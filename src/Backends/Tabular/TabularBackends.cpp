@@ -951,6 +951,26 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
 
                     if (imposed_phase_index != iphase_not_imposed) {
                         double rhoc = rhomolar_critical();
+                        // Lambda: validate the bumped cell. If the imposed-phase walk lands on a
+                        // table cell with no bicubic coefficients (i.e., inside the two-phase
+                        // notch of the table), evaluate_single_phase_pT will dereference an
+                        // empty alpha[] vector and segfault. Resolve to a good neighbour or
+                        // throw cleanly. Same fix idiom as the non-imposed branch below.
+                        auto ensure_bumped_cell_valid = [&](const char* context) {
+                            const auto& cell = dataset->coeffs_pT[cached_single_phase_i][cached_single_phase_j];
+                            if (!cell.valid()) {
+                                if (auto alt = cell.get_alternate()) {
+                                    auto [ai, aj] = *alt;
+                                    cached_single_phase_i = ai;
+                                    cached_single_phase_j = aj;
+                                } else {
+                                    throw ValueError(
+                                      format("Imposed phase %s: bumped cell (%zu, %zu) has no bicubic coefficients and no good neighbour "
+                                             "(p=%g Pa, T=%g K)",
+                                             context, cached_single_phase_i, cached_single_phase_j, _p, static_cast<double>(_T)));
+                                }
+                            }
+                        };
                         if (imposed_phase_index == iphase_liquid && cached_single_phase_i > 0) {
                             // We want a liquid solution, but we got a vapor solution
                             if (_p < this->AS->p_critical()) {
@@ -959,6 +979,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     // Bump to lower temperature
                                     cached_single_phase_i--;
                                 }
+                                ensure_bumped_cell_valid("liquid");
                                 double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
                                 if (rho < rhoc) {
                                     // Didn't work
@@ -977,6 +998,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     // Bump to lower temperature
                                     cached_single_phase_i++;
                                 }
+                                ensure_bumped_cell_valid("gas");
                                 double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
                                 if (rho > rhoc) {
                                     // Didn't work
@@ -1008,6 +1030,25 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     }
                                     // It's vapor, move to the right
                                     cached_single_phase_i++;
+                                }
+                                // The bumped cell may land in the table's two-phase region where
+                                // CellCoeffs has no bicubic alpha[] populated. Subsequent
+                                // evaluate_single_phase dereferences alpha[] without checking
+                                // validity → segfault (#1950: N2 BICUBIC at PT=2e5,78 K).
+                                // Resolve the same way find_native_nearest_good_indices does:
+                                // try the cell's alternate; otherwise throw cleanly.
+                                const auto& bumped_cell = dataset->coeffs_pT[cached_single_phase_i][cached_single_phase_j];
+                                if (!bumped_cell.valid()) {
+                                    if (auto alt = bumped_cell.get_alternate()) {
+                                        auto [ai, aj] = *alt;
+                                        cached_single_phase_i = ai;
+                                        cached_single_phase_j = aj;
+                                    } else {
+                                        throw ValueError(
+                                          format("P,T near saturation: bumped cell (%zu, %zu) has no bicubic coefficients and no good neighbour "
+                                                 "(p=%g Pa, T=%g K, Tsat=%g K)",
+                                                 cached_single_phase_i, cached_single_phase_j, _p, static_cast<double>(_T), Ts));
+                                    }
                                 }
                             }
                         }
