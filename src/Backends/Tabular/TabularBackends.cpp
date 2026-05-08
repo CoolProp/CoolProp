@@ -1248,10 +1248,122 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             }
             break;
         }
+        case HmolarSmolar_INPUTS :{
+
+           std::size_t iL = 0, iV = 0;
+             // A bit trickier than the HEOS case. Iterate on P
+            // in order to find s
+
+            _hmolar  = val1;
+            _smolar  = val2;
+            class Residual : public FuncWrapper1D
+            {
+            public:
+                CoolProp::TabularBackend& HEOS;
+                CoolPropDbl hmolar, smolar;
+                PureFluidSaturationTableData& pure_saturation = HEOS.dataset->pure_saturation;
+                PhaseEnvelopeData& phase_envelope = HEOS.dataset->phase_envelope;
+                SinglePhaseGriddedTableData& single_phase_logph = HEOS.dataset->single_phase_logph;
+                SinglePhaseGriddedTableData& single_phase_logpT = HEOS.dataset->single_phase_logpT;
+                
+                Residual(CoolProp::TabularBackend& HEOS,CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec)
+                : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec){};
+                double call(double P) {
+                                        CoolPropDbl  smolar_calc;
+                                        HEOS._p = P;
+                                        HEOS._hmolar = hmolar;    
+                                        HEOS._smolar = smolar;
+                                        
+                                        HEOS.using_single_phase_table = true;  // Use the table !
+                                        std::size_t iL = std::numeric_limits<std::size_t>::max(), iV = std::numeric_limits<std::size_t>::max(), iclosest = 0;
+                                        CoolPropDbl hL = 0, hV = 0;
+                                        SimpleState closest_state;
+                                        bool is_two_phase = false;
+                                        // If phase is imposed, use it, but only if it's single phase:
+                                        //   - Imposed two phase still needs to determine saturation limits by calling pure_saturation.is_inside().
+                                        //   - There's no speed increase to be gained by imposing two phase.
+                                        if ((HEOS.imposed_phase_index == iphase_not_imposed) || (HEOS.imposed_phase_index == iphase_twophase)) {
+                                            if (HEOS.is_mixture) {
+                                                is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, HEOS._p, iHmolar, HEOS._hmolar, iclosest, closest_state);
+                                            } else {
+                                                is_two_phase = pure_saturation.is_inside(iP, HEOS._p, iHmolar, HEOS._hmolar, iL, iV, hL, hV);
+                                            }
+                                        }
+                                        // Phase determined or imposed, now interpolate results
+                                        if (is_two_phase) {
+                                            HEOS.using_single_phase_table = false;
+                                            HEOS._Q = (static_cast<double>(HEOS._hmolar) - hL) / (hV - hL);
+                                            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(HEOS._Q))) {
+                                                throw ValueError(
+                                                format("vapor quality is not in (0,1) for hmolar: %g p: %g, hL: %g hV: %g ", static_cast<double>(HEOS._hmolar), HEOS._p, hL, hV));
+                                            } else {
+                                                HEOS.cached_saturation_iL = iL;
+                                                HEOS.cached_saturation_iV = iV;
+                                                HEOS._phase = iphase_twophase;
+                                            }
+                                            if (HEOS.is_mixture) {
+                                            HEOS.phase_envelope_sat(phase_envelope, iSmolar, iP, HEOS._p); }
+                                            else {
+                                            smolar_calc=pure_saturation.evaluate(iSmolar, HEOS._p, HEOS._Q, HEOS.cached_saturation_iL, HEOS.cached_saturation_iV);
+                                            }
+                                        } else {
+                                            HEOS.selected_table = SELECTED_PH_TABLE;
+                                            // Find and cache the indices i, j
+                                            HEOS.find_native_nearest_good_indices(single_phase_logph, HEOS.dataset->coeffs_ph, HEOS._hmolar, HEOS._p, HEOS.cached_single_phase_i,
+                                                                            HEOS.cached_single_phase_j);
+                                            // Recalculate the phase
+                                            HEOS.recalculate_singlephase_phase();
+                                            smolar_calc=HEOS.evaluate_single_phase_phmolar(iSmolar, HEOS.cached_single_phase_i, HEOS.cached_single_phase_j);
+                                        }
+                    double r = smolar_calc - smolar;
+                    return r;
+                }
+            }  resid(*this,_hmolar, _smolar);
+            std::string errstr;
+            // Find minimum pressure
+            bool good_Pmin = false;
+            double Pmin = this->AS->p_triple();
+            double rmin;
+            do {
+                try {
+                    rmin = resid.call(Pmin);
+                    good_Pmin = true;
+                } catch (...) {
+                    Pmin = Pmin*1.5;
+                }
+                if (Pmin > this->AS->pmax()) {
+                    throw ValueError("Cannot find good Pmin");
+                }
+            } while (!good_Pmin);
+
+            // Find maximum temperature
+            bool good_Pmax = false;
+            double Pmax = this->AS->pmax() ;  // Just a little above, so if we use Tmax as input, it should still work
+            double rmax;
+            do {
+                try {
+                    rmax = resid.call(Pmax);
+                    good_Pmax = true;
+                } catch (...) {
+                    Pmax = Pmax*0.99;
+                }
+                if (Pmax < Pmin) {
+                    throw ValueError("Cannot find good Pmax");
+                }
+            } while (!good_Pmax);
+            if (rmin * rmax > 0 && std::abs(rmax) < std::abs(rmin)) {
+                throw CoolProp::ValueError(format("HS inputs correspond to temperature above maximum pressure of EOS [%g Pa]", this->AS->pmax()));
+            }
+            Brent(resid, Pmin, Pmax, DBL_EPSILON, 1e-10, 100);
+            break;
+        }
         default:
             throw ValueError("Sorry, but this set of inputs is not supported for Tabular backend");
     }
 }
+
+
+
 
 void CoolProp::TabularDataSet::write_tables(const std::string& path_to_tables) {
     make_dirs(path_to_tables);
