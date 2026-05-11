@@ -3602,8 +3602,10 @@
   "INFO": {
     "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=-1",
     "ALIASES": [
+      "trans-1,2-difluoroethene",
       "R1132E",
-      "trans-1,2-difluoroethene"
+      "R-1132E",
+      "R-1132(E)"
     ],
     "CAS": "1630-78-0",
     "CHEMSPIDER_ID": -1,
@@ -3614,14 +3616,14 @@
       "GWP20": -99999999999,
       "GWP500": -9999999999,
       "HH": -999999999,
-      "Name": "R1132E",
+      "Name": "R1132(E)",
       "ODP": 99999999.0,
       "PH": -999999
     },
     "FORMULA": "CHF=CHF (trans)",
     "INCHI_KEY": "WFLOTYSKFUPZQB-OWOJBTEDSA-N",
     "INCHI_STRING": "InChI=1S/C2H2F2/c3-1-2-4/h1-2H/b2-1+",
-    "NAME": "R1132E",
+    "NAME": "R1132(E)",
     "REFPROP_NAME": "N/A",
     "SMILES": "F/C=C/F"
   },
