@@ -47,7 +47,7 @@ jobs:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}_${{ env.IMAGE_SUFFIX }}
     
     - name: Build and push Docker image
-      uses: docker/build-push-action@v3
+      uses: docker/build-push-action@v7
       with:
         context: ./dev/docker/
         file: ./dev/docker/${{ env.IMAGE_SUFFIX }}.Dockerfile
