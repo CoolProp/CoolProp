@@ -8,6 +8,7 @@ from datetime import datetime
 import subprocess
 import os
 import sys
+import time
 import json
 import hashlib
 import struct
@@ -439,14 +440,26 @@ def generate():
     # (32-bit cdecl/stdcall, 64-bit, arm64) that all share this same
     # dev/hashes.json; a plain open(..., 'w') would let a shorter write only
     # partially overwrite a longer one and leave stale tail bytes that break
-    # the next JSON parse.
+    # the next JSON parse. On Windows the swap step itself races against
+    # peer processes that may briefly hold the destination open, so retry
+    # os.replace with exponential backoff before giving up (issue #2903).
     if hashes:
         dirname = os.path.dirname(hashes_fname) or '.'
         fd, tmp_fname = tempfile.mkstemp(prefix='hashes.', suffix='.json.tmp', dir=dirname)
         try:
             with os.fdopen(fd, 'w') as fp:
                 fp.write(json.dumps(hashes))
-            os.replace(tmp_fname, hashes_fname)
+            attempts = 8
+            delay = 0.05
+            for i in range(attempts):
+                try:
+                    os.replace(tmp_fname, hashes_fname)
+                    break
+                except PermissionError:
+                    if i == attempts - 1:
+                        raise
+                    time.sleep(delay)
+                    delay *= 2
         except BaseException:
             if os.path.exists(tmp_fname):
                 try:
