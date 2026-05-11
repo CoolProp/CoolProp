@@ -797,10 +797,24 @@ double isothermal_compressibility(double T, double p) {
             k_T = 1.6261876614E-22 * pow(T, 6) - 3.3016385196E-19 * pow(T, 5) + 2.7978984577E-16 * pow(T, 4) - 1.2672392901E-13 * pow(T, 3)
                   + 3.2382864853E-11 * pow(T, 2) - 4.4318979503E-09 * T + 2.5455947289E-07;
         } else {
-            // Use IF97 to do the P,T call
-            WaterIF97->update(CoolProp::PT_INPUTS, p, T);
-            Water->update(CoolProp::DmassT_INPUTS, WaterIF97->rhomass(), T);
-            k_T = Water->keyed_output(CoolProp::iisothermal_compressibility);
+            // IF97Backend::set_phase rejects PT_INPUTS whenever |p - psat(T)|
+            // is within IF97's 3.3e-5 RMS saturation-line tolerance — the
+            // pure-water phase is ambiguous there. Pre-check that same
+            // condition and route the near-saturation case through the
+            // polynomial correlation instead; for f_factor purposes the
+            // precise k_T at saturation does not matter much, and a
+            // single-valued surrogate keeps the outer (T_wb,RelHum) solver
+            // from blowing up when its T_db iterate brushes Tsat(p). (#2690)
+            constexpr double if97_sat_tol = 3.3e-5;
+            const double p_ws_T = IF97::psat97(T);
+            if (std::abs(p - p_ws_T) <= p_ws_T * if97_sat_tol) {
+                k_T = 1.6261876614E-22 * pow(T, 6) - 3.3016385196E-19 * pow(T, 5) + 2.7978984577E-16 * pow(T, 4) - 1.2672392901E-13 * pow(T, 3)
+                      + 3.2382864853E-11 * pow(T, 2) - 4.4318979503E-09 * T + 2.5455947289E-07;
+            } else {
+                WaterIF97->update(CoolProp::PT_INPUTS, p, T);
+                Water->update(CoolProp::DmassT_INPUTS, WaterIF97->rhomass(), T);
+                k_T = Water->keyed_output(CoolProp::iisothermal_compressibility);
+            }
         }
     } else {
         k_T = IsothermCompress_Ice(T, p);  //[1/Pa]
@@ -1392,12 +1406,20 @@ double WetbulbTemperature(double T, double p, double psi_w) {
     // Instantiate the solver container class
     WetBulbSolver WBS(T, p, psi_w);
 
-    // Upper bracket for Brent. Historically this was Tmax + 1, which when
-    // T >= Tsat lands ABOVE Tsat where W_s_wb in the residual goes
-    // negative (p_ws_wb > p) and the function becomes meaningless.
-    // Brent then converges to a spurious "root" near Tsat (#2255).
-    // Clamp the upper bracket to stay strictly below Tsat in that case.
-    double Tupper = (T >= Tsat) ? (Tsat - 1e-3) : (Tmax + 1);
+    // Upper bracket for Brent. Historically this was Tmax + 1, which can
+    // straddle Tsat from either side: above (T >= Tsat) makes W_s_wb in
+    // the residual go negative since p_ws_wb > p (#2255), and from below
+    // (Tsat - 1 < T < Tsat) gives Tupper = T + 1 > Tsat so internal
+    // Brent steps still land on the singular point (#2690 isolated
+    // outliers like T_wb=28, RH=1e-4, P=87550). Clamp Tupper strictly
+    // below Tsat with a margin large enough to clear IF97's saturation-
+    // tolerance band — WaterIF97->update(PT_INPUTS, p, T) throws when
+    // |psat(T) - p|/p falls below ~3e-3 %, i.e. roughly 1 mK below Tsat
+    // for atmospheric P. Use 0.1 K to give that check several orders of
+    // headroom while preserving plenty of bracket for the true Twb,
+    // which is typically tens of K below Tsat for the wet-bulb cases
+    // we care about.
+    double Tupper = std::min(Tmax + 1.0, Tsat - 0.1);
 
     double return_val = NAN;
     try {
@@ -1409,8 +1431,11 @@ double WetbulbTemperature(double T, double p, double psi_w) {
         }
         // Reject solutions that are essentially the upper bracket — that
         // is Brent giving up rather than finding a true root in the
-        // physical region (#2255).
-        if (T >= Tsat && return_val > Tsat - 1e-2) {
+        // physical region (#2255). The threshold tracks the Tupper
+        // margin above (0.1 K below Tsat); allow a small additional
+        // tolerance to distinguish "found the bracket" from "found
+        // close to the bracket".
+        if (T >= Tsat && return_val > Tsat - 0.11) {
             throw CoolProp::ValueError();
         }
     } catch (...) {
@@ -1832,6 +1857,32 @@ void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const st
                 }
             } else {
                 T_max = CoolProp::PropsSI("T", "P", p, "Q", 0, "Water") - 1;
+                // For (RelHum, T_wb) at very low RH the wet-bulb energy balance
+                // implies a T_db that can exceed Tsat(p): for moderate T_wb the
+                // overshoot is small (Mode A/B), for high T_wb it diverges
+                // (Mode C). Estimate T_db from the energy balance and either
+                // (a) widen T_max so Brent brackets the root directly — avoiding
+                // Secant overextrapolation into psi_w > 1 territory — or
+                // (b) reject upfront when T_db_est is beyond model validity. (#2690)
+                if (SecondaryInputKey == GIVEN_TWB && MainInputValue < 1e-3) {
+                    double T_wb_K = SecondaryInputValue;
+                    double psat_Twb = (T_wb_K > 273.16) ? IF97::psat97(T_wb_K) : psub_Ice(T_wb_K);
+                    if (psat_Twb < p) {
+                        const double eps_W = 0.621945;
+                        double W_sat_wb = eps_W * psat_Twb / (p - psat_Twb);
+                        double hfg = 2.501e6 - 2400.0 * (T_wb_K - 273.15);
+                        double cp_a = 1006.0;
+                        double T_db_est = T_wb_K + W_sat_wb * hfg / cp_a;
+                        if (T_db_est > 500.0) {
+                            throw CoolProp::ValueError(format("HAPropsSI(T_wb=%g K, RelHum=%g, P=%g Pa): the wet-bulb energy "
+                                                              "balance implies T_db ~ %g K, beyond the validity range (~500 K) "
+                                                              "of the humid-air mixture model for very dry conditions.",
+                                                              T_wb_K, MainInputValue, p, T_db_est)
+                                                         .c_str());
+                        }
+                        T_max = std::max(T_max, T_db_est + 20.0);
+                    }
+                }
             }
         }
         // Minimum drybulb temperature is the drybulb temperature corresponding to saturated air for the humidity ratio
