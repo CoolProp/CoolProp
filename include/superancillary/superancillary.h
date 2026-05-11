@@ -870,16 +870,15 @@ class SuperAncillary
      */
     auto loader(const nlohmann::json& j, const std::string& key) {
         std::vector<ChebyshevExpansion<ArrayType>> buf;
-        // If you want to use Eigen...
-        // auto toeig = [](const nlohmann::json &j) -> Eigen::ArrayXd{
-        //     auto vec = j.get<std::vector<double>>();
-        //     return Eigen::Map<const Eigen::ArrayXd>(&vec[0], vec.size());
-        // };
-        // for (auto& block : j[key]){
-        //     buf.emplace_back(block.at("xmin"), block.at("xmax"), toeig(block.at("coef")));
-        // }
         for (auto& block : j[key]) {
-            buf.emplace_back(block.at("xmin"), block.at("xmax"), block.at("coef"));
+            if constexpr (std::is_same_v<ArrayType, std::vector<double>>) {
+                buf.emplace_back(block.at("xmin"), block.at("xmax"), block.at("coef"));
+            } else {
+                // Convert JSON array -> Eigen::ArrayXd (or other Eigen array type)
+                auto vec = block.at("coef").template get<std::vector<double>>();
+                ArrayType coef = Eigen::Map<const Eigen::ArrayXd>(&vec[0], vec.size());
+                buf.emplace_back(block.at("xmin"), block.at("xmax"), coef);
+            }
         }
         return buf;
     }
@@ -1632,6 +1631,8 @@ class SuperAncillary
 // from EquationOfState; ownership is shared, never duplicated.
 static_assert(!std::is_copy_constructible_v<SuperAncillary<std::vector<double>>>);
 static_assert(!std::is_copy_assignable_v<SuperAncillary<std::vector<double>>>);
+static_assert(!std::is_copy_constructible_v<SuperAncillary<Eigen::ArrayXd>>);
+static_assert(!std::is_copy_assignable_v<SuperAncillary<Eigen::ArrayXd>>);
 
 }  // namespace superancillary
 }  // namespace CoolProp

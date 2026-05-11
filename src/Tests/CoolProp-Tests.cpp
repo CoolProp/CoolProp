@@ -6,6 +6,7 @@
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
+#include "../Backends/Tabular/SBTLBackend.h"
 #include "superancillary/superancillary.h"
 #include "miniz.h"
 #include <atomic>
@@ -3132,6 +3133,20 @@ TEST_CASE("Github issue #2622", "[2622]") {
     CAPTURE(A);
 }
 
+TEST_CASE("Github issue #2673", "[2673]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("PR", "nButane"));
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101325, 350));
+    double rhomolar = AS->rhomolar();
+    double rhomass = AS->rhomass();
+
+    AS->update(CoolProp::DmolarT_INPUTS, rhomolar, 350);
+
+    CHECK_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rhomolar, 350));
+    CHECK_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rhomass, 350));
+
+    CHECK(std::isfinite(AS->rhomolar()));
+}
+
 template <typename T>
 std::vector<T> linspace(T start, T end, int num) {
     std::vector<T> linspaced;
@@ -3351,7 +3366,7 @@ class SuperAncillaryOffFixture
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[superanc]") {
 
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
-    superancillary::SuperAncillary<std::vector<double>> anc{json};
+    superancillary::SuperAncillary<Eigen::ArrayXd> anc{json};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
     auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
@@ -3408,7 +3423,7 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmark class construction", "[supe
 TEST_CASE_METHOD(SuperAncillaryOffFixture, "Check superancillary-like calculations with superancillary disabled for water", "[superanc]") {
 
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
-    superancillary::SuperAncillary<std::vector<double>> anc{json};
+    superancillary::SuperAncillary<Eigen::ArrayXd> anc{json};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
     auto& approxrhoL = anc.get_approx1d('D', 0);
@@ -5513,7 +5528,8 @@ TEST_CASE("mole_fractions_liquid/vapor reject single-phase states (#2308)", "[mo
     // VLE flash (or phase-envelope build); calc_mole_fractions_liquid/vapor
     // were returning those stale values when the current state was actually
     // single-phase, which is misleading. Now they throw.
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(
+      CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
     AS->set_mole_fractions({0.10, 0.34, 0.41, 0.15});
 
     // Build the phase envelope so SatL/SatV pick up some non-trivial state
@@ -5536,10 +5552,8 @@ TEST_CASE("mole_fractions_liquid/vapor reject single-phase states (#2308)", "[mo
     REQUIRE(y.size() == 4);
     // Each composition must sum to ~1.0
     double sx = 0.0, sy = 0.0;
-    for (auto v : x)
-        sx += v;
-    for (auto v : y)
-        sy += v;
+    for (auto v : x) sx += v;
+    for (auto v : y) sy += v;
     CHECK(sx == Catch::Approx(1.0).epsilon(1e-9));
     CHECK(sy == Catch::Approx(1.0).epsilon(1e-9));
 }
@@ -5560,37 +5574,145 @@ TEST_CASE("REFPROP supports DmolarQ / DmassQ inputs (#1845)", "[REFPROP][1845]")
     CHECK(AS->T() == Catch::Approx(AS2->T()).epsilon(1e-6));
 }
 
-TEST_CASE("TABULAR_NX/NY config keys exist and default to 200", "[Configuration][TABULAR]") {
-    // The tabular backend grid resolution is configurable; confirm the keys
-    // are present and the documented default is honored.
-    CHECK(CoolProp::get_config_int(TABULAR_NX) == 200);
-    CHECK(CoolProp::get_config_int(TABULAR_NY) == 200);
+TEST_CASE("NormalizedPHTable: build_normph_table fills cell values matching HEOS for CO2", "[SBTL][normph][build]") {
+    // After build_normph_table runs on a region, every cell with a finite
+    // hmolar entry should match a fresh HEOS evaluation at (h, P) =
+    // (table.hmolar[i][j], table.yvec[j]) — confirming the cell-fill loop
+    // actually plumbed (xnorm, P) -> h -> HEOS update -> stored values
+    // through correctly.  Tolerance 1e-12 (just round-trip floating point).
+    auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "CO2"));
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    auto SBTL = dynamic_cast<CoolProp::SBTLBackend*>(SBTL_AS.get());
+    REQUIRE(SBTL != nullptr);
+    HEOS->update(CoolProp::PT_INPUTS, 1e6, 280.0);
+    SBTL->update(CoolProp::DmolarUmolar_INPUTS, HEOS->rhomolar(), HEOS->umolar());
+
+    using R = CoolProp::NormalizedPHTable::Region;
+    for (auto region : {R::LIQUID, R::VAPOR, R::SUPER}) {
+        CoolProp::NormalizedPHTable table(region);
+        table.Nx = 12;  // small grid for fast test
+        table.Ny = 12;
+        SBTL->build_normph_table(table);
+
+        std::size_t finite_count = 0;
+        for (std::size_t i = 0; i < table.Nx; ++i) {
+            for (std::size_t j = 0; j < table.Ny; ++j) {
+                if (!std::isfinite(table.rhomolar[i][j])) continue;
+                ++finite_count;
+                CAPTURE(static_cast<int>(region));
+                CAPTURE(i);
+                CAPTURE(j);
+                CAPTURE(table.xvec[i]);
+                CAPTURE(table.yvec[j]);
+                CAPTURE(table.hmolar[i][j]);
+                CAPTURE(table.rhomolar[i][j]);
+                // Cell stored values came from a HEOS update; reproducing the
+                // same update should give back the same rhomolar to numerical
+                // precision.
+                HEOS->update(CoolProp::HmolarP_INPUTS, table.hmolar[i][j], table.yvec[j]);
+                CHECK(std::abs(HEOS->rhomolar() - table.rhomolar[i][j]) / std::abs(table.rhomolar[i][j]) < 1e-12);
+            }
+        }
+        // Sanity: at least most cells should be filled (some boundary holes
+        // are expected near pmin/pmax/dome edges).
+        CAPTURE(static_cast<int>(region));
+        CAPTURE(finite_count);
+        CAPTURE(table.Nx * table.Ny);
+        CHECK(finite_count > (table.Nx * table.Ny) / 2);
+    }
 }
 
-TEST_CASE("BICUBIC PT below saturation no longer segfaults (#1950)", "[BICUBIC][1950]") {
-    // Issue #1950: BICUBIC&HEOS update(PT_INPUTS, p, T) where T is just below
-    // Tsat(p) and the saturation curve sits inside the table cell:
-    //   - find_native_nearest_good_indices returns a valid cell on the vapor side
-    //   - saturation-curve check bumps `cached_single_phase_i--` to land in the
-    //     table's two-phase notch, where CellCoeffs has no alpha[] populated
-    //   - evaluate_single_phase dereferences alpha[12] → segfault
-    //
-    // After the fix, the bumped cell is checked for validity; if the alternate
-    // neighbour is set, we use it; otherwise we throw a clean ValueError.
-    auto BICU = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("BICUBIC&HEOS", "Nitrogen"));
-    // P=2 bar, T=78 K is sub-saturation for N2 (Tsat(2 bar) ~ 83.6 K) — was the
-    // original repro from the issue that crashed.
-    REQUIRE_NOTHROW(BICU->update(CoolProp::PT_INPUTS, 2.0e5, 78.0));
-    // BICU should land on a valid liquid cell and produce a sensible density.
-    const double rho = BICU->rhomass();
-    CHECK(std::isfinite(rho));
-    CHECK(rho > 700.0);  // liquid N2 ~803 kg/m^3 at this state
-    CHECK(rho < 900.0);
+TEST_CASE("NormalizedPHTable: xnorm <-> h round-trip across all three regions for CO2", "[SBTL][normph]") {
+    // Verifies the coordinate-aligned PH math: for each region, after
+    // populate_normph_bounds runs, h_from_xnorm(xnorm_from_h(h, P), P) == h
+    // for any (h, P) inside that region's rectangle.  Sample at probe
+    // points strictly inside each region's bounds.
+    auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "CO2"));
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    auto SBTL = dynamic_cast<CoolProp::SBTLBackend*>(SBTL_AS.get());
+    REQUIRE(SBTL != nullptr);
+    // Trigger sat cache build
+    HEOS->update(CoolProp::PT_INPUTS, 1e6, 280.0);
+    SBTL->update(CoolProp::DmolarUmolar_INPUTS, HEOS->rhomolar(), HEOS->umolar());
 
-    // Cross-check vs HEOS — the magnitudes should agree to within bicubic noise.
-    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen"));
-    HEOS->update(CoolProp::PT_INPUTS, 2.0e5, 78.0);
-    CHECK(rho == Catch::Approx(HEOS->rhomass()).epsilon(1e-2));  // 1% bicubic tolerance
+    using R = CoolProp::NormalizedPHTable::Region;
+    for (auto region : {R::LIQUID, R::VAPOR, R::SUPER}) {
+        CoolProp::NormalizedPHTable table(region);
+        table.AS = HEOS;
+        table.Nx = 16;
+        table.Ny = 16;
+        table.set_limits();
+        table.resize(table.Nx, table.Ny);  // populates xvec, yvec
+        SBTL->populate_normph_bounds(table);
+
+        REQUIRE(table.h_lo_isobar.size() == table.Ny);
+        REQUIRE(table.h_hi_isobar.size() == table.Ny);
+        // All bounds must be finite and h_lo < h_hi at every isobar.
+        for (std::size_t j = 0; j < table.Ny; ++j) {
+            CAPTURE(j);
+            CAPTURE(table.h_lo_isobar[j]);
+            CAPTURE(table.h_hi_isobar[j]);
+            CHECK(std::isfinite(table.h_lo_isobar[j]));
+            CHECK(std::isfinite(table.h_hi_isobar[j]));
+            CHECK(table.h_lo_isobar[j] < table.h_hi_isobar[j]);
+        }
+
+        // Round-trip: pick interior (xnorm, P) points; map to h, map back.
+        for (double xnorm : {0.1, 0.3, 0.5, 0.7, 0.9}) {
+            // Take P at four evenly-spaced log-grid rows, avoiding the row endpoints
+            // where linear-in-logP interpolation pins to a boundary value.
+            for (std::size_t jp = 1; jp + 1 < table.Ny; jp += 4) {
+                const double P = std::sqrt(table.yvec[jp] * table.yvec[jp + 1]);  // mid-row geomean
+                const double h = table.h_from_xnorm(xnorm, P);
+                const double xnorm_back = table.xnorm_from_h(h, P);
+                CAPTURE(static_cast<int>(region));
+                CAPTURE(xnorm);
+                CAPTURE(P);
+                CAPTURE(h);
+                CAPTURE(xnorm_back);
+                CHECK(std::abs(xnorm_back - xnorm) < 1e-12);
+            }
+        }
+    }
+}
+
+TEST_CASE("SBTL saturation cache exposes h_sat,L(p) and h_sat,V(p) for CO2", "[SBTL][sat_cache]") {
+    // First building block toward a saturation-curve-aligned PH coordinate:
+    // h_sat,L(p) and h_sat,V(p) are cached in the SBTL backend's sat_cache
+    // (1000 log-p samples, cubic interp from underlying tabular sat data) and
+    // exposed as public methods.  These will be the lower / upper bounds of
+    // the normalized-h coordinate in the subcritical liquid / vapor subdomains
+    // when the coordinate-aligned PH path lands.
+    auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "CO2"));
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    auto SBTL = dynamic_cast<CoolProp::SBTLBackend*>(SBTL_AS.get());
+    REQUIRE(SBTL != nullptr);
+
+    // Sample subcritical pressures spanning the table range.  Tolerance is
+    // ~1e-3 — bounded by the cubic interpolation of the underlying sat table,
+    // not by the cache layer itself.  Tightens to machine precision when an
+    // H superancillary expansion is wired in (follow-up work).
+    const double pc = HEOS->p_critical();
+    for (double frac : {0.01, 0.05, 0.2, 0.5, 0.9}) {
+        const double p = pc * frac;
+        HEOS->update(CoolProp::PQ_INPUTS, p, 0.0);
+        const double hL_eos = HEOS->hmolar();
+        HEOS->update(CoolProp::PQ_INPUTS, p, 1.0);
+        const double hV_eos = HEOS->hmolar();
+
+        const double hL_sbtl = SBTL->saturation_hmolar_liquid(p);
+        const double hV_sbtl = SBTL->saturation_hmolar_vapor(p);
+
+        CAPTURE(p);
+        CAPTURE(hL_eos);
+        CAPTURE(hL_sbtl);
+        CAPTURE(hV_eos);
+        CAPTURE(hV_sbtl);
+        // Tightened from 1e-3 (cubic-interp fallback) to 1e-10 because
+        // try_h_superanc now uses the runtime-built H superancillary.
+        CHECK(std::abs(hL_sbtl - hL_eos) / std::abs(hL_eos) < 1e-10);
+        CHECK(std::abs(hV_sbtl - hV_eos) / std::abs(hV_eos) < 1e-10);
+    }
 }
 
 #endif

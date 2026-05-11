@@ -109,6 +109,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
 
     static void set_fluid_enthalpy_entropy_offset(CoolPropFluid& component, double delta_a1, double delta_a2, const std::string& ref);
 
+   public:
     std::shared_ptr<EquationOfState::SuperAncillary_t> get_superanc();
 
     /// Lazily build saturation superancillaries for caloric properties (h_sat, s_sat,
@@ -121,7 +122,6 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// see GitHub #2773. This is a no-op for fluids without a superancillary.
     void ensure_caloric_superancillaries();
 
-   public:
     HelmholtzEOSMixtureBackend();
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV = true);
