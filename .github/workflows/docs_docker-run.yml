@@ -180,4 +180,4 @@ jobs:
       #if: contains(github.ref, 'refs/tags')
       if: ${{ !env.ACT }} # skip during local actions testing
       id: deployment
-      uses: actions/deploy-pages@v4
+      uses: actions/deploy-pages@v5
