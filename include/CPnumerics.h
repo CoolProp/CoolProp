@@ -263,8 +263,14 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
     // walks the wrong way through the array.  The function's contract is
     // "i and i+1 bound the value", so val == vec[L] returns i=L, and val
     // == vec[R] returns i=R-1 (the cell whose right endpoint is the hit).
-    if (rL == 0) { i = L; return; }
-    if (rR == 0) { i = (R > L) ? R - 1 : L; return; }
+    if (rL == 0) {
+        i = L;
+        return;
+    }
+    if (rR == 0) {
+        i = (R > L) ? R - 1 : L;
+        return;
+    }
     while (R - L > 1) {
         if (!ValidNumber(vec[M])) {
             std::size_t MR = M, ML = M;
@@ -285,8 +291,14 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
             T rML = vec[ML] - val;
             T rMR = vec[MR] - val;
             // Exact-match early returns on the interior probe points.
-            if (rML == 0) { i = ML; return; }
-            if (rMR == 0) { i = MR; return; }
+            if (rML == 0) {
+                i = ML;
+                return;
+            }
+            if (rMR == 0) {
+                i = MR;
+                return;
+            }
             // Figure out which chunk is the good part
             if (rR * rML > 0 && rL * rML < 0) {
                 // solution is between L and ML
@@ -306,7 +318,10 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
             rM = vec[M] - val;
             // Exact-match early return: vec[M] == val means val lies on a
             // node, so i=M is correct (val ∈ [vec[M], vec[M+1]]).
-            if (rM == 0) { i = M; return; }
+            if (rM == 0) {
+                i = M;
+                return;
+            }
             if (rR * rM > 0 && rL * rM < 0) {
                 // solution is between L and M
                 R = M;
