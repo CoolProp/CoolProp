@@ -595,34 +595,21 @@ class SBTLBackend : public TabularBackend
     /// per-cell polynomial reproduces the corner data values to relative 1e-8.
     void build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs);
 
-    /// IAPWS G13-15 conformance upgrade for a normph table (CoolProp-foi.1).
-    /// Walks each valid cell, lazily computes corner-state HEOS partials, and
-    /// replaces the cubic-B-spline alpha for the derived core properties
-    /// (rho, T, s, u) with a Hermite bicubic that uses the EOS-supplied
-    /// first and cross derivatives chain-ruled into the (xnorm, log p)
-    /// coordinate.  Aux (w, η, λ) and the coordinate-aligned (h, p) keep
-    /// their cubic-B-spline alpha.  No-op when iapws_conformance_mode_ is
-    /// false or the input coeffs grid is empty.
+    /// Hermite bicubic alpha for a normph table's core derived params
+    /// (rho, T, s, u) — chain-ruled from EOS-supplied first and cross
+    /// derivatives into the (xnorm, log p) coordinate.  Called from
+    /// build_bspline_coeffs; cells whose corner partials throw keep the
+    /// cubic-B-spline alpha that was computed alongside (single-cell
+    /// fallback so cell.valid() always implies a populated polynomial —
+    /// without the fallback we'd route through alternates which is
+    /// strictly worse extrapolation).  Aux (w, η, λ) and the coordinate-
+    /// aligned (h, p) stay on cubic everywhere.
     void build_normph_hermite_alphas(NormalizedPHTable& table, std::vector<std::vector<CellCoeffs>>& coeffs);
 
-    /// PT-table analogue of build_normph_hermite_alphas.  Replaces cubic
-    /// alpha for the 4 core derived params (rho, h, s, u) with Hermite
-    /// bicubic, chain-ruled from (T, p) HEOS partials into the
-    /// (xnorm_T, log p) coordinate.  T-axis sat envelope is T_lo(p) /
-    /// T_hi(p) per the NormalizedPTTable region; T-derivative of these
-    /// at log p comes from the table's T_lo_cheb / T_hi_cheb expansions.
+    /// PT-table analogue of build_normph_hermite_alphas.  Core derived
+    /// params (rho, h, s, u), (xnorm_T, log p) coordinate.  Same
+    /// cubic-fallback contract.
     void build_normpt_hermite_alphas(NormalizedPTTable& table, std::vector<std::vector<CellCoeffs>>& coeffs);
-
-    /// Enable / disable the Hermite-bicubic build path and force a rebuild
-    /// of the cached per-cell coefficients to honour the new setting.
-    /// Default is enabled — turn off only for accuracy benchmarking
-    /// against the older cubic-B-spline-only baseline, or to recover the
-    /// pre-foi.1 build behaviour for regression diagnosis.
-    void set_iapws_conformance_mode(bool enabled);
-
-    [[nodiscard]] bool iapws_conformance_mode() const noexcept {
-        return iapws_conformance_mode_;
-    }
 
     // -----------------------------------------------------------------------
     // Saturation curve queries (building blocks for coordinate-aligned PH)
@@ -735,14 +722,6 @@ class SBTLBackend : public TabularBackend
     std::vector<std::vector<CellCoeffs>> _coeffs_normpt_vapor;
     std::vector<std::vector<CellCoeffs>> _coeffs_normpt_super;
     bool normpt_tables_built;
-
-    /// IAPWS G13-15 conformance build (CoolProp-foi.1).  When true (the
-    /// default), the per-cell core-property alpha vectors for the normph
-    /// tables are built directly as Hermite bicubics using EOS-supplied
-    /// first and cross derivatives — exact at every corner in value,
-    /// first derivative, and cross derivative.  Disable for benchmarking
-    /// or fall-back to the older cubic-B-spline-only build path.
-    bool iapws_conformance_mode_{true};
 
     // Same active-table state for PT_INPUTS routing.  When a PT query
     // succeeds through one of the normpt tables, _normpt_active_* point

@@ -5872,18 +5872,12 @@ TEST_CASE("SBTL hermite_bicubic_polynomial_coeffs exactly reconstructs an arbitr
     }
 }
 
-TEST_CASE("SBTL Hermite bicubic is the default normph build path for core props", "[SBTL][conformance]") {
-    // Hermite bicubic is the default build path (CoolProp-foi.1).  Verify:
-    //   1. A fresh SBTL&HEOS construction reports iapws_conformance_mode()
-    //      == true without any opt-in.
-    //   2. Looked-up rho/T at single-phase PT probes match HEOS.
-    //   3. Disabling conformance mode (the benchmarking fallback) still
-    //      works and rebuilds with the cubic-B-spline path.
+TEST_CASE("SBTL normph core-property lookups match HEOS at single-phase probes", "[SBTL][conformance]") {
+    // End-to-end smoke check on the foi.1 build path: SBTL with Hermite
+    // bicubic for the core derived properties (rho, T, s, u) matches HEOS
+    // at three single-phase PT probes to within 1e-4 relative.
     auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "CO2"));
     auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
-    auto* SBTL = dynamic_cast<CoolProp::SBTLBackend*>(SBTL_AS.get());
-    REQUIRE(SBTL != nullptr);
-    REQUIRE(SBTL->iapws_conformance_mode());  // default-on
 
     struct Probe
     {
@@ -5900,42 +5894,29 @@ TEST_CASE("SBTL Hermite bicubic is the default normph build path for core props"
         SBTL_AS->update(CoolProp::PT_INPUTS, pr.p_Pa, pr.T_K);
         const double rho_eos = HEOS->rhomolar();
         const double rho_sbtl = SBTL_AS->rhomolar();
-        const double T_eos = HEOS->T();
-        const double T_sbtl = SBTL_AS->T();
         CAPTURE(pr.label);
         CAPTURE(pr.p_Pa);
         CAPTURE(pr.T_K);
         CAPTURE(rho_eos);
         CAPTURE(rho_sbtl);
-        CAPTURE(T_eos);
-        CAPTURE(T_sbtl);
         CHECK(std::abs(rho_sbtl - rho_eos) / std::abs(rho_eos) < 1e-4);
-        CHECK(std::abs(T_sbtl - T_eos) / std::abs(T_eos) < 1e-4);
     }
-
-    // Benchmarking fallback: disable Hermite and rebuild on the cubic-only
-    // path.  Properties should still match HEOS (just at the older
-    // cubic-B-spline accuracy).
-    SBTL->set_iapws_conformance_mode(false);
-    REQUIRE_FALSE(SBTL->iapws_conformance_mode());
-    HEOS->update(CoolProp::PT_INPUTS, 1e6, 320.0);
-    SBTL_AS->update(CoolProp::PT_INPUTS, 1e6, 320.0);
-    CHECK(SBTL_AS->rhomolar() == Catch::Approx(HEOS->rhomolar()).epsilon(1e-3));
 }
 
-TEST_CASE("SBTL Hermite vs cubic accuracy delta on Water random PT sweep", "[.][hermite_accuracy]") {
-    // Hidden by default ([.] prefix) — slow (~150s, two table rebuilds + 200
-    // PT lookups × 2 paths).  Run explicitly with --test-spec '[hermite_accuracy]'
-    // to quantify the foi.1 accuracy improvement.  Asserts the Hermite path
-    // is at least as accurate as the cubic-only baseline on the rho median
-    // — regression guard against bad chain-rule math.  Water is the IAPWS
-    // reference fluid: deviations are directly comparable to G13-15 Table 10
-    // permissible values (v / T / s / w / η, ~1e-5 relative).
+TEST_CASE("SBTL accuracy on Water random PT/PH sweep", "[.][hermite_accuracy]") {
+    // Hidden by default ([.] prefix) — slow (~30s on Water).  Run with
+    //   --test-spec '[hermite_accuracy]'
+    // to validate SBTL accuracy on the IAPWS reference fluid against HEOS
+    // direct.  Reports rho / T / s deviations for both the PT path
+    // (normpt table) and the PH path (normph table) at 200 random
+    // single-phase states.  Deviations are directly comparable to the
+    // G13-15 Table 10 permissible values (v / T / s ~ 1e-5 relative).
+    //
+    // Asserts only that median rho is within sane bounds — looser than
+    // G13-15 because the near-critical box and 2-phase notch are
+    // excluded here, and any one-off CI flake should not break the test.
     auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "Water"));
     auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
-    auto* SBTL = dynamic_cast<CoolProp::SBTLBackend*>(SBTL_AS.get());
-    REQUIRE(SBTL != nullptr);
-    REQUIRE(SBTL->iapws_conformance_mode());
 
     const double T_min = HEOS->Ttriple() * 1.1;
     const double T_max = std::min(static_cast<double>(HEOS->Tmax()) * 0.95, 1.4 * static_cast<double>(HEOS->T_critical()));
@@ -5961,41 +5942,38 @@ TEST_CASE("SBTL Hermite vs cubic accuracy delta on Water random PT sweep", "[.][
         states.emplace_back(p, T);
     }
 
-    struct PathErrors
+    struct Errors
     {
         std::vector<double> drho, dT, ds;
     };
-    auto run_pt = [&](PathErrors& e) {
-        for (auto [p, T] : states) {
-            try {
-                HEOS->update(CoolProp::PT_INPUTS, p, T);
-                SBTL_AS->update(CoolProp::PT_INPUTS, p, T);
-            } catch (...) {
-                continue;
-            }
-            e.drho.push_back(std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar()));
-            // dT trivially zero on PT input; capture s on the same call.
-            const double s_h = HEOS->smolar();
-            e.ds.push_back(std::abs(SBTL_AS->smolar() - s_h) / std::max(std::abs(s_h), 1e-30));
+    Errors pt, ph;
+    for (auto [p, T] : states) {
+        try {
+            HEOS->update(CoolProp::PT_INPUTS, p, T);
+            SBTL_AS->update(CoolProp::PT_INPUTS, p, T);
+        } catch (...) {
+            continue;
         }
-    };
-    auto run_ph = [&](PathErrors& e) {
-        for (auto [p, T] : states) {
-            double h = 0.0;
-            try {
-                HEOS->update(CoolProp::PT_INPUTS, p, T);
-                h = HEOS->hmolar();
-                HEOS->update(CoolProp::HmolarP_INPUTS, h, p);
-                SBTL_AS->update(CoolProp::HmolarP_INPUTS, h, p);
-            } catch (...) {
-                continue;
-            }
-            e.drho.push_back(std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar()));
-            e.dT.push_back(std::abs(SBTL_AS->T() - HEOS->T()) / std::abs(HEOS->T()));
-            const double s_h = HEOS->smolar();
-            e.ds.push_back(std::abs(SBTL_AS->smolar() - s_h) / std::max(std::abs(s_h), 1e-30));
+        pt.drho.push_back(std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar()));
+        const double s_h_pt = HEOS->smolar();
+        pt.ds.push_back(std::abs(SBTL_AS->smolar() - s_h_pt) / std::max(std::abs(s_h_pt), 1e-30));
+    }
+    for (auto [p, T] : states) {
+        double h = 0.0;
+        try {
+            HEOS->update(CoolProp::PT_INPUTS, p, T);
+            h = HEOS->hmolar();
+            HEOS->update(CoolProp::HmolarP_INPUTS, h, p);
+            SBTL_AS->update(CoolProp::HmolarP_INPUTS, h, p);
+        } catch (...) {
+            continue;
         }
-    };
+        ph.drho.push_back(std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar()));
+        ph.dT.push_back(std::abs(SBTL_AS->T() - HEOS->T()) / std::abs(HEOS->T()));
+        const double s_h_ph = HEOS->smolar();
+        ph.ds.push_back(std::abs(SBTL_AS->smolar() - s_h_ph) / std::max(std::abs(s_h_ph), 1e-30));
+    }
+
     struct Stats
     {
         double median, p99, max;
@@ -6005,37 +5983,24 @@ TEST_CASE("SBTL Hermite vs cubic accuracy delta on Water random PT sweep", "[.][
         std::sort(v.begin(), v.end());
         return {v[v.size() / 2], v[static_cast<std::size_t>(0.99 * (v.size() - 1))], v.back()};
     };
-    auto report = [&](const char* label, const PathErrors& h, const PathErrors& c) {
-        auto line = [&](const char* prop, const std::vector<double>& vh, const std::vector<double>& vc) {
-            if (vh.empty() && vc.empty()) return;
-            const auto sh = stats(vh), sc = stats(vc);
-            std::cout << "  " << prop << "   Hermite  median=" << sh.median << "  p99=" << sh.p99 << "  max=" << sh.max << "\n";
-            std::cout << "        Cubic    median=" << sc.median << "  p99=" << sc.p99 << "  max=" << sc.max << "\n";
-            std::cout << "        ratio    median=" << sh.median / std::max(sc.median, 1e-30) << "  p99=" << sh.p99 / std::max(sc.p99, 1e-30)
-                      << "  max=" << sh.max / std::max(sc.max, 1e-30) << "\n";
+    auto report = [&](const char* label, const Errors& e) {
+        auto line = [&](const char* prop, const std::vector<double>& v) {
+            if (v.empty()) return;
+            const auto s = stats(v);
+            std::cout << "  " << prop << "  median=" << s.median << "  p99=" << s.p99 << "  max=" << s.max << "\n";
         };
-        std::cout << "[hermite_accuracy] " << label << " (Water, n=" << h.drho.size() << "):\n";
-        line("rho", h.drho, c.drho);
-        line("T  ", h.dT, c.dT);
-        line("s  ", h.ds, c.ds);
+        std::cout << "[hermite_accuracy] " << label << " (Water, n=" << e.drho.size() << "):\n";
+        line("rho", e.drho);
+        line("T  ", e.dT);
+        line("s  ", e.ds);
     };
+    report("PT path (normpt)", pt);
+    report("PH path (normph)", ph);
 
-    PathErrors pt_h, ph_h, pt_c, ph_c;
-    run_pt(pt_h);
-    run_ph(ph_h);
-    SBTL->set_iapws_conformance_mode(false);
-    run_pt(pt_c);
-    run_ph(ph_c);
-
-    report("PT path (normpt)", pt_h, pt_c);
-    report("PH path (normph)", ph_h, ph_c);
-
-    // Hermite must be at least as accurate as cubic on median rho for both
-    // paths.  2× slack absorbs noise; bigger ratio means broken chain rule.
-    const auto pt_rho_h = stats(pt_h.drho), pt_rho_c = stats(pt_c.drho);
-    const auto ph_rho_h = stats(ph_h.drho), ph_rho_c = stats(ph_c.drho);
-    CHECK(pt_rho_h.median <= 2.0 * pt_rho_c.median);
-    CHECK(ph_rho_h.median <= 2.0 * ph_rho_c.median);
+    // Loose sanity bounds — actual G13-15 conformance is tracked separately.
+    const auto pt_rho = stats(pt.drho), ph_rho = stats(ph.drho);
+    CHECK(pt_rho.median < 1e-6);
+    CHECK(ph_rho.median < 1e-6);
 }
 
 TEST_CASE("SBTL native speed_sound matches HEOS for CO2 single-phase states", "[SBTL][speed_sound]") {

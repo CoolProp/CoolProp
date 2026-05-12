@@ -347,8 +347,9 @@ double eval_alpha(const std::vector<double>& alpha, double tx, double ty) {
 // consume the alpha vector unchanged).
 //
 // First building block toward CoolProp-foi.1 (Hermite bicubic on the
-// normph backbone).  Not wired into the build path yet; callable from
-// tests and the upcoming iapws_conformance_mode path.
+// normph backbone).  Wired into build_bspline_coeffs as the primary
+// alpha source for the 4 core derived params on normph / normpt
+// tables; cells where corner partials throw fall back to cubic alpha.
 std::vector<double> hermite_bicubic_polynomial_coeffs(double f00, double f10, double f01, double f11, double fx00, double fx10, double fx01,
                                                       double fx11, double fy00, double fy10, double fy01, double fy11, double fxy00, double fxy10,
                                                       double fxy01, double fxy11) {
@@ -802,24 +803,7 @@ void SBTLBackend::build_normph_tables() {
     normph_tables_built = true;
 }
 
-void SBTLBackend::set_iapws_conformance_mode(bool enabled) {
-    if (iapws_conformance_mode_ == enabled) return;
-    iapws_conformance_mode_ = enabled;
-    // Invalidate cached coefficients and force rebuild on next access.
-    _coeffs_normph_liquid.clear();
-    _coeffs_normph_vapor.clear();
-    _coeffs_normph_super.clear();
-    _coeffs_normpt_liquid.clear();
-    _coeffs_normpt_vapor.clear();
-    _coeffs_normpt_super.clear();
-    normph_tables_built = false;
-    normpt_tables_built = false;
-    build_normph_tables();
-    build_normpt_tables();
-}
-
 void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
-    if (!iapws_conformance_mode_) return;
     if (coeffs.empty()) return;
     if (!this->AS) return;
 
@@ -991,7 +975,6 @@ void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vec
 }
 
 void SBTLBackend::build_normpt_hermite_alphas(NormalizedPTTable& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
-    if (!iapws_conformance_mode_) return;
     if (coeffs.empty()) return;
     if (!this->AS) return;
 
@@ -1479,16 +1462,17 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
 
     coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
 
-    // IAPWS G13-15 conformance build: for a NormalizedPHTable we route the
-    // 4 core derived params (rho, T, s, u) through a Hermite bicubic path
-    // that uses EOS-supplied first and cross derivatives chain-ruled into
+    // Hermite bicubic overlay: for a NormalizedPHTable we route the 4 core
+    // derived params (rho, T, s, u) through a Hermite bicubic path that
+    // uses EOS-supplied first and cross derivatives chain-ruled into
     // (xnorm, log p); for a NormalizedPTTable, the analogous 4 props
     // (rho, h, s, u) route through (xnorm_T, log p).  Aux + coordinate-
     // aligned params (h/p or T/p, w, η, λ) keep their cubic-B-spline alpha.
-    // Allocations + lazy corner cache live in the helpers to keep
-    // build_bspline_coeffs readable.
-    auto* normph_for_hermite = (iapws_conformance_mode_ ? dynamic_cast<NormalizedPHTable*>(&table) : nullptr);
-    auto* normpt_for_hermite = (iapws_conformance_mode_ ? dynamic_cast<NormalizedPTTable*>(&table) : nullptr);
+    // Cells where Hermite chain-rule throws fall back to cubic alpha
+    // computed in the loop below — single-cell fallback so cell.valid()
+    // always implies a populated polynomial.
+    auto* normph_for_hermite = dynamic_cast<NormalizedPHTable*>(&table);
+    auto* normpt_for_hermite = dynamic_cast<NormalizedPTTable*>(&table);
 
     // First pass: cell validity by 4 finite corners across core params only.
     for (std::size_t i = 0; i < table.Nx - 1; ++i) {
@@ -1525,11 +1509,10 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
         const bool is_aux = (k >= core_count);
         parameters param = is_aux ? aux_params[k - core_count] : core_params[k];
         if (param == table.xkey || param == table.ykey) continue;
-        // Cubic B-spline runs for every cell (including the core derived
-        // params on a normph conformance build).  The Hermite pass below
-        // overlays its alpha for cells where corner-derivative data is
-        // available; cells where Hermite fails (e.g. EOS partials throw)
-        // keep their cubic alpha so cell `valid()` still implies a
+        // Cubic B-spline runs for every cell × every param.  The Hermite
+        // pass below overlays its alpha for cells where corner-derivative
+        // data is available; cells where Hermite fails (e.g. EOS partials
+        // throw) keep their cubic alpha so cell `valid()` still implies a
         // populated polynomial — no eval-time empty-vector crashes.
         std::vector<std::vector<double>>* fp = sbtl_get_field(table, param);
 
