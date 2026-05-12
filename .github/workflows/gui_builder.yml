@@ -263,10 +263,12 @@ jobs:
           Write-Host "Windows signing: signed $($targets.Count) artifact(s)."
 
       # ─── macOS smoke test ──────────────────────────────────────────────────
-      # Open the bundled .app, wait for the window, capture the desktop with
-      # `screencapture -x`, confirm the process is still alive AND that the
-      # screenshot has enough pixel variance to suggest a real render (catches
-      # the blank-WebView regression from gh-2825).
+      # Open the bundled .app, poll a screenshot + render check every 2s up
+      # to 30s. Cold-start WebView paint on a fresh macos-latest runner is
+      # variable, so a fixed sleep either over-waits or flake-fails (see
+      # CoolProp-8j0 / gh-2826 alpha.2). Polling lets fast renders exit in
+      # a few seconds and slow renders still get a fair shot before failing,
+      # catching the blank-WebView regression from gh-2825 at the timeout.
       - name: Smoke-test macOS .app launch + screenshot
         if: matrix.os == 'macos-latest'
         run: |
@@ -278,25 +280,46 @@ jobs:
             exit 1
           fi
           mkdir -p artifacts/screenshots
-          open "$APP"
-          sleep 8
-          if ! pgrep -x coolprop-gui >/dev/null; then
-            echo "FAIL: GUI exited within 8s"
-            ls -la "$HOME/Library/Logs/DiagnosticReports/" 2>/dev/null || true
-            exit 1
-          fi
-          screencapture -x artifacts/screenshots/macos-startup.png
-          ls -la artifacts/screenshots/macos-startup.png
-          pkill -x coolprop-gui || true
-          # Pillow is the only non-stdlib dep of the render check; install it
-          # quietly so the check works regardless of which Python the runner
-          # toolcache happens to ship. macos-latest's Homebrew Python is
+          SHOT="artifacts/screenshots/macos-startup.png"
+
+          # Pillow is the only non-stdlib dep of the render check; install
+          # before the polling loop. macos-latest's Homebrew Python is
           # PEP 668-marked, so --break-system-packages is required (this is
           # an ephemeral runner — no host environment to corrupt).
           python3 -m pip install --quiet --disable-pip-version-check \
             --break-system-packages Pillow
-          python3 wrappers/GUI/scripts/check-screenshot-rendered.py \
-            artifacts/screenshots/macos-startup.png 20
+
+          open "$APP"
+          DEADLINE=$(( $(date +%s) + 30 ))
+          RENDER_EXIT=1
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            sleep 2
+            if ! pgrep -x coolprop-gui >/dev/null; then
+              echo "FAIL: GUI exited before render"
+              ls -la "$HOME/Library/Logs/DiagnosticReports/" 2>/dev/null || true
+              exit 1
+            fi
+            screencapture -x "$SHOT"
+            RENDER_EXIT=0
+            python3 wrappers/GUI/scripts/check-screenshot-rendered.py "$SHOT" 20 \
+              || RENDER_EXIT=$?
+            if [ "$RENDER_EXIT" -eq 0 ]; then
+              break
+            fi
+            if [ "$RENDER_EXIT" -ge 2 ]; then
+              pkill -x coolprop-gui || true
+              echo "FAIL: render check failed to run (exit $RENDER_EXIT)"
+              exit "$RENDER_EXIT"
+            fi
+          done
+
+          ls -la "$SHOT"
+          pkill -x coolprop-gui || true
+
+          if [ "$RENDER_EXIT" -ne 0 ]; then
+            echo "FAIL: screenshot looks blank — render didn't paint (gh-2825 regression?)"
+            exit 1
+          fi
           echo "OK: GUI started, rendered, and screenshot captured"
 
       # ─── Windows smoke test ────────────────────────────────────────────────
@@ -345,40 +368,52 @@ jobs:
           }
 
           $proc = Start-Process -FilePath $bin -PassThru
-          # Cold-start of WebView2 in CI is slower than on a real desktop —
-          # 8s was occasionally catching the window before JS finished. 15s
-          # is the conservative ceiling we use for the render check below.
-          Start-Sleep -Seconds 15
-          if ($proc.HasExited) {
-            throw "Binary exited within 15s (exit $($proc.ExitCode)) — likely missing DLL / WebView2 init failure"
-          }
+
+          # Pillow isn't preinstalled on windows-latest's Python toolcache;
+          # install once before the polling loop.
+          python -m pip install --quiet --disable-pip-version-check Pillow
 
           Add-Type -AssemblyName System.Windows.Forms
           Add-Type -AssemblyName System.Drawing
           $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-          $bmp = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
-          $g = [System.Drawing.Graphics]::FromImage($bmp)
-          $g.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
           $shot = "artifacts\screenshots\windows-startup.png"
-          $bmp.Save($shot, [System.Drawing.Imaging.ImageFormat]::Png)
-          $g.Dispose(); $bmp.Dispose()
+
+          # Cold-start of WebView2 on a fresh windows-latest runner is
+          # variable — a fixed 15s sleep flake-failed an otherwise-identical
+          # tag push (CoolProp-8j0 / gh-2826 alpha.2). Poll a screenshot +
+          # render check every 2s up to 30s so fast renders exit quickly
+          # and slow renders still get a fair shot at painting before the
+          # job fails with the gh-2825 blank-render diagnostic.
+          $deadline = (Get-Date).AddSeconds(30)
+          $renderExit = 1
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 2
+            if ($proc.HasExited) {
+              throw "Binary exited (exit $($proc.ExitCode)) — likely missing DLL / WebView2 init failure"
+            }
+            $bmp = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+            $bmp.Save($shot, [System.Drawing.Imaging.ImageFormat]::Png)
+            $g.Dispose(); $bmp.Dispose()
+
+            python wrappers\GUI\scripts\check-screenshot-rendered.py $shot 20
+            $renderExit = $LASTEXITCODE
+            if ($renderExit -eq 0) { break }
+            if ($renderExit -ge 2) {
+              Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+              throw "render check failed to run (exit $renderExit)"
+            }
+          }
+
           Write-Host "Screenshot saved to $shot"
           Get-Item $shot | Format-List Name, Length
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
 
-          Stop-Process -Id $proc.Id -Force
-
-          # Render check — fails the job if the WebView never painted (the
-          # gh-2825 case where Vite's absolute asset paths 404'd under
-          # https://tauri.localhost left a blank pale-grey window that the
-          # 8s liveness check happily passed). Pillow isn't preinstalled on
-          # windows-latest's Python toolcache, so install it inline.
-          python -m pip install --quiet --disable-pip-version-check Pillow
-          python wrappers\GUI\scripts\check-screenshot-rendered.py `
-            $shot 20
-          switch ($LASTEXITCODE) {
+          switch ($renderExit) {
             0 { Write-Host "OK: GUI started, rendered, and screenshot captured" }
             1 { throw "screenshot looks blank — render didn't paint (gh-2825 regression?)" }
-            default { throw "render check failed to run (exit $LASTEXITCODE)" }
+            default { throw "render check failed to run (exit $renderExit)" }
           }
 
       - name: Upload startup screenshot
