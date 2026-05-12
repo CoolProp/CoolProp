@@ -11,11 +11,16 @@ include("${CMAKE_CURRENT_LIST_DIR}/CPM.cmake")
 
 # ── Core header-only deps ──────────────────────────────────────────────────
 
+# Use tarball instead of git clone: gitlab.com cloning over CMake's
+# FetchContent custom-build step is flaky on Windows runners — when the
+# clone retries internally MSBuild still propagates the first failure
+# (see PR #2890/#2905 for similar wheel-build flake mitigations).
 CPMAddPackage(
   NAME Eigen
-  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-  GIT_TAG        5.0.1
-  DOWNLOAD_ONLY  YES   # header-only; skip Eigen's own CMake targets
+  VERSION 5.0.1
+  URL https://gitlab.com/libeigen/eigen/-/archive/5.0.1/eigen-5.0.1.tar.gz
+  URL_HASH SHA256=e9c326dc8c05cd1e044c71f30f1b2e34a6161a3b6ecf445d56b53ff1669e3dec
+  DOWNLOAD_ONLY YES   # header-only; skip Eigen's own CMake targets
 )
 
 CPMAddPackage(
