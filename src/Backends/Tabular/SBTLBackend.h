@@ -346,6 +346,44 @@ std::vector<double> hermite_bicubic_polynomial_coeffs(double f00, double f10, do
                                                       double fx11, double fy00, double fy10, double fy01, double fy11, double fxy00, double fxy10,
                                                       double fxy01, double fxy11);
 
+/// Corner-state derivatives needed for Hermite bicubic in the (xnorm, log p)
+/// coordinate.  Populated at table-build time per corner node from a primed
+/// HEOS state.  For each of the 6 core SBTL properties we record:
+///   f_h  = ∂f/∂h|_p     — first partial w.r.t. h at constant p
+///   f_p  = ∂f/∂p|_h     — first partial w.r.t. p at constant h
+///   f_hh = ∂²f/∂h²|_p   — second partial w.r.t. h at constant p
+///   f_hp = ∂²f/∂h∂p    — mixed second partial
+/// Chain-rule into (xnorm, log p) requires also p, h, h_lo(p), Δh(p),
+/// ∂h_lo/∂(log p), ∂Δh/∂(log p) at the corner's column — supplied by
+/// the caller from Cheb1D::eval_dlogp + the row's stored isobar bounds.
+///
+/// `valid` is false if HEOS update failed or returned non-finite values;
+/// build_hermite_coeffs then skips this corner's cells.
+struct SBTLCornerDerivs
+{
+    bool valid{false};
+    // Values: redundant with the table corner matrices, included here so the
+    // chain-rule code can read everything from one struct.
+    double rhomolar{0.0}, T{0.0}, smolar{0.0}, umolar{0.0};
+    // First partials with respect to h at constant p.
+    double drho_dh{0.0}, dT_dh{0.0}, ds_dh{0.0}, du_dh{0.0};
+    // First partials with respect to p at constant h.
+    double drho_dp{0.0}, dT_dp{0.0}, ds_dp{0.0}, du_dp{0.0};
+    // Second partials with respect to h at constant p.
+    double d2rho_dh2{0.0}, d2T_dh2{0.0}, d2s_dh2{0.0}, d2u_dh2{0.0};
+    // Mixed second partials ∂²/∂h∂p.
+    double d2rho_dhp{0.0}, d2T_dhp{0.0}, d2s_dhp{0.0}, d2u_dhp{0.0};
+};
+
+/// Populate a SBTLCornerDerivs struct from a HEOS AbstractState that has
+/// already been primed at the desired state (caller is responsible for the
+/// update — typically HmolarP_INPUTS or PQ_INPUTS).  Reads value +
+/// first_partial_deriv (×2) + second_partial_deriv (×2) for each of
+/// {rho, T, s, u}.  Returns true on success, false if any EOS call throws
+/// or yields a non-finite value (the corner is then unusable for Hermite).
+/// h and p themselves are trivial in (xnorm, log p) — not stored here.
+bool populate_corner_derivatives(AbstractState& AS, SBTLCornerDerivs& out);
+
 class SBTLBackend : public TabularBackend
 {
    public:

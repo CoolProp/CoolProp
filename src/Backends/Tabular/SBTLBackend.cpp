@@ -384,6 +384,54 @@ static std::vector<std::vector<double>>* sbtl_get_field(SinglePhaseGriddedTableD
 }
 
 // ---------------------------------------------------------------------------
+// Corner-state derivative collection for Hermite bicubic build path
+// (CoolProp-foi.1).  Reads value + 4 partials per core property (rho, T,
+// s, u) from a HEOS state primed by the caller.  Returns false if any
+// EOS call throws or yields non-finite, so the build loop can skip
+// unusable corners (sat boundary, metastable spinodal).
+// ---------------------------------------------------------------------------
+bool populate_corner_derivatives(AbstractState& AS, SBTLCornerDerivs& out) {
+    auto safe = [&](double v) { return ValidNumber(v) ? v : std::numeric_limits<double>::quiet_NaN(); };
+    try {
+        out.rhomolar = safe(static_cast<double>(AS.rhomolar()));
+        out.T = safe(static_cast<double>(AS.T()));
+        out.smolar = safe(static_cast<double>(AS.smolar()));
+        out.umolar = safe(static_cast<double>(AS.umolar()));
+        if (!ValidNumber(out.rhomolar) || !ValidNumber(out.T) || !ValidNumber(out.smolar) || !ValidNumber(out.umolar)) {
+            return false;
+        }
+
+        // First partials at constant p (∂f/∂h).
+        out.drho_dh = safe(static_cast<double>(AS.first_partial_deriv(iDmolar, iHmolar, iP)));
+        out.dT_dh = safe(static_cast<double>(AS.first_partial_deriv(iT, iHmolar, iP)));
+        out.ds_dh = safe(static_cast<double>(AS.first_partial_deriv(iSmolar, iHmolar, iP)));
+        out.du_dh = safe(static_cast<double>(AS.first_partial_deriv(iUmolar, iHmolar, iP)));
+
+        // First partials at constant h (∂f/∂p).
+        out.drho_dp = safe(static_cast<double>(AS.first_partial_deriv(iDmolar, iP, iHmolar)));
+        out.dT_dp = safe(static_cast<double>(AS.first_partial_deriv(iT, iP, iHmolar)));
+        out.ds_dp = safe(static_cast<double>(AS.first_partial_deriv(iSmolar, iP, iHmolar)));
+        out.du_dp = safe(static_cast<double>(AS.first_partial_deriv(iUmolar, iP, iHmolar)));
+
+        // Second partials at constant p (∂²f/∂h²).
+        out.d2rho_dh2 = safe(static_cast<double>(AS.second_partial_deriv(iDmolar, iHmolar, iP, iHmolar, iP)));
+        out.d2T_dh2 = safe(static_cast<double>(AS.second_partial_deriv(iT, iHmolar, iP, iHmolar, iP)));
+        out.d2s_dh2 = safe(static_cast<double>(AS.second_partial_deriv(iSmolar, iHmolar, iP, iHmolar, iP)));
+        out.d2u_dh2 = safe(static_cast<double>(AS.second_partial_deriv(iUmolar, iHmolar, iP, iHmolar, iP)));
+
+        // Mixed second partials ∂²f/∂h∂p (d/dp of ∂f/∂h|_p, at constant h).
+        out.d2rho_dhp = safe(static_cast<double>(AS.second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar)));
+        out.d2T_dhp = safe(static_cast<double>(AS.second_partial_deriv(iT, iHmolar, iP, iP, iHmolar)));
+        out.d2s_dhp = safe(static_cast<double>(AS.second_partial_deriv(iSmolar, iHmolar, iP, iP, iHmolar)));
+        out.d2u_dhp = safe(static_cast<double>(AS.second_partial_deriv(iUmolar, iHmolar, iP, iP, iHmolar)));
+    } catch (...) {
+        return false;
+    }
+    out.valid = ValidNumber(out.drho_dh) && ValidNumber(out.drho_dp) && ValidNumber(out.d2rho_dh2) && ValidNumber(out.d2rho_dhp);
+    return out.valid;
+}
+
+// ---------------------------------------------------------------------------
 // NormalizedPHTable: coordinate-aligned PH table.
 // ---------------------------------------------------------------------------
 
