@@ -5716,6 +5716,86 @@ TEST_CASE("SBTL saturation cache exposes h_sat,L(p) and h_sat,V(p) for CO2", "[S
     }
 }
 
+TEST_CASE("SBTL hermite_bicubic_polynomial_coeffs exactly reconstructs an arbitrary bicubic", "[SBTL][hermite_bicubic]") {
+    // Construct an arbitrary bicubic f(xi, eta) = Σ_{m,n in 0..3} c_{m,n} xi^m eta^n.
+    // Feed corner values and derivatives into hermite_bicubic_polynomial_coeffs;
+    // the returned alpha vector must reproduce f exactly at every (xi, eta) ∈ [0,1]^2.
+    // This validates the closed-form coefficients before they're wired into the
+    // SBTL build path (CoolProp-foi.1).
+    const double c[4][4] = {
+      {1.7, -0.3, 2.1, 0.5},
+      {0.4, 1.2, -0.9, 0.2},
+      {-1.1, 0.7, 1.4, -0.3},
+      {0.8, -0.5, 0.6, 1.1},
+    };
+    auto eval = [&](double xi, double eta) {
+        double v = 0.0;
+        double xp = 1.0;
+        for (int m = 0; m < 4; ++m) {
+            double ep = 1.0;
+            for (int n = 0; n < 4; ++n) {
+                v += c[m][n] * xp * ep;
+                ep *= eta;
+            }
+            xp *= xi;
+        }
+        return v;
+    };
+    auto pow_int = [](double base, int exp) {
+        double r = 1.0;
+        for (int k = 0; k < exp; ++k)
+            r *= base;
+        return r;
+    };
+    auto dxi = [&](double xi, double eta) {
+        double v = 0.0;
+        for (int m = 1; m < 4; ++m) {
+            for (int n = 0; n < 4; ++n) {
+                v += m * c[m][n] * pow_int(xi, m - 1) * pow_int(eta, n);
+            }
+        }
+        return v;
+    };
+    auto deta = [&](double xi, double eta) {
+        double v = 0.0;
+        for (int m = 0; m < 4; ++m) {
+            for (int n = 1; n < 4; ++n) {
+                v += n * c[m][n] * pow_int(xi, m) * pow_int(eta, n - 1);
+            }
+        }
+        return v;
+    };
+    auto dxideta = [&](double xi, double eta) {
+        double v = 0.0;
+        for (int m = 1; m < 4; ++m) {
+            for (int n = 1; n < 4; ++n) {
+                v += m * n * c[m][n] * pow_int(xi, m - 1) * pow_int(eta, n - 1);
+            }
+        }
+        return v;
+    };
+    const auto alpha = CoolProp::hermite_bicubic_polynomial_coeffs(eval(0, 0), eval(1, 0), eval(0, 1), eval(1, 1), dxi(0, 0), dxi(1, 0), dxi(0, 1),
+                                                                   dxi(1, 1), deta(0, 0), deta(1, 0), deta(0, 1), deta(1, 1), dxideta(0, 0),
+                                                                   dxideta(1, 0), dxideta(0, 1), dxideta(1, 1));
+    REQUIRE(alpha.size() == 16);
+    auto eval_alpha_local = [&](double xi, double eta) {
+        double v = 0.0;
+        for (int m = 0; m < 4; ++m) {
+            for (int n = 0; n < 4; ++n) {
+                v += alpha[4 * m + n] * pow_int(xi, m) * pow_int(eta, n);
+            }
+        }
+        return v;
+    };
+    for (double xi : {0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0}) {
+        for (double eta : {0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0}) {
+            CAPTURE(xi);
+            CAPTURE(eta);
+            CHECK(eval_alpha_local(xi, eta) == Catch::Approx(eval(xi, eta)).epsilon(1e-13));
+        }
+    }
+}
+
 TEST_CASE("SBTL native speed_sound matches HEOS for CO2 single-phase states", "[SBTL][speed_sound]") {
     // Native speed-of-sound path: SBTL builds a per-cell B-spline polynomial
     // for w alongside (rho, T, s, h, p, u) and serves calc_speed_sound() from

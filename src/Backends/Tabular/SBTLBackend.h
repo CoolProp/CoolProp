@@ -289,6 +289,17 @@ class NormalizedPTTable : public SinglePhaseGriddedTableData
  * priming the AbstractState at the table-resolved (h, p) or (T, p) state;
  * polynomial-derivative paths are not supported and throw.
  */
+/// Free function: build a 16-coefficient Hermite bicubic alpha vector
+/// from 16 corner data (4 values, 4 ∂f/∂xi, 4 ∂f/∂eta, 4 ∂²f/∂xi∂eta).
+/// Derivatives must already be scaled to the unit-cell coordinates
+/// (multiplied by Δxi=1, Δeta=1).  Returns the alpha vector in SBTL
+/// convention: alpha[4m + n] = coefficient of xi^m·eta^n in the
+/// reconstructed polynomial.  Corner indexing: 00=(0,0), 10=(1,0),
+/// 01=(0,1), 11=(1,1).  Exposed for unit testing of CoolProp-foi.1.
+std::vector<double> hermite_bicubic_polynomial_coeffs(double f00, double f10, double f01, double f11, double fx00, double fx10, double fx01,
+                                                      double fx11, double fy00, double fy10, double fy01, double fy11, double fxy00, double fxy10,
+                                                      double fxy01, double fxy11);
+
 class SBTLBackend : public TabularBackend
 {
    public:

@@ -290,6 +290,37 @@ std::vector<double> bspline_polynomial_coeffs(const std::vector<std::vector<doub
     return alpha;
 }
 
+std::vector<double> hermite_bicubic_polynomial_coeffs_impl(double f00, double f10, double f01, double f11, double fx00, double fx10, double fx01,
+                                                           double fx11, double fy00, double fy10, double fy01, double fy11, double fxy00,
+                                                           double fxy10, double fxy01, double fxy11) {
+    std::vector<double> alpha(16, 0.0);
+    // c_{0,0..3}: value, fy, value+fy terms at xi=0
+    alpha[0 * 4 + 0] = f00;
+    alpha[0 * 4 + 1] = fy00;
+    alpha[0 * 4 + 2] = -3.0 * f00 + 3.0 * f01 - 2.0 * fy00 - fy01;
+    alpha[0 * 4 + 3] = 2.0 * f00 - 2.0 * f01 + fy00 + fy01;
+    // c_{1,0..3}: fx, fxy, mixed at xi=0
+    alpha[1 * 4 + 0] = fx00;
+    alpha[1 * 4 + 1] = fxy00;
+    alpha[1 * 4 + 2] = -3.0 * fx00 + 3.0 * fx01 - 2.0 * fxy00 - fxy01;
+    alpha[1 * 4 + 3] = 2.0 * fx00 - 2.0 * fx01 + fxy00 + fxy01;
+    // c_{2,0..3}: order-2 in xi
+    alpha[2 * 4 + 0] = -3.0 * f00 + 3.0 * f10 - 2.0 * fx00 - fx10;
+    alpha[2 * 4 + 1] = -3.0 * fy00 + 3.0 * fy10 - 2.0 * fxy00 - fxy10;
+    alpha[2 * 4 + 2] = 9.0 * f00 - 9.0 * f10 - 9.0 * f01 + 9.0 * f11 + 6.0 * fx00 + 3.0 * fx10 - 6.0 * fx01 - 3.0 * fx11 + 6.0 * fy00 - 6.0 * fy10
+                       + 3.0 * fy01 - 3.0 * fy11 + 4.0 * fxy00 + 2.0 * fxy10 + 2.0 * fxy01 + fxy11;
+    alpha[2 * 4 + 3] = -6.0 * f00 + 6.0 * f10 + 6.0 * f01 - 6.0 * f11 - 4.0 * fx00 - 2.0 * fx10 + 4.0 * fx01 + 2.0 * fx11 - 3.0 * fy00 + 3.0 * fy10
+                       - 3.0 * fy01 + 3.0 * fy11 - 2.0 * fxy00 - fxy10 - 2.0 * fxy01 - fxy11;
+    // c_{3,0..3}: order-3 in xi
+    alpha[3 * 4 + 0] = 2.0 * f00 - 2.0 * f10 + fx00 + fx10;
+    alpha[3 * 4 + 1] = 2.0 * fy00 - 2.0 * fy10 + fxy00 + fxy10;
+    alpha[3 * 4 + 2] = -6.0 * f00 + 6.0 * f10 + 6.0 * f01 - 6.0 * f11 - 3.0 * fx00 - 3.0 * fx10 + 3.0 * fx01 + 3.0 * fx11 - 4.0 * fy00 + 4.0 * fy10
+                       - 2.0 * fy01 + 2.0 * fy11 - 2.0 * fxy00 - 2.0 * fxy10 - fxy01 - fxy11;
+    alpha[3 * 4 + 3] = 4.0 * f00 - 4.0 * f10 - 4.0 * f01 + 4.0 * f11 + 2.0 * fx00 + 2.0 * fx10 - 2.0 * fx01 - 2.0 * fx11 + 2.0 * fy00 - 2.0 * fy10
+                       + 2.0 * fy01 - 2.0 * fy11 + fxy00 + fxy10 + fxy01 + fxy11;
+    return alpha;
+}
+
 double eval_alpha(const std::vector<double>& alpha, double tx, double ty) {
     const double tx2 = tx * tx, tx3 = tx2 * tx;
     const double ty2 = ty * ty, ty3 = ty2 * ty;
@@ -301,6 +332,28 @@ double eval_alpha(const std::vector<double>& alpha, double tx, double ty) {
 }
 
 }  // namespace
+
+// Hermite bicubic on a unit cell.  Takes 16 corner data (4 values, 4
+// ∂f/∂xi, 4 ∂f/∂eta, 4 ∂²f/∂xi∂eta — derivatives must already be
+// scaled to the unit-cell coordinates xi, eta ∈ [0,1]) and returns the
+// 16-element alpha vector in SBTL convention: alpha[4m + n] = c_{m,n}
+// such that f(xi, eta) = Σ_{m,n} c_{m,n} xi^m eta^n.
+//
+// Corner indexing: 00 = (xi=0,eta=0), 10 = (1,0), 01 = (0,1), 11 = (1,1).
+// This is the standard bicubic interpolation closed form (see
+// en.wikipedia.org/wiki/Bicubic_interpolation; coefficients match the
+// Ainv matrix used by BicubicBackend in TabularBackends.cpp, transposed
+// to SBTL convention so the same evaluate_single_phase polynomial can
+// consume the alpha vector unchanged).
+//
+// First building block toward CoolProp-foi.1 (Hermite bicubic on the
+// normph backbone).  Not wired into the build path yet; callable from
+// tests and the upcoming iapws_conformance_mode path.
+std::vector<double> hermite_bicubic_polynomial_coeffs(double f00, double f10, double f01, double f11, double fx00, double fx10, double fx01,
+                                                      double fx11, double fy00, double fy10, double fy01, double fy11, double fxy00, double fxy10,
+                                                      double fxy01, double fxy11) {
+    return hermite_bicubic_polynomial_coeffs_impl(f00, f10, f01, f11, fx00, fx10, fx01, fx11, fy00, fy10, fy01, fy11, fxy00, fxy10, fxy01, fxy11);
+}
 
 // ---------------------------------------------------------------------------
 // Helper: get pointer to a table field by parameter key
