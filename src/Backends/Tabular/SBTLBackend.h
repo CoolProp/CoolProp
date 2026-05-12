@@ -9,7 +9,10 @@
 namespace CoolProp {
 
 /**
- * @brief Single Chebyshev expansion in log p on one interval.
+ * @brief Single Chebyshev expansion in ln(p) (natural log of pressure)
+ * on one interval.  Pressure inputs are in Pa; the coefficient store works
+ * in ln(p)-space because the sat curve and the table's y-axis are
+ * uniformly log-spaced.
  */
 class Cheb1DPiece
 {
@@ -48,6 +51,14 @@ class Cheb1DPiece
     [[nodiscard]] double eval(double p) const {
         const double log_p = std::log(p);
         double t = (2.0 * log_p - (log_p_lo_ + log_p_hi_)) / (log_p_hi_ - log_p_lo_);
+        // Pin t to [-1, 1] for queries slightly outside the piece's
+        // domain.  This is intentional: callers (Cheb1D::eval and the
+        // SBTL build path) clamp p to the table's overall yvec range
+        // *before* dispatching to the right piece, but rounding in the
+        // log p < ↔ log_p_hi() comparison can spill across a piece
+        // boundary by ~1 ulp.  Pin rather than throw so a 1-ulp boundary
+        // wobble doesn't surface as a thrown exception in the hot path.
+        // Outside the table envelope is rejected upstream in update().
         if (t < -1.0) t = -1.0;
         if (t > 1.0) t = 1.0;
         const std::size_t N = c_.size() - 1;
@@ -108,8 +119,9 @@ class Cheb1DPiece
 };
 
 /**
- * @brief Piecewise Chebyshev expansion in log p, used to interpolate
- * the per-isobar boundary functions h_lo(p), h_hi(p) of NormalizedPHTable.
+ * @brief Piecewise Chebyshev expansion in ln(p) (natural log of pressure),
+ * used to interpolate the per-isobar boundary functions h_lo(p), h_hi(p)
+ * of NormalizedPHTable.
  *
  * Subdivision lets the bulk piece converge spectrally on the smooth body
  * of the function while a near-critical piece absorbs the sqrt-cusp at
@@ -214,12 +226,12 @@ class NormalizedPHTable : public SinglePhaseGriddedTableData
     /// the normalized x-coordinate.  Optional `h_sat` arg is used for the
     /// region's saturation boundary (h_hi for LIQUID, h_lo for VAPOR);
     /// passing the H-superancillary value here keeps routing and lookup
-    /// consistent.  If NaN, falls back to the Cheb evaluation.
-    [[nodiscard]] double xnorm_from_h(double h, double P, double h_sat = std::numeric_limits<double>::quiet_NaN()) const;
+    /// consistent.  Omit (nullopt) to fall back to the Cheb evaluation.
+    [[nodiscard]] double xnorm_from_h(double h, double P, std::optional<double> h_sat = std::nullopt) const;
 
     /// Inverse transform: given (xnorm ∈ [0,1], P), produce h.  Same
     /// optional h_sat argument as xnorm_from_h.
-    [[nodiscard]] double h_from_xnorm(double xnorm, double P, double h_sat = std::numeric_limits<double>::quiet_NaN()) const;
+    [[nodiscard]] double h_from_xnorm(double xnorm, double P, std::optional<double> h_sat = std::nullopt) const;
 
     [[nodiscard]] Region region() const noexcept {
         return region_;
@@ -288,11 +300,11 @@ class NormalizedPTTable : public SinglePhaseGriddedTableData
     /// Forward transform: given a query (T, P) inside this region, compute
     /// the normalized x-coordinate.  Optional T_sat arg supplies the
     /// region's saturation boundary (T_hi for LIQUID, T_lo for VAPOR);
-    /// falls back to the Cheb evaluation when NaN.
-    [[nodiscard]] double xnorm_from_T(double T, double P, double T_sat = std::numeric_limits<double>::quiet_NaN()) const;
+    /// omit (nullopt) to fall back to the Cheb evaluation.
+    [[nodiscard]] double xnorm_from_T(double T, double P, std::optional<double> T_sat = std::nullopt) const;
 
     /// Inverse transform: given (xnorm ∈ [0,1], P), produce T.
-    [[nodiscard]] double T_from_xnorm(double xnorm, double P, double T_sat = std::numeric_limits<double>::quiet_NaN()) const;
+    [[nodiscard]] double T_from_xnorm(double xnorm, double P, std::optional<double> T_sat = std::nullopt) const;
 
     [[nodiscard]] Region region() const noexcept {
         return region_;
@@ -666,18 +678,17 @@ class SBTLBackend : public TabularBackend
     void ensure_heos_at_active_state();
 
    private:
-    // Try the H expansion of the fluid's superancillary at pressure p.  Returns
-    // true if h was evaluated and written to `out`; returns false if the H
-    // expansion is unavailable (mixture, no SUPERANCILLARY block, or H
-    // expansions not pre-built — most fluid JSONs ship rhoL/rhoV/p only).
-    // The caller falls back to the tabular sat cache.
+    // Evaluate h_sat,Q(p) via the fluid's H-superancillary.  Returns true
+    // and writes to `out` on success; returns false if the H expansion is
+    // unavailable (mixture, no SUPERANCILLARY block, or the underlying
+    // backend isn't HelmholtzEOSMixtureBackend).  The caller falls back
+    // to the tabular sat cache.
     //
-    // Future work: derive H expansions on the fly via SuperAncillary::
-    // add_variable('H', ...).  That requires the upstream SuperAncillary
-    // template body to compile when ArrayType = std::vector<double>, which
-    // currently uses Eigen-only operations (.matrix() on the coefficient
-    // array).  Once upstream supports std::vector<double>, this fallback
-    // path tightens from ~1e-3 to machine precision.
+    // Implementation triggers ensure_caloric_superancillaries() lazily on
+    // first call: most fluid JSONs ship the (T, rho_L, rho_V, p) tower of
+    // sat-curve expansions but not (h, s) directly; the H/S expansions are
+    // derived at runtime from those.  Current accuracy at the worst
+    // sub-critical probe is ~3e-9 relative (per [SBTL][sat_cache] test).
     bool try_h_superanc(double p, short Q, double& out) const;
 
     // Scratch slot for try_h_superanc to avoid an extra return-by-tuple in

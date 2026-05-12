@@ -602,8 +602,10 @@ class SinglePhaseGriddedTableData
     virtual void set_limits() = 0;
 
     SinglePhaseGriddedTableData() {
-        Nx = 200;
-        Ny = 200;
+        const int nx_cfg = get_config_int(TABULAR_NX);
+        const int ny_cfg = get_config_int(TABULAR_NY);
+        Nx = (nx_cfg > 1) ? static_cast<std::size_t>(nx_cfg) : 200;
+        Ny = (ny_cfg > 1) ? static_cast<std::size_t>(ny_cfg) : 200;
         revision = 0;
         xkey = INVALID_PARAMETER;
         ykey = INVALID_PARAMETER;
@@ -839,7 +841,9 @@ class LogPHTable : public SinglePhaseGriddedTableData
         deserialized.convert(temp);
         temp.unpack();
         if (Nx != temp.Nx || Ny != temp.Ny) {
-            throw ValueError(format("old [%dx%d] and new [%dx%d] dimensions don't agree", temp.Nx, temp.Ny, Nx, Ny));
+            // Cached file was built at a different grid resolution than the current
+            // TABULAR_NX/TABULAR_NY config requests; force a rebuild via check_tables().
+            throw UnableToLoadError(format("Cached LogPH grid [%dx%d] does not match requested [%dx%d]; will rebuild", temp.Nx, temp.Ny, Nx, Ny));
         } else if (revision > temp.revision) {
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
         } else if ((std::abs(xmin) > 1e-10 && std::abs(xmax) > 1e-10)
@@ -884,7 +888,9 @@ class LogPTTable : public SinglePhaseGriddedTableData
         deserialized.convert(temp);
         temp.unpack();
         if (Nx != temp.Nx || Ny != temp.Ny) {
-            throw ValueError(format("old [%dx%d] and new [%dx%d] dimensions don't agree", temp.Nx, temp.Ny, Nx, Ny));
+            // Cached file was built at a different grid resolution than the current
+            // TABULAR_NX/TABULAR_NY config requests; force a rebuild via check_tables().
+            throw UnableToLoadError(format("Cached LogPT grid [%dx%d] does not match requested [%dx%d]; will rebuild", temp.Nx, temp.Ny, Nx, Ny));
         } else if (revision > temp.revision) {
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
         } else if ((std::abs(xmin) > 1e-10 && std::abs(xmax) > 1e-10)
@@ -905,22 +911,17 @@ class CellCoeffs
 {
    private:
     std::size_t alt_i, alt_j;
-    std::size_t alt_i2, alt_j2;  ///< Second alternate (vapor-side) for phase-boundary cells
     bool _valid, _has_valid_neighbor;
-    bool _has_alt2;  ///< True if a vapor-side alternate has been set
 
    public:
     double dx_dxhat, dy_dyhat;
     CellCoeffs() {
         _valid = false;
         _has_valid_neighbor = false;
-        _has_alt2 = false;
         dx_dxhat = _HUGE;
         dy_dyhat = _HUGE;
         alt_i = 9999999;
         alt_j = 9999999;
-        alt_i2 = 9999999;
-        alt_j2 = 9999999;
     }
     std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
     /// Additional per-cell polynomials populated by the SBTL backend so it
@@ -1012,25 +1013,6 @@ class CellCoeffs
             return std::make_pair(alt_i, alt_j);
         }
         return std::nullopt;
-    }
-    /// Set the vapor-side alternate cell (used by SBTL for phase-boundary cells)
-    void set_alternate2(std::size_t i, std::size_t j) {
-        alt_i2 = i;
-        alt_j2 = j;
-        _has_alt2 = true;
-    }
-    /// Get the vapor-side alternate cell
-    void get_alternate2(std::size_t& i, std::size_t& j) const {
-        if (_has_alt2) {
-            i = alt_i2;
-            j = alt_j2;
-        } else {
-            throw ValueError("No vapor-side alternate");
-        }
-    }
-    /// Returns true if a vapor-side alternate has been set
-    bool has_valid_neighbor2() const {
-        return _has_alt2;
     }
 };
 

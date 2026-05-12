@@ -6,6 +6,7 @@
 #    include <iostream>
 #    include <map>
 #    include <memory>
+#    include <mutex>
 #    include <Eigen/Sparse>
 #    include <Eigen/SparseLU>
 
@@ -128,7 +129,16 @@ class BsplineMatrixCache
 {
    public:
     using Solver = Eigen::SparseLU<Eigen::SparseMatrix<double>>;
+    // Thread-safety: this is a process-wide cache (file-static via
+    // bspline_cache()).  If two threads concurrently construct SBTL
+    // backends with different grid sizes, both could race on solvers_.
+    // Magic-statics gives us thread-safe initialization of the cache
+    // object itself, but the map mutation here needs its own lock.
+    // Contention is negligible — the lookup is hit once per (Nx, Ny)
+    // pair across the program's lifetime, then becomes a const map
+    // read.
     Solver& solver_for(std::size_t N) {
+        std::lock_guard<std::mutex> lock(solvers_mutex_);
         auto it = solvers_.find(N);
         if (it != solvers_.end()) return *it->second;
         Eigen::SparseMatrix<double> A(static_cast<int>(N), static_cast<int>(N));
@@ -162,6 +172,7 @@ class BsplineMatrixCache
 
    private:
     std::map<std::size_t, std::unique_ptr<Solver>> solvers_;
+    std::mutex solvers_mutex_;
 };
 
 // File-local matrix cache — initialized on first call, freed at program exit.
@@ -498,14 +509,14 @@ void NormalizedPHTable::set_limits() {
     }
 }
 
-double NormalizedPHTable::xnorm_from_h(double h, double P, double h_sat) const {
+double NormalizedPHTable::xnorm_from_h(double h, double P, std::optional<double> h_sat) const {
     // Source of truth per region:
     //   LIQUID: h_lo from Cheb (h(T_min, p)),     h_hi from H-superanc (h_sat,L)
     //   VAPOR : h_lo from H-superanc (h_sat,V),    h_hi from Cheb (h(T_max, p))
     //   SUPER : both from Cheb
     // Caller passes h_sat (machine-precision via H-superancillary) for the
-    // sat-boundary; if NaN, fall back to the Cheb (less accurate near the
-    // critical cusp, but still works for smooth-monotonic stretches).
+    // sat-boundary; if nullopt, fall back to the Cheb (less accurate near
+    // the critical cusp, but still works for smooth-monotonic stretches).
     auto cheb_or_isobar = [&](const Cheb1D& cb, const std::vector<double>& fallback) -> double {
         if (cb.valid()) return cb.eval(P);
         if (fallback.empty()) return std::numeric_limits<double>::quiet_NaN();
@@ -516,14 +527,14 @@ double NormalizedPHTable::xnorm_from_h(double h, double P, double h_sat) const {
         const double frac = (std::log(P) - std::log(yvec[j])) / (std::log(yvec[j + 1]) - std::log(yvec[j]));
         return fallback[j] + frac * (fallback[j + 1] - fallback[j]);
     };
-    double h_lo, h_hi;
+    double h_lo = 0.0, h_hi = 0.0;
     switch (region_) {
         case LIQUID:
             h_lo = cheb_or_isobar(h_lo_cheb, h_lo_isobar);
-            h_hi = std::isfinite(h_sat) ? h_sat : cheb_or_isobar(h_hi_cheb, h_hi_isobar);
+            h_hi = h_sat ? *h_sat : cheb_or_isobar(h_hi_cheb, h_hi_isobar);
             break;
         case VAPOR:
-            h_lo = std::isfinite(h_sat) ? h_sat : cheb_or_isobar(h_lo_cheb, h_lo_isobar);
+            h_lo = h_sat ? *h_sat : cheb_or_isobar(h_lo_cheb, h_lo_isobar);
             h_hi = cheb_or_isobar(h_hi_cheb, h_hi_isobar);
             break;
         case SUPER:
@@ -1180,7 +1191,7 @@ void NormalizedPTTable::set_limits() {
     }
 }
 
-double NormalizedPTTable::xnorm_from_T(double T, double P, double T_sat) const {
+double NormalizedPTTable::xnorm_from_T(double T, double P, std::optional<double> T_sat) const {
     auto cheb_or_isobar = [&](const Cheb1D& cb, const std::vector<double>& fallback) -> double {
         if (cb.valid()) return cb.eval(P);
         if (fallback.empty()) return std::numeric_limits<double>::quiet_NaN();
@@ -1195,10 +1206,10 @@ double NormalizedPTTable::xnorm_from_T(double T, double P, double T_sat) const {
     switch (region_) {
         case LIQUID:
             T_lo = cheb_or_isobar(T_lo_cheb, T_lo_isobar);
-            T_hi = std::isfinite(T_sat) ? T_sat : cheb_or_isobar(T_hi_cheb, T_hi_isobar);
+            T_hi = T_sat ? *T_sat : cheb_or_isobar(T_hi_cheb, T_hi_isobar);
             break;
         case VAPOR:
-            T_lo = std::isfinite(T_sat) ? T_sat : cheb_or_isobar(T_lo_cheb, T_lo_isobar);
+            T_lo = T_sat ? *T_sat : cheb_or_isobar(T_lo_cheb, T_lo_isobar);
             T_hi = cheb_or_isobar(T_hi_cheb, T_hi_isobar);
             break;
         case SUPER:
@@ -1210,7 +1221,7 @@ double NormalizedPTTable::xnorm_from_T(double T, double P, double T_sat) const {
     return (T - T_lo) / (T_hi - T_lo);
 }
 
-double NormalizedPTTable::T_from_xnorm(double xnorm, double P, double T_sat) const {
+double NormalizedPTTable::T_from_xnorm(double xnorm, double P, std::optional<double> T_sat) const {
     auto cheb_or_isobar = [&](const Cheb1D& cb, const std::vector<double>& fallback) -> double {
         if (cb.valid()) return cb.eval(P);
         if (fallback.empty()) return std::numeric_limits<double>::quiet_NaN();
@@ -1225,10 +1236,10 @@ double NormalizedPTTable::T_from_xnorm(double xnorm, double P, double T_sat) con
     switch (region_) {
         case LIQUID:
             T_lo = cheb_or_isobar(T_lo_cheb, T_lo_isobar);
-            T_hi = std::isfinite(T_sat) ? T_sat : cheb_or_isobar(T_hi_cheb, T_hi_isobar);
+            T_hi = T_sat ? *T_sat : cheb_or_isobar(T_hi_cheb, T_hi_isobar);
             break;
         case VAPOR:
-            T_lo = std::isfinite(T_sat) ? T_sat : cheb_or_isobar(T_lo_cheb, T_lo_isobar);
+            T_lo = T_sat ? *T_sat : cheb_or_isobar(T_lo_cheb, T_lo_isobar);
             T_hi = cheb_or_isobar(T_hi_cheb, T_hi_isobar);
             break;
         case SUPER:
@@ -1604,7 +1615,7 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
     }
 }
 
-double NormalizedPHTable::h_from_xnorm(double xnorm, double P, double h_sat) const {
+double NormalizedPHTable::h_from_xnorm(double xnorm, double P, std::optional<double> h_sat) const {
     auto cheb_or_isobar = [&](const Cheb1D& cb, const std::vector<double>& fallback) -> double {
         if (cb.valid()) return cb.eval(P);
         if (fallback.empty()) return std::numeric_limits<double>::quiet_NaN();
@@ -1615,14 +1626,14 @@ double NormalizedPHTable::h_from_xnorm(double xnorm, double P, double h_sat) con
         const double frac = (std::log(P) - std::log(yvec[j])) / (std::log(yvec[j + 1]) - std::log(yvec[j]));
         return fallback[j] + frac * (fallback[j + 1] - fallback[j]);
     };
-    double h_lo, h_hi;
+    double h_lo = 0.0, h_hi = 0.0;
     switch (region_) {
         case LIQUID:
             h_lo = cheb_or_isobar(h_lo_cheb, h_lo_isobar);
-            h_hi = std::isfinite(h_sat) ? h_sat : cheb_or_isobar(h_hi_cheb, h_hi_isobar);
+            h_hi = h_sat ? *h_sat : cheb_or_isobar(h_hi_cheb, h_hi_isobar);
             break;
         case VAPOR:
-            h_lo = std::isfinite(h_sat) ? h_sat : cheb_or_isobar(h_lo_cheb, h_lo_isobar);
+            h_lo = h_sat ? *h_sat : cheb_or_isobar(h_lo_cheb, h_lo_isobar);
             h_hi = cheb_or_isobar(h_hi_cheb, h_hi_isobar);
             break;
         case SUPER:
