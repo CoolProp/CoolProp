@@ -294,6 +294,8 @@ endforeach()
 list(REMOVE_ITEM APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/Tests.cpp")
 list(REMOVE_ITEM APP_SOURCES
      "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+list(REMOVE_ITEM APP_SOURCES
+     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/SBTL-Tests.cpp")
 
 ## This file is only needed for the library, normal builds do not need it.
 list(REMOVE_ITEM APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
@@ -2049,6 +2051,8 @@ if(COOLPROP_MAIN_MODULE)
     list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/Tests.cpp")
     list(APPEND APP_SOURCES
          "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+    list(APPEND APP_SOURCES
+         "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/SBTL-Tests.cpp")
   endif()
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cxx")
   add_executable(Main ${APP_SOURCES})
@@ -2070,6 +2074,8 @@ if(COOLPROP_CATCH_MODULE)
 
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/SBTL-Tests.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
