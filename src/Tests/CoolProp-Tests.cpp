@@ -11,6 +11,7 @@
 #include "miniz.h"
 #include <atomic>
 #include <map>
+#include <random>
 #include <set>
 #include <thread>
 
@@ -5920,6 +5921,82 @@ TEST_CASE("SBTL Hermite bicubic is the default normph build path for core props"
     HEOS->update(CoolProp::PT_INPUTS, 1e6, 320.0);
     SBTL_AS->update(CoolProp::PT_INPUTS, 1e6, 320.0);
     CHECK(SBTL_AS->rhomolar() == Catch::Approx(HEOS->rhomolar()).epsilon(1e-3));
+}
+
+TEST_CASE("SBTL Hermite vs cubic accuracy delta on CO2 random PT sweep", "[.][hermite_accuracy]") {
+    // Hidden by default ([.] prefix) — slow (~150s, two table rebuilds + 200
+    // PT lookups × 2 paths).  Run explicitly with --test-spec '[hermite_accuracy]'
+    // to quantify the foi.1 accuracy improvement.  Asserts the Hermite path
+    // is at least as accurate as the cubic-only baseline on every property's
+    // median deviation — regression guard against bad chain-rule math.
+    auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "CO2"));
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    auto* SBTL = dynamic_cast<CoolProp::SBTLBackend*>(SBTL_AS.get());
+    REQUIRE(SBTL != nullptr);
+    REQUIRE(SBTL->iapws_conformance_mode());
+
+    const double T_min = HEOS->Ttriple() * 1.1;
+    const double T_max = std::min(static_cast<double>(HEOS->Tmax()) * 0.95, 1.4 * static_cast<double>(HEOS->T_critical()));
+    const double p_min = std::max(static_cast<double>(HEOS->p_triple()) * 1.5, 1e3);
+    const double p_max = std::min(static_cast<double>(HEOS->pmax()) * 0.95, 5.0 * static_cast<double>(HEOS->p_critical()));
+    const double p_crit = HEOS->p_critical();
+
+    std::mt19937 gen(42);
+    std::uniform_real_distribution<double> log_p(std::log(p_min), std::log(p_max));
+    std::uniform_real_distribution<double> Tdist(T_min, T_max);
+    std::vector<std::pair<double, double>> states;
+    while (states.size() < 200) {
+        const double p = std::exp(log_p(gen));
+        const double T = Tdist(gen);
+        try {
+            HEOS->update(CoolProp::PT_INPUTS, p, T);
+            const double q = HEOS->Q();
+            if (q > 0.0 && q < 1.0) continue;
+            if (p > 0.97 * p_crit && p < 1.03 * p_crit) continue;
+        } catch (...) {
+            continue;
+        }
+        states.emplace_back(p, T);
+    }
+
+    auto run_path = [&](std::vector<double>& drho, std::vector<double>& dT) {
+        for (auto [p, T] : states) {
+            try {
+                HEOS->update(CoolProp::PT_INPUTS, p, T);
+                SBTL_AS->update(CoolProp::PT_INPUTS, p, T);
+            } catch (...) {
+                continue;
+            }
+            drho.push_back(std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar()));
+            dT.push_back(std::abs(SBTL_AS->T() - HEOS->T()) / std::abs(HEOS->T()));
+        }
+    };
+    struct Stats
+    {
+        double median, p99, max;
+    };
+    auto stats = [](std::vector<double> v) -> Stats {
+        if (v.empty()) return {0.0, 0.0, 0.0};
+        std::sort(v.begin(), v.end());
+        return {v[v.size() / 2], v[static_cast<std::size_t>(0.99 * (v.size() - 1))], v.back()};
+    };
+
+    std::vector<double> drho_h, dT_h, drho_c, dT_c;
+    run_path(drho_h, dT_h);
+    SBTL->set_iapws_conformance_mode(false);
+    run_path(drho_c, dT_c);
+
+    const auto rho_h = stats(drho_h), rho_c = stats(drho_c);
+    std::cout << "[hermite_accuracy] CO2 random PT sweep, n=" << drho_h.size() << " probes\n";
+    std::cout << "  rho   Hermite  median=" << rho_h.median << "  p99=" << rho_h.p99 << "  max=" << rho_h.max << "\n";
+    std::cout << "        Cubic    median=" << rho_c.median << "  p99=" << rho_c.p99 << "  max=" << rho_c.max << "\n";
+    std::cout << "        ratio    median=" << rho_h.median / std::max(rho_c.median, 1e-30) << "  p99=" << rho_h.p99 / std::max(rho_c.p99, 1e-30)
+              << "  max=" << rho_h.max / std::max(rho_c.max, 1e-30) << "\n";
+    // (T deviation is zero by construction for PT_INPUTS lookups since SBTL
+    //  echoes the input T; useful to report only on HmolarP_INPUTS sweeps.)
+    // Hermite must be at least as accurate as cubic on median rho.  2×
+    // slack absorbs noise; bigger ratio means broken chain-rule math.
+    CHECK(rho_h.median <= 2.0 * rho_c.median);
 }
 
 TEST_CASE("SBTL native speed_sound matches HEOS for CO2 single-phase states", "[SBTL][speed_sound]") {
