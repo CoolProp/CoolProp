@@ -137,7 +137,7 @@ cmake --build build --target format-check   # dry-run, fail on violations
 cmake --build build --target format         # apply clang-format -i in place
 ```
 
-CI's `dev_clangformat.yml` workflow runs the same `clang-format` against PR-touched files and fails the build on any diff. Full contributor doc: [`dev/ci/README.md`](../dev/ci/README.md).
+CI's `dev_checks.yml` workflow (job `clang-format`) runs the same `clang-format` against PR-touched files and fails the build on any diff. Full contributor doc: [`dev/ci/README.md`](../dev/ci/README.md).
 
 The repo also ships a `.git-blame-ignore-revs` file listing SHAs of pure-formatting commits (the one-shot reformat). Opt in once per clone so `git blame` looks through them:
 

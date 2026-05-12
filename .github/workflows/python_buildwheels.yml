@@ -1,14 +1,29 @@
 name: Python cibuildwheel
 
+# Wheel-matrix gating (CoolProp-rog):
+#   • On master/develop pushes, tags, and PRs carrying the `full-wheels`
+#     label, build the full matrix (6 Pythons × ~7 arches ≈ 42 wheels).
+#   • On every other PR, build a representative subset (1 Linux x86_64,
+#     1 Linux aarch64, 1 Windows AMD64, 1 macOS arm64 — newest Python
+#     only). Cuts ~90% of PR wheel CI minutes while still catching
+#     cross-platform breakage pre-merge.
+# Adding the `full-wheels` label to an open PR triggers a fresh full
+# build (via the `labeled` event type); other label changes are ignored
+# by the gate in `set-matrix`.
+
 on:
   push:
     branches: [ 'master', 'main', 'develop', 'actions_pypi' ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
+    types: [opened, synchronize, reopened, labeled]
 
 jobs:
   set-version:
+    # Skip this whole workflow on label events unless the label is `full-wheels`,
+    # otherwise every unrelated label change would spawn a wheel build.
+    if: github.event_name != 'pull_request' || github.event.action != 'labeled' || github.event.label.name == 'full-wheels'
     runs-on: ubuntu-latest
     outputs:
       testpypiversion: ${{ steps.set.outputs.testpypiversion }}
@@ -16,20 +31,59 @@ jobs:
       - name: Set version for testpypi
         id: set
         run: echo "testpypiversion=$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
-  
+
+  set-matrix:
+    needs: set-version
+    runs-on: ubuntu-latest
+    outputs:
+      full: ${{ steps.detect.outputs.full }}
+      py_versions: ${{ steps.detect.outputs.py_versions }}
+      ubuntu_archs: ${{ steps.detect.outputs.ubuntu_archs }}
+      ubuntu_arm_archs: ${{ steps.detect.outputs.ubuntu_arm_archs }}
+      windows_archs: ${{ steps.detect.outputs.windows_archs }}
+      macos_archs: ${{ steps.detect.outputs.macos_archs }}
+    steps:
+      - name: Decide full vs subset matrix
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          full=false
+          if [[ "$EVENT_NAME" == "push" || "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            full=true
+          elif [[ "$EVENT_NAME" == "pull_request" ]] && echo "$LABELS_JSON" | grep -q '"full-wheels"'; then
+            full=true
+          fi
+          echo "Mode: $(if $full; then echo full; else echo subset; fi)"
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          if $full; then
+            echo 'py_versions=[39, 310, 311, 312, 313, 314]' >> "$GITHUB_OUTPUT"
+            echo 'ubuntu_archs=["x86_64"]' >> "$GITHUB_OUTPUT"
+            echo 'ubuntu_arm_archs=["aarch64"]' >> "$GITHUB_OUTPUT"
+            echo 'windows_archs=["AMD64", "x86", "ARM64"]' >> "$GITHUB_OUTPUT"
+            echo 'macos_archs=["x86_64", "arm64"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'py_versions=[313]' >> "$GITHUB_OUTPUT"
+            echo 'ubuntu_archs=["x86_64"]' >> "$GITHUB_OUTPUT"
+            echo 'ubuntu_arm_archs=["aarch64"]' >> "$GITHUB_OUTPUT"
+            echo 'windows_archs=["AMD64"]' >> "$GITHUB_OUTPUT"
+            echo 'macos_archs=["arm64"]' >> "$GITHUB_OUTPUT"
+          fi
+
   python_source:
     needs: set-version
     name: Build source package
     runs-on: ubuntu-latest
     steps:
-    
+
     - uses: actions/checkout@v6
 
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
         python-version: 3.13.x
-        
+
     - name: Install dependencies
       run: pip install setuptools wheel Cython requests jinja2 pyyaml packaging
 
@@ -55,82 +109,69 @@ jobs:
           ./Python/*.tar.gz
 
   python_ubuntu:
-    needs: set-version
+    needs: [set-version, set-matrix]
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: [39, 310, 311, 312, 313, 314]
-        arch: [i686, x86_64, ppc64le, s390x]
-        exclude:
-          - os: ubuntu-latest
-            arch: i686 # reduce the build time until people ask for the binaries
-          - os: ubuntu-latest
-            arch: ppc64le # reduce the build time until people ask for the binaries
-          - os: ubuntu-latest
-            arch: s390x # reduce the build time until people ask for the binaries
+        python-version: ${{ fromJSON(needs.set-matrix.outputs.py_versions) }}
+        arch: ${{ fromJSON(needs.set-matrix.outputs.ubuntu_archs) }}
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
       TESTPYPI_VERSION: ${{ needs.set-version.outputs.testpypiversion }}
-      
+
   python_ubuntu_arm:
-    needs: set-version
+    needs: [set-version, set-matrix]
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
         os: [ubuntu-24.04-arm]
-        python-version: [39, 310, 311, 312, 313, 314]
-        arch: [aarch64]
+        python-version: ${{ fromJSON(needs.set-matrix.outputs.py_versions) }}
+        arch: ${{ fromJSON(needs.set-matrix.outputs.ubuntu_arm_archs) }}
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
       TESTPYPI_VERSION: ${{ needs.set-version.outputs.testpypiversion }}
-      
+
   python_windows:
-    needs: set-version
+    needs: [set-version, set-matrix]
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
         os: [windows-latest]
-        python-version: [39, 310, 311, 312, 313, 314]
-        arch: [AMD64, x86, ARM64]
-        #exclude:
-        #  - os: windows
-        #    arch: ARM64 # creates problems with msgpack-c
+        python-version: ${{ fromJSON(needs.set-matrix.outputs.py_versions) }}
+        arch: ${{ fromJSON(needs.set-matrix.outputs.windows_archs) }}
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
       TESTPYPI_VERSION: ${{ needs.set-version.outputs.testpypiversion }}
-  
+
   python_macos:
-    needs: set-version
+    needs: [set-version, set-matrix]
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
         os: [macos-latest]
-        python-version: [39, 310, 311, 312, 313, 314]
-        arch: [x86_64, arm64, universal2]
-        exclude:
-          - os: macos-latest
-            arch: universal2 # is redundant
+        python-version: ${{ fromJSON(needs.set-matrix.outputs.py_versions) }}
+        arch: ${{ fromJSON(needs.set-matrix.outputs.macos_archs) }}
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
       TESTPYPI_VERSION: ${{ needs.set-version.outputs.testpypiversion }}
-  
+
   merge_wheels:
    runs-on: ubuntu-latest
    needs: [python_source, python_ubuntu, python_ubuntu_arm, python_windows, python_macos]

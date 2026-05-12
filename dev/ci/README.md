@@ -116,38 +116,43 @@ The hook auto-skips with a warning when clang-tidy isn't installed or no
 `build/` directory exists. Override the build dir via
 `COOLPROP_BUILD_DIR=<path>` if you have multiple build trees.
 
-The CI counterpart (`.github/workflows/dev_clangtidy.yml`) runs
-`clang-tidy-diff.py` on PR-touched lines only; the local hook runs
-clang-tidy on whole files, so local output is a strict superset of what
-CI surfaces.
+The CI counterpart (the `clang-tidy` job in
+`.github/workflows/dev_checks.yml`) runs `clang-tidy-diff.py` on
+PR-touched lines only; the local hook runs clang-tidy on whole files,
+so local output is a strict superset of what CI surfaces.
 
 ---
 
 ## Other CI tooling (warning-only)
 
-These workflows produce artifacts on every PR but never fail the build —
-they exist to surface signal, not to gate.
+All of these now live as parallel jobs in a single
+`.github/workflows/dev_checks.yml` workflow (CoolProp-rog consolidated
+the previously-separate `dev_*.yml` files). They produce artifacts on
+every PR but never fail the build — they exist to surface signal, not
+to gate. The exception is `asan`, which does fail.
 
-- **cppcheck** (`.github/workflows/dev_cppcheck.yml`) — uploads a colorized
+- **cppcheck** (`cppcheck` job in `dev_checks.yml`) — uploads a colorized
   cppcheck report. Run locally with `cppcheck --std=c++17 ./src` after
   `apt install cppcheck`.
-- **clang-tidy diff** (`.github/workflows/dev_clangtidy.yml`) — runs
+- **clang-tidy diff** (`clang-tidy` job in `dev_checks.yml`) — runs
   `clang-tidy-diff.py` on PR-touched lines and uploads
   `clang-tidy-diff.log`. Empirical noise survey on representative `src/`
   files showed the strict `.clang-tidy` config produces a high cascade
   of `misc-include-cleaner` / `misc-const-correctness` /
   `readability-isolate-declaration` warnings before any meaningful
   bug-finding signal — informational by design, no plans to gate.
-- **CodeQL** (`.github/workflows/dev_codeql.yml`) — runs the
+- **CodeQL** (`codeql` job in `dev_checks.yml`) — runs the
   `security-and-quality` query suite on every PR. Findings appear in the
   repo's Security tab.
 - **Coverity** (`.github/workflows/dev_coverity.yml`) — schedule-only
-  (twice weekly) due to free-tier quota. The workflow uploads
-  `coverity-defects.json` (machine-readable) for AI-agent consumption;
-  see also the Coverity Scan web UI for the curated view.
-- **IWYU** (`.github/workflows/dev_iwyu.yml`) — runs include-what-you-use
+  (twice weekly) due to free-tier quota. Lives in its own workflow file
+  because its trigger model is fundamentally different from the
+  consolidated dev_checks jobs. Uploads `coverity-defects.json`
+  (machine-readable) for AI-agent consumption; see also the Coverity
+  Scan web UI for the curated view.
+- **IWYU** (`iwyu` job in `dev_checks.yml`) — runs include-what-you-use
   via the `COOLPROP_IWYU` CMake opt-in and uploads `iwyu.log`.
-- **AddressSanitizer** (`.github/workflows/dev_asan.yml`) — full Catch test
+- **AddressSanitizer** (`asan` job in `dev_checks.yml`) — full Catch test
   suite under ASan on every PR. This one *does* fail builds, since memory
   bugs are real bugs.
 

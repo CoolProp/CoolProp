@@ -1,0 +1,341 @@
+name: Development checks
+
+# Consolidated dev-checks workflow (CoolProp-rog). Replaces the six
+# previous dev_*.yml files (asan, clangformat, clangtidy, codeql, cppcheck,
+# iwyu) with a single workflow whose jobs run in parallel. Each job's
+# `if:` preserves the original trigger semantics of the file it replaced,
+# so this is a UI/UX consolidation — not a change in what runs when.
+#
+# Trigger semantics per job (matches the retired workflows):
+#   asan         — push to master + PR
+#   clang-format — PR only (push retired in CoolProp-2uw.1; see job comment)
+#   clang-tidy   — PR + workflow_dispatch (informational, never gates)
+#   codeql       — push to master + PR + scheduled twice-weekly fallback
+#   cppcheck     — PR + workflow_dispatch + scheduled weekly fallback
+#                  (informational, never gates)
+#   iwyu         — push to master + PR + workflow_dispatch + scheduled
+#                  weekly fallback (informational, never gates)
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master, main, develop]
+  schedule:
+    - cron: '15 8 * * 0'    # weekly Sunday — cppcheck, iwyu fallback
+    - cron: '15 8 * * 0,4'  # twice weekly Sun+Thu — codeql fallback
+  workflow_dispatch:
+
+jobs:
+  asan:
+    name: address sanitizer
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.13]
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Build REFPROP
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        run: |
+          set -x
+          cd .github/workflows
+          chmod +x buildREFPROP.sh
+          ./buildREFPROP.sh
+          echo COOLPROP_REFPROP_ROOT=`pwd`/gpgREFPROP/REFPROP-cmake/bld >> $GITHUB_ENV
+        env:
+          REFPROP_GPG_PASSPHRASE: ${{ secrets.REFPROP_GPG_PASSPHRASE }}
+      - name: mkdir
+        run: mkdir build && cd build
+      - name: cmake config
+        run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Asan -DCOOLPROP_ASAN=ON -DCOOLPROP_CATCH_MODULE=ON
+      - name: build all Catch tests
+        run: cmake --build build --config Asan
+      - name: run all the compiled Catch tests with address sanitizer
+        run: cd build && ASAN_OPTIONS=detect_stack_use_after_return=1:verbosity=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
+
+  clang-format:
+    name: clang-format (PR diff)
+    # PR-only — push triggers were retired (CoolProp-2uw.1) because master kept
+    # going red retroactively after every merge that introduced a violation.
+    # If you need to test the workflow on a branch, open a draft PR.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # Fetch all history (especially branches)
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Run clang-format against C++ files touched by the PR
+        shell: bash
+        run: |
+            echo "GITHUB_REF=$GITHUB_REF GITHUB_BASE_REF=$GITHUB_BASE_REF GITHUB_HEAD_REF=$GITHUB_HEAD_REF"
+            # Pin clang-format to the version declared in .pre-commit-config.yaml
+            # so CI and the local pre-commit hook always run the same binary.
+            VER=$(awk '/mirrors-clang-format/{f=1} f && /^[[:space:]]*rev:/{print $2; exit}' .pre-commit-config.yaml | tr -d 'v"')
+            export CLANG_FORMAT="uvx clang-format@$VER"
+            $CLANG_FORMAT --version
+            # Use SHAs directly so this works for both fork PRs and local-branch PRs.
+            # remotes/origin/<branch> is unreliable for fork PRs because the fork's
+            # branch is not fetched into origin.
+            #
+            # HEAD must be pull_request.head.sha (the actual PR tip), NOT github.sha
+            # (the synthetic refs/pull/N/merge commit). Using the merge SHA causes
+            # `git diff base..merge` to include every change master made after the
+            # PR was opened — so any file master modified gets flagged on every
+            # downstream PR even when the PR did not touch it.
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            echo "Comparing HEAD $HEAD_SHA against base $BASE_SHA"
+            ./dev/ci/clang-format.sh "$HEAD_SHA" "$BASE_SHA"
+
+      - name: Upload clang-format patch as artifact
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+            name: CoolProp-${{ github.sha }}-clang_format.patch
+            path: clang_format.patch
+
+  clang-tidy:
+    name: clang-tidy (diff-only, informational)
+    # Runs clang-tidy on lines changed in the PR via clang-tidy-diff.py and
+    # uploads the report as an artifact. Informational by design: never gates
+    # a PR. Empirical noise survey on representative src/ files (Solvers.cpp,
+    # CPstrings.cpp, HelmholtzEOSMixtureBackend.cpp) showed the strict
+    # .clang-tidy config (WarningsAsErrors: '*') would surface a high-volume
+    # cascade — mostly misc-include-cleaner / misc-const-correctness /
+    # readability-isolate-declaration noise — on virtually every PR touching
+    # src/, before any meaningful bug-finding signal could be acted on.
+    #
+    # Both the `continue-on-error` on the run step and `if: always()` on the
+    # upload are load-bearing: they keep this workflow informational across
+    # every code path.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # full history for git diff against base
+
+      - name: Install clang-tidy-18 + ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy-18 ninja-build
+          sudo update-alternatives --install \
+            /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-18 100
+          clang-tidy --version
+
+      - name: Configure
+        run: |
+          cmake -G Ninja \
+            -DCOOLPROP_MY_MAIN=dev/ci/main.cpp \
+            -DCOOLPROP_STATIC_LIBRARY=ON \
+            -B ${{ github.workspace }}/build \
+            -S .
+
+      - name: Generate auto-generated headers
+        # The all_*_JSON.h headers are generated at build time from
+        # dev/fluids/. clang-tidy needs them on disk to parse src/ files.
+        run: cmake --build ${{ github.workspace }}/build --target generate_headers
+
+      - name: Locate clang-tidy-diff.py
+        id: diff_script
+        run: |
+          path=$(find /usr -name 'clang-tidy-diff*.py' 2>/dev/null | head -1)
+          if [ -z "$path" ]; then
+            echo "clang-tidy-diff.py not found via apt; falling back to upstream raw"
+            curl -sSL -o /tmp/clang-tidy-diff.py \
+              https://raw.githubusercontent.com/llvm/llvm-project/release/18.x/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
+            path=/tmp/clang-tidy-diff.py
+          fi
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "Using: $path"
+
+      - name: Run clang-tidy-diff on PR-touched lines
+        continue-on-error: true   # informational by design — see top-of-job
+        shell: bash
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+          echo "Comparing $HEAD_SHA against $BASE_SHA"
+          # Negative pathspecs skip vendored / auto-generated files. Anything
+          # that lives outside src/ + include/ won't have a compile_commands
+          # entry anyway and would just produce errors.
+          git diff -U0 "$BASE_SHA" "$HEAD_SHA" -- \
+            ':!externals/' \
+            ':!include/*_JSON*.h' \
+            ':!include/gitrevision.h' \
+            ':!include/miniz.h' \
+            | python3 ${{ steps.diff_script.outputs.path }} \
+                -p1 \
+                -path ${{ github.workspace }}/build \
+                -regex '.*\.(c|cpp|h|hpp)$' \
+                -j$(nproc) \
+                2>&1 | tee clang-tidy-diff.log
+          echo "clang-tidy-diff.log size: $(wc -l < clang-tidy-diff.log) lines"
+
+      - name: Upload clang-tidy report as artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: CoolProp-${{ github.sha }}-clang-tidy-diff
+          path: clang-tidy-diff.log
+          if-no-files-found: warn
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    # Runs on push to master, every PR, and the twice-weekly cron fallback.
+    # Skip the Sunday-only cppcheck/iwyu cron — codeql only wants the Sun+Thu one.
+    if: github.event_name != 'schedule' || github.event.schedule == '15 8 * * 0,4'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [cpp, python]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Autobuild Python
+        if: ${{ matrix.language == 'python' }}
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Configure CPP
+        if: ${{ matrix.language == 'cpp' }}
+        run: cmake
+               -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
+               -B ${{github.workspace}}/build
+               -S .
+
+      - name: Build CPP
+        if: ${{ matrix.language == 'cpp' }}
+        run: cmake
+               --build ${{github.workspace}}/build
+               --config Release
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  cppcheck:
+    name: cppcheck (informational)
+    # Warning-only — cppcheck output drives an artifact + summary, never fails
+    # the PR. cppcheck is high-noise on a 937KLOC mature codebase, so we keep
+    # it advisory while we work down the queue.
+    # Triggers: PR + workflow_dispatch + Sunday cron (skip Thursday codeql cron).
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule == '15 8 * * 0')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck
+          cppcheck --version
+
+      - name: Run cppcheck
+        shell: bash
+        continue-on-error: true
+        run: |
+          cppcheck \
+            --std=c++17 \
+            --enable=warning,style,information \
+            --suppress=noExplicitConstructor \
+            --suppress=useStlAlgorithm \
+            --suppress=unmatchedSuppression \
+            --suppress=unusedPrivateFunction \
+            --suppress=functionStatic:src/Backends/Helmholtz/Fluids/FluidLibrary.h \
+            --inline-suppr \
+            --inconclusive \
+            --template='[{file}:{line}]:({severity}),[{id}],{message}' \
+            -j $(nproc) \
+            --force \
+            ./src \
+            3>&1 1>&2 2>&3 | tee cppcheck.txt || true
+
+      - name: Parse and colorize cppcheck
+        if: ${{ always() }}
+        continue-on-error: true
+        shell: bash
+        run: python ./dev/ci/colorize_cppcheck_results.py
+
+      - name: Upload cppcheck results as artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: CoolProp-${{ github.sha }}-cppcheck_results.txt
+          path: cppcheck.txt
+
+  iwyu:
+    name: include-what-you-use (informational)
+    # Warning-only — IWYU is high-noise and its suggestions need per-file
+    # judgment, so this job uploads the full report as an artifact and
+    # never fails a PR. The intent is to surface signal contributors can
+    # triage incrementally, not to gate.
+    #
+    # How: IWYU is wired into CMakeLists.txt via the COOLPROP_IWYU option
+    # (see src/Backends and the find_program(iwyu_path ...) blocks). When
+    # enabled, CMake sets CXX_INCLUDE_WHAT_YOU_USE on the Main target and
+    # the build output IS the IWYU report.
+    # Triggers: push master + PR + workflow_dispatch + Sunday cron.
+    if: github.event_name != 'schedule' || github.event.schedule == '15 8 * * 0'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install include-what-you-use
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iwyu ninja-build
+          include-what-you-use --version || true
+
+      - name: Configure with COOLPROP_IWYU
+        run: |
+          cmake -G Ninja \
+            -DCOOLPROP_IWYU=ON \
+            -DCOOLPROP_MY_MAIN=dev/ci/main.cpp \
+            -B ${{ github.workspace }}/build \
+            -S .
+
+      - name: Build (produces IWYU report)
+        continue-on-error: true
+        shell: bash
+        run: |
+          cmake --build ${{ github.workspace }}/build --config Release \
+            2>&1 | tee iwyu.log
+          # IWYU's exit codes don't follow build conventions; protect against
+          # tee swallowing a non-zero pipefail.
+          echo "iwyu.log size: $(wc -l < iwyu.log) lines"
+
+      - name: Upload IWYU report as artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: CoolProp-${{ github.sha }}-iwyu
+          path: iwyu.log
+          if-no-files-found: warn
