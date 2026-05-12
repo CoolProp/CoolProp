@@ -431,6 +431,45 @@ bool populate_corner_derivatives(AbstractState& AS, SBTLCornerDerivs& out) {
     return out.valid;
 }
 
+// PT-table analogue.  Reads ∂f/∂T, ∂f/∂p, ∂²f/∂T², ∂²f/∂T∂p for
+// f in {rho, h, s, u} from a primed HEOS state.  Same usage contract
+// as populate_corner_derivatives — returns false on any throw or NaN.
+bool populate_corner_derivatives_pt(AbstractState& AS, SBTLCornerDerivsPT& out) {
+    auto safe = [&](double v) { return ValidNumber(v) ? v : std::numeric_limits<double>::quiet_NaN(); };
+    try {
+        out.rhomolar = safe(static_cast<double>(AS.rhomolar()));
+        out.hmolar = safe(static_cast<double>(AS.hmolar()));
+        out.smolar = safe(static_cast<double>(AS.smolar()));
+        out.umolar = safe(static_cast<double>(AS.umolar()));
+        if (!ValidNumber(out.rhomolar) || !ValidNumber(out.hmolar) || !ValidNumber(out.smolar) || !ValidNumber(out.umolar)) {
+            return false;
+        }
+        out.drho_dT = safe(static_cast<double>(AS.first_partial_deriv(iDmolar, iT, iP)));
+        out.dh_dT = safe(static_cast<double>(AS.first_partial_deriv(iHmolar, iT, iP)));
+        out.ds_dT = safe(static_cast<double>(AS.first_partial_deriv(iSmolar, iT, iP)));
+        out.du_dT = safe(static_cast<double>(AS.first_partial_deriv(iUmolar, iT, iP)));
+
+        out.drho_dp = safe(static_cast<double>(AS.first_partial_deriv(iDmolar, iP, iT)));
+        out.dh_dp = safe(static_cast<double>(AS.first_partial_deriv(iHmolar, iP, iT)));
+        out.ds_dp = safe(static_cast<double>(AS.first_partial_deriv(iSmolar, iP, iT)));
+        out.du_dp = safe(static_cast<double>(AS.first_partial_deriv(iUmolar, iP, iT)));
+
+        out.d2rho_dT2 = safe(static_cast<double>(AS.second_partial_deriv(iDmolar, iT, iP, iT, iP)));
+        out.d2h_dT2 = safe(static_cast<double>(AS.second_partial_deriv(iHmolar, iT, iP, iT, iP)));
+        out.d2s_dT2 = safe(static_cast<double>(AS.second_partial_deriv(iSmolar, iT, iP, iT, iP)));
+        out.d2u_dT2 = safe(static_cast<double>(AS.second_partial_deriv(iUmolar, iT, iP, iT, iP)));
+
+        out.d2rho_dTp = safe(static_cast<double>(AS.second_partial_deriv(iDmolar, iT, iP, iP, iT)));
+        out.d2h_dTp = safe(static_cast<double>(AS.second_partial_deriv(iHmolar, iT, iP, iP, iT)));
+        out.d2s_dTp = safe(static_cast<double>(AS.second_partial_deriv(iSmolar, iT, iP, iP, iT)));
+        out.d2u_dTp = safe(static_cast<double>(AS.second_partial_deriv(iUmolar, iT, iP, iP, iT)));
+    } catch (...) {
+        return false;
+    }
+    out.valid = ValidNumber(out.drho_dT) && ValidNumber(out.drho_dp) && ValidNumber(out.d2rho_dT2) && ValidNumber(out.d2rho_dTp);
+    return out.valid;
+}
+
 // ---------------------------------------------------------------------------
 // NormalizedPHTable: coordinate-aligned PH table.
 // ---------------------------------------------------------------------------
@@ -951,6 +990,189 @@ void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vec
     }
 }
 
+void SBTLBackend::build_normpt_hermite_alphas(NormalizedPTTable& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
+    if (!iapws_conformance_mode_) return;
+    if (coeffs.empty()) return;
+    if (!this->AS) return;
+
+    // Per-row sat envelope data on the T-axis.  For non-sat boundaries
+    // (LIQUID T_lo, VAPOR T_hi, SUPER both) the Cheb1D is fitted and
+    // eval_dlogp gives an analytic derivative.  For the sat-curve sides
+    // (LIQUID T_hi = T_sat,L, VAPOR T_lo = T_sat,V) the Cheb1D is NOT
+    // populated — derive dT_sat/dlogp by central finite difference on
+    // the per-row T_lo_isobar / T_hi_isobar arrays (filled by PQ_INPUTS
+    // during populate_normpt_bounds; smooth in log p away from p_crit).
+    struct RowSat
+    {
+        double T_lo{0.0};
+        double T_hi{0.0};
+        double dT_lo_dlogp{0.0};
+        double dT_hi_dlogp{0.0};
+        bool valid{false};
+    };
+    std::vector<RowSat> row_sat(table.Ny);
+    auto fd_dlogp = [&](const std::vector<double>& v, std::size_t j) -> double {
+        if (j == 0 || j + 1 >= v.size()) {
+            // Forward / backward FD on the edge row.
+            const std::size_t a = (j == 0) ? 0 : v.size() - 2;
+            const std::size_t b = (j == 0) ? 1 : v.size() - 1;
+            if (!ValidNumber(v[a]) || !ValidNumber(v[b])) return std::numeric_limits<double>::quiet_NaN();
+            return (v[b] - v[a]) / (std::log(table.yvec[b]) - std::log(table.yvec[a]));
+        }
+        if (!ValidNumber(v[j - 1]) || !ValidNumber(v[j + 1])) return std::numeric_limits<double>::quiet_NaN();
+        return (v[j + 1] - v[j - 1]) / (std::log(table.yvec[j + 1]) - std::log(table.yvec[j - 1]));
+    };
+    for (std::size_t j = 0; j < table.Ny; ++j) {
+        const double p = table.yvec[j];
+        const double T_lo = table.T_lo_isobar[j];
+        const double T_hi = table.T_hi_isobar[j];
+        const bool lo_is_sat = (table.region() == NormalizedPTTable::VAPOR);
+        const bool hi_is_sat = (table.region() == NormalizedPTTable::LIQUID);
+        const double dT_lo_dlogp =
+          lo_is_sat ? fd_dlogp(table.T_lo_isobar, j) : (table.T_lo_cheb.valid() ? table.T_lo_cheb.eval_dlogp(p) : fd_dlogp(table.T_lo_isobar, j));
+        const double dT_hi_dlogp =
+          hi_is_sat ? fd_dlogp(table.T_hi_isobar, j) : (table.T_hi_cheb.valid() ? table.T_hi_cheb.eval_dlogp(p) : fd_dlogp(table.T_hi_isobar, j));
+        row_sat[j].T_lo = T_lo;
+        row_sat[j].T_hi = T_hi;
+        row_sat[j].dT_lo_dlogp = dT_lo_dlogp;
+        row_sat[j].dT_hi_dlogp = dT_hi_dlogp;
+        row_sat[j].valid = ValidNumber(T_lo) && ValidNumber(T_hi) && ValidNumber(dT_lo_dlogp) && ValidNumber(dT_hi_dlogp) && T_hi > T_lo;
+    }
+
+    std::vector<std::vector<SBTLCornerDerivsPT>> corner(table.Nx, std::vector<SBTLCornerDerivsPT>(table.Ny));
+    std::vector<std::vector<bool>> visited(table.Nx, std::vector<bool>(table.Ny, false));
+
+    auto get_corner = [&](std::size_t i, std::size_t j) -> SBTLCornerDerivsPT& {
+        if (visited[i][j]) return corner[i][j];
+        visited[i][j] = true;
+        if (!row_sat[j].valid) {
+            corner[i][j].valid = false;
+            return corner[i][j];
+        }
+        const double xnorm = table.xvec[i];
+        const double p = table.yvec[j];
+        const double T_lo = row_sat[j].T_lo;
+        const double T_hi = row_sat[j].T_hi;
+        const double T = T_lo + xnorm * (T_hi - T_lo);
+        const bool sat_boundary =
+          (table.region() == NormalizedPTTable::LIQUID && i == table.Nx - 1) || (table.region() == NormalizedPTTable::VAPOR && i == 0);
+        try {
+            if (sat_boundary) {
+                const double Q = (table.region() == NormalizedPTTable::VAPOR) ? 1.0 : 0.0;
+                this->AS->update(PQ_INPUTS, p, Q);
+            } else {
+                this->AS->update(PT_INPUTS, p, T);
+            }
+        } catch (...) {
+            corner[i][j].valid = false;
+            return corner[i][j];
+        }
+        const double q = static_cast<double>(this->AS->Q());
+        if (!sat_boundary && q > 0.0 && q < 1.0) {
+            corner[i][j].valid = false;
+            return corner[i][j];
+        }
+        populate_corner_derivatives_pt(*(this->AS), corner[i][j]);
+        return corner[i][j];
+    };
+
+    auto extract = [](const SBTLCornerDerivsPT& cd, parameters prop, double& f, double& f_T, double& f_p, double& f_TT, double& f_Tp) -> bool {
+        switch (prop) {
+            case iDmolar:
+                f = cd.rhomolar;
+                f_T = cd.drho_dT;
+                f_p = cd.drho_dp;
+                f_TT = cd.d2rho_dT2;
+                f_Tp = cd.d2rho_dTp;
+                break;
+            case iHmolar:
+                f = cd.hmolar;
+                f_T = cd.dh_dT;
+                f_p = cd.dh_dp;
+                f_TT = cd.d2h_dT2;
+                f_Tp = cd.d2h_dTp;
+                break;
+            case iSmolar:
+                f = cd.smolar;
+                f_T = cd.ds_dT;
+                f_p = cd.ds_dp;
+                f_TT = cd.d2s_dT2;
+                f_Tp = cd.d2s_dTp;
+                break;
+            case iUmolar:
+                f = cd.umolar;
+                f_T = cd.du_dT;
+                f_p = cd.du_dp;
+                f_TT = cd.d2u_dT2;
+                f_Tp = cd.d2u_dTp;
+                break;
+            default:
+                return false;
+        }
+        return ValidNumber(f) && ValidNumber(f_T) && ValidNumber(f_p) && ValidNumber(f_TT) && ValidNumber(f_Tp);
+    };
+
+    const std::array<parameters, 4> core_props = {iDmolar, iHmolar, iSmolar, iUmolar};
+    int hermite_cell_count = 0;
+    for (std::size_t i = 0; i + 1 < table.Nx; ++i) {
+        for (std::size_t j = 0; j + 1 < table.Ny; ++j) {
+            if (!coeffs[i][j].valid()) continue;
+            const auto& c00 = get_corner(i, j);
+            const auto& c10 = get_corner(i + 1, j);
+            const auto& c01 = get_corner(i, j + 1);
+            const auto& c11 = get_corner(i + 1, j + 1);
+            if (!c00.valid || !c10.valid || !c01.valid || !c11.valid) continue;
+
+            const double Delta_xi = table.xvec[i + 1] - table.xvec[i];
+            const double Delta_eta = std::log(table.yvec[j + 1]) - std::log(table.yvec[j]);
+
+            const std::array<double, 4> xn = {table.xvec[i], table.xvec[i + 1], table.xvec[i], table.xvec[i + 1]};
+            const std::array<std::size_t, 4> jr = {j, j, j + 1, j + 1};
+            const std::array<const SBTLCornerDerivsPT*, 4> cds = {&c00, &c10, &c01, &c11};
+
+            bool any_property_upgraded = false;
+            for (parameters prop : core_props) {
+                std::array<double, 4> f{};
+                std::array<double, 4> fxi{};
+                std::array<double, 4> feta{};
+                std::array<double, 4> fxieta{};
+                bool ok = true;
+                for (int k = 0; k < 4; ++k) {
+                    double f_T, f_p, f_TT, f_Tp;
+                    if (!extract(*cds[k], prop, f[k], f_T, f_p, f_TT, f_Tp)) {
+                        ok = false;
+                        break;
+                    }
+                    const std::size_t row = jr[k];
+                    const double xnorm_k = xn[k];
+                    const double p_k = table.yvec[row];
+                    const double Delta_T = row_sat[row].T_hi - row_sat[row].T_lo;
+                    const double dDelta_T_dlogp = row_sat[row].dT_hi_dlogp - row_sat[row].dT_lo_dlogp;
+                    const double dT_dlogp = row_sat[row].dT_lo_dlogp + xnorm_k * dDelta_T_dlogp;
+
+                    const double df_dxnorm = f_T * Delta_T;
+                    const double df_dlogp = p_k * f_p + f_T * dT_dlogp;
+                    const double d2f = Delta_T * (f_TT * dT_dlogp + p_k * f_Tp) + f_T * dDelta_T_dlogp;
+
+                    fxi[k] = df_dxnorm * Delta_xi;
+                    feta[k] = df_dlogp * Delta_eta;
+                    fxieta[k] = d2f * Delta_xi * Delta_eta;
+                }
+                if (!ok) continue;
+                const auto alpha = hermite_bicubic_polynomial_coeffs(f[0], f[1], f[2], f[3], fxi[0], fxi[1], fxi[2], fxi[3], feta[0], feta[1],
+                                                                     feta[2], feta[3], fxieta[0], fxieta[1], fxieta[2], fxieta[3]);
+                coeffs[i][j].set(prop, alpha);
+                any_property_upgraded = true;
+            }
+            if (any_property_upgraded) ++hermite_cell_count;
+        }
+    }
+    if (get_debug_level() > 0) {
+        std::cout << "SBTL: upgraded " << hermite_cell_count << " cells to Hermite bicubic for normpt region " << static_cast<int>(table.region())
+                  << "\n";
+    }
+}
+
 // ---------------------------------------------------------------------------
 // NormalizedPTTable: coordinate-aligned PT table.  Mirror of NormalizedPHTable
 // with iT in place of iHmolar.  Cell boundary at xnorm=1 (LIQUID) is exactly
@@ -1257,13 +1479,16 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
 
     coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
 
-    // IAPWS G13-15 conformance mode: for a NormalizedPHTable we route the
+    // IAPWS G13-15 conformance build: for a NormalizedPHTable we route the
     // 4 core derived params (rho, T, s, u) through a Hermite bicubic path
     // that uses EOS-supplied first and cross derivatives chain-ruled into
-    // (xnorm, log p).  Aux + coordinate-aligned params (h, p, w, η, λ)
-    // stay on the cubic-B-spline path below.  Allocations + lazy corner
-    // cache live in the helper to keep build_bspline_coeffs readable.
+    // (xnorm, log p); for a NormalizedPTTable, the analogous 4 props
+    // (rho, h, s, u) route through (xnorm_T, log p).  Aux + coordinate-
+    // aligned params (h/p or T/p, w, η, λ) keep their cubic-B-spline alpha.
+    // Allocations + lazy corner cache live in the helpers to keep
+    // build_bspline_coeffs readable.
     auto* normph_for_hermite = (iapws_conformance_mode_ ? dynamic_cast<NormalizedPHTable*>(&table) : nullptr);
+    auto* normpt_for_hermite = (iapws_conformance_mode_ ? dynamic_cast<NormalizedPTTable*>(&table) : nullptr);
 
     // First pass: cell validity by 4 finite corners across core params only.
     for (std::size_t i = 0; i < table.Nx - 1; ++i) {
@@ -1364,12 +1589,15 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
         }
     }
 
-    // Hermite bicubic pass for the 4 core derived params on a normph
-    // table when IAPWS conformance mode is on.  No cubic alpha was
-    // computed for those params above (we skipped them in the per-prop
-    // loop) — the alpha vectors come from here directly.
+    // Hermite bicubic pass.  Cells with valid corner derivatives get
+    // Hermite alpha overlaid on top of the cubic alpha already populated
+    // by the loop above; cells where EOS partials fail (sat boundary,
+    // metastable spinodal, near-critical cusp) keep cubic so cell.valid()
+    // always implies a populated polynomial.
     if (normph_for_hermite != nullptr) {
         build_normph_hermite_alphas(*normph_for_hermite, coeffs);
+    } else if (normpt_for_hermite != nullptr) {
+        build_normpt_hermite_alphas(*normpt_for_hermite, coeffs);
     }
 
     // Third pass: alternates for invalid cells.

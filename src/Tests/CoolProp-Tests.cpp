@@ -5716,6 +5716,24 @@ TEST_CASE("SBTL saturation cache exposes h_sat,L(p) and h_sat,V(p) for CO2", "[S
     }
 }
 
+TEST_CASE("SBTL populate_corner_derivatives_pt reads HEOS partials at a probe state", "[SBTL][corner_derivs_pt]") {
+    // PT-table analogue: ∂f/∂T, ∂f/∂p, ∂²f/∂T², ∂²f/∂T∂p for f in {rho, h, s, u}.
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    HEOS->update(CoolProp::PT_INPUTS, 1e6, 320.0);
+    CoolProp::SBTLCornerDerivsPT cd;
+    REQUIRE(CoolProp::populate_corner_derivatives_pt(*HEOS, cd));
+    CHECK(cd.rhomolar == Catch::Approx(static_cast<double>(HEOS->rhomolar())));
+    CHECK(cd.hmolar == Catch::Approx(static_cast<double>(HEOS->hmolar())));
+    CHECK(cd.drho_dT == Catch::Approx(static_cast<double>(HEOS->first_partial_deriv(CoolProp::iDmolar, CoolProp::iT, CoolProp::iP))));
+    CHECK(cd.dh_dp == Catch::Approx(static_cast<double>(HEOS->first_partial_deriv(CoolProp::iHmolar, CoolProp::iP, CoolProp::iT))));
+    CHECK(
+      cd.d2rho_dT2
+      == Catch::Approx(static_cast<double>(HEOS->second_partial_deriv(CoolProp::iDmolar, CoolProp::iT, CoolProp::iP, CoolProp::iT, CoolProp::iP))));
+    CHECK(
+      cd.d2h_dTp
+      == Catch::Approx(static_cast<double>(HEOS->second_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iP, CoolProp::iP, CoolProp::iT))));
+}
+
 TEST_CASE("SBTL populate_corner_derivatives reads HEOS partials for CO2 at a probe state", "[SBTL][corner_derivs]") {
     // populate_corner_derivatives reads value + 4 partials × 4 props from a
     // primed HEOS state.  Verify the entries match direct first_partial_deriv

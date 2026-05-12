@@ -384,6 +384,25 @@ struct SBTLCornerDerivs
 /// h and p themselves are trivial in (xnorm, log p) — not stored here.
 bool populate_corner_derivatives(AbstractState& AS, SBTLCornerDerivs& out);
 
+/// PT-table analogue of SBTLCornerDerivs.  Holds value + 4 partial-
+/// derivative quantities (∂f/∂T|_p, ∂f/∂p|_T, ∂²f/∂T²|_p, ∂²f/∂T∂p)
+/// for each of the 4 PT core derived properties (rho, h, s, u).  Used
+/// by the Hermite bicubic chain rule from (T, p) HEOS partials into
+/// the (xnorm_T, log p) coordinate of NormalizedPTTable.
+struct SBTLCornerDerivsPT
+{
+    bool valid{false};
+    double rhomolar{0.0}, hmolar{0.0}, smolar{0.0}, umolar{0.0};
+    double drho_dT{0.0}, dh_dT{0.0}, ds_dT{0.0}, du_dT{0.0};
+    double drho_dp{0.0}, dh_dp{0.0}, ds_dp{0.0}, du_dp{0.0};
+    double d2rho_dT2{0.0}, d2h_dT2{0.0}, d2s_dT2{0.0}, d2u_dT2{0.0};
+    double d2rho_dTp{0.0}, d2h_dTp{0.0}, d2s_dTp{0.0}, d2u_dTp{0.0};
+};
+
+/// PT-table analogue of populate_corner_derivatives.  Caller is
+/// responsible for priming the HEOS state (PT_INPUTS or PQ_INPUTS).
+bool populate_corner_derivatives_pt(AbstractState& AS, SBTLCornerDerivsPT& out);
+
 class SBTLBackend : public TabularBackend
 {
    public:
@@ -585,6 +604,14 @@ class SBTLBackend : public TabularBackend
     /// their cubic-B-spline alpha.  No-op when iapws_conformance_mode_ is
     /// false or the input coeffs grid is empty.
     void build_normph_hermite_alphas(NormalizedPHTable& table, std::vector<std::vector<CellCoeffs>>& coeffs);
+
+    /// PT-table analogue of build_normph_hermite_alphas.  Replaces cubic
+    /// alpha for the 4 core derived params (rho, h, s, u) with Hermite
+    /// bicubic, chain-ruled from (T, p) HEOS partials into the
+    /// (xnorm_T, log p) coordinate.  T-axis sat envelope is T_lo(p) /
+    /// T_hi(p) per the NormalizedPTTable region; T-derivative of these
+    /// at log p comes from the table's T_lo_cheb / T_hi_cheb expansions.
+    void build_normpt_hermite_alphas(NormalizedPTTable& table, std::vector<std::vector<CellCoeffs>>& coeffs);
 
     /// Enable / disable the Hermite-bicubic build path and force a rebuild
     /// of the cached per-cell coefficients to honour the new setting.
