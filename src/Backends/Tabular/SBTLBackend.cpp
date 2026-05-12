@@ -763,6 +763,194 @@ void SBTLBackend::build_normph_tables() {
     normph_tables_built = true;
 }
 
+void SBTLBackend::set_iapws_conformance_mode(bool enabled) {
+    if (iapws_conformance_mode_ == enabled) return;
+    iapws_conformance_mode_ = enabled;
+    // Invalidate cached coefficients and force rebuild on next access.
+    _coeffs_normph_liquid.clear();
+    _coeffs_normph_vapor.clear();
+    _coeffs_normph_super.clear();
+    _coeffs_normpt_liquid.clear();
+    _coeffs_normpt_vapor.clear();
+    _coeffs_normpt_super.clear();
+    normph_tables_built = false;
+    normpt_tables_built = false;
+    build_normph_tables();
+    build_normpt_tables();
+}
+
+void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
+    if (!iapws_conformance_mode_) return;
+    if (coeffs.empty()) return;
+    if (!this->AS) return;
+
+    // Per-row saturation envelope data: h_lo(p_j), h_hi(p_j), and
+    // their d/d(log p) values used to chain-rule (h, p) HEOS partials
+    // into the (xnorm, log p) coordinate.
+    struct RowSat
+    {
+        double h_lo{0.0};
+        double h_hi{0.0};
+        double dh_lo_dlogp{0.0};
+        double dh_hi_dlogp{0.0};
+        bool valid{false};
+    };
+    std::vector<RowSat> row_sat(table.Ny);
+    for (std::size_t j = 0; j < table.Ny; ++j) {
+        const double p = table.yvec[j];
+        const double h_lo = table.h_lo_isobar[j];
+        const double h_hi = table.h_hi_isobar[j];
+        double dh_lo_dlogp = std::numeric_limits<double>::quiet_NaN();
+        double dh_hi_dlogp = std::numeric_limits<double>::quiet_NaN();
+        if (table.h_lo_cheb.valid()) dh_lo_dlogp = table.h_lo_cheb.eval_dlogp(p);
+        if (table.h_hi_cheb.valid()) dh_hi_dlogp = table.h_hi_cheb.eval_dlogp(p);
+        row_sat[j].h_lo = h_lo;
+        row_sat[j].h_hi = h_hi;
+        row_sat[j].dh_lo_dlogp = dh_lo_dlogp;
+        row_sat[j].dh_hi_dlogp = dh_hi_dlogp;
+        row_sat[j].valid = ValidNumber(h_lo) && ValidNumber(h_hi) && ValidNumber(dh_lo_dlogp) && ValidNumber(dh_hi_dlogp) && h_hi > h_lo;
+    }
+
+    // Per-node corner-derivative cache (lazy).  Each node is shared by up
+    // to 4 cells; populate once and reuse to avoid 4× redundant HEOS updates.
+    std::vector<std::vector<SBTLCornerDerivs>> corner(table.Nx, std::vector<SBTLCornerDerivs>(table.Ny));
+    std::vector<std::vector<bool>> visited(table.Nx, std::vector<bool>(table.Ny, false));
+
+    auto get_corner = [&](std::size_t i, std::size_t j) -> SBTLCornerDerivs& {
+        if (visited[i][j]) return corner[i][j];
+        visited[i][j] = true;
+        if (!row_sat[j].valid) {
+            corner[i][j].valid = false;
+            return corner[i][j];
+        }
+        const double xnorm = table.xvec[i];
+        const double p = table.yvec[j];
+        const double h_lo = row_sat[j].h_lo;
+        const double h_hi = row_sat[j].h_hi;
+        const double h = h_lo + xnorm * (h_hi - h_lo);
+        const bool sat_boundary =
+          (table.region() == NormalizedPHTable::LIQUID && i == table.Nx - 1) || (table.region() == NormalizedPHTable::VAPOR && i == 0);
+        try {
+            if (sat_boundary) {
+                const double Q = (table.region() == NormalizedPHTable::VAPOR) ? 1.0 : 0.0;
+                this->AS->update(PQ_INPUTS, p, Q);
+            } else {
+                this->AS->update(HmolarP_INPUTS, h, p);
+            }
+        } catch (...) {
+            corner[i][j].valid = false;
+            return corner[i][j];
+        }
+        const double q = static_cast<double>(this->AS->Q());
+        if (!sat_boundary && q > 0.0 && q < 1.0) {
+            corner[i][j].valid = false;
+            return corner[i][j];
+        }
+        populate_corner_derivatives(*(this->AS), corner[i][j]);
+        return corner[i][j];
+    };
+
+    // Pull (f, f_h, f_p, f_hh, f_hp) for a given property from corner derivs.
+    auto extract = [](const SBTLCornerDerivs& cd, parameters prop, double& f, double& f_h, double& f_p, double& f_hh, double& f_hp) -> bool {
+        switch (prop) {
+            case iDmolar:
+                f = cd.rhomolar;
+                f_h = cd.drho_dh;
+                f_p = cd.drho_dp;
+                f_hh = cd.d2rho_dh2;
+                f_hp = cd.d2rho_dhp;
+                break;
+            case iT:
+                f = cd.T;
+                f_h = cd.dT_dh;
+                f_p = cd.dT_dp;
+                f_hh = cd.d2T_dh2;
+                f_hp = cd.d2T_dhp;
+                break;
+            case iSmolar:
+                f = cd.smolar;
+                f_h = cd.ds_dh;
+                f_p = cd.ds_dp;
+                f_hh = cd.d2s_dh2;
+                f_hp = cd.d2s_dhp;
+                break;
+            case iUmolar:
+                f = cd.umolar;
+                f_h = cd.du_dh;
+                f_p = cd.du_dp;
+                f_hh = cd.d2u_dh2;
+                f_hp = cd.d2u_dhp;
+                break;
+            default:
+                return false;
+        }
+        return ValidNumber(f) && ValidNumber(f_h) && ValidNumber(f_p) && ValidNumber(f_hh) && ValidNumber(f_hp);
+    };
+
+    const std::array<parameters, 4> core_props = {iDmolar, iT, iSmolar, iUmolar};
+    int hermite_cell_count = 0;
+    for (std::size_t i = 0; i + 1 < table.Nx; ++i) {
+        for (std::size_t j = 0; j + 1 < table.Ny; ++j) {
+            if (!coeffs[i][j].valid()) continue;
+            const auto& c00 = get_corner(i, j);
+            const auto& c10 = get_corner(i + 1, j);
+            const auto& c01 = get_corner(i, j + 1);
+            const auto& c11 = get_corner(i + 1, j + 1);
+            if (!c00.valid || !c10.valid || !c01.valid || !c11.valid) continue;
+
+            const double Delta_xi = table.xvec[i + 1] - table.xvec[i];
+            const double Delta_eta = std::log(table.yvec[j + 1]) - std::log(table.yvec[j]);
+
+            const std::array<double, 4> xn = {table.xvec[i], table.xvec[i + 1], table.xvec[i], table.xvec[i + 1]};
+            const std::array<std::size_t, 4> jr = {j, j, j + 1, j + 1};
+            const std::array<const SBTLCornerDerivs*, 4> cds = {&c00, &c10, &c01, &c11};
+
+            bool any_property_upgraded = false;
+            for (parameters prop : core_props) {
+                std::array<double, 4> f{};
+                std::array<double, 4> fxi{};
+                std::array<double, 4> feta{};
+                std::array<double, 4> fxieta{};
+                bool ok = true;
+                for (int k = 0; k < 4; ++k) {
+                    double f_h, f_p, f_hh, f_hp;
+                    if (!extract(*cds[k], prop, f[k], f_h, f_p, f_hh, f_hp)) {
+                        ok = false;
+                        break;
+                    }
+                    const std::size_t row = jr[k];
+                    const double xnorm_k = xn[k];
+                    const double p_k = table.yvec[row];
+                    const double Delta_h = row_sat[row].h_hi - row_sat[row].h_lo;
+                    const double dDelta_h_dlogp = row_sat[row].dh_hi_dlogp - row_sat[row].dh_lo_dlogp;
+                    const double dh_dlogp = row_sat[row].dh_lo_dlogp + xnorm_k * dDelta_h_dlogp;
+
+                    // ∂f̃/∂xnorm = f_h · Δh
+                    const double df_dxnorm = f_h * Delta_h;
+                    // ∂f̃/∂(log p) at fixed xnorm = p · f_p + f_h · (dh_lo' + xnorm · dΔh')
+                    const double df_dlogp = p_k * f_p + f_h * dh_dlogp;
+                    // ∂²f̃/∂xnorm∂(log p) = Δh · [f_hh · dh_dlogp + p · f_hp] + f_h · dΔh'
+                    const double d2f = Delta_h * (f_hh * dh_dlogp + p_k * f_hp) + f_h * dDelta_h_dlogp;
+
+                    fxi[k] = df_dxnorm * Delta_xi;
+                    feta[k] = df_dlogp * Delta_eta;
+                    fxieta[k] = d2f * Delta_xi * Delta_eta;
+                }
+                if (!ok) continue;
+                const auto alpha = hermite_bicubic_polynomial_coeffs(f[0], f[1], f[2], f[3], fxi[0], fxi[1], fxi[2], fxi[3], feta[0], feta[1],
+                                                                     feta[2], feta[3], fxieta[0], fxieta[1], fxieta[2], fxieta[3]);
+                coeffs[i][j].set(prop, alpha);
+                any_property_upgraded = true;
+            }
+            if (any_property_upgraded) ++hermite_cell_count;
+        }
+    }
+    if (get_debug_level() > 0) {
+        std::cout << "SBTL: upgraded " << hermite_cell_count << " cells to Hermite bicubic for normph region " << static_cast<int>(table.region())
+                  << "\n";
+    }
+}
+
 // ---------------------------------------------------------------------------
 // NormalizedPTTable: coordinate-aligned PT table.  Mirror of NormalizedPHTable
 // with iT in place of iHmolar.  Cell boundary at xnorm=1 (LIQUID) is exactly
@@ -1069,6 +1257,14 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
 
     coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
 
+    // IAPWS G13-15 conformance mode: for a NormalizedPHTable we route the
+    // 4 core derived params (rho, T, s, u) through a Hermite bicubic path
+    // that uses EOS-supplied first and cross derivatives chain-ruled into
+    // (xnorm, log p).  Aux + coordinate-aligned params (h, p, w, η, λ)
+    // stay on the cubic-B-spline path below.  Allocations + lazy corner
+    // cache live in the helper to keep build_bspline_coeffs readable.
+    auto* normph_for_hermite = (iapws_conformance_mode_ ? dynamic_cast<NormalizedPHTable*>(&table) : nullptr);
+
     // First pass: cell validity by 4 finite corners across core params only.
     for (std::size_t i = 0; i < table.Nx - 1; ++i) {
         for (std::size_t j = 0; j < table.Ny - 1; ++j) {
@@ -1104,6 +1300,12 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
         const bool is_aux = (k >= core_count);
         parameters param = is_aux ? aux_params[k - core_count] : core_params[k];
         if (param == table.xkey || param == table.ykey) continue;
+        // Cubic B-spline runs for every cell (including the core derived
+        // params on a normph conformance build).  The Hermite pass below
+        // overlays its alpha for cells where corner-derivative data is
+        // available; cells where Hermite fails (e.g. EOS partials throw)
+        // keep their cubic alpha so cell `valid()` still implies a
+        // populated polynomial — no eval-time empty-vector crashes.
         std::vector<std::vector<double>>* fp = sbtl_get_field(table, param);
 
         // For aux params we replace any non-finite corner with 0.0 before
@@ -1160,6 +1362,14 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
                 coeffs[i][j].set(param, alpha);
             }
         }
+    }
+
+    // Hermite bicubic pass for the 4 core derived params on a normph
+    // table when IAPWS conformance mode is on.  No cubic alpha was
+    // computed for those params above (we skipped them in the per-prop
+    // loop) — the alpha vectors come from here directly.
+    if (normph_for_hermite != nullptr) {
+        build_normph_hermite_alphas(*normph_for_hermite, coeffs);
     }
 
     // Third pass: alternates for invalid cells.

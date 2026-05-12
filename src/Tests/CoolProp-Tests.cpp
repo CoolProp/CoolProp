@@ -5853,6 +5853,57 @@ TEST_CASE("SBTL hermite_bicubic_polynomial_coeffs exactly reconstructs an arbitr
     }
 }
 
+TEST_CASE("SBTL Hermite bicubic is the default normph build path for core props", "[SBTL][conformance]") {
+    // Hermite bicubic is the default build path (CoolProp-foi.1).  Verify:
+    //   1. A fresh SBTL&HEOS construction reports iapws_conformance_mode()
+    //      == true without any opt-in.
+    //   2. Looked-up rho/T at single-phase PT probes match HEOS.
+    //   3. Disabling conformance mode (the benchmarking fallback) still
+    //      works and rebuilds with the cubic-B-spline path.
+    auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "CO2"));
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    auto* SBTL = dynamic_cast<CoolProp::SBTLBackend*>(SBTL_AS.get());
+    REQUIRE(SBTL != nullptr);
+    REQUIRE(SBTL->iapws_conformance_mode());  // default-on
+
+    struct Probe
+    {
+        double p_Pa, T_K;
+        const char* label;
+    };
+    const Probe probes[] = {
+      {1e6, 240.0, "subcritical liquid"},
+      {1e6, 320.0, "subcritical vapor"},
+      {1e7, 320.0, "supercritical"},
+    };
+    for (const auto& pr : probes) {
+        HEOS->update(CoolProp::PT_INPUTS, pr.p_Pa, pr.T_K);
+        SBTL_AS->update(CoolProp::PT_INPUTS, pr.p_Pa, pr.T_K);
+        const double rho_eos = HEOS->rhomolar();
+        const double rho_sbtl = SBTL_AS->rhomolar();
+        const double T_eos = HEOS->T();
+        const double T_sbtl = SBTL_AS->T();
+        CAPTURE(pr.label);
+        CAPTURE(pr.p_Pa);
+        CAPTURE(pr.T_K);
+        CAPTURE(rho_eos);
+        CAPTURE(rho_sbtl);
+        CAPTURE(T_eos);
+        CAPTURE(T_sbtl);
+        CHECK(std::abs(rho_sbtl - rho_eos) / std::abs(rho_eos) < 1e-4);
+        CHECK(std::abs(T_sbtl - T_eos) / std::abs(T_eos) < 1e-4);
+    }
+
+    // Benchmarking fallback: disable Hermite and rebuild on the cubic-only
+    // path.  Properties should still match HEOS (just at the older
+    // cubic-B-spline accuracy).
+    SBTL->set_iapws_conformance_mode(false);
+    REQUIRE_FALSE(SBTL->iapws_conformance_mode());
+    HEOS->update(CoolProp::PT_INPUTS, 1e6, 320.0);
+    SBTL_AS->update(CoolProp::PT_INPUTS, 1e6, 320.0);
+    CHECK(SBTL_AS->rhomolar() == Catch::Approx(HEOS->rhomolar()).epsilon(1e-3));
+}
+
 TEST_CASE("SBTL native speed_sound matches HEOS for CO2 single-phase states", "[SBTL][speed_sound]") {
     // Native speed-of-sound path: SBTL builds a per-cell B-spline polynomial
     // for w alongside (rho, T, s, h, p, u) and serves calc_speed_sound() from
