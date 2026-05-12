@@ -64,6 +64,43 @@ class Cheb1DPiece
         return log_p_hi_;
     }
 
+    /// First derivative df/d(log p) evaluated at p.  Analytic — applies the
+    /// standard Cheb derivative recurrence to c_ to produce derivative
+    /// coefficients d_, then evaluates Σ d_k T_k(t) via Clenshaw and scales
+    /// by dt/d(log p) = 2/(log_p_hi_ - log_p_lo_).
+    /// Needed to chain-rule HEOS partials into the (xnorm, log p) coordinate
+    /// for Hermite bicubic corner derivatives (CoolProp-foi.1).
+    [[nodiscard]] double eval_dlogp(double p) const {
+        const std::size_t N = c_.size() - 1;
+        if (N < 1) return 0.0;
+        const double log_p = std::log(p);
+        double t = (2.0 * log_p - (log_p_lo_ + log_p_hi_)) / (log_p_hi_ - log_p_lo_);
+        if (t < -1.0) t = -1.0;
+        if (t > 1.0) t = 1.0;
+        // Derivative coefficients: d_N = 0; d_{k-1} = d_{k+1} + 2k c_k
+        // for k = N, N-1, ..., 1.  After the loop, d_0 carries a doubled
+        // constant term (half-endpoint convention for derivative); we halve
+        // it before the Clenshaw eval so the Σ d_k T_k(t) form sums right.
+        std::vector<double> d(N + 1, 0.0);
+        for (std::size_t k = N; k >= 1; --k) {
+            const double dk_plus1 = (k + 1 <= N) ? d[k + 1] : 0.0;
+            d[k - 1] = dk_plus1 + 2.0 * static_cast<double>(k) * c_[k];
+            if (k == 1) break;  // unsigned guard
+        }
+        d[0] *= 0.5;
+        // Clenshaw on d_ to get Σ d_k T_k(t), then chain by dt/d(log p).
+        double bk1 = 0.0, bk2 = 0.0;
+        for (std::size_t k = N; k >= 1; --k) {
+            const double bk = d[k] + 2.0 * t * bk1 - bk2;
+            bk2 = bk1;
+            bk1 = bk;
+            if (k == 1) break;
+        }
+        const double val = d[0] + t * bk1 - bk2;
+        const double dt_dlogp = 2.0 / (log_p_hi_ - log_p_lo_);
+        return val * dt_dlogp;
+    }
+
    private:
     double log_p_lo_{0.0};
     double log_p_hi_{0.0};
@@ -118,6 +155,15 @@ class Cheb1D
             if (log_p <= pieces_[k].log_p_hi()) return pieces_[k].eval(p);
         }
         return pieces_.back().eval(p);
+    }
+
+    /// First derivative df/d(log p) at p; dispatches like eval().
+    [[nodiscard]] double eval_dlogp(double p) const {
+        const double log_p = std::log(p);
+        for (std::size_t k = 0; k + 1 < pieces_.size(); ++k) {
+            if (log_p <= pieces_[k].log_p_hi()) return pieces_[k].eval_dlogp(p);
+        }
+        return pieces_.back().eval_dlogp(p);
     }
 
    private:

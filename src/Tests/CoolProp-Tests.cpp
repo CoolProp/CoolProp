@@ -5716,6 +5716,42 @@ TEST_CASE("SBTL saturation cache exposes h_sat,L(p) and h_sat,V(p) for CO2", "[S
     }
 }
 
+TEST_CASE("SBTL Cheb1DPiece::eval_dlogp matches finite difference on a smooth function", "[SBTL][cheb_deriv]") {
+    // Cheb-derivative recurrence is the foundation for chain-ruling
+    // sat-curve derivatives ∂h_lo/∂(log p), ∂h_hi/∂(log p) into the
+    // Hermite bicubic corner data (CoolProp-foi.1).  Build a Cheb1DPiece
+    // on a smooth analytic function whose true derivative is known and
+    // verify eval_dlogp agrees with both the analytic answer and a
+    // central finite difference.
+    //
+    // Test function: f(p) = a + b log(p) + c (log p)^2 + d sin(log p)
+    // df/d(log p) = b + 2 c log(p) + d cos(log p)
+    const double a = 1.5, b = 0.7, c = -0.4, d = 0.9;
+    auto f = [&](double p) {
+        const double lp = std::log(p);
+        return a + b * lp + c * lp * lp + d * std::sin(lp);
+    };
+    auto fprime = [&](double p) {
+        const double lp = std::log(p);
+        return b + 2.0 * c * lp + d * std::cos(lp);
+    };
+    const double p_lo = 1e3, p_hi = 1e8;
+    const auto piece = CoolProp::Cheb1DPiece::build(p_lo, p_hi, 20, f);
+    REQUIRE(piece.valid());
+    for (double p : {2e3, 1e4, 5e4, 1e6, 5e6, 1e7, 5e7}) {
+        const double analytic = fprime(p);
+        const double cheb = piece.eval_dlogp(p);
+        const double fd = (f(p * std::exp(1e-6)) - f(p * std::exp(-1e-6))) / (2.0 * 1e-6);
+        CAPTURE(p);
+        CAPTURE(analytic);
+        CAPTURE(cheb);
+        CAPTURE(fd);
+        // Cheb expansion converges spectrally on this smooth f → < 1e-8 vs analytic.
+        CHECK(cheb == Catch::Approx(analytic).epsilon(1e-8));
+        CHECK(cheb == Catch::Approx(fd).epsilon(1e-6));
+    }
+}
+
 TEST_CASE("SBTL hermite_bicubic_polynomial_coeffs exactly reconstructs an arbitrary bicubic", "[SBTL][hermite_bicubic]") {
     // Construct an arbitrary bicubic f(xi, eta) = Σ_{m,n in 0..3} c_{m,n} xi^m eta^n.
     // Feed corner values and derivatives into hermite_bicubic_polynomial_coeffs;
