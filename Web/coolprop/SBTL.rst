@@ -87,16 +87,30 @@ A ``PT_INPUTS`` query at ``T = T_sat(P)`` is formally ambiguous between
 saturated liquid and saturated vapor.  Specify the phase before the
 update to disambiguate:
 
-.. code-block:: c++
+.. ipython::
 
-   auto AS = AbstractState::factory("SBTL&HEOS", "CO2");
-   const double P = 15.8e5;                       // T_sat ≈ 246.2 K
-   const double T_sat = 246.207;
-   // Default: T = T_sat routes to LIQUID by convention
-   AS->update(PT_INPUTS, P, T_sat);               // rho() ≈ 1063 (sat-L)
-   AS->specify_phase(iphase_gas);
-   AS->update(PT_INPUTS, P, T_sat);               // rho() ≈ 41   (sat-V)
-   AS->unspecify_phase();
+    In [0]: import CoolProp
+
+    In [1]: SBTL = CoolProp.AbstractState("SBTL&HEOS", "CO2")
+
+    In [2]: HEOS = CoolProp.AbstractState("HEOS", "CO2")
+
+    # Find the exact saturation temperature at the chosen pressure.
+    In [3]: P = 15.8e5
+
+    In [4]: HEOS.update(CoolProp.PQ_INPUTS, P, 0.0); T_sat = HEOS.T()
+
+    In [5]: round(T_sat, 3)
+
+    # Default: T = T_sat at this P routes to the LIQUID table.
+    In [6]: SBTL.update(CoolProp.PT_INPUTS, P, T_sat); round(SBTL.rhomass(), 1)
+
+    # Same query, but specify gas → routes to the VAPOR table.
+    In [7]: SBTL.specify_phase(CoolProp.iphase_gas)
+
+    In [8]: SBTL.update(CoolProp.PT_INPUTS, P, T_sat); round(SBTL.rhomass(), 1)
+
+    In [9]: SBTL.unspecify_phase()
 
 The mapping from ``imposed_phase_index`` to the table that handles the
 query:
