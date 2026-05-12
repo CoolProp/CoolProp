@@ -5961,7 +5961,11 @@ TEST_CASE("SBTL Hermite vs cubic accuracy delta on Water random PT sweep", "[.][
         states.emplace_back(p, T);
     }
 
-    auto run_path = [&](std::vector<double>& drho, std::vector<double>& dT) {
+    struct PathErrors
+    {
+        std::vector<double> drho, dT, ds;
+    };
+    auto run_pt = [&](PathErrors& e) {
         for (auto [p, T] : states) {
             try {
                 HEOS->update(CoolProp::PT_INPUTS, p, T);
@@ -5969,8 +5973,27 @@ TEST_CASE("SBTL Hermite vs cubic accuracy delta on Water random PT sweep", "[.][
             } catch (...) {
                 continue;
             }
-            drho.push_back(std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar()));
-            dT.push_back(std::abs(SBTL_AS->T() - HEOS->T()) / std::abs(HEOS->T()));
+            e.drho.push_back(std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar()));
+            // dT trivially zero on PT input; capture s on the same call.
+            const double s_h = HEOS->smolar();
+            e.ds.push_back(std::abs(SBTL_AS->smolar() - s_h) / std::max(std::abs(s_h), 1e-30));
+        }
+    };
+    auto run_ph = [&](PathErrors& e) {
+        for (auto [p, T] : states) {
+            double h = 0.0;
+            try {
+                HEOS->update(CoolProp::PT_INPUTS, p, T);
+                h = HEOS->hmolar();
+                HEOS->update(CoolProp::HmolarP_INPUTS, h, p);
+                SBTL_AS->update(CoolProp::HmolarP_INPUTS, h, p);
+            } catch (...) {
+                continue;
+            }
+            e.drho.push_back(std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar()));
+            e.dT.push_back(std::abs(SBTL_AS->T() - HEOS->T()) / std::abs(HEOS->T()));
+            const double s_h = HEOS->smolar();
+            e.ds.push_back(std::abs(SBTL_AS->smolar() - s_h) / std::max(std::abs(s_h), 1e-30));
         }
     };
     struct Stats
@@ -5982,23 +6005,37 @@ TEST_CASE("SBTL Hermite vs cubic accuracy delta on Water random PT sweep", "[.][
         std::sort(v.begin(), v.end());
         return {v[v.size() / 2], v[static_cast<std::size_t>(0.99 * (v.size() - 1))], v.back()};
     };
+    auto report = [&](const char* label, const PathErrors& h, const PathErrors& c) {
+        auto line = [&](const char* prop, const std::vector<double>& vh, const std::vector<double>& vc) {
+            if (vh.empty() && vc.empty()) return;
+            const auto sh = stats(vh), sc = stats(vc);
+            std::cout << "  " << prop << "   Hermite  median=" << sh.median << "  p99=" << sh.p99 << "  max=" << sh.max << "\n";
+            std::cout << "        Cubic    median=" << sc.median << "  p99=" << sc.p99 << "  max=" << sc.max << "\n";
+            std::cout << "        ratio    median=" << sh.median / std::max(sc.median, 1e-30) << "  p99=" << sh.p99 / std::max(sc.p99, 1e-30)
+                      << "  max=" << sh.max / std::max(sc.max, 1e-30) << "\n";
+        };
+        std::cout << "[hermite_accuracy] " << label << " (Water, n=" << h.drho.size() << "):\n";
+        line("rho", h.drho, c.drho);
+        line("T  ", h.dT, c.dT);
+        line("s  ", h.ds, c.ds);
+    };
 
-    std::vector<double> drho_h, dT_h, drho_c, dT_c;
-    run_path(drho_h, dT_h);
+    PathErrors pt_h, ph_h, pt_c, ph_c;
+    run_pt(pt_h);
+    run_ph(ph_h);
     SBTL->set_iapws_conformance_mode(false);
-    run_path(drho_c, dT_c);
+    run_pt(pt_c);
+    run_ph(ph_c);
 
-    const auto rho_h = stats(drho_h), rho_c = stats(drho_c);
-    std::cout << "[hermite_accuracy] Water random PT sweep, n=" << drho_h.size() << " probes\n";
-    std::cout << "  rho   Hermite  median=" << rho_h.median << "  p99=" << rho_h.p99 << "  max=" << rho_h.max << "\n";
-    std::cout << "        Cubic    median=" << rho_c.median << "  p99=" << rho_c.p99 << "  max=" << rho_c.max << "\n";
-    std::cout << "        ratio    median=" << rho_h.median / std::max(rho_c.median, 1e-30) << "  p99=" << rho_h.p99 / std::max(rho_c.p99, 1e-30)
-              << "  max=" << rho_h.max / std::max(rho_c.max, 1e-30) << "\n";
-    // (T deviation is zero by construction for PT_INPUTS lookups since SBTL
-    //  echoes the input T; useful to report only on HmolarP_INPUTS sweeps.)
-    // Hermite must be at least as accurate as cubic on median rho.  2×
-    // slack absorbs noise; bigger ratio means broken chain-rule math.
-    CHECK(rho_h.median <= 2.0 * rho_c.median);
+    report("PT path (normpt)", pt_h, pt_c);
+    report("PH path (normph)", ph_h, ph_c);
+
+    // Hermite must be at least as accurate as cubic on median rho for both
+    // paths.  2× slack absorbs noise; bigger ratio means broken chain rule.
+    const auto pt_rho_h = stats(pt_h.drho), pt_rho_c = stats(pt_c.drho);
+    const auto ph_rho_h = stats(ph_h.drho), ph_rho_c = stats(ph_c.drho);
+    CHECK(pt_rho_h.median <= 2.0 * pt_rho_c.median);
+    CHECK(ph_rho_h.median <= 2.0 * ph_rho_c.median);
 }
 
 TEST_CASE("SBTL native speed_sound matches HEOS for CO2 single-phase states", "[SBTL][speed_sound]") {
