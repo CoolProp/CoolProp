@@ -37,7 +37,8 @@ std::vector<double> bspline_coeffs_1d(const std::vector<double>& f) {
     if (N <= 4) {
         // Tiny grids: fall back to natural BC for stability (not-a-knot
         // requires N ≥ 5 since the 4-band boundary rows touch C[0..3]).
-        for (std::size_t i = 0; i < N; ++i) C[i] = f[i];
+        for (std::size_t i = 0; i < N; ++i)
+            C[i] = f[i];
         if (N == 3) C[1] = (6.0 * f[1] - f[0] - f[2]) / 4.0;
         return C;
     }
@@ -58,7 +59,7 @@ std::vector<double> bspline_coeffs_1d(const std::vector<double>& f) {
     for (std::size_t i = 1; i + 1 < N; ++i) {
         const int ii = static_cast<int>(i);
         trip.emplace_back(ii, ii - 1, 1.0);
-        trip.emplace_back(ii, ii,     4.0);
+        trip.emplace_back(ii, ii, 4.0);
         trip.emplace_back(ii, ii + 1, 1.0);
         b[ii] = 6.0 * f[i];
     }
@@ -66,9 +67,9 @@ std::vector<double> bspline_coeffs_1d(const std::vector<double>& f) {
     // Row N-1: not-a-knot at right edge.
     const int n = static_cast<int>(N) - 1;
     trip.emplace_back(n, n - 3, -1.0);
-    trip.emplace_back(n, n - 2,  4.0);
+    trip.emplace_back(n, n - 2, 4.0);
     trip.emplace_back(n, n - 1, -5.0);
-    trip.emplace_back(n, n,      8.0);
+    trip.emplace_back(n, n, 8.0);
     b[n] = 6.0 * f[N - 1];
 
     A.setFromTriplets(trip.begin(), trip.end());
@@ -78,11 +79,13 @@ std::vector<double> bspline_coeffs_1d(const std::vector<double>& f) {
     solver.factorize(A);
     if (solver.info() != Eigen::Success) {
         // Numerical failure: fall back to a passable default.
-        for (std::size_t i = 0; i < N; ++i) C[i] = f[i];
+        for (std::size_t i = 0; i < N; ++i)
+            C[i] = f[i];
         return C;
     }
     Eigen::VectorXd x = solver.solve(b);
-    for (std::size_t i = 0; i < N; ++i) C[i] = x[static_cast<int>(i)];
+    for (std::size_t i = 0; i < N; ++i)
+        C[i] = x[static_cast<int>(i)];
     return C;
 }
 
@@ -93,20 +96,27 @@ bool fill_holes_1d(std::vector<double>& v) {
     const std::size_t N = v.size();
     bool any = false;
     for (std::size_t i = 0; i < N; ++i)
-        if (ValidNumber(v[i])) { any = true; break; }
+        if (ValidNumber(v[i])) {
+            any = true;
+            break;
+        }
     if (!any) return false;
     // Forward pass: copy nearest left-side valid value into NaN slots.
     double last = std::numeric_limits<double>::quiet_NaN();
     for (std::size_t i = 0; i < N; ++i) {
-        if (ValidNumber(v[i])) last = v[i];
-        else if (ValidNumber(last)) v[i] = last;
+        if (ValidNumber(v[i]))
+            last = v[i];
+        else if (ValidNumber(last))
+            v[i] = last;
     }
     // Reverse pass for any slots that came before the first valid entry.
     last = std::numeric_limits<double>::quiet_NaN();
     for (std::size_t k = 0; k < N; ++k) {
         std::size_t i = N - 1 - k;
-        if (ValidNumber(v[i])) last = v[i];
-        else if (ValidNumber(last)) v[i] = last;
+        if (ValidNumber(v[i]))
+            last = v[i];
+        else if (ValidNumber(last))
+            v[i] = last;
     }
     return true;
 }
@@ -149,6 +159,7 @@ class BsplineMatrixCache
         solvers_[N] = std::move(solver);
         return ref;
     }
+
    private:
     std::map<std::size_t, std::unique_ptr<Solver>> solvers_;
 };
@@ -165,12 +176,14 @@ std::vector<double> bspline_coeffs_1d_fast(const std::vector<double>& f) {
     const std::size_t N = f.size();
     if (N <= 4) return bspline_coeffs_1d(f);
     Eigen::VectorXd b(N);
-    for (std::size_t i = 0; i < N; ++i) b[static_cast<int>(i)] = 6.0 * f[i];
+    for (std::size_t i = 0; i < N; ++i)
+        b[static_cast<int>(i)] = 6.0 * f[i];
     auto& solver = bspline_cache().solver_for(N);
     if (solver.info() != Eigen::Success) return bspline_coeffs_1d(f);
     Eigen::VectorXd x = solver.solve(b);
     std::vector<double> C(N);
-    for (std::size_t i = 0; i < N; ++i) C[i] = x[static_cast<int>(i)];
+    for (std::size_t i = 0; i < N; ++i)
+        C[i] = x[static_cast<int>(i)];
     return C;
 }
 
@@ -189,17 +202,21 @@ std::vector<std::vector<double>> bspline_coeffs_2d(const std::vector<std::vector
     const double nan = std::numeric_limits<double>::quiet_NaN();
     for (std::size_t j = 0; j < Ny; ++j) {
         std::vector<double> col(Nx);
-        for (std::size_t i = 0; i < Nx; ++i) col[i] = f[i][j];
+        for (std::size_t i = 0; i < Nx; ++i)
+            col[i] = f[i][j];
         if (!fill_holes_1d(col)) {
-            for (std::size_t i = 0; i < Nx; ++i) g[i][j] = nan;
+            for (std::size_t i = 0; i < Nx; ++i)
+                g[i][j] = nan;
             continue;
         }
         auto coeffs = bspline_coeffs_1d_fast(col);
-        for (std::size_t i = 0; i < Nx; ++i) g[i][j] = coeffs[i];
+        for (std::size_t i = 0; i < Nx; ++i)
+            g[i][j] = coeffs[i];
     }
     for (std::size_t i = 0; i < Nx; ++i) {
         if (!fill_holes_1d(g[i])) {
-            for (std::size_t j = 0; j < Ny; ++j) C[i][j] = nan;
+            for (std::size_t j = 0; j < Ny; ++j)
+                C[i][j] = nan;
             continue;
         }
         auto coeffs = bspline_coeffs_1d_fast(g[i]);
@@ -211,10 +228,10 @@ std::vector<std::vector<double>> bspline_coeffs_2d(const std::vector<std::vector
 // B-spline basis polynomials in a unit cell.  Index a maps to physical
 // stencil offset {-1, 0, 1, 2}.  [a][m] = coeff of t^m in B_a(t).
 const double Bspline_poly[4][4] = {
-    {1.0/6.0, -1.0/2.0,  1.0/2.0, -1.0/6.0},
-    {2.0/3.0,      0.0, -1.0    ,  1.0/2.0},
-    {1.0/6.0,  1.0/2.0,  1.0/2.0, -1.0/2.0},
-    {    0.0,      0.0,      0.0,  1.0/6.0},
+  {1.0 / 6.0, -1.0 / 2.0, 1.0 / 2.0, -1.0 / 6.0},
+  {2.0 / 3.0, 0.0, -1.0, 1.0 / 2.0},
+  {1.0 / 6.0, 1.0 / 2.0, 1.0 / 2.0, -1.0 / 2.0},
+  {0.0, 0.0, 0.0, 1.0 / 6.0},
 };
 
 // Not-a-knot ghost-cell extension.  At the left edge:
@@ -274,13 +291,13 @@ std::vector<double> bspline_polynomial_coeffs(const std::vector<std::vector<doub
 }
 
 double eval_alpha(const std::vector<double>& alpha, double tx, double ty) {
-    const double tx2 = tx*tx, tx3 = tx2*tx;
-    const double ty2 = ty*ty, ty3 = ty2*ty;
-    const double B0 = alpha[ 0] + alpha[ 1]*ty + alpha[ 2]*ty2 + alpha[ 3]*ty3;
-    const double B1 = alpha[ 4] + alpha[ 5]*ty + alpha[ 6]*ty2 + alpha[ 7]*ty3;
-    const double B2 = alpha[ 8] + alpha[ 9]*ty + alpha[10]*ty2 + alpha[11]*ty3;
-    const double B3 = alpha[12] + alpha[13]*ty + alpha[14]*ty2 + alpha[15]*ty3;
-    return B0 + B1*tx + B2*tx2 + B3*tx3;
+    const double tx2 = tx * tx, tx3 = tx2 * tx;
+    const double ty2 = ty * ty, ty3 = ty2 * ty;
+    const double B0 = alpha[0] + alpha[1] * ty + alpha[2] * ty2 + alpha[3] * ty3;
+    const double B1 = alpha[4] + alpha[5] * ty + alpha[6] * ty2 + alpha[7] * ty3;
+    const double B2 = alpha[8] + alpha[9] * ty + alpha[10] * ty2 + alpha[11] * ty3;
+    const double B3 = alpha[12] + alpha[13] * ty + alpha[14] * ty2 + alpha[15] * ty3;
+    return B0 + B1 * tx + B2 * tx2 + B3 * tx3;
 }
 
 }  // namespace
@@ -302,6 +319,12 @@ static std::vector<std::vector<double>>* sbtl_get_field(SinglePhaseGriddedTableD
             return &table.hmolar;
         case iUmolar:
             return &table.umolar;
+        case ispeed_sound:
+            return &table.speed_sound;
+        case iviscosity:
+            return &table.visc;
+        case iconductivity:
+            return &table.cond;
         default:
             throw ValueError("Invalid param in sbtl_get_field");
     }
@@ -584,8 +607,7 @@ void SBTLBackend::build_normph_table(NormalizedPHTable& table) {
             // — that gives us rho_sat, T_sat etc. exactly, which is what
             // the routing-time xnorm = 0/1 query SHOULD see.
             const bool sat_boundary =
-                (table.region() == NormalizedPHTable::LIQUID && i == table.Nx - 1) ||
-                (table.region() == NormalizedPHTable::VAPOR  && i == 0);
+              (table.region() == NormalizedPHTable::LIQUID && i == table.Nx - 1) || (table.region() == NormalizedPHTable::VAPOR && i == 0);
             try {
                 if (sat_boundary) {
                     const double Q_target = (table.region() == NormalizedPHTable::VAPOR) ? 1.0 : 0.0;
@@ -612,6 +634,14 @@ void SBTLBackend::build_normph_table(NormalizedPHTable& table) {
             table.smolar[i][j] = static_cast<double>(this->AS->smolar());
             table.umolar[i][j] = static_cast<double>(this->AS->umolar());
             try {
+                table.speed_sound[i][j] = static_cast<double>(this->AS->speed_sound());
+            } catch (...) {
+                // speed_sound may not be defined in some regions (e.g. inside
+                // the metastable spinodal); leave the cell as a _HUGE hole
+                // and build_bspline_coeffs will mark cells with non-finite
+                // corners as invalid.
+            }
+            try {
                 table.visc[i][j] = static_cast<double>(this->AS->viscosity());
                 table.cond[i][j] = static_cast<double>(this->AS->conductivity());
             } catch (...) {
@@ -627,8 +657,8 @@ void SBTLBackend::build_normph_tables() {
     build_normph_table(_normph_vapor);
     build_normph_table(_normph_super);
     build_bspline_coeffs(_normph_liquid, _coeffs_normph_liquid);
-    build_bspline_coeffs(_normph_vapor,  _coeffs_normph_vapor);
-    build_bspline_coeffs(_normph_super,  _coeffs_normph_super);
+    build_bspline_coeffs(_normph_vapor, _coeffs_normph_vapor);
+    build_bspline_coeffs(_normph_super, _coeffs_normph_super);
     normph_tables_built = true;
 }
 
@@ -730,9 +760,7 @@ void SBTLBackend::saturation_T_LV(double p, double& T_L, double& T_V) {
     const double p_min_pure = static_cast<double>(this->AS->p_triple());
     const double p_max_pure = static_cast<double>(this->AS->p_critical());
     if (!(p >= p_min_pure && p <= p_max_pure)) {
-        throw ValueError(format(
-            "SBTL saturation_T_LV: P=%g Pa outside the sat range [%g, %g] Pa.",
-            p, p_min_pure, p_max_pure));
+        throw ValueError(format("SBTL saturation_T_LV: P=%g Pa outside the sat range [%g, %g] Pa.", p, p_min_pure, p_max_pure));
     }
     // Pure fluids: T_sat,L = T_sat,V = T_sat(P).  A single PQ_INPUTS at Q=0
     // suffices.  Pseudo-pure / true mixtures are rejected at construction so
@@ -831,9 +859,7 @@ void SBTLBackend::populate_normpt_bounds(NormalizedPTTable& table) {
         const double T_melt = T_melt_floor(P);
         return std::isfinite(T_melt) ? T_melt : T_min;
     };
-    auto T_hi_fn = [&](double /*P*/) -> double {
-        return T_max_ext;
-    };
+    auto T_hi_fn = [&](double /*P*/) -> double { return T_max_ext; };
     try {
         if (table.region() != NormalizedPTTable::VAPOR) {
             table.T_lo_cheb = Cheb1D::build(breakpoints, N_cheb, T_lo_fn);
@@ -885,8 +911,7 @@ void SBTLBackend::build_normpt_table(NormalizedPTTable& table) {
             const double xnorm = table.xvec[i];
             const double T = T_lo + xnorm * (T_hi - T_lo);
             const bool sat_boundary =
-                (table.region() == NormalizedPTTable::LIQUID && i == table.Nx - 1) ||
-                (table.region() == NormalizedPTTable::VAPOR  && i == 0);
+              (table.region() == NormalizedPTTable::LIQUID && i == table.Nx - 1) || (table.region() == NormalizedPTTable::VAPOR && i == 0);
             try {
                 if (sat_boundary) {
                     const double Q_target = (table.region() == NormalizedPTTable::VAPOR) ? 1.0 : 0.0;
@@ -922,25 +947,33 @@ void SBTLBackend::build_normpt_tables() {
     build_normpt_table(_normpt_vapor);
     build_normpt_table(_normpt_super);
     build_bspline_coeffs(_normpt_liquid, _coeffs_normpt_liquid);
-    build_bspline_coeffs(_normpt_vapor,  _coeffs_normpt_vapor);
-    build_bspline_coeffs(_normpt_super,  _coeffs_normpt_super);
+    build_bspline_coeffs(_normpt_vapor, _coeffs_normpt_vapor);
+    build_bspline_coeffs(_normpt_super, _coeffs_normpt_super);
     normpt_tables_built = true;
 }
 
 void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
     if (!coeffs.empty()) return;
 
-    const int param_count = 6;
-    const parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
+    // Core thermodynamic params drive cell validity.  Auxiliary params
+    // (speed_sound / viscosity / conductivity) build their own polynomial
+    // alongside but DON'T affect cell validity — at sat-curve boundaries
+    // and metastable spinodals the EOS may throw for speed_sound or
+    // transport, and we don't want one missing corner to disqualify the
+    // entire cell from the thermodynamic-property lookups.
+    const int core_count = 6;
+    const parameters core_params[core_count] = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
+    const int aux_count = 3;
+    const parameters aux_params[aux_count] = {ispeed_sound, iviscosity, iconductivity};
 
     coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
 
-    // First pass: cell validity by 4 finite corners across all params.
+    // First pass: cell validity by 4 finite corners across core params only.
     for (std::size_t i = 0; i < table.Nx - 1; ++i) {
         for (std::size_t j = 0; j < table.Ny - 1; ++j) {
             bool ok = true;
-            for (int k = 0; k < param_count && ok; ++k) {
-                parameters param = param_list[k];
+            for (int k = 0; k < core_count && ok; ++k) {
+                parameters param = core_params[k];
                 if (param == table.xkey || param == table.ykey) continue;
                 std::vector<std::vector<double>>* fp = sbtl_get_field(table, param);
                 if (!ValidNumber((*fp)[i][j]) || !ValidNumber((*fp)[i + 1][j]) || !ValidNumber((*fp)[i][j + 1])
@@ -965,16 +998,45 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
     // B-spline construction or the polynomial expansion — print and abort
     // the property's per-cell fill so the test loop can find them.
     int self_check_failures = 0;
-    for (int k = 0; k < param_count; ++k) {
-        parameters param = param_list[k];
+    const int total_count = core_count + aux_count;
+    for (int k = 0; k < total_count; ++k) {
+        const bool is_aux = (k >= core_count);
+        parameters param = is_aux ? aux_params[k - core_count] : core_params[k];
         if (param == table.xkey || param == table.ykey) continue;
         std::vector<std::vector<double>>* fp = sbtl_get_field(table, param);
 
-        const auto C = bspline_coeffs_2d(*fp);
+        // For aux params we replace any non-finite corner with 0.0 before
+        // building the global B-spline so the spline operator stays well
+        // defined; per-cell we then skip writing the polynomial into cells
+        // that touch a non-finite corner.  Core params are guaranteed
+        // finite for cells flagged valid by the first pass.
+        std::vector<std::vector<double>> aux_scratch;
+        if (is_aux) {
+            aux_scratch = *fp;  // copy
+            for (auto& row : aux_scratch) {
+                for (double& v : row) {
+                    if (!ValidNumber(v)) v = 0.0;
+                }
+            }
+        }
+        const auto& source = is_aux ? aux_scratch : *fp;
+
+        const auto C = bspline_coeffs_2d(source);
 
         for (std::size_t i = 0; i < table.Nx - 1; ++i) {
             for (std::size_t j = 0; j < table.Ny - 1; ++j) {
                 if (!coeffs[i][j].valid()) continue;
+
+                if (is_aux) {
+                    // Skip cells touching a non-finite corner — they get no
+                    // aux polynomial and calc_speed_sound etc. will fall back
+                    // to HEOS (or throw) at lookup time.
+                    if (!ValidNumber((*fp)[i][j]) || !ValidNumber((*fp)[i + 1][j]) || !ValidNumber((*fp)[i][j + 1])
+                        || !ValidNumber((*fp)[i + 1][j + 1])) {
+                        continue;
+                    }
+                }
+
                 std::vector<double> alpha = bspline_polynomial_coeffs(C, i, j);
 
                 // Self-check: polynomial value at (0,0) corner must equal f[i][j].
@@ -982,18 +1044,16 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
                 const double v10 = eval_alpha(alpha, 1.0, 0.0);
                 const double v01 = eval_alpha(alpha, 0.0, 1.0);
                 const double v11 = eval_alpha(alpha, 1.0, 1.0);
-                const double f00 = (*fp)[i][j];
-                const double f10 = (*fp)[i + 1][j];
-                const double f01 = (*fp)[i][j + 1];
-                const double f11 = (*fp)[i + 1][j + 1];
+                const double f00 = source[i][j];
+                const double f10 = source[i + 1][j];
+                const double f01 = source[i][j + 1];
+                const double f11 = source[i + 1][j + 1];
                 const double scale = std::max({std::abs(f00), std::abs(f10), std::abs(f01), std::abs(f11), 1e-30});
                 const double tol = 1e-8 * scale;
                 if (self_check_failures < 5
-                    && (std::abs(v00 - f00) > tol || std::abs(v10 - f10) > tol || std::abs(v01 - f01) > tol
-                        || std::abs(v11 - f11) > tol)) {
-                    std::cout << "SBTL bspline self-check fail param=" << static_cast<int>(param) << " cell=(" << i << "," << j
-                              << ")  f=(" << f00 << "," << f10 << "," << f01 << "," << f11 << ")  v=(" << v00 << "," << v10 << "," << v01 << "," << v11
-                              << ")\n";
+                    && (std::abs(v00 - f00) > tol || std::abs(v10 - f10) > tol || std::abs(v01 - f01) > tol || std::abs(v11 - f11) > tol)) {
+                    std::cout << "SBTL bspline self-check fail param=" << static_cast<int>(param) << " cell=(" << i << "," << j << ")  f=(" << f00
+                              << "," << f10 << "," << f01 << "," << f11 << ")  v=(" << v00 << "," << v10 << "," << v01 << "," << v11 << ")\n";
                     ++self_check_failures;
                 }
                 coeffs[i][j].set(param, alpha);
@@ -1051,7 +1111,6 @@ double NormalizedPHTable::h_from_xnorm(double xnorm, double P, double h_sat) con
     }
     return h_lo + xnorm * (h_hi - h_lo);
 }
-
 
 // ---------------------------------------------------------------------------
 // H-superancillary fast path: returns true and writes h_sat,Q(p) to `out`.
@@ -1130,8 +1189,8 @@ void SBTLBackend::saturation_hmolar_LV(double p, double& h_L, double& h_V) {
 // (caller passed an xnorm outside [0, 1] or a P outside [yvec.front,
 // yvec.back]) — guarded upstream in update().
 // ---------------------------------------------------------------------------
-void SBTLBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
-                                                   double x, double y, std::size_t& i, std::size_t& j) {
+void SBTLBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs, double x,
+                                                   double y, std::size_t& i, std::size_t& j) {
     bisect_vector(table.xvec, x, i);
     bisect_vector(table.yvec, y, j);
     if (!coeffs[i][j].valid()) {
@@ -1150,8 +1209,8 @@ void SBTLBackend::find_nearest_neighbor(SinglePhaseGriddedTableData& /*table*/, 
 // Transport properties: bilinear interpolation
 // ---------------------------------------------------------------------------
 
-double SBTLBackend::evaluate_single_phase_transport(SinglePhaseGriddedTableData& /*table*/, parameters /*output*/,
-                                                    double /*x*/, double /*y*/, std::size_t /*i*/, std::size_t /*j*/) {
+double SBTLBackend::evaluate_single_phase_transport(SinglePhaseGriddedTableData& /*table*/, parameters /*output*/, double /*x*/, double /*y*/,
+                                                    std::size_t /*i*/, std::size_t /*j*/) {
     throw ValueError("SBTL: tabular transport not supported; use HEOS direct via viscosity()/conductivity() accessors");
 }
 
@@ -1179,12 +1238,33 @@ double SBTLBackend::evaluate_single_phase(const SinglePhaseGriddedTableData& tab
     const double val = B0 + B1 * xi + B2 * xi2 + B3 * xi3;
 
     switch (output) {
-        case iT:      _T = val;        break;
-        case iP:      _p = val;        break;
-        case iDmolar: _rhomolar = val; break;
-        case iSmolar: _smolar = val;   break;
-        case iHmolar: _hmolar = val;   break;
-        case iUmolar: _umolar = val;   break;
+        case iT:
+            _T = val;
+            break;
+        case iP:
+            _p = val;
+            break;
+        case iDmolar:
+            _rhomolar = val;
+            break;
+        case iSmolar:
+            _smolar = val;
+            break;
+        case iHmolar:
+            _hmolar = val;
+            break;
+        case iUmolar:
+            _umolar = val;
+            break;
+        case ispeed_sound:
+            _speed_sound = val;
+            break;
+        case iviscosity:
+            _viscosity = val;
+            break;
+        case iconductivity:
+            _conductivity = val;
+            break;
         default:
             throw ValueError("Invalid output variable in SBTLBackend::evaluate_single_phase");
     }
@@ -1215,7 +1295,6 @@ void SBTLBackend::invert_single_phase_y(const SinglePhaseGriddedTableData& /*tab
     throw ValueError("SBTL backend (pure-fluid PT/PH only) does not support input-pair inversion — "
                      "use PT_INPUTS or HmassP_INPUTS directly, or HEOS for other inputs");
 }
-
 
 // ---------------------------------------------------------------------------
 // update() override: routes HmolarP/HmassP and PT through the
@@ -1274,18 +1353,31 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
     // PH and PT fast paths.  Returns -1 (auto), 0 (LIQUID), 1 (VAPOR), 2 (SUPER),
     // or throws for iphase_twophase.  iphase_critical_point routes through the
     // SUPER table; queries near (T_c, p_c) are caught upstream by the critbox.
-    enum class ForcedRegion { Auto = -1, Liquid = 0, Vapor = 1, Super = 2, TwoPhase = 3 };
+    enum class ForcedRegion
+    {
+        Auto = -1,
+        Liquid = 0,
+        Vapor = 1,
+        Super = 2,
+        TwoPhase = 3
+    };
     const ForcedRegion forced = [&]() -> ForcedRegion {
         switch (imposed_phase_index) {
-            case iphase_not_imposed:           return ForcedRegion::Auto;
-            case iphase_liquid:                return ForcedRegion::Liquid;
-            case iphase_gas:                   return ForcedRegion::Vapor;
+            case iphase_not_imposed:
+                return ForcedRegion::Auto;
+            case iphase_liquid:
+                return ForcedRegion::Liquid;
+            case iphase_gas:
+                return ForcedRegion::Vapor;
             case iphase_supercritical:
             case iphase_supercritical_liquid:
             case iphase_supercritical_gas:
-            case iphase_critical_point:        return ForcedRegion::Super;
-            case iphase_twophase:              return ForcedRegion::TwoPhase;
-            default:                           return ForcedRegion::Auto;
+            case iphase_critical_point:
+                return ForcedRegion::Super;
+            case iphase_twophase:
+                return ForcedRegion::TwoPhase;
+            default:
+                return ForcedRegion::Auto;
         }
     }();
 
@@ -1298,8 +1390,7 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
     }
 
     // Coordinate-aligned PH fast path.
-    if (normph_tables_built
-        && (input_pair == HmolarP_INPUTS || input_pair == HmassP_INPUTS)) {
+    if (normph_tables_built && (input_pair == HmolarP_INPUTS || input_pair == HmassP_INPUTS)) {
         double h_molar = NAN, p = NAN;
         if (input_pair == HmolarP_INPUTS) {
             h_molar = val1;
@@ -1330,9 +1421,9 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
         // both sides of the critical pressure use the SAME tight box —
         // only queries with h close to h_crit (where the polynomial
         // backbones can't reproduce the cusp) actually need EOS-direct.
-        const double dp_below = 0.10e6;     // ±1 bar below pcrit
-        const double dp_above = 0.10e6;     // ±1 bar above pcrit
-        const double dh_crit_frac = 0.30;   // ±30 % of |h_crit|
+        const double dp_below = 0.10e6;    // ±1 bar below pcrit
+        const double dp_above = 0.10e6;    // ±1 bar above pcrit
+        const double dh_crit_frac = 0.30;  // ±30 % of |h_crit|
         // Lazy-compute h_crit at the critical point on the first query
         // that lands near pcrit.  std::optional<double> keeps the unset
         // state explicit instead of relying on a NaN/Inf sentinel.
@@ -1345,8 +1436,7 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
             }
         }
         const double h_crit = _hmolar_crit_cached.value_or(std::numeric_limits<double>::infinity());
-        const bool in_box = std::isfinite(h_crit)
-                            && std::abs(p - p_crit) < ((p < p_crit) ? dp_below : dp_above)
+        const bool in_box = std::isfinite(h_crit) && std::abs(p - p_crit) < ((p < p_crit) ? dp_below : dp_above)
                             && std::abs(h_molar - h_crit) < dh_crit_frac * std::abs(h_crit);
         if (in_box) {
             try {
@@ -1360,8 +1450,7 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                 // contract as the normph fast path below.  iphase_critical_point
                 // is excluded so a user with imposed_critical_point at a state
                 // far from the critical point doesn't get mislabeled.
-                if (imposed_phase_index != iphase_not_imposed
-                    && imposed_phase_index != iphase_critical_point) {
+                if (imposed_phase_index != iphase_not_imposed && imposed_phase_index != iphase_critical_point) {
                     _phase = imposed_phase_index;
                 } else {
                     _phase = this->AS->phase();
@@ -1372,10 +1461,16 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                 _critbox_cpmolar = static_cast<double>(this->AS->cpmolar());
                 _critbox_cvmolar = static_cast<double>(this->AS->cvmolar());
                 _critbox_speed_sound = static_cast<double>(this->AS->speed_sound());
-                try { _critbox_viscosity = static_cast<double>(this->AS->viscosity()); }
-                catch (...) { _critbox_viscosity = _HUGE; }
-                try { _critbox_conductivity = static_cast<double>(this->AS->conductivity()); }
-                catch (...) { _critbox_conductivity = _HUGE; }
+                try {
+                    _critbox_viscosity = static_cast<double>(this->AS->viscosity());
+                } catch (...) {
+                    _critbox_viscosity = _HUGE;
+                }
+                try {
+                    _critbox_conductivity = static_cast<double>(this->AS->conductivity());
+                } catch (...) {
+                    _critbox_conductivity = _HUGE;
+                }
                 using_single_phase_table = true;
                 selected_table = SELECTED_PH_TABLE;
                 return;
@@ -1410,7 +1505,8 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                     double h_sat_L = NAN, h_sat_V = NAN;
                     saturation_hmolar_LV(p, h_sat_L, h_sat_V);
                     h_sat_active = h_sat_L;
-                } catch (...) {}
+                } catch (...) {
+                }
             } else {
                 tbl = &_normph_super;
                 coeffs = &_coeffs_normph_super;
@@ -1423,7 +1519,8 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                     double h_sat_L = NAN, h_sat_V = NAN;
                     saturation_hmolar_LV(p, h_sat_L, h_sat_V);
                     h_sat_active = h_sat_V;
-                } catch (...) {}
+                } catch (...) {
+                }
             } else {
                 tbl = &_normph_super;
                 coeffs = &_coeffs_normph_super;
@@ -1496,8 +1593,7 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                         }
                         // Phase tag: imposed phase wins if set (caller intent
                         // is documented); otherwise derive from active table.
-                        if (imposed_phase_index != iphase_not_imposed
-                            && imposed_phase_index != iphase_critical_point) {
+                        if (imposed_phase_index != iphase_not_imposed && imposed_phase_index != iphase_critical_point) {
                             _phase = imposed_phase_index;
                         } else if (tbl == &_normph_super) {
                             _phase = (T_val > static_cast<double>(this->AS->T_critical())) ? iphase_supercritical_gas : iphase_supercritical_liquid;
@@ -1525,7 +1621,6 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
             }
         }
     }
-
 
     // Coordinate-aligned PT fast path (pure fluids only; built in ctor).
     // Mirror of the PH normph block above — selects LIQUID / VAPOR / SUPER
@@ -1556,15 +1651,12 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
         // instead of through the polynomial backbone.  Numbers chosen
         // empirically to bring the random-PT max relative error from
         // ~3 % down to ~1e-3 across a wide-window CO2 / Water sweep.
-        const double dp_below_frac = 0.25;       // -25 % p_crit below
-        const double dp_above_frac = 0.75;       // +75 % p_crit above
-        const double dT_below_frac = 0.10;       // -10 % T_crit below
-        const double dT_above_frac = 0.30;       // +30 % T_crit above
-        const bool in_crit_box =
-            (p < p_crit ? (p_crit - p) < dp_below_frac * p_crit
-                        : (p - p_crit) < dp_above_frac * p_crit)
-            && (T_query < T_crit ? (T_crit - T_query) < dT_below_frac * T_crit
-                                 : (T_query - T_crit) < dT_above_frac * T_crit);
+        const double dp_below_frac = 0.25;  // -25 % p_crit below
+        const double dp_above_frac = 0.75;  // +75 % p_crit above
+        const double dT_below_frac = 0.10;  // -10 % T_crit below
+        const double dT_above_frac = 0.30;  // +30 % T_crit above
+        const bool in_crit_box = (p < p_crit ? (p_crit - p) < dp_below_frac * p_crit : (p - p_crit) < dp_above_frac * p_crit)
+                                 && (T_query < T_crit ? (T_crit - T_query) < dT_below_frac * T_crit : (T_query - T_crit) < dT_above_frac * T_crit);
         if (in_crit_box) {
             try {
                 this->AS->update(PT_INPUTS, p, T_query);
@@ -1573,8 +1665,7 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                 _rhomolar = static_cast<double>(this->AS->rhomolar());
                 _hmolar = static_cast<double>(this->AS->hmolar());
                 _Q = -1000;
-                if (imposed_phase_index != iphase_not_imposed
-                    && imposed_phase_index != iphase_critical_point) {
+                if (imposed_phase_index != iphase_not_imposed && imposed_phase_index != iphase_critical_point) {
                     _phase = imposed_phase_index;
                 } else {
                     _phase = this->AS->phase();
@@ -1585,10 +1676,16 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                 _critbox_cpmolar = static_cast<double>(this->AS->cpmolar());
                 _critbox_cvmolar = static_cast<double>(this->AS->cvmolar());
                 _critbox_speed_sound = static_cast<double>(this->AS->speed_sound());
-                try { _critbox_viscosity = static_cast<double>(this->AS->viscosity()); }
-                catch (...) { _critbox_viscosity = _HUGE; }
-                try { _critbox_conductivity = static_cast<double>(this->AS->conductivity()); }
-                catch (...) { _critbox_conductivity = _HUGE; }
+                try {
+                    _critbox_viscosity = static_cast<double>(this->AS->viscosity());
+                } catch (...) {
+                    _critbox_viscosity = _HUGE;
+                }
+                try {
+                    _critbox_conductivity = static_cast<double>(this->AS->conductivity());
+                } catch (...) {
+                    _critbox_conductivity = _HUGE;
+                }
                 using_single_phase_table = true;
                 selected_table = SELECTED_PT_TABLE;
                 return;
@@ -1597,7 +1694,6 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                 // Fall through to normpt path.
             }
         }
-
 
         NormalizedPTTable* tbl = nullptr;
         const std::vector<std::vector<CellCoeffs>>* coeffs = nullptr;
@@ -1609,9 +1705,7 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
         // a non-physical state.  Detect the OOB range upfront against the
         // appropriate table's yvec.front/back so we throw cleanly without
         // touching the AS state.
-        const auto pt_range_for = [&](NormalizedPTTable* t) -> std::pair<double, double> {
-            return {t->yvec.front(), t->yvec.back()};
-        };
+        const auto pt_range_for = [&](NormalizedPTTable* t) -> std::pair<double, double> { return {t->yvec.front(), t->yvec.back()}; };
         // Region selection: imposed phase wins over the automatic
         // sat-curve comparison.  This is essential at PT queries on the
         // saturation curve: T = T_sat,L(P) is ambiguous between sat-L and
@@ -1629,10 +1723,9 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
             // User-imposed supercritical, regardless of p vs p_crit.
             auto [pmin, pmax] = pt_range_for(&_normpt_super);
             if (p < pmin || p > pmax) {
-                throw ValueError(format(
-                    "SBTL PT_INPUTS at P=%g Pa is outside the SUPER normpt "
-                    "table range [%g, %g] Pa — use HEOS directly.",
-                    p, pmin, pmax));
+                throw ValueError(format("SBTL PT_INPUTS at P=%g Pa is outside the SUPER normpt "
+                                        "table range [%g, %g] Pa — use HEOS directly.",
+                                        p, pmin, pmax));
             }
             tbl = &_normpt_super;
             coeffs = &_coeffs_normpt_super;
@@ -1640,10 +1733,9 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
             // User-imposed liquid (sub-critical p).
             auto [pmin, pmax] = pt_range_for(&_normpt_liquid);
             if (p < pmin || p > pmax) {
-                throw ValueError(format(
-                    "SBTL PT_INPUTS at P=%g Pa is outside the LIQUID normpt "
-                    "table range [%g, %g] Pa — use HEOS directly.",
-                    p, pmin, pmax));
+                throw ValueError(format("SBTL PT_INPUTS at P=%g Pa is outside the LIQUID normpt "
+                                        "table range [%g, %g] Pa — use HEOS directly.",
+                                        p, pmin, pmax));
             }
             // Read T_sat,L for the xnorm=1 boundary; xnorm_from_T uses it.
             // Sat lookup may throw if p is outside the sat range; let
@@ -1652,23 +1744,24 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                 double T_sat_L = NAN, T_sat_V = NAN;
                 saturation_T_LV(p, T_sat_L, T_sat_V);
                 T_sat_active = T_sat_L;
-            } catch (...) {}
+            } catch (...) {
+            }
             tbl = &_normpt_liquid;
             coeffs = &_coeffs_normpt_liquid;
         } else if (forced == ForcedRegion::Vapor && p < p_crit) {
             // User-imposed vapor (sub-critical p).
             auto [pmin, pmax] = pt_range_for(&_normpt_vapor);
             if (p < pmin || p > pmax) {
-                throw ValueError(format(
-                    "SBTL PT_INPUTS at P=%g Pa is outside the VAPOR normpt "
-                    "table range [%g, %g] Pa — use HEOS directly.",
-                    p, pmin, pmax));
+                throw ValueError(format("SBTL PT_INPUTS at P=%g Pa is outside the VAPOR normpt "
+                                        "table range [%g, %g] Pa — use HEOS directly.",
+                                        p, pmin, pmax));
             }
             try {
                 double T_sat_L = NAN, T_sat_V = NAN;
                 saturation_T_LV(p, T_sat_L, T_sat_V);
                 T_sat_active = T_sat_V;
-            } catch (...) {}
+            } catch (...) {
+            }
             tbl = &_normpt_vapor;
             coeffs = &_coeffs_normpt_vapor;
         } else if ((forced == ForcedRegion::Liquid || forced == ForcedRegion::Vapor) && p >= p_crit) {
@@ -1676,20 +1769,18 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
             // SUPER (which covers both sides of the T_c isotherm at p≥p_c).
             auto [pmin, pmax] = pt_range_for(&_normpt_super);
             if (p < pmin || p > pmax) {
-                throw ValueError(format(
-                    "SBTL PT_INPUTS at P=%g Pa is outside the SUPER normpt "
-                    "table range [%g, %g] Pa — use HEOS directly.",
-                    p, pmin, pmax));
+                throw ValueError(format("SBTL PT_INPUTS at P=%g Pa is outside the SUPER normpt "
+                                        "table range [%g, %g] Pa — use HEOS directly.",
+                                        p, pmin, pmax));
             }
             tbl = &_normpt_super;
             coeffs = &_coeffs_normpt_super;
         } else if (p >= p_crit) {
             auto [pmin, pmax] = pt_range_for(&_normpt_super);
             if (p < pmin || p > pmax) {
-                throw ValueError(format(
-                    "SBTL PT_INPUTS at P=%g Pa is outside the SUPER normpt "
-                    "table range [%g, %g] Pa — use HEOS directly.",
-                    p, pmin, pmax));
+                throw ValueError(format("SBTL PT_INPUTS at P=%g Pa is outside the SUPER normpt "
+                                        "table range [%g, %g] Pa — use HEOS directly.",
+                                        p, pmin, pmax));
             }
             tbl = &_normpt_super;
             coeffs = &_coeffs_normpt_super;
@@ -1697,10 +1788,9 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
             // forced=Auto, subcritical: pick LIQUID/VAPOR from T vs T_sat.
             auto [pmin, pmax] = pt_range_for(&_normpt_liquid);
             if (p < pmin || p > pmax) {
-                throw ValueError(format(
-                    "SBTL PT_INPUTS at P=%g Pa is outside the subcritical "
-                    "normpt table range [%g, %g] Pa — use HEOS directly.",
-                    p, pmin, pmax));
+                throw ValueError(format("SBTL PT_INPUTS at P=%g Pa is outside the subcritical "
+                                        "normpt table range [%g, %g] Pa — use HEOS directly.",
+                                        p, pmin, pmax));
             }
             double T_sat_L = std::numeric_limits<double>::quiet_NaN();
             double T_sat_V = std::numeric_limits<double>::quiet_NaN();
@@ -1722,13 +1812,12 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                     T_sat_active = T_sat_V;
                 } else {
                     // Strictly inside the dome — invalid PT_INPUTS.
-                    throw NotImplementedError(format(
-                        "SBTL PT_INPUTS query (T=%g K, P=%g Pa) is inside the "
-                        "two-phase dome (T_sat=%g K).  PT_INPUTS in the dome "
-                        "is ambiguous; use PQ_INPUTS or HmassP_INPUTS instead, "
-                        "or specify_phase(iphase_liquid|iphase_gas) before "
-                        "the update to disambiguate.",
-                        T_query, p, T_sat_L));
+                    throw NotImplementedError(format("SBTL PT_INPUTS query (T=%g K, P=%g Pa) is inside the "
+                                                     "two-phase dome (T_sat=%g K).  PT_INPUTS in the dome "
+                                                     "is ambiguous; use PQ_INPUTS or HmassP_INPUTS instead, "
+                                                     "or specify_phase(iphase_liquid|iphase_gas) before "
+                                                     "the update to disambiguate.",
+                                                     T_query, p, T_sat_L));
                 }
             }
         }
@@ -1768,12 +1857,10 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                         // Phase tag: prefer the user's imposed phase when they
                         // imposed one (their intent is documented).  Otherwise
                         // derive from the active table.
-                        if (imposed_phase_index != iphase_not_imposed
-                            && imposed_phase_index != iphase_critical_point) {
+                        if (imposed_phase_index != iphase_not_imposed && imposed_phase_index != iphase_critical_point) {
                             _phase = imposed_phase_index;
                         } else if (tbl == &_normpt_super) {
-                            _phase = (T_query > static_cast<double>(this->AS->T_critical()))
-                                       ? iphase_supercritical_gas : iphase_supercritical_liquid;
+                            _phase = (T_query > static_cast<double>(this->AS->T_critical())) ? iphase_supercritical_gas : iphase_supercritical_liquid;
                         } else if (tbl == &_normpt_liquid) {
                             _phase = iphase_liquid;
                         } else {
@@ -1795,10 +1882,10 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                 // Internal failure: re-throw as a clean error so the caller
                 // sees a failure rather than silent fall-through (SBTL is
                 // pure-fluid PT/PH only — no fall-back path).
-                throw ValueError(format(
-                    "SBTL PT_INPUTS at P=%g Pa, T=%g K could not be evaluated through "
-                    "the normalized PT path; the table may not cover this state.  "
-                    "Use HEOS directly.", val1, val2));
+                throw ValueError(format("SBTL PT_INPUTS at P=%g Pa, T=%g K could not be evaluated through "
+                                        "the normalized PT path; the table may not cover this state.  "
+                                        "Use HEOS directly.",
+                                        val1, val2));
             }
         }
     }
@@ -1806,10 +1893,9 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
     // No table-driven fast path matched.  SBTL only supports PT_INPUTS,
     // HmolarP_INPUTS, and HmassP_INPUTS for pure fluids.  Anything else is
     // a user error in this configuration — surface a clean message.
-    throw ValueError(format(
-        "SBTL: input pair %s not supported (only PT_INPUTS, HmassP_INPUTS, HmolarP_INPUTS).  "
-        "Use HEOS for other input pairs.",
-        get_input_pair_short_desc(input_pair).c_str()));
+    throw ValueError(format("SBTL: input pair %s not supported (only PT_INPUTS, HmassP_INPUTS, HmolarP_INPUTS).  "
+                            "Use HEOS for other input pairs.",
+                            get_input_pair_short_desc(input_pair).c_str()));
 }
 
 // ---------------------------------------------------------------------------
@@ -1824,9 +1910,8 @@ CoolPropDbl SBTLBackend::calc_hmolar(void) {
 CoolPropDbl SBTLBackend::calc_smolar(void) {
     if (_critbox_active) return static_cast<CoolPropDbl>(_critbox_smolar);
     if (_normph_active_table) {
-        return static_cast<CoolPropDbl>(evaluate_single_phase(
-            *_normph_active_table, *_normph_active_coeffs, iSmolar,
-            _normph_xnorm, static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
+        return static_cast<CoolPropDbl>(evaluate_single_phase(*_normph_active_table, *_normph_active_coeffs, iSmolar, _normph_xnorm,
+                                                              static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
     }
     if (_normpt_active_table) return static_cast<CoolPropDbl>(_smolar);
     return TabularBackend::calc_smolar();
@@ -1834,9 +1919,8 @@ CoolPropDbl SBTLBackend::calc_smolar(void) {
 CoolPropDbl SBTLBackend::calc_umolar(void) {
     if (_critbox_active) return static_cast<CoolPropDbl>(_critbox_umolar);
     if (_normph_active_table) {
-        return static_cast<CoolPropDbl>(evaluate_single_phase(
-            *_normph_active_table, *_normph_active_coeffs, iUmolar,
-            _normph_xnorm, static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
+        return static_cast<CoolPropDbl>(evaluate_single_phase(*_normph_active_table, *_normph_active_coeffs, iUmolar, _normph_xnorm,
+                                                              static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
     }
     if (_normpt_active_table) return static_cast<CoolPropDbl>(_umolar);
     return TabularBackend::calc_umolar();
@@ -1867,15 +1951,12 @@ CoolPropDbl SBTLBackend::calc_rhomolar(void) {
 // between the SBTL-evaluated h/s/u and the HEOS-evaluated cp/cv/c_sound.
 void SBTLBackend::ensure_heos_at_active_state() {
     if (_normph_active_table != nullptr) {
-        this->AS->update(HmolarP_INPUTS,
-                         static_cast<double>(_hmolar), static_cast<double>(_p));
+        this->AS->update(HmolarP_INPUTS, static_cast<double>(_hmolar), static_cast<double>(_p));
     } else if (_normpt_active_table != nullptr) {
-        this->AS->update(PT_INPUTS,
-                         static_cast<double>(_p), static_cast<double>(_T));
+        this->AS->update(PT_INPUTS, static_cast<double>(_p), static_cast<double>(_T));
     } else {
         // Fallback: most accurate input pair available is PT (we have it).
-        this->AS->update(PT_INPUTS,
-                         static_cast<double>(_p), static_cast<double>(_T));
+        this->AS->update(PT_INPUTS, static_cast<double>(_p), static_cast<double>(_T));
     }
 }
 // First-partial-derivative routing: the base-class calc_first_partial_deriv
@@ -1913,9 +1994,27 @@ CoolPropDbl SBTLBackend::calc_cvmolar() {
 }
 CoolPropDbl SBTLBackend::calc_speed_sound() {
     if (_critbox_active) return static_cast<CoolPropDbl>(_critbox_speed_sound);
-    if (_normph_active_table || _normpt_active_table) {
-        ensure_heos_at_active_state();
-        return static_cast<CoolPropDbl>(this->AS->speed_sound());
+    // SBTL native: evaluate the speed-of-sound polynomial directly from
+    // the active normalized table (matches Kunick's IAPWS-IF97 design —
+    // each spline function has its own coefficient block).  ~1 µs vs
+    // ~10 µs for HEOS direct, and consistent with the rest of the SBTL
+    // output (no formulation-comparison contamination when SBTL was
+    // built from IF97 and the caller queries against IF97).  Cells whose
+    // EOS corners returned NaN for w get no aux polynomial built — fall
+    // back to the base class (which routes via HEOS direct) in that case.
+    if (_normph_active_table != nullptr && _normph_active_coeffs != nullptr) {
+        const auto& cell = (*_normph_active_coeffs)[cached_single_phase_i][cached_single_phase_j];
+        if (!cell.get(ispeed_sound).empty()) {
+            return static_cast<CoolPropDbl>(evaluate_single_phase(*_normph_active_table, *_normph_active_coeffs, ispeed_sound, _normph_xnorm,
+                                                                  static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
+        }
+    }
+    if (_normpt_active_table != nullptr && _normpt_active_coeffs != nullptr) {
+        const auto& cell = (*_normpt_active_coeffs)[cached_single_phase_i][cached_single_phase_j];
+        if (!cell.get(ispeed_sound).empty()) {
+            return static_cast<CoolPropDbl>(evaluate_single_phase(*_normpt_active_table, *_normpt_active_coeffs, ispeed_sound, _normpt_xnorm,
+                                                                  static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
+        }
     }
     return TabularBackend::calc_speed_sound();
 }
@@ -1926,9 +2025,19 @@ CoolPropDbl SBTLBackend::calc_viscosity() {
         }
         return static_cast<CoolPropDbl>(_critbox_viscosity);
     }
-    if (_normph_active_table || _normpt_active_table) {
-        ensure_heos_at_active_state();
-        return static_cast<CoolPropDbl>(this->AS->viscosity());
+    if (_normph_active_table != nullptr && _normph_active_coeffs != nullptr) {
+        const auto& cell = (*_normph_active_coeffs)[cached_single_phase_i][cached_single_phase_j];
+        if (!cell.get(iviscosity).empty()) {
+            return static_cast<CoolPropDbl>(evaluate_single_phase(*_normph_active_table, *_normph_active_coeffs, iviscosity, _normph_xnorm,
+                                                                  static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
+        }
+    }
+    if (_normpt_active_table != nullptr && _normpt_active_coeffs != nullptr) {
+        const auto& cell = (*_normpt_active_coeffs)[cached_single_phase_i][cached_single_phase_j];
+        if (!cell.get(iviscosity).empty()) {
+            return static_cast<CoolPropDbl>(evaluate_single_phase(*_normpt_active_table, *_normpt_active_coeffs, iviscosity, _normpt_xnorm,
+                                                                  static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
+        }
     }
     return TabularBackend::calc_viscosity();
 }
@@ -1939,9 +2048,19 @@ CoolPropDbl SBTLBackend::calc_conductivity() {
         }
         return static_cast<CoolPropDbl>(_critbox_conductivity);
     }
-    if (_normph_active_table || _normpt_active_table) {
-        ensure_heos_at_active_state();
-        return static_cast<CoolPropDbl>(this->AS->conductivity());
+    if (_normph_active_table != nullptr && _normph_active_coeffs != nullptr) {
+        const auto& cell = (*_normph_active_coeffs)[cached_single_phase_i][cached_single_phase_j];
+        if (!cell.get(iconductivity).empty()) {
+            return static_cast<CoolPropDbl>(evaluate_single_phase(*_normph_active_table, *_normph_active_coeffs, iconductivity, _normph_xnorm,
+                                                                  static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
+        }
+    }
+    if (_normpt_active_table != nullptr && _normpt_active_coeffs != nullptr) {
+        const auto& cell = (*_normpt_active_coeffs)[cached_single_phase_i][cached_single_phase_j];
+        if (!cell.get(iconductivity).empty()) {
+            return static_cast<CoolPropDbl>(evaluate_single_phase(*_normpt_active_table, *_normpt_active_coeffs, iconductivity, _normpt_xnorm,
+                                                                  static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
+        }
     }
     return TabularBackend::calc_conductivity();
 }

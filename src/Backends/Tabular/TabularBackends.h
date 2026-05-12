@@ -53,7 +53,8 @@ using std::shared_ptr;
     X(d2umolardxdy)      \
     X(d2umolardy2)       \
     X(visc)              \
-    X(cond)
+    X(cond)              \
+    X(speed_sound)
 
 /** ***MAGIC WARNING***!! X Macros in use
  * See http://stackoverflow.com/a/148610
@@ -922,6 +923,12 @@ class CellCoeffs
         alt_j2 = 9999999;
     }
     std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
+    /// Additional per-cell polynomials populated by the SBTL backend so it
+    /// can return speed-of-sound / viscosity / conductivity from the spline
+    /// instead of routing through the underlying EOS.  These are empty for
+    /// the legacy BICUBIC / TTSE paths, which still go through the EOS for
+    /// these properties.
+    std::vector<double> speed_sound, viscosity, conductivity;
     /// Return a const reference to the desired matrix
     const std::vector<double>& get(const parameters params) const {
         switch (params) {
@@ -937,6 +944,12 @@ class CellCoeffs
                 return smolar;
             case iUmolar:
                 return umolar;
+            case ispeed_sound:
+                return speed_sound;
+            case iviscosity:
+                return viscosity;
+            case iconductivity:
+                return conductivity;
             default:
                 throw KeyError(format("Invalid key to get() function of CellCoeffs"));
         }
@@ -961,6 +974,15 @@ class CellCoeffs
                 break;
             case iUmolar:
                 umolar = mat;
+                break;
+            case ispeed_sound:
+                speed_sound = mat;
+                break;
+            case iviscosity:
+                viscosity = mat;
+                break;
+            case iconductivity:
+                conductivity = mat;
                 break;
             default:
                 throw KeyError(format("Invalid key to set() function of CellCoeffs"));

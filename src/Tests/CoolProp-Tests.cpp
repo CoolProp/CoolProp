@@ -5528,8 +5528,7 @@ TEST_CASE("mole_fractions_liquid/vapor reject single-phase states (#2308)", "[mo
     // VLE flash (or phase-envelope build); calc_mole_fractions_liquid/vapor
     // were returning those stale values when the current state was actually
     // single-phase, which is misleading. Now they throw.
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(
-      CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
     AS->set_mole_fractions({0.10, 0.34, 0.41, 0.15});
 
     // Build the phase envelope so SatL/SatV pick up some non-trivial state
@@ -5552,8 +5551,10 @@ TEST_CASE("mole_fractions_liquid/vapor reject single-phase states (#2308)", "[mo
     REQUIRE(y.size() == 4);
     // Each composition must sum to ~1.0
     double sx = 0.0, sy = 0.0;
-    for (auto v : x) sx += v;
-    for (auto v : y) sy += v;
+    for (auto v : x)
+        sx += v;
+    for (auto v : y)
+        sy += v;
     CHECK(sx == Catch::Approx(1.0).epsilon(1e-9));
     CHECK(sy == Catch::Approx(1.0).epsilon(1e-9));
 }
@@ -5585,7 +5586,7 @@ TEST_CASE("NormalizedPHTable: build_normph_table fills cell values matching HEOS
     auto SBTL = dynamic_cast<CoolProp::SBTLBackend*>(SBTL_AS.get());
     REQUIRE(SBTL != nullptr);
     HEOS->update(CoolProp::PT_INPUTS, 1e6, 280.0);
-    SBTL->update(CoolProp::DmolarUmolar_INPUTS, HEOS->rhomolar(), HEOS->umolar());
+    SBTL->update(CoolProp::HmolarP_INPUTS, HEOS->hmolar(), HEOS->p());
 
     using R = CoolProp::NormalizedPHTable::Region;
     for (auto region : {R::LIQUID, R::VAPOR, R::SUPER}) {
@@ -5633,7 +5634,7 @@ TEST_CASE("NormalizedPHTable: xnorm <-> h round-trip across all three regions fo
     REQUIRE(SBTL != nullptr);
     // Trigger sat cache build
     HEOS->update(CoolProp::PT_INPUTS, 1e6, 280.0);
-    SBTL->update(CoolProp::DmolarUmolar_INPUTS, HEOS->rhomolar(), HEOS->umolar());
+    SBTL->update(CoolProp::HmolarP_INPUTS, HEOS->hmolar(), HEOS->p());
 
     using R = CoolProp::NormalizedPHTable::Region;
     for (auto region : {R::LIQUID, R::VAPOR, R::SUPER}) {
@@ -5712,6 +5713,40 @@ TEST_CASE("SBTL saturation cache exposes h_sat,L(p) and h_sat,V(p) for CO2", "[S
         // try_h_superanc now uses the runtime-built H superancillary.
         CHECK(std::abs(hL_sbtl - hL_eos) / std::abs(hL_eos) < 1e-10);
         CHECK(std::abs(hV_sbtl - hV_eos) / std::abs(hV_eos) < 1e-10);
+    }
+}
+
+TEST_CASE("SBTL native speed_sound matches HEOS for CO2 single-phase states", "[SBTL][speed_sound]") {
+    // Native speed-of-sound path: SBTL builds a per-cell B-spline polynomial
+    // for w alongside (rho, T, s, h, p, u) and serves calc_speed_sound() from
+    // that polynomial.  This sanity test confirms the polynomial reproduces
+    // HEOS at a handful of single-phase liquid / vapor / supercritical states
+    // — full conformance vs IF97/IAPWS-95 spec is a follow-up.
+    auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "CO2"));
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+
+    struct Probe
+    {
+        double p_Pa, T_K;
+        const char* label;
+    };
+    const Probe probes[] = {
+      {1e6, 240.0, "subcritical liquid"},
+      {1e6, 320.0, "subcritical vapor"},
+      {1e7, 320.0, "supercritical"},
+    };
+    for (const auto& pr : probes) {
+        HEOS->update(CoolProp::PT_INPUTS, pr.p_Pa, pr.T_K);
+        SBTL_AS->update(CoolProp::PT_INPUTS, pr.p_Pa, pr.T_K);
+        const double w_eos = HEOS->speed_sound();
+        const double w_sbtl = SBTL_AS->speed_sound();
+        CAPTURE(pr.label);
+        CAPTURE(pr.p_Pa);
+        CAPTURE(pr.T_K);
+        CAPTURE(w_eos);
+        CAPTURE(w_sbtl);
+        // 1% — bounded by B-spline reconstruction error of w, not the EOS.
+        CHECK(std::abs(w_sbtl - w_eos) / std::abs(w_eos) < 1e-2);
     }
 }
 

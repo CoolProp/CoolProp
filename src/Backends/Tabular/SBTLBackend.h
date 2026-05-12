@@ -15,10 +15,11 @@ class Cheb1DPiece
 {
    public:
     Cheb1DPiece() = default;
-    Cheb1DPiece(double log_p_lo, double log_p_hi, std::vector<double> coeffs)
-      : log_p_lo_(log_p_lo), log_p_hi_(log_p_hi), c_(std::move(coeffs)) {}
+    Cheb1DPiece(double log_p_lo, double log_p_hi, std::vector<double> coeffs) : log_p_lo_(log_p_lo), log_p_hi_(log_p_hi), c_(std::move(coeffs)) {}
 
-    [[nodiscard]] bool valid() const { return c_.size() >= 2; }
+    [[nodiscard]] bool valid() const {
+        return c_.size() >= 2;
+    }
 
     template <typename Fn>
     static Cheb1DPiece build(double p_lo, double p_hi, std::size_t N, Fn&& f) {
@@ -59,7 +60,9 @@ class Cheb1DPiece
         return c_[0] + t * bk1 - bk2;
     }
 
-    [[nodiscard]] double log_p_hi() const { return log_p_hi_; }
+    [[nodiscard]] double log_p_hi() const {
+        return log_p_hi_;
+    }
 
    private:
     double log_p_lo_{0.0};
@@ -303,14 +306,30 @@ class SBTLBackend : public TabularBackend
         _normpt_vapor(NormalizedPTTable::VAPOR),
         _normpt_super(NormalizedPTTable::SUPER) {
         imposed_phase_index = iphase_not_imposed;
-        if (!this->AS->get_mole_fractions().empty()) {
-            // Strict pure-fluid check.  Pseudo-pure fluids (R407C, R404A,
-            // R407A, R410A, R507A) have mole_fractions.size() == 1 but a
-            // non-zero glide band; we reject them here so the normalized
-            // routing never has to deal with T_sat,L != T_sat,V.
+        // Strict pure-fluid check.  Pseudo-pure fluids (R407C, R404A,
+        // R407A, R410A, R507A) have mole_fractions.size() == 1 but a
+        // non-zero glide band; we reject them here so the normalized
+        // routing never has to deal with T_sat,L != T_sat,V.  Some
+        // single-fluid backends (e.g. IF97) don't implement
+        // get_mole_fractions; we treat them as pure by construction.
+        bool composition_known = true;
+        std::size_t n_components = 1;
+        try {
+            const auto& mole_fractions = this->AS->get_mole_fractions();
+            n_components = mole_fractions.size();
+        } catch (...) {
+            // Backend doesn't expose composition (IF97, etc.); assume
+            // single-component (the backend factory only routes pure
+            // fluids to those backends in the first place).
+            composition_known = false;
+        }
+        if (composition_known && n_components == 0) {
+            // No fluid set yet — defer build.  This matches the legacy
+            // TTSE/BICUBIC behaviour where the ctor doesn't allocate
+            // anything until update() is called for the first time.
+        } else {
             auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(this->AS.get());
-            if (this->AS->get_mole_fractions().size() > 1
-                || (heos != nullptr && !heos->is_pure())) {
+            if (n_components > 1 || (heos != nullptr && !heos->is_pure())) {
                 throw ValueError("SBTL backend only supports pure fluids "
                                  "(no mixtures or pseudo-pure fluids).  "
                                  "Use a different tabular backend "
@@ -360,7 +379,8 @@ class SBTLBackend : public TabularBackend
     double evaluate_single_phase_derivative(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs, parameters output,
                                             double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny);
 
-    double evaluate_single_phase_phmolar_derivative(parameters /*output*/, std::size_t /*i*/, std::size_t /*j*/, std::size_t /*Nx*/, std::size_t /*Ny*/) {
+    double evaluate_single_phase_phmolar_derivative(parameters /*output*/, std::size_t /*i*/, std::size_t /*j*/, std::size_t /*Nx*/,
+                                                    std::size_t /*Ny*/) {
         throw ValueError("SBTL: polynomial derivatives not supported; use HEOS direct via calc_first_partial_deriv or the cp/cv/c_sound accessors");
     }
     double evaluate_single_phase_pT_derivative(parameters /*output*/, std::size_t /*i*/, std::size_t /*j*/, std::size_t /*Nx*/, std::size_t /*Ny*/) {
