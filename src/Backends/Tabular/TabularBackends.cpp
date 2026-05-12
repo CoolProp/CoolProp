@@ -951,6 +951,26 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
 
                     if (imposed_phase_index != iphase_not_imposed) {
                         double rhoc = rhomolar_critical();
+                        // Lambda: validate the bumped cell. If the imposed-phase walk lands on a
+                        // table cell with no bicubic coefficients (i.e., inside the two-phase
+                        // notch of the table), evaluate_single_phase_pT will dereference an
+                        // empty alpha[] vector and segfault. Resolve to a good neighbour or
+                        // throw cleanly. Same fix idiom as the non-imposed branch below.
+                        auto ensure_bumped_cell_valid = [&](const char* context) {
+                            const auto& cell = dataset->coeffs_pT[cached_single_phase_i][cached_single_phase_j];
+                            if (!cell.valid()) {
+                                if (auto alt = cell.get_alternate()) {
+                                    auto [ai, aj] = *alt;
+                                    cached_single_phase_i = ai;
+                                    cached_single_phase_j = aj;
+                                } else {
+                                    throw ValueError(
+                                      format("Imposed phase %s: bumped cell (%zu, %zu) has no bicubic coefficients and no good neighbour "
+                                             "(p=%g Pa, T=%g K)",
+                                             context, cached_single_phase_i, cached_single_phase_j, _p, static_cast<double>(_T)));
+                                }
+                            }
+                        };
                         if (imposed_phase_index == iphase_liquid && cached_single_phase_i > 0) {
                             // We want a liquid solution, but we got a vapor solution
                             if (_p < this->AS->p_critical()) {
@@ -959,6 +979,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     // Bump to lower temperature
                                     cached_single_phase_i--;
                                 }
+                                ensure_bumped_cell_valid("liquid");
                                 double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
                                 if (rho < rhoc) {
                                     // Didn't work
@@ -977,6 +998,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     // Bump to lower temperature
                                     cached_single_phase_i++;
                                 }
+                                ensure_bumped_cell_valid("gas");
                                 double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
                                 if (rho > rhoc) {
                                     // Didn't work
@@ -1008,6 +1030,25 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     }
                                     // It's vapor, move to the right
                                     cached_single_phase_i++;
+                                }
+                                // The bumped cell may land in the table's two-phase region where
+                                // CellCoeffs has no bicubic alpha[] populated. Subsequent
+                                // evaluate_single_phase dereferences alpha[] without checking
+                                // validity → segfault (#1950: N2 BICUBIC at PT=2e5,78 K).
+                                // Resolve the same way find_native_nearest_good_indices does:
+                                // try the cell's alternate; otherwise throw cleanly.
+                                const auto& bumped_cell = dataset->coeffs_pT[cached_single_phase_i][cached_single_phase_j];
+                                if (!bumped_cell.valid()) {
+                                    if (auto alt = bumped_cell.get_alternate()) {
+                                        auto [ai, aj] = *alt;
+                                        cached_single_phase_i = ai;
+                                        cached_single_phase_j = aj;
+                                    } else {
+                                        throw ValueError(
+                                          format("P,T near saturation: bumped cell (%zu, %zu) has no bicubic coefficients and no good neighbour "
+                                                 "(p=%g Pa, T=%g K, Tsat=%g K)",
+                                                 cached_single_phase_i, cached_single_phase_j, _p, static_cast<double>(_T), Ts));
+                                    }
                                 }
                             }
                         }
@@ -1102,11 +1143,26 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             }
             break;
         }
-        case SmolarT_INPUTS: {
-            _smolar = val1;
-            _T = val2;
-            CoolPropDbl otherval = val1;
-            parameters otherkey = iSmolar;
+        case SmolarT_INPUTS:
+        case DmolarT_INPUTS: {
+            CoolPropDbl otherval = NAN;
+            parameters otherkey;
+            switch (input_pair) {
+                case SmolarT_INPUTS:
+                    _smolar = val1;
+                    _T = val2;
+                    otherval = val1;
+                    otherkey = iSmolar;
+                    break;
+                case DmolarT_INPUTS:
+                    _rhomolar = val1;
+                    _T = val2;
+                    otherval = val1;
+                    otherkey = iDmolar;
+                    break;
+                default:
+                    throw ValueError("Bad (impossible) pair");
+            }
 
             using_single_phase_table = true;  // Use the table (or first guess is that it is single-phase)!
             std::size_t iL = std::numeric_limits<std::size_t>::max(), iV = std::numeric_limits<std::size_t>::max();
@@ -1137,7 +1193,11 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             }
             if (is_two_phase) {
                 using_single_phase_table = false;
-                _Q = (otherval - zL) / (zV - zL);
+                if (otherkey == iDmolar) {
+                    _Q = (1 / otherval - 1 / zL) / (1 / zV - 1 / zL);
+                } else {
+                    _Q = (otherval - zL) / (zV - zL);
+                }
                 if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))) {
                     throw ValueError(format("vapor quality is not in (0,1) for %s: %g T: %g", get_parameter_information(otherkey, "short").c_str(),
                                             otherval, static_cast<double>(_T)));
@@ -1162,19 +1222,11 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 // Find and cache the indices i, j
                 find_nearest_neighbor(single_phase_logpT, dataset->coeffs_pT, iT, _T, otherkey, otherval, cached_single_phase_i,
                                       cached_single_phase_j);
-                // Now find the y variable (Smolar in this case)
+                // Now find the y variable (Dmolar or Smolar in this case)
                 invert_single_phase_y(single_phase_logpT, dataset->coeffs_pT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
                 // Recalculate the phase
                 recalculate_singlephase_phase();
             }
-            break;
-        }
-        case DmolarT_INPUTS: {
-            // Delegate to the virtual flash_DmolarT() which SBTL overrides with a
-            // pure-table forward evaluation; other backends fall back to the EOS.
-            _rhomolar = val1;
-            _T = val2;
-            flash_DmolarT(val1, val2);
             break;
         }
         case PQ_INPUTS: {
@@ -1235,14 +1287,6 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 cached_saturation_iV = iV;
                 _phase = iphase_twophase;
             }
-            break;
-        }
-        case DmolarUmolar_INPUTS: {
-            // Delegate to the virtual flash_DmolarUmolar() which SBTL overrides with a
-            // pure-table Newton iteration; other backends fall back to the EOS.
-            _rhomolar = val1;
-            _umolar = val2;
-            flash_DmolarUmolar(val1, val2);
             break;
         }
         default:

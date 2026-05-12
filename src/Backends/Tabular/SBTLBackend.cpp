@@ -2071,6 +2071,16 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
         }
 
         if (tbl) {
+            // Per-table OOB pressure guard — mirror of the PT path's check.
+            // Without this, an OOB p with a coincidentally in-range xnorm
+            // would silently extrapolate the bicubic, and an OOB p whose
+            // sat-lookup throws would reach the unconditional final-throw
+            // below with the misleading "input pair not supported" message.
+            if (p < tbl->yvec.front() || p > tbl->yvec.back()) {
+                throw ValueError(format("SBTL HmolarP/HmassP_INPUTS at P=%g Pa is outside the normph "
+                                        "table range [%g, %g] Pa — use HEOS directly.",
+                                        p, tbl->yvec.front(), tbl->yvec.back()));
+            }
             try {
                 const double xnorm = tbl->xnorm_from_h(h_molar, p, h_sat_active);
                 // build_bspline_coeffs marks boundary cells valid (i=0 and
