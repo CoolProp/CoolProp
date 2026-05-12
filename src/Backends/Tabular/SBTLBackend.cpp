@@ -227,12 +227,12 @@ std::vector<std::vector<double>> bspline_coeffs_2d(const std::vector<std::vector
 
 // B-spline basis polynomials in a unit cell.  Index a maps to physical
 // stencil offset {-1, 0, 1, 2}.  [a][m] = coeff of t^m in B_a(t).
-const double Bspline_poly[4][4] = {
+const std::array<std::array<double, 4>, 4> Bspline_poly = {{
   {1.0 / 6.0, -1.0 / 2.0, 1.0 / 2.0, -1.0 / 6.0},
   {2.0 / 3.0, 0.0, -1.0, 1.0 / 2.0},
   {1.0 / 6.0, 1.0 / 2.0, 1.0 / 2.0, -1.0 / 2.0},
   {0.0, 0.0, 0.0, 1.0 / 6.0},
-};
+}};
 
 // Not-a-knot ghost-cell extension.  At the left edge:
 //   C[-1] = 4 C[0] - 6 C[1] + 4 C[2] - C[3]
@@ -936,7 +936,7 @@ void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vec
                 std::array<double, 4> fxieta{};
                 bool ok = true;
                 for (int k = 0; k < 4; ++k) {
-                    double f_h, f_p, f_hh, f_hp;
+                    double f_h = 0.0, f_p = 0.0, f_hh = 0.0, f_hp = 0.0;
                     if (!extract(*cds[k], prop, f[k], f_h, f_p, f_hh, f_hp)) {
                         ok = false;
                         break;
@@ -1121,7 +1121,7 @@ void SBTLBackend::build_normpt_hermite_alphas(NormalizedPTTable& table, std::vec
                 std::array<double, 4> fxieta{};
                 bool ok = true;
                 for (int k = 0; k < 4; ++k) {
-                    double f_T, f_p, f_TT, f_Tp;
+                    double f_T = 0.0, f_p = 0.0, f_TT = 0.0, f_Tp = 0.0;
                     if (!extract(*cds[k], prop, f[k], f_T, f_p, f_TT, f_Tp)) {
                         ok = false;
                         break;
@@ -1241,9 +1241,9 @@ double NormalizedPTTable::T_from_xnorm(double xnorm, double P, double T_sat) con
 }
 
 void SBTLBackend::saturation_T_LV(double p, double& T_L, double& T_V) {
-    if (_Tsat_LV_cache_p == p) {
-        T_L = _Tsat_LV_cache_TL;
-        T_V = _Tsat_LV_cache_TV;
+    if (tsat_LV_cache_p == p) {
+        T_L = tsat_LV_cache_TL;
+        T_V = tsat_LV_cache_TV;
         return;
     }
     // Bound check BEFORE calling AS->update: PQ_INPUTS extrapolates the sat
@@ -1263,9 +1263,9 @@ void SBTLBackend::saturation_T_LV(double p, double& T_L, double& T_V) {
     const double T_sat = static_cast<double>(this->AS->T());
     T_L = T_sat;
     T_V = T_sat;
-    _Tsat_LV_cache_p = p;
-    _Tsat_LV_cache_TL = T_L;
-    _Tsat_LV_cache_TV = T_V;
+    tsat_LV_cache_p = p;
+    tsat_LV_cache_TL = T_L;
+    tsat_LV_cache_TV = T_V;
 }
 
 void SBTLBackend::populate_normpt_bounds(NormalizedPTTable& table) {
@@ -1455,10 +1455,10 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
     // and metastable spinodals the EOS may throw for speed_sound or
     // transport, and we don't want one missing corner to disqualify the
     // entire cell from the thermodynamic-property lookups.
-    const int core_count = 6;
-    const parameters core_params[core_count] = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
-    const int aux_count = 3;
-    const parameters aux_params[aux_count] = {ispeed_sound, iviscosity, iconductivity};
+    const std::array<parameters, 6> core_params = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
+    const std::array<parameters, 3> aux_params = {ispeed_sound, iviscosity, iconductivity};
+    const int core_count = static_cast<int>(core_params.size());
+    const int aux_count = static_cast<int>(aux_params.size());
 
     coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
 
@@ -2423,13 +2423,13 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
 // ---------------------------------------------------------------------------
 // Property accessors: return critbox-cached or normph-routed values
 // ---------------------------------------------------------------------------
-CoolPropDbl SBTLBackend::calc_hmolar(void) {
+CoolPropDbl SBTLBackend::calc_hmolar() {
     if (_critbox_active) return static_cast<CoolPropDbl>(_hmolar);
     if (_normph_active_table) return static_cast<CoolPropDbl>(_hmolar);
     if (_normpt_active_table) return static_cast<CoolPropDbl>(_hmolar);
     return TabularBackend::calc_hmolar();
 }
-CoolPropDbl SBTLBackend::calc_smolar(void) {
+CoolPropDbl SBTLBackend::calc_smolar() {
     if (_critbox_active) return static_cast<CoolPropDbl>(_critbox_smolar);
     if (_normph_active_table) {
         return static_cast<CoolPropDbl>(evaluate_single_phase(*_normph_active_table, *_normph_active_coeffs, iSmolar, _normph_xnorm,
@@ -2438,7 +2438,7 @@ CoolPropDbl SBTLBackend::calc_smolar(void) {
     if (_normpt_active_table) return static_cast<CoolPropDbl>(_smolar);
     return TabularBackend::calc_smolar();
 }
-CoolPropDbl SBTLBackend::calc_umolar(void) {
+CoolPropDbl SBTLBackend::calc_umolar() {
     if (_critbox_active) return static_cast<CoolPropDbl>(_critbox_umolar);
     if (_normph_active_table) {
         return static_cast<CoolPropDbl>(evaluate_single_phase(*_normph_active_table, *_normph_active_coeffs, iUmolar, _normph_xnorm,
@@ -2447,7 +2447,7 @@ CoolPropDbl SBTLBackend::calc_umolar(void) {
     if (_normpt_active_table) return static_cast<CoolPropDbl>(_umolar);
     return TabularBackend::calc_umolar();
 }
-CoolPropDbl SBTLBackend::calc_rhomolar(void) {
+CoolPropDbl SBTLBackend::calc_rhomolar() {
     if (_critbox_active) return static_cast<CoolPropDbl>(_rhomolar);
     if (_normph_active_table) return static_cast<CoolPropDbl>(_rhomolar);
     if (_normpt_active_table) return static_cast<CoolPropDbl>(_rhomolar);

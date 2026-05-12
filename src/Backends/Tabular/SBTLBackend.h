@@ -22,7 +22,7 @@ class Cheb1DPiece
     }
 
     template <typename Fn>
-    static Cheb1DPiece build(double p_lo, double p_hi, std::size_t N, Fn&& f) {
+    static Cheb1DPiece build(double p_lo, double p_hi, std::size_t N, const Fn& f) {
         const double a = std::log(p_lo), b = std::log(p_hi);
         std::vector<double> values(N + 1);
         for (std::size_t k = 0; k <= N; ++k) {
@@ -42,7 +42,7 @@ class Cheb1DPiece
         }
         coeffs[0] *= 0.5;
         coeffs[N] *= 0.5;
-        return Cheb1DPiece(a, b, std::move(coeffs));
+        return {a, b, std::move(coeffs)};
     }
 
     [[nodiscard]] double eval(double p) const {
@@ -135,7 +135,7 @@ class Cheb1D
     /// (sorted ascending), with N coeffs per piece.  Produces n pieces:
     /// [p_0, p_1], [p_1, p_2], ..., [p_{n-1}, p_n].
     template <typename Fn>
-    static Cheb1D build(const std::vector<double>& breakpoints, std::size_t N, Fn&& f) {
+    static Cheb1D build(const std::vector<double>& breakpoints, std::size_t N, const Fn& f) {
         Cheb1D out;
         if (breakpoints.size() < 2) return out;
         out.pieces_.reserve(breakpoints.size() - 1);
@@ -198,6 +198,8 @@ class NormalizedPHTable : public SinglePhaseGriddedTableData
         VAPOR = 1,
         SUPER = 2
     };
+
+    virtual ~NormalizedPHTable() = default;
 
     explicit NormalizedPHTable(Region region) : region_(region) {
         xkey = iHmolar;
@@ -265,6 +267,8 @@ class NormalizedPHTable : public SinglePhaseGriddedTableData
 class NormalizedPTTable : public SinglePhaseGriddedTableData
 {
    public:
+    virtual ~NormalizedPTTable() = default;
+
     enum Region : uint8_t
     {
         LIQUID = 0,
@@ -409,10 +413,8 @@ class SBTLBackend : public TabularBackend
     /// Constructor: loads or builds the underlying TabularDataSet and
     /// constructs the coordinate-aligned PH and PT spline backbones.
     /// Throws ValueError for mixtures or pseudo-pure fluids.
-    SBTLBackend(shared_ptr<CoolProp::AbstractState> AS)
-      : TabularBackend(AS),
-        normph_tables_built(false),
-        normpt_tables_built(false),
+    explicit SBTLBackend(shared_ptr<CoolProp::AbstractState> AS)
+      : TabularBackend(std::move(AS)),
         _normph_liquid(NormalizedPHTable::LIQUID),
         _normph_vapor(NormalizedPHTable::VAPOR),
         _normph_super(NormalizedPHTable::SUPER),
@@ -454,7 +456,7 @@ class SBTLBackend : public TabularBackend
         }
     }
 
-    std::string backend_name(void) {
+    std::string backend_name() {
         return get_backend_string(SBTL_BACKEND);
     }
 
@@ -644,10 +646,10 @@ class SBTLBackend : public TabularBackend
     /// Property accessors overridden so the coordinate-aligned PH path can
     /// route property reads through the active NormalizedPHTable cell, and
     /// so the critical-region HEOS-fallback box can return its cached values.
-    CoolPropDbl calc_hmolar(void);
-    CoolPropDbl calc_smolar(void);
-    CoolPropDbl calc_umolar(void);
-    CoolPropDbl calc_rhomolar(void);
+    CoolPropDbl calc_hmolar();
+    CoolPropDbl calc_smolar();
+    CoolPropDbl calc_umolar();
+    CoolPropDbl calc_rhomolar();
 
     // Critbox-aware derivative and transport accessors.  See the matching
     // .cpp definitions for the rationale.
@@ -690,9 +692,9 @@ class SBTLBackend : public TabularBackend
     mutable double _hsat_LV_cache_hV{0.0};
 
     // Same shape, T_sat,L(P) / T_sat,V(P) for the PT routing path.
-    mutable double _Tsat_LV_cache_p{-1.0};
-    mutable double _Tsat_LV_cache_TL{0.0};
-    mutable double _Tsat_LV_cache_TV{0.0};
+    mutable double tsat_LV_cache_p{-1.0};
+    mutable double tsat_LV_cache_TL{0.0};
+    mutable double tsat_LV_cache_TV{0.0};
 
     // Coordinate-aligned PH tables — saturation curve becomes a coordinate axis.
     // See dev/sbtl_normalized_ph_design.md for the math.
@@ -702,7 +704,7 @@ class SBTLBackend : public TabularBackend
     std::vector<std::vector<CellCoeffs>> _coeffs_normph_liquid;
     std::vector<std::vector<CellCoeffs>> _coeffs_normph_vapor;
     std::vector<std::vector<CellCoeffs>> _coeffs_normph_super;
-    bool normph_tables_built;
+    bool normph_tables_built{false};
 
     // Set during update(HmolarP/HmassP_INPUTS) when the query routes through
     // a normalized table.  evaluate_single_phase_phmolar consults these and
@@ -721,7 +723,7 @@ class SBTLBackend : public TabularBackend
     std::vector<std::vector<CellCoeffs>> _coeffs_normpt_liquid;
     std::vector<std::vector<CellCoeffs>> _coeffs_normpt_vapor;
     std::vector<std::vector<CellCoeffs>> _coeffs_normpt_super;
-    bool normpt_tables_built;
+    bool normpt_tables_built{false};
 
     // Same active-table state for PT_INPUTS routing.  When a PT query
     // succeeds through one of the normpt tables, _normpt_active_* point
