@@ -5923,14 +5923,16 @@ TEST_CASE("SBTL Hermite bicubic is the default normph build path for core props"
     CHECK(SBTL_AS->rhomolar() == Catch::Approx(HEOS->rhomolar()).epsilon(1e-3));
 }
 
-TEST_CASE("SBTL Hermite vs cubic accuracy delta on CO2 random PT sweep", "[.][hermite_accuracy]") {
+TEST_CASE("SBTL Hermite vs cubic accuracy delta on Water random PT sweep", "[.][hermite_accuracy]") {
     // Hidden by default ([.] prefix) — slow (~150s, two table rebuilds + 200
     // PT lookups × 2 paths).  Run explicitly with --test-spec '[hermite_accuracy]'
     // to quantify the foi.1 accuracy improvement.  Asserts the Hermite path
-    // is at least as accurate as the cubic-only baseline on every property's
-    // median deviation — regression guard against bad chain-rule math.
-    auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "CO2"));
-    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    // is at least as accurate as the cubic-only baseline on the rho median
+    // — regression guard against bad chain-rule math.  Water is the IAPWS
+    // reference fluid: deviations are directly comparable to G13-15 Table 10
+    // permissible values (v / T / s / w / η, ~1e-5 relative).
+    auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "Water"));
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
     auto* SBTL = dynamic_cast<CoolProp::SBTLBackend*>(SBTL_AS.get());
     REQUIRE(SBTL != nullptr);
     REQUIRE(SBTL->iapws_conformance_mode());
@@ -5987,7 +5989,7 @@ TEST_CASE("SBTL Hermite vs cubic accuracy delta on CO2 random PT sweep", "[.][he
     run_path(drho_c, dT_c);
 
     const auto rho_h = stats(drho_h), rho_c = stats(drho_c);
-    std::cout << "[hermite_accuracy] CO2 random PT sweep, n=" << drho_h.size() << " probes\n";
+    std::cout << "[hermite_accuracy] Water random PT sweep, n=" << drho_h.size() << " probes\n";
     std::cout << "  rho   Hermite  median=" << rho_h.median << "  p99=" << rho_h.p99 << "  max=" << rho_h.max << "\n";
     std::cout << "        Cubic    median=" << rho_c.median << "  p99=" << rho_c.p99 << "  max=" << rho_c.max << "\n";
     std::cout << "        ratio    median=" << rho_h.median / std::max(rho_c.median, 1e-30) << "  p99=" << rho_h.p99 / std::max(rho_c.p99, 1e-30)
