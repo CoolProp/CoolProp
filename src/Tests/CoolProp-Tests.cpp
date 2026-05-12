@@ -5942,9 +5942,19 @@ TEST_CASE("SBTL accuracy on Water random PT/PH sweep", "[.][hermite_accuracy]") 
         states.emplace_back(p, T);
     }
 
+    struct ProbeErr
+    {
+        double p_Pa, T_K, dev;
+    };
     struct Errors
     {
         std::vector<double> drho, dT, ds;
+        std::vector<ProbeErr> rho_worst;  // (p, T, drho), top by drho
+    };
+    auto record_worst = [](std::vector<ProbeErr>& w, double p, double T, double dev) {
+        w.push_back({p, T, dev});
+        std::sort(w.begin(), w.end(), [](auto& a, auto& b) { return a.dev > b.dev; });
+        if (w.size() > 3) w.resize(3);
     };
     Errors pt, ph;
     for (auto [p, T] : states) {
@@ -5954,7 +5964,9 @@ TEST_CASE("SBTL accuracy on Water random PT/PH sweep", "[.][hermite_accuracy]") 
         } catch (...) {
             continue;
         }
-        pt.drho.push_back(std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar()));
+        const double drho = std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar());
+        pt.drho.push_back(drho);
+        record_worst(pt.rho_worst, p, T, drho);
         const double s_h_pt = HEOS->smolar();
         pt.ds.push_back(std::abs(SBTL_AS->smolar() - s_h_pt) / std::max(std::abs(s_h_pt), 1e-30));
     }
@@ -5968,7 +5980,9 @@ TEST_CASE("SBTL accuracy on Water random PT/PH sweep", "[.][hermite_accuracy]") 
         } catch (...) {
             continue;
         }
-        ph.drho.push_back(std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar()));
+        const double drho = std::abs(SBTL_AS->rhomolar() - HEOS->rhomolar()) / std::abs(HEOS->rhomolar());
+        ph.drho.push_back(drho);
+        record_worst(ph.rho_worst, p, T, drho);
         ph.dT.push_back(std::abs(SBTL_AS->T() - HEOS->T()) / std::abs(HEOS->T()));
         const double s_h_ph = HEOS->smolar();
         ph.ds.push_back(std::abs(SBTL_AS->smolar() - s_h_ph) / std::max(std::abs(s_h_ph), 1e-30));
@@ -5993,6 +6007,14 @@ TEST_CASE("SBTL accuracy on Water random PT/PH sweep", "[.][hermite_accuracy]") 
         line("rho", e.drho);
         line("T  ", e.dT);
         line("s  ", e.ds);
+        const double p_crit = 22.064e6;  // Water, approximate
+        const double T_crit = 647.096;
+        for (const auto& w : e.rho_worst) {
+            const double T_red = w.T_K / T_crit;
+            const double p_red = w.p_Pa / p_crit;
+            std::cout << "  worst-rho   p=" << w.p_Pa << " (p/p_c=" << p_red << ")  T=" << w.T_K << " (T/T_c=" << T_red << ")  drho=" << w.dev
+                      << "\n";
+        }
     };
     report("PT path (normpt)", pt);
     report("PH path (normph)", ph);
