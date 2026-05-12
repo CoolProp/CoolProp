@@ -4,10 +4,16 @@
 #    include "DataStructures.h"
 #    include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #    include <iostream>
+#    include <fstream>
 #    include <map>
 #    include <memory>
 #    include <mutex>
+#    include <utility>
 #    include <Eigen/Sparse>
+#    include <msgpack.hpp>
+#    include "miniz.h"
+#    include "CPfilepaths.h"
+#    include "Configuration.h"
 #    include <Eigen/SparseLU>
 
 namespace CoolProp {
@@ -803,8 +809,141 @@ void SBTLBackend::build_normph_table(NormalizedPHTable& table) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Disk persistence: read/write one (table, coeffs) pair per file.
+// Mirrors BICUBIC/TTSE's pattern (msgpack + miniz zlib) but bundled in a
+// single file per region so the corner data and per-cell alpha vectors
+// can be round-tripped together — SBTL's coeffs aren't reconstructible
+// cheaply from corner data alone (the Hermite chain rule calls HEOS
+// second_partial_deriv at every grid node), so they're worth persisting.
+// ---------------------------------------------------------------------------
+namespace {
+template <typename T, typename Coeffs>
+void sbtl_write_region(const std::string& path_to_tables, const std::string& filename, const T& table, const Coeffs& coeffs) {
+    // Pack table and coeffs back-to-back in the same sbuffer; read side
+    // unpacks them in the same order.  Avoids needing std::pair<T, Coeffs>
+    // to be default-constructible / copy-constructible.
+    msgpack::sbuffer sbuf;
+    msgpack::pack(sbuf, table);
+    msgpack::pack(sbuf, coeffs);
+    const std::string tab_path = path_to_tables + "/" + filename + ".bin";
+    const std::string z_path = tab_path + ".z";
+    std::vector<char> buffer(sbuf.size() + 32);
+    uLong out_size = static_cast<uLong>(buffer.size());
+    compress(reinterpret_cast<unsigned char*>(buffer.data()), &out_size, reinterpret_cast<const unsigned char*>(sbuf.data()),
+             static_cast<mz_ulong>(sbuf.size()));
+    std::ofstream ofs(z_path.c_str(), std::ofstream::binary);
+    ofs.write(buffer.data(), out_size);
+    if (CoolProp::get_config_bool(SAVE_RAW_TABLES)) {
+        std::ofstream raw(tab_path.c_str(), std::ofstream::binary);
+        raw.write(sbuf.data(), sbuf.size());
+    }
+}
+
+template <typename T, typename Coeffs>
+bool sbtl_try_read_region(const std::string& path_to_tables, const std::string& filename, T& table, Coeffs& coeffs) {
+    const std::string z_path = path_to_tables + "/" + filename + ".bin.z";
+    std::vector<char> raw;
+    try {
+        raw = get_binary_file_contents(z_path.c_str());
+    } catch (...) {
+        return false;
+    }
+    std::vector<unsigned char> buf(raw.size() * 5);
+    uLong buf_size = static_cast<uLong>(buf.size());
+    int code = Z_BUF_ERROR;
+    while (code == Z_BUF_ERROR) {
+        code = uncompress(buf.data(), &buf_size, reinterpret_cast<unsigned char*>(raw.data()), static_cast<mz_ulong>(raw.size()));
+        if (code == Z_BUF_ERROR) {
+            buf.resize(buf.size() * 5);
+            buf_size = static_cast<uLong>(buf.size());
+        }
+    }
+    if (code != 0) return false;
+    try {
+        // Unpack the two msgpack objects back-to-back: first the table,
+        // then the coeffs grid.  msgpack::unpacker handles the streaming.
+        msgpack::unpacker pac;
+        pac.reserve_buffer(buf_size);
+        std::memcpy(pac.buffer(), buf.data(), buf_size);
+        pac.buffer_consumed(buf_size);
+        msgpack::object_handle oh;
+        if (!pac.next(oh)) return false;
+        T loaded_table;
+        oh.get().convert(loaded_table);
+        if (!pac.next(oh)) return false;
+        Coeffs loaded_coeffs;
+        oh.get().convert(loaded_coeffs);
+        // Validate grid dimensions match the in-memory tables (could
+        // change if TABULAR_NX/NY config differs from cached build).
+        if (loaded_table.Nx != table.Nx || loaded_table.Ny != table.Ny) {
+            return false;
+        }
+        table = std::move(loaded_table);
+        coeffs = std::move(loaded_coeffs);
+        // Reinstate axis vectors and X-macro matrix members from the loaded
+        // `matrices` map.
+        table.unpack();
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+}  // namespace
+
+bool SBTLBackend::try_load_normph_tables() {
+    if (normph_tables_built) return true;
+    const std::string path = path_to_tables();
+    if (!sbtl_try_read_region(path, "sbtl_normph_liquid", _normph_liquid, _coeffs_normph_liquid)) return false;
+    if (!sbtl_try_read_region(path, "sbtl_normph_vapor", _normph_vapor, _coeffs_normph_vapor)) return false;
+    if (!sbtl_try_read_region(path, "sbtl_normph_super", _normph_super, _coeffs_normph_super)) return false;
+    _normph_liquid.AS = this->AS;
+    _normph_vapor.AS = this->AS;
+    _normph_super.AS = this->AS;
+    normph_tables_built = true;
+    return true;
+}
+
+bool SBTLBackend::try_load_normpt_tables() {
+    if (normpt_tables_built) return true;
+    const std::string path = path_to_tables();
+    if (!sbtl_try_read_region(path, "sbtl_normpt_liquid", _normpt_liquid, _coeffs_normpt_liquid)) return false;
+    if (!sbtl_try_read_region(path, "sbtl_normpt_vapor", _normpt_vapor, _coeffs_normpt_vapor)) return false;
+    if (!sbtl_try_read_region(path, "sbtl_normpt_super", _normpt_super, _coeffs_normpt_super)) return false;
+    _normpt_liquid.AS = this->AS;
+    _normpt_vapor.AS = this->AS;
+    _normpt_super.AS = this->AS;
+    normpt_tables_built = true;
+    return true;
+}
+
+void SBTLBackend::write_normph_tables() {
+    const std::string path = path_to_tables();
+    make_dirs(path);
+    // pack() copies the X-macro matrix members into the inherited `matrices`
+    // map so they get serialised; mirror what BICUBIC/TTSE do.
+    _normph_liquid.pack();
+    _normph_vapor.pack();
+    _normph_super.pack();
+    sbtl_write_region(path, "sbtl_normph_liquid", _normph_liquid, _coeffs_normph_liquid);
+    sbtl_write_region(path, "sbtl_normph_vapor", _normph_vapor, _coeffs_normph_vapor);
+    sbtl_write_region(path, "sbtl_normph_super", _normph_super, _coeffs_normph_super);
+}
+
+void SBTLBackend::write_normpt_tables() {
+    const std::string path = path_to_tables();
+    make_dirs(path);
+    _normpt_liquid.pack();
+    _normpt_vapor.pack();
+    _normpt_super.pack();
+    sbtl_write_region(path, "sbtl_normpt_liquid", _normpt_liquid, _coeffs_normpt_liquid);
+    sbtl_write_region(path, "sbtl_normpt_vapor", _normpt_vapor, _coeffs_normpt_vapor);
+    sbtl_write_region(path, "sbtl_normpt_super", _normpt_super, _coeffs_normpt_super);
+}
+
 void SBTLBackend::build_normph_tables() {
     if (normph_tables_built) return;
+    if (try_load_normph_tables()) return;
     build_normph_table(_normph_liquid);
     build_normph_table(_normph_vapor);
     build_normph_table(_normph_super);
@@ -812,6 +951,11 @@ void SBTLBackend::build_normph_tables() {
     build_bspline_coeffs(_normph_vapor, _coeffs_normph_vapor);
     build_bspline_coeffs(_normph_super, _coeffs_normph_super);
     normph_tables_built = true;
+    try {
+        write_normph_tables();
+    } catch (...) {
+        // Persistence failures aren't fatal — the in-memory tables work.
+    }
 }
 
 void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
@@ -1448,6 +1592,7 @@ void SBTLBackend::build_normpt_table(NormalizedPTTable& table) {
 
 void SBTLBackend::build_normpt_tables() {
     if (normpt_tables_built) return;
+    if (try_load_normpt_tables()) return;
     build_normpt_table(_normpt_liquid);
     build_normpt_table(_normpt_vapor);
     build_normpt_table(_normpt_super);
@@ -1455,6 +1600,11 @@ void SBTLBackend::build_normpt_tables() {
     build_bspline_coeffs(_normpt_vapor, _coeffs_normpt_vapor);
     build_bspline_coeffs(_normpt_super, _coeffs_normpt_super);
     normpt_tables_built = true;
+    try {
+        write_normpt_tables();
+    } catch (...) {
+        // Persistence failures aren't fatal — the in-memory tables work.
+    }
 }
 
 void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs) {

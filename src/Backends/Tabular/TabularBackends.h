@@ -1014,6 +1014,9 @@ class CellCoeffs
         }
         return std::nullopt;
     }
+
+    MSGPACK_DEFINE(_valid, _has_valid_neighbor, alt_i, alt_j, dx_dxhat, dy_dyhat, T, rhomolar, hmolar, p, smolar, umolar, speed_sound, viscosity,
+                   conductivity);
 };
 
 /// This class contains the data for one set of Tabular data including single-phase and two-phase data

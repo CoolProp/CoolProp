@@ -15,9 +15,28 @@ as input pairs.  Mixtures (including pseudo-pure refrigerant blends like
 R407C, R410A) are rejected at construction; use the BICUBIC or TTSE
 backends for tabular mixture support.
 
-The grid storage and on-disk caching reuse the same machinery as BICUBIC and
-TTSE (``HOME/.CoolProp/Tables``), and SBTL is subject to the same
-directory-size warnings.
+On-disk caching
+---------------
+
+The first call to ``factory("SBTL&HEOS", "<fluid>")`` builds the six
+coordinate-aligned tables (three normph + three normpt) from scratch
+— this is HEOS-bound at every grid corner and takes ~20–30 s per
+fluid.  The tables (corner values *and* the per-cell Hermite bicubic
+coefficient vectors) are then msgpack-packed and zlib-compressed to
+``$HOME/.CoolProp/Tables/HelmholtzEOSBackend(<fluid>[<mole_frac>])/``
+in six files named ``sbtl_norm{ph,pt}_{liquid,vapor,super}.bin.z``.
+Subsequent calls deserialise from those files in ~1–2 s, skipping
+the full HEOS sweep entirely.  Per-fluid cache size is ≈ 200 MB
+compressed.
+
+The cache directory is shared with BICUBIC and TTSE for the same
+fluid; the file-name prefixes (``single_phase_log*`` vs ``sbtl_*``)
+prevent collisions.  SBTL is subject to the same
+``MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB`` warning and the same
+``ALTERNATIVE_TABLES_DIRECTORY`` config override as the other tabular
+backends.  Cache files keyed by the current ``TABULAR_NX``/``TABULAR_NY``
+grid size are evicted on mismatch and rebuilt at the requested
+resolution.
 
 Backbone interpolation
 ----------------------
@@ -88,6 +107,7 @@ saturated liquid and saturated vapor.  Specify the phase before the
 update to disambiguate:
 
 .. ipython::
+    :okexcept:
 
     In [0]: import CoolProp
 
@@ -167,6 +187,7 @@ Density obtained for R245fa using the equation of state, TTSE, BICUBIC,
 and SBTL:
 
 .. ipython::
+    :okexcept:
 
     In [0]: import CoolProp
 

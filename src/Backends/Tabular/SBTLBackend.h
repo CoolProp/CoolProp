@@ -75,6 +75,19 @@ class Cheb1DPiece
         return log_p_hi_;
     }
 
+    [[nodiscard]] double log_p_lo() const {
+        return log_p_lo_;
+    }
+    [[nodiscard]] const std::vector<double>& coeffs() const {
+        return c_;
+    }
+    // Required for msgpack serialisation; reconstructs from persisted state.
+    void set_from(double log_p_lo, double log_p_hi, std::vector<double> coeffs) {
+        log_p_lo_ = log_p_lo;
+        log_p_hi_ = log_p_hi;
+        c_ = std::move(coeffs);
+    }
+
     /// First derivative df/d(log p) evaluated at p.  Analytic — applies the
     /// standard Cheb derivative recurrence to c_ to produce derivative
     /// coefficients d_, then evaluates Σ d_k T_k(t) via Clenshaw and scales
@@ -116,6 +129,9 @@ class Cheb1DPiece
     double log_p_lo_{0.0};
     double log_p_hi_{0.0};
     std::vector<double> c_;
+
+   public:
+    MSGPACK_DEFINE(log_p_lo_, log_p_hi_, c_);
 };
 
 /**
@@ -180,6 +196,9 @@ class Cheb1D
 
    private:
     std::vector<Cheb1DPiece> pieces_;
+
+   public:
+    MSGPACK_DEFINE(pieces_);
 };
 
 /**
@@ -212,6 +231,15 @@ class NormalizedPHTable : public SinglePhaseGriddedTableData
     };
 
     virtual ~NormalizedPHTable() = default;
+
+    // Default ctor needed for msgpack deserialisation (it default-constructs
+    // then assigns).  Production callers should always use the Region ctor.
+    NormalizedPHTable() {
+        xkey = iHmolar;
+        ykey = iP;
+        logx = false;
+        logy = true;
+    }
 
     explicit NormalizedPHTable(Region region) : region_(region) {
         xkey = iHmolar;
@@ -249,8 +277,11 @@ class NormalizedPHTable : public SinglePhaseGriddedTableData
     /// are still populated and used at table build time for cell-fill.
     Cheb1D h_lo_cheb, h_hi_cheb;
 
-   private:
-    Region region_;
+    /// Region tag.  Public for msgpack serialisation; consumers should
+    /// use the region() accessor rather than touching this directly.
+    Region region_{LIQUID};
+
+    MSGPACK_DEFINE(MSGPACK_BASE(SinglePhaseGriddedTableData), h_lo_isobar, h_hi_isobar, h_lo_cheb, h_hi_cheb, region_);
 };
 
 /**
@@ -288,6 +319,14 @@ class NormalizedPTTable : public SinglePhaseGriddedTableData
         SUPER = 2
     };
 
+    // Default ctor needed for msgpack deserialisation.
+    NormalizedPTTable() {
+        xkey = iT;
+        ykey = iP;
+        logx = false;
+        logy = true;
+    }
+
     explicit NormalizedPTTable(Region region) : region_(region) {
         xkey = iT;
         ykey = iP;
@@ -322,8 +361,11 @@ class NormalizedPTTable : public SinglePhaseGriddedTableData
     /// cell-lookup encode the identical xnorm.
     Cheb1D T_lo_cheb, T_hi_cheb;
 
-   private:
-    Region region_;
+    /// Region tag.  Public for msgpack serialisation; consumers should
+    /// use the region() accessor rather than touching this directly.
+    Region region_{LIQUID};
+
+    MSGPACK_DEFINE(MSGPACK_BASE(SinglePhaseGriddedTableData), T_lo_isobar, T_hi_isobar, T_lo_cheb, T_hi_cheb, region_);
 };
 
 /**
@@ -597,6 +639,18 @@ class SBTLBackend : public TabularBackend
     /// Pure fluids only.  Idempotent.
     void build_normpt_tables();
 
+    /// Disk-persistence helpers.  Files live under
+    /// <path_to_tables()>/sbtl_<scope>_<region>.bin.z where scope is
+    /// "normph" or "normpt" and region is liquid/vapor/super.  Each
+    /// file contains a msgpack-packed pair (table, coeffs).
+    /// try_load_normph_tables / try_load_normpt_tables return true
+    /// on success; constructor calls these before build_*_tables and
+    /// only builds-from-scratch on miss, then write_*_tables.
+    bool try_load_normph_tables();
+    bool try_load_normpt_tables();
+    void write_normph_tables();
+    void write_normpt_tables();
+
     /// Helper: get T_sat,L(P) and T_sat,V(P) at the given subcritical pressure
     /// via PQ_INPUTS HEOS calls.  Throws if P is out of the saturation range.
     /// Single-deep cache so adjacent PT_INPUTS queries at the same P don't
@@ -769,5 +823,10 @@ class SBTLBackend : public TabularBackend
 };
 
 }  // namespace CoolProp
+
+// Register the Region enums with msgpack so they can be packed as the
+// underlying uint8_t.  Must be at global namespace scope.
+MSGPACK_ADD_ENUM(CoolProp::NormalizedPHTable::Region);
+MSGPACK_ADD_ENUM(CoolProp::NormalizedPTTable::Region);
 
 #endif  // SBTLBACKEND_H
