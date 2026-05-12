@@ -5561,4 +5561,37 @@ TEST_CASE("REFPROP supports DmolarQ / DmassQ inputs (#1845)", "[REFPROP][1845]")
     CHECK(AS->T() == Catch::Approx(AS2->T()).epsilon(1e-6));
 }
 
+TEST_CASE("TABULAR_NX/NY config keys exist and default to 200", "[Configuration][TABULAR]") {
+    // The tabular backend grid resolution is configurable; confirm the keys
+    // are present and the documented default is honored.
+    CHECK(CoolProp::get_config_int(TABULAR_NX) == 200);
+    CHECK(CoolProp::get_config_int(TABULAR_NY) == 200);
+}
+
+TEST_CASE("BICUBIC PT below saturation no longer segfaults (#1950)", "[BICUBIC][1950]") {
+    // Issue #1950: BICUBIC&HEOS update(PT_INPUTS, p, T) where T is just below
+    // Tsat(p) and the saturation curve sits inside the table cell:
+    //   - find_native_nearest_good_indices returns a valid cell on the vapor side
+    //   - saturation-curve check bumps `cached_single_phase_i--` to land in the
+    //     table's two-phase notch, where CellCoeffs has no alpha[] populated
+    //   - evaluate_single_phase dereferences alpha[12] → segfault
+    //
+    // After the fix, the bumped cell is checked for validity; if the alternate
+    // neighbour is set, we use it; otherwise we throw a clean ValueError.
+    auto BICU = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("BICUBIC&HEOS", "Nitrogen"));
+    // P=2 bar, T=78 K is sub-saturation for N2 (Tsat(2 bar) ~ 83.6 K) — was the
+    // original repro from the issue that crashed.
+    REQUIRE_NOTHROW(BICU->update(CoolProp::PT_INPUTS, 2.0e5, 78.0));
+    // BICU should land on a valid liquid cell and produce a sensible density.
+    const double rho = BICU->rhomass();
+    CHECK(std::isfinite(rho));
+    CHECK(rho > 700.0);  // liquid N2 ~803 kg/m^3 at this state
+    CHECK(rho < 900.0);
+
+    // Cross-check vs HEOS — the magnitudes should agree to within bicubic noise.
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen"));
+    HEOS->update(CoolProp::PT_INPUTS, 2.0e5, 78.0);
+    CHECK(rho == Catch::Approx(HEOS->rhomass()).epsilon(1e-2));  // 1% bicubic tolerance
+}
+
 #endif

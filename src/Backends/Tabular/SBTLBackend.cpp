@@ -2075,9 +2075,18 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                     tbl = &_normph_vapor;
                     coeffs = &_coeffs_normph_vapor;
                     h_sat_active = h_sat_V;  // VAPOR's h_lo
+                } else {
+                    // h_sat_L < h_molar < h_sat_V → strictly inside the dome.
+                    // PT_INPUTS at the analogous state already throws a clean
+                    // NotImplementedError (see normpt branch); mirror that
+                    // here so callers don't get the misleading "input pair
+                    // HmolarP_INPUTS not supported" terminal throw at the
+                    // bottom of update().
+                    throw NotImplementedError(
+                      format("SBTL HmolarP/HmassP_INPUTS at (h=%g J/mol, P=%g Pa) is strictly inside the two-phase dome "
+                             "(h_sat,L=%g, h_sat,V=%g).  Use PQ_INPUTS or specify_phase(iphase_liquid|iphase_gas) to disambiguate.",
+                             h_molar, p, h_sat_L, h_sat_V));
                 }
-                // else: two-phase; fall through to base class which has
-                // saturation-blend logic.
             }
         }
 
@@ -2339,7 +2348,15 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
             double T_sat_V = std::numeric_limits<double>::quiet_NaN();
             try {
                 saturation_T_LV(p, T_sat_L, T_sat_V);
-            } catch (...) {
+            } catch (const std::exception& e) {
+                // PQ_INPUTS solver failed inside saturation_T_LV (rare:
+                // numerical convergence wobble near p_crit, or stored
+                // ancillary issue).  Don't fall through to the misleading
+                // "input pair not supported" terminal throw; surface what
+                // actually failed.
+                throw ValueError(format("SBTL PT_INPUTS at P=%g Pa: could not resolve T_sat via PQ_INPUTS — %s.  "
+                                        "Use HEOS directly for this state.",
+                                        p, e.what()));
             }
             if (std::isfinite(T_sat_L) && std::isfinite(T_sat_V)) {
                 // T = T_sat (exact saturation): convention is liquid side
