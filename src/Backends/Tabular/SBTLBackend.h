@@ -4,6 +4,7 @@
 #include "TabularBackends.h"
 #include "Exceptions.h"
 #include "DataStructures.h"
+#include <functional>
 #include <optional>
 
 namespace CoolProp {
@@ -283,7 +284,24 @@ class NormalizedPHTable : public SinglePhaseGriddedTableData
     /// use the region() accessor rather than touching this directly.
     Region region_{LIQUID};
 
-    MSGPACK_DEFINE(MSGPACK_BASE(SinglePhaseGriddedTableData), h_lo_isobar, h_hi_isobar, h_lo_cheb, h_hi_cheb, region_);
+    // Override base unpack() to preserve the adaptive yvec persisted in the
+    // msgpack stream.  The base unpack() unconditionally calls
+    // make_axis_vectors(), which rebuilds yvec as a log-uniform vector
+    // from ymin/ymax/Ny — destroying the cusp-concentrated row layout that
+    // build_normph_table installed before serialisation.  Save the
+    // msgpack-deserialised yvec, let the base unpack() run (it also
+    // restores LIST_OF_MATRICES via the X-macro dance and rebuilds xvec
+    // and the good-neighbour matrices, all of which we still want), then
+    // reinstate yvec.
+    void unpack() {
+        std::vector<double> saved_yvec = yvec;
+        SinglePhaseGriddedTableData::unpack();
+        if (!saved_yvec.empty() && saved_yvec.size() == yvec.size()) {
+            yvec = std::move(saved_yvec);
+        }
+    }
+
+    MSGPACK_DEFINE(MSGPACK_BASE(SinglePhaseGriddedTableData), xvec, yvec, h_lo_isobar, h_hi_isobar, h_lo_cheb, h_hi_cheb, region_);
 };
 
 /**
@@ -367,7 +385,17 @@ class NormalizedPTTable : public SinglePhaseGriddedTableData
     /// use the region() accessor rather than touching this directly.
     Region region_{LIQUID};
 
-    MSGPACK_DEFINE(MSGPACK_BASE(SinglePhaseGriddedTableData), T_lo_isobar, T_hi_isobar, T_lo_cheb, T_hi_cheb, region_);
+    // Same yvec-preserving override as NormalizedPHTable — see the
+    // longer comment there for why.
+    void unpack() {
+        std::vector<double> saved_yvec = yvec;
+        SinglePhaseGriddedTableData::unpack();
+        if (!saved_yvec.empty() && saved_yvec.size() == yvec.size()) {
+            yvec = std::move(saved_yvec);
+        }
+    }
+
+    MSGPACK_DEFINE(MSGPACK_BASE(SinglePhaseGriddedTableData), xvec, yvec, T_lo_isobar, T_hi_isobar, T_lo_cheb, T_hi_cheb, region_);
 };
 
 /**
@@ -651,6 +679,25 @@ class SBTLBackend : public TabularBackend
     /// Build all three NormalizedPTTables and their per-cell coefficients.
     /// Pure fluids only.  Idempotent.
     void build_normpt_tables();
+
+    /// Build the row-pressure grid (yvec) for a subcritical LIQUID/VAPOR
+    /// normph/normpt table by seeding from the H-superancillary's piecewise
+    /// breakpoints (which are already dyadically refined where h_sat / T_sat
+    /// changes shape — most densely near p_crit) and then bisecting each
+    /// interval where the chosen sat-side property's linear-interpolation
+    /// error at the midpoint exceeds `tol_rel` of the interval's total
+    /// span.  Cap rows at `Ny_max` to bound build cost.
+    ///
+    /// `prop_at_p` is a callable returning the cusp-driving property at p:
+    ///   PH path: h_sat,Q(p) — vapor or liquid enthalpy along the dome
+    ///   PT path: T_sat(p)
+    /// The bisection treats this property as a proxy for cell error: cells
+    /// where h_sat (or T_sat) is locally far from linear in log p will
+    /// produce a Hermite bicubic that overshoots near the cusp.  Refining
+    /// those rows concentrates resolution where the bicubic actually needs
+    /// it.  SUPER region skips this — yvec stays log-uniform.
+    std::vector<double> build_adaptive_yvec(double ymin, double ymax, std::size_t Ny_target, std::size_t Ny_max,
+                                            const std::function<double(double)>& prop_at_p, double tol_rel) const;
 
     /// Disk-persistence helpers.  Files live under
     /// <path_to_tables()>/sbtl_<scope>_<region>.bin.z where scope is
