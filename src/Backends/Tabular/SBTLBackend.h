@@ -4,10 +4,84 @@
 #include "TabularBackends.h"
 #include "Exceptions.h"
 #include "DataStructures.h"
+#include <cmath>
 #include <functional>
 #include <optional>
 
 namespace CoolProp {
+
+/// Output-variable scaling for SBTL cell coefficients.  When a property
+/// has high dynamic range across a region (most notably ρ in VAPOR /
+/// SUPER, where it spans 5+ orders of magnitude), storing g(value) in
+/// the Hermite bicubic instead of value itself converts the surface to
+/// a more polynomial-friendly form and recovers ~150–280× accuracy in
+/// our empirical study.  Transforms beyond IDENTITY/LOG are kept here
+/// for future expansion (e.g. cusp-distance transform on subcritical
+/// sat-boundaries) but only LOG is wired in for the initial rollout.
+enum class SBTLTransform : std::uint8_t
+{
+    IDENTITY = 0,  ///< g(y) = y
+    LOG = 1,       ///< g(y) = log(y); requires y > 0
+};
+
+/// Apply the forward transform g(y).
+inline double sbtl_transform_apply(SBTLTransform t, double y) {
+    switch (t) {
+        case SBTLTransform::LOG:
+            return std::log(y);
+        case SBTLTransform::IDENTITY:
+        default:
+            return y;
+    }
+}
+
+/// Apply the inverse transform g⁻¹(z).
+inline double sbtl_transform_inverse(SBTLTransform t, double z) {
+    switch (t) {
+        case SBTLTransform::LOG:
+            return std::exp(z);
+        case SBTLTransform::IDENTITY:
+        default:
+            return z;
+    }
+}
+
+/// First derivative dg/dy.
+inline double sbtl_transform_deriv(SBTLTransform t, double y) {
+    switch (t) {
+        case SBTLTransform::LOG:
+            return 1.0 / y;
+        case SBTLTransform::IDENTITY:
+        default:
+            return 1.0;
+    }
+}
+
+/// Second derivative d²g/dy².
+inline double sbtl_transform_second_deriv(SBTLTransform t, double y) {
+    switch (t) {
+        case SBTLTransform::LOG:
+            return -1.0 / (y * y);
+        case SBTLTransform::IDENTITY:
+        default:
+            return 0.0;
+    }
+}
+
+/// Pick the transform for a (region, parameter) combination.  Hardcoded
+/// from empirical-study residuals (see dev/sbtl_auto_transform_study
+/// notes): log transform for ρ in VAPOR / SUPER closes ~150–280× of the
+/// G13-15 ρ-error gap.  region_int matches both NormalizedPHTable::Region
+/// and NormalizedPTTable::Region enum values: 0=LIQUID, 1=VAPOR, 2=SUPER.
+/// Other property-region combinations stay IDENTITY in phase 1 and can
+/// be promoted to log/sqrt/cusp-dist later once the infrastructure is
+/// validated.
+inline SBTLTransform sbtl_transform_for_property(int region_int, parameters output) {
+    if (output == iDmolar && (region_int == 1 || region_int == 2)) {
+        return SBTLTransform::LOG;
+    }
+    return SBTLTransform::IDENTITY;
+}
 
 /**
  * @brief Single Chebyshev expansion in ln(p) (natural log of pressure)

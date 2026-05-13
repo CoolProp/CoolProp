@@ -1318,6 +1318,7 @@ void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vec
 
             bool any_property_upgraded = false;
             for (parameters prop : core_props) {
+                const SBTLTransform tform = sbtl_transform_for_property(static_cast<int>(table.region()), prop);
                 std::array<double, 4> f{};
                 std::array<double, 4> fxi{};
                 std::array<double, 4> feta{};
@@ -1337,11 +1338,30 @@ void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vec
                     const double dh_dlogp = row_sat[row].dh_lo_dlogp + xnorm_k * dDelta_h_dlogp;
 
                     // ∂f̃/∂xnorm = f_h · Δh
-                    const double df_dxnorm = f_h * Delta_h;
+                    double df_dxnorm = f_h * Delta_h;
                     // ∂f̃/∂(log p) at fixed xnorm = p · f_p + f_h · (dh_lo' + xnorm · dΔh')
-                    const double df_dlogp = p_k * f_p + f_h * dh_dlogp;
+                    double df_dlogp = p_k * f_p + f_h * dh_dlogp;
                     // ∂²f̃/∂xnorm∂(log p) = Δh · [f_hh · dh_dlogp + p · f_hp] + f_h · dΔh'
-                    const double d2f = Delta_h * (f_hh * dh_dlogp + p_k * f_hp) + f_h * dDelta_h_dlogp;
+                    double d2f = Delta_h * (f_hh * dh_dlogp + p_k * f_hp) + f_h * dDelta_h_dlogp;
+
+                    // Chain-rule the corner derivatives through the output
+                    // transform g.  For F = g(f):
+                    //   F_x   = g'(f) · f_x
+                    //   F_y   = g'(f) · f_y
+                    //   F_xy  = g''(f) · f_x · f_y + g'(f) · f_xy
+                    if (tform != SBTLTransform::IDENTITY) {
+                        if (!(f[k] > 0.0)) {
+                            ok = false;
+                            break;
+                        }  // log requires y>0
+                        const double gp = sbtl_transform_deriv(tform, f[k]);
+                        const double gpp = sbtl_transform_second_deriv(tform, f[k]);
+                        const double new_d2 = gpp * df_dxnorm * df_dlogp + gp * d2f;
+                        df_dxnorm *= gp;
+                        df_dlogp *= gp;
+                        d2f = new_d2;
+                        f[k] = sbtl_transform_apply(tform, f[k]);
+                    }
 
                     fxi[k] = df_dxnorm * Delta_xi;
                     feta[k] = df_dlogp * Delta_eta;
@@ -1503,6 +1523,7 @@ void SBTLBackend::build_normpt_hermite_alphas(NormalizedPTTable& table, std::vec
 
             bool any_property_upgraded = false;
             for (parameters prop : core_props) {
+                const SBTLTransform tform = sbtl_transform_for_property(static_cast<int>(table.region()), prop);
                 std::array<double, 4> f{};
                 std::array<double, 4> fxi{};
                 std::array<double, 4> feta{};
@@ -1521,9 +1542,25 @@ void SBTLBackend::build_normpt_hermite_alphas(NormalizedPTTable& table, std::vec
                     const double dDelta_T_dlogp = row_sat[row].dT_hi_dlogp - row_sat[row].dT_lo_dlogp;
                     const double dT_dlogp = row_sat[row].dT_lo_dlogp + xnorm_k * dDelta_T_dlogp;
 
-                    const double df_dxnorm = f_T * Delta_T;
-                    const double df_dlogp = p_k * f_p + f_T * dT_dlogp;
-                    const double d2f = Delta_T * (f_TT * dT_dlogp + p_k * f_Tp) + f_T * dDelta_T_dlogp;
+                    double df_dxnorm = f_T * Delta_T;
+                    double df_dlogp = p_k * f_p + f_T * dT_dlogp;
+                    double d2f = Delta_T * (f_TT * dT_dlogp + p_k * f_Tp) + f_T * dDelta_T_dlogp;
+
+                    // Chain-rule corner derivatives through the output
+                    // transform g (same form as PH path; see comment there).
+                    if (tform != SBTLTransform::IDENTITY) {
+                        if (!(f[k] > 0.0)) {
+                            ok = false;
+                            break;
+                        }
+                        const double gp = sbtl_transform_deriv(tform, f[k]);
+                        const double gpp = sbtl_transform_second_deriv(tform, f[k]);
+                        const double new_d2 = gpp * df_dxnorm * df_dlogp + gp * d2f;
+                        df_dxnorm *= gp;
+                        df_dlogp *= gp;
+                        d2f = new_d2;
+                        f[k] = sbtl_transform_apply(tform, f[k]);
+                    }
 
                     fxi[k] = df_dxnorm * Delta_xi;
                     feta[k] = df_dlogp * Delta_eta;
@@ -1967,7 +2004,34 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
                 }
             }
         }
-        const auto& source = is_aux ? aux_scratch : *fp;
+
+        // Output-variable scaling: for properties whose region demands a
+        // non-identity transform (ρ in VAPOR / SUPER => log), build the
+        // spline on the TRANSFORMED matrix.  The stored alpha coefficients
+        // then encode the polynomial fit to g(value) — log(ρ) in this
+        // phase — and the lookup path applies g⁻¹ to recover the physical
+        // value.  Skips properties whose transform is IDENTITY (no-op).
+        const int region_int_for_transform = [&]() -> int {
+            if (auto* ph = dynamic_cast<NormalizedPHTable*>(&table)) return static_cast<int>(ph->region());
+            if (auto* pt = dynamic_cast<NormalizedPTTable*>(&table)) return static_cast<int>(pt->region());
+            return -1;  // unknown — caller is some other table type; identity
+        }();
+        const SBTLTransform tform =
+          (region_int_for_transform >= 0) ? sbtl_transform_for_property(region_int_for_transform, param) : SBTLTransform::IDENTITY;
+        std::vector<std::vector<double>> transform_scratch;
+        if (tform != SBTLTransform::IDENTITY) {
+            transform_scratch = is_aux ? aux_scratch : *fp;
+            for (auto& row : transform_scratch) {
+                for (double& v : row) {
+                    if (ValidNumber(v) && v > 0.0) {
+                        v = sbtl_transform_apply(tform, v);
+                    } else {
+                        v = _HUGE;  // mark so per-cell B-spline skips
+                    }
+                }
+            }
+        }
+        const auto& source = (tform != SBTLTransform::IDENTITY) ? transform_scratch : (is_aux ? aux_scratch : *fp);
 
         const auto C = bspline_coeffs_2d(source);
 
@@ -2564,8 +2628,10 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                         const double eta = (std::log(p) - std::log(tbl->yvec[j])) / (std::log(tbl->yvec[j + 1]) - std::log(tbl->yvec[j]));
                         _normph_xi = xi;
                         _normph_eta = eta;
-                        const double T_val = evaluate_single_phase_pre(*coeffs, iT, xi, eta, i, j);
-                        const double rho_val = evaluate_single_phase_pre(*coeffs, iDmolar, xi, eta, i, j);
+                        const double T_val = sbtl_transform_inverse(sbtl_transform_for_property(static_cast<int>(tbl->region()), iT),
+                                                                    evaluate_single_phase_pre(*coeffs, iT, xi, eta, i, j));
+                        const double rho_val = sbtl_transform_inverse(sbtl_transform_for_property(static_cast<int>(tbl->region()), iDmolar),
+                                                                      evaluate_single_phase_pre(*coeffs, iDmolar, xi, eta, i, j));
                         // Sanity check: cubic B-spline through hole-filled
                         // data near table edges can extrapolate to
                         // non-physical values (e.g. negative density at
@@ -2877,7 +2943,8 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                         const double eta = (std::log(p) - std::log(tbl->yvec[j])) / (std::log(tbl->yvec[j + 1]) - std::log(tbl->yvec[j]));
                         _normpt_xi = xi;
                         _normpt_eta = eta;
-                        const double rho_val = evaluate_single_phase_pre(*coeffs, iDmolar, xi, eta, i, j);
+                        const double rho_val = sbtl_transform_inverse(sbtl_transform_for_property(static_cast<int>(tbl->region()), iDmolar),
+                                                                      evaluate_single_phase_pre(*coeffs, iDmolar, xi, eta, i, j));
                         if (!ValidNumber(rho_val) || rho_val <= 0.0) {
                             throw ValueError("SBTL normpt polynomial gave non-physical rho");
                         }
