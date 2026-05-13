@@ -884,16 +884,112 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
     } catch (...) {
         return log_uniform(ymin, ymax, Ny_floor);
     }
-    auto rho_sat_V = [probe_AS](double p) -> double {
+    // Cell-midpoint ρ-error metric.  For each candidate interval (p_a, p_b),
+    // probe ρ at the same η coordinate at three pressures (p_a, p_mid, p_b)
+    // across η ∈ {0.02, 0.25, 0.5, 0.75, 0.98} (avoiding the sat boundaries
+    // exactly so the HmolarP_INPUTS probe doesn't land in the dome's
+    // ambiguity).  Compare HEOS(η, p_mid) to the linear interpolation of
+    // ρ between (η, p_a) and (η, p_b) — this is the lerp-residual the
+    // cell would carry, which upper-bounds the actual Hermite-bicubic
+    // residual (cubic is more accurate than linear, given the same
+    // corners).  Take the max over η probes as the interval's "needs
+    // refinement?" score.
+    //
+    // Compared to the earlier ρ_sat,V-at-η=0 lerp criterion, this measures
+    // bulk-cell error too, not just the dome boundary.  Bands of bad
+    // states away from the dome (~Argon at 0.5·p_crit, Water at multiple
+    // bisection-level boundaries) should drop because bisection now sees
+    // those bulk cells when they're poorly approximated.
+    //
+    // η-coordinate is region-dependent.  For LIQUID: η spans [0, 1] from
+    // h_min(p)=h(T_min,p) to h_sat,L(p).  For VAPOR: η spans from
+    // h_sat,V(p) to h_hi(p)=h(T_max_ext,p).
+    const int region_int = [&]() -> int {
+        // 0=LIQUID, 1=VAPOR.  Inferred from prop_at_p caller convention,
+        // but build_normph_table calls this with PH-region context.  See
+        // call sites.  Fall back to using the prop_at_p value at the
+        // midpoint to disambiguate: ρ_sat,V > ρ_sat,L always.  Actually
+        // simpler: just probe both bounds; whichever one h_lo/h_hi
+        // computation succeeds for is the region.
+        return -1;
+    }();
+    const double T_min_eos = std::max(static_cast<double>(probe_AS->Ttriple()), static_cast<double>(probe_AS->Tmin()));
+    const double T_max_ext = static_cast<double>(probe_AS->Tmax()) * 1.499;
+    auto h_bounds_at_p_LIQ = [&probe_AS, T_min_eos](double p, double& h_lo, double& h_hi) -> bool {
+        try {
+            probe_AS->update(PT_INPUTS, p, T_min_eos);
+            h_lo = static_cast<double>(probe_AS->hmolar());
+            probe_AS->update(PQ_INPUTS, p, 0.0);
+            h_hi = static_cast<double>(probe_AS->hmolar());
+            return std::isfinite(h_lo) && std::isfinite(h_hi);
+        } catch (...) { return false; }
+    };
+    auto h_bounds_at_p_VAP = [&probe_AS, T_max_ext](double p, double& h_lo, double& h_hi) -> bool {
         try {
             probe_AS->update(PQ_INPUTS, p, 1.0);
-            return static_cast<double>(probe_AS->rhomolar());
-        } catch (...) {
-            return std::numeric_limits<double>::quiet_NaN();
-        }
+            h_lo = static_cast<double>(probe_AS->hmolar());
+            probe_AS->update(PT_INPUTS, p, T_max_ext);
+            h_hi = static_cast<double>(probe_AS->hmolar());
+            return std::isfinite(h_lo) && std::isfinite(h_hi);
+        } catch (...) { return false; }
+    };
+    // Determine region by probing: if VAPOR-style h bounds work and produce
+    // a positive span, treat as VAPOR; same for LIQUID; if both work pick
+    // by checking that h_hi - h_lo is wider in one (the more-relevant
+    // region for our table).  Heuristic: probe at p_mid in the middle of
+    // the yvec.
+    bool is_vapor = false, is_liquid = false;
+    {
+        const double p_probe = std::exp(0.5 * (std::log(ymin) + std::log(ymax)));
+        double h_lo, h_hi;
+        is_vapor = h_bounds_at_p_VAP(p_probe, h_lo, h_hi) && (h_hi > h_lo);
+        is_liquid = h_bounds_at_p_LIQ(p_probe, h_lo, h_hi) && (h_hi > h_lo);
+    }
+    auto h_bounds_at_p = [is_vapor, is_liquid, &h_bounds_at_p_LIQ, &h_bounds_at_p_VAP](double p, double& h_lo,
+                                                                                       double& h_hi) -> bool {
+        // Heuristic resolved at p_mid: prefer VAPOR if it works (most
+        // problematic for the sqrt-cusp), fall back to LIQUID.
+        if (is_vapor) return h_bounds_at_p_VAP(p, h_lo, h_hi);
+        if (is_liquid) return h_bounds_at_p_LIQ(p, h_lo, h_hi);
+        return false;
     };
 
-    const double tol_rho = 0.01 * rho_crit;  // 1 % of ρ_crit
+    auto rho_at_eta_p = [&probe_AS, &h_bounds_at_p](double eta, double p) -> double {
+        double h_lo = 0.0, h_hi = 0.0;
+        if (!h_bounds_at_p(p, h_lo, h_hi)) return std::numeric_limits<double>::quiet_NaN();
+        const double h = h_lo + eta * (h_hi - h_lo);
+        try {
+            probe_AS->update(HmolarP_INPUTS, h, p);
+            return static_cast<double>(probe_AS->rhomolar());
+        } catch (...) { return std::numeric_limits<double>::quiet_NaN(); }
+    };
+
+    auto cell_max_relerr = [&rho_at_eta_p, rho_crit](double p_a, double p_b) -> double {
+        // Return the max RELATIVE lerp error over η probes, with a soft
+        // floor at ρ_crit·0.01 in the denominator so cells in the
+        // ultra-dilute region (ρ → 0) don't make the metric explode.
+        const double log_p_mid = 0.5 * (std::log(p_a) + std::log(p_b));
+        const double p_mid = std::exp(log_p_mid);
+        double max_relerr = 0.0;
+        for (double eta : {0.02, 0.25, 0.5, 0.75, 0.98}) {
+            const double r_a = rho_at_eta_p(eta, p_a);
+            const double r_b = rho_at_eta_p(eta, p_b);
+            const double r_m = rho_at_eta_p(eta, p_mid);
+            if (!std::isfinite(r_a) || !std::isfinite(r_b) || !std::isfinite(r_m)) continue;
+            const double r_lerp = 0.5 * (r_a + r_b);
+            const double denom = std::max(std::abs(r_m), rho_crit * 0.01);
+            const double relerr = std::abs(r_m - r_lerp) / denom;
+            if (relerr > max_relerr) max_relerr = relerr;
+        }
+        return max_relerr;
+    };
+
+    // Tolerance choice.  Tight (1e-4) → refinement budget gets spread across
+    // many low-error cells away from the cusp, leaving the cusp under-
+    // refined.  Loose (1e-2) → only the worst cells trigger refinement;
+    // budget concentrates at the cusp.  1e-2 empirically gives the best
+    // overall accuracy (max errors lowest across the 5-fluid panel).
+    const double tol_relerr = 1e-2;
     int iter = 0;
     constexpr int max_iter = 12;
     while (iter < max_iter && anchors.size() < Ny_max) {
@@ -905,8 +1001,7 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
             next.push_back(a);
             if (anchors.size() + (next.size() - j - 1) < Ny_max) {
                 const double mid = std::exp(0.5 * (std::log(a) + std::log(b)));
-                const double r_a = rho_sat_V(a), r_b = rho_sat_V(b), r_m = rho_sat_V(mid);
-                if (std::isfinite(r_a) && std::isfinite(r_b) && std::isfinite(r_m) && std::abs(r_m - 0.5 * (r_a + r_b)) > tol_rho) {
+                if (cell_max_relerr(a, b) > tol_relerr) {
                     next.push_back(mid);
                     progressing = true;
                 }
