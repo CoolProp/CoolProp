@@ -842,26 +842,24 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
     auto helm = std::dynamic_pointer_cast<HelmholtzEOSMixtureBackend>(this->AS);
     if (!helm) return log_uniform(ymin, ymax, Ny_floor);
 
-    // Step 1: anchor list = {ymin, superancillary breakpoints in (ymin, ymax), ymax}
-    std::vector<double> anchors = {ymin, ymax};
+    // Step 1: seed anchors as a SMALL log-uniform grid (no fluid-specific
+    // breakpoints).  Using the H-superancillary piece edges as hard anchors
+    // was tried — it produced discrete bands of high-error cells at each
+    // anchor location because the bisection-density-across-anchor changed
+    // abruptly, creating the same kind of cell-spacing discontinuity that
+    // the earlier two-zone scheme had at 0.5·p_crit (just at multiple
+    // locations instead of one).  Starting from a uniform log grid and
+    // letting the bisection drive density wherever ρ_sat curvature
+    // demands it produces a smooth cell-spacing profile.
+    constexpr std::size_t Ny_seed = 16;
+    std::vector<double> anchors = log_uniform(ymin, ymax, Ny_seed);
     double rho_crit = 0.0;
     try {
-        helm->ensure_caloric_superancillaries();
-        auto super_anc = helm->get_components()[0].EOS().get_superanc();
-        if (super_anc) {
-            const auto& expansions = super_anc->get_invlnp().value().get_expansions();
-            for (std::size_t k = 0; k + 1 < expansions.size(); ++k) {
-                const double p_break = std::exp(expansions[k].xmax());
-                if (p_break > ymin * 1.0001 && p_break < ymax * 0.9999) {
-                    anchors.push_back(p_break);
-                }
-            }
-        }
+        helm->ensure_caloric_superancillaries();  // probe AS path below needs it
         rho_crit = static_cast<double>(helm->rhomolar_critical());
     } catch (...) {
         return log_uniform(ymin, ymax, Ny_floor);
     }
-    std::sort(anchors.begin(), anchors.end());
     if (rho_crit <= 0.0) return log_uniform(ymin, ymax, Ny_floor);
 
     // Step 2: bisection-to-tolerance on ρ_sat,V linear-interp error at log midpoint.
