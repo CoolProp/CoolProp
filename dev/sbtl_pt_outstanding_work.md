@@ -89,7 +89,7 @@ Recommended: just lower the default.  Estimated 5 min.
 
 ## Defer-able (low-priority polish)
 
-### 0. Near-critical PH error band (~0.85 p_crit < p < p_crit)
+### 0. Near-critical PH error band (~0.85 p_crit < p < p_crit) — follow-up PR
 
 The multi-fluid PH error plot shows a residual error band on the
 subcritical vapor side of the SBTL panel for fluids close to the
@@ -99,14 +99,75 @@ near-machine precision so xnorm at lookup is exact.
 
 The error is in the *property surface* being interpolated.  Along the
 dome boundary (xnorm = 0), `ρ_sat,V(p) ~ ρ_crit - C·(p_crit - p)^β` with
-`β ≈ 0.326` has a vertical-tangent cusp as `p → p_crit`.  The cell's
+`β = 1/2` (mean-field — CoolProp's analytic Helmholtz EOS in (τ, δ) is
+not Ising) has a vertical-tangent cusp as `p → p_crit`.  The cell's
 16-coefficient Hermite bicubic in `(xnorm, log p)` cannot reproduce
 this cusp — the residual at the cell midpoint is bounded by the cell's
 `log p` span times derivatives of `ρ_sat` that diverge near critical.
 Probe at p = 0.93 p_crit on R245fa: error peaks on the dome (0.59 % at
 η = 0.001) and decays monotonically away (0.25 % at η = 0.95).
 
-Mitigation paths (not in this PR):
+#### Plan: mirror Kunick's IAPWS G13-15 method (follow-up PR)
+
+Kunick's water tables already solve this problem and ship as the
+reference IAPWS G13-15 implementation.  The key insight: don't
+interpolate the cusped surface — interpolate a *transformed* surface
+that's smooth, then invert the transform at lookup.  Concrete elements
+to port to SBTL:
+
+1. **Region split at p_crit and h_crit.**  Kunick's (h, p) plane is
+   partitioned into ~6 fixed regions separated by *vertical* lines in p
+   (with p_crit as one boundary) and *horizontal* lines in h
+   (h_crit ≈ 2087.546 kJ/kg for water).  The critical point sits at a
+   corner where 4 regions meet — it isn't *inside* any region.  No
+   single cell ever straddles or contains the cusp.
+
+   For SBTL this means promoting our (LIQUID, VAPOR, SUPER) split to a
+   finer (LIQUID, VAPOR, SUPER_L, SUPER_G) split with the SUPER_L /
+   SUPER_G boundary at the h_crit horizontal.  Compressed-liquid /
+   supercritical-liquid extension goes to SUPER_L; vapor /
+   supercritical-gas extension goes to SUPER_G.  Each gets its own
+   bicubic.
+
+2. **Property-specific coordinate transforms within each region.**
+   Within each region, the function being interpolated is transformed
+   so the residual of the smooth fit is bounded everywhere:
+     - `v̄ = log v` for the gas / supercritical-gas region (kills the
+       large dynamic range)
+     - `s̄ = √s` near the cusp (absorbs the β=1/2 behaviour)
+     - per-property transforms tuned to flatten the third-derivative
+       curvature in the transformed coordinate
+   The bicubic fits the transformed surface; lookup applies the inverse.
+   For our near-critical PH band specifically, fitting
+   `1 - ρ/ρ_crit` on the SUPER table with a `(p_crit - p)^0.5`
+   transform on the p coordinate of the relevant cells should absorb
+   the cusp entirely.
+
+3. **Variable grid density near p_crit.**  Kunick's Tables A8–A10 pack
+   hundreds of nodes into the immediate critical-point neighbourhood
+   and use sparse spacing elsewhere.  Even with the transform, local
+   curvature gets brute-forced down by cell size.  For SBTL this is
+   the same as mitigation path 1 from the earlier write-up: piecewise
+   yvec with `(p_crit - p)^0.5` spacing in the top 15 % of pressure.
+
+4. **HEOS-fallback box stays.**  The existing critbox handles the
+   immediate ±1 bar / ±30 % h_crit neighbourhood that's too cusped for
+   any polynomial — works fine, no change.
+
+5. **Property-specific transforms persisted with the table.**  Per
+   (region, property) the table stores a transform spec (identity,
+   `log`, `√`, `1 - x/x_crit`, etc.) chosen at build time to flatten
+   the residual.  Evaluator applies the inverse before returning.
+   Storage cost: one tag per (region, property), negligible compared
+   to the cell-coefficient payload.
+
+Estimated effort: ~2 weeks for the four region split + transform
+infrastructure + per-property build-time transform selection.  This
+is also items 1–6 of the existing "IAPWS G13-15 conformance" section
+below; landing those would close the cusp band and bring the SBTL
+water table to G13-15-grade accuracy simultaneously.
+
+#### Smaller mitigations (still applicable if the full Kunick port slips)
 
 1. **Finer cells in the top 15 % of p.** Replace log-uniform yvec
    spacing with a piecewise refinement that concentrates rows in the
