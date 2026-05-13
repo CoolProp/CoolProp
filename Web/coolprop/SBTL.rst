@@ -364,17 +364,8 @@ bulk single-phase region both backends are below
 Near-critical PH behaviour
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The SBTL panel of the PH plot shows an error band concentrated in
-:math:`0.85\,p_{\rm crit} \lesssim p < p_{\rm crit}` (visible most
-clearly for R245fa and D6).  This is *not* a coordinate-normalization
-issue — the H-superancillary delivers :math:`h_{\rm sat}(p)` to
-near-machine precision, so the
-:math:`\eta = (h - h_{\rm sat}(p))/(h_{\rm hi}(p) - h_{\rm sat}(p))`
-mapping at lookup time is exact.
-
-The error is in the *property surface* the bicubic interpolates.  Along
-the saturation curve (:math:`\eta = 0` boundary) the vapour-side density
-behaves as
+Along the saturation curve (:math:`\eta = 0` boundary) the vapour-side
+density behaves as
 
 .. math::
 
@@ -386,15 +377,28 @@ with :math:`\partial\rho_{\rm sat}/\partial p \to \infty` as
 classical mean-field value (CoolProp's pure-fluid Helmholtz EOS is
 analytic in :math:`(\tau, \delta)` and therefore reproduces mean-field
 scaling near critical, not the experimental 3D-Ising
-:math:`\beta \approx 0.326`).  Each cell stores a 16-coefficient Hermite
-bicubic (corner values + first derivatives in
-:math:`\eta` and :math:`\log p`).  A cubic Hermite cannot reproduce a
-square-root-style cusp — its residual at the cell midpoint is bounded by
+:math:`\beta \approx 0.326`).  A cubic Hermite cannot reproduce a
+square-root-style cusp; its residual at the cell midpoint is bounded by
 the cell's :math:`\log p` span times derivatives of
-:math:`\rho_{\rm sat}` that diverge near critical.  Probing R245fa at
-:math:`p = 0.93\,p_{\rm crit}` confirms the structure: error is maximal
-right at the dome (~0.59 % at :math:`\eta = 10^{-3}`) and decays
-monotonically as :math:`\eta` moves away (~0.25 % at :math:`\eta = 0.95`).
+:math:`\rho_{\rm sat}` that diverge near critical.
+
+This is **not** a coordinate-normalization issue — the H-superancillary
+delivers :math:`h_{\rm sat}(p)` to near-machine precision, so the
+:math:`\eta = (h - h_{\rm sat}(p))/(h_{\rm hi}(p) - h_{\rm sat}(p))`
+mapping at lookup time is exact.  The error is in the *property surface*
+being interpolated, controlled by how short the cell's :math:`\log p`
+span is at the cusp.
+
+The subcritical PH grid uses a two-zone log-uniform :math:`p`-axis
+layout that concentrates ~60 % of rows into
+:math:`[0.5\,p_{\rm crit},\,p_{\rm crit}]`, shrinking the cell
+:math:`\log p` span at the cusp by ~6× relative to a single
+log-uniform grid.  Random-PH error at :math:`p = 0.93\,p_{\rm crit}`
+on R245fa drops from ~0.59 % (single log-uniform grid) to ~10⁻⁵ %
+(cusp-concentrated grid) at the dome, with similar improvements
+elsewhere in :math:`(0.5,\,1.0)\,p_{\rm crit}`.  Residual error
+remains in a narrow band right at the critical point where the
+HEOS-fallback box takes over.
 
 The supercritical region (``SUPER`` table) is unaffected — no dome, no
 cusp — and stays at the bulk single-phase accuracy.  PT lookups avoid

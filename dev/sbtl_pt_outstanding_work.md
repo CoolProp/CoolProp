@@ -89,7 +89,20 @@ Recommended: just lower the default.  Estimated 5 min.
 
 ## Defer-able (low-priority polish)
 
-### 0. Near-critical PH error band (~0.85 p_crit < p < p_crit) — follow-up PR
+### 0. Near-critical PH error band — substantially closed in this PR (follow-up for the last decade)
+
+**Status: most of the band is gone.**  Subcritical LIQUID/VAPOR normph
+tables now use a two-zone log-uniform yvec (40 % rows in [p_triple,
+0.5·p_crit], 60 % rows in [0.5·p_crit, p_max]) instead of one
+log-uniform span from p_triple to p_crit.  Cusp-region cell `log p`
+spans shrink ~6×; the band's error drops 1000×–10⁵× (random PH at
+p=0.93·p_crit, R245fa: 0.59 % → 10⁻⁵ %).
+
+The bullets below describe the residual problem (max ~1–2 % errors
+right at the immediate critical-point boundary, swallowed by the
+existing critbox) and a follow-up plan to drive it down further.
+
+
 
 The multi-fluid PH error plot shows a residual error band on the
 subcritical vapor side of the SBTL panel for fluids close to the
