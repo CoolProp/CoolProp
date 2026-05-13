@@ -1044,17 +1044,29 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
         return std::isfinite(rho) && std::isfinite(drho_dlogp);
     };
 
+    // For a candidate yvec interval (p_a, p_b), evaluate the cell-midpoint
+    // Hermite-cubic-vs-HEOS error at EVERY η across the working seed
+    // grid, not just a handful of fixed probe points.  Per Ian: "the
+    // check should be for all 16×16 cells, not one per row" — covering
+    // every cell in the row, not a slice of representative η.  Cost:
+    // ~Nx_seed × 3 HEOS calls per interval check.  With Nx_seed = 16
+    // and 12 bisection iterations × ~32 intervals, the metric makes ~16k
+    // HEOS calls per build path.  At 10 µs each, ~160 ms — negligible.
+    constexpr std::size_t Nx_eta_probes = 16;
     auto cell_max_relerr = [&rho_and_drho_dlogp, &rho_at_eta_p, rho_crit](double p_a, double p_b) -> double {
         const double dlog_p = std::log(p_b) - std::log(p_a);
         const double p_mid = std::exp(0.5 * (std::log(p_a) + std::log(p_b)));
         double max_relerr = 0.0;
-        for (double eta : {0.02, 0.25, 0.5, 0.75, 0.98}) {
+        // Use uniform η probes covering all 16 cells across the row, with a
+        // small inset from {0, 1} so HmolarP_INPUTS doesn't land exactly
+        // on the dome boundary (where the sat-side probe can throw).
+        for (std::size_t k = 0; k < Nx_eta_probes; ++k) {
+            const double eta = 0.02 + (0.98 - 0.02) * static_cast<double>(k) / static_cast<double>(Nx_eta_probes - 1);
             double r_a = 0.0, dr_a = 0.0, r_b = 0.0, dr_b = 0.0;
             if (!rho_and_drho_dlogp(eta, p_a, r_a, dr_a)) continue;
             if (!rho_and_drho_dlogp(eta, p_b, r_b, dr_b)) continue;
             const double r_m_heos = rho_at_eta_p(eta, p_mid);
             if (!std::isfinite(r_m_heos)) continue;
-            // Hermite cubic at t = 0.5
             const double r_m_hermite = 0.5 * (r_a + r_b) + 0.125 * dlog_p * (dr_a - dr_b);
             const double denom = std::max(std::abs(r_m_heos), rho_crit * 0.01);
             const double relerr = std::abs(r_m_hermite - r_m_heos) / denom;
@@ -1156,57 +1168,75 @@ std::vector<double> SBTLBackend::build_adaptive_xvec(int region_int, std::size_t
     }
     if (rho_crit <= 0.0) return linear_uniform(0.0, 1.0, Nx_floor);
 
-    // Anchor pressure: log-midpoint of (ymin, ymax).  Representative
-    // single state; the η-resolution needed near the cusp dominates and
-    // is reasonably p-independent for the bicubic structure.
-    const double p_anchor = std::exp(0.5 * (std::log(ymin) + std::log(ymax)));
+    // For an η interval, probe at ALL p values across the yvec seed
+    // (not a single p_anchor) — covers the full row of cells stacked
+    // above each η interval, not a slice.  Per Ian: "the check should
+    // be for all 16×16 cells, not one per row".  Pressure probes are
+    // 16 log-uniform values in (ymin, ymax) — matches the yvec seed.
+    constexpr std::size_t Np_probes = 16;
+    std::vector<double> p_probes(Np_probes);
+    for (std::size_t k = 0; k < Np_probes; ++k) {
+        const double frac = static_cast<double>(k) / static_cast<double>(Np_probes - 1);
+        p_probes[k] = std::exp(std::log(ymin) + frac * (std::log(ymax) - std::log(ymin)));
+    }
     const double T_min_eos = std::max(static_cast<double>(probe_AS->Ttriple()), static_cast<double>(probe_AS->Tmin()));
     const double T_max_ext = static_cast<double>(probe_AS->Tmax()) * 1.499;
     const bool is_liquid = (region_int == 0);
     const bool is_vapor = (region_int == 1);
 
-    // Compute h_lo, h_hi at p_anchor once.
-    double h_lo = 0.0, h_hi = 0.0;
-    try {
-        if (is_vapor) {
-            probe_AS->update(PQ_INPUTS, p_anchor, 1.0);
-            h_lo = static_cast<double>(probe_AS->hmolar());
-            probe_AS->update(PT_INPUTS, p_anchor, T_max_ext);
-            h_hi = static_cast<double>(probe_AS->hmolar());
-        } else if (is_liquid) {
-            probe_AS->update(PT_INPUTS, p_anchor, T_min_eos);
-            h_lo = static_cast<double>(probe_AS->hmolar());
-            probe_AS->update(PQ_INPUTS, p_anchor, 0.0);
-            h_hi = static_cast<double>(probe_AS->hmolar());
-        } else {
-            return linear_uniform(0.0, 1.0, Nx_floor);
-        }
-    } catch (...) { return linear_uniform(0.0, 1.0, Nx_floor); }
-    if (!(h_hi > h_lo)) return linear_uniform(0.0, 1.0, Nx_floor);
-    const double delta_h = h_hi - h_lo;
-
-    auto rho_and_drho_deta = [&probe_AS, p_anchor, h_lo, delta_h](double eta, double& rho, double& drho_deta) -> bool {
-        const double h = h_lo + eta * delta_h;
+    // For each probe pressure, get (h_lo, h_hi) so we can map η→h.
+    std::vector<double> h_lo_at_p(Np_probes), h_hi_at_p(Np_probes);
+    std::vector<bool> p_probe_valid(Np_probes, false);
+    for (std::size_t k = 0; k < Np_probes; ++k) {
         try {
-            probe_AS->update(HmolarP_INPUTS, h, p_anchor);
+            if (is_vapor) {
+                probe_AS->update(PQ_INPUTS, p_probes[k], 1.0);
+                h_lo_at_p[k] = static_cast<double>(probe_AS->hmolar());
+                probe_AS->update(PT_INPUTS, p_probes[k], T_max_ext);
+                h_hi_at_p[k] = static_cast<double>(probe_AS->hmolar());
+            } else if (is_liquid) {
+                probe_AS->update(PT_INPUTS, p_probes[k], T_min_eos);
+                h_lo_at_p[k] = static_cast<double>(probe_AS->hmolar());
+                probe_AS->update(PQ_INPUTS, p_probes[k], 0.0);
+                h_hi_at_p[k] = static_cast<double>(probe_AS->hmolar());
+            }
+            p_probe_valid[k] = std::isfinite(h_lo_at_p[k]) && std::isfinite(h_hi_at_p[k]) && (h_hi_at_p[k] > h_lo_at_p[k]);
+        } catch (...) { p_probe_valid[k] = false; }
+    }
+
+    auto rho_and_drho_deta = [&probe_AS](double eta, double p, double h_lo_p, double h_hi_p, double& rho,
+                                         double& drho_deta) -> bool {
+        const double delta_h_p = h_hi_p - h_lo_p;
+        const double h = h_lo_p + eta * delta_h_p;
+        try {
+            probe_AS->update(HmolarP_INPUTS, h, p);
             rho = static_cast<double>(probe_AS->rhomolar());
             const double drho_dh = probe_AS->first_partial_deriv(iDmolar, iHmolar, iP);
-            drho_deta = drho_dh * delta_h;  // dρ/dη|_p = (∂ρ/∂h)|_p · (h_hi - h_lo)
+            drho_deta = drho_dh * delta_h_p;
         } catch (...) { return false; }
         return std::isfinite(rho) && std::isfinite(drho_deta);
     };
 
-    auto cell_eta_relerr = [&rho_and_drho_deta, rho_crit](double eta_a, double eta_b) -> double {
+    auto cell_eta_relerr = [&rho_and_drho_deta, &p_probes, &h_lo_at_p, &h_hi_at_p, &p_probe_valid, rho_crit](double eta_a,
+                                                                                                            double eta_b) -> double {
         const double eta_mid = 0.5 * (eta_a + eta_b);
         const double d_eta = eta_b - eta_a;
-        double r_a = 0.0, dr_a = 0.0, r_b = 0.0, dr_b = 0.0, r_mid_heos = 0.0, dr_mid_unused = 0.0;
-        if (!rho_and_drho_deta(eta_a, r_a, dr_a)) return 0.0;
-        if (!rho_and_drho_deta(eta_b, r_b, dr_b)) return 0.0;
-        if (!rho_and_drho_deta(eta_mid, r_mid_heos, dr_mid_unused)) return 0.0;
-        // Hermite cubic at t = 0.5
-        const double r_mid_hermite = 0.5 * (r_a + r_b) + 0.125 * d_eta * (dr_a - dr_b);
-        const double denom = std::max(std::abs(r_mid_heos), rho_crit * 0.01);
-        return std::abs(r_mid_hermite - r_mid_heos) / denom;
+        double max_relerr = 0.0;
+        // Take the worst-case relerr across all pressure probes — covers
+        // every cell in the column above this η interval.
+        for (std::size_t k = 0; k < Np_probes; ++k) {
+            if (!p_probe_valid[k]) continue;
+            const double p_k = p_probes[k], h_lo_k = h_lo_at_p[k], h_hi_k = h_hi_at_p[k];
+            double r_a = 0.0, dr_a = 0.0, r_b = 0.0, dr_b = 0.0, r_mid_heos = 0.0, dr_mid_unused = 0.0;
+            if (!rho_and_drho_deta(eta_a, p_k, h_lo_k, h_hi_k, r_a, dr_a)) continue;
+            if (!rho_and_drho_deta(eta_b, p_k, h_lo_k, h_hi_k, r_b, dr_b)) continue;
+            if (!rho_and_drho_deta(eta_mid, p_k, h_lo_k, h_hi_k, r_mid_heos, dr_mid_unused)) continue;
+            const double r_mid_hermite = 0.5 * (r_a + r_b) + 0.125 * d_eta * (dr_a - dr_b);
+            const double denom = std::max(std::abs(r_mid_heos), rho_crit * 0.01);
+            const double relerr = std::abs(r_mid_hermite - r_mid_heos) / denom;
+            if (relerr > max_relerr) max_relerr = relerr;
+        }
+        return max_relerr;
     };
 
     // Seed: uniform 16-point η grid in [0, 1].
