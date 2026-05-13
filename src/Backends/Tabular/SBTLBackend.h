@@ -20,15 +20,25 @@ namespace CoolProp {
 /// sat-boundaries) but only LOG is wired in for the initial rollout.
 enum class SBTLTransform : std::uint8_t
 {
-    IDENTITY = 0,  ///< g(y) = y
-    LOG = 1,       ///< g(y) = log(y); requires y > 0
+    IDENTITY = 0,             ///< g(y) = y
+    LOG = 1,                  ///< g(y) = log(y); requires y > 0
+    CUSP_DIST_BELOW_REF = 2,  ///< g(y) = √(y_ref − y); requires y ≤ y_ref (VAPOR-side ρ near dome)
+    CUSP_DIST_ABOVE_REF = 3,  ///< g(y) = √(y − y_ref); requires y ≥ y_ref (LIQUID-side ρ near dome)
 };
 
-/// Apply the forward transform g(y).
-inline double sbtl_transform_apply(SBTLTransform t, double y) {
+/// Apply the forward transform g(y), with optional y_ref for cusp-distance variants.
+inline double sbtl_transform_apply(SBTLTransform t, double y, double y_ref = 0.0) {
     switch (t) {
         case SBTLTransform::LOG:
             return std::log(y);
+        case SBTLTransform::CUSP_DIST_BELOW_REF: {
+            const double d = y_ref - y;
+            return std::sqrt(d > 0.0 ? d : 0.0);
+        }
+        case SBTLTransform::CUSP_DIST_ABOVE_REF: {
+            const double d = y - y_ref;
+            return std::sqrt(d > 0.0 ? d : 0.0);
+        }
         case SBTLTransform::IDENTITY:
         default:
             return y;
@@ -36,10 +46,14 @@ inline double sbtl_transform_apply(SBTLTransform t, double y) {
 }
 
 /// Apply the inverse transform g⁻¹(z).
-inline double sbtl_transform_inverse(SBTLTransform t, double z) {
+inline double sbtl_transform_inverse(SBTLTransform t, double z, double y_ref = 0.0) {
     switch (t) {
         case SBTLTransform::LOG:
             return std::exp(z);
+        case SBTLTransform::CUSP_DIST_BELOW_REF:
+            return y_ref - z * z;
+        case SBTLTransform::CUSP_DIST_ABOVE_REF:
+            return y_ref + z * z;
         case SBTLTransform::IDENTITY:
         default:
             return z;
@@ -47,10 +61,18 @@ inline double sbtl_transform_inverse(SBTLTransform t, double z) {
 }
 
 /// First derivative dg/dy.
-inline double sbtl_transform_deriv(SBTLTransform t, double y) {
+inline double sbtl_transform_deriv(SBTLTransform t, double y, double y_ref = 0.0) {
     switch (t) {
         case SBTLTransform::LOG:
             return 1.0 / y;
+        case SBTLTransform::CUSP_DIST_BELOW_REF: {
+            const double d = y_ref - y;
+            return (d > 0.0) ? -0.5 / std::sqrt(d) : 0.0;
+        }
+        case SBTLTransform::CUSP_DIST_ABOVE_REF: {
+            const double d = y - y_ref;
+            return (d > 0.0) ? 0.5 / std::sqrt(d) : 0.0;
+        }
         case SBTLTransform::IDENTITY:
         default:
             return 1.0;
@@ -58,10 +80,18 @@ inline double sbtl_transform_deriv(SBTLTransform t, double y) {
 }
 
 /// Second derivative d²g/dy².
-inline double sbtl_transform_second_deriv(SBTLTransform t, double y) {
+inline double sbtl_transform_second_deriv(SBTLTransform t, double y, double y_ref = 0.0) {
     switch (t) {
         case SBTLTransform::LOG:
             return -1.0 / (y * y);
+        case SBTLTransform::CUSP_DIST_BELOW_REF: {
+            const double d = y_ref - y;
+            return (d > 0.0) ? -0.25 / (d * std::sqrt(d)) : 0.0;
+        }
+        case SBTLTransform::CUSP_DIST_ABOVE_REF: {
+            const double d = y - y_ref;
+            return (d > 0.0) ? -0.25 / (d * std::sqrt(d)) : 0.0;
+        }
         case SBTLTransform::IDENTITY:
         default:
             return 0.0;
@@ -69,31 +99,44 @@ inline double sbtl_transform_second_deriv(SBTLTransform t, double y) {
 }
 
 /// Pick the transform for a (region, parameter) combination.  Hardcoded
-/// from empirical-study residuals (see dev/sbtl_auto_transform_study
-/// notes): log transform for ρ in VAPOR / SUPER closes ~150–280× of the
-/// G13-15 ρ-error gap.  region_int matches both NormalizedPHTable::Region
-/// and NormalizedPTTable::Region enum values: 0=LIQUID, 1=VAPOR, 2=SUPER.
-/// Other property-region combinations stay IDENTITY in phase 1 and can
-/// be promoted to log/sqrt/cusp-dist later once the infrastructure is
-/// validated.
+/// from empirical-study residuals.  region_int matches both
+/// NormalizedPHTable::Region and NormalizedPTTable::Region enum values:
+/// 0=LIQUID, 1=VAPOR, 2=SUPER.
+///
+/// ρ transforms (selected per region):
+///   LIQUID (0): CUSP_DIST_ABOVE_REF, y_ref = ρ_crit.  ρ_LIQUID > ρ_crit
+///               and varies only ~2× across the region; z = √(ρ − ρ_crit)
+///               absorbs the sqrt-cusp at the dome (ρ_sat,L → ρ_crit as
+///               p → p_crit).  z error magnification dρ/dz = 2z stays
+///               small because z is bounded by √(ρ_max − ρ_crit).
+///   VAPOR  (1): LOG.  CUSP_DIST_BELOW_REF is mathematically correct here
+///               (ρ_VAPOR < ρ_crit) but is a TERRIBLE FIT: ρ_VAPOR varies
+///               orders of magnitude (e.g. Argon at 1 bar, 150 K: ρ ≈ 3
+///               mol/m³ while ρ_crit ≈ 13 400 mol/m³), so z = √(ρ_crit − ρ)
+///               can be ~116, and dρ/dz = −2z = −232 magnifies polynomial
+///               residuals catastrophically — a 2 % z error becomes a
+///               460 mol/m³ ρ error (verified failure on
+///               SBTL/Argon HmassP at h≈77 kJ/mol, p=1 bar:
+///               ρ_sbtl=534 vs ρ_eos=3.2).  LOG handles the dynamic range
+///               cleanly and accepts the residual sqrt-cusp at the dome
+///               as the lesser evil.
+///   SUPER  (2): LOG.  No sat boundary; ρ spans ~21× for water and log
+///               compresses the dynamic range; cusp-distance doesn't
+///               apply since ρ crosses ρ_crit through this region.
 inline SBTLTransform sbtl_transform_for_property(int region_int, parameters output) {
-    // ρ in all three regions: log transform.  Empirical study (multi-fluid
-    // grid sweep at coarse resolution, fit candidate transforms, pick
-    // lowest p99 residual) showed log beats identity by:
-    //   LIQUID:   ~500× (residual 0.054 vs 26.5; ρ varies ~2×)
-    //   VAPOR:    ~150× (residual 0.137 vs 20.8; ρ varies ~5 orders of magnitude)
-    //   SUPER:    ~280× (residual 0.41  vs 114)
-    // Even where ρ dynamic range is modest (LIQUID, ~2×), log helps
-    // because the property surface near the sat boundary has high
-    // curvature in ρ — log compresses that curvature to a polynomial-
-    // friendlier form.  Cusp-distance transforms (z = √(ρ − ρ_crit))
-    // are slightly better still for LIQUID near the dome (~30 % gain
-    // over log) but require fluid-specific ρ_crit storage; log is the
-    // simpler universal-fluid choice and captures the bulk of the gain.
     if (output == iDmolar) {
-        return SBTLTransform::LOG;
+        if (region_int == 0) return SBTLTransform::CUSP_DIST_ABOVE_REF;
+        return SBTLTransform::LOG;  // VAPOR + SUPER
     }
     return SBTLTransform::IDENTITY;
+}
+
+/// Reference value for the cusp-distance transforms.  For ρ in subcritical
+/// regions this is ρ_crit; for everything else (where the transform is
+/// IDENTITY or LOG) the reference is unused and we return 0.0.
+inline double sbtl_transform_y_ref(int region_int, parameters output, double rho_crit_molar) {
+    if (output == iDmolar && (region_int == 0 || region_int == 1)) return rho_crit_molar;
+    return 0.0;
 }
 
 /**
@@ -799,8 +842,7 @@ class SBTLBackend : public TabularBackend
     /// enum: 0=LIQUID, 1=VAPOR.  ymin/ymax are the pressure bounds —
     /// the probe samples at the log-midpoint pressure as a
     /// representative state.
-    std::vector<double> build_adaptive_xvec(int region_int, std::size_t Nx_target, std::size_t Nx_max, double ymin,
-                                            double ymax) const;
+    std::vector<double> build_adaptive_xvec(int region_int, std::size_t Nx_target, std::size_t Nx_max, double ymin, double ymax) const;
 
     /// Disk-persistence helpers.  Files live under
     /// <path_to_tables()>/sbtl_<scope>_<region>.bin.z where scope is

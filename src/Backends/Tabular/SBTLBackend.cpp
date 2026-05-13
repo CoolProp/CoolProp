@@ -1053,7 +1053,7 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
     // and 12 bisection iterations × ~32 intervals, the metric makes ~16k
     // HEOS calls per build path.  At 10 µs each, ~160 ms — negligible.
     constexpr std::size_t Nx_eta_probes = 16;
-    auto cell_max_relerr = [&rho_and_drho_dlogp, &rho_at_eta_p, rho_crit](double p_a, double p_b) -> double {
+    auto cell_max_relerr = [&rho_and_drho_dlogp, &rho_at_eta_p, rho_crit, Nx_eta_probes](double p_a, double p_b) -> double {
         const double dlog_p = std::log(p_b) - std::log(p_a);
         const double p_mid = std::exp(0.5 * (std::log(p_a) + std::log(p_b)));
         double max_relerr = 0.0;
@@ -1127,8 +1127,7 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
     return yvec;
 }
 
-std::vector<double> SBTLBackend::build_adaptive_xvec(int region_int, std::size_t Nx_target, std::size_t Nx_max, double ymin,
-                                                     double ymax) const {
+std::vector<double> SBTLBackend::build_adaptive_xvec(int region_int, std::size_t Nx_target, std::size_t Nx_max, double ymin, double ymax) const {
     // Adaptive bisection on η ∈ [0, 1] driven by Hermite-cubic-vs-HEOS
     // error at η midpoints.  Probes at the log-midpoint pressure
     // p_anchor as a representative state (single-p probe trades some
@@ -1201,11 +1200,12 @@ std::vector<double> SBTLBackend::build_adaptive_xvec(int region_int, std::size_t
                 h_hi_at_p[k] = static_cast<double>(probe_AS->hmolar());
             }
             p_probe_valid[k] = std::isfinite(h_lo_at_p[k]) && std::isfinite(h_hi_at_p[k]) && (h_hi_at_p[k] > h_lo_at_p[k]);
-        } catch (...) { p_probe_valid[k] = false; }
+        } catch (...) {
+            p_probe_valid[k] = false;
+        }
     }
 
-    auto rho_and_drho_deta = [&probe_AS](double eta, double p, double h_lo_p, double h_hi_p, double& rho,
-                                         double& drho_deta) -> bool {
+    auto rho_and_drho_deta = [&probe_AS](double eta, double p, double h_lo_p, double h_hi_p, double& rho, double& drho_deta) -> bool {
         const double delta_h_p = h_hi_p - h_lo_p;
         const double h = h_lo_p + eta * delta_h_p;
         try {
@@ -1213,12 +1213,14 @@ std::vector<double> SBTLBackend::build_adaptive_xvec(int region_int, std::size_t
             rho = static_cast<double>(probe_AS->rhomolar());
             const double drho_dh = probe_AS->first_partial_deriv(iDmolar, iHmolar, iP);
             drho_deta = drho_dh * delta_h_p;
-        } catch (...) { return false; }
+        } catch (...) {
+            return false;
+        }
         return std::isfinite(rho) && std::isfinite(drho_deta);
     };
 
-    auto cell_eta_relerr = [&rho_and_drho_deta, &p_probes, &h_lo_at_p, &h_hi_at_p, &p_probe_valid, rho_crit](double eta_a,
-                                                                                                            double eta_b) -> double {
+    auto cell_eta_relerr = [&rho_and_drho_deta, &p_probes, &h_lo_at_p, &h_hi_at_p, &p_probe_valid, rho_crit, Np_probes](double eta_a,
+                                                                                                                        double eta_b) -> double {
         const double eta_mid = 0.5 * (eta_a + eta_b);
         const double d_eta = eta_b - eta_a;
         double max_relerr = 0.0;
@@ -1673,6 +1675,7 @@ void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vec
     };
 
     const std::array<parameters, 4> core_props = {iDmolar, iT, iSmolar, iUmolar};
+    const double rho_crit_molar = static_cast<double>(this->AS->rhomolar_critical());
     int hermite_cell_count = 0;
     for (std::size_t i = 0; i + 1 < table.Nx; ++i) {
         for (std::size_t j = 0; j + 1 < table.Ny; ++j) {
@@ -1693,6 +1696,13 @@ void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vec
             bool any_property_upgraded = false;
             for (parameters prop : core_props) {
                 const SBTLTransform tform = sbtl_transform_for_property(static_cast<int>(table.region()), prop);
+                const double y_ref = sbtl_transform_y_ref(static_cast<int>(table.region()), prop, rho_crit_molar);
+                // CUSP_DIST derivatives blow up as f → y_ref.  Require a minimum
+                // distance of 1e-6·y_ref at every corner so the chain-rule terms
+                // stay finite; cells that brush ρ_crit too closely fall back to
+                // the existing bilinear coefficients for this property.
+                const double cusp_min_d =
+                  (tform == SBTLTransform::CUSP_DIST_ABOVE_REF || tform == SBTLTransform::CUSP_DIST_BELOW_REF) ? 1e-6 * std::abs(y_ref) : 0.0;
                 std::array<double, 4> f{};
                 std::array<double, 4> fxi{};
                 std::array<double, 4> feta{};
@@ -1727,14 +1737,22 @@ void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vec
                         if (!(f[k] > 0.0)) {
                             ok = false;
                             break;
-                        }  // log requires y>0
-                        const double gp = sbtl_transform_deriv(tform, f[k]);
-                        const double gpp = sbtl_transform_second_deriv(tform, f[k]);
+                        }  // log/cusp require y>0
+                        if (tform == SBTLTransform::CUSP_DIST_ABOVE_REF && (f[k] - y_ref) <= cusp_min_d) {
+                            ok = false;
+                            break;
+                        }
+                        if (tform == SBTLTransform::CUSP_DIST_BELOW_REF && (y_ref - f[k]) <= cusp_min_d) {
+                            ok = false;
+                            break;
+                        }
+                        const double gp = sbtl_transform_deriv(tform, f[k], y_ref);
+                        const double gpp = sbtl_transform_second_deriv(tform, f[k], y_ref);
                         const double new_d2 = gpp * df_dxnorm * df_dlogp + gp * d2f;
                         df_dxnorm *= gp;
                         df_dlogp *= gp;
                         d2f = new_d2;
-                        f[k] = sbtl_transform_apply(tform, f[k]);
+                        f[k] = sbtl_transform_apply(tform, f[k], y_ref);
                     }
 
                     fxi[k] = df_dxnorm * Delta_xi;
@@ -1878,6 +1896,7 @@ void SBTLBackend::build_normpt_hermite_alphas(NormalizedPTTable& table, std::vec
     };
 
     const std::array<parameters, 4> core_props = {iDmolar, iHmolar, iSmolar, iUmolar};
+    const double rho_crit_molar = static_cast<double>(this->AS->rhomolar_critical());
     int hermite_cell_count = 0;
     for (std::size_t i = 0; i + 1 < table.Nx; ++i) {
         for (std::size_t j = 0; j + 1 < table.Ny; ++j) {
@@ -1898,6 +1917,9 @@ void SBTLBackend::build_normpt_hermite_alphas(NormalizedPTTable& table, std::vec
             bool any_property_upgraded = false;
             for (parameters prop : core_props) {
                 const SBTLTransform tform = sbtl_transform_for_property(static_cast<int>(table.region()), prop);
+                const double y_ref = sbtl_transform_y_ref(static_cast<int>(table.region()), prop, rho_crit_molar);
+                const double cusp_min_d =
+                  (tform == SBTLTransform::CUSP_DIST_ABOVE_REF || tform == SBTLTransform::CUSP_DIST_BELOW_REF) ? 1e-6 * std::abs(y_ref) : 0.0;
                 std::array<double, 4> f{};
                 std::array<double, 4> fxi{};
                 std::array<double, 4> feta{};
@@ -1927,13 +1949,21 @@ void SBTLBackend::build_normpt_hermite_alphas(NormalizedPTTable& table, std::vec
                             ok = false;
                             break;
                         }
-                        const double gp = sbtl_transform_deriv(tform, f[k]);
-                        const double gpp = sbtl_transform_second_deriv(tform, f[k]);
+                        if (tform == SBTLTransform::CUSP_DIST_ABOVE_REF && (f[k] - y_ref) <= cusp_min_d) {
+                            ok = false;
+                            break;
+                        }
+                        if (tform == SBTLTransform::CUSP_DIST_BELOW_REF && (y_ref - f[k]) <= cusp_min_d) {
+                            ok = false;
+                            break;
+                        }
+                        const double gp = sbtl_transform_deriv(tform, f[k], y_ref);
+                        const double gpp = sbtl_transform_second_deriv(tform, f[k], y_ref);
                         const double new_d2 = gpp * df_dxnorm * df_dlogp + gp * d2f;
                         df_dxnorm *= gp;
                         df_dlogp *= gp;
                         d2f = new_d2;
-                        f[k] = sbtl_transform_apply(tform, f[k]);
+                        f[k] = sbtl_transform_apply(tform, f[k], y_ref);
                     }
 
                     fxi[k] = df_dxnorm * Delta_xi;
@@ -2392,13 +2422,19 @@ void SBTLBackend::build_bspline_coeffs(SinglePhaseGriddedTableData& table, std::
         }();
         const SBTLTransform tform =
           (region_int_for_transform >= 0) ? sbtl_transform_for_property(region_int_for_transform, param) : SBTLTransform::IDENTITY;
+        const double y_ref_src = (region_int_for_transform >= 0)
+                                   ? sbtl_transform_y_ref(region_int_for_transform, param, static_cast<double>(this->AS->rhomolar_critical()))
+                                   : 0.0;
         std::vector<std::vector<double>> transform_scratch;
         if (tform != SBTLTransform::IDENTITY) {
             transform_scratch = is_aux ? aux_scratch : *fp;
             for (auto& row : transform_scratch) {
                 for (double& v : row) {
-                    if (ValidNumber(v) && v > 0.0) {
-                        v = sbtl_transform_apply(tform, v);
+                    bool on_domain = ValidNumber(v) && v > 0.0;
+                    if (on_domain && tform == SBTLTransform::CUSP_DIST_ABOVE_REF && !(v > y_ref_src)) on_domain = false;
+                    if (on_domain && tform == SBTLTransform::CUSP_DIST_BELOW_REF && !(v < y_ref_src)) on_domain = false;
+                    if (on_domain) {
+                        v = sbtl_transform_apply(tform, v, y_ref_src);
                     } else {
                         v = _HUGE;  // mark so per-cell B-spline skips
                     }
@@ -3002,10 +3038,15 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                         const double eta = (std::log(p) - std::log(tbl->yvec[j])) / (std::log(tbl->yvec[j + 1]) - std::log(tbl->yvec[j]));
                         _normph_xi = xi;
                         _normph_eta = eta;
-                        const double T_val = sbtl_transform_inverse(sbtl_transform_for_property(static_cast<int>(tbl->region()), iT),
-                                                                    evaluate_single_phase_pre(*coeffs, iT, xi, eta, i, j));
-                        const double rho_val = sbtl_transform_inverse(sbtl_transform_for_property(static_cast<int>(tbl->region()), iDmolar),
-                                                                      evaluate_single_phase_pre(*coeffs, iDmolar, xi, eta, i, j));
+                        const int region_int = static_cast<int>(tbl->region());
+                        const double rho_crit_inv = static_cast<double>(this->AS->rhomolar_critical());
+                        const SBTLTransform tform_T = sbtl_transform_for_property(region_int, iT);
+                        const SBTLTransform tform_rho = sbtl_transform_for_property(region_int, iDmolar);
+                        const double y_ref_T = sbtl_transform_y_ref(region_int, iT, rho_crit_inv);
+                        const double y_ref_rho = sbtl_transform_y_ref(region_int, iDmolar, rho_crit_inv);
+                        const double T_val = sbtl_transform_inverse(tform_T, evaluate_single_phase_pre(*coeffs, iT, xi, eta, i, j), y_ref_T);
+                        const double rho_val =
+                          sbtl_transform_inverse(tform_rho, evaluate_single_phase_pre(*coeffs, iDmolar, xi, eta, i, j), y_ref_rho);
                         // Sanity check: cubic B-spline through hole-filled
                         // data near table edges can extrapolate to
                         // non-physical values (e.g. negative density at
@@ -3317,8 +3358,11 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                         const double eta = (std::log(p) - std::log(tbl->yvec[j])) / (std::log(tbl->yvec[j + 1]) - std::log(tbl->yvec[j]));
                         _normpt_xi = xi;
                         _normpt_eta = eta;
-                        const double rho_val = sbtl_transform_inverse(sbtl_transform_for_property(static_cast<int>(tbl->region()), iDmolar),
-                                                                      evaluate_single_phase_pre(*coeffs, iDmolar, xi, eta, i, j));
+                        const int region_int_pt = static_cast<int>(tbl->region());
+                        const SBTLTransform tform_rho_pt = sbtl_transform_for_property(region_int_pt, iDmolar);
+                        const double y_ref_rho_pt = sbtl_transform_y_ref(region_int_pt, iDmolar, static_cast<double>(this->AS->rhomolar_critical()));
+                        const double rho_val =
+                          sbtl_transform_inverse(tform_rho_pt, evaluate_single_phase_pre(*coeffs, iDmolar, xi, eta, i, j), y_ref_rho_pt);
                         if (!ValidNumber(rho_val) || rho_val <= 0.0) {
                             throw ValueError("SBTL normpt polynomial gave non-physical rho");
                         }
