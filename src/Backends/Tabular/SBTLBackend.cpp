@@ -964,32 +964,70 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
         } catch (...) { return std::numeric_limits<double>::quiet_NaN(); }
     };
 
-    auto cell_max_relerr = [&rho_at_eta_p, rho_crit](double p_a, double p_b) -> double {
-        // Return the max RELATIVE lerp error over η probes, with a soft
-        // floor at ρ_crit·0.01 in the denominator so cells in the
-        // ultra-dilute region (ρ → 0) don't make the metric explode.
-        const double log_p_mid = 0.5 * (std::log(p_a) + std::log(p_b));
-        const double p_mid = std::exp(log_p_mid);
+    // True cell-vs-HEOS metric.  For each candidate interval (p_a, p_b)
+    // and each η probe, build the cubic-Hermite-in-log-p that the actual
+    // SBTL cell would use along that constant-η slice — using HEOS-supplied
+    // values AND first derivatives at the corners — and compare its value
+    // at the log-p midpoint to HEOS truth.  This is the actual cell-fit
+    // residual the user will see, not the lerp upper bound.
+    //
+    // The Hermite cubic basis at t=0.5 evaluates to:
+    //   h00(0.5) = h01(0.5) = 0.5
+    //   h10(0.5) = +0.125,  h11(0.5) = −0.125
+    // so the midpoint value is
+    //   ρ_mid_hermite = 0.5·(ρ_a + ρ_b) + 0.125·Δlogp·(ρ'_a − ρ'_b)
+    // where ρ'_x = dρ/d(log p) at p_x, computed by central finite difference.
+    //
+    // Per interval check: 5 η probes × (3 HEOS for ρ_a, ρ_b, ρ_mid + 4
+    // HEOS for ρ'_a, ρ'_b via FD) = 35 HEOS calls.  At ~10 µs each,
+    // ~0.35 ms per check.  With ~20 intervals per refinement pass × 8
+    // passes × 5 fluids = 800 checks ≈ 280 ms total.  Negligible relative
+    // to the cell-fill cost (~30 s/fluid).
+    auto rho_and_drho_dlogp = [&probe_AS, &h_bounds_at_p](double eta, double p, double& rho, double& drho_dlogp) -> bool {
+        const double eps = 1e-3;  // ±ε in log p for central FD
+        const double p_lo_fd = p * std::exp(-eps);
+        const double p_hi_fd = p * std::exp(eps);
+        double h_lo_b = 0.0, h_hi_b = 0.0;
+        double r_center = 0.0, r_lo_fd = 0.0, r_hi_fd = 0.0;
+        try {
+            if (!h_bounds_at_p(p, h_lo_b, h_hi_b)) return false;
+            probe_AS->update(HmolarP_INPUTS, h_lo_b + eta * (h_hi_b - h_lo_b), p);
+            r_center = static_cast<double>(probe_AS->rhomolar());
+            if (!h_bounds_at_p(p_lo_fd, h_lo_b, h_hi_b)) return false;
+            probe_AS->update(HmolarP_INPUTS, h_lo_b + eta * (h_hi_b - h_lo_b), p_lo_fd);
+            r_lo_fd = static_cast<double>(probe_AS->rhomolar());
+            if (!h_bounds_at_p(p_hi_fd, h_lo_b, h_hi_b)) return false;
+            probe_AS->update(HmolarP_INPUTS, h_lo_b + eta * (h_hi_b - h_lo_b), p_hi_fd);
+            r_hi_fd = static_cast<double>(probe_AS->rhomolar());
+        } catch (...) { return false; }
+        rho = r_center;
+        drho_dlogp = (r_hi_fd - r_lo_fd) / (2.0 * eps);
+        return std::isfinite(rho) && std::isfinite(drho_dlogp);
+    };
+
+    auto cell_max_relerr = [&rho_and_drho_dlogp, &rho_at_eta_p, rho_crit](double p_a, double p_b) -> double {
+        const double dlog_p = std::log(p_b) - std::log(p_a);
+        const double p_mid = std::exp(0.5 * (std::log(p_a) + std::log(p_b)));
         double max_relerr = 0.0;
         for (double eta : {0.02, 0.25, 0.5, 0.75, 0.98}) {
-            const double r_a = rho_at_eta_p(eta, p_a);
-            const double r_b = rho_at_eta_p(eta, p_b);
-            const double r_m = rho_at_eta_p(eta, p_mid);
-            if (!std::isfinite(r_a) || !std::isfinite(r_b) || !std::isfinite(r_m)) continue;
-            const double r_lerp = 0.5 * (r_a + r_b);
-            const double denom = std::max(std::abs(r_m), rho_crit * 0.01);
-            const double relerr = std::abs(r_m - r_lerp) / denom;
+            double r_a = 0.0, dr_a = 0.0, r_b = 0.0, dr_b = 0.0;
+            if (!rho_and_drho_dlogp(eta, p_a, r_a, dr_a)) continue;
+            if (!rho_and_drho_dlogp(eta, p_b, r_b, dr_b)) continue;
+            const double r_m_heos = rho_at_eta_p(eta, p_mid);
+            if (!std::isfinite(r_m_heos)) continue;
+            // Hermite cubic at t = 0.5
+            const double r_m_hermite = 0.5 * (r_a + r_b) + 0.125 * dlog_p * (dr_a - dr_b);
+            const double denom = std::max(std::abs(r_m_heos), rho_crit * 0.01);
+            const double relerr = std::abs(r_m_hermite - r_m_heos) / denom;
             if (relerr > max_relerr) max_relerr = relerr;
         }
         return max_relerr;
     };
 
-    // Tolerance choice.  Tight (1e-4) → refinement budget gets spread across
-    // many low-error cells away from the cusp, leaving the cusp under-
-    // refined.  Loose (1e-2) → only the worst cells trigger refinement;
-    // budget concentrates at the cusp.  1e-2 empirically gives the best
-    // overall accuracy (max errors lowest across the 5-fluid panel).
-    const double tol_relerr = 1e-2;
+    // Tolerance: 1e-4 relative — what G13-15 demands for ρ.  Bisection
+    // refines until the Hermite cubic in log p matches HEOS at the cell
+    // midpoint to this tolerance, for the worst η probe in the cell.
+    const double tol_relerr = 1e-4;
     int iter = 0;
     constexpr int max_iter = 12;
     while (iter < max_iter && anchors.size() < Ny_max) {
