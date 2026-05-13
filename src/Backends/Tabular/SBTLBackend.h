@@ -779,12 +779,15 @@ class SBTLBackend : public TabularBackend
     std::vector<double> build_adaptive_yvec(double ymin, double ymax, std::size_t Ny_target, std::size_t Ny_max,
                                             const std::function<double(double)>& prop_at_p, double tol_rel) const;
 
-    /// Build the cell xnorm (η) grid for a subcritical LIQUID/VAPOR table.
-    /// Two-zone log-uniform-in-(η or 1-η): 40 % of rows in the half far from
-    /// the saturation boundary, 60 % of rows in the half adjacent to it.
-    /// LIQUID concentrates near η=1 (the sat L cusp side); VAPOR
-    /// concentrates near η=0 (the sat V cusp side).
-    static std::vector<double> build_adaptive_xvec(bool concentrate_near_high_end, std::size_t Nx);
+    /// Build the cell xnorm (η) grid via adaptive bisection driven by
+    /// Hermite-cubic-vs-HEOS error at η midpoints (same mechanics as
+    /// build_adaptive_yvec, but along the η axis instead of log p).
+    /// region_int matches NormalizedPHTable / NormalizedPTTable Region
+    /// enum: 0=LIQUID, 1=VAPOR.  ymin/ymax are the pressure bounds —
+    /// the probe samples at the log-midpoint pressure as a
+    /// representative state.
+    std::vector<double> build_adaptive_xvec(int region_int, std::size_t Nx_target, std::size_t Nx_max, double ymin,
+                                            double ymax) const;
 
     /// Disk-persistence helpers.  Files live under
     /// <path_to_tables()>/sbtl_<scope>_<region>.bin.z where scope is

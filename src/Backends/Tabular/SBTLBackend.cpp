@@ -1115,17 +1115,22 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
     return yvec;
 }
 
-std::vector<double> SBTLBackend::build_adaptive_xvec(bool concentrate_near_high_end, std::size_t Nx) {
-    // Two-zone uniform layout in [0, 1].  Allocate 60 % of cells to the
-    // half adjacent to the saturation cusp (high or low end depending on
-    // region), 40 % to the far half.  Same structural recipe as the yvec
-    // two-zone layout in build_adaptive_yvec — chosen here for the same
-    // reason (concentrate cells where the property has a cusp; cap row
-    // count to keep storage bounded).
-    if (Nx < 4) return std::vector<double>{};  // degenerate; let caller skip
-    const std::size_t N_near = static_cast<std::size_t>(std::round(Nx * 0.60));
-    const std::size_t N_far = Nx - N_near;
-    auto linear_segment = [](double a, double b, std::size_t n) {
+std::vector<double> SBTLBackend::build_adaptive_xvec(int region_int, std::size_t Nx_target, std::size_t Nx_max, double ymin,
+                                                     double ymax) const {
+    // Adaptive bisection on η ∈ [0, 1] driven by Hermite-cubic-vs-HEOS
+    // error at η midpoints.  Probes at the log-midpoint pressure
+    // p_anchor as a representative state (single-p probe trades some
+    // optimality for build cost).  Same mechanics as build_adaptive_yvec
+    // along the orthogonal axis.
+    //
+    // Hermite cubic at η midpoint with corner derivatives dρ/dη|_p:
+    //   dρ/dη|_p = (∂ρ/∂h)|_p · (h_hi - h_lo)
+    //
+    // The (h_hi - h_lo) factor is the cell's η-stretch at p_anchor — it
+    // scales how rapidly ρ changes per unit η.  All-analytic from HEOS
+    // partials; no FD.
+    const std::size_t Nx_floor = std::max(Nx_target, static_cast<std::size_t>(40));
+    auto linear_uniform = [](double a, double b, std::size_t n) {
         std::vector<double> v;
         v.reserve(n);
         for (std::size_t k = 0; k < n; ++k) {
@@ -1134,25 +1139,120 @@ std::vector<double> SBTLBackend::build_adaptive_xvec(bool concentrate_near_high_
         }
         return v;
     };
-    const double pivot = 0.5;
-    std::vector<double> xvec;
-    xvec.reserve(Nx);
-    // NOTE: `near` and `far` are reserved identifiers in MSVC (16-bit memory
-    // model legacy).  Using them as variable names breaks the Windows
-    // build with C2513 / C2059.  Use sparse/dense names instead.
-    if (concentrate_near_high_end) {
-        // sparse_seg [0, pivot]; dense_seg [pivot, 1]
-        auto sparse_seg = linear_segment(0.0, pivot, N_far + 1);
-        xvec.insert(xvec.end(), sparse_seg.begin(), sparse_seg.end() - 1);
-        auto dense_seg = linear_segment(pivot, 1.0, N_near);
-        xvec.insert(xvec.end(), dense_seg.begin(), dense_seg.end());
-    } else {
-        // dense_seg [0, pivot]; sparse_seg [pivot, 1]
-        auto dense_seg = linear_segment(0.0, pivot, N_near + 1);
-        xvec.insert(xvec.end(), dense_seg.begin(), dense_seg.end() - 1);
-        auto sparse_seg = linear_segment(pivot, 1.0, N_far);
-        xvec.insert(xvec.end(), sparse_seg.begin(), sparse_seg.end());
+
+    auto helm = std::dynamic_pointer_cast<HelmholtzEOSMixtureBackend>(this->AS);
+    if (!helm) return linear_uniform(0.0, 1.0, Nx_floor);
+
+    double rho_crit = 0.0;
+    std::shared_ptr<CoolProp::AbstractState> probe_AS;
+    try {
+        helm->ensure_caloric_superancillaries();
+        rho_crit = static_cast<double>(helm->rhomolar_critical());
+        const std::vector<std::string> names = helm->fluid_names();
+        if (names.empty()) return linear_uniform(0.0, 1.0, Nx_floor);
+        probe_AS.reset(CoolProp::AbstractState::factory("HEOS", names[0]));
+    } catch (...) {
+        return linear_uniform(0.0, 1.0, Nx_floor);
     }
+    if (rho_crit <= 0.0) return linear_uniform(0.0, 1.0, Nx_floor);
+
+    // Anchor pressure: log-midpoint of (ymin, ymax).  Representative
+    // single state; the η-resolution needed near the cusp dominates and
+    // is reasonably p-independent for the bicubic structure.
+    const double p_anchor = std::exp(0.5 * (std::log(ymin) + std::log(ymax)));
+    const double T_min_eos = std::max(static_cast<double>(probe_AS->Ttriple()), static_cast<double>(probe_AS->Tmin()));
+    const double T_max_ext = static_cast<double>(probe_AS->Tmax()) * 1.499;
+    const bool is_liquid = (region_int == 0);
+    const bool is_vapor = (region_int == 1);
+
+    // Compute h_lo, h_hi at p_anchor once.
+    double h_lo = 0.0, h_hi = 0.0;
+    try {
+        if (is_vapor) {
+            probe_AS->update(PQ_INPUTS, p_anchor, 1.0);
+            h_lo = static_cast<double>(probe_AS->hmolar());
+            probe_AS->update(PT_INPUTS, p_anchor, T_max_ext);
+            h_hi = static_cast<double>(probe_AS->hmolar());
+        } else if (is_liquid) {
+            probe_AS->update(PT_INPUTS, p_anchor, T_min_eos);
+            h_lo = static_cast<double>(probe_AS->hmolar());
+            probe_AS->update(PQ_INPUTS, p_anchor, 0.0);
+            h_hi = static_cast<double>(probe_AS->hmolar());
+        } else {
+            return linear_uniform(0.0, 1.0, Nx_floor);
+        }
+    } catch (...) { return linear_uniform(0.0, 1.0, Nx_floor); }
+    if (!(h_hi > h_lo)) return linear_uniform(0.0, 1.0, Nx_floor);
+    const double delta_h = h_hi - h_lo;
+
+    auto rho_and_drho_deta = [&probe_AS, p_anchor, h_lo, delta_h](double eta, double& rho, double& drho_deta) -> bool {
+        const double h = h_lo + eta * delta_h;
+        try {
+            probe_AS->update(HmolarP_INPUTS, h, p_anchor);
+            rho = static_cast<double>(probe_AS->rhomolar());
+            const double drho_dh = probe_AS->first_partial_deriv(iDmolar, iHmolar, iP);
+            drho_deta = drho_dh * delta_h;  // dρ/dη|_p = (∂ρ/∂h)|_p · (h_hi - h_lo)
+        } catch (...) { return false; }
+        return std::isfinite(rho) && std::isfinite(drho_deta);
+    };
+
+    auto cell_eta_relerr = [&rho_and_drho_deta, rho_crit](double eta_a, double eta_b) -> double {
+        const double eta_mid = 0.5 * (eta_a + eta_b);
+        const double d_eta = eta_b - eta_a;
+        double r_a = 0.0, dr_a = 0.0, r_b = 0.0, dr_b = 0.0, r_mid_heos = 0.0, dr_mid_unused = 0.0;
+        if (!rho_and_drho_deta(eta_a, r_a, dr_a)) return 0.0;
+        if (!rho_and_drho_deta(eta_b, r_b, dr_b)) return 0.0;
+        if (!rho_and_drho_deta(eta_mid, r_mid_heos, dr_mid_unused)) return 0.0;
+        // Hermite cubic at t = 0.5
+        const double r_mid_hermite = 0.5 * (r_a + r_b) + 0.125 * d_eta * (dr_a - dr_b);
+        const double denom = std::max(std::abs(r_mid_heos), rho_crit * 0.01);
+        return std::abs(r_mid_hermite - r_mid_heos) / denom;
+    };
+
+    // Seed: uniform 16-point η grid in [0, 1].
+    constexpr std::size_t Nx_seed = 16;
+    std::vector<double> anchors = linear_uniform(0.0, 1.0, Nx_seed);
+
+    const double tol_relerr = 1e-4;
+    int iter = 0;
+    constexpr int max_iter = 12;
+    while (iter < max_iter && anchors.size() < Nx_max) {
+        std::vector<double> next;
+        next.reserve(anchors.size() * 2);
+        bool progressing = false;
+        for (std::size_t j = 0; j + 1 < anchors.size(); ++j) {
+            const double a = anchors[j], b = anchors[j + 1];
+            next.push_back(a);
+            if (anchors.size() + (next.size() - j - 1) < Nx_max) {
+                if (cell_eta_relerr(a, b) > tol_relerr) {
+                    next.push_back(0.5 * (a + b));
+                    progressing = true;
+                }
+            }
+        }
+        next.push_back(anchors.back());
+        anchors = std::move(next);
+        if (!progressing) break;
+        ++iter;
+    }
+
+    // Pad with linear-uniform fillers up to Nx_target so smooth-η bulk
+    // intervals don't end up with only the seed-grid density.
+    if (anchors.size() >= Nx_target) return anchors;
+    const std::size_t deficit = Nx_target - anchors.size();
+    std::vector<double> xvec;
+    xvec.reserve(Nx_target);
+    for (std::size_t j = 0; j + 1 < anchors.size(); ++j) {
+        const double a = anchors[j], b = anchors[j + 1];
+        const double span = b - a;
+        const std::size_t n_fill = static_cast<std::size_t>(std::round(deficit * span));
+        xvec.push_back(a);
+        for (std::size_t i = 1; i <= n_fill; ++i) {
+            const double frac = static_cast<double>(i) / static_cast<double>(n_fill + 1);
+            xvec.push_back(a + frac * span);
+        }
+    }
+    xvec.push_back(anchors.back());
     return xvec;
 }
 
@@ -1210,8 +1310,8 @@ void SBTLBackend::build_normph_table(NormalizedPHTable& table) {
     // SUPER error needs Kunick's L/G split + per-property transforms —
     // out of scope here, queued in dev/sbtl_pt_outstanding_work.md.
     if (table.region() == NormalizedPHTable::LIQUID || table.region() == NormalizedPHTable::VAPOR) {
-        const bool concentrate_high = (table.region() == NormalizedPHTable::LIQUID);
-        std::vector<double> adaptive_xvec = build_adaptive_xvec(concentrate_high, table.Nx);
+        std::vector<double> adaptive_xvec =
+          build_adaptive_xvec(static_cast<int>(table.region()), table.Nx, /*Nx_max=*/2 * table.Nx, table.ymin, table.ymax);
         if (adaptive_xvec.size() == table.xvec.size()) {
             table.xvec = std::move(adaptive_xvec);
         }
@@ -2098,8 +2198,8 @@ void SBTLBackend::build_normpt_table(NormalizedPTTable& table) {
     // (T_sat(p) is the upper T-bound of the LIQUID region) and VAPOR sat
     // is at η=0 (T_sat(p) is the lower T-bound).  Same orientation as PH.
     if (table.region() == NormalizedPTTable::LIQUID || table.region() == NormalizedPTTable::VAPOR) {
-        const bool concentrate_high = (table.region() == NormalizedPTTable::LIQUID);
-        std::vector<double> adaptive_xvec = build_adaptive_xvec(concentrate_high, table.Nx);
+        std::vector<double> adaptive_xvec =
+          build_adaptive_xvec(static_cast<int>(table.region()), table.Nx, /*Nx_max=*/2 * table.Nx, table.ymin, table.ymax);
         if (adaptive_xvec.size() == table.xvec.size()) {
             table.xvec = std::move(adaptive_xvec);
         }
