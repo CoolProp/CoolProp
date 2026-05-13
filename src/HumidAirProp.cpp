@@ -1431,11 +1431,10 @@ double WetbulbTemperature(double T, double p, double psi_w) {
         }
         // Reject solutions that are essentially the upper bracket — that
         // is Brent giving up rather than finding a true root in the
-        // physical region (#2255). The threshold tracks the Tupper
-        // margin above (0.1 K below Tsat); allow a small additional
-        // tolerance to distinguish "found the bracket" from "found
-        // close to the bracket".
-        if (T >= Tsat && return_val > Tsat - 0.11) {
+        // physical region (#2255). Derive the threshold from Tupper so
+        // it tracks the margin chosen above; the extra 10 mK distinguishes
+        // "found the bracket" from "found close to the bracket".
+        if (T >= Tsat && return_val > Tupper - 1e-2) {
             throw CoolProp::ValueError();
         }
     } catch (...) {
