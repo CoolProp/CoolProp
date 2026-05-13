@@ -284,18 +284,21 @@ class NormalizedPHTable : public SinglePhaseGriddedTableData
     /// use the region() accessor rather than touching this directly.
     Region region_{LIQUID};
 
-    // Override base unpack() to preserve the adaptive yvec persisted in the
-    // msgpack stream.  The base unpack() unconditionally calls
-    // make_axis_vectors(), which rebuilds yvec as a log-uniform vector
-    // from ymin/ymax/Ny — destroying the cusp-concentrated row layout that
-    // build_normph_table installed before serialisation.  Save the
-    // msgpack-deserialised yvec, let the base unpack() run (it also
-    // restores LIST_OF_MATRICES via the X-macro dance and rebuilds xvec
-    // and the good-neighbour matrices, all of which we still want), then
-    // reinstate yvec.
+    // Override base unpack() to preserve the adaptive xvec and yvec
+    // persisted in the msgpack stream.  The base unpack() unconditionally
+    // calls make_axis_vectors(), which rebuilds xvec / yvec as
+    // linspace(0,1) and logspace(ymin,ymax) respectively — destroying the
+    // cusp-concentrated layouts that build_normph_table installed before
+    // serialisation.  Save both, let the base unpack() run (still need it
+    // for LIST_OF_MATRICES restore + good-neighbour matrices), then
+    // reinstate.
     void unpack() {
+        std::vector<double> saved_xvec = xvec;
         std::vector<double> saved_yvec = yvec;
         SinglePhaseGriddedTableData::unpack();
+        if (!saved_xvec.empty() && saved_xvec.size() == xvec.size()) {
+            xvec = std::move(saved_xvec);
+        }
         if (!saved_yvec.empty() && saved_yvec.size() == yvec.size()) {
             yvec = std::move(saved_yvec);
         }
@@ -385,11 +388,14 @@ class NormalizedPTTable : public SinglePhaseGriddedTableData
     /// use the region() accessor rather than touching this directly.
     Region region_{LIQUID};
 
-    // Same yvec-preserving override as NormalizedPHTable — see the
-    // longer comment there for why.
+    // Same xvec/yvec-preserving override as NormalizedPHTable.
     void unpack() {
+        std::vector<double> saved_xvec = xvec;
         std::vector<double> saved_yvec = yvec;
         SinglePhaseGriddedTableData::unpack();
+        if (!saved_xvec.empty() && saved_xvec.size() == xvec.size()) {
+            xvec = std::move(saved_xvec);
+        }
         if (!saved_yvec.empty() && saved_yvec.size() == yvec.size()) {
             yvec = std::move(saved_yvec);
         }
@@ -698,6 +704,13 @@ class SBTLBackend : public TabularBackend
     /// it.  SUPER region skips this — yvec stays log-uniform.
     std::vector<double> build_adaptive_yvec(double ymin, double ymax, std::size_t Ny_target, std::size_t Ny_max,
                                             const std::function<double(double)>& prop_at_p, double tol_rel) const;
+
+    /// Build the cell xnorm (η) grid for a subcritical LIQUID/VAPOR table.
+    /// Two-zone log-uniform-in-(η or 1-η): 40 % of rows in the half far from
+    /// the saturation boundary, 60 % of rows in the half adjacent to it.
+    /// LIQUID concentrates near η=1 (the sat L cusp side); VAPOR
+    /// concentrates near η=0 (the sat V cusp side).
+    static std::vector<double> build_adaptive_xvec(bool concentrate_near_high_end, std::size_t Nx);
 
     /// Disk-persistence helpers.  Files live under
     /// <path_to_tables()>/sbtl_<scope>_<region>.bin.z where scope is

@@ -874,6 +874,44 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
     return yvec;
 }
 
+std::vector<double> SBTLBackend::build_adaptive_xvec(bool concentrate_near_high_end, std::size_t Nx) {
+    // Two-zone uniform layout in [0, 1].  Allocate 60 % of cells to the
+    // half adjacent to the saturation cusp (high or low end depending on
+    // region), 40 % to the far half.  Same structural recipe as the yvec
+    // two-zone layout in build_adaptive_yvec — chosen here for the same
+    // reason (concentrate cells where the property has a cusp; cap row
+    // count to keep storage bounded).
+    if (Nx < 4) return std::vector<double>{};  // degenerate; let caller skip
+    const std::size_t N_near = static_cast<std::size_t>(std::round(Nx * 0.60));
+    const std::size_t N_far = Nx - N_near;
+    auto linear_segment = [](double a, double b, std::size_t n) {
+        std::vector<double> v;
+        v.reserve(n);
+        for (std::size_t k = 0; k < n; ++k) {
+            const double frac = static_cast<double>(k) / static_cast<double>(n - 1);
+            v.push_back(a + frac * (b - a));
+        }
+        return v;
+    };
+    const double pivot = 0.5;
+    std::vector<double> xvec;
+    xvec.reserve(Nx);
+    if (concentrate_near_high_end) {
+        // Far zone [0, pivot], sparser; near zone [pivot, 1], denser.
+        auto far = linear_segment(0.0, pivot, N_far + 1);
+        xvec.insert(xvec.end(), far.begin(), far.end() - 1);
+        auto near = linear_segment(pivot, 1.0, N_near);
+        xvec.insert(xvec.end(), near.begin(), near.end());
+    } else {
+        // Near zone [0, pivot], denser; far zone [pivot, 1], sparser.
+        auto near = linear_segment(0.0, pivot, N_near + 1);
+        xvec.insert(xvec.end(), near.begin(), near.end() - 1);
+        auto far = linear_segment(pivot, 1.0, N_far);
+        xvec.insert(xvec.end(), far.begin(), far.end());
+    }
+    return xvec;
+}
+
 void SBTLBackend::build_normph_table(NormalizedPHTable& table) {
     if (!this->AS) throw ValueError("build_normph_table: AS is not set");
     table.AS = this->AS;
@@ -910,6 +948,29 @@ void SBTLBackend::build_normph_table(NormalizedPHTable& table) {
     table.resize(table.Nx, table.Ny);  // allocates LIST_OF_MATRICES storage; fills xvec, yvec.
     if (!adaptive_yvec.empty() && adaptive_yvec.size() == table.yvec.size()) {
         table.yvec = std::move(adaptive_yvec);  // override log-uniform with adaptive layout
+    }
+
+    // Same cusp-concentration trick on the xnorm (η) axis for subcritical
+    // regions: ρ_sat,L(p) has its sqrt-cusp at η=1 in LIQUID; ρ_sat,V(p)
+    // has it at η=0 in VAPOR.  Concentrating ~60 % of cells in the half
+    // of [0, 1] adjacent to the sat boundary shrinks the cell η-span
+    // there and brings the cell-level Hermite bicubic closer to the cusp
+    // without overshooting elsewhere.
+    //
+    // SUPER xvec stays uniform.  Compressed-liquid (low η) and
+    // supercritical-gas extension (high η) span fundamentally different
+    // output-variable ranges: ρ varies by ~3× across the L half but
+    // ~1000× across the G half.  A single Hermite bicubic on a uniform
+    // xvec cannot represent both halves to G13-15 precision without per-
+    // half output scaling (linear-ρ vs log-ρ).  Closing the residual
+    // SUPER error needs Kunick's L/G split + per-property transforms —
+    // out of scope here, queued in dev/sbtl_pt_outstanding_work.md.
+    if (table.region() == NormalizedPHTable::LIQUID || table.region() == NormalizedPHTable::VAPOR) {
+        const bool concentrate_high = (table.region() == NormalizedPHTable::LIQUID);
+        std::vector<double> adaptive_xvec = build_adaptive_xvec(concentrate_high, table.Nx);
+        if (adaptive_xvec.size() == table.xvec.size()) {
+            table.xvec = std::move(adaptive_xvec);
+        }
     }
     populate_normph_bounds(table);
 
@@ -1750,6 +1811,17 @@ void SBTLBackend::build_normpt_table(NormalizedPTTable& table) {
     table.resize(table.Nx, table.Ny);
     if (!adaptive_yvec.empty() && adaptive_yvec.size() == table.yvec.size()) {
         table.yvec = std::move(adaptive_yvec);
+    }
+    // Mirror the PH xvec adaptive layout on the PT side.  For PT,
+    // η = (T - T_lo(p)) / (T_hi(p) - T_lo(p)), so LIQUID sat is at η=1
+    // (T_sat(p) is the upper T-bound of the LIQUID region) and VAPOR sat
+    // is at η=0 (T_sat(p) is the lower T-bound).  Same orientation as PH.
+    if (table.region() == NormalizedPTTable::LIQUID || table.region() == NormalizedPTTable::VAPOR) {
+        const bool concentrate_high = (table.region() == NormalizedPTTable::LIQUID);
+        std::vector<double> adaptive_xvec = build_adaptive_xvec(concentrate_high, table.Nx);
+        if (adaptive_xvec.size() == table.xvec.size()) {
+            table.xvec = std::move(adaptive_xvec);
+        }
     }
     populate_normpt_bounds(table);
 
