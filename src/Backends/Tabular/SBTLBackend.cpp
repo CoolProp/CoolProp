@@ -922,7 +922,9 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
             probe_AS->update(PQ_INPUTS, p, 0.0);
             h_hi = static_cast<double>(probe_AS->hmolar());
             return std::isfinite(h_lo) && std::isfinite(h_hi);
-        } catch (...) { return false; }
+        } catch (...) {
+            return false;
+        }
     };
     auto h_bounds_at_p_VAP = [&probe_AS, T_max_ext](double p, double& h_lo, double& h_hi) -> bool {
         try {
@@ -931,7 +933,9 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
             probe_AS->update(PT_INPUTS, p, T_max_ext);
             h_hi = static_cast<double>(probe_AS->hmolar());
             return std::isfinite(h_lo) && std::isfinite(h_hi);
-        } catch (...) { return false; }
+        } catch (...) {
+            return false;
+        }
     };
     // Determine region by probing: if VAPOR-style h bounds work and produce
     // a positive span, treat as VAPOR; same for LIQUID; if both work pick
@@ -945,8 +949,7 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
         is_vapor = h_bounds_at_p_VAP(p_probe, h_lo, h_hi) && (h_hi > h_lo);
         is_liquid = h_bounds_at_p_LIQ(p_probe, h_lo, h_hi) && (h_hi > h_lo);
     }
-    auto h_bounds_at_p = [is_vapor, is_liquid, &h_bounds_at_p_LIQ, &h_bounds_at_p_VAP](double p, double& h_lo,
-                                                                                       double& h_hi) -> bool {
+    auto h_bounds_at_p = [is_vapor, is_liquid, &h_bounds_at_p_LIQ, &h_bounds_at_p_VAP](double p, double& h_lo, double& h_hi) -> bool {
         // Heuristic resolved at p_mid: prefer VAPOR if it works (most
         // problematic for the sqrt-cusp), fall back to LIQUID.
         if (is_vapor) return h_bounds_at_p_VAP(p, h_lo, h_hi);
@@ -961,7 +964,9 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
         try {
             probe_AS->update(HmolarP_INPUTS, h, p);
             return static_cast<double>(probe_AS->rhomolar());
-        } catch (...) { return std::numeric_limits<double>::quiet_NaN(); }
+        } catch (...) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
     };
 
     // True cell-vs-HEOS metric.  For each candidate interval (p_a, p_b)
@@ -978,30 +983,64 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
     //   ρ_mid_hermite = 0.5·(ρ_a + ρ_b) + 0.125·Δlogp·(ρ'_a − ρ'_b)
     // where ρ'_x = dρ/d(log p) at p_x, computed by central finite difference.
     //
-    // Per interval check: 5 η probes × (3 HEOS for ρ_a, ρ_b, ρ_mid + 4
-    // HEOS for ρ'_a, ρ'_b via FD) = 35 HEOS calls.  At ~10 µs each,
-    // ~0.35 ms per check.  With ~20 intervals per refinement pass × 8
-    // passes × 5 fluids = 800 checks ≈ 280 ms total.  Negligible relative
-    // to the cell-fill cost (~30 s/fluid).
-    auto rho_and_drho_dlogp = [&probe_AS, &h_bounds_at_p](double eta, double p, double& rho, double& drho_dlogp) -> bool {
-        const double eps = 1e-3;  // ±ε in log p for central FD
-        const double p_lo_fd = p * std::exp(-eps);
-        const double p_hi_fd = p * std::exp(eps);
-        double h_lo_b = 0.0, h_hi_b = 0.0;
-        double r_center = 0.0, r_lo_fd = 0.0, r_hi_fd = 0.0;
+    // ANALYTIC total derivative dρ/d(log p) at constant η — what the cell
+    // actually stores along its constant-η log-p slice.  Two sources of
+    // p-dependence at fixed η:
+    //   (1) ρ varies with p at fixed h:         ∂ρ/∂p|_h
+    //   (2) h itself shifts with p at fixed η:  dh/dp|_η = dh_lo/dp + η·(dh_hi/dp − dh_lo/dp)
+    // Chain rule:
+    //   dρ/dp|_η = ∂ρ/∂p|_h + ∂ρ/∂h|_p · dh/dp|_η
+    //   dρ/d(log p)|_η = p · dρ/dp|_η
+    //
+    // For each region the h_lo and h_hi derivatives come from different
+    // HEOS paths:
+    //   VAPOR : h_lo = h_sat,V(p) via PQ + first_saturation_deriv(H, P);
+    //           h_hi = h(T_max_ext, p) at fixed T via first_partial_deriv(H, P, T)
+    //   LIQUID: h_lo = h(T_min, p);  h_hi = h_sat,L(p) via PQ + first_saturation_deriv
+    auto bounds_and_derivs_at_p = [&probe_AS, T_min_eos, T_max_ext, is_vapor, is_liquid](double p, double& h_lo, double& dh_lo_dp, double& h_hi,
+                                                                                         double& dh_hi_dp) -> bool {
         try {
-            if (!h_bounds_at_p(p, h_lo_b, h_hi_b)) return false;
-            probe_AS->update(HmolarP_INPUTS, h_lo_b + eta * (h_hi_b - h_lo_b), p);
-            r_center = static_cast<double>(probe_AS->rhomolar());
-            if (!h_bounds_at_p(p_lo_fd, h_lo_b, h_hi_b)) return false;
-            probe_AS->update(HmolarP_INPUTS, h_lo_b + eta * (h_hi_b - h_lo_b), p_lo_fd);
-            r_lo_fd = static_cast<double>(probe_AS->rhomolar());
-            if (!h_bounds_at_p(p_hi_fd, h_lo_b, h_hi_b)) return false;
-            probe_AS->update(HmolarP_INPUTS, h_lo_b + eta * (h_hi_b - h_lo_b), p_hi_fd);
-            r_hi_fd = static_cast<double>(probe_AS->rhomolar());
-        } catch (...) { return false; }
-        rho = r_center;
-        drho_dlogp = (r_hi_fd - r_lo_fd) / (2.0 * eps);
+            if (is_vapor) {
+                probe_AS->update(PQ_INPUTS, p, 1.0);
+                h_lo = static_cast<double>(probe_AS->hmolar());
+                dh_lo_dp = probe_AS->first_saturation_deriv(iHmolar, iP);
+                probe_AS->update(PT_INPUTS, p, T_max_ext);
+                h_hi = static_cast<double>(probe_AS->hmolar());
+                dh_hi_dp = probe_AS->first_partial_deriv(iHmolar, iP, iT);
+            } else if (is_liquid) {
+                probe_AS->update(PT_INPUTS, p, T_min_eos);
+                h_lo = static_cast<double>(probe_AS->hmolar());
+                dh_lo_dp = probe_AS->first_partial_deriv(iHmolar, iP, iT);
+                probe_AS->update(PQ_INPUTS, p, 0.0);
+                h_hi = static_cast<double>(probe_AS->hmolar());
+                dh_hi_dp = probe_AS->first_saturation_deriv(iHmolar, iP);
+            } else {
+                return false;
+            }
+            return std::isfinite(h_lo) && std::isfinite(h_hi) && std::isfinite(dh_lo_dp) && std::isfinite(dh_hi_dp);
+        } catch (...) {
+            return false;
+        }
+    };
+
+    // Per interval check: 5 η probes × ~5 HEOS calls (PQ + PT + HmolarP +
+    // 2 partial-deriv evaluations on the same state cache) ≈ 25 HEOS
+    // calls.  Still well under 1 ms per check.
+    auto rho_and_drho_dlogp = [&probe_AS, &bounds_and_derivs_at_p](double eta, double p, double& rho, double& drho_dlogp) -> bool {
+        double h_lo = 0.0, dh_lo_dp = 0.0, h_hi = 0.0, dh_hi_dp = 0.0;
+        if (!bounds_and_derivs_at_p(p, h_lo, dh_lo_dp, h_hi, dh_hi_dp)) return false;
+        const double h = h_lo + eta * (h_hi - h_lo);
+        const double dh_dp_at_eta = dh_lo_dp + eta * (dh_hi_dp - dh_lo_dp);
+        try {
+            probe_AS->update(HmolarP_INPUTS, h, p);
+            rho = static_cast<double>(probe_AS->rhomolar());
+            const double drho_dh = probe_AS->first_partial_deriv(iDmolar, iHmolar, iP);
+            const double drho_dp_at_h = probe_AS->first_partial_deriv(iDmolar, iP, iHmolar);
+            const double drho_dp_total = drho_dp_at_h + drho_dh * dh_dp_at_eta;
+            drho_dlogp = p * drho_dp_total;
+        } catch (...) {
+            return false;
+        }
         return std::isfinite(rho) && std::isfinite(drho_dlogp);
     };
 
@@ -1140,7 +1179,7 @@ void SBTLBackend::build_normph_table(NormalizedPHTable& table) {
         // spec at the cell midpoint.  SUPER stays log-uniform — its
         // property surface is smooth.  Cap Ny growth at 2 × baseline so
         // storage stays bounded.
-        adaptive_yvec = build_adaptive_yvec(table.ymin, table.ymax, table.Ny, /*Ny_max=*/2 * table.Ny, h_sat_at_p,
+        adaptive_yvec = build_adaptive_yvec(table.ymin, table.ymax, table.Ny, /*Ny_max=*/10 * table.Ny, h_sat_at_p,
                                             /*tol_rel=*/0.005);
         if (adaptive_yvec.size() >= 4) {
             table.Ny = adaptive_yvec.size();
@@ -2040,7 +2079,7 @@ void SBTLBackend::build_normpt_table(NormalizedPTTable& table) {
             this->saturation_T_LV(p, T_L, T_V);
             return T_L;  // L == V for pure fluids
         };
-        adaptive_yvec = build_adaptive_yvec(table.ymin, table.ymax, table.Ny, /*Ny_max=*/2 * table.Ny, T_sat_at_p,
+        adaptive_yvec = build_adaptive_yvec(table.ymin, table.ymax, table.Ny, /*Ny_max=*/10 * table.Ny, T_sat_at_p,
                                             /*tol_rel=*/0.005);
         if (adaptive_yvec.size() >= 4) {
             table.Ny = adaptive_yvec.size();
