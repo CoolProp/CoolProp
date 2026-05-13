@@ -306,11 +306,14 @@ assert(Path(html_logo).exists())
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-# 3Dmol.js — required for the interactive molecule viewers on fluid pages
-# Download locally to avoid CORS issues when docs are served from file:// or a local server
+# 3Dmol.js — required for the interactive molecule viewers on fluid pages.
+# Download locally to avoid CORS issues when docs are served from file:// or a local server.
+# Fetched from jsDelivr (CDN-backed npm mirror) with a pinned version, rather than the
+# single-host 3dmol.org/build/ path, which has intermittently timed out from CI runners.
+_3DMOL_VERSION = "2.5.4"
 _3dmol_js = Path(__file__).parent / '_static' / '3Dmol-min.js'
 if not _3dmol_js.exists():
-    _download('https://3dmol.org/build/3Dmol-min.js', _3dmol_js)
+    _download(f'https://cdn.jsdelivr.net/npm/3dmol@{_3DMOL_VERSION}/build/3Dmol-min.js', _3dmol_js)
 # Priority 450 ensures 3Dmol-min.js loads before require.js (added by sphinx.ext.mathjax
 # at priority 500). If 3Dmol loads after require.js, its AMD detection kicks in and
 # define([], factory) is called but never executed, silently preventing $3Dmol from being set.
