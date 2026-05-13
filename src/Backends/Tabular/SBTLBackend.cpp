@@ -807,50 +807,28 @@ void SBTLBackend::populate_normph_bounds(NormalizedPHTable& table) {
 
 std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, std::size_t Ny_target, std::size_t Ny_max,
                                                      const std::function<double(double)>& /*prop_at_p*/, double /*tol_rel*/) const {
-    // Structural cusp-concentrated layout.  Two zones, each log-uniform:
+    // Adaptive subdivision driven by the H-superancillary's piece boundaries.
     //
-    //   Zone A (bulk):  [ymin, p_anchor]   covered by N_A rows
-    //   Zone B (cusp):  [p_anchor, ymax]   covered by N_B rows
+    // Seed the grid with the superancillary's interval edges that fall
+    // inside (ymin, ymax) — these are placed by the superancillary's own
+    // dyadic-splitting build right where T_sat (and therefore h_sat /
+    // ρ_sat) changes shape, so they're already-fluid-tuned anchors.
     //
-    // p_anchor is chosen near 0.85·p_crit (or the highest H-superancillary
-    // interior breakpoint below ymax, which serves as a fluid-specific cusp
-    // marker).  Zone B is the top ~15 % of subcritical pressure where
-    // ρ_sat,V has its sqrt-cusp; concentrating ~half the rows there
-    // converts the cusp-induced error from ~1 % to ~1e-4 % without
-    // sacrificing bulk resolution.
+    // Refinement criterion: ρ_sat (the property whose sqrt-cusp drives
+    // SBTL's cell-level error near p_crit) linear-interpolation error
+    // at the log-p midpoint of each interval, normalised by ρ_crit.
+    // Bisect intervals where this exceeds tol_rho.  ρ_sat itself is what
+    // SBTL has to represent — using it directly as the refinement
+    // sensitivity captures the cusp without proxy artifacts.
     //
-    // The H-superancillary's piecewise-Chebyshev pieces are placed dyadically
-    // where T_sat(log p) changes shape (i.e. near p_crit by construction);
-    // using its largest interior breakpoint as p_anchor inherits that
-    // fluid-tuned location for free.  Falls back to 0.85·ymax if the
-    // superancillary is unavailable for this fluid.
+    // For subcritical tables ymax = 0.999·p_crit, so ρ_sat,V is well-
+    // defined throughout (ymin, ymax) via the H-superancillary.  For
+    // SUPER (above p_crit) ρ_sat doesn't apply — caller skips the
+    // adaptive path for that region.
     //
-    // Refinement to a cell-level accuracy spec is left to a follow-up PR
-    // (would require iterative cell-build + probe + bisect cycles; out of
-    // scope here).  The structural concentration alone solves the dominant
-    // cusp error band that the multi-fluid PH plot surfaced.
-    // Anchor at 0.5·ymax (≈ 0.5·p_crit for subcritical tables since ymax
-    // is just below p_crit).  The cusp band visible in the multi-fluid
-    // PH plot extends from ~0.85·p_crit to p_crit, so the anchor needs
-    // to sit well below 0.85·p_crit to give the entire band proper
-    // cusp-zone resolution.  Two log-uniform zones with roughly equal
-    // row counts puts ~60 rows into the (0.5·p_crit → p_crit) range
-    // vs ~5 rows previously, dropping the cusp error from O(1 %) to
-    // ~O(1e-5 %) in the bulk and O(1e-2 %) closest to the critical
-    // point itself.  The H-superancillary's piece breakpoints are
-    // typically very close to p_crit, so using them as p_anchor leaves
-    // the wider cusp band under-resolved.
-    const double p_anchor = 0.5 * ymax;
-
-    // Allocate roughly 60% of rows to the cusp zone (top half of log p,
-    // covering [0.5·p_crit, p_crit]).  This is a tighter packing than
-    // a strict log-uniform layout, which would only put 50% of rows
-    // there because the (log p) span happens to be balanced.  More rows
-    // → smaller cells → smaller polynomial-approximation error.
-    const std::size_t Ny = std::min(Ny_max, std::max(Ny_target, static_cast<std::size_t>(40)));
-    const std::size_t N_B = static_cast<std::size_t>(std::round(Ny * 0.60));
-    const std::size_t N_A = Ny - N_B;
-
+    // Falls back to log-uniform on any access failure (mixtures, fluids
+    // lacking the superancillary, etc.).
+    const std::size_t Ny_floor = std::max(Ny_target, static_cast<std::size_t>(40));
     auto log_uniform = [](double a, double b, std::size_t n) {
         std::vector<double> v;
         v.reserve(n);
@@ -861,16 +839,109 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
         }
         return v;
     };
+    auto helm = std::dynamic_pointer_cast<HelmholtzEOSMixtureBackend>(this->AS);
+    if (!helm) return log_uniform(ymin, ymax, Ny_floor);
 
+    // Step 1: anchor list = {ymin, superancillary breakpoints in (ymin, ymax), ymax}
+    std::vector<double> anchors = {ymin, ymax};
+    double rho_crit = 0.0;
+    try {
+        helm->ensure_caloric_superancillaries();
+        auto super_anc = helm->get_components()[0].EOS().get_superanc();
+        if (super_anc) {
+            const auto& expansions = super_anc->get_invlnp().value().get_expansions();
+            for (std::size_t k = 0; k + 1 < expansions.size(); ++k) {
+                const double p_break = std::exp(expansions[k].xmax());
+                if (p_break > ymin * 1.0001 && p_break < ymax * 0.9999) {
+                    anchors.push_back(p_break);
+                }
+            }
+        }
+        rho_crit = static_cast<double>(helm->rhomolar_critical());
+    } catch (...) {
+        return log_uniform(ymin, ymax, Ny_floor);
+    }
+    std::sort(anchors.begin(), anchors.end());
+    if (rho_crit <= 0.0) return log_uniform(ymin, ymax, Ny_floor);
+
+    // Step 2: bisection-to-tolerance on ρ_sat,V linear-interp error at log midpoint.
+    // ρ_sat,V at the supercritical-shoulder edge (p just below p_crit) varies as
+    //   ρ_sat,V ~ ρ_crit − C (p_crit − p)^(1/2)
+    // so an interval whose midpoint shows large lerp-error in ρ_sat is one
+    // the bicubic can't bridge with a single cell — bisect it.  Tolerance
+    // tol_rho is in units of ρ_crit; 1 % of ρ_crit at each refinement step
+    // converges in ~6 levels of bisection near p_crit, ending with cells
+    // whose log-p width ~ 0.0005·p_crit there.
+    // Use a SEPARATE AS instance for the ρ_sat probes so the SBTL build's
+    // AS->update sequence isn't disrupted (the cell-fill self-checks at
+    // 1e-12 relative tolerance are sensitive to HEOS internal-cache state
+    // carrying over from PQ_INPUTS calls into subsequent HmolarP_INPUTS
+    // calls).  The shared AS would otherwise alternate between PQ + PH
+    // state and pick up tiny initial-guess differences.
+    std::shared_ptr<CoolProp::AbstractState> probe_AS;
+    try {
+        const std::vector<std::string> names = helm->fluid_names();
+        if (names.empty()) return log_uniform(ymin, ymax, Ny_floor);
+        probe_AS.reset(CoolProp::AbstractState::factory("HEOS", names[0]));
+    } catch (...) {
+        return log_uniform(ymin, ymax, Ny_floor);
+    }
+    auto rho_sat_V = [probe_AS](double p) -> double {
+        try {
+            probe_AS->update(PQ_INPUTS, p, 1.0);
+            return static_cast<double>(probe_AS->rhomolar());
+        } catch (...) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+    };
+
+    const double tol_rho = 0.01 * rho_crit;  // 1 % of ρ_crit
+    int iter = 0;
+    constexpr int max_iter = 12;
+    while (iter < max_iter && anchors.size() < Ny_max) {
+        std::vector<double> next;
+        next.reserve(anchors.size() * 2);
+        bool progressing = false;
+        for (std::size_t j = 0; j + 1 < anchors.size(); ++j) {
+            const double a = anchors[j], b = anchors[j + 1];
+            next.push_back(a);
+            if (anchors.size() + (next.size() - j - 1) < Ny_max) {
+                const double mid = std::exp(0.5 * (std::log(a) + std::log(b)));
+                const double r_a = rho_sat_V(a), r_b = rho_sat_V(b), r_m = rho_sat_V(mid);
+                if (std::isfinite(r_a) && std::isfinite(r_b) && std::isfinite(r_m) && std::abs(r_m - 0.5 * (r_a + r_b)) > tol_rho) {
+                    next.push_back(mid);
+                    progressing = true;
+                }
+            }
+        }
+        next.push_back(anchors.back());
+        anchors = std::move(next);
+        if (!progressing) break;
+        ++iter;
+    }
+
+    // Step 3: pad with log-uniform fillers between sparse anchor pairs to bring
+    // total count up to Ny_target.  The bisection above places anchors based
+    // on local sensitivity; fillers distribute remaining rows proportional to
+    // each interval's log-p span so smooth bulk regions still get adequate
+    // resolution (without those fillers a fluid with few cusp features
+    // could end up with only ~30 rows total).
+    if (anchors.size() >= Ny_target) return anchors;
+    const std::size_t deficit = Ny_target - anchors.size();
+    const double total_log_span = std::log(ymax) - std::log(ymin);
     std::vector<double> yvec;
-    yvec.reserve(Ny);
-    // Zone A: log-uniform from ymin to p_anchor, N_A points, excluding the
-    // right endpoint (which is the first point of Zone B).
-    auto zone_A = log_uniform(ymin, p_anchor, N_A + 1);
-    yvec.insert(yvec.end(), zone_A.begin(), zone_A.end() - 1);
-    // Zone B: log-uniform from p_anchor to ymax, N_B points.
-    auto zone_B = log_uniform(p_anchor, ymax, N_B);
-    yvec.insert(yvec.end(), zone_B.begin(), zone_B.end());
+    yvec.reserve(Ny_target);
+    for (std::size_t j = 0; j + 1 < anchors.size(); ++j) {
+        const double a = anchors[j], b = anchors[j + 1];
+        const double log_span = std::log(b) - std::log(a);
+        const std::size_t n_fill = static_cast<std::size_t>(std::round(deficit * log_span / total_log_span));
+        yvec.push_back(a);
+        for (std::size_t i = 1; i <= n_fill; ++i) {
+            const double frac = static_cast<double>(i) / static_cast<double>(n_fill + 1);
+            yvec.push_back(std::exp(std::log(a) + frac * log_span));
+        }
+    }
+    yvec.push_back(anchors.back());
     return yvec;
 }
 
