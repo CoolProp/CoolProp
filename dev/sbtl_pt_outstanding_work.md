@@ -107,6 +107,49 @@ this cusp — the residual at the cell midpoint is bounded by the cell's
 Probe at p = 0.93 p_crit on R245fa: error peaks on the dome (0.59 % at
 η = 0.001) and decays monotonically away (0.25 % at η = 0.95).
 
+#### Plan: adaptive pressure grid (composes with Kunick mirror)
+
+Independent of the property-surface transforms (Kunick), the *grid* in
+`log p` can be made adaptive instead of log-uniform.  Concrete proposal:
+
+1. **Seed `yvec` from the H-superancillary breakpoints.**  The
+   superancillary is itself piecewise-polynomial in `log p`; its piece
+   boundaries are already concentrated near `p_crit` where `h_sat(p)`
+   changes character.  We get solved breakpoint placement for free
+   instead of log-uniform spacing that ignores the cusp.
+
+2. **Refine to an accuracy spec.**  For each interval
+   `(yvec[j], yvec[j+1])` build the cells, then evaluate worst-case
+   error at ~5 interior probe points: `p` at log-midpoint;
+   `η ∈ {0, 0.25, 0.5, 0.75, 1}`.  If `|ρ_cell − ρ_HEOS| / ρ_HEOS >
+   spec` (e.g. `1e-6`), insert `p_mid` into `yvec` and rebuild the
+   affected cells.  Recurse until in-spec or depth cap reached
+   (the critbox already swallows the immediate cusp neighbourhood
+   so depth runaway isn't a concern in practice).
+
+3. **Lookup cost trade-off.**  yvec was log-uniform, so finding the
+   cell for a query was `O(1)`.  With adaptive yvec, find `j` via
+   `std::lower_bound` on the cached `yvec_log` — `O(log N)`,
+   ~5–10 ns for N≈200.  Hot path is currently ~1 µs so this is ~1 %
+   overhead.
+
+4. **Persistence.**  No schema change — the on-disk cache already
+   serialises `yvec` via msgpack.  Build cost goes from ~25 s to
+   ~35 s (maybe 30–50 % more LIQUID/VAPOR rows).
+
+5. **Composes with Kunick mirror below.**  Adaptive p-grid handles
+   the `log p` axis; Kunick's transforms handle the *property surface*
+   on each cell.  Together: solved breakpoints (adaptive p) +
+   no cell contains the cusp (Kunick L/G split at h_crit) +
+   smooth surface to interpolate (per-property transforms) +
+   HEOS fallback for the immediate cusp neighbourhood (existing critbox).
+   Each chips away at a different axis; combined they should hit
+   G13-15 spec.
+
+Estimated effort: ~1 week for adaptive p + bisection lookup
+infrastructure.  Should be done before or together with the
+Kunick mirror so the test harness can attribute residual error.
+
 #### Plan: mirror Kunick's IAPWS G13-15 method (follow-up PR)
 
 Kunick's water tables already solve this problem and ship as the
