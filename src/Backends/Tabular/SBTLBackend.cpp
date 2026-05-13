@@ -1137,18 +1137,21 @@ std::vector<double> SBTLBackend::build_adaptive_xvec(bool concentrate_near_high_
     const double pivot = 0.5;
     std::vector<double> xvec;
     xvec.reserve(Nx);
+    // NOTE: `near` and `far` are reserved identifiers in MSVC (16-bit memory
+    // model legacy).  Using them as variable names breaks the Windows
+    // build with C2513 / C2059.  Use sparse/dense names instead.
     if (concentrate_near_high_end) {
-        // Far zone [0, pivot], sparser; near zone [pivot, 1], denser.
-        auto far = linear_segment(0.0, pivot, N_far + 1);
-        xvec.insert(xvec.end(), far.begin(), far.end() - 1);
-        auto near = linear_segment(pivot, 1.0, N_near);
-        xvec.insert(xvec.end(), near.begin(), near.end());
+        // sparse_seg [0, pivot]; dense_seg [pivot, 1]
+        auto sparse_seg = linear_segment(0.0, pivot, N_far + 1);
+        xvec.insert(xvec.end(), sparse_seg.begin(), sparse_seg.end() - 1);
+        auto dense_seg = linear_segment(pivot, 1.0, N_near);
+        xvec.insert(xvec.end(), dense_seg.begin(), dense_seg.end());
     } else {
-        // Near zone [0, pivot], denser; far zone [pivot, 1], sparser.
-        auto near = linear_segment(0.0, pivot, N_near + 1);
-        xvec.insert(xvec.end(), near.begin(), near.end() - 1);
-        auto far = linear_segment(pivot, 1.0, N_far);
-        xvec.insert(xvec.end(), far.begin(), far.end());
+        // dense_seg [0, pivot]; sparse_seg [pivot, 1]
+        auto dense_seg = linear_segment(0.0, pivot, N_near + 1);
+        xvec.insert(xvec.end(), dense_seg.begin(), dense_seg.end() - 1);
+        auto sparse_seg = linear_segment(pivot, 1.0, N_far);
+        xvec.insert(xvec.end(), sparse_seg.begin(), sparse_seg.end());
     }
     return xvec;
 }
