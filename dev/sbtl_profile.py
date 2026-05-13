@@ -55,6 +55,7 @@ def accuracy_box(T_lim, p_lim, label, N=80, verbose_worst=False):
                 bicu.update(CP.HmassP_INPUTS, h, P)
                 err_b.append(abs(bicu.rhomass() - rho) / rho)
             except Exception:
+                # query out of table envelope; skip
                 pass
             try:
                 sbtl.update(CP.HmassP_INPUTS, h, P)
@@ -63,6 +64,7 @@ def accuracy_box(T_lim, p_lim, label, N=80, verbose_worst=False):
                 if verbose_worst and e > 1e-3:
                     worst.append((e, T, P, h, rho, sbtl.rhomass()))
             except Exception:
+                # query out of table envelope; skip
                 pass
     eb = np.array(err_b); es = np.array(err_s)
     if eb.size:
@@ -90,6 +92,7 @@ def timing_box(T_lim, p_lim, label, N=2000):
             if 0 < heos.Q() < 1: continue
             h_arr[k] = heos.hmass(); valid[k] = True
         except Exception:
+            # skip out-of-envelope timing point
             pass
     Tarr = Tarr[valid]; Parr = Parr[valid]; h_arr = h_arr[valid]
     M = len(Tarr)
@@ -98,7 +101,8 @@ def timing_box(T_lim, p_lim, label, N=2000):
         t0 = time.perf_counter()
         for k in range(M):
             try: BCK.update(CP.HmassP_INPUTS, h_arr[k], Parr[k])
-            except Exception: pass
+            except Exception:
+                pass  # skip out-of-envelope point
         dt = (time.perf_counter() - t0) * 1e6 / M
         print(f'    {name:<8} HmassP {dt:7.3f} µs/call ({1e6 / dt:>9,.0f} calls/s)', flush=True)
 

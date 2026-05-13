@@ -40,13 +40,39 @@ phase-envelope query for bubble/dew-line `T_L(P)` / `T_V(P)`, then route
 mixture PT through the existing LIQUID / VAPOR table machinery.  The
 SUPER table works as-is.  Estimated 1 day.
 
-### 2. Cryogens / narrow phase diagrams (verify)
+### 2. Cryogens / narrow phase diagrams — DONE
 
-`T_c × 1.30` HEOS-fallback box may be meaningless for fluids whose entire
-EOS range is small (helium: T_c ≈ 5.2 K, T_max ≈ 2000 K — box would
-extend to T = 6.7 K, all fine; but T_min is at least 2.2 K, which is
-0.42 × T_c — well below the box).  No actual issue, but worth running
-the random PT sweep against a cryogen to confirm.  Estimated 30 min.
+Argon sweep ran against the multi-fluid accuracy plots and surfaced two
+real bugs that were silently corrupting subcritical PH coverage:
+
+1. **Melting-line ancillary lower-p bound > p_triple** (Argon, Helium).
+   `AS->update(PT_INPUTS, p_triple, T)` throws because the melting-line
+   polynomial's domain starts just above p_triple.  `safe_h_at_PT`
+   swallowed the throw and returned `_HUGE`, which polluted one
+   Chebyshev-Lobatto sample point in the h_hi Cheb fit — Clenshaw eval
+   at intermediate p then returned NaN through huge-minus-huge
+   cancellation.  Every subcritical Argon HmassP query silently fell
+   through to a misleading "input pair not supported" terminal throw.
+   Fix: `NormalizedPHTable::set_limits` now walks `ymin` upward in 5 %
+   steps for LIQUID/VAPOR until HEOS accepts both T_min and T_max
+   corner probes.
+
+2. **Probe walk drove SUPER ymin far above p_crit** for the same
+   cryogens.  At `(p_crit, T_min)` the fluid is below the melting line,
+   so the corner probe always failed and the walk pushed ymin to
+   ~4× p_crit before the trial cap stopped it.  This created a missing
+   [p_crit, ymin_walked] band in supercritical Argon and CO2 coverage.
+   Fix: skip the probe walk for SUPER region entirely (its ymin =
+   p_crit is well-defined and doesn't need probing).
+
+The HmassP error path was also tightened: internal failures now re-throw
+with `(h, P, xnorm, p_range)` context instead of falling through to the
+terminal "input pair not supported" misleading message.
+
+Argon now covers 52 % subcritical points in random sampling (was 0 %);
+the multi-fluid PH/PT accuracy plots in `Web/coolprop/SBTL.rst` show
+all five fluids (Argon, CO2, Water, R245fa, D6) with consistent
+coverage.
 
 ### 3. PT accuracy figure (visual confirmation)
 
@@ -63,6 +89,42 @@ Recommended: just lower the default.  Estimated 5 min.
 
 ## Defer-able (low-priority polish)
 
+### 0. Near-critical PH error band (~0.85 p_crit < p < p_crit)
+
+The multi-fluid PH error plot shows a residual error band on the
+subcritical vapor side of the SBTL panel for fluids close to the
+critical region (most visible: R245fa, D6).  Not a coordinate or
+normalization issue — the H-superancillary delivers `h_sat(p)` at
+near-machine precision so xnorm at lookup is exact.
+
+The error is in the *property surface* being interpolated.  Along the
+dome boundary (xnorm = 0), `ρ_sat,V(p) ~ ρ_crit - C·(p_crit - p)^β` with
+`β ≈ 0.326` has a vertical-tangent cusp as `p → p_crit`.  The cell's
+16-coefficient Hermite bicubic in `(xnorm, log p)` cannot reproduce
+this cusp — the residual at the cell midpoint is bounded by the cell's
+`log p` span times derivatives of `ρ_sat` that diverge near critical.
+Probe at p = 0.93 p_crit on R245fa: error peaks on the dome (0.59 % at
+η = 0.001) and decays monotonically away (0.25 % at η = 0.95).
+
+Mitigation paths (not in this PR):
+
+1. **Finer cells in the top 15 % of p.** Replace log-uniform yvec
+   spacing with a piecewise refinement that concentrates rows in the
+   `[0.85 p_crit, 0.999 p_crit]` band (e.g. spacing in
+   `(p_crit - p)^0.5` for that piece).  Likely brings near-critical
+   errors down to BICUBIC levels at modest storage cost.  Estimated 1 day.
+
+2. **Non-polynomial correction at xnorm = 0.** Augment the cell's
+   Hermite with an explicit `(p_crit - p)^β` term anchored at the
+   dome boundary, fit at table-build time.  More invasive (requires
+   per-region evaluator changes) but eliminates the cusp residual at
+   its source.  Estimated 2-3 days.
+
+PT is unaffected by this mechanism because `T_sat(p)` is smooth where
+`ρ_sat(p)` is not — the PT normalization makes T the dome coordinate,
+not the density.  Supercritical region is unaffected (no dome, no
+cusp).
+
 ### A. Supercritical-shoulder corner outliers
 
 Five out of 1 486 random CO₂ points still show err > 1e-3 (max 1.7e-3).
@@ -78,12 +140,14 @@ through HEOS direct, inversion is unused (no non-PT/PH input pairs).
 If broader input-pair support is added, these need real implementations
 keyed to the normalized table's `(xnorm, log P)` convention.
 
-### C. Build-time reduction
+### C. Build-time reduction — DONE
 
-normpt + normph tables together take ~25 s per fluid first-build.  The
-existing tabular caching machinery (msgpack of LIST_OF_MATRICES) doesn't
-yet cover the normpt / normph data.  Adding it would drop subsequent
-loads to <1 s.  Estimated 1 day.
+On-disk caching for the six normpt/normph regions landed in commit
+`5c02e70df`.  msgpack-serialised + zlib-compressed; ~30 MB per file,
+six files per fluid (sbtl_norm{ph,pt}_{liquid,vapor,super}.bin.z).
+Cold build ~25 s, warm load ~1.8 s, ~14× speedup.  Cache invalidates
+on dimension mismatch (TABULAR_NX/NY changed) or msgpack-deserialise
+failure.
 
 ### D. PT supercritical-only test
 

@@ -15,7 +15,6 @@ Usage:  python3 sbtl_acc_fig_pt.py [FluidName] [/path/output.png]
 Note: 200×200 default × 3 backends × ~10 ms/HEOS ≈ 25 min/fluid.  Lower
 NT/NP in the probe() call for faster turnaround.
 """
-import os
 import sys
 
 import numpy as np
@@ -96,6 +95,7 @@ def probe(BCK, T_lim, p_lim, NT=200, NP=200):
                 BCK.update(CP.PT_INPUTS, P, T)
                 err[i, j] = abs(BCK.rhomass() - rho) / rho
             except Exception:
+                # query landed outside table envelope; skip this point
                 pass
     return TT, PP, err
 

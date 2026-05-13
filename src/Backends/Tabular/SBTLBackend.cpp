@@ -3,6 +3,7 @@
 #    include "SBTLBackend.h"
 #    include "DataStructures.h"
 #    include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#    include <algorithm>
 #    include <iostream>
 #    include <fstream>
 #    include <map>
@@ -513,6 +514,36 @@ void NormalizedPHTable::set_limits() {
         // conditioned region of the cached sat curve / superancillary.
         ymax = p_crit * 0.999;
     }
+
+    // For LIQUID/VAPOR only: probe whether HEOS PT_INPUTS evaluates cleanly
+    // at the corners of the table's pressure envelope.  Some cryogens
+    // (Argon, Helium) have an HEOS melting-line ancillary whose lower-p
+    // bound sits slightly above p_triple — AS->update at p = p_triple then
+    // throws "unable to calculate melting line T(p)".  Left in place the
+    // failing row contaminates Cheb1D sample values (via safe_h_at_PT
+    // returning _HUGE) and all subsequent table cells become invalid.
+    // SUPER region is intentionally exempted: at p = p_crit and T = T_min
+    // the fluid is below the melting line, so the probe would always fail
+    // for any cryogen and we'd walk ymin far above p_crit, opening a
+    // [p_crit, ymin_walked] hole in supercritical coverage.
+    if (region_ != SUPER) {
+        const double T_min_HEOS = std::max(static_cast<double>(AS->Ttriple()), static_cast<double>(AS->Tmin()));
+        const double T_max_HEOS = static_cast<double>(AS->Tmax());
+        auto probe_ok = [&](double P) -> bool {
+            for (double T : {T_min_HEOS, T_max_HEOS}) {
+                try {
+                    AS->update(PT_INPUTS, P, T);
+                } catch (...) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        for (int trial = 0; trial < 30 && ymin < ymax; ++trial) {
+            if (probe_ok(ymin)) break;
+            ymin *= 1.05;
+        }
+    }
 }
 
 double NormalizedPHTable::xnorm_from_h(double h, double P, std::optional<double> h_sat) const {
@@ -670,8 +701,34 @@ void SBTLBackend::populate_normph_bounds(NormalizedPHTable& table) {
     // (water's melting curve has p_triple as its strict lower bound;
     // queries at p < p_triple throw).  1e-4 relative is well below
     // tabular discretization error and keeps the Cheb fit clean.
-    const double p_lo = table.yvec.front() * 1.0001;
+    //
+    // For cryogens (Argon, Helium, Neon) the HEOS melting-line ancillary's
+    // lower-p bound sits just above the triple-point pressure — sampling
+    // Cheb-Lobatto nodes there returns _HUGE through safe_h_at_PT and the
+    // resulting polynomial evaluates to NaN at intermediate points
+    // (huge - huge cancellation).  Walk p_lo upward until both h_lo_fn
+    // (h at T_lo) and h_hi_fn (h at T_max_ext) return finite values, so
+    // every Lobatto node feeds a clean number into the build.
+    double p_lo = table.yvec.front() * 1.0001;
     const double p_hi = table.yvec.back() * 0.9999;
+    {
+        const bool need_h_lo = (table.region() != NormalizedPHTable::VAPOR);
+        const bool need_h_hi = (table.region() != NormalizedPHTable::LIQUID);
+        for (int trial = 0; trial < 40; ++trial) {
+            const double T_melt_p = T_melt_floor(p_lo);
+            const double T_lo_p = std::isfinite(T_melt_p) ? T_melt_p : T_min;
+            const double v_lo = need_h_lo ? safe_h_at_PT(p_lo, T_lo_p) : 0.0;
+            const double v_hi = need_h_hi ? safe_h_at_PT(p_lo, T_max_ext) : 0.0;
+            const bool ok_lo = std::isfinite(v_lo) && std::abs(v_lo) < 0.5 * _HUGE;
+            const bool ok_hi = std::isfinite(v_hi) && std::abs(v_hi) < 0.5 * _HUGE;
+            if (ok_lo && ok_hi) break;
+            p_lo *= 1.05;
+            if (p_lo >= p_hi) {
+                p_lo = table.yvec.front() * 1.0001;
+                break;
+            }
+        }
+    }
     // Build Chebyshev expansions only for the NON-saturation boundaries:
     //   LIQUID: h_lo = h(T_min, p)        — Cheb
     //   LIQUID: h_hi = h_sat,L(p)         — H-superancillary at lookup
@@ -681,16 +738,30 @@ void SBTLBackend::populate_normph_bounds(NormalizedPHTable& table) {
     // Saturation enthalpies are already machine-precision via the
     // H-superancillaries (Bell et al.); re-fitting with Chebyshev would
     // just inherit any error there with no upside.
+    // Piecewise Chebyshev with low degree per piece (8) and more pieces near
+    // p_crit.  Replaces an earlier 4-piece × degree-32 layout that was both
+    // slow to evaluate (33-coeff Clenshaw on every property access) and
+    // poorly conditioned for the sqrt-cusp in h_sat as p -> p_crit.
+    // Fewer coeffs per piece + cusp-concentrated breakpoints gives:
+    //   - faster Cheb1D.eval (9-coeff Clenshaw, ~3x less arithmetic),
+    //   - smaller stored polynomials (10*9=90 vs 4*33=132 doubles),
+    //   - better near-critical resolution where the cusp dominates.
     std::vector<double> breakpoints;
     if (table.region() == NormalizedPHTable::SUPER) {
-        breakpoints = {p_lo, p_hi};
+        breakpoints = {p_lo, p_hi};  // smooth functions, single piece suffices
     } else if (this->AS) {
         const double p_crit = static_cast<double>(this->AS->p_critical());
-        breakpoints = {p_lo, 0.5 * p_crit, 0.85 * p_crit, 0.97 * p_crit, p_hi};
+        breakpoints = {p_lo,          0.10 * p_crit, 0.30 * p_crit,  0.50 * p_crit,  0.70 * p_crit, 0.85 * p_crit,
+                       0.92 * p_crit, 0.96 * p_crit, 0.985 * p_crit, 0.995 * p_crit, p_hi};
+        // Drop any breakpoint that doesn't fit between p_lo and p_hi
+        // (can happen for narrow tables or if p_lo got walked up to be
+        // above one of the fixed fractions).
+        breakpoints.erase(std::remove_if(breakpoints.begin() + 1, breakpoints.end() - 1, [&](double v) { return v <= p_lo || v >= p_hi; }),
+                          breakpoints.end() - 1);
     } else {
         breakpoints = {p_lo, p_hi};
     }
-    const std::size_t N_cheb = 32;
+    const std::size_t N_cheb = 8;
     auto h_lo_fn = [&](double P) -> double {
         // Only LIQUID and SUPER need a Cheb for h_lo (h(T_min, p)).
         const double T_melt_p = T_melt_floor(P);
@@ -1494,16 +1565,26 @@ void SBTLBackend::populate_normpt_bounds(NormalizedPTTable& table) {
     // PQ_INPUTS at lookup time — already machine-precision.
     const double p_lo = table.yvec.front() * 1.0001;
     const double p_hi = table.yvec.back() * 0.9999;
+    // Piecewise Chebyshev with low degree per piece (8) and more pieces
+    // near p_crit.  Mirrors the PH refactor; same rationale (cheaper eval,
+    // better cusp resolution).  T_hi is constant (T_max_ext), so for SUPER
+    // a single piece is sufficient; T_melt(p) is smooth so few pieces also
+    // suffice there.  LIQUID/VAPOR's T_sat boundary uses PQ_INPUTS at
+    // lookup, not this Cheb, so the cusp resolution here matters less than
+    // in the PH path — but uniform structure is easier to maintain.
     std::vector<double> breakpoints;
     if (table.region() == NormalizedPTTable::SUPER) {
         breakpoints = {p_lo, p_hi};
     } else if (this->AS) {
         const double p_crit = static_cast<double>(this->AS->p_critical());
-        breakpoints = {p_lo, 0.5 * p_crit, 0.85 * p_crit, 0.97 * p_crit, p_hi};
+        breakpoints = {p_lo,          0.10 * p_crit, 0.30 * p_crit,  0.50 * p_crit,  0.70 * p_crit, 0.85 * p_crit,
+                       0.92 * p_crit, 0.96 * p_crit, 0.985 * p_crit, 0.995 * p_crit, p_hi};
+        breakpoints.erase(std::remove_if(breakpoints.begin() + 1, breakpoints.end() - 1, [&](double v) { return v <= p_lo || v >= p_hi; }),
+                          breakpoints.end() - 1);
     } else {
         breakpoints = {p_lo, p_hi};
     }
-    const std::size_t N_cheb = 32;
+    const std::size_t N_cheb = 8;
     auto T_lo_fn = [&](double P) -> double {
         const double T_melt = T_melt_floor(P);
         return std::isfinite(T_melt) ? T_melt : T_min;
@@ -1904,6 +1985,18 @@ double SBTLBackend::evaluate_single_phase_transport(SinglePhaseGriddedTableData&
 // xi is linear in xnorm and eta is linear in log P.
 // ---------------------------------------------------------------------------
 
+double SBTLBackend::evaluate_single_phase_pre(const std::vector<std::vector<CellCoeffs>>& coeffs, const parameters output, const double xi,
+                                              const double eta, const std::size_t i, const std::size_t j) {
+    const std::vector<double>& alpha = coeffs[i][j].get(output);
+    const double xi2 = xi * xi, xi3 = xi2 * xi;
+    const double eta2 = eta * eta, eta3 = eta2 * eta;
+    const double B0 = alpha[0] + alpha[1] * eta + alpha[2] * eta2 + alpha[3] * eta3;
+    const double B1 = alpha[4] + alpha[5] * eta + alpha[6] * eta2 + alpha[7] * eta3;
+    const double B2 = alpha[8] + alpha[9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
+    const double B3 = alpha[12] + alpha[13] * eta + alpha[14] * eta2 + alpha[15] * eta3;
+    return B0 + B1 * xi + B2 * xi2 + B3 * xi3;
+}
+
 double SBTLBackend::evaluate_single_phase(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
                                           const parameters output, const double x, const double y, const std::size_t i, const std::size_t j) {
     const CellCoeffs& cell = coeffs[i][j];
@@ -2269,8 +2362,15 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                         // because we're not going through it for this path.
                         _hmolar = h_molar;
                         _p = p;
-                        const double T_val = evaluate_single_phase(*tbl, *coeffs, iT, xnorm, p, i, j);
-                        const double rho_val = evaluate_single_phase(*tbl, *coeffs, iDmolar, xnorm, p, i, j);
+                        // Compute in-cell (xi, eta) once and reuse across
+                        // every property evaluation.  Caches feed both the
+                        // eager T/rho here and the lazy s/u/μ/k accessors.
+                        const double xi = (xnorm - tbl->xvec[i]) / (tbl->xvec[i + 1] - tbl->xvec[i]);
+                        const double eta = (std::log(p) - std::log(tbl->yvec[j])) / (std::log(tbl->yvec[j + 1]) - std::log(tbl->yvec[j]));
+                        _normph_xi = xi;
+                        _normph_eta = eta;
+                        const double T_val = evaluate_single_phase_pre(*coeffs, iT, xi, eta, i, j);
+                        const double rho_val = evaluate_single_phase_pre(*coeffs, iDmolar, xi, eta, i, j);
                         // Sanity check: cubic B-spline through hole-filled
                         // data near table edges can extrapolate to
                         // non-physical values (e.g. negative density at
@@ -2318,8 +2418,26 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                         return;
                     }
                 }
-            } catch (...) {
-                // Fall through to base class on any failure.
+            } catch (const NotImplementedError&) {
+                throw;  // Re-throw user-facing errors (in-dome HmassP).
+            } catch (const std::exception& e) {
+                // Internal failure: re-throw with context so the caller sees
+                // the real problem rather than the misleading "input pair
+                // not supported" terminal throw at the end of update().
+                throw ValueError(format("SBTL HmolarP/HmassP_INPUTS at (h=%g J/mol, P=%g Pa) could not be "
+                                        "evaluated through the normalized PH path: %s.  Use HEOS directly.",
+                                        h_molar, p, e.what()));
+            }
+            // Reached only when xnorm fell outside [0,1] or the cell at the
+            // resolved (i,j) was marked invalid (e.g. table edge with no
+            // neighbour-recovery).  Surface a clean error rather than
+            // dropping to the misleading "input pair not supported" throw.
+            {
+                const double xnorm_d = tbl->xnorm_from_h(h_molar, p, h_sat_active);
+                throw ValueError(format("SBTL HmolarP/HmassP_INPUTS at (h=%g J/mol, P=%g Pa) is outside the "
+                                        "normph table coverage (xnorm=%g, p_range=[%g,%g]).  "
+                                        "Use HEOS directly.",
+                                        h_molar, p, xnorm_d, tbl->yvec.front(), tbl->yvec.back()));
             }
         }
     }
@@ -2542,14 +2660,22 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
                     if (cell.valid()) {
                         _T = T_query;
                         _p = p;
-                        const double rho_val = evaluate_single_phase(*tbl, *coeffs, iDmolar, xnorm, p, i, j);
+                        // Precompute (xi, eta) once; cache for lazy accessors.
+                        const double xi = (xnorm - tbl->xvec[i]) / (tbl->xvec[i + 1] - tbl->xvec[i]);
+                        const double eta = (std::log(p) - std::log(tbl->yvec[j])) / (std::log(tbl->yvec[j + 1]) - std::log(tbl->yvec[j]));
+                        _normpt_xi = xi;
+                        _normpt_eta = eta;
+                        const double rho_val = evaluate_single_phase_pre(*coeffs, iDmolar, xi, eta, i, j);
                         if (!ValidNumber(rho_val) || rho_val <= 0.0) {
                             throw ValueError("SBTL normpt polynomial gave non-physical rho");
                         }
                         _rhomolar = rho_val;
-                        _hmolar = evaluate_single_phase(*tbl, *coeffs, iHmolar, xnorm, p, i, j);
-                        _smolar = evaluate_single_phase(*tbl, *coeffs, iSmolar, xnorm, p, i, j);
-                        _umolar = evaluate_single_phase(*tbl, *coeffs, iUmolar, xnorm, p, i, j);
+                        // h, s, u deferred to lazy accessors (calc_hmolar /
+                        // calc_smolar / calc_umolar via the _normpt_active_table
+                        // override).  Eager evaluation here was burning ~450 ns
+                        // per update on three Hermite-bicubic polynomial evals
+                        // that are usually unused — most PT consumers only ask
+                        // for rho.  Matches the PH path's lazy contract.
                         // _Q tag: 0 at LIQUID xnorm=1 boundary (saturated liquid),
                         // 1 at VAPOR xnorm=0 boundary (saturated vapor),
                         // -1000 elsewhere (single-phase interior or supercritical).
@@ -2614,25 +2740,34 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
 CoolPropDbl SBTLBackend::calc_hmolar() {
     if (_critbox_active) return static_cast<CoolPropDbl>(_hmolar);
     if (_normph_active_table) return static_cast<CoolPropDbl>(_hmolar);
-    if (_normpt_active_table) return static_cast<CoolPropDbl>(_hmolar);
+    if (_normpt_active_table) {
+        return static_cast<CoolPropDbl>(
+          evaluate_single_phase_pre(*_normpt_active_coeffs, iHmolar, _normpt_xi, _normpt_eta, cached_single_phase_i, cached_single_phase_j));
+    }
     return TabularBackend::calc_hmolar();
 }
 CoolPropDbl SBTLBackend::calc_smolar() {
     if (_critbox_active) return static_cast<CoolPropDbl>(_critbox_smolar);
     if (_normph_active_table) {
-        return static_cast<CoolPropDbl>(evaluate_single_phase(*_normph_active_table, *_normph_active_coeffs, iSmolar, _normph_xnorm,
-                                                              static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
+        return static_cast<CoolPropDbl>(
+          evaluate_single_phase_pre(*_normph_active_coeffs, iSmolar, _normph_xi, _normph_eta, cached_single_phase_i, cached_single_phase_j));
     }
-    if (_normpt_active_table) return static_cast<CoolPropDbl>(_smolar);
+    if (_normpt_active_table) {
+        return static_cast<CoolPropDbl>(
+          evaluate_single_phase_pre(*_normpt_active_coeffs, iSmolar, _normpt_xi, _normpt_eta, cached_single_phase_i, cached_single_phase_j));
+    }
     return TabularBackend::calc_smolar();
 }
 CoolPropDbl SBTLBackend::calc_umolar() {
     if (_critbox_active) return static_cast<CoolPropDbl>(_critbox_umolar);
     if (_normph_active_table) {
-        return static_cast<CoolPropDbl>(evaluate_single_phase(*_normph_active_table, *_normph_active_coeffs, iUmolar, _normph_xnorm,
-                                                              static_cast<double>(_p), cached_single_phase_i, cached_single_phase_j));
+        return static_cast<CoolPropDbl>(
+          evaluate_single_phase_pre(*_normph_active_coeffs, iUmolar, _normph_xi, _normph_eta, cached_single_phase_i, cached_single_phase_j));
     }
-    if (_normpt_active_table) return static_cast<CoolPropDbl>(_umolar);
+    if (_normpt_active_table) {
+        return static_cast<CoolPropDbl>(
+          evaluate_single_phase_pre(*_normpt_active_coeffs, iUmolar, _normpt_xi, _normpt_eta, cached_single_phase_i, cached_single_phase_j));
+    }
     return TabularBackend::calc_umolar();
 }
 CoolPropDbl SBTLBackend::calc_rhomolar() {

@@ -13,12 +13,10 @@ constant-D split.
 
 Usage:  python3 sbtl_du_diagram.py [FluidName] [/path/output.png]
 """
-import os
 import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 
 import CoolProp.CoolProp as CP
 
@@ -74,6 +72,7 @@ def sat_curve():
             heos.update(CP.QT_INPUTS, 0, T); vL.append(1.0 / heos.rhomass()); uL.append(heos.umass())
             heos.update(CP.QT_INPUTS, 1, T); vV.append(1.0 / heos.rhomass()); uV.append(heos.umass())
         except Exception:
+            # query landed outside table envelope; skip this point
             pass
     return np.array(vL), np.array(uL), np.array(vV), np.array(uV)
 
@@ -87,6 +86,7 @@ def isobar(P, T_lo, T_hi, N=200):
             if 0 < heos.Q() < 1: continue
             vs.append(1.0 / heos.rhomass()); us.append(heos.umass())
         except Exception:
+            # query landed outside table envelope; skip this point
             pass
     return np.array(vs), np.array(us)
 
@@ -100,6 +100,7 @@ def isotherm(T, p_lo, p_hi, N=200):
             if 0 < heos.Q() < 1: continue
             vs.append(1.0 / heos.rhomass()); us.append(heos.umass())
         except Exception:
+            # query landed outside table envelope; skip this point
             pass
     return np.array(vs), np.array(us)
 

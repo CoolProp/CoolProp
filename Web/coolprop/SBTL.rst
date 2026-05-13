@@ -203,94 +203,29 @@ and SBTL:
 
     In [6]: print(HEOS.rhomolar(), TTSE.rhomolar(), BICU.rhomolar(), SBTL.rhomolar())
 
-The figure below shows density errors for ``HmassP_INPUTS`` across the
-single-phase region of R245fa.  SBTL routes through the coordinate-aligned
-``NormalizedPHTable``; BICUBIC uses Hermite bi-cubic on a ``logph`` grid;
-TTSE uses bilinear Taylor expansion.  SBTL and BICUBIC both substantially
-outperform TTSE; SBTL additionally avoids the cell-straddling errors that
-BICUBIC sees just above and below the saturation curve.
+The figures below quantify density error in the single-phase region for
+five fluids spanning very different molecular size and critical-point
+locations: **Argon** (cryogenic, simple), **CarbonDioxide** (industrial
+reference, narrow liquid range), **Water** (high :math:`p_{\rm crit}`,
+strong hydrogen bonding), **R245fa** (refrigerant), and **D6** (siloxane,
+low :math:`p_{\rm crit}\approx 0.96\,{\rm MPa}`).
 
-.. plot::
+For each fluid we draw 3,000 random points :math:`(T, p)` uniformly in
+:math:`T` and log-uniformly in :math:`p` over the table's full envelope,
+compute :math:`h={\rm HEOS}(T,p)`, then look up :math:`\rho` from each
+tabular backend with both ``HmassP_INPUTS`` and ``PT_INPUTS``.  Error is
+:math:`|\rho_{\rm table}/\rho_{\rm EOS}-1|`.  Two-phase samples are
+rejected at HEOS lookup.
 
-    import CoolProp
-    import CoolProp.CoolProp as CP
-    import matplotlib.pyplot as plt
-    import matplotlib.colors as colors
-    import matplotlib.cm as cmx
-    import matplotlib.ticker
-    import numpy as np
-    import random
+``HmassP_INPUTS`` error map
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    fig = plt.figure(figsize=(14, 5))
-    ax1 = fig.add_axes((0.05, 0.12, 0.24, 0.80))
-    ax2 = fig.add_axes((0.35, 0.12, 0.24, 0.80))
-    ax3 = fig.add_axes((0.65, 0.12, 0.24, 0.80))
-
-    Ref = 'R245fa'
-
-    SBTL    = CoolProp.AbstractState('SBTL&HEOS',    Ref)
-    BICUBIC = CoolProp.AbstractState('BICUBIC&HEOS', Ref)
-    TTSE    = CoolProp.AbstractState('TTSE&HEOS',    Ref)
-    EOS     = CoolProp.AbstractState('HEOS',         Ref)
-
-    T  = np.linspace(CP.PropsSI(Ref, 'Tmin') + 0.1, CP.PropsSI(Ref, 'Tcrit') - 0.01, 300)
-    pV = CP.PropsSI('P',     'T', T, 'Q', 1, Ref)
-    hL = CP.PropsSI('Hmass', 'T', T, 'Q', 0, Ref)
-    hV = CP.PropsSI('Hmass', 'T', T, 'Q', 1, Ref)
-
-    HHH, PPP, E_TTSE, E_BICU, E_SBTL = [], [], [], [], []
-
-    cNorm = colors.LogNorm(vmin=1e-12, vmax=10)
-    random.seed(0)
-
-    for _ in range(40000):
-        h = random.uniform(150000, 590000)
-        p = 10**random.uniform(np.log10(100000), np.log10(7000000))
-        try:
-            EOS.update(CoolProp.HmassP_INPUTS, h, p)
-            rhoEOS = EOS.rhomolar()
-
-            TTSE.update(CoolProp.HmassP_INPUTS, h, p)
-            BICUBIC.update(CoolProp.HmassP_INPUTS, h, p)
-            SBTL.update(CoolProp.HmassP_INPUTS, h, p)
-
-            HHH.append(h); PPP.append(p)
-            E_TTSE.append(abs(TTSE.rhomolar()    / rhoEOS - 1) * 100)
-            E_BICU.append(abs(BICUBIC.rhomolar() / rhoEOS - 1) * 100)
-            E_SBTL.append(abs(SBTL.rhomolar()    / rhoEOS - 1) * 100)
-        except ValueError:
-            pass
-
-    kw = dict(s=8, edgecolors='none', cmap=plt.get_cmap('jet'), norm=cNorm)
-    SC = ax1.scatter(HHH, PPP, c=E_TTSE, **kw)
-    ax2.scatter(HHH, PPP, c=E_BICU, **kw)
-    ax3.scatter(HHH, PPP, c=E_SBTL, **kw)
-
-    titles = ['Error from TTSE', 'Error from Bicubic', 'Error from SBTL']
-    for ax, title in zip([ax1, ax2, ax3], titles):
-        ax.set_title(title)
-        ax.set_xlim(250000, 550000)
-        ax.set_ylim(100000, 7000000)
-        ax.set_yscale('log')
-        ax.plot(hL, pV, 'k', lw=4)
-        ax.plot(hV, pV, 'k', lw=4)
-        ticks_h = [150000, 250000, 350000, 450000, 550000]
-        ticks_p = [100000, 200000, 400000, 600000, 800000, 1000000, 2000000, 4000000, 6000000]
-        ax.set_xticks(ticks_h); ax.set_xticklabels([str(t//1000) for t in ticks_h])
-        ax.set_yticks(ticks_p); ax.set_yticklabels([str(t//1000) for t in ticks_p])
-        ax.tick_params(axis='y', which='minor', left='off')
-        ax.set_xlabel('Enthalpy [kJ/kg]')
-        ax.set_ylabel('Pressure [kPa]')
-
-    cbar_ax = fig.add_axes([0.91, 0.15, 0.025, 0.70])
-    CB = fig.colorbar(SC, cax=cbar_ax)
-    CB.set_label(r'$(\rho/\rho_{\rm EOS}-1)\times 100$ [%]')
-
-The next figure shows density errors for ``PT_INPUTS`` over the same
-window.  SBTL's coordinate-aligned ``NormalizedPTTable`` matches BICUBIC's
-Hermite bi-cubic in well-conditioned regions and additionally avoids
-the cell-straddling errors that BICUBIC sees just above and below the
-saturation curve.
+SBTL routes through ``NormalizedPHTable``; BICUBIC uses Hermite bi-cubic
+on a ``logph`` grid; TTSE uses bilinear Taylor expansion.  SBTL eliminates
+the cell-straddling streaks along the saturation curve that BICUBIC shows,
+at the cost of larger error in a small band immediately below
+:math:`p_{\rm crit}` (most visible for R245fa).  See the discussion below
+the PT plot for the mechanism.
 
 .. plot::
 
@@ -301,70 +236,296 @@ saturation curve.
     import numpy as np
     import random
 
-    fig = plt.figure(figsize=(10, 5))
-    ax1 = fig.add_axes((0.07, 0.13, 0.36, 0.78))
-    ax2 = fig.add_axes((0.50, 0.13, 0.36, 0.78))
+    FLUIDS = ['Argon', 'CarbonDioxide', 'Water', 'R245fa', 'D6']
+    N = 6000
+    fig, axes = plt.subplots(len(FLUIDS), 3, figsize=(11, 14))
+    fig.subplots_adjust(left=0.08, right=0.90, top=0.97, bottom=0.04,
+                        wspace=0.32, hspace=0.50)
+    cNorm = colors.LogNorm(vmin=1e-10, vmax=10)
+    cmap = plt.get_cmap('jet')
+    for ir, Ref in enumerate(FLUIDS):
+        EOS  = CoolProp.AbstractState('HEOS',         Ref)
+        TTSE = CoolProp.AbstractState('TTSE&HEOS',    Ref)
+        BICU = CoolProp.AbstractState('BICUBIC&HEOS', Ref)
+        SBTL = CoolProp.AbstractState('SBTL&HEOS',    Ref)
+        Tmin  = CP.PropsSI(Ref, 'Tmin') + 0.5
+        Tmax  = CP.PropsSI(Ref, 'Tmax') - 0.5
+        Tcrit = CP.PropsSI(Ref, 'Tcrit')
+        pmin  = CP.PropsSI(Ref, 'ptriple') * 1.05
+        pmax  = CP.PropsSI(Ref, 'pmax') * 0.99
+        Tsat = np.linspace(max(Tmin, CP.PropsSI(Ref, 'Ttriple') + 0.1),
+                           Tcrit - 0.01, 200)
+        psat = CP.PropsSI('P', 'T', Tsat, 'Q', 0, Ref)
+        hLs  = CP.PropsSI('Hmass', 'T', Tsat, 'Q', 0, Ref)
+        hVs  = CP.PropsSI('Hmass', 'T', Tsat, 'Q', 1, Ref)
+        random.seed(0)
+        H, P, eT, eB, eS = [], [], [], [], []
+        for _ in range(N):
+            T = random.uniform(Tmin, Tmax)
+            p = 10**random.uniform(np.log10(pmin), np.log10(pmax))
+            try:
+                EOS.update(CoolProp.PT_INPUTS, p, T)
+                h = EOS.hmass(); rE = EOS.rhomolar()
+                TTSE.update(CoolProp.HmassP_INPUTS, h, p)
+                BICU.update(CoolProp.HmassP_INPUTS, h, p)
+                SBTL.update(CoolProp.HmassP_INPUTS, h, p)
+                H.append(h); P.append(p)
+                eT.append(max(abs(TTSE.rhomolar()/rE - 1)*100, 1e-12))
+                eB.append(max(abs(BICU.rhomolar()/rE - 1)*100, 1e-12))
+                eS.append(max(abs(SBTL.rhomolar()/rE - 1)*100, 1e-12))
+            except ValueError:
+                pass
+        for ax, e, lab in zip(axes[ir], (eT, eB, eS),
+                              ('TTSE', 'Bicubic', 'SBTL')):
+            ax.scatter(np.array(H)/1e3, P, c=e, s=3, cmap=cmap,
+                       norm=cNorm, edgecolors='none')
+            ax.plot(hLs/1e3, psat, 'k-', lw=1.0)
+            ax.plot(hVs/1e3, psat, 'k-', lw=1.0)
+            ax.set_yscale('log')
+            ax.set_title(f'{Ref}: {lab}', fontsize=9)
+            ax.set_xlabel('h [kJ/kg]', fontsize=8)
+            ax.tick_params(labelsize=7)
+            if ax is axes[ir][0]:
+                ax.set_ylabel('p [Pa]', fontsize=8)
+    sm = plt.cm.ScalarMappable(norm=cNorm, cmap=cmap)
+    sm.set_array([])
+    cax = fig.add_axes([0.92, 0.04, 0.020, 0.93])
+    fig.colorbar(sm, cax=cax,
+                 label=r'$|\rho_{\rm table}/\rho_{\rm EOS}-1|\times 100\,[\%]$')
 
-    Ref = 'R245fa'
+``PT_INPUTS`` error map
+~~~~~~~~~~~~~~~~~~~~~~~
 
-    SBTL    = CoolProp.AbstractState('SBTL&HEOS',    Ref)
-    BICUBIC = CoolProp.AbstractState('BICUBIC&HEOS', Ref)
-    EOS     = CoolProp.AbstractState('HEOS',         Ref)
+SBTL's ``NormalizedPTTable`` places the saturation curve on a coordinate
+axis (``xnorm = 1`` for LIQUID, ``xnorm = 0`` for VAPOR) so cells never
+straddle the dome.  The BICUBIC panels show distinctive red streaks along
+the saturation curve from cell-straddling; SBTL eliminates them.  In the
+bulk single-phase region both backends are below
+:math:`10^{-6}`.
 
-    Ttpl  = EOS.Ttriple()
-    Tcrit = EOS.T_critical()
-    Tmax  = EOS.Tmax()
-    ptpl  = CP.PropsSI(Ref, 'ptriple')
-    pmax  = CP.PropsSI(Ref, 'pmax')
+.. plot::
 
-    # Saturation dome in (T, P) coordinates
-    T_sat = np.linspace(Ttpl + 0.1, Tcrit - 0.01, 300)
-    p_sat = CP.PropsSI('P', 'T', T_sat, 'Q', 0, Ref)
+    import CoolProp
+    import CoolProp.CoolProp as CP
+    import matplotlib.pyplot as plt
+    import matplotlib.colors as colors
+    import numpy as np
+    import random
 
-    random.seed(0)
-    TTT, PPP, E_BICU, E_SBTL = [], [], [], []
-    for _ in range(20000):
-        T = random.uniform(Ttpl + 1, Tmax)
-        P = 10**random.uniform(np.log10(ptpl * 1.05), np.log10(pmax))
-        try:
-            EOS.update(CoolProp.PT_INPUTS, P, T)
-            if EOS.phase() == CP.iphase_twophase:
-                continue
-            rho_eos = EOS.rhomolar()
-            BICUBIC.update(CoolProp.PT_INPUTS, P, T)
-            SBTL.update(CoolProp.PT_INPUTS, P, T)
-            TTT.append(T); PPP.append(P)
-            E_BICU.append(abs(BICUBIC.rhomolar() / rho_eos - 1) * 100)
-            E_SBTL.append(abs(SBTL.rhomolar()    / rho_eos - 1) * 100)
-        except (ValueError, RuntimeError):
-            pass
+    FLUIDS = ['Argon', 'CarbonDioxide', 'Water', 'R245fa', 'D6']
+    N = 6000
+    fig, axes = plt.subplots(len(FLUIDS), 2, figsize=(8, 14))
+    fig.subplots_adjust(left=0.11, right=0.88, top=0.97, bottom=0.04,
+                        wspace=0.30, hspace=0.50)
+    cNorm = colors.LogNorm(vmin=1e-10, vmax=10)
+    cmap = plt.get_cmap('jet')
+    for ir, Ref in enumerate(FLUIDS):
+        EOS  = CoolProp.AbstractState('HEOS',         Ref)
+        BICU = CoolProp.AbstractState('BICUBIC&HEOS', Ref)
+        SBTL = CoolProp.AbstractState('SBTL&HEOS',    Ref)
+        Tmin  = CP.PropsSI(Ref, 'Tmin') + 0.5
+        Tmax  = CP.PropsSI(Ref, 'Tmax') - 0.5
+        Tcrit = CP.PropsSI(Ref, 'Tcrit')
+        pmin  = CP.PropsSI(Ref, 'ptriple') * 1.05
+        pmax  = CP.PropsSI(Ref, 'pmax') * 0.99
+        Tsat = np.linspace(max(Tmin, CP.PropsSI(Ref, 'Ttriple') + 0.1),
+                           Tcrit - 0.01, 200)
+        psat = CP.PropsSI('P', 'T', Tsat, 'Q', 0, Ref)
+        random.seed(0)
+        TT, PP, eB, eS = [], [], [], []
+        for _ in range(N):
+            T = random.uniform(Tmin, Tmax)
+            p = 10**random.uniform(np.log10(pmin), np.log10(pmax))
+            try:
+                EOS.update(CoolProp.PT_INPUTS, p, T); rE = EOS.rhomolar()
+                BICU.update(CoolProp.PT_INPUTS, p, T)
+                SBTL.update(CoolProp.PT_INPUTS, p, T)
+                TT.append(T); PP.append(p)
+                eB.append(max(abs(BICU.rhomolar()/rE - 1)*100, 1e-12))
+                eS.append(max(abs(SBTL.rhomolar()/rE - 1)*100, 1e-12))
+            except ValueError:
+                pass
+        for ax, e, lab in zip(axes[ir], (eB, eS), ('Bicubic', 'SBTL')):
+            ax.scatter(TT, PP, c=e, s=3, cmap=cmap, norm=cNorm,
+                       edgecolors='none')
+            ax.plot(Tsat, psat, 'k-', lw=1.0)
+            ax.set_yscale('log')
+            ax.set_title(f'{Ref}: {lab}', fontsize=9)
+            ax.set_xlabel('T [K]', fontsize=8)
+            ax.tick_params(labelsize=7)
+            if ax is axes[ir][0]:
+                ax.set_ylabel('p [Pa]', fontsize=8)
+    sm = plt.cm.ScalarMappable(norm=cNorm, cmap=cmap)
+    sm.set_array([])
+    cax = fig.add_axes([0.90, 0.04, 0.022, 0.93])
+    fig.colorbar(sm, cax=cax,
+                 label=r'$|\rho_{\rm table}/\rho_{\rm EOS}-1|\times 100\,[\%]$')
 
-    cNorm = colors.LogNorm(vmin=1e-12, vmax=10)
-    kw = dict(s=4, edgecolors='none', cmap=plt.get_cmap('jet'), norm=cNorm)
-    SC = ax1.scatter(TTT, PPP, c=E_BICU, **kw)
-    ax2.scatter(TTT, PPP, c=E_SBTL, **kw)
+Near-critical PH behaviour
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    for ax, title in zip([ax1, ax2], ['Error from BICUBIC PT', 'Error from SBTL PT']):
-        ax.set_title(title)
-        ax.set_yscale('log')
-        ax.plot(T_sat, p_sat, 'k', lw=3)
-        ax.set_xlabel('Temperature [K]')
-        ax.set_ylabel('Pressure [Pa]')
+The SBTL panel of the PH plot shows an error band concentrated in
+:math:`0.85\,p_{\rm crit} \lesssim p < p_{\rm crit}` (visible most
+clearly for R245fa and D6).  This is *not* a coordinate-normalization
+issue — the H-superancillary delivers :math:`h_{\rm sat}(p)` to
+near-machine precision, so the
+:math:`\eta = (h - h_{\rm sat}(p))/(h_{\rm hi}(p) - h_{\rm sat}(p))`
+mapping at lookup time is exact.
 
-    cbar_ax = fig.add_axes([0.89, 0.15, 0.025, 0.74])
-    CB = fig.colorbar(SC, cax=cbar_ax)
-    CB.set_label(r'$(\rho/\rho_{\rm EOS}-1)\times 100$ [%]')
+The error is in the *property surface* the bicubic interpolates.  Along
+the saturation curve (:math:`\eta = 0` boundary) the vapour-side density
+behaves as
+
+.. math::
+
+    \rho_{\rm sat,V}(p) \approx \rho_{\rm crit} - C\,(p_{\rm crit} - p)^{\beta},
+    \qquad \beta \approx 0.326
+
+with :math:`\partial\rho_{\rm sat}/\partial p \to \infty` as
+:math:`p \to p_{\rm crit}`.  Each cell stores a 16-coefficient Hermite
+bicubic (corner values + first derivatives in
+:math:`\eta` and :math:`\log p`).  A cubic Hermite cannot reproduce a
+square-root-style cusp — its residual at the cell midpoint is bounded by
+the cell's :math:`\log p` span times derivatives of
+:math:`\rho_{\rm sat}` that diverge near critical.  Probing R245fa at
+:math:`p = 0.93\,p_{\rm crit}` confirms the structure: error is maximal
+right at the dome (~0.59 % at :math:`\eta = 10^{-3}`) and decays
+monotonically as :math:`\eta` moves away (~0.25 % at :math:`\eta = 0.95`).
+
+The supercritical region (``SUPER`` table) is unaffected — no dome, no
+cusp — and stays at the bulk single-phase accuracy.  PT lookups avoid
+the issue too because the PT normalization makes :math:`T` (not the
+density) the dome coordinate, and :math:`T_{\rm sat}(p)` is smooth where
+:math:`\rho_{\rm sat}(p)` is not.  Mitigation paths exist (finer cells
+in the top 15 % of :math:`p`, or a non-polynomial correction at
+:math:`\eta = 0`) but are out of scope for this PR.
 
 Speed comparison
 ----------------
 
-For ``HmassP_INPUTS`` and ``PT_INPUTS``, SBTL and BICUBIC have similar
-per-call cost since both ultimately evaluate a 16-coefficient bi-cubic
-polynomial.  The coordinate-aligned tables add a small constant overhead
-(one ``T_sat(P)`` lookup for the subcritical routing decision, cached
-single-deep for repeat queries at the same P).  In a typical pipeline
-workload the cache hits and SBTL averages ≈ 1.3 µs per ``PT_INPUTS``
-call vs ≈ 10.7 µs for HEOS direct (≈ 8× speedup).
+The benchmark measures wall time per ``AbstractState::update`` call from
+Python for each backend, on the same set of randomly drawn single-phase
+points outside the critical-fallback box.  All four backends see an
+identical query sequence for each fluid; queries that any backend cannot
+evaluate are screened out beforehand so the timing loops never throw.
+N=20,000 queries per fluid, median of five replicates.
+
+Numbers include the Cython wrapper overhead (~0.3 µs per call); the
+*relative* comparison between backends is unaffected since all four pay
+the same overhead.  Hardware: Apple M-series.  HEOS uses analytic
+:math:`\alpha^r(\tau,\delta)` derivatives; ``HmassP_INPUTS`` requires a
+Newton inversion which is responsible for the 10-50× HmassP/PT cost
+ratio for HEOS.
+
+.. plot::
+
+    import CoolProp
+    import CoolProp.CoolProp as CP
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import random
+    import statistics
+    import time
+
+    FLUIDS = ['Argon', 'CarbonDioxide', 'Water', 'R245fa', 'D6']
+    BACKENDS = [('HEOS', 'HEOS'),
+                ('TTSE&HEOS', 'TTSE'),
+                ('BICUBIC&HEOS', 'BICUBIC'),
+                ('SBTL&HEOS', 'SBTL')]
+    N = 20000
+    N_REPS = 5
+    results = {}
+    for Ref in FLUIDS:
+        EOS = CoolProp.AbstractState('HEOS', Ref)
+        Tmin = CP.PropsSI(Ref, 'Tmin') + 1.0
+        Tmax = CP.PropsSI(Ref, 'Tmax') - 1.0
+        pmin = CP.PropsSI(Ref, 'ptriple') * 1.1
+        pmax = CP.PropsSI(Ref, 'pmax') * 0.95
+        pcrit = CP.PropsSI(Ref, 'pcrit')
+        Tcrit = CP.PropsSI(Ref, 'Tcrit')
+        random.seed(42)
+        arrT, arrP, arrH = [], [], []
+        while len(arrT) < N:
+            T = random.uniform(Tmin, Tmax)
+            p = 10**random.uniform(np.log10(pmin), np.log10(pmax))
+            if abs(p / pcrit - 1) < 0.06 and abs(T / Tcrit - 1) < 0.06:
+                continue
+            try:
+                EOS.update(CoolProp.PT_INPUTS, p, T)
+                arrT.append(T); arrP.append(p); arrH.append(EOS.hmass())
+            except ValueError:
+                continue
+        arrT = np.array(arrT); arrP = np.array(arrP); arrH = np.array(arrH)
+        screens = [CoolProp.AbstractState(b, Ref) for b, _ in BACKENDS]
+        mask = np.ones(N, dtype=bool)
+        for i in range(N):
+            for AS_s in screens:
+                try:
+                    AS_s.update(CoolProp.PT_INPUTS, arrP[i], arrT[i])
+                    AS_s.update(CoolProp.HmassP_INPUTS, arrH[i], arrP[i])
+                except ValueError:
+                    mask[i] = False; break
+        arrT = arrT[mask]; arrP = arrP[mask]; arrH = arrH[mask]
+        Ng = len(arrT)
+        for backend, name in BACKENDS:
+            AS = CoolProp.AbstractState(backend, Ref)
+            AS.update(CoolProp.PT_INPUTS, arrP[0], arrT[0])
+            for input_label, pair, X, Y in [
+                ('PT', CoolProp.PT_INPUTS, arrP, arrT),
+                ('HmassP', CoolProp.HmassP_INPUTS, arrH, arrP),
+            ]:
+                trials = []
+                for _ in range(N_REPS):
+                    t0 = time.perf_counter()
+                    for i in range(Ng):
+                        AS.update(pair, X[i], Y[i])
+                    trials.append((time.perf_counter() - t0) / Ng)
+                results[(Ref, name, input_label)] = statistics.median(trials)
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5.5))
+    x = np.arange(len(FLUIDS))
+    width = 0.20
+    colors_b = {'HEOS': '#555', 'TTSE': '#1f77b4',
+                'BICUBIC': '#ff7f0e', 'SBTL': '#2ca02c'}
+    for ax, ipair, ymax in zip(axes, ['PT', 'HmassP'], [12, 100]):
+        for k, (_, name) in enumerate(BACKENDS):
+            ys = [results[(f, name, ipair)] * 1e6 for f in FLUIDS]
+            ax.bar(x + (k - 1.5) * width, ys, width, color=colors_b[name],
+                   label=name, edgecolor='black', linewidth=0.4)
+            for xi, yi in zip(x + (k - 1.5) * width, ys):
+                ax.text(xi, yi + ymax * 0.012, f'{yi:.2f}',
+                        ha='center', va='bottom', fontsize=7.5)
+        ax.set_xticks(x); ax.set_xticklabels(FLUIDS, rotation=15)
+        ax.set_ylabel('Time per call [µs]')
+        ax.set_title(f'{ipair}_INPUTS')
+        ax.legend(loc='upper right' if ipair == 'PT' else 'upper center',
+                  fontsize=8, ncols=4 if ipair == 'HmassP' else 1)
+        ax.set_ylim(0, ymax)
+        ax.grid(axis='y', alpha=0.3)
+    fig.suptitle(
+        f'Per-call cost (median of {N_REPS} runs of N={N//1000}k '
+        f'single-phase queries; critical-fallback box excluded)',
+        fontsize=10)
+    fig.subplots_adjust(top=0.86, bottom=0.13, left=0.07, right=0.97,
+                        wspace=0.22)
+
+Takeaways:
+
+* **TTSE and BICUBIC** are the fastest tabular backends at ~0.4–0.7 µs/call
+  for both input pairs.  Both ultimately evaluate a 16-coefficient
+  polynomial; their cost is dominated by Python-wrapper overhead.
+* **SBTL** is ~0.5–1.5 µs/call.  For ``PT_INPUTS`` it is 2–3× slower than
+  BICUBIC: the per-query saturation lookup for region routing plus the
+  Chebyshev evaluation for the :math:`\eta`-coordinate normalization are
+  the unavoidable cost of putting the dome on a coordinate axis.  For
+  ``HmassP_INPUTS`` SBTL is *competitive with or faster than* BICUBIC —
+  the coordinate-aligned PH table inverts the lookup directly, while
+  BICUBIC pays for the dome-straddling cell-bump logic.
+* **HEOS direct** is the slow path: ~2–9 µs for ``PT_INPUTS``, ~17–93 µs
+  for ``HmassP_INPUTS`` (the latter is iterated; the former is closed-form).
+* The headline speedup vs HEOS is **3–10×** on ``PT_INPUTS`` depending on
+  fluid (HEOS's own PT cost varies 4× across the five fluids), and
+  **20–130×** on ``HmassP_INPUTS`` since the tabular backends skip HEOS's
+  Newton inversion.
 
 For queries inside the critical-region HEOS-fallback box, SBTL bypasses
 the spline and calls HEOS directly (~10 µs), trading speed for the

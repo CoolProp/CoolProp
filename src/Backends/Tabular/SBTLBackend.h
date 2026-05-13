@@ -106,19 +106,21 @@ class Cheb1DPiece
         // constant term (half-endpoint convention for derivative); we halve
         // it before the Clenshaw eval so the Σ d_k T_k(t) form sums right.
         std::vector<double> d(N + 1, 0.0);
-        for (std::size_t k = N; k >= 1; --k) {
+        // Descending unsigned loop: `k > 0` keeps the index in range without
+        // an `if (k == 1) break;` underflow guard, which CodeQL flags as a
+        // tautology.  When the body runs with k=1 it writes d[0]; the --k
+        // then takes k to 0 and the condition exits the loop cleanly.
+        for (std::size_t k = N; k > 0; --k) {
             const double dk_plus1 = (k + 1 <= N) ? d[k + 1] : 0.0;
             d[k - 1] = dk_plus1 + 2.0 * static_cast<double>(k) * c_[k];
-            if (k == 1) break;  // unsigned guard
         }
         d[0] *= 0.5;
         // Clenshaw on d_ to get Σ d_k T_k(t), then chain by dt/d(log p).
         double bk1 = 0.0, bk2 = 0.0;
-        for (std::size_t k = N; k >= 1; --k) {
+        for (std::size_t k = N; k > 0; --k) {
             const double bk = d[k] + 2.0 * t * bk1 - bk2;
             bk2 = bk1;
             bk1 = bk;
-            if (k == 1) break;
         }
         const double val = d[0] + t * bk1 - bk2;
         const double dt_dlogp = 2.0 / (log_p_hi_ - log_p_lo_);
@@ -532,14 +534,25 @@ class SBTLBackend : public TabularBackend
         if (_normph_active_table == nullptr || _normph_active_coeffs == nullptr) {
             throw ValueError("SBTL: no active normalized PH table — only PH input pairs route through SBTL.");
         }
-        return evaluate_single_phase(*_normph_active_table, *_normph_active_coeffs, output, _normph_xnorm, _p, i, j);
+        return evaluate_single_phase_pre(*_normph_active_coeffs, output, _normph_xi, _normph_eta, i, j);
     }
     double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) {
         if (_normpt_active_table == nullptr || _normpt_active_coeffs == nullptr) {
             throw ValueError("SBTL: no active normalized PT table — only PT input pairs route through SBTL.");
         }
-        return evaluate_single_phase(*_normpt_active_table, *_normpt_active_coeffs, output, _normpt_xnorm, _p, i, j);
+        return evaluate_single_phase_pre(*_normpt_active_coeffs, output, _normpt_xi, _normpt_eta, i, j);
     }
+
+    /// Hot-path polynomial evaluator.  Takes the in-cell normalized
+    /// (xi, eta) already computed once by the caller, plus (i, j) to fetch
+    /// the cell's 16-coefficient array for `output`.  Avoids the 3 std::log
+    /// calls per evaluation that evaluate_single_phase() does on every call
+    /// (one for log(y), two for log(yvec[j]), log(yvec[j+1])).  Update paths
+    /// call this 4× (rho, h, s, u) per query while amortizing the xi/eta
+    /// computation once — the previous evaluate_single_phase() was paying
+    /// 12 logs per update where 0 are needed.
+    double evaluate_single_phase_pre(const std::vector<std::vector<CellCoeffs>>& coeffs, parameters output, double xi, double eta, std::size_t i,
+                                     std::size_t j);
 
     // -----------------------------------------------------------------------
     // Derivatives — SBTL does not support polynomial derivatives.
@@ -778,6 +791,11 @@ class SBTLBackend : public TabularBackend
     NormalizedPHTable* _normph_active_table = nullptr;
     const std::vector<std::vector<CellCoeffs>>* _normph_active_coeffs = nullptr;
     double _normph_xnorm = 0.0;
+    // In-cell normalized coordinates (xi, eta) ∈ [0, 1]²; cached at update
+    // so property accessors can call evaluate_single_phase_pre directly
+    // without re-doing the log(p) / log(yvec) arithmetic.
+    double _normph_xi = 0.0;
+    double _normph_eta = 0.0;
 
     // Coordinate-aligned PT tables — same coordinate trick as the PH path.
     // See dev/sbtl_pt_outstanding_work.md for the design rationale (fix for
@@ -798,6 +816,8 @@ class SBTLBackend : public TabularBackend
     NormalizedPTTable* _normpt_active_table = nullptr;
     const std::vector<std::vector<CellCoeffs>>* _normpt_active_coeffs = nullptr;
     double _normpt_xnorm = 0.0;
+    double _normpt_xi = 0.0;
+    double _normpt_eta = 0.0;
 
     // Cached molar enthalpy at the critical point — used to define the
     // tight 2D HEOS-fallback box around (h_crit, p_crit).  Computed

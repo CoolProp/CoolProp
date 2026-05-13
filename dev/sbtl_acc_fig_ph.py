@@ -15,7 +15,6 @@ NormalizedPHTable (LIQUID / VAPOR / SUPER) plus a small HEOS-fallback
 box around (h_crit, p_crit).  See dev/sbtl_normalized_ph_design.md for
 the design.  Sibling PT figure: dev/sbtl_acc_fig_pt.py.
 """
-import os
 import sys
 
 import numpy as np
@@ -119,6 +118,7 @@ def probe(BCK, h_lim, p_lim, mode, NH=200, NP=200):
                     BCK.update(CP.PT_INPUTS, P, T_eos)
                 err[i, j] = abs(BCK.rhomass() - rho) / rho
             except Exception:
+                # query landed outside table envelope; skip this point
                 pass
     return HH, PP, err
 
@@ -132,6 +132,7 @@ def saturation_curve_ph():
             heos.update(CP.QT_INPUTS, 0.0, t); h_L.append(heos.hmass()); p_arr.append(heos.p())
             heos.update(CP.QT_INPUTS, 1.0, t); h_V.append(heos.hmass())
         except Exception:
+            # query landed outside table envelope; skip this point
             pass
     return np.array(h_L), np.array(h_V), np.array(p_arr)
 
