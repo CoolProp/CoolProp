@@ -2432,13 +2432,30 @@ void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double v
             // resolved (i,j) was marked invalid (e.g. table edge with no
             // neighbour-recovery).  Surface a clean error rather than
             // dropping to the misleading "input pair not supported" throw.
+            // Re-eval xnorm in a try/catch so a sat-lookup race here doesn't
+            // replace the diagnostic with whatever xnorm_from_h raises.
             {
-                const double xnorm_d = tbl->xnorm_from_h(h_molar, p, h_sat_active);
+                double xnorm_d = std::numeric_limits<double>::quiet_NaN();
+                try {
+                    xnorm_d = tbl->xnorm_from_h(h_molar, p, h_sat_active);
+                } catch (...) {
+                    // leave xnorm_d as NaN; message still useful
+                }
                 throw ValueError(format("SBTL HmolarP/HmassP_INPUTS at (h=%g J/mol, P=%g Pa) is outside the "
                                         "normph table coverage (xnorm=%g, p_range=[%g,%g]).  "
                                         "Use HEOS directly.",
                                         h_molar, p, xnorm_d, tbl->yvec.front(), tbl->yvec.back()));
             }
+        } else {
+            // tbl == nullptr: routing fell through without picking a table.
+            // Most likely cause: saturation_hmolar_LV(p) threw (sat lookup
+            // race), and forced==Auto with p<p_crit so all three regions
+            // were skipped.  Surface a clean error instead of falling
+            // through to the terminal "input pair not supported" message.
+            throw ValueError(format("SBTL HmolarP/HmassP_INPUTS at (h=%g J/mol, P=%g Pa) could not be routed "
+                                    "to a normalized table — saturation lookup likely failed at this pressure. "
+                                    "Use HEOS directly.",
+                                    h_molar, p));
         }
     }
 

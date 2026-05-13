@@ -379,10 +379,14 @@ behaves as
 .. math::
 
     \rho_{\rm sat,V}(p) \approx \rho_{\rm crit} - C\,(p_{\rm crit} - p)^{\beta},
-    \qquad \beta \approx 0.326
+    \qquad \beta = 1/2
 
 with :math:`\partial\rho_{\rm sat}/\partial p \to \infty` as
-:math:`p \to p_{\rm crit}`.  Each cell stores a 16-coefficient Hermite
+:math:`p \to p_{\rm crit}`.  The exponent :math:`\beta = 1/2` is the
+classical mean-field value (CoolProp's pure-fluid Helmholtz EOS is
+analytic in :math:`(\tau, \delta)` and therefore reproduces mean-field
+scaling near critical, not the experimental 3D-Ising
+:math:`\beta \approx 0.326`).  Each cell stores a 16-coefficient Hermite
 bicubic (corner values + first derivatives in
 :math:`\eta` and :math:`\log p`).  A cubic Hermite cannot reproduce a
 square-root-style cusp — its residual at the cell midpoint is bounded by

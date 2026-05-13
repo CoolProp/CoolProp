@@ -90,6 +90,7 @@ def probe(BCK, T_lim, p_lim, NT=200, NP=200):
                 try:
                     if T < heos.melting_line(CP.iT, CP.iP, P): continue
                 except Exception:
+                    # melting line ancillary unavailable at this P; treat as in-range
                     pass
             try:
                 BCK.update(CP.PT_INPUTS, P, T)

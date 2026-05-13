@@ -110,6 +110,7 @@ def probe(BCK, h_lim, p_lim, mode, NH=200, NP=200):
                     if T_eos < heos.melting_line(CP.iT, CP.iP, P):
                         continue
                 except Exception:
+                    # melting line ancillary unavailable at this P; treat as in-range
                     pass
             try:
                 if mode == 'HP':

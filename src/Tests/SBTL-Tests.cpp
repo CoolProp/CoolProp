@@ -350,13 +350,74 @@ TEST_CASE("SBTL normph core-property lookups match HEOS at single-phase probes",
         SBTL_AS->update(CoolProp::PT_INPUTS, pr.p_Pa, pr.T_K);
         const double rho_eos = HEOS->rhomolar();
         const double rho_sbtl = SBTL_AS->rhomolar();
+        const double h_eos = HEOS->hmolar();
+        const double h_sbtl = SBTL_AS->hmolar();  // lazy accessor path
         CAPTURE(pr.label);
         CAPTURE(pr.p_Pa);
         CAPTURE(pr.T_K);
         CAPTURE(rho_eos);
         CAPTURE(rho_sbtl);
+        CAPTURE(h_eos);
+        CAPTURE(h_sbtl);
         CHECK(std::abs(rho_sbtl - rho_eos) / std::abs(rho_eos) < 1e-4);
+        // Lazy h accessor must produce a sane value — pre-refactor this was
+        // eagerly populated during update(); after the lazy-PT change it
+        // routes through evaluate_single_phase_pre with cached (xi, eta).
+        // A regression that leaves _normpt_xi/_normpt_eta unset would
+        // produce a wrong h here (cell origin instead of the query point).
+        CHECK(std::abs(h_sbtl - h_eos) / (1.0 + std::abs(h_eos)) < 1e-4);
     }
+}
+
+TEST_CASE("SBTL normph HmassP works at subcritical states for cryogens (Argon)", "[SBTL][cryogen]") {
+    // Regression guard for two coupled bugs that silently corrupted
+    // subcritical SBTL coverage for fluids whose HEOS melting-line
+    // ancillary's lower-p bound sits above p_triple (Argon, Helium, Neon).
+    //
+    // Pre-fix symptoms:
+    //   (a) safe_h_at_PT(p_triple, T) threw "unable to calculate melting
+    //       line T(p)" — the lambda returned _HUGE on those Cheb-Lobatto
+    //       nodes; Cheb1D coefficients then carried O(1e30) magnitude;
+    //       eval() returned NaN at intermediate p via huge-minus-huge
+    //       cancellation; xnorm = NaN; every subcritical HmassP query
+    //       silently fell through to the misleading "input pair
+    //       HmassP_INPUTS not supported" terminal throw.
+    //
+    //   (b) The same probe walk applied to the SUPER region drove its
+    //       ymin from p_crit up to ~4·p_crit because (p_crit, T_min) is
+    //       below the melting curve for cryogens, opening a gap in
+    //       supercritical coverage.
+    //
+    // The fix is in NormalizedPHTable::set_limits / NormalizedPTTable::set_limits:
+    //   walk ymin only for LIQUID/VAPOR; skip for SUPER.
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Argon"));
+    auto SBTL_AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SBTL&HEOS", "Argon"));
+
+    // Subcritical vapor: T=150K (well above T_sat≈87K at 1 bar), p=1e5 Pa.
+    // Pre-fix this threw "input pair HmassP_INPUTS not supported".
+    HEOS->update(CoolProp::PT_INPUTS, 1e5, 150.0);
+    const double h_subcrit_vapor = HEOS->hmass();
+    const double rho_eos_subcrit = HEOS->rhomass();
+
+    REQUIRE_NOTHROW(SBTL_AS->update(CoolProp::HmassP_INPUTS, h_subcrit_vapor, 1e5));
+    const double rho_sbtl_subcrit = SBTL_AS->rhomass();
+    CAPTURE(h_subcrit_vapor);
+    CAPTURE(rho_eos_subcrit);
+    CAPTURE(rho_sbtl_subcrit);
+    CHECK(std::abs(rho_sbtl_subcrit - rho_eos_subcrit) / std::abs(rho_eos_subcrit) < 1e-3);
+
+    // Supercritical-shoulder: T=300K, p=1e7 Pa (above p_crit=4.86MPa but
+    // below where the pre-fix probe-walk artifact ended ymin~21MPa).
+    // Pre-fix this threw "outside the normph table range [2.1e7, 1e9] Pa".
+    HEOS->update(CoolProp::PT_INPUTS, 1e7, 300.0);
+    const double h_super = HEOS->hmass();
+    const double rho_eos_super = HEOS->rhomass();
+    REQUIRE_NOTHROW(SBTL_AS->update(CoolProp::HmassP_INPUTS, h_super, 1e7));
+    const double rho_sbtl_super = SBTL_AS->rhomass();
+    CAPTURE(h_super);
+    CAPTURE(rho_eos_super);
+    CAPTURE(rho_sbtl_super);
+    CHECK(std::abs(rho_sbtl_super - rho_eos_super) / std::abs(rho_eos_super) < 1e-3);
 }
 
 TEST_CASE("SBTL accuracy on Water random PT/PH sweep", "[.][hermite_accuracy]") {
