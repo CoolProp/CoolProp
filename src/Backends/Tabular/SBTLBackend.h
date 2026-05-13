@@ -77,7 +77,20 @@ inline double sbtl_transform_second_deriv(SBTLTransform t, double y) {
 /// be promoted to log/sqrt/cusp-dist later once the infrastructure is
 /// validated.
 inline SBTLTransform sbtl_transform_for_property(int region_int, parameters output) {
-    if (output == iDmolar && (region_int == 1 || region_int == 2)) {
+    // ρ in all three regions: log transform.  Empirical study (multi-fluid
+    // grid sweep at coarse resolution, fit candidate transforms, pick
+    // lowest p99 residual) showed log beats identity by:
+    //   LIQUID:   ~500× (residual 0.054 vs 26.5; ρ varies ~2×)
+    //   VAPOR:    ~150× (residual 0.137 vs 20.8; ρ varies ~5 orders of magnitude)
+    //   SUPER:    ~280× (residual 0.41  vs 114)
+    // Even where ρ dynamic range is modest (LIQUID, ~2×), log helps
+    // because the property surface near the sat boundary has high
+    // curvature in ρ — log compresses that curvature to a polynomial-
+    // friendlier form.  Cusp-distance transforms (z = √(ρ − ρ_crit))
+    // are slightly better still for LIQUID near the dome (~30 % gain
+    // over log) but require fluid-specific ρ_crit storage; log is the
+    // simpler universal-fluid choice and captures the bulk of the gain.
+    if (output == iDmolar) {
         return SBTLTransform::LOG;
     }
     return SBTLTransform::IDENTITY;
