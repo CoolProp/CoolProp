@@ -246,8 +246,31 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
         }
         L++;
     }
+    // After the NaN-trim loops we need at least two valid points to
+    // bracket val.  Without this guard a single-valid-point trim (very
+    // unusual but possible for sparse tables) lets the exact-match
+    // early-returns below set i = L = R, and the caller dereferences
+    // vec[i+1] out of bounds.
+    if (L >= R) {
+        throw CoolProp::ValueError("bisect_vector: fewer than 2 valid points after NaN trim");
+    }
     rL = vec[L] - val;
     rR = vec[R] - val;
+    // Exact-match early returns for the endpoints.  Without these the
+    // sign-of-product test below (rR*rM > 0 && rL*rM < 0) fails for the
+    // boundary case where val == vec[L] or val == vec[R], because the
+    // zero product is neither strictly >0 nor <0 — the else branch then
+    // walks the wrong way through the array.  The function's contract is
+    // "i and i+1 bound the value", so val == vec[L] returns i=L, and val
+    // == vec[R] returns i=R-1 (the cell whose right endpoint is the hit).
+    if (rL == 0) {
+        i = L;
+        return;
+    }
+    if (rR == 0) {
+        i = (R > L) ? R - 1 : L;
+        return;
+    }
     while (R - L > 1) {
         if (!ValidNumber(vec[M])) {
             std::size_t MR = M, ML = M;
@@ -267,6 +290,15 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
             }
             T rML = vec[ML] - val;
             T rMR = vec[MR] - val;
+            // Exact-match early returns on the interior probe points.
+            if (rML == 0) {
+                i = ML;
+                return;
+            }
+            if (rMR == 0) {
+                i = MR;
+                return;
+            }
             // Figure out which chunk is the good part
             if (rR * rML > 0 && rL * rML < 0) {
                 // solution is between L and ML
@@ -284,6 +316,12 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
             M = (L + R) / 2;
         } else {
             rM = vec[M] - val;
+            // Exact-match early return: vec[M] == val means val lies on a
+            // node, so i=M is correct (val ∈ [vec[M], vec[M+1]]).
+            if (rM == 0) {
+                i = M;
+                return;
+            }
             if (rR * rM > 0 && rL * rM < 0) {
                 // solution is between L and M
                 R = M;
@@ -557,8 +595,14 @@ T2 CubicInterp(const std::vector<T1>& x, const std::vector<T1>& y, std::size_t i
     return CubicInterp(x[i0], x[i1], x[i2], x[i3], y[i0], y[i1], y[i2], y[i3], static_cast<T1>(val));
 };
 
+// Closed-range membership test.  Previously the template return type was T,
+// which caused the body's boolean `(x >= ... && x <= ...)` result to be
+// silently converted to T (double) at every return.  CodeQL flags the
+// implicit double→bool conversion at the call sites.  Returning bool
+// directly matches the function's semantics and the boolean contexts at
+// every call site (see grep "is_in_closed_range").
 template <class T>
-T is_in_closed_range(T x1, T x2, T x) {
+bool is_in_closed_range(T x1, T x2, T x) {
     return (x >= std::min(x1, x2) && x <= std::max(x1, x2));
 };
 

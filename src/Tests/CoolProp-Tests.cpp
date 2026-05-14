@@ -6,6 +6,7 @@
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
+#include "../Backends/Tabular/SBTLBackend.h"
 #include "superancillary/superancillary.h"
 #include "miniz.h"
 #include <atomic>
@@ -3351,7 +3352,7 @@ class SuperAncillaryOffFixture
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[superanc]") {
 
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
-    superancillary::SuperAncillary<std::vector<double>> anc{json};
+    superancillary::SuperAncillary<Eigen::ArrayXd> anc{json};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
     auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
@@ -3408,7 +3409,7 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmark class construction", "[supe
 TEST_CASE_METHOD(SuperAncillaryOffFixture, "Check superancillary-like calculations with superancillary disabled for water", "[superanc]") {
 
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
-    superancillary::SuperAncillary<std::vector<double>> anc{json};
+    superancillary::SuperAncillary<Eigen::ArrayXd> anc{json};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
     auto& approxrhoL = anc.get_approx1d('D', 0);

@@ -11,6 +11,7 @@ This section includes information about the CoolProp software, listings of input
     HighLevelAPI.rst
     LowLevelAPI.rst
     Tabular.rst
+    SBTL.rst
     Configuration.rst
     REFPROP.rst
     Cubics.rst

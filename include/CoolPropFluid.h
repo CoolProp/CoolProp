@@ -400,7 +400,7 @@ struct Ancillaries
 class EquationOfState
 {
    public:
-    using SuperAncillary_t = superancillary::SuperAncillary<std::vector<double>>;
+    using SuperAncillary_t = superancillary::SuperAncillary<Eigen::ArrayXd>;
 
    private:
     std::string superancillaries_str;
