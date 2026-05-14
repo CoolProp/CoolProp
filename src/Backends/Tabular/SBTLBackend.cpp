@@ -805,6 +805,588 @@ void SBTLBackend::populate_normph_bounds(NormalizedPHTable& table) {
     }
 }
 
+std::pair<std::vector<double>, std::vector<double>>
+  SBTLBackend::build_adaptive_normph_grid(int region_int, double ymin, double ymax, std::size_t Nx_max, std::size_t Ny_max, double tol_relerr) const {
+    // Joint xvec+yvec adaptive grid by alternating row/column bisection.
+    //
+    // Algorithm:
+    //   1. Seed with coarse uniform xvec ([0.01, 0.99]) and log-uniform
+    //      yvec ([ymin, ymax]).
+    //   2. Loop, alternating two passes:
+    //      a) Row pass: for each yvec[j..j+1] pair, evaluate the actual
+    //         Hermite bicubic at every cell midpoint along that row
+    //         (using current xvec).  If ANY cell exceeds tol_relerr,
+    //         insert the geometric midpoint of yvec[j..j+1] into yvec.
+    //      b) Column pass: same, transposed — for each xvec[i..i+1] pair,
+    //         scan all cells in the column against current yvec and
+    //         bisect the column if any fail.
+    //   3. Stop when a full row+column pass produces no new splits, or
+    //      when budgets Nx_max / Ny_max are hit.
+    //
+    // The acceptance criterion is the production cell residual at the
+    // cell midpoint: build the same Hermite bicubic the cell will store
+    // (corner ρ + HEOS first partials + cross deriv, chain-ruled into
+    // (xnorm, log p) cell coords and through the active output transform),
+    // evaluate at (ξ=0.5, η=0.5), invert the transform, compare to HEOS
+    // truth at the physical midpoint.  This is the residual the user
+    // sees at lookup — no proxy.
+    //
+    // Falls back to log-uniform on any setup failure.
+    auto log_uniform = [](double a, double b, std::size_t n) {
+        std::vector<double> v;
+        v.reserve(n);
+        const double la = std::log(a), lb = std::log(b);
+        for (std::size_t k = 0; k < n; ++k) {
+            const double frac = static_cast<double>(k) / static_cast<double>(n - 1);
+            v.push_back(std::exp(la + frac * (lb - la)));
+        }
+        return v;
+    };
+    auto linear_uniform = [](double a, double b, std::size_t n) {
+        std::vector<double> v;
+        v.reserve(n);
+        for (std::size_t k = 0; k < n; ++k) {
+            const double frac = static_cast<double>(k) / static_cast<double>(n - 1);
+            v.push_back(a + frac * (b - a));
+        }
+        return v;
+    };
+    constexpr std::size_t Nx_seed = 16;
+    constexpr std::size_t Ny_seed = 16;
+    // Inset slightly inside [0, 1] so HmolarP_INPUTS at the seed xnorm=0/1
+    // doesn't sit exactly on the sat boundary (which the dome flash can
+    // wobble around).  Final xvec stretches to [0, 1] via the inset
+    // anchors getting bisected outward in the early refinement passes
+    // (not strictly necessary — we anchor inside).
+    std::vector<double> xvec = linear_uniform(0.0, 1.0, Nx_seed);
+    std::vector<double> yvec = log_uniform(ymin, ymax, Ny_seed);
+
+    auto helm = std::dynamic_pointer_cast<HelmholtzEOSMixtureBackend>(this->AS);
+    if (!helm) return {linear_uniform(0.0, 1.0, 200), log_uniform(ymin, ymax, 200)};
+    double rho_crit_local = 0.0;
+    try {
+        helm->ensure_caloric_superancillaries();
+        rho_crit_local = static_cast<double>(helm->rhomolar_critical());
+    } catch (...) {
+        return {linear_uniform(0.0, 1.0, 200), log_uniform(ymin, ymax, 200)};
+    }
+    if (rho_crit_local <= 0.0) return {linear_uniform(0.0, 1.0, 200), log_uniform(ymin, ymax, 200)};
+
+    std::shared_ptr<CoolProp::AbstractState> probe_AS;
+    try {
+        const auto names = helm->fluid_names();
+        if (names.empty()) return {std::move(xvec), std::move(yvec)};
+        probe_AS.reset(CoolProp::AbstractState::factory("HEOS", names[0]));
+    } catch (...) {
+        return {std::move(xvec), std::move(yvec)};
+    }
+
+    const double T_min_eos = std::max(static_cast<double>(probe_AS->Ttriple()), static_cast<double>(probe_AS->Tmin()));
+    const double T_max_ext = static_cast<double>(probe_AS->Tmax()) * 1.499;
+    const bool is_vapor = (region_int == 1);
+    const bool is_liquid = (region_int == 0);
+    const bool is_super = (region_int == 2);
+    if (!is_vapor && !is_liquid && !is_super) return {std::move(xvec), std::move(yvec)};
+
+    // Region-specific h bounds & their dp derivatives at a given p.
+    // SUPER uses T_lo = T_min_eos and T_hi = T_max_ext (both constants in T)
+    // as an approximation for the cold/hot isotherm boundaries.  This
+    // ignores the melting-curve floor T_melt(P) that production uses for
+    // LIQUID-side T_lo in SUPER — acceptable for shallow-melting fluids
+    // (Argon, CO2, R245fa, D6).  For aggressive-melting fluids (Water at
+    // very high P), the cold corner sits below the melting curve in HEOS
+    // extrapolation territory; the resulting adaptive grid may have
+    // slightly different cell layout than what production stores there,
+    // but the worst-case states near the critical pillar (the actual
+    // accuracy bottleneck) are unaffected.
+    auto bounds_at_p = [&probe_AS, T_min_eos, T_max_ext, is_vapor, is_liquid](double p, double& h_lo, double& dh_lo_dp, double& h_hi,
+                                                                              double& dh_hi_dp) -> bool {
+        try {
+            if (is_vapor) {
+                probe_AS->update(PQ_INPUTS, p, 1.0);
+                h_lo = static_cast<double>(probe_AS->hmolar());
+                dh_lo_dp = probe_AS->first_saturation_deriv(iHmolar, iP);
+                probe_AS->update(PT_INPUTS, p, T_max_ext);
+                h_hi = static_cast<double>(probe_AS->hmolar());
+                dh_hi_dp = probe_AS->first_partial_deriv(iHmolar, iP, iT);
+            } else if (is_liquid) {
+                probe_AS->update(PT_INPUTS, p, T_min_eos);
+                h_lo = static_cast<double>(probe_AS->hmolar());
+                dh_lo_dp = probe_AS->first_partial_deriv(iHmolar, iP, iT);
+                probe_AS->update(PQ_INPUTS, p, 0.0);
+                h_hi = static_cast<double>(probe_AS->hmolar());
+                dh_hi_dp = probe_AS->first_saturation_deriv(iHmolar, iP);
+            } else {  // SUPER
+                probe_AS->update(PT_INPUTS, p, T_min_eos);
+                h_lo = static_cast<double>(probe_AS->hmolar());
+                dh_lo_dp = probe_AS->first_partial_deriv(iHmolar, iP, iT);
+                probe_AS->update(PT_INPUTS, p, T_max_ext);
+                h_hi = static_cast<double>(probe_AS->hmolar());
+                dh_hi_dp = probe_AS->first_partial_deriv(iHmolar, iP, iT);
+            }
+            return std::isfinite(h_lo) && std::isfinite(h_hi) && std::isfinite(dh_lo_dp) && std::isfinite(dh_hi_dp);
+        } catch (...) {
+            return false;
+        }
+    };
+
+    // Full HEOS corner data at (xnorm, p): ρ + h-partials + bounds + their dp derivatives.
+    struct Corner
+    {
+        double f;     // ρ
+        double f_h;   // ∂ρ/∂h|p
+        double f_p;   // ∂ρ/∂p|h
+        double f_hh;  // ∂²ρ/∂h²
+        double f_hp;  // ∂²ρ/∂h∂p
+        double h_lo;  // table low-h boundary at this p
+        double h_hi;  // table high-h boundary at this p
+        double dh_lo_dp;
+        double dh_hi_dp;
+        double p;
+        bool ok;
+    };
+    auto compute_corner = [&probe_AS, &bounds_at_p](double xnorm, double p) -> Corner {
+        Corner c{};
+        c.p = p;
+        if (!bounds_at_p(p, c.h_lo, c.dh_lo_dp, c.h_hi, c.dh_hi_dp)) {
+            c.ok = false;
+            return c;
+        }
+        const double h = c.h_lo + xnorm * (c.h_hi - c.h_lo);
+        try {
+            probe_AS->update(HmolarP_INPUTS, h, p);
+            c.f = static_cast<double>(probe_AS->rhomolar());
+            c.f_h = probe_AS->first_partial_deriv(iDmolar, iHmolar, iP);
+            c.f_p = probe_AS->first_partial_deriv(iDmolar, iP, iHmolar);
+            c.f_hh = probe_AS->second_partial_deriv(iDmolar, iHmolar, iP, iHmolar, iP);
+            c.f_hp = probe_AS->second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
+            c.ok = std::isfinite(c.f) && std::isfinite(c.f_h) && std::isfinite(c.f_p) && std::isfinite(c.f_hh) && std::isfinite(c.f_hp);
+        } catch (...) {
+            c.ok = false;
+        }
+        return c;
+    };
+
+    // HEOS truth ρ at a query (xnorm, p) for the midpoint comparison.
+    auto rho_truth = [&probe_AS, &bounds_at_p](double xnorm, double p) -> double {
+        double h_lo = 0.0, dh_lo_dp = 0.0, h_hi = 0.0, dh_hi_dp = 0.0;
+        if (!bounds_at_p(p, h_lo, dh_lo_dp, h_hi, dh_hi_dp)) return std::numeric_limits<double>::quiet_NaN();
+        const double h = h_lo + xnorm * (h_hi - h_lo);
+        try {
+            probe_AS->update(HmolarP_INPUTS, h, p);
+            return static_cast<double>(probe_AS->rhomolar());
+        } catch (...) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+    };
+
+    // Cell midpoint residual: build the production-style Hermite bicubic,
+    // evaluate at (ξ=0.5, η=0.5), invert the transform, compare to HEOS.
+    const SBTLTransform tform = sbtl_transform_for_property(region_int, iDmolar);
+    const double y_ref = sbtl_transform_y_ref(region_int, iDmolar, rho_crit_local);
+    // Same cusp-distance guard production uses: if any corner sits within
+    // 1e-6·y_ref of the reference (ρ_crit for CUSP_DIST), the chain-rule
+    // derivative g'(f) = 0.5/√d blows up; production falls back to B-spline
+    // for that cell, so the adaptive metric should not try to drive
+    // bisection there (return 0, treating the cell as "not Hermite's
+    // responsibility").
+    const double cusp_min_d =
+      (tform == SBTLTransform::CUSP_DIST_ABOVE_REF || tform == SBTLTransform::CUSP_DIST_BELOW_REF) ? 1e-6 * std::abs(y_ref) : 0.0;
+    auto cell_relerr = [&rho_truth, rho_crit_local, tform, y_ref, cusp_min_d](const Corner& c00, const Corner& c10, const Corner& c01,
+                                                                              const Corner& c11, double xn_a, double xn_b, double p_a,
+                                                                              double p_b) -> double {
+        const double Delta_xi = xn_b - xn_a;
+        const double dlog_p = std::log(p_b) - std::log(p_a);
+        const std::array<const Corner*, 4> cs = {&c00, &c10, &c01, &c11};
+        const std::array<double, 4> xn = {xn_a, xn_b, xn_a, xn_b};
+        std::array<double, 4> f{}, fxi{}, feta{}, fxieta{};
+        for (int k = 0; k < 4; ++k) {
+            const Corner& c = *cs[k];
+            if (!c.ok) return std::numeric_limits<double>::infinity();
+            if (tform == SBTLTransform::CUSP_DIST_ABOVE_REF && (c.f - y_ref) <= cusp_min_d) return 0.0;
+            if (tform == SBTLTransform::CUSP_DIST_BELOW_REF && (y_ref - c.f) <= cusp_min_d) return 0.0;
+            const double Delta_h_p = c.h_hi - c.h_lo;
+            const double dDelta_h_dlogp = c.p * (c.dh_hi_dp - c.dh_lo_dp);
+            const double dh_dlogp_at_xn = c.p * (c.dh_lo_dp + xn[k] * (c.dh_hi_dp - c.dh_lo_dp));
+            double df_dxnorm = c.f_h * Delta_h_p;
+            double df_dlogp = c.p * c.f_p + c.f_h * dh_dlogp_at_xn;
+            double d2f = Delta_h_p * (c.f_hh * dh_dlogp_at_xn + c.p * c.f_hp) + c.f_h * dDelta_h_dlogp;
+            double fval = c.f;
+            if (tform != SBTLTransform::IDENTITY) {
+                if (!(fval > 0.0)) return std::numeric_limits<double>::infinity();
+                const double gp = sbtl_transform_deriv(tform, fval, y_ref);
+                const double gpp = sbtl_transform_second_deriv(tform, fval, y_ref);
+                const double new_d2 = gpp * df_dxnorm * df_dlogp + gp * d2f;
+                df_dxnorm *= gp;
+                df_dlogp *= gp;
+                d2f = new_d2;
+                fval = sbtl_transform_apply(tform, fval, y_ref);
+            }
+            f[k] = fval;
+            fxi[k] = df_dxnorm * Delta_xi;
+            feta[k] = df_dlogp * dlog_p;
+            fxieta[k] = d2f * Delta_xi * dlog_p;
+        }
+        const auto alpha = hermite_bicubic_polynomial_coeffs(f[0], f[1], f[2], f[3], fxi[0], fxi[1], fxi[2], fxi[3], feta[0], feta[1], feta[2],
+                                                             feta[3], fxieta[0], fxieta[1], fxieta[2], fxieta[3]);
+        constexpr int N_test = 3;
+        constexpr std::array<double, N_test> ts = {0.25, 0.5, 0.75};
+        double worst_relerr = 0.0;
+        for (int ti = 0; ti < N_test; ++ti) {
+            for (int tj = 0; tj < N_test; ++tj) {
+                const double xi = ts[ti], eta = ts[tj];
+                const double xi2 = xi * xi, xi3 = xi2 * xi;
+                const double eta2 = eta * eta, eta3 = eta2 * eta;
+                const double B0 = alpha[0] + alpha[1] * eta + alpha[2] * eta2 + alpha[3] * eta3;
+                const double B1 = alpha[4] + alpha[5] * eta + alpha[6] * eta2 + alpha[7] * eta3;
+                const double B2 = alpha[8] + alpha[9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
+                const double B3 = alpha[12] + alpha[13] * eta + alpha[14] * eta2 + alpha[15] * eta3;
+                const double F_test = B0 + B1 * xi + B2 * xi2 + B3 * xi3;
+                const double r_pred = sbtl_transform_inverse(tform, F_test, y_ref);
+                const double xn_test = xn_a + xi * (xn_b - xn_a);
+                const double p_test = std::exp(std::log(p_a) + eta * (std::log(p_b) - std::log(p_a)));
+                const double r_heos = rho_truth(xn_test, p_test);
+                if (!std::isfinite(r_pred) || !std::isfinite(r_heos)) return std::numeric_limits<double>::infinity();
+                const double denom = std::max(std::abs(r_heos), rho_crit_local * 0.01);
+                const double relerr = std::abs(r_pred - r_heos) / denom;
+                if (relerr > worst_relerr) worst_relerr = relerr;
+            }
+        }
+        return worst_relerr;
+    };
+
+    auto recompute_corners = [&compute_corner](const std::vector<double>& xv, const std::vector<double>& yv) -> std::vector<std::vector<Corner>> {
+        std::vector<std::vector<Corner>> m(xv.size(), std::vector<Corner>(yv.size()));
+        for (std::size_t i = 0; i < xv.size(); ++i) {
+            for (std::size_t j = 0; j < yv.size(); ++j) {
+                m[i][j] = compute_corner(xv[i], yv[j]);
+            }
+        }
+        return m;
+    };
+
+    constexpr int max_iter = 14;
+    for (int iter = 0; iter < max_iter; ++iter) {
+        auto corners = recompute_corners(xvec, yvec);
+        bool any_split = false;
+        if (yvec.size() < Ny_max) {
+            std::vector<double> new_yvec;
+            new_yvec.reserve(yvec.size() * 2);
+            for (std::size_t j = 0; j + 1 < yvec.size(); ++j) {
+                new_yvec.push_back(yvec[j]);
+                bool row_bad = false;
+                for (std::size_t i = 0; i + 1 < xvec.size(); ++i) {
+                    if (cell_relerr(corners[i][j], corners[i + 1][j], corners[i][j + 1], corners[i + 1][j + 1], xvec[i], xvec[i + 1], yvec[j],
+                                    yvec[j + 1])
+                        > tol_relerr) {
+                        row_bad = true;
+                        break;
+                    }
+                }
+                if (row_bad && new_yvec.size() + (yvec.size() - j - 1) < Ny_max) {
+                    new_yvec.push_back(std::exp(0.5 * (std::log(yvec[j]) + std::log(yvec[j + 1]))));
+                    any_split = true;
+                }
+            }
+            new_yvec.push_back(yvec.back());
+            yvec = std::move(new_yvec);
+        }
+        if (xvec.size() < Nx_max) {
+            corners = recompute_corners(xvec, yvec);
+            std::vector<double> new_xvec;
+            new_xvec.reserve(xvec.size() * 2);
+            for (std::size_t i = 0; i + 1 < xvec.size(); ++i) {
+                new_xvec.push_back(xvec[i]);
+                bool col_bad = false;
+                for (std::size_t j = 0; j + 1 < yvec.size(); ++j) {
+                    if (cell_relerr(corners[i][j], corners[i + 1][j], corners[i][j + 1], corners[i + 1][j + 1], xvec[i], xvec[i + 1], yvec[j],
+                                    yvec[j + 1])
+                        > tol_relerr) {
+                        col_bad = true;
+                        break;
+                    }
+                }
+                if (col_bad && new_xvec.size() + (xvec.size() - i - 1) < Nx_max) {
+                    new_xvec.push_back(0.5 * (xvec[i] + xvec[i + 1]));
+                    any_split = true;
+                }
+            }
+            new_xvec.push_back(xvec.back());
+            xvec = std::move(new_xvec);
+        }
+        if (!any_split) break;
+    }
+
+    return {std::move(xvec), std::move(yvec)};
+}
+
+std::pair<std::vector<double>, std::vector<double>>
+  SBTLBackend::build_adaptive_normpt_grid(int region_int, double ymin, double ymax, std::size_t Nx_max, std::size_t Ny_max, double tol_relerr) const {
+    // PT analogue of build_adaptive_normph_grid.  Same algorithm; T
+    // replaces h as the independent variable on the xnorm axis.
+    auto log_uniform = [](double a, double b, std::size_t n) {
+        std::vector<double> v;
+        v.reserve(n);
+        const double la = std::log(a), lb = std::log(b);
+        for (std::size_t k = 0; k < n; ++k) {
+            v.push_back(std::exp(la + (lb - la) * static_cast<double>(k) / static_cast<double>(n - 1)));
+        }
+        return v;
+    };
+    auto linear_uniform = [](double a, double b, std::size_t n) {
+        std::vector<double> v;
+        v.reserve(n);
+        for (std::size_t k = 0; k < n; ++k)
+            v.push_back(a + (b - a) * static_cast<double>(k) / static_cast<double>(n - 1));
+        return v;
+    };
+    constexpr std::size_t Nx_seed = 16, Ny_seed = 16;
+    std::vector<double> xvec = linear_uniform(0.0, 1.0, Nx_seed);
+    std::vector<double> yvec = log_uniform(ymin, ymax, Ny_seed);
+
+    auto helm = std::dynamic_pointer_cast<HelmholtzEOSMixtureBackend>(this->AS);
+    if (!helm) return {linear_uniform(0.0, 1.0, 200), log_uniform(ymin, ymax, 200)};
+    double rho_crit_local = 0.0;
+    try {
+        helm->ensure_caloric_superancillaries();
+        rho_crit_local = static_cast<double>(helm->rhomolar_critical());
+    } catch (...) {
+        return {linear_uniform(0.0, 1.0, 200), log_uniform(ymin, ymax, 200)};
+    }
+    if (rho_crit_local <= 0.0) return {linear_uniform(0.0, 1.0, 200), log_uniform(ymin, ymax, 200)};
+
+    std::shared_ptr<CoolProp::AbstractState> probe_AS;
+    try {
+        const auto names = helm->fluid_names();
+        if (names.empty()) return {std::move(xvec), std::move(yvec)};
+        probe_AS.reset(CoolProp::AbstractState::factory("HEOS", names[0]));
+    } catch (...) {
+        return {std::move(xvec), std::move(yvec)};
+    }
+
+    const double T_min_eos = std::max(static_cast<double>(probe_AS->Ttriple()), static_cast<double>(probe_AS->Tmin()));
+    const double T_max_ext = static_cast<double>(probe_AS->Tmax()) * 1.499;
+    const bool is_vapor = (region_int == 1);
+    const bool is_liquid = (region_int == 0);
+    const bool is_super = (region_int == 2);
+    if (!is_vapor && !is_liquid && !is_super) return {std::move(xvec), std::move(yvec)};
+
+    // Region-specific T bounds & their dp derivatives at a given p.
+    // SUPER uses T_lo = T_min_eos and T_hi = T_max_ext (both constants).
+    // Production's SUPER T_lo follows the melting curve T_melt(p); using
+    // a constant approximation here ignores that curvature but is exact
+    // for Argon/CO2 (and any shallow-melting fluid) and accepts a small
+    // build-vs-production cell-layout mismatch near the cold isotherm
+    // for steep-melting fluids (water at very high p).  The near-critical
+    // pillar — the actual accuracy bottleneck — is far from the cold
+    // boundary so the approximation doesn't affect worst-case states.
+    auto bounds_at_p = [&probe_AS, T_min_eos, T_max_ext, is_vapor, is_liquid](double p, double& T_lo, double& dT_lo_dp, double& T_hi,
+                                                                              double& dT_hi_dp) -> bool {
+        try {
+            if (is_vapor) {
+                probe_AS->update(PQ_INPUTS, p, 1.0);
+                T_lo = static_cast<double>(probe_AS->T());
+                dT_lo_dp = probe_AS->first_saturation_deriv(iT, iP);
+                T_hi = T_max_ext;
+                dT_hi_dp = 0.0;
+            } else if (is_liquid) {
+                T_lo = T_min_eos;
+                dT_lo_dp = 0.0;
+                probe_AS->update(PQ_INPUTS, p, 0.0);
+                T_hi = static_cast<double>(probe_AS->T());
+                dT_hi_dp = probe_AS->first_saturation_deriv(iT, iP);
+            } else {  // SUPER
+                T_lo = T_min_eos;
+                dT_lo_dp = 0.0;
+                T_hi = T_max_ext;
+                dT_hi_dp = 0.0;
+            }
+            return std::isfinite(T_lo) && std::isfinite(T_hi) && std::isfinite(dT_lo_dp) && std::isfinite(dT_hi_dp);
+        } catch (...) {
+            return false;
+        }
+    };
+
+    struct Corner
+    {
+        double f;     // ρ
+        double f_T;   // ∂ρ/∂T|p
+        double f_p;   // ∂ρ/∂p|T
+        double f_TT;  // ∂²ρ/∂T²
+        double f_Tp;  // ∂²ρ/∂T∂p
+        double T_lo;
+        double T_hi;
+        double dT_lo_dp;
+        double dT_hi_dp;
+        double p;
+        bool ok;
+    };
+    auto compute_corner = [&probe_AS, &bounds_at_p](double xnorm, double p) -> Corner {
+        Corner c{};
+        c.p = p;
+        if (!bounds_at_p(p, c.T_lo, c.dT_lo_dp, c.T_hi, c.dT_hi_dp)) {
+            c.ok = false;
+            return c;
+        }
+        const double T = c.T_lo + xnorm * (c.T_hi - c.T_lo);
+        try {
+            probe_AS->update(PT_INPUTS, p, T);
+            c.f = static_cast<double>(probe_AS->rhomolar());
+            c.f_T = probe_AS->first_partial_deriv(iDmolar, iT, iP);
+            c.f_p = probe_AS->first_partial_deriv(iDmolar, iP, iT);
+            c.f_TT = probe_AS->second_partial_deriv(iDmolar, iT, iP, iT, iP);
+            c.f_Tp = probe_AS->second_partial_deriv(iDmolar, iT, iP, iP, iT);
+            c.ok = std::isfinite(c.f) && std::isfinite(c.f_T) && std::isfinite(c.f_p) && std::isfinite(c.f_TT) && std::isfinite(c.f_Tp);
+        } catch (...) {
+            c.ok = false;
+        }
+        return c;
+    };
+    auto rho_truth = [&probe_AS, &bounds_at_p](double xnorm, double p) -> double {
+        double T_lo = 0.0, dT_lo_dp = 0.0, T_hi = 0.0, dT_hi_dp = 0.0;
+        if (!bounds_at_p(p, T_lo, dT_lo_dp, T_hi, dT_hi_dp)) return std::numeric_limits<double>::quiet_NaN();
+        const double T = T_lo + xnorm * (T_hi - T_lo);
+        try {
+            probe_AS->update(PT_INPUTS, p, T);
+            return static_cast<double>(probe_AS->rhomolar());
+        } catch (...) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+    };
+
+    const SBTLTransform tform = sbtl_transform_for_property(region_int, iDmolar);
+    const double y_ref = sbtl_transform_y_ref(region_int, iDmolar, rho_crit_local);
+    const double cusp_min_d =
+      (tform == SBTLTransform::CUSP_DIST_ABOVE_REF || tform == SBTLTransform::CUSP_DIST_BELOW_REF) ? 1e-6 * std::abs(y_ref) : 0.0;
+
+    auto cell_relerr = [&rho_truth, rho_crit_local, tform, y_ref, cusp_min_d](const Corner& c00, const Corner& c10, const Corner& c01,
+                                                                              const Corner& c11, double xn_a, double xn_b, double p_a,
+                                                                              double p_b) -> double {
+        const double Delta_xi = xn_b - xn_a;
+        const double dlog_p = std::log(p_b) - std::log(p_a);
+        const std::array<const Corner*, 4> cs = {&c00, &c10, &c01, &c11};
+        const std::array<double, 4> xn = {xn_a, xn_b, xn_a, xn_b};
+        std::array<double, 4> f{}, fxi{}, feta{}, fxieta{};
+        for (int k = 0; k < 4; ++k) {
+            const Corner& c = *cs[k];
+            if (!c.ok) return std::numeric_limits<double>::infinity();
+            if (tform == SBTLTransform::CUSP_DIST_ABOVE_REF && (c.f - y_ref) <= cusp_min_d) return 0.0;
+            if (tform == SBTLTransform::CUSP_DIST_BELOW_REF && (y_ref - c.f) <= cusp_min_d) return 0.0;
+            const double Delta_T_p = c.T_hi - c.T_lo;
+            const double dDelta_T_dlogp = c.p * (c.dT_hi_dp - c.dT_lo_dp);
+            const double dT_dlogp_at_xn = c.p * (c.dT_lo_dp + xn[k] * (c.dT_hi_dp - c.dT_lo_dp));
+            double df_dxnorm = c.f_T * Delta_T_p;
+            double df_dlogp = c.p * c.f_p + c.f_T * dT_dlogp_at_xn;
+            double d2f = Delta_T_p * (c.f_TT * dT_dlogp_at_xn + c.p * c.f_Tp) + c.f_T * dDelta_T_dlogp;
+            double fval = c.f;
+            if (tform != SBTLTransform::IDENTITY) {
+                if (!(fval > 0.0)) return std::numeric_limits<double>::infinity();
+                const double gp = sbtl_transform_deriv(tform, fval, y_ref);
+                const double gpp = sbtl_transform_second_deriv(tform, fval, y_ref);
+                const double new_d2 = gpp * df_dxnorm * df_dlogp + gp * d2f;
+                df_dxnorm *= gp;
+                df_dlogp *= gp;
+                d2f = new_d2;
+                fval = sbtl_transform_apply(tform, fval, y_ref);
+            }
+            f[k] = fval;
+            fxi[k] = df_dxnorm * Delta_xi;
+            feta[k] = df_dlogp * dlog_p;
+            fxieta[k] = d2f * Delta_xi * dlog_p;
+        }
+        const auto alpha = hermite_bicubic_polynomial_coeffs(f[0], f[1], f[2], f[3], fxi[0], fxi[1], fxi[2], fxi[3], feta[0], feta[1], feta[2],
+                                                             feta[3], fxieta[0], fxieta[1], fxieta[2], fxieta[3]);
+        constexpr int N_test = 3;
+        constexpr std::array<double, N_test> ts = {0.25, 0.5, 0.75};
+        double worst_relerr = 0.0;
+        for (int ti = 0; ti < N_test; ++ti) {
+            for (int tj = 0; tj < N_test; ++tj) {
+                const double xi = ts[ti], eta = ts[tj];
+                const double xi2 = xi * xi, xi3 = xi2 * xi;
+                const double eta2 = eta * eta, eta3 = eta2 * eta;
+                const double B0 = alpha[0] + alpha[1] * eta + alpha[2] * eta2 + alpha[3] * eta3;
+                const double B1 = alpha[4] + alpha[5] * eta + alpha[6] * eta2 + alpha[7] * eta3;
+                const double B2 = alpha[8] + alpha[9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
+                const double B3 = alpha[12] + alpha[13] * eta + alpha[14] * eta2 + alpha[15] * eta3;
+                const double F_test = B0 + B1 * xi + B2 * xi2 + B3 * xi3;
+                const double r_pred = sbtl_transform_inverse(tform, F_test, y_ref);
+                const double xn_test = xn_a + xi * (xn_b - xn_a);
+                const double p_test = std::exp(std::log(p_a) + eta * (std::log(p_b) - std::log(p_a)));
+                const double r_heos = rho_truth(xn_test, p_test);
+                if (!std::isfinite(r_pred) || !std::isfinite(r_heos)) return std::numeric_limits<double>::infinity();
+                const double denom = std::max(std::abs(r_heos), rho_crit_local * 0.01);
+                const double relerr = std::abs(r_pred - r_heos) / denom;
+                if (relerr > worst_relerr) worst_relerr = relerr;
+            }
+        }
+        return worst_relerr;
+    };
+
+    auto recompute_corners = [&compute_corner](const std::vector<double>& xv, const std::vector<double>& yv) -> std::vector<std::vector<Corner>> {
+        std::vector<std::vector<Corner>> m(xv.size(), std::vector<Corner>(yv.size()));
+        for (std::size_t i = 0; i < xv.size(); ++i) {
+            for (std::size_t j = 0; j < yv.size(); ++j) {
+                m[i][j] = compute_corner(xv[i], yv[j]);
+            }
+        }
+        return m;
+    };
+
+    constexpr int max_iter = 14;
+    for (int iter = 0; iter < max_iter; ++iter) {
+        auto corners = recompute_corners(xvec, yvec);
+        bool any_split = false;
+        if (yvec.size() < Ny_max) {
+            std::vector<double> new_yvec;
+            new_yvec.reserve(yvec.size() * 2);
+            for (std::size_t j = 0; j + 1 < yvec.size(); ++j) {
+                new_yvec.push_back(yvec[j]);
+                bool row_bad = false;
+                for (std::size_t i = 0; i + 1 < xvec.size(); ++i) {
+                    if (cell_relerr(corners[i][j], corners[i + 1][j], corners[i][j + 1], corners[i + 1][j + 1], xvec[i], xvec[i + 1], yvec[j],
+                                    yvec[j + 1])
+                        > tol_relerr) {
+                        row_bad = true;
+                        break;
+                    }
+                }
+                if (row_bad && new_yvec.size() + (yvec.size() - j - 1) < Ny_max) {
+                    new_yvec.push_back(std::exp(0.5 * (std::log(yvec[j]) + std::log(yvec[j + 1]))));
+                    any_split = true;
+                }
+            }
+            new_yvec.push_back(yvec.back());
+            yvec = std::move(new_yvec);
+        }
+        if (xvec.size() < Nx_max) {
+            corners = recompute_corners(xvec, yvec);
+            std::vector<double> new_xvec;
+            new_xvec.reserve(xvec.size() * 2);
+            for (std::size_t i = 0; i + 1 < xvec.size(); ++i) {
+                new_xvec.push_back(xvec[i]);
+                bool col_bad = false;
+                for (std::size_t j = 0; j + 1 < yvec.size(); ++j) {
+                    if (cell_relerr(corners[i][j], corners[i + 1][j], corners[i][j + 1], corners[i + 1][j + 1], xvec[i], xvec[i + 1], yvec[j],
+                                    yvec[j + 1])
+                        > tol_relerr) {
+                        col_bad = true;
+                        break;
+                    }
+                }
+                if (col_bad && new_xvec.size() + (xvec.size() - i - 1) < Nx_max) {
+                    new_xvec.push_back(0.5 * (xvec[i] + xvec[i + 1]));
+                    any_split = true;
+                }
+            }
+            new_xvec.push_back(xvec.back());
+            xvec = std::move(new_xvec);
+        }
+        if (!any_split) break;
+    }
+
+    return {std::move(xvec), std::move(yvec)};
+}
+
 std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, std::size_t Ny_target, std::size_t Ny_max,
                                                      const std::function<double(double)>& /*prop_at_p*/, double /*tol_rel*/) const {
     // Adaptive subdivision driven by the H-superancillary's piece boundaries.
@@ -904,15 +1486,6 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
     // η-coordinate is region-dependent.  For LIQUID: η spans [0, 1] from
     // h_min(p)=h(T_min,p) to h_sat,L(p).  For VAPOR: η spans from
     // h_sat,V(p) to h_hi(p)=h(T_max_ext,p).
-    const int region_int = [&]() -> int {
-        // 0=LIQUID, 1=VAPOR.  Inferred from prop_at_p caller convention,
-        // but build_normph_table calls this with PH-region context.  See
-        // call sites.  Fall back to using the prop_at_p value at the
-        // midpoint to disambiguate: ρ_sat,V > ρ_sat,L always.  Actually
-        // simpler: just probe both bounds; whichever one h_lo/h_hi
-        // computation succeeds for is the region.
-        return -1;
-    }();
     const double T_min_eos = std::max(static_cast<double>(probe_AS->Ttriple()), static_cast<double>(probe_AS->Tmin()));
     const double T_max_ext = static_cast<double>(probe_AS->Tmax()) * 1.499;
     auto h_bounds_at_p_LIQ = [&probe_AS, T_min_eos](double p, double& h_lo, double& h_hi) -> bool {
@@ -1023,53 +1596,154 @@ std::vector<double> SBTLBackend::build_adaptive_yvec(double ymin, double ymax, s
         }
     };
 
-    // Per interval check: 5 η probes × ~5 HEOS calls (PQ + PT + HmolarP +
-    // 2 partial-deriv evaluations on the same state cache) ≈ 25 HEOS
-    // calls.  Still well under 1 ms per check.
-    auto rho_and_drho_dlogp = [&probe_AS, &bounds_and_derivs_at_p](double eta, double p, double& rho, double& drho_dlogp) -> bool {
-        double h_lo = 0.0, dh_lo_dp = 0.0, h_hi = 0.0, dh_hi_dp = 0.0;
+    // Full corner data at (xnorm, p): ρ and the four HEOS partials needed
+    // to chain-rule into (xnorm, log p) cell-coords and apply the same
+    // output transform that production uses.  Matches build_normph_hermite_alphas.
+    auto corner_full_data = [&probe_AS, &bounds_and_derivs_at_p](double xnorm, double p, double& f, double& f_h, double& f_p, double& f_hh,
+                                                                 double& f_hp, double& dh_lo_dp, double& dh_hi_dp) -> bool {
+        double h_lo = 0.0, h_hi = 0.0;
         if (!bounds_and_derivs_at_p(p, h_lo, dh_lo_dp, h_hi, dh_hi_dp)) return false;
-        const double h = h_lo + eta * (h_hi - h_lo);
-        const double dh_dp_at_eta = dh_lo_dp + eta * (dh_hi_dp - dh_lo_dp);
+        const double h = h_lo + xnorm * (h_hi - h_lo);
         try {
             probe_AS->update(HmolarP_INPUTS, h, p);
-            rho = static_cast<double>(probe_AS->rhomolar());
-            const double drho_dh = probe_AS->first_partial_deriv(iDmolar, iHmolar, iP);
-            const double drho_dp_at_h = probe_AS->first_partial_deriv(iDmolar, iP, iHmolar);
-            const double drho_dp_total = drho_dp_at_h + drho_dh * dh_dp_at_eta;
-            drho_dlogp = p * drho_dp_total;
+            f = static_cast<double>(probe_AS->rhomolar());
+            f_h = probe_AS->first_partial_deriv(iDmolar, iHmolar, iP);
+            f_p = probe_AS->first_partial_deriv(iDmolar, iP, iHmolar);
+            f_hh = probe_AS->second_partial_deriv(iDmolar, iHmolar, iP, iHmolar, iP);
+            f_hp = probe_AS->second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
         } catch (...) {
             return false;
         }
-        return std::isfinite(rho) && std::isfinite(drho_dlogp);
+        return std::isfinite(f) && std::isfinite(f_h) && std::isfinite(f_p) && std::isfinite(f_hh) && std::isfinite(f_hp);
     };
 
-    // For a candidate yvec interval (p_a, p_b), evaluate the cell-midpoint
-    // Hermite-cubic-vs-HEOS error at EVERY η across the working seed
-    // grid, not just a handful of fixed probe points.  Per Ian: "the
-    // check should be for all 16×16 cells, not one per row" — covering
-    // every cell in the row, not a slice of representative η.  Cost:
-    // ~Nx_seed × 3 HEOS calls per interval check.  With Nx_seed = 16
-    // and 12 bisection iterations × ~32 intervals, the metric makes ~16k
-    // HEOS calls per build path.  At 10 µs each, ~160 ms — negligible.
-    constexpr std::size_t Nx_eta_probes = 16;
-    auto cell_max_relerr = [&rho_and_drho_dlogp, &rho_at_eta_p, rho_crit, Nx_eta_probes](double p_a, double p_b) -> double {
+    // Which output transform will the production cell apply?  Must match
+    // build_normph_hermite_alphas, otherwise the metric and the stored
+    // polynomial disagree.
+    const int region_int = is_vapor ? 1 : (is_liquid ? 0 : -1);
+    const SBTLTransform tform = (region_int >= 0) ? sbtl_transform_for_property(region_int, iDmolar) : SBTLTransform::IDENTITY;
+    const double y_ref = (region_int >= 0) ? sbtl_transform_y_ref(region_int, iDmolar, rho_crit) : 0.0;
+
+    // True 2D-bicubic-vs-HEOS metric.  For a candidate yvec interval
+    // (p_a, p_b) and each xnorm test cell, build the actual production-
+    // style Hermite bicubic (corner ρ + chain-ruled first derivs +
+    // cross deriv, all carried through the active output transform),
+    // evaluate at (ξ=0.5, η=0.5), invert the transform, and compare to
+    // HEOS truth at the same physical (xnorm_mid, p_mid).
+    //
+    // Why: the prior 1D-Hermite-in-ρ proxy underestimates the residual
+    // the user sees, because it (a) ignores the LOG/CUSP transform the
+    // bicubic actually stores in, and (b) misses the xi-direction
+    // interpolation component of the 2D fit.  Empirically: production
+    // cells passed the proxy at <1e-7 residual but exhibited >1e-3 user-
+    // visible error.  Replacing the proxy with the actual bicubic
+    // evaluation removes that blind spot.
+    // Tile the xnorm direction with TEST cells at production xnorm spacing
+    // (Δxi ≈ 1/Nx_test).  Pre-fetch corner data at Nx_test+1 xnorm anchors
+    // × {p_a, p_b}, then for each adjacent pair build the bicubic and
+    // check its midpoint.  Tiling (no gaps between test cells) ensures
+    // every production cell is represented; the previous strided-probe
+    // version missed cells falling between probes.
+    constexpr std::size_t Nx_test = 200;  // matches production Nx baseline
+    constexpr double Delta_xi = 1.0 / static_cast<double>(Nx_test);
+    auto cell_max_relerr = [&corner_full_data, &rho_at_eta_p, &bounds_and_derivs_at_p, rho_crit, tform, y_ref, Delta_xi](double p_a,
+                                                                                                                         double p_b) -> double {
         const double dlog_p = std::log(p_b) - std::log(p_a);
         const double p_mid = std::exp(0.5 * (std::log(p_a) + std::log(p_b)));
+        struct Corner
+        {
+            double f, f_h, f_p, f_hh, f_hp, dh_lo_dp, dh_hi_dp;
+            bool ok;
+        };
+        // Stay in [0.01, 0.99] to avoid HmolarP_INPUTS landing exactly on
+        // the dome at xnorm=0 (sat) or hitting the T_max_ext extrapolation
+        // cliff at xnorm=1.
+        const double xn_lo_global = 0.01, xn_hi_global = 0.99;
+        const std::size_t n_anchors = Nx_test + 1;
+        std::vector<Corner> col_a(n_anchors), col_b(n_anchors);
+        std::vector<double> xn_grid(n_anchors);
+        for (std::size_t k = 0; k < n_anchors; ++k) {
+            xn_grid[k] = xn_lo_global + (xn_hi_global - xn_lo_global) * static_cast<double>(k) / static_cast<double>(Nx_test);
+            col_a[k].ok = corner_full_data(xn_grid[k], p_a, col_a[k].f, col_a[k].f_h, col_a[k].f_p, col_a[k].f_hh, col_a[k].f_hp, col_a[k].dh_lo_dp,
+                                           col_a[k].dh_hi_dp);
+            col_b[k].ok = corner_full_data(xn_grid[k], p_b, col_b[k].f, col_b[k].f_h, col_b[k].f_p, col_b[k].f_hh, col_b[k].f_hp, col_b[k].dh_lo_dp,
+                                           col_b[k].dh_hi_dp);
+        }
         double max_relerr = 0.0;
-        // Use uniform η probes covering all 16 cells across the row, with a
-        // small inset from {0, 1} so HmolarP_INPUTS doesn't land exactly
-        // on the dome boundary (where the sat-side probe can throw).
-        for (std::size_t k = 0; k < Nx_eta_probes; ++k) {
-            const double eta = 0.02 + (0.98 - 0.02) * static_cast<double>(k) / static_cast<double>(Nx_eta_probes - 1);
-            double r_a = 0.0, dr_a = 0.0, r_b = 0.0, dr_b = 0.0;
-            if (!rho_and_drho_dlogp(eta, p_a, r_a, dr_a)) continue;
-            if (!rho_and_drho_dlogp(eta, p_b, r_b, dr_b)) continue;
-            const double r_m_heos = rho_at_eta_p(eta, p_mid);
-            if (!std::isfinite(r_m_heos)) continue;
-            const double r_m_hermite = 0.5 * (r_a + r_b) + 0.125 * dlog_p * (dr_a - dr_b);
-            const double denom = std::max(std::abs(r_m_heos), rho_crit * 0.01);
-            const double relerr = std::abs(r_m_hermite - r_m_heos) / denom;
+        for (std::size_t k = 0; k + 1 < n_anchors; ++k) {
+            const double xn_a = xn_grid[k];
+            const double xn_b = xn_grid[k + 1];
+            const double xn_mid = 0.5 * (xn_a + xn_b);
+            if (!col_a[k].ok || !col_a[k + 1].ok || !col_b[k].ok || !col_b[k + 1].ok) continue;
+            const std::array<const Corner*, 4> cds = {&col_a[k], &col_a[k + 1], &col_b[k], &col_b[k + 1]};
+            const std::array<double, 4> xn = {xn_a, xn_b, xn_a, xn_b};
+            const std::array<double, 4> p_at = {p_a, p_a, p_b, p_b};
+            std::array<double, 4> f{}, fxi{}, feta{}, fxieta{};
+            bool ok = true;
+            for (int c = 0; c < 4; ++c) {
+                if (!cds[c]->ok) {
+                    ok = false;
+                    break;
+                }
+                const double Delta_h = 1.0;  // we scale by Δh below via f_h·(h_hi-h_lo); but we need it for chain rule
+                // Recompute Δh and dh-derivatives at this corner's p (cheaper to refetch from corner):
+                const double p_k = p_at[c];
+                const double h_lo_p_unused = 0.0;
+                (void)h_lo_p_unused;
+                // Reconstruct Δh and dDelta_h_dp from the dh_lo_dp / dh_hi_dp we cached:
+                // Need h_lo, h_hi for this p — easiest: get from bounds_and_derivs_at_p again,
+                // but that's a duplicate call.  Instead, since rho_at_eta_p was already called
+                // with the same h_lo/h_hi internally, we don't have direct access here.  Re-query.
+                double h_lo_loc = 0.0, h_hi_loc = 0.0, dh_lo_dp_unused = 0.0, dh_hi_dp_unused = 0.0;
+                if (!bounds_and_derivs_at_p(p_k, h_lo_loc, dh_lo_dp_unused, h_hi_loc, dh_hi_dp_unused)) {
+                    ok = false;
+                    break;
+                }
+                const double Delta_h_p = h_hi_loc - h_lo_loc;
+                const double dDelta_h_dlogp = p_k * (cds[c]->dh_hi_dp - cds[c]->dh_lo_dp);
+                const double dh_dlogp_at_xn = p_k * (cds[c]->dh_lo_dp + xn[c] * (cds[c]->dh_hi_dp - cds[c]->dh_lo_dp));
+                (void)Delta_h;
+                // Partials in (xnorm-global, log p) coords:
+                double df_dxnorm = cds[c]->f_h * Delta_h_p;
+                double df_dlogp = p_k * cds[c]->f_p + cds[c]->f_h * dh_dlogp_at_xn;
+                double d2f = Delta_h_p * (cds[c]->f_hh * dh_dlogp_at_xn + p_k * cds[c]->f_hp) + cds[c]->f_h * dDelta_h_dlogp;
+                double fval = cds[c]->f;
+                // Apply the active output transform — same chain rule as build_normph_hermite_alphas.
+                if (tform != SBTLTransform::IDENTITY) {
+                    if (!(fval > 0.0)) {
+                        ok = false;
+                        break;
+                    }
+                    const double gp = sbtl_transform_deriv(tform, fval, y_ref);
+                    const double gpp = sbtl_transform_second_deriv(tform, fval, y_ref);
+                    const double new_d2 = gpp * df_dxnorm * df_dlogp + gp * d2f;
+                    df_dxnorm *= gp;
+                    df_dlogp *= gp;
+                    d2f = new_d2;
+                    fval = sbtl_transform_apply(tform, fval, y_ref);
+                }
+                f[c] = fval;
+                fxi[c] = df_dxnorm * Delta_xi;
+                feta[c] = df_dlogp * dlog_p;
+                fxieta[c] = d2f * Delta_xi * dlog_p;
+            }
+            if (!ok) continue;
+            const auto alpha = hermite_bicubic_polynomial_coeffs(f[0], f[1], f[2], f[3], fxi[0], fxi[1], fxi[2], fxi[3], feta[0], feta[1], feta[2],
+                                                                 feta[3], fxieta[0], fxieta[1], fxieta[2], fxieta[3]);
+            // Bicubic eval at (ξ=0.5, η=0.5):
+            const double xi = 0.5, eta = 0.5;
+            const double xi2 = xi * xi, xi3 = xi2 * xi;
+            const double eta2 = eta * eta, eta3 = eta2 * eta;
+            const double B0 = alpha[0] + alpha[1] * eta + alpha[2] * eta2 + alpha[3] * eta3;
+            const double B1 = alpha[4] + alpha[5] * eta + alpha[6] * eta2 + alpha[7] * eta3;
+            const double B2 = alpha[8] + alpha[9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
+            const double B3 = alpha[12] + alpha[13] * eta + alpha[14] * eta2 + alpha[15] * eta3;
+            const double F_mid = B0 + B1 * xi + B2 * xi2 + B3 * xi3;
+            const double r_pred = sbtl_transform_inverse(tform, F_mid, y_ref);
+            const double r_heos_mid = rho_at_eta_p(xn_mid, p_mid);
+            if (!std::isfinite(r_pred) || !std::isfinite(r_heos_mid)) continue;
+            const double denom = std::max(std::abs(r_heos_mid), rho_crit * 0.01);
+            const double relerr = std::abs(r_pred - r_heos_mid) / denom;
             if (relerr > max_relerr) max_relerr = relerr;
         }
         return max_relerr;
@@ -1321,9 +1995,35 @@ void SBTLBackend::build_normph_table(NormalizedPHTable& table) {
         }
     }
 
+    // Joint xvec+yvec adaptive grid for LIQUID/VAPOR — replaces the
+    // separate single-axis yvec / xvec bisection above and below.  The
+    // joint refinement uses the actual production cell residual (Hermite
+    // bicubic at midpoint vs HEOS) so the cell layout matches what the
+    // user actually sees, not a 1D proxy.
+    std::vector<double> adaptive_xvec;
+    // SUPER region needs the melting curve T_melt(P) as the cold-T
+    // boundary; using T_min_eos as a flat approximation in the adaptive
+    // grid samples HEOS in the solid extrapolation zone for high-p
+    // queries on steep-melting fluids (water).  Until the melting-curve
+    // path is wired through bounds_at_p / corner data, restrict adaptive
+    // refinement to LIQUID and VAPOR.
+    if (table.region() == NormalizedPHTable::LIQUID || table.region() == NormalizedPHTable::VAPOR) {
+        auto grid = build_adaptive_normph_grid(static_cast<int>(table.region()), table.ymin, table.ymax, /*Nx_max=*/2 * table.Nx,
+                                               /*Ny_max=*/4 * table.Ny, /*tol_relerr=*/1e-4);
+        if (grid.first.size() >= 4 && grid.second.size() >= 4) {
+            adaptive_xvec = std::move(grid.first);
+            adaptive_yvec = std::move(grid.second);
+            table.Nx = adaptive_xvec.size();
+            table.Ny = adaptive_yvec.size();
+        }
+    }
+
     table.resize(table.Nx, table.Ny);  // allocates LIST_OF_MATRICES storage; fills xvec, yvec.
     if (!adaptive_yvec.empty() && adaptive_yvec.size() == table.yvec.size()) {
         table.yvec = std::move(adaptive_yvec);  // override log-uniform with adaptive layout
+    }
+    if (!adaptive_xvec.empty() && adaptive_xvec.size() == table.xvec.size()) {
+        table.xvec = std::move(adaptive_xvec);
     }
 
     // Same cusp-concentration trick on the xnorm (η) axis for subcritical
@@ -1341,13 +2041,9 @@ void SBTLBackend::build_normph_table(NormalizedPHTable& table) {
     // half output scaling (linear-ρ vs log-ρ).  Closing the residual
     // SUPER error needs Kunick's L/G split + per-property transforms —
     // out of scope here, queued in dev/sbtl_pt_outstanding_work.md.
-    if (table.region() == NormalizedPHTable::LIQUID || table.region() == NormalizedPHTable::VAPOR) {
-        std::vector<double> adaptive_xvec =
-          build_adaptive_xvec(static_cast<int>(table.region()), table.Nx, /*Nx_max=*/2 * table.Nx, table.ymin, table.ymax);
-        if (adaptive_xvec.size() == table.xvec.size()) {
-            table.xvec = std::move(adaptive_xvec);
-        }
-    }
+    // xvec is now set by the joint build_adaptive_normph_grid above; the
+    // legacy single-axis build_adaptive_xvec call is no longer needed
+    // for LIQUID/VAPOR regions.
     populate_normph_bounds(table);
 
     // For LIQUID/VAPOR regions some isobars may sit at pressures where the
@@ -1589,8 +2285,35 @@ void SBTLBackend::build_normph_hermite_alphas(NormalizedPHTable& table, std::vec
         const double h_hi = table.h_hi_isobar[j];
         double dh_lo_dlogp = std::numeric_limits<double>::quiet_NaN();
         double dh_hi_dlogp = std::numeric_limits<double>::quiet_NaN();
-        if (table.h_lo_cheb.valid()) dh_lo_dlogp = table.h_lo_cheb.eval_dlogp(p);
-        if (table.h_hi_cheb.valid()) dh_hi_dlogp = table.h_hi_cheb.eval_dlogp(p);
+        // For saturation boundaries (LIQUID h_hi = h_sat,L; VAPOR h_lo =
+        // h_sat,V) use the HEOS analytic d/dp via first_saturation_deriv,
+        // converted to d/dlogp by multiplication by p.  For non-sat
+        // boundaries (LIQUID h_lo = h(T_min, p), VAPOR h_hi = h(T_max_ext, p),
+        // SUPER both edges) use the Cheb1D fit's analytic derivative.
+        //
+        // Pre-fix: only the Cheb path was wired in, leaving sat-side
+        // boundaries with NaN derivatives.  Every VAPOR row then failed
+        // the Hermite-upgrade validity check, so VAPOR cells kept their
+        // (lower-accuracy) plain B-spline polynomial.  Same on the
+        // LIQUID sat-L side.  Filling those derivatives unlocks the
+        // Hermite upgrade for the entire subcritical table and aligns
+        // production with what the adaptive metric tests.
+        try {
+            if (table.region() == NormalizedPHTable::LIQUID) {
+                if (table.h_lo_cheb.valid()) dh_lo_dlogp = table.h_lo_cheb.eval_dlogp(p);
+                this->AS->update(PQ_INPUTS, p, 0.0);
+                dh_hi_dlogp = p * static_cast<double>(this->AS->first_saturation_deriv(iHmolar, iP));
+            } else if (table.region() == NormalizedPHTable::VAPOR) {
+                this->AS->update(PQ_INPUTS, p, 1.0);
+                dh_lo_dlogp = p * static_cast<double>(this->AS->first_saturation_deriv(iHmolar, iP));
+                if (table.h_hi_cheb.valid()) dh_hi_dlogp = table.h_hi_cheb.eval_dlogp(p);
+            } else {  // SUPER — both edges are Cheb-fit (no sat curve)
+                if (table.h_lo_cheb.valid()) dh_lo_dlogp = table.h_lo_cheb.eval_dlogp(p);
+                if (table.h_hi_cheb.valid()) dh_hi_dlogp = table.h_hi_cheb.eval_dlogp(p);
+            }
+        } catch (...) {
+            // Leave NaN; row will be marked invalid below.
+        }
         row_sat[j].h_lo = h_lo;
         row_sat[j].h_hi = h_hi;
         row_sat[j].dh_lo_dlogp = dh_lo_dlogp;
@@ -1778,13 +2501,18 @@ void SBTLBackend::build_normpt_hermite_alphas(NormalizedPTTable& table, std::vec
     if (coeffs.empty()) return;
     if (!this->AS) return;
 
-    // Per-row sat envelope data on the T-axis.  For non-sat boundaries
-    // (LIQUID T_lo, VAPOR T_hi, SUPER both) the Cheb1D is fitted and
-    // eval_dlogp gives an analytic derivative.  For the sat-curve sides
-    // (LIQUID T_hi = T_sat,L, VAPOR T_lo = T_sat,V) the Cheb1D is NOT
-    // populated — derive dT_sat/dlogp by central finite difference on
-    // the per-row T_lo_isobar / T_hi_isobar arrays (filled by PQ_INPUTS
-    // during populate_normpt_bounds; smooth in log p away from p_crit).
+    // Per-row sat envelope data on the T-axis.  All derivatives are analytic:
+    //   * sat boundaries  (LIQUID T_hi = T_sat,L, VAPOR T_lo = T_sat,V)
+    //     → HEOS-analytic via first_saturation_deriv(iT, iP), scaled by p.
+    //   * non-sat boundaries (LIQUID T_lo, VAPOR T_hi, SUPER both)
+    //     → analytic derivative of the Cheb1D fit through HEOS-sampled
+    //       values (eval_dlogp).  Pairs with h_*_cheb.eval at lookup time
+    //       so the build and lookup paths see the same boundary function.
+    //
+    // No FD fallback.  If neither source supplies a finite derivative the
+    // row is marked invalid and falls back to the cubic-B-spline backbone
+    // (which is the same behaviour as any other row with non-finite corner
+    // data).
     struct RowSat
     {
         double T_lo{0.0};
@@ -1794,27 +2522,30 @@ void SBTLBackend::build_normpt_hermite_alphas(NormalizedPTTable& table, std::vec
         bool valid{false};
     };
     std::vector<RowSat> row_sat(table.Ny);
-    auto fd_dlogp = [&](const std::vector<double>& v, std::size_t j) -> double {
-        if (j == 0 || j + 1 >= v.size()) {
-            // Forward / backward FD on the edge row.
-            const std::size_t a = (j == 0) ? 0 : v.size() - 2;
-            const std::size_t b = (j == 0) ? 1 : v.size() - 1;
-            if (!ValidNumber(v[a]) || !ValidNumber(v[b])) return std::numeric_limits<double>::quiet_NaN();
-            return (v[b] - v[a]) / (std::log(table.yvec[b]) - std::log(table.yvec[a]));
-        }
-        if (!ValidNumber(v[j - 1]) || !ValidNumber(v[j + 1])) return std::numeric_limits<double>::quiet_NaN();
-        return (v[j + 1] - v[j - 1]) / (std::log(table.yvec[j + 1]) - std::log(table.yvec[j - 1]));
-    };
     for (std::size_t j = 0; j < table.Ny; ++j) {
         const double p = table.yvec[j];
         const double T_lo = table.T_lo_isobar[j];
         const double T_hi = table.T_hi_isobar[j];
         const bool lo_is_sat = (table.region() == NormalizedPTTable::VAPOR);
         const bool hi_is_sat = (table.region() == NormalizedPTTable::LIQUID);
-        const double dT_lo_dlogp =
-          lo_is_sat ? fd_dlogp(table.T_lo_isobar, j) : (table.T_lo_cheb.valid() ? table.T_lo_cheb.eval_dlogp(p) : fd_dlogp(table.T_lo_isobar, j));
-        const double dT_hi_dlogp =
-          hi_is_sat ? fd_dlogp(table.T_hi_isobar, j) : (table.T_hi_cheb.valid() ? table.T_hi_cheb.eval_dlogp(p) : fd_dlogp(table.T_hi_isobar, j));
+        double dT_lo_dlogp = std::numeric_limits<double>::quiet_NaN();
+        double dT_hi_dlogp = std::numeric_limits<double>::quiet_NaN();
+        try {
+            if (lo_is_sat) {
+                this->AS->update(PQ_INPUTS, p, 1.0);
+                dT_lo_dlogp = p * static_cast<double>(this->AS->first_saturation_deriv(iT, iP));
+            } else if (table.T_lo_cheb.valid()) {
+                dT_lo_dlogp = table.T_lo_cheb.eval_dlogp(p);
+            }
+            if (hi_is_sat) {
+                this->AS->update(PQ_INPUTS, p, 0.0);
+                dT_hi_dlogp = p * static_cast<double>(this->AS->first_saturation_deriv(iT, iP));
+            } else if (table.T_hi_cheb.valid()) {
+                dT_hi_dlogp = table.T_hi_cheb.eval_dlogp(p);
+            }
+        } catch (...) {
+            // Leave NaN; row will be marked invalid below.
+        }
         row_sat[j].T_lo = T_lo;
         row_sat[j].T_hi = T_hi;
         row_sat[j].dT_lo_dlogp = dT_lo_dlogp;
@@ -2249,20 +2980,28 @@ void SBTLBackend::build_normpt_table(NormalizedPTTable& table) {
         }
     }
 
+    // SUPER region excluded for the same reason as PH path — the constant
+    // T_lo approximation breaks for high-p queries on water (samples in
+    // the solid extrapolation zone), making the adaptive grid worse than
+    // the default log-uniform.  Restrict to LIQUID and VAPOR.
+    std::vector<double> adaptive_xvec;
+    if (table.region() == NormalizedPTTable::LIQUID || table.region() == NormalizedPTTable::VAPOR) {
+        auto grid = build_adaptive_normpt_grid(static_cast<int>(table.region()), table.ymin, table.ymax, /*Nx_max=*/2 * table.Nx,
+                                               /*Ny_max=*/4 * table.Ny, /*tol_relerr=*/1e-4);
+        if (grid.first.size() >= 4 && grid.second.size() >= 4) {
+            adaptive_xvec = std::move(grid.first);
+            adaptive_yvec = std::move(grid.second);
+            table.Nx = adaptive_xvec.size();
+            table.Ny = adaptive_yvec.size();
+        }
+    }
+
     table.resize(table.Nx, table.Ny);
     if (!adaptive_yvec.empty() && adaptive_yvec.size() == table.yvec.size()) {
         table.yvec = std::move(adaptive_yvec);
     }
-    // Mirror the PH xvec adaptive layout on the PT side.  For PT,
-    // η = (T - T_lo(p)) / (T_hi(p) - T_lo(p)), so LIQUID sat is at η=1
-    // (T_sat(p) is the upper T-bound of the LIQUID region) and VAPOR sat
-    // is at η=0 (T_sat(p) is the lower T-bound).  Same orientation as PH.
-    if (table.region() == NormalizedPTTable::LIQUID || table.region() == NormalizedPTTable::VAPOR) {
-        std::vector<double> adaptive_xvec =
-          build_adaptive_xvec(static_cast<int>(table.region()), table.Nx, /*Nx_max=*/2 * table.Nx, table.ymin, table.ymax);
-        if (adaptive_xvec.size() == table.xvec.size()) {
-            table.xvec = std::move(adaptive_xvec);
-        }
+    if (!adaptive_xvec.empty() && adaptive_xvec.size() == table.xvec.size()) {
+        table.xvec = std::move(adaptive_xvec);
     }
     populate_normpt_bounds(table);
 

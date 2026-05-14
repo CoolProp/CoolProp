@@ -835,6 +835,30 @@ class SBTLBackend : public TabularBackend
     std::vector<double> build_adaptive_yvec(double ymin, double ymax, std::size_t Ny_target, std::size_t Ny_max,
                                             const std::function<double(double)>& prop_at_p, double tol_rel) const;
 
+    /// Joint xvec+yvec adaptive grid for a NormalizedPHTable region.
+    /// Starts from a coarse uniform grid and refines by alternating
+    /// row-pass (bisect yvec where any cell in a row pair fails) and
+    /// column-pass (bisect xvec where any cell in a column pair fails)
+    /// until no cell in the grid exceeds tol_relerr, or budget is hit.
+    ///
+    /// The acceptance criterion is the production cell residual:
+    ///   |ρ_bicubic(xi=0.5, eta=0.5) − ρ_HEOS(midpoint)| / ρ_HEOS
+    /// where ρ_bicubic is the Hermite-bicubic-in-transformed-space that
+    /// the cell will actually store at lookup (corner ρ values + HEOS
+    /// first partials + cross deriv, chain-ruled into (xnorm, log p) cell
+    /// coords and then through the active output transform).
+    ///
+    /// Out: pair(xvec, yvec).  region must be LIQUID or VAPOR.
+    std::pair<std::vector<double>, std::vector<double>> build_adaptive_normph_grid(int region_int, double ymin, double ymax, std::size_t Nx_max,
+                                                                                   std::size_t Ny_max, double tol_relerr) const;
+
+    /// PT analogue of build_adaptive_normph_grid: joint xvec+yvec adaptive
+    /// grid for a NormalizedPTTable region, using the actual cell-midpoint
+    /// Hermite bicubic residual (in the active output transform) vs HEOS
+    /// truth as the acceptance criterion.
+    std::pair<std::vector<double>, std::vector<double>> build_adaptive_normpt_grid(int region_int, double ymin, double ymax, std::size_t Nx_max,
+                                                                                   std::size_t Ny_max, double tol_relerr) const;
+
     /// Build the cell xnorm (η) grid via adaptive bisection driven by
     /// Hermite-cubic-vs-HEOS error at η midpoints (same mechanics as
     /// build_adaptive_yvec, but along the η axis instead of log p).

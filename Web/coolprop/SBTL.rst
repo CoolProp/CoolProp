@@ -49,16 +49,57 @@ cell-local coordinates:
 
     z(\hat{x}, \hat{y}) = \sum_{m=0}^{3} \sum_{n=0}^{3} a_{mn}\, \hat{x}^m \hat{y}^n
 
-The coefficients come from one of two families:
+The per-cell coefficient set :math:`a_{mn}` is built by a **two-pass overlay**
+inside :func:`SBTLBackend::build_bspline_coeffs`:
 
-* **Coordinate-aligned PH tables** (``NormalizedPHTable``, three flavours
-  LIQUID / VAPOR / SUPER) — coefficients computed from a 2-D natural cubic
-  B-spline (Kunick C\ :sup:`2`) over a uniform :math:`(\hat x, \log p)` grid
-  whose left/right column boundaries are the ``h_lo(P)`` and ``h_hi(P)``
-  isotherms / saturation isobars.
-* **Coordinate-aligned PT tables** (``NormalizedPTTable``, same three flavours)
-  — same B-spline backbone with ``T_lo(P)`` and ``T_hi(P)`` replacing
-  ``h_lo`` / ``h_hi``.
+#. **Pass 1 — global C\ :sup:`2` cubic B-spline backbone** (Kunick C\ :sup:`2`).
+   A single 2-D not-a-knot natural cubic B-spline is fit through the
+   :math:`N_x \times N_y` matrix of property values at the grid corners,
+   and each cell's :math:`a_{mn}` is extracted from the global fit.
+   This pass writes *every* cell.  Continuity across cell boundaries is
+   C\ :sup:`2` because the underlying B-spline is.
+
+#. **Pass 2 — C\ :sup:`1` Hermite-bicubic overlay**
+   (:func:`SBTLBackend::build_normph_hermite_alphas` /
+   ``build_normpt_hermite_alphas``).  For every cell, if all four corners
+   yield finite HEOS values, finite first partials (:math:`\partial \rho /
+   \partial h`, :math:`\partial \rho / \partial p`, etc.) **and** a finite
+   mixed second partial :math:`\partial^2 \rho / \partial h \partial p`,
+   the cell's :math:`a_{mn}` from pass 1 is **replaced** by a Hermite
+   bicubic that exactly interpolates the corner values + their first
+   derivatives (with the cross-deriv term filling the 16-th coefficient).
+   Continuity across cell boundaries is then C\ :sup:`1` (values + first
+   derivatives match at shared corners by construction; second
+   derivatives may jump).
+
+So the final per-cell polynomial is:
+
+* **C\ :sup:`1` Hermite bicubic** in the bulk of every coordinate-aligned
+  subcritical region — including the cells touching the saturation
+  boundary, which use the H-superancillary's analytic
+  :math:`\mathrm{d}h_{\mathrm{sat}}/\mathrm{d}p` to fill the row-boundary
+  derivative.
+* **C\ :sup:`2` B-spline backbone**, untouched by the overlay, anywhere
+  pass 2 declines to run — typically a thin ring around the critical
+  point where HEOS partials return non-finite values, and any cell where
+  the EOS rejected the corner input.  These cells fall through to the
+  HEOS fallback box at lookup time for high accuracy; the cubic-B-spline
+  fallback handles queries outside the box.
+
+(The earlier version of the docs described only pass 1 and was technically
+incomplete: most of the table the user ever queries is the C\ :sup:`1`
+Hermite overlay, not the C\ :sup:`2` B-spline backbone.)
+
+The B-spline backbone uses the same coordinate-aligned :math:`(\hat x,
+\log p)` grid for both pass-1 and pass-2 polynomials, with three region
+flavours:
+
+* **PH tables** (``NormalizedPHTable``) — left/right column boundaries
+  are ``h_lo(P)`` (cold-isotherm or saturated-vapor curve) and
+  ``h_hi(P)`` (hot-isotherm or saturated-liquid curve), so column
+  boundaries lie exactly on the saturation curve.
+* **PT tables** (``NormalizedPTTable``) — same construction with
+  ``T_lo(P)`` and ``T_hi(P)``.
 
 The coordinate-aligned tables guarantee that no cell straddles the
 saturation curve: ``xnorm = 1`` for the LIQUID region is exactly the
