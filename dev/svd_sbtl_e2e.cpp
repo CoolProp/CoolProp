@@ -46,7 +46,7 @@
 #include "AbstractState.h"
 
 #include "CoolProp/region/AxisTransform.h"
-#include "CoolProp/region/PiecewiseChebyshevCurve.h"
+#include "CoolProp/region/CubicSplineCurve.h"
 #include "CoolProp/region/Region.h"
 #include "CoolProp/region/RegionAtlas.h"
 #include "CoolProp/svd/SVDBuilder.h"
@@ -118,7 +118,47 @@ struct FluidStats
     double p50_rel = 0.0;
     double build_seconds = 0.0;
     double eval_seconds = 0.0;
+    // Pure-lookup speed (find_region + to_normalized + SVD eval, NO
+    // HEOS truth call).  This is what an SVDSBTL backend's update()
+    // would cost per call.
+    double lookup_ns_per_call = 0.0;
 };
+
+// Number of knots used to fit each saturation / isobar boundary curve.
+// 64 is plenty for the smooth sat curves we deal with; raising it makes
+// the boundary fit essentially exact at HEOS resolution.
+constexpr std::size_t SAT_KNOTS = 64;
+
+// Build a CubicSplineCurve through SAT_KNOTS samples of `f(p)` over
+// log-uniform p ∈ [p_min, p_max].  C² continuous everywhere — no
+// piece-boundary derivative kinks like PiecewiseChebyshevCurve has.
+std::unique_ptr<cp_region::CubicSplineCurve> build_log_p_spline(double p_min, double p_max, const std::function<double(double)>& f) {
+    std::vector<double> log_p(SAT_KNOTS);
+    std::vector<double> y(SAT_KNOTS);
+    const double log_p_min = std::log(p_min);
+    const double log_p_max = std::log(p_max);
+    for (std::size_t k = 0; k < SAT_KNOTS; ++k) {
+        log_p[k] = log_p_min + static_cast<double>(k) * (log_p_max - log_p_min) / static_cast<double>(SAT_KNOTS - 1);
+        const double p = std::exp(log_p[k]);
+        y[k] = f(p);
+    }
+    // The CubicSplineCurve's primary axis is the variable it was built
+    // on; we built on `log_p` so the curve expects `log p` at lookup
+    // time.  But Region's primary AxisTransform is LOG-scaled p, so it
+    // will be calling the BoundaryCurve with `p` (the physical primary
+    // value, not log p).  Wrap the spline behind an outer lambda... no,
+    // that doesn't work either — Region calls eval(p) directly.
+    //
+    // Simpler: build the spline on p directly (linear primary) and let
+    // it cope.  Knot density is log-uniform so the spline still
+    // captures the high-frequency behaviour near the lower end of the
+    // pressure range.
+    std::vector<double> p_knots(SAT_KNOTS);
+    for (std::size_t k = 0; k < SAT_KNOTS; ++k) {
+        p_knots[k] = std::exp(log_p[k]);
+    }
+    return cp_region::CubicSplineCurve::build(std::move(p_knots), std::move(y));
+}
 
 // Compute the percentile of a sorted vector.  pct in [0, 1].
 double percentile_sorted(const std::vector<double>& v, double pct) {
@@ -143,14 +183,23 @@ AtlasBundle build_atlas(CoolProp::AbstractState& heos) {
     const double p_crit = heos.p_critical();
     const double T_min_eos = std::max(heos.Ttriple(), heos.Tmin());
     const double T_max_eos = heos.Tmax();
-    // The PoC's triple-point pressure: a hair above the actual triple
-    // point to avoid PQ flash failures at the boundary.
+    // Triple-point pressure.  Sample HEOS at the actual triple T to
+    // get p_triple; use that as the lower bound directly (no 1.5×
+    // padding — extend the table all the way down).
     heos.update(CoolProp::QT_INPUTS, 0.0, heos.Ttriple() * 1.001);
     const double p_triple = heos.p();
-    const double p_min = std::max(p_triple * 1.5, p_crit * 1e-3);
+    // A tiny margin still helps near-triple-point PQ flashes converge.
+    const double p_min = p_triple * 1.01;
     const double p_max = 0.999 * p_crit;
 
-    using PCC = cp_region::PiecewiseChebyshevCurve;
+    // Saturation / isobar boundary curves: use CubicSplineCurve (C²
+    // continuous) rather than PiecewiseChebyshevCurve.  Earlier figures
+    // showed faint green error bands at log p values corresponding to
+    // the Chebyshev piece boundaries (k/SAT_PIECES fractions of the
+    // log-p range), which are exactly where the derivative of a
+    // piecewise expansion is discontinuous.  A global cubic spline
+    // through SAT_KNOTS=64 HEOS samples has no piece boundaries and no
+    // derivative kinks, so the η normalization is smooth everywhere.
 
     // LIQUID lower bound: h on the cold-isotherm floor.  For fluids
     // with steep melting curves (Methane, Propane), T_min_eos can lie
@@ -158,7 +207,7 @@ AtlasBundle build_atlas(CoolProp::AbstractState& heos) {
     // increments until HEOS accepts the (T, p) state.  The resulting
     // floor is non-isothermal but still defines a valid region with
     // monotone `h_lo(p)`.
-    auto h_lo_liq = PCC::build(p_min, p_max, SAT_PIECES, SAT_DEGREE, PCC::ParamScale::LOG, [&](double p) {
+    auto h_lo_liq = build_log_p_spline(p_min, p_max, [&](double p) {
         for (int k = 0; k < 40; ++k) {
             const double T_try = T_min_eos + 0.5 * k;
             try {
@@ -171,18 +220,18 @@ AtlasBundle build_atlas(CoolProp::AbstractState& heos) {
         throw std::runtime_error("LIQUID floor unreachable within 20 K of T_min_eos");
     });
     // LIQUID upper bound / VAPOR side of dome: h_sat,L(p).
-    auto h_sat_L = PCC::build(p_min, p_max, SAT_PIECES, SAT_DEGREE, PCC::ParamScale::LOG, [&](double p) {
+    auto h_sat_L = build_log_p_spline(p_min, p_max, [&](double p) {
         heos.update(CoolProp::PQ_INPUTS, p, 0.0);
         return heos.hmass();
     });
     // VAPOR lower bound: h_sat,V(p).
-    auto h_sat_V = PCC::build(p_min, p_max, SAT_PIECES, SAT_DEGREE, PCC::ParamScale::LOG, [&](double p) {
+    auto h_sat_V = build_log_p_spline(p_min, p_max, [&](double p) {
         heos.update(CoolProp::PQ_INPUTS, p, 1.0);
         return heos.hmass();
     });
     // VAPOR upper bound: h on the hot-isotherm ceiling.  Stay safely
     // inside the HEOS validity envelope (Tmax - 0.5 K).
-    auto h_hi_vap = PCC::build(p_min, p_max, SAT_PIECES, SAT_DEGREE, PCC::ParamScale::LOG, [&](double p) {
+    auto h_hi_vap = build_log_p_spline(p_min, p_max, [&](double p) {
         heos.update(CoolProp::PT_INPUTS, p, T_max_eos - 0.5);
         return heos.hmass();
     });
@@ -374,8 +423,50 @@ FluidStats run_fluid(const std::string& fluid, const std::string& csv_dir) {
     stats.p99_rel = percentile_sorted(errs, 0.99);
     stats.p50_rel = percentile_sorted(errs, 0.50);
 
-    std::printf("kept=%5zu  max=%.3e  p99=%.3e  p50=%.3e  build=%.1fs  eval=%.2fs\n", stats.kept, stats.max_rel, stats.p99_rel, stats.p50_rel,
-                stats.build_seconds, stats.eval_seconds);
+    // Pure lookup speed: collect (p, h) pairs from kept probes, then
+    // run a tight loop of (find_region + to_normalized + SVD eval)
+    // many times.  Excludes the HEOS-truth PT_INPUTS call (which
+    // dominates total wall time and would mislead the perf number).
+    {
+        std::ifstream csv_in(csv_dir + "/svd_sbtl_e2e_" + fluid + ".csv");
+        std::string line;
+        std::getline(csv_in, line);  // header
+        std::vector<std::pair<double, double>> ph;
+        ph.reserve(stats.kept);
+        while (std::getline(csv_in, line)) {
+            // columns: T,p,h,rho_truth,rho_pred,rel_err
+            std::size_t c1 = line.find(','), c2 = line.find(',', c1 + 1);
+            std::size_t c3 = line.find(',', c2 + 1);
+            const double p_val = std::stod(line.substr(c1 + 1, c2 - c1 - 1));
+            const double h_val = std::stod(line.substr(c2 + 1, c3 - c2 - 1));
+            ph.emplace_back(p_val, h_val);
+        }
+        // Repeat the loop enough times that timer noise is below ~1%.
+        const std::size_t repeats = std::max<std::size_t>(1, 200000 / std::max<std::size_t>(1, ph.size()));
+        auto t0 = std::chrono::steady_clock::now();
+        double sink = 0.0;
+        for (std::size_t rep = 0; rep < repeats; ++rep) {
+            for (const auto& [pp, hh] : ph) {
+                const int region_idx = bundle.atlas.find_region(pp, hh);
+                if (region_idx < 0) {
+                    continue;
+                }
+                const auto [xi, eta] = bundle.atlas.region(static_cast<std::size_t>(region_idx)).to_normalized(pp, hh);
+                sink += regions[static_cast<std::size_t>(region_idx)].eval->eval(eta, xi);
+            }
+        }
+        auto t1 = std::chrono::steady_clock::now();
+        const double total_ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
+        const double n_calls = static_cast<double>(ph.size() * repeats);
+        stats.lookup_ns_per_call = total_ns / std::max(1.0, n_calls);
+        // Defeat dead-code elimination.
+        if (sink == 0.0) {
+            std::printf("");
+        }
+    }
+
+    std::printf("kept=%5zu  max=%.3e  p99=%.3e  p50=%.3e  build=%.1fs  lookup=%.0f ns/call\n", stats.kept, stats.max_rel, stats.p99_rel, stats.p50_rel,
+                stats.build_seconds, stats.lookup_ns_per_call);
     return stats;
 }
 
@@ -388,7 +479,7 @@ int main(int argc, char** argv) {
     RANK = env_int("SVD_RANK", RANK_DEFAULT);
     N_PROBES = env_size_t("SVD_PROBES", N_PROBES_DEFAULT);
 
-    const std::vector<std::string> fluids = {"Water", "R134a", "Ammonia", "Methane", "Propane"};
+    const std::vector<std::string> fluids = {"Water", "CarbonDioxide", "R134a", "Ammonia", "Methane", "Propane", "D6"};
 
     std::printf("Phase 2a — SVD ρ(h,p) end-to-end validation\n");
     std::printf("  NT=%zu  NR=%zu  RANK=%d  N_PROBES=%zu\n", NT, NR, RANK, N_PROBES);
@@ -404,10 +495,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::printf("\n%-12s %8s %12s %12s %12s\n", "fluid", "kept", "max", "p99", "p50");
-    std::printf("%-12s %8s %12s %12s %12s\n", "-----", "----", "---", "---", "---");
+    std::printf("\n%-14s %8s %12s %12s %12s %12s\n", "fluid", "kept", "max", "p99", "p50", "lookup ns");
+    std::printf("%-14s %8s %12s %12s %12s %12s\n", "-----", "----", "---", "---", "---", "---------");
     for (const auto& r : results) {
-        std::printf("%-12s %8zu %12.3e %12.3e %12.3e\n", r.name.c_str(), r.kept, r.max_rel, r.p99_rel, r.p50_rel);
+        std::printf("%-14s %8zu %12.3e %12.3e %12.3e %12.0f\n", r.name.c_str(), r.kept, r.max_rel, r.p99_rel, r.p50_rel, r.lookup_ns_per_call);
     }
     return 0;
 }
