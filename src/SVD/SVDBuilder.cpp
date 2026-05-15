@@ -145,7 +145,7 @@ SVDDecomposition build_svd(const std::vector<double>& x_grid, const std::vector<
         }
     }
 
-    const std::size_t r = static_cast<std::size_t>(opts.rank);
+    const auto r = static_cast<std::size_t>(opts.rank);
 
     // Eigen matrix view over M (row-major).
     using RowMajorMat = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
@@ -160,6 +160,9 @@ SVDDecomposition build_svd(const std::vector<double>& x_grid, const std::vector<
 #else
     Eigen::BDCSVD<Eigen::MatrixXd> svd(M_map, Eigen::ComputeThinU | Eigen::ComputeThinV);
 #endif
+    if (svd.info() != Eigen::Success) {
+        throw std::runtime_error("build_svd: BDCSVD failed to converge");
+    }
 
     const Eigen::MatrixXd& U_full = svd.matrixU();         // NX x min(NX,NY)
     const Eigen::MatrixXd& V_full = svd.matrixV();         // NY x min(NX,NY)

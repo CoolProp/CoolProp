@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <stdexcept>
 #include <utility>
 
 #include "CoolProp/svd/Hermite1D.h"
@@ -31,12 +32,42 @@ namespace svd {
 class SVDEvaluator
 {
    public:
-    explicit SVDEvaluator(const SVDDecomposition& decomp) noexcept : d_(&decomp) {}
+    // Construct from a borrowed decomposition.  The caller must keep the
+    // SVDDecomposition alive at least as long as this evaluator —
+    // typically by storing both in the same containing object.  Rvalue-
+    // ref construction is deleted to prevent the
+    //
+    //   SVDEvaluator e(build_svd(...));  // <-- temporary, dangling
+    //
+    // foot-gun.  Invariants on the decomposition (NX, NY, rank, and the
+    // sizes of U/V_S/dU_dx/dV_S_dy/x_grid/y_grid) are checked once at
+    // construction so the eval hot path can assume them.
+    explicit SVDEvaluator(const SVDDecomposition& decomp) : d_(&decomp) {
+        const auto nx = static_cast<std::size_t>(decomp.NX);
+        const auto ny = static_cast<std::size_t>(decomp.NY);
+        const auto r = static_cast<std::size_t>(decomp.rank);
+        if (decomp.NX < 2 || decomp.NY < 2 || decomp.rank <= 0 || decomp.x_grid.size() != nx || decomp.y_grid.size() != ny
+            || decomp.U.size() != nx * r || decomp.dU_dx.size() != nx * r || decomp.V_S.size() != ny * r || decomp.dV_S_dy.size() != ny * r) {
+            throw std::invalid_argument("SVDEvaluator: SVDDecomposition has inconsistent dimensions");
+        }
+    }
+    // Forbid construction from a temporary — eval() reads from the
+    // borrowed decomposition after the constructor returns.
+    SVDEvaluator(SVDDecomposition&&) = delete;
+    explicit SVDEvaluator(const SVDDecomposition&&) = delete;
 
     // Evaluate the rank-r reconstruction at (x, y).  No clamping; if
     // (x, y) lies outside the grid the Hermite kernel extrapolates from
     // the boundary cell, which can lose accuracy quickly — callers
     // should normally gate on the Region they came from.
+    //
+    // The body uses pointer arithmetic with stride r over U, V_S, and
+    // the co-located slope buffers; that is the whole point of the
+    // transposed-V layout in SVDDecomposition.  Bounds-correctness is
+    // established by the constructor's invariant check above, so the
+    // hot path is intentionally exempt from clang-tidy's pointer-
+    // arithmetic warning.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     [[nodiscard]] inline double eval(double x, double y) const noexcept {
         const SVDDecomposition& d = *d_;
         const std::size_t i = locate(d.x_grid, x);
@@ -47,7 +78,8 @@ class SVDEvaluator
         const double ty = (y - d.y_grid[j]) / hy;
         const HermiteBasis bx = hermite_basis(tx);
         const HermiteBasis by = hermite_basis(ty);
-        const std::size_t r = static_cast<std::size_t>(d.rank);
+        const auto r = static_cast<std::size_t>(d.rank);
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         const double* U0 = d.U.data() + i * r;
         const double* U1 = d.U.data() + (i + 1) * r;
         const double* dU0 = d.dU_dx.data() + i * r;
@@ -56,16 +88,19 @@ class SVDEvaluator
         const double* V1 = d.V_S.data() + (j + 1) * r;
         const double* dV0 = d.dV_S_dy.data() + j * r;
         const double* dV1 = d.dV_S_dy.data() + (j + 1) * r;
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         const double bx10_hx = bx.h10 * hx;
         const double bx11_hx = bx.h11 * hx;
         const double by10_hy = by.h10 * hy;
         const double by11_hy = by.h11 * hy;
         double acc = 0.0;
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         for (std::size_t k = 0; k < r; ++k) {
             const double u_k = bx.h00 * U0[k] + bx10_hx * dU0[k] + bx.h01 * U1[k] + bx11_hx * dU1[k];
             const double v_k = by.h00 * V0[k] + by10_hy * dV0[k] + by.h01 * V1[k] + by11_hy * dV1[k];
             acc += u_k * v_k;
         }
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         return (d.out_transform == OutputTransform::EXP) ? std::exp(acc) : acc;
     }
 

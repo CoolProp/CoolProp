@@ -1,5 +1,7 @@
 #include "CoolProp/region/Region.h"
 
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace CoolProp {
@@ -35,7 +37,13 @@ std::pair<double, double> Region::to_normalized(double a, double b) const noexce
     const double xi = primary_.forward(a);
     const double b_lo_val = b_lo_->eval(a);
     const double b_hi_val = b_hi_->eval(a);
-    const double eta = (b - b_lo_val) / (b_hi_val - b_lo_val);
+    const double span = b_hi_val - b_lo_val;
+    // Guard against a degenerate boundary span: if the two curves
+    // converge at this a (e.g. a critical-point pinch), eta is
+    // undefined.  Return 0 rather than inf/NaN so callers using the
+    // result for grid indexing don't blow up.
+    const double tol = std::numeric_limits<double>::epsilon() * (1.0 + std::abs(b_lo_val) + std::abs(b_hi_val));
+    const double eta = (std::abs(span) <= tol) ? 0.0 : ((b - b_lo_val) / span);
     return {xi, eta};
 }
 

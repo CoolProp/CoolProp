@@ -28,6 +28,12 @@
 namespace cp_svd = CoolProp::svd;
 namespace cp_region = CoolProp::region;
 
+namespace {
+// Local portability constant — M_PI is non-standard on MSVC without
+// _USE_MATH_DEFINES.
+constexpr double kPi = 3.141592653589793238462643383279502884;
+}  // namespace
+
 // ============================================================
 // AxisTransform
 // ============================================================
@@ -284,7 +290,7 @@ cp_svd::SVDDecomposition build_test_decomposition(cp_svd::SlopeSource slope_sour
     }
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
-            M[i * N + j] = std::sin(M_PI * xg[i]) * (1.0 + 0.3 * std::sin(M_PI * yg[j]));
+            M[i * N + j] = std::sin(kPi * xg[i]) * (1.0 + 0.3 * std::sin(kPi * yg[j]));
         }
     }
     cp_svd::SVDBuildOptions opts;
@@ -295,7 +301,7 @@ cp_svd::SVDDecomposition build_test_decomposition(cp_svd::SlopeSource slope_sour
 }
 
 double test_function_truth(double x, double y) {
-    return std::sin(M_PI * x) * (1.0 + 0.3 * std::sin(M_PI * y));
+    return std::sin(kPi * x) * (1.0 + 0.3 * std::sin(kPi * y));
 }
 
 }  // namespace

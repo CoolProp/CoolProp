@@ -1,6 +1,8 @@
 #ifndef COOLPROP_REGION_CONSTANT_CURVE_H
 #define COOLPROP_REGION_CONSTANT_CURVE_H
 
+#include <stdexcept>
+
 #include "CoolProp/region/BoundaryCurve.h"
 
 namespace CoolProp {
@@ -11,7 +13,11 @@ namespace region {
 class ConstantCurve final : public BoundaryCurve
 {
    public:
-    ConstantCurve(double a_lo, double a_hi, double b_value) noexcept : a_lo_(a_lo), a_hi_(a_hi), b_(b_value) {}
+    ConstantCurve(double a_lo, double a_hi, double b_value) : a_lo_(a_lo), a_hi_(a_hi), b_(b_value) {
+        if (!(a_hi_ > a_lo_)) {
+            throw std::invalid_argument("ConstantCurve: a_hi must exceed a_lo");
+        }
+    }
 
     [[nodiscard]] double eval(double /*a*/) const noexcept override {
         return b_;

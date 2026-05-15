@@ -4,13 +4,42 @@ namespace CoolProp {
 namespace region {
 
 std::size_t RegionAtlas::add(Region region) {
+    // Transactional insertion: every container must end up with the
+    // same size, or none of them grow.  A throw mid-sequence would
+    // otherwise leave the SoA AABB cache and regions_ out of sync, so
+    // subsequent find_region calls would mis-dispatch.
     const auto& bbox = region.bbox();
-    a_lo_.push_back(bbox.a_lo);
-    a_hi_.push_back(bbox.a_hi);
-    b_min_.push_back(bbox.b_min);
-    b_max_.push_back(bbox.b_max);
-    regions_.push_back(std::move(region));
-    return regions_.size() - 1;
+    const std::size_t old_size = regions_.size();
+    try {
+        regions_.push_back(std::move(region));
+        a_lo_.push_back(bbox.a_lo);
+        a_hi_.push_back(bbox.a_hi);
+        b_min_.push_back(bbox.b_min);
+        b_max_.push_back(bbox.b_max);
+    } catch (...) {
+        // Region has a deleted copy constructor (it owns std::unique_ptr
+        // members), so resize() can't be used here — it would require
+        // DefaultInsertable on the value type for the (potential) grow
+        // path.  erase() is the right tool: shrink-only, no default
+        // construction needed.
+        if (regions_.size() > old_size) {
+            regions_.erase(regions_.begin() + static_cast<std::ptrdiff_t>(old_size), regions_.end());
+        }
+        if (a_lo_.size() > old_size) {
+            a_lo_.erase(a_lo_.begin() + static_cast<std::ptrdiff_t>(old_size), a_lo_.end());
+        }
+        if (a_hi_.size() > old_size) {
+            a_hi_.erase(a_hi_.begin() + static_cast<std::ptrdiff_t>(old_size), a_hi_.end());
+        }
+        if (b_min_.size() > old_size) {
+            b_min_.erase(b_min_.begin() + static_cast<std::ptrdiff_t>(old_size), b_min_.end());
+        }
+        if (b_max_.size() > old_size) {
+            b_max_.erase(b_max_.begin() + static_cast<std::ptrdiff_t>(old_size), b_max_.end());
+        }
+        throw;
+    }
+    return old_size;
 }
 
 int RegionAtlas::find_region(double a, double b) const noexcept {

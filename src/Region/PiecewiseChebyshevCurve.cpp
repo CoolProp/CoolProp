@@ -9,6 +9,12 @@ namespace region {
 
 namespace {
 
+// Local portability constant.  M_PI is non-standard and MSVC does not
+// define it without _USE_MATH_DEFINES; rather than reach for the
+// project-wide shim in CPnumerics.h (which pulls in unrelated math
+// utilities), keep this file self-contained.
+constexpr double kPi = 3.141592653589793238462643383279502884;
+
 // Compute Chebyshev coefficients c_0..c_N of f(s), s in [-1, 1], from
 // samples taken at the Chebyshev-Lobatto nodes s_j = cos(j*pi/N),
 // j = 0..N.  Returns N+1 coefficients such that
@@ -27,7 +33,7 @@ std::vector<double> chebyshev_coeffs_from_samples(const std::vector<double>& fj)
     }
     const std::size_t N = Np1 - 1;
     std::vector<double> c(Np1, 0.0);
-    const double pi_N = M_PI / static_cast<double>(N);
+    const double pi_N = kPi / static_cast<double>(N);
     for (std::size_t k = 0; k <= N; ++k) {
         double s = 0.0;
         for (std::size_t j = 0; j <= N; ++j) {
@@ -116,7 +122,7 @@ std::unique_ptr<PiecewiseChebyshevCurve> PiecewiseChebyshevCurve::build(double a
     double b_min = std::numeric_limits<double>::infinity();
     double b_max = -std::numeric_limits<double>::infinity();
     const std::size_t Np1 = degree + 1;
-    const double pi_over_deg = M_PI / static_cast<double>(degree);
+    const double pi_over_deg = kPi / static_cast<double>(degree);
 
     for (std::size_t p = 0; p < n_pieces; ++p) {
         Piece piece;
@@ -130,16 +136,27 @@ std::unique_ptr<PiecewiseChebyshevCurve> PiecewiseChebyshevCurve::build(double a
             const double s_j = std::cos(static_cast<double>(j) * pi_over_deg);
             const double t_j = piece.t_mid + 0.5 * dt * s_j;
             const double a_j = (scale == ParamScale::LOG) ? std::exp(t_j) : t_j;
-            const double v = f(a_j);
-            fj[j] = v;
-            if (v < b_min) {
-                b_min = v;
-            }
-            if (v > b_max) {
-                b_max = v;
-            }
+            fj[j] = f(a_j);
         }
         piece.coeffs = chebyshev_coeffs_from_samples(fj);
+        // Conservative bound on the piece: since |T_k(s)| <= 1 on [-1, 1],
+        // the Chebyshev series sum_{k>=1} c_k T_k(s) has absolute value
+        // bounded by sum_{k>=1} |c_k|.  This gives a strict enclosure
+        // of the curve on its piece *including interior extrema between
+        // the Lobatto samples* — important for AABB correctness, since
+        // the sampled-node min/max would otherwise under-approximate.
+        double piece_radius = 0.0;
+        for (std::size_t k = 1; k < piece.coeffs.size(); ++k) {
+            piece_radius += std::abs(piece.coeffs[k]);
+        }
+        const double piece_lo = piece.coeffs[0] - piece_radius;
+        const double piece_hi = piece.coeffs[0] + piece_radius;
+        if (piece_lo < b_min) {
+            b_min = piece_lo;
+        }
+        if (piece_hi > b_max) {
+            b_max = piece_hi;
+        }
         pieces.push_back(std::move(piece));
     }
 
