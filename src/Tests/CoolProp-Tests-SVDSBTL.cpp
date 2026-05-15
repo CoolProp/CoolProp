@@ -237,6 +237,59 @@ TEST_CASE("SVDSBTL backend speed of sound throws in two-phase", "[SVDSBTL][speed
     REQUIRE_THROWS(AS->speed_sound());
 }
 
+TEST_CASE("SVDSBTL backend works across the Phase 2a fluid set", "[SVDSBTL][multi_fluid][slow]") {
+    // For each Phase 2a fluid, exercise the full SVDSBTL pipeline:
+    // PT single-phase, HmassP round-trip, PQ two-phase (via the
+    // SuperAncillary cascade), and speed_sound.  Looser tolerances
+    // than the Water-only suite because some fluids have less
+    // smooth h_sat curves and the cache build runs at production
+    // resolution (NT=200, NR=800, rank=20) -- a 0.5% bar still
+    // confirms each backend wires up correctly.
+    for (const auto* fluid : {"R134a", "Ammonia", "Methane", "Propane", "CarbonDioxide", "D6"}) {
+        SECTION(fluid) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", fluid));
+            auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
+            REQUIRE(AS->backend_name() == "SVDSBTLBackend");
+
+            // Single-phase PT probe in compressed liquid.  0.85 * T_crit
+            // keeps us comfortably above the melting line for CO2 (which
+            // has T_melt(p_crit/2) > T_triple by ~1 K) while still well
+            // into the liquid phase across the rest of the fluid set.
+            const double p_pt = 0.5 * heos->p_critical();
+            const double T_pt = 0.85 * heos->T_critical();
+            AS->update(CoolProp::PT_INPUTS, p_pt, T_pt);
+            heos->update(CoolProp::PT_INPUTS, p_pt, T_pt);
+            INFO(fluid << " PT  rho_AS=" << AS->rhomass() << "  rho_HEOS=" << heos->rhomass());
+            REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(5e-3));
+            REQUIRE(AS->hmass() == Approx(heos->hmass()).epsilon(5e-3));
+
+            // HmassP round-trip from that same (p, T) state.
+            const double h_pt = heos->hmass();
+            AS->update(CoolProp::HmassP_INPUTS, h_pt, p_pt);
+            INFO(fluid << " PH  T_AS=" << AS->T() << "  T_HEOS=" << T_pt);
+            REQUIRE(AS->T() == Approx(T_pt).epsilon(5e-3));
+            REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(5e-3));
+            REQUIRE(AS->hmass() == Approx(h_pt).epsilon(1e-12));  // input passes through
+
+            // Speed of sound at the same point.
+            AS->update(CoolProp::PT_INPUTS, p_pt, T_pt);
+            INFO(fluid << " w  AS=" << AS->speed_sound() << "  HEOS=" << heos->speed_sound());
+            REQUIRE(AS->speed_sound() == Approx(heos->speed_sound()).epsilon(1e-2));  // 1% bar > IF97 budget but absorbs any fluid-specific quirks
+
+            // Two-phase PQ at half-critical pressure.  All Phase 2a
+            // fluids ship a SuperAncillary, so the two-phase path
+            // must succeed -- match HEOS to machine precision.
+            const double p_pq = 0.3 * heos->p_critical();
+            AS->update(CoolProp::PQ_INPUTS, p_pq, 0.5);
+            heos->update(CoolProp::PQ_INPUTS, p_pq, 0.5);
+            INFO(fluid << " PQ  rho_AS=" << AS->rhomass() << "  rho_HEOS=" << heos->rhomass());
+            REQUIRE(AS->T() == Approx(heos->T()).margin(1e-9));
+            REQUIRE(AS->rhomass() == Approx(heos->rhomass()).margin(1e-9));
+            REQUIRE(AS->Q() == Approx(0.5).margin(0.0));
+        }
+    }
+}
+
 TEST_CASE("SVDSBTL backend Q out of [0, 1] is rejected", "[SVDSBTL][twophase][reject]") {
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
     REQUIRE_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.0e6, -0.1));

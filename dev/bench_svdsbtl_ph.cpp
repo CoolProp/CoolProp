@@ -97,10 +97,13 @@ struct Row
     double s_pred;
     double u_truth;
     double u_pred;
+    double w_truth;
+    double w_pred;
     double rel_err_rho;
     double rel_err_T;
     double rel_err_s;
     double rel_err_u;
+    double rel_err_w;
     double ns_per_call_svd;
     double ns_per_call_heos;
     double ns_per_call_refprop;         // via AbstractState wrapper
@@ -304,12 +307,17 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
                 r.rho_truth = heos->rhomass();
                 r.s_truth = heos->smass();
                 r.u_truth = heos->umass();
+                r.w_truth = heos->speed_sound();
 
                 svd->update(::CoolProp::HmassP_INPUTS, r.h, r.p);
                 r.rho_pred = svd->rhomass();
                 r.T_pred = svd->T();
                 r.s_pred = svd->smass();
                 r.u_pred = svd->umass();
+                // speed_sound throws in two-phase; the bench skips
+                // two-phase cells via the Q check above, so the
+                // single-phase eval is always safe here.
+                r.w_pred = svd->speed_sound();
 
                 const bool svd_in_domain = !std::isnan(r.rho_pred);
                 if (svd_in_domain) {
@@ -317,12 +325,14 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
                     r.rel_err_T = std::abs(r.T_pred - r.T) / r.T;
                     r.rel_err_s = (r.s_truth != 0.0) ? std::abs(r.s_pred - r.s_truth) / std::abs(r.s_truth) : 0.0;
                     r.rel_err_u = (r.u_truth != 0.0) ? std::abs(r.u_pred - r.u_truth) / std::abs(r.u_truth) : 0.0;
+                    r.rel_err_w = (r.w_truth != 0.0) ? std::abs(r.w_pred - r.w_truth) / std::abs(r.w_truth) : 0.0;
                     r.ns_per_call_svd = time_update_rhomass(*svd, ::CoolProp::HmassP_INPUTS, r.h, r.p, repeats);
                 } else {
                     r.rel_err_rho = std::nan("");
                     r.rel_err_T = std::nan("");
                     r.rel_err_s = std::nan("");
                     r.rel_err_u = std::nan("");
+                    r.rel_err_w = std::nan("");
                     r.ns_per_call_svd = std::nan("");
                 }
                 r.ns_per_call_heos = time_update_rhomass(*heos, ::CoolProp::PT_INPUTS, p, T, repeats);
@@ -389,22 +399,23 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
     if (!ofs) {
         throw std::runtime_error("bench_one: failed to open " + out_path);
     }
-    ofs << "h,p,T,rho_truth,rho_pred,T_pred,s_truth,s_pred,u_truth,u_pred,"
-        << "rel_err_rho,rel_err_T,rel_err_s,rel_err_u,"
+    ofs << "h,p,T,rho_truth,rho_pred,T_pred,s_truth,s_pred,u_truth,u_pred,w_truth,w_pred,"
+        << "rel_err_rho,rel_err_T,rel_err_s,rel_err_u,rel_err_w,"
         << "ns_per_call_svd,ns_per_call_heos,ns_per_call_refprop,ns_per_call_refprop_direct,ns_per_call_refprop_phfl1,"
         << "ns_per_call_if97,ns_per_call_if97_direct,"
         << "rho_refprop,rel_err_rho_refprop\n";
     ofs.precision(17);
     for (const auto& r : rows) {
         ofs << r.h << "," << r.p << "," << r.T << "," << r.rho_truth << "," << r.rho_pred << "," << r.T_pred << "," << r.s_truth << "," << r.s_pred
-            << "," << r.u_truth << "," << r.u_pred << "," << r.rel_err_rho << "," << r.rel_err_T << "," << r.rel_err_s << "," << r.rel_err_u << ","
-            << r.ns_per_call_svd << "," << r.ns_per_call_heos << "," << r.ns_per_call_refprop << "," << r.ns_per_call_refprop_direct << ","
-            << r.ns_per_call_refprop_phfl1 << "," << r.ns_per_call_if97 << "," << r.ns_per_call_if97_direct << "," << r.rho_refprop << ","
-            << r.rel_err_rho_refprop << "\n";
+            << "," << r.u_truth << "," << r.u_pred << "," << r.w_truth << "," << r.w_pred << "," << r.rel_err_rho << "," << r.rel_err_T << ","
+            << r.rel_err_s << "," << r.rel_err_u << "," << r.rel_err_w << "," << r.ns_per_call_svd << "," << r.ns_per_call_heos << ","
+            << r.ns_per_call_refprop << "," << r.ns_per_call_refprop_direct << "," << r.ns_per_call_refprop_phfl1 << "," << r.ns_per_call_if97 << ","
+            << r.ns_per_call_if97_direct << "," << r.rho_refprop << "," << r.rel_err_rho_refprop << "\n";
     }
 
     // Console summary.
     double max_rho = 0;
+    double max_w = 0;
     double max_T = 0;
     double max_s = 0;
     double max_u = 0;
@@ -424,6 +435,9 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
     for (const auto& r : rows) {
         if (!std::isnan(r.rel_err_rho)) {
             max_rho = std::max(max_rho, r.rel_err_rho);
+            if (!std::isnan(r.rel_err_w)) {
+                max_w = std::max(max_w, r.rel_err_w);
+            }
             max_T = std::max(max_T, r.rel_err_T);
             max_s = std::max(max_s, r.rel_err_s);
             max_u = std::max(max_u, r.rel_err_u);
@@ -457,7 +471,7 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
     const double mean_svd = (n_svd > 0) ? sum_ns_svd / n_in_domain : std::nan("");
     const double mean_heos = sum_ns_heos / n;
     std::printf("%-12s N=%5zu (SVDSBTL in-domain=%zu, out-of-domain=%zu)\n", fluid.c_str(), rows.size(), n_svd, rows.size() - n_svd);
-    std::printf("            max_rel: rho=%.2e T=%.2e s=%.2e u=%.2e\n", max_rho, max_T, max_s, max_u);
+    std::printf("            max_rel: rho=%.2e T=%.2e s=%.2e u=%.2e w=%.2e\n", max_rho, max_T, max_s, max_u, max_w);
     std::printf("            mean ns/call: svd=%.0f  heos=%.0f", mean_svd, mean_heos);
     if (n_refprop > 0) {
         std::printf("  refprop(via AS)=%.0f", sum_ns_refprop / static_cast<double>(n_refprop));

@@ -107,7 +107,10 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
     has_if97 = "ns_per_call_if97" in df.columns and df["ns_per_call_if97"].notna().any()
     has_if97_direct = "ns_per_call_if97_direct" in df.columns and df["ns_per_call_if97_direct"].notna().any()
 
-    fig, axes = plt.subplots(2, 4, figsize=(19, 9), constrained_layout=True)
+    # 2x5: row 0 accuracy panels (rho, T, s, u, w) + row 1 timing
+    # panels (SVDSBTL, IF97, HEOS, REFPROP).  Bottom-right cell is
+    # blank for visual balance.
+    fig, axes = plt.subplots(2, 5, figsize=(23, 9), constrained_layout=True)
     fig.suptitle(
         f"SVDSBTL benchmark in PH coordinates -- {fluid}   N={len(df)}",
         fontsize=13,
@@ -126,6 +129,11 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
     _err_panel(axes[0, 1], h_kJ, p_MPa, df["rel_err_T"].to_numpy(), "T  rel. error  vs HEOS", **common)
     _err_panel(axes[0, 2], h_kJ, p_MPa, df["rel_err_s"].to_numpy(), "s  rel. error  vs HEOS", **common)
     _err_panel(axes[0, 3], h_kJ, p_MPa, df["rel_err_u"].to_numpy(), "u  rel. error  vs HEOS", **common)
+    if "rel_err_w" in df.columns and df["rel_err_w"].notna().any():
+        _err_panel(axes[0, 4], h_kJ, p_MPa, df["rel_err_w"].to_numpy(), "w (speed of sound) rel. error vs HEOS", **common)
+    else:
+        axes[0, 4].set_axis_off()
+        axes[0, 4].set_title("w  (not tabulated in this run)")
 
     # Row 1 -- timing panels on a SHARED log color scale so the
     # cross-backend speed delta is visually unambiguous.  For IF97
@@ -164,6 +172,9 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
     _time_panel(axes[1, 1], h_kJ, p_MPa, if97_ns, if97_title, shared, **tcommon)
     _time_panel(axes[1, 2], h_kJ, p_MPa, df["ns_per_call_heos"].to_numpy(), "HEOS  ns / (update + rhomass)", shared, **tcommon)
     _time_panel(axes[1, 3], h_kJ, p_MPa, refprop_ns, refprop_panel_title, shared, **tcommon)
+    # Leave axes[1, 4] blank for visual balance with the 5-panel
+    # accuracy row above.
+    axes[1, 4].set_axis_off()
 
     # Summary footer.
     max_rho = df["rel_err_rho"].max()
@@ -176,6 +187,11 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
         f"mean ns/call: SVDSBTL={mean_ns_svd:.0f}  HEOS={mean_ns_heos:.0f}",
         f"speedup vs HEOS={mean_ns_heos / mean_ns_svd:.1f}x",
     ]
+    if "rel_err_w" in df.columns and df["rel_err_w"].notna().any():
+        max_w = df["rel_err_w"].max()
+        p99_w = df["rel_err_w"].quantile(0.99)
+        med_w = df["rel_err_w"].median()
+        parts.insert(1, f"w rel-err: max={max_w:.2e}  p99={p99_w:.2e}  median={med_w:.2e}")
     if has_if97_direct:
         mean_ns_if97_direct = df["ns_per_call_if97_direct"].mean()
         mean_ns_if97_as = df["ns_per_call_if97"].mean() if has_if97 else float("nan")
