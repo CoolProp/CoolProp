@@ -286,9 +286,12 @@ file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # Generic SVD / Region components — sources live under src/SVD/ and
 # src/Region/, headers under include/CoolProp/{svd,region}/.
+# SBTL adapter layer (Phase 2b) sits on top — sources under src/SBTL/,
+# headers under include/CoolProp/sbtl/.
 file(GLOB SVD_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/SVD/*.cpp")
 file(GLOB REGION_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Region/*.cpp")
-list(APPEND APP_SOURCES ${SVD_SOURCES} ${REGION_SOURCES})
+file(GLOB SBTL_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/SBTL/*.cpp")
+list(APPEND APP_SOURCES ${SVD_SOURCES} ${REGION_SOURCES} ${SBTL_SOURCES})
 
 # Add the miniz source file
 list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1/miniz.c")
@@ -2082,6 +2085,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDComponents.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SBTLAdapter.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
