@@ -17,14 +17,32 @@ Region::BBox compute_bbox(const AxisTransform& primary, const BoundaryCurve& b_l
 
 }  // namespace
 
+// Sentinel BBox that aabb_contains will never report a hit on (a_hi
+// strictly less than a_lo).  Used for moved-from instances so they
+// fail the AABB filter without anyone having to add an "is_alive"
+// check to the hot path.
+constexpr Region::BBox kEmptyBBox = {1.0, -1.0, 1.0, -1.0};
+
 Region::Region(AxisTransform primary, std::unique_ptr<BoundaryCurve> b_lo, std::unique_ptr<BoundaryCurve> b_hi)
-  : primary_(primary),
-    b_lo_(std::move(b_lo)),
-    b_hi_(std::move(b_hi)),
-    bbox_((b_lo_ && b_hi_) ? compute_bbox(primary_, *b_lo_, *b_hi_) : Region::BBox{0, 0, 0, 0}) {
+  : primary_(primary), b_lo_(std::move(b_lo)), b_hi_(std::move(b_hi)), bbox_((b_lo_ && b_hi_) ? compute_bbox(primary_, *b_lo_, *b_hi_) : kEmptyBBox) {
     if (!b_lo_ || !b_hi_) {
         throw std::invalid_argument("Region: b_lo and b_hi BoundaryCurves must be non-null");
     }
+}
+
+Region::Region(Region&& other) noexcept : primary_(other.primary_), b_lo_(std::move(other.b_lo_)), b_hi_(std::move(other.b_hi_)), bbox_(other.bbox_) {
+    other.bbox_ = kEmptyBBox;
+}
+
+Region& Region::operator=(Region&& other) noexcept {
+    if (this != &other) {
+        primary_ = other.primary_;
+        b_lo_ = std::move(other.b_lo_);
+        b_hi_ = std::move(other.b_hi_);
+        bbox_ = other.bbox_;
+        other.bbox_ = kEmptyBBox;
+    }
+    return *this;
 }
 
 bool Region::curve_contains(double a, double b) const noexcept {
@@ -40,10 +58,11 @@ std::pair<double, double> Region::to_normalized(double a, double b) const noexce
     const double span = b_hi_val - b_lo_val;
     // Guard against a degenerate boundary span: if the two curves
     // converge at this a (e.g. a critical-point pinch), eta is
-    // undefined.  Return 0 rather than inf/NaN so callers using the
-    // result for grid indexing don't blow up.
+    // undefined.  Return NaN so callers see an obvious failure rather
+    // than a silently-wrong eta = 0 that propagates into an SVD lookup
+    // and produces garbage with no signal.
     const double tol = std::numeric_limits<double>::epsilon() * (1.0 + std::abs(b_lo_val) + std::abs(b_hi_val));
-    const double eta = (std::abs(span) <= tol) ? 0.0 : ((b - b_lo_val) / span);
+    const double eta = (std::abs(span) <= tol) ? std::numeric_limits<double>::quiet_NaN() : ((b - b_lo_val) / span);
     return {xi, eta};
 }
 

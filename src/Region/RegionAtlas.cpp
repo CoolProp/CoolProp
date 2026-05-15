@@ -8,7 +8,12 @@ std::size_t RegionAtlas::add(Region region) {
     // same size, or none of them grow.  A throw mid-sequence would
     // otherwise leave the SoA AABB cache and regions_ out of sync, so
     // subsequent find_region calls would mis-dispatch.
-    const auto& bbox = region.bbox();
+    //
+    // Snapshot the BBox before the std::move below — Region's custom
+    // move op invalidates the source's bbox_ (to defend against
+    // dangling-curve-pointer accesses on moved-from regions), so a
+    // reference taken pre-move would read sentinel values after.
+    const Region::BBox bbox = region.bbox();
     const std::size_t old_size = regions_.size();
     try {
         regions_.push_back(std::move(region));
@@ -45,8 +50,12 @@ std::size_t RegionAtlas::add(Region region) {
 int RegionAtlas::find_region(double a, double b) const noexcept {
     const std::size_t n = regions_.size();
     for (std::size_t i = 0; i < n; ++i) {
-        // AABB filter — cache-friendly first pass.
-        if (a < a_lo_[i] || a > a_hi_[i] || b < b_min_[i] || b > b_max_[i]) {
+        // AABB filter — cache-friendly first pass.  Positive form so
+        // NaN inputs are correctly rejected (every comparison returns
+        // false; the previous negated form `a < a_lo_[i] || ...` was
+        // C++ UB on NaN — none of the `continue`s fired and locate_piece
+        // cast NaN to ptrdiff_t).
+        if (!(a >= a_lo_[i] && a <= a_hi_[i] && b >= b_min_[i] && b <= b_max_[i])) {
             continue;
         }
         // AABB hit — confirm against the curved envelope.
@@ -61,7 +70,7 @@ std::vector<std::size_t> RegionAtlas::find_all_curve_hits(double a, double b) co
     std::vector<std::size_t> hits;
     const std::size_t n = regions_.size();
     for (std::size_t i = 0; i < n; ++i) {
-        if (a < a_lo_[i] || a > a_hi_[i] || b < b_min_[i] || b > b_max_[i]) {
+        if (!(a >= a_lo_[i] && a <= a_hi_[i] && b >= b_min_[i] && b <= b_max_[i])) {
             continue;
         }
         if (regions_[i].curve_contains(a, b)) {

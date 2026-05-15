@@ -73,6 +73,12 @@ class PiecewiseChebyshevCurve final : public BoundaryCurve
         double inv_half_span;        // 2 / (t_hi - t_lo); for s = inv_half_span*(t - t_mid)
         double t_mid;                // (t_lo + t_hi) / 2
         std::vector<double> coeffs;  // size degree+1; Chebyshev coefficients
+        // Pre-computed derivative coefficients on this piece — size
+        // degree (the trivially-zero c_N coefficient of the derivative
+        // expansion is dropped).  eval_da used to recompute these on
+        // every call (heap allocation + recurrence); precomputing here
+        // saves the malloc and one wasted Clenshaw step per call.
+        std::vector<double> deriv_coeffs;
     };
 
     PiecewiseChebyshevCurve(double a_lo, double a_hi, ParamScale scale, std::vector<Piece> pieces, double b_min, double b_max);

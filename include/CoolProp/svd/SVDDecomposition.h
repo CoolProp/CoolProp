@@ -47,6 +47,10 @@ enum class SlopeSource : std::uint8_t
 // the underlying contiguous buffers (U.data(), V_S.data(), dU_dx.data(),
 // dV_S_dy.data(), x_grid.data(), y_grid.data()) into device buffers
 // individually and read them with an Eigen::Map on the device side.
+// Device-side evaluation will agree with host evaluation within a few
+// ulp — not byte-exact — because nvcc fuses multiply-and-accumulate by
+// default (`--fmad=true`) and the slopes themselves were computed on
+// the host with whatever rounding the spline solver chose.
 struct SVDDecomposition
 {
     std::int32_t NX = 0;    // number of grid points on x axis
@@ -54,6 +58,9 @@ struct SVDDecomposition
     std::int32_t rank = 0;  // truncation rank r (rank <= min(NX, NY))
 
     OutputTransform out_transform = OutputTransform::IDENTITY;
+    // Provenance only — the eval kernel reads slopes from dU_dx /
+    // dV_S_dy and is agnostic to which strategy filled them.  Kept on
+    // the struct so a deserialised decomposition is self-describing.
     SlopeSource slope_source = SlopeSource::NATURAL_CUBIC_SPLINE;
 
     std::vector<double> x_grid;  // size NX

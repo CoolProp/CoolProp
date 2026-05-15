@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 
@@ -99,6 +100,18 @@ class SVDEvaluator
     SVDEvaluator(SVDDecomposition&&) = delete;
     explicit SVDEvaluator(const SVDDecomposition&&) = delete;
 
+    // Owning constructor: take a shared_ptr to the decomposition and
+    // hold it for the evaluator's lifetime.  This is the safer pattern
+    // for callers that can't easily guarantee a stable address (the
+    // dangling-pointer foot-gun documented above).  The performance
+    // cost relative to the borrowed-ref form is a single pointer hop
+    // at construction; the eval hot path is identical.
+    explicit SVDEvaluator(std::shared_ptr<const SVDDecomposition> decomp)
+      : SVDEvaluator(*decomp)  // delegate to the ref constructor for invariant check
+    {
+        owned_ = std::move(decomp);
+    }
+
     // Evaluate the rank-r reconstruction at (x, y).  No clamping; if
     // (x, y) lies outside the grid the Hermite kernel extrapolates from
     // the boundary cell, which can lose accuracy quickly — callers
@@ -148,8 +161,11 @@ class SVDEvaluator
     }
 
    private:
-    // Binary search: returns i such that grid[i] <= x < grid[i+1],
+    // Binary search: returns i such that grid[i] <= x <= grid[i+1],
     // clamped to [0, n-2] so that the i+1 access is always in range.
+    // Closed on both ends at the boundaries — x == grid.back() returns
+    // n-2, so the Hermite kernel sees t = 1 on the last cell rather
+    // than t = 0 on a non-existent next cell.
     [[nodiscard]] static inline std::size_t locate(const std::vector<double>& g, double x) noexcept {
         const std::size_t n = g.size();
         if (x <= g.front()) {
@@ -172,6 +188,10 @@ class SVDEvaluator
     }
 
     const SVDDecomposition* d_;
+    // Set only when constructed via the shared_ptr overload; the
+    // borrowed-ref constructor leaves this null and d_ aliases the
+    // caller-owned object.
+    std::shared_ptr<const SVDDecomposition> owned_;
 };
 
 }  // namespace svd

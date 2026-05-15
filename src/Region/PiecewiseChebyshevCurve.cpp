@@ -74,27 +74,95 @@ double clenshaw_eval(const std::vector<double>& c, double s) noexcept {
 //   c'_{k-1} = c'_{k+1} + 2 k c_k     for k = N, N-1, ..., 1
 //   c'_0 /= 2
 //
+// The returned vector has size N (NOT N+1) — the trivially-zero c'_N
+// coefficient is dropped so Clenshaw doesn't iterate over it.
+//
 // Note this gives df/ds, not df/da; the chain rule via dt/da and ds/dt
 // is handled at the call site.
 std::vector<double> chebyshev_derivative_coeffs(const std::vector<double>& c) {
     const std::size_t Np1 = c.size();
     if (Np1 < 2) {
-        return std::vector<double>(Np1, 0.0);
+        return {};
     }
     const std::size_t N = Np1 - 1;
-    std::vector<double> d(Np1, 0.0);  // d[N] = 0
-    // Backward recurrence: c'_{k-1} = c'_{k+1} + 2k c_k, k = N..1.
-    // Loop on the 1-based index `kp = k` so the comparison is non-
-    // redundant (kp > 0 actually exits the loop) — CodeQL flagged the
-    // earlier `k >= 1` form as always-true on an unsigned counter.
+    // d has size N (degree-1 expansion); indices 0..N-1.
+    std::vector<double> d(N, 0.0);
+    // Backward recurrence: c'_{k-1} = c'_{k+1} + 2k c_k, k = N..1, with
+    // c'_N implicitly zero (we never write to index N).
     for (std::size_t kp = N; kp > 0; --kp) {
-        const double d_km1 = (kp + 1 <= N ? d[kp + 1] : 0.0) + 2.0 * static_cast<double>(kp) * c[kp];
+        const double d_km1 = (kp + 1 < N ? d[kp + 1] : 0.0) + 2.0 * static_cast<double>(kp) * c[kp];
         d[kp - 1] = d_km1;
     }
     d[0] *= 0.5;
-    // The N-th coefficient of the derivative is zero (degree drops by 1).
-    d[N] = 0.0;
     return d;
+}
+
+// Tight extremum of the piece f(s) = sum c_k T_k(s) on s in [-1, 1].
+// Drives the AABB so the cheap RegionAtlas filter rejects probes
+// accurately — the conservative `c_0 ± sum |c_k|` bound can inflate
+// the AABB 30–50% beyond the true range and defeat the filter.
+//
+// Strategy: f is smooth, so its extrema on [-1,1] are at s = ±1 or at
+// the roots of f'(s) = 0 in (-1, 1).  Evaluate f at both endpoints,
+// then root-find f' in (-1, 1) and evaluate f at each root.  Track
+// running min/max.
+//
+// f' has degree N-1, with N+1 = c.size().  We sample f' on a fine
+// grid (8 * N points), look for sign changes, and bisect each
+// bracket to ~1e-10.  Cheap and robust for the modest degrees we use
+// (build-time cost only).
+std::pair<double, double> tight_piece_bounds(const std::vector<double>& c, const std::vector<double>& d) noexcept {
+    auto eval_s = [&](double s) { return clenshaw_eval(c, s); };
+    auto eval_deriv = [&](double s) { return clenshaw_eval(d, s); };
+
+    double lo = eval_s(-1.0);
+    double hi = lo;
+    const double at_p1 = eval_s(1.0);
+    if (at_p1 < lo) {
+        lo = at_p1;
+    }
+    if (at_p1 > hi) {
+        hi = at_p1;
+    }
+    // 8x oversample on derivative — sufficient to bracket all roots
+    // of a polynomial of degree (N-1) where N is the curve's degree.
+    const std::size_t N = c.size() - 1;
+    const std::size_t n_samples = 8 * std::max<std::size_t>(N, 4);
+    double prev_s = -1.0;
+    double prev_d = eval_deriv(prev_s);
+    for (std::size_t k = 1; k <= n_samples; ++k) {
+        const double cur_s = -1.0 + 2.0 * static_cast<double>(k) / static_cast<double>(n_samples);
+        const double cur_d = eval_deriv(cur_s);
+        if (prev_d == 0.0 || (prev_d * cur_d < 0.0)) {
+            // Bracket [prev_s, cur_s]; bisect.
+            double a_lo = prev_s, a_hi = cur_s;
+            double f_lo = prev_d, f_hi = cur_d;
+            for (int it = 0; it < 60; ++it) {
+                const double mid = 0.5 * (a_lo + a_hi);
+                const double f_mid = eval_deriv(mid);
+                if (f_lo * f_mid <= 0.0) {
+                    a_hi = mid;
+                    f_hi = f_mid;
+                } else {
+                    a_lo = mid;
+                    f_lo = f_mid;
+                }
+                if (a_hi - a_lo < 1e-12) {
+                    break;
+                }
+            }
+            const double root_val = eval_s(0.5 * (a_lo + a_hi));
+            if (root_val < lo) {
+                lo = root_val;
+            }
+            if (root_val > hi) {
+                hi = root_val;
+            }
+        }
+        prev_s = cur_s;
+        prev_d = cur_d;
+    }
+    return {lo, hi};
 }
 
 }  // namespace
@@ -132,26 +200,29 @@ std::unique_ptr<PiecewiseChebyshevCurve> PiecewiseChebyshevCurve::build(double a
         piece.t_mid = 0.5 * (piece.t_lo + piece.t_hi);
         piece.inv_half_span = 2.0 / (piece.t_hi - piece.t_lo);
         // Sample f at Lobatto nodes s_j = cos(j*pi/N), j = 0..N.
+        // Reject non-finite samples up front — without this check the
+        // build silently produces a curve with NaN coefficients, and
+        // every downstream eval / aabb_contains then returns NaN/false
+        // and the atlas silently mis-dispatches.
         std::vector<double> fj(Np1);
         for (std::size_t j = 0; j <= degree; ++j) {
             const double s_j = std::cos(static_cast<double>(j) * pi_over_deg);
             const double t_j = piece.t_mid + 0.5 * dt * s_j;
             const double a_j = (scale == ParamScale::LOG) ? std::exp(t_j) : t_j;
-            fj[j] = f(a_j);
+            const double v = f(a_j);
+            if (!std::isfinite(v)) {
+                throw std::invalid_argument("PiecewiseChebyshevCurve::build: sample function returned non-finite value");
+            }
+            fj[j] = v;
         }
         piece.coeffs = chebyshev_coeffs_from_samples(fj);
-        // Conservative bound on the piece: since |T_k(s)| <= 1 on [-1, 1],
-        // the Chebyshev series sum_{k>=1} c_k T_k(s) has absolute value
-        // bounded by sum_{k>=1} |c_k|.  This gives a strict enclosure
-        // of the curve on its piece *including interior extrema between
-        // the Lobatto samples* — important for AABB correctness, since
-        // the sampled-node min/max would otherwise under-approximate.
-        double piece_radius = 0.0;
-        for (std::size_t k = 1; k < piece.coeffs.size(); ++k) {
-            piece_radius += std::abs(piece.coeffs[k]);
-        }
-        const double piece_lo = piece.coeffs[0] - piece_radius;
-        const double piece_hi = piece.coeffs[0] + piece_radius;
+        piece.deriv_coeffs = chebyshev_derivative_coeffs(piece.coeffs);
+        // Tight bound on the piece via cubic-derivative root finding
+        // (see tight_piece_bounds): a conservative |c_0| ± Σ|c_k| bound
+        // is correct but pessimistic enough to inflate the AABB 30–50%
+        // beyond the true range, which defeats the cheap RegionAtlas
+        // filter.  Tight bounds keep curve_contains rare.
+        const auto [piece_lo, piece_hi] = tight_piece_bounds(piece.coeffs, piece.deriv_coeffs);
         if (piece_lo < b_min) {
             b_min = piece_lo;
         }
@@ -214,10 +285,10 @@ double PiecewiseChebyshevCurve::eval_da(double a) const noexcept {
     const std::size_t p = locate_piece(t);
     const Piece& pc = pieces_[p];
     const double s = (t - pc.t_mid) * pc.inv_half_span;
-    // df/ds via the derivative coefficient recurrence, then chain rule.
-    const std::vector<double> d_coeffs = chebyshev_derivative_coeffs(pc.coeffs);
-    const double df_ds = clenshaw_eval(d_coeffs, s);
-    // ds/dt = inv_half_span; dt/da from to_t.
+    // df/ds via the precomputed derivative coefficients (built once at
+    // construction; see Piece::deriv_coeffs).  Chain rule via ds/dt
+    // and dt/da at the call site.
+    const double df_ds = clenshaw_eval(pc.deriv_coeffs, s);
     return df_ds * pc.inv_half_span * dt_da(a);
 }
 

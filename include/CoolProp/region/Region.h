@@ -49,8 +49,13 @@ class Region
 
     Region(const Region&) = delete;
     Region& operator=(const Region&) = delete;
-    Region(Region&&) = default;
-    Region& operator=(Region&&) = default;
+    // Custom move ops invalidate `bbox_` on the moved-from instance so
+    // `aabb_contains` returns false unconditionally.  The default
+    // move-op leaves bbox_ populated even though b_lo_ / b_hi_ are
+    // nulled — any subsequent aabb_contains hit would then fall through
+    // into curve_contains and dereference a null unique_ptr.
+    Region(Region&& other) noexcept;
+    Region& operator=(Region&& other) noexcept;
     ~Region() = default;
 
     // O(1), no curve evaluation.
