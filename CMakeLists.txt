@@ -87,6 +87,10 @@ option(COOLPROP_BUILD_SVD_TABLES
        "Build the SVDSBTL bulk-table builder at dev/build_svd_tables.cpp"
        OFF)
 
+option(COOLPROP_BUILD_SVDSBTL_BENCH
+       "Build the SVDSBTL state-point benchmark at dev/bench_svdsbtl_ph.cpp"
+       OFF)
+
 #option (DARWIN_USE_LIBCPP
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
@@ -2165,6 +2169,18 @@ if(COOLPROP_BUILD_SVD_TABLES)
   add_dependencies(build_svd_tables generate_headers)
   if(UNIX)
     target_link_libraries(build_svd_tables ${CMAKE_DL_LIBS})
+  endif()
+endif()
+
+if(COOLPROP_BUILD_SVDSBTL_BENCH)
+  # Phase 2c state-point benchmark.  Walks an (h, p) grid and writes a
+  # CSV with per-point rel-err vs HEOS + ns/call for both backends.
+  add_executable(bench_svdsbtl_ph
+                 ${APP_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/bench_svdsbtl_ph.cpp")
+  add_dependencies(bench_svdsbtl_ph generate_headers)
+  if(UNIX)
+    target_link_libraries(bench_svdsbtl_ph ${CMAKE_DL_LIBS})
   endif()
 endif()
 
