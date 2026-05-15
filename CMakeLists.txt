@@ -79,6 +79,10 @@ option(
 option(COOLPROP_NO_EXAMPLES
        "Do not generate example code, does only apply to some wrappers." OFF)
 
+option(COOLPROP_SVD_E2E
+       "Build the SVD-SBTL end-to-end validation tool at dev/svd_sbtl_e2e.cpp"
+       OFF)
+
 #option (DARWIN_USE_LIBCPP
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
@@ -2116,6 +2120,20 @@ if(COOLPROP_CPP_EXAMPLE_TEST)
     target_link_libraries(docuTest.exe ${CMAKE_DL_LIBS})
   endif()
   add_test(DocumentationTest docuTest.exe)
+endif()
+
+if(COOLPROP_SVD_E2E)
+  # Standalone Phase 2a validation tool.  Builds a self-contained
+  # executable that compiles every CoolProp source plus the e2e harness
+  # — same pattern as COOLPROP_MAIN_MODULE / CatchTestRunner.  Run with
+  # ./SVDSBTL_E2E [csv_dir].
+  add_executable(SVDSBTL_E2E
+                 ${APP_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/svd_sbtl_e2e.cpp")
+  add_dependencies(SVDSBTL_E2E generate_headers)
+  if(UNIX)
+    target_link_libraries(SVDSBTL_E2E ${CMAKE_DL_LIBS})
+  endif()
 endif()
 
 if(COOLPROP_SNIPPETS)
