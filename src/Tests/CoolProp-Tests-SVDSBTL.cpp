@@ -130,6 +130,14 @@ TEST_CASE("SVDSBTL backend cache reload produces the same result", "[SVDSBTL][ca
 }
 
 TEST_CASE("SVDSBTL backend PQ_INPUTS two-phase blend matches HEOS", "[SVDSBTL][twophase][pq][water][slow]") {
+    // SVDSBTL and HEOS both end up consulting the same SuperAncillary
+    // for sat-line properties, so the agreement is bit-identical on
+    // T and rho (the SA is the *source* HEOS uses internally for PQ
+    // flashes on fluids that ship one).  h is computed via a Q-weighted
+    // blend on both sides; tiny floating-point roundoff differences
+    // (~1e-15 relative) are the only delta.  margin(...) lets us
+    // express the tolerance in absolute terms where relative
+    // comparisons break down at zero-crossing references.
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
 
@@ -139,13 +147,15 @@ TEST_CASE("SVDSBTL backend PQ_INPUTS two-phase blend matches HEOS", "[SVDSBTL][t
             AS->update(CoolProp::PQ_INPUTS, p, Q);
             heos->update(CoolProp::PQ_INPUTS, p, Q);
             INFO("p=" << p << "  Q=" << Q << "  T_AS=" << AS->T() << "  T_HEOS=" << heos->T());
-            REQUIRE(AS->T() == Approx(heos->T()).epsilon(1e-4));
-            REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(1e-4));
-            REQUIRE(AS->hmass() == Approx(heos->hmass()).epsilon(1e-3));
-            REQUIRE(AS->smass() == Approx(heos->smass()).epsilon(1e-3));
-            // p flows through verbatim.
-            REQUIRE(AS->p() == Approx(p).epsilon(1e-12));
-            REQUIRE(AS->Q() == Approx(Q).epsilon(1e-12));
+            REQUIRE(AS->T() == Approx(heos->T()).margin(1e-9));
+            REQUIRE(AS->rhomass() == Approx(heos->rhomass()).margin(1e-9));
+            // h has a near-zero reference state at the triple point,
+            // so use an absolute margin (in J/kg).
+            REQUIRE(AS->hmass() == Approx(heos->hmass()).margin(1e-6));
+            REQUIRE(AS->smass() == Approx(heos->smass()).margin(1e-9));
+            // p / Q flow through verbatim.
+            REQUIRE(AS->p() == Approx(p).margin(0.0));
+            REQUIRE(AS->Q() == Approx(Q).margin(0.0));
         }
     }
 }
@@ -159,11 +169,11 @@ TEST_CASE("SVDSBTL backend QT_INPUTS two-phase blend matches HEOS", "[SVDSBTL][t
             AS->update(CoolProp::QT_INPUTS, Q, T);
             heos->update(CoolProp::QT_INPUTS, Q, T);
             INFO("T=" << T << "  Q=" << Q);
-            REQUIRE(AS->p() == Approx(heos->p()).epsilon(1e-4));
-            REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(1e-4));
-            REQUIRE(AS->hmass() == Approx(heos->hmass()).epsilon(1e-3));
-            REQUIRE(AS->T() == Approx(T).epsilon(1e-12));
-            REQUIRE(AS->Q() == Approx(Q).epsilon(1e-12));
+            REQUIRE(AS->p() == Approx(heos->p()).margin(1e-3));
+            REQUIRE(AS->rhomass() == Approx(heos->rhomass()).margin(1e-9));
+            REQUIRE(AS->hmass() == Approx(heos->hmass()).margin(1e-6));
+            REQUIRE(AS->T() == Approx(T).margin(0.0));
+            REQUIRE(AS->Q() == Approx(Q).margin(0.0));
         }
     }
 }
@@ -185,10 +195,10 @@ TEST_CASE("SVDSBTL backend HmassP_INPUTS dome-hit routes to two-phase blend", "[
         heos->update(CoolProp::HmassP_INPUTS, h_mid, p);
         INFO("p=" << p << "  h_mid=" << h_mid);
         REQUIRE(AS->phase() == CoolProp::iphase_twophase);
-        REQUIRE(AS->Q() == Approx(heos->Q()).epsilon(1e-4));
-        REQUIRE(AS->T() == Approx(heos->T()).epsilon(1e-4));
-        REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(1e-4));
-        REQUIRE(AS->hmass() == Approx(h_mid).epsilon(1e-12));  // input round-trip
+        REQUIRE(AS->Q() == Approx(heos->Q()).margin(1e-9));
+        REQUIRE(AS->T() == Approx(heos->T()).margin(1e-9));
+        REQUIRE(AS->rhomass() == Approx(heos->rhomass()).margin(1e-9));
+        REQUIRE(AS->hmass() == Approx(h_mid).margin(1e-9));  // input round-trip
     }
 }
 
