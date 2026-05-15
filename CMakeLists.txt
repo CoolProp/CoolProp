@@ -295,7 +295,8 @@ file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 file(GLOB SVD_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/SVD/*.cpp")
 file(GLOB REGION_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Region/*.cpp")
 file(GLOB SBTL_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/SBTL/*.cpp")
-list(APPEND APP_SOURCES ${SVD_SOURCES} ${REGION_SOURCES} ${SBTL_SOURCES})
+file(GLOB SVDSBTL_BACKEND_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Backends/SVDSBTL/*.cpp")
+list(APPEND APP_SOURCES ${SVD_SOURCES} ${REGION_SOURCES} ${SBTL_SOURCES} ${SVDSBTL_BACKEND_SOURCES})
 
 # Add the miniz source file
 list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1/miniz.c")
@@ -2091,6 +2092,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDComponents.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SBTLAdapter.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDSBTL.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
