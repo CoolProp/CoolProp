@@ -633,21 +633,26 @@ class IF97Backend : public AbstractState
     void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
                        const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size, int* status_flags,
                        std::size_t status_flags_size, CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) override {
-        if (out_buffer_size < N_inputs * N_outputs) {
-            throw ValueError(
-              format("fast_evaluate: out_buffer_size=%zu < required %zu (N_inputs * N_outputs)", out_buffer_size, N_inputs * N_outputs));
+        if (N_outputs != 0 && N_inputs > std::numeric_limits<std::size_t>::max() / N_outputs) {
+            throw ValueError(format("fast_evaluate: N_inputs * N_outputs would overflow size_t (N_inputs=%zu, N_outputs=%zu)", N_inputs, N_outputs));
+        }
+        const std::size_t required_out = N_inputs * N_outputs;
+        if (out_buffer_size < required_out) {
+            throw ValueError(format("fast_evaluate: out_buffer_size=%zu < required %zu (N_inputs * N_outputs)", out_buffer_size, required_out));
         }
         if (status_flags_size < N_inputs) {
             throw ValueError(format("fast_evaluate: status_flags_size=%zu < required %zu (N_inputs)", status_flags_size, N_inputs));
         }
         if (N_inputs == 0) return;
+        // Null-pointer check BEFORE the N_outputs==0 early-write path: that path
+        // dereferences status_flags, so the check has to dominate it.
+        if (val1 == nullptr || val2 == nullptr || outputs == nullptr || out_buffer == nullptr || status_flags == nullptr) {
+            throw ValueError("fast_evaluate: null pointer argument");
+        }
         if (N_outputs == 0) {
             for (std::size_t k = 0; k < N_inputs; ++k)
                 status_flags[k] = CoolProp::fast_evaluate_ok;
             return;
-        }
-        if (val1 == nullptr || val2 == nullptr || outputs == nullptr || out_buffer == nullptr || status_flags == nullptr) {
-            throw ValueError("fast_evaluate: null pointer argument");
         }
 
         const bool is_PT = (input_pair == PT_INPUTS);
@@ -820,7 +825,15 @@ class IF97Backend : public AbstractState
                     out_buffer[k * N_outputs + o] = NaN;
                 }
             }
-            status_flags[k] = eval_failed ? CoolProp::fast_evaluate_internal_error : CoolProp::fast_evaluate_ok;
+            // API contract: when status_flags[k] is non-zero, the entire row is
+            // NaN. The per-output catch above only NaNs the specific failing
+            // output; finish the job here so callers don't see partial rows.
+            if (eval_failed) {
+                fill_nan_row(k);
+                status_flags[k] = CoolProp::fast_evaluate_internal_error;
+            } else {
+                status_flags[k] = CoolProp::fast_evaluate_ok;
+            }
         }
         // IF97 is stateless externally; clear() resets internal cached values to
         // be consistent with the TabularBackend contract (state untouched).

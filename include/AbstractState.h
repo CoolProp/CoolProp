@@ -902,8 +902,11 @@ class AbstractState
      * @param status_flags_size Capacity of status_flags (validated against N_inputs).
      * @param imposed_phase     Optional phase hint; iphase_not_imposed = detect.
      *
-     * On a per-point failure the corresponding output-buffer slice is filled
-     * with NaN and status_flags[k] is set to a nonzero fast_evaluate_status.
+     * On a per-point failure all N_outputs entries for that point —
+     * `out_buffer[k * N_outputs + 0 .. k * N_outputs + (N_outputs - 1)]` —
+     * are filled with NaN, and `status_flags[k]` is set to a nonzero
+     * fast_evaluate_status.  Callers may rely on a single `status_flags[k]`
+     * check rather than scanning the row.
      */
     virtual void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
                                const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size,

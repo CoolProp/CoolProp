@@ -868,20 +868,26 @@ void CoolProp::TabularBackend::fast_evaluate(CoolProp::input_pairs input_pair, c
                                              CoolProp::phases imposed_phase) {
     // Pre-loop validation. These conditions are programmer errors (mismatched
     // buffers, unsupported keys), not data errors — throw so misuse fails loud.
-    if (out_buffer_size < N_inputs * N_outputs) {
-        throw ValueError(format("fast_evaluate: out_buffer_size=%zu < required %zu (N_inputs * N_outputs)", out_buffer_size, N_inputs * N_outputs));
+    if (N_outputs != 0 && N_inputs > std::numeric_limits<std::size_t>::max() / N_outputs) {
+        throw ValueError(format("fast_evaluate: N_inputs * N_outputs would overflow size_t (N_inputs=%zu, N_outputs=%zu)", N_inputs, N_outputs));
+    }
+    const std::size_t required_out = N_inputs * N_outputs;
+    if (out_buffer_size < required_out) {
+        throw ValueError(format("fast_evaluate: out_buffer_size=%zu < required %zu (N_inputs * N_outputs)", out_buffer_size, required_out));
     }
     if (status_flags_size < N_inputs) {
         throw ValueError(format("fast_evaluate: status_flags_size=%zu < required %zu (N_inputs)", status_flags_size, N_inputs));
     }
     if (N_inputs == 0) return;
+    // Null-pointer check BEFORE the N_outputs==0 early-write path: that path
+    // dereferences status_flags, so the check has to dominate it.
+    if (val1 == nullptr || val2 == nullptr || outputs == nullptr || out_buffer == nullptr || status_flags == nullptr) {
+        throw ValueError("fast_evaluate: null pointer argument");
+    }
     if (N_outputs == 0) {
         for (std::size_t k = 0; k < N_inputs; ++k)
             status_flags[k] = CoolProp::fast_evaluate_ok;
         return;
-    }
-    if (val1 == nullptr || val2 == nullptr || outputs == nullptr || out_buffer == nullptr || status_flags == nullptr) {
-        throw ValueError("fast_evaluate: null pointer argument");
     }
 
     const bool is_ph = (input_pair == HmolarP_INPUTS);
@@ -998,7 +1004,15 @@ void CoolProp::TabularBackend::fast_evaluate(CoolProp::input_pairs input_pair, c
                 out_buffer[k * N_outputs + o] = NaN;
             }
         }
-        status_flags[k] = eval_failed ? fast_evaluate_internal_error : fast_evaluate_ok;
+        // API contract: when status_flags[k] is non-zero, the entire row is NaN.
+        // The per-output catch above only NaNs the specific failing output;
+        // finish the job here so callers don't see partial rows.
+        if (eval_failed) {
+            fill_nan_row(k);
+            status_flags[k] = fast_evaluate_internal_error;
+        } else {
+            status_flags[k] = fast_evaluate_ok;
+        }
     }
 
     // Restore phase override and clear the AS cache so no per-point residue
