@@ -60,7 +60,14 @@ namespace sbtl {
 class SVDSurfaceSerializer
 {
    public:
-    static constexpr int kRevision = 1;
+    // On-wire revision.  Bumped on:
+    //   rev 1: initial Phase 2b release (4 properties per surface)
+    //   rev 2: speed_sound added as 5th property (rev 1 caches still
+    //          deserialize as 4-property surfaces but calc_speed_sound
+    //          would silently fall through to NaN; bumping the rev
+    //          forces a clean rebuild so the user can't trip on stale
+    //          caches missing w).
+    static constexpr int kRevision = 2;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

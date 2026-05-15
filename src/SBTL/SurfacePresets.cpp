@@ -18,26 +18,28 @@ namespace presets {
 namespace {
 
 // Shared property list for HmassP_INPUTS: h is the input (secondary
-// axis), so the outputs are ρ, T, s, u.  Density is log-transformed
-// (EXP) since it varies over orders of magnitude across LIQUID +
-// VAPOR; the rest are identity-transformed (additive scale).
+// axis), so the outputs are ρ, T, s, u, w (speed of sound).  Density
+// is log-transformed (EXP) since it varies over orders of magnitude
+// across LIQUID + VAPOR; the rest are identity-transformed.
 std::vector<PropertySpec> ph_properties() {
     return {
       {::CoolProp::iDmass, svd::OutputTransform::EXP},
       {::CoolProp::iT, svd::OutputTransform::IDENTITY},
       {::CoolProp::iSmass, svd::OutputTransform::IDENTITY},
       {::CoolProp::iUmass, svd::OutputTransform::IDENTITY},
+      {::CoolProp::ispeed_sound, svd::OutputTransform::IDENTITY},
     };
 }
 
 // Shared property list for PT_INPUTS: T is the input (secondary
-// axis), so outputs are ρ, h, s, u.
+// axis), so outputs are ρ, h, s, u, w (speed of sound).
 std::vector<PropertySpec> pt_properties() {
     return {
       {::CoolProp::iDmass, svd::OutputTransform::EXP},
       {::CoolProp::iHmass, svd::OutputTransform::IDENTITY},
       {::CoolProp::iSmass, svd::OutputTransform::IDENTITY},
       {::CoolProp::iUmass, svd::OutputTransform::IDENTITY},
+      {::CoolProp::ispeed_sound, svd::OutputTransform::IDENTITY},
     };
 }
 
@@ -108,6 +110,8 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
                 return s.smass();
             case ::CoolProp::iUmass:
                 return s.umass();
+            case ::CoolProp::ispeed_sound:
+                return s.speed_sound();
             default:
                 throw std::invalid_argument("ph_subcritical: unsupported output property");
         }
@@ -213,6 +217,8 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
                 return s.smass();
             case ::CoolProp::iUmass:
                 return s.umass();
+            case ::CoolProp::ispeed_sound:
+                return s.speed_sound();
             default:
                 throw std::invalid_argument("pt_subcritical: unsupported output property");
         }

@@ -202,6 +202,41 @@ TEST_CASE("SVDSBTL backend HmassP_INPUTS dome-hit routes to two-phase blend", "[
     }
 }
 
+TEST_CASE("SVDSBTL backend speed of sound matches HEOS in single phase", "[SVDSBTL][speed_sound][water][slow]") {
+    // Speed of sound is the 5th property on both PH and PT surfaces.
+    // For typical single-phase Water states, SVDSBTL should agree with
+    // HEOS to ~SVD fitting tolerance (median ~1e-7 relative for ρ-like
+    // quantities; w roughly tracks that).
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    struct Pt
+    {
+        double p;
+        double T;
+        const char* label;
+    };
+    for (const auto& pt : std::vector<Pt>{
+           {1.0e5, 320.0, "subcooled liquid, near-ambient"},
+           {1.0e6, 400.0, "subcooled liquid, mid-p"},
+           {5.0e6, 350.0, "compressed liquid"},
+           {1.0e5, 500.0, "superheated vapor, low-p"},
+           {1.0e6, 700.0, "superheated vapor, mid-p"},
+           {3.0e7, 800.0, "supercritical-ish (just past p_crit)"},
+         }) {
+        AS->update(CoolProp::PT_INPUTS, pt.p, pt.T);
+        heos->update(CoolProp::PT_INPUTS, pt.p, pt.T);
+        INFO(pt.label << "  p=" << pt.p << " T=" << pt.T << "  w_AS=" << AS->speed_sound() << "  w_HEOS=" << heos->speed_sound());
+        REQUIRE(AS->speed_sound() == Approx(heos->speed_sound()).epsilon(5e-3));  // 0.5% — well under IF97's 0.1% budget at most points
+    }
+}
+
+TEST_CASE("SVDSBTL backend speed of sound throws in two-phase", "[SVDSBTL][speed_sound][twophase]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    AS->update(CoolProp::PQ_INPUTS, 1.0e6, 0.5);
+    REQUIRE_THROWS(AS->speed_sound());
+}
+
 TEST_CASE("SVDSBTL backend Q out of [0, 1] is rejected", "[SVDSBTL][twophase][reject]") {
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
     REQUIRE_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.0e6, -0.1));

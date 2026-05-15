@@ -341,6 +341,17 @@ CoolPropDbl SVDSBTLBackend::calc_T() {
     }
     return lookup_(iT);
 }
+CoolPropDbl SVDSBTLBackend::calc_speed_sound() {
+    if (two_phase_.active) {
+        // Speed of sound is not uniquely defined in the two-phase
+        // region (it goes to zero at the interface; equilibrium
+        // thermodynamics doesn't give a meaningful bulk value).
+        // Mirror what HEOS does -- throw rather than return a
+        // misleading Q-weighted blend.
+        throw NotImplementedError("SVDSBTL backend: speed_sound is not defined in the two-phase region");
+    }
+    return lookup_(ispeed_sound);
+}
 CoolPropDbl SVDSBTLBackend::calc_pressure() {
     return _p;
 }
