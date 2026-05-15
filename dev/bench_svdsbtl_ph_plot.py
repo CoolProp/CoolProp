@@ -103,6 +103,7 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
     p_crit_MPa = p_crit_Pa / 1e6 if p_crit_Pa is not None else None
     has_refprop = df["ns_per_call_refprop"].notna().any()
     has_refprop_direct = "ns_per_call_refprop_direct" in df.columns and df["ns_per_call_refprop_direct"].notna().any()
+    has_refprop_phfl1 = "ns_per_call_refprop_phfl1" in df.columns and df["ns_per_call_refprop_phfl1"].notna().any()
     has_if97 = "ns_per_call_if97" in df.columns and df["ns_per_call_if97"].notna().any()
     has_if97_direct = "ns_per_call_if97_direct" in df.columns and df["ns_per_call_if97_direct"].notna().any()
 
@@ -135,10 +136,21 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
         df["ns_per_call_if97_direct"].to_numpy() if has_if97_direct
         else (df["ns_per_call_if97"].to_numpy() if has_if97 else np.full(len(df), np.nan))
     )
-    refprop_ns = (
-        df["ns_per_call_refprop_direct"].to_numpy() if has_refprop_direct
-        else (df["ns_per_call_refprop"].to_numpy() if has_refprop else np.full(len(df), np.nan))
-    )
+    # Prefer PHFL1 (single-phase fast path, apples-to-apples with
+    # SVDSBTL which is also single-phase-only) over PHFLSH for the
+    # REFPROP timing panel.  Fall back to PHFLSH then via-AS.
+    if has_refprop_phfl1:
+        refprop_ns = df["ns_per_call_refprop_phfl1"].to_numpy()
+        refprop_panel_title = "REFPROP direct PHFL1dll  ns / call"
+    elif has_refprop_direct:
+        refprop_ns = df["ns_per_call_refprop_direct"].to_numpy()
+        refprop_panel_title = "REFPROP direct PHFLSHdll  ns / call"
+    elif has_refprop:
+        refprop_ns = df["ns_per_call_refprop"].to_numpy()
+        refprop_panel_title = "REFPROP  ns / (update + rhomass via AS)"
+    else:
+        refprop_ns = np.full(len(df), np.nan)
+        refprop_panel_title = "REFPROP"
     timings = [df["ns_per_call_svd"].to_numpy(), df["ns_per_call_heos"].to_numpy(), if97_ns, refprop_ns]
     valid_arrays = [t[~np.isnan(t)] for t in timings if not np.all(np.isnan(t))]
     all_ns = np.concatenate(valid_arrays) if valid_arrays else np.array([100.0, 10000.0])
@@ -151,8 +163,7 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
     if97_title = "IF97 direct rhomass_phmass  ns / call" if has_if97_direct else "IF97  ns / (update + rhomass via AS)"
     _time_panel(axes[1, 1], h_kJ, p_MPa, if97_ns, if97_title, shared, **tcommon)
     _time_panel(axes[1, 2], h_kJ, p_MPa, df["ns_per_call_heos"].to_numpy(), "HEOS  ns / (update + rhomass)", shared, **tcommon)
-    refprop_title = "REFPROP direct PHFLSHdll  ns / call" if has_refprop_direct else "REFPROP  ns / (update + rhomass via AS)"
-    _time_panel(axes[1, 3], h_kJ, p_MPa, refprop_ns, refprop_title, shared, **tcommon)
+    _time_panel(axes[1, 3], h_kJ, p_MPa, refprop_ns, refprop_panel_title, shared, **tcommon)
 
     # Summary footer.
     max_rho = df["rel_err_rho"].max()
@@ -176,13 +187,18 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
         mean_ns_if97 = df["ns_per_call_if97"].mean()
         parts[1] += f"  IF97={mean_ns_if97:.0f}"
         parts.append(f"speedup vs IF97={mean_ns_if97 / mean_ns_svd:.2f}x")
-    if has_refprop_direct:
-        mean_ns_refprop_direct = df["ns_per_call_refprop_direct"].mean()
-        mean_ns_refprop_as = df["ns_per_call_refprop"].mean() if has_refprop else float("nan")
-        parts[1] += f"  REFPROP(direct)={mean_ns_refprop_direct:.0f}"
-        if not np.isnan(mean_ns_refprop_as):
-            parts[1] += f"  REFPROP(via AS)={mean_ns_refprop_as:.0f}"
-        parts.append(f"speedup vs REFPROP(direct)={mean_ns_refprop_direct / mean_ns_svd:.1f}x")
+    if has_refprop_direct or has_refprop_phfl1:
+        mean_ns_refprop_direct = df["ns_per_call_refprop_direct"].mean() if has_refprop_direct else float("nan")
+        mean_ns_refprop_phfl1 = df["ns_per_call_refprop_phfl1"].mean() if has_refprop_phfl1 else float("nan")
+        bits = []
+        if not np.isnan(mean_ns_refprop_phfl1):
+            bits.append(f"PHFL1={mean_ns_refprop_phfl1:.0f}")
+        if not np.isnan(mean_ns_refprop_direct):
+            bits.append(f"PHFLSH={mean_ns_refprop_direct:.0f}")
+        parts[1] += "  REFPROP(" + ", ".join(bits) + ")"
+        ref_mean = mean_ns_refprop_phfl1 if not np.isnan(mean_ns_refprop_phfl1) else mean_ns_refprop_direct
+        ref_label = "PHFL1" if not np.isnan(mean_ns_refprop_phfl1) else "PHFLSH"
+        parts.append(f"speedup vs REFPROP({ref_label})={ref_mean / mean_ns_svd:.1f}x")
     elif has_refprop:
         mean_ns_refprop = df["ns_per_call_refprop"].mean()
         parts[1] += f"  REFPROP={mean_ns_refprop:.0f}"
