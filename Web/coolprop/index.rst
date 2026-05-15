@@ -19,3 +19,4 @@ This section includes information about the CoolProp software, listings of input
     changelog.rst
     SuperAncillary.ipynb
     IdealGas.ipynb
+    SVDComponents.ipynb
