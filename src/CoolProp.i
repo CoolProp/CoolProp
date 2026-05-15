@@ -13,6 +13,13 @@
 %ignore CoolProp::set_config_json(rapidjson::Document &);
 %ignore CoolProp::get_config_as_json(rapidjson::Document &);
 
+// fast_evaluate is a C++-only raw-pointer batch API; SWIG's default
+// typemaps for `const double*` / `int*` produce wrappers that don't
+// compile on at least the R binding (int -> SEXP).  Scripted-language
+// callers should keep using update()/keyed_output() or the Cython
+// AbstractState.fast_evaluate wrapper in the Python binding.
+%ignore CoolProp::AbstractState::fast_evaluate;
+
 %include "std_string.i" // This %include allows the use of std::string natively
 %include "std_vector.i" // This allows for the use of STL vectors natively(ish)
 %include "exception.i" //
