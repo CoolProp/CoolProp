@@ -216,7 +216,10 @@ CoolPropDbl SVDSBTLBackend::calc_umolar() {
 
 // Constants — delegate to a lazily-allocated HEOS reference.
 CoolPropDbl SVDSBTLBackend::calc_molar_mass() {
-    return heos_reference_()->molar_mass();
+    if (molar_mass_cached_ < 0.0) {
+        molar_mass_cached_ = heos_reference_()->molar_mass();
+    }
+    return molar_mass_cached_;
 }
 CoolPropDbl SVDSBTLBackend::calc_gas_constant() {
     return heos_reference_()->gas_constant();

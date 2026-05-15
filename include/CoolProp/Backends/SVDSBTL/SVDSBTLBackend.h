@@ -142,6 +142,13 @@ class SVDSBTLBackend : public AbstractState
     std::string fluid_name_;
     std::vector<CoolPropDbl> mole_fractions_;  // always {1.0}
 
+    // Cache of molar mass, populated lazily on the first
+    // calc_molar_mass() call.  Avoids per-call shared_ptr deref +
+    // virtual dispatch through heos_reference_() on every
+    // calc_hmolar / calc_rhomolar / calc_smolar.  Fluid is fixed at
+    // construction so this never changes after first read.
+    mutable CoolPropDbl molar_mass_cached_ = -1.0;
+
     // Reference HEOS state for constants (critical point, triple point,
     // bounds, molar mass, R).  Lazily allocated so that backend
     // construction is cheap even when only cached blobs are loaded.

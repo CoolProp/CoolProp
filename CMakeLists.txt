@@ -91,6 +91,10 @@ option(COOLPROP_BUILD_SVDSBTL_BENCH
        "Build the SVDSBTL state-point benchmark at dev/bench_svdsbtl_ph.cpp"
        OFF)
 
+option(COOLPROP_BUILD_SVDSBTL_PROFILE
+       "Build the SVDSBTL per-stage profiler at dev/profile_svdsbtl.cpp"
+       OFF)
+
 #option (DARWIN_USE_LIBCPP
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
@@ -2181,6 +2185,18 @@ if(COOLPROP_BUILD_SVDSBTL_BENCH)
   add_dependencies(bench_svdsbtl_ph generate_headers)
   if(UNIX)
     target_link_libraries(bench_svdsbtl_ph ${CMAKE_DL_LIBS})
+  endif()
+endif()
+
+if(COOLPROP_BUILD_SVDSBTL_PROFILE)
+  # Phase 2c per-stage profiler.  Picks one representative state and
+  # decomposes the SVDSBTL per-call cost into stages.
+  add_executable(profile_svdsbtl
+                 ${APP_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/profile_svdsbtl.cpp")
+  add_dependencies(profile_svdsbtl generate_headers)
+  if(UNIX)
+    target_link_libraries(profile_svdsbtl ${CMAKE_DL_LIBS})
   endif()
 endif()
 
