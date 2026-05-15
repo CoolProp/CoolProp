@@ -9,6 +9,7 @@
 #include "CoolProp/region/ConstantCurve.h"
 #include "CoolProp/sbtl/SVDSurface.h"
 #include "CoolProp/sbtl/SVDSurfaceFactory.h"
+#include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #include "CoolProp/sbtl/SatBoundaryFactory.h"
 #include "CoolProp/sbtl/SurfaceSpec.h"
 
@@ -20,6 +21,7 @@
 #    include <vector>
 
 #    include "AbstractState.h"
+#    include "miniz.h"
 
 namespace cp_sbtl = CoolProp::sbtl;
 namespace cp_region = CoolProp::region;
@@ -119,6 +121,92 @@ TEST_CASE("SVDSurface PH preset builds + evals against HEOS", "[SBTL][SVDSurface
     // 40x80 rank-10 SVD over the whole subcritical range is coarse —
     // anything under 5% on Water is a sanity-passing build.
     REQUIRE(max_rel < 5e-2);
+}
+
+TEST_CASE("SVDSurface save/load round-trip is bit-identical", "[SBTL][serializer][slow]") {
+    auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
+    auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
+    auto surface_before = cp_sbtl::build_surface(*heos, std::move(spec));
+
+    // Save to a byte buffer and load back.
+    const auto blob = cp_sbtl::SVDSurfaceSerializer::save(surface_before);
+    auto surface_after = cp_sbtl::SVDSurfaceSerializer::load(blob);
+
+    // Round-trip checks: metadata identity.
+    REQUIRE(surface_after.fluid_name() == surface_before.fluid_name());
+    REQUIRE(surface_after.input_pair() == surface_before.input_pair());
+    REQUIRE(surface_after.region_count() == surface_before.region_count());
+    REQUIRE(surface_after.properties() == surface_before.properties());
+
+    // Same query at multiple probes must give bit-identical results.
+    // (Floating-point bit-identical because Region/SVDEvaluator math
+    // is deterministic and we packed the exact ULP-precise doubles.)
+    std::mt19937 rng(101);
+    const auto [p_min, p_max] = cp_sbtl::subcritical_pressure_range(*heos);
+    std::uniform_real_distribution<double> u_log_p(std::log(p_min * 1.5), std::log(p_max * 0.9));
+    std::uniform_real_distribution<double> uT(290.0, heos->Tmax() - 1.0);
+
+    int compared = 0;
+    for (int trial = 0; trial < 200 && compared < 30; ++trial) {
+        const double T = uT(rng);
+        const double p = std::exp(u_log_p(rng));
+        try {
+            heos->update(::CoolProp::PT_INPUTS, p, T);
+            if (heos->Q() > 0.0 && heos->Q() < 1.0) {
+                continue;
+            }
+            const double h = heos->hmass();
+            const double rho_before = surface_before.eval(::CoolProp::iDmass, p, h);
+            const double rho_after = surface_after.eval(::CoolProp::iDmass, p, h);
+            if (std::isnan(rho_before) || std::isnan(rho_after)) {
+                continue;
+            }
+            // Same bytes → same evaluator → bit-identical output.
+            REQUIRE(rho_before == rho_after);
+            ++compared;
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+        }
+    }
+    REQUIRE(compared >= 10);
+}
+
+TEST_CASE("SVDSurfaceSerializer rejects corrupt input", "[SBTL][serializer]") {
+    // Empty / truncated / wrong-magic bytes should all throw, not segfault.
+    const std::vector<char> empty;
+    REQUIRE_THROWS_AS(cp_sbtl::SVDSurfaceSerializer::load(empty), std::runtime_error);
+
+    const std::vector<char> garbage(64, '\0');
+    REQUIRE_THROWS_AS(cp_sbtl::SVDSurfaceSerializer::load(garbage), std::runtime_error);
+
+    // Valid zlib-compressed payload that decompresses to "hello world" —
+    // not a valid msgpack stream, so msgpack::unpack throws.  The
+    // serializer wraps that in std::runtime_error.
+    std::vector<char> bogus_payload;
+    {
+        const char hello[] = "hello world";
+        bogus_payload.resize(64);
+        mz_ulong out_size = static_cast<mz_ulong>(bogus_payload.size());
+        compress((unsigned char*)bogus_payload.data(), &out_size, (const unsigned char*)hello, sizeof(hello) - 1);
+        bogus_payload.resize(out_size);
+    }
+    REQUIRE_THROWS(cp_sbtl::SVDSurfaceSerializer::load(bogus_payload));
+}
+
+TEST_CASE("SVDSurfaceSerializer file save/load round-trip", "[SBTL][serializer][slow]") {
+    auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
+    auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
+    auto surface = cp_sbtl::build_surface(*heos, std::move(spec));
+
+    // Save to a tmp file and load back via the file API.
+    const std::string path = "/tmp/svd_test_water_ph.svd.bin.z";
+    cp_sbtl::SVDSurfaceSerializer::save_to_file(surface, path);
+    auto loaded = cp_sbtl::SVDSurfaceSerializer::load_from_file(path);
+    REQUIRE(loaded.fluid_name() == "Water");
+    REQUIRE(loaded.region_count() == 2);
+    // Spot-check a single eval matches.
+    heos->update(::CoolProp::PT_INPUTS, 1e5, 350.0);
+    const double h = heos->hmass();
+    REQUIRE(loaded.eval(::CoolProp::iDmass, 1e5, h) == surface.eval(::CoolProp::iDmass, 1e5, h));
 }
 
 #endif  // ENABLE_CATCH

@@ -19,6 +19,19 @@ class ConstantCurve final : public BoundaryCurve
         }
     }
 
+    // Plain-data snapshot for serialization.  Safe to expose because
+    // the only invariant ConstantCurve enforces (a_hi > a_lo) is
+    // re-checked by the constructor.
+    struct State
+    {
+        double a_lo;
+        double a_hi;
+        double b;
+    };
+    [[nodiscard]] State state() const noexcept {
+        return State{a_lo_, a_hi_, b_};
+    }
+
     [[nodiscard]] double eval(double /*a*/) const noexcept override {
         return b_;
     }

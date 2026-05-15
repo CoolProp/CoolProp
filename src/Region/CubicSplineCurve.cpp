@@ -174,6 +174,26 @@ std::unique_ptr<CubicSplineCurve> CubicSplineCurve::build(std::vector<double> a,
 CubicSplineCurve::CubicSplineCurve(std::vector<double> a, std::vector<double> b, std::vector<double> M, double b_min, double b_max)
   : a_(std::move(a)), b_(std::move(b)), M_(std::move(M)), b_min_(b_min), b_max_(b_max) {}
 
+CubicSplineCurve::State CubicSplineCurve::state() const {
+    return State{a_, b_, M_, b_min_, b_max_};
+}
+
+std::unique_ptr<CubicSplineCurve> CubicSplineCurve::from_state(State s) {
+    const std::size_t n = s.a.size();
+    if (s.b.size() != n || s.M.size() != n) {
+        throw std::invalid_argument("CubicSplineCurve::from_state: a/b/M size mismatch");
+    }
+    if (n < 2) {
+        throw std::invalid_argument("CubicSplineCurve::from_state: need at least 2 knots");
+    }
+    for (std::size_t i = 1; i < n; ++i) {
+        if (!(s.a[i] > s.a[i - 1])) {
+            throw std::invalid_argument("CubicSplineCurve::from_state: a must be strictly increasing");
+        }
+    }
+    return std::unique_ptr<CubicSplineCurve>(new CubicSplineCurve(std::move(s.a), std::move(s.b), std::move(s.M), s.b_min, s.b_max));
+}
+
 std::size_t CubicSplineCurve::locate(double a) const noexcept {
     // Binary search; clamp to a valid segment index.
     const std::size_t n = a_.size();

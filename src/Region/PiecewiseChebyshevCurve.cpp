@@ -241,6 +241,48 @@ std::unique_ptr<PiecewiseChebyshevCurve> PiecewiseChebyshevCurve::build(double a
 PiecewiseChebyshevCurve::PiecewiseChebyshevCurve(double a_lo, double a_hi, ParamScale scale, std::vector<Piece> pieces, double b_min, double b_max)
   : a_lo_(a_lo), a_hi_(a_hi), scale_(scale), pieces_(std::move(pieces)), b_min_(b_min), b_max_(b_max) {}
 
+PiecewiseChebyshevCurve::State PiecewiseChebyshevCurve::state() const {
+    State s;
+    s.a_lo = a_lo_;
+    s.a_hi = a_hi_;
+    s.scale = scale_;
+    s.b_min = b_min_;
+    s.b_max = b_max_;
+    s.pieces.reserve(pieces_.size());
+    for (const auto& p : pieces_) {
+        s.pieces.push_back(PieceState{p.t_lo, p.t_hi, p.inv_half_span, p.t_mid, p.coeffs, p.deriv_coeffs});
+    }
+    return s;
+}
+
+std::unique_ptr<PiecewiseChebyshevCurve> PiecewiseChebyshevCurve::from_state(State s) {
+    if (s.pieces.empty()) {
+        throw std::invalid_argument("PiecewiseChebyshevCurve::from_state: pieces is empty");
+    }
+    if (!(s.a_hi > s.a_lo)) {
+        throw std::invalid_argument("PiecewiseChebyshevCurve::from_state: a_hi must exceed a_lo");
+    }
+    std::vector<Piece> pieces;
+    pieces.reserve(s.pieces.size());
+    for (auto& ps : s.pieces) {
+        if (ps.coeffs.size() < 2) {
+            throw std::invalid_argument("PiecewiseChebyshevCurve::from_state: each piece needs >= 2 coefficients");
+        }
+        if (ps.deriv_coeffs.size() + 1 != ps.coeffs.size()) {
+            throw std::invalid_argument("PiecewiseChebyshevCurve::from_state: deriv_coeffs size must be coeffs.size() - 1");
+        }
+        Piece p;
+        p.t_lo = ps.t_lo;
+        p.t_hi = ps.t_hi;
+        p.inv_half_span = ps.inv_half_span;
+        p.t_mid = ps.t_mid;
+        p.coeffs = std::move(ps.coeffs);
+        p.deriv_coeffs = std::move(ps.deriv_coeffs);
+        pieces.push_back(std::move(p));
+    }
+    return std::unique_ptr<PiecewiseChebyshevCurve>(new PiecewiseChebyshevCurve(s.a_lo, s.a_hi, s.scale, std::move(pieces), s.b_min, s.b_max));
+}
+
 double PiecewiseChebyshevCurve::to_t(double a) const noexcept {
     return (scale_ == ParamScale::LOG) ? std::log(a) : a;
 }
