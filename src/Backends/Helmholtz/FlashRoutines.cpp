@@ -1405,6 +1405,15 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             /// Something homogeneous to avoid flash calls
             HEOS->specify_phase(iphase_gas);
         };
+        // RAII: ensure the imposed gas phase is cleared on every exit
+        // path, including exceptions thrown from Halley/Brent.  Without
+        // this, the imposed phase leaks into subsequent state queries,
+        // which take fast paths that assume gas-phase ideal-gas
+        // guesses and converge to metastable roots in the compressed-
+        // liquid region (e.g. CO2 LIQUID).  See solver_rho_Tp; #2738.
+        ~solver_resid() {
+            HEOS->unspecify_phase();
+        }
         double call(double T) {
             HEOS->update_DmolarT_direct(rhomolar, T);
             double eos = HEOS->keyed_output(other);
