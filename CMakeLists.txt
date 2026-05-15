@@ -2127,8 +2127,14 @@ if(COOLPROP_SVD_E2E)
   # executable that compiles every CoolProp source plus the e2e harness
   # — same pattern as COOLPROP_MAIN_MODULE / CatchTestRunner.  Run with
   # ./SVDSBTL_E2E [csv_dir].
+  #
+  # Filter any main() implementation out of APP_SOURCES so co-enabling
+  # COOLPROP_MY_MAIN / COOLPROP_MAIN_MODULE doesn't trigger a duplicate-
+  # main link error when this target is also on.
+  set(SVDSBTL_E2E_SOURCES ${APP_SOURCES})
+  list(REMOVE_ITEM SVDSBTL_E2E_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cxx")
   add_executable(SVDSBTL_E2E
-                 ${APP_SOURCES}
+                 ${SVDSBTL_E2E_SOURCES}
                  "${CMAKE_CURRENT_SOURCE_DIR}/dev/svd_sbtl_e2e.cpp")
   add_dependencies(SVDSBTL_E2E generate_headers)
   if(UNIX)

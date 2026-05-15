@@ -23,7 +23,13 @@ import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
 
-import CoolProp.CoolProp as CP
+# CoolProp is optional at plot time -- needed only for the saturation-dome
+# overlay.  If it's unavailable the script still produces the per-fluid
+# error-scatter PNGs (just without the red dome curve).
+try:
+    import CoolProp.CoolProp as CP
+except ImportError:
+    CP = None
 
 
 def fluid_from_path(path: str) -> Optional[str]:
@@ -32,9 +38,14 @@ def fluid_from_path(path: str) -> Optional[str]:
 
 
 def load_csv(path: str) -> dict:
+    """Load a Phase 2a results CSV.  Raises ValueError on malformed input."""
     arr = np.loadtxt(path, delimiter=",", skiprows=1)
+    if arr.size == 0:
+        raise ValueError(f"CSV has no data rows: {path}")
     if arr.ndim == 1:  # single row
         arr = arr[np.newaxis, :]
+    if arr.shape[1] < 6:
+        raise ValueError(f"CSV must have at least 6 columns: {path}")
     return {
         "T": arr[:, 0],
         "p": arr[:, 1],
@@ -55,16 +66,24 @@ def plot_fluid(fluid: str, csv_path: str) -> dict:
     p99 = float(np.percentile(rel, 99))
     p50 = float(np.percentile(rel, 50))
 
-    # Saturation curve for context.
-    try:
-        Tt = CP.PropsSI("Ttriple", fluid)
-        Tc = CP.PropsSI("Tcrit", fluid)
-        Tsat = np.linspace(Tt + 0.1, Tc - 0.01, 400)
-        psat = CP.PropsSI("P", "T", Tsat, "Q", 0, fluid)
-        hLs = CP.PropsSI("Hmass", "T", Tsat, "Q", 0, fluid)
-        hVs = CP.PropsSI("Hmass", "T", Tsat, "Q", 1, fluid)
-    except Exception:
-        psat = hLs = hVs = None
+    # Saturation curve for context.  Skip cleanly if CoolProp isn't
+    # importable or if the fluid is unknown to PropsSI -- the plot is
+    # still useful without the dome overlay.
+    psat = None
+    hLs = None
+    hVs = None
+    if CP is not None:
+        try:
+            Tt = CP.PropsSI("Ttriple", fluid)
+            Tc = CP.PropsSI("Tcrit", fluid)
+            Tsat = np.linspace(Tt + 0.1, Tc - 0.01, 400)
+            psat = CP.PropsSI("P", "T", Tsat, "Q", 0, fluid)
+            hLs = CP.PropsSI("Hmass", "T", Tsat, "Q", 0, fluid)
+            hVs = CP.PropsSI("Hmass", "T", Tsat, "Q", 1, fluid)
+        except Exception:
+            psat = None
+            hLs = None
+            hVs = None
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 7))
     cnorm = colors.LogNorm(vmin=1e-10, vmax=10)
@@ -114,7 +133,11 @@ def main() -> None:
         fluid = fluid_from_path(csv)
         if fluid is None or os.path.getsize(csv) == 0:
             continue
-        rows.append(plot_fluid(fluid, csv))
+        try:
+            rows.append(plot_fluid(fluid, csv))
+        except Exception as exc:
+            # One malformed CSV must not abort the whole batch.
+            print(f"skip {csv}: {exc}")
 
     print(f"\n{'fluid':<12s} {'N':>6s} {'max %':>12s} {'p99 %':>12s} {'p50 %':>12s}  png")
     print("-" * 90)

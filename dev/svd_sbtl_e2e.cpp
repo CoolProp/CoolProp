@@ -332,6 +332,13 @@ cp_svd::SVDDecomposition build_region_svd(CoolProp::AbstractState& heos, const c
             finite_vals.push_back(v);
         }
     }
+    if (finite_vals.empty()) {
+        // Every sample was non-finite — typically means the (T, p) grid
+        // walked outside the HEOS validity envelope for this region.
+        // Failing fast here beats producing a NaN-filled "table" and
+        // silently corrupting downstream SVD math.
+        throw std::runtime_error("SVD grid build failed: no finite log(rho) samples were produced");
+    }
     if (finite_vals.size() < M.size()) {
         std::nth_element(finite_vals.begin(), finite_vals.begin() + finite_vals.size() / 2, finite_vals.end());
         const double median = finite_vals[finite_vals.size() / 2];
@@ -378,7 +385,13 @@ FluidStats run_fluid(const std::string& fluid, const std::string& csv_dir) {
     std::uniform_real_distribution<double> uT(T_min_q, T_max_q);
     std::uniform_real_distribution<double> u_log_p(std::log(bundle.p_min * 1.05), std::log(bundle.p_max * 0.99));
 
-    std::ofstream csv(csv_dir + "/svd_sbtl_e2e_" + fluid + ".csv");
+    const std::string csv_path = csv_dir + "/svd_sbtl_e2e_" + fluid + ".csv";
+    std::ofstream csv(csv_path);
+    if (!csv.is_open()) {
+        // Bad output dir / permission issue / disk-full -- bail before
+        // silently dropping the per-fluid results.
+        throw std::runtime_error("Failed to open CSV output for fluid '" + fluid + "' at: " + csv_path);
+    }
     csv << "T,p,h,rho_truth,rho_pred,rel_err\n";
     csv << std::scientific << std::setprecision(12);
 
@@ -465,8 +478,8 @@ FluidStats run_fluid(const std::string& fluid, const std::string& csv_dir) {
         }
     }
 
-    std::printf("kept=%5zu  max=%.3e  p99=%.3e  p50=%.3e  build=%.1fs  lookup=%.0f ns/call\n", stats.kept, stats.max_rel, stats.p99_rel, stats.p50_rel,
-                stats.build_seconds, stats.lookup_ns_per_call);
+    std::printf("kept=%5zu  max=%.3e  p99=%.3e  p50=%.3e  build=%.1fs  lookup=%.0f ns/call\n", stats.kept, stats.max_rel, stats.p99_rel,
+                stats.p50_rel, stats.build_seconds, stats.lookup_ns_per_call);
     return stats;
 }
 
@@ -474,10 +487,13 @@ FluidStats run_fluid(const std::string& fluid, const std::string& csv_dir) {
 
 int main(int argc, char** argv) {
     const std::string csv_dir = (argc > 1) ? argv[1] : "/tmp";
-    NT = env_size_t("SVD_NT", NT_DEFAULT);
-    NR = env_size_t("SVD_NR", NR_DEFAULT);
-    RANK = env_int("SVD_RANK", RANK_DEFAULT);
-    N_PROBES = env_size_t("SVD_PROBES", N_PROBES_DEFAULT);
+    // Clamp env overrides to valid ranges before any downstream loop
+    // divides by (NT - 1) or (NR - 1).  Anything below 2 grid points
+    // would be a malformed table; rank < 1 has no usable decomposition.
+    NT = std::max<std::size_t>(2, env_size_t("SVD_NT", NT_DEFAULT));
+    NR = std::max<std::size_t>(2, env_size_t("SVD_NR", NR_DEFAULT));
+    RANK = std::max<std::int32_t>(1, env_int("SVD_RANK", RANK_DEFAULT));
+    N_PROBES = std::max<std::size_t>(1, env_size_t("SVD_PROBES", N_PROBES_DEFAULT));
 
     const std::vector<std::string> fluids = {"Water", "CarbonDioxide", "R134a", "Ammonia", "Methane", "Propane", "D6"};
 
