@@ -877,6 +877,40 @@ class AbstractState
         throw NotImplementedError("update_with_guesses is not implemented for this backend");
     };
 
+    /**
+     * @brief Vectorized direct evaluation that bypasses the AbstractState cache.
+     *
+     * Evaluate one or more outputs at one or more input points, writing into
+     * caller-supplied buffers. Performs no heap allocations and does not touch
+     * any cached state on the AbstractState instance — fast batch fluid-property
+     * evaluation without the per-call overhead of update()/keyed_output().
+     *
+     * Backends opt in; the default impl here throws NotImplementedError.
+     * Currently overridden by: TabularBackend (Bicubic, TTSE) and IF97Backend.
+     *
+     * Output layout: out_buffer[k * N_outputs + o] is output index o at point k.
+     *
+     * @param input_pair        Which input pair (e.g. HmolarP_INPUTS, PT_INPUTS).
+     * @param val1              First-input array, length N_inputs.
+     * @param val2              Second-input array, length N_inputs.
+     * @param N_inputs          Number of input points.
+     * @param outputs           Output parameter keys, length N_outputs.
+     * @param N_outputs         Number of outputs requested per input point.
+     * @param out_buffer        Row-major output, length >= N_inputs * N_outputs.
+     * @param out_buffer_size   Capacity of out_buffer (validated against N_inputs*N_outputs).
+     * @param status_flags      Per-point status, length >= N_inputs. 0 = ok.
+     * @param status_flags_size Capacity of status_flags (validated against N_inputs).
+     * @param imposed_phase     Optional phase hint; iphase_not_imposed = detect.
+     *
+     * On a per-point failure the corresponding output-buffer slice is filled
+     * with NaN and status_flags[k] is set to a nonzero fast_evaluate_status.
+     */
+    virtual void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
+                               const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size,
+                               int* status_flags, std::size_t status_flags_size, CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) {
+        throw NotImplementedError("fast_evaluate is not implemented for this backend");
+    };
+
     /// A function that says whether the backend instance can be instantiated in the high-level interface
     /// In general this should be true, except for some other backends (especially the tabular backends)
     /// To disable use in high-level interface, implement this function and return false

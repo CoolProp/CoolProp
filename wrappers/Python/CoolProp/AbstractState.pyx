@@ -121,6 +121,73 @@ cdef class AbstractState:
         _guesses.y = guesses.y
         self.thisptr.update_with_guesses(ipair, Value1, Value2, _guesses)
 
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    def fast_evaluate(self,
+                      constants_header.input_pairs input_pair,
+                      double[::1] val1 not None,
+                      double[::1] val2 not None,
+                      int[::1] outputs not None,
+                      double[:, ::1] out not None,
+                      int[::1] status not None,
+                      constants_header.phases imposed_phase=constants_header.iphase_not_imposed):
+        """
+        Vectorized cache-bypassing batch evaluation - wrapper of c++ function
+        :cpapi:`CoolProp::AbstractState::fast_evaluate`.
+
+        This is a zero-allocation fast path supported on tabular backends
+        (BICUBIC, TTSE) and the IF97 backend. All buffers are caller-allocated
+        and validated for shape before the call:
+
+        :param input_pair: One of ``HmolarP_INPUTS``, ``PT_INPUTS`` (tabular)
+            or ``PT_INPUTS``/``HmolarP_INPUTS``/``HmassP_INPUTS`` (IF97).
+        :param val1: 1D contiguous array of first inputs, length ``N_inputs``.
+        :param val2: 1D contiguous array of second inputs, length ``N_inputs``.
+        :param outputs: 1D int32 array of CoolProp output keys (e.g.
+            ``[iDmolar, iHmolar]``), length ``N_outputs``.
+        :param out: 2D contiguous (C-order) output array, shape
+            ``(N_inputs, N_outputs)``. Populated in place.
+        :param status: 1D int32 status array, length ``N_inputs``. ``0`` on
+            success, nonzero ``fast_evaluate_status`` on per-point failure.
+        :param imposed_phase: Optional phase hint (default: detect).
+
+        .. note::
+            Unlike :meth:`update`, this fast path does not perform saturation-
+            curve cell bumping for tabular backends. PT_INPUTS points that
+            land near the saturation curve may evaluate using a cell that
+            straddles the two-phase notch, giving values that diverge from
+            the cached path. To get strict single-phase results near
+            saturation, either:
+
+            * use ``HmolarP_INPUTS`` (which natively distinguishes liquid
+              vs vapor by enthalpy), or
+            * pass ``imposed_phase=iphase_liquid`` / ``iphase_gas``.
+        """
+        cdef Py_ssize_t N = val1.shape[0]
+        cdef Py_ssize_t M = outputs.shape[0]
+        cdef Py_ssize_t k
+        if val2.shape[0] != N:
+            raise ValueError("val1 and val2 must have the same length, got {0} and {1}".format(N, val2.shape[0]))
+        if out.shape[0] != N or out.shape[1] != M:
+            raise ValueError("out must have shape (N_inputs, N_outputs) = ({0}, {1}), got ({2}, {3})".format(N, M, out.shape[0], out.shape[1]))
+        if status.shape[0] != N:
+            raise ValueError("status must have length N_inputs = {0}, got {1}".format(N, status.shape[0]))
+        if N == 0:
+            return
+        if M == 0:
+            # Nothing to compute per point. C++ contract: status=ok, no output writes.
+            for k in range(N):
+                status[k] = 0
+            return
+        self.thisptr.fast_evaluate(
+            <constants_header.input_pairs>input_pair,
+            &val1[0], &val2[0], <size_t>N,
+            <constants_header.parameters*>&outputs[0], <size_t>M,
+            &out[0, 0], <size_t>(N * M),
+            &status[0], <size_t>N,
+            <constants_header.phases>imposed_phase,
+        )
+
     cpdef set_mole_fractions(self, vector[double] z):
         """ Set the mole fractions - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_mole_fractions` """
         self.thisptr.set_mole_fractions(z)

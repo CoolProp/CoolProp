@@ -625,6 +625,207 @@ class IF97Backend : public AbstractState
     double Prandtl() {
         return calc_Flash(iPrandtl);
     };
+
+    /// Vectorized direct evaluation. See AbstractState::fast_evaluate for contract.
+    /// IF97 is stateless under the hood; this entry point just dispatches each
+    /// (T,p) or (h,p) point straight to the IF97 namespace evaluators with no
+    /// allocations and no writes to the AbstractState cache.
+    void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
+                       const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size, int* status_flags,
+                       std::size_t status_flags_size, CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) override {
+        if (out_buffer_size < N_inputs * N_outputs) {
+            throw ValueError(
+              format("fast_evaluate: out_buffer_size=%zu < required %zu (N_inputs * N_outputs)", out_buffer_size, N_inputs * N_outputs));
+        }
+        if (status_flags_size < N_inputs) {
+            throw ValueError(format("fast_evaluate: status_flags_size=%zu < required %zu (N_inputs)", status_flags_size, N_inputs));
+        }
+        if (N_inputs == 0) return;
+        if (N_outputs == 0) {
+            for (std::size_t k = 0; k < N_inputs; ++k)
+                status_flags[k] = CoolProp::fast_evaluate_ok;
+            return;
+        }
+        if (val1 == nullptr || val2 == nullptr || outputs == nullptr || out_buffer == nullptr || status_flags == nullptr) {
+            throw ValueError("fast_evaluate: null pointer argument");
+        }
+
+        const bool is_PT = (input_pair == PT_INPUTS);
+        const bool is_HmassP = (input_pair == HmassP_INPUTS);
+        const bool is_HmolarP = (input_pair == HmolarP_INPUTS);
+        if (!is_PT && !is_HmassP && !is_HmolarP) {
+            throw ValueError(format("fast_evaluate (IF97): input_pair %s not supported (use PT_INPUTS, HmassP_INPUTS, HmolarP_INPUTS)",
+                                    get_input_pair_short_desc(input_pair).c_str()));
+        }
+
+        // Validate output keys up-front. IF97 covers everything its calc_Flash supports.
+        constexpr std::size_t MAX_FE_OUTPUTS = 64;
+        if (N_outputs > MAX_FE_OUTPUTS) {
+            throw ValueError(format("fast_evaluate: N_outputs=%zu exceeds compile-time limit %zu", N_outputs, MAX_FE_OUTPUTS));
+        }
+        for (std::size_t o = 0; o < N_outputs; ++o) {
+            switch (outputs[o]) {
+                case iT:
+                case iP:
+                case iDmass:
+                case iDmolar:
+                case iHmass:
+                case iHmolar:
+                case iSmass:
+                case iSmolar:
+                case iUmass:
+                case iUmolar:
+                case iCpmass:
+                case iCpmolar:
+                case iCvmass:
+                case iCvmolar:
+                case ispeed_sound:
+                case iviscosity:
+                case iconductivity:
+                case iPrandtl:
+                    break;
+                default:
+                    throw ValueError(
+                      format("fast_evaluate (IF97): output[%zu]=%s not supported", o, get_parameter_information(outputs[o], "short").c_str()));
+            }
+        }
+
+        const double M = calc_molar_mass();  // kg/mol, constant for water
+        const double NaN = std::numeric_limits<double>::quiet_NaN();
+
+        // imposed_phase: IF97 derives phase from (T,p) — we honour the hint by
+        // skipping the two-phase check when caller asserts single-phase.
+        const bool skip_twophase_check = (imposed_phase != iphase_not_imposed && imposed_phase != iphase_twophase && imposed_phase != iphase_unknown);
+
+        auto fill_nan_row = [&](std::size_t k) {
+            for (std::size_t o = 0; o < N_outputs; ++o) {
+                out_buffer[k * N_outputs + o] = NaN;
+            }
+        };
+
+        for (std::size_t k = 0; k < N_inputs; ++k) {
+            const double v1 = val1[k];
+            const double v2 = val2[k];
+
+            double T_k, p_k;
+            if (is_PT) {
+                p_k = v1;
+                T_k = v2;
+            } else {
+                // (h, p) input — convert h to mass basis and use IF97's
+                // backward T_phmass to recover T. Both branches must produce
+                // a clean (T, p) for the forward evaluators below.
+                p_k = v2;
+                double hmass_k = is_HmolarP ? (v1 / M) : v1;
+                try {
+                    T_k = IF97::T_phmass(p_k, hmass_k);
+                } catch (const std::exception&) {
+                    status_flags[k] = CoolProp::fast_evaluate_out_of_range;
+                    fill_nan_row(k);
+                    continue;
+                }
+            }
+
+            // Range check before evaluation. IF97 has explicit T/p limits; we
+            // reject points outside and let in-range points go to the kernel,
+            // which itself will throw on Region-5 etc. (caught below).
+            if (!(p_k > 0 && T_k > 0 && p_k <= IF97::get_Pmax() && T_k >= IF97::get_Tmin() && T_k <= IF97::get_Tmax())) {
+                status_flags[k] = CoolProp::fast_evaluate_out_of_range;
+                fill_nan_row(k);
+                continue;
+            }
+
+            // Two-phase rejection: PT_INPUTS landing exactly on the saturation
+            // curve is ambiguous; caller can use imposed_phase or QT/PQ inputs
+            // (which we don't support here yet). For (h,p) inputs the backward
+            // solver places us in a specific region so this is less common.
+            if (!skip_twophase_check && is_PT && T_k <= IF97::Tcrit) {
+                const double psat = IF97::psat97(T_k);
+                const double eps = 3.3e-5;
+                if (std::abs(p_k - psat) <= psat * eps) {
+                    status_flags[k] = CoolProp::fast_evaluate_two_phase_disallowed;
+                    fill_nan_row(k);
+                    continue;
+                }
+            }
+
+            bool eval_failed = false;
+            for (std::size_t o = 0; o < N_outputs; ++o) {
+                const parameters out_key = outputs[o];
+                try {
+                    double val;
+                    switch (out_key) {
+                        case iT:
+                            val = T_k;
+                            break;
+                        case iP:
+                            val = p_k;
+                            break;
+                        case iDmass:
+                            val = IF97::rhomass_Tp(T_k, p_k);
+                            break;
+                        case iDmolar:
+                            val = IF97::rhomass_Tp(T_k, p_k) / M;
+                            break;
+                        case iHmass:
+                            val = IF97::hmass_Tp(T_k, p_k);
+                            break;
+                        case iHmolar:
+                            val = IF97::hmass_Tp(T_k, p_k) * M;
+                            break;
+                        case iSmass:
+                            val = IF97::smass_Tp(T_k, p_k);
+                            break;
+                        case iSmolar:
+                            val = IF97::smass_Tp(T_k, p_k) * M;
+                            break;
+                        case iUmass:
+                            val = IF97::umass_Tp(T_k, p_k);
+                            break;
+                        case iUmolar:
+                            val = IF97::umass_Tp(T_k, p_k) * M;
+                            break;
+                        case iCpmass:
+                            val = IF97::cpmass_Tp(T_k, p_k);
+                            break;
+                        case iCpmolar:
+                            val = IF97::cpmass_Tp(T_k, p_k) * M;
+                            break;
+                        case iCvmass:
+                            val = IF97::cvmass_Tp(T_k, p_k);
+                            break;
+                        case iCvmolar:
+                            val = IF97::cvmass_Tp(T_k, p_k) * M;
+                            break;
+                        case ispeed_sound:
+                            val = IF97::speed_sound_Tp(T_k, p_k);
+                            break;
+                        case iviscosity:
+                            val = IF97::visc_Tp(T_k, p_k);
+                            break;
+                        case iconductivity:
+                            val = IF97::tcond_Tp(T_k, p_k);
+                            break;
+                        case iPrandtl:
+                            val = IF97::prandtl_Tp(T_k, p_k);
+                            break;
+                        default:
+                            val = NaN;
+                            eval_failed = true;
+                            break;
+                    }
+                    out_buffer[k * N_outputs + o] = val;
+                } catch (const std::exception&) {
+                    eval_failed = true;
+                    out_buffer[k * N_outputs + o] = NaN;
+                }
+            }
+            status_flags[k] = eval_failed ? CoolProp::fast_evaluate_internal_error : CoolProp::fast_evaluate_ok;
+        }
+        // IF97 is stateless externally; clear() resets internal cached values to
+        // be consistent with the TabularBackend contract (state untouched).
+        clear();
+    };
 };
 
 } /* namespace CoolProp */
