@@ -2,6 +2,7 @@
 #define COOLPROP_REGION_CUBIC_SPLINE_CURVE_H
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "CoolProp/region/BoundaryCurve.h"

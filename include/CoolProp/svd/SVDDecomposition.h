@@ -16,7 +16,7 @@ enum class OutputTransform : std::uint8_t
     EXP        // value = exp(sum_k S_k u_k v_k)  (matrix was log of property)
 };
 
-// Slope source used to build the per-mode 1D slopes (dU_dx, dV_dy).
+// Slope source used to build the per-mode 1D slopes (dU_dx, dV_S_dy).
 // Affects build only — the eval kernel reads slopes from arrays and is
 // agnostic to how they were computed.
 enum class SlopeSource : std::uint8_t
@@ -38,12 +38,15 @@ enum class SlopeSource : std::uint8_t
 //     The eval kernel becomes a plain dot product.  Storage saving:
 //     rank doubles (negligible).  CPU saving: one multiply per mode per
 //     call (small but free).
-//   - dU_dx and dV_dy carry the precomputed slopes used by the cubic
+//   - dU_dx and dV_S_dy carry the precomputed slopes used by the cubic
 //     Hermite kernel; one slope per (axis grid point, mode).
 //
-// The whole struct is trivially copyable except for the std::vectors;
-// callers wanting GPU portability can `cudaMemcpy` the raw buffers
-// pointed at by .data() and read them with an Eigen::Map.
+// This struct is NOT trivially copyable — the std::vector members own
+// heap storage, so a memcpy of the SVDDecomposition object itself
+// produces garbage.  Callers wanting GPU portability should `cudaMemcpy`
+// the underlying contiguous buffers (U.data(), V_S.data(), dU_dx.data(),
+// dV_S_dy.data(), x_grid.data(), y_grid.data()) into device buffers
+// individually and read them with an Eigen::Map on the device side.
 struct SVDDecomposition
 {
     std::int32_t NX = 0;    // number of grid points on x axis
