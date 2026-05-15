@@ -82,13 +82,24 @@ void report(const char* label, double ns_per_call, double baseline_ns) {
 }  // namespace
 
 int main(int argc, char** argv) {
-    const std::size_t repeats = env_size_t("PROFILE_REPEATS", 5'000'000);
+    // Clamp to >=1 so the timing math doesn't divide by zero on
+    // PROFILE_REPEATS=0.
+    const std::size_t repeats = std::max<std::size_t>(1, env_size_t("PROFILE_REPEATS", 5'000'000));
 
     double p = 1.0e6;
     double T = 350.0;
     if (argc >= 3) {
-        p = std::stod(argv[1]);
-        T = std::stod(argv[2]);
+        // Catch std::stod throws (invalid_argument / out_of_range) on
+        // bad numeric input rather than letting the process abort with
+        // a confusing terminate().  Same posture as the env-parsing
+        // helpers above.
+        try {
+            p = std::stod(argv[1]);
+            T = std::stod(argv[2]);
+        } catch (const std::exception& e) {
+            std::fprintf(stderr, "profile_svdsbtl: bad numeric argument: %s (expected: ./profile_svdsbtl <p_Pa> <T_K>)\n", e.what());
+            return 2;
+        }
     }
 
     // Setup: HEOS for h_truth, SVDSBTL backend for end-to-end timing,

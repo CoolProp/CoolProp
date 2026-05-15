@@ -10,6 +10,7 @@
 #include "CoolProp/sbtl/SatBoundaryFactory.h"
 #include "CoolProp/sbtl/SurfaceSpec.h"
 #include "DataStructures.h"
+#include "Exceptions.h"
 
 namespace CoolProp {
 namespace sbtl {
@@ -142,7 +143,12 @@ std::unique_ptr<region::CubicSplineCurve> pt_T_floor_curve_(::CoolProp::Abstract
                 heos.update(::CoolProp::PT_INPUTS, p, T_try);
                 T_found = T_try;
                 break;
-            } catch (...) {  // NOLINT(bugprone-empty-catch)
+            } catch (const CoolProp::CoolPropBaseError&) {
+                // Expected: below the melting line at this p, or
+                // otherwise outside the HEOS envelope.  Bump T up and
+                // retry; we don't swallow std::exception broadly to
+                // avoid masking real bugs (allocator failures,
+                // numeric_cast overflows, etc.).
             }
         }
         if (!std::isfinite(T_found)) {

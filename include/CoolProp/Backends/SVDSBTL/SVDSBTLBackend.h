@@ -76,7 +76,13 @@ class SVDSBTLBackend : public AbstractState
         return false;
     }
     void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override;
-    void set_mass_fractions(const std::vector<CoolPropDbl>& /*mass_fractions*/) override {}
+    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override {
+        // SVDSBTL is pure-fluid only; for pure fluids Qmass == Qmolar
+        // exactly and the only valid composition is {1.0}.  Route to
+        // set_mole_fractions so we share the size/value validation
+        // there instead of silently accepting any vector.
+        set_mole_fractions(mass_fractions);
+    }
     void set_volu_fractions(const std::vector<CoolPropDbl>& /*volu_fractions*/) override {
         throw NotImplementedError("SVDSBTL backend does not support volume fractions");
     }
@@ -126,8 +132,18 @@ class SVDSBTLBackend : public AbstractState
     std::vector<std::string> calc_fluid_names() override {
         return {fluid_name_};
     }
-    std::string fluid_param_string(const std::string& /*ParamName*/) override {
-        return fluid_name_;
+    std::string fluid_param_string(const std::string& ParamName) override {
+        // HEOS exposes a range of per-fluid metadata strings via
+        // fluid_param_string (name, aliases, CAS, formula, ...).  For
+        // SVDSBTL we only need to make sure "name" round-trips
+        // correctly; everything else routes to the HEOS reference
+        // so callers don't lose access to those strings by switching
+        // backends.  Keep the "name" / "aliases" fast paths inline
+        // so they don't trip an unnecessary HEOS construction.
+        if (ParamName == "name") {
+            return fluid_name_;
+        }
+        return heos_reference_()->fluid_param_string(ParamName);
     }
 
     // Test seam: exposes which surfaces were loaded vs built.  Returns

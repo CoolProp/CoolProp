@@ -15,10 +15,26 @@ namespace {
 // forward, one pass back.  Writes the solution into d in-place.
 void thomas(std::vector<double>& sub, std::vector<double>& diag, std::vector<double>& sup, std::vector<double>& d) {
     const std::size_t n = diag.size();
+    // Defense in depth: every CubicSplineCurve build() call feeds the
+    // natural-cubic system whose diagonal is (h_lo + h_hi)/3 with both
+    // h_i strictly positive (we validate strictly-increasing a above),
+    // so the diagonal is always positive.  But if someone routes a
+    // future call into this helper with a pathological matrix, the
+    // forward sweep silently divides by zero -- check explicitly so we
+    // surface a clear error instead of producing NaN coefficients.
+    constexpr double kTinyDiag = 1e-300;
+    for (std::size_t i = 0; i < n; ++i) {
+        if (std::abs(diag[i]) < kTinyDiag) {
+            throw std::invalid_argument("thomas: zero (or sub-normal) diagonal entry; tridiagonal system is singular");
+        }
+    }
     // Forward sweep.
     for (std::size_t i = 1; i < n; ++i) {
         const double m = sub[i] / diag[i - 1];
         diag[i] -= m * sup[i - 1];
+        if (std::abs(diag[i]) < kTinyDiag) {
+            throw std::invalid_argument("thomas: pivot vanished during forward sweep (system is singular at row " + std::to_string(i) + ")");
+        }
         d[i] -= m * d[i - 1];
     }
     // Back substitution.
@@ -234,6 +250,14 @@ std::size_t CubicSplineCurve::locate(double a) const noexcept {
     // — the build_bucket_table_ pass already absorbed it.
     const std::size_t n = a_.size();
     const double a_lo = a_.front();
+    // NaN/inf guard: the comparisons below are both false on NaN,
+    // and the cast to ptrdiff_t a few lines down is UB on non-finite
+    // values.  Return the leftmost segment for any non-finite input
+    // — the eventual eval() math will propagate NaN to the caller
+    // through the standard return path.
+    if (!std::isfinite(a)) {
+        return 0;
+    }
     if (a <= a_lo) {
         return 0;
     }

@@ -107,7 +107,9 @@ class SVDEvaluator
     // cost relative to the borrowed-ref form is a single pointer hop
     // at construction; the eval hot path is identical.
     explicit SVDEvaluator(std::shared_ptr<const SVDDecomposition> decomp)
-      : SVDEvaluator(*decomp)  // delegate to the ref constructor for invariant check
+      : SVDEvaluator(decomp ? *decomp
+                            : throw std::invalid_argument(
+                                "SVDEvaluator: shared_ptr<SVDDecomposition> must not be null"))  // delegate to the ref ctor for the invariant check
     {
         owned_ = std::move(decomp);
     }

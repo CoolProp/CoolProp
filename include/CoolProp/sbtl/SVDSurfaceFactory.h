@@ -2,6 +2,7 @@
 #define COOLPROP_SBTL_SVD_SURFACE_FACTORY_H
 
 #include <cstddef>
+#include <cstdint>
 
 #include "AbstractState.h"
 #include "CoolProp/sbtl/SVDSurface.h"

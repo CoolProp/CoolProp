@@ -17,9 +17,12 @@
 //   ./build/bench_svdsbtl_ph Water Propane    # subset
 //
 // Env:
-//   BENCH_NT (default 80) — temperature grid points
-//   BENCH_NP (default 60) — pressure grid points
-//   BENCH_REPEATS (default 200) — calls per point for timing
+//   BENCH_NT (default 200) — temperature grid points
+//   BENCH_NP (default 150) — pressure grid points
+//   BENCH_REPEATS (default 100) — calls per point for timing
+//   BENCH_REFPROP_PATH       — optional path to a REFPROP install
+//                              (e.g. /Users/you/REFPROP10/); empty
+//                              disables the REFPROP comparison column
 //
 // NOLINTBEGIN(cppcoreguidelines-pro-type-vararg,cert-err33-c,hicpp-vararg,bugprone-empty-catch)
 
@@ -140,10 +143,18 @@ double time_update_rhomass(::CoolProp::AbstractState& AS, ::CoolProp::input_pair
 // fails on this platform.
 void* refprop_sym_(const std::string& refprop_path, const std::vector<const char*>& names) {
 #if defined(__unix__) || defined(__APPLE__)
-    const std::string lib_path = refprop_path + "librefprop.dylib";
+    // Normalise the path so we don't accidentally fuse the last
+    // directory name into the library file name when the caller
+    // passes a slash-less path (e.g. "/usr/local/lib" + "librefprop.dylib"
+    // would produce "/usr/local/liblibrefprop.dylib").
+    std::string base = refprop_path;
+    if (!base.empty() && base.back() != '/') {
+        base += '/';
+    }
+    const std::string lib_path = base + "librefprop.dylib";
     void* handle = dlopen(lib_path.c_str(), RTLD_NOW);
     if (handle == nullptr) {
-        handle = dlopen((refprop_path + "librefprop.so").c_str(), RTLD_NOW);
+        handle = dlopen((base + "librefprop.so").c_str(), RTLD_NOW);
     }
     if (handle == nullptr) {
         return nullptr;
@@ -389,7 +400,21 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
                 }
 
                 rows.push_back(r);
-            } catch (...) {  // NOLINT(bugprone-empty-catch)
+            } catch (const std::exception& e) {
+                // HEOS at this (T, p) failed — typical reason is the
+                // melting line / two-phase boundary (the bench's Q
+                // check should catch most, but PT_INPUTS in a thin
+                // band can still throw).  Print and continue rather
+                // than silently dropping the cell, so a regression
+                // that knocks out a large grid swath isn't hidden.
+                static std::size_t printed = 0;
+                if (printed < 20) {
+                    std::printf("  skip cell (T=%.3g K, p=%.3g Pa): %s\n", T, p, e.what());
+                    ++printed;
+                    if (printed == 20) {
+                        std::printf("  (further skipped cells suppressed)\n");
+                    }
+                }
             }
         }
     }
@@ -510,9 +535,13 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
 }  // namespace
 
 int main(int argc, char** argv) {
-    const std::size_t NT = env_size_t("BENCH_NT", 200);
-    const std::size_t NP = env_size_t("BENCH_NP", 150);
-    const std::size_t repeats = env_size_t("BENCH_REPEATS", 100);
+    // Clamp env overrides to valid ranges before any downstream loop
+    // divides by (NT - 1), (NR - 1), or repeats.  Anything below 2
+    // grid points is a malformed table; repeats < 1 produces a
+    // divide-by-zero in the timing math.
+    const std::size_t NT = std::max<std::size_t>(2, env_size_t("BENCH_NT", 200));
+    const std::size_t NP = std::max<std::size_t>(2, env_size_t("BENCH_NP", 150));
+    const std::size_t repeats = std::max<std::size_t>(1, env_size_t("BENCH_REPEATS", 100));
     const char* refprop_env = std::getenv("BENCH_REFPROP_PATH");
     const std::string refprop_path = (refprop_env != nullptr) ? std::string(refprop_env) : std::string();
 

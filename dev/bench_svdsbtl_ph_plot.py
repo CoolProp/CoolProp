@@ -88,6 +88,10 @@ def _saturation_dome(fluid: str) -> tuple[dict | None, float | None]:
             hL[i] = cp.PropsSI("H", "P", p, "Q", 0.0, fluid)
             hV[i] = cp.PropsSI("H", "P", p, "Q", 1.0, fluid)
         except Exception:
+            # PropsSI near the critical point or at melting-line
+            # collisions can throw.  Leave hL[i] / hV[i] as NaN —
+            # matplotlib silently skips NaN scatter points when
+            # drawing the dome overlay below.
             pass
     return {"p": p_arr, "hL": hL, "hV": hV}, p_crit
 
