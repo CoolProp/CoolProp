@@ -27,28 +27,69 @@ import pandas as pd
 from matplotlib.colors import LogNorm
 
 
-def _err_panel(ax, h_kJ, p_MPa, vals, title, vmin=1e-7, vmax=1e-1):
-    vals = np.maximum(vals, 1e-16)
-    sc = ax.scatter(h_kJ, p_MPa, c=vals, s=6, edgecolor="none", cmap="viridis", norm=LogNorm(vmin=vmin, vmax=vmax))
+def _err_panel(ax, h_kJ, p_MPa, vals, title, vmin=1e-7, vmax=1e-1, dome=None, p_crit_MPa=None):
+    vals = np.maximum(np.asarray(vals, dtype=float), 1e-16)
+    valid = ~np.isnan(vals)
+    sc = ax.scatter(h_kJ[valid], p_MPa[valid], c=vals[valid], s=4, edgecolor="none", cmap="viridis", norm=LogNorm(vmin=vmin, vmax=vmax))
     ax.set_yscale("log")
     ax.set_xlabel("h  [kJ/kg]")
     ax.set_ylabel("p  [MPa]")
     ax.set_title(title)
+    if dome is not None:
+        ax.plot(dome["hL"] / 1e3, dome["p"] / 1e6, color="red", lw=0.8, alpha=0.8)
+        ax.plot(dome["hV"] / 1e3, dome["p"] / 1e6, color="red", lw=0.8, alpha=0.8)
+    if p_crit_MPa is not None:
+        ax.axhline(p_crit_MPa, color="gray", ls="--", lw=0.6, alpha=0.6)
     plt.colorbar(sc, ax=ax, label="relative error")
 
 
-def _time_panel(ax, h_kJ, p_MPa, ns, title, norm):
+def _time_panel(ax, h_kJ, p_MPa, ns, title, norm, dome=None, p_crit_MPa=None):
     if np.all(np.isnan(ns)):
         ax.set_axis_off()
         ax.set_title(title + "  (n/a)")
         return
     valid = ~np.isnan(ns)
-    sc = ax.scatter(h_kJ[valid], p_MPa[valid], c=ns[valid], s=6, edgecolor="none", cmap="magma", norm=norm)
+    sc = ax.scatter(h_kJ[valid], p_MPa[valid], c=ns[valid], s=4, edgecolor="none", cmap="magma", norm=norm)
     ax.set_yscale("log")
     ax.set_xlabel("h  [kJ/kg]")
     ax.set_ylabel("p  [MPa]")
     ax.set_title(title)
+    if dome is not None:
+        ax.plot(dome["hL"] / 1e3, dome["p"] / 1e6, color="cyan", lw=0.8, alpha=0.8)
+        ax.plot(dome["hV"] / 1e3, dome["p"] / 1e6, color="cyan", lw=0.8, alpha=0.8)
+    if p_crit_MPa is not None:
+        ax.axhline(p_crit_MPa, color="gray", ls="--", lw=0.6, alpha=0.6)
     plt.colorbar(sc, ax=ax, label="ns / call")
+
+
+def _saturation_dome(fluid: str) -> tuple[dict | None, float | None]:
+    """Walk the saturation curve via CoolProp.HEOS for the dome overlay.
+
+    Returns (dict with arrays p, hL, hV, or None if HEOS doesn't have
+    this fluid; p_crit in Pa or None).  Catches all exceptions so the
+    plot still produces something useful if CoolProp isn't importable.
+    """
+    try:
+        import CoolProp.CoolProp as cp
+    except Exception:
+        return None, None
+
+    try:
+        p_crit = cp.PropsSI("pcrit", fluid)
+        p_trip = cp.PropsSI("ptriple", fluid)
+    except Exception:
+        return None, None
+
+    p_arr = np.geomspace(p_trip * 1.01, p_crit * 0.999, 200)
+    hL = np.full(p_arr.size, np.nan)
+    hV = np.full(p_arr.size, np.nan)
+    for i, p in enumerate(p_arr):
+        try:
+            hL[i] = cp.PropsSI("H", "P", p, "Q", 0.0, fluid)
+            hV[i] = cp.PropsSI("H", "P", p, "Q", 1.0, fluid)
+        except Exception:
+            pass
+    return {"p": p_arr, "hL": hL, "hV": hV}, p_crit
 
 
 def plot_one(csv_path: Path, out_path: Path) -> None:
@@ -58,6 +99,8 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
         return
 
     fluid = csv_path.stem.replace("bench_svdsbtl_ph_", "")
+    dome, p_crit_Pa = _saturation_dome(fluid)
+    p_crit_MPa = p_crit_Pa / 1e6 if p_crit_Pa is not None else None
     has_refprop = df["ns_per_call_refprop"].notna().any()
     has_refprop_direct = "ns_per_call_refprop_direct" in df.columns and df["ns_per_call_refprop_direct"].notna().any()
     has_if97 = "ns_per_call_if97" in df.columns and df["ns_per_call_if97"].notna().any()
@@ -73,11 +116,15 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
     h_kJ = df["h"].to_numpy() / 1e3
     p_MPa = df["p"].to_numpy() / 1e6
 
-    # Row 0 -- accuracy panels (SVDSBTL vs HEOS).
-    _err_panel(axes[0, 0], h_kJ, p_MPa, df["rel_err_rho"].to_numpy(), r"$\rho$  rel. error  vs HEOS")
-    _err_panel(axes[0, 1], h_kJ, p_MPa, df["rel_err_T"].to_numpy(), "T  rel. error  vs HEOS")
-    _err_panel(axes[0, 2], h_kJ, p_MPa, df["rel_err_s"].to_numpy(), "s  rel. error  vs HEOS")
-    _err_panel(axes[0, 3], h_kJ, p_MPa, df["rel_err_u"].to_numpy(), "u  rel. error  vs HEOS")
+    # Row 0 -- accuracy panels (SVDSBTL vs HEOS).  Sat dome (red) +
+    # critical-pressure line (gray dashed) overlaid so the eye can
+    # see where coverage stops and where the surface is fighting
+    # boundary geometry.
+    common = dict(dome=dome, p_crit_MPa=p_crit_MPa)
+    _err_panel(axes[0, 0], h_kJ, p_MPa, df["rel_err_rho"].to_numpy(), r"$\rho$  rel. error  vs HEOS", **common)
+    _err_panel(axes[0, 1], h_kJ, p_MPa, df["rel_err_T"].to_numpy(), "T  rel. error  vs HEOS", **common)
+    _err_panel(axes[0, 2], h_kJ, p_MPa, df["rel_err_s"].to_numpy(), "s  rel. error  vs HEOS", **common)
+    _err_panel(axes[0, 3], h_kJ, p_MPa, df["rel_err_u"].to_numpy(), "u  rel. error  vs HEOS", **common)
 
     # Row 1 -- timing panels on a SHARED log color scale so the
     # cross-backend speed delta is visually unambiguous.  For IF97
@@ -99,12 +146,13 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
     vmax = float(np.percentile(all_ns, 99))
     shared = LogNorm(vmin=vmin, vmax=vmax)
 
-    _time_panel(axes[1, 0], h_kJ, p_MPa, df["ns_per_call_svd"].to_numpy(), "SVDSBTL  ns / (update + rhomass)", shared)
+    tcommon = dict(dome=dome, p_crit_MPa=p_crit_MPa)
+    _time_panel(axes[1, 0], h_kJ, p_MPa, df["ns_per_call_svd"].to_numpy(), "SVDSBTL  ns / (update + rhomass)", shared, **tcommon)
     if97_title = "IF97 direct rhomass_phmass  ns / call" if has_if97_direct else "IF97  ns / (update + rhomass via AS)"
-    _time_panel(axes[1, 1], h_kJ, p_MPa, if97_ns, if97_title, shared)
-    _time_panel(axes[1, 2], h_kJ, p_MPa, df["ns_per_call_heos"].to_numpy(), "HEOS  ns / (update + rhomass)", shared)
+    _time_panel(axes[1, 1], h_kJ, p_MPa, if97_ns, if97_title, shared, **tcommon)
+    _time_panel(axes[1, 2], h_kJ, p_MPa, df["ns_per_call_heos"].to_numpy(), "HEOS  ns / (update + rhomass)", shared, **tcommon)
     refprop_title = "REFPROP direct PHFLSHdll  ns / call" if has_refprop_direct else "REFPROP  ns / (update + rhomass via AS)"
-    _time_panel(axes[1, 3], h_kJ, p_MPa, refprop_ns, refprop_title, shared)
+    _time_panel(axes[1, 3], h_kJ, p_MPa, refprop_ns, refprop_title, shared, **tcommon)
 
     # Summary footer.
     max_rho = df["rel_err_rho"].max()

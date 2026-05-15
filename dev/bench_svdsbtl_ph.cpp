@@ -237,10 +237,16 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
         }
     }
 
-    const double T_min = std::max(heos->Ttriple(), heos->Tmin()) + 1.0;
-    const double T_max = heos->Tmax() - 1.0;
-    const double p_min = heos->p_triple() * 1.5;
-    const double p_max = heos->p_critical() * 0.98;
+    // Full phase-diagram coverage: triple-point pressure -> backend's
+    // upper limit, triple-point temperature -> Tmax.  Goes well past
+    // p_crit into supercritical territory; SVDSBTL only covers
+    // subcritical so above-p_crit cells will record rho_pred = NaN.
+    // We keep them in the output anyway so the plot can show where
+    // coverage stops.
+    const double T_min = std::max(heos->Ttriple(), heos->Tmin()) + 0.5;
+    const double T_max = heos->Tmax() - 0.5;
+    const double p_min = heos->p_triple() * 1.1;
+    const double p_max = heos->pmax() * 0.99;
 
     std::vector<Row> rows;
     rows.reserve(NT * NP);
@@ -269,16 +275,20 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
                 r.s_pred = svd->smass();
                 r.u_pred = svd->umass();
 
-                if (std::isnan(r.rho_pred)) {
-                    continue;  // outside any region (e.g. dome edge slip)
+                const bool svd_in_domain = !std::isnan(r.rho_pred);
+                if (svd_in_domain) {
+                    r.rel_err_rho = std::abs(r.rho_pred - r.rho_truth) / r.rho_truth;
+                    r.rel_err_T = std::abs(r.T_pred - r.T) / r.T;
+                    r.rel_err_s = (r.s_truth != 0.0) ? std::abs(r.s_pred - r.s_truth) / std::abs(r.s_truth) : 0.0;
+                    r.rel_err_u = (r.u_truth != 0.0) ? std::abs(r.u_pred - r.u_truth) / std::abs(r.u_truth) : 0.0;
+                    r.ns_per_call_svd = time_update_rhomass(*svd, ::CoolProp::HmassP_INPUTS, r.h, r.p, repeats);
+                } else {
+                    r.rel_err_rho = std::nan("");
+                    r.rel_err_T = std::nan("");
+                    r.rel_err_s = std::nan("");
+                    r.rel_err_u = std::nan("");
+                    r.ns_per_call_svd = std::nan("");
                 }
-
-                r.rel_err_rho = std::abs(r.rho_pred - r.rho_truth) / r.rho_truth;
-                r.rel_err_T = std::abs(r.T_pred - r.T) / r.T;
-                r.rel_err_s = (r.s_truth != 0.0) ? std::abs(r.s_pred - r.s_truth) / std::abs(r.s_truth) : 0.0;
-                r.rel_err_u = (r.u_truth != 0.0) ? std::abs(r.u_pred - r.u_truth) / std::abs(r.u_truth) : 0.0;
-
-                r.ns_per_call_svd = time_update_rhomass(*svd, ::CoolProp::HmassP_INPUTS, r.h, r.p, repeats);
                 r.ns_per_call_heos = time_update_rhomass(*heos, ::CoolProp::PT_INPUTS, p, T, repeats);
 
                 if (if97) {
@@ -356,16 +366,20 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
     double sum_ns_refprop_direct = 0;
     double sum_ns_if97 = 0;
     double sum_ns_if97_direct = 0;
+    std::size_t n_svd = 0;  // cells where SVDSBTL is in-domain
     std::size_t n_refprop = 0;
     std::size_t n_refprop_direct = 0;
     std::size_t n_if97 = 0;
     std::size_t n_if97_direct = 0;
     for (const auto& r : rows) {
-        max_rho = std::max(max_rho, r.rel_err_rho);
-        max_T = std::max(max_T, r.rel_err_T);
-        max_s = std::max(max_s, r.rel_err_s);
-        max_u = std::max(max_u, r.rel_err_u);
-        sum_ns_svd += r.ns_per_call_svd;
+        if (!std::isnan(r.rel_err_rho)) {
+            max_rho = std::max(max_rho, r.rel_err_rho);
+            max_T = std::max(max_T, r.rel_err_T);
+            max_s = std::max(max_s, r.rel_err_s);
+            max_u = std::max(max_u, r.rel_err_u);
+            sum_ns_svd += r.ns_per_call_svd;
+            ++n_svd;
+        }
         sum_ns_heos += r.ns_per_call_heos;
         if (!std::isnan(r.ns_per_call_refprop)) {
             sum_ns_refprop += r.ns_per_call_refprop;
@@ -385,9 +399,11 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
         }
     }
     const auto n = static_cast<double>(rows.size());
-    const double mean_svd = sum_ns_svd / n;
+    const auto n_in_domain = static_cast<double>(n_svd);
+    const double mean_svd = (n_svd > 0) ? sum_ns_svd / n_in_domain : std::nan("");
     const double mean_heos = sum_ns_heos / n;
-    std::printf("%-12s N=%5zu  max_rel: rho=%.2e T=%.2e s=%.2e u=%.2e\n", fluid.c_str(), rows.size(), max_rho, max_T, max_s, max_u);
+    std::printf("%-12s N=%5zu (SVDSBTL in-domain=%zu, out-of-domain=%zu)\n", fluid.c_str(), rows.size(), n_svd, rows.size() - n_svd);
+    std::printf("            max_rel: rho=%.2e T=%.2e s=%.2e u=%.2e\n", max_rho, max_T, max_s, max_u);
     std::printf("            mean ns/call: svd=%.0f  heos=%.0f", mean_svd, mean_heos);
     if (n_refprop > 0) {
         std::printf("  refprop(via AS)=%.0f", sum_ns_refprop / static_cast<double>(n_refprop));
@@ -420,9 +436,9 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
 }  // namespace
 
 int main(int argc, char** argv) {
-    const std::size_t NT = env_size_t("BENCH_NT", 80);
-    const std::size_t NP = env_size_t("BENCH_NP", 60);
-    const std::size_t repeats = env_size_t("BENCH_REPEATS", 200);
+    const std::size_t NT = env_size_t("BENCH_NT", 200);
+    const std::size_t NP = env_size_t("BENCH_NP", 150);
+    const std::size_t repeats = env_size_t("BENCH_REPEATS", 100);
     const char* refprop_env = std::getenv("BENCH_REFPROP_PATH");
     const std::string refprop_path = (refprop_env != nullptr) ? std::string(refprop_env) : std::string();
 
