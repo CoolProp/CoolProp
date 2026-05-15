@@ -18,8 +18,11 @@ namespace {
 // extracting it once keeps the per-factory code 4–5 lines.
 std::unique_ptr<region::CubicSplineCurve> spline_through_log_p_samples(double p_min, double p_max, std::size_t n_knots,
                                                                        const std::function<double(double)>& f) {
-    if (!(p_max > p_min) || n_knots < 2) {
-        throw std::invalid_argument("SatBoundaryFactory: invalid p range or n_knots");
+    // p_min must be strictly positive for log-space sampling; otherwise
+    // std::log(p_min) silently feeds -inf into the spline knots and we'd
+    // cascade into hard-to-debug downstream failures.
+    if (!(p_min > 0.0) || !(p_max > p_min) || n_knots < 2) {
+        throw std::invalid_argument("SatBoundaryFactory: invalid p range or n_knots (need 0 < p_min < p_max and n_knots >= 2)");
     }
     std::vector<double> p_knots(n_knots);
     std::vector<double> y(n_knots);

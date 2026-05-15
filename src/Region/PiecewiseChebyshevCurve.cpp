@@ -271,6 +271,9 @@ std::unique_ptr<PiecewiseChebyshevCurve> PiecewiseChebyshevCurve::from_state(Sta
         if (ps.deriv_coeffs.size() + 1 != ps.coeffs.size()) {
             throw std::invalid_argument("PiecewiseChebyshevCurve::from_state: deriv_coeffs size must be coeffs.size() - 1");
         }
+        if (!(ps.t_hi > ps.t_lo)) {
+            throw std::invalid_argument("PiecewiseChebyshevCurve::from_state: each piece must have t_hi > t_lo");
+        }
         Piece p;
         p.t_lo = ps.t_lo;
         p.t_hi = ps.t_hi;
@@ -279,6 +282,22 @@ std::unique_ptr<PiecewiseChebyshevCurve> PiecewiseChebyshevCurve::from_state(Sta
         p.coeffs = std::move(ps.coeffs);
         p.deriv_coeffs = std::move(ps.deriv_coeffs);
         pieces.push_back(std::move(p));
+    }
+    // `locate_piece` does an O(1) hit assuming pieces are sorted,
+    // contiguous, and uniformly sized in t -- invariants build()
+    // guarantees, but a malformed blob could break any of them and
+    // silently route queries to the wrong piece.  Validate up-front so
+    // the O(1) lookup math is always safe.
+    const double dt0 = pieces.front().t_hi - pieces.front().t_lo;
+    const double eps = 1e-9 * std::max(1.0, std::abs(dt0));
+    for (std::size_t i = 0; i < pieces.size(); ++i) {
+        if (i > 0 && std::abs(pieces[i].t_lo - pieces[i - 1].t_hi) > eps) {
+            throw std::invalid_argument("PiecewiseChebyshevCurve::from_state: pieces must be contiguous in t (gap or overlap detected)");
+        }
+        const double dt = pieces[i].t_hi - pieces[i].t_lo;
+        if (std::abs(dt - dt0) > eps) {
+            throw std::invalid_argument("PiecewiseChebyshevCurve::from_state: pieces must be uniformly spaced in t (locate_piece assumes this)");
+        }
     }
     return std::unique_ptr<PiecewiseChebyshevCurve>(new PiecewiseChebyshevCurve(s.a_lo, s.a_hi, s.scale, std::move(pieces), s.b_min, s.b_max));
 }

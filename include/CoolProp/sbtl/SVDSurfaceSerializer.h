@@ -29,7 +29,9 @@ namespace sbtl {
 //
 //   [
 //     input_pair,                    // int (CoolProp::input_pairs)
-//     [[prop_key, transform], ...],  // properties
+//     [[prop_key], ...],             // properties (length-1 arrays;
+//                                    //  per-property OutputTransform
+//                                    //  lives inside each decomp_blob)
 //     [region_blob, ...],            // regions
 //     [decomp_blob, ...]             // per (region, property) SVDs
 //   ]
@@ -50,8 +52,10 @@ namespace sbtl {
 //     they add anything.
 //
 // File extension convention: `.svd.bin.z`, parallel to BicubicBackend's
-// `.bin.z`.  Stored at `${HOME}/.CoolProp/SVDTables/<fluid>.svd.bin.z`
-// by the helper paths below.
+// `.bin.z`.  Stored at
+// `${HOME}/.CoolProp/SVDTables/<fluid>.<input_pair>.svd.bin.z`
+// by the helper paths below — see default_cache_path() for the exact
+// composition (input_pair is the integer value of the enum).
 
 class SVDSurfaceSerializer
 {

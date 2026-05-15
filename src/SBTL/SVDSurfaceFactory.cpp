@@ -127,6 +127,14 @@ std::vector<std::vector<double>> sample_grid(::CoolProp::AbstractState& heos, co
             }
         }
         if (finite_vals.size() < m.size()) {
+            if (finite_vals.empty()) {
+                // Every sample for this property in this region was
+                // non-finite — typically means the (T, p) grid walked
+                // outside the HEOS validity envelope for this region's
+                // axis transform.  Failing fast beats producing a NaN-
+                // filled "table" and silently corrupting the SVD math.
+                throw std::runtime_error("build_surface: all-NaN property matrix in region (HEOS sampling produced no finite values)");
+            }
             std::nth_element(finite_vals.begin(), finite_vals.begin() + static_cast<std::ptrdiff_t>(finite_vals.size() / 2), finite_vals.end());
             const double median = finite_vals[finite_vals.size() / 2];
             for (double& v : m) {
@@ -165,6 +173,15 @@ SVDSurface build_surface(::CoolProp::AbstractState& heos, SurfaceSpec spec, cons
     if (!spec.update_state || !spec.read_property) {
         throw std::invalid_argument("build_surface: SurfaceSpec is missing update_state / read_property callbacks");
     }
+    // Grid axes use (NT - 1) / (NR - 1) as denominators; values < 2 would
+    // emit NaN-shaped grids and crash downstream SVD math.  Rank < 1 has
+    // no usable decomposition.
+    if (spec.NT < 2 || spec.NR < 2) {
+        throw std::invalid_argument("build_surface: SurfaceSpec.NT and .NR must each be >= 2");
+    }
+    if (spec.rank < 1) {
+        throw std::invalid_argument("build_surface: SurfaceSpec.rank must be >= 1");
+    }
 
     // Build the SVDSurface, transferring regions in order, then SVDs.
     std::vector<::CoolProp::parameters> prop_keys;
@@ -195,6 +212,7 @@ SVDSurface build_surface(::CoolProp::AbstractState& heos, SurfaceSpec spec, cons
             svd::SVDDecomposition decomp = svd::build_svd(xn_grid, xi_grid, M_per_prop[p], svdopts);
             surface.add_region_property_svd(region_idx, spec.properties[p].key, std::move(decomp));
             if (opts.verbose) {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
                 std::printf("  region %zu property %d: SVD built (rank=%d)\n", region_idx, static_cast<int>(spec.properties[p].key), spec.rank);
             }
         }

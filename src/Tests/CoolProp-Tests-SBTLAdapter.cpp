@@ -1,13 +1,13 @@
 // Catch2 tests for the SBTL adapter layer (Phase 2b): SatBoundaryFactory,
-// SurfaceSpec, SVDSurfaceFactory, SVDSurface, presets.
-//
-// The serializer round-trip tests are added in a separate file once
-// the SVDSurfaceSerializer lands.  For now this exercises the
-// build-and-eval end-to-end at a SMALL grid so the suite stays fast.
+// SurfaceSpec, SVDSurfaceFactory, SVDSurface, presets, and the
+// SVDSurfaceSerializer round-trip + corruption-rejection coverage.
+// Build-and-eval tests use a SMALL grid so the suite stays fast;
+// production-resolution accuracy is covered by Phase 2a's SVDSBTL_E2E.
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
 
+#    include <filesystem>
 #    include <memory>
 #    include <random>
 #    include <vector>
@@ -169,6 +169,23 @@ TEST_CASE("SVDSurface save/load round-trip is bit-identical", "[SBTL][serializer
     REQUIRE(compared >= 10);
 }
 
+TEST_CASE("SVDSurfaceSerializer::default_cache_path rejects path-traversal fluid names", "[SBTL][serializer]") {
+    // Defense-in-depth: anything that could escape the cache directory
+    // must throw rather than silently writing outside ~/.CoolProp/SVDTables.
+    using Catch::Matchers::ContainsSubstring;
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("../etc/passwd", ::CoolProp::HmassP_INPUTS),
+                        ContainsSubstring("invalid fluid_name"));
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("foo/bar", ::CoolProp::HmassP_INPUTS),
+                        ContainsSubstring("invalid fluid_name"));
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("foo\\bar", ::CoolProp::HmassP_INPUTS),
+                        ContainsSubstring("invalid fluid_name"));
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("..", ::CoolProp::HmassP_INPUTS), ContainsSubstring("invalid fluid_name"));
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("", ::CoolProp::HmassP_INPUTS), ContainsSubstring("invalid fluid_name"));
+    // Legitimate names pass.
+    REQUIRE_NOTHROW(cp_sbtl::SVDSurfaceSerializer::default_cache_path("Water", ::CoolProp::HmassP_INPUTS));
+    REQUIRE_NOTHROW(cp_sbtl::SVDSurfaceSerializer::default_cache_path("R134a", ::CoolProp::PT_INPUTS));
+}
+
 TEST_CASE("SVDSurfaceSerializer rejects corrupt input", "[SBTL][serializer]") {
     // Empty / truncated / wrong-magic bytes should all throw, not segfault.
     const std::vector<char> empty;
@@ -185,7 +202,11 @@ TEST_CASE("SVDSurfaceSerializer rejects corrupt input", "[SBTL][serializer]") {
         const char hello[] = "hello world";
         bogus_payload.resize(64);
         mz_ulong out_size = static_cast<mz_ulong>(bogus_payload.size());
-        compress((unsigned char*)bogus_payload.data(), &out_size, (const unsigned char*)hello, sizeof(hello) - 1);
+        const int rc = compress((unsigned char*)bogus_payload.data(), &out_size, (const unsigned char*)hello, sizeof(hello) - 1);
+        // miniz returns MZ_OK == Z_OK == 0.  Failing here means the
+        // test setup itself is broken (not what we're trying to
+        // validate), so REQUIRE rather than silently resizing.
+        REQUIRE(rc == 0);
         bogus_payload.resize(out_size);
     }
     REQUIRE_THROWS(cp_sbtl::SVDSurfaceSerializer::load(bogus_payload));
@@ -276,8 +297,12 @@ TEST_CASE("SVDSurfaceSerializer file save/load round-trip", "[SBTL][serializer][
     auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
     auto surface = cp_sbtl::build_surface(*heos, std::move(spec));
 
-    // Save to a tmp file and load back via the file API.
-    const std::string path = "/tmp/svd_test_water_ph.svd.bin.z";
+    // Save to a tmp file and load back via the file API.  Use
+    // std::filesystem::temp_directory_path() rather than hard-coding
+    // /tmp -- the latter doesn't exist on Windows CI and would race
+    // when multiple test instances run concurrently.
+    const auto tmp_path = std::filesystem::temp_directory_path() / "svd_test_water_ph.svd.bin.z";
+    const std::string path = tmp_path.string();
     cp_sbtl::SVDSurfaceSerializer::save_to_file(surface, path);
     auto loaded = cp_sbtl::SVDSurfaceSerializer::load_from_file(path);
     REQUIRE(loaded.fluid_name() == "Water");

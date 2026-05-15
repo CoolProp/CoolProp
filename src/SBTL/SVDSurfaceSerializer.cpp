@@ -124,10 +124,13 @@ void pack_surface(Packer& pk, const SVDSurface& s) {
     const auto& props = s.properties();
     pk.pack_array(props.size());
     for (const auto& p : props) {
-        // Property entry is [key, transform].  Transform is currently
-        // baked into the SVDDecomposition itself, but the surface-level
-        // record is the spec — kept here so a deserializer can verify
-        // the transform per-property matches what the decomp expects.
+        // Property entry is currently a length-1 array `[key]`.  The
+        // OutputTransform lives inside the per-property SVDDecomposition
+        // blob (packed by pack_decomp below), so the surface-level
+        // record only needs the property key here.  Leaving it as a
+        // length-1 array (rather than packing the bare int) lets a
+        // future revision extend it to `[key, transform_override]` or
+        // similar without bumping the on-wire revision number.
         pk.pack_array(1);
         pk.pack(static_cast<std::int32_t>(p));
     }
@@ -148,6 +151,14 @@ void pack_surface(Packer& pk, const SVDSurface& s) {
 }
 
 // ---------- unpacking helpers ----------------------------------------
+//
+// The msgpack-c API is intrinsically pointer-arithmetic-on-unions:
+// every array access goes through `obj.via.array.ptr[i]` where `via`
+// is a tagged union and `ptr` is a raw msgpack_object*.  Both patterns
+// trip cppcoreguidelines-pro-{type-union-access,bounds-pointer-arithmetic}
+// on every line of the unpacker.  These are msgpack-c idioms, not
+// real bugs, so we silence them en bloc rather than per-line.
+// NOLINTBEGIN(cppcoreguidelines-pro-type-union-access,cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
 // Convenience wrappers around msgpack::object → typed conversion.
 template <typename T>
@@ -372,6 +383,8 @@ SVDSurface SVDSurfaceSerializer::load(const std::vector<char>& compressed) {
     return unpack_surface(fluid_name, surfaces_obj.via.array.ptr[0]);
 }
 
+// NOLINTEND(cppcoreguidelines-pro-type-union-access,cppcoreguidelines-pro-bounds-pointer-arithmetic)
+
 void SVDSurfaceSerializer::save_to_file(const SVDSurface& surface, const std::string& path) {
     const auto compressed = save(surface);
     std::ofstream out(path, std::ios::binary);
@@ -406,6 +419,15 @@ std::string SVDSurfaceSerializer::default_cache_dir() {
 }
 
 std::string SVDSurfaceSerializer::default_cache_path(const std::string& fluid_name, ::CoolProp::input_pairs input_pair) {
+    // Defense-in-depth against path traversal.  CoolProp fluid names
+    // come from the JSON catalog so this is unlikely to be hit in
+    // practice, but a caller passing an attacker-controlled string
+    // (e.g. through PropsSI("...", "SVDSBTL::<weird name>")) would
+    // otherwise be able to read or write outside the cache dir.
+    if (fluid_name.empty() || fluid_name.find('/') != std::string::npos || fluid_name.find('\\') != std::string::npos
+        || fluid_name.find("..") != std::string::npos) {
+        throw std::invalid_argument("SVDSurfaceSerializer::default_cache_path: invalid fluid_name (must be a bare component name)");
+    }
     return default_cache_dir() + fluid_name + "." + std::to_string(static_cast<int>(input_pair)) + ".svd.bin.z";
 }
 

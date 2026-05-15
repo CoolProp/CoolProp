@@ -191,7 +191,13 @@ std::unique_ptr<CubicSplineCurve> CubicSplineCurve::from_state(State s) {
             throw std::invalid_argument("CubicSplineCurve::from_state: a must be strictly increasing");
         }
     }
-    return std::unique_ptr<CubicSplineCurve>(new CubicSplineCurve(std::move(s.a), std::move(s.b), std::move(s.M), s.b_min, s.b_max));
+    // Re-derive the tight (b_min, b_max) from the deserialized (a, b, M)
+    // rather than trusting the values shipped in `s`.  A tampered or
+    // mis-versioned blob could otherwise drop a bogus AABB into the
+    // RegionAtlas and silently corrupt region dispatch.  The recompute
+    // is O(n) — negligible vs the rest of deserialization.
+    const auto bnds = compute_bounds(s.a, s.b, s.M);
+    return std::unique_ptr<CubicSplineCurve>(new CubicSplineCurve(std::move(s.a), std::move(s.b), std::move(s.M), bnds.first, bnds.second));
 }
 
 std::size_t CubicSplineCurve::locate(double a) const noexcept {
