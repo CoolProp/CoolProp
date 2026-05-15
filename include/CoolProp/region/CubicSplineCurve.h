@@ -21,6 +21,19 @@ namespace region {
 // here the segment derivative is the piecewise quadratic obtained by
 // differentiating the spline polynomial term-by-term — no finite
 // differences at runtime.
+//
+// SMOOTHNESS CAVEAT.  Natural cubic spline assumes the source function
+// is smooth.  When the knot sequence captures a kink or near-cusp in
+// the underlying b(a), the global-C² requirement forces oscillation
+// in the neighbourhood of the kink (Gibbs-like overshoot).  Phase 2a's
+// e2e validation surfaced this for Propane: at the pressure where
+// the LIQUID-floor lambda crosses the melting line and bumps T up,
+// h_lo(p) has a slope kink, and the resulting spline shows a thin
+// vertical band of elevated error on the LIQUID side at ~250-400
+// kJ/kg.  Workarounds when smoothness can't be guaranteed: build a
+// PiecewiseChebyshevCurve over a uniform partition (which absorbs
+// the kink at one piece boundary but trades the global-C² guarantee
+// for a single C⁰ point), or split the data into two splines.
 class CubicSplineCurve final : public BoundaryCurve
 {
    public:

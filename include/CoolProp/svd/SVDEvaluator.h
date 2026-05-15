@@ -33,14 +33,41 @@ class SVDEvaluator
 {
    public:
     // Construct from a borrowed decomposition.  The caller must keep the
-    // SVDDecomposition alive at least as long as this evaluator —
-    // typically by storing both in the same containing object.  Rvalue-
-    // ref construction is deleted to prevent the
+    // SVDDecomposition alive *at a stable address* for at least as long
+    // as this evaluator.  Rvalue-ref construction is deleted to prevent
+    // the obvious temporary foot-gun:
     //
     //   SVDEvaluator e(build_svd(...));  // <-- temporary, dangling
     //
-    // foot-gun.  Invariants on the decomposition (NX, NY, rank, and the
-    // sizes of U/V_S/dU_dx/dV_S_dy/x_grid/y_grid) are checked once at
+    // The less-obvious foot-gun involves moving the decomposition out
+    // from under the evaluator via a container.  This pattern looks
+    // safe but ISN'T, because vector::push_back moves the inline
+    // `decomp` and the evaluator's borrowed pointer is left dangling:
+    //
+    //   struct RegionData {
+    //       SVDDecomposition decomp;                  // INLINE — gets moved!
+    //       std::unique_ptr<SVDEvaluator> eval;
+    //   };
+    //   std::vector<RegionData> regions;
+    //   RegionData rd;
+    //   rd.decomp = build_svd(...);
+    //   rd.eval = std::make_unique<SVDEvaluator>(rd.decomp);
+    //   regions.push_back(std::move(rd));   // ⚠  eval->d_ now dangles
+    //
+    // The right pattern is to give the decomposition a stable heap
+    // address — either by storing the decomposition itself behind
+    // std::unique_ptr / std::shared_ptr, or by constructing the
+    // evaluator AFTER push_back from the in-vector decomp:
+    //
+    //   struct RegionData {
+    //       std::unique_ptr<SVDDecomposition> decomp;  // heap = stable
+    //       std::unique_ptr<SVDEvaluator> eval;
+    //   };
+    //
+    // See dev/svd_sbtl_e2e.cpp for the canonical multi-region setup.
+    //
+    // Invariants on the decomposition (NX, NY, rank, and the sizes of
+    // U/V_S/dU_dx/dV_S_dy/x_grid/y_grid) are checked once at
     // construction so the eval hot path can assume them.
     explicit SVDEvaluator(const SVDDecomposition& decomp) : d_(&decomp) {
         const auto nx = static_cast<std::size_t>(decomp.NX);

@@ -27,6 +27,18 @@ namespace region {
 // recurrence on the coefficients (no finite differences) — see
 // eval_da().
 //
+// CONTINUITY CAVEAT.  The curve is value-continuous across piece
+// boundaries (adjacent Chebyshev fits share their endpoint samples)
+// but the *derivative* is generally discontinuous — each piece's
+// expansion is independent.  When this curve drives the secondary
+// axis of a Region, the kink at each piece boundary propagates
+// through η normalization into the SVD reconstruction and appears as
+// a thin band of elevated error at the corresponding axis value.
+// Phase 2a's e2e validation surfaced this empirically for Water:
+// SAT_PIECES=6 placed a visible "green band" at 4/6 of the log-p
+// range (~770 kPa).  When a smoother boundary is required, use
+// CubicSplineCurve (C² continuous everywhere).
+//
 // Extracted and generalised from the ihb/SBTL Cheb1D / Cheb1DPiece
 // classes (originally parametrised on log(p) only).
 class PiecewiseChebyshevCurve final : public BoundaryCurve
