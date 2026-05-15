@@ -5,14 +5,6 @@
 // the SVDSurfaceSerializer lands.  For now this exercises the
 // build-and-eval end-to-end at a SMALL grid so the suite stays fast.
 
-#include "CoolProp/region/AxisTransform.h"
-#include "CoolProp/region/ConstantCurve.h"
-#include "CoolProp/sbtl/SVDSurface.h"
-#include "CoolProp/sbtl/SVDSurfaceFactory.h"
-#include "CoolProp/sbtl/SVDSurfaceSerializer.h"
-#include "CoolProp/sbtl/SatBoundaryFactory.h"
-#include "CoolProp/sbtl/SurfaceSpec.h"
-
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
 
@@ -21,6 +13,13 @@
 #    include <vector>
 
 #    include "AbstractState.h"
+#    include "CoolProp/region/AxisTransform.h"
+#    include "CoolProp/region/ConstantCurve.h"
+#    include "CoolProp/sbtl/SVDSurface.h"
+#    include "CoolProp/sbtl/SVDSurfaceFactory.h"
+#    include "CoolProp/sbtl/SVDSurfaceSerializer.h"
+#    include "CoolProp/sbtl/SatBoundaryFactory.h"
+#    include "CoolProp/sbtl/SurfaceSpec.h"
 #    include "miniz.h"
 
 namespace cp_sbtl = CoolProp::sbtl;
@@ -190,6 +189,86 @@ TEST_CASE("SVDSurfaceSerializer rejects corrupt input", "[SBTL][serializer]") {
         bogus_payload.resize(out_size);
     }
     REQUIRE_THROWS(cp_sbtl::SVDSurfaceSerializer::load(bogus_payload));
+}
+
+// Multi-fluid coverage: build and round-trip PH + PT surfaces for a
+// handful of fluids at a tiny grid.  Tiny grid (NT=30, NR=50, rank=8)
+// keeps total per-fluid runtime ≈ 1–2 s; the test set runs in
+// ~10 s with all 5 fluids.  Loose accuracy tolerance — production
+// resolution is what Phase 2a's SVDSBTL_E2E covers.
+TEST_CASE("SVDSurface PH preset across multi-fluid set", "[SBTL][SVDSurface][preset_ph][multi_fluid][slow]") {
+    for (const auto* fluid : {"R134a", "Ammonia", "Methane", "Propane", "CarbonDioxide"}) {
+        SECTION(fluid) {
+            auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", fluid));
+            auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/30, /*NR=*/50, /*rank=*/8);
+            cp_sbtl::SVDSurface surface = cp_sbtl::build_surface(*heos, std::move(spec));
+            REQUIRE(surface.sealed());
+            REQUIRE(surface.region_count() == 2);
+
+            // Round-trip through serializer.  HEOS canonicalises aliases
+            // (e.g. "Propane" → "n-Propane"), so compare against what the
+            // surface actually stored, not the user-facing input string.
+            const auto blob = cp_sbtl::SVDSurfaceSerializer::save(surface);
+            auto reloaded = cp_sbtl::SVDSurfaceSerializer::load(blob);
+            REQUIRE(reloaded.fluid_name() == surface.fluid_name());
+            REQUIRE(reloaded.region_count() == 2);
+
+            // Spot-check eval matches HEOS at a handful of single-phase probes.
+            std::mt19937 rng(91);
+            const auto [p_min, p_max] = cp_sbtl::subcritical_pressure_range(*heos);
+            std::uniform_real_distribution<double> uT(std::max(heos->Ttriple() + 5.0, heos->Tmin() + 5.0), heos->Tmax() - 5.0);
+            std::uniform_real_distribution<double> u_log_p(std::log(p_min * 2.0), std::log(p_max * 0.8));
+            int kept = 0;
+            double max_rel = 0;
+            for (int trial = 0; trial < 200 && kept < 10; ++trial) {
+                const double T = uT(rng);
+                const double p = std::exp(u_log_p(rng));
+                try {
+                    heos->update(::CoolProp::PT_INPUTS, p, T);
+                    if (heos->Q() > 0.0 && heos->Q() < 1.0) {
+                        continue;
+                    }
+                    const double h = heos->hmass();
+                    const double rho_truth = heos->rhomass();
+                    const double rho_pred = reloaded.eval(::CoolProp::iDmass, p, h);
+                    if (std::isnan(rho_pred)) {
+                        continue;
+                    }
+                    const double rel = std::abs(rho_pred - rho_truth) / rho_truth;
+                    max_rel = std::max(max_rel, rel);
+                    ++kept;
+                } catch (...) {  // NOLINT(bugprone-empty-catch)
+                }
+            }
+            INFO(fluid << " kept=" << kept << " max_rel=" << max_rel);
+            REQUIRE(kept >= 3);
+            // Tiny grid → loose tolerance; just confirm no order-of-magnitude regressions.
+            REQUIRE(max_rel < 0.20);
+        }
+    }
+}
+
+TEST_CASE("SVDSurface PT preset water round-trip", "[SBTL][SVDSurface][preset_pt][slow]") {
+    auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
+    auto spec = cp_sbtl::presets::pt_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
+    REQUIRE(spec.input_pair == ::CoolProp::PT_INPUTS);
+    REQUIRE(spec.regions.size() == 2);
+
+    cp_sbtl::SVDSurface surface = cp_sbtl::build_surface(*heos, std::move(spec));
+    REQUIRE(surface.sealed());
+
+    // Round-trip serializer.
+    const auto blob = cp_sbtl::SVDSurfaceSerializer::save(surface);
+    auto reloaded = cp_sbtl::SVDSurfaceSerializer::load(blob);
+    REQUIRE(reloaded.input_pair() == ::CoolProp::PT_INPUTS);
+
+    // Spot-check on water at a known compressed-liquid state.
+    heos->update(::CoolProp::PT_INPUTS, 1e6, 350.0);
+    const double rho_truth = heos->rhomass();
+    const double rho_pred = reloaded.eval(::CoolProp::iDmass, 1e6, 350.0);
+    INFO("rho_truth=" << rho_truth << " rho_pred=" << rho_pred);
+    REQUIRE_FALSE(std::isnan(rho_pred));
+    REQUIRE(std::abs(rho_pred - rho_truth) / rho_truth < 0.05);
 }
 
 TEST_CASE("SVDSurfaceSerializer file save/load round-trip", "[SBTL][serializer][slow]") {

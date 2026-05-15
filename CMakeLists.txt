@@ -83,6 +83,10 @@ option(COOLPROP_SVD_E2E
        "Build the SVD-SBTL end-to-end validation tool at dev/svd_sbtl_e2e.cpp"
        OFF)
 
+option(COOLPROP_BUILD_SVD_TABLES
+       "Build the SVDSBTL bulk-table builder at dev/build_svd_tables.cpp"
+       OFF)
+
 #option (DARWIN_USE_LIBCPP
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
@@ -2144,6 +2148,20 @@ if(COOLPROP_SVD_E2E)
   add_dependencies(SVDSBTL_E2E generate_headers)
   if(UNIX)
     target_link_libraries(SVDSBTL_E2E ${CMAKE_DL_LIBS})
+  endif()
+endif()
+
+if(COOLPROP_BUILD_SVD_TABLES)
+  # Phase 2b bulk-table builder.  Writes one .svd.bin.z per fluid per
+  # input pair under ~/.CoolProp/SVDTables/.  Same pattern as
+  # COOLPROP_MAIN_MODULE / CatchTestRunner: link the whole project
+  # statically into the standalone executable.
+  add_executable(build_svd_tables
+                 ${APP_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/build_svd_tables.cpp")
+  add_dependencies(build_svd_tables generate_headers)
+  if(UNIX)
+    target_link_libraries(build_svd_tables ${CMAKE_DL_LIBS})
   endif()
 endif()
 
