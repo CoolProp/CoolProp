@@ -44,7 +44,11 @@ std::vector<PropertySpec> pt_properties() {
 }  // namespace
 
 SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
-    const auto [p_min, p_max] = subcritical_pressure_range(heos);
+    // Name is historical: this preset now also registers a SUPER
+    // region above p_crit so the surface covers the full HEOS
+    // (p, h) envelope.  Three regions: LIQUID + VAPOR + SUPER.
+    const auto [p_min, p_max_sub] = subcritical_pressure_range(heos);
+    const auto [p_min_sup, p_max_sup] = supercritical_pressure_range(heos);
     const double T_min_eos = std::max(heos.Ttriple(), heos.Tmin());
     const double T_max_eos = heos.Tmax();
 
@@ -61,9 +65,9 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     //                       if T_min < T_melt(p) at high p.
     //   b_hi = h_sat,L(p) — liquid side of the saturation dome.
     {
-        auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max);
-        auto lo = build_h_isotherm_floor(heos, p_min, p_max, T_min_eos);
-        auto hi = build_h_sat_L(heos, p_min, p_max);
+        auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max_sub);
+        auto lo = build_h_isotherm_floor(heos, p_min, p_max_sub, T_min_eos);
+        auto hi = build_h_sat_L(heos, p_min, p_max_sub);
         spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
     }
     // VAPOR region: primary = log p, secondary = h.
@@ -71,9 +75,19 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     //   b_hi = h(T_max - 0.5 K, p) — hot ceiling within the HEOS
     //                                validity envelope.
     {
-        auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max);
-        auto lo = build_h_sat_V(heos, p_min, p_max);
-        auto hi = build_h_isotherm_ceiling(heos, p_min, p_max, T_max_eos - 0.5);
+        auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max_sub);
+        auto lo = build_h_sat_V(heos, p_min, p_max_sub);
+        auto hi = build_h_isotherm_ceiling(heos, p_min, p_max_sub, T_max_eos - 0.5);
+        spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+    }
+    // SUPER region: p > p_crit.  Primary = log p over [p_crit*1.001,
+    // p_max_eos*0.99], secondary = h.  No sat dome above p_crit, so
+    // the secondary bounds are the same low-T / high-T isotherms used
+    // by LIQUID / VAPOR — they continue smoothly into supercritical.
+    {
+        auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_max_sup);
+        auto lo = build_h_isotherm_floor(heos, p_min_sup, p_max_sup, T_min_eos);
+        auto hi = build_h_isotherm_ceiling(heos, p_min_sup, p_max_sup, T_max_eos - 0.5);
         spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
     }
 
@@ -102,8 +116,45 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     return spec;
 }
 
+// Build a T-floor CubicSplineCurve for any pressure range, walking T
+// up at each knot to clear the melting line if needed.  Reused by
+// both the subcritical LIQUID region and the SUPER region of the PT
+// preset.
+namespace {
+std::unique_ptr<region::CubicSplineCurve> pt_T_floor_curve_(::CoolProp::AbstractState& heos, double p_min, double p_max, double T_min_eos,
+                                                            const SatBoundaryBuildOptions& sbopts) {
+    const double log_p_min = std::log(p_min);
+    const double log_p_max = std::log(p_max);
+    std::vector<double> p_knots(sbopts.n_knots);
+    std::vector<double> y(sbopts.n_knots);
+    const std::size_t walk_steps = sbopts.t_floor_walk_steps;
+    for (std::size_t k = 0; k < sbopts.n_knots; ++k) {
+        const double p = std::exp(log_p_min + static_cast<double>(k) * (log_p_max - log_p_min) / static_cast<double>(sbopts.n_knots - 1));
+        p_knots[k] = p;
+        double T_found = std::nan("");
+        for (std::size_t s = 0; s < walk_steps; ++s) {
+            const double T_try = T_min_eos + 0.5 * static_cast<double>(s);
+            try {
+                heos.update(::CoolProp::PT_INPUTS, p, T_try);
+                T_found = T_try;
+                break;
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+            }
+        }
+        if (!std::isfinite(T_found)) {
+            throw std::runtime_error("pt preset: T-floor unreachable within " + std::to_string(walk_steps / 2) + " K of T_min_eos");
+        }
+        y[k] = T_found;
+    }
+    return region::CubicSplineCurve::build(std::move(p_knots), std::move(y));
+}
+}  // namespace
+
 SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
+    // Historical name; now covers the full phase diagram via three
+    // regions: LIQUID + VAPOR (subcritical) + SUPER (p > p_crit).
     const auto [p_min, p_max] = subcritical_pressure_range(heos);
+    const auto [p_min_sup, p_max_sup] = supercritical_pressure_range(heos);
     const double T_min_eos = std::max(heos.Ttriple(), heos.Tmin());
     const double T_max_eos = heos.Tmax();
 
@@ -123,34 +174,11 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     // exactly like the h-floor case.
 
     // LIQUID region.  T-floor walks T_min(p) up over the melting
-    // line, same trick as build_h_isotherm_floor.  Pre-compute the
-    // (p, T_floor) knots inline, then hand them to CubicSplineCurve.
+    // line.  Helper handles the knot loop so the SUPER region below
+    // can reuse it.
     {
-        const SatBoundaryBuildOptions sbopts;
-        const double log_p_min = std::log(p_min);
-        const double log_p_max = std::log(p_max);
-        std::vector<double> p_knots(sbopts.n_knots);
-        std::vector<double> y(sbopts.n_knots);
-        for (std::size_t k = 0; k < sbopts.n_knots; ++k) {
-            const double p = std::exp(log_p_min + static_cast<double>(k) * (log_p_max - log_p_min) / static_cast<double>(sbopts.n_knots - 1));
-            p_knots[k] = p;
-            double T_found = std::nan("");
-            for (int s = 0; s < 40; ++s) {
-                const double T_try = T_min_eos + 0.5 * static_cast<double>(s);
-                try {
-                    heos.update(::CoolProp::PT_INPUTS, p, T_try);
-                    T_found = T_try;
-                    break;
-                } catch (...) {  // NOLINT(bugprone-empty-catch)
-                }
-            }
-            if (!std::isfinite(T_found)) {
-                throw std::runtime_error("pt_subcritical: T-floor unreachable within 20 K of T_min_eos");
-            }
-            y[k] = T_found;
-        }
         auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max);
-        auto t_lo = region::CubicSplineCurve::build(std::move(p_knots), std::move(y));
+        auto t_lo = pt_T_floor_curve_(heos, p_min, p_max, T_min_eos, SatBoundaryBuildOptions{});
         auto t_hi = build_T_sat(heos, p_min, p_max);
         spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
     }
@@ -161,6 +189,15 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
         // Constant T_max ceiling — no melting consideration on the
         // hot side, so just a flat isotherm.
         auto t_hi = std::make_unique<region::ConstantCurve>(p_min, p_max, T_max_eos - 0.5);
+        spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
+    }
+    // SUPER region: p > p_crit.  T-floor still walks T_min up over
+    // melting line (the melting curve extends well into supercritical
+    // for most fluids).  Hot ceiling stays at T_max - 0.5 K.
+    {
+        auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_max_sup);
+        auto t_lo = pt_T_floor_curve_(heos, p_min_sup, p_max_sup, T_min_eos, SatBoundaryBuildOptions{});
+        auto t_hi = std::make_unique<region::ConstantCurve>(p_min_sup, p_max_sup, T_max_eos - 0.5);
         spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
     }
 
