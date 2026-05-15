@@ -129,4 +129,75 @@ TEST_CASE("SVDSBTL backend cache reload produces the same result", "[SVDSBTL][ca
     REQUIRE(rho_first == Approx(rho_second).epsilon(1e-15));
 }
 
+TEST_CASE("SVDSBTL backend PQ_INPUTS two-phase blend matches HEOS", "[SVDSBTL][twophase][pq][water][slow]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    // Sweep a few (p, Q) combinations across the subcritical range.
+    for (const double p : {1.0e5, 1.0e6, 5.0e6, 1.5e7}) {
+        for (const double Q : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+            AS->update(CoolProp::PQ_INPUTS, p, Q);
+            heos->update(CoolProp::PQ_INPUTS, p, Q);
+            INFO("p=" << p << "  Q=" << Q << "  T_AS=" << AS->T() << "  T_HEOS=" << heos->T());
+            REQUIRE(AS->T() == Approx(heos->T()).epsilon(1e-4));
+            REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(1e-4));
+            REQUIRE(AS->hmass() == Approx(heos->hmass()).epsilon(1e-3));
+            REQUIRE(AS->smass() == Approx(heos->smass()).epsilon(1e-3));
+            // p flows through verbatim.
+            REQUIRE(AS->p() == Approx(p).epsilon(1e-12));
+            REQUIRE(AS->Q() == Approx(Q).epsilon(1e-12));
+        }
+    }
+}
+
+TEST_CASE("SVDSBTL backend QT_INPUTS two-phase blend matches HEOS", "[SVDSBTL][twophase][qt][water][slow]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    for (const double T : {280.0, 350.0, 450.0, 600.0}) {
+        for (const double Q : {0.0, 0.5, 1.0}) {
+            AS->update(CoolProp::QT_INPUTS, Q, T);
+            heos->update(CoolProp::QT_INPUTS, Q, T);
+            INFO("T=" << T << "  Q=" << Q);
+            REQUIRE(AS->p() == Approx(heos->p()).epsilon(1e-4));
+            REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(1e-4));
+            REQUIRE(AS->hmass() == Approx(heos->hmass()).epsilon(1e-3));
+            REQUIRE(AS->T() == Approx(T).epsilon(1e-12));
+            REQUIRE(AS->Q() == Approx(Q).epsilon(1e-12));
+        }
+    }
+}
+
+TEST_CASE("SVDSBTL backend HmassP_INPUTS dome-hit routes to two-phase blend", "[SVDSBTL][twophase][hp_dome][water][slow]") {
+    // Pick a sat state, take h half-way between hL and hV at p_sat, and
+    // confirm SVDSBTL recovers the same Q as HEOS via the in-dome
+    // HmassP path.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    for (const double p : {2.0e5, 1.0e6, 5.0e6}) {
+        heos->update(CoolProp::PQ_INPUTS, p, 0.0);
+        const double hL = heos->hmass();
+        heos->update(CoolProp::PQ_INPUTS, p, 1.0);
+        const double hV = heos->hmass();
+        const double h_mid = 0.5 * (hL + hV);
+        AS->update(CoolProp::HmassP_INPUTS, h_mid, p);
+        heos->update(CoolProp::HmassP_INPUTS, h_mid, p);
+        INFO("p=" << p << "  h_mid=" << h_mid);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        REQUIRE(AS->Q() == Approx(heos->Q()).epsilon(1e-4));
+        REQUIRE(AS->T() == Approx(heos->T()).epsilon(1e-4));
+        REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(1e-4));
+        REQUIRE(AS->hmass() == Approx(h_mid).epsilon(1e-12));  // input round-trip
+    }
+}
+
+TEST_CASE("SVDSBTL backend Q out of [0, 1] is rejected", "[SVDSBTL][twophase][reject]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    REQUIRE_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.0e6, -0.1));
+    REQUIRE_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.0e6, 1.1));
+    REQUIRE_THROWS(AS->update(CoolProp::QT_INPUTS, -0.1, 350.0));
+    REQUIRE_THROWS(AS->update(CoolProp::QT_INPUTS, 1.1, 350.0));
+}
+
 #endif  // ENABLE_CATCH

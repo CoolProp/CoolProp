@@ -3,9 +3,12 @@
 
 #include <limits>
 #include <memory>
+#include <set>  // transitively needed by superancillary.h
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "superancillary/superancillary.h"
 
 #include "AbstractState.h"
 #include "CoolProp/sbtl/SVDSurface.h"
@@ -139,6 +142,23 @@ class SVDSBTLBackend : public AbstractState
     // build via the matching preset and save it.  Inserts into surfaces_.
     void ensure_surface_(CoolProp::input_pairs pair);
 
+    // Resolve the SuperAncillary handle for this fluid (cached after
+    // first call).  Returns nullptr if no SuperAncillary ships with
+    // this fluid -- two-phase queries then throw a clear error.
+    std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> superanc_();
+
+    // Two-phase update for PQ_INPUTS / QT_INPUTS / dome-hit HmassP /
+    // dome-hit PT.  Caches the sat-line state (T_sat, p_sat, Q, plus
+    // sat-line endpoints rho_L/V, h_L/V, s_L/V, u_L/V on a molar basis)
+    // so the calc_* virtuals can produce Q-weighted properties without
+    // re-evaluating the superancillary.
+    void update_two_phase_(double T_sat, double p_sat, double Q);
+
+    // Per-property Q-weighted blend over the cached sat-line state.
+    // Density uses 1/(Q/rho_V + (1-Q)/rho_L) (specific-volume blend);
+    // h/s/u use the linear blend.
+    [[nodiscard]] CoolPropDbl two_phase_property_(CoolProp::parameters prop) const;
+
     std::string fluid_name_;
     std::vector<CoolPropDbl> mole_fractions_;  // always {1.0}
 
@@ -169,6 +189,30 @@ class SVDSBTLBackend : public AbstractState
     // the user asks for the property they just supplied (no SVD
     // round-trip).  _T and _p live in AbstractState already.
     double active_hmass_ = std::numeric_limits<double>::quiet_NaN();
+
+    // Lazy-resolved SuperAncillary handle.  Resolved on first call to
+    // superanc_(); cached for subsequent two-phase queries.  Stays
+    // nullptr if the fluid ships without one.
+    std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> superanc_cached_;
+    bool superanc_resolved_ = false;  // distinguish "not tried yet" from "tried and got nullptr"
+
+    // Active two-phase state, populated by update_two_phase_().  All
+    // four endpoint properties are stored on a MOLAR basis so the
+    // Q-weighted blend math doesn't need to redo the unit conversion
+    // on every calc_*.
+    struct TwoPhaseState
+    {
+        bool active = false;
+        double rhoL_mol = 0.0;
+        double rhoV_mol = 0.0;
+        double hL_mol = 0.0;
+        double hV_mol = 0.0;
+        double sL_mol = 0.0;
+        double sV_mol = 0.0;
+        double uL_mol = 0.0;
+        double uV_mol = 0.0;
+    };
+    TwoPhaseState two_phase_{};
 };
 
 }  // namespace CoolProp
