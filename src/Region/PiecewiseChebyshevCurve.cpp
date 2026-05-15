@@ -54,13 +54,16 @@ double clenshaw_eval(const std::vector<double>& c, double s) noexcept {
     const std::size_t N = c.size() - 1;
     double b_kp1 = 0.0;
     double b_kp2 = 0.0;
-    for (std::size_t k = N; k >= 1; --k) {
+    // Iterate k = N, N-1, ..., 1 (inclusive).  Using `k > 0` instead of
+    // `k >= 1` for the condition is equivalent for unsigned k and lets
+    // CodeQL see that the loop terminates -- the previous form (which
+    // wrote `k >= 1` with an inner `break` for k == 1) tripped a "comparison
+    // always true" alert because std::size_t is non-negative by
+    // construction.
+    for (std::size_t k = N; k > 0; --k) {
         const double b_k = 2.0 * s * b_kp1 - b_kp2 + c[k];
         b_kp2 = b_kp1;
         b_kp1 = b_k;
-        if (k == 1) {
-            break;
-        }  // unsigned guard against k-- underflow
     }
     return s * b_kp1 - b_kp2 + c[0];
 }
