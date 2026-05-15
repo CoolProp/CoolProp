@@ -59,6 +59,7 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
 
     fluid = csv_path.stem.replace("bench_svdsbtl_ph_", "")
     has_refprop = df["ns_per_call_refprop"].notna().any()
+    has_refprop_direct = "ns_per_call_refprop_direct" in df.columns and df["ns_per_call_refprop_direct"].notna().any()
 
     fig, axes = plt.subplots(2, 3, figsize=(15, 9), constrained_layout=True)
     fig.suptitle(
@@ -75,10 +76,14 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
     _err_panel(axes[0, 1], h_kJ, p_MPa, df["rel_err_T"].to_numpy(), "T  rel. error  vs HEOS")
     _err_panel(axes[0, 2], h_kJ, p_MPa, df["rel_err_s"].to_numpy(), "s  rel. error  vs HEOS")
 
-    # Row 1 -- timing panels on a SHARED log color scale.
-    timings = [df["ns_per_call_svd"].to_numpy(), df["ns_per_call_heos"].to_numpy()]
-    if has_refprop:
-        timings.append(df["ns_per_call_refprop"].to_numpy())
+    # Row 1 -- timing panels on a SHARED log color scale so the
+    # cross-backend speed delta is visually unambiguous.  Prefer the
+    # direct PHFLSHdll measurement for the REFPROP panel when we have
+    # it; the via-AbstractState run for REFPROP only adds a couple
+    # hundred ns of wrapper overhead on top, which is invisible at
+    # this scale.
+    refprop_ns = df["ns_per_call_refprop_direct"].to_numpy() if has_refprop_direct else (df["ns_per_call_refprop"].to_numpy() if has_refprop else np.full(len(df), np.nan))
+    timings = [df["ns_per_call_svd"].to_numpy(), df["ns_per_call_heos"].to_numpy(), refprop_ns]
     all_ns = np.concatenate([t[~np.isnan(t)] for t in timings])
     vmin = max(50.0, float(np.percentile(all_ns, 1)))
     vmax = float(np.percentile(all_ns, 99))
@@ -86,7 +91,8 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
 
     _time_panel(axes[1, 0], h_kJ, p_MPa, df["ns_per_call_svd"].to_numpy(), "SVDSBTL  ns / (update + rhomass)", shared)
     _time_panel(axes[1, 1], h_kJ, p_MPa, df["ns_per_call_heos"].to_numpy(), "HEOS  ns / (update + rhomass)", shared)
-    _time_panel(axes[1, 2], h_kJ, p_MPa, df["ns_per_call_refprop"].to_numpy(), "REFPROP  ns / (update + rhomass)", shared)
+    refprop_title = "REFPROP direct PHFLSHdll  ns / call" if has_refprop_direct else "REFPROP  ns / (update + rhomass via AbstractState)"
+    _time_panel(axes[1, 2], h_kJ, p_MPa, refprop_ns, refprop_title, shared)
 
     # Summary footer.
     max_rho = df["rel_err_rho"].max()
@@ -99,7 +105,14 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
         f"mean ns/call: SVDSBTL={mean_ns_svd:.0f}  HEOS={mean_ns_heos:.0f}",
         f"speedup vs HEOS={mean_ns_heos / mean_ns_svd:.1f}x",
     ]
-    if has_refprop:
+    if has_refprop_direct:
+        mean_ns_refprop_direct = df["ns_per_call_refprop_direct"].mean()
+        mean_ns_refprop_as = df["ns_per_call_refprop"].mean() if has_refprop else float("nan")
+        parts[1] += f"  REFPROP(direct PHFLSHdll)={mean_ns_refprop_direct:.0f}"
+        if not np.isnan(mean_ns_refprop_as):
+            parts[1] += f"  REFPROP(via AS)={mean_ns_refprop_as:.0f}"
+        parts.append(f"speedup vs REFPROP(direct)={mean_ns_refprop_direct / mean_ns_svd:.1f}x")
+    elif has_refprop:
         mean_ns_refprop = df["ns_per_call_refprop"].mean()
         parts[1] += f"  REFPROP={mean_ns_refprop:.0f}"
         parts.append(f"speedup vs REFPROP={mean_ns_refprop / mean_ns_svd:.1f}x")

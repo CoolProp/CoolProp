@@ -38,6 +38,30 @@
 #include "Configuration.h"
 #include "DataStructures.h"
 
+// Direct REFPROP call path.  REFPROPMixtureBackend.cpp already
+// dlopen()s the REFPROP library and SETUPdll's the chosen fluid when
+// AbstractState::factory("REFPROP", ...) succeeds — the Fortran
+// COMMON-block state that holds is then visible to any other call
+// site against the same library handle.  All we need here is the
+// PHFLSHdll symbol itself, fetched via dlsym so we can call it
+// without going through CoolProp's update() dispatch and
+// CachedElement plumbing.  Including REFPROP_lib.h with
+// REFPROP_IMPLEMENTATION here would collide with the already-defined
+// symbols in REFPROPMixtureBackend's TU, and wrapping in an
+// anonymous namespace breaks the standard-library template lookups
+// the header transitively needs.  So we do this surgically:
+#if defined(__unix__) || defined(__APPLE__)
+#    include <dlfcn.h>
+#endif
+
+extern "C"
+{
+    // Fortran-mangled C signature of PHFLSHdll, matching REFPROP_lib.h's
+    // PHFLSHdll_ARGS expansion with REFPROP_CSTYLE_REFERENCES enabled.
+    using PHFLSHdll_t = void (*)(double*, double*, double*, double*, double*, double*, double*, double*, double*, double*, double*, double*, double*,
+                                 double*, double*, int*, char*, std::size_t);
+}
+
 namespace {
 
 std::size_t env_size_t(const char* name, std::size_t fallback) {
@@ -70,9 +94,10 @@ struct Row
     double rel_err_u;
     double ns_per_call_svd;
     double ns_per_call_heos;
-    double ns_per_call_refprop;  // NaN when REFPROP unavailable
-    double rho_refprop;          // NaN when REFPROP unavailable
-    double rel_err_rho_refprop;  // SVDSBTL vs REFPROP (NaN if no REFPROP)
+    double ns_per_call_refprop;         // via AbstractState wrapper
+    double ns_per_call_refprop_direct;  // direct PHFLSHdll call (no wrapper)
+    double rho_refprop;
+    double rel_err_rho_refprop;
 };
 
 bool has_refprop_at_(const std::string& path) {
@@ -94,15 +119,91 @@ double time_update_rhomass(::CoolProp::AbstractState& AS, ::CoolProp::input_pair
     return std::chrono::duration<double, std::nano>(t1 - t0).count() / static_cast<double>(repeats);
 }
 
+// Resolve PHFLSHdll from the REFPROP library that CoolProp's
+// REFPROPMixtureBackend has already dlopen'd.  Returns nullptr if the
+// library or symbol isn't accessible.
+PHFLSHdll_t resolve_phflshdll_(const std::string& refprop_path) {
+#if defined(__unix__) || defined(__APPLE__)
+    // dlopen returns the existing handle if the library is already
+    // loaded — bumping the refcount, not reloading.
+    const std::string lib_path = refprop_path + "librefprop.dylib";
+    void* handle = dlopen(lib_path.c_str(), RTLD_NOW);
+    if (handle == nullptr) {
+        // Try Linux name as a fallback.
+        handle = dlopen((refprop_path + "librefprop.so").c_str(), RTLD_NOW);
+    }
+    if (handle == nullptr) {
+        return nullptr;
+    }
+    // Try the canonical name first, then the lowercase / underscored
+    // Fortran-mangled variants the loader probes (mirrors REFPROP_lib.h's
+    // DLLNameManglingStyle).
+    for (const char* sym : {"PHFLSHdll", "phflshdll", "phflshdll_"}) {
+        void* p = dlsym(handle, sym);
+        if (p != nullptr) {
+            return reinterpret_cast<PHFLSHdll_t>(p);
+        }
+    }
+    return nullptr;
+#else
+    (void)refprop_path;
+    return nullptr;  // direct-call path not wired on Windows yet
+#endif
+}
+
+// Direct REFPROP PHFLSHdll timing.  Calls the Fortran flash routine
+// straight through the dlsym'd function pointer — no AbstractState
+// dispatch, no CachedElement.clear(), no kg <-> mol round-trips that
+// the wrapper does on every call.  Returns ns per (p, h_mol) flash.
+//
+// The caller must have already SETUPdll'd the right fluid (which our
+// CoolProp factory("REFPROP", fluid) call has done by the time we
+// reach this).
+double time_phflsh_direct(PHFLSHdll_t phflsh, double p_kPa, double h_mol, double* mole_fractions, std::size_t repeats) {
+    double T = 0;
+    double d = 0;
+    double dl = 0;
+    double dv = 0;
+    std::array<double, 20> xliq{};
+    std::array<double, 20> xvap{};
+    double q = 0;
+    double e = 0;
+    double s = 0;
+    double cv = 0;
+    double cp = 0;
+    double w = 0;
+    int ierr = 0;
+    std::array<char, 256> herr{};
+    volatile double sink = 0.0;
+    const auto t0 = std::chrono::steady_clock::now();
+    for (std::size_t i = 0; i < repeats; ++i) {
+        phflsh(&p_kPa, &h_mol, mole_fractions, &T, &d, &dl, &dv, xliq.data(), xvap.data(), &q, &e, &s, &cv, &cp, &w, &ierr, herr.data(), 255);
+        sink += d;
+    }
+    const auto t1 = std::chrono::steady_clock::now();
+    (void)sink;
+    return std::chrono::duration<double, std::nano>(t1 - t0).count() / static_cast<double>(repeats);
+}
+
 void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::size_t repeats, const std::string& refprop_path) {
     auto svd = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("SVDSBTL", fluid));
     auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", fluid));
 
     std::shared_ptr<::CoolProp::AbstractState> refprop;
+    double refprop_molar_mass = 0.0;
+    std::array<double, 20> refprop_mole_fractions{};
+    PHFLSHdll_t phflsh_direct = nullptr;
     if (has_refprop_at_(refprop_path)) {
         ::CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, refprop_path);
         try {
             refprop.reset(::CoolProp::AbstractState::factory("REFPROP", fluid));
+            refprop_molar_mass = refprop->molar_mass();  // kg/mol
+            refprop_mole_fractions[0] = 1.0;
+            // Resolve PHFLSHdll from the already-loaded REFPROP library.
+            phflsh_direct = resolve_phflshdll_(refprop_path);
+            if (phflsh_direct == nullptr) {
+                std::printf("  REFPROP direct PHFLSHdll resolve failed; falling back to wrapper-only timing\n");
+            }
         } catch (const std::exception& e) {
             std::printf("  REFPROP unavailable: %s\n", e.what());
             refprop.reset();
@@ -160,15 +261,24 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
                         r.rho_refprop = refprop->rhomass();
                         r.rel_err_rho_refprop = std::abs(r.rho_pred - r.rho_refprop) / r.rho_refprop;
                         r.ns_per_call_refprop = time_update_rhomass(*refprop, ::CoolProp::HmassP_INPUTS, r.h, r.p, repeats);
+                        if (phflsh_direct != nullptr) {
+                            const double p_kPa = r.p * 1e-3;
+                            const double h_mol = r.h * refprop_molar_mass;  // J/kg * kg/mol -> J/mol
+                            r.ns_per_call_refprop_direct = time_phflsh_direct(phflsh_direct, p_kPa, h_mol, refprop_mole_fractions.data(), repeats);
+                        } else {
+                            r.ns_per_call_refprop_direct = std::nan("");
+                        }
                     } catch (...) {  // NOLINT(bugprone-empty-catch)
                         r.rho_refprop = std::nan("");
                         r.rel_err_rho_refprop = std::nan("");
                         r.ns_per_call_refprop = std::nan("");
+                        r.ns_per_call_refprop_direct = std::nan("");
                     }
                 } else {
                     r.rho_refprop = std::nan("");
                     r.rel_err_rho_refprop = std::nan("");
                     r.ns_per_call_refprop = std::nan("");
+                    r.ns_per_call_refprop_direct = std::nan("");
                 }
 
                 rows.push_back(r);
@@ -184,14 +294,14 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
     }
     ofs << "h,p,T,rho_truth,rho_pred,T_pred,s_truth,s_pred,u_truth,u_pred,"
         << "rel_err_rho,rel_err_T,rel_err_s,rel_err_u,"
-        << "ns_per_call_svd,ns_per_call_heos,ns_per_call_refprop,"
+        << "ns_per_call_svd,ns_per_call_heos,ns_per_call_refprop,ns_per_call_refprop_direct,"
         << "rho_refprop,rel_err_rho_refprop\n";
     ofs.precision(17);
     for (const auto& r : rows) {
         ofs << r.h << "," << r.p << "," << r.T << "," << r.rho_truth << "," << r.rho_pred << "," << r.T_pred << "," << r.s_truth << "," << r.s_pred
             << "," << r.u_truth << "," << r.u_pred << "," << r.rel_err_rho << "," << r.rel_err_T << "," << r.rel_err_s << "," << r.rel_err_u << ","
-            << r.ns_per_call_svd << "," << r.ns_per_call_heos << "," << r.ns_per_call_refprop << "," << r.rho_refprop << "," << r.rel_err_rho_refprop
-            << "\n";
+            << r.ns_per_call_svd << "," << r.ns_per_call_heos << "," << r.ns_per_call_refprop << "," << r.ns_per_call_refprop_direct << ","
+            << r.rho_refprop << "," << r.rel_err_rho_refprop << "\n";
     }
 
     // Console summary.
@@ -202,7 +312,9 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
     double sum_ns_svd = 0;
     double sum_ns_heos = 0;
     double sum_ns_refprop = 0;
+    double sum_ns_refprop_direct = 0;
     std::size_t n_refprop = 0;
+    std::size_t n_refprop_direct = 0;
     for (const auto& r : rows) {
         max_rho = std::max(max_rho, r.rel_err_rho);
         max_T = std::max(max_T, r.rel_err_T);
@@ -214,19 +326,30 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
             sum_ns_refprop += r.ns_per_call_refprop;
             ++n_refprop;
         }
+        if (!std::isnan(r.ns_per_call_refprop_direct)) {
+            sum_ns_refprop_direct += r.ns_per_call_refprop_direct;
+            ++n_refprop_direct;
+        }
     }
     const auto n = static_cast<double>(rows.size());
+    const double mean_svd = sum_ns_svd / n;
+    const double mean_heos = sum_ns_heos / n;
+    std::printf("%-12s N=%5zu  max_rel: rho=%.2e T=%.2e s=%.2e u=%.2e\n", fluid.c_str(), rows.size(), max_rho, max_T, max_s, max_u);
+    std::printf("            mean ns/call: svd=%.0f  heos=%.0f", mean_svd, mean_heos);
     if (n_refprop > 0) {
-        const double mean_ns_refprop = sum_ns_refprop / static_cast<double>(n_refprop);
-        std::printf("%-12s  N=%5zu  max_rel rho=%.2e T=%.2e s=%.2e u=%.2e  mean ns/call: svd=%.0f heos=%.0f refprop=%.0f"
-                    "  speedup: vs heos=%.1fx vs refprop=%.1fx  -> %s\n",
-                    fluid.c_str(), rows.size(), max_rho, max_T, max_s, max_u, sum_ns_svd / n, sum_ns_heos / n, mean_ns_refprop,
-                    (sum_ns_heos / n) / (sum_ns_svd / n), mean_ns_refprop / (sum_ns_svd / n), out_path.c_str());
-    } else {
-        std::printf("%-12s  N=%5zu  max_rel: rho=%.2e T=%.2e s=%.2e u=%.2e  mean ns/call: svd=%.0f heos=%.0f  speedup=%.1fx  -> %s\n", fluid.c_str(),
-                    rows.size(), max_rho, max_T, max_s, max_u, sum_ns_svd / n, sum_ns_heos / n, (sum_ns_heos / n) / (sum_ns_svd / n),
-                    out_path.c_str());
+        std::printf("  refprop(via AS)=%.0f", sum_ns_refprop / static_cast<double>(n_refprop));
     }
+    if (n_refprop_direct > 0) {
+        std::printf("  refprop(direct PHFLSHdll)=%.0f", sum_ns_refprop_direct / static_cast<double>(n_refprop_direct));
+    }
+    std::printf("\n            speedup vs heos=%.1fx", mean_heos / mean_svd);
+    if (n_refprop > 0) {
+        std::printf("  vs refprop(AS)=%.1fx", (sum_ns_refprop / static_cast<double>(n_refprop)) / mean_svd);
+    }
+    if (n_refprop_direct > 0) {
+        std::printf("  vs refprop(direct)=%.1fx", (sum_ns_refprop_direct / static_cast<double>(n_refprop_direct)) / mean_svd);
+    }
+    std::printf("\n            -> %s\n", out_path.c_str());
 }
 
 }  // namespace
