@@ -38,6 +38,8 @@
 #include "Configuration.h"
 #include "DataStructures.h"
 
+#include <IF97.h>
+
 // Direct REFPROP call path.  REFPROPMixtureBackend.cpp already
 // dlopen()s the REFPROP library and SETUPdll's the chosen fluid when
 // AbstractState::factory("REFPROP", ...) succeeds — the Fortran
@@ -96,6 +98,8 @@ struct Row
     double ns_per_call_heos;
     double ns_per_call_refprop;         // via AbstractState wrapper
     double ns_per_call_refprop_direct;  // direct PHFLSHdll call (no wrapper)
+    double ns_per_call_if97;            // via AbstractState wrapper (only when fluid is water)
+    double ns_per_call_if97_direct;     // direct IF97::rhomass_phmass (no wrapper)
     double rho_refprop;
     double rel_err_rho_refprop;
 };
@@ -151,6 +155,21 @@ PHFLSHdll_t resolve_phflshdll_(const std::string& refprop_path) {
 #endif
 }
 
+// Direct IAPWS-IF97 timing: pure header-only inline call, no
+// AbstractState dispatch.  This is the closest we can get to the
+// claim in the IF97 release CTR -- the only overhead beyond the math
+// is the call-site / loop / volatile sink.
+double time_if97_rhomass_phmass_direct(double p_Pa, double h_J_per_kg, std::size_t repeats) {
+    volatile double sink = 0.0;
+    const auto t0 = std::chrono::steady_clock::now();
+    for (std::size_t i = 0; i < repeats; ++i) {
+        sink += IF97::rhomass_phmass(p_Pa, h_J_per_kg);
+    }
+    const auto t1 = std::chrono::steady_clock::now();
+    (void)sink;
+    return std::chrono::duration<double, std::nano>(t1 - t0).count() / static_cast<double>(repeats);
+}
+
 // Direct REFPROP PHFLSHdll timing.  Calls the Fortran flash routine
 // straight through the dlsym'd function pointer — no AbstractState
 // dispatch, no CachedElement.clear(), no kg <-> mol round-trips that
@@ -188,6 +207,14 @@ double time_phflsh_direct(PHFLSHdll_t phflsh, double p_kPa, double h_mol, double
 void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::size_t repeats, const std::string& refprop_path) {
     auto svd = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("SVDSBTL", fluid));
     auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", fluid));
+
+    // IF97 only applies to water; lazily allocate so other fluids skip it.
+    std::shared_ptr<::CoolProp::AbstractState> if97;
+    try {
+        if97.reset(::CoolProp::AbstractState::factory("IF97", fluid));
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+        if97.reset();
+    }
 
     std::shared_ptr<::CoolProp::AbstractState> refprop;
     double refprop_molar_mass = 0.0;
@@ -254,6 +281,19 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
                 r.ns_per_call_svd = time_update_rhomass(*svd, ::CoolProp::HmassP_INPUTS, r.h, r.p, repeats);
                 r.ns_per_call_heos = time_update_rhomass(*heos, ::CoolProp::PT_INPUTS, p, T, repeats);
 
+                if (if97) {
+                    try {
+                        r.ns_per_call_if97 = time_update_rhomass(*if97, ::CoolProp::HmassP_INPUTS, r.h, r.p, repeats);
+                        r.ns_per_call_if97_direct = time_if97_rhomass_phmass_direct(r.p, r.h, repeats);
+                    } catch (...) {  // NOLINT(bugprone-empty-catch)
+                        r.ns_per_call_if97 = std::nan("");
+                        r.ns_per_call_if97_direct = std::nan("");
+                    }
+                } else {
+                    r.ns_per_call_if97 = std::nan("");
+                    r.ns_per_call_if97_direct = std::nan("");
+                }
+
                 if (refprop) {
                     try {
                         // Use HmassP for a fair shape comparison with SVDSBTL.
@@ -295,13 +335,14 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
     ofs << "h,p,T,rho_truth,rho_pred,T_pred,s_truth,s_pred,u_truth,u_pred,"
         << "rel_err_rho,rel_err_T,rel_err_s,rel_err_u,"
         << "ns_per_call_svd,ns_per_call_heos,ns_per_call_refprop,ns_per_call_refprop_direct,"
+        << "ns_per_call_if97,ns_per_call_if97_direct,"
         << "rho_refprop,rel_err_rho_refprop\n";
     ofs.precision(17);
     for (const auto& r : rows) {
         ofs << r.h << "," << r.p << "," << r.T << "," << r.rho_truth << "," << r.rho_pred << "," << r.T_pred << "," << r.s_truth << "," << r.s_pred
             << "," << r.u_truth << "," << r.u_pred << "," << r.rel_err_rho << "," << r.rel_err_T << "," << r.rel_err_s << "," << r.rel_err_u << ","
             << r.ns_per_call_svd << "," << r.ns_per_call_heos << "," << r.ns_per_call_refprop << "," << r.ns_per_call_refprop_direct << ","
-            << r.rho_refprop << "," << r.rel_err_rho_refprop << "\n";
+            << r.ns_per_call_if97 << "," << r.ns_per_call_if97_direct << "," << r.rho_refprop << "," << r.rel_err_rho_refprop << "\n";
     }
 
     // Console summary.
@@ -313,8 +354,12 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
     double sum_ns_heos = 0;
     double sum_ns_refprop = 0;
     double sum_ns_refprop_direct = 0;
+    double sum_ns_if97 = 0;
+    double sum_ns_if97_direct = 0;
     std::size_t n_refprop = 0;
     std::size_t n_refprop_direct = 0;
+    std::size_t n_if97 = 0;
+    std::size_t n_if97_direct = 0;
     for (const auto& r : rows) {
         max_rho = std::max(max_rho, r.rel_err_rho);
         max_T = std::max(max_T, r.rel_err_T);
@@ -330,6 +375,14 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
             sum_ns_refprop_direct += r.ns_per_call_refprop_direct;
             ++n_refprop_direct;
         }
+        if (!std::isnan(r.ns_per_call_if97)) {
+            sum_ns_if97 += r.ns_per_call_if97;
+            ++n_if97;
+        }
+        if (!std::isnan(r.ns_per_call_if97_direct)) {
+            sum_ns_if97_direct += r.ns_per_call_if97_direct;
+            ++n_if97_direct;
+        }
     }
     const auto n = static_cast<double>(rows.size());
     const double mean_svd = sum_ns_svd / n;
@@ -342,12 +395,24 @@ void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::si
     if (n_refprop_direct > 0) {
         std::printf("  refprop(direct PHFLSHdll)=%.0f", sum_ns_refprop_direct / static_cast<double>(n_refprop_direct));
     }
+    if (n_if97 > 0) {
+        std::printf("  if97(via AS)=%.0f", sum_ns_if97 / static_cast<double>(n_if97));
+    }
+    if (n_if97_direct > 0) {
+        std::printf("  if97(direct rhomass_phmass)=%.0f", sum_ns_if97_direct / static_cast<double>(n_if97_direct));
+    }
     std::printf("\n            speedup vs heos=%.1fx", mean_heos / mean_svd);
     if (n_refprop > 0) {
         std::printf("  vs refprop(AS)=%.1fx", (sum_ns_refprop / static_cast<double>(n_refprop)) / mean_svd);
     }
     if (n_refprop_direct > 0) {
         std::printf("  vs refprop(direct)=%.1fx", (sum_ns_refprop_direct / static_cast<double>(n_refprop_direct)) / mean_svd);
+    }
+    if (n_if97 > 0) {
+        std::printf("  vs if97(AS)=%.2fx", (sum_ns_if97 / static_cast<double>(n_if97)) / mean_svd);
+    }
+    if (n_if97_direct > 0) {
+        std::printf("  vs if97(direct)=%.2fx", (sum_ns_if97_direct / static_cast<double>(n_if97_direct)) / mean_svd);
     }
     std::printf("\n            -> %s\n", out_path.c_str());
 }

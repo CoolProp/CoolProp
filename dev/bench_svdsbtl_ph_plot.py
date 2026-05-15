@@ -3,12 +3,12 @@
 Reads /tmp/bench_svdsbtl_ph_<fluid>.csv produced by
 dev/bench_svdsbtl_ph.cpp and emits a single PNG per fluid laid out as:
 
-  Row 0 (accuracy):  rho rel-err     T rel-err     s rel-err
-  Row 1 (timing):    SVDSBTL ns      HEOS ns       REFPROP ns
+  Row 0 (accuracy):  rho rel-err  T rel-err  s rel-err  u rel-err
+  Row 1 (timing):    SVDSBTL ns   IF97 ns    HEOS ns    REFPROP ns
 
-The three timing panels share a single log color scale so the eye
-can directly compare backends.  REFPROP columns are blank if the
-benchmark was run without BENCH_REFPROP_PATH.
+The four timing panels share a single log color scale so the eye
+can directly compare backends.  IF97 / REFPROP panels are blank if
+the run didn't have them available.
 
 Usage:
     python3 dev/bench_svdsbtl_ph_plot.py
@@ -60,8 +60,10 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
     fluid = csv_path.stem.replace("bench_svdsbtl_ph_", "")
     has_refprop = df["ns_per_call_refprop"].notna().any()
     has_refprop_direct = "ns_per_call_refprop_direct" in df.columns and df["ns_per_call_refprop_direct"].notna().any()
+    has_if97 = "ns_per_call_if97" in df.columns and df["ns_per_call_if97"].notna().any()
+    has_if97_direct = "ns_per_call_if97_direct" in df.columns and df["ns_per_call_if97_direct"].notna().any()
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 9), constrained_layout=True)
+    fig, axes = plt.subplots(2, 4, figsize=(19, 9), constrained_layout=True)
     fig.suptitle(
         f"SVDSBTL benchmark in PH coordinates -- {fluid}   N={len(df)}",
         fontsize=13,
@@ -75,24 +77,34 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
     _err_panel(axes[0, 0], h_kJ, p_MPa, df["rel_err_rho"].to_numpy(), r"$\rho$  rel. error  vs HEOS")
     _err_panel(axes[0, 1], h_kJ, p_MPa, df["rel_err_T"].to_numpy(), "T  rel. error  vs HEOS")
     _err_panel(axes[0, 2], h_kJ, p_MPa, df["rel_err_s"].to_numpy(), "s  rel. error  vs HEOS")
+    _err_panel(axes[0, 3], h_kJ, p_MPa, df["rel_err_u"].to_numpy(), "u  rel. error  vs HEOS")
 
     # Row 1 -- timing panels on a SHARED log color scale so the
-    # cross-backend speed delta is visually unambiguous.  Prefer the
-    # direct PHFLSHdll measurement for the REFPROP panel when we have
-    # it; the via-AbstractState run for REFPROP only adds a couple
-    # hundred ns of wrapper overhead on top, which is invisible at
-    # this scale.
-    refprop_ns = df["ns_per_call_refprop_direct"].to_numpy() if has_refprop_direct else (df["ns_per_call_refprop"].to_numpy() if has_refprop else np.full(len(df), np.nan))
-    timings = [df["ns_per_call_svd"].to_numpy(), df["ns_per_call_heos"].to_numpy(), refprop_ns]
-    all_ns = np.concatenate([t[~np.isnan(t)] for t in timings])
+    # cross-backend speed delta is visually unambiguous.  For IF97
+    # and REFPROP we prefer the direct-call measurement (header-only
+    # IF97::rhomass_phmass / dlsym'd PHFLSHdll) when available;
+    # via-AbstractState measurements get pulled in as fallback.
+    if97_ns = (
+        df["ns_per_call_if97_direct"].to_numpy() if has_if97_direct
+        else (df["ns_per_call_if97"].to_numpy() if has_if97 else np.full(len(df), np.nan))
+    )
+    refprop_ns = (
+        df["ns_per_call_refprop_direct"].to_numpy() if has_refprop_direct
+        else (df["ns_per_call_refprop"].to_numpy() if has_refprop else np.full(len(df), np.nan))
+    )
+    timings = [df["ns_per_call_svd"].to_numpy(), df["ns_per_call_heos"].to_numpy(), if97_ns, refprop_ns]
+    valid_arrays = [t[~np.isnan(t)] for t in timings if not np.all(np.isnan(t))]
+    all_ns = np.concatenate(valid_arrays) if valid_arrays else np.array([100.0, 10000.0])
     vmin = max(50.0, float(np.percentile(all_ns, 1)))
     vmax = float(np.percentile(all_ns, 99))
     shared = LogNorm(vmin=vmin, vmax=vmax)
 
     _time_panel(axes[1, 0], h_kJ, p_MPa, df["ns_per_call_svd"].to_numpy(), "SVDSBTL  ns / (update + rhomass)", shared)
-    _time_panel(axes[1, 1], h_kJ, p_MPa, df["ns_per_call_heos"].to_numpy(), "HEOS  ns / (update + rhomass)", shared)
-    refprop_title = "REFPROP direct PHFLSHdll  ns / call" if has_refprop_direct else "REFPROP  ns / (update + rhomass via AbstractState)"
-    _time_panel(axes[1, 2], h_kJ, p_MPa, refprop_ns, refprop_title, shared)
+    if97_title = "IF97 direct rhomass_phmass  ns / call" if has_if97_direct else "IF97  ns / (update + rhomass via AS)"
+    _time_panel(axes[1, 1], h_kJ, p_MPa, if97_ns, if97_title, shared)
+    _time_panel(axes[1, 2], h_kJ, p_MPa, df["ns_per_call_heos"].to_numpy(), "HEOS  ns / (update + rhomass)", shared)
+    refprop_title = "REFPROP direct PHFLSHdll  ns / call" if has_refprop_direct else "REFPROP  ns / (update + rhomass via AS)"
+    _time_panel(axes[1, 3], h_kJ, p_MPa, refprop_ns, refprop_title, shared)
 
     # Summary footer.
     max_rho = df["rel_err_rho"].max()
@@ -105,10 +117,21 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
         f"mean ns/call: SVDSBTL={mean_ns_svd:.0f}  HEOS={mean_ns_heos:.0f}",
         f"speedup vs HEOS={mean_ns_heos / mean_ns_svd:.1f}x",
     ]
+    if has_if97_direct:
+        mean_ns_if97_direct = df["ns_per_call_if97_direct"].mean()
+        mean_ns_if97_as = df["ns_per_call_if97"].mean() if has_if97 else float("nan")
+        parts[1] += f"  IF97(direct)={mean_ns_if97_direct:.0f}"
+        if not np.isnan(mean_ns_if97_as):
+            parts[1] += f"  IF97(via AS)={mean_ns_if97_as:.0f}"
+        parts.append(f"speedup vs IF97(direct)={mean_ns_if97_direct / mean_ns_svd:.2f}x")
+    elif has_if97:
+        mean_ns_if97 = df["ns_per_call_if97"].mean()
+        parts[1] += f"  IF97={mean_ns_if97:.0f}"
+        parts.append(f"speedup vs IF97={mean_ns_if97 / mean_ns_svd:.2f}x")
     if has_refprop_direct:
         mean_ns_refprop_direct = df["ns_per_call_refprop_direct"].mean()
         mean_ns_refprop_as = df["ns_per_call_refprop"].mean() if has_refprop else float("nan")
-        parts[1] += f"  REFPROP(direct PHFLSHdll)={mean_ns_refprop_direct:.0f}"
+        parts[1] += f"  REFPROP(direct)={mean_ns_refprop_direct:.0f}"
         if not np.isnan(mean_ns_refprop_as):
             parts[1] += f"  REFPROP(via AS)={mean_ns_refprop_as:.0f}"
         parts.append(f"speedup vs REFPROP(direct)={mean_ns_refprop_direct / mean_ns_svd:.1f}x")
