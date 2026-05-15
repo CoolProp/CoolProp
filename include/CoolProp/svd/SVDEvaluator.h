@@ -77,6 +77,22 @@ class SVDEvaluator
             || decomp.U.size() != nx * r || decomp.dU_dx.size() != nx * r || decomp.V_S.size() != ny * r || decomp.dV_S_dy.size() != ny * r) {
             throw std::invalid_argument("SVDEvaluator: SVDDecomposition has inconsistent dimensions");
         }
+        // Grids must be strictly increasing: locate() does a binary
+        // search assuming a sorted axis, and the hx / hy divisions in
+        // eval() would blow up on duplicate or descending knots.
+        // SVDBuilder enforces this at build time, but an
+        // SVDDecomposition can be constructed by hand or loaded from a
+        // file, so re-check on the evaluator side.
+        for (std::size_t i = 1; i < nx; ++i) {
+            if (!(decomp.x_grid[i - 1] < decomp.x_grid[i])) {
+                throw std::invalid_argument("SVDEvaluator: x_grid must be strictly increasing");
+            }
+        }
+        for (std::size_t j = 1; j < ny; ++j) {
+            if (!(decomp.y_grid[j - 1] < decomp.y_grid[j])) {
+                throw std::invalid_argument("SVDEvaluator: y_grid must be strictly increasing");
+            }
+        }
     }
     // Forbid construction from a temporary — eval() reads from the
     // borrowed decomposition after the constructor returns.

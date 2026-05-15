@@ -83,12 +83,13 @@ std::vector<double> chebyshev_derivative_coeffs(const std::vector<double>& c) {
     }
     const std::size_t N = Np1 - 1;
     std::vector<double> d(Np1, 0.0);  // d[N] = 0
-    for (std::size_t k = N; k >= 1; --k) {
-        const double d_km1 = (k + 1 <= N ? d[k + 1] : 0.0) + 2.0 * static_cast<double>(k) * c[k];
-        d[k - 1] = d_km1;
-        if (k == 1) {
-            break;
-        }
+    // Backward recurrence: c'_{k-1} = c'_{k+1} + 2k c_k, k = N..1.
+    // Loop on the 1-based index `kp = k` so the comparison is non-
+    // redundant (kp > 0 actually exits the loop) — CodeQL flagged the
+    // earlier `k >= 1` form as always-true on an unsigned counter.
+    for (std::size_t kp = N; kp > 0; --kp) {
+        const double d_km1 = (kp + 1 <= N ? d[kp + 1] : 0.0) + 2.0 * static_cast<double>(kp) * c[kp];
+        d[kp - 1] = d_km1;
     }
     d[0] *= 0.5;
     // The N-th coefficient of the derivative is zero (degree drops by 1).
