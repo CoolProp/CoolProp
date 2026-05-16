@@ -168,33 +168,52 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
     _phase = iphase_not_imposed;
     two_phase_.active = false;
 
-    // Two-phase inputs go to the superancillary path immediately --
-    // no SVDSurface needed.  PQ_INPUTS and QT_INPUTS are degenerate
-    // in the surface (the dome interior is not single-phase, so the
-    // surface returns NaN) so we route around it.
+    // Two-phase inputs go to the SuperAncillary or to the source
+    // backend directly — no SVDSurface needed.  PQ_INPUTS and
+    // QT_INPUTS are degenerate in the surface (the dome interior is
+    // not single-phase, so the surface returns NaN), so we route
+    // around it.
     if (input_pair == CoolProp::PQ_INPUTS || input_pair == CoolProp::QT_INPUTS) {
         active_pair_ = input_pair;
         active_surface_ = nullptr;
         active_resolved_ = false;
-        auto sa = superanc_();
-        if (!sa) {
-            throw NotImplementedError(std::string("SVDSBTL backend: two-phase inputs require a SuperAncillary for this fluid (") + fluid_name_
-                                      + " has none).  Use a different backend (e.g. HEOS) for two-phase queries on this fluid.");
-        }
         double p_sat = 0.0;
         double T_sat = 0.0;
         double Q = 0.0;
-        if (input_pair == CoolProp::PQ_INPUTS) {
-            // value1 = p, value2 = Q.
-            p_sat = value1;
-            Q = value2;
-            T_sat = sa->get_T_from_p(p_sat);
+        auto sa = superanc_();
+        if (sa) {
+            // Fast path — HEOS-side SuperAncillary Chebyshev expansion
+            // gives sat-line state in O(1) without an HEOS flash.
+            if (input_pair == CoolProp::PQ_INPUTS) {
+                // value1 = p, value2 = Q.
+                p_sat = value1;
+                Q = value2;
+                T_sat = sa->get_T_from_p(p_sat);
+            } else {
+                // QT_INPUTS: value1 = Q, value2 = T.
+                Q = value1;
+                T_sat = value2;
+                p_sat = sa->eval_sat(T_sat, 'P', 0);
+            }
         } else {
-            // QT_INPUTS: value1 = Q, value2 = T.
-            Q = value1;
-            T_sat = value2;
-            // p_sat from the SuperAncillary's pressure expansion.
-            p_sat = sa->eval_sat(T_sat, 'P', 0);
+            // Fallback path — source backend doesn't ship a
+            // SuperAncillary (REFPROP, IF97, ...).  Route directly
+            // to its own PQ/QT_INPUTS, which it must implement.
+            auto src = source_reference_();
+            if (input_pair == CoolProp::PQ_INPUTS) {
+                p_sat = value1;
+                Q = value2;
+                // Anchor at Q=0 so the source state lands cleanly on
+                // sat,L; T_sat is invariant in Q across the dome at
+                // fixed p.
+                src->update(CoolProp::PQ_INPUTS, p_sat, 0.0);
+                T_sat = src->T();
+            } else {
+                Q = value1;
+                T_sat = value2;
+                src->update(CoolProp::QT_INPUTS, 0.0, T_sat);
+                p_sat = src->p();
+            }
         }
         if (Q < 0.0 || Q > 1.0) {
             throw ValueError("SVDSBTL backend: two-phase Q must be in [0, 1]");
@@ -243,17 +262,38 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
 
     if (active_point_.region_idx < 0) {
         // Out of every single-phase region.  For HmassP this typically
-        // means the (h, p) point is inside the saturation dome; route
-        // to the superancillary two-phase path and recover the user's
-        // request.  Other input pairs (PT on the sat curve) currently
-        // still surface as NaN -- two-phase PT is degenerate anyway
-        // (no unique state at T_sat unless Q is supplied).
+        // means the (h, p) point is inside the saturation dome; pull
+        // the sat-line endpoints from the SuperAncillary if available
+        // or directly from the source backend otherwise, compute Q
+        // from the lever rule, and route to the two-phase path.
+        // Other input pairs (PT on the sat curve) currently still
+        // surface as NaN — two-phase PT is degenerate anyway (no
+        // unique state at T_sat unless Q is supplied).
         if ((input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS) && _p > 0.0) {
+            double T_sat = 0.0, hL_mol = 0.0, hV_mol = 0.0;
+            bool sat_resolved = false;
             auto sa = superanc_();
             if (sa) {
-                const double T_sat = sa->get_T_from_p(_p);
-                const double hL_mol = sa->eval_sat(T_sat, 'H', 0);
-                const double hV_mol = sa->eval_sat(T_sat, 'H', 1);
+                T_sat = sa->get_T_from_p(_p);
+                hL_mol = sa->eval_sat(T_sat, 'H', 0);
+                hV_mol = sa->eval_sat(T_sat, 'H', 1);
+                sat_resolved = true;
+            } else {
+                try {
+                    auto src = source_reference_();
+                    src->update(CoolProp::PQ_INPUTS, _p, 0.0);
+                    T_sat = src->T();
+                    hL_mol = src->hmolar();
+                    src->update(CoolProp::PQ_INPUTS, _p, 1.0);
+                    hV_mol = src->hmolar();
+                    sat_resolved = true;
+                } catch (const std::exception&) {
+                    // Source backend couldn't resolve PQ at this _p
+                    // (e.g. above its critical pressure).  Fall
+                    // through to the iphase_twophase tag below.
+                }
+            }
+            if (sat_resolved) {
                 const double h_mol = active_hmass_ * calc_molar_mass();
                 if (hL_mol <= h_mol && h_mol <= hV_mol) {
                     const double Q = (h_mol - hL_mol) / (hV_mol - hL_mol);
@@ -267,14 +307,31 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
 }
 
 void SVDSBTLBackend::update_two_phase_(double T_sat, double p_sat, double Q) {
-    auto sa = superanc_();
-    if (!sa) {
-        throw NotImplementedError("SVDSBTL backend: update_two_phase_ called without a SuperAncillary");
-    }
     _p = p_sat;
     _T = T_sat;
     _Q = Q;
     _phase = iphase_twophase;
+    auto sa = superanc_();
+    if (!sa) {
+        // No SuperAncillary (REFPROP / IF97 source) — pull sat-line
+        // endpoints from the source backend directly via QT_INPUTS.
+        // Two flashes (Q=0 and Q=1) at the same T_sat; slow compared
+        // to a Chebyshev eval but correct by construction.
+        auto src = source_reference_();
+        src->update(CoolProp::QT_INPUTS, 0.0, T_sat);
+        two_phase_.rhoL_mol = src->rhomolar();
+        two_phase_.hL_mol = src->hmolar();
+        two_phase_.sL_mol = src->smolar();
+        src->update(CoolProp::QT_INPUTS, 1.0, T_sat);
+        two_phase_.rhoV_mol = src->rhomolar();
+        two_phase_.hV_mol = src->hmolar();
+        two_phase_.sV_mol = src->smolar();
+        // u = h - p*v = h - p/rho; same identity as the HEOS path.
+        two_phase_.uL_mol = two_phase_.hL_mol - p_sat / two_phase_.rhoL_mol;
+        two_phase_.uV_mol = two_phase_.hV_mol - p_sat / two_phase_.rhoV_mol;
+        two_phase_.active = true;
+        return;
+    }
     two_phase_.rhoL_mol = sa->eval_sat(T_sat, 'D', 0);
     two_phase_.rhoV_mol = sa->eval_sat(T_sat, 'D', 1);
     two_phase_.hL_mol = sa->eval_sat(T_sat, 'H', 0);

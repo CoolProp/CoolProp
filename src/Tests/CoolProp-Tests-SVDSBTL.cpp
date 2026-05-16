@@ -116,7 +116,7 @@ TEST_CASE("SVDSBTL backend supports the high-level PropsSI surface", "[SVDSBTL][
     heos->update(CoolProp::PT_INPUTS, 1.0e6, 350.0);
     const double rho_truth = heos->rhomass();
 
-    const double rho_via_propsi = CoolProp::PropsSI("D", "T", 350.0, "P", 1.0e6, "SVDSBTL::Water");
+    const double rho_via_propsi = CoolProp::PropsSI("D", "T", 350.0, "P", 1.0e6, "SVDSBTL&HEOS::Water");
     INFO("PropsSI = " << rho_via_propsi << "  HEOS = " << rho_truth);
     REQUIRE(rho_via_propsi == Approx(rho_truth).epsilon(5e-3));
 }
@@ -305,6 +305,101 @@ TEST_CASE("SVDSBTL backend Q out of [0, 1] is rejected", "[SVDSBTL][twophase][re
     REQUIRE_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.0e6, 1.1));
     REQUIRE_THROWS(AS->update(CoolProp::QT_INPUTS, -0.1, 350.0));
     REQUIRE_THROWS(AS->update(CoolProp::QT_INPUTS, 1.1, 350.0));
+}
+
+// -----------------------------------------------------------------------------
+// Non-HEOS source-of-truth backends
+// -----------------------------------------------------------------------------
+
+TEST_CASE("SVDSBTL backend without explicit source throws", "[SVDSBTL][source][reject]") {
+    // factory("SVDSBTL", ...) without &<source> must throw.  The error
+    // text mentions SVDSBTL&HEOS so the user has an obvious fix.
+    REQUIRE_THROWS_WITH(std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water")),
+                        Catch::Matchers::ContainsSubstring("explicit source"));
+}
+
+TEST_CASE("SVDSBTL backend rejects unsupported source names", "[SVDSBTL][source][reject]") {
+    REQUIRE_THROWS_WITH(std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&SRK", "Water")),
+                        Catch::Matchers::ContainsSubstring("unsupported source"));
+}
+
+TEST_CASE("SVDSBTL&IF97 rejects non-Water fluids", "[SVDSBTL][source][if97][reject]") {
+    REQUIRE_THROWS_WITH(std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&IF97", "CarbonDioxide")),
+                        Catch::Matchers::ContainsSubstring("Water-only"));
+}
+
+// Try-and-skip helper: REFPROP and IF97 may not be available on every
+// CI machine.  Construct once at TEST_CASE entry and SKIP if the
+// source-backend itself can't be built.
+namespace {
+bool source_backend_available(const std::string& source, const std::string& fluid) {
+    try {
+        const std::string spec = std::string("SVDSBTL&") + source;
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(spec, fluid));
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+}  // namespace
+
+TEST_CASE("SVDSBTL&REFPROP single-phase PT lookup matches REFPROP truth", "[SVDSBTL][source][refprop][pt][slow]") {
+    if (!source_backend_available("REFPROP", "Water")) {
+        SKIP("REFPROP not available; skipping SVDSBTL&REFPROP test");
+    }
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&REFPROP", "Water"));
+    auto refprop = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    const double T = 0.85 * refprop->T_critical();
+    const double p = 0.50 * refprop->p_critical();
+    AS->update(CoolProp::PT_INPUTS, p, T);
+    refprop->update(CoolProp::PT_INPUTS, p, T);
+    REQUIRE(AS->rhomass() == Approx(refprop->rhomass()).epsilon(1e-3));
+    REQUIRE(AS->hmass() == Approx(refprop->hmass()).epsilon(1e-3));
+}
+
+TEST_CASE("SVDSBTL&REFPROP two-phase PQ matches REFPROP truth", "[SVDSBTL][source][refprop][twophase][slow]") {
+    if (!source_backend_available("REFPROP", "Water")) {
+        SKIP("REFPROP not available; skipping SVDSBTL&REFPROP two-phase test");
+    }
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&REFPROP", "Water"));
+    auto refprop = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    const double p_sat = 0.4 * refprop->p_critical();
+    AS->update(CoolProp::PQ_INPUTS, p_sat, 0.5);
+    refprop->update(CoolProp::PQ_INPUTS, p_sat, 0.5);
+    // Two-phase: SVDSBTL routes through the source backend's QT_INPUTS
+    // for sat endpoints (REFPROP has no SuperAncillary), then does the
+    // standard Q-weighted blend.  Should agree to within REFPROP's own
+    // numerical precision on the sat curves.
+    REQUIRE(AS->T() == Approx(refprop->T()).epsilon(1e-8));
+    REQUIRE(AS->rhomass() == Approx(refprop->rhomass()).epsilon(1e-6));
+    REQUIRE(AS->Q() == Approx(0.5));
+}
+
+TEST_CASE("SVDSBTL&IF97 single-phase PT lookup matches IF97 truth", "[SVDSBTL][source][if97][pt][slow]") {
+    if (!source_backend_available("IF97", "Water")) {
+        SKIP("IF97 backend not available; skipping SVDSBTL&IF97 test");
+    }
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&IF97", "Water"));
+    auto if97 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    // 500 K, 3 MPa — IAPWS Table 5 region (compressed liquid)
+    const double T = 500.0;
+    const double p = 3.0e6;
+    AS->update(CoolProp::PT_INPUTS, p, T);
+    if97->update(CoolProp::PT_INPUTS, p, T);
+    REQUIRE(AS->rhomass() == Approx(if97->rhomass()).epsilon(1e-3));
+    REQUIRE(AS->hmass() == Approx(if97->hmass()).epsilon(1e-3));
+}
+
+TEST_CASE("SVDSBTL&HEOS and SVDSBTL&REFPROP produce distinct cache files", "[SVDSBTL][source][cache]") {
+    if (!source_backend_available("REFPROP", "Water")) {
+        SKIP("REFPROP not available; skipping cache-key disambiguation test");
+    }
+    namespace cp_sbtl = CoolProp::sbtl;
+    const std::string heos_path = cp_sbtl::SVDSurfaceSerializer::default_cache_path("Water", "HEOS", CoolProp::HmassP_INPUTS);
+    const std::string refprop_path = cp_sbtl::SVDSurfaceSerializer::default_cache_path("Water", "REFPROP", CoolProp::HmassP_INPUTS);
+    REQUIRE(heos_path != refprop_path);
+    REQUIRE(heos_path.find("Water.HEOS.") != std::string::npos);
+    REQUIRE(refprop_path.find("Water.REFPROP.") != std::string::npos);
 }
 
 #endif  // ENABLE_CATCH

@@ -173,17 +173,24 @@ TEST_CASE("SVDSurfaceSerializer::default_cache_path rejects path-traversal fluid
     // Defense-in-depth: anything that could escape the cache directory
     // must throw rather than silently writing outside ~/.CoolProp/SVDTables.
     using Catch::Matchers::ContainsSubstring;
-    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("../etc/passwd", ::CoolProp::HmassP_INPUTS),
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("../etc/passwd", "HEOS", ::CoolProp::HmassP_INPUTS),
                         ContainsSubstring("invalid fluid_name"));
-    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("foo/bar", ::CoolProp::HmassP_INPUTS),
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("foo/bar", "HEOS", ::CoolProp::HmassP_INPUTS),
                         ContainsSubstring("invalid fluid_name"));
-    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("foo\\bar", ::CoolProp::HmassP_INPUTS),
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("foo\\bar", "HEOS", ::CoolProp::HmassP_INPUTS),
                         ContainsSubstring("invalid fluid_name"));
-    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("..", ::CoolProp::HmassP_INPUTS), ContainsSubstring("invalid fluid_name"));
-    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("", ::CoolProp::HmassP_INPUTS), ContainsSubstring("invalid fluid_name"));
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("..", "HEOS", ::CoolProp::HmassP_INPUTS),
+                        ContainsSubstring("invalid fluid_name"));
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("", "HEOS", ::CoolProp::HmassP_INPUTS),
+                        ContainsSubstring("invalid fluid_name"));
+    // Same checks apply to the source_backend slot.
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("Water", "foo/bar", ::CoolProp::HmassP_INPUTS),
+                        ContainsSubstring("invalid source_backend"));
+    REQUIRE_THROWS_WITH(cp_sbtl::SVDSurfaceSerializer::default_cache_path("Water", "", ::CoolProp::HmassP_INPUTS),
+                        ContainsSubstring("invalid source_backend"));
     // Legitimate names pass.
-    REQUIRE_NOTHROW(cp_sbtl::SVDSurfaceSerializer::default_cache_path("Water", ::CoolProp::HmassP_INPUTS));
-    REQUIRE_NOTHROW(cp_sbtl::SVDSurfaceSerializer::default_cache_path("R134a", ::CoolProp::PT_INPUTS));
+    REQUIRE_NOTHROW(cp_sbtl::SVDSurfaceSerializer::default_cache_path("Water", "HEOS", ::CoolProp::HmassP_INPUTS));
+    REQUIRE_NOTHROW(cp_sbtl::SVDSurfaceSerializer::default_cache_path("R134a", "REFPROP", ::CoolProp::PT_INPUTS));
 }
 
 TEST_CASE("SVDSurfaceSerializer rejects corrupt input", "[SBTL][serializer]") {
