@@ -80,7 +80,12 @@ class SVDSurfaceSerializer
     //          opthash over the canonical-JSON options blob.  No
     //          on-wire format change; just a path change.  Old rev-3
     //          int-keyed caches simply won't be picked up.
-    static constexpr int kRevision = 4;
+    //   rev 5: ph_properties / pt_properties extended with transport
+    //          properties (η, λ) for IAPWS G13-15 Tables 12 & 13.
+    //          Old rev-4 caches are missing two properties at the
+    //          tail; bump to force rebuild rather than try to silently
+    //          extend them in-place.
+    static constexpr int kRevision = 5;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

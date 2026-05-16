@@ -22,26 +22,62 @@ namespace {
 // axis), so the outputs are ρ, T, s, u, w (speed of sound).  Density
 // is log-transformed (EXP) since it varies over orders of magnitude
 // across LIQUID + VAPOR; the rest are identity-transformed.
-std::vector<PropertySpec> ph_properties() {
-    return {
+// Returns true if the source backend can compute the given transport
+// property at a benign single-phase probe point.  Used to gate
+// inclusion of η / λ in the tabulated property list — fluids whose
+// HEOS model lacks a transport correlation (e.g. some siloxanes) get
+// a slimmer table rather than an all-NaN sampling failure.
+bool source_supports_transport_(::CoolProp::AbstractState& src, ::CoolProp::parameters key) {
+    const double T = 0.85 * src.T_critical();
+    const double p = 0.50 * src.p_critical();
+    try {
+        src.update(::CoolProp::PT_INPUTS, p, T);
+        double v = (key == ::CoolProp::iviscosity) ? src.viscosity() : src.conductivity();
+        return std::isfinite(v);
+    } catch (...) {  // NOLINT(bugprone-empty-catch)
+        return false;
+    }
+}
+
+std::vector<PropertySpec> ph_properties(::CoolProp::AbstractState& src) {
+    std::vector<PropertySpec> ps = {
       {::CoolProp::iDmass, svd::OutputTransform::EXP},
       {::CoolProp::iT, svd::OutputTransform::IDENTITY},
       {::CoolProp::iSmass, svd::OutputTransform::IDENTITY},
       {::CoolProp::iUmass, svd::OutputTransform::IDENTITY},
       {::CoolProp::ispeed_sound, svd::OutputTransform::IDENTITY},
     };
+    // Transport properties — IAPWS G13-15 Tables 12 (η) and 13 (λ).
+    // Both span ~5 orders of magnitude across the (p, h) envelope so
+    // they ride the EXP transform alongside density.  Only added if
+    // the source backend actually exposes them (some fluids' HEOS
+    // models lack transport correlations entirely).
+    if (source_supports_transport_(src, ::CoolProp::iviscosity)) {
+        ps.push_back({::CoolProp::iviscosity, svd::OutputTransform::EXP});
+    }
+    if (source_supports_transport_(src, ::CoolProp::iconductivity)) {
+        ps.push_back({::CoolProp::iconductivity, svd::OutputTransform::EXP});
+    }
+    return ps;
 }
 
 // Shared property list for PT_INPUTS: T is the input (secondary
 // axis), so outputs are ρ, h, s, u, w (speed of sound).
-std::vector<PropertySpec> pt_properties() {
-    return {
+std::vector<PropertySpec> pt_properties(::CoolProp::AbstractState& src) {
+    std::vector<PropertySpec> ps = {
       {::CoolProp::iDmass, svd::OutputTransform::EXP},
       {::CoolProp::iHmass, svd::OutputTransform::IDENTITY},
       {::CoolProp::iSmass, svd::OutputTransform::IDENTITY},
       {::CoolProp::iUmass, svd::OutputTransform::IDENTITY},
       {::CoolProp::ispeed_sound, svd::OutputTransform::IDENTITY},
     };
+    if (source_supports_transport_(src, ::CoolProp::iviscosity)) {
+        ps.push_back({::CoolProp::iviscosity, svd::OutputTransform::EXP});
+    }
+    if (source_supports_transport_(src, ::CoolProp::iconductivity)) {
+        ps.push_back({::CoolProp::iconductivity, svd::OutputTransform::EXP});
+    }
+    return ps;
 }
 
 }  // namespace
@@ -61,7 +97,7 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     spec.NT = NT;
     spec.NR = NR;
     spec.rank = rank;
-    spec.properties = ph_properties();
+    spec.properties = ph_properties(heos);
 
     // LIQUID region: primary = log p, secondary = h.
     //   b_lo = h(T_min, p) — non-isothermal floor that walks T up
@@ -113,6 +149,10 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
                 return s.umass();
             case ::CoolProp::ispeed_sound:
                 return s.speed_sound();
+            case ::CoolProp::iviscosity:
+                return s.viscosity();
+            case ::CoolProp::iconductivity:
+                return s.conductivity();
             default:
                 throw std::invalid_argument("ph_subcritical: unsupported output property");
         }
@@ -174,7 +214,7 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     spec.NT = NT;
     spec.NR = NR;
     spec.rank = rank;
-    spec.properties = pt_properties();
+    spec.properties = pt_properties(heos);
 
     // For PT_INPUTS the secondary axis is T (instead of h for PH).
     // The b_lo / b_hi curves return T values, not h values.  Reuse
@@ -225,6 +265,10 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
                 return s.umass();
             case ::CoolProp::ispeed_sound:
                 return s.speed_sound();
+            case ::CoolProp::iviscosity:
+                return s.viscosity();
+            case ::CoolProp::iconductivity:
+                return s.conductivity();
             default:
                 throw std::invalid_argument("pt_subcritical: unsupported output property");
         }

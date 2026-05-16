@@ -139,6 +139,8 @@ class SVDSBTLBackend : public AbstractState
     CoolPropDbl calc_umolar() override;
 
     CoolPropDbl calc_speed_sound() override;
+    CoolPropDbl calc_viscosity() override;
+    CoolPropDbl calc_conductivity() override;
 
     CoolPropDbl calc_molar_mass() override;
     CoolPropDbl calc_gas_constant() override;
