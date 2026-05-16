@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstddef>
 #include <stdexcept>
+#include <string>  // std::to_string + std::invalid_argument(string) — MSVC needs explicit include
 
 namespace CoolProp {
 namespace region {
