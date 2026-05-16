@@ -243,10 +243,16 @@ def run_timing(backends, rng_seed=0xCAFE):
     # Build a single (T, p) sample population using the same per-region
     # sampling + classifier as run_conformance(): draw from each region
     # box, accept only points the IF97 region atlas assigns to that
-    # region, and append to a shared list.  Result is a stratified
-    # mixture of R1/R2/R3/R5 samples — representative of real IF97
-    # usage and guaranteed in-envelope so the timed loop needs no
-    # try/except.
+    # region.  Then probe every backend in the timing set at each
+    # candidate (with every property we'll time) and KEEP only samples
+    # that succeed everywhere.  This is the right place to filter out
+    # SVDSBTL's known rank-truncation gap near the critical singularity
+    # (R3, !mayfail in the conformance tests): including those points
+    # in the timed loop would either crash or require try/except inside
+    # the inner per-call measurement.  Pre-filtering keeps the timed
+    # loop a plain for-loop and timing data is the wall-time mean over
+    # the SHARED-evaluable population for fair backend-to-backend
+    # comparison.
     T_arr = []
     p_arr = []
     region_of = []
@@ -262,8 +268,24 @@ def run_timing(backends, rng_seed=0xCAFE):
             attempts += 1
             if classify_region(T, p_MPa) != region:
                 continue
+            p_Pa = p_MPa * 1e6
+            ok = True
+            for backend in backends:
+                for prop in TIMING_PROPS:
+                    try:
+                        v = CP.PropsSI(prop, 'T', T, 'P', p_Pa, backend)
+                    except Exception:
+                        ok = False
+                        break
+                    if not math.isfinite(v):
+                        ok = False
+                        break
+                if not ok:
+                    break
+            if not ok:
+                continue
             T_arr.append(T)
-            p_arr.append(p_MPa * 1e6)
+            p_arr.append(p_Pa)
             region_of.append(region)
             accepted += 1
     N = len(T_arr)
@@ -388,7 +410,11 @@ def render_rst(results_per_backend, counts_per_backend, timings):
             'random :math:`(T, p)` samples drawn from the same per-IF97-region '
             'population the conformance sweep uses above (stratified across '
             'R1, R2, R3, R5; saturation cells filtered out by the IF97 '
-            'region classifier so every timed call is single-phase). '
+            'region classifier so every timed call is single-phase, and '
+            'samples that any tested backend cannot evaluate — e.g. cells '
+            'inside SVDSBTL\'s known rank-truncation gap near the critical '
+            'singularity — are pre-rejected during population so the timed '
+            'loop is a plain for-loop). '
             'The ratio column is :math:`t_{\\mathrm{backend}} / '
             't_{\\mathrm{IF97}}`. Lower is faster than IF97. '
             'Absolute timings depend on hardware; the **ratios** are the '
