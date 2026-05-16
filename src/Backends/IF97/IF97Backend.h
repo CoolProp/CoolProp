@@ -58,10 +58,18 @@ class IF97Backend : public AbstractState
 
     /// Override clear() function of IF97 Water
     bool clear() {
-        // Reset all instances of CachedElement and overwrite
-        // the internal double values with -_HUGE
-        // Default phase condition is no phase imposed
-        // IF97 will make phase/region determination
+        // Reset the full CachedElement registry so every cached value
+        // (speed_sound, cpmass, cvmass, umass, ...) gets invalidated
+        // alongside the IF97-specific fields the override knows about.
+        // Without `cache.clear()`, a backend instance reused across
+        // multiple update() calls would return stale property values
+        // for any CachedElement not in the manual clear-list below.
+        // This bit users of the SBTL surface sampler in particular,
+        // which reuses one AbstractState across thousands of (T, p)
+        // cells and was getting a constant speed_sound surface as a
+        // result.
+        cache.clear();
+
         this->_T = -_HUGE;
         this->_p = -_HUGE;
         this->_Q = -_HUGE;
