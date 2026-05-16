@@ -80,7 +80,11 @@ TEST_CASE("SVDSurface PH preset builds + evals against HEOS", "[SBTL][SVDSurface
     auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
     REQUIRE(spec.input_pair == ::CoolProp::HmassP_INPUTS);
     REQUIRE(spec.regions.size() == 3);
-    REQUIRE(spec.properties.size() == 5);
+    // 5 thermodynamic properties (ρ, T, s, u, w) plus 2 optional
+    // transport properties (η, λ) when the source backend exposes them
+    // — HEOS Water does, so we expect 7 here.  Fluids without transport
+    // correlations get only the 5 thermodynamic properties.
+    REQUIRE(spec.properties.size() == 7);
 
     auto surface = cp_sbtl::build_surface(*heos, std::move(spec));
     REQUIRE(surface.sealed());
