@@ -60,6 +60,32 @@ class PiecewiseChebyshevCurve final : public BoundaryCurve
     static std::unique_ptr<PiecewiseChebyshevCurve> build(double a_lo, double a_hi, std::size_t n_pieces, std::size_t degree, ParamScale scale,
                                                           const std::function<double(double)>& f);
 
+    // Plain-data snapshot of a single piece's coefficient state.
+    struct PieceState
+    {
+        double t_lo;
+        double t_hi;
+        double inv_half_span;
+        double t_mid;
+        std::vector<double> coeffs;        // size degree+1
+        std::vector<double> deriv_coeffs;  // size degree (drops trivially-zero last coeff)
+    };
+    // Snapshot of the whole curve.
+    struct State
+    {
+        double a_lo;
+        double a_hi;
+        ParamScale scale;
+        std::vector<PieceState> pieces;
+        double b_min;
+        double b_max;
+    };
+    [[nodiscard]] State state() const;
+
+    // Trusted factory: reconstructs from a previously-captured State
+    // without re-sampling f.  Used by the SBTL deserializer.
+    static std::unique_ptr<PiecewiseChebyshevCurve> from_state(State s);
+
     [[nodiscard]] double eval(double a) const noexcept override;
     [[nodiscard]] double eval_da(double a) const noexcept override;
     [[nodiscard]] std::pair<double, double> bounds() const noexcept override;

@@ -83,6 +83,10 @@ option(COOLPROP_SVD_E2E
        "Build the SVD-SBTL end-to-end validation tool at dev/svd_sbtl_e2e.cpp"
        OFF)
 
+option(COOLPROP_BUILD_SVD_TABLES
+       "Build the SVDSBTL bulk-table builder at dev/build_svd_tables.cpp"
+       OFF)
+
 #option (DARWIN_USE_LIBCPP
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
@@ -286,9 +290,12 @@ file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # Generic SVD / Region components — sources live under src/SVD/ and
 # src/Region/, headers under include/CoolProp/{svd,region}/.
+# SBTL adapter layer (Phase 2b) sits on top — sources under src/SBTL/,
+# headers under include/CoolProp/sbtl/.
 file(GLOB SVD_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/SVD/*.cpp")
 file(GLOB REGION_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Region/*.cpp")
-list(APPEND APP_SOURCES ${SVD_SOURCES} ${REGION_SOURCES})
+file(GLOB SBTL_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/SBTL/*.cpp")
+list(APPEND APP_SOURCES ${SVD_SOURCES} ${REGION_SOURCES} ${SBTL_SOURCES})
 
 # Add the miniz source file
 list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1/miniz.c")
@@ -2082,6 +2089,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDComponents.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SBTLAdapter.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
@@ -2139,6 +2148,20 @@ if(COOLPROP_SVD_E2E)
   add_dependencies(SVDSBTL_E2E generate_headers)
   if(UNIX)
     target_link_libraries(SVDSBTL_E2E ${CMAKE_DL_LIBS})
+  endif()
+endif()
+
+if(COOLPROP_BUILD_SVD_TABLES)
+  # Phase 2b bulk-table builder.  Writes one .svd.bin.z per fluid per
+  # input pair under ~/.CoolProp/SVDTables/.  Same pattern as
+  # COOLPROP_MAIN_MODULE / CatchTestRunner: link the whole project
+  # statically into the standalone executable.
+  add_executable(build_svd_tables
+                 ${APP_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/build_svd_tables.cpp")
+  add_dependencies(build_svd_tables generate_headers)
+  if(UNIX)
+    target_link_libraries(build_svd_tables ${CMAKE_DL_LIBS})
   endif()
 endif()
 

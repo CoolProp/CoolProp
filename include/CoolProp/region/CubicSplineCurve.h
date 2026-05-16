@@ -44,6 +44,26 @@ class CubicSplineCurve final : public BoundaryCurve
     // input.
     static std::unique_ptr<CubicSplineCurve> build(std::vector<double> a, std::vector<double> b);
 
+    // Plain-data snapshot for serialization.  Captures the natural-
+    // spline state: knot positions a, knot values b, the
+    // second-derivative table M, and the tight bounds (b_min, b_max)
+    // computed by build() via cubic-extremum root finding.
+    struct State
+    {
+        std::vector<double> a;
+        std::vector<double> b;
+        std::vector<double> M;
+        double b_min;
+        double b_max;
+    };
+    [[nodiscard]] State state() const;
+
+    // Trusted factory: reconstructs a CubicSplineCurve from a State
+    // snapshot WITHOUT re-running the tridiagonal solve.  Used by the
+    // SBTL deserializer.  Validates the state shape (a/b/M all same
+    // length, a strictly increasing) and rejects malformed input.
+    static std::unique_ptr<CubicSplineCurve> from_state(State s);
+
     [[nodiscard]] double eval(double a) const noexcept override;
     [[nodiscard]] double eval_da(double a) const noexcept override;
     [[nodiscard]] std::pair<double, double> bounds() const noexcept override;
