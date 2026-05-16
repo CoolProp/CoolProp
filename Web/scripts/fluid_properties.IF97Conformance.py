@@ -240,35 +240,44 @@ def run_timing(backends, rng_seed=0xCAFE):
     Returns timings[backend][prop_key] = ns/call.
     """
     rng = random.Random(rng_seed)
-    N = 20000
-    # Pre-build (T, p) state vectors; restrict to a single-phase box so
-    # we don't pay the saturation-flash penalty in the timed loop.
-    T_arr = [rng.uniform(350.0, 800.0) for _ in range(N)]
-    p_arr = [rng.uniform(0.5, 20.0) * 1e6 for _ in range(N)]
+    # Build a single (T, p) sample population using the same per-region
+    # sampling + classifier as run_conformance(): draw from each region
+    # box, accept only points the IF97 region atlas assigns to that
+    # region, and append to a shared list.  Result is a stratified
+    # mixture of R1/R2/R3/R5 samples — representative of real IF97
+    # usage and guaranteed in-envelope so the timed loop needs no
+    # try/except.
+    T_arr = []
+    p_arr = []
+    region_of = []
+    for region, box in REGION_BOXES.items():
+        T_lo, T_hi = box['T']
+        p_lo, p_hi = box['p']
+        attempts = 0
+        accepted = 0
+        target = SAMPLES_PER_REGION
+        while accepted < target and attempts < 10 * target:
+            T = rng.uniform(T_lo, T_hi)
+            p_MPa = math.exp(rng.uniform(math.log(p_lo), math.log(p_hi)))
+            attempts += 1
+            if classify_region(T, p_MPa) != region:
+                continue
+            T_arr.append(T)
+            p_arr.append(p_MPa * 1e6)
+            region_of.append(region)
+            accepted += 1
+    N = len(T_arr)
     timings = {}
     for backend in backends:
         timings[backend] = {}
         for prop in TIMING_PROPS:
             for k in range(min(64, N)):  # warmup
-                try:
-                    CP.PropsSI(prop, 'T', T_arr[k], 'P', p_arr[k], backend)
-                except Exception:
-                    # Warm-up sample landed outside this backend's
-                    # validity envelope; ignore — actual timing starts
-                    # below.
-                    pass
+                CP.PropsSI(prop, 'T', T_arr[k], 'P', p_arr[k], backend)
             t0 = time.perf_counter()
-            ok = 0
             for k in range(N):
-                try:
-                    CP.PropsSI(prop, 'T', T_arr[k], 'P', p_arr[k], backend)
-                    ok += 1
-                except Exception:
-                    # Sample outside the backend's validity envelope;
-                    # don't count it toward the per-call mean.
-                    pass
+                CP.PropsSI(prop, 'T', T_arr[k], 'P', p_arr[k], backend)
             t1 = time.perf_counter()
-            timings[backend][prop] = ((t1 - t0) / ok * 1e9) if ok else float('nan')
+            timings[backend][prop] = (t1 - t0) / N * 1e9
     return timings
 
 
@@ -376,8 +385,10 @@ def render_rst(results_per_backend, counts_per_backend, timings):
         lines.append('')
         lines.append(
             'Mean wall time per ``PropsSI`` call for property look-ups at '
-            'random :math:`(T, p)` in the single-phase region '
-            ':math:`T \\in [350, 800]` K, :math:`p \\in [0.5, 20]` MPa. '
+            'random :math:`(T, p)` samples drawn from the same per-IF97-region '
+            'population the conformance sweep uses above (stratified across '
+            'R1, R2, R3, R5; saturation cells filtered out by the IF97 '
+            'region classifier so every timed call is single-phase). '
             'The ratio column is :math:`t_{\\mathrm{backend}} / '
             't_{\\mathrm{IF97}}`. Lower is faster than IF97. '
             'Absolute timings depend on hardware; the **ratios** are the '
