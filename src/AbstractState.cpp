@@ -171,14 +171,32 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
     }
 
     // Split off any "?<options>" suffix once at the entry-point so the
-    // rest of the dispatch operates on the unadorned backend string.
-    // The raw options JSON (or "" when nothing was supplied) is
-    // threaded through to the backend generator via the options-aware
-    // overload below.  See
+    // rest of the dispatch operates on the unadorned backend / fluid
+    // strings.  PropsSI calls extract_backend() first, which splits
+    // "BACKEND::FLUID?<options>" on "::" without touching '?'  — so
+    // the suffix arrives on the *fluid* side.  Direct factory()
+    // callers may put it on either side.  Strip from wherever it
+    // lives (rejecting the ambiguous both-sides case) and thread the
+    // raw options JSON through to the backend generator via the
+    // options-aware overload below.  See
     // docs/superpowers/specs/2026-05-16-backend-options-string-design.md.
     auto parsed = parse_factory_options(backend);
-    const std::string& clean_backend = parsed.clean_string;
-    const std::string& options_json = parsed.options_json;
+    std::string clean_backend = parsed.clean_string;
+    std::string options_json = parsed.options_json;
+    std::vector<std::string> clean_fluid_names = fluid_names;
+    if (!clean_fluid_names.empty() && clean_fluid_names[0].find('?') != std::string::npos) {
+        auto parsed_fluid = parse_factory_options(clean_fluid_names[0]);
+        if (!parsed_fluid.options_json.empty() && !options_json.empty()) {
+            throw ValueError("factory: '?<options>' supplied on both the backend and fluid sides; pick one side.");
+        }
+        // Always replace fluid_names[0] with the stripped form — even
+        // when the suffix carried no options (bare '?' or whitespace) —
+        // so the downstream fluid lookup doesn't see a trailing '?'.
+        clean_fluid_names[0] = parsed_fluid.clean_string;
+        if (!parsed_fluid.options_json.empty()) {
+            options_json = parsed_fluid.options_json;
+        }
+    }
 
     backend_families f1;
     std::string f2;
@@ -193,16 +211,23 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
 
     if (gen != end) {
         // One of the registered backends was able to match the given backend family
-        return gen->second->get_AbstractState(fluid_names, options_json);
+        return gen->second->get_AbstractState(clean_fluid_names, options_json);
     }
 #if !defined(NO_TABULAR_BACKENDS)
     else if (f1 == TTSE_BACKEND_FAMILY) {
-        // Will throw if there is a problem with this backend
-        const shared_ptr<AbstractState> AS(factory(f2, fluid_names));
+        // Will throw if there is a problem with this backend.  These
+        // tabular backends don't accept options today; if the caller
+        // supplied any, fail loud so the suffix isn't silently dropped.
+        if (!options_json.empty()) {
+            throw NotImplementedError("TTSE backend does not yet accept factory-string options");
+        }
+        const shared_ptr<AbstractState> AS(factory(f2, clean_fluid_names));
         return new TTSEBackend(AS);
     } else if (f1 == BICUBIC_BACKEND_FAMILY) {
-        // Will throw if there is a problem with this backend
-        const shared_ptr<AbstractState> AS(factory(f2, fluid_names));
+        if (!options_json.empty()) {
+            throw NotImplementedError("BICUBIC backend does not yet accept factory-string options");
+        }
+        const shared_ptr<AbstractState> AS(factory(f2, clean_fluid_names));
         return new BicubicBackend(AS);
     } else if (f1 == SVDSBTL_BACKEND_FAMILY) {
         // SVDSBTL requires an explicit source-of-truth backend in
@@ -211,28 +236,38 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
         // without the '&' lands here with f2 empty and throws.
         if (f2.empty()) {
             throw ValueError(format("SVDSBTL requires an explicit source backend, e.g. factory(\"SVDSBTL&HEOS\", \"%s\")",
-                                    fluid_names.empty() ? "<fluid>" : fluid_names[0].c_str()));
+                                    clean_fluid_names.empty() ? "<fluid>" : clean_fluid_names[0].c_str()));
         }
-        if (fluid_names.size() != 1) {
+        if (clean_fluid_names.size() != 1) {
             throw ValueError("SVDSBTL backend is pure-fluid only; expected exactly one fluid name");
         }
-        return new SVDSBTLBackend(fluid_names[0], f2);
+        // SVDSBTL is not yet opted in to factory-string options; drop
+        // the suffix loudly rather than silently for symmetry with the
+        // tabular branches above.  PR B wires this up.
+        if (!options_json.empty()) {
+            throw NotImplementedError("SVDSBTL backend does not yet accept factory-string options");
+        }
+        return new SVDSBTLBackend(clean_fluid_names[0], f2);
     }
 #endif
-    else if (backend == "?" || backend.empty()) {
-        const std::size_t idel = fluid_names[0].find("::");
-        // Backend has not been specified, and we have to figure out what the backend is by parsing the string
-        if (idel == std::string::npos)  // No '::' found, no backend specified, try HEOS, otherwise a failure
-        {
-            // Figure out what backend to use
-            return factory("HEOS", fluid_names);
+    else if (clean_backend == "?" || clean_backend.empty()) {
+        // Backend has not been specified, and we have to figure out what
+        // the backend is by parsing the (already-stripped) fluid string.
+        // Options accumulated above are re-attached to the inner
+        // backend half so the recursive factory() call's own parse pass
+        // picks them up — keeps the dispatch logic in one place.
+        const std::size_t idel = clean_fluid_names[0].find("::");
+        const std::string suffix = options_json.empty() ? std::string{} : ("?" + options_json);
+        if (idel == std::string::npos) {
+            // No '::' found, default to HEOS.
+            return factory("HEOS" + suffix, clean_fluid_names);
         } else {
-            // Split string at the '::' into two std::string, call again
-            return factory(std::string(fluid_names[0].begin(), fluid_names[0].begin() + idel),
-                           std::string(fluid_names[0].begin() + (idel + 2), fluid_names[0].end()));
+            std::string inner_backend = clean_fluid_names[0].substr(0, idel) + suffix;
+            std::vector<std::string> inner_fluid = {clean_fluid_names[0].substr(idel + 2)};
+            return factory(inner_backend, inner_fluid);
         }
     } else {
-        throw ValueError(format("Invalid backend name [%s] to factory function", backend.c_str()));
+        throw ValueError(format("Invalid backend name [%s] to factory function", clean_backend.c_str()));
     }
 }
 std::vector<std::string> AbstractState::fluid_names() {
