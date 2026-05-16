@@ -217,7 +217,7 @@ void CoolProp::AbstractCubicBackend::update_DmolarT() {
     if (_T >= Tmax) {
         _p = calc_pressure_nocache(_T, _rhomolar);
         _Q = -1;
-        _phase = (_rhomolar >= calc_rhomolar_critical()) ? iphase_supercritical_liquid : iphase_supercritical_gas;
+        recalculate_singlephase_phase();
         return;
     }
     const double rhoL_sat = calc_saturation_ancillary(iDmolar, 0, iT, _T);
