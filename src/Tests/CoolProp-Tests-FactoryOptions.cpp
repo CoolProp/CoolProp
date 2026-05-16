@@ -137,4 +137,40 @@ TEST_CASE("parse_factory_options: clean_string preserves the full backend+fluid 
     }
 }
 
+// ---------------------------------------------------------------------------
+// Factory entry-point integration: options are stripped from the backend
+// string before dispatch, and the default generator overload rejects
+// non-empty options with NotImplementedError for backends that haven't
+// opted in.
+// ---------------------------------------------------------------------------
+
+#    include "AbstractState.h"
+
+TEST_CASE("AbstractState::factory: '?<options>' is stripped before backend dispatch", "[FactoryOptions]") {
+    SECTION("no options — existing behaviour unchanged") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+        REQUIRE(AS != nullptr);
+        // HEOS factory returns the pure-fluid wrapper, which reports
+        // "HelmholtzEOSBackend" rather than the mixture variant.
+        REQUIRE(AS->backend_name() == "HelmholtzEOSBackend");
+    }
+    SECTION("empty options ('?{}') accepted by default overload") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS?{}", "Water"));
+        REQUIRE(AS != nullptr);
+    }
+    SECTION("bare '?' accepted by default overload") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS?", "Water"));
+        REQUIRE(AS != nullptr);
+    }
+}
+
+TEST_CASE("AbstractState::factory: non-empty options on an opted-out backend throw", "[FactoryOptions]") {
+    REQUIRE_THROWS(std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(R"(HEOS?{"some_key":1})", "Water")));
+}
+
+TEST_CASE("AbstractState::build_options_json: default returns empty string", "[FactoryOptions]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    REQUIRE(AS->build_options_json().empty());
+}
+
 #endif  // ENABLE_CATCH

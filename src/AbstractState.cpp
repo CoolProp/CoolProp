@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include "boost/math/tools/toms748_solve.hpp"
 #include "AbstractState.h"
+#include "CoolProp/FactoryOptions.h"
 #include "DataStructures.h"
 #include "qmass_conversions.h"
 #include "Backends/IF97/IF97Backend.h"
@@ -59,6 +60,26 @@ inline BackendLibrary& get_backend_library() {
 void register_backend(const backend_families& bf, shared_ptr<AbstractStateGenerator> gen) {
     get_backend_library().add_backend(bf, gen);
 };
+
+// Default implementation of the options-aware factory entry-point.
+// Forwards to the no-options overload when `options_json` is empty or
+// is the canonical empty object "{}".  Anything else means the caller
+// passed `?<options>` but the backend hasn't opted in to consume them —
+// throw with a clear message so silent option-dropping never happens.
+AbstractState* AbstractStateGenerator::get_AbstractState(const std::vector<std::string>& fluid_names, const std::string& options_json) {
+    // Trim surrounding whitespace; treat ""/"{}" as "no options".
+    std::size_t lo = options_json.find_first_not_of(" \t\r\n");
+    if (lo == std::string::npos) {
+        return get_AbstractState(fluid_names);
+    }
+    std::size_t hi = options_json.find_last_not_of(" \t\r\n");
+    const std::string trimmed = options_json.substr(lo, hi - lo + 1);
+    if (trimmed == "{}") {
+        return get_AbstractState(fluid_names);
+    }
+    throw NotImplementedError("This backend does not accept factory-string options.  Drop the '?<...>' suffix or opt the backend in (see "
+                              "docs/superpowers/specs/2026-05-16-backend-options-string-design.md).");
+}
 
 class IF97BackendGenerator : public AbstractStateGenerator
 {
@@ -149,9 +170,19 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
         std::cout << "AbstractState::factory(" << backend << "," << stringvec_to_string(fluid_names) << ")" << std::endl;
     }
 
+    // Split off any "?<options>" suffix once at the entry-point so the
+    // rest of the dispatch operates on the unadorned backend string.
+    // The raw options JSON (or "" when nothing was supplied) is
+    // threaded through to the backend generator via the options-aware
+    // overload below.  See
+    // docs/superpowers/specs/2026-05-16-backend-options-string-design.md.
+    auto parsed = parse_factory_options(backend);
+    const std::string& clean_backend = parsed.clean_string;
+    const std::string& options_json = parsed.options_json;
+
     backend_families f1;
     std::string f2;
-    extract_backend_families_string(backend, f1, f2);
+    extract_backend_families_string(clean_backend, f1, f2);
 
     std::map<backend_families, shared_ptr<AbstractStateGenerator>>::const_iterator gen, end;
     get_backend_library().get_generator_iterators(f1, gen, end);
@@ -162,7 +193,7 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
 
     if (gen != end) {
         // One of the registered backends was able to match the given backend family
-        return gen->second->get_AbstractState(fluid_names);
+        return gen->second->get_AbstractState(fluid_names, options_json);
     }
 #if !defined(NO_TABULAR_BACKENDS)
     else if (f1 == TTSE_BACKEND_FAMILY) {

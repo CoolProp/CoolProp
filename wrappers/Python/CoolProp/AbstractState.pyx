@@ -44,6 +44,18 @@ cdef class AbstractState:
     cpdef backend_name(self):
         """ Get the backend name - wrapper of c++ function :cpapi:`CoolProp::AbstractState::backend_name` """
         return self.thisptr.backend_name()
+    cpdef build_options_json(self):
+        """ Canonical-JSON string of the options this instance was built with.
+
+        Returns an empty string for backends that don't accept factory-string
+        options.  For options-aware backends (e.g. SVDSBTL), the return value
+        round-trips through :py:func:`AbstractState.factory`: feeding it back
+        as the ``?<options>`` suffix on the factory string reproduces the
+        construction byte-for-byte.
+
+        Wrapper of c++ function :cpapi:`CoolProp::AbstractState::build_options_json` .
+        """
+        return self.thisptr.build_options_json()
     cpdef fluid_names(self):
         """ Get the list of fluid names - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fluid_names` """
         return self.thisptr.fluid_names()

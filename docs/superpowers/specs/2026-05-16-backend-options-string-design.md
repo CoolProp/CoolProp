@@ -175,18 +175,30 @@ it's a per-backend `"strict": false` in the JSON itself, not a global.
 ### Canonical serialization
 
 Cache hashing and reproducibility both need a single canonical form per
-logical-options-value. We use [RFC 8785 JCS][jcs]: sort keys
-recursively, normalize number representation, UTF-8 NFC for strings,
-arrays preserve order. The canonical bytes are the input to:
+logical-options-value. We sort object keys recursively, preserve
+array order, and use RapidJSON's default number formatting. This
+is *not* strict [RFC 8785 JCS][jcs] (no NFC string normalisation,
+no ECMAScript number rounding) — but it's "deterministic within a
+single CoolProp build", which is what cache hashing needs since the
+canonical form never appears in any on-wire / cross-implementation
+context.
+
+The canonical bytes are the input to:
 
 - **`AbstractState::build_options_json()`** — returns the canonical
   string for the instance.
 - **Cache filename hashing** — for caching backends (SVDSBTL today),
-  the cache filename gets an 8-hex-char SHA-256 prefix of the canonical
-  bytes alongside fluid / source / input_pair. Drops the int-keyed
+  the cache filename gets a 16-hex-char [FNV-1a 64][fnv1a] prefix
+  of the canonical bytes alongside fluid / source / input_pair.
+  FNV-1a 64 is the same hash family CoolProp already uses for
+  superancillary EOS-freshness verification (see the
+  `Superancillary source_eos_hash` test in
+  `src/Tests/CoolProp-Tests.cpp`) — no new dependencies, identical
+  determinism guarantees across compilers. Drops the int-keyed
   input_pair fragility (CoolProp-b6v) at the same time.
 
 [jcs]: https://datatracker.ietf.org/doc/html/rfc8785
+[fnv1a]: http://www.isthe.com/chongo/tech/comp/fnv/
 
 ### API surface
 
@@ -319,7 +331,7 @@ equivalent.
 - Build instance with `?{"grid":{"NT":200,"rank":20,"NR":800}}` and
   with `?{"grid":{"rank":20,"NR":800,"NT":200}}`. Both must produce the
   same `build_options_json()` output (sorted keys) and the same
-  SHA-256 cache-filename prefix.
+  FNV-1a 64 cache-filename prefix.
 - Round-trip: `build_options_json()` output, fed back into the factory,
   produces an instance with identical `build_options_json()`.
 
@@ -370,20 +382,24 @@ release-cycle of overlap before the Configuration globals are removed.
   already gets the options canonical form; that's sufficient for
   reproducibility.
 
+## Decisions made during PR A
+
+1. **JSON library: RapidJSON** (already vendored for the fluid catalog).
+   nlohmann would offer a nicer API at a build-time cost; not worth it.
+2. **Schema validator: RapidJSON's built-in** (`rapidjson::SchemaDocument`).
+   Strict-mode = `additionalProperties:false` in each per-backend schema.
+3. **Canonical-form hash: FNV-1a 64** (same hash family CoolProp already
+   uses to stamp `source_eos_hash` for superancillary freshness; 16-hex
+   prefix on cache filenames).
+4. **Schema storage:** per-backend JSON Schemas live in
+   `include/CoolProp/schemas/<backend>.schema.json` plus a generated
+   `*.h` companion that exposes the schema as a string literal
+   (`kSVDSBTLOptionsSchemaJson`), so the validator has no runtime file
+   dependency.
+
 ## Open questions
 
-1. **RapidJSON vs nlohmann::json** — CoolProp already vendors RapidJSON
-   for the fluid catalog. Sticking with it keeps the dependency surface
-   flat. nlohmann would give a nicer C++ API but bloats build time.
-   Recommendation: RapidJSON; revisit only if the API friction shows up.
-2. **JSON Schema validator** — RapidJSON has a schema validator. Use
-   it directly; don't pull in a separate validator library.
-3. **Where do per-backend schemas live?** — Recommend
-   `include/CoolProp/schemas/<backend>.schema.json` so they're
-   header-only-installable, with a `*.h` companion that exposes them as
-   `kSVDSBTLOptionsSchemaJson` string literals (avoids runtime file
-   lookups for the validator).
-4. **Deprecation cadence for Configuration globals** — One release with
+1. **Deprecation cadence for Configuration globals** — One release with
    the JSON key + a deprecation warning when the global is set, then
    removal one release later? Leaving as TBD pending Ian's preference.
 
