@@ -2190,7 +2190,23 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
     else if ((HEOS._phase == iphase_liquid) || (HEOS._phase == iphase_supercritical_liquid)) {
         CoolPropDbl ymelt = NAN, yL = NAN, y = NAN;
         CoolPropDbl rhomelt = HEOS.components[0].triple_liquid.rhomolar;
-        CoolPropDbl rhoL = static_cast<double>(HEOS._rhoLanc);
+        // Self-contained seed evaluation: prefer the cached ancillary set by
+        // upstream phase-determination, otherwise fall through to superancillary
+        // (numerical-critical-point accurate), then to the polynomial ancillary.
+        // Lets DHSU_T_flash skip the unconditional ancillary evaluation on the
+        // imposed-phase fast path without breaking this consumer (#2718).
+        CoolPropDbl rhoL = NAN;
+        if (HEOS._rhoLanc) {
+            rhoL = static_cast<double>(HEOS._rhoLanc);
+        } else if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
+            auto superanc_ptr = HEOS.get_superanc();
+            if (superanc_ptr) {
+                rhoL = superanc_ptr->eval_sat(HEOS._T, 'D', 0);
+            }
+        }
+        if (!ValidNumber(rhoL)) {
+            rhoL = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
+        }
 
         switch (other) {
             case iSmolar: {
@@ -2226,7 +2242,19 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
     // Subcritical temperature gas
     else if (HEOS._phase == iphase_gas) {
         CoolPropDbl rhomin = 1e-14;
-        CoolPropDbl rhoV = static_cast<double>(HEOS._rhoVanc);
+        // See companion block in the liquid branch above (#2718).
+        CoolPropDbl rhoV = NAN;
+        if (HEOS._rhoVanc) {
+            rhoV = static_cast<double>(HEOS._rhoVanc);
+        } else if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
+            auto superanc_ptr = HEOS.get_superanc();
+            if (superanc_ptr) {
+                rhoV = superanc_ptr->eval_sat(HEOS._T, 'D', 1);
+            }
+        }
+        if (!ValidNumber(rhoV)) {
+            rhoV = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
+        }
 
         try {
             Halley(resid, 0.5 * (rhomin + rhoV), 1e-8, 100);
