@@ -2179,11 +2179,15 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
         } else {
             throw ValueError(format("input %Lg is not in range %Lg,%Lg,%Lg", y, yc, ymin));
         }
-        // Update the state (T > Tc)
-        if (HEOS._p < HEOS.p_critical()) {
-            HEOS._phase = iphase_supercritical_gas;
-        } else {
-            HEOS._phase = iphase_supercritical;
+        // Update the state (T > Tc). Honor an imposed phase here: a caller who used
+        // specify_phase(iphase_supercritical_gas/liquid) would otherwise have it
+        // silently rewritten by this density-based classifier. (#2718)
+        if (HEOS.imposed_phase_index == iphase_not_imposed) {
+            if (HEOS._p < HEOS.p_critical()) {
+                HEOS._phase = iphase_supercritical_gas;
+            } else {
+                HEOS._phase = iphase_supercritical;
+            }
         }
     }
     // Subcritical temperature liquid
@@ -2201,7 +2205,15 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
         } else if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
             auto superanc_ptr = HEOS.get_superanc();
             if (superanc_ptr) {
-                rhoL = superanc_ptr->eval_sat(HEOS._T, 'D', 0);
+                // get_superanc() only reports cache existence, not domain coverage —
+                // eval_sat() can still throw near the numerical critical point or a
+                // domain edge. Swallow the throw so the polynomial fallback below stays
+                // reachable for previously valid subcritical flashes.
+                try {
+                    rhoL = superanc_ptr->eval_sat(HEOS._T, 'D', 0);
+                } catch (...) {
+                    rhoL = NAN;
+                }
             }
         }
         if (!ValidNumber(rhoL)) {
@@ -2249,7 +2261,12 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
         } else if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
             auto superanc_ptr = HEOS.get_superanc();
             if (superanc_ptr) {
-                rhoV = superanc_ptr->eval_sat(HEOS._T, 'D', 1);
+                // See companion try/catch in the liquid branch above.
+                try {
+                    rhoV = superanc_ptr->eval_sat(HEOS._T, 'D', 1);
+                } catch (...) {
+                    rhoV = NAN;
+                }
             }
         }
         if (!ValidNumber(rhoV)) {
