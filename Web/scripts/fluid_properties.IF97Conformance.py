@@ -253,6 +253,9 @@ def run_timing(backends, rng_seed=0xCAFE):
                 try:
                     CP.PropsSI(prop, 'T', T_arr[k], 'P', p_arr[k], backend)
                 except Exception:
+                    # Warm-up sample landed outside this backend's
+                    # validity envelope; ignore — actual timing starts
+                    # below.
                     pass
             t0 = time.perf_counter()
             ok = 0
@@ -261,6 +264,8 @@ def run_timing(backends, rng_seed=0xCAFE):
                     CP.PropsSI(prop, 'T', T_arr[k], 'P', p_arr[k], backend)
                     ok += 1
                 except Exception:
+                    # Sample outside the backend's validity envelope;
+                    # don't count it toward the per-call mean.
                     pass
             t1 = time.perf_counter()
             timings[backend][prop] = ((t1 - t0) / ok * 1e9) if ok else float('nan')
@@ -317,14 +322,12 @@ def render_rst(results_per_backend, counts_per_backend, timings):
         .format(n=SAMPLES_PER_REGION))
     lines.append('')
 
-    backend_titles = dict(TESTED)
     for backend, _label in TESTED:
         if backend not in results_per_backend:
             lines.append('Backend ``{}``: not available on this build.'.format(backend))
             lines.append('')
             continue
         results = results_per_backend[backend]
-        counts = counts_per_backend[backend]
 
         section_title = 'Deviation of ``{}`` from IAPWS-IF97'.format(backend)
         lines.append(section_title)
