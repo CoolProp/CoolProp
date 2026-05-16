@@ -249,7 +249,7 @@ double time_phflsh_direct(PHFLSHdll_t phflsh, double p_kPa, double h_mol, double
 }
 
 void bench_one(const std::string& fluid, std::size_t NT, std::size_t NP, std::size_t repeats, const std::string& refprop_path) {
-    auto svd = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("SVDSBTL", fluid));
+    auto svd = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("SVDSBTL&HEOS", fluid));
     auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", fluid));
 
     // IF97 only applies to water; lazily allocate so other fluids skip it.

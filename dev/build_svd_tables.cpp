@@ -71,20 +71,20 @@ double file_size_kb(const std::string& path) {
     return static_cast<double>(sz) / 1024.0;
 }
 
-void build_one(const std::string& fluid, std::size_t NT, std::size_t NR, std::int32_t rank) {
-    auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", fluid));
+void build_one(const std::string& fluid, const std::string& source_backend, std::size_t NT, std::size_t NR, std::int32_t rank) {
+    auto source = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory(source_backend, fluid));
 
     for (const auto pair : {::CoolProp::HmassP_INPUTS, ::CoolProp::PT_INPUTS}) {
         const std::string label = (pair == ::CoolProp::HmassP_INPUTS) ? "PH" : "PT";
-        const std::string out_path = cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid, pair);
+        const std::string out_path = cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid, source_backend, pair);
 
-        std::printf("  %s %s  building... ", fluid.c_str(), label.c_str());
+        std::printf("  %s/%s %s  building... ", source_backend.c_str(), fluid.c_str(), label.c_str());
         std::fflush(stdout);
 
         const auto t0 = std::chrono::steady_clock::now();
-        cp_sbtl::SurfaceSpec spec = (pair == ::CoolProp::HmassP_INPUTS) ? cp_sbtl::presets::ph_subcritical(*heos, NT, NR, rank)
-                                                                        : cp_sbtl::presets::pt_subcritical(*heos, NT, NR, rank);
-        cp_sbtl::SVDSurface surface = cp_sbtl::build_surface(*heos, std::move(spec));
+        cp_sbtl::SurfaceSpec spec = (pair == ::CoolProp::HmassP_INPUTS) ? cp_sbtl::presets::ph_subcritical(*source, NT, NR, rank)
+                                                                        : cp_sbtl::presets::pt_subcritical(*source, NT, NR, rank);
+        cp_sbtl::SVDSurface surface = cp_sbtl::build_surface(*source, std::move(spec));
         const auto t1 = std::chrono::steady_clock::now();
 
         cp_sbtl::SVDSurfaceSerializer::save_to_file(surface, out_path);
@@ -111,6 +111,23 @@ int main(int argc, char** argv) {
     const std::size_t NT = std::max<std::size_t>(2, env_size_t("SVD_NT", 200));
     const std::size_t NR = std::max<std::size_t>(2, env_size_t("SVD_NR", 800));
     const std::int32_t rank = std::max<std::int32_t>(1, env_int("SVD_RANK", 20));
+    // Source backend(s) to build tables against.  Comma-separated, no
+    // spaces.  Defaults to "HEOS" only; pass SVD_SOURCES=HEOS,REFPROP
+    // to build both side-by-side (each lands at a distinct cache path).
+    const std::string source_csv = []() {
+        const char* env = std::getenv("SVD_SOURCES");
+        return env != nullptr ? std::string(env) : std::string("HEOS");
+    }();
+    std::vector<std::string> sources;
+    {
+        std::string s = source_csv;
+        std::size_t pos = 0;
+        while ((pos = s.find(',')) != std::string::npos) {
+            sources.push_back(s.substr(0, pos));
+            s.erase(0, pos + 1);
+        }
+        if (!s.empty()) sources.push_back(s);
+    }
 
     std::vector<std::string> fluids;
     if (argc > 1) {
@@ -123,18 +140,30 @@ int main(int argc, char** argv) {
     }
 
     std::printf("SVDSBTL bulk-build  (NT=%zu  NR=%zu  rank=%d)\n", NT, NR, rank);
-    std::printf("Cache dir: %s\n\n", cp_sbtl::SVDSurfaceSerializer::default_cache_dir().c_str());
+    std::printf("Cache dir: %s\n", cp_sbtl::SVDSurfaceSerializer::default_cache_dir().c_str());
+    std::printf("Sources:   ");
+    for (std::size_t i = 0; i < sources.size(); ++i)
+        std::printf("%s%s", i > 0 ? "," : "", sources[i].c_str());
+    std::printf("\n\n");
 
     int ok = 0;
     int failed = 0;
     const auto t_global = std::chrono::steady_clock::now();
-    for (const auto& fluid : fluids) {
-        try {
-            build_one(fluid, NT, NR, rank);
-            ++ok;
-        } catch (const std::exception& e) {
-            std::printf("  %s  ERROR: %s\n", fluid.c_str(), e.what());
-            ++failed;
+    for (const auto& source : sources) {
+        for (const auto& fluid : fluids) {
+            // IF97 is Water-only; silently skip non-Water fluids
+            // rather than erroring out the whole batch.
+            if (source == "IF97" && fluid != "Water") {
+                std::printf("  %s/%s  SKIP (IF97 is Water-only)\n", source.c_str(), fluid.c_str());
+                continue;
+            }
+            try {
+                build_one(fluid, source, NT, NR, rank);
+                ++ok;
+            } catch (const std::exception& e) {
+                std::printf("  %s/%s  ERROR: %s\n", source.c_str(), fluid.c_str(), e.what());
+                ++failed;
+            }
         }
     }
     const double total_s = std::chrono::duration<double>(std::chrono::steady_clock::now() - t_global).count();

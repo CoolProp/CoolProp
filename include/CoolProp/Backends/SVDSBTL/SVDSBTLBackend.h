@@ -52,7 +52,22 @@ namespace CoolProp {
 class SVDSBTLBackend : public AbstractState
 {
    public:
-    explicit SVDSBTLBackend(const std::string& fluid_name);
+    // Construct an SVDSBTL backend backed by the given truth source.
+    //
+    // The source argument is required (no default) — it determines:
+    //   * which backend supplies the HEOS-style truth values when the
+    //     SVD tables are built (or loaded from cache)
+    //   * the cache key slot in <fluid>.<source>.<input_pair>.svd.bin.z
+    //     so HEOS-built and REFPROP-built tables for the same fluid
+    //     never collide
+    //   * how two-phase queries are resolved (HEOS uses SuperAncillary;
+    //     REFPROP forwards PQ/QT directly; IF97 uses psat97 + Q-blend)
+    //   * the critical-patch fallback target (always the source backend,
+    //     so the patch is "truth" by definition for each source)
+    //
+    // Supported source values: "HEOS", "REFPROP", "IF97".  Anything
+    // else throws.  IF97 is restricted to Water.
+    SVDSBTLBackend(const std::string& fluid_name, const std::string& source_backend);
 
     SVDSBTLBackend(const SVDSBTLBackend&) = delete;
     SVDSBTLBackend& operator=(const SVDSBTLBackend&) = delete;
@@ -143,7 +158,7 @@ class SVDSBTLBackend : public AbstractState
         if (ParamName == "name") {
             return fluid_name_;
         }
-        return heos_reference_()->fluid_param_string(ParamName);
+        return source_reference_()->fluid_param_string(ParamName);
     }
 
     // Test seam: exposes which surfaces were loaded vs built.  Returns
@@ -178,11 +193,12 @@ class SVDSBTLBackend : public AbstractState
     [[nodiscard]] CoolPropDbl two_phase_property_(CoolProp::parameters prop) const;
 
     std::string fluid_name_;
+    std::string source_backend_;               // "HEOS" / "REFPROP" / "IF97"
     std::vector<CoolPropDbl> mole_fractions_;  // always {1.0}
 
     // Cache of molar mass, populated lazily on the first
     // calc_molar_mass() call.  Avoids per-call shared_ptr deref +
-    // virtual dispatch through heos_reference_() on every
+    // virtual dispatch through source_reference_() on every
     // calc_hmolar / calc_rhomolar / calc_smolar.  Fluid is fixed at
     // construction so this never changes after first read.
     mutable CoolPropDbl molar_mass_cached_ = -1.0;
@@ -190,8 +206,8 @@ class SVDSBTLBackend : public AbstractState
     // Reference HEOS state for constants (critical point, triple point,
     // bounds, molar mass, R).  Lazily allocated so that backend
     // construction is cheap even when only cached blobs are loaded.
-    std::shared_ptr<CoolProp::AbstractState> heos_reference_();
-    std::shared_ptr<CoolProp::AbstractState> heos_;
+    std::shared_ptr<CoolProp::AbstractState> source_reference_();
+    std::shared_ptr<CoolProp::AbstractState> source_;
 
     // One surface per supported input pair.  Heap-allocated so the
     // ResolvedPoint pointers below stay valid across map growth.

@@ -53,9 +53,10 @@ namespace sbtl {
 //
 // File extension convention: `.svd.bin.z`, parallel to BicubicBackend's
 // `.bin.z`.  Stored at
-// `${HOME}/.CoolProp/SVDTables/<fluid>.<input_pair>.svd.bin.z`
+// `${HOME}/.CoolProp/SVDTables/<fluid>.<source>.<input_pair>.svd.bin.z`
 // by the helper paths below — see default_cache_path() for the exact
-// composition (input_pair is the integer value of the enum).
+// composition (source is the truth-source backend name; input_pair is
+// the integer value of the enum).
 
 class SVDSurfaceSerializer
 {
@@ -67,7 +68,13 @@ class SVDSurfaceSerializer
     //          would silently fall through to NaN; bumping the rev
     //          forces a clean rebuild so the user can't trip on stale
     //          caches missing w).
-    static constexpr int kRevision = 2;
+    //   rev 3: explicit source-of-truth backend in the cache filename
+    //          ("<fluid>.<source>.<input_pair>.svd.bin.z").  No on-wire
+    //          format change, just a path change — old caches at the
+    //          rev-2 path simply won't be picked up and will be
+    //          rebuilt under the new path the first time they're
+    //          requested.
+    static constexpr int kRevision = 3;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);
@@ -92,9 +99,13 @@ class SVDSurfaceSerializer
     // existing BicubicBackend pattern (see TabularBackends.h:1035).
     static std::string default_cache_dir();
 
-    // Compose default_cache_dir() with "<fluid>.<input_pair>.svd.bin.z"
-    // so PH and PT surfaces for the same fluid get distinct files.
-    static std::string default_cache_path(const std::string& fluid_name, ::CoolProp::input_pairs input_pair);
+    // Compose default_cache_dir() with
+    //   "<fluid>.<source>.<input_pair>.svd.bin.z"
+    // so HEOS-built, REFPROP-built, and IF97-built tables for the
+    // same fluid get distinct files, and PH and PT surfaces for the
+    // same (fluid, source) get distinct files.  source_backend must
+    // be non-empty and free of path-separator characters.
+    static std::string default_cache_path(const std::string& fluid_name, const std::string& source_backend, ::CoolProp::input_pairs input_pair);
 };
 
 }  // namespace sbtl

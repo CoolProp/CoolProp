@@ -426,17 +426,26 @@ std::string SVDSurfaceSerializer::default_cache_dir() {
     return dir + "/";
 }
 
-std::string SVDSurfaceSerializer::default_cache_path(const std::string& fluid_name, ::CoolProp::input_pairs input_pair) {
+std::string SVDSurfaceSerializer::default_cache_path(const std::string& fluid_name, const std::string& source_backend,
+                                                     ::CoolProp::input_pairs input_pair) {
     // Defense-in-depth against path traversal.  CoolProp fluid names
     // come from the JSON catalog so this is unlikely to be hit in
     // practice, but a caller passing an attacker-controlled string
-    // (e.g. through PropsSI("...", "SVDSBTL::<weird name>")) would
-    // otherwise be able to read or write outside the cache dir.
-    if (fluid_name.empty() || fluid_name.find('/') != std::string::npos || fluid_name.find('\\') != std::string::npos
-        || fluid_name.find("..") != std::string::npos) {
+    // (e.g. through PropsSI("...", "SVDSBTL&HEOS::<weird name>"))
+    // would otherwise be able to read or write outside the cache dir.
+    auto unsafe = [](const std::string& s) {
+        return s.empty() || s.find('/') != std::string::npos || s.find('\\') != std::string::npos || s.find("..") != std::string::npos;
+    };
+    if (unsafe(fluid_name)) {
         throw std::invalid_argument("SVDSurfaceSerializer::default_cache_path: invalid fluid_name (must be a bare component name)");
     }
-    return default_cache_dir() + fluid_name + "." + std::to_string(static_cast<int>(input_pair)) + ".svd.bin.z";
+    if (unsafe(source_backend)) {
+        throw std::invalid_argument("SVDSurfaceSerializer::default_cache_path: invalid source_backend");
+    }
+    // Format: <fluid>.<source>.<input_pair>.svd.bin.z so HEOS-built
+    // and REFPROP-built (and IF97-built) tables for the same fluid
+    // never collide on disk.
+    return default_cache_dir() + fluid_name + "." + source_backend + "." + std::to_string(static_cast<int>(input_pair)) + ".svd.bin.z";
 }
 
 }  // namespace sbtl

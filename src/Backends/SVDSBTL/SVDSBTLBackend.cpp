@@ -32,35 +32,58 @@ namespace {
 constexpr std::array<CoolProp::input_pairs, 2> kSupportedPairs = {CoolProp::HmassP_INPUTS, CoolProp::PT_INPUTS};
 
 // Sample-and-build for a given input pair using the matching preset.
-CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& heos, CoolProp::input_pairs pair) {
+CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& source, CoolProp::input_pairs pair) {
     namespace cp_sbtl = CoolProp::sbtl;
     cp_sbtl::SurfaceSpec spec;
     switch (pair) {
         case CoolProp::HmassP_INPUTS:
-            spec = cp_sbtl::presets::ph_subcritical(heos);
+            spec = cp_sbtl::presets::ph_subcritical(source);
             break;
         case CoolProp::PT_INPUTS:
-            spec = cp_sbtl::presets::pt_subcritical(heos);
+            spec = cp_sbtl::presets::pt_subcritical(source);
             break;
         default:
             throw ValueError("SVDSBTL backend: no preset registered for the requested input pair");
     }
-    return cp_sbtl::build_surface(heos, std::move(spec));
+    return cp_sbtl::build_surface(source, std::move(spec));
 }
 
 }  // namespace
 
-SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name) : fluid_name_(fluid_name), mole_fractions_({1.0}) {
+SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name, const std::string& source_backend)
+  : fluid_name_(fluid_name), source_backend_(source_backend), mole_fractions_({1.0}) {
+    // Validate the source backend up-front.  Anything outside the
+    // {HEOS, REFPROP, IF97} set is rejected — adding a new source
+    // (SRK, PR, etc.) needs deliberate per-backend wiring for
+    // two-phase routing and the cache-key encoding below, so failing
+    // loudly is better than silently mismatching.
+    if (source_backend_ != "HEOS" && source_backend_ != "REFPROP" && source_backend_ != "IF97") {
+        throw ValueError(format("SVDSBTL: unsupported source backend '%s' (allowed: HEOS, REFPROP, IF97)", source_backend_.c_str()));
+    }
+    // IF97 is parameterized — the only fluid it knows is Water.  Catch
+    // the obvious misuse here rather than at the first surface-build
+    // call.
+    if (source_backend_ == "IF97" && fluid_name != "Water") {
+        throw ValueError(format("SVDSBTL&IF97 is Water-only; got fluid '%s'", fluid_name.c_str()));
+    }
     for (const auto pair : kSupportedPairs) {
         ensure_surface_(pair);
     }
 }
 
-std::shared_ptr<CoolProp::AbstractState> SVDSBTLBackend::heos_reference_() {
-    if (!heos_) {
-        heos_.reset(CoolProp::AbstractState::factory("HEOS", fluid_name_));
+std::shared_ptr<CoolProp::AbstractState> SVDSBTLBackend::source_reference_() {
+    if (!source_) {
+        // The single AbstractState handle that all internal
+        // truth-source calls go through: HEOS sampling for the SVD
+        // tables, SuperAncillary (when source is HEOS), critical-
+        // patch fallback queries, and two-phase PQ/QT routing.
+        //
+        // IF97's factory takes the literal "Water" (its only fluid);
+        // the constructor already validated fluid_name_=="Water" for
+        // this source.  REFPROP and HEOS use the same fluid string.
+        source_.reset(CoolProp::AbstractState::factory(source_backend_, fluid_name_));
     }
-    return heos_;
+    return source_;
 }
 
 std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> SVDSBTLBackend::superanc_() {
@@ -71,12 +94,12 @@ std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> SVDSBTLBack
     // The SuperAncillary lives on the per-fluid CoolPropFluid record;
     // HEOSMixtureBackend wraps it via get_superanc().  Anything that's
     // not a HEOS instance simply won't have one.
-    auto* heos_ptr = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(heos_reference_().get());
-    if (heos_ptr == nullptr) {
+    auto* helmholtz_ptr = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(source_reference_().get());
+    if (helmholtz_ptr == nullptr) {
         return superanc_cached_;  // stays nullptr
     }
     try {
-        superanc_cached_ = heos_ptr->get_superanc();
+        superanc_cached_ = helmholtz_ptr->get_superanc();
     } catch (const std::exception&) {
         // get_superanc() throws for pseudo-pure / mixtures; SVDSBTL
         // already rejects those at construction, so this is mostly
@@ -88,7 +111,7 @@ std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> SVDSBTLBack
         // trigger them eagerly here so the first two-phase calc_*
         // doesn't pay the build cost on the hot path.  Cheap (~30 ms
         // total) and runs once per backend lifetime.
-        heos_ptr->ensure_caloric_superancillaries();
+        helmholtz_ptr->ensure_caloric_superancillaries();
     }
     return superanc_cached_;
 }
@@ -113,7 +136,7 @@ std::vector<CoolProp::input_pairs> SVDSBTLBackend::registered_input_pairs() cons
 
 void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     namespace cp_sbtl = CoolProp::sbtl;
-    const std::string path = cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid_name_, pair);
+    const std::string path = cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid_name_, source_backend_, pair);
     std::unique_ptr<cp_sbtl::SVDSurface> surface;
 
     if (std::filesystem::exists(path)) {
@@ -127,8 +150,8 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     }
 
     if (!surface) {
-        auto heos = heos_reference_();
-        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*heos, pair));
+        auto source = source_reference_();
+        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, pair));
         try {
             cp_sbtl::SVDSurfaceSerializer::save_to_file(*surface, path);
         } catch (const std::exception&) {
@@ -145,33 +168,52 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
     _phase = iphase_not_imposed;
     two_phase_.active = false;
 
-    // Two-phase inputs go to the superancillary path immediately --
-    // no SVDSurface needed.  PQ_INPUTS and QT_INPUTS are degenerate
-    // in the surface (the dome interior is not single-phase, so the
-    // surface returns NaN) so we route around it.
+    // Two-phase inputs go to the SuperAncillary or to the source
+    // backend directly — no SVDSurface needed.  PQ_INPUTS and
+    // QT_INPUTS are degenerate in the surface (the dome interior is
+    // not single-phase, so the surface returns NaN), so we route
+    // around it.
     if (input_pair == CoolProp::PQ_INPUTS || input_pair == CoolProp::QT_INPUTS) {
         active_pair_ = input_pair;
         active_surface_ = nullptr;
         active_resolved_ = false;
-        auto sa = superanc_();
-        if (!sa) {
-            throw NotImplementedError(std::string("SVDSBTL backend: two-phase inputs require a SuperAncillary for this fluid (") + fluid_name_
-                                      + " has none).  Use a different backend (e.g. HEOS) for two-phase queries on this fluid.");
-        }
         double p_sat = 0.0;
         double T_sat = 0.0;
         double Q = 0.0;
-        if (input_pair == CoolProp::PQ_INPUTS) {
-            // value1 = p, value2 = Q.
-            p_sat = value1;
-            Q = value2;
-            T_sat = sa->get_T_from_p(p_sat);
+        auto sa = superanc_();
+        if (sa) {
+            // Fast path — HEOS-side SuperAncillary Chebyshev expansion
+            // gives sat-line state in O(1) without an HEOS flash.
+            if (input_pair == CoolProp::PQ_INPUTS) {
+                // value1 = p, value2 = Q.
+                p_sat = value1;
+                Q = value2;
+                T_sat = sa->get_T_from_p(p_sat);
+            } else {
+                // QT_INPUTS: value1 = Q, value2 = T.
+                Q = value1;
+                T_sat = value2;
+                p_sat = sa->eval_sat(T_sat, 'P', 0);
+            }
         } else {
-            // QT_INPUTS: value1 = Q, value2 = T.
-            Q = value1;
-            T_sat = value2;
-            // p_sat from the SuperAncillary's pressure expansion.
-            p_sat = sa->eval_sat(T_sat, 'P', 0);
+            // Fallback path — source backend doesn't ship a
+            // SuperAncillary (REFPROP, IF97, ...).  Route directly
+            // to its own PQ/QT_INPUTS, which it must implement.
+            auto src = source_reference_();
+            if (input_pair == CoolProp::PQ_INPUTS) {
+                p_sat = value1;
+                Q = value2;
+                // Anchor at Q=0 so the source state lands cleanly on
+                // sat,L; T_sat is invariant in Q across the dome at
+                // fixed p.
+                src->update(CoolProp::PQ_INPUTS, p_sat, 0.0);
+                T_sat = src->T();
+            } else {
+                Q = value1;
+                T_sat = value2;
+                src->update(CoolProp::QT_INPUTS, 0.0, T_sat);
+                p_sat = src->p();
+            }
         }
         if (Q < 0.0 || Q > 1.0) {
             throw ValueError("SVDSBTL backend: two-phase Q must be in [0, 1]");
@@ -220,17 +262,38 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
 
     if (active_point_.region_idx < 0) {
         // Out of every single-phase region.  For HmassP this typically
-        // means the (h, p) point is inside the saturation dome; route
-        // to the superancillary two-phase path and recover the user's
-        // request.  Other input pairs (PT on the sat curve) currently
-        // still surface as NaN -- two-phase PT is degenerate anyway
-        // (no unique state at T_sat unless Q is supplied).
+        // means the (h, p) point is inside the saturation dome; pull
+        // the sat-line endpoints from the SuperAncillary if available
+        // or directly from the source backend otherwise, compute Q
+        // from the lever rule, and route to the two-phase path.
+        // Other input pairs (PT on the sat curve) currently still
+        // surface as NaN — two-phase PT is degenerate anyway (no
+        // unique state at T_sat unless Q is supplied).
         if ((input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS) && _p > 0.0) {
+            double T_sat = 0.0, hL_mol = 0.0, hV_mol = 0.0;
+            bool sat_resolved = false;
             auto sa = superanc_();
             if (sa) {
-                const double T_sat = sa->get_T_from_p(_p);
-                const double hL_mol = sa->eval_sat(T_sat, 'H', 0);
-                const double hV_mol = sa->eval_sat(T_sat, 'H', 1);
+                T_sat = sa->get_T_from_p(_p);
+                hL_mol = sa->eval_sat(T_sat, 'H', 0);
+                hV_mol = sa->eval_sat(T_sat, 'H', 1);
+                sat_resolved = true;
+            } else {
+                try {
+                    auto src = source_reference_();
+                    src->update(CoolProp::PQ_INPUTS, _p, 0.0);
+                    T_sat = src->T();
+                    hL_mol = src->hmolar();
+                    src->update(CoolProp::PQ_INPUTS, _p, 1.0);
+                    hV_mol = src->hmolar();
+                    sat_resolved = true;
+                } catch (const std::exception&) {
+                    // Source backend couldn't resolve PQ at this _p
+                    // (e.g. above its critical pressure).  Fall
+                    // through to the iphase_twophase tag below.
+                }
+            }
+            if (sat_resolved) {
                 const double h_mol = active_hmass_ * calc_molar_mass();
                 if (hL_mol <= h_mol && h_mol <= hV_mol) {
                     const double Q = (h_mol - hL_mol) / (hV_mol - hL_mol);
@@ -244,14 +307,31 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
 }
 
 void SVDSBTLBackend::update_two_phase_(double T_sat, double p_sat, double Q) {
-    auto sa = superanc_();
-    if (!sa) {
-        throw NotImplementedError("SVDSBTL backend: update_two_phase_ called without a SuperAncillary");
-    }
     _p = p_sat;
     _T = T_sat;
     _Q = Q;
     _phase = iphase_twophase;
+    auto sa = superanc_();
+    if (!sa) {
+        // No SuperAncillary (REFPROP / IF97 source) — pull sat-line
+        // endpoints from the source backend directly via QT_INPUTS.
+        // Two flashes (Q=0 and Q=1) at the same T_sat; slow compared
+        // to a Chebyshev eval but correct by construction.
+        auto src = source_reference_();
+        src->update(CoolProp::QT_INPUTS, 0.0, T_sat);
+        two_phase_.rhoL_mol = src->rhomolar();
+        two_phase_.hL_mol = src->hmolar();
+        two_phase_.sL_mol = src->smolar();
+        src->update(CoolProp::QT_INPUTS, 1.0, T_sat);
+        two_phase_.rhoV_mol = src->rhomolar();
+        two_phase_.hV_mol = src->hmolar();
+        two_phase_.sV_mol = src->smolar();
+        // u = h - p*v = h - p/rho; same identity as the HEOS path.
+        two_phase_.uL_mol = two_phase_.hL_mol - p_sat / two_phase_.rhoL_mol;
+        two_phase_.uV_mol = two_phase_.hV_mol - p_sat / two_phase_.rhoV_mol;
+        two_phase_.active = true;
+        return;
+    }
     two_phase_.rhoL_mol = sa->eval_sat(T_sat, 'D', 0);
     two_phase_.rhoV_mol = sa->eval_sat(T_sat, 'D', 1);
     two_phase_.hL_mol = sa->eval_sat(T_sat, 'H', 0);
@@ -373,39 +453,39 @@ CoolPropDbl SVDSBTLBackend::calc_umolar() {
 // Constants — delegate to a lazily-allocated HEOS reference.
 CoolPropDbl SVDSBTLBackend::calc_molar_mass() {
     if (molar_mass_cached_ < 0.0) {
-        molar_mass_cached_ = heos_reference_()->molar_mass();
+        molar_mass_cached_ = source_reference_()->molar_mass();
     }
     return molar_mass_cached_;
 }
 CoolPropDbl SVDSBTLBackend::calc_gas_constant() {
-    return heos_reference_()->gas_constant();
+    return source_reference_()->gas_constant();
 }
 CoolPropDbl SVDSBTLBackend::calc_T_critical() {
-    return heos_reference_()->T_critical();
+    return source_reference_()->T_critical();
 }
 CoolPropDbl SVDSBTLBackend::calc_p_critical() {
-    return heos_reference_()->p_critical();
+    return source_reference_()->p_critical();
 }
 CoolPropDbl SVDSBTLBackend::calc_rhomass_critical() {
-    return heos_reference_()->rhomass_critical();
+    return source_reference_()->rhomass_critical();
 }
 CoolPropDbl SVDSBTLBackend::calc_rhomolar_critical() {
-    return heos_reference_()->rhomolar_critical();
+    return source_reference_()->rhomolar_critical();
 }
 CoolPropDbl SVDSBTLBackend::calc_Ttriple() {
-    return heos_reference_()->Ttriple();
+    return source_reference_()->Ttriple();
 }
 CoolPropDbl SVDSBTLBackend::calc_p_triple() {
-    return heos_reference_()->p_triple();
+    return source_reference_()->p_triple();
 }
 CoolPropDbl SVDSBTLBackend::calc_Tmax() {
-    return heos_reference_()->Tmax();
+    return source_reference_()->Tmax();
 }
 CoolPropDbl SVDSBTLBackend::calc_Tmin() {
-    return heos_reference_()->Tmin();
+    return source_reference_()->Tmin();
 }
 CoolPropDbl SVDSBTLBackend::calc_pmax() {
-    return heos_reference_()->pmax();
+    return source_reference_()->pmax();
 }
 
 }  // namespace CoolProp

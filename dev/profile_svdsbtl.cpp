@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     const double h = heos->hmass();
     const double rho_truth = heos->rhomass();
 
-    auto svd_backend = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto svd_backend = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
 
     // Direct surface (skip backend wrapper) -- load the same cache
     // file SVDSBTLBackend just hit.

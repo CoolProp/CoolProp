@@ -138,19 +138,11 @@ class PCSAFTGenerator : public CoolProp::AbstractStateGenerator
 // NOLINTNEXTLINE(cert-err58-cpp)
 static CoolProp::GeneratorInitializer<PCSAFTGenerator> pcsaft_gen(CoolProp::PCSAFT_BACKEND_FAMILY);
 
-class SVDSBTLBackendGenerator : public CoolProp::AbstractStateGenerator
-{
-   public:
-    CoolProp::AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
-        if (fluid_names.size() != 1) {
-            throw ValueError("SVDSBTL backend is pure-fluid only; expected exactly one fluid name");
-        }
-        return new CoolProp::SVDSBTLBackend(fluid_names[0]);
-    };
-};
-// This static initialization will cause the generator to register
-// NOLINTNEXTLINE(cert-err58-cpp)
-static CoolProp::GeneratorInitializer<SVDSBTLBackendGenerator> svdsbtl_gen(CoolProp::SVDSBTL_BACKEND_FAMILY);
+// SVDSBTL has no AbstractStateGenerator because the standard
+// generator API only knows about (backend_family, fluid_names) — it
+// can't carry the source-backend slot SVDSBTL needs.  Instead,
+// factory() handles SVDSBTL inline below, the same pattern TTSE and
+// BICUBIC already use.
 
 AbstractState* AbstractState::factory(const std::string& backend, const std::vector<std::string>& fluid_names) {
     if (get_debug_level() > 0) {
@@ -181,6 +173,19 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
         // Will throw if there is a problem with this backend
         const shared_ptr<AbstractState> AS(factory(f2, fluid_names));
         return new BicubicBackend(AS);
+    } else if (f1 == SVDSBTL_BACKEND_FAMILY) {
+        // SVDSBTL requires an explicit source-of-truth backend in
+        // its name (e.g. "SVDSBTL&HEOS").  No default — see
+        // SVDSBTLBackend.h for rationale.  factory("SVDSBTL", ...)
+        // without the '&' lands here with f2 empty and throws.
+        if (f2.empty()) {
+            throw ValueError(format("SVDSBTL requires an explicit source backend, e.g. factory(\"SVDSBTL&HEOS\", \"%s\")",
+                                    fluid_names.empty() ? "<fluid>" : fluid_names[0].c_str()));
+        }
+        if (fluid_names.size() != 1) {
+            throw ValueError("SVDSBTL backend is pure-fluid only; expected exactly one fluid name");
+        }
+        return new SVDSBTLBackend(fluid_names[0], f2);
     }
 #endif
     else if (backend == "?" || backend.empty()) {

@@ -26,6 +26,15 @@ class IF97Backend : public AbstractState
         return get_backend_string(IF97_BACKEND);
     }
 
+    /// The fluid this backend represents (always Water by definition).
+    /// AbstractState's default calc_fluid_names() throws — override
+    /// here so callers like the SVDSBTL adapter (which expects
+    /// fluid_names() to work on any source-of-truth backend) don't
+    /// trip on it.
+    std::vector<std::string> calc_fluid_names() override {
+        return {"Water"};
+    }
+
     // REQUIRED BUT NOT USED IN IF97 FUNCTIONS
     bool using_mole_fractions() {
         return false;
