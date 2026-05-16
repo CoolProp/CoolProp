@@ -426,7 +426,8 @@ std::string SVDSurfaceSerializer::default_cache_dir() {
     return dir + "/";
 }
 
-std::string SVDSurfaceSerializer::default_cache_path(const std::string& fluid_name, const std::string& source_backend, ::CoolProp::input_pairs input_pair) {
+std::string SVDSurfaceSerializer::default_cache_path(const std::string& fluid_name, const std::string& source_backend,
+                                                     ::CoolProp::input_pairs input_pair) {
     // Defense-in-depth against path traversal.  CoolProp fluid names
     // come from the JSON catalog so this is unlikely to be hit in
     // practice, but a caller passing an attacker-controlled string

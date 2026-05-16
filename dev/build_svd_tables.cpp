@@ -142,7 +142,8 @@ int main(int argc, char** argv) {
     std::printf("SVDSBTL bulk-build  (NT=%zu  NR=%zu  rank=%d)\n", NT, NR, rank);
     std::printf("Cache dir: %s\n", cp_sbtl::SVDSurfaceSerializer::default_cache_dir().c_str());
     std::printf("Sources:   ");
-    for (std::size_t i = 0; i < sources.size(); ++i) std::printf("%s%s", i > 0 ? "," : "", sources[i].c_str());
+    for (std::size_t i = 0; i < sources.size(); ++i)
+        std::printf("%s%s", i > 0 ? "," : "", sources[i].c_str());
     std::printf("\n\n");
 
     int ok = 0;
