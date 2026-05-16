@@ -67,7 +67,14 @@ class SVDSBTLBackend : public AbstractState
     //
     // Supported source values: "HEOS", "REFPROP", "IF97".  Anything
     // else throws.  IF97 is restricted to Water.
-    SVDSBTLBackend(const std::string& fluid_name, const std::string& source_backend);
+    //
+    // `options_json` is the raw JSON payload from the factory string's
+    // `?<options>` suffix (or "" when the caller didn't supply one).
+    // Validated against `kSVDSBTLOptionsSchemaJson`; unknown keys
+    // throw immediately.  Defaults expanded at construction so
+    // `build_options_json()` returns the canonical form.  See
+    // Web/coolprop/BackendOptions.rst for the schema and grammar.
+    SVDSBTLBackend(const std::string& fluid_name, const std::string& source_backend, const std::string& options_json = "");
 
     SVDSBTLBackend(const SVDSBTLBackend&) = delete;
     SVDSBTLBackend& operator=(const SVDSBTLBackend&) = delete;
@@ -78,6 +85,13 @@ class SVDSBTLBackend : public AbstractState
     // AbstractState identification.
     std::string backend_name() override {
         return get_backend_string(SVDSBTL_BACKEND);
+    }
+
+    // Canonical JSON of the options this instance was built with
+    // (validated + schema defaults expanded).  Returns the literal "{}"
+    // when no options were supplied; round-trips through factory().
+    [[nodiscard]] std::string build_options_json() const override {
+        return options_canonical_.empty() ? std::string{"{}"} : options_canonical_;
     }
 
     // Pure fluid only.  Reject mixtures via set_mole_fractions().
@@ -195,6 +209,13 @@ class SVDSBTLBackend : public AbstractState
     std::string fluid_name_;
     std::string source_backend_;               // "HEOS" / "REFPROP" / "IF97"
     std::vector<CoolPropDbl> mole_fractions_;  // always {1.0}
+
+    // Canonical-JSON form of the options blob (validated + defaults
+    // expanded) that this instance was built with.  Used by both the
+    // cache-filename hash and `build_options_json()`.  Empty for
+    // backwards compatibility when no options were supplied
+    // (treated as the schema's all-defaults configuration).
+    std::string options_canonical_;
 
     // Cache of molar mass, populated lazily on the first
     // calc_molar_mass() call.  Avoids per-call shared_ptr deref +

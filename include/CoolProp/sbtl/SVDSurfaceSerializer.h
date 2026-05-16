@@ -74,7 +74,13 @@ class SVDSurfaceSerializer
     //          rev-2 path simply won't be picked up and will be
     //          rebuilt under the new path the first time they're
     //          requested.
-    static constexpr int kRevision = 3;
+    //   rev 4: cache filename now uses the symbolic input_pair name
+    //          (e.g. "PT_INPUTS") instead of the raw enum int — closes
+    //          CoolProp-b6v — and incorporates a 16-hex FNV-1a 64
+    //          opthash over the canonical-JSON options blob.  No
+    //          on-wire format change; just a path change.  Old rev-3
+    //          int-keyed caches simply won't be picked up.
+    static constexpr int kRevision = 4;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);
@@ -100,12 +106,24 @@ class SVDSurfaceSerializer
     static std::string default_cache_dir();
 
     // Compose default_cache_dir() with
-    //   "<fluid>.<source>.<input_pair>.svd.bin.z"
-    // so HEOS-built, REFPROP-built, and IF97-built tables for the
-    // same fluid get distinct files, and PH and PT surfaces for the
-    // same (fluid, source) get distinct files.  source_backend must
-    // be non-empty and free of path-separator characters.
-    static std::string default_cache_path(const std::string& fluid_name, const std::string& source_backend, ::CoolProp::input_pairs input_pair);
+    //   "<fluid>.<source>.<input_pair_name>.<opthash>.svd.bin.z"
+    //
+    // - input_pair_name is the symbolic enum name returned by
+    //   CoolProp::get_input_pair_short_desc() (e.g. "PT_INPUTS",
+    //   "HmassP_INPUTS"), so reordering the input_pairs enum in
+    //   DataStructures.h can't silently misalign caches (was the
+    //   raw int previously — closes CoolProp-b6v).
+    // - opthash is a 16-hex string (typically FNV-1a 64 of the
+    //   canonical options blob), or "no_opts" for callers that don't
+    //   care about per-options caching.  Defaults to "no_opts" to
+    //   keep the legacy two-arg-ish call sites compiling without
+    //   touching every test.
+    //
+    // source_backend must be non-empty and free of path-separator
+    // characters; opthash is rejected if it contains anything other
+    // than [0-9a-f_].
+    static std::string default_cache_path(const std::string& fluid_name, const std::string& source_backend, ::CoolProp::input_pairs input_pair,
+                                          const std::string& opthash = "no_opts");
 };
 
 }  // namespace sbtl

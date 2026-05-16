@@ -261,13 +261,10 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
         if (clean_fluid_names.size() != 1) {
             throw ValueError("SVDSBTL backend is pure-fluid only; expected exactly one fluid name");
         }
-        // SVDSBTL is not yet opted in to factory-string options; drop
-        // the suffix loudly rather than silently for symmetry with the
-        // tabular branches above.  PR B wires this up.
-        if (!options_json.empty()) {
-            throw NotImplementedError("SVDSBTL backend does not yet accept factory-string options");
-        }
-        return new SVDSBTLBackend(clean_fluid_names[0], f2);
+        // SVDSBTL is opted in to factory-string options: the JSON
+        // payload is forwarded verbatim to the constructor, which
+        // validates against kSVDSBTLOptionsSchemaJson before applying.
+        return new SVDSBTLBackend(clean_fluid_names[0], f2, options_json);
     }
 #endif
     else if (clean_backend == "?" || clean_backend.empty()) {
