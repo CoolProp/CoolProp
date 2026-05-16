@@ -193,6 +193,17 @@ enum phases : int
     iphase_not_imposed
 };  ///< Phase is not imposed
 
+/// Per-point status codes for AbstractState::fast_evaluate. Zero means success.
+enum fast_evaluate_status : int
+{
+    fast_evaluate_ok = 0,
+    fast_evaluate_out_of_range = 1,
+    fast_evaluate_two_phase_disallowed = 2,
+    fast_evaluate_unsupported_input = 3,
+    fast_evaluate_unsupported_output = 4,
+    fast_evaluate_internal_error = 5
+};
+
 /// Constants for the different PC-SAFT association schemes (see Huang and Radosz 1990)
 enum schemes
 {

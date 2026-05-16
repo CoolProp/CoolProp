@@ -833,6 +833,194 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_two_phase_deriv_splined(paramet
     return _HUGE;
 }
 
+namespace {
+/// Categorize an output key for routing to the appropriate eval kernel inside
+/// TabularBackend::fast_evaluate. Values >0 mean the output is supported.
+enum FastEvalOutputKind : unsigned char
+{
+    fe_unsupported = 0,
+    fe_single_phase = 1,  // iT, iP, iDmolar, iHmolar, iSmolar, iUmolar
+    fe_transport = 2,     // iviscosity, iconductivity
+};
+
+FastEvalOutputKind classify_fast_eval_output(CoolProp::parameters key) {
+    using namespace CoolProp;
+    switch (key) {
+        case iT:
+        case iP:
+        case iDmolar:
+        case iHmolar:
+        case iSmolar:
+        case iUmolar:
+            return fe_single_phase;
+        case iviscosity:
+        case iconductivity:
+            return fe_transport;
+        default:
+            return fe_unsupported;
+    }
+}
+}  // namespace
+
+void CoolProp::TabularBackend::fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
+                                             const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer,
+                                             std::size_t out_buffer_size, int* status_flags, std::size_t status_flags_size,
+                                             CoolProp::phases imposed_phase) {
+    // Pre-loop validation. These conditions are programmer errors (mismatched
+    // buffers, unsupported keys), not data errors — throw so misuse fails loud.
+    if (N_outputs != 0 && N_inputs > std::numeric_limits<std::size_t>::max() / N_outputs) {
+        throw ValueError(format("fast_evaluate: N_inputs * N_outputs would overflow size_t (N_inputs=%zu, N_outputs=%zu)", N_inputs, N_outputs));
+    }
+    const std::size_t required_out = N_inputs * N_outputs;
+    if (out_buffer_size < required_out) {
+        throw ValueError(format("fast_evaluate: out_buffer_size=%zu < required %zu (N_inputs * N_outputs)", out_buffer_size, required_out));
+    }
+    if (status_flags_size < N_inputs) {
+        throw ValueError(format("fast_evaluate: status_flags_size=%zu < required %zu (N_inputs)", status_flags_size, N_inputs));
+    }
+    if (N_inputs == 0) return;
+    // Null-pointer check BEFORE the N_outputs==0 early-write path: that path
+    // dereferences status_flags, so the check has to dominate it.
+    if (val1 == nullptr || val2 == nullptr || outputs == nullptr || out_buffer == nullptr || status_flags == nullptr) {
+        throw ValueError("fast_evaluate: null pointer argument");
+    }
+    if (N_outputs == 0) {
+        for (std::size_t k = 0; k < N_inputs; ++k)
+            status_flags[k] = CoolProp::fast_evaluate_ok;
+        return;
+    }
+
+    const bool is_ph = (input_pair == HmolarP_INPUTS);
+    const bool is_pT = (input_pair == PT_INPUTS);
+    if (!is_ph && !is_pT) {
+        throw ValueError(
+          format("fast_evaluate: input_pair %s not supported (use HmolarP_INPUTS or PT_INPUTS)", get_input_pair_short_desc(input_pair).c_str()));
+    }
+
+    // Validate output keys up-front (caller passes typically a few; fits on stack)
+    constexpr std::size_t MAX_FE_OUTPUTS = 64;
+    if (N_outputs > MAX_FE_OUTPUTS) {
+        throw ValueError(format("fast_evaluate: N_outputs=%zu exceeds compile-time limit %zu", N_outputs, MAX_FE_OUTPUTS));
+    }
+    FastEvalOutputKind output_kinds[MAX_FE_OUTPUTS];
+    for (std::size_t o = 0; o < N_outputs; ++o) {
+        output_kinds[o] = classify_fast_eval_output(outputs[o]);
+        if (output_kinds[o] == fe_unsupported) {
+            throw ValueError(format("fast_evaluate: output[%zu]=%s not supported", o, get_parameter_information(outputs[o], "short").c_str()));
+        }
+    }
+
+    // Build tables if not already built; this is the only "lazy alloc" we tolerate
+    // here, and it happens at most once per AS lifetime — outside the hot loop.
+    check_tables();
+
+    // The two tables are concrete derived types of SinglePhaseGriddedTableData;
+    // bind through a pointer to the common base for the conditional.
+    SinglePhaseGriddedTableData* table_ptr = is_ph ? static_cast<SinglePhaseGriddedTableData*>(&dataset->single_phase_logph)
+                                                   : static_cast<SinglePhaseGriddedTableData*>(&dataset->single_phase_logpT);
+    SinglePhaseGriddedTableData& table = *table_ptr;
+    const std::vector<std::vector<CellCoeffs>>& coeffs = is_ph ? dataset->coeffs_ph : dataset->coeffs_pT;
+
+    // Apply imposed phase for the duration of the call; restore at end. (The
+    // existing per-output kernels do not consult imposed_phase_index — they
+    // operate on the (i,j) we already located — but downstream callers and
+    // diagnostic paths do, so keeping it in sync avoids surprises.)
+    const phases saved_imposed_phase = imposed_phase_index;
+    if (imposed_phase != iphase_not_imposed) {
+        imposed_phase_index = imposed_phase;
+    }
+
+    const double NaN = std::numeric_limits<double>::quiet_NaN();
+
+    auto fill_nan_row = [&](std::size_t k) {
+        for (std::size_t o = 0; o < N_outputs; ++o) {
+            out_buffer[k * N_outputs + o] = NaN;
+        }
+    };
+
+    for (std::size_t k = 0; k < N_inputs; ++k) {
+        // x is the table's primary axis (logh for ph table, logT-equivalent for pT)
+        // and y is the secondary (logp). The table internally translates from
+        // (h,p) or (T,p) → (x,y); we just pass the raw inputs.
+        const double v1 = val1[k];
+        const double v2 = val2[k];
+        const double x = is_ph ? v1 : v2;  // logph: x=h ; logpT: x=T
+        const double y = is_ph ? v2 : v1;  // y is always p
+
+        if (!table.native_inputs_are_in_range(x, y)) {
+            status_flags[k] = fast_evaluate_out_of_range;
+            fill_nan_row(k);
+            continue;
+        }
+
+        std::size_t i = 0, j = 0;
+        try {
+            find_native_nearest_good_indices(table, coeffs, x, y, i, j);
+        } catch (const std::exception&) {
+            // Cell exists but has no valid neighbour (e.g., deep inside the table's
+            // two-phase notch with no alternate). Report and skip.
+            status_flags[k] = fast_evaluate_out_of_range;
+            fill_nan_row(k);
+            continue;
+        }
+
+        // The per-output kernels in BicubicBackend / TTSEBackend read from
+        // _hmolar/_p (ph) or _T/_p (pT) to recompute the normalised cell coords.
+        // We must set those before each call; we restore at the end of the
+        // function so the AS's cached state is not silently polluted.
+        if (is_ph) {
+            _hmolar = v1;
+            _p = v2;
+        } else {
+            _T = v2;
+            _p = v1;
+        }
+
+        bool eval_failed = false;
+        for (std::size_t o = 0; o < N_outputs; ++o) {
+            const parameters out_key = outputs[o];
+            const FastEvalOutputKind kind = output_kinds[o];
+            try {
+                double val;
+                if (kind == fe_transport) {
+                    val = is_ph ? evaluate_single_phase_phmolar_transport(out_key, i, j) : evaluate_single_phase_pT_transport(out_key, i, j);
+                } else {
+                    // For the (h,p) table requesting iHmolar, or (T,p) table requesting
+                    // iT/iP, the answer is just the input — short-circuit to skip
+                    // pointless polynomial evaluation. iP is always one of the inputs.
+                    if (out_key == iP) {
+                        val = is_ph ? v2 : v1;
+                    } else if (is_ph && out_key == iHmolar) {
+                        val = v1;
+                    } else if (is_pT && out_key == iT) {
+                        val = v2;
+                    } else {
+                        val = is_ph ? evaluate_single_phase_phmolar(out_key, i, j) : evaluate_single_phase_pT(out_key, i, j);
+                    }
+                }
+                out_buffer[k * N_outputs + o] = val;
+            } catch (const std::exception&) {
+                eval_failed = true;
+                out_buffer[k * N_outputs + o] = NaN;
+            }
+        }
+        // API contract: when status_flags[k] is non-zero, the entire row is NaN.
+        // The per-output catch above only NaNs the specific failing output;
+        // finish the job here so callers don't see partial rows.
+        if (eval_failed) {
+            fill_nan_row(k);
+            status_flags[k] = fast_evaluate_internal_error;
+        } else {
+            status_flags[k] = fast_evaluate_ok;
+        }
+    }
+
+    // Restore phase override and clear the AS cache so no per-point residue
+    // leaks into subsequent keyed_output() / T() / p() calls on this instance.
+    imposed_phase_index = saved_imposed_phase;
+    clear();
+}
+
 void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double val1, double val2) {
 
     if (get_debug_level() > 0) {
@@ -1729,6 +1917,120 @@ TEST_CASE_METHOD(TabularFixture, "Tests for tabular backends with water", "[Tabu
         CHECK(std::abs((expected - actual_TTSE) / expected) < 1e-3);
         CHECK(std::abs((expected - actual_BICUBIC) / expected) < 1e-3);
     }
+
+    SECTION("fast_evaluate single point matches keyed_output (PT, BICUBIC)") {
+        setup();
+        const double T = 400, p = 1e6;
+        // Reference via the standard path
+        ASHEOS->update(CoolProp::PT_INPUTS, p, T);
+        const double ref_D = ASHEOS->rhomolar();
+        const double ref_H = ASHEOS->hmolar();
+        const double ref_S = ASHEOS->smolar();
+
+        const double val1[1] = {p};
+        const double val2[1] = {T};
+        const CoolProp::parameters outs[3] = {CoolProp::iDmolar, CoolProp::iHmolar, CoolProp::iSmolar};
+        double buf[3] = {0, 0, 0};
+        int status[1] = {-1};
+        ASBICUBIC->fast_evaluate(CoolProp::PT_INPUTS, val1, val2, 1, outs, 3, buf, 3, status, 1);
+        CAPTURE(status[0]);
+        CHECK(status[0] == CoolProp::fast_evaluate_ok);
+        CHECK(std::abs((ref_D - buf[0]) / ref_D) < 1e-3);
+        CHECK(std::abs((ref_H - buf[1]) / ref_H) < 1e-3);
+        CHECK(std::abs((ref_S - buf[2]) / ref_S) < 1e-3);
+    }
+
+    SECTION("fast_evaluate batch — Hmolar/p inputs over a range (BICUBIC)") {
+        setup();
+        constexpr std::size_t N = 32;
+        const double p = 5e5;
+        std::vector<double> hs(N), ps(N, p);
+        // Pick a band of single-phase enthalpies above saturation at 500 kPa.
+        ASHEOS->update(CoolProp::PQ_INPUTS, p, 1.0);
+        const double h_satV = ASHEOS->hmolar();
+        for (std::size_t k = 0; k < N; ++k) {
+            hs[k] = h_satV + 100.0 + k * 50.0;  // walk above saturation
+        }
+        const CoolProp::parameters outs[2] = {CoolProp::iT, CoolProp::iDmolar};
+        std::vector<double> buf(2 * N, 0);
+        std::vector<int> status(N, -1);
+        ASBICUBIC->fast_evaluate(CoolProp::HmolarP_INPUTS, hs.data(), ps.data(), N, outs, 2, buf.data(), buf.size(), status.data(), status.size());
+        for (std::size_t k = 0; k < N; ++k) {
+            CAPTURE(k);
+            CAPTURE(status[k]);
+            CHECK(status[k] == CoolProp::fast_evaluate_ok);
+            // Compare against the cached path
+            ASBICUBIC->update(CoolProp::HmolarP_INPUTS, hs[k], p);
+            CHECK(std::abs((ASBICUBIC->T() - buf[2 * k + 0]) / ASBICUBIC->T()) < 1e-9);
+            CHECK(std::abs((ASBICUBIC->rhomolar() - buf[2 * k + 1]) / ASBICUBIC->rhomolar()) < 1e-9);
+        }
+    }
+
+    SECTION("fast_evaluate validates buffer sizes") {
+        setup();
+        const double v1[1] = {1e6};
+        const double v2[1] = {400};
+        const CoolProp::parameters outs[2] = {CoolProp::iDmolar, CoolProp::iHmolar};
+        double buf[2] = {0, 0};
+        int status[1] = {0};
+        // out_buffer too small (1 instead of N*M=2)
+        CHECK_THROWS(ASBICUBIC->fast_evaluate(CoolProp::PT_INPUTS, v1, v2, 1, outs, 2, buf, 1, status, 1));
+        // status_flags too small (0 instead of N=1)
+        CHECK_THROWS(ASBICUBIC->fast_evaluate(CoolProp::PT_INPUTS, v1, v2, 1, outs, 2, buf, 2, status, 0));
+        // Unsupported input pair
+        CHECK_THROWS(ASBICUBIC->fast_evaluate(CoolProp::QT_INPUTS, v1, v2, 1, outs, 2, buf, 2, status, 1));
+    }
+
+    SECTION("fast_evaluate out-of-range point reports NaN + flag, others ok") {
+        setup();
+        const double v1[2] = {1e6, 1e20};  // p: 1 MPa (ok), 1e20 Pa (out of range)
+        const double v2[2] = {400, 400};
+        const CoolProp::parameters outs[1] = {CoolProp::iDmolar};
+        double buf[2] = {-1, -1};
+        int status[2] = {-1, -1};
+        ASBICUBIC->fast_evaluate(CoolProp::PT_INPUTS, v1, v2, 2, outs, 1, buf, 2, status, 2);
+        CHECK(status[0] == CoolProp::fast_evaluate_ok);
+        CHECK(status[1] == CoolProp::fast_evaluate_out_of_range);
+        CHECK(std::isnan(buf[1]));
+        CHECK(buf[0] > 0);  // a sensible density value
+    }
+}
+
+TEST_CASE("fast_evaluate works with IF97 backend", "[fast_evaluate][IF97]") {
+    using namespace CoolProp;
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("IF97", "Water"));
+
+    SECTION("PT batch matches the cached path") {
+        constexpr std::size_t N = 16;
+        std::vector<double> ps(N), Ts(N);
+        for (std::size_t k = 0; k < N; ++k) {
+            ps[k] = 1e5 + k * 1e4;
+            Ts[k] = 500 + k * 5.0;  // superheated vapor / supercritical band
+        }
+        const parameters outs[3] = {iDmass, iHmass, iSmass};
+        std::vector<double> buf(3 * N, 0);
+        std::vector<int> status(N, -1);
+        AS->fast_evaluate(PT_INPUTS, ps.data(), Ts.data(), N, outs, 3, buf.data(), buf.size(), status.data(), status.size());
+        for (std::size_t k = 0; k < N; ++k) {
+            CAPTURE(k);
+            CHECK(status[k] == fast_evaluate_ok);
+            AS->update(PT_INPUTS, ps[k], Ts[k]);
+            CHECK(std::abs((AS->rhomass() - buf[3 * k + 0]) / AS->rhomass()) < 1e-12);
+            CHECK(std::abs((AS->hmass() - buf[3 * k + 1]) / AS->hmass()) < 1e-12);
+            CHECK(std::abs((AS->smass() - buf[3 * k + 2]) / AS->smass()) < 1e-12);
+        }
+    }
+}
+
+TEST_CASE("fast_evaluate is not implemented for HEOS backend", "[fast_evaluate][HEOS]") {
+    using namespace CoolProp;
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Water"));
+    const double v1[1] = {1e6};
+    const double v2[1] = {400};
+    const parameters outs[1] = {iDmolar};
+    double buf[1] = {0};
+    int status[1] = {0};
+    CHECK_THROWS(AS->fast_evaluate(PT_INPUTS, v1, v2, 1, outs, 1, buf, 1, status, 1));
 }
 #    endif  // ENABLE_CATCH
 

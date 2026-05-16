@@ -1195,6 +1195,12 @@ class TabularBackend : public AbstractState
     virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
     virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
     virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
+
+    /// Vectorized direct evaluation; see AbstractState::fast_evaluate for contract.
+    virtual void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
+                               const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size,
+                               int* status_flags, std::size_t status_flags_size,
+                               CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) override;
     virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
     virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
 

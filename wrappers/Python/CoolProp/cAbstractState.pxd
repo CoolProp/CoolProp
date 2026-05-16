@@ -108,6 +108,14 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         ## Uses the indices in CoolProp for the input parameters
         void update_with_guesses(constants_header.input_pairs iInput1, double Value1, double Value2, GuessesStructure) except +ValueError
 
+        ## Vectorized, cache-bypassing direct evaluation (Tabular/IF97 only)
+        void fast_evaluate(constants_header.input_pairs input_pair,
+                           const double* val1, const double* val2, size_t N_inputs,
+                           const constants_header.parameters* outputs, size_t N_outputs,
+                           double* out_buffer, size_t out_buffer_size,
+                           int* status_flags, size_t status_flags_size,
+                           constants_header.phases imposed_phase) except +ValueError
+
         ## Bulk properties accessors - temperature, pressure and density are directly calculated every time
         ## All other parameters are calculated on an as-needed basis
         ## If single-phase, just plug into the EOS, otherwise need to do two-phase analysis
