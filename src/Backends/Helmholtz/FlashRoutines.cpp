@@ -2251,14 +2251,19 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
         // since HEOS.T_phase_determination_pure_or_pseudopure() is not being called.
         if (HEOS._T < T_critical_)  //
         {
-            // TODO: is it a bug that this branch can be accessed for mixtures?
-            HEOS._rhoVanc = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
-            HEOS._rhoLanc = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
             if (HEOS._phase == iphase_liquid) {
                 HEOS._Q = -1000;
             } else if (HEOS._phase == iphase_gas) {
                 HEOS._Q = 1000;
             } else if (HEOS._phase == iphase_twophase) {
+                // The ancillary rhoL/rhoV densities are only needed by the twophase
+                // sub-branch (and only when other != iDmolar — they seed SatL/SatV
+                // updates). Keep the evaluation localized so the cheaper single-phase
+                // imposed-phase paths (liquid, gas, supercritical_liquid) avoid the
+                // two polynomial evaluations on every update() (#2718).
+                // TODO: is it a bug that this branch can be accessed for mixtures?
+                HEOS._rhoVanc = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
+                HEOS._rhoLanc = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
                 // Actually have to use saturation information sadly
                 // For the given temperature, find the saturation state
                 // Run the saturation routines to determine the saturation densities and pressures
@@ -2357,8 +2362,12 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
         HEOS.calc_pressure();
         HEOS._Q = -1;
     }
-    if (HEOS.is_pure_or_pseudopure && HEOS._phase != iphase_twophase) {
-        // Update the state for conditions where the state was guessed
+    if (HEOS.is_pure_or_pseudopure && HEOS._phase != iphase_twophase && HEOS.imposed_phase_index == iphase_not_imposed) {
+        // Update the state for conditions where the state was guessed. When the user
+        // imposed a phase via specify_phase(), honor it: recalculate_singlephase_phase()
+        // would silently overwrite the caller's choice (e.g. flip iphase_gas to
+        // iphase_liquid above rhomolar_critical), and the overwrite is also wasted
+        // work on the imposed-phase fast path (#2718).
         HEOS.recalculate_singlephase_phase();
     }
 }
