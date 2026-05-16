@@ -87,6 +87,14 @@ option(COOLPROP_BUILD_SVD_TABLES
        "Build the SVDSBTL bulk-table builder at dev/build_svd_tables.cpp"
        OFF)
 
+option(COOLPROP_BUILD_SVDSBTL_BENCH
+       "Build the SVDSBTL state-point benchmark at dev/bench_svdsbtl_ph.cpp"
+       OFF)
+
+option(COOLPROP_BUILD_SVDSBTL_PROFILE
+       "Build the SVDSBTL per-stage profiler at dev/profile_svdsbtl.cpp"
+       OFF)
+
 #option (DARWIN_USE_LIBCPP
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
@@ -295,7 +303,8 @@ file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 file(GLOB SVD_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/SVD/*.cpp")
 file(GLOB REGION_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Region/*.cpp")
 file(GLOB SBTL_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/SBTL/*.cpp")
-list(APPEND APP_SOURCES ${SVD_SOURCES} ${REGION_SOURCES} ${SBTL_SOURCES})
+file(GLOB SVDSBTL_BACKEND_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Backends/SVDSBTL/*.cpp")
+list(APPEND APP_SOURCES ${SVD_SOURCES} ${REGION_SOURCES} ${SBTL_SOURCES} ${SVDSBTL_BACKEND_SOURCES})
 
 # Add the miniz source file
 list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1/miniz.c")
@@ -2091,6 +2100,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDComponents.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SBTLAdapter.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDSBTL.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
@@ -2162,6 +2173,30 @@ if(COOLPROP_BUILD_SVD_TABLES)
   add_dependencies(build_svd_tables generate_headers)
   if(UNIX)
     target_link_libraries(build_svd_tables ${CMAKE_DL_LIBS})
+  endif()
+endif()
+
+if(COOLPROP_BUILD_SVDSBTL_BENCH)
+  # Phase 2c state-point benchmark.  Walks an (h, p) grid and writes a
+  # CSV with per-point rel-err vs HEOS + ns/call for both backends.
+  add_executable(bench_svdsbtl_ph
+                 ${APP_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/bench_svdsbtl_ph.cpp")
+  add_dependencies(bench_svdsbtl_ph generate_headers)
+  if(UNIX)
+    target_link_libraries(bench_svdsbtl_ph ${CMAKE_DL_LIBS})
+  endif()
+endif()
+
+if(COOLPROP_BUILD_SVDSBTL_PROFILE)
+  # Phase 2c per-stage profiler.  Picks one representative state and
+  # decomposes the SVDSBTL per-call cost into stages.
+  add_executable(profile_svdsbtl
+                 ${APP_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/profile_svdsbtl.cpp")
+  add_dependencies(profile_svdsbtl generate_headers)
+  if(UNIX)
+    target_link_libraries(profile_svdsbtl ${CMAKE_DL_LIBS})
   endif()
 endif()
 

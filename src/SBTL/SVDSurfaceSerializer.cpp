@@ -1,6 +1,7 @@
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -415,6 +416,13 @@ std::string SVDSurfaceSerializer::default_cache_dir() {
     const std::string dir = ::get_home_dir() + "/.CoolProp/SVDTables";
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
+    if (ec) {
+        // Non-fatal: tables can still be built and used in-memory.
+        // Surface the error to stderr so a user with an unwritable
+        // home dir (CI sandboxes, read-only mounts) sees *why* every
+        // SVDSBTL session pays the full build cost.
+        std::fprintf(stderr, "SVDSurfaceSerializer: could not create cache dir %s: %s\n", dir.c_str(), ec.message().c_str());
+    }
     return dir + "/";
 }
 

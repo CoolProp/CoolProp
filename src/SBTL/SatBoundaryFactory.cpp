@@ -67,8 +67,9 @@ std::unique_ptr<region::CubicSplineCurve> build_h_isotherm_floor(::CoolProp::Abs
     // For fluids with steep melting curves the requested T_min may be
     // below T_melt(p) at high p; walk T up in 0.5 K steps until HEOS
     // accepts the (T, p) state.  Matches Phase 2a's `h_lo_liq` lambda.
-    return spline_through_log_p_samples(p_min, p_max, opts.n_knots, [&](double p) {
-        for (int k = 0; k < 40; ++k) {
+    const std::size_t walk_steps = opts.t_floor_walk_steps;
+    return spline_through_log_p_samples(p_min, p_max, opts.n_knots, [&, walk_steps](double p) {
+        for (std::size_t k = 0; k < walk_steps; ++k) {
             const double T_try = T_min + 0.5 * static_cast<double>(k);
             try {
                 heos.update(::CoolProp::PT_INPUTS, p, T_try);
@@ -77,7 +78,7 @@ std::unique_ptr<region::CubicSplineCurve> build_h_isotherm_floor(::CoolProp::Abs
                 // Below melting line at this p; bump T up and retry.
             }
         }
-        throw std::runtime_error("build_h_isotherm_floor: floor unreachable within 20 K of T_min");
+        throw std::runtime_error("build_h_isotherm_floor: floor unreachable within " + std::to_string(walk_steps / 2) + " K of T_min");
     });
 }
 
@@ -96,6 +97,12 @@ std::pair<double, double> subcritical_pressure_range(::CoolProp::AbstractState& 
     heos.update(::CoolProp::QT_INPUTS, 0.0, heos.Ttriple() * 1.001);
     const double p_triple = heos.p();
     return {p_triple * 1.01, 0.999 * p_crit};
+}
+
+std::pair<double, double> supercritical_pressure_range(::CoolProp::AbstractState& heos) {
+    const double p_crit = heos.p_critical();
+    const double p_max_eos = heos.pmax();
+    return {1.001 * p_crit, 0.99 * p_max_eos};
 }
 
 }  // namespace sbtl

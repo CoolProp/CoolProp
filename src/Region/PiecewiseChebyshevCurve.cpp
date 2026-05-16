@@ -315,6 +315,13 @@ std::size_t PiecewiseChebyshevCurve::locate_piece(double t) const noexcept {
     if (n == 1) {
         return 0;
     }
+    // NaN guard: casting NaN to ptrdiff_t (below) is UB, and the
+    // `t <= t0` / `t >= tn` guards are both false on NaN.  Return
+    // index 0 for any non-finite input — callers can detect bogus
+    // queries via the eventual NaN they get back from eval().
+    if (!std::isfinite(t)) {
+        return 0;
+    }
     // Pieces are uniformly spaced in t (the build guarantees this), so
     // an O(1) hit is available.
     const double t0 = pieces_.front().t_lo;

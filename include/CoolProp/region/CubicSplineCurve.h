@@ -1,6 +1,8 @@
 #ifndef COOLPROP_REGION_CUBIC_SPLINE_CURVE_H
 #define COOLPROP_REGION_CUBIC_SPLINE_CURVE_H
 
+#include <array>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -72,15 +74,38 @@ class CubicSplineCurve final : public BoundaryCurve
    private:
     CubicSplineCurve(std::vector<double> a, std::vector<double> b, std::vector<double> M, double b_min, double b_max);
 
-    // Locate the segment index i such that a_[i] <= a < a_[i+1], clamped
-    // to [0, n-2].  Used by eval / eval_da.
+    // O(1) amortized interval lookup.  Indexed-search variant of the
+    // NR hunt/locate idiom: a precomputed uniform bucket table maps a
+    // linear `a` coordinate to a starting knot index in constant
+    // time, then a tiny refinement loop (typically 0–1 iterations)
+    // nails the final segment.  Handles non-uniform knot spacing
+    // without ever falling back to bisection.
     [[nodiscard]] std::size_t locate(double a) const noexcept;
+
+    // Build bucket_to_knot_ from the current `a_` knot positions.
+    // Called by build() and from_state(); writes only this table, no
+    // other state is touched.  Idempotent — safe to call twice.
+    void build_bucket_table_() noexcept;
 
     std::vector<double> a_;  // knot positions, size n
     std::vector<double> b_;  // knot values,    size n
     std::vector<double> M_;  // second derivatives at knots, size n
     double b_min_;           // tight min of the spline on [a_[0], a_[n-1]]
     double b_max_;           // tight max of the spline on [a_[0], a_[n-1]]
+
+    // Indexed-search machinery.  Hot-path additions; not serialized
+    // (rebuilt on construction / from_state).
+    //
+    // bucket_to_knot_[k] = largest knot index i such that
+    //   a_[i] <= a_[0] + k * (a_[n-1] - a_[0]) / kBuckets
+    // is true, clamped to [0, n-2].  At lookup time we hash `a` into
+    // a bucket in O(1), then walk forward at most a few knots.  For
+    // log-uniform sampling (typical SBTL pressure curves), a 256-slot
+    // table reliably hits the right segment with zero refinement on
+    // smooth queries.
+    static constexpr std::size_t kBuckets = 256;
+    double a_lo_inv_step_ = 0.0;  // = kBuckets / (a_[n-1] - a_[0])
+    std::array<std::uint16_t, kBuckets> bucket_to_knot_{};
 };
 
 }  // namespace region

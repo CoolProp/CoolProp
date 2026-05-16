@@ -40,6 +40,14 @@ namespace sbtl {
 struct SatBoundaryBuildOptions
 {
     std::size_t n_knots = 64;  // CubicSplineCurve knots per curve
+
+    // T-floor walk-up: number of 0.5 K steps to try when T_min falls
+    // below T_melt(p) at high p.  Default 1000 = 500 K of slack, which
+    // covers water's melting line all the way to its EOS p_max ~1 GPa
+    // (melting curve reaches ~370 K vs T_triple 273 K).  Subcritical
+    // fluids typically clear in a handful of steps; this is just the
+    // safety net for SUPER-region builds.
+    std::size_t t_floor_walk_steps = 1000;
 };
 
 // h_sat,L(p) — mass enthalpy on the saturated-liquid side of the dome.
@@ -79,6 +87,15 @@ std::unique_ptr<region::CubicSplineCurve> build_h_isotherm_ceiling(::CoolProp::A
 // don't fail at the exact boundary.  Driven by the fluid's HEOS
 // AbstractState — needs an instance already constructed by the caller.
 std::pair<double, double> subcritical_pressure_range(::CoolProp::AbstractState& heos);
+
+// Convenience: supercritical pressure range for `fluid`.  Returns
+// (p_min, p_max) ≈ (p_crit * 1.001, pmax_eos * 0.99) — a thin margin
+// above the critical point so the SUPER region doesn't share its
+// lower boundary with the subcritical regions' upper bound (the SVD
+// gets ill-conditioned right at p_crit; the gap is small enough that
+// caller-side dispatch falls back to direct HEOS in the gap, when /
+// if that fallback ships).  Driven by the fluid's HEOS AbstractState.
+std::pair<double, double> supercritical_pressure_range(::CoolProp::AbstractState& heos);
 
 }  // namespace sbtl
 }  // namespace CoolProp

@@ -25,6 +25,7 @@
 #include "Backends/Tabular/TTSEBackend.h"
 #include "Backends/Tabular/BicubicBackend.h"
 #endif
+#include "CoolProp/Backends/SVDSBTL/SVDSBTLBackend.h"
 
 namespace CoolProp {
 
@@ -136,6 +137,20 @@ class PCSAFTGenerator : public CoolProp::AbstractStateGenerator
 // This static initialization will cause the generator to register
 // NOLINTNEXTLINE(cert-err58-cpp)
 static CoolProp::GeneratorInitializer<PCSAFTGenerator> pcsaft_gen(CoolProp::PCSAFT_BACKEND_FAMILY);
+
+class SVDSBTLBackendGenerator : public CoolProp::AbstractStateGenerator
+{
+   public:
+    CoolProp::AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
+        if (fluid_names.size() != 1) {
+            throw ValueError("SVDSBTL backend is pure-fluid only; expected exactly one fluid name");
+        }
+        return new CoolProp::SVDSBTLBackend(fluid_names[0]);
+    };
+};
+// This static initialization will cause the generator to register
+// NOLINTNEXTLINE(cert-err58-cpp)
+static CoolProp::GeneratorInitializer<SVDSBTLBackendGenerator> svdsbtl_gen(CoolProp::SVDSBTL_BACKEND_FAMILY);
 
 AbstractState* AbstractState::factory(const std::string& backend, const std::vector<std::string>& fluid_names) {
     if (get_debug_level() > 0) {

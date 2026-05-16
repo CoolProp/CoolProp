@@ -105,9 +105,12 @@ void build_one(const std::string& fluid, std::size_t NT, std::size_t NR, std::in
 }  // namespace
 
 int main(int argc, char** argv) {
-    const std::size_t NT = env_size_t("SVD_NT", 200);
-    const std::size_t NR = env_size_t("SVD_NR", 800);
-    const std::int32_t rank = env_int("SVD_RANK", 20);
+    // Clamp env overrides to valid ranges before kicking off the build
+    // loop -- (NT - 1) and (NR - 1) appear in grid denominators downstream,
+    // and rank < 1 produces no usable decomposition.
+    const std::size_t NT = std::max<std::size_t>(2, env_size_t("SVD_NT", 200));
+    const std::size_t NR = std::max<std::size_t>(2, env_size_t("SVD_NR", 800));
+    const std::int32_t rank = std::max<std::int32_t>(1, env_int("SVD_RANK", 20));
 
     std::vector<std::string> fluids;
     if (argc > 1) {

@@ -15,10 +15,26 @@ namespace {
 // forward, one pass back.  Writes the solution into d in-place.
 void thomas(std::vector<double>& sub, std::vector<double>& diag, std::vector<double>& sup, std::vector<double>& d) {
     const std::size_t n = diag.size();
+    // Defense in depth: every CubicSplineCurve build() call feeds the
+    // natural-cubic system whose diagonal is (h_lo + h_hi)/3 with both
+    // h_i strictly positive (we validate strictly-increasing a above),
+    // so the diagonal is always positive.  But if someone routes a
+    // future call into this helper with a pathological matrix, the
+    // forward sweep silently divides by zero -- check explicitly so we
+    // surface a clear error instead of producing NaN coefficients.
+    constexpr double kTinyDiag = 1e-300;
+    for (std::size_t i = 0; i < n; ++i) {
+        if (std::abs(diag[i]) < kTinyDiag) {
+            throw std::invalid_argument("thomas: zero (or sub-normal) diagonal entry; tridiagonal system is singular");
+        }
+    }
     // Forward sweep.
     for (std::size_t i = 1; i < n; ++i) {
         const double m = sub[i] / diag[i - 1];
         diag[i] -= m * sup[i - 1];
+        if (std::abs(diag[i]) < kTinyDiag) {
+            throw std::invalid_argument("thomas: pivot vanished during forward sweep (system is singular at row " + std::to_string(i) + ")");
+        }
         d[i] -= m * d[i - 1];
     }
     // Back substitution.
@@ -173,7 +189,32 @@ std::unique_ptr<CubicSplineCurve> CubicSplineCurve::build(std::vector<double> a,
 }
 
 CubicSplineCurve::CubicSplineCurve(std::vector<double> a, std::vector<double> b, std::vector<double> M, double b_min, double b_max)
-  : a_(std::move(a)), b_(std::move(b)), M_(std::move(M)), b_min_(b_min), b_max_(b_max) {}
+  : a_(std::move(a)), b_(std::move(b)), M_(std::move(M)), b_min_(b_min), b_max_(b_max) {
+    build_bucket_table_();
+}
+
+void CubicSplineCurve::build_bucket_table_() noexcept {
+    const std::size_t n = a_.size();
+    const double a_lo = a_.front();
+    const double a_hi = a_.back();
+    const double span = a_hi - a_lo;
+    // Guard against degenerate single-segment curves where span could
+    // be zero (build() already rejects this, but be defensive).
+    a_lo_inv_step_ = (span > 0.0) ? (static_cast<double>(kBuckets) / span) : 0.0;
+    // Sweep buckets left-to-right; maintain a single advancing knot
+    // index `i` so the build is O(kBuckets + n) total.
+    std::size_t i = 0;
+    const auto max_seg_idx = static_cast<std::uint16_t>(n - 2);
+    for (std::size_t k = 0; k < kBuckets; ++k) {
+        const double a_bucket = a_lo + static_cast<double>(k) * span / static_cast<double>(kBuckets);
+        // Advance i while a_[i+1] is still <= a_bucket.  Loop invariant
+        // after this step: a_[i] <= a_bucket < a_[i+1] (modulo clamping).
+        while (i + 1 < n - 1 && a_[i + 1] <= a_bucket) {
+            ++i;
+        }
+        bucket_to_knot_[k] = (i > max_seg_idx) ? max_seg_idx : static_cast<std::uint16_t>(i);
+    }
+}
 
 CubicSplineCurve::State CubicSplineCurve::state() const {
     return State{a_, b_, M_, b_min_, b_max_};
@@ -196,31 +237,50 @@ std::unique_ptr<CubicSplineCurve> CubicSplineCurve::from_state(State s) {
     // rather than trusting the values shipped in `s`.  A tampered or
     // mis-versioned blob could otherwise drop a bogus AABB into the
     // RegionAtlas and silently corrupt region dispatch.  The recompute
-    // is O(n) — negligible vs the rest of deserialization.
+    // is O(n) — negligible vs the rest of deserialization.  The private
+    // ctor rebuilds the bucket table from the knot array as part of
+    // construction, so no extra work needed here.
     const auto bnds = compute_bounds(s.a, s.b, s.M);
     return std::unique_ptr<CubicSplineCurve>(new CubicSplineCurve(std::move(s.a), std::move(s.b), std::move(s.M), bnds.first, bnds.second));
 }
 
 std::size_t CubicSplineCurve::locate(double a) const noexcept {
-    // Binary search; clamp to a valid segment index.
+    // O(1) amortized: hash into a precomputed bucket, then walk
+    // forward at most a few knots.  Non-uniform knot spacing is fine
+    // — the build_bucket_table_ pass already absorbed it.
     const std::size_t n = a_.size();
-    if (a <= a_.front()) {
+    const double a_lo = a_.front();
+    // NaN/inf guard: the comparisons below are both false on NaN,
+    // and the cast to ptrdiff_t a few lines down is UB on non-finite
+    // values.  Return the leftmost segment for any non-finite input
+    // — the eventual eval() math will propagate NaN to the caller
+    // through the standard return path.
+    if (!std::isfinite(a)) {
+        return 0;
+    }
+    if (a <= a_lo) {
         return 0;
     }
     if (a >= a_.back()) {
         return n - 2;
     }
-    std::size_t lo = 0;
-    std::size_t hi = n - 1;
-    while (hi - lo > 1) {
-        const std::size_t mid = (lo + hi) / 2;
-        if (a_[mid] <= a) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
+    // Bucket index in [0, kBuckets).  Clamp defensively in case
+    // a_lo_inv_step_ is 0 or rounding pushes us out.
+    auto k = static_cast<std::ptrdiff_t>((a - a_lo) * a_lo_inv_step_);
+    if (k < 0) {
+        k = 0;
+    } else if (k >= static_cast<std::ptrdiff_t>(kBuckets)) {
+        k = static_cast<std::ptrdiff_t>(kBuckets) - 1;
     }
-    return lo;
+    std::size_t i = bucket_to_knot_[static_cast<std::size_t>(k)];
+    // Refine forward.  Loop bound matches the worst-case "knots per
+    // bucket" which is ~ceil(n / kBuckets) for any reasonable knot
+    // distribution (1 for n <= kBuckets, larger for dense knot tails
+    // on log-uniform sampling).  Practical iterations: 0–1.
+    while (i + 1 < n - 1 && a_[i + 1] <= a) {
+        ++i;
+    }
+    return i;
 }
 
 double CubicSplineCurve::eval(double a) const noexcept {
