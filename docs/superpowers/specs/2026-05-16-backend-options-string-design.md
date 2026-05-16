@@ -94,6 +94,45 @@ if (pos == std::string::npos) {
 inside the JSON value (or inside the file path for `@…`) and are handled
 by the JSON parser's quoting rules, not by the factory-string parser.
 
+### High-level interface support (PropsSI, FORTRAN, Excel)
+
+The factory string is parsed in exactly one place
+(`AbstractState::factory()`), and `PropsSI` / `Props1SI` /
+`PhaseSI` etc. forward their `FluidName` argument through that same
+parser unchanged. Consequence: the `?<options>` suffix works
+identically for callers stuck on the high-level interface, with **no
+new entry-points and no per-language wrapper changes**:
+
+```python
+# Python
+PropsSI("D", "T", 300, "P", 1e5,
+        'SVDSBTL&HEOS::Water?{"critical_patch":"off"}')
+```
+
+```fortran
+! FORTRAN — escape quotes per host language rules
+d = PropsSI('D'//c_null_char, 'T'//c_null_char, 300.0_dp, &
+            'P'//c_null_char, 1.0e5_dp, &
+            'SVDSBTL&HEOS::Water?@/opt/coolprop/h2o_no_patch.json'//c_null_char)
+```
+
+```excel
+=PropsSI("D";"T";300;"P";1E5;"SVDSBTL&HEOS::Water?@C:\Configs\h2o.json")
+```
+
+```matlab
+% MATLAB
+d = py.CoolProp.CoolProp.PropsSI('D','T',300,'P',1e5, ...
+        'SVDSBTL&HEOS::Water?@~/coolprop/opts.json');
+```
+
+For inline JSON the host language's string-quoting rules apply
+(escape `"` as `\"` in C-family, doubled `""` in Excel, etc.). When
+the quoting becomes painful — Excel cells especially are limited to
+~32k chars and don't escape gracefully — the `?@path.json` form
+sidesteps escaping entirely and is the recommended path for
+high-level interfaces.
+
 ### Schema (initial, for SVDSBTL)
 
 ```jsonc
@@ -284,6 +323,20 @@ equivalent.
 - Round-trip: `build_options_json()` output, fed back into the factory,
   produces an instance with identical `build_options_json()`.
 
+### High-level-interface pass-through
+
+- `PropsSI("D", "T", 300, "P", 1e5,
+   'SVDSBTL&HEOS::Water?{"critical_patch":"off"}')` returns a finite
+   density and matches the result of constructing the same backend
+   via `AbstractState::factory()` with the same string.
+- `PropsSI(..., 'SVDSBTL&HEOS::Water?@/tmp/cfg.json')` reads the file
+   and applies the options. A missing file throws the same
+   `FileIOError` PropsSI surfaces as a CoolProp error message — no
+   silent fallback to defaults.
+- A round-trip from `build_options_json()` through PropsSI's
+   FluidName argument produces a backend with identical canonical
+   options.
+
 ### SVDSBTL behavioural tests
 
 - `critical_patch=off` → backend instance has the patch disabled;
@@ -352,3 +405,7 @@ release-cycle of overlap before the Configuration globals are removed.
       different filenames.
 - [ ] At least one BICUBIC / TTSE follow-up PR filed (not landed) to
       verify the mechanism generalizes.
+- [ ] PropsSI / Props1SI / PhaseSI accept the `?<options>` suffix
+      verbatim in their `FluidName` argument — both inline JSON and
+      `@path` forms exercised in tests, Python wrapper through to the
+      C++ entry-point.
