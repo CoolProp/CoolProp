@@ -25,16 +25,16 @@ namespace {
 // Returns true if both files at the SVDSBTL default cache path exist
 // for `fluid`.  Used as a "did the constructor populate the cache?"
 // gate without re-running the build path itself.
-bool cache_present_for(const std::string& fluid) {
+bool cache_present_for(const std::string& fluid, const std::string& source_backend = "HEOS") {
     namespace cp_sbtl = CoolProp::sbtl;
-    return std::filesystem::exists(cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid, CoolProp::HmassP_INPUTS))
-           && std::filesystem::exists(cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid, CoolProp::PT_INPUTS));
+    return std::filesystem::exists(cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid, source_backend, CoolProp::HmassP_INPUTS))
+           && std::filesystem::exists(cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid, source_backend, CoolProp::PT_INPUTS));
 }
 
 }  // namespace
 
 TEST_CASE("SVDSBTL backend constructs via AbstractState::factory", "[SVDSBTL][factory][slow]") {
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     REQUIRE(AS != nullptr);
     REQUIRE(AS->backend_name() == "SVDSBTLBackend");
     REQUIRE(AS->fluid_names().size() == 1);
@@ -50,7 +50,7 @@ TEST_CASE("SVDSBTL backend constructs via AbstractState::factory", "[SVDSBTL][fa
 }
 
 TEST_CASE("SVDSBTL backend reports critical / triple constants from HEOS reference", "[SVDSBTL][constants][slow]") {
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
     REQUIRE(AS->T_critical() == Approx(heos->T_critical()).epsilon(1e-12));
     REQUIRE(AS->p_critical() == Approx(heos->p_critical()).epsilon(1e-12));
@@ -61,7 +61,7 @@ TEST_CASE("SVDSBTL backend reports critical / triple constants from HEOS referen
 }
 
 TEST_CASE("SVDSBTL backend PT lookup matches HEOS within tolerance", "[SVDSBTL][pt][water][slow]") {
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
 
     // Compressed-liquid spot check matching Phase 2b's water PT preset assertion.
@@ -82,7 +82,7 @@ TEST_CASE("SVDSBTL backend PT lookup matches HEOS within tolerance", "[SVDSBTL][
 }
 
 TEST_CASE("SVDSBTL backend PH lookup matches HEOS within tolerance", "[SVDSBTL][ph][water][slow]") {
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
 
     // Build a (p, T) probe via HEOS, then ask SVDSBTL for the same point via (h, p).
@@ -107,7 +107,7 @@ TEST_CASE("SVDSBTL backend PH lookup matches HEOS within tolerance", "[SVDSBTL][
 TEST_CASE("SVDSBTL backend rejects mixtures", "[SVDSBTL][reject][mixture]") {
     using Catch::Matchers::ContainsSubstring;
     REQUIRE_THROWS_WITH(
-      std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", std::vector<std::string>{"Water", "Ethanol"})),
+      std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::vector<std::string>{"Water", "Ethanol"})),
       ContainsSubstring("pure-fluid"));
 }
 
@@ -123,7 +123,7 @@ TEST_CASE("SVDSBTL backend supports the high-level PropsSI surface", "[SVDSBTL][
 
 TEST_CASE("SVDSBTL backend cache reload produces the same result", "[SVDSBTL][cache][slow]") {
     // First instance populates the cache (or no-ops if already present).
-    auto first = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto first = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     if (!cache_present_for("Water")) {
         WARN("SVDSBTL cache absent after first construction (read-only home dir?); reload test will exercise rebuild path instead");
     }
@@ -131,7 +131,7 @@ TEST_CASE("SVDSBTL backend cache reload produces the same result", "[SVDSBTL][ca
     const double rho_first = first->rhomass();
 
     // Second instance hits the cache.
-    auto second = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto second = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     second->update(CoolProp::PT_INPUTS, 1.0e6, 350.0);
     const double rho_second = second->rhomass();
 
@@ -147,7 +147,7 @@ TEST_CASE("SVDSBTL backend PQ_INPUTS two-phase blend matches HEOS", "[SVDSBTL][t
     // (~1e-15 relative) are the only delta.  margin(...) lets us
     // express the tolerance in absolute terms where relative
     // comparisons break down at zero-crossing references.
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
 
     // Sweep a few (p, Q) combinations across the subcritical range.
@@ -170,7 +170,7 @@ TEST_CASE("SVDSBTL backend PQ_INPUTS two-phase blend matches HEOS", "[SVDSBTL][t
 }
 
 TEST_CASE("SVDSBTL backend QT_INPUTS two-phase blend matches HEOS", "[SVDSBTL][twophase][qt][water][slow]") {
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
 
     for (const double T : {280.0, 350.0, 450.0, 600.0}) {
@@ -191,7 +191,7 @@ TEST_CASE("SVDSBTL backend HmassP_INPUTS dome-hit routes to two-phase blend", "[
     // Pick a sat state, take h half-way between hL and hV at p_sat, and
     // confirm SVDSBTL recovers the same Q as HEOS via the in-dome
     // HmassP path.
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
 
     for (const double p : {2.0e5, 1.0e6, 5.0e6}) {
@@ -216,7 +216,7 @@ TEST_CASE("SVDSBTL backend speed of sound matches HEOS in single phase", "[SVDSB
     // For typical single-phase Water states, SVDSBTL should agree with
     // HEOS to ~SVD fitting tolerance (median ~1e-7 relative for ρ-like
     // quantities; w roughly tracks that).
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
 
     struct Pt
@@ -241,7 +241,7 @@ TEST_CASE("SVDSBTL backend speed of sound matches HEOS in single phase", "[SVDSB
 }
 
 TEST_CASE("SVDSBTL backend speed of sound throws in two-phase", "[SVDSBTL][speed_sound][twophase]") {
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     AS->update(CoolProp::PQ_INPUTS, 1.0e6, 0.5);
     REQUIRE_THROWS(AS->speed_sound());
 }
@@ -256,7 +256,7 @@ TEST_CASE("SVDSBTL backend works across the Phase 2a fluid set", "[SVDSBTL][mult
     // confirms each backend wires up correctly.
     for (const auto* fluid : {"R134a", "Ammonia", "Methane", "Propane", "CarbonDioxide", "D6"}) {
         SECTION(fluid) {
-            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", fluid));
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", fluid));
             auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
             REQUIRE(AS->backend_name() == "SVDSBTLBackend");
 
@@ -300,7 +300,7 @@ TEST_CASE("SVDSBTL backend works across the Phase 2a fluid set", "[SVDSBTL][mult
 }
 
 TEST_CASE("SVDSBTL backend Q out of [0, 1] is rejected", "[SVDSBTL][twophase][reject]") {
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL", "Water"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     REQUIRE_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.0e6, -0.1));
     REQUIRE_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.0e6, 1.1));
     REQUIRE_THROWS(AS->update(CoolProp::QT_INPUTS, -0.1, 350.0));

@@ -32,35 +32,58 @@ namespace {
 constexpr std::array<CoolProp::input_pairs, 2> kSupportedPairs = {CoolProp::HmassP_INPUTS, CoolProp::PT_INPUTS};
 
 // Sample-and-build for a given input pair using the matching preset.
-CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& heos, CoolProp::input_pairs pair) {
+CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& source, CoolProp::input_pairs pair) {
     namespace cp_sbtl = CoolProp::sbtl;
     cp_sbtl::SurfaceSpec spec;
     switch (pair) {
         case CoolProp::HmassP_INPUTS:
-            spec = cp_sbtl::presets::ph_subcritical(heos);
+            spec = cp_sbtl::presets::ph_subcritical(source);
             break;
         case CoolProp::PT_INPUTS:
-            spec = cp_sbtl::presets::pt_subcritical(heos);
+            spec = cp_sbtl::presets::pt_subcritical(source);
             break;
         default:
             throw ValueError("SVDSBTL backend: no preset registered for the requested input pair");
     }
-    return cp_sbtl::build_surface(heos, std::move(spec));
+    return cp_sbtl::build_surface(source, std::move(spec));
 }
 
 }  // namespace
 
-SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name) : fluid_name_(fluid_name), mole_fractions_({1.0}) {
+SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name, const std::string& source_backend)
+  : fluid_name_(fluid_name), source_backend_(source_backend), mole_fractions_({1.0}) {
+    // Validate the source backend up-front.  Anything outside the
+    // {HEOS, REFPROP, IF97} set is rejected — adding a new source
+    // (SRK, PR, etc.) needs deliberate per-backend wiring for
+    // two-phase routing and the cache-key encoding below, so failing
+    // loudly is better than silently mismatching.
+    if (source_backend_ != "HEOS" && source_backend_ != "REFPROP" && source_backend_ != "IF97") {
+        throw ValueError(format("SVDSBTL: unsupported source backend '%s' (allowed: HEOS, REFPROP, IF97)", source_backend_.c_str()));
+    }
+    // IF97 is parameterized — the only fluid it knows is Water.  Catch
+    // the obvious misuse here rather than at the first surface-build
+    // call.
+    if (source_backend_ == "IF97" && fluid_name != "Water") {
+        throw ValueError(format("SVDSBTL&IF97 is Water-only; got fluid '%s'", fluid_name.c_str()));
+    }
     for (const auto pair : kSupportedPairs) {
         ensure_surface_(pair);
     }
 }
 
-std::shared_ptr<CoolProp::AbstractState> SVDSBTLBackend::heos_reference_() {
-    if (!heos_) {
-        heos_.reset(CoolProp::AbstractState::factory("HEOS", fluid_name_));
+std::shared_ptr<CoolProp::AbstractState> SVDSBTLBackend::source_reference_() {
+    if (!source_) {
+        // The single AbstractState handle that all internal
+        // truth-source calls go through: HEOS sampling for the SVD
+        // tables, SuperAncillary (when source is HEOS), critical-
+        // patch fallback queries, and two-phase PQ/QT routing.
+        //
+        // IF97's factory takes the literal "Water" (its only fluid);
+        // the constructor already validated fluid_name_=="Water" for
+        // this source.  REFPROP and HEOS use the same fluid string.
+        source_.reset(CoolProp::AbstractState::factory(source_backend_, fluid_name_));
     }
-    return heos_;
+    return source_;
 }
 
 std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> SVDSBTLBackend::superanc_() {
@@ -71,12 +94,12 @@ std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> SVDSBTLBack
     // The SuperAncillary lives on the per-fluid CoolPropFluid record;
     // HEOSMixtureBackend wraps it via get_superanc().  Anything that's
     // not a HEOS instance simply won't have one.
-    auto* heos_ptr = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(heos_reference_().get());
-    if (heos_ptr == nullptr) {
+    auto* helmholtz_ptr = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(source_reference_().get());
+    if (helmholtz_ptr == nullptr) {
         return superanc_cached_;  // stays nullptr
     }
     try {
-        superanc_cached_ = heos_ptr->get_superanc();
+        superanc_cached_ = helmholtz_ptr->get_superanc();
     } catch (const std::exception&) {
         // get_superanc() throws for pseudo-pure / mixtures; SVDSBTL
         // already rejects those at construction, so this is mostly
@@ -88,7 +111,7 @@ std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> SVDSBTLBack
         // trigger them eagerly here so the first two-phase calc_*
         // doesn't pay the build cost on the hot path.  Cheap (~30 ms
         // total) and runs once per backend lifetime.
-        heos_ptr->ensure_caloric_superancillaries();
+        helmholtz_ptr->ensure_caloric_superancillaries();
     }
     return superanc_cached_;
 }
@@ -113,7 +136,7 @@ std::vector<CoolProp::input_pairs> SVDSBTLBackend::registered_input_pairs() cons
 
 void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     namespace cp_sbtl = CoolProp::sbtl;
-    const std::string path = cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid_name_, pair);
+    const std::string path = cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid_name_, source_backend_, pair);
     std::unique_ptr<cp_sbtl::SVDSurface> surface;
 
     if (std::filesystem::exists(path)) {
@@ -127,8 +150,8 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     }
 
     if (!surface) {
-        auto heos = heos_reference_();
-        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*heos, pair));
+        auto source = source_reference_();
+        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, pair));
         try {
             cp_sbtl::SVDSurfaceSerializer::save_to_file(*surface, path);
         } catch (const std::exception&) {
@@ -373,39 +396,39 @@ CoolPropDbl SVDSBTLBackend::calc_umolar() {
 // Constants — delegate to a lazily-allocated HEOS reference.
 CoolPropDbl SVDSBTLBackend::calc_molar_mass() {
     if (molar_mass_cached_ < 0.0) {
-        molar_mass_cached_ = heos_reference_()->molar_mass();
+        molar_mass_cached_ = source_reference_()->molar_mass();
     }
     return molar_mass_cached_;
 }
 CoolPropDbl SVDSBTLBackend::calc_gas_constant() {
-    return heos_reference_()->gas_constant();
+    return source_reference_()->gas_constant();
 }
 CoolPropDbl SVDSBTLBackend::calc_T_critical() {
-    return heos_reference_()->T_critical();
+    return source_reference_()->T_critical();
 }
 CoolPropDbl SVDSBTLBackend::calc_p_critical() {
-    return heos_reference_()->p_critical();
+    return source_reference_()->p_critical();
 }
 CoolPropDbl SVDSBTLBackend::calc_rhomass_critical() {
-    return heos_reference_()->rhomass_critical();
+    return source_reference_()->rhomass_critical();
 }
 CoolPropDbl SVDSBTLBackend::calc_rhomolar_critical() {
-    return heos_reference_()->rhomolar_critical();
+    return source_reference_()->rhomolar_critical();
 }
 CoolPropDbl SVDSBTLBackend::calc_Ttriple() {
-    return heos_reference_()->Ttriple();
+    return source_reference_()->Ttriple();
 }
 CoolPropDbl SVDSBTLBackend::calc_p_triple() {
-    return heos_reference_()->p_triple();
+    return source_reference_()->p_triple();
 }
 CoolPropDbl SVDSBTLBackend::calc_Tmax() {
-    return heos_reference_()->Tmax();
+    return source_reference_()->Tmax();
 }
 CoolPropDbl SVDSBTLBackend::calc_Tmin() {
-    return heos_reference_()->Tmin();
+    return source_reference_()->Tmin();
 }
 CoolPropDbl SVDSBTLBackend::calc_pmax() {
-    return heos_reference_()->pmax();
+    return source_reference_()->pmax();
 }
 
 }  // namespace CoolProp
