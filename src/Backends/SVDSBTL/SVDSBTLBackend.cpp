@@ -116,6 +116,123 @@ SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name, const std::string&
     for (const auto pair : kSupportedPairs) {
         ensure_surface_(pair);
     }
+    build_critical_patch_(options_canonical_);
+}
+
+bool SVDSBTLBackend::CriticalPatch::contains(::CoolProp::input_pairs pair, double a, double b) const noexcept {
+    if (!enabled) {
+        return false;
+    }
+    const auto it = bbox_per_pair.find(static_cast<int>(pair));
+    if (it == bbox_per_pair.end()) {
+        return false;
+    }
+    const auto& bb = it->second;
+    return (a >= bb.a_lo && a <= bb.a_hi && b >= bb.b_lo && b <= bb.b_hi);
+}
+
+std::shared_ptr<::CoolProp::AbstractState> SVDSBTLBackend::patch_source_ref_() {
+    if (patch_source_) {
+        return patch_source_;
+    }
+    // critical_patch_.source is empty when the options blob left it
+    // null / default — fall back to the SVD truth source so the
+    // patch IS the source by definition.
+    const std::string backend = critical_patch_.source.empty() ? source_backend_ : critical_patch_.source;
+    patch_source_.reset(::CoolProp::AbstractState::factory(backend, fluid_name_));
+    return patch_source_;
+}
+
+void SVDSBTLBackend::build_critical_patch_(const std::string& options_canonical) {
+    critical_patch_ = CriticalPatch{};  // disabled by default
+    // Default behaviour when no options are supplied (mode unset) is
+    // "auto" with the spec's hardcoded multipliers.  PR D will plug
+    // in the actual binary-search-shrink loop.
+    std::string mode = "auto";
+    std::array<double, 4> bbox_mult = {0.95, 1.05, 0.75, 1.15};  // T_lo, T_hi, p_lo, p_hi
+    std::string patch_source;
+
+    if (!options_canonical.empty()) {
+        rapidjson::Document opts;
+        opts.Parse(options_canonical.c_str(), options_canonical.size());
+        if (opts.IsObject() && opts.HasMember("critical_patch") && opts["critical_patch"].IsObject()) {
+            const auto& cp = opts["critical_patch"];
+            if (cp.HasMember("mode") && cp["mode"].IsString()) {
+                mode = cp["mode"].GetString();
+            }
+            if (cp.HasMember("source") && cp["source"].IsString()) {
+                patch_source = cp["source"].GetString();
+            }
+            if (cp.HasMember("bbox") && cp["bbox"].IsArray() && cp["bbox"].Size() == 4) {
+                for (std::size_t i = 0; i < 4; ++i) {
+                    bbox_mult[i] = cp["bbox"][static_cast<rapidjson::SizeType>(i)].GetDouble();
+                }
+            }
+        }
+    }
+    if (mode == "off") {
+        return;
+    }
+    if (mode != "auto" && mode != "fixed") {
+        // schema validation should have caught this already
+        return;
+    }
+
+    // Set the patch source up-front so an invalid `critical_patch.source`
+    // override fails at construction (factory throws on unknown backend)
+    // instead of on the first in-patch query.  Also: the bbox must be
+    // sampled from the SAME backend that will serve the patch — if a
+    // user runs SVDSBTL&IF97 with critical_patch.source="HEOS", the
+    // (p, h) envelope has to come from HEOS's h(T, p) so the in-patch
+    // (h, p) classification matches what HEOS would return.
+    critical_patch_.enabled = true;
+    critical_patch_.source = patch_source;
+    auto src = patch_source_ref_();  // factories the patch backend; throws on invalid
+
+    const double Tc = src->T_critical();
+    const double pc = src->p_critical();
+    const double T_lo = bbox_mult[0] * Tc;
+    const double T_hi = bbox_mult[1] * Tc;
+    const double p_lo = bbox_mult[2] * pc;
+    const double p_hi = bbox_mult[3] * pc;
+
+    // PT_INPUTS — native bbox is (p, T): a = p, b = T.
+    critical_patch_.bbox_per_pair[static_cast<int>(::CoolProp::PT_INPUTS)] = CriticalPatchBbox{p_lo, p_hi, T_lo, T_hi};
+
+    // HmassP_INPUTS — bbox is (p, h).  Walk the (T, p) bbox's
+    // perimeter through the PATCH backend's h(T, p) and take the
+    // conservative axis-aligned envelope of the resulting h values.
+    // Catches every (T, p) in the critical box; may include cells
+    // slightly outside (false positive → source backend used outside
+    // the strict box, correct but slightly slower; no false negatives).
+    double h_lo = std::numeric_limits<double>::infinity();
+    double h_hi = -std::numeric_limits<double>::infinity();
+    constexpr int kPerimeterSamples = 24;
+    auto try_h = [&](double T, double p) {
+        try {
+            src->update(::CoolProp::PT_INPUTS, p, T);
+            const double h = src->hmass();
+            if (std::isfinite(h)) {
+                h_lo = std::min(h_lo, h);
+                h_hi = std::max(h_hi, h);
+            }
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Source may reject (T, p) inside the dome at p just below
+            // pc — those cells aren't critical-supercritical anyway.
+            // Skipping them only narrows the h-bbox, which is the
+            // safer direction.
+        }
+    };
+    for (int i = 0; i <= kPerimeterSamples; ++i) {
+        const double f = static_cast<double>(i) / kPerimeterSamples;
+        try_h(T_lo + f * (T_hi - T_lo), p_lo);
+        try_h(T_lo + f * (T_hi - T_lo), p_hi);
+        try_h(T_lo, p_lo + f * (p_hi - p_lo));
+        try_h(T_hi, p_lo + f * (p_hi - p_lo));
+    }
+    if (std::isfinite(h_lo) && std::isfinite(h_hi) && h_lo < h_hi) {
+        critical_patch_.bbox_per_pair[static_cast<int>(::CoolProp::HmassP_INPUTS)] = CriticalPatchBbox{p_lo, p_hi, h_lo, h_hi};
+    }
 }
 
 std::shared_ptr<CoolProp::AbstractState> SVDSBTLBackend::source_reference_() {
@@ -283,7 +400,12 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
         return;
     }
 
-    const auto it = surfaces_.find(static_cast<int>(input_pair));
+    // HmolarP shares the HmassP surface — the molar→mass conversion
+    // happens in the switch below.  Without this normalisation the
+    // surfaces_.find() lookup would miss (we only register HmassP and
+    // PT keys) and the HmolarP switch case would be unreachable.
+    const auto surface_key = (input_pair == CoolProp::HmolarP_INPUTS) ? CoolProp::HmassP_INPUTS : input_pair;
+    const auto it = surfaces_.find(static_cast<int>(surface_key));
     if (it == surfaces_.end() || !it->second) {
         throw ValueError(std::string("SVDSBTL backend: no surface registered for this input pair (") + CoolProp::get_input_pair_short_desc(input_pair)
                          + ")");
@@ -291,35 +413,61 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
 
     active_pair_ = input_pair;
     active_surface_ = it->second.get();
+    active_in_patch_ = false;
 
     // Record inputs into AbstractState's standard slots so calc_T() /
     // calc_pressure() can return them directly without an SVD round-trip.
+    // While we're at it, ask critical_patch_ whether this state lies in
+    // its bbox; if so, every calc_* below routes through patch_source_
+    // instead of the SVD surface.  The bbox check itself is O(1).
     switch (input_pair) {
         case CoolProp::HmassP_INPUTS: {
             // (a, b) = (p, h) per ph_subcritical preset; value1=h, value2=p.
             _p = value2;
             active_hmass_ = value1;
-            active_point_ = active_surface_->resolve(_p, active_hmass_);
+            active_in_patch_ = critical_patch_.contains(input_pair, _p, active_hmass_);
+            if (active_in_patch_) {
+                patch_source_ref_()->update(input_pair, value1, value2);
+                _T = patch_source_->T();
+            } else {
+                active_point_ = active_surface_->resolve(_p, active_hmass_);
+            }
             break;
         }
         case CoolProp::HmolarP_INPUTS: {
             // Convert molar → mass and route to the PH surface.
             _p = value2;
             active_hmass_ = value1 / calc_molar_mass();
-            active_point_ = active_surface_->resolve(_p, active_hmass_);
+            active_in_patch_ = critical_patch_.contains(CoolProp::HmassP_INPUTS, _p, active_hmass_);
+            if (active_in_patch_) {
+                patch_source_ref_()->update(CoolProp::HmassP_INPUTS, active_hmass_, _p);
+                _T = patch_source_->T();
+            } else {
+                active_point_ = active_surface_->resolve(_p, active_hmass_);
+            }
             break;
         }
         case CoolProp::PT_INPUTS: {
             // (a, b) = (p, T) per pt_subcritical preset; value1=p, value2=T.
             _p = value1;
             _T = value2;
-            active_point_ = active_surface_->resolve(_p, _T);
+            active_in_patch_ = critical_patch_.contains(input_pair, _p, _T);
+            if (active_in_patch_) {
+                patch_source_ref_()->update(input_pair, value1, value2);
+            } else {
+                active_point_ = active_surface_->resolve(_p, _T);
+            }
             break;
         }
         default:
             throw ValueError(std::string("SVDSBTL backend update: unsupported input pair (") + CoolProp::get_input_pair_short_desc(input_pair) + ")");
     }
     active_resolved_ = true;
+    if (active_in_patch_) {
+        // Patch is active: the source backend owns the answers for
+        // calc_* below.  active_point_ stays invalid but isn't read.
+        return;
+    }
 
     if (active_point_.region_idx < 0) {
         // Out of every single-phase region.  For HmassP this typically
@@ -445,10 +593,14 @@ CoolPropDbl SVDSBTLBackend::lookup_(CoolProp::parameters prop) {
 
 // Mass-basis accessors — route through the active SVDSurface, OR
 // through the cached two-phase blend when the active state is inside
-// the saturation dome.
+// the saturation dome, OR through the critical-patch source backend
+// when the active state falls inside the per-pair bbox.
 CoolPropDbl SVDSBTLBackend::calc_rhomass() {
     if (two_phase_.active) {
         return two_phase_property_(iDmolar) * calc_molar_mass();
+    }
+    if (active_in_patch_) {
+        return patch_source_->rhomass();
     }
     return lookup_(iDmass);
 }
@@ -461,11 +613,17 @@ CoolPropDbl SVDSBTLBackend::calc_hmass() {
     if (active_pair_ == CoolProp::HmassP_INPUTS || active_pair_ == CoolProp::HmolarP_INPUTS) {
         return active_hmass_;
     }
+    if (active_in_patch_) {
+        return patch_source_->hmass();
+    }
     return lookup_(iHmass);
 }
 CoolPropDbl SVDSBTLBackend::calc_smass() {
     if (two_phase_.active) {
         return two_phase_property_(iSmolar) / calc_molar_mass();
+    }
+    if (active_in_patch_) {
+        return patch_source_->smass();
     }
     return lookup_(iSmass);
 }
@@ -473,12 +631,18 @@ CoolPropDbl SVDSBTLBackend::calc_umass() {
     if (two_phase_.active) {
         return two_phase_property_(iUmolar) / calc_molar_mass();
     }
+    if (active_in_patch_) {
+        return patch_source_->umass();
+    }
     return lookup_(iUmass);
 }
 
 CoolPropDbl SVDSBTLBackend::calc_T() {
     if (two_phase_.active || active_pair_ == CoolProp::PT_INPUTS) {
         return _T;
+    }
+    if (active_in_patch_) {
+        return patch_source_->T();
     }
     return lookup_(iT);
 }
@@ -490,6 +654,9 @@ CoolPropDbl SVDSBTLBackend::calc_speed_sound() {
         // Mirror what HEOS does -- throw rather than return a
         // misleading Q-weighted blend.
         throw NotImplementedError("SVDSBTL backend: speed_sound is not defined in the two-phase region");
+    }
+    if (active_in_patch_) {
+        return patch_source_->speed_sound();
     }
     return lookup_(ispeed_sound);
 }
