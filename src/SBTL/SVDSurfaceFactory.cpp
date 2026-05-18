@@ -17,6 +17,45 @@ namespace sbtl {
 
 namespace {
 
+// Build the per-region (xn, xi) grids returned to both the sampler and
+// the SVD builder.  Single source of truth for the secondary-axis
+// spacing — the SVD's stored y_grid MUST match the η positions where
+// the source was actually sampled, so sample_grid() and the
+// build_surface() loop below both go through here.
+//
+// Secondary axis (xn) uses Chebyshev-cosine spacing: cells crowd toward
+// both η=0 and η=1 boundaries.  In LIQUID/VAPOR regions the saturation
+// curve is one of the η boundaries, and properties have sharp curvature
+// in a thin η-strip right against it.  Uniform η spacing puts only ~1
+// grid cell of resolution into that strip — measured worst-case error
+// in SVDSBTL&HEOS R2 lives there (h_truth − h_sat,V ≈ 0.33%, η ≈ 0.005,
+// only ~1 grid cell of support at NT=200).  Chebyshev squashes bulk
+// cells toward the middle and crowds them at both ends, dropping
+// per-region failure counts by 6-9× on the SVDSBTL&HEOS conformance
+// fail-map (2026-05-18).
+//
+// Tiny pad off the literal 0 / 1 corners keeps boundary-curve evaluation
+// safe — the cubic-spline / Chebyshev sat boundaries can extrapolate
+// epsilon-outside their fit interval at the dome corners, and HmassP
+// flash failures cluster there.
+//
+// Primary axis (xi) stays on uniform spacing — its scale is handled by
+// the region's AxisTransform (linear or log) at from_normalized() time.
+std::pair<std::vector<double>, std::vector<double>> make_grid_axes(std::size_t NT, std::size_t NR) {
+    constexpr double kPadEnd = 0.001;
+    std::vector<double> xn_grid(NT);
+    std::vector<double> xi_grid(NR);
+    for (std::size_t i = 0; i < NT; ++i) {
+        const double t = static_cast<double>(i) / static_cast<double>(NT - 1);
+        const double eta_cheb = 0.5 * (1.0 - std::cos(M_PI * t));
+        xn_grid[i] = kPadEnd + (1.0 - 2.0 * kPadEnd) * eta_cheb;
+    }
+    for (std::size_t j = 0; j < NR; ++j) {
+        xi_grid[j] = static_cast<double>(j) / static_cast<double>(NR - 1);
+    }
+    return {std::move(xn_grid), std::move(xi_grid)};
+}
+
 // Walk the (xnorm, log_p_norm) ∈ [0,1] × [0,1] grid for one Region,
 // sample HEOS per cell via the spec's update_state / read_property
 // callbacks, and fill the per-property matrix dictionary.  Cells
@@ -31,32 +70,7 @@ std::vector<std::vector<double>> sample_grid(::CoolProp::AbstractState& heos, co
     const std::size_t NR = spec.NR;
     const std::size_t n_props = spec.properties.size();
 
-    std::vector<double> xn_grid(NT);
-    std::vector<double> xi_grid(NR);
-    // Chebyshev-style spacing on the secondary axis: cells crowd
-    // toward both η=0 and η=1 boundaries.  In LIQUID/VAPOR regions
-    // the saturation curve is one of the η boundaries, and properties
-    // have sharp curvature in a thin η-strip right against it.
-    // Uniform η spacing puts only ~1 grid cell of resolution into that
-    // strip — measured worst-case error in SVDSBTL&HEOS R2 lives there
-    // (h_truth − h_sat,V ≈ 0.33%, η ≈ 0.005, only ~1 grid cell of
-    // support at NT=200).  Chebyshev squashes bulk cells toward the
-    // middle and crowds them at both ends, dropping per-region failure
-    // counts by 6-9× on the SVDSBTL&HEOS conformance fail-map (2026-05-18).
-    //
-    // Tiny pad off the literal 0 / 1 corners keeps boundary-curve
-    // evaluation safe — the cubic-spline / Chebyshev sat boundaries
-    // can extrapolate epsilon-outside their fit interval at the dome
-    // corners, and HmassP flash failures cluster there.
-    constexpr double kPadEnd = 0.001;
-    for (std::size_t i = 0; i < NT; ++i) {
-        const double t = static_cast<double>(i) / static_cast<double>(NT - 1);
-        const double eta_cheb = 0.5 * (1.0 - std::cos(M_PI * t));
-        xn_grid[i] = kPadEnd + (1.0 - 2.0 * kPadEnd) * eta_cheb;
-    }
-    for (std::size_t j = 0; j < NR; ++j) {
-        xi_grid[j] = static_cast<double>(j) / static_cast<double>(NR - 1);
-    }
+    const auto [xn_grid, xi_grid] = make_grid_axes(NT, NR);
 
     // M[prop][i*NR + j] for each output property.
     std::vector<std::vector<double>> M(n_props);
@@ -162,25 +176,6 @@ std::vector<std::vector<double>> sample_grid(::CoolProp::AbstractState& heos, co
     return M;
 }
 
-// Build the per-region (xn, xi) grids returned to the SVD builder.
-// Must mirror sample_grid()'s xn formula above so the SVD's stored
-// y_grid matches the η positions where the source was actually
-// sampled.  See the comment block on sample_grid().
-std::pair<std::vector<double>, std::vector<double>> grid_axes(std::size_t NT, std::size_t NR) {
-    std::vector<double> xn_grid(NT);
-    std::vector<double> xi_grid(NR);
-    constexpr double kPadEnd = 0.001;
-    for (std::size_t i = 0; i < NT; ++i) {
-        const double t = static_cast<double>(i) / static_cast<double>(NT - 1);
-        const double eta_cheb = 0.5 * (1.0 - std::cos(M_PI * t));
-        xn_grid[i] = kPadEnd + (1.0 - 2.0 * kPadEnd) * eta_cheb;
-    }
-    for (std::size_t j = 0; j < NR; ++j) {
-        xi_grid[j] = static_cast<double>(j) / static_cast<double>(NR - 1);
-    }
-    return {xn_grid, xi_grid};
-}
-
 }  // namespace
 
 SVDSurface build_surface(::CoolProp::AbstractState& heos, SurfaceSpec spec, const BuildOptions& opts) {
@@ -211,7 +206,7 @@ SVDSurface build_surface(::CoolProp::AbstractState& heos, SurfaceSpec spec, cons
     }
     SVDSurface surface(spec.fluid_name, spec.input_pair, prop_keys);
 
-    const auto [xn_grid, xi_grid] = grid_axes(spec.NT, spec.NR);
+    const auto [xn_grid, xi_grid] = make_grid_axes(spec.NT, spec.NR);
 
     for (std::size_t r = 0; r < spec.regions.size(); ++r) {
         // Move the RegionSpec's boundary curves into a real Region,
