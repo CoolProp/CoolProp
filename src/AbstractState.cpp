@@ -184,15 +184,35 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
     std::string clean_backend = parsed.clean_string;
     std::string options_json = parsed.options_json;
     std::vector<std::string> clean_fluid_names = fluid_names;
-    if (!clean_fluid_names.empty() && clean_fluid_names[0].find('?') != std::string::npos) {
-        auto parsed_fluid = parse_factory_options(clean_fluid_names[0]);
+    // The `?<options>` suffix on the fluid side can land on ANY
+    // element of fluid_names — for mixtures, the
+    // factory(string, string) convenience overload calls
+    // strsplit('&') before forwarding, so e.g.
+    // "HEOS::R32&R125?{...}" arrives as ["R32", "R125?{...}"] with
+    // the suffix on the LAST token.  Scan the whole vector; throw
+    // if two different tokens carry a suffix (typo); always strip
+    // the trailing '?' so downstream fluid lookup sees the bare
+    // component name.
+    std::size_t fluid_options_index = clean_fluid_names.size();  // sentinel = none
+    for (std::size_t i = 0; i < clean_fluid_names.size(); ++i) {
+        if (clean_fluid_names[i].find('?') == std::string::npos) {
+            continue;
+        }
+        if (fluid_options_index != clean_fluid_names.size()) {
+            throw ValueError("factory: '?<options>' supplied in multiple fluid components; encode it once.");
+        }
+        fluid_options_index = i;
+    }
+    if (fluid_options_index != clean_fluid_names.size()) {
+        auto parsed_fluid = parse_factory_options(clean_fluid_names[fluid_options_index]);
         if (!parsed_fluid.options_json.empty() && !options_json.empty()) {
             throw ValueError("factory: '?<options>' supplied on both the backend and fluid sides; pick one side.");
         }
-        // Always replace fluid_names[0] with the stripped form — even
-        // when the suffix carried no options (bare '?' or whitespace) —
-        // so the downstream fluid lookup doesn't see a trailing '?'.
-        clean_fluid_names[0] = parsed_fluid.clean_string;
+        // Always replace the affected fluid name with the stripped
+        // form — even when the suffix carried no options (bare '?'
+        // or whitespace) — so the downstream fluid lookup doesn't
+        // see a trailing '?'.
+        clean_fluid_names[fluid_options_index] = parsed_fluid.clean_string;
         if (!parsed_fluid.options_json.empty()) {
             options_json = parsed_fluid.options_json;
         }

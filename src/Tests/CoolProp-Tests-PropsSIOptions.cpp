@@ -123,4 +123,31 @@ TEST_CASE("AbstractState::factory: '?<options>' on the fluid side is hoisted", "
     }
 }
 
+TEST_CASE("AbstractState::factory: '?<options>' on the LAST mixture token is hoisted", "[FactoryOptions]") {
+    // For mixtures, factory(string, string) splits on '&' before the
+    // vector-overload runs — so e.g. "HEOS::R32&R125?{}" arrives as
+    // fluid_names = ["R32", "R125?{}"] and the suffix lands on the
+    // last token, not the first.  Make sure the parser scans the
+    // whole vector and strips correctly.
+    SECTION("empty options on last mixture token accepted") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125?{}"));
+        REQUIRE(AS != nullptr);
+        REQUIRE(AS->fluid_names().size() == 2);
+        REQUIRE(AS->fluid_names()[0] == "R32");
+        REQUIRE(AS->fluid_names()[1] == "R125");  // trailing '?' stripped
+    }
+    SECTION("empty options on first mixture token accepted") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32?{}&R125"));
+        REQUIRE(AS != nullptr);
+        REQUIRE(AS->fluid_names()[0] == "R32");
+        REQUIRE(AS->fluid_names()[1] == "R125");
+    }
+    SECTION("non-empty options on last mixture token reach the default overload (throws)") {
+        REQUIRE_THROWS(std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", R"(R32&R125?{"k":1})")));
+    }
+    SECTION("options on multiple mixture tokens is rejected") {
+        REQUIRE_THROWS(std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32?{}&R125?{}")));
+    }
+}
+
 #endif  // ENABLE_CATCH
