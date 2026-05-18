@@ -198,14 +198,47 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_pressure_nocache(CoolPropDbl T,
     return _rhomolar * gas_constant() * _T * (1 + delta * cubic->alphar(tau, delta, this->get_mole_fractions_doubleref(), 0, 1));
 }
 void CoolProp::AbstractCubicBackend::update_DmolarT() {
-    // Only works for now when phase is specified
     if (this->imposed_phase_index != iphase_not_imposed) {
         _p = calc_pressure_nocache(_T, _rhomolar);
         _Q = -1;
         _phase = imposed_phase_index;
-    } else {
-        // Pass call to parent class
+        return;
+    }
+    // Mixtures don't have a cubic superancillary; fall through to the HEOS path so the
+    // user sees the same diagnostic as before for unsupported mixture DmolarT input.
+    if (!is_pure_or_pseudopure || get_superanc_eos_code() == CubicSuperAncillary::UNKNOWN_CODE) {
         HelmholtzEOSMixtureBackend::update(DmolarT_INPUTS, this->_rhomolar, this->_T);
+        return;
+    }
+    // Pure SRK/PR: use the Chebyshev superancillary to bracket the dome at T, then pick
+    // the matching EOS root.  Above the superancillary Tmax we are unambiguously single-
+    // phase and just evaluate the EOS directly.
+    const double Tmax = calc_superanc_Tmax();
+    if (_T >= Tmax) {
+        _p = calc_pressure_nocache(_T, _rhomolar);
+        _Q = -1;
+        recalculate_singlephase_phase();
+        return;
+    }
+    const double rhoL_sat = calc_saturation_ancillary(iDmolar, 0, iT, _T);
+    const double rhoV_sat = calc_saturation_ancillary(iDmolar, 1, iT, _T);
+    if (_rhomolar >= rhoL_sat) {
+        _p = calc_pressure_nocache(_T, _rhomolar);
+        _Q = -1;
+        _phase = iphase_liquid;
+    } else if (_rhomolar <= rhoV_sat) {
+        _p = calc_pressure_nocache(_T, _rhomolar);
+        _Q = -1;
+        _phase = iphase_gas;
+    } else {
+        // Inside the dome: pressure is the saturation pressure and quality follows from
+        // the lever rule, 1/rho = (1-Q)/rhoL + Q/rhoV.
+        const double rho = _rhomolar;
+        _p = calc_saturation_ancillary(iP, 0, iT, _T);
+        _Q = (rhoV_sat * (rhoL_sat - rho)) / (rho * (rhoL_sat - rhoV_sat));
+        _phase = iphase_twophase;
+        SatL->update_TDmolarP_unchecked(_T, rhoL_sat, _p);
+        SatV->update_TDmolarP_unchecked(_T, rhoV_sat, _p);
     }
 };
 

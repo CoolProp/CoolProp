@@ -4051,6 +4051,74 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic_superanc][2739
     }
 }
 
+TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic_DmolarT][2673]") {
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "nButane"));
+        auto& ACB = *dynamic_cast<AbstractCubicBackend*>(AS.get());
+        const double Tc_sa = ACB.calc_superanc_Tmax();
+
+        SECTION(backend + " liquid round-trip subcooled") {
+            // Subcooled liquid: p > p_sat(T) at T < Tc.  Using PT_INPUTS at
+            // (101325, 350 K) for nButane lands on the vapor side (p_sat(350) ~ 1.5 MPa),
+            // so set p_in well above p_sat(T_in) to actually exercise the liquid branch.
+            const double T_in = 0.7 * Tc_sa;
+            const double p_sat = ACB.calc_saturation_ancillary(iP, 0, iT, T_in);
+            const double p_in = 2.0 * p_sat;
+            AS->update(PT_INPUTS, p_in, T_in);
+            const double rho_molar = AS->rhomolar();
+            const double rho_mass = AS->rhomass();
+
+            CHECK_NOTHROW(AS->update(DmolarT_INPUTS, rho_molar, T_in));
+            CHECK(AS->p() == Catch::Approx(p_in).epsilon(1e-6));
+            CHECK(AS->T() == Catch::Approx(T_in).epsilon(1e-10));
+            CHECK(AS->rhomolar() == Catch::Approx(rho_molar).epsilon(1e-12));
+            CHECK(AS->phase() == iphase_liquid);
+
+            CHECK_NOTHROW(AS->update(DmassT_INPUTS, rho_mass, T_in));
+            CHECK(AS->p() == Catch::Approx(p_in).epsilon(1e-6));
+            CHECK(AS->rhomass() == Catch::Approx(rho_mass).epsilon(1e-12));
+            CHECK(AS->phase() == iphase_liquid);
+        }
+
+        SECTION(backend + " vapor round-trip below Tsat") {
+            // pick T well below superanc Tc and a low pressure to guarantee vapor
+            const double T_in = 0.7 * Tc_sa;
+            const double p_sat = ACB.calc_saturation_ancillary(iP, 1, iT, T_in);
+            const double p_in = 0.5 * p_sat;  // half saturation pressure -> vapor
+            AS->update(PT_INPUTS, p_in, T_in);
+            const double rho_molar = AS->rhomolar();
+            CHECK_NOTHROW(AS->update(DmolarT_INPUTS, rho_molar, T_in));
+            CHECK(AS->p() == Catch::Approx(p_in).epsilon(1e-6));
+            CHECK(AS->phase() == iphase_gas);
+        }
+
+        SECTION(backend + " two-phase region returns iphase_twophase") {
+            const double T_in = 0.7 * Tc_sa;
+            const double rhoL = ACB.calc_saturation_ancillary(iDmolar, 0, iT, T_in);
+            const double rhoV = ACB.calc_saturation_ancillary(iDmolar, 1, iT, T_in);
+            const double p_sat = ACB.calc_saturation_ancillary(iP, 0, iT, T_in);
+            const double rho_mid = 0.5 * (rhoL + rhoV);  // midpoint of the dome
+            CHECK_NOTHROW(AS->update(DmolarT_INPUTS, rho_mid, T_in));
+            CHECK(AS->phase() == iphase_twophase);
+            CHECK(AS->p() == Catch::Approx(p_sat).epsilon(1e-6));
+            CHECK(AS->Q() > 0.0);
+            CHECK(AS->Q() < 1.0);
+        }
+
+        SECTION(backend + " supercritical T returns single phase") {
+            const double T_in = 1.5 * Tc_sa;
+            const double p_in = 5e6;
+            AS->update(PT_INPUTS, p_in, T_in);
+            const double rho_molar = AS->rhomolar();
+            CHECK_NOTHROW(AS->update(DmolarT_INPUTS, rho_molar, T_in));
+            CHECK(AS->p() == Catch::Approx(p_in).epsilon(1e-6));
+            const auto ph = AS->phase();
+            CHECK((ph == iphase_supercritical || ph == iphase_supercritical_gas || ph == iphase_supercritical_liquid));
+        }
+    }
+}
+
 // ============================================================================
 // Lemmon-Akasaka 2022 R-1234yf EOS check values (Table 7)
 // Lemmon & Akasaka, Int. J. Thermophys. 43:119 (2022), DOI 10.1007/s10765-022-03015-y
