@@ -197,9 +197,12 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
      */
     void rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int& Nsolns, double& rho0, double& rho1, double& rho2);
 
-    /// In this class, we are already doing cubic evaluation, just delegate to our function
     CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) {
-        return solver_rho_Tp(T, p);
+        bool was_imposed = (imposed_phase_index != iphase_not_imposed);
+        specify_phase(phase);
+        CoolPropDbl rho = solver_rho_Tp(T, p);
+        if (!was_imposed) unspecify_phase();
+        return rho;
     };
     /**
      * /brief Solve for rho = f(T,p)

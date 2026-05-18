@@ -152,6 +152,16 @@ void successive_substitution(HelmholtzEOSMixtureBackend& HEOS, const CoolPropDbl
 void x_and_y_from_K(CoolPropDbl beta, const std::vector<CoolPropDbl>& K, const std::vector<CoolPropDbl>& z, std::vector<CoolPropDbl>& x,
                     std::vector<CoolPropDbl>& y);
 
+/** \brief Run up to num_steps of fast successive-substitution using guess-based density updates.
+ *
+ * Requires good initial density guesses (e.g. from a traced phase envelope or a preceding
+ * global SS step).  x, y, rhomolar_liq and rhomolar_vap are updated in-place.  Stops early
+ * when the maximum |\Delta\ln K| across all components falls below tol.
+ */
+void successive_substitution_guessrho(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
+                                      CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z, int num_steps,
+                                      double tol = 1e-6);
+
 /*! A wrapper function around the residual to find the initial guess for the bubble point temperature
     \f[
     r = \sum_i \frac{z_i(K_i-1)}{1-beta+beta*K_i}
@@ -627,7 +637,8 @@ class StabilityEvaluationClass
     /** \brief Calculate trial compositions
          */
     void trial_compositions();
-    /** \brief Successive substitution
+    /** \brief Successive substitution using the global SRK-based density solver.
+         * @param num_steps  Number of SS iterations to perform.
          */
     void successive_substitution(int num_steps);
     /** \brief Check stability
