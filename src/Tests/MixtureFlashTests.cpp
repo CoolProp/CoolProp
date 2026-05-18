@@ -365,4 +365,20 @@ TEST_CASE("HSU_P flash close to saturation for Nitrogen&Methane&Ethane&Butane&Pe
     }
 }
 
+TEST_CASE("PQ flash with built phase envelope - N2+CH4", "[mixture][PQ_flash][PhaseEnvelope]") {
+    // Test that PQ flash works when the phase envelope is built. 
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane"));
+    AS->set_mole_fractions({0.5, 0.5});
+    AS->build_phase_envelope("");
+    const std::size_t npts = AS->get_phase_envelope_data().T.size();
+    // Ensure PE built
+    CAPTURE(npts);
+    CHECK(npts > 0);
+    // Check built flag is actually true (no early exit)
+    CHECK(AS->get_phase_envelope_data().built);
+    // Calculate point inside PE
+    REQUIRE_NOTHROW(AS->update(CoolProp::PQ_INPUTS, 1.5e5, 0.5));
+    CHECK(AS->phase() == CoolProp::iphase_twophase);
+}
+
 #endif  // ENABLE_CATCH

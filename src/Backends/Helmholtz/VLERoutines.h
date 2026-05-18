@@ -371,7 +371,7 @@ class newton_raphson_twophase
     bool logging;
     int Nsteps;
     Eigen::MatrixXd J;
-    Eigen::Vector2d r, err_rel;
+    Eigen::VectorXd r, err_rel;
     std::vector<CoolPropDbl> K, x, y, z;
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
