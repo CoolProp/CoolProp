@@ -318,7 +318,7 @@ class PengRobinsonBackend : public AbstractCubicBackend
 {
 
    public:
-    PengRobinsonBackend(){};  // Default constructor (make sure you know what you are doing)
+    PengRobinsonBackend() {};  // Default constructor (make sure you know what you are doing)
     PengRobinsonBackend(const std::vector<double>& Tc, const std::vector<double>& pc, const std::vector<double>& acentric, double R_u,
                         bool generate_SatL_and_SatV = true) {
         cubic = std::make_shared<PengRobinson>(Tc, pc, acentric, R_u);
@@ -370,7 +370,7 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
     CubicResidualHelmholtz() {
         ACB = nullptr;
     };
-    CubicResidualHelmholtz(AbstractCubicBackend* ACB) : ACB(ACB){};
+    CubicResidualHelmholtz(AbstractCubicBackend* ACB) : ACB(ACB) {};
 
     // copy assignment
     CubicResidualHelmholtz& operator=(CubicResidualHelmholtz& other) {
