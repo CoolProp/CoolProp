@@ -187,14 +187,17 @@ def backend_available(factory_str):
 
 
 def run_conformance(backend):
-    """Return (results, counts).
+    """Return (results, counts, samples).
 
     results[region][prop_key] = DevAcc of (backend - reference) in the
     table's reported unit. counts[region] = in-region accepted samples.
+    samples[region] = list of dicts {'h', 'p', 'devs': {prop: |dev|}} —
+    raw per-sample record used by the failure-point figures.
     """
     rng = random.Random(SEED)
     results = {r: {p[0]: DevAcc() for p in PROPERTIES} for r in REGION_BOXES}
     counts = {r: 0 for r in REGION_BOXES}
+    samples = {r: [] for r in REGION_BOXES}
 
     prop_keys = [p[0] for p in PROPERTIES]
     kinds = {p[0]: p[3] for p in PROPERTIES}
@@ -219,15 +222,76 @@ def run_conformance(backend):
             if any(v is None for v in test_vals.values()):
                 continue
             counts[region] += 1
+            per_sample_devs = {}
             for k in prop_keys:
                 # v = 1/rho — flip so the table reports v deviation.
                 if k == 'D':
                     ref_v = 1.0 / ref_vals[k]
                     test_v = 1.0 / test_vals[k]
-                    results[region][k].add(_deviation(ref_v, test_v, kinds[k]))
+                    dev = _deviation(ref_v, test_v, kinds[k])
                 else:
-                    results[region][k].add(_deviation(ref_vals[k], test_vals[k], kinds[k]))
-    return results, counts
+                    dev = _deviation(ref_vals[k], test_vals[k], kinds[k])
+                results[region][k].add(dev)
+                per_sample_devs[k] = abs(dev) if (dev is not None and math.isfinite(dev)) else None
+            samples[region].append({'h': h, 'p': p_Pa, 'devs': per_sample_devs})
+    return results, counts, samples
+
+
+def write_failure_figures(backend, samples_per_region, out_dir):
+    """Emit one PNG per region showing sample population in PH coords
+    with budget-violating points overlaid darker.
+
+    Returns dict region → relative-path of the emitted PNG (relative to
+    Web/fluid_properties/ for inclusion in the rst.in).  When the
+    matplotlib import fails (headless CI without matplotlib), returns
+    an empty dict and the rst renderer omits the figures section.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return {}
+
+    # Slug for the backend name so the filename is filesystem-safe.
+    slug = ''.join(c if c.isalnum() else '_' for c in backend)
+    perms = {p[0]: p[4] for p in PROPERTIES}
+    symbols = {p[0]: p[1] for p in PROPERTIES}
+    paths = {}
+
+    for region in sorted(samples_per_region):
+        samples = samples_per_region[region]
+        if not samples:
+            continue
+        # 2x3 grid: T, v, s, w, η, λ
+        fig, axes = plt.subplots(2, 3, figsize=(12, 7.5), sharex=True, sharey=True)
+        h_all = [s['h'] / 1e3 for s in samples]   # h in kJ/kg
+        p_all = [s['p'] / 1e6 for s in samples]   # p in MPa
+        prop_order = [p[0] for p in PROPERTIES]
+        for ax, prop_key in zip(axes.flat, prop_order):
+            ax.scatter(h_all, p_all, c='lightgray', s=4, edgecolors='none', label='in-region samples')
+            failing_h, failing_p = [], []
+            for s in samples:
+                d = s['devs'].get(prop_key)
+                if d is not None and d > perms[prop_key]:
+                    failing_h.append(s['h'] / 1e3)
+                    failing_p.append(s['p'] / 1e6)
+            if failing_h:
+                ax.scatter(failing_h, failing_p, c='crimson', s=8, edgecolors='none', label='over budget')
+            ax.set_yscale('log')
+            ax.set_title(r'$|\Delta {0}|>\,{1:g}$ ({2}/{3})'.format(symbols[prop_key], perms[prop_key], len(failing_h), len(samples)))
+            ax.grid(True, which='both', alpha=0.3)
+        for ax in axes[-1]:
+            ax.set_xlabel(r'$h$ [kJ/kg]')
+        for ax in axes[:, 0]:
+            ax.set_ylabel(r'$p$ [MPa]')
+        fig.suptitle(r'IF97 Region {0} — `{1}` budget-violating samples ({2} drawn)'.format(region, backend, len(samples)))
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
+        out_path = os.path.join(out_dir, 'IF97_conformance_fails_{0}_R{1}.png'.format(slug, region))
+        fig.savefig(out_path, dpi=110)
+        plt.close(fig)
+        paths[region] = os.path.basename(out_path)
+    return paths
 
 
 # ---------------------------------------------------------------------------
@@ -329,7 +393,9 @@ def _fmt_ns(ns):
     return '{:.0f} ns'.format(ns)
 
 
-def render_rst(results_per_backend, counts_per_backend, timings):
+def render_rst(results_per_backend, counts_per_backend, timings, figure_paths_per_backend=None):
+    if figure_paths_per_backend is None:
+        figure_paths_per_backend = {}
     lines = []
     lines.append('')
     lines.append('.. _IF97-Conformance:')
@@ -359,11 +425,30 @@ def render_rst(results_per_backend, counts_per_backend, timings):
             lines.append('')
             continue
         results = results_per_backend[backend]
+        fig_paths = figure_paths_per_backend.get(backend, {})
 
         section_title = 'Deviation of ``{}`` from IAPWS-IF97'.format(backend)
         lines.append(section_title)
         lines.append('~' * max(60, len(section_title)))
         lines.append('')
+
+        # Failure-point figures (one per region) showing the
+        # population in PH coords with budget-violating samples
+        # overlaid in red.  Lets the reader see WHERE the SVDSBTL
+        # truncation residual exceeds the IAPWS perm budget, not
+        # just the bulk statistics.
+        if fig_paths:
+            lines.append('*Where the failures cluster (PH coords; light grey = all in-region samples, '
+                         'red = budget-violating samples for that property; one panel per property; '
+                         'pressure axis is log-scaled):*')
+            lines.append('')
+            for region in sorted(fig_paths):
+                lines.append('.. figure:: {0}'.format(fig_paths[region]))
+                lines.append('   :align: center')
+                lines.append('   :width: 90%')
+                lines.append('')
+                lines.append('   IF97 Region {0} — {1}'.format(region, backend))
+                lines.append('')
 
         for pk, sym, _unit, kind, perm, perm_unit, table_id in PROPERTIES:
             if kind == 'rel':
@@ -459,22 +544,31 @@ def main():
     print('IF97 conformance script: starting')
     results_per_backend = {}
     counts_per_backend = {}
+    figure_paths_per_backend = {}
     available = [REFERENCE]
     for backend, label in TESTED:
         if not backend_available(backend):
             print('  {} unavailable — skipping'.format(backend))
             continue
         print('  sweeping {} ({})'.format(backend, label))
-        results, counts = run_conformance(backend)
+        results, counts, samples = run_conformance(backend)
         results_per_backend[backend] = results
         counts_per_backend[backend] = counts
         available.append(backend)
         print('    in-region counts: {}'.format(counts))
+        # Emit the per-region failure-point PH figures alongside the
+        # .rst.in include.  Failures take their basename so the
+        # rst-relative path is just the file name.
+        fig_dir = os.path.dirname(OUT_PATH)
+        paths = write_failure_figures(backend, samples, fig_dir)
+        if paths:
+            figure_paths_per_backend[backend] = paths
+            print('    wrote {} failure figure(s)'.format(len(paths)))
 
     print('  timing pass over {}'.format(available))
     timings = run_timing(available)
 
-    rst = render_rst(results_per_backend, counts_per_backend, timings)
+    rst = render_rst(results_per_backend, counts_per_backend, timings, figure_paths_per_backend)
     with open(OUT_PATH, 'w') as fp:
         fp.write(rst)
     print('Wrote {}'.format(OUT_PATH))
