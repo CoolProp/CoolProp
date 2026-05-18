@@ -193,6 +193,7 @@ class AbstractCubic
         for (std::size_t i = 0; i < alpha.size(); ++i) {
             alpha[i]->set_Tr_over_Tci(T_r / Tc[i]);
         }
+        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate cache
     }
     /// Set the reducing density to be used
     void set_rhor(double rhor) {
@@ -210,10 +211,12 @@ class AbstractCubic
     /// Set the three Mathias-Copeman constants in one shot for the component i of a mixture
     void set_C_MC(std::size_t i, double c1, double c2, double c3) {
         alpha[i] = std::make_shared<MathiasCopemanAlphaFunction>(a0_ii(i), c1, c2, c3, T_r / Tc[i]);
+        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate cache
     }
     /// Set the three Twu constants in one shot for the component i of a mixture
     void set_C_Twu(std::size_t i, double L, double M, double N) {
         alpha[i] = std::make_shared<TwuAlphaFunction>(a0_ii(i), L, M, N, T_r / Tc[i]);
+        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate cache
     }
     /// Get the leading constant in the expression for the pure fluid attractive energy term
     /// (must be implemented by derived classes)

@@ -38,6 +38,7 @@ class PhaseEnvelopeData
    public:
     bool TypeI;             ///< True if it is a Type-I mixture that has a phase envelope that looks like a pure fluid more or less
     bool built;             ///< True if the phase envelope has been constructed
+    bool is_partial;        ///< True if the envelope tracing stopped early (e.g. due to convergence failure) and does not close on itself
     std::size_t iTsat_max,  ///< The index of the point corresponding to the maximum temperature for Type-I mixtures
       ipsat_max,            ///< The index of the point corresponding to the maximum pressure for Type-I mixtures
       icrit;                ///< The index of the point corresponding to the critical point
@@ -54,7 +55,7 @@ class PhaseEnvelopeData
     PHASE_ENVELOPE_MATRICES
 #undef X
 
-    PhaseEnvelopeData() : TypeI(false), built(false), iTsat_max(-1), ipsat_max(-1), icrit(-1) {}
+    PhaseEnvelopeData() : TypeI(false), built(false), is_partial(false), iTsat_max(-1), ipsat_max(-1), icrit(-1) {}
 
     void resize(std::size_t N) {
         K.resize(N);
