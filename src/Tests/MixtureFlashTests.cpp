@@ -15,15 +15,15 @@
 
 #if defined(ENABLE_CATCH)
 
-#include <cmath>
-#include <string>
-#include <vector>
-#include <memory>
-#include <catch2/catch_all.hpp>
+#    include <cmath>
+#    include <string>
+#    include <vector>
+#    include <memory>
+#    include <catch2/catch_all.hpp>
 
-#include "AbstractState.h"
-#include "DataStructures.h"
-#include "CoolProp.h"
+#    include "AbstractState.h"
+#    include "DataStructures.h"
+#    include "CoolProp.h"
 
 using namespace CoolProp;
 
@@ -31,49 +31,46 @@ using namespace CoolProp;
 // Mixture / condition table shared by all tests
 // ===================================================================
 
-struct PhaseCondition {
-    std::string label;   // "gas", "liquid", "2ph"
-    double P;            // Pa
-    double T;            // K
-    phases imposed;      // iphase_gas, iphase_liquid, iphase_twophase
+struct PhaseCondition
+{
+    std::string label;  // "gas", "liquid", "2ph"
+    double P;           // Pa
+    double T;           // K
+    phases imposed;     // iphase_gas, iphase_liquid, iphase_twophase
 };
 
-struct MixtureDef {
+struct MixtureDef
+{
     std::string fluids;
     std::vector<double> z;
     std::vector<PhaseCondition> conditions;
 };
 
 static const std::vector<MixtureDef> mixtures = {
-    {"Methane&Ethane", {0.5, 0.5},
-     {{"gas", 1e5, 300, iphase_gas},
-      {"2ph", 1e5, 150, iphase_twophase},
-      {"liquid", 1e5, 100, iphase_liquid}}},
+  {"Methane&Ethane", {0.5, 0.5}, {{"gas", 1e5, 300, iphase_gas}, {"2ph", 1e5, 150, iphase_twophase}, {"liquid", 1e5, 100, iphase_liquid}}},
 
-    {"Methane&Propane", {0.7, 0.3},
-     {{"gas", 1e5, 300, iphase_gas},
-      {"2ph", 1e5, 150, iphase_twophase},
-      {"liquid", 1e5, 100, iphase_liquid}}},
+  {"Methane&Propane", {0.7, 0.3}, {{"gas", 1e5, 300, iphase_gas}, {"2ph", 1e5, 150, iphase_twophase}, {"liquid", 1e5, 100, iphase_liquid}}},
 
-    {"Nitrogen&Oxygen", {0.79, 0.21},
-     {{"gas", 1e5, 300, iphase_gas},
-      {"2ph", 1e5, 80, iphase_twophase},
-      {"liquid", 1e5, 75, iphase_liquid}}},
+  {"Nitrogen&Oxygen", {0.79, 0.21}, {{"gas", 1e5, 300, iphase_gas}, {"2ph", 1e5, 80, iphase_twophase}, {"liquid", 1e5, 75, iphase_liquid}}},
 
-    {"Nitrogen&Methane&Ethane&Propane", {0.1, 0.5, 0.25, 0.15},
-     {{"gas", 1e5, 300, iphase_gas},
-      {"2ph", 1e5, 145, iphase_twophase},
-      {"liquid", 1e5, 80, iphase_liquid}}},
+  {"Nitrogen&Methane&Ethane&Propane",
+   {0.1, 0.5, 0.25, 0.15},
+   {{"gas", 1e5, 300, iphase_gas}, {"2ph", 1e5, 145, iphase_twophase}, {"liquid", 1e5, 80, iphase_liquid}}},
 };
 
 static const std::vector<std::string> test_backends = {"SRK", "PR", "HEOS"};
 
-enum class Mode { PE, Imposed, Blind };
+enum class Mode
+{
+    PE,
+    Imposed,
+    Blind
+};
 
 static const std::vector<std::pair<std::string, Mode>> modes = {
-    {"PE", Mode::PE},
-    {"imposed", Mode::Imposed},
-    {"blind", Mode::Blind},
+  {"PE", Mode::PE},
+  {"imposed", Mode::Imposed},
+  {"blind", Mode::Blind},
 };
 
 // ===================================================================
@@ -81,12 +78,8 @@ static const std::vector<std::pair<std::string, Mode>> modes = {
 // ===================================================================
 
 /// Create an AbstractState with the given mode applied.
-static std::shared_ptr<AbstractState>
-make_state(const std::string& backend, const MixtureDef& mix,
-           Mode mode, phases imposed_phase)
-{
-    auto AS = std::shared_ptr<AbstractState>(
-        AbstractState::factory(backend, mix.fluids));
+static std::shared_ptr<AbstractState> make_state(const std::string& backend, const MixtureDef& mix, Mode mode, phases imposed_phase) {
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(backend, mix.fluids));
     AS->set_mole_fractions(mix.z);
     switch (mode) {
         case Mode::PE:
@@ -112,14 +105,13 @@ TEST_CASE("PT flash mixture per-mode", "[mixture][PT_flash]") {
             for (auto& cond : mix.conditions) {
                 for (auto& [mode_name, mode] : modes) {
 
-                    std::string tag = be + " " + mode_name + " "
-                                    + mix.fluids + " " + cond.label;
+                    std::string tag = be + " " + mode_name + " " + mix.fluids + " " + cond.label;
                     DYNAMIC_SECTION(tag) {
                         auto AS = make_state(be, mix, mode, cond.imposed);
                         AS->update(PT_INPUTS, cond.P, cond.T);
 
-                        double Q   = AS->Q();
-                        double H   = AS->hmolar();
+                        double Q = AS->Q();
+                        double H = AS->hmolar();
                         double rho = AS->rhomolar();
 
                         if (cond.label == "2ph") {
@@ -128,8 +120,7 @@ TEST_CASE("PT flash mixture per-mode", "[mixture][PT_flash]") {
                             REQUIRE(Q <= 1.0);
 
                             // Q round-trip via PQ → T → PT → Q
-                            auto AS_pq = std::shared_ptr<AbstractState>(
-                                AbstractState::factory(be, mix.fluids));
+                            auto AS_pq = std::shared_ptr<AbstractState>(AbstractState::factory(be, mix.fluids));
                             AS_pq->set_mole_fractions(mix.z);
                             AS_pq->update(PQ_INPUTS, cond.P, Q);
                             double T_from_pq = AS_pq->T();
@@ -147,9 +138,8 @@ TEST_CASE("PT flash mixture per-mode", "[mixture][PT_flash]") {
                             auto AS2 = make_state(be, mix, mode, cond.imposed);
                             AS2->update(PT_INPUTS, cond.P, cond.T);
                             double rho2 = AS2->rhomolar();
-                            double H2   = AS2->hmolar();
-                            double rel_rho = std::abs(rho2 - rho)
-                                           / std::max(std::abs(rho), 1e-10);
+                            double H2 = AS2->hmolar();
+                            double rel_rho = std::abs(rho2 - rho) / std::max(std::abs(rho), 1e-10);
                             CHECK(rel_rho < 0.01);
                             CHECK(std::abs(H2 - H) < 1.0);
                         }
@@ -166,8 +156,7 @@ TEST_CASE("PT flash mixture cross-mode consistency", "[mixture][PT_flash][cross-
         for (auto& be : test_backends) {
             for (auto& cond : mix.conditions) {
 
-                std::string tag = be + " x-mode " + mix.fluids
-                                + " " + cond.label;
+                std::string tag = be + " x-mode " + mix.fluids + " " + cond.label;
                 DYNAMIC_SECTION(tag) {
                     // Evaluate all three modes
                     double Qs[3], rhos[3];
@@ -175,7 +164,7 @@ TEST_CASE("PT flash mixture cross-mode consistency", "[mixture][PT_flash][cross-
                     for (auto& [mode_name, mode] : modes) {
                         auto AS = make_state(be, mix, mode, cond.imposed);
                         AS->update(PT_INPUTS, cond.P, cond.T);
-                        Qs[idx]   = AS->Q();
+                        Qs[idx] = AS->Q();
                         rhos[idx] = AS->rhomolar();
                         idx++;
                     }
@@ -187,8 +176,7 @@ TEST_CASE("PT flash mixture cross-mode consistency", "[mixture][PT_flash][cross-
                     } else {
                         double rho_min = *std::min_element(rhos, rhos + 3);
                         double rho_max = *std::max_element(rhos, rhos + 3);
-                        double spread  = (rho_max - rho_min)
-                                       / std::max(rho_max, 1e-10);
+                        double spread = (rho_max - rho_min) / std::max(rho_max, 1e-10);
                         CHECK(spread < 0.01);
                     }
                 }
@@ -210,8 +198,7 @@ TEST_CASE("HSU_P flash mixture HP round-trip", "[mixture][HSU_P_flash]") {
             for (auto& cond : mix.conditions) {
                 for (auto& [mode_name, mode] : modes) {
 
-                    std::string tag = be + " " + mode_name + " "
-                                    + mix.fluids + " HP " + cond.label;
+                    std::string tag = be + " " + mode_name + " " + mix.fluids + " HP " + cond.label;
                     DYNAMIC_SECTION(tag) {
                         // 1. Reference state via PT
                         auto AS_ref = make_state(be, mix, mode, cond.imposed);
@@ -230,12 +217,11 @@ TEST_CASE("HSU_P flash mixture HP round-trip", "[mixture][HSU_P_flash]") {
     }
 }
 
-TEST_CASE("HSU_P flash mixture SP and UP round-trip",
-          "[mixture][HSU_P_flash]") {
+TEST_CASE("HSU_P flash mixture SP and UP round-trip", "[mixture][HSU_P_flash]") {
 
     // Exemplary case: SRK, blind, Methane&Ethane, two-phase
     const std::string be = "SRK";
-    const MixtureDef& mix = mixtures[0];  // Methane&Ethane
+    const MixtureDef& mix = mixtures[0];             // Methane&Ethane
     const PhaseCondition& cond = mix.conditions[1];  // 2ph
     const double TOL = 1.0;
 
@@ -257,4 +243,4 @@ TEST_CASE("HSU_P flash mixture SP and UP round-trip",
     }
 }
 
-#endif // ENABLE_CATCH
+#endif  // ENABLE_CATCH
