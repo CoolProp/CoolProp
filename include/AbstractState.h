@@ -773,6 +773,17 @@ class AbstractState
     /// Must be overloaded by the backend to provide the backend's name
     virtual std::string backend_name() = 0;
 
+    /// Canonical-JSON string of the options this instance was built
+    /// with.  Default returns "" — backends that accept factory-string
+    /// options (`?{...}` suffix) override this to return the
+    /// canonical form (sorted keys, defaults expanded) so callers can
+    /// reproduce the construction by feeding it back through
+    /// `factory()`.  See
+    /// docs/superpowers/specs/2026-05-16-backend-options-string-design.md.
+    virtual std::string build_options_json() const {
+        return "";
+    }
+
     // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
     virtual bool using_mole_fractions() = 0;
     virtual bool using_mass_fractions() = 0;
@@ -1681,6 +1692,17 @@ class AbstractStateGenerator
 {
    public:
     virtual AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) = 0;
+
+    /// Options-aware factory entry-point.  Default forwards to the
+    /// no-options overload when `options_json` is empty / "{}"; throws
+    /// NotImplementedError otherwise.  Backends that accept options
+    /// override this to parse + validate the JSON against their schema
+    /// before constructing.  `options_json` arrives raw from the
+    /// `?<...>` suffix on the factory string (see
+    /// `parse_factory_options`); backends are responsible for their
+    /// own JSON parse and schema validation.
+    virtual AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names, const std::string& options_json);
+
     virtual ~AbstractStateGenerator() {};
 };
 

@@ -64,6 +64,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
 
         string name() except +ValueError
         string backend_name() except +ValueError
+        string build_options_json() except +ValueError
         vector[string] fluid_names() except +ValueError
         string fluid_param_string(const string &) except +ValueError
         void set_cubic_alpha_C(const size_t, const string&, const double, const double, const double) except +ValueError

@@ -61,6 +61,7 @@ cdef class AbstractState:
 
     cpdef name(self)
     cpdef backend_name(self)
+    cpdef build_options_json(self)
     cpdef fluid_names(self)
     cpdef fluid_param_string(self, string key)
     cpdef set_cubic_alpha_C(self, size_t i, string parameter, double c1, double c2, double c3)
