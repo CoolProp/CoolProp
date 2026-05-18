@@ -353,6 +353,12 @@ def run_timing(backends, rng_seed=0xCAFE):
             region_of.append(region)
             accepted += 1
     N = len(T_arr)
+    # Pre-filter may reject everything if the backend set has zero
+    # joint-domain overlap on the IF97 region boxes — leave timings as
+    # NaN rather than divide by zero and abort the docs build.
+    if N == 0:
+        return {backend: {prop: float('nan') for prop in TIMING_PROPS}
+                for backend in backends}
     timings = {}
     for backend in backends:
         timings[backend] = {}
