@@ -16,11 +16,15 @@
 
 #include "AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#include "CoolProp/Hash.h"
+#include "CoolProp/SchemaValidation.h"
 #include "CoolProp/sbtl/SVDSurface.h"
 #include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
+#include "CoolProp/schemas/SVDSBTLOptions.h"
 #include "DataStructures.h"
 #include "Exceptions.h"
+#include "rapidjson_include.h"
 
 namespace CoolProp {
 
@@ -31,16 +35,44 @@ namespace {
 // in `build_surface_for_pair_`.
 constexpr std::array<CoolProp::input_pairs, 2> kSupportedPairs = {CoolProp::HmassP_INPUTS, CoolProp::PT_INPUTS};
 
+// Resolved grid-shape knobs extracted from the validated options
+// document.  Used both to size the per-input-pair surfaces and to
+// stamp the canonical-options form into the cache filename.
+struct ResolvedGrid
+{
+    std::size_t NT;
+    std::size_t NR;
+    std::int32_t rank;
+};
+
+constexpr ResolvedGrid kDefaultGrid = {200, 800, 20};
+
+// Read `grid.NT/NR/rank` out of a validated options document.  Missing
+// keys (and missing `grid` itself) leave the corresponding default in
+// place — the validator has already rejected anything ill-formed.
+ResolvedGrid resolve_grid(const rapidjson::Document& opts) {
+    ResolvedGrid g = kDefaultGrid;
+    if (opts.IsObject() && opts.HasMember("grid") && opts["grid"].IsObject()) {
+        const auto& grid = opts["grid"];
+        if (grid.HasMember("NT")) g.NT = static_cast<std::size_t>(grid["NT"].GetInt());
+        if (grid.HasMember("NR")) g.NR = static_cast<std::size_t>(grid["NR"].GetInt());
+        if (grid.HasMember("rank")) g.rank = grid["rank"].GetInt();
+    }
+    return g;
+}
+
 // Sample-and-build for a given input pair using the matching preset.
-CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& source, CoolProp::input_pairs pair) {
+// Grid shape comes from `g` so the caller can drive NT/NR/rank from
+// the options blob.
+CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& source, CoolProp::input_pairs pair, const ResolvedGrid& g) {
     namespace cp_sbtl = CoolProp::sbtl;
     cp_sbtl::SurfaceSpec spec;
     switch (pair) {
         case CoolProp::HmassP_INPUTS:
-            spec = cp_sbtl::presets::ph_subcritical(source);
+            spec = cp_sbtl::presets::ph_subcritical(source, g.NT, g.NR, g.rank);
             break;
         case CoolProp::PT_INPUTS:
-            spec = cp_sbtl::presets::pt_subcritical(source);
+            spec = cp_sbtl::presets::pt_subcritical(source, g.NT, g.NR, g.rank);
             break;
         default:
             throw ValueError("SVDSBTL backend: no preset registered for the requested input pair");
@@ -48,10 +80,25 @@ CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& so
     return cp_sbtl::build_surface(source, std::move(spec));
 }
 
+// Parse + validate `options_json` against the SVDSBTL schema.  Returns
+// the canonical-JSON form (or "{}" when options_json was empty); throws
+// CoolProp::ValueError on schema violation.
+std::string parse_and_canonicalise(const std::string& options_json) {
+    if (options_json.empty()) {
+        return "{}";
+    }
+    rapidjson::Document opts;
+    if (opts.Parse(options_json.c_str(), options_json.size()).HasParseError()) {
+        throw ValueError("SVDSBTL options: invalid JSON (offset " + std::to_string(opts.GetErrorOffset()) + ")");
+    }
+    CoolProp::validate_against_schema(opts, kSVDSBTLOptionsSchemaJson);
+    return CoolProp::to_canonical_json(opts);
+}
+
 }  // namespace
 
-SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name, const std::string& source_backend)
-  : fluid_name_(fluid_name), source_backend_(source_backend), mole_fractions_({1.0}) {
+SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name, const std::string& source_backend, const std::string& options_json)
+  : fluid_name_(fluid_name), source_backend_(source_backend), mole_fractions_({1.0}), options_canonical_(parse_and_canonicalise(options_json)) {
     // Validate the source backend up-front.  Anything outside the
     // {HEOS, REFPROP, IF97} set is rejected — adding a new source
     // (SRK, PR, etc.) needs deliberate per-backend wiring for
@@ -136,7 +183,18 @@ std::vector<CoolProp::input_pairs> SVDSBTLBackend::registered_input_pairs() cons
 
 void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     namespace cp_sbtl = CoolProp::sbtl;
-    const std::string path = cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid_name_, source_backend_, pair);
+    // Cache filename: <fluid>.<source>.<input_pair_name>.<opthash>.svd.bin.z
+    //  - input_pair_name (e.g. "PT_INPUTS", "HmassP_INPUTS") instead
+    //    of the raw enum int, so reordering DataStructures.h's
+    //    `input_pairs` enum can no longer silently misalign caches
+    //    (closes CoolProp-b6v).
+    //  - opthash: 16-hex FNV-1a 64 prefix over the canonical-JSON
+    //    options blob; two different option sets get different cache
+    //    files automatically (canonical "{}" is treated as the all-
+    //    defaults case so the no-options path still picks up its
+    //    intended cache file).
+    const std::string opthash = to_hex16(fnv1a_64(options_canonical_.empty() ? std::string{"{}"} : options_canonical_));
+    const std::string path = cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid_name_, source_backend_, pair, opthash);
     std::unique_ptr<cp_sbtl::SVDSurface> surface;
 
     if (std::filesystem::exists(path)) {
@@ -151,7 +209,10 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
 
     if (!surface) {
         auto source = source_reference_();
-        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, pair));
+        rapidjson::Document opts;
+        opts.Parse(options_canonical_.empty() ? "{}" : options_canonical_.c_str());
+        const ResolvedGrid grid = resolve_grid(opts);
+        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, pair, grid));
         try {
             cp_sbtl::SVDSurfaceSerializer::save_to_file(*surface, path);
         } catch (const std::exception&) {

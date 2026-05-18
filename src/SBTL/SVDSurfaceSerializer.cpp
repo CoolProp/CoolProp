@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include "DataStructures.h"
+
 #include <msgpack.hpp>
 
 #include "CPfilepaths.h"
@@ -427,7 +429,7 @@ std::string SVDSurfaceSerializer::default_cache_dir() {
 }
 
 std::string SVDSurfaceSerializer::default_cache_path(const std::string& fluid_name, const std::string& source_backend,
-                                                     ::CoolProp::input_pairs input_pair) {
+                                                     ::CoolProp::input_pairs input_pair, const std::string& opthash) {
     // Defense-in-depth against path traversal.  CoolProp fluid names
     // come from the JSON catalog so this is unlikely to be hit in
     // practice, but a caller passing an attacker-controlled string
@@ -442,10 +444,29 @@ std::string SVDSurfaceSerializer::default_cache_path(const std::string& fluid_na
     if (unsafe(source_backend)) {
         throw std::invalid_argument("SVDSurfaceSerializer::default_cache_path: invalid source_backend");
     }
-    // Format: <fluid>.<source>.<input_pair>.svd.bin.z so HEOS-built
-    // and REFPROP-built (and IF97-built) tables for the same fluid
-    // never collide on disk.
-    return default_cache_dir() + fluid_name + "." + source_backend + "." + std::to_string(static_cast<int>(input_pair)) + ".svd.bin.z";
+    // opthash is filename-restricted to [0-9a-z_] — covers the hex
+    // FNV-1a 64 output (lowercase) and the literal "no_opts" default
+    // sentinel for callers that don't carry an options blob.  Uppercase
+    // and path-separator characters are rejected to keep the cache
+    // directory layout deterministic across filesystems with
+    // case-insensitive matching.
+    for (char c : opthash) {
+        const bool ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || c == '_';
+        if (!ok) {
+            throw std::invalid_argument("SVDSurfaceSerializer::default_cache_path: opthash must match [0-9a-z_]+");
+        }
+    }
+    if (opthash.empty()) {
+        throw std::invalid_argument("SVDSurfaceSerializer::default_cache_path: opthash must be non-empty");
+    }
+    // Format: <fluid>.<source>.<input_pair_name>.<opthash>.svd.bin.z
+    // so HEOS-built and REFPROP-built (and IF97-built) tables for the
+    // same fluid never collide on disk, two different option sets for
+    // the same (fluid, source, input_pair) get distinct files, and
+    // reordering the input_pairs enum in DataStructures.h can never
+    // silently misalign caches (the symbolic name is the key).
+    const std::string& pair_name = ::CoolProp::get_input_pair_short_desc(input_pair);
+    return default_cache_dir() + fluid_name + "." + source_backend + "." + pair_name + "." + opthash + ".svd.bin.z";
 }
 
 }  // namespace sbtl
