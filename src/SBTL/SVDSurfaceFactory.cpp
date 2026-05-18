@@ -33,12 +33,26 @@ std::vector<std::vector<double>> sample_grid(::CoolProp::AbstractState& heos, co
 
     std::vector<double> xn_grid(NT);
     std::vector<double> xi_grid(NR);
-    // Step slightly off the corners — the η normalization is exact
-    // at the boundary curves but the Chebyshev / spline curves can
-    // extrapolate epsilon-outside their fit interval and HmassP can
-    // pile up flash failures near the dome corners.
+    // Chebyshev-style spacing on the secondary axis: cells crowd
+    // toward both η=0 and η=1 boundaries.  In LIQUID/VAPOR regions
+    // the saturation curve is one of the η boundaries, and properties
+    // have sharp curvature in a thin η-strip right against it.
+    // Uniform η spacing puts only ~1 grid cell of resolution into that
+    // strip — measured worst-case error in SVDSBTL&HEOS R2 lives there
+    // (h_truth − h_sat,V ≈ 0.33%, η ≈ 0.005, only ~1 grid cell of
+    // support at NT=200).  Chebyshev squashes bulk cells toward the
+    // middle and crowds them at both ends, dropping per-region failure
+    // counts by 6-9× on the SVDSBTL&HEOS conformance fail-map (2026-05-18).
+    //
+    // Tiny pad off the literal 0 / 1 corners keeps boundary-curve
+    // evaluation safe — the cubic-spline / Chebyshev sat boundaries
+    // can extrapolate epsilon-outside their fit interval at the dome
+    // corners, and HmassP flash failures cluster there.
+    constexpr double kPadEnd = 0.001;
     for (std::size_t i = 0; i < NT; ++i) {
-        xn_grid[i] = 0.001 + (0.999 - 0.001) * static_cast<double>(i) / static_cast<double>(NT - 1);
+        const double t = static_cast<double>(i) / static_cast<double>(NT - 1);
+        const double eta_cheb = 0.5 * (1.0 - std::cos(M_PI * t));
+        xn_grid[i] = kPadEnd + (1.0 - 2.0 * kPadEnd) * eta_cheb;
     }
     for (std::size_t j = 0; j < NR; ++j) {
         xi_grid[j] = static_cast<double>(j) / static_cast<double>(NR - 1);
@@ -149,11 +163,17 @@ std::vector<std::vector<double>> sample_grid(::CoolProp::AbstractState& heos, co
 }
 
 // Build the per-region (xn, xi) grids returned to the SVD builder.
+// Must mirror sample_grid()'s xn formula above so the SVD's stored
+// y_grid matches the η positions where the source was actually
+// sampled.  See the comment block on sample_grid().
 std::pair<std::vector<double>, std::vector<double>> grid_axes(std::size_t NT, std::size_t NR) {
     std::vector<double> xn_grid(NT);
     std::vector<double> xi_grid(NR);
+    constexpr double kPadEnd = 0.001;
     for (std::size_t i = 0; i < NT; ++i) {
-        xn_grid[i] = 0.001 + (0.999 - 0.001) * static_cast<double>(i) / static_cast<double>(NT - 1);
+        const double t = static_cast<double>(i) / static_cast<double>(NT - 1);
+        const double eta_cheb = 0.5 * (1.0 - std::cos(M_PI * t));
+        xn_grid[i] = kPadEnd + (1.0 - 2.0 * kPadEnd) * eta_cheb;
     }
     for (std::size_t j = 0; j < NR; ++j) {
         xi_grid[j] = static_cast<double>(j) / static_cast<double>(NR - 1);
