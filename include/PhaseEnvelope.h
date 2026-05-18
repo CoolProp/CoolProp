@@ -64,6 +64,13 @@ class PhaseEnvelopeData
         y.resize(N);
     }
     void clear() {
+        // Reset metadata to pristine state
+        built = false;
+        is_partial = false;
+        TypeI = false;
+        iTsat_max = static_cast<std::size_t>(-1);
+        ipsat_max = static_cast<std::size_t>(-1);
+        icrit = static_cast<std::size_t>(-1);
 /* Use X macros to auto-generate the clearing code; each will look something like: T.clear(); */
 #define X(name) name.clear();
         PHASE_ENVELOPE_VECTORS
