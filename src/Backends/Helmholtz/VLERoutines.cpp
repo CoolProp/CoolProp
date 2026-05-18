@@ -1739,6 +1739,92 @@ class RachfordRiceResidual : public FuncWrapper1DWithDeriv
     }
 };
 
+void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
+                                                         CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z,
+                                                         int num_steps, double tol) {
+    const std::size_t N = z.size();
+    std::vector<CoolPropDbl> lnK(N, 0.0), K(N);
+    for (int ss = 0; ss < num_steps; ++ss) {
+        HEOS.SatL->set_mole_fractions(x);
+        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
+        HEOS.SatV->set_mole_fractions(y);
+        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
+        rhomolar_liq = HEOS.SatL->rhomolar();
+        rhomolar_vap = HEOS.SatV->rhomolar();
+
+        double g0 = 0, g1 = 0, max_lnK_change = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            double lnK_new = log(HEOS.SatL->fugacity_coefficient(i) / HEOS.SatV->fugacity_coefficient(i));
+            max_lnK_change = std::max(max_lnK_change, std::abs(lnK_new - lnK[i]));
+            lnK[i] = lnK_new;
+            K[i] = exp(lnK[i]);
+            g0 += z[i] * (K[i] - 1.0);
+            g1 += z[i] * (1.0 - 1.0 / K[i]);
+        }
+        if (ss > 0 && max_lnK_change < tol) {
+            // Converged: update x/y from the latest K before returning.
+            double beta_conv;
+            if (g0 < 0)
+                beta_conv = 0;
+            else if (g1 > 0)
+                beta_conv = 1;
+            else {
+                RachfordRiceResidual resid_conv(z, lnK);
+                beta_conv = Brent(resid_conv, 0, 1, DBL_EPSILON, 1e-10, 100);
+                // Brent can overshoot just past the nearest pole; bisect as fallback.
+                if (beta_conv < 0.0 || beta_conv > 1.0) {
+                    double a_b = 0.0, b_b = 1.0, f_a = g0;
+                    for (int sb = 0; sb < 60; ++sb) {
+                        double mid = 0.5 * (a_b + b_b);
+                        double f_mid = resid_conv.call(mid);
+                        if (f_a * f_mid > 0) {
+                            a_b = mid;
+                            f_a = f_mid;
+                        } else {
+                            b_b = mid;
+                        }
+                    }
+                    beta_conv = 0.5 * (a_b + b_b);
+                }
+            }
+            x_and_y_from_K(beta_conv, K, z, x, y);
+            normalize_vector(x);
+            normalize_vector(y);
+            break;
+        }
+
+        double beta;
+        if (g0 < 0)
+            beta = 0;
+        else if (g1 > 0)
+            beta = 1;
+        else {
+            RachfordRiceResidual resid(z, lnK);
+            beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+            // Brent can overshoot just past the nearest pole (at 1/(1-K_min), slightly
+            // above 1).  The Rachford-Rice function is strictly monotone on [0,1] with
+            // no poles there, so bisection is guaranteed to recover the interior root.
+            if (beta < 0.0 || beta > 1.0) {
+                double a_b = 0.0, b_b = 1.0, f_a = g0;
+                for (int sb = 0; sb < 60; ++sb) {
+                    double mid = 0.5 * (a_b + b_b);
+                    double f_mid = resid.call(mid);
+                    if (f_a * f_mid > 0) {
+                        a_b = mid;
+                        f_a = f_mid;
+                    } else {
+                        b_b = mid;
+                    }
+                }
+                beta = 0.5 * (a_b + b_b);
+            }
+        }
+        x_and_y_from_K(beta, K, z, x, y);
+        normalize_vector(x);
+        normalize_vector(y);
+    }
+}
+
 void StabilityRoutines::StabilityEvaluationClass::trial_compositions() {
 
     x.resize(z.size());
@@ -1773,6 +1859,21 @@ void StabilityRoutines::StabilityEvaluationClass::trial_compositions() {
         // Need to iterate to find beta that makes g of Rachford-Rice zero
         RachfordRiceResidual resid(z, lnK);
         beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+        // Brent can overshoot just past the nearest pole; bisect as fallback.
+        if (beta < 0.0 || beta > 1.0) {
+            double a_b = 0.0, b_b = 1.0, f_a = g0;
+            for (int sb = 0; sb < 60; ++sb) {
+                double mid = 0.5 * (a_b + b_b);
+                double f_mid = resid.call(mid);
+                if (f_a * f_mid > 0) {
+                    a_b = mid;
+                    f_a = f_mid;
+                } else {
+                    b_b = mid;
+                }
+            }
+            beta = 0.5 * (a_b + b_b);
+        }
     }
     // Get the compositions from given value for beta, K, z
     SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
@@ -1820,6 +1921,21 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         } else {
             // Need to iterate to find beta that makes g of Rachford-Rice zero
             beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+            // Brent can overshoot just past the nearest pole; bisect as fallback.
+            if (beta < 0.0 || beta > 1.0) {
+                double a_b = 0.0, b_b = 1.0, f_a = g0;
+                for (int sb = 0; sb < 60; ++sb) {
+                    double mid = 0.5 * (a_b + b_b);
+                    double f_mid = resid.call(mid);
+                    if (f_a * f_mid > 0) {
+                        a_b = mid;
+                        f_a = f_mid;
+                    } else {
+                        b_b = mid;
+                    }
+                }
+                beta = 0.5 * (a_b + b_b);
+            }
         }
 
         // Get the compositions from given values for beta, K, z
@@ -1952,6 +2068,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
             return;
         }
     }
+
     if (diffbulkH > 0.25 || diffbulkL > 0.25) {
         // At least one test phase is definitely not the bulk composition, so phase split predicted
         _stable = false;
