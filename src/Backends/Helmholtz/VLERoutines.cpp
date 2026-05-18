@@ -18,7 +18,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
         HelmholtzEOSMixtureBackend* HEOS;
         CoolPropDbl T, desired_p;
 
-        inner_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl desired_p) : HEOS(HEOS), T(T), desired_p(desired_p) {};
+        inner_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl desired_p) : HEOS(HEOS), T(T), desired_p(desired_p){};
         double call(double rhomolar_liq) {
             HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
             CoolPropDbl calc_p = HEOS->SatL->p();
@@ -38,7 +38,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
         CoolPropDbl rhomolar_crit;
 
         outer_resid(HelmholtzEOSMixtureBackend& HEOS, CoolProp::parameters ykey, CoolPropDbl y)
-          : HEOS(&HEOS), ykey(ykey), y(y), rhomolar_crit(HEOS.rhomolar_critical()) {};
+          : HEOS(&HEOS), ykey(ykey), y(y), rhomolar_crit(HEOS.rhomolar_critical()){};
         double call(double rhomolar_vap) {
             // Calculate the other variable (T->p or p->T) for given vapor density
             CoolPropDbl T = NAN, p = NAN, rhomolar_liq = NAN;
@@ -85,7 +85,7 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend& HEOS,
         CoolPropDbl T, rhomolar_liq, rhomolar_vap;
 
         solver_resid(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess)
-          : HEOS(&HEOS), T(T), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess) {};
+          : HEOS(&HEOS), T(T), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
         double call(double p) {
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
@@ -130,7 +130,7 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend& HEOS,
         CoolPropDbl p, rhomolar_liq, rhomolar_vap;
 
         solver_resid(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl p, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess)
-          : HEOS(&HEOS), p(p), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess) {};
+          : HEOS(&HEOS), p(p), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
         double call(double T) {
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
@@ -1155,18 +1155,18 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend& HEOS
 
     // Use Peneloux volume translation to shift liquid volume
     // As in Horstmann :: doi:10.1016/j.fluid.2004.11.002
-        double summer_c = 0, v_SRK = 1 / rhomolar_liq;
-        const std::vector<CoolPropFluid>& components = HEOS.get_components();
-        for (std::size_t i = 0; i < components.size(); ++i) {
+    double summer_c = 0, v_SRK = 1 / rhomolar_liq;
+    const std::vector<CoolPropFluid>& components = HEOS.get_components();
+    for (std::size_t i = 0; i < components.size(); ++i) {
         // Get the parameters for the cubic EOS
-            CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical);
-            CoolPropDbl pc = HEOS.get_fluid_constant(i, iP_critical);
-            CoolPropDbl rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
-            CoolPropDbl R = 8.3144598;
+        CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical);
+        CoolPropDbl pc = HEOS.get_fluid_constant(i, iP_critical);
+        CoolPropDbl rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
+        CoolPropDbl R = 8.3144598;
 
-            summer_c += z[i] * (0.40768 * R * Tc / pc * (0.29441 - pc / (rhomolarc * R * Tc)));
-        }
-        rhomolar_liq = 1 / (v_SRK - summer_c);
+        summer_c += z[i] * (0.40768 * R * Tc / pc * (0.29441 - pc / (rhomolarc * R * Tc)));
+    }
+    rhomolar_liq = 1 / (v_SRK - summer_c);
     HEOS.SatL->update_TP_guessrho(T, p, rhomolar_liq);
     HEOS.SatV->update_TP_guessrho(T, p, rhomolar_vap);
 
@@ -1730,7 +1730,7 @@ class RachfordRiceResidual : public FuncWrapper1DWithDeriv
     const std::vector<double>&z, &lnK;
 
    public:
-    RachfordRiceResidual(const std::vector<double>& z, const std::vector<double>& lnK) : z(z), lnK(lnK) {};
+    RachfordRiceResidual(const std::vector<double>& z, const std::vector<double>& lnK) : z(z), lnK(lnK){};
     double call(double beta) {
         return FlashRoutines::g_RachfordRice(z, lnK, beta);
     }
@@ -1794,8 +1794,12 @@ void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBack
                 for (int sb = 0; sb < 60; ++sb) {
                     double mid = 0.5 * (a_b + b_b);
                     double f_mid = resid.call(mid);
-                    if (f_a * f_mid > 0) { a_b = mid; f_a = f_mid; }
-                    else { b_b = mid; }
+                    if (f_a * f_mid > 0) {
+                        a_b = mid;
+                        f_a = f_mid;
+                    } else {
+                        b_b = mid;
+                    }
                 }
                 beta = 0.5 * (a_b + b_b);
             }
@@ -1846,8 +1850,12 @@ void StabilityRoutines::StabilityEvaluationClass::trial_compositions() {
             for (int sb = 0; sb < 60; ++sb) {
                 double mid = 0.5 * (a_b + b_b);
                 double f_mid = resid.call(mid);
-                if (f_a * f_mid > 0) { a_b = mid; f_a = f_mid; }
-                else { b_b = mid; }
+                if (f_a * f_mid > 0) {
+                    a_b = mid;
+                    f_a = f_mid;
+                } else {
+                    b_b = mid;
+                }
             }
             beta = 0.5 * (a_b + b_b);
         }
@@ -1904,8 +1912,12 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
                 for (int sb = 0; sb < 60; ++sb) {
                     double mid = 0.5 * (a_b + b_b);
                     double f_mid = resid.call(mid);
-                    if (f_a * f_mid > 0) { a_b = mid; f_a = f_mid; }
-                    else { b_b = mid; }
+                    if (f_a * f_mid > 0) {
+                        a_b = mid;
+                        f_a = f_mid;
+                    } else {
+                        b_b = mid;
+                    }
                 }
                 beta = 0.5 * (a_b + b_b);
             }

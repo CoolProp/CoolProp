@@ -3954,7 +3954,7 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Phase for solid water should throw", 
         CAPTURE(p_Pa);
         auto Tm = AS->melting_line(iT, iP, p_Pa);
         CAPTURE(Tm);
-        CHECK_THROWS(AS->update(PT_INPUTS, p_Pa, -5+Tm));
+        CHECK_THROWS(AS->update(PT_INPUTS, p_Pa, -5 + Tm));
     }
 }
 
@@ -4037,7 +4037,6 @@ TEST_CASE("calc_all_terms matches term() for non-default alpha functions", "[cub
             }
         }
     }
-
 }
 
 // Tests for cubic EOS superancillaries (#2739)
