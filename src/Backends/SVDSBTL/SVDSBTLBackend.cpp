@@ -493,6 +493,21 @@ CoolPropDbl SVDSBTLBackend::calc_speed_sound() {
     }
     return lookup_(ispeed_sound);
 }
+CoolPropDbl SVDSBTLBackend::calc_viscosity() {
+    if (two_phase_.active) {
+        // Viscosity has saturated-side values but no equilibrium bulk
+        // value inside the dome; G13-15 Table 12 is only defined off
+        // the saturation curve.  Mirror HEOS / IF97 and throw.
+        throw NotImplementedError("SVDSBTL backend: viscosity is not defined in the two-phase region");
+    }
+    return lookup_(iviscosity);
+}
+CoolPropDbl SVDSBTLBackend::calc_conductivity() {
+    if (two_phase_.active) {
+        throw NotImplementedError("SVDSBTL backend: conductivity is not defined in the two-phase region");
+    }
+    return lookup_(iconductivity);
+}
 CoolPropDbl SVDSBTLBackend::calc_pressure() {
     return _p;
 }

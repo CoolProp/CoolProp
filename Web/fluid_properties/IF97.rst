@@ -194,4 +194,5 @@ A call to the top-level function ``PropsSI`` can provide: temperature, pressure,
     In [17]: PropsSI('ptriple','T',0,'P',0,'IF97::Water')
 
 
+.. include:: IF97_conformance.rst.in
 
