@@ -336,5 +336,24 @@ class PY_flash_resid : public FuncWrapper1D
     };
 };
 
+/// Two-phase HSU_P residual parameterised by vapor fraction Q in [0, 1].
+/// At each Q calls HEOS.update(PQ_INPUTS, p, Q) and returns keyed_output - value.
+class PQ_flash_val_resid : public FuncWrapper1D
+{
+   public:
+    HelmholtzEOSMixtureBackend& HEOS;
+    CoolPropDbl p;
+    parameters other;
+    CoolPropDbl value;
+
+    PQ_flash_val_resid(HelmholtzEOSMixtureBackend& HEOS_, CoolPropDbl p_, parameters other_, CoolPropDbl value_)
+      : HEOS(HEOS_), p(p_), other(other_), value(value_) {}
+
+    double call(double Q) {
+        HEOS.update(PQ_INPUTS, p, Q);
+        return HEOS.keyed_output(other) - value;
+    }
+};
+
 } /* namespace CoolProp */
 #endif /* FLASHROUTINES_H */
