@@ -176,10 +176,25 @@ class IF97Backend : public AbstractState
                 _T = value2;
                 _Q = -1;
                 set_phase();
-                //Two-Phase Check, with PT Inputs:
-                if (_phase == iphase_twophase)
-                    throw ValueError(format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 3.3e-3 %% of given p [%Lg Pa]",
-                                            IF97::psat97(_T), _T, _p));
+                // Two-Phase Check, with PT Inputs.  set_phase()'s
+                // ε=3.3e-5 band around the saturation curve catches
+                // genuinely-ambiguous (p, T)-on-the-dome usage where
+                // the caller should be using PQ / QT inputs instead.
+                // But sampling-driven callers (SBTL surface build,
+                // Newton refinement of a forward h(T, p) = h_target
+                // iteration) legitimately land in this band through
+                // round-off and want a single-phase evaluation on
+                // the side they tell us.  Honour an explicit
+                // specify_phase() hint here; throw otherwise.
+                if (_phase == iphase_twophase) {
+                    if (imposed_phase_index == iphase_liquid || imposed_phase_index == iphase_supercritical_liquid
+                        || imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) {
+                        _phase = imposed_phase_index;
+                    } else {
+                        throw ValueError(format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 3.3e-3 %% of given p [%Lg Pa]",
+                                                IF97::psat97(_T), _T, _p));
+                    }
+                }
                 break;
             case PQ_INPUTS:
                 _p = value1;
@@ -539,6 +554,18 @@ class IF97Backend : public AbstractState
     phases calc_phase() {
         return _phase;
     };
+
+    // Phase-hint plumbing.  AbstractState's default calc_specify_phase
+    // throws NotImplementedError; override here so callers can use
+    // specify_phase() to disambiguate (p, T) inputs that land within
+    // IF97's 3.3e-5 ε-band of the saturation curve.  The hint is read
+    // by update(PT_INPUTS) above.
+    void calc_specify_phase(phases phase) {
+        imposed_phase_index = phase;
+    }
+    void calc_unspecify_phase() {
+        imposed_phase_index = iphase_not_imposed;
+    }
 
     //
     // ************************************************************************* //
