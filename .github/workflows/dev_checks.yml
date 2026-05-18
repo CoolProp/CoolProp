@@ -71,7 +71,7 @@ jobs:
           fetch-depth: 0   # Fetch all history (especially branches)
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
 
       - name: Run clang-format against C++ files touched by the PR
         shell: bash
