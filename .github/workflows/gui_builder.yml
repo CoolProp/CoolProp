@@ -449,7 +449,7 @@ jobs:
       contents: write
     steps:
       - name: Download all bundle artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           pattern: coolprop-gui-*
