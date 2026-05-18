@@ -744,8 +744,12 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
     }
     if (parameter == "MC" || parameter == "mc" || parameter == "Mathias-Copeman") {
         get_cubic()->set_C_MC(i, c1, c2, c3);
+        components[i].alpha_type = "MathiasCopeman";
+        components[i].alpha_coeffs = {c1, c2, c3};
     } else if (parameter == "TWU" || parameter == "Twu" || parameter == "twu") {
         get_cubic()->set_C_Twu(i, c1, c2, c3);
+        components[i].alpha_type = "Twu";
+        components[i].alpha_coeffs = {c1, c2, c3};
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
