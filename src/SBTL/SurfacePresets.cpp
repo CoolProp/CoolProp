@@ -155,15 +155,27 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
             const bool single_phase =
               (phase0 == ::CoolProp::iphase_liquid || phase0 == ::CoolProp::iphase_gas || phase0 == ::CoolProp::iphase_supercritical_liquid
                || phase0 == ::CoolProp::iphase_supercritical_gas || phase0 == ::CoolProp::iphase_supercritical);
+            // Phase pin must be exception-safe.  AbstractState::clear()
+            // doesn't reset imposed_phase_index (only HEOS resets it
+            // inline in its own update paths; IF97's update doesn't),
+            // so if any Newton step throws we must still unspecify
+            // before propagating — otherwise the stale phase hint
+            // leaks into the next sample cell and silently biases its
+            // PT_INPUTS resolution.
             if (single_phase) s.specify_phase(phase0);
-            for (int k = 0; k < 5; ++k) {
-                const double h_now = s.hmass();
-                const double dh = h_now - h;
-                if (std::abs(dh) < 1e-10 * std::abs(h)) break;
-                const double cp = s.cpmass();
-                if (!std::isfinite(cp) || cp <= 0.0) break;
-                const double T_new = s.T() - dh / cp;
-                s.update(::CoolProp::PT_INPUTS, p, T_new);
+            try {
+                for (int k = 0; k < 5; ++k) {
+                    const double h_now = s.hmass();
+                    const double dh = h_now - h;
+                    if (std::abs(dh) < 1e-10 * std::abs(h)) break;
+                    const double cp = s.cpmass();
+                    if (!std::isfinite(cp) || cp <= 0.0) break;
+                    const double T_new = s.T() - dh / cp;
+                    s.update(::CoolProp::PT_INPUTS, p, T_new);
+                }
+            } catch (...) {
+                if (single_phase) s.unspecify_phase();
+                throw;
             }
             if (single_phase) s.unspecify_phase();
         };
