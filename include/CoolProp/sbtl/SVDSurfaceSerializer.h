@@ -85,7 +85,15 @@ class SVDSurfaceSerializer
     //          Old rev-4 caches are missing two properties at the
     //          tail; bump to force rebuild rather than try to silently
     //          extend them in-place.
-    static constexpr int kRevision = 5;
+    //   rev 6: Chebyshev η-spacing on the secondary axis (cells now
+    //          crowd toward the saturation curve) and IF97-source
+    //          sampling Newton-refines against forward h(T, p) at
+    //          build time.  Both change the *content* of the stored
+    //          U-matrix and slopes at the same hashed options key, so
+    //          the rev bump is the cache-invalidation mechanism — old
+    //          rev-5 caches would silently serve uniform-η surfaces
+    //          and undo the IF97 conformance gains.
+    static constexpr int kRevision = 6;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

@@ -131,12 +131,62 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     }
 
     // Thermodynamics glue: PH update + per-property readout.
-    spec.update_state = [](::CoolProp::AbstractState& s, double p, double h) {
-        // SurfaceSpec passes (a, b) where a is the primary axis (p) and
-        // b is the secondary axis (h).  HmassP_INPUTS takes (h, p) in
-        // that order.
-        s.update(::CoolProp::HmassP_INPUTS, h, p);
-    };
+    //
+    // For IF97-source sampling we Newton-refine the backwards-equation
+    // T(p, h) against the forward h(T, p) at build time.  The IAPWS
+    // R7-97 backwards equations carry a documented ±25 mK residual
+    // (see IF97.h's RegionOutputBackward note), which propagates to
+    // ~0.25 J/(kg·K) in s via ds ≈ cp·dT/T — well above the IAPWS
+    // perm budgets of 1e-3 J/(kg·K).  Newton-refining closes that gap
+    // so the SVD grid stores forward-consistent properties.  Costs
+    // ~3 extra forward calls per sample (build-time only); query path
+    // unchanged.  HEOS / REFPROP sources don't need refinement
+    // because their HmassP path converges to forward precision
+    // internally.
+    //
+    // Newton iterates may land within IF97's 3.3e-5 ε-band of the
+    // saturation curve.  Pin the phase across iterations so PT_INPUTS
+    // doesn't trip the ε-band reject.
+    const bool source_is_if97 = (heos.backend_name() == "IF97Backend");
+    if (source_is_if97) {
+        spec.update_state = [](::CoolProp::AbstractState& s, double p, double h) {
+            s.update(::CoolProp::HmassP_INPUTS, h, p);
+            const ::CoolProp::phases phase0 = s.phase();
+            const bool single_phase =
+              (phase0 == ::CoolProp::iphase_liquid || phase0 == ::CoolProp::iphase_gas || phase0 == ::CoolProp::iphase_supercritical_liquid
+               || phase0 == ::CoolProp::iphase_supercritical_gas || phase0 == ::CoolProp::iphase_supercritical);
+            // Phase pin must be exception-safe.  AbstractState::clear()
+            // doesn't reset imposed_phase_index (only HEOS resets it
+            // inline in its own update paths; IF97's update doesn't),
+            // so if any Newton step throws we must still unspecify
+            // before propagating — otherwise the stale phase hint
+            // leaks into the next sample cell and silently biases its
+            // PT_INPUTS resolution.
+            if (single_phase) s.specify_phase(phase0);
+            try {
+                for (int k = 0; k < 5; ++k) {
+                    const double h_now = s.hmass();
+                    const double dh = h_now - h;
+                    if (std::abs(dh) < 1e-10 * std::abs(h)) break;
+                    const double cp = s.cpmass();
+                    if (!std::isfinite(cp) || cp <= 0.0) break;
+                    const double T_new = s.T() - dh / cp;
+                    s.update(::CoolProp::PT_INPUTS, p, T_new);
+                }
+            } catch (...) {
+                if (single_phase) s.unspecify_phase();
+                throw;
+            }
+            if (single_phase) s.unspecify_phase();
+        };
+    } else {
+        spec.update_state = [](::CoolProp::AbstractState& s, double p, double h) {
+            // SurfaceSpec passes (a, b) where a is the primary axis (p)
+            // and b is the secondary axis (h).  HmassP_INPUTS takes
+            // (h, p) in that order.
+            s.update(::CoolProp::HmassP_INPUTS, h, p);
+        };
+    }
     spec.read_property = [](::CoolProp::AbstractState& s, ::CoolProp::parameters key) -> double {
         switch (key) {
             case ::CoolProp::iDmass:
