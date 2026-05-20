@@ -270,6 +270,45 @@ class SVDSBTLBackend : public AbstractState
         double uV_mol = 0.0;
     };
     TwoPhaseState two_phase_{};
+
+    // Critical-patch HEOS-fallback.  When an active query point lands
+    // inside the configured bbox (in whatever the input pair's native
+    // coords are), update() forwards the call to `patch_source_`
+    // instead of the SVD surface, and every calc_* below routes there
+    // for the duration of the current state.  Bbox is precomputed at
+    // construction per input pair so update() is a constant-time
+    // axis-aligned containment check.  Disabled when
+    // critical_patch.mode is "off" in the options blob.
+    struct CriticalPatchBbox
+    {
+        double a_lo, a_hi;  // primary axis: p for both PT and HmassP
+        double b_lo, b_hi;  // secondary axis: T for PT, h for HmassP
+    };
+    struct CriticalPatch
+    {
+        bool enabled = false;
+        std::string source;  // "HEOS" / "REFPROP" / "IF97"
+        std::unordered_map<int /*input_pairs as int*/, CriticalPatchBbox> bbox_per_pair;
+        [[nodiscard]] bool contains(::CoolProp::input_pairs pair, double a, double b) const noexcept;
+    };
+    CriticalPatch critical_patch_{};
+    std::shared_ptr<CoolProp::AbstractState> patch_source_;  // lazy
+    bool active_in_patch_ = false;
+
+    // Configure critical_patch_ from the validated options blob.
+    // Called once at construction after surfaces_ are loaded.  When
+    // mode == "auto" uses the default multipliers (PR D plugs in
+    // real auto-calibration); when "fixed" honours `bbox`; when
+    // "off" leaves enabled=false and queries always go to the SVD.
+    void build_critical_patch_(const std::string& options_canonical);
+
+    // Get the patch-side source backend, allocating on first use.
+    // The patch source can differ from the SVD truth source (set via
+    // `critical_patch.source` in the options blob) — e.g. SVDSBTL&IF97
+    // can still route patch queries through HEOS for full IAPWS-95
+    // accuracy at the critical singularity.  Defaults to the SVD
+    // truth source when null.
+    std::shared_ptr<CoolProp::AbstractState> patch_source_ref_();
 };
 
 }  // namespace CoolProp
