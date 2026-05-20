@@ -103,7 +103,14 @@ class SVDSurfaceSerializer
     //          clean rebuild instead of attempting to deserialize a
     //          rev-6 cache that won't have the new boundary curves.
     //          HEOS source unchanged.
-    static constexpr int kRevision = 7;
+    //   rev 8: SUPER_R3 further split at the IF97 R1/R3 isotherm
+    //          h_R1R3(p) = h_IF97(623.15 K, p), so R1 territory at
+    //          p > pcrit gets its own SVD (SUPER_R1_super) separate
+    //          from R3 proper (SUPER_R3_proper).  Region count for
+    //          IF97 goes from 4-5 (post-rev-7) to 5-6.  Closes the
+    //          post-rev-7 R1 conformance gap where R1 and R3 modes
+    //          competed for SVD bandwidth in a single region.
+    static constexpr int kRevision = 8;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);
