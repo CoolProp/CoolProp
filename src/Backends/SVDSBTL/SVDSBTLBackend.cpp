@@ -14,6 +14,8 @@
 #include <utility>
 #include <vector>
 
+#include "boost/math/tools/toms748_solve.hpp"
+
 #include "AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "Configuration.h"
@@ -47,6 +49,48 @@ struct ResolvedGrid
 };
 
 constexpr ResolvedGrid kDefaultGrid = {200, 800, 20};
+
+// Polish the patch backend's T after an HmassP_INPUTS update so the
+// returned state is forward-consistent in h(T, p), not just R7-97-
+// backward-consistent.  Without this, in-bbox queries inherit the
+// patch source's backward-equation residual (±25 mK for IF97 R1/R3,
+// ±10 mK for R2/R5) — visible as ~10-20 mK / 0.1-0.4 J/(kg·K) s
+// residuals in the SVDSBTL&IF97 fail-map even inside the patch box.
+// Mirrors the polish in src/SBTL/SurfacePresets.cpp's IF97 sampling
+// lambda (foi.9.10).  Best-effort: on bracket-failure or out-of-range,
+// leaves the state as the HmassP backward seed (still functional, just
+// at the ±25 mK floor).
+void polish_patch_state_(::CoolProp::AbstractState& s, double p, double h) {
+    auto resid = [&s, p, h](double T) -> double {
+        try {
+            s.update(::CoolProp::PT_INPUTS, p, T);
+            return s.hmass() - h;
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            return std::nan("");
+        }
+    };
+    const double T_seed = s.T();
+    constexpr double kT_min = 273.16;  // IF97 / IAPWS-95 lower bound
+    constexpr double kT_max = 2273.15;
+    const double T_lo = std::max(T_seed - 0.5, kT_min);
+    const double T_hi = std::min(T_seed + 0.5, kT_max);
+    if (!(T_lo < T_hi)) {
+        return;
+    }
+    const double r_lo = resid(T_lo);
+    const double r_hi = resid(T_hi);
+    if (!std::isfinite(r_lo) || !std::isfinite(r_hi) || r_lo * r_hi > 0.0) {
+        // Bracket missed (rare): restore the backward seed and bail.
+        try {
+            s.update(::CoolProp::PT_INPUTS, p, T_seed);
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+        }
+        return;
+    }
+    boost::uintmax_t max_iter = 30;
+    const auto bracket = boost::math::tools::toms748_solve(resid, T_lo, T_hi, r_lo, r_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
+    s.update(::CoolProp::PT_INPUTS, p, 0.5 * (bracket.first + bracket.second));
+}
 
 // Read `grid.NT/NR/rank` out of a validated options document.  Missing
 // keys (and missing `grid` itself) leave the corresponding default in
@@ -460,12 +504,33 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
 
     // Critical-patch bbox routing.  Patch lookups defer their property
     // reads to evaluate_property_ via patch_source_.
+    //
+    // For HmassP / HmolarP inputs we follow the source-backend update
+    // with polish_patch_state_(): the source's HmassP_INPUTS path
+    // typically uses a backward equation (IF97 R7-97 in particular)
+    // that's only ±25 mK forward-consistent in T.  Without the polish
+    // every in-bbox query inherits that floor — visible as ~10-20 mK /
+    // 0.1-0.4 J/(kg·K) s residuals in the SVDSBTL&IF97 fail-map even
+    // inside the patch box.  The polish TOMS748-iterates on a tight
+    // bracket around T_seed so the returned state is
+    // forward-consistent (h(T_polished, p) == h_input to bracket eps).
+    // Mirrors the polish baked into ph_subcritical's IF97 sampling
+    // lambda — that's the foi.9.10 sampling-side fix; this is its
+    // query-side counterpart.  No-op for HEOS source (HEOS HmassP is
+    // already iterative + forward-consistent) modulo one extra HEOS
+    // eval per in-bbox query.
     const auto patch_key = (input_pair == CoolProp::HmolarP_INPUTS) ? CoolProp::HmassP_INPUTS : input_pair;
     if (critical_patch_.contains(patch_key, a, b)) {
         try {
             if (input_pair == CoolProp::HmolarP_INPUTS) {
                 patch_source_ref_()->update(CoolProp::HmassP_INPUTS, *pt.h_mass, *pt.p);
+                polish_patch_state_(*patch_source_, *pt.p, *pt.h_mass);
+            } else if (input_pair == CoolProp::HmassP_INPUTS) {
+                patch_source_ref_()->update(input_pair, value1, value2);
+                polish_patch_state_(*patch_source_, *pt.p, *pt.h_mass);
             } else {
+                // PT_INPUTS — source backend's PT path is already
+                // forward-consistent; no polish needed.
                 patch_source_ref_()->update(input_pair, value1, value2);
             }
             pt.kind = PointEvaluation::Kind::Patched;
