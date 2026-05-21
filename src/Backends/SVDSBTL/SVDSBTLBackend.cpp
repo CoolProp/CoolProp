@@ -731,4 +731,240 @@ CoolPropDbl SVDSBTLBackend::calc_pmax() {
     return source_reference_()->pmax();
 }
 
+// fast_evaluate: vectorized cache-bypassing batch path.  Mirrors
+// update()'s routing per point but writes directly to out_buffer
+// without touching any per-instance cache slot (_T, _p, _phase,
+// active_*).  All allocations live outside the loop.
+//
+// Supported pairs:
+//   HmassP_INPUTS  : val1 = h, val2 = p
+//   HmolarP_INPUTS : val1 = h_molar, val2 = p  (converted to h_mass)
+//   PT_INPUTS      : val1 = p,   val2 = T
+//
+// Per-point outcome:
+//   - in-domain single-phase  → resolve + N_outputs evaluations + ok
+//   - inside critical-patch   → patch_source_->update() + property reads
+//   - out of every region     → NaN row + fast_evaluate_out_of_range
+//   - two-phase / dome hit    → NaN row + fast_evaluate_two_phase_disallowed
+//
+// Note that two-phase points are NOT routed through update_two_phase_'s
+// Q-weighted blend here — fast_evaluate's contract explicitly states
+// it doesn't do flash refinement; callers wanting dome behaviour use
+// update() instead.  In-patch points DO get routed through the patch
+// source (an AbstractState::update() call per point), since omitting
+// the critical-patch routing would silently degrade accuracy at points
+// the build was explicitly configured to handle.
+void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
+                                   const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size,
+                                   int* status_flags, std::size_t status_flags_size, CoolProp::phases /*imposed_phase*/) {
+    // Bounds + null checks first (matches IF97Backend::fast_evaluate).
+    if (N_outputs != 0 && N_inputs > std::numeric_limits<std::size_t>::max() / N_outputs) {
+        throw ValueError(format("fast_evaluate: N_inputs * N_outputs would overflow size_t (N_inputs=%zu, N_outputs=%zu)", N_inputs, N_outputs));
+    }
+    const std::size_t required_out = N_inputs * N_outputs;
+    if (out_buffer_size < required_out) {
+        throw ValueError(format("fast_evaluate: out_buffer_size=%zu < required %zu (N_inputs * N_outputs)", out_buffer_size, required_out));
+    }
+    if (status_flags_size < N_inputs) {
+        throw ValueError(format("fast_evaluate: status_flags_size=%zu < required %zu (N_inputs)", status_flags_size, N_inputs));
+    }
+    if (N_inputs == 0) return;
+    if (val1 == nullptr || val2 == nullptr || outputs == nullptr || out_buffer == nullptr || status_flags == nullptr) {
+        throw ValueError("fast_evaluate: null pointer argument");
+    }
+    if (N_outputs == 0) {
+        for (std::size_t k = 0; k < N_inputs; ++k)
+            status_flags[k] = CoolProp::fast_evaluate_ok;
+        return;
+    }
+
+    const bool is_HmassP = (input_pair == CoolProp::HmassP_INPUTS);
+    const bool is_HmolarP = (input_pair == CoolProp::HmolarP_INPUTS);
+    const bool is_PT = (input_pair == CoolProp::PT_INPUTS);
+    if (!is_HmassP && !is_HmolarP && !is_PT) {
+        throw ValueError(format("fast_evaluate (SVDSBTL): input_pair %s not supported (use HmassP_INPUTS, HmolarP_INPUTS, or PT_INPUTS)",
+                                get_input_pair_short_desc(input_pair).c_str()));
+    }
+    const auto surface_key = is_HmolarP ? CoolProp::HmassP_INPUTS : input_pair;
+    const auto it = surfaces_.find(static_cast<int>(surface_key));
+    if (it == surfaces_.end() || !it->second) {
+        throw ValueError(std::string("fast_evaluate (SVDSBTL): no surface registered for ") + CoolProp::get_input_pair_short_desc(input_pair));
+    }
+    const auto* surface = it->second.get();
+
+    const double M = calc_molar_mass();  // pure fluid, constant
+    const double NaN = std::numeric_limits<double>::quiet_NaN();
+
+    // Validate output keys up-front so we don't fail mid-loop.  Anything
+    // the SVD surface stores directly is supported, plus the per-input
+    // pair shortcuts (T/p/h that the caller just gave us) and molar
+    // variants that scale by molar mass.
+    auto is_surface_prop = [&](CoolProp::parameters prop) { return surface->contains_property(prop); };
+    for (std::size_t o = 0; o < N_outputs; ++o) {
+        switch (outputs[o]) {
+            // Always available shortcuts (no SVD eval needed).
+            case CoolProp::iT:
+            case CoolProp::iP:
+            case CoolProp::iHmass:
+            case CoolProp::iHmolar:
+            case CoolProp::iDmolar:
+            case CoolProp::iSmolar:
+            case CoolProp::iUmolar:
+                break;
+            default:
+                // Anything else has to be in the surface (mass-basis
+                // primary keys).  iDmass / iSmass / iUmass / ispeed_sound /
+                // iviscosity / iconductivity all land here.
+                if (!is_surface_prop(outputs[o])) {
+                    throw ValueError(format("fast_evaluate (SVDSBTL): active surface does not expose output[%zu]=%s", o,
+                                            get_parameter_information(outputs[o], "short").c_str()));
+                }
+                break;
+        }
+    }
+
+    auto fill_nan_row = [&](std::size_t k) {
+        for (std::size_t o = 0; o < N_outputs; ++o) {
+            out_buffer[k * N_outputs + o] = NaN;
+        }
+    };
+
+    for (std::size_t k = 0; k < N_inputs; ++k) {
+        const double v1 = val1[k];
+        const double v2 = val2[k];
+
+        // Convert input to the surface's (a, b) coordinates and the
+        // mass-basis h we'll return as a shortcut.
+        double a;                   // primary axis: always p
+        double b;                   // secondary axis: h_mass (PH surface) or T (PT surface)
+        double h_mass_input = NaN;  // only meaningful when is_HmassP / is_HmolarP
+        double T_input = NaN;       // only meaningful when is_PT
+        if (is_HmassP) {
+            h_mass_input = v1;
+            a = v2;
+            b = v1;
+        } else if (is_HmolarP) {
+            h_mass_input = v1 / M;
+            a = v2;
+            b = h_mass_input;
+        } else {
+            // is_PT
+            T_input = v2;
+            a = v1;
+            b = v2;
+        }
+
+        // Critical-patch routing: if the point lies in the configured
+        // bbox, defer to the patch source backend.  We still pay an
+        // update() per in-patch point on the patch source — that's the
+        // cost of being "truth" inside the patch zone — but we avoid
+        // touching our own cache.
+        const auto patch_key = is_HmolarP ? CoolProp::HmassP_INPUTS : input_pair;
+        if (critical_patch_.contains(patch_key, a, b)) {
+            try {
+                if (is_HmolarP) {
+                    patch_source_ref_()->update(CoolProp::HmassP_INPUTS, h_mass_input, a);
+                } else {
+                    patch_source_ref_()->update(input_pair, v1, v2);
+                }
+            } catch (const std::exception&) {
+                status_flags[k] = CoolProp::fast_evaluate_out_of_range;
+                fill_nan_row(k);
+                continue;
+            }
+            auto& src = *patch_source_;
+            for (std::size_t o = 0; o < N_outputs; ++o) {
+                const auto prop = outputs[o];
+                double v = NaN;
+                try {
+                    switch (prop) {
+                        case CoolProp::iP:
+                            v = (is_PT ? v1 : v2);
+                            break;
+                        case CoolProp::iT:
+                            v = (is_PT ? v2 : src.keyed_output(CoolProp::iT));
+                            break;
+                        case CoolProp::iHmass:
+                            v = (is_HmassP ? v1 : src.keyed_output(CoolProp::iHmass));
+                            break;
+                        case CoolProp::iHmolar:
+                            v = (is_HmolarP ? v1 : src.keyed_output(CoolProp::iHmass) * M);
+                            break;
+                        case CoolProp::iDmolar:
+                            v = src.keyed_output(CoolProp::iDmass) / M;
+                            break;
+                        case CoolProp::iSmolar:
+                            v = src.keyed_output(CoolProp::iSmass) * M;
+                            break;
+                        case CoolProp::iUmolar:
+                            v = src.keyed_output(CoolProp::iUmass) * M;
+                            break;
+                        default:
+                            v = src.keyed_output(prop);
+                            break;
+                    }
+                } catch (const std::exception&) {
+                    v = NaN;
+                }
+                out_buffer[k * N_outputs + o] = v;
+            }
+            status_flags[k] = CoolProp::fast_evaluate_ok;
+            continue;
+        }
+
+        // Plain SVD-surface path: resolve once, evaluate per output.
+        const auto pt = surface->resolve(a, b);
+        if (pt.region_idx < 0) {
+            // Atlas didn't find a region — either out of every region's
+            // AABB (genuinely out of range) or inside the saturation
+            // dome.  We can't distinguish here without an extra dome
+            // check, so report two-phase-disallowed which more
+            // accurately reflects the most common cause (dome hit).
+            status_flags[k] = CoolProp::fast_evaluate_two_phase_disallowed;
+            fill_nan_row(k);
+            continue;
+        }
+
+        for (std::size_t o = 0; o < N_outputs; ++o) {
+            const auto prop = outputs[o];
+            double v = NaN;
+            switch (prop) {
+                // Caller-supplied inputs — no SVD eval.
+                case CoolProp::iP:
+                    v = (is_PT ? v1 : v2);
+                    break;
+                case CoolProp::iT:
+                    v = is_PT ? T_input : surface->eval_with_region(CoolProp::iT, pt.region_idx, pt.svd_x, pt.svd_y);
+                    break;
+                case CoolProp::iHmass:
+                    v = (is_HmassP || is_HmolarP) ? h_mass_input : surface->eval_with_region(CoolProp::iHmass, pt.region_idx, pt.svd_x, pt.svd_y);
+                    break;
+                case CoolProp::iHmolar:
+                    if (is_HmolarP) {
+                        v = v1;
+                    } else if (is_HmassP) {
+                        v = h_mass_input * M;
+                    } else {
+                        v = surface->eval_with_region(CoolProp::iHmass, pt.region_idx, pt.svd_x, pt.svd_y) * M;
+                    }
+                    break;
+                case CoolProp::iDmolar:
+                    v = surface->eval_with_region(CoolProp::iDmass, pt.region_idx, pt.svd_x, pt.svd_y) / M;
+                    break;
+                case CoolProp::iSmolar:
+                    v = surface->eval_with_region(CoolProp::iSmass, pt.region_idx, pt.svd_x, pt.svd_y) * M;
+                    break;
+                case CoolProp::iUmolar:
+                    v = surface->eval_with_region(CoolProp::iUmass, pt.region_idx, pt.svd_x, pt.svd_y) * M;
+                    break;
+                default:
+                    v = surface->eval_with_region(prop, pt.region_idx, pt.svd_x, pt.svd_y);
+                    break;
+            }
+            out_buffer[k * N_outputs + o] = v;
+        }
+        status_flags[k] = CoolProp::fast_evaluate_ok;
+    }
+}
+
 }  // namespace CoolProp

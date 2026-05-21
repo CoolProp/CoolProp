@@ -124,6 +124,19 @@ class SVDSBTLBackend : public AbstractState
     // subsequent calc_* calls are pure SVD evaluations.
     void update(CoolProp::input_pairs input_pair, double value1, double value2) override;
 
+    // Vectorized cache-bypassing batch evaluation — see
+    // AbstractState::fast_evaluate for the contract.  Mirrors update()'s
+    // routing (critical-patch bbox → patch_source_, otherwise SVD
+    // surface) but never touches the instance's _T / _p / _phase /
+    // active_point_ slots, so back-to-back fast_evaluate batches do not
+    // interfere with each other and a concurrent update() call.  No
+    // heap allocations beyond what each in-patch point's
+    // patch_source_->update() does internally.  Two-phase / dome-hit
+    // points NaN-fill their row and set fast_evaluate_two_phase_disallowed.
+    void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
+                       const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size, int* status_flags,
+                       std::size_t status_flags_size, CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) override;
+
     // Property accessors.  Each routes through lookup_(prop), which
     // honours the inputs the user supplied (no SVD round-trip for
     // values the user just gave us).

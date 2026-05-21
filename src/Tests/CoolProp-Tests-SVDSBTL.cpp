@@ -431,4 +431,63 @@ TEST_CASE("SVDSBTL&HEOS and SVDSBTL&REFPROP produce distinct cache files", "[SVD
     REQUIRE(refprop_path.find("Water.REFPROP.") != std::string::npos);
 }
 
+TEST_CASE("SVDSBTL fast_evaluate matches per-call update() bit-for-bit", "[SVDSBTL][fast_evaluate][water][slow]") {
+    // Build a small (T, p) probe set via IF97, pull h(T, p), then evaluate
+    // each probe via both update() + property reads AND via fast_evaluate;
+    // assert the two paths return identical numbers (no rounding tolerance).
+    auto if97 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&IF97", "Water"));
+    std::vector<double> h_v, p_v;
+    for (double T = 320.0; T <= 800.0; T += 60.0) {
+        for (double lp = std::log(1.0e5); lp <= std::log(3.0e7); lp += 0.5 * std::log(10.0)) {
+            const double p = std::exp(lp);
+            try {
+                if97->update(CoolProp::PT_INPUTS, p, T);
+                const double h = if97->hmass();
+                if (std::isfinite(h)) {
+                    h_v.push_back(h);
+                    p_v.push_back(p);
+                }
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+            }
+        }
+    }
+    REQUIRE(h_v.size() > 10);
+    const std::size_t N = h_v.size();
+    const std::vector<CoolProp::parameters> outputs = {CoolProp::iT, CoolProp::iDmass, CoolProp::iSmass, CoolProp::ispeed_sound};
+    std::vector<double> out_fe(N * outputs.size(), std::nan(""));
+    std::vector<int> status(N, -1);
+    svd->fast_evaluate(CoolProp::HmassP_INPUTS, h_v.data(), p_v.data(), N, outputs.data(), outputs.size(), out_fe.data(), out_fe.size(),
+                       status.data(), status.size());
+    for (std::size_t k = 0; k < N; ++k) {
+        REQUIRE(status[k] == CoolProp::fast_evaluate_ok);
+        svd->update(CoolProp::HmassP_INPUTS, h_v[k], p_v[k]);
+        const double T_up = svd->T();
+        const double rho_up = svd->rhomass();
+        const double s_up = svd->smass();
+        const double w_up = svd->speed_sound();
+        // Bit-identical: both paths call the same SVDSurface::eval_with_region
+        // on the same ResolvedPoint, so there's no floating-point freedom
+        // between them.  No epsilon tolerance.
+        REQUIRE(out_fe[k * outputs.size() + 0] == T_up);
+        REQUIRE(out_fe[k * outputs.size() + 1] == rho_up);
+        REQUIRE(out_fe[k * outputs.size() + 2] == s_up);
+        REQUIRE(out_fe[k * outputs.size() + 3] == w_up);
+    }
+}
+
+TEST_CASE("SVDSBTL fast_evaluate rejects unsupported inputs cleanly", "[SVDSBTL][fast_evaluate][reject]") {
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&IF97", "Water"));
+    const std::vector<double> v1 = {1.0};
+    const std::vector<double> v2 = {1.0};
+    const std::vector<CoolProp::parameters> outputs = {CoolProp::iT};
+    std::vector<double> out(1, std::nan(""));
+    std::vector<int> status(1, -1);
+    // PQ_INPUTS isn't a fast-path input — caller should get a clear error,
+    // not a NaN row.
+    REQUIRE_THROWS_AS(svd->fast_evaluate(CoolProp::PQ_INPUTS, v1.data(), v2.data(), 1, outputs.data(), outputs.size(), out.data(), out.size(),
+                                         status.data(), status.size()),
+                      CoolProp::ValueError);
+}
+
 #endif  // ENABLE_CATCH
