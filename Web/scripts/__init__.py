@@ -91,6 +91,7 @@ add_to_task_list("coolprop.configuration.py")
 add_to_task_list("logo_2014.py")
 add_to_task_list("fluid_properties.REFPROPcomparison.py")
 add_to_task_list("fluid_properties.IF97Conformance.py")
+add_to_task_list("fluid_properties.IF97Profile.py")
 # Consistency.py is incremental: it skips fluids whose PNG already exists, so a
 # cache-restored run is a cheap no-op while new fluids still get their plots.
 add_to_task_list("fluid_properties.Consistency.py")

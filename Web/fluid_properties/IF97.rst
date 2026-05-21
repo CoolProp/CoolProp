@@ -196,3 +196,27 @@ A call to the top-level function ``PropsSI`` can provide: temperature, pressure,
 
 .. include:: IF97_conformance.rst.in
 
+IF97 vs HEOS timing — per-call and batch
+----------------------------------------
+
+The figure below profiles ``AbstractState.update(HmassP_INPUTS, h, p)``
+for every backend the local build exposes (``IF97``, ``HEOS``, and the
+``SVDSBTL`` family when bound through Python). It also reports
+:meth:`CoolProp.AbstractState.fast_evaluate` — a cache-bypassing
+zero-allocation batch path — for backends that implement it (currently
+``IF97`` and the tabular backends). Re-running
+``Web/scripts/fluid_properties.IF97Profile.py`` regenerates the figure
+against your local hardware and CoolProp build, so the numbers reflect
+your machine, not the documentation server's.
+
+The per-call panels report the *median* wall time over many warm-cache
+calls, so first-call cache-load cost is baked out. Per-call numbers
+include ~1 us of Python-wrapper marshalling that applies equally to
+every backend — read the *ratios* as the meaningful comparison, not the
+absolute nanoseconds. ``fast_evaluate`` amortizes that overhead over
+the batch, so its per-point cost is closer to native C++.
+
+.. image:: IF97_profile.png
+   :width: 100%
+   :alt: IF97 / HEOS HmassP_INPUTS timing profile
+
