@@ -1,10 +1,11 @@
 // Emit per-region CSVs of conformance residuals against IAPWS IF97
 // truth, for both SVDSBTL&HEOS and SVDSBTL&IF97 source backends.
 // Tagged [!benchmark] so it doesn't run on every CI invocation;
-// invoke explicitly with:
+// invoke explicitly with one of:
 //
-//   ./CatchTestRunner '[SVDSBTL][fail_map][if97_src]' > /tmp/failmap_if97.csv
-//   ./CatchTestRunner '[SVDSBTL][fail_map][heos_src]' > /tmp/failmap_heos.csv
+//   ./CatchTestRunner '[SVDSBTL][fail_map][if97_src]'         > /tmp/failmap_if97.csv
+//   ./CatchTestRunner '[SVDSBTL][fail_map][heos_src_vs_if97]' > /tmp/failmap_heos_vs_if97.csv
+//   ./CatchTestRunner '[SVDSBTL][fail_map][heos_src_vs_heos]' > /tmp/failmap_heos_vs_heos.csv
 
 #if defined(ENABLE_CATCH)
 
@@ -144,7 +145,7 @@ void run_failmap(const std::string& source_backend, const std::string& truth_bac
                 const double dv_pct = (v_svd - v_truth) / v_truth * 100.0;
                 const double ds = s_svd - s_truth;
                 const double dw_pct = (w_svd - w_truth) / w_truth * 100.0;
-                std::printf("%d,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e\n", region, h_truth, p_Pa, T, dT_mK, dv_pct, ds, dw_pct);
+                std::printf("%d,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e\n", region, h_truth, p_Pa, T_truth_refined, dT_mK, dv_pct, ds, dw_pct);
             } catch (...) {  // NOLINT(bugprone-empty-catch)
                 continue;
             }
