@@ -15,6 +15,7 @@ using Catch::Approx;
 #    include <vector>
 
 #    include "AbstractState.h"
+#    include "Configuration.h"
 #    include "CoolProp.h"
 #    include "CoolProp/Backends/SVDSBTL/SVDSBTLBackend.h"
 #    include "CoolProp/sbtl/SVDSurfaceSerializer.h"
@@ -140,12 +141,29 @@ TEST_CASE("SVDSBTL backend rejects mixtures", "[SVDSBTL][reject][mixture]") {
       ContainsSubstring("pure-fluid"));
 }
 
-TEST_CASE("SVDSBTL backend supports the high-level PropsSI surface", "[SVDSBTL][propsi][slow]") {
+TEST_CASE("SVDSBTL backend is rejected from PropsSI by default", "[SVDSBTL][propsi][gate]") {
+    // Make sure the gate is closed (it is by default; this just guards
+    // against an earlier test forgetting to restore the flag).
+    CoolProp::set_config_bool(ALLOW_SVDSBTL_IN_PROPSSI, false);
+    // PropsSI catches internally and returns _HUGE on failure, with the
+    // exception message left in get_global_param_string("errstring").
+    const double v = CoolProp::PropsSI("D", "T", 350.0, "P", 1.0e6, "SVDSBTL&HEOS::Water");
+    const std::string err = CoolProp::get_global_param_string("errstring");
+    INFO("PropsSI returned " << v << "; errstring=" << err);
+    REQUIRE(!ValidNumber(v));
+    REQUIRE(err.find("high-level") != std::string::npos);
+}
+
+TEST_CASE("SVDSBTL backend usable via PropsSI when ALLOW_SVDSBTL_IN_PROPSSI is set", "[SVDSBTL][propsi][slow]") {
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
     heos->update(CoolProp::PT_INPUTS, 1.0e6, 350.0);
     const double rho_truth = heos->rhomass();
 
+    // Opt in for this case, then restore the default so subsequent
+    // tests see the gate as closed.
+    CoolProp::set_config_bool(ALLOW_SVDSBTL_IN_PROPSSI, true);
     const double rho_via_propsi = CoolProp::PropsSI("D", "T", 350.0, "P", 1.0e6, "SVDSBTL&HEOS::Water");
+    CoolProp::set_config_bool(ALLOW_SVDSBTL_IN_PROPSSI, false);
     INFO("PropsSI = " << rho_via_propsi << "  HEOS = " << rho_truth);
     REQUIRE(rho_via_propsi == Approx(rho_truth).epsilon(5e-3));
 }

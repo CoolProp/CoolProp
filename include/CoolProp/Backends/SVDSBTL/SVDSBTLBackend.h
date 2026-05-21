@@ -87,6 +87,25 @@ class SVDSBTLBackend : public AbstractState
         return get_backend_string(SVDSBTL_BACKEND);
     }
 
+    // Block use through the high-level PropsSI interface by default.
+    //
+    // PropsSI calls AbstractState::factory() on every invocation, which
+    // for SVDSBTL means loading + msgpack-deserializing the .svd.bin.z
+    // cache file (~80 ms / call) before the actual SVD eval (~5 us).
+    // Per-call cost is therefore ~4 orders of magnitude slower than
+    // expected — a measured 77 ms / PropsSI vs 3.7 us for IF97 — which
+    // turned the IF97 conformance docs script (~100k PropsSI calls)
+    // into a 2+ hour job and pushed docs builds past the 3-hour
+    // ceiling.  See also the BICUBIC / TTSE tabular backends which
+    // are gated the same way.
+    //
+    // The ALLOW_SVDSBTL_IN_PROPSSI configuration key lets advanced
+    // callers opt back in (e.g. for one-off interactive queries where
+    // the cache load cost is fine).  For any throughput-sensitive
+    // workload, use AbstractState directly + update() in a loop, or
+    // fast_evaluate for a vectorized batch.
+    bool available_in_high_level() override;
+
     // Canonical JSON of the options this instance was built with
     // (validated + schema defaults expanded).  Returns the literal "{}"
     // when no options were supplied; round-trips through factory().
