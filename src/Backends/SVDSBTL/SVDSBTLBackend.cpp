@@ -939,9 +939,81 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
         }
     };
 
-    // Per-point loop.  The resolve_point_ / evaluate_property_ kernel
-    // does all the routing — the loop is just an adapter that turns
-    // exceptions into status flags + NaN rows.
+    // Build an output plan ONCE outside the per-point loop.
+    //
+    // SVDSurface::eval_with_region_multi can evaluate N properties at
+    // the same (region, svd_x, svd_y) for the price of one locate() +
+    // Hermite-basis-setup pair, amortizing those ~25 ns across the
+    // batch.  To use it we need to know up-front which of the user's
+    // outputs map to surface evals, what mass-basis surface key each
+    // corresponds to (iDmolar → iDmass × M, iHmolar → iHmass × M, etc.),
+    // and how to scale on output (multiply / divide by M).
+    //
+    // Per-output role:
+    //   * Surface:        consumed from the batched surface_vals array
+    //   * Shortcut:       served by evaluate_property_ (input-pair
+    //                     shortcuts + iQ + kind-dependent paths)
+    // We dedup the surface-prop list so requesting both iDmass and
+    // iDmolar costs one eval, not two.
+    constexpr std::size_t kMaxOuts = 64;
+    std::array<bool, kMaxOuts> output_is_surface{};
+    std::array<std::size_t, kMaxOuts> output_surface_idx{};
+    std::array<double, kMaxOuts> output_M_scale{};
+    std::array<CoolProp::parameters, kMaxOuts> surface_props{};
+    std::size_t n_surface_props = 0;
+    if (N_outputs > kMaxOuts) {
+        throw ValueError(format("fast_evaluate: N_outputs=%zu exceeds compile-time limit %zu", N_outputs, kMaxOuts));
+    }
+    const double M = calc_molar_mass();
+    for (std::size_t o = 0; o < N_outputs; ++o) {
+        CoolProp::parameters mass_prop = outputs[o];
+        double scale = 1.0;
+        switch (outputs[o]) {
+            case CoolProp::iDmolar:
+                mass_prop = CoolProp::iDmass;
+                scale = 1.0 / M;
+                break;
+            case CoolProp::iSmolar:
+                mass_prop = CoolProp::iSmass;
+                scale = M;
+                break;
+            case CoolProp::iUmolar:
+                mass_prop = CoolProp::iUmass;
+                scale = M;
+                break;
+            case CoolProp::iHmolar:
+            case CoolProp::iT:
+            case CoolProp::iP:
+            case CoolProp::iHmass:
+            case CoolProp::iQ:
+                // Shortcuts — never need a surface eval.
+                output_is_surface[o] = false;
+                continue;
+            default:
+                break;
+        }
+        // Surface-served output.  Dedup against already-listed props
+        // (cheap linear scan; N_outputs is small).
+        std::size_t idx = n_surface_props;
+        for (std::size_t s = 0; s < n_surface_props; ++s) {
+            if (surface_props[s] == mass_prop) {
+                idx = s;
+                break;
+            }
+        }
+        if (idx == n_surface_props) {
+            surface_props[n_surface_props++] = mass_prop;
+        }
+        output_is_surface[o] = true;
+        output_surface_idx[o] = idx;
+        output_M_scale[o] = scale;
+    }
+
+    // Per-point loop.  resolve_point_ does all the routing; for
+    // SinglePhase kinds we batch the surface evals via the multi-eval
+    // path; everything else (DomeBlend, Patched, shortcuts) falls
+    // through evaluate_property_ per output.
+    std::array<double, kMaxOuts> surface_vals{};
     for (std::size_t k = 0; k < N_inputs; ++k) {
         PointEvaluation pt;
         try {
@@ -957,21 +1029,41 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
             fill_nan_row(k);
             continue;
         }
+
+        // SinglePhase: one batched surface multi-eval covers every
+        // surface-served output; shortcuts still go through
+        // evaluate_property_.
+        const bool can_batch = (pt.kind == PointEvaluation::Kind::SinglePhase) && n_surface_props > 0;
+        if (can_batch) {
+            try {
+                pt.surface->eval_with_region_multi(pt.resolved.region_idx, pt.resolved.svd_x, pt.resolved.svd_y, surface_props.data(),
+                                                   n_surface_props, surface_vals.data());
+            } catch (const std::exception&) {
+                status_flags[k] = CoolProp::fast_evaluate_internal_error;
+                fill_nan_row(k);
+                continue;
+            }
+        }
+
         bool row_failed = false;
         for (std::size_t o = 0; o < N_outputs; ++o) {
             double v = NaN;
-            try {
-                v = evaluate_property_(pt, outputs[o]);
-            } catch (const NotImplementedError&) {
-                // Two-phase undefined property (speed_sound, viscosity,
-                // conductivity, cp, cv, Prandtl).  In-band NaN signals
-                // "no equilibrium value here"; status stays ok so the
-                // caller can still read the meaningful T / D / S / U
-                // / Q outputs from the same row.
-                v = NaN;
-            } catch (const std::exception&) {
-                v = NaN;
-                row_failed = true;
+            if (can_batch && output_is_surface[o]) {
+                v = surface_vals[output_surface_idx[o]] * output_M_scale[o];
+            } else {
+                try {
+                    v = evaluate_property_(pt, outputs[o]);
+                } catch (const NotImplementedError&) {
+                    // Two-phase undefined property (speed_sound, viscosity,
+                    // conductivity, cp, cv, Prandtl).  In-band NaN signals
+                    // "no equilibrium value here"; status stays ok so the
+                    // caller can still read the meaningful T / D / S / U
+                    // / Q outputs from the same row.
+                    v = NaN;
+                } catch (const std::exception&) {
+                    v = NaN;
+                    row_failed = true;
+                }
             }
             out_buffer[k * N_outputs + o] = v;
         }

@@ -135,5 +135,33 @@ double SVDSurface::eval_with_region(::CoolProp::parameters prop, int region_idx,
     return evaluators_[static_cast<std::size_t>(region_idx)][pidx]->eval(svd_x, svd_y);
 }
 
+void SVDSurface::eval_with_region_multi(int region_idx, double svd_x, double svd_y, const ::CoolProp::parameters* props, std::size_t n,
+                                        double* out) const {
+    if (!sealed_) {
+        throw std::logic_error("SVDSurface::eval_with_region_multi called before seal()");
+    }
+    if (region_idx < 0 || static_cast<std::size_t>(region_idx) >= evaluators_.size()) {
+        throw std::out_of_range("SVDSurface::eval_with_region_multi: region_idx out of range");
+    }
+    if (n == 0) {
+        return;
+    }
+    const auto& region_evals = evaluators_[static_cast<std::size_t>(region_idx)];
+    // All per-property evaluators in this region share the same
+    // (x_grid, y_grid) by construction (SVDSurfaceFactory builds them
+    // together), so a single make_context() call covers all `n`
+    // outputs.  Pick the first property's evaluator as the context
+    // source — picking the same one every time is fine, but using
+    // props[0] avoids surprising readers who'd expect the prop they
+    // asked for to drive the context.
+    const std::size_t first_pidx = property_index(props[0]);
+    const svd::SVDEvalContext ctx = region_evals[first_pidx]->make_context(svd_x, svd_y);
+    out[0] = region_evals[first_pidx]->eval_with_context(ctx);
+    for (std::size_t k = 1; k < n; ++k) {
+        const std::size_t pidx = property_index(props[k]);
+        out[k] = region_evals[pidx]->eval_with_context(ctx);
+    }
+}
+
 }  // namespace sbtl
 }  // namespace CoolProp
