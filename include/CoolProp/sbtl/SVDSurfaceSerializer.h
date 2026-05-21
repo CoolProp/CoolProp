@@ -93,7 +93,17 @@ class SVDSurfaceSerializer
     //          the rev bump is the cache-invalidation mechanism — old
     //          rev-5 caches would silently serve uniform-η surfaces
     //          and undo the IF97 conformance gains.
-    static constexpr int kRevision = 6;
+    //   rev 7: SUPER region split for IF97 source backend — SUPER_R3
+    //          (h < h_B23(p)) and SUPER_R2 (h > h_B23(p)) — so the
+    //          IF97 R2/R3 derivative kink sits on a region edge
+    //          instead of inside a cell.  Region count for IF97 goes
+    //          from 3 (LIQUID/VAPOR/SUPER) to 4 or 5 (LIQUID/VAPOR/
+    //          SUPER_R3/SUPER_R2 + optional SUPER_HIGH_P above 100 MPa).
+    //          On-wire region list differs, so the rev bump forces a
+    //          clean rebuild instead of attempting to deserialize a
+    //          rev-6 cache that won't have the new boundary curves.
+    //          HEOS source unchanged.
+    static constexpr int kRevision = 7;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

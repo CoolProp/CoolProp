@@ -80,6 +80,48 @@ std::vector<PropertySpec> pt_properties(::CoolProp::AbstractState& src) {
     return ps;
 }
 
+// IF97 R2/R3 boundary equation, inverted:
+//   p_B23(T) = 0.10192970039326e-2 · (T − 572.54459862746)^2 + 13.91883776670  [MPa]
+// Closed-form inverse for p ∈ [16.529, 100] MPa (the valid range for
+// IF97's R2/R3 boundary) → T ∈ [623.15, 863.15] K.  Outside this p
+// range the curve isn't defined; callers must gate.
+double if97_T_B23_K(double p_Pa) {
+    constexpr double a = 0.10192970039326e-2;
+    constexpr double b = 0.57254459862746e3;
+    constexpr double c = 0.1391883776670e2;
+    const double p_MPa = p_Pa / 1.0e6;
+    return b + std::sqrt((p_MPa - c) / a);
+}
+
+// Build the h = h_B23(p) boundary curve in (p, h) coords by walking p
+// knots and evaluating forward IF97 h(T_B23(p), p) at each.  Used to
+// split the SUPER region in ph_subcritical along the IF97 R2/R3 kink
+// when the source backend is IF97 (the kink is intrinsic to IF97's
+// piecewise EOS; HEOS source has no such internal boundary).  Valid
+// only for p ∈ [16.529 MPa, 100 MPa] — caller must clamp.
+std::unique_ptr<region::CubicSplineCurve> build_h_B23_curve(::CoolProp::AbstractState& heos, double p_lo, double p_hi) {
+    constexpr double kP_B23_lo_MPa = 16.529;
+    constexpr double kP_B23_hi_MPa = 100.0;
+    const double p_lo_clamped = std::max(p_lo, kP_B23_lo_MPa * 1.0e6);
+    const double p_hi_clamped = std::min(p_hi, kP_B23_hi_MPa * 1.0e6);
+    if (!(p_lo_clamped < p_hi_clamped)) {
+        throw std::invalid_argument("build_h_B23_curve: p range does not overlap IF97 B23 curve's [16.529, 100] MPa validity");
+    }
+    constexpr std::size_t n_knots = 64;
+    std::vector<double> p_knots(n_knots);
+    std::vector<double> h_knots(n_knots);
+    const double log_p_lo = std::log(p_lo_clamped);
+    const double log_p_hi = std::log(p_hi_clamped);
+    for (std::size_t k = 0; k < n_knots; ++k) {
+        const double p = std::exp(log_p_lo + static_cast<double>(k) * (log_p_hi - log_p_lo) / static_cast<double>(n_knots - 1));
+        const double T_B23 = if97_T_B23_K(p);
+        heos.update(::CoolProp::PT_INPUTS, p, T_B23);
+        p_knots[k] = p;
+        h_knots[k] = heos.hmass();
+    }
+    return region::CubicSplineCurve::build(std::move(p_knots), std::move(h_knots));
+}
+
 }  // namespace
 
 SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
@@ -123,7 +165,53 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     // p_max_eos*0.99], secondary = h.  No sat dome above p_crit, so
     // the secondary bounds are the same low-T / high-T isotherms used
     // by LIQUID / VAPOR — they continue smoothly into supercritical.
-    {
+    //
+    // For IF97 source backend, split SUPER along the IF97 R2/R3
+    // boundary curve h_B23(p).  IF97 uses different basis equations
+    // (R3: ρ-T fundamental Helmholtz; R2: g-basis) on the two sides
+    // of p = p_B23(T), so the property values match at the boundary
+    // but the derivatives have a kink.  A single SVD over a region
+    // straddling that kink encodes it into the modes and the
+    // Hermite-cubic interpolant overshoots, producing R3 worst-case
+    // residuals ~100% in v / ~190 K in T against IAPWS-IF97 — five
+    // orders of magnitude beyond IAPWS G13-15 perm.  Splitting the
+    // SUPER region at h_B23(p) puts the kink on a region edge instead
+    // of inside a cell, so each sub-region's SVD only sees cells on
+    // ONE side of the kink and reconstructs smoothly.  (CoolProp-foi.9.5
+    // — subagent investigation 2026-05-20 ruled out kernel-level
+    // fixes and converged on this atlas-level structural fix.)
+    //
+    // HEOS source backend has no piecewise structure, so its SUPER
+    // stays one region.
+    const bool source_is_if97 = (heos.backend_name() == "IF97Backend");
+    constexpr double kP_B23_hi = 100.0e6;  // IF97 B23 curve's upper p bound
+    if (source_is_if97 && p_min_sup < kP_B23_hi) {
+        // p range where the kink applies; clamped at the B23 upper bound.
+        const double p_split_hi = std::min(p_max_sup, kP_B23_hi);
+        // SUPER_R3: low-h side of the IF97 R2/R3 kink, p ∈ [p_min_sup, p_split_hi].
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_split_hi);
+            auto lo = build_h_isotherm_floor(heos, p_min_sup, p_split_hi, T_min_eos);
+            auto hi = build_h_B23_curve(heos, p_min_sup, p_split_hi);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+        // SUPER_R2: high-h side of the IF97 R2/R3 kink, same p range.
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_split_hi);
+            auto lo = build_h_B23_curve(heos, p_min_sup, p_split_hi);
+            auto hi = build_h_isotherm_ceiling(heos, p_min_sup, p_split_hi, T_max_eos - 0.5);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+        // SUPER_HIGH_P (if any): above the IF97 B23 curve's valid p
+        // range there's no R2/R3 boundary (IF97 R3 extrapolates), so
+        // a single region suffices.
+        if (p_max_sup > kP_B23_hi) {
+            auto axis = region::AxisTransform::make(region::AxisScale::LOG, kP_B23_hi, p_max_sup);
+            auto lo = build_h_isotherm_floor(heos, kP_B23_hi, p_max_sup, T_min_eos);
+            auto hi = build_h_isotherm_ceiling(heos, kP_B23_hi, p_max_sup, T_max_eos - 0.5);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+    } else {
         auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_max_sup);
         auto lo = build_h_isotherm_floor(heos, p_min_sup, p_max_sup, T_min_eos);
         auto hi = build_h_isotherm_ceiling(heos, p_min_sup, p_max_sup, T_max_eos - 0.5);
@@ -147,24 +235,48 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     // Newton iterates may land within IF97's 3.3e-5 ε-band of the
     // saturation curve.  Pin the phase across iterations so PT_INPUTS
     // doesn't trip the ε-band reject.
-    const bool source_is_if97 = (heos.backend_name() == "IF97Backend");
     if (source_is_if97) {
         spec.update_state = [](::CoolProp::AbstractState& s, double p, double h) {
-            s.update(::CoolProp::HmassP_INPUTS, h, p);
-            const ::CoolProp::phases phase0 = s.phase();
-            const bool single_phase =
-              (phase0 == ::CoolProp::iphase_liquid || phase0 == ::CoolProp::iphase_gas || phase0 == ::CoolProp::iphase_supercritical_liquid
-               || phase0 == ::CoolProp::iphase_supercritical_gas || phase0 == ::CoolProp::iphase_supercritical);
-            // Phase pin must be exception-safe.  AbstractState::clear()
-            // doesn't reset imposed_phase_index (only HEOS resets it
-            // inline in its own update paths; IF97's update doesn't),
-            // so if any Newton step throws we must still unspecify
-            // before propagating — otherwise the stale phase hint
-            // leaks into the next sample cell and silently biases its
-            // PT_INPUTS resolution.
-            if (single_phase) s.specify_phase(phase0);
+            // IF97's HmassP_INPUTS only implements closed-form backward
+            // T(p, h) for R1, R2, and R5.  R3 (dense supercritical /
+            // near-critical) throws "Pressure out of range" because no
+            // backward equation is wired up.  This used to be silently
+            // masked by sample_grid's NaN-fill / median-fill machinery
+            // — every R3 cell in the SUPER region got a garbage stored
+            // value — until the foi.9.5 split shrank SUPER_R3's η-axis
+            // so much that the bad cells dominated the surface and
+            // worst-case T residuals blew out to ~470 K.
+            //
+            // Fallback: when HmassP_INPUTS throws, find T such that
+            // h_IF97(T, p) = h by bracketed Newton iteration starting
+            // from T = 700 K (mid-R3 T range).  IF97 forward h(T, p)
+            // is monotonic and smooth in T at fixed p for the SUPER
+            // envelope so simple Newton with a generous bracket
+            // converges in 5-10 steps.
+            ::CoolProp::phases phase0 = ::CoolProp::iphase_not_imposed;
+            bool single_phase = false;
+            bool pinned = false;
             try {
-                for (int k = 0; k < 5; ++k) {
+                s.update(::CoolProp::HmassP_INPUTS, h, p);
+                phase0 = s.phase();
+                single_phase =
+                  (phase0 == ::CoolProp::iphase_liquid || phase0 == ::CoolProp::iphase_gas || phase0 == ::CoolProp::iphase_supercritical_liquid
+                   || phase0 == ::CoolProp::iphase_supercritical_gas || phase0 == ::CoolProp::iphase_supercritical);
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+                // IF97 R3 path: start Newton from T = 700 K.  R3 spans
+                // T ∈ [623.15, 863.15] K so the bracket midpoint is a
+                // reasonable seed everywhere in R3.
+                s.update(::CoolProp::PT_INPUTS, p, 700.0);
+            }
+            if (single_phase) {
+                s.specify_phase(phase0);
+                pinned = true;
+            }
+            // Phase pin must be exception-safe: AbstractState::clear()
+            // doesn't reset imposed_phase_index in IF97, so a stale
+            // hint can leak to the next sample cell otherwise.
+            try {
+                for (int k = 0; k < 10; ++k) {
                     const double h_now = s.hmass();
                     const double dh = h_now - h;
                     if (std::abs(dh) < 1e-10 * std::abs(h)) break;
@@ -174,10 +286,10 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
                     s.update(::CoolProp::PT_INPUTS, p, T_new);
                 }
             } catch (...) {
-                if (single_phase) s.unspecify_phase();
+                if (pinned) s.unspecify_phase();
                 throw;
             }
-            if (single_phase) s.unspecify_phase();
+            if (pinned) s.unspecify_phase();
         };
     } else {
         spec.update_state = [](::CoolProp::AbstractState& s, double p, double h) {
