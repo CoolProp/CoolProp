@@ -876,6 +876,7 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
                 continue;
             }
             auto& src = *patch_source_;
+            bool patch_row_failed = false;
             for (std::size_t o = 0; o < N_outputs; ++o) {
                 const auto prop = outputs[o];
                 double v = NaN;
@@ -902,16 +903,33 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
                         case CoolProp::iUmolar:
                             v = src.keyed_output(CoolProp::iUmass) * M;
                             break;
+                        case CoolProp::iQ:
+                            // Single-phase by definition in the patch
+                            // zone — supercritical region surrounding the
+                            // critical point.  Mirror update()'s
+                            // convention of returning -1 outside the dome.
+                            v = -1.0;
+                            break;
                         default:
                             v = src.keyed_output(prop);
                             break;
                     }
                 } catch (const std::exception&) {
                     v = NaN;
+                    patch_row_failed = true;
                 }
                 out_buffer[k * N_outputs + o] = v;
             }
-            status_flags[k] = CoolProp::fast_evaluate_ok;
+            // If any per-output read failed, the row no longer satisfies
+            // the all-defined contract — NaN-fill the whole row and
+            // flag it, matching IF97Backend::fast_evaluate's
+            // fast_evaluate_internal_error semantics.
+            if (patch_row_failed) {
+                status_flags[k] = CoolProp::fast_evaluate_internal_error;
+                fill_nan_row(k);
+            } else {
+                status_flags[k] = CoolProp::fast_evaluate_ok;
+            }
             continue;
         }
 
@@ -1066,7 +1084,35 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
                 }
             }
             if (!dome_handled) {
-                status_flags[k] = CoolProp::fast_evaluate_out_of_range;
+                // For PT_INPUTS, an atlas miss CAN mean "T is exactly
+                // on the saturation curve" (ambiguous Q, can't pick a
+                // single-phase side without an explicit phase hint) —
+                // that's a different failure mode from "the (T, p)
+                // point is outside every region's bbox".  Distinguish
+                // by probing Tsat(p) when a SuperAncillary or source
+                // backend can answer.  If unavailable, default to
+                // out_of_range (the conservative choice).
+                int pt_status = CoolProp::fast_evaluate_out_of_range;
+                if (is_PT) {
+                    try {
+                        auto sa = superanc_();
+                        double T_sat_probe = std::numeric_limits<double>::quiet_NaN();
+                        if (sa) {
+                            T_sat_probe = sa->get_T_from_p(a);  // a == p for PT
+                        } else {
+                            auto src = source_reference_();
+                            src->update(CoolProp::PQ_INPUTS, a, 0.0);
+                            T_sat_probe = src->T();
+                        }
+                        constexpr double kSatEps = 3.3e-5;  // matches IF97Backend::set_phase
+                        if (std::isfinite(T_sat_probe) && std::abs(b - T_sat_probe) <= kSatEps * T_sat_probe) {
+                            pt_status = CoolProp::fast_evaluate_two_phase_disallowed;
+                        }
+                    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+                        // No sat-line probe available — stick with OOB.
+                    }
+                }
+                status_flags[k] = pt_status;
                 fill_nan_row(k);
             }
             continue;
@@ -1103,6 +1149,12 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
                     break;
                 case CoolProp::iUmolar:
                     v = surface->eval_with_region(CoolProp::iUmass, pt.region_idx, pt.svd_x, pt.svd_y) * M;
+                    break;
+                case CoolProp::iQ:
+                    // Single-phase by definition (atlas resolved to a
+                    // region, which excludes the dome).  Mirror the
+                    // -1 sentinel update() uses outside the dome.
+                    v = -1.0;
                     break;
                 default:
                     v = surface->eval_with_region(prop, pt.region_idx, pt.svd_x, pt.svd_y);

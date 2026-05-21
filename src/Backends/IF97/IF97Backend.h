@@ -975,6 +975,14 @@ class IF97Backend : public AbstractState
                             case iPrandtl:
                                 val = IF97::prandtl_Tp(T_k, p_k);
                                 break;
+                            case iQ:
+                                // Single-phase by definition here — the
+                                // dome-detection branch above would have
+                                // routed two-phase points to the
+                                // Q-blend path.  Mirror update()'s
+                                // -1 sentinel for single-phase Q.
+                                val = -1.0;
+                                break;
                             default:
                                 val = NaN;
                                 eval_failed = true;

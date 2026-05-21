@@ -127,12 +127,22 @@ class SVDSBTLBackend : public AbstractState
     // Vectorized cache-bypassing batch evaluation — see
     // AbstractState::fast_evaluate for the contract.  Mirrors update()'s
     // routing (critical-patch bbox → patch_source_, otherwise SVD
-    // surface) but never touches the instance's _T / _p / _phase /
-    // active_point_ slots, so back-to-back fast_evaluate batches do not
-    // interfere with each other and a concurrent update() call.  No
-    // heap allocations beyond what each in-patch point's
-    // patch_source_->update() does internally.  Two-phase / dome-hit
-    // points NaN-fill their row and set fast_evaluate_two_phase_disallowed.
+    // surface) but writes directly into the caller's out_buffer rather
+    // than touching the instance's update()-side state (_T / _p /
+    // _phase / active_point_ / active_surface_ / active_resolved_ /
+    // active_hmass_).  So back-to-back fast_evaluate calls can be
+    // interleaved with update() calls on the same instance without
+    // corrupting the most-recent update()'s state, BUT the patch
+    // routing IS stateful: it reuses the lazily-allocated patch_source_
+    // child AbstractState across all in-patch points in the batch.
+    // That makes fast_evaluate safe for single-threaded interleaving
+    // with update() but NOT thread-safe — two concurrent fast_evaluate
+    // calls on the same backend will race on patch_source_->update()
+    // for any point that falls inside the critical-patch bbox.  In-
+    // domain HmassP / HmolarP probes that fall inside the saturation
+    // dome are Q-blended in place; PT probes exactly on the sat curve
+    // and points outside every region NaN-fill with
+    // fast_evaluate_two_phase_disallowed or fast_evaluate_out_of_range.
     void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
                        const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size, int* status_flags,
                        std::size_t status_flags_size, CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) override;

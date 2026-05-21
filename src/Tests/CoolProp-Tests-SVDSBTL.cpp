@@ -519,6 +519,44 @@ TEST_CASE("SVDSBTL fast_evaluate Q-blends inside the saturation dome", "[SVDSBTL
     }
 }
 
+TEST_CASE("SVDSBTL fast_evaluate returns Q = -1 on single-phase rows", "[SVDSBTL][fast_evaluate][water]") {
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&IF97", "Water"));
+    // Three solid single-phase points well inside the surface envelope:
+    // compressed liquid, sub-saturated gas, supercritical.  All should
+    // report iQ = -1.0 (matching update()'s sentinel for single-phase).
+    const std::vector<double> h_v = {5.0e5, 3.0e6, 2.0e6};
+    const std::vector<double> p_v = {1.0e7, 1.0e5, 3.0e7};
+    const std::vector<CoolProp::parameters> outputs = {CoolProp::iT, CoolProp::iQ};
+    std::vector<double> out(h_v.size() * outputs.size(), std::nan(""));
+    std::vector<int> status(h_v.size(), -1);
+    svd->fast_evaluate(CoolProp::HmassP_INPUTS, h_v.data(), p_v.data(), h_v.size(), outputs.data(), outputs.size(), out.data(), out.size(),
+                       status.data(), status.size());
+    for (std::size_t k = 0; k < h_v.size(); ++k) {
+        INFO("k=" << k << " p=" << p_v[k] << " h=" << h_v[k]);
+        REQUIRE(status[k] == CoolProp::fast_evaluate_ok);
+        REQUIRE(out[k * outputs.size() + 1] == -1.0);
+    }
+}
+
+TEST_CASE("SVDSBTL fast_evaluate flags out-of-range PT misses cleanly", "[SVDSBTL][fast_evaluate][water]") {
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    // PT below the IF97 triple-point floor — genuinely outside every
+    // region of the atlas.  Must report fast_evaluate_out_of_range
+    // (not two-phase-disallowed, which is reserved for atlas misses
+    // that the sat-curve probe can identify; the SVDSBTL PT atlas
+    // registers LIQUID and VAPOR as adjacent at T_sat so a sat-curve
+    // hit resolves as liquid rather than missing).
+    const std::vector<double> v1 = {1.0e6};
+    const std::vector<double> v2 = {200.0};  // K, below T_triple
+    const std::vector<CoolProp::parameters> outputs = {CoolProp::iDmass};
+    std::vector<double> out(1, std::nan(""));
+    std::vector<int> status(1, -1);
+    svd->fast_evaluate(CoolProp::PT_INPUTS, v1.data(), v2.data(), 1, outputs.data(), outputs.size(), out.data(), out.size(), status.data(),
+                       status.size());
+    REQUIRE(status[0] == CoolProp::fast_evaluate_out_of_range);
+    REQUIRE(!std::isfinite(out[0]));
+}
+
 TEST_CASE("SVDSBTL fast_evaluate rejects unsupported inputs cleanly", "[SVDSBTL][fast_evaluate][reject]") {
     auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&IF97", "Water"));
     const std::vector<double> v1 = {1.0};
