@@ -103,7 +103,22 @@ class SVDSurfaceSerializer
     //          clean rebuild instead of attempting to deserialize a
     //          rev-6 cache that won't have the new boundary curves.
     //          HEOS source unchanged.
-    static constexpr int kRevision = 7;
+    //   rev 8: SUPER_R3 further split at the IF97 R1/R3 isotherm
+    //          h_R1R3(p) = h_IF97(623.15 K, p), so R1 territory at
+    //          p > pcrit gets its own SVD (SUPER_R1_super) separate
+    //          from R3 proper (SUPER_R3_proper).  Region count for
+    //          IF97 goes from 4-5 (post-rev-7) to 5-6.  Closes the
+    //          post-rev-7 R1 conformance gap where R1 and R3 modes
+    //          competed for SVD bandwidth in a single region.
+    //   rev 9: IF97 sampling-side Newton replaced with TOMS748
+    //          bracketed root-find (foi.9.10).  R3 cells whose Newton
+    //          previously failed to converge (e.g., T_target=663.7 K,
+    //          p=26.6 MPa where the T=700 fallback seed put Newton in
+    //          R2 territory and it oscillated across the R2/R3 boundary)
+    //          now sample correctly.  Stored T/s/ρ/w grid values for
+    //          those cells change, so existing rev-8 caches must
+    //          rebuild.
+    static constexpr int kRevision = 9;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);
