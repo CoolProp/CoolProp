@@ -185,7 +185,7 @@ double solve_T_from_h_toms748(::CoolProp::AbstractState& s, double p, double h_t
         // state must check *ok and skip the subsequent PT_INPUTS update.
         return (std::abs(r_lo) < std::abs(r_hi)) ? T_lo : T_hi;
     }
-    boost::uintmax_t max_iter = 30;
+    std::uintmax_t max_iter = 30;
     const auto bracket = boost::math::tools::toms748_solve(resid, T_lo, T_hi, r_lo, r_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
     if (ok != nullptr) {
         *ok = true;

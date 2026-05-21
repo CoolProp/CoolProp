@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <memory>
@@ -87,7 +88,7 @@ void polish_patch_state_(::CoolProp::AbstractState& s, double p, double h) {
         }
         return;
     }
-    boost::uintmax_t max_iter = 30;
+    std::uintmax_t max_iter = 30;
     const auto bracket = boost::math::tools::toms748_solve(resid, T_lo, T_hi, r_lo, r_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
     s.update(::CoolProp::PT_INPUTS, p, 0.5 * (bracket.first + bracket.second));
 }
