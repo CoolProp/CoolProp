@@ -42,9 +42,16 @@ bool cache_present_for(const std::string& fluid, const std::string& source_backe
     if (!fs::exists(dir, ec)) return false;
     const auto match = [&](::CoolProp::input_pairs pair) {
         const std::string prefix = fluid + "." + source_backend + "." + CoolProp::get_input_pair_short_desc(pair) + ".";
+        // Match the full SVDSBTL suffix, not just .z — the cache dir is
+        // shared with BicubicBackend's .bin.z files and could accumulate
+        // other .z artifacts.  Checking the literal contract avoids
+        // false positives across unrelated extensions.
+        static const std::string kSuffix = ".svd.bin.z";
         for (const auto& entry : fs::directory_iterator(dir, ec)) {
             const std::string name = entry.path().filename().string();
-            if (name.rfind(prefix, 0) == 0 && name.size() > prefix.size() && entry.path().extension() == ".z") {
+            const bool has_prefix = name.rfind(prefix, 0) == 0 && name.size() > prefix.size();
+            const bool has_suffix = name.size() >= kSuffix.size() && name.compare(name.size() - kSuffix.size(), kSuffix.size(), kSuffix) == 0;
+            if (has_prefix && has_suffix) {
                 return true;
             }
         }
