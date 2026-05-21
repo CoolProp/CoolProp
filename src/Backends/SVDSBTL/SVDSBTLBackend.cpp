@@ -341,342 +341,436 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     surfaces_[static_cast<int>(pair)] = std::move(surface);
 }
 
-void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
-    clear();
-    _phase = iphase_not_imposed;
-    two_phase_.active = false;
+// resolve_point_: the shared kernel called by both update() and
+// fast_evaluate().  Maps (input_pair, v1, v2) to a PointEvaluation
+// without mutating any backend state.  The same routing logic — input-
+// pair dispatch, critical-patch bbox check, atlas resolve, dome
+// detection with sat-line lever-rule — lives in one place so any
+// future entry point (batched PropsSI, Python update_array wrapper,
+// ...) plugs in by reusing this method.
+//
+// Two-phase PQ_INPUTS / QT_INPUTS are folded into the DomeBlend kind
+// — same sat-line endpoints, same Q, same downstream property dispatch.
+SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_pairs input_pair, double value1, double value2) {
+    PointEvaluation pt;
+    pt.input_pair = input_pair;
+    pt.v1 = value1;
+    pt.v2 = value2;
 
-    // Two-phase inputs go to the SuperAncillary or to the source
-    // backend directly — no SVDSurface needed.  PQ_INPUTS and
-    // QT_INPUTS are degenerate in the surface (the dome interior is
-    // not single-phase, so the surface returns NaN), so we route
-    // around it.
+    // --- PQ / QT inputs: dome by definition, no surface needed. ---
     if (input_pair == CoolProp::PQ_INPUTS || input_pair == CoolProp::QT_INPUTS) {
-        active_pair_ = input_pair;
-        active_surface_ = nullptr;
-        active_resolved_ = false;
         double p_sat = 0.0;
         double T_sat = 0.0;
         double Q = 0.0;
-        auto sa = superanc_();
-        if (sa) {
-            // Fast path — HEOS-side SuperAncillary Chebyshev expansion
-            // gives sat-line state in O(1) without an HEOS flash.
-            if (input_pair == CoolProp::PQ_INPUTS) {
-                // value1 = p, value2 = Q.
-                p_sat = value1;
-                Q = value2;
-                T_sat = sa->get_T_from_p(p_sat);
-            } else {
-                // QT_INPUTS: value1 = Q, value2 = T.
-                Q = value1;
-                T_sat = value2;
-                p_sat = sa->eval_sat(T_sat, 'P', 0);
-            }
+        if (input_pair == CoolProp::PQ_INPUTS) {
+            p_sat = value1;
+            Q = value2;
         } else {
-            // Fallback path — source backend doesn't ship a
-            // SuperAncillary (REFPROP, IF97, ...).  Route directly
-            // to its own PQ/QT_INPUTS, which it must implement.
-            auto src = source_reference_();
-            if (input_pair == CoolProp::PQ_INPUTS) {
-                p_sat = value1;
-                Q = value2;
-                // Anchor at Q=0 so the source state lands cleanly on
-                // sat,L; T_sat is invariant in Q across the dome at
-                // fixed p.
-                src->update(CoolProp::PQ_INPUTS, p_sat, 0.0);
-                T_sat = src->T();
-            } else {
-                Q = value1;
-                T_sat = value2;
-                src->update(CoolProp::QT_INPUTS, 0.0, T_sat);
-                p_sat = src->p();
-            }
+            Q = value1;
+            T_sat = value2;
         }
         if (Q < 0.0 || Q > 1.0) {
             throw ValueError("SVDSBTL backend: two-phase Q must be in [0, 1]");
         }
-        update_two_phase_(T_sat, p_sat, Q);
-        return;
+        auto sa = superanc_();
+        if (sa) {
+            if (input_pair == CoolProp::PQ_INPUTS) {
+                T_sat = sa->get_T_from_p(p_sat);
+            } else {
+                p_sat = sa->eval_sat(T_sat, 'P', 0);
+            }
+            pt.hL_mol = sa->eval_sat(T_sat, 'H', 0);
+            pt.hV_mol = sa->eval_sat(T_sat, 'H', 1);
+        } else {
+            // Source-backend PQ/QT fallback (REFPROP / IF97).
+            auto src = source_reference_();
+            if (input_pair == CoolProp::PQ_INPUTS) {
+                src->update(CoolProp::PQ_INPUTS, p_sat, 0.0);
+                T_sat = src->T();
+                pt.hL_mol = src->hmolar();
+                src->update(CoolProp::PQ_INPUTS, p_sat, 1.0);
+                pt.hV_mol = src->hmolar();
+            } else {
+                src->update(CoolProp::QT_INPUTS, 0.0, T_sat);
+                p_sat = src->p();
+                pt.hL_mol = src->hmolar();
+                src->update(CoolProp::QT_INPUTS, 1.0, T_sat);
+                pt.hV_mol = src->hmolar();
+            }
+        }
+        pt.kind = PointEvaluation::Kind::DomeBlend;
+        pt.status = CoolProp::fast_evaluate_ok;
+        pt.T = T_sat;
+        pt.T_sat = T_sat;
+        pt.p = p_sat;
+        pt.Q = Q;
+        const double M = calc_molar_mass();
+        pt.h_mass = ((1.0 - Q) * *pt.hL_mol + Q * *pt.hV_mol) / M;
+        return pt;
     }
 
-    // HmolarP shares the HmassP surface — the molar→mass conversion
-    // happens in the switch below.  Without this normalisation the
-    // surfaces_.find() lookup would miss (we only register HmassP and
-    // PT keys) and the HmolarP switch case would be unreachable.
+    // --- Single-phase / dome routing through the surface atlas. ---
     const auto surface_key = (input_pair == CoolProp::HmolarP_INPUTS) ? CoolProp::HmassP_INPUTS : input_pair;
     const auto it = surfaces_.find(static_cast<int>(surface_key));
     if (it == surfaces_.end() || !it->second) {
         throw ValueError(std::string("SVDSBTL backend: no surface registered for this input pair (") + CoolProp::get_input_pair_short_desc(input_pair)
                          + ")");
     }
+    const auto* surface = it->second.get();
+    pt.surface = surface;
 
-    active_pair_ = input_pair;
-    active_surface_ = it->second.get();
-    active_in_patch_ = false;
-
-    // Record inputs into AbstractState's standard slots so calc_T() /
-    // calc_pressure() can return them directly without an SVD round-trip.
-    // While we're at it, ask critical_patch_ whether this state lies in
-    // its bbox; if so, every calc_* below routes through patch_source_
-    // instead of the SVD surface.  The bbox check itself is O(1).
+    // Extract (a, b) primary/secondary axes and the canonical h_mass
+    // input shortcut where applicable.
+    double a = 0.0;  // primary axis: always p for the MVP presets
+    double b = 0.0;  // secondary axis: h for HmassP/HmolarP, T for PT
     switch (input_pair) {
-        case CoolProp::HmassP_INPUTS: {
-            // (a, b) = (p, h) per ph_subcritical preset; value1=h, value2=p.
-            _p = value2;
-            active_hmass_ = value1;
-            active_in_patch_ = critical_patch_.contains(input_pair, _p, active_hmass_);
-            if (active_in_patch_) {
-                patch_source_ref_()->update(input_pair, value1, value2);
-                _T = patch_source_->T();
-            } else {
-                active_point_ = active_surface_->resolve(_p, active_hmass_);
-            }
+        case CoolProp::HmassP_INPUTS:
+            a = value2;
+            pt.p = value2;
+            pt.h_mass = value1;
+            b = value1;
             break;
-        }
-        case CoolProp::HmolarP_INPUTS: {
-            // Convert molar → mass and route to the PH surface.
-            _p = value2;
-            active_hmass_ = value1 / calc_molar_mass();
-            active_in_patch_ = critical_patch_.contains(CoolProp::HmassP_INPUTS, _p, active_hmass_);
-            if (active_in_patch_) {
-                patch_source_ref_()->update(CoolProp::HmassP_INPUTS, active_hmass_, _p);
-                _T = patch_source_->T();
-            } else {
-                active_point_ = active_surface_->resolve(_p, active_hmass_);
-            }
+        case CoolProp::HmolarP_INPUTS:
+            a = value2;
+            pt.p = value2;
+            pt.h_mass = value1 / calc_molar_mass();
+            b = *pt.h_mass;
             break;
-        }
-        case CoolProp::PT_INPUTS: {
-            // (a, b) = (p, T) per pt_subcritical preset; value1=p, value2=T.
-            _p = value1;
-            _T = value2;
-            active_in_patch_ = critical_patch_.contains(input_pair, _p, _T);
-            if (active_in_patch_) {
-                patch_source_ref_()->update(input_pair, value1, value2);
-            } else {
-                active_point_ = active_surface_->resolve(_p, _T);
-            }
+        case CoolProp::PT_INPUTS:
+            a = value1;
+            pt.p = value1;
+            pt.T = value2;
+            b = value2;
             break;
-        }
         default:
             throw ValueError(std::string("SVDSBTL backend update: unsupported input pair (") + CoolProp::get_input_pair_short_desc(input_pair) + ")");
     }
-    active_resolved_ = true;
-    if (active_in_patch_) {
-        // Patch is active: the source backend owns the answers for
-        // calc_* below.  active_point_ stays invalid but isn't read.
-        return;
+
+    // Critical-patch bbox routing.  Patch lookups defer their property
+    // reads to evaluate_property_ via patch_source_.
+    const auto patch_key = (input_pair == CoolProp::HmolarP_INPUTS) ? CoolProp::HmassP_INPUTS : input_pair;
+    if (critical_patch_.contains(patch_key, a, b)) {
+        try {
+            if (input_pair == CoolProp::HmolarP_INPUTS) {
+                patch_source_ref_()->update(CoolProp::HmassP_INPUTS, *pt.h_mass, *pt.p);
+            } else {
+                patch_source_ref_()->update(input_pair, value1, value2);
+            }
+            pt.kind = PointEvaluation::Kind::Patched;
+            pt.status = CoolProp::fast_evaluate_ok;
+            if (!pt.T) pt.T = patch_source_->T();
+            if (!pt.p) pt.p = patch_source_->p();
+            return pt;
+        } catch (const std::exception&) {
+            pt.kind = PointEvaluation::Kind::OutOfRange;
+            pt.status = CoolProp::fast_evaluate_out_of_range;
+            return pt;
+        }
     }
 
-    if (active_point_.region_idx < 0) {
-        // Out of every single-phase region.  For HmassP this typically
-        // means the (h, p) point is inside the saturation dome; pull
-        // the sat-line endpoints from the SuperAncillary if available
-        // or directly from the source backend otherwise, compute Q
-        // from the lever rule, and route to the two-phase path.
-        // Other input pairs (PT on the sat curve) currently still
-        // surface as NaN — two-phase PT is degenerate anyway (no
-        // unique state at T_sat unless Q is supplied).
-        if ((input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS) && _p > 0.0) {
-            double T_sat = 0.0, hL_mol = 0.0, hV_mol = 0.0;
-            bool sat_resolved = false;
-            auto sa = superanc_();
-            if (sa) {
-                T_sat = sa->get_T_from_p(_p);
+    // Atlas resolve.  region_idx < 0 means the point landed inside
+    // the saturation dome (for HmassP) or outside every region's bbox
+    // (for PT or genuinely OOB HmassP).
+    pt.resolved = surface->resolve(a, b);
+    if (pt.resolved.region_idx >= 0) {
+        pt.kind = PointEvaluation::Kind::SinglePhase;
+        pt.status = CoolProp::fast_evaluate_ok;
+        return pt;
+    }
+
+    // --- Atlas miss.  For HmassP / HmolarP try dome blend. ---
+    if (input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS) {
+        const double p_val = *pt.p;
+        const double h_mass = *pt.h_mass;
+        const double M = calc_molar_mass();
+        bool sat_resolved = false;
+        double T_sat = 0.0, hL_mol = 0.0, hV_mol = 0.0;
+        // Optional sat-line caloric endpoints we may also pick up from
+        // the source PQ fallback (saves the redundant lookup later).
+        std::optional<double> rhoL_mol_seed, rhoV_mol_seed, sL_mol_seed, sV_mol_seed;
+        auto sa = superanc_();
+        if (sa) {
+            try {
+                T_sat = sa->get_T_from_p(p_val);
                 hL_mol = sa->eval_sat(T_sat, 'H', 0);
                 hV_mol = sa->eval_sat(T_sat, 'H', 1);
                 sat_resolved = true;
-            } else {
-                try {
-                    auto src = source_reference_();
-                    src->update(CoolProp::PQ_INPUTS, _p, 0.0);
-                    T_sat = src->T();
-                    hL_mol = src->hmolar();
-                    src->update(CoolProp::PQ_INPUTS, _p, 1.0);
-                    hV_mol = src->hmolar();
-                    sat_resolved = true;
-                } catch (const std::exception&) {
-                    // Source backend couldn't resolve PQ at this _p
-                    // (e.g. above its critical pressure).  Fall
-                    // through to the iphase_twophase tag below.
-                }
-            }
-            if (sat_resolved) {
-                const double h_mol = active_hmass_ * calc_molar_mass();
-                if (hL_mol <= h_mol && h_mol <= hV_mol) {
-                    const double Q = (h_mol - hL_mol) / (hV_mol - hL_mol);
-                    update_two_phase_(T_sat, _p, Q);
-                    return;
-                }
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
             }
         }
-        _phase = iphase_twophase;  // best-effort tag; users typically check via the NaN return
+        if (!sat_resolved) {
+            try {
+                auto src = source_reference_();
+                src->update(CoolProp::PQ_INPUTS, p_val, 0.0);
+                T_sat = src->T();
+                hL_mol = src->hmolar();
+                rhoL_mol_seed = src->rhomolar();
+                sL_mol_seed = src->smolar();
+                src->update(CoolProp::PQ_INPUTS, p_val, 1.0);
+                hV_mol = src->hmolar();
+                rhoV_mol_seed = src->rhomolar();
+                sV_mol_seed = src->smolar();
+                sat_resolved = true;
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+            }
+        }
+        if (sat_resolved) {
+            const double h_mol = h_mass * M;
+            if (hL_mol <= h_mol && h_mol <= hV_mol) {
+                pt.kind = PointEvaluation::Kind::DomeBlend;
+                pt.status = CoolProp::fast_evaluate_ok;
+                pt.T = T_sat;
+                pt.T_sat = T_sat;
+                pt.Q = (h_mol - hL_mol) / (hV_mol - hL_mol);
+                pt.hL_mol = hL_mol;
+                pt.hV_mol = hV_mol;
+                pt.rhoL_mol = rhoL_mol_seed;
+                pt.rhoV_mol = rhoV_mol_seed;
+                pt.sL_mol = sL_mol_seed;
+                pt.sV_mol = sV_mol_seed;
+                return pt;
+            }
+        }
     }
+
+    // --- PT-on-sat detection vs genuine OOB. ---
+    if (input_pair == CoolProp::PT_INPUTS) {
+        try {
+            auto sa = superanc_();
+            double T_sat_probe = std::numeric_limits<double>::quiet_NaN();
+            if (sa) {
+                T_sat_probe = sa->get_T_from_p(a);
+            } else {
+                auto src = source_reference_();
+                src->update(CoolProp::PQ_INPUTS, a, 0.0);
+                T_sat_probe = src->T();
+            }
+            constexpr double kSatEps = 3.3e-5;  // matches IF97Backend::set_phase
+            if (std::isfinite(T_sat_probe) && std::abs(b - T_sat_probe) <= kSatEps * T_sat_probe) {
+                pt.kind = PointEvaluation::Kind::TwoPhaseDisallowed;
+                pt.status = CoolProp::fast_evaluate_two_phase_disallowed;
+                return pt;
+            }
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+            // No sat probe available — fall through to OOB.
+        }
+    }
+    pt.kind = PointEvaluation::Kind::OutOfRange;
+    pt.status = CoolProp::fast_evaluate_out_of_range;
+    return pt;
 }
 
-void SVDSBTLBackend::update_two_phase_(double T_sat, double p_sat, double Q) {
-    _p = p_sat;
-    _T = T_sat;
-    _Q = Q;
-    _phase = iphase_twophase;
+void SVDSBTLBackend::ensure_dome_rho_endpoints_(PointEvaluation& pt) {
+    if (pt.rhoL_mol && pt.rhoV_mol) return;
     auto sa = superanc_();
-    if (!sa) {
-        // No SuperAncillary (REFPROP / IF97 source) — pull sat-line
-        // endpoints from the source backend directly via QT_INPUTS.
-        // Two flashes (Q=0 and Q=1) at the same T_sat; slow compared
-        // to a Chebyshev eval but correct by construction.
-        auto src = source_reference_();
-        src->update(CoolProp::QT_INPUTS, 0.0, T_sat);
-        two_phase_.rhoL_mol = src->rhomolar();
-        two_phase_.hL_mol = src->hmolar();
-        two_phase_.sL_mol = src->smolar();
-        src->update(CoolProp::QT_INPUTS, 1.0, T_sat);
-        two_phase_.rhoV_mol = src->rhomolar();
-        two_phase_.hV_mol = src->hmolar();
-        two_phase_.sV_mol = src->smolar();
-        // u = h - p*v = h - p/rho; same identity as the HEOS path.
-        two_phase_.uL_mol = two_phase_.hL_mol - p_sat / two_phase_.rhoL_mol;
-        two_phase_.uV_mol = two_phase_.hV_mol - p_sat / two_phase_.rhoV_mol;
-        two_phase_.active = true;
+    if (sa) {
+        pt.rhoL_mol = sa->eval_sat(*pt.T_sat, 'D', 0);
+        pt.rhoV_mol = sa->eval_sat(*pt.T_sat, 'D', 1);
         return;
     }
-    two_phase_.rhoL_mol = sa->eval_sat(T_sat, 'D', 0);
-    two_phase_.rhoV_mol = sa->eval_sat(T_sat, 'D', 1);
-    two_phase_.hL_mol = sa->eval_sat(T_sat, 'H', 0);
-    two_phase_.hV_mol = sa->eval_sat(T_sat, 'H', 1);
-    two_phase_.sL_mol = sa->eval_sat(T_sat, 'S', 0);
-    two_phase_.sV_mol = sa->eval_sat(T_sat, 'S', 1);
-    // The SuperAncillary's caloric lazy-build covers H and S but not U.
-    // Recover u via the thermodynamic identity u = h - p*v = h - p/rho.
-    // (Equivalent in mass or molar basis; the SuperAncillary is molar.)
-    two_phase_.uL_mol = two_phase_.hL_mol - p_sat / two_phase_.rhoL_mol;
-    two_phase_.uV_mol = two_phase_.hV_mol - p_sat / two_phase_.rhoV_mol;
-    two_phase_.active = true;
+    auto src = source_reference_();
+    src->update(CoolProp::QT_INPUTS, 0.0, *pt.T_sat);
+    pt.rhoL_mol = src->rhomolar();
+    src->update(CoolProp::QT_INPUTS, 1.0, *pt.T_sat);
+    pt.rhoV_mol = src->rhomolar();
 }
 
-CoolPropDbl SVDSBTLBackend::two_phase_property_(CoolProp::parameters prop) const {
-    // Specific volume blends linearly; density is its reciprocal.
-    // Caloric props blend linearly directly.  Everything here is molar.
-    const double Q = static_cast<double>(_Q);
-    switch (prop) {
-        case CoolProp::iDmolar: {
-            const double vL = 1.0 / two_phase_.rhoL_mol;
-            const double vV = 1.0 / two_phase_.rhoV_mol;
-            return 1.0 / ((1.0 - Q) * vL + Q * vV);
+void SVDSBTLBackend::ensure_dome_s_endpoints_(PointEvaluation& pt) {
+    if (pt.sL_mol && pt.sV_mol) return;
+    auto sa = superanc_();
+    if (sa) {
+        pt.sL_mol = sa->eval_sat(*pt.T_sat, 'S', 0);
+        pt.sV_mol = sa->eval_sat(*pt.T_sat, 'S', 1);
+        return;
+    }
+    auto src = source_reference_();
+    src->update(CoolProp::QT_INPUTS, 0.0, *pt.T_sat);
+    pt.sL_mol = src->smolar();
+    src->update(CoolProp::QT_INPUTS, 1.0, *pt.T_sat);
+    pt.sV_mol = src->smolar();
+}
+
+// evaluate_property_: the per-output kernel.  Pure dispatch over the
+// PointEvaluation kind — no business logic beyond input-pair
+// shortcuts, surface eval routing, dome Q-blend, and patch deref.
+//
+// Throws NotImplementedError for properties that are mathematically
+// undefined in the two-phase region (speed_sound, cp, cv, viscosity,
+// conductivity, Prandtl); fast_evaluate translates those into in-band
+// NaN values, while calc_*() lets them propagate to the caller.
+double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::parameters prop) {
+    const double M = calc_molar_mass();
+
+    // Always-available shortcuts directly from the resolved point.
+    // The conditional checks matter — pt.T isn't filled for HmassP /
+    // HmolarP single-phase points until we read it off the surface, so
+    // we only short-circuit when the value was either supplied by the
+    // input pair (PT case), set by the dome blend (T = T_sat), or
+    // pulled from patch_source_->T() / ->p() in resolve_point_.
+    if (prop == CoolProp::iQ) {
+        return pt.Q;
+    }
+    if (prop == CoolProp::iP && pt.p) {
+        return *pt.p;
+    }
+    if (prop == CoolProp::iT && pt.T) {
+        return *pt.T;
+    }
+    if (prop == CoolProp::iHmass && pt.h_mass) {
+        return *pt.h_mass;
+    }
+    if (prop == CoolProp::iHmolar && pt.h_mass) {
+        return *pt.h_mass * M;
+    }
+
+    switch (pt.kind) {
+        case PointEvaluation::Kind::SinglePhase: {
+            // Map molar variants to the mass-basis property the surface
+            // tabulates, then scale.
+            CoolProp::parameters surface_prop = prop;
+            bool need_div_M = false, need_mul_M = false;
+            switch (prop) {
+                case CoolProp::iDmolar:
+                    surface_prop = CoolProp::iDmass;
+                    need_div_M = true;
+                    break;
+                case CoolProp::iSmolar:
+                    surface_prop = CoolProp::iSmass;
+                    need_mul_M = true;
+                    break;
+                case CoolProp::iUmolar:
+                    surface_prop = CoolProp::iUmass;
+                    need_mul_M = true;
+                    break;
+                case CoolProp::iHmolar:
+                    surface_prop = CoolProp::iHmass;
+                    need_mul_M = true;
+                    break;
+                default:
+                    break;
+            }
+            if (!pt.surface->contains_property(surface_prop)) {
+                throw ValueError(std::string("SVDSBTL backend: active surface does not expose property '")
+                                 + CoolProp::get_parameter_information(surface_prop, "short") + "'");
+            }
+            const double v = pt.surface->eval_with_region(surface_prop, pt.resolved.region_idx, pt.resolved.svd_x, pt.resolved.svd_y);
+            if (need_div_M) return v / M;
+            if (need_mul_M) return v * M;
+            return v;
         }
-        case CoolProp::iHmolar:
-            return (1.0 - Q) * two_phase_.hL_mol + Q * two_phase_.hV_mol;
-        case CoolProp::iSmolar:
-            return (1.0 - Q) * two_phase_.sL_mol + Q * two_phase_.sV_mol;
-        case CoolProp::iUmolar:
-            return (1.0 - Q) * two_phase_.uL_mol + Q * two_phase_.uV_mol;
-        default:
-            throw ValueError(std::string("SVDSBTL backend: two-phase blend not implemented for property '")
-                             + CoolProp::get_parameter_information(prop, "short") + "'");
+        case PointEvaluation::Kind::DomeBlend: {
+            const double Q = pt.Q;
+            switch (prop) {
+                case CoolProp::iDmass:
+                case CoolProp::iDmolar: {
+                    ensure_dome_rho_endpoints_(pt);
+                    const double vL = 1.0 / *pt.rhoL_mol;
+                    const double vV = 1.0 / *pt.rhoV_mol;
+                    const double rho_molar = 1.0 / ((1.0 - Q) * vL + Q * vV);
+                    return (prop == CoolProp::iDmass) ? rho_molar * M : rho_molar;
+                }
+                case CoolProp::iSmass:
+                case CoolProp::iSmolar: {
+                    ensure_dome_s_endpoints_(pt);
+                    const double s_molar = (1.0 - Q) * *pt.sL_mol + Q * *pt.sV_mol;
+                    return (prop == CoolProp::iSmass) ? s_molar / M : s_molar;
+                }
+                case CoolProp::iUmass:
+                case CoolProp::iUmolar: {
+                    ensure_dome_rho_endpoints_(pt);
+                    // u = h - p/rho per the thermodynamic identity.
+                    const double uL_mol = *pt.hL_mol - *pt.p / *pt.rhoL_mol;
+                    const double uV_mol = *pt.hV_mol - *pt.p / *pt.rhoV_mol;
+                    const double u_molar = (1.0 - Q) * uL_mol + Q * uV_mol;
+                    return (prop == CoolProp::iUmass) ? u_molar / M : u_molar;
+                }
+                case CoolProp::iHmolar:
+                    return (1.0 - Q) * *pt.hL_mol + Q * *pt.hV_mol;
+                case CoolProp::ispeed_sound:
+                    throw NotImplementedError("SVDSBTL backend: speed_sound is not defined in the two-phase region");
+                case CoolProp::iviscosity:
+                    throw NotImplementedError("SVDSBTL backend: viscosity is not defined in the two-phase region");
+                case CoolProp::iconductivity:
+                    throw NotImplementedError("SVDSBTL backend: conductivity is not defined in the two-phase region");
+                default:
+                    throw ValueError(std::string("SVDSBTL backend: two-phase blend not implemented for property '")
+                                     + CoolProp::get_parameter_information(prop, "short") + "'");
+            }
+        }
+        case PointEvaluation::Kind::Patched: {
+            auto& src = *patch_source_;
+            switch (prop) {
+                case CoolProp::iDmolar:
+                    return src.keyed_output(CoolProp::iDmass) / M;
+                case CoolProp::iSmolar:
+                    return src.keyed_output(CoolProp::iSmass) * M;
+                case CoolProp::iUmolar:
+                    return src.keyed_output(CoolProp::iUmass) * M;
+                default:
+                    return src.keyed_output(prop);
+            }
+        }
+        case PointEvaluation::Kind::OutOfRange:
+        case PointEvaluation::Kind::TwoPhaseDisallowed:
+        case PointEvaluation::Kind::Invalid:
+        case PointEvaluation::Kind::InternalError:
+            return std::nan("");
+    }
+    return std::nan("");
+}
+
+void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    clear();
+    _phase = iphase_not_imposed;
+    active_eval_ = resolve_point_(input_pair, value1, value2);
+
+    // Copy the resolved (T, p, Q) into AbstractState's standard slots
+    // so legacy callers reading _T / _p / _Q / _phase from the base
+    // class still see consistent values.
+    if (active_eval_.T) _T = *active_eval_.T;
+    if (active_eval_.p) _p = *active_eval_.p;
+    if (active_eval_.kind == PointEvaluation::Kind::DomeBlend) {
+        _Q = active_eval_.Q;
+        _phase = iphase_twophase;
+    } else if (active_eval_.kind == PointEvaluation::Kind::OutOfRange
+               && (input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS)) {
+        // Legacy back-compat: when an HmassP probe misses everything
+        // (above critical pressure, etc.) we used to tag iphase_twophase
+        // as a best-effort label.  Preserve that to avoid surprising
+        // callers that check phase() in this corner case.
+        _phase = iphase_twophase;
     }
 }
 
-CoolPropDbl SVDSBTLBackend::lookup_(CoolProp::parameters prop) {
-    if (active_surface_ == nullptr || !active_resolved_) {
-        throw ValueError("SVDSBTL backend: lookup before update()");
-    }
-    if (active_point_.region_idx < 0) {
-        return std::nan("");
-    }
-    if (!active_surface_->contains_property(prop)) {
-        throw ValueError(std::string("SVDSBTL backend: active surface does not expose property '")
-                         + CoolProp::get_parameter_information(prop, "short") + "'");
-    }
-    return active_surface_->eval_with_region(prop, active_point_.region_idx, active_point_.svd_x, active_point_.svd_y);
-}
-
-// Mass-basis accessors — route through the active SVDSurface, OR
-// through the cached two-phase blend when the active state is inside
-// the saturation dome, OR through the critical-patch source backend
-// when the active state falls inside the per-pair bbox.
+// Property accessors — all route through evaluate_property_ over the
+// active_eval_ kernel.  The throw cases (speed_sound / viscosity /
+// conductivity in the two-phase region) propagate to the caller.
 CoolPropDbl SVDSBTLBackend::calc_rhomass() {
-    if (two_phase_.active) {
-        return two_phase_property_(iDmolar) * calc_molar_mass();
-    }
-    if (active_in_patch_) {
-        return patch_source_->rhomass();
-    }
-    return lookup_(iDmass);
+    return evaluate_property_(active_eval_, CoolProp::iDmass);
 }
 CoolPropDbl SVDSBTLBackend::calc_hmass() {
-    if (two_phase_.active) {
-        return two_phase_property_(iHmolar) / calc_molar_mass();
-    }
-    // If the user supplied h via HmassP_INPUTS, return it directly; no
-    // SVD round-trip needed.
-    if (active_pair_ == CoolProp::HmassP_INPUTS || active_pair_ == CoolProp::HmolarP_INPUTS) {
-        return active_hmass_;
-    }
-    if (active_in_patch_) {
-        return patch_source_->hmass();
-    }
-    return lookup_(iHmass);
+    return evaluate_property_(active_eval_, CoolProp::iHmass);
 }
 CoolPropDbl SVDSBTLBackend::calc_smass() {
-    if (two_phase_.active) {
-        return two_phase_property_(iSmolar) / calc_molar_mass();
-    }
-    if (active_in_patch_) {
-        return patch_source_->smass();
-    }
-    return lookup_(iSmass);
+    return evaluate_property_(active_eval_, CoolProp::iSmass);
 }
 CoolPropDbl SVDSBTLBackend::calc_umass() {
-    if (two_phase_.active) {
-        return two_phase_property_(iUmolar) / calc_molar_mass();
-    }
-    if (active_in_patch_) {
-        return patch_source_->umass();
-    }
-    return lookup_(iUmass);
+    return evaluate_property_(active_eval_, CoolProp::iUmass);
 }
-
 CoolPropDbl SVDSBTLBackend::calc_T() {
-    if (two_phase_.active || active_pair_ == CoolProp::PT_INPUTS) {
-        return _T;
-    }
-    if (active_in_patch_) {
-        return patch_source_->T();
-    }
-    return lookup_(iT);
+    return evaluate_property_(active_eval_, CoolProp::iT);
 }
 CoolPropDbl SVDSBTLBackend::calc_speed_sound() {
-    if (two_phase_.active) {
-        // Speed of sound is not uniquely defined in the two-phase
-        // region (it goes to zero at the interface; equilibrium
-        // thermodynamics doesn't give a meaningful bulk value).
-        // Mirror what HEOS does -- throw rather than return a
-        // misleading Q-weighted blend.
-        throw NotImplementedError("SVDSBTL backend: speed_sound is not defined in the two-phase region");
-    }
-    if (active_in_patch_) {
-        return patch_source_->speed_sound();
-    }
-    return lookup_(ispeed_sound);
+    return evaluate_property_(active_eval_, CoolProp::ispeed_sound);
 }
 CoolPropDbl SVDSBTLBackend::calc_viscosity() {
-    if (two_phase_.active) {
-        // Viscosity has saturated-side values but no equilibrium bulk
-        // value inside the dome; G13-15 Table 12 is only defined off
-        // the saturation curve.  Mirror HEOS / IF97 and throw.
-        throw NotImplementedError("SVDSBTL backend: viscosity is not defined in the two-phase region");
-    }
-    return lookup_(iviscosity);
+    return evaluate_property_(active_eval_, CoolProp::iviscosity);
 }
 CoolPropDbl SVDSBTLBackend::calc_conductivity() {
-    if (two_phase_.active) {
-        throw NotImplementedError("SVDSBTL backend: conductivity is not defined in the two-phase region");
-    }
-    return lookup_(iconductivity);
+    return evaluate_property_(active_eval_, CoolProp::iconductivity);
 }
 CoolPropDbl SVDSBTLBackend::calc_pressure() {
-    return _p;
+    return evaluate_property_(active_eval_, CoolProp::iP);
 }
 
 // Molar variants — defer to the mass version and scale by molar_mass.
@@ -777,392 +871,68 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
             status_flags[k] = CoolProp::fast_evaluate_ok;
         return;
     }
-
-    const bool is_HmassP = (input_pair == CoolProp::HmassP_INPUTS);
-    const bool is_HmolarP = (input_pair == CoolProp::HmolarP_INPUTS);
-    const bool is_PT = (input_pair == CoolProp::PT_INPUTS);
-    if (!is_HmassP && !is_HmolarP && !is_PT) {
+    if (input_pair != CoolProp::HmassP_INPUTS && input_pair != CoolProp::HmolarP_INPUTS && input_pair != CoolProp::PT_INPUTS) {
         throw ValueError(format("fast_evaluate (SVDSBTL): input_pair %s not supported (use HmassP_INPUTS, HmolarP_INPUTS, or PT_INPUTS)",
                                 get_input_pair_short_desc(input_pair).c_str()));
     }
-    const auto surface_key = is_HmolarP ? CoolProp::HmassP_INPUTS : input_pair;
-    const auto it = surfaces_.find(static_cast<int>(surface_key));
-    if (it == surfaces_.end() || !it->second) {
+    // Validate the surface exists for this input pair before the per-
+    // point loop so a malformed request fails fast (resolve_point_
+    // would otherwise throw on the first call).
+    const auto surface_key = (input_pair == CoolProp::HmolarP_INPUTS) ? CoolProp::HmassP_INPUTS : input_pair;
+    const auto sit = surfaces_.find(static_cast<int>(surface_key));
+    if (sit == surfaces_.end() || !sit->second) {
         throw ValueError(std::string("fast_evaluate (SVDSBTL): no surface registered for ") + CoolProp::get_input_pair_short_desc(input_pair));
     }
-    const auto* surface = it->second.get();
 
-    const double M = calc_molar_mass();  // pure fluid, constant
     const double NaN = std::numeric_limits<double>::quiet_NaN();
-
-    // Validate output keys up-front so we don't fail mid-loop.  Anything
-    // the SVD surface stores directly is supported, plus the per-input
-    // pair shortcuts (T/p/h that the caller just gave us) and molar
-    // variants that scale by molar mass.
-    auto is_surface_prop = [&](CoolProp::parameters prop) { return surface->contains_property(prop); };
-    for (std::size_t o = 0; o < N_outputs; ++o) {
-        switch (outputs[o]) {
-            // Always available shortcuts (no SVD eval needed) — either
-            // straight from the input pair or computed by Q-blend when
-            // the point lands in the dome.
-            case CoolProp::iT:
-            case CoolProp::iP:
-            case CoolProp::iHmass:
-            case CoolProp::iHmolar:
-            case CoolProp::iDmolar:
-            case CoolProp::iSmolar:
-            case CoolProp::iUmolar:
-            case CoolProp::iQ:
-                break;
-            default:
-                // Anything else has to be in the surface (mass-basis
-                // primary keys).  iDmass / iSmass / iUmass / ispeed_sound /
-                // iviscosity / iconductivity all land here.
-                if (!is_surface_prop(outputs[o])) {
-                    throw ValueError(format("fast_evaluate (SVDSBTL): active surface does not expose output[%zu]=%s", o,
-                                            get_parameter_information(outputs[o], "short").c_str()));
-                }
-                break;
-        }
-    }
-
     auto fill_nan_row = [&](std::size_t k) {
         for (std::size_t o = 0; o < N_outputs; ++o) {
             out_buffer[k * N_outputs + o] = NaN;
         }
     };
 
+    // Per-point loop.  The resolve_point_ / evaluate_property_ kernel
+    // does all the routing — the loop is just an adapter that turns
+    // exceptions into status flags + NaN rows.
     for (std::size_t k = 0; k < N_inputs; ++k) {
-        const double v1 = val1[k];
-        const double v2 = val2[k];
-
-        // Convert input to the surface's (a, b) coordinates and the
-        // mass-basis h we'll return as a shortcut.
-        double a;                   // primary axis: always p
-        double b;                   // secondary axis: h_mass (PH surface) or T (PT surface)
-        double h_mass_input = NaN;  // only meaningful when is_HmassP / is_HmolarP
-        double T_input = NaN;       // only meaningful when is_PT
-        if (is_HmassP) {
-            h_mass_input = v1;
-            a = v2;
-            b = v1;
-        } else if (is_HmolarP) {
-            h_mass_input = v1 / M;
-            a = v2;
-            b = h_mass_input;
-        } else {
-            // is_PT
-            T_input = v2;
-            a = v1;
-            b = v2;
-        }
-
-        // Critical-patch routing: if the point lies in the configured
-        // bbox, defer to the patch source backend.  We still pay an
-        // update() per in-patch point on the patch source — that's the
-        // cost of being "truth" inside the patch zone — but we avoid
-        // touching our own cache.
-        const auto patch_key = is_HmolarP ? CoolProp::HmassP_INPUTS : input_pair;
-        if (critical_patch_.contains(patch_key, a, b)) {
-            try {
-                if (is_HmolarP) {
-                    patch_source_ref_()->update(CoolProp::HmassP_INPUTS, h_mass_input, a);
-                } else {
-                    patch_source_ref_()->update(input_pair, v1, v2);
-                }
-            } catch (const std::exception&) {
-                status_flags[k] = CoolProp::fast_evaluate_out_of_range;
-                fill_nan_row(k);
-                continue;
-            }
-            auto& src = *patch_source_;
-            bool patch_row_failed = false;
-            for (std::size_t o = 0; o < N_outputs; ++o) {
-                const auto prop = outputs[o];
-                double v = NaN;
-                try {
-                    switch (prop) {
-                        case CoolProp::iP:
-                            v = (is_PT ? v1 : v2);
-                            break;
-                        case CoolProp::iT:
-                            v = (is_PT ? v2 : src.keyed_output(CoolProp::iT));
-                            break;
-                        case CoolProp::iHmass:
-                            v = (is_HmassP ? v1 : src.keyed_output(CoolProp::iHmass));
-                            break;
-                        case CoolProp::iHmolar:
-                            v = (is_HmolarP ? v1 : src.keyed_output(CoolProp::iHmass) * M);
-                            break;
-                        case CoolProp::iDmolar:
-                            v = src.keyed_output(CoolProp::iDmass) / M;
-                            break;
-                        case CoolProp::iSmolar:
-                            v = src.keyed_output(CoolProp::iSmass) * M;
-                            break;
-                        case CoolProp::iUmolar:
-                            v = src.keyed_output(CoolProp::iUmass) * M;
-                            break;
-                        case CoolProp::iQ:
-                            // Single-phase by definition in the patch
-                            // zone — supercritical region surrounding the
-                            // critical point.  Mirror update()'s
-                            // convention of returning -1 outside the dome.
-                            v = -1.0;
-                            break;
-                        default:
-                            v = src.keyed_output(prop);
-                            break;
-                    }
-                } catch (const std::exception&) {
-                    v = NaN;
-                    patch_row_failed = true;
-                }
-                out_buffer[k * N_outputs + o] = v;
-            }
-            // If any per-output read failed, the row no longer satisfies
-            // the all-defined contract — NaN-fill the whole row and
-            // flag it, matching IF97Backend::fast_evaluate's
-            // fast_evaluate_internal_error semantics.
-            if (patch_row_failed) {
-                status_flags[k] = CoolProp::fast_evaluate_internal_error;
-                fill_nan_row(k);
-            } else {
-                status_flags[k] = CoolProp::fast_evaluate_ok;
-            }
+        PointEvaluation pt;
+        try {
+            pt = resolve_point_(input_pair, val1[k], val2[k]);
+        } catch (const std::exception&) {
+            status_flags[k] = CoolProp::fast_evaluate_internal_error;
+            fill_nan_row(k);
             continue;
         }
-
-        // Plain SVD-surface path: resolve once, evaluate per output.
-        const auto pt = surface->resolve(a, b);
-        if (pt.region_idx < 0) {
-            // Atlas miss.  For HmassP / HmolarP this usually means the
-            // (h, p) point is inside the saturation dome; for PT it
-            // means the point straddles the sat curve (Q ambiguous) or
-            // is genuinely out of range.  Try a Q-weighted blend via
-            // the SuperAncillary for the HmassP case; fall through to
-            // out-of-range otherwise.
-            bool dome_handled = false;
-            if (is_HmassP || is_HmolarP) {
-                // Resolve sat-line endpoints in molar units.  Prefer the
-                // source backend's SuperAncillary when available (HEOS,
-                // REFPROP); fall back to source->update(PQ_INPUTS, p, Q)
-                // otherwise (IF97 source has no SA but does support PQ
-                // via psat97 + region 4).
-                double T_sat = 0.0, hL_mol = 0.0, hV_mol = 0.0;
-                double rhoL_mol = 0.0, rhoV_mol = 0.0;
-                double sL_mol = 0.0, sV_mol = 0.0;
-                bool sat_endpoints_resolved = false;
-                bool have_rho_endpoints = false;
-                bool have_s_endpoints = false;
-                auto sa = superanc_();
-                if (sa) {
-                    try {
-                        T_sat = sa->get_T_from_p(a);
-                        hL_mol = sa->eval_sat(T_sat, 'H', 0);
-                        hV_mol = sa->eval_sat(T_sat, 'H', 1);
-                        sat_endpoints_resolved = true;
-                    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
-                    }
-                }
-                if (!sat_endpoints_resolved) {
-                    // Source-backend PQ fallback.  IF97 / REFPROP routes
-                    // come here.  We share the same patch_source-style
-                    // AbstractState across all dome probes in this batch
-                    // (lazily allocated) to avoid factory overhead.
-                    try {
-                        auto src = source_reference_();
-                        src->update(CoolProp::PQ_INPUTS, a, 0.0);
-                        T_sat = src->T();
-                        hL_mol = src->hmolar();
-                        rhoL_mol = src->rhomolar();
-                        sL_mol = src->smolar();
-                        src->update(CoolProp::PQ_INPUTS, a, 1.0);
-                        hV_mol = src->hmolar();
-                        rhoV_mol = src->rhomolar();
-                        sV_mol = src->smolar();
-                        sat_endpoints_resolved = true;
-                        have_rho_endpoints = true;
-                        have_s_endpoints = true;
-                    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
-                        // Above pcrit or source PQ failure — fall through to OOB.
-                    }
-                }
-                if (sat_endpoints_resolved) {
-                    const double hL = hL_mol / M;
-                    const double hV = hV_mol / M;
-                    if (h_mass_input >= hL && h_mass_input <= hV) {
-                        const double Q = (h_mass_input - hL) / (hV - hL);
-                        // Lazy sat-line endpoint pulls — only touch the
-                        // source's SuperAncillary (or its PQ path) for the
-                        // endpoints that the requested output set needs.
-                        double uL_mol = 0.0, uV_mol = 0.0;
-                        bool have_u = false;
-                        auto ensure_rho = [&] {
-                            if (have_rho_endpoints) return;
-                            rhoL_mol = sa->eval_sat(T_sat, 'D', 0);
-                            rhoV_mol = sa->eval_sat(T_sat, 'D', 1);
-                            have_rho_endpoints = true;
-                        };
-                        auto ensure_s = [&] {
-                            if (have_s_endpoints) return;
-                            sL_mol = sa->eval_sat(T_sat, 'S', 0);
-                            sV_mol = sa->eval_sat(T_sat, 'S', 1);
-                            have_s_endpoints = true;
-                        };
-                        auto ensure_u = [&] {
-                            if (have_u) return;
-                            ensure_rho();
-                            // u = h - p/rho recovers internal energy
-                            // without a SuperAncillary u-table (the SA
-                            // caloric build covers H and S but not U).
-                            uL_mol = hL_mol - a / rhoL_mol;
-                            uV_mol = hV_mol - a / rhoV_mol;
-                            have_u = true;
-                        };
-                        for (std::size_t o = 0; o < N_outputs; ++o) {
-                            const auto prop = outputs[o];
-                            double v = NaN;
-                            switch (prop) {
-                                case CoolProp::iP:
-                                    v = a;
-                                    break;
-                                case CoolProp::iT:
-                                    v = T_sat;
-                                    break;
-                                case CoolProp::iHmass:
-                                    v = h_mass_input;
-                                    break;
-                                case CoolProp::iHmolar:
-                                    v = (1.0 - Q) * hL_mol + Q * hV_mol;
-                                    break;
-                                case CoolProp::iDmass:
-                                case CoolProp::iDmolar: {
-                                    ensure_rho();
-                                    const double vL = 1.0 / rhoL_mol;
-                                    const double vV = 1.0 / rhoV_mol;
-                                    const double rho_molar = 1.0 / ((1.0 - Q) * vL + Q * vV);
-                                    v = (prop == CoolProp::iDmass) ? rho_molar * M : rho_molar;
-                                    break;
-                                }
-                                case CoolProp::iSmass:
-                                case CoolProp::iSmolar: {
-                                    ensure_s();
-                                    const double s_molar = (1.0 - Q) * sL_mol + Q * sV_mol;
-                                    v = (prop == CoolProp::iSmass) ? s_molar / M : s_molar;
-                                    break;
-                                }
-                                case CoolProp::iUmass:
-                                case CoolProp::iUmolar: {
-                                    ensure_u();
-                                    const double u_molar = (1.0 - Q) * uL_mol + Q * uV_mol;
-                                    v = (prop == CoolProp::iUmass) ? u_molar / M : u_molar;
-                                    break;
-                                }
-                                case CoolProp::iQ:
-                                    v = Q;
-                                    break;
-                                case CoolProp::ispeed_sound:
-                                case CoolProp::iviscosity:
-                                case CoolProp::iconductivity:
-                                    // No equilibrium bulk value inside the
-                                    // dome.  NaN — caller can detect via
-                                    // the explicit two-phase status that
-                                    // we set below if any of these were in
-                                    // the output set.
-                                    v = NaN;
-                                    break;
-                                default:
-                                    v = NaN;
-                                    break;
-                            }
-                            out_buffer[k * N_outputs + o] = v;
-                        }
-                        status_flags[k] = CoolProp::fast_evaluate_ok;
-                        dome_handled = true;
-                    }
-                }
-            }
-            if (!dome_handled) {
-                // For PT_INPUTS, an atlas miss CAN mean "T is exactly
-                // on the saturation curve" (ambiguous Q, can't pick a
-                // single-phase side without an explicit phase hint) —
-                // that's a different failure mode from "the (T, p)
-                // point is outside every region's bbox".  Distinguish
-                // by probing Tsat(p) when a SuperAncillary or source
-                // backend can answer.  If unavailable, default to
-                // out_of_range (the conservative choice).
-                int pt_status = CoolProp::fast_evaluate_out_of_range;
-                if (is_PT) {
-                    try {
-                        auto sa = superanc_();
-                        double T_sat_probe = std::numeric_limits<double>::quiet_NaN();
-                        if (sa) {
-                            T_sat_probe = sa->get_T_from_p(a);  // a == p for PT
-                        } else {
-                            auto src = source_reference_();
-                            src->update(CoolProp::PQ_INPUTS, a, 0.0);
-                            T_sat_probe = src->T();
-                        }
-                        constexpr double kSatEps = 3.3e-5;  // matches IF97Backend::set_phase
-                        if (std::isfinite(T_sat_probe) && std::abs(b - T_sat_probe) <= kSatEps * T_sat_probe) {
-                            pt_status = CoolProp::fast_evaluate_two_phase_disallowed;
-                        }
-                    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
-                        // No sat-line probe available — stick with OOB.
-                    }
-                }
-                status_flags[k] = pt_status;
-                fill_nan_row(k);
-            }
+        if (pt.kind == PointEvaluation::Kind::OutOfRange || pt.kind == PointEvaluation::Kind::TwoPhaseDisallowed
+            || pt.kind == PointEvaluation::Kind::Invalid || pt.kind == PointEvaluation::Kind::InternalError) {
+            status_flags[k] = pt.status;
+            fill_nan_row(k);
             continue;
         }
-
+        bool row_failed = false;
         for (std::size_t o = 0; o < N_outputs; ++o) {
-            const auto prop = outputs[o];
             double v = NaN;
-            switch (prop) {
-                // Caller-supplied inputs — no SVD eval.
-                case CoolProp::iP:
-                    v = (is_PT ? v1 : v2);
-                    break;
-                case CoolProp::iT:
-                    v = is_PT ? T_input : surface->eval_with_region(CoolProp::iT, pt.region_idx, pt.svd_x, pt.svd_y);
-                    break;
-                case CoolProp::iHmass:
-                    v = (is_HmassP || is_HmolarP) ? h_mass_input : surface->eval_with_region(CoolProp::iHmass, pt.region_idx, pt.svd_x, pt.svd_y);
-                    break;
-                case CoolProp::iHmolar:
-                    if (is_HmolarP) {
-                        v = v1;
-                    } else if (is_HmassP) {
-                        v = h_mass_input * M;
-                    } else {
-                        v = surface->eval_with_region(CoolProp::iHmass, pt.region_idx, pt.svd_x, pt.svd_y) * M;
-                    }
-                    break;
-                case CoolProp::iDmolar:
-                    v = surface->eval_with_region(CoolProp::iDmass, pt.region_idx, pt.svd_x, pt.svd_y) / M;
-                    break;
-                case CoolProp::iSmolar:
-                    v = surface->eval_with_region(CoolProp::iSmass, pt.region_idx, pt.svd_x, pt.svd_y) * M;
-                    break;
-                case CoolProp::iUmolar:
-                    v = surface->eval_with_region(CoolProp::iUmass, pt.region_idx, pt.svd_x, pt.svd_y) * M;
-                    break;
-                case CoolProp::iQ:
-                    // Single-phase by definition (atlas resolved to a
-                    // region, which excludes the dome).  Mirror the
-                    // -1 sentinel update() uses outside the dome.
-                    v = -1.0;
-                    break;
-                default:
-                    v = surface->eval_with_region(prop, pt.region_idx, pt.svd_x, pt.svd_y);
-                    break;
+            try {
+                v = evaluate_property_(pt, outputs[o]);
+            } catch (const NotImplementedError&) {
+                // Two-phase undefined property (speed_sound, viscosity,
+                // conductivity, cp, cv, Prandtl).  In-band NaN signals
+                // "no equilibrium value here"; status stays ok so the
+                // caller can still read the meaningful T / D / S / U
+                // / Q outputs from the same row.
+                v = NaN;
+            } catch (const std::exception&) {
+                v = NaN;
+                row_failed = true;
             }
             out_buffer[k * N_outputs + o] = v;
         }
-        status_flags[k] = CoolProp::fast_evaluate_ok;
+        if (row_failed) {
+            status_flags[k] = CoolProp::fast_evaluate_internal_error;
+            fill_nan_row(k);
+        } else {
+            status_flags[k] = pt.status;
+        }
     }
 }
 

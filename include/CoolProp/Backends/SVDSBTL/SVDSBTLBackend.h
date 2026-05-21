@@ -3,6 +3,7 @@
 
 #include <limits>
 #include <memory>
+#include <optional>
 #include <set>  // transitively needed by superancillary.h
 #include <string>
 #include <unordered_map>
@@ -125,24 +126,23 @@ class SVDSBTLBackend : public AbstractState
     void update(CoolProp::input_pairs input_pair, double value1, double value2) override;
 
     // Vectorized cache-bypassing batch evaluation — see
-    // AbstractState::fast_evaluate for the contract.  Mirrors update()'s
-    // routing (critical-patch bbox → patch_source_, otherwise SVD
-    // surface) but writes directly into the caller's out_buffer rather
-    // than touching the instance's update()-side state (_T / _p /
-    // _phase / active_point_ / active_surface_ / active_resolved_ /
-    // active_hmass_).  So back-to-back fast_evaluate calls can be
-    // interleaved with update() calls on the same instance without
-    // corrupting the most-recent update()'s state, BUT the patch
-    // routing IS stateful: it reuses the lazily-allocated patch_source_
-    // child AbstractState across all in-patch points in the batch.
-    // That makes fast_evaluate safe for single-threaded interleaving
-    // with update() but NOT thread-safe — two concurrent fast_evaluate
-    // calls on the same backend will race on patch_source_->update()
-    // for any point that falls inside the critical-patch bbox.  In-
-    // domain HmassP / HmolarP probes that fall inside the saturation
-    // dome are Q-blended in place; PT probes exactly on the sat curve
-    // and points outside every region NaN-fill with
-    // fast_evaluate_two_phase_disallowed or fast_evaluate_out_of_range.
+    // AbstractState::fast_evaluate for the contract.  Both update() and
+    // fast_evaluate() route through the same private resolve_point_()
+    // kernel; this entry point just loops over the input array, asks
+    // the kernel for a PointEvaluation per probe, then dispatches each
+    // requested output through evaluate_property_().  Writes directly
+    // into the caller's out_buffer instead of mutating active_eval_, so
+    // back-to-back fast_evaluate calls can be interleaved with update()
+    // on the same instance without corrupting the most-recent update()
+    // — BUT the patch routing is stateful (reuses the lazily-allocated
+    // patch_source_ child AbstractState across all in-patch points),
+    // which makes fast_evaluate safe for single-threaded interleaving
+    // with update() but NOT thread-safe against a concurrent
+    // fast_evaluate/update on the same backend.  HmassP / HmolarP
+    // probes inside the saturation dome are Q-blended in place; PT
+    // probes exactly on the sat curve NaN-fill with
+    // fast_evaluate_two_phase_disallowed; points outside every region
+    // NaN-fill with fast_evaluate_out_of_range.
     void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
                        const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size, int* status_flags,
                        std::size_t status_flags_size, CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) override;
@@ -204,11 +204,88 @@ class SVDSBTLBackend : public AbstractState
     // the set of input pairs registered in surfaces_.
     [[nodiscard]] std::vector<CoolProp::input_pairs> registered_input_pairs() const;
 
+   public:
+    // Self-contained per-point evaluation state — the shared currency
+    // between update() (caches the result on the instance) and
+    // fast_evaluate() (loops, holds it locally per probe).  Public so
+    // tests + future batch callers can inspect what resolve_point_()
+    // decided.
+    struct PointEvaluation
+    {
+        enum class Kind : std::uint8_t
+        {
+            Invalid,             // never assigned
+            SinglePhase,         // atlas resolved to a surface region
+            DomeBlend,           // HmassP / HmolarP landed inside the dome OR PQ/QT input
+            Patched,             // inside the critical-patch bbox; consult patch_source_
+            OutOfRange,          // outside every region's bbox
+            TwoPhaseDisallowed,  // PT exactly on sat curve (Q ambiguous)
+            InternalError,       // per-point evaluation failure
+        };
+
+        Kind kind = Kind::Invalid;
+        int status = CoolProp::fast_evaluate_internal_error;  // fast_evaluate_status code
+
+        // The input pair this point was resolved for + the raw inputs.
+        // Lets evaluate_property_() return the supplied input verbatim
+        // (no surface round-trip) when the caller asks for it.  v1 /
+        // v2 are always set after a valid resolve_point_ call.
+        CoolProp::input_pairs input_pair = CoolProp::INPUT_PAIR_INVALID;
+        double v1 = std::numeric_limits<double>::quiet_NaN();
+        double v2 = std::numeric_limits<double>::quiet_NaN();
+
+        // Universal physical coords resolved for this point.  Filled
+        // for SinglePhase / DomeBlend / Patched; the OOB and
+        // TwoPhaseDisallowed kinds leave them as nullopt because
+        // there's no defined physical state at the input.  For
+        // DomeBlend, T == T_sat and Q is in [0, 1].
+        std::optional<double> T;
+        std::optional<double> p;
+        std::optional<double> h_mass;
+        double Q = -1.0;  // -1 sentinel for single-phase, [0, 1] in dome
+
+        // SinglePhase / Patched routing.
+        const CoolProp::sbtl::SVDSurface* surface = nullptr;
+        CoolProp::sbtl::SVDSurface::ResolvedPoint resolved{};
+
+        // DomeBlend endpoints (molar basis to match SuperAncillary's
+        // native units; h_mass / T above is what calc_* / fast_evaluate
+        // return for the row).  Sat-line h endpoints are filled at
+        // resolve time (we need them to determine Q anyway); rho and
+        // s endpoints fill lazily on first request via
+        // ensure_dome_*_endpoints_().
+        std::optional<double> T_sat;
+        std::optional<double> hL_mol;
+        std::optional<double> hV_mol;
+        std::optional<double> rhoL_mol;
+        std::optional<double> rhoV_mol;
+        std::optional<double> sL_mol;
+        std::optional<double> sV_mol;
+    };
+
    private:
-    // Returns the prop's value at the active lookup point.  Throws
-    // CoolProp::ValueError if no update() has been called or the
-    // active surface doesn't expose `prop`.
-    CoolPropDbl lookup_(CoolProp::parameters prop);
+    // Resolve an (input_pair, v1, v2) triple into a PointEvaluation
+    // without mutating any backend state.  Both update() and
+    // fast_evaluate() call this — there's exactly one place where the
+    // input-pair dispatch, critical-patch routing, atlas resolve, and
+    // dome detection live.  Two-phase PQ_INPUTS / QT_INPUTS get the
+    // same DomeBlend treatment as HmassP-inside-dome — same kernel,
+    // same fields.
+    PointEvaluation resolve_point_(CoolProp::input_pairs ip, double v1, double v2);
+
+    // Evaluate one property against a resolved PointEvaluation.  Pure;
+    // touches only the const data inside `pt` (the surface pointer or
+    // the dome endpoints) plus the lazily-populated patch_source_ for
+    // Patched rows.  Returns NaN for properties undefined in the dome
+    // (speed_sound, cp, cv, viscosity, conductivity, Prandtl) when
+    // kind == DomeBlend.  Throws when a request can't be served at all
+    // (e.g. unsupported property on a surface that doesn't expose it).
+    [[nodiscard]] double evaluate_property_(PointEvaluation& pt, CoolProp::parameters prop);
+
+    // Lazy population of dome endpoint properties — only the ones the
+    // caller actually requests are pulled from SuperAncillary / source.
+    void ensure_dome_rho_endpoints_(PointEvaluation& pt);
+    void ensure_dome_s_endpoints_(PointEvaluation& pt);
 
     // Load <fluid>.<pair>.svd.bin.z from the default cache; if absent,
     // build via the matching preset and save it.  Inserts into surfaces_.
@@ -218,18 +295,6 @@ class SVDSBTLBackend : public AbstractState
     // first call).  Returns nullptr if no SuperAncillary ships with
     // this fluid -- two-phase queries then throw a clear error.
     std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> superanc_();
-
-    // Two-phase update for PQ_INPUTS / QT_INPUTS / dome-hit HmassP /
-    // dome-hit PT.  Caches the sat-line state (T_sat, p_sat, Q, plus
-    // sat-line endpoints rho_L/V, h_L/V, s_L/V, u_L/V on a molar basis)
-    // so the calc_* virtuals can produce Q-weighted properties without
-    // re-evaluating the superancillary.
-    void update_two_phase_(double T_sat, double p_sat, double Q);
-
-    // Per-property Q-weighted blend over the cached sat-line state.
-    // Density uses 1/(Q/rho_V + (1-Q)/rho_L) (specific-volume blend);
-    // h/s/u use the linear blend.
-    [[nodiscard]] CoolPropDbl two_phase_property_(CoolProp::parameters prop) const;
 
     std::string fluid_name_;
     std::string source_backend_;               // "HEOS" / "REFPROP" / "IF97"
@@ -259,40 +324,15 @@ class SVDSBTLBackend : public AbstractState
     // ResolvedPoint pointers below stay valid across map growth.
     std::unordered_map<int /*input_pairs as int*/, std::unique_ptr<CoolProp::sbtl::SVDSurface>> surfaces_;
 
-    // State recorded by the most recent update() call.
-    CoolProp::input_pairs active_pair_ = CoolProp::INPUT_PAIR_INVALID;
-    const CoolProp::sbtl::SVDSurface* active_surface_ = nullptr;
-    CoolProp::sbtl::SVDSurface::ResolvedPoint active_point_{};
-    bool active_resolved_ = false;
-
-    // Mass-basis inputs stashed by update().  Returned verbatim when
-    // the user asks for the property they just supplied (no SVD
-    // round-trip).  _T and _p live in AbstractState already.
-    double active_hmass_ = std::numeric_limits<double>::quiet_NaN();
+    // The most recent update()'s resolved point.  All calc_*() methods
+    // dispatch through evaluate_property_(active_eval_, ...).
+    PointEvaluation active_eval_;
 
     // Lazy-resolved SuperAncillary handle.  Resolved on first call to
     // superanc_(); cached for subsequent two-phase queries.  Stays
     // nullptr if the fluid ships without one.
     std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> superanc_cached_;
     bool superanc_resolved_ = false;  // distinguish "not tried yet" from "tried and got nullptr"
-
-    // Active two-phase state, populated by update_two_phase_().  All
-    // four endpoint properties are stored on a MOLAR basis so the
-    // Q-weighted blend math doesn't need to redo the unit conversion
-    // on every calc_*.
-    struct TwoPhaseState
-    {
-        bool active = false;
-        double rhoL_mol = 0.0;
-        double rhoV_mol = 0.0;
-        double hL_mol = 0.0;
-        double hV_mol = 0.0;
-        double sL_mol = 0.0;
-        double sV_mol = 0.0;
-        double uL_mol = 0.0;
-        double uV_mol = 0.0;
-    };
-    TwoPhaseState two_phase_{};
 
     // Critical-patch HEOS-fallback.  When an active query point lands
     // inside the configured bbox (in whatever the input pair's native
@@ -316,7 +356,8 @@ class SVDSBTLBackend : public AbstractState
     };
     CriticalPatch critical_patch_{};
     std::shared_ptr<CoolProp::AbstractState> patch_source_;  // lazy
-    bool active_in_patch_ = false;
+    // active_in_patch_ removed — the patch / non-patch routing now
+    // lives on active_eval_.kind (Patched vs SinglePhase/etc.).
 
     // Configure critical_patch_ from the validated options blob.
     // Called once at construction after surfaces_ are loaded.  When
