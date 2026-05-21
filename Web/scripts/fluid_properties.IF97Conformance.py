@@ -31,6 +31,20 @@ import random
 import time
 
 import CoolProp.CoolProp as CP
+from CoolProp import AbstractState
+
+# Map our short keys to the CoolProp parameter int IDs used by the
+# AbstractState.keyed_output() fast path.  Avoids the per-call string
+# lookup and PropsSI factory rebuild that PropsSI('key', ...) would do.
+_PARAM_KEY = {
+    'T': CP.iT,
+    'D': CP.iDmass,
+    'S': CP.iSmass,
+    'A': CP.ispeed_sound,
+    'V': CP.iviscosity,
+    'L': CP.iconductivity,
+    'H': CP.iHmass,
+}
 
 WEB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 OUT_PATH = os.path.join(WEB_DIR, 'fluid_properties', 'IF97_conformance.rst.in')
@@ -157,17 +171,44 @@ def _deviation(ref, test, kind):
 
 
 def _safe_propssi(key, h, p, backend):
+    """Legacy PropsSI helper.  Kept for the few places (timing pass,
+    backend availability probe) that genuinely want the high-level
+    string-keyed surface.  The hot conformance loop uses the
+    AbstractState fast path below instead — going through PropsSI
+    means a factory() rebuild per call, which for SVDSBTL is ~80 ms
+    and turned this script into a 2+ hour drag on the docs build."""
     try:
         return CP.PropsSI(key, 'H', h, 'P', p, backend)
     except Exception:
         return None
 
 
-def _safe_truth_h(T, p):
+def _factory(backend_str):
+    """Resolve the backend factory string (e.g. ``SVDSBTL&IF97::Water``)
+    to an AbstractState we keep alive for the whole sweep, paying the
+    surface-load cost ONCE instead of once per probe."""
+    if '::' in backend_str:
+        backend, fluid = backend_str.split('::', 1)
+    else:
+        backend, fluid = 'HEOS', backend_str
+    return AbstractState(backend, fluid)
+
+
+def _read_props_fast(state, h, p, prop_int_keys):
+    """update(HmassP, h, p) once, then read every key off the same
+    cached state in one shot.  Returns ``None`` when update fails so
+    the caller can skip the sample (matches the prior PropsSI semantics)."""
     try:
-        return CP.PropsSI('H', 'T', T, 'P', p, REFERENCE)
+        state.update(CP.HmassP_INPUTS, h, p)
     except Exception:
         return None
+    out = {}
+    for short_key, ip in prop_int_keys:
+        try:
+            out[short_key] = state.keyed_output(ip)
+        except Exception:
+            return None
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -176,14 +217,10 @@ def _safe_truth_h(T, p):
 
 def backend_available(factory_str):
     try:
-        CP.PropsSI('T', 'P', 1e5, 'Q', 0, factory_str)
+        _factory(factory_str)
         return True
     except Exception:
-        try:
-            CP.PropsSI('D', 'T', 500, 'P', 1e6, factory_str)
-            return True
-        except Exception:
-            return False
+        return False
 
 
 def run_conformance(backend):
@@ -201,6 +238,15 @@ def run_conformance(backend):
 
     prop_keys = [p[0] for p in PROPERTIES]
     kinds = {p[0]: p[3] for p in PROPERTIES}
+    prop_int_keys = [(k, _PARAM_KEY[k]) for k in prop_keys]
+
+    # Build BOTH AbstractStates once and reuse across all probes.  This
+    # is the entire perf delta — PropsSI rebuilds the AbstractState (and
+    # for SVDSBTL re-loads the cached SVDSurface, ~80 ms) on every call.
+    ref_state = _factory(REFERENCE)
+    test_state = _factory(backend)
+    # Truth state used to convert (T, p) -> h on the reference side.
+    truth_state = _factory(REFERENCE)
 
     for region, box in REGION_BOXES.items():
         T_lo, T_hi = box['T']
@@ -211,15 +257,18 @@ def run_conformance(backend):
             if classify_region(T, p_MPa) != region:
                 continue
             p_Pa = p_MPa * 1e6
-            h = _safe_truth_h(T, p_Pa)
-            if h is None or not math.isfinite(h):
+            try:
+                truth_state.update(CP.PT_INPUTS, p_Pa, T)
+                h = truth_state.hmass()
+            except Exception:
                 continue
-            # Truth values for all comparison properties.
-            ref_vals = {k: _safe_propssi(k, h, p_Pa, REFERENCE) for k in prop_keys}
-            if any(v is None for v in ref_vals.values()):
+            if not math.isfinite(h):
                 continue
-            test_vals = {k: _safe_propssi(k, h, p_Pa, backend) for k in prop_keys}
-            if any(v is None for v in test_vals.values()):
+            ref_vals = _read_props_fast(ref_state, h, p_Pa, prop_int_keys)
+            if ref_vals is None:
+                continue
+            test_vals = _read_props_fast(test_state, h, p_Pa, prop_int_keys)
+            if test_vals is None:
                 continue
             counts[region] += 1
             per_sample_devs = {}
@@ -320,6 +369,10 @@ def run_timing(backends, rng_seed=0xCAFE):
     T_arr = []
     p_arr = []
     region_of = []
+    # Same AbstractState-reuse trick as run_conformance: pay surface
+    # load once, reuse across all probes.
+    states = {b: _factory(b) for b in backends}
+    timing_int_keys = [_PARAM_KEY[p] for p in TIMING_PROPS]
     for region, box in REGION_BOXES.items():
         T_lo, T_hi = box['T']
         p_lo, p_hi = box['p']
@@ -335,9 +388,16 @@ def run_timing(backends, rng_seed=0xCAFE):
             p_Pa = p_MPa * 1e6
             ok = True
             for backend in backends:
-                for prop in TIMING_PROPS:
+                state = states[backend]
+                try:
+                    state.update(CP.PT_INPUTS, p_Pa, T)
+                except Exception:
+                    ok = False
+                if not ok:
+                    break
+                for ip in timing_int_keys:
                     try:
-                        v = CP.PropsSI(prop, 'T', T, 'P', p_Pa, backend)
+                        v = state.keyed_output(ip)
                     except Exception:
                         ok = False
                         break
@@ -362,12 +422,16 @@ def run_timing(backends, rng_seed=0xCAFE):
     timings = {}
     for backend in backends:
         timings[backend] = {}
+        state = _factory(backend)
         for prop in TIMING_PROPS:
+            ip = _PARAM_KEY[prop]
             for k in range(min(64, N)):  # warmup
-                CP.PropsSI(prop, 'T', T_arr[k], 'P', p_arr[k], backend)
+                state.update(CP.PT_INPUTS, p_arr[k], T_arr[k])
+                state.keyed_output(ip)
             t0 = time.perf_counter()
             for k in range(N):
-                CP.PropsSI(prop, 'T', T_arr[k], 'P', p_arr[k], backend)
+                state.update(CP.PT_INPUTS, p_arr[k], T_arr[k])
+                state.keyed_output(ip)
             t1 = time.perf_counter()
             timings[backend][prop] = (t1 - t0) / N * 1e9
     return timings

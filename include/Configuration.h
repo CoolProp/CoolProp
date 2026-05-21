@@ -77,6 +77,11 @@
     X(FLOAT_PUNCTUATION, "FLOAT_PUNCTUATION", ".", "The first character of this string will be used as the separator between the number fraction.")  \
     X(ENABLE_SUPERANCILLARIES, "ENABLE_SUPERANCILLARIES", true, "If true, the superancillary functions will be used for VLE of pure fluids")         \
     X(LIST_STRING_DELIMITER, "LIST_STRING_DELIMITER", ",", "The delimiter to be used when converting a list of strings to a string")                 \
+    X(ALLOW_SVDSBTL_IN_PROPSSI, "ALLOW_SVDSBTL_IN_PROPSSI", false,                                                                                   \
+      "If true, the SVDSBTL backend is usable through the high-level PropsSI interface.  By default it is rejected (mirroring the BICUBIC/TTSE "     \
+      "tabular backends) because PropsSI rebuilds the AbstractState on every call, and loading an SVDSurface from cache costs ~80 ms — over four " \
+      "orders of magnitude slower per call than the actual SVD eval.  For batched workloads use AbstractState directly and call update() in a "      \
+      "loop, or use fast_evaluate for a vectorized batch.")                                                                                          \
     X(TABULAR_NX, "TABULAR_NX", static_cast<int>(200),                                                                                               \
       "Number of x-axis grid points (T for PT table, h for PH table) for the BICUBIC and TTSE tabular backends. Increase for higher accuracy in "    \
       "regions with steep gradients (e.g. near the critical point). Memory and build cost scale as O(Nx*Ny). Tables auto-rebuild when changed.")     \

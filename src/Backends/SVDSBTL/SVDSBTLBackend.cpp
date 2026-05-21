@@ -16,6 +16,7 @@
 
 #include "AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#include "Configuration.h"
 #include "CoolProp/Hash.h"
 #include "CoolProp/SchemaValidation.h"
 #include "CoolProp/sbtl/SVDSurface.h"
@@ -117,6 +118,17 @@ SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name, const std::string&
         ensure_surface_(pair);
     }
     build_critical_patch_(options_canonical_);
+}
+
+bool SVDSBTLBackend::available_in_high_level() {
+    // Off by default — PropsSI rebuilds the AbstractState per call and
+    // loading an SVDSurface from .svd.bin.z costs ~80 ms per
+    // construction, vs ~5 us for the actual evaluation.  Throughput
+    // workloads should use AbstractState directly + update() / batched
+    // fast_evaluate.  Set ALLOW_SVDSBTL_IN_PROPSSI=true to opt back
+    // in (e.g. for one-off interactive queries where the constructor
+    // cost is irrelevant).
+    return get_config_bool(ALLOW_SVDSBTL_IN_PROPSSI);
 }
 
 bool SVDSBTLBackend::CriticalPatch::contains(::CoolProp::input_pairs pair, double a, double b) const noexcept {
