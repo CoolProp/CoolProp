@@ -802,7 +802,9 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
     auto is_surface_prop = [&](CoolProp::parameters prop) { return surface->contains_property(prop); };
     for (std::size_t o = 0; o < N_outputs; ++o) {
         switch (outputs[o]) {
-            // Always available shortcuts (no SVD eval needed).
+            // Always available shortcuts (no SVD eval needed) — either
+            // straight from the input pair or computed by Q-blend when
+            // the point lands in the dome.
             case CoolProp::iT:
             case CoolProp::iP:
             case CoolProp::iHmass:
@@ -810,6 +812,7 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
             case CoolProp::iDmolar:
             case CoolProp::iSmolar:
             case CoolProp::iUmolar:
+            case CoolProp::iQ:
                 break;
             default:
                 // Anything else has to be in the surface (mass-basis
@@ -915,13 +918,157 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
         // Plain SVD-surface path: resolve once, evaluate per output.
         const auto pt = surface->resolve(a, b);
         if (pt.region_idx < 0) {
-            // Atlas didn't find a region — either out of every region's
-            // AABB (genuinely out of range) or inside the saturation
-            // dome.  We can't distinguish here without an extra dome
-            // check, so report two-phase-disallowed which more
-            // accurately reflects the most common cause (dome hit).
-            status_flags[k] = CoolProp::fast_evaluate_two_phase_disallowed;
-            fill_nan_row(k);
+            // Atlas miss.  For HmassP / HmolarP this usually means the
+            // (h, p) point is inside the saturation dome; for PT it
+            // means the point straddles the sat curve (Q ambiguous) or
+            // is genuinely out of range.  Try a Q-weighted blend via
+            // the SuperAncillary for the HmassP case; fall through to
+            // out-of-range otherwise.
+            bool dome_handled = false;
+            if (is_HmassP || is_HmolarP) {
+                // Resolve sat-line endpoints in molar units.  Prefer the
+                // source backend's SuperAncillary when available (HEOS,
+                // REFPROP); fall back to source->update(PQ_INPUTS, p, Q)
+                // otherwise (IF97 source has no SA but does support PQ
+                // via psat97 + region 4).
+                double T_sat = 0.0, hL_mol = 0.0, hV_mol = 0.0;
+                double rhoL_mol = 0.0, rhoV_mol = 0.0;
+                double sL_mol = 0.0, sV_mol = 0.0;
+                bool sat_endpoints_resolved = false;
+                bool have_rho_endpoints = false;
+                bool have_s_endpoints = false;
+                auto sa = superanc_();
+                if (sa) {
+                    try {
+                        T_sat = sa->get_T_from_p(a);
+                        hL_mol = sa->eval_sat(T_sat, 'H', 0);
+                        hV_mol = sa->eval_sat(T_sat, 'H', 1);
+                        sat_endpoints_resolved = true;
+                    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+                    }
+                }
+                if (!sat_endpoints_resolved) {
+                    // Source-backend PQ fallback.  IF97 / REFPROP routes
+                    // come here.  We share the same patch_source-style
+                    // AbstractState across all dome probes in this batch
+                    // (lazily allocated) to avoid factory overhead.
+                    try {
+                        auto src = source_reference_();
+                        src->update(CoolProp::PQ_INPUTS, a, 0.0);
+                        T_sat = src->T();
+                        hL_mol = src->hmolar();
+                        rhoL_mol = src->rhomolar();
+                        sL_mol = src->smolar();
+                        src->update(CoolProp::PQ_INPUTS, a, 1.0);
+                        hV_mol = src->hmolar();
+                        rhoV_mol = src->rhomolar();
+                        sV_mol = src->smolar();
+                        sat_endpoints_resolved = true;
+                        have_rho_endpoints = true;
+                        have_s_endpoints = true;
+                    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+                        // Above pcrit or source PQ failure — fall through to OOB.
+                    }
+                }
+                if (sat_endpoints_resolved) {
+                    const double hL = hL_mol / M;
+                    const double hV = hV_mol / M;
+                    if (h_mass_input >= hL && h_mass_input <= hV) {
+                        const double Q = (h_mass_input - hL) / (hV - hL);
+                        // Lazy sat-line endpoint pulls — only touch the
+                        // source's SuperAncillary (or its PQ path) for the
+                        // endpoints that the requested output set needs.
+                        double uL_mol = 0.0, uV_mol = 0.0;
+                        bool have_u = false;
+                        auto ensure_rho = [&] {
+                            if (have_rho_endpoints) return;
+                            rhoL_mol = sa->eval_sat(T_sat, 'D', 0);
+                            rhoV_mol = sa->eval_sat(T_sat, 'D', 1);
+                            have_rho_endpoints = true;
+                        };
+                        auto ensure_s = [&] {
+                            if (have_s_endpoints) return;
+                            sL_mol = sa->eval_sat(T_sat, 'S', 0);
+                            sV_mol = sa->eval_sat(T_sat, 'S', 1);
+                            have_s_endpoints = true;
+                        };
+                        auto ensure_u = [&] {
+                            if (have_u) return;
+                            ensure_rho();
+                            // u = h - p/rho recovers internal energy
+                            // without a SuperAncillary u-table (the SA
+                            // caloric build covers H and S but not U).
+                            uL_mol = hL_mol - a / rhoL_mol;
+                            uV_mol = hV_mol - a / rhoV_mol;
+                            have_u = true;
+                        };
+                        for (std::size_t o = 0; o < N_outputs; ++o) {
+                            const auto prop = outputs[o];
+                            double v = NaN;
+                            switch (prop) {
+                                case CoolProp::iP:
+                                    v = a;
+                                    break;
+                                case CoolProp::iT:
+                                    v = T_sat;
+                                    break;
+                                case CoolProp::iHmass:
+                                    v = h_mass_input;
+                                    break;
+                                case CoolProp::iHmolar:
+                                    v = (1.0 - Q) * hL_mol + Q * hV_mol;
+                                    break;
+                                case CoolProp::iDmass:
+                                case CoolProp::iDmolar: {
+                                    ensure_rho();
+                                    const double vL = 1.0 / rhoL_mol;
+                                    const double vV = 1.0 / rhoV_mol;
+                                    const double rho_molar = 1.0 / ((1.0 - Q) * vL + Q * vV);
+                                    v = (prop == CoolProp::iDmass) ? rho_molar * M : rho_molar;
+                                    break;
+                                }
+                                case CoolProp::iSmass:
+                                case CoolProp::iSmolar: {
+                                    ensure_s();
+                                    const double s_molar = (1.0 - Q) * sL_mol + Q * sV_mol;
+                                    v = (prop == CoolProp::iSmass) ? s_molar / M : s_molar;
+                                    break;
+                                }
+                                case CoolProp::iUmass:
+                                case CoolProp::iUmolar: {
+                                    ensure_u();
+                                    const double u_molar = (1.0 - Q) * uL_mol + Q * uV_mol;
+                                    v = (prop == CoolProp::iUmass) ? u_molar / M : u_molar;
+                                    break;
+                                }
+                                case CoolProp::iQ:
+                                    v = Q;
+                                    break;
+                                case CoolProp::ispeed_sound:
+                                case CoolProp::iviscosity:
+                                case CoolProp::iconductivity:
+                                    // No equilibrium bulk value inside the
+                                    // dome.  NaN — caller can detect via
+                                    // the explicit two-phase status that
+                                    // we set below if any of these were in
+                                    // the output set.
+                                    v = NaN;
+                                    break;
+                                default:
+                                    v = NaN;
+                                    break;
+                            }
+                            out_buffer[k * N_outputs + o] = v;
+                        }
+                        status_flags[k] = CoolProp::fast_evaluate_ok;
+                        dome_handled = true;
+                    }
+                }
+            }
+            if (!dome_handled) {
+                status_flags[k] = CoolProp::fast_evaluate_out_of_range;
+                fill_nan_row(k);
+            }
             continue;
         }
 

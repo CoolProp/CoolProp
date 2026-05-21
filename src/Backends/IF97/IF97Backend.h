@@ -732,6 +732,7 @@ class IF97Backend : public AbstractState
                 case iviscosity:
                 case iconductivity:
                 case iPrandtl:
+                case iQ:
                     break;
                 default:
                     throw ValueError(
@@ -757,6 +758,9 @@ class IF97Backend : public AbstractState
             const double v2 = val2[k];
 
             double T_k, p_k;
+            const double hmass_k = is_HmassP ? v1 : (is_HmolarP ? (v1 / M) : 0.0);
+            bool dome_hit = false;
+            double T_sat_k = 0.0, Q_k = 0.0, hL_k = 0.0, hV_k = 0.0;
             if (is_PT) {
                 p_k = v1;
                 T_k = v2;
@@ -765,10 +769,37 @@ class IF97Backend : public AbstractState
                 // backward T_phmass to recover T. Both branches must produce
                 // a clean (T, p) for the forward evaluators below.
                 p_k = v2;
-                double hmass_k = is_HmolarP ? (v1 / M) : v1;
+                bool inverse_ok = false;
                 try {
                     T_k = IF97::T_phmass(p_k, hmass_k);
+                    inverse_ok = true;
                 } catch (const std::exception&) {
+                    // T_phmass throws for out-of-range inputs — fall
+                    // through to the dome probe + OOB classification.
+                }
+                // T_phmass returns Tsat for in-dome (h, p) inputs without
+                // throwing, so the dome check has to run independently of
+                // whether the inverse "succeeded".  Probing hL / hV at p
+                // and bracketing on h is the cleanest detector.
+                if (p_k > 0 && p_k <= IF97::Pcrit) {
+                    try {
+                        const double hL_probe = IF97::hliq_p(p_k);
+                        const double hV_probe = IF97::hvap_p(p_k);
+                        if (hmass_k >= hL_probe && hmass_k <= hV_probe) {
+                            T_sat_k = IF97::Tsat97(p_k);
+                            hL_k = hL_probe;
+                            hV_k = hV_probe;
+                            Q_k = (hmass_k - hL_k) / (hV_k - hL_k);
+                            dome_hit = true;
+                            T_k = T_sat_k;
+                            inverse_ok = true;
+                        }
+                    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+                        // Above pcrit or other IF97 envelope failure;
+                        // fall through to OOB.
+                    }
+                }
+                if (!inverse_ok) {
                     status_flags[k] = CoolProp::fast_evaluate_out_of_range;
                     fill_nan_row(k);
                     continue;
@@ -799,70 +830,156 @@ class IF97Backend : public AbstractState
             }
 
             bool eval_failed = false;
+            // Two-phase Q-blend cache (lazy fill — only touched if a
+            // property that needs sat-line endpoints is requested while
+            // dome_hit is true).
+            double rhoL_k = 0.0, rhoV_k = 0.0;
+            double sL_k = 0.0, sV_k = 0.0;
+            double uL_k = 0.0, uV_k = 0.0;
+            bool have_rho = false, have_s = false, have_u = false;
+            auto ensure_rho_sat = [&] {
+                if (have_rho) return;
+                rhoL_k = IF97::rholiq_p(p_k);
+                rhoV_k = IF97::rhovap_p(p_k);
+                have_rho = true;
+            };
+            auto ensure_s_sat = [&] {
+                if (have_s) return;
+                sL_k = IF97::sliq_p(p_k);
+                sV_k = IF97::svap_p(p_k);
+                have_s = true;
+            };
+            auto ensure_u_sat = [&] {
+                if (have_u) return;
+                uL_k = IF97::uliq_p(p_k);
+                uV_k = IF97::uvap_p(p_k);
+                have_u = true;
+            };
             for (std::size_t o = 0; o < N_outputs; ++o) {
                 const parameters out_key = outputs[o];
                 try {
                     double val;
-                    switch (out_key) {
-                        case iT:
-                            val = T_k;
-                            break;
-                        case iP:
-                            val = p_k;
-                            break;
-                        case iDmass:
-                            val = IF97::rhomass_Tp(T_k, p_k);
-                            break;
-                        case iDmolar:
-                            val = IF97::rhomass_Tp(T_k, p_k) / M;
-                            break;
-                        case iHmass:
-                            val = IF97::hmass_Tp(T_k, p_k);
-                            break;
-                        case iHmolar:
-                            val = IF97::hmass_Tp(T_k, p_k) * M;
-                            break;
-                        case iSmass:
-                            val = IF97::smass_Tp(T_k, p_k);
-                            break;
-                        case iSmolar:
-                            val = IF97::smass_Tp(T_k, p_k) * M;
-                            break;
-                        case iUmass:
-                            val = IF97::umass_Tp(T_k, p_k);
-                            break;
-                        case iUmolar:
-                            val = IF97::umass_Tp(T_k, p_k) * M;
-                            break;
-                        case iCpmass:
-                            val = IF97::cpmass_Tp(T_k, p_k);
-                            break;
-                        case iCpmolar:
-                            val = IF97::cpmass_Tp(T_k, p_k) * M;
-                            break;
-                        case iCvmass:
-                            val = IF97::cvmass_Tp(T_k, p_k);
-                            break;
-                        case iCvmolar:
-                            val = IF97::cvmass_Tp(T_k, p_k) * M;
-                            break;
-                        case ispeed_sound:
-                            val = IF97::speed_sound_Tp(T_k, p_k);
-                            break;
-                        case iviscosity:
-                            val = IF97::visc_Tp(T_k, p_k);
-                            break;
-                        case iconductivity:
-                            val = IF97::tcond_Tp(T_k, p_k);
-                            break;
-                        case iPrandtl:
-                            val = IF97::prandtl_Tp(T_k, p_k);
-                            break;
-                        default:
-                            val = NaN;
-                            eval_failed = true;
-                            break;
-                    }
+                    if (dome_hit) {
+                        // Q-weighted blend for two-phase points.  Specific
+                        // volume blends linearly (density is its reciprocal);
+                        // h/s/u blend linearly directly.  Speed of sound,
+                        // cp, cv, viscosity, conductivity have no
+                        // equilibrium bulk value in the dome — set NaN.
+                        switch (out_key) {
+                            case iT:
+                                val = T_sat_k;
+                                break;
+                            case iP:
+                                val = p_k;
+                                break;
+                            case iHmass:
+                                val = hmass_k;
+                                break;
+                            case iHmolar:
+                                val = hmass_k * M;
+                                break;
+                            case iDmass:
+                            case iDmolar: {
+                                ensure_rho_sat();
+                                const double vL = 1.0 / rhoL_k;
+                                const double vV = 1.0 / rhoV_k;
+                                const double rho_mass = 1.0 / ((1.0 - Q_k) * vL + Q_k * vV);
+                                val = (out_key == iDmass) ? rho_mass : rho_mass / M;
+                                break;
+                            }
+                            case iSmass:
+                            case iSmolar: {
+                                ensure_s_sat();
+                                const double s_mass = (1.0 - Q_k) * sL_k + Q_k * sV_k;
+                                val = (out_key == iSmass) ? s_mass : s_mass * M;
+                                break;
+                            }
+                            case iUmass:
+                            case iUmolar: {
+                                ensure_u_sat();
+                                const double u_mass = (1.0 - Q_k) * uL_k + Q_k * uV_k;
+                                val = (out_key == iUmass) ? u_mass : u_mass * M;
+                                break;
+                            }
+                            case iQ:
+                                val = Q_k;
+                                break;
+                            case iCpmass:
+                            case iCpmolar:
+                            case iCvmass:
+                            case iCvmolar:
+                            case ispeed_sound:
+                            case iviscosity:
+                            case iconductivity:
+                            case iPrandtl:
+                                val = NaN;
+                                break;
+                            default:
+                                val = NaN;
+                                eval_failed = true;
+                                break;
+                        }
+                    } else
+                        switch (out_key) {
+                            case iT:
+                                val = T_k;
+                                break;
+                            case iP:
+                                val = p_k;
+                                break;
+                            case iDmass:
+                                val = IF97::rhomass_Tp(T_k, p_k);
+                                break;
+                            case iDmolar:
+                                val = IF97::rhomass_Tp(T_k, p_k) / M;
+                                break;
+                            case iHmass:
+                                val = IF97::hmass_Tp(T_k, p_k);
+                                break;
+                            case iHmolar:
+                                val = IF97::hmass_Tp(T_k, p_k) * M;
+                                break;
+                            case iSmass:
+                                val = IF97::smass_Tp(T_k, p_k);
+                                break;
+                            case iSmolar:
+                                val = IF97::smass_Tp(T_k, p_k) * M;
+                                break;
+                            case iUmass:
+                                val = IF97::umass_Tp(T_k, p_k);
+                                break;
+                            case iUmolar:
+                                val = IF97::umass_Tp(T_k, p_k) * M;
+                                break;
+                            case iCpmass:
+                                val = IF97::cpmass_Tp(T_k, p_k);
+                                break;
+                            case iCpmolar:
+                                val = IF97::cpmass_Tp(T_k, p_k) * M;
+                                break;
+                            case iCvmass:
+                                val = IF97::cvmass_Tp(T_k, p_k);
+                                break;
+                            case iCvmolar:
+                                val = IF97::cvmass_Tp(T_k, p_k) * M;
+                                break;
+                            case ispeed_sound:
+                                val = IF97::speed_sound_Tp(T_k, p_k);
+                                break;
+                            case iviscosity:
+                                val = IF97::visc_Tp(T_k, p_k);
+                                break;
+                            case iconductivity:
+                                val = IF97::tcond_Tp(T_k, p_k);
+                                break;
+                            case iPrandtl:
+                                val = IF97::prandtl_Tp(T_k, p_k);
+                                break;
+                            default:
+                                val = NaN;
+                                eval_failed = true;
+                                break;
+                        }
                     out_buffer[k * N_outputs + o] = val;
                 } catch (const std::exception&) {
                     eval_failed = true;

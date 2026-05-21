@@ -476,6 +476,49 @@ TEST_CASE("SVDSBTL fast_evaluate matches per-call update() bit-for-bit", "[SVDSB
     }
 }
 
+TEST_CASE("SVDSBTL fast_evaluate Q-blends inside the saturation dome", "[SVDSBTL][fast_evaluate][twophase][water][slow]") {
+    // Probe inside the dome at three subcritical pressures, vary Q.
+    // fast_evaluate must (a) report fast_evaluate_ok, (b) recover Q,
+    // and (c) blend mass-basis properties linearly between the
+    // sat-line endpoints.
+    auto ref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    const std::vector<double> ps = {1.0e5, 1.0e6, 5.0e6};
+    const std::vector<double> qs = {0.05, 0.25, 0.5, 0.75, 0.95};
+    std::vector<double> h_v, p_v, q_v;
+    for (double p : ps) {
+        ref->update(CoolProp::PQ_INPUTS, p, 0.0);
+        const double hL = ref->hmass();
+        ref->update(CoolProp::PQ_INPUTS, p, 1.0);
+        const double hV = ref->hmass();
+        for (double q : qs) {
+            h_v.push_back(hL + q * (hV - hL));
+            p_v.push_back(p);
+            q_v.push_back(q);
+        }
+    }
+    const std::size_t N = h_v.size();
+    const std::vector<CoolProp::parameters> outputs = {CoolProp::iT, CoolProp::iDmass, CoolProp::iSmass, CoolProp::iUmass, CoolProp::iQ};
+    std::vector<double> out(N * outputs.size(), std::nan(""));
+    std::vector<int> status(N, -1);
+    svd->fast_evaluate(CoolProp::HmassP_INPUTS, h_v.data(), p_v.data(), N, outputs.data(), outputs.size(), out.data(), out.size(), status.data(),
+                       status.size());
+    for (std::size_t k = 0; k < N; ++k) {
+        INFO("k=" << k << "  p=" << p_v[k] << "  h=" << h_v[k]);
+        REQUIRE(status[k] == CoolProp::fast_evaluate_ok);
+        // Q recovered to within a few ULP of the lever-rule construction;
+        // any residual is the HEOS sat-line round-trip noise (~1e-5).
+        REQUIRE(out[k * outputs.size() + 4] == Approx(q_v[k]).epsilon(1e-4));
+        // Q-blend matches update_two_phase_() bit-identically — both paths
+        // use the same SuperAncillary endpoints.
+        svd->update(CoolProp::HmassP_INPUTS, h_v[k], p_v[k]);
+        REQUIRE(out[k * outputs.size() + 0] == Approx(svd->T()).epsilon(1e-12));
+        REQUIRE(out[k * outputs.size() + 1] == Approx(svd->rhomass()).epsilon(1e-12));
+        REQUIRE(out[k * outputs.size() + 2] == Approx(svd->smass()).epsilon(1e-12));
+        REQUIRE(out[k * outputs.size() + 3] == Approx(svd->umass()).epsilon(1e-12));
+    }
+}
+
 TEST_CASE("SVDSBTL fast_evaluate rejects unsupported inputs cleanly", "[SVDSBTL][fast_evaluate][reject]") {
     auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&IF97", "Water"));
     const std::vector<double> v1 = {1.0};
