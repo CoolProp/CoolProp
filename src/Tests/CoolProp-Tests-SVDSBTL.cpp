@@ -538,6 +538,52 @@ TEST_CASE("SVDSBTL fast_evaluate returns Q = -1 on single-phase rows", "[SVDSBTL
     }
 }
 
+TEST_CASE("SVDSBTL fast_evaluate routes through patch_source_ inside the critical-patch bbox", "[SVDSBTL][fast_evaluate][water][slow]") {
+    // The default auto-calibrated patch bbox for Water sits at
+    // [0.95, 1.05] * T_c x [0.75, 1.15] * p_c.  Pick a state well
+    // inside that box and assert fast_evaluate's per-output values
+    // match what patch_source_->update + property reads return on
+    // the same input.  This exercises the Patched-kind branch in
+    // resolve_point_ + evaluate_property_ that nothing else in the
+    // suite hits.
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    auto ref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double T_c = ref->T_critical();
+    const double p_c = ref->p_critical();
+    // 99% T_c, 95% p_c — comfortably inside [0.95, 1.05] x [0.75, 1.15].
+    const double T_probe = 0.99 * T_c;
+    const double p_probe = 0.95 * p_c;
+    // Get h(p, T) from HEOS so we can route the probe through both
+    // PT_INPUTS (direct) and HmassP_INPUTS (which exercises the same
+    // bbox via the (p, h) projection).
+    ref->update(CoolProp::PT_INPUTS, p_probe, T_probe);
+    const double h_probe = ref->hmass();
+    for (const auto& routing : std::vector<std::pair<CoolProp::input_pairs, std::pair<double, double>>>{
+           {CoolProp::PT_INPUTS, {p_probe, T_probe}},
+           {CoolProp::HmassP_INPUTS, {h_probe, p_probe}},
+         }) {
+        const double v1 = routing.second.first;
+        const double v2 = routing.second.second;
+        const std::vector<CoolProp::parameters> outputs = {CoolProp::iT, CoolProp::iDmass, CoolProp::iSmass, CoolProp::iHmass, CoolProp::iQ};
+        std::vector<double> out(outputs.size(), std::nan(""));
+        std::vector<int> status(1, -1);
+        svd->fast_evaluate(routing.first, &v1, &v2, 1, outputs.data(), outputs.size(), out.data(), out.size(), status.data(), status.size());
+        REQUIRE(status[0] == CoolProp::fast_evaluate_ok);
+        // Bit-identical to update() + property reads — both code paths
+        // route through the same patch_source_ AbstractState.
+        svd->update(routing.first, v1, v2);
+        INFO("input_pair=" << routing.first << " v1=" << v1 << " v2=" << v2);
+        REQUIRE(out[0] == svd->T());
+        REQUIRE(out[1] == svd->rhomass());
+        REQUIRE(out[2] == svd->smass());
+        REQUIRE(out[3] == svd->hmass());
+        // iQ on a single-phase supercritical probe should mirror the
+        // patch_source_'s answer (typically iphase_supercritical, Q
+        // returned as a sentinel-shaped finite value from HEOS).
+        REQUIRE(out[4] == svd->Q());
+    }
+}
+
 TEST_CASE("SVDSBTL fast_evaluate flags out-of-range PT misses cleanly", "[SVDSBTL][fast_evaluate][water]") {
     auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     // PT below the IF97 triple-point floor — genuinely outside every

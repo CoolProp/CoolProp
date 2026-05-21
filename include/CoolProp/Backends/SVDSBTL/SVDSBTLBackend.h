@@ -120,9 +120,14 @@ class SVDSBTLBackend : public AbstractState
         return mole_fractions_;
     }
 
-    // Main update dispatcher.  Routes by input_pair to the matching
-    // surface and resolves the atlas-dispatch ResolvedPoint once so
-    // subsequent calc_* calls are pure SVD evaluations.
+    // Main update dispatcher.  Hands off to resolve_point_(), stores
+    // the resulting PointEvaluation as active_eval_, and copies the
+    // legacy AbstractState slots (_T / _p / _Q / _phase) for back-
+    // compat readers.  Subsequent calc_*() calls dispatch through
+    // evaluate_property_(active_eval_, ...) — which in the SinglePhase
+    // case is a single eval_with_region per output, in the DomeBlend
+    // case is a lever-rule blend with lazy sat-line endpoint fills,
+    // and in the Patched case forwards to patch_source_.
     void update(CoolProp::input_pairs input_pair, double value1, double value2) override;
 
     // Vectorized cache-bypassing batch evaluation — see
@@ -131,25 +136,34 @@ class SVDSBTLBackend : public AbstractState
     // kernel; this entry point just loops over the input array, asks
     // the kernel for a PointEvaluation per probe, then dispatches each
     // requested output through evaluate_property_().  Writes directly
-    // into the caller's out_buffer instead of mutating active_eval_, so
-    // back-to-back fast_evaluate calls can be interleaved with update()
-    // on the same instance without corrupting the most-recent update()
-    // — BUT the patch routing is stateful (reuses the lazily-allocated
-    // patch_source_ child AbstractState across all in-patch points),
-    // which makes fast_evaluate safe for single-threaded interleaving
-    // with update() but NOT thread-safe against a concurrent
-    // fast_evaluate/update on the same backend.  HmassP / HmolarP
-    // probes inside the saturation dome are Q-blended in place; PT
-    // probes exactly on the sat curve NaN-fill with
-    // fast_evaluate_two_phase_disallowed; points outside every region
-    // NaN-fill with fast_evaluate_out_of_range.
+    // into the caller's out_buffer instead of mutating active_eval_.
+    //
+    // **Thread safety / interleaving:** The backend is not thread-safe
+    // — two concurrent calls (any combination of update / fast_evaluate
+    // / property reads) on the same instance can corrupt each other's
+    // state.  Single-threaded back-to-back fast_evaluate calls and
+    // single-threaded fast_evaluate interleaved with update() are
+    // **only** safe when no probe in the batch falls inside the
+    // critical-patch bbox.  Patched probes re-update the lazily
+    // allocated patch_source_ child AbstractState in place, which
+    // means a sequence like `update(state A); fast_evaluate(...batch
+    // containing a Patched probe B...); state->T()` returns T from B
+    // rather than A.  In practice the critical-patch bbox is small
+    // (~5 % of T_c × ~30 % of p_c by default) so the corruption is
+    // local to true near-critical workloads.
+    //
+    // HmassP / HmolarP probes inside the saturation dome are
+    // Q-blended in place; PT probes exactly on the sat curve NaN-fill
+    // with fast_evaluate_two_phase_disallowed; points outside every
+    // region NaN-fill with fast_evaluate_out_of_range.
     void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
                        const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size, int* status_flags,
                        std::size_t status_flags_size, CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) override;
 
-    // Property accessors.  Each routes through lookup_(prop), which
-    // honours the inputs the user supplied (no SVD round-trip for
-    // values the user just gave us).
+    // Property accessors.  All route through
+    // evaluate_property_(active_eval_, ...), which honours the
+    // inputs the user supplied (no SVD round-trip for values the
+    // user just gave us — h on HmassP, T on PT, etc.).
     CoolPropDbl calc_rhomass() override;
     CoolPropDbl calc_hmass() override;
     CoolPropDbl calc_smass() override;

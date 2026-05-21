@@ -607,9 +607,12 @@ double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::paramet
     // we only short-circuit when the value was either supplied by the
     // input pair (PT case), set by the dome blend (T = T_sat), or
     // pulled from patch_source_->T() / ->p() in resolve_point_.
-    if (prop == CoolProp::iQ) {
-        return pt.Q;
-    }
+    //
+    // iQ is *not* short-circuited at top level — Patched probes
+    // delegate to patch_source_'s Q (which may itself be two-phase
+    // near the bbox edge), and OOB / TwoPhaseDisallowed / Invalid
+    // kinds return NaN through the kind switch.  Only SinglePhase
+    // and DomeBlend use the pt.Q default / blend value.
     if (prop == CoolProp::iP && pt.p) {
         return *pt.p;
     }
@@ -620,11 +623,20 @@ double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::paramet
         return *pt.h_mass;
     }
     if (prop == CoolProp::iHmolar && pt.h_mass) {
+        // pt.h_mass is the single source of truth: PQ/QT and HmassP-
+        // in-dome both populate it from the lever rule at resolve
+        // time, so this also handles the DomeBlend case correctly.
         return *pt.h_mass * M;
     }
 
     switch (pt.kind) {
         case PointEvaluation::Kind::SinglePhase: {
+            // Single-phase by construction (atlas resolved to a
+            // region, which excludes the dome).  Mirror the -1
+            // sentinel update()'s legacy contract uses for iQ.
+            if (prop == CoolProp::iQ) {
+                return -1.0;
+            }
             // Map molar variants to the mass-basis property the surface
             // tabulates, then scale.
             CoolProp::parameters surface_prop = prop;
@@ -661,6 +673,8 @@ double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::paramet
         case PointEvaluation::Kind::DomeBlend: {
             const double Q = pt.Q;
             switch (prop) {
+                case CoolProp::iQ:
+                    return Q;
                 case CoolProp::iDmass:
                 case CoolProp::iDmolar: {
                     ensure_dome_rho_endpoints_(pt);
@@ -684,8 +698,9 @@ double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::paramet
                     const double u_molar = (1.0 - Q) * uL_mol + Q * uV_mol;
                     return (prop == CoolProp::iUmass) ? u_molar / M : u_molar;
                 }
-                case CoolProp::iHmolar:
-                    return (1.0 - Q) * *pt.hL_mol + Q * *pt.hV_mol;
+                // iHmass / iHmolar are served by the lever-rule short-circuit
+                // above (pt.h_mass is populated in resolve_point_); no
+                // duplicate arms here.
                 case CoolProp::ispeed_sound:
                     throw NotImplementedError("SVDSBTL backend: speed_sound is not defined in the two-phase region");
                 case CoolProp::iviscosity:
@@ -698,17 +713,12 @@ double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::paramet
             }
         }
         case PointEvaluation::Kind::Patched: {
-            auto& src = *patch_source_;
-            switch (prop) {
-                case CoolProp::iDmolar:
-                    return src.keyed_output(CoolProp::iDmass) / M;
-                case CoolProp::iSmolar:
-                    return src.keyed_output(CoolProp::iSmass) * M;
-                case CoolProp::iUmolar:
-                    return src.keyed_output(CoolProp::iUmass) * M;
-                default:
-                    return src.keyed_output(prop);
-            }
+            // Inside the critical-patch bbox the source backend owns
+            // every answer — delegate without trying to second-guess
+            // it via mass-basis round-trips.  iQ in particular can be
+            // genuinely two-phase near the bbox edge if the patch was
+            // sized to include sat-curve excursions.
+            return patch_source_->keyed_output(prop);
         }
         case PointEvaluation::Kind::OutOfRange:
         case PointEvaluation::Kind::TwoPhaseDisallowed:
@@ -729,16 +739,43 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
     // class still see consistent values.
     if (active_eval_.T) _T = *active_eval_.T;
     if (active_eval_.p) _p = *active_eval_.p;
-    if (active_eval_.kind == PointEvaluation::Kind::DomeBlend) {
-        _Q = active_eval_.Q;
-        _phase = iphase_twophase;
-    } else if (active_eval_.kind == PointEvaluation::Kind::OutOfRange
-               && (input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS)) {
-        // Legacy back-compat: when an HmassP probe misses everything
-        // (above critical pressure, etc.) we used to tag iphase_twophase
-        // as a best-effort label.  Preserve that to avoid surprising
-        // callers that check phase() in this corner case.
-        _phase = iphase_twophase;
+    // _Q is populated for every kind that has a well-defined Q so
+    // legacy callers reading state->Q() see a value consistent with
+    // what fast_evaluate(iQ) would return.  SinglePhase gets the -1
+    // sentinel (matches IF97Backend::update()); DomeBlend gets the
+    // lever-rule fraction; Patched delegates to the source backend
+    // (which can be two-phase if the bbox extends across the sat
+    // curve); OOB / TwoPhaseDisallowed / Invalid leave _Q untouched
+    // (clear() set it to -_HUGE) since there's no defined value.
+    switch (active_eval_.kind) {
+        case PointEvaluation::Kind::SinglePhase:
+            _Q = -1.0;
+            break;
+        case PointEvaluation::Kind::DomeBlend:
+            _Q = active_eval_.Q;
+            _phase = iphase_twophase;
+            break;
+        case PointEvaluation::Kind::Patched:
+            try {
+                _Q = patch_source_->keyed_output(CoolProp::iQ);
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+                _Q = -1.0;
+            }
+            break;
+        case PointEvaluation::Kind::OutOfRange:
+            // Legacy back-compat: when an HmassP probe misses
+            // everything (above critical pressure, etc.) we used to
+            // tag iphase_twophase as a best-effort label.  Preserve
+            // that to avoid surprising callers that check phase()
+            // in this corner case.
+            if (input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS) {
+                _phase = iphase_twophase;
+            }
+            break;
+        case PointEvaluation::Kind::TwoPhaseDisallowed:
+        case PointEvaluation::Kind::Invalid:
+        case PointEvaluation::Kind::InternalError:
+            break;
     }
 }
 
@@ -838,16 +875,15 @@ CoolPropDbl SVDSBTLBackend::calc_pmax() {
 // Per-point outcome:
 //   - in-domain single-phase  → resolve + N_outputs evaluations + ok
 //   - inside critical-patch   → patch_source_->update() + property reads
-//   - out of every region     → NaN row + fast_evaluate_out_of_range
-//   - two-phase / dome hit    → NaN row + fast_evaluate_two_phase_disallowed
+//   - HmassP / HmolarP in dome → Q-weighted lever-rule blend through
+//                                 resolve_point_ + evaluate_property_
+//   - PT exactly on sat curve  → NaN row + fast_evaluate_two_phase_disallowed
+//   - out of every region      → NaN row + fast_evaluate_out_of_range
 //
-// Note that two-phase points are NOT routed through update_two_phase_'s
-// Q-weighted blend here — fast_evaluate's contract explicitly states
-// it doesn't do flash refinement; callers wanting dome behaviour use
-// update() instead.  In-patch points DO get routed through the patch
-// source (an AbstractState::update() call per point), since omitting
-// the critical-patch routing would silently degrade accuracy at points
-// the build was explicitly configured to handle.
+// In-patch points get the same patch_source_->update() routing as
+// update() does — omitting the critical-patch handoff would silently
+// degrade accuracy at the states the build was explicitly configured
+// to cover.
 void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
                                    const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size,
                                    int* status_flags, std::size_t status_flags_size, CoolProp::phases /*imposed_phase*/) {
