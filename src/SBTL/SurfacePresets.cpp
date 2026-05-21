@@ -99,33 +99,6 @@ double if97_T_B23_K(double p_Pa) {
 // when the source backend is IF97 (the kink is intrinsic to IF97's
 // piecewise EOS; HEOS source has no such internal boundary).  Valid
 // only for p ∈ [16.529 MPa, 100 MPa] — caller must clamp.
-// Build h = h_IF97(623.15 K, p) along the IF97 R1/R3 isotherm.  Used to
-// split SUPER_R3 (above pcrit, below p_B23) into a R1-territory sub-
-// region (T < 623.15 K, compressed-liquid supercritical) and a R3-
-// proper sub-region (T >= 623.15 K, dense supercritical).  Same
-// pattern as build_h_B23_curve but on the T isotherm instead of the
-// p_B23(T) curve.  Valid for p > p_sat(623.15) = 16.529 MPa.
-std::unique_ptr<region::CubicSplineCurve> build_h_R1R3_curve(::CoolProp::AbstractState& heos, double p_lo, double p_hi) {
-    constexpr double kT_R1R3 = 623.15;
-    constexpr double kP_R1R3_lo_MPa = 16.529;
-    const double p_lo_clamped = std::max(p_lo, kP_R1R3_lo_MPa * 1.0e6);
-    if (!(p_lo_clamped < p_hi)) {
-        throw std::invalid_argument("build_h_R1R3_curve: p range does not overlap IF97 R1/R3 isotherm's validity (p > 16.529 MPa)");
-    }
-    constexpr std::size_t n_knots = 64;
-    std::vector<double> p_knots(n_knots);
-    std::vector<double> h_knots(n_knots);
-    const double log_p_lo = std::log(p_lo_clamped);
-    const double log_p_hi = std::log(p_hi);
-    for (std::size_t k = 0; k < n_knots; ++k) {
-        const double p = std::exp(log_p_lo + static_cast<double>(k) * (log_p_hi - log_p_lo) / static_cast<double>(n_knots - 1));
-        heos.update(::CoolProp::PT_INPUTS, p, kT_R1R3);
-        p_knots[k] = p;
-        h_knots[k] = heos.hmass();
-    }
-    return region::CubicSplineCurve::build(std::move(p_knots), std::move(h_knots));
-}
-
 std::unique_ptr<region::CubicSplineCurve> build_h_B23_curve(::CoolProp::AbstractState& heos, double p_lo, double p_hi) {
     constexpr double kP_B23_lo_MPa = 16.529;
     constexpr double kP_B23_hi_MPa = 100.0;
@@ -215,26 +188,10 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     if (source_is_if97 && p_min_sup < kP_B23_hi) {
         // p range where the kink applies; clamped at the B23 upper bound.
         const double p_split_hi = std::min(p_max_sup, kP_B23_hi);
-        // SUPER_R1_super: IF97 R1 territory at p > pcrit, h ∈ [h_floor(p),
-        // h_IF97(623.15 K, p)).  Separating R1 from R3 in this slab
-        // (foi.9.9) gives the R1-side compressed-liquid SVD its own η
-        // normalization — the previous combined SUPER_R3 region had
-        // R1+R3 sharing modes, and R1 conformance suffered (post-foi.9.5
-        // R1 worst v 0.164%).  Subcritical-p R1 (the LIQUID region)
-        // hits 0.008% max v with the same physics; this split brings
-        // SUPER_R3's R1 territory to that level.
+        // SUPER_R3: low-h side of the IF97 R2/R3 kink, p ∈ [p_min_sup, p_split_hi].
         {
             auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_split_hi);
             auto lo = build_h_isotherm_floor(heos, p_min_sup, p_split_hi, T_min_eos);
-            auto hi = build_h_R1R3_curve(heos, p_min_sup, p_split_hi);
-            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
-        }
-        // SUPER_R3_proper: IF97 R3 territory at p > pcrit, h ∈ [h_R1R3(p),
-        // h_B23(p)).  Only the (T, p, h) region where IF97 actually
-        // evaluates R3.
-        {
-            auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_split_hi);
-            auto lo = build_h_R1R3_curve(heos, p_min_sup, p_split_hi);
             auto hi = build_h_B23_curve(heos, p_min_sup, p_split_hi);
             spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
         }
