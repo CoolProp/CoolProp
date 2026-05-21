@@ -13,12 +13,61 @@ Steam/Water properties are of critical importance in industry and specifically t
 
 Realizing the need for fast numerical computation of water properties, the IAPWS_ created a committee to develop a faster formulation for the steam power industry.  In 1997, the IAPWS release the "*IAPWS Industrial Formulation 1997 for the Thermodynamic Properties of Water and Steam*" or IAPWS-IF97_.  This formulation replaced the older IFC-67 formulation. It is pressure based (rather than density based), and uses fundamental equations for the Gibbs free energy and its derivatives.  While IAPWS-IF97_ is faster, it is less accurate than the IAPWS-95_ formulation, but within 1% uncertainty for all properties (and in many areas within 0.1%) except very near the critical point. Details of this formulation can be found in IAPWS-IF97_, released in 2007 and updated in 2012.
 
-The IF97 backend in CoolProp is based on the latest `IAPWS Releases`_ for thermodynamic and transport properties.  It was originally coded as a fast water property calculation for the :ref:`Humid Air <Humid-Air>` backend.  It has matured to include most of the forward and backward formulations in all fluid phase regions as released by the IAPWS_ and can provide a much faster calculation of water properties than the default HEOS backend (or the :ref:`REFPROP <REFPROP>` backend, which is also based on IAPWS-95_).  
+The IF97 backend in CoolProp is based on the latest `IAPWS Releases`_ for thermodynamic and transport properties.  It was originally coded as a fast water property calculation for the :ref:`Humid Air <Humid-Air>` backend.  It has matured to include most of the forward and backward formulations in all fluid phase regions as released by the IAPWS_ and can provide a much faster calculation of water properties than the default HEOS backend (or the :ref:`REFPROP <REFPROP>` backend, which is also based on IAPWS-95_).
 
-.. _IAPWS: http://www.iapws.org  
-.. _IAPWS Releases: http://www.iapws.org/release.html  
+.. _IAPWS: http://www.iapws.org
+.. _IAPWS Releases: http://www.iapws.org/release.html
 .. _IAPWS-95: http://www.iapws.org/relguide/IAPWS-95.html
 .. _IAPWS-IF97: http://www.iapws.org/relguide/IF97-Rev.html
+
+Piecewise structure of IAPWS-IF97
+---------------------------------
+
+IAPWS-IF97 is **piecewise** by construction.  The :math:`(T, p)`
+plane is partitioned into five regions, each with its own
+fundamental equation:
+
+* **Region 1** — compressed liquid (:math:`T \le 623.15` K, below
+  the saturation curve and above the melting curve).  Backward Gibbs
+  free energy :math:`g_1(T, p)`.
+
+* **Region 2** — superheated steam and high-:math:`T` gas
+  (:math:`T \ge T_\mathrm{sat}(p)` up to :math:`T = 1073.15` K, plus
+  the slab :math:`T > 1073.15`).  Backward Gibbs :math:`g_2(T, p)`.
+
+* **Region 3** — dense supercritical and near-critical
+  (:math:`T \ge 623.15` K, :math:`p \ge p_{B23}(T)`).  Helmholtz
+  :math:`f_3(\rho, T)` in :math:`(\rho, T)` rather than :math:`(p,
+  T)` — the only IF97 region not parameterised in pressure.
+
+* **Region 4** — saturation curve, :math:`p_\mathrm{sat}(T)` only.
+
+* **Region 5** — high-temperature extension :math:`T \in [1073.15,
+  2273.15]` K up to 50 MPa.  Backward Gibbs :math:`g_5(T, p)`.
+
+The boundaries between regions are themselves analytic curves:
+
+* The **R2/R3 boundary** is the parametric curve
+  :math:`p_{B23}(T) = 0.10193 \cdot (T - 572.545)^2 + 13.919` MPa,
+  valid for :math:`T \in [623.15, 863.15]` K (equivalently
+  :math:`p \in [16.529, 100]` MPa).
+* The **R1/R3 boundary** is the isotherm :math:`T = 623.15` K.
+
+Because IF97 uses *different* fundamental equations across these
+curves, calorimetric and acoustic quantities (:math:`c_p, s, w`) have
+**structural kinks** at the boundaries — the absolute values match
+across the boundary by construction, but derivatives do not.  Any
+downstream interpolator built on IF97 (the :doc:`SVDSBTL backend
+</coolprop/SVDSBTL>`, in particular) must respect this structure to
+recover G13-15-conformant accuracy.  A bilinear or bicubic table over
+a region that straddles :math:`p_{B23}` averages the kink into the
+interpolant and pays for it with ~1% structural error in :math:`v,
+s, w` near the boundary; the right fix is to split the region along
+the kink and table each side independently.
+
+A plot of the region atlas (orange = saturation curve, dashed =
+:math:`p_{B23}` and :math:`T = 1073.15` K boundaries) appears under
+:ref:`Range of validity <IF97-validity>` below.
 
 IF97 Backend
 ------------
@@ -30,6 +79,8 @@ The IF97 backend can be accessed the same way as the other backends, by prefixin
 3. The Reference State cannot be modified for the IF97 formulation.  *The reference state is fixed such that the specific internal energy,* :math:`U` *, and the specific entropy,* :math:`S` *, of the saturated liquid at the triple point are identically zero.*
 4. Solid properties are not supported in any of the ICE regions.
 5. The melting-sublimation curve is not used; rather, the property equations are limited uniformly at :math:`T_{min}=273.15K`.
+
+.. _IF97-validity:
 
 IF97 Range of Validity
 ----------------------
@@ -196,25 +247,28 @@ A call to the top-level function ``PropsSI`` can provide: temperature, pressure,
 
 .. include:: IF97_conformance.rst.in
 
-IF97 vs HEOS timing — per-call and batch
-----------------------------------------
+IF97 vs HEOS timing — per-call and batched
+------------------------------------------
 
 The figure below profiles ``AbstractState.update(HmassP_INPUTS, h, p)``
 for every backend the local build exposes (``IF97``, ``HEOS``, and the
-``SVDSBTL`` family when bound through Python). It also reports
-:meth:`CoolProp.AbstractState.fast_evaluate` — a cache-bypassing
-zero-allocation batch path — for backends that implement it (currently
-``IF97`` and the tabular backends). Re-running
+:doc:`SVDSBTL </coolprop/SVDSBTL>` family when bound through Python).
+It also reports :meth:`CoolProp.AbstractState.fast_evaluate` — a
+cache-bypassing zero-allocation batch path — for backends that
+implement it (currently ``IF97`` and the tabular backends).
 ``Web/scripts/fluid_properties.IF97Profile.py`` regenerates the figure
-against your local hardware and CoolProp build, so the numbers reflect
-your machine, not the documentation server's.
+against your local hardware and CoolProp build; the numbers shipped
+with the docs come from the GitHub-hosted CI runner.
 
-The per-call panels report the *median* wall time over many warm-cache
-calls, so first-call cache-load cost is baked out. Per-call numbers
+Per-call panels report the *median* wall time over many warm-cache
+calls (first-call cache-load cost is baked out).  Per-call numbers
 include ~1000 ns of Python-wrapper marshalling that applies equally to
 every backend — read the *ratios* as the meaningful comparison, not the
-absolute nanoseconds. ``fast_evaluate`` amortizes that overhead over
-the batch, so its per-point cost is closer to native C++.
+absolute nanoseconds.  ``fast_evaluate`` amortizes that overhead over
+the batch, so its per-point cost approaches native C++.  IF97's own
+dome-blend lever-rule path was added in CoolProp 7.2, so probes
+landing inside the saturation dome no longer return NaN through
+``fast_evaluate`` — they Q-blend between IF97's saturation endpoints.
 
 .. image:: IF97_profile.png
    :width: 100%
