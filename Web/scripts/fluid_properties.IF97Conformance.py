@@ -15,8 +15,14 @@ root-mean-square deviation of the tested backend from IAPWS-IF97 for
 :math:`T(p,h)`, :math:`v(p,h)`, :math:`s(p,h)`, :math:`w(p,h)`,
 :math:`\\eta(p,h)`, and :math:`\\lambda(p,h)`.
 
-Timing: per backend per property, mean wall time for ``PropsSI`` over
-the same sample population, reported as ratio relative to IF97.
+Timing: per backend per property, mean wall time for one
+``AbstractState.update()`` + ``keyed_output()`` call over the same
+sample population, reported as ratio relative to IF97.  (The
+``AbstractState`` is instantiated once per backend and reused across
+the loop, so the cost is the flash + property read with no factory
+rebuild per probe — a real ``PropsSI`` end-to-end call pays an
+additional reconstruction tax that dominates for tabular / SVDSBTL
+backends.)
 
 The script gracefully skips any backend whose factory string isn't
 available (e.g. on a CoolProp build without the SVDSBTL backend
@@ -348,7 +354,11 @@ def write_failure_figures(backend, samples_per_region, out_dir):
 # ---------------------------------------------------------------------------
 
 def run_timing(backends, rng_seed=0xCAFE):
-    """Mean PropsSI time per (backend, property) over N timing calls.
+    """Mean ``AbstractState.update()`` + ``keyed_output()`` time per
+    (backend, property) over N timing calls.  One state per backend is
+    constructed up front and reused, so the per-call cost is the flash
+    + property read without the factory-rebuild tax ``PropsSI`` would
+    add.
 
     Returns timings[backend][prop_key] = ns/call.
     """
@@ -561,20 +571,29 @@ def render_rst(results_per_backend, counts_per_backend, timings, figure_paths_pe
         lines.append('~~~~~~~~~~~~~~~~~~~~~~~~~~')
         lines.append('')
         lines.append(
-            'Mean wall time per ``PropsSI`` call for property look-ups at '
-            'random :math:`(T, p)` samples drawn from the same per-IF97-region '
-            'population the conformance sweep uses above (stratified across '
-            'R1, R2, R3, R5; saturation cells filtered out by the IF97 '
-            'region classifier so every timed call is single-phase, and '
-            'samples that any tested backend cannot evaluate — e.g. cells '
-            'inside SVDSBTL\'s known rank-truncation gap near the critical '
-            'singularity — are pre-rejected during population so the timed '
-            'loop is a plain for-loop). '
+            'Mean wall time per ``AbstractState.update()`` + '
+            '``keyed_output()`` call (one ``AbstractState`` is instantiated '
+            'per backend and reused across the loop, so the cost is the '
+            'flash + property read with no factory rebuild per probe) for '
+            'property look-ups at random :math:`(T, p)` samples drawn from '
+            'the same per-IF97-region population the conformance sweep uses '
+            'above (stratified across R1, R2, R3, R5; saturation cells '
+            'filtered out by the IF97 region classifier so every timed call '
+            'is single-phase, and samples that any tested backend cannot '
+            'evaluate — e.g. cells inside SVDSBTL\'s known rank-truncation '
+            'gap near the critical singularity — are pre-rejected during '
+            'population so the timed loop is a plain for-loop). '
             'The ratio column is :math:`t_{\\mathrm{backend}} / '
             't_{\\mathrm{IF97}}`. Lower is faster than IF97. '
             'Absolute timings depend on hardware; the **ratios** are the '
             'load-bearing quantity. CI rebuilds these on a GitHub-hosted '
-            'runner.')
+            'runner. '
+            'Note: these numbers do **not** match what ``PropsSI`` would '
+            'measure end-to-end — ``PropsSI`` reconstructs the '
+            '``AbstractState`` on every call, which dominates the per-call '
+            'cost for tabular / SVDSBTL backends.  For a real-world '
+            '``PropsSI`` timing comparison see the SVDSBTL profiling figure '
+            'in the :ref:`IF97 docs <IF97-Conformance>`.')
         lines.append('')
         lines.append('.. list-table::')
         lines.append('   :header-rows: 1')
