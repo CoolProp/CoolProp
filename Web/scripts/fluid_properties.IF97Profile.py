@@ -1,22 +1,26 @@
 #!/usr/bin/env python
-"""Profile IF97 (and SVDSBTL, when available) per-call timing.
+"""Profile HmassP_INPUTS backends via batched timing.
 
-Walks a sparse (T, p) probe grid via IF97 to get h(T, p), then queries
-each backend at ``HmassP_INPUTS(h, p)`` and times the per-call wall cost
-via :func:`time.perf_counter_ns`.  Backends not in the build are
-skipped without breaking the rest.
+Builds a sparse (T, p) probe grid via IF97 to get h_truth(T, p), then
+times each available backend by *batches* — either via
+:meth:`AbstractState.fast_evaluate` (the cache-bypassing zero-allocation
+batch API) when the backend implements it, or via a manual same-probe
+loop inside a single :func:`time.perf_counter_ns` block as the fallback.
 
-What this measures
-------------------
+Why batch
+---------
 
-* **per-call** — one ``AbstractState.update()`` call per probe, repeated
-  ``REPEATS`` times; median ns/call reported.  Includes the Python-side
-  marshalling cost (~1 us/call floor).  This is what your code sees if
-  you ``update()`` once per state-point in a Python loop.
-* **batch** — :meth:`AbstractState.fast_evaluate`, the cache-bypassing
-  zero-allocation batch API.  Times the whole probe set as one C++ call,
-  divides by point count.  This is the C++-native per-point cost — what
-  you'd see in tight inner loops once Python overhead is amortized.
+Per-call timing in a Python loop bottoms out at the
+``perf_counter_ns`` resolution and is dominated by the wrapper
+marshalling cost (~1 us / call), so the fastest backends all look the
+same. Timing whole batches at a time amortizes both effects: the
+wrapper overhead becomes a one-time tax over ``N`` points instead of
+``N`` taxes of one, and a many-tick batch is statistically robust.
+
+``fast_evaluate`` exposes the zero-allocation C++ batch path directly;
+for backends that don't implement it yet we time
+``[update(...) for each point]`` inside one tick block as the closest
+equivalent. Both numbers are reported as ``ns/point``.
 
 Run it
 ------
@@ -25,17 +29,8 @@ Run it
 
     python Web/scripts/fluid_properties.IF97Profile.py
 
-Output: ``Web/fluid_properties/IF97_profile.png`` + stdout summary.
-The figure pages itself to however many backends were actually
-available; missing ones drop out cleanly.
-
-Caveats
--------
-
-* The first call against each backend warms the in-memory surface.
-  Reported timings are the *median* of warm-cache calls.
-* Per-call ``update()`` times are ~1 us higher than C++-native because
-  of the wrapper marshalling.  ``fast_evaluate`` does not pay this.
+Output: ``Web/fluid_properties/IF97_profile.png`` + a stdout summary
+listing each backend's per-point ns from N_RUNS independent batches.
 """
 from __future__ import annotations
 
@@ -50,18 +45,19 @@ from CoolProp import AbstractState
 WEB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 OUT_PNG = os.path.join(WEB_DIR, 'fluid_properties', 'IF97_profile.png')
 
-# Sparse-by-design.  G13-15 conformance probes 8000+ points per region
-# but profiling is about per-call cost, not statistical coverage; 30x30
-# is enough to estimate medians and show spatial trends without making
-# the docs build slow.
+# Sparse-by-design probe grid; we want enough states to amortize the
+# fast_evaluate batch and give the manual loop a few hundred us to
+# stabilize, not statistical coverage.
 NT = 30
 NP = 30
 T_RANGE = (290.0, 1000.0)   # K — covers R1/R2/R5 for Water under IF97
 P_RANGE = (1.0e4, 5.0e7)    # Pa — 0.01 to 50 MPa
-REPEATS = 100               # per-point repeats; median absorbs jitter
 
-# Backends to try.  Missing ones drop cleanly; the figure pages to the
-# number that worked.
+# Number of independent batch runs per backend.  Each run times the full
+# valid probe set; we report the distribution (median, P10, P90) across
+# runs.  Cheap to bump if the noise looks high.
+N_RUNS = 200
+
 BACKENDS = [
     ('IF97',         'Water', 'IF97'),
     ('HEOS',         'Water', 'HEOS'),
@@ -70,21 +66,23 @@ BACKENDS = [
 ]
 
 
-def make_probes() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def make_probes() -> tuple[np.ndarray, np.ndarray]:
+    """Return contiguous (h, p) arrays for every single-phase point."""
     Ts = np.linspace(*T_RANGE, NT)
     ps = np.geomspace(*P_RANGE, NP)
-    TT, PP = np.meshgrid(Ts, ps, indexing='ij')
-    HH = np.full_like(TT, np.nan)
     if97 = AbstractState('IF97', 'Water')
-    for i in range(NT):
-        for j in range(NP):
+    hs, prs = [], []
+    for T in Ts:
+        for p in ps:
             try:
-                if97.update(CP.PT_INPUTS, PP[i, j], TT[i, j])
-                if np.isfinite(if97.hmass()):
-                    HH[i, j] = if97.hmass()
+                if97.update(CP.PT_INPUTS, p, T)
+                h = if97.hmass()
+                if np.isfinite(h):
+                    hs.append(h)
+                    prs.append(p)
             except Exception:
                 pass
-    return TT, PP, HH
+    return np.ascontiguousarray(hs), np.ascontiguousarray(prs)
 
 
 def try_factory(backend: str, fluid: str):
@@ -95,122 +93,100 @@ def try_factory(backend: str, fluid: str):
         return None
 
 
-def time_per_call(s, h: np.ndarray, p: np.ndarray) -> np.ndarray:
-    ns = np.full_like(h, np.nan)
-    for i in range(h.shape[0]):
-        for j in range(h.shape[1]):
-            if not np.isfinite(h[i, j]):
-                continue
-            try:
-                s.update(CP.HmassP_INPUTS, h[i, j], p[i, j])  # warmup
-            except Exception:
-                continue
-            samples = []
-            for _ in range(REPEATS):
-                t0 = time.perf_counter_ns()
-                s.update(CP.HmassP_INPUTS, h[i, j], p[i, j])
-                samples.append(time.perf_counter_ns() - t0)
-            ns[i, j] = statistics.median(samples)
-    return ns
-
-
-def time_fast_evaluate(s, h: np.ndarray, p: np.ndarray) -> float:
-    h_flat = h.ravel()
-    p_flat = p.ravel()
-    valid = np.isfinite(h_flat)
-    h_flat = np.ascontiguousarray(h_flat[valid])
-    p_flat = np.ascontiguousarray(p_flat[valid])
-    if h_flat.size == 0:
-        return float('nan')
+def time_fast_evaluate(s, h: np.ndarray, p: np.ndarray, n_runs: int) -> tuple[list[float], bool]:
+    """Time ``fast_evaluate`` over the full probe set; returns ns/point per run."""
     outputs = np.array([CP.iT, CP.iDmass], dtype=np.int32)
-    out = np.zeros((h_flat.size, 2), dtype=np.float64)
-    status = np.zeros(h_flat.size, dtype=np.int32)
+    out = np.zeros((h.size, 2), dtype=np.float64)
+    status = np.zeros(h.size, dtype=np.int32)
     try:
-        s.fast_evaluate(CP.HmassP_INPUTS, h_flat, p_flat, outputs, out, status)
-    except Exception:
-        return float('nan')
+        s.fast_evaluate(CP.HmassP_INPUTS, h, p, outputs, out, status)  # warmup
+    except (AttributeError, Exception):
+        return [], False
     samples = []
-    for _ in range(20):
+    for _ in range(n_runs):
         t0 = time.perf_counter_ns()
-        s.fast_evaluate(CP.HmassP_INPUTS, h_flat, p_flat, outputs, out, status)
-        samples.append((time.perf_counter_ns() - t0) / h_flat.size)
-    return statistics.median(samples)
+        s.fast_evaluate(CP.HmassP_INPUTS, h, p, outputs, out, status)
+        samples.append((time.perf_counter_ns() - t0) / h.size)
+    return samples, True
+
+
+def time_manual_batch(s, h: np.ndarray, p: np.ndarray, n_runs: int) -> list[float]:
+    """Time ``[update(...) for each point]`` inside one tick block."""
+    for k in range(h.size):  # warmup
+        try:
+            s.update(CP.HmassP_INPUTS, float(h[k]), float(p[k]))
+        except Exception:
+            pass
+    samples = []
+    for _ in range(n_runs):
+        t0 = time.perf_counter_ns()
+        for k in range(h.size):
+            s.update(CP.HmassP_INPUTS, float(h[k]), float(p[k]))
+        samples.append((time.perf_counter_ns() - t0) / h.size)
+    return samples
 
 
 def main() -> None:
     import matplotlib.pyplot as plt
-    from matplotlib.colors import LogNorm
 
     print(f'Building {NT}x{NP} probe grid via IF97...')
-    TT, PP, HH = make_probes()
-    n_valid = int(np.isfinite(HH).sum())
-    print(f'  {n_valid} valid single-phase probes\n')
+    h, p = make_probes()
+    print(f'  {h.size} valid single-phase probes\n')
 
-    states = []
-    print('per-call update(HmassP_INPUTS, h, p):')
+    results: list[tuple[str, list[float], str]] = []
+    print(f'Timing {N_RUNS} batch runs per backend (ns/point):')
+    print(f'  {"backend":18s} {"mechanism":18s} {"median":>8s} {"P10":>8s} {"P90":>8s}')
     for backend, fluid, label in BACKENDS:
         s = try_factory(backend, fluid)
         if s is None:
             continue
-        ns = time_per_call(s, HH, PP)
-        finite = ns[np.isfinite(ns)]
-        if finite.size == 0:
-            print(f'  {label}: no valid points')
-            continue
-        med = float(np.median(finite))
-        print(f'  {label:14s} median {med:7.0f} ns/call  ({finite.size} pts)')
-        states.append((label, ns, s, med))
-
-    print('\nfast_evaluate (batch, high-level API):')
-    fast_medians = {}
-    for label, _, s, _ in states:
-        per_pt = time_fast_evaluate(s, HH, PP)
-        if np.isfinite(per_pt):
-            print(f'  {label:14s} {per_pt:7.0f} ns/point (batch)')
-            fast_medians[label] = per_pt
+        fe_samples, fe_ok = time_fast_evaluate(s, h, p, N_RUNS)
+        if fe_ok:
+            results.append((label, fe_samples, 'fast_evaluate'))
+            med = statistics.median(fe_samples)
+            p10 = float(np.percentile(fe_samples, 10))
+            p90 = float(np.percentile(fe_samples, 90))
+            print(f'  {label:18s} {"fast_evaluate":18s} {med:8.0f} {p10:8.0f} {p90:8.0f}')
         else:
-            print(f'  {label:14s} fast_evaluate not supported')
+            mb_samples = time_manual_batch(s, h, p, N_RUNS)
+            results.append((label, mb_samples, 'manual update loop'))
+            med = statistics.median(mb_samples)
+            p10 = float(np.percentile(mb_samples, 10))
+            p90 = float(np.percentile(mb_samples, 90))
+            print(f'  {label:18s} {"manual update loop":18s} {med:8.0f} {p10:8.0f} {p90:8.0f}')
 
-    if not states:
-        print('\nNo backends available; nothing to plot.')
+    if not results:
+        print('No backends available; nothing to plot.')
         return
 
-    # Lay out N panels in a 2-up grid; trailing panels stay blank if odd.
-    n = len(states)
-    cols = 2 if n > 1 else 1
-    rows = (n + cols - 1) // cols
-    fig, axes = plt.subplots(rows, cols, figsize=(5.4 * cols, 4.0 * rows),
-                             sharex=True, sharey=True, squeeze=False)
-    axes = axes.flatten()
+    # Box-and-violin: each backend gets one column.  Log y because
+    # SVDSBTL and HEOS differ by ~3 orders of magnitude.
+    labels = [f'{lbl}\n({mech})' for lbl, _, mech in results]
+    medians = [statistics.median(s) for _, s, _ in results]
+    samples = [s for _, s, _ in results]
 
-    pos = np.concatenate([ns[np.isfinite(ns)] for _, ns, _, _ in states if np.isfinite(ns).any()])
-    vmin = float(np.percentile(pos, 5))
-    vmax = float(np.percentile(pos, 95))
-    norm = LogNorm(vmin=max(vmin, 1.0), vmax=max(vmax, vmin * 10))
+    fig, ax = plt.subplots(figsize=(7.5, 5.5))
+    parts = ax.violinplot(samples, showmedians=True, widths=0.7)
+    for body in parts['bodies']:
+        body.set_alpha(0.55)
+    ax.set_xticks(range(1, len(results) + 1))
+    ax.set_xticklabels(labels, fontsize=9)
+    ax.set_yscale('log')
+    ax.set_ylabel('per-point batch wall time [ns]')
+    ax.grid(True, axis='y', which='both', alpha=0.25)
 
-    sc = None
-    for ax, (label, ns, _, med) in zip(axes, states):
-        h_kJ = HH / 1e3
-        sc = ax.scatter(h_kJ.ravel(), PP.ravel() / 1e6,
-                        c=ns.ravel(), s=22, cmap='viridis', norm=norm,
-                        edgecolor='none')
-        ax.set_yscale('log')
-        title = f'{label}\nmedian {med:.0f} ns/call'
-        if label in fast_medians:
-            title += f'  |  fast_evaluate {fast_medians[label]:.0f} ns/pt'
-        ax.set_title(title, fontsize=10)
-        ax.set_xlabel('h [kJ/kg]')
-        ax.set_ylabel('p [MPa]')
-        ax.grid(True, alpha=0.2)
-    for ax in axes[n:]:
-        ax.set_visible(False)
-    if sc is not None:
-        cbar = fig.colorbar(sc, ax=axes[:n].tolist(), fraction=0.025, pad=0.04)
-        cbar.set_label('per-call wall time [ns]')
+    for i, med in enumerate(medians, start=1):
+        ax.annotate(f'{med:.0f}', xy=(i, med), xytext=(8, 0),
+                    textcoords='offset points', fontsize=9, va='center',
+                    color='black', fontweight='bold')
 
-    fig.suptitle(f'CoolProp HmassP_INPUTS timing — Water  ({n_valid} probes, '
-                 f'{REPEATS} repeats / point)', fontsize=12)
-    fig.savefig(OUT_PNG, dpi=120, bbox_inches='tight')
+    title = (f'HmassP_INPUTS batched timing — Water  ({h.size} probes, '
+             f'{N_RUNS} batches per backend)\n'
+             f'fast_evaluate where available; manual-update-loop fallback '
+             f'(same probe set, single perf_counter block) otherwise')
+    ax.set_title(title, fontsize=10)
+    fig.tight_layout()
+    fig.savefig(OUT_PNG, dpi=130, bbox_inches='tight')
     print(f'\nWrote {OUT_PNG}')
 
 
