@@ -110,7 +110,15 @@ class SVDSurfaceSerializer
     //          IF97 goes from 4-5 (post-rev-7) to 5-6.  Closes the
     //          post-rev-7 R1 conformance gap where R1 and R3 modes
     //          competed for SVD bandwidth in a single region.
-    static constexpr int kRevision = 8;
+    //   rev 9: IF97 sampling-side Newton replaced with TOMS748
+    //          bracketed root-find (foi.9.10).  R3 cells whose Newton
+    //          previously failed to converge (e.g., T_target=663.7 K,
+    //          p=26.6 MPa where the T=700 fallback seed put Newton in
+    //          R2 territory and it oscillated across the R2/R3 boundary)
+    //          now sample correctly.  Stored T/s/ρ/w grid values for
+    //          those cells change, so existing rev-8 caches must
+    //          rebuild.
+    static constexpr int kRevision = 9;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

@@ -1,7 +1,10 @@
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <stdexcept>
 #include <utility>
+
+#include "boost/math/tools/toms748_solve.hpp"
 
 #include "CoolProp/region/AxisTransform.h"
 #include "CoolProp/region/ConstantCurve.h"
@@ -149,6 +152,47 @@ std::unique_ptr<region::CubicSplineCurve> build_h_B23_curve(::CoolProp::Abstract
     return region::CubicSplineCurve::build(std::move(p_knots), std::move(h_knots));
 }
 
+// Find T such that h(T, p) = h_target via bracketed TOMS748 iteration on
+// the source backend's forward h.  Bracketed (vs Newton) so we stay
+// robust across IF97 region boundaries where cp jumps cause Newton to
+// overshoot into the wrong basin — the foi.9.10 root cause that
+// contaminated R3 cells with garbage stored T / s / ρ values up through
+// foi.9.9.  Boost's toms748_solve is already used elsewhere in CoolProp
+// (superancillary, AbstractState, FlashRoutines), so no new dependency.
+//
+// Returns the converged T.  If the bracket [T_lo, T_hi] doesn't contain
+// a root, returns the nearer endpoint and signals via `ok` so the caller
+// can fall through to the NaN-fill machinery downstream.
+double solve_T_from_h_toms748(::CoolProp::AbstractState& s, double p, double h_target, double T_lo, double T_hi, bool* ok = nullptr) {
+    auto resid = [&s, p, h_target](double T) -> double {
+        try {
+            s.update(::CoolProp::PT_INPUTS, p, T);
+            return s.hmass() - h_target;
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Out-of-range / ε-band rejects bubble up as NaN so the
+            // sign-bracket check below cleanly fails the bracket test.
+            return std::nan("");
+        }
+    };
+    const double r_lo = resid(T_lo);
+    const double r_hi = resid(T_hi);
+    if (!std::isfinite(r_lo) || !std::isfinite(r_hi) || r_lo * r_hi > 0.0) {
+        if (ok != nullptr) {
+            *ok = false;
+        }
+        // Returning the endpoint with smaller residual would re-mutate
+        // `s`; callers that want to fall through to the HmassP_INPUTS
+        // state must check *ok and skip the subsequent PT_INPUTS update.
+        return (std::abs(r_lo) < std::abs(r_hi)) ? T_lo : T_hi;
+    }
+    boost::uintmax_t max_iter = 30;
+    const auto bracket = boost::math::tools::toms748_solve(resid, T_lo, T_hi, r_lo, r_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
+    if (ok != nullptr) {
+        *ok = true;
+    }
+    return 0.5 * (bracket.first + bracket.second);
+}
+
 }  // namespace
 
 SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
@@ -290,15 +334,30 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
             // so much that the bad cells dominated the surface and
             // worst-case T residuals blew out to ~470 K.
             //
-            // Fallback: when HmassP_INPUTS throws, find T such that
-            // h_IF97(T, p) = h by bracketed Newton iteration starting
-            // from T = 700 K (mid-R3 T range).  IF97 forward h(T, p)
-            // is monotonic and smooth in T at fixed p for the SUPER
-            // envelope so simple Newton with a generous bracket
-            // converges in 5-10 steps.
+            // Two-stage h-inversion via TOMS748 (foi.9.10).  Bracketed
+            // iteration is essential — Newton from a fixed T=700 K seed
+            // overshoots across IF97 R2/R3 cp-jump boundaries when
+            // T_B23(p) < 700 K and fails to converge, leaving stored
+            // cell values wrong by tens of K (e.g., 65 K T error at
+            // T_target=663.7, p=26.6 MPa, propagating to s, ρ residuals
+            // of >20% downstream).
+            //
+            //   1. HmassP_INPUTS (R7-97 backward) seeds T to ±25 mK,
+            //      sets the phase classification.  Throws in R3 where
+            //      no backward equation is published.
+            //   2. TOMS748 polish on [T_seed − 0.5, T_seed + 0.5], clamped
+            //      to IF97's [273.16, 2273.15] T validity, closes the
+            //      ±25 mK R7-97 residual to machine precision.  Critical
+            //      for R2/R5 s conformance (cp·dT/T propagates 25 mK in
+            //      T to ~0.25 J/(kg·K) in s — over the 1e-3 perm budget).
+            //      If the clamped bracket doesn't span a sign change
+            //      (rare: HmassP already at machine precision, or
+            //      near-T_min cell with bracket clipped tight), the
+            //      helper signals via *ok and we keep the HmassP state.
+            //   3. R3 fallback: TOMS748 on [623.15 K, T_B23(p)].
             ::CoolProp::phases phase0 = ::CoolProp::iphase_not_imposed;
             bool single_phase = false;
-            bool pinned = false;
+            bool seeded_via_hmass = true;
             try {
                 s.update(::CoolProp::HmassP_INPUTS, h, p);
                 phase0 = s.phase();
@@ -306,27 +365,38 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
                   (phase0 == ::CoolProp::iphase_liquid || phase0 == ::CoolProp::iphase_gas || phase0 == ::CoolProp::iphase_supercritical_liquid
                    || phase0 == ::CoolProp::iphase_supercritical_gas || phase0 == ::CoolProp::iphase_supercritical);
             } catch (...) {  // NOLINT(bugprone-empty-catch)
-                // IF97 R3 path: start Newton from T = 700 K.  R3 spans
-                // T ∈ [623.15, 863.15] K so the bracket midpoint is a
-                // reasonable seed everywhere in R3.
-                s.update(::CoolProp::PT_INPUTS, p, 700.0);
+                seeded_via_hmass = false;
             }
+            // Phase pin (PR E mechanism) so the TOMS748 polish's
+            // PT_INPUTS evaluations near the sat dome don't trip
+            // IF97's ε-band reject.  Exception-safe — AbstractState::
+            // clear() doesn't reset imposed_phase_index in IF97.
+            bool pinned = false;
             if (single_phase) {
                 s.specify_phase(phase0);
                 pinned = true;
             }
-            // Phase pin must be exception-safe: AbstractState::clear()
-            // doesn't reset imposed_phase_index in IF97, so a stale
-            // hint can leak to the next sample cell otherwise.
             try {
-                for (int k = 0; k < 10; ++k) {
-                    const double h_now = s.hmass();
-                    const double dh = h_now - h;
-                    if (std::abs(dh) < 1e-10 * std::abs(h)) break;
-                    const double cp = s.cpmass();
-                    if (!std::isfinite(cp) || cp <= 0.0) break;
-                    const double T_new = s.T() - dh / cp;
-                    s.update(::CoolProp::PT_INPUTS, p, T_new);
+                if (!seeded_via_hmass) {
+                    // R3 fallback: bracket on [623.15 K, T_B23(p)].
+                    const double T_R3_lo = 623.15;
+                    const double T_R3_hi = if97_T_B23_K(p);
+                    const double T_R3 = solve_T_from_h_toms748(s, p, h, T_R3_lo, T_R3_hi);
+                    s.update(::CoolProp::PT_INPUTS, p, T_R3);
+                } else {
+                    // Polish R7-97 backward seed.
+                    const double T_seed = s.T();
+                    constexpr double kIF97_T_min = 273.16;
+                    constexpr double kIF97_T_max = 2273.15;
+                    const double T_lo = std::max(T_seed - 0.5, kIF97_T_min);
+                    const double T_hi = std::min(T_seed + 0.5, kIF97_T_max);
+                    if (T_lo < T_hi) {
+                        bool ok = false;
+                        const double T_polished = solve_T_from_h_toms748(s, p, h, T_lo, T_hi, &ok);
+                        if (ok) {
+                            s.update(::CoolProp::PT_INPUTS, p, T_polished);
+                        }
+                    }
                 }
             } catch (...) {
                 if (pinned) s.unspecify_phase();
