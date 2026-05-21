@@ -22,13 +22,42 @@ using Catch::Approx;
 
 namespace {
 
-// Returns true if both files at the SVDSBTL default cache path exist
-// for `fluid`.  Used as a "did the constructor populate the cache?"
-// gate without re-running the build path itself.
+// Returns true if a cache file matching the SVDSBTL on-disk pattern
+// exists for both HmassP_INPUTS and PT_INPUTS for `fluid`.
+//
+// We can't just call default_cache_path() and stat — the backend
+// embeds an FNV-1a 64 opthash over the canonical options blob in the
+// filename, and that hash isn't exposed from SVDSBTLBackend.cpp (it
+// lives in an anonymous-namespace helper).  Glob the cache dir for
+//
+//   <fluid>.<source>.<input_pair_name>.*.svd.bin.z
+//
+// instead, which is robust to whatever opthash the build path happens
+// to compute for the no-options default.
 bool cache_present_for(const std::string& fluid, const std::string& source_backend = "HEOS") {
     namespace cp_sbtl = CoolProp::sbtl;
-    return std::filesystem::exists(cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid, source_backend, CoolProp::HmassP_INPUTS))
-           && std::filesystem::exists(cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid, source_backend, CoolProp::PT_INPUTS));
+    namespace fs = std::filesystem;
+    const fs::path dir = cp_sbtl::SVDSurfaceSerializer::default_cache_dir();
+    std::error_code ec;
+    if (!fs::exists(dir, ec)) return false;
+    const auto match = [&](::CoolProp::input_pairs pair) {
+        const std::string prefix = fluid + "." + source_backend + "." + CoolProp::get_input_pair_short_desc(pair) + ".";
+        // Match the full SVDSBTL suffix, not just .z — the cache dir is
+        // shared with BicubicBackend's .bin.z files and could accumulate
+        // other .z artifacts.  Checking the literal contract avoids
+        // false positives across unrelated extensions.
+        static const std::string kSuffix = ".svd.bin.z";
+        for (const auto& entry : fs::directory_iterator(dir, ec)) {
+            const std::string name = entry.path().filename().string();
+            const bool has_prefix = name.rfind(prefix, 0) == 0 && name.size() > prefix.size();
+            const bool has_suffix = name.size() >= kSuffix.size() && name.compare(name.size() - kSuffix.size(), kSuffix.size(), kSuffix) == 0;
+            if (has_prefix && has_suffix) {
+                return true;
+            }
+        }
+        return false;
+    };
+    return match(::CoolProp::HmassP_INPUTS) && match(::CoolProp::PT_INPUTS);
 }
 
 }  // namespace
