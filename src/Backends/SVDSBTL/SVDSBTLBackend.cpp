@@ -71,10 +71,18 @@ void polish_patch_state_(::CoolProp::AbstractState& s, double p, double h) {
         }
     };
     const double T_seed = s.T();
-    constexpr double kT_min = 273.16;  // IF97 / IAPWS-95 lower bound
-    constexpr double kT_max = 2273.15;
-    const double T_lo = std::max(T_seed - 0.5, kT_min);
-    const double T_hi = std::min(T_seed + 0.5, kT_max);
+    // Use backend-reported T limits rather than IF97-specific constants:
+    // patch_source_ may be HEOS / REFPROP / IF97 with different envelopes,
+    // and pinning to water bounds either silently clips (HEOS with T_min
+    // > 273.16) or overshoots (backend with T_max < 2273.15).
+    const double T_lo = std::max(T_seed - 0.5, s.Tmin());
+    const double T_hi = std::min(T_seed + 0.5, s.Tmax());
+    auto restore_seed = [&s, p, T_seed]() noexcept {
+        try {
+            s.update(::CoolProp::PT_INPUTS, p, T_seed);
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+        }
+    };
     if (!(T_lo < T_hi)) {
         return;
     }
@@ -82,15 +90,20 @@ void polish_patch_state_(::CoolProp::AbstractState& s, double p, double h) {
     const double r_hi = resid(T_hi);
     if (!std::isfinite(r_lo) || !std::isfinite(r_hi) || r_lo * r_hi > 0.0) {
         // Bracket missed (rare): restore the backward seed and bail.
-        try {
-            s.update(::CoolProp::PT_INPUTS, p, T_seed);
-        } catch (...) {  // NOLINT(bugprone-empty-catch)
-        }
+        restore_seed();
         return;
     }
-    std::uintmax_t max_iter = 30;
-    const auto bracket = boost::math::tools::toms748_solve(resid, T_lo, T_hi, r_lo, r_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
-    s.update(::CoolProp::PT_INPUTS, p, 0.5 * (bracket.first + bracket.second));
+    try {
+        std::uintmax_t max_iter = 30;
+        const auto bracket =
+          boost::math::tools::toms748_solve(resid, T_lo, T_hi, r_lo, r_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
+        s.update(::CoolProp::PT_INPUTS, p, 0.5 * (bracket.first + bracket.second));
+    } catch (...) {
+        // toms748_solve / final update threw: restore the backward seed
+        // so the caller sees the ±25 mK floor instead of a half-mutated
+        // state at the last failed PT probe.
+        restore_seed();
+    }
 }
 
 // Read `grid.NT/NR/rank` out of a validated options document.  Missing

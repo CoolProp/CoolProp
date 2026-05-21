@@ -379,9 +379,34 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
             try {
                 if (!seeded_via_hmass) {
                     // R3 fallback: bracket on [623.15 K, T_B23(p)].
+                    // if97_T_B23_K is only defined for p ∈ [16.529, 100]
+                    // MPa; outside that range its closed-form inverse
+                    // returns garbage (sub-623.15 K or NaN from the
+                    // negative-argument sqrt).  Above 100 MPa is the
+                    // SUPER_HIGH_P slab where there's no R2/R3 boundary
+                    // at all — the R3 fallback shouldn't run there in
+                    // the first place, but guard anyway.
+                    constexpr double kP_B23_lo_Pa = 16.529e6;
+                    constexpr double kP_B23_hi_Pa = 100.0e6;
+                    if (!(p >= kP_B23_lo_Pa && p <= kP_B23_hi_Pa)) {
+                        throw ::CoolProp::ValueError(
+                          "ph_subcritical IF97 sampling: R3 fallback called outside the IF97 B23 curve's [16.529, 100] MPa "
+                          "validity (the HmassP backward seed failed and no R3 bracket is defined)");
+                    }
                     const double T_R3_lo = 623.15;
                     const double T_R3_hi = if97_T_B23_K(p);
-                    const double T_R3 = solve_T_from_h_toms748(s, p, h, T_R3_lo, T_R3_hi);
+                    if (!(T_R3_lo < T_R3_hi)) {
+                        throw ::CoolProp::ValueError("ph_subcritical IF97 sampling: degenerate R3 bracket (T_B23(p) <= 623.15 K)");
+                    }
+                    bool ok = false;
+                    const double T_R3 = solve_T_from_h_toms748(s, p, h, T_R3_lo, T_R3_hi, &ok);
+                    if (!ok) {
+                        // Bracket doesn't contain h — propagate as
+                        // failure so the SurfaceFactory marks this
+                        // cell NaN, rather than committing an endpoint
+                        // T as a real state.
+                        throw ::CoolProp::ValueError("ph_subcritical IF97 sampling: R3 TOMS748 missed bracket; cell will be NaN-filled");
+                    }
                     s.update(::CoolProp::PT_INPUTS, p, T_R3);
                 } else {
                     // Polish R7-97 backward seed.
@@ -395,6 +420,22 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
                         const double T_polished = solve_T_from_h_toms748(s, p, h, T_lo, T_hi, &ok);
                         if (ok) {
                             s.update(::CoolProp::PT_INPUTS, p, T_polished);
+                        } else {
+                            // solve_T_from_h_toms748 mutates `s` via its
+                            // bracket-residual probes; on a miss the
+                            // last probe leaves s at PT_INPUTS(p, T_hi
+                            // or T_lo) instead of the HmassP seed.
+                            // Restore so callers downstream see the
+                            // backward-equation seed (±25 mK floor)
+                            // rather than a near-endpoint state.
+                            try {
+                                s.update(::CoolProp::HmassP_INPUTS, h, p);
+                            } catch (...) {  // NOLINT(bugprone-empty-catch)
+                                // Seed-restore failed (the original
+                                // HmassP at line 362 succeeded, so this
+                                // is unexpected); leave state alone and
+                                // let downstream handle as a bad cell.
+                            }
                         }
                     }
                 }
