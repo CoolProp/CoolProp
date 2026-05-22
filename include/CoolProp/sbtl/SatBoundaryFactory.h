@@ -21,9 +21,14 @@ namespace sbtl {
 // introduce derivative kinks (which would show up as bands of
 // elevated SVD error — Phase 2a verified this empirically for Water).
 //
-// Default knot count (64) is plenty for the smooth sat curves of
-// pure fluids; raise it if a fluid's curve has unusually fast log-p
-// variation.
+// Default knot count (256) is sized for boundary-curve residual at
+// the ~1e-10 level so it doesn't contribute to the LIQUID-region
+// rho residual against BICUBIC (~1e-10).  Empirically:
+//   64 knots  -> ~1e-8 residual (was the floor before CoolProp-8vg)
+//   256 knots -> ~1e-10 residual (matches BICUBIC; current default)
+// CubicSplineCurve error scales as n^-4, so 4x knots gives 256x
+// tighter fit; the next factor of 100 would require Hermite +
+// Chebyshev-bubble basis (stage 2 of CoolProp-8vg).
 //
 // TODO (Phase 2c): the *true* sat boundaries can be a no-refit view
 // onto the existing fluid superancillary (h_sat(T) chained with
@@ -39,7 +44,7 @@ namespace sbtl {
 
 struct SatBoundaryBuildOptions
 {
-    std::size_t n_knots = 64;  // CubicSplineCurve knots per curve
+    std::size_t n_knots = 256;  // CubicSplineCurve knots per curve
 
     // T-floor walk-up: number of 0.5 K steps to try when T_min falls
     // below T_melt(p) at high p.  Default 1000 = 500 K of slack, which

@@ -107,7 +107,10 @@ std::unique_ptr<region::CubicSplineCurve> build_h_B23_curve(::CoolProp::Abstract
     if (!(p_lo_clamped < p_hi_clamped)) {
         throw std::invalid_argument("build_h_B23_curve: p range does not overlap IF97 B23 curve's [16.529, 100] MPa validity");
     }
-    constexpr std::size_t n_knots = 64;
+    // 256 knots: matches the default in SatBoundaryBuildOptions
+    // (CoolProp-8vg stage 1) so the boundary-curve residual is ~1e-10
+    // — not the LIQUID-region floor.
+    constexpr std::size_t n_knots = 256;
     std::vector<double> p_knots(n_knots);
     std::vector<double> h_knots(n_knots);
     const double log_p_lo = std::log(p_lo_clamped);
