@@ -65,19 +65,39 @@ TESTED = [
     ('SVDSBTL&IF97::Water', 'SVDSBTL with IF97 source'),
 ]
 
-# Properties to compare.  Each entry: (CoolProp PropsSI key, math symbol,
-# unit, kind, IAPWS perm-value, IAPWS perm-unit, G13-15 table id).
+# Properties to compare.  Each entry: (CoolProp PropsSI key, math
+# symbol, unit, kind, IAPWS perm-value, IAPWS perm-unit, G13-15 table
+# id).
 #   kind = 'rel'  -> relative deviation as %, reported in %
 #   kind = 'abs_T'-> absolute deviation, reported in mK (with x1000)
 #   kind = 'abs_s'-> absolute deviation, reported in 10^-3 J/(kg K)
+#
+# The perm-value can be either a scalar (applies to all regions) or a
+# dict {IF97 region : perm}.  G13-15 specifies region-dependent
+# tolerances for T(p,h): 25 mK in R1 and R3, 10 mK in R2 and R5.
+# Other tables here use a single perm pending per-region verification
+# against the published G13-15 Tables 9-13.
 PROPERTIES = [
-    ('T', 'T',         'K',        'abs_T', 25.0,    'mK',                       8),
+    ('T', 'T',         'K',        'abs_T', {1: 25.0, 2: 10.0, 3: 25.0, 5: 10.0}, 'mK', 8),
     ('D', r'\rho',     'kg/m^3',   'rel',   0.001,   r'\%',                      9),
     ('S', 's',         'J/(kg K)', 'abs_s', 1.0,     r'10^{-3}\ \mathrm{J/(kg\,K)}', 10),
     ('A', 'w',         'm/s',      'rel',   0.001,   r'\%',                     11),
     ('V', r'\eta',     'Pa s',     'rel',   0.001,   r'\%',                     12),
     ('L', r'\lambda',  'W/(m K)',  'rel',   0.001,   r'\%',                     13),
 ]
+
+
+def _perm_for(perm, region):
+    """Resolve a perm field that may be either a scalar or a dict of
+    region -> perm.  Falls back to the smallest perm in the dict if
+    the region key isn't present (= the strictest budget, conservative)."""
+    if isinstance(perm, dict):
+        if region in perm:
+            return perm[region]
+        # Region not enumerated — return the strictest budget so an
+        # untyped region isn't silently let off the hook.
+        return min(perm.values())
+    return perm
 
 # Property keys we time (must be a subset of the comparison properties).
 TIMING_PROPS = ['T', 'D', 'A', 'V']
@@ -438,16 +458,20 @@ def write_failure_figures(backend, samples_per_region, out_dir):
     total_probes = sum(len(s) for s in samples_per_region.values())
 
     for ax, (pk, sym, _u, kind, perm, _pu, _tid) in zip(axes.flat, plot_props):
-        # Collect over-budget samples across all regions.
+        # Collect over-budget samples across all regions.  The
+        # perm-budget can be region-dependent (G13-15 Table 8 sets
+        # |ΔT| = 25 mK in R1/R3, 10 mK in R2/R5), so resolve it per
+        # sample.
         fail_h, fail_p, fail_severity = [], [], []
         for region in samples_per_region:
+            region_perm = _perm_for(perm, region)
             for s in samples_per_region[region]:
                 d = s['devs'].get(pk)
-                if d is None or d <= perm:
+                if d is None or d <= region_perm:
                     continue
                 fail_h.append(s['h'] / 1e3)
                 fail_p.append(s['p'] / 1e6)
-                fail_severity.append(d / perm)
+                fail_severity.append(d / region_perm)
         # Marker size + colour scale by log10(severity).  Severity floor
         # at 1.0 (= exactly at budget) by construction.  Cap at 1e5 so
         # extreme outliers don't blow out the colour bar.
@@ -506,12 +530,20 @@ def write_failure_figures(backend, samples_per_region, out_dir):
 
 def run_timing(backends, rng_seed=0xCAFE):
     """Mean ``AbstractState.update()`` + ``keyed_output()`` time per
-    (backend, property) over N timing calls.  One state per backend is
-    constructed up front and reused, so the per-call cost is the flash
-    + property read without the factory-rebuild tax ``PropsSI`` would
-    add.
+    (backend, input pair, property) over N timing calls.  Times BOTH
+    ``PT_INPUTS`` (the input pair the conformance population is
+    naturally drawn on) and ``HmassP_INPUTS`` (the input pair most
+    SVDSBTL users actually call with — the whole point of a tabulated
+    backend over HEOS is the cheap :math:`(h, p)` lookup).  One
+    ``AbstractState`` per backend is constructed up front and reused
+    so the per-call cost is the flash + property read without the
+    factory-rebuild tax ``PropsSI`` would add.  Each cell entry is
+    the wall time for **one ``update()`` + one ``keyed_output()``**
+    — backends that share the flash across N outputs would amortise
+    this measurement; the SVDSBTL ``fast_evaluate`` path is the
+    batched variant.
 
-    Returns timings[backend][prop_key] = ns/call.
+    Returns timings[backend][input_pair_name][prop_key] = ns/call.
     """
     rng = random.Random(rng_seed)
     # Build a single (T, p) sample population using the same per-region
@@ -578,14 +610,27 @@ def run_timing(backends, rng_seed=0xCAFE):
     # joint-domain overlap on the IF97 region boxes — leave timings as
     # NaN rather than divide by zero and abort the docs build.
     if N == 0:
-        return {backend: {prop: float('nan') for prop in TIMING_PROPS}
-                for backend in backends}
+        empty = {ip: {prop: float('nan') for prop in TIMING_PROPS} for ip in ('PT', 'HmassP')}
+        return {backend: empty for backend in backends}
+    # Pre-compute h_arr[] via the reference backend so HmassP timing
+    # uses inputs identical to the conformance population.  IF97 has
+    # a direct backward equation for HmassP — using its forward h
+    # ensures both input-pair timings sample the same physical points.
+    h_arr = [float('nan')] * N
+    ref_state = _factory(REFERENCE)
+    for k in range(N):
+        try:
+            ref_state.update(CP.PT_INPUTS, p_arr[k], T_arr[k])
+            h_arr[k] = ref_state.hmass()
+        except Exception:
+            pass
     timings = {}
     for backend in backends:
-        timings[backend] = {}
+        timings[backend] = {'PT': {}, 'HmassP': {}}
         state = _factory(backend)
         for prop in TIMING_PROPS:
             ip = _PARAM_KEY[prop]
+            # PT timing
             for k in range(min(64, N)):  # warmup
                 state.update(CP.PT_INPUTS, p_arr[k], T_arr[k])
                 state.keyed_output(ip)
@@ -594,7 +639,29 @@ def run_timing(backends, rng_seed=0xCAFE):
                 state.update(CP.PT_INPUTS, p_arr[k], T_arr[k])
                 state.keyed_output(ip)
             t1 = time.perf_counter()
-            timings[backend][prop] = (t1 - t0) / N * 1e9
+            timings[backend]['PT'][prop] = (t1 - t0) / N * 1e9
+            # HmassP timing — same sample set, expressed in (h, p)
+            # via the reference backend's forward h(T, p) above.
+            for k in range(min(64, N)):
+                if math.isfinite(h_arr[k]):
+                    try:
+                        state.update(CP.HmassP_INPUTS, h_arr[k], p_arr[k])
+                        state.keyed_output(ip)
+                    except Exception:
+                        pass
+            t0 = time.perf_counter()
+            ok_n = 0
+            for k in range(N):
+                if not math.isfinite(h_arr[k]):
+                    continue
+                try:
+                    state.update(CP.HmassP_INPUTS, h_arr[k], p_arr[k])
+                    state.keyed_output(ip)
+                    ok_n += 1
+                except Exception:
+                    pass
+            t1 = time.perf_counter()
+            timings[backend]['HmassP'][prop] = ((t1 - t0) / ok_n * 1e9) if ok_n else float('nan')
     return timings
 
 
@@ -762,121 +829,132 @@ def render_rst(results_per_backend, counts_per_backend, timings, figure_paths_pe
                     lines.append('')
 
         for pk, sym, _unit, kind, perm, perm_unit, table_id in PROPERTIES:
+            # `unit_str` is the LaTeX-flavoured unit token used INSIDE
+            # a :math: directive; `unit_plain` is the corresponding
+            # bracketed form for the header (also wrapped in :math:
+            # so superscripts / \mathrm render correctly).  Previously
+            # the units were emitted as plain RST inside square
+            # brackets, which left `10^{-3}` and `\mathrm` as literal
+            # text in the entropy column header.
             if kind == 'rel':
                 unit_str = r'\%'
             elif kind == 'abs_T':
-                unit_str = 'mK'
+                unit_str = r'\mathrm{mK}'
             elif kind == 'abs_s':
                 unit_str = r'10^{-3}\ \mathrm{J/(kg\,K)}'
             else:
                 unit_str = perm_unit
+            unit_math = ':math:`[{0}]`'.format(unit_str)
 
             prop_sym = sym if pk != 'D' else 'v'  # density → specific volume
             lines.append('')
-            lines.append(
-                '*G13-15 Table {tid}* — :math:`{psym}(p,h)`, '
-                'permissible :math:`|\\Delta {psym}|_\\mathrm{{perm}} = {perm}\\ {pu}`.'
-                .format(tid=table_id, psym=prop_sym, perm=_fmt_perm(perm), pu=unit_str))
+            # Header line: state the perm once if it's region-uniform,
+            # or as "perm depends on region (see column)" if it varies.
+            if isinstance(perm, dict):
+                lines.append(
+                    '*G13-15 Table {tid}* — :math:`{psym}(p,h)`, '
+                    'permissible :math:`|\\Delta {psym}|_\\mathrm{{perm}}` '
+                    'is region-dependent (per-region column below).'
+                    .format(tid=table_id, psym=prop_sym))
+            else:
+                lines.append(
+                    '*G13-15 Table {tid}* — :math:`{psym}(p,h)`, '
+                    'permissible :math:`|\\Delta {psym}|_\\mathrm{{perm}} = {perm}\\ {pu}`.'
+                    .format(tid=table_id, psym=prop_sym, perm=_fmt_perm(perm), pu=unit_str))
             lines.append('')
             lines.append('.. list-table::')
             lines.append('   :header-rows: 1')
-            lines.append('   :widths: 12 18 22 22')
+            # Wider columns when the perm column is present.
+            if isinstance(perm, dict):
+                lines.append('   :widths: 10 14 18 18 18')
+            else:
+                lines.append('   :widths: 12 18 22 22')
             lines.append('')
             lines.append('   * - IF97 Region')
             lines.append('     - in-region samples')
-            lines.append('     - :math:`|\\Delta {0}|_{{\\max}}` [{1}]'.format(prop_sym, unit_str))
-            lines.append('     - :math:`(\\Delta {0})_{{\\mathrm{{RMS}}}}` [{1}]'.format(prop_sym, unit_str))
+            if isinstance(perm, dict):
+                lines.append('     - :math:`|\\Delta {0}|_{{\\mathrm{{perm}}}}` {1}'.format(prop_sym, unit_math))
+            lines.append('     - :math:`|\\Delta {0}|_{{\\max}}` {1}'.format(prop_sym, unit_math))
+            lines.append('     - :math:`(\\Delta {0})_{{\\mathrm{{RMS}}}}` {1}'.format(prop_sym, unit_math))
             for region in sorted(REGION_BOXES):
                 acc = results[region][pk]
                 lines.append('   * - {}'.format(region))
                 lines.append('     - {}'.format(acc.n))
+                if isinstance(perm, dict):
+                    lines.append('     - {}'.format(_fmt_perm(_perm_for(perm, region))))
                 lines.append('     - {}'.format(_fmt_dev(acc.max_abs)))
                 lines.append('     - {}'.format(_fmt_dev(acc.rms)))
         lines.append('')
 
     # ------------------------------------------------------------------
-    # Timing table
+    # Timing tables — one per input pair
     # ------------------------------------------------------------------
     if timings:
-        lines.append('Backend timing (PT inputs, ``AbstractState.update`` regime)')
-        lines.append('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        lines.append('Backend timing (``AbstractState.update`` regime)')
+        lines.append('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         lines.append('')
         lines.append(
-            'Mean wall time per ``AbstractState.update()`` + '
-            '``keyed_output()`` call.  One ``AbstractState`` is '
-            'instantiated per backend and reused across the loop, so '
-            'the cost is the flash + property read with **no factory '
-            'rebuild per probe** — this is the regime production code '
-            'should target.')
+            'Two tables below time the same backends against the same '
+            'sample population for **both** ``PT_INPUTS`` (the input '
+            'pair the conformance sweep is drawn on) and '
+            '``HmassP_INPUTS`` (the input pair most users actually call '
+            'with — the whole point of a tabulated backend is the '
+            'cheap :math:`(h, p)` lookup).  Sample points are identical '
+            'across the two tables; only the input pair changes.  '
+            ':math:`h(T, p)` is taken from the reference IF97 backend '
+            'so HmassP inputs are forward-consistent with PT inputs.')
         lines.append('')
         lines.append(
-            'Each column header (T / D / A / V) corresponds to one '
-            'output property; the cell entry is the **mean wall time '
-            'for a single ``update()`` + one ``keyed_output()`` call '
-            'requesting that property**.  Backends that share the '
-            'flash cost across multiple outputs are penalised here — '
-            'an :math:`(h, p)`-flash-then-read-N-properties workload '
-            'is reported per-output, not amortised — so a fair '
-            'comparison for batch use cases is the SVDSBTL '
-            '``fast_evaluate`` path which shares the surface locate '
-            'across all N outputs.')
+            'Each cell is the **mean wall time for one ``update()`` + '
+            'one ``keyed_output()`` requesting that property** — i.e. '
+            '**one output per call**.  Backends that share the flash '
+            'across N outputs would amortise this measurement; the '
+            'SVDSBTL ``fast_evaluate`` path is the batched variant.  '
+            'The ratio column is the mean across the per-property '
+            'ratios :math:`t_{\\mathrm{backend}} / '
+            't_{\\mathrm{IF97}}` for that input pair.  Lower is '
+            'faster than IF97.  Rows are sorted by descending mean '
+            'ratio so the slowest path sits at the top.  Absolute '
+            'timings depend on hardware; the **ratios** are the '
+            'load-bearing quantity.  CI rebuilds these on a '
+            'GitHub-hosted runner.')
         lines.append('')
-        lines.append(
-            'Samples are drawn from the same per-IF97-region '
-            'population the conformance sweep uses above (stratified '
-            'across R1, R2, R3, R5; saturation cells filtered out by '
-            'the IF97 region classifier so every timed call is '
-            'single-phase, and samples that any tested backend cannot '
-            'evaluate — e.g. cells inside SVDSBTL\'s known '
-            'rank-truncation gap near the critical singularity — are '
-            'pre-rejected during population so the timed loop is a '
-            'plain for-loop).  The ratio column is the mean across '
-            'the per-property ratios :math:`t_{\\mathrm{backend}} / '
-            't_{\\mathrm{IF97}}`.  Lower is faster than IF97.  Rows '
-            'are sorted by descending mean ratio so the slowest path '
-            'sits at the top.  Absolute timings depend on hardware; '
-            'the **ratios** are the load-bearing quantity.  CI '
-            'rebuilds these on a GitHub-hosted runner.')
-        lines.append('')
-        lines.append('.. list-table::')
-        lines.append('   :header-rows: 1')
-        lines.append('   :widths: 22 12 12 12 12 14')
-        lines.append('')
-        header = ['   * - Backend']
-        for prop in TIMING_PROPS:
-            header.append('     - {}'.format(prop))
-        header.append('     - mean ratio vs IF97')
-        lines.extend(header)
 
-        baseline = timings.get(REFERENCE, {})
-        # Order rows by descending mean ratio against IF97 (slowest
-        # backend on top, fastest on bottom).  Surfaces the "what's the
-        # cost ceiling" answer at a glance — the user reading the table
-        # in docs cares more about who's the slow path than alphabetic
-        # / definition-order convention.
-        candidates = [REFERENCE] + [b for b, _ in TESTED if b in timings]
-        rows_by_ratio = []
-        for backend in candidates:
-            bt = timings.get(backend, {})
-            if not bt:
-                continue
-            ratios = []
+        for ip_label in ('PT', 'HmassP'):
+            lines.append('**{0}_INPUTS**:'.format(ip_label))
+            lines.append('')
+            lines.append('.. list-table::')
+            lines.append('   :header-rows: 1')
+            lines.append('   :widths: 22 12 12 12 12 14')
+            lines.append('')
+            header = ['   * - Backend']
             for prop in TIMING_PROPS:
-                base = baseline.get(prop, float('nan'))
-                this = bt.get(prop, float('nan'))
-                if math.isfinite(base) and base > 0 and math.isfinite(this):
-                    ratios.append(this / base)
-            mean_ratio = sum(ratios) / len(ratios) if ratios else float('inf')
-            rows_by_ratio.append((mean_ratio, backend, bt, ratios))
-        # Sort: largest mean_ratio first (slowest backend on top).
-        rows_by_ratio.sort(key=lambda x: x[0], reverse=True)
-        for mean_ratio, backend, bt, ratios in rows_by_ratio:
-            row = ['   * - ``{}``'.format(backend)]
-            for prop in TIMING_PROPS:
-                row.append('     - {}'.format(_fmt_ns(bt.get(prop, float('nan')))))
-            row.append('     - {:.2f}'.format(mean_ratio) if ratios else '     - --')
-            lines.extend(row)
-        lines.append('')
+                header.append('     - {}'.format(prop))
+            header.append('     - mean ratio vs IF97')
+            lines.extend(header)
+            ref_t = timings.get(REFERENCE, {}).get(ip_label, {})
+            candidates = [REFERENCE] + [b for b, _ in TESTED if b in timings]
+            rows_by_ratio = []
+            for backend in candidates:
+                bt = timings.get(backend, {}).get(ip_label, {})
+                if not bt:
+                    continue
+                ratios = []
+                for prop in TIMING_PROPS:
+                    base = ref_t.get(prop, float('nan'))
+                    this = bt.get(prop, float('nan'))
+                    if math.isfinite(base) and base > 0 and math.isfinite(this):
+                        ratios.append(this / base)
+                mean_ratio = sum(ratios) / len(ratios) if ratios else float('inf')
+                rows_by_ratio.append((mean_ratio, backend, bt, ratios))
+            rows_by_ratio.sort(key=lambda x: x[0], reverse=True)
+            for mean_ratio, backend, bt, ratios in rows_by_ratio:
+                row = ['   * - ``{}``'.format(backend)]
+                for prop in TIMING_PROPS:
+                    row.append('     - {}'.format(_fmt_ns(bt.get(prop, float('nan')))))
+                row.append('     - {:.2f}'.format(mean_ratio) if ratios else '     - --')
+                lines.extend(row)
+            lines.append('')
     return '\n'.join(lines) + '\n'
 
 
