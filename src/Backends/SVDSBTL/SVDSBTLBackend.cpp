@@ -872,6 +872,17 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
             } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
                 _Q = -1.0;
             }
+            // Inherit the source's phase classification.  Without this
+            // a two-phase patched state (which the skip-polish path now
+            // correctly preserves) would surface as iphase_not_imposed
+            // and state.phase() would disagree with the source.  Wrap
+            // in try/catch because some sources may not report a phase
+            // for every input pair (HEOS does; defensive against
+            // REFPROP edge cases).
+            try {
+                _phase = patch_source_->phase();
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+            }
             break;
         case PointEvaluation::Kind::OutOfRange:
             // Legacy back-compat: when an HmassP probe misses
