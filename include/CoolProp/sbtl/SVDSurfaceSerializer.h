@@ -118,7 +118,20 @@ class SVDSurfaceSerializer
     //          now sample correctly.  Stored T/s/ρ/w grid values for
     //          those cells change, so existing rev-8 caches must
     //          rebuild.
-    static constexpr int kRevision = 9;
+    //   rev 10: CoolProp-8vg.  HEOS-source presets switched their sat
+    //           boundary curves (h_sat,L, h_sat,V) to
+    //           region::SuperancillaryBoundaryCurve — no-refit views
+    //           onto the SuperAncillary's machine-precision Chebyshev
+    //           expansions.  IF97-source presets (which have no SA)
+    //           keep the legacy 64-knot cubic spline path.  HEOS
+    //           tables built with the new boundaries have different
+    //           η normalisation at each grid sample → SVD
+    //           coefficients shift → existing rev-9 caches must
+    //           rebuild.  HEOS surfaces can't yet round-trip through
+    //           the serializer (SuperancillaryBoundaryCurve has no
+    //           CurveKind id) — they rebuild in memory each session;
+    //           IF97 surfaces still cache normally.
+    static constexpr int kRevision = 10;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

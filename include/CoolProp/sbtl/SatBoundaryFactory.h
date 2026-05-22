@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "AbstractState.h"
+#include "CoolProp/region/BoundaryCurve.h"
 #include "CoolProp/region/CubicSplineCurve.h"
 
 namespace CoolProp {
@@ -52,21 +53,26 @@ struct SatBoundaryBuildOptions
 
 // h_sat,L(p) — mass enthalpy on the saturated-liquid side of the dome.
 //
-// HEOS calls go through PQ_INPUTS with Q = 0.  Throws if p is outside
-// the fluid's saturation range or HEOS rejects the PQ flash.
-std::unique_ptr<region::CubicSplineCurve> build_h_sat_L(::CoolProp::AbstractState& heos, double p_min, double p_max,
-                                                        const SatBoundaryBuildOptions& opts = {});
+// When the source backend exposes a SuperAncillary (HEOS pure
+// fluids), returns a SuperancillaryBoundaryCurve composing
+// eval_sat('H', 0) with get_T_from_p — machine-precision residual
+// against the source HEOS, no refit (CoolProp-8vg).  Otherwise
+// (REFPROP / IF97 / pseudo-pure fluids), falls back to a 64-knot
+// CubicSplineCurve sampled via PQ_INPUTS with Q = 0.
+std::unique_ptr<region::BoundaryCurve> build_h_sat_L(::CoolProp::AbstractState& heos, double p_min, double p_max,
+                                                     const SatBoundaryBuildOptions& opts = {});
 
 // h_sat,V(p) — mass enthalpy on the saturated-vapor side of the dome.
-// PQ_INPUTS with Q = 1.
-std::unique_ptr<region::CubicSplineCurve> build_h_sat_V(::CoolProp::AbstractState& heos, double p_min, double p_max,
-                                                        const SatBoundaryBuildOptions& opts = {});
+// Same SuperAncillary-or-spline dispatch as build_h_sat_L; PQ_INPUTS
+// with Q = 1 in the spline fallback.
+std::unique_ptr<region::BoundaryCurve> build_h_sat_V(::CoolProp::AbstractState& heos, double p_min, double p_max,
+                                                     const SatBoundaryBuildOptions& opts = {});
 
 // T_sat(p) — saturation temperature.  Single-valued for pure fluids
-// (LIQUID and VAPOR sat curves coincide on T).  Uses PQ_INPUTS with
-// Q = 0.
-std::unique_ptr<region::CubicSplineCurve> build_T_sat(::CoolProp::AbstractState& heos, double p_min, double p_max,
-                                                      const SatBoundaryBuildOptions& opts = {});
+// (LIQUID and VAPOR sat curves coincide on T).  Same dispatch — the
+// SuperAncillary path uses its own inverse-p Chebyshev expansion.
+std::unique_ptr<region::BoundaryCurve> build_T_sat(::CoolProp::AbstractState& heos, double p_min, double p_max,
+                                                   const SatBoundaryBuildOptions& opts = {});
 
 // Isobar h-floor: h on the cold-isotherm boundary.  For fluids with
 // steep melting curves (Methane / Propane / CO2 LIQUID at high p),

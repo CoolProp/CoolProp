@@ -5,12 +5,44 @@
 #include <stdexcept>
 #include <vector>
 
+#include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#include "CoolProp/region/SuperancillaryBoundaryCurve.h"
 #include "DataStructures.h"
 
 namespace CoolProp {
 namespace sbtl {
 
 namespace {
+
+// Try to pull a SuperAncillary handle off the source AbstractState.
+// Returns null when the source isn't a HelmholtzEOSMixtureBackend
+// (e.g. IF97, REFPROP) or when the fluid's HEOS model doesn't ship a
+// SuperAncillary expansion (some pseudo-pure fluids / mixtures).
+// Side effect: triggers caloric superancillary lazy-build so the
+// downstream eval_sat('H', ...) calls don't pay that cost per-eval.
+std::shared_ptr<region::SuperancillaryBoundaryCurve::SuperAncillary_t> try_get_superanc(::CoolProp::AbstractState& src, bool need_caloric) {
+    auto* helmholtz = dynamic_cast<::CoolProp::HelmholtzEOSMixtureBackend*>(&src);
+    if (helmholtz == nullptr) return nullptr;
+    std::shared_ptr<region::SuperancillaryBoundaryCurve::SuperAncillary_t> sa;
+    try {
+        sa = helmholtz->get_superanc();
+    } catch (...) {  // NOLINT(bugprone-empty-catch)
+        // get_superanc throws for mixtures / pseudo-pures.  Treat as
+        // "no SA available" and fall through to the spline path.
+    }
+    if (!sa) return nullptr;
+    if (need_caloric) {
+        try {
+            helmholtz->ensure_caloric_superancillaries();
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Caloric build failed (rare: superanc rejection).  Keep
+            // the SA handle for non-caloric properties but the caller
+            // will null-check on the property key.
+            return nullptr;
+        }
+    }
+    return sa;
+}
 
 // Sample `f(p)` at `n_knots` log-uniform points in [p_min, p_max] and
 // build a CubicSplineCurve through the resulting (p, f(p)) knots.
@@ -38,24 +70,45 @@ std::unique_ptr<region::CubicSplineCurve> spline_through_log_p_samples(double p_
 
 }  // namespace
 
-std::unique_ptr<region::CubicSplineCurve> build_h_sat_L(::CoolProp::AbstractState& heos, double p_min, double p_max,
-                                                        const SatBoundaryBuildOptions& opts) {
+std::unique_ptr<region::BoundaryCurve> build_h_sat_L(::CoolProp::AbstractState& heos, double p_min, double p_max,
+                                                     const SatBoundaryBuildOptions& opts) {
+    if (auto sa = try_get_superanc(heos, /*need_caloric=*/true)) {
+        try {
+            // SuperAncillary returns molar enthalpy (J/mol); SBTL
+            // stores mass-basis (J/kg).  h_mass = h_mol / M.
+            const double inv_M = 1.0 / heos.molar_mass();
+            return region::SuperancillaryBoundaryCurve::build(sa, p_min, p_max, 'H', 0, inv_M);
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Fall through to the spline path on SA range mismatch.
+        }
+    }
     return spline_through_log_p_samples(p_min, p_max, opts.n_knots, [&](double p) {
         heos.update(::CoolProp::PQ_INPUTS, p, 0.0);
         return heos.hmass();
     });
 }
 
-std::unique_ptr<region::CubicSplineCurve> build_h_sat_V(::CoolProp::AbstractState& heos, double p_min, double p_max,
-                                                        const SatBoundaryBuildOptions& opts) {
+std::unique_ptr<region::BoundaryCurve> build_h_sat_V(::CoolProp::AbstractState& heos, double p_min, double p_max,
+                                                     const SatBoundaryBuildOptions& opts) {
+    if (auto sa = try_get_superanc(heos, /*need_caloric=*/true)) {
+        try {
+            const double inv_M = 1.0 / heos.molar_mass();
+            return region::SuperancillaryBoundaryCurve::build(sa, p_min, p_max, 'H', 1, inv_M);
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+        }
+    }
     return spline_through_log_p_samples(p_min, p_max, opts.n_knots, [&](double p) {
         heos.update(::CoolProp::PQ_INPUTS, p, 1.0);
         return heos.hmass();
     });
 }
 
-std::unique_ptr<region::CubicSplineCurve> build_T_sat(::CoolProp::AbstractState& heos, double p_min, double p_max,
-                                                      const SatBoundaryBuildOptions& opts) {
+std::unique_ptr<region::BoundaryCurve> build_T_sat(::CoolProp::AbstractState& heos, double p_min, double p_max, const SatBoundaryBuildOptions& opts) {
+    // No prop_key in the SuperAncillary for T directly — it's the
+    // *result* of get_T_from_p, not a tabulated property.  Build a
+    // small wrapper class would be possible but for now keep the
+    // spline path here; T_sat is only used by IF97-source presets
+    // (which don't have an SA anyway).
     return spline_through_log_p_samples(p_min, p_max, opts.n_knots, [&](double p) {
         heos.update(::CoolProp::PQ_INPUTS, p, 0.0);
         return heos.T();
