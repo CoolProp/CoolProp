@@ -531,13 +531,26 @@ TEST_CASE("SVDSBTL&REFPROP fast_evaluate works for mixed single-phase + dome bat
     AS->fast_evaluate(CoolProp::HmassP_INPUTS, h_v.data(), p_v.data(), N, outputs.data(), outputs.size(), out_buffer.data(), out_buffer.size(),
                       status.data(), status.size());
     // Compare against update() + per-property reads point-by-point.
+    // Bit-exact would be ideal but fails on the dome-blend probe
+    // because REFPROP's PQ flash on the two sat endpoints isn't
+    // order-deterministic at the last bits — fast_evaluate's
+    // resolve_point_ does both endpoints in one call, while
+    // update() does them in a different order across the two
+    // round-trips here.  4-ULP-class differences observed in
+    // practice; use a generous-but-tight relative tolerance.
     for (std::size_t k = 0; k < N; ++k) {
+        INFO("k=" << k << " p=" << p_v[k] << " h=" << h_v[k]);
+        // Check status BEFORE comparing — a non-OK status leaves
+        // out_buffer holding NaN / garbage, and the comparison
+        // failure would mask the real issue.
+        REQUIRE(status[k] == CoolProp::fast_evaluate_ok);
         AS->update(CoolProp::HmassP_INPUTS, h_v[k], p_v[k]);
-        REQUIRE(out_buffer[k * 3 + 0] == AS->T());        // iT
-        REQUIRE(out_buffer[k * 3 + 1] == AS->rhomass());  // iDmass
+        REQUIRE(out_buffer[k * 3 + 0] == Approx(AS->T()).epsilon(1e-10));        // iT
+        REQUIRE(out_buffer[k * 3 + 1] == Approx(AS->rhomass()).epsilon(1e-10));  // iDmass
         // iQ: -1 sentinel for single-phase, [0,1] in dome (per
         // SVDSBTL's PointEvaluation convention; see SVDSBTLBackend.h
-        // PointEvaluation::Q docs).
+        // PointEvaluation::Q docs).  -1 and Q in [0,1] are both
+        // exactly representable so direct compare is fine.
         REQUIRE(out_buffer[k * 3 + 2] == AS->Q());
     }
 }
