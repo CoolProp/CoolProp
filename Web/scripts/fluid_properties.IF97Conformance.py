@@ -109,7 +109,18 @@ REGION_BOXES = {
     3: dict(T=(623.15, 863.15), p=(16.5292, 100.0)),
     5: dict(T=(1073.15, 2273.15), p=(1.0e-3, 50.0)),
 }
-SAMPLES_PER_REGION = 2000
+# Bumped from 2000 → 50000 per IF97 region.  Reasoning:
+#   * The conformance Tables 8-13 are statistical claims about a
+#     population (max + RMS over random IF97 probes).  At 2000 in-
+#     region samples (~24 R3 probes after classification), the R3
+#     column was a 24-sample average — too noisy to call meaningful.
+#   * The failure-cluster figure was visibly sparse vs the reference
+#     /tmp/conformance_dense_540k.png; the geographic clustering
+#     pattern only emerges with enough density to fill the (h, p) plane.
+#   * Total runtime budget: 50000 * 4 regions * ~8 us per IF97 HmassP
+#     probe ~= 1.6 s for the conformance sweep, plus ~6 s for the
+#     timing pass.  Docs build adds < 10 s.
+SAMPLES_PER_REGION = 50000
 SEED = 0xC001DAD
 
 
@@ -237,6 +248,71 @@ def _read_props_fast(state, h, p, prop_int_keys):
     return out
 
 
+def _refine_to_forward_h(state, p, T_seed, h_target, max_iter=5, rel_tol=1e-10):
+    """Newton-iterate ``state`` on the FORWARD equation h(T, p) until its
+    cached T satisfies h(T, p) = h_target to machine precision.  Mirrors
+    ``refine_to_forward_h`` in src/Tests/CoolProp-Tests-SVDSBTLFailMap.cpp.
+
+    Why this matters for the conformance sweep: IF97's published backward
+    T_phmass(p, h) has a ±25 mK residual baked into R7-97.  If we use
+    that backward T as "truth", we're comparing SVDSBTL (which was
+    sampled via TOMS748-polished forward h to machine precision) against
+    a reference that has ~25 mK of its own slop — every R1/R3 cell
+    nominally shows ~25 mK of "deviation" that's really just IF97's own
+    backward-equation residual.  Refining to forward-consistent T
+    removes that floor so the conformance figure shows the SVD's actual
+    residual against the IF97 forward equations, not the reference's
+    own backward floor.
+
+    State pinning: hold the IF97 phase across the Newton iteration so
+    HEOS / IF97 doesn't flip basins mid-iteration on probes near the
+    saturation curve.
+
+    Best-effort: returns silently after max_iter (5 is sufficient for
+    Newton on a smooth h(T, p) — typical convergence is 2-3 iters)."""
+    try:
+        state.update(CP.HmassP_INPUTS, h_target, p)
+    except Exception:
+        try:
+            state.update(CP.PT_INPUTS, p, T_seed)
+        except Exception:
+            pass
+        return
+    pinned = False
+    try:
+        phase0 = state.phase()
+        single = phase0 in (CP.iphase_liquid, CP.iphase_gas,
+                            CP.iphase_supercritical_liquid,
+                            CP.iphase_supercritical_gas,
+                            CP.iphase_supercritical)
+        if single:
+            state.specify_phase(phase0)
+            pinned = True
+    except Exception:
+        pass
+    try:
+        for _ in range(max_iter):
+            try:
+                h_now = state.hmass()
+                cp = state.cpmass()
+            except Exception:
+                break
+            dh = h_now - h_target
+            if abs(dh) < rel_tol * abs(h_target):
+                break
+            if not math.isfinite(cp) or cp <= 0.0:
+                break
+            T_new = state.T() - dh / cp
+            try:
+                state.update(CP.PT_INPUTS, p, T_new)
+            except Exception:
+                break
+    finally:
+        if pinned:
+            try: state.unspecify_phase()
+            except Exception: pass
+
+
 # ---------------------------------------------------------------------------
 # Conformance sweep
 # ---------------------------------------------------------------------------
@@ -290,7 +366,21 @@ def run_conformance(backend):
                 continue
             if not math.isfinite(h):
                 continue
-            ref_vals = _read_props_fast(ref_state, h, p_Pa, prop_int_keys)
+            # Forward-refine the reference state so its cached T
+            # matches h_target = h(T_forward, p) to machine precision —
+            # otherwise the IF97 backward equation's ±25 mK residual
+            # leaks into every deviation and swamps the figure.
+            # ref_state and truth_state are both REFERENCE (IF97); the
+            # refinement leaves ref_state holding forward-consistent
+            # (T, p, h, s, ...) which is what the test_state's
+            # (SVDSBTL) post-update values should be compared against.
+            _refine_to_forward_h(ref_state, p_Pa, T, h)
+            ref_vals = {}
+            try:
+                for short_key, ip in prop_int_keys:
+                    ref_vals[short_key] = ref_state.keyed_output(ip)
+            except Exception:
+                ref_vals = None
             if ref_vals is None:
                 continue
             test_vals = _read_props_fast(test_state, h, p_Pa, prop_int_keys)
@@ -458,27 +548,35 @@ def write_failure_figures(backend, samples_per_region, out_dir):
     total_probes = sum(len(s) for s in samples_per_region.values())
 
     for ax, (pk, sym, _u, kind, perm, _pu, _tid) in zip(axes.flat, plot_props):
-        # Collect over-budget samples across all regions.  The
-        # perm-budget can be region-dependent (G13-15 Table 8 sets
-        # |ΔT| = 25 mK in R1/R3, 10 mK in R2/R5), so resolve it per
-        # sample.
+        # Collect the full in-region population (for the grey
+        # background scatter — shows the reader where the sample
+        # density is and what fraction of the envelope is being
+        # tested), and the over-budget subset (red foreground).
+        all_h, all_p = [], []
         fail_h, fail_p, fail_severity = [], [], []
         for region in samples_per_region:
             region_perm = _perm_for(perm, region)
             for s in samples_per_region[region]:
                 d = s['devs'].get(pk)
+                all_h.append(s['h'] / 1e3)
+                all_p.append(s['p'] / 1e6)
                 if d is None or d <= region_perm:
                     continue
                 fail_h.append(s['h'] / 1e3)
                 fail_p.append(s['p'] / 1e6)
                 fail_severity.append(d / region_perm)
+        # Grey population scatter under the red violations.  Small
+        # markers + low alpha so it acts as a density backdrop
+        # without obscuring the over-budget cluster pattern.
+        if all_h:
+            ax.scatter(all_h, all_p, c='lightgrey', s=1, edgecolors='none', alpha=0.4, zorder=1)
         # Marker size + colour scale by log10(severity).  Severity floor
         # at 1.0 (= exactly at budget) by construction.  Cap at 1e5 so
         # extreme outliers don't blow out the colour bar.
         if fail_h:
             severity = [_math.log10(max(s, 1.0)) for s in fail_severity]
             sizes = [4 + 4 * min(s, 5.0) for s in severity]
-            sc = ax.scatter(fail_h, fail_p, c=severity, cmap='Reds', s=sizes, edgecolors='none', vmin=0.0, vmax=5.0)
+            sc = ax.scatter(fail_h, fail_p, c=severity, cmap='Reds', s=sizes, edgecolors='none', vmin=0.0, vmax=5.0, zorder=3)
             cbar = fig.colorbar(sc, ax=ax, fraction=0.04, pad=0.02)
             cbar.set_label(r'$\log_{10}(|\Delta|/|\Delta|_\mathrm{perm})$', fontsize=8)
         # IF97 boundary overlays.
