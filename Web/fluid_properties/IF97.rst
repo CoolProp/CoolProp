@@ -31,9 +31,9 @@ fundamental equation:
   the saturation curve and above the melting curve).  Backward Gibbs
   free energy :math:`g_1(T, p)`.
 
-* **Region 2** — superheated steam and high-:math:`T` gas
-  (:math:`T \ge T_\mathrm{sat}(p)` up to :math:`T = 1073.15` K, plus
-  the slab :math:`T > 1073.15`).  Backward Gibbs :math:`g_2(T, p)`.
+* **Region 2** — superheated steam and high-:math:`T` gas, from the
+  saturation curve up to :math:`T = 1073.15` K.  Backward Gibbs
+  :math:`g_2(T, p)`.
 
 * **Region 3** — dense supercritical and near-critical
   (:math:`T \ge 623.15` K, :math:`p \ge p_{B23}(T)`).  Helmholtz
@@ -247,6 +247,43 @@ A call to the top-level function ``PropsSI`` can provide: temperature, pressure,
 
 .. include:: IF97_conformance.rst.in
 
+SVDSBTL&IF97 — open-source, fast, fully traceable
+-------------------------------------------------
+
+The conformance section above tests one configuration:
+``SVDSBTL&IF97::Water``, where SVDSBTL serves as a tabulated
+interpolator over the IAPWS-IF97 source equations.  Why is this
+useful when the SBTL backend (an existing CoolProp tabular backend
+based on cubic B-splines) already exists?
+
+* **Open source.**  SVDSBTL is built on the SVD components shipped
+  with CoolProp itself (see :doc:`/coolprop/SVDComponents`).  No
+  proprietary closed-source dependencies, no licensed binaries —
+  everything that goes into building the tables ships in the source
+  tree.  Anyone can reproduce the bit-identical table by re-running
+  the build with the same source revision.
+
+* **High speed.**  The :ref:`three performance regimes <SVDSBTL-regimes>`
+  cover the full single-shot-to-CFD-scale range.  The per-output
+  marginal cost in the batched ``fast_evaluate`` path is ~57 ns on
+  modern hardware — competitive with the fastest closed tabular
+  implementations.
+
+* **Complete traceability.**  Every cell of the table is
+  reproducible from the source backend at the exact build-time
+  source revision.  The cache file stores the options hash that
+  generated it, so two installs sharing the same fluid + source +
+  options recompute bit-identical tables; mismatches force a
+  rebuild instead of silently mixing revisions.  This matters
+  whenever the table is part of a regulated calculation chain
+  (industrial control, certification, scientific publication).
+
+These three properties together set SVDSBTL apart from the older
+SBTL backend and from closed-source tabulators.  The conformance
+figures above measure how close to the IAPWS-IF97 reference
+formulation the :ref:`SVDSBTL backend </coolprop/SVDSBTL>` lands
+on the four G13-15 thermodynamic properties.
+
 IF97 vs HEOS timing — per-call and batched
 ------------------------------------------
 
@@ -255,10 +292,11 @@ for every backend the local build exposes (``IF97``, ``HEOS``, and the
 :doc:`SVDSBTL </coolprop/SVDSBTL>` family when bound through Python).
 It also reports :meth:`CoolProp.AbstractState.fast_evaluate` — a
 cache-bypassing zero-allocation batch path — for backends that
-implement it (currently ``IF97`` and the tabular backends).
-``Web/scripts/fluid_properties.IF97Profile.py`` regenerates the figure
-against your local hardware and CoolProp build; the numbers shipped
-with the docs come from the GitHub-hosted CI runner.
+implement it (currently ``IF97`` and the tabular backends).  The
+:download:`profile script </scripts/fluid_properties.IF97Profile.py>`
+regenerates the figure against your local hardware and CoolProp
+build; the numbers shipped with the docs come from the
+GitHub-hosted CI runner.
 
 Per-call panels report the *median* wall time over many warm-cache
 calls (first-call cache-load cost is baked out).  Per-call numbers

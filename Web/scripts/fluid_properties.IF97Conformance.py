@@ -293,60 +293,211 @@ def run_conformance(backend):
 
 
 def write_failure_figures(backend, samples_per_region, out_dir):
-    """Emit one PNG per region showing sample population in PH coords
-    with budget-violating points overlaid darker.
+    """Emit ONE combined PNG showing budget-violating probes for the
+    four G13-15 thermodynamic properties (T, v, s, w) in (h, p) coords,
+    overlaid on the IF97 region boundaries and the critical-patch
+    HEOS-fallback bbox.
 
-    Returns dict region → relative-path of the emitted PNG (relative to
-    Web/fluid_properties/ for inclusion in the rst.in).  When the
-    matplotlib import fails (headless CI without matplotlib), returns
-    an empty dict and the rst renderer omits the figures section.
+    Layout: 2x2 grid, one panel per property.  Each panel plots ONLY
+    the budget-violating samples (no full-population scatter) so the
+    geographic pattern is unambiguous.  Markers are sized + coloured
+    by :math:`\\log_{10}(|\\Delta| / |\\Delta|_\\mathrm{perm})` — bigger
+    + redder means further past budget.
+
+    Overlays:
+      - IF97 saturation curve (R4)
+      - R1/R3 isotherm (T = 623.15 K) and R2/R5 isotherm (T = 1073.15 K),
+        in (h, p) coords by walking the isotherm and recording IF97 h(T,p)
+      - IF97 B23 boundary p_B23(T), in (h, p) coords
+      - critical-patch HEOS-fallback bbox (auto-calibrated; in (h, p) coords
+        via the same perimeter walk the backend uses), gold-shaded
+      - critical point as a black dot
+
+    Returns ``{'all': <filename>}`` so render_rst() can embed the single
+    figure with the same dict-of-paths plumbing used previously.  Empty
+    dict on matplotlib import failure (headless CI).
     """
     try:
+        import math as _math
+
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+        from matplotlib.cm import ScalarMappable
+        from matplotlib.colors import LogNorm
     except ImportError:
         return {}
 
     # Slug for the backend name so the filename is filesystem-safe.
     slug = ''.join(c if c.isalnum() else '_' for c in backend)
-    perms = {p[0]: p[4] for p in PROPERTIES}
-    symbols = {p[0]: p[1] for p in PROPERTIES}
-    paths = {}
+    # All six G13-15 properties: T, v, s, w (thermodynamic, Tables 8-11)
+    # plus eta, lambda (transport, Tables 12-13).  Layout is 2x3 to
+    # match — transport properties fail more aggressively than the
+    # thermodynamic ones at the rank-truncation limit, but the
+    # log10-scaled colour bar keeps both classes legible side-by-side.
+    plot_props = list(PROPERTIES)
+    perms = {p[0]: p[4] for p in plot_props}
+    symbols = {p[0]: p[1] for p in plot_props}
 
-    for region in sorted(samples_per_region):
-        samples = samples_per_region[region]
-        if not samples:
-            continue
-        # 2x3 grid: T, v, s, w, η, λ
-        fig, axes = plt.subplots(2, 3, figsize=(12, 7.5), sharex=True, sharey=True)
-        h_all = [s['h'] / 1e3 for s in samples]   # h in kJ/kg
-        p_all = [s['p'] / 1e6 for s in samples]   # p in MPa
-        prop_order = [p[0] for p in PROPERTIES]
-        for ax, prop_key in zip(axes.flat, prop_order):
-            ax.scatter(h_all, p_all, c='lightgray', s=4, edgecolors='none', label='in-region samples')
-            failing_h, failing_p = [], []
-            for s in samples:
-                d = s['devs'].get(prop_key)
-                if d is not None and d > perms[prop_key]:
-                    failing_h.append(s['h'] / 1e3)
-                    failing_p.append(s['p'] / 1e6)
-            if failing_h:
-                ax.scatter(failing_h, failing_p, c='crimson', s=8, edgecolors='none', label='over budget')
-            ax.set_yscale('log')
-            ax.set_title(r'$|\Delta {0}|>\,{1:g}$ ({2}/{3})'.format(symbols[prop_key], perms[prop_key], len(failing_h), len(samples)))
-            ax.grid(True, which='both', alpha=0.3)
-        for ax in axes[-1]:
-            ax.set_xlabel(r'$h$ [kJ/kg]')
-        for ax in axes[:, 0]:
-            ax.set_ylabel(r'$p$ [MPa]')
-        fig.suptitle(r'IF97 Region {0} — `{1}` budget-violating samples ({2} drawn)'.format(region, backend, len(samples)))
-        fig.tight_layout(rect=[0, 0, 1, 0.96])
-        out_path = os.path.join(out_dir, 'IF97_conformance_fails_{0}_R{1}.png'.format(slug, region))
-        fig.savefig(out_path, dpi=110)
-        plt.close(fig)
-        paths[region] = os.path.basename(out_path)
-    return paths
+    # Resolve the actual backend AbstractState to fetch (a) the IF97
+    # boundary curves in (h, p) coords and (b) the critical-patch bbox
+    # the backend computed at construction.  Both use the source
+    # backend's own h(T, p) so the overlay matches the geometry the
+    # backend actually classifies on.
+    try:
+        ref = _factory(backend)
+    except Exception:
+        return {}
+    try:
+        Tc = ref.T_critical()
+        pc = ref.p_critical()
+    except Exception:
+        Tc = pc = None
+
+    # Saturation curve (R4): walk Tsat from triple to critical.
+    sat_h = []
+    sat_p = []
+    if Tc is not None:
+        T_tri = max(273.16, ref.Ttriple() if hasattr(ref, 'Ttriple') else 273.16)
+        for i in range(200):
+            T = T_tri + (Tc - T_tri) * (i / 199.0)
+            try:
+                p_sat = CP.PropsSI('P', 'T', T, 'Q', 0, 'IF97::Water')
+                h_L = CP.PropsSI('H', 'T', T, 'Q', 0, 'IF97::Water')
+                h_V = CP.PropsSI('H', 'T', T, 'Q', 1, 'IF97::Water')
+                sat_h.append((h_L, h_V))
+                sat_p.append(p_sat)
+            except Exception:
+                pass
+
+    # Isotherm overlays — walk fixed T sweeping log p, record (h, p).
+    def isotherm(T_K, p_lo_Pa, p_hi_Pa, n=64):
+        hs, ps = [], []
+        for i in range(n):
+            p = _math.exp(_math.log(p_lo_Pa) + (i / (n - 1)) * (_math.log(p_hi_Pa) - _math.log(p_lo_Pa)))
+            try:
+                h = CP.PropsSI('H', 'T', T_K, 'P', p, 'IF97::Water')
+                hs.append(h)
+                ps.append(p)
+            except Exception:
+                pass
+        return hs, ps
+
+    iso_R1R3_h, iso_R1R3_p = isotherm(623.15, 1.0e3, 100.0e6)
+    iso_R2R5_h, iso_R2R5_p = isotherm(1073.15, 1.0e3, 100.0e6)
+
+    # B23 curve: walk T in [623.15, 863.15], compute p_B23(T) and the
+    # corresponding h via IF97 at (T, p_B23).  Already in (h, p).
+    B23_h, B23_p = [], []
+    for i in range(64):
+        T = 623.15 + (863.15 - 623.15) * (i / 63.0)
+        p_B23_MPa = 0.10192970039326e-2 * (T - 572.54459862746) ** 2 + 13.91883776670
+        p_B23_Pa = p_B23_MPa * 1.0e6
+        try:
+            h = CP.PropsSI('H', 'T', T, 'P', p_B23_Pa, 'IF97::Water')
+            B23_h.append(h)
+            B23_p.append(p_B23_Pa)
+        except Exception:
+            pass
+
+    # Critical-patch bbox in (h, p) — the backend exposes only the
+    # axis-aligned bbox shape via its update/calc_* dispatch, not via a
+    # public accessor.  Approximate it by walking the auto-calibrated
+    # (T, p) perimeter and recording h, matching the construction-time
+    # logic in SVDSBTLBackend::build_critical_patch_.  Multipliers come
+    # from a hardcoded snapshot here; if mismatched the gold patch
+    # extent is slightly off but still informative.
+    patch_h_lo = patch_h_hi = patch_p_lo = patch_p_hi = None
+    if Tc is not None and pc is not None:
+        # Conservative snapshot of the post-calibration Water/IF97 bbox
+        # (from CoolProp-5ni / dxd).  Hard-coding rather than calling
+        # an introspection accessor keeps the docs script standalone.
+        T_lo, T_hi = 0.999 * Tc, 1.010 * Tc
+        p_lo, p_hi = 0.996 * pc, 1.138 * pc
+        try:
+            h_lo_p = float('inf')
+            h_hi_p = -float('inf')
+            for i in range(24):
+                f = i / 23.0
+                for T in (T_lo + f * (T_hi - T_lo), T_lo, T_hi):
+                    for p in (p_lo + f * (p_hi - p_lo), p_lo, p_hi):
+                        try:
+                            h = CP.PropsSI('H', 'T', T, 'P', p, 'IF97::Water')
+                            if _math.isfinite(h):
+                                h_lo_p = min(h_lo_p, h)
+                                h_hi_p = max(h_hi_p, h)
+                        except Exception:
+                            pass
+            if _math.isfinite(h_lo_p) and _math.isfinite(h_hi_p):
+                patch_h_lo, patch_h_hi = h_lo_p, h_hi_p
+                patch_p_lo, patch_p_hi = p_lo, p_hi
+        except Exception:
+            pass
+
+    fig, axes = plt.subplots(2, 3, figsize=(14, 8), sharex=True, sharey=True)
+    total_probes = sum(len(s) for s in samples_per_region.values())
+
+    for ax, (pk, sym, _u, kind, perm, _pu, _tid) in zip(axes.flat, plot_props):
+        # Collect over-budget samples across all regions.
+        fail_h, fail_p, fail_severity = [], [], []
+        for region in samples_per_region:
+            for s in samples_per_region[region]:
+                d = s['devs'].get(pk)
+                if d is None or d <= perm:
+                    continue
+                fail_h.append(s['h'] / 1e3)
+                fail_p.append(s['p'] / 1e6)
+                fail_severity.append(d / perm)
+        # Marker size + colour scale by log10(severity).  Severity floor
+        # at 1.0 (= exactly at budget) by construction.  Cap at 1e5 so
+        # extreme outliers don't blow out the colour bar.
+        if fail_h:
+            severity = [_math.log10(max(s, 1.0)) for s in fail_severity]
+            sizes = [4 + 4 * min(s, 5.0) for s in severity]
+            sc = ax.scatter(fail_h, fail_p, c=severity, cmap='Reds', s=sizes, edgecolors='none', vmin=0.0, vmax=5.0)
+            cbar = fig.colorbar(sc, ax=ax, fraction=0.04, pad=0.02)
+            cbar.set_label(r'$\log_{10}(|\Delta|/|\Delta|_\mathrm{perm})$', fontsize=8)
+        # IF97 boundary overlays.
+        if sat_p:
+            sat_h_arr = [(hl + hv) / 2e3 for hl, hv in sat_h]  # dummy; replaced by L+V curves below
+            sat_p_arr = [p / 1e6 for p in sat_p]
+            ax.plot([h[0] / 1e3 for h in sat_h], sat_p_arr, color='steelblue', lw=0.8, label='sat dome')
+            ax.plot([h[1] / 1e3 for h in sat_h], sat_p_arr, color='steelblue', lw=0.8)
+        if iso_R1R3_h:
+            ax.plot([h / 1e3 for h in iso_R1R3_h], [p / 1e6 for p in iso_R1R3_p], color='C1', lw=0.6, ls='--', label='T=623.15 K (R1/R3)')
+        if iso_R2R5_h:
+            ax.plot([h / 1e3 for h in iso_R2R5_h], [p / 1e6 for p in iso_R2R5_p], color='C3', lw=0.6, ls='--',
+                    label='T=1073.15 K (R2/R5)')
+        if B23_h:
+            ax.plot([h / 1e3 for h in B23_h], [p / 1e6 for p in B23_p], color='C2', lw=0.6, ls=':', label='$p_{B23}(T)$ (R2/R3)')
+        # Critical-patch bbox in (h, p).
+        if patch_h_lo is not None:
+            ax.fill_between([patch_h_lo / 1e3, patch_h_hi / 1e3], patch_p_lo / 1e6, patch_p_hi / 1e6, color='gold', alpha=0.35, edgecolor='goldenrod', lw=0.8, label='critical-patch bbox')
+        # Critical point marker.
+        if Tc is not None and pc is not None:
+            try:
+                h_c = CP.PropsSI('H', 'T', Tc, 'P', pc, 'IF97::Water')
+                ax.plot(h_c / 1e3, pc / 1e6, 'ko', ms=5)
+            except Exception:
+                pass
+
+        ax.set_yscale('log')
+        ax.grid(True, which='both', alpha=0.3)
+        # Title shows the property symbol + violation count.
+        prop_sym = sym if pk != 'D' else 'v'  # density -> specific volume
+        ax.set_title(r'$|\Delta {0}|$ budget violations  ({1} / {2} probes)'.format(prop_sym, len(fail_h), total_probes), fontsize=10)
+    for ax in axes[-1]:
+        ax.set_xlabel(r'$h$ [kJ/kg]')
+    for ax in axes[:, 0]:
+        ax.set_ylabel(r'$p$ [MPa]')
+    # Legend on the upper-left panel only (overlays are the same on all).
+    axes[0, 0].legend(fontsize=7, loc='lower left')
+    fig.suptitle('{0} — IAPWS G13-15 budget violations\n{1} probes — fails only shown\nGold shaded = critical-patch HEOS-fallback bbox'.format(backend, total_probes), fontsize=11)
+    fig.tight_layout(rect=[0, 0, 1, 0.94])
+    out_path = os.path.join(out_dir, 'IF97_conformance_fails_{0}.png'.format(slug))
+    fig.savefig(out_path, dpi=110)
+    plt.close(fig)
+    return {'all': os.path.basename(out_path)}
 
 
 # ---------------------------------------------------------------------------
@@ -522,21 +673,32 @@ def render_rst(results_per_backend, counts_per_backend, timings, figure_paths_pe
         lines.append('~' * max(60, len(section_title)))
         lines.append('')
 
-        # Failure-point figures (one per region) showing the
-        # population in PH coords with budget-violating samples
-        # overlaid in red.  Lets the reader see WHERE the SVDSBTL
-        # truncation residual exceeds the IAPWS perm budget, not
-        # just the bulk statistics.
+        # Single combined failure-point figure spanning all IF97
+        # regions, six panels (2x3) — one per G13-15 property
+        # (T, v, s, w plus eta and lambda).  Each panel shows ONLY
+        # the budget-violating probes; markers sized + coloured by
+        # log10(|delta|/perm) so isolated thin-support outliers are
+        # visually distinguishable from the multi-cell clusters that
+        # signal structural SVD-truncation problems.  Overlays
+        # (saturation dome, R1/R3 / R2/R5 isotherms, B23 boundary,
+        # auto-calibrated critical-patch bbox, critical point) anchor
+        # the geographic interpretation.
         if fig_paths:
             lines.append(
-                'The three figures below show *where* the failures live '
-                'in :math:`(p, h)` coords (one per IF97 region, four '
-                'panels per figure — one for each G13-15 property: '
-                ':math:`T, v, s, w`).  Light-grey dots are the full '
-                'in-region sample population; red markers are samples '
-                'that exceed the G13-15 permissible deviation for that '
-                'property, sized + coloured by '
-                ':math:`\\log_{10}(|\\Delta| / |\\Delta|_\\mathrm{perm})`.')
+                'The figure below shows *where* the failures live in '
+                ':math:`(p, h)` coords across the full IF97 envelope '
+                '— six panels, one per G13-15 property '
+                '(:math:`T, v, s, w, \\eta, \\lambda`).  Only the '
+                'budget-violating probes are plotted; marker size and '
+                'colour both encode '
+                ':math:`\\log_{10}(|\\Delta| / |\\Delta|_\\mathrm{perm})`, '
+                'so bigger + redder is further past budget.  Overlays: '
+                'the saturation dome, the IF97 R1/R3 isotherm '
+                '(:math:`T = 623.15` K) and R2/R5 isotherm '
+                '(:math:`T = 1073.15` K), the R2/R3 boundary curve '
+                ':math:`p_{B23}(T)`, and the auto-calibrated '
+                'critical-patch HEOS-fallback bbox (gold).  Black dot '
+                'marks the critical point.')
             lines.append('')
             lines.append(
                 'The clustering pattern is the load-bearing signal — '
@@ -544,51 +706,60 @@ def render_rst(results_per_backend, counts_per_backend, timings, figure_paths_pe
                 'what to do about it:')
             lines.append('')
             lines.append(
-                '* **R1** (compressed liquid, :math:`T < 623.15` K): '
-                'isolated red pixels at extreme :math:`p, h` corners '
-                'where Hermite cubic basis support is thin against the '
-                'SVD\'s :math:`200 \\times 800` grid.  No structural '
-                'cluster — these are accuracy-ceiling cells, not '
-                'systematic.')
-            lines.append('')
-            lines.append(
-                '* **R2** (superheated vapour and :math:`T > 1073.15` K): '
-                'red cluster along the IF97 R2/R3 boundary curve '
-                ':math:`p_{B23}(T)`.  IF97 switches basis equations '
-                '(g-form vs :math:`\\rho, T` fundamental Helmholtz) '
-                'across this curve, so :math:`c_p, s, w` have a '
-                'structural kink.  A single SVD over a region '
-                'containing the kink cannot resolve it; the atlas '
-                'splits SUPER at :math:`p_{B23}(T)` into SUPER_R2 and '
-                'SUPER_R3 so each SVD only sees cells on one side of '
-                'the kink.  The residual reds are the cells closest '
-                'to the kink (Hermite spans across :math:`p_{B23}` '
-                'within the boundary-row cells).')
-            lines.append('')
-            lines.append(
-                '* **R3** (near-critical and supercritical dense): red '
-                'cluster around the critical point '
-                '(:math:`T_c = 647.096` K, :math:`p_c = 22.064` MPa).  '
-                'A rank-20 SVD cannot represent the '
+                '* **Thermodynamic panels** (:math:`T, v, s, w`): '
+                'failures cluster around the **critical point** '
+                '(rank-20 SVD cannot represent the '
                 ':math:`(\\partial \\rho / \\partial p)_h` cusp at the '
                 'critical singularity — that would require unbounded '
-                'rank.  SVDSBTL\'s critical-patch fallback routes '
-                'queries inside :math:`[0.95, 1.05] T_c \\times '
-                '[0.75, 1.15] p_c` directly through IF97 '
-                '(TOMS748-polished to forward-consistent :math:`h(T, p)` '
-                'to shed IF97\'s :math:`\\pm 25` mK backward residual).  '
-                'The red marks outside that patch are the budget-ceiling '
-                'cells along the IF97 R1/R3 isotherm (623.15 K) — '
-                'addressed by the SUPER_R3 atlas split in '
-                '``CoolProp-foi.9.9``.')
+                'rank).  The gold critical-patch bbox covers the bulk '
+                'of those failures; the auto-calibration loop sized it '
+                'to do exactly that.  Residual reds outside the gold '
+                'bbox are thin-Hermite-support corner cells '
+                '(``CoolProp-3c4`` accuracy ceiling — accepted, not '
+                'fixable by widening the bbox).')
             lines.append('')
-            for region in sorted(fig_paths):
-                lines.append('.. figure:: {0}'.format(fig_paths[region]))
+            lines.append(
+                '* **Transport panels** (:math:`\\eta, \\lambda`): '
+                'failures are widespread.  The G13-15 transport '
+                'budgets (:math:`10^{-5}` relative) are 100-1000x '
+                'tighter than the thermodynamic ones, and the rank-20 '
+                'SVD\'s representation of viscosity / conductivity is '
+                'not yet conformant — closing this gap is tracked in '
+                'the SBTL conformance epic (``CoolProp-foi``).  The '
+                'thermodynamic panels are the ones to focus on when '
+                'assessing whether SVDSBTL is fit-for-purpose for a '
+                'given application; the transport panels document the '
+                'remaining work.')
+            lines.append('')
+            lines.append(
+                '* The **R2/R3 kink** along :math:`p_{B23}(T)` is no '
+                'longer a structural failure cluster — the atlas split '
+                'introduced in ``CoolProp-foi.9.5`` separates SUPER_R2 '
+                'and SUPER_R3 so each SVD only sees cells on one side '
+                'of the kink.  Residual failures along that line are '
+                'the boundary-row cells where the Hermite kernel spans '
+                'across :math:`p_{B23}`.')
+            lines.append('')
+            # The new generator emits a single combined PNG keyed
+            # 'all' rather than per-region files — embed it directly.
+            combined = fig_paths.get('all')
+            if combined is not None:
+                lines.append('.. figure:: {0}'.format(combined))
                 lines.append('   :align: center')
-                lines.append('   :width: 90%')
+                lines.append('   :width: 95%')
                 lines.append('')
-                lines.append('   IF97 Region {0} — {1}'.format(region, backend))
+                lines.append('   {0} — IAPWS G13-15 budget violations across the full IF97 envelope.'.format(backend))
                 lines.append('')
+            else:
+                # Backwards-compat for any legacy per-region keys (a
+                # plugin or downstream regen might still emit them).
+                for region in sorted(fig_paths):
+                    lines.append('.. figure:: {0}'.format(fig_paths[region]))
+                    lines.append('   :align: center')
+                    lines.append('   :width: 90%')
+                    lines.append('')
+                    lines.append('   IF97 Region {0} — {1}'.format(region, backend))
+                    lines.append('')
 
         for pk, sym, _unit, kind, perm, perm_unit, table_id in PROPERTIES:
             if kind == 'rel':
@@ -636,12 +807,19 @@ def render_rst(results_per_backend, counts_per_backend, timings, figure_paths_pe
             'instantiated per backend and reused across the loop, so '
             'the cost is the flash + property read with **no factory '
             'rebuild per probe** — this is the regime production code '
-            'should target, not the ``PropsSI`` regime (which '
-            'reconstructs the ``AbstractState`` on every call and is '
-            'dominated by the table-load cost for tabular / SVDSBTL '
-            'backends).  See :ref:`Three performance regimes '
-            '<SVDSBTL-regimes>` on the SVDSBTL page for the full '
-            'three-regime comparison.')
+            'should target.')
+        lines.append('')
+        lines.append(
+            'Each column header (T / D / A / V) corresponds to one '
+            'output property; the cell entry is the **mean wall time '
+            'for a single ``update()`` + one ``keyed_output()`` call '
+            'requesting that property**.  Backends that share the '
+            'flash cost across multiple outputs are penalised here — '
+            'an :math:`(h, p)`-flash-then-read-N-properties workload '
+            'is reported per-output, not amortised — so a fair '
+            'comparison for batch use cases is the SVDSBTL '
+            '``fast_evaluate`` path which shares the surface locate '
+            'across all N outputs.')
         lines.append('')
         lines.append(
             'Samples are drawn from the same per-IF97-region '
@@ -652,11 +830,13 @@ def render_rst(results_per_backend, counts_per_backend, timings, figure_paths_pe
             'evaluate — e.g. cells inside SVDSBTL\'s known '
             'rank-truncation gap near the critical singularity — are '
             'pre-rejected during population so the timed loop is a '
-            'plain for-loop).  The ratio column is '
-            ':math:`t_{\\mathrm{backend}} / t_{\\mathrm{IF97}}`.  '
-            'Lower is faster than IF97.  Absolute timings depend on '
-            'hardware; the **ratios** are the load-bearing quantity.  '
-            'CI rebuilds these on a GitHub-hosted runner.')
+            'plain for-loop).  The ratio column is the mean across '
+            'the per-property ratios :math:`t_{\\mathrm{backend}} / '
+            't_{\\mathrm{IF97}}`.  Lower is faster than IF97.  Rows '
+            'are sorted by descending mean ratio so the slowest path '
+            'sits at the top.  Absolute timings depend on hardware; '
+            'the **ratios** are the load-bearing quantity.  CI '
+            'rebuilds these on a GitHub-hosted runner.')
         lines.append('')
         lines.append('.. list-table::')
         lines.append('   :header-rows: 1')
@@ -669,20 +849,32 @@ def render_rst(results_per_backend, counts_per_backend, timings, figure_paths_pe
         lines.extend(header)
 
         baseline = timings.get(REFERENCE, {})
-        ordered = [REFERENCE] + [b for b, _ in TESTED if b in timings]
-        for backend in ordered:
+        # Order rows by descending mean ratio against IF97 (slowest
+        # backend on top, fastest on bottom).  Surfaces the "what's the
+        # cost ceiling" answer at a glance — the user reading the table
+        # in docs cares more about who's the slow path than alphabetic
+        # / definition-order convention.
+        candidates = [REFERENCE] + [b for b, _ in TESTED if b in timings]
+        rows_by_ratio = []
+        for backend in candidates:
             bt = timings.get(backend, {})
             if not bt:
                 continue
-            row = ['   * - ``{}``'.format(backend)]
             ratios = []
             for prop in TIMING_PROPS:
-                row.append('     - {}'.format(_fmt_ns(bt.get(prop, float('nan')))))
                 base = baseline.get(prop, float('nan'))
                 this = bt.get(prop, float('nan'))
                 if math.isfinite(base) and base > 0 and math.isfinite(this):
                     ratios.append(this / base)
-            row.append('     - {:.2f}'.format(sum(ratios) / len(ratios)) if ratios else '     - --')
+            mean_ratio = sum(ratios) / len(ratios) if ratios else float('inf')
+            rows_by_ratio.append((mean_ratio, backend, bt, ratios))
+        # Sort: largest mean_ratio first (slowest backend on top).
+        rows_by_ratio.sort(key=lambda x: x[0], reverse=True)
+        for mean_ratio, backend, bt, ratios in rows_by_ratio:
+            row = ['   * - ``{}``'.format(backend)]
+            for prop in TIMING_PROPS:
+                row.append('     - {}'.format(_fmt_ns(bt.get(prop, float('nan')))))
+            row.append('     - {:.2f}'.format(mean_ratio) if ratios else '     - --')
             lines.extend(row)
         lines.append('')
     return '\n'.join(lines) + '\n'

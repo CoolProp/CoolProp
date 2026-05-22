@@ -6,10 +6,11 @@ SVDSBTL --- SVD-Compressed Tabular Lookup Backend
 
 SVDSBTL is a tabular-lookup backend that combines an atlas of
 analytically-bounded regions with a low-rank SVD of each region's
-property surfaces.  It produces single-digit-microsecond property
-evaluations at IAPWS G13-15 conformance for water, and a single-digit
-percent accuracy ceiling for the multi-fluid HEOS-backed presets, at a
-disk footprint of ~10 MB per (fluid, input pair, source backend).
+property surfaces.  It produces **sub-microsecond** property
+evaluations (~200-400 ns per probe in the batched ``fast_evaluate``
+path) at IAPWS G13-15 conformance for water, and a single-digit
+percent accuracy ceiling for the multi-fluid HEOS-backed presets,
+at a disk footprint of ~10 MB per (fluid, input pair, source backend).
 
 This page is the **user-facing** page: how to use the backend, what it
 guarantees, and when to pick it.  For the underlying SVD math
@@ -23,8 +24,15 @@ What it is
 
 A traditional bicubic table covers the full :math:`(p, h)` or
 :math:`(p, T)` envelope with one coarse grid and stores the source
-backend's property values at each cell.  SVDSBTL replaces that with
-three layered components:
+backend's property values at each cell.  Two known limitations of
+that approach: (a) the **saturation boundary** can't be expressed on
+a regular grid without padding cells on either side, so a single
+table either crosses the dome (with the discontinuity smearing into
+the bicubic interpolant) or excludes a stripe around it (so the
+backend can't answer there); and (b) **memory grows quadratically**
+with grid resolution — the bicubic table for a single fluid at
+useful accuracy is hundreds of MB.  SVDSBTL replaces the single
+bicubic table with three layered components that address both:
 
 1. **Region atlas.**  The thermodynamic envelope is partitioned into
    ~3-7 disjoint regions in :math:`(p, h)` or :math:`(p, T)` — LIQUID
@@ -41,20 +49,20 @@ three layered components:
    as a rank-:math:`r` SVD of a dense :math:`N_p \times N_h` (default
    :math:`200 \times 800`, :math:`r = 20`) sample grid.  Hermite
    bicubic interpolation between SVD grid points gives :math:`C^1`
-   continuity across the region.  Density / transport properties
-   ride a log transform (:math:`\rho = \exp(\sum_k S_k U_k V_k)`) so
-   their multi-decade dynamic range fits the SVD's smoothness
-   assumption.
+   continuity across the region.  Density and transport properties
+   use a **log transform**
+   (:math:`\rho = \exp(\sum_k S_k U_k V_k)`) so their multi-decade
+   dynamic range fits the SVD's smoothness assumption.
 
 3. **Critical-patch HEOS fallback.**  Near the critical point the
    rank-truncated SVD cannot resolve the cusp in
    :math:`(\partial \rho / \partial p)_h` — a single dense region
    needs unbounded rank.  SVDSBTL identifies a small rectangular
-   patch in :math:`(T, p)` around the critical point (default
-   :math:`[0.95, 1.05] \cdot T_c \times [0.75, 1.15] \cdot p_c` for
-   Water) and routes queries inside the patch directly through the
-   source backend.  Outside the patch the SVD owns the answer.  This
-   keeps the SVD's per-cell rank low everywhere it is responsible.
+   patch in :math:`(T, p)` around the critical point (auto-calibrated
+   per fluid; see :ref:`Critical-patch bbox <SVDSBTL-critpatch>`
+   below) and routes queries inside the patch directly through the
+   source backend.  Outside the patch the SVD owns the answer; this
+   keeps the SVD's per-cell rank low everywhere else.
 
 Queries through the public ``AbstractState`` interface dispatch to
 whichever of these three handles the input pair: the atlas locates the
@@ -95,8 +103,8 @@ multiplying by molar mass.  Two-phase ``PQ_INPUTS`` and ``QT_INPUTS``
 route directly through the source's saturation line — no separate
 table is required.
 
-A follow-up adds ``HmassSmass`` and ``Dmass-Umass`` for the remaining
-G13-15 input-pair coverage (Tables 14-17); see bd
+A planned follow-up adds ``HmassSmass`` and ``Dmass-Umass`` for the
+remaining G13-15 input-pair coverage (Tables 14-17); see bd
 ``CoolProp-phv``.
 
 The on-disk table cache
@@ -139,12 +147,81 @@ SVDSBTL exposes three distinct call patterns with very different
 per-call cost.  Picking the right one matters far more than picking
 the backend.
 
-1. **PropsSI (low-level wrapper, off by default).**
-   ``PropsSI`` rebuilds an ``AbstractState`` instance per call,
-   including a zlib-decompressed ``.svd.bin.z`` load (~80 ms per
-   ``AbstractState`` construction).  For a one-off query this is
-   cheap-enough; for a throughput workload it is catastrophic —
-   *every* ``PropsSI`` call pays the table-load cost again.
+1. **AbstractState.update — reuse the instance (canonical path).**
+   Construct the ``AbstractState`` once, then call ``update`` /
+   property accessors in a loop.  Table load is amortised over the
+   full workload:
+
+   .. ipython::
+
+       In [1]: import CoolProp.CoolProp as CP
+
+       In [1]: from CoolProp import AbstractState
+
+       In [1]: import numpy as np
+
+       In [1]: AS = AbstractState("SVDSBTL&IF97", "Water")
+
+       In [1]: h_arr = np.linspace(2.0e5, 3.0e6, 5)
+
+       In [1]: p_arr = np.full_like(h_arr, 1.0e6)
+
+       In [1]: def loop():
+          ...:     for h, p in zip(h_arr, p_arr):
+          ...:         AS.update(CP.HmassP_INPUTS, h, p)
+          ...:         AS.rhomass(); AS.T()
+
+       In [1]: %timeit loop()
+
+   Native C++ per-call wall time is ~200 ns; the bulk of the
+   Python-visible cost is the wrapper marshalling, and even in Python
+   the per-call cost is hundreds of nanoseconds — far faster than
+   HEOS's :math:`(p, h)` flash.  This is what most user code should
+   look like.
+
+2. **fast_evaluate (batched, no instance mutation).**
+   ``AbstractState.fast_evaluate(input_pair, val1[], val2[],
+   outputs[], out_buffer, status)`` writes N property values for M
+   probes directly into a caller-supplied buffer.  No per-point
+   ``AbstractState`` cache mutation, no Python wrapper marshalling
+   per probe, and shared :math:`(p, h)` locate / Hermite-basis setup
+   across the N requested properties:
+
+   .. ipython::
+
+       In [1]: import CoolProp.CoolProp as CP
+
+       In [1]: from CoolProp import AbstractState
+
+       In [1]: import numpy as np
+
+       In [1]: AS = AbstractState("SVDSBTL&IF97", "Water")
+
+       In [1]: N = 10_000
+
+       In [1]: h = np.random.uniform(1e5, 3e6, N)
+
+       In [1]: p = np.random.uniform(1e5, 3e7, N)
+
+       In [1]: outputs = np.array([CP.iT, CP.iDmass, CP.iSmass], dtype=np.int32)
+
+       In [1]: out = np.empty((N, 3)); status = np.empty(N, dtype=np.int32)
+
+       In [1]: %timeit AS.fast_evaluate(CP.HmassP_INPUTS, h, p, outputs, out, status)
+
+   Per-point wall time: **~340-400 ns** for a 4-output query on Apple
+   Silicon (10k-probe batch).  Marginal cost per added surface output
+   ~57 ns after locate / basis-weight setup is paid once per probe.
+   For CFD-scale workloads (≥100k probes per timestep) this is the
+   only sensible API.
+
+3. **PropsSI — the high-level wrapper (off by default).**
+   ``PropsSI`` is the high-level entry point that resolves the
+   backend and constructs an ``AbstractState`` on every call.  For
+   SVDSBTL that means a zlib-decompressed ``.svd.bin.z`` load (~80 ms
+   per ``AbstractState`` construction).  For a one-off interactive
+   query this is fine; for a throughput workload it is catastrophic
+   — *every* ``PropsSI`` call pays the table-load cost again.
 
    SVDSBTL therefore opts *out* of ``PropsSI`` by default.  Enable
    only for interactive / scripting use where the construction cost
@@ -158,49 +235,6 @@ the backend.
    This gate is :ref:`enforced architecturally <SVDSBTL-config>` — the
    same pattern the bicubic and TTSE backends use, for the same
    reason.
-
-2. **AbstractState.update (reuse the instance).**
-   Construct the ``AbstractState`` once, then call ``update`` /
-   property accessors in a loop.  Table load is amortised over the
-   full workload:
-
-   .. code-block:: python
-
-       AS = CP.AbstractState("SVDSBTL&IF97", "Water")
-       for h, p in probes:
-           AS.update(CP.HmassP_INPUTS, h, p)
-           rho.append(AS.rhomass())
-           T.append(AS.T())
-
-   Per-call wall time: **~1-2 μs** on a modern CPU (includes Python
-   wrapper marshalling; native C++ closer to ~200 ns).  This is
-   what most user code should look like.
-
-3. **fast_evaluate (batched, no instance mutation).**
-   ``AbstractState.fast_evaluate(input_pair, val1[], val2[],
-   outputs[], out_buffer, status)`` writes N property values for M
-   probes directly into a caller-supplied buffer.  No per-point
-   ``AbstractState`` cache mutation, no Python wrapper marshalling
-   per probe, and shared :math:`(p, h)` locate / Hermite-basis setup
-   across the N requested properties:
-
-   .. code-block:: python
-
-       import numpy as np
-       AS = CP.AbstractState("SVDSBTL&IF97", "Water")
-       N = 10_000
-       h = np.random.uniform(1e5, 3e6, N)
-       p = np.random.uniform(1e5, 3e7, N)
-       outputs = np.array([CP.iT, CP.iDmass, CP.iSmass], dtype=np.int32)
-       out = np.empty((N, 3))
-       status = np.empty(N, dtype=np.int32)
-       AS.fast_evaluate(CP.HmassP_INPUTS, h, p, outputs, out, status)
-
-   Per-point wall time: **~340-400 ns** for a 4-output query on Apple
-   Silicon (10k-probe batch).  Marginal cost per added surface output
-   ~57 ns after locate / basis-weight setup is paid once per probe.
-   For CFD-scale workloads (≥100k probes per timestep) this is the
-   only sensible API.
 
 The :ref:`profile figure on the IF97 page <IF97-Conformance>` shows
 all three regimes side-by-side, against HEOS and IF97 baselines.
@@ -234,31 +268,35 @@ When to use SVDSBTL
 
 SVDSBTL pays off when one of these is true:
 
-* You evaluate a fixed-formulation EOS at **>10k probes per process
-  lifetime**.  The table-build amortises out below that point.
-* You need :math:`p, h` lookup (typical for power-cycle, refrigeration,
-  CFD); HEOS's :math:`(T, \rho)` formulation makes :math:`(p, h)`
-  inputs 5-10× slower than :math:`(p, T)`.
-* You want conformance to IAPWS G13-15 for water (not just the
-  G13-15 *backward* :math:`T(p, h)` accuracy of IF97, but the
-  *forward* equations as well — SVDSBTL&IF97 inherits IF97's
-  :math:`±25` mK :math:`T(p, h)` floor by construction).
-* You need to use IF97 forward equations from non-pre-IF97 input
-  coordinates (e.g. :math:`(p, s)`-driven turbine stages) without
-  paying IF97's :math:`(p, h) \to T \to (p, T)` inversion cost.
+* You evaluate a fixed-formulation EOS at **>10k probes per
+  AbstractState instance**.  The first construction pays a
+  ~80 ms table-load cost (or, for a cold cache, a few seconds of
+  table-build cost); both amortise over the subsequent queries.
+* You need :math:`(p, h)` lookup (typical for power-cycle,
+  refrigeration, CFD); HEOS's :math:`(T, \rho)` formulation makes
+  :math:`(p, h)` inputs 5-10× slower than :math:`(p, T)`.
+* You want conformance to IAPWS G13-15 for water — both the
+  *backward* :math:`T(p, h)` equations and the *forward* equations
+  (SVDSBTL&IF97 returns forward-consistent values via the
+  TOMS748-polished SVD).
+* You need a non-pre-tabulated input pair (e.g. :math:`(p, s)`-driven
+  turbine stages) at IF97 conformance: SVDSBTL's atlas + per-region
+  SVD generalises beyond the input pair that IF97 ships native
+  backward equations for.
 
 SVDSBTL is **not** the right pick when:
 
 * Your workload is interactive single-shot ``PropsSI`` calls.  Use
-  HEOS or IF97 directly.
-* You need accuracy in the critical region better than HEOS's
-  :math:`±0.5` mK (SVDSBTL's critical-patch HEOS fallback inherits
-  HEOS's accuracy in that slice, so this is rarely a hard limit, but
-  if you are running ultra-precise EOS verification, the SVD path is
-  not the right tool).
-* You need transport properties for a fluid whose HEOS model lacks
-  them — SVDSBTL's table will not include :math:`\eta` or
-  :math:`\lambda` for that fluid, and queries will return NaN.
+  HEOS or IF97 directly — the ~80 ms per-call table-load overhead
+  dominates.
+* You need transport properties for a fluid whose source backend
+  lacks them.  SVDSBTL just samples the source; if the source's HEOS
+  model has no :math:`\eta` / :math:`\lambda` correlation, neither
+  does the SVDSBTL table for that fluid.  (This is a source-backend
+  limitation, not an SVDSBTL one — but it bites SVDSBTL users
+  because they may pick SVDSBTL specifically to skip the
+  per-call source flash, then discover the property they want isn't
+  in the table.)
 
 Accuracy envelope
 =================
@@ -285,6 +323,62 @@ Accuracy envelope
   endpoints currently fall through to REFPROP's PQ flash (~ms per
   probe); ``CoolProp-077`` will replace that with an on-disk
   saturation-surrogate spline.
+
+Deviation plot
+==============
+
+The figure below shows the density deviation of ``SVDSBTL&HEOS`` from
+the underlying HEOS truth source over the full :math:`(h, p)`
+envelope of R245fa.  Sample density 20,000 random :math:`(h, p)`
+points (matching the :ref:`tabular-interpolation accuracy figure
+<tabular_interpolation>` for the BICUBIC / TTSE backends).
+
+.. plot::
+
+    import matplotlib
+    import matplotlib.colors as colors
+    import matplotlib.cm as cmx
+    import matplotlib.ticker
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import random
+
+    import CoolProp
+    import CoolProp.CoolProp as CP
+
+    Ref = 'R245fa'
+    EOS = CoolProp.AbstractState('HEOS', Ref)
+    SVD = CoolProp.AbstractState('SVDSBTL&HEOS', Ref)
+
+    HHH, PPP, EEE = [], [], []
+    cNorm = colors.LogNorm(vmin=1e-12, vmax=10)
+    for _ in range(20000):
+        h = random.uniform(150000, 590000)
+        p = 10 ** random.uniform(np.log10(100000), np.log10(7000000))
+        try:
+            EOS.update(CoolProp.HmassP_INPUTS, h, p)
+            SVD.update(CoolProp.HmassP_INPUTS, h, p)
+            err = abs(SVD.rhomolar() / EOS.rhomolar() - 1) * 100
+        except Exception:
+            continue
+        HHH.append(h); PPP.append(p); EEE.append(err)
+
+    fig = plt.figure(figsize=(7, 5))
+    ax = fig.add_axes((0.13, 0.13, 0.74, 0.78))
+    sc = ax.scatter(HHH, PPP, s=8, c=EEE, edgecolors='none',
+                    cmap='jet', norm=cNorm)
+    ax.set_yscale('log')
+    ax.set_xlabel('Enthalpy [J/kg]')
+    ax.set_ylabel('Pressure [Pa]')
+    ax.set_title('SVDSBTL&HEOS density deviation — ' + Ref)
+    cb = fig.colorbar(sc, ax=ax, fraction=0.05, pad=0.02)
+    cb.set_label(r'$|\rho_{\mathrm{SVDSBTL}} / \rho_{\mathrm{HEOS}} - 1|\ \%$')
+
+For the IF97-sourced SVDSBTL on water, the per-property fail-map
+figure in :ref:`IF97-Conformance` shows the equivalent — same
+:math:`(h, p)`-coloured deviation pattern but classified against the
+IAPWS G13-15 conformance budgets rather than reported as raw
+relative error.
 
 For the underlying SVD compression math — why a rank-:math:`r` SVD
 of a smooth function on a rectangle gives :math:`O(r^{-\infty})`
