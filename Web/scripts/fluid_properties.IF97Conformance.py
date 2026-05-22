@@ -248,28 +248,34 @@ def _read_props_fast(state, h, p, prop_int_keys):
     return out
 
 
-def _refine_to_forward_h(state, p, T_seed, h_target, max_iter=5, rel_tol=1e-10):
-    """Newton-iterate ``state`` on the FORWARD equation h(T, p) until its
-    cached T satisfies h(T, p) = h_target to machine precision.  Mirrors
-    ``refine_to_forward_h`` in src/Tests/CoolProp-Tests-SVDSBTLFailMap.cpp.
+def _refine_to_forward_h(state, p, T_seed, h_target, rel_tol=1e-10):
+    """TOMS748-iterate ``state`` on the FORWARD equation h(T, p) until
+    its cached T satisfies h(T, p) = h_target to machine precision.
+    Mirrors the polish used by SVDSBTL's own sampling lambda
+    (src/SBTL/SurfacePresets.cpp + the SurfaceFailMap C++ harness in
+    src/Tests/CoolProp-Tests-SVDSBTLFailMap.cpp; PR #2940).
 
-    Why this matters for the conformance sweep: IF97's published backward
-    T_phmass(p, h) has a ±25 mK residual baked into R7-97.  If we use
-    that backward T as "truth", we're comparing SVDSBTL (which was
-    sampled via TOMS748-polished forward h to machine precision) against
-    a reference that has ~25 mK of its own slop — every R1/R3 cell
-    nominally shows ~25 mK of "deviation" that's really just IF97's own
-    backward-equation residual.  Refining to forward-consistent T
-    removes that floor so the conformance figure shows the SVD's actual
-    residual against the IF97 forward equations, not the reference's
-    own backward floor.
+    Why TOMS748 rather than Newton: SVDSBTL's table was built via a
+    TOMS748-polished sampling pass (foi.9.10).  Using TOMS748 here too
+    means the conformance comparison's reference-state refinement is
+    bit-identical-in-philosophy to the source-table construction —
+    same root-finder, same convergence guarantees, no cpmass slope
+    discontinuity at region boundaries to trip up Newton.
 
-    State pinning: hold the IF97 phase across the Newton iteration so
-    HEOS / IF97 doesn't flip basins mid-iteration on probes near the
-    saturation curve.
+    Why this matters: IF97's published backward T_phmass(p, h) has
+    ±25 mK residual baked in (R7-97 backward eqs are polynomial fits,
+    not exact inverses).  If used as "truth", every R1/R3 cell shows
+    ~25 mK of deviation that's really IF97's own backward-equation
+    residual — swamps the SVD's actual error.  Refining the reference
+    to forward-consistent T removes that floor so the figure shows
+    the SVD's residual against IF97's forward equations, not the
+    backward-equation noise.
 
-    Best-effort: returns silently after max_iter (5 is sufficient for
-    Newton on a smooth h(T, p) — typical convergence is 2-3 iters)."""
+    State pinning: hold the IF97 phase across the iteration so HEOS /
+    IF97 don't flip basins mid-iteration near the saturation curve.
+
+    Best-effort: returns silently on bracket failure / source rejection.
+    """
     try:
         state.update(CP.HmassP_INPUTS, h_target, p)
     except Exception:
@@ -278,6 +284,7 @@ def _refine_to_forward_h(state, p, T_seed, h_target, max_iter=5, rel_tol=1e-10):
         except Exception:
             pass
         return
+
     pinned = False
     try:
         phase0 = state.phase()
@@ -290,23 +297,52 @@ def _refine_to_forward_h(state, p, T_seed, h_target, max_iter=5, rel_tol=1e-10):
             pinned = True
     except Exception:
         pass
+
+    def h_residual(T):
+        try:
+            state.update(CP.PT_INPUTS, p, T)
+            return state.hmass() - h_target
+        except Exception:
+            return float('nan')
+
+    # Build a tight bracket around T_seed and check for sign change.
+    # ±0.5 K is wider than IF97's ±25 mK backward residual by 20×,
+    # comfortably contains the forward root.
     try:
-        for _ in range(max_iter):
-            try:
-                h_now = state.hmass()
-                cp = state.cpmass()
-            except Exception:
-                break
-            dh = h_now - h_target
-            if abs(dh) < rel_tol * abs(h_target):
-                break
-            if not math.isfinite(cp) or cp <= 0.0:
-                break
-            T_new = state.T() - dh / cp
-            try:
-                state.update(CP.PT_INPUTS, p, T_new)
-            except Exception:
-                break
+        T_lo = max(state.Tmin() if hasattr(state, 'Tmin') else 273.16, T_seed - 0.5)
+        T_hi = min(state.Tmax() if hasattr(state, 'Tmax') else 2273.15, T_seed + 0.5)
+    except Exception:
+        T_lo, T_hi = T_seed - 0.5, T_seed + 0.5
+
+    try:
+        from scipy.optimize import toms748
+    except ImportError:
+        toms748 = None
+
+    try:
+        if toms748 is None or not (T_lo < T_hi):
+            # Fallback to leaving the state at the backward seed.
+            pass
+        else:
+            r_lo = h_residual(T_lo)
+            r_hi = h_residual(T_hi)
+            if math.isfinite(r_lo) and math.isfinite(r_hi) and r_lo * r_hi <= 0:
+                try:
+                    T_root, info = toms748(h_residual, T_lo, T_hi,
+                                           xtol=1e-6, rtol=rel_tol,
+                                           full_output=True)
+                    if info.converged:
+                        state.update(CP.PT_INPUTS, p, T_root)
+                except Exception:
+                    # On any solver failure, restore the HmassP seed
+                    # so callers don't see a wild PT state.
+                    try: state.update(CP.HmassP_INPUTS, h_target, p)
+                    except Exception: pass
+            else:
+                # Bracket misses (rare: at T_seed boundary cells).
+                # Leave at the backward seed.
+                try: state.update(CP.HmassP_INPUTS, h_target, p)
+                except Exception: pass
     finally:
         if pinned:
             try: state.unspecify_phase()
@@ -615,7 +651,38 @@ def write_failure_figures(backend, samples_per_region, out_dir):
     # Legend on the upper-left panel only (overlays are the same on all).
     axes[0, 0].legend(fontsize=7, loc='lower left')
     fig.suptitle('{0} — IAPWS G13-15 budget violations\n{1} probes — fails only shown\nGold shaded = critical-patch HEOS-fallback bbox'.format(backend, total_probes), fontsize=11)
-    fig.tight_layout(rect=[0, 0, 1, 0.94])
+
+    # Footer: enumerate the G13-15 perm budget that each panel is
+    # scored against.  Region-dependent perms (Table 8 T) are spelled
+    # out as R1/R2/R3/R5; uniform perms are shown as a single value.
+    # Keeps the figure self-contained — reader doesn't have to crack
+    # the script to know what "budget violation" means per property.
+    def _fmt_perm_for_footer(pk, perm, unit_str):
+        prop_sym = 'v' if pk == 'D' else dict((p[0], p[1]) for p in plot_props)[pk]
+        if isinstance(perm, dict):
+            vals = '/'.join(str(int(perm[r])) if perm[r] == int(perm[r]) else '{:g}'.format(perm[r])
+                            for r in (1, 2, 3, 5))
+            return r'$|\Delta {0}|_\mathrm{{perm}}$: {1} {2} (R1/R2/R3/R5)'.format(prop_sym, vals, unit_str)
+        # scalar
+        return r'$|\Delta {0}|_\mathrm{{perm}}$: {1:g} {2}'.format(prop_sym, perm, unit_str)
+
+    footer_parts = []
+    for pk, sym, _u, kind, perm, perm_unit, _tid in plot_props:
+        if kind == 'rel':
+            unit_str = r'$\%$'
+        elif kind == 'abs_T':
+            unit_str = 'mK'
+        elif kind == 'abs_s':
+            unit_str = r'$10^{-3}\,$J/(kg$\cdot$K)'
+        else:
+            unit_str = perm_unit
+        footer_parts.append(_fmt_perm_for_footer(pk, perm, unit_str))
+    # Two-line layout: thermodynamic perms on line 1, transport on line 2.
+    footer_line_1 = '   '.join(footer_parts[:4])
+    footer_line_2 = '   '.join(footer_parts[4:])
+    fig.text(0.5, 0.025, footer_line_1, ha='center', fontsize=7.5, color='#333')
+    fig.text(0.5, 0.005, footer_line_2, ha='center', fontsize=7.5, color='#333')
+    fig.tight_layout(rect=[0, 0.05, 1, 0.94])
     out_path = os.path.join(out_dir, 'IF97_conformance_fails_{0}.png'.format(slug))
     fig.savefig(out_path, dpi=110)
     plt.close(fig)
