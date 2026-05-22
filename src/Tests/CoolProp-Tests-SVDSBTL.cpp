@@ -449,6 +449,112 @@ TEST_CASE("SVDSBTL&HEOS and SVDSBTL&REFPROP produce distinct cache files", "[SVD
     REQUIRE(refprop_path.find("Water.REFPROP.") != std::string::npos);
 }
 
+// HmassP single-phase via SVDSBTL&REFPROP — the dominant call pattern,
+// exercises a different routing path from PT (uses log-p as primary axis,
+// h as secondary, atlas-resolves the LIQUID/VAPOR/SUPER region directly
+// from the inputs).  REFPROP-truth comparison so we catch any HEOS-only
+// assumption that slipped past the PT test.
+TEST_CASE("SVDSBTL&REFPROP HmassP single-phase matches REFPROP truth", "[SVDSBTL][source][refprop][hmassp][slow]") {
+    if (!source_backend_available("REFPROP", "Water")) {
+        SKIP("REFPROP not available; skipping SVDSBTL&REFPROP HmassP test");
+    }
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&REFPROP", "Water"));
+    auto refprop = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    // Subcritical liquid (well inside LIQUID region): T=400 K, p=10 MPa.
+    // Compute h from REFPROP, then feed (h, p) to SVDSBTL.  Both should
+    // recover the same density / temperature.
+    refprop->update(CoolProp::PT_INPUTS, 1.0e7, 400.0);
+    const double h_liq = refprop->hmass();
+    AS->update(CoolProp::HmassP_INPUTS, h_liq, 1.0e7);
+    REQUIRE(AS->T() == Approx(refprop->T()).epsilon(1e-3));
+    REQUIRE(AS->rhomass() == Approx(refprop->rhomass()).epsilon(1e-3));
+    // Superheated vapor (well inside VAPOR region): T=600 K, p=0.5 MPa.
+    refprop->update(CoolProp::PT_INPUTS, 5.0e5, 600.0);
+    const double h_vap = refprop->hmass();
+    AS->update(CoolProp::HmassP_INPUTS, h_vap, 5.0e5);
+    REQUIRE(AS->T() == Approx(refprop->T()).epsilon(1e-3));
+    REQUIRE(AS->rhomass() == Approx(refprop->rhomass()).epsilon(1e-3));
+}
+
+// HmassP dome-blend via SVDSBTL&REFPROP — the harder path.  Inputs (h, p)
+// land inside the saturation dome; the source PQ fallback runs (REFPROP
+// has no SuperAncillary), computes sat endpoints via PQ_INPUTS, and the
+// lever-rule blend should match REFPROP's own two-phase Q determination.
+TEST_CASE("SVDSBTL&REFPROP HmassP dome-blend matches REFPROP truth", "[SVDSBTL][source][refprop][hmassp][twophase][slow]") {
+    if (!source_backend_available("REFPROP", "Water")) {
+        SKIP("REFPROP not available; skipping SVDSBTL&REFPROP dome-blend test");
+    }
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&REFPROP", "Water"));
+    auto refprop = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    // Pick a sat pressure away from the critical point so the lever rule
+    // isn't near-degenerate.  Q=0.3 puts us comfortably inside the dome
+    // (h_L + 0.3*(h_V - h_L)).
+    const double p_sat = 0.3 * refprop->p_critical();
+    refprop->update(CoolProp::PQ_INPUTS, p_sat, 0.3);
+    const double h_dome = refprop->hmass();
+    AS->update(CoolProp::HmassP_INPUTS, h_dome, p_sat);
+    REQUIRE(AS->T() == Approx(refprop->T()).epsilon(1e-6));
+    REQUIRE(AS->Q() == Approx(0.3).epsilon(1e-6));
+    REQUIRE(AS->rhomass() == Approx(refprop->rhomass()).epsilon(1e-4));
+}
+
+// fast_evaluate via SVDSBTL&REFPROP — exercises the batched path with the
+// REFPROP-backed source.  The fast_evaluate kernel is source-agnostic
+// (uses the SVDSurface directly + source for dome endpoints) so the
+// principal risk is the REFPROP-via-source_reference_ path for dome
+// queries; both single-phase and dome probes are included.
+TEST_CASE("SVDSBTL&REFPROP fast_evaluate works for mixed single-phase + dome batch", "[SVDSBTL][source][refprop][fast_evaluate][slow]") {
+    if (!source_backend_available("REFPROP", "Water")) {
+        SKIP("REFPROP not available; skipping SVDSBTL&REFPROP fast_evaluate test");
+    }
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&REFPROP", "Water"));
+    auto refprop = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    // Build a (h, p) probe set spanning LIQUID (subcooled), VAPOR
+    // (superheated), and DOME (two-phase) so each Kind of the kernel is
+    // exercised.
+    std::vector<double> h_v, p_v;
+    for (double T_K : {350.0, 600.0}) {
+        for (double p_Pa : {1.0e5, 5.0e6}) {
+            refprop->update(CoolProp::PT_INPUTS, p_Pa, T_K);
+            h_v.push_back(refprop->hmass());
+            p_v.push_back(p_Pa);
+        }
+    }
+    // One dome probe: p = 0.3*p_crit, Q = 0.4.
+    refprop->update(CoolProp::PQ_INPUTS, 0.3 * refprop->p_critical(), 0.4);
+    h_v.push_back(refprop->hmass());
+    p_v.push_back(0.3 * refprop->p_critical());
+    const std::size_t N = h_v.size();
+    const std::vector<CoolProp::parameters> outputs = {CoolProp::iT, CoolProp::iDmass, CoolProp::iQ};
+    std::vector<double> out_buffer(N * outputs.size(), std::nan(""));
+    std::vector<int> status(N, -1);
+    AS->fast_evaluate(CoolProp::HmassP_INPUTS, h_v.data(), p_v.data(), N, outputs.data(), outputs.size(), out_buffer.data(), out_buffer.size(),
+                      status.data(), status.size());
+    // Compare against update() + per-property reads point-by-point.
+    // Bit-exact would be ideal but fails on the dome-blend probe
+    // because REFPROP's PQ flash on the two sat endpoints isn't
+    // order-deterministic at the last bits — fast_evaluate's
+    // resolve_point_ does both endpoints in one call, while
+    // update() does them in a different order across the two
+    // round-trips here.  4-ULP-class differences observed in
+    // practice; use a generous-but-tight relative tolerance.
+    for (std::size_t k = 0; k < N; ++k) {
+        INFO("k=" << k << " p=" << p_v[k] << " h=" << h_v[k]);
+        // Check status BEFORE comparing — a non-OK status leaves
+        // out_buffer holding NaN / garbage, and the comparison
+        // failure would mask the real issue.
+        REQUIRE(status[k] == CoolProp::fast_evaluate_ok);
+        AS->update(CoolProp::HmassP_INPUTS, h_v[k], p_v[k]);
+        REQUIRE(out_buffer[k * 3 + 0] == Approx(AS->T()).epsilon(1e-10));        // iT
+        REQUIRE(out_buffer[k * 3 + 1] == Approx(AS->rhomass()).epsilon(1e-10));  // iDmass
+        // iQ: -1 sentinel for single-phase, [0,1] in dome (per
+        // SVDSBTL's PointEvaluation convention; see SVDSBTLBackend.h
+        // PointEvaluation::Q docs).  -1 and Q in [0,1] are both
+        // exactly representable so direct compare is fine.
+        REQUIRE(out_buffer[k * 3 + 2] == AS->Q());
+    }
+}
+
 TEST_CASE("SVDSBTL fast_evaluate matches per-call update() bit-for-bit", "[SVDSBTL][fast_evaluate][water][slow]") {
     // Build a small (T, p) probe set via IF97, pull h(T, p), then evaluate
     // each probe via both update() + property reads AND via fast_evaluate;
