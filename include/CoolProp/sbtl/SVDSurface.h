@@ -105,6 +105,16 @@ class SVDSurface
     // region_idx >= 0.
     [[nodiscard]] double eval_with_region(::CoolProp::parameters prop, int region_idx, double svd_x, double svd_y) const;
 
+    // Batched fast path: evaluate `n` properties at the same
+    // (region, svd_x, svd_y).  All per-region per-property
+    // SVDEvaluators share the region's (x_grid, y_grid), so the
+    // locate() + Hermite-basis setup is done ONCE and amortized
+    // across the n property evals — a measurable speedup once n is
+    // ≥ 2.  out[i] receives the value for props[i].  Throws on
+    // unknown property keys (i.e., props that aren't tabulated on
+    // this surface); see contains_property() for the gate.
+    void eval_with_region_multi(int region_idx, double svd_x, double svd_y, const ::CoolProp::parameters* props, std::size_t n, double* out) const;
+
     // Convenience predicates.
     [[nodiscard]] bool contains_property(::CoolProp::parameters prop) const noexcept;
 

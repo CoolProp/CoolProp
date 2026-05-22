@@ -1018,9 +1018,116 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
         }
     };
 
-    // Per-point loop.  The resolve_point_ / evaluate_property_ kernel
-    // does all the routing — the loop is just an adapter that turns
-    // exceptions into status flags + NaN rows.
+    // Build an output plan ONCE outside the per-point loop.
+    //
+    // SVDSurface::eval_with_region_multi can evaluate N properties at
+    // the same (region, svd_x, svd_y) for the price of one locate() +
+    // Hermite-basis-setup pair, amortizing those ~25 ns across the
+    // batch.  To use it we need to know up-front which of the user's
+    // outputs map to surface evals, what mass-basis surface key each
+    // corresponds to (iDmolar → iDmass × M, iHmolar → iHmass × M, etc.),
+    // and how to scale on output (multiply / divide by M).
+    //
+    // Per-output role:
+    //   * Surface:        consumed from the batched surface_vals array
+    //   * Shortcut:       served by evaluate_property_ (input-pair
+    //                     shortcuts + iQ + kind-dependent paths)
+    // We dedup the surface-prop list so requesting both iDmass and
+    // iDmolar costs one eval, not two.
+    //
+    // Shortcut eligibility depends on which input pair is active —
+    // e.g., iT is a shortcut only for PT_INPUTS (pt.T is the input);
+    // for HmassP / HmolarP it has to come off the surface, in which
+    // case routing it through the batch saves an extra locate().
+    // Likewise iHmass / iHmolar are shortcuts only when h is supplied
+    // by the input pair.
+    const bool input_is_PT = (input_pair == CoolProp::PT_INPUTS);
+    const bool input_has_h = (input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS);
+
+    // N_outputs is bounded by the caller's output schema (typically <
+    // 10 for thermo-property batches), so a single heap allocation
+    // per fast_evaluate call is negligible against an N_inputs-deep
+    // per-point loop and avoids a hard-coded compile-time ceiling.
+    std::vector<unsigned char> output_is_surface(N_outputs, 0);
+    std::vector<std::size_t> output_surface_idx(N_outputs, 0);
+    std::vector<double> output_M_scale(N_outputs, 1.0);
+    std::vector<CoolProp::parameters> surface_props;
+    surface_props.reserve(N_outputs);
+    const double M = calc_molar_mass();
+    for (std::size_t o = 0; o < N_outputs; ++o) {
+        CoolProp::parameters mass_prop = outputs[o];
+        double scale = 1.0;
+        switch (outputs[o]) {
+            case CoolProp::iP:
+            case CoolProp::iQ:
+                // Always-available shortcuts: iP comes off the input
+                // pair; iQ resolves trivially (-1 for SinglePhase, Q
+                // for DomeBlend) inside evaluate_property_.
+                output_is_surface[o] = 0;
+                continue;
+            case CoolProp::iT:
+                if (input_is_PT) {
+                    output_is_surface[o] = 0;
+                    continue;
+                }
+                // Falls through to surface eval (mass_prop = iT, scale = 1).
+                break;
+            case CoolProp::iHmass:
+                if (input_has_h) {
+                    // pt.h_mass is populated directly from the input.
+                    output_is_surface[o] = 0;
+                    continue;
+                }
+                // PT_INPUTS: needs a surface lookup.  mass_prop = iHmass.
+                break;
+            case CoolProp::iHmolar:
+                if (input_has_h) {
+                    // evaluate_property_ shortcut: *pt.h_mass * M.
+                    output_is_surface[o] = 0;
+                    continue;
+                }
+                // PT_INPUTS: surface returns iHmass, scale by M.
+                mass_prop = CoolProp::iHmass;
+                scale = M;
+                break;
+            case CoolProp::iDmolar:
+                mass_prop = CoolProp::iDmass;
+                scale = 1.0 / M;
+                break;
+            case CoolProp::iSmolar:
+                mass_prop = CoolProp::iSmass;
+                scale = M;
+                break;
+            case CoolProp::iUmolar:
+                mass_prop = CoolProp::iUmass;
+                scale = M;
+                break;
+            default:
+                break;
+        }
+        // Surface-served output.  Dedup against already-listed props
+        // (cheap linear scan; N_outputs is small).
+        std::size_t idx = surface_props.size();
+        for (std::size_t s = 0; s < surface_props.size(); ++s) {
+            if (surface_props[s] == mass_prop) {
+                idx = s;
+                break;
+            }
+        }
+        if (idx == surface_props.size()) {
+            surface_props.push_back(mass_prop);
+        }
+        output_is_surface[o] = 1;
+        output_surface_idx[o] = idx;
+        output_M_scale[o] = scale;
+    }
+    const std::size_t n_surface_props = surface_props.size();
+
+    // Per-point loop.  resolve_point_ does all the routing; for
+    // SinglePhase kinds we batch the surface evals via the multi-eval
+    // path; everything else (DomeBlend, Patched, shortcuts) falls
+    // through evaluate_property_ per output.
+    std::vector<double> surface_vals(n_surface_props, 0.0);
     for (std::size_t k = 0; k < N_inputs; ++k) {
         PointEvaluation pt;
         try {
@@ -1036,21 +1143,41 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
             fill_nan_row(k);
             continue;
         }
+
+        // SinglePhase: one batched surface multi-eval covers every
+        // surface-served output; shortcuts still go through
+        // evaluate_property_.
+        const bool can_batch = (pt.kind == PointEvaluation::Kind::SinglePhase) && n_surface_props > 0;
+        if (can_batch) {
+            try {
+                pt.surface->eval_with_region_multi(pt.resolved.region_idx, pt.resolved.svd_x, pt.resolved.svd_y, surface_props.data(),
+                                                   n_surface_props, surface_vals.data());
+            } catch (const std::exception&) {
+                status_flags[k] = CoolProp::fast_evaluate_internal_error;
+                fill_nan_row(k);
+                continue;
+            }
+        }
+
         bool row_failed = false;
         for (std::size_t o = 0; o < N_outputs; ++o) {
             double v = NaN;
-            try {
-                v = evaluate_property_(pt, outputs[o]);
-            } catch (const NotImplementedError&) {
-                // Two-phase undefined property (speed_sound, viscosity,
-                // conductivity, cp, cv, Prandtl).  In-band NaN signals
-                // "no equilibrium value here"; status stays ok so the
-                // caller can still read the meaningful T / D / S / U
-                // / Q outputs from the same row.
-                v = NaN;
-            } catch (const std::exception&) {
-                v = NaN;
-                row_failed = true;
+            if (can_batch && output_is_surface[o]) {
+                v = surface_vals[output_surface_idx[o]] * output_M_scale[o];
+            } else {
+                try {
+                    v = evaluate_property_(pt, outputs[o]);
+                } catch (const NotImplementedError&) {
+                    // Two-phase undefined property (speed_sound, viscosity,
+                    // conductivity, cp, cv, Prandtl).  In-band NaN signals
+                    // "no equilibrium value here"; status stays ok so the
+                    // caller can still read the meaningful T / D / S / U
+                    // / Q outputs from the same row.
+                    v = NaN;
+                } catch (const std::exception&) {
+                    v = NaN;
+                    row_failed = true;
+                }
             }
             out_buffer[k * N_outputs + o] = v;
         }

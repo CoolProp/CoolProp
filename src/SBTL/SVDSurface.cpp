@@ -64,6 +64,24 @@ void SVDSurface::seal() {
             }
         }
     }
+    // eval_with_region_multi reuses one SVDEvalContext across every
+    // per-property evaluator in a region, which is only valid when
+    // every decomposition in that region shares an identical
+    // (x_grid, y_grid).  SVDSurfaceFactory builds them together so
+    // this holds by construction, but a hand-built surface or one
+    // loaded from disk could violate it — validate once at seal()
+    // rather than trusting it forever.
+    for (std::size_t r = 0; r < decomps_.size(); ++r) {
+        const auto& x_ref = decomps_[r][0]->x_grid;
+        const auto& y_ref = decomps_[r][0]->y_grid;
+        for (std::size_t p = 1; p < properties_.size(); ++p) {
+            if (decomps_[r][p]->x_grid != x_ref || decomps_[r][p]->y_grid != y_ref) {
+                throw std::logic_error("SVDSurface::seal: region " + std::to_string(r) + " property index " + std::to_string(p)
+                                       + " has (x_grid, y_grid) that differ from the region's first property — "
+                                         "eval_with_region_multi requires identical grids across the region");
+            }
+        }
+    }
     // Build evaluators against the heap-resident decompositions.  The
     // address of each unique_ptr's pointee is stable for the lifetime
     // of the unique_ptr (and the surface).
@@ -133,6 +151,34 @@ double SVDSurface::eval_with_region(::CoolProp::parameters prop, int region_idx,
     }
     const std::size_t pidx = property_index(prop);
     return evaluators_[static_cast<std::size_t>(region_idx)][pidx]->eval(svd_x, svd_y);
+}
+
+void SVDSurface::eval_with_region_multi(int region_idx, double svd_x, double svd_y, const ::CoolProp::parameters* props, std::size_t n,
+                                        double* out) const {
+    if (!sealed_) {
+        throw std::logic_error("SVDSurface::eval_with_region_multi called before seal()");
+    }
+    if (region_idx < 0 || static_cast<std::size_t>(region_idx) >= evaluators_.size()) {
+        throw std::out_of_range("SVDSurface::eval_with_region_multi: region_idx out of range");
+    }
+    if (n == 0) {
+        return;
+    }
+    const auto& region_evals = evaluators_[static_cast<std::size_t>(region_idx)];
+    // All per-property evaluators in this region share the same
+    // (x_grid, y_grid) by construction (SVDSurfaceFactory builds them
+    // together), so a single make_context() call covers all `n`
+    // outputs.  Pick the first property's evaluator as the context
+    // source — picking the same one every time is fine, but using
+    // props[0] avoids surprising readers who'd expect the prop they
+    // asked for to drive the context.
+    const std::size_t first_pidx = property_index(props[0]);
+    const svd::SVDEvalContext ctx = region_evals[first_pidx]->make_context(svd_x, svd_y);
+    out[0] = region_evals[first_pidx]->eval_with_context(ctx);
+    for (std::size_t k = 1; k < n; ++k) {
+        const std::size_t pidx = property_index(props[k]);
+        out[k] = region_evals[pidx]->eval_with_context(ctx);
+    }
 }
 
 }  // namespace sbtl
