@@ -479,9 +479,16 @@ std::array<double, 4> SVDSBTLBackend::auto_calibrate_critical_bbox_() {
     // Strip walker: at a candidate axis multiplier, sample N probes
     // along the strip JUST OUTSIDE that axis (at axis-position ± eps,
     // varying over the other two axes' wide span).  Returns true iff
-    // every finite probe passes its budget.
-    constexpr int kStripSamples = 8;
-    constexpr double kStripEps = 0.005;  // 0.5% offset outside the candidate
+    // at least N - kStripOutlierBudget finite probes pass their budget
+    // — isolated outliers (typically thin-Hermite-support cells at
+    // region edges, e.g. just-below-dome cells near critical) don't
+    // block the calibrator from shrinking past them.  The patch is
+    // for the critical-singularity divergence, not the
+    // CoolProp-3c4 corner-cell accuracy ceiling; the outlier budget
+    // cleanly separates the two.
+    constexpr int kStripSamples = 12;
+    constexpr int kStripOutlierBudget = 2;  // tolerate up to 2/12 = 17% outliers
+    constexpr double kStripEps = 0.005;     // 0.5% offset outside the candidate
     auto strip_passes = [&](double T_lo_mult, double T_hi_mult, double p_lo_mult, double p_hi_mult, int axis) {
         // axis: 0=T_lo, 1=T_hi, 2=p_lo, 3=p_hi
         const double T_lo = T_lo_mult * Tc;
@@ -499,7 +506,8 @@ std::array<double, 4> SVDSBTLBackend::auto_calibrate_critical_bbox_() {
         constexpr double kT_outer_hi = 1.05;
         constexpr double kp_outer_lo = 0.75;
         constexpr double kp_outer_hi = 1.15;
-        bool any_finite = false;
+        int n_finite = 0;
+        int n_outliers = 0;
         for (int i = 0; i < kStripSamples; ++i) {
             const double f = (i + 0.5) / kStripSamples;
             double T_probe = T_lo, p_probe = p_lo;
@@ -518,16 +526,16 @@ std::array<double, 4> SVDSBTLBackend::auto_calibrate_critical_bbox_() {
             }
             const double err = probe_rel_err(T_probe, p_probe);
             if (std::isfinite(err)) {
-                any_finite = true;
+                ++n_finite;
                 if (err > 1.0) {
-                    return false;
+                    ++n_outliers;
                 }
             }
         }
-        // If we never got a finite probe on the strip, fail-safe to
-        // "not passing" so the axis doesn't shrink past a region the
-        // source rejects.
-        return any_finite;
+        // Require: at least one finite probe (otherwise we're shrinking
+        // past a region the source rejects entirely), AND fewer than
+        // kStripOutlierBudget budget-violating probes.
+        return n_finite > 0 && n_outliers <= kStripOutlierBudget;
     };
 
     // Binary search per axis.  Strategy: start at the Water-sized
