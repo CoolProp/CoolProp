@@ -549,9 +549,16 @@ TEST_CASE("SVDSBTL&REFPROP fast_evaluate works for mixed single-phase + dome bat
         REQUIRE(out_buffer[k * 3 + 1] == Approx(AS->rhomass()).epsilon(1e-10));  // iDmass
         // iQ: -1 sentinel for single-phase, [0,1] in dome (per
         // SVDSBTL's PointEvaluation convention; see SVDSBTLBackend.h
-        // PointEvaluation::Q docs).  -1 and Q in [0,1] are both
-        // exactly representable so direct compare is fine.
-        REQUIRE(out_buffer[k * 3 + 2] == AS->Q());
+        // PointEvaluation::Q docs).  The dome probe inherits the same
+        // last-bit divergence as T / rho via REFPROP's not-quite-
+        // order-deterministic PQ flash on the sat endpoints (see the
+        // top-of-loop comment) — Q = (h_mol - h_L_mol) / (h_V_mol -
+        // h_L_mol) is a function of those endpoints, so the bit-exact
+        // compare that worked for HEOS fails for REFPROP at ~4-ULP.
+        // The -1.0 single-phase sentinel is bit-exact under Approx
+        // with margin 0 (Approx default), so this margin only relaxes
+        // the dome case.
+        REQUIRE(out_buffer[k * 3 + 2] == Approx(AS->Q()).margin(1e-10));
     }
 }
 
