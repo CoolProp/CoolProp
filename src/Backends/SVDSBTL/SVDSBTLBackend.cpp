@@ -176,7 +176,24 @@ std::uint64_t opthash_fnv1a_(const std::string& s) noexcept {
 // Critpatch sidecar path: lives next to the .svd.bin.z files so
 // directory-level cache cleanup catches both.  The opthash binds the
 // patch to the same options blob the surfaces were built against.
+//
+// Defense-in-depth against path traversal: rejects any
+// fluid_name / source_backend containing '/', '\\', or "..".  Mirrors
+// the validation in SVDSurfaceSerializer::default_cache_path; without
+// it a caller passing an attacker-controlled fluid name through
+// AbstractState::factory could read or write outside the cache dir,
+// since `default_cache_dir()` derives the parent dir from
+// `getenv("HOME")` (CodeQL tracks this as taint on fopen).
 std::filesystem::path critpatch_cache_path_(const std::string& fluid_name, const std::string& source_backend, const std::string& options_canonical) {
+    const auto unsafe = [](const std::string& s) {
+        return s.empty() || s.find('/') != std::string::npos || s.find('\\') != std::string::npos || s.find("..") != std::string::npos;
+    };
+    if (unsafe(fluid_name)) {
+        throw std::invalid_argument("SVDSBTLBackend: invalid fluid_name (must be a bare component name)");
+    }
+    if (unsafe(source_backend)) {
+        throw std::invalid_argument("SVDSBTLBackend: invalid source_backend");
+    }
     const std::filesystem::path dir = CoolProp::sbtl::SVDSurfaceSerializer::default_cache_dir();
     const std::uint64_t opthash = opthash_fnv1a_(options_canonical);
     // Match the SVDSurface filename pattern <Fluid>.<Source>.<...>.<opthash>.svd.bin.z
@@ -648,6 +665,17 @@ void SVDSBTLBackend::save_critpatch_cache_(const std::string& fluid_name, const 
     (void)std::fwrite(&kVersion, sizeof(kVersion), 1, f);
     (void)std::fwrite(mults.data(), sizeof(double), 4, f);
     (void)std::fclose(f);
+    // Restrict permissions to owner read/write only.  fopen("wb")
+    // honours the process umask but typically leaves the file
+    // world-readable (0644).  The cache holds nothing security-
+    // sensitive — just calibration multipliers — but a multi-user
+    // host has no reason to let other users overwrite it, and a
+    // CodeQL alert (cpp/file-without-restricted-permissions) flagged
+    // the default-permissions form.  No-op on Windows where the POSIX
+    // permission model doesn't apply.
+    std::error_code perm_ec;
+    std::filesystem::permissions(path, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write, std::filesystem::perm_options::replace, perm_ec);
+    // perm_ec ignored — cache permission tightening is best-effort.
 }
 
 std::shared_ptr<CoolProp::AbstractState> SVDSBTLBackend::source_reference_() {

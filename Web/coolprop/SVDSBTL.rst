@@ -339,6 +339,12 @@ the resulting :math:`(p, h)` bbox is roughly
   the critical point will return the SVD's rank-truncated reconstruction
   with the corresponding accuracy degradation.  Useful for benchmark
   studies of the SVD itself.
+* ``critical_patch.mode = "fixed"`` — enables the patch but skips the
+  auto-calibration shrink loop.  The patch uses whatever ``critical_patch.bbox``
+  the caller supplied; if ``bbox`` is omitted, the Water-sized default
+  :math:`[0.95, 1.05] T_c \times [0.75, 1.15] p_c` is used as-is.  Useful
+  when you want to lock the patch geometry to a known shape across
+  CoolProp versions without paying the per-fluid calibration cost.
 
 * ``critical_patch.source`` — override the source backend that serves
   in-patch queries.  E.g. ``SVDSBTL&IF97`` with
