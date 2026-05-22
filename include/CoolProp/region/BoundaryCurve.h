@@ -40,6 +40,24 @@ class BoundaryCurve
     // First derivative db/da at a — analytic, not finite-difference.
     [[nodiscard]] virtual double eval_da(double a) const noexcept = 0;
 
+    // Fast approximate variant of eval(a) — opt-in surrogate for
+    // sign-only callers (e.g. RegionAtlas curve_contains, which only
+    // needs to decide which side of the curve the probe is on).
+    //
+    // Default forwards to eval() so non-SA curves are unaffected.
+    // Subclasses backed by an expensive analytic representation (e.g.
+    // SuperancillaryBoundaryCurve, which composes get_T_from_p with
+    // eval_sat — ~80 ns per call) override this with a precomputed
+    // linear-interp table that runs in single-digit ns and is accurate
+    // to ~1e-6 over the curve's build range.  Use of eval_fast is
+    // confined to callers where boundary-value noise doesn't
+    // contaminate downstream numerics; precision-critical callers
+    // (Region::to_normalized / from_normalized, which compute the eta
+    // normalization the SVD consumes) continue to use eval().
+    [[nodiscard]] virtual double eval_fast(double a) const noexcept {
+        return eval(a);
+    }
+
     // Min and max of b achieved on the build interval [a_lo, a_hi].
     // Precomputed at build; used to populate the parent Region's
     // axis-aligned bounding box for cheap region-dispatch filtering.
