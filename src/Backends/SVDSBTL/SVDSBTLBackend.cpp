@@ -538,10 +538,30 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
         try {
             if (input_pair == CoolProp::HmolarP_INPUTS) {
                 patch_source_ref_()->update(CoolProp::HmassP_INPUTS, *pt.h_mass, *pt.p);
-                polish_patch_state_(*patch_source_, *pt.p, *pt.h_mass);
+                // Same dome-aware polish gating as the HmassP branch
+                // below — multi-valued h(T, p) inside the dome breaks
+                // the single-phase forward-h polish bracket.
+                if (patch_source_->phase() != CoolProp::iphase_twophase) {
+                    polish_patch_state_(*patch_source_, *pt.p, *pt.h_mass);
+                }
             } else if (input_pair == CoolProp::HmassP_INPUTS) {
                 patch_source_ref_()->update(input_pair, value1, value2);
-                polish_patch_state_(*patch_source_, *pt.p, *pt.h_mass);
+                // Skip the forward-h polish on two-phase points.
+                // polish_patch_state_ assumes a single-phase solution
+                // exists at h(T, p) = h_target on a tight T bracket
+                // around T_seed.  Inside the saturation dome h(T, p)
+                // is multi-valued (the function jumps from h_L to h_V
+                // across T = T_sat), so the bracket [T_seed-0.5,
+                // T_seed+0.5] straddles the dome and resid changes
+                // sign without any single-phase root in the range.
+                // TOMS748 silently converges to a nonsense T and the
+                // returned state classifies as supercritical_liquid
+                // with rho / Q = ±inf.  Two-phase points coming out
+                // of the patch already have correct (T_sat, Q, rho)
+                // from the source's PQ-blend; no polish needed.
+                if (patch_source_->phase() != CoolProp::iphase_twophase) {
+                    polish_patch_state_(*patch_source_, *pt.p, *pt.h_mass);
+                }
             } else {
                 // PT_INPUTS — source backend's PT path is already
                 // forward-consistent; no polish needed.
@@ -851,6 +871,17 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
                 _Q = patch_source_->keyed_output(CoolProp::iQ);
             } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
                 _Q = -1.0;
+            }
+            // Inherit the source's phase classification.  Without this
+            // a two-phase patched state (which the skip-polish path now
+            // correctly preserves) would surface as iphase_not_imposed
+            // and state.phase() would disagree with the source.  Wrap
+            // in try/catch because some sources may not report a phase
+            // for every input pair (HEOS does; defensive against
+            // REFPROP edge cases).
+            try {
+                _phase = patch_source_->phase();
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
             }
             break;
         case PointEvaluation::Kind::OutOfRange:
