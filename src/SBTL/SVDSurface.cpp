@@ -64,6 +64,24 @@ void SVDSurface::seal() {
             }
         }
     }
+    // eval_with_region_multi reuses one SVDEvalContext across every
+    // per-property evaluator in a region, which is only valid when
+    // every decomposition in that region shares an identical
+    // (x_grid, y_grid).  SVDSurfaceFactory builds them together so
+    // this holds by construction, but a hand-built surface or one
+    // loaded from disk could violate it — validate once at seal()
+    // rather than trusting it forever.
+    for (std::size_t r = 0; r < decomps_.size(); ++r) {
+        const auto& x_ref = decomps_[r][0]->x_grid;
+        const auto& y_ref = decomps_[r][0]->y_grid;
+        for (std::size_t p = 1; p < properties_.size(); ++p) {
+            if (decomps_[r][p]->x_grid != x_ref || decomps_[r][p]->y_grid != y_ref) {
+                throw std::logic_error("SVDSurface::seal: region " + std::to_string(r) + " property index " + std::to_string(p)
+                                       + " has (x_grid, y_grid) that differ from the region's first property — "
+                                         "eval_with_region_multi requires identical grids across the region");
+            }
+        }
+    }
     // Build evaluators against the heap-resident decompositions.  The
     // address of each unique_ptr's pointee is stable for the lifetime
     // of the unique_ptr (and the surface).
