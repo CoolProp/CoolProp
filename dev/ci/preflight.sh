@@ -209,7 +209,7 @@ fi
 
 # ---------- check 5: clang-tidy diff-only ----------------------------
 
-step "clang-tidy (diff-only, informational)"
+step "clang-tidy (diff-only, signal-filtered)"
 if skip_check clang-tidy; then
     skip "clang-tidy" "--skip=clang-tidy"
 elif [ -z "$ALL_CPP" ]; then
@@ -217,33 +217,54 @@ elif [ -z "$ALL_CPP" ]; then
 elif [ ! -f build_catch/compile_commands.json ]; then
     skip "clang-tidy" "build_catch/compile_commands.json missing (cmake configure with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON)"
 else
-    # Informational ONLY — mirrors CI's clang-tidy workflow which is
-    # informational by design (see .github/workflows/dev_checks.yml:
-    # `continue-on-error: true`) because .clang-tidy's
-    # WarningsAsErrors='*' triggers high-volume noise from Catch2 macros
-    # and include-cleaner that CI explicitly elected not to gate on
-    # (see issue #2926).  Preflight reports findings to stderr so I can
-    # see them in early triage but does not fail the gate.
+    # Noise filter: clang-tidy checks that CI explicitly elected NOT to
+    # gate on, per issue #2926's "Filtered as noise" section.  These
+    # dominate the raw output (Catch2 macro expansions, REFPROP C-API
+    # surface, identifier-reserved patterns from numerical-derivative
+    # naming) without delivering signal worth blocking on.  Findings
+    # matching ANY of these check names are subtracted from the gating
+    # count; preflight passes if the remaining (signal) count is zero.
     #
-    # Prefer clang-tidy-diff.py if it's already on PATH (Linux CI
-    # installs it via clang-tools-extra) — it limits analysis to lines
-    # actually touched by the PR rather than full TUs, matching CI's
-    # exact scope.  Fall back to the staged-wrapper which runs on whole
-    # .cpp files (more findings but easier to set up).
+    # Sourced from #2926 — keep in sync if that triage report updates.
+    # New noise classes that recur across PRs without yielding action
+    # belong here too.
+    CLANG_TIDY_NOISE_CHECKS=(
+        cppcoreguidelines-avoid-do-while
+        cert-err58-cpp
+        modernize-avoid-c-arrays
+        cppcoreguidelines-init-variables
+        cppcoreguidelines-pro-bounds-pointer-arithmetic
+        cert-dcl37-c
+        cert-dcl51-cpp
+        bugprone-reserved-identifier
+        cert-msc32-c
+        cert-msc51-cpp
+        clang-analyzer-optin.core.EnumCastOutOfRange
+    )
+    NOISE_PATTERN="$(IFS='|'; echo "${CLANG_TIDY_NOISE_CHECKS[*]}")"
+
     CPP_ONLY="$(printf '%s\n' "$ALL_CPP" | grep -E '\.(cpp|cc|cxx)$' || true)"
     if [ -z "$CPP_ONLY" ]; then
         skip "clang-tidy" "no .cpp files in diff (headers covered transitively)"
     else
-        if ! COOLPROP_BUILD_DIR=build_catch ./dev/ci/run-clang-tidy-staged.sh $CPP_ONLY >/tmp/preflight-clang-tidy.log 2>&1; then
-            # Don't fail — just report finding count for triage.
-            FINDING_COUNT="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null || echo 0)"
-            printf '\033[33m- clang-tidy: %s findings (informational; see /tmp/preflight-clang-tidy.log)\033[0m\n' "$FINDING_COUNT"
-            SKIP_COUNT=$((SKIP_COUNT + 1))
+        COOLPROP_BUILD_DIR=build_catch ./dev/ci/run-clang-tidy-staged.sh $CPP_ONLY >/tmp/preflight-clang-tidy.log 2>&1 || true
+        if grep -q "^warning:.*skipping" /tmp/preflight-clang-tidy.log; then
+            skip "clang-tidy" "$(grep -m1 '^warning:' /tmp/preflight-clang-tidy.log | sed 's/^warning: //')"
         else
-            if grep -q "^warning:.*skipping" /tmp/preflight-clang-tidy.log; then
-                skip "clang-tidy" "$(grep -m1 '^warning:' /tmp/preflight-clang-tidy.log | sed 's/^warning: //')"
+            RAW="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null | head -1 || echo 0)"
+            # Each finding line ends with `[<check-name>,-warnings-as-errors]`
+            # or `[<check-name>]`.  Match the bracketed check name and
+            # exclude any line whose name is in NOISE_PATTERN.
+            SIGNAL_LINES="$(grep -E 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null \
+                | grep -vE "\\[($NOISE_PATTERN)(,|\\])" || true)"
+            SIGNAL_COUNT="$(printf '%s\n' "$SIGNAL_LINES" | grep -c . || echo 0)"
+            if [ "$SIGNAL_COUNT" -gt 0 ]; then
+                printf '\n--- signal findings (noise-filtered, see #2926) ---\n'
+                printf '%s\n' "$SIGNAL_LINES" | head -30
+                printf '%s\n' "$SIGNAL_LINES" > /tmp/preflight-clang-tidy-signal.log
+                fail "clang-tidy ($SIGNAL_COUNT signal / $RAW raw findings; see /tmp/preflight-clang-tidy-signal.log)"
             else
-                ok "clang-tidy ($(printf '%s\n' "$CPP_ONLY" | wc -l | tr -d ' ') .cpp file(s); 0 findings)"
+                ok "clang-tidy ($(printf '%s\n' "$CPP_ONLY" | wc -l | tr -d ' ') .cpp file(s); 0 signal / $RAW raw findings)"
             fi
         fi
     fi
@@ -288,4 +309,23 @@ if [ $FAIL_COUNT -gt 0 ]; then
     for n in "${FAIL_NAMES[@]}"; do printf '  - %s\n' "$n"; done
     exit 1
 fi
+
+# ---------- pre-PR code-reviewer reminder ----------------------------
+#
+# Pre-push shell hooks can't mechanically invoke a Claude Code subagent
+# (subagents are an in-conversation construct, not a CLI).  Print a
+# loud reminder so the next step before `gh pr create` is clear.  See
+# CLAUDE.md "Pre-PR adversarial review" for the canonical invocation.
+#
+# This banner ALWAYS prints when preflight passes — agents and humans
+# both see it.  Skip the banner if --skip=banner is passed (useful for
+# successive iteration runs where the reviewer was already run).
+if ! skip_check banner; then
+    printf '\n\033[1;36m┌─────────────────────────────────────────────────────────┐\033[0m\n'
+    printf '\033[1;36m│  REMINDER: before `gh pr create`, run code-reviewer.   │\033[0m\n'
+    printf '\033[1;36m│  See CLAUDE.md "Pre-PR adversarial review" for the     │\033[0m\n'
+    printf '\033[1;36m│  exact Agent({subagent_type: ...}) invocation.         │\033[0m\n'
+    printf '\033[1;36m└─────────────────────────────────────────────────────────┘\033[0m\n'
+fi
+
 exit 0
