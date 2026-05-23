@@ -7,10 +7,13 @@ SVDSBTL --- SVD-Compressed Tabular Lookup Backend
 SVDSBTL is a tabular-lookup backend that combines an atlas of
 analytically-bounded regions with a low-rank SVD of each region's
 property surfaces.  It produces **sub-microsecond** property
-evaluations (~200-400 ns per probe in the batched ``fast_evaluate``
-path) at IAPWS G13-15 conformance for water, and a single-digit
-percent accuracy ceiling for the multi-fluid HEOS-backed presets,
-at a disk footprint of ~10 MB per (fluid, input pair, source backend).
+evaluations in the batched ``fast_evaluate`` path away from the
+critical patch (~300-400 ns per probe at four outputs on Apple
+Silicon, rising to a few µs/probe inside the critical-patch
+fallback), at IAPWS G13-15 :math:`T(p, h)` conformance for water
+and a single-digit percent accuracy ceiling for the multi-fluid
+HEOS-backed presets, at a disk footprint of ~7-14 MB per
+(fluid, input pair, source backend).
 
 This page is the **user-facing** page: how to use the backend, what it
 guarantees, and when to pick it.  For the underlying SVD math
@@ -39,18 +42,23 @@ bicubic table with three layered components that address both:
    (subcooled), VAPOR (superheated), SUPER (supercritical), with
    further splits for IF97 (R1/R3, R2/R3 boundary curves).  Each
    region's secondary axis is normalised to :math:`[0, 1]` via two
-   analytic boundary curves — saturation dome on the subcritical
-   side, low-T / high-T isotherms on the supercritical side.  Lookups
-   first AABB-test against region bounding boxes (cheap), then
-   evaluate the precise boundary curves on the candidate.
+   analytic boundary curves — on subcritical regions one curve is the
+   saturation dome and the other is an isotherm (low-T floor for the
+   liquid region, high-T ceiling for the vapor region); on
+   supercritical regions both curves are isotherms.  Lookups first
+   AABB-test against region bounding boxes (cheap), then evaluate the
+   precise boundary curves on the candidate.
 
 2. **Per-region SVD.**  Inside each normalised region, every tabulated
    property (:math:`\rho, h, s, u, w, \eta, \lambda`) is represented
-   as a rank-:math:`r` SVD of a dense :math:`N_p \times N_h` (default
-   :math:`200 \times 800`, :math:`r = 20`) sample grid.  Hermite
-   bicubic interpolation between SVD grid points gives :math:`C^1`
-   continuity across the region.  Density and transport properties
-   use a **log transform**
+   as a rank-:math:`r` SVD of a dense :math:`N_h \times N_p` (default
+   :math:`200 \times 800`, :math:`r = 20`) sample grid — the 200-point
+   axis is the secondary (h or T), the 800-point axis is the primary
+   (log p).  Per-mode tensor-product cubic Hermite (1D × 1D, summed
+   across rank-:math:`r` modes) gives :math:`C^1` continuity at
+   minimum, and :math:`C^2` with the default natural-cubic-spline
+   slope source (see :doc:`SVDComponents`).  Density and transport
+   properties use a **log transform**
    (:math:`\rho = \exp(\sum_k S_k U_k V_k)`) so their multi-decade
    dynamic range fits the SVD's smoothness assumption.
 
@@ -112,9 +120,10 @@ The on-disk table cache
 
 The first construction for a given ``(fluid, source, input_pair,
 options)`` tuple samples ~160,000 :math:`(p, h)` or :math:`(p, T)`
-points from the source backend, runs SVD on each region's property
-matrix, and persists the result as a zlib-compressed binary file
-under
+points per region from the source backend (3 regions for HEOS-PH,
+6-7 for IF97-PH, so 0.5-1.1M samples per table), runs SVD on each
+region's property matrix, and persists the result as a zlib-
+compressed binary file under
 
 .. code-block:: text
 
@@ -133,10 +142,8 @@ Subsequent constructions for the same tuple load from this cache.
   ``.github/workflows/test_catch2.yml`` so CI rebuilds occur
   automatically.
 
-The cache directory is `XDG_DATA_HOME`-aware on Linux and uses
-``~/.CoolProp/SVDTables/`` by default elsewhere.  The path is
-configurable via the ``ALTERNATIVE_SVDTABLES_DIRECTORY`` configuration
-key (see :ref:`configuration`).
+The cache directory is ``~/.CoolProp/SVDTables/`` on all platforms.
+A configurable cache directory is tracked in bd ``CoolProp-fhp``.
 
 .. _SVDSBTL-regimes:
 
@@ -173,11 +180,12 @@ the backend.
 
        In [1]: %timeit loop()
 
-   Native C++ per-call wall time is ~200 ns; the bulk of the
-   Python-visible cost is the wrapper marshalling, and even in Python
-   the per-call cost is hundreds of nanoseconds — far faster than
-   HEOS's :math:`(p, h)` flash.  This is what most user code should
-   look like.
+   Native C++ ``update + rhomass + T`` is ~1 µs/iter (dominated by
+   ``update()``; the cached accessors are <10 ns/pair).  The Cython
+   wrapper adds ~0.3 µs across the three FFI crossings, totaling
+   ~1.3 µs/iter from Python — still ~20× faster than HEOS's
+   :math:`(p, h)` flash on the same loop.  This is what most user
+   code should look like.
 
 2. **fast_evaluate (batched, no instance mutation).**
    ``AbstractState.fast_evaluate(input_pair, val1[], val2[],
@@ -186,6 +194,13 @@ the backend.
    ``AbstractState`` cache mutation, no Python wrapper marshalling
    per probe, and shared :math:`(p, h)` locate / Hermite-basis setup
    across the N requested properties:
+
+   The probe distribution below is **supercritical only**
+   (:math:`p > p_c`, :math:`h > h_c`) — this isolates the
+   representative locate + basis cost from the
+   :ref:`critical patch <SVDSBTL-critpatch>`, which is several µs/probe
+   and would otherwise dominate a uniformly sampled :math:`(p, h)`
+   box:
 
    .. ipython::
 
@@ -199,29 +214,37 @@ the backend.
 
        In [1]: N = 10_000
 
-       In [1]: h = np.random.uniform(1e5, 3e6, N)
+       In [1]: rng = np.random.default_rng(0)
 
-       In [1]: p = np.random.uniform(1e5, 3e7, N)
+       In [1]: h = rng.uniform(2.5e6, 4.0e6, N)   # h > h_c ≈ 2086 kJ/kg
 
-       In [1]: outputs = np.array([CP.iT, CP.iDmass, CP.iSmass], dtype=np.int32)
+       In [1]: p = rng.uniform(22.5e6, 50.0e6, N) # p > p_c = 22.064 MPa
 
-       In [1]: out = np.empty((N, 3)); status = np.empty(N, dtype=np.int32)
+       In [1]: outputs = np.array([CP.iT, CP.iDmass, CP.iSmass, CP.iUmass], dtype=np.int32)
+
+       In [1]: out = np.empty((N, 4)); status = np.empty(N, dtype=np.int32)
 
        In [1]: %timeit AS.fast_evaluate(CP.HmassP_INPUTS, h, p, outputs, out, status)
 
-   Per-point wall time: **~340-400 ns** for a 4-output query on Apple
-   Silicon (10k-probe batch).  Marginal cost per added surface output
-   ~57 ns after locate / basis-weight setup is paid once per probe.
-   For CFD-scale workloads (≥100k probes per timestep) this is the
-   only sensible API.
+   Per-point wall time: **~300-330 ns** for a 4-output query on Apple
+   Silicon (10k-probe batch, supercritical region).  Marginal cost
+   per added surface output is ~35 ns from a linear fit over
+   :math:`N_{\mathrm{out}} \in \{1, \dots, 5\}` — setup intercept
+   ~170 ns covers the per-probe locate + basis-weight evaluation that
+   is shared across the requested outputs.  For CFD-scale workloads
+   (≥100k probes per timestep) this is the only sensible API.
+   Uniformly-sampled :math:`(p, h)` boxes that touch the critical
+   patch heavily can rise to ~1 µs/probe; pure supercritical or PT
+   sweeps hold the headline number.
 
 3. **PropsSI — the high-level wrapper (off by default).**
    ``PropsSI`` is the high-level entry point that resolves the
    backend and constructs an ``AbstractState`` on every call.  For
    SVDSBTL that means a zlib-decompressed ``.svd.bin.z`` load (~80 ms
-   per ``AbstractState`` construction).  For a one-off interactive
-   query this is fine; for a throughput workload it is catastrophic
-   — *every* ``PropsSI`` call pays the table-load cost again.
+   for the typical ~7 MB table, ~140 ms for the larger 14 MB
+   SVDSBTL&IF97 HmassP table).  For a one-off interactive query this
+   is fine; for a throughput workload it is catastrophic — *every*
+   ``PropsSI`` call pays the table-load cost again.
 
    SVDSBTL therefore opts *out* of ``PropsSI`` by default.  Enable
    only for interactive / scripting use where the construction cost
@@ -293,25 +316,25 @@ their critical-singularity footprint allows.  Typical results
      - :math:`p_\mathrm{lo} / p_c`
      - :math:`p_\mathrm{hi} / p_c`
    * - Water (HEOS)
-     - 0.970
-     - 1.050
+     - 0.986
+     - 1.025
      - 0.996
      - 1.150
    * - Water (IF97)
-     - 0.984
-     - 1.027
+     - 0.999
+     - 1.010
      - 0.996
-     - 1.150
+     - 1.138
    * - CarbonDioxide (HEOS)
-     - 0.961
+     - 0.994
      - 1.050
-     - 0.863
+     - 0.996
      - 1.150
    * - R134a (HEOS)
-     - 0.995
-     - 1.013
+     - 0.999
+     - 1.001
      - 0.996
-     - 1.080
+     - 1.014
 
 These numbers are regenerated at backend construction; the exact
 values are sensitive to the SVD grid size and rank (and so move when
@@ -327,7 +350,7 @@ axis-aligned envelope of the resulting :math:`h` values — that way
 any :math:`(T, p)` in the canonical patch round-trips into a
 :math:`(h, p)` that the patch test also fires on.  For Water/HEOS
 the resulting :math:`(p, h)` bbox is roughly
-:math:`p \in [22.0, 25.4]` MPa, :math:`h \in [1.55, 2.93]` MJ/kg.
+:math:`p \in [22.0, 25.4]` MPa, :math:`h \in [1.74, 2.65]` MJ/kg.
 
 **Overrides.**  Two escape hatches:
 
@@ -353,10 +376,6 @@ the resulting :math:`(p, h)` bbox is roughly
   accuracy at the critical singularity rather than IF97's R3
   formulation).
 
-The ``set_critical_bbox_multipliers(T_lo, T_hi, p_lo, p_hi)`` C++
-entry point also lets callers override the patch at runtime without
-rebuilding the backend.
-
 .. _SVDSBTL-config:
 
 Configuration keys
@@ -367,19 +386,15 @@ Configuration keys
     <SVDSBTL-regimes>`.  Set to ``true`` for interactive
     use; leave ``false`` for throughput code.
 
-``ALTERNATIVE_SVDTABLES_DIRECTORY`` (default empty)
-    Override the cache directory.  Useful when ``$HOME`` is read-only
-    or on shared workstations where a centrally-managed cache is
-    preferable.
-
 ``SVDSBTL_SAMPLING_THREADS`` (default ``1``)
     Number of worker threads for the per-grid-cell sampling phase of
     the SVDSBTL table build (CoolProp-43h).  ``1`` (the default) runs
     serially.  ``N > 1`` spawns ``N`` workers, each with its own
     factory-built source ``AbstractState``, that partition the grid
     rows.  ``0`` resolves to ``std::thread::hardware_concurrency()``.
-    Typical ~2.5× speedup at ``N = 4`` on a modern laptop
-    (R245fa cold build: 65 s → 25 s).  Worth setting when:
+    Typical ~2.25× speedup at ``N = 4`` on Apple Silicon
+    (R245fa cold build: 122 s → 54 s; R134a 15.5 s → 6.3 s).
+    Worth setting when:
 
     * Iterating on a kRevision bump where every developer + CI machine
       pays the full table-rebuild cost across the fluid set.
@@ -420,8 +435,9 @@ SVDSBTL pays off when one of these is true:
 
 * You evaluate a fixed-formulation EOS at **>10k probes per
   AbstractState instance**.  The first construction pays a
-  ~80 ms table-load cost (or, for a cold cache, a few seconds of
-  table-build cost); both amortise over the subsequent queries.
+  ~80-140 ms table-load cost (depending on file size; or, for a
+  cold cache, a few seconds of table-build cost); both amortise
+  over the subsequent queries.
 * You need :math:`(p, h)` lookup (typical for power-cycle,
   refrigeration, CFD); HEOS's :math:`(T, \rho)` formulation makes
   :math:`(p, h)` inputs 5-10× slower than :math:`(p, T)`.
@@ -437,8 +453,8 @@ SVDSBTL pays off when one of these is true:
 SVDSBTL is **not** the right pick when:
 
 * Your workload is interactive single-shot ``PropsSI`` calls.  Use
-  HEOS or IF97 directly — the ~80 ms per-call table-load overhead
-  dominates.
+  HEOS or IF97 directly — the ~80-140 ms per-call table-load
+  overhead dominates.
 * You need transport properties for a fluid whose source backend
   lacks them.  SVDSBTL just samples the source; if the source's HEOS
   model has no :math:`\eta` / :math:`\lambda` correlation, neither
@@ -451,15 +467,18 @@ SVDSBTL is **not** the right pick when:
 Accuracy envelope
 =================
 
-* **SVDSBTL&IF97::Water**: conformant to IAPWS G13-15 Tables 8-13 for
-  :math:`T, v, s, w` in regions R1, R2, R5; R3 close to but not
-  uniformly inside budget (the critical-patch fallback covers the
-  near-critical R3 cells).  Transport properties :math:`\eta,
-  \lambda` exceed G13-15 budgets in R3 — those budgets are
-  intrinsically tight (:math:`10^{-5}` relative) and the rank-20 SVD
-  has known headroom for tighter ranks.  See
-  :ref:`IF97-Conformance` for the per-region fail maps and exact
-  numbers.
+* **SVDSBTL&IF97::Water**: :math:`T(p, h)` is conformant to IAPWS
+  G13-15 budgets in R1, R2, R5 (max 2.79 / 8.52 / 1.81 mK against
+  25 / 10 / 10 mK budgets).  Forward properties miss in places: :math:`v`
+  is conformant only in R5 (R1/R2 are 3-4× over a 10⁻⁵ budget);
+  :math:`w` is conformant in R2 and R5; :math:`s` exceeds budget in
+  all four regions (R5 is 13× over; R3 worst-case is ~10⁴× over).
+  Transport properties :math:`\eta, \lambda` exceed G13-15 budgets
+  across R1, R2 and R3 — those budgets are intrinsically tight
+  (:math:`10^{-5}` relative) and the rank-20 SVD has known headroom
+  for tighter ranks.  The critical-patch fallback covers the
+  near-critical R3 cells.  See :ref:`IF97-Conformance` for the
+  per-region fail maps and exact numbers.
 
 * **SVDSBTL&HEOS::<Fluid>**: ~10^-3 relative error on
   :math:`\rho, h, s` across the full subcritical envelope.
@@ -470,9 +489,10 @@ Accuracy envelope
 * **SVDSBTL&REFPROP::<Fluid>**: matches REFPROP truth on tested
   probes within REFPROP's own numerical-noise floor on the sat
   curves; same single-phase envelope as HEOS-source.  Two-phase
-  endpoints currently fall through to REFPROP's PQ flash (~ms per
-  probe); ``CoolProp-077`` will replace that with an on-disk
-  saturation-surrogate spline.
+  endpoints currently fall through to REFPROP's PQ flash (~3-5 µs
+  per probe); ``CoolProp-077`` will replace that with an on-disk
+  saturation-surrogate spline to remove the cross-DLL hop and the
+  REFPROP-thread-safety constraint that fallback inherits.
 
 Deviation plot
 ==============
@@ -542,15 +562,17 @@ slopes for the Hermite per-mode interpolation, and the
 Programmatic access
 ===================
 
-Beyond the high-level ``AbstractState`` API, the C++ entry point
+Beyond the high-level ``AbstractState`` API, the C++ class
 ``CoolProp::SVDSBTLBackend`` exposes:
 
-* ``fast_evaluate`` for batched cache-bypassing evaluation (also
-  bound to Python — see the example above)
+* ``fast_evaluate`` for batched cache-bypassing evaluation — also
+  bound to Python (see the example above).
 * ``registered_input_pairs()`` for introspection (which surfaces did
-  this instance load)
-* ``set_critical_bbox_multipliers(T_lo_mult, T_hi_mult, p_lo_mult,
-  p_hi_mult)`` for ad-hoc critical-patch tuning
+  this instance load).  C++-only; not bound to Python.
+
+Runtime overrides to the critical-patch geometry currently require
+reconstructing the backend with an updated ``critical_patch.bbox``
+options blob; there is no in-place setter.
 
 All other ``AbstractState`` methods (``rhomass``, ``hmass``, ``smass``,
 ``viscosity``, ``conductivity``, ``T_critical``, ``Ttriple``, etc.)
