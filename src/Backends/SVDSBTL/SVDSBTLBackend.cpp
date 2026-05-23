@@ -651,7 +651,10 @@ void SVDSBTLBackend::save_critpatch_cache_(const std::string& fluid_name, const 
         // re-runs the calibrator).
         return;
     }
-    std::FILE* f = std::fopen(path.string().c_str(), "wb");
+    // The std::filesystem::permissions() call below restricts the file
+    // to owner-only (0600); preflight's pattern-only semgrep rule
+    // can't see that mitigation across statements, so suppress.
+    std::FILE* f = std::fopen(path.string().c_str(), "wb");  // nosemgrep: cpp-fopen-without-restricted-permissions
     if (!f) {
         return;
     }

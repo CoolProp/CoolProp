@@ -10,10 +10,63 @@ If you're new, the **fast path** is:
 cmake -G Ninja -B build -S .                    # one-time configure
 pip install pre-commit && pre-commit install    # one-time hook setup
 cmake --build build --target format-check       # check formatting any time
+
+# Local pre-push gate (CoolProp-6r6) — mirrors what CI runs, catches
+# clang-format / cppcheck / semgrep / test failures before they hit a PR.
+# Install once by symlinking the hook (it's NOT auto-installed since
+# .git/hooks/ isn't tracked):
+ln -s ../../dev/ci/pre-push.sample .git/hooks/pre-push   # one-time
+./dev/ci/preflight.sh                                    # run any time
 ```
 
 Then commit normally — the pre-commit hook will block formatting violations
-on staged C/C++ files.
+on staged C/C++ files, and the pre-push hook will run the full preflight
+(clang-format + build + tests + cppcheck + clang-tidy + semgrep) before
+any `git push` succeeds.
+
+---
+
+## preflight.sh — local pre-push gate
+
+`dev/ci/preflight.sh` is a single script that runs the same checks CI
+runs against the diff between HEAD and the upstream branch.  Designed
+to be invoked from a pre-push git hook so a passing preflight strongly
+predicts a green CI.
+
+| Check | What it does | Skip flag |
+|---|---|---|
+| clang-format | uvx clang-format (version pinned from `.pre-commit-config.yaml`) dry-run on changed `.cpp` / `.h` files | `--skip=clang-format` |
+| build | cmake builds `CatchTestRunner` in `build_catch/` (auto-configures on first run) | `--skip=build` |
+| tests | Catch2 runner with auto-selected tag scope — `[SBTL]`, `[SVDSBTL]`, etc. picked from the changed paths | `--skip=tests` |
+| cppcheck | `--enable=warning` (real-bug-class) on changed files, `--language=c++ --std=c++17` to handle headers | `--skip=cppcheck` |
+| clang-tidy | diff-only via existing `run-clang-tidy-staged.sh`, requires `build_catch/compile_commands.json` | `--skip=clang-tidy` |
+| semgrep | `p/security-audit` + local `.semgrep/` rules (uvx-resolved, Python 3.12 pinned) | `--skip=semgrep` |
+
+Invocation:
+
+```bash
+./dev/ci/preflight.sh                          # check vs origin/master
+./dev/ci/preflight.sh --base=HEAD~1            # check vs an earlier ref
+./dev/ci/preflight.sh --skip=cppcheck,semgrep  # subset
+```
+
+Tools missing locally (`semgrep`, `clang-tidy`) are *gracefully skipped*
+rather than blocking — but the skip count is reported in the summary so
+agents see what's actually being checked.
+
+### Custom semgrep rules
+
+Rules under `.semgrep/` are loaded in addition to the public registry.
+Current local rules:
+
+- `cpp-fopen-without-restricted-permissions` — flags `std::fopen("...", "w*")`
+  patterns without an obvious permission restriction.  Suppress with
+  `// nosemgrep: cpp-fopen-without-restricted-permissions` on the line
+  when the surrounding code restricts via `std::filesystem::permissions`
+  after the close.  See PR #2947 for the originating incident.
+
+Add new rules as the CI surfaces new CodeQL-class findings that didn't
+get caught locally.
 
 ---
 
