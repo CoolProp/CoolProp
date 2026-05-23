@@ -48,7 +48,7 @@ fundamental equation:
 The boundaries between regions are themselves analytic curves:
 
 * The **R2/R3 boundary** is the parametric curve
-  :math:`p_{B23}(T) = 0.10193 \cdot (T - 572.545)^2 + 13.919` MPa,
+  :math:`p_{B23}(T) = 1.0193 \times 10^{-3} \cdot (T - 572.545)^2 + 13.919` MPa,
   valid for :math:`T \in [623.15, 863.15]` K (equivalently
   :math:`p \in [16.529, 100]` MPa).
 * The **R1/R3 boundary** is the isotherm :math:`T = 623.15` K.
@@ -61,9 +61,11 @@ downstream interpolator built on IF97 (the :doc:`SVDSBTL backend
 </coolprop/SVDSBTL>`, in particular) must respect this structure to
 recover G13-15-conformant accuracy.  A bilinear or bicubic table over
 a region that straddles :math:`p_{B23}` averages the kink into the
-interpolant and pays for it with ~1% structural error in :math:`v,
-s, w` near the boundary; the right fix is to split the region along
-the kink and table each side independently.
+interpolant, producing percent-class structural error in :math:`v,
+s, w` near the boundary (the SVDSBTL atlas split along
+:math:`p_{B23}` was introduced specifically to avoid this regime).
+The right fix is to split the region along the kink and table each
+side independently.
 
 A plot of the region atlas (orange = saturation curve, dashed =
 :math:`p_{B23}` and :math:`T = 1073.15` K boundaries) appears under
@@ -72,11 +74,11 @@ A plot of the region atlas (orange = saturation curve, dashed =
 IF97 Backend
 ------------
 
-The IF97 backend can be accessed the same way as the other backends, by prefixing the fluid name in calls to ``PropsSI`` and ``Props1SI``.  However, Water is the only fluid name that can be specified, as ``IF97::Water``.  Most output variables and input pairs are accepted as of CoolProp 6.1.1, with a few exceptions:
+The IF97 backend can be accessed the same way as the other backends, by prefixing the fluid name in calls to ``PropsSI`` and ``Props1SI``.  Water is the only fluid that can be specified, as ``IF97::Water`` (the alias ``IF97::H2O`` is also accepted, case-insensitively).  Most output variables and input pairs are accepted as of CoolProp 6.1.1, with a few exceptions:
 
 1. Generic Partial Derivatives are not yet supported.
 2. Mixtures are obviously not supported since this is a Water-only backend.
-3. The Reference State cannot be modified for the IF97 formulation.  *The reference state is fixed such that the specific internal energy,* :math:`U` *, and the specific entropy,* :math:`S` *, of the saturated liquid at the triple point are identically zero.*
+3. Setting the reference state has no effect on IF97 properties (top-level ``set_reference_state(...)`` silently returns; the OO ``AbstractState::set_reference_stateS`` raises ``NotImplementedError``).  *The reference state is fixed such that the specific internal energy,* :math:`U` *, and the specific entropy,* :math:`S` *, of the saturated liquid at the triple point are identically zero.*
 4. Solid properties are not supported in any of the ICE regions.
 5. The melting-sublimation curve is not used; rather, the property equations are limited uniformly at :math:`T_{min}=273.15K`.
 
@@ -143,7 +145,7 @@ Although IF97 is generally faster than the other backends, it is only applicable
     # -----------------------------
     n3 = 0.10192970039326e-2
     n4 = 0.57254459862746e3
-    n5 = 0.1391883776670e2
+    n5 = 0.13918839778870e2
     PI = 2.0*np.arcsin(1.0)
     TT = []
     PP = list(np.linspace(pb,pmax,1000))
@@ -265,9 +267,10 @@ based on cubic B-splines) already exists?
 
 * **High speed.**  The :ref:`three performance regimes <SVDSBTL-regimes>`
   cover the full single-shot-to-CFD-scale range.  The per-output
-  marginal cost in the batched ``fast_evaluate`` path is ~57 ns on
-  modern hardware — competitive with the fastest closed tabular
-  implementations.
+  marginal cost in the batched ``fast_evaluate`` path is ~35 ns on
+  Apple Silicon (supercritical region; mixes that touch the critical
+  patch heavily can rise to ~1 µs/probe) — competitive with the
+  fastest closed tabular implementations.
 
 * **Complete traceability.**  Every cell of the table is
   reproducible from the source backend at the exact build-time
@@ -280,9 +283,10 @@ based on cubic B-splines) already exists?
 
 These three properties together set SVDSBTL apart from the older
 SBTL backend and from closed-source tabulators.  The conformance
-figures above measure how close to the IAPWS-IF97 reference
-formulation the :ref:`SVDSBTL backend </coolprop/SVDSBTL>` lands
-on the four G13-15 thermodynamic properties.
+figures above characterise how the four G13-15 thermodynamic
+properties (:math:`T, v, s, w`) fare against per-region IAPWS
+budgets — see the :doc:`SVDSBTL accuracy envelope </coolprop/SVDSBTL>`
+section for the per-property/per-region pass/fail summary.
 
 IF97 vs HEOS timing — per-call and batched
 ------------------------------------------
@@ -300,11 +304,15 @@ GitHub-hosted CI runner.
 
 Per-call panels report the *median* wall time over many warm-cache
 calls (first-call cache-load cost is baked out).  Per-call numbers
-include ~1000 ns of Python-wrapper marshalling that applies equally to
-every backend — read the *ratios* as the meaningful comparison, not the
+include ~300 ns of Cython-wrapper marshalling across the three FFI
+crossings (``update`` + two accessors) that applies equally to every
+backend — read the *ratios* as the meaningful comparison, not the
 absolute nanoseconds.  ``fast_evaluate`` amortizes that overhead over
-the batch, so its per-point cost approaches native C++.  IF97's own
-dome-blend lever-rule path was added in CoolProp 7.2, so probes
+the batch, so its per-point cost approaches the native floor — sub-µs
+for the tabular backends (SVDSBTL ~300 ns/probe in the supercritical
+region), while bare IF97's own :math:`(p, h)` inversion stays
+~2 µs/probe regardless of the wrapper.  IF97's own dome-blend
+lever-rule path was added in CoolProp 7.2.1 (PR #2942), so probes
 landing inside the saturation dome no longer return NaN through
 ``fast_evaluate`` — they Q-blend between IF97's saturation endpoints.
 
