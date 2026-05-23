@@ -169,7 +169,10 @@ class SVDSurfaceSerializer
     static SVDSurface load(const std::vector<char>& compressed);
 
     // File-level convenience.  save_to_file overwrites; load_from_file
-    // throws if the file doesn't exist or is unreadable.
+    // throws if the file doesn't exist or is unreadable.  save_to_file
+    // routes through ::write_bytes_atomic (CPfilepaths.h) so concurrent
+    // writers in different processes / threads never see a partial-
+    // write file (CoolProp-4no.2).
     static void save_to_file(const SVDSurface& surface, const std::string& path);
     static SVDSurface load_from_file(const std::string& path);
 

@@ -465,14 +465,7 @@ SVDSurface SVDSurfaceSerializer::load(const std::vector<char>& compressed) {
 
 void SVDSurfaceSerializer::save_to_file(const SVDSurface& surface, const std::string& path) {
     const auto compressed = save(surface);
-    std::ofstream out(path, std::ios::binary);
-    if (!out) {
-        throw std::runtime_error("SVDSurfaceSerializer::save_to_file: cannot open " + path);
-    }
-    out.write(compressed.data(), static_cast<std::streamsize>(compressed.size()));
-    if (!out) {
-        throw std::runtime_error("SVDSurfaceSerializer::save_to_file: write failed for " + path);
-    }
+    ::write_bytes_atomic(std::filesystem::path(path), compressed.data(), compressed.size(), /*restrict_perms=*/false);
 }
 
 SVDSurface SVDSurfaceSerializer::load_from_file(const std::string& path) {

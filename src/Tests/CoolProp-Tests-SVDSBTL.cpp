@@ -8,12 +8,15 @@
 using Catch::Approx;
 
 #    include <algorithm>
+#    include <atomic>
 #    include <chrono>
 #    include <cstdint>
 #    include <filesystem>
+#    include <fstream>
 #    include <memory>
 #    include <random>
 #    include <string>
+#    include <thread>
 #    include <vector>
 
 #    include "AbstractState.h"
@@ -858,6 +861,80 @@ TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY end-to-end build + reload", "
     }
 
     CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, saved);
+    fs::remove_all(tmpdir, ec);
+}
+
+// CoolProp-4no.2: parallel docs-build invocations (joblib loky workers)
+// race on writes to the same cache file, producing torn-write artifacts.
+// ::write_bytes_atomic does write-temp + rename so readers never see a
+// partial-write file on the visible path.  This test spawns many threads
+// contending on the same target and asserts the post-write file matches
+// exactly one writer's payload (last writer wins) — never a torn /
+// interleaved mix.
+TEST_CASE("write_bytes_atomic is race-safe across threads", "[SVDSBTL][cache][race][4no.2]") {
+    namespace fs = std::filesystem;
+    const fs::path tmpdir = fs::temp_directory_path() / "coolprop_svdtables_atomic_race";
+    std::error_code ec;
+    fs::remove_all(tmpdir, ec);
+    fs::create_directories(tmpdir);
+    const fs::path target = tmpdir / "race.bin";
+
+    constexpr int kThreads = 16;
+    // Payload large enough that an ofstream::write of one payload would
+    // be observable mid-stream by another writer if the writes were not
+    // serialized via rename.  Several pages worth of bytes.
+    constexpr std::size_t kPayloadSize = 1 << 14;  // 16 KiB
+    std::vector<std::vector<char>> payloads(kThreads);
+    for (int i = 0; i < kThreads; ++i) {
+        payloads[i].assign(kPayloadSize, static_cast<char>(i + 1));  // distinct fill bytes per thread
+    }
+
+    std::atomic<bool> go{false};
+    std::vector<std::thread> threads;
+    threads.reserve(kThreads);
+    for (int i = 0; i < kThreads; ++i) {
+        threads.emplace_back([&, i]() {
+            while (!go.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            ::write_bytes_atomic(target, payloads[i].data(), payloads[i].size(), /*restrict_perms=*/false);
+        });
+    }
+    go.store(true, std::memory_order_release);
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    // Read back: file must exist and match EXACTLY one writer's payload.
+    REQUIRE(fs::exists(target));
+    std::ifstream in(target, std::ios::binary);
+    REQUIRE(in.good());
+    std::vector<char> result((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    in.close();
+    REQUIRE(result.size() == kPayloadSize);
+
+    bool matched_one = false;
+    int matched_idx = -1;
+    for (int i = 0; i < kThreads; ++i) {
+        if (result == payloads[i]) {
+            matched_one = true;
+            matched_idx = i;
+            break;
+        }
+    }
+    INFO("Result must match exactly one writer's payload; instead matched index " << matched_idx);
+    REQUIRE(matched_one);
+
+    // No leftover .tmp.* sibling files (write_bytes_atomic must rename or
+    // unlink on its way out — never leak temps on success).
+    int leftover_temps = 0;
+    for (const auto& entry : fs::directory_iterator(tmpdir)) {
+        if (entry.path().filename().string().find(".tmp.") != std::string::npos) {
+            ++leftover_temps;
+        }
+    }
+    REQUIRE(leftover_temps == 0);
+
     fs::remove_all(tmpdir, ec);
 }
 
