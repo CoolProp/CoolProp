@@ -44,7 +44,7 @@ More information:
 
 All :ref:`the wrappers <wrappers>` wrap this function in exactly the same way.
 
-For pure and pseudo-pure fluids, two state variables are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), followed by input pairs where neither :math:`T` nor :math:`\rho` are specified, like :math:`P,H`; these will be much slower.  If speed is an issue, you can look into table-based interpolation methods using :ref:`TTSE or bicubic interpolation <Tabular_Interpolation>`; or if you are only interested in Water properties, you can look into using the :ref:`IF97 <IF97>` (industrial formulation) backend.
+For pure and pseudo-pure fluids, two state variables are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), followed by input pairs where neither :math:`T` nor :math:`\rho` are specified, like :math:`P,H`; these will be much slower.  If you are only interested in Water properties, you can look into using the :ref:`IF97 <IF97>` (industrial formulation) backend.
 
 Vapor, Liquid, and Saturation States
 ------------------------------------
@@ -444,14 +444,6 @@ If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installe
 
     # Using properties from REFPROP to get R410A density
     In [2]: CP.PropsSI('D','T',300,'P',101325,'REFPROP::R32[0.697615]&R125[0.302385]')
-
-The same ``backend::fluid`` selector also routes to other backends:
-``BICUBIC&HEOS::Water``, ``TTSE&HEOS::Water``, and the SVD-compressed
-tabular backend ``SVDSBTL&IF97::Water`` /
-``SVDSBTL&HEOS::<Fluid>`` (sub-microsecond per-probe; see the
-:doc:`SVDSBTL page </coolprop/SVDSBTL>` for the routing gate — SVDSBTL
-is opted *out* of ``PropsSI`` by default and must be enabled via
-``ALLOW_SVDSBTL_IN_PROPSSI``).
 
 Adding Fluids
 -------------
