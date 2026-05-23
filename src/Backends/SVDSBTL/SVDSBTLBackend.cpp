@@ -674,7 +674,8 @@ void SVDSBTLBackend::save_critpatch_cache_(const std::string& fluid_name, const 
     // the default-permissions form.  No-op on Windows where the POSIX
     // permission model doesn't apply.
     std::error_code perm_ec;
-    std::filesystem::permissions(path, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write, std::filesystem::perm_options::replace, perm_ec);
+    std::filesystem::permissions(path, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write,
+                                 std::filesystem::perm_options::replace, perm_ec);
     // perm_ec ignored — cache permission tightening is best-effort.
 }
 
