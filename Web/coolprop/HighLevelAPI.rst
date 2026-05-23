@@ -44,7 +44,7 @@ More information:
 
 All :ref:`the wrappers <wrappers>` wrap this function in exactly the same way.
 
-For pure and pseudo-pure fluids, two state variables are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), followed by input pairs where neither :math:`T` nor :math:`\rho` are specified, like :math:`P,H`; these will be much slower.  If you are only interested in Water properties, you can look into using the :ref:`IF97 <IF97>` (industrial formulation) backend.
+For pure and pseudo-pure fluids, two state variables are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), followed by input pairs where neither :math:`T` nor :math:`\rho` are specified, like :math:`P,H`; these will be much slower.  If speed is an issue, you can look into table-based interpolation methods using :ref:`TTSE or bicubic interpolation <Tabular_Interpolation>`; or if you are only interested in Water properties, you can look into using the :ref:`IF97 <IF97>` (industrial formulation) backend.
 
 Vapor, Liquid, and Saturation States
 ------------------------------------
