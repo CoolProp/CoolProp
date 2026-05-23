@@ -8,6 +8,8 @@
 using Catch::Approx;
 
 #    include <algorithm>
+#    include <chrono>
+#    include <cstdint>
 #    include <filesystem>
 #    include <memory>
 #    include <random>
@@ -746,6 +748,117 @@ TEST_CASE("SVDSBTL fast_evaluate rejects unsupported inputs cleanly", "[SVDSBTL]
     REQUIRE_THROWS_AS(svd->fast_evaluate(CoolProp::PQ_INPUTS, v1.data(), v2.data(), 1, outputs.data(), outputs.size(), out.data(), out.size(),
                                          status.data(), status.size()),
                       CoolProp::ValueError);
+}
+
+// -----------------------------------------------------------------------------
+// ALTERNATIVE_SVDTABLES_DIRECTORY config key (CoolProp-fhp)
+// -----------------------------------------------------------------------------
+
+// Fast resolver-only test: no table build.  Verifies the contract that
+// default_cache_dir() consults the config key, creates the directory,
+// normalizes the trailing separator, and falls back to ~/.CoolProp/SVDTables
+// when the override is empty.  Both the .svd.bin.z surfaces and the
+// .critpatch.bin sidecars route through default_cache_dir(), so this single
+// check covers both file kinds by construction.
+TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY routes default_cache_dir", "[SVDSBTL][cache][fhp]") {
+    namespace fs = std::filesystem;
+    namespace cp_sbtl = CoolProp::sbtl;
+    const std::string saved = CoolProp::get_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY);
+    const fs::path tmpdir = fs::temp_directory_path() / "coolprop_svdtables_fhp_resolver";
+    std::error_code ec;
+    fs::remove_all(tmpdir, ec);
+
+    // Override -> resolved path starts with override and ends with a separator.
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, tmpdir.string());
+    const std::string resolved = cp_sbtl::SVDSurfaceSerializer::default_cache_dir();
+    REQUIRE(resolved.rfind(tmpdir.string(), 0) == 0);
+    REQUIRE_FALSE(resolved.empty());
+    REQUIRE((resolved.back() == '/' || resolved.back() == '\\'));
+    REQUIRE(fs::is_directory(tmpdir));
+
+    // Trailing separator already present in override -> no double slash.
+    const std::string with_slash = tmpdir.string() + "/";
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, with_slash);
+    const std::string resolved2 = cp_sbtl::SVDSurfaceSerializer::default_cache_dir();
+    REQUIRE(resolved2.find("//") == std::string::npos);
+
+    // Empty -> default $HOME/.CoolProp/SVDTables path.
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, "");
+    const std::string defaulted = cp_sbtl::SVDSurfaceSerializer::default_cache_dir();
+    REQUIRE(defaulted.find("/.CoolProp/SVDTables") != std::string::npos);
+
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, saved);
+    fs::remove_all(tmpdir, ec);
+}
+
+// End-to-end test: with the override set to a fresh tmpdir, building an
+// SVDSBTL AbstractState must land its cache files inside that tmpdir (not in
+// $HOME), and a second construction with the same options must hit-and-load
+// from there (cache file's mtime must NOT advance).  Uses the smallest schema-
+// valid grid so the build is a few seconds; tagged [slow] so the default
+// preflight tag sweep doesn't pay the cost on every iteration.
+TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY end-to-end build + reload", "[SVDSBTL][cache][fhp][slow]") {
+    namespace fs = std::filesystem;
+    const std::string saved = CoolProp::get_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY);
+    const fs::path tmpdir = fs::temp_directory_path() / "coolprop_svdtables_fhp_e2e";
+    std::error_code ec;
+    fs::remove_all(tmpdir, ec);
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, tmpdir.string());
+
+    // Smallest valid grid + critical_patch off so we don't pay the
+    // bbox-calibration loop.  The options blob is the cache key (via
+    // its FNV-1a 64 opthash) so first and second construction must use
+    // an identical blob to share a cache file.
+    const std::string opts = R"({"grid":{"NT":40,"NR":80,"rank":10},"critical_patch":{"mode":"off"}})";
+    const std::string spec = "SVDSBTL&HEOS";
+    const std::string spec_with_opts = std::string("Water?") + opts;
+
+    auto cache_files_in_tmpdir = [&]() {
+        std::vector<fs::path> out;
+        if (!fs::is_directory(tmpdir, ec)) return out;
+        for (const auto& entry : fs::directory_iterator(tmpdir, ec)) {
+            const std::string name = entry.path().filename().string();
+            if (name.find(".svd.bin.z") != std::string::npos) out.push_back(entry.path());
+        }
+        return out;
+    };
+
+    // First construction -> build + write cache files into tmpdir.
+    {
+        auto first = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(spec, spec_with_opts));
+        first->update(CoolProp::PT_INPUTS, 1.0e6, 350.0);
+    }
+    REQUIRE(fs::is_directory(tmpdir));
+    auto files = cache_files_in_tmpdir();
+    INFO("cache files in tmpdir: " << files.size());
+    REQUIRE_FALSE(files.empty());
+    // Stash mtimes as plain int64 nanoseconds: Catch2's stringifier on
+    // macOS can't print std::filesystem::file_time_type (the underlying
+    // duration uses __int128) so a failing REQUIRE on the raw type
+    // produces an ambiguous operator<< compile error.
+    auto to_ns = [](const fs::file_time_type& t) {
+        return static_cast<std::int64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(t.time_since_epoch()).count());
+    };
+    std::vector<std::int64_t> mtimes_before_ns;
+    mtimes_before_ns.reserve(files.size());
+    for (const auto& f : files) mtimes_before_ns.push_back(to_ns(fs::last_write_time(f)));
+
+    // Second construction with the same options -> must read from cache,
+    // not rebuild.  A rebuild would rewrite the .svd.bin.z files and
+    // bump their mtime.
+    {
+        auto second = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(spec, spec_with_opts));
+        second->update(CoolProp::PT_INPUTS, 1.0e6, 350.0);
+    }
+    const auto files_after = cache_files_in_tmpdir();
+    REQUIRE(files_after.size() == files.size());
+    for (std::size_t i = 0; i < files.size(); ++i) {
+        INFO("file: " << files[i].filename().string());
+        REQUIRE(to_ns(fs::last_write_time(files[i])) == mtimes_before_ns[i]);
+    }
+
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, saved);
+    fs::remove_all(tmpdir, ec);
 }
 
 #endif  // ENABLE_CATCH

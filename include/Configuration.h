@@ -29,6 +29,10 @@
     X(SAVE_RAW_TABLES, "SAVE_RAW_TABLES", false, "If true, the raw, uncompressed tables will also be written to file")                               \
     X(ALTERNATIVE_TABLES_DIRECTORY, "ALTERNATIVE_TABLES_DIRECTORY", "",                                                                              \
       "If provided, this path will be the root directory for the tabular data.  Otherwise, ${HOME}/.CoolProp/Tables is used")                        \
+    X(ALTERNATIVE_SVDTABLES_DIRECTORY, "ALTERNATIVE_SVDTABLES_DIRECTORY", "",                                                                        \
+      "If provided, this path will be the root directory for the SVDSBTL on-disk cache (both .svd.bin.z surfaces and .critpatch.bin sidecars).  "    \
+      "Otherwise, ${HOME}/.CoolProp/SVDTables is used.  Useful when ${HOME} is read-only (CI containers), on shared workstations, or for "           \
+      "centrally-managed cache directories.")                                                                                                        \
     X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "",                                                                                      \
       "An alternative path to be provided to the directory that contains REFPROP's fluids and mixtures directories.  If provided, the SETPATH "      \
       "function will be called with this directory prior to calling any REFPROP functions.")                                                         \

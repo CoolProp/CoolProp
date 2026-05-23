@@ -132,7 +132,10 @@ compressed binary file under
 
     $HOME/.CoolProp/SVDTables/<Fluid>.<Source>.<InputPair>.<OptHash>.svd.bin.z
 
-Subsequent constructions for the same tuple load from this cache.
+(or under ``${ALTERNATIVE_SVDTABLES_DIRECTORY}/`` in place of
+``$HOME/.CoolProp/SVDTables/`` when that config key is set — see
+:ref:`SVDSBTL-config` below).  Subsequent constructions for the same
+tuple load from this cache.
 
 * **Build time:** ~10-60 s per (fluid, input pair) on a 2024-era laptop,
   HEOS-source.  REFPROP-source is several times slower (REFPROP flash
@@ -145,8 +148,10 @@ Subsequent constructions for the same tuple load from this cache.
   ``.github/workflows/test_catch2.yml`` so CI rebuilds occur
   automatically.
 
-The cache directory is ``~/.CoolProp/SVDTables/`` on all platforms.
-A configurable cache directory is tracked in bd ``CoolProp-fhp``.
+The cache directory defaults to ``~/.CoolProp/SVDTables/`` on all
+platforms.  The location is configurable via the
+``ALTERNATIVE_SVDTABLES_DIRECTORY`` configuration key — see
+:ref:`SVDSBTL-config` below.
 
 .. _SVDSBTL-regimes:
 
@@ -394,6 +399,21 @@ Configuration keys
     Gate for ``PropsSI`` routing.  See :ref:`Three performance regimes
     <SVDSBTL-regimes>`.  Set to ``true`` for interactive
     use; leave ``false`` for throughput code.
+
+``ALTERNATIVE_SVDTABLES_DIRECTORY`` (default empty)
+    Override the on-disk cache directory.  When non-empty, both the
+    ``.svd.bin.z`` surface files and the ``.critpatch.bin`` sidecars
+    are read from and written to this directory in place of the
+    default ``~/.CoolProp/SVDTables/``.  The directory is created on
+    first use.  Useful when ``$HOME`` is read-only (CI containers,
+    sandboxed processes), on shared workstations, or when a
+    centrally-managed cache is preferable.  Set via the Python API
+    like any other string-typed config key:
+
+    .. code-block:: python
+
+       import CoolProp.CoolProp as CP
+       CP.set_config_string(CP.ALTERNATIVE_SVDTABLES_DIRECTORY, "/srv/coolprop_cache")
 
 ``SVDSBTL_SAMPLING_THREADS`` (default ``1``)
     Number of worker threads for the per-grid-cell sampling phase of
