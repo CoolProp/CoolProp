@@ -517,7 +517,11 @@ def write_failure_figures(backend, samples_per_region, out_dir):
                 pass
 
     # Isotherm overlays — walk fixed T sweeping log p, record (h, p).
-    def isotherm(T_K, p_lo_Pa, p_hi_Pa, n=64):
+    # Use dense knots (n=2000) so the sub-critical R1/R3 isotherm at
+    # T=623.15 K visually renders the near-flat plateau through the
+    # two-phase region (where p ≈ p_sat) without a visible vertical
+    # jump artifact at the dome crossing.
+    def isotherm(T_K, p_lo_Pa, p_hi_Pa, n=2000):
         hs, ps = [], []
         for i in range(n):
             p = _math.exp(_math.log(p_lo_Pa) + (i / (n - 1)) * (_math.log(p_hi_Pa) - _math.log(p_lo_Pa)))
@@ -685,6 +689,11 @@ def write_failure_figures(backend, samples_per_region, out_dir):
     fig.tight_layout(rect=[0, 0.05, 1, 0.94])
     out_path = os.path.join(out_dir, 'IF97_conformance_fails_{0}.png'.format(slug))
     fig.savefig(out_path, dpi=110)
+    # Vector PDF alongside the PNG — same figure, no second build.
+    # Useful for embedding in slides / preprints where the raster
+    # PNG would pixelate at print resolution.
+    pdf_path = os.path.join(out_dir, 'IF97_conformance_fails_{0}.pdf'.format(slug))
+    fig.savefig(pdf_path)
     plt.close(fig)
     return {'all': os.path.basename(out_path)}
 
@@ -981,6 +990,16 @@ def render_rst(results_per_backend, counts_per_backend, timings, figure_paths_pe
                 lines.append('   :width: 95%')
                 lines.append('')
                 lines.append('   {0} — IAPWS G13-15 budget violations across the full IF97 envelope.'.format(backend))
+                lines.append('')
+                # Sphinx :download: role copies the file into _downloads/
+                # at build time and renders a hyperlink in the HTML.
+                # PDF is the same figure as the PNG but vector, useful
+                # for slides / preprints where the scatter markers
+                # would pixelate at print resolution.  ~10 MB so we
+                # don't inline it; the link surfaces it for readers who
+                # want it without bloating the HTML page.
+                pdf_basename = combined.rsplit('.', 1)[0] + '.pdf'
+                lines.append('   :download:`Download the same figure as a vector PDF <{0}>` (~14 MB; useful for print / slides).'.format(pdf_basename))
                 lines.append('')
             else:
                 # Backwards-compat for any legacy per-region keys (a
