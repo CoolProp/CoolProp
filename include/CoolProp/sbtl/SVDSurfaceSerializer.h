@@ -1,6 +1,8 @@
 #ifndef COOLPROP_SBTL_SVD_SURFACE_SERIALIZER_H
 #define COOLPROP_SBTL_SVD_SURFACE_SERIALIZER_H
 
+#include <cstddef>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -169,9 +171,28 @@ class SVDSurfaceSerializer
     static SVDSurface load(const std::vector<char>& compressed);
 
     // File-level convenience.  save_to_file overwrites; load_from_file
-    // throws if the file doesn't exist or is unreadable.
+    // throws if the file doesn't exist or is unreadable.  The save path
+    // uses a write-temp + atomic-rename pattern (write_bytes_atomic
+    // below), so concurrent writers in different processes / threads
+    // never see a partial-write file (CoolProp-4no.2).
     static void save_to_file(const SVDSurface& surface, const std::string& path);
     static SVDSurface load_from_file(const std::string& path);
+
+    // Write `size` bytes from `bytes` to `target` via a write-temp +
+    // atomic-rename pattern: writes to a sibling temp path (with a
+    // process- and thread-unique suffix) and then std::filesystem::rename
+    // s onto the target.  Concurrent writers in different processes
+    // race on the rename — last writer wins — but no caller ever sees
+    // a partial-write file on the visible path.  When restrict_perms
+    // is true, the temp file is chmod'd to owner-only *before* the
+    // rename, so the post-rename file inherits the tight permissions
+    // (matters for the .critpatch.bin sidecar, which intentionally
+    // narrows perms vs. fopen's umask default).
+    //
+    // Throws std::runtime_error on open/write/rename failure (and
+    // unlinks the temp file in that case).  Assumes target.parent_path()
+    // already exists.
+    static void write_bytes_atomic(const std::filesystem::path& target, const void* bytes, std::size_t size, bool restrict_perms = false);
 
     // Returns the standard cache directory:
     //   ${HOME}/.CoolProp/SVDTables/

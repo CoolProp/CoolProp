@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <exception>
 #include <filesystem>
 #include <memory>
@@ -26,6 +27,7 @@
 #include "CoolProp/SchemaValidation.h"
 #include "CoolProp/sbtl/SVDSurface.h"
 #include "CoolProp/sbtl/SVDSurfaceFactory.h"
+#include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #include "CoolProp/schemas/SVDSBTLOptions.h"
 #include "DataStructures.h"
@@ -655,35 +657,23 @@ void SVDSBTLBackend::save_critpatch_cache_(const std::string& fluid_name, const 
         // re-runs the calibrator).
         return;
     }
-    // The std::filesystem::permissions() call below restricts the file
-    // to owner-only (0600); preflight's pattern-only semgrep rule
-    // can't see that mitigation across statements, so suppress.
-    std::FILE* f = std::fopen(path.string().c_str(), "wb");  // nosemgrep: cpp-fopen-without-restricted-permissions
-    if (!f) {
-        return;
-    }
     constexpr std::array<char, 8> kMagic = {'C', 'P', 'C', 'R', 'I', 'T', 'P', 'B'};
     constexpr std::uint32_t kVersion = 1;
-    // Return values intentionally discarded: a partial write would
-    // leave a malformed cache, but the load path's magic+version
-    // checks reject those on read, so the worst case is a one-time
-    // recalibration on next construction.  Not worth surfacing.
-    (void)std::fwrite(kMagic.data(), 1, 8, f);
-    (void)std::fwrite(&kVersion, sizeof(kVersion), 1, f);
-    (void)std::fwrite(mults.data(), sizeof(double), 4, f);
-    (void)std::fclose(f);
-    // Restrict permissions to owner read/write only.  fopen("wb")
-    // honours the process umask but typically leaves the file
-    // world-readable (0644).  The cache holds nothing security-
-    // sensitive — just calibration multipliers — but a multi-user
-    // host has no reason to let other users overwrite it, and a
-    // CodeQL alert (cpp/file-without-restricted-permissions) flagged
-    // the default-permissions form.  No-op on Windows where the POSIX
-    // permission model doesn't apply.
-    std::error_code perm_ec;
-    std::filesystem::permissions(path, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write,
-                                 std::filesystem::perm_options::replace, perm_ec);
-    // perm_ec ignored — cache permission tightening is best-effort.
+    constexpr std::size_t kPayloadSize = kMagic.size() + sizeof(kVersion) + 4 * sizeof(double);
+    std::array<char, kPayloadSize> buf{};
+    std::memcpy(buf.data(), kMagic.data(), kMagic.size());
+    std::memcpy(buf.data() + kMagic.size(), &kVersion, sizeof(kVersion));
+    std::memcpy(buf.data() + kMagic.size() + sizeof(kVersion), mults.data(), 4 * sizeof(double));
+    // Atomic write: temp + rename, with owner-only perms applied to the
+    // temp file before rename so multi-process notebook builds never
+    // see a torn-write critpatch sidecar (CoolProp-4no.2).  Any failure
+    // is non-fatal — same semantics as the previous fopen-then-fwrite
+    // path: cache miss on next load just re-runs the calibrator.
+    try {
+        sbtl::SVDSurfaceSerializer::write_bytes_atomic(path, buf.data(), buf.size(), /*restrict_perms=*/true);
+    } catch (const std::exception&) {
+        // swallowed — cache write is best-effort
+    }
 }
 
 std::shared_ptr<CoolProp::AbstractState> SVDSBTLBackend::source_reference_() {
