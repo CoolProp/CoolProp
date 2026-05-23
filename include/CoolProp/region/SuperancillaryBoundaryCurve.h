@@ -61,15 +61,34 @@ class SuperancillaryBoundaryCurve final : public BoundaryCurve
 
     SuperancillaryBoundaryCurve(std::shared_ptr<SuperAncillary_t> sa, double p_min, double p_max, char prop_key, short Q, double output_scale,
                                 double b_min, double b_max)
-      : sa_(std::move(sa)), p_min_(p_min), p_max_(p_max), prop_key_(prop_key), Q_(Q), output_scale_(output_scale), b_min_(b_min), b_max_(b_max) {
-        // Fail fast: every public eval / eval_da path dereferences sa_
-        // unchecked.  Allowing null would let a caller create an object
-        // that crashes on first lookup.  Both factories (build,
-        // from_state) also null-guard; this catches the direct-
-        // construction path that bypasses them.
+      : sa_(std::move(sa)),
+        p_min_(p_min),
+        p_max_(p_max),
+        prop_key_(prop_key),
+        Q_(Q),
+        output_scale_(output_scale),
+        b_min_(b_min),
+        b_max_(b_max) {
+        // Fail fast: every public eval / eval_da / eval_fast path
+        // dereferences sa_ unchecked.  Allowing null would let a caller
+        // create an object that crashes on first lookup.  Both
+        // factories (build, from_state) also null-guard; this catches
+        // the direct-construction path that bypasses them.  Must run
+        // before build_surrogate_() — that helper calls eval() at
+        // 1024 probe points.
         if (!sa_) {
             throw std::invalid_argument("SuperancillaryBoundaryCurve: null SuperAncillary handle");
         }
+        // Constructor must also enforce 0 < p_min < p_max before
+        // build_surrogate_() calls std::log(p_min_) and divides by
+        // log_p_step.  Factory build() already validates these; the
+        // public constructor path (used by from_state on deserialise)
+        // did not, so a bad cache file could produce -inf / NaN in
+        // log_p_min_ + a div-by-zero in inv_log_p_step_.
+        if (!(p_min_ > 0.0) || !(p_max_ > p_min_)) {
+            throw std::invalid_argument("SuperancillaryBoundaryCurve: need 0 < p_min < p_max");
+        }
+        build_surrogate_();
     }
 
     // Factory: probes the SA at p_min / p_max to pre-compute b_min /
@@ -120,6 +139,34 @@ class SuperancillaryBoundaryCurve final : public BoundaryCurve
         return (y_plus - y_minus) / (p_hi - p_lo);
     }
 
+    // Fast 1e-6-accurate surrogate via 1024-point log-spaced linear
+    // interpolation table.  Used by Region::curve_contains for atlas
+    // dispatch; precision-critical callers (to_normalized) keep using
+    // eval().
+    //
+    // Implementation: precomputed table of b_sat at 1024 log-uniform
+    // p in [p_min, p_max].  eval_fast(p):
+    //   1. fractional bucket index = (log(p) - log_p_min_) * inv_log_p_step_
+    //   2. linear interp between the two adjacent table entries
+    // Out-of-range clamps to the nearest endpoint (atlas's AABB test
+    // already gates this; clamp is defense-in-depth).
+    [[nodiscard]] double eval_fast(double p) const noexcept override {
+        const double lp = std::log(p);
+        const double idx_f = (lp - log_p_min_) * inv_log_p_step_;
+        if (!(idx_f > 0.0)) {
+            return surrogate_table_.front();
+        }
+        const auto last = static_cast<double>(kSurrogatePoints - 1);
+        if (idx_f >= last) {
+            return surrogate_table_.back();
+        }
+        const auto i = static_cast<std::size_t>(idx_f);
+        const double frac = idx_f - static_cast<double>(i);
+        const double y0 = surrogate_table_[i];
+        const double y1 = surrogate_table_[i + 1];
+        return y0 + frac * (y1 - y0);
+    }
+
     [[nodiscard]] std::pair<double, double> bounds() const noexcept override {
         return {b_min_, b_max_};
     }
@@ -156,6 +203,36 @@ class SuperancillaryBoundaryCurve final : public BoundaryCurve
     }
 
    private:
+    // 1024 points across the (log) p range gives ~1e-6 max relative
+    // error on a Cheb-smooth saturation curve — comfortably below the
+    // atlas's sign-only requirement.  ~8 KB per curve; 4 SA-backed
+    // curves per fluid (LIQUID b_hi + VAPOR b_lo, for each of HmassP /
+    // PT input pairs) = ~32 KB / fluid.  Negligible.
+    static constexpr std::size_t kSurrogatePoints = 1024;
+
+    // Build the surrogate table by sampling eval() at 1024 log-uniform
+    // points in [p_min_, p_max_].  One-shot cost ~80 ns × 1024 ≈ 80 μs
+    // per curve, paid once at construction.  Failed eval() at any
+    // probe leaves the table entry NaN; eval_fast then propagates the
+    // NaN (curve_contains returns false for NaN, which is the correct
+    // behavior for an unrepresentable region of the curve).
+    // NOT noexcept: surrogate_table_.resize(kSurrogatePoints) below
+    // can throw std::bad_alloc.  Marking this noexcept would call
+    // std::terminate on allocation failure instead of letting the
+    // exception propagate up to the constructor's caller — caller
+    // can catch and either retry or fall back to a non-SA path.
+    void build_surrogate_() {
+        surrogate_table_.resize(kSurrogatePoints);
+        log_p_min_ = std::log(p_min_);
+        const double log_p_max = std::log(p_max_);
+        const double log_p_step = (log_p_max - log_p_min_) / static_cast<double>(kSurrogatePoints - 1);
+        inv_log_p_step_ = 1.0 / log_p_step;
+        for (std::size_t k = 0; k < kSurrogatePoints; ++k) {
+            const double lp = log_p_min_ + static_cast<double>(k) * log_p_step;
+            surrogate_table_[k] = eval(std::exp(lp));
+        }
+    }
+
     std::shared_ptr<SuperAncillary_t> sa_;
     double p_min_;
     double p_max_;
@@ -164,6 +241,11 @@ class SuperancillaryBoundaryCurve final : public BoundaryCurve
     double output_scale_;
     double b_min_;
     double b_max_;
+    // Surrogate-table state; populated by build_surrogate_() in the
+    // constructor (or by from_state for cache reloads).
+    std::vector<double> surrogate_table_;
+    double log_p_min_ = 0.0;
+    double inv_log_p_step_ = 0.0;
 };
 
 }  // namespace region

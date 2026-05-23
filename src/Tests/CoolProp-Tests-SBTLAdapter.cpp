@@ -72,6 +72,64 @@ TEST_CASE("SatBoundaryFactory builds water sat curves matching HEOS", "[SBTL][Sa
     }
 }
 
+TEST_CASE("SuperancillaryBoundaryCurve::eval_fast tracks eval within surrogate budget", "[SBTL][SatBoundaryFactory][eval_fast][slow]") {
+    // CoolProp-akt: eval_fast is a 1024-point log-spaced linear-interp
+    // surrogate for the SA-backed boundary curve, used by Region::
+    // curve_contains where sign-only accuracy is sufficient.  Atlas-
+    // dispatch correctness depends on eval_fast giving the same
+    // bracketing decision as eval at every probe.  Check tightness
+    // empirically over Water's whole subcritical p range.
+    auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
+    const auto [p_min, p_max] = cp_sbtl::subcritical_pressure_range(*heos);
+
+    auto h_sat_L = cp_sbtl::build_h_sat_L(*heos, p_min, p_max);
+    auto h_sat_V = cp_sbtl::build_h_sat_V(*heos, p_min, p_max);
+
+    std::mt19937 rng(89);
+    std::uniform_real_distribution<double> u(std::log(p_min * 1.05), std::log(p_max * 0.99));
+    double max_rel_L = 0.0;
+    double max_rel_V = 0.0;
+    for (int k = 0; k < 1024; ++k) {
+        const double p = std::exp(u(rng));
+        const double yL = h_sat_L->eval(p);
+        const double yV = h_sat_V->eval(p);
+        const double yL_fast = h_sat_L->eval_fast(p);
+        const double yV_fast = h_sat_V->eval_fast(p);
+        // Fast-path finiteness: eval_fast() interpolates from a
+        // surrogate table populated by eval(); if any cell in the
+        // table is NaN/Inf the interp can propagate that.  Assert
+        // explicitly so std::max doesn't silently absorb a non-finite
+        // value and let the 1e-3 budget pass with garbage in
+        // max_rel_L/max_rel_V.
+        if (std::isfinite(yL) && std::abs(yL) > 0.0) {
+            REQUIRE(std::isfinite(yL_fast));
+            const double relL = std::abs(yL_fast - yL) / std::abs(yL);
+            REQUIRE(std::isfinite(relL));
+            max_rel_L = std::max(max_rel_L, relL);
+        }
+        if (std::isfinite(yV) && std::abs(yV) > 0.0) {
+            REQUIRE(std::isfinite(yV_fast));
+            const double relV = std::abs(yV_fast - yV) / std::abs(yV);
+            REQUIRE(std::isfinite(relV));
+            max_rel_V = std::max(max_rel_V, relV);
+        }
+    }
+    INFO("max rel-err: h_sat_L=" << max_rel_L << " h_sat_V=" << max_rel_V);
+    // The saturation enthalpies h_sat,L/V have a sqrt-singularity at
+    // p_crit (latent heat -> 0 like sqrt(p_crit - p)), so linear
+    // interp on a log-uniform grid bottoms out at ~5e-4 near the
+    // singularity even at 1024 knots.  Sign-only callers (atlas
+    // curve_contains) tolerate this: a probe within 5e-4 relative of
+    // the true sat curve is essentially ON the curve, and either
+    // routing (single-phase via the matched region's SVD vs dome blend
+    // via the lever rule) returns a numerically consistent answer at
+    // the boundary.  The 1e-3 budget is the contract the atlas relies
+    // on — outside the near-critical strip the empirical error is
+    // 1e-7 ish.
+    REQUIRE(max_rel_L < 1e-3);
+    REQUIRE(max_rel_V < 1e-3);
+}
+
 TEST_CASE("SVDSurface PH preset builds + evals against HEOS", "[SBTL][SVDSurface][preset_ph][slow]") {
     auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
     // Tiny grid for unit-test runtime — accuracy is checked

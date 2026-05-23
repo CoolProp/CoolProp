@@ -46,8 +46,14 @@ Region& Region::operator=(Region&& other) noexcept {
 }
 
 bool Region::curve_contains(double a, double b) const noexcept {
-    const double b_lo_val = b_lo_->eval(a);
-    const double b_hi_val = b_hi_->eval(a);
+    // curve_contains is sign-only — it just decides whether b is
+    // bracketed by the two curve values at a, not the precise value
+    // of either curve.  Route through eval_fast so SA-backed curves
+    // can use their precomputed linear-interp surrogate (~5 ns vs
+    // ~80 ns for the full SA composition).  Precision-critical
+    // callers (to_normalized / from_normalized) keep using eval().
+    const double b_lo_val = b_lo_->eval_fast(a);
+    const double b_hi_val = b_hi_->eval_fast(a);
     return b >= b_lo_val && b <= b_hi_val;
 }
 
