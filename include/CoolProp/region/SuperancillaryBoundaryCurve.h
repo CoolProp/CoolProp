@@ -79,6 +79,15 @@ class SuperancillaryBoundaryCurve final : public BoundaryCurve
         if (!sa_) {
             throw std::invalid_argument("SuperancillaryBoundaryCurve: null SuperAncillary handle");
         }
+        // Constructor must also enforce 0 < p_min < p_max before
+        // build_surrogate_() calls std::log(p_min_) and divides by
+        // log_p_step.  Factory build() already validates these; the
+        // public constructor path (used by from_state on deserialise)
+        // did not, so a bad cache file could produce -inf / NaN in
+        // log_p_min_ + a div-by-zero in inv_log_p_step_.
+        if (!(p_min_ > 0.0) || !(p_max_ > p_min_)) {
+            throw std::invalid_argument("SuperancillaryBoundaryCurve: need 0 < p_min < p_max");
+        }
         build_surrogate_();
     }
 
@@ -207,7 +216,12 @@ class SuperancillaryBoundaryCurve final : public BoundaryCurve
     // probe leaves the table entry NaN; eval_fast then propagates the
     // NaN (curve_contains returns false for NaN, which is the correct
     // behavior for an unrepresentable region of the curve).
-    void build_surrogate_() noexcept {
+    // NOT noexcept: surrogate_table_.resize(kSurrogatePoints) below
+    // can throw std::bad_alloc.  Marking this noexcept would call
+    // std::terminate on allocation failure instead of letting the
+    // exception propagate up to the constructor's caller — caller
+    // can catch and either retry or fall back to a non-SA path.
+    void build_surrogate_() {
         surrogate_table_.resize(kSurrogatePoints);
         log_p_min_ = std::log(p_min_);
         const double log_p_max = std::log(p_max_);

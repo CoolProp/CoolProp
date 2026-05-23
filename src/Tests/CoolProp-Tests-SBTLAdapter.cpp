@@ -95,11 +95,23 @@ TEST_CASE("SuperancillaryBoundaryCurve::eval_fast tracks eval within surrogate b
         const double yV = h_sat_V->eval(p);
         const double yL_fast = h_sat_L->eval_fast(p);
         const double yV_fast = h_sat_V->eval_fast(p);
+        // Fast-path finiteness: eval_fast() interpolates from a
+        // surrogate table populated by eval(); if any cell in the
+        // table is NaN/Inf the interp can propagate that.  Assert
+        // explicitly so std::max doesn't silently absorb a non-finite
+        // value and let the 1e-3 budget pass with garbage in
+        // max_rel_L/max_rel_V.
         if (std::isfinite(yL) && std::abs(yL) > 0.0) {
-            max_rel_L = std::max(max_rel_L, std::abs(yL_fast - yL) / std::abs(yL));
+            REQUIRE(std::isfinite(yL_fast));
+            const double relL = std::abs(yL_fast - yL) / std::abs(yL);
+            REQUIRE(std::isfinite(relL));
+            max_rel_L = std::max(max_rel_L, relL);
         }
         if (std::isfinite(yV) && std::abs(yV) > 0.0) {
-            max_rel_V = std::max(max_rel_V, std::abs(yV_fast - yV) / std::abs(yV));
+            REQUIRE(std::isfinite(yV_fast));
+            const double relV = std::abs(yV_fast - yV) / std::abs(yV);
+            REQUIRE(std::isfinite(relV));
+            max_rel_V = std::max(max_rel_V, relV);
         }
     }
     INFO("max rel-err: h_sat_L=" << max_rel_L << " h_sat_V=" << max_rel_V);
