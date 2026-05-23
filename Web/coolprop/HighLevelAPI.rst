@@ -445,6 +445,14 @@ If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installe
     # Using properties from REFPROP to get R410A density
     In [2]: CP.PropsSI('D','T',300,'P',101325,'REFPROP::R32[0.697615]&R125[0.302385]')
 
+The same ``backend::fluid`` selector also routes to other backends:
+``BICUBIC&HEOS::Water``, ``TTSE&HEOS::Water``, and the SVD-compressed
+tabular backend ``SVDSBTL&IF97::Water`` /
+``SVDSBTL&HEOS::<Fluid>`` (sub-microsecond per-probe; see the
+:doc:`SVDSBTL page </coolprop/SVDSBTL>` for the routing gate — SVDSBTL
+is opted *out* of ``PropsSI`` by default and must be enabled via
+``ALLOW_SVDSBTL_IN_PROPSSI``).
+
 Adding Fluids
 -------------
 

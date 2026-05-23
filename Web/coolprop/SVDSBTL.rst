@@ -43,11 +43,14 @@ bicubic table with three layered components that address both:
    further splits for IF97 (R1/R3, R2/R3 boundary curves).  Each
    region's secondary axis is normalised to :math:`[0, 1]` via two
    analytic boundary curves — on subcritical regions one curve is the
-   saturation dome and the other is an isotherm (low-T floor for the
-   liquid region, high-T ceiling for the vapor region); on
-   supercritical regions both curves are isotherms.  Lookups first
-   AABB-test against region bounding boxes (cheap), then evaluate the
-   precise boundary curves on the candidate.
+   saturation dome and the other is an EOS-domain floor/ceiling (for
+   the liquid region the floor walks up over the **melting curve**
+   where it binds at high p, falling back to the low-T EOS isotherm
+   where it doesn't; for the vapor region the ceiling is the high-T
+   isotherm at the EOS validity limit); on supercritical regions both
+   curves are isotherms.  Lookups first AABB-test against region
+   bounding boxes (cheap), then evaluate the precise boundary curves
+   on the candidate.
 
 2. **Per-region SVD.**  Inside each normalised region, every tabulated
    property (:math:`\rho, h, s, u, w, \eta, \lambda`) is represented
@@ -180,12 +183,18 @@ the backend.
 
        In [1]: %timeit loop()
 
-   Native C++ ``update + rhomass + T`` is ~1 µs/iter (dominated by
-   ``update()``; the cached accessors are <10 ns/pair).  The Cython
-   wrapper adds ~0.3 µs across the three FFI crossings, totaling
-   ~1.3 µs/iter from Python — still ~20× faster than HEOS's
-   :math:`(p, h)` flash on the same loop.  This is what most user
-   code should look like.
+   Native C++ ``update + rhomass + T`` is region-dependent: well
+   under 200 ns/call in single-phase (subcooled liquid, superheated
+   vapor, supercritical), and ~1-1.5 µs/call in two-phase / sat-line
+   regions where the SuperAncillary or source-backend PQ flash runs
+   per probe.  The cached accessors are <10 ns/pair on top.  The
+   Cython wrapper adds ~0.3 µs across the three FFI crossings — so
+   even a Python loop sweeping the saturation dome stays ~20× faster
+   than the same loop on HEOS.  This path is fine for ad-hoc / setup
+   code; for throughput-sensitive workloads, prefer
+   :ref:`fast_evaluate <SVDSBTL-regimes>` (next regime) which strips
+   the per-probe wrapper marshalling and amortises locate + basis
+   setup across multiple outputs.
 
 2. **fast_evaluate (batched, no instance mutation).**
    ``AbstractState.fast_evaluate(input_pair, val1[], val2[],
@@ -489,10 +498,14 @@ Accuracy envelope
 * **SVDSBTL&REFPROP::<Fluid>**: matches REFPROP truth on tested
   probes within REFPROP's own numerical-noise floor on the sat
   curves; same single-phase envelope as HEOS-source.  Two-phase
-  endpoints currently fall through to REFPROP's PQ flash (~3-5 µs
-  per probe); ``CoolProp-077`` will replace that with an on-disk
-  saturation-surrogate spline to remove the cross-DLL hop and the
-  REFPROP-thread-safety constraint that fallback inherits.
+  endpoints currently fall through to REFPROP's PQ flash; the flash
+  itself is ~1.5 µs/call native, with the SVDSBTL fallback wrapper
+  (lever rule + endpoint conversions) bringing the user-visible
+  per-probe cost to ~3-4 µs.  ``CoolProp-077`` will replace the
+  REFPROP flash with an on-disk saturation-surrogate spline to remove
+  both the cross-DLL hop and the REFPROP-thread-safety constraint
+  that fallback inherits, and reduce the wrapped cost into the
+  single-µs band.
 
 Deviation plot
 ==============

@@ -8,7 +8,13 @@ Especially when evaluating inputs as a function of pressure and enthalpy (common
 
 As of version 5.1 of CoolProp, the tabular interpolation methods of CoolProp v4 have been brought back from the dead, and significantly improved.  They are approximately 4 times faster than the equivalent methods in v4 of CoolProp due to a more optimized structure.  In order to make the most effective use of the tabular interpolation methods, you must be using the :ref:`low-level interface <low_level_api>`, otherwise significant overhead and slowdown will be experienced.  Thus, this method is best suited to C++, python, and the SWIG wrappers.
 
-There are two backends implemented for tabular interpolation, ``BICUBIC`` and ``TTSE``.  Both consume the same gridded tabular data that is stored to your user home directory in the folder ``HOME/.CoolProp/Tables``.  If you want to find the directory that CoolProp is using as your home directory (``HOME``), you can do something like 
+There are two backends implemented for tabular interpolation, ``BICUBIC`` and ``TTSE``.  Both consume the same gridded tabular data that is stored to your user home directory in the folder ``HOME/.CoolProp/Tables``.
+
+.. seealso::
+
+    For sub-microsecond per-probe evaluation with IAPWS-G13-15 conformance for water (``SVDSBTL&IF97``) and single-digit-percent accuracy on a multi-fluid HEOS-backed envelope (``SVDSBTL&HEOS``), see the :doc:`SVDSBTL backend </coolprop/SVDSBTL>`.  SVDSBTL combines a region atlas with per-region SVD compression and is the recommended throughput-oriented tabular backend for new code; BICUBIC and TTSE remain for backward compatibility.
+
+If you want to find the directory that CoolProp is using as your home directory (``HOME``), you can do something like
 
 .. ipython::
 
