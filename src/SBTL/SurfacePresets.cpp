@@ -84,14 +84,14 @@ std::vector<PropertySpec> pt_properties(::CoolProp::AbstractState& src) {
 }
 
 // IF97 R2/R3 boundary equation, inverted:
-//   p_B23(T) = 0.10192970039326e-2 · (T − 572.54459862746)^2 + 13.91883776670  [MPa]
+//   p_B23(T) = 0.10192970039326e-2 · (T − 572.54459862746)^2 + 13.918839778870  [MPa]
 // Closed-form inverse for p ∈ [16.529, 100] MPa (the valid range for
 // IF97's R2/R3 boundary) → T ∈ [623.15, 863.15] K.  Outside this p
 // range the curve isn't defined; callers must gate.
 double if97_T_B23_K(double p_Pa) {
     constexpr double a = 0.10192970039326e-2;
     constexpr double b = 0.57254459862746e3;
-    constexpr double c = 0.1391883776670e2;
+    constexpr double c = 0.13918839778870e2;
     const double p_MPa = p_Pa / 1.0e6;
     return b + std::sqrt((p_MPa - c) / a);
 }
