@@ -61,7 +61,16 @@ class SuperancillaryBoundaryCurve final : public BoundaryCurve
 
     SuperancillaryBoundaryCurve(std::shared_ptr<SuperAncillary_t> sa, double p_min, double p_max, char prop_key, short Q, double output_scale,
                                 double b_min, double b_max)
-      : sa_(std::move(sa)), p_min_(p_min), p_max_(p_max), prop_key_(prop_key), Q_(Q), output_scale_(output_scale), b_min_(b_min), b_max_(b_max) {}
+      : sa_(std::move(sa)), p_min_(p_min), p_max_(p_max), prop_key_(prop_key), Q_(Q), output_scale_(output_scale), b_min_(b_min), b_max_(b_max) {
+        // Fail fast: every public eval / eval_da path dereferences sa_
+        // unchecked.  Allowing null would let a caller create an object
+        // that crashes on first lookup.  Both factories (build,
+        // from_state) also null-guard; this catches the direct-
+        // construction path that bypasses them.
+        if (!sa_) {
+            throw std::invalid_argument("SuperancillaryBoundaryCurve: null SuperAncillary handle");
+        }
+    }
 
     // Factory: probes the SA at p_min / p_max to pre-compute b_min /
     // b_max for the AABB cheap-reject.  Throws if the SuperAncillary
@@ -90,13 +99,25 @@ class SuperancillaryBoundaryCurve final : public BoundaryCurve
         // p gives ~1e-13 relative error in the derivative — Cheb
         // expansions are C^∞ in the interior, so FD doesn't introduce
         // truncation noise of any significance.
+        //
+        // Clamp the ±h endpoints to [p_min_, p_max_] so a query right
+        // at a build-range endpoint doesn't step into the SA's invalid
+        // region and return NaN.  When clamped on one side the
+        // effective stencil becomes asymmetric (forward or backward
+        // difference); divide by the actual span to keep the slope
+        // correct.
         const double h = std::max(1e-7 * std::abs(p), 1.0);
-        const double y_plus = eval(p + h);
-        const double y_minus = eval(p - h);
+        const double p_hi = std::min(p + h, p_max_);
+        const double p_lo = std::max(p - h, p_min_);
+        if (!(p_hi > p_lo)) {
+            return std::nan("");
+        }
+        const double y_plus = eval(p_hi);
+        const double y_minus = eval(p_lo);
         if (!std::isfinite(y_plus) || !std::isfinite(y_minus)) {
             return std::nan("");
         }
-        return (y_plus - y_minus) / (2.0 * h);
+        return (y_plus - y_minus) / (p_hi - p_lo);
     }
 
     [[nodiscard]] std::pair<double, double> bounds() const noexcept override {

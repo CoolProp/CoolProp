@@ -25,6 +25,7 @@ std::unique_ptr<SuperancillaryBoundaryCurve> SuperancillaryBoundaryCurve::build(
     constexpr std::size_t kProbes = 32;
     double b_min = std::numeric_limits<double>::infinity();
     double b_max = -std::numeric_limits<double>::infinity();
+    std::size_t finite_probe_count = 0;
     const double log_p_min = std::log(p_min);
     const double log_p_max = std::log(p_max);
     for (std::size_t k = 0; k < kProbes; ++k) {
@@ -34,6 +35,7 @@ std::unique_ptr<SuperancillaryBoundaryCurve> SuperancillaryBoundaryCurve::build(
             const double T_sat = sa->get_T_from_p(p);
             const double y = sa->eval_sat(T_sat, prop_key, Q) * output_scale;
             if (std::isfinite(y)) {
+                ++finite_probe_count;
                 b_min = std::min(b_min, y);
                 b_max = std::max(b_max, y);
             }
@@ -43,8 +45,19 @@ std::unique_ptr<SuperancillaryBoundaryCurve> SuperancillaryBoundaryCurve::build(
             // the surrounding probes.
         }
     }
-    if (!std::isfinite(b_min) || !std::isfinite(b_max) || !(b_min < b_max)) {
+    if (finite_probe_count == 0) {
         throw std::runtime_error("SuperancillaryBoundaryCurve::build: SuperAncillary rejected all probes in the requested p range");
+    }
+    if (b_min == b_max) {
+        // Pathological but representable: all finite probes yielded
+        // the same value (truly constant curve, or near-flat one
+        // whose variation is below the SA's noise floor).  Synthesize
+        // a tiny inflation so the AABB has non-zero b-extent and
+        // downstream Region machinery doesn't trip on degenerate
+        // span checks.  1 ULP of inflation per side is enough.
+        const double eps = std::max(std::abs(b_min) * std::numeric_limits<double>::epsilon(), std::numeric_limits<double>::min());
+        b_min -= eps;
+        b_max += eps;
     }
     return std::make_unique<SuperancillaryBoundaryCurve>(std::move(sa), p_min, p_max, prop_key, Q, output_scale, b_min, b_max);
 }
