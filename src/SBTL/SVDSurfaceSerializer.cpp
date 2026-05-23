@@ -13,11 +13,14 @@
 
 #include <msgpack.hpp>
 
+#include "AbstractState.h"
+#include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "CPfilepaths.h"
 #include "CoolProp/region/ConstantCurve.h"
 #include "CoolProp/region/CubicSplineCurve.h"
 #include "CoolProp/region/PiecewiseChebyshevCurve.h"
 #include "CoolProp/region/Region.h"
+#include "CoolProp/region/SuperancillaryBoundaryCurve.h"
 #include "CoolProp/svd/SVDDecomposition.h"
 #include "miniz.h"
 
@@ -34,6 +37,10 @@ enum class CurveKind : std::uint8_t
     CONSTANT = 0,
     CUBIC_SPLINE = 1,
     PIECEWISE_CHEBYSHEV = 2,
+    // SuperancillaryBoundaryCurve — stores only the State POD scalars
+    // (no piecewise tables); the SuperAncillary handle itself is
+    // re-acquired at load time from the source HEOS for the fluid.
+    SUPERANCILLARY = 3,
 };
 
 // ---------- packing helpers -------------------------------------------
@@ -79,6 +86,23 @@ void pack_curve(Packer& pk, const region::BoundaryCurve& curve) {
             pk.pack(p.coeffs);
             pk.pack(p.deriv_coeffs);
         }
+        pk.pack(s.b_min);
+        pk.pack(s.b_max);
+        return;
+    }
+    if (const auto* c = dynamic_cast<const region::SuperancillaryBoundaryCurve*>(&curve)) {
+        const auto s = c->state();
+        // Pack only the State POD scalars; the SuperAncillary handle
+        // itself isn't serialised (it's a per-fluid singleton lazily
+        // built by HelmholtzEOSMixtureBackend).  On load, the handle
+        // is re-acquired from the fluid HEOS at unpack_surface entry.
+        pk.pack_array(8);
+        pk.pack(static_cast<std::uint8_t>(CurveKind::SUPERANCILLARY));
+        pk.pack(s.p_min);
+        pk.pack(s.p_max);
+        pk.pack(static_cast<std::int8_t>(s.prop_key));
+        pk.pack(static_cast<std::int16_t>(s.Q));
+        pk.pack(s.output_scale);
         pk.pack(s.b_min);
         pk.pack(s.b_max);
         return;
@@ -178,7 +202,8 @@ void check_array(const msgpack::object& o, std::size_t expected_min, const char*
     }
 }
 
-std::unique_ptr<region::BoundaryCurve> unpack_curve(const msgpack::object& o) {
+std::unique_ptr<region::BoundaryCurve> unpack_curve(const msgpack::object& o,
+                                                    const std::shared_ptr<region::SuperancillaryBoundaryCurve::SuperAncillary_t>& sa) {
     check_array(o, 1, "curve");
     const auto kind = static_cast<CurveKind>(as<std::uint8_t>(o.via.array.ptr[0]));
     switch (kind) {
@@ -224,11 +249,27 @@ std::unique_ptr<region::BoundaryCurve> unpack_curve(const msgpack::object& o) {
             s.b_max = as<double>(o.via.array.ptr[6]);
             return region::PiecewiseChebyshevCurve::from_state(std::move(s));
         }
+        case CurveKind::SUPERANCILLARY: {
+            check_array(o, 8, "superancillary curve");
+            if (!sa) {
+                throw std::runtime_error("SVDSurfaceSerializer: stream contains a SuperAncillary-backed curve but no SuperAncillary handle is "
+                                         "available for the fluid (source backend must be HEOS for re-hydration)");
+            }
+            region::SuperancillaryBoundaryCurve::State s;
+            s.p_min = as<double>(o.via.array.ptr[1]);
+            s.p_max = as<double>(o.via.array.ptr[2]);
+            s.prop_key = static_cast<char>(as<std::int8_t>(o.via.array.ptr[3]));
+            s.Q = static_cast<short>(as<std::int16_t>(o.via.array.ptr[4]));
+            s.output_scale = as<double>(o.via.array.ptr[5]);
+            s.b_min = as<double>(o.via.array.ptr[6]);
+            s.b_max = as<double>(o.via.array.ptr[7]);
+            return region::SuperancillaryBoundaryCurve::from_state(std::move(s), sa);
+        }
     }
     throw std::runtime_error("SVDSurfaceSerializer: unknown curve kind");
 }
 
-region::Region unpack_region(const msgpack::object& o) {
+region::Region unpack_region(const msgpack::object& o, const std::shared_ptr<region::SuperancillaryBoundaryCurve::SuperAncillary_t>& sa) {
     check_array(o, 8, "region");
     const auto scale = static_cast<region::AxisScale>(as<std::uint8_t>(o.via.array.ptr[0]));
     const auto a_lo = as<double>(o.via.array.ptr[1]);
@@ -237,8 +278,8 @@ region::Region unpack_region(const msgpack::object& o) {
     // a_lo_t/a_hi_t/inv_span_t are derived; we re-derive via make()
     // and don't read the stream values — they're stored for round-
     // trip diagnostics only.
-    auto b_lo = unpack_curve(o.via.array.ptr[6]);
-    auto b_hi = unpack_curve(o.via.array.ptr[7]);
+    auto b_lo = unpack_curve(o.via.array.ptr[6], sa);
+    auto b_hi = unpack_curve(o.via.array.ptr[7], sa);
     return region::Region(axis, std::move(b_lo), std::move(b_hi));
 }
 
@@ -262,6 +303,34 @@ svd::SVDDecomposition unpack_decomp(const msgpack::object& o, std::size_t* out_r
     return d;
 }
 
+// Best-effort SuperAncillary handle acquisition for `fluid_name`.  Returns
+// null when the fluid isn't a HEOS pure fluid (mixtures / unknown names);
+// the unpack_curve SUPERANCILLARY arm will throw with a clear message if
+// it actually needs the handle.  We don't differentiate the source-backend
+// here (HEOS vs REFPROP vs IF97) because only HEOS surfaces ever emit a
+// SuperancillaryBoundaryCurve into the stream — REFPROP / IF97 fall
+// through to the cubic-spline path at sat-boundary build time.
+std::shared_ptr<region::SuperancillaryBoundaryCurve::SuperAncillary_t> acquire_superanc_for(const std::string& fluid_name) noexcept {
+    try {
+        std::unique_ptr<::CoolProp::AbstractState> as(::CoolProp::AbstractState::factory("HEOS", fluid_name));
+        auto* heos = dynamic_cast<::CoolProp::HelmholtzEOSMixtureBackend*>(as.get());
+        if (heos == nullptr) return nullptr;
+        auto sa = heos->get_superanc();
+        if (sa) {
+            // Eagerly build the caloric expansions so the deserialized
+            // curve's first eval() doesn't pay the lazy-build cost on
+            // the hot path.
+            try {
+                heos->ensure_caloric_superancillaries();
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+            }
+        }
+        return sa;
+    } catch (...) {  // NOLINT(bugprone-empty-catch)
+        return nullptr;
+    }
+}
+
 SVDSurface unpack_surface(const std::string& fluid_name, const msgpack::object& o) {
     check_array(o, 4, "surface");
     const auto input_pair = static_cast<::CoolProp::input_pairs>(as<std::int32_t>(o.via.array.ptr[0]));
@@ -278,10 +347,15 @@ SVDSurface unpack_surface(const std::string& fluid_name, const msgpack::object& 
 
     SVDSurface surface(fluid_name, input_pair, properties);
 
+    // Acquire SA handle once per surface load — passed into unpack_region
+    // → unpack_curve so the SUPERANCILLARY arm can rehydrate without
+    // re-constructing the HEOS state for every region.
+    const auto sa = acquire_superanc_for(fluid_name);
+
     const auto& regions_obj = o.via.array.ptr[2];
     check_array(regions_obj, 0, "regions");
     for (std::uint32_t i = 0; i < regions_obj.via.array.size; ++i) {
-        surface.add_region(unpack_region(regions_obj.via.array.ptr[i]));
+        surface.add_region(unpack_region(regions_obj.via.array.ptr[i], sa));
     }
 
     const auto& decomps_obj = o.via.array.ptr[3];
