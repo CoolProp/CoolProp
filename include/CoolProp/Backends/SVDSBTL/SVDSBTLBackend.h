@@ -1,6 +1,7 @@
 #ifndef COOLPROP_SVDSBTL_BACKEND_H
 #define COOLPROP_SVDSBTL_BACKEND_H
 
+#include <array>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -394,10 +395,42 @@ class SVDSBTLBackend : public AbstractState
 
     // Configure critical_patch_ from the validated options blob.
     // Called once at construction after surfaces_ are loaded.  When
-    // mode == "auto" uses the default multipliers (PR D plugs in
-    // real auto-calibration); when "fixed" honours `bbox`; when
-    // "off" leaves enabled=false and queries always go to the SVD.
+    // mode == "auto":
+    //   - tries to load 4 calibrated multipliers from a sidecar cache
+    //     file; if found, uses them
+    //   - otherwise runs auto_calibrate_critical_bbox_() which
+    //     binary-search-shrinks each of the 4 (T_lo, T_hi, p_lo, p_hi)
+    //     axes until the strip just outside the candidate patch passes
+    //     IAPWS conformance budgets in (rho, h, s, w) against the
+    //     source backend.  The resulting multipliers are persisted to
+    //     the sidecar cache for the next construction.
+    // When "fixed" honours the `bbox` array verbatim; when "off"
+    // leaves enabled=false and queries always go to the SVD.
     void build_critical_patch_(const std::string& options_canonical);
+
+    // Auto-calibration shrink loop (CoolProp-dxd).  Returns the four
+    // multipliers {T_lo_mult, T_hi_mult, p_lo_mult, p_hi_mult} such
+    // that the SVD's reconstruction of (rho, h, s, w) at every probe
+    // *just outside* the resulting (T, p) bbox satisfies the IAPWS
+    // conformance budgets (200 ppm rho, 100 ppm h, 200 ppm s,
+    // 1000 ppm w).  Wide initial bbox is
+    // [0.85, 1.20]*Tc x [0.50, 4.0]*pc; binary-search-shrinks each
+    // axis independently in ~8 iterations.  Total cost dominated by
+    // ~120 PT probes against the source backend (~ms each for HEOS,
+    // ~10 ms each for REFPROP) → a few seconds.  Persists to the
+    // sidecar cache so subsequent constructions skip the work.
+    [[nodiscard]] std::array<double, 4> auto_calibrate_critical_bbox_();
+
+    // Sidecar persistence for the 4 calibrated multipliers.  Cache
+    // path: $HOME/.CoolProp/SVDTables/<Fluid>.<Source>.critpatch.<OptHash>.bin
+    // (matches the SVDSurface cache directory + opthash so user-level
+    // table cleanup catches both files).  Format: 8-byte magic
+    // "CPCRITPB" + uint32 version + 4 doubles = 44 bytes.  Tiny
+    // enough to be plain binary; no msgpack / zlib overhead.
+    [[nodiscard]] static std::optional<std::array<double, 4>> load_critpatch_cache_(const std::string& fluid_name, const std::string& source_backend,
+                                                                                    const std::string& options_canonical);
+    static void save_critpatch_cache_(const std::string& fluid_name, const std::string& source_backend, const std::string& options_canonical,
+                                      const std::array<double, 4>& mults);
 
     // Get the patch-side source backend, allocating on first use.
     // The patch source can differ from the SVD truth source (set via

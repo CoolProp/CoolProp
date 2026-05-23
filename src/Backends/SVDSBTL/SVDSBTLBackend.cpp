@@ -8,9 +8,11 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <exception>
 #include <filesystem>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -154,6 +156,53 @@ std::string parse_and_canonicalise(const std::string& options_json) {
     return CoolProp::to_canonical_json(opts);
 }
 
+// FNV-1a 64 over the canonical options blob — mirrors the opthash the
+// SVDSurface cache uses so the critpatch sidecar lives alongside the
+// matching .svd.bin.z files and shares the cache-invalidation lifetime.
+// The implementation here is intentionally a tiny duplicate; the
+// canonical version lives in SVDSurfaceSerializer but isn't exposed
+// for re-use, and the cost of duplicating is one short function.
+std::uint64_t opthash_fnv1a_(const std::string& s) noexcept {
+    constexpr std::uint64_t kFNVOffset = 0xcbf29ce484222325ULL;
+    constexpr std::uint64_t kFNVPrime = 0x100000001b3ULL;
+    std::uint64_t h = kFNVOffset;
+    for (const unsigned char c : s) {
+        h ^= static_cast<std::uint64_t>(c);
+        h *= kFNVPrime;
+    }
+    return h;
+}
+
+// Critpatch sidecar path: lives next to the .svd.bin.z files so
+// directory-level cache cleanup catches both.  The opthash binds the
+// patch to the same options blob the surfaces were built against.
+//
+// Defense-in-depth against path traversal: rejects any
+// fluid_name / source_backend containing '/', '\\', or "..".  Mirrors
+// the validation in SVDSurfaceSerializer::default_cache_path; without
+// it a caller passing an attacker-controlled fluid name through
+// AbstractState::factory could read or write outside the cache dir,
+// since `default_cache_dir()` derives the parent dir from
+// `getenv("HOME")` (CodeQL tracks this as taint on fopen).
+std::filesystem::path critpatch_cache_path_(const std::string& fluid_name, const std::string& source_backend, const std::string& options_canonical) {
+    const auto unsafe = [](const std::string& s) {
+        return s.empty() || s.find('/') != std::string::npos || s.find('\\') != std::string::npos || s.find("..") != std::string::npos;
+    };
+    if (unsafe(fluid_name)) {
+        throw std::invalid_argument("SVDSBTLBackend: invalid fluid_name (must be a bare component name)");
+    }
+    if (unsafe(source_backend)) {
+        throw std::invalid_argument("SVDSBTLBackend: invalid source_backend");
+    }
+    const std::filesystem::path dir = CoolProp::sbtl::SVDSurfaceSerializer::default_cache_dir();
+    const std::uint64_t opthash = opthash_fnv1a_(options_canonical);
+    // Match the SVDSurface filename pattern <Fluid>.<Source>.<...>.<opthash>.svd.bin.z
+    // but with .critpatch.bin suffix (no zlib — too small to matter).
+    std::ostringstream oss;
+    oss << fluid_name << '.' << source_backend << ".critpatch." << std::hex << opthash << ".bin";
+    return dir / oss.str();
+}
+
 }  // namespace
 
 SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name, const std::string& source_backend, const std::string& options_json)
@@ -216,10 +265,15 @@ std::shared_ptr<::CoolProp::AbstractState> SVDSBTLBackend::patch_source_ref_() {
 void SVDSBTLBackend::build_critical_patch_(const std::string& options_canonical) {
     critical_patch_ = CriticalPatch{};  // disabled by default
     // Default behaviour when no options are supplied (mode unset) is
-    // "auto" with the spec's hardcoded multipliers.  PR D will plug
-    // in the actual binary-search-shrink loop.
+    // "auto", which now triggers the binary-search shrink loop in
+    // auto_calibrate_critical_bbox_() (cached to a sidecar file so
+    // subsequent constructions skip it).
     std::string mode = "auto";
+    // Fallback multipliers: Water-sized.  Used when mode == "fixed"
+    // without a bbox override, or when the auto-calibration fails
+    // (source backend throws) and we can't load a cached result either.
     std::array<double, 4> bbox_mult = {0.95, 1.05, 0.75, 1.15};  // T_lo, T_hi, p_lo, p_hi
+    bool user_supplied_bbox = false;
     std::string patch_source;
 
     if (!options_canonical.empty()) {
@@ -237,6 +291,7 @@ void SVDSBTLBackend::build_critical_patch_(const std::string& options_canonical)
                 for (std::size_t i = 0; i < 4; ++i) {
                     bbox_mult[i] = cp["bbox"][static_cast<rapidjson::SizeType>(i)].GetDouble();
                 }
+                user_supplied_bbox = true;
             }
         }
     }
@@ -246,6 +301,33 @@ void SVDSBTLBackend::build_critical_patch_(const std::string& options_canonical)
     if (mode != "auto" && mode != "fixed") {
         // schema validation should have caught this already
         return;
+    }
+    // Mode "auto" → try cache, then calibrate if missing.  User-supplied
+    // bbox overrides auto-calibration even in "auto" mode (escape hatch
+    // for users who want to pin the bbox without flipping mode to "fixed").
+    if (mode == "auto" && !user_supplied_bbox) {
+        const auto cached = load_critpatch_cache_(fluid_name_, source_backend_, options_canonical);
+        if (cached) {
+            bbox_mult = *cached;
+        } else {
+            // Need a patch_source for the calibration probe; ensure it's
+            // set up before the calibrator pokes at SVD properties (the
+            // calibration only reads from the SVD surface + source_, but
+            // future calibrators may want patch_source_, so initialise
+            // here to keep the calibrator simple).
+            critical_patch_.source = patch_source;
+            try {
+                bbox_mult = auto_calibrate_critical_bbox_();
+                save_critpatch_cache_(fluid_name_, source_backend_, options_canonical, bbox_mult);
+            } catch (const std::exception&) {
+                // Calibrator threw (source backend rejected a probe,
+                // SVD surface missing a property, etc.) — fall back to
+                // the Water-sized defaults rather than disabling the
+                // patch entirely.  The defaults are conservative
+                // (over-large) for non-water fluids, but better
+                // accuracy than no patch.
+            }
+        }
     }
 
     // Set the patch source up-front so an invalid `critical_patch.source`
@@ -303,6 +385,298 @@ void SVDSBTLBackend::build_critical_patch_(const std::string& options_canonical)
     if (std::isfinite(h_lo) && std::isfinite(h_hi) && h_lo < h_hi) {
         critical_patch_.bbox_per_pair[static_cast<int>(::CoolProp::HmassP_INPUTS)] = CriticalPatchBbox{p_lo, p_hi, h_lo, h_hi};
     }
+}
+
+std::array<double, 4> SVDSBTLBackend::auto_calibrate_critical_bbox_() {
+    // Binary-search-shrink the (T_lo, T_hi, p_lo, p_hi) bbox toward
+    // (Tc, pc) until the strip JUST OUTSIDE the candidate patch can be
+    // served by the SVD within IAPWS conformance budgets.  Each of the
+    // four axes is shrunk independently; the resulting bbox is the
+    // smallest axis-aligned rectangle that contains every cell where
+    // the rank-r SVD's reconstruction error exceeds budget.
+    //
+    // Why "just outside" matters: probes INSIDE the candidate bbox
+    // would be served by the patch (the source backend, by definition
+    // exact), so testing them tells us nothing about SVD accuracy.
+    // Probes just outside are the ones the SVD will own if we accept
+    // this candidate, so those are the ones whose error budget we
+    // need to respect.
+
+    auto src = patch_source_ref_();
+    const double Tc = src->T_critical();
+    const double pc = src->p_critical();
+
+    // Per-property relative-error budgets for the calibration probe.
+    // INTENTIONALLY 50-100x wider than the IAPWS G13-15 perm values
+    // (200 ppm rho, 100 ppm h, 200 ppm s, 1000 ppm w).  The patch
+    // exists to cover the critical-singularity rank-truncation cusp
+    // — where SVD reconstruction error reaches ~1%-10% in rho and
+    // ~5%-50% in w.  Thin-support corner cells far from the critical
+    // point also exceed the strict IAPWS budget by 10-100x (this is
+    // CoolProp-3c4 accuracy ceiling territory), but they're not what
+    // the patch is for — the patch can't cover scattered failures
+    // with an axis-aligned bbox.  Using IAPWS-strict budgets here
+    // would refuse to shrink the patch because every wide candidate
+    // includes some corner outliers; relaxing to "1% relative" cleanly
+    // separates the critical-cusp divergence from the corner ceiling.
+    constexpr double kBudget_rho = 1.0e-2;  // 1%
+    constexpr double kBudget_h = 1.0e-2;    // 1%
+    constexpr double kBudget_s = 1.0e-2;    // 1%
+    constexpr double kBudget_w = 5.0e-2;    // 5%
+
+    // The PT surface is where the calibration probes go — it's the
+    // canonical (T, p) → (rho, h, s, w) source the patch shape is
+    // expressed in.  Bail to defaults if the surface isn't registered
+    // (would indicate a non-standard preset; safer to use the
+    // Water-sized fallback than to error out).
+    const auto it = surfaces_.find(static_cast<int>(::CoolProp::PT_INPUTS));
+    if (it == surfaces_.end() || !it->second) {
+        throw ValueError("SVDSBTL auto-calibration: no PT_INPUTS surface registered");
+    }
+    const auto& pt_surface = *it->second;
+
+    // Probe at (T, p): SVD vs source; return max relative error across
+    // (rho, h, s, w), or NaN if either side rejects the point.
+    auto probe_rel_err = [&](double T, double p) -> double {
+        try {
+            src->update(::CoolProp::PT_INPUTS, p, T);
+            const double rho_src = src->rhomass();
+            const double h_src = src->hmass();
+            const double s_src = src->smass();
+            double w_src = std::numeric_limits<double>::quiet_NaN();
+            try {
+                w_src = src->speed_sound();
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+                // Some sources reject speed_sound near the critical
+                // point — skip and rely on (rho, h, s) alone there.
+            }
+
+            const auto resolved = pt_surface.resolve(p, T);
+            if (resolved.region_idx < 0) {
+                // SVD has no region containing this (p, T); not an
+                // accuracy failure, just out-of-table.  Don't reject
+                // the shrink based on it — the strip walker checks
+                // multiple probes per axis position, and at least one
+                // should land inside the SVD envelope.
+                return std::numeric_limits<double>::quiet_NaN();
+            }
+            const double rho_svd = pt_surface.eval_with_region(::CoolProp::iDmass, resolved.region_idx, resolved.svd_x, resolved.svd_y);
+            const double h_svd = pt_surface.eval_with_region(::CoolProp::iHmass, resolved.region_idx, resolved.svd_x, resolved.svd_y);
+            const double s_svd = pt_surface.eval_with_region(::CoolProp::iSmass, resolved.region_idx, resolved.svd_x, resolved.svd_y);
+            double w_svd = std::numeric_limits<double>::quiet_NaN();
+            if (pt_surface.contains_property(::CoolProp::ispeed_sound)) {
+                w_svd = pt_surface.eval_with_region(::CoolProp::ispeed_sound, resolved.region_idx, resolved.svd_x, resolved.svd_y);
+            }
+
+            double worst = 0.0;
+            if (std::isfinite(rho_src) && std::isfinite(rho_svd) && std::abs(rho_src) > 0.0) {
+                worst = std::max(worst, std::abs(rho_svd - rho_src) / std::abs(rho_src) / kBudget_rho);
+            }
+            if (std::isfinite(h_src) && std::isfinite(h_svd) && std::abs(h_src) > 0.0) {
+                worst = std::max(worst, std::abs(h_svd - h_src) / std::abs(h_src) / kBudget_h);
+            }
+            if (std::isfinite(s_src) && std::isfinite(s_svd) && std::abs(s_src) > 0.0) {
+                worst = std::max(worst, std::abs(s_svd - s_src) / std::abs(s_src) / kBudget_s);
+            }
+            if (std::isfinite(w_src) && std::isfinite(w_svd) && std::abs(w_src) > 0.0) {
+                worst = std::max(worst, std::abs(w_svd - w_src) / std::abs(w_src) / kBudget_w);
+            }
+            // worst is in units of "fraction of the largest budget";
+            // <= 1 means all properties pass; > 1 means at least one
+            // property exceeds its budget.
+            return worst;
+        } catch (const std::exception&) {
+            // Source rejected the probe — return NaN so the caller
+            // treats this probe as a no-op (doesn't influence the
+            // shrink decision either way).
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+    };
+
+    // Strip walker: at a candidate axis multiplier, sample N probes
+    // along the strip JUST OUTSIDE that axis (at axis-position ± eps,
+    // varying over the other two axes' wide span).  Returns true iff
+    // at least N - kStripOutlierBudget finite probes pass their budget
+    // — isolated outliers (typically thin-Hermite-support cells at
+    // region edges, e.g. just-below-dome cells near critical) don't
+    // block the calibrator from shrinking past them.  The patch is
+    // for the critical-singularity divergence, not the
+    // CoolProp-3c4 corner-cell accuracy ceiling; the outlier budget
+    // cleanly separates the two.
+    constexpr int kStripSamples = 12;
+    constexpr int kStripOutlierBudget = 2;  // tolerate up to 2/12 = 17% outliers
+    constexpr double kStripEps = 0.005;     // 0.5% offset outside the candidate
+    auto strip_passes = [&](double T_lo_mult, double T_hi_mult, double p_lo_mult, double p_hi_mult, int axis) {
+        // axis: 0=T_lo, 1=T_hi, 2=p_lo, 3=p_hi
+        const double T_lo = T_lo_mult * Tc;
+        const double T_hi = T_hi_mult * Tc;
+        const double p_lo = p_lo_mult * pc;
+        const double p_hi = p_hi_mult * pc;
+        // Outer reference for the variation axis: matches the
+        // Water-default bbox so the strip walker samples the region
+        // that the default patch would have covered.  Going wider
+        // would sample cells well outside the default patch where
+        // the SVD is the only owner anyway — those are CoolProp-3c4
+        // accuracy-ceiling territory and shouldn't influence the
+        // patch shape.
+        constexpr double kT_outer_lo = 0.95;
+        constexpr double kT_outer_hi = 1.05;
+        constexpr double kp_outer_lo = 0.75;
+        constexpr double kp_outer_hi = 1.15;
+        int n_finite = 0;
+        int n_outliers = 0;
+        for (int i = 0; i < kStripSamples; ++i) {
+            const double f = (i + 0.5) / kStripSamples;
+            double T_probe = T_lo, p_probe = p_lo;
+            if (axis == 0) {
+                T_probe = T_lo * (1.0 - kStripEps);  // just below T_lo
+                p_probe = (kp_outer_lo + f * (kp_outer_hi - kp_outer_lo)) * pc;
+            } else if (axis == 1) {
+                T_probe = T_hi * (1.0 + kStripEps);  // just above T_hi
+                p_probe = (kp_outer_lo + f * (kp_outer_hi - kp_outer_lo)) * pc;
+            } else if (axis == 2) {
+                p_probe = p_lo * (1.0 - kStripEps);  // just below p_lo
+                T_probe = (kT_outer_lo + f * (kT_outer_hi - kT_outer_lo)) * Tc;
+            } else {
+                p_probe = p_hi * (1.0 + kStripEps);  // just above p_hi
+                T_probe = (kT_outer_lo + f * (kT_outer_hi - kT_outer_lo)) * Tc;
+            }
+            const double err = probe_rel_err(T_probe, p_probe);
+            if (std::isfinite(err)) {
+                ++n_finite;
+                if (err > 1.0) {
+                    ++n_outliers;
+                }
+            }
+        }
+        // Require: at least one finite probe (otherwise we're shrinking
+        // past a region the source rejects entirely), AND fewer than
+        // kStripOutlierBudget budget-violating probes.
+        return n_finite > 0 && n_outliers <= kStripOutlierBudget;
+    };
+
+    // Binary search per axis.  Strategy: start at the Water-sized
+    // defaults (which are known to give G13-15 conformant SVDSBTL&IF97
+    // for water) and only SHRINK toward 1.0 (= the critical point).
+    // Never widen — that way Water gets back its tested bbox, and
+    // other fluids tighten if their critical regions are less
+    // extended.
+    //
+    // Axis indices: 0=T_lo, 1=T_hi, 2=p_lo, 3=p_hi.
+    // "safer" (wider patch) is the default; "tighter" is 1.0.
+    std::array<double, 4> defaults = {0.95, 1.05, 0.75, 1.15};
+    std::array<double, 4> tight = {1.0, 1.0, 1.0, 1.0};
+    std::array<double, 4> mults = defaults;
+    constexpr int kBisectSteps = 6;  // 6 = 1/64 multiplier resolution
+    for (int axis = 0; axis < 4; ++axis) {
+        // First confirm the default passes the strip test — if it
+        // doesn't (e.g. a fluid where the default patch is itself too
+        // small), bail to defaults and let the user override via
+        // critical_patch.bbox.  No widening here.
+        if (!strip_passes(mults[0], mults[1], mults[2], mults[3], axis)) {
+            continue;
+        }
+        // The (safe, aggressive) pair encodes the shrink direction per
+        // axis: safe = defaults[axis] (Water-sized, known to pass);
+        // aggressive = 1.0 (smallest patch, may or may not pass).  Lo-
+        // side axes (0=T_lo, 2=p_lo) have safe < aggressive numerically;
+        // hi-side axes (1=T_hi, 3=p_hi) have safe > aggressive.  Either
+        // way, the bisection moves `safe` toward `aggressive` whenever
+        // the candidate passes, and pulls `aggressive` toward `safe`
+        // when it doesn't.
+        double safe = defaults[axis];
+        double aggressive = tight[axis];
+        for (int step = 0; step < kBisectSteps; ++step) {
+            const double mid = 0.5 * (safe + aggressive);
+            auto trial = mults;
+            trial[axis] = mid;
+            if (strip_passes(trial[0], trial[1], trial[2], trial[3], axis)) {
+                safe = mid;
+            } else {
+                aggressive = mid;
+            }
+        }
+        // safe is the latest known-passing value — commit it.
+        mults[axis] = safe;
+    }
+    return mults;
+}
+
+std::optional<std::array<double, 4>> SVDSBTLBackend::load_critpatch_cache_(const std::string& fluid_name, const std::string& source_backend,
+                                                                           const std::string& options_canonical) {
+    const auto path = critpatch_cache_path_(fluid_name, source_backend, options_canonical);
+    std::error_code ec;
+    if (!std::filesystem::exists(path, ec) || ec) {
+        return std::nullopt;
+    }
+    // Use FILE* (POSIX/Windows-portable; binary fixed-width 44 bytes is
+    // small enough that stdio buffering overhead is irrelevant).
+    std::FILE* f = std::fopen(path.string().c_str(), "rb");
+    if (!f) {
+        return std::nullopt;
+    }
+    std::array<char, 8> magic{};
+    std::uint32_t version = 0;
+    std::array<double, 4> mults{};
+    const auto rd_n = std::fread(magic.data(), 1, 8, f);
+    if (rd_n != 8 || std::string(magic.data(), 8) != "CPCRITPB") {
+        (void)std::fclose(f);
+        return std::nullopt;
+    }
+    if (std::fread(&version, sizeof(version), 1, f) != 1 || version != 1u) {
+        (void)std::fclose(f);
+        return std::nullopt;
+    }
+    if (std::fread(mults.data(), sizeof(double), 4, f) != 4) {
+        (void)std::fclose(f);
+        return std::nullopt;
+    }
+    (void)std::fclose(f);
+    // Sanity-clamp: refuse obviously-wrong cached values rather than
+    // letting a corrupt file silently produce a broken patch.
+    if (!(mults[0] > 0.0 && mults[0] < mults[1] && mults[1] < 2.0 && mults[2] > 0.0 && mults[2] < mults[3] && mults[3] < 10.0)) {
+        return std::nullopt;
+    }
+    return mults;
+}
+
+void SVDSBTLBackend::save_critpatch_cache_(const std::string& fluid_name, const std::string& source_backend, const std::string& options_canonical,
+                                           const std::array<double, 4>& mults) {
+    const auto path = critpatch_cache_path_(fluid_name, source_backend, options_canonical);
+    std::error_code ec;
+    std::filesystem::create_directories(path.parent_path(), ec);
+    if (ec) {
+        // Cache directory inaccessible — non-fatal (the calibration
+        // result is still usable in-process; next construction just
+        // re-runs the calibrator).
+        return;
+    }
+    std::FILE* f = std::fopen(path.string().c_str(), "wb");
+    if (!f) {
+        return;
+    }
+    constexpr std::array<char, 8> kMagic = {'C', 'P', 'C', 'R', 'I', 'T', 'P', 'B'};
+    constexpr std::uint32_t kVersion = 1;
+    // Return values intentionally discarded: a partial write would
+    // leave a malformed cache, but the load path's magic+version
+    // checks reject those on read, so the worst case is a one-time
+    // recalibration on next construction.  Not worth surfacing.
+    (void)std::fwrite(kMagic.data(), 1, 8, f);
+    (void)std::fwrite(&kVersion, sizeof(kVersion), 1, f);
+    (void)std::fwrite(mults.data(), sizeof(double), 4, f);
+    (void)std::fclose(f);
+    // Restrict permissions to owner read/write only.  fopen("wb")
+    // honours the process umask but typically leaves the file
+    // world-readable (0644).  The cache holds nothing security-
+    // sensitive — just calibration multipliers — but a multi-user
+    // host has no reason to let other users overwrite it, and a
+    // CodeQL alert (cpp/file-without-restricted-permissions) flagged
+    // the default-permissions form.  No-op on Windows where the POSIX
+    // permission model doesn't apply.
+    std::error_code perm_ec;
+    std::filesystem::permissions(path, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write,
+                                 std::filesystem::perm_options::replace, perm_ec);
+    // perm_ec ignored — cache permission tightening is best-effort.
 }
 
 std::shared_ptr<CoolProp::AbstractState> SVDSBTLBackend::source_reference_() {

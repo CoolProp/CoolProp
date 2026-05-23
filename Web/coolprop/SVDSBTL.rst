@@ -239,6 +239,124 @@ the backend.
 The :ref:`profile figure on the IF97 page <IF97-Conformance>` shows
 all three regimes side-by-side, against HEOS and IF97 baselines.
 
+.. _SVDSBTL-critpatch:
+
+Critical-patch bbox
+===================
+
+Near the critical point the rank-:math:`r` SVD's reconstruction error
+diverges — the :math:`(\partial \rho / \partial p)_h` cusp at the
+critical singularity needs unbounded rank to represent, and even a
+generous rank like :math:`r = 20` leaves multi-percent error in
+:math:`\rho` and ten-percent-class error in :math:`w` within a
+fraction of :math:`T_c` from the critical point.  SVDSBTL covers this
+slice with a small axis-aligned rectangular **patch** in
+:math:`(T, p)`: every query whose state lands inside the patch
+forwards to the source backend (HEOS / REFPROP / IF97) for the
+calculation; everything outside the patch goes through the SVD.
+
+**Patch shape per fluid.**  The patch is computed automatically at
+the first backend construction for a given (fluid, source backend,
+options) combination, via a binary-search shrink loop:
+
+1. Start from the Water-sized default
+   :math:`[0.95, 1.05] T_c \times [0.75, 1.15] p_c`.
+2. For each of the four axes :math:`(T_\mathrm{lo},
+   T_\mathrm{hi}, p_\mathrm{lo}, p_\mathrm{hi})`, binary-search-shrink
+   the multiplier toward 1.0 (= the critical point) until the SVD's
+   reconstruction at a strip of probes *just outside* the candidate
+   patch boundary passes the calibration error budget against the
+   source backend (1% relative in :math:`\rho, h, s`; 5% relative in
+   :math:`w`).
+3. The result is persisted to a sidecar file alongside the
+   ``.svd.bin.z`` table caches:
+
+   .. code-block:: text
+
+       $HOME/.CoolProp/SVDTables/<Fluid>.<Source>.critpatch.<OptHash>.bin
+
+   Subsequent constructions load the cached multipliers; the
+   calibration probe is not re-run.
+
+The calibrator never widens the patch beyond the Water default — so
+Water keeps its tested bbox and other fluids tighten only as much as
+their critical-singularity footprint allows.  Typical results
+(post-CoolProp-5ni / -dxd):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 18 18 18 18
+
+   * - Fluid (source)
+     - :math:`T_\mathrm{lo} / T_c`
+     - :math:`T_\mathrm{hi} / T_c`
+     - :math:`p_\mathrm{lo} / p_c`
+     - :math:`p_\mathrm{hi} / p_c`
+   * - Water (HEOS)
+     - 0.970
+     - 1.050
+     - 0.996
+     - 1.150
+   * - Water (IF97)
+     - 0.984
+     - 1.027
+     - 0.996
+     - 1.150
+   * - CarbonDioxide (HEOS)
+     - 0.961
+     - 1.050
+     - 0.863
+     - 1.150
+   * - R134a (HEOS)
+     - 0.995
+     - 1.013
+     - 0.996
+     - 1.080
+
+These numbers are regenerated at backend construction; the exact
+values are sensitive to the SVD grid size and rank (and so move when
+the options blob changes).  ``CoolProp-3c4`` tracks the residual
+accuracy ceiling at extreme thin-support cells *outside* the patch,
+which the calibrator deliberately ignores (axis-aligned bboxes can't
+cover those scattered failures).
+
+For the **HmassP_INPUTS** input pair the :math:`(p, h)` bbox is
+derived from the :math:`(T, p)` patch by walking the perimeter
+through the source backend's :math:`h(T, p)` and taking the
+axis-aligned envelope of the resulting :math:`h` values — that way
+any :math:`(T, p)` in the canonical patch round-trips into a
+:math:`(h, p)` that the patch test also fires on.  For Water/HEOS
+the resulting :math:`(p, h)` bbox is roughly
+:math:`p \in [22.0, 25.4]` MPa, :math:`h \in [1.55, 2.93]` MJ/kg.
+
+**Overrides.**  Two escape hatches:
+
+* ``critical_patch.bbox`` in the options JSON — set explicit
+  :math:`(T_\mathrm{lo}, T_\mathrm{hi}, p_\mathrm{lo},
+  p_\mathrm{hi})` multipliers (skips auto-calibration entirely).
+  Useful for pinning the patch to a known-good shape across versions.
+* ``critical_patch.mode = "off"`` — disables the patch.  Queries near
+  the critical point will return the SVD's rank-truncated reconstruction
+  with the corresponding accuracy degradation.  Useful for benchmark
+  studies of the SVD itself.
+* ``critical_patch.mode = "fixed"`` — enables the patch but skips the
+  auto-calibration shrink loop.  The patch uses whatever ``critical_patch.bbox``
+  the caller supplied; if ``bbox`` is omitted, the Water-sized default
+  :math:`[0.95, 1.05] T_c \times [0.75, 1.15] p_c` is used as-is.  Useful
+  when you want to lock the patch geometry to a known shape across
+  CoolProp versions without paying the per-fluid calibration cost.
+
+* ``critical_patch.source`` — override the source backend that serves
+  in-patch queries.  E.g. ``SVDSBTL&IF97`` with
+  ``critical_patch.source = "HEOS"`` uses IF97 for the SVD truth
+  source but HEOS for in-patch queries (which gives full IAPWS-95
+  accuracy at the critical singularity rather than IF97's R3
+  formulation).
+
+The ``set_critical_bbox_multipliers(T_lo, T_hi, p_lo, p_hi)`` C++
+entry point also lets callers override the patch at runtime without
+rebuilding the backend.
+
 .. _SVDSBTL-config:
 
 Configuration keys

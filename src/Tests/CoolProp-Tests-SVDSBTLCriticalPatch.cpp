@@ -167,4 +167,105 @@ TEST_CASE("critical_patch: mode=fixed honours an explicit bbox", "[SVDSBTL][crit
     }
 }
 
+TEST_CASE("critical_patch: auto-calibration produces sane multipliers", "[SVDSBTL][critical_patch][auto_calibration][slow]") {
+    // Default mode is "auto", which (post-CoolProp-5ni/dxd) calibrates
+    // the bbox per fluid by shrinking each axis from the Water-default
+    // (0.95, 1.05, 0.75, 1.15) toward (1.0, 1.0, 1.0, 1.0) until the
+    // SVD's reconstruction at the strip just outside the patch passes
+    // a relaxed (1% rel-err) budget against the source backend.  The
+    // result is persisted to <Fluid>.<Source>.critpatch.<OptHash>.bin
+    // alongside the .svd.bin.z files.
+    //
+    // Black-box assertions: T_lo / p_lo must be < 1.0 (the patch
+    // extends below the critical point on those axes), T_hi / p_hi
+    // must be > 1.0 (extends above), and no axis can be wider than
+    // the Water default (the calibration only shrinks).
+    auto AS = make_svdsbtl();
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double Tc = heos->T_critical();
+    const double pc = heos->p_critical();
+
+    SECTION("Patch is centered on the critical point with sensible width") {
+        // The patch covers SOME slice around (Tc, pc); without a
+        // direct accessor for the multipliers, we probe corner-to-
+        // corner: the patch must fire at (Tc, pc) (centered) and
+        // must NOT fire at points clearly outside the Water default
+        // (0.90*Tc, 0.70*pc).
+        AS->update(CoolProp::PT_INPUTS, pc, Tc);
+        heos->update(CoolProp::PT_INPUTS, pc, Tc);
+        const double rho_in_AS = AS->rhomass();
+        const double rho_in_heos = heos->rhomass();
+        // At the critical point, the patch fires and bit-equals HEOS.
+        REQUIRE(rho_in_AS == rho_in_heos);
+
+        // Outside the *Water default* bbox the patch must not fire,
+        // regardless of how aggressive the auto-calibration was — the
+        // calibrator only shrinks, never widens.
+        AS->update(CoolProp::PT_INPUTS, 0.50 * pc, 0.85 * Tc);
+        heos->update(CoolProp::PT_INPUTS, 0.50 * pc, 0.85 * Tc);
+        const double rho_out_AS = AS->rhomass();
+        const double rho_out_heos = heos->rhomass();
+        REQUIRE(std::isfinite(rho_out_AS));
+        // SVD-served result must differ from HEOS truth (the SVD has
+        // some interpolation residual; ~1e-4 typical for this point).
+        if (rho_out_AS == rho_out_heos) {
+            FAIL("patch fired outside the Water-default bbox; calibrator widened?");
+        }
+    }
+}
+
+TEST_CASE("critical_patch: auto-calibration cache round-trip", "[SVDSBTL][critical_patch][auto_calibration]") {
+    // Construct twice in succession; the second construction must
+    // find the sidecar file and skip recalibration.  Functional test:
+    // both instances must produce bit-identical answers inside the
+    // patch (proves both loaded the same multipliers).
+    auto AS1 = make_svdsbtl();
+    auto AS2 = make_svdsbtl();
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double Tc = heos->T_critical();
+    const double pc = heos->p_critical();
+
+    AS1->update(CoolProp::PT_INPUTS, pc, Tc);
+    AS2->update(CoolProp::PT_INPUTS, pc, Tc);
+    REQUIRE(AS1->rhomass() == AS2->rhomass());
+    REQUIRE(AS1->hmass() == AS2->hmass());
+
+    // Outside the patch, both instances must also agree (SVD shared
+    // between the two — but importantly, no inconsistency from one
+    // running the calibrator and the other loading the cache).
+    AS1->update(CoolProp::PT_INPUTS, 0.40 * pc, 0.90 * Tc);
+    AS2->update(CoolProp::PT_INPUTS, 0.40 * pc, 0.90 * Tc);
+    REQUIRE(AS1->rhomass() == AS2->rhomass());
+}
+
+TEST_CASE("critical_patch: explicit bbox override skips auto-calibration", "[SVDSBTL][critical_patch][auto_calibration]") {
+    // mode=auto with an explicit bbox is an escape hatch: the user
+    // wants the auto path *off* without flipping mode to "fixed"
+    // (which has different semantics — fixed disables the per-fluid
+    // tightening but also rejects the cache load).  An explicit bbox
+    // in auto mode must be honoured verbatim, no calibration probe.
+    auto AS = make_svdsbtl(R"({"critical_patch":{"mode":"auto","bbox":[0.99, 1.01, 0.90, 1.10]}})");
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double Tc = heos->T_critical();
+    const double pc = heos->p_critical();
+
+    // At T = 0.985*Tc, p = 1.05*pc — inside the Water default (0.95)
+    // but OUTSIDE the user's narrow [0.99, 1.01] T-bbox — patch must
+    // NOT fire here.  Stay slightly above pc so we're solidly in the
+    // SVD's SUPER region (the subcritical/supercritical knife-edge
+    // at exactly p_crit can leave the SVD atlas without a covering
+    // region).
+    AS->update(CoolProp::PT_INPUTS, 1.05 * pc, 0.985 * Tc);
+    heos->update(CoolProp::PT_INPUTS, 1.05 * pc, 0.985 * Tc);
+    REQUIRE(std::isfinite(AS->rhomass()));
+    if (AS->rhomass() == heos->rhomass()) {
+        FAIL("user-supplied bbox in auto mode was ignored");
+    }
+
+    // At T = Tc, p = pc — inside the user's narrow bbox — patch fires.
+    AS->update(CoolProp::PT_INPUTS, pc, Tc);
+    heos->update(CoolProp::PT_INPUTS, pc, Tc);
+    REQUIRE(AS->rhomass() == heos->rhomass());
+}
+
 #endif  // ENABLE_CATCH
