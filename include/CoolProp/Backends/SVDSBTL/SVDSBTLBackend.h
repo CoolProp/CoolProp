@@ -411,14 +411,15 @@ class SVDSBTLBackend : public AbstractState
     // Auto-calibration shrink loop (CoolProp-dxd).  Returns the four
     // multipliers {T_lo_mult, T_hi_mult, p_lo_mult, p_hi_mult} such
     // that the SVD's reconstruction of (rho, h, s, w) at every probe
-    // *just outside* the resulting (T, p) bbox satisfies the IAPWS
-    // conformance budgets (200 ppm rho, 100 ppm h, 200 ppm s,
-    // 1000 ppm w).  Wide initial bbox is
-    // [0.85, 1.20]*Tc x [0.50, 4.0]*pc; binary-search-shrinks each
-    // axis independently in ~8 iterations.  Total cost dominated by
-    // ~120 PT probes against the source backend (~ms each for HEOS,
-    // ~10 ms each for REFPROP) → a few seconds.  Persists to the
-    // sidecar cache so subsequent constructions skip the work.
+    // *just outside* the resulting (T, p) bbox satisfies the
+    // calibration budgets (1% relative in rho/h/s, 5% relative in w;
+    // see kBudget_* in the .cpp).  Starts from the Water-sized
+    // default {0.95, 1.05, 0.75, 1.15} and binary-search-shrinks
+    // each axis independently toward 1.0 in 6 steps; never widens
+    // beyond the default.  Total cost dominated by ~120 PT probes
+    // against the source backend (~ms each for HEOS, ~10 ms each
+    // for REFPROP) → a few seconds.  Persists to the sidecar cache
+    // so subsequent constructions skip the work.
     [[nodiscard]] std::array<double, 4> auto_calibrate_critical_bbox_();
 
     // Sidecar persistence for the 4 calibrated multipliers.  Cache

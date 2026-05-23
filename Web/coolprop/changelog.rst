@@ -6,6 +6,7 @@ Unreleased
 
 Highlights:
 
+* Added the :doc:`SVDSBTL </coolprop/SVDSBTL>` SVD-compressed tabular lookup backend (factory string ``SVDSBTL&<source>``, where source ∈ {``HEOS``, ``REFPROP``, ``IF97``}).  Combines a region atlas with per-region SVD compression plus a critical-patch fallback to the source backend; produces sub-microsecond per-probe property evaluation in the batched ``fast_evaluate`` path at IAPWS-G13-15 ``T(p, h)`` conformance for water and a single-digit-percent accuracy ceiling for the multi-fluid HEOS-backed presets.  Disk footprint ~7-14 MB per (fluid, input pair, source backend), cached under ``~/.CoolProp/SVDTables/``.  Off by default in ``PropsSI`` — see ``ALLOW_SVDSBTL_IN_PROPSSI``.  See PRs `#2917`, `#2938-#2940`, `#2944-#2957`.
 * Added mass-basis vapor quality (``Qmass``) support across HEOS and REFPROP backends, paralleling the existing molar quality (``Q``). Adds a new ``iQmass`` keyed parameter, a ``Qmass()`` accessor on ``AbstractState``, and 8 new ``Qmass``-bearing input pairs (``QmassT_INPUTS``, ``PQmass_INPUTS``, ``QmassSmolar_INPUTS``, ``QmassSmass_INPUTS``, ``HmolarQmass_INPUTS``, ``HmassQmass_INPUTS``, ``DmolarQmass_INPUTS``, ``DmassQmass_INPUTS``). Mixtures supported from day one — REFPROP uses its native ``kq=2`` flag in ``TQFLSHdll``/``PQFLSHdll`` for ``QmassT``/``PQmass``; the other 6 pairs and all HEOS pairs use a TOMS748 root-find on ``Qmolar`` (typically 5–8 iterations).
 
 **Behavior changes (potentially breaking):**

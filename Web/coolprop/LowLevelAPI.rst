@@ -14,7 +14,7 @@ In order to make most effective use of the low-level interface, you should insta
 
 .. warning::
 
-    While the warning about the computational overhead when generating AbstractState instances is more a recommendation, it is *required* that you allocate as few AbstractState instances as possible when using the :ref:`tabular backends (TTSE & Bicubic) <tabular_interpolation>`.
+    While the warning about the computational overhead when generating AbstractState instances is more a recommendation, it is *required* that you allocate as few AbstractState instances as possible when using the :ref:`tabular backends (TTSE & Bicubic) <tabular_interpolation>` and the :doc:`SVD-compressed tabular backend (SVDSBTL) </coolprop/SVDSBTL>` (~80-140 ms table-load per construction).
 
 .. warning::
 
