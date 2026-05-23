@@ -16,6 +16,7 @@
 #include "AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "CPfilepaths.h"
+#include "Configuration.h"
 #include "CoolProp/region/ConstantCurve.h"
 #include "CoolProp/region/CubicSplineCurve.h"
 #include "CoolProp/region/PiecewiseChebyshevCurve.h"
@@ -489,7 +490,14 @@ SVDSurface SVDSurfaceSerializer::load_from_file(const std::string& path) {
 }
 
 std::string SVDSurfaceSerializer::default_cache_dir() {
-    const std::string dir = ::get_home_dir() + "/.CoolProp/SVDTables";
+    // ALTERNATIVE_SVDTABLES_DIRECTORY (when non-empty) overrides the
+    // default $HOME/.CoolProp/SVDTables location.  Both the .svd.bin.z
+    // surfaces and the .critpatch.bin sidecars route through this
+    // helper, so a single config key redirects both.  Motivation:
+    // read-only $HOME (CI containers), shared workstations, centrally-
+    // managed cache directories.
+    const std::string alt = ::CoolProp::get_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY);
+    std::string dir = alt.empty() ? (::get_home_dir() + "/.CoolProp/SVDTables") : alt;
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
     if (ec) {
@@ -499,7 +507,13 @@ std::string SVDSurfaceSerializer::default_cache_dir() {
         // SVDSBTL session pays the full build cost.
         std::fprintf(stderr, "SVDSurfaceSerializer: could not create cache dir %s: %s\n", dir.c_str(), ec.message().c_str());
     }
-    return dir + "/";
+    // Normalize: callers naively concatenate dir + filename, so the
+    // returned path must end with a separator regardless of whether
+    // the user supplied a trailing slash in their override.
+    if (!dir.empty() && dir.back() != '/' && dir.back() != '\\') {
+        dir.push_back('/');
+    }
+    return dir;
 }
 
 std::string SVDSurfaceSerializer::default_cache_path(const std::string& fluid_name, const std::string& source_backend,
