@@ -478,16 +478,19 @@ Accuracy envelope
 
 * **SVDSBTL&IF97::Water**: :math:`T(p, h)` is conformant to IAPWS
   G13-15 budgets in R1, R2, R5 (max 2.79 / 8.52 / 1.81 mK against
-  25 / 10 / 10 mK budgets).  Forward properties miss in places: :math:`v`
-  is conformant only in R5 (R1/R2 are 3-4× over a 10⁻⁵ budget);
-  :math:`w` is conformant in R2 and R5; :math:`s` exceeds budget in
-  all four regions (R5 is 13× over; R3 worst-case is ~10⁴× over).
-  Transport properties :math:`\eta, \lambda` exceed G13-15 budgets
-  across R1, R2 and R3 — those budgets are intrinsically tight
-  (:math:`10^{-5}` relative) and the rank-20 SVD has known headroom
-  for tighter ranks.  The critical-patch fallback covers the
-  near-critical R3 cells.  See :ref:`IF97-Conformance` for the
-  per-region fail maps and exact numbers.
+  25 / 10 / 10 mK budgets — R2 has ~15% headroom and is fragile).
+  Forward properties miss in places: :math:`v` is conformant only in
+  R5 (R1/R2 are 3-4× over a 10⁻⁵ relative budget); :math:`w` is
+  conformant only in R5 (R1 36×, R2 4.4× over budget); :math:`s`
+  exceeds budget in all four regions (R5 is 13× over; R3 worst-case
+  is ~10⁴× over).  Transport properties :math:`\eta, \lambda` exceed
+  G13-15 budgets across R1, R2 and R3; :math:`\eta` is within budget
+  in R5 (0.89×), and :math:`\lambda` is fractionally over (1.1×).
+  Those budgets are intrinsically tight (:math:`10^{-5}` relative)
+  and the rank-20 SVD has known headroom for tighter ranks.  The
+  critical-patch fallback covers the near-critical R3 cells.  See
+  :ref:`IF97-Conformance` for the per-region fail maps and exact
+  numbers.
 
 * **SVDSBTL&HEOS::<Fluid>**: ~10^-3 relative error on
   :math:`\rho, h, s` across the full subcritical envelope.
