@@ -298,6 +298,51 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
             auto hi = build_h_isotherm_ceiling(heos, kP_B23_hi, p_max_sup, T_max_eos - 0.5);
             spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
         }
+        // SUPER_R5: IAPWS R7-97 Region 5 — extended-T high-temperature
+        // slab.  T ∈ [1073.15, 2273.15] K, p ∈ (0, 50] MPa.  Closes
+        // CoolProp-pd6.  All other SVDSBTL&IF97 regions are bounded
+        // above by IF97::get_Tmax() = 1073.15 K (the R1/R2/R3 ceiling),
+        // so without this slab the conformance plots have a hard
+        // cutoff at 1073 K and the G13-15 Table 11 claim for R5 isn't
+        // actually exercised.  IF97Backend dispatches PT_INPUTS with
+        // T > 1073.15 K (and p ≤ 50 MPa) to R5 internally, so the
+        // sampling reuses the same update_state lambda as the rest of
+        // the IF97 path.  No internal subdivision: R5 is one closed-
+        // form expansion in IF97 and smooth enough to fit cleanly in a
+        // single SVD region.
+        // Nudge above 1073.15 because IF97's RegionDetermination_TP
+        // dispatches T == 1073.15 K to R2 (the boundary uses
+        // T <= Tmax strictly).  Sampling h at T=1073.15 would build
+        // the SVD on R2's reference frame, then runtime queries that
+        // bracket at T=1073.15 would converge to R2 instead of R5
+        // (R2 and R5 use independent ideal-gas references; no
+        // IAPWS R7-97 smoothness condition at the boundary).  One
+        // ULP above 1073.15 puts the sample and the runtime bracket
+        // both squarely in R5 territory.  Found by code-reviewer
+        // adversarial pass.
+        const double kT_R5_lo = std::nextafter(1073.15, 2273.15);
+        constexpr double kT_R5_hi = 2273.15;
+        constexpr double kP_R5_hi = 50.0e6;
+        // IF97 Pmin = 611.213 Pa (saturation pressure at T_min =
+        // 273.15 K) per IAPWS R7-97; queries below that throw
+        // "Pressure out of range".  Use 700 Pa as the SVDSBTL R5
+        // lower bound to leave a small margin against numerical
+        // boundary effects in the log-uniform grid sampling near
+        // p_min.  Practical cost: ~50 Pa of R5 coverage lost on the
+        // very low-p side, where nothing physically interesting
+        // happens (R5 is supercritical-vapor at extreme T).
+        constexpr double kP_R5_lo = 700.0;
+        if (kP_R5_lo < kP_R5_hi) {
+            const double p_r5_hi = std::min(p_max_sup, kP_R5_hi);
+            auto axis = region::AxisTransform::make(region::AxisScale::LOG, kP_R5_lo, p_r5_hi);
+            // h_lo / h_hi sampled at the R5 endpoints via the same
+            // isotherm-spline path the rest of the preset uses.  R5
+            // is monotone in h(T) at fixed p, so the spline through
+            // 64 knots reproduces the slab cleanly.
+            auto lo = build_h_isotherm_floor(heos, kP_R5_lo, p_r5_hi, kT_R5_lo);
+            auto hi = build_h_isotherm_ceiling(heos, kP_R5_lo, p_r5_hi, kT_R5_hi);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
     } else {
         auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_max_sup);
         auto lo = build_h_isotherm_floor(heos, p_min_sup, p_max_sup, T_min_eos);
@@ -378,36 +423,75 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
             }
             try {
                 if (!seeded_via_hmass) {
-                    // R3 fallback: bracket on [623.15 K, T_B23(p)].
-                    // if97_T_B23_K is only defined for p ∈ [16.529, 100]
-                    // MPa; outside that range its closed-form inverse
-                    // returns garbage (sub-623.15 K or NaN from the
-                    // negative-argument sqrt).  Above 100 MPa is the
-                    // SUPER_HIGH_P slab where there's no R2/R3 boundary
-                    // at all — the R3 fallback shouldn't run there in
-                    // the first place, but guard anyway.
+                    // Two fallback paths for cells where the R7-97
+                    // backward equation can't dispatch:
+                    //   * R3 — T ∈ [623.15, T_B23(p)], p ∈ [16.529,
+                    //     100] MPa (existing path).
+                    //   * R5 — T ∈ [1073.15, 2273.15], p ≤ 50 MPa
+                    //     (added for CoolProp-pd6 to support the new
+                    //     SUPER_R5 region).  R5 has no backward
+                    //     equation either, so we forward-solve via
+                    //     TOMS748 just like R3.
+                    //
+                    // Dispatch by h_target magnitude — R5's lowest h
+                    // (at T=1073.15) is ~4 MJ/kg, well above R3's
+                    // upper h (~2.5 MJ/kg at the R3/R2 boundary).
+                    // 3 MJ/kg is a conservative split.
+                    // kR5_T_lo nudged one ULP above 1073.15 to skip
+                    // IF97's R2/R5 dispatch boundary — see the
+                    // matching comment in the SUPER_R5 region build.
+                    // Without this, resid(T_lo) evaluates R2 while
+                    // resid(T_lo + ε) evaluates R5, and the bracket
+                    // straddles a small h discontinuity between the
+                    // two formulations.
+                    const double kR5_T_lo = std::nextafter(1073.15, 2273.15);
+                    constexpr double kR5_T_hi = 2273.15;
+                    constexpr double kR5_P_hi = 50.0e6;
+                    constexpr double kH_R3_vs_R5_split = 3.0e6;
                     constexpr double kP_B23_lo_Pa = 16.529e6;
                     constexpr double kP_B23_hi_Pa = 100.0e6;
-                    if (!(p >= kP_B23_lo_Pa && p <= kP_B23_hi_Pa)) {
-                        throw ::CoolProp::ValueError(
-                          "ph_subcritical IF97 sampling: R3 fallback called outside the IF97 B23 curve's [16.529, 100] MPa "
-                          "validity (the HmassP backward seed failed and no R3 bracket is defined)");
+
+                    bool resolved = false;
+                    // R5 fallback (try first when h is high and p is
+                    // in R5's slab).
+                    if (h >= kH_R3_vs_R5_split && p <= kR5_P_hi) {
+                        bool ok = false;
+                        const double T_R5 = solve_T_from_h_toms748(s, p, h, kR5_T_lo, kR5_T_hi, &ok);
+                        if (ok) {
+                            s.update(::CoolProp::PT_INPUTS, p, T_R5);
+                            resolved = true;
+                        }
                     }
-                    const double T_R3_lo = 623.15;
-                    const double T_R3_hi = if97_T_B23_K(p);
-                    if (!(T_R3_lo < T_R3_hi)) {
-                        throw ::CoolProp::ValueError("ph_subcritical IF97 sampling: degenerate R3 bracket (T_B23(p) <= 623.15 K)");
+                    if (!resolved) {
+                        // R3 fallback: bracket on [623.15 K, T_B23(p)].
+                        // if97_T_B23_K is only defined for p ∈ [16.529, 100]
+                        // MPa; outside that range its closed-form inverse
+                        // returns garbage (sub-623.15 K or NaN from the
+                        // negative-argument sqrt).  Above 100 MPa is the
+                        // SUPER_HIGH_P slab where there's no R2/R3 boundary
+                        // at all — the R3 fallback shouldn't run there in
+                        // the first place, but guard anyway.
+                        if (!(p >= kP_B23_lo_Pa && p <= kP_B23_hi_Pa)) {
+                            throw ::CoolProp::ValueError(
+                              "ph_subcritical IF97 sampling: neither R5 (h<3MJ/kg or p>50MPa) nor R3 (p outside [16.529, 100] MPa) "
+                              "fallback applies — HmassP backward seed failed and no bracket is defined");
+                        }
+                        const double T_R3_lo = 623.15;
+                        const double T_R3_hi = if97_T_B23_K(p);
+                        if (!(T_R3_lo < T_R3_hi)) {
+                            throw ::CoolProp::ValueError("ph_subcritical IF97 sampling: degenerate R3 bracket (T_B23(p) <= 623.15 K)");
+                        }
+                        bool ok = false;
+                        const double T_R3 = solve_T_from_h_toms748(s, p, h, T_R3_lo, T_R3_hi, &ok);
+                        if (!ok) {
+                            // Bracket doesn't contain h — propagate as
+                            // failure so the SurfaceFactory marks this
+                            // cell NaN, rather than committing an endpoint
+                            // T as a real state.
+                            throw ::CoolProp::ValueError("ph_subcritical IF97 sampling: R3 TOMS748 missed bracket; cell will be NaN-filled");
+                        }
+                        s.update(::CoolProp::PT_INPUTS, p, T_R3);
                     }
-                    bool ok = false;
-                    const double T_R3 = solve_T_from_h_toms748(s, p, h, T_R3_lo, T_R3_hi, &ok);
-                    if (!ok) {
-                        // Bracket doesn't contain h — propagate as
-                        // failure so the SurfaceFactory marks this
-                        // cell NaN, rather than committing an endpoint
-                        // T as a real state.
-                        throw ::CoolProp::ValueError("ph_subcritical IF97 sampling: R3 TOMS748 missed bracket; cell will be NaN-filled");
-                    }
-                    s.update(::CoolProp::PT_INPUTS, p, T_R3);
                 } else {
                     // Polish R7-97 backward seed.
                     const double T_seed = s.T();
@@ -499,7 +583,7 @@ std::unique_ptr<region::CubicSplineCurve> pt_T_floor_curve_(::CoolProp::Abstract
                 heos.update(::CoolProp::PT_INPUTS, p, T_try);
                 T_found = T_try;
                 break;
-            } catch (const CoolProp::CoolPropBaseError&) {
+            } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
                 // Expected: below the melting line at this p, or
                 // otherwise outside the HEOS envelope.  Bump T up and
                 // retry; we don't swallow std::exception broadly to
@@ -565,6 +649,38 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
         auto t_lo = pt_T_floor_curve_(heos, p_min_sup, p_max_sup, T_min_eos, SatBoundaryBuildOptions{});
         auto t_hi = std::make_unique<region::ConstantCurve>(p_min_sup, p_max_sup, T_max_eos - 0.5);
         spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
+    }
+    // SUPER_R5: IAPWS R7-97 Region 5 — extended-T high-temperature
+    // slab.  T ∈ [1073.15, 2273.15] K, p ∈ (0, 50] MPa.  Closes
+    // CoolProp-pd6.  Mirror of the SUPER_R5 region in ph_subcritical.
+    // IF97-only because R5 has no HEOS counterpart in CoolProp for
+    // water (Wagner & Pruss covers 273-1273 K).  Constant-T b_lo /
+    // b_hi: R5 is a flat T-slab, no melting curve consideration.
+    const bool source_is_if97 = (heos.backend_name() == "IF97Backend");
+    if (source_is_if97) {
+        // Nudge above 1073.15 because IF97's RegionDetermination_TP
+        // dispatches T == 1073.15 K to R2 (the boundary uses
+        // T <= Tmax strictly).  Sampling h at T=1073.15 would build
+        // the SVD on R2's reference frame, then runtime queries that
+        // bracket at T=1073.15 would converge to R2 instead of R5
+        // (R2 and R5 use independent ideal-gas references; no
+        // IAPWS R7-97 smoothness condition at the boundary).  One
+        // ULP above 1073.15 puts the sample and the runtime bracket
+        // both squarely in R5 territory.  Found by code-reviewer
+        // adversarial pass.
+        const double kT_R5_lo = std::nextafter(1073.15, 2273.15);
+        constexpr double kT_R5_hi = 2273.15;
+        constexpr double kP_R5_hi = 50.0e6;
+        // Same kP_R5_lo as ph_subcritical — 700 Pa is just above
+        // IF97's documented Pmin = 611.213 Pa (sat-p at T_min).
+        constexpr double kP_R5_lo = 700.0;
+        if (kP_R5_lo < kP_R5_hi) {
+            const double p_r5_hi = std::min(p_max_sup, kP_R5_hi);
+            auto axis = region::AxisTransform::make(region::AxisScale::LOG, kP_R5_lo, p_r5_hi);
+            auto t_lo = std::make_unique<region::ConstantCurve>(kP_R5_lo, p_r5_hi, kT_R5_lo);
+            auto t_hi = std::make_unique<region::ConstantCurve>(kP_R5_lo, p_r5_hi, kT_R5_hi);
+            spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
+        }
     }
 
     // Thermodynamics glue: PT update + per-property readout.

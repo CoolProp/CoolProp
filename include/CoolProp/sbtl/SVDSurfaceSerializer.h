@@ -142,7 +142,19 @@ class SVDSurfaceSerializer
     //           Rev bump invalidates rev-10 caches, which never
     //           successfully landed any HEOS surfaces on disk anyway
     //           (save() threw on the unknown subclass).
-    static constexpr int kRevision = 11;
+    //   rev 12: SVDSBTL&IF97 presets gain a SUPER_R5 region covering
+    //           IAPWS R7-97 Region 5 (T ∈ [1073.15, 2273.15] K, p ≤
+    //           50 MPa — CoolProp-pd6).  The new region appears at
+    //           the tail of the regions array (per-PH and per-PT),
+    //           so the region count for IF97 caches changes from
+    //           5-6 to 6-7.  Rev bump forces rebuild so the loader
+    //           doesn't try to dispatch lookups for R5 cells against
+    //           a rev-11 cache that has no SUPER_R5 region.  HEOS
+    //           caches unchanged in content but invalidated by the
+    //           rev bump too (R5 is IF97-only and HEOS presets skip
+    //           the new region entirely; the cache geometry is the
+    //           same as rev 11 but the rev field differs).
+    static constexpr int kRevision = 12;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);
