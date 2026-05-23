@@ -866,14 +866,13 @@ TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY end-to-end build + reload", "
 
 // CoolProp-4no.2: parallel docs-build invocations (joblib loky workers)
 // race on writes to the same cache file, producing torn-write artifacts.
-// SVDSurfaceSerializer::write_bytes_atomic does write-temp + rename so
-// readers never see a partial-write file on the visible path.  This test
-// spawns many threads contending on the same target and asserts the
-// post-write file matches exactly one writer's payload (last writer
-// wins) — never a torn / interleaved mix.
-TEST_CASE("SVDSurfaceSerializer::write_bytes_atomic is race-safe across threads", "[SVDSBTL][cache][race][4no.2]") {
+// ::write_bytes_atomic does write-temp + rename so readers never see a
+// partial-write file on the visible path.  This test spawns many threads
+// contending on the same target and asserts the post-write file matches
+// exactly one writer's payload (last writer wins) — never a torn /
+// interleaved mix.
+TEST_CASE("write_bytes_atomic is race-safe across threads", "[SVDSBTL][cache][race][4no.2]") {
     namespace fs = std::filesystem;
-    namespace cp_sbtl = CoolProp::sbtl;
     const fs::path tmpdir = fs::temp_directory_path() / "coolprop_svdtables_atomic_race";
     std::error_code ec;
     fs::remove_all(tmpdir, ec);
@@ -898,7 +897,7 @@ TEST_CASE("SVDSurfaceSerializer::write_bytes_atomic is race-safe across threads"
             while (!go.load(std::memory_order_acquire)) {
                 std::this_thread::yield();
             }
-            cp_sbtl::SVDSurfaceSerializer::write_bytes_atomic(target, payloads[i].data(), payloads[i].size(), /*restrict_perms=*/false);
+            ::write_bytes_atomic(target, payloads[i].data(), payloads[i].size(), /*restrict_perms=*/false);
         });
     }
     go.store(true, std::memory_order_release);

@@ -1,13 +1,10 @@
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 
-#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <random>
-#include <sstream>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -466,64 +463,9 @@ SVDSurface SVDSurfaceSerializer::load(const std::vector<char>& compressed) {
 
 // NOLINTEND(cppcoreguidelines-pro-type-union-access,cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
-namespace {
-// Process-unique 64-bit salt: drawn once per process from std::random_device
-// so two concurrent processes building the same fluid don't collide on
-// temp-file paths.  Combined with a process-local atomic counter inside
-// make_temp_sibling() to disambiguate threads / repeated writes within
-// the same process.
-const std::uint64_t kProcessSalt = []() {
-    std::random_device rd;
-    return (static_cast<std::uint64_t>(rd()) << 32) | static_cast<std::uint64_t>(rd());
-}();
-
-std::filesystem::path make_temp_sibling(const std::filesystem::path& target) {
-    static std::atomic<std::uint64_t> counter{0};
-    const auto seq = counter.fetch_add(1, std::memory_order_relaxed);
-    std::ostringstream oss;
-    oss << ".tmp." << std::hex << kProcessSalt << '.' << seq;
-    auto temp = target;
-    temp += oss.str();
-    return temp;
-}
-}  // namespace
-
-void SVDSurfaceSerializer::write_bytes_atomic(const std::filesystem::path& target, const void* bytes, std::size_t size, bool restrict_perms) {
-    const auto temp = make_temp_sibling(target);
-    {
-        std::ofstream out(temp, std::ios::binary | std::ios::trunc);
-        if (!out) {
-            throw std::runtime_error("SVDSurfaceSerializer::write_bytes_atomic: cannot open temp " + temp.string());
-        }
-        if (size > 0) {
-            out.write(reinterpret_cast<const char*>(bytes), static_cast<std::streamsize>(size));
-        }
-        out.flush();
-        if (!out) {
-            std::error_code ec_rm;
-            std::filesystem::remove(temp, ec_rm);
-            throw std::runtime_error("SVDSurfaceSerializer::write_bytes_atomic: write failed for temp " + temp.string());
-        }
-    }
-    if (restrict_perms) {
-        std::error_code perm_ec;
-        std::filesystem::permissions(temp, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write,
-                                     std::filesystem::perm_options::replace, perm_ec);
-        // perm_ec ignored — owner-only is best-effort (no-op on Windows
-        // where the POSIX permission model doesn't apply).
-    }
-    std::error_code rename_ec;
-    std::filesystem::rename(temp, target, rename_ec);
-    if (rename_ec) {
-        std::error_code ec_rm;
-        std::filesystem::remove(temp, ec_rm);
-        throw std::runtime_error("SVDSurfaceSerializer::write_bytes_atomic: rename to " + target.string() + " failed: " + rename_ec.message());
-    }
-}
-
 void SVDSurfaceSerializer::save_to_file(const SVDSurface& surface, const std::string& path) {
     const auto compressed = save(surface);
-    write_bytes_atomic(std::filesystem::path(path), compressed.data(), compressed.size(), /*restrict_perms=*/false);
+    ::write_bytes_atomic(std::filesystem::path(path), compressed.data(), compressed.size(), /*restrict_perms=*/false);
 }
 
 SVDSurface SVDSurfaceSerializer::load_from_file(const std::string& path) {

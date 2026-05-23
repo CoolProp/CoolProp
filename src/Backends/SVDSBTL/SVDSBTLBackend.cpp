@@ -28,6 +28,7 @@
 #include "CoolProp/sbtl/SVDSurface.h"
 #include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
+#include "CPfilepaths.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #include "CoolProp/schemas/SVDSBTLOptions.h"
 #include "DataStructures.h"
@@ -670,7 +671,7 @@ void SVDSBTLBackend::save_critpatch_cache_(const std::string& fluid_name, const 
     // is non-fatal — same semantics as the previous fopen-then-fwrite
     // path: cache miss on next load just re-runs the calibrator.
     try {
-        sbtl::SVDSurfaceSerializer::write_bytes_atomic(path, buf.data(), buf.size(), /*restrict_perms=*/true);
+        ::write_bytes_atomic(path, buf.data(), buf.size(), /*restrict_perms=*/true);
     } catch (const std::exception&) {
         // swallowed — cache write is best-effort
     }
