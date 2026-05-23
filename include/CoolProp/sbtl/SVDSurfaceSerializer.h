@@ -131,7 +131,18 @@ class SVDSurfaceSerializer
     //           the serializer (SuperancillaryBoundaryCurve has no
     //           CurveKind id) — they rebuild in memory each session;
     //           IF97 surfaces still cache normally.
-    static constexpr int kRevision = 10;
+    //   rev 11: CurveKind::SUPERANCILLARY tag added with the State
+    //           POD (p_min, p_max, prop_key, Q, output_scale, b_min,
+    //           b_max — 8-element array).  The SA handle itself isn't
+    //           stored; load-side re-acquires it by constructing a
+    //           HEOS AbstractState for the fluid in the stream and
+    //           pulling its SuperAncillary.  HEOS surfaces now round-
+    //           trip through disk (CoolProp-cv7); first-session cost
+    //           amortises across all subsequent process invocations.
+    //           Rev bump invalidates rev-10 caches, which never
+    //           successfully landed any HEOS surfaces on disk anyway
+    //           (save() threw on the unknown subclass).
+    static constexpr int kRevision = 11;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

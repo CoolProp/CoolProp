@@ -124,6 +124,13 @@ class SuperancillaryBoundaryCurve final : public BoundaryCurve
         return State{p_min_, p_max_, prop_key_, Q_, output_scale_, b_min_, b_max_};
     }
     static std::unique_ptr<SuperancillaryBoundaryCurve> from_state(State s, std::shared_ptr<SuperAncillary_t> sa) {
+        // Constructor's eval() dereferences sa_ unchecked; the matching
+        // factory build() already null-guards.  Fail fast here too so a
+        // caller passing a null handle gets a clear diagnostic instead
+        // of an eventual segfault on the first lookup.
+        if (!sa) {
+            throw std::invalid_argument("SuperancillaryBoundaryCurve::from_state: null SuperAncillary handle");
+        }
         return std::make_unique<SuperancillaryBoundaryCurve>(std::move(sa), s.p_min, s.p_max, s.prop_key, s.Q, s.output_scale, s.b_min, s.b_max);
     }
 
