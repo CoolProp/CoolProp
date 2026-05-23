@@ -391,8 +391,7 @@ Configuration keys
     * **REFPROP** is process-global and not thread-safe under
       ``SETUPdll``.  The parallel path automatically falls back to
       serial when the source backend is REFPROP regardless of the
-      config value — but other backends are also rendered serial if a
-      REFPROP build is in flight in the same process.
+      config value.
     * **Memory** peaks scale with worker count: each thread holds its
       own ``AbstractState`` (~few MB) plus a thread-local SuperAncillary
       lazy-build buffer.  Capped CI containers may not tolerate ``N >=
@@ -457,8 +456,7 @@ Accuracy envelope
   uniformly inside budget (the critical-patch fallback covers the
   near-critical R3 cells).  Transport properties :math:`\eta,
   \lambda` exceed G13-15 budgets in R3 — those budgets are
-  intrinsically tight (:math:`10^{
-    -5}` relative) and the rank-20 SVD
+  intrinsically tight (:math:`10^{-5}` relative) and the rank-20 SVD
   has known headroom for tighter ranks.  See
   :ref:`IF97-Conformance` for the per-region fail maps and exact
   numbers.
@@ -508,10 +506,14 @@ points (matching the :ref:`tabular-interpolation accuracy figure
         h = random.uniform(150000, 590000)
         p = 10 ** random.uniform(np.log10(100000), np.log10(7000000))
         try:
-            EOS
-    .update(CoolProp.HmassP_INPUTS, h, p) SVD.update(CoolProp.HmassP_INPUTS, h, p) err = abs(SVD.rhomolar() / EOS.rhomolar() - 1)
-                                                                                         * 100 except Exception : continue HHH.append(h);
-PPP.append(p); EEE.append(err)
+            EOS.update(CoolProp.HmassP_INPUTS, h, p)
+            SVD.update(CoolProp.HmassP_INPUTS, h, p)
+            err = abs(SVD.rhomolar() / EOS.rhomolar() - 1) * 100
+        except Exception:
+            continue
+        HHH.append(h)
+        PPP.append(p)
+        EEE.append(err)
 
     fig = plt.figure(figsize=(7, 5))
     ax = fig.add_axes((0.13, 0.13, 0.74, 0.78))

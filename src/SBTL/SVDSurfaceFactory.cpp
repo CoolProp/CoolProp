@@ -1,6 +1,7 @@
 #include "CoolProp/sbtl/SVDSurfaceFactory.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <memory>
@@ -149,15 +150,20 @@ std::vector<std::vector<double>> sample_grid(::CoolProp::AbstractState& heos, co
         // factory-builds its own AbstractState once and reuses across
         // its row slice; per-thread construction cost (~ms) amortises
         // across hundreds of cells per row.
+        //
+        // worker_factory_failed flags any thread that couldn't
+        // construct its local source.  Silently returning would leave
+        // whole row chunks unsampled, and the NaN-fill below would
+        // produce a corrupted SVD table instead of a build failure.
+        // Fail loudly post-join.
         const std::size_t n_threads = std::min(n_threads_cfg, NT);
+        std::atomic<bool> worker_factory_failed{false};
         auto worker = [&](std::size_t i_lo, std::size_t i_hi) {
             std::unique_ptr<::CoolProp::AbstractState> local_src;
             try {
                 local_src.reset(::CoolProp::AbstractState::factory(spec.source_backend, spec.fluid_name));
             } catch (...) {  // NOLINT(bugprone-empty-catch)
-                // Factory failure leaves local_src null → bail; the
-                // serial fallback below would have hit the same error
-                // on the shared heos handle.
+                worker_factory_failed.store(true, std::memory_order_relaxed);
                 return;
             }
             for (std::size_t i = i_lo; i < i_hi; ++i) {
@@ -177,6 +183,9 @@ std::vector<std::vector<double>> sample_grid(::CoolProp::AbstractState& heos, co
         }
         for (auto& w : workers) {
             w.join();
+        }
+        if (worker_factory_failed.load(std::memory_order_relaxed)) {
+            throw std::runtime_error("build_surface: failed to construct per-thread source AbstractState (parallel sampling)");
         }
     }
 
