@@ -3,9 +3,13 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <memory>
 #include <stdexcept>
+#include <thread>
 #include <vector>
 
+#include "AbstractState.h"
+#include "Configuration.h"
 #include "CoolProp/region/Region.h"
 #include "CoolProp/sbtl/SatBoundaryFactory.h"
 #include "CoolProp/svd/SVDBuilder.h"
@@ -78,29 +82,101 @@ std::vector<std::vector<double>> sample_grid(::CoolProp::AbstractState& heos, co
         m.assign(NT * NR, std::nan(""));
     }
 
-    for (std::size_t j = 0; j < NR; ++j) {
-        for (std::size_t i = 0; i < NT; ++i) {
-            const auto [a, b] = region.from_normalized(xi_grid[j], xn_grid[i]);
-            try {
-                spec.update_state(heos, a, b);
-                if (heos.Q() > 0.0 && heos.Q() < 1.0) {
-                    continue;  // two-phase — leave NaN
-                }
-                for (std::size_t p = 0; p < n_props; ++p) {
-                    const double v = spec.read_property(heos, spec.properties[p].key);
-                    if (!std::isfinite(v)) {
-                        continue;
-                    }
-                    // Apply the property's transform (typically LOG
-                    // for density via OutputTransform::EXP) before
-                    // storing into M.
-                    const double stored = (spec.properties[p].transform == svd::OutputTransform::EXP) ? (v > 0.0 ? std::log(v) : std::nan("")) : v;
-                    M[p][i * NR + j] = stored;
-                }
-            } catch (...) {  // NOLINT(bugprone-empty-catch)
-                // HEOS failures (above melting line, OOB, ...) → NaN.
-                // Row-fill below patches them.
+    // Per-cell sampling lambda — captures the grid axes + region by
+    // reference (read-only) and the output matrix M by reference
+    // (per-cell writes are to disjoint indices so concurrent
+    // invocations are safe).  `src` is whichever AbstractState the
+    // caller hands in — the original `heos` for the serial path, a
+    // per-thread factory-built clone for the parallel path.
+    auto sample_cell = [&](std::size_t i, std::size_t j, ::CoolProp::AbstractState& src) {
+        // Avoid structured-binding capture (a C++20 feature; the
+        // project compiles at C++17).  Use the pair fields directly.
+        const auto ab = region.from_normalized(xi_grid[j], xn_grid[i]);
+        const double a = ab.first;
+        const double b = ab.second;
+        try {
+            spec.update_state(src, a, b);
+            if (src.Q() > 0.0 && src.Q() < 1.0) {
+                return;  // two-phase — leave NaN
             }
+            for (std::size_t p = 0; p < n_props; ++p) {
+                const double v = spec.read_property(src, spec.properties[p].key);
+                if (!std::isfinite(v)) {
+                    continue;
+                }
+                // Apply the property's transform (typically LOG
+                // for density via OutputTransform::EXP) before
+                // storing into M.
+                const double stored = (spec.properties[p].transform == svd::OutputTransform::EXP) ? (v > 0.0 ? std::log(v) : std::nan("")) : v;
+                M[p][i * NR + j] = stored;
+            }
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // HEOS failures (above melting line, OOB, ...) → NaN.
+            // Row-fill below patches them.
+        }
+    };
+
+    // Decide serial vs parallel.  Parallel needs all of:
+    //   * config opt-in (SVDSBTL_SAMPLING_THREADS != 1)
+    //   * non-REFPROP source (REFPROP's FORTRAN runtime is process-
+    //     global; concurrent SETUPdll'd states share state and corrupt
+    //     each other under parallel updates)
+    //   * a non-empty spec.source_backend + spec.fluid_name (so worker
+    //     threads can factory-build their own AbstractState)
+    //   * at least 2 effective worker threads after resolving "auto"
+    auto resolve_thread_count = []() -> std::size_t {
+        const int cfg = ::CoolProp::get_config_int(SVDSBTL_SAMPLING_THREADS);
+        if (cfg == 1) return 1;  // serial fast-path
+        if (cfg <= 0) {
+            // 0 (or negative) → auto = hardware_concurrency
+            const unsigned hw = std::thread::hardware_concurrency();
+            return hw <= 1 ? 1 : static_cast<std::size_t>(hw);
+        }
+        return static_cast<std::size_t>(cfg);
+    };
+    const std::size_t n_threads_cfg = resolve_thread_count();
+    const bool can_parallelise = n_threads_cfg > 1 && spec.source_backend != "REFPROP" && !spec.source_backend.empty() && !spec.fluid_name.empty();
+
+    if (!can_parallelise) {
+        for (std::size_t j = 0; j < NR; ++j) {
+            for (std::size_t i = 0; i < NT; ++i) {
+                sample_cell(i, j, heos);
+            }
+        }
+    } else {
+        // Cap workers at NT (no point launching more threads than rows
+        // — each thread gets one full row at a time).  Each worker
+        // factory-builds its own AbstractState once and reuses across
+        // its row slice; per-thread construction cost (~ms) amortises
+        // across hundreds of cells per row.
+        const std::size_t n_threads = std::min(n_threads_cfg, NT);
+        auto worker = [&](std::size_t i_lo, std::size_t i_hi) {
+            std::unique_ptr<::CoolProp::AbstractState> local_src;
+            try {
+                local_src.reset(::CoolProp::AbstractState::factory(spec.source_backend, spec.fluid_name));
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+                // Factory failure leaves local_src null → bail; the
+                // serial fallback below would have hit the same error
+                // on the shared heos handle.
+                return;
+            }
+            for (std::size_t i = i_lo; i < i_hi; ++i) {
+                for (std::size_t j = 0; j < NR; ++j) {
+                    sample_cell(i, j, *local_src);
+                }
+            }
+        };
+        std::vector<std::thread> workers;
+        workers.reserve(n_threads);
+        const std::size_t chunk = (NT + n_threads - 1) / n_threads;
+        for (std::size_t t = 0; t < n_threads; ++t) {
+            const std::size_t i_lo = t * chunk;
+            const std::size_t i_hi = std::min(i_lo + chunk, NT);
+            if (i_lo >= i_hi) break;
+            workers.emplace_back(worker, i_lo, i_hi);
+        }
+        for (auto& w : workers) {
+            w.join();
         }
     }
 
