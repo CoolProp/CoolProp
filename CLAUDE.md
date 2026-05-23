@@ -97,24 +97,43 @@ When changes touch files under `src/SBTL/`, `include/CoolProp/sbtl/`,
 `./dev/ci/preflight.sh` auto-selects the right umbrella tag from the
 changed-file paths; running preflight is the safe default.
 
-### Pre-PR adversarial review
+### Pre-PR adversarial review — MANDATORY
 
-Before opening a PR (`gh pr create`), run the `superpowers:code-reviewer`
-subagent against the diff with the project conventions in this file as
-the standard.  It catches the same null-deref / edge-stencil / dead-arg
-class of findings that CodeRabbit flags post-push, at zero CI-cycle
-latency.  Example invocation:
+Before any `gh pr create` invocation, **you MUST** invoke the
+`superpowers:code-reviewer` subagent against the diff.  The
+pre-push shell hook can't mechanically gate this (subagents are a
+Claude Code construct, not a CLI), so the gate is procedural — but it
+is NOT optional.  Every recent PR where CodeRabbit found a blocking
+issue (null-deref, FD-out-of-range, noexcept-on-throwing, NaN-
+absorbed-by-std::max) would have been caught by code-reviewer first
+at zero CI latency.  Skip this step and the same class of findings
+keeps recurring.
+
+**Pre-`gh pr create` checklist (MUST complete in order):**
+
+1. `./dev/ci/preflight.sh` passes (or you can explain each `--skip`).
+2. `Agent({subagent_type: "superpowers:code-reviewer", ...})` returns
+   with no blocking findings, OR you've addressed/justified each one.
+3. `git push` (the pre-push hook re-runs preflight as a safety net).
+4. THEN `gh pr create`.
+
+Canonical code-reviewer invocation:
 
 ```
 Agent({
   subagent_type: "superpowers:code-reviewer",
   description: "Pre-PR review of <branch>",
   prompt: "Adversarial review of the diff between <branch> and origin/master.
-           Check for: null-deref risk on shared_ptr inputs, FD stencils that
-           step outside their valid range, fopen without permission restriction,
-           tests that use bit-exact compare where ULP-class noise exists,
-           bot-comment-class issues that recur across the SVDSBTL PRs.
-           Report blocking findings only."
+           Project conventions are in CLAUDE.md.  Check for:
+             - null-deref risk on shared_ptr inputs
+             - noexcept on functions that can throw (resize/allocate/etc.)
+             - FD stencils that step outside their valid range
+             - non-finite values silently absorbed by std::max/std::min
+             - bit-exact compare where ULP-class noise exists
+             - fopen without permission restriction
+             - preconditions checked in the factory but not the public constructor
+             - bot-comment-class issues that recur across recent PRs
+           Report blocking findings only; skip style nits."
 })
 ```
 
