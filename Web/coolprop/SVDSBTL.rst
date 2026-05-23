@@ -372,6 +372,38 @@ Configuration keys
     or on shared workstations where a centrally-managed cache is
     preferable.
 
+``SVDSBTL_SAMPLING_THREADS`` (default ``1``)
+    Number of worker threads for the per-grid-cell sampling phase of
+    the SVDSBTL table build (CoolProp-43h).  ``1`` (the default) runs
+    serially.  ``N > 1`` spawns ``N`` workers, each with its own
+    factory-built source ``AbstractState``, that partition the grid
+    rows.  ``0`` resolves to ``std::thread::hardware_concurrency()``.
+    Typical ~2.5× speedup at ``N = 4`` on a modern laptop
+    (R245fa cold build: 65 s → 25 s).  Worth setting when:
+
+    * Iterating on a kRevision bump where every developer + CI machine
+      pays the full table-rebuild cost across the fluid set.
+    * Building tables on a fresh ``~/.CoolProp/SVDTables/`` cache
+      (first-ever install, CI runner) and the per-fluid 3-5 s adds up.
+
+    The default stays at 1 because:
+
+    * **REFPROP** is process-global and not thread-safe under
+      ``SETUPdll``.  The parallel path automatically falls back to
+      serial when the source backend is REFPROP regardless of the
+      config value.
+    * **Memory** peaks scale with worker count: each thread holds its
+      own ``AbstractState`` (~few MB) plus a thread-local SuperAncillary
+      lazy-build buffer.  Capped CI containers may not tolerate ``N >=
+      8`` on a wide fluid set.
+
+    Set via the Python API (mirrors the other config keys):
+
+    .. code-block:: python
+
+       import CoolProp.CoolProp as CP
+       CP.set_config_int(CP.SVDSBTL_SAMPLING_THREADS, 4)
+
 Backend options JSON (``factory("SVDSBTL&HEOS", "Water",
 '{"grid": {"NT": 200, "NR": 800, "rank": 20}}')``) lets per-instance
 overrides tune the SVD grid and rank; see :doc:`BackendOptions`.  Any
@@ -479,7 +511,9 @@ points (matching the :ref:`tabular-interpolation accuracy figure
             err = abs(SVD.rhomolar() / EOS.rhomolar() - 1) * 100
         except Exception:
             continue
-        HHH.append(h); PPP.append(p); EEE.append(err)
+        HHH.append(h)
+        PPP.append(p)
+        EEE.append(err)
 
     fig = plt.figure(figsize=(7, 5))
     ax = fig.add_axes((0.13, 0.13, 0.74, 0.78))

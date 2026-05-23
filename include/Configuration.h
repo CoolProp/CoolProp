@@ -82,6 +82,13 @@
       "tabular backends) because PropsSI rebuilds the AbstractState on every call, and loading an SVDSurface from cache costs ~80 ms -- over four "  \
       "orders of magnitude slower per call than the actual SVD eval.  For batched workloads use AbstractState directly and call update() in a "      \
       "loop, or use fast_evaluate for a vectorized batch.")                                                                                          \
+    X(SVDSBTL_SAMPLING_THREADS, "SVDSBTL_SAMPLING_THREADS", static_cast<int>(1),                                                                     \
+      "Number of worker threads for SVDSBTL table-build sampling.  1 (default) = serial (no extra threads).  N > 1 = use N worker threads, each "    \
+      "with its own source AbstractState.  0 = auto (use std::thread::hardware_concurrency()).  Typical 4-8x build-time speedup at N >= 4 on a "     \
+      "multi-core machine.  Default is 1 because: (a) REFPROP is process-global and not thread-safe under SETUPdll (the parallel path falls back "   \
+      "to serial when the source is REFPROP regardless of this setting); (b) per-worker source instantiation roughly multiplies peak build-time "    \
+      "memory footprint by N, which can matter on capped CI containers.  Set > 1 when build cost on a fresh ~/.CoolProp/SVDTables/ cache or "        \
+      "post-rev-bump rebuild becomes the bottleneck.")                                                                                               \
     X(TABULAR_NX, "TABULAR_NX", static_cast<int>(200),                                                                                               \
       "Number of x-axis grid points (T for PT table, h for PH table) for the BICUBIC and TTSE tabular backends. Increase for higher accuracy in "    \
       "regions with steep gradients (e.g. near the critical point). Memory and build cost scale as O(Nx*Ny). Tables auto-rebuild when changed.")     \

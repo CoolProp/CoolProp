@@ -83,6 +83,12 @@ struct PropertySpec
 struct SurfaceSpec
 {
     std::string fluid_name;
+    // Source-backend name ("HEOS" / "REFPROP" / "IF97") — used by
+    // sample_grid to spawn per-thread AbstractState instances when
+    // the PARALLEL_SVDSBTL_SAMPLING config flag is set.  Empty value
+    // forces serial sampling regardless of the config (no factory
+    // metadata to clone from).
+    std::string source_backend;
     // The unscoped CoolProp::input_pairs enum lacks a portable
     // "sentinel" value — initialise to PT_INPUTS which is always a
     // valid enumerator, then expect builders to overwrite.

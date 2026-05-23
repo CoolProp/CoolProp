@@ -124,8 +124,11 @@ ResolvedGrid resolve_grid(const rapidjson::Document& opts) {
 
 // Sample-and-build for a given input pair using the matching preset.
 // Grid shape comes from `g` so the caller can drive NT/NR/rank from
-// the options blob.
-CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& source, CoolProp::input_pairs pair, const ResolvedGrid& g) {
+// the options blob.  The source_backend string is threaded into the
+// SurfaceSpec so sample_grid can spawn per-thread AbstractState
+// instances when PARALLEL_SVDSBTL_SAMPLING is on (CoolProp-43h).
+CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& source, const std::string& source_backend, CoolProp::input_pairs pair,
+                                                   const ResolvedGrid& g) {
     namespace cp_sbtl = CoolProp::sbtl;
     cp_sbtl::SurfaceSpec spec;
     switch (pair) {
@@ -138,6 +141,7 @@ CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& so
         default:
             throw ValueError("SVDSBTL backend: no preset registered for the requested input pair");
     }
+    spec.source_backend = source_backend;
     return cp_sbtl::build_surface(source, std::move(spec));
 }
 
@@ -776,7 +780,7 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
         rapidjson::Document opts;
         opts.Parse(options_canonical_.empty() ? "{}" : options_canonical_.c_str());
         const ResolvedGrid grid = resolve_grid(opts);
-        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, pair, grid));
+        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, source_backend_, pair, grid));
         try {
             cp_sbtl::SVDSurfaceSerializer::save_to_file(*surface, path);
         } catch (const std::exception&) {
