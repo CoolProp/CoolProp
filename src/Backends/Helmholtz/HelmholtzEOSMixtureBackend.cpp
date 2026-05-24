@@ -22,9 +22,11 @@
 #include <string>
 //#include "CoolProp.h"
 
+#include "CoolProp.h"
 #include "HelmholtzEOSMixtureBackend.h"
 #include "HelmholtzEOSBackend.h"
 #include "Fluids/FluidLibrary.h"
+#include "Backends/Cubics/GeneralizedCubic.h"
 #include "Solvers.h"
 #include "MatrixMath.h"
 #include "VLERoutines.h"

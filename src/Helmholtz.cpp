@@ -1,5 +1,6 @@
 #include <cmath>
 #include "Helmholtz.h"
+#include "Backends/Cubics/GeneralizedCubic.h"
 
 #ifdef __ANDROID__
 #    undef _A

@@ -12,6 +12,7 @@ using std::shared_ptr;
 #include <algorithm>
 #include "Configuration.h"
 #include "Backends/Cubics/CubicsLibrary.h"
+#include "Backends/Cubics/GeneralizedCubic.h"
 #include "Helmholtz.h"
 
 namespace CoolProp {

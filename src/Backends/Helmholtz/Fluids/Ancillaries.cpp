@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <limits>
+#include "CoolProp.h"
 #include "DataStructures.h"
 #include "AbstractState.h"
 #include "Configuration.h"

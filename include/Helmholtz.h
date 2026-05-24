@@ -9,10 +9,17 @@
 //#include "Eigen/Core"
 #include "time.h"
 #include "CachedElement.h"
-#include "Backends/Cubics/GeneralizedCubic.h"
 #include <memory>
 using std::shared_ptr;
 #include "CPnumerics.h"
+
+// Forward declaration of AbstractCubic — only used via shared_ptr<AbstractCubic>
+// in this header, so the full type from Backends/Cubics/GeneralizedCubic.h is not
+// required at parse time.  Note: AbstractCubic is declared in the global namespace
+// (not CoolProp::) by GeneralizedCubic.h, so this forward decl must match.  TUs
+// that actually call methods on the pointer must include
+// "Backends/Cubics/GeneralizedCubic.h" directly.
+class AbstractCubic;
 
 #if ENABLE_CATCH
 #    include "MultiComplex/MultiComplex.hpp"

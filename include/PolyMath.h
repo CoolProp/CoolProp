@@ -1,7 +1,6 @@
 #ifndef POLYMATH_H
 #define POLYMATH_H
 
-#include "CoolProp.h"
 #include "CoolPropTools.h"
 #include "Exceptions.h"
 
@@ -11,6 +10,11 @@
 #include "unsupported/Eigen/Polynomials"
 
 namespace CoolProp {
+
+// Forward declaration of get_debug_level (defined in CoolProp.h / CoolProp.cpp);
+// pulled in here so PolyMath.h does not have to #include the much heavier CoolProp.h
+// just for the one-line do_debug() helper below.
+int get_debug_level();
 
 // Just a forward declaration
 class Poly2DResidual;
