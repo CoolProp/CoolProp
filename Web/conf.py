@@ -94,11 +94,16 @@ else:
         'cpapi': ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.org/dev/_static/doxygen/html')
     }
 
-# Execute all the notebooks
-for dirpath, dirnames, filenames in Path(__file__).parent.walk():
+# Execute all the notebooks.
+# Timeout is bumped from nbconvert's 30 s default to 1 h to accommodate
+# notebooks that lazy-build expensive on-disk caches on first run
+# (notably SVDSBTLValidation.ipynb, which builds SVDSBTL surfaces per fluid
+# at ~20-80 s each on a cold cache). Applies globally — any notebook that
+# legitimately hangs for an hour was broken anyway.
+for dirpath, _dirnames, filenames in Path(__file__).parent.walk():
     for file in filenames:
         if file.endswith('.ipynb') and '.ipynb_checkpoints' not in str(dirpath) and '_build' not in str(dirpath):
-            cmd = f'jupyter nbconvert --allow-errors --to notebook --output "{file}" --execute "{file}"'
+            cmd = f'jupyter nbconvert --allow-errors --ExecutePreprocessor.timeout=3600 --to notebook --output "{file}" --execute "{file}"'
             print(f"About to run: {cmd} in {dirpath}")
             subprocess.check_output(cmd, shell=True, cwd=dirpath)
 
