@@ -186,7 +186,7 @@ class SVDSurfaceSerializer
     //           large enough to keep the SuperAncillary sat-curve
     //           well-defined, and tightening reduces the patch-only
     //           sliver around pc.
-    static constexpr int kRevision = 14;
+    static constexpr int kRevision = 15;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

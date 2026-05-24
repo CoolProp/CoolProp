@@ -54,6 +54,29 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200
 // PT_INPUTS preset.  (a, b) = (p, T).  Output properties: rho, h, s, u.
 SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200, std::size_t NR = 800, std::int32_t rank = 20);
 
+// DmassT_INPUTS preset.  (a, b) = (T, D).  Output properties: p, h, s, u.
+//
+// Primary advantage over PT/PH: (D, T) is the Helmholtz EOS's native
+// coordinate, so every output property is a direct evaluation — no
+// inversion, no critical-region stiffness, no "cells with -760 MPa"
+// failure modes like BICUBIC's invert_single_phase_y on #1301.
+//
+// Geometry mirrors ph_subcritical: LIQUID + VAPOR sub-critical (T <
+// T_critical * 0.999), SUPER super-critical (T > T_critical * 1.001).
+// Secondary axis D bounded by rho_sat,L(T) / rho_sat,V(T) and
+// per-fluid HEOS-validity D-extents on the non-dome side.
+//
+// Anomaly handling: for fluids whose ρ_sat,L(T) curve has interior
+// extrema (water at T_anom ≈ 277 K, heavy water at ≈ 284 K), the
+// LIQUID region is split into N+1 sub-regions where N is the number
+// of extrema — each sub-region's T span lies inside one monotonic
+// piece of ρ_sat,L(T).  Auto-detected via the source backend's
+// SuperAncillary `get_x_at_extrema()` on the rho_sat,L expansion;
+// gracefully falls back to a single LIQUID region when no SA is
+// available (REFPROP / IF97 sources, or fluids without a SA in
+// HEOS).
+SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200, std::size_t NR = 800, std::int32_t rank = 20);
+
 }  // namespace presets
 
 }  // namespace sbtl

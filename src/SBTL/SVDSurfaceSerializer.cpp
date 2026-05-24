@@ -22,6 +22,7 @@
 #include "CoolProp/region/PiecewiseChebyshevCurve.h"
 #include "CoolProp/region/Region.h"
 #include "CoolProp/region/SuperancillaryBoundaryCurve.h"
+#include "CoolProp/region/SuperancillaryTemperatureBoundaryCurve.h"
 #include "CoolProp/svd/SVDDecomposition.h"
 #include "miniz.h"
 
@@ -42,6 +43,12 @@ enum class CurveKind : std::uint8_t
     // (no piecewise tables); the SuperAncillary handle itself is
     // re-acquired at load time from the source HEOS for the fluid.
     SUPERANCILLARY = 3,
+    // SuperancillaryTemperatureBoundaryCurve — T-parameterized sibling
+    // of SUPERANCILLARY used by the DT-indexed preset for its
+    // rho_sat,L / rho_sat,V dome boundaries.  Same POD-only scheme
+    // (T_min/T_max in place of p_min/p_max); SA handle re-acquired at
+    // load time.
+    SUPERANCILLARY_T = 4,
 };
 
 // ---------- packing helpers -------------------------------------------
@@ -101,6 +108,22 @@ void pack_curve(Packer& pk, const region::BoundaryCurve& curve) {
         pk.pack(static_cast<std::uint8_t>(CurveKind::SUPERANCILLARY));
         pk.pack(s.p_min);
         pk.pack(s.p_max);
+        pk.pack(static_cast<std::int8_t>(s.prop_key));
+        pk.pack(static_cast<std::int16_t>(s.Q));
+        pk.pack(s.output_scale);
+        pk.pack(s.b_min);
+        pk.pack(s.b_max);
+        return;
+    }
+    if (const auto* c = dynamic_cast<const region::SuperancillaryTemperatureBoundaryCurve*>(&curve)) {
+        const auto s = c->state();
+        // T-parameterized sibling of SUPERANCILLARY (DT-preset dome
+        // boundaries).  Same POD-only scheme; the SuperAncillary handle
+        // is re-acquired from the fluid HEOS at load time.
+        pk.pack_array(8);
+        pk.pack(static_cast<std::uint8_t>(CurveKind::SUPERANCILLARY_T));
+        pk.pack(s.T_min);
+        pk.pack(s.T_max);
         pk.pack(static_cast<std::int8_t>(s.prop_key));
         pk.pack(static_cast<std::int16_t>(s.Q));
         pk.pack(s.output_scale);
@@ -256,7 +279,7 @@ std::unique_ptr<region::BoundaryCurve> unpack_curve(const msgpack::object& o,
                 throw std::runtime_error("SVDSurfaceSerializer: stream contains a SuperAncillary-backed curve but no SuperAncillary handle is "
                                          "available for the fluid (source backend must be HEOS for re-hydration)");
             }
-            region::SuperancillaryBoundaryCurve::State s;
+            region::SuperancillaryBoundaryCurve::State s{};
             s.p_min = as<double>(o.via.array.ptr[1]);
             s.p_max = as<double>(o.via.array.ptr[2]);
             s.prop_key = static_cast<char>(as<std::int8_t>(o.via.array.ptr[3]));
@@ -264,7 +287,23 @@ std::unique_ptr<region::BoundaryCurve> unpack_curve(const msgpack::object& o,
             s.output_scale = as<double>(o.via.array.ptr[5]);
             s.b_min = as<double>(o.via.array.ptr[6]);
             s.b_max = as<double>(o.via.array.ptr[7]);
-            return region::SuperancillaryBoundaryCurve::from_state(std::move(s), sa);
+            return region::SuperancillaryBoundaryCurve::from_state(s, sa);
+        }
+        case CurveKind::SUPERANCILLARY_T: {
+            check_array(o, 8, "superancillary-T curve");
+            if (!sa) {
+                throw std::runtime_error("SVDSurfaceSerializer: stream contains a SuperAncillary-backed curve but no SuperAncillary handle is "
+                                         "available for the fluid (source backend must be HEOS for re-hydration)");
+            }
+            region::SuperancillaryTemperatureBoundaryCurve::State s{};
+            s.T_min = as<double>(o.via.array.ptr[1]);
+            s.T_max = as<double>(o.via.array.ptr[2]);
+            s.prop_key = static_cast<char>(as<std::int8_t>(o.via.array.ptr[3]));
+            s.Q = static_cast<short>(as<std::int16_t>(o.via.array.ptr[4]));
+            s.output_scale = as<double>(o.via.array.ptr[5]);
+            s.b_min = as<double>(o.via.array.ptr[6]);
+            s.b_max = as<double>(o.via.array.ptr[7]);
+            return region::SuperancillaryTemperatureBoundaryCurve::from_state(s, sa);
         }
     }
     throw std::runtime_error("SVDSurfaceSerializer: unknown curve kind");
@@ -380,7 +419,10 @@ std::vector<char> zlib_compress(const msgpack::sbuffer& sbuf) {
     // Z_OK when it fits.
     std::vector<char> out(sbuf.size() + (sbuf.size() / 1000) + 128);
     auto out_size = static_cast<mz_ulong>(out.size());
-    const int code = compress((unsigned char*)out.data(), &out_size, (const unsigned char*)sbuf.data(), static_cast<mz_ulong>(sbuf.size()));
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) — zlib's C API takes unsigned char*; our buffers are char (pre-existing glue).
+    const int code = compress(reinterpret_cast<unsigned char*>(out.data()), &out_size, reinterpret_cast<const unsigned char*>(sbuf.data()),
+                              static_cast<mz_ulong>(sbuf.size()));
+    // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
     if (code != Z_OK) {
         throw std::runtime_error(std::string("SVDSurfaceSerializer: zlib compress failed (code ") + std::to_string(code) + ")");
     }
@@ -397,7 +439,10 @@ std::vector<char> zlib_uncompress(const std::vector<char>& compressed) {
     int code = 0;
     int retries = 0;
     do {
-        code = uncompress((unsigned char*)out.data(), &out_size, (const unsigned char*)compressed.data(), in_size);
+        // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) — zlib C API takes unsigned char* (pre-existing glue).
+        code =
+          uncompress(reinterpret_cast<unsigned char*>(out.data()), &out_size, reinterpret_cast<const unsigned char*>(compressed.data()), in_size);
+        // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
         if (code == Z_BUF_ERROR) {
             if (++retries > 8) {
                 throw std::runtime_error("SVDSurfaceSerializer: zlib uncompress would not fit after 8 retries");
@@ -498,6 +543,7 @@ std::string SVDSurfaceSerializer::default_cache_dir() {
         // Surface the error to stderr so a user with an unwritable
         // home dir (CI sandboxes, read-only mounts) sees *why* every
         // SVDSBTL session pays the full build cost.
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,cert-err33-c) — deliberate diagnostic-only stderr write (pre-existing)
         std::fprintf(stderr, "SVDSurfaceSerializer: could not create cache dir %s: %s\n", dir.c_str(), ec.message().c_str());
     }
     // Normalize: callers naively concatenate dir + filename, so the

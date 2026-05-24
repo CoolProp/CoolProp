@@ -2,6 +2,7 @@
 #define COOLPROP_SBTL_SAT_BOUNDARY_FACTORY_H
 
 #include <memory>
+#include <vector>
 
 #include "AbstractState.h"
 #include "CoolProp/region/BoundaryCurve.h"
@@ -74,6 +75,33 @@ std::unique_ptr<region::BoundaryCurve> build_h_sat_V(::CoolProp::AbstractState& 
 std::unique_ptr<region::BoundaryCurve> build_T_sat(::CoolProp::AbstractState& heos, double p_min, double p_max,
                                                    const SatBoundaryBuildOptions& opts = {});
 
+// rho_sat,L(T) — mass density on the saturated-liquid side of the
+// dome, parameterized on temperature.  Used by the DT-indexed preset
+// where the secondary axis (D) is bounded below by rho_sat,V(T) and
+// above by rho_sat,L(T) at fixed T.
+//
+// When the source backend exposes a SuperAncillary, returns a
+// SuperancillaryTemperatureBoundaryCurve calling eval_sat('D', 0, T)
+// directly (no inversion, machine-precision residual).  Otherwise
+// falls back to a CubicSplineCurve sampled via QT_INPUTS with Q=0
+// at `n_knots` linear-uniform T values across [T_min, T_max].
+//
+// NOTE: for fluids with a density anomaly (water at T_anom ≈ 277 K,
+// heavy water at ≈ 284 K) the caller MUST split the LIQUID region so
+// each sub-region's [T_min, T_max] stays inside one monotonic piece of
+// rho_sat,L(T).  Querying piece boundaries on the SuperAncillary via
+// `get_approx1d('D', 0).get_x_at_extrema()` is the supported way.
+std::unique_ptr<region::BoundaryCurve> build_rho_sat_L(::CoolProp::AbstractState& heos, double T_min, double T_max,
+                                                       const SatBoundaryBuildOptions& opts = {});
+
+// rho_sat,V(T) — mass density on the saturated-vapor side of the
+// dome, parameterized on temperature.  Same dispatch as
+// build_rho_sat_L; QT_INPUTS with Q=1 in the spline fallback.  No
+// anomaly handling needed — rho_sat,V is monotone in T for every
+// known fluid.
+std::unique_ptr<region::BoundaryCurve> build_rho_sat_V(::CoolProp::AbstractState& heos, double T_min, double T_max,
+                                                       const SatBoundaryBuildOptions& opts = {});
+
 // Isobar h-floor: h on the cold-isotherm boundary.  For fluids with
 // steep melting curves (Methane / Propane / CO2 LIQUID at high p),
 // T_min may fall below T_melt(p) at part of the pressure range;
@@ -87,6 +115,30 @@ std::unique_ptr<region::CubicSplineCurve> build_h_isotherm_floor(::CoolProp::Abs
 // so we stay strictly inside the HEOS validity envelope).
 std::unique_ptr<region::CubicSplineCurve> build_h_isotherm_ceiling(::CoolProp::AbstractState& heos, double p_min, double p_max, double T_max,
                                                                    const SatBoundaryBuildOptions& opts = {});
+
+// Locate the interior extrema of rho_sat,L(T) inside [T_min, T_max] —
+// i.e., the T values where drho_sat,L/dT = 0.  For most fluids the
+// returned vector is empty (rho_sat,L is monotone decreasing in T from
+// triple to critical).  Water and heavy water each have one extremum
+// (the density anomaly at ~277 K and ~284 K respectively); any future
+// fluid with N extrema returns N entries.
+//
+// Used by the DT-indexed SVDSBTL preset (CoolProp-i7j) to split the
+// LIQUID region into monotonic sub-regions — required because a
+// non-monotone rho_sat,L(T) creates a non-simply-connected LIQUID
+// region in (D, T) space (cells straddling the anomaly contain a
+// discontinuity the SVD can't represent).
+//
+// Dispatch:
+//   1. Source has SuperAncillary: query
+//      `get_approx1d('D', 0).get_x_at_extrema()` — exact, zero compute.
+//   2. Else: walk QT_INPUTS on a coarse T grid (~64 points), find any
+//      sign change in dρ_sat,L/dT via central difference, bisect each
+//      bracket with TOMS748 to locate the extremum.
+//
+// Returned T values are sorted ascending and lie strictly inside
+// (T_min, T_max).
+std::vector<double> find_rho_satL_extrema_T(::CoolProp::AbstractState& heos, double T_min, double T_max);
 
 // Convenience: subcritical pressure range for `fluid`.  Returns
 // (p_min, p_max) ≈ (p_triple * 1.01, p_crit * 0.999) so PQ flashes
