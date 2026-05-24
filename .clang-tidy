@@ -20,7 +20,9 @@
 #   -cppcoreguidelines-owning-memory : we use raw pointers under Qt parent
 #   -cppcoreguidelines-avoid-non-const-global-variables : Google Tests
 #   -modernize-concat-nested-namespaces : doesn't clarify intent
-#   -modernize-use-override : project uses override+final via macros
+#   -modernize-use-override : enabled after CoolProp-7ue (no override macros);
+#       fix-it swept once across src/ + include/ with AllowOverrideAndFinal=true
+#       and IgnoreDestructors=true, keep enabled going forward.
 #   -cppcoreguidelines-narrowing-conversions / -bugprone-narrowing-conversions :
 #       WarnOnEquivalentBitWidth was added in clang-tidy 13; without it
 #       the check is too noisy on uint→int conversions, so disabled
@@ -57,7 +59,6 @@ Checks: |
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -cppcoreguidelines-pro-bounds-constant-array-index,
   -modernize-concat-nested-namespaces,
-  -modernize-use-override,
   -modernize-use-trailing-return-type,
 
 WarningsAsErrors: '*'
@@ -65,6 +66,14 @@ HeaderFilterRegex: '*'
 FormatStyle:     file
 CheckOptions:
   - key:             performance-for-range-copy.WarnOnAllAutoCopies
+    value:           'true'
+  # modernize-use-override tuning (CoolProp-7ue): allow `override final`
+  # together rather than collapsing to `final` only, and don't add `override`
+  # to destructors (the project's convention; matches the historical 2uw.13
+  # configuration).
+  - key:             modernize-use-override.AllowOverrideAndFinal
+    value:           'true'
+  - key:             modernize-use-override.IgnoreDestructors
     value:           'true'
   - key:             readability-implicit-bool-conversion.AllowPointerConditions
     value:           'true'

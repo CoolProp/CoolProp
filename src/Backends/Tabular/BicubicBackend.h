@@ -74,7 +74,7 @@ class BicubicBackend : public TabularBackend
             is_mixture = (this->AS->get_mole_fractions().size() > 1);
         }
     };
-    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) {
+    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override {
         this->AS->set_mole_fractions(mole_fractions);
         is_mixture = true;
         // Check the tables and build if necessary
@@ -86,7 +86,7 @@ class BicubicBackend : public TabularBackend
         dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
         dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
     };
-    std::string backend_name() {
+    std::string backend_name() override {
         return get_backend_string(BICUBIC_BACKEND);
     }
 
@@ -105,10 +105,10 @@ class BicubicBackend : public TabularBackend
          */
     double evaluate_single_phase_derivative(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs, parameters output,
                                             double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny);
-    double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) {
+    double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) override {
         return evaluate_single_phase_derivative(dataset->single_phase_logph, dataset->coeffs_ph, output, _hmolar, _p, i, j, Nx, Ny);
     };
-    double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) {
+    double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) override {
         return evaluate_single_phase_derivative(dataset->single_phase_logpT, dataset->coeffs_pT, output, _T, _p, i, j, Nx, Ny);
     };
 
@@ -125,20 +125,19 @@ class BicubicBackend : public TabularBackend
          */
     double evaluate_single_phase(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
                                  const parameters output, const double x, const double y, const std::size_t i, const std::size_t j);
-    double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) {
+    double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) override {
         return evaluate_single_phase(dataset->single_phase_logph, dataset->coeffs_ph, output, _hmolar, _p, i, j);
     };
-    double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) {
+    double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) override {
         return evaluate_single_phase(dataset->single_phase_logpT, dataset->coeffs_pT, output, _T, _p, i, j);
     };
 
-    virtual void find_native_nearest_good_indices(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs, double x,
-                                                  double y, std::size_t& i, std::size_t& j);
+    void find_native_nearest_good_indices(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs, double x, double y,
+                                          std::size_t& i, std::size_t& j) override;
 
     /// Ask the derived class to find the nearest neighbor (pure virtual)
-    virtual void find_nearest_neighbor(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
-                                       const parameters variable1, const double value1, const parameters otherkey, const double otherval,
-                                       std::size_t& i, std::size_t& j);
+    void find_nearest_neighbor(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs, const parameters variable1,
+                               const double value1, const parameters otherkey, const double otherval, std::size_t& i, std::size_t& j) override;
 
     /**
          * @brief Evaluate the single-phase transport properties using linear interpolation.  Works well except for near the critical point
@@ -151,10 +150,10 @@ class BicubicBackend : public TabularBackend
          */
     double evaluate_single_phase_transport(SinglePhaseGriddedTableData& table, parameters output, double x, double y, std::size_t i, std::size_t j);
 
-    double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) {
+    double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) override {
         return evaluate_single_phase_transport(dataset->single_phase_logph, output, _hmolar, _p, i, j);
     };
-    double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) {
+    double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) override {
         return evaluate_single_phase_transport(dataset->single_phase_logpT, output, _T, _p, i, j);
     };
 
@@ -169,9 +168,9 @@ class BicubicBackend : public TabularBackend
          * @param j The y-coordinate of the cell
          */
     void invert_single_phase_x(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs, parameters other_key,
-                               double other, double y, std::size_t i, std::size_t j);
+                               double other, double y, std::size_t i, std::size_t j) override;
     void invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs, parameters other_key,
-                               double other, double x, std::size_t i, std::size_t j);
+                               double other, double x, std::size_t i, std::size_t j) override;
 };
 
 }  // namespace CoolProp

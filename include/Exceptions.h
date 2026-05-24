@@ -30,7 +30,7 @@ class CoolPropBaseError : public std::exception
     };
     CoolPropBaseError(const std::string& err, ErrCode code) throw() : m_code(code), m_err(err) {}
     ~CoolPropBaseError() throw(){};
-    virtual const char* what() const throw() {
+    const char* what() const throw() override {
         return m_err.c_str();
     }
     ErrCode code() {

@@ -141,17 +141,17 @@ class solver_DP_resid : public FuncWrapper1DWithTwoDerivs
     HelmholtzEOSMixtureBackend* HEOS;
     CoolPropDbl rhomolar, p;
     solver_DP_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl rhomolar, CoolPropDbl p) : HEOS(HEOS), rhomolar(rhomolar), p(p) {}
-    double call(double T) {
+    double call(double T) override {
         HEOS->update_DmolarT_direct(rhomolar, T);
         CoolPropDbl peos = HEOS->p();
         CoolPropDbl r = (peos - p) / p;
         return r;
     };
-    double deriv(double T) {
+    double deriv(double T) override {
         // dp/dT|rho / pspecified
         return HEOS->first_partial_deriv(iP, iT, iDmolar) / p;
     };
-    double second_deriv(double T) {
+    double second_deriv(double T) override {
         // d2p/dT2|rho / pspecified
         return HEOS->second_partial_deriv(iP, iT, iDmolar, iT, iDmolar) / p;
     };
@@ -259,17 +259,17 @@ class DQ_flash_residual : public FuncWrapper1DWithTwoDerivs
     HelmholtzEOSMixtureBackend& HEOS;
     double rhomolar, Q_target;
     DQ_flash_residual(HelmholtzEOSMixtureBackend& HEOS, double rhomolar, double Q_target) : HEOS(HEOS), rhomolar(rhomolar), Q_target(Q_target) {};
-    double call(double T) {
+    double call(double T) override {
         HEOS.update(QT_INPUTS, 0, T);  // Doesn't matter whether liquid or vapor, we are just doing a full VLE call for given T
         double rhoL = HEOS.saturated_liquid_keyed_output(iDmolar);
         double rhoV = HEOS.saturated_vapor_keyed_output(iDmolar);
         /// Error between calculated and target vapor quality based on densities
         return (1 / rhomolar - 1 / rhoL) / (1 / rhoV - 1 / rhoL) - Q_target;
     }
-    double deriv(double T) {
+    double deriv(double T) override {
         return _HUGE;
     }
-    double second_deriv(double T) {
+    double second_deriv(double T) override {
         return _HUGE;
     }
 };
@@ -1365,7 +1365,7 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend& HEOS, CoolP
           : HEOS(HEOS), rhomolar_spec(rhomolar_spec), other(other), value(value) {
             Qd = _HUGE;
         };
-        double call(double T) {
+        double call(double T) override {
             HEOS.update(QT_INPUTS, 0, T);
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(), &SatV = HEOS.get_SatV();
             // Quality from density
@@ -1414,7 +1414,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
         ~solver_resid() {
             HEOS->unspecify_phase();
         }
-        double call(double T) {
+        double call(double T) override {
             HEOS->update_DmolarT_direct(rhomolar, T);
             double eos = HEOS->keyed_output(other);
             if (other == iP) {
@@ -1425,19 +1425,19 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                 return eos - value;
             }
         };
-        double deriv(double T) {
+        double deriv(double T) override {
             if (other == iP) {
                 return HEOS->first_partial_deriv(other, iT, iDmolar) / value;
             }
             return HEOS->first_partial_deriv(other, iT, iDmolar);
         };
-        double second_deriv(double T) {
+        double second_deriv(double T) override {
             if (other == iP) {
                 return HEOS->second_partial_deriv(other, iT, iDmolar, iT, iDmolar) / value;
             }
             return HEOS->second_partial_deriv(other, iT, iDmolar, iT, iDmolar);
         };
-        bool input_not_in_range(double T) {
+        bool input_not_in_range(double T) override {
             return (T < Tmin || T > Tmax);
         }
     };
@@ -1788,7 +1788,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
                     {}
             }
         }
-        double call(double T) {
+        double call(double T) override {
 
             if (iter < 2 || std::abs(rhomolar1 / rhomolar0 - 1) > 0.05) {
                 // Run the solver with T,P as inputs; but only if the last change in density was greater than a few percent
@@ -1828,13 +1828,13 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             iter++;
             return r;
         };
-        double deriv(double T) {
+        double deriv(double T) override {
             return HEOS->first_partial_deriv(other, iT, iP);
         }
-        double second_deriv(double T) {
+        double second_deriv(double T) override {
             return HEOS->second_partial_deriv(other, iT, iP, iT, iP);
         }
-        bool input_not_in_range(double x) {
+        bool input_not_in_range(double x) override {
             return (x < Tmin || x > Tmax);
         }
     };
@@ -2105,15 +2105,15 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
 
         solver_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl value, parameters other)
           : HEOS(HEOS), T(T), value(value), other(other) {}
-        double call(double rhomolar) {
+        double call(double rhomolar) override {
             HEOS->update_DmolarT_direct(rhomolar, T);
             double eos = HEOS->keyed_output(other);
             return eos - value;
         };
-        double deriv(double rhomolar) {
+        double deriv(double rhomolar) override {
             return HEOS->first_partial_deriv(other, iDmolar, iT);
         }
-        double second_deriv(double rhomolar) {
+        double second_deriv(double rhomolar) override {
             return HEOS->second_partial_deriv(other, iDmolar, iT, iDmolar, iT);
         }
     };
@@ -2426,7 +2426,7 @@ void FlashRoutines::HS_flash_twophase(HelmholtzEOSMixtureBackend& HEOS, CoolProp
         CoolPropDbl hmolar, smolar, Qs;
         Residual(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec)
           : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec), Qs(_HUGE) {};
-        double call(double T) {
+        double call(double T) override {
             HEOS.update(QT_INPUTS, 0, T);
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(), &SatV = HEOS.get_SatV();
             // Quality from entropy
@@ -2517,7 +2517,7 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
         CoolPropDbl hmolar, smolar;
         Residual(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec)
           : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec) {};
-        double call(double T) {
+        double call(double T) override {
             HEOS.update(SmolarT_INPUTS, smolar, T);
             double r = HEOS.hmolar() - hmolar;
             return r;

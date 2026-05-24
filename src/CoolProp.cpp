@@ -120,7 +120,7 @@ struct delim : std::numpunct<char>
 {
     char m_c;
     delim(char c) : m_c(c) {};
-    char do_decimal_point() const {
+    char do_decimal_point() const override {
         return m_c;
     }
 };

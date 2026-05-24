@@ -202,8 +202,8 @@ class Poly2DResidual : public FuncWrapper1DWithDeriv
     Poly2DResidual(Polynomial2D& poly, const Eigen::MatrixXd& coefficients, const double& in, const double& z_in, const int& axis);
     virtual ~Poly2DResidual() {};
 
-    double call(double target);
-    double deriv(double target);
+    double call(double target) override;
+    double deriv(double target) override;
 };
 
 /// A class for polynomials starting at an arbitrary degree.
@@ -421,8 +421,8 @@ class Poly2DFracResidual : public Poly2DResidual
     Poly2DFracResidual(Polynomial2DFrac& poly, const Eigen::MatrixXd& coefficients, const double& in, const double& z_in, const int& axis,
                        const int& x_exp, const int& y_exp, const double& x_base, const double& y_base);
     virtual ~Poly2DFracResidual() {};
-    double call(double target);
-    double deriv(double target);
+    double call(double target) override;
+    double deriv(double target) override;
 };
 
 class Poly2DFracIntResidual : public Poly2DFracResidual
@@ -447,8 +447,8 @@ class Poly2DFracIntResidual : public Poly2DFracResidual
     Poly2DFracIntResidual(Polynomial2DFrac& poly, const Eigen::MatrixXd& coefficients, const double& in, const double& z_in, const int& axis,
                           const int& x_exp, const int& y_exp, const double& x_base, const double& y_base, const int& int_axis);
     virtual ~Poly2DFracIntResidual() {};
-    double call(double target);
-    double deriv(double target);
+    double call(double target) override;
+    double deriv(double target) override;
 };
 
 //

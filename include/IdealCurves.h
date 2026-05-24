@@ -34,7 +34,7 @@ class CurveTracer : public FuncWrapper1D
         return M_PI / 2.0;
     }
 
-    double call(double t) {
+    double call(double t) override {
         if (this->obj == OBJECTIVE_CIRCLE) {
             double T2, P2;
             this->TPcoords(t, lnT, lnp, T2, P2);
@@ -90,7 +90,7 @@ class IdealCurveTracer : public CurveTracer
         init();
     };
     /// Z = 1
-    double objective() {
+    double objective() override {
         return this->AS->keyed_output(iZ) - 1;
     };
 };
@@ -102,7 +102,7 @@ class BoyleCurveTracer : public CurveTracer
         init();
     };
     /// dZ/dv|T = 0
-    double objective() {
+    double objective() override {
         double r =
           (this->AS->p() - this->AS->rhomolar() * this->AS->first_partial_deriv(iP, iDmolar, iT)) / (this->AS->gas_constant() * this->AS->T());
         return r;
@@ -115,7 +115,7 @@ class JouleInversionCurveTracer : public CurveTracer
         init();
     };
     /// dZ/dT|v = 0
-    double objective() {
+    double objective() override {
         double r = (this->AS->gas_constant() * this->AS->T() * 1 / this->AS->rhomolar() * this->AS->first_partial_deriv(iP, iT, iDmolar)
                     - this->AS->p() * this->AS->gas_constant() / this->AS->rhomolar())
                    / POW2(this->AS->gas_constant() * this->AS->T());
@@ -129,7 +129,7 @@ class JouleThomsonCurveTracer : public CurveTracer
         init();
     };
     /// dZ/dT|p = 0
-    double objective() {
+    double objective() override {
         double dvdT__constp = -this->AS->first_partial_deriv(iDmolar, iT, iP) / POW2(this->AS->rhomolar());
         double r = this->AS->p() / (this->AS->gas_constant() * POW2(this->AS->T())) * (this->AS->T() * dvdT__constp - 1 / this->AS->rhomolar());
         return r;

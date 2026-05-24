@@ -541,7 +541,7 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 
 #if ENABLE_CATCH
-    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
 };
 
@@ -584,7 +584,7 @@ class ResidualHelmholtzNonAnalytic : public BaseHelmholtzTerm
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 #if ENABLE_CATCH
-    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
 };
 
@@ -607,7 +607,7 @@ class ResidualHelmholtzGeneralizedCubic : public BaseHelmholtzTerm
     };
 
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
 class ResidualHelmholtzGaoB : public BaseHelmholtzTerm
@@ -635,7 +635,7 @@ class ResidualHelmholtzGaoB : public BaseHelmholtzTerm
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 
 #if ENABLE_CATCH
-    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
 };
 
@@ -656,7 +656,7 @@ class ResidualHelmholtzXiangDeiters : public BaseHelmholtzTerm
                                   const CoolPropDbl R);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 #if ENABLE_CATCH
-    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
 };
 
@@ -716,23 +716,23 @@ class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm
 
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
 
-    CoolPropDbl dTau4(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    CoolPropDbl dTau4(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() override {
         return 1e99;
     };
-    CoolPropDbl dDelta_dTau3(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    CoolPropDbl dDelta_dTau3(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() override {
         return 1e99;
     };
-    CoolPropDbl dDelta2_dTau2(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    CoolPropDbl dDelta2_dTau2(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() override {
         return 1e99;
     };
-    CoolPropDbl dDelta3_dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    CoolPropDbl dDelta3_dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() override {
         return 1e99;
     };
-    CoolPropDbl dDelta4(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    CoolPropDbl dDelta4(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() override {
         return 1e99;
     };
 
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& deriv) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& deriv) throw() override;
 };
 
 class BaseHelmholtzContainer
@@ -843,7 +843,7 @@ class ResidualHelmholtzContainer : public BaseHelmholtzContainer
     ResidualHelmholtzXiangDeiters XiangDeiters;
     ResidualHelmholtzGaoB GaoB;
 
-    void empty_the_EOS() {
+    void empty_the_EOS() override {
         NonAnalytic = ResidualHelmholtzNonAnalytic();
         SAFT = ResidualHelmholtzSAFTAssociating();
         GenExp = ResidualHelmholtzGeneralizedExponential();
@@ -852,7 +852,7 @@ class ResidualHelmholtzContainer : public BaseHelmholtzContainer
         GaoB = ResidualHelmholtzGaoB();
     };
 
-    HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta, bool cache_values = false) {
+    HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta, bool cache_values = false) override {
         HelmholtzDerivatives derivs;  // zeros out the elements
         GenExp.all(tau, delta, derivs);
         NonAnalytic.all(tau, delta, derivs);
@@ -915,7 +915,7 @@ class IdealHelmholtzLead : public BaseHelmholtzTerm
         el.AddMember("a2", static_cast<double>(a2), doc.GetAllocator());
     };
 
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
 /// The term in the EOS used to shift the reference state of the fluid
@@ -979,7 +979,7 @@ class IdealHelmholtzEnthalpyEntropyOffset : public BaseHelmholtzTerm
         el.AddMember("a1", static_cast<double>(a1), doc.GetAllocator());
         el.AddMember("a2", static_cast<double>(a2), doc.GetAllocator());
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
 /**
@@ -1008,7 +1008,7 @@ class IdealHelmholtzLogTau : public BaseHelmholtzTerm
         el.AddMember("type", "IdealHelmholtzLogTau", doc.GetAllocator());
         el.AddMember("a1", static_cast<double>(a1), doc.GetAllocator());
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
 /**
@@ -1038,7 +1038,7 @@ class IdealHelmholtzPower : public BaseHelmholtzTerm
         cpjson::set_long_double_array("n", n, el, doc);
         cpjson::set_long_double_array("t", t, el, doc);
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
 /**
@@ -1121,7 +1121,7 @@ class IdealHelmholtzPlanckEinsteinGeneralized : public BaseHelmholtzTerm
         cpjson::set_long_double_array("n", n, el, doc);
         cpjson::set_long_double_array("theta", theta, el, doc);
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
 class IdealHelmholtzCP0Constant : public BaseHelmholtzTerm
@@ -1157,7 +1157,7 @@ class IdealHelmholtzCP0Constant : public BaseHelmholtzTerm
         el.AddMember("T0", T0, doc.GetAllocator());
     };
 
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
 class IdealHelmholtzCP0PolyT : public BaseHelmholtzTerm
@@ -1190,7 +1190,7 @@ class IdealHelmholtzCP0PolyT : public BaseHelmholtzTerm
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 #if ENABLE_CATCH
-    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
 };
 /**
@@ -1228,7 +1228,7 @@ class IdealHelmholtzGERG2004Sinh : public BaseHelmholtzTerm
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 
 #if ENABLE_CATCH
-    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
 };
 
@@ -1264,7 +1264,7 @@ class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 
 #if ENABLE_CATCH
-    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
 };
 
@@ -1436,7 +1436,7 @@ class IdealHelmholtzContainer : public BaseHelmholtzContainer
         GERG2004Sinh.set_Tred(T_red);
     }
 
-    void empty_the_EOS() {
+    void empty_the_EOS() override {
         Lead = IdealHelmholtzLead();
         EnthalpyEntropyOffsetCore = IdealHelmholtzEnthalpyEntropyOffset();
         EnthalpyEntropyOffset = IdealHelmholtzEnthalpyEntropyOffset();
@@ -1449,7 +1449,7 @@ class IdealHelmholtzContainer : public BaseHelmholtzContainer
         GERG2004Sinh = IdealHelmholtzGERG2004Sinh();
     };
 
-    HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta, bool cache_values = false) {
+    HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta, bool cache_values = false) override {
         HelmholtzDerivatives derivs;  // zeros out the elements
         Lead.all(tau, delta, derivs);
         EnthalpyEntropyOffsetCore.all(tau, delta, derivs);

@@ -176,25 +176,25 @@ TEST_CASE("Integrate y'=y", "[ODEIntegrator]") {
        public:
         std::vector<double> t, h, y;
 
-        virtual std::vector<double> get_initial_array() const {
+        std::vector<double> get_initial_array() const override {
             return std::vector<double>(1, 1);
         }
 
-        virtual void pre_step_callback() {};
+        void pre_step_callback() override {};
 
-        virtual void post_deriv_callback() {};
+        void post_deriv_callback() override {};
 
-        virtual void post_step_callback(double t, double h, std::vector<double>& y) {
+        void post_step_callback(double t, double h, std::vector<double>& y) override {
             this->t.push_back(t);
             this->h.push_back(h);
             this->y.push_back(y[0]);
         };
 
-        virtual bool premature_termination() {
+        bool premature_termination() override {
             return false;
         };
 
-        virtual void derivs(double t, std::vector<double>& y, std::vector<double>& yprime) {
+        void derivs(double t, std::vector<double>& y, std::vector<double>& yprime) override {
             yprime[0] = y[0];
         };
     };

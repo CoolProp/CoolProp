@@ -134,7 +134,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void sync_linked_states(const HelmholtzEOSMixtureBackend* const);
 
     virtual ~HelmholtzEOSMixtureBackend() {};
-    std::string backend_name() {
+    std::string backend_name() override {
         return get_backend_string(HEOS_BACKEND_MIX);
     }
     shared_ptr<ReducingFunction> Reducing;
@@ -144,7 +144,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     SsatSimpleState ssat_max;
     SpinodalData spinodal_values;
 
-    bool clear() {
+    bool clear() override {
         // Clear the locally cached values for the derivatives of the Helmholtz energy
         // in each component
         for (std::vector<CoolPropFluid>::iterator it = components.begin(); it != components.end(); ++it) {
@@ -168,54 +168,55 @@ class HelmholtzEOSMixtureBackend : public AbstractState
       CorrespondingStatesTerm;  // // Allows the methods in the CorrespondingStatesTerm class to have access to all the protected members and methods of this class
 
     // Helmholtz EOS backend uses mole fractions
-    bool using_mole_fractions() {
+    bool using_mole_fractions() override {
         return true;
     }
-    bool using_mass_fractions() {
+    bool using_mass_fractions() override {
         return false;
     }
-    bool using_volu_fractions() {
+    bool using_volu_fractions() override {
         return false;
     }
     bool is_pure() {
         return components.size() == 1 && !components[0].EOS().pseudo_pure;
     }
-    bool has_melting_line() {
+    bool has_melting_line() override {
         return is_pure_or_pseudopure && components[0].ancillaries.melting_line.enabled();
     };
-    CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
+    CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value) override;
     /// Return a string from the backend for the mixture/fluid
-    std::string fluid_param_string(const std::string&);
+    std::string fluid_param_string(const std::string&) override;
 
     /// brief Set the reference state based on a string representation
-    virtual void set_reference_stateS(const std::string& reference_state);
+    void set_reference_stateS(const std::string& reference_state) override;
 
     /// Set the reference state based on a thermodynamic state point specified by temperature and molar density
-    virtual void set_reference_stateD(double T, double rhomolar, double hmolar0, double smolar0);
+    void set_reference_stateD(double T, double rhomolar, double hmolar0, double smolar0) override;
 
     /// Set binary mixture floating point parameter
-    virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, const double value);
+    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, const double value) override;
     /// Get binary mixture double value
-    virtual double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter);
+    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) override;
     ///// Get binary mixture string value
     //virtual std::string get_binary_interaction_string(const std::size_t &i, const std::size_t &j, const std::string &parameter);
     /// Set a binary interaction string
-    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter, const std::string& value);
+    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
+                                       const std::string& value) override;
     /// Apply a simple mixing rule
-    void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model);
+    void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model) override;
 
     // Set the cubic alpha function's constants:
-    virtual void set_cubic_alpha_C(const size_t i, const std::string& parameter, const double c1, const double c2, const double c3) {
+    void set_cubic_alpha_C(const size_t i, const std::string& parameter, const double c1, const double c2, const double c3) override {
         throw ValueError("set_cubic_alpha_C only defined for cubic backends");
     };
 
     // Set fluid parameter (currently the volume translation parameter for cubic)
-    virtual void set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) {
+    void set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) override {
         throw ValueError("set_fluid_parameter_double only defined for cubic backends");
     };
-    virtual double get_fluid_parameter_double(const size_t i, const std::string& parameter);
+    double get_fluid_parameter_double(const size_t i, const std::string& parameter) override;
 
-    phases calc_phase() {
+    phases calc_phase() override {
         return _phase;
     };
 
@@ -223,33 +224,34 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      *
      * @param phase_index The index from CoolProp::phases
      */
-    void calc_specify_phase(phases phase_index) {
+    void calc_specify_phase(phases phase_index) override {
         imposed_phase_index = phase_index;
         _phase = phase_index;
     }
     /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
      */
-    void calc_unspecify_phase() {
+    void calc_unspecify_phase() override {
         imposed_phase_index = iphase_not_imposed;
     }
-    CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value);
+    CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value) override;
     void calc_ssat_max();
     void calc_hsat_max();
-    CoolPropDbl calc_GWP20();
-    CoolPropDbl calc_GWP500();
-    CoolPropDbl calc_GWP100();
-    CoolPropDbl calc_ODP();
+    CoolPropDbl calc_GWP20() override;
+    CoolPropDbl calc_GWP500() override;
+    CoolPropDbl calc_GWP100() override;
+    CoolPropDbl calc_ODP() override;
 
-    CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
+    CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1) override;
     CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1, HelmholtzEOSMixtureBackend& SatL, HelmholtzEOSMixtureBackend& SatV);
-    CoolPropDbl calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Wrt2);
-    CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
-    CoolPropDbl calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
-    CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
+    CoolPropDbl calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Wrt2) override;
+    CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant) override;
+    CoolPropDbl calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2,
+                                            parameters Constant2) override;
+    CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end) override;
 
     CriticalState calc_critical_point(double rho0, double T0);
     /// An overload to make the compiler (clang in this case) happy
-    std::vector<CoolProp::CriticalState> calc_all_critical_points() {
+    std::vector<CoolProp::CriticalState> calc_all_critical_points() override {
         bool find_critical_points = true;
         return _calc_all_critical_points(find_critical_points);
     };
@@ -266,28 +268,28 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     }
 
     /// Build the spinodal curve
-    virtual void calc_build_spinodal();
+    void calc_build_spinodal() override;
 
     /// Get the data from the spinodal curve
-    virtual SpinodalData calc_get_spinodal_data() {
+    SpinodalData calc_get_spinodal_data() override {
         return spinodal_values;
     };
 
     /// Calculate the values \f$\mathcal{L}_1^*\f$ and \f$\mathcal{M}_1^*\f$
-    void calc_criticality_contour_values(double& L1star, double& M1star);
+    void calc_criticality_contour_values(double& L1star, double& M1star) override;
 
     /// Calculate tangent plane distance for given trial composition w
-    double calc_tangent_plane_distance(const double T, const double p, const std::vector<double>& w, const double rhomolar_guess);
+    double calc_tangent_plane_distance(const double T, const double p, const std::vector<double>& w, const double rhomolar_guess) override;
 
     /// Calculate the phase once the state is fully calculated but you aren't sure if it is liquid or gas or ...
     void recalculate_singlephase_phase();
 
     /// Change the equation of state for one component
-    void calc_change_EOS(const std::size_t i, const std::string& EOS_name);
+    void calc_change_EOS(const std::size_t i, const std::string& EOS_name) override;
 
-    const CoolProp::SimpleState& calc_state(const std::string& state);
+    const CoolProp::SimpleState& calc_state(const std::string& state) override;
 
-    virtual const double get_fluid_constant(std::size_t i, parameters param) const {
+    const double get_fluid_constant(std::size_t i, parameters param) const override {
         const CoolPropFluid& fld = components[i];
         switch (param) {
             case iP_critical:
@@ -334,7 +336,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         return *SatV;
     };
 
-    std::vector<CoolPropDbl> calc_mole_fractions_liquid() {
+    std::vector<CoolPropDbl> calc_mole_fractions_liquid() override {
         // SatL/SatV retain composition vectors from the most recent VLE flash
         // (or phase-envelope build) — those are not meaningful when the
         // current state is single-phase, and returning them silently surfaced
@@ -345,21 +347,21 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         }
         return SatL->get_mole_fractions();
     };
-    std::vector<CoolPropDbl> calc_mole_fractions_vapor() {
+    std::vector<CoolPropDbl> calc_mole_fractions_vapor() override {
         if (_phase != iphase_twophase) {
             throw ValueError("mole_fractions_vapor is only defined in the two-phase region (current state is single-phase)");
         }
         return SatV->get_mole_fractions();
     };
 
-    const std::vector<CoolPropDbl> calc_mass_fractions();
+    const std::vector<CoolPropDbl> calc_mass_fractions() override;
 
-    const CoolProp::PhaseEnvelopeData& calc_phase_envelope_data() {
+    const CoolProp::PhaseEnvelopeData& calc_phase_envelope_data() override {
         return PhaseEnvelope;
     };
 
     /// Calculate the conformal state (unity shape factors starting point if T < 0 and rhomolar < 0)
-    void calc_conformal_state(const std::string& reference_fluid, CoolPropDbl& T, CoolPropDbl& rhomolar);
+    void calc_conformal_state(const std::string& reference_fluid, CoolPropDbl& T, CoolPropDbl& rhomolar) override;
 
     void resize(std::size_t N);
     shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV;  ///<
@@ -369,12 +371,12 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      * @param value1 The first input value
      * @param value2 The second input value
      */
-    virtual void update(CoolProp::input_pairs input_pair, double value1, double value2);
+    void update(CoolProp::input_pairs input_pair, double value1, double value2) override;
 
     /** \brief Update the state using guess values
 	 *
 	 */
-    void update_with_guesses(CoolProp::input_pairs input_pair, double Value1, double Value2, const GuessesStructure& guesses);
+    void update_with_guesses(CoolProp::input_pairs input_pair, double Value1, double Value2, const GuessesStructure& guesses) override;
 
     /** \brief Update all the internal variables for a state by copying from another state
      */
@@ -388,7 +390,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void update_TP_guessrho(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess);
     void update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T);
     void update_TDmolarP_unchecked(CoolPropDbl T, CoolPropDbl rhomolarL, CoolPropDbl p);
-    void update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T);
+    void update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) override;
     void update_HmolarQ_with_guessT(CoolPropDbl hmolar, CoolPropDbl Q, CoolPropDbl Tguess);
 
     /** \brief Set the components of the mixture
@@ -406,9 +408,9 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      *
      * @param mf The vector of mole fractions of the components
      */
-    void set_mole_fractions(const std::vector<CoolPropDbl>& mf);
+    void set_mole_fractions(const std::vector<CoolPropDbl>& mf) override;
 
-    const std::vector<CoolPropDbl>& get_mole_fractions() {
+    const std::vector<CoolPropDbl>& get_mole_fractions() override {
         return mole_fractions;
     };
     std::vector<CoolPropDbl>& get_mole_fractions_ref() {
@@ -422,49 +424,49 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      *
      * @param mass_fractions The vector of mass fractions of the components
      */
-    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions);
+    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override;
 
-    void calc_ideal_curve(const std::string& type, std::vector<double>& T, std::vector<double>& p);
+    void calc_ideal_curve(const std::string& type, std::vector<double>& T, std::vector<double>& p) override;
 
-    CoolPropDbl calc_molar_mass();
+    CoolPropDbl calc_molar_mass() override;
     PhaseMolarMasses calc_phase_molar_masses() override;
-    CoolPropDbl calc_gas_constant();
-    CoolPropDbl calc_acentric_factor();
+    CoolPropDbl calc_gas_constant() override;
+    CoolPropDbl calc_acentric_factor() override;
 
-    CoolPropDbl calc_Bvirial();
-    CoolPropDbl calc_Cvirial();
-    CoolPropDbl calc_dBvirial_dT();
-    CoolPropDbl calc_dCvirial_dT();
+    CoolPropDbl calc_Bvirial() override;
+    CoolPropDbl calc_Cvirial() override;
+    CoolPropDbl calc_dBvirial_dT() override;
+    CoolPropDbl calc_dCvirial_dT() override;
 
-    CoolPropDbl calc_pressure();
-    CoolPropDbl calc_cvmolar();
-    CoolPropDbl calc_cpmolar();
-    CoolPropDbl calc_gibbsmolar();
-    CoolPropDbl calc_gibbsmolar_residual() {
+    CoolPropDbl calc_pressure() override;
+    CoolPropDbl calc_cvmolar() override;
+    CoolPropDbl calc_cpmolar() override;
+    CoolPropDbl calc_gibbsmolar() override;
+    CoolPropDbl calc_gibbsmolar_residual() override {
         return gas_constant() * _T * (alphar() + delta() * dalphar_dDelta());
     }
     CoolPropDbl calc_gibbsmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
 
-    CoolPropDbl calc_helmholtzmolar();
-    CoolPropDbl calc_cpmolar_idealgas();
+    CoolPropDbl calc_helmholtzmolar() override;
+    CoolPropDbl calc_cpmolar_idealgas() override;
     CoolPropDbl calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
-    CoolPropDbl calc_smolar();
-    CoolPropDbl calc_smolar_residual() {
+    CoolPropDbl calc_smolar() override;
+    CoolPropDbl calc_smolar_residual() override {
         return gas_constant() * (tau() * dalphar_dTau() - alphar());
     }
     CoolPropDbl calc_smolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
 
-    CoolPropDbl calc_hmolar();
-    CoolPropDbl calc_hmolar_residual() {
+    CoolPropDbl calc_hmolar() override;
+    CoolPropDbl calc_hmolar_residual() override {
         return gas_constant() * _T * (tau() * dalphar_dTau() + delta() * dalphar_dDelta());
     }
     CoolPropDbl calc_hmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
 
     CoolPropDbl calc_umolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
-    CoolPropDbl calc_umolar();
-    CoolPropDbl calc_speed_sound();
+    CoolPropDbl calc_umolar() override;
+    CoolPropDbl calc_speed_sound() override;
 
-    void calc_excess_properties();
+    void calc_excess_properties() override;
 
     /** \brief The phase identification parameter of Venkatarathnam et al., FPE, 2011
      *
@@ -472,71 +474,71 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      */
 
     CoolPropDbl calc_phase_identification_parameter();
-    CoolPropDbl calc_fugacity(std::size_t i);
-    virtual CoolPropDbl calc_fugacity_coefficient(std::size_t i);
-    CoolPropDbl calc_chemical_potential(std::size_t i);
+    CoolPropDbl calc_fugacity(std::size_t i) override;
+    CoolPropDbl calc_fugacity_coefficient(std::size_t i) override;
+    CoolPropDbl calc_chemical_potential(std::size_t i) override;
 
     /// Using this backend, calculate the flame hazard
-    CoolPropDbl calc_flame_hazard() {
+    CoolPropDbl calc_flame_hazard() override {
         return components[0].environment.FH;
     };
     /// Using this backend, calculate the health hazard
-    CoolPropDbl calc_health_hazard() {
+    CoolPropDbl calc_health_hazard() override {
         return components[0].environment.HH;
     };
     /// Using this backend, calculate the physical hazard
-    CoolPropDbl calc_physical_hazard() {
+    CoolPropDbl calc_physical_hazard() override {
         return components[0].environment.PH;
     };
 
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
-    CoolPropDbl calc_alphar();
+    CoolPropDbl calc_alphar() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta}\f$ (dimensionless)
-    CoolPropDbl calc_dalphar_dDelta();
+    CoolPropDbl calc_dalphar_dDelta() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau}\f$ (dimensionless)
-    CoolPropDbl calc_dalphar_dTau();
+    CoolPropDbl calc_dalphar_dTau() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dDelta2();
+    CoolPropDbl calc_d2alphar_dDelta2() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dDelta_dTau();
+    CoolPropDbl calc_d2alphar_dDelta_dTau() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dTau2();
+    CoolPropDbl calc_d2alphar_dTau2() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta3();
+    CoolPropDbl calc_d3alphar_dDelta3() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta2_dTau();
+    CoolPropDbl calc_d3alphar_dDelta2_dTau() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta_dTau2();
+    CoolPropDbl calc_d3alphar_dDelta_dTau2() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dTau3();
+    CoolPropDbl calc_d3alphar_dTau3() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta\delta}\f$ (dimensionless)
-    CoolPropDbl calc_d4alphar_dDelta4();
+    CoolPropDbl calc_d4alphar_dDelta4() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d4alphar_dDelta3_dTau();
+    CoolPropDbl calc_d4alphar_dDelta3_dTau() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d4alphar_dDelta2_dTau2();
+    CoolPropDbl calc_d4alphar_dDelta2_dTau2() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d4alphar_dDelta_dTau3();
+    CoolPropDbl calc_d4alphar_dDelta_dTau3() override;
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d4alphar_dTau4();
+    CoolPropDbl calc_d4alphar_dTau4() override;
 
-    CoolPropDbl calc_alpha0();
-    CoolPropDbl calc_dalpha0_dDelta();
-    CoolPropDbl calc_dalpha0_dTau();
-    CoolPropDbl calc_d2alpha0_dDelta2();
-    CoolPropDbl calc_d2alpha0_dDelta_dTau();
-    CoolPropDbl calc_d2alpha0_dTau2();
-    CoolPropDbl calc_d3alpha0_dDelta3();
-    CoolPropDbl calc_d3alpha0_dDelta2_dTau();
-    CoolPropDbl calc_d3alpha0_dDelta_dTau2();
-    CoolPropDbl calc_d3alpha0_dTau3();
+    CoolPropDbl calc_alpha0() override;
+    CoolPropDbl calc_dalpha0_dDelta() override;
+    CoolPropDbl calc_dalpha0_dTau() override;
+    CoolPropDbl calc_d2alpha0_dDelta2() override;
+    CoolPropDbl calc_d2alpha0_dDelta_dTau() override;
+    CoolPropDbl calc_d2alpha0_dTau2() override;
+    CoolPropDbl calc_d3alpha0_dDelta3() override;
+    CoolPropDbl calc_d3alpha0_dDelta2_dTau() override;
+    CoolPropDbl calc_d3alpha0_dDelta_dTau2() override;
+    CoolPropDbl calc_d3alpha0_dTau3() override;
 
-    CoolPropDbl calc_surface_tension();
-    CoolPropDbl calc_viscosity();
+    CoolPropDbl calc_surface_tension() override;
+    CoolPropDbl calc_viscosity() override;
     CoolPropDbl calc_viscosity_dilute();
     CoolPropDbl calc_viscosity_background();
     CoolPropDbl calc_viscosity_background(CoolPropDbl eta_dilute, CoolPropDbl& initial_density, CoolPropDbl& residual);
-    CoolPropDbl calc_conductivity();
+    CoolPropDbl calc_conductivity() override;
     CoolPropDbl calc_conductivity_background();
 
     /**
@@ -544,51 +546,53 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      *
      * If the viscosity model is hardcoded or ECS is being used, there will only be one entry in critical and all others will be zero
      */
-    void calc_viscosity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual, CoolPropDbl& critical);
+    void calc_viscosity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
+                                      CoolPropDbl& critical) override;
     /**
      * \brief Calculate each of the contributions to the conductivity
      *
      * If the conductivity model is hardcoded or ECS is being used, there will only be one entry in initial_density and all others will be zero
      */
-    void calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual, CoolPropDbl& critical);
+    void calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
+                                         CoolPropDbl& critical) override;
 
-    CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
-    CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
+    CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) override;
+    CoolPropDbl calc_saturated_vapor_keyed_output(parameters key) override;
 
-    CoolPropDbl calc_Tmin();
-    CoolPropDbl calc_Tmax();
-    CoolPropDbl calc_pmax();
-    CoolPropDbl calc_Ttriple();
-    CoolPropDbl calc_p_triple();
+    CoolPropDbl calc_Tmin() override;
+    CoolPropDbl calc_Tmax() override;
+    CoolPropDbl calc_pmax() override;
+    CoolPropDbl calc_Ttriple() override;
+    CoolPropDbl calc_p_triple() override;
     CoolPropDbl calc_pmax_sat();
     CoolPropDbl calc_Tmax_sat();
     void calc_Tmin_sat(CoolPropDbl& Tmin_satL, CoolPropDbl& Tmin_satV);
     void calc_pmin_sat(CoolPropDbl& pmin_satL, CoolPropDbl& pmin_satV);
 
-    virtual CoolPropDbl calc_T_critical();
-    virtual CoolPropDbl calc_p_critical();
-    virtual CoolPropDbl calc_rhomolar_critical();
+    CoolPropDbl calc_T_critical() override;
+    CoolPropDbl calc_p_critical() override;
+    CoolPropDbl calc_rhomolar_critical() override;
 
-    CoolPropDbl calc_T_reducing() {
+    CoolPropDbl calc_T_reducing() override {
         return get_reducing_state().T;
     };
-    CoolPropDbl calc_rhomolar_reducing() {
+    CoolPropDbl calc_rhomolar_reducing() override {
         return get_reducing_state().rhomolar;
     };
-    CoolPropDbl calc_p_reducing() {
+    CoolPropDbl calc_p_reducing() override {
         return get_reducing_state().p;
     };
 
     // Calculate the phase identification parameter of Venkatarathnam et al, Fluid Phase Equilibria
-    CoolPropDbl calc_PIP() {
+    CoolPropDbl calc_PIP() override {
         return 2
                - rhomolar()
                    * (second_partial_deriv(iP, iDmolar, iT, iT, iDmolar) / first_partial_deriv(iP, iT, iDmolar)
                       - second_partial_deriv(iP, iDmolar, iT, iDmolar, iT) / first_partial_deriv(iP, iDmolar, iT));
     };
 
-    std::string calc_name();
-    std::vector<std::string> calc_fluid_names();
+    std::string calc_name() override;
+    std::vector<std::string> calc_fluid_names() override;
 
     void calc_all_alphar_deriv_cache(const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau, const CoolPropDbl& delta);
     virtual CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,
@@ -624,21 +628,21 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     HelmholtzDerivatives calc_all_alpha0_derivs_nocache(const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau,
                                                         const CoolPropDbl& delta, const CoolPropDbl& Tr, const CoolPropDbl& rhor);
 
-    virtual void calc_reducing_state();
+    void calc_reducing_state() override;
     virtual SimpleState calc_reducing_state_nocache(const std::vector<CoolPropDbl>& mole_fractions);
 
-    const CoolProp::SimpleState& get_reducing_state() {
+    const CoolProp::SimpleState& get_reducing_state() override {
         calc_reducing_state();
         return _reducing;
     };
 
-    void update_states();
+    void update_states() override;
 
-    CoolPropDbl calc_compressibility_factor() {
+    CoolPropDbl calc_compressibility_factor() override {
         return 1 + delta() * dalphar_dDelta();
     };
 
-    void calc_phase_envelope(const std::string& type);
+    void calc_phase_envelope(const std::string& type) override;
 
     CoolPropDbl SRK_covolume();
 

@@ -84,7 +84,7 @@ AbstractState* AbstractStateGenerator::get_AbstractState(const std::vector<std::
 class IF97BackendGenerator : public AbstractStateGenerator
 {
    public:
-    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
+    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
         if (fluid_names.size() == 1) {               // Check that fluid_names[0] has only one component
             const std::string str = fluid_names[0];  // Check that the fluid name is an alias for "Water"
             if ((upper(str) == "WATER") || (upper(str) == "H2O")) {
@@ -109,7 +109,7 @@ static GeneratorInitializer<IF97BackendGenerator> if97_gen(IF97_BACKEND_FAMILY);
 class SRKGenerator : public AbstractStateGenerator
 {
    public:
-    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
+    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
         return new SRKBackend(fluid_names, get_config_double(R_U_CODATA));
     };
 };
@@ -118,7 +118,7 @@ static GeneratorInitializer<SRKGenerator> srk_gen(CoolProp::SRK_BACKEND_FAMILY);
 class PRGenerator : public AbstractStateGenerator
 {
    public:
-    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
+    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
         return new PengRobinsonBackend(fluid_names, get_config_double(R_U_CODATA));
     };
 };
@@ -127,7 +127,7 @@ static GeneratorInitializer<PRGenerator> pr_gen(CoolProp::PR_BACKEND_FAMILY);
 class IncompressibleBackendGenerator : public AbstractStateGenerator
 {
    public:
-    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
+    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
         if (fluid_names.size() != 1) {
             throw ValueError(format("For INCOMP backend, name vector must be one element long"));
         }
@@ -140,7 +140,7 @@ static GeneratorInitializer<IncompressibleBackendGenerator> incomp_gen(INCOMP_BA
 class VTPRGenerator : public CoolProp::AbstractStateGenerator
 {
    public:
-    CoolProp::AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
+    CoolProp::AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
         return new CoolProp::VTPRBackend(fluid_names, CoolProp::get_config_double(R_U_CODATA));
     };
 };
@@ -151,7 +151,7 @@ static CoolProp::GeneratorInitializer<VTPRGenerator> vtpr_gen(CoolProp::VTPR_BAC
 class PCSAFTGenerator : public CoolProp::AbstractStateGenerator
 {
    public:
-    CoolProp::AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
+    CoolProp::AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
         return new CoolProp::PCSAFTBackend(fluid_names);
     };
 };

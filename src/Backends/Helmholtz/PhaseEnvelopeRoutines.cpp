@@ -595,7 +595,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
                     this->HEOS = &HEOS, this->imax = imax;
                     this->maxima = maxima;
                 };
-                double call(double rhomolar_vap) {
+                double call(double rhomolar_vap) override {
                     PhaseEnvelopeData& env = HEOS->PhaseEnvelope;
                     IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::RHOV_IMPOSED;
                     IO.bubble_point = false;

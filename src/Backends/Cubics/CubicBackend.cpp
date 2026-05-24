@@ -414,7 +414,7 @@ class SaturationResidual : public CoolProp::FuncWrapper1D
     SaturationResidual(CoolProp::AbstractCubicBackend* ACB, CoolProp::input_pairs inputs, double imposed_variable)
       : ACB(ACB), inputs(inputs), imposed_variable(imposed_variable) {};
 
-    double call(double value) {
+    double call(double value) override {
         int Nsolns = 0;
         double rho0 = -1, rho1 = -1, rho2 = -1, T = NAN, p = NAN;
 

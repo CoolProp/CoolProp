@@ -816,7 +816,7 @@ class LogPHTable : public SinglePhaseGriddedTableData
         logy = true;
         logx = false;
     };
-    void set_limits() {
+    void set_limits() override {
         if (this->AS.get() == nullptr) {
             throw ValueError("AS is not yet set");
         }
@@ -870,7 +870,7 @@ class LogPTTable : public SinglePhaseGriddedTableData
         xmax = _HUGE;
         ymax = _HUGE;
     };
-    void set_limits() {
+    void set_limits() override {
         if (this->AS.get() == nullptr) {
             throw ValueError("AS is not yet set");
         }
@@ -1091,14 +1091,14 @@ class TabularBackend : public AbstractState
     };
 
     // None of the tabular methods are available from the high-level interface
-    bool available_in_high_level() {
+    bool available_in_high_level() override {
         return false;
     }
 
-    std::string calc_name() {
+    std::string calc_name() override {
         return AS->name();
     }
-    std::vector<std::string> calc_fluid_names() {
+    std::vector<std::string> calc_fluid_names() override {
         return AS->fluid_names();
     }
 
@@ -1181,13 +1181,13 @@ class TabularBackend : public AbstractState
         *
         * @param phase_index The index from CoolProp::phases
         */
-    void calc_specify_phase(phases phase_index) {
+    void calc_specify_phase(phases phase_index) override {
         imposed_phase_index = phase_index;
     };
 
     /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
         */
-    void calc_unspecify_phase() {
+    void calc_unspecify_phase() override {
         imposed_phase_index = iphase_not_imposed;
     };
 
@@ -1197,10 +1197,9 @@ class TabularBackend : public AbstractState
     virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
 
     /// Vectorized direct evaluation; see AbstractState::fast_evaluate for contract.
-    virtual void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
-                               const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size,
-                               int* status_flags, std::size_t status_flags_size,
-                               CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) override;
+    void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
+                       const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size, int* status_flags,
+                       std::size_t status_flags_size, CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) override;
     virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
     virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
 
@@ -1218,62 +1217,62 @@ class TabularBackend : public AbstractState
     virtual void invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
                                        parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
 
-    phases calc_phase() {
+    phases calc_phase() override {
         return _phase;
     }
-    CoolPropDbl calc_T_critical() {
+    CoolPropDbl calc_T_critical() override {
         return this->AS->T_critical();
     };
-    CoolPropDbl calc_Ttriple() {
+    CoolPropDbl calc_Ttriple() override {
         return this->AS->Ttriple();
     };
-    CoolPropDbl calc_p_triple() {
+    CoolPropDbl calc_p_triple() override {
         return this->AS->p_triple();
     };
-    CoolPropDbl calc_pmax() {
+    CoolPropDbl calc_pmax() override {
         return this->AS->pmax();
     };
-    CoolPropDbl calc_Tmax() {
+    CoolPropDbl calc_Tmax() override {
         return this->AS->Tmax();
     };
-    CoolPropDbl calc_Tmin() {
+    CoolPropDbl calc_Tmin() override {
         return this->AS->Tmin();
     };
-    CoolPropDbl calc_p_critical() {
+    CoolPropDbl calc_p_critical() override {
         return this->AS->p_critical();
     }
-    CoolPropDbl calc_rhomolar_critical() {
+    CoolPropDbl calc_rhomolar_critical() override {
         return this->AS->rhomolar_critical();
     }
-    bool using_mole_fractions() {
+    bool using_mole_fractions() override {
         return true;
     }
-    bool using_mass_fractions() {
+    bool using_mass_fractions() override {
         return false;
     }
-    bool using_volu_fractions() {
+    bool using_volu_fractions() override {
         return false;
     }
-    void update(CoolProp::input_pairs input_pair, double Value1, double Value2);
-    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) {
+    void update(CoolProp::input_pairs input_pair, double Value1, double Value2) override;
+    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override {
         this->AS->set_mole_fractions(mole_fractions);
     };
-    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) {
+    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override {
         throw NotImplementedError("set_mass_fractions not implemented for Tabular backends");
     };
-    const std::vector<CoolPropDbl>& get_mole_fractions() {
+    const std::vector<CoolPropDbl>& get_mole_fractions() override {
         return AS->get_mole_fractions();
     };
-    const std::vector<CoolPropDbl> calc_mass_fractions() {
+    const std::vector<CoolPropDbl> calc_mass_fractions() override {
         return AS->get_mass_fractions();
     };
 
-    CoolPropDbl calc_molar_mass() {
+    CoolPropDbl calc_molar_mass() override {
         return AS->molar_mass();
     };
 
-    [[nodiscard]] CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
-    [[nodiscard]] CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
+    [[nodiscard]] CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) override;
+    [[nodiscard]] CoolPropDbl calc_saturated_vapor_keyed_output(parameters key) override;
 
     /// Returns the path to the tables that shall be written
     std::string path_to_tables();
@@ -1298,36 +1297,36 @@ class TabularBackend : public AbstractState
         CoolPropDbl yV = PhaseEnvelopeRoutines::evaluate(phase_envelope, output, iInput1, value1, cached_saturation_iV);
         return _Q * yV + (1 - _Q) * yL;
     }
-    CoolPropDbl calc_cpmolar_idealgas() {
+    CoolPropDbl calc_cpmolar_idealgas() override {
         this->AS->set_T(_T);
         return this->AS->cp0molar();
     }
     /// Calculate the surface tension using the wrapped class (fast enough)
-    CoolPropDbl calc_surface_tension() {
+    CoolPropDbl calc_surface_tension() override {
         this->AS->set_T(_T);
         return this->AS->surface_tension();
         this->AS->set_T(_HUGE);
     }
     CoolPropDbl calc_p();
-    CoolPropDbl calc_T();
-    CoolPropDbl calc_rhomolar();
-    CoolPropDbl calc_hmolar();
-    CoolPropDbl calc_smolar();
-    CoolPropDbl calc_umolar();
-    CoolPropDbl calc_cpmolar();
-    CoolPropDbl calc_cvmolar();
-    CoolPropDbl calc_viscosity();
-    CoolPropDbl calc_conductivity();
+    CoolPropDbl calc_T() override;
+    CoolPropDbl calc_rhomolar() override;
+    CoolPropDbl calc_hmolar() override;
+    CoolPropDbl calc_smolar() override;
+    CoolPropDbl calc_umolar() override;
+    CoolPropDbl calc_cpmolar() override;
+    CoolPropDbl calc_cvmolar() override;
+    CoolPropDbl calc_viscosity() override;
+    CoolPropDbl calc_conductivity() override;
     /// Calculate the speed of sound using a tabular backend [m/s]
-    CoolPropDbl calc_speed_sound();
-    CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
+    CoolPropDbl calc_speed_sound() override;
+    CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant) override;
     /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
         */
-    CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
-    CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
+    CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1) override;
+    CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant) override;
 
     /// If you need all three values (drho_dh__p, drho_dp__h and rho_spline), you should calculate drho_dp__h first to avoid duplicate calculations.
-    CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
+    CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end) override;
 
     void check_tables() {
         if (!tables_loaded) {

@@ -178,7 +178,7 @@ namespace CoolProp {
 class REFPROPGenerator : public AbstractStateGenerator
 {
    public:
-    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
+    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
         REFPROPMixtureBackend::REFPROP_supported();
         if (fluid_names.size() == 1) {
             return new REFPROPBackend(fluid_names[0]);
@@ -2223,7 +2223,7 @@ void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
        public:
         const std::vector<double> z;
         wrapper(const std::vector<double>& z) : z(z) {};
-        std::vector<double> call(const std::vector<double>& x) {
+        std::vector<double> call(const std::vector<double>& x) override {
             std::vector<double> r(2);
             double dpdrho__constT = _HUGE, d2pdrho2__constT = _HUGE;
             DPDDdll(const_cast<double*>(&(x[0])), const_cast<double*>(&(x[1])), const_cast<double*>(&(z[0])), &dpdrho__constT);

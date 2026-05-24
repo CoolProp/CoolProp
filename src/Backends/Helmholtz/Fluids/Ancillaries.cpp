@@ -97,7 +97,7 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
 
         solver_resid(SaturationAncillaryFunction* anc, CoolPropDbl value) : anc(anc), value(value) {}
 
-        double call(double T) {
+        double call(double T) override {
             CoolPropDbl current_value = anc->evaluate(T);
             return current_value - value;
         }
@@ -223,7 +223,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                 MeltingLinePiecewisePolynomialInTrSegment* part;
                 CoolPropDbl given_p;
                 solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
-                double call(double T) {
+                double call(double T) override {
 
                     CoolPropDbl calc_p = part->evaluate(T);
 
@@ -251,7 +251,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                 MeltingLinePiecewisePolynomialInThetaSegment* part;
                 CoolPropDbl given_p;
                 solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
-                double call(double T) {
+                double call(double T) override {
 
                     CoolPropDbl calc_p = part->evaluate(T);
 
