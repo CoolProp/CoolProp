@@ -22,7 +22,7 @@ Local verification (renders the HTML the docs build would produce):
 
 import nbformat as nbf
 
-FLUIDS = ['Water', 'Argon', 'Hydrogen', 'R1234yf', 'R245fa', 'D6']
+FLUIDS = ['Water', 'Argon', 'Hydrogen', 'R1234yf', 'R245fa', 'D6', 'CO2', 'Helium']
 INPUT_PAIRS = ['PT', 'HP']
 N_X, N_Y = 300, 300        # 90k cells per (fluid, input_pair)
 
