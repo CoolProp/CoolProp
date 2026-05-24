@@ -262,7 +262,9 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
         spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
     }
     // NC_LIQUID + NC_VAPOR (CoolProp-4u9): near-critical sub-regions on
-    // p ∈ [0.9·pc, (1 − 1ppm)·pc] with POWER(β=1/3) primary axis.
+    // p ∈ [0.9·pc, (1 − 1e-10)·pc] with POWER(β=1/3) primary axis.
+    // The 1e-10 gap below pc is sub-ULP for practical p — anything
+    // closer falls inside the critical patch's auto-cal'd (T, p) bbox.
     // Same boundary curves as the parent regions — the SuperAncillary-
     // backed sat curves are continuous across the p = 0.9·pc handoff.
     if (nc_enabled && p_nc_lo < p_nc_hi) {
@@ -296,8 +298,10 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
         auto hi = build_h_isotherm_ceiling(heos, p_nc_sup_lo, p_nc_sup_hi, T_max_eos - 0.5);
         spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
     }
-    // SUPER region: p > p_crit.  Primary = log p over [p_crit*1.001,
-    // p_max_eos*0.99], secondary = h.  No sat dome above p_crit, so
+    // SUPER region: p > p_crit (clipped up to 1.1·pc when NC enabled,
+    // so NC_SUPER owns the strip just above pc).  Primary = log p over
+    // [max(p_crit, 1.1·pc), p_max_eos*0.99], secondary = h.  No sat
+    // dome above p_crit, so
     // the secondary bounds are the same low-T / high-T isotherms used
     // by LIQUID / VAPOR — they continue smoothly into supercritical.
     //
@@ -722,7 +726,9 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
         spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
     }
     // NC_LIQUID + NC_VAPOR (CoolProp-4u9): near-critical sub-regions on
-    // p ∈ [0.9·pc, (1 − 1ppm)·pc] with POWER(β=1/3) primary axis.
+    // p ∈ [0.9·pc, (1 − 1e-10)·pc] with POWER(β=1/3) primary axis.
+    // The 1e-10 gap below pc is sub-ULP for practical p — anything
+    // closer falls inside the critical patch's auto-cal'd bbox.
     if (nc_enabled && p_nc_lo < p_nc_hi) {
         {
             auto axis = region::AxisTransform::make(region::AxisScale::POWER, p_nc_lo, p_nc_hi);

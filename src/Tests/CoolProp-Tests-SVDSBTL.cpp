@@ -1054,14 +1054,16 @@ TEST_CASE("SVDSBTLBackend uses surrogate when source has no SuperAncillary", "[S
 }
 
 // CoolProp-4u9: the tiny p-strip immediately around pc (sub: p ∈
-// [(1−1ppm)·pc, pc]; super: p ∈ [pc, (1+1ppm)·pc]) sits outside the
-// NC sub-regions (which stop at (1−1ppm)·pc) and outside SUPER
-// (which starts at 1.001·pc).  Its natural home is the critical
-// patch — cells in the strip route to the source backend directly
-// and should return HEOS-exact values.  This test guards against
-// (a) patch HmassP envelope misses (e.g. perimeter walk skipping
-// cells at T > T_max for fluids with T_max ≈ Tc + ε) and (b)
-// runtime gaps where neither NC, SUPER, nor patch claims a cell.
+// [(1−1e-10)·pc, pc]; super: p ∈ [pc, (1+1e-10)·pc]) sits outside
+// the NC sub-regions (which stop at (1−1e-10)·pc on the sub-side
+// and start at (1+1e-10)·pc on the super-side) and outside SUPER
+// (which starts at 1.1·pc when NC is enabled).  Its natural home
+// is the critical patch — cells in the strip route to the source
+// backend directly and should return HEOS-exact values.  This test
+// guards against (a) patch HmassP envelope misses (e.g. perimeter
+// walk skipping cells at T > T_max for fluids with T_max ≈ Tc + ε)
+// and (b) runtime gaps where neither NC, SUPER, nor patch claims a
+// cell.
 TEST_CASE("SVDSBTL pc-strip routes through critical patch", "[SVDSBTL][CoolProp-4u9][pc_strip][slow]") {
     // Include R245fa (T_max/Tc = 1.030 — the narrowest envelope in
     // the supported set), Water (T_max/Tc = 3.51 — comfortable),
