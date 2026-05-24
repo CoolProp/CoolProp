@@ -139,13 +139,12 @@ std::pair<double, double> tight_piece_bounds(const std::vector<double>& c, const
         if (prev_d == 0.0 || (prev_d * cur_d < 0.0)) {
             // Bracket [prev_s, cur_s]; bisect.
             double a_lo = prev_s, a_hi = cur_s;
-            double f_lo = prev_d, f_hi = cur_d;
+            double f_lo = prev_d;
             for (int it = 0; it < 60; ++it) {
                 const double mid = 0.5 * (a_lo + a_hi);
                 const double f_mid = eval_deriv(mid);
                 if (f_lo * f_mid <= 0.0) {
                     a_hi = mid;
-                    f_hi = f_mid;
                 } else {
                     a_lo = mid;
                     f_lo = f_mid;

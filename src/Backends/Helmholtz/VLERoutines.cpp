@@ -833,7 +833,13 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend& HE
 
         deltaL = rhoL / reduce.rhomolar;
         deltaV = rhoV / reduce.rhomolar;
-    } catch (NotImplementedError&) {
+    } catch (NotImplementedError&) {  // NOLINT(bugprone-empty-catch)
+        // Backend doesn't implement the saturation-density ancillaries
+        // (e.g. PCSAFT, incompressible) — keep the deltaL/deltaV initial
+        // guess from the caller and let the Newton iteration below
+        // converge from there.  The commented-out Soave fallback was an
+        // earlier attempt at a guess-from-Tc/pc/omega path; left in
+        // place as a hint if anyone revisits this.
         /*double Tc = crit.T;
         double pc = crit.p.Pa;
         double w = 6.67228479e-09*Tc*Tc*Tc-7.20464352e-06*Tc*Tc+3.16947758e-03*Tc-2.88760012e-01;
@@ -1024,7 +1030,10 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend& HE
                 }
             }
         }
-    } catch (NotImplementedError&) {
+    } catch (NotImplementedError&) {  // NOLINT(bugprone-empty-catch)
+        // SatL/SatV ancillaries not implemented for this backend — keep
+        // the input rhoL/rhoV initial guesses and let the caller's
+        // crit.rhomolar clamps below handle the dome edge.
     }
 
     if (rhoL < crit.rhomolar) {

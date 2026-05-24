@@ -1644,7 +1644,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
     // Maximum saturation temperature - Equal to critical pressure for pure fluids
     CoolPropDbl psat_max = calc_pmax_sat();
 
-    double T_crit_ = T_critical(), p_crit_ = p_critical(), rhomolar_crit_ = rhomolar_critical();
+    double T_crit_ = T_critical(), rhomolar_crit_ = rhomolar_critical();
     auto smolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_smolar_nocache(T_crit_, rhomolar_crit_); };
     auto hmolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_hmolar_nocache(T_crit_, rhomolar_crit_); };
     auto umolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_umolar_nocache(T_crit_, rhomolar_crit_); };
@@ -2646,7 +2646,10 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
                 }
                 rho *= 2;
             }
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Slow-path probe gave up; `light` stays at -1 and the
+            // light/heavy < 0 checks below classify this as
+            // ZERO_STATIONARY_POINTS.
         }
     }
 
@@ -2682,7 +2685,10 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
                 }
                 rho /= 1.1;
             }
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Mirror of the light-side slow path above — `heavy` stays
+            // at -1 and the classification below treats it as no
+            // stationary point.
         }
     }
 

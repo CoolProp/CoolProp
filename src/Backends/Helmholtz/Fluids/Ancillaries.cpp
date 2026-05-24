@@ -103,7 +103,6 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
         }
     };
     solver_resid resid(this, value);
-    std::string errstring;
     if (min_bound < 0) {
         min_bound = Tmin - 0.01;
     }
@@ -365,7 +364,11 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
             try {
                 CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, true);
                 T_pmax_required = AS->melting_line(iT, iP, EOS_pmax);
-            } catch (...) {
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+                // Best-effort probe: T_pmax_required stays at its -1
+                // sentinel and shows up in the CAPTURE below.  The real
+                // assertion is CHECK_NOTHROW on the next melting_line
+                // call.
             }
             CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, false);
             CAPTURE(T_pmax_required);
@@ -387,8 +390,7 @@ TEST_CASE("Test that hs_anchor enthalpy/entropy agrees with EOS", "[ancillaries]
         std::ostringstream ss1;
         ss1 << "Check hs_anchor for " << fluids[i];
         SECTION(ss1.str(), "") {
-            std::string note =
-              "The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS";
+            INFO("The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS");
             AS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);
             double EOS_hmolar = AS->hmolar();
             double EOS_smolar = AS->smolar();

@@ -140,9 +140,8 @@ std::string get_REFPROP_mixtures_path_prefix() {
     std::string rpPath = refpropPath;
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
-    std::string separator = get_separator();
     if (!alt_refprop_path.empty()) {
-        //if (!endswith(alt_refprop_path, separator)) {
+        //if (!endswith(alt_refprop_path, get_separator())) {
         //    throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a path sparator, typically a slash character", alt_refprop_path.c_str()));
         //}
         if (!path_exists(alt_refprop_path)) {
@@ -666,8 +665,7 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
     // Get the prior state
     GETKTVdll(&icomp, &jcomp, hmodij.data(), fij, hfmix.data(), hfij.data(), hbinp.data(), hmxrul.data(), 3, 255, 255, 255, 255);
 
-    std::string shmodij(hmodij.data());
-    //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
+    //if (std::string(hmodij.data()).find("KW") == 0 || std::string(hmodij.data()).find("GE") == 0)  // Starts with KW or GE
     //{
     if (parameter == "betaT") {
         fij[0] = value;
@@ -714,8 +712,7 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
     // Get the current state
     GETKTVdll(&icomp, &jcomp, hmodij.data(), fij, hfmix.data(), hfij.data(), hbinp.data(), hmxrul.data(), 3, 255, 255, 255, 255);
 
-    std::string shmodij(hmodij.data());
-    //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
+    //if (std::string(hmodij.data()).find("KW") == 0 || std::string(hmodij.data()).find("GE") == 0)  // Starts with KW or GE
     //{
     double val = NAN;
     if (parameter == "betaT") {

@@ -188,7 +188,7 @@ TEST_CASE("SVDSurface PH preset builds + evals against HEOS", "[SBTL][SVDSurface
             const double rel = std::abs(rho_pred - rho_truth) / rho_truth;
             max_rel = std::max(max_rel, rel);
             ++kept;
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
             // skip
         }
     }

@@ -773,7 +773,7 @@ class IF97Backend : public AbstractState
                 try {
                     T_k = IF97::T_phmass(p_k, hmass_k);
                     inverse_ok = true;
-                } catch (const std::exception&) {
+                } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
                     // T_phmass throws for out-of-range inputs — fall
                     // through to the dome probe + OOB classification.
                 }

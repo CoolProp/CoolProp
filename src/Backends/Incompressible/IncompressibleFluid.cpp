@@ -553,11 +553,6 @@ Eigen::MatrixXd makeMatrix(const std::vector<double>& coefficients) {
 }
 
 TEST_CASE("Internal consistency checks and example use cases for the incompressible fluids", "[IncompressibleFluids]") {
-    bool PRINT = false;
-    std::string tmpStr;
-    std::vector<double> tmpVector;
-    std::vector<std::vector<double>> tmpMatrix;
-
     SECTION("Test case for \"SylthermXLT\" by Dow Chemicals") {
 
         std::vector<double> cRho;

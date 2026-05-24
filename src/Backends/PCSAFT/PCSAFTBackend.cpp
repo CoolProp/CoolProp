@@ -1999,8 +1999,10 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend& PCSAFT) {
         p_guess = estimate_flash_p(PCSAFT);
         p = outerTQ(p_guess, PCSAFT);
         solution_found = true;
-    } catch (const SolutionError& /* ex */) {
-    } catch (const ValueError& /* ex */) {
+    } catch (const SolutionError& /* ex */) {  // NOLINT(bugprone-empty-catch)
+        // Initial-guess attempt failed; fall through to the pressure sweep below.
+    } catch (const ValueError& /* ex */) {  // NOLINT(bugprone-empty-catch)
+        // Same as above — fall through to the pressure sweep.
     }
 
     // if solution hasn't been found, try cycling through a range of pressures
@@ -2039,8 +2041,10 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend& PCSAFT) {
         t_guess = estimate_flash_t(PCSAFT);
         t = outerPQ(t_guess, PCSAFT);
         solution_found = true;
-    } catch (const SolutionError& /* ex */) {
-    } catch (const ValueError& /* ex */) {
+    } catch (const SolutionError& /* ex */) {  // NOLINT(bugprone-empty-catch)
+        // Initial-guess attempt failed; fall through to the temperature sweep below.
+    } catch (const ValueError& /* ex */) {  // NOLINT(bugprone-empty-catch)
+        // Same as above — fall through to the temperature sweep.
     }
 
     // if solution hasn't been found, try calling the flash function directly with a range of initial temperatures

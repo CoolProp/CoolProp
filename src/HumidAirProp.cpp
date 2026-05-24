@@ -2337,7 +2337,10 @@ double HAProps_Aux(const char* Name, double T, double p, double W, char* units) 
             std::cout << format("Sorry I didn't understand your input [%s] to HAProps_Aux\n", Name);
             return -1;
         }
-    } catch (...) {
+    } catch (...) {  // NOLINT(bugprone-empty-catch)
+        // HAProps_Aux is a public-facing C API and must never throw —
+        // anything that escapes the dispatch above is surfaced as
+        // _HUGE so callers see "no value" rather than a crash.
     }
     return _HUGE;
 }
