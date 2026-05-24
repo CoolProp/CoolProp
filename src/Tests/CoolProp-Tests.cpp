@@ -736,10 +736,14 @@ class ConsistencyFixture
     void subcritical_pressure_liquid() {
         // Subcritical pressure liquid
         int inputsN = sizeof(inputs) / sizeof(inputs[0]);
-        for (double p = pState->p_triple() * 1.1; p < pState->p_critical(); p *= 3) {
+        // Geometric scaling (p *= 3) — no FP-counter-accumulation issue; ~3-5 iters.
+        for (double p = pState->p_triple() * 1.1; p < pState->p_critical(); p *= 3) {  // NOLINT(cert-flp30-c)
             double Ts = PropsSI("T", "P", p, "Q", 0, "Water");
             double Tmelt = pState->melting_line(CoolProp::iT, CoolProp::iP, p);
-            for (double T = Tmelt; T < Ts - 0.1; T += 0.1) {
+            // Test scaffold: T += 0.1 over a ~100 K range gives ~1e-14
+            // cumulative error which is far below the property tolerance
+            // any of the inner CHECKs use.
+            for (double T = Tmelt; T < Ts - 0.1; T += 0.1) {  // NOLINT(cert-flp30-c)
                 CHECK_NOTHROW(set_TP(T, p));
 
                 for (int i = 0; i < inputsN; ++i) {
@@ -822,7 +826,12 @@ class HumidAirDewpointFixture
     }
     void run_p(double p) {
         CAPTURE(p);
-        for (double zH2O = 0.999; zH2O > 0; zH2O -= 0.001) {
+        // Integer-indexed sweep (cert-flp30-c): zH2O = 0.999, 0.998, ...,
+        // 0.001 (999 samples), exactly preserving the original loop's
+        // exit condition without 1e-3 step accumulation.
+        constexpr std::size_t N_z = 999;
+        for (std::size_t i = 0; i < N_z; ++i) {
+            const double zH2O = 0.999 - 0.001 * i;
             setup(zH2O);
             AS->set_mole_fractions(z);
             CAPTURE(zH2O);
@@ -1999,7 +2008,11 @@ class AncillaryFixture
         }
     }
     void do_sat(shared_ptr<CoolProp::AbstractState>& AS) {
-        for (double f = 0.1; f < 1; f += 0.4) {
+        // Integer-indexed (cert-flp30-c): f = 0.1, 0.5, 0.9 — exactly
+        // what the original `for (double f = 0.1; f < 1; f += 0.4)`
+        // produced.
+        for (std::size_t k = 0; k < 3; ++k) {
+            const double f = 0.1 + 0.4 * static_cast<double>(k);
             double Tc = AS->T_critical();
             double Tt = AS->Ttriple();
             double T = f * Tc + (1 - f) * Tt;
@@ -2188,7 +2201,9 @@ class SatTFixture
         if (AS->fluid_param_string("pure") == "true") {
             Tc = std::min(Tc, AS->T_reducing());
         }
-        for (double j = 0.1; j > 1e-10; j /= 10) {
+        // Geometric scaling (j /= 10) — not summation; 9 well-defined
+        // iters from 0.1 down to 1e-10.
+        for (double j = 0.1; j > 1e-10; j /= 10) {  // NOLINT(cert-flp30-c)
             check_QT(AS, Tc - j);
         }
     }

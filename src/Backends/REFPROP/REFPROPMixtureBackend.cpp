@@ -1266,7 +1266,8 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
     SPLNVALdll(&isp, &iderv, &c, &rhoymax, &ierr, herr.data(), errormessagelength);
     int nc = static_cast<int>(this->Ncomp);
     double ratio = pow(rhoymax / rhoymin, 1 / double(N));
-    for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio) {
+    // Geometric density sweep (rho *= ratio, ~N iters by construction).
+    for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio) {  // NOLINT(cert-flp30-c)
         double y = NAN;
         iderv = 0;
 

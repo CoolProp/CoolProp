@@ -515,7 +515,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
         // a) tau > 1
         // b) rhoL > rhoV or deltaL > deltaV
         double tau0 = tau, deltaL0 = deltaL, deltaV0 = deltaV;
-        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1) {
+        // Geometric damping search (~25 iters) — no FP accumulation.
+        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1) {  // NOLINT(cert-flp30-c)
             tau = tau0 + omega_local * options.omega * v[0];
             if (options.use_logdelta) {
                 deltaL = exp(log(deltaL0) + omega_local * options.omega * v[1]);
@@ -896,7 +897,8 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend& HE
         CoolPropDbl deltaL0 = deltaL, deltaV0 = deltaV;
         // Conditions for an acceptable step are:
         // a) rhoL > rhoV or deltaL > deltaV
-        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1) {
+        // Geometric damping search (~25 iters) — no FP accumulation.
+        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1) {  // NOLINT(cert-flp30-c)
             deltaL = deltaL0 + omega_local * stepL;
             deltaV = deltaV0 + omega_local * stepV;
 

@@ -66,7 +66,13 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
         for (std::size_t i = 0; i < Tbp.size() - 1; ++i) {
             CoolPropDbl Tmin = Tbp[i], Tmax = Tbp[i + 1];
             std::size_t N = Nbp[i];
-            for (CoolPropDbl T = Tmin; is_in_closed_range(Tmin, Tmax, T); T += (Tmax - Tmin) / (N - 1)) {
+            // Integer-indexed grid (cert-flp30-c): N samples from Tmin
+            // to Tmax inclusive — exactly the count the original
+            // is_in_closed_range / `T += (Tmax-Tmin)/(N-1)` targeted,
+            // without FP roundoff dropping or duplicating the endpoint.
+            const CoolPropDbl dT_pe = (Tmax - Tmin) / static_cast<CoolPropDbl>(N - 1);
+            for (std::size_t k_pe = 0; k_pe < N; ++k_pe) {
+                const CoolPropDbl T = Tmin + static_cast<CoolPropDbl>(k_pe) * dT_pe;
                 try {
                     HEOS.update(QT_INPUTS, Qbp[i], T);
                 } catch (...) {
@@ -386,7 +392,9 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
         double factor = pow(rhomolar_vap_end / rhomolar_vap_start, 1.0 / N);
 
         int failure_count = 0;
-        for (double rhomolar_vap = rhomolar_vap_start * factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor) {
+        // Geometric density sweep (factor = (end/start)^(1/N)); ~N
+        // iterations, no FP accumulation issue worth converting.
+        for (double rhomolar_vap = rhomolar_vap_start * factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor) {  // NOLINT(cert-flp30-c)
             IO.rhomolar_vap = rhomolar_vap;
             IO.x.resize(IO.y.size());
             if (i < env.T.size() - 3) {

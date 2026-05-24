@@ -980,7 +980,15 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
 
         double acc = 0.001;
 
-        for (double T = Tmin; T < Tmax; T += Tinc) {
+        // Integer-indexed grid: preserves the original `T < Tmax` exit
+        // semantics without floating-point loop-counter accumulation
+        // (cert-flp30-c).  N_T = ceil((Tmax-Tmin)/Tinc) matches the
+        // count the original `for (T = Tmin; T < Tmax; T += Tinc)` loop
+        // produces for the current Tmin/Tmax/Tinc (223.15/523.15/200 -> 2).
+        const std::size_t N_T = static_cast<std::size_t>(std::ceil((Tmax - Tmin) / Tinc));
+
+        for (std::size_t i = 0; i < N_T; ++i) {
+            const double T = Tmin + i * Tinc;
             val1 = poly.evaluate(matrix, x, T - deltaT);
             val2 = poly.evaluate(matrix, x, T + deltaT);
             val3 = (val2 - val1) / 2 / deltaT;
@@ -995,7 +1003,8 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
             CHECK(check_abs(val3, val4, acc));
         }
 
-        for (double T = Tmin; T < Tmax; T += Tinc) {
+        for (std::size_t i = 0; i < N_T; ++i) {
+            const double T = Tmin + i * Tinc;
             val1 = poly.evaluate(matrixDer, x, T - deltaT);
             val2 = poly.evaluate(matrixDer, x, T + deltaT);
             val3 = (val2 - val1) / 2 / deltaT;
@@ -1010,7 +1019,8 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
             CHECK(check_abs(val3, val4, acc));
         }
 
-        for (double T = Tmin; T < Tmax; T += Tinc) {
+        for (std::size_t i = 0; i < N_T; ++i) {
+            const double T = Tmin + i * Tinc;
             val1 = poly.evaluate(matrixInt, x, T - deltaT);
             val2 = poly.evaluate(matrixInt, x, T + deltaT);
             val3 = (val2 - val1) / 2 / deltaT;
@@ -1025,7 +1035,8 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
             CHECK(check_abs(val3, val4, acc));
         }
 
-        for (double T = Tmin; T < Tmax; T += Tinc) {
+        for (std::size_t i = 0; i < N_T; ++i) {
+            const double T = Tmin + i * Tinc;
             val1 = poly.evaluate(matrixInt2, x, T - deltaT);
             val2 = poly.evaluate(matrixInt2, x, T + deltaT);
             val3 = (val2 - val1) / 2 / deltaT;
@@ -1040,7 +1051,8 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
             CHECK(check_abs(val3, val4, acc));
         }
 
-        for (double T = Tmin; T < Tmax; T += Tinc) {
+        for (std::size_t i = 0; i < N_T; ++i) {
+            const double T = Tmin + i * Tinc;
             val1 = poly.evaluate(matrix, x, T);
             val2 = poly.derivative(matrixInt, x, T, 1);
             CAPTURE(T);
@@ -1049,7 +1061,8 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
             CHECK(check_abs(val1, val2, acc));
         }
 
-        for (double T = Tmin; T < Tmax; T += Tinc) {
+        for (std::size_t i = 0; i < N_T; ++i) {
+            const double T = Tmin + i * Tinc;
             val1 = poly.derivative(matrix, x, T, 1);
             val2 = poly.evaluate(matrixDer, x, T);
             CAPTURE(T);
@@ -1171,7 +1184,12 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
         }
 
         deltaT = 0.01;
-        for (T = Tmin; T < Tmax; T += Tinc) {
+        // Integer-indexed grid (cert-flp30-c) — same N_T derivation as
+        // the loops in the previous SECTION; T is the outer-scope test
+        // variable, reuse it.
+        const std::size_t N_T_frac = static_cast<std::size_t>(std::ceil((Tmax - Tmin) / Tinc));
+        for (std::size_t i = 0; i < N_T_frac; ++i) {
+            T = Tmin + i * Tinc;
             a = poly.evaluate(matrix, T - deltaT, y);
             b = poly.evaluate(matrix, T + deltaT, y);
             c = (b - a) / 2.0 / deltaT;

@@ -2667,7 +2667,8 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
     }
 
     // First try a "normal" calculation of the stationary point on the liquid side
-    for (double omega = 0.7; omega > 0; omega -= 0.2) {
+    // 4 fixed iters (omega = 0.7, 0.5, 0.3, 0.1) — no FP accumulation concern.
+    for (double omega = 0.7; omega > 0; omega -= 0.2) {  // NOLINT(cert-flp30-c)
         try {
             resid.options.add_number("omega", omega);
             heavy = Halley(resid, rhomax, 1e-8, 100);

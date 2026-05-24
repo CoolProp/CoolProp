@@ -1170,7 +1170,8 @@ void TransportRoutines::conformal_state_solver(HelmholtzEOSMixtureBackend& HEOS,
         double T0_init = HEOS_Reference.T(), rhomolar0_init = HEOS_Reference.rhomolar();
         // Calculate the old residual after the last step
         resid_old = sqrt(POW2(r(0)) + POW2(r(1)));
-        for (double frac = 1.0; frac > 0.001; frac /= 2) {
+        // Geometric Newton-step halving (~10 iters from 1.0 to ~1/1024).
+        for (double frac = 1.0; frac > 0.001; frac /= 2) {  // NOLINT(cert-flp30-c)
             try {
                 // Calculate new values
                 double T_new = T0_init + frac * v(0);
