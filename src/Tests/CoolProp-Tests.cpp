@@ -5013,6 +5013,125 @@ TEST_CASE("HAPropsSI Twb at high T (T > Tsat) returns the physical root (#2255)"
         prev = Twb;
     }
 }
+TEST_CASE("HAPropsSI T_db from (T_wb, RelHum, P) — issue #2690 surviving failure modes", "[HAPropsSI][humid_air][2690]") {
+    // Issue #2690: HAPropsSI('T_db','T_wb',T_wb,'RelHum',RH,'P',P) returned
+    // "Temperature value (inf)" for narrow pressure bands at very low RH.
+    // A reporter sweep (td.xlsx, May 2026) decomposes the failures into
+    // distinct modes. The b3360b8c6 fix for #2255 (Twb solver bracket
+    // handling) already addressed the bulk of the originally-reported
+    // bands. This test pins the two surviving modes addressed in this PR.
+
+    SECTION("Mode B — Tsat(p) crossing isolated outliers") {
+        // The inner WetbulbTemperature historically used Tupper = Tmax + 1.
+        // For T just below Tsat(p), this Tupper crosses Tsat and Brent steps
+        // hit the W_s_wb singularity (p_ws_wb -> p, denominator -> 0).
+        // The fix tightens Tupper to std::min(Tmax + 1, Tsat - 1e-3).
+        const double T_db_a = HumidAir::HAPropsSI("T_db", "T_wb", 30 + 273.15, "RelHum", 1e-5, "P", 97950.0);
+        CAPTURE(T_db_a);
+        CHECK(std::isfinite(T_db_a));
+        CHECK(T_db_a > 30 + 273.15);   // T_db must exceed T_wb
+        CHECK(T_db_a < 200 + 273.15);  // and stay within HVAC range
+
+        const double T_db_b = HumidAir::HAPropsSI("T_db", "T_wb", 28 + 273.15, "RelHum", 1e-4, "P", 87550.0);
+        CAPTURE(T_db_b);
+        CHECK(std::isfinite(T_db_b));
+        CHECK(T_db_b > 28 + 273.15);
+    }
+
+    SECTION("Mode A — pressure-band cases incidentally fixed by b3360b8c6 stay green") {
+        // Sample points from the reporter's failing band on CoolProp 7.2.0.
+        // These passed once b3360b8c6 landed; pin them so the new Tupper
+        // clamp (Mode B fix) doesn't accidentally regress them.
+        for (double P : {90200.0, 90550.0, 90700.0, 91000.0, 91100.0, 91024.0}) {
+            const double T_db = HumidAir::HAPropsSI("T_db", "T_wb", 30 + 273.15, "RelHum", 1e-5, "P", P);
+            CAPTURE(P);
+            CAPTURE(T_db);
+            CHECK(std::isfinite(T_db));
+            CHECK(T_db > 30 + 273.15);
+            CHECK(T_db < 200 + 273.15);
+        }
+    }
+
+    SECTION("Mode C — physically infeasible inputs surface a clear error, not 'inf'") {
+        // At T_wb >= ~55 C with RH <= 1e-4 the wet-bulb energy balance
+        // implies T_db > 500 K, beyond the validity of the humid-air
+        // mixture model. The previous behavior was an opaque
+        // "Temperature value (inf)" from check_bounds at the bounds-check
+        // boundary. The fix detects infeasibility upfront and throws a
+        // CoolProp::ValueError whose message names T_wb / RelHum / P /
+        // T_db_estimate. HAPropsSI catches all exceptions and returns _HUGE,
+        // so we verify (a) the result is not a valid number and (b) the
+        // diagnostic error string contains the new message — not the old
+        // misleading "outside the range of validity" wording.
+        const double r1 = HumidAir::HAPropsSI("T_db", "T_wb", 60 + 273.15, "RelHum", 1e-5, "P", 90000.0);
+        CHECK_FALSE(ValidNumber(r1));
+        const std::string err1 = CoolProp::get_global_param_string("errstring");
+        CAPTURE(err1);
+        CHECK(err1.find("beyond the validity range") != std::string::npos);
+
+        const double r2 = HumidAir::HAPropsSI("T_db", "T_wb", 65 + 273.15, "RelHum", 1e-4, "P", 95000.0);
+        CHECK_FALSE(ValidNumber(r2));
+        const std::string err2 = CoolProp::get_global_param_string("errstring");
+        CAPTURE(err2);
+        CHECK(err2.find("beyond the validity range") != std::string::npos);
+    }
+
+    SECTION("Reporter sweep (td.xlsx) — Modes B+C clean, Mode D out of scope") {
+        // Abbreviated replay of the reporter's sweep over (RH, T_wb, P).
+        // After this PR, for T_wb >= 5 °C every point should either
+        // (a) return a finite T_db, or (b) surface the explicit
+        // "beyond the validity range" Mode C infeasibility error —
+        // never the misleading "Temperature value (inf)" of the prior
+        // code path. Mode D (sub-freezing T_wb=0 °C) is a separate
+        // failure mechanism and is explicitly excluded from this PR.
+        int unexpected_failures_above_freezing = 0;
+        int mode_c_above_freezing = 0;
+        int fail_at_freezing = 0;
+        const double T_wbs[] = {0, 5, 10, 15, 20, 25, 28, 29, 30, 31, 32, 35, 40, 45, 50, 55, 60, 65};
+        const double RHs[] = {0.01, 1e-3, 1e-4, 1e-5};
+        for (double RH : RHs) {
+            for (double T_wb_C : T_wbs) {
+                for (int P = 87000; P < 99000; P += 250) {  // step 250 keeps test ~< 1s
+                    const double v = HumidAir::HAPropsSI("T_db", "T_wb", T_wb_C + 273.15, "RelHum", RH, "P", (double)P);
+                    if (!ValidNumber(v)) {
+                        if (T_wb_C == 0) {
+                            ++fail_at_freezing;
+                        } else {
+                            const std::string err = CoolProp::get_global_param_string("errstring");
+                            if (err.find("beyond the validity range") != std::string::npos) {
+                                ++mode_c_above_freezing;
+                            } else {
+                                ++unexpected_failures_above_freezing;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        CAPTURE(unexpected_failures_above_freezing);
+        CAPTURE(mode_c_above_freezing);
+        CAPTURE(fail_at_freezing);
+        // Modes A+B: zero unexpected failures above freezing.
+        CHECK(unexpected_failures_above_freezing == 0);
+        // Mode C: the infeasibility detector should fire for at least the
+        // T_wb >= 60 °C low-RH points; confirms the throw path is wired up.
+        CHECK(mode_c_above_freezing > 0);
+        // Mode D: sub-freezing failures still exist (out of scope here).
+        CHECK(fail_at_freezing > 0);
+    }
+
+    SECTION("Regression guard — #2697 high-pressure Twb cases must still work") {
+        // PR #2697 was reverted because raising T_max unconditionally to 640 K
+        // broke ASHRAE A.8/A.9-style high-pressure wet-bulb computations.
+        // Re-pin a representative high-P Twb case to catch a repeat over-correction.
+        const double Twb = HumidAir::HAPropsSI("Twb", "T", 200 + 273.15, "W", 0.05, "P", 5.0e6);
+        CAPTURE(Twb);
+        CHECK(std::isfinite(Twb));
+        CHECK(Twb > 100 + 273.15);
+        CHECK(Twb < 250 + 273.15);
+    }
+}
+
 TEST_CASE("Out-of-range Q in update() does not corrupt cached state (#2195)", "[update][2195]") {
     // Issue #2195: PQ_INPUTS / QT_INPUTS / etc. assigned _Q = value
     // BEFORE validating the range, so a thrown OutOfRangeError left _Q at
