@@ -23,6 +23,7 @@
 
 #    include "AbstractState.h"
 #    include "CoolProp.h"
+#    include "TestUtils.h"
 
 namespace {
 
@@ -30,7 +31,8 @@ class TempJSONFile
 {
    public:
     explicit TempJSONFile(const std::string& contents) {
-        path_ = std::filesystem::temp_directory_path() / ("cp_propssi_opts_test_" + std::to_string(counter_++) + ".json");
+        path_ = std::filesystem::temp_directory_path()
+                / ("cp_propssi_opts_test_" + std::to_string(CoolProp::tests::test_pid()) + "_" + std::to_string(counter_++) + ".json");
         std::ofstream(path_) << contents;
     }
     ~TempJSONFile() {

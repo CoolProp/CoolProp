@@ -25,6 +25,7 @@ using Catch::Approx;
 #    include "CoolProp/Backends/SVDSBTL/SVDSBTLBackend.h"
 #    include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #    include "DataStructures.h"
+#    include "TestUtils.h"
 
 namespace {
 
@@ -769,7 +770,7 @@ TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY routes default_cache_dir", "[
     namespace fs = std::filesystem;
     namespace cp_sbtl = CoolProp::sbtl;
     const std::string saved = CoolProp::get_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY);
-    const fs::path tmpdir = fs::temp_directory_path() / "coolprop_svdtables_fhp_resolver";
+    const fs::path tmpdir = fs::temp_directory_path() / ("coolprop_svdtables_fhp_resolver_" + std::to_string(CoolProp::tests::test_pid()));
     std::error_code ec;
     fs::remove_all(tmpdir, ec);
 
@@ -805,7 +806,7 @@ TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY routes default_cache_dir", "[
 TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY end-to-end build + reload", "[SVDSBTL][cache][fhp][slow]") {
     namespace fs = std::filesystem;
     const std::string saved = CoolProp::get_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY);
-    const fs::path tmpdir = fs::temp_directory_path() / "coolprop_svdtables_fhp_e2e";
+    const fs::path tmpdir = fs::temp_directory_path() / ("coolprop_svdtables_fhp_e2e_" + std::to_string(CoolProp::tests::test_pid()));
     std::error_code ec;
     fs::remove_all(tmpdir, ec);
     CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, tmpdir.string());
@@ -876,7 +877,7 @@ TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY end-to-end build + reload", "
 // interleaved mix.
 TEST_CASE("write_bytes_atomic is race-safe across threads", "[SVDSBTL][cache][race][4no.2]") {
     namespace fs = std::filesystem;
-    const fs::path tmpdir = fs::temp_directory_path() / "coolprop_svdtables_atomic_race";
+    const fs::path tmpdir = fs::temp_directory_path() / ("coolprop_svdtables_atomic_race_" + std::to_string(CoolProp::tests::test_pid()));
     std::error_code ec;
     fs::remove_all(tmpdir, ec);
     fs::create_directories(tmpdir);
