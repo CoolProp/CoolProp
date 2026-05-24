@@ -954,7 +954,7 @@ TEST_CASE("write_bytes_atomic is race-safe across threads", "[SVDSBTL][cache][ra
 // Probe set deliberately picks T in [0.55, 0.95] * T_crit to stay well
 // clear of the sqrt-singularity near T_crit and the iteration-sensitive
 // strip near T_triple.
-TEST_CASE("SaturationSurrogate eval_sat matches source QT_INPUTS on HEOS water", "[SVDSBTL][sat_surrogate][slow]") {
+TEST_CASE("SaturationSurrogate eval_sat matches source QT_INPUTS on HEOS water", "[SBTL][SVDSBTL][sat_surrogate][slow]") {
     auto src = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
     auto surrogate = CoolProp::sbtl::SaturationSurrogate::build_from_source(*src);
     REQUIRE(surrogate != nullptr);
@@ -991,7 +991,7 @@ TEST_CASE("SaturationSurrogate eval_sat matches source QT_INPUTS on HEOS water",
 // well past 1e-6 — but the surrogate must not return NaN / inf or
 // overshoot below zero, since callers blend rho/h/s/u under the lever
 // rule and a non-finite endpoint corrupts the whole dome row.
-TEST_CASE("SaturationSurrogate stays finite and positive near T_crit", "[SVDSBTL][sat_surrogate][slow]") {
+TEST_CASE("SaturationSurrogate stays finite and positive near T_crit", "[SBTL][SVDSBTL][sat_surrogate][slow]") {
     auto src = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
     auto surrogate = CoolProp::sbtl::SaturationSurrogate::build_from_source(*src);
     REQUIRE(surrogate != nullptr);
@@ -1013,7 +1013,7 @@ TEST_CASE("SaturationSurrogate stays finite and positive near T_crit", "[SVDSBTL
 
 // Inverse: p -> T_sat.  The surrogate stores T(log p) so the inversion is
 // just one spline evaluation.  Same well-behaved probe interval as above.
-TEST_CASE("SaturationSurrogate get_T_from_p inverts source PQ_INPUTS on HEOS water", "[SVDSBTL][sat_surrogate][slow]") {
+TEST_CASE("SaturationSurrogate get_T_from_p inverts source PQ_INPUTS on HEOS water", "[SBTL][SVDSBTL][sat_surrogate][slow]") {
     auto src = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
     auto surrogate = CoolProp::sbtl::SaturationSurrogate::build_from_source(*src);
     REQUIRE(surrogate != nullptr);
@@ -1033,7 +1033,7 @@ TEST_CASE("SaturationSurrogate get_T_from_p inverts source PQ_INPUTS on HEOS wat
 // Backend wiring: when SVDSBTL is built on a source without a SuperAncillary
 // (REFPROP today), the backend must lazily build a SaturationSurrogate.
 // HEOS source must NOT trigger the surrogate (the SA path is preferred).
-TEST_CASE("SVDSBTLBackend uses surrogate when source has no SuperAncillary", "[SVDSBTL][sat_surrogate][source]") {
+TEST_CASE("SVDSBTLBackend uses surrogate when source has no SuperAncillary", "[SBTL][SVDSBTL][sat_surrogate][source]") {
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     auto* heos_be = dynamic_cast<CoolProp::SVDSBTLBackend*>(heos.get());
     REQUIRE(heos_be != nullptr);

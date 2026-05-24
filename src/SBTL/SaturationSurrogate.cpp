@@ -207,6 +207,11 @@ double SaturationSurrogate::eval_sat(double T, char what, int side) const {
     if (side != 0 && side != 1) {
         throw std::invalid_argument("SaturationSurrogate::eval_sat: side must be 0 (liquid) or 1 (vapor)");
     }
+    // NaN compares false against both bounds, so the range check below
+    // silently lets non-finite T through into the spline evaluator.
+    if (!std::isfinite(T)) {
+        throw std::out_of_range("SaturationSurrogate::eval_sat: T must be finite");
+    }
     if (T < impl_->T_lo || T > impl_->T_hi) {
         throw std::out_of_range("SaturationSurrogate::eval_sat: T outside surrogate range");
     }
