@@ -57,6 +57,7 @@ EMSCRIPTEN_BINDINGS(coolprop_bindings) {
         .value("iT", CoolProp::iT)
         .value("iP", CoolProp::iP)
         .value("iQ", CoolProp::iQ)
+        .value("iQmass", CoolProp::iQmass)
         .value("iTau", CoolProp::iTau)
         .value("iDelta", CoolProp::iDelta)
         .value("iDmolar", CoolProp::iDmolar)
@@ -125,13 +126,21 @@ EMSCRIPTEN_BINDINGS(coolprop_bindings) {
 
     enum_<CoolProp::input_pairs>("input_pairs")
         .value("QT_INPUTS", CoolProp::QT_INPUTS)
+        .value("QmassT_INPUTS", CoolProp::QmassT_INPUTS)
         .value("PQ_INPUTS", CoolProp::PQ_INPUTS)
+        .value("PQmass_INPUTS", CoolProp::PQmass_INPUTS)
         .value("QSmolar_INPUTS", CoolProp::QSmolar_INPUTS)
+        .value("QmassSmolar_INPUTS", CoolProp::QmassSmolar_INPUTS)
         .value("QSmass_INPUTS", CoolProp::QSmass_INPUTS)
+        .value("QmassSmass_INPUTS", CoolProp::QmassSmass_INPUTS)
         .value("HmolarQ_INPUTS", CoolProp::HmolarQ_INPUTS)
+        .value("HmolarQmass_INPUTS", CoolProp::HmolarQmass_INPUTS)
         .value("HmassQ_INPUTS", CoolProp::HmassQ_INPUTS)
+        .value("HmassQmass_INPUTS", CoolProp::HmassQmass_INPUTS)
         .value("DmolarQ_INPUTS", CoolProp::DmolarQ_INPUTS)
+        .value("DmolarQmass_INPUTS", CoolProp::DmolarQmass_INPUTS)
         .value("DmassQ_INPUTS", CoolProp::DmassQ_INPUTS)
+        .value("DmassQmass_INPUTS", CoolProp::DmassQmass_INPUTS)
         .value("PT_INPUTS", CoolProp::PT_INPUTS)
         .value("DmassT_INPUTS", CoolProp::DmassT_INPUTS)
         .value("DmolarT_INPUTS", CoolProp::DmolarT_INPUTS)
@@ -174,6 +183,7 @@ EMSCRIPTEN_BINDINGS(coolprop_bindings) {
         ;
 
     enum_<CoolProp::backend_families>("backend_families")
+        .value("INVALID_BACKEND_FAMILY", CoolProp::INVALID_BACKEND_FAMILY)
         .value("HEOS_BACKEND_FAMILY", CoolProp::HEOS_BACKEND_FAMILY)
         .value("REFPROP_BACKEND_FAMILY", CoolProp::REFPROP_BACKEND_FAMILY)
         .value("INCOMP_BACKEND_FAMILY", CoolProp::INCOMP_BACKEND_FAMILY)
@@ -185,6 +195,7 @@ EMSCRIPTEN_BINDINGS(coolprop_bindings) {
         .value("PR_BACKEND_FAMILY", CoolProp::PR_BACKEND_FAMILY)
         .value("VTPR_BACKEND_FAMILY", CoolProp::VTPR_BACKEND_FAMILY)
         .value("PCSAFT_BACKEND_FAMILY", CoolProp::PCSAFT_BACKEND_FAMILY)
+        .value("SVDSBTL_BACKEND_FAMILY", CoolProp::SVDSBTL_BACKEND_FAMILY)
         ;
 }
 // Binding code
@@ -217,8 +228,8 @@ EMSCRIPTEN_BINDINGS(abstract_state_bindings) {
       .function("using_mole_fractions", &CoolProp::AbstractState::using_mole_fractions)
       .function("using_mass_fractions", &CoolProp::AbstractState::using_mass_fractions)
       .function("using_volu_fractions", &CoolProp::AbstractState::using_volu_fractions)
-      .function("set_mass_fractions", &CoolProp::AbstractState::set_mass_fractions)
-      .function("set_volu_fractions", &CoolProp::AbstractState::set_volu_fractions)
+      .function("set_mass_fractions", &CoolProp::AbstractState::set_mass_fractions_double)
+      .function("set_volu_fractions", &CoolProp::AbstractState::set_volu_fractions_double)
       .function("set_mole_fractions", &CoolProp::AbstractState::set_mole_fractions_double)
       .function("mole_fractions_liquid", &CoolProp::AbstractState::mole_fractions_liquid_double)
       .function("mole_fractions_vapor", &CoolProp::AbstractState::mole_fractions_vapor_double)
@@ -275,6 +286,7 @@ EMSCRIPTEN_BINDINGS(abstract_state_bindings) {
       .function("second_saturation_deriv", &CoolProp::AbstractState::second_saturation_deriv)
       .function("first_two_phase_deriv", &CoolProp::AbstractState::first_two_phase_deriv)
       .function("second_two_phase_deriv", &CoolProp::AbstractState::second_two_phase_deriv)
+      .function("first_two_phase_deriv_splined", &CoolProp::AbstractState::first_two_phase_deriv_splined)
 
       .function("build_phase_envelope", &CoolProp::AbstractState::build_phase_envelope)
       .function("get_phase_envelope_data", &CoolProp::AbstractState::get_phase_envelope_data)
