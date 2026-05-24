@@ -61,22 +61,16 @@ try {
     process.exit(1);
 }
 
-// Test mixture composition via set_mole_fractions(VectorDouble).
-// The set is verified by cross-checking the resulting density against
-// PropsSI with an explicit-composition fluid string; a bit-exact match
-// confirms the VectorDouble was correctly threaded into AbstractState.
+// Test mixture composition. Setters take a native JS array; getters return
+// a native JS array. Cross-check against PropsSI with explicit composition.
 console.log("Testing set_mole_fractions on a binary mixture...");
 try {
-    var z = new coolprop.VectorDouble();
-    z.push_back(0.4);
-    z.push_back(0.6);
-
     var ASmix = coolprop.factory("HEOS", "Methane&Ethane");
     if (!ASmix.using_mole_fractions()) {
         console.error("HEOS mixture should report using_mole_fractions() === true");
         process.exit(1);
     }
-    ASmix.set_mole_fractions(z);
+    ASmix.set_mole_fractions([0.4, 0.6]);
     ASmix.update(coolprop.input_pairs.PT_INPUTS, 1e6, 250);
 
     var rho = ASmix.rhomass();
@@ -88,21 +82,19 @@ try {
         process.exit(1);
     }
 
-    // Round-trip the composition through get_mole_fractions(). The
-    // VectorDouble::get(i) → std::optional<double> binding is registered
-    // explicitly in src/emscripten_interface.cxx; embind surfaces it as a
-    // plain JS number when the value is present.
+    // Round-trip the composition through get_mole_fractions(). Returns a
+    // native JS Array; read with [i].
     var got = ASmix.get_mole_fractions();
-    var got0 = got.get(0);
-    var got1 = got.get(1);
-    console.log("mixture composition round-trip:", got0, got1);
-    if (Math.abs(got0 - 0.4) > 1e-12 || Math.abs(got1 - 0.6) > 1e-12) {
+    console.log("mixture composition round-trip:", got);
+    if (!Array.isArray(got) || got.length !== 2) {
+        console.error("get_mole_fractions should return a JS Array of length 2; got", got);
+        process.exit(1);
+    }
+    if (Math.abs(got[0] - 0.4) > 1e-12 || Math.abs(got[1] - 0.6) > 1e-12) {
         console.error("get_mole_fractions did not round-trip composition");
         process.exit(1);
     }
-    got.delete();
 
-    z.delete();
     ASmix.delete();
     console.log("set_mole_fractions test passed!");
 } catch (e) {
@@ -137,30 +129,26 @@ try {
 }
 
 // Test the build_phase_envelope -> get_phase_envelope_data round-trip.
-// The value_object<PhaseEnvelopeData> binding (X-macro driven) is the
-// highest-risk surface from PR #2664 and was not covered by its tests.
+// get_phase_envelope_data returns a plain JS object whose fields are
+// native Arrays — read with .length and [i].
 console.log("Testing phase envelope round-trip...");
 try {
     var ASenv = coolprop.factory("HEOS", "Methane&Ethane");
-    var ze = new coolprop.VectorDouble();
-    ze.push_back(0.5);
-    ze.push_back(0.5);
-    ASenv.set_mole_fractions(ze);
+    ASenv.set_mole_fractions([0.5, 0.5]);
     ASenv.build_phase_envelope("");
     var env = ASenv.get_phase_envelope_data();
 
-    // env.T and env.p are VectorDouble fields populated by the envelope tracer.
-    var nT = env.T.size();
-    var np = env.p.size();
+    var nT = env.T.length;
+    var np = env.p.length;
     console.log("envelope points: T=" + nT + ", p=" + np);
     if (nT < 5 || np !== nT) {
         console.error("envelope returned too few points or T/p size mismatch:", nT, np);
         process.exit(1);
     }
     // Sample the middle point; both must be finite and in plausible ranges
-    // for Methane&Ethane. Exercises VectorDouble::get(i) -> optional<double>.
-    var Tmid = env.T.get(Math.floor(nT/2));
-    var pmid = env.p.get(Math.floor(np/2));
+    // for Methane&Ethane.
+    var Tmid = env.T[Math.floor(nT/2)];
+    var pmid = env.p[Math.floor(np/2)];
     console.log("envelope mid-point: T=" + Tmid + " K, p=" + pmid + " Pa");
     if (!(Number.isFinite(Tmid) && Tmid > 50 && Tmid < 400)) {
         console.error("envelope mid-T out of plausible range:", Tmid);
@@ -171,7 +159,6 @@ try {
         process.exit(1);
     }
 
-    ze.delete();
     ASenv.delete();
     console.log("Phase envelope test passed!");
 } catch (e) {

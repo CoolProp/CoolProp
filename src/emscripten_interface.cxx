@@ -22,8 +22,31 @@
 /// *********************************************************************************
 
 #    include <emscripten/bind.h>
-#    include <optional>
+#    include <emscripten/val.h>
 using namespace emscripten;
+
+namespace {
+// Convert std::vector<double> → JS Array via emscripten::val.
+// Used by the JS bindings so callers get native JS arrays (with .length /
+// [i] / iterator support) instead of an embind VectorDouble wrapper, and
+// so the binding surface doesn't depend on the optional<T> registration
+// that emcc's EMBIND_AOT path doesn't currently generate invokers for
+// (upstream emscripten-core#24540).
+template <class T>
+val vec_to_js_array(const std::vector<T>& v) {
+    val arr = val::array();
+    for (const auto& x : v) arr.call<void>("push", x);
+    return arr;
+}
+
+std::vector<double> js_array_to_vec(const val& arr) {
+    const unsigned n = arr["length"].as<unsigned>();
+    std::vector<double> v;
+    v.reserve(n);
+    for (unsigned i = 0; i < n; ++i) v.push_back(arr[i].as<double>());
+    return v;
+}
+}  // namespace
 
 // Binding code
 EMSCRIPTEN_BINDINGS(coolprop_bindings) {
@@ -211,25 +234,6 @@ CoolProp::AbstractState* factory(const std::string& backend, const std::string& 
 // Binding code
 EMSCRIPTEN_BINDINGS(abstract_state_bindings) {
 
-    register_vector<double>("VectorDouble");
-    register_vector<std::string>("VectorString");
-    // Without this, VectorDouble.get(i) throws 'unbound types: optional<double>'
-    // from JS because register_vector's auto-call to register_optional<T> is
-    // an inlineable template whose body the optimizer folds to a no-op (the
-    // `thread_local bool hasRun` guard appears to be the trigger). Calling the
-    // embind internal entry-point directly preserves the wasm import.
-    internal::_embind_register_optional(
-        internal::TypeID<std::optional<double>>::get(),
-        internal::TypeID<double>::get());
-
-    value_object<CoolProp::PhaseEnvelopeData>("CoolProp::PhaseEnvelopeData")
-// Use X macros to auto-generate the variables;
-// each will look something like: .field("T", &CoolProp::PhaseEnvelopeData::T);
-#    define X(name) .field(#    name, &CoolProp::PhaseEnvelopeData::name)
-      PHASE_ENVELOPE_VECTORS
-#    undef X
-      ;
-
     function("factory", &factory, allow_raw_pointers());
 
     class_<CoolProp::AbstractState>("AbstractState")
@@ -237,13 +241,31 @@ EMSCRIPTEN_BINDINGS(abstract_state_bindings) {
       .function("using_mole_fractions", &CoolProp::AbstractState::using_mole_fractions)
       .function("using_mass_fractions", &CoolProp::AbstractState::using_mass_fractions)
       .function("using_volu_fractions", &CoolProp::AbstractState::using_volu_fractions)
-      .function("set_mass_fractions", &CoolProp::AbstractState::set_mass_fractions_double)
-      .function("set_volu_fractions", &CoolProp::AbstractState::set_volu_fractions_double)
-      .function("set_mole_fractions", &CoolProp::AbstractState::set_mole_fractions_double)
-      .function("mole_fractions_liquid", &CoolProp::AbstractState::mole_fractions_liquid_double)
-      .function("mole_fractions_vapor", &CoolProp::AbstractState::mole_fractions_vapor_double)
-      .function("get_mole_fractions", &CoolProp::AbstractState::get_mole_fractions)
-      .function("get_mass_fractions", &CoolProp::AbstractState::get_mass_fractions)
+
+      // Fraction setters/getters: accept and return native JS Arrays via
+      // emscripten::val. JS callers do `AS.set_mole_fractions([0.4, 0.6])`
+      // and read `AS.get_mole_fractions()[i]` with no VectorDouble wrapper.
+      .function("set_mass_fractions", +[](CoolProp::AbstractState& self, val arr) {
+          self.set_mass_fractions(js_array_to_vec(arr));
+      })
+      .function("set_volu_fractions", +[](CoolProp::AbstractState& self, val arr) {
+          self.set_volu_fractions(js_array_to_vec(arr));
+      })
+      .function("set_mole_fractions", +[](CoolProp::AbstractState& self, val arr) {
+          self.set_mole_fractions(js_array_to_vec(arr));
+      })
+      .function("mole_fractions_liquid", +[](CoolProp::AbstractState& self) {
+          return vec_to_js_array(self.mole_fractions_liquid_double());
+      })
+      .function("mole_fractions_vapor", +[](CoolProp::AbstractState& self) {
+          return vec_to_js_array(self.mole_fractions_vapor_double());
+      })
+      .function("get_mole_fractions", +[](CoolProp::AbstractState& self) {
+          return vec_to_js_array(self.get_mole_fractions());
+      })
+      .function("get_mass_fractions", +[](CoolProp::AbstractState& self) {
+          return vec_to_js_array(self.get_mass_fractions());
+      })
 
       .function("update", &CoolProp::AbstractState::update)
 
@@ -298,7 +320,16 @@ EMSCRIPTEN_BINDINGS(abstract_state_bindings) {
       .function("first_two_phase_deriv_splined", &CoolProp::AbstractState::first_two_phase_deriv_splined)
 
       .function("build_phase_envelope", &CoolProp::AbstractState::build_phase_envelope)
-      .function("get_phase_envelope_data", &CoolProp::AbstractState::get_phase_envelope_data)
+      .function("get_phase_envelope_data", +[](CoolProp::AbstractState& self) {
+          // Return a plain JS object with one Array per PHASE_ENVELOPE_VECTORS
+          // field (T, p, lnT, lnp, …). JS reads them as `data.T[i]` directly.
+          const CoolProp::PhaseEnvelopeData& d = self.get_phase_envelope_data();
+          val obj = val::object();
+#    define X(name) obj.set(#name, vec_to_js_array(d.name));
+          PHASE_ENVELOPE_VECTORS
+#    undef X
+          return obj;
+      })
 
       .function("melting_line", &CoolProp::AbstractState::melting_line)
       .function("saturation_ancillary", &CoolProp::AbstractState::saturation_ancillary)
