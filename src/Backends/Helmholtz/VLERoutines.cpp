@@ -19,7 +19,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
         CoolPropDbl T, desired_p;
 
         inner_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl desired_p) : HEOS(HEOS), T(T), desired_p(desired_p) {};
-        double call(double rhomolar_liq) {
+        double call(double rhomolar_liq) override {
             HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
             CoolPropDbl calc_p = HEOS->SatL->p();
             std::cout << format("inner p: %0.16Lg; res: %0.16Lg", calc_p, calc_p - desired_p) << std::endl;
@@ -39,7 +39,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
 
         outer_resid(HelmholtzEOSMixtureBackend& HEOS, CoolProp::parameters ykey, CoolPropDbl y)
           : HEOS(&HEOS), ykey(ykey), y(y), rhomolar_crit(HEOS.rhomolar_critical()) {};
-        double call(double rhomolar_vap) {
+        double call(double rhomolar_vap) override {
             // Calculate the other variable (T->p or p->T) for given vapor density
             CoolPropDbl T = NAN, p = NAN, rhomolar_liq = NAN;
             switch (ykey) {
@@ -86,7 +86,7 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend& HEOS,
 
         solver_resid(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess)
           : HEOS(&HEOS), T(T), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess) {};
-        double call(double p) {
+        double call(double p) override {
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
             HEOS->SatV->update_TP_guessrho(T, p, rhomolar_vap);
@@ -131,7 +131,7 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend& HEOS,
 
         solver_resid(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl p, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess)
           : HEOS(&HEOS), p(p), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess) {};
-        double call(double T) {
+        double call(double T) override {
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
             HEOS->SatV->update_TP_guessrho(T, p, rhomolar_vap);
@@ -212,7 +212,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
                     this->component = &component;
                     this->h = h;
                 }
-                double call(double T) {
+                double call(double T) override {
                     CoolPropDbl h_liq = component->ancillaries.hL.evaluate(T) + component->EOS().hs_anchor.hmolar;
                     return h_liq + component->ancillaries.hLV.evaluate(T) - h;
                 };
@@ -276,7 +276,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
                     this->component = &component;
                     this->s = s;
                 }
-                double call(double T) {
+                double call(double T) override {
                     CoolPropDbl s_liq = component->ancillaries.sL.evaluate(T) + component->EOS().hs_anchor.smolar;
                     CoolPropDbl resid = s_liq + component->ancillaries.sLV.evaluate(T) - s;
 
@@ -1731,10 +1731,10 @@ class RachfordRiceResidual : public FuncWrapper1DWithDeriv
 
    public:
     RachfordRiceResidual(const std::vector<double>& z, const std::vector<double>& lnK) : z(z), lnK(lnK) {};
-    double call(double beta) {
+    double call(double beta) override {
         return FlashRoutines::g_RachfordRice(z, lnK, beta);
     }
-    double deriv(double beta) {
+    double deriv(double beta) override {
         return FlashRoutines::dgdbeta_RachfordRice(z, lnK, beta);
     }
 };

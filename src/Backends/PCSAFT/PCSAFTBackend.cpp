@@ -2090,7 +2090,7 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend& PCSAFT) {
         vector<CoolPropDbl> u;
 
         SolverInnerResid(PCSAFTBackend& PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u) : PCSAFT(PCSAFT), kb0(kb0), u(u) {}
-        CoolPropDbl call(CoolPropDbl R) {
+        CoolPropDbl call(CoolPropDbl R) override {
             auto ncomp = PCSAFT.components.size();
             double error = 0;
 
@@ -2351,7 +2351,7 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend& PCSAFT) {
         vector<CoolPropDbl> u;
 
         SolverInnerResid(PCSAFTBackend& PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u) : PCSAFT(PCSAFT), kb0(kb0), u(u) {}
-        CoolPropDbl call(CoolPropDbl R) {
+        CoolPropDbl call(CoolPropDbl R) override {
             auto ncomp = PCSAFT.components.size();
             double error = 0;
 
@@ -2749,7 +2749,7 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
         CoolPropDbl T, p;
 
         SolverRhoResid(PCSAFTBackend& PCSAFT, CoolPropDbl T, CoolPropDbl p) : PCSAFT(PCSAFT), T(T), p(p) {}
-        CoolPropDbl call(CoolPropDbl rhomolar) {
+        CoolPropDbl call(CoolPropDbl rhomolar) override {
             CoolPropDbl peos = PCSAFT.update_DmolarT(rhomolar);
             double cost = (peos - p) / p;
             if (ValidNumber(cost)) {

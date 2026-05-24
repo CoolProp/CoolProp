@@ -263,13 +263,13 @@ class solver_TP_resid : public FuncWrapper1DWithDeriv
         tau(HEOS.get_reducing_state().T / T),
         R_u(HEOS.gas_constant()),
         delta(-_HUGE) {}
-    double call(double rhomolar) {
+    double call(double rhomolar) override {
         delta = rhomolar / rhor;  // needed for derivative
         HEOS->update_DmolarT_direct(rhomolar, T);
         CoolPropDbl peos = HEOS->p();
         return (peos - p) / p;
     };
-    double deriv(double rhomolar) {
+    double deriv(double rhomolar) override {
         // dp/drho|T / pspecified
         return R_u * T * (1 + 2 * delta * HEOS->dalphar_dDelta() + pow(delta, 2) * HEOS->d2alphar_dDelta2()) / p;
     };
@@ -291,7 +291,7 @@ class PY_singlephase_flash_resid : public FuncWrapper1D
             HEOS.specify_phase(HEOS.phase());
         }
     };
-    double call(double T) {
+    double call(double T) override {
 
         // Run the solver with T,P as inputs;
         HEOS->update(PT_INPUTS, p, T);

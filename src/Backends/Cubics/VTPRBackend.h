@@ -57,11 +57,11 @@ class VTPRBackend : public PengRobinsonBackend
         setup(fluid_identifiers, generate_SatL_and_SatV);
     };
 
-    std::string backend_name() {
+    std::string backend_name() override {
         return get_backend_string(VTPR_BACKEND);
     }
 
-    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) {
+    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) override {
         AbstractCubicBackend* ACB =
           new VTPRBackend(calc_fluid_names(), cubic->get_Tc(), cubic->get_pc(), cubic->get_acentric(), cubic->get_R_u(), generate_SatL_and_SatV);
         ACB->copy_k(this);
@@ -72,7 +72,7 @@ class VTPRBackend : public PengRobinsonBackend
     void set_alpha_from_components();
 
     /// Return the fluid names
-    std::vector<std::string> calc_fluid_names() {
+    std::vector<std::string> calc_fluid_names() override {
         return m_fluid_names;
     }
 
@@ -82,22 +82,22 @@ class VTPRBackend : public PengRobinsonBackend
     /// Load the UNIFAC library if needed and get const reference to it
     const UNIFACLibrary::UNIFACParameterLibrary& LoadLibrary();
 
-    void set_mole_fractions(const std::vector<double>& z) {
+    void set_mole_fractions(const std::vector<double>& z) override {
         mole_fractions = z;
         VTPRCubic* _cubic = static_cast<VTPRCubic*>(cubic.get());
         _cubic->get_unifaq().set_mole_fractions(z);
     };
 
     /// Calculate the molar mass
-    CoolPropDbl calc_molar_mass();
+    CoolPropDbl calc_molar_mass() override;
 
     /// Allows to modify the interactions parameters aij, bij and cij
-    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, const double value);
+    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, const double value) override;
 
     /// Allows to modify the interactions parameters aij, bij and cij
-    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter);
+    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) override;
 
-    CoolPropDbl calc_fugacity_coefficient(std::size_t i);
+    CoolPropDbl calc_fugacity_coefficient(std::size_t i) override;
 
     /// Modify the surface parameter Q_k of the sub group sgi
     void set_Q_k(const size_t sgi, const double value);

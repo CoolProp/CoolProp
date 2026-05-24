@@ -48,7 +48,7 @@ namespace CoolProp {
 class HEOSGenerator : public AbstractStateGenerator
 {
    public:
-    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
+    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
         if (fluid_names.size() == 1) {
             return new HelmholtzEOSBackend(fluid_names[0]);
         } else {
@@ -2049,7 +2049,7 @@ void HelmholtzEOSMixtureBackend::calc_ssat_max() {
        public:
         HelmholtzEOSMixtureBackend* HEOS;
         Residual(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS) {};
-        double call(double T) {
+        double call(double T) override {
             HEOS->update(QT_INPUTS, 1, T);
             // dTdp_along_sat
             double dTdp_along_sat =
@@ -2084,7 +2084,7 @@ void HelmholtzEOSMixtureBackend::calc_hsat_max() {
        public:
         HelmholtzEOSMixtureBackend* HEOS;
         Residualhmax(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS) {};
-        double call(double T) {
+        double call(double T) override {
             HEOS->update(QT_INPUTS, 1, T);
             // dTdp_along_sat
             double dTdp_along_sat =
@@ -2600,17 +2600,17 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             rhor(HEOS->get_reducing_state().rhomolar),
             tau(HEOS->get_reducing_state().T / T),
             R_u(HEOS->gas_constant()) {}
-        double call(double rhomolar) {
+        double call(double rhomolar) override {
             delta = rhomolar / rhor;  // needed for derivative
             HEOS->update_DmolarT_direct(rhomolar, T);
             // dp/drho|T
             return R_u * T * (1 + 2 * delta * HEOS->dalphar_dDelta() + POW2(delta) * HEOS->d2alphar_dDelta2());
         };
-        double deriv(double rhomolar) {
+        double deriv(double rhomolar) override {
             // d2p/drho2|T
             return R_u * T / rhor * (2 * HEOS->dalphar_dDelta() + 4 * delta * HEOS->d2alphar_dDelta2() + POW2(delta) * HEOS->calc_d3alphar_dDelta3());
         };
-        double second_deriv(double rhomolar) {
+        double second_deriv(double rhomolar) override {
             // d3p/drho3|T
             return R_u * T / POW2(rhor)
                    * (6 * HEOS->d2alphar_dDelta2() + 6 * delta * HEOS->d3alphar_dDelta3() + POW2(delta) * HEOS->calc_d4alphar_dDelta4());
@@ -2720,21 +2720,21 @@ class SolverTPResid : public FuncWrapper1DWithThreeDerivs
         rhor(HEOS->get_reducing_state().rhomolar),
         tau(HEOS->get_reducing_state().T / T),
         R_u(HEOS->gas_constant()) {}
-    double call(double rhomolar) {
+    double call(double rhomolar) override {
         delta = rhomolar / rhor;  // needed for derivative
         HEOS->update_DmolarT_direct(rhomolar, T);
         CoolPropDbl peos = HEOS->p();
         return (peos - p) / p;
     };
-    double deriv(double rhomolar) {
+    double deriv(double rhomolar) override {
         // dp/drho|T / pspecified
         return R_u * T * (1 + 2 * delta * HEOS->dalphar_dDelta() + POW2(delta) * HEOS->d2alphar_dDelta2()) / p;
     };
-    double second_deriv(double rhomolar) {
+    double second_deriv(double rhomolar) override {
         // d2p/drho2|T / pspecified
         return R_u * T / rhor * (2 * HEOS->dalphar_dDelta() + 4 * delta * HEOS->d2alphar_dDelta2() + POW2(delta) * HEOS->calc_d3alphar_dDelta3()) / p;
     };
-    double third_deriv(double rhomolar) {
+    double third_deriv(double rhomolar) override {
         // d3p/drho3|T / pspecified
         return R_u * T / POW2(rhor)
                * (6 * HEOS->d2alphar_dDelta2() + 6 * delta * HEOS->d3alphar_dDelta3() + POW2(delta) * HEOS->calc_d4alphar_dDelta4()) / p;
@@ -3936,7 +3936,7 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
         double L1, M1;
         Eigen::MatrixXd Lstar, Mstar;
         Resid(HelmholtzEOSMixtureBackend& HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE) {};
-        std::vector<double> call(const std::vector<double>& tau_delta) {
+        std::vector<double> call(const std::vector<double>& tau_delta) override {
             double rhomolar = tau_delta[1] * HEOS.rhomolar_reducing();
             double T = HEOS.T_reducing() / tau_delta[0];
             HEOS.update(DmolarT_INPUTS, rhomolar, T);
@@ -3947,7 +3947,7 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
             o[1] = Mstar.determinant();
             return o;
         };
-        std::vector<std::vector<double>> Jacobian(const std::vector<double>& x) {
+        std::vector<std::vector<double>> Jacobian(const std::vector<double>& x) override {
             std::size_t N = x.size();
             std::vector<std::vector<double>> J(N, std::vector<double>(N, 0));
             Eigen::MatrixXd adjL = adjugate(Lstar), adjM = adjugate(Mstar), dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
@@ -4024,19 +4024,19 @@ class OneDimObjective : public FuncWrapper1DWithTwoDerivs
     double _call, _deriv, _second_deriv;
     OneDimObjective(HelmholtzEOSMixtureBackend& HEOS, double delta0)
       : HEOS(HEOS), delta(delta0), _call(_HUGE), _deriv(_HUGE), _second_deriv(_HUGE) {};
-    double call(double tau) {
+    double call(double tau) override {
         double rhomolar = HEOS.rhomolar_reducing() * delta, T = HEOS.T_reducing() / tau;
         HEOS.update_DmolarT_direct(rhomolar, T);
         _call = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant();
         return _call;
     }
-    double deriv(double tau) {
+    double deriv(double tau) override {
         Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
                         dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau);
         _deriv = (adjL * dLdTau).trace();
         return _deriv;
     };
-    double second_deriv(double tau) {
+    double second_deriv(double tau) override {
         Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT),
                         dLstardTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
                         d2LstardTau2 = MixtureDerivatives::d2Lstar_dX2(HEOS, XN_INDEPENDENT, iTau, iTau), adjL = adjugate(Lstar),
@@ -4088,7 +4088,7 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
      \brief Calculate the value of L1
      @param theta The angle
      */
-    double call(double theta) {
+    double call(double theta) override {
         double tau_new = NAN, delta_new = NAN;
         this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
         double rhomolar = HEOS.rhomolar_reducing() * delta_new, T = HEOS.T_reducing() / tau_new;
@@ -4104,7 +4104,7 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
      \brief Calculate the first partial derivative of L1 with respect to the angle
      @param theta The angle
      */
-    double deriv(double theta) {
+    double deriv(double theta) override {
         double dL1_dtau = (adjLstar * dLstardTau).trace(), dL1_ddelta = (adjLstar * dLstardDelta).trace();
         return -R_tau * sin(theta) * dL1_dtau + R_delta * cos(theta) * dL1_ddelta;
     };

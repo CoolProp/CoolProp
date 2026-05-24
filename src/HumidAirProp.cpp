@@ -404,7 +404,7 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
             input_vals[0] = Input1;
         };
 
-        double call(double W) {
+        double call(double W) override {
             input_vals[1] = W;
             double T = _HUGE, psi_w = _HUGE;
             _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
@@ -474,7 +474,7 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
             input_vals[0] = Input1;
         };
 
-        double call(double T_drybulb) {
+        double call(double T_drybulb) override {
             double psi_w = NAN;
             psi_w = MoleFractionWater(T_drybulb, p, input_keys[0], input_vals[0]);
             double val = _HAPropsSI_outputs(OutputKey, p, T_drybulb, psi_w);
@@ -533,7 +533,7 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess) 
         };
         ~BrentSolverResids() {};
 
-        double call(double T) {
+        double call(double T) override {
             double p_ws = NAN;
             if (T >= 273.16) {
                 // Saturation pressure [Pa] using IF97 formulation
@@ -1317,7 +1317,7 @@ class WetBulbSolver : public CoolProp::FuncWrapper1D
         double v_bar_w = MolarVolume(T, p, psi_w), M_ha = MM_Water() * psi_w + (1 - psi_w) * 0.028966;
         LHS = MolarEnthalpy(T, p, psi_w, v_bar_w) * (1 + _W) / M_ha;
     }
-    double call(double Twb) {
+    double call(double Twb) override {
         double epsilon = 0.621945;
         double f_wb = NAN, p_ws_wb = NAN, p_s_wb = NAN, W_s_wb = NAN, h_w = NAN, M_ha_wb = NAN, psi_wb = NAN, v_bar_wb = NAN;
 
@@ -1364,7 +1364,7 @@ class WetBulbTminSolver : public CoolProp::FuncWrapper1D
    public:
     double p, hair_dry;
     WetBulbTminSolver(double p, double hair_dry) : p(p), hair_dry(hair_dry) {}
-    double call(double Ts) {
+    double call(double Ts) override {
         //double RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
 
         double psi_w = NAN, T = Ts;
@@ -1696,7 +1696,7 @@ class HAProps_W_Residual : public CoolProp::FuncWrapper1D
         input_vals.resize(2, T);
     }
 
-    double call(double W) {
+    double call(double W) override {
         // Update inputs
         input_vals[1] = W;
         // Prepare calculation
@@ -1722,7 +1722,7 @@ class HAProps_T_Residual : public CoolProp::FuncWrapper1D
         input_vals.resize(2, W);
     }
 
-    double call(double T) {
+    double call(double T) override {
         // Update inputs
         input_vals[0] = T;
         // Prepare calculation

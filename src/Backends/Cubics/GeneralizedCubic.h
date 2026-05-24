@@ -43,7 +43,7 @@ class BasicMathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction
     BasicMathiasCopemanAlphaFunction(double a0, double m_ii, double Tr_over_Tci) : AbstractCubicAlphaFunction(a0, Tr_over_Tci) {
         this->m = m_ii;
     };
-    double term(double tau, std::size_t itau);
+    double term(double tau, std::size_t itau) override;
 };
 
 /// An implementation of AbstractCubicAlphaFunction for the Twu alpha function
@@ -56,7 +56,7 @@ class TwuAlphaFunction : public AbstractCubicAlphaFunction
         c[1] = M;
         c[2] = N;
     };
-    double term(double tau, std::size_t itau);
+    double term(double tau, std::size_t itau) override;
 };
 
 /// An implementation of AbstractCubicAlphaFunction for the Mathias-Copeman alpha function
@@ -69,7 +69,7 @@ class MathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction
         c[1] = c2;
         c[2] = c3;
     };
-    double term(double tau, std::size_t itau);
+    double term(double tau, std::size_t itau) override;
 };
 
 class AbstractCubic
@@ -625,9 +625,9 @@ class PengRobinson : public AbstractCubic
         set_alpha(std::vector<double>(), std::vector<double>(), std::vector<double>());
     };
 
-    double a0_ii(std::size_t i);
-    double b0_ii(std::size_t i);
-    double m_ii(std::size_t i);
+    double a0_ii(std::size_t i) override;
+    double b0_ii(std::size_t i) override;
+    double m_ii(std::size_t i) override;
 };
 
 class SRK : public AbstractCubic
@@ -643,9 +643,9 @@ class SRK : public AbstractCubic
         set_alpha(std::vector<double>(), std::vector<double>(), std::vector<double>());
     };
 
-    double a0_ii(std::size_t i);
-    double b0_ii(std::size_t i);
-    double m_ii(std::size_t i);
+    double a0_ii(std::size_t i) override;
+    double b0_ii(std::size_t i) override;
+    double m_ii(std::size_t i) override;
 };
 
 #endif

@@ -175,7 +175,7 @@ class WilsonK_resid : public FuncWrapper1D
         z(z),
         K(K),
         HEOS(HEOS) {}  // if input_type == imposed_T -> use T, else use p; init both
-    double call(double input_value) {
+    double call(double input_value) override {
         double summer = 0;
         if (input_type == imposed_T) {
             p = input_value;  // Iterate on pressure

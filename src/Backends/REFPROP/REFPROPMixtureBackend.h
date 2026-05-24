@@ -63,54 +63,56 @@ class REFPROPMixtureBackend : public AbstractState
     /// A function to actually do the initialization to allow it to be called in derived classes
     void construct(const std::vector<std::string>& fluid_names);
 
-    std::string backend_name() {
+    std::string backend_name() override {
         return get_backend_string(REFPROP_BACKEND_MIX);
     }
     virtual ~REFPROPMixtureBackend();
 
     static std::string version();
 
-    std::vector<std::string> calc_fluid_names() {
+    std::vector<std::string> calc_fluid_names() override {
         return fluid_names;
     };
     PhaseEnvelopeData PhaseEnvelope;
 
     /// Set binary mixture floating point parameter
-    void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter, const double value);
+    void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter,
+                                       const double value) override;
     /// Get binary mixture double value
-    double get_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter);
+    double get_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) override;
 
     /// Get binary mixture string value
-    std::string get_binary_interaction_string(const std::string& CAS1, const std::string& CAS2, const std::string& parameter);
+    std::string get_binary_interaction_string(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) override;
     /// Set binary mixture string value
-    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter, const std::string& value);
+    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
+                                       const std::string& value) override;
 
     /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
-    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, const double value);
+    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, const double value) override;
     /// Get binary mixture double value (EXPERT USE ONLY!!!)
-    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter);
+    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) override;
 
     /// Find the index (1-based for FORTRAN) of the fluid with the given CAS number
     int match_CAS(const std::string& CAS);
 
     // REFPROP backend uses mole fractions
-    bool using_mole_fractions() {
+    bool using_mole_fractions() override {
         return true;
     }
-    bool using_mass_fractions() {
+    bool using_mass_fractions() override {
         return false;
     }
-    bool using_volu_fractions() {
+    bool using_volu_fractions() override {
         return false;
     }
 
     /// Calculate the name of the fluid
-    std::string calc_name() {
+    std::string calc_name() override {
         return fluid_param_string("name");
     }
 
     // Get _phase for pure fluids only
-    phases calc_phase() {
+    phases calc_phase() override {
         if (this->Ncomp > 1) {
             throw NotImplementedError("The REFPROP backend does not implement calc_phase function for mixtures.");
         } else {
@@ -125,13 +127,13 @@ class REFPROPMixtureBackend : public AbstractState
      *
      * @param phase_index The index from CoolProp::phases
      */
-    void calc_specify_phase(phases phase_index) {
+    void calc_specify_phase(phases phase_index) override {
         imposed_phase_index = phase_index;
         _phase = phase_index;
     }
     /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
      */
-    void calc_unspecify_phase() {
+    void calc_unspecify_phase() override {
         imposed_phase_index = iphase_not_imposed;
     }
 
@@ -146,31 +148,31 @@ class REFPROPMixtureBackend : public AbstractState
     @param value1 First input value
     @param value2 Second input value
     */
-    void update(CoolProp::input_pairs, double value1, double value2);
+    void update(CoolProp::input_pairs, double value1, double value2) override;
 
     void update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) override;
 
     /**
      * @brief Update the state, while providing guess values
      */
-    void update_with_guesses(CoolProp::input_pairs, double value1, double value2, const GuessesStructure& guesses);
+    void update_with_guesses(CoolProp::input_pairs, double value1, double value2, const GuessesStructure& guesses) override;
 
-    CoolPropDbl calc_molar_mass();
+    CoolPropDbl calc_molar_mass() override;
 
     PhaseMolarMasses calc_phase_molar_masses() override;
 
     void check_loaded_fluid();
 
-    void calc_excess_properties();
+    void calc_excess_properties() override;
 
     /// Returns true if REFPROP is supported on this platform
     static bool REFPROP_supported();
 
-    std::string fluid_param_string(const std::string& ParamName);
+    std::string fluid_param_string(const std::string& ParamName) override;
 
-    CoolPropDbl calc_PIP();
+    CoolPropDbl calc_PIP() override;
 
-    CoolPropDbl calc_cpmolar_idealgas();
+    CoolPropDbl calc_cpmolar_idealgas() override;
 
     /// Set the fluids in REFPROP DLL by calling the SETUPdll function
     /**
@@ -182,34 +184,34 @@ class REFPROPMixtureBackend : public AbstractState
     /**
     @param mole_fractions The vector of mole fractions of the components
     */
-    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions);
+    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override;
 
     /// Set the mass fractions
     /**
     @param mass_fractions The vector of mass fractions of the components
     */
-    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions);
+    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override;
 
-    const std::vector<CoolPropDbl>& get_mole_fractions() {
+    const std::vector<CoolPropDbl>& get_mole_fractions() override {
         return mole_fractions_long_double;
     };
 
-    const std::vector<CoolPropDbl> calc_mass_fractions();
+    const std::vector<CoolPropDbl> calc_mass_fractions() override;
 
-    void calc_phase_envelope(const std::string& type);
+    void calc_phase_envelope(const std::string& type) override;
 
-    CoolPropDbl calc_compressibility_factor() {
+    CoolPropDbl calc_compressibility_factor() override {
         return _p / (_rhomolar * gas_constant() * _T);
     };
 
-    const CoolProp::PhaseEnvelopeData& calc_phase_envelope_data() {
+    const CoolProp::PhaseEnvelopeData& calc_phase_envelope_data() override {
         return PhaseEnvelope;
     };
 
-    std::vector<CoolPropDbl> calc_mole_fractions_liquid() {
+    std::vector<CoolPropDbl> calc_mole_fractions_liquid() override {
         return std::vector<CoolPropDbl>(mole_fractions_liq.begin(), mole_fractions_liq.begin() + this->Ncomp);
     }
-    std::vector<CoolPropDbl> calc_mole_fractions_vapor() {
+    std::vector<CoolPropDbl> calc_mole_fractions_vapor() override {
         return std::vector<CoolPropDbl>(mole_fractions_vap.begin(), mole_fractions_vap.begin() + this->Ncomp);
     }
 
@@ -217,135 +219,135 @@ class REFPROPMixtureBackend : public AbstractState
     void check_status();
 
     /// Get the viscosity [Pa-s] (based on the temperature and density in the state class)
-    CoolPropDbl calc_viscosity();
+    CoolPropDbl calc_viscosity() override;
     /// Get the thermal conductivity [W/m/K] (based on the temperature and density in the state class)
-    CoolPropDbl calc_conductivity();
+    CoolPropDbl calc_conductivity() override;
     /// Get the surface tension [N/m] (based on the temperature in the state class).  Invalid for temperatures above critical point or below triple point temperature
-    CoolPropDbl calc_surface_tension();
+    CoolPropDbl calc_surface_tension() override;
     /// Calc the B virial coefficient
-    CoolPropDbl calc_Bvirial();
+    CoolPropDbl calc_Bvirial() override;
     /// Calc the temperature derivative of the second virial coefficient
-    CoolPropDbl calc_dBvirial_dT();
+    CoolPropDbl calc_dBvirial_dT() override;
     /// Calc the C virial coefficient
-    CoolPropDbl calc_Cvirial();
+    CoolPropDbl calc_Cvirial() override;
 
-    CoolPropDbl calc_fugacity_coefficient(std::size_t i);
-    CoolPropDbl calc_fugacity(std::size_t i);
-    CoolPropDbl calc_chemical_potential(std::size_t i);
-    CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
-    bool has_melting_line();
+    CoolPropDbl calc_fugacity_coefficient(std::size_t i) override;
+    CoolPropDbl calc_fugacity(std::size_t i) override;
+    CoolPropDbl calc_chemical_potential(std::size_t i) override;
+    CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value) override;
+    bool has_melting_line() override;
     double calc_melt_Tmax();
-    CoolPropDbl calc_T_critical();
-    CoolPropDbl calc_T_reducing();
-    void calc_reducing_state();
-    CoolPropDbl calc_p_critical();
-    CoolPropDbl calc_p_triple();
+    CoolPropDbl calc_T_critical() override;
+    CoolPropDbl calc_T_reducing() override;
+    void calc_reducing_state() override;
+    CoolPropDbl calc_p_critical() override;
+    CoolPropDbl calc_p_triple() override;
     CoolPropDbl calc_p_min() {
         return calc_p_triple();
     };
-    CoolPropDbl calc_rhomolar_critical();
-    CoolPropDbl calc_rhomolar_reducing();
-    CoolPropDbl calc_Ttriple();
-    CoolPropDbl calc_acentric_factor();
-    CoolPropDbl calc_gas_constant();
-    CoolPropDbl calc_dipole_moment();
+    CoolPropDbl calc_rhomolar_critical() override;
+    CoolPropDbl calc_rhomolar_reducing() override;
+    CoolPropDbl calc_Ttriple() override;
+    CoolPropDbl calc_acentric_factor() override;
+    CoolPropDbl calc_gas_constant() override;
+    CoolPropDbl calc_dipole_moment() override;
 
     /// Calculate the "true" critical point where dp/drho|T and d2p/drho2|T are zero
-    void calc_true_critical_point(double& T, double& rho);
+    void calc_true_critical_point(double& T, double& rho) override;
 
     /// Calculate the saturation properties
-    CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
-    CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
+    CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) override;
+    CoolPropDbl calc_saturated_vapor_keyed_output(parameters key) override;
 
     /// Calculate an ideal curve
-    void calc_ideal_curve(const std::string& type, std::vector<double>& T, std::vector<double>& p);
+    void calc_ideal_curve(const std::string& type, std::vector<double>& T, std::vector<double>& p) override;
 
     /// A wrapper function to calculate the limits for the EOS
     void limits(double& Tmin, double& Tmax, double& rhomolarmax, double& pmax);
     /// Calculate the maximum pressure
-    CoolPropDbl calc_pmax();
+    CoolPropDbl calc_pmax() override;
     /// Calculate the maximum temperature
-    CoolPropDbl calc_Tmax();
+    CoolPropDbl calc_Tmax() override;
     /// Calculate the minimum temperature
-    CoolPropDbl calc_Tmin();
+    CoolPropDbl calc_Tmin() override;
 
     /// Call into the THERM0dll method and return outputs as a struct. REFPROP must already be setup
     THERM0dllOutputs call_THERM0dll(double T, double rho_mol_dm3, const std::vector<double>& mole_fractions);
 
     /// Calculate the residual entropy in J/mol/K (should be a uniquely negative quantity)
-    CoolPropDbl calc_smolar_residual() {
+    CoolPropDbl calc_smolar_residual() override {
         return (tau() * calc_dalphar_dTau() - calc_alphar()) * gas_constant();
     }
 
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
-    CoolPropDbl calc_alphar() {
+    CoolPropDbl calc_alphar() override {
         return call_phixdll(0, 0);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta}\f$ (dimensionless)
-    CoolPropDbl calc_dalphar_dDelta() {
+    CoolPropDbl calc_dalphar_dDelta() override {
         return call_phixdll(0, 1);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau}\f$ (dimensionless)
-    CoolPropDbl calc_dalphar_dTau() {
+    CoolPropDbl calc_dalphar_dTau() override {
         return call_phixdll(1, 0);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dDelta2() {
+    CoolPropDbl calc_d2alphar_dDelta2() override {
         return call_phixdll(0, 2);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dDelta_dTau() {
+    CoolPropDbl calc_d2alphar_dDelta_dTau() override {
         return call_phixdll(1, 1);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dTau2() {
+    CoolPropDbl calc_d2alphar_dTau2() override {
         return call_phixdll(2, 0);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta3() {
+    CoolPropDbl calc_d3alphar_dDelta3() override {
         return call_phixdll(0, 3);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta2_dTau() {
+    CoolPropDbl calc_d3alphar_dDelta2_dTau() override {
         return call_phixdll(1, 2);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta_dTau2() {
+    CoolPropDbl calc_d3alphar_dDelta_dTau2() override {
         return call_phixdll(2, 1);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dTau3() {
+    CoolPropDbl calc_d3alphar_dTau3() override {
         return call_phixdll(3, 0);
     };
 
-    CoolPropDbl calc_alpha0() {
+    CoolPropDbl calc_alpha0() override {
         return call_phi0dll(0, 0);
     };
-    CoolPropDbl calc_dalpha0_dDelta() {
+    CoolPropDbl calc_dalpha0_dDelta() override {
         return call_phi0dll(0, 1);
     };
-    CoolPropDbl calc_dalpha0_dTau() {
+    CoolPropDbl calc_dalpha0_dTau() override {
         return call_phi0dll(1, 0);
     };
-    CoolPropDbl calc_d2alpha0_dDelta2() {
+    CoolPropDbl calc_d2alpha0_dDelta2() override {
         return call_phi0dll(0, 2);
     };
-    CoolPropDbl calc_d2alpha0_dDelta_dTau() {
+    CoolPropDbl calc_d2alpha0_dDelta_dTau() override {
         return call_phi0dll(1, 1);
     };
-    CoolPropDbl calc_d2alpha0_dTau2() {
+    CoolPropDbl calc_d2alpha0_dTau2() override {
         return call_phi0dll(2, 0);
     };
-    CoolPropDbl calc_d3alpha0_dDelta3() {
+    CoolPropDbl calc_d3alpha0_dDelta3() override {
         return call_phi0dll(0, 3);
     };
-    CoolPropDbl calc_d3alpha0_dDelta2_dTau() {
+    CoolPropDbl calc_d3alpha0_dDelta2_dTau() override {
         return call_phi0dll(1, 2);
     };
-    CoolPropDbl calc_d3alpha0_dDelta_dTau2() {
+    CoolPropDbl calc_d3alpha0_dDelta_dTau2() override {
         return call_phi0dll(2, 1);
     };
-    CoolPropDbl calc_d3alpha0_dTau3() {
+    CoolPropDbl calc_d3alpha0_dTau3() override {
         return call_phi0dll(3, 0);
     };
 };
