@@ -109,9 +109,13 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bo
 
     if (generate_SatL_and_SatV) {
         bool SatLSatV = false;
-        SatL.reset(this->get_copy(SatLSatV));
+        // Explicit scope: this runs inside the ctor; derived overrides
+        // of get_copy aren't active yet, so dispatch would resolve to
+        // PCSAFTBackend::get_copy regardless.  Make that explicit and
+        // silence clang-analyzer-optin.cplusplus.VirtualCall.
+        SatL.reset(PCSAFTBackend::get_copy(SatLSatV));
         SatL->specify_phase(iphase_liquid);
-        SatV.reset(this->get_copy(SatLSatV));
+        SatV.reset(PCSAFTBackend::get_copy(SatLSatV));
         SatV->specify_phase(iphase_gas);
     }
 
@@ -175,9 +179,13 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid>& components_in, bool
 
     if (generate_SatL_and_SatV) {
         bool SatLSatV = false;
-        SatL.reset(this->get_copy(SatLSatV));
+        // Explicit scope: this runs inside the ctor; derived overrides
+        // of get_copy aren't active yet, so dispatch would resolve to
+        // PCSAFTBackend::get_copy regardless.  Make that explicit and
+        // silence clang-analyzer-optin.cplusplus.VirtualCall.
+        SatL.reset(PCSAFTBackend::get_copy(SatLSatV));
         SatL->specify_phase(iphase_liquid);
-        SatV.reset(this->get_copy(SatLSatV));
+        SatV.reset(PCSAFTBackend::get_copy(SatLSatV));
         SatV->specify_phase(iphase_gas);
     }
 
@@ -1732,7 +1740,7 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
-                  << std::endl;
+                  << '\n';
     }
 
     // Mass-quality input pair on a true mixture: solve iteratively for Qmolar

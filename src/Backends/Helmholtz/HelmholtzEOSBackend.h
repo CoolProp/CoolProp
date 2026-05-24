@@ -43,8 +43,8 @@ class HelmholtzEOSBackend : public HelmholtzEOSMixtureBackend
             std::vector<std::string> fluids = dict.get_string_vector("fluids");
             mole_fractions = dict.get_double_vector("mole_fractions");
             if (get_debug_level() > 0) {
-                std::cout << "Got the fluids" << vecstring_to_string(fluids) << std::endl;
-                std::cout << "Got the fractions" << vec_to_string(mole_fractions, "%g") << std::endl;
+                std::cout << "Got the fluids" << vecstring_to_string(fluids) << '\n';
+                std::cout << "Got the fractions" << vec_to_string(mole_fractions, "%g") << '\n';
             }
             for (unsigned int i = 0; i < fluids.size(); ++i) {
                 components.push_back(library.get(fluids[i]));
@@ -58,7 +58,7 @@ class HelmholtzEOSBackend : public HelmholtzEOSMixtureBackend
         // Set the mole fractions
         set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end()));
         if (get_debug_level() > 0) {
-            std::cout << "successfully set up state" << std::endl;
+            std::cout << "successfully set up state" << '\n';
         }
     };
     virtual ~HelmholtzEOSBackend() {};

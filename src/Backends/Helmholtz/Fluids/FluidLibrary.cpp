@@ -55,7 +55,7 @@ void load() {
     if (getenv("COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY")) {
         std::cout << "CoolProp: superancillaries have been disabled because the COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY environment variable has "
                      "been defined"
-                  << std::endl;
+                  << '\n';
     }
 
     rapidjson::Document dd;
@@ -67,7 +67,7 @@ void load() {
         try {
             library.add_many(dd);
         } catch (std::exception& e) {
-            std::cout << e.what() << std::endl;
+            std::cout << e.what() << '\n';
         }
     }
 }

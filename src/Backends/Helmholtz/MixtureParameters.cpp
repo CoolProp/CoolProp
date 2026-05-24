@@ -25,7 +25,7 @@ class PredefinedMixturesLibrary
         rapidjson::Document doc;
         doc.Parse<0>(str.data(), str.size());
         if (doc.HasParseError()) {
-            std::cout << str << std::endl;
+            std::cout << str << '\n';
             throw ValueError("Unable to parse predefined mixture string");
         }
         load_from_JSON(doc);
@@ -56,6 +56,7 @@ static PredefinedMixturesLibrary predefined_mixtures_library;
 
 std::string get_csv_predefined_mixtures() {
     std::vector<std::string> out;
+    out.reserve(predefined_mixtures_library.predefined_mixture_map.size());
     for (const auto& [key, val] : predefined_mixtures_library.predefined_mixture_map) {
         out.push_back(key);
     }
@@ -101,7 +102,7 @@ class MixtureBinaryPairLibrary
         rapidjson::Document doc;
         doc.Parse<0>(str.data(), str.size());
         if (doc.HasParseError()) {
-            std::cout << str << std::endl;
+            std::cout << str << '\n';
             throw ValueError("Unable to parse binary interaction function string");
         }
         load_from_JSON(doc);
@@ -175,7 +176,7 @@ class MixtureBinaryPairLibrary
                 }
             } else {
                 std::cout << "Loading error: binary pair of " << name1 << " & " << name2
-                          << "does not provide either a) xi and zeta b) gammaT, gammaV, betaT, and betaV" << std::endl;
+                          << "does not provide either a) xi and zeta b) gammaT, gammaV, betaT, and betaV" << '\n';
                 continue;
             }
 
@@ -426,7 +427,7 @@ class MixtureDepartureFunctionsLibrary
         rapidjson::Document doc;
         doc.Parse<0>(str.data(), str.size());
         if (doc.HasParseError()) {
-            std::cout << str << std::endl;
+            std::cout << str << '\n';
             throw ValueError("Unable to parse departure function string");
         }
         load_from_JSON(doc);
@@ -503,6 +504,7 @@ class MixtureDepartureFunctionsLibrary
                 //
                 // Collect all the current names for departure functions for a nicer error message
                 std::vector<std::string> names;
+                names.reserve(m_departure_function_map.size());
                 for (const auto& [name, dict] : m_departure_function_map) {
                     names.push_back(name);
                 }
@@ -698,7 +700,7 @@ void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BI
                 continue;
             }
             // Parse the line with the thermo BIP
-            if (lines[i].find("/") > 0) {
+            if (lines[i].find('/') > 0) {
                 // Split at ' '
                 std::vector<std::string> bits = strsplit(strstrip(lines[i]), ' ');
                 // Remove empty elements
@@ -708,7 +710,7 @@ void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BI
                     }
                 }
                 // Get the line that contains the thermo BIP
-                if (bits[0].find("/") > 0 && bits[1].size() == 3) {
+                if (bits[0].find('/') > 0 && bits[1].size() == 3) {
                     std::vector<std::string> theCAS = strsplit(bits[0], '/');
                     bnc.CAS1 = theCAS[0];
                     bnc.CAS2 = theCAS[1];

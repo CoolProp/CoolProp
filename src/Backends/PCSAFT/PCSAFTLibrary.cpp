@@ -39,7 +39,7 @@ void add_fluids_from_JSON_string(PCSAFTLibraryClass& dest, const std::string_vie
             try {
                 dest.add_many(dd);
             } catch (std::exception& e) {
-                std::cout << e.what() << std::endl;
+                std::cout << e.what() << '\n';
             }
         }
     } else {
@@ -360,7 +360,7 @@ void PCSAFTLibraryClass::load_from_JSON(rapidjson::Document& doc) {
         if (itr->HasMember("kij")) {
             dict.add_number("kij", cpjson::get_double(*itr, "kij"));
         } else {
-            std::cout << "Loading error: binary pair of " << name1 << " & " << name2 << "does not provide kij" << std::endl;
+            std::cout << "Loading error: binary pair of " << name1 << " & " << name2 << "does not provide kij" << '\n';
         }
         if (itr->HasMember("kijT")) {
             dict.add_number("kijT", cpjson::get_double(*itr, "kijT"));

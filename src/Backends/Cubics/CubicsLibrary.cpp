@@ -57,7 +57,7 @@ class CubicsLibraryClass
                 fluid_map.erase(ret.first);
                 ret = fluid_map.emplace(upper(val.name), val);
                 if (get_debug_level() > 0) {
-                    std::cout << "added the cubic fluid: " + val.name << std::endl;
+                    std::cout << "added the cubic fluid: " + val.name << '\n';
                 }
                 assert(ret.second == true);
             }
@@ -78,7 +78,7 @@ class CubicsLibraryClass
                 JSONstring_map.erase(addJson.first);
                 addJson = JSONstring_map.emplace(upper(val.name), cpjson::json2string(*itr));
                 if (get_debug_level() > 0) {
-                    std::cout << "added the cubic fluid: " + val.name << std::endl;
+                    std::cout << "added the cubic fluid: " + val.name << '\n';
                 }
                 assert(addJson.second == true);
             }

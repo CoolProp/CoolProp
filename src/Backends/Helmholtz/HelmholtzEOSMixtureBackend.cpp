@@ -80,8 +80,10 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::st
     // Reset the residual Helmholtz energy class
     residual_helmholtz = std::make_shared<ResidualHelmholtz>();
 
-    // Set the components and associated flags
-    set_components(components, generate_SatL_and_SatV);
+    // Set the components and associated flags.  Explicit scope so the
+    // virtual-from-ctor call isn't flagged — derived overrides aren't
+    // active yet, so we want exactly THIS class's set_components.
+    HelmholtzEOSMixtureBackend::set_components(components, generate_SatL_and_SatV);
 
     // Set the phase to default unknown value
     _phase = iphase_unknown;
@@ -91,8 +93,9 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPro
     // Reset the residual Helmholtz energy class
     residual_helmholtz = std::make_shared<ResidualHelmholtz>();
 
-    // Set the components and associated flags
-    set_components(components, generate_SatL_and_SatV);
+    // Set the components and associated flags (explicit scope — see
+    // the string-name ctor above for the rationale).
+    HelmholtzEOSMixtureBackend::set_components(components, generate_SatL_and_SatV);
 
     // Set the phase to default unknown value
     _phase = iphase_unknown;
@@ -108,8 +111,12 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
         mole_fractions = std::vector<CoolPropDbl>(1, 1);
         std::vector<std::vector<double>> ones(1, std::vector<double>(1, 1));
         Reducing = std::make_shared<GERG2008ReducingFunction>(components, ones, ones, ones, ones);
-        _reducing = calc_reducing_state_nocache(mole_fractions);
-        _gas_constant = calc_gas_constant();
+        // Explicit scope: set_components is called from the ctor (see
+        // HelmholtzEOSMixtureBackend ctor above), so derived overrides
+        // aren't active yet and these virtuals would dispatch to this
+        // class anyway.  Make that explicit.
+        _reducing = HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(mole_fractions);
+        _gas_constant = HelmholtzEOSMixtureBackend::calc_gas_constant();
     } else {
         // Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
         set_mixture_parameters();
@@ -118,13 +125,17 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
     imposed_phase_index = iphase_not_imposed;
 
     // Top-level class can hold copies of the base saturation classes,
-    // saturation classes cannot hold copies of the saturation classes
+    // saturation classes cannot hold copies of the saturation classes.
+    // Explicit scope on get_copy: this method is called from the ctor
+    // (transitively) and clang-analyzer flags the implicit virtual
+    // dispatch — but derived overrides aren't active yet, so we want
+    // exactly THIS class's get_copy regardless.
     if (generate_SatL_and_SatV) {
-        SatL.reset(get_copy(false));
+        SatL.reset(HelmholtzEOSMixtureBackend::get_copy(false));
         SatL->specify_phase(iphase_liquid);
         linked_states.push_back(SatL);
         SatL->clear();
-        SatV.reset(get_copy(false));
+        SatV.reset(HelmholtzEOSMixtureBackend::get_copy(false));
         SatV->specify_phase(iphase_gas);
         SatV->clear();
         linked_states.push_back(SatV);
@@ -170,6 +181,7 @@ void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDb
         sum_moles += tmp;
     }
     std::vector<CoolPropDbl> mole_fractions;
+    mole_fractions.reserve(moles.size());
     for (const auto& m : moles) {
         mole_fractions.push_back(m / sum_moles);
     }
@@ -1087,6 +1099,7 @@ void HelmholtzEOSMixtureBackend::calc_ideal_curve(const std::string& type, std::
 };
 std::vector<std::string> HelmholtzEOSMixtureBackend::calc_fluid_names() {
     std::vector<std::string> out;
+    out.reserve(components.size());
     for (std::size_t i = 0; i < components.size(); ++i) {
         out.push_back(components[i].name);
     }
@@ -1406,7 +1419,7 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
-                  << std::endl;
+                  << '\n';
     }
 
     CoolPropDbl ld_value1 = value1, ld_value2 = value2;
@@ -1532,7 +1545,7 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
-                  << std::endl;
+                  << '\n';
     }
 
     CoolPropDbl ld_value1 = value1, ld_value2 = value2;
@@ -2628,7 +2641,7 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
         }
     } catch (std::exception& e) {
         if (get_debug_level() > 5) {
-            std::cout << e.what() << std::endl;
+            std::cout << e.what() << '\n';
         };
         light = -1;
     }
@@ -2654,7 +2667,8 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
     }
 
     // First try a "normal" calculation of the stationary point on the liquid side
-    for (double omega = 0.7; omega > 0; omega -= 0.2) {
+    // 4 fixed iters (omega = 0.7, 0.5, 0.3, 0.1) — no FP accumulation concern.
+    for (double omega = 0.7; omega > 0; omega -= 0.2) {  // NOLINT(cert-flp30-c)
         try {
             resid.options.add_number("omega", omega);
             heavy = Halley(resid, rhomax, 1e-8, 100);
@@ -2666,7 +2680,7 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             break;  // Jump out, we got a good solution
         } catch (std::exception& e) {
             if (get_debug_level() > 5) {
-                std::cout << e.what() << std::endl;
+                std::cout << e.what() << '\n';
             };
             heavy = -1;
         }
@@ -3048,7 +3062,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_hmolar_nocache(CoolPropDbl T, CoolP
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_hmolar() {
     if (get_debug_level() >= 50)
-        std::cout << format("HelmholtzEOSMixtureBackend::calc_hmolar: 2phase: %d T: %g rhomomolar: %g", isTwoPhase(), _T, _rhomolar) << std::endl;
+        std::cout << format("HelmholtzEOSMixtureBackend::calc_hmolar: 2phase: %d T: %g rhomomolar: %g", isTwoPhase(), _T, _rhomolar) << '\n';
     if (isTwoPhase()) {
         if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
         if (std::abs(_Q) < DBL_EPSILON) {
@@ -3987,8 +4001,8 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
                     J[j][i] = (rplus[j] - rminus[j]) / (2 * epsilon);
                 }
             }
-            std::cout << J[0][0] << " " << J[0][1] << std::endl;
-            std::cout << J[1][0] << " " << J[1][1] << std::endl;
+            std::cout << J[0][0] << " " << J[0][1] << '\n';
+            std::cout << J[1][0] << " " << J[1][1] << '\n';
             return J;
         };
     };
@@ -4181,7 +4195,7 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
                 critical_points.push_back(crit);
                 N_critical_points++;
                 if (debug) {
-                    std::cout << HEOS.get_mole_fractions()[0] << " " << crit.rhomolar << " " << crit.T << " " << p_MPa << std::endl;
+                    std::cout << HEOS.get_mole_fractions()[0] << " " << crit.rhomolar << " " << crit.T << " " << p_MPa << '\n';
                 }
             }
 

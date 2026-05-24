@@ -1029,6 +1029,7 @@ class TabularDataLibrary
         std::vector<std::string> fluids = AS->fluid_names();
         std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
         std::vector<std::string> components;
+        components.reserve(fluids.size());
         for (std::size_t i = 0; i < fluids.size(); ++i) {
             components.push_back(format("%s[%0.10Lf]", fluids[i].c_str(), fractions[i]));
         }

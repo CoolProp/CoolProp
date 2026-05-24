@@ -341,7 +341,13 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
             CHECK(pmax > pmin);
             CHECK(pmin > 0);
         }
-        for (double p = 0.1 * (pmax - pmin) + pmin; p < pmax; p += 0.2 * (pmax - pmin)) {
+        // Integer-indexed grid (cert-flp30-c): the original
+        //   for (p = 0.1*range + pmin; p < pmax; p += 0.2*range)
+        // intends 5 samples at p_i = pmin + (0.1 + 0.2*i)*range for
+        // i in {0..4}; preserve that count exactly.
+        const double p_range = pmax - pmin;
+        for (int p_i = 0; p_i < 5; ++p_i) {
+            const double p = pmin + (0.1 + 0.2 * p_i) * p_range;
             // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
             std::ostringstream ss1;
             ss1 << "Melting line for " << fluids[i] << " at p=" << p;

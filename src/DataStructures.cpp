@@ -204,6 +204,7 @@ std::string get_parameter_information(int key, std::string_view info) {
 std::string get_csv_parameter_list() {
     auto& parameter_information = get_parameter_information();
     std::vector<std::string> strings;
+    strings.reserve(parameter_information.index_map.size());
     for (auto& it : parameter_information.index_map) {
         strings.push_back(it.first);
     }
@@ -241,15 +242,15 @@ bool is_valid_first_derivative(const std::string& name, parameters& iOf, paramet
         return false;
     }
 
-    std::size_t i0 = split_at_slash[0].find("(");
-    std::size_t i1 = split_at_slash[0].find(")", i0);
+    std::size_t i0 = split_at_slash[0].find('(');
+    std::size_t i1 = split_at_slash[0].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
     std::string num = split_at_slash[0].substr(i0 + 1, i1 - i0 - 1);
 
-    i0 = split_at_slash[1].find("(");
-    i1 = split_at_slash[1].find(")", i0);
+    i0 = split_at_slash[1].find('(');
+    i1 = split_at_slash[1].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
@@ -284,15 +285,15 @@ bool is_valid_first_saturation_derivative(const std::string& name, parameters& i
         return false;
     }
 
-    std::size_t i0 = split_at_slash[0].find("(");
-    std::size_t i1 = split_at_slash[0].find(")", i0);
+    std::size_t i0 = split_at_slash[0].find('(');
+    std::size_t i1 = split_at_slash[0].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
     std::string num = split_at_slash[0].substr(i0 + 1, i1 - i0 - 1);
 
-    i0 = split_at_slash[1].find("(");
-    i1 = split_at_slash[1].find(")", i0);
+    i0 = split_at_slash[1].find('(');
+    i1 = split_at_slash[1].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
@@ -332,8 +333,8 @@ bool is_valid_second_derivative(const std::string& name, parameters& iOf1, param
     std::string left_of_slash = left_of_bar.substr(0, i);    // "d(d(P)/d(Dmolar)|T)"
     std::string right_of_slash = left_of_bar.substr(i + 1);  // "d(Dmolar)"
 
-    i = left_of_slash.find("(");
-    std::size_t i1 = left_of_slash.rfind(")");
+    i = left_of_slash.find('(');
+    std::size_t i1 = left_of_slash.rfind(')');
     if (!((i > 0) && (i != std::string::npos) && (i1 > (i + 1)) && (i1 != std::string::npos))) {
         return false;
     }
@@ -342,8 +343,8 @@ bool is_valid_second_derivative(const std::string& name, parameters& iOf1, param
         return false;
     }
 
-    i = right_of_slash.find("(");
-    i1 = right_of_slash.rfind(")");
+    i = right_of_slash.find('(');
+    i1 = right_of_slash.rfind(')');
     if (!((i > 0) && (i != std::string::npos) && (i1 > (i + 1)) && (i1 != std::string::npos))) {
         return false;
     }
@@ -855,7 +856,7 @@ void extract_backend_families(std::string backend_string, backend_families& f1, 
     auto& backend_information = get_backend_information();
     f1 = INVALID_BACKEND_FAMILY;
     f2 = INVALID_BACKEND_FAMILY;
-    std::size_t i = backend_string.find("&");
+    std::size_t i = backend_string.find('&');
     std::map<std::string, backend_families>::const_iterator it;
     if (i != std::string::npos) {
         it = backend_information.family_name_map_r.find(backend_string.substr(0, i));  // Before "&"

@@ -358,7 +358,7 @@ class Configuration
                     } catch (...) {
                         auto skey = config_key_to_string(key);
                         std::string msg = "Unable to convert \"" + std::string(envval) + "\" to int for key [" + skey + "]";
-                        std::cerr << msg << std::endl;
+                        std::cerr << msg << '\n';
                         throw ValueError(msg);
                     }
                     items.erase(key);
@@ -372,7 +372,7 @@ class Configuration
                     } catch (...) {
                         auto skey = config_key_to_string(key);
                         std::string msg = "Unable to convert \"" + std::string(envval) + "\" to double for key [" + skey + "]";
-                        std::cerr << msg << std::endl;
+                        std::cerr << msg << '\n';
                         throw ValueError(msg);
                     }
                     items.erase(key);
@@ -386,7 +386,7 @@ class Configuration
                     } catch (...) {
                         auto skey = config_key_to_string(key);
                         std::string msg = "Unable to convert \"" + std::string(envval) + "\" to bool for key [" + skey + "]";
-                        std::cerr << msg << std::endl;
+                        std::cerr << msg << '\n';
                         throw ValueError(msg);
                     }
                     items.erase(key);

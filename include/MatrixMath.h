@@ -361,7 +361,7 @@ std::string vec_to_string(const std::vector<std::vector<T>>& A, const char* fmt)
     std::stringstream out;
     out << "[ " << vec_to_string(A[0], fmt);
     for (size_t j = 1; j < A.size(); j++) {
-        out << ", " << std::endl << "  " << vec_to_string(A[j], fmt);
+        out << ", " << '\n' << "  " << vec_to_string(A[j], fmt);
     }
     out << " ]";
     return out.str();
@@ -388,7 +388,7 @@ std::string mat_to_string(const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>
     } else {
         out << mat_to_string(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>(A.row(0)), fmt);
         for (size_t i = 1; i < r; i++) {
-            out << ", " << std::endl << "  " << mat_to_string(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>(A.row(i)), fmt);
+            out << ", " << '\n' << "  " << mat_to_string(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>(A.row(i)), fmt);
         }
     }
     out << " ]";
@@ -723,6 +723,7 @@ std::vector<std::vector<T>> linsolve(std::vector<std::vector<T>> const& A, std::
 template <class T>
 std::vector<T> linsolve(std::vector<std::vector<T>> const& A, std::vector<T> const& b) {
     std::vector<std::vector<T>> B;
+    B.reserve(b.size());
     for (size_t i = 0; i < b.size(); i++) {
         B.push_back(std::vector<T>(1, b[i]));
     }

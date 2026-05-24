@@ -66,7 +66,13 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
         for (std::size_t i = 0; i < Tbp.size() - 1; ++i) {
             CoolPropDbl Tmin = Tbp[i], Tmax = Tbp[i + 1];
             std::size_t N = Nbp[i];
-            for (CoolPropDbl T = Tmin; is_in_closed_range(Tmin, Tmax, T); T += (Tmax - Tmin) / (N - 1)) {
+            // Integer-indexed grid (cert-flp30-c): N samples from Tmin
+            // to Tmax inclusive — exactly the count the original
+            // is_in_closed_range / `T += (Tmax-Tmin)/(N-1)` targeted,
+            // without FP roundoff dropping or duplicating the endpoint.
+            const CoolPropDbl dT_pe = (Tmax - Tmin) / static_cast<CoolPropDbl>(N - 1);
+            for (std::size_t k_pe = 0; k_pe < N; ++k_pe) {
+                const CoolPropDbl T = Tmin + static_cast<CoolPropDbl>(k_pe) * dT_pe;
                 try {
                     HEOS.update(QT_INPUTS, Qbp[i], T);
                 } catch (...) {
@@ -248,7 +254,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
                 }
             } catch (std::exception& e) {
                 if (debug) {
-                    std::cout << e.what() << std::endl;
+                    std::cout << e.what() << '\n';
                 }
                 //std::cout << IO.T << " " << IO.p << std::endl;
                 // Try again, but with a smaller step
@@ -265,7 +271,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
             if (debug) {
                 std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p << " hl " << IO.hmolar_liq
                           << " hv " << IO.hmolar_vap << " sl " << IO.smolar_liq << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")
-                          << " Ns " << IO.Nsteps << " factor " << factor << std::endl;
+                          << " Ns " << IO.Nsteps << " factor " << factor << '\n';
             }
             env.store_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y);
 
@@ -386,7 +392,9 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
         double factor = pow(rhomolar_vap_end / rhomolar_vap_start, 1.0 / N);
 
         int failure_count = 0;
-        for (double rhomolar_vap = rhomolar_vap_start * factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor) {
+        // Geometric density sweep (factor = (end/start)^(1/N)); ~N
+        // iterations, no FP accumulation issue worth converting.
+        for (double rhomolar_vap = rhomolar_vap_start * factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor) {  // NOLINT(cert-flp30-c)
             IO.rhomolar_vap = rhomolar_vap;
             IO.x.resize(IO.y.size());
             if (i < env.T.size() - 3) {
@@ -413,7 +421,7 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
                 if (debug) {
                     std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p << " hl " << IO.hmolar_liq
                               << " hv " << IO.hmolar_vap << " sl " << IO.smolar_liq << " sv " << IO.smolar_vap << " x "
-                              << vec_to_string(IO.x, "%0.10Lg") << " Ns " << IO.Nsteps << std::endl;
+                              << vec_to_string(IO.x, "%0.10Lg") << " Ns " << IO.Nsteps << '\n';
                 }
             } catch (...) {
                 failure_count++;
@@ -783,7 +791,7 @@ bool PhaseEnvelopeRoutines::is_inside(const PhaseEnvelopeData& env, parameters i
             closest_state.Q = env.Q[iclosest];
 
             if (get_debug_level() > 5) {
-                std::cout << format("is_inside: it is not inside") << std::endl;
+                std::cout << format("is_inside: it is not inside") << '\n';
             }
             return false;
         } else {

@@ -1176,7 +1176,7 @@ class JSONFluidLibrary
             }
         }
         if (!ValidNumber(fluid.ancillaries.sL.get_Tmin()) && get_debug_level() > 0) {
-            std::cout << "Tmin invalid for sL for " << fluid.name << std::endl;
+            std::cout << "Tmin invalid for sL for " << fluid.name << '\n';
         }
     };
 

@@ -484,12 +484,12 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                 return;
             } else if (k < number_of_endings - 1) {  // Keep going
                 if (CoolProp::get_debug_level() > 5) {
-                    std::cout << format("REFPROP error/warning [ierr: %d]: %s", ierr, herr.data()) << std::endl;
+                    std::cout << format("REFPROP error/warning [ierr: %d]: %s", ierr, herr.data()) << '\n';
                 }
                 continue;
             } else {
                 if (CoolProp::get_debug_level() > 5) {
-                    std::cout << format("k: %d #endings: %d", k, number_of_endings) << std::endl;
+                    std::cout << format("k: %d #endings: %d", k, number_of_endings) << '\n';
                 }
                 throw ValueError(format("Could not load these fluids: %s", components_joined_raw.c_str()));
             }
@@ -1266,7 +1266,8 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
     SPLNVALdll(&isp, &iderv, &c, &rhoymax, &ierr, herr.data(), errormessagelength);
     int nc = static_cast<int>(this->Ncomp);
     double ratio = pow(rhoymax / rhoymin, 1 / double(N));
-    for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio) {
+    // Geometric density sweep (rho *= ratio, ~N iters by construction).
+    for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio) {  // NOLINT(cert-flp30-c)
         double y = NAN;
         iderv = 0;
 
@@ -2332,7 +2333,7 @@ bool force_load_REFPROP() {
     std::string err;
     if (!load_REFPROP(err)) {
         if (CoolProp::get_debug_level() > 5) {
-            std::cout << format("Error while loading REFPROP: %s", err) << std::endl;
+            std::cout << format("Error while loading REFPROP: %s", err) << '\n';
         }
         LoadedREFPROPRef = "";
         return false;
@@ -2345,7 +2346,7 @@ bool force_unload_REFPROP() {
     std::string err;
     if (!unload_REFPROP(err)) {
         if (CoolProp::get_debug_level() > 5) {
-            std::cout << format("Error while unloading REFPROP: %s", err) << std::endl;
+            std::cout << format("Error while unloading REFPROP: %s", err) << '\n';
         }
         LoadedREFPROPRef = "";
         return false;

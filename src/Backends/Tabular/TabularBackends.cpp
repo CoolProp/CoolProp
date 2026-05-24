@@ -37,7 +37,7 @@ void load_table(T& table, const std::string& path_to_tables, const std::string& 
     double tic = clock();
     std::string path_to_table = path_to_tables + "/" + filename;
     if (get_debug_level() > 0) {
-        std::cout << format("Loading table: %s", path_to_table.c_str()) << std::endl;
+        std::cout << format("Loading table: %s", path_to_table.c_str()) << '\n';
     }
     std::vector<char> raw;
     try {
@@ -45,7 +45,7 @@ void load_table(T& table, const std::string& path_to_tables, const std::string& 
     } catch (...) {
         std::string err = format("Unable to load file %s", path_to_table.c_str());
         if (get_debug_level() > 0) {
-            std::cout << "err:" << err << std::endl;
+            std::cout << "err:" << err << '\n';
         }
         throw UnableToLoadError(err);
     }
@@ -62,7 +62,7 @@ void load_table(T& table, const std::string& path_to_tables, const std::string& 
         } else if (code != 0) {  // Something else, a big problem
             std::string err = format("Unable to uncompress file %s with miniz code %d", path_to_table.c_str(), code);
             if (get_debug_level() > 0) {
-                std::cout << "uncompress err:" << err << std::endl;
+                std::cout << "uncompress err:" << err << '\n';
             }
             throw UnableToLoadError(err);
         }
@@ -78,12 +78,12 @@ void load_table(T& table, const std::string& path_to_tables, const std::string& 
         table.deserialize(deserialized);
         double toc = clock();
         if (get_debug_level() > 0) {
-            std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc - tic) / CLOCKS_PER_SEC) << std::endl;
+            std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc - tic) / CLOCKS_PER_SEC) << '\n';
         }
     } catch (std::exception& e) {
         std::string err = format("Unable to msgpack deserialize %s; err: %s", path_to_table.c_str(), e.what());
         if (get_debug_level() > 0) {
-            std::cout << "err: " << err << std::endl;
+            std::cout << "err: " << err << '\n';
         }
         throw UnableToLoadError(err);
     }
@@ -148,7 +148,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
         } catch (std::exception& e) {
             // That failed for some reason, go to the next pair
             if (debug) {
-                std::cout << " " << e.what() << std::endl;
+                std::cout << " " << e.what() << '\n';
             }
             continue;
         }
@@ -159,7 +159,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
             logviscL[i] = log(viscL[i]);
         } catch (std::exception& e) {
             if (debug) {
-                std::cout << " " << e.what() << std::endl;
+                std::cout << " " << e.what() << '\n';
             }
         }
         // Saturated vapor
@@ -179,7 +179,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
         } catch (std::exception& e) {
             // That failed for some reason, go to the next pair
             if (debug) {
-                std::cout << " " << e.what() << std::endl;
+                std::cout << " " << e.what() << '\n';
             }
             continue;
         }
@@ -190,7 +190,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
             logviscV[i] = log(viscV[i]);
         } catch (std::exception& e) {
             if (debug) {
-                std::cout << " " << e.what() << std::endl;
+                std::cout << " " << e.what() << '\n';
             }
         }
         if (i == 0) {
@@ -258,7 +258,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             yvec[j] = y;
 
             if (debug) {
-                std::cout << "x: " << x << " y: " << y << std::endl;
+                std::cout << "x: " << x << " y: " << y << '\n';
             }
 
             // Generate the input pair
@@ -276,7 +276,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             } catch (std::exception& e) {
                 // That failed for some reason, go to the next pair
                 if (debug) {
-                    std::cout << " " << e.what() << std::endl;
+                    std::cout << " " << e.what() << '\n';
                 }
                 continue;
             }
@@ -284,7 +284,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             // Skip two-phase states - they will remain as _HUGE holes in the table
             if (is_in_closed_range(0.0, 1.0, AS->Q())) {
                 if (debug) {
-                    std::cout << " 2Phase" << std::endl;
+                    std::cout << " 2Phase" << '\n';
                 }
                 continue;
             };
@@ -353,6 +353,7 @@ std::string CoolProp::TabularBackend::path_to_tables() {
     std::vector<std::string> fluids = AS->fluid_names();
     std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
     std::vector<std::string> components;
+    components.reserve(fluids.size());
     for (std::size_t i = 0; i < fluids.size(); ++i) {
         components.push_back(format("%s[%0.10Lf]", fluids[i].c_str(), fractions[i]));
     }
@@ -384,7 +385,7 @@ void CoolProp::TabularBackend::load_tables() {
         throw UnableToLoadError("Could not load tables");
     }
     if (get_debug_level() > 0) {
-        std::cout << "Tables loaded" << std::endl;
+        std::cout << "Tables loaded" << '\n';
     }
 }
 
@@ -1502,7 +1503,7 @@ void CoolProp::TabularDataSet::load_tables(const std::string& path_to_tables, sh
     load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
     tables_loaded = true;
     if (get_debug_level() > 0) {
-        std::cout << "Tables loaded" << std::endl;
+        std::cout << "Tables loaded" << '\n';
     }
 };
 

@@ -22,7 +22,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
         double call(double rhomolar_liq) override {
             HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
             CoolPropDbl calc_p = HEOS->SatL->p();
-            std::cout << format("inner p: %0.16Lg; res: %0.16Lg", calc_p, calc_p - desired_p) << std::endl;
+            std::cout << format("inner p: %0.16Lg; res: %0.16Lg", calc_p, calc_p - desired_p) << '\n';
             return calc_p - desired_p;
         }
     };
@@ -47,7 +47,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
                     T = y;
                     HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, y);
                     p = HEOS->SatV->p();
-                    std::cout << format("outer p: %0.16Lg", p) << std::endl;
+                    std::cout << format("outer p: %0.16Lg", p) << '\n';
                     inner_resid inner(HEOS, T, p);
                     rhomolar_liq = Brent(inner, rhomolar_crit * 1.5, rhomolar_crit * (1 + 1e-8), LDBL_EPSILON, 1e-10, 100);
                     break;
@@ -515,7 +515,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
         // a) tau > 1
         // b) rhoL > rhoV or deltaL > deltaV
         double tau0 = tau, deltaL0 = deltaL, deltaV0 = deltaV;
-        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1) {
+        // Geometric damping search (~25 iters) — no FP accumulation.
+        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1) {  // NOLINT(cert-flp30-c)
             tau = tau0 + omega_local * options.omega * v[0];
             if (options.use_logdelta) {
                 deltaL = exp(log(deltaL0) + omega_local * options.omega * v[1]);
@@ -896,7 +897,8 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend& HE
         CoolPropDbl deltaL0 = deltaL, deltaV0 = deltaV;
         // Conditions for an acceptable step are:
         // a) rhoL > rhoV or deltaL > deltaV
-        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1) {
+        // Geometric damping search (~25 iters) — no FP accumulation.
+        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1) {  // NOLINT(cert-flp30-c)
             deltaL = deltaL0 + omega_local * stepL;
             deltaV = deltaV0 + omega_local * stepV;
 
@@ -1355,7 +1357,7 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
     bool debug = get_debug_level() > 9 || false;
 
     if (debug) {
-        std::cout << " NRsat::call:  p " << IO.p << " T " << IO.T << " dl " << IO.rhomolar_liq << " dv " << IO.rhomolar_vap << std::endl;
+        std::cout << " NRsat::call:  p " << IO.p << " T " << IO.T << " dl " << IO.rhomolar_liq << " dv " << IO.rhomolar_vap << '\n';
     }
 
     // Reset all the variables and resize
@@ -1583,7 +1585,7 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
     int iter = 0;
 
     if (get_debug_level() > 9) {
-        std::cout << " NRsat::call:  p" << IO.p << " T" << IO.T << " dl" << IO.rhomolar_liq << " dv" << IO.rhomolar_vap << std::endl;
+        std::cout << " NRsat::call:  p" << IO.p << " T" << IO.T << " dl" << IO.rhomolar_liq << " dv" << IO.rhomolar_vap << '\n';
     }
 
     // Reset all the variables and resize

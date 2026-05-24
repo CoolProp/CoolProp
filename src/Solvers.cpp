@@ -123,7 +123,7 @@ double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter) {
         };
 
         if (f->verbosity > 0) {
-            std::cout << format("i: %d, x: %0.15g, dx: %g, f: %g, dfdx: %g", f->iter, x, dx, fval, dfdx) << std::endl;
+            std::cout << format("i: %d, x: %0.15g, dx: %g, f: %g, dfdx: %g", f->iter, x, dx, fval, dfdx) << '\n';
         }
 
         x += dx;
@@ -190,7 +190,7 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
         dx = -omega * (2 * fval * dfdx) / (2 * POW2(dfdx) - fval * d2fdx2);
 
         if (f->verbosity > 0) {
-            std::cout << format("i: %d, x: %0.15g, dx: %g, f: %g, dfdx: %g, d2fdx2: %g", f->iter, x, dx, fval, dfdx, d2fdx2) << std::endl;
+            std::cout << format("i: %d, x: %0.15g, dx: %g, f: %g, dfdx: %g, d2fdx2: %g", f->iter, x, dx, fval, dfdx, d2fdx2) << '\n';
         }
 
         x += dx;

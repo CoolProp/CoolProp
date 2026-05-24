@@ -961,7 +961,9 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
             double increment = 0.4;
 
             try {
-                for (double omega = 1.0; omega > 0; omega -= increment) {
+                // Newton-step damping: 3 iters (omega = 1.0, 0.6, 0.2)
+                // — bounded loop, no accumulation issue worth rewriting.
+                for (double omega = 1.0; omega > 0; omega -= increment) {  // NOLINT(cert-flp30-c)
                     try {
                         options.omega = omega;
 
@@ -1921,7 +1923,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
                 throw;
             }
             if (get_debug_level() > 0) {
-                std::cout << resid.errstring << std::endl;
+                std::cout << resid.errstring << '\n';
             }
             std::vector<double> x0 = {Tstart, rhomolarstart};
             NDNewtonRaphson_Jacobian(&solver_resid2d, x0, 1e-12, 20, 1.0);
@@ -1933,7 +1935,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             HEOS.recalculate_singlephase_phase();
         } catch (...) {
             if (get_debug_level() > 0) {
-                std::cout << resid.errstring << std::endl;
+                std::cout << resid.errstring << '\n';
             }
             // Un-specify the phase of the fluid
             HEOS.unspecify_phase();
@@ -2469,7 +2471,10 @@ void FlashRoutines::HS_flash_singlephase(HelmholtzEOSMixtureBackend& HEOS, CoolP
         double tau0 = HEOS.tau(), delta0 = HEOS.delta();
         // Calculate the old residual after the last step
         resid_old = sqrt(POW2(HEOS.hmolar() - hmolar_spec) + POW2(HEOS.smolar() - smolar_spec));
-        for (double frac = 1.0; frac > 0.001; frac /= 2) {
+        // Geometric halving of the Newton step length (10 iters from
+        // 1.0 down to ~1/1024) — geometric, not summation; no FP
+        // counter-accumulation issue.
+        for (double frac = 1.0; frac > 0.001; frac /= 2) {  // NOLINT(cert-flp30-c)
             try {
                 // Calculate new values
                 double tau_new = tau0 + options.omega * frac * v(0);
@@ -2585,7 +2590,8 @@ TEST_CASE("Stability testing", "[stability]") {
 
     SECTION("Liquid (feed is stable)") {
         StabilityRoutines::StabilityEvaluationClass stability_tester(*HEOS);
-        for (double T = TL - 1; T >= 100; T -= 1) {
+        // Unit step over an integer range — T values are bit-exact doubles, no accumulation.
+        for (double T = TL - 1; T >= 100; T -= 1) {  // NOLINT(cert-flp30-c)
             stability_tester.set_TP(T, 101325);
             CAPTURE(T);
             CHECK_NOTHROW(stability_tester.is_stable());
@@ -2593,7 +2599,8 @@ TEST_CASE("Stability testing", "[stability]") {
     }
     SECTION("Vapor (feed is stable)") {
         StabilityRoutines::StabilityEvaluationClass stability_tester(*HEOS);
-        for (double T = TV + 1; T <= 500; T += 1) {
+        // Unit step over an integer range — see liquid section above.
+        for (double T = TV + 1; T <= 500; T += 1) {  // NOLINT(cert-flp30-c)
             stability_tester.set_TP(T, 101325);
             CAPTURE(T);
             CHECK_NOTHROW(stability_tester.is_stable());

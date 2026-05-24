@@ -440,7 +440,7 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value& fluid_json) {
     fluid.setName("unloaded");
     try {
         fluid.setName(cpjson::get_string(fluid_json, "name"));
-        if (get_debug_level() >= 20) std::cout << format("Incompressible library: Loading base values for %s ", fluid.getName().c_str()) << std::endl;
+        if (get_debug_level() >= 20) std::cout << format("Incompressible library: Loading base values for %s ", fluid.getName().c_str()) << '\n';
         fluid.setDescription(cpjson::get_string(fluid_json, "description"));
         fluid.setReference(cpjson::get_string(fluid_json, "reference"));
         fluid.setTmax(parse_value(fluid_json, "Tmax", true, 0.0));
@@ -454,8 +454,7 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value& fluid_json) {
         fluid.setxbase(parse_value(fluid_json, "xbase", false, 0.0));
 
         /// Setters for the coefficients
-        if (get_debug_level() >= 20)
-            std::cout << format("Incompressible library: Loading coefficients for %s ", fluid.getName().c_str()) << std::endl;
+        if (get_debug_level() >= 20) std::cout << format("Incompressible library: Loading coefficients for %s ", fluid.getName().c_str()) << '\n';
         fluid.setDensity(parse_coefficients(fluid_json, "density", true));
         fluid.setSpecificHeat(parse_coefficients(fluid_json, "specific_heat", true));
         fluid.setViscosity(parse_coefficients(fluid_json, "viscosity", false));
@@ -561,7 +560,7 @@ void load_incompressible_library() {
         try {
             library.add_many(dd);
         } catch (std::exception& e) {
-            std::cout << e.what() << std::endl;
+            std::cout << e.what() << '\n';
         }
     }
     // TODO: Implement LiBr in the source code!

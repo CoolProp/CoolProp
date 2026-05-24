@@ -128,6 +128,7 @@ std::string CoolProp::AbstractCubicBackend::fluid_param_string(const std::string
 
 std::vector<std::string> CoolProp::AbstractCubicBackend::calc_fluid_names() {
     std::vector<std::string> out;
+    out.reserve(components.size());
     for (std::size_t i = 0; i < components.size(); ++i) {
         out.push_back(components[i].name);
     }
@@ -319,7 +320,7 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
-                  << std::endl;
+                  << '\n';
     }
 
     // Mass-quality input pair on a true mixture: solve iteratively for Qmolar
