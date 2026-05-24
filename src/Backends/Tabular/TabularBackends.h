@@ -756,9 +756,24 @@ class SinglePhaseGriddedTableData
             }
         } else if (givenkey == xkey) {
             bisect_vector(xvec, givenval, i);
-            // This one is fine because we now end up with a vector<double> in the other variable
             const std::vector<std::vector<double>>& v = get(otherkey);
-            bisect_vector(v[i], otherval, j);
+            // Bisect on a bilinearly-interpolated otherkey column at the
+            // actual query position xhat in [0, 1] inside cell (i, .),
+            // not on the lower-edge slice v[i].  The lower-edge slice
+            // gives a systematically off-by-one (sometimes more) j when
+            // the x-axis dependence is significant — e.g. for CO2 PT
+            // tables the density along a supercritical isotherm differs
+            // meaningfully from the lower-T edge of the cell, so a strict
+            // in-cell BICUBIC cubic-root requirement throws on otherwise
+            // valid states (#1301).  Bilinear interpolation gives the
+            // bisection the row of otherkey values the cubic interpolant
+            // will actually see.
+            const double xhat = (givenval - xvec[i]) / (xvec[i + 1] - xvec[i]);
+            std::vector<double> v_at_xhat(v[i].size());
+            for (std::size_t k = 0; k < v[i].size(); ++k) {
+                v_at_xhat[k] = (1.0 - xhat) * v[i][k] + xhat * v[i + 1][k];
+            }
+            bisect_vector(v_at_xhat, otherval, j);
         }
     }
     /// Find the nearest good neighbor node for inputs that are the same as the grid inputs

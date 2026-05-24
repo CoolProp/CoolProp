@@ -5780,4 +5780,61 @@ TEST_CASE("BICUBIC PT below saturation no longer segfaults (#1950)", "[BICUBIC][
     CHECK(rho == Catch::Approx(HEOS->rhomass()).epsilon(1e-2));  // 1% bicubic tolerance
 }
 
+TEST_CASE("BICUBIC invert_single_phase: root selection + out-of-table detection (#1301)", "[BICUBIC][1301]") {
+    // Issue #1301: BICUBIC P(D, T) for CO2 at supercritical T and very low
+    // density returned absurd values (e.g. P = -760 MPa for T=315K, rho=1).
+    // Two distinct bugs were in play:
+    //   (A) BicubicBackend::invert_single_phase_x/y picked the smallest-
+    //       absolute-value root of the cell's cubic, which can be a far-
+    //       negative root with no physical meaning. Fixed by routing root
+    //       selection through find_in_cell_root(), which only accepts a
+    //       root in [0, 1] (the cell's normalized coordinate).
+    //   (B) For states whose density at the requested T lies below the
+    //       table's column minimum, find_nearest_neighbor's bisection has
+    //       no sign change to detect and lands in an essentially random
+    //       (high-pressure) cell. The cubic in that wrong cell has no
+    //       root in [0, 1]; the closest-to-[0, 1] fallback then unscales
+    //       to a far-out-of-cell value (e.g. ~-750 MPa). Fixed by
+    //       detecting the cell-normalized root being far outside [0, 1]
+    //       in invert_single_phase_x/y and throwing a clear error rather
+    //       than silently returning garbage.
+    auto BICU = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("BICUBIC&HEOS", "CO2"));
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+
+    SECTION("in-table supercritical CO2 P(D, T): BICUBIC matches HEOS to within 1%") {
+        // BICUBIC table for CO2 has pmin ~ 500 kPa. Pick (T, rho) pairs
+        // that lie comfortably above this and clear of the critical
+        // region (Tc=304K, rhoc=468 kg/m^3) where BICUBIC's intrinsic
+        // table accuracy degrades for reasons unrelated to #1301. Across
+        // these in-table states, the fix must not regress accuracy;
+        // pressures must remain positive, finite, and close to HEOS.
+        for (double T : {320.0, 400.0, 500.0}) {
+            for (double rho : {20.0, 50.0, 100.0}) {
+                BICU->update(CoolProp::DmassT_INPUTS, rho, T);
+                HEOS->update(CoolProp::DmassT_INPUTS, rho, T);
+                const double p_b = BICU->p();
+                const double p_h = HEOS->p();
+                CAPTURE(T);
+                CAPTURE(rho);
+                CAPTURE(p_h);
+                CAPTURE(p_b);
+                CHECK(std::isfinite(p_b));
+                CHECK(p_b > 0);
+                CHECK(std::abs(p_b - p_h) / p_h < 1e-2);
+            }
+        }
+    }
+
+    SECTION("out-of-table low-density CO2 throws rather than returning garbage") {
+        // CO2 BICUBIC table's pmin at supercritical T corresponds to rho
+        // ~9 kg/m^3 (T=314K). rho=1 kg/m^3 at T=320K gives p~60 kPa, well
+        // below the table's pmin. Pre-fix, BICUBIC returned p ~ -750 MPa
+        // from a wrong-cell cubic solve. Post-fix, invert_single_phase_y
+        // detects the cell-normalized root being far outside [0, 1] and
+        // throws a clear ValueError.
+        CHECK_THROWS_AS(BICU->update(CoolProp::DmassT_INPUTS, 1.0, 320.0), CoolProp::ValueError);
+        CHECK_THROWS_AS(BICU->update(CoolProp::DmassT_INPUTS, 5.0, 315.0), CoolProp::ValueError);
+    }
+}
+
 #endif

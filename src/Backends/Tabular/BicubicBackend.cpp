@@ -3,9 +3,69 @@
 #    include "BicubicBackend.h"
 
 #    include <cmath>
+#    include <limits>
+#    include <optional>
 #    include "MatrixMath.h"
 #    include "DataStructures.h"
 #    include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
+
+namespace {
+// Return the cubic root that lies in [0, 1] (the cell's normalized
+// coordinate), or std::nullopt if no root is in-cell.
+//
+// solve_cubic returns up to three real roots in arbitrary order. The
+// historical code picked the smallest-absolute-value root, which can be
+// a far-negative root with no physical meaning and produces wildly wrong
+// values once unscaled to the cell width (#1301: P = -760 MPa for CO2 at
+// T=315K, rho=1 kg/m^3).
+//
+// Strict cell bound here is intentional: the bicubic interpolant has
+// physical meaning only inside the cell. If the bisection landed in the
+// wrong cell, the caller walks to a neighbour and retries; if no
+// neighbouring cell contains the root either, the requested state is
+// outside the table's domain and the caller throws.
+//
+// When multiple roots are in [0, 1] (can happen for cells near a
+// saturation curve where the interpolant is non-monotonic), prefer the
+// one closest to 0.5 — that's furthest from the cell edges and least
+// sensitive to coefficient noise.
+constexpr double kCellRootTol = 1e-6;
+
+inline std::optional<double> find_in_cell_root(int N, double r0, double r1, double r2) {
+    const double roots[3] = {r0, r1, r2};
+    int best = -1;
+    double best_score = std::numeric_limits<double>::infinity();
+    for (int k = 0; k < N; ++k) {
+        const double r = roots[k];
+        if (r >= -kCellRootTol && r <= 1.0 + kCellRootTol) {
+            const double score = std::abs(r - 0.5);
+            if (score < best_score) {
+                best_score = score;
+                best = k;
+            }
+        }
+    }
+    if (best < 0) {
+        return std::nullopt;
+    }
+    return roots[best];
+}
+
+// Maximum number of cells to walk away from the bisection's initial
+// guess.  find_nearest_neighbor (TabularBackends.h) now bilinearly
+// interpolates the otherkey column at the actual query position before
+// bisecting (xkey branch), so the chosen cell is usually correct.  The
+// remaining off-by-one cases come from the bilinear estimator being a
+// linear approximation of the bicubic interpolant — the cubic in the
+// neighbouring cell can hold the true root.  The immediate neighbour
+// (one cell either side) is the only physically meaningful source:
+// that's a real cell with its own valid cubic, not an extrapolation of
+// the original cell's interpolant.  Walking further would just be
+// extrapolation in disguise and would mask genuinely out-of-table
+// queries — those are caught here by throwing.  #1301's catastrophic
+// case lands ~50+ cells away, well outside this bound.
+constexpr int kMaxCellWalk = 1;
+}  // namespace
 
 void CoolProp::BicubicBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& table,
                                                                 const std::vector<std::vector<CellCoeffs>>& coeffs, double x, double y,
@@ -196,49 +256,79 @@ double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGri
 }
 
 /// Use the single_phase table to invert for x given a y
+///
+/// Iterate cells in the i (xkey-axis) direction looking for one whose cubic
+/// has a root inside the unit interval. find_nearest_neighbor's i bisection
+/// (via bisect_segmented_vector_slice on the otherkey matrix at the chosen
+/// j) can be off-by-one when the y-dependence is significant; walking ±1..N
+/// cells recovers the correct cell so the final root lies in [0, 1] rather
+/// than relying on out-of-cell cubic extrapolation. If no neighbour holds
+/// the root either, the state is outside the table's domain — throw
+/// instead of returning a wildly wrong (often negative) value (#1301).
 void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
                                                      parameters other_key, double other, double y, std::size_t i, std::size_t j) {
-    // Get the cell
-    const CellCoeffs& cell = coeffs[i][j];
+    // yhat is fixed (same for every cell we try in the i direction)
+    const double yhat = (y - table.yvec[j]) / (table.yvec[j + 1] - table.yvec[j]);
+    const double y_0 = 1, y_1 = yhat, y_2 = yhat * yhat, y_3 = yhat * yhat * yhat;
 
-    // Get the alpha coefficients
-    const std::vector<double>& alpha = cell.get(other_key);
-
-    // Normalized value in the range (0, 1)
-    double yhat = (y - table.yvec[j]) / (table.yvec[j + 1] - table.yvec[j]);
-
-    double y_0 = 1, y_1 = yhat, y_2 = yhat * yhat, y_3 = yhat * yhat * yhat;
-
-    double a = alpha[3 + 0 * 4] * y_0 + alpha[3 + 1 * 4] * y_1 + alpha[3 + 2 * 4] * y_2 + alpha[3 + 3 * 4] * y_3;          // factors of xhat^3
-    double b = alpha[2 + 0 * 4] * y_0 + alpha[2 + 1 * 4] * y_1 + alpha[2 + 2 * 4] * y_2 + alpha[2 + 3 * 4] * y_3;          // factors of xhar^2
-    double c = alpha[1 + 0 * 4] * y_0 + alpha[1 + 1 * 4] * y_1 + alpha[1 + 2 * 4] * y_2 + alpha[1 + 3 * 4] * y_3;          // factors of xhat
-    double d = alpha[0 + 0 * 4] * y_0 + alpha[0 + 1 * 4] * y_1 + alpha[0 + 2 * 4] * y_2 + alpha[0 + 3 * 4] * y_3 - other;  // constant factors
-    int N = 0;
-    double xhat0 = NAN, xhat1 = NAN, xhat2 = NAN, val = NAN, xhat = _HUGE;
-    solve_cubic(a, b, c, d, N, xhat0, xhat1, xhat2);
-    if (N == 1) {
-        xhat = xhat0;
-    } else if (N == 2) {
-        xhat = std::abs(xhat0) < std::abs(xhat1) ? xhat0 : xhat1;
-    } else if (N == 3) {
-        if (std::abs(xhat0) < std::abs(xhat1) && std::abs(xhat0) < std::abs(xhat2)) {
-            xhat = xhat0;
+    auto try_cell = [&](std::size_t i_try) -> std::optional<double> {
+        const CellCoeffs& cell = coeffs[i_try][j];
+        if (!cell.valid()) {
+            return std::nullopt;
         }
-        // Already know that xhat1 < xhat0 (xhat0 is not the minimum)
-        else if (std::abs(xhat1) < std::abs(xhat2)) {
-            xhat = xhat1;
-        } else {
-            xhat = xhat2;
+        const std::vector<double>& alpha = cell.get(other_key);
+        const double a = alpha[3 + 0 * 4] * y_0 + alpha[3 + 1 * 4] * y_1 + alpha[3 + 2 * 4] * y_2 + alpha[3 + 3 * 4] * y_3;
+        const double b = alpha[2 + 0 * 4] * y_0 + alpha[2 + 1 * 4] * y_1 + alpha[2 + 2 * 4] * y_2 + alpha[2 + 3 * 4] * y_3;
+        const double c = alpha[1 + 0 * 4] * y_0 + alpha[1 + 1 * 4] * y_1 + alpha[1 + 2 * 4] * y_2 + alpha[1 + 3 * 4] * y_3;
+        const double d = alpha[0 + 0 * 4] * y_0 + alpha[0 + 1 * 4] * y_1 + alpha[0 + 2 * 4] * y_2 + alpha[0 + 3 * 4] * y_3 - other;
+        int N = 0;
+        double r0 = NAN, r1 = NAN, r2 = NAN;
+        solve_cubic(a, b, c, d, N, r0, r1, r2);
+        if (N == 0) {
+            return std::nullopt;
         }
-    } else if (N == 0) {
-        throw ValueError("Could not find a solution in invert_single_phase_x");
+        return find_in_cell_root(N, r0, r1, r2);
+    };
+
+    std::optional<double> xhat_opt = try_cell(i);
+    std::size_t i_found = i;
+    if (!xhat_opt) {
+        for (int delta = 1; delta <= kMaxCellWalk; ++delta) {
+            // Bound checks: cell coefficients are indexed by [i][j], cells go up to
+            // table.xvec.size() - 2 (inclusive); the last index has no [i+1] neighbour.
+            if (i + delta + 1 < table.xvec.size()) {
+                xhat_opt = try_cell(i + delta);
+                if (xhat_opt) {
+                    i_found = i + delta;
+                    break;
+                }
+            }
+            if (i >= static_cast<std::size_t>(delta)) {
+                xhat_opt = try_cell(i - delta);
+                if (xhat_opt) {
+                    i_found = i - delta;
+                    break;
+                }
+            }
+        }
     }
 
-    // Unpack xhat into actual value
-    // xhat = (x-x_{i})/(x_{i+1}-x_{i})
-    val = xhat * (table.xvec[i + 1] - table.xvec[i]) + table.xvec[i];
+    if (!xhat_opt) {
+        throw ValueError(format("BICUBIC: invert_single_phase_x could not find an in-cell cubic root for cell "
+                                "(i=%zu, j=%zu) spanning xvec=[%g,%g], yvec=[%g,%g] or any neighbour within +/-%d "
+                                "cells in the i direction (other_key=%d, other=%g, y=%g); requested state likely "
+                                "lies outside the BICUBIC table's domain",
+                                i, j, table.xvec[i], table.xvec[i + 1], table.yvec[j], table.yvec[j + 1], kMaxCellWalk, static_cast<int>(other_key),
+                                other, y));
+    }
 
-    // Cache the output value calculated
+    // Cache the cell we actually used so downstream evaluations see the
+    // corrected position rather than the original bisection's mistake.
+    i = i_found;
+    cached_single_phase_i = i;
+    const double xhat = *xhat_opt;
+    const double val = xhat * (table.xvec[i + 1] - table.xvec[i]) + table.xvec[i];
+
     switch (table.xkey) {
         case iHmolar:
             _hmolar = val;
@@ -252,47 +342,76 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
 }
 
 /// Use the single_phase table to solve for y given an x
+///
+/// Iterate cells in the j (ykey-axis) direction looking for one whose cubic
+/// has a root inside the unit interval. find_nearest_neighbor's j bisection
+/// (via bisect_vector on the otherkey column at the lower-xkey edge of the
+/// cell) can be off-by-one when the xkey-dependence is significant — e.g.
+/// for the CO2 PT-table at T=320K, density along the supercritical
+/// isotherm differs meaningfully from the lower edge of the i-cell, so the
+/// bisection systematically misses by one j. Walking ±1..N cells recovers
+/// the correct cell. If no neighbour holds the root either, the state is
+/// outside the table's domain — throw instead of returning a wildly wrong
+/// (often negative) value (#1301).
 void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
                                                      parameters other_key, double other, double x, std::size_t i, std::size_t j) {
-    // Get the cell
-    const CellCoeffs& cell = coeffs[i][j];
+    // xhat is fixed (same for every cell we try in the j direction)
+    const double xhat = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
+    const double x_0 = 1, x_1 = xhat, x_2 = xhat * xhat, x_3 = xhat * xhat * xhat;
 
-    // Get the alpha coefficients
-    const std::vector<double>& alpha = cell.get(other_key);
-
-    // Normalized value in the range (0, 1)
-    double xhat = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
-
-    double x_0 = 1, x_1 = xhat, x_2 = xhat * xhat, x_3 = xhat * xhat * xhat;
-
-    double a = alpha[0 + 3 * 4] * x_0 + alpha[1 + 3 * 4] * x_1 + alpha[2 + 3 * 4] * x_2 + alpha[3 + 3 * 4] * x_3;          // factors of yhat^3 (m= 3)
-    double b = alpha[0 + 2 * 4] * x_0 + alpha[1 + 2 * 4] * x_1 + alpha[2 + 2 * 4] * x_2 + alpha[3 + 2 * 4] * x_3;          // factors of yhat^2
-    double c = alpha[0 + 1 * 4] * x_0 + alpha[1 + 1 * 4] * x_1 + alpha[2 + 1 * 4] * x_2 + alpha[3 + 1 * 4] * x_3;          // factors of yhat
-    double d = alpha[0 + 0 * 4] * x_0 + alpha[1 + 0 * 4] * x_1 + alpha[2 + 0 * 4] * x_2 + alpha[3 + 0 * 4] * x_3 - other;  // constant factors
-    int N = 0;
-    double yhat0 = NAN, yhat1 = NAN, yhat2 = NAN, val = NAN, yhat = _HUGE;
-    solve_cubic(a, b, c, d, N, yhat0, yhat1, yhat2);
-    if (N == 1) {
-        yhat = yhat0;
-    } else if (N == 2) {
-        yhat = std::abs(yhat0) < std::abs(yhat1) ? yhat0 : yhat1;
-    } else if (N == 3) {
-        if (std::abs(yhat0) < std::abs(yhat1) && std::abs(yhat0) < std::abs(yhat2)) {
-            yhat = yhat0;
+    auto try_cell = [&](std::size_t j_try) -> std::optional<double> {
+        const CellCoeffs& cell = coeffs[i][j_try];
+        if (!cell.valid()) {
+            return std::nullopt;
         }
-        // Already know that yhat1 < yhat0 (yhat0 is not the minimum)
-        else if (std::abs(yhat1) < std::abs(yhat2)) {
-            yhat = yhat1;
-        } else {
-            yhat = yhat2;
+        const std::vector<double>& alpha = cell.get(other_key);
+        const double a = alpha[0 + 3 * 4] * x_0 + alpha[1 + 3 * 4] * x_1 + alpha[2 + 3 * 4] * x_2 + alpha[3 + 3 * 4] * x_3;
+        const double b = alpha[0 + 2 * 4] * x_0 + alpha[1 + 2 * 4] * x_1 + alpha[2 + 2 * 4] * x_2 + alpha[3 + 2 * 4] * x_3;
+        const double c = alpha[0 + 1 * 4] * x_0 + alpha[1 + 1 * 4] * x_1 + alpha[2 + 1 * 4] * x_2 + alpha[3 + 1 * 4] * x_3;
+        const double d = alpha[0 + 0 * 4] * x_0 + alpha[1 + 0 * 4] * x_1 + alpha[2 + 0 * 4] * x_2 + alpha[3 + 0 * 4] * x_3 - other;
+        int N = 0;
+        double r0 = NAN, r1 = NAN, r2 = NAN;
+        solve_cubic(a, b, c, d, N, r0, r1, r2);
+        if (N == 0) {
+            return std::nullopt;
         }
-    } else if (N == 0) {
-        throw ValueError("Could not find a solution in invert_single_phase_x");
+        return find_in_cell_root(N, r0, r1, r2);
+    };
+
+    std::optional<double> yhat_opt = try_cell(j);
+    std::size_t j_found = j;
+    if (!yhat_opt) {
+        for (int delta = 1; delta <= kMaxCellWalk; ++delta) {
+            if (j + delta + 1 < table.yvec.size()) {
+                yhat_opt = try_cell(j + delta);
+                if (yhat_opt) {
+                    j_found = j + delta;
+                    break;
+                }
+            }
+            if (j >= static_cast<std::size_t>(delta)) {
+                yhat_opt = try_cell(j - delta);
+                if (yhat_opt) {
+                    j_found = j - delta;
+                    break;
+                }
+            }
+        }
     }
 
-    // Unpack xhat into actual value
-    // yhat = (y-y_{j})/(y_{j+1}-y_{j})
-    val = yhat * (table.yvec[j + 1] - table.yvec[j]) + table.yvec[j];
+    if (!yhat_opt) {
+        throw ValueError(format("BICUBIC: invert_single_phase_y could not find an in-cell cubic root for cell "
+                                "(i=%zu, j=%zu) spanning xvec=[%g,%g], yvec=[%g,%g] or any neighbour within +/-%d "
+                                "cells in the j direction (other_key=%d, other=%g, x=%g); requested state likely "
+                                "lies outside the BICUBIC table's domain",
+                                i, j, table.xvec[i], table.xvec[i + 1], table.yvec[j], table.yvec[j + 1], kMaxCellWalk, static_cast<int>(other_key),
+                                other, x));
+    }
+
+    j = j_found;
+    cached_single_phase_j = j;
+    const double yhat = *yhat_opt;
+    const double val = yhat * (table.yvec[j + 1] - table.yvec[j]) + table.yvec[j];
 
     // Cache the output value calculated
     switch (table.ykey) {
