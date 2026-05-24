@@ -167,7 +167,7 @@ static CoolProp::GeneratorInitializer<PCSAFTGenerator> pcsaft_gen(CoolProp::PCSA
 
 AbstractState* AbstractState::factory(const std::string& backend, const std::vector<std::string>& fluid_names) {
     if (get_debug_level() > 0) {
-        std::cout << "AbstractState::factory(" << backend << "," << stringvec_to_string(fluid_names) << ")" << std::endl;
+        std::cout << "AbstractState::factory(" << backend << "," << stringvec_to_string(fluid_names) << ")" << '\n';
     }
 
     // Split off any "?<options>" suffix once at the entry-point so the
@@ -226,7 +226,7 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
     get_backend_library().get_generator_iterators(f1, gen, end);
 
     if (get_debug_level() > 0) {
-        std::cout << "AbstractState::factory backend_library size: " << get_backend_library().size() << std::endl;
+        std::cout << "AbstractState::factory backend_library size: " << get_backend_library().size() << '\n';
     }
 
     if (gen != end) {
@@ -450,7 +450,7 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs& input_pair, Cool
 }
 double AbstractState::trivial_keyed_output(parameters key) {
     if (get_debug_level() >= 50)
-        std::cout << format("AbstractState: trivial_keyed_output called for %s ", get_parameter_information(key, "short").c_str()) << std::endl;
+        std::cout << format("AbstractState: trivial_keyed_output called for %s ", get_parameter_information(key, "short").c_str()) << '\n';
     switch (key) {
         case imolar_mass:
             return molar_mass();
@@ -512,7 +512,7 @@ double AbstractState::trivial_keyed_output(parameters key) {
 }
 double AbstractState::keyed_output(parameters key) {
     if (get_debug_level() >= 50)
-        std::cout << format("AbstractState: keyed_output called for %s ", get_parameter_information(key, "short").c_str()) << std::endl;
+        std::cout << format("AbstractState: keyed_output called for %s ", get_parameter_information(key, "short").c_str()) << '\n';
     // Handle trivial inputs
     if (is_trivial_parameter(key)) {
         return trivial_keyed_output(key);

@@ -218,6 +218,7 @@ TEST_CASE("CubicSplineCurve through known knots", "[SVDComponents][Region][bound
     // Knots from y = x^2 (a strict-convex test).
     std::vector<double> x = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0};
     std::vector<double> y;
+    y.reserve(x.size());
     for (double xi : x) {
         y.push_back(xi * xi);
     }

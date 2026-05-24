@@ -170,6 +170,7 @@ void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDb
         sum_moles += tmp;
     }
     std::vector<CoolPropDbl> mole_fractions;
+    mole_fractions.reserve(moles.size());
     for (const auto& m : moles) {
         mole_fractions.push_back(m / sum_moles);
     }
@@ -1087,6 +1088,7 @@ void HelmholtzEOSMixtureBackend::calc_ideal_curve(const std::string& type, std::
 };
 std::vector<std::string> HelmholtzEOSMixtureBackend::calc_fluid_names() {
     std::vector<std::string> out;
+    out.reserve(components.size());
     for (std::size_t i = 0; i < components.size(); ++i) {
         out.push_back(components[i].name);
     }
@@ -1406,7 +1408,7 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
-                  << std::endl;
+                  << '\n';
     }
 
     CoolPropDbl ld_value1 = value1, ld_value2 = value2;
@@ -1532,7 +1534,7 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
-                  << std::endl;
+                  << '\n';
     }
 
     CoolPropDbl ld_value1 = value1, ld_value2 = value2;
@@ -2628,7 +2630,7 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
         }
     } catch (std::exception& e) {
         if (get_debug_level() > 5) {
-            std::cout << e.what() << std::endl;
+            std::cout << e.what() << '\n';
         };
         light = -1;
     }
@@ -2666,7 +2668,7 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             break;  // Jump out, we got a good solution
         } catch (std::exception& e) {
             if (get_debug_level() > 5) {
-                std::cout << e.what() << std::endl;
+                std::cout << e.what() << '\n';
             };
             heavy = -1;
         }
@@ -3048,7 +3050,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_hmolar_nocache(CoolPropDbl T, CoolP
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_hmolar() {
     if (get_debug_level() >= 50)
-        std::cout << format("HelmholtzEOSMixtureBackend::calc_hmolar: 2phase: %d T: %g rhomomolar: %g", isTwoPhase(), _T, _rhomolar) << std::endl;
+        std::cout << format("HelmholtzEOSMixtureBackend::calc_hmolar: 2phase: %d T: %g rhomomolar: %g", isTwoPhase(), _T, _rhomolar) << '\n';
     if (isTwoPhase()) {
         if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
         if (std::abs(_Q) < DBL_EPSILON) {
@@ -3987,8 +3989,8 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
                     J[j][i] = (rplus[j] - rminus[j]) / (2 * epsilon);
                 }
             }
-            std::cout << J[0][0] << " " << J[0][1] << std::endl;
-            std::cout << J[1][0] << " " << J[1][1] << std::endl;
+            std::cout << J[0][0] << " " << J[0][1] << '\n';
+            std::cout << J[1][0] << " " << J[1][1] << '\n';
             return J;
         };
     };
@@ -4181,7 +4183,7 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
                 critical_points.push_back(crit);
                 N_critical_points++;
                 if (debug) {
-                    std::cout << HEOS.get_mole_fractions()[0] << " " << crit.rhomolar << " " << crit.T << " " << p_MPa << std::endl;
+                    std::cout << HEOS.get_mole_fractions()[0] << " " << crit.rhomolar << " " << crit.T << " " << p_MPa << '\n';
                 }
             }
 

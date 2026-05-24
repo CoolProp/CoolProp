@@ -3791,7 +3791,7 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression; on", "[2438]"
         return AS;
     };
     AS->update(HmassP_INPUTS, 300e3, 70e5);
-    std::cout << AS->Q() << std::endl;
+    std::cout << AS->Q() << '\n';
 }
 TEST_CASE_METHOD(SuperAncillaryOffFixture, "Performance regression; off", "[2438]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "CO2"));
@@ -3800,7 +3800,7 @@ TEST_CASE_METHOD(SuperAncillaryOffFixture, "Performance regression; off", "[2438
         return AS;
     };
     AS->update(HmassP_INPUTS, 300e3, 70e5);
-    std::cout << AS->Q() << std::endl;
+    std::cout << AS->Q() << '\n';
 }
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression for TS; on", "[2438saontime]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));

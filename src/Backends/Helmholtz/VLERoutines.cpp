@@ -22,7 +22,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
         double call(double rhomolar_liq) override {
             HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
             CoolPropDbl calc_p = HEOS->SatL->p();
-            std::cout << format("inner p: %0.16Lg; res: %0.16Lg", calc_p, calc_p - desired_p) << std::endl;
+            std::cout << format("inner p: %0.16Lg; res: %0.16Lg", calc_p, calc_p - desired_p) << '\n';
             return calc_p - desired_p;
         }
     };
@@ -47,7 +47,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
                     T = y;
                     HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, y);
                     p = HEOS->SatV->p();
-                    std::cout << format("outer p: %0.16Lg", p) << std::endl;
+                    std::cout << format("outer p: %0.16Lg", p) << '\n';
                     inner_resid inner(HEOS, T, p);
                     rhomolar_liq = Brent(inner, rhomolar_crit * 1.5, rhomolar_crit * (1 + 1e-8), LDBL_EPSILON, 1e-10, 100);
                     break;
@@ -1355,7 +1355,7 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
     bool debug = get_debug_level() > 9 || false;
 
     if (debug) {
-        std::cout << " NRsat::call:  p " << IO.p << " T " << IO.T << " dl " << IO.rhomolar_liq << " dv " << IO.rhomolar_vap << std::endl;
+        std::cout << " NRsat::call:  p " << IO.p << " T " << IO.T << " dl " << IO.rhomolar_liq << " dv " << IO.rhomolar_vap << '\n';
     }
 
     // Reset all the variables and resize
@@ -1583,7 +1583,7 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
     int iter = 0;
 
     if (get_debug_level() > 9) {
-        std::cout << " NRsat::call:  p" << IO.p << " T" << IO.T << " dl" << IO.rhomolar_liq << " dv" << IO.rhomolar_vap << std::endl;
+        std::cout << " NRsat::call:  p" << IO.p << " T" << IO.T << " dl" << IO.rhomolar_liq << " dv" << IO.rhomolar_vap << '\n';
     }
 
     // Reset all the variables and resize

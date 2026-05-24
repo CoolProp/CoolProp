@@ -67,12 +67,12 @@ class Spline
     /** A spline with x and y values */
     Spline(const std::vector<X>& x, const std::vector<Y>& y) {
         if (x.size() != y.size()) {
-            std::cerr << "X and Y must be the same size " << std::endl;
+            std::cerr << "X and Y must be the same size " << '\n';
             return;
         }
 
         if (x.size() < 3) {
-            std::cerr << "Must have at least three points for interpolation" << std::endl;
+            std::cerr << "Must have at least three points for interpolation" << '\n';
             return;
         }
 

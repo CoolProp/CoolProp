@@ -1921,7 +1921,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
                 throw;
             }
             if (get_debug_level() > 0) {
-                std::cout << resid.errstring << std::endl;
+                std::cout << resid.errstring << '\n';
             }
             std::vector<double> x0 = {Tstart, rhomolarstart};
             NDNewtonRaphson_Jacobian(&solver_resid2d, x0, 1e-12, 20, 1.0);
@@ -1933,7 +1933,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             HEOS.recalculate_singlephase_phase();
         } catch (...) {
             if (get_debug_level() > 0) {
-                std::cout << resid.errstring << std::endl;
+                std::cout << resid.errstring << '\n';
             }
             // Un-specify the phase of the fluid
             HEOS.unspecify_phase();

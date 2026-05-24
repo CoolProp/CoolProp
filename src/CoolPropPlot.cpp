@@ -193,11 +193,11 @@ void Isoline::calc_sat_range(int count) {
                 || (input_pair == CoolProp::PQ_INPUTS && abs(one[i] - p_crit) < 1e2)) {
                 x[i] = x_crit;
                 y[i] = y_crit;
-                std::cerr << "ERROR near critical inputs" << std::endl;
+                std::cerr << "ERROR near critical inputs" << '\n';
             } else {
                 x[i] = Detail::NaN;
                 y[i] = Detail::NaN;
-                std::cerr << "ERROR" << std::endl;
+                std::cerr << "ERROR" << '\n';
             }
         }
     }

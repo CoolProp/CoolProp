@@ -159,7 +159,7 @@ Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd& coefficients, 
 double Polynomial2D::evaluate(const Eigen::MatrixXd& coefficients, const double& x_in) {
     double result = Eigen::poly_eval(makeVector(coefficients), x_in);
     if (this->do_debug())
-        std::cout << "Running      1D evaluate(" << mat_to_string(coefficients) << ", x_in:" << vec_to_string(x_in) << "): " << result << std::endl;
+        std::cout << "Running      1D evaluate(" << mat_to_string(coefficients) << ", x_in:" << vec_to_string(x_in) << "): " << result << '\n';
     return result;
 }
 double Polynomial2D::evaluate(const Eigen::MatrixXd& coefficients, const double& x_in, const double& y_in) {
@@ -171,7 +171,7 @@ double Polynomial2D::evaluate(const Eigen::MatrixXd& coefficients, const double&
     }
     if (this->do_debug())
         std::cout << "Running      2D evaluate(" << mat_to_string(coefficients) << ", x_in:" << vec_to_string(x_in)
-                  << ", y_in:" << vec_to_string(y_in) << "): " << result << std::endl;
+                  << ", y_in:" << vec_to_string(y_in) << "): " << result << '\n';
     return result;
 }
 
@@ -188,12 +188,12 @@ double Polynomial2D::integral(const Eigen::MatrixXd& coefficients, const double&
 /// @param min double value that represents the minimum value
 /// @param max double value that represents the maximum value
 double Polynomial2D::solve_limits(Poly2DResidual* res, const double& min, const double& max) {
-    if (do_debug()) std::cout << format("Called solve_limits with: min=%f and max=%f", min, max) << std::endl;
+    if (do_debug()) std::cout << format("Called solve_limits with: min=%f and max=%f", min, max) << '\n';
     double macheps = DBL_EPSILON;
     double tol = DBL_EPSILON * 1e3;
     int maxiter = 10;
     double result = Brent(res, min, max, macheps, tol, maxiter);
-    if (this->do_debug()) std::cout << "Brent solver message: " << res->errstring << std::endl;
+    if (this->do_debug()) std::cout << "Brent solver message: " << res->errstring << '\n';
     return result;
 }
 
@@ -201,12 +201,12 @@ double Polynomial2D::solve_limits(Poly2DResidual* res, const double& min, const 
 /// @param res Poly2DResidual object to calculate residuals and derivatives
 /// @param guess double value that represents the start value
 double Polynomial2D::solve_guess(Poly2DResidual* res, const double& guess) {
-    if (do_debug()) std::cout << format("Called solve_guess with: guess=%f ", guess) << std::endl;
+    if (do_debug()) std::cout << format("Called solve_guess with: guess=%f ", guess) << '\n';
     //set_debug_level(1000);
     double tol = DBL_EPSILON * 1e3;
     int maxiter = 10;
     double result = Newton(res, guess, tol, maxiter);
-    if (this->do_debug()) std::cout << "Newton solver message: " << res->errstring << std::endl;
+    if (this->do_debug()) std::cout << "Newton solver message: " << res->errstring << '\n';
     return result;
 }
 
@@ -231,11 +231,11 @@ Eigen::VectorXd Polynomial2D::solve(const Eigen::MatrixXd& coefficients, const d
             break;
     }
     tmpCoefficients(0, 0) -= z_in;
-    if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string(Eigen::MatrixXd(tmpCoefficients)) << std::endl;
+    if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string(Eigen::MatrixXd(tmpCoefficients)) << '\n';
     Eigen::PolynomialSolver<double, Eigen::Dynamic> polySolver(tmpCoefficients);
     std::vector<double> rootsVec;
     polySolver.realRoots(rootsVec);
-    if (this->do_debug()) std::cout << "Real roots: " << vec_to_string(rootsVec) << std::endl;
+    if (this->do_debug()) std::cout << "Real roots: " << vec_to_string(rootsVec) << '\n';
     return vec_to_eigen(rootsVec);
     //return rootsVec[0]; // TODO: implement root selection algorithm
 }
@@ -261,7 +261,7 @@ double Polynomial2D::simplePolynomial(std::vector<double> const& coefficients, d
         result += coefficients[i] * pow(x, (int)i);
     }
     if (this->do_debug())
-        std::cout << "Running simplePolynomial(" << vec_to_string(coefficients) << ", " << vec_to_string(x) << "): " << result << std::endl;
+        std::cout << "Running simplePolynomial(" << vec_to_string(coefficients) << ", " << vec_to_string(x) << "): " << result << '\n';
     return result;
 }
 double Polynomial2D::simplePolynomial(std::vector<std::vector<double>> const& coefficients, double x, double y) {
@@ -271,7 +271,7 @@ double Polynomial2D::simplePolynomial(std::vector<std::vector<double>> const& co
     }
     if (this->do_debug())
         std::cout << "Running simplePolynomial(" << vec_to_string(coefficients) << ", " << vec_to_string(x) << ", " << vec_to_string(y)
-                  << "): " << result << std::endl;
+                  << "): " << result << '\n';
     return result;
 }
 
@@ -287,7 +287,7 @@ double Polynomial2D::baseHorner(std::vector<double> const& coefficients, double 
         result += coefficients[i];
     }
     if (this->do_debug())
-        std::cout << "Running       baseHorner(" << vec_to_string(coefficients) << ", " << vec_to_string(x) << "): " << result << std::endl;
+        std::cout << "Running       baseHorner(" << vec_to_string(coefficients) << ", " << vec_to_string(x) << "): " << result << '\n';
     return result;
 }
 
@@ -299,7 +299,7 @@ double Polynomial2D::baseHorner(std::vector<std::vector<double>> const& coeffici
     }
     if (this->do_debug())
         std::cout << "Running       baseHorner(" << vec_to_string(coefficients) << ", " << vec_to_string(x) << ", " << vec_to_string(y)
-                  << "): " << result << std::endl;
+                  << "): " << result << '\n';
     return result;
 }
 
@@ -470,7 +470,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
                                   const double& x_base, const double& y_base) {
     if ((x_exp < 0) && (std::abs(x_in - x_base) < CPPOLY_EPSILON)) {
         // throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ", __FILE__, __LINE__, x_in - x_base));
-        if (this->do_debug()) std::cout << "Interpolating in x-direction for base " << x_base << " and input " << x_in << std::endl;
+        if (this->do_debug()) std::cout << "Interpolating in x-direction for base " << x_base << " and input " << x_in << '\n';
         const double x_lo = x_base - CPPOLY_DELTA;
         const double x_hi = x_base + CPPOLY_DELTA;
         const double z_lo = evaluate(coefficients, x_lo, y_in, x_exp, y_exp, x_base, y_base);
@@ -479,7 +479,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
     }
     if ((y_exp < 0) && (std::abs(y_in - y_base) < CPPOLY_EPSILON)) {
         // throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, y_in-y_base=%f ", __FILE__, __LINE__, y_in - y_base));
-        if (this->do_debug()) std::cout << "Interpolating in y-direction for base " << y_base << " and input " << y_in << std::endl;
+        if (this->do_debug()) std::cout << "Interpolating in y-direction for base " << y_base << " and input " << y_in << '\n';
         const double y_lo = y_base - CPPOLY_DELTA;
         const double y_hi = y_base + CPPOLY_DELTA;
         const double z_lo = evaluate(coefficients, x_in, y_lo, x_exp, y_exp, x_base, y_base);
@@ -517,11 +517,11 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
         posExp *= x_in - x_base;
         posExp += evaluate(tmpCoeffs.row(i), y_in, y_exp, y_base);
     }
-    if (this->do_debug()) std::cout << "Running      2D evaluate(" << mat_to_string(coefficients) << ", " << std::endl;
+    if (this->do_debug()) std::cout << "Running      2D evaluate(" << mat_to_string(coefficients) << ", " << '\n';
     if (this->do_debug())
         std::cout << "x_in:" << vec_to_string(x_in) << ", y_in:" << vec_to_string(y_in) << ", x_exp:" << vec_to_string(x_exp)
                   << ", y_exp:" << vec_to_string(y_exp) << ", x_base:" << vec_to_string(x_base) << ", y_base:" << vec_to_string(y_base)
-                  << "): " << negExp + posExp << std::endl;
+                  << "): " << negExp + posExp << '\n';
     return negExp + posExp;
 }
 
@@ -663,7 +663,7 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd& coefficients, con
             break;
     }
 
-    if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string(Eigen::MatrixXd(newCoefficients)) << std::endl;
+    if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string(Eigen::MatrixXd(newCoefficients)) << '\n';
 
     const size_t r = newCoefficients.rows();
     for (size_t i = 0; i < r; i++) {
@@ -684,11 +684,11 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd& coefficients, con
                                          __FILE__, __LINE__, solve_exp));
     }
 
-    if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string(Eigen::MatrixXd(tmpCoefficients)) << std::endl;
+    if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string(Eigen::MatrixXd(tmpCoefficients)) << '\n';
     Eigen::PolynomialSolver<double, -1> polySolver(tmpCoefficients);
     std::vector<double> rootsVec;
     polySolver.realRoots(rootsVec);
-    if (this->do_debug()) std::cout << "Real roots: " << vec_to_string(rootsVec) << std::endl;
+    if (this->do_debug()) std::cout << "Real roots: " << vec_to_string(rootsVec) << '\n';
     return vec_to_eigen(rootsVec);
     //return rootsVec[0]; // TODO: implement root selection algorithm
 }
@@ -698,7 +698,7 @@ double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd& coefficients, const
                                       const int& axis, const int& x_exp, const int& y_exp, const double& x_base, const double& y_base) {
     if (do_debug())
         std::cout << format("Called solve_limits with: %f, %f, %f, %f, %d, %d, %d, %f, %f", in, z_in, min, max, axis, x_exp, y_exp, x_base, y_base)
-                  << std::endl;
+                  << '\n';
     Poly2DFracResidual res = Poly2DFracResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base);
     return Polynomial2D::solve_limits(&res, min, max);
 }  //TODO: Implement tests for this solver
@@ -707,8 +707,7 @@ double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd& coefficients, const
 double Polynomial2DFrac::solve_guess(const Eigen::MatrixXd& coefficients, const double& in, const double& z_in, const double& guess, const int& axis,
                                      const int& x_exp, const int& y_exp, const double& x_base, const double& y_base) {
     if (do_debug())
-        std::cout << format("Called solve_guess with: %f, %f, %f, %d, %d, %d, %f, %f", in, z_in, guess, axis, x_exp, y_exp, x_base, y_base)
-                  << std::endl;
+        std::cout << format("Called solve_guess with: %f, %f, %f, %d, %d, %d, %f, %f", in, z_in, guess, axis, x_exp, y_exp, x_base, y_base) << '\n';
     Poly2DFracResidual res = Poly2DFracResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base);
     return Polynomial2D::solve_guess(&res, guess);
 }  //TODO: Implement tests for this solver
@@ -787,7 +786,7 @@ double Polynomial2DFrac::fracIntCentral(const Eigen::MatrixXd& coefficients, con
     }
     if (this->do_debug())
         std::cout << "Running   fracIntCentral(" << mat_to_string(coefficients) << ", " << vec_to_string(x_in) << ", " << vec_to_string(x_base)
-                  << "): " << result << std::endl;
+                  << "): " << result << '\n';
     return result;
 }
 
@@ -879,29 +878,29 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
 
         CHECK_NOTHROW(matrix = poly.integrateCoeffs(matrix2D, 0));
         tmpStr = CoolProp::mat_to_string(matrix2D);
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
         tmpStr = CoolProp::mat_to_string(matrix);
-        if (PRINT) std::cout << tmpStr << std::endl << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n' << '\n';
 
         CHECK_NOTHROW(matrix = poly.integrateCoeffs(matrix2D, 1));
         tmpStr = CoolProp::mat_to_string(matrix2D);
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
         tmpStr = CoolProp::mat_to_string(matrix);
-        if (PRINT) std::cout << tmpStr << std::endl << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n' << '\n';
 
         CHECK_THROWS(poly.deriveCoeffs(matrix2D));
 
         CHECK_NOTHROW(matrix = poly.deriveCoeffs(matrix2D, 0));
         tmpStr = CoolProp::mat_to_string(matrix2D);
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
         tmpStr = CoolProp::mat_to_string(matrix);
-        if (PRINT) std::cout << tmpStr << std::endl << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n' << '\n';
 
         CHECK_NOTHROW(matrix = poly.deriveCoeffs(matrix2D, 1));
         tmpStr = CoolProp::mat_to_string(matrix2D);
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
         tmpStr = CoolProp::mat_to_string(matrix);
-        if (PRINT) std::cout << tmpStr << std::endl << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n' << '\n';
     }
 
     SECTION("Evaluation and test values") {

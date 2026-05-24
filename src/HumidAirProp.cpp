@@ -1208,7 +1208,7 @@ double MolarEntropy(double T, double p, double psi_w, double v_bar) {
     }
 
     if (FlagUseIdealGasEnthalpyCorrelations) {
-        std::cout << "Not implemented" << std::endl;
+        std::cout << "Not implemented" << '\n';
     } else {
         sbar_w = IdealGasMolarEntropy_Water(T, p);
         sbar_a = IdealGasMolarEntropy_Air(T, vbar_a);
@@ -1920,7 +1920,7 @@ void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const st
             T = Brent_HAProps_T(SecondaryInputKey, p, MainInputKey, MainInputValue, SecondaryInputValue, T_min, T_max);
         } catch (std::exception& e) {
             if (CoolProp::get_debug_level() > 0) {
-                std::cout << "ERROR: " << e.what() << std::endl;
+                std::cout << "ERROR: " << e.what() << '\n';
             }
             CoolProp::set_error_string(e.what());
             T = _HUGE;

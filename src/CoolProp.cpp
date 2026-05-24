@@ -109,7 +109,7 @@ void extract_backend(std::string fluid_string, std::string& backend, std::string
 
 bool has_fractions_in_string(const std::string& fluid_string) {
     // If can find both "[" and "]", it must have mole fractions encoded as string
-    return (fluid_string.find("[") != std::string::npos && fluid_string.find("]") != std::string::npos);
+    return (fluid_string.find('[') != std::string::npos && fluid_string.find(']') != std::string::npos);
 }
 bool has_solution_concentration(const std::string& fluid_string) {
     // If can find "-", expect mass fractions encoded as string
@@ -363,9 +363,9 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
     }
 
     if (get_debug_level() > 100) {
-        std::cout << format("%s (%d): input pair = %d ", __FILE__, __LINE__, input_pair) << std::endl;
-        std::cout << format("%s (%d): in1 = %s ", __FILE__, __LINE__, vec_to_string(in1).c_str()) << std::endl;
-        std::cout << format("%s (%d): in2 = %s ", __FILE__, __LINE__, vec_to_string(in2).c_str()) << std::endl;
+        std::cout << format("%s (%d): input pair = %d ", __FILE__, __LINE__, input_pair) << '\n';
+        std::cout << format("%s (%d): in1 = %s ", __FILE__, __LINE__, vec_to_string(in1).c_str()) << '\n';
+        std::cout << format("%s (%d): in2 = %s ", __FILE__, __LINE__, vec_to_string(in2).c_str()) << '\n';
     }
 
     // Get configuration variable for line tracing, see #1443
@@ -382,7 +382,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
     bool success_inner = false;
 
     if (get_debug_level() > 100) {
-        std::cout << format("%s (%d): Iterating over %d input value pairs.", __FILE__, __LINE__, IO.size()) << std::endl;
+        std::cout << format("%s (%d): Iterating over %d input value pairs.", __FILE__, __LINE__, IO.size()) << '\n';
     }
 
     // Iterate over the state variable inputs
@@ -615,7 +615,7 @@ std::vector<std::vector<double>> PropsSImulti(const std::vector<std::string>& Ou
         std::cout << e.what() << std::endl;
 #    endif
         if (get_debug_level() > 1) {
-            std::cout << e.what() << std::endl;
+            std::cout << e.what() << '\n';
         }
     } catch (...) {  // NOLINT(bugprone-empty-catch)
         // PropsSImulti is a public API and must never throw — non-
@@ -652,7 +652,7 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
         const double val = IO[0][0];
 
         if (get_debug_level() > 1) {
-            std::cout << format("_PropsSI will return %g", val) << std::endl;
+            std::cout << format("_PropsSI will return %g", val) << '\n';
         }
         return val;
         // END OF TRY
@@ -665,7 +665,7 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
         std::cout << e.what() << std::endl;
 #    endif
         if (get_debug_level() > 1) {
-            std::cout << e.what() << std::endl;
+            std::cout << e.what() << '\n';
         }
         return _HUGE;
     } catch (...) {

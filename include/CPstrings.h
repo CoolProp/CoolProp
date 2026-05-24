@@ -114,13 +114,13 @@ inline bool strstartswith(const std::string& s, const std::string& other) {
 inline double string2double(const std::string& s) {
     std::string mys = s;  //copy
     // replace D with e (FORTRAN style scientific definition)
-    if (mys.find("D") != std::string::npos) {
-        std::size_t pos = mys.find("D"), len = 1;
+    if (mys.find('D') != std::string::npos) {
+        std::size_t pos = mys.find('D'), len = 1;
         mys.replace(pos, len, "e");
     }
     // replace d with e (FORTRAN style scientific definition)
-    if (mys.find("d") != std::string::npos) {
-        std::size_t pos = mys.find("d"), len = 1;
+    if (mys.find('d') != std::string::npos) {
+        std::size_t pos = mys.find('d'), len = 1;
         mys.replace(pos, len, "e");
     }
 

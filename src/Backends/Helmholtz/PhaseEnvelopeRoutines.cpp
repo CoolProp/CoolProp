@@ -248,7 +248,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
                 }
             } catch (std::exception& e) {
                 if (debug) {
-                    std::cout << e.what() << std::endl;
+                    std::cout << e.what() << '\n';
                 }
                 //std::cout << IO.T << " " << IO.p << std::endl;
                 // Try again, but with a smaller step
@@ -265,7 +265,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
             if (debug) {
                 std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p << " hl " << IO.hmolar_liq
                           << " hv " << IO.hmolar_vap << " sl " << IO.smolar_liq << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")
-                          << " Ns " << IO.Nsteps << " factor " << factor << std::endl;
+                          << " Ns " << IO.Nsteps << " factor " << factor << '\n';
             }
             env.store_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y);
 
@@ -413,7 +413,7 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
                 if (debug) {
                     std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p << " hl " << IO.hmolar_liq
                               << " hv " << IO.hmolar_vap << " sl " << IO.smolar_liq << " sv " << IO.smolar_vap << " x "
-                              << vec_to_string(IO.x, "%0.10Lg") << " Ns " << IO.Nsteps << std::endl;
+                              << vec_to_string(IO.x, "%0.10Lg") << " Ns " << IO.Nsteps << '\n';
                 }
             } catch (...) {
                 failure_count++;
@@ -783,7 +783,7 @@ bool PhaseEnvelopeRoutines::is_inside(const PhaseEnvelopeData& env, parameters i
             closest_state.Q = env.Q[iclosest];
 
             if (get_debug_level() > 5) {
-                std::cout << format("is_inside: it is not inside") << std::endl;
+                std::cout << format("is_inside: it is not inside") << '\n';
             }
             return false;
         } else {
