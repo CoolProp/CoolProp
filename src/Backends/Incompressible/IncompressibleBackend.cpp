@@ -174,7 +174,11 @@ bool IncompressibleBackend::clear() {
 
 /// Update the reference values and clear the state
 void IncompressibleBackend::set_reference_state(double T0, double p0, double x0, double h0, double s0) {
-    this->clear();
+    // Explicit scope: this method is reachable from the ctor
+    // (IncompressibleBackend(IncompressibleFluid*) calls
+    // set_reference_state()), so the virtual clear() would bypass
+    // derived overrides anyway.  Make that explicit.
+    IncompressibleBackend::clear();
     /// Reference values, no need to calculate them each time
     this->_hmass_ref.clear();
     this->_smass_ref.clear();

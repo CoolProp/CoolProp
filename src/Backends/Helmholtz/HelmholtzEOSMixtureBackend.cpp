@@ -80,8 +80,10 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::st
     // Reset the residual Helmholtz energy class
     residual_helmholtz = std::make_shared<ResidualHelmholtz>();
 
-    // Set the components and associated flags
-    set_components(components, generate_SatL_and_SatV);
+    // Set the components and associated flags.  Explicit scope so the
+    // virtual-from-ctor call isn't flagged — derived overrides aren't
+    // active yet, so we want exactly THIS class's set_components.
+    HelmholtzEOSMixtureBackend::set_components(components, generate_SatL_and_SatV);
 
     // Set the phase to default unknown value
     _phase = iphase_unknown;
@@ -91,8 +93,9 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPro
     // Reset the residual Helmholtz energy class
     residual_helmholtz = std::make_shared<ResidualHelmholtz>();
 
-    // Set the components and associated flags
-    set_components(components, generate_SatL_and_SatV);
+    // Set the components and associated flags (explicit scope — see
+    // the string-name ctor above for the rationale).
+    HelmholtzEOSMixtureBackend::set_components(components, generate_SatL_and_SatV);
 
     // Set the phase to default unknown value
     _phase = iphase_unknown;
@@ -108,8 +111,12 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
         mole_fractions = std::vector<CoolPropDbl>(1, 1);
         std::vector<std::vector<double>> ones(1, std::vector<double>(1, 1));
         Reducing = std::make_shared<GERG2008ReducingFunction>(components, ones, ones, ones, ones);
-        _reducing = calc_reducing_state_nocache(mole_fractions);
-        _gas_constant = calc_gas_constant();
+        // Explicit scope: set_components is called from the ctor (see
+        // HelmholtzEOSMixtureBackend ctor above), so derived overrides
+        // aren't active yet and these virtuals would dispatch to this
+        // class anyway.  Make that explicit.
+        _reducing = HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(mole_fractions);
+        _gas_constant = HelmholtzEOSMixtureBackend::calc_gas_constant();
     } else {
         // Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
         set_mixture_parameters();
@@ -118,13 +125,17 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
     imposed_phase_index = iphase_not_imposed;
 
     // Top-level class can hold copies of the base saturation classes,
-    // saturation classes cannot hold copies of the saturation classes
+    // saturation classes cannot hold copies of the saturation classes.
+    // Explicit scope on get_copy: this method is called from the ctor
+    // (transitively) and clang-analyzer flags the implicit virtual
+    // dispatch — but derived overrides aren't active yet, so we want
+    // exactly THIS class's get_copy regardless.
     if (generate_SatL_and_SatV) {
-        SatL.reset(get_copy(false));
+        SatL.reset(HelmholtzEOSMixtureBackend::get_copy(false));
         SatL->specify_phase(iphase_liquid);
         linked_states.push_back(SatL);
         SatL->clear();
-        SatV.reset(get_copy(false));
+        SatV.reset(HelmholtzEOSMixtureBackend::get_copy(false));
         SatV->specify_phase(iphase_gas);
         SatV->clear();
         linked_states.push_back(SatV);

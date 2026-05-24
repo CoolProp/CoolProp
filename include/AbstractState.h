@@ -722,7 +722,11 @@ class AbstractState
 
    public:
     AbstractState() : _fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown) {
-        clear();
+        // Explicit scope: a virtual `clear()` call from the base ctor
+        // would dispatch to this class anyway (derived overrides aren't
+        // active yet), so call it directly to make that intent visible
+        // and silence clang-analyzer-optin.cplusplus.VirtualCall.
+        AbstractState::clear();
     }
     virtual ~AbstractState() {};
 
