@@ -26,7 +26,25 @@ using Catch::Approx;
 #    include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #    include "DataStructures.h"
 
+#    if defined(_WIN32)
+#        include <process.h>  // _getpid
+#    else
+#        include <unistd.h>  // getpid
+#    endif
+
 namespace {
+
+// Portable PID accessor: tests that stage scratch files under
+// fs::temp_directory_path() suffix their directory name with this so
+// that two CatchTestRunner instances running concurrently (preflight
+// in two worktrees, dev + CI, etc.) don't trample each other's tmpdir.
+inline int test_pid() {
+#    if defined(_WIN32)
+    return ::_getpid();
+#    else
+    return ::getpid();
+#    endif
+}
 
 // Returns true if a cache file matching the SVDSBTL on-disk pattern
 // exists for both HmassP_INPUTS and PT_INPUTS for `fluid`.
@@ -769,7 +787,7 @@ TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY routes default_cache_dir", "[
     namespace fs = std::filesystem;
     namespace cp_sbtl = CoolProp::sbtl;
     const std::string saved = CoolProp::get_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY);
-    const fs::path tmpdir = fs::temp_directory_path() / "coolprop_svdtables_fhp_resolver";
+    const fs::path tmpdir = fs::temp_directory_path() / ("coolprop_svdtables_fhp_resolver_" + std::to_string(test_pid()));
     std::error_code ec;
     fs::remove_all(tmpdir, ec);
 
@@ -805,7 +823,7 @@ TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY routes default_cache_dir", "[
 TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY end-to-end build + reload", "[SVDSBTL][cache][fhp][slow]") {
     namespace fs = std::filesystem;
     const std::string saved = CoolProp::get_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY);
-    const fs::path tmpdir = fs::temp_directory_path() / "coolprop_svdtables_fhp_e2e";
+    const fs::path tmpdir = fs::temp_directory_path() / ("coolprop_svdtables_fhp_e2e_" + std::to_string(test_pid()));
     std::error_code ec;
     fs::remove_all(tmpdir, ec);
     CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, tmpdir.string());
@@ -876,7 +894,7 @@ TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY end-to-end build + reload", "
 // interleaved mix.
 TEST_CASE("write_bytes_atomic is race-safe across threads", "[SVDSBTL][cache][race][4no.2]") {
     namespace fs = std::filesystem;
-    const fs::path tmpdir = fs::temp_directory_path() / "coolprop_svdtables_atomic_race";
+    const fs::path tmpdir = fs::temp_directory_path() / ("coolprop_svdtables_atomic_race_" + std::to_string(test_pid()));
     std::error_code ec;
     fs::remove_all(tmpdir, ec);
     fs::create_directories(tmpdir);
