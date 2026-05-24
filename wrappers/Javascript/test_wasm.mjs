@@ -60,3 +60,38 @@ try {
     console.error("AbstractState test failed:", e);
     process.exit(1);
 }
+
+// Test mixture composition via set_mole_fractions(VectorDouble).
+// The set is verified by cross-checking the resulting density against
+// PropsSI with an explicit-composition fluid string; a bit-exact match
+// confirms the VectorDouble was correctly threaded into AbstractState.
+console.log("Testing set_mole_fractions on a binary mixture...");
+try {
+    var z = new coolprop.VectorDouble();
+    z.push_back(0.4);
+    z.push_back(0.6);
+
+    var ASmix = coolprop.factory("HEOS", "Methane&Ethane");
+    if (!ASmix.using_mole_fractions()) {
+        console.error("HEOS mixture should report using_mole_fractions() === true");
+        process.exit(1);
+    }
+    ASmix.set_mole_fractions(z);
+    ASmix.update(coolprop.input_pairs.PT_INPUTS, 1e6, 250);
+
+    var rho = ASmix.rhomass();
+    var rhoRef = coolprop.PropsSI('D', 'P', 1e6, 'T', 250, 'HEOS::Methane[0.4]&Ethane[0.6]');
+    console.log("mixture rhomass (set_mole_fractions):", rho);
+    console.log("mixture rhomass (PropsSI ref):       ", rhoRef);
+    if (Math.abs(rho - rhoRef) > 1e-8 * Math.abs(rhoRef)) {
+        console.error("set_mole_fractions did not produce a state matching PropsSI reference");
+        process.exit(1);
+    }
+
+    z.delete();
+    ASmix.delete();
+    console.log("set_mole_fractions test passed!");
+} catch (e) {
+    console.error("set_mole_fractions test failed:", e);
+    process.exit(1);
+}
