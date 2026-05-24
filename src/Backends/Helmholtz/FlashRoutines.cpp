@@ -30,7 +30,6 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             CoolPropDbl rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_gas);
 
             solver_TP_resid resid(HEOS, HEOS._T, HEOS._p);
-            std::string errstr;
             HEOS.specify_phase(iphase_gas);
             try {
                 // Try using Newton's method
@@ -234,7 +233,6 @@ void FlashRoutines::DP_flash(HelmholtzEOSMixtureBackend& HEOS) {
             }
             // Then, do the solver using the full EOS
             solver_DP_resid resid(&HEOS, HEOS.rhomolar(), HEOS.p());
-            std::string errstr;
             Halley(resid, T0, 1e-10, 100);
             HEOS._Q = -1;
             // Update the state for conditions where the state was guessed
@@ -2523,7 +2521,6 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
             return r;
         }
     } resid(HEOS, hmolar, smolar);
-    std::string errstr;
     // Find minimum temperature
     bool good_Tmin = false;
     double Tmin = HEOS.Ttriple();

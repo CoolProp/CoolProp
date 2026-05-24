@@ -340,7 +340,10 @@ std::string get_mixture_binary_pair_data(const std::string& CAS1, const std::str
                 return format("%0.16g", v[0].get_double("betaV"));
             } else {
             }
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Dictionary lookup threw (e.g. key present but wrong type);
+            // fall through to the ValueError below so the caller sees a
+            // uniform "could not match the parameter" message.
         }
         throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(),
                                 CAS1.c_str(), CAS2.c_str()));

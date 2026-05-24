@@ -305,7 +305,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             try {
                 visc[i][j] = AS->viscosity();
                 cond[i][j] = AS->conductivity();
-            } catch (std::exception&) {
+            } catch (std::exception&) {  // NOLINT(bugprone-empty-catch)
                 // Failures will remain as holes in table
             }
 

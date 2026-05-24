@@ -617,7 +617,10 @@ std::vector<std::vector<double>> PropsSImulti(const std::vector<std::string>& Ou
         if (get_debug_level() > 1) {
             std::cout << e.what() << std::endl;
         }
-    } catch (...) {
+    } catch (...) {  // NOLINT(bugprone-empty-catch)
+        // PropsSImulti is a public API and must never throw — non-
+        // std::exception escapes (e.g. ABI/external faults) are silently
+        // swallowed and surfaced via the empty return below.
     }
 #endif
     return std::vector<std::vector<double>>();

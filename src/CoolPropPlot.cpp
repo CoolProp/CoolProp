@@ -96,17 +96,21 @@ std::shared_ptr<CoolProp::AbstractState> get_critical_point(const std::shared_pt
     std::vector<double> masses = state->get_mass_fractions();
     if (masses.size() > 1) new_state->set_mass_fractions(masses);
 
+    // Try (p, T) first with the iphase_critical_point hint and then
+    // without; fall through to (rhomolar, T) with the same hint pair
+    // if neither works.  Each catch is a deliberate "try the next
+    // strategy" without reporting.
     if (std::isfinite(crit_state.p) && std::isfinite(crit_state.T)) {
         try {
             new_state->specify_phase(CoolProp::iphase_critical_point);
             new_state->update(CoolProp::PT_INPUTS, crit_state.p, crit_state.T);
             return new_state;
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
         }
         try {
             new_state->update(CoolProp::PT_INPUTS, crit_state.p, crit_state.T);
             return new_state;
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
         }
     }
 
@@ -115,12 +119,12 @@ std::shared_ptr<CoolProp::AbstractState> get_critical_point(const std::shared_pt
             new_state->specify_phase(CoolProp::iphase_critical_point);
             new_state->update(CoolProp::DmolarT_INPUTS, crit_state.rhomolar, crit_state.T);
             return new_state;
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
         }
         try {
             new_state->update(CoolProp::DmolarT_INPUTS, crit_state.rhomolar, crit_state.T);
             return new_state;
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
         }
     }
     throw CoolProp::ValueError("Could not calculate the critical point data.");
@@ -410,21 +414,25 @@ PropertyPlot::Range2D PropertyPlot::get_Tp_limits() const {
     else if (p.max < ID_FACTOR)
         p.max *= psat.max;
 
+    // trivial_keyed_output throws NotImplementedError on backends that
+    // don't expose iT_min / iT_max / iP_min / iP_max; in that case keep
+    // the prior limit unchanged.  Each catch is independent because we
+    // want to tighten any limit that IS available.
     try {
         t.min = std::max(t.min, state_->trivial_keyed_output(CoolProp::iT_min));
-    } catch (...) {
+    } catch (...) {  // NOLINT(bugprone-empty-catch)
     }
     try {
         t.max = std::min(t.max, state_->trivial_keyed_output(CoolProp::iT_max));
-    } catch (...) {
+    } catch (...) {  // NOLINT(bugprone-empty-catch)
     }
     try {
         p.min = std::max(p.min, state_->trivial_keyed_output(CoolProp::iP_min));
-    } catch (...) {
+    } catch (...) {  // NOLINT(bugprone-empty-catch)
     }
     try {
         p.max = std::min(p.max, state_->trivial_keyed_output(CoolProp::iP_max));
-    } catch (...) {
+    } catch (...) {  // NOLINT(bugprone-empty-catch)
     }
     return {t, p};
 }
@@ -448,7 +456,9 @@ PropertyPlot::Range2D PropertyPlot::get_axis_limits(CoolProp::parameters xkey, C
                     xrange.max = std::max(xrange.max, x);
                     yrange.min = std::min(yrange.min, y);
                     yrange.max = std::max(yrange.max, y);
-                } catch (...) {
+                } catch (...) {  // NOLINT(bugprone-empty-catch)
+                    // (T, p) outside the backend's valid region — this
+                    // corner doesn't contribute to the bounding box.
                 }
             }
         }

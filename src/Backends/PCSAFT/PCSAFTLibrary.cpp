@@ -239,7 +239,9 @@ std::string PCSAFTLibraryClass::get_binary_interaction_pcsaft(const std::string&
                 }
             } else {
             }
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Dictionary lookup threw; fall through to the uniform
+            // "could not match the parameter" ValueError below.
         }
         throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(),
                                 CAS1.c_str(), CAS2.c_str()));
@@ -262,7 +264,9 @@ std::string PCSAFTLibraryClass::get_binary_interaction_pcsaft(const std::string&
                 }
             } else {
             }
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Dictionary lookup threw; fall through to the uniform
+            // "could not match the parameter" ValueError below.
         }
         throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(),
                                 CAS1.c_str(), CAS2.c_str()));

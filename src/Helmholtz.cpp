@@ -1850,7 +1850,10 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
             try {
                 numerical_mcx = get_analytic_mcx(term, tau, delta, ntau, ndelta);
                 alphar_mcx = term->one_mcx(tau, delta).real();
-            } catch (std::exception& /* e */) {
+            } catch (std::exception& /* e */) {  // NOLINT(bugprone-empty-catch)
+                // one_mcx isn't implemented for every term; leave
+                // numerical_mcx/alphar_mcx at _HUGE so the CAPTURE
+                // below shows the gap rather than aborting the test.
                 //std::cout << e.what() << std::endl;
             }
             CAPTURE(alphar_mcx);

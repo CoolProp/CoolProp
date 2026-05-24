@@ -633,7 +633,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
 
                 env.insert_variables(resid.IO.T, resid.IO.p, resid.IO.rhomolar_liq, resid.IO.rhomolar_vap, resid.IO.hmolar_liq, resid.IO.hmolar_vap,
                                      resid.IO.smolar_liq, resid.IO.smolar_vap, resid.IO.x, resid.IO.y, imax);
-            } catch (...) {
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
                 // Don't do the insertion
             }
         }
