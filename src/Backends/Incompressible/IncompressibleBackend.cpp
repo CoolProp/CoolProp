@@ -11,7 +11,7 @@
 #endif
 
 #include <string>
-//#include "CoolProp.h"
+#include "CoolProp.h"
 
 #include "IncompressibleBackend.h"
 #include "IncompressibleFluid.h"

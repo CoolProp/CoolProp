@@ -2,6 +2,7 @@
 #include "FlashRoutines.h"
 
 #include <cmath>
+#include "CoolProp.h"
 #include "HelmholtzEOSMixtureBackend.h"
 #include "HelmholtzEOSBackend.h"
 #include "PhaseEnvelopeRoutines.h"
