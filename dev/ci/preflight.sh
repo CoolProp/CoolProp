@@ -240,6 +240,15 @@ else
         cert-msc32-c
         cert-msc51-cpp
         clang-analyzer-optin.core.EnumCastOutOfRange
+        # AbstractState::AbstractState() calls the (virtual) clear() to
+        # initialize members; the base impl is independent of any
+        # overrides.  Refactoring around the warning would mean splitting
+        # clear() into virtual + non-virtual halves across the whole
+        # backend hierarchy.  Cppcheck classifies the same finding as
+        # `style` (not warning), and CI's clang-tidy job runs
+        # clang-tidy-diff (changed lines only) so it never reports this.
+        # Keeping the suppression scoped to preflight to match.
+        clang-analyzer-optin.cplusplus.VirtualCall
     )
     NOISE_PATTERN="$(IFS='|'; echo "${CLANG_TIDY_NOISE_CHECKS[*]}")"
 

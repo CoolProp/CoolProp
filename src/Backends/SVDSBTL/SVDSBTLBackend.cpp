@@ -30,10 +30,24 @@
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #include "CPfilepaths.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
+#include "CoolProp/sbtl/SaturationSurrogate.h"
 #include "CoolProp/schemas/SVDSBTLOptions.h"
 #include "DataStructures.h"
 #include "Exceptions.h"
 #include "rapidjson_include.h"
+
+// File-scope suppression for bugprone-unchecked-optional-access: the
+// optionals on PointEvaluation are filled by resolve_point_() based on
+// the Kind invariant (SinglePhase / DomeBlend / Patched / OutOfRange /
+// TwoPhaseDisallowed) and unconditionally read by evaluate_property_()
+// only when that invariant guarantees the field is set.  Per-line
+// checking would require either (a) refactoring PointEvaluation to use
+// non-optional NaN-sentinel fields (mass disruption) or (b) interleaving
+// has_value() asserts that compile to nothing in release.  Neither
+// matches the kind-invariant design here, so the check is suppressed at
+// file scope — every access in this file is preceded by a kind switch.
+//
+// NOLINTBEGIN(bugprone-unchecked-optional-access)
 
 namespace CoolProp {
 
@@ -212,7 +226,9 @@ std::filesystem::path critpatch_cache_path_(const std::string& fluid_name, const
 
 }  // namespace
 
-SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name, const std::string& source_backend, const std::string& options_json)
+SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name,      // NOLINT(modernize-pass-by-value)
+                               const std::string& source_backend,  // NOLINT(modernize-pass-by-value)
+                               const std::string& options_json)    // NOLINT(modernize-pass-by-value)
   : fluid_name_(fluid_name), source_backend_(source_backend), mole_fractions_({1.0}), options_canonical_(parse_and_canonicalise(options_json)) {
     // Validate the source backend up-front.  Anything outside the
     // {HEOS, REFPROP, IF97} set is rejected — adding a new source
@@ -326,7 +342,7 @@ void SVDSBTLBackend::build_critical_patch_(const std::string& options_canonical)
             try {
                 bbox_mult = auto_calibrate_critical_bbox_();
                 save_critpatch_cache_(fluid_name_, source_backend_, options_canonical, bbox_mult);
-            } catch (const std::exception&) {
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
                 // Calibrator threw (source backend rejected a probe,
                 // SVD surface missing a property, etc.) — fall back to
                 // the Water-sized defaults rather than disabling the
@@ -672,7 +688,7 @@ void SVDSBTLBackend::save_critpatch_cache_(const std::string& fluid_name, const 
     // path: cache miss on next load just re-runs the calibrator.
     try {
         ::write_bytes_atomic(path, buf.data(), buf.size(), /*restrict_perms=*/true);
-    } catch (const std::exception&) {
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
         // swallowed — cache write is best-effort
     }
 }
@@ -740,6 +756,78 @@ std::vector<CoolProp::input_pairs> SVDSBTLBackend::registered_input_pairs() cons
     return out;
 }
 
+bool SVDSBTLBackend::sat_surrogate_consulted() const noexcept {
+    return sat_surrogate_used_;
+}
+
+const CoolProp::sbtl::SaturationSurrogate* SVDSBTLBackend::sat_surrogate_handle_() {
+    if (sat_surrogate_resolved_) {
+        return sat_surrogate_.get();
+    }
+    sat_surrogate_resolved_ = true;
+    // NOTE: surrogate build consumes the source backend's update slot
+    // (mutates source_reference_() state via ~2*n_knots QT_INPUTS
+    // calls before returning).  Same shared state any other resolve_
+    // point path uses; downstream callers must always update before
+    // reading, which they already do — but if a future refactor caches
+    // source state across calls, this build path will silently invalidate
+    // it on the first sat-touching call after construction.
+    // Surrogate is the fallback for sources without a SuperAncillary;
+    // if we have one we shouldn't build the surrogate at all.  Callers
+    // (sat_T_from_p_ / sat_eval_) prefer SA on the resolution side too,
+    // so even if we did build it the surrogate would be unused — saves
+    // ~50-100 source.update calls on HEOS-source backends.
+    if (superanc_() != nullptr) {
+        return nullptr;
+    }
+    try {
+        auto src = source_reference_();
+        if (!src) {
+            return nullptr;
+        }
+        sat_surrogate_ = CoolProp::sbtl::SaturationSurrogate::build_from_source(*src);
+    } catch (const std::exception&) {
+        sat_surrogate_.reset();
+    }
+    return sat_surrogate_.get();
+}
+
+double SVDSBTLBackend::sat_T_from_p_(double p) {
+    try {
+        auto sa = superanc_();
+        if (sa) {
+            return sa->get_T_from_p(p);
+        }
+        const auto* surrogate = sat_surrogate_handle_();
+        if (surrogate) {
+            sat_surrogate_used_ = true;
+            return surrogate->get_T_from_p(p);
+        }
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+        // Out-of-range / numerical failure: signal NaN so callers
+        // can fall through to source PQ.  Matches the "throw on
+        // surrogate, NaN on backend interface" contract documented
+        // on SaturationSurrogate.
+    }
+    return std::nan("");
+}
+
+double SVDSBTLBackend::sat_eval_(double T, char what, int side) {
+    try {
+        auto sa = superanc_();
+        if (sa) {
+            return sa->eval_sat(T, what, static_cast<short>(side));
+        }
+        const auto* surrogate = sat_surrogate_handle_();
+        if (surrogate) {
+            sat_surrogate_used_ = true;
+            return surrogate->eval_sat(T, what, side);
+        }
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) see sat_T_from_p_ note
+    }
+    return std::nan("");
+}
+
 void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     namespace cp_sbtl = CoolProp::sbtl;
     // Cache filename: <fluid>.<source>.<input_pair_name>.<opthash>.svd.bin.z
@@ -774,7 +862,7 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
         surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, source_backend_, pair, grid));
         try {
             cp_sbtl::SVDSurfaceSerializer::save_to_file(*surface, path);
-        } catch (const std::exception&) {
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
             // Cache write failure is non-fatal — the in-memory surface
             // still works for this run.
         }
@@ -814,17 +902,30 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
         if (Q < 0.0 || Q > 1.0) {
             throw ValueError("SVDSBTL backend: two-phase Q must be in [0, 1]");
         }
-        auto sa = superanc_();
-        if (sa) {
-            if (input_pair == CoolProp::PQ_INPUTS) {
-                T_sat = sa->get_T_from_p(p_sat);
-            } else {
-                p_sat = sa->eval_sat(T_sat, 'P', 0);
+        // Try SA-or-surrogate fast path first; only fall through to
+        // source.update PQ/QT when neither sat provider is available.
+        // sat_T_from_p_ / sat_eval_ return NaN when both are missing.
+        const double T_sat_fast = (input_pair == CoolProp::PQ_INPUTS) ? sat_T_from_p_(p_sat) : T_sat;
+        double hL_fast = std::nan("");
+        double hV_fast = std::nan("");
+        double p_sat_fast = (input_pair == CoolProp::PQ_INPUTS) ? p_sat : std::nan("");
+        if (std::isfinite(T_sat_fast)) {
+            hL_fast = sat_eval_(T_sat_fast, 'H', 0);
+            hV_fast = sat_eval_(T_sat_fast, 'H', 1);
+            if (input_pair == CoolProp::QT_INPUTS) {
+                p_sat_fast = sat_eval_(T_sat_fast, 'P', 0);
             }
-            pt.hL_mol = sa->eval_sat(T_sat, 'H', 0);
-            pt.hV_mol = sa->eval_sat(T_sat, 'H', 1);
+        }
+        if (std::isfinite(T_sat_fast) && std::isfinite(hL_fast) && std::isfinite(hV_fast) && std::isfinite(p_sat_fast)) {
+            T_sat = T_sat_fast;
+            p_sat = p_sat_fast;
+            pt.hL_mol = hL_fast;
+            pt.hV_mol = hV_fast;
         } else {
-            // Source-backend PQ/QT fallback (REFPROP / IF97).
+            // Last-resort source-backend PQ/QT fallback — only reached when
+            // both SA and the surrogate are unavailable (truly degenerate
+            // source, or surrogate-build failure on a fluid REFPROP can't
+            // sample cleanly).
             auto src = source_reference_();
             if (input_pair == CoolProp::PQ_INPUTS) {
                 src->update(CoolProp::PQ_INPUTS, p_sat, 0.0);
@@ -986,15 +1087,21 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
         // Optional sat-line caloric endpoints we may also pick up from
         // the source PQ fallback (saves the redundant lookup later).
         std::optional<double> rhoL_mol_seed, rhoV_mol_seed, sL_mol_seed, sV_mol_seed;
-        auto sa = superanc_();
-        if (sa) {
-            try {
-                T_sat = sa->get_T_from_p(p_val);
-                hL_mol = sa->eval_sat(T_sat, 'H', 0);
-                hV_mol = sa->eval_sat(T_sat, 'H', 1);
-                sat_resolved = true;
-            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+        // Fast path: SA -> surrogate -> NaN.  Falls through to source
+        // PQ only when neither provider is built.
+        try {
+            const double T_sat_fast = sat_T_from_p_(p_val);
+            if (std::isfinite(T_sat_fast)) {
+                const double hL_fast = sat_eval_(T_sat_fast, 'H', 0);
+                const double hV_fast = sat_eval_(T_sat_fast, 'H', 1);
+                if (std::isfinite(hL_fast) && std::isfinite(hV_fast)) {
+                    T_sat = T_sat_fast;
+                    hL_mol = hL_fast;
+                    hV_mol = hV_fast;
+                    sat_resolved = true;
+                }
             }
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
         }
         if (!sat_resolved) {
             try {
@@ -1034,11 +1141,10 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
     // --- PT-on-sat detection vs genuine OOB. ---
     if (input_pair == CoolProp::PT_INPUTS) {
         try {
-            auto sa = superanc_();
-            double T_sat_probe = std::numeric_limits<double>::quiet_NaN();
-            if (sa) {
-                T_sat_probe = sa->get_T_from_p(a);
-            } else {
+            // SA-or-surrogate fast path; only fall through to source
+            // PQ if neither provider returns a finite T_sat.
+            double T_sat_probe = sat_T_from_p_(a);
+            if (!std::isfinite(T_sat_probe)) {
                 auto src = source_reference_();
                 src->update(CoolProp::PQ_INPUTS, a, 0.0);
                 T_sat_probe = src->T();
@@ -1060,10 +1166,11 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
 
 void SVDSBTLBackend::ensure_dome_rho_endpoints_(PointEvaluation& pt) {
     if (pt.rhoL_mol && pt.rhoV_mol) return;
-    auto sa = superanc_();
-    if (sa) {
-        pt.rhoL_mol = sa->eval_sat(*pt.T_sat, 'D', 0);
-        pt.rhoV_mol = sa->eval_sat(*pt.T_sat, 'D', 1);
+    const double rhoL_fast = sat_eval_(*pt.T_sat, 'D', 0);
+    const double rhoV_fast = sat_eval_(*pt.T_sat, 'D', 1);
+    if (std::isfinite(rhoL_fast) && std::isfinite(rhoV_fast)) {
+        pt.rhoL_mol = rhoL_fast;
+        pt.rhoV_mol = rhoV_fast;
         return;
     }
     auto src = source_reference_();
@@ -1075,10 +1182,11 @@ void SVDSBTLBackend::ensure_dome_rho_endpoints_(PointEvaluation& pt) {
 
 void SVDSBTLBackend::ensure_dome_s_endpoints_(PointEvaluation& pt) {
     if (pt.sL_mol && pt.sV_mol) return;
-    auto sa = superanc_();
-    if (sa) {
-        pt.sL_mol = sa->eval_sat(*pt.T_sat, 'S', 0);
-        pt.sV_mol = sa->eval_sat(*pt.T_sat, 'S', 1);
+    const double sL_fast = sat_eval_(*pt.T_sat, 'S', 0);
+    const double sV_fast = sat_eval_(*pt.T_sat, 'S', 1);
+    if (std::isfinite(sL_fast) && std::isfinite(sV_fast)) {
+        pt.sL_mol = sL_fast;
+        pt.sV_mol = sV_fast;
         return;
     }
     auto src = source_reference_();
@@ -1580,7 +1688,7 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
         bool row_failed = false;
         for (std::size_t o = 0; o < N_outputs; ++o) {
             double v = NaN;
-            if (can_batch && output_is_surface[o]) {
+            if (can_batch && output_is_surface[o] != 0) {
                 v = surface_vals[output_surface_idx[o]] * output_M_scale[o];
             } else {
                 try {
@@ -1609,3 +1717,5 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
 }
 
 }  // namespace CoolProp
+
+// NOLINTEND(bugprone-unchecked-optional-access)

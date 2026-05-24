@@ -574,7 +574,9 @@ TEST_CASE("SVDSBTL fast_evaluate matches per-call update() bit-for-bit", "[SVDSB
     auto if97 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
     auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&IF97", "Water"));
     std::vector<double> h_v, p_v;
+    // NOLINTNEXTLINE(clang-analyzer-security.FloatLoopCounter,cert-flp30-c)
     for (double T = 320.0; T <= 800.0; T += 60.0) {
+        // NOLINTNEXTLINE(clang-analyzer-security.FloatLoopCounter,cert-flp30-c)
         for (double lp = std::log(1.0e5); lp <= std::log(3.0e7); lp += 0.5 * std::log(10.0)) {
             const double p = std::exp(lp);
             try {
@@ -844,7 +846,8 @@ TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY end-to-end build + reload", "
     };
     std::vector<std::int64_t> mtimes_before_ns;
     mtimes_before_ns.reserve(files.size());
-    for (const auto& f : files) mtimes_before_ns.push_back(to_ns(fs::last_write_time(f)));
+    for (const auto& f : files)
+        mtimes_before_ns.push_back(to_ns(fs::last_write_time(f)));
 
     // Second construction with the same options -> must read from cache,
     // not rebuild.  A rebuild would rewrite the .svd.bin.z files and
@@ -883,7 +886,7 @@ TEST_CASE("write_bytes_atomic is race-safe across threads", "[SVDSBTL][cache][ra
     // Payload large enough that an ofstream::write of one payload would
     // be observable mid-stream by another writer if the writes were not
     // serialized via rename.  Several pages worth of bytes.
-    constexpr std::size_t kPayloadSize = 1 << 14;  // 16 KiB
+    constexpr std::size_t kPayloadSize = static_cast<std::size_t>(1) << 14U;  // 16 KiB
     std::vector<std::vector<char>> payloads(kThreads);
     for (int i = 0; i < kThreads; ++i) {
         payloads[i].assign(kPayloadSize, static_cast<char>(i + 1));  // distinct fill bytes per thread
@@ -922,6 +925,7 @@ TEST_CASE("write_bytes_atomic is race-safe across threads", "[SVDSBTL][cache][ra
             break;
         }
     }
+    // cppcheck-suppress shiftNegative // Catch2 INFO macro: << is ostream insertion, not bit-shift
     INFO("Result must match exactly one writer's payload; instead matched index " << matched_idx);
     REQUIRE(matched_one);
 
@@ -936,6 +940,117 @@ TEST_CASE("write_bytes_atomic is race-safe across threads", "[SVDSBTL][cache][ra
     REQUIRE(leftover_temps == 0);
 
     fs::remove_all(tmpdir, ec);
+}
+
+// -- SaturationSurrogate (CoolProp-077) -----------------------------------
+
+#    include "CoolProp/sbtl/SaturationSurrogate.h"
+
+// Standalone surrogate accuracy: build from HEOS Water (always available,
+// has a SuperAncillary as ground truth elsewhere; here we treat HEOS's own
+// QT_INPUTS as truth and check the spline interpolant against it).
+//
+// Bead acceptance: rel err <= 1e-6 on smooth-fluid probes away from T_crit.
+// Probe set deliberately picks T in [0.55, 0.95] * T_crit to stay well
+// clear of the sqrt-singularity near T_crit and the iteration-sensitive
+// strip near T_triple.
+TEST_CASE("SaturationSurrogate eval_sat matches source QT_INPUTS on HEOS water", "[SBTL][SVDSBTL][sat_surrogate][slow]") {
+    auto src = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    auto surrogate = CoolProp::sbtl::SaturationSurrogate::build_from_source(*src);
+    REQUIRE(surrogate != nullptr);
+    REQUIRE(surrogate->n_knots() >= 4);
+
+    const double T_crit = src->T_critical();
+    std::mt19937 rng(2026'05'23);
+    std::uniform_real_distribution<double> tfrac(0.55, 0.95);
+
+    for (int trial = 0; trial < 32; ++trial) {
+        const double T = tfrac(rng) * T_crit;
+        for (int side : {0, 1}) {
+            src->update(CoolProp::QT_INPUTS, static_cast<double>(side), T);
+            const double p_ref = src->p();
+            const double h_ref = src->hmolar();
+            const double s_ref = src->smolar();
+            const double rho_ref = src->rhomolar();
+            const double u_ref = src->umolar();
+
+            REQUIRE(surrogate->eval_sat(T, 'P', side) == Approx(p_ref).epsilon(1e-6));
+            REQUIRE(surrogate->eval_sat(T, 'H', side) == Approx(h_ref).epsilon(1e-6));
+            REQUIRE(surrogate->eval_sat(T, 'S', side) == Approx(s_ref).epsilon(1e-6));
+            REQUIRE(surrogate->eval_sat(T, 'D', side) == Approx(rho_ref).epsilon(1e-6));
+            REQUIRE(surrogate->eval_sat(T, 'U', side) == Approx(u_ref).epsilon(1e-6));
+        }
+    }
+}
+
+// Near-critical guard: at T = 0.99 * T_crit (well above the eval_sat
+// accuracy test's 0.95 upper bound, but inside the surrogate's build
+// range of 0.9999 * T_crit), the surrogate must still return finite,
+// physically-sensible values.  The bead's accuracy contract doesn't
+// hold here — the sqrt-singularity at T_crit pushes cubic-spline error
+// well past 1e-6 — but the surrogate must not return NaN / inf or
+// overshoot below zero, since callers blend rho/h/s/u under the lever
+// rule and a non-finite endpoint corrupts the whole dome row.
+TEST_CASE("SaturationSurrogate stays finite and positive near T_crit", "[SBTL][SVDSBTL][sat_surrogate][slow]") {
+    auto src = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    auto surrogate = CoolProp::sbtl::SaturationSurrogate::build_from_source(*src);
+    REQUIRE(surrogate != nullptr);
+    const double T = 0.99 * src->T_critical();
+    for (int side : {0, 1}) {
+        for (char k : {'P', 'D', 'H', 'S', 'U'}) {
+            const double y = surrogate->eval_sat(T, k, side);
+            REQUIRE(std::isfinite(y));
+            // P/D/H positive at the dome interior for water (H_L is
+            // positive in the IAPWS reference state above triple liquid;
+            // P and D are positive by physics).  U/S are signed but
+            // finite-only here.
+            if (k == 'P' || k == 'D' || k == 'H') {
+                REQUIRE(y > 0.0);
+            }
+        }
+    }
+}
+
+// Inverse: p -> T_sat.  The surrogate stores T(log p) so the inversion is
+// just one spline evaluation.  Same well-behaved probe interval as above.
+TEST_CASE("SaturationSurrogate get_T_from_p inverts source PQ_INPUTS on HEOS water", "[SBTL][SVDSBTL][sat_surrogate][slow]") {
+    auto src = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    auto surrogate = CoolProp::sbtl::SaturationSurrogate::build_from_source(*src);
+    REQUIRE(surrogate != nullptr);
+
+    const double p_crit = src->p_critical();
+    std::mt19937 rng(2026'05'24);
+    std::uniform_real_distribution<double> log_pfrac(std::log(1e-3), std::log(0.95));
+
+    for (int trial = 0; trial < 16; ++trial) {
+        const double p = std::exp(log_pfrac(rng)) * p_crit;
+        src->update(CoolProp::PQ_INPUTS, p, 0.0);
+        const double T_ref = src->T();
+        REQUIRE(surrogate->get_T_from_p(p) == Approx(T_ref).epsilon(1e-6));
+    }
+}
+
+// Backend wiring: when SVDSBTL is built on a source without a SuperAncillary
+// (REFPROP today), the backend must lazily build a SaturationSurrogate.
+// HEOS source must NOT trigger the surrogate (the SA path is preferred).
+TEST_CASE("SVDSBTLBackend uses surrogate when source has no SuperAncillary", "[SBTL][SVDSBTL][sat_surrogate][source]") {
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    auto* heos_be = dynamic_cast<CoolProp::SVDSBTLBackend*>(heos.get());
+    REQUIRE(heos_be != nullptr);
+
+    // Hot path that flushes through the sat resolver — pick a clean dome
+    // probe so the backend definitely went through the sat-provider code.
+    heos->update(CoolProp::PQ_INPUTS, 0.4 * heos->p_critical(), 0.5);
+    REQUIRE_FALSE(heos_be->sat_surrogate_consulted());
+
+    if (!source_backend_available("REFPROP", "Water")) {
+        SKIP("REFPROP not available; skipping surrogate-wired-in assertion for REFPROP source");
+    }
+    auto rp = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&REFPROP", "Water"));
+    auto* rp_be = dynamic_cast<CoolProp::SVDSBTLBackend*>(rp.get());
+    REQUIRE(rp_be != nullptr);
+    rp->update(CoolProp::PQ_INPUTS, 0.4 * rp->p_critical(), 0.5);
+    REQUIRE(rp_be->sat_surrogate_consulted());
 }
 
 #endif  // ENABLE_CATCH

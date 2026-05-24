@@ -14,6 +14,7 @@
 
 #include "AbstractState.h"
 #include "CoolProp/sbtl/SVDSurface.h"
+#include "CoolProp/sbtl/SaturationSurrogate.h"
 #include "DataStructures.h"
 #include "Exceptions.h"
 
@@ -238,6 +239,17 @@ class SVDSBTLBackend : public AbstractState
     // the set of input pairs registered in surfaces_.
     [[nodiscard]] std::vector<CoolProp::input_pairs> registered_input_pairs() const;
 
+    // Test seam: true iff at least one sat lookup so far (any of
+    // PQ/QT routing, PT-on-sat probing, HmassP dome detection, or
+    // dome-endpoint fills) has gone through the SaturationSurrogate
+    // cubic-spline cache rather than the source backend's QT/PQ_INPUTS
+    // path or the per-fluid SuperAncillary.  Used by the CoolProp-077
+    // wiring test to confirm the surrogate is actually consulted (HEOS
+    // source -> false because SA is preferred; REFPROP source -> true).
+    // Always false before the first sat-touching call; lazy build only
+    // fires on demand.
+    [[nodiscard]] bool sat_surrogate_consulted() const noexcept;
+
    public:
     // Self-contained per-point evaluation state — the shared currency
     // between update() (caches the result on the instance) and
@@ -330,6 +342,30 @@ class SVDSBTLBackend : public AbstractState
     // this fluid -- two-phase queries then throw a clear error.
     std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> superanc_();
 
+    // Resolve the SaturationSurrogate for this (fluid, source-backend).
+    // Lazy: only built when superanc_() returns nullptr AND a hot-path
+    // caller asks for it (sat_T_from_p_ / sat_eval_).  Cached for the
+    // lifetime of the backend.  Returns nullptr if the source backend
+    // can't provide enough QT_INPUTS probes to build a valid surrogate
+    // — callers then fall through to the source-PQ/QT last-resort path.
+    // Mirrors the superanc_() resolution pattern so adding a third
+    // sat-provider source (e.g. cached blob) later is a one-line
+    // addition.
+    const CoolProp::sbtl::SaturationSurrogate* sat_surrogate_handle_();
+
+    // Composite saturation lookups.  Each one tries the SuperAncillary
+    // first; if unavailable, falls back to the SaturationSurrogate.
+    // If BOTH are unavailable, returns NaN — callers then drop into
+    // the per-site source-PQ/QT fallback path that already exists for
+    // surrogate-build failures.
+    //
+    // Setting `record_use` to true tags the test-seam flag
+    // `sat_surrogate_used_` whenever the surrogate (not the SA) is
+    // consulted — drives the using_sat_surrogate() public test seam.
+    // The fallback (source.update PQ/QT) does not toggle the flag.
+    [[nodiscard]] double sat_T_from_p_(double p);
+    [[nodiscard]] double sat_eval_(double T, char what, int side);
+
     std::string fluid_name_;
     std::string source_backend_;               // "HEOS" / "REFPROP" / "IF97"
     std::vector<CoolPropDbl> mole_fractions_;  // always {1.0}
@@ -367,6 +403,19 @@ class SVDSBTLBackend : public AbstractState
     // nullptr if the fluid ships without one.
     std::shared_ptr<superancillary::SuperAncillary<std::vector<double>>> superanc_cached_;
     bool superanc_resolved_ = false;  // distinguish "not tried yet" from "tried and got nullptr"
+
+    // Lazy-resolved SaturationSurrogate handle.  See sat_surrogate_handle_()
+    // for the build trigger.  Owned by the backend.  Built only when SA is
+    // absent (REFPROP source today); HEOS source skips this entirely
+    // because superanc_ provides faster + more accurate sat lookups.
+    std::unique_ptr<CoolProp::sbtl::SaturationSurrogate> sat_surrogate_;
+    bool sat_surrogate_resolved_ = false;
+
+    // Test seam.  Flipped on the first hot-path call that actually
+    // routes through sat_surrogate_ (as opposed to superanc_).  Set
+    // only by sat_T_from_p_ / sat_eval_; never cleared during the
+    // backend's lifetime.
+    bool sat_surrogate_used_ = false;
 
     // Critical-patch HEOS-fallback.  When an active query point lands
     // inside the configured bbox (in whatever the input pair's native
