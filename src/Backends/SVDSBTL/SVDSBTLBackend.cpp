@@ -664,7 +664,10 @@ std::optional<std::array<double, 4>> SVDSBTLBackend::load_critpatch_cache_(const
         (void)std::fclose(f);
         return std::nullopt;
     }
-    if (std::fread(&version, sizeof(version), 1, f) != 1 || version != 1u) {
+    // v1 → v2: T_hi_cap clamp added in CoolProp-4u9.  Bump to invalidate
+    // pre-clamp caches so they get recomputed with the corrected ceiling
+    // (no migration — calibrator is cheap, re-runs on cache miss).
+    if (std::fread(&version, sizeof(version), 1, f) != 1 || version != 2u) {
         (void)std::fclose(f);
         return std::nullopt;
     }
@@ -693,7 +696,7 @@ void SVDSBTLBackend::save_critpatch_cache_(const std::string& fluid_name, const 
         return;
     }
     constexpr std::array<char, 8> kMagic = {'C', 'P', 'C', 'R', 'I', 'T', 'P', 'B'};
-    constexpr std::uint32_t kVersion = 1;
+    constexpr std::uint32_t kVersion = 2;
     constexpr std::size_t kPayloadSize = kMagic.size() + sizeof(kVersion) + 4 * sizeof(double);
     std::array<char, kPayloadSize> buf{};
     std::memcpy(buf.data(), kMagic.data(), kMagic.size());

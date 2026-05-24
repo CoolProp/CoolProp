@@ -32,7 +32,11 @@ import pandas as pd
 _INTERACTIVE = "--interactive" in sys.argv
 if _INTERACTIVE:
     sys.argv.remove("--interactive")
-    matplotlib.use("MacOSX")
+    # Only force "MacOSX" on macOS — that backend's Cocoa support isn't
+    # available on Linux/Windows.  Elsewhere, let matplotlib pick the
+    # first available GUI backend (QtAgg / TkAgg / GTK3Agg).
+    if sys.platform == "darwin":
+        matplotlib.use("MacOSX")
 
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.colors import LogNorm  # noqa: E402
