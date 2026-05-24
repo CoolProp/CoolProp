@@ -88,12 +88,19 @@ try {
         process.exit(1);
     }
 
-    // NOTE: get_mole_fractions() readback via .get(i) is gated on
-    // register_optional<double>() actually surfacing in the JS glue —
-    // currently the wasm doesn't import _embind_register_optional under
-    // emcc 4.0.12 (template body either DCE'd or not instantiated), so
-    // VectorDouble.get(i) still throws 'unbound types: optional<double>'.
-    // Round-trip test is left out until that path works; see beads.
+    // Round-trip the composition through get_mole_fractions(). The
+    // VectorDouble::get(i) → std::optional<double> binding is registered
+    // explicitly in src/emscripten_interface.cxx; embind surfaces it as a
+    // plain JS number when the value is present.
+    var got = ASmix.get_mole_fractions();
+    var got0 = got.get(0);
+    var got1 = got.get(1);
+    console.log("mixture composition round-trip:", got0, got1);
+    if (Math.abs(got0 - 0.4) > 1e-12 || Math.abs(got1 - 0.6) > 1e-12) {
+        console.error("get_mole_fractions did not round-trip composition");
+        process.exit(1);
+    }
+    got.delete();
 
     z.delete();
     ASmix.delete();
@@ -143,18 +150,24 @@ try {
     var env = ASenv.get_phase_envelope_data();
 
     // env.T and env.p are VectorDouble fields populated by the envelope tracer.
-    // We check structure (both vectors non-empty and same length) rather than
-    // element values: VectorDouble.get(i) currently returns std::optional<double>
-    // and the optional-type registration isn't taking effect in the full
-    // CoolProp build (minimal repro works; full build doesn't — pending
-    // investigation). The size check still proves the value_object binding
-    // and the X-macro field registration round-trip the data populated by
-    // build_phase_envelope().
     var nT = env.T.size();
     var np = env.p.size();
     console.log("envelope points: T=" + nT + ", p=" + np);
     if (nT < 5 || np !== nT) {
         console.error("envelope returned too few points or T/p size mismatch:", nT, np);
+        process.exit(1);
+    }
+    // Sample the middle point; both must be finite and in plausible ranges
+    // for Methane&Ethane. Exercises VectorDouble::get(i) -> optional<double>.
+    var Tmid = env.T.get(Math.floor(nT/2));
+    var pmid = env.p.get(Math.floor(np/2));
+    console.log("envelope mid-point: T=" + Tmid + " K, p=" + pmid + " Pa");
+    if (!(Number.isFinite(Tmid) && Tmid > 50 && Tmid < 400)) {
+        console.error("envelope mid-T out of plausible range:", Tmid);
+        process.exit(1);
+    }
+    if (!(Number.isFinite(pmid) && pmid > 1 && pmid < 1e8)) {
+        console.error("envelope mid-p out of plausible range:", pmid);
         process.exit(1);
     }
 

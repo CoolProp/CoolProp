@@ -22,6 +22,7 @@
 /// *********************************************************************************
 
 #    include <emscripten/bind.h>
+#    include <optional>
 using namespace emscripten;
 
 // Binding code
@@ -212,6 +213,14 @@ EMSCRIPTEN_BINDINGS(abstract_state_bindings) {
 
     register_vector<double>("VectorDouble");
     register_vector<std::string>("VectorString");
+    // Without this, VectorDouble.get(i) throws 'unbound types: optional<double>'
+    // from JS because register_vector's auto-call to register_optional<T> is
+    // an inlineable template whose body the optimizer folds to a no-op (the
+    // `thread_local bool hasRun` guard appears to be the trigger). Calling the
+    // embind internal entry-point directly preserves the wasm import.
+    internal::_embind_register_optional(
+        internal::TypeID<std::optional<double>>::get(),
+        internal::TypeID<double>::get());
 
     value_object<CoolProp::PhaseEnvelopeData>("CoolProp::PhaseEnvelopeData")
 // Use X macros to auto-generate the variables;
