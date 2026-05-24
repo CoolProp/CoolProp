@@ -113,8 +113,7 @@ TEST_CASE("critical_patch: HmassP_INPUTS routing matches source backend in the b
     REQUIRE(AS->smass() == Catch::Approx(heos->smass()).margin(1e-9));
 }
 
-TEST_CASE("critical_patch: HEOS source must NOT polish (regression for low-Tc drift)",
-          "[SVDSBTL][critical_patch][hydrogen][slow]") {
+TEST_CASE("critical_patch: HEOS source must NOT polish (regression for low-Tc drift)", "[SVDSBTL][critical_patch][hydrogen][slow]") {
     // polish_patch_state_ was added (d176979e7) to fix IF97's R7-97
     // backward-equation floor (±25 mK forward-consistency).  HEOS's
     // HmassP_INPUTS is already iterative + forward-consistent, so the

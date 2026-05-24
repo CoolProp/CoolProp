@@ -914,7 +914,12 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
     // polish for HEOS also drops one extra HEOS PT_INPUTS eval per
     // in-bbox query.  See the [hydrogen] regression test in
     // CoolProp-Tests-SVDSBTLCriticalPatch.cpp.
-    const bool needs_polish = (source_backend_ == "IF97");
+    // Gate on the ACTIVE patch backend, not source_backend_: when the
+    // user overrides critical_patch.source (e.g. SVDSBTL&HEOS with
+    // patch source="IF97" for Water), the polish requirement follows
+    // the backend actually serving the in-patch query.
+    const std::string& patch_backend = critical_patch_.source.empty() ? source_backend_ : critical_patch_.source;
+    const bool needs_polish = (patch_backend == "IF97");
     const auto patch_key = (input_pair == CoolProp::HmolarP_INPUTS) ? CoolProp::HmassP_INPUTS : input_pair;
     if (critical_patch_.contains(patch_key, a, b)) {
         try {
