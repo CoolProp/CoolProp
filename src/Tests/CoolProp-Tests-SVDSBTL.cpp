@@ -1103,13 +1103,24 @@ TEST_CASE("SVDSBTL pc-strip routes through critical patch", "[SVDSBTL][CoolProp-
                     REQUIRE(svd->rhomass() == Approx(rho_truth).epsilon(1e-12));
 
                     // 2) HmassP lookup: same cell via (h, p) must
-                    //    also route to patch and return HEOS-exact
-                    //    rho.  This is the path that fails for
-                    //    R245fa without the T_hi_mult clamp.
+                    //    also route to patch and return what HEOS
+                    //    returns for the SAME (h, p) input.  This
+                    //    is the path that fails for R245fa without
+                    //    the T_hi_mult clamp.  Compare against
+                    //    heos->HmassP, not heos->PT, because the
+                    //    polish gate (#2966) means HEOS-source
+                    //    patches no longer iterate T to match
+                    //    rho_truth_PT — they just call HEOS's
+                    //    HmassP_INPUTS, which is iterative+forward-
+                    //    consistent but not bit-exact with PT in
+                    //    the ill-conditioned critical region
+                    //    (~1e-7 residual for R245fa).
+                    heos->update(CoolProp::HmassP_INPUTS, h, p);
+                    const double rho_truth_hp = heos->rhomass();
                     svd->update(CoolProp::HmassP_INPUTS, h, p);
                     INFO(fluid << " pc-strip HmassP: p=" << p << " h=" << h << " (T_truth=" << T << ")");
                     REQUIRE_FALSE(std::isnan(svd->rhomass()));
-                    REQUIRE(svd->rhomass() == Approx(rho_truth).epsilon(1e-9));
+                    REQUIRE(svd->rhomass() == Approx(rho_truth_hp).epsilon(1e-12));
                 }
             }
         }
