@@ -77,6 +77,87 @@ TEST_CASE("AxisTransform analytic Jacobian", "[SVDComponents][Region][axis_trans
     REQUIRE(t_log.dxi_da(a) == Catch::Approx(fd).epsilon(1e-6));
 }
 
+TEST_CASE("AxisTransform power round-trip", "[SVDComponents][Region][axis_transform]") {
+    // POWER β=1/3 (CoolProp-4u9): xi=0 → a_lo, xi=1 → a_hi, crowds at a_hi.
+    // Use a band typical of NC near-critical use (R245fa-like p range).
+    const double a_lo = 0.9 * 3.651e6;           // 0.9·pc
+    const double a_hi = (1.0 - 1e-6) * 3.651e6;  // (1 − 1ppm)·pc
+    const auto t = cp_region::AxisTransform::make(cp_region::AxisScale::POWER, a_lo, a_hi);
+    std::mt19937 rng(3);
+    std::uniform_real_distribution<double> u(a_lo, a_hi);
+    for (int k = 0; k < 100; ++k) {
+        const double a = u(rng);
+        const double xi = t.forward(a);
+        REQUIRE(xi >= -1e-12);
+        REQUIRE(xi <= 1.0 + 1e-12);
+        const double a_back = t.inverse(xi);
+        REQUIRE(std::abs(a_back - a) / a < 1e-12);
+    }
+    // Endpoints exact.
+    REQUIRE(t.forward(a_lo) == Catch::Approx(0.0).margin(1e-15));
+    REQUIRE(t.forward(a_hi) == Catch::Approx(1.0).margin(1e-15));
+    REQUIRE(t.inverse(0.0) == Catch::Approx(a_lo).margin(1e-15));
+    REQUIRE(t.inverse(1.0) == Catch::Approx(a_hi).margin(1e-15));
+    // Crowding direction: at xi=0.5 the physical a is much closer to a_hi
+    // than to a_lo.  (1 − 0.5)³ = 0.125 → a = a_hi − 0.125·(a_hi−a_lo),
+    // i.e. 87.5% of the way to a_hi.
+    const double a_mid = t.inverse(0.5);
+    const double frac = (a_mid - a_lo) / (a_hi - a_lo);
+    REQUIRE(frac == Catch::Approx(0.875).margin(1e-15));
+    // POWER requires a_hi > a_lo (no LOG-style positive-bound check; physical
+    // pressures > 0 are sufficient).
+    REQUIRE_THROWS_AS(cp_region::AxisTransform::make(cp_region::AxisScale::POWER, 1.0, 1.0), std::invalid_argument);
+}
+
+TEST_CASE("AxisTransform power Jacobian vs central FD", "[SVDComponents][Region][axis_transform]") {
+    // POWER's analytic dxi/da diverges as a → a_hi; check at a few
+    // interior points where central FD is well-conditioned.
+    const auto t = cp_region::AxisTransform::make(cp_region::AxisScale::POWER, 1.0, 2.0);
+    for (double a : {1.1, 1.3, 1.5, 1.7, 1.9}) {
+        const double h = 1e-7 * a;
+        const double fd = (t.forward(a + h) - t.forward(a - h)) / (2.0 * h);
+        REQUIRE(t.dxi_da(a) == Catch::Approx(fd).epsilon(1e-5));
+    }
+}
+
+TEST_CASE("AxisTransform power_lo round-trip", "[SVDComponents][Region][axis_transform]") {
+    // POWER_LO β=1/3 (CoolProp-4u9): xi=0 → a_lo, xi=1 → a_hi, crowds at a_lo.
+    // Use a band typical of NC_SUPER (R245fa-like, just above pc).
+    const double a_lo = (1.0 + 1e-10) * 3.651e6;
+    const double a_hi = 1.1 * 3.651e6;
+    const auto t = cp_region::AxisTransform::make(cp_region::AxisScale::POWER_LO, a_lo, a_hi);
+    std::mt19937 rng(4);
+    std::uniform_real_distribution<double> u(a_lo, a_hi);
+    for (int k = 0; k < 100; ++k) {
+        const double a = u(rng);
+        const double xi = t.forward(a);
+        REQUIRE(xi >= -1e-12);
+        REQUIRE(xi <= 1.0 + 1e-12);
+        const double a_back = t.inverse(xi);
+        REQUIRE(std::abs(a_back - a) / a < 1e-12);
+    }
+    // Endpoints exact.
+    REQUIRE(t.forward(a_lo) == Catch::Approx(0.0).margin(1e-15));
+    REQUIRE(t.forward(a_hi) == Catch::Approx(1.0).margin(1e-15));
+    REQUIRE(t.inverse(0.0) == Catch::Approx(a_lo).margin(1e-15));
+    REQUIRE(t.inverse(1.0) == Catch::Approx(a_hi).margin(1e-15));
+    // Mirror of POWER: at xi=0.5 the physical a is 12.5% of the way to a_hi
+    // (POWER had 87.5%).  (0.5)³ = 0.125 → a = a_lo + 0.125·(a_hi−a_lo).
+    const double a_mid = t.inverse(0.5);
+    const double frac = (a_mid - a_lo) / (a_hi - a_lo);
+    REQUIRE(frac == Catch::Approx(0.125).margin(1e-15));
+}
+
+TEST_CASE("AxisTransform power_lo Jacobian vs central FD", "[SVDComponents][Region][axis_transform]") {
+    // POWER_LO's analytic dxi/da diverges as a → a_lo; check interior points.
+    const auto t = cp_region::AxisTransform::make(cp_region::AxisScale::POWER_LO, 1.0, 2.0);
+    for (double a : {1.1, 1.3, 1.5, 1.7, 1.9}) {
+        const double h = 1e-7 * a;
+        const double fd = (t.forward(a + h) - t.forward(a - h)) / (2.0 * h);
+        REQUIRE(t.dxi_da(a) == Catch::Approx(fd).epsilon(1e-5));
+    }
+}
+
 // ============================================================
 // BoundaryCurve: ConstantCurve
 // ============================================================

@@ -588,6 +588,24 @@ std::array<double, 4> SVDSBTLBackend::auto_calibrate_critical_bbox_() {
     // Axis indices: 0=T_lo, 1=T_hi, 2=p_lo, 3=p_hi.
     // "safer" (wider patch) is the default; "tighter" is 1.0.
     std::array<double, 4> defaults = {0.95, 1.05, 0.75, 1.15};
+    // CoolProp-4u9: cap T_hi multiplier so the patch doesn't claim
+    // T territory beyond the HEOS validity envelope.  For fluids
+    // where T_max barely exceeds Tc (R245fa: T_max=440 K, Tc=427 K),
+    // the default T_hi_mult=1.05 maps to T_hi=448 K > T_max=440 K.
+    // The HmassP-envelope perimeter walk skips those unreachable
+    // corners, leaving the (h, p) bbox missing cells with h≈h_crit
+    // at p just below pc — runtime HmassP queries in that thin
+    // strip get NaN (atlas misses; patch bbox check fails) even
+    // though they're physically inside the patch's (T, p) rectangle.
+    // Clamping T_hi_mult at (T_max - 0.5) / Tc keeps the patch's
+    // T extent inside HEOS validity; the perimeter walk produces a
+    // tight, correct (h, p) bbox and the strip routes cleanly.
+    // No-op for fluids with T_max >> Tc (Water, CO2, methane —
+    // cap value > 1.05).
+    const double T_hi_cap = (src->Tmax() - 0.5) / Tc;
+    if (T_hi_cap < defaults[1]) {
+        defaults[1] = T_hi_cap;
+    }
     std::array<double, 4> tight = {1.0, 1.0, 1.0, 1.0};
     std::array<double, 4> mults = defaults;
     constexpr int kBisectSteps = 6;  // 6 = 1/64 multiplier resolution
@@ -646,7 +664,10 @@ std::optional<std::array<double, 4>> SVDSBTLBackend::load_critpatch_cache_(const
         (void)std::fclose(f);
         return std::nullopt;
     }
-    if (std::fread(&version, sizeof(version), 1, f) != 1 || version != 1u) {
+    // v1 → v2: T_hi_cap clamp added in CoolProp-4u9.  Bump to invalidate
+    // pre-clamp caches so they get recomputed with the corrected ceiling
+    // (no migration — calibrator is cheap, re-runs on cache miss).
+    if (std::fread(&version, sizeof(version), 1, f) != 1 || version != 2u) {
         (void)std::fclose(f);
         return std::nullopt;
     }
@@ -675,7 +696,7 @@ void SVDSBTLBackend::save_critpatch_cache_(const std::string& fluid_name, const 
         return;
     }
     constexpr std::array<char, 8> kMagic = {'C', 'P', 'C', 'R', 'I', 'T', 'P', 'B'};
-    constexpr std::uint32_t kVersion = 1;
+    constexpr std::uint32_t kVersion = 2;
     constexpr std::size_t kPayloadSize = kMagic.size() + sizeof(kVersion) + 4 * sizeof(double);
     std::array<char, kPayloadSize> buf{};
     std::memcpy(buf.data(), kMagic.data(), kMagic.size());

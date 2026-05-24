@@ -1053,4 +1053,80 @@ TEST_CASE("SVDSBTLBackend uses surrogate when source has no SuperAncillary", "[S
     REQUIRE(rp_be->sat_surrogate_consulted());
 }
 
+// CoolProp-4u9: the tiny p-strip immediately around pc (sub: p ∈
+// [(1−1e-10)·pc, pc]; super: p ∈ [pc, (1+1e-10)·pc]) sits outside
+// the NC sub-regions (which stop at (1−1e-10)·pc on the sub-side
+// and start at (1+1e-10)·pc on the super-side) and outside SUPER
+// (which starts at 1.1·pc when NC is enabled).  Its natural home
+// is the critical patch — cells in the strip route to the source
+// backend directly and should return HEOS-exact values.  This test
+// guards against (a) patch HmassP envelope misses (e.g. perimeter
+// walk skipping cells at T > T_max for fluids with T_max ≈ Tc + ε)
+// and (b) runtime gaps where neither NC, SUPER, nor patch claims a
+// cell.
+TEST_CASE("SVDSBTL pc-strip routes through critical patch", "[SVDSBTL][CoolProp-4u9][pc_strip][slow]") {
+    // Include R245fa (T_max/Tc = 1.030 — the narrowest envelope in
+    // the supported set), Water (T_max/Tc = 3.51 — comfortable),
+    // and CO2 (T_max/Tc = 6.58 — comfortable).  R245fa is the one
+    // that exposed the T_hi_mult clamp bug; Water/CO2 are regression
+    // anchors.
+    for (const auto* fluid : {"R245fa", "Water", "CarbonDioxide"}) {
+        SECTION(fluid) {
+            auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", fluid));
+            auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
+            const double pc = heos->p_critical();
+            const double Tc = heos->T_critical();
+
+            // Probe both sides of pc at p-offsets that step through
+            // the strip.  Use T very close to Tc on each side so the
+            // cell lands inside the patch's auto-cal'd (T, p) bbox.
+            // (The auto-cal bisects T_lo aggressively; for R245fa
+            // T_lo ends at 0.9992·Tc.  A T 0.5 K below Tc would fall
+            // BELOW patch.T_lo and route to NC at its ξ=1 boundary
+            // edge — 1e-6 error, not the machine-precision the strip
+            // is supposed to give.  Testing physically-meaningful
+            // critical-region cells means T near Tc anyway.)
+            const double T_sub = (1.0 - 1.0e-4) * Tc;
+            const double T_sup = (1.0 + 1.0e-4) * Tc;
+            for (const double frac : {1e-6, 1e-7, 1e-8}) {
+                for (const auto& side : {std::make_pair(pc * (1.0 - frac), T_sub), std::make_pair(pc * (1.0 + frac), T_sup)}) {
+                    const double p = side.first;
+                    const double T = side.second;
+                    // Forward (p, T) -> h via HEOS truth.
+                    heos->update(CoolProp::PT_INPUTS, p, T);
+                    const double h = heos->hmass();
+                    const double rho_truth = heos->rhomass();
+
+                    // 1) PT lookup: SVD must route to patch and
+                    //    return HEOS-exact rho.
+                    svd->update(CoolProp::PT_INPUTS, p, T);
+                    INFO(fluid << " pc-strip PT: p=" << p << " T=" << T);
+                    REQUIRE_FALSE(std::isnan(svd->rhomass()));
+                    REQUIRE(svd->rhomass() == Approx(rho_truth).epsilon(1e-12));
+
+                    // 2) HmassP lookup: same cell via (h, p) must
+                    //    also route to patch and return what HEOS
+                    //    returns for the SAME (h, p) input.  This
+                    //    is the path that fails for R245fa without
+                    //    the T_hi_mult clamp.  Compare against
+                    //    heos->HmassP, not heos->PT, because the
+                    //    polish gate (#2966) means HEOS-source
+                    //    patches no longer iterate T to match
+                    //    rho_truth_PT — they just call HEOS's
+                    //    HmassP_INPUTS, which is iterative+forward-
+                    //    consistent but not bit-exact with PT in
+                    //    the ill-conditioned critical region
+                    //    (~1e-7 residual for R245fa).
+                    heos->update(CoolProp::HmassP_INPUTS, h, p);
+                    const double rho_truth_hp = heos->rhomass();
+                    svd->update(CoolProp::HmassP_INPUTS, h, p);
+                    INFO(fluid << " pc-strip HmassP: p=" << p << " h=" << h << " (T_truth=" << T << ")");
+                    REQUIRE_FALSE(std::isnan(svd->rhomass()));
+                    REQUIRE(svd->rhomass() == Approx(rho_truth_hp).epsilon(1e-12));
+                }
+            }
+        }
+    }
+}
+
 #endif  // ENABLE_CATCH

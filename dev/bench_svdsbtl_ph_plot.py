@@ -21,10 +21,25 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import pandas as pd
-from matplotlib.colors import LogNorm
+
+# Interactive mode toggles the backend BEFORE importing pyplot.  Passing
+# --interactive on the CLI keeps the figure window open + clickable
+# (zoom / pan / hover via the matplotlib toolbar); the default mode
+# (no flag) writes a PNG and closes the figure, suitable for CI.
+_INTERACTIVE = "--interactive" in sys.argv
+if _INTERACTIVE:
+    sys.argv.remove("--interactive")
+    # Only force "MacOSX" on macOS — that backend's Cocoa support isn't
+    # available on Linux/Windows.  Elsewhere, let matplotlib pick the
+    # first available GUI backend (QtAgg / TkAgg / GTK3Agg).
+    if sys.platform == "darwin":
+        matplotlib.use("MacOSX")
+
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.colors import LogNorm  # noqa: E402
 
 
 def _err_panel(ax, h_kJ, p_MPa, vals, title, vmin=1e-7, vmax=1e-1, dome=None, p_crit_MPa=None):
@@ -225,9 +240,15 @@ def plot_one(csv_path: Path, out_path: Path) -> None:
         parts.append(f"speedup vs REFPROP={mean_ns_refprop / mean_ns_svd:.1f}x")
     fig.text(0.5, -0.03, "    ".join(parts), ha="center", fontsize=10, family="monospace")
 
-    fig.savefig(out_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  {csv_path.name}  ->  {out_path}")
+    if _INTERACTIVE:
+        # Keep the figure open; the toolbar lets the user zoom / pan /
+        # save.  plt.show() at end of main() blocks until all windows
+        # are closed.
+        print(f"  {csv_path.name}  ->  interactive window")
+    else:
+        fig.savefig(out_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"  {csv_path.name}  ->  {out_path}")
 
 
 def main() -> int:
@@ -250,6 +271,8 @@ def main() -> int:
             continue
         out_path = out_dir / f"bench_svdsbtl_ph_{p.stem.replace('bench_svdsbtl_ph_', '')}.png"
         plot_one(p, out_path)
+    if _INTERACTIVE:
+        plt.show()
     return 0
 
 
