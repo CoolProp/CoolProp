@@ -841,21 +841,6 @@ class AbstractState
     };
 #endif
 
-#ifdef EMSCRIPTEN
-    // Emscripten cannot disambiguate the overloaded set_*_fractions members when
-    // CoolPropDbl != double, so embind takes the address of these single-arity
-    // wrappers instead of the raw virtuals.
-    void set_mole_fractions_double(const std::vector<double>& mole_fractions) {
-        set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end()));
-    };
-    void set_mass_fractions_double(const std::vector<double>& mass_fractions) {
-        set_mass_fractions(std::vector<CoolPropDbl>(mass_fractions.begin(), mass_fractions.end()));
-    };
-    void set_volu_fractions_double(const std::vector<double>& volu_fractions) {
-        set_volu_fractions(std::vector<CoolPropDbl>(volu_fractions.begin(), volu_fractions.end()));
-    };
-#endif
-
     /// Get the mole fractions of the equilibrium liquid phase
     std::vector<CoolPropDbl> mole_fractions_liquid() {
         return calc_mole_fractions_liquid();

@@ -11,6 +11,16 @@ Highlights:
 
 **Behavior changes (potentially breaking):**
 
+* **WASM / JavaScript wrapper:** composition vectors and phase-envelope
+  data now use **native JavaScript arrays** instead of the embind
+  ``VectorDouble`` wrapper class. Setters take a JS array directly
+  (``AS.set_mole_fractions([0.4, 0.6])``); getters return one
+  (``var z = AS.get_mole_fractions(); console.log(z[0]);``);
+  ``get_phase_envelope_data()`` returns a plain object whose fields
+  (``T``, ``p``, ...) are JS arrays (``data.T[i]``). The
+  ``VectorDouble``/``VectorString`` classes have been removed from
+  the exposed surface.
+
 * Default ``update`` for ``HmolarQ_INPUTS``, ``QSmolar_INPUTS``,
   ``DmolarQ_INPUTS`` (and their mass-input equivalents) on pure fluids
   now raises :cpapi:`CoolProp::MultipleSolutionsError` when the input
