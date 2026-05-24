@@ -138,7 +138,11 @@ TEST_CASE("SVDSurface PH preset builds + evals against HEOS", "[SBTL][SVDSurface
     // production-resolution accuracy.
     auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
     REQUIRE(spec.input_pair == ::CoolProp::HmassP_INPUTS);
-    REQUIRE(spec.regions.size() == 3);
+    // 6 regions: LIQUID, VAPOR, NC_LIQUID, NC_VAPOR, NC_SUPER, SUPER.
+    // The NC_* regions are the near-critical sub-regions added in
+    // CoolProp-4u9 (POWER / POWER_LO β=1/3 primary axis crowding
+    // toward pc).
+    REQUIRE(spec.regions.size() == 6);
     // 5 thermodynamic properties (ρ, T, s, u, w) plus 2 optional
     // transport properties (η, λ) when the source backend exposes them
     // — HEOS Water does, so we expect 7 here.  Fluids without transport
@@ -157,7 +161,7 @@ TEST_CASE("SVDSurface PH preset builds + evals against HEOS", "[SBTL][SVDSurface
 
     auto surface = cp_sbtl::build_surface(*heos, std::move(spec));
     REQUIRE(surface.sealed());
-    REQUIRE(surface.region_count() == 3);
+    REQUIRE(surface.region_count() == 6);  // CoolProp-4u9: NC_LIQUID + NC_VAPOR + NC_SUPER
 
     // Probe single-phase Water states in (T, p) → look up via (h, p).
     std::mt19937 rng(57);
@@ -304,7 +308,7 @@ TEST_CASE("SVDSurface PH preset across multi-fluid set", "[SBTL][SVDSurface][pre
             auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/30, /*NR=*/50, /*rank=*/8);
             cp_sbtl::SVDSurface surface = cp_sbtl::build_surface(*heos, std::move(spec));
             REQUIRE(surface.sealed());
-            REQUIRE(surface.region_count() == 3);
+            REQUIRE(surface.region_count() == 6);  // CoolProp-4u9: NC_LIQUID + NC_VAPOR + NC_SUPER
 
             // Round-trip through serializer.  HEOS canonicalises aliases
             // (e.g. "Propane" → "n-Propane"), so compare against what the
@@ -312,7 +316,7 @@ TEST_CASE("SVDSurface PH preset across multi-fluid set", "[SBTL][SVDSurface][pre
             const auto blob = cp_sbtl::SVDSurfaceSerializer::save(surface);
             auto reloaded = cp_sbtl::SVDSurfaceSerializer::load(blob);
             REQUIRE(reloaded.fluid_name() == surface.fluid_name());
-            REQUIRE(reloaded.region_count() == 3);
+            REQUIRE(reloaded.region_count() == 6);
 
             // Spot-check eval matches HEOS at a handful of single-phase probes.
             std::mt19937 rng(91);
@@ -353,7 +357,7 @@ TEST_CASE("SVDSurface PT preset water round-trip", "[SBTL][SVDSurface][preset_pt
     auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
     auto spec = cp_sbtl::presets::pt_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
     REQUIRE(spec.input_pair == ::CoolProp::PT_INPUTS);
-    REQUIRE(spec.regions.size() == 3);
+    REQUIRE(spec.regions.size() == 6);  // CoolProp-4u9: NC_LIQUID + NC_VAPOR + NC_SUPER
 
     cp_sbtl::SVDSurface surface = cp_sbtl::build_surface(*heos, std::move(spec));
     REQUIRE(surface.sealed());
@@ -386,7 +390,7 @@ TEST_CASE("SVDSurfaceSerializer file save/load round-trip", "[SBTL][serializer][
     cp_sbtl::SVDSurfaceSerializer::save_to_file(surface, path);
     auto loaded = cp_sbtl::SVDSurfaceSerializer::load_from_file(path);
     REQUIRE(loaded.fluid_name() == "Water");
-    REQUIRE(loaded.region_count() == 3);
+    REQUIRE(loaded.region_count() == 6);  // CoolProp-4u9: NC_LIQUID + NC_VAPOR + NC_SUPER
     // Spot-check a single eval matches.
     heos->update(::CoolProp::PT_INPUTS, 1e5, 350.0);
     const double h = heos->hmass();

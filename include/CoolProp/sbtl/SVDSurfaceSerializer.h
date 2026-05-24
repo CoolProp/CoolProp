@@ -154,7 +154,39 @@ class SVDSurfaceSerializer
     //           rev bump too (R5 is IF97-only and HEOS presets skip
     //           the new region entirely; the cache geometry is the
     //           same as rev 11 but the rev field differs).
-    static constexpr int kRevision = 12;
+    //   rev 13: CoolProp-4u9.  HEOS / REFPROP source presets gain a
+    //           pair of near-critical sub-regions (NC_LIQUID,
+    //           NC_VAPOR) on p ∈ [0.9·pc, (1 − 1ppm)·pc] using a new
+    //           AxisScale::POWER primary axis (β = 1/3, cube-root
+    //           crowding toward pc).  Parent LIQUID/VAPOR p_max
+    //           clipped down to 0.9·pc to hand off cleanly.  Region
+    //           count for HEOS caches goes from 3 (LIQUID/VAPOR/SUPER)
+    //           to 5.  POWER axis serialises via the same
+    //           AxisTransform pack/unpack as LINEAR/LOG (scale enum
+    //           value differs; a_lo/a_hi unchanged); existing rev-12
+    //           caches don't know about the NC regions and would
+    //           dispatch near-pc lookups to the parent LIQUID/VAPOR
+    //           SVD where off-grid max error is ~1e-3 instead of the
+    //           new ~1e-7 from the POWER NC regions, so the rev bump
+    //           forces a clean rebuild.  IF97 caches unchanged in
+    //           content (no NC for IF97 — G13-15 already passes) but
+    //           invalidated by the rev bump too.
+    //   rev 14: CoolProp-4u9 follow-up.  Add NC_SUPER region on
+    //           p ∈ [(1 + 1e-10)·pc, 1.1·pc] using AxisScale::POWER_LO
+    //           (mirror of POWER that crowds toward a_lo).  Closes a
+    //           (T, p) coverage gap exposed by the h=350 kJ/kg R245fa
+    //           sweep: cells in the thin strip just above pc with T
+    //           outside the auto-cal'd patch's narrow (T) bbox fell
+    //           through every region (LIQUID/VAPOR clipped to 0.9·pc,
+    //           NC_LIQUID/VAPOR capped at (1−1ppm)·pc, SUPER starting
+    //           at 1.001·pc) and returned NaN.  NC_SUPER claims them.
+    //           HEOS region count goes from 5 to 6.  NC sub-side band
+    //           also tightened from 1ppm to 1e-10 below pc — the NC
+    //           POWER axis is well-behaved at a_hi=pc-ε for any ε
+    //           large enough to keep the SuperAncillary sat-curve
+    //           well-defined, and tightening reduces the patch-only
+    //           sliver around pc.
+    static constexpr int kRevision = 14;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

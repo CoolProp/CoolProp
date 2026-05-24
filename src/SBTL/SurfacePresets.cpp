@@ -198,11 +198,40 @@ double solve_T_from_h_toms748(::CoolProp::AbstractState& s, double p, double h_t
 SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
     // Name is historical: this preset now also registers a SUPER
     // region above p_crit so the surface covers the full HEOS
-    // (p, h) envelope.  Three regions: LIQUID + VAPOR + SUPER.
-    const auto [p_min, p_max_sub] = subcritical_pressure_range(heos);
-    const auto [p_min_sup, p_max_sup] = supercritical_pressure_range(heos);
+    // (p, h) envelope.  Three regions: LIQUID + VAPOR + SUPER, plus
+    // an optional NC_LIQUID/NC_VAPOR pair near pc when source is
+    // HEOS/REFPROP (CoolProp-4u9).
+    const auto [p_min, p_max_sub_raw] = subcritical_pressure_range(heos);
+    const auto [p_min_sup_raw, p_max_sup] = supercritical_pressure_range(heos);
     const double T_min_eos = std::max(heos.Ttriple(), heos.Tmin());
     const double T_max_eos = heos.Tmax();
+    const double pc = heos.p_critical();
+
+    // Near-critical sub-region geometry (CoolProp-4u9).  HEOS/REFPROP
+    // sources gain a dedicated NC_LIQUID/NC_VAPOR pair on p ∈ [0.9·pc,
+    // (1 − 1 ppm)·pc] with a POWER(β=1/3) primary axis that crowds
+    // grid lines toward pc.  Python diagnostics on R245fa/Water/CO2
+    // showed POWER buys 1000–100000× better off-grid max error vs LOG
+    // and stays flat in p_hi from 0.999·pc to 0.999999·pc — the
+    // critical-scaling singularity gets absorbed by the cube-root
+    // transform (Ising β ≈ 0.326 ≈ 1/3).  IF97 source skips this
+    // (G13-15 already passes without it).
+    const bool source_is_if97 = (heos.backend_name() == "IF97Backend");
+    constexpr double kNC_p_lo_mult = 0.9;
+    constexpr double kNC_p_hi_mult = 1.0 - 1.0e-10;      // gap of 1e-10·pc below pc — sub-ULP for practical p
+    constexpr double kNC_sup_p_lo_mult = 1.0 + 1.0e-10;  // mirror above pc
+    constexpr double kNC_sup_p_hi_mult = 1.1;
+    const bool nc_enabled = !source_is_if97;
+    const double p_nc_lo = nc_enabled ? kNC_p_lo_mult * pc : 0.0;
+    const double p_nc_hi = nc_enabled ? kNC_p_hi_mult * pc : 0.0;
+    const double p_nc_sup_lo = nc_enabled ? kNC_sup_p_lo_mult * pc : 0.0;
+    const double p_nc_sup_hi = nc_enabled ? kNC_sup_p_hi_mult * pc : 0.0;
+    // Clip parent LIQUID/VAPOR p-max to the NC band's lower edge when
+    // NC is enabled — handoff at p = 0.9·pc.  Clip parent SUPER p-min
+    // to NC_SUPER's upper edge.  When NC disabled (IF97 source), parent
+    // bounds use legacy values.
+    const double p_max_sub = nc_enabled ? std::min(p_max_sub_raw, p_nc_lo) : p_max_sub_raw;
+    const double p_min_sup = nc_enabled ? std::max(p_min_sup_raw, p_nc_sup_hi) : p_min_sup_raw;
 
     SurfaceSpec spec;
     spec.fluid_name = heos.fluid_names().empty() ? std::string{} : heos.fluid_names().front();
@@ -216,7 +245,7 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     //   b_lo = h(T_min, p) — non-isothermal floor that walks T up
     //                       if T_min < T_melt(p) at high p.
     //   b_hi = h_sat,L(p) — liquid side of the saturation dome.
-    {
+    if (p_min < p_max_sub) {
         auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max_sub);
         auto lo = build_h_isotherm_floor(heos, p_min, p_max_sub, T_min_eos);
         auto hi = build_h_sat_L(heos, p_min, p_max_sub);
@@ -226,10 +255,45 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     //   b_lo = h_sat,V(p) — vapor side of the saturation dome.
     //   b_hi = h(T_max - 0.5 K, p) — hot ceiling within the HEOS
     //                                validity envelope.
-    {
+    if (p_min < p_max_sub) {
         auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max_sub);
         auto lo = build_h_sat_V(heos, p_min, p_max_sub);
         auto hi = build_h_isotherm_ceiling(heos, p_min, p_max_sub, T_max_eos - 0.5);
+        spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+    }
+    // NC_LIQUID + NC_VAPOR (CoolProp-4u9): near-critical sub-regions on
+    // p ∈ [0.9·pc, (1 − 1ppm)·pc] with POWER(β=1/3) primary axis.
+    // Same boundary curves as the parent regions — the SuperAncillary-
+    // backed sat curves are continuous across the p = 0.9·pc handoff.
+    if (nc_enabled && p_nc_lo < p_nc_hi) {
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::POWER, p_nc_lo, p_nc_hi);
+            auto lo = build_h_isotherm_floor(heos, p_nc_lo, p_nc_hi, T_min_eos);
+            auto hi = build_h_sat_L(heos, p_nc_lo, p_nc_hi);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::POWER, p_nc_lo, p_nc_hi);
+            auto lo = build_h_sat_V(heos, p_nc_lo, p_nc_hi);
+            auto hi = build_h_isotherm_ceiling(heos, p_nc_lo, p_nc_hi, T_max_eos - 0.5);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+    }
+    // NC_SUPER (CoolProp-4u9): super-critical near-critical sub-region
+    // on p ∈ [(1 + 1e-10)·pc, 1.1·pc] with POWER_LO(β=1/3) primary
+    // axis that crowds grid lines toward pc.  No saturation dome above
+    // pc, so b_lo / b_hi are the same isotherm-floor / isotherm-ceiling
+    // pair used by parent SUPER — they continue smoothly across the
+    // p = 1.1·pc handoff.  Single region (not the LIQ/VAP split used
+    // sub-critically) because the dome doesn't bisect this band.
+    // Closes the (h, p) coverage gap exposed by the h=350 kJ/kg sweep
+    // for R245fa: cells at p just above pc with T outside the patch's
+    // (T, p) bbox previously fell through every region and returned
+    // NaN.  NC_SUPER claims them; SVD residual ≲ 1e-7 in this band.
+    if (nc_enabled && p_nc_sup_lo < p_nc_sup_hi) {
+        auto axis = region::AxisTransform::make(region::AxisScale::POWER_LO, p_nc_sup_lo, p_nc_sup_hi);
+        auto lo = build_h_isotherm_floor(heos, p_nc_sup_lo, p_nc_sup_hi, T_min_eos);
+        auto hi = build_h_isotherm_ceiling(heos, p_nc_sup_lo, p_nc_sup_hi, T_max_eos - 0.5);
         spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
     }
     // SUPER region: p > p_crit.  Primary = log p over [p_crit*1.001,
@@ -254,7 +318,6 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     //
     // HEOS source backend has no piecewise structure, so its SUPER
     // stays one region.
-    const bool source_is_if97 = (heos.backend_name() == "IF97Backend");
     constexpr double kP_B23_hi = 100.0e6;  // IF97 B23 curve's upper p bound
     if (source_is_if97 && p_min_sup < kP_B23_hi) {
         // p range where the kink applies; clamped at the B23 upper bound.
@@ -343,7 +406,7 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
             auto hi = build_h_isotherm_ceiling(heos, kP_R5_lo, p_r5_hi, kT_R5_hi);
             spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
         }
-    } else {
+    } else if (p_min_sup < p_max_sup) {
         auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_max_sup);
         auto lo = build_h_isotherm_floor(heos, p_min_sup, p_max_sup, T_min_eos);
         auto hi = build_h_isotherm_ceiling(heos, p_min_sup, p_max_sup, T_max_eos - 0.5);
@@ -602,11 +665,28 @@ std::unique_ptr<region::CubicSplineCurve> pt_T_floor_curve_(::CoolProp::Abstract
 
 SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
     // Historical name; now covers the full phase diagram via three
-    // regions: LIQUID + VAPOR (subcritical) + SUPER (p > p_crit).
-    const auto [p_min, p_max] = subcritical_pressure_range(heos);
-    const auto [p_min_sup, p_max_sup] = supercritical_pressure_range(heos);
+    // regions: LIQUID + VAPOR (subcritical) + SUPER (p > p_crit), plus
+    // an optional NC_LIQUID/NC_VAPOR pair near pc when source is
+    // HEOS/REFPROP (CoolProp-4u9).
+    const auto [p_min, p_max_raw] = subcritical_pressure_range(heos);
+    const auto [p_min_sup_raw, p_max_sup] = supercritical_pressure_range(heos);
     const double T_min_eos = std::max(heos.Ttriple(), heos.Tmin());
     const double T_max_eos = heos.Tmax();
+    const double pc = heos.p_critical();
+
+    // Near-critical sub-region geometry (mirrors ph_subcritical above).
+    const bool source_is_if97 = (heos.backend_name() == "IF97Backend");
+    constexpr double kNC_p_lo_mult = 0.9;
+    constexpr double kNC_p_hi_mult = 1.0 - 1.0e-10;
+    constexpr double kNC_sup_p_lo_mult = 1.0 + 1.0e-10;
+    constexpr double kNC_sup_p_hi_mult = 1.1;
+    const bool nc_enabled = !source_is_if97;
+    const double p_nc_lo = nc_enabled ? kNC_p_lo_mult * pc : 0.0;
+    const double p_nc_hi = nc_enabled ? kNC_p_hi_mult * pc : 0.0;
+    const double p_nc_sup_lo = nc_enabled ? kNC_sup_p_lo_mult * pc : 0.0;
+    const double p_nc_sup_hi = nc_enabled ? kNC_sup_p_hi_mult * pc : 0.0;
+    const double p_max = nc_enabled ? std::min(p_max_raw, p_nc_lo) : p_max_raw;
+    const double p_min_sup = nc_enabled ? std::max(p_min_sup_raw, p_nc_sup_hi) : p_min_sup_raw;
 
     SurfaceSpec spec;
     spec.fluid_name = heos.fluid_names().empty() ? std::string{} : heos.fluid_names().front();
@@ -626,14 +706,14 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     // LIQUID region.  T-floor walks T_min(p) up over the melting
     // line.  Helper handles the knot loop so the SUPER region below
     // can reuse it.
-    {
+    if (p_min < p_max) {
         auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max);
         auto t_lo = pt_T_floor_curve_(heos, p_min, p_max, T_min_eos, SatBoundaryBuildOptions{});
         auto t_hi = build_T_sat(heos, p_min, p_max);
         spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
     }
     // VAPOR region.
-    {
+    if (p_min < p_max) {
         auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max);
         auto t_lo = build_T_sat(heos, p_min, p_max);
         // Constant T_max ceiling — no melting consideration on the
@@ -641,10 +721,37 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
         auto t_hi = std::make_unique<region::ConstantCurve>(p_min, p_max, T_max_eos - 0.5);
         spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
     }
-    // SUPER region: p > p_crit.  T-floor still walks T_min up over
-    // melting line (the melting curve extends well into supercritical
-    // for most fluids).  Hot ceiling stays at T_max - 0.5 K.
-    {
+    // NC_LIQUID + NC_VAPOR (CoolProp-4u9): near-critical sub-regions on
+    // p ∈ [0.9·pc, (1 − 1ppm)·pc] with POWER(β=1/3) primary axis.
+    if (nc_enabled && p_nc_lo < p_nc_hi) {
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::POWER, p_nc_lo, p_nc_hi);
+            auto t_lo = pt_T_floor_curve_(heos, p_nc_lo, p_nc_hi, T_min_eos, SatBoundaryBuildOptions{});
+            auto t_hi = build_T_sat(heos, p_nc_lo, p_nc_hi);
+            spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
+        }
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::POWER, p_nc_lo, p_nc_hi);
+            auto t_lo = build_T_sat(heos, p_nc_lo, p_nc_hi);
+            auto t_hi = std::make_unique<region::ConstantCurve>(p_nc_lo, p_nc_hi, T_max_eos - 0.5);
+            spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
+        }
+    }
+    // NC_SUPER (CoolProp-4u9): super-critical near-critical sub-region
+    // on p ∈ [(1 + 1e-10)·pc, 1.1·pc] with POWER_LO(β=1/3) primary
+    // axis crowding toward pc.  Single region (no sat dome above pc);
+    // b_lo / b_hi are the T-floor / constant T_max-0.5 ceiling.
+    if (nc_enabled && p_nc_sup_lo < p_nc_sup_hi) {
+        auto axis = region::AxisTransform::make(region::AxisScale::POWER_LO, p_nc_sup_lo, p_nc_sup_hi);
+        auto t_lo = pt_T_floor_curve_(heos, p_nc_sup_lo, p_nc_sup_hi, T_min_eos, SatBoundaryBuildOptions{});
+        auto t_hi = std::make_unique<region::ConstantCurve>(p_nc_sup_lo, p_nc_sup_hi, T_max_eos - 0.5);
+        spec.regions.emplace_back(axis, std::move(t_lo), std::move(t_hi));
+    }
+    // SUPER region: p > p_crit (clipped up to 1.1·pc when NC enabled
+    // so NC_SUPER owns the strip just above pc).  T-floor still walks
+    // T_min up over melting line (the melting curve extends well into
+    // supercritical for most fluids).  Hot ceiling stays at T_max-0.5 K.
+    if (p_min_sup < p_max_sup) {
         auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_max_sup);
         auto t_lo = pt_T_floor_curve_(heos, p_min_sup, p_max_sup, T_min_eos, SatBoundaryBuildOptions{});
         auto t_hi = std::make_unique<region::ConstantCurve>(p_min_sup, p_max_sup, T_max_eos - 0.5);
@@ -656,7 +763,6 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     // IF97-only because R5 has no HEOS counterpart in CoolProp for
     // water (Wagner & Pruss covers 273-1273 K).  Constant-T b_lo /
     // b_hi: R5 is a flat T-slab, no melting curve consideration.
-    const bool source_is_if97 = (heos.backend_name() == "IF97Backend");
     if (source_is_if97) {
         // Nudge above 1073.15 because IF97's RegionDetermination_TP
         // dispatches T == 1073.15 K to R2 (the boundary uses
