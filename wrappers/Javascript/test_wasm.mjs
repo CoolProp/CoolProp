@@ -88,10 +88,128 @@ try {
         process.exit(1);
     }
 
+    // NOTE: get_mole_fractions() readback via .get(i) is gated on
+    // register_optional<double>() actually surfacing in the JS glue —
+    // currently the wasm doesn't import _embind_register_optional under
+    // emcc 4.0.12 (template body either DCE'd or not instantiated), so
+    // VectorDouble.get(i) still throws 'unbound types: optional<double>'.
+    // Round-trip test is left out until that path works; see beads.
+
     z.delete();
     ASmix.delete();
     console.log("set_mole_fractions test passed!");
 } catch (e) {
     console.error("set_mole_fractions test failed:", e);
+    process.exit(1);
+}
+
+// Sanity-check that enum entries added in the binding-coverage follow-up
+// resolve (catches accidental drops if these enums are edited later).
+console.log("Testing enum coverage...");
+try {
+    var enumProbes = [
+        ["parameters.iQmass",                  coolprop.parameters.iQmass],
+        ["input_pairs.QmassT_INPUTS",          coolprop.input_pairs.QmassT_INPUTS],
+        ["input_pairs.PQmass_INPUTS",          coolprop.input_pairs.PQmass_INPUTS],
+        ["input_pairs.DmolarQmass_INPUTS",     coolprop.input_pairs.DmolarQmass_INPUTS],
+        ["backend_families.INVALID_BACKEND_FAMILY", coolprop.backend_families.INVALID_BACKEND_FAMILY],
+        ["backend_families.SVDSBTL_BACKEND_FAMILY", coolprop.backend_families.SVDSBTL_BACKEND_FAMILY],
+    ];
+    for (var i = 0; i < enumProbes.length; i++) {
+        var name = enumProbes[i][0], v = enumProbes[i][1];
+        if (v === undefined || v === null || !Number.isFinite(v.value)) {
+            console.error("enum entry missing or non-numeric:", name, "=", v);
+            process.exit(1);
+        }
+        console.log("  " + name + " =", v.value);
+    }
+    console.log("Enum coverage test passed!");
+} catch (e) {
+    console.error("Enum coverage test failed:", e);
+    process.exit(1);
+}
+
+// Test the build_phase_envelope -> get_phase_envelope_data round-trip.
+// The value_object<PhaseEnvelopeData> binding (X-macro driven) is the
+// highest-risk surface from PR #2664 and was not covered by its tests.
+console.log("Testing phase envelope round-trip...");
+try {
+    var ASenv = coolprop.factory("HEOS", "Methane&Ethane");
+    var ze = new coolprop.VectorDouble();
+    ze.push_back(0.5);
+    ze.push_back(0.5);
+    ASenv.set_mole_fractions(ze);
+    ASenv.build_phase_envelope("");
+    var env = ASenv.get_phase_envelope_data();
+
+    // env.T and env.p are VectorDouble fields populated by the envelope tracer.
+    // We check structure (both vectors non-empty and same length) rather than
+    // element values: VectorDouble.get(i) currently returns std::optional<double>
+    // and the optional-type registration isn't taking effect in the full
+    // CoolProp build (minimal repro works; full build doesn't — pending
+    // investigation). The size check still proves the value_object binding
+    // and the X-macro field registration round-trip the data populated by
+    // build_phase_envelope().
+    var nT = env.T.size();
+    var np = env.p.size();
+    console.log("envelope points: T=" + nT + ", p=" + np);
+    if (nT < 5 || np !== nT) {
+        console.error("envelope returned too few points or T/p size mismatch:", nT, np);
+        process.exit(1);
+    }
+
+    ze.delete();
+    ASenv.delete();
+    console.log("Phase envelope test passed!");
+} catch (e) {
+    console.error("Phase envelope test failed:", e);
+    process.exit(1);
+}
+
+// Test derivative bindings. The point is to exercise each binding's signature
+// end-to-end against real backend code; tolerances are loose.
+console.log("Testing derivative bindings...");
+try {
+    var ASd = coolprop.factory("HEOS", "Water");
+
+    // first_partial_deriv: dH/dT|P at single-phase point should equal Cp_molar.
+    ASd.update(coolprop.input_pairs.PT_INPUTS, 1e6, 300);
+    var dHdT = ASd.first_partial_deriv(coolprop.parameters.iHmolar,
+                                       coolprop.parameters.iT,
+                                       coolprop.parameters.iP);
+    var cp = ASd.cpmolar();
+    console.log("dH/dT|P:", dHdT, " cp_molar:", cp);
+    if (!Number.isFinite(dHdT) || Math.abs(dHdT - cp) > 1e-6 * Math.abs(cp)) {
+        console.error("first_partial_deriv(H,T,P) should equal cpmolar");
+        process.exit(1);
+    }
+
+    // first_saturation_deriv: dp/dT along the saturation line, Clausius-Clapeyron > 0.
+    ASd.update(coolprop.input_pairs.PQ_INPUTS, 101325, 0);
+    var dpsatdT = ASd.first_saturation_deriv(coolprop.parameters.iP,
+                                             coolprop.parameters.iT);
+    console.log("dp/dT|sat at NBP:", dpsatdT);
+    if (!(Number.isFinite(dpsatdT) && dpsatdT > 0)) {
+        console.error("first_saturation_deriv(P,T) should be positive at the NBP");
+        process.exit(1);
+    }
+
+    // first_two_phase_deriv_splined: smooth two-phase derivative; just check finite.
+    // x_end is the upper bound of the spline region; backend requires Q < x_end.
+    ASd.update(coolprop.input_pairs.PQ_INPUTS, 1e5, 0.05);
+    var dDdh_spl = ASd.first_two_phase_deriv_splined(coolprop.parameters.iDmolar,
+                                                    coolprop.parameters.iHmolar,
+                                                    coolprop.parameters.iP,
+                                                    0.1);
+    console.log("d rho_molar / dh |P (splined, Q=0.05, x_end=0.1):", dDdh_spl);
+    if (!Number.isFinite(dDdh_spl)) {
+        console.error("first_two_phase_deriv_splined returned non-finite");
+        process.exit(1);
+    }
+
+    ASd.delete();
+    console.log("Derivative bindings test passed!");
+} catch (e) {
+    console.error("Derivative bindings test failed:", e);
     process.exit(1);
 }
