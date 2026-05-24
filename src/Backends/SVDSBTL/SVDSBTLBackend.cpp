@@ -891,20 +891,35 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
     // Critical-patch bbox routing.  Patch lookups defer their property
     // reads to evaluate_property_ via patch_source_.
     //
-    // For HmassP / HmolarP inputs we follow the source-backend update
-    // with polish_patch_state_(): the source's HmassP_INPUTS path
-    // typically uses a backward equation (IF97 R7-97 in particular)
-    // that's only ±25 mK forward-consistent in T.  Without the polish
-    // every in-bbox query inherits that floor — visible as ~10-20 mK /
-    // 0.1-0.4 J/(kg·K) s residuals in the SVDSBTL&IF97 fail-map even
-    // inside the patch box.  The polish TOMS748-iterates on a tight
-    // bracket around T_seed so the returned state is
-    // forward-consistent (h(T_polished, p) == h_input to bracket eps).
-    // Mirrors the polish baked into ph_subcritical's IF97 sampling
-    // lambda — that's the foi.9.10 sampling-side fix; this is its
-    // query-side counterpart.  No-op for HEOS source (HEOS HmassP is
-    // already iterative + forward-consistent) modulo one extra HEOS
-    // eval per in-bbox query.
+    // For HmassP / HmolarP inputs we follow IF97's source-backend
+    // update with polish_patch_state_(): IF97's HmassP_INPUTS uses the
+    // R7-97 backward equation, which is only ±25 mK forward-consistent
+    // in T.  Without the polish every in-bbox query inherits that floor
+    // — visible as ~10-20 mK / 0.1-0.4 J/(kg·K) s residuals in the
+    // SVDSBTL&IF97 fail-map even inside the patch box.  The polish
+    // TOMS748-iterates on a tight bracket around T_seed so the returned
+    // state is forward-consistent (h(T_polished, p) == h_input to
+    // bracket eps).  Mirrors the polish baked into ph_subcritical's
+    // IF97 sampling lambda — that's the foi.9.10 sampling-side fix;
+    // this is its query-side counterpart.
+    //
+    // Polish is gated to IF97 sources only.  HEOS's HmassP_INPUTS is
+    // already iterative + forward-consistent, so the polish should be
+    // a no-op — but TOMS748 in [T_seed±0.5 K] leaves a sub-ULP T
+    // residual that, for low-Tc fluids (Hydrogen Tc=33.14 K — the
+    // bracket is ~1.5% of Tc), the critical-region stiffness amplifies
+    // into ~1e-7 ρ drift inside the patch bbox.  Visible as non-zero
+    // error in 82% of bbox cells in the SVDSBTLValidation heatmap even
+    // though the patch source IS the reference HEOS.  Skipping the
+    // polish for HEOS also drops one extra HEOS PT_INPUTS eval per
+    // in-bbox query.  See the [hydrogen] regression test in
+    // CoolProp-Tests-SVDSBTLCriticalPatch.cpp.
+    // Gate on the ACTIVE patch backend, not source_backend_: when the
+    // user overrides critical_patch.source (e.g. SVDSBTL&HEOS with
+    // patch source="IF97" for Water), the polish requirement follows
+    // the backend actually serving the in-patch query.
+    const std::string& patch_backend = critical_patch_.source.empty() ? source_backend_ : critical_patch_.source;
+    const bool needs_polish = (patch_backend == "IF97");
     const auto patch_key = (input_pair == CoolProp::HmolarP_INPUTS) ? CoolProp::HmassP_INPUTS : input_pair;
     if (critical_patch_.contains(patch_key, a, b)) {
         try {
@@ -913,7 +928,7 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
                 // Same dome-aware polish gating as the HmassP branch
                 // below — multi-valued h(T, p) inside the dome breaks
                 // the single-phase forward-h polish bracket.
-                if (patch_source_->phase() != CoolProp::iphase_twophase) {
+                if (needs_polish && patch_source_->phase() != CoolProp::iphase_twophase) {
                     polish_patch_state_(*patch_source_, *pt.p, *pt.h_mass);
                 }
             } else if (input_pair == CoolProp::HmassP_INPUTS) {
@@ -931,7 +946,7 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
                 // with rho / Q = ±inf.  Two-phase points coming out
                 // of the patch already have correct (T_sat, Q, rho)
                 // from the source's PQ-blend; no polish needed.
-                if (patch_source_->phase() != CoolProp::iphase_twophase) {
+                if (needs_polish && patch_source_->phase() != CoolProp::iphase_twophase) {
                     polish_patch_state_(*patch_source_, *pt.p, *pt.h_mass);
                 }
             } else {

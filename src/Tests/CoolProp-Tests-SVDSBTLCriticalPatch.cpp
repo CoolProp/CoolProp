@@ -113,6 +113,45 @@ TEST_CASE("critical_patch: HmassP_INPUTS routing matches source backend in the b
     REQUIRE(AS->smass() == Catch::Approx(heos->smass()).margin(1e-9));
 }
 
+TEST_CASE("critical_patch: HEOS source must NOT polish (regression for low-Tc drift)", "[SVDSBTL][critical_patch][hydrogen][slow]") {
+    // polish_patch_state_ was added (d176979e7) to fix IF97's R7-97
+    // backward-equation floor (±25 mK forward-consistency).  HEOS's
+    // HmassP_INPUTS is already iterative + forward-consistent, so the
+    // polish should be a no-op for HEOS sources.
+    //
+    // It isn't.  For low-Tc fluids (Hydrogen, Tc=33.14 K) the polish
+    // bracket [T_seed±0.5 K] is ~1.5% of Tc, and TOMS748's eps_tolerance
+    // ≈ 1e-12 relative T leaves a sub-ULP residual which the critical-
+    // region stiffness amplifies into ~1e-7 ρ drift inside the patch
+    // bbox.  Visible as non-zero error in 82% of bbox cells in the
+    // SVDSBTLValidation heatmap, even though the patch source IS the
+    // reference HEOS and the answer should be bit-exact.
+    //
+    // Pin: every property inside the patch must equal HEOS's HmassP
+    // result bit-for-bit (margin 0) for HEOS-sourced backends.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(
+      CoolProp::AbstractState::factory("SVDSBTL&HEOS", R"(Hydrogen?{"critical_patch":{"mode":"fixed","bbox":[0.95,1.05,0.90,1.10]}})"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Hydrogen"));
+    const double Tc = heos->T_critical();
+    const double pc = heos->p_critical();
+
+    // (T=Tc, p=1.05*pc) — supercritical, comfortably inside the fixed
+    // bbox in (T, p).  Translate to (h, p) via HEOS to get the HmassP
+    // probe.
+    heos->update(CoolProp::PT_INPUTS, 1.05 * pc, Tc);
+    const double h = heos->hmass();
+    const double p = 1.05 * pc;
+
+    AS->update(CoolProp::HmassP_INPUTS, h, p);
+    heos->update(CoolProp::HmassP_INPUTS, h, p);
+
+    // Bit-exact (==): the patch routes to the same HEOS instance, so
+    // any difference is polish-induced drift.
+    REQUIRE(AS->rhomass() == heos->rhomass());
+    REQUIRE(AS->T() == heos->T());
+    REQUIRE(AS->smass() == heos->smass());
+}
+
 TEST_CASE("critical_patch: HmolarP_INPUTS reaches the surface lookup (CodeRabbit)", "[SVDSBTL][critical_patch]") {
     // surfaces_ only registers HmassP_INPUTS and PT_INPUTS — HmolarP
     // shares the HmassP surface via a molar→mass conversion inside
