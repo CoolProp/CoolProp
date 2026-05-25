@@ -5801,7 +5801,8 @@ TEST_CASE("REFPROP update_DmolarT_direct matches update(DmolarT)", "[REFPROPsat]
     std::shared_ptr<AbstractState> flash(AbstractState::factory("REFPROP", "Propane"));
     double T = 300.0, rhomolar = 12000.0;  // dense liquid, single phase
     flash->update(DmolarT_INPUTS, rhomolar, T);
-    auto* be = static_cast<REFPROPMixtureBackend*>(direct.get());
+    auto* be = dynamic_cast<REFPROPMixtureBackend*>(direct.get());
+    REQUIRE(be != nullptr);
     be->update_DmolarT_direct(rhomolar, T);
     CHECK(direct->p() == Catch::Approx(flash->p()).epsilon(1e-9));
     CHECK(direct->hmolar() == Catch::Approx(flash->hmolar()).epsilon(1e-9));
@@ -5812,7 +5813,8 @@ TEST_CASE("REFPROP saturation shim reproduces saturated densities", "[REFPROPsat
     Skip_if_No_REFPROP();
     std::shared_ptr<AbstractState> host(AbstractState::factory("REFPROP", "Propane"));
     host->update(QT_INPUTS, 0.5, 300.0);  // two-phase
-    auto* be = static_cast<REFPROPMixtureBackend*>(host.get());
+    auto* be = dynamic_cast<REFPROPMixtureBackend*>(host.get());
+    REQUIRE(be != nullptr);
     auto shimL = be->build_saturation_shim(0);  // liquid
     auto shimV = be->build_saturation_shim(1);  // vapor
     CHECK(shimL->rhomolar() == Catch::Approx(be->saturated_liquid_keyed_output(iDmolar)).epsilon(1e-10));
@@ -5846,13 +5848,18 @@ TEST_CASE("REFPROP first_saturation_deriv matches HEOS for a pure fluid", "[REFP
     Skip_if_No_REFPROP();
     std::shared_ptr<AbstractState> RP(AbstractState::factory("REFPROP", "Propane"));
     std::shared_ptr<AbstractState> HE(AbstractState::factory("HEOS", "Propane"));
-    for (double T = 200; T <= 360; T += 40) {
+    for (int Ti = 200; Ti <= 360; Ti += 40) {
+        double T = Ti;
         RP->update(QT_INPUTS, 0.0, T);
         HE->update(QT_INPUTS, 0.0, T);
         CHECK(RP->first_saturation_deriv(iT, iP) == Catch::Approx(HE->first_saturation_deriv(iT, iP)).epsilon(1e-4));
         CHECK(RP->first_saturation_deriv(iDmolar, iT) == Catch::Approx(HE->first_saturation_deriv(iDmolar, iT)).epsilon(1e-3));
         CHECK(RP->first_saturation_deriv(iHmolar, iP) == Catch::Approx(HE->first_saturation_deriv(iHmolar, iP)).epsilon(1e-3));
     }
+    // Pure fluid: a two-phase state with 0<Q<1 must also work (vapor-pressure slope is Q-independent).
+    RP->update(QT_INPUTS, 0.5, 300.0);
+    HE->update(QT_INPUTS, 0.5, 300.0);
+    CHECK(RP->first_saturation_deriv(iT, iP) == Catch::Approx(HE->first_saturation_deriv(iT, iP)).epsilon(1e-4));
 }
 
 TEST_CASE("REFPROP first_two_phase_deriv matches HEOS for a pure fluid", "[REFPROPsat]") {
@@ -5898,6 +5905,11 @@ TEST_CASE("REFPROP saturation derivs work for a mixture", "[REFPROPsat]") {
     double dTdp = RP->first_saturation_deriv(iT, iP);
     CHECK(ValidNumber(dTdp));
     CHECK(dTdp > 0);
+    // Two-phase interior derivatives are not implemented for mixtures (need the
+    // constant-overall-composition saturation slope); they must throw, not return garbage.
+    RP->update(QT_INPUTS, 0.4, 180.0);
+    CHECK_THROWS(RP->first_two_phase_deriv(iDmolar, iHmolar, iP));
+    CHECK_THROWS(RP->first_two_phase_deriv_splined(iDmolar, iHmolar, iP, 0.5));
 }
 
 #endif
