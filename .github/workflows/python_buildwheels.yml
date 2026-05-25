@@ -19,6 +19,14 @@ on:
     branches: [ 'master', 'main', 'develop' ]
     types: [opened, synchronize, reopened, labeled]
 
+concurrency:
+  # Cancel superseded runs on the same ref to cut CI backlog on heavy
+  # dev days (repeated pushes to an open PR).  Protected: master / main
+  # / develop and tags never cancel, so mainline + release runs always
+  # complete.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   set-version:
     # Skip this whole workflow on label events unless the label is `full-wheels`,
