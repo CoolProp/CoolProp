@@ -2505,7 +2505,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv_splined(parameters
     } else if (Of == iDmass && Wrt == iDmass && Constant == iDmass) {
         return first_two_phase_deriv_splined(iDmolar, iDmolar, iDmolar, x_end) * molar_mass();
     } else {
-        throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+        throw ValueError("These inputs are not supported to calc_first_two_phase_deriv_splined");
     }
 
     if (!_rhoLmolar || !_rhoVmolar || !ValidNumber(static_cast<CoolPropDbl>(_rhoLmolar)) || !ValidNumber(static_cast<CoolPropDbl>(_rhoVmolar))) {
