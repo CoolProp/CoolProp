@@ -2362,6 +2362,42 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_saturation_deriv(parameters Of1, p
     }
 }
 
+CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant) {
+    if (!ValidNumber(_rhoLmolar) || !ValidNumber(_rhoVmolar)) {
+        throw ValueError("The saturation properties are needed for calc_first_two_phase_deriv");
+    }
+    shared_ptr<REFPROPMixtureBackend> SatL = build_saturation_shim(0);
+    shared_ptr<REFPROPMixtureBackend> SatV = build_saturation_shim(1);
+
+    if (Of == iDmolar && Wrt == iHmolar && Constant == iP) {
+        return -POW2(rhomolar()) * (1 / SatV->rhomolar() - 1 / SatL->rhomolar()) / (SatV->hmolar() - SatL->hmolar());
+    } else if (Of == iDmass && Wrt == iHmass && Constant == iP) {
+        return -POW2(rhomass()) * (1 / SatV->rhomass() - 1 / SatL->rhomass()) / (SatV->hmass() - SatL->hmass());
+    } else if (Of == iDmolar && Wrt == iP && Constant == iHmolar) {
+        CoolPropDbl dvdrhoL = -1 / POW2(SatL->rhomolar());
+        CoolPropDbl dvdrhoV = -1 / POW2(SatV->rhomolar());
+        CoolPropDbl dvL_dp = dvdrhoL * SatL->calc_first_saturation_deriv(iDmolar, iP);
+        CoolPropDbl dvV_dp = dvdrhoV * SatV->calc_first_saturation_deriv(iDmolar, iP);
+        CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmolar, iP);
+        CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmolar, iP);
+        CoolPropDbl dxdp_h = (Q() * dhV_dp + (1 - Q()) * dhL_dp) / (SatL->hmolar() - SatV->hmolar());
+        CoolPropDbl dvdp_h = dvL_dp + dxdp_h * (1 / SatV->rhomolar() - 1 / SatL->rhomolar()) + Q() * (dvV_dp - dvL_dp);
+        return -POW2(rhomolar()) * dvdp_h;
+    } else if (Of == iDmass && Wrt == iP && Constant == iHmass) {
+        CoolPropDbl dvdrhoL = -1 / POW2(SatL->rhomass());
+        CoolPropDbl dvdrhoV = -1 / POW2(SatV->rhomass());
+        CoolPropDbl dvL_dp = dvdrhoL * SatL->calc_first_saturation_deriv(iDmass, iP);
+        CoolPropDbl dvV_dp = dvdrhoV * SatV->calc_first_saturation_deriv(iDmass, iP);
+        CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmass, iP);
+        CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmass, iP);
+        CoolPropDbl dxdp_h = (Q() * dhV_dp + (1 - Q()) * dhL_dp) / (SatL->hmass() - SatV->hmass());
+        CoolPropDbl dvdp_h = dvL_dp + dxdp_h * (1 / SatV->rhomass() - 1 / SatL->rhomass()) + Q() * (dvV_dp - dvL_dp);
+        return -POW2(rhomass()) * dvdp_h;
+    } else {
+        throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+    }
+}
+
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
     if (!ValidNumber(_rhoLmolar)) {
         throw ValueError("The saturated liquid state has not been set.");

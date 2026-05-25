@@ -5855,4 +5855,14 @@ TEST_CASE("REFPROP first_saturation_deriv matches HEOS for a pure fluid", "[REFP
     }
 }
 
+TEST_CASE("REFPROP first_two_phase_deriv matches HEOS for a pure fluid", "[REFPROPsat]") {
+    Skip_if_No_REFPROP();
+    std::shared_ptr<AbstractState> RP(AbstractState::factory("REFPROP", "Propane"));
+    std::shared_ptr<AbstractState> HE(AbstractState::factory("HEOS", "Propane"));
+    RP->update(QT_INPUTS, 0.4, 300.0);
+    HE->update(QT_INPUTS, 0.4, 300.0);
+    CHECK(RP->first_two_phase_deriv(iDmolar, iHmolar, iP) == Catch::Approx(HE->first_two_phase_deriv(iDmolar, iHmolar, iP)).epsilon(1e-4));
+    CHECK(RP->first_two_phase_deriv(iDmolar, iP, iHmolar) == Catch::Approx(HE->first_two_phase_deriv(iDmolar, iP, iHmolar)).epsilon(1e-3));
+}
+
 #endif
