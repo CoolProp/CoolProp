@@ -1,0 +1,71 @@
+name: Cancel CI for merged PRs
+
+# Concurrency groups (PR #2989) cancel superseded runs on the same ref
+# while a PR is open, but they never fire once a PR is merged — nothing
+# pushes to refs/pull/<N>/merge again, so any still-running matrix jobs
+# run to completion even though their result is now worthless.  This
+# workflow closes that gap: when a PR is merged, cancel its in-flight CI
+# runs.  (deleteBranchOnMerge is off, so a `delete`-event trigger would
+# be unreliable — pull_request:closed is the canonical merge signal.)
+
+on:
+  pull_request:
+    types: [closed]
+
+# Only need permission to cancel workflow runs.
+permissions:
+  actions: write
+
+# Don't let two cancellers for the same PR stack up.
+concurrency:
+  group: cancel-merged-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  cancel:
+    # Merged only — a PR closed without merging is left alone.
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel in-flight runs for the merged PR's head commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # Scope by --branch (the PR head ref) so mainline runs from the
+          # merge-commit push — listed under headBranch=master — are never
+          # returned.  This branch filter is what protects master: for a
+          # rebase/fast-forward merge the landed commit can share the PR
+          # head SHA, so the headSha guard alone wouldn't.  Match headSha
+          # too so we don't touch an unrelated branch that shares a name
+          # (e.g. a fork's branch).  Exclude this canceller's own run — it
+          # shares the PR head branch+SHA, so an unguarded match would
+          # cancel ourselves mid-step.
+          #
+          # On a merged fork PR the token is downscoped to read-only and
+          # `gh run cancel` 403s; that's swallowed by the `|| true` below
+          # (a harmless no-op — those runs have usually finished anyway).
+          mapfile -t ids < <(
+            gh run list --repo "$REPO" --branch "$HEAD_BRANCH" --limit 200 \
+              --json databaseId,headSha,status \
+              --jq '.[]
+                    | select(.headSha == env.HEAD_SHA)
+                    | select((.databaseId | tostring) != env.RUN_ID)
+                    | select(.status | IN("queued","in_progress","requested","waiting","pending"))
+                    | .databaseId'
+          )
+          if [ "${#ids[@]}" -eq 0 ]; then
+            echo "No in-flight runs for $HEAD_BRANCH@$HEAD_SHA."
+            exit 0
+          fi
+          for id in "${ids[@]}"; do
+            echo "Cancelling run $id"
+            # gh run cancel is a no-op on already-finished runs; `|| true`
+            # only guards the race where a run completes between list and
+            # cancel.
+            gh run cancel "$id" --repo "$REPO" || true
+          done
