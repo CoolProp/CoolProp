@@ -5795,4 +5795,17 @@ TEST_CASE("BICUBIC PT below saturation no longer segfaults (#1950)", "[BICUBIC][
     CHECK(rho == Catch::Approx(HEOS->rhomass()).epsilon(1e-2));  // 1% bicubic tolerance
 }
 
+TEST_CASE("REFPROP update_DmolarT_direct matches update(DmolarT)", "[REFPROPsat]") {
+    Skip_if_No_REFPROP();
+    std::shared_ptr<AbstractState> direct(AbstractState::factory("REFPROP", "Propane"));
+    std::shared_ptr<AbstractState> flash(AbstractState::factory("REFPROP", "Propane"));
+    double T = 300.0, rhomolar = 12000.0;  // dense liquid, single phase
+    flash->update(DmolarT_INPUTS, rhomolar, T);
+    auto* be = static_cast<REFPROPMixtureBackend*>(direct.get());
+    be->update_DmolarT_direct(rhomolar, T);
+    CHECK(direct->p() == Catch::Approx(flash->p()).epsilon(1e-9));
+    CHECK(direct->hmolar() == Catch::Approx(flash->hmolar()).epsilon(1e-9));
+    CHECK(direct->smolar() == Catch::Approx(flash->smolar()).epsilon(1e-9));
+}
+
 #endif

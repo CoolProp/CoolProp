@@ -2153,6 +2153,30 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
     _delta = _rhomolar / calc_rhomolar_reducing();
     _Q = q;
 }
+
+void REFPROPMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T) {
+    this->check_loaded_fluid();
+    clear();
+    _T = T;
+    _rhomolar = rhomolar;
+    _Q = -1;  // not on the saturation envelope by construction
+
+    double rho_mol_L = 0.001 * static_cast<double>(_rhomolar);
+    double T_K = static_cast<double>(_T);
+    double p_kPa = _HUGE, emol = _HUGE, hmol = _HUGE, smol = _HUGE, cvmol = _HUGE, cpmol = _HUGE, w = _HUGE, hjt = _HUGE;
+    THERMdll(&T_K, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+
+    _p = 1000.0 * p_kPa;
+    _hmolar = hmol;
+    _smolar = smol;
+    _umolar = emol;
+    _cvmolar = cvmol;
+    _cpmolar = cpmol;
+    _speed_sound = w;
+    _gibbsmolar = hmol - T_K * smol;
+    _tau = calc_T_reducing() / _T;
+    _delta = _rhomolar / calc_rhomolar_reducing();
+}
 CoolPropDbl REFPROPMixtureBackend::call_phixdll(int itau, int idel) {
     this->check_loaded_fluid();
     double val = 0, tau = _tau, delta = _delta;
