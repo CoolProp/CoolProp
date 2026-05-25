@@ -2345,7 +2345,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_saturation_deriv(parameters Of1, p
     // The saturation slope comes from REFPROP's own DPTSATKdll/SATTdll at (T, composition),
     // so this needs only a valid two-phase _Q, not the L/V saturation densities. (This is
     // also why it works when invoked on a single-phase saturation shim, whose _Q is 0 or 1.)
-    CoolPropDbl dTdP_sat;
+    CoolPropDbl dTdP_sat = _HUGE;
     if (Ncomp == 1) {
         // Pure fluid: dP/dT along the vapor-pressure curve is independent of quality, so
         // any two-phase state (0<=Q<=1) is valid. DPTSATKdll (icomp=1) returns it natively;
@@ -2444,7 +2444,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_second_two_phase_deriv(parameters Of, pa
             || (Wrt2 == iHmolar && Constant2 == iP && Wrt1 == iP && Constant1 == iHmolar))) {
         parameters h_key = iHmolar, rho_key = iDmolar, p_key = iP;
         CoolPropDbl dv_dh_constp = calc_first_two_phase_deriv(rho_key, h_key, p_key) / (-POW2(rhomolar()));
-        CoolPropDbl drhomolar_dp__consth = first_two_phase_deriv(rho_key, p_key, h_key);
+        CoolPropDbl drhomolar_dp_consth = first_two_phase_deriv(rho_key, p_key, h_key);
 
         CoolPropDbl dhL_dp_sat = SatL->calc_first_saturation_deriv(h_key, p_key);
         CoolPropDbl dhV_dp_sat = SatV->calc_first_saturation_deriv(h_key, p_key);
@@ -2454,15 +2454,15 @@ CoolPropDbl REFPROPMixtureBackend::calc_second_two_phase_deriv(parameters Of, pa
         CoolPropDbl denominator = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
         CoolPropDbl dnumerator = -1 / POW2(SatV->keyed_output(rho_key)) * drhoV_dp_sat + 1 / POW2(SatL->keyed_output(rho_key)) * drhoL_dp_sat;
         CoolPropDbl ddenominator = dhV_dp_sat - dhL_dp_sat;
-        CoolPropDbl d_dvdh_dp__consth = (denominator * dnumerator - numerator * ddenominator) / POW2(denominator);
-        return -POW2(rhomolar()) * d_dvdh_dp__consth + dv_dh_constp * (-2 * rhomolar()) * drhomolar_dp__consth;
+        CoolPropDbl d_dvdh_dp_consth = (denominator * dnumerator - numerator * ddenominator) / POW2(denominator);
+        return -POW2(rhomolar()) * d_dvdh_dp_consth + dv_dh_constp * (-2 * rhomolar()) * drhomolar_dp_consth;
     } else if (Of == iDmass
                && ((Wrt1 == iHmass && Constant1 == iP && Wrt2 == iP && Constant2 == iHmass)
                    || (Wrt2 == iHmass && Constant2 == iP && Wrt1 == iP && Constant1 == iHmass))) {
         parameters h_key = iHmass, rho_key = iDmass, p_key = iP;
         CoolPropDbl rho = keyed_output(rho_key);
         CoolPropDbl dv_dh_constp = calc_first_two_phase_deriv(rho_key, h_key, p_key) / (-POW2(rho));
-        CoolPropDbl drho_dp__consth = first_two_phase_deriv(rho_key, p_key, h_key);
+        CoolPropDbl drho_dp_consth = first_two_phase_deriv(rho_key, p_key, h_key);
 
         CoolPropDbl dhL_dp_sat = SatL->calc_first_saturation_deriv(h_key, p_key);
         CoolPropDbl dhV_dp_sat = SatV->calc_first_saturation_deriv(h_key, p_key);
@@ -2472,8 +2472,8 @@ CoolPropDbl REFPROPMixtureBackend::calc_second_two_phase_deriv(parameters Of, pa
         CoolPropDbl denominator = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
         CoolPropDbl dnumerator = -1 / POW2(SatV->keyed_output(rho_key)) * drhoV_dp_sat + 1 / POW2(SatL->keyed_output(rho_key)) * drhoL_dp_sat;
         CoolPropDbl ddenominator = dhV_dp_sat - dhL_dp_sat;
-        CoolPropDbl d_dvdh_dp__consth = (denominator * dnumerator - numerator * ddenominator) / POW2(denominator);
-        return -POW2(rho) * d_dvdh_dp__consth + dv_dh_constp * (-2 * rho) * drho_dp__consth;
+        CoolPropDbl d_dvdh_dp_consth = (denominator * dnumerator - numerator * ddenominator) / POW2(denominator);
+        return -POW2(rho) * d_dvdh_dp_consth + dv_dh_constp * (-2 * rho) * drho_dp_consth;
     } else {
         throw ValueError("These inputs are not supported to calc_second_two_phase_deriv");
     }
@@ -2483,19 +2483,19 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv_splined(parameters
     if (Ncomp > 1) {
         throw NotImplementedError("calc_first_two_phase_deriv_splined is not implemented for mixtures in the REFPROP backend");
     }
-    // Note: If you need all three values (drho_dh__p, drho_dp__h and rho_spline),
-    // you should calculate drho_dp__h first to avoid duplicate calculations.
-    bool drho_dh__p = false;
-    bool drho_dp__h = false;
+    // Note: If you need all three values (drho_dh_p, drho_dp_h and rho_spline),
+    // you should calculate drho_dp_h first to avoid duplicate calculations.
+    bool drho_dh_p = false;
+    bool drho_dp_h = false;
     bool rho_spline = false;
 
     if (Of == iDmolar && Wrt == iHmolar && Constant == iP) {
-        drho_dh__p = true;
+        drho_dh_p = true;
         if (_drho_spline_dh__constp) return _drho_spline_dh__constp;
     } else if (Of == iDmass && Wrt == iHmass && Constant == iP) {
         return first_two_phase_deriv_splined(iDmolar, iHmolar, iP, x_end) * POW2(molar_mass());
     } else if (Of == iDmolar && Wrt == iP && Constant == iHmolar) {
-        drho_dp__h = true;
+        drho_dp_h = true;
         if (_drho_spline_dp__consth) return _drho_spline_dp__consth;
     } else if (Of == iDmass && Wrt == iP && Constant == iHmass) {
         return first_two_phase_deriv_splined(iDmolar, iP, iHmolar, x_end) * molar_mass();
@@ -2544,20 +2544,20 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv_splined(parameters
 
     // Faking single-phase
     CoolPropDbl rho_liq = Liq->keyed_output(iDmolar);
-    CoolPropDbl drho_dh_liq__constp = Liq->first_partial_deriv(iDmolar, iHmolar, iP);
+    CoolPropDbl drho_dh_liq_constp = Liq->first_partial_deriv(iDmolar, iHmolar, iP);
 
     // Spline coordinates a, b, c, d
-    CoolPropDbl Abracket = (2 * rho_liq - 2 * rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
+    CoolPropDbl Abracket = (2 * rho_liq - 2 * rho_end + Delta_end * (drho_dh_liq_constp + drho_dh_end));
     CoolPropDbl a = 1 / POW3(Delta_end) * Abracket;
-    CoolPropDbl b = 3 / POW2(Delta_end) * (-rho_liq + rho_end) - 1 / Delta_end * (drho_dh_end + 2 * drho_dh_liq__constp);
-    CoolPropDbl c = drho_dh_liq__constp;
+    CoolPropDbl b = 3 / POW2(Delta_end) * (-rho_liq + rho_end) - 1 / Delta_end * (drho_dh_end + 2 * drho_dh_liq_constp);
+    CoolPropDbl c = drho_dh_liq_constp;
     CoolPropDbl d = rho_liq;
 
     // Either the spline value or drho/dh|p can be directly evaluated now
     _rho_spline = a * POW3(Delta) + b * POW2(Delta) + c * Delta + d;
     _drho_spline_dh__constp = 3 * a * POW2(Delta) + 2 * b * Delta + c;
     if (rho_spline) return _rho_spline;
-    if (drho_dh__p) return _drho_spline_dh__constp;
+    if (drho_dh_p) return _drho_spline_dh__constp;
 
     // It's drho/dp|h - calculate some more things
     // Derivatives *along* the saturation curve
@@ -2576,22 +2576,22 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv_splined(parameters
     CoolPropDbl d2rhodhdp_end = End->calc_second_two_phase_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
 
     // Reminder: Delta = Q()*(hV-hL) = h-hL ; Delta_end = x_end*(hV-hL)
-    CoolPropDbl d_Delta_dp__consth = -dhL_dp_sat;
-    CoolPropDbl d_Delta_end_dp__consth = x_end * (dhV_dp_sat - dhL_dp_sat);
+    CoolPropDbl d_Delta_dp_consth = -dhL_dp_sat;
+    CoolPropDbl d_Delta_end_dp_consth = x_end * (dhV_dp_sat - dhL_dp_sat);
 
     // First pressure derivative at constant h of the coefficients a,b,c,d
-    CoolPropDbl d_Abracket_dp_consth = (2 * drhoL_dp_sat - 2 * drho_dp_end + Delta_end * (d2rhodhdp_liq + d2rhodhdp_end)
-                                        + d_Delta_end_dp__consth * (drho_dh_liq__constp + drho_dh_end));
-    CoolPropDbl da_dp = 1 / POW3(Delta_end) * d_Abracket_dp_consth + Abracket * (-3 / POW4(Delta_end) * d_Delta_end_dp__consth);
-    CoolPropDbl db_dp = -6 / POW3(Delta_end) * d_Delta_end_dp__consth * (rho_end - rho_liq) + 3 / POW2(Delta_end) * (drho_dp_end - drhoL_dp_sat)
-                        + (1 / POW2(Delta_end) * d_Delta_end_dp__consth) * (drho_dh_end + 2 * drho_dh_liq__constp)
+    CoolPropDbl d_Abracket_dp_consth =
+      (2 * drhoL_dp_sat - 2 * drho_dp_end + Delta_end * (d2rhodhdp_liq + d2rhodhdp_end) + d_Delta_end_dp_consth * (drho_dh_liq_constp + drho_dh_end));
+    CoolPropDbl da_dp = 1 / POW3(Delta_end) * d_Abracket_dp_consth + Abracket * (-3 / POW4(Delta_end) * d_Delta_end_dp_consth);
+    CoolPropDbl db_dp = -6 / POW3(Delta_end) * d_Delta_end_dp_consth * (rho_end - rho_liq) + 3 / POW2(Delta_end) * (drho_dp_end - drhoL_dp_sat)
+                        + (1 / POW2(Delta_end) * d_Delta_end_dp_consth) * (drho_dh_end + 2 * drho_dh_liq_constp)
                         - (1 / Delta_end) * (d2rhodhdp_end + 2 * d2rhodhdp_liq);
     CoolPropDbl dc_dp = d2rhodhdp_liq;
     CoolPropDbl dd_dp = drhoL_dp_sat;
 
     _drho_spline_dp__consth =
-      (3 * a * POW2(Delta) + 2 * b * Delta + c) * d_Delta_dp__consth + POW3(Delta) * da_dp + POW2(Delta) * db_dp + Delta * dc_dp + dd_dp;
-    if (drho_dp__h) return _drho_spline_dp__consth;
+      (3 * a * POW2(Delta) + 2 * b * Delta + c) * d_Delta_dp_consth + POW3(Delta) * da_dp + POW2(Delta) * db_dp + Delta * dc_dp + dd_dp;
+    if (drho_dp_h) return _drho_spline_dp__consth;
 
     throw ValueError("Something went wrong in REFPROPMixtureBackend::calc_first_two_phase_deriv_splined");
     return _HUGE;
