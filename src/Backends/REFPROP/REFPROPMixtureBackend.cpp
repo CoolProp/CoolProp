@@ -2038,6 +2038,14 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     if (imposed_phase_index == iphase_not_imposed) {  // If phase is imposed, _phase will already be set.
         if (Ncomp == 1) {                             // Only set _phase for pure fluids
             _phase = GetRPphase();                    // Set the CoolProp _phase variable based on RefProp's quality value (q)
+            if (_phase != iphase_twophase) {
+                // No saturated state: clear so build_saturation_shim / keyed outputs reject it.
+                _rhoLmolar = _HUGE;
+                _rhoVmolar = _HUGE;
+            }
+        } else if (!(_Q >= 0 && _Q <= 1)) {  // mixture, not two-phase
+            _rhoLmolar = _HUGE;
+            _rhoVmolar = _HUGE;
         }
     }
 }

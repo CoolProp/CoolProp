@@ -5865,4 +5865,14 @@ TEST_CASE("REFPROP first_two_phase_deriv matches HEOS for a pure fluid", "[REFPR
     CHECK(RP->first_two_phase_deriv(iDmolar, iP, iHmolar) == Catch::Approx(HE->first_two_phase_deriv(iDmolar, iP, iHmolar)).epsilon(1e-3));
 }
 
+TEST_CASE("REFPROP saturated keyed output throws in single phase", "[REFPROPsat]") {
+    Skip_if_No_REFPROP();
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("REFPROP", "Propane"));
+    AS->update(PT_INPUTS, 101325, 300.0);  // single-phase gas
+    CHECK_THROWS(AS->saturated_liquid_keyed_output(iHmolar));
+    // A subsequent two-phase update must still work (no stale state leaks).
+    AS->update(QT_INPUTS, 0.3, 280.0);
+    CHECK(ValidNumber(AS->saturated_liquid_keyed_output(iHmolar)));
+}
+
 #endif
