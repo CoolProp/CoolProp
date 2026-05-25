@@ -5825,4 +5825,21 @@ TEST_CASE("REFPROP saturation shim reproduces saturated densities", "[REFPROPsat
     CHECK(shimL->hmolar() == Catch::Approx(probe->hmolar()).epsilon(1e-9));
 }
 
+TEST_CASE("REFPROP saturated keyed outputs (h,s,cp,visc) match endpoint flashes", "[REFPROPsat]") {
+    Skip_if_No_REFPROP();
+    std::shared_ptr<AbstractState> twophase(AbstractState::factory("REFPROP", "Propane"));
+    twophase->update(QT_INPUTS, 0.5, 300.0);
+    std::shared_ptr<AbstractState> bubble(AbstractState::factory("REFPROP", "Propane"));
+    bubble->update(QT_INPUTS, 0.0, 300.0);
+    std::shared_ptr<AbstractState> dew(AbstractState::factory("REFPROP", "Propane"));
+    dew->update(QT_INPUTS, 1.0, 300.0);
+
+    CHECK(twophase->saturated_liquid_keyed_output(iHmolar) == Catch::Approx(bubble->hmolar()).epsilon(1e-7));
+    CHECK(twophase->saturated_vapor_keyed_output(iHmolar) == Catch::Approx(dew->hmolar()).epsilon(1e-7));
+    CHECK(twophase->saturated_liquid_keyed_output(iSmolar) == Catch::Approx(bubble->smolar()).epsilon(1e-7));
+    CHECK(twophase->saturated_liquid_keyed_output(iCpmolar) == Catch::Approx(bubble->cpmolar()).epsilon(1e-6));
+    CHECK(twophase->saturated_vapor_keyed_output(iviscosity) == Catch::Approx(dew->viscosity()).epsilon(1e-6));
+    CHECK(twophase->saturated_liquid_keyed_output(iconductivity) == Catch::Approx(bubble->conductivity()).epsilon(1e-6));
+}
+
 #endif

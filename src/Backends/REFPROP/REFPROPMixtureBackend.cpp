@@ -2300,40 +2300,44 @@ shared_ptr<REFPROPMixtureBackend> REFPROPMixtureBackend::build_saturation_shim(i
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
-    if (_rhoLmolar) {
-        if (key == iDmolar) {
+    if (!ValidNumber(_rhoLmolar)) {
+        throw ValueError("The saturated liquid state has not been set.");
+    }
+    switch (key) {
+        case iDmolar:
             return _rhoLmolar;
-        } else if (key == iDmass) {
+        case iDmass:
             return static_cast<double>(_rhoLmolar) * calc_saturated_liquid_keyed_output(imolar_mass);
-        } else if (key == imolar_mass) {
+        case imolar_mass: {
             double wmm_kg_kmol = 0;
             WMOLdll(&(mole_fractions_liq[0]), &wmm_kg_kmol);  // returns mole mass in kg/kmol
             return wmm_kg_kmol / 1000;                        // kg/mol
-        } else {
-            throw ValueError("Invalid parameter. Only mass and molar density are available with RefProp");
-            return _HUGE;
+        }
+        default: {
+            shared_ptr<REFPROPMixtureBackend> shimL = build_saturation_shim(0);
+            return shimL->keyed_output(key);
         }
     }
-    throw ValueError("The saturated liquid state has not been set.");
-    return _HUGE;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters key) {
-    if (_rhoVmolar) {
-        if (key == iDmolar) {
+    if (!ValidNumber(_rhoVmolar)) {
+        throw ValueError("The saturated vapor state has not been set.");
+    }
+    switch (key) {
+        case iDmolar:
             return _rhoVmolar;
-        } else if (key == iDmass) {
+        case iDmass:
             return static_cast<double>(_rhoVmolar) * calc_saturated_vapor_keyed_output(imolar_mass);
-        } else if (key == imolar_mass) {
+        case imolar_mass: {
             double wmm_kg_kmol = 0;
             WMOLdll(&(mole_fractions_vap[0]), &wmm_kg_kmol);  // returns mole mass in kg/kmol
             return wmm_kg_kmol / 1000;                        // kg/mol
-        } else {
-            throw ValueError("Invalid key.");
-            return _HUGE;
+        }
+        default: {
+            shared_ptr<REFPROPMixtureBackend> shimV = build_saturation_shim(1);
+            return shimV->keyed_output(key);
         }
     }
-    throw ValueError("The saturated vapor state has not been set.");
-    return _HUGE;
 }
 
 void REFPROPMixtureBackend::calc_ideal_curve(const std::string& type, std::vector<double>& T, std::vector<double>& p) {
