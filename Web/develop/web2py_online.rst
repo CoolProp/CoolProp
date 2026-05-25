@@ -9,10 +9,10 @@ Getting going on PythonAnywhere
 
 1. In PythonAnywhere, add a new web app, select your username
 2. Make sure that you can get to https://YOURUSERNAME.pythonanywhere.com and you don't get an error (ok, good, web2py is running). Your admin page is https://ibell.pythonanywhere.com/admin/default/index
-2. Open a shell in ``/home/YOURUSERNAME/web2py/applications``
-3. ``git clone https://github.com/CoolProp/CoolProp-Online coolpropgit`` to check out the application
-4. Reset the web application in Web tab in PythonAnywhere, go to admin webpage (https://YOURUSERNAME.pythonanywhere.com/admin/default/index), make sure you can see ``coolpropgit`` application
-5. Deposit a file called ``routes.py`` in ``/home/YOURUSERNAME/web2py`` with the contents::
+3. Open a shell in ``/home/YOURUSERNAME/web2py/applications``
+4. ``git clone https://github.com/CoolProp/CoolProp-Online coolpropgit`` to check out the application
+5. Reset the web application in Web tab in PythonAnywhere, go to admin webpage (https://YOURUSERNAME.pythonanywhere.com/admin/default/index), make sure you can see ``coolpropgit`` application
+6. Deposit a file called ``routes.py`` in ``/home/YOURUSERNAME/web2py`` with the contents::
 
     routers = dict(
         BASE = dict(
@@ -20,8 +20,8 @@ Getting going on PythonAnywhere
         )
     )
 
-6. Restart the webservice
-7. Page should serve properly, and redirect to the appropriate page
+7. Restart the webservice
+8. Page should serve properly, and redirect to the appropriate page
 
 Running application locally
 ---------------------------

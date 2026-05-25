@@ -232,12 +232,12 @@ A short tour of why the design lands where it does:
 * **Why not a builder API?**  Wrapper bridges (SWIG, Cython,
   Mathematica) would each need per-method bindings.  The string-only
   factory entry-point requires zero new wrapper code.
-* **Why JSON over query-string ("``?critical_patch=off&NT=200``")?**
+* **Why JSON over query-string** (``?critical_patch=off&NT=200``)?
   JSON gives typed nested structures (``critical_patch.tolerance``
   next to ``critical_patch.bbox`` without flat-key collisions), and
   the schema evolution story is straightforward.  The high-level
   ``?@path.json`` indirection sidesteps the inline-quoting tax.
-* **Why split on the first ``?`` only?**  Any other rule re-introduces
+* **Why split on the first** ``?`` **only?**  Any other rule re-introduces
   parser ambiguity for URLs and regexes inside JSON string values.
   JSON's quoting rules are the source of truth for everything after
   the first ``?``.
