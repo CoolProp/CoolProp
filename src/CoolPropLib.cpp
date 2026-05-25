@@ -36,7 +36,7 @@ void HandleException(long* errcode, char* message_buffer, const long buffer_leng
         std::string errmsg = std::string("HandleError: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
             *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
+            std::memcpy(message_buffer, errmsg.c_str(), errmsg.size() + 1);  // guarded above: size + null fits
         } else {
             *errcode = 2;
         }
@@ -44,7 +44,7 @@ void HandleException(long* errcode, char* message_buffer, const long buffer_leng
         std::string errmsg = std::string("Error: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
             *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
+            std::memcpy(message_buffer, errmsg.c_str(), errmsg.size() + 1);  // guarded above: size + null fits
         } else {
             *errcode = 2;
         }
@@ -59,6 +59,11 @@ void HandleException(long* errcode, char* message_buffer, const long buffer_leng
 // See also http://stackoverflow.com/questions/16849009/in-linux-do-there-exist-functions-similar-to-clearfp-and-statusfp for linux and OSX
 struct fpu_reset_guard
 {
+    fpu_reset_guard() = default;
+    fpu_reset_guard(const fpu_reset_guard&) = delete;
+    fpu_reset_guard(fpu_reset_guard&&) = delete;
+    fpu_reset_guard& operator=(const fpu_reset_guard&) = delete;
+    fpu_reset_guard& operator=(fpu_reset_guard&&) = delete;
     ~fpu_reset_guard() {
 #if defined(_MSC_VER)
         _clearfp();  // For MSVC, clear the floating point error flags
@@ -132,25 +137,25 @@ EXPORT_CODE int CONVENTION set_reference_stateS(const char* Ref, const char* ref
     fpu_reset_guard guard;
     try {
         CoolProp::set_reference_stateS(std::string(Ref), std::string(reference_state));
-        return true;
+        return 1;
     } catch (std::exception& e) {
         CoolProp::set_error_string(e.what());
     } catch (...) {
         CoolProp::set_error_string("Undefined error");
     }
-    return false;
+    return 0;
 }
 EXPORT_CODE int CONVENTION set_reference_stateD(const char* Ref, double T, double rhomolar, double hmolar0, double smolar0) {
     fpu_reset_guard guard;
     try {
         CoolProp::set_reference_stateD(std::string(Ref), T, rhomolar, hmolar0, smolar0);
-        return true;
+        return 1;
     } catch (std::exception& e) {
         CoolProp::set_error_string(e.what());
     } catch (...) {
         CoolProp::set_error_string("Undefined error");
     }
-    return false;
+    return 0;
 }
 
 // All the function interfaces that point to the single-input Props function
@@ -386,9 +391,9 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char* param, 
         // (see src/DataStructures.cpp)
         // if n is too small, str2buf throws string
         // "Buffer size is too small"
-        CoolProp::set_error_string(format("get_parameter_information_string(\"%s\", \"%s\", %d): %s", param, Output, n, e.what()));
+        CoolProp::set_error_string(format(R"(get_parameter_information_string("%s", "%s", %d): %s)", param, Output, n, e.what()));
     } catch (...) {
-        CoolProp::set_error_string(format("get_parameter_information_string(\"%s\", \"%s\", %d): Undefined error", param, Output, n));
+        CoolProp::set_error_string(format(R"(get_parameter_information_string("%s", "%s", %d): Undefined error)", param, Output, n));
     }
     return 0;
 }
@@ -483,27 +488,27 @@ class AbstractStateLibrary
 {
    private:
     std::map<std::size_t, shared_ptr<CoolProp::AbstractState>> ASlibrary;
-    long next_handle;
+    long next_handle = 0;
     std::mutex ASLib_mutex;
 
    public:
-    AbstractStateLibrary() : next_handle(0) {};
-    long add(shared_ptr<CoolProp::AbstractState> AS) {
-        std::lock_guard<std::mutex> guard(ASLib_mutex);
+    AbstractStateLibrary() = default;
+    long add(const shared_ptr<CoolProp::AbstractState>& AS) {
+        std::scoped_lock guard(ASLib_mutex);
         ASlibrary.insert(std::pair<std::size_t, shared_ptr<CoolProp::AbstractState>>(this->next_handle, AS));
         this->next_handle++;
         return next_handle - 1;
     }
     void remove(long handle) {
-        std::lock_guard<std::mutex> guard(ASLib_mutex);
+        std::scoped_lock guard(ASLib_mutex);
         std::size_t count_removed = ASlibrary.erase(handle);
         if (count_removed != 1) {
             throw CoolProp::HandleError("could not free handle");
         }
     }
     shared_ptr<CoolProp::AbstractState>& get(long handle) {
-        std::lock_guard<std::mutex> guard(ASLib_mutex);
-        std::map<std::size_t, shared_ptr<CoolProp::AbstractState>>::iterator it = ASlibrary.find(handle);
+        std::scoped_lock guard(ASLib_mutex);
+        auto it = ASlibrary.find(handle);
         if (it != ASlibrary.end()) {
             return it->second;
         } else {
@@ -533,7 +538,7 @@ EXPORT_CODE void CONVENTION AbstractState_fluid_names(const long handle, char* f
         std::vector<std::string> _fluids = AS->fluid_names();
         std::string fluidsstring = strjoin(_fluids, CoolProp::get_config_string(LIST_STRING_DELIMITER));
         if (fluidsstring.size() < static_cast<std::size_t>(buffer_length)) {
-            strcpy(fluids, fluidsstring.c_str());
+            std::memcpy(fluids, fluidsstring.c_str(), fluidsstring.size() + 1);  // guarded above: size + null fits
         } else {
             throw CoolProp::ValueError(format("Length of string [%d] is greater than allocated buffer length [%d]", fluidsstring.size(),
                                               static_cast<std::size_t>(buffer_length)));
@@ -603,7 +608,7 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long
                 _fractions = AS->mole_fractions_vapor();
             } else {
                 throw CoolProp::ValueError(
-                  format("Bad info string [%s] to saturated state mole fractions, options are \"liquid\" and \"gas\"", saturated_state));
+                  format(R"(Bad info string [%s] to saturated state mole fractions, options are "liquid" and "gas")", saturated_state));
             }
         } else {
             throw CoolProp::ValueError(format("AbstractState_get_mole_fractions_satState only returns outputs for saturated states if AbstractState "
@@ -993,7 +998,7 @@ EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle,
             *(T + i) = pts[i].T;
             *(p + i) = pts[i].p;
             *(rhomolar + i) = pts[i].rhomolar;
-            *(stable + i) = pts[i].stable;
+            *(stable + i) = static_cast<long>(pts[i].stable);
         }
     } catch (...) {
         HandleException(errcode, message_buffer, buffer_length);
@@ -1015,7 +1020,7 @@ EXPORT_CODE double CONVENTION AbstractState_keyed_output_satState(const long han
                 return AS->saturated_vapor_keyed_output(static_cast<CoolProp::parameters>(param));
             } else {
                 throw CoolProp::ValueError(
-                  format("Bad info string [%s] to saturated state output, options are \"liquid\" and \"gas\"", saturated_state));
+                  format(R"(Bad info string [%s] to saturated state output, options are "liquid" and "gas")", saturated_state));
             }
         } else {
             throw CoolProp::ValueError(format("AbstractState_keyed_output_satState only returns outputs for saturated states if AbstractState "
@@ -1036,7 +1041,7 @@ EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* 
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         std::string backendstring = AS->backend_name();
         if (backendstring.size() < static_cast<std::size_t>(buffer_length)) {
-            strcpy(backend, backendstring.c_str());
+            std::memcpy(backend, backendstring.c_str(), backendstring.size() + 1);  // guarded above: size + null fits
         } else {
             throw CoolProp::ValueError(format("Length of string [%d] is greater than allocated buffer length [%d]", backendstring.size(),
                                               static_cast<std::size_t>(buffer_length)));
@@ -1065,7 +1070,7 @@ EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, 
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         std::string temp = AS->fluid_param_string(param);
         if (temp.size() < static_cast<std::size_t>(return_buffer_length)) {
-            strcpy(return_buffer, temp.c_str());
+            std::memcpy(return_buffer, temp.c_str(), temp.size() + 1);  // guarded above: size + null fits
         } else {
             *errcode = 2;
         }
@@ -1110,7 +1115,7 @@ EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* 
 }
 
 EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* fluidName) {
-    return CoolProp::is_valid_fluid_string(fluidName);
+    return static_cast<int>(CoolProp::is_valid_fluid_string(fluidName));
 }
 
 EXPORT_CODE int CONVENTION C_extract_backend(const char* fluid_string, char* backend, const long backend_length, char* fluid,
@@ -1118,12 +1123,12 @@ EXPORT_CODE int CONVENTION C_extract_backend(const char* fluid_string, char* bac
     std::string _fluid, _backend;
     CoolProp::extract_backend(fluid_string, _backend, _fluid);
     if (_backend.size() < static_cast<std::size_t>(backend_length)) {
-        strcpy(backend, _backend.c_str());
+        std::memcpy(backend, _backend.c_str(), _backend.size() + 1);  // guarded above: size + null fits
     } else {
         return -1;
     }
     if (_fluid.size() < static_cast<std::size_t>(fluid_length)) {
-        strcpy(fluid, _fluid.c_str());
+        std::memcpy(fluid, _fluid.c_str(), _fluid.size() + 1);  // guarded above: size + null fits
     } else {
         return -1;
     }
