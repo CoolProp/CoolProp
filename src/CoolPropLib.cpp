@@ -782,7 +782,11 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_common_out(const long handl
                 *(rhomolar + i) = AS->rhomolar();
                 *(hmolar + i) = AS->hmolar();
                 *(smolar + i) = AS->smolar();
-            } catch (...) {
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+                // Per-element failure is intentionally swallowed so a single
+                // bad input point does not abort the whole batch.  As
+                // documented in CoolPropLib.h, the output slot for this index
+                // is left unchanged on error.
             }
         };
     } catch (...) {
@@ -801,7 +805,11 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_1_out(const long handle, co
             try {
                 AS->update(static_cast<CoolProp::input_pairs>(input_pair), *(value1 + i), *(value2 + i));
                 *(out + i) = AS->keyed_output(static_cast<CoolProp::parameters>(output));
-            } catch (...) {
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+                // Per-element failure is intentionally swallowed so a single
+                // bad input point does not abort the whole batch.  As
+                // documented in CoolPropLib.h, the output slot for this index
+                // is left unchanged on error.
             }
         };
     } catch (...) {
@@ -824,7 +832,11 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, co
                 *(out3 + i) = AS->keyed_output(static_cast<CoolProp::parameters>(outputs[2]));
                 *(out4 + i) = AS->keyed_output(static_cast<CoolProp::parameters>(outputs[3]));
                 *(out5 + i) = AS->keyed_output(static_cast<CoolProp::parameters>(outputs[4]));
-            } catch (...) {
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+                // Per-element failure is intentionally swallowed so a single
+                // bad input point does not abort the whole batch.  As
+                // documented in CoolPropLib.h, the output slot for this index
+                // is left unchanged on error.
             }
         };
     } catch (...) {
