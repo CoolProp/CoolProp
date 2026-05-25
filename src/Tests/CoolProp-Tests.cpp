@@ -5808,4 +5808,21 @@ TEST_CASE("REFPROP update_DmolarT_direct matches update(DmolarT)", "[REFPROPsat]
     CHECK(direct->smolar() == Catch::Approx(flash->smolar()).epsilon(1e-9));
 }
 
+TEST_CASE("REFPROP saturation shim reproduces saturated densities", "[REFPROPsat]") {
+    Skip_if_No_REFPROP();
+    std::shared_ptr<AbstractState> host(AbstractState::factory("REFPROP", "Propane"));
+    host->update(QT_INPUTS, 0.5, 300.0);  // two-phase
+    auto* be = static_cast<REFPROPMixtureBackend*>(host.get());
+    auto shimL = be->build_saturation_shim(0);  // liquid
+    auto shimV = be->build_saturation_shim(1);  // vapor
+    CHECK(shimL->rhomolar() == Catch::Approx(be->saturated_liquid_keyed_output(iDmolar)).epsilon(1e-10));
+    CHECK(shimV->rhomolar() == Catch::Approx(be->saturated_vapor_keyed_output(iDmolar)).epsilon(1e-10));
+    // The shim must NOT have triggered a re-SETUP: enthalpy from THERMdll at (T, rhoL)
+    // must equal a fresh single-phase evaluation at the same point.
+    std::shared_ptr<AbstractState> probe(AbstractState::factory("REFPROP", "Propane"));
+    probe->specify_phase(iphase_liquid);
+    probe->update(DmolarT_INPUTS, shimL->rhomolar(), 300.0);
+    CHECK(shimL->hmolar() == Catch::Approx(probe->hmolar()).epsilon(1e-9));
+}
+
 #endif

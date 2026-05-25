@@ -49,6 +49,9 @@ class REFPROPMixtureBackend : public AbstractState
     /// Call the PHI0dll function in the dll
     CoolPropDbl call_phi0dll(int itau, int idelta);
 
+    /// Configure *this* as a shim linked to `host`'s already-loaded REFPROP fluids (no SETUPdll).
+    void link_to_loaded_fluids(const REFPROPMixtureBackend& host);
+
    public:
     REFPROPMixtureBackend() : Ncomp(0), _mole_fractions_set(false) {
         instance_counter++;
@@ -158,6 +161,11 @@ class REFPROPMixtureBackend : public AbstractState
     /// Set the state directly from (rho_molar, T) using THERMdll, no flash.
     /// Used internally to drive saturation/two-phase derivative shims.
     void update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T);
+
+    /// Build a fully-populated saturated-phase shim. `Q` must be 0 (liquid) or 1 (vapor).
+    /// The shim reuses the fluids already loaded by this instance (no SETUPdll) and
+    /// carries the correct per-phase composition (mole_fractions_liq / mole_fractions_vap).
+    shared_ptr<REFPROPMixtureBackend> build_saturation_shim(int Q);
 
     CoolPropDbl calc_molar_mass() override;
 

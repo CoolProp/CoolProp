@@ -2266,6 +2266,39 @@ void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
     rho = xfinal[1] * 1000.0;
 }
 
+void REFPROPMixtureBackend::link_to_loaded_fluids(const REFPROPMixtureBackend& host) {
+    // Per-class access: we may read host's private cached_component_string.
+    this->Ncomp = host.Ncomp;
+    this->fluid_names = host.fluid_names;
+    this->cached_component_string = host.cached_component_string;  // => check_loaded_fluid() reuse path, no SETUPdll
+    this->mole_fractions.assign(ncmax, 0.0);
+    this->mole_fractions_liq.assign(ncmax, 0.0);
+    this->mole_fractions_vap.assign(ncmax, 0.0);
+    this->imposed_phase_index = iphase_not_imposed;
+    this->_mole_fractions_set = false;
+}
+
+shared_ptr<REFPROPMixtureBackend> REFPROPMixtureBackend::build_saturation_shim(int Q) {
+    this->check_loaded_fluid();
+    if (!(Q == 0 || Q == 1)) {
+        throw ValueError(format("build_saturation_shim requires Q==0 or Q==1; got %d", Q));
+    }
+    const std::vector<double>& x_phase = (Q == 0) ? mole_fractions_liq : mole_fractions_vap;
+    CoolPropDbl rho_phase = (Q == 0) ? _rhoLmolar : _rhoVmolar;
+    if (!ValidNumber(rho_phase)) {
+        throw ValueError("The saturated state has not been set (no two-phase density available).");
+    }
+    shared_ptr<REFPROPMixtureBackend> shim(new REFPROPMixtureBackend());
+    shim->link_to_loaded_fluids(*this);
+    // Copy only the first Ncomp entries of the per-phase composition.
+    std::vector<CoolPropDbl> x(x_phase.begin(), x_phase.begin() + Ncomp);
+    shim->set_mole_fractions(x);
+    shim->specify_phase((Q == 0) ? iphase_liquid : iphase_gas);
+    shim->update_DmolarT_direct(rho_phase, _T);
+    shim->_Q = static_cast<CoolPropDbl>(Q);  // mark the shim as sitting on the envelope
+    return shim;
+}
+
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
     if (_rhoLmolar) {
         if (key == iDmolar) {
