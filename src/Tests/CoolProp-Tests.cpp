@@ -5842,4 +5842,17 @@ TEST_CASE("REFPROP saturated keyed outputs (h,s,cp,visc) match endpoint flashes"
     CHECK(twophase->saturated_liquid_keyed_output(iconductivity) == Catch::Approx(bubble->conductivity()).epsilon(1e-6));
 }
 
+TEST_CASE("REFPROP first_saturation_deriv matches HEOS for a pure fluid", "[REFPROPsat]") {
+    Skip_if_No_REFPROP();
+    std::shared_ptr<AbstractState> RP(AbstractState::factory("REFPROP", "Propane"));
+    std::shared_ptr<AbstractState> HE(AbstractState::factory("HEOS", "Propane"));
+    for (double T = 200; T <= 360; T += 40) {
+        RP->update(QT_INPUTS, 0.0, T);
+        HE->update(QT_INPUTS, 0.0, T);
+        CHECK(RP->first_saturation_deriv(iT, iP) == Catch::Approx(HE->first_saturation_deriv(iT, iP)).epsilon(1e-4));
+        CHECK(RP->first_saturation_deriv(iDmolar, iT) == Catch::Approx(HE->first_saturation_deriv(iDmolar, iT)).epsilon(1e-3));
+        CHECK(RP->first_saturation_deriv(iHmolar, iP) == Catch::Approx(HE->first_saturation_deriv(iHmolar, iP)).epsilon(1e-3));
+    }
+}
+
 #endif

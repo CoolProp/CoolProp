@@ -2299,6 +2299,69 @@ shared_ptr<REFPROPMixtureBackend> REFPROPMixtureBackend::build_saturation_shim(i
     return shim;
 }
 
+double REFPROPMixtureBackend::dpdT_along_saturation_pure(int kph) {
+    int icomp = 1;  // pure fluid
+    double T_K = static_cast<double>(_T);
+    double p_kPa = _HUGE, rho_mol_L = _HUGE, csat = _HUGE, dpdt_kPa_K = _HUGE;
+    int ierr = 0;
+    std::array<char, errormessagelength> herr{};
+    DPTSATKdll(&icomp, &T_K, &kph, &p_kPa, &rho_mol_L, &csat, &dpdt_kPa_K, &ierr, herr.data(), errormessagelength);
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+        throw ValueError(format("%s", herr.data()));
+    }
+    return 1000.0 * dpdt_kPa_K;  // kPa/K -> Pa/K
+}
+
+double REFPROPMixtureBackend::saturation_pressure_at_T(double T, int Q) {
+    // Q==0 -> bubble (kph=1), Q==1 -> dew (kph=2). Mirror update()'s QT_INPUTS SATTdll call.
+    int kph = (Q == 0) ? 1 : 2;
+    double T_K = T, p_kPa = _HUGE, rhoLmol_L = _HUGE, rhoVmol_L = _HUGE;
+    int ierr = 0;
+    std::array<char, errormessagelength> herr{};
+    std::vector<double> xliq(ncmax, 0.0), xvap(ncmax, 0.0);
+    SATTdll(&T_K, &(mole_fractions[0]), &kph, &p_kPa, &rhoLmol_L, &rhoVmol_L, &(xliq[0]), &(xvap[0]), &ierr, herr.data(), errormessagelength);
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+        throw ValueError(format("%s", herr.data()));
+    }
+    return 1000.0 * p_kPa;  // kPa -> Pa
+}
+
+CoolPropDbl REFPROPMixtureBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1) {
+    this->check_loaded_fluid();
+
+    if (!(_Q == 0 || _Q == 1)) {
+        throw ValueError(format("calc_first_saturation_deriv requires Q==0 (bubble) or Q==1 (dew); got Q=%g", _Q));
+    }
+    CoolPropDbl dTdP_sat;
+    if (Ncomp == 1) {
+        // Pure fluid: REFPROP gives dP/dT along the saturation line natively via
+        // DPTSATKdll (dpdt in kPa/K). icomp=1, kph: 1=liquid(bubble), 2=vapor(dew).
+        // (Equivalent to Clausius-Clapeyron T*(vV-vL)/(hV-hL); we use the native call.)
+        dTdP_sat = 1.0 / dpdT_along_saturation_pure(_Q == 1 ? 2 : 1);  // Pa/K
+    } else {
+        // Mixture: DPTSATKdll is a PER-COMPONENT routine (icomp); it does NOT give the
+        // constant-overall-composition bubble/dew slope a mixture needs. So differentiate
+        // REFPROP's own SATTdll flash numerically at fixed overall composition.
+        const double dT = 1e-3 * static_cast<double>(_T);  // relative central step
+        double pp = saturation_pressure_at_T(_T + dT, static_cast<int>(_Q));
+        double pm = saturation_pressure_at_T(_T - dT, static_cast<int>(_Q));
+        dTdP_sat = (2 * dT) / (pp - pm);
+    }
+
+    if (Of1 == iT && Wrt1 == iP) {
+        return dTdP_sat;
+    } else if (Of1 == iP && Wrt1 == iT) {
+        return 1 / dTdP_sat;
+    } else if (Wrt1 == iT) {
+        return first_partial_deriv(Of1, iT, iP) + first_partial_deriv(Of1, iP, iT) / dTdP_sat;
+    } else if (Wrt1 == iP) {
+        return first_partial_deriv(Of1, iP, iT) + first_partial_deriv(Of1, iT, iP) * dTdP_sat;
+    } else {
+        throw ValueError(
+          format("Not possible to take first saturation derivative with respect to %s", get_parameter_information(Wrt1, "short").c_str()));
+    }
+}
+
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
     if (!ValidNumber(_rhoLmolar)) {
         throw ValueError("The saturated liquid state has not been set.");

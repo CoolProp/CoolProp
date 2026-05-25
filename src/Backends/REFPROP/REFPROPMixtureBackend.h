@@ -52,6 +52,11 @@ class REFPROPMixtureBackend : public AbstractState
     /// Configure *this* as a shim linked to `host`'s already-loaded REFPROP fluids (no SETUPdll).
     void link_to_loaded_fluids(const REFPROPMixtureBackend& host);
 
+    /// dP/dT [Pa/K] along the pure-component saturation line via DPTSATKdll. kph: 1=liquid, 2=vapor.
+    double dpdT_along_saturation_pure(int kph);
+    /// Saturation pressure [Pa] at temperature T for the bubble (Q=0) / dew (Q=1) branch via SATTdll.
+    double saturation_pressure_at_T(double T, int Q);
+
    public:
     REFPROPMixtureBackend() : Ncomp(0), _mole_fractions_set(false) {
         instance_counter++;
@@ -166,6 +171,8 @@ class REFPROPMixtureBackend : public AbstractState
     /// The shim reuses the fluids already loaded by this instance (no SETUPdll) and
     /// carries the correct per-phase composition (mole_fractions_liq / mole_fractions_vap).
     shared_ptr<REFPROPMixtureBackend> build_saturation_shim(int Q);
+
+    CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1) override;
 
     CoolPropDbl calc_molar_mass() override;
 
