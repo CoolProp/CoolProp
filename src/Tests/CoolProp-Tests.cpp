@@ -5875,4 +5875,29 @@ TEST_CASE("REFPROP saturated keyed output throws in single phase", "[REFPROPsat]
     CHECK(ValidNumber(AS->saturated_liquid_keyed_output(iHmolar)));
 }
 
+TEST_CASE("REFPROP first_two_phase_deriv_splined matches HEOS (pure)", "[REFPROPsat]") {
+    Skip_if_No_REFPROP();
+    std::shared_ptr<AbstractState> RP(AbstractState::factory("REFPROP", "Propane"));
+    std::shared_ptr<AbstractState> HE(AbstractState::factory("HEOS", "Propane"));
+    double x_end = 0.3;
+    RP->update(QT_INPUTS, 0.1, 300.0);
+    HE->update(QT_INPUTS, 0.1, 300.0);
+    CHECK(RP->first_two_phase_deriv_splined(iDmolar, iHmolar, iP, x_end)
+          == Catch::Approx(HE->first_two_phase_deriv_splined(iDmolar, iHmolar, iP, x_end)).epsilon(1e-3));
+    CHECK(RP->first_two_phase_deriv_splined(iDmolar, iP, iHmolar, x_end)
+          == Catch::Approx(HE->first_two_phase_deriv_splined(iDmolar, iP, iHmolar, x_end)).epsilon(1e-3));
+}
+
+TEST_CASE("REFPROP saturation derivs work for a mixture", "[REFPROPsat]") {
+    Skip_if_No_REFPROP();
+    std::shared_ptr<AbstractState> RP(AbstractState::factory("REFPROP", "Methane&Ethane"));
+    std::vector<double> z = {0.6, 0.4};
+    RP->set_mole_fractions(z);
+    RP->update(QT_INPUTS, 0.0, 180.0);  // bubble
+    // dT/dp along the bubble curve should be finite and positive away from the critical point.
+    double dTdp = RP->first_saturation_deriv(iT, iP);
+    CHECK(ValidNumber(dTdp));
+    CHECK(dTdp > 0);
+}
+
 #endif

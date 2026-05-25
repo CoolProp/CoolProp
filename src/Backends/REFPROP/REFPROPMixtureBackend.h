@@ -175,6 +175,8 @@ class REFPROPMixtureBackend : public AbstractState
     CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1) override;
 
     CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant) override;
+    CoolPropDbl calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2) override;
+    CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end) override;
 
     CoolPropDbl calc_molar_mass() override;
 
