@@ -42,13 +42,17 @@ Where,
 * "Input2" = Second state-point property string.
 * Val2 = Second state-point property value (scalar variable)
 * "Fluid" = Fluid string (e.g, "Water", "Ammonia", "Air.mix", etc.).
+
 .. note::
     The Fluid string can use a backend prefix (e.g., "HEOS::", "INCOMP::", "REFPROP::", etc.) to specify an alternative EOS; the default being the Helmholtz EOS ("HEOS::") if not provided.
+
 .. note::
     In addition to pure and pseudo-pure fluid strings, the fluid string can be specified as a predefined mixture (e.g., "Air.mix") or an ad-hoc mixture, specifying each pure component and mole fraction (e.g., "O2[0.2096]&N2[0.7812]&AR[0.0092]") where the mole fractions are in square braces [ ] and the components are delimited with "&".
+
 **EXAMPLE:**
     .. math::
        h := PropsSI("H",\ "T",\ 300.0,\ "P",\ 500,\ "Helium") = 1562994.2
+
 |
 
 ----
@@ -65,7 +69,9 @@ Where,
 
 * "Outputs" = Requested output properties string containing a delimited list of one or more valid output property names from the :ref:`Table of Valid Parameters <parameter_table>`.  For this Mathcad wrapper, the delimiter can be any one of (*comma, <space>, colon, semi-colon, or ampersand*), but must be consistent.
 * Vec1, Vec2 = State point array pairs corresponding to "Input1" and "Input2".  These are single-column, :math:`m`-element vector arrays and must be the same length or an error will be thrown.
+
 |
+
 **EXAMPLE:**
 
     Define a fluid:       :math:`fl` := "Water"
@@ -165,6 +171,7 @@ Where,
 * Val2 = Second state-point property value (scalar variable)
 * "Input3" = Third state-point property string.
 * Val3 = Third state-point property value (scalar variable)
+
 At least one of the inputs must be "T" (dry bulb temperature), "R" (Relative Humidity between 0.0 and 1.0), "W" (Humidity Ratio), or "Tdp" (dew point).
 
 **EXAMPLE:**
@@ -382,5 +389,6 @@ A simple example of a call to ``PropsSI`` using variables with units is,
     Evaluate:       :math:`h\ :=\ PropsSI("H",\ "T",\ \dfrac{T}{K},\ "P",\ \dfrac{P}{Pa},\ "Water")\cdot\dfrac{J}{kg}`
 
     Show :math:`h` in English Engineering Units:       :math:`h\ =\ 40.133\ \dfrac{BTU}{lb}`
+
 .. note::
     Technically, if input variables are not "stripped" of units, they will be passed as values in Mathcad's Base Units, which are SI.  This is compatible with CoolProp's base units of SI and will work.  However, units still have to be applied to the result and units should be stripped explicitely, as shown above as Mathcad allows the Base Units to be changed.  This will guarantee consistency of units between Mathcad and CoolProp.

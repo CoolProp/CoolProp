@@ -37,7 +37,7 @@ Manual Installation
 
   1. Place the CoolProp DLL files in the alternate location
   2. Place the CoolProp xlam file in a writable location and open it.
-  3. You will get an Excel error, ``File not found - CoolProp_stdcall.dll``.  Clicking **Ok** on the error will only clear the first of many.  Press and hold the **``Enter``** key until all of the errors clear.
+  3. You will get an Excel error, ``File not found - CoolProp_stdcall.dll``.  Clicking **Ok** on the error will only clear the first of many.  Press and hold the ``Enter`` key until all of the errors clear.
   4. Make sure that the Developer ribbon is visible on the main menu.  If not
   
      - Go to **File | Options** on the main menu and select Cusomize Ribbon
