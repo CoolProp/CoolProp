@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <utility>
 
+#include <IF97.h>
 #include "boost/math/tools/toms748_solve.hpp"
 
 #include "CoolProp/region/AxisTransform.h"
@@ -83,18 +84,13 @@ std::vector<PropertySpec> pt_properties(::CoolProp::AbstractState& src) {
     return ps;
 }
 
-// IF97 R2/R3 boundary equation, inverted:
-//   p_B23(T) = 0.10192970039326e-2 · (T − 572.54459862746)^2 + 13.918839778870  [MPa]
-// Closed-form inverse for p ∈ [16.529, 100] MPa (the valid range for
-// IF97's R2/R3 boundary) → T ∈ [623.15, 863.15] K.  Outside this p
-// range the curve isn't defined; callers must gate.
-double if97_T_B23_K(double p_Pa) {
-    constexpr double a = 0.10192970039326e-2;
-    constexpr double b = 0.57254459862746e3;
-    constexpr double c = 0.13918839778870e2;
-    const double p_MPa = p_Pa / 1.0e6;
-    return b + std::sqrt((p_MPa - c) / a);
-}
+// NOTE on the IF97 R2/R3 boundary: T_B23(p) comes straight from the
+// if97 library's IF97::Region23_p(p) — no local copy of the B23
+// coefficients (henningjp, PR #2938).  CoolProp builds the if97 dep
+// in Pa units (p_fact = 1e6), matching the Pa-based IF97::psat97 /
+// Tsat97 used in HumidAirProp, so call sites pass p in Pa directly.
+// IF97::Region23_p is valid for p ∈ [16.529, 100] MPa → T ∈
+// [623.15, 863.15] K; callers must gate to that range.
 
 // Build the h = h_B23(p) boundary curve in (p, h) coords by walking p
 // knots and evaluating forward IF97 h(T_B23(p), p) at each.  Used to
@@ -144,7 +140,7 @@ std::unique_ptr<region::CubicSplineCurve> build_h_B23_curve(::CoolProp::Abstract
     const double log_p_hi = std::log(p_hi_clamped);
     for (std::size_t k = 0; k < n_knots; ++k) {
         const double p = std::exp(log_p_lo + static_cast<double>(k) * (log_p_hi - log_p_lo) / static_cast<double>(n_knots - 1));
-        const double T_B23 = if97_T_B23_K(p);
+        const double T_B23 = IF97::Region23_p(p);
         heos.update(::CoolProp::PT_INPUTS, p, T_B23);
         p_knots[k] = p;
         h_knots[k] = heos.hmass();
@@ -531,20 +527,20 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
                     }
                     if (!resolved) {
                         // R3 fallback: bracket on [623.15 K, T_B23(p)].
-                        // if97_T_B23_K is only defined for p ∈ [16.529, 100]
-                        // MPa; outside that range its closed-form inverse
-                        // returns garbage (sub-623.15 K or NaN from the
-                        // negative-argument sqrt).  Above 100 MPa is the
-                        // SUPER_HIGH_P slab where there's no R2/R3 boundary
-                        // at all — the R3 fallback shouldn't run there in
-                        // the first place, but guard anyway.
+                        // IF97::Region23_p is only valid for p ∈ [16.529,
+                        // 100] MPa; outside that range it returns garbage
+                        // (sub-623.15 K or NaN from the negative-argument
+                        // sqrt).  Above 100 MPa is the SUPER_HIGH_P slab
+                        // where there's no R2/R3 boundary at all — the R3
+                        // fallback shouldn't run there in the first place,
+                        // but guard anyway.
                         if (!(p >= kP_B23_lo_Pa && p <= kP_B23_hi_Pa)) {
                             throw ::CoolProp::ValueError(
                               "ph_subcritical IF97 sampling: neither R5 (h<3MJ/kg or p>50MPa) nor R3 (p outside [16.529, 100] MPa) "
                               "fallback applies — HmassP backward seed failed and no bracket is defined");
                         }
                         const double T_R3_lo = 623.15;
-                        const double T_R3_hi = if97_T_B23_K(p);
+                        const double T_R3_hi = IF97::Region23_p(p);
                         if (!(T_R3_lo < T_R3_hi)) {
                             throw ::CoolProp::ValueError("ph_subcritical IF97 sampling: degenerate R3 bracket (T_B23(p) <= 623.15 K)");
                         }
