@@ -43,7 +43,7 @@ jobs:
     # SVDSurfaceSerializer::load is the safety net if the hash ever
     # misses an invalidation trigger.
     - name: Cache SVDSBTL tables
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.CoolProp/SVDTables
         key: svdsbtl-${{ runner.os }}-${{ hashFiles('include/CoolProp/sbtl/**', 'include/CoolProp/Backends/SVDSBTL/**', 'include/CoolProp/svd/**', 'include/CoolProp/region/**', 'src/SBTL/**', 'src/Backends/SVDSBTL/**', 'src/SVD/**', 'src/Region/**', 'dev/fluids/**', 'dev/mixtures/**') }}
