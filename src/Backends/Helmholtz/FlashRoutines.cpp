@@ -2,6 +2,8 @@
 #include "FlashRoutines.h"
 
 #include <cmath>
+#include <algorithm>
+#include <cstdlib>
 #include "CoolProp.h"
 #include "HelmholtzEOSMixtureBackend.h"
 #include "HelmholtzEOSBackend.h"
@@ -437,6 +439,8 @@ static char param_to_superanc_key(parameters key) {
             return 'H';
         case iSmolar:
             return 'S';
+        case iUmolar:
+            return 'U';
         default:
             throw ValueError(format("Unsupported parameters key for saturation superancillary: %d", static_cast<int>(key)));
     }
@@ -480,7 +484,7 @@ double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& H
         throw ValueError(format("%s currently requires Q=0 or Q=1; got Q=%g", fn_name, Q));
     }
     const char k = param_to_superanc_key(key);
-    if (k == 'H' || k == 'S') {
+    if (k == 'H' || k == 'S' || k == 'U') {
         HEOS.ensure_caloric_superancillaries();
     }
     auto& superanc = *superanc_ptr;
@@ -499,14 +503,15 @@ double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& H
     // ensure_HS_under_lock comment and #2773. For D the cache is
     // reference-state-independent intrinsically (no shift needed).
     double target_in_cache_frame = target_value;
-    if (k == 'H' || k == 'S') {
+    if (k == 'H' || k == 'S' || k == 'U') {
         const auto stamp = superanc.get_caloric_alpha0_stamp();
         if (stamp.has_value()) {
             const auto [caller_a1, caller_a2] = alpha0_offset_total(HEOS);
             const double cache_a1 = stamp->first;
             const double cache_a2 = stamp->second;
-            if (k == 'H') {
-                // h_cache(T) = h_caller(T) + R·T_red·(a2_cache − a2_caller)
+            if (k == 'H' || k == 'U') {
+                // h_cache(T) = h_caller(T) + R·T_red·(a2_cache − a2_caller); U
+                // inherits the H shift since u = h − p/rho and p/rho is offset-free.
                 const double R = HEOS.gas_constant();
                 const double T_red = HEOS.get_reducing_state().T;
                 target_in_cache_frame = target_value + R * T_red * (cache_a2 - caller_a2);
@@ -1392,6 +1397,77 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend& HEOS, CoolP
 }
 // D given and one of P,H,S,U
 void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters other) {
+    // Two-phase residual for the superancillary "happy path": for a trial
+    // saturation temperature T it reads the saturated densities (and pressure)
+    // straight off the superancillary, sets the SatL/SatV sub-states, and
+    // returns the difference between the vapor quality implied by the density
+    // and the vapor quality implied by the caloric input (H/S/U).  Driving
+    // this to zero locates the two-phase saturation temperature.  See
+    // CoolProp-j3n; ported from the saD_HSU branch.
+    class solver_resid_2phase : public FuncWrapper1D
+    {
+       public:
+        // Reference members mirror the sibling residual classes in this file
+        // (e.g. HSU_D_flash_twophase::Residual); the object is a short-lived
+        // local that never outlives HEOS/superanc.
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
+        HelmholtzEOSMixtureBackend& HEOS;
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
+        EquationOfState::SuperAncillary_t& superanc;
+        CoolPropDbl rhomolar_spec;  // Specified density
+        parameters other;           // Key for the caloric input (EOS-mode)
+        CoolPropDbl value;          // Value of H/S/U in the CALLER reference frame
+        // Fast caloric-superancillary mode: read the saturated caloric values
+        // straight off the H/S/U caloric superancillary (Chebyshev, ~35 ns)
+        // instead of a full EOS property evaluation (~1.3 us).  ca_key is 'H',
+        // 'S' or 'U'.  value_cache is `value` shifted into the superancillary's
+        // reference frame.  When use_ca is false the residual
+        // uses the full EOS (fallback for fluids whose caloric SA is absent).
+        bool use_ca;
+        char ca_key;
+        CoolPropDbl value_cache;
+        CoolPropDbl Qd;  // Quality implied by density (output)
+        solver_resid_2phase(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar_spec, parameters other, CoolPropDbl value,
+                            EquationOfState::SuperAncillary_t& superanc, bool use_ca, char ca_key, CoolPropDbl value_cache)
+          : HEOS(HEOS),
+            superanc(superanc),
+            rhomolar_spec(rhomolar_spec),
+            other(other),
+            value(value),
+            use_ca(use_ca),
+            ca_key(ca_key),
+            value_cache(value_cache),
+            Qd(_HUGE) {};
+        double call(double T) override {
+            const double rhoL = superanc.eval_sat(T, 'D', 0);
+            const double rhoV = superanc.eval_sat(T, 'D', 1);
+            // Quality from the specified density
+            Qd = (1 / rhomolar_spec - 1 / rhoL) / (1 / rhoV - 1 / rhoL);
+            CoolPropDbl Qo;
+            if (use_ca) {
+                // Saturated caloric values straight off the superancillary (H, S or U),
+                // in its (stamped) reference frame; value_cache is the target in the
+                // same frame.
+                const double yL = superanc.eval_sat(T, ca_key, 0);
+                const double yV = superanc.eval_sat(T, ca_key, 1);
+                Qo = (value_cache - yL) / (yV - yL);
+            } else {
+                // Full-EOS fallback.
+                const double p = superanc.eval_sat(T, 'P', 1);
+                HEOS.SatL->update_TDmolarP_unchecked(T, rhoL, p);
+                HEOS.SatV->update_TDmolarP_unchecked(T, rhoV, p);
+                const double yL = HEOS.SatL->keyed_output(other);
+                const double yV = HEOS.SatV->keyed_output(other);
+                Qo = (value - yL) / (yV - yL);
+            }
+            const double resid = Qo - Qd;
+            if (!std::isfinite(resid)) {
+                throw ValueError(format("HSU_D superancillary resid not finite @ T=%g K; Qo=%g; Qd=%g", T, Qo, Qd));
+            }
+            return resid;
+        }
+    };
+
     // Define the residual to be driven to zero
     class solver_resid : public FuncWrapper1DWithTwoDerivs
     {
@@ -1444,6 +1520,256 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
     };
 
     if (HEOS.is_pure_or_pseudopure) {
+
+        // ===================== superancillary "happy path" =====================
+        // For a pure fluid with a built superancillary and the caloric inputs
+        // H/S/U, use the superancillary saturation-density roots to robustly
+        // decide single- vs two-phase and to bracket the temperature solve.
+        // This avoids the saturation_D_pure instability that makes the legacy
+        // routine fail near the critical density, and clamps the quality at the
+        // saturation boundary.  Any failure here falls through to the legacy
+        // ancillary "sad path" below.  See CoolProp-j3n (ported from saD_HSU).
+        //
+        // Escape hatch: COOLPROP_DISABLE_SUPERANC_HSU_D (read once) forces the
+        // legacy path -- a field kill-switch and an A/B regression-test handle.
+        static const bool superanc_hsu_d_disabled = (std::getenv("COOLPROP_DISABLE_SUPERANC_HSU_D") != nullptr);
+        if (!superanc_hsu_d_disabled && get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()
+            && (other == iHmolar || other == iSmolar || other == iUmolar)) {
+            std::shared_ptr<EquationOfState::SuperAncillary_t> sa_ptr = HEOS.get_superanc();
+            if (sa_ptr) {
+                // Capture the inputs OUTSIDE the try so the catch can restore them.
+                // Only read the two members the flash actually consumes -- the density
+                // and the one relevant caloric input -- never the others (which are
+                // uninitialized for a D+X flash). The solves overwrite these members at
+                // trial states, and both the legacy path and later candidate intervals
+                // re-read them, so restore them on every non-committing exit.
+                const double rho_in = HEOS._rhomolar;
+                const CoolPropDbl value = (other == iHmolar) ? HEOS._hmolar : ((other == iSmolar) ? HEOS._smolar : HEOS._umolar);
+                auto restore_inputs = [&]() {
+                    HEOS._rhomolar = rho_in;
+                    if (other == iHmolar) {
+                        HEOS._hmolar = value;
+                    } else if (other == iSmolar) {
+                        HEOS._smolar = value;
+                    } else {
+                        HEOS._umolar = value;
+                    }
+                    HEOS.unspecify_phase();
+                };
+                try {
+                    EquationOfState::SuperAncillary_t& superanc = *sa_ptr;
+
+                    // Decide once whether the two-phase residual can read the saturated
+                    // caloric values straight off the (fast) caloric superancillary
+                    // rather than the EOS.  H, S and U all have superancillaries (built
+                    // together; U shares H's reference frame since u = h - p/rho).  The
+                    // cached caloric SA is expressed in a stamped reference frame, so
+                    // shift the target `value` into that frame by the constant offset
+                    // (see resolve_T_via_superancillary / #2773).
+                    const char ca_key = (other == iHmolar) ? 'H' : ((other == iSmolar) ? 'S' : 'U');
+                    bool use_ca = false;
+                    CoolPropDbl value_cache = value;
+                    HEOS.ensure_caloric_superancillaries();
+                    if (superanc.has_variable(ca_key)) {
+                        double delta = 0.0;  // caller -> cache frame shift (constant in T)
+                        const auto stamp = superanc.get_caloric_alpha0_stamp();
+                        if (stamp.has_value()) {
+                            const auto [caller_a1, caller_a2] = alpha0_offset_total(HEOS);
+                            const double R = HEOS.gas_constant();
+                            if (ca_key == 'S') {
+                                delta = -R * (stamp->first - caller_a1);
+                            } else {  // 'H' or 'U': u inherits the H enthalpy shift (p/rho is offset-free)
+                                const double T_red = HEOS.get_reducing_state().T;
+                                delta = R * T_red * (stamp->second - caller_a2);
+                            }
+                        }
+                        value_cache = value + delta;
+                        use_ca = true;
+                    }
+
+                    const double Tmin_sa = superanc.get_Tmin();
+                    const double Tmax_1phase = HEOS.Tmax() * 1.5;
+                    const double tol = 1e-12;
+                    // 44 correct bits -> tolerance 2^(1-44) ~ 1.14e-13
+                    auto eps44 = boost::math::tools::eps_tolerance<double>(44);
+
+                    // Finalize a converged single-phase state at the current (rho, T).
+                    auto finalize_1phase = [](HelmholtzEOSMixtureBackend& H) {
+                        H._Q = 10000;
+                        H._p = H.calc_pressure_nocache(H.T(), H.rhomolar());
+                        H.unspecify_phase();
+                        H.recalculate_singlephase_phase();
+                    };
+                    // Final safety gate: the committed state must reproduce BOTH inputs
+                    // (density and the caloric value).  A solve can occasionally report
+                    // success on a spurious root -- e.g. where X(rho,T) is non-monotonic
+                    // at extreme compression and a bracket collapses onto a boundary
+                    // temperature.  Refusing such a state here turns a silent wrong
+                    // answer into a clean fall-through to the legacy path.
+                    auto committed_ok = [&]() -> bool {
+                        const double dout = HEOS.rhomolar();
+                        if (!std::isfinite(dout) || std::abs(dout / rho_in - 1) > 1e-7) return false;
+                        const double xout = HEOS.keyed_output(other);
+                        return std::isfinite(xout) && std::abs(xout - value) <= 1e-6 * std::abs(value) + 1e-3;
+                    };
+                    // True if (rho, T) lies strictly inside the two-phase dome,
+                    // i.e. a single-phase root there would be metastable.  Only
+                    // meaningful below the critical temperature.
+                    auto inside_dome = [&](double T) -> bool {
+                        if (T >= superanc.get_Tcrit_num()) return false;
+                        const double rhoV = superanc.eval_sat(T, 'D', 1);
+                        const double rhoL = superanc.eval_sat(T, 'D', 0);
+                        return HEOS._rhomolar > rhoV && HEOS._rhomolar < rhoL;
+                    };
+                    // Bracketed single-phase solve on [Ta, Tb]; returns true if it
+                    // converged to a genuine (non-metastable) single-phase root.
+                    auto solve_1phase = [&](double Ta, double Tb) -> bool {
+                        try {
+                            solver_resid resid(&HEOS, HEOS._rhomolar, value, other, Ta, Tb);
+                            const double fa = resid.call(Ta), fb = resid.call(Tb);
+                            double Tconv;
+                            if (std::abs(fa) < tol) {
+                                Tconv = Ta;
+                            } else if (std::abs(fb) < tol) {
+                                Tconv = Tb;
+                            } else if (fa * fb < 0) {
+                                boost::math::uintmax_t max_iter = 100;
+                                auto f = [&resid](double T) { return resid.call(T); };
+                                auto [l, r] = toms748_solve(f, Ta, Tb, fa, fb, eps44, max_iter);
+                                Tconv = 0.5 * (l + r);
+                            } else {
+                                return false;
+                            }
+                            // Belt-and-suspenders: reject a converged root that lies
+                            // inside the dome (metastable).  Interval classification
+                            // below should never hand us such a bracket, but the
+                            // superancillary/EOS saturation curves differ at the ~1e-8
+                            // level, so guard the boundary anyway.
+                            if (inside_dome(Tconv)) return false;
+                            HEOS.update_DmolarT_direct(HEOS._rhomolar, Tconv);
+                            finalize_1phase(HEOS);
+                            return true;
+                        } catch (const std::exception&) {
+                            return false;
+                        }
+                    };
+                    // Bracketed two-phase solve on [Ta, Tb]; returns true if it converged
+                    // to a genuine two-phase state.
+                    auto solve_2phase = [&](double Ta, double Tb) -> bool {
+                        try {
+                            solver_resid_2phase resid(HEOS, HEOS._rhomolar, other, value, superanc, use_ca, ca_key, value_cache);
+                            const double fa = resid.call(Ta), fb = resid.call(Tb);
+                            double Tsol;
+                            if (std::abs(fa) < tol) {
+                                Tsol = Ta;
+                            } else if (std::abs(fb) < tol) {
+                                Tsol = Tb;
+                            } else if (fa * fb < 0) {
+                                boost::math::uintmax_t max_iter = 100;
+                                auto f = [&resid](double T) { return resid.call(T); };
+                                auto [l, r] = toms748_solve(f, Ta, Tb, fa, fb, eps44, max_iter);
+                                Tsol = 0.5 * (l + r);
+                            } else {
+                                return false;
+                            }
+                            // EOS polish: the fast path read the saturated caloric
+                            // values off the superancillary, which carries a ~1e-8
+                            // deviation from the EOS.  T_sol is an excellent seed, so a
+                            // couple of secant steps on the EOS-caloric residual (full
+                            // EOS h/s/u of each phase) clean the solution up to EOS
+                            // precision at a few EOS evaluations -- vs the ~12 the fast
+                            // path saved.  U already uses the EOS, so nothing to polish.
+                            // The polish is on by default (EOS-exact) but can be turned
+                            // off via HSU_D_TWOPHASE_EOS_POLISH for callers that prefer
+                            // the faster raw superancillary solution (~1e-8 deviation).
+                            double Qd_final;
+                            if (use_ca && get_config_bool(HSU_D_TWOPHASE_EOS_POLISH)) {
+                                solver_resid_2phase resid_eos(HEOS, HEOS._rhomolar, other, value, superanc, /*use_ca=*/false, ca_key, value_cache);
+                                double t0 = Tsol, r0 = resid_eos.call(t0);
+                                double t1 = Tsol * (1.0 + 1e-7), r1 = resid_eos.call(t1);
+                                for (int it = 0; it < 4; ++it) {
+                                    if (!std::isfinite(r1) || std::abs(r1) < tol || std::abs(t1 - t0) <= 1e-13 * t1 || r1 == r0) break;
+                                    const double tn = t1 - r1 * (t1 - t0) / (r1 - r0);
+                                    t0 = t1;
+                                    r0 = r1;
+                                    t1 = tn;
+                                    r1 = resid_eos.call(t1);
+                                }
+                                Tsol = t1;
+                                resid_eos.call(Tsol);
+                                Qd_final = resid_eos.Qd;
+                            } else {
+                                resid.call(Tsol);  // refresh Qd at the solution temperature
+                                Qd_final = resid.Qd;
+                            }
+                            // Reject a spurious crossing: if the implied quality is outside
+                            // [0, 1] the specified density is NOT within the two-phase band
+                            // at Tsol, so this is a single-phase point whose quality residual
+                            // merely happened to cross zero.  Clamping Qd here would return a
+                            // saturated-boundary density (~rho_crit) instead of the input
+                            // density.  Reject so the loop proceeds to the single-phase
+                            // interval.  (Dual of the inside_dome guard in solve_1phase.)
+                            constexpr double Qeps = 1e-8;
+                            if (Qd_final < -Qeps || Qd_final > 1.0 + Qeps) return false;
+                            HEOS.update(QT_INPUTS, std::clamp(Qd_final, 0.0, 1.0), Tsol);
+                            return true;
+                        } catch (const std::exception&) {
+                            return false;
+                        }
+                    };
+
+                    // Reliable saturation temperatures at the specified density.
+                    // These are the ONLY temperatures at which the density crosses
+                    // the saturation curve, so dome membership is constant between
+                    // consecutive roots.  Build candidate intervals
+                    // [Tmin_sa .. roots .. Tcrit .. Tmax], classify each by testing
+                    // its midpoint with inside_dome(), and run the matching solve.
+                    // This never hands the single-phase solver a dome-interior
+                    // bracket, and it handles uniformly: the normal topology (one
+                    // root), the rho ~ rho_crit collapse (roots pile up at Tcrit, so
+                    // the whole sub-critical span is one two-phase interval), and the
+                    // water/heavy-water liquid density anomaly (a non-monotonic
+                    // liquid branch yields multiple liquid-side roots).
+                    auto Tsats = superanc.get_all_intersections('D', HEOS._rhomolar, 48, 100, 1e-13);
+                    std::sort(Tsats.begin(), Tsats.end());
+
+                    const double Tcrit = superanc.get_Tcrit_num();
+                    // rhoV and rhoL coalesce at Tcrit and the quality ratio degenerates
+                    // to 0/0, so keep two-phase brackets just shy of it.
+                    const double Tcrit_2phase = Tcrit - std::max(1e-6, 1e-9 * Tcrit);
+
+                    std::vector<double> edges{Tmin_sa};
+                    for (const auto& pr : Tsats) {
+                        if (pr.first > Tmin_sa && pr.first < Tcrit) edges.push_back(pr.first);
+                    }
+                    edges.push_back(Tcrit);
+                    edges.push_back(Tmax_1phase);
+
+                    for (std::size_t i = 0; i + 1 < edges.size(); ++i) {
+                        const double a = edges[i], b = edges[i + 1];
+                        if (b - a < 1e-10) continue;
+                        const double mid = 0.5 * (a + b);
+                        const bool solved = (mid < Tcrit && inside_dome(mid)) ? solve_2phase(a, std::min(b, Tcrit_2phase)) : solve_1phase(a, b);
+                        if (solved) {
+                            if (committed_ok()) return;
+                            // Converged but did not reproduce the inputs (a spurious root);
+                            // undo the state mutation before trying the next interval.
+                            restore_inputs();
+                        }
+                    }
+                    throw ValueError("HSU_D superancillary: no candidate interval reproduced the inputs");
+                } catch (const std::exception& e) {
+                    if (get_debug_level() > 0) {
+                        std::cout << "HSU_D_flash superancillary path failed (" << e.what() << "); using legacy path\n";
+                    }
+                    // Restore the inputs (the happy path may have mutated HEOS), then
+                    // fall through to the legacy ancillary path below.
+                    restore_inputs();
+                }
+            }
+        }
+        // ===================== legacy ancillary "sad path" =====================
+
         CoolPropFluid& component = HEOS.components[0];
 
         shared_ptr<HelmholtzEOSMixtureBackend> Sat;
@@ -1786,7 +2112,8 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
                     HEOS->specify_phase(phase);
                 default:
                     // Otherwise don't do anything (this is to make compiler happy)
-                    {}
+                    {
+                    }
             }
         }
         double call(double T) override {

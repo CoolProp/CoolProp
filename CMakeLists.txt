@@ -2118,6 +2118,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-HS.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-HS-prototypes.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-HSU_D.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})

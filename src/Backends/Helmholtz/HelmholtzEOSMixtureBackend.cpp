@@ -303,13 +303,14 @@ void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
     // Callbacks evaluate h(T, rho) and s(T, rho) using the EOS in its current
     // configuration (including the active reference state). The rho values
     // come from the existing rho_sat superancillary at the Chebyshev nodes —
-    // see SuperAncillary::add_variable. Building H and S together so we
-    // amortize the EOS calls; both derive from the same alpha0/alphar evaluation.
-    // The mutex inside ensure_HS_under_lock serializes concurrent first-call
+    // see SuperAncillary::add_variable. Building H, S and U together so we
+    // amortize the EOS calls; all derive from the same alpha0/alphar evaluation.
+    // The mutex inside ensure_HSU_under_lock serializes concurrent first-call
     // builds across HEOS instances that share this fluid's SuperAncillary
     // (#2773 review C2).
     auto h_callable = [this](double T, double rhomolar) -> double { return this->calc_hmolar_nocache(T, rhomolar); };
     auto s_callable = [this](double T, double rhomolar) -> double { return this->calc_smolar_nocache(T, rhomolar); };
+    auto u_callable = [this](double T, double rhomolar) -> double { return this->calc_umolar_nocache(T, rhomolar); };
     // Stamp the cache with the *total* alpha0 offset — sum of Core (parse-
     // time-immutable) and user-mutable offsets, scaled by the alpha0
     // prefactor. This way the shift formula in resolve_T_via_superancillary
@@ -317,7 +318,7 @@ void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
     // for fluids with a non-unity prefactor (currently none in the bundled
     // library, but the JSON path is live). See #2773.
     const auto [caller_a1, caller_a2] = FlashRoutines::alpha0_offset_total(*this);
-    superanc_ptr->ensure_HS_under_lock(caller_a1, caller_a2, h_callable, s_callable);
+    superanc_ptr->ensure_HSU_under_lock(caller_a1, caller_a2, h_callable, s_callable, u_callable);
 }
 
 double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
