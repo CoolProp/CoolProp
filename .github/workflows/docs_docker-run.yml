@@ -98,7 +98,11 @@ jobs:
         # Build and install the wheel
         pip -vv wheel .
         pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls *.whl`
-        pip install pydata-sphinx-theme tqdm ninja
+        # sphinx-design is in conda_environment.yml, but that env is baked into
+        # the prebuilt docs container; the image isn't rebuilt for PRs, so install
+        # it at runtime here (same escape hatch as the packages above) to unblock
+        # the build until the next docs image rebuild on master.
+        pip install pydata-sphinx-theme tqdm ninja sphinx-design
         
     - name: Test the installed CoolProp version
       shell: bash
