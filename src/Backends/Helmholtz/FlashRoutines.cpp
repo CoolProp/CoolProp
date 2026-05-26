@@ -1786,7 +1786,8 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
                     HEOS->specify_phase(phase);
                 default:
                     // Otherwise don't do anything (this is to make compiler happy)
-                    {}
+                    {
+                    }
             }
         }
         double call(double T) override {
@@ -2535,6 +2536,8 @@ struct HSGasGuard
     explicit HSGasGuard(HelmholtzEOSMixtureBackend& H) : H(H) {
         H.specify_phase(iphase_gas);
     }
+    // unspecify_phase() only resets an enum flag and does not throw.
+    // NOLINTNEXTLINE(bugprone-exception-escape)
     ~HSGasGuard() {
         H.unspecify_phase();
     }
@@ -2668,7 +2671,6 @@ bool hs_leg_saturation(HelmholtzEOSMixtureBackend& H, HS_SA_t& sa, double h_t, d
     }
     if (!found) {
         if (near_critical) return false;  // hand to the supercritical isentrope leg
-        const double Rgas = H.gas_constant();
         const double s_crit = [&] {
             H.update_DmolarT_direct(sa.eval_sat(Tcap, 'D', 0), Tcap);
             return H.smolar();
@@ -2680,7 +2682,6 @@ bool hs_leg_saturation(HelmholtzEOSMixtureBackend& H, HS_SA_t& sa, double h_t, d
                 return H.hmolar() - h_t;
             };
             double Ta = Tmin + 1e-3, Tb = 1.5 * H.Tmax(), fa = hres(Ta), fb = hres(Tb);
-            (void)Rgas;
             if (fa * fb <= 0) {
                 boost::math::uintmax_t it = 60;
                 auto [l, r] = toms748_solve(hres, Ta, Tb, fa, fb, boost::math::tools::eps_tolerance<double>(30), it);
@@ -2756,7 +2757,7 @@ bool hs_leg_departure(HelmholtzEOSMixtureBackend& H, double h_t, double s_t, dou
         const double artd = H.calc_alphar_deriv_nocache(1, 1, x, tau, delta);
         const double at = a0t + lam * art, att = a0tt + lam * artt;
         const double Hh = 1.0 + tau * at + delta * lam * ard;
-        LP L;
+        LP L{};
         L.h = Rg * T * Hh;
         L.s = Rg * (tau * at - (a0 + lam * ar));
         L.prho = Rg * T * (1.0 + 2.0 * delta * lam * ard + delta * delta * lam * ardd);
@@ -2872,33 +2873,23 @@ bool hs_inside_dome(HS_SA_t& sa, double T, double rho) {
 // falls through to the two-phase solve.
 bool hs_cascade(HelmholtzEOSMixtureBackend& H, HS_SA_t* sa, double h_t, double s_t, double& T_out, double& rho_out) {
     auto good = [&](double T, double rho) { return hs_accept(H, T, rho, h_t, s_t) && !(sa != nullptr && hs_inside_dome(*sa, T, rho)); };
-    double T = 0, rho = 0;
-    if (sa != nullptr) {
+    // Run one leg; on success commit T_out/rho_out.  A leg whose rootfind wanders
+    // out of the EOS domain can throw -- that just defers to the next leg.
+    auto run = [&](auto&& leg) -> bool {
         try {
-            if (hs_leg_saturation(H, *sa, h_t, s_t, T, rho) && good(T, rho)) {
+            double T = 0, rho = 0;
+            if (leg(T, rho) && good(T, rho)) {
                 T_out = T;
                 rho_out = rho;
                 return true;
             }
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch): a throwing leg defers to the next
         }
-    }
-    try {
-        if (hs_leg_isentrope(H, h_t, s_t, T, rho) && good(T, rho)) {
-            T_out = T;
-            rho_out = rho;
-            return true;
-        }
-    } catch (...) {
-    }
-    try {
-        if (hs_leg_departure(H, h_t, s_t, T, rho) && good(T, rho)) {
-            T_out = T;
-            rho_out = rho;
-            return true;
-        }
-    } catch (...) {
-    }
+        return false;
+    };
+    if (sa != nullptr && run([&](double& T, double& rho) { return hs_leg_saturation(H, *sa, h_t, s_t, T, rho); })) return true;
+    if (run([&](double& T, double& rho) { return hs_leg_isentrope(H, h_t, s_t, T, rho); })) return true;
+    if (run([&](double& T, double& rho) { return hs_leg_departure(H, h_t, s_t, T, rho); })) return true;
     return false;
 }
 
@@ -2982,7 +2973,6 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
                     // cascade (~50-100 wasted evals for two-phase inputs).
                     if (hs_two_phase_likely(HEOS, sa, h_t, s_t)) {
                         if (try_twophase()) return;
-                        restore_inputs();
                     }
                     // (1) Single-phase cascade (the common case, ~16 evals).  It accepts
                     // only a stable root OUTSIDE the dome, so for a two-phase (h,s) every
@@ -2997,15 +2987,19 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
                         HEOS.unspecify_phase();
                         HEOS.recalculate_singlephase_phase();
                         if (reproduces()) return;
-                        restore_inputs();
                     }
                     // (2) Two-phase fallback (if the screen did not already try it): the
                     // cascade found no stable single-phase root, so solve the EOS-exact
                     // Qh==Qs problem and accept only if it reproduces (h,s).
                     if (!tried_2ph) {
                         if (try_twophase()) return;
-                        restore_inputs();
                     }
+                    // Every fall-through to the legacy path below MUST see the original
+                    // inputs: the cascade / two-phase attempts mutate HEOS._hmolar,
+                    // _smolar (via update_DmolarT_direct -> clear()), so restore them
+                    // unconditionally here.  (Skipping this on the screen-fired +
+                    // cascade-failed path corrupted the legacy solve's target.)
+                    restore_inputs();
                 } catch (const std::exception& e) {
                     if (get_debug_level() > 0) {
                         std::cout << "HS_flash superancillary path failed (" << e.what() << "); using legacy path\n";
