@@ -221,6 +221,62 @@ Table of Inputs/Outputs to HAPropsSI
     ``W``, ``Omega``, ``HumRat``; kg water/kg dry air; Input/Output; Humidity Ratio
     ``Z``; ; Output; Compressibility factor (:math:`Z = pv/(RT)`)
 
+Wet-bulb temperature near the triple point
+------------------------------------------
+
+The wet-bulb energy balance changes branch at the triple point of water
+(273.16 K): above it the wick is liquid water, below it the wick is ice, and the
+enthalpy of the wick jumps by the latent heat of fusion (:math:`\approx` 333
+kJ/kg) across that line.  As a consequence the wet-bulb temperature is a
+*discontinuous* function of the dry-bulb temperature -- as :math:`T_{db}`
+increases through the transition, :math:`T_{wb}` jumps across a band of values
+straddling 0 °C.  That band of wet-bulb temperatures is therefore **not
+attainable** for any dry-bulb temperature at the given relative humidity and
+pressure.  The band is widest for very dry air (several tenths of a kelvin) and
+shrinks steadily as the relative humidity rises, becoming negligible near
+saturation.
+
+.. warning::
+
+   Solving for the dry-bulb temperature from a wet-bulb temperature that lies in
+   this unreachable band -- for example
+   ``HAPropsSI("Tdb", "Twb", 273.15, "RelHum", 0.01, "P", 89000)`` -- has no
+   physical solution.  CoolProp raises a ``ValueError`` naming the water triple
+   point in that case, rather than returning a misleading dry-bulb value.
+   Wet-bulb inputs comfortably above or below 0 °C are unaffected.
+
+In the figure below the wet-bulb temperature is plotted against dry-bulb
+temperature for several relative humidities.  Each curve climbs the ice-wick
+branch up to just below 0 °C, then breaks and resumes on the liquid-wick branch
+a few tenths of a kelvin higher: the gap straddling 0 °C is exactly the
+unreachable band of wet-bulb temperatures, widest for dry air and shrinking as
+the relative humidity rises.
+
+.. plot::
+
+    import numpy as np
+    import CoolProp.CoolProp as CP
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    P = 89000.0
+    Tdb = np.linspace(-2, 16, 1500) + 273.15
+    for RH in [0.01, 0.1, 0.5, 0.7]:
+        Twb = []
+        for T in Tdb:
+            try:
+                Twb.append(CP.HAPropsSI("Twb", "T", T, "R", RH, "P", P) - 273.15)
+            except Exception:
+                Twb.append(np.nan)
+        ax.plot(Tdb - 273.15, Twb, '.', ms=2, label='RH = {:g}'.format(RH))
+    ax.axhline(0, color='0.8', lw=0.8, zorder=0)
+    ax.set_ylim(-2, 2)
+    ax.set_xlabel(r'$T_\mathrm{db}$ [$^\circ$C]')
+    ax.set_ylabel(r'$T_\mathrm{wb}$ [$^\circ$C]')
+    ax.set_title('Wet-bulb vs dry-bulb near the water triple point (P = 89 kPa)')
+    ax.legend(loc='best')
+    ax.grid(True, alpha=0.3)
+
 Psychrometric Chart
 -------------------
 

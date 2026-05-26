@@ -5147,6 +5147,95 @@ TEST_CASE("HAPropsSI T_db from (T_wb, RelHum, P) — issue #2690 surviving failu
     }
 }
 
+TEST_CASE("HAPropsSI T_db from T_wb near the water triple point — issue #2906", "[HAPropsSI][humid_air][2906]") {
+    // Issue #2906 (follow-up to #2690). Near 273.16 K the wet-bulb energy
+    // balance in WetBulbSolver is discontinuous: h_w jumps by the latent heat
+    // of fusion (~333 kJ/kg) as the saturant wick switches liquid<->ice, so the
+    // forward map Twb(T_db) skips a band of wet-bulb temperatures (widest at low
+    // RH, vanishing by RH ~ 0.7). For a target T_wb inside that band there is no
+    // dry-bulb solution. The old solver handled this badly two ways: a scattered
+    // set returned the opaque "Temperature value (inf)", but MOST of the band was
+    // worse — the outer Brent latched onto the discontinuity T_db* and returned a
+    // T_db whose actual wet-bulb was NOT the request (a silently-wrong "flat
+    // section"). The fix verifies the solved T_db reproduces the requested T_wb
+    // and otherwise throws a clean infeasibility naming the triple point.
+
+    SECTION("No silently-wrong result: every finite T_db reproduces the requested T_wb") {
+        // Core invariant. Sweep target T_wb through the gap region across RH and
+        // a WIDE pressure range; any finite T_db must be self-consistent (its
+        // forward wet-bulb equals the request), and unreachable targets must
+        // surface a clean 'triple point' error — never the opaque "(inf)" and
+        // never a wrong number. The band is widest at low pressure (reaching
+        // ~1.2 K above the triple point near 20-30 kPa), so the T_wb sweep
+        // extends to +1.5 C and pressures down to 20 kPa to exercise it.
+        int valid = 0, errored_clean = 0, bad = 0;
+        for (double RH : {0.01, 0.1, 0.5}) {
+            for (int i = 0; i <= 42; ++i) {  // T_wb from -0.6 to +1.5 C in 0.05 C steps
+                const double twb_C = -0.6 + 0.05 * i;
+                for (int P = 20000; P <= 98000; P += 13000) {
+                    const double tdb = HumidAir::HAPropsSI("T_db", "T_wb", twb_C + 273.15, "RelHum", RH, "P", (double)P);
+                    if (ValidNumber(tdb)) {
+                        const double back = HumidAir::HAPropsSI("Twb", "T", tdb, "RelHum", RH, "P", (double)P) - 273.15;
+                        if (ValidNumber(back) && std::abs(back - twb_C) <= 1e-2)  // match the production guard's 1e-2 K contract
+                            ++valid;
+                        else
+                            ++bad;  // silently-wrong T_db
+                    } else {
+                        const std::string err = CoolProp::get_global_param_string("errstring");
+                        if (err.find("triple point") != std::string::npos)
+                            ++errored_clean;
+                        else
+                            ++bad;  // opaque "(inf)" or other unexpected failure
+                    }
+                }
+            }
+        }
+        CAPTURE(valid);
+        CAPTURE(errored_clean);
+        CAPTURE(bad);
+        CHECK(bad == 0);           // no silently-wrong T_db, no opaque inf
+        CHECK(valid > 0);          // reachable targets solve
+        CHECK(errored_clean > 0);  // the genuine gap is reported cleanly
+    }
+
+    SECTION("Reachable wet-bulbs on both branches still solve") {
+        // Ice branch (T_wb < 0 C) and liquid branch (T_wb > 0 C), away from the
+        // gap, must keep returning a finite, self-consistent T_db.
+        for (double tw : {-5.0, -0.5, 1.0, 5.0}) {
+            const double tdb = HumidAir::HAPropsSI("T_db", "T_wb", tw + 273.15, "RelHum", 0.5, "P", 101325.0);
+            CAPTURE(tw);
+            CHECK(std::isfinite(tdb));
+            CHECK(tdb >= tw + 273.15 - 1e-6);  // dry-bulb is never below wet-bulb
+        }
+    }
+
+    SECTION("Canonical T_wb = 0 C failing pressures error cleanly, never opaque 'inf'") {
+        // The reporter's headline case: at exactly 0 C a scattered set of P is in
+        // the gap. Those must surface the explicit triple-point message; none may
+        // leak the old "(inf)" wording.
+        int clean = 0, opaque = 0, unexpected = 0;
+        for (int P = 87000; P < 99000; P += 50) {
+            const double v = HumidAir::HAPropsSI("T_db", "T_wb", 273.15, "RelHum", 0.01, "P", (double)P);
+            if (ValidNumber(v)) {
+                continue;
+            }
+            const std::string err = CoolProp::get_global_param_string("errstring");
+            if (err.find("triple point") != std::string::npos)
+                ++clean;
+            else if (err.find("(inf)") != std::string::npos)
+                ++opaque;
+            else
+                ++unexpected;  // any other failure text is an unrecognized regression
+        }
+        CAPTURE(clean);
+        CAPTURE(opaque);
+        CAPTURE(unexpected);
+        CHECK(clean > 0);
+        CHECK(opaque == 0);
+        CHECK(unexpected == 0);
+    }
+}
+
 TEST_CASE("Out-of-range Q in update() does not corrupt cached state (#2195)", "[update][2195]") {
     // Issue #2195: PQ_INPUTS / QT_INPUTS / etc. assigned _Q = value
     // BEFORE validating the range, so a thrown OutOfRangeError left _Q at

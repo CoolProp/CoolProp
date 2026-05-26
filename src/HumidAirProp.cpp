@@ -1915,12 +1915,49 @@ void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const st
             T_min = DewpointTemperature(T, p, psi_w);
         }
 
+        // #2906: the (X, T_wb) -> T_db inverse can land in the unreachable band
+        // at the water triple point (273.16 K). There the wet-bulb energy
+        // balance is discontinuous — h_w jumps by the latent heat of fusion as
+        // the saturant wick switches liquid<->ice — so the forward map
+        // Twb(T_db) skips a range of wet-bulb temperatures. For a target T_wb
+        // in that gap the solve either fails outright, or (worse) Brent
+        // converges onto the discontinuity T_db* and returns a T_db whose
+        // actual wet-bulb is NOT the requested value — a silently-wrong "flat
+        // section" spanning the band. Detect both modes and report a single,
+        // honest infeasibility instead.
+        //
+        // The band always straddles 273.16 K but its width varies with
+        // pressure: it is widest at low pressure (reaching ~1.2 K above the
+        // triple point near 20-30 kPa for dry air) and narrows above
+        // atmospheric. So the post-solve consistency check below runs for ANY
+        // wet-bulb input — a silently-wrong result then cannot slip through at
+        // any pressure — while the 2 K window only governs whether an outright
+        // solve failure is reported as the triple-point infeasibility (vs the
+        // generic out-of-range path).
+        const bool twb_inverse = (SecondaryInputKey == GIVEN_TWB);
+        const bool twb_near_triple = twb_inverse && (std::abs(SecondaryInputValue - 273.16) < 2.0);
+        auto twb_triple_point_error = [&]() {
+            const char* main_name = (MainInputKey == GIVEN_RH)       ? "RelHum"
+                                    : (MainInputKey == GIVEN_HUMRAT) ? "HumRat"
+                                    : (MainInputKey == GIVEN_TDP)    ? "T_dp"
+                                                                     : "input";
+            return CoolProp::ValueError(format("HAPropsSI(T_wb=%g K, %s=%g, P=%g Pa): no dry-bulb temperature reproduces this wet-bulb. It lies "
+                                               "in the unreachable band at the water triple point (273.16 K), where the ice/liquid latent-heat "
+                                               "discontinuity makes Twb(T_db) skip a range of wet-bulb temperatures; the state is infeasible for "
+                                               "these conditions.",
+                                               SecondaryInputValue, main_name, MainInputValue, p)
+                                          .c_str());
+        };
+
         try {
             // Use the Brent's method solver to find T_drybulb.  Slow but reliable
             T = Brent_HAProps_T(SecondaryInputKey, p, MainInputKey, MainInputValue, SecondaryInputValue, T_min, T_max);
         } catch (std::exception& e) {
             if (CoolProp::get_debug_level() > 0) {
                 std::cout << "ERROR: " << e.what() << '\n';
+            }
+            if (twb_near_triple) {
+                throw twb_triple_point_error();  // no root: target T_wb is in the triple-point gap (#2906)
             }
             CoolProp::set_error_string(e.what());
             T = _HUGE;
@@ -1934,6 +1971,18 @@ void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const st
         std::vector<double> input_vals(2, T);
         input_vals[1] = MainInputValue;
         _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
+
+        // #2906 consistency check (unconditional for wet-bulb inputs): reject a
+        // T_db whose wet-bulb does not match the request — the silently-wrong
+        // flat section where Brent latched onto the discontinuity rather than a
+        // true root. Running this for every wet-bulb input makes the guard
+        // pressure-independent.
+        if (twb_inverse) {
+            const double wb_check = _HAPropsSI_outputs(GIVEN_TWB, p, T, psi_w);
+            if (!ValidNumber(wb_check) || std::abs(wb_check - SecondaryInputValue) > 1e-2) {
+                throw twb_triple_point_error();
+            }
+        }
     }
 }
 double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w) {
