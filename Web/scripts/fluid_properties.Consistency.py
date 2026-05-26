@@ -95,8 +95,8 @@ for fluid in CoolProp.__fluids__:
         with open(file_path, 'w') as fp:
             fp.write(file_string)
         try:
-            subprocess.check_call('python -u "' + fluid + '.py"', cwd=plots_path,
-                                  stdout=sys.stdout, stderr=sys.stderr, shell=True)
+            subprocess.check_call([sys.executable, '-u', fluid + '.py'], cwd=plots_path,
+                                  stdout=sys.stdout, stderr=sys.stderr)
         except subprocess.CalledProcessError as exc:
             print('BUILD FAILED for', fluid, ':', exc)
             build_failures.append((fluid, str(exc)))

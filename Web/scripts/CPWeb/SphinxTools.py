@@ -57,12 +57,7 @@ In this figure, we start off with a state point given by T,P and then we calcula
 
 .. include:: Consistencyplots/{fluid:s}-report.rst
 
-REFPROP Consistency Plots
-=========================
-
-.. include:: Consistencyplots_REFPROP/{fluid:s}-report.rst
-
-Superancillary Plots
+{refprop_consistency_rst:s}Superancillary Plots
 ====================
 
 The following figure shows the accuracy of the superancillary functions relative to extended precision calculations carried out in C++ with the teqp library. The results of the iterative calculations with REFPROP and CoolProp are also shown.
@@ -600,12 +595,26 @@ class FluidGenerator(object):
         else:
             GEOMETRY_STATUS['no_inchikey'].append(self.fluid)
 
+        # The REFPROP consistency section is opt-in: it only appears in the fluid
+        # page when COOLPROP_CONSISTENCY_INCLUDE_REFPROP is set, so a default
+        # (HEOS-only) build does not carry an empty "not generated" stub section.
+        include_refprop = os.environ.get('COOLPROP_CONSISTENCY_INCLUDE_REFPROP', '').lower() in ('1', 'true', 'yes')
+        if include_refprop:
+            refprop_consistency_rst = (
+                'REFPROP Consistency Plots\n'
+                '=========================\n\n'
+                '.. include:: Consistencyplots_REFPROP/{fluid:s}-report.rst\n\n'
+            ).format(fluid=self.fluid)
+        else:
+            refprop_consistency_rst = ''
+
         # Write RST file for fluid
         out = fluid_template.format(aliases=aliases,
                                     fluid=self.fluid,
                                     fluid_stars='*' * len(self.fluid),
                                     references=references,
-                                    molecule_viewer_rst=molecule_viewer_rst
+                                    molecule_viewer_rst=molecule_viewer_rst,
+                                    refprop_consistency_rst=refprop_consistency_rst
                                     )
 
         with codecs.open(os.path.join(path, self.fluid + '.rst'), 'w', encoding='utf-8') as fp:

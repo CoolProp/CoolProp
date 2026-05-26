@@ -1,4 +1,3 @@
-import math
 import pandas
 import pytest
 from CoolProp.Plots import _consistency_report as rpt
