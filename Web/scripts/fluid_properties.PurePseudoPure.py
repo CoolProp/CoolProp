@@ -93,3 +93,4 @@ with open(indexfile, 'w') as fp:
     fp.write('.. toctree::\n    :hidden:\n\n')
     for index, row in df.iterrows():
         fp.write('    fluids/' + row['name'] + '.rst\n')
+    fp.write('    ConsistencyReport.rst\n')

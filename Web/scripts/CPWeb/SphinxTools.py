@@ -55,6 +55,13 @@ In this figure, we start off with a state point given by T,P and then we calcula
 
 .. image:: Consistencyplots/{fluid:s}.png
 
+.. include:: Consistencyplots/{fluid:s}-report.rst
+
+REFPROP Consistency Plots
+=========================
+
+.. include:: Consistencyplots_REFPROP/{fluid:s}-report.rst
+
 Superancillary Plots
 ====================
 
