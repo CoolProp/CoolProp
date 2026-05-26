@@ -1686,10 +1686,23 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                             if (use_ca && get_config_bool(HSU_D_TWOPHASE_EOS_POLISH)) {
                                 solver_resid_2phase resid_eos(HEOS, HEOS._rhomolar, other, value, superanc, /*use_ca=*/false, ca_key, value_cache);
                                 double t0 = Tsol, r0 = resid_eos.call(t0);
-                                double t1 = Tsol * (1.0 + 1e-7), r1 = resid_eos.call(t1);
+                                // Probe just above Tsol, but keep the second secant seed
+                                // strictly inside the two-phase bracket [Ta, Tb]: when the
+                                // raw solve lands on a boundary root, Tsol*(1+1e-7) can step
+                                // past Tb and make resid_eos.call() fail, needlessly kicking
+                                // a valid happy-path state back to the legacy path.
+                                double t1 = Tsol * (1.0 + 1e-7);
+                                if (t1 <= Ta || t1 >= Tb) {
+                                    t1 = 0.5 * (Tsol + ((Tsol - Ta) > (Tb - Tsol) ? Ta : Tb));
+                                }
+                                double r1 = resid_eos.call(t1);
                                 for (int it = 0; it < 4; ++it) {
-                                    if (!std::isfinite(r1) || std::abs(r1) < tol || std::abs(t1 - t0) <= 1e-13 * t1 || r1 == r0) break;
+                                    if (!std::isfinite(r1) || std::abs(r1) < tol || std::abs(t1 - t0) <= 1e-13 * t1) break;
+                                    // Secant step; a vanishing denominator (r1 == r0) makes tn
+                                    // non-finite, which the guard below turns into a clean break
+                                    // -- avoids the exact float compare CodeQL flags.
                                     const double tn = t1 - r1 * (t1 - t0) / (r1 - r0);
+                                    if (!std::isfinite(tn)) break;
                                     t0 = t1;
                                     r0 = r1;
                                     t1 = tn;
@@ -1749,7 +1762,19 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         const double a = edges[i], b = edges[i + 1];
                         if (b - a < 1e-10) continue;
                         const double mid = 0.5 * (a + b);
-                        const bool solved = (mid < Tcrit && inside_dome(mid)) ? solve_2phase(a, std::min(b, Tcrit_2phase)) : solve_1phase(a, b);
+                        // Clamp the two-phase upper bound just shy of Tcrit, but if that
+                        // collapses the bracket (ub <= a, i.e. the last saturation
+                        // intersection lands inside the critical guard band) fall back to
+                        // the single-phase solve rather than hand solve_2phase an inverted
+                        // interval -- which would fail immediately, exactly the near-critical
+                        // case this path is meant to recover.
+                        bool solved;
+                        if (mid < Tcrit && inside_dome(mid)) {
+                            const double ub = std::min(b, Tcrit_2phase);
+                            solved = (ub > a) ? solve_2phase(a, ub) : solve_1phase(a, b);
+                        } else {
+                            solved = solve_1phase(a, b);
+                        }
                         if (solved) {
                             if (committed_ok()) return;
                             // Converged but did not reproduce the inputs (a spurious root);

@@ -673,7 +673,14 @@ TEST_CASE("HSU_D: happy-vs-legacy speed", "[HSU_D_bench][.]") {
 TEST_CASE("HSU_D: two-phase call() component profile", "[HSU_D_prof][.]") {
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
     auto* be = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
-    auto sa = be->get_superanc();
+    if (be == nullptr || !be->is_pure()) return;  // not a pure HEOS backend -> no superancillary
+    std::shared_ptr<CoolProp::EquationOfState::SuperAncillary_t> sa;
+    try {
+        sa = be->get_superanc();
+    } catch (...) {
+        sa.reset();  // treat a failed lookup as "no superancillary"
+    }
+    if (!sa) return;  // Water lacks a superancillary -> nothing to profile
     const double T = 450.0;
     const double rhoL = sa->eval_sat(T, 'D', 0), rhoV = sa->eval_sat(T, 'D', 1), p = sa->eval_sat(T, 'P', 1);
 
