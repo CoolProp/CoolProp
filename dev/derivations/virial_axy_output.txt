@@ -1,0 +1,128 @@
+==============================================================================
+IDEAL LEAD
+==============================================================================
+  alpha = a1 + a2*tau + log(delta)
+  ... A01
+  A01 = 1
+        ccode: 1
+  ... A02
+  A02 = -1
+        ccode: -1
+  ... A10
+  A10 = a2*tau
+        ccode: a2*tau
+  ... A11
+  A11 = 0
+        ccode: 0
+  ... A12
+  A12 = 0
+        ccode: 0
+  NOTE: A00 = log(delta)+a1+a2*tau; A00 not read by p/virials.
+
+==============================================================================
+GENEXP element
+==============================================================================
+  alpha = delta**d*n*tau**t*exp(-beta1*(-gamma1 + tau) - beta2*(-gamma2 + tau)**2 - c*delta**l - eta1*(delta - epsilon1) - eta2*(delta - epsilon2)**2 - omega*tau**m)
+  ... A01
+  A01 = delta**d*n*tau**t*(-c*delta**l*l + d - delta*(eta1 + 2*eta2*(delta - epsilon2)))*exp(-beta1*(-gamma1 + tau) - beta2*(-gamma2 + tau)**2 - c*delta**l - eta1*(delta - epsilon1) - eta2*(delta - epsilon2)**2 - omega*tau**m)
+        ccode: pow(delta, d)*n*pow(tau, t)*(-c*pow(delta, l)*l + d - delta*(eta1 + 2*eta2*(delta - epsilon2)))*exp(-beta1*(-gamma1 + tau) - beta2*pow(-gamma2 + tau, 2) - c*pow(delta, l) - eta1*(delta - epsilon1) - eta2*pow(delta - epsilon2, 2) - omega*pow(tau, m))
+        finiteness@delta=0: {d: 1, l: 1}->0 (finite=True) ; {d: 2, l: 1}->0 (finite=True)
+  ... A02
+  A02 = -delta**d*n*tau**t*(c*delta**l*l**2 - c*delta**l*l - d*(d - 1) + 2*d*(c*delta**l*l + delta*(eta1 + 2*eta2*(delta - epsilon2))) + 2*delta**2*eta2 - (c*delta**l*l + delta*(eta1 + 2*eta2*(delta - epsilon2)))**2)*exp(-beta1*(-gamma1 + tau) - beta2*(-gamma2 + tau)**2 - c*delta**l - eta1*(delta - epsilon1) - eta2*(delta - epsilon2)**2 - omega*tau**m)
+        ccode: -pow(delta, d)*n*pow(tau, t)*(c*pow(delta, l)*pow(l, 2) - c*pow(delta, l)*l - d*(d - 1) + 2*d*(c*pow(delta, l)*l + delta*(eta1 + 2*eta2*(delta - epsilon2))) + 2*pow(delta, 2)*eta2 - pow(c*pow(delta, l)*l + delta*(eta1 + 2*eta2*(delta - epsilon2)), 2))*exp(-beta1*(-gamma1 + tau) - beta2*pow(-gamma2 + tau, 2) - c*pow(delta, l) - eta1*(delta - epsilon1) - eta2*pow(delta - epsilon2, 2) - omega*pow(tau, m))
+        finiteness@delta=0: {d: 1, l: 1}->0 (finite=True) ; {d: 2, l: 1}->0 (finite=True)
+  ... A10
+  A10 = delta**d*n*tau**t*(-m*omega*tau**m + t - tau*(beta1 - 2*beta2*(gamma2 - tau)))*exp(-beta1*(-gamma1 + tau) - beta2*(-gamma2 + tau)**2 - c*delta**l - eta1*(delta - epsilon1) - eta2*(delta - epsilon2)**2 - omega*tau**m)
+        ccode: pow(delta, d)*n*pow(tau, t)*(-m*omega*pow(tau, m) + t - tau*(beta1 - 2*beta2*(gamma2 - tau)))*exp(-beta1*(-gamma1 + tau) - beta2*pow(-gamma2 + tau, 2) - c*pow(delta, l) - eta1*(delta - epsilon1) - eta2*pow(delta - epsilon2, 2) - omega*pow(tau, m))
+        finiteness@delta=0: {d: 1, l: 1}->0 (finite=True) ; {d: 2, l: 1}->0 (finite=True)
+  ... A11
+  A11 = delta**d*n*tau**t*(d*t - d*(m*omega*tau**m + tau*(beta1 - 2*beta2*(gamma2 - tau))) - t*(c*delta**l*l + delta*(eta1 + 2*eta2*(delta - epsilon2))) + (c*delta**l*l + delta*(eta1 + 2*eta2*(delta - epsilon2)))*(m*omega*tau**m + tau*(beta1 - 2*beta2*(gamma2 - tau))))*exp(-beta1*(-gamma1 + tau) - beta2*(-gamma2 + tau)**2 - c*delta**l - eta1*(delta - epsilon1) - eta2*(delta - epsilon2)**2 - omega*tau**m)
+        ccode: pow(delta, d)*n*pow(tau, t)*(d*t - d*(m*omega*pow(tau, m) + tau*(beta1 - 2*beta2*(gamma2 - tau))) - t*(c*pow(delta, l)*l + delta*(eta1 + 2*eta2*(delta - epsilon2))) + (c*pow(delta, l)*l + delta*(eta1 + 2*eta2*(delta - epsilon2)))*(m*omega*pow(tau, m) + tau*(beta1 - 2*beta2*(gamma2 - tau))))*exp(-beta1*(-gamma1 + tau) - beta2*pow(-gamma2 + tau, 2) - c*pow(delta, l) - eta1*(delta - epsilon1) - eta2*pow(delta - epsilon2, 2) - omega*pow(tau, m))
+        finiteness@delta=0: {d: 1, l: 1}->0 (finite=True) ; {d: 2, l: 1}->0 (finite=True)
+  ... A12
+  A12 = delta**d*n*tau**t*(d*t*(d - 1) - 2*d*t*(c*delta**l*l + delta*(eta1 + 2*eta2*(delta - epsilon2))) - d*(d - 1)*(m*omega*tau**m + tau*(beta1 - 2*beta2*(gamma2 - tau))) + 2*d*(c*delta**l*l + delta*(eta1 + 2*eta2*(delta - epsilon2)))*(m*omega*tau**m + tau*(beta1 - 2*beta2*(gamma2 - tau))) - t*(c*delta**l*l**2 - c*delta**l*l + 2*delta**2*eta2 - (c*delta**l*l + delta*(eta1 + 2*eta2*(delta - epsilon2)))**2) + (m*omega*tau**m + tau*(beta1 - 2*beta2*(gamma2 - tau)))*(c*delta**l*l**2 - c*delta**l*l + 2*delta**2*eta2 - (c*delta**l*l + delta*(eta1 + 2*eta2*(delta - epsilon2)))**2))*exp(-beta1*(-gamma1 + tau) - beta2*(-gamma2 + tau)**2 - c*delta**l - eta1*(delta - epsilon1) - eta2*(delta - epsilon2)**2 - omega*tau**m)
+        ccode: pow(delta, d)*n*pow(tau, t)*(d*t*(d - 1) - 2*d*t*(c*pow(delta, l)*l + delta*(eta1 + 2*eta2*(delta - epsilon2))) - d*(d - 1)*(m*omega*pow(tau, m) + tau*(beta1 - 2*beta2*(gamma2 - tau))) + 2*d*(c*pow(delta, l)*l + delta*(eta1 + 2*eta2*(delta - epsilon2)))*(m*omega*pow(tau, m) + tau*(beta1 - 2*beta2*(gamma2 - tau))) - t*(c*pow(delta, l)*pow(l, 2) - c*pow(delta, l)*l + 2*pow(delta, 2)*eta2 - pow(c*pow(delta, l)*l + delta*(eta1 + 2*eta2*(delta - epsilon2)), 2)) + (m*omega*pow(tau, m) + tau*(beta1 - 2*beta2*(gamma2 - tau)))*(c*pow(delta, l)*pow(l, 2) - c*pow(delta, l)*l + 2*pow(delta, 2)*eta2 - pow(c*pow(delta, l)*l + delta*(eta1 + 2*eta2*(delta - epsilon2)), 2)))*exp(-beta1*(-gamma1 + tau) - beta2*pow(-gamma2 + tau, 2) - c*pow(delta, l) - eta1*(delta - epsilon1) - eta2*pow(delta - epsilon2, 2) - omega*pow(tau, m))
+        finiteness@delta=0: {d: 1, l: 1}->0 (finite=True) ; {d: 2, l: 1}->0 (finite=True)
+------------------------------------------------------------------------------
+GENEXP element: virial coefficients
+------------------------------------------------------------------------------
+  [d=1,l=1] c1=n*tau**t*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=1,l=1] c2=n*tau**t*(-c + 2*epsilon2*eta2 - eta1)*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=1,l=1] dc1/dtau=n*tau**(t - 1)*(-m*omega*tau**m + t - tau*(beta1 - 2*beta2*gamma2 + 2*beta2*tau))*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=1,l=1] dc2/dtau=n*tau**(t - 1)*(c - 2*epsilon2*eta2 + eta1)*(m*omega*tau**m - t + tau*(beta1 - 2*beta2*gamma2 + 2*beta2*tau))*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=1,l=2] c1=n*tau**t*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=1,l=2] c2=n*tau**t*(2*epsilon2*eta2 - eta1)*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=1,l=2] dc1/dtau=n*tau**(t - 1)*(-m*omega*tau**m + t - tau*(beta1 - 2*beta2*gamma2 + 2*beta2*tau))*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=1,l=2] dc2/dtau=n*tau**(t - 1)*(2*epsilon2*eta2 - eta1)*(-m*omega*tau**m + t - tau*(beta1 - 2*beta2*gamma2 + 2*beta2*tau))*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=2,l=1] c1=0
+  [d=2,l=1] c2=n*tau**t*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=2,l=1] dc2/dtau=n*tau**(t - 1)*(-m*omega*tau**m + t - tau*(beta1 - 2*beta2*gamma2 + 2*beta2*tau))*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=2,l=2] c1=0
+  [d=2,l=2] c2=n*tau**t*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=2,l=2] dc2/dtau=n*tau**(t - 1)*(-m*omega*tau**m + t - tau*(beta1 - 2*beta2*gamma2 + 2*beta2*tau))*exp(beta1*gamma1 - beta1*tau - beta2*gamma2**2 + 2*beta2*gamma2*tau - beta2*tau**2 + epsilon1*eta1 - epsilon2**2*eta2 - omega*tau**m)
+  [d=3,l=1] c1=0
+  [d=3,l=1] c2=0
+  [d=3,l=2] c1=0
+  [d=3,l=2] c2=0
+==============================================================================
+GAOB element
+==============================================================================
+  alpha = delta**d*n*tau**t*exp(eta*(delta - epsilon)**2)*exp(1/(b + beta*(-gamma + tau)**2))
+  ... A01
+  A01 = n*tau**t*(d*delta**d + 2*delta**(d + 1)*eta*(delta - epsilon))*exp((eta*(b + beta*(gamma - tau)**2)*(delta - epsilon)**2 + 1)/(b + beta*(gamma - tau)**2))
+        ccode: n*pow(tau, t)*(d*pow(delta, d) + 2*pow(delta, d + 1)*eta*(delta - epsilon))*exp((eta*(b + beta*pow(gamma - tau, 2))*pow(delta - epsilon, 2) + 1)/(b + beta*pow(gamma - tau, 2)))
+        finiteness@delta=0: {d: 1}->0 (finite=True) ; {d: 2}->0 (finite=True)
+  ... A02
+  A02 = delta**d*n*tau**t*(4*d*delta*eta*(delta - epsilon) + d*(d - 1) + 2*delta**2*eta*(2*eta*(delta - epsilon)**2 + 1))*exp(eta*(delta - epsilon)**2 + 1/(b + beta*(gamma - tau)**2))
+        ccode: pow(delta, d)*n*pow(tau, t)*(4*d*delta*eta*(delta - epsilon) + d*(d - 1) + 2*pow(delta, 2)*eta*(2*eta*pow(delta - epsilon, 2) + 1))*exp(eta*pow(delta - epsilon, 2) + 1.0/(b + beta*pow(gamma - tau, 2)))
+        finiteness@delta=0: {d: 1}->0 (finite=True) ; {d: 2}->0 (finite=True)
+  ... A10
+  A10 = delta**d*n*(2*beta*tau**(t + 1)*(gamma - tau) + t*tau**t*(b + beta*(gamma - tau)**2)**2)*exp((eta*(b + beta*(gamma - tau)**2)*(delta - epsilon)**2 + 1)/(b + beta*(gamma - tau)**2))/(b + beta*(gamma - tau)**2)**2
+        ccode: pow(delta, d)*n*(2*beta*pow(tau, t + 1)*(gamma - tau) + t*pow(tau, t)*pow(b + beta*pow(gamma - tau, 2), 2))*exp((eta*(b + beta*pow(gamma - tau, 2))*pow(delta - epsilon, 2) + 1)/(b + beta*pow(gamma - tau, 2)))/pow(b + beta*pow(gamma - tau, 2), 2)
+        finiteness@delta=0: {d: 1}->0 (finite=True) ; {d: 2}->0 (finite=True)
+  ... A11
+  A11 = delta**d*n*tau**t*(2*beta*d*tau*(gamma - tau) + 4*beta*delta*eta*tau*(delta - epsilon)*(gamma - tau) + d*t*(b + beta*(gamma - tau)**2)**2 + 2*delta*eta*t*(b + beta*(gamma - tau)**2)**2*(delta - epsilon))*exp((eta*(b + beta*(gamma - tau)**2)*(delta - epsilon)**2 + 1)/(b + beta*(gamma - tau)**2))/(b + beta*(gamma - tau)**2)**2
+        ccode: pow(delta, d)*n*pow(tau, t)*(2*beta*d*tau*(gamma - tau) + 4*beta*delta*eta*tau*(delta - epsilon)*(gamma - tau) + d*t*pow(b + beta*pow(gamma - tau, 2), 2) + 2*delta*eta*t*pow(b + beta*pow(gamma - tau, 2), 2)*(delta - epsilon))*exp((eta*(b + beta*pow(gamma - tau, 2))*pow(delta - epsilon, 2) + 1)/(b + beta*pow(gamma - tau, 2)))/pow(b + beta*pow(gamma - tau, 2), 2)
+        finiteness@delta=0: {d: 1}->0 (finite=True) ; {d: 2}->0 (finite=True)
+  ... A12
+  A12 = delta**d*n*tau**t*(8*beta*d*delta*eta*tau*(delta - epsilon)*(gamma - tau) + 2*beta*d*tau*(d - 1)*(gamma - tau) + 4*beta*delta**2*eta*tau*(gamma - tau)*(2*eta*(delta - epsilon)**2 + 1) + 4*d*delta*eta*t*(b + beta*(gamma - tau)**2)**2*(delta - epsilon) + d*t*(b + beta*(gamma - tau)**2)**2*(d - 1) + 2*delta**2*eta*t*(b + beta*(gamma - tau)**2)**2*(2*eta*(delta - epsilon)**2 + 1))*exp((eta*(b + beta*(gamma - tau)**2)*(delta - epsilon)**2 + 1)/(b + beta*(gamma - tau)**2))/(b + beta*(gamma - tau)**2)**2
+        ccode: pow(delta, d)*n*pow(tau, t)*(8*beta*d*delta*eta*tau*(delta - epsilon)*(gamma - tau) + 2*beta*d*tau*(d - 1)*(gamma - tau) + 4*beta*pow(delta, 2)*eta*tau*(gamma - tau)*(2*eta*pow(delta - epsilon, 2) + 1) + 4*d*delta*eta*t*pow(b + beta*pow(gamma - tau, 2), 2)*(delta - epsilon) + d*t*pow(b + beta*pow(gamma - tau, 2), 2)*(d - 1) + 2*pow(delta, 2)*eta*t*pow(b + beta*pow(gamma - tau, 2), 2)*(2*eta*pow(delta - epsilon, 2) + 1))*exp((eta*(b + beta*pow(gamma - tau, 2))*pow(delta - epsilon, 2) + 1)/(b + beta*pow(gamma - tau, 2)))/pow(b + beta*pow(gamma - tau, 2), 2)
+        finiteness@delta=0: {d: 1}->0 (finite=True) ; {d: 2}->0 (finite=True)
+------------------------------------------------------------------------------
+GAOB element: virial coefficients
+------------------------------------------------------------------------------
+  [d=1] c1=n*tau**t*exp((b*epsilon**2*eta + beta*epsilon**2*eta*gamma**2 - 2*beta*epsilon**2*eta*gamma*tau + beta*epsilon**2*eta*tau**2 + 1)/(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2))
+  [d=1] c2=-2*epsilon*eta*n*tau**t*exp((b*epsilon**2*eta + beta*epsilon**2*eta*gamma**2 - 2*beta*epsilon**2*eta*gamma*tau + beta*epsilon**2*eta*tau**2 + 1)/(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2))
+  [d=1] dc1/dtau=n*(2*beta*tau**(t + 1)*(epsilon**2*eta*(-gamma + tau)*(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2) + (gamma - tau)*(b*epsilon**2*eta + beta*epsilon**2*eta*gamma**2 - 2*beta*epsilon**2*eta*gamma*tau + beta*epsilon**2*eta*tau**2 + 1)) + t*tau**t*(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2)**2)*exp((b*epsilon**2*eta + beta*epsilon**2*eta*gamma**2 - 2*beta*epsilon**2*eta*gamma*tau + beta*epsilon**2*eta*tau**2 + 1)/(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2))/(tau*(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2)**2)
+  [d=1] dc2/dtau=2*epsilon*eta*n*(-2*beta*tau**(t + 1)*(epsilon**2*eta*(-gamma + tau)*(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2) + (gamma - tau)*(b*epsilon**2*eta + beta*epsilon**2*eta*gamma**2 - 2*beta*epsilon**2*eta*gamma*tau + beta*epsilon**2*eta*tau**2 + 1)) - t*tau**t*(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2)**2)*exp((b*epsilon**2*eta + beta*epsilon**2*eta*gamma**2 - 2*beta*epsilon**2*eta*gamma*tau + beta*epsilon**2*eta*tau**2 + 1)/(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2))/(tau*(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2)**2)
+  [d=2] c1=0
+  [d=2] c2=n*tau**t*exp((b*epsilon**2*eta + beta*epsilon**2*eta*gamma**2 - 2*beta*epsilon**2*eta*gamma*tau + beta*epsilon**2*eta*tau**2 + 1)/(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2))
+  [d=2] dc2/dtau=n*(2*beta*tau**(t + 1)*(epsilon**2*eta*(-gamma + tau)*(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2) + (gamma - tau)*(b*epsilon**2*eta + beta*epsilon**2*eta*gamma**2 - 2*beta*epsilon**2*eta*gamma*tau + beta*epsilon**2*eta*tau**2 + 1)) + t*tau**t*(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2)**2)*exp((b*epsilon**2*eta + beta*epsilon**2*eta*gamma**2 - 2*beta*epsilon**2*eta*gamma*tau + beta*epsilon**2*eta*tau**2 + 1)/(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2))/(tau*(b + beta*gamma**2 - 2*beta*gamma*tau + beta*tau**2)**2)
+  [d=3] c1=0
+  [d=3] c2=0
+==============================================================================
+NONANALYTIC element  (numeric, concrete params)
+==============================================================================
+  params: {n: 0.7, a: 3.5, b: 0.85, beta: 0.3, A: 0.32, B: 0.2, C: 28.0, D: 700.0, tau: 1.1}
+  A01: vals@(1e-4,1e-7,1e-10)=[0.0, 0.0, 0.0] finite=True
+  A02: vals@(1e-4,1e-7,1e-10)=[0.0, 0.0, 0.0] finite=True
+  A10: vals@(1e-4,1e-7,1e-10)=[-0.0, -0.0, -0.0] finite=True
+  A11: vals@(1e-4,1e-7,1e-10)=[-0.0, -0.0, -0.0] finite=True
+  A12: vals@(1e-4,1e-7,1e-10)=[-0.0, -0.0, -0.0] finite=True
+  c1(~B*rho_r) = 1.351045792e-16   c2 = 6.701636575e-15
+==============================================================================
+SAFT association
+==============================================================================
+  X(delta->0) = 1  (expect 1)
+==============================================================================
+SAFT association  (numeric, concrete params)
+==============================================================================
+  params: {m: 1.0, a: 1.0, vbarn: 0.45, epsilonbar: 5.0, kappabar: 0.002, tau: 1.2}
+  A01: vals@(1e-4,1e-7,1e-10)=[-4.025e-05, -4e-08, -0.0] finite=True
+  A02: vals@(1e-4,1e-7,1e-10)=[-0.0, -0.0, -0.0] finite=True
+  A10: vals@(1e-4,1e-7,1e-10)=[-0.00024205, -2.4e-07, -0.0] finite=True
+  A11: vals@(1e-4,1e-7,1e-10)=[-0.00024203, -2.4e-07, -0.0] finite=True
+  A12: vals@(1e-4,1e-7,1e-10)=[2e-08, 0.0, 0.0] finite=True
+  c1(~B*rho_r) = -0.4024287938   c2 = -0.1288345252
+
+DONE.
