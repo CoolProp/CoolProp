@@ -39,6 +39,14 @@ jobs:
     name: address sanitizer
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ${{ matrix.os }}
+    # Guardrail (CoolProp-xuu).  Without this the job inherits GitHub's 6-hour
+    # default cap; when a test runs away the job is silently reported as
+    # `cancelled` rather than a real failure (that is exactly how the
+    # detect_stack_use_after_return BDCSVD blow-up hid for so long).  The full
+    # ASan suite + REFPROP completes in ~12 min locally (~40-50 min expected on
+    # the slower 2-vCPU runner); 90 min is a ~2x headroom that still surfaces a
+    # genuine runaway fast and visibly instead of burning six hours.
+    timeout-minutes: 90
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -64,7 +72,18 @@ jobs:
       - name: build all Catch tests
         run: cmake --build build --config Asan
       - name: run all the compiled Catch tests with address sanitizer
-        run: cd build && ASAN_OPTIONS=detect_stack_use_after_return=1:verbosity=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
+        # detect_stack_use_after_return is deliberately NOT enabled here
+        # (CoolProp-xuu).  With REFPROP present — which CI builds — the 5
+        # SVDSBTL&REFPROP [source] tests build large BDCSVD surfaces, and
+        # under detect_stack_use_after_return=1 the per-coefficient
+        # __asan_stack_malloc inside Eigen's O(n^2-n^3) singular-value inner
+        # loop becomes unbounded (a single such test went from 87s to a
+        # >38-minute hang locally).  That is what drove the whole job into
+        # GitHub's 6-hour cap, where it was silently reported as `cancelled`
+        # rather than producing a real pass/fail.  ASan's heap/global/UAF
+        # checks all still run; only the fake-stack (use-after-return)
+        # instrumentation is dropped.
+        run: cd build && ASAN_OPTIONS=verbosity=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
 
   clang-format:
     name: clang-format (PR diff)
