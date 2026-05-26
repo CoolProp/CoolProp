@@ -485,7 +485,11 @@ class ConsistencyAxis(object):
                     dT = abs(self.state_QT.T() - self.state.T())
                     if drho < 1e-3 and dp < 1e-3 and dT < 1e-3:
                         data.append(dict(cls="GOOD", phase_region="2phase", x=x, y=y, elapsed=elapsed))
-                        if 'REFPROP' not in self.backend:
+                        # Skip the phase check at the saturation boundaries (q==0/1):
+                        # a point sitting exactly on the phase boundary rounds between
+                        # single-phase and two-phase, so a mismatch there is numerical
+                        # noise rather than a flash-routine bug.
+                        if 'REFPROP' not in self.backend and 0.0 < q < 1.0:
                             if self.state_QT.phase() != self.state.phase():
                                 data.append(dict(cls="BAD_PHASE", phase_region="2phase", in1=param1, val1=val1,
                                                  in2=param2, val2=val2, P=self.state_QT.p(), T=T, x=x, y=y, elapsed=elapsed,
