@@ -50,7 +50,10 @@ _VERSION_RE = re.compile(
     r"set\(COOLPROP_VERSION_MAJOR\s+(?P<major>\d+)\).*?"
     r"set\(COOLPROP_VERSION_MINOR\s+(?P<minor>\d+)\).*?"
     r"set\(COOLPROP_VERSION_PATCH\s+(?P<patch>\d+)\).*?"
-    r"set\(COOLPROP_VERSION_REVISION\s+(?P<dev>\w*)\)",
+    # REVISION may be unquoted ("dev" on the development line) or a quoted
+    # string ("" on a tagged release); accept both, matching the more
+    # permissive parse in dev/extract_version.py.
+    r'set\(COOLPROP_VERSION_REVISION\s+"?(?P<dev>\w*)"?\)',
     re.DOTALL,
 )
 
