@@ -2750,15 +2750,14 @@ bool hs_leg_departure(HelmholtzEOSMixtureBackend& H, double h_t, double s_t, dou
     // Evaluate the above at (T, rho) for continuation parameter lam in [0, 1].
     auto lprops = [&](double T, double rho, double lam) -> LP {
         const double tau = Tr / T, delta = rho / rhor;
-        const double a0 = H.calc_alpha0_deriv_nocache(0, 0, x, tau, delta, Tr, rhor);
-        const double a0t = H.calc_alpha0_deriv_nocache(1, 0, x, tau, delta, Tr, rhor);
-        const double a0tt = H.calc_alpha0_deriv_nocache(2, 0, x, tau, delta, Tr, rhor);
-        const double ar = H.calc_alphar_deriv_nocache(0, 0, x, tau, delta);
-        const double art = H.calc_alphar_deriv_nocache(1, 0, x, tau, delta);
-        const double ard = H.calc_alphar_deriv_nocache(0, 1, x, tau, delta);
-        const double artt = H.calc_alphar_deriv_nocache(2, 0, x, tau, delta);
-        const double ardd = H.calc_alphar_deriv_nocache(0, 2, x, tau, delta);
-        const double artd = H.calc_alphar_deriv_nocache(1, 1, x, tau, delta);
+        // Each calc_*_deriv_nocache computes the FULL HelmholtzDerivatives set and
+        // returns one component, so the per-term calls recompute everything 6-9x.
+        // Evaluate the ideal-gas and residual blocks once each instead.
+        const HelmholtzDerivatives a0d = H.calc_all_alpha0_derivs_nocache(x, tau, delta, Tr, rhor);
+        const HelmholtzDerivatives ard_all = H.residual_helmholtz->all(H, x, tau, delta, false);
+        const double a0 = a0d.alphar, a0t = a0d.dalphar_dtau, a0tt = a0d.d2alphar_dtau2;
+        const double ar = ard_all.alphar, art = ard_all.dalphar_dtau, ard = ard_all.dalphar_ddelta;
+        const double artt = ard_all.d2alphar_dtau2, ardd = ard_all.d2alphar_ddelta2, artd = ard_all.d2alphar_ddelta_dtau;
         const double at = a0t + lam * art, att = a0tt + lam * artt;
         const double Hh = 1.0 + tau * at + delta * lam * ard;
         LP L{};
