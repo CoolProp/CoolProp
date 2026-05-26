@@ -24,6 +24,7 @@ static matplotlib figure if plotly is unavailable.
 from __future__ import print_function, division, absolute_import
 import os
 import argparse
+import warnings
 
 import numpy as np
 import pandas
@@ -60,7 +61,11 @@ def phase_boundary(fluid, n=240):
     try:
         Tt = CP.PropsSI("Ttriple", fluid)
         Tc = CP.PropsSI("Tcrit", fluid)
-    except Exception:
+    except Exception as exc:
+        # A bad --fluid (or any CoolProp lookup failure) should not be swallowed:
+        # warn with the fluid name and underlying error so the omitted overlay is
+        # explained rather than silently dropped, then skip the overlay.
+        warnings.warn("phase_boundary: cannot resolve triple/critical point for fluid {0!r}: {1}".format(fluid, exc))
         return {}
     T, p, hL, sL, hV, sV = [], [], [], [], [], []
     for Ti in np.linspace(Tt, Tc, n):

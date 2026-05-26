@@ -1124,6 +1124,18 @@ TEST_CASE("HS cascade stress + no-regression, all pure fluids", "[HS][HS_stress]
 // ---------------------------------------------------------------------------
 TEST_CASE("HS cascade under alternate reference states (water)", "[HS][HS_refstate][.]") {
     using namespace CoolProp;
+    // set_reference_stateS mutates process-global state; restore the default on
+    // every exit path (including an unexpected throw) so we never poison later
+    // tests by leaving Water in the wrong reference state.
+    struct WaterRefStateReset
+    {
+        ~WaterRefStateReset() noexcept {
+            try {
+                set_reference_stateS("Water", "DEF");
+            } catch (...) {
+            }
+        }
+    } reset_guard;
     for (const std::string& refstate : {std::string("DEF"), std::string("NBP"), std::string("IIR"), std::string("ASHRAE")}) {
         try {
             set_reference_stateS("Water", refstate);
@@ -1161,7 +1173,7 @@ TEST_CASE("HS cascade under alternate reference states (water)", "[HS][HS_refsta
         }
         std::printf("[HS_refstate] Water/%-7s: %zu/%zu\n", refstate.c_str(), ok, total);
     }
-    set_reference_stateS("Water", "DEF");  // restore default for other tests
+    // Default reference state is restored by reset_guard on scope exit.
 }
 
 // ---------------------------------------------------------------------------
@@ -1187,6 +1199,9 @@ TEST_CASE("HS water domain timing map", "[HS][HS_watermap][.]") {
     const char* path_env = std::getenv("HS_MAP_CSV");
     const std::string path = (path_env != nullptr) ? path_env : "water_hs_map.csv";
     std::ofstream out(path);
+    if (!out.is_open()) {
+        FAIL("Failed to open HS timing-map CSV: " << path);
+    }
     out << "T_K,p_Pa,rho_moldm3,h_Jmol,s_JmolK,ok,T_solved,rho_solved,evals,method,microseconds,legacy_ok,legacy_us\n";
 
     // Warm up: the FIRST solve lazily builds the (caloric) superancillaries, which

@@ -1786,8 +1786,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
                     HEOS->specify_phase(phase);
                 default:
                     // Otherwise don't do anything (this is to make compiler happy)
-                    {
-                    }
+                    {}
             }
         }
         double call(double T) override {
@@ -2617,14 +2616,14 @@ bool hs_corrector(HelmholtzEOSMixtureBackend& H, double T0, double rho0, double 
 double hs_s_to_cache(HelmholtzEOSMixtureBackend& H, HS_SA_t& sa, double s_t) {
     const auto stamp = sa.get_caloric_alpha0_stamp();
     if (!stamp.has_value()) return s_t;
-    const auto [a1, a2] = FlashRoutines::alpha0_offset_total(H);
+    const double a1 = FlashRoutines::alpha0_offset_total(H).first;
     return s_t - H.gas_constant() * (stamp->first - a1);
 }
 // Target enthalpy shifted into the caloric superancillary's stamped frame (#2773).
 double hs_h_to_cache(HelmholtzEOSMixtureBackend& H, HS_SA_t& sa, double h_t) {
     const auto stamp = sa.get_caloric_alpha0_stamp();
     if (!stamp.has_value()) return h_t;
-    const auto [a1, a2] = FlashRoutines::alpha0_offset_total(H);
+    const double a2 = FlashRoutines::alpha0_offset_total(H).second;
     return h_t + H.gas_constant() * H.get_reducing_state().T * (stamp->second - a2);
 }
 
@@ -2740,10 +2739,15 @@ bool hs_leg_departure(HelmholtzEOSMixtureBackend& H, double h_t, double s_t, dou
     const double Tr = red.T, rhor = red.rhomolar;
     const auto& x = H.get_mole_fractions_ref();
     const double Tmin = H.Tmin(), Tmax = H.Tmax();
+    // Properties (and the Jacobian entries the Newton step needs) of the
+    // lambda-scaled model alpha = alpha0 + lam*alphar: h, s, the stability
+    // marker prho (= dp/drho|_T, must stay > 0), and the partials
+    // hT=dh/dT, hr=dh/drho, sT=ds/dT, sr=ds/drho.
     struct LP
     {
         double h, s, prho, hT, hr, sT, sr;
     };
+    // Evaluate the above at (T, rho) for continuation parameter lam in [0, 1].
     auto lprops = [&](double T, double rho, double lam) -> LP {
         const double tau = Tr / T, delta = rho / rhor;
         const double a0 = H.calc_alpha0_deriv_nocache(0, 0, x, tau, delta, Tr, rhor);
@@ -2769,6 +2773,9 @@ bool hs_leg_departure(HelmholtzEOSMixtureBackend& H, double h_t, double s_t, dou
         L.sr = Rg * (tau * lam * artd - 1.0 / delta - lam * ard) / rhor;
         return L;
     };
+    // lambda=0 anchor: the ideal-gas limit has no dome, so (h,s)->(T,rho) is a
+    // pair of decoupled 1-D solves -- T from h(T) at the reducing density, then
+    // rho from s(T0, rho).  This seeds the continuation below.
     double T0 = 0, rho0 = 0;
     {
         auto hig = [&](double T) { return lprops(T, rhor, 0.0).h - h_t; };
@@ -2787,6 +2794,9 @@ bool hs_leg_departure(HelmholtzEOSMixtureBackend& H, double h_t, double s_t, dou
             rho0 = 0.5 * (l2 + r2);
         }
     }
+    // Continuation lam: 0 -> 1 in N equal steps, solving in (T, w=log rho) so rho
+    // stays positive.  Retry with a finer schedule (N doubling) if a coarse one
+    // loses the path; first N that reaches lam=1 wins.
     const double hscale = Rg * Tr, sscale = Rg;
     for (int N = 1; N <= 256; N *= 2) {
         double T = T0, w = std::log(rho0);
@@ -2809,10 +2819,14 @@ bool hs_leg_departure(HelmholtzEOSMixtureBackend& H, double h_t, double s_t, dou
                     conv = true;
                     break;
                 }
+                // 2x2 Newton step on (rh, rs); columns scaled by rho since we
+                // step in w = log rho (drho = rho*dw).
                 const double a11 = L.hT, a12 = rho * L.hr, a21 = L.sT, a22 = rho * L.sr;
                 const double det = a11 * a22 - a12 * a21;
                 if (!std::isfinite(det) || std::abs(det) < 1e-300) break;
                 const double dT = -(a22 * rh - a12 * rs) / det, dw = -(-a21 * rh + a11 * rs) / det;
+                // Damp the step: first keep T in range and cap the log-rho move,
+                // then back off until the trial state is mechanically stable (prho>0).
                 double f = 1.0;
                 while ((T + f * dT <= 0 || T + f * dT > 3.0 * Tmax || std::abs(f * dw) > 2.0) && f > 1e-6)
                     f *= 0.5;
