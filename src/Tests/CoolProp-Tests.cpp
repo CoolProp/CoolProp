@@ -5176,7 +5176,7 @@ TEST_CASE("HAPropsSI T_db from T_wb near the water triple point — issue #2906"
                     const double tdb = HumidAir::HAPropsSI("T_db", "T_wb", twb_C + 273.15, "RelHum", RH, "P", (double)P);
                     if (ValidNumber(tdb)) {
                         const double back = HumidAir::HAPropsSI("Twb", "T", tdb, "RelHum", RH, "P", (double)P) - 273.15;
-                        if (ValidNumber(back) && std::abs(back - twb_C) < 0.05)
+                        if (ValidNumber(back) && std::abs(back - twb_C) <= 1e-2)  // match the production guard's 1e-2 K contract
                             ++valid;
                         else
                             ++bad;  // silently-wrong T_db
@@ -5213,7 +5213,7 @@ TEST_CASE("HAPropsSI T_db from T_wb near the water triple point — issue #2906"
         // The reporter's headline case: at exactly 0 C a scattered set of P is in
         // the gap. Those must surface the explicit triple-point message; none may
         // leak the old "(inf)" wording.
-        int clean = 0, opaque = 0;
+        int clean = 0, opaque = 0, unexpected = 0;
         for (int P = 87000; P < 99000; P += 50) {
             const double v = HumidAir::HAPropsSI("T_db", "T_wb", 273.15, "RelHum", 0.01, "P", (double)P);
             if (ValidNumber(v)) {
@@ -5224,11 +5224,15 @@ TEST_CASE("HAPropsSI T_db from T_wb near the water triple point — issue #2906"
                 ++clean;
             else if (err.find("(inf)") != std::string::npos)
                 ++opaque;
+            else
+                ++unexpected;  // any other failure text is an unrecognized regression
         }
         CAPTURE(clean);
         CAPTURE(opaque);
+        CAPTURE(unexpected);
         CHECK(clean > 0);
         CHECK(opaque == 0);
+        CHECK(unexpected == 0);
     }
 }
 
