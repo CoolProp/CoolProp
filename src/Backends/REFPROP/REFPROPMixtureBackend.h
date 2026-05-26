@@ -49,6 +49,14 @@ class REFPROPMixtureBackend : public AbstractState
     /// Call the PHI0dll function in the dll
     CoolPropDbl call_phi0dll(int itau, int idelta);
 
+    /// Configure *this* as a shim linked to `host`'s already-loaded REFPROP fluids (no SETUPdll).
+    void link_to_loaded_fluids(const REFPROPMixtureBackend& host);
+
+    /// dP/dT [Pa/K] along the pure-component saturation line via DPTSATKdll. kph: 1=liquid, 2=vapor.
+    double dpdT_along_saturation_pure(int kph);
+    /// Saturation pressure [Pa] at temperature T for the bubble (Q=0) / dew (Q=1) branch via SATTdll.
+    double saturation_pressure_at_T(double T, int Q);
+
    public:
     REFPROPMixtureBackend() : Ncomp(0), _mole_fractions_set(false) {
         instance_counter++;
@@ -76,16 +84,14 @@ class REFPROPMixtureBackend : public AbstractState
     PhaseEnvelopeData PhaseEnvelope;
 
     /// Set binary mixture floating point parameter
-    void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter,
-                                       const double value) override;
+    void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter, const double value) override;
     /// Get binary mixture double value
     double get_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) override;
 
     /// Get binary mixture string value
     std::string get_binary_interaction_string(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) override;
     /// Set binary mixture string value
-    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
-                                       const std::string& value) override;
+    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter, const std::string& value) override;
 
     /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, const double value) override;
@@ -156,6 +162,21 @@ class REFPROPMixtureBackend : public AbstractState
      * @brief Update the state, while providing guess values
      */
     void update_with_guesses(CoolProp::input_pairs, double value1, double value2, const GuessesStructure& guesses) override;
+
+    /// Set the state directly from (rho_molar, T) using THERMdll, no flash.
+    /// Used internally to drive saturation/two-phase derivative shims.
+    void update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T);
+
+    /// Build a fully-populated saturated-phase shim. `Q` must be 0 (liquid) or 1 (vapor).
+    /// The shim reuses the fluids already loaded by this instance (no SETUPdll) and
+    /// carries the correct per-phase composition (mole_fractions_liq / mole_fractions_vap).
+    shared_ptr<REFPROPMixtureBackend> build_saturation_shim(int Q);
+
+    CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1) override;
+
+    CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant) override;
+    CoolPropDbl calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2) override;
+    CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end) override;
 
     CoolPropDbl calc_molar_mass() override;
 
