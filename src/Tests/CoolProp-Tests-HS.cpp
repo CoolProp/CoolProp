@@ -70,6 +70,65 @@ TEST_CASE("HS production two-phase round-trip", "[HS][HS_prod2ph]") {
         }
     }
     std::printf("[HS_prod2ph] %s: %zu/%zu two-phase round-trips\n", fluid.c_str(), ok, total);
+    REQUIRE(total > 0);  // grid actually exercised the flash
+    CHECK(ok == total);  // every two-phase (h,s) round-tripped
+}
+
+// ---------------------------------------------------------------------------
+// PRODUCTION single-phase HS round-trip across the whole phase diagram (liquid,
+// vapor, supercritical).  Each state is established with PT_INPUTS (always
+// single-phase), then (h,s) is round-tripped back to (T,rho) through the
+// production HmolarSmolar_INPUTS flash; the originating T and rho must return.
+// This is the single-phase complement to [HS_prod2ph]; together they cover
+// general inputs over the full phase diagram.
+//     CatchTestRunner "[HS_prod1ph]"
+// ---------------------------------------------------------------------------
+TEST_CASE("HS production single-phase round-trip (phase-diagram sweep)", "[HS][HS_prod1ph]") {
+    const std::string fluid = GENERATE(as<std::string>{}, "Water", "Nitrogen", "CarbonDioxide", "R134a", "MM", "n-Pentane", "Methane", "Hydrogen");
+    CAPTURE(fluid);
+    auto ref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
+    auto wrk = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
+
+    const double Tmin = ref->Tmin(), Tmax = ref->Tmax(), pmax = ref->pmax();
+    double plo;
+    try {
+        plo = std::max(ref->p_triple(), pmax * 1e-6);
+    } catch (...) {
+        plo = pmax * 1e-6;
+    }
+    std::size_t total = 0, ok = 0;
+    // (log p, linear T) grid: log-p spans the compressed-liquid / dense
+    // supercritical region down to dilute vapor; T spans triple to Tmax.
+    for (double T : linspace(Tmin + 0.5, Tmax, 20)) {
+        for (std::size_t j = 0; j < 20; ++j) {
+            const double p = plo * std::pow(pmax / plo, static_cast<double>(j) / 19.0);
+            try {
+                ref->update(CoolProp::PT_INPUTS, p, T);  // always single-phase
+            } catch (...) {
+                continue;  // unreachable (p, T) for this fluid
+            }
+            const double h = ref->hmolar(), s = ref->smolar(), rho = ref->rhomolar(), Tt = ref->T();
+            if (!std::isfinite(h) || !std::isfinite(s) || !std::isfinite(rho)) continue;
+            ++total;
+            CAPTURE(T, p, rho, h, s);
+            try {
+                wrk->update(CoolProp::HmolarSmolar_INPUTS, h, s);
+            } catch (const std::exception& e) {
+                FAIL_CHECK("single-phase HS threw: " << e.what());
+                continue;
+            }
+            const bool good = std::abs(wrk->T() - Tt) / Tt < 1e-5 && std::abs(wrk->rhomolar() - rho) / rho < 1e-5;
+            if (good)
+                ++ok;
+            else {
+                CAPTURE(wrk->T(), wrk->rhomolar());
+                CHECK(good);
+            }
+        }
+    }
+    std::printf("[HS_prod1ph] %s: %zu/%zu single-phase round-trips\n", fluid.c_str(), ok, total);
+    REQUIRE(total > 0);  // grid actually exercised the flash
+    CHECK(ok == total);  // every single-phase (h,s) round-tripped
 }
 
 #endif  // ENABLE_CATCH
