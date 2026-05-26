@@ -98,11 +98,23 @@ jobs:
     - name: Figure out the TestPyPi/PyPi Version
       shell: bash
       run: |
+        set -euo pipefail
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
-          python dev/extract_version.py --pypi --replace-version
+          COOLPROP_VERSION_OVERRIDE=$(python dev/extract_version.py --pypi)
         else
-          python dev/extract_version.py --replace-version --version "${{ needs.set-version.outputs.testpypiversion }}"
-        fi;
+          COOLPROP_VERSION_OVERRIDE=$(python dev/extract_version.py --version "${{ needs.set-version.outputs.testpypiversion }}")
+        fi
+        # Fail loudly rather than fall back to the static CMakeLists version: an
+        # empty override would silently re-publish 7.2.1.dev0 and get skipped by
+        # twine --skip-existing, which is exactly the #2988 failure mode.
+        if [[ -z "$COOLPROP_VERSION_OVERRIDE" ]]; then
+          echo "::error::extract_version.py returned an empty version"
+          exit 1
+        fi
+        echo "Resolved package version: $COOLPROP_VERSION_OVERRIDE"
+        # The sdist build resolves the version via dev/coolprop_version_provider.py,
+        # which reads this env var (see pyproject.toml).
+        echo "COOLPROP_VERSION_OVERRIDE=$COOLPROP_VERSION_OVERRIDE" >> "$GITHUB_ENV"
 
     - name: Build package, sdist
       run: |

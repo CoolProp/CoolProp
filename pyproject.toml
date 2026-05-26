@@ -43,6 +43,11 @@ Repository = "https://github.com/CoolProp/CoolProp"
 "Bug Tracker" = "https://github.com/CoolProp/CoolProp/issues"
 
 [tool.scikit-build]
+# Required to load the local (provider-path) dynamic-metadata version
+# plugin in dev/coolprop_version_provider.py — scikit-build-core gates
+# local plugins behind this flag.
+experimental = true
+
 # Minimum version of CMake to use
 cmake.version = ">=3.15"
 
@@ -58,8 +63,9 @@ build-dir = "build/{wheel_tag}"
 # Enable verbose output for debugging (set to true if needed)
 build.verbose = true
 
-# Include .version file in sdist
-sdist.include = [".version"]
+# Ship the dynamic-metadata version provider so sdist -> wheel builds can
+# resolve the version (see [tool.scikit-build.metadata.version] below).
+sdist.include = ["dev/coolprop_version_provider.py"]
 
 # Exclude unnecessary files from the wheel
 wheel.exclude = [
@@ -70,17 +76,15 @@ wheel.exclude = [
     "**/*.cpp",  # Exclude generated C++ from Cython
 ]
 
-# Derived from https://scikit-build-core.readthedocs.io/en/latest/configuration/dynamic.html#regex
+# Resolve the version at build time via a small Python provider (see
+# dev/coolprop_version_provider.py).  It parses the base version from
+# CMakeLists.txt — the single source of truth — and honors an optional
+# $COOLPROP_VERSION_OVERRIDE so CI can inject a unique TestPyPI/PyPI version
+# per build.  A plain regex over CMakeLists.txt cannot do that, which left
+# every dev build stuck at 7.2.1.dev0 and silently un-published (#2988).
 [tool.scikit-build.metadata.version]
-provider = "scikit_build_core.metadata.regex"
-input = "CMakeLists.txt"
-regex = '''(?sx)
-set\(COOLPROP_VERSION_MAJOR\s+(?P<major>\d+)\).*?
-set\(COOLPROP_VERSION_MINOR\s+(?P<minor>\d+)\).*?
-set\(COOLPROP_VERSION_PATCH\s+(?P<patch>\d+)\).*?
-set\(COOLPROP_VERSION_REVISION\s+(?P<dev>\w*)\).*?
-'''
-result = "{major}.{minor}.{patch}{dev}"
+provider = "coolprop_version_provider"
+provider-path = "dev"
 
 [tool.cibuildwheel]
 # Build for multiple Python versions (CPython only)

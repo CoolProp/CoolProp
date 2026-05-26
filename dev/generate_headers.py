@@ -195,6 +195,14 @@ def TO_CPP(root_dir, hashes):
             print(outfile + ' is up to date')
             
 def get_version(root_dir):
+    # CI sets COOLPROP_VERSION_OVERRIDE (from dev/extract_version.py) so every
+    # uploaded wheel gets a unique version.  Honor it here too, so the version
+    # compiled into cpversion.h -- i.e. CoolProp.__version__ at runtime --
+    # matches the wheel's distribution metadata.  Same env var and resolution
+    # used by dev/coolprop_version_provider.py.
+    override = os.environ.get('COOLPROP_VERSION_OVERRIDE', '').strip()
+    if override:
+        return override
     lines = open(os.path.join(root_dir, 'CMakeLists.txt'), 'r').readlines()
     # Find the necessary lines
     MAJOR_line = [line for line in lines if ('VERSION_MAJOR' in line and 'MINOR' not in line)]

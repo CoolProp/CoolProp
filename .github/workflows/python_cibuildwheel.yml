@@ -44,11 +44,23 @@ jobs:
     - name: Figure out the TestPyPi/PyPi Version
       shell: bash
       run: |
+        set -euo pipefail
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
-          python dev/extract_version.py --pypi --replace-version
+          COOLPROP_VERSION_OVERRIDE=$(python dev/extract_version.py --pypi)
         else
-          python dev/extract_version.py --replace-version --version "${{ inputs.TESTPYPI_VERSION }}"
-        fi;
+          COOLPROP_VERSION_OVERRIDE=$(python dev/extract_version.py --version "${{ inputs.TESTPYPI_VERSION }}")
+        fi
+        # Fail loudly rather than fall back to the static CMakeLists version: an
+        # empty override would silently re-publish 7.2.1.dev0 and get skipped by
+        # twine --skip-existing, which is exactly the #2988 failure mode.
+        if [[ -z "$COOLPROP_VERSION_OVERRIDE" ]]; then
+          echo "::error::extract_version.py returned an empty version"
+          exit 1
+        fi
+        echo "Resolved package version: $COOLPROP_VERSION_OVERRIDE"
+        # The build resolves the version via dev/coolprop_version_provider.py,
+        # which reads this env var (see pyproject.toml).
+        echo "COOLPROP_VERSION_OVERRIDE=$COOLPROP_VERSION_OVERRIDE" >> "$GITHUB_ENV"
 
     - name: Cache CPM packages
       uses: actions/cache@v5
@@ -81,6 +93,10 @@ jobs:
           pip install ninja &&
           git config --global --add safe.directory "*"
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE CPM_SOURCE_CACHE=/root/.cache/CPM PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60
+        # Linux wheels build inside the manylinux container, which does not
+        # inherit host env vars; forward the resolved version through so the
+        # version provider sees it. macOS/Windows build on the host directly.
+        CIBW_ENVIRONMENT_PASS_LINUX: COOLPROP_VERSION_OVERRIDE
         CIBW_BUILD: cp${{ inputs.python-version }}-*
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
         CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 # ARM64 creates problems with msgpack-c
