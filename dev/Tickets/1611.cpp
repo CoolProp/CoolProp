@@ -7,7 +7,6 @@
 #include "CoolProp.h"
 #include "AbstractState.h"
 
-
 int main(int argc, const char* argv[]) {
 
     CoolProp::set_debug_level(1000);
@@ -34,7 +33,6 @@ int main(int argc, const char* argv[]) {
     ptr->update(CoolProp::PQ_INPUTS, p, Q);
     s = 4000;
     ptr->update(CoolProp::PSmass_INPUTS, p, s);
-
 
     return 0;
 }

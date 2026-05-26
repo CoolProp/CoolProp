@@ -76,16 +76,14 @@ class REFPROPMixtureBackend : public AbstractState
     PhaseEnvelopeData PhaseEnvelope;
 
     /// Set binary mixture floating point parameter
-    void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter,
-                                       const double value) override;
+    void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter, const double value) override;
     /// Get binary mixture double value
     double get_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) override;
 
     /// Get binary mixture string value
     std::string get_binary_interaction_string(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) override;
     /// Set binary mixture string value
-    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
-                                       const std::string& value) override;
+    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter, const std::string& value) override;
 
     /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, const double value) override;

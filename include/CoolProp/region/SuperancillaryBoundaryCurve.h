@@ -61,14 +61,7 @@ class SuperancillaryBoundaryCurve final : public BoundaryCurve
 
     SuperancillaryBoundaryCurve(std::shared_ptr<SuperAncillary_t> sa, double p_min, double p_max, char prop_key, short Q, double output_scale,
                                 double b_min, double b_max)
-      : sa_(std::move(sa)),
-        p_min_(p_min),
-        p_max_(p_max),
-        prop_key_(prop_key),
-        Q_(Q),
-        output_scale_(output_scale),
-        b_min_(b_min),
-        b_max_(b_max) {
+      : sa_(std::move(sa)), p_min_(p_min), p_max_(p_max), prop_key_(prop_key), Q_(Q), output_scale_(output_scale), b_min_(b_min), b_max_(b_max) {
         // Fail fast: every public eval / eval_da / eval_fast path
         // dereferences sa_ unchecked.  Allowing null would let a caller
         // create an object that crashes on first lookup.  Both

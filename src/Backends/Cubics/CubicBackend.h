@@ -220,12 +220,10 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
 
     CoolPropDbl calc_molar_mass() override;
 
-    void set_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string& parameter,
-                                       const double value) override;
+    void set_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string& parameter, const double value) override;
     double get_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string& parameter) override;
 
-    void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter,
-                                       const double value) override {
+    void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter, const double value) override {
         throw ValueError("set_binary_interaction_double not defined for AbstractCubic not defined for CAS #");
     }
     double get_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) override {
@@ -422,8 +420,7 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 1, 0, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }
-    CoolPropDbl d3alphar_dxi_dxj_dDelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
-                                        x_N_dependency_flag xN_flag) override {
+    CoolPropDbl d3alphar_dxi_dxj_dDelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 1, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }
@@ -440,18 +437,15 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
     CoolPropDbl d4alphar_dxi_dDelta3(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 3, i, xN_flag == XN_INDEPENDENT);
     }
-    CoolPropDbl d4alphar_dxi_dxj_dTau2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
-                                       x_N_dependency_flag xN_flag) override {
+    CoolPropDbl d4alphar_dxi_dxj_dTau2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 2, 0, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }
-    CoolPropDbl d4alphar_dxi_dxj_dDelta_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
-                                             x_N_dependency_flag xN_flag) override {
+    CoolPropDbl d4alphar_dxi_dxj_dDelta_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 1, 1, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }
-    CoolPropDbl d4alphar_dxi_dxj_dDelta2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
-                                         x_N_dependency_flag xN_flag) override {
+    CoolPropDbl d4alphar_dxi_dxj_dDelta2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 2, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }

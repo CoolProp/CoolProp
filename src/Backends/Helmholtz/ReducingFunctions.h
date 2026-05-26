@@ -371,8 +371,7 @@ class GERG2008ReducingFunction : public ReducingFunction
      * \left(\frac{\partial^2 \rho_r}{\partial x_i\partial x_j}\right) = 2\rho_r^3\left(\left(\frac{\partial v_r}{\partial x_i}\right)_{x_{i\neq j}}\right)\left(\left(\frac{\partial v_r}{\partial x_j}\right)_{x_{i\neq j}}\right)-\rho_r^2\left(\left(\frac{\partial v_r}{\partial x_i\partial x_j}\right)\right)
      * \f]
      */
-    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j,
-                                  x_N_dependency_flag xN_flag) const override;
+    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const override;
     /** \brief Derivative of the molar reducing density with respect to component i, j, and k mole fractions
 	*
 	*/
@@ -601,8 +600,7 @@ class ConstantReducingFunction : public ReducingFunction
         return 0;
     };
     /// \brief Derivative of the molar reducing density with respect to component i  and j mole fractions
-    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j,
-                                  x_N_dependency_flag xN_flag) const override {
+    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const override {
         return 0;
     };
     /// \brief Derivative of the molar reducing density with respect to component i, j, and k mole fractions

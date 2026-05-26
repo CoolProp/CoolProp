@@ -387,8 +387,8 @@ TEST_CASE("SVDSurfaceSerializer file save/load round-trip", "[SBTL][serializer][
     // /tmp -- the latter doesn't exist on Windows CI.  Suffix with the
     // process PID (see CoolProp-8ft) so two concurrent CatchTestRunner
     // instances don't collide on the same file.
-    const auto tmp_path = std::filesystem::temp_directory_path()
-                          / ("svd_test_water_ph_" + std::to_string(CoolProp::tests::test_pid()) + ".svd.bin.z");
+    const auto tmp_path =
+      std::filesystem::temp_directory_path() / ("svd_test_water_ph_" + std::to_string(CoolProp::tests::test_pid()) + ".svd.bin.z");
     const std::string path = tmp_path.string();
     cp_sbtl::SVDSurfaceSerializer::save_to_file(surface, path);
     auto loaded = cp_sbtl::SVDSurfaceSerializer::load_from_file(path);
