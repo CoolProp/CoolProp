@@ -406,6 +406,12 @@ HSResult solve_HS_departure(CoolProp::HelmholtzEOSMixtureBackend& AS, double h_t
         L.hr = Rg * T * dHddelta / rhor;
         L.sT = -Rg * tau * tau * att / T;                                 // = cv/T
         L.sr = Rg * (tau * lam * artd - 1.0 / delta - lam * ard) / rhor;  // ideal -1/delta term is lambda-free
+        // A non-finite property/derivative must not leak a NaN into the
+        // continuation/Newton loop; throw so the cascade defers this leg cleanly.
+        if (!std::isfinite(L.h) || !std::isfinite(L.s) || !std::isfinite(L.prho) || !std::isfinite(L.hT) || !std::isfinite(L.hr)
+            || !std::isfinite(L.sT) || !std::isfinite(L.sr)) {
+            throw ValueError("solve_HS_departure: non-finite lambda-model property/derivative");
+        }
         return L;
     };
 

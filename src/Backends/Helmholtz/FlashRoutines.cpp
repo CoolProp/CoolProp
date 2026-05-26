@@ -2770,6 +2770,14 @@ bool hs_leg_departure(HelmholtzEOSMixtureBackend& H, double h_t, double s_t, dou
         L.hr = Rg * T * dHddelta / rhor;
         L.sT = -Rg * tau * tau * att / T;
         L.sr = Rg * (tau * lam * artd - 1.0 / delta - lam * ard) / rhor;
+        // A non-finite property/derivative (e.g. a degenerate EOS evaluation) must
+        // not leak a NaN into the continuation/Newton loop; throw so the cascade
+        // defers this leg cleanly (the per-term calc_*_deriv_nocache previously
+        // threw on a non-finite alpha0 -- the batched accessor does not).
+        if (!std::isfinite(L.h) || !std::isfinite(L.s) || !std::isfinite(L.prho) || !std::isfinite(L.hT) || !std::isfinite(L.hr)
+            || !std::isfinite(L.sT) || !std::isfinite(L.sr)) {
+            throw ValueError("hs_leg_departure: non-finite lambda-model property/derivative");
+        }
         return L;
     };
     // lambda=0 anchor: the ideal-gas limit has no dome, so (h,s)->(T,rho) is a
