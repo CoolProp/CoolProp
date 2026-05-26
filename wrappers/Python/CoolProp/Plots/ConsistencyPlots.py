@@ -532,8 +532,8 @@ class ConsistencyAxis(object):
             parts.append('2ph ' + format_time(self.mean_elapsed_2phase))
         if not parts:
             return
-        self.ax.text(0.02, 0.98, u'⟨t⟩ ' + u' · '.join(parts),
-                     transform=self.ax.transAxes, ha='left', va='top', fontsize=7,
+        self.ax.text(0.02, 0.98, u'mean t/pt: ' + u', '.join(parts),
+                     transform=self.ax.transAxes, ha='left', va='top', fontsize=9,
                      bbox=dict(fc='white', ec='none', alpha=0.7, pad=1))
 
     def cross_out_axis(self):

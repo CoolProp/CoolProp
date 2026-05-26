@@ -29,9 +29,10 @@ backend = {backend!r}
 fluid = {fluid!r}
 csv_relpath = {csv_relpath!r}
 intro_rst = {intro_rst!r}
+dpi = {dpi!r}
 
 ff = ConsistencyFigure(fluid, backend=backend)
-ff.savefig(fluid + '.png', dpi=30)
+ff.savefig(fluid + '.png', dpi=dpi)
 ff.savefig(fluid + '.pdf')
 plt.close()
 
@@ -45,6 +46,8 @@ del ff
 """
 
 force = os.environ.get('COOLPROP_FORCE_CONSISTENCY', '').lower() in ('1', 'true', 'yes')
+# The figure is a 15x23" 5x3 grid; dpi=30 (the historical default) was unreadable.
+dpi = int(os.environ.get('COOLPROP_CONSISTENCY_DPI', '100'))
 
 if not os.path.exists(plots_path):
     os.makedirs(plots_path)
@@ -87,7 +90,7 @@ for fluid in CoolProp.__fluids__:
         csv_relpath = subdir + '/' + fluid + '-consistency.csv'
         intro_rst = refprop_intro(fluid) if backend == 'REFPROP' else ''
         file_string = template.format(backend=backend, fluid=fluid,
-                                      csv_relpath=csv_relpath, intro_rst=intro_rst)
+                                      csv_relpath=csv_relpath, intro_rst=intro_rst, dpi=dpi)
         file_path = os.path.join(plots_path, fluid + '.py')
         with open(file_path, 'w') as fp:
             fp.write(file_string)

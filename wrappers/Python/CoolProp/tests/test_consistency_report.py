@@ -172,11 +172,11 @@ def test_panel_timing_annotation():
     matplotlib.use('Agg')
     ff = ConsistencyFigure('Water', backend='HEOS',
                            NT_1phase=4, Np_1phase=4, NT_2phase=3, NQ_2phase=3)
-    # Every implemented panel that ran should carry a "<t>" annotation.
+    # Every implemented panel that ran should carry a mean-time annotation.
     annotated = 0
     for ax in ff.axes_list:
         texts = [t.get_text() for t in ax.ax.texts]
-        if any('⟨t⟩' in s for s in texts):
+        if any('mean t/pt' in s for s in texts):
             annotated += 1
     assert annotated > 0
     import matplotlib.pyplot as plt
