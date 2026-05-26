@@ -100,7 +100,16 @@ for fluid in CoolProp.__fluids__:
         except subprocess.CalledProcessError as exc:
             print('BUILD FAILED for', fluid, ':', exc)
             build_failures.append((fluid, str(exc)))
-            continue
+            # fall through: a stub fragment is written below so the fluid-page
+            # include never dangles and the whole Sphinx build does not break.
+
+    # Guarantee the per-fluid HEOS report fragment exists. The fluid page includes
+    # it unconditionally, so a crash before the subprocess wrote it (or a partial
+    # cache) must not leave a dangling `.. include::`.
+    report_frag = os.path.join(plots_path, fluid + '-report.rst')
+    if not os.path.exists(report_frag):
+        rpt.write_stub_fragment(report_frag,
+                                'Consistency data could not be generated for this fluid in this build.')
 
     # During the default (HEOS) build, ensure a REFPROP stub fragment exists so the
     # fluid page's REFPROP include never points at a missing file.
