@@ -25,8 +25,8 @@
 class IncompressibleTest : public IncompressibleClass
 {
    public:
-    IncompressibleTest(){};
-    ~IncompressibleTest(){};
+    IncompressibleTest() {};
+    ~IncompressibleTest() {};
     // Some functions need top be overwritten!
 
    public:

@@ -200,8 +200,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     ///// Get binary mixture string value
     //virtual std::string get_binary_interaction_string(const std::size_t &i, const std::size_t &j, const std::string &parameter);
     /// Set a binary interaction string
-    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
-                                       const std::string& value) override;
+    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter, const std::string& value) override;
     /// Apply a simple mixing rule
     void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model) override;
 
@@ -245,8 +244,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1, HelmholtzEOSMixtureBackend& SatL, HelmholtzEOSMixtureBackend& SatV);
     CoolPropDbl calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Wrt2) override;
     CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant) override;
-    CoolPropDbl calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2,
-                                            parameters Constant2) override;
+    CoolPropDbl calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2) override;
     CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end) override;
 
     CriticalState calc_critical_point(double rho0, double T0);
@@ -546,15 +544,13 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      *
      * If the viscosity model is hardcoded or ECS is being used, there will only be one entry in critical and all others will be zero
      */
-    void calc_viscosity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
-                                      CoolPropDbl& critical) override;
+    void calc_viscosity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual, CoolPropDbl& critical) override;
     /**
      * \brief Calculate each of the contributions to the conductivity
      *
      * If the conductivity model is hardcoded or ECS is being used, there will only be one entry in initial_density and all others will be zero
      */
-    void calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
-                                         CoolPropDbl& critical) override;
+    void calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual, CoolPropDbl& critical) override;
 
     CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) override;
     CoolPropDbl calc_saturated_vapor_keyed_output(parameters key) override;

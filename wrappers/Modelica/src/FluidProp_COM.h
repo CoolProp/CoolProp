@@ -27,7 +27,9 @@
 
 // An IFluidProp interface
 //
-interface IFluidProp_COM : public IDispatch {
+interface IFluidProp_COM
+  : public IDispatch
+{
    public:
     virtual void __stdcall CreateObject(BSTR ModelName, BSTR * ErrorMsg) = 0;
     virtual void __stdcall ReleaseObjects() = 0;
