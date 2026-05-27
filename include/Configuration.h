@@ -81,9 +81,9 @@
     X(FLOAT_PUNCTUATION, "FLOAT_PUNCTUATION", ".", "The first character of this string will be used as the separator between the number fraction.")  \
     X(ENABLE_SUPERANCILLARIES, "ENABLE_SUPERANCILLARIES", true, "If true, the superancillary functions will be used for VLE of pure fluids")         \
     X(HSU_D_TWOPHASE_EOS_POLISH, "HSU_D_TWOPHASE_EOS_POLISH", true,                                                                                  \
-      "If true (default), the superancillary D+{H,S,U} two-phase flash refines its fast superancillary-based saturation temperature with a short " \
+      "If true (default), the superancillary D+{H,S,U} two-phase flash refines its fast superancillary-based saturation temperature with a short "   \
       "full-EOS secant polish, giving an EOS-exact result. If false, the (slightly faster) superancillary solution is returned directly with a "     \
-      "~1e-8 deviation; still far inside typical tolerances. No effect on single-phase states.")                                                    \
+      "~1e-8 deviation; still far inside typical tolerances. No effect on single-phase states.")                                                     \
     X(LIST_STRING_DELIMITER, "LIST_STRING_DELIMITER", ",", "The delimiter to be used when converting a list of strings to a string")                 \
     X(ALLOW_SVDSBTL_IN_PROPSSI, "ALLOW_SVDSBTL_IN_PROPSSI", false,                                                                                   \
       "If true, the SVDSBTL backend is usable through the high-level PropsSI interface.  By default it is rejected (mirroring the BICUBIC/TTSE "     \
