@@ -1001,18 +1001,22 @@ class SuperAncillary
     /// shared and rebuild-free across all HEOS instances of the same fluid,
     /// regardless of how many distinct reference states are in play.
     /// See #2773.
-    void ensure_HS_under_lock(double caller_a1, double caller_a2, const std::function<double(double, double)>& h_callable,
-                              const std::function<double(double, double)>& s_callable) {
+    void ensure_HSU_under_lock(double caller_a1, double caller_a2, const std::function<double(double, double)>& h_callable,
+                               const std::function<double(double, double)>& s_callable, const std::function<double(double, double)>& u_callable) {
         // Always lock. Skipping the lock for a fast-path peek at
         // optional::has_value() is technically a data race per the C++
         // standard. An uncontended mutex acquire is ~20 ns — much less than a
-        // single EOS-side h/s evaluation.
+        // single EOS-side h/s/u evaluation.
         std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
-        if (m_hL.has_value() && m_hV.has_value() && m_sL.has_value() && m_sV.has_value()) {
+        if (m_hL.has_value() && m_hV.has_value() && m_sL.has_value() && m_sV.has_value() && m_uL.has_value() && m_uV.has_value()) {
             return;  // already built; stamp captured at first build, never invalidated
         }
         add_variable_locked('H', h_callable);
         add_variable_locked('S', s_callable);
+        // U shares the H reference-frame stamp: u = h - p/rho and p/rho is
+        // independent of the ideal-gas enthalpy/entropy offset, so the constant
+        // caller->cache shift for u equals the one for h.
+        add_variable_locked('U', u_callable);
         m_caloric_alpha0_stamp = std::make_pair(caller_a1, caller_a2);
         ++m_caloric_build_count;  // for test instrumentation
     }
