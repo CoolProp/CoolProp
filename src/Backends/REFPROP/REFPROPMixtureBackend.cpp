@@ -1992,8 +1992,12 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                     rho_mol_L = (iFlsh == 1) ? rhoLmol_L : rhoVmol_L;
                 }
                 if (ierr <= 0L) {
-                    // Calculate everything else since we were able to carry out a flash call
-                    THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+                    // Calculate everything else since we were able to carry out a flash call.
+                    // #2671: keep the equilibrium pressure that SATTP/SATT returned; THERMdll
+                    // would otherwise recompute a slightly different p from the (SATSPLN-refined)
+                    // saturated-phase density, so send its p output to a throwaway.
+                    double p_kPa_therm = _HUGE;
+                    THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa_therm, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
                 }
             }
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD) || iFlsh == 0) {
@@ -2822,6 +2826,31 @@ TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
             double Dcp = (cp_RP - cp_CP) / cp_RP;
             CHECK(std::abs(Dcp) < 0.05);
         }
+    }
+    SECTION("QT flash reports the equilibrium saturation pressure, not a THERMdll recompute (#2671)") {
+        // SATTP/SATT return the equilibrium saturation pressure for a (T, Q) state.
+        // Before #2671 the QT path then overwrote that pressure with THERMdll's
+        // recompute from the saturated-phase density; once the SATSPLN splines
+        // (activated by build_phase_envelope) refine that density, the recomputed
+        // pressure drifts off the saturation curve — most severely on the dew
+        // branch near the critical region.  A correct equilibrium pressure must
+        // round-trip: feeding it back through a dew-point PQ flash recovers the
+        // original temperature.  THERMdll's drifted pressure lands off the curve
+        // and the recovered temperature shifts measurably.
+        shared_ptr<CoolProp::AbstractState> S(CoolProp::AbstractState::factory("REFPROP", "Methane&Ethane"));
+        std::vector<double> z = {0.4, 0.6};
+        S->set_mole_fractions(z);
+        S->build_phase_envelope("");  // activates the SATSPLN saturation splines
+        const double T = 250;         // near-critical dew point (Tc ~ 276 K) — drift is pronounced here
+        S->update(CoolProp::QT_INPUTS, 1, T);
+        double p_dew = S->p();
+        S->update(CoolProp::PQ_INPUTS, p_dew, 1);
+        double T_back = S->T();
+        CAPTURE(p_dew);
+        CAPTURE(T_back);
+        // With the fix the round-trip is exact to ~1e-11 K; the THERMdll drift
+        // shifts it by ~3e-5 K, so 1e-7 K cleanly separates the two.
+        CHECK(std::abs(T_back - T) < 1e-7);
     }
     SECTION("Enthalpy and entropy reference state") {
         std::vector<std::string> ss = strsplit(CoolProp::get_global_param_string("FluidsList"), ',');
