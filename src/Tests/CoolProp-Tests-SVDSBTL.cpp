@@ -352,6 +352,62 @@ TEST_CASE("SVDSBTL backend works across the Phase 2a fluid set", "[SVDSBTL][mult
     }
 }
 
+TEST_CASE("SVDSBTL backend tracks HEOS for R32 vapor at low superheat (issue #2247)", "[SVDSBTL][regression][issue_2247][r32][low_superheat][slow]") {
+    // Regression for GH #2247: BICUBIC / TTSE smear density and
+    // viscosity for R32 vapor at low superheat because a rectangular
+    // interpolation stencil straddles the saturation dome.  SVDSBTL
+    // bounds its VAPOR region by the actual saturated-vapor curve, so a
+    // point ~1 K above T_sat resolves to the VAPOR surface and is never
+    // blended across the dome.  This test reproduces the issue's sweep:
+    // for T_sat in [-30, +30] degC, evaluate the vapor 1 K above
+    // saturation via PT_INPUTS and require SVDSBTL to track HEOS.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "R32"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32"));
+    REQUIRE(AS->backend_name() == "SVDSBTLBackend");
+
+    constexpr double kSuperheat = 1.0;  // K above saturation (the issue's "SH")
+    double max_rel_rho = 0.0;
+    double max_rel_mu = 0.0;
+    // 61-point sweep matches the issue's np.linspace(243.15, 303.15, 61).
+    for (int i = 0; i < 61; ++i) {
+        const double T_sat = 243.15 + i * (303.15 - 243.15) / 60.0;
+        // Saturation pressure from HEOS (the issue's SSP), then the vapor
+        // state at T_sat + 1 K (the issue's rho at P = SSP, T = SST + SH).
+        heos->update(CoolProp::QT_INPUTS, 1.0, T_sat);
+        const double p_sat = heos->p();
+        const double T = T_sat + kSuperheat;
+
+        heos->update(CoolProp::PT_INPUTS, p_sat, T);
+        const double rho_truth = heos->rhomass();
+        const double mu_truth = heos->viscosity();
+
+        AS->update(CoolProp::PT_INPUTS, p_sat, T);
+
+        INFO("T_sat=" << T_sat << " K  p_sat=" << p_sat << " Pa  T=" << T << " K");
+        INFO("rho HEOS=" << rho_truth << "  SVDSBTL=" << AS->rhomass());
+        INFO("mu  HEOS=" << mu_truth << "  SVDSBTL=" << AS->viscosity());
+
+        // The point is genuinely superheated vapor, not two-phase: the
+        // dome-straddling bug would mis-route it here.
+        REQUIRE(AS->phase() != CoolProp::iphase_twophase);
+
+        // 0.5 % on density — far inside the (often double-digit) BICUBIC
+        // deviations the issue reports, yet comfortably above SVDSBTL's
+        // fit residual for smooth single-phase vapor.
+        REQUIRE(AS->rhomass() == Approx(rho_truth).epsilon(5e-3));
+        // Viscosity is the second property #2247 calls out.  Transport
+        // correlations are less smooth than density near the sat curve,
+        // so allow 1 %.
+        REQUIRE(AS->viscosity() == Approx(mu_truth).epsilon(1e-2));
+
+        max_rel_rho = std::max(max_rel_rho, std::abs(AS->rhomass() - rho_truth) / rho_truth);
+        max_rel_mu = std::max(max_rel_mu, std::abs(AS->viscosity() - mu_truth) / mu_truth);
+    }
+    INFO("max rel-err over sweep: rho=" << max_rel_rho << "  mu=" << max_rel_mu);
+    REQUIRE(max_rel_rho < 5e-3);
+    REQUIRE(max_rel_mu < 1e-2);
+}
+
 TEST_CASE("SVDSBTL backend Q out of [0, 1] is rejected", "[SVDSBTL][twophase][reject]") {
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     REQUIRE_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.0e6, -0.1));
