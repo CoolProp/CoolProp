@@ -1,13 +1,22 @@
 Changelog for CoolProp
 ======================
 
-Unreleased
-----------
+8.0.0
+-----
 
 Highlights:
 
 * Added the :doc:`SVDSBTL </coolprop/SVDSBTL>` SVD-compressed tabular lookup backend (factory string ``SVDSBTL&<source>``, where source ∈ {``HEOS``, ``REFPROP``, ``IF97``}).  Combines a region atlas with per-region SVD compression plus a critical-patch fallback to the source backend; produces sub-microsecond per-probe property evaluation in the batched ``fast_evaluate`` path at IAPWS-G13-15 ``T(p, h)`` conformance for water and a single-digit-percent accuracy ceiling for the multi-fluid HEOS-backed presets.  Disk footprint ~7-14 MB per (fluid, input pair, source backend), cached under ``~/.CoolProp/SVDTables/``.  Off by default in ``PropsSI`` — see ``ALLOW_SVDSBTL_IN_PROPSSI``.  See PRs `#2917`, `#2938-#2940`, `#2944-#2957`.
 * Added mass-basis vapor quality (``Qmass``) support across HEOS and REFPROP backends, paralleling the existing molar quality (``Q``). Adds a new ``iQmass`` keyed parameter, a ``Qmass()`` accessor on ``AbstractState``, and 8 new ``Qmass``-bearing input pairs (``QmassT_INPUTS``, ``PQmass_INPUTS``, ``QmassSmolar_INPUTS``, ``QmassSmass_INPUTS``, ``HmolarQmass_INPUTS``, ``HmassQmass_INPUTS``, ``DmolarQmass_INPUTS``, ``DmassQmass_INPUTS``). Mixtures supported from day one — REFPROP uses its native ``kq=2`` flag in ``TQFLSHdll``/``PQFLSHdll`` for ``QmassT``/``PQmass``; the other 6 pairs and all HEOS pairs use a TOMS748 root-find on ``Qmolar`` (typically 5–8 iterations).
+* Added Chebyshev superancillary functions for the SRK and Peng-Robinson cubic EOS, mirroring the multiparameter-EOS superancillaries from v7 — fast, robust saturation curves for the cubic backends.  The SRK/PR ``Omega`` coefficients are now stored at full precision rather than the historical rounded values.  See PRs `#2744`, `#2745`.
+* Large expansion of the fluid and mixture libraries: new / updated pure-fluid EOS for Chlorine (Cl₂), R-1336mzz(Z), R-1130(E), R-1123, R-1224yd(Z), R-1132(E), THF, propylene glycol, vinyl chloride, the R-1233zd(E) international-standard EOS, perfluoro-n-butane / -pentane / -hexane, and 3rd-generation R-1243zf / R-1234yf EOS.  Many new mixture interaction pairs and predefined mixtures, including the Bell-JCED-2025, Bell-IJT-2020 and Bell-JPCRD-2022/2023 models, NIST IR 8570 pairs, JPCRD reference refrigerant mixtures, and the ASHRAE Standard 34 (2026) predefined blends.
+* REFPROP backend: saturated-state properties and saturation / two-phase derivatives are now exposed (matching the HEOS surface); imposed-phase ``DmolarSmolar`` and the ``DmassQ`` / ``DmolarQ`` input pairs are wired through the corresponding REFPROP flash routines.  See PRs `#2990`, `#2865`, `#2866`.
+* Thread-safety hardening for the native (HEOS / incompressible / HumidAir) code paths: fluid-library static initialization is now race-free, ``HumidAirProp`` uses per-thread Water/Air backends, and shared derivative counters are atomic.  The REFPROP backend remains **not** thread-safe — REFPROP itself is not reentrant, so calls into the ``REFPROP`` backend must still be serialized by the caller.  See PRs `#2800`, `#2831`, `#2855`.
+* Tabular backends can now be evaluated directly (cache-bypassing batch ``fast_evaluate``), with new ``TABULAR_NX`` / ``TABULAR_NY`` configuration keys for grid resolution and a fix for a BICUBIC ``PT`` segfault near the saturation curve.  See PRs `#2920`, `#2894`, `#2891`.
+* Numerous solver-robustness and graceful-error-handling fixes across the flash and density solvers (illegal quality inputs, zero-/one-length ``PropsSI`` arrays, incompressible molar requests, sub-``TminPsat`` saturation, ancillaries above the reducing temperature, and more).
+* New native desktop GUI built with Tauri + React (`#2715`), plus a much-expanded Mathcad wrapper and interactive 3D molecule viewers on the fluid documentation pages.
+* Build-system modernization: git submodules replaced by CPM.cmake (boost fetched as a trimmed subset from ``CoolProp/boost-headers``), Eigen bumped to 5.0.1, and a broad C++17 cleanup that also cuts compile times.
+* Repository-wide code-quality program: enforced ``clang-format`` (pre-commit + CI), diff-only ``clang-tidy``, ``cppcheck``, CodeQL, include-what-you-use, and a single-script ``dev/ci/preflight.sh`` pre-push gate.
 
 **Behavior changes (potentially breaking):**
 
@@ -40,6 +49,313 @@ Highlights:
 
 * New exception type :cpapi:`CoolProp::MultipleSolutionsError`
   (subclass of :cpapi:`CoolProp::ValueError`).
+
+Issues closed:
+
+* `#2189 <https://github.com/CoolProp/CoolProp/issues/2189>`_ : CoolProp C++ High level interface
+* `#2193 <https://github.com/CoolProp/CoolProp/issues/2193>`_ : Handle PowerPC builds transparently
+* `#2194 <https://github.com/CoolProp/CoolProp/issues/2194>`_ : Fix the builds for Windows on ARM and ARM64
+* `#2195 <https://github.com/CoolProp/CoolProp/issues/2195>`_ : Wrong enthalpy outputs for illegal quality inputs
+* `#2209 <https://github.com/CoolProp/CoolProp/issues/2209>`_ : Problem with zero Psat for incompressible mixture
+* `#2215 <https://github.com/CoolProp/CoolProp/issues/2215>`_ : request  for r513a
+* `#2217 <https://github.com/CoolProp/CoolProp/issues/2217>`_ : CoolProp SimpleCompressionCycle not close due to numerical tolerance(?)
+* `#2226 <https://github.com/CoolProp/CoolProp/issues/2226>`_ : first_two_phase_deriv function is not implemented in CoolpropLib.h.
+* `#2244 <https://github.com/CoolProp/CoolProp/issues/2244>`_ : PropsSI failed ungracefully
+* `#2255 <https://github.com/CoolProp/CoolProp/issues/2255>`_ : HAPropsSI("Twb","T",200+273.15,"W",0.2,"P",1000E3) gives wrong result
+* `#2308 <https://github.com/CoolProp/CoolProp/issues/2308>`_ : Issue calculating molar fractions of every component out the biphase zone for a custom fluid modelled with AbstractState
+* `#2332 <https://github.com/CoolProp/CoolProp/issues/2332>`_ : CO2  at 297.45 K
+* `#2339 <https://github.com/CoolProp/CoolProp/issues/2339>`_ : Comment creer diagramme des phases avec Excel ?
+* `#2360 <https://github.com/CoolProp/CoolProp/issues/2360>`_ : Negative vapor and unsteady liquid quality caluculation for Helium
+* `#2379 <https://github.com/CoolProp/CoolProp/issues/2379>`_ : Mixtures in C#
+* `#2380 <https://github.com/CoolProp/CoolProp/issues/2380>`_ : Cannot use CoolProp in Excel anymore because add-in is not signed
+* `#2385 <https://github.com/CoolProp/CoolProp/issues/2385>`_ : R1336mzz(Z) fluid
+* `#2391 <https://github.com/CoolProp/CoolProp/issues/2391>`_ : CoolProp.dll has no versionnumber
+* `#2417 <https://github.com/CoolProp/CoolProp/issues/2417>`_ : PropsSI array argument functionality gives unexpected results for arrays of length 1 or 0
+* `#2427 <https://github.com/CoolProp/CoolProp/issues/2427>`_ : web site documentation for mixtures
+* `#2433 <https://github.com/CoolProp/CoolProp/issues/2433>`_ : Mass fraction of saturated lithium bromide solution calculation question
+* `#2434 <https://github.com/CoolProp/CoolProp/issues/2434>`_ : Discrepancy Between CoolProp DLL and Online Calculator Outputs
+* `#2461 <https://github.com/CoolProp/CoolProp/issues/2461>`_ : Problem with displaying enthalpy diagram
+* `#2533 <https://github.com/CoolProp/CoolProp/issues/2533>`_ : Official support for conda-forge
+* `#2586 <https://github.com/CoolProp/CoolProp/issues/2586>`_ : Consistency issue when calculating enthalpy from entropy and density at dew line
+* `#2602 <https://github.com/CoolProp/CoolProp/issues/2602>`_ : _crit needs to be synchronized with the superancillaries at load
+* `#2654 <https://github.com/CoolProp/CoolProp/issues/2654>`_ : Github Release Tags missing?
+* `#2655 <https://github.com/CoolProp/CoolProp/issues/2655>`_ : Wrappers need update.
+* `#2658 <https://github.com/CoolProp/CoolProp/issues/2658>`_ : Data of Molar volume of saturated liquid water or ice (vbar_ws) [m^3/mol_H2O]
+* `#2660 <https://github.com/CoolProp/CoolProp/issues/2660>`_ : Compatibility of CoolProp with MacBook Pro M4 chip
+* `#2663 <https://github.com/CoolProp/CoolProp/issues/2663>`_ : Fluid mixtures not working for matlab wrapper
+* `#2667 <https://github.com/CoolProp/CoolProp/issues/2667>`_ : MATLAB Wrapper
+* `#2668 <https://github.com/CoolProp/CoolProp/issues/2668>`_ : Multithreaded Support with REFPROP Backend
+* `#2670 <https://github.com/CoolProp/CoolProp/issues/2670>`_ : HAPropsSI with T_dp + R inputs returns 0 in v7.2.0 (worked in v6.3.0)
+* `#2672 <https://github.com/CoolProp/CoolProp/issues/2672>`_ : REFPROP backend: mixture R1233zd(E) + Air cannot be loaded in CoolProp, while direct REFPROP calls work (with warning)
+* `#2673 <https://github.com/CoolProp/CoolProp/issues/2673>`_ : DmassT and DmolarT inputs with Cubic backend not working in v7.2
+* `#2680 <https://github.com/CoolProp/CoolProp/issues/2680>`_ : Address performance regression with superancillary functions
+* `#2684 <https://github.com/CoolProp/CoolProp/issues/2684>`_ : DLL load failed while importing CoolProp
+* `#2685 <https://github.com/CoolProp/CoolProp/issues/2685>`_ : CoolProp fails ungracefully when computing entropy through density+internal energy
+* `#2691 <https://github.com/CoolProp/CoolProp/issues/2691>`_ : vcpkg port of coolprop out of date (6.4.3#3)
+* `#2693 <https://github.com/CoolProp/CoolProp/issues/2693>`_ : PropsSImulti does not return _HUGE and does not trap Value Errors
+* `#2694 <https://github.com/CoolProp/CoolProp/issues/2694>`_ : Download of REFPROP fails in CI build due to bad session key
+* `#2696 <https://github.com/CoolProp/CoolProp/issues/2696>`_ : Issue template not being used since Nov. 2024
+* `#2698 <https://github.com/CoolProp/CoolProp/issues/2698>`_ : Speed of sound shows numerical jump near vapor saturation line in two-phase HFRS model
+* `#2701 <https://github.com/CoolProp/CoolProp/issues/2701>`_ : Equations Not Displaying on Ideal-Gas page of CoolProp.org
+* `#2703 <https://github.com/CoolProp/CoolProp/issues/2703>`_ : HAPropsSI Patch (#2697) Created a Regression in the Docs/Workflows
+* `#2711 <https://github.com/CoolProp/CoolProp/issues/2711>`_ : [ISSUE] Add table to docs with predefined mixtures
+* `#2712 <https://github.com/CoolProp/CoolProp/issues/2712>`_ : [ISSUE] Add predefined mixtures from ASHRAE 2026 standard 34
+* `#2714 <https://github.com/CoolProp/CoolProp/issues/2714>`_ : [ISSUE] Add Chlorine EOS
+* `#2717 <https://github.com/CoolProp/CoolProp/issues/2717>`_ : [ISSUE] Get coverity to dump its output during build
+* `#2718 <https://github.com/CoolProp/CoolProp/issues/2718>`_ : [ISSUE] Further speedup to caching
+* `#2721 <https://github.com/CoolProp/CoolProp/issues/2721>`_ : [ISSUE] Implement reference refrigerant mixture models from JPCRD
+* `#2724 <https://github.com/CoolProp/CoolProp/issues/2724>`_ : [ISSUE] Clang-format CI Misbehaving (silently) on Remote PRs
+* `#2726 <https://github.com/CoolProp/CoolProp/issues/2726>`_ : [FEAT] Add even more mixture models
+* `#2727 <https://github.com/CoolProp/CoolProp/issues/2727>`_ : Generate SUPERANCILLARY for R1234yf Lemmon-IJT-2022 EOS
+* `#2738 <https://github.com/CoolProp/CoolProp/issues/2738>`_ : Critical density CO2
+* `#2739 <https://github.com/CoolProp/CoolProp/issues/2739>`_ : [FEAT] Add superancillaries for cubic EOS
+* `#2740 <https://github.com/CoolProp/CoolProp/issues/2740>`_ : [ISSUE] Mathematica won't build under new CMake Package Manager (CPM)
+* `#2742 <https://github.com/CoolProp/CoolProp/issues/2742>`_ : Update cubic EOS coefficients
+* `#2751 <https://github.com/CoolProp/CoolProp/issues/2751>`_ : Enforce clang-format
+* `#2754 <https://github.com/CoolProp/CoolProp/issues/2754>`_ : Investigate the inclusion of teqp in CoolProp
+* `#2755 <https://github.com/CoolProp/CoolProp/issues/2755>`_ : [ISSUE] Chlorine consistency plots are missing from docs
+* `#2756 <https://github.com/CoolProp/CoolProp/issues/2756>`_ : [ISSUE] Wrong number of fluids in docs
+* `#2762 <https://github.com/CoolProp/CoolProp/issues/2762>`_ : Tracking: bump fastchebpure pin after Akasaka/Lemmon EOS batch merges
+* `#2763 <https://github.com/CoolProp/CoolProp/issues/2763>`_ : THF EOS (Fiedler et al. 2023): paper/FLD inconsistencies
+* `#2764 <https://github.com/CoolProp/CoolProp/issues/2764>`_ : Propylene Glycol EOS (Eisenbach et al. 2021): critical-region instability
+* `#2765 <https://github.com/CoolProp/CoolProp/issues/2765>`_ : R-1123 EOS (Akasaka et al., IJR 2020): Table 6 typo in Gaussian n_{14}
+* `#2767 <https://github.com/CoolProp/CoolProp/issues/2767>`_ : Pure and mixture models in DOE report
+* `#2769 <https://github.com/CoolProp/CoolProp/issues/2769>`_ : [ISSUE] CL2 does not precisely match REFPROP implementation
+* `#2770 <https://github.com/CoolProp/CoolProp/issues/2770>`_ : HmolarQ calculation fails and rends AbstractState unstable
+* `#2772 <https://github.com/CoolProp/CoolProp/issues/2772>`_ : Add at least one extended precision point for superancillaries to JSON
+* `#2773 <https://github.com/CoolProp/CoolProp/issues/2773>`_ : [FEAT] Add means to specify which solution you want when multiple solutions are possible
+* `#2774 <https://github.com/CoolProp/CoolProp/issues/2774>`_ : Move boost deps from archive to new repo
+* `#2777 <https://github.com/CoolProp/CoolProp/issues/2777>`_ : fastchebpure: emit source_eos_hash in output/<fluid>_exps.json so CoolProp can verify SA freshness without git archaeology
+* `#2779 <https://github.com/CoolProp/CoolProp/issues/2779>`_ : [ISSUE] eos_hash
+* `#2787 <https://github.com/CoolProp/CoolProp/issues/2787>`_ : Fluid-library static init is not thread-safe (race during cold cache population)
+* `#2815 <https://github.com/CoolProp/CoolProp/issues/2815>`_ : Dependabot should do actions too
+* `#2825 <https://github.com/CoolProp/CoolProp/issues/2825>`_ : [ISSUE] CoolProp GUI: blank screen
+* `#2828 <https://github.com/CoolProp/CoolProp/issues/2828>`_ : Windows Installer build: hashes.json decoding error from concurrent writes
+* `#2830 <https://github.com/CoolProp/CoolProp/issues/2830>`_ : Doc builds are sometimes getting stuck in infinite loop
+* `#2834 <https://github.com/CoolProp/CoolProp/issues/2834>`_ : Consider treating multi-valued saturation regions as an error in update() (follow-up to #2773)
+* `#2869 <https://github.com/CoolProp/CoolProp/issues/2869>`_ : refactor: modernize-avoid-c-arrays — replace C arrays with std::array
+* `#2870 <https://github.com/CoolProp/CoolProp/issues/2870>`_ : refactor: cppcoreguidelines-pro-type-vararg — replace remaining printf calls
+* `#2871 <https://github.com/CoolProp/CoolProp/issues/2871>`_ : refactor: modernize-redundant-void-arg — drop (void) parameter lists
+* `#2872 <https://github.com/CoolProp/CoolProp/issues/2872>`_ : refactor: modernize-make-shared — single-allocation shared_ptr construction
+* `#2873 <https://github.com/CoolProp/CoolProp/issues/2873>`_ : refactor: bugprone-empty-catch — audit silent catch (...)  blocks
+* `#2874 <https://github.com/CoolProp/CoolProp/issues/2874>`_ : refactor: cert-err58-cpp — static-init that can throw
+* `#2885 <https://github.com/CoolProp/CoolProp/issues/2885>`_ : [ISSUE] Duplicated code at end of CoolPropLib.h in 7.2.0 shared_library SourceForge distribution
+* `#2896 <https://github.com/CoolProp/CoolProp/issues/2896>`_ : R1132E should be R1132(E)
+* `#2897 <https://github.com/CoolProp/CoolProp/issues/2897>`_ : Tabular methods should expose direct tabular evaluation
+* `#2903 <https://github.com/CoolProp/CoolProp/issues/2903>`_ : CI contention on hashes.json
+* `#2906 <https://github.com/CoolProp/CoolProp/issues/2906>`_ : HAPropsSI fails at T_wb = 0 °C across all RH (sub-freezing branch, #2690 follow-up)
+* `#2913 <https://github.com/CoolProp/CoolProp/issues/2913>`_ : devdocs should only deploy on master
+* `#2926 <https://github.com/CoolProp/CoolProp/issues/2926>`_ : clang-tidy sweep: actionable findings from files modified in the last month
+* `#2973 <https://github.com/CoolProp/CoolProp/issues/2973>`_ : SVDSBTL: add DT-indexed surface to natively handle P(D, T) — supersedes BICUBIC inverter patching attempt (#1301)
+* `#2988 <https://github.com/CoolProp/CoolProp/issues/2988>`_ : wheels not getting pushed to testpypi
+
+Pull requests merged:
+
+* `#2664 <https://github.com/CoolProp/CoolProp/pull/2664>`_ : Expose comprehensive AbstractState functionality and enums to WASM
+* `#2669 <https://github.com/CoolProp/CoolProp/pull/2669>`_ : Document MEX function usage for MATLAB
+* `#2677 <https://github.com/CoolProp/CoolProp/pull/2677>`_ : VB .Net README Update [skip ci]
+* `#2679 <https://github.com/CoolProp/CoolProp/pull/2679>`_ : Fix HAPropsSI with T_dp+R or W+R inputs when T is unknown (issue #2670)
+* `#2681 <https://github.com/CoolProp/CoolProp/pull/2681>`_ : Fix superancillary performance: store as shared_ptr instead of optional
+* `#2682 <https://github.com/CoolProp/CoolProp/pull/2682>`_ : Some Refactoring of the Mathcad Wrapper for code succinctness and readability
+* `#2683 <https://github.com/CoolProp/CoolProp/pull/2683>`_ : Update mixture tables for R1234ze(E) [skip ci]
+* `#2687 <https://github.com/CoolProp/CoolProp/pull/2687>`_ : Install updated README.md to SourceForge with Mathcad binaries [skip ci]
+* `#2688 <https://github.com/CoolProp/CoolProp/pull/2688>`_ : C++17 modernization: remove shims, stdlib idioms, attributes, filesystem
+* `#2689 <https://github.com/CoolProp/CoolProp/pull/2689>`_ : Remove unused heavy headers to improve compile times
+* `#2692 <https://github.com/CoolProp/CoolProp/pull/2692>`_ : make _binary arrays constexpr and use string_view instead of string
+* `#2695 <https://github.com/CoolProp/CoolProp/pull/2695>`_ : Add PhaseSI and PropsSImulti to Mathcad Wrapper
+* `#2697 <https://github.com/CoolProp/CoolProp/pull/2697>`_ : Fix HAPropsSI T_db from T_wb + low RelHum failing for narrow pressure band (issue #2690)
+* `#2699 <https://github.com/CoolProp/CoolProp/pull/2699>`_ : fix(ci): skip REFPROP build for fork PRs where secrets are unavailable
+* `#2700 <https://github.com/CoolProp/CoolProp/pull/2700>`_ : chore(deps): update miniz 3.0.2 → 3.1.1
+* `#2702 <https://github.com/CoolProp/CoolProp/pull/2702>`_ : Add $$ to equations on Ideal Gas web page [skip ci]
+* `#2704 <https://github.com/CoolProp/CoolProp/pull/2704>`_ : Revert "Fix HAPropsSI T_db from T_wb + low RelHum failing for narrow pressure band (issue #2690) (#2697)"
+* `#2705 <https://github.com/CoolProp/CoolProp/pull/2705>`_ : test(humid_air): add comprehensive validation test suite
+* `#2707 <https://github.com/CoolProp/CoolProp/pull/2707>`_ : feat(docs): add interactive 3D molecule viewers to fluid pages
+* `#2708 <https://github.com/CoolProp/CoolProp/pull/2708>`_ : fix(docs): resolve all doxygen warnings
+* `#2709 <https://github.com/CoolProp/CoolProp/pull/2709>`_ : Add Predefined Mixture Helper Functions to Mathcad Wrapper
+* `#2710 <https://github.com/CoolProp/CoolProp/pull/2710>`_ : Skip REFPROP tests when not available during CI
+* `#2713 <https://github.com/CoolProp/CoolProp/pull/2713>`_ : Add some more predefined mixtures from ASHRAE 34
+* `#2715 <https://github.com/CoolProp/CoolProp/pull/2715>`_ : feat(GUI): add native Tauri/React desktop GUI for CoolProp
+* `#2716 <https://github.com/CoolProp/CoolProp/pull/2716>`_ : perf(humid_air): cache virial/alpha0 coefficients to eliminate redundant EOS calls (26× speedup)
+* `#2719 <https://github.com/CoolProp/CoolProp/pull/2719>`_ : docs: add predefined mixtures table to Mixtures page
+* `#2722 <https://github.com/CoolProp/CoolProp/pull/2722>`_ : Mathcad wrapper compliance with CoolProp CLANG-format
+* `#2723 <https://github.com/CoolProp/CoolProp/pull/2723>`_ : Mathcad wrapper additional error trapping for PropsSImulti
+* `#2725 <https://github.com/CoolProp/CoolProp/pull/2725>`_ : Add refrigerant mixture models (Bell-JPCRD-2022/2023) and update R-1234yf EOS
+* `#2728 <https://github.com/CoolProp/CoolProp/pull/2728>`_ : build: replace git submodules with CPM.cmake
+* `#2729 <https://github.com/CoolProp/CoolProp/pull/2729>`_ : feat: add Chlorine (Cl2) fundamental equation of state with superancillaries
+* `#2730 <https://github.com/CoolProp/CoolProp/pull/2730>`_ : Use requests with retry adapter for PubChem 3D/2D SDF downloads
+* `#2731 <https://github.com/CoolProp/CoolProp/pull/2731>`_ : fix: repair clang-format CI for fork PRs and push events
+* `#2732 <https://github.com/CoolProp/CoolProp/pull/2732>`_ : Add helper routine for HAPropsSI error handling in Mathcad wrapper
+* `#2733 <https://github.com/CoolProp/CoolProp/pull/2733>`_ : fix(build): replace CPM.cmake dev snapshot with v0.40.7 release
+* `#2734 <https://github.com/CoolProp/CoolProp/pull/2734>`_ : fix(cmake): change CACHE LIST to CACHE STRING for app sources and include dirs
+* `#2735 <https://github.com/CoolProp/CoolProp/pull/2735>`_ : fix(build): default CPM_SOURCE_CACHE to enable incremental builds
+* `#2741 <https://github.com/CoolProp/CoolProp/pull/2741>`_ : fix(cmake): Update FindMathematica dependency to latest version
+* `#2744 <https://github.com/CoolProp/CoolProp/pull/2744>`_ : feat(cubics): add Chebyshev superancillaries for SRK and Peng-Robinson EOS
+* `#2745 <https://github.com/CoolProp/CoolProp/pull/2745>`_ : fix(cubics): replace rounded SRK/PR Omega coefficients with exact values
+* `#2747 <https://github.com/CoolProp/CoolProp/pull/2747>`_ : Mathematica wrapper web page .rst touchups [skip ci]
+* `#2748 <https://github.com/CoolProp/CoolProp/pull/2748>`_ : Add mixture models from Bell-JCED-2025 and Bell-IJT-2020
+* `#2749 <https://github.com/CoolProp/CoolProp/pull/2749>`_ : test(plot): regenerate isoline test data for exact SRK/PR coefficients
+* `#2750 <https://github.com/CoolProp/CoolProp/pull/2750>`_ : fix(flash): return rhomolar_critical from PT_flash at the critical point (#2738)
+* `#2752 <https://github.com/CoolProp/CoolProp/pull/2752>`_ : Ignore the .cache dir
+* `#2758 <https://github.com/CoolProp/CoolProp/pull/2758>`_ : docs(index): auto-generate pure fluid count on landing page
+* `#2759 <https://github.com/CoolProp/CoolProp/pull/2759>`_ : fix(docs): regenerate consistency plots when fluids are added
+* `#2760 <https://github.com/CoolProp/CoolProp/pull/2760>`_ : test(plot): tolerate cross-platform libm jitter in isoline value checks
+* `#2766 <https://github.com/CoolProp/CoolProp/pull/2766>`_ : fix(bib): correct DOIs for Bell-JPCRD-2022 and Bell-JPCRD-2023
+* `#2768 <https://github.com/CoolProp/CoolProp/pull/2768>`_ : Batch update: 10 multiparameter EOS (R-1224yd(Z), R-1132(E), THF, PG, vinyl chloride, R-1123, n-C4/C5/C6 F, R-1233zd(E) intl std)
+* `#2771 <https://github.com/CoolProp/CoolProp/pull/2771>`_ : fix(chlorine): align CL2 EOS with REFPROP reference implementation
+* `#2775 <https://github.com/CoolProp/CoolProp/pull/2775>`_ : build: fetch boost subset via CPM from CoolProp/boost-headers
+* `#2776 <https://github.com/CoolProp/CoolProp/pull/2776>`_ : test(superanc): extended-precision check points + EOS-freshness hash (#2772)
+* `#2780 <https://github.com/CoolProp/CoolProp/pull/2780>`_ : Add R-1130(E); update R-1243zf to 3rd-gen EOS; harmonize source_eos_hash
+* `#2781 <https://github.com/CoolProp/CoolProp/pull/2781>`_ : feat: NIST IR 8570 mixture pairs + R-1336mzz(Z) pure fluid
+* `#2782 <https://github.com/CoolProp/CoolProp/pull/2782>`_ : fix(R1336mzzZ): inject SUPERANCILLARY block to fix sat-T-to-Tc test
+* `#2784 <https://github.com/CoolProp/CoolProp/pull/2784>`_ : fix(R1336mzzZ): refresh hs_anchor h/s and SUPERANCILLARY after a1/a2 change
+* `#2786 <https://github.com/CoolProp/CoolProp/pull/2786>`_ : ci(clang-format): drop push triggers, run PR-only (CoolProp-2uw.1)
+* `#2788 <https://github.com/CoolProp/CoolProp/pull/2788>`_ : ci: add .pre-commit-config.yaml with clang-format hook (CoolProp-2uw.3)
+* `#2789 <https://github.com/CoolProp/CoolProp/pull/2789>`_ : build(cmake): always export compile_commands.json (CoolProp-2uw.7)
+* `#2790 <https://github.com/CoolProp/CoolProp/pull/2790>`_ : ci: skip CI on beads-only commits via shared commit-msg hook
+* `#2791 <https://github.com/CoolProp/CoolProp/pull/2791>`_ : build(cmake): add format and format-check targets (CoolProp-2uw.2)
+* `#2792 <https://github.com/CoolProp/CoolProp/pull/2792>`_ : ci: re-enable cppcheck as warning-only artifact (CoolProp-2uw.8)
+* `#2793 <https://github.com/CoolProp/CoolProp/pull/2793>`_ : ci(codeql): run on PRs + master, bump to v3 actions (CoolProp-2uw.9)
+* `#2794 <https://github.com/CoolProp/CoolProp/pull/2794>`_ : ci(coverity): schedule-only + dump JSON defects (CoolProp-2uw.10, closes #2717)
+* `#2796 <https://github.com/CoolProp/CoolProp/pull/2796>`_ : docs: contributor code-quality workflow (CoolProp-2uw.4)
+* `#2797 <https://github.com/CoolProp/CoolProp/pull/2797>`_ : ci: add IWYU report job as warning-only artifact (CoolProp-2uw.11)
+* `#2798 <https://github.com/CoolProp/CoolProp/pull/2798>`_ : ci: add diff-only clang-tidy workflow on PRs (CoolProp-2uw.5)
+* `#2799 <https://github.com/CoolProp/CoolProp/pull/2799>`_ : ci: add manual-stage clang-tidy pre-commit hook (CoolProp-2uw.6)
+* `#2800 <https://github.com/CoolProp/CoolProp/pull/2800>`_ : fix: thread-safe lazy initialization of fluid libraries
+* `#2801 <https://github.com/CoolProp/CoolProp/pull/2801>`_ : ci(clang-tidy): document informational-by-design
+* `#2802 <https://github.com/CoolProp/CoolProp/pull/2802>`_ : ci(clang-tidy): switch to high-signal whitelist (CoolProp-2uw)
+* `#2803 <https://github.com/CoolProp/CoolProp/pull/2803>`_ : style: whole-repo clang-format pass over src/ + include/ (CoolProp-2uw.12)
+* `#2804 <https://github.com/CoolProp/CoolProp/pull/2804>`_ : chore: add .git-blame-ignore-revs for the whole-repo reformat (CoolProp-2uw.12)
+* `#2805 <https://github.com/CoolProp/CoolProp/pull/2805>`_ : refactor: apply safe clang-tidy --fix passes (CoolProp-2uw.13, part 1)
+* `#2806 <https://github.com/CoolProp/CoolProp/pull/2806>`_ : fix(cmake): IWYU wiring fires for both Main creation paths
+* `#2807 <https://github.com/CoolProp/CoolProp/pull/2807>`_ : chore: blame-revs append + clang-tidy MathHeader (CoolProp-2uw.13b)
+* `#2808 <https://github.com/CoolProp/CoolProp/pull/2808>`_ : refactor: cppcoreguidelines-init-variables --fix pass (CoolProp-2uw.13 part 2)
+* `#2809 <https://github.com/CoolProp/CoolProp/pull/2809>`_ : chore: blame-ignore #2808 init-variables fix pass (CoolProp-2uw.13c)
+* `#2810 <https://github.com/CoolProp/CoolProp/pull/2810>`_ : refactor: IWYU pass — drop 28 unused std-library includes (build speed)
+* `#2814 <https://github.com/CoolProp/CoolProp/pull/2814>`_ : Expand Mathcad Wrapper Documentation [skip ci]
+* `#2816 <https://github.com/CoolProp/CoolProp/pull/2816>`_ : build(deps): bump vite/vitest, override protocol-buffers-schema (combines #2811-2813)
+* `#2817 <https://github.com/CoolProp/CoolProp/pull/2817>`_ : ci: enable Dependabot version updates for GitHub Actions
+* `#2824 <https://github.com/CoolProp/CoolProp/pull/2824>`_ : ci(GUI): consolidate per-OS releases into one draft (idempotent release job)
+* `#2826 <https://github.com/CoolProp/CoolProp/pull/2826>`_ : fix(GUI): unwrap react-plotly.js CJS default — fixes blank window on all platforms
+* `#2827 <https://github.com/CoolProp/CoolProp/pull/2827>`_ : build(deps): bump Eigen 3.4.0 → 5.0.1
+* `#2831 <https://github.com/CoolProp/CoolProp/pull/2831>`_ : fix(HumidAirProp): per-thread Water/Air backends via thread_local
+* `#2832 <https://github.com/CoolProp/CoolProp/pull/2832>`_ : docs(pubchem): commit SDF cache + manifest-based freshness check
+* `#2833 <https://github.com/CoolProp/CoolProp/pull/2833>`_ : fix(build): atomic dev/hashes.json write — fixes Windows installer race (#2828)
+* `#2835 <https://github.com/CoolProp/CoolProp/pull/2835>`_ : feat(saturation): branch-selecting HQ/SQ/DQ flashes via guess.T (#2773)
+* `#2837 <https://github.com/CoolProp/CoolProp/pull/2837>`_ : ci: deprecate Coverity Scan in favor of CodeQL + cppcheck
+* `#2840 <https://github.com/CoolProp/CoolProp/pull/2840>`_ : Add Qmass (mass-basis vapor quality) support across CoolProp backends
+* `#2841 <https://github.com/CoolProp/CoolProp/pull/2841>`_ : fix(cubic): add missing override on SRK/PR backend methods
+* `#2842 <https://github.com/CoolProp/CoolProp/pull/2842>`_ : ci(clang-format): pin CI version via uvx to match pre-commit hook
+* `#2843 <https://github.com/CoolProp/CoolProp/pull/2843>`_ : build(deps): cargo update — drop vulnerable rand 0.7.3/0.8.5 (Dependabot #8)
+* `#2845 <https://github.com/CoolProp/CoolProp/pull/2845>`_ : ci(codeql): exclude vendored sources via paths-ignore config
+* `#2846 <https://github.com/CoolProp/CoolProp/pull/2846>`_ : fix(pcsaft): widen num_sites multiply to size_t (CodeQL int-overflow)
+* `#2847 <https://github.com/CoolProp/CoolProp/pull/2847>`_ : chore: retire generate_meta_info.py to .py.txt (orphan; closes 2 CodeQL jinja2 alerts)
+* `#2848 <https://github.com/CoolProp/CoolProp/pull/2848>`_ : fix(plots): silence CodeQL uninitialized-locals in Plots/Common.py
+* `#2849 <https://github.com/CoolProp/CoolProp/pull/2849>`_ : fix(cppcheck): four real bugs / suppressions across src/
+* `#2850 <https://github.com/CoolProp/CoolProp/pull/2850>`_ : fix(HEOS): change_EOS throws on unknown EOS name (#1703)
+* `#2851 <https://github.com/CoolProp/CoolProp/pull/2851>`_ : fix(HEOS): correct first_saturation_deriv for mixtures (#2091)
+* `#2852 <https://github.com/CoolProp/CoolProp/pull/2852>`_ : fix(ancillaries): return NaN above the reducing T instead of UB / SIGFPE (#1611)
+* `#2853 <https://github.com/CoolProp/CoolProp/pull/2853>`_ : fix(PropsSI): handle length-0 and length-1 array inputs (#2417)
+* `#2854 <https://github.com/CoolProp/CoolProp/pull/2854>`_ : fix(INCOMP): throw a clean error for molar properties (#1908)
+* `#2855 <https://github.com/CoolProp/CoolProp/pull/2855>`_ : fix(thread-safety): make deriv_counter atomic (#2844 race 1)
+* `#2856 <https://github.com/CoolProp/CoolProp/pull/2856>`_ : test(water): regression tests for fixed flash bugs (#2079, #1730)
+* `#2857 <https://github.com/CoolProp/CoolProp/pull/2857>`_ : fix(HEOS): re-evaluate alphar at converged T in HSU_D_flash (#1907)
+* `#2858 <https://github.com/CoolProp/CoolProp/pull/2858>`_ : fix(PCSAFT): align gibbsmolar_residual with g_res = h_res - T*s_res (#1943)
+* `#2859 <https://github.com/CoolProp/CoolProp/pull/2859>`_ : fix(HumidAir): Twb solver no longer brackets above Tsat(p) (#2255)
+* `#2860 <https://github.com/CoolProp/CoolProp/pull/2860>`_ : fix(HEOS): validate Q before mutating state in update() (#2195)
+* `#2861 <https://github.com/CoolProp/CoolProp/pull/2861>`_ : fix(INCOMP): psat throws below TminPsat instead of returning 0 silently (#2209)
+* `#2862 <https://github.com/CoolProp/CoolProp/pull/2862>`_ : test(water): pin sub-zero water phase behaviour (#1098)
+* `#2863 <https://github.com/CoolProp/CoolProp/pull/2863>`_ : build(MSVC): embed VERSIONINFO in CoolProp.dll (#2391)
+* `#2864 <https://github.com/CoolProp/CoolProp/pull/2864>`_ : test: regression pins for fixed bugs (#2244, #2461)
+* `#2865 <https://github.com/CoolProp/CoolProp/pull/2865>`_ : fix(REFPROP): DmolarSmolar honours imposed phase via DSFL1 (#2042)
+* `#2866 <https://github.com/CoolProp/CoolProp/pull/2866>`_ : fix(REFPROP): wire DmassQ / DmolarQ inputs through DQFL2 (#1845)
+* `#2875 <https://github.com/CoolProp/CoolProp/pull/2875>`_ : refactor(modernize-make-shared): single-allocation shared_ptr (#2872)
+* `#2876 <https://github.com/CoolProp/CoolProp/pull/2876>`_ : refactor(vararg): replace direct printf/fprintf with iostream + format (#2870)
+* `#2877 <https://github.com/CoolProp/CoolProp/pull/2877>`_ : refactor(modernize-avoid-c-arrays): convert local char arrays to std::array (#2869)
+* `#2878 <https://github.com/CoolProp/CoolProp/pull/2878>`_ : fix(ci): use pull_request.head.sha for clang-format diff
+* `#2886 <https://github.com/CoolProp/CoolProp/pull/2886>`_ : refactor(modernize-redundant-void-arg): drop (void) parameter lists (#2871)
+* `#2887 <https://github.com/CoolProp/CoolProp/pull/2887>`_ : refactor(cert-err58-cpp): NOLINT static-init that may throw (#2874)
+* `#2888 <https://github.com/CoolProp/CoolProp/pull/2888>`_ : fix(HEOS): mole_fractions_liquid/vapor reject single-phase states (#2308)
+* `#2889 <https://github.com/CoolProp/CoolProp/pull/2889>`_ : feat(python): expose AbstractState::Qmass on Python interface
+* `#2890 <https://github.com/CoolProp/CoolProp/pull/2890>`_ : ci(python): add PIP_RETRIES/PIP_TIMEOUT for cibw pip-install flakes
+* `#2891 <https://github.com/CoolProp/CoolProp/pull/2891>`_ : fix(tabular): validate cell after sat-curve bump (BICUBIC PT segfault, #1950)
+* `#2894 <https://github.com/CoolProp/CoolProp/pull/2894>`_ : feat(tabular): TABULAR_NX/NY config keys for grid resolution
+* `#2895 <https://github.com/CoolProp/CoolProp/pull/2895>`_ : Fix equations and typos in MathcadWrappers documentation [skip ci]
+* `#2904 <https://github.com/CoolProp/CoolProp/pull/2904>`_ : fix(fluids): rename R1132E to R1132(E); add R-1132E, R-1132(E) aliases (#2896)
+* `#2905 <https://github.com/CoolProp/CoolProp/pull/2905>`_ : fix(build): retry hashes.json swap on Windows PermissionError (#2903)
+* `#2907 <https://github.com/CoolProp/CoolProp/pull/2907>`_ : fix(HumidAir): T_db from (T_wb, RelHum, P) at low RH (#2690 modes B+C)
+* `#2909 <https://github.com/CoolProp/CoolProp/pull/2909>`_ : fix(cmake): fetch Eigen via tarball to avoid Windows clone flakes
+* `#2910 <https://github.com/CoolProp/CoolProp/pull/2910>`_ : ci(GUI): poll screenshot render check instead of fixed sleep
+* `#2911 <https://github.com/CoolProp/CoolProp/pull/2911>`_ : ci: consolidate dev_* checks + gate wheel matrix on PRs
+* `#2912 <https://github.com/CoolProp/CoolProp/pull/2912>`_ : fix(docs): pin 3Dmol.js download to jsDelivr CDN
+* `#2914 <https://github.com/CoolProp/CoolProp/pull/2914>`_ : feat(svd,region): generic 2D rank-r SVD + curve-bounded region atlas
+* `#2915 <https://github.com/CoolProp/CoolProp/pull/2915>`_ : feat(svd-2a): C++ multi-fluid SVD ρ(h,p) end-to-end validation harness
+* `#2916 <https://github.com/CoolProp/CoolProp/pull/2916>`_ : fix(HEOS): RAII clear of imposed iphase_gas in HSU_D_flash::solver_resid
+* `#2917 <https://github.com/CoolProp/CoolProp/pull/2917>`_ : feat(sbtl): SVDSurface adapter library + msgpack persistence (Phase 2b)
+* `#2918 <https://github.com/CoolProp/CoolProp/pull/2918>`_ : ci(devdocs): drop pull_request trigger so devdocs deploys only on master
+* `#2919 <https://github.com/CoolProp/CoolProp/pull/2919>`_ : feat(svdsbtl): SVDSBTL_BACKEND — full Phase 2c (backend + benchmark)
+* `#2920 <https://github.com/CoolProp/CoolProp/pull/2920>`_ : feat(AbstractState): cache-bypassing batch fast_evaluate (Tabular + IF97)
+* `#2921 <https://github.com/CoolProp/CoolProp/pull/2921>`_ : fix(region,clenshaw): drop redundant >= 1 + break in unsigned loop (CodeQL #3512)
+* `#2922 <https://github.com/CoolProp/CoolProp/pull/2922>`_ : feat(svdsbtl): require explicit source-of-truth backend (HEOS/REFPROP/IF97)
+* `#2923 <https://github.com/CoolProp/CoolProp/pull/2923>`_ : fix(if97): clear() must flush full cache; SVDSBTL viscosity + auto-conformance docs
+* `#2924 <https://github.com/CoolProp/CoolProp/pull/2924>`_ : fix(cubic): pure-fluid DmolarT/DmassT via superancillary phase bracketing
+* `#2925 <https://github.com/CoolProp/CoolProp/pull/2925>`_ : perf(HEOS): trim DHSU_T_flash imposed-phase overhead (#2718)
+* `#2927 <https://github.com/CoolProp/CoolProp/pull/2927>`_ : Generic backend options via factory-string JSON (PR A — infrastructure)
+* `#2928 <https://github.com/CoolProp/CoolProp/pull/2928>`_ : SVDSBTL opts in to factory-string options (PR B — schema + cache key)
+* `#2929 <https://github.com/CoolProp/CoolProp/pull/2929>`_ : SVDSBTL critical-patch HEOS-fallback routing (PR C)
+* `#2934 <https://github.com/CoolProp/CoolProp/pull/2934>`_ : feat(svdsbtl): Chebyshev η + Newton-refined IF97 + ε-band phase-pin
+* `#2936 <https://github.com/CoolProp/CoolProp/pull/2936>`_ : test(svdsbtl): fix cache_present_for to match actual cache filenames
+* `#2937 <https://github.com/CoolProp/CoolProp/pull/2937>`_ : ci(test_catch2): cache ~/.CoolProp/SVDTables across runs
+* `#2938 <https://github.com/CoolProp/CoolProp/pull/2938>`_ : feat(svdsbtl): split SUPER at IF97 R2/R3 boundary + fix R3 sampling
+* `#2940 <https://github.com/CoolProp/CoolProp/pull/2940>`_ : feat(svdsbtl): R1/R3 atlas split + TOMS748 h-inversion (combines reverted #2939 + #2940)
+* `#2941 <https://github.com/CoolProp/CoolProp/pull/2941>`_ : docs(IF97): Python timing-profile script + figure for IF97 / HEOS / SVDSBTL
+* `#2942 <https://github.com/CoolProp/CoolProp/pull/2942>`_ : feat(fast_evaluate): batch path for SVDSBTL + dome Q-blend for IF97/SVDSBTL
+* `#2943 <https://github.com/CoolProp/CoolProp/pull/2943>`_ : fix(svdsbtl,docs): block SVDSBTL from PropsSI + speed up IF97Conformance.py ~3000x
+* `#2944 <https://github.com/CoolProp/CoolProp/pull/2944>`_ : perf(svdsbtl): batched fast_evaluate — share locate+basis across surface outputs
+* `#2945 <https://github.com/CoolProp/CoolProp/pull/2945>`_ : test(svdsbtl): close REFPROP-source coverage gaps (zx1)
+* `#2946 <https://github.com/CoolProp/CoolProp/pull/2946>`_ : docs(svdsbtl,if97): new SVDSBTL page + restructure IF97 narrative (s60)
+* `#2947 <https://github.com/CoolProp/CoolProp/pull/2947>`_ : feat(svdsbtl): auto-calibrate critical-patch bbox per fluid (5ni+dxd+229)
+* `#2949 <https://github.com/CoolProp/CoolProp/pull/2949>`_ : fix(svdsbtl): skip patch polish for two-phase points
+* `#2950 <https://github.com/CoolProp/CoolProp/pull/2950>`_ : test(svdsbtl): relax Q bit-exact compare to Approx for REFPROP fast_evaluate
+* `#2951 <https://github.com/CoolProp/CoolProp/pull/2951>`_ : feat(svdsbtl): SuperAncillary-backed sat boundaries (CoolProp-8vg)
+* `#2952 <https://github.com/CoolProp/CoolProp/pull/2952>`_ : feat(svdsbtl): fast eval surrogate for atlas curve_contains (~28% sub-critical speedup)
+* `#2953 <https://github.com/CoolProp/CoolProp/pull/2953>`_ : feat(svdsbtl): parallel per-cell HEOS sampling during table build (CoolProp-43h)
+* `#2954 <https://github.com/CoolProp/CoolProp/pull/2954>`_ : feat(ci): dev/ci/preflight.sh single-script pre-push gate (CoolProp-6r6)
+* `#2955 <https://github.com/CoolProp/CoolProp/pull/2955>`_ : feat(ci): preflight clang-tidy works on macOS (per #2926)
+* `#2956 <https://github.com/CoolProp/CoolProp/pull/2956>`_ : feat(ci): preflight gates on signal-filtered clang-tidy + code-reviewer banner (CoolProp-y51)
+* `#2957 <https://github.com/CoolProp/CoolProp/pull/2957>`_ : feat(svdsbtl): extend SVDSBTL&IF97 coverage to IAPWS R5 (CoolProp-pd6)
+* `#2958 <https://github.com/CoolProp/CoolProp/pull/2958>`_ : docs(if97-conformance): dense-knot R1/R3 isotherm + PDF emission + download link
+* `#2959 <https://github.com/CoolProp/CoolProp/pull/2959>`_ : docs(svdsbtl): correct 19 doc bugs uncovered by audit (CoolProp-fhp)
+* `#2960 <https://github.com/CoolProp/CoolProp/pull/2960>`_ : docs(if97,svdsbtl): correct 12 claims uncovered by IF97 audit
+* `#2961 <https://github.com/CoolProp/CoolProp/pull/2961>`_ : feat(svdsbtl): implement ALTERNATIVE_SVDTABLES_DIRECTORY config key (CoolProp-fhp)
+* `#2962 <https://github.com/CoolProp/CoolProp/pull/2962>`_ : fix(if97): correct n5 typo in R2/R3 boundary classifier (CoolProp-6zl)
+* `#2963 <https://github.com/CoolProp/CoolProp/pull/2963>`_ : fix(svdsbtl): atomic write-temp + rename for cache files (CoolProp-4no.2)
+* `#2964 <https://github.com/CoolProp/CoolProp/pull/2964>`_ : docs(svdsbtl): interactive SVDSBTL-vs-HEOS validation page (CoolProp-4no.4)
+* `#2965 <https://github.com/CoolProp/CoolProp/pull/2965>`_ : feat(svdsbtl): SaturationSurrogate cubic-spline cache for REFPROP source (CoolProp-077)
+* `#2966 <https://github.com/CoolProp/CoolProp/pull/2966>`_ : fix(svdsbtl): gate polish_patch_state_ to IF97 source only
+* `#2967 <https://github.com/CoolProp/CoolProp/pull/2967>`_ : feat(svdsbtl): NC near-critical sub-regions with POWER(β=1/3) axis (CoolProp-4u9)
+* `#2968 <https://github.com/CoolProp/CoolProp/pull/2968>`_ : feat(dev): SVDSBTL per-region sizing harness (CoolProp-6oe)
+* `#2970 <https://github.com/CoolProp/CoolProp/pull/2970>`_ : fix(wasm): pin emsdk to CI sha + add mixture set_mole_fractions test
+* `#2971 <https://github.com/CoolProp/CoolProp/pull/2971>`_ : feat(wasm): complete enum binding coverage + binding-surface gaps + tests
+* `#2974 <https://github.com/CoolProp/CoolProp/pull/2974>`_ : fix(wasm): bypass register_optional<T> template to preserve _embind_register_optional import
+* `#2976 <https://github.com/CoolProp/CoolProp/pull/2976>`_ : refactor(clang-tidy): modernize-use-override sweep (CoolProp-7ue)
+* `#2977 <https://github.com/CoolProp/CoolProp/pull/2977>`_ : feat(wasm)!: native JS arrays via emscripten::val (replaces VectorDouble)
+* `#2978 <https://github.com/CoolProp/CoolProp/pull/2978>`_ : refactor: clang-tidy bug-finder batch (CoolProp-m1q, #2926)
+* `#2979 <https://github.com/CoolProp/CoolProp/pull/2979>`_ : fix(tests): per-PID tmpdir suffix on Catch2 fixtures (CoolProp-8ft, CoolProp-3t8)
+* `#2980 <https://github.com/CoolProp/CoolProp/pull/2980>`_ : refactor: clang-tidy perf sweep + virtual-in-ctor + float-loops (CoolProp-kig, #2926)
+* `#2981 <https://github.com/CoolProp/CoolProp/pull/2981>`_ : refactor(headers): break two header layering violations (CoolProp-6c1)
+* `#2983 <https://github.com/CoolProp/CoolProp/pull/2983>`_ : refactor(clang-tidy): annotate documented silent catches in CoolPropLib batch APIs (#2873)
+* `#2985 <https://github.com/CoolProp/CoolProp/pull/2985>`_ : refactor(clang-tidy): behaviour-preserving modernize sweep of CoolPropLib.cpp (CoolProp-jtl)
+* `#2986 <https://github.com/CoolProp/CoolProp/pull/2986>`_ : fix(HumidAir): reject wet-bulb inputs in the water triple-point gap (#2906)
+* `#2989 <https://github.com/CoolProp/CoolProp/pull/2989>`_ : ci: cancel superseded runs to cut CI backlog (concurrency groups)
+* `#2990 <https://github.com/CoolProp/CoolProp/pull/2990>`_ : feat(REFPROP): saturated-state props + saturation/two-phase derivatives (#2013, supersedes #2016)
+* `#2992 <https://github.com/CoolProp/CoolProp/pull/2992>`_ : refactor(svdsbtl): use IF97::Region23_p for B23 boundary, drop local copy
+* `#2993 <https://github.com/CoolProp/CoolProp/pull/2993>`_ : fix(ci): publish unique TestPyPI wheel versions (#2988)
+* `#2994 <https://github.com/CoolProp/CoolProp/pull/2994>`_ : docs: fix RST escaping and formatting issues in Web docs
+* `#2996 <https://github.com/CoolProp/CoolProp/pull/2996>`_ : ci: cancel a merged PR's in-flight CI runs
+* `#2997 <https://github.com/CoolProp/CoolProp/pull/2997>`_ : style: clang-format whole codebase (pinned 18.1.8) [skip ci]
+* `#2998 <https://github.com/CoolProp/CoolProp/pull/2998>`_ : ci(asan): drop detect_stack_use_after_return + add 90-min timeout (CoolProp-xuu)
+* `#3001 <https://github.com/CoolProp/CoolProp/pull/3001>`_ : feat(plots/docs): consistency-plot failure reporting, per-panel timing, REFPROP support
+* `#3003 <https://github.com/CoolProp/CoolProp/pull/3003>`_ : docs(virial): exact-virials/Axy derivations, plans & beads (#2991) [skip ci]
 
 7.2.0
 -----
