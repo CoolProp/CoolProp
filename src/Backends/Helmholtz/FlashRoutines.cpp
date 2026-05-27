@@ -1856,7 +1856,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         Sat = HEOS.SatV;
                     }
                     break;  // good solve
-                } catch (CoolPropBaseError) {
+                } catch (const CoolPropBaseError&) {
                     optionsD.omega /= 2;
                     optionsD.max_iterations *= 2;
                     if (i_try >= 6) {

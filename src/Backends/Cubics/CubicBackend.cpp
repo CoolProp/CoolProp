@@ -632,13 +632,13 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_molar_mass() {
 void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                    const double value) {
     // bound-check indices
-    if (i < 0 || i >= N) {
-        if (j < 0 || j >= N) {
+    if (i >= N) {
+        if (j >= N) {
             throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
             throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
-    } else if (j < 0 || j >= N) {
+    } else if (j >= N) {
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
     }
     if (parameter == "kij" || parameter == "k_ij") {
@@ -652,13 +652,13 @@ void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::si
 };
 double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) {
     // bound-check indices
-    if (i < 0 || i >= N) {
-        if (j < 0 || j >= N) {
+    if (i >= N) {
+        if (j >= N) {
             throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
             throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
-    } else if (j < 0 || j >= N) {
+    } else if (j >= N) {
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
     }
     if (parameter == "kij" || parameter == "k_ij") {
@@ -701,7 +701,7 @@ void CoolProp::AbstractCubicBackend::copy_internals(AbstractCubicBackend& donor)
 void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std::string& parameter, const double c1, const double c2,
                                                        const double c3) {
     // bound-check indices
-    if (i < 0 || i >= N) {
+    if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
     if (parameter == "MC" || parameter == "mc" || parameter == "Mathias-Copeman") {
@@ -719,7 +719,7 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
 
 void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) {
     // bound-check indices
-    if (i < 0 || i >= N) {
+    if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
     // Set the volume translation parrameter, currently applied to the whole fluid, not to components.
@@ -741,7 +741,7 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
 }
 double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
     // bound-check indices
-    if (i < 0 || i >= N) {
+    if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
     // Get the volume translation parrameter, currently applied to the whole fluid, not to components.
