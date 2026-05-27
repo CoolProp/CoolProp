@@ -1098,8 +1098,8 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
         double t_in = static_cast<double>(calc_Ttriple()), D_in = 0.0, p_in = 0.0;
         double tmin_unused = NAN, tmax_melt = NAN, Dmax_unused = NAN, pmax_kPa = NAN;
         char htyp[] = "MLT";
-        LIMITXdll(htyp, &t_in, &D_in, &p_in, &(mole_fractions[0]), &tmin_unused, &tmax_melt, &Dmax_unused, &pmax_kPa, &ierr,
-                  herr.data(), 3, errormessagelength);
+        LIMITXdll(htyp, &t_in, &D_in, &p_in, &(mole_fractions[0]), &tmin_unused, &tmax_melt, &Dmax_unused, &pmax_kPa, &ierr, herr.data(), 3,
+                  errormessagelength);
         if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
             throw ValueError(format("%s", herr.data()).c_str());
         }
