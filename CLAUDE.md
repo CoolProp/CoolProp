@@ -53,8 +53,11 @@ bd close <id>         # Complete work
 ## Build & Test
 
 ```bash
-# Configure (one-time)
-cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON
+# Configure (one-time).  Always set -DCMAKE_BUILD_TYPE=Release: the
+# default is an UNOPTIMIZED build, which makes the [slow] SVDSBTL surface
+# builds (a dense SVD at production resolution, NT=200/NR=800/rank=20)
+# crawl for minutes per fresh fluid.  Release turns that into seconds.
+cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
 
 # Build the Catch2 runner
 cmake --build build_catch --target CatchTestRunner -j8
