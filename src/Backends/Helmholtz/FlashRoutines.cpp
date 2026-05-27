@@ -2510,7 +2510,527 @@ void FlashRoutines::HS_flash_generate_TP_singlephase_guess(HelmholtzEOSMixtureBa
     T = ((double)rand() / (double)RAND_MAX) * (HEOS.Tmax() - HEOS.Ttriple()) + HEOS.Ttriple();
     p = exp(logp);
 }
+namespace {
+// ===========================================================================
+// Single-phase H,S superancillary "happy path" (the cascade).  Ported from the
+// validated prototype in src/Tests/CoolProp-Tests-HS.cpp (bd CoolProp-j3n.4).
+//
+// Three legs, each a homotopy that anchors where a state of the target entropy
+// provably exists and then marches in (T, ln rho) holding (h,s) on a chord:
+//   1) saturation-anchor   : anchor = saturated state whose entropy == s_t
+//   2) supercritical isentrope : anchor on the T=Tmax isotherm (dome-free)
+//   3) ideal-gas departure : anchor at lambda=0 (no dome at all)
+// A candidate is accepted only if it reproduces (h,s) AND is fully intrinsically
+// stable (dp/drho|_T > 0 AND cv > 0) within [Tmin,Tmax]; that makes the stable
+// (h,s)->(T,rho) root unique, so no knowledge of the true (T,rho) is needed.
+// See the docs notebook (Web/coolprop/HSFlash.ipynb) for the full derivation.
+// ===========================================================================
+using HS_SA_t = EquationOfState::SuperAncillary_t;
+
+// RAII: impose single phase so update_DmolarT_direct + h/s/derivative queries
+// take the single-phase EOS path everywhere (including metastable iterates).
+struct HSGasGuard
+{
+    HelmholtzEOSMixtureBackend& H;  // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+    explicit HSGasGuard(HelmholtzEOSMixtureBackend& H) : H(H) {
+        H.specify_phase(iphase_gas);
+    }
+    // unspecify_phase() only resets an enum flag and does not throw.
+    // NOLINTNEXTLINE(bugprone-exception-escape)
+    ~HSGasGuard() {
+        H.unspecify_phase();
+    }
+    HSGasGuard(const HSGasGuard&) = delete;
+    HSGasGuard& operator=(const HSGasGuard&) = delete;
+    HSGasGuard(HSGasGuard&&) = delete;
+    HSGasGuard& operator=(HSGasGuard&&) = delete;
+};
+
+// Shared (T, w=ln rho) homotopy corrector: homotope (h,s) linearly from the
+// anchor's values to the target with adaptive subdivision; the dp/drho|_T>0 guard
+// keeps the corrector on the mechanically stable branch.  Caller imposes the gas
+// phase.  Returns true and fills T_out/rho_out on success.
+bool hs_corrector(HelmholtzEOSMixtureBackend& H, double T0, double rho0, double h_t, double s_t, double& T_out, double& rho_out) {
+    const double Rgas = H.gas_constant(), Tsc = H.T_critical();
+    const double hscale = Rgas * Tsc, sscale = Rgas;                   // dimensional scales (h passes through 0 at the ref state)
+    const double Tlo = H.Tmin() * (1.0 - 2e-2), Thi = 1.5 * H.Tmax();  // 2% sub-Tmin slack: admits the cold-liquid fold
+    auto eval = [&](double T, double rho) { H.update_DmolarT_direct(rho, T); };
+    eval(T0, rho0);
+    const double h0 = H.hmolar(), s0 = H.smolar();
+    for (int N = 1; N <= 128; N *= 2) {
+        double T = T0, w = std::log(rho0);
+        bool failed = false;
+        for (int k = 1; k <= N && !failed; ++k) {
+            const double lam = static_cast<double>(k) / N;
+            const double ht = h0 + lam * (h_t - h0), st = s0 + lam * (s_t - s0);
+            bool conv = false;
+            double best_norm = 1e300, best_T = T, best_w = w;
+            for (int iter = 0; iter < 40; ++iter) {
+                const double rho = std::exp(w);
+                eval(T, rho);
+                const double rh = H.hmolar() - ht, rs = H.smolar() - st;
+                const double norm = std::abs(rh) / hscale + std::abs(rs) / sscale;
+                if (norm < best_norm) {
+                    best_norm = norm;
+                    best_T = T;
+                    best_w = w;
+                }
+                if (norm < 1e-11) {
+                    conv = true;
+                    break;
+                }
+                const double hT = H.first_partial_deriv(iHmolar, iT, iDmolar), hr = H.first_partial_deriv(iHmolar, iDmolar, iT);
+                const double sT = H.first_partial_deriv(iSmolar, iT, iDmolar), sr = H.first_partial_deriv(iSmolar, iDmolar, iT);
+                const double a11 = hT, a12 = rho * hr, a21 = sT, a22 = rho * sr;
+                const double det = a11 * a22 - a12 * a21;
+                if (!std::isfinite(det) || std::abs(det) < 1e-300) break;
+                const double dT = -(a22 * rh - a12 * rs) / det, dw = -(-a21 * rh + a11 * rs) / det;
+                double f = 1.0;
+                while ((T + f * dT < Tlo || T + f * dT > Thi || std::abs(f * dw) > 2.0) && f > 1e-6)
+                    f *= 0.5;
+                for (int g = 0; g < 8 && f > 1e-3; ++g) {  // stay on the mechanically stable branch
+                    eval(T + f * dT, std::exp(w + f * dw));
+                    if (H.first_partial_deriv(iP, iDmolar, iT) > 0) break;
+                    f *= 0.5;
+                }
+                T += f * dT;
+                w += f * dw;
+            }
+            if (!conv && best_norm < 1e-8) {
+                T = best_T;
+                w = best_w;
+                conv = true;
+            }
+            if (!conv) failed = true;
+        }
+        if (!failed) {
+            T_out = T;
+            rho_out = std::exp(w);
+            return true;
+        }
+    }
+    return false;
+}
+
+// Target entropy shifted into the caloric superancillary's stamped frame (#2773).
+double hs_s_to_cache(HelmholtzEOSMixtureBackend& H, HS_SA_t& sa, double s_t) {
+    const auto stamp = sa.get_caloric_alpha0_stamp();
+    if (!stamp.has_value()) return s_t;
+    const double a1 = FlashRoutines::alpha0_offset_total(H).first;
+    return s_t - H.gas_constant() * (stamp->first - a1);
+}
+// Target enthalpy shifted into the caloric superancillary's stamped frame (#2773).
+double hs_h_to_cache(HelmholtzEOSMixtureBackend& H, HS_SA_t& sa, double h_t) {
+    const auto stamp = sa.get_caloric_alpha0_stamp();
+    if (!stamp.has_value()) return h_t;
+    const double a2 = FlashRoutines::alpha0_offset_total(H).second;
+    return h_t + H.gas_constant() * H.get_reducing_state().T * (stamp->second - a2);
+}
+
+// Leg 1: saturation anchor.  Anchor at the saturated state whose entropy equals
+// the target's (found by the superancillary's native S-inversion), then march.
+bool hs_leg_saturation(HelmholtzEOSMixtureBackend& H, HS_SA_t& sa, double h_t, double s_t, double& T_out, double& rho_out) {
+    HSGasGuard guard(H);
+    const double Tc = sa.get_Tcrit_num(), Tmin = sa.get_Tmin();
+    const double Tcap = Tc - std::max(1e-4, 1e-6 * Tc);
+    const double a = Tmin + 1e-3, b = Tcap;
+    H.ensure_caloric_superancillaries();
+    const double s_cache = hs_s_to_cache(H, sa, s_t);
+    // Disambiguate the saturation branch by enthalpy closeness to the target.  When
+    // the caloric H superancillary is present, read the saturated enthalpy straight
+    // off it (Chebyshev, no EOS call) instead of evaluating the EOS at each
+    // candidate -- this is the dominant leg, so it trims EOS evaluations off the
+    // common case (and several for retrograde fluids with multiple roots).
+    const bool use_ca_h = sa.has_variable('H');
+    const double h_cache = use_ca_h ? hs_h_to_cache(H, sa, h_t) : h_t;
+    double T0 = 0, rho0 = 0, best_hgap = 1e300;
+    bool found = false, near_critical = false;
+    auto consider = [&](double Tcand, short Q) {
+        const double rho = sa.eval_sat(Tcand, 'D', Q);
+        double hgap;
+        if (use_ca_h) {
+            hgap = std::abs(sa.eval_sat(Tcand, 'H', Q) - h_cache);
+        } else {
+            H.update_DmolarT_direct(rho, Tcand);
+            hgap = std::abs(H.hmolar() - h_t);
+        }
+        if (std::isfinite(hgap) && hgap < best_hgap) {
+            best_hgap = hgap;
+            T0 = Tcand;
+            rho0 = rho;
+            found = true;
+        }
+    };
+    for (const auto& pr : sa.get_all_intersections('S', s_cache, 48, 100, 1e-12)) {
+        const double Tcand = pr.first;
+        if (Tcand >= b) near_critical = true;  // anchor pinned against Tc => effectively critical/supercritical entropy
+        if (Tcand <= a || Tcand >= b) continue;
+        const short Qroot = (std::abs(sa.eval_sat(Tcand, 'S', 0) - s_cache) <= std::abs(sa.eval_sat(Tcand, 'S', 1) - s_cache)) ? 0 : 1;
+        consider(Tcand, Qroot);
+    }
+    if (!found) {
+        if (near_critical) return false;  // hand to the supercritical isentrope leg
+        const double s_crit = [&] {
+            H.update_DmolarT_direct(sa.eval_sat(Tcap, 'D', 0), Tcap);
+            return H.smolar();
+        }();
+        if (s_t > s_crit) {  // dilute gas: T from the monotone 1D enthalpy inversion
+            rho0 = sa.get_rhocrit_num() * 1e-4;
+            auto hres = [&](double T) {
+                H.update_DmolarT_direct(rho0, T);
+                return H.hmolar() - h_t;
+            };
+            double Ta = Tmin + 1e-3, Tb = 1.5 * H.Tmax(), fa = hres(Ta), fb = hres(Tb);
+            if (fa * fb <= 0) {
+                boost::math::uintmax_t it = 60;
+                auto [l, r] = toms748_solve(hres, Ta, Tb, fa, fb, boost::math::tools::eps_tolerance<double>(30), it);
+                T0 = 0.5 * (l + r);
+            } else {
+                T0 = (std::abs(fa) <= std::abs(fb)) ? Ta : Tb;
+            }
+        } else {  // cold compressed liquid: triple-point saturated liquid
+            T0 = a;
+            rho0 = sa.eval_sat(a, 'D', 0);
+        }
+    }
+    return hs_corrector(H, T0, rho0, h_t, s_t, T_out, rho_out);
+}
+
+// Leg 2: supercritical isentrope.  Anchor on the dome-free T=Tmax isotherm at the
+// density whose entropy equals s_t, then march (holding s == s_t).
+bool hs_leg_isentrope(HelmholtzEOSMixtureBackend& H, double h_t, double s_t, double& T_out, double& rho_out) {
+    HSGasGuard guard(H);
+    const double Ta = H.Tmax(), rhoc = H.rhomolar_critical();
+    auto sres = [&](double rho) {
+        H.update_DmolarT_direct(rho, Ta);
+        return H.smolar() - s_t;
+    };
+    const double ra = 1e-6 * rhoc, ga = sres(ra);
+    double rb = 6.0 * rhoc, gb = sres(rb);
+    for (int e = 0; e < 12 && ga * gb > 0; ++e) {
+        const double rb_next = rb * 2.0;
+        double gb_next;
+        try {
+            gb_next = sres(rb_next);
+        } catch (...) {
+            break;
+        }
+        if (!std::isfinite(gb_next)) break;
+        rb = rb_next;
+        gb = gb_next;
+    }
+    double rho0;
+    if (ga * gb > 0) {
+        rho0 = (std::abs(ga) <= std::abs(gb)) ? ra : rb;
+    } else {
+        boost::math::uintmax_t it = 80;
+        auto [l, r] = toms748_solve(sres, ra, rb, ga, gb, boost::math::tools::eps_tolerance<double>(40), it);
+        rho0 = 0.5 * (l + r);
+    }
+    return hs_corrector(H, Ta, rho0, h_t, s_t, T_out, rho_out);
+}
+
+// Leg 3: ideal-gas departure.  Scale residual Helmholtz by lambda; anchor at
+// lambda=0 (ideal gas, no dome) and continue lambda:0->1.  Self-contained.
+bool hs_leg_departure(HelmholtzEOSMixtureBackend& H, double h_t, double s_t, double& T_out, double& rho_out) {
+    HSGasGuard guard(H);
+    const double Rg = H.gas_constant();
+    const auto& red = H.get_reducing_state();
+    const double Tr = red.T, rhor = red.rhomolar;
+    const auto& x = H.get_mole_fractions_ref();
+    const double Tmin = H.Tmin(), Tmax = H.Tmax();
+    // Properties (and the Jacobian entries the Newton step needs) of the
+    // lambda-scaled model alpha = alpha0 + lam*alphar: h, s, the stability
+    // marker prho (= dp/drho|_T, must stay > 0), and the partials
+    // hT=dh/dT, hr=dh/drho, sT=ds/dT, sr=ds/drho.
+    struct LP
+    {
+        double h, s, prho, hT, hr, sT, sr;
+    };
+    // Evaluate the above at (T, rho) for continuation parameter lam in [0, 1].
+    auto lprops = [&](double T, double rho, double lam) -> LP {
+        const double tau = Tr / T, delta = rho / rhor;
+        // Each calc_*_deriv_nocache computes the FULL HelmholtzDerivatives set and
+        // returns one component, so the per-term calls recompute everything 6-9x.
+        // Evaluate the ideal-gas and residual blocks once each instead.
+        const HelmholtzDerivatives a0d = H.calc_all_alpha0_derivs_nocache(x, tau, delta, Tr, rhor);
+        const HelmholtzDerivatives ard_all = H.residual_helmholtz->all(H, x, tau, delta, false);
+        const double a0 = a0d.alphar, a0t = a0d.dalphar_dtau, a0tt = a0d.d2alphar_dtau2;
+        const double ar = ard_all.alphar, art = ard_all.dalphar_dtau, ard = ard_all.dalphar_ddelta;
+        const double artt = ard_all.d2alphar_dtau2, ardd = ard_all.d2alphar_ddelta2, artd = ard_all.d2alphar_ddelta_dtau;
+        const double at = a0t + lam * art, att = a0tt + lam * artt;
+        const double Hh = 1.0 + tau * at + delta * lam * ard;
+        LP L{};
+        L.h = Rg * T * Hh;
+        L.s = Rg * (tau * at - (a0 + lam * ar));
+        L.prho = Rg * T * (1.0 + 2.0 * delta * lam * ard + delta * delta * lam * ardd);
+        const double dHdtau = at + tau * att + delta * lam * artd;
+        const double dHddelta = lam * ard + tau * lam * artd + delta * lam * ardd;
+        L.hT = Rg * (Hh - tau * dHdtau);
+        L.hr = Rg * T * dHddelta / rhor;
+        L.sT = -Rg * tau * tau * att / T;
+        L.sr = Rg * (tau * lam * artd - 1.0 / delta - lam * ard) / rhor;
+        // A non-finite property/derivative (e.g. a degenerate EOS evaluation) must
+        // not leak a NaN into the continuation/Newton loop; throw so the cascade
+        // defers this leg cleanly (the per-term calc_*_deriv_nocache previously
+        // threw on a non-finite alpha0 -- the batched accessor does not).
+        if (!std::isfinite(L.h) || !std::isfinite(L.s) || !std::isfinite(L.prho) || !std::isfinite(L.hT) || !std::isfinite(L.hr)
+            || !std::isfinite(L.sT) || !std::isfinite(L.sr)) {
+            throw ValueError("hs_leg_departure: non-finite lambda-model property/derivative");
+        }
+        return L;
+    };
+    // lambda=0 anchor: the ideal-gas limit has no dome, so (h,s)->(T,rho) is a
+    // pair of decoupled 1-D solves -- T from h(T) at the reducing density, then
+    // rho from s(T0, rho).  This seeds the continuation below.
+    double T0 = 0, rho0 = 0;
+    {
+        auto hig = [&](double T) { return lprops(T, rhor, 0.0).h - h_t; };
+        double Ta = 0.3 * Tmin, Tb = 3.0 * Tmax, fa = hig(Ta), fb = hig(Tb);
+        if (fa * fb > 0) return false;
+        boost::math::uintmax_t it = 80;
+        auto [l, r] = toms748_solve(hig, Ta, Tb, fa, fb, boost::math::tools::eps_tolerance<double>(40), it);
+        T0 = 0.5 * (l + r);
+        auto sig = [&](double rho) { return lprops(T0, rho, 0.0).s - s_t; };
+        double ra = 1e-8 * rhor, rb = 50.0 * rhor, ga = sig(ra), gb = sig(rb);
+        if (ga * gb > 0) {
+            rho0 = (std::abs(ga) <= std::abs(gb)) ? ra : rb;
+        } else {
+            boost::math::uintmax_t it2 = 80;
+            auto [l2, r2] = toms748_solve(sig, ra, rb, ga, gb, boost::math::tools::eps_tolerance<double>(40), it2);
+            rho0 = 0.5 * (l2 + r2);
+        }
+    }
+    // Continuation lam: 0 -> 1 in N equal steps, solving in (T, w=log rho) so rho
+    // stays positive.  Retry with a finer schedule (N doubling) if a coarse one
+    // loses the path; first N that reaches lam=1 wins.
+    const double hscale = Rg * Tr, sscale = Rg;
+    for (int N = 1; N <= 256; N *= 2) {
+        double T = T0, w = std::log(rho0);
+        bool failed = false;
+        for (int k = 1; k <= N && !failed; ++k) {
+            const double lam = static_cast<double>(k) / N;
+            bool conv = false;
+            double best_norm = 1e300, best_T = T, best_w = w;
+            for (int iter = 0; iter < 40; ++iter) {
+                const double rho = std::exp(w);
+                LP L = lprops(T, rho, lam);
+                const double rh = L.h - h_t, rs = L.s - s_t;
+                const double norm = std::abs(rh) / hscale + std::abs(rs) / sscale;
+                if (norm < best_norm) {
+                    best_norm = norm;
+                    best_T = T;
+                    best_w = w;
+                }
+                if (norm < 1e-11) {
+                    conv = true;
+                    break;
+                }
+                // 2x2 Newton step on (rh, rs); columns scaled by rho since we
+                // step in w = log rho (drho = rho*dw).
+                const double a11 = L.hT, a12 = rho * L.hr, a21 = L.sT, a22 = rho * L.sr;
+                const double det = a11 * a22 - a12 * a21;
+                if (!std::isfinite(det) || std::abs(det) < 1e-300) break;
+                const double dT = -(a22 * rh - a12 * rs) / det, dw = -(-a21 * rh + a11 * rs) / det;
+                // Damp the step: first keep T in range and cap the log-rho move,
+                // then back off until the trial state is mechanically stable (prho>0).
+                double f = 1.0;
+                while ((T + f * dT <= 0 || T + f * dT > 3.0 * Tmax || std::abs(f * dw) > 2.0) && f > 1e-6)
+                    f *= 0.5;
+                for (int g = 0; g < 8 && f > 1e-3; ++g) {
+                    if (lprops(T + f * dT, std::exp(w + f * dw), lam).prho > 0) break;
+                    f *= 0.5;
+                }
+                T += f * dT;
+                w += f * dw;
+            }
+            if (!conv && best_norm < 1e-8) {
+                T = best_T;
+                w = best_w;
+                conv = true;
+            }
+            if (!conv) failed = true;
+        }
+        if (!failed) {
+            T_out = T;
+            rho_out = std::exp(w);
+            return true;
+        }
+    }
+    return false;
+}
+
+// Accept only a faithful (h,s) reproduction that is in-range and fully stable
+// (dp/drho|_T>0 AND cv>0): over that region the (h,s)->(T,rho) map is injective,
+// so a stable+matching root IS the unique physical root.
+bool hs_accept(HelmholtzEOSMixtureBackend& H, double T, double rho, double h_t, double s_t) {
+    if (!std::isfinite(T) || !std::isfinite(rho) || rho <= 0) return false;
+    const double Rg = H.gas_constant(), Tc = H.T_critical();
+    if (T < H.Tmin() * (1 - 1e-6) || T > H.Tmax() * (1 + 1e-6)) return false;
+    HSGasGuard guard(H);
+    H.update_DmolarT_direct(rho, T);
+    if (std::abs(H.hmolar() - h_t) > 1e-6 * Rg * Tc || std::abs(H.smolar() - s_t) > 1e-6 * Rg) return false;
+    double cv = -1;
+    try {
+        cv = H.cvmolar();
+    } catch (...) {
+        return false;
+    }
+    if (!std::isfinite(cv) || cv <= 0) return false;
+    return H.first_partial_deriv(iP, iDmolar, iT) > 0;
+}
+
+// True if (T,rho) lies strictly inside the two-phase dome (a metastable single-
+// phase extension).  Such a root reproduces a two-phase (h,s) but is NOT the
+// physical answer, so the cascade must reject it and defer to the two-phase solve.
+bool hs_inside_dome(HS_SA_t& sa, double T, double rho) {
+    if (T >= sa.get_Tcrit_num()) return false;
+    return rho > sa.eval_sat(T, 'D', 1) && rho < sa.eval_sat(T, 'D', 0);
+}
+
+// Try the three legs in order; accept the first result that is stable, matching,
+// AND outside the dome (a genuine single-phase state).  An in-dome (metastable)
+// root means the input is actually two-phase, so reject it -- the dispatcher then
+// falls through to the two-phase solve.
+bool hs_cascade(HelmholtzEOSMixtureBackend& H, HS_SA_t* sa, double h_t, double s_t, double& T_out, double& rho_out) {
+    auto good = [&](double T, double rho) { return hs_accept(H, T, rho, h_t, s_t) && !(sa != nullptr && hs_inside_dome(*sa, T, rho)); };
+    // Run one leg; on success commit T_out/rho_out.  A leg whose rootfind wanders
+    // out of the EOS domain can throw -- that just defers to the next leg.
+    auto run = [&](auto&& leg) -> bool {
+        try {
+            double T = 0, rho = 0;
+            if (leg(T, rho) && good(T, rho)) {
+                T_out = T;
+                rho_out = rho;
+                return true;
+            }
+        } catch (...) {  // NOLINT(bugprone-empty-catch): a throwing leg defers to the next
+        }
+        return false;
+    };
+    if (sa != nullptr && run([&](double& T, double& rho) { return hs_leg_saturation(H, *sa, h_t, s_t, T, rho); })) return true;
+    if (run([&](double& T, double& rho) { return hs_leg_isentrope(H, h_t, s_t, T, rho); })) return true;
+    if (run([&](double& T, double& rho) { return hs_leg_departure(H, h_t, s_t, T, rho); })) return true;
+    return false;
+}
+
+// Cheap superancillary two-phase detector (no EOS): scan the Qh==Qs residual on
+// the caloric superancillary for a sign change with quality strictly inside (0,1).
+// Used only as an OPTIMIZATION -- a true routes the point straight to the
+// EOS-exact two-phase solve, skipping the (doomed) single-phase cascade.  It is
+// deliberately conservative: a false negative (or a near-critical miss) is safe
+// because the cascade rejects the resulting in-dome metastable root and the
+// dispatcher's two-phase fallback then runs; a false positive is safe because the
+// two-phase solve fails to reproduce (h,s) and we fall through to the cascade.
+bool hs_two_phase_likely(HelmholtzEOSMixtureBackend& H, HS_SA_t& sa, double h_t, double s_t) {
+    H.ensure_caloric_superancillaries();
+    if (!sa.has_variable('H') || !sa.has_variable('S')) return false;
+    const double hc = hs_h_to_cache(H, sa, h_t), sc = hs_s_to_cache(H, sa, s_t);
+    const double Tmin = sa.get_Tmin(), Tc = sa.get_Tcrit_num();
+    auto Qh_minus_Qs = [&](double T) -> double {
+        const double sL = sa.eval_sat(T, 'S', 0), sV = sa.eval_sat(T, 'S', 1);
+        const double hL = sa.eval_sat(T, 'H', 0), hV = sa.eval_sat(T, 'H', 1);
+        return (hc - hL) / (hV - hL) - (sc - sL) / (sV - sL);
+    };
+    // Coarse scan for a sign change: the endpoint near Tc is ill-conditioned
+    // (rhoL->rhoV, the quality ratios degenerate), so scan rather than bracket the
+    // ends -- this is what a naive two-endpoint test missed at low quality.
+    const int M = 40;
+    const double Tlo = Tmin + 1e-3, Thi = Tc - std::max(0.5, 1e-3 * Tc);
+    double Tprev = Tlo, fprev = Qh_minus_Qs(Tlo);
+    for (int i = 1; i <= M; ++i) {
+        const double T = Tlo + (Thi - Tlo) * i / M;
+        const double f = Qh_minus_Qs(T);
+        if (std::isfinite(fprev) && std::isfinite(f) && fprev * f <= 0) {
+            boost::math::uintmax_t it = 60;
+            auto [l, r] = toms748_solve(Qh_minus_Qs, Tprev, T, fprev, f, boost::math::tools::eps_tolerance<double>(40), it);
+            const double Tsol = 0.5 * (l + r);
+            const double sL = sa.eval_sat(Tsol, 'S', 0), sV = sa.eval_sat(Tsol, 'S', 1);
+            const double Q = (sc - sL) / (sV - sL);
+            if (Q > 1e-6 && Q < 1.0 - 1e-6) return true;  // strictly interior => two-phase
+        }
+        Tprev = T;
+        fprev = f;
+    }
+    return false;
+}
+
+}  // namespace
+
 void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
+    // ===================== superancillary "happy path" =====================
+    // For a pure fluid with a built superancillary, robustly classify two-phase
+    // vs single-phase from (h,s) and solve each fast: two-phase by the Qh==Qs
+    // saturation solve (mirror of the D+X happy path), single-phase by the
+    // cascade above.  Any failure falls through to the legacy "sad path" below.
+    // Kill-switch COOLPROP_DISABLE_SUPERANC_HS forces the legacy path.
+    {
+        static const bool hs_disabled = (std::getenv("COOLPROP_DISABLE_SUPERANC_HS") != nullptr);
+        if (!hs_disabled && get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
+            std::shared_ptr<EquationOfState::SuperAncillary_t> sa_ptr = HEOS.get_superanc();
+            if (sa_ptr) {
+                const double h_t = HEOS._hmolar, s_t = HEOS._smolar;
+                auto restore_inputs = [&]() {
+                    HEOS._hmolar = h_t;
+                    HEOS._smolar = s_t;
+                    HEOS.unspecify_phase();
+                };
+                auto reproduces = [&]() -> bool {
+                    const double hh = HEOS.hmolar(), ss = HEOS.smolar();
+                    return std::isfinite(hh) && std::isfinite(ss) && std::abs(hh - h_t) <= 1e-6 * std::abs(h_t) + 1e-3
+                           && std::abs(ss - s_t) <= 1e-6 * std::abs(s_t) + 1e-5;
+                };
+                try {
+                    EquationOfState::SuperAncillary_t& sa = *sa_ptr;
+                    bool tried_2ph = false;
+                    auto try_twophase = [&]() -> bool {
+                        HS_flash_twophaseOptions opt;
+                        HS_flash_twophase(HEOS, h_t, s_t, opt);
+                        tried_2ph = true;
+                        return reproduces();
+                    };
+                    // (0) Fast two-phase screen (no EOS): if (h,s) is clearly inside the
+                    // dome, solve two-phase directly and skip the doomed single-phase
+                    // cascade (~50-100 wasted evals for two-phase inputs).
+                    if (hs_two_phase_likely(HEOS, sa, h_t, s_t)) {
+                        if (try_twophase()) return;
+                    }
+                    // (1) Single-phase cascade (the common case, ~16 evals).  It accepts
+                    // only a stable root OUTSIDE the dome, so for a two-phase (h,s) every
+                    // leg lands on an in-dome metastable root and is rejected -> the
+                    // cascade fails and we fall through to (2).  This dome-rejection is
+                    // the robust safety net behind the conservative screen in (0).
+                    double T = 0, rho = 0;
+                    if (hs_cascade(HEOS, sa_ptr.get(), h_t, s_t, T, rho)) {
+                        HEOS.update_DmolarT_direct(rho, T);
+                        HEOS._Q = 10000;
+                        HEOS._p = HEOS.calc_pressure_nocache(HEOS.T(), HEOS.rhomolar());
+                        HEOS.unspecify_phase();
+                        HEOS.recalculate_singlephase_phase();
+                        if (reproduces()) return;
+                    }
+                    // (2) Two-phase fallback (if the screen did not already try it): the
+                    // cascade found no stable single-phase root, so solve the EOS-exact
+                    // Qh==Qs problem and accept only if it reproduces (h,s).
+                    if (!tried_2ph) {
+                        if (try_twophase()) return;
+                    }
+                    // Every fall-through to the legacy path below MUST see the original
+                    // inputs: the cascade / two-phase attempts mutate HEOS._hmolar,
+                    // _smolar (via update_DmolarT_direct -> clear()), so restore them
+                    // unconditionally here.  (Skipping this on the screen-fired +
+                    // cascade-failed path corrupted the legacy solve's target.)
+                    restore_inputs();
+                } catch (const std::exception& e) {
+                    if (get_debug_level() > 0) {
+                        std::cout << "HS_flash superancillary path failed (" << e.what() << "); using legacy path\n";
+                    }
+                    restore_inputs();
+                }
+            }
+        }
+    }
+    // ===================== legacy "sad path" =====================
     // Use TS flash and iterate on T (known to be between Tmin and Tmax)
     // in order to find H
     double hmolar = HEOS.hmolar(), smolar = HEOS.smolar();
