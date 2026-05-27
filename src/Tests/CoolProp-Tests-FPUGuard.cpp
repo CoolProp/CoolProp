@@ -18,11 +18,11 @@
 #    include <catch2/catch_all.hpp>
 #    include "CoolProp/FPUGuard.h"
 #    include <cmath>  // std::isnan
+#    include <cfenv>  // std::fetestexcept / std::feclearexcept
 
 // fegetexcept/feenableexcept/fedisableexcept are GNU glibc extensions; the
 // "trapping host" half of the contract can only be exercised where they exist.
 #    if defined(__GLIBC__) && defined(FE_ALL_EXCEPT)
-#        include <cfenv>
 
 TEST_CASE("fpu_guard masks FP traps inside its scope and survives a NaN op", "[fpu_guard][fpu][3012]") {
     std::feclearexcept(FE_ALL_EXCEPT);
@@ -64,12 +64,19 @@ TEST_CASE("fpu_guard leaves an already-masked environment unchanged", "[fpu_guar
 #    endif  // __GLIBC__ && FE_ALL_EXCEPT
 
 TEST_CASE("fpu_guard is constructible and clears status flags on every platform", "[fpu_guard][fpu][3012]") {
-    // Platform-independent smoke test: the guard must compile and run a NaN op
-    // without aborting even where the GNU trapping API is unavailable.
-    CoolProp::fpu_guard guard;
-    volatile double zero = 0.0;
-    volatile double nan = zero / zero;
-    CHECK(std::isnan(nan));
+    // Platform-independent smoke test: the guard must compile, run a NaN op
+    // without aborting even where the GNU trapping API is unavailable, and -- on
+    // every platform path (glibc/MSVC/macOS) -- leave a clean status word once
+    // destroyed, since each ~fpu_guard clears the flags it raised.
+    std::feclearexcept(FE_ALL_EXCEPT);
+    {
+        CoolProp::fpu_guard guard;
+        volatile double zero = 0.0;
+        volatile double nan = zero / zero;  // raises FE_INVALID inside the guard
+        CHECK(std::isnan(nan));
+    }
+    // The guard is now destroyed; the flag it raised must have been cleared.
+    CHECK(std::fetestexcept(FE_INVALID) == 0);
 }
 
 #endif  // ENABLE_CATCH
