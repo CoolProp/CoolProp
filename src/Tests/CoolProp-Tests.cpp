@@ -3973,6 +3973,42 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Phase for solid water should throw", 
     }
 }
 
+TEST_CASE("REFPROP melting_line honors iP_min/iT_min/iP_max/iT_max sentinels", "[melting][REFPROP]") {
+    Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
+    std::shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    std::shared_ptr<CoolProp::AbstractState> HE(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    double pmin = RP->melting_line(iP_min, -1, -1);
+    double Tmin = RP->melting_line(iT_min, -1, -1);
+
+    // iP_min is the triple-point pressure, for consistency with HEOS.
+    CHECK(pmin == Catch::Approx(RP->p_triple()));
+    CHECK(pmin == Catch::Approx(HE->melting_line(iP_min, -1, -1)).epsilon(1e-3));
+
+    // iT_min is the melting line's lowest temperature.  For water that is the ice
+    // Ih/III junction (251.165 K), which lies BELOW the triple-point temperature --
+    // the one case (with heavy water) where it differs from the triple point.
+    CHECK(Tmin == Catch::Approx(251.165).epsilon(1e-5));
+    CHECK(Tmin < RP->Ttriple());
+    // ...and Tmin is a valid point on the melting line (the floor MELTT accepts).
+    CHECK_NOTHROW(RP->melting_line(iP, iT, Tmin));
+
+    // The high-pressure end must be a finite value above the minimum.
+    double pmax = RP->melting_line(iP_max, -1, -1);
+    double Tmax = RP->melting_line(iT_max, -1, -1);
+    CHECK(ValidNumber(pmax));
+    CHECK(ValidNumber(Tmax));
+    CHECK(pmax > pmin);
+    CHECK(Tmax > Tmin);
+
+    // A genuine melting lookup must still work and agree with HEOS (regression).
+    CHECK(RP->melting_line(iT, iP, 1e8) == Catch::Approx(HE->melting_line(iT, iP, 1e8)).epsilon(1e-3));
+
+    // A truly invalid input pair must throw a ValueError -- not crash building
+    // its own error message via get_parameter_information() on an invalid key.
+    CHECK_THROWS_AS(RP->melting_line(iDmolar, iHmolar, 0), CoolProp::ValueError);
+}
+
 // Tests for cubic EOS superancillaries (#2739)
 TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[cubic_superanc][2739]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {

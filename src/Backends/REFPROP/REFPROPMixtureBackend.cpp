@@ -1077,7 +1077,34 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
     int ierr = 0;
     std::array<char, 255> herr{};
 
-    if (param == iP && given == iT) {
+    // Bounding-box sentinels for the melting curve, matching the HEOS ancillary
+    // contract (Ancillaries.cpp): when param is a bound key, return the bound and
+    // ignore given/value.  Each axis bound is independent.
+    //
+    // iP_min is the triple-point pressure, for consistency with the HEOS melting
+    // ancillary.  iT_min is the melting line's lowest temperature: for most fluids
+    // that is the triple-point temperature, but for water and heavy water the
+    // melting line extends below it to the ice Ih/III junction (251.165 K for
+    // water).  REFPROP's MELTP (CORE_ANC.FOR) takes that floor as LIMITS('EOS').Tmin,
+    // so we read it from the EOS lower temperature limit.  The upper limits come from
+    // the melting-line model ("MLT") via LIMITX, distinct from the EOS limits.
+    if (param == iP_min) {
+        return calc_p_triple();
+    } else if (param == iT_min) {
+        double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
+        limits(Tmin, Tmax, rhomolarmax, pmax);  // LIMITS('EOS'); Tmin is MELTP's temperature floor
+        return static_cast<CoolPropDbl>(Tmin);
+    } else if (param == iP_max || param == iT_max) {
+        double t_in = static_cast<double>(calc_Ttriple()), D_in = 0.0, p_in = 0.0;
+        double tmin_unused = NAN, tmax_melt = NAN, Dmax_unused = NAN, pmax_kPa = NAN;
+        char htyp[] = "MLT";
+        LIMITXdll(htyp, &t_in, &D_in, &p_in, &(mole_fractions[0]), &tmin_unused, &tmax_melt, &Dmax_unused, &pmax_kPa, &ierr,
+                  herr.data(), 3, errormessagelength);
+        if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+            throw ValueError(format("%s", herr.data()).c_str());
+        }
+        return (param == iP_max) ? static_cast<CoolPropDbl>(pmax_kPa * 1000) : static_cast<CoolPropDbl>(tmax_melt);
+    } else if (param == iP && given == iT) {
         double _T = static_cast<double>(value), p_kPa = NAN;
         MELTTdll(&_T, &(mole_fractions[0]), &p_kPa, &ierr, herr.data(), errormessagelength);  // Error message
         if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
@@ -1092,8 +1119,10 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
         }  //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
         return _T;
     } else {
-        throw ValueError(format("calc_melting_line(%s,%s,%Lg) is an invalid set of inputs ", get_parameter_information(param, "short").c_str(),
-                                get_parameter_information(given, "short").c_str(), value));
+        // Use the raw integer keys here: param/given may be invalid keys (e.g. the
+        // -1 sentinel), and looking them up via get_parameter_information() would
+        // itself throw, masking this "invalid inputs" diagnostic.
+        throw ValueError(format("calc_melting_line(param=%d, given=%d, value=%Lg) is an invalid set of inputs", param, given, value));
     }
 }
 bool REFPROPMixtureBackend::has_melting_line() {
