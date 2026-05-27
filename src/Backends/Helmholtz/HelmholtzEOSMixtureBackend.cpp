@@ -356,13 +356,13 @@ double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, co
 
 void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model) {
     // bound-check indices
-    if (i < 0 || i >= N) {
-        if (j < 0 || j >= N) {
+    if (i >= N) {
+        if (j >= N) {
             throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
             throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
-    } else if (j < 0 || j >= N) {
+    } else if (j >= N) {
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
     }
     if (model == "linear") {
@@ -387,13 +387,13 @@ void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::si
 void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                const double value) {
     // bound-check indices
-    if (i < 0 || i >= N) {
-        if (j < 0 || j >= N) {
+    if (i >= N) {
+        if (j >= N) {
             throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
             throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
-    } else if (j < 0 || j >= N) {
+    } else if (j >= N) {
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
     }
     if (parameter == "Fij") {
@@ -410,13 +410,13 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t
 /// Get binary mixture floating point parameter for this instance
 double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) {
     // bound-check indices
-    if (i < 0 || i >= N) {
-        if (j < 0 || j >= N) {
+    if (i >= N) {
+        if (j >= N) {
             throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
             throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
-    } else if (j < 0 || j >= N) {
+    } else if (j >= N) {
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
     }
     if (parameter == "Fij") {
@@ -433,13 +433,13 @@ double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size
 void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                const std::string& value) {
     // bound-check indices
-    if (i < 0 || i >= N) {
-        if (j < 0 || j >= N) {
+    if (i >= N) {
+        if (j >= N) {
             throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
             throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
-    } else if (j < 0 || j >= N) {
+    } else if (j >= N) {
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
     }
     if (parameter == "function") {

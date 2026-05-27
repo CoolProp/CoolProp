@@ -558,7 +558,7 @@ T2 CubicInterp(const std::vector<T1>& x, const std::vector<T1>& y, std::size_t i
 };
 
 template <class T>
-T is_in_closed_range(T x1, T x2, T x) {
+bool is_in_closed_range(T x1, T x2, T x) {
     return (x >= std::min(x1, x2) && x <= std::max(x1, x2));
 };
 

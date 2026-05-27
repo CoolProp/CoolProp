@@ -234,7 +234,7 @@ std::string PCSAFTLibraryClass::get_binary_interaction_pcsaft(const std::string&
             } else if (key == "kijT") {
                 try {
                     return format("%0.16g", v[0].get_double("kijT"));
-                } catch (ValueError) {
+                } catch (const ValueError&) {
                     return format("%0.16g", 0.0);
                 }
             } else {
@@ -259,7 +259,7 @@ std::string PCSAFTLibraryClass::get_binary_interaction_pcsaft(const std::string&
             } else if (key == "kijT") {
                 try {
                     return format("%0.16g", v[0].get_double("kijT"));
-                } catch (ValueError) {
+                } catch (const ValueError&) {
                     return format("%0.16g", 0.0);
                 }
             } else {
