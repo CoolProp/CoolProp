@@ -1198,9 +1198,10 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parame
         // *********************************************************
         // Find the correct solution
         std::vector<std::size_t> solutions;
-        for (std::vector<std::pair<std::size_t, std::size_t>>::const_iterator it = intersections.begin(); it != intersections.end(); ++it) {
-            if (std::abs(env.Q[it->first] - HEOS._Q) < 10 * DBL_EPSILON && std::abs(env.Q[it->second] - HEOS._Q) < 10 * DBL_EPSILON) {
-                solutions.push_back(it->first);
+        for (const auto& intersection : intersections) {
+            if (std::abs(env.Q[intersection.first] - HEOS._Q) < 10 * DBL_EPSILON
+                && std::abs(env.Q[intersection.second] - HEOS._Q) < 10 * DBL_EPSILON) {
+                solutions.push_back(intersection.first);
             }
         }
 
@@ -1276,12 +1277,12 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parame
 
         // Find the correct solution
         std::vector<std::size_t> liquid_solutions, vapor_solutions;
-        for (std::vector<std::pair<std::size_t, std::size_t>>::const_iterator it = intersections.begin(); it != intersections.end(); ++it) {
-            if (std::abs(env.Q[it->first] - 0) < 10 * DBL_EPSILON && std::abs(env.Q[it->second] - 0) < 10 * DBL_EPSILON) {
-                liquid_solutions.push_back(it->first);
+        for (const auto& intersection : intersections) {
+            if (std::abs(env.Q[intersection.first] - 0) < 10 * DBL_EPSILON && std::abs(env.Q[intersection.second] - 0) < 10 * DBL_EPSILON) {
+                liquid_solutions.push_back(intersection.first);
             }
-            if (std::abs(env.Q[it->first] - 1) < 10 * DBL_EPSILON && std::abs(env.Q[it->second] - 1) < 10 * DBL_EPSILON) {
-                vapor_solutions.push_back(it->first);
+            if (std::abs(env.Q[intersection.first] - 1) < 10 * DBL_EPSILON && std::abs(env.Q[intersection.second] - 1) < 10 * DBL_EPSILON) {
+                vapor_solutions.push_back(intersection.first);
             }
         }
 
@@ -1368,9 +1369,9 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend& HEOS, CoolP
         CoolPropDbl value;          // value for S,H,U
         CoolPropDbl Qd;             // Quality from density
         Residual(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar_spec, parameters other, CoolPropDbl value)
-          : HEOS(HEOS), rhomolar_spec(rhomolar_spec), other(other), value(value) {
-            Qd = _HUGE;
-        };
+          : HEOS(HEOS), rhomolar_spec(rhomolar_spec), other(other), value(value), Qd(_HUGE) {
+
+            };
         double call(double T) override {
             HEOS.update(QT_INPUTS, 0, T);
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(), &SatV = HEOS.get_SatV();
@@ -3621,8 +3622,7 @@ TEST_CASE("Test critical points for nitrogen + ethane with HEOS", "[critical_poi
     shared_ptr<HelmholtzEOSMixtureBackend> HEOS = std::make_shared<HelmholtzEOSMixtureBackend>(strsplit("Nitrogen&Ethane", '&'));
     std::vector<double> zz = linspace(0.001, 0.999, 21);
     int failure_count = 0;
-    for (int i = 0; i < static_cast<std::size_t>(zz.size()); ++i) {
-        double z0 = zz[i];
+    for (double z0 : zz) {
         std::vector<double> z(2);
         z[0] = z0;
         z[1] = 1 - z0;
@@ -3644,8 +3644,7 @@ TEST_CASE("Test critical points for nitrogen + ethane with PR", "[critical_point
     shared_ptr<PengRobinsonBackend> HEOS = std::make_shared<PengRobinsonBackend>(strsplit("Nitrogen&Ethane", '&'));
     HEOS->set_binary_interaction_double(0, 1, "kij", 0.0407);  // Ramırez-Jimenez et al.
     std::vector<double> zz = linspace(0.001, 0.999, 21);
-    for (int i = 0; i < static_cast<std::size_t>(zz.size()); ++i) {
-        double z0 = zz[i];
+    for (double z0 : zz) {
         std::vector<double> z(2);
         z[0] = z0;
         z[1] = 1 - z0;

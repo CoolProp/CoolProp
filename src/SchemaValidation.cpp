@@ -52,7 +52,7 @@ void copy_sorted(const rapidjson::Value& src, rapidjson::Value& dst, rapidjson::
 std::string pointer_to_string(const rapidjson::GenericPointer<rapidjson::Value>& p) {
     rapidjson::StringBuffer sb;
     p.StringifyUriFragment(sb);
-    return std::string(sb.GetString(), sb.GetSize());
+    return {sb.GetString(), sb.GetSize()};
 }
 
 rapidjson::Document parse_json(const std::string& s, const char* what) {
@@ -102,7 +102,7 @@ std::string to_canonical_json(const rapidjson::Value& value) {
     rapidjson::StringBuffer sb;
     rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
     sorted.Accept(writer);
-    return std::string(sb.GetString(), sb.GetSize());
+    return {sb.GetString(), sb.GetSize()};
 }
 
 std::string to_canonical_json(const std::string& json_str) {

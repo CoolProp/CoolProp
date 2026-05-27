@@ -124,8 +124,7 @@ void MeltingLineVariables::set_limits() {
     if (type == MELTING_LINE_SIMON_TYPE) {
 
         // Fill in the min and max pressures for each part
-        for (std::size_t i = 0; i < simon.parts.size(); ++i) {
-            MeltingLinePiecewiseSimonSegment& part = simon.parts[i];
+        for (auto& part : simon.parts) {
             part.p_min = part.p_0 + part.a * (pow(part.T_min / part.T_0, part.c) - 1);
             part.p_max = part.p_0 + part.a * (pow(part.T_max / part.T_0, part.c) - 1);
         }
@@ -135,8 +134,7 @@ void MeltingLineVariables::set_limits() {
         Tmax = simon.parts.back().T_max;
     } else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE) {
         // Fill in the min and max pressures for each part
-        for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i) {
-            MeltingLinePiecewisePolynomialInTrSegment& part = polynomial_in_Tr.parts[i];
+        for (auto& part : polynomial_in_Tr.parts) {
             part.p_min = part.evaluate(part.T_min);
             part.p_max = part.evaluate(part.T_max);
         }
@@ -146,8 +144,7 @@ void MeltingLineVariables::set_limits() {
         pmax = polynomial_in_Tr.parts.back().p_max;
     } else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE) {
         // Fill in the min and max pressures for each part
-        for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i) {
-            MeltingLinePiecewisePolynomialInThetaSegment& part = polynomial_in_Theta.parts[i];
+        for (auto& part : polynomial_in_Theta.parts) {
             part.p_min = part.evaluate(part.T_min);
             part.p_max = part.evaluate(part.T_max);
         }
@@ -176,8 +173,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
         CoolPropDbl T = value;
         if (type == MELTING_LINE_SIMON_TYPE) {
             // Need to find the right segment
-            for (std::size_t i = 0; i < simon.parts.size(); ++i) {
-                MeltingLinePiecewiseSimonSegment& part = simon.parts[i];
+            for (auto& part : simon.parts) {
                 if (is_in_closed_range(part.T_min, part.T_max, T)) {
                     return part.p_0 + part.a * (pow(T / part.T_0, part.c) - 1);
                 }
@@ -185,8 +181,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             throw ValueError("unable to calculate melting line (p,T) for Simon curve");
         } else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE) {
             // Need to find the right segment
-            for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i) {
-                MeltingLinePiecewisePolynomialInTrSegment& part = polynomial_in_Tr.parts[i];
+            for (auto& part : polynomial_in_Tr.parts) {
                 if (is_in_closed_range(part.T_min, part.T_max, T)) {
                     return part.evaluate(T);
                 }
@@ -194,8 +189,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             throw ValueError("unable to calculate melting line (p,T) for polynomial_in_Tr curve");
         } else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE) {
             // Need to find the right segment
-            for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i) {
-                MeltingLinePiecewisePolynomialInThetaSegment& part = polynomial_in_Theta.parts[i];
+            for (auto& part : polynomial_in_Theta.parts) {
                 if (is_in_closed_range(part.T_min, part.T_max, T)) {
                     return part.evaluate(T);
                 }
@@ -207,8 +201,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
     } else {
         if (type == MELTING_LINE_SIMON_TYPE) {
             // Need to find the right segment
-            for (std::size_t i = 0; i < simon.parts.size(); ++i) {
-                MeltingLinePiecewiseSimonSegment& part = simon.parts[i];
+            for (auto& part : simon.parts) {
                 //  p = part.p_0 + part.a*(pow(T/part.T_0,part.c)-1);
                 CoolPropDbl T = pow((value - part.p_0) / part.a + 1, 1 / part.c) * part.T_0;
                 if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS) || (T >= part.T_0 && T <= part.T_max)) {
@@ -233,8 +226,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             };
 
             // Need to find the right segment
-            for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i) {
-                MeltingLinePiecewisePolynomialInTrSegment& part = polynomial_in_Tr.parts[i];
+            for (auto& part : polynomial_in_Tr.parts) {
                 if (is_in_closed_range(part.p_min, part.p_max, value)) {
                     solver_resid resid(&part, value);
                     double T = Brent(resid, part.T_min, part.T_max, DBL_EPSILON, 1e-12, 100);
@@ -261,8 +253,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             };
 
             // Need to find the right segment
-            for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i) {
-                MeltingLinePiecewisePolynomialInThetaSegment& part = polynomial_in_Theta.parts[i];
+            for (auto& part : polynomial_in_Theta.parts) {
                 if (is_in_closed_range(part.p_min, part.p_max, value)) {
                     solver_resid resid(&part, value);
                     double T = Brent(resid, part.T_min, part.T_max, DBL_EPSILON, 1e-12, 100);
@@ -317,11 +308,11 @@ TEST_CASE("Water melting line", "[melting]") {
 TEST_CASE("Tests for values from melting lines", "[melting]") {
     int iT = CoolProp::iT, iP = CoolProp::iP;
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-    for (std::size_t i = 0; i < fluids.size(); ++i) {
-        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+    for (const auto& fluid : fluids) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
 
         // Water has its own better tests; skip fluids without melting line
-        if (!AS->has_melting_line() || !fluids[i].compare("Water")) {
+        if (!AS->has_melting_line() || !fluid.compare("Water")) {
             continue;
         }
 
@@ -332,7 +323,7 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
 
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss0;
-        ss0 << "Check melting line limits for fluid " << fluids[i];
+        ss0 << "Check melting line limits for fluid " << fluid;
         SECTION(ss0.str(), "") {
             CAPTURE(Tmin);
             CAPTURE(Tmax);
@@ -351,7 +342,7 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
             const double p = pmin + (0.1 + 0.2 * p_i) * p_range;
             // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
             std::ostringstream ss1;
-            ss1 << "Melting line for " << fluids[i] << " at p=" << p;
+            ss1 << "Melting line for " << fluid << " at p=" << p;
             SECTION(ss1.str(), "") {
                 double actual_T = AS->melting_line(iT, iP, p);
                 CAPTURE(Tmin);
@@ -363,7 +354,7 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
         }
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss2;
-        ss2 << "Ensure melting line valid for " << fluids[i] << " @ EOS pmax";
+        ss2 << "Ensure melting line valid for " << fluid << " @ EOS pmax";
         SECTION(ss2.str(), "") {
             double actual_T = -_HUGE;
             double EOS_pmax = AS->pmax();
@@ -388,14 +379,14 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
 
 TEST_CASE("Test that hs_anchor enthalpy/entropy agrees with EOS", "[ancillaries]") {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-    for (std::size_t i = 0; i < fluids.size(); ++i) {
-        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+    for (const auto& fluid : fluids) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
 
         CoolProp::SimpleState hs_anchor = AS->get_state("hs_anchor");
 
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss1;
-        ss1 << "Check hs_anchor for " << fluids[i];
+        ss1 << "Check hs_anchor for " << fluid;
         SECTION(ss1.str(), "") {
             INFO("The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS");
             AS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);

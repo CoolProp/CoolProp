@@ -225,8 +225,8 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
                 std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
                 // Flip the sign of theta
-                for (std::size_t i = 0; i < t.size(); ++i) {
-                    t[i] *= -1;
+                for (double& i : t) {
+                    i *= -1;
                 }
                 std::vector<CoolPropDbl> c(n.size(), 1);
                 std::vector<CoolPropDbl> d(c.size(), -1);
@@ -1078,7 +1078,7 @@ class JSONFluidLibrary
     /// Parse the critical state for the given EOS
     void parse_states(rapidjson::Value& states, CoolPropFluid& fluid) {
         if (!states.HasMember("critical")) {
-            throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"critical\" member", fluid.name.c_str()));
+            throw ValueError(format(R"(fluid["STATES"] [%s] does not have "critical" member)", fluid.name.c_str()));
         }
         rapidjson::Value& crit = states["critical"];
         fluid.crit.T = cpjson::get_double(crit, "T");
@@ -1088,7 +1088,7 @@ class JSONFluidLibrary
         fluid.crit.smolar = cpjson::get_double(crit, "smolar");
 
         if (!states.HasMember("triple_liquid")) {
-            throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"triple_liquid\" member", fluid.name.c_str()));
+            throw ValueError(format(R"(fluid["STATES"] [%s] does not have "triple_liquid" member)", fluid.name.c_str()));
         }
         rapidjson::Value& triple_liquid = states["triple_liquid"];
         if (triple_liquid.ObjectEmpty()) {
@@ -1107,7 +1107,7 @@ class JSONFluidLibrary
         }
 
         if (!states.HasMember("triple_vapor")) {
-            throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"triple_vapor\" member", fluid.name.c_str()));
+            throw ValueError(format(R"(fluid["STATES"] [%s] does not have "triple_vapor" member)", fluid.name.c_str()));
         }
         rapidjson::Value& triple_vapor = states["triple_vapor"];
         if (triple_vapor.ObjectEmpty()) {
@@ -1195,9 +1195,10 @@ class JSONFluidLibrary
 
    public:
     // Default constructor;
-    JSONFluidLibrary() {
-        _is_empty = true;
-    };
+    JSONFluidLibrary()
+      : _is_empty(true) {
+
+        };
     bool is_empty() {
         return _is_empty;
     };
@@ -1212,10 +1213,10 @@ class JSONFluidLibrary
 
     std::string get_JSONstring(const std::string& key) {
         // Try to find it
-        std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(key);
+        auto it = string_to_index_map.find(key);
         if (it != string_to_index_map.end()) {
 
-            std::map<std::size_t, std::string>::const_iterator it2 = JSONstring_map.find(it->second);
+            auto it2 = JSONstring_map.find(it->second);
             if (it2 != JSONstring_map.end()) {
                 // Then, load the fluids we would like to add
                 rapidjson::Document doc;
@@ -1238,7 +1239,7 @@ class JSONFluidLibrary
     */
     CoolPropFluid get(const std::string& key) {
         // Try to find it
-        std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(key);
+        auto it = string_to_index_map.find(key);
         // If it is found
         if (it != string_to_index_map.end()) {
             return get(it->second);
@@ -1247,9 +1248,9 @@ class JSONFluidLibrary
             std::vector<std::string> endings;
             endings.emplace_back("-SRK");
             endings.emplace_back("-PengRobinson");
-            for (std::vector<std::string>::const_iterator end = endings.begin(); end != endings.end(); ++end) {
-                if (endswith(key, *end)) {
-                    std::string used_name = key.substr(0, key.size() - (*end).size());
+            for (const auto& ending : endings) {
+                if (endswith(key, ending)) {
+                    std::string used_name = key.substr(0, key.size() - ending.size());
                     it = string_to_index_map.find(used_name);
                     if (it != string_to_index_map.end()) {
                         // We found the name of the fluid within the library of multiparameter
@@ -1267,12 +1268,12 @@ class JSONFluidLibrary
                         CoolPropDbl R = 8.3144598;  // fluid.EOSVector[0].R_u;
                         // Set the cubic contribution to the residual Helmholtz energy
                         shared_ptr<AbstractCubic> ac;
-                        if (*end == "-SRK") {
+                        if (ending == "-SRK") {
                             ac = std::make_shared<SRK>(Tc, pc, acentric, R);
-                        } else if (*end == "-PengRobinson") {
+                        } else if (ending == "-PengRobinson") {
                             ac = std::make_shared<PengRobinson>(Tc, pc, acentric, R);
                         } else {
-                            throw CoolProp::ValueError(format("Unable to match this ending [%s]", (*end).c_str()));
+                            throw CoolProp::ValueError(format("Unable to match this ending [%s]", ending.c_str()));
                         }
                         ac->set_Tr(Tc);
                         ac->set_rhor(rhomolarc);
@@ -1283,12 +1284,12 @@ class JSONFluidLibrary
                         CubicLibrary::CubicsValues vals = CubicLibrary::get_cubic_values(used_name);
                         // Set the cubic contribution to the residual Helmholtz energy
                         shared_ptr<AbstractCubic> ac;
-                        if (*end == "-SRK") {
+                        if (ending == "-SRK") {
                             ac = std::make_shared<SRK>(vals.Tc, vals.pc, vals.acentric, get_config_double(R_U_CODATA));
-                        } else if (*end == "-PengRobinson") {
+                        } else if (ending == "-PengRobinson") {
                             ac = std::make_shared<PengRobinson>(vals.Tc, vals.pc, vals.acentric, get_config_double(R_U_CODATA));
                         } else {
-                            throw CoolProp::ValueError(format("Unable to match this ending [%s]", (*end).c_str()));
+                            throw CoolProp::ValueError(format("Unable to match this ending [%s]", ending.c_str()));
                         }
                         ac->set_Tr(vals.Tc);
                         if (vals.rhomolarc > 0) {
@@ -1332,7 +1333,7 @@ class JSONFluidLibrary
     */
     CoolPropFluid get(std::size_t key) {
         // Try to find it
-        std::map<std::size_t, CoolPropFluid>::iterator it = fluid_map.find(key);
+        auto it = fluid_map.find(key);
         // If it is found
         if (it != fluid_map.end()) {
             return it->second;

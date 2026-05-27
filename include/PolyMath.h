@@ -29,10 +29,10 @@ class Polynomial2D
 
    public:
     /// Constructors
-    Polynomial2D() {};
+    Polynomial2D() = default;
 
     /// Destructor.  No implementation
-    virtual ~Polynomial2D() {};
+    virtual ~Polynomial2D() = default;
 
    public:
     /// Convert the coefficient vector.
@@ -204,7 +204,7 @@ class Poly2DResidual : public FuncWrapper1DWithDeriv
     /// @param z_in double value that represents the current output in the 3rd dimension
     /// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
     Poly2DResidual(Polynomial2D& poly, const Eigen::MatrixXd& coefficients, const double& in, const double& z_in, const int& axis);
-    virtual ~Poly2DResidual() {};
+    virtual ~Poly2DResidual() = default;
 
     double call(double target) override;
     double deriv(double target) override;
@@ -222,10 +222,10 @@ class Polynomial2DFrac : public Polynomial2D
 
    public:
     /// Constructors
-    Polynomial2DFrac() {};
+    Polynomial2DFrac() = default;
 
     /// Destructor.  No implementation
-    virtual ~Polynomial2DFrac() {};
+    virtual ~Polynomial2DFrac() = default;
 
    public:
     //    /// Integration functions
@@ -424,7 +424,7 @@ class Poly2DFracResidual : public Poly2DResidual
     /// @param y_base base value for y (y = y_in - y_base)
     Poly2DFracResidual(Polynomial2DFrac& poly, const Eigen::MatrixXd& coefficients, const double& in, const double& z_in, const int& axis,
                        const int& x_exp, const int& y_exp, const double& x_base, const double& y_base);
-    virtual ~Poly2DFracResidual() {};
+    virtual ~Poly2DFracResidual() = default;
     double call(double target) override;
     double deriv(double target) override;
 };
@@ -450,7 +450,7 @@ class Poly2DFracIntResidual : public Poly2DFracResidual
     /// @param int_axis axis for the integration (0=x, 1=y)
     Poly2DFracIntResidual(Polynomial2DFrac& poly, const Eigen::MatrixXd& coefficients, const double& in, const double& z_in, const int& axis,
                           const int& x_exp, const int& y_exp, const double& x_base, const double& y_base, const int& int_axis);
-    virtual ~Poly2DFracIntResidual() {};
+    virtual ~Poly2DFracIntResidual() = default;
     double call(double target) override;
     double deriv(double target) override;
 };

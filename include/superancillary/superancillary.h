@@ -259,7 +259,7 @@ class ChebyshevExpansion
       m_xmax;           ///< The maximum value of the independent variable
     ArrayType m_coeff;  ///< The coefficients of the expansion
    public:
-    ChebyshevExpansion() {};
+    ChebyshevExpansion() = default;
 
     /// Constructor with bounds and coefficients
     ChebyshevExpansion(double xmin, double xmax, const ArrayType& coeff) : m_xmin(xmin), m_xmax(xmax), m_coeff(coeff) {};
@@ -368,7 +368,7 @@ class ChebyshevExpansion
         if (std::abs(fb) < boundsytol) {
             return std::make_tuple(b, std::size_t{2});
         }
-        boost::math::uintmax_t max_iter_ = static_cast<boost::math::uintmax_t>(max_iter);
+        auto max_iter_ = static_cast<boost::math::uintmax_t>(max_iter);
         auto [l, r] = toms748_solve(f, a, b, fa, fb, eps_tolerance<double>(bits), max_iter_);
         return std::make_tuple((r + l) / 2.0, counter);
     }
@@ -485,7 +485,7 @@ struct ChebyshevApproximation1D
         return c.head(N);
     }
     std::vector<double> head(const std::vector<double>& c, Eigen::Index N) const {
-        return std::vector<double>(c.begin(), c.begin() + N);
+        return {c.begin(), c.begin() + N};
     }
 
     /** Determine the values of x for the extrema where y'(x)=0 according to the expansions
@@ -1389,7 +1389,7 @@ class SuperAncillary
         }
         // Neither bound meets the convergence criterion, we need to iterate on temperature
         try {
-            boost::math::uintmax_t max_iter_ = static_cast<boost::math::uintmax_t>(max_iter);
+            auto max_iter_ = static_cast<boost::math::uintmax_t>(max_iter);
             auto [l, r] = toms748_solve(f, Tmin, Tmax, fTmin, fTmax, eps_tolerance<double>(bits), max_iter_);
             T = (r + l) / 2.0;
             return returner();

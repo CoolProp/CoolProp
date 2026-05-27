@@ -191,7 +191,7 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
         // Check it worked
         if (fluid_parts.size() != 2) {
             throw ValueError(
-              format("Format of incompressible solution string [%s] is invalid, should be like \"EG-20%\" or \"EG-0.2\" ", fluid_string.c_str()));
+              format(R"(Format of incompressible solution string [%s] is invalid, should be like "EG-20%" or "EG-0.2" )", fluid_string.c_str()));
         }
 
         // Convert the concentration into a string
@@ -289,24 +289,24 @@ struct output_parameter
     /// Covers both normal and derivative outputs
     static std::vector<output_parameter> get_output_parameters(const std::vector<std::string>& Outputs) {
         std::vector<output_parameter> outputs;
-        for (std::vector<std::string>::const_iterator str = Outputs.begin(); str != Outputs.end(); ++str) {
+        for (const auto& Output : Outputs) {
             output_parameter out;
             CoolProp::parameters iOutput;
-            if (is_valid_parameter(*str, iOutput)) {
+            if (is_valid_parameter(Output, iOutput)) {
                 out.Of1 = iOutput;
                 if (is_trivial_parameter(iOutput)) {
                     out.type = OUTPUT_TYPE_TRIVIAL;
                 } else {
                     out.type = OUTPUT_TYPE_NORMAL;
                 }
-            } else if (is_valid_first_saturation_derivative(*str, out.Of1, out.Wrt1)) {
+            } else if (is_valid_first_saturation_derivative(Output, out.Of1, out.Wrt1)) {
                 out.type = OUTPUT_TYPE_FIRST_SATURATION_DERIVATIVE;
-            } else if (is_valid_first_derivative(*str, out.Of1, out.Wrt1, out.Constant1)) {
+            } else if (is_valid_first_derivative(Output, out.Of1, out.Wrt1, out.Constant1)) {
                 out.type = OUTPUT_TYPE_FIRST_DERIVATIVE;
-            } else if (is_valid_second_derivative(*str, out.Of1, out.Wrt1, out.Constant1, out.Wrt2, out.Constant2)) {
+            } else if (is_valid_second_derivative(Output, out.Of1, out.Wrt1, out.Constant1, out.Wrt2, out.Constant2)) {
                 out.type = OUTPUT_TYPE_SECOND_DERIVATIVE;
             } else {
-                throw ValueError(format("Output string is invalid [%s]", str->c_str()));
+                throw ValueError(format("Output string is invalid [%s]", Output.c_str()));
             }
             outputs.push_back(out);
         }
@@ -333,8 +333,8 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
     const bool one_input_one_output = (in1.size() == 1 && in2.size() == 1 && output_parameters.size() == 1);
     // If all trivial outputs, never do a state update
     bool all_trivial_outputs = true;
-    for (std::size_t j = 0; j < output_parameters.size(); ++j) {
-        if (output_parameters[j].type != output_parameter::OUTPUT_TYPE_TRIVIAL) {
+    for (const auto& j : output_parameters) {
+        if (j.type != output_parameter::OUTPUT_TYPE_TRIVIAL) {
             all_trivial_outputs = false;
         }
     }
@@ -345,12 +345,12 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
         // Split the input pair into parameters
         split_input_pair(input_pair, p1, p2);
         // See if each parameter is in the output vector and is a normal type input
-        for (std::size_t j = 0; j < output_parameters.size(); ++j) {
-            if (output_parameters[j].type != output_parameter::OUTPUT_TYPE_NORMAL) {
+        for (const auto& j : output_parameters) {
+            if (j.type != output_parameter::OUTPUT_TYPE_NORMAL) {
                 all_outputs_in_inputs = false;
                 break;
             }
-            if (!(output_parameters[j].Of1 == p1 || output_parameters[j].Of1 == p2)) {
+            if (!(j.Of1 == p1 || j.Of1 == p2)) {
                 all_outputs_in_inputs = false;
                 break;
             }
@@ -405,8 +405,8 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
                 throw;
             }  // Re-raise the exception since we want to bubble the error
             // All the outputs are filled with _HUGE; go to next input
-            for (std::size_t j = 0; j < IO[i].size(); ++j) {
-                IO[i][j] = _HUGE;
+            for (double& j : IO[i]) {
+                j = _HUGE;
             }
             continue;
         }
@@ -561,7 +561,7 @@ void _PropsSImulti(const std::vector<std::string>& Outputs, const std::string& N
         _PropsSI_initialize(backend, fluids, fractions, State);
     } catch (std::exception& e) {
         // Initialization failed.  Stop.
-        throw ValueError(format("Initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"; error: %s", backend.c_str(),
+        throw ValueError(format(R"(Initialize failed for backend: "%s", fluid: "%s" fractions "%s"; error: %s)", backend.c_str(),
                                 strjoin(fluids, "&").c_str(), vec_to_string(fractions, "%0.10f").c_str(), e.what()));
     }
 
@@ -578,7 +578,7 @@ void _PropsSImulti(const std::vector<std::string>& Outputs, const std::string& N
         if (is_valid_parameter(N1, key1) && is_valid_parameter(N2, key2)) input_pair = generate_update_pair(key1, Prop1, key2, Prop2, v1, v2);
     } catch (std::exception& e) {
         // Input parameter parsing failed.  Stop
-        throw ValueError(format("Input pair parsing failed for Name1: \"%s\", Name2: \"%s\"; err: %s", Name1.c_str(), Name2.c_str(), e.what()));
+        throw ValueError(format(R"(Input pair parsing failed for Name1: "%s", Name2: "%s"; err: %s)", Name1.c_str(), Name2.c_str(), e.what()));
     }
 
     try {
@@ -623,7 +623,7 @@ std::vector<std::vector<double>> PropsSImulti(const std::vector<std::string>& Ou
         // swallowed and surfaced via the empty return below.
     }
 #endif
-    return std::vector<std::vector<double>>();
+    return {};
 }
 double PropsSI(const std::string& Output, const std::string& Name1, double Prop1, const std::string& Name2, double Prop2,
                const std::string& FluidName) {
@@ -659,7 +659,7 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
 #if !defined(NO_ERROR_CATCHING)
     } catch (const std::exception& e) {
         set_error_string(e.what()
-                         + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")", Output.c_str(), Name1.c_str(), Prop1, Name2.c_str(), Prop2,
+                         + format(R"( : PropsSI("%s","%s",%0.10g,"%s",%0.10g,"%s"))", Output.c_str(), Name1.c_str(), Prop1, Name2.c_str(), Prop2,
                                   FluidName.c_str()));
 #    if defined(PROPSSI_ERROR_STDOUT)
         std::cout << e.what() << std::endl;
@@ -739,7 +739,7 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
     SECTION("Predefined mixture") {
         std::vector<double> p(1, 101325), Q(1, 1.0), z;
         std::vector<std::string> outputs(1, "T");
-        outputs.push_back("Dmolar");
+        outputs.emplace_back("Dmolar");
         std::vector<std::vector<double>> IO;
         std::vector<std::string> fluids(1, "R410A.mix");
         CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs, "P", p, "Q", Q, "HEOS", fluids, z));
@@ -747,7 +747,7 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
     SECTION("Single state, two outputs") {
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::string> outputs(1, "T");
-        outputs.push_back("Dmolar");
+        outputs.emplace_back("Dmolar");
         std::vector<std::string> fluids(1, "Water");
         CHECK_NOTHROW(CoolProp::PropsSImulti(outputs, "P", p, "Q", Q, "HEOS", fluids, z));
     };
@@ -755,7 +755,7 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::vector<double>> IO;
         std::vector<std::string> outputs(1, "???????");
-        outputs.push_back("?????????");
+        outputs.emplace_back("?????????");
         std::vector<std::string> fluids(1, "Water");
         CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs, "P", p, "Q", Q, "HEOS", fluids, z));
         CHECK(IO.size() == 0);
@@ -769,7 +769,7 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
     SECTION("Two states, two outputs") {
         std::vector<double> p(2, 101325), Q(2, 1.0), z(1, 1.0);
         std::vector<std::string> outputs(1, "T");
-        outputs.push_back("Dmolar");
+        outputs.emplace_back("Dmolar");
         std::vector<std::string> fluids(1, "Water");
         CHECK_NOTHROW(CoolProp::PropsSImulti(outputs, "P", p, "Q", Q, "HEOS", fluids, z));
     };
@@ -777,7 +777,7 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::vector<double>> IO;
         std::vector<std::string> outputs(1, "Cpmolar");
-        outputs.push_back("d(Hmolar)/d(T)|P");
+        outputs.emplace_back("d(Hmolar)/d(T)|P");
         std::vector<std::string> fluids(1, "Water");
         CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs, "P", p, "Q", Q, "HEOS", fluids, z));
         std::string errstring = get_global_param_string("errstring");
@@ -791,7 +791,7 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::vector<double>> IO;
         std::vector<std::string> outputs(1, "Cpmolar");
-        outputs.push_back("d(Hmolar)/d(T)|P");
+        outputs.emplace_back("d(Hmolar)/d(T)|P");
         std::vector<std::string> fluids(1, "????????");
         CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs, "P", p, "Q", Q, "HEOS", fluids, z));
         std::string errstring = get_global_param_string("errstring");
@@ -812,7 +812,7 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
         std::vector<double> p(1, 101325), Q(2, 1.0), z(100, 1.0);
         std::vector<std::vector<double>> IO;
         std::vector<std::string> outputs(1, "Cpmolar");
-        outputs.push_back("d(Hmolar)/d(T)|P");
+        outputs.emplace_back("d(Hmolar)/d(T)|P");
         std::vector<std::string> fluids(1, "Water");
         CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs, "P", p, "Q", Q, "HEOS", fluids, z));
         std::string errstring = get_global_param_string("errstring");
@@ -823,7 +823,7 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
         std::vector<double> Q(2, 1.0), z(1, 1.0);
         std::vector<std::vector<double>> IO;
         std::vector<std::string> outputs(1, "Cpmolar");
-        outputs.push_back("d(Hmolar)/d(T)|P");
+        outputs.emplace_back("d(Hmolar)/d(T)|P");
         std::vector<std::string> fluids(1, "Water");
         CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs, "Q", Q, "Q", Q, "HEOS", fluids, z));
         std::string errstring = get_global_param_string("errstring");
@@ -1059,10 +1059,10 @@ TEST_CASE("Check inputs to get_global_param_string", "[get_global_param_string]"
       "version",        "gitrevision",        "fluids_list", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list",
       "parameter_list", "predefined_mixtures"};
     std::ostringstream ss3c;
-    for (int i = 0; i < num_good_inputs; ++i) {
-        ss3c << "Test for" << good_inputs[i];
+    for (const auto& good_input : good_inputs) {
+        ss3c << "Test for" << good_input;
         SECTION(ss3c.str(), "") {
-            CHECK_NOTHROW(CoolProp::get_global_param_string(good_inputs[i]));
+            CHECK_NOTHROW(CoolProp::get_global_param_string(good_input));
         };
     }
     CHECK_THROWS(CoolProp::get_global_param_string(""));
@@ -1088,10 +1088,10 @@ TEST_CASE("Check inputs to get_fluid_param_string", "[get_fluid_param_string]") 
                                                 "BibTeX-MELTING_LINE",
                                                 "BibTeX-VISCOSITY"};
     std::ostringstream ss3c;
-    for (int i = 0; i < num_good_inputs; ++i) {
-        ss3c << "Test for" << good_inputs[i];
+    for (const auto& good_input : good_inputs) {
+        ss3c << "Test for" << good_input;
         SECTION(ss3c.str(), "") {
-            CHECK_NOTHROW(CoolProp::get_fluid_param_string("Water", good_inputs[i]));
+            CHECK_NOTHROW(CoolProp::get_fluid_param_string("Water", good_input));
         };
     }
     CHECK_THROWS(CoolProp::get_fluid_param_string("", "aliases"));
@@ -1135,8 +1135,8 @@ std::string PhaseSI(const std::string& Name1, double Prop1, const std::string& N
         }
         return strPhase;  //     return the "unknown" phase string
     }  // else
-    std::size_t Phase_int = static_cast<std::size_t>(Phase_double);  //     convert returned phase to int
-    return phase_lookup_string(static_cast<phases>(Phase_int));      //     return phase as a string
+    auto Phase_int = static_cast<std::size_t>(Phase_double);     //     convert returned phase to int
+    return phase_lookup_string(static_cast<phases>(Phase_int));  //     return phase as a string
 }
 
 /*

@@ -32,10 +32,16 @@ struct saturation_D_pure_options
     CoolPropDbl omega, rhoL, rhoV, pL, pV;
     int imposed_rho;
     int max_iterations;
-    saturation_D_pure_options() : use_guesses(false), rhoL(_HUGE), rhoV(_HUGE), pL(_HUGE), pV(_HUGE), imposed_rho(0), max_iterations(200) {
-        use_logdelta = true;
-        omega = 1.0;
-    }  // Defaults
+    saturation_D_pure_options()
+      : use_guesses(false),
+        use_logdelta(true),
+        omega(1.0),
+        rhoL(_HUGE),
+        rhoV(_HUGE),
+        pL(_HUGE),
+        pV(_HUGE),
+        imposed_rho(0),
+        max_iterations(200) {}  // Defaults
 };
 
 enum sstype_enum
@@ -90,11 +96,17 @@ struct saturation_PHSU_pure_options
       use_logdelta;    ///< True to use partials with respect to log(delta) rather than delta
     specified_variable_options specified_variable;
     CoolPropDbl omega, rhoL, rhoV, pL, pV, T, p;
-    saturation_PHSU_pure_options() : use_logdelta(true), rhoL(_HUGE), rhoV(_HUGE), pL(_HUGE), pV(_HUGE), T(_HUGE), p(_HUGE) {
-        specified_variable = IMPOSED_INVALID_INPUT;
-        use_guesses = true;
-        omega = 1.0;
-    }
+    saturation_PHSU_pure_options()
+      : use_guesses(true),
+        use_logdelta(true),
+        specified_variable(IMPOSED_INVALID_INPUT),
+        omega(1.0),
+        rhoL(_HUGE),
+        rhoV(_HUGE),
+        pL(_HUGE),
+        pV(_HUGE),
+        T(_HUGE),
+        p(_HUGE) {}
 };
 
 #if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
@@ -428,7 +440,9 @@ struct newton_raphson_saturation_options
     imposed_variable_options imposed_variable;
     std::vector<CoolPropDbl> x, y;
     newton_raphson_saturation_options()
-      : bubble_point(false),
+      : Nstep_max(30),
+        bubble_point(false),
+        Nsteps(0),
         omega(_HUGE),
         rhomolar_liq(_HUGE),
         rhomolar_vap(_HUGE),
@@ -440,10 +454,7 @@ struct newton_raphson_saturation_options
         hmolar_vap(_HUGE),
         smolar_liq(_HUGE),
         smolar_vap(_HUGE),
-        imposed_variable(NO_VARIABLE_IMPOSED) {
-        Nstep_max = 30;
-        Nsteps = 0;
-    }  // Defaults
+        imposed_variable(NO_VARIABLE_IMPOSED) {}  // Defaults
 };
 
 /** \brief A class to do newton raphson solver mixture bubble point and dew point calculations
@@ -489,7 +500,7 @@ class newton_raphson_saturation
     Eigen::VectorXd r, err_rel;
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
-    newton_raphson_saturation() {};
+    newton_raphson_saturation() = default;
 
     void resize(std::size_t N);
 
@@ -538,9 +549,10 @@ struct PTflash_twophase_options
     std::vector<CoolPropDbl> x,  ///< Liquid mole fractions
       y,                         ///< Vapor mole fractions
       z;                         ///< Bulk mole fractions
-    PTflash_twophase_options() : omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE) {
-        Nstep_max = 30;
-        Nsteps = 0;  // Defaults
+    PTflash_twophase_options()
+      : Nstep_max(30), Nsteps(0), omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE) {
+
+        // Defaults
     }
 };
 

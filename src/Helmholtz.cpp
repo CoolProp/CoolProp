@@ -767,7 +767,7 @@ mcx::MultiComplex<double> ResidualHelmholtzGaoB::one_mcx(const mcx::MultiComplex
 
 ResidualHelmholtzXiangDeiters::ResidualHelmholtzXiangDeiters(const CoolPropDbl Tc, const CoolPropDbl pc, const CoolPropDbl rhomolarc,
                                                              const CoolPropDbl acentric, const CoolPropDbl R)
-  : Tc(Tc), pc(pc), rhomolarc(rhomolarc), acentric(acentric), R(R) {
+  : enabled(true), Tc(Tc), pc(pc), rhomolarc(rhomolarc), acentric(acentric), R(R) {
     double Zc = pc / (R * Tc * rhomolarc);
     theta = POW2(Zc - 0.29);
 
@@ -793,8 +793,6 @@ ResidualHelmholtzXiangDeiters::ResidualHelmholtzXiangDeiters(const CoolPropDbl T
     phi0.add_Exponential(a0, d, t, g, l);
     phi1.add_Exponential(a1, d, t, g, l);
     phi2.add_Exponential(a2, d, t, g, l);
-
-    enabled = true;
 };
 
 void ResidualHelmholtzXiangDeiters::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
@@ -1638,7 +1636,7 @@ class HelmholtzConsistencyFixture
               std::vector<CoolPropDbl>(gamma, gamma + sizeof(gamma) / sizeof(gamma[0])));
         }
     }
-    void call(std::string d, shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void call(const std::string& d, const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         if (!d.compare("dTau")) {
             return dTau(term, tau, delta, ddelta);
         } else if (!d.compare("dTau2")) {
@@ -1671,7 +1669,7 @@ class HelmholtzConsistencyFixture
             throw CoolProp::ValueError("don't understand deriv type");
         }
     }
-    shared_ptr<CoolProp::BaseHelmholtzTerm> get(std::string t) {
+    shared_ptr<CoolProp::BaseHelmholtzTerm> get(const std::string& t) {
         if (!t.compare("Lead")) {
             return Lead;
         } else if (!t.compare("LogTau")) {
@@ -1716,85 +1714,85 @@ class HelmholtzConsistencyFixture
             throw CoolProp::ValueError(format("don't understand helmholtz type: %s", t.c_str()));
         }
     }
-    void dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
+    void dTau(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
         CoolPropDbl term_plus = term->base(tau + dtau, delta);
         CoolPropDbl term_minus = term->base(tau - dtau, delta);
         numerical = (term_plus - term_minus) / (2 * dtau);
         analytic = term->dTau(tau, delta);
     };
-    void dTau2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
+    void dTau2(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
         CoolPropDbl term_plus = term->dTau(tau + dtau, delta);
         CoolPropDbl term_minus = term->dTau(tau - dtau, delta);
         numerical = (term_plus - term_minus) / (2 * dtau);
         analytic = term->dTau2(tau, delta);
     };
-    void dTau3(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
+    void dTau3(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
         CoolPropDbl term_plus = term->dTau2(tau + dtau, delta);
         CoolPropDbl term_minus = term->dTau2(tau - dtau, delta);
         numerical = (term_plus - term_minus) / (2 * dtau);
         analytic = term->dTau3(tau, delta);
     };
-    void dTau4(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
+    void dTau4(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
         CoolPropDbl term_plus = term->dTau3(tau + dtau, delta);
         CoolPropDbl term_minus = term->dTau3(tau - dtau, delta);
         numerical = (term_plus - term_minus) / (2 * dtau);
         analytic = term->dTau4(tau, delta);
     };
-    void dDelta(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->base(tau, delta + ddelta);
         CoolPropDbl term_minus = term->base(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta(tau, delta);
     };
-    void dDelta2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta2(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta2(tau, delta);
     };
-    void dDelta3(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta3(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta2(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta2(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta3(tau, delta);
     };
-    void dDelta4(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta4(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta3(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta3(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta4(tau, delta);
     };
-    void dDelta_dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta_dTau(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dTau(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dTau(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta_dTau(tau, delta);
     };
-    void dDelta_dTau2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta_dTau2(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dTau2(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dTau2(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta_dTau2(tau, delta);
     };
-    void dDelta2_dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta2_dTau(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta_dTau(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta_dTau(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta2_dTau(tau, delta);
     };
-    void dDelta3_dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta3_dTau(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta2_dTau(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta2_dTau(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta3_dTau(tau, delta);
     };
-    void dDelta2_dTau2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta2_dTau2(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta_dTau2(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta_dTau2(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta2_dTau2(tau, delta);
     };
-    void dDelta_dTau3(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta_dTau3(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dTau3(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dTau3(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
@@ -1834,18 +1832,17 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
     std::size_t n = sizeof(terms) / sizeof(terms[0]);
     for (std::size_t i = 0; i < n; ++i) {
         term = get(terms[i]);
-        for (std::size_t j = 0; j < sizeof(derivs) / sizeof(derivs[0]); ++j) {
+        for (const auto& deriv : derivs) {
             if (terms[i] == "SAFT"
-                && (derivs[j] == "dTau4" || derivs[j] == "dDelta_dTau3" || derivs[j] == "dDelta2_dTau2" || derivs[j] == "dDelta3_dTau"
-                    || derivs[j] == "dDelta4")) {
+                && (deriv == "dTau4" || deriv == "dDelta_dTau3" || deriv == "dDelta2_dTau2" || deriv == "dDelta3_dTau" || deriv == "dDelta4")) {
                 continue;
             }
             double tau = 1.3, delta = 0.9;
-            call(derivs[j], term, tau, delta, 1e-5);
+            call(deriv, term, tau, delta, 1e-5);
             double alphar = term->base(tau, delta);
 
             // Do calculations with multicomplex, if the one_mcx function has been implemented
-            auto [ntau, ndelta] = counts.at(derivs[j]);
+            auto [ntau, ndelta] = counts.at(deriv);
             double numerical_mcx = _HUGE;
             double alphar_mcx = _HUGE;
             try {
@@ -1860,7 +1857,7 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
             CAPTURE(alphar_mcx);
             CAPTURE(numerical_mcx);
 
-            CAPTURE(derivs[j]);
+            CAPTURE(deriv);
             CAPTURE(alphar);
             double numerical_finitediff = numerical;
             CAPTURE(numerical_finitediff);

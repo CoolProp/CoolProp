@@ -35,7 +35,7 @@ bool IncompressibleFluid::is_pure() {
 }
 
 /// Base exponential function
-double IncompressibleFluid::baseExponential(IncompressibleData data, double y, double ybase) {
+double IncompressibleFluid::baseExponential(const IncompressibleData& data, double y, double ybase) {
     Eigen::VectorXd coeffs = makeVector(data.coeffs);
     size_t r = coeffs.rows(), c = coeffs.cols();
     if (strict && (r != 3 || c != 1)) {
@@ -61,7 +61,7 @@ double IncompressibleFluid::baseExponential(IncompressibleData data, double y, d
 }
 
 /// Base exponential function with logarithmic term
-double IncompressibleFluid::baseLogexponential(IncompressibleData data, double y, double ybase) {
+double IncompressibleFluid::baseLogexponential(const IncompressibleData& data, double y, double ybase) {
     Eigen::VectorXd coeffs = makeVector(data.coeffs);
     size_t r = coeffs.rows(), c = coeffs.cols();
     if (strict && (r != 3 || c != 1)) {

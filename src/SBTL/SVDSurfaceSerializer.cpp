@@ -281,7 +281,7 @@ region::Region unpack_region(const msgpack::object& o, const std::shared_ptr<reg
     // trip diagnostics only.
     auto b_lo = unpack_curve(o.via.array.ptr[6], sa);
     auto b_hi = unpack_curve(o.via.array.ptr[7], sa);
-    return region::Region(axis, std::move(b_lo), std::move(b_hi));
+    return {axis, std::move(b_lo), std::move(b_hi)};
 }
 
 svd::SVDDecomposition unpack_decomp(const msgpack::object& o, std::size_t* out_region_idx, ::CoolProp::parameters* out_prop) {
@@ -379,7 +379,7 @@ std::vector<char> zlib_compress(const msgpack::sbuffer& sbuf) {
     // raw size and let zlib write into that buffer.  miniz returns
     // Z_OK when it fits.
     std::vector<char> out(sbuf.size() + (sbuf.size() / 1000) + 128);
-    mz_ulong out_size = static_cast<mz_ulong>(out.size());
+    auto out_size = static_cast<mz_ulong>(out.size());
     const int code = compress((unsigned char*)out.data(), &out_size, (const unsigned char*)sbuf.data(), static_cast<mz_ulong>(sbuf.size()));
     if (code != Z_OK) {
         throw std::runtime_error(std::string("SVDSurfaceSerializer: zlib compress failed (code ") + std::to_string(code) + ")");
@@ -392,8 +392,8 @@ std::vector<char> zlib_uncompress(const std::vector<char>& compressed) {
     // Mirrors TabularBackends.cpp:52-69: start at 5x the compressed
     // size, double on Z_BUF_ERROR until it fits or we exhaust patience.
     std::vector<char> out(compressed.size() * 5);
-    mz_ulong out_size = static_cast<mz_ulong>(out.size());
-    mz_ulong in_size = static_cast<mz_ulong>(compressed.size());
+    auto out_size = static_cast<mz_ulong>(out.size());
+    auto in_size = static_cast<mz_ulong>(compressed.size());
     int code = 0;
     int retries = 0;
     do {

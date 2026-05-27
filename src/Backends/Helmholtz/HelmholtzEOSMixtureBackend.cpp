@@ -65,10 +65,9 @@ class HEOSGenerator : public AbstractStateGenerator
 // NOLINTNEXTLINE(cert-err58-cpp)
 static CoolProp::GeneratorInitializer<HEOSGenerator> heos_gen(CoolProp::HEOS_BACKEND_FAMILY);
 
-HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend() {
+HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend() : is_pure_or_pseudopure(false), N(0) {
     imposed_phase_index = iphase_not_imposed;
-    is_pure_or_pseudopure = false;
-    N = 0;
+
     _phase = iphase_unknown;
     // Reset the residual Helmholtz energy class
     residual_helmholtz = std::make_shared<ResidualHelmholtz>();
@@ -164,7 +163,7 @@ void HelmholtzEOSMixtureBackend::sync_linked_states(const HelmholtzEOSMixtureBac
 }
 HelmholtzEOSMixtureBackend* HelmholtzEOSMixtureBackend::get_copy(bool generate_SatL_and_SatV) {
     // Set up the class with these components
-    HelmholtzEOSMixtureBackend* ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
+    auto* ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
     // Recursively walk into linked states, setting the departure and reducing terms
     // to be equal to the parent (this instance)
     ptr->sync_linked_states(this);
@@ -240,7 +239,7 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string& Pa
         if (parts.size() != 2) {
             throw ValueError(format("Unable to parse BibTeX string %s", ParamName.c_str()));
         }
-        std::string key = parts[1];
+        const std::string& key = parts[1];
         if (!key.compare("EOS")) {
             return cpfluid.EOS().BibTeX_EOS;
         } else if (!key.compare("CP0")) {
@@ -1111,8 +1110,8 @@ void HelmholtzEOSMixtureBackend::calc_ideal_curve(const std::string& type, std::
 std::vector<std::string> HelmholtzEOSMixtureBackend::calc_fluid_names() {
     std::vector<std::string> out;
     out.reserve(components.size());
-    for (std::size_t i = 0; i < components.size(); ++i) {
-        out.push_back(components[i].name);
+    for (auto& component : components) {
+        out.push_back(component.name);
     }
     return out;
 }
@@ -2882,7 +2881,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             double rhomolar = NAN;
             if (is_pure_or_pseudopure) {
                 // It's liquid at subcritical pressure, we can use ancillaries as guess value
-                CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
+                auto _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
                 try {
                     // First we try with Halley's method starting at saturated liquid
                     rhomolar = Halley(resid, _rhoLancval, 1e-8, 100);
@@ -2903,8 +2902,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             }
             return rhomolar;
         } else if (phase == iphase_supercritical_liquid) {
-            CoolPropDbl rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
-            CoolPropDbl rhoLtripleancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(Ttriple()));
+            auto rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
+            auto rhoLtripleancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(Ttriple()));
 
             // Next we try with a Brent method bounded solver since the function should be 1-1 in most cases
             // But some EOS have a maximum in pressure so if rhoc*4 is after the maximum in pressure, this method will fail
@@ -4139,10 +4138,17 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
     bool
       find_critical_points;  ///< If true, actually calculate the critical points, otherwise, skip evaluation of critical points but still trace the spinodal
     L0CurveTracer(HelmholtzEOSMixtureBackend& HEOS, double tau0, double delta0)
-      : HEOS(HEOS), delta(delta0), tau(tau0), M1_last(_HUGE), N_critical_points(0), find_critical_points(true) {
-        R_delta_tracer = 0.1;
+      : HEOS(HEOS),
+        delta(delta0),
+        tau(tau0),
+        M1_last(_HUGE),
+        R_delta_tracer(0.1),
+        R_tau_tracer(0.1),
+        N_critical_points(0),
+        find_critical_points(true) {
+
         R_delta = R_delta_tracer;
-        R_tau_tracer = 0.1;
+
         R_tau = R_tau_tracer;
     };
     /***
@@ -4354,8 +4360,8 @@ void HelmholtzEOSMixtureBackend::calc_build_spinodal() {
 }
 
 void HelmholtzEOSMixtureBackend::set_reference_stateS(const std::string& reference_state) {
-    for (std::size_t i = 0; i < components.size(); ++i) {
-        CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<CoolPropFluid>(1, components[i]));
+    for (auto& component : components) {
+        CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<CoolPropFluid>(1, component));
         if (!reference_state.compare("IIR")) {
             if (HEOS.Ttriple() > 273.15) {
                 throw ValueError(format("Cannot use IIR reference state; Ttriple [%Lg] is greater than 273.15 K", HEOS.Ttriple()));
@@ -4368,7 +4374,7 @@ void HelmholtzEOSMixtureBackend::set_reference_stateS(const std::string& referen
             double delta_a1 = deltas / (HEOS.gas_constant() / HEOS.molar_mass());
             double delta_a2 = -deltah / (HEOS.gas_constant() / HEOS.molar_mass() * HEOS.get_reducing_state().T);
             // Change the value in the library for the given fluid
-            set_fluid_enthalpy_entropy_offset(components[i], delta_a1, delta_a2, "IIR");
+            set_fluid_enthalpy_entropy_offset(component, delta_a1, delta_a2, "IIR");
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
@@ -4384,7 +4390,7 @@ void HelmholtzEOSMixtureBackend::set_reference_stateS(const std::string& referen
             double delta_a1 = deltas / (HEOS.gas_constant() / HEOS.molar_mass());
             double delta_a2 = -deltah / (HEOS.gas_constant() / HEOS.molar_mass() * HEOS.get_reducing_state().T);
             // Change the value in the library for the given fluid
-            set_fluid_enthalpy_entropy_offset(components[i], delta_a1, delta_a2, "ASHRAE");
+            set_fluid_enthalpy_entropy_offset(component, delta_a1, delta_a2, "ASHRAE");
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
@@ -4400,14 +4406,14 @@ void HelmholtzEOSMixtureBackend::set_reference_stateS(const std::string& referen
             double delta_a1 = deltas / (HEOS.gas_constant() / HEOS.molar_mass());
             double delta_a2 = -deltah / (HEOS.gas_constant() / HEOS.molar_mass() * HEOS.get_reducing_state().T);
             // Change the value in the library for the given fluid
-            set_fluid_enthalpy_entropy_offset(components[i], delta_a1, delta_a2, "NBP");
+            set_fluid_enthalpy_entropy_offset(component, delta_a1, delta_a2, "NBP");
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
         } else if (!reference_state.compare("DEF")) {
-            set_fluid_enthalpy_entropy_offset(components[i], 0, 0, "DEF");
+            set_fluid_enthalpy_entropy_offset(component, 0, 0, "DEF");
         } else if (!reference_state.compare("RESET")) {
-            set_fluid_enthalpy_entropy_offset(components[i], 0, 0, "RESET");
+            set_fluid_enthalpy_entropy_offset(component, 0, 0, "RESET");
         } else {
             throw ValueError(format("reference state string is invalid: [%s]", reference_state.c_str()));
         }
@@ -4420,8 +4426,8 @@ void HelmholtzEOSMixtureBackend::set_reference_stateS(const std::string& referen
 /// @param hmolar0 Molar enthalpy at reference state [J/mol]
 /// @param smolar0 Molar entropy at reference state [J/mol/K]
 void HelmholtzEOSMixtureBackend::set_reference_stateD(double T, double rhomolar, double hmolar0, double smolar0) {
-    for (std::size_t i = 0; i < components.size(); ++i) {
-        CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<CoolPropFluid>(1, components[i]));
+    for (auto& component : components) {
+        CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<CoolPropFluid>(1, component));
 
         // Skip the cache and phase calculation because we are given a temperature and density directly;
         // just evaluate the EOS
@@ -4433,7 +4439,7 @@ void HelmholtzEOSMixtureBackend::set_reference_stateD(double T, double rhomolar,
         double deltas = smolar - smolar0;  // offset from specified entropy in J/mol/K
         double delta_a1 = deltas / (HEOS.gas_constant());
         double delta_a2 = -deltah / (HEOS.gas_constant() * HEOS.get_reducing_state().T);
-        set_fluid_enthalpy_entropy_offset(components[i], delta_a1, delta_a2, "custom");
+        set_fluid_enthalpy_entropy_offset(component, delta_a1, delta_a2, "custom");
     }
 }
 

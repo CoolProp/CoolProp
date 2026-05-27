@@ -88,7 +88,7 @@ class UNIFACMixture
     /// Add a component with the defined groups defined by (count, sgi) pairs
     void add_component(const UNIFACLibrary::Component& comp);
 
-    void set_components(const std::string& identifier_type, std::vector<std::string> identifiers);
+    void set_components(const std::string& identifier_type, const std::vector<std::string>& identifiers);
 
     const std::vector<UNIFACLibrary::Component>& get_components() {
         return components;

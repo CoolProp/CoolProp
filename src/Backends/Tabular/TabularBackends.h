@@ -8,6 +8,7 @@ using std::shared_ptr;
 #include "Exceptions.h"
 #include "CoolProp.h"
 #include <optional>
+#include <utility>
 #include "Configuration.h"
 #include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 
@@ -127,14 +128,14 @@ class PackablePhaseEnvelopeData : public PhaseEnvelopeData
 #undef X
     };
     std::map<std::string, std::vector<double>>::iterator get_vector_iterator(const std::string& name) {
-        std::map<std::string, std::vector<double>>::iterator it = vectors.find(name);
+        auto it = vectors.find(name);
         if (it == vectors.end()) {
             throw UnableToLoadError(format("could not find vector %s", name.c_str()));
         }
         return it;
     }
     std::map<std::string, std::vector<std::vector<double>>>::iterator get_matrix_iterator(const std::string& name) {
-        std::map<std::string, std::vector<std::vector<double>>>::iterator it = matrices.find(name);
+        auto it = matrices.find(name);
         if (it == matrices.end()) {
             throw UnableToLoadError(format("could not find matrix %s", name.c_str()));
         }
@@ -227,10 +228,7 @@ class PureFluidSaturationTableData
     std::size_t N;
     shared_ptr<CoolProp::AbstractState> AS;
 
-    PureFluidSaturationTableData() {
-        N = 1000;
-        revision = 1;
-    }
+    PureFluidSaturationTableData() : N(1000), revision(1) {}
 
     /// Build this table
     void build(shared_ptr<CoolProp::AbstractState>& AS);
@@ -380,7 +378,7 @@ class PureFluidSaturationTableData
 #undef X
     };
     std::map<std::string, std::vector<double>>::iterator get_vector_iterator(const std::string& name) {
-        std::map<std::string, std::vector<double>>::iterator it = vectors.find(name);
+        auto it = vectors.find(name);
         if (it == vectors.end()) {
             throw UnableToLoadError(format("could not find vector %s", name.c_str()));
         }
@@ -600,20 +598,12 @@ class SinglePhaseGriddedTableData
 
     virtual void set_limits() = 0;
 
-    SinglePhaseGriddedTableData() {
+    SinglePhaseGriddedTableData()
+      : revision(0), xkey(INVALID_PARAMETER), ykey(INVALID_PARAMETER), logx(false), logy(false), xmin(_HUGE), xmax(_HUGE), ymin(_HUGE), ymax(_HUGE) {
         const int nx_cfg = get_config_int(TABULAR_NX);
         const int ny_cfg = get_config_int(TABULAR_NY);
         Nx = (nx_cfg > 1) ? static_cast<std::size_t>(nx_cfg) : 200;
         Ny = (ny_cfg > 1) ? static_cast<std::size_t>(ny_cfg) : 200;
-        revision = 0;
-        xkey = INVALID_PARAMETER;
-        ykey = INVALID_PARAMETER;
-        logx = false;
-        logy = false;
-        xmin = _HUGE;
-        xmax = _HUGE;
-        ymin = _HUGE;
-        ymax = _HUGE;
     }
 
 /* Use X macros to auto-generate the variables; each will look something like: std::vector< std::vector<double> > T; */
@@ -681,7 +671,7 @@ class SinglePhaseGriddedTableData
 #undef X
     };
     std::map<std::string, std::vector<std::vector<double>>>::iterator get_matrices_iterator(const std::string& name) {
-        std::map<std::string, std::vector<std::vector<double>>>::iterator it = matrices.find(name);
+        auto it = matrices.find(name);
         if (it == matrices.end()) {
             throw UnableToLoadError(format("could not find matrix %s", name.c_str()));
         }
@@ -914,14 +904,7 @@ class CellCoeffs
 
    public:
     double dx_dxhat, dy_dyhat;
-    CellCoeffs() {
-        _valid = false;
-        _has_valid_neighbor = false;
-        dx_dxhat = _HUGE;
-        dy_dyhat = _HUGE;
-        alt_i = 9999999;
-        alt_j = 9999999;
-    }
+    CellCoeffs() : _valid(false), _has_valid_neighbor(false), dx_dxhat(_HUGE), dy_dyhat(_HUGE), alt_i(9999999), alt_j(9999999) {}
     std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
     /// Return a const reference to the desired matrix
     const std::vector<double>& get(const parameters params) const {
@@ -1005,9 +988,7 @@ class TabularDataSet
     PackablePhaseEnvelopeData phase_envelope;
     std::vector<std::vector<CellCoeffs>> coeffs_ph, coeffs_pT;
 
-    TabularDataSet() {
-        tables_loaded = false;
-    }
+    TabularDataSet() : tables_loaded(false) {}
     /// Write the tables to files on the computer
     void write_tables(const std::string& path_to_tables);
     /// Load the tables from file
@@ -1024,7 +1005,7 @@ class TabularDataLibrary
     std::map<std::string, TabularDataSet> data;
 
    public:
-    TabularDataLibrary() {};
+    TabularDataLibrary() = default;
     std::string path_to_tables(shared_ptr<CoolProp::AbstractState>& AS) {
         std::vector<std::string> fluids = AS->fluid_names();
         std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
@@ -1074,22 +1055,28 @@ class TabularBackend : public AbstractState
 
    public:
     shared_ptr<CoolProp::AbstractState> AS;
-    TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), is_mixture(false), AS(AS) {
-        selected_table = SELECTED_NO_TABLE;
-        // Flush the cached indices (set to large number)
-        cached_single_phase_i = std::numeric_limits<std::size_t>::max();
-        cached_single_phase_j = std::numeric_limits<std::size_t>::max();
-        cached_saturation_iL = std::numeric_limits<std::size_t>::max();
-        cached_saturation_iV = std::numeric_limits<std::size_t>::max();
-        z = nullptr;
-        dzdx = nullptr;
-        dzdy = nullptr;
-        d2zdx2 = nullptr;
-        d2zdxdy = nullptr;
-        d2zdy2 = nullptr;
-        dataset = nullptr;
-        imposed_phase_index = iphase_not_imposed;
-    };
+    TabularBackend(shared_ptr<CoolProp::AbstractState> AS)
+      : imposed_phase_index(iphase_not_imposed),
+        tables_loaded(false),
+        using_single_phase_table(false),
+        is_mixture(false),
+        selected_table(SELECTED_NO_TABLE),
+        cached_single_phase_i(std::numeric_limits<std::size_t>::max()),
+        cached_single_phase_j(std::numeric_limits<std::size_t>::max()),
+        cached_saturation_iL(std::numeric_limits<std::size_t>::max()),
+        cached_saturation_iV(std::numeric_limits<std::size_t>::max()),
+        z(nullptr),
+        dzdx(nullptr),
+        dzdy(nullptr),
+        d2zdx2(nullptr),
+        d2zdxdy(nullptr),
+        d2zdy2(nullptr),
+        AS(std::move(AS)),
+        dataset(nullptr) {
+
+            // Flush the cached indices (set to large number)
+
+        };
 
     // None of the tabular methods are available from the high-level interface
     bool available_in_high_level() override {

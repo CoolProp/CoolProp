@@ -45,7 +45,7 @@ static void ensure_library_loaded() {
 
 void load() {
     std::vector<unsigned char> outbuffer(gall_fluids_JSON_zSize * 7);
-    uLong outlen = static_cast<uLong>(outbuffer.size());
+    auto outlen = static_cast<uLong>(outbuffer.size());
     auto code = uncompress(&outbuffer[0], &outlen, gall_fluids_JSON_zData, gall_fluids_JSON_zSize);
     std::string buf(outbuffer.begin(), outbuffer.begin() + outlen);
     if (code != 0) {
@@ -74,9 +74,9 @@ void load() {
 
 void JSONFluidLibrary::set_fluid_enthalpy_entropy_offset(const std::string& fluid, double delta_a1, double delta_a2, const std::string& ref) {
     // Try to find it
-    std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(fluid);
+    auto it = string_to_index_map.find(fluid);
     if (it != string_to_index_map.end()) {
-        std::map<std::size_t, CoolPropFluid>::iterator it2 = fluid_map.find(it->second);
+        auto it2 = fluid_map.find(it->second);
         // If it is found
         if (it2 != fluid_map.end()) {
             if (!ValidNumber(delta_a1) || !ValidNumber(delta_a2)) {
@@ -304,13 +304,13 @@ void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
             index = string_to_index_map.find(upper(fluid.name))->second;  // if uppercase name found, grab index
         } else {
             // Check the aliases
-            for (std::size_t i = 0; i < fluid.aliases.size(); ++i) {
-                if (string_to_index_map.find(fluid.aliases[i]) != string_to_index_map.end()) {
-                    index = string_to_index_map.find(fluid.aliases[i])->second;  // if alias found, grab index
+            for (const auto& aliase : fluid.aliases) {
+                if (string_to_index_map.find(aliase) != string_to_index_map.end()) {
+                    index = string_to_index_map.find(aliase)->second;  // if alias found, grab index
                     break;
                 }
-                if (string_to_index_map.find(upper(fluid.aliases[i])) != string_to_index_map.end()) {  // if ALIAS found, grab index
-                    index = string_to_index_map.find(upper(fluid.aliases[i]))->second;
+                if (string_to_index_map.find(upper(aliase)) != string_to_index_map.end()) {  // if ALIAS found, grab index
+                    index = string_to_index_map.find(upper(aliase))->second;
                     break;
                 }
             }
@@ -363,11 +363,11 @@ void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
         // Add/Replace the aliases->index mapping
         // This map quickly finds the index of a fluid in the fluid_map given an alias string
         // Again, the map [] operator replaces if the alias is found, adds the new (alias,index) pair if not
-        for (std::size_t i = 0; i < fluid.aliases.size(); ++i) {
-            string_to_index_map[fluid.aliases[i]] = index;
+        for (const auto& aliase : fluid.aliases) {
+            string_to_index_map[aliase] = index;
 
             // Add uppercase alias for EES compatibility
-            string_to_index_map[upper(fluid.aliases[i])] = index;
+            string_to_index_map[upper(aliase)] = index;
         }
 
         //If Debug level set >5 print fluid name and total size of fluid_map

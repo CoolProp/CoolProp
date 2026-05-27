@@ -330,10 +330,10 @@ Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector
 std::vector<CoolProp::parameters> PropertyPlot::supported_isoline_keys() const {
     // taken from PropertyPlot::calc_isolines when called with iso_type='all'
     std::vector<CoolProp::parameters> keys;
-    for (auto it = Detail::xy_switch.begin(); it != Detail::xy_switch.end(); ++it) {
-        const std::map<int, Detail::IsolineSupported>& supported = it->second;
+    for (const auto& it : Detail::xy_switch) {
+        const std::map<int, Detail::IsolineSupported>& supported = it.second;
         auto supported_xy = supported.find(ykey_ * 10 + xkey_);
-        if (supported_xy != supported.end() && supported_xy->second != Detail::IsolineSupported::No) keys.push_back(it->first);
+        if (supported_xy != supported.end() && supported_xy->second != Detail::IsolineSupported::No) keys.push_back(it.first);
     }
     return keys;
 }

@@ -103,7 +103,7 @@ std::string get_casesensitive_fluids(const std::string& root) {
         if (path_exists(ucase_joined)) {
             return ucase_joined;
         } else {
-            throw CoolProp::ValueError(format("fluid directories \"FLUIDS\" or \"fluids\" could not be found in the directory [%s]", root));
+            throw CoolProp::ValueError(format(R"(fluid directories "FLUIDS" or "fluids" could not be found in the directory [%s])", root));
         }
     }
 }
@@ -305,8 +305,8 @@ std::string REFPROPMixtureBackend::version() {
         return "n/a";
     };
     // Pad the version string with NULL characters
-    for (int i = 0; i < 255; ++i) {
-        herr[i] = '\0';
+    for (char& i : herr) {
+        i = '\0';
     }
     SETUPdll(&N, fluids, hmx, default_reference_state, &ierr, herr,
              10000,              // Length of component_string (see PASS_FTN.for from REFPROP)
@@ -2769,16 +2769,16 @@ TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
     SECTION("Saturation densities agree within 0.5% at T/Tc = 0.9") {
         std::vector<std::string> ss = strsplit(CoolProp::get_global_param_string("FluidsList"), ',');
 
-        for (std::vector<std::string>::iterator it = ss.begin(); it != ss.end(); ++it) {
-            std::string Name = (*it);
-            std::string RPName = CoolProp::get_fluid_param_string((*it), "REFPROP_name");
+        for (auto& s : ss) {
+            const std::string& Name = s;
+            std::string RPName = CoolProp::get_fluid_param_string(s, "REFPROP_name");
 
             // Skip fluids not in REFPROP
             if (RPName.find("N/A") == 0) {
                 continue;
             }
 
-            shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
+            shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", s));
             double Tr = S1->T_critical();
             CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, Tr * 0.9));
             double rho_CP = S1->rhomolar();
@@ -2799,16 +2799,16 @@ TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
     SECTION("Saturation specific heats agree within 0.5% at T/Tc = 0.9") {
         std::vector<std::string> ss = strsplit(CoolProp::get_global_param_string("FluidsList"), ',');
 
-        for (std::vector<std::string>::iterator it = ss.begin(); it != ss.end(); ++it) {
-            std::string Name = (*it);
-            std::string RPName = CoolProp::get_fluid_param_string((*it), "REFPROP_name");
+        for (auto& s : ss) {
+            const std::string& Name = s;
+            std::string RPName = CoolProp::get_fluid_param_string(s, "REFPROP_name");
 
             // Skip fluids not in REFPROP
             if (RPName.find("N/A") == 0) {
                 continue;
             }
 
-            shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
+            shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", s));
             double Tr = S1->T_critical();
             S1->update(CoolProp::QT_INPUTS, 0, Tr * 0.9);
             double cp_CP = S1->cpmolar();
@@ -2855,16 +2855,16 @@ TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
     SECTION("Enthalpy and entropy reference state") {
         std::vector<std::string> ss = strsplit(CoolProp::get_global_param_string("FluidsList"), ',');
 
-        for (std::vector<std::string>::iterator it = ss.begin(); it != ss.end(); ++it) {
-            std::string Name = (*it);
-            std::string RPName = CoolProp::get_fluid_param_string((*it), "REFPROP_name");
+        for (auto& it : ss) {
+            const std::string& Name = it;
+            std::string RPName = CoolProp::get_fluid_param_string(it, "REFPROP_name");
 
             // Skip fluids not in REFPROP
             if (RPName.find("N/A") == 0) {
                 continue;
             }
 
-            shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
+            shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", it));
             double Tr = S1->T_critical();
             double RCP = S1->gas_constant();
             CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, 0.9 * Tr));
@@ -2910,12 +2910,12 @@ TEST_CASE("Check trivial inputs for REFPROP work", "[REFPROP_trivial]") {
 
     const int num_inputs = 6;
     std::string inputs[num_inputs] = {"T_triple", "T_critical", "p_critical", "molar_mass", "rhomolar_critical", "rhomass_critical"};
-    for (int i = 0; i < num_inputs; ++i) {
+    for (const auto& input : inputs) {
         std::ostringstream ss;
-        ss << "Check " << inputs[i];
+        ss << "Check " << input;
         SECTION(ss.str(), "") {
-            double cp_val = CoolProp::PropsSI(inputs[i], "P", 0, "T", 0, "HEOS::Water");
-            double rp_val = CoolProp::PropsSI(inputs[i], "P", 0, "T", 0, "REFPROP::Water");
+            double cp_val = CoolProp::PropsSI(input, "P", 0, "T", 0, "HEOS::Water");
+            double rp_val = CoolProp::PropsSI(input, "P", 0, "T", 0, "REFPROP::Water");
 
             std::string errstr = CoolProp::get_global_param_string("errstring");
             CAPTURE(errstr);
@@ -2930,12 +2930,12 @@ TEST_CASE("Check PHI0 derivatives", "[REFPROP_PHI0]") {
 
     const int num_inputs = 3;
     std::string inputs[num_inputs] = {"DALPHA0_DDELTA_CONSTTAU", "D2ALPHA0_DDELTA2_CONSTTAU", "D3ALPHA0_DDELTA3_CONSTTAU"};
-    for (int i = 0; i < num_inputs; ++i) {
+    for (const auto& input : inputs) {
         std::ostringstream ss;
-        ss << "Check " << inputs[i];
+        ss << "Check " << input;
         SECTION(ss.str(), "") {
-            double cp_val = CoolProp::PropsSI(inputs[i], "P", 101325, "T", 298, "HEOS::Water");
-            double rp_val = CoolProp::PropsSI(inputs[i], "P", 101325, "T", 298, "REFPROP::Water");
+            double cp_val = CoolProp::PropsSI(input, "P", 101325, "T", 298, "HEOS::Water");
+            double rp_val = CoolProp::PropsSI(input, "P", 101325, "T", 298, "REFPROP::Water");
 
             std::string errstr = CoolProp::get_global_param_string("errstring");
             CAPTURE(errstr);

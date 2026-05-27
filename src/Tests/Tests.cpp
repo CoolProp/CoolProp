@@ -19,7 +19,7 @@ int run_fast_tests() {
 #ifdef ENABLE_CATCH
     Catch::ConfigData& config = session.configData();
     config.testsOrTags.clear();
-    config.testsOrTags.push_back("[fast]");
+    config.testsOrTags.emplace_back("[fast]");
     session.useConfigData(config);
     return session.run();
 #else
@@ -31,7 +31,7 @@ int run_not_slow_tests() {
 #ifdef ENABLE_CATCH
     Catch::ConfigData& config = session.configData();
     config.testsOrTags.clear();
-    config.testsOrTags.push_back("~[slow]");
+    config.testsOrTags.emplace_back("~[slow]");
     session.useConfigData(config);
 
     time_t t1, t2;
@@ -50,8 +50,8 @@ int run_user_defined_tests(const std::vector<std::string>& tests_or_tags) {
 #ifdef ENABLE_CATCH
     Catch::ConfigData& config = session.configData();
     config.testsOrTags.clear();
-    for (unsigned int i = 0; i < tests_or_tags.size(); i++) {
-        config.testsOrTags.push_back(tests_or_tags[i]);
+    for (const auto& tests_or_tag : tests_or_tags) {
+        config.testsOrTags.push_back(tests_or_tag);
     }
     session.useConfigData(config);
 

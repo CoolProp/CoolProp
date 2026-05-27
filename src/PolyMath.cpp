@@ -792,12 +792,7 @@ double Polynomial2DFrac::fracIntCentral(const Eigen::MatrixXd& coefficients, con
 
 Poly2DFracResidual::Poly2DFracResidual(Polynomial2DFrac& poly, const Eigen::MatrixXd& coefficients, const double& in, const double& z_in,
                                        const int& axis, const int& x_exp, const int& y_exp, const double& x_base, const double& y_base)
-  : Poly2DResidual(poly, coefficients, in, z_in, axis) {
-    this->x_exp = x_exp;
-    this->y_exp = y_exp;
-    this->x_base = x_base;
-    this->y_base = y_base;
-}
+  : Poly2DResidual(poly, coefficients, in, z_in, axis), x_exp(x_exp), y_exp(y_exp), x_base(x_base), y_base(y_base) {}
 
 double Poly2DFracResidual::call(double target) {
     if (axis == iX) return poly.evaluate(coefficients, target, in, x_exp, y_exp, x_base, y_base) - z_in;
@@ -814,9 +809,7 @@ double Poly2DFracResidual::deriv(double target) {
 Poly2DFracIntResidual::Poly2DFracIntResidual(Polynomial2DFrac& poly, const Eigen::MatrixXd& coefficients, const double& in, const double& z_in,
                                              const int& axis, const int& x_exp, const int& y_exp, const double& x_base, const double& y_base,
                                              const int& int_axis)
-  : Poly2DFracResidual(poly, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base) {
-    this->int_axis = int_axis;
-}
+  : Poly2DFracResidual(poly, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base), int_axis(int_axis) {}
 
 double Poly2DFracIntResidual::call(double target) {
     if (axis == iX) return poly.integral(coefficients, target, in, int_axis, x_exp, y_exp, x_base, y_base) - z_in;
@@ -964,7 +957,7 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
 
         CoolProp::Polynomial2D poly;
 
-        Eigen::MatrixXd matrix(matrix2D);
+        const Eigen::MatrixXd& matrix(matrix2D);
         Eigen::MatrixXd matrixInt = poly.integrateCoeffs(matrix, 1);
         Eigen::MatrixXd matrixDer = poly.deriveCoeffs(matrix, 1);
         Eigen::MatrixXd matrixInt2 = poly.integrateCoeffs(matrix, 1, 2);
@@ -985,7 +978,7 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
         // (cert-flp30-c).  N_T = ceil((Tmax-Tmin)/Tinc) matches the
         // count the original `for (T = Tmin; T < Tmax; T += Tinc)` loop
         // produces for the current Tmin/Tmax/Tinc (223.15/523.15/200 -> 2).
-        const std::size_t N_T = static_cast<std::size_t>(std::ceil((Tmax - Tmin) / Tinc));
+        const auto N_T = static_cast<std::size_t>(std::ceil((Tmax - Tmin) / Tinc));
 
         for (std::size_t i = 0; i < N_T; ++i) {
             const double T = Tmin + i * Tinc;
@@ -1187,7 +1180,7 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
         // Integer-indexed grid (cert-flp30-c) — same N_T derivation as
         // the loops in the previous SECTION; T is the outer-scope test
         // variable, reuse it.
-        const std::size_t N_T_frac = static_cast<std::size_t>(std::ceil((Tmax - Tmin) / Tinc));
+        const auto N_T_frac = static_cast<std::size_t>(std::ceil((Tmax - Tmin) / Tinc));
         for (std::size_t i = 0; i < N_T_frac; ++i) {
             T = Tmin + i * Tinc;
             a = poly.evaluate(matrix, T - deltaT, y);

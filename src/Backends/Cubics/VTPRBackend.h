@@ -33,21 +33,21 @@ class VTPRBackend : public PengRobinsonBackend
     std::vector<std::string> m_fluid_names;
 
    public:
-    VTPRBackend(const std::vector<std::string> fluid_identifiers, const std::vector<double>& Tc, const std::vector<double>& pc,
+    VTPRBackend(const std::vector<std::string>& fluid_identifiers, const std::vector<double>& Tc, const std::vector<double>& pc,
                 const std::vector<double>& acentric, double R_u, bool generate_SatL_and_SatV = true) {
         const UNIFACLibrary::UNIFACParameterLibrary& lib = LoadLibrary();
         cubic = std::make_shared<VTPRCubic>(Tc, pc, acentric, R_u, lib);
         setup(fluid_identifiers, generate_SatL_and_SatV);
     };
-    VTPRBackend(const std::vector<std::string> fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
+    VTPRBackend(const std::vector<std::string>& fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
                 bool generate_SatL_and_SatV = true) {
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
         components.resize(N);
         // Extract data from the UNIFAC parameter library
         const UNIFACLibrary::UNIFACParameterLibrary& lib = LoadLibrary();
-        for (std::size_t i = 0; i < fluid_identifiers.size(); ++i) {
-            UNIFACLibrary::Component comp = lib.get_component("name", fluid_identifiers[i]);
+        for (const auto& fluid_identifier : fluid_identifiers) {
+            UNIFACLibrary::Component comp = lib.get_component("name", fluid_identifier);
             Tc.push_back(comp.Tc);              // [K]
             pc.push_back(comp.pc);              // [Pa]
             acentric.push_back(comp.acentric);  // [-]
@@ -84,7 +84,7 @@ class VTPRBackend : public PengRobinsonBackend
 
     void set_mole_fractions(const std::vector<double>& z) override {
         mole_fractions = z;
-        VTPRCubic* _cubic = static_cast<VTPRCubic*>(cubic.get());
+        auto* _cubic = static_cast<VTPRCubic*>(cubic.get());
         _cubic->get_unifaq().set_mole_fractions(z);
     };
 

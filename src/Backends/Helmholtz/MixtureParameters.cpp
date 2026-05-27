@@ -64,7 +64,7 @@ std::string get_csv_predefined_mixtures() {
 }
 
 bool is_predefined_mixture(const std::string& name, Dictionary& dict) {
-    std::map<std::string, Dictionary>::const_iterator iter = predefined_mixtures_library.predefined_mixture_map.find(name);
+    auto iter = predefined_mixtures_library.predefined_mixture_map.find(name);
     if (iter != predefined_mixtures_library.predefined_mixture_map.end()) {
         dict = iter->second;
         return true;
@@ -180,7 +180,7 @@ class MixtureBinaryPairLibrary
                 continue;
             }
 
-            std::map<std::vector<std::string>, std::vector<Dictionary>>::iterator it = m_binary_pair_map.find(CAS);
+            auto it = m_binary_pair_map.find(CAS);
             if (it == m_binary_pair_map.end()) {
                 // Add to binary pair map by creating one-element vector
                 m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
@@ -268,7 +268,7 @@ class MixtureBinaryPairLibrary
             throw ValueError(format("Your simple mixing rule [%s] was not understood", rule.c_str()));
         }
 
-        std::map<std::vector<std::string>, std::vector<Dictionary>>::iterator it = m_binary_pair_map.find(CAS);
+        auto it = m_binary_pair_map.find(CAS);
         if (it == m_binary_pair_map.end()) {
             // Add to binary pair map by creating one-element vector
             m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
@@ -488,7 +488,7 @@ class MixtureDepartureFunctionsLibrary
     void add_one(const std::string& name, Dictionary& dict) {
 
         // Check if this name is already in use
-        std::map<std::string, Dictionary>::iterator it = m_departure_function_map.find(name);
+        auto it = m_departure_function_map.find(name);
         if (it == m_departure_function_map.end()) {
             // Not in map, add new entry to map with dictionary as value and Name as key
             m_departure_function_map.insert(std::pair<std::string, Dictionary>(name, dict));

@@ -378,7 +378,8 @@ inline bool is_Qmass_pair(input_pairs p) {
  * @return pair, or INPUT_PAIR_INVALID if not valid
  */
 template <class T>
-[[nodiscard]] CoolProp::input_pairs generate_update_pair(parameters key1, T value1, parameters key2, T value2, T& out1, T& out2) noexcept {
+[[nodiscard]] CoolProp::input_pairs generate_update_pair(parameters key1, const T& value1, parameters key2, const T& value2, T& out1,
+                                                         T& out2) noexcept {
     CoolProp::input_pairs pair;
     bool swap;
 
@@ -525,7 +526,7 @@ enum backends : int
 };
 
 /// Convert a string into the enum values
-void extract_backend_families(std::string backend_string, backend_families& f1, backend_families& f2);
+void extract_backend_families(const std::string& backend_string, backend_families& f1, backend_families& f2);
 void extract_backend_families_string(std::string backend_string, backend_families& f1, std::string& f2);
 std::string get_backend_string(backends backend);
 

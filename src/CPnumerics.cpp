@@ -5,8 +5,8 @@
 
 double root_sum_square(const std::vector<double>& x) {
     double sum = 0;
-    for (unsigned int i = 0; i < x.size(); i++) {
-        sum += pow(x[i], 2);
+    for (double i : x) {
+        sum += pow(i, 2);
     }
     return sqrt(sum);
 }

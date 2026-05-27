@@ -1,6 +1,8 @@
 #ifndef TTSEBACKEND_H
 #define TTSEBACKEND_H
 
+#include <utility>
+
 #include "TabularBackends.h"
 #include "DataStructures.h"
 
@@ -13,7 +15,7 @@ class TTSEBackend : public TabularBackend
         return get_backend_string(TTSE_BACKEND);
     }
     /// Instantiator; base class loads or makes tables
-    TTSEBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(AS) {
+    TTSEBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(std::move(AS)) {
         imposed_phase_index = iphase_not_imposed;
         // If a pure fluid or a predefined mixture, don't need to set fractions, go ahead and build
         if (!this->AS->get_mole_fractions().empty()) {

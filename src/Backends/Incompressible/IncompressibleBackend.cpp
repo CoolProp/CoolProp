@@ -27,8 +27,8 @@ IncompressibleBackend::IncompressibleBackend() {
     //this->fluid = NULL;
 }
 
-IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) {
-    this->fluid = fluid;
+IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) : fluid(fluid) {
+
     this->set_reference_state();
     if (this->fluid->is_pure()) {
         this->set_fractions(std::vector<CoolPropDbl>(1, 1.0));
@@ -42,8 +42,8 @@ IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) {
     //}
 }
 
-IncompressibleBackend::IncompressibleBackend(const std::string& fluid_name) {
-    this->fluid = &get_incompressible_fluid(fluid_name);
+IncompressibleBackend::IncompressibleBackend(const std::string& fluid_name) : fluid(&get_incompressible_fluid(fluid_name)) {
+
     this->set_reference_state();
     if (this->fluid->is_pure()) {
         this->set_fractions(std::vector<CoolPropDbl>(1, 1.0));
@@ -229,8 +229,8 @@ void IncompressibleBackend::set_mole_fractions(const std::vector<CoolPropDbl>& m
     } else {
         std::vector<CoolPropDbl> tmp_fractions;
         tmp_fractions.reserve(mole_fractions.size());
-        for (std::size_t i = 0; i < mole_fractions.size(); i++) {
-            tmp_fractions.push_back((CoolPropDbl)fluid->inputFromMole(0.0, mole_fractions[i]));
+        for (double mole_fraction : mole_fractions) {
+            tmp_fractions.push_back((CoolPropDbl)fluid->inputFromMole(0.0, mole_fraction));
         }
         this->set_fractions(tmp_fractions);
     }
@@ -256,8 +256,8 @@ void IncompressibleBackend::set_mass_fractions(const std::vector<CoolPropDbl>& m
     } else {
         std::vector<CoolPropDbl> tmp_fractions;
         tmp_fractions.reserve(mass_fractions.size());
-        for (std::size_t i = 0; i < mass_fractions.size(); i++) {
-            tmp_fractions.push_back((CoolPropDbl)fluid->inputFromMass(0.0, mass_fractions[i]));
+        for (double mass_fraction : mass_fractions) {
+            tmp_fractions.push_back((CoolPropDbl)fluid->inputFromMass(0.0, mass_fraction));
         }
         this->set_fractions(tmp_fractions);
     }
@@ -284,8 +284,8 @@ void IncompressibleBackend::set_volu_fractions(const std::vector<CoolPropDbl>& v
     } else {
         std::vector<CoolPropDbl> tmp_fractions;
         tmp_fractions.reserve(volu_fractions.size());
-        for (std::size_t i = 0; i < volu_fractions.size(); i++) {
-            tmp_fractions.push_back((CoolPropDbl)fluid->inputFromVolume(0.0, volu_fractions[i]));
+        for (double volu_fraction : volu_fractions) {
+            tmp_fractions.push_back((CoolPropDbl)fluid->inputFromVolume(0.0, volu_fraction));
         }
         this->set_fractions(tmp_fractions);
     }

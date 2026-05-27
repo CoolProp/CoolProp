@@ -39,8 +39,12 @@ class SurfaceTensionCorrelation
         Tc = cpjson::get_double(json_code, "Tc");
         BibTeX = cpjson::get_string(json_code, "BibTeX");
 
-        this->N = n.size();
-        s = n;
+        // NB: N and s derive from n, which is populated above in the body, so
+        // they must NOT be hoisted into a member-initializer list (clang-tidy
+        // cppcoreguidelines-prefer-member-initializer) — at init-list time n is
+        // still empty, which would silently make every surface tension 0.
+        this->N = n.size();  // NOLINT(cppcoreguidelines-prefer-member-initializer)
+        s = n;               // NOLINT(cppcoreguidelines-prefer-member-initializer)
     };
     /// Actually evaluate the surface tension equation
     CoolPropDbl evaluate(CoolPropDbl T) {
@@ -109,11 +113,10 @@ class SaturationAncillaryFunction
     };
     ancillaryfunctiontypes type;  ///< The type of ancillary curve being used
    public:
-    SaturationAncillaryFunction() {
-        type = TYPE_NOT_SET;
-        Tmin = _HUGE;
-        Tmax = _HUGE;
-    };
+    SaturationAncillaryFunction()
+      : type(TYPE_NOT_SET), Tmin(_HUGE), Tmax(_HUGE) {
+
+        };
     SaturationAncillaryFunction(rapidjson::Value& json_code);
 
     /// Return true if the ancillary is enabled (type is not TYPE_NOT_SET)

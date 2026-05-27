@@ -22,12 +22,12 @@
 template <size_t dimcount, typename T>
 struct VectorNd
 {
-    typedef std::vector<typename VectorNd<dimcount - 1, T>::type> type;
+    using type = std::vector<typename VectorNd<dimcount - 1, T>::type>;
 };
 template <typename T>
 struct VectorNd<0, T>
 {
-    typedef T type;
+    using type = T;
 };
 
 namespace CoolProp {
@@ -317,7 +317,7 @@ static const char* stdFmt = "%8.3f";
 ///Templates for turning vectors (1D-matrices) into strings
 template <class T>
 std::string vec_to_string(const std::vector<T>& a, const char* fmt) {
-    if (a.size() < 1) return std::string("");
+    if (a.size() < 1) return {""};
     std::stringstream out;
     out << "[ " << format(fmt, a[0]);
     for (size_t j = 1; j < a.size(); j++) {
@@ -332,7 +332,7 @@ std::string vec_to_string(const std::vector<T>& a) {
 };
 ///Templates for turning vectors (1D-matrices) into strings
 inline std::string stringvec_to_string(const std::vector<std::string>& a) {
-    if (a.size() < 1) return std::string("");
+    if (a.size() < 1) return {""};
     std::stringstream out;
     out << "[ " << format("%s", a[0].c_str());
     for (size_t j = 1; j < a.size(); j++) {
@@ -357,7 +357,7 @@ std::string vec_to_string(const T& a) {
 ///Templates for turning 2D-matrices into strings
 template <class T>
 std::string vec_to_string(const std::vector<std::vector<T>>& A, const char* fmt) {
-    if (A.size() < 1) return std::string("");
+    if (A.size() < 1) return {""};
     std::stringstream out;
     out << "[ " << vec_to_string(A[0], fmt);
     for (size_t j = 1; j < A.size(); j++) {
@@ -377,7 +377,7 @@ std::string mat_to_string(const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>
     //std::string mat_to_string(const Eigen::MatrixXd &A, const char *fmt) {
     std::size_t r = A.rows();
     std::size_t c = A.cols();
-    if ((r < 1) || (c < 1)) return std::string("");
+    if ((r < 1) || (c < 1)) return {""};
     std::stringstream out;
     out << "[ ";
     if (r == 1) {
@@ -877,7 +877,7 @@ std::vector<std::vector<T>> invert(std::vector<std::vector<T>> const& in) {
 
 inline void removeRow(Eigen::MatrixXd& matrix, unsigned int rowToRemove) {
     unsigned int numRows = static_cast<unsigned int>(matrix.rows()) - 1;
-    unsigned int numCols = static_cast<unsigned int>(matrix.cols());
+    auto numCols = static_cast<unsigned int>(matrix.cols());
 
     if (rowToRemove <= numRows)
         matrix.block(rowToRemove, 0, numRows - rowToRemove, numCols) = matrix.block(rowToRemove + 1, 0, numRows - rowToRemove, numCols);
@@ -888,7 +888,7 @@ inline void removeRow(Eigen::MatrixXd& matrix, unsigned int rowToRemove) {
 };
 
 inline void removeColumn(Eigen::MatrixXd& matrix, unsigned int colToRemove) {
-    unsigned int numRows = static_cast<unsigned int>(matrix.rows());
+    auto numRows = static_cast<unsigned int>(matrix.rows());
     unsigned int numCols = static_cast<unsigned int>(matrix.cols()) - 1;
 
     if (colToRemove <= numCols)

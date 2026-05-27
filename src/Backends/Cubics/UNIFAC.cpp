@@ -35,8 +35,7 @@ void UNIFAC::UNIFACMixture::set_interaction_parameter(const std::size_t mgi1, co
     }
 }
 double UNIFAC::UNIFACMixture::get_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string& parameter) {
-    std::map<std::pair<int, int>, UNIFACLibrary::InteractionParameters>::iterator it =
-      this->interaction.find(std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2)));
+    auto it = this->interaction.find(std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2)));
     if (it == this->interaction.end()) {
         throw CoolProp::ValueError(format("Unable to match mgi-mgi pair: [%d,%d]", static_cast<int>(mgi1), static_cast<int>(mgi1)));
     } else {
@@ -109,8 +108,7 @@ double UNIFAC::UNIFACMixture::Psi(std::size_t sgi1, std::size_t sgi2) const {
     if (mgi1 == mgi2) {
         return 1;
     } else {
-        std::map<std::pair<int, int>, UNIFACLibrary::InteractionParameters>::const_iterator it =
-          this->interaction.find(std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2)));
+        auto it = this->interaction.find(std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2)));
         if (it != this->interaction.end()) {
             return exp(-(it->second.a_ij / this->m_T + it->second.b_ij + it->second.c_ij * this->m_T));
         } else {
@@ -159,8 +157,8 @@ void UNIFAC::UNIFACMixture::set_temperature(const double T) {
             double Q = c.groups[k].group.Q_k;
             int sgik = c.groups[k].group.sgi;
             double sum1 = 0;
-            for (std::size_t m = 0; m < c.groups.size(); ++m) {
-                int sgim = c.groups[m].group.sgi;
+            for (const auto& group : c.groups) {
+                int sgim = group.group.sgi;
                 sum1 += theta_pure(i, sgim) * Psi_.find(std::pair<std::size_t, std::size_t>(sgim, sgik))->second;
             }
             // sum1 > 0: c.groups is the set of groups present in component i, theta_pure
@@ -171,8 +169,8 @@ void UNIFAC::UNIFACMixture::set_temperature(const double T) {
             for (std::size_t m = 0; m < c.groups.size(); ++m) {
                 int sgim = c.groups[m].group.sgi;
                 double sum2 = 0;
-                for (std::size_t n = 0; n < c.groups.size(); ++n) {
-                    int sgin = c.groups[n].group.sgi;
+                for (const auto& group : c.groups) {
+                    int sgin = group.group.sgi;
                     sum2 += theta_pure(i, sgin) * Psi_.find(std::pair<std::size_t, std::size_t>(sgin, sgim))->second;
                 }
                 s -= theta_pure(i, sgim) * Psi_.find(std::pair<std::size_t, std::size_t>(sgik, sgim))->second / sum2;
@@ -229,8 +227,7 @@ void UNIFAC::UNIFACMixture::activity_coefficients(double tau, const std::vector<
     for (std::size_t i = 0; i < N; ++i) {
         double summerr = 0, summerq = 0;
         const UNIFACLibrary::Component& c = components[i];
-        for (std::size_t j = 0; j < c.groups.size(); ++j) {
-            const UNIFACLibrary::ComponentGroup& cg = c.groups[j];
+        for (const auto& cg : c.groups) {
             summerr += cg.count * cg.group.R_k;
             summerq += cg.count * cg.group.Q_k;
         }
@@ -259,7 +256,7 @@ void UNIFAC::UNIFACMixture::add_component(const UNIFACLibrary::Component& comp) 
     }
 }
 
-void UNIFAC::UNIFACMixture::set_components(const std::string& identifier_type, std::vector<std::string> identifiers) {
+void UNIFAC::UNIFACMixture::set_components(const std::string& identifier_type, const std::vector<std::string>& identifiers) {
     components.clear();
     N = identifiers.size();
     if (identifier_type == "name") {
@@ -286,10 +283,9 @@ void UNIFAC::UNIFACMixture::set_pure_data() {
         ComponentData cd;
         double summerxq = 0;
         cd.group_count = 0;
-        for (std::size_t j = 0; j < c.groups.size(); ++j) {
-            const UNIFACLibrary::ComponentGroup& cg = c.groups[j];
-            double x = static_cast<double>(cg.count);
-            double theta = static_cast<double>(cg.count * cg.group.Q_k);
+        for (const auto& cg : c.groups) {
+            auto x = static_cast<double>(cg.count);
+            auto theta = static_cast<double>(cg.count * cg.group.Q_k);
             cd.X.emplace(cg.group.sgi, x);
             cd.theta.emplace(cg.group.sgi, theta);
             cd.group_count += cg.count;
@@ -314,9 +310,9 @@ void UNIFAC::UNIFACMixture::set_pure_data() {
 /// Modify the surface parameter Q_k of the sub group sgi
 void UNIFAC::UNIFACMixture::set_Q_k(const size_t sgi, const double value) {
     for (std::size_t i = 0; i < N; ++i) {
-        for (std::size_t j = 0; j < components[i].groups.size(); ++j) {
-            if (components[i].groups[j].group.sgi == sgi) {
-                components[i].groups[j].group.Q_k = value;
+        for (auto& group : components[i].groups) {
+            if (group.group.sgi == sgi) {
+                group.group.Q_k = value;
             }
         }
     }
@@ -328,9 +324,9 @@ void UNIFAC::UNIFACMixture::set_Q_k(const size_t sgi, const double value) {
 /// Modify the surface parameter Q_k of the sub group sgi
 double UNIFAC::UNIFACMixture::get_Q_k(const size_t sgi) const {
     for (std::size_t i = 0; i < N; ++i) {
-        for (std::size_t j = 0; j < components[i].groups.size(); ++j) {
-            if (components[i].groups[j].group.sgi == sgi) {
-                return components[i].groups[j].group.Q_k;
+        for (const auto& group : components[i].groups) {
+            if (group.group.sgi == sgi) {
+                return group.group.Q_k;
             }
         }
     }

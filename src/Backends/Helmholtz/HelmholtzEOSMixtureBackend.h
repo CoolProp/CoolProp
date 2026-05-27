@@ -133,7 +133,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     // Copy over the reducing and departure terms to all linked states (recursively)
     void sync_linked_states(const HelmholtzEOSMixtureBackend* const);
 
-    virtual ~HelmholtzEOSMixtureBackend() {};
+    virtual ~HelmholtzEOSMixtureBackend() = default;
     std::string backend_name() override {
         return get_backend_string(HEOS_BACKEND_MIX);
     }
@@ -147,9 +147,9 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     bool clear() override {
         // Clear the locally cached values for the derivatives of the Helmholtz energy
         // in each component
-        for (std::vector<CoolPropFluid>::iterator it = components.begin(); it != components.end(); ++it) {
-            (*it).EOS().alphar.clear();
-            (*it).EOS().alpha0.clear();
+        for (auto& component : components) {
+            component.EOS().alphar.clear();
+            component.EOS().alpha0.clear();
         }
         return AbstractState::clear();
     };
@@ -831,7 +831,7 @@ class ResidualHelmholtz
     ExcessTerm Excess;
     CorrespondingStatesTerm CS;
 
-    ResidualHelmholtz() {};
+    ResidualHelmholtz() = default;
     ResidualHelmholtz(const ExcessTerm& E, const CorrespondingStatesTerm& C) : Excess(E), CS(C) {};
     virtual ~ResidualHelmholtz() = default;
 

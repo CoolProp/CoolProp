@@ -29,7 +29,7 @@ class CoolPropBaseError : public std::exception
         eMultipleSolutions
     };
     CoolPropBaseError(const std::string& err, ErrCode code) throw() : m_code(code), m_err(err) {}
-    ~CoolPropBaseError() throw() {};
+    ~CoolPropBaseError() throw() = default;
     const char* what() const throw() override {
         return m_err.c_str();
     }
@@ -49,15 +49,15 @@ class CoolPropError : public CoolPropBaseError
     CoolPropError(const std::string& err = "", ErrCode ecode = errcode) throw() : CoolPropBaseError(err, ecode) {}
 };
 
-typedef CoolPropError<CoolPropBaseError::eNotImplemented> NotImplementedError;
-typedef CoolPropError<CoolPropBaseError::eSolution> SolutionError;
-typedef CoolPropError<CoolPropBaseError::eAttribute> AttributeError;
-typedef CoolPropError<CoolPropBaseError::eOutOfRange> OutOfRangeError;
-typedef CoolPropError<CoolPropBaseError::eValue> ValueError;
-typedef CoolPropError<CoolPropBaseError::eKey> KeyError;
-typedef CoolPropError<CoolPropBaseError::eHandle> HandleError;
-typedef CoolPropError<CoolPropBaseError::eUnableToLoad> UnableToLoadError;
-typedef CoolPropError<CoolPropBaseError::eDirectorySize> DirectorySizeError;
+using NotImplementedError = CoolPropError<CoolPropBaseError::eNotImplemented>;
+using SolutionError = CoolPropError<CoolPropBaseError::eSolution>;
+using AttributeError = CoolPropError<CoolPropBaseError::eAttribute>;
+using OutOfRangeError = CoolPropError<CoolPropBaseError::eOutOfRange>;
+using ValueError = CoolPropError<CoolPropBaseError::eValue>;
+using KeyError = CoolPropError<CoolPropBaseError::eKey>;
+using HandleError = CoolPropError<CoolPropBaseError::eHandle>;
+using UnableToLoadError = CoolPropError<CoolPropBaseError::eUnableToLoad>;
+using DirectorySizeError = CoolPropError<CoolPropBaseError::eDirectorySize>;
 
 // ValueError specializations
 template <CoolPropBaseError::ErrCode errcode>
@@ -67,15 +67,15 @@ class ValueErrorSpec : public ValueError
     ValueErrorSpec(const std::string& err = "", ErrCode ecode = errcode) throw() : ValueError(err, ecode) {}
 };
 
-typedef ValueErrorSpec<CoolPropBaseError::eWrongFluid> WrongFluidError;
-typedef ValueErrorSpec<CoolPropBaseError::eComposition> CompositionError;
-typedef ValueErrorSpec<CoolPropBaseError::eInput> InputError;
-typedef ValueErrorSpec<CoolPropBaseError::eNotAvailable> NotAvailableError;
+using WrongFluidError = ValueErrorSpec<CoolPropBaseError::eWrongFluid>;
+using CompositionError = ValueErrorSpec<CoolPropBaseError::eComposition>;
+using InputError = ValueErrorSpec<CoolPropBaseError::eInput>;
+using NotAvailableError = ValueErrorSpec<CoolPropBaseError::eNotAvailable>;
 /// Thrown when a saturation flash input maps to more than one temperature on
 /// the saturation curve (e.g. water saturated-vapor enthalpy at a given h has
 /// two T-roots). The caller should use update_with_guesses with a guess.T to
 /// pick a branch. See GitHub #2773.
-typedef ValueErrorSpec<CoolPropBaseError::eMultipleSolutions> MultipleSolutionsError;
+using MultipleSolutionsError = ValueErrorSpec<CoolPropBaseError::eMultipleSolutions>;
 
 }; /* namespace CoolProp */
 #endif

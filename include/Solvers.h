@@ -23,7 +23,7 @@ class FuncWrapper1D
     int iter;
     int verbosity = 0;
     FuncWrapper1D() : errcode(0), errstring(""), iter(0) {};
-    virtual ~FuncWrapper1D() {};
+    virtual ~FuncWrapper1D() = default;
     virtual double call(double) = 0;
     /**
      * /brief A function for checking whether the input is in range;
@@ -59,7 +59,7 @@ class FuncWrapperND
     int errcode;
     std::string errstring;
     FuncWrapperND() : errcode(0), errstring("") {};
-    virtual ~FuncWrapperND() {};
+    virtual ~FuncWrapperND() = default;
     virtual std::vector<double> call(const std::vector<double>&) = 0;  // must be provided
     virtual std::vector<std::vector<double>> Jacobian(const std::vector<double>&);
 };

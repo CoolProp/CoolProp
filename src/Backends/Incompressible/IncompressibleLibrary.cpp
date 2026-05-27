@@ -326,14 +326,15 @@ namespace CoolProp {
 //}
 
 /// Default constructor
-JSONIncompressibleLibrary::JSONIncompressibleLibrary() {
-    _is_empty = true;
-    //    fluid_map.clear();
-    //    name_vector.clear();
-    //    string_to_index_map.clear();
-    //
-    //    //shared_ptr<double> array (new double [256], ArrayDeleter<double> ());
-};
+JSONIncompressibleLibrary::JSONIncompressibleLibrary()
+  : _is_empty(true) {
+
+        //    fluid_map.clear();
+        //    name_vector.clear();
+        //    string_to_index_map.clear();
+        //
+        //    //shared_ptr<double> array (new double [256], ArrayDeleter<double> ());
+    };
 
 /// Default destructor
 JSONIncompressibleLibrary::~JSONIncompressibleLibrary() {
@@ -514,7 +515,7 @@ void JSONIncompressibleLibrary::add_obj(const IncompressibleFluid& fluid_obj) {
 // Get an IncompressibleFluid instance stored in this library
 IncompressibleFluid& JSONIncompressibleLibrary::get(const std::string& key) {
     // Try to find it
-    std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(key);
+    auto it = string_to_index_map.find(key);
     // If it is found
     if (it != string_to_index_map.end()) {
         return get(it->second);
@@ -529,7 +530,7 @@ IncompressibleFluid& JSONIncompressibleLibrary::get(const std::string& key) {
  */
 IncompressibleFluid& JSONIncompressibleLibrary::get(std::size_t key) {
     // Try to find it
-    std::map<std::size_t, IncompressibleFluid>::iterator it = fluid_map.find(key);
+    auto it = fluid_map.find(key);
     // If it is found
     if (it != fluid_map.end()) {
         return it->second;

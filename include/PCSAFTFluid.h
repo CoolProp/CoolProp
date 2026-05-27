@@ -32,9 +32,9 @@ class PCSAFTFluid
     PCSAFTValues params;
 
    public:
-    PCSAFTFluid() {};
+    PCSAFTFluid() = default;
     PCSAFTFluid(rapidjson::Value::ValueIterator itr);
-    ~PCSAFTFluid() {};
+    ~PCSAFTFluid() = default;
 
     std::string getName() const {
         return name;
