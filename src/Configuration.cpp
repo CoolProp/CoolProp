@@ -41,8 +41,8 @@ std::string config_key_description(const std::string& key) {
     * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
     */
 #define X(Enum, String, Default, Desc) \
-    if (key == String) {               \
-        return Desc;                   \
+    if (key == (String)) {             \
+        return (Desc);                 \
     }
     CONFIGURATION_KEYS_ENUM
 #undef X
@@ -55,7 +55,7 @@ configuration_keys config_string_to_key(const std::string& s) {
      * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
      */
 #define X(Enum, String, Default, Desc) \
-    if (s == String) {                 \
+    if (s == (String)) {               \
         return Enum;                   \
     }
     CONFIGURATION_KEYS_ENUM

@@ -621,6 +621,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters par
                     return components[0].ancillaries.pL.evaluate(value);
                 case 1:
                     return components[0].ancillaries.pV.evaluate(value);
+                default:
+                    break;  // falls through to the "Q invalid" throw below
             }
         } else if (param == iT && given == iP) {
             // T = f(p), inverse evaluation
@@ -629,6 +631,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters par
                     return components[0].ancillaries.pL.invert(value);
                 case 1:
                     return components[0].ancillaries.pV.invert(value);
+                default:
+                    break;  // falls through to the "Q invalid" throw below
             }
         } else if (param == iDmolar && given == iT) {
             // rho = f(T), inverse evaluation
@@ -637,6 +641,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters par
                     return components[0].ancillaries.rhoL.evaluate(value);
                 case 1:
                     return components[0].ancillaries.rhoV.evaluate(value);
+                default:
+                    break;  // falls through to the "Q invalid" throw below
             }
         } else if (param == iT && given == iDmolar) {
             // T = f(rho), inverse evaluation
@@ -645,6 +651,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters par
                     return components[0].ancillaries.rhoL.invert(value);
                 case 1:
                     return components[0].ancillaries.rhoV.invert(value);
+                default:
+                    break;  // falls through to the "Q invalid" throw below
             }
         } else if (param == isurface_tension && given == iT) {
             return components[0].ancillaries.surface_tension.evaluate(value);
@@ -1959,6 +1967,8 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                     }
                     break;
                 }
+                default:
+                    break;  // non-density inputs fall through to the full VLE path below
             }
         }
 
