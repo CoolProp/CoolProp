@@ -229,7 +229,7 @@ void IncompressibleBackend::set_mole_fractions(const std::vector<CoolPropDbl>& m
     } else {
         std::vector<CoolPropDbl> tmp_fractions;
         tmp_fractions.reserve(mole_fractions.size());
-        for (double mole_fraction : mole_fractions) {
+        for (auto mole_fraction : mole_fractions) {
             tmp_fractions.push_back((CoolPropDbl)fluid->inputFromMole(0.0, mole_fraction));
         }
         this->set_fractions(tmp_fractions);
@@ -256,7 +256,7 @@ void IncompressibleBackend::set_mass_fractions(const std::vector<CoolPropDbl>& m
     } else {
         std::vector<CoolPropDbl> tmp_fractions;
         tmp_fractions.reserve(mass_fractions.size());
-        for (double mass_fraction : mass_fractions) {
+        for (auto mass_fraction : mass_fractions) {
             tmp_fractions.push_back((CoolPropDbl)fluid->inputFromMass(0.0, mass_fraction));
         }
         this->set_fractions(tmp_fractions);
@@ -284,7 +284,7 @@ void IncompressibleBackend::set_volu_fractions(const std::vector<CoolPropDbl>& v
     } else {
         std::vector<CoolPropDbl> tmp_fractions;
         tmp_fractions.reserve(volu_fractions.size());
-        for (double volu_fraction : volu_fractions) {
+        for (auto volu_fraction : volu_fractions) {
             tmp_fractions.push_back((CoolPropDbl)fluid->inputFromVolume(0.0, volu_fraction));
         }
         this->set_fractions(tmp_fractions);

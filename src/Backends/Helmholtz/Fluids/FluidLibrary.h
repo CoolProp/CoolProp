@@ -225,7 +225,7 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
                 std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
                 // Flip the sign of theta
-                for (double& i : t) {
+                for (auto& i : t) {
                     i *= -1;
                 }
                 std::vector<CoolPropDbl> c(n.size(), 1);

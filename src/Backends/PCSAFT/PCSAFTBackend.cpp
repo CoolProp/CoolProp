@@ -212,7 +212,7 @@ void PCSAFTBackend::set_mass_fractions(const std::vector<CoolPropDbl>& mass_frac
         sum_moles += tmp;
     }
     std::vector<CoolPropDbl> mole_fractions;
-    for (double& mole : moles) {
+    for (const auto& mole : moles) {
         mole_fractions.push_back(mole / sum_moles);
     }
     this->set_mole_fractions(mole_fractions);
