@@ -128,6 +128,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
               # 'numpydoc',
               # 'breathe'
               "nbsphinx",
+              "sphinx_design",
               ]
 
 # set path to issue tracker:

@@ -31,4 +31,5 @@ dependencies:
     - pybtex
     - pickleshare
     - nbsphinx
+    - sphinx-design
 
