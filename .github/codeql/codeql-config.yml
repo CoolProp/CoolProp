@@ -3,15 +3,23 @@ name: "CoolProp CodeQL config"
 # Keep the default security-and-quality query suite (added by the workflow
 # via `queries: +security-and-quality`).
 
-# Exclude vendored / fetched third-party sources we cannot patch.
-# - build/_deps/**     : CPM/FetchContent downloads (Eigen, fmt, msgpack, …)
-# - externals/miniz-*  : vendored miniz copy
-# - externals/fmt*     : any in-tree fmt copy (defensive; fetched copy lives under build/_deps)
-# - .claude/worktrees  : local Claude Code worktrees, never analysed
+# Exclude vendored / fetched third-party sources and auto-generated files we
+# cannot (and should not) patch. The vendored / generated set mirrors the
+# canonical exclusion list in CMakeLists.txt (clang-format `format` target,
+# regex /include/(.*_JSON.*|gitrevision|miniz)\.h$) and the dev_checks
+# clang-tidy negative pathspecs.
+# - build/**, _deps/**      : CPM/FetchContent downloads (Eigen, fmt, msgpack, rapidjson, …)
+# - externals/**            : all vendored third-party libs (miniz, nlohmann-json, incbin, …)
+# - include/miniz.h         : vendored upstream miniz amalgamation header
+# - include/gitrevision.h   : auto-generated at configure time
+# - include/*_JSON*.h       : auto-generated from dev/fluids JSON (huge raw-string blobs)
+# - .claude/**              : local Claude Code worktrees, never analysed
 paths-ignore:
   - build/**
   - build_*/**
   - "**/_deps/**"
-  - externals/miniz-*/**
-  - externals/fmt*/**
+  - externals/**
+  - include/miniz.h
+  - include/gitrevision.h
+  - "include/*_JSON*.h"
   - .claude/**
