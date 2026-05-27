@@ -239,29 +239,26 @@ jobs:
         with:
           python-version: '3.x'
 
+      # cpp uses build-mode: none (buildless extractor). Two reasons:
+      #   1. paths-ignore in codeql-config.yml is honoured for C/C++ ONLY when
+      #      analysing without building; a build-based run silently ignores it,
+      #      so vendored sources (Eigen, nlohmann-json, miniz, …) kept flooding
+      #      the alert list. See GitHub #3010.
+      #   2. No build means no build/_deps tree, so the fetched header-only deps
+      #      (Eigen/boost/msgpack/fmt/rapidjson/if97/refprop) are never extracted
+      #      in the first place.
+      # python keeps its default extraction (build-mode left unset → autobuild).
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.language == 'cpp' && 'none' || '' }}
           queries: +security-and-quality
           config-file: ./.github/codeql/codeql-config.yml
 
       - name: Autobuild Python
         if: ${{ matrix.language == 'python' }}
         uses: github/codeql-action/autobuild@v4
-
-      - name: Configure CPP
-        if: ${{ matrix.language == 'cpp' }}
-        run: cmake
-               -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
-               -B ${{github.workspace}}/build
-               -S .
-
-      - name: Build CPP
-        if: ${{ matrix.language == 'cpp' }}
-        run: cmake
-               --build ${{github.workspace}}/build
-               --config Release
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
