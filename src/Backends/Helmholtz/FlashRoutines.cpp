@@ -1489,7 +1489,14 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
         // guesses and converge to metastable roots in the compressed-
         // liquid region (e.g. CO2 LIQUID).  See solver_rho_Tp; #2738.
         ~solver_resid() {
-            HEOS->unspecify_phase();
+            // This RAII cleanup runs from a destructor (implicitly noexcept):
+            // a throw escaping here would call std::terminate.  unspecify_phase()
+            // only resets a flag and shouldn't throw, but guard it so a future
+            // change can't silently turn this into a crash.
+            try {
+                HEOS->unspecify_phase();
+            } catch (...) {  // NOLINT(bugprone-empty-catch) — a dtor must not let an exception escape
+            }
         }
         double call(double T) override {
             HEOS->update_DmolarT_direct(rhomolar, T);

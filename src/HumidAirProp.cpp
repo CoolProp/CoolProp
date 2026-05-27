@@ -1795,16 +1795,18 @@ void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const st
         if (CoolProp::get_debug_level() > 0) {
             std::cout << format("The main input is not T\n", T);
         }
-        // Need to iterate to find dry bulb temperature since temperature is not provided
-        if ((key = get_input_key(input_keys, GIVEN_HUMRAT)) >= 0) {
-        }  // Humidity ratio is given
-        // Prefer T_dp over R as main key when both are present: T_dp determines psi_w directly
-        // without requiring dry-bulb T, so it gives better iteration bounds.
-        else if ((key = get_input_key(input_keys, GIVEN_TDP)) >= 0) {
-        }  // Dewpoint temperature is given
-        else if ((key = get_input_key(input_keys, GIVEN_RH)) >= 0) {
-        }  // Relative humidity is given
-        else {
+        // Need to iterate to find dry bulb temperature since temperature is not provided.
+        // Pick the first available key in priority order: humidity ratio, then dewpoint,
+        // then relative humidity.  Prefer T_dp over R when both are present: T_dp determines
+        // psi_w directly without requiring dry-bulb T, so it gives better iteration bounds.
+        key = get_input_key(input_keys, GIVEN_HUMRAT);  // Humidity ratio is given
+        if (key < 0) {
+            key = get_input_key(input_keys, GIVEN_TDP);  // Dewpoint temperature is given
+        }
+        if (key < 0) {
+            key = get_input_key(input_keys, GIVEN_RH);  // Relative humidity is given
+        }
+        if (key < 0) {
             throw CoolProp::ValueError(
               "Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, "
               "or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now");
