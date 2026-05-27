@@ -15,3 +15,13 @@ paths-ignore:
   - externals/miniz-*/**
   - externals/fmt*/**
   - .claude/**
+
+# Suppress individual queries that are pure noise on this codebase.
+# Unlike paths-ignore (inert for built C/C++), query-filters are applied at
+# result-interpretation time and DO take effect for compiled languages.
+# - cpp/commented-out-code: 250 first-party hits, all low-signal style; the
+#   commented-out blocks are deliberate (alternative formulations, disabled
+#   debug, doc snippets) and reviewing them yields no security/correctness value.
+query-filters:
+  - exclude:
+      id: cpp/commented-out-code
