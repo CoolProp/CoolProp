@@ -2332,8 +2332,10 @@ double HAProps_Aux(const char* Name, double T, double p, double W, char* units) 
                 Water->update(CoolProp::QT_INPUTS, 0, T);
                 return 1.0 / Water->keyed_output(CoolProp::iDmolar);
             } else {
-                // It is ice
-                return dg_dp_Ice(T, p) * MM_Water() / 1000 / 1000;  //[m^3/mol]
+                // It is ice. dg_dp_Ice is the specific volume [m^3/kg] (rho_Ice = 1/dg_dp_Ice)
+                // and MM_Water is [kg/mol], so the product is already [m^3/mol]; no further
+                // unit conversion is needed. This mirrors the f_factor() computation. (GH #2657)
+                return dg_dp_Ice(T, p) * MM_Water();  //[m^3/mol]
             }
         } else if (!strcmp(Name, "f")) {
             strcpy(units, "-");

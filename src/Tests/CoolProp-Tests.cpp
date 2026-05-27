@@ -1415,7 +1415,12 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity", "
         }
     }
 
-    SECTION("Saturated molar volume vbar_ws is positive") {
+    SECTION("Saturated molar volume vbar_ws is physically sane") {
+        // Molar volume of condensed water (liquid or ice) is ~1.8e-5 to ~2.0e-5
+        // m^3/mol. Both branches must land in this range; in particular the ice
+        // branch must not be off by the 1e6 factor of GH #2657. See also the
+        // f_factor() computation in HumidAirProp.cpp which uses the correct
+        // expression. Bound generously to allow for compression/expansion.
         const double Tvals[] = {213.15, 253.15, 273.15, 293.15, 333.15, 373.15};
         const double Pvals[] = {101325.0, 500000.0, 1000000.0};
         for (double T : Tvals) {
@@ -1424,9 +1429,25 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity", "
                 CAPTURE(T);
                 CAPTURE(p);
                 CHECK(ValidNumber(v));
-                CHECK(v > 0.0);
+                CHECK(v > 1.5e-5);
+                CHECK(v < 2.5e-5);
             }
         }
+    }
+
+    SECTION("vbar_ws is continuous across the ice/liquid boundary (GH #2657)") {
+        // Just below (ice) and just above (liquid) the triple-point temperature
+        // 273.16 K the molar volume must be nearly equal — ice is only ~9%
+        // larger than liquid water, not 1e6x smaller as in GH #2657.
+        const double p = 101325.0;
+        double v_ice = HumidAir::HAProps_Aux("vbar_ws", 273.15, p, 0.0, units);
+        double v_liq = HumidAir::HAProps_Aux("vbar_ws", 273.17, p, 0.0, units);
+        CAPTURE(v_ice);
+        CAPTURE(v_liq);
+        CHECK(ValidNumber(v_ice));
+        CHECK(ValidNumber(v_liq));
+        CHECK(v_ice > 0.9 * v_liq);
+        CHECK(v_ice < 1.2 * v_liq);
     }
 
     SECTION("Virial coefficients Baa and Bww have expected signs") {
