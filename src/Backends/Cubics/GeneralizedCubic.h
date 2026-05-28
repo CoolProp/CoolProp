@@ -618,7 +618,7 @@ class PengRobinson : public AbstractCubic
     PengRobinson(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
                  const std::vector<double>& C1 = std::vector<double>(), const std::vector<double>& C2 = std::vector<double>(),
                  const std::vector<double>& C3 = std::vector<double>())
-      : AbstractCubic(std::move(Tc), std::move(pc), std::move(acentric), R_u, 1 + sqrt(2.0), 1 - sqrt(2.0), C1, C2, C3) {
+      : AbstractCubic(Tc, std::move(pc), std::move(acentric), R_u, 1 + sqrt(2.0), 1 - sqrt(2.0), C1, C2, C3) {
         set_alpha(C1, C2, C3);
     };
 
@@ -638,7 +638,7 @@ class SRK : public AbstractCubic
     SRK(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
         const std::vector<double>& C1 = std::vector<double>(), const std::vector<double>& C2 = std::vector<double>(),
         const std::vector<double>& C3 = std::vector<double>())
-      : AbstractCubic(std::move(Tc), std::move(pc), std::move(acentric), R_u, 1, 0, C1, C2, C3) {
+      : AbstractCubic(Tc, std::move(pc), std::move(acentric), R_u, 1, 0, C1, C2, C3) {
         set_alpha(C1, C2, C3);
     };
     SRK(double Tc, double pc, double acentric, double R_u)

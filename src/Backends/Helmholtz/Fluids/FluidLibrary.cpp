@@ -304,13 +304,13 @@ void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
             index = string_to_index_map.find(upper(fluid.name))->second;  // if uppercase name found, grab index
         } else {
             // Check the aliases
-            for (const auto& aliase : fluid.aliases) {
-                if (string_to_index_map.find(aliase) != string_to_index_map.end()) {
-                    index = string_to_index_map.find(aliase)->second;  // if alias found, grab index
+            for (const auto& alias : fluid.aliases) {
+                if (string_to_index_map.find(alias) != string_to_index_map.end()) {
+                    index = string_to_index_map.find(alias)->second;  // if alias found, grab index
                     break;
                 }
-                if (string_to_index_map.find(upper(aliase)) != string_to_index_map.end()) {  // if ALIAS found, grab index
-                    index = string_to_index_map.find(upper(aliase))->second;
+                if (string_to_index_map.find(upper(alias)) != string_to_index_map.end()) {  // if ALIAS found, grab index
+                    index = string_to_index_map.find(upper(alias))->second;
                     break;
                 }
             }

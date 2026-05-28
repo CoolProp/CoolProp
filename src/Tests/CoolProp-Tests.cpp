@@ -1468,23 +1468,23 @@ TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert model
     Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
 
     std::string mixes[] = {"CO2[0.7]&Argon[0.3]", "CO2[0.7]&Water[0.3]", "CO2[0.7]&Nitrogen[0.3]"};
-    for (const auto& mixe : mixes) {
-        const char* ykey = mixe.c_str();
+    for (const auto& mix : mixes) {
+        const char* ykey = mix.c_str();
         std::ostringstream ss1;
-        ss1 << mixe;
+        ss1 << mix;
         SECTION(ss1.str(), "") {
             double Tnbp_CP, Tnbp_RP, R_RP, R_CP, pchk_CP, pchk_RP;
-            CHECK_NOTHROW(R_CP = PropsSI("gas_constant", "P", 101325, "Q", 1, "HEOS::" + mixe));
+            CHECK_NOTHROW(R_CP = PropsSI("gas_constant", "P", 101325, "Q", 1, "HEOS::" + mix));
             CAPTURE(R_CP);
-            CHECK_NOTHROW(R_RP = PropsSI("gas_constant", "P", 101325, "Q", 1, "REFPROP::" + mixe));
+            CHECK_NOTHROW(R_RP = PropsSI("gas_constant", "P", 101325, "Q", 1, "REFPROP::" + mix));
             CAPTURE(R_RP);
-            CHECK_NOTHROW(Tnbp_CP = PropsSI("T", "P", 101325, "Q", 1, "HEOS::" + mixe));
+            CHECK_NOTHROW(Tnbp_CP = PropsSI("T", "P", 101325, "Q", 1, "HEOS::" + mix));
             CAPTURE(Tnbp_CP);
-            CHECK_NOTHROW(pchk_CP = PropsSI("P", "T", Tnbp_CP, "Q", 1, "HEOS::" + mixe));
+            CHECK_NOTHROW(pchk_CP = PropsSI("P", "T", Tnbp_CP, "Q", 1, "HEOS::" + mix));
             CAPTURE(pchk_CP);
-            CHECK_NOTHROW(Tnbp_RP = PropsSI("T", "P", 101325, "Q", 1, "REFPROP::" + mixe));
+            CHECK_NOTHROW(Tnbp_RP = PropsSI("T", "P", 101325, "Q", 1, "REFPROP::" + mix));
             CAPTURE(Tnbp_RP);
-            CHECK_NOTHROW(pchk_RP = PropsSI("P", "T", Tnbp_RP, "Q", 1, "REFPROP::" + mixe));
+            CHECK_NOTHROW(pchk_RP = PropsSI("P", "T", Tnbp_RP, "Q", 1, "REFPROP::" + mix));
             CAPTURE(pchk_RP);
             double diff = std::abs(Tnbp_CP / Tnbp_RP - 1);
             CHECK(diff < 1e-2);
@@ -1557,7 +1557,7 @@ TEST_CASE("P,T flash at the critical point returns rhomolar_critical", "[flash],
 TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]") {
     double Ts, y, T2;
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
-    std::string Ykeys[] = {"H", "S", "U", "Hmass", "Smass", "Umass", "Hmolar", "Smolar", "Umolar"};
+    const std::vector<std::string> Ykeys = {"H", "S", "U", "Hmass", "Smass", "Umass", "Hmolar", "Smolar", "Umolar"};
     for (const auto& Ykey : Ykeys) {
         const char* ykey = Ykey.c_str();
         std::ostringstream ss1;
@@ -2273,19 +2273,19 @@ TEST_CASE("Test that reference states yield proper values using high-level inter
     std::string fluids[] = {"n-Propane", "R134a", "R124"};
     ref_entry entries[3] = {{"IIR", 200000, 1000, "T", 273.15, "Q", 0}, {"ASHRAE", 0, 0, "T", 233.15, "Q", 0}, {"NBP", 0, 0, "P", 101325, "Q", 0}};
     for (const auto& fluid : fluids) {
-        for (auto& entrie : entries) {
+        for (auto& entry : entries) {
             std::ostringstream ss1;
-            ss1 << "Check state for " << fluid << " for " + entrie.name + " reference state ";
+            ss1 << "Check state for " << fluid << " for " + entry.name + " reference state ";
             SECTION(ss1.str(), "") {
                 // First reset the reference state
                 set_reference_stateS(fluid, "DEF");
                 // Then set to desired reference state
-                set_reference_stateS(fluid, entrie.name);
+                set_reference_stateS(fluid, entry.name);
                 // Calculate the values
-                double hmass = PropsSI("Hmass", entrie.in1, entrie.val1, entrie.in2, entrie.val2, fluid);
-                double smass = PropsSI("Smass", entrie.in1, entrie.val1, entrie.in2, entrie.val2, fluid);
-                CHECK(std::abs(hmass - entrie.hmass) < 1e-8);
-                CHECK(std::abs(smass - entrie.smass) < 1e-8);
+                double hmass = PropsSI("Hmass", entry.in1, entry.val1, entry.in2, entry.val2, fluid);
+                double smass = PropsSI("Smass", entry.in1, entry.val1, entry.in2, entry.val2, fluid);
+                CHECK(std::abs(hmass - entry.hmass) < 1e-8);
+                CHECK(std::abs(smass - entry.smass) < 1e-8);
                 // Then reset the reference state
                 set_reference_stateS(fluid, "DEF");
             }
@@ -2305,12 +2305,12 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
     std::string fluids[] = {"n-Propane", "R134a", "R124"};
     ref_entry entries[3] = {{"IIR", 200000, 1000, iT, 273.15, iQ, 0}, {"ASHRAE", 0, 0, iT, 233.15, iQ, 0}, {"NBP", 0, 0, iP, 101325, iQ, 0}};
     for (const auto& fluid : fluids) {
-        for (auto& entrie : entries) {
+        for (auto& entry : entries) {
             std::ostringstream ss1;
-            ss1 << "Check state for " << fluid << " for " + entrie.name + " reference state ";
+            ss1 << "Check state for " << fluid << " for " + entry.name + " reference state ";
             SECTION(ss1.str(), "") {
                 double val1, val2;
-                input_pairs pair = generate_update_pair(entrie.in1, entrie.val1, entrie.in2, entrie.val2, val1, val2);
+                input_pairs pair = generate_update_pair(entry.in1, entry.val1, entry.in2, entry.val2, val1, val2);
                 // Generate a state instance
                 shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
                 AS->update(pair, val1, val2);
@@ -2325,7 +2325,7 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
                 CHECK(std::abs(smass00 - smass0) < 1e-10);
 
                 // Then set to desired reference state
-                set_reference_stateS(fluid, entrie.name);
+                set_reference_stateS(fluid, entry.name);
 
                 // Should not change existing instance
                 AS->clear();
@@ -2340,8 +2340,8 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
                 AS2->update(pair, val1, val2);
                 double hmass2 = AS2->hmass();
                 double smass2 = AS2->smass();
-                CHECK(std::abs(hmass2 - entrie.hmass) < 1e-8);
-                CHECK(std::abs(smass2 - entrie.smass) < 1e-8);
+                CHECK(std::abs(hmass2 - entry.hmass) < 1e-8);
+                CHECK(std::abs(smass2 - entry.smass) < 1e-8);
 
                 // Then reset the reference state
                 set_reference_stateS(fluid, "DEF");

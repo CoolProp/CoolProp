@@ -1072,11 +1072,7 @@ class TabularBackend : public AbstractState
         d2zdxdy(nullptr),
         d2zdy2(nullptr),
         AS(std::move(AS)),
-        dataset(nullptr) {
-
-            // Flush the cached indices (set to large number)
-
-        };
+        dataset(nullptr) {};
 
     // None of the tabular methods are available from the high-level interface
     bool available_in_high_level() override {

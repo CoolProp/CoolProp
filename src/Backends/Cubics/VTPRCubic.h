@@ -22,7 +22,7 @@ class VTPRCubic : public PengRobinson
    public:
     VTPRCubic(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
               const UNIFACLibrary::UNIFACParameterLibrary& lib)
-      : PengRobinson(std::move(Tc), std::move(pc), std::move(acentric), R_u), unifaq(lib, T_r) {};
+      : PengRobinson(Tc, std::move(pc), std::move(acentric), R_u), unifaq(lib, T_r) {};
 
     VTPRCubic(double Tc, double pc, double acentric, double R_u, const UNIFACLibrary::UNIFACParameterLibrary& lib)
       : PengRobinson(std::vector<double>(1, Tc), std::vector<double>(1, pc), std::vector<double>(1, acentric), R_u), unifaq(lib, T_r) {};

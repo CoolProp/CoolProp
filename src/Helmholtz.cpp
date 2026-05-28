@@ -1819,8 +1819,8 @@ class HelmholtzConsistencyFixture
 std::string terms[] = {"Lead",         "LogTau",       "IGPower", "PlanckEinstein", "CP0Constant", "CP0PolyT", "Gaussian",
                        "Lemmon2005",   "Power",        "SAFT",    "NonAnalytic",    "Exponential", "GERG2008", "SRK",
                        "PengRobinson", "XiangDeiters", "GaoB",    "GERG2004Cosh",   "GERG2004Sinh"};
-std::string derivs[] = {"dTau",         "dTau2",        "dTau3", "dDelta",       "dDelta2",       "dDelta3",      "dDelta_dTau",
-                        "dDelta_dTau2", "dDelta2_dTau", "dTau4", "dDelta_dTau3", "dDelta2_dTau2", "dDelta3_dTau", "dDelta4"};
+const std::vector<std::string> derivs = {"dTau",         "dTau2",        "dTau3", "dDelta",       "dDelta2",       "dDelta3",      "dDelta_dTau",
+                                         "dDelta_dTau2", "dDelta2_dTau", "dTau4", "dDelta_dTau3", "dDelta2_dTau2", "dDelta3_dTau", "dDelta4"};
 std::map<std::string, std::tuple<int, int>> counts = {
   {"dTau", {1, 0}},         {"dTau2", {2, 0}},        {"dTau3", {3, 0}},         {"dTau4", {4, 0}},        {"dDelta", {0, 1}},
   {"dDelta2", {0, 2}},      {"dDelta3", {0, 3}},      {"dDelta4", {0, 4}},       {"dDelta_dTau", {1, 1}},  {"dDelta_dTau2", {2, 1}},
