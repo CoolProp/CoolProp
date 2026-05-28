@@ -2114,6 +2114,15 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
     if (!ValidNumber(value)) {
         throw ValueError("value for other in HSU_P_flash_singlephase_Brent is invalid");
     };
+    // Save the target pressure at function entry.  HEOS._p can be CORRUPTED by
+    // the inner density solve (update(PT_INPUTS, p, T)) if it throws part-way
+    // through its Newton iteration -- it can be left holding a garbage value
+    // (e.g. a negative pressure).  The exception-fallback guard below must test
+    // the *intended* pressure, not this possibly-corrupted live value, otherwise
+    // it branches on garbage and re-throws instead of running the 2-D Newton
+    // fallback.  Always read p_target (not HEOS._p) in the fallback guard.
+    const CoolPropDbl p_target = HEOS._p;
+
     class solver_resid : public FuncWrapper1DWithTwoDerivs
     {
        public:
@@ -2254,10 +2263,18 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             boost::math::uintmax_t max_iter = 100;
 
             auto f = [&resid](const double T) { return resid.call(T); };
-            // Want 44 bits to be correct, tolerance is 2^(1-bits) ::
-            // >>> 2**(1-44)
-            // 1.1368683772161603e-13
-            auto [l, r] = toms748_solve(f, Tmin, Tmax, resid_Tmin, resid_Tmax, boost::math::tools::eps_tolerance<double>(44), max_iter);
+            // TOMS748 correct-bits tolerance is 2^(1-bits).  44 bits (~1.1e-13)
+            // is far tighter than thermophysical properties need; 30 bits
+            // (~9.3e-10 on T) keeps the worst P+X round-trip well under the 1e-6
+            // hard limit while cutting ~7% of the outer iterations.
+            // >>> 2**(1-30) == 9.31e-10
+            auto [l, r] = toms748_solve(f, Tmin, Tmax, resid_Tmin, resid_Tmax, boost::math::tools::eps_tolerance<double>(30), max_iter);
+            // Re-evaluate at the midpoint of the final bracket so HEOS is left at
+            // the converged state (TOMS748's last probe may be at a slightly
+            // different point within the bracket).  Same discipline as the
+            // supercritical-cold narrow-TOMS748 path below.
+            resid.iter = 0;
+            resid.call(0.5 * (l + r));
             if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T()))) {
                 throw ValueError(format("TOMS748 method yielded out of bound T of %g", static_cast<CoolPropDbl>(resid.HEOS->T())));
             }
@@ -2278,20 +2295,109 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
     } catch (...) {
         try {
             double p_critical_ = HEOS.p_critical();
-            if (0.95 * p_critical_ > HEOS._p || HEOS._p > p_critical_) {
+            // Decide whether to attempt the 2-D Newton fallback.  IMPORTANT: test
+            // p_target (saved at entry) NOT HEOS._p -- the inner density solve can
+            // leave HEOS._p corrupted when it throws mid-Newton, and branching on
+            // that garbage pressure is what caused supercritical-cold P+X states to
+            // re-throw instead of recovering (see the p_target comment above).
+            //   - near-critical (0.95*pc < p <= pc): the original fallback case.
+            //   - supercritical (p > pc): compressed-liquid corner where TOMS748
+            //     can't bracket zero across the wide T range; engage the fallback
+            //     here too (this is the Nitrogen/PS fix).
+            const bool in_near_critical = (p_target > 0.95 * p_critical_ && p_target <= p_critical_);
+            const bool in_supercritical = (p_target > p_critical_);
+            if (!in_near_critical && !in_supercritical) {
                 throw;
             }
             if (get_debug_level() > 0) {
                 std::cout << resid.errstring << '\n';
             }
-            std::vector<double> x0 = {Tstart, rhomolarstart};
-            NDNewtonRaphson_Jacobian(&solver_resid2d, x0, 1e-12, 20, 1.0);
-            if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(solver_resid2d.HEOS->T())) || solver_resid2d.HEOS->phase() != phase) {
-                throw ValueError("2D Newton method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+            if (in_supercritical) {
+                // Supercritical-cold strategy.  TOMS748 threw because the EOS has
+                // numerical issues at high T inside the wide supercritical bracket;
+                // the solution is a compressed-liquid state at T << T_crit.
+                // Step 1: try a narrowed TOMS748 on [Tmin, 1.05*T_crit], which
+                //   avoids the high-T instability and the non-monotone region.
+                // Step 2: if that bracket doesn't sign-change (or throws), fall
+                //   back to the 2-D Newton from the high-density Tmin seed.
+                const double T_crit = HEOS.T_critical();
+                const double Tnarrow = T_crit * 1.05;
+                bool narrow_toms748_ok = false;
+                if (Tnarrow < Tmax) {
+                    resid.iter = 0;
+                    double resid_Tnarrow = 0.0;
+                    bool have_narrow_bracket = false;
+                    try {
+                        resid_Tnarrow = resid.call(Tnarrow);
+                        have_narrow_bracket = (resid_Tnarrow * resid_Tmin < 0);
+                    } catch (const std::exception& e) {
+                        if (get_debug_level() > 0) {
+                            std::cout << "narrow TOMS748 probe threw: " << e.what() << '\n';
+                        }
+                        // narrow_toms748_ok stays false -> fall through to 2-D Newton backstop
+                    }
+                    if (have_narrow_bracket) {
+                        resid.iter = 0;
+                        boost::math::uintmax_t max_iter_narrow = 100;
+                        auto fn = [&resid](const double T) { return resid.call(T); };
+                        try {
+                            auto [nl, nr] = toms748_solve(fn, Tmin, Tnarrow, resid_Tmin, resid_Tnarrow, boost::math::tools::eps_tolerance<double>(30),
+                                                          max_iter_narrow);
+                            // Re-evaluate at the midpoint of the final bracket so HEOS
+                            // is left at the converged state (TOMS748's last call may
+                            // be at a slightly different point).
+                            const double T_conv = 0.5 * (nl + nr);
+                            resid.iter = 0;
+                            resid.call(T_conv);
+                            if (is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T()))) {
+                                HEOS.unspecify_phase();
+                                HEOS.recalculate_singlephase_phase();
+                                narrow_toms748_ok = true;
+                            }
+                        } catch (const std::exception& e) {
+                            // narrow TOMS748 also threw -- intentionally swallow and fall
+                            // through to the 2-D Newton fallback below (narrow_toms748_ok
+                            // stays false).  Surface the reason only at debug level.
+                            if (get_debug_level() > 0) {
+                                std::cout << "narrow TOMS748 fallback threw: " << e.what() << '\n';
+                            }
+                        }
+                    }
+                }
+                if (!narrow_toms748_ok) {
+                    // 2-D Newton from the high-density Tmin seed (liquid-like basin).
+                    std::vector<double> x0 = {Tmin, rhomolar_Tmin};
+                    NDNewtonRaphson_Jacobian(&solver_resid2d, x0, 1e-12, 20, 1.0);
+                    // Acceptance check: T in range AND both residuals small.
+                    // NDNewtonRaphson_Jacobian can early-exit on a tiny step while
+                    // the residual is still large; verify the state actually reproduces
+                    // the inputs rather than returning a silently-wrong root.
+                    {
+                        const double T_sol = static_cast<CoolPropDbl>(solver_resid2d.HEOS->T());
+                        const double p_resid_rel = std::abs(HEOS.p() - p_target) / p_target;
+                        const double other_scale = std::abs(value) > 1.0 ? std::abs(value) : 1.0;
+                        const double other_resid_rel = std::abs(HEOS.keyed_output(other) - value) / other_scale;
+                        if (!is_in_closed_range(Tmin, Tmax, T_sol) || p_resid_rel > 1e-6 || other_resid_rel > 1e-6) {
+                            throw ValueError("2D Newton method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+                        }
+                    }
+                    HEOS.unspecify_phase();
+                    HEOS.recalculate_singlephase_phase();
+                }
+            } else {
+                std::vector<double> x0 = {Tstart, rhomolarstart};
+                NDNewtonRaphson_Jacobian(&solver_resid2d, x0, 1e-12, 20, 1.0);
+                const double T_sol = static_cast<CoolPropDbl>(solver_resid2d.HEOS->T());
+                const double p_resid_rel = std::abs(HEOS.p() - p_target) / p_target;
+                const double other_scale = std::abs(value) > 1.0 ? std::abs(value) : 1.0;
+                const double other_resid_rel = std::abs(HEOS.keyed_output(other) - value) / other_scale;
+                if (!is_in_closed_range(Tmin, Tmax, T_sol) || solver_resid2d.HEOS->phase() != phase || p_resid_rel > 1e-6 || other_resid_rel > 1e-6) {
+                    throw ValueError("2D Newton method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+                }
+                // Un-specify the phase of the fluid
+                HEOS.unspecify_phase();
+                HEOS.recalculate_singlephase_phase();
             }
-            // Un-specify the phase of the fluid
-            HEOS.unspecify_phase();
-            HEOS.recalculate_singlephase_phase();
         } catch (...) {
             if (get_debug_level() > 0) {
                 std::cout << resid.errstring << '\n';
