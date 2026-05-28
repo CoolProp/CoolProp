@@ -2268,13 +2268,12 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             // (~9.3e-10 on T) keeps the worst P+X round-trip well under the 1e-6
             // hard limit while cutting ~7% of the outer iterations.
             // >>> 2**(1-30) == 9.31e-10
-            auto [l, r] = toms748_solve(f, Tmin, Tmax, resid_Tmin, resid_Tmax, boost::math::tools::eps_tolerance<double>(30), max_iter);
-            // Re-evaluate at the midpoint of the final bracket so HEOS is left at
-            // the converged state (TOMS748's last probe may be at a slightly
-            // different point within the bracket).  Same discipline as the
-            // supercritical-cold narrow-TOMS748 path below.
-            resid.iter = 0;
-            resid.call(0.5 * (l + r));
+            [[maybe_unused]] auto [l, r] =
+              toms748_solve(f, Tmin, Tmax, resid_Tmin, resid_Tmax, boost::math::tools::eps_tolerance<double>(30), max_iter);
+            // TOMS748 converges HEOS to within 2^(1-30) ≈ 9.3e-10 relative T of
+            // the root; the last probe IS the answer, so no midpoint re-eval is
+            // needed here.  The narrow-TOMS748 fallback below keeps its midpoint
+            // re-eval as a defensive measure in that recovery context.
             if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T()))) {
                 throw ValueError(format("TOMS748 method yielded out of bound T of %g", static_cast<CoolPropDbl>(resid.HEOS->T())));
             }
