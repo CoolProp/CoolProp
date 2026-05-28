@@ -34,6 +34,7 @@ Subsequent edits by Ian Bell
 #pragma once
 
 #include <atomic>
+#include <cmath>
 #include <cstdio>
 #include <mutex>
 #include <utility>
@@ -62,12 +63,22 @@ inline void balance_matrix(const Matrix& A, Matrix& Aprime, Matrix& D) {
         for (Eigen::Index i = 0; i < A.rows(); ++i) {
             double c = Aprime.col(i).template lpNorm<p>();
             double r = Aprime.row(i).template lpNorm<p>();
+            // A row/column norm that is zero or non-finite cannot be balanced by
+            // diagonal scaling, and worse, it spins the scaling loops below
+            // forever: e.g. r == inf makes (c < r/beta) perpetually true while
+            // c *= beta never catches up (inf/beta == inf), and the symmetric
+            // (c >= r*beta) loop traps once c overflows to inf. The companion
+            // matrix picks up an inf entry from a near-zero leading Chebyshev
+            // coefficient (last column is -coeffs.head(N)/(2*coeffs(N))); whether
+            // that division overflows is FP-rounding-dependent, so the hang is
+            // platform-specific. Leave such a row/column at unit scaling: the
+            // eigenvalue solve still runs and the caller falls through on the
+            // (degenerate) result instead of looping forever.
+            if (!std::isfinite(c) || !std::isfinite(r) || c == 0.0 || r == 0.0) {
+                continue;
+            }
             double s = pow(c, p) + pow(r, p);
             double f = 1;
-            //if (!ValidNumber(c)){
-            //    std::cout << A << std::endl;
-            //    throw std::range_error("c is not a valid number in balance_matrix"); }
-            //if (!ValidNumber(r)) { throw std::range_error("r is not a valid number in balance_matrix"); }
             while (c < r / beta) {
                 c *= beta;
                 r /= beta;

@@ -38,12 +38,14 @@
 #include "DataStructures.h"
 #include "Configuration.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#include "superancillary/superancillary.h"
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
 
 #    include <cmath>
 #    include <cstdlib>
+#    include <limits>
 #    include <memory>
 #    include <string>
 #    include <vector>
@@ -584,6 +586,39 @@ TEST_CASE("HSU_D: dense PT sweep over all superancillary fluids", "[HSU_D_ptswee
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Regression: the matrix-balancing helper used by the superancillary
+// Chebyshev root finder (CoolProp::superancillary::detail::balance_matrix) must
+// always terminate, even when a companion-matrix row/column norm is non-finite.
+//
+// A near-zero leading Chebyshev coefficient makes the companion matrix's last
+// column (-coeffs.head(N)/(2*coeffs(N))) overflow to +/-inf. With an inf row
+// norm r, the scaling loop condition (c < r/beta) is perpetually true and
+// c *= beta never catches up, so balance_matrix spun forever -- the root cause
+// of the devdocs consistency-plot hang (Propyne D+H flash on x86 Linux, exposed
+// when #2995 routed D+{H,S,U} through get_all_intersections -> get_x_for_y ->
+// balance_matrix). The hang was FP-rounding dependent, hence x86-only.
+//
+// This drives balance_matrix directly with an inf entry so the guard is
+// exercised hermetically on every platform. Without the fix the test hangs.
+// ---------------------------------------------------------------------------
+TEST_CASE("balance_matrix terminates on a non-finite companion entry", "[HSU_D][balance_matrix]") {
+    Eigen::MatrixXd A(3, 3), Aprime, D;
+    A.setZero();
+    A(1, 0) = 1.0;
+    A(2, 1) = 1.0;
+    // Last column as produced by a near-zero leading coefficient: overflows to inf.
+    A(0, 2) = -1.0 / (2.0 * std::numeric_limits<double>::min() * std::numeric_limits<double>::min());
+    REQUIRE(std::isinf(A(0, 2)));
+
+    // Must return (terminate) rather than spin in the scaling loops.
+    CoolProp::superancillary::detail::balance_matrix(A, Aprime, D);
+
+    // The inf row/column is left at unit scaling; finite rows stay finite.
+    CHECK(std::isfinite(D(1, 1)));
+    CHECK(D(1, 1) == 1.0);
 }
 
 // ---------------------------------------------------------------------------
