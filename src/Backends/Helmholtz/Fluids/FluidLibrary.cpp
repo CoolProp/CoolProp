@@ -363,11 +363,11 @@ void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
         // Add/Replace the aliases->index mapping
         // This map quickly finds the index of a fluid in the fluid_map given an alias string
         // Again, the map [] operator replaces if the alias is found, adds the new (alias,index) pair if not
-        for (const auto& aliase : fluid.aliases) {
-            string_to_index_map[aliase] = index;
+        for (const auto& alias : fluid.aliases) {
+            string_to_index_map[alias] = index;
 
             // Add uppercase alias for EES compatibility
-            string_to_index_map[upper(aliase)] = index;
+            string_to_index_map[upper(alias)] = index;
         }
 
         //If Debug level set >5 print fluid name and total size of fluid_map
