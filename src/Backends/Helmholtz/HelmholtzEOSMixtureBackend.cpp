@@ -3360,7 +3360,16 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_helmholtzmolar() {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(std::size_t i) {
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
-    return exp(MixtureDerivatives::ln_fugacity_coefficient(*this, i, xN_flag));
+    if (isTwoPhase()) {
+        // phi_i = f_i / (x_i * p).  At VLE f_i^L == f_i^V but x_i^L != x_i^V, so
+        // phi_i^L != phi_i^V and no convex combination is physically meaningful for
+        // the overall two-phase state.  Force callers to evaluate on SatL or SatV.
+        throw ValueError(format("fugacity_coefficient is not well-defined in the two-phase region; evaluate on SatL or SatV instead"));
+    } else if (isHomogeneousPhase()) {
+        return exp(MixtureDerivatives::ln_fugacity_coefficient(*this, i, xN_flag));
+    } else {
+        throw ValueError(format("phase is invalid in calc_fugacity_coefficient"));
+    }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity(std::size_t i) {
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
@@ -3383,12 +3392,28 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity(std::size_t i) {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_chemical_potential(std::size_t i) {
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
-    double Tci = get_fluid_constant(i, iT_critical);
-    double rhoci = get_fluid_constant(i, irhomolar_critical);
-    double dnar_dni__const_T_V_nj = MixtureDerivatives::dnalphar_dni__constT_V_nj(*this, i, xN_flag);
-    double dna0_dni__const_T_V_nj =
-      components[i].EOS().alpha0.base(tau() * (Tci / T_reducing()), delta() / (rhoci / rhomolar_reducing())) + 1 + log(mole_fractions[i]);
-    return gas_constant() * T() * (dna0_dni__const_T_V_nj + dnar_dni__const_T_V_nj);
+    if (isTwoPhase()) {
+        // mu_i^L == mu_i^V at VLE (equality of chemical potentials is the equilibrium
+        // condition), so the Q-weighted form collapses to either sat-state value up to
+        // flash tolerance.  Mirrors the calc_fugacity pattern from PR #2345.
+        if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
+        if (std::abs(_Q) < DBL_EPSILON) {
+            return SatL->chemical_potential(i);
+        } else if (std::abs(_Q - 1) < DBL_EPSILON) {
+            return SatV->chemical_potential(i);
+        } else {
+            return _Q * SatV->chemical_potential(i) + (1 - _Q) * SatL->chemical_potential(i);
+        }
+    } else if (isHomogeneousPhase()) {
+        double Tci = get_fluid_constant(i, iT_critical);
+        double rhoci = get_fluid_constant(i, irhomolar_critical);
+        double dnar_dni__const_T_V_nj = MixtureDerivatives::dnalphar_dni__constT_V_nj(*this, i, xN_flag);
+        double dna0_dni__const_T_V_nj =
+          components[i].EOS().alpha0.base(tau() * (Tci / T_reducing()), delta() / (rhoci / rhomolar_reducing())) + 1 + log(mole_fractions[i]);
+        return gas_constant() * T() * (dna0_dni__const_T_V_nj + dnar_dni__const_T_V_nj);
+    } else {
+        throw ValueError(format("phase is invalid in calc_chemical_potential"));
+    }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_phase_identification_parameter() {
     return 2

@@ -5055,6 +5055,45 @@ TEST_CASE("first_saturation_deriv mixture: throws at intermediate Q", "[first_sa
     CHECK_THROWS(AS->first_saturation_deriv(CoolProp::iT, CoolProp::iP));
 }
 
+TEST_CASE("Two-phase chemical_potential mirrors sat-state values; fugacity_coefficient throws", "[mixtures][2345-followup]") {
+    // Follow-up to PR #2345: calc_chemical_potential and calc_fugacity_coefficient
+    // were calling MixtureDerivatives::* directly on the overall homogeneous state,
+    // which is meaningless inside the two-phase dome.
+    //   - mu_i^L == mu_i^V at VLE (the equilibrium condition), so the new code
+    //     returns the Q-weighted sat-state value, which collapses to either
+    //     endpoint up to flash tolerance.
+    //   - phi_i^L != phi_i^V because the phase compositions differ; the new
+    //     code throws to force callers to evaluate on SatL/SatV explicitly.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+    AS->set_mole_fractions({0.25, 0.25, 0.5});
+    AS->update(CoolProp::PQ_INPUTS, 500e3, 0.5);
+    REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+
+    auto* heos_ptr = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(heos_ptr != nullptr);
+    auto& satL = heos_ptr->get_SatL();
+    auto& satV = heos_ptr->get_SatV();
+
+    for (std::size_t i = 0; i < 3; ++i) {
+        CAPTURE(i);
+        // chemical_potential: mu_i^L == mu_i^V at VLE
+        const double mu = AS->chemical_potential(i);
+        const double muL = satL.chemical_potential(i);
+        const double muV = satV.chemical_potential(i);
+        CHECK(std::isfinite(mu));
+        // sat-state pair equal up to flash tolerance
+        CHECK(std::abs(muL - muV) < 1e-4 * std::abs(muL));
+        // overall == Q-weighted combination of sat states (Q=0.5)
+        CHECK(std::abs(mu - 0.5 * (muL + muV)) < 1e-9 * std::abs(0.5 * (muL + muV)));
+
+        // fugacity_coefficient throws in two-phase
+        CHECK_THROWS(AS->fugacity_coefficient(i));
+        // but works on the sat states
+        CHECK(std::isfinite(satL.fugacity_coefficient(i)));
+        CHECK(std::isfinite(satV.fugacity_coefficient(i)));
+    }
+}
+
 TEST_CASE("HAPropsSI Twb at high T (T > Tsat) returns the physical root (#2255)", "[HAPropsSI][2255]") {
     // Issue #2255: HAPropsSI('Twb','T',200+273.15,'W',0.2,'P',1000E3)
     // returned 180.7241 C (essentially Tsat at 1 MPa) instead of the
@@ -6056,6 +6095,55 @@ TEST_CASE("REFPROP saturation derivs work for a mixture", "[REFPROPsat]") {
     RP->update(QT_INPUTS, 0.4, 180.0);
     CHECK_THROWS(RP->first_two_phase_deriv(iDmolar, iHmolar, iP));
     CHECK_THROWS(RP->first_two_phase_deriv_splined(iDmolar, iHmolar, iP, 0.5));
+}
+
+TEST_CASE("REFPROP cross-check: sat-state fugacity_coefficient agrees with HEOS for Methane/Ethane/Propane", "[REFPROPsat][2345-followup]") {
+    Skip_if_No_REFPROP();
+    const std::vector<double> z = {0.25, 0.25, 0.5};
+
+    std::shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+    HEOS->set_mole_fractions(z);
+    HEOS->update(PQ_INPUTS, 500e3, 0.5);
+
+    std::shared_ptr<AbstractState> RP(AbstractState::factory("REFPROP", "Methane&Ethane&Propane"));
+    RP->set_mole_fractions(z);
+    RP->update(PQ_INPUTS, 500e3, 0.5);
+
+    // Bubble/dew T should agree across the two libraries to a few mK; that's the
+    // anchor for the fugacity-coefficient comparison below.
+    CHECK(std::abs(HEOS->T() - RP->T()) < 0.05);
+
+    auto* heos_mix_ptr = dynamic_cast<HelmholtzEOSMixtureBackend*>(HEOS.get());
+    REQUIRE(heos_mix_ptr != nullptr);
+    auto& satL_heos = heos_mix_ptr->get_SatL();
+    auto& satV_heos = heos_mix_ptr->get_SatV();
+
+    // The REFPROP sat states are re-flashed at the bubble/dew T of the
+    // liquid/vapor composition respectively — those T's differ slightly from
+    // the original two-phase T at Q=0.5, so this is a near-apples comparison
+    // rather than exact.  The 1 % tolerance below absorbs the mismatch.
+    std::shared_ptr<AbstractState> satL_rp(AbstractState::factory("REFPROP", "Methane&Ethane&Propane"));
+    satL_rp->set_mole_fractions(RP->mole_fractions_liquid());
+    satL_rp->update(PQ_INPUTS, RP->p(), 0.0);
+    std::shared_ptr<AbstractState> satV_rp(AbstractState::factory("REFPROP", "Methane&Ethane&Propane"));
+    satV_rp->set_mole_fractions(RP->mole_fractions_vapor());
+    satV_rp->update(PQ_INPUTS, RP->p(), 1.0);
+
+    for (std::size_t i = 0; i < 3; ++i) {
+        CAPTURE(i);
+        const double phiL_heos = satL_heos.fugacity_coefficient(i);
+        const double phiL_rp = satL_rp->fugacity_coefficient(i);
+        const double phiV_heos = satV_heos.fugacity_coefficient(i);
+        const double phiV_rp = satV_rp->fugacity_coefficient(i);
+        CAPTURE(phiL_heos);
+        CAPTURE(phiL_rp);
+        CAPTURE(phiV_heos);
+        CAPTURE(phiV_rp);
+        // Both libraries use Helmholtz-based mixture models; for this well-studied
+        // alkane system the fugacity coefficients should agree to ~1%.
+        CHECK(std::abs(phiL_heos - phiL_rp) / std::abs(phiL_rp) < 1e-2);
+        CHECK(std::abs(phiV_heos - phiV_rp) / std::abs(phiV_rp) < 1e-2);
+    }
 }
 
 #endif
