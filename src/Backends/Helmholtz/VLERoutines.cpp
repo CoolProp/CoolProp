@@ -1846,7 +1846,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
     try {
         CoolPropDbl rho_b = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatL->SRK_covolume());
         HEOS.SatL->update_DmolarT_direct(rho_b, the_T);
-    } catch (...) { return; }
+    } catch (...) { throw; }
     std::vector<CoolPropDbl> ln_f_z(z.size());
     for (std::size_t i = 0; i < z.size(); ++i) {
         ln_f_z[i] = std::log(z[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
