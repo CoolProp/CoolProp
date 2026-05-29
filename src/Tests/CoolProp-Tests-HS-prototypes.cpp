@@ -16,6 +16,7 @@
 #include "DataStructures.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "../Backends/Helmholtz/FlashRoutines.h"
+#include "MeltingCaloric.h"
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
@@ -1475,6 +1476,29 @@ TEST_CASE("HS probe hydrogen dual root", "[HS][HS_probe][.]") {
 
 TEST_CASE("Melting caloric config key default", "[HS][HS_meltcal][.]") {
     CHECK(CoolProp::get_config_bool(ENABLE_MELTING_CALORIC_HS) == true);
+}
+
+TEST_CASE("MeltingCaloric raw sampling matches EOS (water)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(H->has_melting_line());
+
+    MeltingCaloric mc;
+    mc.sample(*H, 60);  // 60 sample points along the melting curve
+    REQUIRE(mc.n_samples() >= 2);
+
+    auto chk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    for (std::size_t i = 1; i + 1 < mc.n_samples(); i += std::max<std::size_t>(1, mc.n_samples() / 5)) {
+        const double lnp = mc.sample_lnp(i);
+        const double p = std::exp(lnp);
+        const double Tm = chk->melting_line(iT, iP, p);
+        chk->update(PT_INPUTS, p, Tm);
+        CHECK(std::abs(mc.sample_T(i) - Tm) < 1e-9 * Tm);
+        CHECK(std::abs(mc.sample_rho(i) - chk->rhomolar()) < 1e-7 * chk->rhomolar());
+        CHECK(std::abs(mc.sample_h(i) - chk->hmolar()) < 1e-6 * (std::abs(chk->hmolar()) + 1));
+        CHECK(std::abs(mc.sample_s(i) - chk->smolar()) < 1e-6 * (std::abs(chk->smolar()) + 1));
+    }
 }
 
 #endif  // ENABLE_CATCH
