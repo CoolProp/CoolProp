@@ -298,9 +298,17 @@ inline double saturation_Wilson(HelmholtzEOSMixtureBackend& HEOS, double beta, d
         // Find first guess for output variable using Wilson K-factors
         WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
         try {
-            out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100);
+            // When input_type == imposed_T we are solving for pressure (Pa);
+            // use a wide pressure bracket [1 Pa, 1e9 Pa].
+            // When input_type == imposed_p we are solving for temperature (K);
+            // use [50 K, 10000 K].
+            if (input_type == imposed_T) {
+                out = Brent(Resid, 1.0, 1e9, 1e-10, 1e-10, 100);
+            } else {
+                out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100);
+            }
         } catch (const std::exception&) {
-            // Brent failed to bracket (e.g. root outside [50 K, 10000 K]); fall back to Secant
+            // Brent failed to bracket; fall back to Secant from the provided guess
             if (!ValidNumber(guess) || guess < 0) {
                 throw;
             }

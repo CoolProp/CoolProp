@@ -828,24 +828,16 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend& HE
 
         deltaL = rhoL / reduce.rhomolar;
         deltaV = rhoV / reduce.rhomolar;
-    } catch (NotImplementedError&) {  // NOLINT(bugprone-empty-catch)
+    } catch (NotImplementedError&) {
         // Backend doesn't implement the saturation-density ancillaries
-        // (e.g. PCSAFT, incompressible) — keep the deltaL/deltaV initial
-        // guess from the caller and let the Newton iteration below
-        // converge from there.  The commented-out Soave fallback was an
-        // earlier attempt at a guess-from-Tc/pc/omega path; left in
-        // place as a hint if anyone revisits this.
-        /*double Tc = crit.T;
-        double pc = crit.p.Pa;
-        double w = 6.67228479e-09*Tc*Tc*Tc-7.20464352e-06*Tc*Tc+3.16947758e-03*Tc-2.88760012e-01;
-        double q = -6.08930221451*w -5.42477887222;
-        double pt = exp(q*(Tc/T-1))*pc;*/
-
-        //double rhoL = density_Tp_Soave(T, pt, 0), rhoV = density_Tp_Soave(T, pt, 1);
-
-        //deltaL = rhoL/reduce.rhomolar;
-        //deltaV = rhoV/reduce.rhomolar;
-        //tau = reduce.T/T;
+        // (e.g. PCSAFT, incompressible).  Since ancillaries are never called
+        // when options.use_guesses == true, this catch is only reached with
+        // rhoL == _HUGE and deltaL == 0 (initial values), which would make the
+        // Newton loop below crash.  Seed it with near-critical estimates instead.
+        rhoL = reduce.rhomolar;         // liquid ≈ critical density (deltaL = 1)
+        rhoV = reduce.rhomolar * 0.01;  // dilute-vapour estimate (deltaV = 0.01)
+        deltaL = rhoL / reduce.rhomolar;
+        deltaV = rhoV / reduce.rhomolar;
     }
     //if (get_debug_level()>5){
     //        std::cout << format("%s:%d: Akasaka guess values deltaL = %g deltaV = %g tau = %g\n",__FILE__,__LINE__,deltaL, deltaV, tau).c_str();
@@ -2222,8 +2214,8 @@ void SaturationSolvers::PTflash_twophase::build_arrays() {
             const std::size_t k = i + N;
             r(k) = (IO.z[i] - IO.x[i]) / (IO.y[i] - IO.x[i]) - (IO.z[N - 1] - IO.x[N - 1]) / (IO.y[N - 1] - IO.x[N - 1]);
             const double denom_i_sq = POW2(IO.y[i] - IO.x[i]);
-            const double diag_x_i = (IO.z[i] - IO.y[i]) / denom_i_sq;    // diagonal x term for row i
-            const double diag_y_i = -(IO.z[i] - IO.x[i]) / denom_i_sq;   // diagonal y term for row i
+            const double diag_x_i = (IO.z[i] - IO.y[i]) / denom_i_sq;   // diagonal x term for row i
+            const double diag_y_i = -(IO.z[i] - IO.x[i]) / denom_i_sq;  // diagonal y term for row i
             for (std::size_t m = 0; m < N - 1; ++m) {
                 J(k, m) = (m == i) ? (diag_x_i + B_x) : B_x;
                 J(k, m + N - 1) = (m == i) ? (diag_y_i + B_y) : B_y;
