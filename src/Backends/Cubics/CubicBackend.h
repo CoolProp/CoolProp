@@ -200,9 +200,14 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) override {
         bool was_imposed = (imposed_phase_index != iphase_not_imposed);
         specify_phase(phase);
-        CoolPropDbl rho = solver_rho_Tp(T, p);
-        if (!was_imposed) unspecify_phase();
-        return rho;
+        try {
+            CoolPropDbl rho = solver_rho_Tp(T, p);
+            if (!was_imposed) unspecify_phase();
+            return rho;
+        } catch (...) {
+            if (!was_imposed) unspecify_phase();
+            throw;
+        }
     };
     /**
      * /brief Solve for rho = f(T,p)

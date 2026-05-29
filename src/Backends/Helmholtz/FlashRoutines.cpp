@@ -61,12 +61,23 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
 
             CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
             solver.solve();
-            HEOS._phase = iphase_twophase;
-            HEOS._Q = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
-            if (HEOS._Q < 0 || HEOS._Q > 1) {
+            double Q_raw = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
+            if (Q_raw < 0 || Q_raw > 1) {
+                // The two-phase solver converged to a Q outside [0,1]:
+                // Re-solve as single-phase.
+                double T = HEOS.T(), p = HEOS.p();
+                phases ph = (Q_raw < 0) ? iphase_liquid : iphase_gas;
+                HEOS.specify_phase(ph);
+                double rho = HEOS.solver_rho_Tp(T, p);
+                HEOS.update_DmolarT_direct(rho, T);
+                HEOS.unspecify_phase();
                 HEOS._Q = -1;
+                HEOS._phase = ph;
+            } else {
+                HEOS._phase = iphase_twophase;
+                HEOS._rhomolar = 1 / (Q_raw / HEOS.SatV->rhomolar() + (1 - Q_raw) / HEOS.SatL->rhomolar());
+                HEOS._Q = Q_raw;
             }
-            HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
         }
         return;
     }
@@ -2638,8 +2649,9 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
     };
 
     // Binary-search inward from a failing endpoint to find the valid evaluation boundary.
-    auto bracket_validity = [&try_eval](FuncWrapper1D& resid, CoolPropDbl& T_fail, CoolPropDbl& T_ok, double& r_ok, bool fail_is_lo) {
+    auto bracket_validity = [&try_eval](FuncWrapper1D& resid, CoolPropDbl& T_fail, CoolPropDbl& T_ok, double& r_ok, bool fail_is_lo) -> bool {
         CoolPropDbl a = std::min(T_fail, T_ok), b = std::max(T_fail, T_ok);
+        bool found = false;
         for (int iter = 0; iter < 50; ++iter) {
             CoolPropDbl mid = 0.5 * (a + b);
             double r_mid;
@@ -2651,6 +2663,7 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
                 }
                 T_fail = mid;
                 r_ok = r_mid;
+                found = true;
             } else {
                 if (fail_is_lo) {
                     a = mid;
@@ -2660,6 +2673,7 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
             }
             if (b - a < 0.01) break;
         }
+        return found;
     };
 
     if (HEOS.PhaseEnvelope.built) {
@@ -2697,11 +2711,9 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
             bool ok_lo = try_eval(resid, T_lo, r_lo);
             bool ok_hi = try_eval(resid, T_hi, r_hi);
             if (!ok_lo && ok_hi) {
-                bracket_validity(resid, T_lo, T_hi, r_lo, /*fail_is_lo=*/true);
-                ok_lo = true;
+                ok_lo = bracket_validity(resid, T_lo, T_hi, r_lo, /*fail_is_lo=*/true);
             } else if (ok_lo && !ok_hi) {
-                bracket_validity(resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
-                ok_hi = true;
+                ok_hi = bracket_validity(resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
             }
             if (!ok_lo || !ok_hi || r_lo * r_hi > 0) {
                 HEOS.unspecify_phase();
@@ -2804,11 +2816,9 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
                 ok_lo = try_eval(probe_resid, T_lo, r_lo);
                 ok_hi = try_eval(probe_resid, T_hi, r_hi);
                 if (!ok_lo && ok_hi) {
-                    bracket_validity(probe_resid, T_lo, T_hi, r_lo, /*fail_is_lo=*/true);
-                    ok_lo = true;
+                    ok_lo = bracket_validity(probe_resid, T_lo, T_hi, r_lo, /*fail_is_lo=*/true);
                 } else if (ok_lo && !ok_hi) {
-                    bracket_validity(probe_resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
-                    ok_hi = true;
+                    ok_hi = bracket_validity(probe_resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
                 }
             }
 
@@ -2846,11 +2856,9 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
             bool ok_hi = try_eval(resid, T_hi, r_hi);
 
             if (!ok_lo && ok_hi) {
-                bracket_validity(resid, T_lo, T_hi, r_lo, /*fail_is_lo=*/true);
-                ok_lo = true;
+                ok_lo = bracket_validity(resid, T_lo, T_hi, r_lo, /*fail_is_lo=*/true);
             } else if (ok_lo && !ok_hi) {
-                bracket_validity(resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
-                ok_hi = true;
+                ok_hi = bracket_validity(resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
             } else if (!ok_lo && !ok_hi) {
                 // Both endpoints fail – scan outward from T_pseudo_crit.
                 double r_mid;

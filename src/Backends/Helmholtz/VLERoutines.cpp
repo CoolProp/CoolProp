@@ -1766,7 +1766,22 @@ void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBack
             g0 += z[i] * (K[i] - 1.0);
             g1 += z[i] * (1.0 - 1.0 / K[i]);
         }
-        if (ss > 0 && max_lnK_change < tol) break;
+        if (ss > 0 && max_lnK_change < tol) {
+            // Converged: update x/y from the latest K before returning.
+            double beta_conv;
+            if (g0 < 0)
+                beta_conv = 0;
+            else if (g1 > 0)
+                beta_conv = 1;
+            else {
+                RachfordRiceResidual resid_conv(z, lnK);
+                beta_conv = Brent(resid_conv, 0, 1, DBL_EPSILON, 1e-10, 100);
+            }
+            x_and_y_from_K(beta_conv, K, z, x, y);
+            normalize_vector(x);
+            normalize_vector(y);
+            break;
+        }
 
         double beta;
         if (g0 < 0)

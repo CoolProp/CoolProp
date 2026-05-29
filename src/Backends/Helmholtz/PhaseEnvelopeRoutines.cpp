@@ -174,6 +174,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
                 // Stop since we are stuck at a bad point
                 if (env.T.size() > 4) {
                     env.built = true;
+                    env.is_partial = true;
                 }
                 return;
             }
