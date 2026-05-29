@@ -164,7 +164,7 @@ void write_bytes_atomic(const std::filesystem::path& target, const void* bytes, 
 
 // ---- make_dirs --------------------------------------------------------------
 
-void make_dirs(std::string file_path) {
+void make_dirs(const std::string& file_path) {
     std::error_code ec;
     fs::create_directories(fs::path(file_path), ec);
     // Ignore errors (same behaviour as legacy code which silently skipped failures)
@@ -204,7 +204,7 @@ void make_dirs(std::string file_path) {
 // ---- get_separator ----------------------------------------------------------
 
 std::string get_separator() {
-    return std::string(1, fs::path::preferred_separator);
+    return {1, fs::path::preferred_separator};
 }
 
 // Legacy implementation kept for reference (powerpc / pre-NDK-r23 Android):
@@ -239,7 +239,7 @@ std::string get_home_dir() {
     if (home == nullptr) {
         throw CoolProp::NotImplementedError("Could not detect home directory.");
     }
-    return std::string(home);
+    return {home};
 #elif defined(__ISWINDOWS__)
 #    if defined(_MSC_VER)
 #        pragma warning(push)

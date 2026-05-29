@@ -60,7 +60,7 @@ inline std::string json2string(const rapidjson::Value& v) {
     return buffer.GetString();
 }
 /// A convenience function to get a double from a JSON value, including error checking
-inline int get_integer(const rapidjson::Value& v, std::string m) {
+inline int get_integer(const rapidjson::Value& v, const std::string& m) {
     if (!v.HasMember(m.c_str())) {
         throw CoolProp::ValueError(format("Does not have member [%s]", m.c_str()));
     }
@@ -72,7 +72,7 @@ inline int get_integer(const rapidjson::Value& v, std::string m) {
     }
 };
 /// A convenience function to get a double from a JSON value, including error checking
-inline double get_double(const rapidjson::Value& v, std::string m) {
+inline double get_double(const rapidjson::Value& v, const std::string& m) {
     if (!v.HasMember(m.c_str())) {
         throw CoolProp::ValueError(format("Does not have member [%s]", m.c_str()));
     }
@@ -84,7 +84,7 @@ inline double get_double(const rapidjson::Value& v, std::string m) {
     }
 };
 /// A convenience function to get a bool from a JSON value, including error checking
-inline bool get_bool(const rapidjson::Value& v, std::string m) {
+inline bool get_bool(const rapidjson::Value& v, const std::string& m) {
     if (!v.HasMember(m.c_str())) {
         throw CoolProp::ValueError(format("Does not have member [%s]", m.c_str()));
     }
@@ -96,7 +96,7 @@ inline bool get_bool(const rapidjson::Value& v, std::string m) {
     }
 };
 /// A convenience function to get a string from a JSON value, including error checking
-inline std::string get_string(const rapidjson::Value& v, std::string m) {
+inline std::string get_string(const rapidjson::Value& v, const std::string& m) {
     if (!v.HasMember(m.c_str())) {
         throw CoolProp::ValueError(format("Does not have member [%s]", m.c_str()));
     }
@@ -124,7 +124,7 @@ inline std::vector<double> get_double_array(const rapidjson::Value& v) {
 };
 
 /// A convenience function to get a double array compactly
-inline std::vector<double> get_double_array(const rapidjson::Value& v, std::string m) {
+inline std::vector<double> get_double_array(const rapidjson::Value& v, const std::string& m) {
     if (!v.HasMember(m.c_str())) {
         throw CoolProp::ValueError(format("Does not have member [%s]", m.c_str()));
     } else {
@@ -196,7 +196,7 @@ inline std::vector<std::vector<CoolPropDbl>> get_long_double_array2D(const rapid
 };
 
 /// A convenience function to get a long double array compactly
-inline std::vector<CoolPropDbl> get_long_double_array(const rapidjson::Value& v, std::string name) {
+inline std::vector<CoolPropDbl> get_long_double_array(const rapidjson::Value& v, const std::string& name) {
     std::vector<CoolPropDbl> out;
     if (!v.HasMember(name.c_str())) {
         throw CoolProp::ValueError(format("Does not have member [%s]", name.c_str()));
@@ -226,7 +226,7 @@ inline std::vector<std::string> get_string_array(const rapidjson::Value& v) {
 };
 
 /// A convenience function to get a string array compactly
-inline std::vector<std::string> get_string_array(const rapidjson::Value& v, std::string m) {
+inline std::vector<std::string> get_string_array(const rapidjson::Value& v, const std::string& m) {
     if (!v.HasMember(m.c_str())) {
         throw CoolProp::ValueError(format("Does not have member [%s]", m.c_str()));
     } else {
@@ -246,11 +246,11 @@ inline std::string to_string(const T& v) {
 /// A convenience function to set a 2D array of double compactly
 inline void set_double_array2D(const char* key, const std::vector<std::vector<double>>& vec, rapidjson::Value& value, rapidjson::Document& doc) {
     rapidjson::Value _i(rapidjson::kArrayType);
-    for (unsigned int i = 0; i < vec.size(); ++i) {
+    for (const auto& i : vec) {
         rapidjson::Value _j(rapidjson::kArrayType);
-        for (unsigned int j = 0; j < vec[i].size(); ++j) {
+        for (double j : i) {
             rapidjson::Value v(rapidjson::kNumberType);
-            v.SetDouble(vec[i][j]);
+            v.SetDouble(j);
             _j.PushBack(v, doc.GetAllocator());
         }
         _i.PushBack(_j, doc.GetAllocator());
@@ -267,8 +267,8 @@ inline void set_string(const std::string& key, const std::string& s, rapidjson::
 /// A convenience function to set a string array compactly
 inline void set_string_array(const char* key, const std::vector<std::string>& vec, rapidjson::Value& value, rapidjson::Document& doc) {
     rapidjson::Value _v(rapidjson::kArrayType);
-    for (unsigned int i = 0; i < vec.size(); ++i) {
-        _v.PushBack(rapidjson::Value(vec[i].c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
+    for (const auto& i : vec) {
+        _v.PushBack(rapidjson::Value(i.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
     }
     value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), _v, doc.GetAllocator());
 };
@@ -276,8 +276,8 @@ inline void set_string_array(const char* key, const std::vector<std::string>& ve
 /// A convenience function to set an integer array compactly
 inline void set_int_array(const char* key, const std::vector<int>& vec, rapidjson::Value& value, rapidjson::Document& doc) {
     rapidjson::Value _v(rapidjson::kArrayType);
-    for (unsigned int i = 0; i < vec.size(); ++i) {
-        _v.PushBack(vec[i], doc.GetAllocator());
+    for (int i : vec) {
+        _v.PushBack(i, doc.GetAllocator());
     }
     value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), _v, doc.GetAllocator());
 };
@@ -285,8 +285,8 @@ inline void set_int_array(const char* key, const std::vector<int>& vec, rapidjso
 /// A convenience function to set a double array compactly
 inline void set_double_array(const char* key, const std::vector<double>& vec, rapidjson::Value& value, rapidjson::Document& doc) {
     rapidjson::Value _v(rapidjson::kArrayType);
-    for (unsigned int i = 0; i < vec.size(); ++i) {
-        _v.PushBack(vec[i], doc.GetAllocator());
+    for (double i : vec) {
+        _v.PushBack(i, doc.GetAllocator());
     }
     value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), _v, doc.GetAllocator());
 };
@@ -294,8 +294,8 @@ inline void set_double_array(const char* key, const std::vector<double>& vec, ra
 /// A convenience function to set a double array compactly
 inline void set_long_double_array(const char* const key, const std::vector<CoolPropDbl>& vec, rapidjson::Value& value, rapidjson::Document& doc) {
     rapidjson::Value _v(rapidjson::kArrayType);
-    for (unsigned int i = 0; i < vec.size(); ++i) {
-        _v.PushBack(static_cast<double>(vec[i]), doc.GetAllocator());
+    for (double i : vec) {
+        _v.PushBack(static_cast<double>(i), doc.GetAllocator());
     }
     value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), _v, doc.GetAllocator());
 };

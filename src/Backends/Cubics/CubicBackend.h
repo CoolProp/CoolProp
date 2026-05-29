@@ -279,7 +279,7 @@ class SRKBackend : public AbstractCubicBackend
         cubic = std::make_shared<SRK>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     }
-    SRKBackend(const std::vector<std::string> fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
+    SRKBackend(const std::vector<std::string>& fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
                bool generate_SatL_and_SatV = true) {
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
@@ -310,7 +310,7 @@ class PengRobinsonBackend : public AbstractCubicBackend
 {
 
    public:
-    PengRobinsonBackend() {};  // Default constructor (make sure you know what you are doing)
+    PengRobinsonBackend() = default;  // Default constructor (make sure you know what you are doing)
     PengRobinsonBackend(const std::vector<double>& Tc, const std::vector<double>& pc, const std::vector<double>& acentric, double R_u,
                         bool generate_SatL_and_SatV = true) {
         cubic = std::make_shared<PengRobinson>(Tc, pc, acentric, R_u);
@@ -320,7 +320,7 @@ class PengRobinsonBackend : public AbstractCubicBackend
         cubic = std::make_shared<PengRobinson>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     };
-    PengRobinsonBackend(const std::vector<std::string> fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
+    PengRobinsonBackend(const std::vector<std::string>& fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
                         bool generate_SatL_and_SatV = true) {
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
@@ -359,9 +359,10 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
     AbstractCubicBackend* ACB;
 
    public:
-    CubicResidualHelmholtz() {
-        ACB = nullptr;
-    };
+    CubicResidualHelmholtz()
+      : ACB(nullptr) {
+
+        };
     CubicResidualHelmholtz(AbstractCubicBackend* ACB) : ACB(ACB) {};
 
     // copy assignment

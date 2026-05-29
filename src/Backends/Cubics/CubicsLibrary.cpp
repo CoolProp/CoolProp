@@ -62,7 +62,7 @@ class CubicsLibraryClass
                 assert(ret.second == true);
             }
 
-            for (std::vector<std::string>::const_iterator it = val.aliases.begin(); it != val.aliases.end(); ++it) {
+            for (auto it = val.aliases.begin(); it != val.aliases.end(); ++it) {
                 if (aliases_map.find(*it) == aliases_map.end()) {
                     // It's not already in aliases map
                     aliases_map.emplace(*it, upper(val.name));
@@ -91,10 +91,10 @@ class CubicsLibraryClass
     std::string get_JSONstring(const std::string& key) {
         std::string uppercase_identifier = upper(key);
         // Try to find it
-        std::map<std::string, std::string>::iterator it = JSONstring_map.find(uppercase_identifier);
+        auto it = JSONstring_map.find(uppercase_identifier);
         // If it is found
         if (it == JSONstring_map.end()) {
-            std::map<std::string, std::string>::iterator italias = aliases_map.find(uppercase_identifier);
+            auto italias = aliases_map.find(uppercase_identifier);
             if (italias != aliases_map.end()) {
                 // Alias was found, use it to get the fluid name, and then the cubic values
                 it = JSONstring_map.find(italias->second);
@@ -114,12 +114,12 @@ class CubicsLibraryClass
     CubicsValues get(const std::string& identifier) {
         std::string uppercase_identifier = upper(identifier);
         // Try to find it
-        std::map<std::string, CubicsValues>::iterator it = fluid_map.find(uppercase_identifier);
+        auto it = fluid_map.find(uppercase_identifier);
         // If it is found
         if (it != fluid_map.end()) {
             return it->second;
         } else {
-            std::map<std::string, std::string>::iterator italias = aliases_map.find(uppercase_identifier);
+            auto italias = aliases_map.find(uppercase_identifier);
             if (italias != aliases_map.end()) {
                 // Alias was found, use it to get the fluid name, and then the cubic values
                 return fluid_map.find(italias->second)->second;
@@ -130,7 +130,7 @@ class CubicsLibraryClass
     };
     std::string get_fluids_list() {
         std::vector<std::string> out;
-        for (std::map<std::string, CubicsValues>::const_iterator it = fluid_map.begin(); it != fluid_map.end(); ++it) {
+        for (auto it = fluid_map.begin(); it != fluid_map.end(); ++it) {
             out.push_back(it->first);
         }
         return strjoin(out, ",");

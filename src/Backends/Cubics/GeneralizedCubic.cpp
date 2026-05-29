@@ -1,6 +1,7 @@
 #include "GeneralizedCubic.h"
 #include "CPnumerics.h"
 #include <cmath>
+#include <utility>
 
 double BasicMathiasCopemanAlphaFunction::term(double tau, std::size_t itau) {
 
@@ -117,15 +118,22 @@ double TwuAlphaFunction::term(double tau, std::size_t itau) {
     }
 }
 
-AbstractCubic::AbstractCubic(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1, double Delta_2,
-                             std::vector<double> C1, std::vector<double> C2, std::vector<double> C3)
-  : Tc(Tc), pc(pc), acentric(acentric), R_u(R_u), Delta_1(Delta_1), Delta_2(Delta_2) {
-    N = static_cast<int>(Tc.size());
+AbstractCubic::AbstractCubic(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1,
+                             double Delta_2, const std::vector<double>& C1, const std::vector<double>& C2, const std::vector<double>& C3)
+  : T_r(1.0),
+    rho_r(1.0),
+    Tc(Tc),
+    pc(std::move(pc)),
+    acentric(std::move(acentric)),
+    R_u(R_u),
+    Delta_1(Delta_1),
+    Delta_2(Delta_2),
+    N(static_cast<int>(Tc.size())),
+    cm(0.) {
+
     k.resize(N, std::vector<double>(N, 0));
-    cm = 0.;
+
     alpha.resize(N);
-    T_r = 1.0;
-    rho_r = 1.0;
 };
 
 void AbstractCubic::set_alpha(const std::vector<double>& C1, const std::vector<double>& C2, const std::vector<double>& C3) {

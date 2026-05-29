@@ -528,10 +528,11 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess) 
         double pp_water, psi_w, p;
 
        public:
-        BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) {
-            pp_water = psi_w * p;
-        };
-        ~BrentSolverResids() {};
+        BrentSolverResids(double psi_w, double p)
+          : pp_water(psi_w * p), psi_w(psi_w), p(p) {
+
+            };
+        ~BrentSolverResids() = default;
 
         double call(double T) override {
             double p_ws = NAN;
@@ -2494,16 +2495,10 @@ struct hel
    public:
     std::string in1, in2, in3, out;
     double v1, v2, v3, expected;
-    hel(std::string in1, double v1, std::string in2, double v2, std::string in3, double v3, std::string out, double expected) {
-        this->in1 = in1;
-        this->in2 = in2;
-        this->in3 = in3;
-        this->v1 = v1;
-        this->v2 = v2;
-        this->v3 = v3;
-        this->expected = expected;
-        this->out = out;
-    };
+    hel(std::string in1, double v1, std::string in2, double v2, std::string in3, double v3, std::string out, double expected)
+      : in1(in1), in2(in2), in3(in3), v1(v1), v2(v2), v3(v3), expected(expected), out(out) {
+
+        };
 };
 std::vector<hel> table_A11 = {hel("T", 473.15, "W", 0.00, "P", 101325, "B", 45.07 + 273.15), hel("T", 473.15, "W", 0.00, "P", 101325, "V", 1.341),
                               hel("T", 473.15, "W", 0.00, "P", 101325, "H", 202520),         hel("T", 473.15, "W", 0.00, "P", 101325, "S", 555.8),
@@ -2551,15 +2546,15 @@ class HAPropsConsistencyFixture
 TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]") {
     SECTION("Table A.15") {
         inputs = table_A15;
-        for (std::size_t i = 0; i < inputs.size(); ++i) {
-            set_values(inputs[i]);
+        for (auto& input : inputs) {
+            set_values(input);
             call();
-            CAPTURE(inputs[i].in1);
-            CAPTURE(inputs[i].v1);
-            CAPTURE(inputs[i].in2);
-            CAPTURE(inputs[i].v2);
-            CAPTURE(inputs[i].in3);
-            CAPTURE(inputs[i].v3);
+            CAPTURE(input.in1);
+            CAPTURE(input.v1);
+            CAPTURE(input.in2);
+            CAPTURE(input.v2);
+            CAPTURE(input.in3);
+            CAPTURE(input.v3);
             CAPTURE(out);
             CAPTURE(actual);
             CAPTURE(expected);
@@ -2570,15 +2565,15 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]") 
     }
     SECTION("Table A.11") {
         inputs = table_A11;
-        for (std::size_t i = 0; i < inputs.size(); ++i) {
-            set_values(inputs[i]);
+        for (auto& input : inputs) {
+            set_values(input);
             call();
-            CAPTURE(inputs[i].in1);
-            CAPTURE(inputs[i].v1);
-            CAPTURE(inputs[i].in2);
-            CAPTURE(inputs[i].v2);
-            CAPTURE(inputs[i].in3);
-            CAPTURE(inputs[i].v3);
+            CAPTURE(input.in1);
+            CAPTURE(input.v1);
+            CAPTURE(input.in2);
+            CAPTURE(input.v2);
+            CAPTURE(input.in3);
+            CAPTURE(input.v3);
             CAPTURE(out);
             CAPTURE(actual);
             CAPTURE(expected);
@@ -2589,15 +2584,15 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]") 
     }
     SECTION("Table A.12") {
         inputs = table_A12;
-        for (std::size_t i = 0; i < inputs.size(); ++i) {
-            set_values(inputs[i]);
+        for (auto& input : inputs) {
+            set_values(input);
             call();
-            CAPTURE(inputs[i].in1);
-            CAPTURE(inputs[i].v1);
-            CAPTURE(inputs[i].in2);
-            CAPTURE(inputs[i].v2);
-            CAPTURE(inputs[i].in3);
-            CAPTURE(inputs[i].v3);
+            CAPTURE(input.in1);
+            CAPTURE(input.v1);
+            CAPTURE(input.in2);
+            CAPTURE(input.v2);
+            CAPTURE(input.in3);
+            CAPTURE(input.v3);
             CAPTURE(out);
             CAPTURE(actual);
             CAPTURE(expected);
@@ -2706,9 +2701,10 @@ class ConsistencyTestData
     bool is_built;
     std::vector<Dictionary> data;
     std::list<std::set<std::size_t>> inputs_list;
-    ConsistencyTestData() {
-        is_built = false;
-    };
+    ConsistencyTestData()
+      : is_built(false) {
+
+        };
     void build() {
         if (is_built) {
             return;
@@ -2740,9 +2736,9 @@ class ConsistencyTestData
                 const double W = W_lo + dW * iw;
                 Dictionary vals;
                 // Calculate all the values using T, W
-                for (int i = 0; i < number_of_inputs; ++i) {
-                    double v = HumidAir::HAPropsSI(inputs[i], "T", T, "P", p, "W", W);
-                    vals.add_number(inputs[i], v);
+                for (const auto& input : inputs) {
+                    double v = HumidAir::HAPropsSI(input, "T", T, "P", p, "W", W);
+                    vals.add_number(input, v);
                 }
                 data.push_back(vals);
                 std::cout << format("T %g W %g\n", T, W);

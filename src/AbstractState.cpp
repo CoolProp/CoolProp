@@ -57,7 +57,7 @@ inline BackendLibrary& get_backend_library() {
     return the_library;
 }
 
-void register_backend(const backend_families& bf, shared_ptr<AbstractStateGenerator> gen) {
+void register_backend(const backend_families& bf, const shared_ptr<AbstractStateGenerator>& gen) {
     get_backend_library().add_backend(bf, gen);
 };
 
@@ -85,8 +85,8 @@ class IF97BackendGenerator : public AbstractStateGenerator
 {
    public:
     AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
-        if (fluid_names.size() == 1) {               // Check that fluid_names[0] has only one component
-            const std::string str = fluid_names[0];  // Check that the fluid name is an alias for "Water"
+        if (fluid_names.size() == 1) {                // Check that fluid_names[0] has only one component
+            const std::string& str = fluid_names[0];  // Check that the fluid name is an alias for "Water"
             if ((upper(str) == "WATER") || (upper(str) == "H2O")) {
                 return new IF97Backend();
             } else {
@@ -255,7 +255,7 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
         // SVDSBTLBackend.h for rationale.  factory("SVDSBTL", ...)
         // without the '&' lands here with f2 empty and throws.
         if (f2.empty()) {
-            throw ValueError(format("SVDSBTL requires an explicit source backend, e.g. factory(\"SVDSBTL&HEOS\", \"%s\")",
+            throw ValueError(format(R"(SVDSBTL requires an explicit source backend, e.g. factory("SVDSBTL&HEOS", "%s"))",
                                     clean_fluid_names.empty() ? "<fluid>" : clean_fluid_names[0].c_str()));
         }
         if (clean_fluid_names.size() != 1) {

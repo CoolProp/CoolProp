@@ -230,10 +230,10 @@ class REFPROPMixtureBackend : public AbstractState
     };
 
     std::vector<CoolPropDbl> calc_mole_fractions_liquid() override {
-        return std::vector<CoolPropDbl>(mole_fractions_liq.begin(), mole_fractions_liq.begin() + this->Ncomp);
+        return {mole_fractions_liq.begin(), mole_fractions_liq.begin() + this->Ncomp};
     }
     std::vector<CoolPropDbl> calc_mole_fractions_vapor() override {
-        return std::vector<CoolPropDbl>(mole_fractions_vap.begin(), mole_fractions_vap.begin() + this->Ncomp);
+        return {mole_fractions_vap.begin(), mole_fractions_vap.begin() + this->Ncomp};
     }
 
     /// Check if the mole fractions have been set, etc.

@@ -286,7 +286,7 @@ TEST_CASE("SVDSurfaceSerializer rejects corrupt input", "[SBTL][serializer]") {
     {
         const char hello[] = "hello world";
         bogus_payload.resize(64);
-        mz_ulong out_size = static_cast<mz_ulong>(bogus_payload.size());
+        auto out_size = static_cast<mz_ulong>(bogus_payload.size());
         const int rc = compress((unsigned char*)bogus_payload.data(), &out_size, (const unsigned char*)hello, sizeof(hello) - 1);
         // miniz returns MZ_OK == Z_OK == 0.  Failing here means the
         // test setup itself is broken (not what we're trying to

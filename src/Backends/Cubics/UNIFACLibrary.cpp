@@ -86,16 +86,16 @@ void UNIFACParameterLibrary::populate(std::string& group_data, std::string& inte
     m_populated = true;
 }
 Group UNIFACParameterLibrary::get_group(int sgi) const {
-    for (std::vector<Group>::const_iterator it = groups.begin(); it != groups.end(); ++it) {
-        if (it->sgi == sgi) {
-            return *it;
+    for (const auto& group : groups) {
+        if (group.sgi == sgi) {
+            return group;
         }
     }
     throw CoolProp::ValueError("Could not find group");
 }
 bool UNIFACParameterLibrary::has_group(int sgi) const {
-    for (std::vector<Group>::const_iterator it = groups.begin(); it != groups.end(); ++it) {
-        if (it->sgi == sgi) {
+    for (const auto& group : groups) {
+        if (group.sgi == sgi) {
             return true;
         }
     }
@@ -112,14 +112,14 @@ InteractionParameters UNIFACParameterLibrary::get_interaction_parameters(int mgi
         ip.zero_out();
         return ip;
     }
-    for (std::vector<InteractionParameters>::const_iterator it = interaction_parameters.begin(); it != interaction_parameters.end(); ++it) {
-        if (it->mgi1 == mgi1 && it->mgi2 == mgi2) {
+    for (const auto& interaction_parameter : interaction_parameters) {
+        if (interaction_parameter.mgi1 == mgi1 && interaction_parameter.mgi2 == mgi2) {
             // Correct order, return it
-            return *it;
+            return interaction_parameter;
         }
-        if (it->mgi2 == mgi1 && it->mgi1 == mgi2) {
+        if (interaction_parameter.mgi2 == mgi1 && interaction_parameter.mgi1 == mgi2) {
             // Backwards, swap the parameters
-            InteractionParameters ip = *it;
+            InteractionParameters ip = interaction_parameter;
             ip.swap();
             return ip;
         }
@@ -129,9 +129,9 @@ InteractionParameters UNIFACParameterLibrary::get_interaction_parameters(int mgi
 
 Component UNIFACParameterLibrary::get_component(const std::string& identifier, const std::string& value) const {
     if (identifier == "name") {
-        for (std::vector<Component>::const_iterator it = components.begin(); it != components.end(); ++it) {
-            if (it->name == value) {
-                return *it;
+        for (const auto& component : components) {
+            if (component.name == value) {
+                return component;
             }
         }
     }
@@ -154,16 +154,15 @@ TEST_CASE("Check Poling example for UNIFAC", "[UNIFAC]") {
     std::string groups = "[{\"Q_k\": 0.848, \"R_k\": 0.9011, \"maingroup_name\": \"CH2\", \"mgi\": 1, \"sgi\": 1, \"subgroup_name\": \"CH3\"},"
                          "{\"Q_k\": 0.540, \"R_k\": 0.6744, \"maingroup_name\": \"CH2\", \"mgi\": 1, \"sgi\": 2, \"subgroup_name\": \"CH2\"},"
                          "{\"Q_k\": 1.488, \"R_k\": 1.6724, \"maingroup_name\": \"CH2CO\", \"mgi\": 9, \"sgi\": 18, \"subgroup_name\": \"CH3CO\"}]";
-    std::string interactions =
-      "[{\"a_ij\": 476.4, \"a_ji\": 26.76, \"b_ij\": 0.0, \"b_ji\": 0.0,  \"c_ij\": 0.0, \"c_ji\": 0.0, \"mgi1\": 1, \"mgi2\": 9}]";
+    std::string interactions = R"([{"a_ij": 476.4, "a_ji": 26.76, "b_ij": 0.0, "b_ji": 0.0,  "c_ij": 0.0, "c_ji": 0.0, "mgi1": 1, "mgi2": 9}])";
 
     SECTION("Validate AC for acetone + n-pentane") {
         UNIFACLibrary::UNIFACParameterLibrary lib;
         CHECK_NOTHROW(lib.populate(groups, interactions, acetone_pentane_groups));
         UNIFAC::UNIFACMixture mix(lib, 1.0);
         std::vector<std::string> names;
-        names.push_back("Acetone");
-        names.push_back("n-Pentane");
+        names.emplace_back("Acetone");
+        names.emplace_back("n-Pentane");
         mix.set_components("name", names);
         mix.set_interaction_parameters();
 

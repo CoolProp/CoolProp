@@ -10,7 +10,7 @@ using std::shared_ptr;
 
 namespace CoolProp {
 
-typedef std::vector<std::vector<CoolPropDbl>> STLMatrix;
+using STLMatrix = std::vector<std::vector<CoolPropDbl>>;
 
 /** \brief The abstract base class for departure functions used in the excess part of the Helmholtz energy
  *
@@ -20,9 +20,9 @@ typedef std::vector<std::vector<CoolPropDbl>> STLMatrix;
 class DepartureFunction
 {
    public:
-    DepartureFunction() {};
+    DepartureFunction() = default;
     DepartureFunction(const ResidualHelmholtzGeneralizedExponential& _phi) : phi(_phi) {};
-    virtual ~DepartureFunction() {};
+    virtual ~DepartureFunction() = default;
     ResidualHelmholtzGeneralizedExponential phi;
     HelmholtzDerivatives derivs;
 
@@ -104,7 +104,7 @@ class DepartureFunction
 class GERG2008DepartureFunction : public DepartureFunction
 {
    public:
-    GERG2008DepartureFunction() {};
+    GERG2008DepartureFunction() = default;
     GERG2008DepartureFunction(const std::vector<double>& n, const std::vector<double>& d, const std::vector<double>& t,
                               const std::vector<double>& eta, const std::vector<double>& epsilon, const std::vector<double>& beta,
                               const std::vector<double>& gamma, std::size_t Npower) {
@@ -128,7 +128,7 @@ class GERG2008DepartureFunction : public DepartureFunction
             phi.add_GERG2008Gaussian(_n, _d, _t, _eta, _epsilon, _beta, _gamma);
         }
     };
-    ~GERG2008DepartureFunction() {};
+    ~GERG2008DepartureFunction() = default;
 };
 
 /** \brief A hybrid gaussian with temperature and density dependence along with
@@ -142,7 +142,7 @@ class GERG2008DepartureFunction : public DepartureFunction
 class GaussianExponentialDepartureFunction : public DepartureFunction
 {
    public:
-    GaussianExponentialDepartureFunction() {};
+    GaussianExponentialDepartureFunction() = default;
     GaussianExponentialDepartureFunction(const std::vector<double>& n, const std::vector<double>& d, const std::vector<double>& t,
                                          const std::vector<double>& l, const std::vector<double>& eta, const std::vector<double>& epsilon,
                                          const std::vector<double>& beta, const std::vector<double>& gamma, std::size_t Npower) {
@@ -167,7 +167,7 @@ class GaussianExponentialDepartureFunction : public DepartureFunction
         }
         phi.finish();
     };
-    ~GaussianExponentialDepartureFunction() {};
+    ~GaussianExponentialDepartureFunction() = default;
 };
 
 /** \brief A polynomial/exponential departure function
@@ -181,7 +181,7 @@ class GaussianExponentialDepartureFunction : public DepartureFunction
 class ExponentialDepartureFunction : public DepartureFunction
 {
    public:
-    ExponentialDepartureFunction() {};
+    ExponentialDepartureFunction() = default;
     ExponentialDepartureFunction(const std::vector<double>& n, const std::vector<double>& d, const std::vector<double>& t,
                                  const std::vector<double>& l) {
         std::vector<CoolPropDbl> _n(n.begin(), n.begin() + n.size());
@@ -190,10 +190,10 @@ class ExponentialDepartureFunction : public DepartureFunction
         std::vector<CoolPropDbl> _l(l.begin(), l.begin() + l.size());
         phi.add_Power(_n, _d, _t, _l);
     };
-    ~ExponentialDepartureFunction() {};
+    ~ExponentialDepartureFunction() = default;
 };
 
-typedef shared_ptr<DepartureFunction> DepartureFunctionPointer;
+using DepartureFunctionPointer = shared_ptr<DepartureFunction>;
 
 class ExcessTerm
 {

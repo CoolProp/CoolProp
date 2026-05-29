@@ -229,9 +229,7 @@ class FlashRoutines
     struct HS_flash_singlephaseOptions
     {
         double omega;
-        HS_flash_singlephaseOptions() {
-            omega = 1.0;
-        }
+        HS_flash_singlephaseOptions() : omega(1.0) {}
     };
     static void HS_flash_singlephase(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec,
                                      HS_flash_singlephaseOptions& options);
@@ -239,9 +237,7 @@ class FlashRoutines
     struct HS_flash_twophaseOptions
     {
         double omega;
-        HS_flash_twophaseOptions() {
-            omega = 1.0;
-        }
+        HS_flash_twophaseOptions() : omega(1.0) {}
     };
     static void HS_flash_twophase(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec,
                                   HS_flash_twophaseOptions& options);

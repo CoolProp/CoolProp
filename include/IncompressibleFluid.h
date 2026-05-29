@@ -14,6 +14,7 @@
 
 #include <numeric>
 #include <string>
+#include <utility>
 #include <vector>
 #include <map>
 #include <cassert>
@@ -39,9 +40,10 @@ struct IncompressibleData
     IncompressibleTypeEnum type;
     Eigen::MatrixXd coeffs;  //TODO: Can we store the Eigen::Matrix objects more efficiently?
     //std::vector<std::vector<double> > coeffs;
-    IncompressibleData() {
-        type = INCOMPRESSIBLE_NOT_SET;
-    };
+    IncompressibleData()
+      : type(INCOMPRESSIBLE_NOT_SET) {
+
+        };
 };
 
 #if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
@@ -137,11 +139,11 @@ class IncompressibleFluid
     //double u_h(double T, double p, double x);
 
    public:
-    IncompressibleFluid() : Tmin(_HUGE), Tmax(_HUGE), xmin(_HUGE), xmax(_HUGE), TminPsat(_HUGE), xbase(_HUGE), Tbase(_HUGE) {
-        strict = true;
-        xid = IFRAC_UNDEFINED;
-    };
-    virtual ~IncompressibleFluid() {};
+    IncompressibleFluid()
+      : strict(true), Tmin(_HUGE), Tmax(_HUGE), xmin(_HUGE), xmax(_HUGE), xid(IFRAC_UNDEFINED), TminPsat(_HUGE), xbase(_HUGE), Tbase(_HUGE) {
+
+        };
+    virtual ~IncompressibleFluid() = default;
 
     std::string getName() const {
         return name;
@@ -217,33 +219,33 @@ class IncompressibleFluid
 
     /// Setters for the coefficients
     void setDensity(IncompressibleData density) {
-        this->density = density;
+        this->density = std::move(density);
     }
     void setSpecificHeat(IncompressibleData specific_heat) {
-        this->specific_heat = specific_heat;
+        this->specific_heat = std::move(specific_heat);
     }
     void setViscosity(IncompressibleData viscosity) {
-        this->viscosity = viscosity;
+        this->viscosity = std::move(viscosity);
     }
     void setConductivity(IncompressibleData conductivity) {
-        this->conductivity = conductivity;
+        this->conductivity = std::move(conductivity);
     }
     void setPsat(IncompressibleData p_sat) {
-        this->p_sat = p_sat;
+        this->p_sat = std::move(p_sat);
     }
     void setTfreeze(IncompressibleData T_freeze) {
-        this->T_freeze = T_freeze;
+        this->T_freeze = std::move(T_freeze);
     }
 
     /// Setters for the concentration conversion coefficients
     void setMass2input(IncompressibleData mass2input) {
-        this->mass2input = mass2input;
+        this->mass2input = std::move(mass2input);
     }
     void setVolume2input(IncompressibleData volume2input) {
-        this->volume2input = volume2input;
+        this->volume2input = std::move(volume2input);
     }
     void setMole2input(IncompressibleData mole2input) {
-        this->mole2input = mole2input;
+        this->mole2input = std::move(mole2input);
     }
 
     /// A function to check coefficients and equation types.
@@ -253,8 +255,8 @@ class IncompressibleFluid
 
    protected:
     /// Base functions that handle the custom function types
-    double baseExponential(IncompressibleData data, double y, double ybase);
-    double baseLogexponential(IncompressibleData data, double y, double ybase);
+    double baseExponential(const IncompressibleData& data, double y, double ybase);
+    double baseLogexponential(const IncompressibleData& data, double y, double ybase);
     double baseExponentialOffset(IncompressibleData data, double y);
     double basePolyOffset(IncompressibleData data, double y, double z = 0.0);
 

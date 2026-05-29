@@ -35,15 +35,10 @@ struct vel
    public:
     std::string in1, in2, out, fluid;
     double v1, v2, tol, expected;
-    vel(std::string fluid, std::string in1, double v1, std::string in2, double v2, std::string out, double expected, double tol) {
-        this->in1 = in1;
-        this->in2 = in2;
-        this->fluid = fluid;
-        this->v1 = v1;
-        this->v2 = v2;
-        this->expected = expected;
-        this->tol = tol;
-    };
+    vel(std::string fluid, std::string in1, double v1, std::string in2, double v2, const std::string& out, double expected, double tol)
+      : in1(in1), in2(in2), fluid(fluid), v1(v1), v2(v2), expected(expected), tol(tol) {
+
+        };
 };
 
 vel viscosity_validation_data[] = {
@@ -313,9 +308,9 @@ class TransportValidationFixture
     CoolProp::input_pairs pair;
 
    public:
-    TransportValidationFixture() {}
-    ~TransportValidationFixture() {}
-    void set_backend(std::string backend, std::string fluid_name) {
+    TransportValidationFixture() = default;
+    ~TransportValidationFixture() = default;
+    void set_backend(const std::string& backend, const std::string& fluid_name) {
         pState.reset(CoolProp::AbstractState::factory(backend, fluid_name));
     }
     void set_pair(std::string& in1, double v1, std::string& in2, double v2) {
@@ -635,9 +630,9 @@ class ConsistencyFixture
     CoolProp::input_pairs pair;
 
    public:
-    ConsistencyFixture() {}
-    ~ConsistencyFixture() {}
-    void set_backend(std::string backend, std::string fluid_name) {
+    ConsistencyFixture() = default;
+    ~ConsistencyFixture() = default;
+    void set_backend(const std::string& backend, const std::string& fluid_name) {
         pState.reset(CoolProp::AbstractState::factory(backend, fluid_name));
     }
     void set_pair(CoolProp::input_pairs pair) {
@@ -803,9 +798,9 @@ TEST_CASE("Test saturation properties for a few fluids", "[saturation],[slow]") 
         std::vector<double> pv = linspace(Props1SI("CO2", "ptriple"), Props1SI("CO2", "pcrit") - 1e-6, 5);
 
         SECTION("All pressures are ok")
-        for (std::size_t i = 0; i < pv.size(); ++i) {
-            CAPTURE(pv[i]);
-            double T = CoolProp::PropsSI("T", "P", pv[i], "Q", 0, "CO2");
+        for (double i : pv) {
+            CAPTURE(i);
+            double T = CoolProp::PropsSI("T", "P", i, "Q", 0, "CO2");
         }
     }
 }
@@ -992,8 +987,7 @@ TEST_CASE("Humid-air h and s are consistent with individual EOS alpha0", "[humid
         // Tests that the alpha0-derived enthalpy is internally consistent.
         // Note: H+S alone cannot determine T (humidity ratio is unknown), so
         // we keep W=0 fixed and invert H(T, W=0, P) → T.
-        for (int i = 0; i < NT; ++i) {
-            const double T = Tvals[i];
+        for (double T : Tvals) {
             CAPTURE(T);
             double H = HumidAir::HAPropsSI("H", "T", T, "W", 0.0, "P", P);
             REQUIRE(ValidNumber(H));
@@ -1474,23 +1468,23 @@ TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert model
     Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
 
     std::string mixes[] = {"CO2[0.7]&Argon[0.3]", "CO2[0.7]&Water[0.3]", "CO2[0.7]&Nitrogen[0.3]"};
-    for (int i = 0; i < 3; ++i) {
-        const char* ykey = mixes[i].c_str();
+    for (const auto& mix : mixes) {
+        const char* ykey = mix.c_str();
         std::ostringstream ss1;
-        ss1 << mixes[i];
+        ss1 << mix;
         SECTION(ss1.str(), "") {
             double Tnbp_CP, Tnbp_RP, R_RP, R_CP, pchk_CP, pchk_RP;
-            CHECK_NOTHROW(R_CP = PropsSI("gas_constant", "P", 101325, "Q", 1, "HEOS::" + mixes[i]));
+            CHECK_NOTHROW(R_CP = PropsSI("gas_constant", "P", 101325, "Q", 1, "HEOS::" + mix));
             CAPTURE(R_CP);
-            CHECK_NOTHROW(R_RP = PropsSI("gas_constant", "P", 101325, "Q", 1, "REFPROP::" + mixes[i]));
+            CHECK_NOTHROW(R_RP = PropsSI("gas_constant", "P", 101325, "Q", 1, "REFPROP::" + mix));
             CAPTURE(R_RP);
-            CHECK_NOTHROW(Tnbp_CP = PropsSI("T", "P", 101325, "Q", 1, "HEOS::" + mixes[i]));
+            CHECK_NOTHROW(Tnbp_CP = PropsSI("T", "P", 101325, "Q", 1, "HEOS::" + mix));
             CAPTURE(Tnbp_CP);
-            CHECK_NOTHROW(pchk_CP = PropsSI("P", "T", Tnbp_CP, "Q", 1, "HEOS::" + mixes[i]));
+            CHECK_NOTHROW(pchk_CP = PropsSI("P", "T", Tnbp_CP, "Q", 1, "HEOS::" + mix));
             CAPTURE(pchk_CP);
-            CHECK_NOTHROW(Tnbp_RP = PropsSI("T", "P", 101325, "Q", 1, "REFPROP::" + mixes[i]));
+            CHECK_NOTHROW(Tnbp_RP = PropsSI("T", "P", 101325, "Q", 1, "REFPROP::" + mix));
             CAPTURE(Tnbp_RP);
-            CHECK_NOTHROW(pchk_RP = PropsSI("P", "T", Tnbp_RP, "Q", 1, "REFPROP::" + mixes[i]));
+            CHECK_NOTHROW(pchk_RP = PropsSI("P", "T", Tnbp_RP, "Q", 1, "REFPROP::" + mix));
             CAPTURE(pchk_RP);
             double diff = std::abs(Tnbp_CP / Tnbp_RP - 1);
             CHECK(diff < 1e-2);
@@ -1563,9 +1557,9 @@ TEST_CASE("P,T flash at the critical point returns rhomolar_critical", "[flash],
 TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]") {
     double Ts, y, T2;
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
-    std::string Ykeys[] = {"H", "S", "U", "Hmass", "Smass", "Umass", "Hmolar", "Smolar", "Umolar"};
-    for (int i = 0; i < 9; ++i) {
-        const char* ykey = Ykeys[i].c_str();
+    const std::vector<std::string> Ykeys = {"H", "S", "U", "Hmass", "Smass", "Umass", "Hmolar", "Smolar", "Umolar"};
+    for (const auto& Ykey : Ykeys) {
+        const char* ykey = Ykey.c_str();
         std::ostringstream ss1;
         ss1 << "Subcritical superheated P," << ykey;
         SECTION(ss1.str(), "") {
@@ -1979,11 +1973,11 @@ TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
     Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
 
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-    for (std::size_t i = 0; i < fluids.size(); ++i) {
+    for (const auto& fluid : fluids) {
         std::ostringstream ss1;
-        ss1 << "Check that REFPROP fluid name for fluid " << fluids[i] << " is valid";
+        ss1 << "Check that REFPROP fluid name for fluid " << fluid << " is valid";
         SECTION(ss1.str(), "") {
-            std::string RPName = get_fluid_param_string(fluids[i], "REFPROPName");
+            std::string RPName = get_fluid_param_string(fluid, "REFPROPName");
             CHECK(!RPName.empty());
             CAPTURE(RPName);
             if (!RPName.compare("N/A")) {
@@ -2019,8 +2013,8 @@ class AncillaryFixture
     std::string name;
     void run_checks() {
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-        for (std::size_t i = 0; i < fluids.size(); ++i) {
-            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+        for (const auto& fluid : fluids) {
+            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
             auto* rHEOS = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
             if (!rHEOS->is_pure()) {
                 continue;
@@ -2101,8 +2095,8 @@ class AncillaryFixture
 
 TEST_CASE("Triple point checks", "[triple_point]") {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-    for (std::size_t i = 0; i < fluids.size(); ++i) {
-        std::vector<std::string> names(1, fluids[i]);
+    for (const auto& fluid : fluids) {
+        std::vector<std::string> names(1, fluid);
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(names);
         // Skip pseudo-pure
         if (!HEOS->is_pure()) {
@@ -2110,7 +2104,7 @@ TEST_CASE("Triple point checks", "[triple_point]") {
         }
 
         std::ostringstream ss1;
-        ss1 << "Minimum saturation temperature state matches for liquid " << fluids[i];
+        ss1 << "Minimum saturation temperature state matches for liquid " << fluid;
         SECTION(ss1.str(), "") {
             REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 0, HEOS->Ttriple()));
             double p_EOS = HEOS->p();
@@ -2125,7 +2119,7 @@ TEST_CASE("Triple point checks", "[triple_point]") {
             CHECK(err_sat_min_liquid < 1e-3);
         }
         std::ostringstream ss2;
-        ss2 << "Minimum saturation temperature state matches for vapor " << fluids[i];
+        ss2 << "Minimum saturation temperature state matches for vapor " << fluid;
         SECTION(ss2.str(), "") {
             REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 1, HEOS->Ttriple()));
 
@@ -2141,7 +2135,7 @@ TEST_CASE("Triple point checks", "[triple_point]") {
             CHECK(err_sat_min_vapor < 1e-3);
         }
         std::ostringstream ss3;
-        ss3 << "Minimum saturation temperature state matches for vapor " << fluids[i];
+        ss3 << "Minimum saturation temperature state matches for vapor " << fluid;
         SECTION(ss3.str(), "") {
             if (HEOS->p_triple() < 10) {
                 continue;
@@ -2157,7 +2151,7 @@ TEST_CASE("Triple point checks", "[triple_point]") {
             CHECK(err_sat_min_vapor < 1e-3);
         }
         std::ostringstream ss4;
-        ss4 << "Minimum saturation temperature state matches for liquid " << fluids[i];
+        ss4 << "Minimum saturation temperature state matches for liquid " << fluid;
         SECTION(ss4.str(), "") {
             if (HEOS->p_triple() < 10) {
                 continue;
@@ -2205,8 +2199,8 @@ class SatTFixture
     double Tc;
     void run_checks() {
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-        for (std::size_t i = 0; i < fluids.size(); ++i) {
-            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+        for (const auto& fluid : fluids) {
+            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
             auto* rHEOS = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
             if (!rHEOS->is_pure()) {
                 continue;
@@ -2278,22 +2272,22 @@ TEST_CASE("Test that reference states yield proper values using high-level inter
     };
     std::string fluids[] = {"n-Propane", "R134a", "R124"};
     ref_entry entries[3] = {{"IIR", 200000, 1000, "T", 273.15, "Q", 0}, {"ASHRAE", 0, 0, "T", 233.15, "Q", 0}, {"NBP", 0, 0, "P", 101325, "Q", 0}};
-    for (std::size_t i = 0; i < 3; ++i) {
-        for (std::size_t j = 0; j < 3; ++j) {
+    for (const auto& fluid : fluids) {
+        for (auto& entry : entries) {
             std::ostringstream ss1;
-            ss1 << "Check state for " << fluids[i] << " for " + entries[j].name + " reference state ";
+            ss1 << "Check state for " << fluid << " for " + entry.name + " reference state ";
             SECTION(ss1.str(), "") {
                 // First reset the reference state
-                set_reference_stateS(fluids[i], "DEF");
+                set_reference_stateS(fluid, "DEF");
                 // Then set to desired reference state
-                set_reference_stateS(fluids[i], entries[j].name);
+                set_reference_stateS(fluid, entry.name);
                 // Calculate the values
-                double hmass = PropsSI("Hmass", entries[j].in1, entries[j].val1, entries[j].in2, entries[j].val2, fluids[i]);
-                double smass = PropsSI("Smass", entries[j].in1, entries[j].val1, entries[j].in2, entries[j].val2, fluids[i]);
-                CHECK(std::abs(hmass - entries[j].hmass) < 1e-8);
-                CHECK(std::abs(smass - entries[j].smass) < 1e-8);
+                double hmass = PropsSI("Hmass", entry.in1, entry.val1, entry.in2, entry.val2, fluid);
+                double smass = PropsSI("Smass", entry.in1, entry.val1, entry.in2, entry.val2, fluid);
+                CHECK(std::abs(hmass - entry.hmass) < 1e-8);
+                CHECK(std::abs(smass - entry.smass) < 1e-8);
                 // Then reset the reference state
-                set_reference_stateS(fluids[i], "DEF");
+                set_reference_stateS(fluid, "DEF");
             }
         }
     }
@@ -2310,20 +2304,20 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
     };
     std::string fluids[] = {"n-Propane", "R134a", "R124"};
     ref_entry entries[3] = {{"IIR", 200000, 1000, iT, 273.15, iQ, 0}, {"ASHRAE", 0, 0, iT, 233.15, iQ, 0}, {"NBP", 0, 0, iP, 101325, iQ, 0}};
-    for (std::size_t i = 0; i < 3; ++i) {
-        for (std::size_t j = 0; j < 3; ++j) {
+    for (const auto& fluid : fluids) {
+        for (auto& entry : entries) {
             std::ostringstream ss1;
-            ss1 << "Check state for " << fluids[i] << " for " + entries[j].name + " reference state ";
+            ss1 << "Check state for " << fluid << " for " + entry.name + " reference state ";
             SECTION(ss1.str(), "") {
                 double val1, val2;
-                input_pairs pair = generate_update_pair(entries[j].in1, entries[j].val1, entries[j].in2, entries[j].val2, val1, val2);
+                input_pairs pair = generate_update_pair(entry.in1, entry.val1, entry.in2, entry.val2, val1, val2);
                 // Generate a state instance
-                shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+                shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
                 AS->update(pair, val1, val2);
                 double hmass0 = AS->hmass();
                 double smass0 = AS->smass();
                 // First reset the reference state
-                set_reference_stateS(fluids[i], "DEF");
+                set_reference_stateS(fluid, "DEF");
                 AS->update(pair, val1, val2);
                 double hmass00 = AS->hmass();
                 double smass00 = AS->smass();
@@ -2331,7 +2325,7 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
                 CHECK(std::abs(smass00 - smass0) < 1e-10);
 
                 // Then set to desired reference state
-                set_reference_stateS(fluids[i], entries[j].name);
+                set_reference_stateS(fluid, entry.name);
 
                 // Should not change existing instance
                 AS->clear();
@@ -2342,15 +2336,15 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
                 CHECK(std::abs(smass1 - smass0) < 1e-10);
 
                 // New instance - should get updated reference state
-                shared_ptr<CoolProp::AbstractState> AS2(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+                shared_ptr<CoolProp::AbstractState> AS2(CoolProp::AbstractState::factory("HEOS", fluid));
                 AS2->update(pair, val1, val2);
                 double hmass2 = AS2->hmass();
                 double smass2 = AS2->smass();
-                CHECK(std::abs(hmass2 - entries[j].hmass) < 1e-8);
-                CHECK(std::abs(smass2 - entries[j].smass) < 1e-8);
+                CHECK(std::abs(hmass2 - entry.hmass) < 1e-8);
+                CHECK(std::abs(smass2 - entry.smass) < 1e-8);
 
                 // Then reset the reference state
-                set_reference_stateS(fluids[i], "DEF");
+                set_reference_stateS(fluid, "DEF");
             }
         }
     }
@@ -2429,12 +2423,12 @@ class FixedStateFixture
     void run_checks() {
 
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-        for (std::size_t i = 0; i < fluids.size(); ++i) {
+        for (const auto& fluid : fluids) {
             std::string ref_state[4] = {"DEF", "IIR", "ASHRAE", "NBP"};
-            for (std::size_t j = 0; j < 4; ++j) {
+            for (const auto& j : ref_state) {
                 std::string states[] = {"hs_anchor", "reducing", "critical", "max_sat_T", "max_sat_p", "triple_liquid", "triple_vapor"};
-                for (std::size_t k = 0; k < 7; ++k) {
-                    run_fluid(fluids[i], states[k], ref_state[j]);
+                for (const auto& state : states) {
+                    run_fluid(fluid, state, j);
                 }
             }
         }
@@ -2453,28 +2447,28 @@ TEST_CASE("Check the first partial derivatives", "[first_saturation_partial_deri
     pair pairs[number_of_pairs] = {{iP, iT}, {iDmolar, iT}, {iHmolar, iT}, {iSmolar, iT}, {iUmolar, iT},
                                    {iT, iP}, {iDmolar, iP}, {iHmolar, iP}, {iSmolar, iP}, {iUmolar, iP}};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
-    for (std::size_t i = 0; i < number_of_pairs; ++i) {
+    for (auto& pair : pairs) {
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss1;
-        ss1 << "Check first partial derivative for d(" << get_parameter_information(pairs[i].p1, "short") << ")/d("
-            << get_parameter_information(pairs[i].p2, "short") << ")|sat";
+        ss1 << "Check first partial derivative for d(" << get_parameter_information(pair.p1, "short") << ")/d("
+            << get_parameter_information(pair.p2, "short") << ")|sat";
         SECTION(ss1.str(), "") {
             AS->update(QT_INPUTS, 1, 300);
             CoolPropDbl p = AS->p();
-            CoolPropDbl analytical = AS->first_saturation_deriv(pairs[i].p1, pairs[i].p2);
+            CoolPropDbl analytical = AS->first_saturation_deriv(pair.p1, pair.p2);
             CAPTURE(analytical);
             CoolPropDbl numerical;
-            if (pairs[i].p2 == iT) {
+            if (pair.p2 == iT) {
                 AS->update(QT_INPUTS, 1, 300 + 1e-5);
-                CoolPropDbl v1 = AS->keyed_output(pairs[i].p1);
+                CoolPropDbl v1 = AS->keyed_output(pair.p1);
                 AS->update(QT_INPUTS, 1, 300 - 1e-5);
-                CoolPropDbl v2 = AS->keyed_output(pairs[i].p1);
+                CoolPropDbl v2 = AS->keyed_output(pair.p1);
                 numerical = (v1 - v2) / (2e-5);
-            } else if (pairs[i].p2 == iP) {
+            } else if (pair.p2 == iP) {
                 AS->update(PQ_INPUTS, p + 1e-2, 1);
-                CoolPropDbl v1 = AS->keyed_output(pairs[i].p1);
+                CoolPropDbl v1 = AS->keyed_output(pair.p1);
                 AS->update(PQ_INPUTS, p - 1e-2, 1);
-                CoolPropDbl v2 = AS->keyed_output(pairs[i].p1);
+                CoolPropDbl v2 = AS->keyed_output(pair.p1);
                 numerical = (v1 - v2) / (2e-2);
             } else {
                 throw ValueError();
@@ -2493,24 +2487,24 @@ TEST_CASE("Check the second saturation derivatives", "[second_saturation_partial
     };
     pair pairs[number_of_pairs] = {{iT, iP, iP}, {iDmolar, iP, iP}, {iHmolar, iP, iP}, {iSmolar, iP, iP}, {iUmolar, iP, iP}};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
-    for (std::size_t i = 0; i < number_of_pairs; ++i) {
+    for (auto& pair : pairs) {
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss1;
-        ss1 << "Check second saturation derivative for d2(" << get_parameter_information(pairs[i].p1, "short") << ")/d("
-            << get_parameter_information(pairs[i].p2, "short") << ")2|sat";
+        ss1 << "Check second saturation derivative for d2(" << get_parameter_information(pair.p1, "short") << ")/d("
+            << get_parameter_information(pair.p2, "short") << ")2|sat";
         SECTION(ss1.str(), "") {
             AS->update(QT_INPUTS, 1, 300);
             CoolPropDbl p = AS->p();
-            CoolPropDbl analytical = AS->second_saturation_deriv(pairs[i].p1, pairs[i].p2, pairs[i].p3);
+            CoolPropDbl analytical = AS->second_saturation_deriv(pair.p1, pair.p2, pair.p3);
             CAPTURE(analytical);
             CoolPropDbl numerical;
-            if (pairs[i].p2 == iT) {
+            if (pair.p2 == iT) {
                 throw NotImplementedError();
-            } else if (pairs[i].p2 == iP) {
+            } else if (pair.p2 == iP) {
                 AS->update(PQ_INPUTS, p + 1e-2, 1);
-                CoolPropDbl v1 = AS->first_saturation_deriv(pairs[i].p1, pairs[i].p2);
+                CoolPropDbl v1 = AS->first_saturation_deriv(pair.p1, pair.p2);
                 AS->update(PQ_INPUTS, p - 1e-2, 1);
-                CoolPropDbl v2 = AS->first_saturation_deriv(pairs[i].p1, pairs[i].p2);
+                CoolPropDbl v2 = AS->first_saturation_deriv(pair.p1, pair.p2);
                 numerical = (v1 - v2) / (2e-2);
             } else {
                 throw ValueError();
@@ -2529,29 +2523,29 @@ TEST_CASE("Check the first two-phase derivative", "[first_two_phase_deriv]") {
     };
     pair pairs[number_of_pairs] = {{iDmass, iP, iHmass}, {iDmolar, iP, iHmolar}, {iDmolar, iHmolar, iP}, {iDmass, iHmass, iP}};
     shared_ptr<CoolProp::HelmholtzEOSBackend> AS = std::make_shared<CoolProp::HelmholtzEOSBackend>("n-Propane");
-    for (std::size_t i = 0; i < number_of_pairs; ++i) {
+    for (auto& pair : pairs) {
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss1;
-        ss1 << "for (" << get_parameter_information(pairs[i].p1, "short") << ", " << get_parameter_information(pairs[i].p2, "short") << ", "
-            << get_parameter_information(pairs[i].p3, "short") << ")";
+        ss1 << "for (" << get_parameter_information(pair.p1, "short") << ", " << get_parameter_information(pair.p2, "short") << ", "
+            << get_parameter_information(pair.p3, "short") << ")";
         SECTION(ss1.str(), "") {
             AS->update(QT_INPUTS, 0.3, 300);
             CoolPropDbl numerical;
-            CoolPropDbl analytical = AS->first_two_phase_deriv(pairs[i].p1, pairs[i].p2, pairs[i].p3);
+            CoolPropDbl analytical = AS->first_two_phase_deriv(pair.p1, pair.p2, pair.p3);
             CAPTURE(analytical);
 
             CoolPropDbl out1, out2;
             CoolPropDbl v2base, v3base;
-            v2base = AS->keyed_output(pairs[i].p2);
-            v3base = AS->keyed_output(pairs[i].p3);
+            v2base = AS->keyed_output(pair.p2);
+            v3base = AS->keyed_output(pair.p3);
             CoolPropDbl v2plus = v2base * 1.001;
             CoolPropDbl v2minus = v2base * 0.999;
-            CoolProp::input_pairs input_pair1 = generate_update_pair(pairs[i].p2, v2plus, pairs[i].p3, v3base, out1, out2);
+            CoolProp::input_pairs input_pair1 = generate_update_pair(pair.p2, v2plus, pair.p3, v3base, out1, out2);
             AS->update(input_pair1, out1, out2);
-            CoolPropDbl v1 = AS->keyed_output(pairs[i].p1);
-            CoolProp::input_pairs input_pair2 = generate_update_pair(pairs[i].p2, v2minus, pairs[i].p3, v3base, out1, out2);
+            CoolPropDbl v1 = AS->keyed_output(pair.p1);
+            CoolProp::input_pairs input_pair2 = generate_update_pair(pair.p2, v2minus, pair.p3, v3base, out1, out2);
             AS->update(input_pair2, out1, out2);
-            CoolPropDbl v2 = AS->keyed_output(pairs[i].p1);
+            CoolPropDbl v2 = AS->keyed_output(pair.p1);
 
             numerical = (v1 - v2) / (v2plus - v2minus);
             CAPTURE(numerical);
@@ -3670,7 +3664,7 @@ TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[a
         std::string hex() const {
             char buf[17];
             std::snprintf(buf, sizeof(buf), "%016llx", static_cast<unsigned long long>(h));
-            return std::string(buf);
+            return {buf};
         }
     };
 
@@ -3701,7 +3695,7 @@ TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[a
     // Decompress the raw all_fluids JSON bytes — the same blob FluidLibrary
     // loads, but without the subsequent rapidjson round-trip.
     std::vector<unsigned char> buf(gall_fluids_JSON_zSize * 7);
-    mz_ulong out_len = static_cast<mz_ulong>(buf.size());
+    auto out_len = static_cast<mz_ulong>(buf.size());
     REQUIRE(mz_uncompress(buf.data(), &out_len, gall_fluids_JSON_zData, gall_fluids_JSON_zSize) == MZ_OK);
     auto all_fluids = nlohmann::json::parse(buf.begin(), buf.begin() + out_len);
 
@@ -3883,13 +3877,13 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[cach
     std::array<bool, 100> bool100;
     bool100.fill(false);
     std::vector<CachedElement> cache100(100);
-    for (auto i = 0; i < cache100.size(); ++i) {
-        cache100[i] = _HUGE;
+    for (auto& i : cache100) {
+        i = _HUGE;
     }
 
     std::vector<std::optional<double>> opt100(100);
-    for (auto i = 0; i < opt100.size(); ++i) {
-        opt100[i] = _HUGE;
+    for (auto& i : opt100) {
+        i = _HUGE;
     }
 
     BENCHMARK("memset array15 w/ 0") {
@@ -3925,14 +3919,14 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[cach
         return buf100;
     };
     BENCHMARK("fill cache100") {
-        for (auto i = 0; i < cache100.size(); ++i) {
-            cache100[i] = _HUGE;
+        for (auto& i : cache100) {
+            i = _HUGE;
         }
         return cache100;
     };
     BENCHMARK("fill opt100") {
-        for (auto i = 0; i < opt100.size(); ++i) {
-            opt100[i] = _HUGE;
+        for (auto& i : opt100) {
+            i = _HUGE;
         }
         return opt100;
     };
@@ -6144,6 +6138,28 @@ TEST_CASE("REFPROP cross-check: sat-state fugacity_coefficient agrees with HEOS 
         CHECK(std::abs(phiL_heos - phiL_rp) / std::abs(phiL_rp) < 1e-2);
         CHECK(std::abs(phiV_heos - phiV_rp) / std::abs(phiV_rp) < 1e-2);
     }
+}
+
+// Regression guard for the SurfaceTensionCorrelation ctor: a clang-tidy
+// prefer-member-initializer "fix" once hoisted N=n.size() and s=n into the
+// member-init list, where n is still empty (it's populated in the body), so
+// every surface tension silently evaluated to 0.0.  These checks fail loudly
+// if that ever recurs.  IAPWS reference values, ~1% tolerance.
+TEST_CASE("Surface tension of water is nonzero and matches IAPWS", "[surface_tension]") {
+    const double st_300 = CoolProp::PropsSI("I", "T", 300, "Q", 0, "Water");
+    const double st_350 = CoolProp::PropsSI("I", "T", 350, "Q", 0, "Water");
+    CAPTURE(st_300);
+    CAPTURE(st_350);
+    // Load-bearing: the regression made these exactly 0.
+    CHECK(st_300 > 0.0);
+    CHECK(st_350 > 0.0);
+    // IAPWS: sigma(300 K) ~ 0.07170 N/m, sigma(350 K) ~ 0.06301 N/m.
+    CHECK(st_300 == Catch::Approx(0.07170).epsilon(0.01));
+    CHECK(st_350 == Catch::Approx(0.06301).epsilon(0.01));
+    // Surface tension decreases monotonically toward the critical point.
+    CHECK(st_350 < st_300);
+    // A second fluid, looser bound, just to exercise another correlation.
+    CHECK(CoolProp::PropsSI("I", "T", 300, "Q", 0, "R134a") > 0.0);
 }
 
 #endif

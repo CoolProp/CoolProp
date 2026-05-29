@@ -62,7 +62,7 @@ class Spline
 {
    public:
     /** An empty, invalid spline */
-    Spline() {}
+    Spline() = default;
 
     /** A spline with x and y values */
     Spline(const std::vector<X>& x, const std::vector<Y>& y) {
@@ -76,7 +76,7 @@ class Spline
             return;
         }
 
-        typedef typename std::vector<X>::difference_type size_type;
+        using size_type = typename std::vector<X>::difference_type;
 
         size_type n = y.size() - 1;
 
@@ -109,7 +109,7 @@ class Spline
             mElements.push_back(Element(x[i], y[i], b[i], c[i], d[i]));
         }
     }
-    virtual ~Spline() {}
+    virtual ~Spline() = default;
 
     Y operator[](const X& x) const {
         return interpolate(x);
@@ -170,7 +170,7 @@ class Spline
         Y a, b, c, d;
     };
 
-    typedef Element element_type;
+    using element_type = Element;
     std::vector<element_type> mElements;
 };
 
@@ -483,7 +483,7 @@ double interp1d(const std::vector<double>* x, const std::vector<double>* y, doub
 double powInt(double x, int y);
 
 template <class T>
-T POW2(T x) {
+T POW2(const T& x) {
     return x * x;
 }
 template <class T>

@@ -531,10 +531,11 @@ class CoolPropFluid
     std::string ECSReferenceFluid;  ///< A string that gives the name of the fluids that should be used for the ECS method for transport properties
     double ECS_qd;                  ///< The critical qd parameter for the Olchowy-Sengers cross-over term
    public:
-    CoolPropFluid() : ECS_qd(-_HUGE) {
-        this->ChemSpider_id = -1;
-    };
-    ~CoolPropFluid() {};
+    CoolPropFluid()
+      : ECS_qd(-_HUGE), ChemSpider_id(-1) {
+
+        };
+    ~CoolPropFluid() = default;
     const EquationOfState& EOS() const {
         return EOSVector[0];
     }  ///< Get a reference to the equation of state

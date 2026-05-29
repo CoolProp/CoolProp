@@ -1,6 +1,8 @@
 #ifndef BICUBICBACKEND_H
 #define BICUBICBACKEND_H
 
+#include <utility>
+
 #include "TabularBackends.h"
 #include "Exceptions.h"
 #include "DataStructures.h"
@@ -57,12 +59,12 @@ A^{-1} =  \left[ \begin{array}{*{16}c} 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0
  \f]
  \
 */
-typedef std::vector<std::vector<double>> mat;
+using mat = std::vector<std::vector<double>>;
 class BicubicBackend : public TabularBackend
 {
    public:
     /// Instantiator; base class loads or makes tables
-    BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(AS) {
+    BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(std::move(AS)) {
         imposed_phase_index = iphase_not_imposed;
         // If a pure fluid or a predefined mixture, don't need to set fractions, go ahead and build
         if (!this->AS->get_mole_fractions().empty()) {

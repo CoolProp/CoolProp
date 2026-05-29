@@ -37,7 +37,7 @@ class IncompressibleBackend : public AbstractState
 
    public:
     IncompressibleBackend();
-    virtual ~IncompressibleBackend() {};
+    virtual ~IncompressibleBackend() = default;
     std::string backend_name() override {
         return get_backend_string(INCOMP_BACKEND);
     }

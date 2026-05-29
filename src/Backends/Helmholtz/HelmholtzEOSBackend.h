@@ -30,8 +30,8 @@ inline std::string vecstring_to_string(const std::vector<std::string>& a) {
 class HelmholtzEOSBackend : public HelmholtzEOSMixtureBackend
 {
    public:
-    HelmholtzEOSBackend() {};
-    HelmholtzEOSBackend(CoolPropFluid Fluid) {
+    HelmholtzEOSBackend() = default;
+    HelmholtzEOSBackend(const CoolPropFluid& Fluid) {
         set_components(std::vector<CoolPropFluid>(1, Fluid));
     };
     HelmholtzEOSBackend(const std::string& name) : HelmholtzEOSMixtureBackend() {
@@ -46,8 +46,8 @@ class HelmholtzEOSBackend : public HelmholtzEOSMixtureBackend
                 std::cout << "Got the fluids" << vecstring_to_string(fluids) << '\n';
                 std::cout << "Got the fractions" << vec_to_string(mole_fractions, "%g") << '\n';
             }
-            for (unsigned int i = 0; i < fluids.size(); ++i) {
-                components.push_back(library.get(fluids[i]));
+            for (const auto& fluid : fluids) {
+                components.push_back(library.get(fluid));
             }
         } else {
             components.push_back(library.get(name));  // Until now it's empty
@@ -61,7 +61,7 @@ class HelmholtzEOSBackend : public HelmholtzEOSMixtureBackend
             std::cout << "successfully set up state" << '\n';
         }
     };
-    virtual ~HelmholtzEOSBackend() {};
+    virtual ~HelmholtzEOSBackend() = default;
     std::string backend_name() override {
         return get_backend_string(HEOS_BACKEND_PURE);
     }

@@ -74,7 +74,7 @@ PCSAFTLibraryClass::PCSAFTLibraryClass() : empty(true) {
 // Get a PCSAFTFluid instance stored in this library
 PCSAFTFluid& PCSAFTLibraryClass::get(const std::string& key) {
     // Try to find it
-    std::map<std::string, std::size_t>::iterator it = string_to_index_map.find(key);
+    auto it = string_to_index_map.find(key);
     // If it is found
     if (it != string_to_index_map.end()) {
         return get(it->second);
@@ -89,7 +89,7 @@ PCSAFTFluid& PCSAFTLibraryClass::get(const std::string& key) {
  */
 PCSAFTFluid& PCSAFTLibraryClass::get(std::size_t key) {
     // Try to find it
-    std::map<std::size_t, PCSAFTFluid>::iterator it = fluid_map.find(key);
+    auto it = fluid_map.find(key);
     // If it is found
     if (it != fluid_map.end()) {
         return it->second;
@@ -366,7 +366,7 @@ void PCSAFTLibraryClass::load_from_JSON(rapidjson::Document& doc) {
             dict.add_number("kijT", cpjson::get_double(*itr, "kijT"));
         }
 
-        std::map<std::vector<std::string>, std::vector<Dictionary>>::iterator it = m_binary_pair_map.find(CAS);
+        auto it = m_binary_pair_map.find(CAS);
         if (it == m_binary_pair_map.end()) {
             // Add to binary pair map by creating one-element vector
             m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary>>(CAS, std::vector<Dictionary>(1, dict)));

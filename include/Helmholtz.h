@@ -173,8 +173,8 @@ struct HelmholtzDerivatives
 class BaseHelmholtzTerm
 {
    public:
-    BaseHelmholtzTerm() {};
-    virtual ~BaseHelmholtzTerm() {};
+    BaseHelmholtzTerm() = default;
+    virtual ~BaseHelmholtzTerm() = default;
 
     /// Returns the base, non-dimensional, Helmholtz energy term (no derivatives) [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
@@ -316,27 +316,28 @@ struct ResidualHelmholtzGeneralizedExponentialElement
     /// If l is an integer, store a boolean flag so we can evaluate the correct pow() function
     bool l_is_int, m_is_int;
 
-    ResidualHelmholtzGeneralizedExponentialElement() {
-        n = 0;
-        d = 0;
-        t = 0;
-        c = 0;
-        l_double = 0;
-        omega = 0;
-        m_double = 0;
-        eta1 = 0;
-        epsilon1 = 0;
-        eta2 = 0;
-        epsilon2 = 0;
-        beta1 = 0;
-        gamma1 = 0;
-        beta2 = 0;
-        gamma2 = 0;
-        l_int = 0;
-        m_int = 0;
-        l_is_int = false;
-        m_is_int = true;
-    };
+    ResidualHelmholtzGeneralizedExponentialElement()
+      : n(0),
+        d(0),
+        t(0),
+        c(0),
+        l_double(0),
+        omega(0),
+        m_double(0),
+        eta1(0),
+        epsilon1(0),
+        eta2(0),
+        epsilon2(0),
+        beta1(0),
+        gamma1(0),
+        beta2(0),
+        gamma2(0),
+        l_int(0),
+        m_int(0),
+        l_is_int(false),
+        m_is_int(true) {
+
+        };
 };
 /** \brief A generalized residual helmholtz energy container that can deal with a wide range of terms which can be converted to this general form
  *
@@ -564,16 +565,18 @@ class ResidualHelmholtzNonAnalytic : public BaseHelmholtzTerm
     std::vector<CoolPropDbl> s;
     std::vector<ResidualHelmholtzNonAnalyticElement> elements;
     /// Default Constructor
-    ResidualHelmholtzNonAnalytic() {
-        N = 0;
-    };
+    ResidualHelmholtzNonAnalytic()
+      : N(0) {
+
+        };
     /// Destructor. No implementation
-    ~ResidualHelmholtzNonAnalytic() {};
+    ~ResidualHelmholtzNonAnalytic() = default;
     /// Constructor
     ResidualHelmholtzNonAnalytic(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& a, const std::vector<CoolPropDbl>& b,
                                  const std::vector<CoolPropDbl>& beta, const std::vector<CoolPropDbl>& A, const std::vector<CoolPropDbl>& B,
-                                 const std::vector<CoolPropDbl>& C, const std::vector<CoolPropDbl>& D) {
-        N = n.size();
+                                 const std::vector<CoolPropDbl>& C, const std::vector<CoolPropDbl>& D)
+      : N(n.size()) {
+
         s.resize(N);
         for (std::size_t i = 0; i < n.size(); ++i) {
             ResidualHelmholtzNonAnalyticElement el;
@@ -604,12 +607,13 @@ class ResidualHelmholtzGeneralizedCubic : public BaseHelmholtzTerm
     bool enabled;
 
     /// Default Constructor
-    ResidualHelmholtzGeneralizedCubic() {
-        enabled = false;
-    };
+    ResidualHelmholtzGeneralizedCubic()
+      : enabled(false) {
+
+        };
     /// Constructor given an abstract cubic instance
-    ResidualHelmholtzGeneralizedCubic(shared_ptr<AbstractCubic>& ac) : m_abstractcubic(ac) {
-        enabled = true;
+    ResidualHelmholtzGeneralizedCubic(shared_ptr<AbstractCubic>& ac) : m_abstractcubic(ac), enabled(true) {
+
         z = std::vector<double>(1, 1);  // Init the vector to [1.0]
     };
 
@@ -626,17 +630,18 @@ class ResidualHelmholtzGaoB : public BaseHelmholtzTerm
     bool enabled;
 
     /// Default Constructor
-    ResidualHelmholtzGaoB() {
-        enabled = false;
-    };
+    ResidualHelmholtzGaoB()
+      : enabled(false) {
+
+        };
 
     /// Constructor given coefficients
     ResidualHelmholtzGaoB(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& t, const std::vector<CoolPropDbl>& d,
                           const std::vector<CoolPropDbl>& eta, const std::vector<CoolPropDbl>& beta, const std::vector<CoolPropDbl>& gamma,
                           const std::vector<CoolPropDbl>& epsilon, const std::vector<CoolPropDbl>& b)
-      : n(n), t(t), d(d), eta(eta), beta(beta), gamma(gamma), epsilon(epsilon), b(b) {
-        enabled = true;
-    };
+      : n(n), t(t), d(d), eta(eta), beta(beta), gamma(gamma), epsilon(epsilon), b(b), enabled(true) {
+
+        };
 
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
@@ -655,9 +660,10 @@ class ResidualHelmholtzXiangDeiters : public BaseHelmholtzTerm
     ResidualHelmholtzGeneralizedExponential phi0, phi1, phi2;
     CoolPropDbl Tc, pc, rhomolarc, acentric, R, theta;
     /// Default Constructor
-    ResidualHelmholtzXiangDeiters() : Tc(_HUGE), pc(_HUGE), rhomolarc(_HUGE), acentric(_HUGE), R(_HUGE), theta(_HUGE) {
-        enabled = false;
-    };
+    ResidualHelmholtzXiangDeiters()
+      : enabled(false), Tc(_HUGE), pc(_HUGE), rhomolarc(_HUGE), acentric(_HUGE), R(_HUGE), theta(_HUGE) {
+
+        };
     /// Constructor
     ResidualHelmholtzXiangDeiters(const CoolPropDbl Tc, const CoolPropDbl pc, const CoolPropDbl rhomolarc, const CoolPropDbl acentric,
                                   const CoolPropDbl R);
@@ -706,20 +712,21 @@ class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm
 
    public:
     /// Default constructor
-    ResidualHelmholtzSAFTAssociating() : a(_HUGE), m(_HUGE), epsilonbar(_HUGE), vbarn(_HUGE), kappabar(_HUGE) {
-        disabled = true;
-    };
+    ResidualHelmholtzSAFTAssociating()
+      : a(_HUGE), m(_HUGE), epsilonbar(_HUGE), vbarn(_HUGE), kappabar(_HUGE), disabled(true) {
+
+        };
 
     // Constructor
     ResidualHelmholtzSAFTAssociating(double a, double m, double epsilonbar, double vbarn, double kappabar)
-      : a(a), m(m), epsilonbar(epsilonbar), vbarn(vbarn), kappabar(kappabar) {
-        disabled = false;
-    };
+      : a(a), m(m), epsilonbar(epsilonbar), vbarn(vbarn), kappabar(kappabar), disabled(false) {
+
+        };
 
     bool disabled;
 
     //Destructor. No Implementation
-    ~ResidualHelmholtzSAFTAssociating() {};
+    ~ResidualHelmholtzSAFTAssociating() = default;
 
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
 
@@ -1140,18 +1147,19 @@ class IdealHelmholtzCP0Constant : public BaseHelmholtzTerm
 
    public:
     /// Default constructor
-    IdealHelmholtzCP0Constant() : cp_over_R(_HUGE), Tc(_HUGE), T0(_HUGE), tau0(_HUGE) {
-        enabled = false;
-    };
+    IdealHelmholtzCP0Constant()
+      : cp_over_R(_HUGE), Tc(_HUGE), T0(_HUGE), tau0(_HUGE), enabled(false) {
+
+        };
 
     /// Constructor with just a single double value
-    IdealHelmholtzCP0Constant(CoolPropDbl cp_over_R, CoolPropDbl Tc, CoolPropDbl T0) : cp_over_R(cp_over_R), Tc(Tc), T0(T0) {
-        enabled = true;
-        tau0 = Tc / T0;
-    };
+    IdealHelmholtzCP0Constant(CoolPropDbl cp_over_R, CoolPropDbl Tc, CoolPropDbl T0)
+      : cp_over_R(cp_over_R), Tc(Tc), T0(T0), enabled(true), tau0(Tc / T0) {
+
+        };
 
     /// Destructor
-    ~IdealHelmholtzCP0Constant() {};
+    ~IdealHelmholtzCP0Constant() = default;
 
     bool is_enabled() const {
         return enabled;

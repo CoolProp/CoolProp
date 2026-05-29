@@ -1,4 +1,5 @@
 #include <cmath>
+#include <utility>
 #include <vector>
 #include <string>
 #include <Eigen/Dense>
@@ -53,14 +54,11 @@ revised,” Chem. Eng. Res. Des., vol. 92, no. 12, pp. 2884–2897, Dec. 2014.
 
 namespace CoolProp {
 
-PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV) {
-    N = component_names.size();
+PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV)
+  : N(component_names.size()), ion_term(false), polar_term(false), assoc_term(false), water_present(false), water_idx(0) {
+
     components.resize(N);
-    ion_term = false;
-    polar_term = false;
-    assoc_term = false;
-    water_present = false;
-    water_idx = 0;
+
     for (unsigned int i = 0; i < N; ++i) {
         components[i] = PCSAFTLibrary::get_library().get(component_names[i]);
         // Determining which PC-SAFT terms should be used
@@ -124,15 +122,11 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bo
     _phase = iphase_unknown;
 }
 
-PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid>& components_in, bool generate_SatL_and_SatV) {
-    components = components_in;
-    N = components.size();
+PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid>& components_in, bool generate_SatL_and_SatV)
+  : components(components_in), N(components.size()), ion_term(false), polar_term(false), assoc_term(false), water_present(false), water_idx(0) {
+
     // Determining which PC-SAFT terms should be used
-    ion_term = false;
-    polar_term = false;
-    assoc_term = false;
-    water_present = false;
-    water_idx = 0;
+
     for (unsigned int i = 0; i < N; ++i) {
         if (components[i].getZ() != 0) {
             ion_term = true;
@@ -218,15 +212,15 @@ void PCSAFTBackend::set_mass_fractions(const std::vector<CoolPropDbl>& mass_frac
         sum_moles += tmp;
     }
     std::vector<CoolPropDbl> mole_fractions;
-    for (std::vector<CoolPropDbl>::iterator it = moles.begin(); it != moles.end(); ++it) {
-        mole_fractions.push_back(*it / sum_moles);
+    for (const auto& mole : moles) {
+        mole_fractions.push_back(mole / sum_moles);
     }
     this->set_mole_fractions(mole_fractions);
 };
 
 PCSAFTBackend* PCSAFTBackend::get_copy(bool generate_SatL_and_SatV) {
     // Set up the class with these components
-    PCSAFTBackend* ptr = new PCSAFTBackend(components, generate_SatL_and_SatV);
+    auto* ptr = new PCSAFTBackend(components, generate_SatL_and_SatV);
     return ptr;
 };
 
@@ -431,7 +425,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar() {
     if (assoc_term) {
         int num_sites = 0;
         vector<int> iA;  //indices of associating compounds
-        for (std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
+        for (auto it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
                 iA.push_back(static_cast<int>(it - assoc_num.begin()));
@@ -748,7 +742,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt() {
     if (assoc_term) {
         int num_sites = 0;
         vector<int> iA;  //indices of associating compounds
-        for (std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
+        for (auto it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
                 iA.push_back(static_cast<int>(it - assoc_num.begin()));
@@ -1215,7 +1209,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients() {
     if (assoc_term) {
         int num_sites = 0;
         vector<int> iA;  //indices of associating compounds
-        for (std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
+        for (auto it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
                 iA.push_back(static_cast<int>(it - assoc_num.begin()));
@@ -1581,7 +1575,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor() {
     if (assoc_term) {
         int num_sites = 0;
         vector<int> iA;  //indices of associating compounds
-        for (std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
+        for (auto it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
                 iA.push_back(static_cast<int>(it - assoc_num.begin()));
@@ -2101,7 +2095,7 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend& PCSAFT) {
         CoolPropDbl kb0;
         vector<CoolPropDbl> u;
 
-        SolverInnerResid(PCSAFTBackend& PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u) : PCSAFT(PCSAFT), kb0(kb0), u(u) {}
+        SolverInnerResid(PCSAFTBackend& PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u) : PCSAFT(PCSAFT), kb0(kb0), u(std::move(u)) {}
         CoolPropDbl call(CoolPropDbl R) override {
             auto ncomp = PCSAFT.components.size();
             double error = 0;
@@ -2362,7 +2356,7 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend& PCSAFT) {
         CoolPropDbl kb0;
         vector<CoolPropDbl> u;
 
-        SolverInnerResid(PCSAFTBackend& PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u) : PCSAFT(PCSAFT), kb0(kb0), u(u) {}
+        SolverInnerResid(PCSAFTBackend& PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u) : PCSAFT(PCSAFT), kb0(kb0), u(std::move(u)) {}
         CoolPropDbl call(CoolPropDbl R) override {
             auto ncomp = PCSAFT.components.size();
             double error = 0;
@@ -3051,13 +3045,13 @@ void PCSAFTBackend::set_assoc_matrix() {
         assoc_num.push_back(num_sites);
     }
 
-    for (std::vector<int>::iterator i1 = charge.begin(); i1 != charge.end(); i1++) {
-        for (std::vector<int>::iterator i2 = charge.begin(); i2 != charge.end(); i2++) {
-            if (*i1 == 0 || *i2 == 0) {
+    for (auto i1 = charge.begin(); i1 != charge.end(); i1++) {
+        for (int& i2 : charge) {
+            if (*i1 == 0 || i2 == 0) {
                 assoc_matrix.push_back(1);
-            } else if (*i1 == 1 && *i2 == -1) {
+            } else if (*i1 == 1 && i2 == -1) {
                 assoc_matrix.push_back(1);
-            } else if (*i1 == -1 && *i2 == 1) {
+            } else if (*i1 == -1 && i2 == 1) {
                 assoc_matrix.push_back(1);
             } else {
                 assoc_matrix.push_back(0);

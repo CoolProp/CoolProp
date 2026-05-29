@@ -14,7 +14,7 @@ using std::shared_ptr;
 
 namespace CoolProp {
 
-typedef std::vector<std::vector<CoolPropDbl>> STLMatrix;
+using STLMatrix = std::vector<std::vector<CoolPropDbl>>;
 
 enum x_N_dependency_flag
 {
@@ -36,7 +36,7 @@ class ReducingFunction
 
    public:
     ReducingFunction() : N(0) {};
-    virtual ~ReducingFunction() {};
+    virtual ~ReducingFunction() = default;
 
     virtual ReducingFunction* copy() = 0;
 
@@ -158,12 +158,9 @@ class GERG2008ReducingFunction : public ReducingFunction
 
    public:
     GERG2008ReducingFunction(const std::vector<CoolPropFluid>& pFluids, const STLMatrix& beta_v, const STLMatrix& gamma_v, const STLMatrix& beta_T,
-                             const STLMatrix& gamma_T) {
-        this->pFluids = pFluids;
-        this->beta_v = beta_v;
-        this->gamma_v = gamma_v;
-        this->beta_T = beta_T;
-        this->gamma_T = gamma_T;
+                             const STLMatrix& gamma_T)
+      : pFluids(pFluids), beta_v(beta_v), gamma_v(gamma_v), beta_T(beta_T), gamma_T(gamma_T) {
+
         this->N = pFluids.size();
         T_c.resize(N, std::vector<CoolPropDbl>(N, 0));
         v_c.resize(N, std::vector<CoolPropDbl>(N, 0));
@@ -184,7 +181,7 @@ class GERG2008ReducingFunction : public ReducingFunction
     };
 
     /// Default destructor
-    ~GERG2008ReducingFunction() {};
+    ~GERG2008ReducingFunction() = default;
 
     /// Set all beta and gamma values in one shot
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, double betaT, double gammaT, double betaV, double gammaV) {

@@ -44,7 +44,7 @@
 
 #define COOLPROPDBL_MAPS_TO_DOUBLE
 #ifdef COOLPROPDBL_MAPS_TO_DOUBLE
-typedef double CoolPropDbl;
+using CoolPropDbl = double;
 #else
 typedef long double CoolPropDbl;
 #endif
@@ -54,17 +54,17 @@ typedef long double CoolPropDbl;
 class Dictionary
 {
    private:
-    typedef std::map<std::string, double> numbers_map;
+    using numbers_map = std::map<std::string, double>;
     numbers_map numbers;
-    typedef std::map<std::string, std::string> strings_map;
+    using strings_map = std::map<std::string, std::string>;
     strings_map strings;
-    typedef std::map<std::string, std::vector<double>> double_vectors_map;
+    using double_vectors_map = std::map<std::string, std::vector<double>>;
     double_vectors_map double_vectors;
-    typedef std::map<std::string, std::vector<std::string>> string_vectors_map;
+    using string_vectors_map = std::map<std::string, std::vector<std::string>>;
     string_vectors_map string_vectors;
 
    public:
-    Dictionary() {};
+    Dictionary() = default;
     bool is_empty() const {
         return numbers.empty() && strings.empty() && double_vectors.empty() && string_vectors.empty();
     }
@@ -85,7 +85,7 @@ class Dictionary
         string_vectors.insert(std::pair<std::string, std::vector<std::string>>(s1, d));
     }
     std::string get_string(const std::string& s) const {
-        strings_map::const_iterator i = strings.find(s);
+        auto i = strings.find(s);
         if (i != strings.end()) {
             return i->second;
         } else {
@@ -93,7 +93,7 @@ class Dictionary
         }
     };
     double get_double(const std::string& s) const {
-        numbers_map::const_iterator i = numbers.find(s);
+        auto i = numbers.find(s);
         if (i != numbers.end()) {
             return i->second;
         } else {
@@ -102,7 +102,7 @@ class Dictionary
     };
     /// Get a double, or return the default value if not found
     double get_double(const std::string& s, const double default_value) const {
-        numbers_map::const_iterator i = numbers.find(s);
+        auto i = numbers.find(s);
         if (i != numbers.end()) {
             return i->second;
         } else {
@@ -113,7 +113,7 @@ class Dictionary
         return get_double(s);
     };
     const std::vector<double>& get_double_vector(const std::string& s) const {
-        double_vectors_map::const_iterator i = double_vectors.find(s);
+        auto i = double_vectors.find(s);
         if (i != double_vectors.end()) {
             return i->second;
         } else {
@@ -121,7 +121,7 @@ class Dictionary
         }
     };
     const std::vector<std::string>& get_string_vector(const std::string& s) const {
-        string_vectors_map::const_iterator i = string_vectors.find(s);
+        auto i = string_vectors.find(s);
         if (i != string_vectors.end()) {
             return i->second;
         } else {

@@ -167,35 +167,30 @@ class ConfigurationItem
         return v_integer;
     };
     // Initializer for bool
-    ConfigurationItem(configuration_keys key, bool val) {
-        this->key = key;
-        type = CONFIGURATION_BOOL_TYPE;
+    ConfigurationItem(configuration_keys key, bool val) : key(key), type(CONFIGURATION_BOOL_TYPE) {
+
         v_bool = val;
     };
     // Initializer for integer
-    ConfigurationItem(configuration_keys key, int val) {
-        this->key = key;
-        type = CONFIGURATION_INTEGER_TYPE;
+    ConfigurationItem(configuration_keys key, int val) : key(key), type(CONFIGURATION_INTEGER_TYPE) {
+
         v_integer = val;
     };
     // Initializer for double
-    ConfigurationItem(configuration_keys key, double val) {
-        this->key = key;
-        type = CONFIGURATION_DOUBLE_TYPE;
+    ConfigurationItem(configuration_keys key, double val) : key(key), type(CONFIGURATION_DOUBLE_TYPE) {
+
         v_double = val;
     };
     // Initializer for const char *
-    ConfigurationItem(configuration_keys key, const char* val) {
-        this->key = key;
-        type = CONFIGURATION_STRING_TYPE;
-        v_string = val;
-    };
+    ConfigurationItem(configuration_keys key, const char* val)
+      : key(key), type(CONFIGURATION_STRING_TYPE), v_string(val) {
+
+        };
     // Initializer for string
-    ConfigurationItem(configuration_keys key, const std::string& val) {
-        this->key = key;
-        type = CONFIGURATION_STRING_TYPE;
-        v_string = val;
-    };
+    ConfigurationItem(configuration_keys key, const std::string& val)
+      : key(key), type(CONFIGURATION_STRING_TYPE), v_string(val) {
+
+        };
     void set_bool(bool val) {
         check_data_type(CONFIGURATION_BOOL_TYPE);
         v_bool = val;
@@ -311,12 +306,12 @@ class Configuration
     Configuration() {
         set_defaults();
     };
-    ~Configuration() {};
+    ~Configuration() = default;
 
     /// Get an item from the configuration
     ConfigurationItem& get_item(configuration_keys key) {
         // Try to find it
-        std::unordered_map<configuration_keys, ConfigurationItem>::iterator it = items.find(key);
+        auto it = items.find(key);
         // If equal to end, not found
         if (it != items.end()) {
             // Found, return it
@@ -326,7 +321,7 @@ class Configuration
         }
     }
     /// Add an item to the configuration
-    void add_item(ConfigurationItem item) {
+    void add_item(const ConfigurationItem& item) {
         std::pair<configuration_keys, ConfigurationItem> pair(item.get_key(), item);
         items.insert(pair);
     };
@@ -341,7 +336,7 @@ class Configuration
         std::string envkey = "COOLPROP_" + config_key_to_string(key);
         const char* envval = std::getenv(envkey.c_str());
         if (envval) {
-            auto tobool = [](const std::string x) {
+            auto tobool = [](const std::string& x) {
                 if (x == "True" || x == "true") {
                     return true;
                 }

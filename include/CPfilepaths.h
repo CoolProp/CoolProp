@@ -19,7 +19,7 @@ bool path_exists(const std::string& path);
 std::string join_path(const std::string& one, const std::string& two);
 
 /// Make directory and all required intermediate directories
-void make_dirs(std::string file_path);
+void make_dirs(const std::string& file_path);
 
 /// Get the size of a directory in bytes.
 /// Uses std::filesystem on modern platforms (Windows, Linux, macOS).

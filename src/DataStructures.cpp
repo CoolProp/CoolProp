@@ -213,7 +213,7 @@ std::string get_csv_parameter_list() {
 bool is_valid_parameter(const std::string& param_name, parameters& iOutput) {
     auto& parameter_information = get_parameter_information();
     // Try to find it
-    std::map<std::string, int>::const_iterator it = parameter_information.index_map.find(param_name);
+    auto it = parameter_information.index_map.find(param_name);
     // If equal to end, not found
     if (it != parameter_information.index_map.end()) {
         // Found, return it
@@ -409,7 +409,7 @@ const std::string& get_phase_short_desc(phases phase) {
 bool is_valid_phase(const std::string& phase_name, phases& iOutput) {
     auto& phase_information = get_phase_information();
     // Try to find it
-    std::map<std::string, phases>::const_iterator it = phase_information.index_map.find(phase_name);
+    auto it = phase_information.index_map.find(phase_name);
     // If equal to end, not found
     if (it != phase_information.index_map.end()) {
         // Found, return it
@@ -852,7 +852,7 @@ const BackendInformation& get_backend_information() {
 }
 
 /// Convert a string into the enum values
-void extract_backend_families(std::string backend_string, backend_families& f1, backend_families& f2) {
+void extract_backend_families(const std::string& backend_string, backend_families& f1, backend_families& f2) {
     auto& backend_information = get_backend_information();
     f1 = INVALID_BACKEND_FAMILY;
     f2 = INVALID_BACKEND_FAMILY;
@@ -872,7 +872,7 @@ void extract_backend_families(std::string backend_string, backend_families& f1, 
 void extract_backend_families_string(std::string backend_string, backend_families& f1, std::string& f2) {
     auto& backend_information = get_backend_information();
     backend_families f2_enum;
-    extract_backend_families(backend_string, f1, f2_enum);
+    extract_backend_families(std::move(backend_string), f1, f2_enum);
     std::map<backend_families, std::string>::const_iterator it;
     it = backend_information.family_name_map.find(f2_enum);
     if (it != backend_information.family_name_map.end())
@@ -888,7 +888,7 @@ std::string get_backend_string(backends backend) {
     if (it != backend_information.backend_name_map.end())
         return it->second;
     else
-        return std::string("");
+        return {""};
 }
 
 } /* namespace CoolProp */
@@ -896,6 +896,7 @@ std::string get_backend_string(backends backend) {
 #ifdef ENABLE_CATCH
 #    include <catch2/catch_all.hpp>
 #    include <sstream>
+#    include <utility>
 
 TEST_CASE("Check that csv list of parameters is possible", "[parameter_list]") {
     CHECK_NOTHROW(CoolProp::get_csv_parameter_list());

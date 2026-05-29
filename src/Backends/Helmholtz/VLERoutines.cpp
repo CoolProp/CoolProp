@@ -208,10 +208,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
                public:
                 CoolPropFluid* component;
                 double h;
-                Residual(CoolPropFluid& component, double h) {
-                    this->component = &component;
-                    this->h = h;
-                }
+                Residual(CoolPropFluid& component, double h) : component(&component), h(h) {}
                 double call(double T) override {
                     CoolPropDbl h_liq = component->ancillaries.hL.evaluate(T) + component->EOS().hs_anchor.hmolar;
                     return h_liq + component->ancillaries.hLV.evaluate(T) - h;
@@ -272,10 +269,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
                public:
                 CoolPropFluid* component;
                 double s;
-                Residual(CoolPropFluid& component, double s) {
-                    this->component = &component;
-                    this->s = s;
-                }
+                Residual(CoolPropFluid& component, double s) : component(&component), s(s) {}
                 double call(double T) override {
                     CoolPropDbl s_liq = component->ancillaries.sL.evaluate(T) + component->EOS().hs_anchor.smolar;
                     CoolPropDbl resid = s_liq + component->ancillaries.sLV.evaluate(T) - s;

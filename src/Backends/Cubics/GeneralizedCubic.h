@@ -11,6 +11,7 @@
 #ifndef CUBIC_H
 #define CUBIC_H
 
+#include <utility>
 #include <vector>
 #include <cmath>
 #include <memory>
@@ -26,7 +27,7 @@ class AbstractCubicAlphaFunction
       sqrt_Tr_Tci;          ///< The sqrt of the (constant) reducing temperature divided by the critical temperature of the pure component
     std::vector<double> c;  ///< The vector of constants
    public:
-    virtual ~AbstractCubicAlphaFunction() {};
+    virtual ~AbstractCubicAlphaFunction() = default;
     virtual double term(double tau, std::size_t itau) = 0;
     void set_Tr_over_Tci(double Tr_over_Tci) {
         this->Tr_over_Tci = Tr_over_Tci;
@@ -40,9 +41,10 @@ class BasicMathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction
 {
     double m;  ///< The term coming from the function of omega
    public:
-    BasicMathiasCopemanAlphaFunction(double a0, double m_ii, double Tr_over_Tci) : AbstractCubicAlphaFunction(a0, Tr_over_Tci) {
-        this->m = m_ii;
-    };
+    BasicMathiasCopemanAlphaFunction(double a0, double m_ii, double Tr_over_Tci)
+      : AbstractCubicAlphaFunction(a0, Tr_over_Tci), m(m_ii) {
+
+        };
     double term(double tau, std::size_t itau) override;
 };
 
@@ -98,10 +100,10 @@ class AbstractCubic
      so long as it has the formulation given in this work.
 
      */
-    AbstractCubic(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1, double Delta_2,
-                  std::vector<double> C1 = std::vector<double>(), std::vector<double> C2 = std::vector<double>(),
-                  std::vector<double> C3 = std::vector<double>());
-    virtual ~AbstractCubic() {};
+    AbstractCubic(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1, double Delta_2,
+                  const std::vector<double>& C1 = std::vector<double>(), const std::vector<double>& C2 = std::vector<double>(),
+                  const std::vector<double>& C3 = std::vector<double>());
+    virtual ~AbstractCubic() = default;
     /// Set the constants for the Mathias-Copeman alpha function, or if C1,C2,C3 are all empty, set the default alpha model
     void set_alpha(const std::vector<double>& C1, const std::vector<double>& C2, const std::vector<double>& C3);
     /// Set the alpha function for the i-th component
@@ -613,10 +615,10 @@ class AbstractCubic
 class PengRobinson : public AbstractCubic
 {
    public:
-    PengRobinson(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
-                 std::vector<double> C1 = std::vector<double>(), std::vector<double> C2 = std::vector<double>(),
-                 std::vector<double> C3 = std::vector<double>())
-      : AbstractCubic(Tc, pc, acentric, R_u, 1 + sqrt(2.0), 1 - sqrt(2.0), C1, C2, C3) {
+    PengRobinson(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
+                 const std::vector<double>& C1 = std::vector<double>(), const std::vector<double>& C2 = std::vector<double>(),
+                 const std::vector<double>& C3 = std::vector<double>())
+      : AbstractCubic(Tc, std::move(pc), std::move(acentric), R_u, 1 + sqrt(2.0), 1 - sqrt(2.0), C1, C2, C3) {
         set_alpha(C1, C2, C3);
     };
 
@@ -633,9 +635,10 @@ class PengRobinson : public AbstractCubic
 class SRK : public AbstractCubic
 {
    public:
-    SRK(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, std::vector<double> C1 = std::vector<double>(),
-        std::vector<double> C2 = std::vector<double>(), std::vector<double> C3 = std::vector<double>())
-      : AbstractCubic(Tc, pc, acentric, R_u, 1, 0, C1, C2, C3) {
+    SRK(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
+        const std::vector<double>& C1 = std::vector<double>(), const std::vector<double>& C2 = std::vector<double>(),
+        const std::vector<double>& C3 = std::vector<double>())
+      : AbstractCubic(Tc, std::move(pc), std::move(acentric), R_u, 1, 0, C1, C2, C3) {
         set_alpha(C1, C2, C3);
     };
     SRK(double Tc, double pc, double acentric, double R_u)

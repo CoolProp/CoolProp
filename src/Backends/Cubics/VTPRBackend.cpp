@@ -26,7 +26,7 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string>& names, bool ge
     // Now set the reducing function for the mixture
     Reducing = std::make_shared<ConstantReducingFunction>(cubic->get_Tr(), cubic->get_rhor());
 
-    VTPRCubic* _cubic = static_cast<VTPRCubic*>(cubic.get());
+    auto* _cubic = static_cast<VTPRCubic*>(cubic.get());
     _cubic->get_unifaq().set_components("name", names);
     _cubic->get_unifaq().set_interaction_parameters();
 
@@ -64,7 +64,7 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string>& names, bool ge
 
 void CoolProp::VTPRBackend::set_alpha_from_components() {
 
-    VTPRCubic* _cubic = static_cast<VTPRCubic*>(cubic.get());
+    auto* _cubic = static_cast<VTPRCubic*>(cubic.get());
     const std::vector<UNIFACLibrary::Component>& components = _cubic->get_unifaq().get_components();
 
     /// If components is not present, you are using a vanilla cubic, so don't do anything
@@ -111,8 +111,8 @@ void CoolProp::VTPRBackend::set_binary_interaction_double(const std::size_t i, c
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
     }
     cubic->set_interaction_parameter(i, j, parameter, value);
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        (*it)->set_binary_interaction_double(i, j, parameter, value);
+    for (auto& linked_state : linked_states) {
+        linked_state->set_binary_interaction_double(i, j, parameter, value);
     }
 };
 
@@ -156,7 +156,7 @@ const UNIFACLibrary::UNIFACParameterLibrary& CoolProp::VTPRBackend::LoadLibrary(
 
 CoolPropDbl CoolProp::VTPRBackend::calc_fugacity_coefficient(std::size_t i) {
     //double slower = log(HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(i));
-    VTPRCubic* _cubic = static_cast<VTPRCubic*>(cubic.get());
+    auto* _cubic = static_cast<VTPRCubic*>(cubic.get());
     std::vector<double> here = _cubic->ln_fugacity_coefficient(mole_fractions, rhomolar(), p(), T());
     return exp(here[i]);
 }

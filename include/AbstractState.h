@@ -728,7 +728,7 @@ class AbstractState
         // and silence clang-analyzer-optin.cplusplus.VirtualCall.
         AbstractState::clear();
     }
-    virtual ~AbstractState() {};
+    virtual ~AbstractState() = default;
 
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
     /**
@@ -852,7 +852,7 @@ class AbstractState
     /// Get the mole fractions of the equilibrium liquid phase (but as a double for use in SWIG wrapper)
     std::vector<double> mole_fractions_liquid_double() {
         std::vector<CoolPropDbl> x = calc_mole_fractions_liquid();
-        return std::vector<double>(x.begin(), x.end());
+        return {x.begin(), x.end()};
     };
 
     /// Get the mole fractions of the equilibrium vapor phase
@@ -862,7 +862,7 @@ class AbstractState
     /// Get the mole fractions of the equilibrium vapor phase (but as a double for use in SWIG wrapper)
     std::vector<double> mole_fractions_vapor_double() {
         std::vector<CoolPropDbl> y = calc_mole_fractions_vapor();
-        return std::vector<double>(y.begin(), y.end());
+        return {y.begin(), y.end()};
     };
 
     /// Get the mole fractions of the fluid
@@ -1701,13 +1701,13 @@ class AbstractStateGenerator
     /// own JSON parse and schema validation.
     virtual AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names, const std::string& options_json);
 
-    virtual ~AbstractStateGenerator() {};
+    virtual ~AbstractStateGenerator() = default;
 };
 
 /** Register a backend in the backend library (statically defined in AbstractState.cpp and not
  *  publicly accessible)
  */
-void register_backend(const backend_families& bf, shared_ptr<AbstractStateGenerator> gen);
+void register_backend(const backend_families& bf, const shared_ptr<AbstractStateGenerator>& gen);
 
 template <class T>
 class GeneratorInitializer

@@ -129,8 +129,8 @@ std::string CoolProp::AbstractCubicBackend::fluid_param_string(const std::string
 std::vector<std::string> CoolProp::AbstractCubicBackend::calc_fluid_names() {
     std::vector<std::string> out;
     out.reserve(components.size());
-    for (std::size_t i = 0; i < components.size(); ++i) {
-        out.push_back(components[i].name);
+    for (auto& component : components) {
+        out.push_back(component.name);
     }
     return out;
 }
@@ -411,7 +411,7 @@ class SaturationResidual : public CoolProp::FuncWrapper1D
     double imposed_variable;
     double deltaL, deltaV;
 
-    SaturationResidual() {};
+    SaturationResidual() = default;
     SaturationResidual(CoolProp::AbstractCubicBackend* ACB, CoolProp::input_pairs inputs, double imposed_variable)
       : ACB(ACB), inputs(inputs), imposed_variable(imposed_variable) {};
 
@@ -671,7 +671,7 @@ double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::
 void CoolProp::AbstractCubicBackend::copy_all_alpha_functions(AbstractCubicBackend* donor) {
     get_cubic()->set_all_alpha_functions(donor->get_cubic()->get_all_alpha_functions());
     for (auto& state : linked_states) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
+        auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->copy_all_alpha_functions(this);
     }
 }
@@ -679,7 +679,7 @@ void CoolProp::AbstractCubicBackend::copy_all_alpha_functions(AbstractCubicBacke
 void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend* donor) {
     get_cubic()->set_kmat(donor->get_cubic()->get_kmat());
     for (auto& state : linked_states) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
+        auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->copy_k(this);
     }
 }
@@ -691,7 +691,7 @@ void CoolProp::AbstractCubicBackend::copy_internals(AbstractCubicBackend& donor)
     this->set_alpha_from_components();
     this->set_alpha0_from_components();
     for (auto& state : linked_states) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
+        auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->components = donor.components;
         ACB->set_alpha_from_components();
         ACB->set_alpha0_from_components();
@@ -712,7 +712,7 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
     for (auto& state : linked_states) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
+        auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->set_cubic_alpha_C(i, parameter, c1, c2, c3);
     }
 }
@@ -726,13 +726,13 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
     if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
         get_cubic()->set_cm(value);
         for (auto& state : linked_states) {
-            AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
+            auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
             ACB->set_fluid_parameter_double(i, parameter, value);
         }
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
         get_cubic()->set_Q_k(i, value);
         for (auto& state : linked_states) {
-            AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
+            auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
             ACB->set_fluid_parameter_double(i, parameter, value);
         }
     } else {

@@ -1035,13 +1035,13 @@ CoolPropDbl MixtureDerivatives::dpsir_dxi(HelmholtzEOSMixtureBackend& HEOS, std:
 }
 
 CoolPropDbl MixtureDerivatives::d_rhorTr_dxi(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
-    GERG2008ReducingFunction* GERG = static_cast<GERG2008ReducingFunction*>(HEOS.Reducing.get());
+    auto* GERG = static_cast<GERG2008ReducingFunction*>(HEOS.Reducing.get());
     return HEOS.rhomolar_reducing() * GERG->dTrdxi__constxj(HEOS.mole_fractions, i, xN_flag)
            + HEOS.T_reducing() * GERG->drhormolardxi__constxj(HEOS.mole_fractions, i, xN_flag);
 }
 
 CoolPropDbl MixtureDerivatives::d2_rhorTr_dxidxj(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) {
-    GERG2008ReducingFunction* GERG = static_cast<GERG2008ReducingFunction*>(HEOS.Reducing.get());
+    auto* GERG = static_cast<GERG2008ReducingFunction*>(HEOS.Reducing.get());
     return (HEOS.rhomolar_reducing() * GERG->d2Trdxidxj(HEOS.mole_fractions, i, j, xN_flag)
             + GERG->drhormolardxi__constxj(HEOS.mole_fractions, j, xN_flag) * GERG->dTrdxi__constxj(HEOS.mole_fractions, i, xN_flag)
             + HEOS.T_reducing() * GERG->d2rhormolardxidxj(HEOS.mole_fractions, i, j, xN_flag)
@@ -1118,7 +1118,7 @@ double mix_deriv_err_func(double numeric, double analytic) {
     }
 }
 
-typedef CoolProp::MixtureDerivatives MD;
+using MD = CoolProp::MixtureDerivatives;
 
 enum derivative
 {
@@ -1136,12 +1136,12 @@ enum derivative
     CONST_TRHO
 };
 
-typedef double (*zero_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, CoolProp::x_N_dependency_flag xN_flag);
-typedef double (*one_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag);
-typedef double (*two_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
-                                            CoolProp::x_N_dependency_flag xN_flag);
-typedef double (*three_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
-                                              CoolProp::x_N_dependency_flag xN_flag);
+using zero_mole_fraction_pointer = double (*)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, CoolProp::x_N_dependency_flag xN_flag);
+using one_mole_fraction_pointer = double (*)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag);
+using two_mole_fraction_pointer = double (*)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
+                                             CoolProp::x_N_dependency_flag xN_flag);
+using three_mole_fraction_pointer = double (*)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
+                                               CoolProp::x_N_dependency_flag xN_flag);
 
 template <class backend>
 class DerivativeFixture
@@ -1154,20 +1154,13 @@ class DerivativeFixture
       HEOS_plus_n, HEOS_minus_n, HEOS_plus_2z, HEOS_minus_2z, HEOS_plus_2z__constTrho, HEOS_minus_2z__constTrho;
     CoolProp::x_N_dependency_flag xN;
     double dtau, ddelta, dz, dn, tol, dT, drho, dp;
-    DerivativeFixture() : xN(XN_INDEPENDENT) {
-        dtau = 1e-6;
-        ddelta = 1e-6;
-        dz = 1e-6;
-        dn = 1e-6;
-        dT = 1e-3;
-        drho = 1e-3;
-        dp = 1;
-        tol = 5e-6;
+    DerivativeFixture() : xN(XN_INDEPENDENT), dtau(1e-6), ddelta(1e-6), dz(1e-6), dn(1e-6), dT(1e-3), drho(1e-3), dp(1), tol(5e-6) {
+
         std::vector<std::string> names;
-        names.push_back("n-Pentane");
-        names.push_back("Ethane");
-        names.push_back("n-Propane");
-        names.push_back("n-Butane");
+        names.emplace_back("n-Pentane");
+        names.emplace_back("Ethane");
+        names.emplace_back("n-Propane");
+        names.emplace_back("n-Butane");
         std::vector<CoolPropDbl> mole_fractions;
         mole_fractions.push_back(0.1);
         mole_fractions.push_back(0.12);
@@ -1467,7 +1460,7 @@ class DerivativeFixture
             }
         }
     }
-    Eigen::MatrixXd get_matrix(CoolProp::HelmholtzEOSMixtureBackend& HEOS, const std::string name) {
+    Eigen::MatrixXd get_matrix(CoolProp::HelmholtzEOSMixtureBackend& HEOS, const std::string& name) {
         Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(HEOS, xN);
         if (name == "Lstar") {
             return Lstar;
@@ -1477,7 +1470,7 @@ class DerivativeFixture
             throw ValueError("Must be one of Lstar or Mstar");
         }
     }
-    void matrix_derivative(const std::string name, const std::string& wrt) {
+    void matrix_derivative(const std::string& name, const std::string& wrt) {
         CAPTURE(name);
         CAPTURE(wrt);
         double err = 10000;

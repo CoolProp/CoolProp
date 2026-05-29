@@ -50,8 +50,8 @@ void load_table(T& table, const std::string& path_to_tables, const std::string& 
         throw UnableToLoadError(err);
     }
     std::vector<unsigned char> newBuffer(raw.size() * 5);
-    uLong newBufferSize = static_cast<uLong>(newBuffer.size());
-    mz_ulong rawBufferSize = static_cast<mz_ulong>(raw.size());
+    auto newBufferSize = static_cast<uLong>(newBuffer.size());
+    auto rawBufferSize = static_cast<mz_ulong>(raw.size());
     int code = 0;
     do {
         code = uncompress((unsigned char*)(&(newBuffer[0])), &newBufferSize, (unsigned char*)(&(raw[0])), rawBufferSize);
@@ -95,7 +95,7 @@ void write_table(const T& table, const std::string& path_to_tables, const std::s
     std::string tabPath = std::string(path_to_tables + "/" + name + ".bin");
     std::string zPath = tabPath + ".z";
     std::vector<char> buffer(sbuf.size());
-    uLong outSize = static_cast<uLong>(buffer.size());
+    auto outSize = static_cast<uLong>(buffer.size());
     compress((unsigned char*)(&(buffer[0])), &outSize, (unsigned char*)(sbuf.data()), static_cast<mz_ulong>(sbuf.size()));
     std::ofstream ofs2(zPath.c_str(), std::ofstream::binary);
     ofs2.write(&buffer[0], outSize);
@@ -1532,7 +1532,7 @@ std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set
     const int cfg_Nx = get_config_int(TABULAR_NX);
     const int cfg_Ny = get_config_int(TABULAR_NY);
     // Try to find tabular set if it is already loaded
-    std::map<std::string, TabularDataSet>::iterator it = data.find(path);
+    auto it = data.find(path);
     if (it != data.end()) {
         // Verify the cached dataset's grid matches the current TABULAR_NX/TABULAR_NY
         // config; if not, evict so we rebuild at the requested resolution rather than
@@ -1582,8 +1582,7 @@ void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, 
     coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
 
     int valid_cell_count = 0;
-    for (std::size_t k = 0; k < param_count; ++k) {
-        parameters param = param_list[k];
+    for (auto param : param_list) {
         if (param == table.xkey || param == table.ykey) {
             continue;
         }  // Skip tables that match either of the input variables
@@ -1721,7 +1720,7 @@ static shared_ptr<CoolProp::AbstractState> ASHEOS, ASTTSE, ASBICUBIC;
 class TabularFixture
 {
    public:
-    TabularFixture() {}
+    TabularFixture() = default;
     void setup() {
         if (ASHEOS.get() == nullptr) {
             ASHEOS.reset(CoolProp::AbstractState::factory("HEOS", "Water"));
