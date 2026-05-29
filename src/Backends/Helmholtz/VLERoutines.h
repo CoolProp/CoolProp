@@ -546,8 +546,8 @@ class newton_raphson_saturation
  */
 struct PTflash_twophase_options
 {
-    int Nstep_max; ///< Maximum number of iterations for the solver
-    std::size_t Nsteps; ///< Number of steps actually taken
+    int Nstep_max;       ///< Maximum number of iterations for the solver
+    std::size_t Nsteps;  ///< Number of steps actually taken
     /** Intermediate and result variables */
     CoolPropDbl omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, beta;
     std::vector<CoolPropDbl> x,  ///< Liquid mole fractions

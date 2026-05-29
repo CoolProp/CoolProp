@@ -872,7 +872,8 @@ void CoolProp::AbstractCubicBackend::cubic_PT_flash_mixture() {
     const std::size_t N = mole_fractions.size();
     std::vector<CoolPropDbl> z = get_mole_fractions();
     std::vector<CoolPropDbl> K(N);
-    CoolPropDbl the_T = _T; CoolPropDbl the_p = _p;
+    CoolPropDbl the_T = _T;
+    CoolPropDbl the_p = _p;
     for (std::size_t i = 0; i < N; ++i) {
         CoolPropDbl Tc_i = get_fluid_constant(i, CoolProp::iT_critical);
         CoolPropDbl pc_i = get_fluid_constant(i, CoolProp::iP_critical);
@@ -882,33 +883,47 @@ void CoolProp::AbstractCubicBackend::cubic_PT_flash_mixture() {
     std::vector<CoolPropDbl> yV(N), xL(N);
     CoolPropDbl sum_yV = 0, sum_xL = 0;
     for (std::size_t i = 0; i < N; ++i) {
-        yV[i] = z[i] * K[i]; sum_yV += yV[i];
-        xL[i] = z[i] / K[i]; sum_xL += xL[i];
+        yV[i] = z[i] * K[i];
+        sum_yV += yV[i];
+        xL[i] = z[i] / K[i];
+        sum_xL += xL[i];
     }
-    for (std::size_t i = 0; i < N; ++i) { yV[i] /= sum_yV; xL[i] /= sum_xL; }
+    for (std::size_t i = 0; i < N; ++i) {
+        yV[i] /= sum_yV;
+        xL[i] /= sum_xL;
+    }
     SatL->set_mole_fractions(z);
     try {
         CoolPropDbl rho_b = SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / SatL->SRK_covolume());
         SatL->update_DmolarT_direct(rho_b, the_T);
-    } catch (...) { throw CoolProp::ValueError("Failed to solve for bulk density"); }
+    } catch (...) {
+        throw CoolProp::ValueError("Failed to solve for bulk density");
+    }
     std::vector<CoolPropDbl> d(N);
-    for (std::size_t i = 0; i < N; ++i) { d[i] = std::log(z[i]) + std::log(SatL->fugacity_coefficient(i)); }
+    for (std::size_t i = 0; i < N; ++i) {
+        d[i] = std::log(z[i]) + std::log(SatL->fugacity_coefficient(i));
+    }
     bool is_stable = true;
     std::vector<std::vector<CoolPropDbl>> trials = {yV, xL};
     std::vector<CoolPropDbl> best_x = z, best_y = z;
     for (auto& y_trial : trials) {
         for (int iter = 0; iter < 150; ++iter) {
             CoolPropDbl sumY = 0;
-            for (double val : y_trial) sumY += val;
+            for (double val : y_trial)
+                sumY += val;
             std::vector<CoolPropDbl> y_norm(N);
-            for (std::size_t i = 0; i < N; ++i) y_norm[i] = y_trial[i] / sumY;
+            for (std::size_t i = 0; i < N; ++i)
+                y_norm[i] = y_trial[i] / sumY;
 
             SatV->set_mole_fractions(y_norm);
             try {
                 CoolPropDbl rho_t = SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / SatV->SRK_covolume());
                 SatV->update_DmolarT_direct(rho_t, the_T);
-            } catch (...) { break; }
-            CoolPropDbl sumY_new = 0; CoolPropDbl max_err = 0;
+            } catch (...) {
+                break;
+            }
+            CoolPropDbl sumY_new = 0;
+            CoolPropDbl max_err = 0;
             for (std::size_t i = 0; i < N; ++i) {
                 double ln_phi_y = std::log(SatV->fugacity_coefficient(i));
                 double Y_next = std::exp(d[i] - ln_phi_y);
@@ -918,7 +933,13 @@ void CoolProp::AbstractCubicBackend::cubic_PT_flash_mixture() {
             }
             if (sumY_new > 1.0 + 1e-10) {
                 is_stable = false;
-                if (&y_trial == &trials[0]) { best_y = y_norm; best_x = z; } else { best_x = y_norm; best_y = z; }
+                if (&y_trial == &trials[0]) {
+                    best_y = y_norm;
+                    best_x = z;
+                } else {
+                    best_x = y_norm;
+                    best_y = z;
+                }
                 break;
             }
             if (max_err < 1e-8) break;
@@ -928,50 +949,84 @@ void CoolProp::AbstractCubicBackend::cubic_PT_flash_mixture() {
     if (is_stable) {
         _rhomolar = solver_rho_Tp_global(_T, _p, 0.9 / SRK_covolume());
         update_DmolarT_direct(_rhomolar, _T);
-        if (_rhomolar < rhomolar_reducing()) { _phase = iphase_gas; } else { _phase = iphase_liquid; }
-        _Q = -1; return;
+        if (_rhomolar < rhomolar_reducing()) {
+            _phase = iphase_gas;
+        } else {
+            _phase = iphase_liquid;
+        }
+        _Q = -1;
+        return;
     }
-    double beta = 0.5; std::vector<CoolPropDbl> x = best_x, y = best_y;
-    for (std::size_t i = 0; i < N; ++i) { if (x[i] > 1e-12) K[i] = y[i] / x[i]; }
+    double beta = 0.5;
+    std::vector<CoolPropDbl> x = best_x, y = best_y;
+    for (std::size_t i = 0; i < N; ++i) {
+        if (x[i] > 1e-12) K[i] = y[i] / x[i];
+    }
     for (int iter = 0; iter < 15; ++iter) {
         double beta_min = 0, beta_max = 1.0;
         for (int rr_iter = 0; rr_iter < 100; ++rr_iter) {
             CoolPropDbl r = 0, dr = 0;
             for (std::size_t i = 0; i < N; ++i) {
-                double term = K[i] - 1.0; double denom = 1.0 + beta * term;
-                r += z[i] * term / denom; dr -= z[i] * term * term / (denom * denom);
+                double term = K[i] - 1.0;
+                double denom = 1.0 + beta * term;
+                r += z[i] * term / denom;
+                dr -= z[i] * term * term / (denom * denom);
             }
-            if (r > 0) beta_min = beta; else beta_max = beta;
+            if (r > 0)
+                beta_min = beta;
+            else
+                beta_max = beta;
             if (std::abs(r) < 1e-11) break;
-            CoolPropDbl step = r / dr; CoolPropDbl beta_new = beta - step;
-            if (beta_new <= beta_min || beta_new >= beta_max) { beta_new = 0.5 * (beta_min + beta_max); }
+            CoolPropDbl step = r / dr;
+            CoolPropDbl beta_new = beta - step;
+            if (beta_new <= beta_min || beta_new >= beta_max) {
+                beta_new = 0.5 * (beta_min + beta_max);
+            }
             if (std::abs(beta_new - beta) < 1e-11) break;
             beta = beta_new;
         }
-        for (std::size_t i = 0; i < N; ++i) { x[i] = z[i] / (1.0 + beta * (K[i] - 1.0)); y[i] = K[i] * x[i]; }
-        CoolPropDbl sx = 0, sy = 0; for(double v : x) sx += v; for(double v : y) sy += v;
-        for(std::size_t i = 0; i < N; ++i) { x[i] /= sx; y[i] /= sy; }
+        for (std::size_t i = 0; i < N; ++i) {
+            x[i] = z[i] / (1.0 + beta * (K[i] - 1.0));
+            y[i] = K[i] * x[i];
+        }
+        CoolPropDbl sx = 0, sy = 0;
+        for (double v : x)
+            sx += v;
+        for (double v : y)
+            sy += v;
+        for (std::size_t i = 0; i < N; ++i) {
+            x[i] /= sx;
+            y[i] /= sy;
+        }
         SatL->set_mole_fractions(x);
         try {
             CoolPropDbl rhol = SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / SatL->SRK_covolume());
             SatL->update_DmolarT_direct(rhol, the_T);
-        } catch (...) { throw CoolProp::ValueError("Density solver failed for liquid phase"); }
+        } catch (...) {
+            throw CoolProp::ValueError("Density solver failed for liquid phase");
+        }
         SatV->set_mole_fractions(y);
         try {
             CoolPropDbl rhov = SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / SatV->SRK_covolume());
             SatV->update_DmolarT_direct(rhov, the_T);
-        } catch (...) { throw CoolProp::ValueError("Density solver failed for vapor phase"); }
+        } catch (...) {
+            throw CoolProp::ValueError("Density solver failed for vapor phase");
+        }
         CoolPropDbl max_err = 0;
         for (std::size_t i = 0; i < N; ++i) {
             double K_new = SatL->fugacity_coefficient(i) / SatV->fugacity_coefficient(i);
-            max_err = std::max(max_err, std::abs(std::log(K_new) - std::log(K[i]))); K[i] = K_new;
+            max_err = std::max(max_err, std::abs(std::log(K_new) - std::log(K[i])));
+            K[i] = K_new;
         }
         if (max_err < 1e-3) break;
     }
     for (int gibbs_iter = 0; gibbs_iter < 30; ++gibbs_iter) {
-        Eigen::VectorXd g(N); Eigen::MatrixXd H(N, N);
-        CoolPropDbl L_frac = 1.0 - beta; CoolPropDbl V_frac = beta;
-        CoolPropDbl max_g = 0; Eigen::MatrixXd DL(N, N), DV(N, N);
+        Eigen::VectorXd g(N);
+        Eigen::MatrixXd H(N, N);
+        CoolPropDbl L_frac = 1.0 - beta;
+        CoolPropDbl V_frac = beta;
+        CoolPropDbl max_g = 0;
+        Eigen::MatrixXd DL(N, N), DV(N, N);
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = 0; j < N; ++j) {
                 DL(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(SatL.get()), i, j, CoolProp::XN_INDEPENDENT);
@@ -980,7 +1035,10 @@ void CoolProp::AbstractCubicBackend::cubic_PT_flash_mixture() {
         }
         for (std::size_t i = 0; i < N; ++i) {
             CoolPropDbl sum_x_DL = 0, sum_y_DV = 0;
-            for (std::size_t k = 0; k < N; ++k) { sum_x_DL += x[k] * DL(i, k); sum_y_DV += y[k] * DV(i, k); }
+            for (std::size_t k = 0; k < N; ++k) {
+                sum_x_DL += x[k] * DL(i, k);
+                sum_y_DV += y[k] * DV(i, k);
+            }
             for (std::size_t j = 0; j < N; ++j) {
                 CoolPropDbl dln_phi_L_dnj = DL(i, j) - sum_x_DL;
                 CoolPropDbl dln_phi_V_dnj = DV(i, j) - sum_y_DV;
@@ -989,7 +1047,8 @@ void CoolProp::AbstractCubicBackend::cubic_PT_flash_mixture() {
             H(i, i) += (V_frac / x[i]) + (L_frac / y[i]);
             CoolPropDbl l_act = std::log(x[i]) + std::log(SatL->fugacity_coefficient(i));
             CoolPropDbl v_act = std::log(y[i]) + std::log(SatV->fugacity_coefficient(i));
-            g(i) = V_frac * L_frac * (v_act - l_act); max_g = std::max(max_g, std::abs(v_act - l_act));
+            g(i) = V_frac * L_frac * (v_act - l_act);
+            max_g = std::max(max_g, std::abs(v_act - l_act));
         }
         if (max_g < 1e-9) break;
         Eigen::VectorXd delta_v = H.colPivHouseholderQr().solve(-g);
@@ -999,23 +1058,33 @@ void CoolProp::AbstractCubicBackend::cubic_PT_flash_mixture() {
             if (delta_v(i) > 0 && v_old + delta_v(i) > z[i]) step_scale = std::min(step_scale, 0.99 * (z[i] - v_old) / delta_v(i));
             if (delta_v(i) < 0 && v_old + delta_v(i) < 0) step_scale = std::min(step_scale, 0.99 * (-v_old) / delta_v(i));
         }
-        CoolPropDbl V_new = 0, L_new = 0; std::vector<CoolPropDbl> v_new(N), l_new(N);
+        CoolPropDbl V_new = 0, L_new = 0;
+        std::vector<CoolPropDbl> v_new(N), l_new(N);
         for (std::size_t i = 0; i < N; ++i) {
-            v_new[i] = V_frac * y[i] + step_scale * delta_v(i); l_new[i] = z[i] - v_new[i];
-            V_new += v_new[i]; L_new += l_new[i];
+            v_new[i] = V_frac * y[i] + step_scale * delta_v(i);
+            l_new[i] = z[i] - v_new[i];
+            V_new += v_new[i];
+            L_new += l_new[i];
         }
         beta = V_new;
-        for (std::size_t i = 0; i < N; ++i) { y[i] = v_new[i] / V_new; x[i] = l_new[i] / L_new; }
+        for (std::size_t i = 0; i < N; ++i) {
+            y[i] = v_new[i] / V_new;
+            x[i] = l_new[i] / L_new;
+        }
         SatL->set_mole_fractions(x);
         try {
             CoolPropDbl rhol = SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / SatL->SRK_covolume());
             SatL->update_DmolarT_direct(rhol, the_T);
-        } catch (...) { throw CoolProp::ValueError("Density solver failed for liquid phase in Newton step"); }
+        } catch (...) {
+            throw CoolProp::ValueError("Density solver failed for liquid phase in Newton step");
+        }
         SatV->set_mole_fractions(y);
         try {
             CoolPropDbl rhov = SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / SatV->SRK_covolume());
             SatV->update_DmolarT_direct(rhov, the_T);
-        } catch (...) { throw CoolProp::ValueError("Density solver failed for vapor phase in Newton step"); }
+        } catch (...) {
+            throw CoolProp::ValueError("Density solver failed for vapor phase in Newton step");
+        }
     }
     if (beta < 1e-9) {
         _rhomolar = SatL->rhomolar();
