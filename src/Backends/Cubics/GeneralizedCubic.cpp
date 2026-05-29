@@ -1,6 +1,8 @@
 #include "GeneralizedCubic.h"
 #include "CPnumerics.h"
+#include <array>
 #include <cmath>
+#include <limits>
 #include <utility>
 
 double BasicMathiasCopemanAlphaFunction::term(double tau, std::size_t itau) {
@@ -118,6 +120,81 @@ double TwuAlphaFunction::term(double tau, std::size_t itau) {
     }
 }
 
+void BasicMathiasCopemanAlphaFunction::calc_all_terms(double tau, double terms[5]) {
+    // Compute B and shared powers of tau once, then fill all 5 derivatives
+    const double sq = sqrt_Tr_Tci / sqrt(tau);  // sqrt(Tr/Tci / tau)
+    const double B = 1.0 + m * (1.0 - sq);
+    const double t15 = sqrt_Tr_Tci / (tau * sqrt(tau));  // sqrt_Tr_Tci / tau^1.5
+    const double t25 = t15 / tau;                        // sqrt_Tr_Tci / tau^2.5
+    const double t35 = t25 / tau;                        // sqrt_Tr_Tci / tau^3.5
+    const double t45 = t35 / tau;                        // sqrt_Tr_Tci / tau^4.5
+    const double t3 = Tr_over_Tci / (tau * tau * tau);
+    const double t4 = t3 / tau;
+    const double t5 = t4 / tau;
+    terms[0] = a0 * B * B;
+    terms[1] = a0 * m * B * t15;
+    terms[2] = a0 * m * 0.5 * (m * t3 - 3.0 * B * t25);
+    terms[3] = (3.0 / 4.0) * a0 * m * (-3.0 * m * t4 + 5.0 * B * t35);
+    terms[4] = (3.0 / 8.0) * a0 * m * (29.0 * m * t5 - 35.0 * B * t45);
+}
+
+void TwuAlphaFunction::calc_all_terms(double tau, double terms[5]) {
+    const double L = c[0], M = c[1], N = c[2];
+    // Compute the two pow() and one exp() calls exactly once
+    const double A = pow(Tr_over_Tci / tau, M * N);
+    const double am = a0 * pow(Tr_over_Tci / tau, N * (M - 1)) * exp(L * (1.0 - A));
+    terms[0] = am;
+    const double B1 = N / tau * (L * M * A - M + 1.0);
+    const double dam = am * B1;
+    terms[1] = dam;
+    const double dB1 = N / powInt(tau, 2) * (-L * M * M * N * A - L * M * A + M - 1.0);
+    const double d2am = B1 * dam + am * dB1;
+    terms[2] = d2am;
+    const double d2B1 = N / powInt(tau, 3) * (L * M * M * M * N * N * A + 3.0 * L * M * M * N * A + 2.0 * L * M * A - 2.0 * M + 2.0);
+    const double d3am = B1 * d2am + am * d2B1 + 2.0 * dB1 * dam;
+    terms[3] = d3am;
+    const double d3B1 =
+      -N / powInt(tau, 4)
+      * (L * powInt(M, 4) * powInt(N, 3) * A + 6.0 * L * M * M * M * N * N * A + 11.0 * L * M * M * N * A + 6.0 * L * M * A - 6.0 * M + 6.0);
+    terms[4] = B1 * d3am + am * d3B1 + 3.0 * dB1 * d2am + 3.0 * d2B1 * dam;
+}
+
+void MathiasCopemanAlphaFunction::calc_all_terms(double tau, double terms[5]) {
+    // Compute Di = 1 - sqrt(Tr/Tci / tau) and its tau-derivatives once, reusing
+    // a common power chain.  All five derivatives share these values.
+    const double sq = sqrt_Tr_Tci / sqrt(tau);  // sqrt(Tr_over_Tci / tau)
+    const double Di = 1.0 - sq;
+    const double p = sq / tau;                   // sqrt_Tr_Tci / tau^1.5
+    const double d1Di = 0.5 * p;
+    const double d2Di = -0.75 * p / tau;
+    const double d3Di = 1.875 * p / (tau * tau);
+    const double d4Di = -6.5625 * p / (tau * tau * tau);
+
+    const double Di2 = Di * Di;
+    const double Di3 = Di2 * Di;
+    const double c0 = c[0], c1 = c[1], c2 = c[2];
+
+    // Expand the loop over n=1,2,3 analytically.
+    // Many polynomial factors in (n^2-3n+2) and (n^3-6n^2+11n-6) vanish for small n.
+    const double Bi = 1.0 + c0 * Di + c1 * Di2 + c2 * Di3;
+    const double dBi = d1Di * (c0 + 2.0 * c1 * Di + 3.0 * c2 * Di2);
+    const double d2Bi = c0 * d2Di
+                      + 2.0 * c1 * (d1Di * d1Di + Di * d2Di)
+                      + 3.0 * c2 * Di * (2.0 * d1Di * d1Di + Di * d2Di);
+    const double d3Bi = c0 * d3Di
+                      + 2.0 * c1 * (3.0 * d1Di * d2Di + Di * d3Di)
+                      + 3.0 * c2 * (6.0 * Di * d1Di * d2Di + 2.0 * d1Di * d1Di * d1Di + Di2 * d3Di);
+    const double d4Bi = c0 * d4Di
+                      + 2.0 * c1 * (4.0 * d1Di * d3Di + 3.0 * d2Di * d2Di + Di * d4Di)
+                      + 3.0 * c2 * (12.0 * d1Di * d1Di * d2Di + Di * (8.0 * d1Di * d3Di + 6.0 * d2Di * d2Di) + Di2 * d4Di);
+
+    terms[0] = a0 * Bi * Bi;
+    terms[1] = 2.0 * a0 * Bi * dBi;
+    terms[2] = 2.0 * a0 * (Bi * d2Bi + dBi * dBi);
+    terms[3] = 2.0 * a0 * (Bi * d3Bi + 3.0 * dBi * d2Bi);
+    terms[4] = 2.0 * a0 * (Bi * d4Bi + 4.0 * dBi * d3Bi + 3.0 * d2Bi * d2Bi);
+}
+
 AbstractCubic::AbstractCubic(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1,
                              double Delta_2, const std::vector<double>& C1, const std::vector<double>& C2, const std::vector<double>& C3)
   : T_r(1.0),
@@ -134,11 +211,13 @@ AbstractCubic::AbstractCubic(const std::vector<double>& Tc, std::vector<double> 
     k.resize(N, std::vector<double>(N, 0));
 
     alpha.resize(N);
+    m_tau_cache = std::numeric_limits<double>::quiet_NaN();
 };
 
 void AbstractCubic::set_alpha(const std::vector<double>& C1, const std::vector<double>& C2, const std::vector<double>& C3) {
     /// Resize the vector of alpha functions
     alpha.resize(Tc.size());
+    m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate cache
     /// If no Mathias-Copeman coefficients are passed in (all empty vectors), use the predictive scheme for m_ii
     if (C1.empty() && C2.empty() && C3.empty()) {
         for (std::size_t i = 0; i < Tc.size(); ++i) {
@@ -216,7 +295,8 @@ double AbstractCubic::cm_term() {
 }
 
 double AbstractCubic::aii_term(double tau, std::size_t i, std::size_t itau) {
-    return alpha[i]->term(tau, itau);
+    _ensure_aii_cache(tau);
+    return m_aii_cache[i][itau];
 }
 double AbstractCubic::u_term(double tau, std::size_t i, std::size_t j, std::size_t itau) {
     double aii = aii_term(tau, i, 0), ajj = aii_term(tau, j, 0);
