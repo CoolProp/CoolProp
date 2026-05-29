@@ -367,6 +367,84 @@ TEST_CASE("HSU_P flash close to saturation for Nitrogen&Methane&Ethane&Butane&Pe
 }
 
 // ===================================================================
+//  TWO-PHASE PT FLASH CONSISTENCY
+// ===================================================================
+
+TEST_CASE("PT flash 5-component N2-HC two-phase consistency", "[mixture][PT_flash]") {
+    // 100 temperatures interior to the two-phase region at P=3e5 Pa.
+    // For each backend checks:
+    //   1. phase == iphase_twophase
+    //   2. hmolar() is monotonically non-decreasing with T (1 J/mol tolerance)
+    //   3. Fugacity equality |phi_i^L x_i - phi_i^V y_i| / max(...) < 1e-7
+    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    const double P = 3e5;  // Pa
+    const int NQ = 100;
+    const std::size_t NC = z.size();
+
+    for (const auto& be : test_backends) {
+        DYNAMIC_SECTION(be) {
+            // Bubble and dew temperatures for this backend
+            auto sat = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            sat->set_mole_fractions(z);
+            sat->update(PQ_INPUTS, P, 0.0);
+            const double T_bub = sat->T();
+            sat->update(PQ_INPUTS, P, 1.0);
+            const double T_dew = sat->T();
+            REQUIRE(T_dew > T_bub);
+
+            // Reused states for per-component fugacity sub-calculations
+            auto liq = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            auto vap = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            AS->set_mole_fractions(z);
+
+            double H_prev = -1e100;
+            for (int i = 0; i < NQ; ++i) {
+                // Interior points — skip exact bubble/dew boundaries
+                const double alpha = (static_cast<double>(i) + 0.5) / NQ;
+                const double T = T_bub + (T_dew - T_bub) * alpha;
+                CAPTURE(T);
+
+                AS->update(PT_INPUTS, P, T);
+
+                // 1. Phase
+                CHECK(AS->phase() == iphase_twophase);
+
+                // 2. Enthalpy monotonicity
+                const double H = AS->hmolar();
+                CHECK(H >= H_prev - 1.0);
+                H_prev = H;
+
+                // 3. Fugacity equality (only meaningful while phase is two-phase)
+                if (AS->phase() == iphase_twophase) {
+                    const auto x = AS->mole_fractions_liquid();
+                    const auto y = AS->mole_fractions_vapor();
+
+                    liq->set_mole_fractions(x);
+                    liq->specify_phase(iphase_liquid);
+                    liq->update(PT_INPUTS, P, T);
+
+                    vap->set_mole_fractions(y);
+                    vap->specify_phase(iphase_gas);
+                    vap->update(PT_INPUTS, P, T);
+
+                    for (std::size_t j = 0; j < NC; ++j) {
+                        const double f_liq = liq->fugacity_coefficient(j) * x[j];
+                        const double f_vap = vap->fugacity_coefficient(j) * y[j];
+                        const double f_ref = std::max(std::abs(f_liq), std::abs(f_vap));
+                        if (f_ref > 1e-15) {
+                            CAPTURE(j);
+                            CHECK(std::abs(f_liq - f_vap) / f_ref < 1e-7);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ===================================================================
 //  PQ FLASH TESTS
 // ===================================================================
 
