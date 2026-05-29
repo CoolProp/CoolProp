@@ -5004,7 +5004,11 @@ TEST_CASE("Incompressible enthalpy is finite and continuous at T == Tbase (#1578
     // against the throw returning.
     const double p = 101325.0;
     // (fluid name, Tbase [K]) pairs taken straight from the issue report.
-    struct Case { std::string name; double Tbase; };
+    struct Case
+    {
+        std::string name;
+        double Tbase;
+    };
     const std::vector<Case> cases = {
       {"INCOMP::AS30", 273.15},    // single-point case from the issue
       {"INCOMP::TD12", 345.65},    // single-point case from the issue
