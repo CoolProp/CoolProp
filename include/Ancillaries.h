@@ -263,7 +263,7 @@ class MeltingLineVariables
     };
 
     /// Pressure range [p_min, p_max] (Pa) of each melting-curve part, increasing-p order. Empty if no curve.
-    std::vector<std::pair<CoolPropDbl, CoolPropDbl>> get_parts_pranges() const;
+    [[nodiscard]] std::vector<std::pair<CoolPropDbl, CoolPropDbl>> get_parts_pranges() const;
 };
 
 } /* namespace CoolProp */
