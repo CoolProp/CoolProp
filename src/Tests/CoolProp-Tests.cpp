@@ -5049,14 +5049,17 @@ TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", 
     // Pa*s, sampled at exact (T, x) grid points where the fit reproduces it.
     const double p = 101325.0;
     const double rel = 0.01;  // 1% relative; pre-fix the values were ~90% low
-    struct Pt { double T, x, mu; };
+    struct Pt
+    {
+        double T, x, mu;
+    };
     // T [K], x = mass fraction, mu = dynamic viscosity [Pa*s]
     const std::vector<Pt> pts = {
-      {283.15, 0.42, 742.1231823e-5},   // 10 C, 42%
-      {283.15, 0.52, 1137.598557e-5},   // 10 C, 52%
-      {283.15, 0.57, 1443.949841e-5},   // 10 C, 57%
-      {303.15, 0.42, 326.47355e-5},     // 30 C, 42%
-      {303.15, 0.52, 456.9447475e-5},   // 30 C, 52%
+      {283.15, 0.42, 742.1231823e-5},  // 10 C, 42%
+      {283.15, 0.52, 1137.598557e-5},  // 10 C, 52%
+      {283.15, 0.57, 1443.949841e-5},  // 10 C, 57%
+      {303.15, 0.42, 326.47355e-5},    // 30 C, 42%
+      {303.15, 0.52, 456.9447475e-5},  // 30 C, 52%
     };
     for (const Pt& pt : pts) {
         const std::string name = "INCOMP::MPG2" + format("[%f]", pt.x);
