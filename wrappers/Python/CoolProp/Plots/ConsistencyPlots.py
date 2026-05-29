@@ -6,7 +6,6 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import time, timeit
-import six
 import pandas
 import CoolProp as CP
 from CoolProp.Plots._consistency_report import format_time
@@ -96,7 +95,7 @@ class ConsistencyFigure(object):
         self.axes_list = []
         for row in self.axes:
             for ax in row:
-                pair = six.next(pairs_generator)
+                pair = next(pairs_generator)
                 kwargs = dict(p_limits_1phase=p_limits_1phase, T_limits_1phase=T_limits_1phase, NT_1phase=NT_1phase, Np_1phase=Np_1phase,
                               NT_2phase=NT_2phase, NQ_2phase=NQ_2phase)
                 self.axes_list.append(ConsistencyAxis(ax, self, pair, self.fluid, self.backend, *states, **kwargs))

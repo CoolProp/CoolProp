@@ -1,5 +1,4 @@
 import json, sys
-from six import string_types
 
 header_template = """
 [
@@ -610,7 +609,7 @@ class BaseParser(object):
     def parse(self):
         lines = []
         for line in self.pieces:
-            if isinstance(line, string_types):
+            if isinstance(line, str):
                 lines.append(line)
             elif isinstance(line, dict):
                 lines.append(self.dict2string(line))
@@ -642,7 +641,7 @@ class Python(BaseParser):
     def parse_arguments(self, arguments):
         out = []
         for arg in arguments:
-            if isinstance(arg, string_types) and arg[0] == "'" and arg[-1] == "'":
+            if isinstance(arg, str) and arg[0] == "'" and arg[-1] == "'":
                 out.append('\"' + arg[1:-1] + '\"')
             elif isinstance(arg, dict):
                 out.append(self.dict2string(arg))
@@ -698,7 +697,7 @@ class Octave(BaseParser):
     def parse_arguments(self, arguments):
         out = []
         for arg in arguments:
-            if isinstance(arg, string_types) and arg[0] == "'" and arg[-1] == "'":
+            if isinstance(arg, str) and arg[0] == "'" and arg[-1] == "'":
                 out.append('\'' + arg[1:-1] + '\'')
             elif isinstance(arg, dict):
                 out.append(self.dict2string(arg))
@@ -758,7 +757,7 @@ class R(BaseParser):
     def parse_arguments(self, arguments):
         out = []
         for arg in arguments:
-            if isinstance(arg, string_types) and arg[0] == "'" and arg[-1] == "'":
+            if isinstance(arg, str) and arg[0] == "'" and arg[-1] == "'":
                 out.append('\'' + arg[1:-1] + '\'')
             elif isinstance(arg, dict):
                 out.append(self.dict2string(arg))
@@ -822,7 +821,7 @@ class MATLAB(BaseParser):
     def parse_arguments(self, arguments):
         out = []
         for arg in arguments:
-            if isinstance(arg, string_types) and arg[0] == "'" and arg[-1] == "'":
+            if isinstance(arg, str) and arg[0] == "'" and arg[-1] == "'":
                 out.append('\'' + arg[1:-1] + '\'')
             elif isinstance(arg, dict):
                 out.append(self.dict2string(arg))
@@ -887,7 +886,7 @@ class Java(BaseParser):
     def parse_arguments(self, arguments):
         out = []
         for arg in arguments:
-            if isinstance(arg, string_types) and arg[0] == "'" and arg[-1] == "'":
+            if isinstance(arg, str) and arg[0] == "'" and arg[-1] == "'":
                 out.append('\"' + arg[1:-1] + '\"')
             elif isinstance(arg, dict):
                 out.append(self.dict2string(arg))
@@ -953,7 +952,7 @@ class Csharp(BaseParser):
     def parse_arguments(self, arguments):
         out = []
         for arg in arguments:
-            if isinstance(arg, string_types) and arg[0] == "'" and arg[-1] == "'":
+            if isinstance(arg, str) and arg[0] == "'" and arg[-1] == "'":
                 out.append('\"' + arg[1:-1] + '\"')
             elif isinstance(arg, dict):
                 out.append(self.dict2string(arg))
