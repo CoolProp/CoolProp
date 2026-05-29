@@ -20,7 +20,7 @@ class BasePowerCycle(BaseCycle):
         BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
 
     def eta_carnot(self):
-        """Carnot efficiency
+        r"""Carnot efficiency
 
         Calculates the Carnot efficiency for the specified process, :math:`\eta_c = 1 - \frac{T_c}{T_h}`.
 
@@ -32,7 +32,7 @@ class BasePowerCycle(BaseCycle):
         return 1. - np.min(Tvector) / np.max(Tvector)
 
     def eta_thermal(self):
-        """Thermal efficiency
+        r"""Thermal efficiency
 
         The thermal efficiency for the specified process(es), :math:`\eta_{th} = \frac{\dot{W}_{exp} - \dot{W}_{pum}}{\dot{Q}_{in}}`.
 
@@ -163,7 +163,7 @@ class SimpleRankineCycle(BasePowerCycle):
         self.fill_states()
 
     def eta_thermal(self):
-        """Thermal efficiency
+        r"""Thermal efficiency
 
         The thermal efficiency for the specified process(es), :math:`\eta_{th} = \frac{\dot{W}_{exp} - \dot{W}_{pum}}{\dot{Q}_{in}}`.
 
