@@ -1786,6 +1786,7 @@ if(COOLPROP_PHP_MODULE)
 
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   swig_add_module(CoolProp php ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropPHP")
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -1798,7 +1799,7 @@ if(COOLPROP_PHP_MODULE)
   add_dependencies(CoolProp generate_headers)
 
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/cross-platform)
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/cross-platform OPTIONAL)
   install(TARGETS ${app_name}
           DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/${CMAKE_SYSTEM_NAME})
 
