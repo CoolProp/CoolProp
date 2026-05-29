@@ -1527,4 +1527,23 @@ TEST_CASE("MeltingCaloric per-segment fit matches EOS (water)", "[HS][HS_meltcal
     }
 }
 
+TEST_CASE("MeltingCaloric seed finds a cold-liquid anchor (water)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    MeltingCaloric mc;
+    mc.build(*H);
+
+    auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    const double p = 2.308e8, T = 252.5;
+    ref->update(PT_INPUTS, p, T);
+    const double h = ref->hmolar(), s = ref->smolar();
+
+    // Build-frame == DEF here, so cache values equal caller values.
+    double T0 = 0, rho0 = 0;
+    REQUIRE(mc.seed_for_hs(/*s_cache=*/s, /*h_cache=*/h, T0, rho0));
+    CHECK(T0 == Catch::Approx(T).margin(25.0));                    // within ~25 K of target
+    CHECK(rho0 == Catch::Approx(ref->rhomolar()).epsilon(0.08));  // within ~8%
+}
+
 #endif  // ENABLE_CATCH

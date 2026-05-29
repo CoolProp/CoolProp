@@ -43,6 +43,12 @@ class MeltingCaloric
     double eval_h(double lnp) const { return m_h_approx->eval(lnp); }
     double eval_s(double lnp) const { return m_s_approx->eval(lnp); }
 
+    /// Find a (T0, rho0) seed for a target whose caloric values are expressed in
+    /// THIS object's build frame (s_cache, h_cache). Returns false if no melting-
+    /// line entropy intersection exists. Disambiguates multiple intersections by
+    /// closeness in enthalpy.
+    bool seed_for_hs(double s_cache, double h_cache, double& T0, double& rho0) const;
+
    protected:
     std::vector<double> m_lnp, m_T, m_rho, m_h, m_s;
 
