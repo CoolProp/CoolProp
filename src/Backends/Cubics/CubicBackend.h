@@ -39,6 +39,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Set the pointer to the residual helmholtz class, etc.
     void setup(bool generate_SatL_and_SatV = true);
 
+    /// Robust PT flash for mixtures
+    void cubic_PT_flash_mixture();
+
     /// Set the alpha function based on the alpha function defined in the components vector;
     void set_alpha_from_components();
 
