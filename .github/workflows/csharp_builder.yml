@@ -1,0 +1,89 @@
+name: C# wrapper
+
+on:
+  push:
+    branches: [ 'master', 'main', 'develop', 'actions_csharp' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            sysname: Linux
+          - os: windows-latest
+            sysname: Windows
+          - os: macos-latest
+            sysname: Darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install SWIG + mono + 7zip (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -y && sudo apt-get install -y swig mono-mcs p7zip-full
+
+      - name: Install SWIG + mono + 7zip (macOS)
+        if: runner.os == 'macOS'
+        run: brew install swig mono p7zip
+
+      - name: Install SWIG (Windows)
+        if: runner.os == 'Windows'
+        run: choco install swig -y --no-progress
+
+      - name: Configure
+        shell: bash
+        run: cmake -B build -S . -DCOOLPROP_CSHARP_MODULE=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build and install
+        shell: bash
+        run: cmake --build build --target install --config Release -j
+
+      - name: Upload per-OS artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Csharp-${{ matrix.sysname }}
+          path: install_root/Csharp
+
+  merge:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download per-OS artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: Csharp-*
+          path: staging
+
+      - name: Assemble unified Csharp tree
+        shell: bash
+        run: |
+          set -eux
+          mkdir -p Csharp
+          for d in staging/Csharp-*/; do
+            [ -f "${d}Example.cs" ] && cp -n "${d}Example.cs" Csharp/ || true
+            [ -f "${d}platform-independent.7z" ] && cp -n "${d}platform-independent.7z" Csharp/ || true
+            find "$d" -maxdepth 1 -type d -name '*bit' -exec cp -r {} Csharp/ \;
+          done
+          ls -R Csharp
+
+      - name: Upload unified Csharp artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Csharp
+          path: Csharp
+
+      - name: Delete intermediate per-OS artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: Csharp-*
