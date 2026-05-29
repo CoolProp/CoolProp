@@ -1160,18 +1160,18 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend& HEOS
 
     // Use Peneloux volume translation to shift liquid volume
     // As in Horstmann :: doi:10.1016/j.fluid.2004.11.002
-        double summer_c = 0, v_SRK = 1 / rhomolar_liq;
-        const std::vector<CoolPropFluid>& components = HEOS.get_components();
-        for (std::size_t i = 0; i < components.size(); ++i) {
+    double summer_c = 0, v_SRK = 1 / rhomolar_liq;
+    const std::vector<CoolPropFluid>& components = HEOS.get_components();
+    for (std::size_t i = 0; i < components.size(); ++i) {
         // Get the parameters for the cubic EOS
-            CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical);
-            CoolPropDbl pc = HEOS.get_fluid_constant(i, iP_critical);
-            CoolPropDbl rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
-            CoolPropDbl R = 8.3144598;
+        CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical);
+        CoolPropDbl pc = HEOS.get_fluid_constant(i, iP_critical);
+        CoolPropDbl rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
+        CoolPropDbl R = 8.3144598;
 
-            summer_c += z[i] * (0.40768 * R * Tc / pc * (0.29441 - pc / (rhomolarc * R * Tc)));
-        }
-        rhomolar_liq = 1 / (v_SRK - summer_c);
+        summer_c += z[i] * (0.40768 * R * Tc / pc * (0.29441 - pc / (rhomolarc * R * Tc)));
+    }
+    rhomolar_liq = 1 / (v_SRK - summer_c);
     HEOS.SatL->update_TP_guessrho(T, p, rhomolar_liq);
     HEOS.SatV->update_TP_guessrho(T, p, rhomolar_vap);
 
@@ -1799,8 +1799,12 @@ void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBack
                 for (int sb = 0; sb < 60; ++sb) {
                     double mid = 0.5 * (a_b + b_b);
                     double f_mid = resid.call(mid);
-                    if (f_a * f_mid > 0) { a_b = mid; f_a = f_mid; }
-                    else { b_b = mid; }
+                    if (f_a * f_mid > 0) {
+                        a_b = mid;
+                        f_a = f_mid;
+                    } else {
+                        b_b = mid;
+                    }
                 }
                 beta = 0.5 * (a_b + b_b);
             }
@@ -1851,8 +1855,12 @@ void StabilityRoutines::StabilityEvaluationClass::trial_compositions() {
             for (int sb = 0; sb < 60; ++sb) {
                 double mid = 0.5 * (a_b + b_b);
                 double f_mid = resid.call(mid);
-                if (f_a * f_mid > 0) { a_b = mid; f_a = f_mid; }
-                else { b_b = mid; }
+                if (f_a * f_mid > 0) {
+                    a_b = mid;
+                    f_a = f_mid;
+                } else {
+                    b_b = mid;
+                }
             }
             beta = 0.5 * (a_b + b_b);
         }
@@ -1909,8 +1917,12 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
                 for (int sb = 0; sb < 60; ++sb) {
                     double mid = 0.5 * (a_b + b_b);
                     double f_mid = resid.call(mid);
-                    if (f_a * f_mid > 0) { a_b = mid; f_a = f_mid; }
-                    else { b_b = mid; }
+                    if (f_a * f_mid > 0) {
+                        a_b = mid;
+                        f_a = f_mid;
+                    } else {
+                        b_b = mid;
+                    }
                 }
                 beta = 0.5 * (a_b + b_b);
             }

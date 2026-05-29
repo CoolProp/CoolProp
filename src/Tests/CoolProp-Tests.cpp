@@ -4082,7 +4082,6 @@ TEST_CASE("calc_all_terms matches term() for non-default alpha functions", "[cub
             }
         }
     }
-
 }
 
 // The melting-line guards added in #2648 must honor DONT_CHECK_PROPERTY_LIMITS so the

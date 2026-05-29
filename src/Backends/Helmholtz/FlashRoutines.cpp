@@ -110,7 +110,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         solver.solve();
         double Q_raw = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
         if (Q_raw < 0 || Q_raw > 1) {
-            // The two-phase solver converged to a Q outside [0,1]: 
+            // The two-phase solver converged to a Q outside [0,1]:
             // Re-solve as single-phase.
             double T = HEOS.T(), p = HEOS.p();
             phases ph = (Q_raw < 0) ? iphase_liquid : iphase_gas;
@@ -1288,7 +1288,7 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parame
             if (env.T.size() >= 3) {
                 imax = std::min(imax, env.T.size() - 3);  // ensures imax+2 <= env.T.size()-1
             }
-            imax = std::max(imax, std::size_t(1));        // ensures imax-1 >= 0
+            imax = std::max(imax, std::size_t(1));  // ensures imax-1 >= 0
 
             SaturationSolvers::newton_raphson_saturation NR;
             SaturationSolvers::newton_raphson_saturation_options IO;
