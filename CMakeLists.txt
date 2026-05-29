@@ -1404,7 +1404,7 @@ if(COOLPROP_CSHARP_MODULE)
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 
   if(WIN32)
-    set(MORE_SWIG_FLAGS -dllimport \"CoolProp\")
+    set(MORE_SWIG_FLAGS -dllimport \"CoolPropCsharp\")
   endif()
 
   # Define which headers the CoolProp wrapper is dependent on
@@ -1420,6 +1420,7 @@ if(COOLPROP_CSHARP_MODULE)
                                                    CPLUSPLUS ON)
 
   swig_add_module(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropCsharp")
 
   add_definitions(-DNO_ERROR_CATCHING)
 
