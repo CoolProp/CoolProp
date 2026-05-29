@@ -7,6 +7,7 @@
 #include "MixtureDerivatives.h"
 #include "CoolProp/Configuration.h"
 #include "FlashRoutines.h"
+#include <Eigen/Dense>
 
 namespace CoolProp {
 

@@ -5,6 +5,7 @@
 #include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
 #include "Backends/Helmholtz/MixtureDerivatives.h"
+#include <Eigen/Dense>
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     N = cubic->get_Tc().size();
