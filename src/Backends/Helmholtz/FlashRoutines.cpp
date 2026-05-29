@@ -61,11 +61,21 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
 
             CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
             solver.solve();
-            double denom_pe = o.y[0] - o.x[0];
+            // Use the component with the largest phase split for best numerical conditioning.
+            std::size_t ibest_pe = 0;
+            double best_spread_pe = std::abs(o.y[0] - o.x[0]);
+            for (std::size_t i = 1; i < o.z.size(); ++i) {
+                double spread = std::abs(o.y[i] - o.x[i]);
+                if (spread > best_spread_pe) {
+                    best_spread_pe = spread;
+                    ibest_pe = i;
+                }
+            }
+            double denom_pe = o.y[ibest_pe] - o.x[ibest_pe];
             if (std::abs(denom_pe) < 1e-10) {
                 // Azeotrope or near-critical: composition spread too small to compute Q reliably.
                 double T = HEOS.T(), p = HEOS.p();
-                phases ph = (o.z[0] < o.x[0]) ? iphase_liquid : iphase_gas;
+                phases ph = (o.z[ibest_pe] < o.x[ibest_pe]) ? iphase_liquid : iphase_gas;
                 HEOS.specify_phase(ph);
                 double rho = HEOS.solver_rho_Tp(T, p);
                 HEOS.update_DmolarT_direct(rho, T);
@@ -73,7 +83,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 HEOS._Q = -1;
                 HEOS._phase = ph;
             } else {
-                double Q_raw = (o.z[0] - o.x[0]) / denom_pe;
+                double Q_raw = (o.z[ibest_pe] - o.x[ibest_pe]) / denom_pe;
                 if (Q_raw < 0 || Q_raw > 1) {
                     // The two-phase solver converged to a Q outside [0,1]:
                     // Re-solve as single-phase.
@@ -121,11 +131,21 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         SaturationSolvers::successive_substitution_guessrho(HEOS, o.x, o.y, o.rhomolar_liq, o.rhomolar_vap, o.z, 10);
         CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
         solver.solve();
-        double denom = o.y[0] - o.x[0];
+        // Use the component with the largest phase split for best numerical conditioning.
+        std::size_t ibest = 0;
+        double best_spread = std::abs(o.y[0] - o.x[0]);
+        for (std::size_t i = 1; i < o.z.size(); ++i) {
+            double spread = std::abs(o.y[i] - o.x[i]);
+            if (spread > best_spread) {
+                best_spread = spread;
+                ibest = i;
+            }
+        }
+        double denom = o.y[ibest] - o.x[ibest];
         if (std::abs(denom) < 1e-10) {
             // Azeotrope or near-critical: composition spread too small to compute Q reliably.
             double T = HEOS.T(), p = HEOS.p();
-            phases ph = (o.z[0] < o.x[0]) ? iphase_liquid : iphase_gas;
+            phases ph = (o.z[ibest] < o.x[ibest]) ? iphase_liquid : iphase_gas;
             HEOS.specify_phase(ph);
             double rho = HEOS.solver_rho_Tp(T, p);
             HEOS.update_DmolarT_direct(rho, T);
@@ -133,7 +153,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             HEOS._Q = -1;
             HEOS._phase = ph;
         } else {
-            double Q_raw = (o.z[0] - o.x[0]) / denom;
+            double Q_raw = (o.z[ibest] - o.x[ibest]) / denom;
             if (Q_raw < 0 || Q_raw > 1) {
                 // The two-phase solver converged to a Q outside [0,1]:
                 // Re-solve as single-phase.
