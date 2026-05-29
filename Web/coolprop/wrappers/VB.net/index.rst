@@ -17,7 +17,7 @@ Pre-compiled binaries of the C# wrapper can be downloaded from :sfdownloads:`Csh
 When you are finished, you should have a folder layout something like ::
 
     main
-     |- CoolProp.dll
+     |- CoolPropCsharp.dll
      |- Example.vb
      |- platform-independent
         |- AbstractState.cs
@@ -26,12 +26,12 @@ When you are finished, you should have a folder layout something like ::
 
 Open Visual Studio 2012 (or any other version of Visual Studio).  Even the express version works.
 
-Create a VB console application.  Add a project that is a C# Class library to the solution.  Add all the platform-independent .cs files to the class library project.  Add the Example.vb file to the VB console application project.  Add the CoolProp.dll file as an existing file to the VB console project.  Right click on the DLL, select the property "Copy to Output Directory" and make sure it is set to "Copy always".  Right click on the console project, "Add Reference...", expand Solution, then projects. Select the class library project.  This will copy the class library dll to the output directory and allow Intellisense to properly parse the C# code.
+Create a VB console application.  Add a project that is a C# Class library to the solution.  Add all the platform-independent .cs files to the class library project.  Add the Example.vb file to the VB console application project.  Add the CoolPropCsharp.dll file as an existing file to the VB console project.  Right click on the DLL, select the property "Copy to Output Directory" and make sure it is set to "Copy always".  Right click on the console project, "Add Reference...", expand Solution, then projects. Select the class library project.  This will copy the class library dll to the output directory and allow Intellisense to properly parse the C# code.
 
 Caveats
 -------
 
-The architecture of the solution/projects should match that of the CoolProp.dll file.  So if you are using the 64-bit DLL, make sure the architecture of the console application project is set to ``x64`` rather than ``Any CPU``
+The architecture of the solution/projects should match that of the CoolPropCsharp.dll file.  So if you are using the 64-bit DLL, make sure the architecture of the console application project is set to ``x64`` rather than ``Any CPU``
 
 User-Compiled Binaries
 ======================
