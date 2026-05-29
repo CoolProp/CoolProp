@@ -1636,6 +1636,7 @@ if(COOLPROP_JAVA_MODULE)
 
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   swig_add_module(CoolProp java ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropJava")
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")

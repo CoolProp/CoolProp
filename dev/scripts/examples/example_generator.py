@@ -931,7 +931,7 @@ class Java(BaseParser):
         return l
 
     def header(self):
-        return 'public class Example {\n    static {\n        System.loadLibrary("CoolProp");\n    }\n\n    public static void main(String argv[]){\n'
+        return 'public class Example {\n    static {\n        System.loadLibrary("CoolPropJava");\n    }\n\n    public static void main(String argv[]){\n'
 
     def footer(self):
         return '\n    }\n}'
