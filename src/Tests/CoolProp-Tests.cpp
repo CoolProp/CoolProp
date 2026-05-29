@@ -5037,6 +5037,45 @@ TEST_CASE("Incompressible enthalpy is finite and continuous at T == Tbase (#1578
         CHECK(std::abs(h_mid - midpoint) < 1.0);  // [J/kg]
     }
 }
+TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {
+    // Issue #1374: the fitted viscosity (and hence Prandtl number) of MPG2
+    // (Melinder propylene glycol) was a uniform factor of 10 too small versus
+    // MPG/APG and every other propylene-glycol fluid. Root cause: the
+    // exp-polynomial constant term in MPG2.json was off by ln(10), so
+    // viscosity = exp(poly) came out 10x low everywhere. The reference values
+    // below are the Melinder propylene-glycol viscosity table
+    // (dev/incompressible_liquids/CPIncomp/data/SecCool/xMass/"Melinder,
+    // Propylene Glycol_Mu.txt") scaled by viscosityFactor = 1e-5 to obtain
+    // Pa*s, sampled at exact (T, x) grid points where the fit reproduces it.
+    const double p = 101325.0;
+    const double rel = 0.01;  // 1% relative; pre-fix the values were ~90% low
+    struct Pt
+    {
+        double T, x, mu;
+    };
+    // T [K], x = mass fraction, mu = dynamic viscosity [Pa*s]
+    const std::vector<Pt> pts = {
+      {283.15, 0.42, 742.1231823e-5},  // 10 C, 42%
+      {283.15, 0.52, 1137.598557e-5},  // 10 C, 52%
+      {283.15, 0.57, 1443.949841e-5},  // 10 C, 57%
+      {303.15, 0.42, 326.47355e-5},    // 30 C, 42%
+      {303.15, 0.52, 456.9447475e-5},  // 30 C, 52%
+    };
+    for (const Pt& pt : pts) {
+        const std::string name = "INCOMP::MPG2" + format("[%f]", pt.x);
+        const double actual = CoolProp::PropsSI("V", "T", pt.T, "P", p, name);
+        CAPTURE(pt.T);
+        CAPTURE(pt.x);
+        CAPTURE(pt.mu);
+        CAPTURE(actual);
+        CAPTURE(CoolProp::get_global_param_string("errstring"));
+        CHECK(check_abs(pt.mu, actual, rel));
+    }
+    // The Prandtl number reported in #1374 should be ~100 (like MPG/APG), not ~10.
+    const double Pr = CoolProp::PropsSI("PRANDTL", "T", 283.15, "P", p, "INCOMP::MPG2[0.5]");
+    CAPTURE(Pr);
+    CHECK(Pr > 80.0);
+}
 TEST_CASE("PropsSImulti with empty input vectors returns empty result instead of segfaulting", "[PropsSImulti][2417]") {
     // Issue #2417: PropsSI('T','P',[],'Q',[],'Ammonia') segfaulted because
     // _PropsSI_outputs forced N1 = max(1, in1.size()) and then dereferenced
