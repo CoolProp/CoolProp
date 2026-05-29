@@ -618,7 +618,7 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
         if (imposed_phase_index != iphase_not_imposed) {
             _phase = imposed_phase_index;
         } else {
-            if (rho < rhomolar_critical()) {
+            if (rho < rhomolar_reducing()) {
                 _phase = iphase_gas;
             } else {
                 _phase = iphase_liquid;
@@ -918,7 +918,7 @@ void CoolProp::AbstractCubicBackend::cubic_PT_flash_mixture() {
     if (is_stable) {
         _rhomolar = solver_rho_Tp_global(_T, _p, 0.9 / SRK_covolume());
         update_DmolarT_direct(_rhomolar, _T);
-        if (_rhomolar < rhomolar_critical()) { _phase = iphase_gas; } else { _phase = iphase_liquid; }
+        if (_rhomolar < rhomolar_reducing()) { _phase = iphase_gas; } else { _phase = iphase_liquid; }
         _Q = -1; return;
     }
     double beta = 0.5; std::vector<CoolPropDbl> x = best_x, y = best_y;
