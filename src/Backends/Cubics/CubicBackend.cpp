@@ -4,6 +4,7 @@
 #include "Solvers.h"
 #include "Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     N = cubic->get_Tc().size();
@@ -82,6 +83,13 @@ void CoolProp::AbstractCubicBackend::set_alpha0_from_components() {
         CoolPropFluid fld;
         fld.EOSVector.emplace_back();
         fld.EOS().alpha0 = components[i].alpha0;
+        // Copy triple-point data from the HEOS fluid library so that
+        // get_fluid_constant(iT_triple) returns a valid value.
+        try {
+            CoolPropFluid heos_fld = get_fluid(components[i].name);
+            fld.EOS().sat_min_liquid = heos_fld.EOS().sat_min_liquid;
+            fld.EOS().sat_min_vapor = heos_fld.EOS().sat_min_vapor;
+        } catch (...) {}
         _components.push_back(fld);
     }
 }
