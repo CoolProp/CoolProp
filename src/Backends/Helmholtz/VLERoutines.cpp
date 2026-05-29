@@ -1852,7 +1852,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
         ln_f_z[i] = std::log(z[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
     }
     std::vector<CoolPropDbl> yV(z.size()), xL(z.size());
-    double sum_yV = 0, sum_xL = 0;
+    CoolPropDbl sum_yV = 0, sum_xL = 0;
     for (std::size_t i = 0; i < z.size(); ++i) {
         yV[i] = z[i] * K0[i]; sum_yV += yV[i];
         xL[i] = z[i] / K0[i]; sum_xL += xL[i];
@@ -1860,7 +1860,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
     std::vector<std::vector<CoolPropDbl>> trials = {yV, xL};
     for (auto& Y : trials) {
         for (int iter = 0; iter < 150; ++iter) {
-            double sumY = 0;
+            CoolPropDbl sumY = 0;
             for (double val : Y) sumY += val;
             std::vector<CoolPropDbl> y_norm(z.size());
             for (std::size_t i = 0; i < z.size(); ++i) y_norm[i] = Y[i] / sumY;
@@ -1869,8 +1869,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
                 CoolPropDbl rho_t = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatV->SRK_covolume());
                 HEOS.SatV->update_DmolarT_direct(rho_t, the_T);
             } catch (...) { break; }
-            double sumY_new = 0;
-            double max_err = 0;
+            CoolPropDbl sumY_new = 0;
+            CoolPropDbl max_err = 0;
             for (std::size_t i = 0; i < z.size(); ++i) {
                 double ln_phi_y = std::log(HEOS.SatV->fugacity_coefficient(i));
                 double Y_next = std::exp(ln_f_z[i] - ln_phi_y);
@@ -1963,7 +1963,7 @@ void SaturationSolvers::PTflash_twophase::solve() {
             }
             if (r > 0) beta_min = beta; else beta_max = beta;
             if (std::abs(r) < 1e-11) break;
-            double step = r / dr; double beta_new = beta - step;
+            CoolPropDbl step = r / dr; CoolPropDbl beta_new = beta - step;
             if (beta_new <= beta_min || beta_new >= beta_max) beta_new = 0.5 * (beta_min + beta_max);
             if (std::abs(beta_new - beta) < 1e-11) break;
             beta = beta_new;
@@ -2000,13 +2000,13 @@ void SaturationSolvers::PTflash_twophase::solve() {
             CoolPropDbl sum_x_DL = 0, sum_y_DV = 0;
             for (std::size_t k = 0; k < N; ++k) { sum_x_DL += IO.x[k] * DL(i, k); sum_y_DV += IO.y[k] * DV(i, k); }
             for (std::size_t j = 0; j < N; ++j) {
-                double dln_phi_L_dnj = DL(i, j) - sum_x_DL;
-                double dln_phi_V_dnj = DV(i, j) - sum_y_DV;
+                CoolPropDbl dln_phi_L_dnj = DL(i, j) - sum_x_DL;
+                CoolPropDbl dln_phi_V_dnj = DV(i, j) - sum_y_DV;
                 H(i, j) = V_frac * dln_phi_L_dnj + L_frac * dln_phi_V_dnj - 1.0;
             }
             H(i, i) += (V_frac / IO.x[i]) + (L_frac / IO.y[i]);
-            double l_act = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
-            double v_act = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
+            CoolPropDbl l_act = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
+            CoolPropDbl v_act = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
             g(i) = V_frac * L_frac * (v_act - l_act);
             max_g = std::max(max_g, std::abs(v_act - l_act));
         }
@@ -2014,7 +2014,7 @@ void SaturationSolvers::PTflash_twophase::solve() {
         Eigen::VectorXd delta_v = H.colPivHouseholderQr().solve(-g);
         CoolPropDbl step_scale = 1.0;
         for (std::size_t i = 0; i < N; ++i) {
-            double v_old = beta * IO.y[i];
+            CoolPropDbl v_old = beta * IO.y[i];
             if (delta_v(i) > 0 && v_old + delta_v(i) > IO.z[i]) step_scale = std::min(step_scale, 0.99 * (IO.z[i] - v_old) / delta_v(i));
             if (delta_v(i) < 0 && v_old + delta_v(i) < 0) step_scale = std::min(step_scale, 0.99 * (-v_old) / delta_v(i));
         }
