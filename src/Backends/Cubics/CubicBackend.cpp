@@ -1007,6 +1007,17 @@ void CoolProp::AbstractCubicBackend::cubic_PT_flash_mixture() {
             SatV->update_DmolarT_direct(rhov, the_T);
         } catch (...) { throw CoolProp::ValueError("Density solver failed for vapor phase in Newton step"); }
     }
-    _phase = CoolProp::iphase_twophase; _Q = beta;
-    _rhomolar = 1.0 / (beta / SatV->rhomolar() + (1.0 - beta) / SatL->rhomolar());
+    if (beta < 1e-9) {
+        _rhomolar = SatL->rhomolar();
+        _phase = (_rhomolar < rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+        _Q = -1;
+    } else if (beta > 1.0 - 1e-9) {
+        _rhomolar = SatV->rhomolar();
+        _phase = (_rhomolar < rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+        _Q = -1;
+    } else {
+        _phase = CoolProp::iphase_twophase;
+        _Q = beta;
+        _rhomolar = 1.0 / (beta / SatV->rhomolar() + (1.0 - beta) / SatL->rhomolar());
+    }
 }
