@@ -92,10 +92,7 @@ def interpolate_values_1d(x, y, x_points=None, kind='linear'):
 
 
 def is_string(in_obj):
-    try:
-        return isinstance(in_obj, basestring)
-    except NameError:
-        return isinstance(in_obj, str)
+    return isinstance(in_obj, str)
     # except:
     #    return False
 

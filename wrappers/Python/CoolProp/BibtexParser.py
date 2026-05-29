@@ -192,7 +192,10 @@ class BibTeXerClass(object):
 
         if fmt == "latex":
             contents = contents.replace(u"\\newblock ", "")
-            contents = codecs.encode(contents, "latex")
+            # latexcodec's "latex" codec encodes str -> bytes (ASCII LaTeX); decode
+            # back to str so the trailing newline strip below works and getEntry
+            # returns a consistent str type across all formats.
+            contents = codecs.encode(contents, "latex").decode("utf-8")
         elif fmt == "html":
             contents = contents.replace(u"<dd>", "")
             contents = contents.replace(u"</dd>", "")

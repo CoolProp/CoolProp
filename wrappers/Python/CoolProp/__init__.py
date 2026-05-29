@@ -77,6 +77,6 @@ def copy_BibTeX_library(file=None, folder=None):
     elif file and folder is None:
         shutil.copy2(path_to_bib, file)
     elif folder and file is None:
-        shutil.copy2(path_to_bib, os.path.join(folder, file))
+        shutil.copy2(path_to_bib, folder)
     else:
         raise ValueError('can only provide one of file or folder')
