@@ -39,35 +39,34 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             HEOS.unspecify_phase();
             HEOS._Q = -1;
         } else {
-            // Two-phase: use TPD stability for robust initial guesses.
-            // If TPD says stable (near boundary), treat as single-phase.
-            StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
-            if (!stability_tester.is_stable()) {
-                CoolProp::SaturationSolvers::PTflash_twophase_options o;
-                stability_tester.get_liq(o.x, o.rhomolar_liq);
-                stability_tester.get_vap(o.y, o.rhomolar_vap);
-                o.z = HEOS.get_mole_fractions();
-                o.T = HEOS.T();
-                o.p = HEOS.p();
-                o.omega = 1.0;
-                CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
-                solver.solve();
-                HEOS._phase = iphase_twophase;
-                HEOS._Q = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
-                if (HEOS._Q < 0 || HEOS._Q > 1) {
-                    HEOS._Q = -1;
-                }
-                HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
-            } else {
-                // TPD says stable but PE says two-phase - near phase boundary.
-                // Treat as single-phase
-                phases phase_to_use = (HEOS._T > closest_state.T) ? iphase_gas : iphase_liquid;
-                HEOS.specify_phase(phase_to_use);
-                CoolPropDbl rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
-                HEOS.update_DmolarT_direct(rhomolar, HEOS._T);
-                HEOS.unspecify_phase();
+            // Two-phase: initialize PTflash directly from the nearest phase-envelope point.
+            const PhaseEnvelopeData& env = HEOS.PhaseEnvelope;
+            CoolProp::SaturationSolvers::PTflash_twophase_options o;
+            o.z = HEOS.get_mole_fractions();
+            o.T = HEOS.T();
+            o.p = HEOS.p();
+            o.omega = 1.0;
+            const std::size_t Ncomp = o.z.size();
+            o.x.resize(Ncomp);
+            o.y.resize(Ncomp);
+            for (std::size_t k = 0; k < Ncomp; ++k) {
+                o.x[k] = env.x[k][i];
+                o.y[k] = env.y[k][i];
+            }
+            o.rhomolar_liq = env.rhomolar_liq[i];
+            o.rhomolar_vap = env.rhomolar_vap[i];
+
+            // Fast SS warm-up: PE point may be at a different T than the query.
+            SaturationSolvers::successive_substitution_guessrho(HEOS, o.x, o.y, o.rhomolar_liq, o.rhomolar_vap, o.z, 10);
+
+            CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
+            solver.solve();
+            HEOS._phase = iphase_twophase;
+            HEOS._Q = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
+            if (HEOS._Q < 0 || HEOS._Q > 1) {
                 HEOS._Q = -1;
             }
+            HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
         }
         return;
     }
@@ -94,6 +93,8 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         o.T = HEOS.T();
         o.p = HEOS.p();
         o.omega = 1.0;
+        // Run some more SS iterations to improve starting point before calling Newton solver.
+        SaturationSolvers::successive_substitution_guessrho(HEOS, o.x, o.y, o.rhomolar_liq, o.rhomolar_vap, o.z, 10);
         CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
         solver.solve();
         HEOS._phase = iphase_twophase;
@@ -104,8 +105,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         HEOS._rhomolar = 1 / (Q_phys / HEOS.SatV->rhomolar() + (1 - Q_phys) / HEOS.SatL->rhomolar());
         HEOS._Q = (Q_raw < 0 || Q_raw > 1) ? -1 : Q_raw;
     } else {
-        // TPD says stable - single-phase (even if caller imposed two-phase,
-        // e.g. near the phase boundary during an HP flash Brent sweep).
+        // TPD says stable - single-phase.
         //
         // Determine the phase from Wilson K-factor bubble-pressure estimate
         // before solving for density.
@@ -128,6 +128,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         HEOS._Q = -1;
     }
 }
+
 void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.is_pure_or_pseudopure) {
         // At the critical point dP/drho -> 0, so solver_rho_Tp is ill-conditioned: a tight
@@ -2772,12 +2773,12 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
                 PY_flash_resid probe_resid(probe, P, other, value);
                 ok_lo = try_eval(probe_resid, T_lo, r_lo);
                 ok_hi = try_eval(probe_resid, T_hi, r_hi);
-            if (!ok_lo && ok_hi) {
+                if (!ok_lo && ok_hi) {
                     bracket_validity(probe_resid, T_lo, T_hi, r_lo, /*fail_is_lo=*/true);
-                ok_lo = true;
-            } else if (ok_lo && !ok_hi) {
+                    ok_lo = true;
+                } else if (ok_lo && !ok_hi) {
                     bracket_validity(probe_resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
-                ok_hi = true;
+                    ok_hi = true;
                 }
             }
 

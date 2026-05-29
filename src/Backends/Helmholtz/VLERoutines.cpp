@@ -1160,18 +1160,18 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend& HEOS
 
     // Use Peneloux volume translation to shift liquid volume
     // As in Horstmann :: doi:10.1016/j.fluid.2004.11.002
-    double summer_c = 0, v_SRK = 1 / rhomolar_liq;
-    const std::vector<CoolPropFluid>& components = HEOS.get_components();
-    for (std::size_t i = 0; i < components.size(); ++i) {
+        double summer_c = 0, v_SRK = 1 / rhomolar_liq;
+        const std::vector<CoolPropFluid>& components = HEOS.get_components();
+        for (std::size_t i = 0; i < components.size(); ++i) {
         // Get the parameters for the cubic EOS
-        CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical);
-        CoolPropDbl pc = HEOS.get_fluid_constant(i, iP_critical);
-        CoolPropDbl rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
-        CoolPropDbl R = 8.3144598;
+            CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical);
+            CoolPropDbl pc = HEOS.get_fluid_constant(i, iP_critical);
+            CoolPropDbl rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
+            CoolPropDbl R = 8.3144598;
 
-        summer_c += z[i] * (0.40768 * R * Tc / pc * (0.29441 - pc / (rhomolarc * R * Tc)));
-    }
-    rhomolar_liq = 1 / (v_SRK - summer_c);
+            summer_c += z[i] * (0.40768 * R * Tc / pc * (0.29441 - pc / (rhomolarc * R * Tc)));
+        }
+        rhomolar_liq = 1 / (v_SRK - summer_c);
     HEOS.SatL->update_TP_guessrho(T, p, rhomolar_liq);
     HEOS.SatV->update_TP_guessrho(T, p, rhomolar_vap);
 
@@ -1744,6 +1744,45 @@ class RachfordRiceResidual : public FuncWrapper1DWithDeriv
     }
 };
 
+void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
+                                                         CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z,
+                                                         int num_steps, double tol) {
+    const std::size_t N = z.size();
+    std::vector<CoolPropDbl> lnK(N, 0.0), K(N);
+    for (int ss = 0; ss < num_steps; ++ss) {
+        HEOS.SatL->set_mole_fractions(x);
+        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
+        HEOS.SatV->set_mole_fractions(y);
+        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
+        rhomolar_liq = HEOS.SatL->rhomolar();
+        rhomolar_vap = HEOS.SatV->rhomolar();
+
+        double g0 = 0, g1 = 0, max_lnK_change = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            double lnK_new = log(HEOS.SatL->fugacity_coefficient(i) / HEOS.SatV->fugacity_coefficient(i));
+            max_lnK_change = std::max(max_lnK_change, std::abs(lnK_new - lnK[i]));
+            lnK[i] = lnK_new;
+            K[i] = exp(lnK[i]);
+            g0 += z[i] * (K[i] - 1.0);
+            g1 += z[i] * (1.0 - 1.0 / K[i]);
+        }
+        if (ss > 0 && max_lnK_change < tol) break;
+
+        double beta;
+        if (g0 < 0)
+            beta = 0;
+        else if (g1 > 0)
+            beta = 1;
+        else {
+            RachfordRiceResidual resid(z, lnK);
+            beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+        }
+        x_and_y_from_K(beta, K, z, x, y);
+        normalize_vector(x);
+        normalize_vector(y);
+    }
+}
+
 void StabilityRoutines::StabilityEvaluationClass::trial_compositions() {
 
     x.resize(z.size());
@@ -1951,15 +1990,15 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
                                 rhomolar_liq, rhomolar_vap, tpd_L, tpd_H);
         }
 
-        // Check if either of the phases have the bulk composition. If so, no phase split
-        if (diffbulkL < 1e-2 || diffbulkH < 1e-2) {
-            _stable = true;
+        // Check tpd first: If either tpd is negative, phases definitely split.
+        if (tpd_L < -1e-12 || tpd_H < -1e-12) {
+            _stable = false;
             return;
         }
 
-        // Check if either tpd is negative, if so, phases definitively split, quit
-        if (tpd_L < -1e-12 || tpd_H < -1e-12) {
-            _stable = false;
+        // Check if either of the phases have the bulk composition. If so, no phase split
+        if (diffbulkL < 1e-2 || diffbulkH < 1e-2) {
+            _stable = true;
             return;
         }
     }
