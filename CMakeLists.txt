@@ -2095,8 +2095,9 @@ if(COOLPROP_CATCH_MODULE)
   enable_testing()
 
   list(APPEND APP_SOURCES
-       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp"
-       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/MixtureFlashTests.cpp")
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-MixtureFlash.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDComponents.cpp")
   list(APPEND APP_SOURCES
