@@ -1494,7 +1494,7 @@ if(COOLPROP_VBDOTNET_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB)
 
-  set(MORE_SWIG_FLAGS -dllimport \"CoolProp\" -namespace CoolProp)
+  set(MORE_SWIG_FLAGS -dllimport \"CoolPropCsharp\" -namespace CoolProp)
   set(CMAKE_SWIG_OUTDIR CoolPropVB/CsharpClassLibrary)
 
   # Define which headers the CoolProp wrapper is dependent on
@@ -1509,6 +1509,7 @@ if(COOLPROP_VBDOTNET_MODULE)
   set_property(SOURCE ${I_FILE} PROPERTY CPLUSPLUS ON)
   set_property(SOURCE ${I_FILE} PROPERTY SWIG_FLAGS ${SWIG_OPTIONS})
   swig_add_module(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropCsharp")
 
   add_definitions(-DNO_ERROR_CATCHING)
 
