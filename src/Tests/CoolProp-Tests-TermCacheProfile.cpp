@@ -28,7 +28,10 @@
 #include "AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "CoolPropFluid.h"
+#include "CoolProp.h"
 #include "Helmholtz.h"
+
+#include <sstream>
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
@@ -70,16 +73,16 @@ std::vector<double> distinct_values(const std::vector<double>& xs, double rtol =
 // corresponds to the pow/exp calls actually executed at run time.
 struct TermStats
 {
-    std::size_t N = 0;             // total residual term count (GenExp.elements.size())
-    std::size_t N_l_used = 0;      // terms that take the exp(l*log_delta) branch
-    std::size_t N_m_used = 0;      // terms that take the exp(m*log_tau) branch
-    std::size_t unique_l = 0;      // distinct l_double values among the N_l_used terms
-    std::size_t unique_m = 0;      // distinct m_double values among the N_m_used terms
-    std::vector<double> ls;        // the l_double values per-term (for Part 2 to reuse)
-    std::vector<double> ms;        // the m_double values per-term (for Part 2 to reuse)
+    std::size_t N = 0;         // total residual term count (GenExp.elements.size())
+    std::size_t N_l_used = 0;  // terms that take the exp(l*log_delta) branch
+    std::size_t N_m_used = 0;  // terms that take the exp(m*log_tau) branch
+    std::size_t unique_l = 0;  // distinct l_double values among the N_l_used terms
+    std::size_t unique_m = 0;  // distinct m_double values among the N_m_used terms
+    std::vector<double> ls;    // the l_double values per-term (for Part 2 to reuse)
+    std::vector<double> ms;    // the m_double values per-term (for Part 2 to reuse)
     bool delta_li_in_u = false;
     bool tau_mi_in_u = false;
-    bool ok = false;               // false => introspection failed / not a HEOS pure
+    bool ok = false;  // false => introspection failed / not a HEOS pure
 };
 
 // Walk the residual term table of fluid `name` and produce stats.  Returns ok=false
@@ -109,9 +112,7 @@ TermStats inspect_fluid(const std::string& name) {
         const auto& el = gen.elements[i];
         // Gate for the delta^l branch — mirrors the live code in
         // src/Helmholtz.cpp around line 162 of ResidualHelmholtzGeneralizedExponential::all.
-        const bool l_active = s.delta_li_in_u
-                              && std::isfinite(static_cast<double>(el.l_double))
-                              && static_cast<double>(el.l_double) > 0.0
+        const bool l_active = s.delta_li_in_u && std::isfinite(static_cast<double>(el.l_double)) && static_cast<double>(el.l_double) > 0.0
                               && std::abs(static_cast<double>(el.c)) > DBL_EPSILON;
         // Gate for the tau^m branch — mirrors the live code around line 177.
         const bool m_active = s.tau_mi_in_u && std::abs(static_cast<double>(el.m_double)) > 0.0;
@@ -135,21 +136,25 @@ TermStats inspect_fluid(const std::string& name) {
 double path_A(const std::vector<double>& ls, const std::vector<double>& ms, double log_delta, double log_tau) {
     double acc = 0.0;
     const std::size_t Nl = ls.size(), Nm = ms.size();
-    for (std::size_t i = 0; i < Nl; ++i) acc += std::exp(ls[i] * log_delta);
-    for (std::size_t i = 0; i < Nm; ++i) acc += std::exp(ms[i] * log_tau);
+    for (std::size_t i = 0; i < Nl; ++i)
+        acc += std::exp(ls[i] * log_delta);
+    for (std::size_t i = 0; i < Nm; ++i)
+        acc += std::exp(ms[i] * log_tau);
     return acc;
 }
 
 // Path B: precompute one exp() per unique exponent, then do a small linear-search
 // lookup per term to fetch the cached value.  Realistic for the typical case where
 // unique <= 16 — linear search beats a hash map at that size.
-double path_B(const std::vector<double>& ls, const std::vector<double>& ms, const std::vector<double>& uniq_l,
-              const std::vector<double>& uniq_m, double log_delta, double log_tau) {
+double path_B(const std::vector<double>& ls, const std::vector<double>& ms, const std::vector<double>& uniq_l, const std::vector<double>& uniq_m,
+              double log_delta, double log_tau) {
     // Precompute exp(u * log_x) once per unique exponent.
     double cache_l[64], cache_m[64];
     const std::size_t Ul = std::min<std::size_t>(uniq_l.size(), 64), Um = std::min<std::size_t>(uniq_m.size(), 64);
-    for (std::size_t k = 0; k < Ul; ++k) cache_l[k] = std::exp(uniq_l[k] * log_delta);
-    for (std::size_t k = 0; k < Um; ++k) cache_m[k] = std::exp(uniq_m[k] * log_tau);
+    for (std::size_t k = 0; k < Ul; ++k)
+        cache_l[k] = std::exp(uniq_l[k] * log_delta);
+    for (std::size_t k = 0; k < Um; ++k)
+        cache_m[k] = std::exp(uniq_m[k] * log_tau);
 
     double acc = 0.0;
     const std::size_t Nl = ls.size(), Nm = ms.size();
@@ -197,10 +202,12 @@ TrialStats bench(F&& fn, std::size_t reps, std::size_t n_trials) {
     }
     (void)sink;
     double sum = 0.0;
-    for (double x : ns_per_iter) sum += x;
+    for (double x : ns_per_iter)
+        sum += x;
     const double mean = sum / static_cast<double>(n_trials);
     double sq = 0.0;
-    for (double x : ns_per_iter) sq += (x - mean) * (x - mean);
+    for (double x : ns_per_iter)
+        sq += (x - mean) * (x - mean);
     const double stddev = (n_trials > 1) ? std::sqrt(sq / static_cast<double>(n_trials - 1)) : 0.0;
     return TrialStats{mean, stddev};
 }
@@ -225,16 +232,35 @@ bool eval_state(const std::string& name, double T, double p, double& log_tau, do
 
 }  // anonymous namespace
 
+TEST_CASE("Tau-mi sweep: which fluids actually populate tau_mi_in_u with non-zero m_double", "[term_cache_tau_sweep][.]") {
+    // Scan the whole fluid library for fluids where N_m_used > 0.
+    const std::string fluids_csv = CoolProp::get_global_param_string("FluidsList");
+    std::vector<std::string> all_fluids;
+    std::stringstream ss(fluids_csv);
+    std::string item;
+    while (std::getline(ss, item, ','))
+        all_fluids.push_back(item);
+    std::printf("\n=== tau_mi sweep: %zu fluids ===\n", all_fluids.size());
+    std::printf("%-30s %5s %8s %10s %8s %10s\n", "fluid", "N", "N_l_used", "unique_l", "N_m_used", "unique_m");
+    std::size_t with_m = 0;
+    for (const auto& name : all_fluids) {
+        const TermStats s = inspect_fluid(name);
+        if (!s.ok) continue;
+        if (s.N_m_used == 0) continue;
+        ++with_m;
+        std::printf("%-30s %5zu %8zu %10zu %8zu %10zu\n", name.c_str(), s.N, s.N_l_used, s.unique_l, s.N_m_used, s.unique_m);
+    }
+    std::printf("--- %zu / %zu fluids have N_m_used > 0 ---\n", with_m, all_fluids.size());
+}
+
 TEST_CASE("Term-cache feasibility profile for ResidualHelmholtzGeneralizedExponential::all", "[term_cache_profile][.]") {
     // -------------------- PART 1 --------------------
-    const std::vector<std::string> fluids = {"Water",   "CarbonDioxide", "n-Propane", "R134a", "Nitrogen",
-                                             "Methane", "MM",            "Ammonia",   "Hydrogen", "R32"};
+    const std::vector<std::string> fluids = {"Water", "CarbonDioxide", "n-Propane", "R134a", "Nitrogen", "Methane",
+                                             "MM",    "Ammonia",       "Hydrogen",  "R32",   "R143a"};
 
     std::printf("\n=== Part 1: residual-term-table structure (per fluid) ===\n");
-    std::printf("%-15s %5s %8s %10s %8s %10s %12s\n",
-                "fluid", "N", "N_l_used", "unique_l", "N_m_used", "unique_m", "savings_pow");
-    std::printf("%-15s %5s %8s %10s %8s %10s %12s\n",
-                "-----", "-", "--------", "--------", "--------", "--------", "-----------");
+    std::printf("%-15s %5s %8s %10s %8s %10s %12s\n", "fluid", "N", "N_l_used", "unique_l", "N_m_used", "unique_m", "savings_pow");
+    std::printf("%-15s %5s %8s %10s %8s %10s %12s\n", "-----", "-", "--------", "--------", "--------", "--------", "-----------");
     std::vector<std::string> skipped;
     for (const auto& name : fluids) {
         const TermStats s = inspect_fluid(name);
@@ -243,11 +269,8 @@ TEST_CASE("Term-cache feasibility profile for ResidualHelmholtzGeneralizedExpone
             continue;
         }
         const std::size_t denom = s.N_l_used + s.N_m_used;
-        const double savings = (denom > 0)
-                                   ? static_cast<double>(denom - s.unique_l - s.unique_m) / static_cast<double>(denom)
-                                   : 0.0;
-        std::printf("%-15s %5zu %8zu %10zu %8zu %10zu %12.3f\n", name.c_str(), s.N, s.N_l_used, s.unique_l, s.N_m_used,
-                    s.unique_m, savings);
+        const double savings = (denom > 0) ? static_cast<double>(denom - s.unique_l - s.unique_m) / static_cast<double>(denom) : 0.0;
+        std::printf("%-15s %5zu %8zu %10zu %8zu %10zu %12.3f\n", name.c_str(), s.N, s.N_l_used, s.unique_l, s.N_m_used, s.unique_m, savings);
         // Sanity asserts (validation): the unique count can't exceed the participating count,
         // and savings is in [0, 1].
         REQUIRE(s.unique_l <= s.N_l_used);
@@ -257,7 +280,8 @@ TEST_CASE("Term-cache feasibility profile for ResidualHelmholtzGeneralizedExpone
     }
     if (!skipped.empty()) {
         std::printf("(skipped: ");
-        for (std::size_t i = 0; i < skipped.size(); ++i) std::printf("%s%s", skipped[i].c_str(), i + 1 == skipped.size() ? "" : ", ");
+        for (std::size_t i = 0; i < skipped.size(); ++i)
+            std::printf("%s%s", skipped[i].c_str(), i + 1 == skipped.size() ? "" : ", ");
         std::printf(")\n");
     }
 
@@ -270,20 +294,17 @@ TEST_CASE("Term-cache feasibility profile for ResidualHelmholtzGeneralizedExpone
     };
     // Representative single-phase states (well away from saturation / criticality).
     const std::vector<BenchFluid> benches = {
-        {"Water", 400.0, 1.0e7},    // compressed liquid water, comfortably subcritical
-        {"R134a", 350.0, 5.0e5},    // superheated R134a vapor
-        {"n-Propane", 300.0, 2.0e5} // gas-phase n-propane
+      {"Water", 400.0, 1.0e7},     // compressed liquid water, comfortably subcritical
+      {"R134a", 350.0, 5.0e5},     // superheated R134a vapor
+      {"n-Propane", 300.0, 2.0e5}  // gas-phase n-propane
     };
     const std::size_t reps = 1'000'000;
     const std::size_t n_trials = 5;
 
     std::printf("\n=== Part 2: microbench Path A (per-term exp) vs Path B (precompute+lookup) ===\n");
     std::printf("(%zu reps x %zu trials, ns per loop iteration)\n", reps, n_trials);
-    std::printf("%-12s %5s %10s %10s %14s %14s %8s %14s\n",
-                "fluid", "N", "uniq_l", "uniq_m", "A mean (ns)", "B mean (ns)", "A/B",
-                "Delta x 25 ns");
-    std::printf("%-12s %5s %10s %10s %14s %14s %8s %14s\n",
-                "-----", "-", "------", "------", "-----------", "-----------", "---", "-------------");
+    std::printf("%-12s %5s %10s %10s %14s %14s %8s %14s\n", "fluid", "N", "uniq_l", "uniq_m", "A mean (ns)", "B mean (ns)", "A/B", "Delta x 25 ns");
+    std::printf("%-12s %5s %10s %10s %14s %14s %8s %14s\n", "-----", "-", "------", "------", "-----------", "-----------", "---", "-------------");
 
     for (const auto& b : benches) {
         TermStats s = inspect_fluid(b.name);
@@ -313,9 +334,8 @@ TEST_CASE("Term-cache feasibility profile for ResidualHelmholtzGeneralizedExpone
         // translates to ~25 * (A - B) ns per flash solve.
         const double per_solve_ns = (A.mean_ns - B.mean_ns) * 25.0;
 
-        std::printf("%-12s %5zu %10zu %10zu %8.1f +-%3.1f %8.1f +-%3.1f %8.2f %14.1f\n",
-                    b.name.c_str(), s.N, uniq_l.size(), uniq_m.size(),
-                    A.mean_ns, A.stddev_ns, B.mean_ns, B.stddev_ns, ratio, per_solve_ns);
+        std::printf("%-12s %5zu %10zu %10zu %8.1f +-%3.1f %8.1f +-%3.1f %8.2f %14.1f\n", b.name.c_str(), s.N, uniq_l.size(), uniq_m.size(), A.mean_ns,
+                    A.stddev_ns, B.mean_ns, B.stddev_ns, ratio, per_solve_ns);
     }
 
     std::printf("\nNote: Path A mimics 'exp(l*log_delta) + exp(m*log_tau) per term'.\n");
