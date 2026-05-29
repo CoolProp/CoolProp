@@ -50,7 +50,7 @@ Per wrapper in `CMakeLists.txt` (and `dev/scripts/examples/example_generator.py`
 | VB.NET | `COOLPROP_VBDOTNET_MODULE` (`:1486`) | `CoolPropCsharp` | `-dllimport "CoolProp"` → `-dllimport "CoolPropCsharp"` (`:1496`) |
 | Java | `COOLPROP_JAVA_MODULE` (`:1606`) | `CoolPropJava` | `example_generator.py:934` `System.loadLibrary("CoolProp")` → `loadLibrary("CoolPropJava")` |
 | R | `COOLPROP_R_MODULE` (`:1555`) | `CoolPropR` | `example_generator.py:806` `dyn.load(paste("CoolProp", ...))` → `"CoolPropR"` |
-| PHP | `COOLPROP_PHP_MODULE` (`:1751`) | `CoolPropPHP` | generated `CoolProp.php` `dl()` loader — see verification item |
+| PHP | `COOLPROP_PHP_MODULE` (`:1751`) | `CoolPropPHP` | none required — see PHP finding below |
 
 Mechanics:
 - Add `set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolProp<Lang>")` to
@@ -59,11 +59,23 @@ Mechanics:
   (`CMakeLists.txt:1533`) follows the rename automatically — no path edit needed.
 - Install destinations (`Csharp/`, `Java/`, `R/`, `PHP/`, `VB.NET/`) are unchanged.
 
-**Verification item (PHP)**: SWIG PHP may couple the loadable-extension name to the
-`%module` name, in which case `dl('CoolProp...')` in the generated `CoolProp.php`
-will not resolve a `CoolPropPHP.so`. If so, add a post-generation `sed` patch of the
-generated loader line, or document the limitation. This is the one item that cannot
-be fully resolved without building the PHP wrapper.
+**PHP finding (tested with SWIG 4.3.0, 2026-05-29)**: the rename is safe with no
+loader patch. Verified by running `swig -c++ -php7` on a minimal `%module CoolProp`
+interface:
+- The module name `"CoolProp"` appears only in the internal `zend_module_entry`,
+  `SWIG_name`, and `INIT_CLASS_ENTRY` (`CoolProp_wrap.cxx`). That is the API-level
+  extension name (used by `extension_loaded("CoolProp")` and `get_module()`), which
+  we keep unchanged.
+- There is **no** hardcoded `.so` filename and **no** `dl()` call in the generated
+  wrapper. PHP loads a C extension by filename (`extension=CoolPropPHP.so` or
+  `dl("CoolPropPHP.so")`), then calls `get_module()`; filename and internal module
+  name are decoupled, so renaming the `.so` to `CoolPropPHP` requires no patch.
+
+**Pre-existing PHP bug (out of #1674 scope, flagged)**: SWIG 4.1+ no longer emits a
+`CoolProp.php` proxy, but `CMakeLists.txt:1796` still does
+`install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php ...)`. That install will fail
+or install nothing on any modern SWIG. This is independent of the rename; recommend a
+follow-up issue rather than folding it into this branch.
 
 ## Part B — #2254: C# builder workflow
 
@@ -107,8 +119,8 @@ Add to `Web/coolprop/changelog.rst` under the next major version:
   matches the renamed DLL — this is the concrete check for both #1674 and #2326.
 - **Java / R**: existing example tests (`R_test`, the Java example run at
   `CMakeLists.txt:1683`) validate the loader-name updates.
-- **PHP**: verify the generated loader resolves the renamed `.so`; document or patch
-  per the PHP verification item.
+- **PHP**: rename verified safe by SWIG-generation inspection (see PHP finding); no
+  runtime test needed for the rename itself.
 - **Local**: the full SWIG toolchain set is not all installable locally; rely on the
   CI matrix for cross-platform confirmation.
 
