@@ -1,5 +1,4 @@
 #include <cmath>
-#include <array>
 #include "Helmholtz.h"
 #include "Backends/Cubics/GeneralizedCubic.h"
 
@@ -143,60 +142,6 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
     // Maybe split the construction of u and other parts into two separate loops?
     // If both loops can get vectorized, could be worth it.
     const std::size_t N = elements.size();
-
-    // === Optimization (E): cache exp(l_double * log_delta) and exp(m_double * log_tau)
-    // across terms that share the same exponent.  Per-call statistics show unique_l <= 6
-    // across all 136 fluids and unique_m in {0, 1, 3}, so a small fixed-size linear-search
-    // table beats std::unordered_map decisively.  When the gate is OFF (delta_li_in_u/
-    // tau_mi_in_u == false), the cache is empty and adds zero overhead.
-    constexpr std::size_t MAX_UNIQUE = 16;
-    std::array<double, MAX_UNIQUE> unique_l_keys{}, cache_exp_l{};
-    std::size_t n_unique_l = 0;
-    std::array<double, MAX_UNIQUE> unique_m_keys{}, cache_exp_m{};
-    std::size_t n_unique_m = 0;
-
-    if (delta_li_in_u) {
-        for (std::size_t i = 0; i < N; ++i) {
-            const ResidualHelmholtzGeneralizedExponentialElement& el = elements[i];
-            // Match the gate inside the term loop (the non-l_is_int branch).
-            if (!ValidNumber(el.l_double) || el.l_double <= 0 || std::abs(el.c) <= DBL_EPSILON) continue;
-            if (el.l_is_int) continue;  // powInt branch — not cached
-            const double l = static_cast<double>(el.l_double);
-            bool seen = false;
-            for (std::size_t k = 0; k < n_unique_l; ++k) {
-                if (unique_l_keys[k] == l) {
-                    seen = true;
-                    break;
-                }  // exact bitwise compare — exponents come from the same JSON field
-            }
-            if (!seen && n_unique_l < MAX_UNIQUE) {
-                unique_l_keys[n_unique_l] = l;
-                cache_exp_l[n_unique_l] = std::exp(l * log_delta);
-                ++n_unique_l;
-            }
-        }
-    }
-
-    if (tau_mi_in_u) {
-        for (std::size_t i = 0; i < N; ++i) {
-            const ResidualHelmholtzGeneralizedExponentialElement& el = elements[i];
-            if (std::abs(static_cast<double>(el.m_double)) <= 0) continue;
-            const double m = static_cast<double>(el.m_double);
-            bool seen = false;
-            for (std::size_t k = 0; k < n_unique_m; ++k) {
-                if (unique_m_keys[k] == m) {
-                    seen = true;
-                    break;
-                }
-            }
-            if (!seen && n_unique_m < MAX_UNIQUE) {
-                unique_m_keys[n_unique_m] = m;
-                cache_exp_m[n_unique_m] = std::exp(m * log_tau);
-                ++n_unique_m;
-            }
-        }
-    }
-
     for (std::size_t i = 0; i < N; ++i) {
         ResidualHelmholtzGeneralizedExponentialElement& el = elements[i];
         CoolPropDbl ni = el.n, di = el.d, ti = el.t;
@@ -215,21 +160,7 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
         if (delta_li_in_u) {
             CoolPropDbl ci = el.c, l_double = el.l_double;
             if (ValidNumber(l_double) && l_double > 0 && std::abs(ci) > DBL_EPSILON) {
-                CoolPropDbl powed;
-                if (el.l_is_int) {
-                    powed = powInt(delta, el.l_int);
-                } else {
-                    powed = 0.0;
-                    for (std::size_t k = 0; k < n_unique_l; ++k) {
-                        if (unique_l_keys[k] == l_double) {
-                            powed = cache_exp_l[k];
-                            break;
-                        }
-                    }
-                    // Defensive fallback (shouldn't trigger since prelude saw the same term):
-                    if (powed == 0.0) powed = std::exp(l_double * log_delta);
-                }
-                const CoolPropDbl u_increment = -ci * powed;
+                const CoolPropDbl u_increment = (el.l_is_int) ? -ci * powInt(delta, el.l_int) : -ci * exp(l_double * log_delta);
                 const CoolPropDbl du_ddelta_increment = l_double * u_increment * one_over_delta;
                 const CoolPropDbl d2u_ddelta2_increment = (l_double - 1) * du_ddelta_increment * one_over_delta;
                 const CoolPropDbl d3u_ddelta3_increment = (l_double - 2) * d2u_ddelta2_increment * one_over_delta;
@@ -244,15 +175,7 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
         if (tau_mi_in_u) {
             CoolPropDbl omegai = el.omega, m_double = el.m_double;
             if (std::abs(m_double) > 0) {
-                double cached_exp_m_val = 0.0;
-                for (std::size_t k = 0; k < n_unique_m; ++k) {
-                    if (unique_m_keys[k] == m_double) {
-                        cached_exp_m_val = cache_exp_m[k];
-                        break;
-                    }
-                }
-                if (cached_exp_m_val == 0.0) cached_exp_m_val = std::exp(m_double * log_tau);  // defensive
-                const CoolPropDbl u_increment = -omegai * cached_exp_m_val;
+                const CoolPropDbl u_increment = -omegai * exp(m_double * log_tau);
                 const CoolPropDbl du_dtau_increment = m_double * u_increment * one_over_tau;
                 const CoolPropDbl d2u_dtau2_increment = (m_double - 1) * du_dtau_increment * one_over_tau;
                 const CoolPropDbl d3u_dtau3_increment = (m_double - 2) * d2u_dtau2_increment * one_over_tau;
