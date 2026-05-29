@@ -62,5 +62,10 @@ class MeltingCaloric
     std::optional<std::pair<double, double>> m_stamp;
 };
 
+/// Return a process-global, lazily-built MeltingCaloric for H's (pure) fluid.
+/// Returns nullptr if the fluid is not pure or has no melting line. Built once
+/// per fluid name; subsequent calls return the cached instance.
+std::shared_ptr<MeltingCaloric> get_melting_caloric_cached(HelmholtzEOSMixtureBackend& H);
+
 }  // namespace CoolProp
 #endif

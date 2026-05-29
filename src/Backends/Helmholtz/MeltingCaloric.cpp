@@ -7,7 +7,10 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <map>
+#include <mutex>
 #include <stdexcept>
+#include <string>
 #include <Eigen/Dense>
 
 namespace CoolProp {
@@ -205,5 +208,25 @@ void MeltingCaloric::build(HelmholtzEOSMixtureBackend& H) {
     m_s_approx.emplace(fit_all_parts(H, pranges, [](HelmholtzEOSMixtureBackend& S) { return S.smolar(); }));
     m_stamp = FlashRoutines::alpha0_offset_total(H);
     m_built = true;
+}
+
+std::shared_ptr<MeltingCaloric> get_melting_caloric_cached(HelmholtzEOSMixtureBackend& H) {
+    if (!H.is_pure() || !H.has_melting_line()) return nullptr;
+    static std::map<std::string, std::shared_ptr<MeltingCaloric>> cache;
+    static std::mutex mtx;
+    const std::string key = H.fluid_names()[0];  // pure fluid: single name
+    std::lock_guard<std::mutex> lk(mtx);
+    auto it = cache.find(key);
+    if (it != cache.end()) return it->second;
+    auto mc = std::make_shared<MeltingCaloric>();
+    try {
+        mc->build(H);
+    } catch (...) {
+        cache[key] = nullptr;  // remember the failure; don't retry every call
+        return nullptr;
+    }
+    if (!mc->built()) mc = nullptr;
+    cache[key] = mc;
+    return mc;
 }
 }  // namespace CoolProp

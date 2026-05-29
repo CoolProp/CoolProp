@@ -1561,4 +1561,15 @@ TEST_CASE("MeltingCaloric stamp is captured at build", "[HS][HS_meltcal][.]") {
     CHECK(stamp->second == Catch::Approx(def_off.second));
 }
 
+TEST_CASE("MeltingCaloric global cache builds once per fluid", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    auto a = get_melting_caloric_cached(*H);
+    auto b = get_melting_caloric_cached(*H);
+    REQUIRE(a != nullptr);
+    CHECK(a.get() == b.get());     // same object: cached
+    CHECK(a->built());
+}
+
 #endif  // ENABLE_CATCH
