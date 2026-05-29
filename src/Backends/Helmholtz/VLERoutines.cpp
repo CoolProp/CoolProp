@@ -1838,134 +1838,53 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
     }
 }
 void StabilityRoutines::StabilityEvaluationClass::check_stability() {
-    std::vector<double> tpdL, tpdH;
-
-    // Calculate the temperature and pressure to be used
-    double the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
-    double the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
-
-    // If beta value is between epsilon and 1-epsilon, check the TPD
-    if (beta > DBL_EPSILON && beta < 1 - DBL_EPSILON) {
-
-        // Set the composition back to the bulk composition for both liquid and vapor phases
-        HEOS.SatL->set_mole_fractions(z);
-        HEOS.SatV->set_mole_fractions(z);
-        HEOS.SatL->calc_reducing_state();
-        HEOS.SatV->calc_reducing_state();
-
-        // Update the densities in each class
-        double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatL->SRK_covolume());
-        double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatV->SRK_covolume());
-        HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
-        HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
-
-        // Calculate the tpd and the Gibbs energy difference (Gernert, 2014, Eqs. 20-22)
-        // The trial compositions are the phase compositions from before
-        this->tpd_liq = HEOS.SatL->tangent_plane_distance(the_T, the_p, x, rhomolar_liq);
-        this->tpd_vap = HEOS.SatV->tangent_plane_distance(the_T, the_p, y, rhomolar_vap);
-
-        this->DELTAG_nRT = (1 - beta) * tpd_liq + beta * (tpd_vap);
-        if (debug) {
-            std::cout << format("3) tpd': %g tpd'': %g DELTAG/nRT: %g\n", tpd_liq, tpd_vap, DELTAG_nRT);
-        }
-
-        // If any of these cases are met, feed is conclusively unstable, stop!
-        if (this->tpd_liq < -DBL_EPSILON || this->tpd_vap < -DBL_EPSILON || this->DELTAG_nRT < -DBL_EPSILON) {
-            if (debug) {
-                std::cout << format("3) PHASE SPLIT beta in (eps,1-eps) \n");
-            }
-            _stable = false;
-            return;
-        }
-    }
-
-    // Ok, we aren't sure about stability, need to keep going with the full tpd analysis
-
-    // Use the global density solver to obtain the density root (or the lowest Gibbs energy root if more than one)
-    CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SRK_covolume());
-    HEOS.update_DmolarT_direct(rho_bulk, the_T);
-
-    // Calculate the fugacity coefficient at initial composition of the bulk phase.
-    // The bulk HEOS state is a hypothetical homogeneous root forced via
-    // update_DmolarT_direct above, but _phase isn't reset by that call (it can
-    // be iphase_twophase from a prior PQ flash).  Call MixtureDerivatives
-    // directly to bypass the phase-dispatch in calc_fugacity / calc_fugacity_coefficient
-    // and get the actual bulk-composition values — same pattern used in the
-    // tpd_L / tpd_H accumulation just below.
-    std::vector<double> fugacity_coefficient0(z.size()), fugacity0(z.size());
-    for (std::size_t i = 0; i < z.size(); ++i) {
-        fugacity_coefficient0[i] = exp(MixtureDerivatives::ln_fugacity_coefficient(HEOS, i, XN_DEPENDENT));
-        fugacity0[i] = MixtureDerivatives::fugacity_i(HEOS, i, XN_DEPENDENT);
-    }
-
-    // Generate light and heavy test compositions (Gernert, 2014, Eq. 23)
-    xL.resize(z.size());
-    xH.resize(z.size());
-    for (std::size_t i = 0; i < z.size(); ++i) {
-        xL[i] = z[i] * K0[i];  // Light-phase composition
-        xH[i] = z[i] / K0[i];  // Heavy-phase composition
-    }
-    normalize_vector(xL);
-    normalize_vector(xH);
-
-    // For each composition, use successive substitution to try to evaluate stability
-    if (debug) {
-        std::cout << format("3) SS2: i x' x'' rho' rho'' tpd' tpd''\n");
-    }
-
-    // We got this far, we assume stable phases
+    CoolPropDbl the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
+    CoolPropDbl the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
     _stable = true;
-
-    double diffbulkL = 0, diffbulkH = 0;
-    for (int step_count = 0; step_count < 100; ++step_count) {
-
-        // Set the composition
-        HEOS.SatL->set_mole_fractions(xH);
-        HEOS.SatV->set_mole_fractions(xL);
-        HEOS.SatL->calc_reducing_state();
-        HEOS.SatV->calc_reducing_state();
-
-        // Do the global density solver for both phases
-        rho_TP_global();
-
-        double tpd_L = 0, tpd_H = 0;
-        for (std::size_t i = 0; i < xL.size(); ++i) {
-            tpd_L += xL[i] * (log(MixtureDerivatives::fugacity_i(*HEOS.SatV, i, XN_DEPENDENT)) - log(fugacity0[i]));
-            tpd_H += xH[i] * (log(MixtureDerivatives::fugacity_i(*HEOS.SatL, i, XN_DEPENDENT)) - log(fugacity0[i]));
-        }
-        tpdL.push_back(tpd_L);
-        tpdH.push_back(tpd_H);
-
-        // Calculate the new composition from the fugacity coefficients
-        diffbulkL = 0, diffbulkH = 0;
-        for (std::size_t i = 0; i < z.size(); ++i) {
-            xL[i] = z[i] * fugacity_coefficient0[i] / HEOS.SatV->fugacity_coefficient(i);
-            diffbulkL += std::abs(xL[i] - z[i]);
-            xH[i] = z[i] * fugacity_coefficient0[i] / HEOS.SatL->fugacity_coefficient(i);
-            diffbulkH += std::abs(xH[i] - z[i]);
-        }
-        normalize_vector(xL);
-        normalize_vector(xH);
-        if (debug) {
-            std::cout << format("3) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f").c_str(), vec_to_string(xH, "%0.6f").c_str(),
-                                rhomolar_liq, rhomolar_vap, tpd_L, tpd_H);
-        }
-
-        // Check if either of the phases have the bulk composition. If so, no phase split
-        if (diffbulkL < 1e-2 || diffbulkH < 1e-2) {
-            _stable = true;
-            return;
-        }
-
-        // Check if either tpd is negative, if so, phases definitively split, quit
-        if (tpd_L < -1e-12 || tpd_H < -1e-12) {
-            _stable = false;
-            return;
-        }
+    HEOS.SatL->set_mole_fractions(z);
+    try {
+        CoolPropDbl rho_b = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatL->SRK_covolume());
+        HEOS.SatL->update_DmolarT_direct(rho_b, the_T);
+    } catch (...) { return; }
+    std::vector<double> ln_f_z(z.size());
+    for (std::size_t i = 0; i < z.size(); ++i) {
+        ln_f_z[i] = std::log(z[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
     }
-    if (diffbulkH > 0.25 || diffbulkL > 0.25) {
-        // At least one test phase is definitely not the bulk composition, so phase split predicted
-        _stable = false;
+    std::vector<double> yV(z.size()), xL(z.size());
+    double sum_yV = 0, sum_xL = 0;
+    for (std::size_t i = 0; i < z.size(); ++i) {
+        yV[i] = z[i] * K0[i]; sum_yV += yV[i];
+        xL[i] = z[i] / K0[i]; sum_xL += xL[i];
+    }
+    std::vector<std::vector<double>> trials = {yV, xL};
+    for (auto& Y : trials) {
+        for (int iter = 0; iter < 150; ++iter) {
+            double sumY = 0;
+            for (double val : Y) sumY += val;
+            std::vector<double> y_norm(z.size());
+            for (std::size_t i = 0; i < z.size(); ++i) y_norm[i] = Y[i] / sumY;
+            HEOS.SatV->set_mole_fractions(y_norm);
+            try {
+                CoolPropDbl rho_t = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatV->SRK_covolume());
+                HEOS.SatV->update_DmolarT_direct(rho_t, the_T);
+            } catch (...) { break; }
+            double sumY_new = 0;
+            double max_err = 0;
+            for (std::size_t i = 0; i < z.size(); ++i) {
+                double ln_phi_y = std::log(HEOS.SatV->fugacity_coefficient(i));
+                double Y_next = std::exp(ln_f_z[i] - ln_phi_y);
+                max_err = std::max(max_err, std::abs(std::log(Y_next) - std::log(Y[i])));
+                Y[i] = Y_next;
+                sumY_new += Y_next;
+            }
+            if (sumY_new > 1.0 + 1e-10) {
+                _stable = false;
+                if (&Y == &trials[0]) { this->y = y_norm; this->x = z; } 
+                else { this->x = y_norm; this->y = z; }
+                return;
+            }
+            if (max_err < 1e-8) break;
+        }
     }
 }
 
@@ -2028,39 +1947,106 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_SRK_translated() {
 
 void SaturationSolvers::PTflash_twophase::solve() {
     const std::size_t N = IO.x.size();
-    int iter = 0;
-    double min_rel_change = NAN;
-    do {
-        // Build the Jacobian and residual vectors
-        build_arrays();
-
-        // Solve for the step; v is the step with the contents
-        // [delta(x'_0), delta(x'_1), ..., delta(x'_{N-1}), delta(x''_0), delta(x''_1), ..., delta(x''_{N-1})]
-
-        // Uncomment to see Jacobian and residual at every step
-        //std::cout << vec_to_string(J, "%0.12Lg") << std::endl;
-        //std::cout << vec_to_string(-r, "%0.12Lg") << std::endl;
-
-        Eigen::VectorXd v = J.colPivHouseholderQr().solve(-r);
-
-        for (unsigned int i = 0; i < N - 1; ++i) {
-            err_rel[i] = v[i] / IO.x[i];
-            IO.x[i] += v[i];
-            err_rel[i + (N - 1)] = v[i + (N - 1)] / IO.y[i];
-            IO.y[i] += v[i + (N - 1)];
+    if (!ValidNumber(IO.p)) IO.p = HEOS.p();
+    if (!ValidNumber(IO.T)) IO.T = HEOS.T();
+    std::vector<double> K(N);
+    for (std::size_t i = 0; i < N; ++i) K[i] = IO.y[i] / IO.x[i];
+    CoolPropDbl beta = IO.beta;
+    for (int ss_iter = 0; ss_iter < 10; ++ss_iter) {
+        CoolPropDbl beta_min = 0, beta_max = 1.0;
+        for (int rr_iter = 0; rr_iter < 50; ++rr_iter) {
+            CoolPropDbl r = 0, dr = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                double term = K[i] - 1.0; double denom = 1.0 + beta * term;
+                r += IO.z[i] * term / denom; dr -= IO.z[i] * term * term / (denom * denom);
+            }
+            if (r > 0) beta_min = beta; else beta_max = beta;
+            if (std::abs(r) < 1e-11) break;
+            double step = r / dr; double beta_new = beta - step;
+            if (beta_new <= beta_min || beta_new >= beta_max) beta_new = 0.5 * (beta_min + beta_max);
+            if (std::abs(beta_new - beta) < 1e-11) break;
+            beta = beta_new;
         }
-        IO.x[N - 1] = 1 - std::accumulate(IO.x.begin(), IO.x.end() - 1, 0.0);
-        IO.y[N - 1] = 1 - std::accumulate(IO.y.begin(), IO.y.end() - 1, 0.0);
-
-        //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
-
-        min_rel_change = err_rel.cwiseAbs().minCoeff();
-        iter++;
-
-        if (iter == IO.Nstep_max) {
-            throw ValueError(format("PTflash_twophase::call reached max number of iterations [%d]", IO.Nstep_max));
+        for (std::size_t i = 0; i < N; ++i) {
+            IO.x[i] = IO.z[i] / (1.0 + beta * (K[i] - 1.0));
+            IO.y[i] = K[i] * IO.x[i];
         }
-    } while (this->error_rms > 1e-9 && min_rel_change > 1000 * DBL_EPSILON && iter < IO.Nstep_max);
+        normalize_vector(IO.x); normalize_vector(IO.y);
+        HEOS.SatL->set_mole_fractions(IO.x);
+        try {
+            CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, 0.9 / HEOS.SatL->SRK_covolume());
+            IO.rhomolar_liq = rL; HEOS.SatL->update_DmolarT_direct(rL, IO.T);
+        } catch (...) {}
+        HEOS.SatV->set_mole_fractions(IO.y);
+        try {
+            CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, 0.9 / HEOS.SatV->SRK_covolume());
+            IO.rhomolar_vap = rV; HEOS.SatV->update_DmolarT_direct(rV, IO.T);
+        } catch (...) {}
+        for (std::size_t i = 0; i < N; ++i) K[i] = HEOS.SatL->fugacity_coefficient(i) / HEOS.SatV->fugacity_coefficient(i);
+    }
+    bool converged = false;
+    for (int gibbs_iter = 0; gibbs_iter < 30; ++gibbs_iter) {
+        Eigen::VectorXd g(N); Eigen::MatrixXd H(N, N);
+        CoolPropDbl L_frac = 1.0 - beta; CoolPropDbl V_frac = beta;
+        CoolPropDbl max_g = 0; Eigen::MatrixXd DL(N, N), DV(N, N);
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                DL(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatL.get()), i, j, CoolProp::XN_INDEPENDENT);
+                DV(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, CoolProp::XN_INDEPENDENT);
+            }
+        }
+        for (std::size_t i = 0; i < N; ++i) {
+            CoolPropDbl sum_x_DL = 0, sum_y_DV = 0;
+            for (std::size_t k = 0; k < N; ++k) { sum_x_DL += IO.x[k] * DL(i, k); sum_y_DV += IO.y[k] * DV(i, k); }
+            for (std::size_t j = 0; j < N; ++j) {
+                double dln_phi_L_dnj = DL(i, j) - sum_x_DL;
+                double dln_phi_V_dnj = DV(i, j) - sum_y_DV;
+                H(i, j) = V_frac * dln_phi_L_dnj + L_frac * dln_phi_V_dnj - 1.0;
+            }
+            H(i, i) += (V_frac / IO.x[i]) + (L_frac / IO.y[i]);
+            double l_act = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
+            double v_act = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
+            g(i) = V_frac * L_frac * (v_act - l_act);
+            max_g = std::max(max_g, std::abs(v_act - l_act));
+        }
+        if (max_g < 1e-9) { converged = true; break; }
+        Eigen::VectorXd delta_v = H.colPivHouseholderQr().solve(-g);
+        CoolPropDbl step_scale = 1.0;
+        for (std::size_t i = 0; i < N; ++i) {
+            double v_old = beta * IO.y[i];
+            if (delta_v(i) > 0 && v_old + delta_v(i) > IO.z[i]) step_scale = std::min(step_scale, 0.99 * (IO.z[i] - v_old) / delta_v(i));
+            if (delta_v(i) < 0 && v_old + delta_v(i) < 0) step_scale = std::min(step_scale, 0.99 * (-v_old) / delta_v(i));
+        }
+        bool step_ok = false;
+        while (step_scale > 1e-6) {
+            CoolPropDbl V_new = 0, L_new = 0;
+            std::vector<double> v_new(N), l_new(N);
+            for (std::size_t i = 0; i < N; ++i) {
+                v_new[i] = beta * IO.y[i] + step_scale * delta_v(i);
+                l_new[i] = IO.z[i] - v_new[i];
+                V_new += v_new[i]; L_new += l_new[i];
+            }
+            std::vector<double> x_trial(N), y_trial(N);
+            for (std::size_t i = 0; i < N; ++i) {
+                y_trial[i] = v_new[i] / V_new; x_trial[i] = l_new[i] / L_new;
+            }
+            try {
+                HEOS.SatL->set_mole_fractions(x_trial);
+                CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, 0.9 / HEOS.SatL->SRK_covolume());
+                HEOS.SatV->set_mole_fractions(y_trial);
+                CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, 0.9 / HEOS.SatV->SRK_covolume());
+                if (ValidNumber(rL) && ValidNumber(rV) && rL > 0 && rV > 0) {
+                    beta = V_new; IO.x = x_trial; IO.y = y_trial;
+                    IO.rhomolar_liq = rL; IO.rhomolar_vap = rV;
+                    HEOS.SatL->update_DmolarT_direct(rL, IO.T);
+                    HEOS.SatV->update_DmolarT_direct(rV, IO.T);
+                    step_ok = true; break;
+                } else { step_scale *= 0.5; }
+            } catch (...) { step_scale *= 0.5; }
+        }
+        if (!step_ok) break;
+    }
+    IO.beta = beta;
 }
 void SaturationSolvers::PTflash_twophase::build_arrays() {
     const std::size_t N = IO.x.size();

@@ -545,14 +545,12 @@ struct PTflash_twophase_options
 {
     int Nstep_max;
     std::size_t Nsteps;
-    CoolPropDbl omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T;
+    CoolPropDbl omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, beta;
     std::vector<CoolPropDbl> x,  ///< Liquid mole fractions
       y,                         ///< Vapor mole fractions
       z;                         ///< Bulk mole fractions
     PTflash_twophase_options()
-      : Nstep_max(30), Nsteps(0), omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE) {
-
-        // Defaults
+      : Nstep_max(30), Nsteps(0), omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE), beta(0.5) {
     }
 };
 

@@ -73,15 +73,30 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 o.omega = 1.0;
                 CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
                 solver.solve();
-                HEOS._phase = iphase_twophase;
-                HEOS._Q = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);  // All vapor qualities are the same (these are the residuals in the solver)
-                HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+                if (o.beta < 1e-10) {
+                    HEOS.update_DmolarT_direct(o.rhomolar_liq, HEOS.T());
+                    try { HEOS.recalculate_singlephase_phase(); } catch (...) { HEOS._phase = iphase_liquid; }
+                    HEOS._Q = -1;
+                } else if (o.beta > 1.0 - 1e-10) {
+                    HEOS.update_DmolarT_direct(o.rhomolar_vap, HEOS.T());
+                    try { HEOS.recalculate_singlephase_phase(); } catch (...) { HEOS._phase = iphase_gas; }
+                    HEOS._Q = -1;
+                } else {
+                    HEOS._phase = iphase_twophase;
+                    HEOS._Q = o.beta;
+                    HEOS._rhomolar = 1.0 / (o.beta / o.rhomolar_vap + (1.0 - o.beta) / o.rhomolar_liq);
+                }
             } else {
                 // It's single-phase
                 double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
                 HEOS.update_DmolarT_direct(rho, HEOS.T());
                 HEOS._Q = -1;
-                HEOS._phase = iphase_liquid;
+                try {
+                    HEOS.recalculate_singlephase_phase();
+                } catch (...) {
+                    if (rho < HEOS.Reducing->rhormolar(HEOS.get_mole_fractions())) { HEOS._phase = iphase_gas; }
+                    else { HEOS._phase = iphase_liquid; }
+                }
             }
         } else {
             // It's single-phase, and phase is imposed
