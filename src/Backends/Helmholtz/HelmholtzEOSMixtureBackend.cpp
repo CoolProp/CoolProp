@@ -1677,8 +1677,9 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         _Q = 1e9;
         switch (other) {
             case iT: {
-                // Check for the presence of the melting line
-                if (has_melting_line()) {
+                // Check for the presence of the melting line (skipped when the caller has
+                // opted out of property-limit checks, mirroring the subcritical path below)
+                if (has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
                     double Tm = melting_line(iT, iP, _p);
                     if (_T < Tm - 0.001) {
                         throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
@@ -2139,8 +2140,9 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     auto hmolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_hmolar_nocache(T_crit_, rhomolar_crit_); };
     auto umolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_umolar_nocache(T_crit_, rhomolar_crit_); };
 
-    // Check for the presence of the melting line
-    if (other == iP && has_melting_line()) {
+    // Check for the presence of the melting line (skipped when the caller has opted out
+    // of property-limit checks, mirroring p_phase_determination_pure_or_pseudopure)
+    if (other == iP && has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
         double Tm = melting_line(iT, iP, value);
         if (_T < Tm - 0.001) {
             throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));

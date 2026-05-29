@@ -3378,6 +3378,21 @@ class SuperAncillaryOffFixture
     }
 };
 
+/// A fixture class that saves and restores DONT_CHECK_PROPERTY_LIMITS so a test may
+/// toggle it freely without leaking the global config state to later tests
+class PropertyLimitsFixture
+{
+   private:
+    const configuration_keys m_key = DONT_CHECK_PROPERTY_LIMITS;
+    const bool initial_value;
+
+   public:
+    PropertyLimitsFixture() : initial_value(CoolProp::get_config_bool(m_key)) {}
+    ~PropertyLimitsFixture() {
+        CoolProp::set_config_bool(m_key, initial_value);
+    }
+};
+
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[superanc]") {
 
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
@@ -3985,6 +4000,51 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Phase for solid water should throw", 
         auto Tm = AS->melting_line(iT, iP, p_Pa);
         CAPTURE(Tm);
         CHECK_THROWS(AS->update(PT_INPUTS, p_Pa, -5 + Tm));
+    }
+}
+
+// The melting-line guards added in #2648 must honor DONT_CHECK_PROPERTY_LIMITS so the
+// metastable/below-melting escape hatch behaves the same below and above the critical
+// pressure.  Before the fix, the supercritical-pressure branch (p > psat_max) and the
+// other==iP branch in T_phase_determination_pure_or_pseudopure ignored the override and
+// threw regardless.  See GitHub #1936.
+TEST_CASE_METHOD(PropertyLimitsFixture, "Below-melting PT guard honors DONT_CHECK_PROPERTY_LIMITS", "[1936]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    const double Tt = AS->Ttriple();
+    const double pc = AS->p_critical();
+    // CO2's melting line has positive slope, so each of these (T, p) pairs sits just below
+    // the melting line.  The three pressures exercise the three distinct internal paths
+    // that carry a melting-line guard:
+    //   - p_sub  at Ttriple  -> p_phase_determination, subcritical superancillary branch
+    //   - p_sup  at Ttriple  -> p_phase_determination, supercritical-pressure branch (p > psat_max)
+    //   - p_hiT  at T > triple-routing threshold -> T_phase_determination, other==iP branch
+    const double p_sub = 0.5 * (AS->p_triple() + pc);  // between ptriple and pcrit
+    const double p_sup = 5 * pc;                       // well above pcrit
+    struct Case
+    {
+        double p_Pa, T;
+    };
+    for (const Case& c : {Case{p_sub, Tt}, Case{p_sup, Tt}, Case{1e8, 230.0}}) {
+        CAPTURE(c.p_Pa);
+        CAPTURE(c.T);
+        const double Tm = AS->melting_line(iT, iP, c.p_Pa);
+        CAPTURE(Tm);
+        REQUIRE(c.T < Tm - 0.001);  // sanity: the state really is below the melting line
+        // Default: below the melting line throws
+        {
+            CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, false);
+            CHECK_THROWS(AS->update(PT_INPUTS, c.p_Pa, c.T));
+        }
+        // With the override, the same state must resolve to a finite (metastable) density
+        {
+            CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, true);
+            CHECK_NOTHROW(AS->update(PT_INPUTS, c.p_Pa, c.T));
+            // Guard against a silent no-op update leaving the prior case's state behind
+            CHECK(AS->T() == Catch::Approx(c.T).epsilon(1e-12));
+            CHECK(AS->p() == Catch::Approx(c.p_Pa).epsilon(1e-12));
+            CHECK(ValidNumber(AS->rhomolar()));
+            CHECK(AS->rhomolar() > 0);
+        }
     }
 }
 
