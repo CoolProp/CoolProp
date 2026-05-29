@@ -160,7 +160,7 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
         if (delta_li_in_u) {
             CoolPropDbl ci = el.c, l_double = el.l_double;
             if (ValidNumber(l_double) && l_double > 0 && std::abs(ci) > DBL_EPSILON) {
-                const CoolPropDbl u_increment = (el.l_is_int) ? -ci * powInt(delta, el.l_int) : -ci * pow(delta, l_double);
+                const CoolPropDbl u_increment = (el.l_is_int) ? -ci * powInt(delta, el.l_int) : -ci * exp(l_double * log_delta);
                 const CoolPropDbl du_ddelta_increment = l_double * u_increment * one_over_delta;
                 const CoolPropDbl d2u_ddelta2_increment = (l_double - 1) * du_ddelta_increment * one_over_delta;
                 const CoolPropDbl d3u_ddelta3_increment = (l_double - 2) * d2u_ddelta2_increment * one_over_delta;
@@ -175,7 +175,7 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
         if (tau_mi_in_u) {
             CoolPropDbl omegai = el.omega, m_double = el.m_double;
             if (std::abs(m_double) > 0) {
-                const CoolPropDbl u_increment = -omegai * pow(tau, m_double);
+                const CoolPropDbl u_increment = -omegai * exp(m_double * log_tau);
                 const CoolPropDbl du_dtau_increment = m_double * u_increment * one_over_tau;
                 const CoolPropDbl d2u_dtau2_increment = (m_double - 1) * du_dtau_increment * one_over_tau;
                 const CoolPropDbl d3u_dtau3_increment = (m_double - 2) * d2u_dtau2_increment * one_over_tau;
