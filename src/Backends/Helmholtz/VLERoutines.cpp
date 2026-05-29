@@ -1891,11 +1891,17 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
     CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SRK_covolume());
     HEOS.update_DmolarT_direct(rho_bulk, the_T);
 
-    // Calculate the fugacity coefficient at initial composition of the bulk phase
+    // Calculate the fugacity coefficient at initial composition of the bulk phase.
+    // The bulk HEOS state is a hypothetical homogeneous root forced via
+    // update_DmolarT_direct above, but _phase isn't reset by that call (it can
+    // be iphase_twophase from a prior PQ flash).  Call MixtureDerivatives
+    // directly to bypass the phase-dispatch in calc_fugacity / calc_fugacity_coefficient
+    // and get the actual bulk-composition values — same pattern used in the
+    // tpd_L / tpd_H accumulation just below.
     std::vector<double> fugacity_coefficient0(z.size()), fugacity0(z.size());
     for (std::size_t i = 0; i < z.size(); ++i) {
-        fugacity_coefficient0[i] = HEOS.fugacity_coefficient(i);
-        fugacity0[i] = HEOS.fugacity(i);
+        fugacity_coefficient0[i] = exp(MixtureDerivatives::ln_fugacity_coefficient(HEOS, i, XN_DEPENDENT));
+        fugacity0[i] = MixtureDerivatives::fugacity_i(HEOS, i, XN_DEPENDENT);
     }
 
     // Generate light and heavy test compositions (Gernert, 2014, Eq. 23)
