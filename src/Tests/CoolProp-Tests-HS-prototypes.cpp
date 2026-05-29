@@ -1572,4 +1572,26 @@ TEST_CASE("MeltingCaloric global cache builds once per fluid", "[HS][HS_meltcal]
     CHECK(a->built());
 }
 
+TEST_CASE("hs_corrector accepts a sub-Tmin floor (water cold liquid)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    auto mc = get_melting_caloric_cached(*H);
+    REQUIRE(mc != nullptr);
+    auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    const double p = 2.308e8, T = 252.5;
+    ref->update(PT_INPUTS, p, T);
+    const double h = ref->hmolar(), s = ref->smolar();
+    double T0 = 0, rho0 = 0;
+    REQUIRE(mc->seed_for_hs(s, h, T0, rho0));
+    double Tout = 0, rho_out = 0;
+    // floor: 0.1% below the melting-curve seed temperature (~252 K, well below H->Tmin()=273 K).
+    // water's calc_melting_line(iT_min,...) returns the triple-point T (273.16 K), not the
+    // coldest point on the curve; use the seed itself as the floor anchor.
+    const double floor = T0 * (1.0 - 1e-3);
+    REQUIRE(FlashRoutines::hs_corrector_probe(*H, T0, rho0, h, s, Tout, rho_out, floor));
+    CHECK(std::abs(Tout - T) / T < 1e-5);
+    CHECK(std::abs(rho_out - ref->rhomolar()) / ref->rhomolar() < 1e-5);
+}
+
 #endif  // ENABLE_CATCH

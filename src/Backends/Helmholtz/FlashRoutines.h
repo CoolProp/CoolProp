@@ -241,6 +241,10 @@ class FlashRoutines
     };
     static void HS_flash_twophase(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec,
                                   HS_flash_twophaseOptions& options);
+
+    /// Test-only: invoke the internal HS corrector with an explicit Tlo floor.
+    static bool hs_corrector_probe(HelmholtzEOSMixtureBackend& H, double T0, double rho0, double h_t, double s_t, double& T_out,
+                                   double& rho_out, double Tlo_override);
 };
 
 /** A residual function for the rho(T,P) solver
