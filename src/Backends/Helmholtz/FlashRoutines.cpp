@@ -62,20 +62,20 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
             solver.solve();
             // Use the component with the largest phase split for best numerical conditioning.
-            std::size_t ibest_pe = 0;
-            double best_spread_pe = std::abs(o.y[0] - o.x[0]);
-            for (std::size_t i = 1; i < o.z.size(); ++i) {
-                double spread = std::abs(o.y[i] - o.x[i]);
-                if (spread > best_spread_pe) {
-                    best_spread_pe = spread;
-                    ibest_pe = i;
+            std::size_t kbest = 0;
+            double best_spread = std::abs(o.y[0] - o.x[0]);
+            for (std::size_t k = 1; k < Ncomp; ++k) {
+                double spread = std::abs(o.y[k] - o.x[k]);
+                if (spread > best_spread) {
+                    best_spread = spread;
+                    kbest = k;
                 }
             }
-            double denom_pe = o.y[ibest_pe] - o.x[ibest_pe];
-            if (std::abs(denom_pe) < 1e-10) {
+            double denom = o.y[kbest] - o.x[kbest];
+            if (std::abs(denom) < 1e-10) {
                 // Azeotrope or near-critical: composition spread too small to compute Q reliably.
                 double T = HEOS.T(), p = HEOS.p();
-                phases ph = (o.z[ibest_pe] < o.x[ibest_pe]) ? iphase_liquid : iphase_gas;
+                phases ph = (o.z[kbest] < o.x[kbest]) ? iphase_liquid : iphase_gas;
                 HEOS.specify_phase(ph);
                 double rho = HEOS.solver_rho_Tp(T, p);
                 HEOS.update_DmolarT_direct(rho, T);
@@ -83,7 +83,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 HEOS._Q = -1;
                 HEOS._phase = ph;
             } else {
-                double Q_raw = (o.z[ibest_pe] - o.x[ibest_pe]) / denom_pe;
+                double Q_raw = (o.z[kbest] - o.x[kbest]) / denom;
                 if (Q_raw < 0 || Q_raw > 1) {
                     // The two-phase solver converged to a Q outside [0,1]:
                     // Re-solve as single-phase.
