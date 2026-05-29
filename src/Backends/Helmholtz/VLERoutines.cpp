@@ -1838,6 +1838,16 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         }
     }
 }
+/**
+ * @brief Performs a rigorous Tangent Plane Distance (TPD) stability analysis
+ *
+ * This implementation follows Michelsen (1982a) and uses the Sum(Y) > 1 criterion
+ * to identify instability. It is designed to be EoS-agnostic and robust for
+ * multicomponent HEOS mixtures.
+ *
+ * @see Michelsen, M. L. (1982). "The isothermal flash problem. Part I. Stability." 
+ *      Fluid Phase Equilibria, 9(1), 1-19.
+ */
 void StabilityRoutines::StabilityEvaluationClass::check_stability() {
     CoolPropDbl the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
     CoolPropDbl the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
@@ -1946,6 +1956,15 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_SRK_translated() {
     }
 }
 
+/**
+ * @brief Solves the two-phase isothermal-isobaric flash problem
+ *
+ * A hybrid implementation that combines:
+ * 1. Robust Successive Substitution (SS) for initialization (Michelsen 1982b).
+ * 2. Second-Order Gibbs minimization using analytical reduced Hessians for quadratic convergence.
+ *
+ * Includes a restricted-step line search to handle HEOS density divergence.
+ */
 void SaturationSolvers::PTflash_twophase::solve() {
     const std::size_t N = IO.x.size();
     if (!ValidNumber(IO.p)) IO.p = HEOS.p();

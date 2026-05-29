@@ -39,7 +39,23 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Set the pointer to the residual helmholtz class, etc.
     void setup(bool generate_SatL_and_SatV = true);
 
-    /// Robust PT flash for mixtures
+    /**
+     * @brief Robust Isothermal-Isobaric (PT) Flash for Mixtures
+     *
+     * This method implements a state-of-the-art phase stability and phase-split algorithm
+     * specifically optimized for Cubic Equations of State (e.g., Peng-Robinson, SRK).
+     * It bypasses the standard Helmholtz routines to provide industrial-grade reliability
+     * for multicomponent systems.
+     *
+     * The algorithm follows a two-tier approach:
+     * 1. Stability Analysis: Uses Michelsen's Tangent Plane Distance (TPD) criterion to
+     *    determine if the mixture is unstable at the given T and P.
+     * 2. Phase Split: If unstable, it performs a hybrid Successive Substitution (SS)
+     *    and Second-Order Gibbs energy minimization to find the equilibrium compositions.
+     *
+     * @note This method correctly handles cases near the critical point where traditional
+     *       Newton solvers often diverge.
+     */
     void cubic_PT_flash_mixture();
 
     /// Set the alpha function based on the alpha function defined in the components vector;

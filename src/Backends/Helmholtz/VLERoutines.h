@@ -541,10 +541,14 @@ class newton_raphson_saturation
     void check_Jacobian();
 };
 
+/**
+ * @brief Options and results for the PT flash two-phase solver
+ */
 struct PTflash_twophase_options
 {
-    int Nstep_max;
-    std::size_t Nsteps;
+    int Nstep_max; ///< Maximum number of iterations for the solver
+    std::size_t Nsteps; ///< Number of steps actually taken
+    /** Intermediate and result variables */
     CoolPropDbl omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, beta;
     std::vector<CoolPropDbl> x,  ///< Liquid mole fractions
       y,                         ///< Vapor mole fractions
@@ -554,6 +558,13 @@ struct PTflash_twophase_options
     }
 };
 
+/**
+ * @brief Isothermal-Isobaric (PT) two-phase flash solver
+ *
+ * Implements a hybrid solver using Successive Substitution (SS) for robust initialization
+ * followed by a Second-Order Gibbs energy minimization (Newton-Raphson) for rapid
+ * quadratic convergence.
+ */
 class PTflash_twophase
 {
    public:
