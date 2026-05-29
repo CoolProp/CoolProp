@@ -4019,7 +4019,7 @@ TEST_CASE_METHOD(PropertyLimitsFixture, "Below-melting PT guard honors DONT_CHEC
     //   - p_sup  at Ttriple  -> p_phase_determination, supercritical-pressure branch (p > psat_max)
     //   - p_hiT  at T > triple-routing threshold -> T_phase_determination, other==iP branch
     const double p_sub = 0.5 * (AS->p_triple() + pc);  // between ptriple and pcrit
-    const double p_sup = 5 * pc;                        // well above pcrit
+    const double p_sup = 5 * pc;                       // well above pcrit
     struct Case
     {
         double p_Pa, T;
@@ -4039,6 +4039,9 @@ TEST_CASE_METHOD(PropertyLimitsFixture, "Below-melting PT guard honors DONT_CHEC
         {
             CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, true);
             CHECK_NOTHROW(AS->update(PT_INPUTS, c.p_Pa, c.T));
+            // Guard against a silent no-op update leaving the prior case's state behind
+            CHECK(AS->T() == Catch::Approx(c.T).epsilon(1e-12));
+            CHECK(AS->p() == Catch::Approx(c.p_Pa).epsilon(1e-12));
             CHECK(ValidNumber(AS->rhomolar()));
             CHECK(AS->rhomolar() > 0);
         }
