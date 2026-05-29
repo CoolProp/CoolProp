@@ -1591,6 +1591,14 @@ if(COOLPROP_R_MODULE)
   # No lib prefix for the shared library
   set_target_properties(CoolProp PROPERTIES PREFIX "")
 
+  # Patch the generated R proxy's PACKAGE= references to the renamed library (#1674)
+  add_custom_command(
+    TARGET CoolProp
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -DRFILE=${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R -P
+            ${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/patch_r_package.cmake
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
   add_dependencies(${app_name} generate_headers generate_examples)
   #add_custom_command(TARGET CoolProp
   #                   POST_BUILD
