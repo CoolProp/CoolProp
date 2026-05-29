@@ -20,7 +20,7 @@ class BaseCompressionCycle(BaseCycle):
         BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
 
     def eta_carnot_heating(self):
-        """Carnot efficiency
+        r"""Carnot efficiency
 
         Calculates the Carnot efficiency for a heating process, :math:`\eta_c = \frac{T_h}{T_h-T_c}`.
 
@@ -32,7 +32,7 @@ class BaseCompressionCycle(BaseCycle):
         return np.max(Tvector) / (np.max(Tvector) - np.min(Tvector))
 
     def eta_carnot_cooling(self):
-        """Carnot efficiency
+        r"""Carnot efficiency
 
         Calculates the Carnot efficiency for a cooling process, :math:`\eta_c = \frac{T_c}{T_h-T_c}`.
 

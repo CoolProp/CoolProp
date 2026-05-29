@@ -115,7 +115,7 @@ class PsyCoolprop(object):
               "P": 0.0,
 
               "tdb": 0.0,
-              "tdb": 0.0,
+              "tdp": 0.0,
               "twb": 0.0,
               "w": None,
               "HR": None,

@@ -50,7 +50,7 @@ class PlotFormatting(object):
         ax.set_ylabel(r"$W$ ($m_{w}/m_{da}$) [-]")
 
     def __str__(self):
-        return indented_segment("""
+        return indented_segment(r"""
             ax.set_xlim(Tdb[0]-273.15,Tdb[-1]-273.15)
             ax.set_ylim(0,0.03)
             ax.set_xlabel(r"$T_{db}$ [$^{\circ}$C]")
@@ -90,7 +90,7 @@ class HumidityLabels(object):
             ax.text(T_K - 273.15, w, string, rotation=rot, ha='center', va='center', bbox=bbox_opts)
 
     def __str__(self):
-        return indented_segment("""
+        return indented_segment(r"""
                 xv = Tdb #[K]
                 for RH in {RHValues:s}:
                     yv = [HAPropsSI('W','T',T,'P',p,'R',RH) for T in Tdb]
