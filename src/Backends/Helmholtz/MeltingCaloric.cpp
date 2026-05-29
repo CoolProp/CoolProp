@@ -111,40 +111,66 @@ fit_all_parts(CoolProp::HelmholtzEOSMixtureBackend& H,
     std::sort(exps.begin(), exps.end(), [](const auto& a, const auto& b) { return a.xmin() < b.xmin(); });
     return superancillary::ChebyshevApproximation1D<Eigen::ArrayXd>(std::move(exps));
 }
+/// Fallback bracket-scan + bisection on h(lnp) - h_cache.  Used only when the
+/// Chebyshev monotone-interval inverter returns nothing (should not happen for
+/// water since h is monotonic, but kept for robustness with other fluids).
+double scan_bisect_h(const CoolProp::superancillary::ChebyshevApproximation1D<Eigen::ArrayXd>& approx,
+                     double h_cache) {
+    const double lo = approx.xmin(), hi = approx.xmax();
+    constexpr int Nscan = 200;
+    double best_lnp = lo, best_gap = 1e300;
+    double prev_lnp = lo, prev_h = approx.eval(lo) - h_cache;
+    for (int k = 1; k <= Nscan; ++k) {
+        const double cur_lnp = lo + (hi - lo) * k / Nscan;
+        const double cur_h = approx.eval(cur_lnp) - h_cache;
+        if (prev_h * cur_h <= 0.0) {
+            double a = prev_lnp, b = cur_lnp, fa = prev_h, fb = cur_h;
+            for (int it = 0; it < 60; ++it) {
+                const double m = 0.5 * (a + b);
+                const double fm = approx.eval(m) - h_cache;
+                if (fa * fm <= 0.0) { b = m; fb = fm; } else { a = m; fa = fm; }
+                if ((b - a) < 1e-14 * (std::abs(a) + std::abs(b) + 1e-30)) break;
+            }
+            const double root_lnp = 0.5 * (a + b);
+            const double gap = std::abs(approx.eval(root_lnp) - h_cache);
+            if (std::isfinite(gap) && gap < best_gap) { best_gap = gap; best_lnp = root_lnp; }
+        }
+        prev_lnp = cur_lnp; prev_h = cur_h;
+    }
+    return best_lnp;
+}
 }  // namespace
 
 namespace CoolProp {
 bool MeltingCaloric::seed_for_hs(double s_cache, double h_cache, double& T0, double& rho0) const {
     if (!m_built || !m_s_approx || !m_h_approx || !m_T_approx || !m_rho_approx) return false;
-    const double lo = m_s_approx->xmin(), hi = m_s_approx->xmax();
-    // Scan for sign-change brackets of s(lnp) - s_cache across the melting curve.
-    // The entropy can be non-monotone (e.g. water's anomalous melting curve), so
-    // ChebyshevApproximation1D::get_x_for_y may miss roots if the interior extremum
-    // is not detected by the companion-matrix eigenvalue step. A coarse scan followed
-    // by bisection is robust for any curve shape.
-    constexpr int Nscan = 200;
-    double best_lnp = 0, best_gap = 1e300;
-    bool found = false;
-    double prev_lnp = lo, prev_s = m_s_approx->eval(lo) - s_cache;
-    for (int k = 1; k <= Nscan; ++k) {
-        const double cur_lnp = lo + (hi - lo) * k / Nscan;
-        const double cur_s = m_s_approx->eval(cur_lnp) - s_cache;
-        if (prev_s * cur_s <= 0.0) {
-            // Bisect within [prev_lnp, cur_lnp]
-            double a = prev_lnp, b = cur_lnp, fa = prev_s, fb = cur_s;
-            for (int it = 0; it < 60; ++it) {
-                const double m = 0.5 * (a + b);
-                const double fm = m_s_approx->eval(m) - s_cache;
-                if (fa * fm <= 0.0) { b = m; fb = fm; } else { a = m; fa = fm; }
-                if ((b - a) < 1e-14 * (std::abs(a) + std::abs(b) + 1e-30)) break;
-            }
-            const double root_lnp = 0.5 * (a + b);
-            const double hgap = std::abs(m_h_approx->eval(root_lnp) - h_cache);
-            if (std::isfinite(hgap) && hgap < best_gap) {
-                best_gap = hgap; best_lnp = root_lnp; found = true;
-            }
+    // Enthalpy is monotonic in ln(p) along the melting curve (entropy and T are
+    // NOT -- they fold back at the ice-Ih/III junction), so intersect on h: this
+    // yields a single, well-conditioned root via the Chebyshev monotone-interval
+    // inverter. Entropy is used only to disambiguate in the (not expected) event
+    // of multiple roots.
+    std::vector<double> cand_lnp;
+    for (const auto& pr : m_h_approx->get_x_for_y(h_cache, 48, 100, 1e-12)) {
+        const double lnp = pr.first;
+        if (lnp >= m_h_approx->xmin() && lnp <= m_h_approx->xmax()) cand_lnp.push_back(lnp);
+    }
+    if (cand_lnp.empty()) {
+        // Fallback: bracket-scan h(lnp) - h_cache for a sign change (robust if the
+        // assembled-expansion metadata ever misbehaves or h is out of range).
+        const double fb_lnp = scan_bisect_h(*m_h_approx, h_cache);
+        const double fb_gap = std::abs(m_h_approx->eval(fb_lnp) - h_cache);
+        // Only accept the fallback if it actually found a near-zero residual
+        if (std::isfinite(fb_gap) && fb_gap < std::abs(h_cache) * 0.01 + 1.0) {
+            cand_lnp.push_back(fb_lnp);
         }
-        prev_lnp = cur_lnp; prev_s = cur_s;
+    }
+    if (cand_lnp.empty()) return false;
+    // Disambiguate by entropy closeness (usually exactly one candidate).
+    double best_lnp = cand_lnp.front(), best_gap = 1e300;
+    bool found = false;
+    for (double lnp : cand_lnp) {
+        const double sgap = std::abs(m_s_approx->eval(lnp) - s_cache);
+        if (std::isfinite(sgap) && sgap < best_gap) { best_gap = sgap; best_lnp = lnp; found = true; }
     }
     if (!found) return false;
     T0 = m_T_approx->eval(best_lnp);
