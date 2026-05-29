@@ -19,6 +19,7 @@
 - `.github/workflows/csharp_builder.yml` — **new** matrix builder + merge job for the C# wrapper.
 - `.github/workflows/release_all_files.yml` — add `csharp_builder.yml` to the `collect_binaries` matrix.
 - `Web/coolprop/changelog.rst` — breaking-change + issues-closed entries under `8.0.0`.
+- `Web/coolprop/wrappers/{Csharp,VB.net,Java,R,PHP}/index.rst` — update the library-name references (file-tree listings, install snippets, `dyn.load`/`extension=`) to the new `CoolProp<Lang>` names.
 
 All edits target the CMake target named `CoolProp` (the SWIG module target) and/or `${app_name}` (== `${project_name}`, the same target — see `CMakeLists.txt:207`). Setting `OUTPUT_NAME` on `CoolProp` is correct because `install(TARGETS ${app_name} ...)` and `$<TARGET_FILE:CoolProp>` both resolve through the renamed output.
 
@@ -507,6 +508,133 @@ Expected: the new references appear (breaking-change bullet + issues-closed list
 git add Web/coolprop/changelog.rst
 git restore --staged .beads/issues.jsonl 2>/dev/null; git checkout .beads/issues.jsonl 2>/dev/null
 git commit --no-verify -m "docs(changelog): note SWIG DLL rename + C# wrapper restore (#1674, #2254, #2326)"
+```
+
+---
+
+## Task 9: Update wrapper documentation pages (#1674, #2254)
+
+**Files:**
+- Modify: `Web/coolprop/wrappers/Csharp/index.rst`, `.../VB.net/index.rst`, `.../Java/index.rst`, `.../R/index.rst`, `.../PHP/index.rst`
+
+These pages hardcode the old `CoolProp` binary name in file-tree listings, install
+commands, and loader snippets. SourceForge download folder names (`Csharp`, `Java`,
+`R`, `PHP`) are unchanged — only the binary filename references move.
+
+- [ ] **Step 1: C# page — rename the binary in the folder-layout listing**
+
+In `Web/coolprop/wrappers/Csharp/index.rst`, change:
+```rst
+    main
+     |- CoolProp.dll
+     |- Example.cs
+```
+to:
+```rst
+    main
+     |- CoolPropCsharp.dll
+     |- Example.cs
+```
+
+- [ ] **Step 2: VB.NET page — rename in listing and prose (3 edits)**
+
+In `Web/coolprop/wrappers/VB.net/index.rst`:
+
+(a) the folder layout:
+```rst
+    main
+     |- CoolProp.dll
+     |- Example.vb
+```
+→
+```rst
+    main
+     |- CoolPropCsharp.dll
+     |- Example.vb
+```
+
+(b) the prose `Add the CoolProp.dll file as an existing file to the VB console project.`
+→ `Add the CoolPropCsharp.dll file as an existing file to the VB console project.`
+
+(c) the caveat `The architecture of the solution/projects should match that of the CoolProp.dll file.`
+→ `The architecture of the solution/projects should match that of the CoolPropCsharp.dll file.`
+
+- [ ] **Step 3: Java page — rename the binary in the folder-layout listing**
+
+In `Web/coolprop/wrappers/Java/index.rst`, change:
+```rst
+    main
+     |- CoolProp.dll
+     |- Example.java
+```
+to:
+```rst
+    main
+     |- CoolPropJava.dll
+     |- Example.java
+```
+
+- [ ] **Step 4: R page — rename the `dyn.load` target**
+
+In `Web/coolprop/wrappers/R/index.rst`, change:
+```rst
+    dyn.load(paste("CoolProp", .Platform$dynlib.ext, sep=""))
+```
+to:
+```rst
+    dyn.load(paste("CoolPropR", .Platform$dynlib.ext, sep=""))
+```
+
+- [ ] **Step 5: PHP page — rename the shared-library references (4 edits)**
+
+In `Web/coolprop/wrappers/PHP/index.rst`:
+
+(a) `* Copy the libCoolProp.so file into the extension-dir for php::`
+→ `* Copy the libCoolPropPHP.so file into the extension-dir for php::`
+
+(b) `    sudo cp libCoolProp.so \`php-config --extension-dir\``
+→ `    sudo cp libCoolPropPHP.so \`php-config --extension-dir\``
+
+(c) `    extension = "libCoolProp.so"`
+→ `    extension = "libCoolPropPHP.so"`
+
+(d) `  after \`\`[PHP]\`\`. If you didn't copy libCoolProp.so into the folder given by`
+→ `  after \`\`[PHP]\`\`. If you didn't copy libCoolPropPHP.so into the folder given by`
+
+- [ ] **Step 6: PHP page — fix the stale build-output line and note the missing proxy**
+
+In `Web/coolprop/wrappers/PHP/index.rst`, change:
+```rst
+  This will generate the file libCoolProp.so and the php module CoolProp.php
+```
+to:
+```rst
+  This will generate the file libCoolPropPHP.so.
+
+  .. note::
+
+     With SWIG 4.1 and newer the PHP classes are registered natively and
+     the separate ``CoolProp.php`` proxy file is no longer generated; the
+     references to ``CoolProp.php`` above apply only to builds made with
+     SWIG older than 4.1.
+```
+
+- [ ] **Step 7: Verify the doc edits**
+
+Run:
+```bash
+cd /Users/ianbell/Code/CoolProp/.claude/worktrees/i2254
+grep -rn 'CoolPropCsharp.dll\|CoolPropJava.dll\|CoolPropR\|libCoolPropPHP.so' Web/coolprop/wrappers
+grep -rn '|- CoolProp.dll\|libCoolProp.so\|paste("CoolProp"' Web/coolprop/wrappers && echo "FAIL: stale name remains" || echo "OK: no stale names"
+```
+Expected: the new names appear in C#/VB/Java/R/PHP pages; `OK: no stale names`.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add Web/coolprop/wrappers/Csharp/index.rst Web/coolprop/wrappers/VB.net/index.rst Web/coolprop/wrappers/Java/index.rst Web/coolprop/wrappers/R/index.rst Web/coolprop/wrappers/PHP/index.rst
+git restore --staged .beads/issues.jsonl 2>/dev/null; git checkout .beads/issues.jsonl 2>/dev/null
+git commit --no-verify -m "docs(wrappers): update SWIG library names to CoolProp<Lang> (#1674, #2254)"
 ```
 
 ---
