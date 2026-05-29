@@ -1,16 +1,16 @@
 /**
- * Comprehensive tests for mixture PT flash and HSU_P flash routines.
+ * Tests for mixture flash routines: PT, PQ, and HSU_P.
  *
  * Tests all combinations of:
  *   - Backends:  SRK, PR, HEOS
  *   - Phases:    gas, liquid, two-phase
  *   - Modes:     PE (phase envelope), imposed, blind
  *
- * PT flash: verifies Q round-trip for two-phase and property self-
- * consistency for single-phase, plus cross-mode agreement.
- *
- * HSU_P flash: round-trips PT → HP (and SP, UP for one exemplary case)
- * and checks that the recovered temperature matches the reference.
+ * PT flash:   Q round-trip for two-phase; property self-consistency and
+ *             cross-mode agreement for all phases.
+ * PQ flash:   no-throw sweep; VLE consistency (fugacity equality + T
+ *             monotonicity); phase-envelope integration.
+ * HSU_P flash: PT → HP/SP/UP round-trips near and away from saturation.
  */
 
 #if defined(ENABLE_CATCH)
@@ -96,10 +96,16 @@ static std::shared_ptr<AbstractState> make_state(const std::string& backend, con
 }
 
 // ===================================================================
-//  PT FLASH TESTS
+//  PT FLASH - PER-MODE AND CROSS-MODE AGREEMENT
 // ===================================================================
 
 TEST_CASE("PT flash mixture per-mode", "[mixture][PT_flash]") {
+    // Two-phase: Q in [0,1], Q round-trip via PQ, repeat-flash Q agreement.
+    // Single-phase: Q==-1, repeat-flash density and enthalpy agreement.
+    const double T_TOL = 0.01;    // K     - PQ round-trip temperature
+    const double Q_TOL = 1e-4;    // -     - repeat-flash vapor quality
+    const double H_TOL = 0.1;     // J/mol - repeat-flash enthalpy
+    const double RHO_TOL = 1e-4;  // -     - relative density agreement
 
     for (auto& mix : mixtures) {
         for (auto& be : test_backends) {
@@ -124,13 +130,12 @@ TEST_CASE("PT flash mixture per-mode", "[mixture][PT_flash]") {
                             auto AS_pq = std::shared_ptr<AbstractState>(AbstractState::factory(be, mix.fluids));
                             AS_pq->set_mole_fractions(mix.z);
                             AS_pq->update(PQ_INPUTS, cond.P, Q);
-                            double T_from_pq = AS_pq->T();
-                            CHECK(std::abs(T_from_pq - cond.T) < 0.1);
+                            CHECK(std::abs(AS_pq->T() - cond.T) < T_TOL);
 
                             // Repeat PT flash recovers same Q
                             auto AS2 = make_state(be, mix, mode, cond.imposed);
                             AS2->update(PT_INPUTS, cond.P, cond.T);
-                            CHECK(std::abs(AS2->Q() - Q) < 0.01);
+                            CHECK(std::abs(AS2->Q() - Q) < Q_TOL);
                         } else {
                             // Single-phase: Q must be -1
                             CHECK(Q == -1.0);
@@ -138,11 +143,9 @@ TEST_CASE("PT flash mixture per-mode", "[mixture][PT_flash]") {
                             // Repeat PT flash is self-consistent
                             auto AS2 = make_state(be, mix, mode, cond.imposed);
                             AS2->update(PT_INPUTS, cond.P, cond.T);
-                            double rho2 = AS2->rhomolar();
-                            double H2 = AS2->hmolar();
-                            double rel_rho = std::abs(rho2 - rho) / std::max(std::abs(rho), 1e-10);
-                            CHECK(rel_rho < 0.01);
-                            CHECK(std::abs(H2 - H) < 1.0);
+                            double rel_rho = std::abs(AS2->rhomolar() - rho) / std::max(std::abs(rho), 1e-10);
+                            CHECK(rel_rho < RHO_TOL);
+                            CHECK(std::abs(AS2->hmolar() - H) < H_TOL);
                         }
                     }
                 }
@@ -152,6 +155,10 @@ TEST_CASE("PT flash mixture per-mode", "[mixture][PT_flash]") {
 }
 
 TEST_CASE("PT flash mixture cross-mode consistency", "[mixture][PT_flash][cross-mode]") {
+    // All three modes (PE, imposed, blind) must agree on Q (two-phase) or
+    // density (single-phase) to within tolerance.
+    const double Q_TOL = 1e-4;    // - vapor quality spread across modes
+    const double RHO_TOL = 1e-3;  // - relative density spread across modes
 
     for (auto& mix : mixtures) {
         for (auto& be : test_backends) {
@@ -159,7 +166,6 @@ TEST_CASE("PT flash mixture cross-mode consistency", "[mixture][PT_flash][cross-
 
                 std::string tag = be + " x-mode " + mix.fluids + " " + cond.label;
                 DYNAMIC_SECTION(tag) {
-                    // Evaluate all three modes
                     double Qs[3], rhos[3];
                     int idx = 0;
                     for (auto& [mode_name, mode] : modes) {
@@ -173,12 +179,11 @@ TEST_CASE("PT flash mixture cross-mode consistency", "[mixture][PT_flash][cross-
                     if (cond.label == "2ph") {
                         double Q_min = *std::min_element(Qs, Qs + 3);
                         double Q_max = *std::max_element(Qs, Qs + 3);
-                        CHECK(Q_max - Q_min < 0.01);
+                        CHECK(Q_max - Q_min < Q_TOL);
                     } else {
                         double rho_min = *std::min_element(rhos, rhos + 3);
                         double rho_max = *std::max_element(rhos, rhos + 3);
-                        double spread = (rho_max - rho_min) / std::max(rho_max, 1e-10);
-                        CHECK(spread < 0.01);
+                        CHECK((rho_max - rho_min) / std::max(rho_max, 1e-10) < RHO_TOL);
                     }
                 }
             }
@@ -187,7 +192,7 @@ TEST_CASE("PT flash mixture cross-mode consistency", "[mixture][PT_flash][cross-
 }
 
 // ===================================================================
-//  HSU_P FLASH TESTS
+//  HSU_P FLASH - ROUND-TRIP AND NEAR-SATURATION
 // ===================================================================
 
 TEST_CASE("HSU_P flash mixture HP round-trip", "[mixture][HSU_P_flash]") {
@@ -243,10 +248,6 @@ TEST_CASE("HSU_P flash mixture SP and UP round-trip", "[mixture][HSU_P_flash]") 
         CHECK(std::abs(AS->T() - cond.T) < TOL);
     }
 }
-
-// ===================================================================
-//  NEAR-SATURATION AND CONSISTENCY TESTS
-// ===================================================================
 
 TEST_CASE("HSU_P flash close to saturation for Propane&Butane", "[mixture][HSU_P_flash][saturation]") {
     // Propane&Butane 50/50 at P=1e5 Pa.
@@ -367,19 +368,30 @@ TEST_CASE("HSU_P flash close to saturation for Nitrogen&Methane&Ethane&Butane&Pe
 }
 
 // ===================================================================
-//  TWO-PHASE PT FLASH CONSISTENCY
+//  VLE CONSISTENCY - PT AND PQ SWEEP
 // ===================================================================
 
+// Shared mixture definition for the VLE consistency tests
+namespace {
+constexpr double VLE_P = 3e5;         // Pa
+constexpr int VLE_NPTS = 100;         // interior scan points
+constexpr double VLE_Z_MIN = 1e-4;    // skip trace-phase components
+constexpr double VLE_FUG_TOL = 1e-7;  // |f_L - f_V| / max(f_L, f_V)
+constexpr double VLE_F_MIN = 1e-15;   // Pa - fugacity reference floor
+constexpr double VLE_H_SLACK = 0.1;   // J/mol - allowed H regression
+static const std::string VLE_FLUIDS = "Nitrogen&Methane&Ethane&Butane&Pentane";
+static const std::vector<double> VLE_Z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+}  // namespace
+
 TEST_CASE("PT flash 5-component N2-HC two-phase consistency", "[mixture][PT_flash]") {
-    // 100 temperatures interior to the two-phase region at P=3e5 Pa.
-    // For each backend checks:
-    //   1. phase == iphase_twophase
-    //   2. hmolar() is monotonically non-decreasing with T (1 J/mol tolerance)
-    //   3. Fugacity equality |phi_i^L x_i - phi_i^V y_i| / max(...) < 1e-7
-    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
-    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
-    const double P = 3e5;  // Pa
-    const int NQ = 100;
+    // Sweeps 100 temperatures uniformly from T_bub to T_dew.  Checks:
+    //   1. phase == iphase_twophase at every point
+    //   2. hmolar() non-decreasing with T (slack: VLE_H_SLACK J/mol)
+    //   3. Fugacity equality for non-trace components (< VLE_FUG_TOL)
+    const std::string fluids = VLE_FLUIDS;
+    const std::vector<double> z = VLE_Z;
+    const double P = VLE_P;
+    const int NQ = VLE_NPTS;
     const std::size_t NC = z.size();
 
     for (const auto& be : test_backends) {
@@ -401,7 +413,7 @@ TEST_CASE("PT flash 5-component N2-HC two-phase consistency", "[mixture][PT_flas
 
             double H_prev = -1e100;
             for (int i = 0; i < NQ; ++i) {
-                // Interior points — skip exact bubble/dew boundaries
+                // Interior points - skip exact bubble/dew boundaries
                 const double alpha = (static_cast<double>(i) + 0.5) / NQ;
                 const double T = T_bub + (T_dew - T_bub) * alpha;
                 CAPTURE(T);
@@ -413,7 +425,7 @@ TEST_CASE("PT flash 5-component N2-HC two-phase consistency", "[mixture][PT_flas
 
                 // 2. Enthalpy monotonicity
                 const double H = AS->hmolar();
-                CHECK(H >= H_prev - 1.0);
+                CHECK(H >= H_prev - VLE_H_SLACK);
                 H_prev = H;
 
                 // 3. Fugacity equality (only meaningful while phase is two-phase)
@@ -430,12 +442,86 @@ TEST_CASE("PT flash 5-component N2-HC two-phase consistency", "[mixture][PT_flas
                     vap->update(PT_INPUTS, P, T);
 
                     for (std::size_t j = 0; j < NC; ++j) {
+                        if (std::min(x[j], y[j]) < VLE_Z_MIN) continue;
                         const double f_liq = liq->fugacity_coefficient(j) * x[j];
                         const double f_vap = vap->fugacity_coefficient(j) * y[j];
                         const double f_ref = std::max(std::abs(f_liq), std::abs(f_vap));
-                        if (f_ref > 1e-15) {
+                        if (f_ref > VLE_F_MIN) {
                             CAPTURE(j);
-                            CHECK(std::abs(f_liq - f_vap) / f_ref < 1e-7);
+                            CHECK(std::abs(f_liq - f_vap) / f_ref < VLE_FUG_TOL);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("PQ flash 5-component N2-HC two-phase consistency", "[mixture][PQ_flash]") {
+    // Sweeps 100 quality midpoints from Q=0 to Q=1.  Checks:
+    //   1. phase == iphase_twophase at every point
+    //   2. T non-decreasing with Q
+    //   3. Fugacity equality for non-trace components (< VLE_FUG_TOL)
+    const std::string fluids = VLE_FLUIDS;
+    const std::vector<double> z = VLE_Z;
+    const double P = VLE_P;
+    const int NQ = VLE_NPTS;
+    const std::size_t NC = z.size();
+
+    for (const auto& be : test_backends) {
+        DYNAMIC_SECTION(be) {
+            // Bubble and dew temperatures bracket
+            auto sat = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            sat->set_mole_fractions(z);
+            sat->update(PQ_INPUTS, P, 0.0);
+            const double T_bub = sat->T();
+            sat->update(PQ_INPUTS, P, 1.0);
+            const double T_dew = sat->T();
+            REQUIRE(T_dew > T_bub);
+
+            // Reused states for per-component fugacity sub-calculations
+            auto liq = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            auto vap = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            AS->set_mole_fractions(z);
+
+            double T_prev = -1e100;
+            for (int i = 0; i < NQ; ++i) {
+                // Interior midpoints - skip exact Q=0 and Q=1 boundaries
+                const double Q = (static_cast<double>(i) + 0.5) / NQ;
+                CAPTURE(Q);
+
+                AS->update(PQ_INPUTS, P, Q);
+
+                // 1. Phase
+                CHECK(AS->phase() == iphase_twophase);
+
+                // 2. Temperature monotonicity
+                const double T = AS->T();
+                CHECK(T >= T_prev);
+                T_prev = T;
+
+                // 3. Fugacity equality (only meaningful while phase is two-phase)
+                if (AS->phase() == iphase_twophase) {
+                    const auto x = AS->mole_fractions_liquid();
+                    const auto y = AS->mole_fractions_vapor();
+
+                    liq->set_mole_fractions(x);
+                    liq->specify_phase(iphase_liquid);
+                    liq->update(PT_INPUTS, P, T);
+
+                    vap->set_mole_fractions(y);
+                    vap->specify_phase(iphase_gas);
+                    vap->update(PT_INPUTS, P, T);
+
+                    for (std::size_t j = 0; j < NC; ++j) {
+                        if (std::min(x[j], y[j]) < VLE_Z_MIN) continue;
+                        const double f_liq = liq->fugacity_coefficient(j) * x[j];
+                        const double f_vap = vap->fugacity_coefficient(j) * y[j];
+                        const double f_ref = std::max(std::abs(f_liq), std::abs(f_vap));
+                        if (f_ref > VLE_F_MIN) {
+                            CAPTURE(j);
+                            CHECK(std::abs(f_liq - f_vap) / f_ref < VLE_FUG_TOL);
                         }
                     }
                 }
@@ -445,7 +531,7 @@ TEST_CASE("PT flash 5-component N2-HC two-phase consistency", "[mixture][PT_flas
 }
 
 // ===================================================================
-//  PQ FLASH TESTS
+//  PQ FLASH - PHASE ENVELOPE AND REGRESSION
 // ===================================================================
 
 TEST_CASE("PQ flash with built phase envelope - N2+CH4", "[mixture][PQ_flash][PhaseEnvelope]") {
