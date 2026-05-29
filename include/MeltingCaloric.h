@@ -53,6 +53,11 @@ class MeltingCaloric
     /// or nullopt if build() has not completed successfully.
     std::optional<std::pair<double, double>> stamp() const { return m_stamp; }
 
+    /// Minimum temperature on the melting curve (may be below the triple-point T
+    /// for fluids like water that fold back, e.g. ~251 K for water).
+    /// Returns 0.0 if build() has not completed successfully.
+    double curve_Tmin() const { return m_curve_Tmin; }
+
    protected:
     std::vector<double> m_lnp, m_T, m_rho, m_h, m_s;
 
@@ -60,6 +65,7 @@ class MeltingCaloric
     bool m_built = false;
     std::optional<Approx> m_T_approx, m_rho_approx, m_h_approx, m_s_approx;
     std::optional<std::pair<double, double>> m_stamp;
+    double m_curve_Tmin = 0.0;
 };
 
 /// Return a process-global, lazily-built MeltingCaloric for H's (pure) fluid.

@@ -207,6 +207,19 @@ void MeltingCaloric::build(HelmholtzEOSMixtureBackend& H) {
     m_h_approx.emplace(fit_all_parts(H, pranges, [](HelmholtzEOSMixtureBackend& S) { return S.hmolar(); }));
     m_s_approx.emplace(fit_all_parts(H, pranges, [](HelmholtzEOSMixtureBackend& S) { return S.smolar(); }));
     m_stamp = FlashRoutines::alpha0_offset_total(H);
+    // Melting-curve minimum temperature (water folds to ~251 K), used as the
+    // corrector floor for the cold-liquid leg.
+    if (m_T_approx) {
+        const double lo = m_T_approx->xmin(), hi = m_T_approx->xmax();
+        double tmin = 1e300;
+        const int Nscan = 257;
+        for (int k = 0; k <= Nscan; ++k) {
+            const double lnp = lo + (hi - lo) * k / Nscan;
+            const double T = m_T_approx->eval(lnp);
+            if (std::isfinite(T) && T < tmin) tmin = T;
+        }
+        m_curve_Tmin = tmin;
+    }
     m_built = true;
 }
 

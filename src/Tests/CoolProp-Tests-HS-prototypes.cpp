@@ -1594,4 +1594,30 @@ TEST_CASE("hs_corrector accepts a sub-Tmin floor (water cold liquid)", "[HS][HS_
     CHECK(std::abs(rho_out - ref->rhomolar()) / ref->rhomolar() < 1e-5);
 }
 
+TEST_CASE("HS cascade solves cold sub-triple liquid via melting leg (water)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto wrk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    std::size_t total = 0, ok = 0;
+    for (double p : {5e7, 1e8, 2.308e8, 4e8, 7e8}) {
+        const double Tm = ref->melting_line(iT, iP, p);
+        for (double T : linspace(Tm + 0.05, Tm + 40.0, 12)) {
+            try { ref->update(PT_INPUTS, p, T); } catch (...) { continue; }
+            const double h = ref->hmolar(), s = ref->smolar();
+            if (!std::isfinite(h) || !std::isfinite(s)) continue;
+            ++total;
+            try {
+                wrk->update(HmolarSmolar_INPUTS, h, s);
+            } catch (const std::exception& e) {
+                CAPTURE(p, T, e.what()); CHECK(false); continue;
+            }
+            const bool good = std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5
+                           && std::abs(wrk->rhomolar() - ref->rhomolar()) / ref->rhomolar() < 1e-5;
+            if (good) ++ok; else { CAPTURE(p, T); CHECK(good); }
+        }
+    }
+    REQUIRE(total > 0);
+    CHECK(ok == total);
+}
+
 #endif  // ENABLE_CATCH
