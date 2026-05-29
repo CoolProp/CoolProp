@@ -37,6 +37,7 @@ Subsequent edits by Ian Bell
 #include <cmath>
 #include <cstdio>
 #include <mutex>
+#include <set>
 #include <utility>
 #include <optional>
 #include <Eigen/Dense>

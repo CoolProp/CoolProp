@@ -1501,4 +1501,30 @@ TEST_CASE("MeltingCaloric raw sampling matches EOS (water)", "[HS][HS_meltcal][.
     }
 }
 
+TEST_CASE("MeltingCaloric per-segment fit matches EOS (water)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    const auto pranges = H->get_melting_line_part_pranges();
+    CHECK(pranges.size() >= 2);
+
+    MeltingCaloric mc;
+    mc.build(*H);
+    REQUIRE(mc.built());
+
+    auto chk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    const double lo = mc.lnp_min(), hi = mc.lnp_max();
+    for (int k = 1; k < 60; ++k) {
+        const double lnp = lo + (hi - lo) * k / 60.0;
+        const double p = std::exp(lnp);
+        double Tm;
+        try { Tm = chk->melting_line(iT, iP, p); } catch (...) { continue; }
+        chk->update(PT_INPUTS, p, Tm);
+        CHECK(std::abs(mc.eval_T(lnp) - Tm) < 1e-4 * Tm);
+        CHECK(std::abs(mc.eval_rho(lnp) - chk->rhomolar()) < 1e-3 * chk->rhomolar());
+        CHECK(std::abs(mc.eval_h(lnp) - chk->hmolar()) < 1e-3 * (std::abs(chk->hmolar()) + 1));
+        CHECK(std::abs(mc.eval_s(lnp) - chk->smolar()) < 1e-3 * (std::abs(chk->smolar()) + 1));
+    }
+}
+
 #endif  // ENABLE_CATCH

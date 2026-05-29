@@ -2,6 +2,7 @@
 #define ANCILLARIES_H
 
 #include "Exceptions.h"
+#include <utility>
 #include <vector>
 #include "rapidjson_include.h"
 #include "Eigen/Core"
@@ -260,6 +261,9 @@ class MeltingLineVariables
     bool enabled() {
         return type != MELTING_LINE_NOT_SET;
     };
+
+    /// Pressure range [p_min, p_max] (Pa) of each melting-curve part, increasing-p order. Empty if no curve.
+    std::vector<std::pair<CoolPropDbl, CoolPropDbl>> get_parts_pranges() const;
 };
 
 } /* namespace CoolProp */
