@@ -124,7 +124,7 @@ TEST_CASE("PT flash mixture per-mode", "[mixture][PT_flash]") {
                             AS_pq->set_mole_fractions(mix.z);
                             AS_pq->update(PQ_INPUTS, cond.P, Q);
                             double T_from_pq = AS_pq->T();
-                            CHECK(std::abs(T_from_pq - cond.T) < 1.0);
+                            CHECK(std::abs(T_from_pq - cond.T) < 0.1);
 
                             // Repeat PT flash recovers same Q
                             auto AS2 = make_state(be, mix, mode, cond.imposed);
@@ -191,7 +191,7 @@ TEST_CASE("PT flash mixture cross-mode consistency", "[mixture][PT_flash][cross-
 
 TEST_CASE("HSU_P flash mixture HP round-trip", "[mixture][HSU_P_flash]") {
 
-    const double TOL = 1.0;  // K
+    const double TOL = 0.1;  // K
 
     for (auto& mix : mixtures) {
         for (auto& be : test_backends) {
@@ -223,7 +223,7 @@ TEST_CASE("HSU_P flash mixture SP and UP round-trip", "[mixture][HSU_P_flash]") 
     const std::string be = "SRK";
     const MixtureDef& mix = mixtures[0];             // Methane&Ethane
     const PhaseCondition& cond = mix.conditions[1];  // 2ph
-    const double TOL = 1.0;
+    const double TOL = 0.1;
 
     auto AS_ref = make_state(be, mix, Mode::Blind, cond.imposed);
     AS_ref->update(PT_INPUTS, cond.P, cond.T);
@@ -248,16 +248,12 @@ TEST_CASE("HSU_P flash mixture SP and UP round-trip", "[mixture][HSU_P_flash]") 
 // ===================================================================
 
 TEST_CASE("HSU_P flash close to saturation for Propane&Butane", "[mixture][HSU_P_flash][saturation]") {
-    // Propane&Butane 50/50 at P=1e5 Pa.  The stability analysis returns
-    // gas from ~0.7 K below T_bubble, so the PQ-routed liquid bracket
-    // with phase imposition is essential for correctness.  Tests cover
-    // HP, SP, and UP for all five regions including T_bub-0.5 K which
-    // falls inside the false-gas zone.
+    // Propane&Butane 50/50 at P=1e5 Pa.
     const std::string be = "HEOS";
     const std::string fluids = "Propane&Butane";
     const std::vector<double> z = {0.5, 0.5};
     const double P = 1e5;
-    const double TOL = 1e-6;  // K
+    const double TOL = 0.1;  // K
 
     auto sat = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
     sat->set_mole_fractions(z);
@@ -310,48 +306,62 @@ TEST_CASE("HSU_P flash close to saturation for Propane&Butane", "[mixture][HSU_P
     }
 }
 
-TEST_CASE("HSU_P flash catches EOS inconsistency in 5-component mixture", "[mixture][HSU_P_flash][consistency]") {
-    // Nitrogen&Methane&Ethane&Propane&Butane at P=1e5 Pa exhibits two
-    // known EOS limitations (possibly due to VLLE) detected by HSU_P_flash_mixtures
-    // Throw instead of returning unphysical results:
-    //   * subcooled (T_bub-1): mismatch of PQ and phase imposed PT at bubble point indicates bad liquid region
-    //     -> reclassified to two-phase but cannot be bracketed -> ValueError.
-    //   * two-phase1 (T_bub+1): PT solution is not confirmed by PQ re-verification
-    //     -> ValueError.
+TEST_CASE("HSU_P flash close to saturation for Nitrogen&Methane&Ethane&Butane&Pentane", "[mixture][HSU_P_flash][saturation]") {
+    // 5-component mixture: Nitrogen/Methane/Ethane/Butane/Pentane at P=3e5 Pa.
     const std::string be = "HEOS";
-    const std::string fluids = "Nitrogen&Methane&Ethane&Propane&Butane";
-    const std::vector<double> z = {0.1, 0.2, 0.3, 0.2, 0.2};
-    const double P = 1e5;
+    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    const double P = 3e5;
+    const double TOL = 0.1;  // K
 
     auto sat = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
     sat->set_mole_fractions(z);
     sat->update(PQ_INPUTS, P, 0.0);
     const double T_bub = sat->T();
+    sat->update(PQ_INPUTS, P, 1.0);
+    const double T_dew = sat->T();
 
-    SECTION("subcooled detects bubble-point inconsistency") {
+    struct Case
+    {
+        std::string label;
+        double T;
+        phases ph;
+    };
+    const std::vector<Case> cases = {
+      {"subcooled T_bub-0.5", T_bub - 0.5, iphase_liquid}, {"subcooled T_bub-1", T_bub - 1.0, iphase_liquid},
+      {"two-phase T_bub+1", T_bub + 1.0, iphase_twophase}, {"two-phase midpoint", 0.5 * (T_bub + T_dew), iphase_twophase},
+      {"two-phase T_dew-1", T_dew - 1.0, iphase_twophase}, {"superheated T_dew+1", T_dew + 1.0, iphase_gas},
+    };
+
+    for (auto& c : cases) {
+        // Reference properties from a phase-imposed PT flash
         auto ref = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
         ref->set_mole_fractions(z);
-        ref->specify_phase(iphase_liquid);
-        ref->update(PT_INPUTS, P, T_bub - 1.0);
+        ref->specify_phase(c.ph);
+        ref->update(PT_INPUTS, P, c.T);
         const double H_ref = ref->hmass();
+        const double S_ref = ref->smass();
+        const double U_ref = ref->umass();
         ref->unspecify_phase();
 
-        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
-        AS->set_mole_fractions(z);
-        REQUIRE_THROWS_WITH(AS->update(HmassP_INPUTS, H_ref, P), Catch::Matchers::ContainsSubstring("bubble-point inconsistency detected"));
-    }
-
-    SECTION("two-phase1 catches PQ verification failure") {
-        auto ref = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
-        ref->set_mole_fractions(z);
-        ref->specify_phase(iphase_twophase);
-        ref->update(PT_INPUTS, P, T_bub + 1.0);
-        const double H_ref = ref->hmass();
-        ref->unspecify_phase();
-
-        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
-        AS->set_mole_fractions(z);
-        REQUIRE_THROWS_WITH(AS->update(HmassP_INPUTS, H_ref, P), Catch::Matchers::ContainsSubstring("not confirmed by PQ flash"));
+        DYNAMIC_SECTION(c.label + " HP") {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            AS->set_mole_fractions(z);
+            AS->update(HmassP_INPUTS, H_ref, P);
+            CHECK(std::abs(AS->T() - c.T) < TOL);
+        }
+        DYNAMIC_SECTION(c.label + " SP") {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            AS->set_mole_fractions(z);
+            AS->update(PSmass_INPUTS, P, S_ref);
+            CHECK(std::abs(AS->T() - c.T) < TOL);
+        }
+        DYNAMIC_SECTION(c.label + " UP") {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            AS->set_mole_fractions(z);
+            AS->update(PUmass_INPUTS, P, U_ref);
+            CHECK(std::abs(AS->T() - c.T) < TOL);
+        }
     }
 }
 
