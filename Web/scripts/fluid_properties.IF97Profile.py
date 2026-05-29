@@ -58,9 +58,12 @@ P_RANGE = (1.0e4, 5.0e7)    # Pa — 0.01 to 50 MPa
 # runs.  Cheap to bump if the noise looks high.
 N_RUNS = 200
 
+# Order left-to-right: HEOS (the slow iterative baseline) first, then
+# IF97 (closed-form backward equations), then the tabular backends — so
+# the figure reads as a descending cost ladder.
 BACKENDS = [
-    ('IF97',         'Water', 'IF97'),
     ('HEOS',         'Water', 'HEOS'),
+    ('IF97',         'Water', 'IF97'),
     ('SVDSBTL&HEOS', 'Water', 'SVDSBTL+HEOS'),
     ('SVDSBTL&IF97', 'Water', 'SVDSBTL+IF97'),
 ]
