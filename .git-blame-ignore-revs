@@ -16,3 +16,13 @@ ee879788a10365c13f812993c4db6e69cb2d51a7
 # clang-tidy --fix for cppcoreguidelines-init-variables across src/
 # (CoolProp-2uw.13 part 2, PR #2808)
 7adb0aa1a216a0495b075fb84ad402b331bf9655
+
+# clang-tidy perf sweep + virtual-in-ctor + float-loops
+# (CoolProp-kig, #2926, PR #2980)
+2e61d46eeaa083895d14b64b461c973f4c52b2dd
+
+# clang-tidy Tier-2 mechanical fix-it sweep (modernize/perf:
+# unnecessary-value-param, prefer-member-initializer, use-auto,
+# loop-convert, use-equals-default, use-using, etc.)
+# (CoolProp-0xu, #2926 layer 2, PR #3019)
+fe950bbfa4c2cf53a79fb5a3d848b7c945dd1ddf
