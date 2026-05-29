@@ -444,7 +444,7 @@ class ConsistencyAxis(object):
         state = self.state
 
         try:
-            if state_pcsaft.fluid_param_string('pure') == 'false':
+            if state.fluid_param_string('pure') == 'false':
                 print("Not a pure-fluid, skipping two-phase evaluation")
                 return
         except:
