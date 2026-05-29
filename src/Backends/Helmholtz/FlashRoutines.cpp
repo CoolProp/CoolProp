@@ -97,15 +97,33 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         SaturationSolvers::successive_substitution_guessrho(HEOS, o.x, o.y, o.rhomolar_liq, o.rhomolar_vap, o.z, 10);
         CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
         solver.solve();
-        HEOS._phase = iphase_twophase;
         double Q_raw = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
-        // Use the physical Q (clamped to [0,1]) for the mixture density to
-        // avoid a negative rhomolar when Q_raw is slightly outside [0,1].
-        double Q_phys = std::max(0.0, std::min(1.0, Q_raw));
-        HEOS._rhomolar = 1 / (Q_phys / HEOS.SatV->rhomolar() + (1 - Q_phys) / HEOS.SatL->rhomolar());
-        HEOS._Q = (Q_raw < 0 || Q_raw > 1) ? -1 : Q_raw;
+        if (Q_raw < 0 || Q_raw > 1) {
+            // The two-phase solver converged to a Q outside [0,1]: 
+            // Re-solve as single-phase.
+            double T = HEOS.T(), p = HEOS.p();
+            phases ph = (Q_raw < 0) ? iphase_liquid : iphase_gas;
+            HEOS.specify_phase(ph);
+            double rho = HEOS.solver_rho_Tp(T, p);
+            HEOS.update_DmolarT_direct(rho, T);
+            HEOS.unspecify_phase();
+            HEOS._Q = -1;
+            HEOS._phase = ph;
+        } else {
+            HEOS._phase = iphase_twophase;
+            HEOS._rhomolar = 1 / (Q_raw / HEOS.SatV->rhomolar() + (1 - Q_raw) / HEOS.SatL->rhomolar());
+            HEOS._Q = Q_raw;
+        }
     } else {
         // TPD says stable - single-phase.
+        //
+        // Throw if the caller explicitly imposed two-phase but the stability
+        // test disagrees
+        if (HEOS.imposed_phase_index == iphase_twophase) {
+            throw ValueError(format("PT_flash_mixtures: stability test returned stable at T=%g K, p=%g Pa"
+                                    " but iphase_twophase was imposed; possible false-stability gap in TPD analysis",
+                                    HEOS.T(), HEOS.p()));
+        }
         //
         // Determine the phase from Wilson K-factor bubble-pressure estimate
         // before solving for density.

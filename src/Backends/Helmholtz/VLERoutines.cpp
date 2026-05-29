@@ -1776,6 +1776,19 @@ void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBack
         else {
             RachfordRiceResidual resid(z, lnK);
             beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+            // Brent can overshoot just past the nearest pole (at 1/(1-K_min), slightly
+            // above 1).  The Rachford-Rice function is strictly monotone on [0,1] with
+            // no poles there, so bisection is guaranteed to recover the interior root.
+            if (beta < 0.0 || beta > 1.0) {
+                double a_b = 0.0, b_b = 1.0, f_a = g0;
+                for (int sb = 0; sb < 60; ++sb) {
+                    double mid = 0.5 * (a_b + b_b);
+                    double f_mid = resid.call(mid);
+                    if (f_a * f_mid > 0) { a_b = mid; f_a = f_mid; }
+                    else { b_b = mid; }
+                }
+                beta = 0.5 * (a_b + b_b);
+            }
         }
         x_and_y_from_K(beta, K, z, x, y);
         normalize_vector(x);
@@ -1817,6 +1830,17 @@ void StabilityRoutines::StabilityEvaluationClass::trial_compositions() {
         // Need to iterate to find beta that makes g of Rachford-Rice zero
         RachfordRiceResidual resid(z, lnK);
         beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+        // Brent can overshoot just past the nearest pole; bisect as fallback.
+        if (beta < 0.0 || beta > 1.0) {
+            double a_b = 0.0, b_b = 1.0, f_a = g0;
+            for (int sb = 0; sb < 60; ++sb) {
+                double mid = 0.5 * (a_b + b_b);
+                double f_mid = resid.call(mid);
+                if (f_a * f_mid > 0) { a_b = mid; f_a = f_mid; }
+                else { b_b = mid; }
+            }
+            beta = 0.5 * (a_b + b_b);
+        }
     }
     // Get the compositions from given value for beta, K, z
     SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
@@ -1864,6 +1888,17 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         } else {
             // Need to iterate to find beta that makes g of Rachford-Rice zero
             beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+            // Brent can overshoot just past the nearest pole; bisect as fallback.
+            if (beta < 0.0 || beta > 1.0) {
+                double a_b = 0.0, b_b = 1.0, f_a = g0;
+                for (int sb = 0; sb < 60; ++sb) {
+                    double mid = 0.5 * (a_b + b_b);
+                    double f_mid = resid.call(mid);
+                    if (f_a * f_mid > 0) { a_b = mid; f_a = f_mid; }
+                    else { b_b = mid; }
+                }
+                beta = 0.5 * (a_b + b_b);
+            }
         }
 
         // Get the compositions from given values for beta, K, z
@@ -1990,18 +2025,19 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
                                 rhomolar_liq, rhomolar_vap, tpd_L, tpd_H);
         }
 
-        // Check tpd first: If either tpd is negative, phases definitely split.
-        if (tpd_L < -1e-12 || tpd_H < -1e-12) {
-            _stable = false;
-            return;
-        }
-
         // Check if either of the phases have the bulk composition. If so, no phase split
         if (diffbulkL < 1e-2 || diffbulkH < 1e-2) {
             _stable = true;
             return;
         }
+
+        // Check if either tpd is negative, if so, phases definitively split, quit
+        if (tpd_L < -1e-12 || tpd_H < -1e-12) {
+            _stable = false;
+            return;
+        }
     }
+
     if (diffbulkH > 0.25 || diffbulkL > 0.25) {
         // At least one test phase is definitely not the bulk composition, so phase split predicted
         _stable = false;
