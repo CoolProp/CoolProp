@@ -71,11 +71,22 @@ interface:
   `dl("CoolPropPHP.so")`), then calls `get_module()`; filename and internal module
   name are decoupled, so renaming the `.so` to `CoolPropPHP` requires no patch.
 
-**Pre-existing PHP bug (out of #1674 scope, flagged)**: SWIG 4.1+ no longer emits a
-`CoolProp.php` proxy, but `CMakeLists.txt:1796` still does
-`install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php ...)`. That install will fail
-or install nothing on any modern SWIG. This is independent of the rename; recommend a
-follow-up issue rather than folding it into this branch.
+**Pre-existing PHP bug — fixed as a drive-by in this branch**: SWIG 4.1+ rewrote the
+PHP module to register classes as native PHP 8 Zend classes (verified: with an
+`AbstractState` class in the interface, SWIG 4.3 emits `PHP_METHOD(AbstractState,...)`
+directly in `php_CoolProp.h`/`_wrap.cxx` and produces **no** `CoolProp.php` proxy).
+But `CMakeLists.txt:1796` still does
+`install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php ...)`, so
+`cmake --build --target install` for the PHP module hard-fails on any SWIG ≥ 4.1.
+
+Fix: add the `OPTIONAL` keyword to that `install(FILES ...)`. This stops the failure
+on modern SWIG (file absent → skipped) while still installing the proxy on a pre-4.1
+SWIG that does generate it. Minimal and version-agnostic.
+
+Note on PHP wrapper viability: the generated extension itself is functional — the
+`.so` compiles and registers `PropsSI`/`AbstractState` natively for PHP 8 (SWIG ≥ 4.1
+dropped PHP 5/7). The wrapper is shippable once the install step is fixed; it is
+simply not built in CI (no PHP builder workflow, which remains out of scope).
 
 ## Part B — #2254: C# builder workflow
 
@@ -123,6 +134,12 @@ Add to `Web/coolprop/changelog.rst` under the next major version:
   runtime test needed for the rename itself.
 - **Local**: the full SWIG toolchain set is not all installable locally; rely on the
   CI matrix for cross-platform confirmation.
+
+## Drive-by fix (folded in)
+
+- Add `OPTIONAL` to `install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php ...)` at
+  `CMakeLists.txt:1796` so the PHP module's `--target install` no longer hard-fails
+  on SWIG ≥ 4.1 (which no longer generates the proxy). See the PHP finding above.
 
 ## Out of scope
 
