@@ -297,10 +297,15 @@ inline double saturation_Wilson(HelmholtzEOSMixtureBackend& HEOS, double beta, d
     } else {
         // Find first guess for output variable using Wilson K-factors
         WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
-        if (guess < 0 || !ValidNumber(guess))
+        try {
             out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100);
-        else
+        } catch (const std::exception&) {
+            // Brent failed to bracket (e.g. root outside [50 K, 10000 K]); fall back to Secant
+            if (!ValidNumber(guess) || guess < 0) {
+                throw;
+            }
             out = Secant(Resid, guess, 0.001, 1e-10, 100);
+        }
         if (!ValidNumber(out)) {
             throw ValueError("saturation_p_Wilson failed to get good output value");
         }

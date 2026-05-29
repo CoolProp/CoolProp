@@ -366,6 +366,10 @@ TEST_CASE("HSU_P flash close to saturation for Nitrogen&Methane&Ethane&Butane&Pe
     }
 }
 
+// ===================================================================
+//  PQ FLASH TESTS
+// ===================================================================
+
 TEST_CASE("PQ flash with built phase envelope - N2+CH4", "[mixture][PQ_flash][PhaseEnvelope]") {
     // Test that PQ flash works when the phase envelope is built.
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane"));
@@ -380,6 +384,26 @@ TEST_CASE("PQ flash with built phase envelope - N2+CH4", "[mixture][PQ_flash][Ph
     // Calculate point inside PE
     REQUIRE_NOTHROW(AS->update(CoolProp::PQ_INPUTS, 1.5e5, 0.5));
     CHECK(AS->phase() == CoolProp::iphase_twophase);
+}
+
+TEST_CASE("PQ flash 6-component N2-HC mixture does not throw", "[mixture][PQ_flash]") {
+    // Regression test: saturation_Wilson Secant diverges with preconditioning guess for q between 0.88 and 0.95.
+    // New logic tries Brent first.
+    const std::string fluids = "Nitrogen&Methane&Ethane&Propane&Butane&Pentane";
+    const std::vector<double> z = {0.2936, 0.2720, 0.0592, 0.2932, 0.0787, 0.0033};
+    const double P = 3.92e5;  // Pa
+    const int NQ = 100;
+
+    for (const auto& be : test_backends) {
+        DYNAMIC_SECTION(be) {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(be, fluids));
+            AS->set_mole_fractions(z);
+            for (int i = 0; i < NQ; ++i) {
+                double q = static_cast<double>(i) / (NQ - 1);
+                REQUIRE_NOTHROW(AS->update(PQ_INPUTS, P, q));
+            }
+        }
+    }
 }
 
 #endif  // ENABLE_CATCH
