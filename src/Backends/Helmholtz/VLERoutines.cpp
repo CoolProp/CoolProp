@@ -1973,16 +1973,22 @@ void SaturationSolvers::PTflash_twophase::solve() {
             IO.y[i] = K[i] * IO.x[i];
         }
         normalize_vector(IO.x); normalize_vector(IO.y);
+        bool liquid_ok = false, vapor_ok = false;
         HEOS.SatL->set_mole_fractions(IO.x);
         try {
             CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, 0.9 / HEOS.SatL->SRK_covolume());
             IO.rhomolar_liq = rL; HEOS.SatL->update_DmolarT_direct(rL, IO.T);
+            liquid_ok = true;
         } catch (...) {}
         HEOS.SatV->set_mole_fractions(IO.y);
         try {
             CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, 0.9 / HEOS.SatV->SRK_covolume());
             IO.rhomolar_vap = rV; HEOS.SatV->update_DmolarT_direct(rV, IO.T);
+            vapor_ok = true;
         } catch (...) {}
+        if (!liquid_ok || !vapor_ok) {
+            throw SolutionError("PT flash lost a phase density solve during successive substitution");
+        }
         for (std::size_t i = 0; i < N; ++i) K[i] = HEOS.SatL->fugacity_coefficient(i) / HEOS.SatV->fugacity_coefficient(i);
     }
     bool converged = false;
