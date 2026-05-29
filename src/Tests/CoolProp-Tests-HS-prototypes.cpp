@@ -1706,4 +1706,28 @@ TEST_CASE("HS cold-liquid round-trip across reference states (water)", "[HS][HS_
     }
 }
 
+TEST_CASE("HS unaffected for monotone-melting-line fluids", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    for (const std::string fluid : {std::string("CarbonDioxide"), std::string("Methane")}) {
+        auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluid));
+        auto wrk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluid));
+        const double Tt = ref->Ttriple(), Tmax = ref->Tmax();
+        const double pmin = ref->keyed_output(iP_min) * 1.01, pmax = ref->keyed_output(iP_max);
+        std::size_t total = 0, ok = 0;
+        for (double p : linspace(pmin, pmax, 8)) {
+            for (double T : linspace(Tt + 1.0, Tmax, 8)) {
+                try { ref->update(PT_INPUTS, p, T); } catch (...) { continue; }
+                if (ref->phase() == iphase_twophase) continue;
+                const double h = ref->hmolar(), s = ref->smolar();
+                if (!std::isfinite(h) || !std::isfinite(s)) continue;
+                ++total;
+                try { wrk->update(HmolarSmolar_INPUTS, h, s);
+                    if (std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5) ++ok; else CHECK(false);
+                } catch (...) { CHECK(false); }
+            }
+        }
+        REQUIRE(total > 0); CHECK(ok == total);
+    }
+}
+
 #endif  // ENABLE_CATCH
