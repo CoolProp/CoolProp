@@ -26,6 +26,7 @@
 #    include <array>
 #    include <chrono>
 #    include <cmath>
+#    include <cstdio>
 #    include <cstdlib>
 #    include <fstream>
 #    include <memory>
@@ -1618,6 +1619,53 @@ TEST_CASE("HS cascade solves cold sub-triple liquid via melting leg (water)", "[
     }
     REQUIRE(total > 0);
     CHECK(ok == total);
+}
+
+TEST_CASE("HS sub-triple cold-liquid profile vs supercritical (water/heavywater)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    const double MELTING_SLOWDOWN_FACTOR = 200.0;  // TODO(CoolProp-vmp): tighten after first profile (measured ~95x on Water)
+    for (const std::string fluid : {std::string("Water"), std::string("HeavyWater")}) {
+        auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluid));
+        auto wrk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluid));
+        auto* Href = dynamic_cast<HelmholtzEOSMixtureBackend*>(ref.get());
+        // Skip a fluid that has no melting line (leg 4 unavailable there).
+        if (get_melting_caloric_cached(*Href) == nullptr) {
+            std::printf("[HS_meltcal] %s: no melting caloric -> skipped\n", fluid.c_str());
+            continue;
+        }
+        const double Ttrip = ref->Ttriple(), Tc = ref->T_critical(), pc = ref->p_critical();
+
+        auto time_hs = [&](double p, double T) -> double {
+            ref->update(PT_INPUTS, p, T);
+            const double h = ref->hmolar(), s = ref->smolar();
+            const auto t0 = std::chrono::steady_clock::now();
+            wrk->update(HmolarSmolar_INPUTS, h, s);
+            const double us = std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - t0).count();
+            CHECK(std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5);  // fast must also be correct
+            return us;
+        };
+
+        double cold_sum = 0; std::size_t cold_n = 0;
+        for (double p : {5e7, 1e8, 2.308e8, 4e8, 7e8}) {
+            double Tm; try { Tm = ref->melting_line(iT, iP, p); } catch (...) { continue; }
+            for (double T : linspace(Tm + 0.05, std::min(Ttrip - 0.1, Tm + 15.0), 8)) {
+                if (T >= Ttrip) continue;  // sub-triple only
+                try { cold_sum += time_hs(p, T); ++cold_n; } catch (...) {}
+            }
+        }
+        double sup_sum = 0; std::size_t sup_n = 0;
+        for (double p : linspace(1.2 * pc, 5.0 * pc, 5)) {
+            for (double T : linspace(1.05 * Tc, 2.0 * Tc, 8)) {
+                try { sup_sum += time_hs(p, T); ++sup_n; } catch (...) {}
+            }
+        }
+        if (cold_n == 0) { std::printf("[HS_meltcal] %s: no sub-triple points sampled -> skipped\n", fluid.c_str()); continue; }
+        REQUIRE(sup_n > 0);
+        const double cold_mean = cold_sum / cold_n, sup_mean = sup_sum / sup_n;
+        std::printf("[HS_meltcal] %s: cold-mean %.1f us, supercrit-mean %.1f us, ratio %.1fx (bound %.0fx)\n",
+                    fluid.c_str(), cold_mean, sup_mean, cold_mean / sup_mean, MELTING_SLOWDOWN_FACTOR);
+        CHECK(cold_mean <= MELTING_SLOWDOWN_FACTOR * sup_mean);
+    }
 }
 
 #endif  // ENABLE_CATCH
