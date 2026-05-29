@@ -4048,6 +4048,37 @@ TEST_CASE_METHOD(PropertyLimitsFixture, "Below-melting PT guard honors DONT_CHEC
     }
 }
 
+TEST_CASE("HeavyWater (D2O) melting line matches Herrig et al. check values", "[melting]") {
+    // Melting-pressure equations Eqs. (4)-(7) of Herrig, Thol, Harvey, Lemmon,
+    // "A Reference Equation of State for Heavy Water," J. Phys. Chem. Ref. Data
+    // 47, 043102 (2018). The values below are the paper's computer-implementation
+    // check values (Sec. 3.4) for the four ice-structure branches.
+    using namespace CoolProp;
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "HeavyWater"));
+    REQUIRE(AS->has_melting_line());
+    struct Pt
+    {
+        double T_K, p_Pa;
+    };
+    // (T, p) check points, one per ice-structure branch; p in MPa from the paper.
+    // NB: melting pressure p(T) is multi-valued near the ice-Ih/III/V triples (the
+    // ice-Ih branch folds back), so we validate via the single-valued T(p) inverse
+    // — the direction the parser indexes by pressure, and the one the EOS uses for
+    // its lower temperature bound. Recovering each branch's check temperature from
+    // its check pressure exercises that branch's transcribed coefficients.
+    const Pt pts[] = {
+      {270.0, 0.837888413e2 * 1e6},  // ice Ih,  Eq. (4)
+      {255.0, 0.236470168e3 * 1e6},  // ice III, Eq. (5)
+      {275.0, 0.619526971e3 * 1e6},  // ice V,   Eq. (6)
+      {300.0, 0.959203594e3 * 1e6},  // ice VI,  Eq. (7)
+    };
+    for (const Pt& pt : pts) {
+        CAPTURE(pt.T_K, pt.p_Pa);
+        const double T = AS->melting_line(iT, iP, pt.p_Pa);
+        CHECK(T == Catch::Approx(pt.T_K).epsilon(1e-6));
+    }
+}
+
 TEST_CASE("REFPROP melting_line honors iP_min/iT_min/iP_max/iT_max sentinels", "[melting][REFPROP]") {
     Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
     std::shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Water"));
