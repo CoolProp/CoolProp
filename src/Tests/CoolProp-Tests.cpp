@@ -4993,6 +4993,46 @@ TEST_CASE("INCOMP psat throws below TminPsat instead of returning 0 silently (#2
     CHECK(ValidNumber(v2));
     CHECK(v2 > 0);
 }
+TEST_CASE("Incompressible enthalpy is finite and continuous at T == Tbase (#1578)", "[INCOMP][1578]") {
+    // Issue #1578: PropsSI for incompressible fluids used to throw "A fraction
+    // cannot be evaluated with zero as denominator" whenever the requested
+    // temperature equalled the fluid's Tbase (so x_in - x_base == 0). For most
+    // fluids that is a single unlucky point, but Antifrogen N/L (AN/AL) have
+    // Tbase == 293.15 K, which is also their reference temperature, so
+    // enthalpy/entropy failed for *every* state. The singularity is now handled
+    // by L'Hopital-style interpolation in Polynomial2DFrac::evaluate; this guards
+    // against the throw returning.
+    const double p = 101325.0;
+    // (fluid name, Tbase [K]) pairs taken straight from the issue report.
+    struct Case { std::string name; double Tbase; };
+    const std::vector<Case> cases = {
+      {"INCOMP::AS30", 273.15},    // single-point case from the issue
+      {"INCOMP::TD12", 345.65},    // single-point case from the issue
+      {"INCOMP::AN-30%", 293.15},  // Antifrogen N: Tbase == Tref, failed for all T
+      {"INCOMP::AL-30%", 293.15},  // Antifrogen L: Tbase == Tref, failed for all T
+    };
+    for (const Case& c : cases) {
+        const double dT = 0.1;
+        double h_lo = 0, h_mid = 0, h_hi = 0;
+        CHECK_NOTHROW(h_lo = CoolProp::PropsSI("Hmass", "T", c.Tbase - dT, "P", p, c.name));
+        CHECK_NOTHROW(h_mid = CoolProp::PropsSI("Hmass", "T", c.Tbase, "P", p, c.name));
+        CHECK_NOTHROW(h_hi = CoolProp::PropsSI("Hmass", "T", c.Tbase + dT, "P", p, c.name));
+        CAPTURE(c.name);
+        CAPTURE(c.Tbase);
+        CAPTURE(h_lo);
+        CAPTURE(h_mid);
+        CAPTURE(h_hi);
+        CAPTURE(CoolProp::get_global_param_string("errstring"));
+        REQUIRE(ValidNumber(h_mid));
+        // Enthalpy is ~linear in T over a 0.2 K window (cp is locally constant),
+        // so the value at Tbase must equal the midpoint of its neighbours: this
+        // catches a spike/dropout if the singular point is mishandled. The bound
+        // is on the linearity residual (curvature ~ d(cp)/dT * dT^2), not the
+        // slope (~cp*dT ~ 400 J/kg); 1.0 J/kg leaves a wide margin.
+        const double midpoint = 0.5 * (h_lo + h_hi);
+        CHECK(std::abs(h_mid - midpoint) < 1.0);  // [J/kg]
+    }
+}
 TEST_CASE("PropsSImulti with empty input vectors returns empty result instead of segfaulting", "[PropsSImulti][2417]") {
     // Issue #2417: PropsSI('T','P',[],'Q',[],'Ammonia') segfaulted because
     // _PropsSI_outputs forced N1 = max(1, in1.size()) and then dereferenced
