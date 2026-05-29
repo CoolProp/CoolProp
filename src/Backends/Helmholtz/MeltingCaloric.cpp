@@ -3,6 +3,7 @@
 // for these two headers:
 #include "HelmholtzEOSMixtureBackend.h"
 #include "DataStructures.h"
+#include "FlashRoutines.h"
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -202,6 +203,7 @@ void MeltingCaloric::build(HelmholtzEOSMixtureBackend& H) {
     m_rho_approx.emplace(fit_all_parts(H, pranges, [](HelmholtzEOSMixtureBackend& S) { return S.rhomolar(); }));
     m_h_approx.emplace(fit_all_parts(H, pranges, [](HelmholtzEOSMixtureBackend& S) { return S.hmolar(); }));
     m_s_approx.emplace(fit_all_parts(H, pranges, [](HelmholtzEOSMixtureBackend& S) { return S.smolar(); }));
+    m_stamp = FlashRoutines::alpha0_offset_total(H);
     m_built = true;
 }
 }  // namespace CoolProp

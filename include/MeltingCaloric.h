@@ -49,12 +49,17 @@ class MeltingCaloric
     /// closeness in enthalpy.
     bool seed_for_hs(double s_cache, double h_cache, double& T0, double& rho0) const;
 
+    /// The (a1, a2) alpha0 offset pair that was active when build() was called,
+    /// or nullopt if build() has not completed successfully.
+    std::optional<std::pair<double, double>> stamp() const { return m_stamp; }
+
    protected:
     std::vector<double> m_lnp, m_T, m_rho, m_h, m_s;
 
     using Approx = CoolProp::superancillary::ChebyshevApproximation1D<Eigen::ArrayXd>;
     bool m_built = false;
     std::optional<Approx> m_T_approx, m_rho_approx, m_h_approx, m_s_approx;
+    std::optional<std::pair<double, double>> m_stamp;
 };
 
 }  // namespace CoolProp

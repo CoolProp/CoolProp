@@ -1546,4 +1546,19 @@ TEST_CASE("MeltingCaloric seed finds a cold-liquid anchor (water)", "[HS][HS_mel
     CHECK(rho0 == Catch::Approx(ref->rhomolar()).epsilon(0.08));  // within ~8%
 }
 
+TEST_CASE("MeltingCaloric stamp is captured at build", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    struct Reset { ~Reset() noexcept { try { set_reference_stateS("Water","DEF"); } catch(...){} } } guard;
+    set_reference_stateS("Water", "DEF");
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    MeltingCaloric mc;
+    mc.build(*H);
+    const auto stamp = mc.stamp();
+    REQUIRE(stamp.has_value());
+    const auto def_off = FlashRoutines::alpha0_offset_total(*H);
+    CHECK(stamp->first == Catch::Approx(def_off.first));
+    CHECK(stamp->second == Catch::Approx(def_off.second));
+}
+
 #endif  // ENABLE_CATCH
