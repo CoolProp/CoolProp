@@ -148,3 +148,51 @@ The draft PR's description will include explicit sections:
 - Baseline fixture committed; watermap plotter committed.
 - bd issue updated with PR link + status.
 - No master-behavior change when the toggle is OFF.
+
+## Phase 3b findings (integration attempted, not shipped)
+
+Two integration attempts were made; both failed the G3 hard gate. The
+preconditioner unit + test bed are shipped; the integration is deferred to
+CoolProp-cdj proper (with the inner-Newton replacement).
+
+### Attempt 1 — seed at `T_mid`
+- Strategy: compute `regime_classified_rho_seed(H, T_mid, p)` once at function entry; reuse on every Brent probe.
+- Result: **10,762 new failures vs baseline.**
+- Root cause: Brent probes `Tmin` and `Tmax` first (often very far from `T_mid`); a seed classified for `T_mid` lands the inner Newton in the wrong basin for the bracket-endpoint probes → wrong-root convergence → Brent bisects around a fake solution.
+
+### Attempt 2 — per-call seed re-classification
+- Strategy: compute `regime_classified_rho_seed(H, T_probe, p)` on every `solver_resid::call(T)`. Cost: ~50–200 ns × ~9 calls ≈ ~1–2 µs overhead.
+- Result: **234 new failures vs baseline** (down from 10,762 — big improvement), but still violates G3 = 0.
+- Net effect: **+2,204 newly-successful points** (preconditioner is a clear win overall), but the spec mandates *zero new* failures, not a net gain.
+- Failure clustering: 234 failures across just 4 fluids in 2 regimes:
+  - **Deep supercritical compressed** (p > ~3·p_c): R12 at p=2×10⁸ Pa, R123 at 2.4–7.6×10⁷, Methane at 4.6–10×10⁸. Classifier picks ideal-gas/critical blend; actual is compressed-liquid density at ~30,000 mol/m³.
+  - **Near-T_c handoff** (|T − T_c|/T_c < 0.005): R152A at T ≈ T_c. The sub/supercritical branch switch at exactly T = T_c is discontinuous.
+
+### Attempt 3 — engagement gate (exclude failure regimes)
+- Strategy: same as Attempt 2 plus an engagement gate excluding the two failure regimes (`p > 3·p_c`, `|T − T_c|/T_c < 0.005`); fall back to baseline (cold update) otherwise.
+- Result: **444 new failures vs baseline** — *worse* than Attempt 2.
+- Aggregate ON/OFF timing ratio: **1.257** (~26% slower when engaged).
+- Failure clustering: **95% of new failures are pseudo-pure mixtures** (R407C 107, R410A 97, R507A 101, R404A 91, SES36 28) in well-behaved subcritical and moderately-supercritical regimes — the engagement gate's "safe zone" was wrong because `is_pure() == true` returns true for pseudo-pure mixtures whose superancillaries behave differently than true pure-fluid superancillaries.
+
+### Lessons learned
+
+1. **`is_pure()` is not the right gate for the preconditioner.** Pseudo-pure mixtures pass `is_pure()` but their superancillary-derived ρ_sat,L/V values don't seed the cold-path inner Newton correctly. The classifier needs `is_pure() && !is_pseudopure()` or an explicit check that the superancillary behaves as expected.
+2. **Brent's bracket-endpoint probes need basin-correct seeds at the actual probe T**, not at any single representative T. Per-call re-classification fixes this for most regimes but exposes (1).
+3. **Per-call seed-compute overhead (~200 ns × ~9 outer iters) is not paid back** by faster convergence on most fluids — the cached path's SRK guess + Householder4 + retry is already well-tuned for the bulk regime, and replacing it with the preconditioner's seed adds work without reducing inner-iter count enough to win.
+4. **The preconditioner architecture is not enough on its own.** The big speedup hypothesis (preconditioner → fewer inner iters AND cheaper per iter) requires *also* replacing the cached `solver_rho_Tp` + Householder4 path with the direct-EOS inner Newton (CoolProp-cdj proper). The preconditioner alone changes only the seed; the inner-Newton machinery is unchanged and dominates the time.
+5. **Net G3-positive but G3-not-zero** is a real outcome of opt-in preconditioning. The spec's hard G3 = 0 is the right gate for a *default-on* change, but if the toggle stays OFF in production, a net-positive ON path is shippable IF the test infrastructure can prove the net gain on representative grids.
+
+### Status
+
+- **Phase 2a** (test bed + named regressions + baseline fixture): ✅ shipped, commit `1b4bc2272`.
+- **Phase 3a** (standalone preconditioner unit + unit tests): ✅ shipped, commit `1306d4e24`.
+- **Phase 3b** (production integration): ❌ deferred — three attempts failed G3; the architecture needs to be reconsidered in conjunction with the CoolProp-cdj inner-Newton replacement.
+- **Plotter** (Python visualization): deferred (lower priority; sweep CSV is directly parseable).
+- **Structural tests** (lazy-init, pseudo-pure passthrough, thread-safety): partially covered by the Phase 3a preconditioner tests; full structural suite deferred to integration phase.
+
+### Recommendations for CoolProp-cdj (the next phase)
+
+1. **Re-design the gate**: `is_pure() && !is_pseudopure()` AND the per-fluid melt table actually has data AND the superancillary is consistent (run a startup sanity check).
+2. **Co-design the seed with the inner Newton**: the preconditioner's value is in giving a *basin-classified* seed for a *direct-EOS, cache-bypassing* inner Newton. The cached `solver_rho_Tp` doesn't benefit enough from the seed because its iteration cost is already dominated by `CachedElement` and virtual-dispatch overhead.
+3. **Consider a stricter ship gate**: instead of G3 = 0, allow "G3 net-positive AND no fluid regresses by more than X%" for an opt-in toggle. This admits net-improvement scenarios that the hard gate rejects.
+4. **Address the pseudo-pure mixture handling explicitly** — these are a real and common class (HFCs blends like R407C/R410A/R404A) that need either a separate seed strategy or explicit opt-out.
