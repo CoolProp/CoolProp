@@ -2208,17 +2208,27 @@ void SaturationSolvers::PTflash_twophase::build_arrays() {
             }
         }
     }
-    // Next N-2 residuals are amount of substance balances
-    for (std::size_t i = 0; i < N - 2; ++i) {
-        std::size_t k = i + N;
-        r(k) = (IO.z[i] - IO.x[i]) / (IO.y[i] - IO.x[i]) - (IO.z[N - 1] - IO.x[N - 1]) / (IO.y[N - 1] - IO.x[N - 1]);
-        for (std::size_t j = 0; j < N - 2; ++j) {
-            J(k, j) = (IO.z[j] - IO.x[j]) / POW2(IO.y[j] - IO.x[j]);
-            J(k, j + N - 1) = -(IO.z[j] - IO.x[j]) / POW2(IO.y[j] - IO.x[j]);
+    // Next N-2 residuals are amount of substance balances.
+    // Jacobian derivation (independent vars: x_0..x_{N-2}, y_0..y_{N-2};
+    // dependent: x_{N-1}=1-Σx, y_{N-1}=1-Σy):
+    //   r_{N+i} = Q_i - Q_{N-1},  Q_j = (z_j - x_j)/(y_j - x_j)
+    //   ∂r_{N+i}/∂x_m = δ_{im}*(z_i-y_i)/(y_i-x_i)² + (z_{N-1}-y_{N-1})/(y_{N-1}-x_{N-1})²
+    //   ∂r_{N+i}/∂y_m = δ_{im}*(-(z_i-x_i)/(y_i-x_i)²) - (z_{N-1}-x_{N-1})/(y_{N-1}-x_{N-1})²
+    {
+        const double denom_Nm1_sq = POW2(IO.y[N - 1] - IO.x[N - 1]);
+        const double B_x = (IO.z[N - 1] - IO.y[N - 1]) / denom_Nm1_sq;   // off-diag x term
+        const double B_y = -(IO.z[N - 1] - IO.x[N - 1]) / denom_Nm1_sq;  // off-diag y term
+        for (std::size_t i = 0; i < N - 2; ++i) {
+            const std::size_t k = i + N;
+            r(k) = (IO.z[i] - IO.x[i]) / (IO.y[i] - IO.x[i]) - (IO.z[N - 1] - IO.x[N - 1]) / (IO.y[N - 1] - IO.x[N - 1]);
+            const double denom_i_sq = POW2(IO.y[i] - IO.x[i]);
+            const double diag_x_i = (IO.z[i] - IO.y[i]) / denom_i_sq;    // diagonal x term for row i
+            const double diag_y_i = -(IO.z[i] - IO.x[i]) / denom_i_sq;   // diagonal y term for row i
+            for (std::size_t m = 0; m < N - 1; ++m) {
+                J(k, m) = (m == i) ? (diag_x_i + B_x) : B_x;
+                J(k, m + N - 1) = (m == i) ? (diag_y_i + B_y) : B_y;
+            }
         }
-        std::size_t j = N - 2;
-        J(k, j) = -(IO.z[j] - IO.x[j]) / POW2(IO.y[j] - IO.x[j]);
-        J(k, j + N - 1) = +(IO.z[j] - IO.x[j]) / POW2(IO.y[j] - IO.x[j]);
     }
     this->error_rms = r.norm();
 }
