@@ -1410,7 +1410,7 @@ if(COOLPROP_CSHARP_MODULE)
   # Define which headers the CoolProp wrapper is dependent on
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
 
-  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}" "${MORE_SWIG_FLAGS}")
+  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}" "${MORE_SWIG_FLAGS}" "-DSWIG_CSHARP_NO_STRING_WITH_LENGTH_HELPER")
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
   message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
 
@@ -1500,7 +1500,7 @@ if(COOLPROP_VBDOTNET_MODULE)
   # Define which headers the CoolProp wrapper is dependent on
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
 
-  set(SWIG_OPTIONS "${MORE_SWIG_FLAGS}")
+  set(SWIG_OPTIONS "${MORE_SWIG_FLAGS}" "-DSWIG_CSHARP_NO_STRING_WITH_LENGTH_HELPER")
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
   message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
 
