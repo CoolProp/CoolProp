@@ -41,7 +41,7 @@ class AbstractCubicAlphaFunction
         this->Tr_over_Tci = Tr_over_Tci;
         this->sqrt_Tr_Tci = sqrt(Tr_over_Tci);
     };
-    AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)){};
+    AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)) {};
 };
 
 /// An implementation of AbstractCubicAlphaFunction for the baseline alpha function of PR or SRK
