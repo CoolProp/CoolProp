@@ -122,7 +122,7 @@ CoolProp::superancillary::ChebyshevApproximation1D<Eigen::ArrayXd>
         fit_part(H, ln_lo, ln_hi, pick, exps);
     }
     std::sort(exps.begin(), exps.end(), [](const auto& a, const auto& b) { return a.xmin() < b.xmin(); });
-    return superancillary::ChebyshevApproximation1D<Eigen::ArrayXd>(std::move(exps));
+    return {std::move(exps)};
 }
 /// Fallback bracket-scan + bisection on h(lnp) - h_cache.  Used only when the
 /// Chebyshev monotone-interval inverter returns nothing (should not happen for
@@ -136,13 +136,12 @@ double scan_bisect_h(const CoolProp::superancillary::ChebyshevApproximation1D<Ei
         const double cur_lnp = lo + (hi - lo) * k / Nscan;
         const double cur_h = approx.eval(cur_lnp) - h_cache;
         if (prev_h * cur_h <= 0.0) {
-            double a = prev_lnp, b = cur_lnp, fa = prev_h, fb = cur_h;
+            double a = prev_lnp, b = cur_lnp, fa = prev_h;
             for (int it = 0; it < 60; ++it) {
                 const double m = 0.5 * (a + b);
                 const double fm = approx.eval(m) - h_cache;
                 if (fa * fm <= 0.0) {
                     b = m;
-                    fb = fm;
                 } else {
                     a = m;
                     fa = fm;
@@ -250,7 +249,7 @@ std::shared_ptr<MeltingCaloric> get_melting_caloric_cached(HelmholtzEOSMixtureBa
     static std::map<std::string, std::shared_ptr<MeltingCaloric>> cache;
     static std::mutex mtx;
     const std::string key = H.fluid_names()[0];  // pure fluid: single name
-    std::lock_guard<std::mutex> lk(mtx);
+    std::scoped_lock lk(mtx);
     auto it = cache.find(key);
     if (it != cache.end()) return it->second;
     auto mc = std::make_shared<MeltingCaloric>();
