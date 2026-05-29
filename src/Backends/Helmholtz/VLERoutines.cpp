@@ -1776,6 +1776,21 @@ void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBack
             else {
                 RachfordRiceResidual resid_conv(z, lnK);
                 beta_conv = Brent(resid_conv, 0, 1, DBL_EPSILON, 1e-10, 100);
+                // Brent can overshoot just past the nearest pole; bisect as fallback.
+                if (beta_conv < 0.0 || beta_conv > 1.0) {
+                    double a_b = 0.0, b_b = 1.0, f_a = g0;
+                    for (int sb = 0; sb < 60; ++sb) {
+                        double mid = 0.5 * (a_b + b_b);
+                        double f_mid = resid_conv.call(mid);
+                        if (f_a * f_mid > 0) {
+                            a_b = mid;
+                            f_a = f_mid;
+                        } else {
+                            b_b = mid;
+                        }
+                    }
+                    beta_conv = 0.5 * (a_b + b_b);
+                }
             }
             x_and_y_from_K(beta_conv, K, z, x, y);
             normalize_vector(x);

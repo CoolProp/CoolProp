@@ -61,12 +61,11 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
 
             CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
             solver.solve();
-            double Q_raw = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
-            if (Q_raw < 0 || Q_raw > 1) {
-                // The two-phase solver converged to a Q outside [0,1]:
-                // Re-solve as single-phase.
+            double denom_pe = o.y[0] - o.x[0];
+            if (std::abs(denom_pe) < 1e-10) {
+                // Azeotrope or near-critical: composition spread too small to compute Q reliably.
                 double T = HEOS.T(), p = HEOS.p();
-                phases ph = (Q_raw < 0) ? iphase_liquid : iphase_gas;
+                phases ph = (o.z[0] < o.x[0]) ? iphase_liquid : iphase_gas;
                 HEOS.specify_phase(ph);
                 double rho = HEOS.solver_rho_Tp(T, p);
                 HEOS.update_DmolarT_direct(rho, T);
@@ -74,9 +73,23 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 HEOS._Q = -1;
                 HEOS._phase = ph;
             } else {
-                HEOS._phase = iphase_twophase;
-                HEOS._rhomolar = 1 / (Q_raw / HEOS.SatV->rhomolar() + (1 - Q_raw) / HEOS.SatL->rhomolar());
-                HEOS._Q = Q_raw;
+                double Q_raw = (o.z[0] - o.x[0]) / denom_pe;
+                if (Q_raw < 0 || Q_raw > 1) {
+                    // The two-phase solver converged to a Q outside [0,1]:
+                    // Re-solve as single-phase.
+                    double T = HEOS.T(), p = HEOS.p();
+                    phases ph = (Q_raw < 0) ? iphase_liquid : iphase_gas;
+                    HEOS.specify_phase(ph);
+                    double rho = HEOS.solver_rho_Tp(T, p);
+                    HEOS.update_DmolarT_direct(rho, T);
+                    HEOS.unspecify_phase();
+                    HEOS._Q = -1;
+                    HEOS._phase = ph;
+                } else {
+                    HEOS._phase = iphase_twophase;
+                    HEOS._rhomolar = 1 / (Q_raw / HEOS.SatV->rhomolar() + (1 - Q_raw) / HEOS.SatL->rhomolar());
+                    HEOS._Q = Q_raw;
+                }
             }
         }
         return;
@@ -108,12 +121,11 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         SaturationSolvers::successive_substitution_guessrho(HEOS, o.x, o.y, o.rhomolar_liq, o.rhomolar_vap, o.z, 10);
         CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
         solver.solve();
-        double Q_raw = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
-        if (Q_raw < 0 || Q_raw > 1) {
-            // The two-phase solver converged to a Q outside [0,1]:
-            // Re-solve as single-phase.
+        double denom = o.y[0] - o.x[0];
+        if (std::abs(denom) < 1e-10) {
+            // Azeotrope or near-critical: composition spread too small to compute Q reliably.
             double T = HEOS.T(), p = HEOS.p();
-            phases ph = (Q_raw < 0) ? iphase_liquid : iphase_gas;
+            phases ph = (o.z[0] < o.x[0]) ? iphase_liquid : iphase_gas;
             HEOS.specify_phase(ph);
             double rho = HEOS.solver_rho_Tp(T, p);
             HEOS.update_DmolarT_direct(rho, T);
@@ -121,9 +133,23 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             HEOS._Q = -1;
             HEOS._phase = ph;
         } else {
-            HEOS._phase = iphase_twophase;
-            HEOS._rhomolar = 1 / (Q_raw / HEOS.SatV->rhomolar() + (1 - Q_raw) / HEOS.SatL->rhomolar());
-            HEOS._Q = Q_raw;
+            double Q_raw = (o.z[0] - o.x[0]) / denom;
+            if (Q_raw < 0 || Q_raw > 1) {
+                // The two-phase solver converged to a Q outside [0,1]:
+                // Re-solve as single-phase.
+                double T = HEOS.T(), p = HEOS.p();
+                phases ph = (Q_raw < 0) ? iphase_liquid : iphase_gas;
+                HEOS.specify_phase(ph);
+                double rho = HEOS.solver_rho_Tp(T, p);
+                HEOS.update_DmolarT_direct(rho, T);
+                HEOS.unspecify_phase();
+                HEOS._Q = -1;
+                HEOS._phase = ph;
+            } else {
+                HEOS._phase = iphase_twophase;
+                HEOS._rhomolar = 1 / (Q_raw / HEOS.SatV->rhomolar() + (1 - Q_raw) / HEOS.SatL->rhomolar());
+                HEOS._Q = Q_raw;
+            }
         }
     } else {
         // TPD says stable - single-phase.

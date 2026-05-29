@@ -19,6 +19,7 @@
 #    include <string>
 #    include <vector>
 #    include <memory>
+#    include <algorithm>
 #    include <catch2/catch_all.hpp>
 
 #    include "AbstractState.h"
