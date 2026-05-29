@@ -1053,9 +1053,17 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
             HEOS._T = HEOS.SatL->T();
         }
     } else {
+        // Try the phase-envelope fast path first.
+        bool pe_flash_done = false;
         if (HEOS.PhaseEnvelope.built) {
-            PT_Q_flash_mixtures(HEOS, iP, HEOS._p);
-        } else {
+            try {
+                PT_Q_flash_mixtures(HEOS, iP, HEOS._p);
+                pe_flash_done = true;
+            } catch (...) {
+                // PE-based flash failed fall through to the blind solver below.
+            }
+        }
+        if (!pe_flash_done) {
 
             // Set some input options
             SaturationSolvers::mixture_VLE_IO io;
@@ -1265,16 +1273,11 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parame
 
             std::size_t& imax = solutions[0];
 
-            // Shift the solution if needed to ensure that imax+2 and imax-1 are both in range
-            if (imax + 2 >= env.T.size()) {
-                imax--;
-            } else if (imax == 0) {
-                imax++;
+            // Clamp imax so that [imax-1 .. imax+2] is always within [0, env.T.size()-1].
+            if (env.T.size() >= 3) {
+                imax = std::min(imax, env.T.size() - 3);  // ensures imax+2 <= env.T.size()-1
             }
-            // Here imax+2 or imax-1 is still possibly out of range:
-            // 1. If imax initially is 1, and env.T.size() <= 3, then imax will become 0.
-            // 2. If imax initially is 0, and env.T.size() <= 2, then imax will become MAX_UINT.
-            // 3. If imax+2 initially is more than env.T.size(), then single decrement will not bring it to range
+            imax = std::max(imax, std::size_t(1));        // ensures imax-1 >= 0
 
             SaturationSolvers::newton_raphson_saturation NR;
             SaturationSolvers::newton_raphson_saturation_options IO;
@@ -1346,6 +1349,15 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parame
             throw ValueError(format("Number liquid solutions [%d] or vapor solutions [%d] != 1", liquid_solutions.size(), vapor_solutions.size()));
         }
         std::size_t iliq = liquid_solutions[0], ivap = vapor_solutions[0];
+
+        // Clamp ivap and iliq so that [i-1 .. i+2] is always within [0, env.T.size()-1].
+        const std::size_t Nenv = env.T.size();
+        if (Nenv >= 3) {
+            ivap = std::min(ivap, Nenv - 3);
+            iliq = std::min(iliq, Nenv - 3);
+        }
+        ivap = std::max(ivap, std::size_t(1));
+        iliq = std::max(iliq, std::size_t(1));
 
         SaturationSolvers::newton_raphson_twophase NR;
         SaturationSolvers::newton_raphson_twophase_options IO;
