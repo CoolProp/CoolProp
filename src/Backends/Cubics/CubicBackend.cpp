@@ -859,7 +859,7 @@ void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, Cool
  */
 void CoolProp::AbstractCubicBackend::cubic_PT_flash_mixture() {
     const std::size_t N = mole_fractions.size();
-    std::vector<double> z = mole_fractions;
+    std::vector<double> z(get_mole_fractions().begin(), get_mole_fractions().end());
     std::vector<double> K(N);
     CoolPropDbl the_T = _T; CoolPropDbl the_p = _p;
     for (std::size_t i = 0; i < N; ++i) {
