@@ -80,6 +80,9 @@
       "If true, the library will always be reloaded, no matter what is currently loaded")                                                            \
     X(FLOAT_PUNCTUATION, "FLOAT_PUNCTUATION", ".", "The first character of this string will be used as the separator between the number fraction.")  \
     X(ENABLE_SUPERANCILLARIES, "ENABLE_SUPERANCILLARIES", true, "If true, the superancillary functions will be used for VLE of pure fluids")         \
+    X(ENABLE_MELTING_CALORIC_HS, "ENABLE_MELTING_CALORIC_HS", true,                                                                                  \
+      "If true, HS_flash may seed the cold-compressed-liquid corner from the melting-line caloric Chebyshev (cascade leg 4). "                       \
+      "Set false to force the legacy fallback for that region. Default: true")                                                                       \
     X(HSU_D_TWOPHASE_EOS_POLISH, "HSU_D_TWOPHASE_EOS_POLISH", true,                                                                                  \
       "If true (default), the superancillary D+{H,S,U} two-phase flash refines its fast superancillary-based saturation temperature with a short "   \
       "full-EOS secant polish, giving an EOS-exact result. If false, the (slightly faster) superancillary solution is returned directly with a "     \

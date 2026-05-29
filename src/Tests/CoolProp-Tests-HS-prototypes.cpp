@@ -1473,4 +1473,8 @@ TEST_CASE("HS probe hydrogen dual root", "[HS][HS_probe][.]") {
     CHECK(cv_alt < 0);
 }
 
+TEST_CASE("Melting caloric config key default", "[HS][HS_meltcal][.]") {
+    CHECK(CoolProp::get_config_bool(ENABLE_MELTING_CALORIC_HS) == true);
+}
+
 #endif  // ENABLE_CATCH
