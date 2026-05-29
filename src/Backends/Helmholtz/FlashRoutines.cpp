@@ -96,11 +96,12 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
         solver.solve();
         HEOS._phase = iphase_twophase;
-        HEOS._Q = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
-        if (HEOS._Q < 0 || HEOS._Q > 1) {
-            HEOS._Q = -1;
-        }
-        HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+        double Q_raw = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
+        // Use the physical Q (clamped to [0,1]) for the mixture density to
+        // avoid a negative rhomolar when Q_raw is slightly outside [0,1].
+        double Q_phys = std::max(0.0, std::min(1.0, Q_raw));
+        HEOS._rhomolar = 1 / (Q_phys / HEOS.SatV->rhomolar() + (1 - Q_phys) / HEOS.SatL->rhomolar());
+        HEOS._Q = (Q_raw < 0 || Q_raw > 1) ? -1 : Q_raw;
     } else {
         // TPD says stable — single-phase (even if caller imposed two-phase,
         // e.g. near the phase boundary during an HP flash Brent sweep).
