@@ -311,8 +311,12 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
     for (const auto& fluid : fluids) {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
 
-        // Water has its own better tests; skip fluids without melting line
-        if (!AS->has_melting_line() || !fluid.compare("Water")) {
+        // Skip fluids without a melting line. Also skip Water and HeavyWater:
+        // their melting curves are anomalous (the ice-Ih branch folds back BELOW
+        // the triple temperature), which violates this generic test's
+        // actual_T > Tmin / actual_T < Tmax bounds. Both have dedicated
+        // check-value tests instead (see the "[melting]" cases in CoolProp-Tests).
+        if (!AS->has_melting_line() || !fluid.compare("Water") || !fluid.compare("HeavyWater")) {
             continue;
         }
 
