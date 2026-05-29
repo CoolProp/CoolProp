@@ -1847,22 +1847,22 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
         CoolPropDbl rho_b = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatL->SRK_covolume());
         HEOS.SatL->update_DmolarT_direct(rho_b, the_T);
     } catch (...) { return; }
-    std::vector<double> ln_f_z(z.size());
+    std::vector<CoolPropDbl> ln_f_z(z.size());
     for (std::size_t i = 0; i < z.size(); ++i) {
         ln_f_z[i] = std::log(z[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
     }
-    std::vector<double> yV(z.size()), xL(z.size());
+    std::vector<CoolPropDbl> yV(z.size()), xL(z.size());
     double sum_yV = 0, sum_xL = 0;
     for (std::size_t i = 0; i < z.size(); ++i) {
         yV[i] = z[i] * K0[i]; sum_yV += yV[i];
         xL[i] = z[i] / K0[i]; sum_xL += xL[i];
     }
-    std::vector<std::vector<double>> trials = {yV, xL};
+    std::vector<std::vector<CoolPropDbl>> trials = {yV, xL};
     for (auto& Y : trials) {
         for (int iter = 0; iter < 150; ++iter) {
             double sumY = 0;
             for (double val : Y) sumY += val;
-            std::vector<double> y_norm(z.size());
+            std::vector<CoolPropDbl> y_norm(z.size());
             for (std::size_t i = 0; i < z.size(); ++i) y_norm[i] = Y[i] / sumY;
             HEOS.SatV->set_mole_fractions(y_norm);
             try {
@@ -1950,7 +1950,7 @@ void SaturationSolvers::PTflash_twophase::solve() {
     const std::size_t N = IO.x.size();
     if (!ValidNumber(IO.p)) IO.p = HEOS.p();
     if (!ValidNumber(IO.T)) IO.T = HEOS.T();
-    std::vector<double> K(N);
+    std::vector<CoolPropDbl> K(N);
     for (std::size_t i = 0; i < N; ++i) K[i] = IO.y[i] / IO.x[i];
     CoolPropDbl beta = IO.beta;
     for (int ss_iter = 0; ss_iter < 10; ++ss_iter) {
@@ -2021,13 +2021,13 @@ void SaturationSolvers::PTflash_twophase::solve() {
         bool step_ok = false;
         while (step_scale > 1e-6) {
             CoolPropDbl V_new = 0, L_new = 0;
-            std::vector<double> v_new(N), l_new(N);
+            std::vector<CoolPropDbl> v_new(N), l_new(N);
             for (std::size_t i = 0; i < N; ++i) {
                 v_new[i] = beta * IO.y[i] + step_scale * delta_v(i);
                 l_new[i] = IO.z[i] - v_new[i];
                 V_new += v_new[i]; L_new += l_new[i];
             }
-            std::vector<double> x_trial(N), y_trial(N);
+            std::vector<CoolPropDbl> x_trial(N), y_trial(N);
             for (std::size_t i = 0; i < N; ++i) {
                 y_trial[i] = v_new[i] / V_new; x_trial[i] = l_new[i] / L_new;
             }
