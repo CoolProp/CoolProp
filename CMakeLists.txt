@@ -1586,6 +1586,7 @@ if(COOLPROP_R_MODULE)
 
   swig_add_module(CoolProp r ${I_FILE} ${APP_SOURCES})
   swig_link_libraries(CoolProp "${R_LIBRARY}")
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropR")
 
   # No lib prefix for the shared library
   set_target_properties(CoolProp PROPERTIES PREFIX "")
