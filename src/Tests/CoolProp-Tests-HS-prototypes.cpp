@@ -1519,7 +1519,11 @@ TEST_CASE("MeltingCaloric per-segment fit matches EOS (water)", "[HS][HS_meltcal
         const double lnp = lo + (hi - lo) * k / 60.0;
         const double p = std::exp(lnp);
         double Tm;
-        try { Tm = chk->melting_line(iT, iP, p); } catch (...) { continue; }
+        try {
+            Tm = chk->melting_line(iT, iP, p);
+        } catch (...) {
+            continue;
+        }
         chk->update(PT_INPUTS, p, Tm);
         CHECK(std::abs(mc.eval_T(lnp) - Tm) < 1e-4 * Tm);
         CHECK(std::abs(mc.eval_rho(lnp) - chk->rhomolar()) < 1e-3 * chk->rhomolar());
@@ -1543,13 +1547,21 @@ TEST_CASE("MeltingCaloric seed finds a cold-liquid anchor (water)", "[HS][HS_mel
     // Build-frame == DEF here, so cache values equal caller values.
     double T0 = 0, rho0 = 0;
     REQUIRE(mc.seed_for_hs(/*s_cache=*/s, /*h_cache=*/h, T0, rho0));
-    CHECK(T0 == Catch::Approx(T).margin(25.0));                    // within ~25 K of target
+    CHECK(T0 == Catch::Approx(T).margin(25.0));                   // within ~25 K of target
     CHECK(rho0 == Catch::Approx(ref->rhomolar()).epsilon(0.08));  // within ~8%
 }
 
 TEST_CASE("MeltingCaloric stamp is captured at build", "[HS][HS_meltcal][.]") {
     using namespace CoolProp;
-    struct Reset { ~Reset() noexcept { try { set_reference_stateS("Water","DEF"); } catch(...){} } } guard;
+    struct Reset
+    {
+        ~Reset() noexcept {
+            try {
+                set_reference_stateS("Water", "DEF");
+            } catch (...) {
+            }
+        }
+    } guard;
     set_reference_stateS("Water", "DEF");
     auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
     auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
@@ -1569,7 +1581,7 @@ TEST_CASE("MeltingCaloric global cache builds once per fluid", "[HS][HS_meltcal]
     auto a = get_melting_caloric_cached(*H);
     auto b = get_melting_caloric_cached(*H);
     REQUIRE(a != nullptr);
-    CHECK(a.get() == b.get());     // same object: cached
+    CHECK(a.get() == b.get());  // same object: cached
     CHECK(a->built());
 }
 
@@ -1603,18 +1615,28 @@ TEST_CASE("HS cascade solves cold sub-triple liquid via melting leg (water)", "[
     for (double p : {5e7, 1e8, 2.308e8, 4e8, 7e8}) {
         const double Tm = ref->melting_line(iT, iP, p);
         for (double T : linspace(Tm + 0.05, Tm + 40.0, 12)) {
-            try { ref->update(PT_INPUTS, p, T); } catch (...) { continue; }
+            try {
+                ref->update(PT_INPUTS, p, T);
+            } catch (...) {
+                continue;
+            }
             const double h = ref->hmolar(), s = ref->smolar();
             if (!std::isfinite(h) || !std::isfinite(s)) continue;
             ++total;
             try {
                 wrk->update(HmolarSmolar_INPUTS, h, s);
             } catch (const std::exception& e) {
-                CAPTURE(p, T, e.what()); CHECK(false); continue;
+                CAPTURE(p, T, e.what());
+                CHECK(false);
+                continue;
             }
-            const bool good = std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5
-                           && std::abs(wrk->rhomolar() - ref->rhomolar()) / ref->rhomolar() < 1e-5;
-            if (good) ++ok; else { CAPTURE(p, T); CHECK(good); }
+            const bool good = std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5 && std::abs(wrk->rhomolar() - ref->rhomolar()) / ref->rhomolar() < 1e-5;
+            if (good)
+                ++ok;
+            else {
+                CAPTURE(p, T);
+                CHECK(good);
+            }
         }
     }
     REQUIRE(total > 0);
@@ -1645,59 +1667,105 @@ TEST_CASE("HS sub-triple cold-liquid profile vs supercritical (water/heavywater)
             return us;
         };
 
-        double cold_sum = 0; std::size_t cold_n = 0;
+        double cold_sum = 0;
+        std::size_t cold_n = 0;
         for (double p : {5e7, 1e8, 2.308e8, 4e8, 7e8}) {
-            double Tm; try { Tm = ref->melting_line(iT, iP, p); } catch (...) { continue; }
+            double Tm;
+            try {
+                Tm = ref->melting_line(iT, iP, p);
+            } catch (...) {
+                continue;
+            }
             for (double T : linspace(Tm + 0.05, std::min(Ttrip - 0.1, Tm + 15.0), 8)) {
                 if (T >= Ttrip) continue;  // sub-triple only
-                try { cold_sum += time_hs(p, T); ++cold_n; } catch (...) {}
+                try {
+                    cold_sum += time_hs(p, T);
+                    ++cold_n;
+                } catch (...) {
+                }
             }
         }
-        double sup_sum = 0; std::size_t sup_n = 0;
+        double sup_sum = 0;
+        std::size_t sup_n = 0;
         for (double p : linspace(1.2 * pc, 5.0 * pc, 5)) {
             for (double T : linspace(1.05 * Tc, 2.0 * Tc, 8)) {
-                try { sup_sum += time_hs(p, T); ++sup_n; } catch (...) {}
+                try {
+                    sup_sum += time_hs(p, T);
+                    ++sup_n;
+                } catch (...) {
+                }
             }
         }
-        if (cold_n == 0) { std::printf("[HS_meltcal] %s: no sub-triple points sampled -> skipped\n", fluid.c_str()); continue; }
+        if (cold_n == 0) {
+            std::printf("[HS_meltcal] %s: no sub-triple points sampled -> skipped\n", fluid.c_str());
+            continue;
+        }
         REQUIRE(sup_n > 0);
         const double cold_mean = cold_sum / cold_n, sup_mean = sup_sum / sup_n;
-        std::printf("[HS_meltcal] %s: cold-mean %.1f us, supercrit-mean %.1f us, ratio %.1fx (bound %.0fx)\n",
-                    fluid.c_str(), cold_mean, sup_mean, cold_mean / sup_mean, MELTING_SLOWDOWN_FACTOR);
+        std::printf("[HS_meltcal] %s: cold-mean %.1f us, supercrit-mean %.1f us, ratio %.1fx (bound %.0fx)\n", fluid.c_str(), cold_mean, sup_mean,
+                    cold_mean / sup_mean, MELTING_SLOWDOWN_FACTOR);
         CHECK(cold_mean <= MELTING_SLOWDOWN_FACTOR * sup_mean);
     }
 }
 
 TEST_CASE("HS cold-liquid round-trip across reference states (water)", "[HS][HS_meltcal][.]") {
     using namespace CoolProp;
-    struct Reset { ~Reset() noexcept { try { set_reference_stateS("Water","DEF"); } catch(...){} } } guard;
+    struct Reset
+    {
+        ~Reset() noexcept {
+            try {
+                set_reference_stateS("Water", "DEF");
+            } catch (...) {
+            }
+        }
+    } guard;
 
     auto run_band = [](std::size_t& total, std::size_t& ok) {
         auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
         auto wrk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
         for (double p : {1e8, 2.308e8, 5e8}) {
-            double Tm; try { Tm = ref->melting_line(iT, iP, p); } catch (...) { continue; }
+            double Tm;
+            try {
+                Tm = ref->melting_line(iT, iP, p);
+            } catch (...) {
+                continue;
+            }
             for (double T : linspace(Tm + 0.05, Tm + 20.0, 6)) {
-                try { ref->update(PT_INPUTS, p, T); } catch (...) { continue; }
+                try {
+                    ref->update(PT_INPUTS, p, T);
+                } catch (...) {
+                    continue;
+                }
                 const double h = ref->hmolar(), s = ref->smolar();
                 if (!std::isfinite(h) || !std::isfinite(s)) continue;
                 ++total;
                 try {
                     wrk->update(HmolarSmolar_INPUTS, h, s);
-                    if (std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5) ++ok;
-                    else CHECK(false);
-                } catch (const std::exception& e) { CAPTURE(p, T, e.what()); CHECK(false); }
+                    if (std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5)
+                        ++ok;
+                    else
+                        CHECK(false);
+                } catch (const std::exception& e) {
+                    CAPTURE(p, T, e.what());
+                    CHECK(false);
+                }
             }
         }
     };
 
     // Build the melting caloric under DEF first (stamp = DEF).
     set_reference_stateS("Water", "DEF");
-    { auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS","Water"));
-      get_melting_caloric_cached(*dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get())); }
+    {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+        get_melting_caloric_cached(*dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get()));
+    }
 
     for (const std::string refstate : {std::string("DEF"), std::string("NBP"), std::string("IIR"), std::string("ASHRAE")}) {
-        try { set_reference_stateS("Water", refstate); } catch (...) { continue; }
+        try {
+            set_reference_stateS("Water", refstate);
+        } catch (...) {
+            continue;
+        }
         std::size_t total = 0, ok = 0;
         run_band(total, ok);
         std::printf("[HS_meltcal] refstate %-7s cold round-trips: %zu/%zu\n", refstate.c_str(), ok, total);
@@ -1716,17 +1784,28 @@ TEST_CASE("HS unaffected for monotone-melting-line fluids", "[HS][HS_meltcal][.]
         std::size_t total = 0, ok = 0;
         for (double p : linspace(pmin, pmax, 8)) {
             for (double T : linspace(Tt + 1.0, Tmax, 8)) {
-                try { ref->update(PT_INPUTS, p, T); } catch (...) { continue; }
+                try {
+                    ref->update(PT_INPUTS, p, T);
+                } catch (...) {
+                    continue;
+                }
                 if (ref->phase() == iphase_twophase) continue;
                 const double h = ref->hmolar(), s = ref->smolar();
                 if (!std::isfinite(h) || !std::isfinite(s)) continue;
                 ++total;
-                try { wrk->update(HmolarSmolar_INPUTS, h, s);
-                    if (std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5) ++ok; else CHECK(false);
-                } catch (...) { CHECK(false); }
+                try {
+                    wrk->update(HmolarSmolar_INPUTS, h, s);
+                    if (std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5)
+                        ++ok;
+                    else
+                        CHECK(false);
+                } catch (...) {
+                    CHECK(false);
+                }
             }
         }
-        REQUIRE(total > 0); CHECK(ok == total);
+        REQUIRE(total > 0);
+        CHECK(ok == total);
     }
 }
 

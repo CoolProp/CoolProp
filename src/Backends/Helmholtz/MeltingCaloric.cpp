@@ -24,8 +24,16 @@ void MeltingCaloric::sample(HelmholtzEOSMixtureBackend& H, std::size_t n) {
     const double p_hi = H.calc_melting_line(iP_max, iT, 0.0);
     const double lo = std::log(p_lo), hi = std::log(p_hi);
 
-    m_lnp.clear(); m_T.clear(); m_rho.clear(); m_h.clear(); m_s.clear();
-    m_lnp.reserve(n); m_T.reserve(n); m_rho.reserve(n); m_h.reserve(n); m_s.reserve(n);
+    m_lnp.clear();
+    m_T.clear();
+    m_rho.clear();
+    m_h.clear();
+    m_s.clear();
+    m_lnp.reserve(n);
+    m_T.reserve(n);
+    m_rho.reserve(n);
+    m_h.reserve(n);
+    m_s.reserve(n);
     for (std::size_t i = 0; i < n; ++i) {
         const double lnp = lo + (hi - lo) * static_cast<double>(i) / static_cast<double>(n - 1);
         const double p = std::exp(lnp);
@@ -42,8 +50,11 @@ void MeltingCaloric::sample(HelmholtzEOSMixtureBackend& H, std::size_t n) {
         }
         const double rho = H.rhomolar(), h = H.hmolar(), s = H.smolar();
         if (!std::isfinite(rho) || !std::isfinite(h) || !std::isfinite(s)) continue;
-        m_lnp.push_back(lnp); m_T.push_back(Tm); m_rho.push_back(rho);
-        m_h.push_back(h); m_s.push_back(s);
+        m_lnp.push_back(lnp);
+        m_T.push_back(Tm);
+        m_rho.push_back(rho);
+        m_h.push_back(h);
+        m_s.push_back(s);
     }
 }
 
@@ -69,7 +80,8 @@ void fit_part(CoolProp::HelmholtzEOSMixtureBackend& H, double ln_lo, double ln_h
         return pick(H);
     };
     auto exps = superancillary::detail::dyadic_splitting<decltype(func), CE_t>(8, func, adj_lo, adj_hi, 3, 1e-10, 2);
-    for (auto& e : exps) out.push_back(std::move(e));
+    for (auto& e : exps)
+        out.push_back(std::move(e));
 }
 
 /// Probe whether H can evaluate all caloric properties at lnp. Returns true on success.
@@ -78,17 +90,15 @@ bool can_eval_all(CoolProp::HelmholtzEOSMixtureBackend& H, double lnp) {
         const double p = std::exp(lnp);
         const double Tm = H.calc_melting_line(CoolProp::iT, CoolProp::iP, p);
         H.update(CoolProp::PT_INPUTS, p, Tm);
-        return std::isfinite(H.T()) && std::isfinite(H.rhomolar()) && std::isfinite(H.hmolar())
-               && std::isfinite(H.smolar());
+        return std::isfinite(H.T()) && std::isfinite(H.rhomolar()) && std::isfinite(H.hmolar()) && std::isfinite(H.smolar());
     } catch (...) {
         return false;
     }
 }
 
 /// Filter pranges to only those parts where the EOS can be evaluated at both endpoints.
-std::vector<std::pair<double, double>>
-filter_valid_parts(CoolProp::HelmholtzEOSMixtureBackend& H,
-                   const std::vector<std::pair<double, double>>& pranges) {
+std::vector<std::pair<double, double>> filter_valid_parts(CoolProp::HelmholtzEOSMixtureBackend& H,
+                                                          const std::vector<std::pair<double, double>>& pranges) {
     std::vector<std::pair<double, double>> valid;
     for (const auto& pr : pranges) {
         const double ln_lo = std::log(pr.first), ln_hi = std::log(pr.second);
@@ -102,9 +112,8 @@ filter_valid_parts(CoolProp::HelmholtzEOSMixtureBackend& H,
 }
 
 CoolProp::superancillary::ChebyshevApproximation1D<Eigen::ArrayXd>
-fit_all_parts(CoolProp::HelmholtzEOSMixtureBackend& H,
-              const std::vector<std::pair<double, double>>& pranges,
-              const std::function<double(CoolProp::HelmholtzEOSMixtureBackend&)>& pick) {
+  fit_all_parts(CoolProp::HelmholtzEOSMixtureBackend& H, const std::vector<std::pair<double, double>>& pranges,
+                const std::function<double(CoolProp::HelmholtzEOSMixtureBackend&)>& pick) {
     using namespace CoolProp;
     CE_t exps;
     for (const auto& pr : pranges) {
@@ -118,8 +127,7 @@ fit_all_parts(CoolProp::HelmholtzEOSMixtureBackend& H,
 /// Fallback bracket-scan + bisection on h(lnp) - h_cache.  Used only when the
 /// Chebyshev monotone-interval inverter returns nothing (should not happen for
 /// water since h is monotonic, but kept for robustness with other fluids).
-double scan_bisect_h(const CoolProp::superancillary::ChebyshevApproximation1D<Eigen::ArrayXd>& approx,
-                     double h_cache) {
+double scan_bisect_h(const CoolProp::superancillary::ChebyshevApproximation1D<Eigen::ArrayXd>& approx, double h_cache) {
     const double lo = approx.xmin(), hi = approx.xmax();
     constexpr int Nscan = 200;
     double best_lnp = lo, best_gap = 1e300;
@@ -132,14 +140,24 @@ double scan_bisect_h(const CoolProp::superancillary::ChebyshevApproximation1D<Ei
             for (int it = 0; it < 60; ++it) {
                 const double m = 0.5 * (a + b);
                 const double fm = approx.eval(m) - h_cache;
-                if (fa * fm <= 0.0) { b = m; fb = fm; } else { a = m; fa = fm; }
+                if (fa * fm <= 0.0) {
+                    b = m;
+                    fb = fm;
+                } else {
+                    a = m;
+                    fa = fm;
+                }
                 if ((b - a) < 1e-14 * (std::abs(a) + std::abs(b) + 1e-30)) break;
             }
             const double root_lnp = 0.5 * (a + b);
             const double gap = std::abs(approx.eval(root_lnp) - h_cache);
-            if (std::isfinite(gap) && gap < best_gap) { best_gap = gap; best_lnp = root_lnp; }
+            if (std::isfinite(gap) && gap < best_gap) {
+                best_gap = gap;
+                best_lnp = root_lnp;
+            }
         }
-        prev_lnp = cur_lnp; prev_h = cur_h;
+        prev_lnp = cur_lnp;
+        prev_h = cur_h;
     }
     return best_lnp;
 }
@@ -174,7 +192,11 @@ bool MeltingCaloric::seed_for_hs(double s_cache, double h_cache, double& T0, dou
     bool found = false;
     for (double lnp : cand_lnp) {
         const double sgap = std::abs(m_s_approx->eval(lnp) - s_cache);
-        if (std::isfinite(sgap) && sgap < best_gap) { best_gap = sgap; best_lnp = lnp; found = true; }
+        if (std::isfinite(sgap) && sgap < best_gap) {
+            best_gap = sgap;
+            best_lnp = lnp;
+            found = true;
+        }
     }
     if (!found) return false;
     T0 = m_T_approx->eval(best_lnp);
@@ -192,8 +214,7 @@ void MeltingCaloric::build(HelmholtzEOSMixtureBackend& H) {
         pr.first = std::max(pr.first, p_lo_eos);
         pr.second = std::min(pr.second, p_hi_eos);
     }
-    pranges.erase(std::remove_if(pranges.begin(), pranges.end(),
-                                 [](const std::pair<double, double>& pr) { return !(pr.second > pr.first); }),
+    pranges.erase(std::remove_if(pranges.begin(), pranges.end(), [](const std::pair<double, double>& pr) { return !(pr.second > pr.first); }),
                   pranges.end());
     if (pranges.empty()) return;
 
@@ -218,7 +239,8 @@ void MeltingCaloric::build(HelmholtzEOSMixtureBackend& H) {
             const double T = m_T_approx->eval(lnp);
             if (std::isfinite(T) && T < tmin) tmin = T;
         }
-        m_curve_Tmin = tmin;
+        if (std::isfinite(tmin) && tmin < 1e299) m_curve_Tmin = tmin;
+        // else leave m_curve_Tmin == 0.0 (conservative sentinel: callers fall back to H.Tmin())
     }
     m_built = true;
 }

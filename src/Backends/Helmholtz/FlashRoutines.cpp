@@ -3019,7 +3019,7 @@ struct HSGasGuard
 bool hs_corrector(HelmholtzEOSMixtureBackend& H, double T0, double rho0, double h_t, double s_t, double& T_out, double& rho_out,
                   double Tlo_override = -1.0) {
     const double Rgas = H.gas_constant(), Tsc = H.T_critical();
-    const double hscale = Rgas * Tsc, sscale = Rgas;                   // dimensional scales (h passes through 0 at the ref state)
+    const double hscale = Rgas * Tsc, sscale = Rgas;  // dimensional scales (h passes through 0 at the ref state)
     const double Tlo = (Tlo_override > 0.0) ? Tlo_override : H.Tmin() * (1.0 - 2e-2);
     const double Thi = 1.5 * H.Tmax();  // 2% sub-Tmin slack default; melting leg passes a lower floor
     auto eval = [&](double T, double rho) { H.update_DmolarT_direct(rho, T); };
@@ -3489,8 +3489,8 @@ bool hs_two_phase_likely(HelmholtzEOSMixtureBackend& H, HS_SA_t& sa, double h_t,
 
 }  // namespace
 
-bool FlashRoutines::hs_corrector_probe(HelmholtzEOSMixtureBackend& H, double T0, double rho0, double h_t, double s_t, double& T_out,
-                                       double& rho_out, double Tlo_override) {
+bool FlashRoutines::hs_corrector_probe(HelmholtzEOSMixtureBackend& H, double T0, double rho0, double h_t, double s_t, double& T_out, double& rho_out,
+                                       double Tlo_override) {
     HSGasGuard guard(H);  // hs_corrector requires caller to impose single-phase
     return hs_corrector(H, T0, rho0, h_t, s_t, T_out, rho_out, Tlo_override);
 }
