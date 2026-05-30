@@ -567,6 +567,11 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     // src/Helmholtz.cpp for the body.
     void allFastVDSP(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs);
 
+    // Apple Silicon NEON 2-wide SIMD path: batches exp() via vvexp() AND
+    // SIMD-vectorizes the B-chain (delta * du_ddelta + di + ... + accumulate)
+    // 2 terms at a time with FMAs.  Bit-equivalent within ULP.
+    void allFastNEON(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs);
+
 #if ENABLE_CATCH
     mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
