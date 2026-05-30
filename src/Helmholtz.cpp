@@ -588,8 +588,31 @@ void ResidualHelmholtzGeneralizedExponential::allFastNEON(const CoolPropDbl& tau
     const std::size_t N = elements.size();
     if (N == 0) return;
     if (N > kAllFastVDSPMaxN) {
-        all(tau, delta, derivs);
-        return;
+        std::fprintf(stderr, "allFastNEON: N=%zu exceeds %zu\n", N, kAllFastVDSPMaxN);
+        std::abort();
+    }
+    // Common case: pure fluid, finish() called → use the class SoA directly.
+    // Fallback: mixture excess GenExp where finish() wasn't called → copy
+    // AoS to local stack SoA.  Saves ~3*N stores in the common case.
+    alignas(16) double n_local[kAllFastVDSPMaxN];
+    alignas(16) double d_local[kAllFastVDSPMaxN];
+    alignas(16) double t_local[kAllFastVDSPMaxN];
+    const double* n_ptr;
+    const double* d_ptr;
+    const double* t_ptr;
+    if (n.size() == N && d.size() == N && t.size() == N) {
+        n_ptr = n.data();
+        d_ptr = d.data();
+        t_ptr = t.data();
+    } else {
+        for (std::size_t i = 0; i < N; ++i) {
+            n_local[i] = elements[i].n;
+            d_local[i] = elements[i].d;
+            t_local[i] = elements[i].t;
+        }
+        n_ptr = n_local;
+        d_ptr = d_local;
+        t_ptr = t_local;
     }
 
     const double log_tau = std::log(tau);
@@ -720,7 +743,7 @@ void ResidualHelmholtzGeneralizedExponential::allFastNEON(const CoolPropDbl& tau
     }
 
     for (std::size_t i = 0; i < N; ++i) {
-        main_args[i] = t[i] * log_tau + d[i] * log_delta + u_partial[i];
+        main_args[i] = t_ptr[i] * log_tau + d_ptr[i] * log_delta + u_partial[i];
     }
     {
         int nN = static_cast<int>(N);
@@ -752,9 +775,9 @@ void ResidualHelmholtzGeneralizedExponential::allFastNEON(const CoolPropDbl& tau
 
     std::size_t i = 0;
     for (; i + 2 <= N; i += 2) {
-        const float64x2_t v_ni = vld1q_f64(&n[i]);
-        const float64x2_t v_di = vld1q_f64(&d[i]);
-        const float64x2_t v_ti = vld1q_f64(&t[i]);
+        const float64x2_t v_ni = vld1q_f64(&n_ptr[i]);
+        const float64x2_t v_di = vld1q_f64(&d_ptr[i]);
+        const float64x2_t v_ti = vld1q_f64(&t_ptr[i]);
         const float64x2_t v_main = vld1q_f64(&main_results[i]);
 
         const float64x2_t v_du_dd = vld1q_f64(&du_ddelta[i]);
@@ -853,7 +876,7 @@ void ResidualHelmholtzGeneralizedExponential::allFastNEON(const CoolPropDbl& tau
 
     // Scalar tail for odd N.
     for (; i < N; ++i) {
-        const double ni = n[i], di = d[i], ti = t[i];
+        const double ni = n_ptr[i], di = d_ptr[i], ti = t_ptr[i];
         const double ndteu = ni * main_results[i];
 
         const double dB_dd_dd = delta * d2u_ddelta2[i] + du_ddelta[i];
