@@ -136,6 +136,13 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, c
 };
 */
 void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
+    // Defense-in-depth: finish() populates SoA arrays (n, d, t, ...) and sets
+    // per-term l_is_int flags used below for the powInt fast path.  All
+    // properly-constructed subclasses of DepartureFunction call finish() in
+    // their ctor; the lazy auto-call here covers any future subclass that
+    // forgets.  Cost: one well-predicted branch per call after first.
+    if (!finished) finish();
+
     CoolPropDbl log_tau = log(tau), log_delta = log(delta), ndteu = NAN, one_over_delta = 1 / delta,
                 one_over_tau = 1 / tau;  // division is much slower than multiplication, so do one division here
 
