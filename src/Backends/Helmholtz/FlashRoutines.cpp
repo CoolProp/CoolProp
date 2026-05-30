@@ -9,6 +9,7 @@
 #include "HelmholtzEOSBackend.h"
 #include "PhaseEnvelopeRoutines.h"
 #include "Configuration.h"
+#include "MeltingCaloric.h"
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
@@ -3196,10 +3197,12 @@ struct HSGasGuard
 // anchor's values to the target with adaptive subdivision; the dp/drho|_T>0 guard
 // keeps the corrector on the mechanically stable branch.  Caller imposes the gas
 // phase.  Returns true and fills T_out/rho_out on success.
-bool hs_corrector(HelmholtzEOSMixtureBackend& H, double T0, double rho0, double h_t, double s_t, double& T_out, double& rho_out) {
+bool hs_corrector(HelmholtzEOSMixtureBackend& H, double T0, double rho0, double h_t, double s_t, double& T_out, double& rho_out,
+                  double Tlo_override = -1.0) {
     const double Rgas = H.gas_constant(), Tsc = H.T_critical();
-    const double hscale = Rgas * Tsc, sscale = Rgas;                   // dimensional scales (h passes through 0 at the ref state)
-    const double Tlo = H.Tmin() * (1.0 - 2e-2), Thi = 1.5 * H.Tmax();  // 2% sub-Tmin slack: admits the cold-liquid fold
+    const double hscale = Rgas * Tsc, sscale = Rgas;  // dimensional scales (h passes through 0 at the ref state)
+    const double Tlo = (Tlo_override > 0.0) ? Tlo_override : H.Tmin() * (1.0 - 2e-2);
+    const double Thi = 1.5 * H.Tmax();  // 2% sub-Tmin slack default; melting leg passes a lower floor
     auto eval = [&](double T, double rho) { H.update_DmolarT_direct(rho, T); };
     eval(T0, rho0);
     const double h0 = H.hmolar(), s0 = H.smolar();
@@ -3509,10 +3512,14 @@ bool hs_leg_departure(HelmholtzEOSMixtureBackend& H, double h_t, double s_t, dou
 // Accept only a faithful (h,s) reproduction that is in-range and fully stable
 // (dp/drho|_T>0 AND cv>0): over that region the (h,s)->(T,rho) map is injective,
 // so a stable+matching root IS the unique physical root.
-bool hs_accept(HelmholtzEOSMixtureBackend& H, double T, double rho, double h_t, double s_t) {
+// Tmin_override: if > 0, replaces H.Tmin() as the lower bound (used by the
+// melting-line leg to allow sub-triple compressed-liquid states whose EOS IS
+// valid below the triple-point temperature).
+bool hs_accept(HelmholtzEOSMixtureBackend& H, double T, double rho, double h_t, double s_t, double Tmin_override = -1.0) {
     if (!std::isfinite(T) || !std::isfinite(rho) || rho <= 0) return false;
     const double Rg = H.gas_constant(), Tc = H.T_critical();
-    if (T < H.Tmin() * (1 - 1e-6) || T > H.Tmax() * (1 + 1e-6)) return false;
+    const double Tmin_eff = (Tmin_override > 0) ? Tmin_override : H.Tmin();
+    if (T < Tmin_eff * (1 - 1e-6) || T > H.Tmax() * (1 + 1e-6)) return false;
     HSGasGuard guard(H);
     H.update_DmolarT_direct(rho, T);
     if (std::abs(H.hmolar() - h_t) > 1e-6 * Rg * Tc || std::abs(H.smolar() - s_t) > 1e-6 * Rg) return false;
@@ -3532,6 +3539,36 @@ bool hs_accept(HelmholtzEOSMixtureBackend& H, double T, double rho, double h_t, 
 bool hs_inside_dome(HS_SA_t& sa, double T, double rho) {
     if (T >= sa.get_Tcrit_num()) return false;
     return rho > sa.eval_sat(T, 'D', 1) && rho < sa.eval_sat(T, 'D', 0);
+}
+
+// Shift a target h/s into a MeltingCaloric's stamped build frame (mirror of
+// hs_h_to_cache/hs_s_to_cache, reading the melting caloric's own stamp).
+double meltcal_s_to_cache(HelmholtzEOSMixtureBackend& H, const MeltingCaloric& mc, double s_t) {
+    const auto stamp = mc.stamp();
+    if (!stamp.has_value()) return s_t;
+    const double a1 = FlashRoutines::alpha0_offset_total(H).first;
+    return s_t - H.gas_constant() * (stamp->first - a1);
+}
+double meltcal_h_to_cache(HelmholtzEOSMixtureBackend& H, const MeltingCaloric& mc, double h_t) {
+    const auto stamp = mc.stamp();
+    if (!stamp.has_value()) return h_t;
+    const double a2 = FlashRoutines::alpha0_offset_total(H).second;
+    return h_t + H.gas_constant() * H.get_reducing_state().T * (stamp->second - a2);
+}
+
+// Leg 4: melting-line anchor for the cold compressed-liquid corner (incl. sub-triple T).
+bool hs_leg_melting(HelmholtzEOSMixtureBackend& H, const MeltingCaloric& mc, double h_t, double s_t, double& T_out, double& rho_out) {
+    HSGasGuard guard(H);  // corrector requires the caller to impose the gas phase (mirror hs_leg_saturation)
+    const double s_cache = meltcal_s_to_cache(H, mc, s_t);
+    const double h_cache = meltcal_h_to_cache(H, mc, h_t);
+    double T0 = 0, rho0 = 0;
+    if (!mc.seed_for_hs(s_cache, h_cache, T0, rho0)) return false;
+    // Floor at the melting-curve minimum temperature (water folds to ~251 K),
+    // minus a small slack, so the corrector can reach the sub-triple region.
+    double Tlo = -1.0;
+    const double cTmin = mc.curve_Tmin();
+    if (std::isfinite(cTmin) && cTmin > 0) Tlo = cTmin * (1.0 - 1e-3);
+    return hs_corrector(H, T0, rho0, h_t, s_t, T_out, rho_out, Tlo);
 }
 
 // Try the three legs in order; accept the first result that is stable, matching,
@@ -3557,6 +3594,36 @@ bool hs_cascade(HelmholtzEOSMixtureBackend& H, HS_SA_t* sa, double h_t, double s
     if (sa != nullptr && run([&](double& T, double& rho) { return hs_leg_saturation(H, *sa, h_t, s_t, T, rho); })) return true;
     if (run([&](double& T, double& rho) { return hs_leg_isentrope(H, h_t, s_t, T, rho); })) return true;
     if (run([&](double& T, double& rho) { return hs_leg_departure(H, h_t, s_t, T, rho); })) return true;
+    // Leg 4: melting-line anchor for the cold compressed-liquid corner. Gated by
+    // config + env kill-switch; built lazily and cached.
+    // Uses a dedicated run_melt that accepts a lower Tmin bound (the melting-curve
+    // minimum temperature, ~251 K for water) instead of H.Tmin() (~273 K), so
+    // sub-triple compressed-liquid states -- which are physically valid EOS states
+    // but lie below the triple-point temperature -- pass the acceptance gate.
+    // All other acceptance criteria (h/s residual, dp/drho > 0, cv > 0, outside
+    // dome) are identical to the standard run()/good() path.
+    static const bool meltcal_disabled = (std::getenv("COOLPROP_DISABLE_MELTING_CALORIC_HS") != nullptr);
+    if (!meltcal_disabled && get_config_bool(ENABLE_MELTING_CALORIC_HS)) {
+        if (auto mc = get_melting_caloric_cached(H)) {
+            const double melt_Tmin = mc->curve_Tmin();
+            auto good_melt = [&](double T, double rho) {
+                return hs_accept(H, T, rho, h_t, s_t, melt_Tmin) && !(sa != nullptr && hs_inside_dome(*sa, T, rho));
+            };
+            auto run_melt = [&](auto&& leg) -> bool {
+                try {
+                    double T = 0, rho = 0;
+                    if (leg(T, rho) && good_melt(T, rho)) {
+                        T_out = T;
+                        rho_out = rho;
+                        return true;
+                    }
+                } catch (...) {  // NOLINT(bugprone-empty-catch): a throwing leg defers to the next
+                }
+                return false;
+            };
+            if (run_melt([&](double& T, double& rho) { return hs_leg_melting(H, *mc, h_t, s_t, T, rho); })) return true;
+        }
+    }
     return false;
 }
 
@@ -3602,6 +3669,12 @@ bool hs_two_phase_likely(HelmholtzEOSMixtureBackend& H, HS_SA_t& sa, double h_t,
 }
 
 }  // namespace
+
+bool FlashRoutines::hs_corrector_probe(HelmholtzEOSMixtureBackend& H, double T0, double rho0, double h_t, double s_t, double& T_out, double& rho_out,
+                                       double Tlo_override) {
+    HSGasGuard guard(H);  // hs_corrector requires caller to impose single-phase
+    return hs_corrector(H, T0, rho0, h_t, s_t, T_out, rho_out, Tlo_override);
+}
 
 void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
     // ===================== superancillary "happy path" =====================

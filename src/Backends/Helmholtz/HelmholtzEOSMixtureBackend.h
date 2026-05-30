@@ -184,6 +184,19 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         return is_pure_or_pseudopure && components[0].ancillaries.melting_line.enabled();
     };
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value) override;
+
+    /// Per-part pressure ranges [p_min,p_max] of the (pure) fluid's melting curve.
+    std::vector<std::pair<double, double>> get_melting_line_part_pranges() {
+        if (!is_pure_or_pseudopure) {
+            throw NotImplementedError("melting line not available for mixtures");
+        }
+        std::vector<std::pair<double, double>> out;
+        for (const auto& pr : components[0].ancillaries.melting_line.get_parts_pranges()) {
+            out.emplace_back(static_cast<double>(pr.first), static_cast<double>(pr.second));
+        }
+        return out;
+    }
+
     /// Return a string from the backend for the mixture/fluid
     std::string fluid_param_string(const std::string&) override;
 

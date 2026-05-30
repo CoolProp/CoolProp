@@ -16,6 +16,7 @@
 #include "DataStructures.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "../Backends/Helmholtz/FlashRoutines.h"
+#include "MeltingCaloric.h"
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
@@ -25,6 +26,7 @@
 #    include <array>
 #    include <chrono>
 #    include <cmath>
+#    include <cstdio>
 #    include <cstdlib>
 #    include <fstream>
 #    include <memory>
@@ -1471,6 +1473,340 @@ TEST_CASE("HS probe hydrogen dual root", "[HS][HS_probe][.]") {
     // cv > 0 gate in solve_HS_cascade::accept relies on exactly this separation.
     CHECK(cv_true > 0);
     CHECK(cv_alt < 0);
+}
+
+TEST_CASE("Melting caloric config key default", "[HS][HS_meltcal][.]") {
+    CHECK(CoolProp::get_config_bool(ENABLE_MELTING_CALORIC_HS) == true);
+}
+
+TEST_CASE("MeltingCaloric raw sampling matches EOS (water)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(H->has_melting_line());
+
+    MeltingCaloric mc;
+    mc.sample(*H, 60);  // 60 sample points along the melting curve
+    REQUIRE(mc.n_samples() >= 2);
+
+    auto chk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    for (std::size_t i = 1; i + 1 < mc.n_samples(); i += std::max<std::size_t>(1, mc.n_samples() / 5)) {
+        const double lnp = mc.sample_lnp(i);
+        const double p = std::exp(lnp);
+        const double Tm = chk->melting_line(iT, iP, p);
+        chk->update(PT_INPUTS, p, Tm);
+        CHECK(std::abs(mc.sample_T(i) - Tm) < 1e-9 * Tm);
+        CHECK(std::abs(mc.sample_rho(i) - chk->rhomolar()) < 1e-7 * chk->rhomolar());
+        CHECK(std::abs(mc.sample_h(i) - chk->hmolar()) < 1e-6 * (std::abs(chk->hmolar()) + 1));
+        CHECK(std::abs(mc.sample_s(i) - chk->smolar()) < 1e-6 * (std::abs(chk->smolar()) + 1));
+    }
+}
+
+TEST_CASE("MeltingCaloric per-segment fit matches EOS (water)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    const auto pranges = H->get_melting_line_part_pranges();
+    CHECK(pranges.size() >= 2);
+
+    MeltingCaloric mc;
+    mc.build(*H);
+    REQUIRE(mc.built());
+
+    auto chk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    const double lo = mc.lnp_min(), hi = mc.lnp_max();
+    for (int k = 1; k < 60; ++k) {
+        const double lnp = lo + (hi - lo) * k / 60.0;
+        const double p = std::exp(lnp);
+        double Tm;
+        try {
+            Tm = chk->melting_line(iT, iP, p);
+        } catch (...) {
+            continue;
+        }
+        chk->update(PT_INPUTS, p, Tm);
+        CHECK(std::abs(mc.eval_T(lnp) - Tm) < 1e-4 * Tm);
+        CHECK(std::abs(mc.eval_rho(lnp) - chk->rhomolar()) < 1e-3 * chk->rhomolar());
+        CHECK(std::abs(mc.eval_h(lnp) - chk->hmolar()) < 1e-3 * (std::abs(chk->hmolar()) + 1));
+        CHECK(std::abs(mc.eval_s(lnp) - chk->smolar()) < 1e-3 * (std::abs(chk->smolar()) + 1));
+    }
+}
+
+TEST_CASE("MeltingCaloric seed finds a cold-liquid anchor (water)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    MeltingCaloric mc;
+    mc.build(*H);
+
+    auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    const double p = 2.308e8, T = 252.5;
+    ref->update(PT_INPUTS, p, T);
+    const double h = ref->hmolar(), s = ref->smolar();
+
+    // Build-frame == DEF here, so cache values equal caller values.
+    double T0 = 0, rho0 = 0;
+    REQUIRE(mc.seed_for_hs(/*s_cache=*/s, /*h_cache=*/h, T0, rho0));
+    CHECK(T0 == Catch::Approx(T).margin(25.0));                   // within ~25 K of target
+    CHECK(rho0 == Catch::Approx(ref->rhomolar()).epsilon(0.08));  // within ~8%
+}
+
+TEST_CASE("MeltingCaloric stamp is captured at build", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    struct Reset
+    {
+        ~Reset() noexcept {
+            try {
+                set_reference_stateS("Water", "DEF");
+            } catch (...) {
+            }
+        }
+    } guard;
+    set_reference_stateS("Water", "DEF");
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    MeltingCaloric mc;
+    mc.build(*H);
+    const auto stamp = mc.stamp();
+    REQUIRE(stamp.has_value());
+    const auto def_off = FlashRoutines::alpha0_offset_total(*H);
+    CHECK(stamp->first == Catch::Approx(def_off.first));
+    CHECK(stamp->second == Catch::Approx(def_off.second));
+}
+
+TEST_CASE("MeltingCaloric global cache builds once per fluid", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    auto a = get_melting_caloric_cached(*H);
+    auto b = get_melting_caloric_cached(*H);
+    REQUIRE(a != nullptr);
+    CHECK(a.get() == b.get());  // same object: cached
+    CHECK(a->built());
+}
+
+TEST_CASE("hs_corrector accepts a sub-Tmin floor (water cold liquid)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    auto mc = get_melting_caloric_cached(*H);
+    REQUIRE(mc != nullptr);
+    auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    const double p = 2.308e8, T = 252.5;
+    ref->update(PT_INPUTS, p, T);
+    const double h = ref->hmolar(), s = ref->smolar();
+    double T0 = 0, rho0 = 0;
+    REQUIRE(mc->seed_for_hs(s, h, T0, rho0));
+    double Tout = 0, rho_out = 0;
+    // floor: 0.1% below the melting-curve seed temperature (~252 K, well below H->Tmin()=273 K).
+    // water's calc_melting_line(iT_min,...) returns the triple-point T (273.16 K), not the
+    // coldest point on the curve; use the seed itself as the floor anchor.
+    const double floor = T0 * (1.0 - 1e-3);
+    REQUIRE(FlashRoutines::hs_corrector_probe(*H, T0, rho0, h, s, Tout, rho_out, floor));
+    CHECK(std::abs(Tout - T) / T < 1e-5);
+    CHECK(std::abs(rho_out - ref->rhomolar()) / ref->rhomolar() < 1e-5);
+}
+
+TEST_CASE("HS cascade solves cold sub-triple liquid via melting leg (water)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    auto wrk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+    std::size_t total = 0, ok = 0;
+    for (double p : {5e7, 1e8, 2.308e8, 4e8, 7e8}) {
+        const double Tm = ref->melting_line(iT, iP, p);
+        for (double T : linspace(Tm + 0.05, Tm + 40.0, 12)) {
+            try {
+                ref->update(PT_INPUTS, p, T);
+            } catch (...) {
+                continue;
+            }
+            const double h = ref->hmolar(), s = ref->smolar();
+            if (!std::isfinite(h) || !std::isfinite(s)) continue;
+            ++total;
+            try {
+                wrk->update(HmolarSmolar_INPUTS, h, s);
+            } catch (const std::exception& e) {
+                CAPTURE(p, T, e.what());
+                CHECK(false);
+                continue;
+            }
+            const bool good = std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5 && std::abs(wrk->rhomolar() - ref->rhomolar()) / ref->rhomolar() < 1e-5;
+            if (good)
+                ++ok;
+            else {
+                CAPTURE(p, T);
+                CHECK(good);
+            }
+        }
+    }
+    REQUIRE(total > 0);
+    CHECK(ok == total);
+}
+
+TEST_CASE("HS sub-triple cold-liquid profile vs supercritical (water/heavywater)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    const double MELTING_SLOWDOWN_FACTOR = 200.0;  // TODO(CoolProp-vmp): tighten after first profile (measured ~95x on Water)
+    for (const std::string fluid : {std::string("Water"), std::string("HeavyWater")}) {
+        auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluid));
+        auto wrk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluid));
+        auto* Href = dynamic_cast<HelmholtzEOSMixtureBackend*>(ref.get());
+        // Skip a fluid that has no melting line (leg 4 unavailable there).
+        if (get_melting_caloric_cached(*Href) == nullptr) {
+            std::printf("[HS_meltcal] %s: no melting caloric -> skipped\n", fluid.c_str());
+            continue;
+        }
+        const double Ttrip = ref->Ttriple(), Tc = ref->T_critical(), pc = ref->p_critical();
+
+        auto time_hs = [&](double p, double T) -> double {
+            ref->update(PT_INPUTS, p, T);
+            const double h = ref->hmolar(), s = ref->smolar();
+            const auto t0 = std::chrono::steady_clock::now();
+            wrk->update(HmolarSmolar_INPUTS, h, s);
+            const double us = std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - t0).count();
+            CHECK(std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5);  // fast must also be correct
+            return us;
+        };
+
+        double cold_sum = 0;
+        std::size_t cold_n = 0;
+        for (double p : {5e7, 1e8, 2.308e8, 4e8, 7e8}) {
+            double Tm;
+            try {
+                Tm = ref->melting_line(iT, iP, p);
+            } catch (...) {
+                continue;
+            }
+            for (double T : linspace(Tm + 0.05, std::min(Ttrip - 0.1, Tm + 15.0), 8)) {
+                if (T >= Ttrip) continue;  // sub-triple only
+                try {
+                    cold_sum += time_hs(p, T);
+                    ++cold_n;
+                } catch (...) {
+                }
+            }
+        }
+        double sup_sum = 0;
+        std::size_t sup_n = 0;
+        for (double p : linspace(1.2 * pc, 5.0 * pc, 5)) {
+            for (double T : linspace(1.05 * Tc, 2.0 * Tc, 8)) {
+                try {
+                    sup_sum += time_hs(p, T);
+                    ++sup_n;
+                } catch (...) {
+                }
+            }
+        }
+        if (cold_n == 0) {
+            std::printf("[HS_meltcal] %s: no sub-triple points sampled -> skipped\n", fluid.c_str());
+            continue;
+        }
+        REQUIRE(sup_n > 0);
+        const double cold_mean = cold_sum / cold_n, sup_mean = sup_sum / sup_n;
+        std::printf("[HS_meltcal] %s: cold-mean %.1f us, supercrit-mean %.1f us, ratio %.1fx (bound %.0fx)\n", fluid.c_str(), cold_mean, sup_mean,
+                    cold_mean / sup_mean, MELTING_SLOWDOWN_FACTOR);
+        CHECK(cold_mean <= MELTING_SLOWDOWN_FACTOR * sup_mean);
+    }
+}
+
+TEST_CASE("HS cold-liquid round-trip across reference states (water)", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    struct Reset
+    {
+        ~Reset() noexcept {
+            try {
+                set_reference_stateS("Water", "DEF");
+            } catch (...) {
+            }
+        }
+    } guard;
+
+    auto run_band = [](std::size_t& total, std::size_t& ok) {
+        auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+        auto wrk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+        for (double p : {1e8, 2.308e8, 5e8}) {
+            double Tm;
+            try {
+                Tm = ref->melting_line(iT, iP, p);
+            } catch (...) {
+                continue;
+            }
+            for (double T : linspace(Tm + 0.05, Tm + 20.0, 6)) {
+                try {
+                    ref->update(PT_INPUTS, p, T);
+                } catch (...) {
+                    continue;
+                }
+                const double h = ref->hmolar(), s = ref->smolar();
+                if (!std::isfinite(h) || !std::isfinite(s)) continue;
+                ++total;
+                try {
+                    wrk->update(HmolarSmolar_INPUTS, h, s);
+                    if (std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5)
+                        ++ok;
+                    else
+                        CHECK(false);
+                } catch (const std::exception& e) {
+                    CAPTURE(p, T, e.what());
+                    CHECK(false);
+                }
+            }
+        }
+    };
+
+    // Build the melting caloric under DEF first (stamp = DEF).
+    set_reference_stateS("Water", "DEF");
+    {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
+        get_melting_caloric_cached(*dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get()));
+    }
+
+    for (const std::string refstate : {std::string("DEF"), std::string("NBP"), std::string("IIR"), std::string("ASHRAE")}) {
+        try {
+            set_reference_stateS("Water", refstate);
+        } catch (...) {
+            continue;
+        }
+        std::size_t total = 0, ok = 0;
+        run_band(total, ok);
+        std::printf("[HS_meltcal] refstate %-7s cold round-trips: %zu/%zu\n", refstate.c_str(), ok, total);
+        REQUIRE(total > 0);
+        CHECK(ok == total);
+    }
+}
+
+TEST_CASE("HS unaffected for monotone-melting-line fluids", "[HS][HS_meltcal][.]") {
+    using namespace CoolProp;
+    for (const std::string fluid : {std::string("CarbonDioxide"), std::string("Methane")}) {
+        auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluid));
+        auto wrk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluid));
+        const double Tt = ref->Ttriple(), Tmax = ref->Tmax();
+        const double pmin = ref->keyed_output(iP_min) * 1.01, pmax = ref->keyed_output(iP_max);
+        std::size_t total = 0, ok = 0;
+        for (double p : linspace(pmin, pmax, 8)) {
+            for (double T : linspace(Tt + 1.0, Tmax, 8)) {
+                try {
+                    ref->update(PT_INPUTS, p, T);
+                } catch (...) {
+                    continue;
+                }
+                if (ref->phase() == iphase_twophase) continue;
+                const double h = ref->hmolar(), s = ref->smolar();
+                if (!std::isfinite(h) || !std::isfinite(s)) continue;
+                ++total;
+                try {
+                    wrk->update(HmolarSmolar_INPUTS, h, s);
+                    if (std::abs(wrk->T() - ref->T()) / ref->T() < 1e-5)
+                        ++ok;
+                    else
+                        CHECK(false);
+                } catch (...) {
+                    CHECK(false);
+                }
+            }
+        }
+        REQUIRE(total > 0);
+        CHECK(ok == total);
+    }
 }
 
 #endif  // ENABLE_CATCH

@@ -269,6 +269,21 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
     }
 }
 
+std::vector<std::pair<CoolPropDbl, CoolPropDbl>> MeltingLineVariables::get_parts_pranges() const {
+    std::vector<std::pair<CoolPropDbl, CoolPropDbl>> out;
+    if (type == MELTING_LINE_SIMON_TYPE) {
+        for (const auto& p : simon.parts)
+            out.emplace_back(p.p_min, p.p_max);
+    } else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE) {
+        for (const auto& p : polynomial_in_Tr.parts)
+            out.emplace_back(p.p_min, p.p_max);
+    } else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE) {
+        for (const auto& p : polynomial_in_Theta.parts)
+            out.emplace_back(p.p_min, p.p_max);
+    }
+    return out;
+}
+
 }; /* namespace CoolProp */
 
 #if defined(ENABLE_CATCH)
