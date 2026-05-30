@@ -1,16 +1,48 @@
 # VLE precision near triple point — measurement + recommendations
 
-## The most important finding (added after superancillary comparison)
+## The general phenomenon being quantified
 
-CoolProp's `QT_INPUTS` for fluids that have a saturation superancillary does **NOT iterate** — it dispatches to `update_QT_pure_superanc` which evaluates Chebyshev expansions fitted at 100-200 digits of working precision. Result: **`p_sat` is bit-exact (0 ULP) and ρ_L, ρ_V are 1-ULP-accurate vs the superancillary across all 10 fluids tested.**
+This test makes a specific, surprising precision pathology visible — but the pathology is **not specific to VLE near the triple point**. It's a general fact about how any double-precision EOS evaluation behaves: **the EOS pressure (or any other property) computed at a known-precise `(T, ρ)` has roughly constant absolute noise (~1e-6 to 1e-4 Pa for pressure, depending on fluid). When the magnitude of the quantity being computed is small, the relative noise becomes catastrophic.**
 
-The `|p_L - p_V| / p` metric I called "noise floor" was therefore NOT measuring solver convergence. It was measuring the gap between the superancillary's stored `p_sat(T)` and the EOS evaluation `p(T, ρ_L_superanc)` at that density. That gap is real and bounded by EOS-evaluation precision (~1e-7 to 3e-5 Pa absolute), but it has nothing to do with the saturation solver.
+VLE near the triple point hits this because `p_sat` becomes tiny (Propane at 86 K → 1.7e-4 Pa). But the same arithmetic pathology shows up wherever an EOS-derived quantity is intrinsically small in magnitude:
 
-The "refinement" experiment that iterated Akasaka past 1e-10 produced ρ values 10-300 ULPs **further from the superancillary truth** than the default. **In double precision, iterating the EOS Newton step makes the answer worse, not better**, because the EOS's evaluation noise floor is wider than the superancillary's fit precision.
+- **Chemical potential difference** between phases at near-equilibrium (μ_L − μ_V close to 0; the precision-limited residual in any flash solver)
+- **c_p − c_v** in regions where c_p ≈ c_v (high-T low-P, or low-T dense liquid)
+- **First derivatives near critical** (∂p/∂ρ → 0 at the critical point and along the spinodal; same story for the inflection points)
+- **Spinodal locations** (∂p/∂ρ = 0 found as a small number from differencing large derivatives)
+- **Critical-point identification** (3rd derivative also zero; cancellation cascades)
+- **Mixture critical points, azeotropes, miscibility gaps** (residuals minimized to small numbers in poorly-conditioned spaces)
+- **Speed of sound near saturation** (involves cancellation of nearly-equal terms)
+- **Finite-difference verification of derivatives** (always suffers cancellation; needs careful step-size selection)
 
-**Implication:** the iterative-precision concern (Propane near triple) is real and quantified — but it applies to **paths that don't have the superancillary in the loop**: PT-inputs near the saturation boundary, HS flash near saturation, custom user iterations on `update_DmolarT_direct`, etc. Anything that goes through `QT_INPUTS` on a superancillary-equipped fluid is already at ground-truth precision.
+The principle: **for any quantity Q computed in double precision through the EOS as a difference or combination of large numbers, the achievable precision is bounded by the absolute noise of the constituent evaluations divided by |Q|. When |Q| becomes small (low p_sat, near-spinodal, near-critical, μ_L − μ_V at equilibrium), relative precision degrades catastrophically.**
 
-The recommendations below are reorganized to reflect this.
+The remainder of this document quantifies one instance of the phenomenon (VLE near triple) and makes recommendations that generalize to all of them.
+
+## The specific finding (VLE saturation near triple)
+
+CoolProp's `QT_INPUTS` for fluids that have a saturation superancillary does **NOT iterate** — it dispatches to `update_QT_pure_superanc` which evaluates Chebyshev expansions fitted at 100-200 digits of working precision. The superancillary stores `ρ_L(T)`, `ρ_V(T)`, `p_sat(T)` as mutually consistent at the fit's working precision. CoolProp returns these stored values directly, so the apparent "bit-exactness" of `p_sat` vs `p_sat_super` is just because they're the same stored number.
+
+**The real precision concern shows up when you take the superancillary's high-precision density and evaluate the EOS at it.** That is the situation every iterative algorithm faces: it has some `(T, ρ_guess)` and needs the EOS to give back `p_eval` for convergence checking. The EOS-evaluation noise at the high-precision-fitted `(T, ρ_super)` is the iterative-precision floor.
+
+| Fluid | p_sat_min (Pa) | Worst rel \|p(T,ρ_L_super) − p_sat_super\| | What this means |
+|---|---:|---:|---|
+| **Propane** | 1.7e-4 | **1.72%** | Pressure-equality convergence ceases to discriminate at this absolute pressure |
+| **Methanol** | 0.19 | **0.018%** | EOS noise ~28 µPa at p_sat ~0.2 Pa |
+| Ethane | 1.15 | 2.0e-6 | EOS noise ~3 µPa at p_sat ~1 Pa |
+| Water | 613 | 1.7e-7 | ~100 µPa absolute |
+| R134a | 391 | 3.7e-9 | ~1.4 µPa |
+| Ammonia | 6066 | 3.2e-10 | ~1.9 µPa |
+| R125 | 2919 | 2.9e-10 | ~0.8 µPa |
+| Methane | 11714 | 6.1e-11 | ~0.7 µPa |
+| Nitrogen | 12534 | 7.5e-11 | ~0.9 µPa |
+| CO₂ | 518234 | 2.6e-12 | ~1.4 µPa |
+
+The absolute noise floor is fairly uniform at ~1 µPa for most fluids, ~3 µPa for Propane, ~30 µPa for Methanol. **The pathology is purely relative**: when the absolute pressure shrinks toward the noise floor, relative precision collapses.
+
+The "refinement" experiment (iterating Akasaka past CoolProp's 1e-10 cutoff) produced ρ values 10-300 ULPs **further from the superancillary truth** than the default. **In double precision, iterating the EOS Newton step makes the answer worse, not better**, because the EOS's evaluation noise floor is wider than the superancillary's fit precision.
+
+**Implication:** anything iterative that crosses the saturation boundary without the superancillary in the loop — PT-inputs near saturation, HS-flash near saturation, custom user iterations on `update_DmolarT_direct`, mixture flash near triple — faces the noise floor quantified above. Anything via `QT_INPUTS` on a superancillary-equipped fluid is already at ground-truth precision.
 
 
 

@@ -95,6 +95,12 @@ struct StressRow
     double rho_L_super = 0, rho_V_super = 0, p_sat_super = 0;
     // Error of CoolProp default solver vs superancillary:
     double rel_drho_L_default = 0, rel_drho_V_default = 0, rel_dp_sat_default = 0;
+    // EOS-evaluation noise: |p(T, rho_L_super) - p_sat_super| / p_sat_super.
+    // The superancillary's rho_L_super and p_sat_super are consistent at the
+    // fit's working precision; re-evaluating the EOS at rho_L_super exposes
+    // the double-precision evaluation noise of the EOS itself.  This is the
+    // precision iterative solvers see when checking convergence on p.
+    double rel_dpL_eos_vs_super = 0, rel_dpV_eos_vs_super = 0;
     // Error of refined solver vs superancillary:
     double rel_drho_L_refined = 0, rel_drho_V_refined = 0;
     double wall_us = 0;
@@ -278,6 +284,23 @@ StressRow measure_one(const std::string& fluid, double T) {
                         }
                         if (r.p_sat_super > 0) {
                             r.rel_dp_sat_default = std::abs(r.p_sat - r.p_sat_super) / r.p_sat_super;
+                            // EOS evaluation noise vs superancillary truth.  Ian's
+                            // point: even with a known-precise density from the
+                            // superancillary, the EOS double-precision evaluation
+                            // for pressure has noise relative to the superancillary's
+                            // stored p_sat.  At low p_sat (Propane near triple) this
+                            // becomes a huge relative error — the precision iterative
+                            // algorithms have to live with.
+                            try {
+                                AS_eval->update(CoolProp::DmolarT_INPUTS, r.rho_L_super, T);
+                                const double p_eval_at_super_L = AS_eval->p();
+                                r.rel_dpL_eos_vs_super = std::abs(p_eval_at_super_L - r.p_sat_super) / r.p_sat_super;
+                                AS_eval->update(CoolProp::DmolarT_INPUTS, r.rho_V_super, T);
+                                const double p_eval_at_super_V = AS_eval->p();
+                                r.rel_dpV_eos_vs_super = std::abs(p_eval_at_super_V - r.p_sat_super) / r.p_sat_super;
+                            } catch (...) {
+                                // leave at 0
+                            }
                         }
                     } catch (...) {
                         // Superancillary evaluation failed; mark out of range.
@@ -337,6 +360,8 @@ TEST_CASE("VLE saturation-curve precision stress (triple → critical)", "[vle_t
         std::size_t n_in_super_range = 0;
         double worst_rel_drho_L_default = 0, worst_rel_drho_V_default = 0, worst_rel_dp_sat_default = 0;
         double worst_rel_drho_L_refined = 0, worst_rel_drho_V_refined = 0;
+        // Ian's metric: EOS evaluation noise from known-precise density
+        double worst_rel_dpL_eos_vs_super = 0, worst_rel_dpV_eos_vs_super = 0;
     };
     std::vector<FluidSummary> summaries;
 
@@ -386,6 +411,8 @@ TEST_CASE("VLE saturation-curve precision stress (triple → critical)", "[vle_t
                     if (r.rel_dp_sat_default > fsum.worst_rel_dp_sat_default) fsum.worst_rel_dp_sat_default = r.rel_dp_sat_default;
                     if (r.rel_drho_L_refined > fsum.worst_rel_drho_L_refined) fsum.worst_rel_drho_L_refined = r.rel_drho_L_refined;
                     if (r.rel_drho_V_refined > fsum.worst_rel_drho_V_refined) fsum.worst_rel_drho_V_refined = r.rel_drho_V_refined;
+                    if (r.rel_dpL_eos_vs_super > fsum.worst_rel_dpL_eos_vs_super) fsum.worst_rel_dpL_eos_vs_super = r.rel_dpL_eos_vs_super;
+                    if (r.rel_dpV_eos_vs_super > fsum.worst_rel_dpV_eos_vs_super) fsum.worst_rel_dpV_eos_vs_super = r.rel_dpV_eos_vs_super;
                 }
             } else {
                 ++fsum.n_fail;
@@ -398,6 +425,8 @@ TEST_CASE("VLE saturation-curve precision stress (triple → critical)", "[vle_t
                         fsum.worst_rel_drho_L_default, fsum.worst_rel_drho_V_default, fsum.worst_rel_dp_sat_default);
             std::printf("  ↳ vs superancillary: rel_drho_L_refined=%.2e  rel_drho_V_refined=%.2e\n", fsum.worst_rel_drho_L_refined,
                         fsum.worst_rel_drho_V_refined);
+            std::printf("  ↳ EOS p(T,rho_super)/p_super - 1:  L=%.2e  V=%.2e   <-- iterative-precision floor\n", fsum.worst_rel_dpL_eos_vs_super,
+                        fsum.worst_rel_dpV_eos_vs_super);
         } else if (!fsum.has_super) {
             std::printf("  ↳ no superancillary available for this fluid\n");
         }
