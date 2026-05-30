@@ -57,7 +57,7 @@ VPY="$VENV/bin/python"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/CoolProp"
-cp "$PKG_DIR"/*.pyx "$PKG_DIR"/*.pxd "$TMP/CoolProp/" 2>/dev/null || true
+cp -f "$PKG_DIR"/*.pyx "$PKG_DIR"/*.pxd "$TMP/CoolProp/" 2>/dev/null || true
 for f in "$TMP/CoolProp"/*.pyx; do
     sed -i.bak 's/;[[:space:]]*$//' "$f" && rm -f "$f.bak"
 done

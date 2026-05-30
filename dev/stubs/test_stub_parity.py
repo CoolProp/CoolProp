@@ -22,6 +22,7 @@ standalone and picks up CoolProp from the environment.
 from __future__ import annotations
 
 import ast
+import inspect
 import pathlib
 
 import pytest
@@ -66,11 +67,28 @@ def _stub_module_funcs(tree: ast.Module) -> set[str]:
 
 
 def _runtime_methods(obj) -> set[str]:
+    # isroutine (not callable): a nested class would be `callable` but is not a
+    # method, and we don't want it counted against the method surface.
     return {
         name
         for name in dir(obj)
-        if not name.startswith("_") and callable(getattr(obj, name, None))
+        if not name.startswith("_") and inspect.isroutine(getattr(obj, name, None))
     }
+
+
+def _runtime_module_funcs() -> set[str]:
+    # Functions DEFINED in the CoolProp.CoolProp module — excludes both the
+    # classes (callable but not routines, e.g. AbstractState) and stdlib
+    # re-exports that leak into the namespace (e.g. `from re import split as
+    # re_split`), which carry a foreign __module__ and are not part of the API.
+    out: set[str] = set()
+    for name in dir(cpcp):
+        if name.startswith("_"):
+            continue
+        obj = getattr(cpcp, name, None)
+        if inspect.isroutine(obj) and getattr(obj, "__module__", None) == cpcp.__name__:
+            out.add(name)
+    return out
 
 
 def test_stub_file_exists_and_parses():
@@ -93,14 +111,16 @@ def test_abstractstate_methods_match_runtime():
     )
 
 
-def test_module_functions_present_at_runtime():
+def test_module_functions_match_runtime():
     stub_funcs = _stub_module_funcs(_stub_tree())
-    runtime = {
-        n for n in dir(cpcp)
-        if not n.startswith("_") and callable(getattr(cpcp, n, None))
-    }
+    runtime = _runtime_module_funcs()
     stale = stub_funcs - runtime
+    missing = runtime - stub_funcs
     assert not stale, (
         f"CoolProp.pyi declares module functions absent at runtime: "
         f"{sorted(stale)} — stale stub; run dev/stubs/gen_stubs.sh"
+    )
+    assert not missing, (
+        f"runtime CoolProp.CoolProp exposes public functions missing from the "
+        f"stub: {sorted(missing)} — regenerate with dev/stubs/gen_stubs.sh"
     )
