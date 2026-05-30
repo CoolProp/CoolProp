@@ -301,6 +301,269 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
     return;
 };
 
+// ============================================================================
+// allFastVDSP — three-pass version of all() that batches exp() calls into
+// Accelerate.framework vvexp() on Apple, scalar fallback elsewhere.
+//
+// Layout:
+//   Pass 1: walk elements once.  For each term, compute the inputs to the two
+//           exp() calls (one for the delta_li_in_u branch, one for the main
+//           ndteu).  Store partial u-construction (without the delta_li exp
+//           contribution) in stack arrays.  Store both exp arguments.
+//   Pass 2: vvexp() once over the delta_li exp-argument array, then patch the
+//           u/du_ddelta/d2u_ddelta2/d3u_ddelta3/d4u_ddelta4 values with the
+//           result.  Combine into the main exp argument.  Second vvexp() once
+//           over the main argument array.
+//   Pass 3: walk elements again, doing the B-chain + 15 derivative
+//           accumulations using the pre-computed ndteu = n*exp_result.
+//
+// vvexp() per Apple docs: 1.5-1.7 ns/exp at N >= 32, vs scalar std::exp at
+// ~2.4 ns.  Two vvexp calls per all() save ~50-100 ns on Water-class fluids.
+// ============================================================================
+
+// ---------- vector exp wrapper -----------
+#if defined(__APPLE__)
+#    include <Accelerate/Accelerate.h>
+namespace {
+inline void batch_exp(double* dst, const double* src, int n) {
+    // vvexp signature: void vvexp(double* y, const double* x, const int* n);
+    vvexp(dst, src, &n);
+}
+}  // namespace
+#else
+namespace {
+inline void batch_exp(double* dst, const double* src, int n) {
+    for (int i = 0; i < n; ++i)
+        dst[i] = std::exp(src[i]);
+}
+}  // namespace
+#endif
+
+// Max term count seen across CoolProp's fluid library is 54 (Water); pad to
+// 128 for safety + alignment.  Stack-allocated => zero allocation overhead.
+constexpr std::size_t kAllFastVDSPMaxN = 128;
+
+void ResidualHelmholtzGeneralizedExponential::allFastVDSP(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
+    const std::size_t N = elements.size();
+    if (N == 0) return;
+    if (N > kAllFastVDSPMaxN) {
+        // Fall back to scalar all() — should never happen for current fluid library.
+        all(tau, delta, derivs);
+        return;
+    }
+
+    const double log_tau = std::log(tau);
+    const double log_delta = std::log(delta);
+    const double one_over_delta = 1.0 / delta;
+    const double one_over_tau = 1.0 / tau;
+
+    // Per-term partial u state (without the delta_li exp contribution, which
+    // arrives in pass 2).  All other contributions (eta1/eta2/beta1/beta2 and
+    // tau_mi_in_u — handled scalar since R125/Methanol only have 3-8 m-terms)
+    // are added here in pass 1.
+    alignas(16) double u_partial[kAllFastVDSPMaxN];
+    alignas(16) double du_ddelta[kAllFastVDSPMaxN];
+    alignas(16) double du_dtau[kAllFastVDSPMaxN];
+    alignas(16) double d2u_ddelta2[kAllFastVDSPMaxN];
+    alignas(16) double d2u_dtau2[kAllFastVDSPMaxN];
+    alignas(16) double d3u_ddelta3[kAllFastVDSPMaxN];
+    alignas(16) double d3u_dtau3[kAllFastVDSPMaxN];
+    alignas(16) double d4u_ddelta4[kAllFastVDSPMaxN];
+    alignas(16) double d4u_dtau4[kAllFastVDSPMaxN];
+
+    // Exp argument batches: deltaL_args[k] = l*log_delta for k-th delta_li
+    // candidate term; deltaL_results[k] = exp(...).  Maintains a separate
+    // index into the batched array vs the term index i since not every term
+    // takes the branch (l_is_int terms use powInt instead — handled scalar).
+    alignas(16) double deltaL_args[kAllFastVDSPMaxN];
+    alignas(16) double deltaL_results[kAllFastVDSPMaxN];
+    int deltaL_term_idx[kAllFastVDSPMaxN];  // which term i this batch entry corresponds to
+    double deltaL_ci[kAllFastVDSPMaxN];     // term's c coefficient (sign baked in)
+    double deltaL_l[kAllFastVDSPMaxN];      // term's l_double
+    int n_deltaL = 0;
+
+    alignas(16) double main_args[kAllFastVDSPMaxN];
+    alignas(16) double main_results[kAllFastVDSPMaxN];
+
+    // --- Pass 1: build u_partial (everything except the delta_li exp contribution)
+    //              and collect the delta_li exp arguments into a batch.
+    for (std::size_t i = 0; i < N; ++i) {
+        ResidualHelmholtzGeneralizedExponentialElement& el = elements[i];
+        const double ti = el.t, di = el.d;
+
+        u_partial[i] = 0.0;
+        du_ddelta[i] = 0.0;
+        du_dtau[i] = 0.0;
+        d2u_ddelta2[i] = 0.0;
+        d2u_dtau2[i] = 0.0;
+        d3u_ddelta3[i] = 0.0;
+        d3u_dtau3[i] = 0.0;
+        d4u_ddelta4[i] = 0.0;
+        d4u_dtau4[i] = 0.0;
+
+        if (delta_li_in_u) {
+            const double ci = el.c, l_double = el.l_double;
+            if (ValidNumber(l_double) && l_double > 0 && std::abs(ci) > DBL_EPSILON) {
+                if (el.l_is_int) {
+                    // Scalar powInt path — same as all().  Apply contribution
+                    // to u_partial here so pass 2 doesn't have to touch it.
+                    const double u_increment = -ci * powInt(delta, el.l_int);
+                    const double du_increment = l_double * u_increment * one_over_delta;
+                    const double d2_increment = (l_double - 1) * du_increment * one_over_delta;
+                    const double d3_increment = (l_double - 2) * d2_increment * one_over_delta;
+                    const double d4_increment = (l_double - 3) * d3_increment * one_over_delta;
+                    u_partial[i] += u_increment;
+                    du_ddelta[i] += du_increment;
+                    d2u_ddelta2[i] += d2_increment;
+                    d3u_ddelta3[i] += d3_increment;
+                    d4u_ddelta4[i] += d4_increment;
+                } else {
+                    // Defer to pass 2: store arg, term index, c, l.
+                    deltaL_args[n_deltaL] = l_double * log_delta;
+                    deltaL_term_idx[n_deltaL] = static_cast<int>(i);
+                    deltaL_ci[n_deltaL] = ci;
+                    deltaL_l[n_deltaL] = l_double;
+                    ++n_deltaL;
+                }
+            }
+        }
+        if (tau_mi_in_u) {
+            const double omegai = el.omega, m_double = el.m_double;
+            if (std::abs(m_double) > 0) {
+                const double u_increment = -omegai * std::pow(tau, m_double);
+                const double du_increment = m_double * u_increment * one_over_tau;
+                const double d2_increment = (m_double - 1) * du_increment * one_over_tau;
+                const double d3_increment = (m_double - 2) * d2_increment * one_over_tau;
+                const double d4_increment = (m_double - 3) * d3_increment * one_over_tau;
+                u_partial[i] += u_increment;
+                du_dtau[i] += du_increment;
+                d2u_dtau2[i] += d2_increment;
+                d3u_dtau3[i] += d3_increment;
+                d4u_dtau4[i] += d4_increment;
+            }
+        }
+        if (eta1_in_u) {
+            const double eta1 = el.eta1, epsilon1 = el.epsilon1;
+            if (ValidNumber(eta1)) {
+                u_partial[i] += -eta1 * (delta - epsilon1);
+                du_ddelta[i] += -eta1;
+            }
+        }
+        if (eta2_in_u) {
+            const double eta2 = el.eta2, epsilon2 = el.epsilon2;
+            if (ValidNumber(eta2)) {
+                u_partial[i] += -eta2 * POW2(delta - epsilon2);
+                du_ddelta[i] += -2 * eta2 * (delta - epsilon2);
+                d2u_ddelta2[i] += -2 * eta2;
+            }
+        }
+        if (beta1_in_u) {
+            const double beta1 = el.beta1, gamma1 = el.gamma1;
+            if (ValidNumber(beta1)) {
+                u_partial[i] += -beta1 * (tau - gamma1);
+                du_dtau[i] += -beta1;
+            }
+        }
+        if (beta2_in_u) {
+            const double beta2 = el.beta2, gamma2 = el.gamma2;
+            if (ValidNumber(beta2)) {
+                u_partial[i] += -beta2 * POW2(tau - gamma2);
+                du_dtau[i] += -2 * beta2 * (tau - gamma2);
+                d2u_dtau2[i] += -2 * beta2;
+            }
+        }
+    }
+
+    // --- Pass 2a: batch exp for delta_li terms, fold into u_partial + derivatives.
+    if (n_deltaL > 0) {
+        batch_exp(deltaL_results, deltaL_args, n_deltaL);
+        for (int k = 0; k < n_deltaL; ++k) {
+            const int i = deltaL_term_idx[k];
+            const double l = deltaL_l[k];
+            const double u_increment = -deltaL_ci[k] * deltaL_results[k];
+            const double du_increment = l * u_increment * one_over_delta;
+            const double d2_increment = (l - 1) * du_increment * one_over_delta;
+            const double d3_increment = (l - 2) * d2_increment * one_over_delta;
+            const double d4_increment = (l - 3) * d3_increment * one_over_delta;
+            u_partial[i] += u_increment;
+            du_ddelta[i] += du_increment;
+            d2u_ddelta2[i] += d2_increment;
+            d3u_ddelta3[i] += d3_increment;
+            d4u_ddelta4[i] += d4_increment;
+        }
+    }
+
+    // --- Pass 2b: build the main exp arguments + batch exp.
+    for (std::size_t i = 0; i < N; ++i) {
+        const double ti = elements[i].t, di = elements[i].d;
+        main_args[i] = ti * log_tau + di * log_delta + u_partial[i];
+    }
+    batch_exp(main_results, main_args, static_cast<int>(N));
+
+    // --- Pass 3: derivative chain + accumulation.
+    for (std::size_t i = 0; i < N; ++i) {
+        const ResidualHelmholtzGeneralizedExponentialElement& el = elements[i];
+        const double ni = el.n, di = el.d, ti = el.t;
+
+        const double ndteu = ni * main_results[i];
+
+        const double dB_delta_ddelta = delta * d2u_ddelta2[i] + du_ddelta[i];
+        const double d2B_delta_ddelta2 = delta * d3u_ddelta3[i] + 2 * d2u_ddelta2[i];
+        const double d3B_delta_ddelta3 = delta * d4u_ddelta4[i] + 3 * d3u_ddelta3[i];
+
+        const double B_delta = (delta * du_ddelta[i] + di);
+        const double B_delta2 = delta * dB_delta_ddelta + (B_delta - 1) * B_delta;
+        const double dB_delta2_ddelta = delta * d2B_delta_ddelta2 + 2 * B_delta * dB_delta_ddelta;
+        const double B_delta3 = delta * dB_delta2_ddelta + (B_delta - 2) * B_delta2;
+        const double dB_delta3_ddelta = delta * delta * d3B_delta_ddelta3 + 3 * delta * B_delta * d2B_delta_ddelta2
+                                        + 3 * delta * POW2(dB_delta_ddelta) + 3 * B_delta * (B_delta - 1) * dB_delta_ddelta;
+        const double B_delta4 = delta * dB_delta3_ddelta + (B_delta - 3) * B_delta3;
+
+        const double dB_tau_dtau = tau * d2u_dtau2[i] + du_dtau[i];
+        const double d2B_tau_dtau2 = tau * d3u_dtau3[i] + 2 * d2u_dtau2[i];
+        const double d3B_tau_dtau3 = tau * d4u_dtau4[i] + 3 * d3u_dtau3[i];
+
+        const double B_tau = (tau * du_dtau[i] + ti);
+        const double B_tau2 = tau * dB_tau_dtau + (B_tau - 1) * B_tau;
+        const double dB_tau2_dtau = tau * d2B_tau_dtau2 + 2 * B_tau * dB_tau_dtau;
+        const double B_tau3 = tau * dB_tau2_dtau + (B_tau - 2) * B_tau2;
+        const double dB_tau3_dtau =
+          tau * tau * d3B_tau_dtau3 + 3 * tau * B_tau * d2B_tau_dtau2 + 3 * tau * POW2(dB_tau_dtau) + 3 * B_tau * (B_tau - 1) * dB_tau_dtau;
+        const double B_tau4 = tau * dB_tau3_dtau + (B_tau - 3) * B_tau3;
+
+        derivs.alphar += ndteu;
+        derivs.dalphar_ddelta += ndteu * B_delta;
+        derivs.dalphar_dtau += ndteu * B_tau;
+        derivs.d2alphar_ddelta2 += ndteu * B_delta2;
+        derivs.d2alphar_ddelta_dtau += ndteu * B_delta * B_tau;
+        derivs.d2alphar_dtau2 += ndteu * B_tau2;
+        derivs.d3alphar_ddelta3 += ndteu * B_delta3;
+        derivs.d3alphar_ddelta2_dtau += ndteu * B_delta2 * B_tau;
+        derivs.d3alphar_ddelta_dtau2 += ndteu * B_delta * B_tau2;
+        derivs.d3alphar_dtau3 += ndteu * B_tau3;
+        derivs.d4alphar_ddelta4 += ndteu * B_delta4;
+        derivs.d4alphar_ddelta3_dtau += ndteu * B_delta3 * B_tau;
+        derivs.d4alphar_ddelta2_dtau2 += ndteu * B_delta2 * B_tau2;
+        derivs.d4alphar_ddelta_dtau3 += ndteu * B_delta * B_tau3;
+        derivs.d4alphar_dtau4 += ndteu * B_tau4;
+    }
+
+    derivs.dalphar_ddelta *= one_over_delta;
+    derivs.dalphar_dtau *= one_over_tau;
+    derivs.d2alphar_ddelta2 *= POW2(one_over_delta);
+    derivs.d2alphar_dtau2 *= POW2(one_over_tau);
+    derivs.d2alphar_ddelta_dtau *= one_over_delta * one_over_tau;
+    derivs.d3alphar_ddelta3 *= POW3(one_over_delta);
+    derivs.d3alphar_dtau3 *= POW3(one_over_tau);
+    derivs.d3alphar_ddelta2_dtau *= POW2(one_over_delta) * one_over_tau;
+    derivs.d3alphar_ddelta_dtau2 *= one_over_delta * POW2(one_over_tau);
+    derivs.d4alphar_ddelta4 *= POW4(one_over_delta);
+    derivs.d4alphar_dtau4 *= POW4(one_over_tau);
+    derivs.d4alphar_ddelta3_dtau *= POW3(one_over_delta) * one_over_tau;
+    derivs.d4alphar_ddelta2_dtau2 *= POW2(one_over_delta) * POW2(one_over_tau);
+    derivs.d4alphar_ddelta_dtau3 *= one_over_delta * POW3(one_over_tau);
+}
+
 #if ENABLE_CATCH
 mcx::MultiComplex<double> ResidualHelmholtzGeneralizedExponential::one_mcx(const mcx::MultiComplex<double>& tau,
                                                                            const mcx::MultiComplex<double>& delta) const {
