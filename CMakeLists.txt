@@ -2123,6 +2123,8 @@ if(COOLPROP_CATCH_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PXcdj.cpp")
   list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-HelmholtzInnerBench.cpp")
+  list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PXFlash.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-FPUGuard.cpp")
@@ -2134,6 +2136,9 @@ if(COOLPROP_CATCH_MODULE)
   add_dependencies(CatchTestRunner generate_headers)
 
   target_link_libraries(CatchTestRunner PRIVATE Catch2::Catch2WithMain)
+  if(APPLE)
+    target_link_libraries(CatchTestRunner PRIVATE "-framework Accelerate")
+  endif()
   target_compile_definitions(CatchTestRunner PRIVATE ENABLE_CATCH)
   target_compile_definitions(CatchTestRunner PRIVATE COOLPROP_NO_INCBIN) # Incbin is disabled for Catch2 because of a weird behavior where out-of-date zlib-compressed fluid information were being used.
   if(UNIX)

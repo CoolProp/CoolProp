@@ -513,6 +513,14 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
         eta2.resize(elements.size());
         gamma2.resize(elements.size());
         beta2.resize(elements.size());
+        // Also populate the "1" series for the allEigen recon path so the
+        // Eigen::Map's it builds reference valid storage. (Live all() reads
+        // through elements[].member; allEigen() reads through these SoA
+        // vectors.)
+        epsilon1.resize(elements.size());
+        eta1.resize(elements.size());
+        gamma1.resize(elements.size());
+        beta1.resize(elements.size());
 
         for (std::size_t i = 0; i < elements.size(); ++i) {
             n[i] = elements[i].n;
@@ -528,6 +536,10 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
             eta2[i] = elements[i].eta2;
             gamma2[i] = elements[i].gamma2;
             beta2[i] = elements[i].beta2;
+            epsilon1[i] = elements[i].epsilon1;
+            eta1[i] = elements[i].eta1;
+            gamma1[i] = elements[i].gamma1;
+            beta1[i] = elements[i].beta1;
 
             // See if l is an integer, and store a flag if it is
             elements[i].l_is_int = (std::abs(static_cast<long>(elements[i].l_double) - elements[i].l_double) < 1e-14);
@@ -546,7 +558,19 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
 
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
-    //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
+    void allEigen(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
+
+    // Apple-only fast path: batches the two per-term exp() calls into vvexp()
+    // calls from Accelerate.framework's vForce.  Bit-equivalent within ULP to
+    // all() on every fluid; only the order of exp() evaluations changes.
+    // Returns immediately as a no-op on non-Apple platforms.  See
+    // src/Helmholtz.cpp for the body.
+    void allFastVDSP(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs);
+
+    // Apple Silicon NEON 2-wide SIMD path: batches exp() via vvexp() AND
+    // SIMD-vectorizes the B-chain (delta * du_ddelta + di + ... + accumulate)
+    // 2 terms at a time with FMAs.  Bit-equivalent within ULP.
+    void allFastNEON(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs);
 
 #if ENABLE_CATCH
     mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
