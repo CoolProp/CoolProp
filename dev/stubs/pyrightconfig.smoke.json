@@ -1,0 +1,6 @@
+{
+  "include": ["typecheck_smoke.py"],
+  "extraPaths": ["../../wrappers/Python"],
+  "pythonVersion": "3.12",
+  "reportMissingModuleSource": "none"
+}

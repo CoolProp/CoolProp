@@ -218,11 +218,16 @@ install(TARGETS CoolProp_module _constants_module
     RUNTIME DESTINATION CoolProp
 )
 
-# Install Python package files
+# Install Python package files.
+# *.pyi and the py.typed marker ship the PEP 561 type stubs into the wheel so
+# editors/type-checkers see the typed API of the compiled extension; they must
+# land next to CoolProp.<soabi>.so in the installed package.
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/"
     DESTINATION CoolProp
     FILES_MATCHING
     PATTERN "*.py"
+    PATTERN "*.pyi"
+    PATTERN "py.typed"
     PATTERN "*.pxd"
     PATTERN "*.bib"
     PATTERN "psyrc"
