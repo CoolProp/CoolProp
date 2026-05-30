@@ -350,9 +350,8 @@ void ResidualHelmholtzGeneralizedExponential::allFastVDSP(const CoolPropDbl& tau
     const std::size_t N = elements.size();
     if (N == 0) return;
     if (N > kAllFastVDSPMaxN) {
-        // Fall back to scalar all() — should never happen for current fluid library.
-        all(tau, delta, derivs);
-        return;
+        // Defensive only — see allFastNEON for the equivalent guard.
+        throw CoolProp::ValueError(format("allFastVDSP: N=%zu exceeds kAllFastVDSPMaxN=%zu", N, kAllFastVDSPMaxN));
     }
 
     const double log_tau = std::log(tau);
@@ -580,8 +579,11 @@ void ResidualHelmholtzGeneralizedExponential::allFastNEON(const CoolPropDbl& tau
     const std::size_t N = elements.size();
     if (N == 0) return;
     if (N > kAllFastVDSPMaxN) {
-        std::fprintf(stderr, "allFastNEON: N=%zu exceeds %zu\n", N, kAllFastVDSPMaxN);
-        std::abort();
+        // Defensive only — current fluid library tops out at N=54 (Water).
+        // Cannot safely fall back to all() here because the dispatcher caches
+        // the env-toggle decision and would recurse.  Raise kAllFastVDSPMaxN
+        // if a new fluid pushes past 128 terms.
+        throw CoolProp::ValueError(format("allFastNEON: N=%zu exceeds kAllFastVDSPMaxN=%zu", N, kAllFastVDSPMaxN));
     }
     // Common case: pure fluid, finish() called → use the class SoA directly.
     // Fallback: mixture excess GenExp where finish() wasn't called → copy
