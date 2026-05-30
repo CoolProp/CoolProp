@@ -32,6 +32,7 @@
 //   ./build_catch_rel/CatchTestRunner "[vle_triple_stress]"
 
 #include "AbstractState.h"
+#include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "CoolProp.h"
 
 #if defined(ENABLE_CATCH)
@@ -86,6 +87,16 @@ struct StressRow
     double rho_L_refined = 0, rho_V_refined = 0;
     double abs_dp_refined = 0, rel_dp_refined = 0;
     int refine_iters = 0;
+    // Superancillary reference values (Chebyshev expansions fitted at 100-200
+    // digits of working precision; for fluids that have a superancillary,
+    // these are the closest thing to ground truth available in double precision).
+    bool has_superanc = false;
+    bool in_superanc_range = false;
+    double rho_L_super = 0, rho_V_super = 0, p_sat_super = 0;
+    // Error of CoolProp default solver vs superancillary:
+    double rel_drho_L_default = 0, rel_drho_V_default = 0, rel_dp_sat_default = 0;
+    // Error of refined solver vs superancillary:
+    double rel_drho_L_refined = 0, rel_drho_V_refined = 0;
     double wall_us = 0;
     bool success = false;
     const char* fail_stage = "";
@@ -237,6 +248,45 @@ StressRow measure_one(const std::string& fluid, double T) {
             r.rel_dp_refined = r.rel_dp;
         }
 
+        // ---- Compare against superancillary ground truth -------------------
+        // The superancillary stores Chebyshev coefficients fitted at 100-200
+        // digits of working precision; querying it returns a double, but the
+        // result is the closest reference available without extended-precision
+        // arithmetic.  We can compute the TRUE solver error this way, vs the
+        // mere internal-consistency residual that abs_dp measures.
+        auto* be_L = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS_L.get());
+        if (be_L != nullptr) {
+            auto sa = be_L->get_superanc();
+            if (sa) {
+                r.has_superanc = true;
+                const double T_super_min = sa->get_Tmin();
+                const double T_super_max = sa->get_Tcrit_num();
+                if (T >= T_super_min && T <= T_super_max) {
+                    r.in_superanc_range = true;
+                    try {
+                        r.rho_L_super = sa->eval_sat(T, 'D', 0);
+                        r.rho_V_super = sa->eval_sat(T, 'D', 1);
+                        r.p_sat_super = sa->eval_sat(T, 'P', 1);
+
+                        if (r.rho_L_super > 0) {
+                            r.rel_drho_L_default = std::abs(r.rho_L - r.rho_L_super) / r.rho_L_super;
+                            r.rel_drho_L_refined = std::abs(r.rho_L_refined - r.rho_L_super) / r.rho_L_super;
+                        }
+                        if (r.rho_V_super > 0) {
+                            r.rel_drho_V_default = std::abs(r.rho_V - r.rho_V_super) / r.rho_V_super;
+                            r.rel_drho_V_refined = std::abs(r.rho_V_refined - r.rho_V_super) / r.rho_V_super;
+                        }
+                        if (r.p_sat_super > 0) {
+                            r.rel_dp_sat_default = std::abs(r.p_sat - r.p_sat_super) / r.p_sat_super;
+                        }
+                    } catch (...) {
+                        // Superancillary evaluation failed; mark out of range.
+                        r.in_superanc_range = false;
+                    }
+                }
+            }
+        }
+
         r.success = true;
     } catch (CoolProp::CoolPropBaseError& e) {
         r.success = false;
@@ -261,6 +311,9 @@ TEST_CASE("VLE saturation-curve precision stress (triple → critical)", "[vle_t
         std::fprintf(csv, "fluid,T,T_reduced,p_sat,rho_L,rho_V,p_L_eval,p_V_eval,"
                           "abs_dp_Pa,rel_dp,g_L,g_V,rel_dg,"
                           "rho_L_refined,rho_V_refined,abs_dp_refined_Pa,rel_dp_refined,refine_iters,"
+                          "has_superanc,in_superanc_range,rho_L_super,rho_V_super,p_sat_super,"
+                          "rel_drho_L_default,rel_drho_V_default,rel_dp_sat_default,"
+                          "rel_drho_L_refined,rel_drho_V_refined,"
                           "wall_us,success,fail_stage\n");
     }
 
@@ -279,6 +332,11 @@ TEST_CASE("VLE saturation-curve precision stress (triple → critical)", "[vle_t
         int max_refine_iters = 0;
         std::size_t n_success = 0, n_fail = 0;
         double min_p_sat = std::numeric_limits<double>::infinity();
+        // Superancillary truth comparison
+        bool has_super = false;
+        std::size_t n_in_super_range = 0;
+        double worst_rel_drho_L_default = 0, worst_rel_drho_V_default = 0, worst_rel_dp_sat_default = 0;
+        double worst_rel_drho_L_refined = 0, worst_rel_drho_V_refined = 0;
     };
     std::vector<FluidSummary> summaries;
 
@@ -302,10 +360,13 @@ TEST_CASE("VLE saturation-curve precision stress (triple → critical)", "[vle_t
             if (csv) {
                 std::fprintf(csv,
                              "%s,%.6e,%.4f,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,"
-                             "%.6e,%.6e,%.6e,%.6e,%d,%.2f,%d,%s\n",
+                             "%.6e,%.6e,%.6e,%.6e,%d,"
+                             "%d,%d,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,"
+                             "%.2f,%d,%s\n",
                              r.fluid.c_str(), r.T, r.T_reduced, r.p_sat, r.rho_L, r.rho_V, r.p_L_eval, r.p_V_eval, r.abs_dp, r.rel_dp, r.g_L, r.g_V,
-                             r.rel_dg, r.rho_L_refined, r.rho_V_refined, r.abs_dp_refined, r.rel_dp_refined, r.refine_iters, r.wall_us,
-                             r.success ? 1 : 0, r.fail_stage);
+                             r.rel_dg, r.rho_L_refined, r.rho_V_refined, r.abs_dp_refined, r.rel_dp_refined, r.refine_iters, r.has_superanc ? 1 : 0,
+                             r.in_superanc_range ? 1 : 0, r.rho_L_super, r.rho_V_super, r.p_sat_super, r.rel_drho_L_default, r.rel_drho_V_default,
+                             r.rel_dp_sat_default, r.rel_drho_L_refined, r.rel_drho_V_refined, r.wall_us, r.success ? 1 : 0, r.fail_stage);
             }
             if (r.success) {
                 ++fsum.n_success;
@@ -317,12 +378,29 @@ TEST_CASE("VLE saturation-curve precision stress (triple → critical)", "[vle_t
                 if (r.refine_iters > fsum.max_refine_iters) fsum.max_refine_iters = r.refine_iters;
                 if (std::isfinite(r.rel_dg) && r.rel_dg > fsum.worst_rel_dg) fsum.worst_rel_dg = r.rel_dg;
                 if (r.p_sat > 0 && r.p_sat < fsum.min_p_sat) fsum.min_p_sat = r.p_sat;
+                if (r.has_superanc) fsum.has_super = true;
+                if (r.in_superanc_range) {
+                    ++fsum.n_in_super_range;
+                    if (r.rel_drho_L_default > fsum.worst_rel_drho_L_default) fsum.worst_rel_drho_L_default = r.rel_drho_L_default;
+                    if (r.rel_drho_V_default > fsum.worst_rel_drho_V_default) fsum.worst_rel_drho_V_default = r.rel_drho_V_default;
+                    if (r.rel_dp_sat_default > fsum.worst_rel_dp_sat_default) fsum.worst_rel_dp_sat_default = r.rel_dp_sat_default;
+                    if (r.rel_drho_L_refined > fsum.worst_rel_drho_L_refined) fsum.worst_rel_drho_L_refined = r.rel_drho_L_refined;
+                    if (r.rel_drho_V_refined > fsum.worst_rel_drho_V_refined) fsum.worst_rel_drho_V_refined = r.rel_drho_V_refined;
+                }
             } else {
                 ++fsum.n_fail;
             }
         }
         std::printf("%-15s %12.3e %14.3e %14.3e %8d%s\n", fsum.name.c_str(), fsum.min_p_sat, fsum.worst_rel_dp, fsum.worst_rel_dp_refined,
                     fsum.max_refine_iters, fsum.n_fail > 0 ? "  FAILS" : "");
+        if (fsum.has_super && fsum.n_in_super_range > 0) {
+            std::printf("  ↳ vs superancillary: rel_drho_L_default=%.2e  rel_drho_V_default=%.2e  rel_dp_sat_default=%.2e\n",
+                        fsum.worst_rel_drho_L_default, fsum.worst_rel_drho_V_default, fsum.worst_rel_dp_sat_default);
+            std::printf("  ↳ vs superancillary: rel_drho_L_refined=%.2e  rel_drho_V_refined=%.2e\n", fsum.worst_rel_drho_L_refined,
+                        fsum.worst_rel_drho_V_refined);
+        } else if (!fsum.has_super) {
+            std::printf("  ↳ no superancillary available for this fluid\n");
+        }
         if (fsum.n_fail > 0) {
             std::printf("  ↳ %zu/%zu VLE flashes FAILED for this fluid\n", fsum.n_fail, fsum.n_success + fsum.n_fail);
         }

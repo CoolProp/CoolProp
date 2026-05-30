@@ -1,5 +1,19 @@
 # VLE precision near triple point — measurement + recommendations
 
+## The most important finding (added after superancillary comparison)
+
+CoolProp's `QT_INPUTS` for fluids that have a saturation superancillary does **NOT iterate** — it dispatches to `update_QT_pure_superanc` which evaluates Chebyshev expansions fitted at 100-200 digits of working precision. Result: **`p_sat` is bit-exact (0 ULP) and ρ_L, ρ_V are 1-ULP-accurate vs the superancillary across all 10 fluids tested.**
+
+The `|p_L - p_V| / p` metric I called "noise floor" was therefore NOT measuring solver convergence. It was measuring the gap between the superancillary's stored `p_sat(T)` and the EOS evaluation `p(T, ρ_L_superanc)` at that density. That gap is real and bounded by EOS-evaluation precision (~1e-7 to 3e-5 Pa absolute), but it has nothing to do with the saturation solver.
+
+The "refinement" experiment that iterated Akasaka past 1e-10 produced ρ values 10-300 ULPs **further from the superancillary truth** than the default. **In double precision, iterating the EOS Newton step makes the answer worse, not better**, because the EOS's evaluation noise floor is wider than the superancillary's fit precision.
+
+**Implication:** the iterative-precision concern (Propane near triple) is real and quantified — but it applies to **paths that don't have the superancillary in the loop**: PT-inputs near the saturation boundary, HS flash near saturation, custom user iterations on `update_DmolarT_direct`, etc. Anything that goes through `QT_INPUTS` on a superancillary-equipped fluid is already at ground-truth precision.
+
+The recommendations below are reorganized to reflect this.
+
+
+
 **Branch:** `ihb/vle-triple-stress`
 **Test:** `src/Tests/CoolProp-Tests-VLETripleStress.cpp` — `[vle_triple_stress]`
 **Hardware:** Apple Silicon ARM64, Release build, master @ `cbb1686c5` (post-#3041)
@@ -78,9 +92,21 @@ At T_reduced > 0.5, ALL fluids hit the IEEE-double ULP floor (1e-14 to 1e-16 rel
 
 ## Recommendations for improving numerics at the limits
 
-Ordered by impact-to-effort ratio:
+Reorganized after the superancillary finding. The top recommendations now target the iterative paths (PT-near-saturation, HS, etc.) that don't go through `update_QT_pure_superanc`.
+
+### 0. Use the superancillary as an oracle for any iterative path that crosses the saturation boundary (HIGHEST IMPACT, LOW-MEDIUM EFFORT)
+The superancillary captures ρ_L(T), ρ_V(T), p_sat(T) at fitted precision far better than double-precision Newton iteration on the EOS can recover. Any non-QT iterative solver near saturation should:
+
+- **(a) Use the superancillary as the starting point** — not just as an ancillary fit. The K-J residual at the superancillary starting point is already at the noise floor; don't iterate further.
+- **(b) When near the saturation boundary, switch to the superancillary directly** rather than continuing Newton. For PT-flash near saturation, detect proximity (e.g., `|p - p_sat(T)| / p_sat < 1e-4`) and accept the superancillary's (ρ_L, ρ_V) without further iteration.
+- **(c) For HS-flash and similar, use the saturation superancillary's (T, ρ) on the saturation boundary as the entry point** for the single-phase Newton, rather than re-deriving (T, ρ) on the saturation curve via the EOS.
+
+Quantified impact: this gives bit-exact `p_sat` and 1-ULP-accurate densities for free, vs ~10-300 ULPs of drift from double-precision iteration.
+
+Implementation note: CoolProp already does this for QT inputs. Extending to PT-near-saturation and HS-flash would require auditing those code paths to add the "are we near the saturation boundary, do we have a superancillary, can we just use it" branch.
 
 ### 1. Convergence-metric choice matters — and the current Akasaka K-J residual can pessimize pressure equality at triple (HIGH IMPACT, MEDIUM EFFORT)
+*Note: this recommendation now applies primarily to fluids WITHOUT a superancillary (e.g., new fluids, mixture components, REFPROP-backend pure fluids that haven't been fitted). For superancillary-equipped fluids, recommendation #0 makes this moot for the QT path.*
 The refinement experiment shows that for triple-point-class fluids (Propane, Water, Methanol), pushing the K-J residual below 1e-10 actively **degrades** pressure equality. The K-residual is dominated by `log(δ_V)` near triple — tightening it pushes the densities into states where chemical potential matches better but pressure doesn't.
 
 Options:
