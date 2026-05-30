@@ -1403,14 +1403,17 @@ if(COOLPROP_CSHARP_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 
-  if(WIN32)
-    set(MORE_SWIG_FLAGS -dllimport \"CoolProp\")
-  endif()
+  # SWIG's -dllimport sets the library name embedded in the generated C#
+  # [DllImport(...)] attributes.  It must match the renamed native OUTPUT_NAME
+  # ("CoolPropCsharp") on EVERY platform, not just Windows -- otherwise the
+  # macOS/Linux bindings target the default "CoolProp" module name and fail to
+  # load the renamed shared library.
+  set(MORE_SWIG_FLAGS -dllimport \"CoolPropCsharp\")
 
   # Define which headers the CoolProp wrapper is dependent on
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
 
-  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}" "${MORE_SWIG_FLAGS}")
+  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}" "${MORE_SWIG_FLAGS}" "-DSWIG_CSHARP_NO_STRING_WITH_LENGTH_HELPER")
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
   message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
 
@@ -1420,6 +1423,7 @@ if(COOLPROP_CSHARP_MODULE)
                                                    CPLUSPLUS ON)
 
   swig_add_module(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropCsharp")
 
   add_definitions(-DNO_ERROR_CATCHING)
 
@@ -1493,13 +1497,13 @@ if(COOLPROP_VBDOTNET_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB)
 
-  set(MORE_SWIG_FLAGS -dllimport \"CoolProp\" -namespace CoolProp)
+  set(MORE_SWIG_FLAGS -dllimport \"CoolPropCsharp\" -namespace CoolProp)
   set(CMAKE_SWIG_OUTDIR CoolPropVB/CsharpClassLibrary)
 
   # Define which headers the CoolProp wrapper is dependent on
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
 
-  set(SWIG_OPTIONS "${MORE_SWIG_FLAGS}")
+  set(SWIG_OPTIONS "${MORE_SWIG_FLAGS}" "-DSWIG_CSHARP_NO_STRING_WITH_LENGTH_HELPER")
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
   message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
 
@@ -1508,6 +1512,7 @@ if(COOLPROP_VBDOTNET_MODULE)
   set_property(SOURCE ${I_FILE} PROPERTY CPLUSPLUS ON)
   set_property(SOURCE ${I_FILE} PROPERTY SWIG_FLAGS ${SWIG_OPTIONS})
   swig_add_module(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropCsharp")
 
   add_definitions(-DNO_ERROR_CATCHING)
 
@@ -1584,9 +1589,18 @@ if(COOLPROP_R_MODULE)
 
   swig_add_module(CoolProp r ${I_FILE} ${APP_SOURCES})
   swig_link_libraries(CoolProp "${R_LIBRARY}")
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropR")
 
   # No lib prefix for the shared library
   set_target_properties(CoolProp PROPERTIES PREFIX "")
+
+  # Patch the generated R proxy's PACKAGE= references to the renamed library (#1674)
+  add_custom_command(
+    TARGET CoolProp
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -DRFILE=${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R -P
+            ${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/patch_r_package.cmake
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
   add_dependencies(${app_name} generate_headers generate_examples)
   #add_custom_command(TARGET CoolProp
@@ -1634,6 +1648,7 @@ if(COOLPROP_JAVA_MODULE)
 
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   swig_add_module(CoolProp java ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropJava")
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -1782,6 +1797,7 @@ if(COOLPROP_PHP_MODULE)
 
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   swig_add_module(CoolProp php ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropPHP")
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -1794,7 +1810,7 @@ if(COOLPROP_PHP_MODULE)
   add_dependencies(CoolProp generate_headers)
 
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/cross-platform)
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/cross-platform OPTIONAL)
   install(TARGETS ${app_name}
           DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/${CMAKE_SYSTEM_NAME})
 

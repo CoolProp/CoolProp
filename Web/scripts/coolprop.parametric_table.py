@@ -1,6 +1,5 @@
 import CoolProp
 import pandas
-import six
 grouping = dict()
 grouping2 = []
 # Group aliases
@@ -19,7 +18,7 @@ for parameter in CoolProp.get('parameter_list').split(','):
     else:
         grouping[RHS].append(parameter)
 
-for k, v in six.iteritems(grouping):
+for k, v in grouping.items():
     grouping2.append([', '.join(['``' + _ + '``' for _ in v])] + list(k))
 
 headers = ['Parameter', 'Units', 'Input/Output', 'Trivial', 'Description']

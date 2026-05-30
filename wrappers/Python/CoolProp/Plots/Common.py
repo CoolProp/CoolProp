@@ -4,7 +4,6 @@ from __future__ import print_function, division, absolute_import
 import matplotlib.pyplot as plt
 import numpy as np
 from abc import ABCMeta
-from six import with_metaclass
 import warnings
 
 import CoolProp
@@ -202,7 +201,7 @@ class BaseDimension(BaseQuantity):
     def unit(self, value): self._unit = value
 
 
-class PropertyDict(with_metaclass(ABCMeta), object):
+class PropertyDict(object, metaclass=ABCMeta):
     """A collection of dimensions for all the required quantities"""
 
     def __init__(self):
@@ -327,7 +326,7 @@ class EURunits(KSIunits):
         self.T.unit = u'deg C'
 
 
-class Base2DObject(with_metaclass(ABCMeta), object):
+class Base2DObject(object, metaclass=ABCMeta):
     """A container for shared settings and constants for the
     isolines and the property plots."""
 

@@ -15,7 +15,7 @@ Usage
 -----
 At the R console, run::
 
-    dyn.load(paste("CoolProp", .Platform$dynlib.ext, sep=""))
+    dyn.load(paste("CoolPropR", .Platform$dynlib.ext, sep=""))
     source("CoolProp.R")
     cacheMetaData(1)
     PropsSI("T","P",101325,"Q",0,"Water")

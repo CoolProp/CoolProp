@@ -16,7 +16,7 @@ Download the ``platform-independent.7z`` file and expand it to a folder called `
 When you are finished, you should have a folder layout something like ::
 
     main
-     |- CoolProp.dll
+     |- CoolPropJava.dll
      |- Example.java
      |- platform-independent
         |- AbstractState.java

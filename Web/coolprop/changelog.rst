@@ -30,6 +30,17 @@ Highlights:
   ``VectorDouble``/``VectorString`` classes have been removed from
   the exposed surface.
 
+* **SWIG-based language wrappers (C#, VB.NET, Java, R, PHP):** the
+  generated shared library is now language-prefixed —
+  ``CoolPropCsharp`` (C# and VB.NET), ``CoolPropJava``, ``CoolPropR``,
+  ``CoolPropPHP`` — instead of ``CoolProp``. This removes the long-
+  standing name collision with the conventional CoolProp shared
+  library. The CoolProp API (classes, namespaces, functions) is
+  unchanged; only the binary filename and the loader reference change.
+  Update your ``DllImport`` (C#/VB.NET), ``System.loadLibrary`` (Java),
+  or ``dyn.load`` (R) calls to the new name. See GitHub
+  `#1674 <https://github.com/CoolProp/CoolProp/issues/1674>`_.
+
 * Default ``update`` for ``HmolarQ_INPUTS``, ``QSmolar_INPUTS``,
   ``DmolarQ_INPUTS`` (and their mass-input equivalents) on pure fluids
   now raises :cpapi:`CoolProp::MultipleSolutionsError` when the input
@@ -52,6 +63,9 @@ Highlights:
 
 Issues closed:
 
+* `#2254 <https://github.com/CoolProp/CoolProp/issues/2254>`_ : CSharp wrapper folder missing from download location since version 6.4.2
+* `#1674 <https://github.com/CoolProp/CoolProp/issues/1674>`_ : Make the SWIG-generated DLL have a language prefix
+* `#2326 <https://github.com/CoolProp/CoolProp/issues/2326>`_ : EntryPointNotFound after upgrade to newest version
 * `#2189 <https://github.com/CoolProp/CoolProp/issues/2189>`_ : CoolProp C++ High level interface
 * `#2193 <https://github.com/CoolProp/CoolProp/issues/2193>`_ : Handle PowerPC builds transparently
 * `#2194 <https://github.com/CoolProp/CoolProp/issues/2194>`_ : Fix the builds for Windows on ARM and ARM64
