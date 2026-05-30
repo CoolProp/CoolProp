@@ -127,6 +127,7 @@ class GERG2008DepartureFunction : public DepartureFunction
             std::vector<CoolPropDbl> _gamma(gamma.begin() + Npower, gamma.end());
             phi.add_GERG2008Gaussian(_n, _d, _t, _eta, _epsilon, _beta, _gamma);
         }
+        phi.finish();
     };
     ~GERG2008DepartureFunction() = default;
 };
@@ -189,6 +190,7 @@ class ExponentialDepartureFunction : public DepartureFunction
         std::vector<CoolPropDbl> _t(t.begin(), t.begin() + t.size());
         std::vector<CoolPropDbl> _l(l.begin(), l.begin() + l.size());
         phi.add_Power(_n, _d, _t, _l);
+        phi.finish();
     };
     ~ExponentialDepartureFunction() = default;
 };
