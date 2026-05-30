@@ -16,14 +16,12 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
-    paths:
-      # Re-run when anything that can change the stub or its inputs changes.
-      - 'wrappers/Python/CoolProp/**.pyx'
-      - 'wrappers/Python/CoolProp/**.pxd'
-      - 'wrappers/Python/CoolProp/CoolProp.pyi'
-      - 'wrappers/Python/CoolProp/py.typed'
-      - 'dev/stubs/**'
-      - '.github/workflows/python_typestubs.yml'
+    # NO paths filter on purpose.  This check is meant to be REQUIRED for merge,
+    # and a path-filtered required check deadlocks PRs that don't touch the
+    # listed paths (GitHub never reports a status, so the PR waits forever).
+    # The job is build-free and finishes in seconds, so running it on every PR
+    # is cheap.  A C++-only change cannot make the stub stale anyway — stubgen
+    # reads only .pyx/.pxd — so on those PRs all three steps simply pass fast.
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

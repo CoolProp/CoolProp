@@ -29,10 +29,10 @@ to the Cython that *compiles* CoolProp), runs the generator, and writes
 
 ## How sync is enforced (3 layers)
 
-Layers 1–3 are wired as a PR gate in
-`.github/workflows/python_typestubs.yml` (build-free; runs on any change to the
-`.pyx`/`.pxd`/`.pyi` sources or `dev/stubs/`).  Layer 4 (runtime parity) needs a
-compiled CoolProp and runs in the wheel-build workflow instead.
+Layers 1–2 are wired as a PR gate in
+`.github/workflows/python_typestubs.yml` (build-free, runs on every PR so it can
+be a required check without deadlocking path-filtered PRs).  Layer 3 (runtime
+parity) needs a compiled CoolProp and runs in the wheel-build workflow instead.
 
 1. **Drift gate (exact).** CoolProp.pyi is fully generated, so CI can:
    ```bash
