@@ -560,6 +560,13 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
     void allEigen(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 
+    // Apple-only fast path: batches the two per-term exp() calls into vvexp()
+    // calls from Accelerate.framework's vForce.  Bit-equivalent within ULP to
+    // all() on every fluid; only the order of exp() evaluations changes.
+    // Returns immediately as a no-op on non-Apple platforms.  See
+    // src/Helmholtz.cpp for the body.
+    void allFastVDSP(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs);
+
 #if ENABLE_CATCH
     mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
