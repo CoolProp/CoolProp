@@ -47,7 +47,12 @@ jobs:
 
       - name: Build and install
         shell: bash
-        run: cmake --build build --target install --config Release -j
+        # Bound parallelism to the core count.  A bare `-j` lets make spawn an
+        # unlimited number of concurrent compiles (~60+ for the CoolProp lib),
+        # which exhausts RAM on the 16 GB ubuntu runner and gets the runner
+        # OOM-killed ("runner received a shutdown signal", exit 143).  Matches
+        # every other wrapper workflow (library_shared, javascript, mathcad...).
+        run: cmake --build build --target install --config Release -j $(nproc)
 
       - name: Upload per-OS artifact
         uses: actions/upload-artifact@v7
