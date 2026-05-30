@@ -11,6 +11,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
 
+# Default the GITHUB_TOKEN to read-only; jobs that need more opt in explicitly.
+permissions:
+  contents: read
+
 jobs:
   build:
     strategy:
@@ -52,7 +56,11 @@ jobs:
         # which exhausts RAM on the 16 GB ubuntu runner and gets the runner
         # OOM-killed ("runner received a shutdown signal", exit 143).  Matches
         # every other wrapper workflow (library_shared, javascript, mathcad...).
-        run: cmake --build build --target install --config Release -j $(nproc)
+        # `nproc` is Linux-only (and present in Git-Bash on Windows) but absent
+        # on macOS, so fall back to `sysctl`, then a bounded constant.
+        run: |
+          JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
+          cmake --build build --target install --config Release -j "$JOBS"
 
       - name: Upload per-OS artifact
         uses: actions/upload-artifact@v7
@@ -63,6 +71,10 @@ jobs:
   merge:
     needs: build
     runs-on: ubuntu-latest
+    # delete-artifact removes the per-OS intermediates via the Actions API.
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Download per-OS artifacts
         uses: actions/download-artifact@v8

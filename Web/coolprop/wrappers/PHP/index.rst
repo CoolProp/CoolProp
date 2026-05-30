@@ -21,7 +21,7 @@ Pre-Compiled Binaries
 
     extension = "libCoolPropPHP.so"
 
-  after ``[PHP]``. If you didn't copy libCoolPropPHP.so into the folder given by ```php-config --extension-dir``` you will need to use the absolute path
+  after ``[PHP]``. If you didn't copy libCoolPropPHP.so into the folder given by ``php-config --extension-dir`` you will need to use the absolute path
 
 * You can determine the php.ini file that you should be modifying by creating a file on the server with the contents
 

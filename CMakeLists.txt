@@ -1403,9 +1403,12 @@ if(COOLPROP_CSHARP_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 
-  if(WIN32)
-    set(MORE_SWIG_FLAGS -dllimport \"CoolPropCsharp\")
-  endif()
+  # SWIG's -dllimport sets the library name embedded in the generated C#
+  # [DllImport(...)] attributes.  It must match the renamed native OUTPUT_NAME
+  # ("CoolPropCsharp") on EVERY platform, not just Windows -- otherwise the
+  # macOS/Linux bindings target the default "CoolProp" module name and fail to
+  # load the renamed shared library.
+  set(MORE_SWIG_FLAGS -dllimport \"CoolPropCsharp\")
 
   # Define which headers the CoolProp wrapper is dependent on
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
