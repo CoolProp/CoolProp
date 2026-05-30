@@ -76,7 +76,8 @@ Stats stats_of(const std::vector<double>& xs) {
 enum class WhichVariant
 {
     Scalar,
-    FastVDSP
+    FastVDSP,
+    FastNEON
 };
 
 void call_variant(CoolProp::ResidualHelmholtzGeneralizedExponential& gen, WhichVariant which, CoolPropDbl tau, CoolPropDbl delta,
@@ -87,6 +88,9 @@ void call_variant(CoolProp::ResidualHelmholtzGeneralizedExponential& gen, WhichV
             break;
         case WhichVariant::FastVDSP:
             gen.allFastVDSP(tau, delta, d);
+            break;
+        case WhichVariant::FastNEON:
+            gen.allFastNEON(tau, delta, d);
             break;
     }
 }
@@ -229,6 +233,113 @@ TEST_CASE("allFastVDSP equivalence to scalar all()", "[helmholtz_inner_bench_vds
             std::printf("%-14s %4zu   %-20s   %12.3e   %s\n", bp.name, gen.elements.size(), r.desc, worst, worst_field.c_str());
             CHECK(worst < 1e-12);
         }
+    }
+}
+
+TEST_CASE("allFastNEON equivalence to scalar all()", "[helmholtz_inner_bench_neon][.]") {
+    std::printf("\n=== allFastNEON equivalence ===\n");
+    struct TP
+    {
+        double tau, delta;
+        const char* desc;
+    };
+    const std::vector<TP> regimes = {
+      {1.4, 1.1, "near_critical"},
+      {2.0, 2.5, "compressed_liquid"},
+      {0.8, 0.3, "supercritical"},
+      {3.0, 0.01, "dilute_gas"},
+    };
+    double worst_seen = 0.0;
+    std::string worst_label;
+    for (const auto& bp : kBenchPoints) {
+        std::shared_ptr<CoolProp::AbstractState> AS;
+        try {
+            AS.reset(CoolProp::AbstractState::factory("HEOS", bp.name));
+        } catch (...) {
+            continue;
+        }
+        auto* be = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+        if (!be) continue;
+        auto& comps = be->get_components();
+        if (comps.empty()) continue;
+        auto& gen = comps[0].EOS().alphar.GenExp;
+        for (const auto& r : regimes) {
+            CoolProp::HelmholtzDerivatives s{}, v{};
+            gen.all(static_cast<CoolPropDbl>(r.tau), static_cast<CoolPropDbl>(r.delta), s);
+            gen.allFastNEON(static_cast<CoolPropDbl>(r.tau), static_cast<CoolPropDbl>(r.delta), v);
+            struct F
+            {
+                const char* n;
+                double s, v;
+            };
+            const F fs[] = {
+              {"alphar", s.alphar, v.alphar},
+              {"dar_dd", s.dalphar_ddelta, v.dalphar_ddelta},
+              {"dar_dt", s.dalphar_dtau, v.dalphar_dtau},
+              {"d2ar_dd2", s.d2alphar_ddelta2, v.d2alphar_ddelta2},
+              {"d2ar_dt2", s.d2alphar_dtau2, v.d2alphar_dtau2},
+              {"d2ar_ddt", s.d2alphar_ddelta_dtau, v.d2alphar_ddelta_dtau},
+              {"d3ar_dd3", s.d3alphar_ddelta3, v.d3alphar_ddelta3},
+              {"d3ar_dt3", s.d3alphar_dtau3, v.d3alphar_dtau3},
+              {"d4ar_dd4", s.d4alphar_ddelta4, v.d4alphar_ddelta4},
+              {"d4ar_dt4", s.d4alphar_dtau4, v.d4alphar_dtau4},
+            };
+            double worst = 0;
+            std::string worst_field;
+            for (const auto& f : fs) {
+                const double scale = std::max(std::abs(f.s), 1.0);
+                const double rd = std::abs(f.s - f.v) / scale;
+                if (rd > worst) {
+                    worst = rd;
+                    worst_field = f.n;
+                }
+            }
+            if (worst > worst_seen) {
+                worst_seen = worst;
+                worst_label = std::string(bp.name) + " / " + r.desc + " / " + worst_field;
+            }
+            CHECK(worst < 1e-12);
+        }
+    }
+    std::printf("worst across all fluid×regime×field: %.3e (%s)\n", worst_seen, worst_label.c_str());
+}
+
+TEST_CASE("Helmholtz inner-loop: scalar vs allFastNEON", "[helmholtz_inner_bench_neon][.]") {
+    std::printf("\n=== scalar all() vs allFastNEON (vvexp + NEON 2-wide SIMD B-chain) ===\n");
+    std::printf("%-14s %4s   scalar       neon         scalar/neon\n", "fluid", "N");
+    std::printf("%-14s %4s   ------       ----         -----------\n", "-----", "-");
+    double total_scalar = 0, total_neon = 0;
+    std::size_t fluid_count = 0;
+    for (const auto& bp : kBenchPoints) {
+        std::shared_ptr<CoolProp::AbstractState> AS;
+        try {
+            AS.reset(CoolProp::AbstractState::factory("HEOS", bp.name));
+        } catch (...) {
+            continue;
+        }
+        auto* be = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+        if (!be) continue;
+        auto& comps = be->get_components();
+        if (comps.empty()) continue;
+        auto& gen = comps[0].EOS().alphar.GenExp;
+        const auto tau = static_cast<CoolPropDbl>(bp.tau);
+        const auto delta = static_cast<CoolPropDbl>(bp.delta);
+        CoolProp::HelmholtzDerivatives d{};
+        for (std::size_t i = 0; i < 1000; ++i)
+            gen.all(tau, delta, d);
+        for (std::size_t i = 0; i < 1000; ++i)
+            gen.allFastNEON(tau, delta, d);
+        const double scalar_ns = measure_variant(gen, WhichVariant::Scalar, tau, delta);
+        const double neon_ns = measure_variant(gen, WhichVariant::FastNEON, tau, delta);
+        const double ratio = scalar_ns / neon_ns;
+        std::printf("%-14s %4zu   %7.1f      %7.1f      %5.3f%s\n", bp.name, gen.elements.size(), scalar_ns, neon_ns, ratio,
+                    (ratio > 1.0 ? "  ✓" : "  ✗"));
+        total_scalar += scalar_ns;
+        total_neon += neon_ns;
+        ++fluid_count;
+    }
+    if (fluid_count > 0) {
+        std::printf("--- aggregate: scalar %.1f ns, neon %.1f ns, ratio %.3f ---\n", total_scalar, total_neon, total_scalar / total_neon);
     }
 }
 
