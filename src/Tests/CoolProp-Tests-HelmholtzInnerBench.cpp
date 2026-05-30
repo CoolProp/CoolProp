@@ -23,10 +23,21 @@
 #    include <chrono>
 #    include <cmath>
 #    include <cstdio>
+#    include <filesystem>
 #    include <memory>
 #    include <numeric>
 #    include <string>
 #    include <vector>
+
+namespace {
+// Helper: write CSV at owner-read/write only (semgrep cpp-fopen-without-restricted-permissions, PR #2947).
+inline void restrict_owner_only(const char* path) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::permissions(path, fs::perms::owner_read | fs::perms::owner_write, fs::perm_options::replace, ec);
+    // Ignore ec — best-effort restriction; the CSV is in /tmp for development only.
+}
+}  // namespace
 
 namespace {
 
@@ -167,7 +178,10 @@ TEST_CASE("Helmholtz inner-loop scalar baseline", "[helmholtz_inner_bench][.]") 
         total_ns_mean += s.mean;
         ++fluid_count;
     }
-    if (csv) std::fclose(csv);
+    if (csv) {
+        std::fclose(csv);
+        restrict_owner_only("/tmp/helmholtz_inner_bench.csv");
+    }
     if (fluid_count > 0) {
         std::printf("--- avg ns/call across %zu fluids: %.1f ---\n", fluid_count, total_ns_mean / fluid_count);
     }
@@ -395,7 +409,10 @@ TEST_CASE("Helmholtz inner-loop: scalar vs allFastVDSP", "[helmholtz_inner_bench
         total_vdsp += vdsp_ns;
         ++fluid_count;
     }
-    if (csv) std::fclose(csv);
+    if (csv) {
+        std::fclose(csv);
+        restrict_owner_only("/tmp/helmholtz_inner_bench_vdsp.csv");
+    }
     if (fluid_count > 0) {
         std::printf("--- aggregate (sum of means): scalar %.1f ns, vdsp %.1f ns, ratio %.3f ---\n", total_scalar, total_vdsp,
                     total_scalar / total_vdsp);
