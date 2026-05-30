@@ -163,7 +163,10 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
         allFastNEON(tau, delta, derivs);
         return;
     }
+    all_scalar(tau, delta, derivs);
+}
 
+void ResidualHelmholtzGeneralizedExponential::all_scalar(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
     CoolPropDbl log_tau = log(tau), log_delta = log(delta), ndteu = NAN, one_over_delta = 1 / delta,
                 one_over_tau = 1 / tau;  // division is much slower than multiplication, so do one division here
 
@@ -593,29 +596,13 @@ void ResidualHelmholtzGeneralizedExponential::allFastNEON(const CoolPropDbl& tau
         // if a new fluid pushes past 128 terms.
         throw CoolProp::ValueError(format("allFastNEON: N=%zu exceeds kAllFastVDSPMaxN=%zu", N, kAllFastVDSPMaxN));
     }
-    // Common case: pure fluid, finish() called → use the class SoA directly.
-    // Fallback: mixture excess GenExp where finish() wasn't called → copy
-    // AoS to local stack SoA.  Saves ~3*N stores in the common case.
-    alignas(16) double n_local[kAllFastVDSPMaxN];
-    alignas(16) double d_local[kAllFastVDSPMaxN];
-    alignas(16) double t_local[kAllFastVDSPMaxN];
-    const double* n_ptr;
-    const double* d_ptr;
-    const double* t_ptr;
-    if (n.size() == N && d.size() == N && t.size() == N) {
-        n_ptr = n.data();
-        d_ptr = d.data();
-        t_ptr = t.data();
-    } else {
-        for (std::size_t i = 0; i < N; ++i) {
-            n_local[i] = elements[i].n;
-            d_local[i] = elements[i].d;
-            t_local[i] = elements[i].t;
-        }
-        n_ptr = n_local;
-        d_ptr = d_local;
-        t_ptr = t_local;
-    }
+    // The class SoA arrays are guaranteed populated: the caller (all() above)
+    // invokes finish() before dispatch, and finish() is also called by every
+    // DepartureFunction subclass ctor (per PR #3041).  The previous runtime
+    // conditional fallback that handled empty SoA is now dead code.
+    const double* const n_ptr = n.data();
+    const double* const d_ptr = d.data();
+    const double* const t_ptr = t.data();
 
     const double log_tau = std::log(tau);
     const double log_delta = std::log(delta);

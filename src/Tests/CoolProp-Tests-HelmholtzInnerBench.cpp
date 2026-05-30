@@ -201,7 +201,9 @@ TEST_CASE("allFastVDSP equivalence to scalar all()", "[helmholtz_inner_bench_vds
         auto& gen = comps[0].EOS().alphar.GenExp;
         for (const auto& r : regimes) {
             CoolProp::HelmholtzDerivatives s{}, v{};
-            gen.all(static_cast<CoolPropDbl>(r.tau), static_cast<CoolPropDbl>(r.delta), s);
+            // all_scalar bypasses the env-toggled dispatcher so this is a
+            // genuine scalar-vs-NEON/vvexp comparison, not a self-comparison.
+            gen.all_scalar(static_cast<CoolPropDbl>(r.tau), static_cast<CoolPropDbl>(r.delta), s);
             gen.allFastVDSP(static_cast<CoolPropDbl>(r.tau), static_cast<CoolPropDbl>(r.delta), v);
             struct F
             {
@@ -236,7 +238,12 @@ TEST_CASE("allFastVDSP equivalence to scalar all()", "[helmholtz_inner_bench_vds
     }
 }
 
-TEST_CASE("allFastNEON equivalence to scalar all()", "[helmholtz_inner_bench_neon][.]") {
+// Equivalence test runs in CI default (no [.] hide).  Code review of the
+// SIMD branch flagged that running the bespoke PXcdj_sweep alone (which is
+// [.]-hidden) provided no CI coverage of the NEON path's correctness; this
+// test now does, against the genuine scalar body (all_scalar) on every
+// fluid in kBenchPoints across 4 regimes.
+TEST_CASE("allFastNEON equivalence to scalar all()", "[helmholtz_inner_bench_neon][helmholtz_neon_equiv]") {
     std::printf("\n=== allFastNEON equivalence ===\n");
     struct TP
     {
@@ -265,7 +272,9 @@ TEST_CASE("allFastNEON equivalence to scalar all()", "[helmholtz_inner_bench_neo
         auto& gen = comps[0].EOS().alphar.GenExp;
         for (const auto& r : regimes) {
             CoolProp::HelmholtzDerivatives s{}, v{};
-            gen.all(static_cast<CoolPropDbl>(r.tau), static_cast<CoolPropDbl>(r.delta), s);
+            // all_scalar bypasses the env-toggled dispatcher so this is a
+            // genuine scalar-vs-NEON comparison, not a self-comparison.
+            gen.all_scalar(static_cast<CoolPropDbl>(r.tau), static_cast<CoolPropDbl>(r.delta), s);
             gen.allFastNEON(static_cast<CoolPropDbl>(r.tau), static_cast<CoolPropDbl>(r.delta), v);
             struct F
             {

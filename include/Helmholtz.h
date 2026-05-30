@@ -558,6 +558,11 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
 
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
+    /// Pure scalar body of all(), bypassing the env-toggled NEON dispatcher.
+    /// Public so equivalence tests can compare against allFastNEON without
+    /// the dispatcher routing both sides to NEON (self-comparison defect
+    /// caught in the code review of the SIMD branch).
+    void all_scalar(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs);
     void allEigen(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 
     // Apple-only fast path: batches the two per-term exp() calls into vvexp()

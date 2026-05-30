@@ -694,6 +694,13 @@ if(COOLPROP_OBJECT_LIBRARY
 
   if(NOT COOLPROP_OBJECT_LIBRARY)
     target_link_libraries(${LIB_NAME} ${CMAKE_DL_LIBS})
+    # Accelerate.framework provides vvexp() used by allFastVDSP/allFastNEON in
+    # src/Helmholtz.cpp on Apple platforms.  The references are unconditional
+    # under __APPLE__ so the library and every downstream consumer (Python
+    # wheel, shared lib users, MATLAB/Mathcad/EES wrappers) must link it.
+    if(APPLE)
+      target_link_libraries(${LIB_NAME} "-framework Accelerate")
+    endif()
   endif()
 
   # For windows systems, bug workaround for Eigen
