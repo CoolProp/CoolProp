@@ -39,6 +39,12 @@ jobs:
   build:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      # Exposed at job level so the Windows SignPath steps can gate on its
+      # presence in their `if:` conditions (the `env` context is available in
+      # `if`, the `secrets` context is not). Absent on forks / when the secret
+      # is unset, in which case signing no-ops and the build stays unsigned.
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -228,47 +234,77 @@ jobs:
           kill "$APP_PID" "$XVFB_PID" 2>/dev/null || true
           echo "OK: GUI started and screenshot captured"
 
-      # ─── Windows post-build signing ────────────────────────────────────────
-      # Sign the .exe and .msi with the runner's signtool when a code-signing
-      # cert is provided via secrets. Without WINDOWS_CERTIFICATE the step is
-      # a no-op and we ship unsigned binaries (SmartScreen will flag them).
+      # ─── Windows code signing via SignPath (gh CoolProp-dzq.8) ──────────────
+      # SignPath (Foundation OSS) keeps the certificate in its HSM and signs an
+      # *already-uploaded* GitHub artifact — it cannot sign in place the way
+      # signtool did. Flow: upload the unsigned bundle as a throwaway GH
+      # artifact, submit it to SignPath, download the signed bundle back, then
+      # overlay it onto the bundle dir so the Windows smoke test and the release
+      # upload both see signed binaries.
       #
-      # Required secrets to activate:
-      #   WINDOWS_CERTIFICATE          base64 of a .pfx with the signing cert
-      #   WINDOWS_CERTIFICATE_PASSWORD password used during the .pfx export
+      # All steps no-op gracefully when SIGNPATH_API_TOKEN is absent (forks,
+      # secret unset), leaving an unsigned-but-functional build.
       #
-      # SignPath OSS users: replace this step with the SignPath action — see
-      # wrappers/GUI/README.md.
-      - name: Sign Windows .exe and .msi
-        if: matrix.os == 'windows-latest'
+      # signing-policy-slug defaults to 'test-signing', which exercises the full
+      # pipeline with SignPath's untrusted test certificate — it will NOT clear
+      # SmartScreen. Once SignPath Foundation issues the release certificate, set
+      # the repo variable SIGNPATH_POLICY_SLUG=release-signing to go live; no
+      # code change required.
+      - name: Upload unsigned Windows bundle for SignPath
+        id: signpath_upload
+        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
+        uses: actions/upload-artifact@v7
+        with:
+          # Name kept outside the coolprop-gui-* pattern the release job globs,
+          # so this unsigned copy can never reach a release.
+          name: signpath-unsigned-windows
+          path: wrappers/GUI/src-tauri/target/release/bundle
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Sign Windows installers via SignPath
+        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: e6ed0285-8cc0-431c-b527-6502f5b77e94
+          project-slug: coolprop
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'test-signing' }}
+          github-artifact-id: ${{ steps.signpath_upload.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signpath-signed
+
+      - name: Overlay signed Windows installers onto bundle
+        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
         shell: pwsh
-        env:
-          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
-          if (-not $env:WINDOWS_CERTIFICATE) {
-            Write-Host "Windows signing: WINDOWS_CERTIFICATE not set — leaving unsigned."
-            exit 0
-          }
-          $pfx = "$env:RUNNER_TEMP\coolprop-cert.pfx"
-          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
-          $signtool = (Get-ChildItem -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
-            Where-Object { $_.DirectoryName -match '\\x64\\?$' } | Select-Object -First 1).FullName
-          if (-not $signtool) { throw "signtool.exe not found" }
+          # SignPath returns the signed copy of the whole uploaded artifact with
+          # its original layout (msi/, nsis/); copy it back over the bundle dir
+          # so downstream steps consume the signed binaries.
+          $signed = "$PWD\signpath-signed"
           $bundle = "$PWD\wrappers\GUI\src-tauri\target\release\bundle"
-          $targets = @()
-          $targets += Get-ChildItem -Path "$PWD\wrappers\GUI\src-tauri\target\release\*.exe" -File -ErrorAction SilentlyContinue
-          $targets += Get-ChildItem -Path "$bundle\msi\*.msi" -File -ErrorAction SilentlyContinue
-          $targets += Get-ChildItem -Path "$bundle\nsis\*.exe" -File -ErrorAction SilentlyContinue
-          if ($targets.Count -eq 0) { throw "No artifacts to sign" }
-          foreach ($f in $targets) {
-            Write-Host "Signing $($f.FullName)"
-            & $signtool sign /f $pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD `
-              /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 $f.FullName
-            if ($LASTEXITCODE -ne 0) { throw "signtool failed for $($f.FullName)" }
+          if (-not (Test-Path $signed)) { throw "SignPath output dir not found: $signed" }
+          if (-not (Get-ChildItem $signed -Recurse -File)) { throw "SignPath output dir is empty: $signed" }
+          Copy-Item -Path "$signed\*" -Destination $bundle -Recurse -Force
+          Write-Host "Overlaid SignPath-signed artifacts onto $bundle"
+
+          # Verify the overlay actually replaced the installers with signed
+          # ones. Copy-Item overlays the tree rather than replacing it, so a
+          # layout mismatch in SignPath's output could otherwise leave the
+          # original UNSIGNED .msi/.exe in place and ship it under a "signed"
+          # banner. Fail loudly if any installer lacks an Authenticode
+          # signature. (A test-signing cert is untrusted but still produces a
+          # signature, so Status is NotSigned only when truly unsigned.)
+          $installers = @()
+          $installers += Get-ChildItem -Path "$bundle\msi\*.msi" -File -ErrorAction SilentlyContinue
+          $installers += Get-ChildItem -Path "$bundle\nsis\*.exe" -File -ErrorAction SilentlyContinue
+          if ($installers.Count -eq 0) { throw "No .msi/.exe installers found under $bundle to verify" }
+          foreach ($f in $installers) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            Write-Host "$($f.Name): $($sig.Status) — signer: $($sig.SignerCertificate.Subject)"
+            if ($sig.Status -eq 'NotSigned') { throw "Installer not signed after overlay: $($f.FullName)" }
           }
-          Remove-Item $pfx -Force
-          Write-Host "Windows signing: signed $($targets.Count) artifact(s)."
+          Write-Host "Verified $($installers.Count) signed installer(s)."
 
       # ─── macOS smoke test ──────────────────────────────────────────────────
       # Open the bundled .app, poll a screenshot + render check every 2s up

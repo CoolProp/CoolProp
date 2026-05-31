@@ -146,34 +146,36 @@ them to `tauri-action`, which signs the `.app`, staples the notarization
 ticket, and produces a `.dmg` that opens cleanly without the `xattr`
 workaround.
 
-#### Windows — Authenticode signing
+#### Windows — Authenticode signing via SignPath
 
-Two paths supported:
+The workflow signs Windows installers through **SignPath OSS** (free for
+qualifying open-source projects via
+[signpath.io](https://signpath.io/products/foundation)). SignPath keeps the
+certificate in its HSM and signs an *already-uploaded* GitHub artifact, so the
+*Sign Windows installers via SignPath* step uploads the unsigned bundle,
+submits it via `signpath/github-action-submit-signing-request`, and overlays
+the signed installers back onto the bundle dir before the Windows smoke test
+and the release upload. It activates when the `SIGNPATH_API_TOKEN` secret is
+present, and no-ops to an unsigned build when it isn't (forks, secret unset).
 
-- **Direct certificate (any Authenticode cert).** Set:
+| Setting                | Where                | Value                                              |
+|------------------------|----------------------|----------------------------------------------------|
+| `SIGNPATH_API_TOKEN`   | repo **secret**      | SignPath REST API token for the CI user            |
+| organization-id        | hard-coded in YAML   | CoolProp's SignPath org GUID                        |
+| project-slug           | hard-coded in YAML   | `coolprop`                                          |
+| `SIGNPATH_POLICY_SLUG` | repo **variable**    | signing policy slug; defaults to `test-signing`     |
 
-| Secret                          | Value                                       |
-|---------------------------------|---------------------------------------------|
-| `WINDOWS_CERTIFICATE`           | base64 of a `.pfx` containing the cert + key |
-| `WINDOWS_CERTIFICATE_PASSWORD`  | password used during the `.pfx` export       |
+The policy defaults to `test-signing`, which exercises the full pipeline using
+SignPath's **untrusted test certificate** — this validates the wiring but will
+*not* clear SmartScreen. SignPath Foundation issues the trusted release
+certificate only after manually approving the project; once that lands, set the
+repo variable `SIGNPATH_POLICY_SLUG=release-signing` (Settings → Secrets and
+variables → Actions → Variables) to go live with no code change.
 
-  Encode with PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes('cert.pfx')) | Set-Clipboard`.
-  The workflow's *Sign Windows .exe and .msi* step decodes the cert into a
-  temp `.pfx`, locates `signtool.exe` from the bundled Windows Kits, and
-  signs the `target/release/*.exe`, `bundle/msi/*.msi`, and any
-  `bundle/nsis/*.exe` produced by `tauri build`. Timestamp server is
-  DigiCert's free endpoint.
-
-- **SignPath OSS (recommended for OSS projects without a paid cert).**
-  Free for qualifying OSS via [signpath.io](https://signpath.io/products/foundation).
-  Replace the *Sign Windows .exe and .msi* step with the
-  `signpath/github-action-submit-signing-request` action — see SignPath's
-  [GitHub action docs](https://about.signpath.io/documentation/build-system-integration#github-actions)
-  for the exact YAML; you'll set `SIGNPATH_*` secrets instead of
-  `WINDOWS_CERTIFICATE`.
-
-- **Azure Trusted Signing** is also a fit (pay-per-signature, no HSM
-  hardware) — analogous post-build step.
+**Alternatives** (would require swapping the signing step): a direct
+Authenticode `.pfx` via `signtool` (set base64 `WINDOWS_CERTIFICATE` +
+`WINDOWS_CERTIFICATE_PASSWORD` secrets), or **Azure Trusted Signing**
+(pay-per-signature, no HSM hardware).
 
 #### Linux
 
