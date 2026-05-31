@@ -239,7 +239,10 @@ jobs:
           # which shipped the macOS/Windows render checks). A WM maps it.
           # x11-apps provides xwd, the capture fallback if imagemagick's
           # `import` fails; self-provision it rather than lean on the runner image.
-          sudo apt-get install -y --no-install-recommends xvfb imagemagick dbus-x11 openbox x11-apps
+          # xdotool: locate the app's client window so the render check
+          # captures only the WebView content (no WM title bar / root margin).
+          # x11-apps provides xwd, the capture fallback if imagemagick fails.
+          sudo apt-get install -y --no-install-recommends xvfb imagemagick dbus-x11 openbox x11-apps xdotool
           # Pillow drives the blank-render check (same script as macOS/Windows).
           # Try plain first (older pip / non-PEP668), fall back to the
           # PEP668 override on a newer marked interpreter.
@@ -248,13 +251,21 @@ jobs:
           DEB=$(ls "$PWD/wrappers/GUI/src-tauri/target/release/bundle/deb/"*.deb)
           sudo dpkg -i "$DEB" || sudo apt-get install -y -f
           mkdir -p artifacts/screenshots
-          SHOT="artifacts/screenshots/linux-startup.png"
+          SHOT="artifacts/screenshots/linux-startup.png"      # full root (for the artifact)
+          CONTENT="artifacts/screenshots/linux-content.png"    # client window only (for the check)
 
           Xvfb :99 -screen 0 1280x900x24 -ac >/tmp/xvfb.log 2>&1 &
           XVFB_PID=$!
           sleep 2
           export DISPLAY=:99
           export NO_AT_BRIDGE=1
+          # WebKitGTK 2.40+ defaults to a DMABUF / accelerated-compositing
+          # renderer that paints a BLANK page on a headless Xvfb display (no
+          # GPU/EGL) — the window maps but the React UI never appears. Force
+          # the software path so the WebView actually renders in CI.
+          export WEBKIT_DISABLE_DMABUF_RENDERER=1
+          export WEBKIT_DISABLE_COMPOSITING_MODE=1
+          export LIBGL_ALWAYS_SOFTWARE=1
           openbox >/tmp/openbox.log 2>&1 &
           WM_PID=$!
           sleep 1
@@ -276,10 +287,21 @@ jobs:
               cleanup
               exit 1
             fi
+            # Full-root capture for the uploaded artifact (shows window + chrome).
             import -display :99 -window root "$SHOT" \
               || xwd -display :99 -root | convert xwd:- "$SHOT"
+            # The render CHECK runs on the app's CLIENT window only. A full-root
+            # capture false-passes: the openbox title bar + black Xvfb-root
+            # margin alone score std-dev ~35 (> threshold) even when the
+            # WebView content is uniformly blank (verified: blank interior =
+            # std-dev 0). Capturing just the client window means a blank render
+            # scores ~0 and correctly fails (gh CoolProp-dzq.16).
+            WID=$(xdotool search --onlyvisible --name "CoolProp" 2>/dev/null | head -1 || true)
+            if [ -z "$WID" ]; then continue; fi   # window not mapped yet — retry
+            import -display :99 -window "$WID" "$CONTENT" \
+              || xwd -display :99 -id "$WID" | convert xwd:- "$CONTENT"
             RENDER_EXIT=0
-            python3 wrappers/GUI/scripts/check-screenshot-rendered.py "$SHOT" 20 \
+            python3 wrappers/GUI/scripts/check-screenshot-rendered.py "$CONTENT" 20 \
               || RENDER_EXIT=$?
             if [ "$RENDER_EXIT" -eq 0 ]; then
               break
