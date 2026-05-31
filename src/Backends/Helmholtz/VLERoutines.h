@@ -377,6 +377,8 @@ class PTflash_twophase
 
     PTflash_twophase(HelmholtzEOSMixtureBackend& HEOS, PTflash_twophase_options& IO) : HEOS(HEOS), IO(IO) {};
     void solve();
+    void solve_legacy();
+    void solve_michelsen();
     void build_arrays();
 };
 };  // namespace SaturationSolvers

@@ -1,6 +1,7 @@
 
 #include "HelmholtzEOSMixtureBackend.h"
 #include "VLERoutines.h"
+#include <numeric>
 
 #include <cmath>
 #include "CoolProp/numerics/MatrixMath.h"
@@ -2112,6 +2113,13 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_SRK_translated() {
  * Includes a restricted-step line search to handle HEOS density divergence.
  */
 void SaturationSolvers::PTflash_twophase::solve() {
+    if (get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {
+        solve_michelsen();
+    } else {
+        solve_legacy();
+    }
+}
+void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     const std::size_t N = IO.x.size();
     if (!ValidNumber(IO.p)) IO.p = HEOS.p();
     if (!ValidNumber(IO.T)) IO.T = HEOS.T();
@@ -2251,6 +2259,43 @@ void SaturationSolvers::PTflash_twophase::solve() {
         if (!step_ok) break;
     }
     IO.beta = beta;
+}
+
+void SaturationSolvers::PTflash_twophase::solve_legacy() {
+    const std::size_t N = IO.x.size();
+    int iter = 0;
+    double min_rel_change = NAN;
+    do {
+        // Build the Jacobian and residual vectors
+        build_arrays();
+
+        // Solve for the step; v is the step with the contents
+        // [delta(x'_0), delta(x'_1), ..., delta(x'_{N-1}), delta(x''_0), delta(x''_1), ..., delta(x''_{N-1})]
+
+        // Uncomment to see Jacobian and residual at every step
+        //std::cout << vec_to_string(J, "%0.12Lg") << std::endl;
+        //std::cout << vec_to_string(-r, "%0.12Lg") << std::endl;
+
+        Eigen::VectorXd v = J.colPivHouseholderQr().solve(-r);
+
+        for (unsigned int i = 0; i < N - 1; ++i) {
+            err_rel[i] = v[i] / IO.x[i];
+            IO.x[i] += v[i];
+            err_rel[i + (N - 1)] = v[i + (N - 1)] / IO.y[i];
+            IO.y[i] += v[i + (N - 1)];
+        }
+        IO.x[N - 1] = 1 - std::accumulate(IO.x.begin(), IO.x.end() - 1, 0.0);
+        IO.y[N - 1] = 1 - std::accumulate(IO.y.begin(), IO.y.end() - 1, 0.0);
+
+        //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
+
+        min_rel_change = err_rel.cwiseAbs().minCoeff();
+        iter++;
+
+        if (iter == IO.Nstep_max) {
+            throw ValueError(format("PTflash_twophase::call reached max number of iterations [%d]", IO.Nstep_max));
+        }
+    } while (this->error_rms > 1e-9 && min_rel_change > 1000 * DBL_EPSILON && iter < IO.Nstep_max);
 }
 void SaturationSolvers::PTflash_twophase::build_arrays() {
     const std::size_t N = IO.x.size();

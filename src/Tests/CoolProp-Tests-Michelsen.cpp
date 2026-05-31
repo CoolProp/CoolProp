@@ -72,4 +72,23 @@ TEST_CASE("Legacy Stability: check that legacy algorithm still works", "[stabili
     CoolProp::set_config_int(MIXTURE_STABILITY_ALGORITHM, 1);
 }
 
+TEST_CASE("Legacy Flash: check that legacy Jacobian solver still works", "[flash][legacy]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+    std::vector<double> z = {0.5, 0.5};
+    AS->set_mole_fractions(z);
+
+    // Force legacy algorithm via configuration
+    CoolProp::set_config_int(MIXTURE_STABILITY_ALGORITHM, 0);
+
+    // Methane/Ethane at 200K, 1MPa is stable single-phase
+    // For HEOS it might go through PTflash_twophase if it thinks it is twophase
+    // Let's use a state that is definitely twophase to exercise the solver
+    // T = 180K, P = 1MPa for 50/50 Methane/Ethane
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e6, 180.0));
+    CHECK(AS->phase() == CoolProp::iphase_twophase);
+
+    // Reset to default
+    CoolProp::set_config_int(MIXTURE_STABILITY_ALGORITHM, 1);
+}
+
 #endif
