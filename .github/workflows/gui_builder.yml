@@ -110,27 +110,61 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          # Notarization, app-password flow:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Notarization, API-key flow (alternative):
+          # Notarization, App Store Connect API-key flow (preferred):
+          #   APPLE_API_ISSUER     issuer UUID (above the keys table)
+          #   APPLE_API_KEY        the Key ID (short identifier), NOT the key body
+          #   APPLE_API_KEY_BASE64 base64 of the downloaded AuthKey_*.p8 — this
+          #                        step decodes it to a file and exports
+          #                        APPLE_API_KEY_PATH for tauri-action.
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          # Notarization, app-specific-password flow (alternative):
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
         run: |
+          set -euo pipefail
           if [ -z "${APPLE_CERTIFICATE:-}" ]; then
             echo "macOS signing: APPLE_CERTIFICATE not set — building unsigned."
             exit 0
           fi
+          # API-key and app-password notarization are mutually exclusive. If
+          # both sets of secrets are present, tauri-action would silently pick
+          # one — masking a secrets mistake. Reject the ambiguous config.
+          if [ -n "${APPLE_API_KEY_BASE64:-}${APPLE_API_KEY:-}${APPLE_API_ISSUER:-}" ] \
+             && [ -n "${APPLE_ID:-}${APPLE_PASSWORD:-}" ]; then
+            echo "::error::Both API-key (APPLE_API_*) and app-password (APPLE_ID/APPLE_PASSWORD) notarization secrets are set — configure exactly one flow."
+            exit 1
+          fi
+          # Forward the signing + plain-string notarization vars to later steps
+          # (tauri-action reads them straight from the environment).
           for var in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY \
-                     APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID \
-                     APPLE_API_ISSUER APPLE_API_KEY APPLE_API_KEY_PATH; do
+                     APPLE_TEAM_ID APPLE_ID APPLE_PASSWORD \
+                     APPLE_API_ISSUER APPLE_API_KEY; do
             val=$(printenv "$var" 2>/dev/null || true)
             if [ -n "$val" ]; then
               printf '%s<<__SIGN_EOF__\n%s\n__SIGN_EOF__\n' "$var" "$val" >> "$GITHUB_ENV"
             fi
           done
+          # API-key flow: tauri-action wants APPLE_API_KEY_PATH to point at the
+          # actual AuthKey_*.p8 on disk, so decode the base64 secret to a file
+          # and export the path. base64.b64decode tolerates wrapped/unwrapped
+          # input (it drops non-alphabet chars), sidestepping BSD-vs-GNU
+          # base64 flag differences on the macOS runner.
+          if [ -n "${APPLE_API_KEY_BASE64:-}" ]; then
+            # Fail fast on a half-configured API-key flow rather than letting
+            # tauri-action fail later with an opaque notarization error.
+            if [ -z "${APPLE_API_KEY:-}" ] || [ -z "${APPLE_API_ISSUER:-}" ]; then
+              echo "::error::APPLE_API_KEY_BASE64 is set but APPLE_API_KEY (Key ID) and/or APPLE_API_ISSUER is missing — the API-key notarization flow needs all three."
+              exit 1
+            fi
+            key_path="$RUNNER_TEMP/AuthKey.p8"
+            KEY_PATH="$key_path" python3 -c 'import base64,os; open(os.environ["KEY_PATH"],"wb").write(base64.b64decode(os.environ["APPLE_API_KEY_BASE64"]))'
+            chmod 600 "$key_path"
+            echo "APPLE_API_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+            echo "macOS signing: decoded App Store Connect API key to $key_path."
+          fi
           echo "macOS signing: APPLE_* env forwarded to subsequent steps."
 
       # Builds the frontend (Vite), compiles CoolProp via build.rs (CMake),
@@ -228,47 +262,102 @@ jobs:
           kill "$APP_PID" "$XVFB_PID" 2>/dev/null || true
           echo "OK: GUI started and screenshot captured"
 
-      # ─── Windows post-build signing ────────────────────────────────────────
-      # Sign the .exe and .msi with the runner's signtool when a code-signing
-      # cert is provided via secrets. Without WINDOWS_CERTIFICATE the step is
-      # a no-op and we ship unsigned binaries (SmartScreen will flag them).
+      # ─── Windows code signing via SignPath (gh CoolProp-dzq.8) ──────────────
+      # SignPath (Foundation OSS) keeps the certificate in its HSM and signs an
+      # *already-uploaded* GitHub artifact — it cannot sign in place the way
+      # signtool did. Flow: upload the unsigned bundle as a throwaway GH
+      # artifact, submit it to SignPath, download the signed bundle back, then
+      # overlay it onto the bundle dir so the Windows smoke test and the release
+      # upload both see signed binaries.
       #
-      # Required secrets to activate:
-      #   WINDOWS_CERTIFICATE          base64 of a .pfx with the signing cert
-      #   WINDOWS_CERTIFICATE_PASSWORD password used during the .pfx export
+      # All steps no-op gracefully when SIGNPATH_API_TOKEN is absent (forks,
+      # secret unset), leaving an unsigned-but-functional build.
       #
-      # SignPath OSS users: replace this step with the SignPath action — see
-      # wrappers/GUI/README.md.
-      - name: Sign Windows .exe and .msi
+      # signing-policy-slug defaults to 'test-signing', which exercises the full
+      # pipeline with SignPath's untrusted test certificate — it will NOT clear
+      # SmartScreen. Once SignPath Foundation issues the release certificate, set
+      # the repo variable SIGNPATH_POLICY_SLUG=release-signing to go live; no
+      # code change required.
+      # Confine SIGNPATH_API_TOKEN to this probe step (and the signing action's
+      # `with:` input below) rather than exposing it to every matrix job via a
+      # job-level env. Emits a boolean the Windows signing steps gate on.
+      # 'false' on forks / when the secret is unset -> bundle stays unsigned.
+      - name: Check SignPath availability
+        id: signpath_check
         if: matrix.os == 'windows-latest'
-        shell: pwsh
+        shell: bash
         env:
-          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
         run: |
-          if (-not $env:WINDOWS_CERTIFICATE) {
-            Write-Host "Windows signing: WINDOWS_CERTIFICATE not set — leaving unsigned."
-            exit 0
-          }
-          $pfx = "$env:RUNNER_TEMP\coolprop-cert.pfx"
-          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
-          $signtool = (Get-ChildItem -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
-            Where-Object { $_.DirectoryName -match '\\x64\\?$' } | Select-Object -First 1).FullName
-          if (-not $signtool) { throw "signtool.exe not found" }
+          if [ -n "${SIGNPATH_API_TOKEN:-}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "SignPath: token not set — Windows bundle stays unsigned."
+          fi
+
+      - name: Upload unsigned Windows bundle for SignPath
+        id: signpath_upload
+        if: matrix.os == 'windows-latest' && steps.signpath_check.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          # Name kept outside the coolprop-gui-* pattern the release job globs,
+          # so this unsigned copy can never reach a release.
+          name: signpath-unsigned-windows
+          path: wrappers/GUI/src-tauri/target/release/bundle
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Sign Windows installers via SignPath
+        if: matrix.os == 'windows-latest' && steps.signpath_check.outputs.enabled == 'true'
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: e6ed0285-8cc0-431c-b527-6502f5b77e94
+          project-slug: coolprop
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'test-signing' }}
+          github-artifact-id: ${{ steps.signpath_upload.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signpath-signed
+
+      - name: Overlay signed Windows installers onto bundle
+        if: matrix.os == 'windows-latest' && steps.signpath_check.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          # SignPath returns the signed copy of the whole uploaded artifact with
+          # its original layout (msi/, nsis/); copy it back over the bundle dir
+          # so downstream steps consume the signed binaries.
+          $signed = "$PWD\signpath-signed"
           $bundle = "$PWD\wrappers\GUI\src-tauri\target\release\bundle"
-          $targets = @()
-          $targets += Get-ChildItem -Path "$PWD\wrappers\GUI\src-tauri\target\release\*.exe" -File -ErrorAction SilentlyContinue
-          $targets += Get-ChildItem -Path "$bundle\msi\*.msi" -File -ErrorAction SilentlyContinue
-          $targets += Get-ChildItem -Path "$bundle\nsis\*.exe" -File -ErrorAction SilentlyContinue
-          if ($targets.Count -eq 0) { throw "No artifacts to sign" }
-          foreach ($f in $targets) {
-            Write-Host "Signing $($f.FullName)"
-            & $signtool sign /f $pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD `
-              /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 $f.FullName
-            if ($LASTEXITCODE -ne 0) { throw "signtool failed for $($f.FullName)" }
+          if (-not (Test-Path $signed)) { throw "SignPath output dir not found: $signed" }
+          if (-not (Get-ChildItem $signed -Recurse -File)) { throw "SignPath output dir is empty: $signed" }
+          Copy-Item -Path "$signed\*" -Destination $bundle -Recurse -Force
+          Write-Host "Overlaid SignPath-signed artifacts onto $bundle"
+
+          # Verify the overlay actually replaced the installers with signed
+          # ones. Copy-Item overlays the tree rather than replacing it, so a
+          # layout mismatch in SignPath's output could otherwise leave the
+          # original UNSIGNED .msi/.exe in place and ship it under a "signed"
+          # banner. Fail loudly if any installer lacks an Authenticode
+          # signature. (A test-signing cert is untrusted but still produces a
+          # signature, so Status is NotSigned only when truly unsigned.)
+          $installers = @()
+          $installers += Get-ChildItem -Path "$bundle\msi\*.msi" -File -ErrorAction SilentlyContinue
+          $installers += Get-ChildItem -Path "$bundle\nsis\*.exe" -File -ErrorAction SilentlyContinue
+          if ($installers.Count -eq 0) { throw "No .msi/.exe installers found under $bundle to verify" }
+          foreach ($f in $installers) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            Write-Host "$($f.Name): $($sig.Status) — signer: $($sig.SignerCertificate.Subject)"
+            # Hard-fail on a genuinely bad signature: NotSigned (overlay left
+            # the unsigned original) or HashMismatch (tampered/corrupt). A
+            # test-signing cert yields 'UnknownError' (untrusted chain) and a
+            # release cert yields 'Valid' — both acceptable, so don't reject
+            # everything that isn't 'Valid' (that would fail test-signing).
+            if ($sig.Status -eq 'NotSigned' -or $sig.Status -eq 'HashMismatch') {
+              throw "Installer signature invalid ($($sig.Status)) after overlay: $($f.FullName)"
+            }
           }
-          Remove-Item $pfx -Force
-          Write-Host "Windows signing: signed $($targets.Count) artifact(s)."
+          Write-Host "Verified $($installers.Count) signed installer(s)."
 
       # ─── macOS smoke test ──────────────────────────────────────────────────
       # Open the bundled .app, poll a screenshot + render check every 2s up
