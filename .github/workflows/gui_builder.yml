@@ -237,12 +237,15 @@ jobs:
           # uniform black frame and the render check was meaningless on Linux
           # — process-liveness only (gh CoolProp-dzq.16, follow-up to dzq.15
           # which shipped the macOS/Windows render checks). A WM maps it.
-          # x11-apps provides xwd, the capture fallback if imagemagick's
-          # `import` fails; self-provision it rather than lean on the runner image.
-          # xdotool: locate the app's client window so the render check
-          # captures only the WebView content (no WM title bar / root margin).
-          # x11-apps provides xwd, the capture fallback if imagemagick fails.
-          sudo apt-get install -y --no-install-recommends xvfb imagemagick dbus-x11 openbox x11-apps xdotool
+          # Headless rendering + capture toolchain:
+          #   openbox         WM so the WebView window maps onto the Xvfb root
+          #   x11-apps        xwd — capture fallback if imagemagick's import fails
+          #   xdotool         locate the app's client window (capture content only)
+          #   libgl1-mesa-dri Mesa software GL (llvmpipe); LIBGL_ALWAYS_SOFTWARE
+          #                   has nothing to load without it, so WebKitGTK's GL
+          #                   init fails and the page paints blank
+          sudo apt-get install -y --no-install-recommends \
+            xvfb imagemagick dbus-x11 openbox x11-apps xdotool libgl1-mesa-dri
           # Pillow drives the blank-render check (same script as macOS/Windows).
           # Try plain first (older pip / non-PEP668), fall back to the
           # PEP668 override on a newer marked interpreter.
@@ -254,18 +257,24 @@ jobs:
           SHOT="artifacts/screenshots/linux-startup.png"      # full root (for the artifact)
           CONTENT="artifacts/screenshots/linux-content.png"    # client window only (for the check)
 
-          Xvfb :99 -screen 0 1280x900x24 -ac >/tmp/xvfb.log 2>&1 &
+          # +extension GLX +render so Mesa can create a (software) GL context
+          # on the virtual display.
+          Xvfb :99 -screen 0 1280x900x24 -ac +extension GLX +render -noreset >/tmp/xvfb.log 2>&1 &
           XVFB_PID=$!
           sleep 2
           export DISPLAY=:99
           export NO_AT_BRIDGE=1
-          # WebKitGTK 2.40+ defaults to a DMABUF / accelerated-compositing
-          # renderer that paints a BLANK page on a headless Xvfb display (no
-          # GPU/EGL) — the window maps but the React UI never appears. Force
-          # the software path so the WebView actually renders in CI.
+          # Make WebKitGTK actually paint on a GPU-less Xvfb display:
+          #  - disable the DMABUF / accelerated-compositing path (needs real EGL)
+          #  - force Mesa's llvmpipe software rasterizer (driver pkg installed above)
+          # Without this the window maps but the React UI never appears (blank).
           export WEBKIT_DISABLE_DMABUF_RENDERER=1
           export WEBKIT_DISABLE_COMPOSITING_MODE=1
           export LIBGL_ALWAYS_SOFTWARE=1
+          export GALLIUM_DRIVER=llvmpipe
+          # WebKitGTK spawns Network/Web helper processes that need a session
+          # bus; without one they fail to initialise and the page stays blank.
+          eval "$(dbus-launch --sh-syntax)"
           openbox >/tmp/openbox.log 2>&1 &
           WM_PID=$!
           sleep 1
@@ -276,7 +285,7 @@ jobs:
           # and Windows steps so WebView cold-start jitter doesn't flake a
           # fixed sleep (CoolProp-8j0). Fast renders exit in a couple seconds;
           # a persistently blank frame fails at the deadline.
-          cleanup() { kill "$APP_PID" "$WM_PID" "$XVFB_PID" 2>/dev/null || true; }
+          cleanup() { kill "$APP_PID" "$WM_PID" "$XVFB_PID" "${DBUS_SESSION_BUS_PID:-}" 2>/dev/null || true; }
           DEADLINE=$(( $(date +%s) + 30 ))
           RENDER_EXIT=1
           while [ "$(date +%s)" -lt "$DEADLINE" ]; do
@@ -318,6 +327,10 @@ jobs:
 
           if [ "$RENDER_EXIT" -ne 0 ]; then
             echo "FAIL: screenshot looks blank — render didn't paint (gh-2825 regression?)"
+            echo "── coolprop-gui stderr (WebKit/GL diagnostics) ──"
+            cat /tmp/coolprop-gui.log || true
+            echo "── Xvfb log ──"
+            tail -40 /tmp/xvfb.log || true
             exit 1
           fi
           echo "OK: GUI started, rendered, and screenshot captured"
