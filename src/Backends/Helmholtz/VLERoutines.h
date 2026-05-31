@@ -359,8 +359,7 @@ struct PTflash_twophase_options
       y,                         ///< Vapor mole fractions
       z;                         ///< Bulk mole fractions
     PTflash_twophase_options()
-      : Nstep_max(30), Nsteps(0), omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE), beta(0.5) {
-    }
+      : Nstep_max(30), Nsteps(0), omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE), beta(0.5) {}
 };
 
 class PTflash_twophase
