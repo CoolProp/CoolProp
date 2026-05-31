@@ -238,29 +238,73 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: |
           set -e
-          sudo apt-get install -y --no-install-recommends xvfb imagemagick dbus-x11
+          # openbox: without a window manager the WebView window is never
+          # mapped onto the Xvfb root, so `import -window root` grabbed a
+          # uniform black frame and the render check was meaningless on Linux
+          # — process-liveness only (gh CoolProp-dzq.16, follow-up to dzq.15
+          # which shipped the macOS/Windows render checks). A WM maps it.
+          # x11-apps provides xwd, the capture fallback if imagemagick's
+          # `import` fails; self-provision it rather than lean on the runner image.
+          sudo apt-get install -y --no-install-recommends xvfb imagemagick dbus-x11 openbox x11-apps
+          # Pillow drives the blank-render check (same script as macOS/Windows).
+          # Try plain first (older pip / non-PEP668), fall back to the
+          # PEP668 override on a newer marked interpreter.
+          python3 -m pip install --quiet --disable-pip-version-check Pillow \
+            || python3 -m pip install --quiet --disable-pip-version-check --break-system-packages Pillow
           DEB=$(ls "$PWD/wrappers/GUI/src-tauri/target/release/bundle/deb/"*.deb)
           sudo dpkg -i "$DEB" || sudo apt-get install -y -f
           mkdir -p artifacts/screenshots
+          SHOT="artifacts/screenshots/linux-startup.png"
+
           Xvfb :99 -screen 0 1280x900x24 -ac >/tmp/xvfb.log 2>&1 &
           XVFB_PID=$!
           sleep 2
           export DISPLAY=:99
           export NO_AT_BRIDGE=1
+          openbox >/tmp/openbox.log 2>&1 &
+          WM_PID=$!
+          sleep 1
           /usr/bin/coolprop-gui >/tmp/coolprop-gui.log 2>&1 &
           APP_PID=$!
-          sleep 8
-          if ! kill -0 "$APP_PID" 2>/dev/null; then
-            echo "FAIL: GUI exited within 8s; log:"
-            cat /tmp/coolprop-gui.log
+
+          # Poll capture + render-check every 2s up to 30s — mirrors the macOS
+          # and Windows steps so WebView cold-start jitter doesn't flake a
+          # fixed sleep (CoolProp-8j0). Fast renders exit in a couple seconds;
+          # a persistently blank frame fails at the deadline.
+          cleanup() { kill "$APP_PID" "$WM_PID" "$XVFB_PID" 2>/dev/null || true; }
+          DEADLINE=$(( $(date +%s) + 30 ))
+          RENDER_EXIT=1
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            sleep 2
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              echo "FAIL: GUI exited before render; log:"
+              cat /tmp/coolprop-gui.log
+              cleanup
+              exit 1
+            fi
+            import -display :99 -window root "$SHOT" \
+              || xwd -display :99 -root | convert xwd:- "$SHOT"
+            RENDER_EXIT=0
+            python3 wrappers/GUI/scripts/check-screenshot-rendered.py "$SHOT" 20 \
+              || RENDER_EXIT=$?
+            if [ "$RENDER_EXIT" -eq 0 ]; then
+              break
+            fi
+            if [ "$RENDER_EXIT" -ge 2 ]; then
+              cleanup
+              echo "FAIL: render check failed to run (exit $RENDER_EXIT)"
+              exit "$RENDER_EXIT"
+            fi
+          done
+
+          ls -la "$SHOT"
+          cleanup
+
+          if [ "$RENDER_EXIT" -ne 0 ]; then
+            echo "FAIL: screenshot looks blank — render didn't paint (gh-2825 regression?)"
             exit 1
           fi
-          echo "GUI alive (PID $APP_PID), capturing screenshot…"
-          import -display :99 -window root artifacts/screenshots/linux-startup.png \
-            || xwd -display :99 -root | convert xwd:- artifacts/screenshots/linux-startup.png
-          ls -la artifacts/screenshots/linux-startup.png
-          kill "$APP_PID" "$XVFB_PID" 2>/dev/null || true
-          echo "OK: GUI started and screenshot captured"
+          echo "OK: GUI started, rendered, and screenshot captured"
 
       # ─── Windows code signing via SignPath (gh CoolProp-dzq.8) ──────────────
       # SignPath (Foundation OSS) keeps the certificate in its HSM and signs an
