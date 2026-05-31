@@ -521,6 +521,12 @@ export default function HumidAirCalculator() {
         <Plot
           data={plotData}
           layout={{
+            // Constant uirevision preserves the user's zoom/pan across the
+            // frequent re-renders this component does (hover readout, recompute,
+            // panel resize). Without it Plotly re-applies the hardcoded
+            // xaxis.range below on every render and snaps the view back — which
+            // looked like "zoom is broken".
+            uirevision: "humidair",
             margin: { l: 60, r: 70, t: 30, b: 50 },
             xaxis: {
               title: { text: "Dry-bulb temperature (K)" },
@@ -534,7 +540,9 @@ export default function HumidAirCalculator() {
             paper_bgcolor: "#fff",
             font: { size: 12 },
           }}
-          config={{ responsive: true, displayModeBar: false }}
+          // scrollZoom: wheel-zoom; drag-select zoom and double-click-to-reset
+          // work too (displayModeBar stays off to keep the chart uncluttered).
+          config={{ responsive: true, displayModeBar: false, scrollZoom: true }}
           style={{ width: "100%", height: "100%" }}
           useResizeHandler
           onInitialized={(_, gd) => { graphDivRef.current = gd as HTMLDivElement; }}
