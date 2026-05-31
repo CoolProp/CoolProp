@@ -82,19 +82,39 @@ Produces a bundle for the host platform under
 CI (`.github/workflows/gui_builder.yml`) builds these bundles on every push
 to GUI-affecting paths and uploads them as artifacts.
 
-### Running an unsigned macOS bundle (CI artifact)
+### Downloading a build
 
-CI artifacts are not currently signed or notarized. macOS Gatekeeper will
-block them on first launch ("App is damaged" or "from an unidentified
-developer"). To launch:
+For end users the intended channel is a **GitHub Release** (created by
+pushing a `gui-v*` tag): each installer is attached as a *direct* download —
+the macOS `.dmg`, the Windows `.msi` / `-setup.exe`, the Linux `.deb` /
+`.rpm` / `.AppImage`.
+
+The per-build **CI artifacts** (`coolprop-gui-<os>`) are for testing. GitHub
+always wraps an artifact in a `.zip`, so you download e.g.
+`coolprop-gui-macos-latest.zip` and unzip it. The artifact is curated to the
+installers only:
+
+- **macOS** — open `dmg/CoolProp_*.dmg`, then drag the app to Applications.
+  Do **not** try to launch a `.app` pulled straight out of a zip: a macOS app
+  bundle loses the bits that make it launchable through a plain zip, so the
+  `.dmg` is the correct, self-contained format. (`*.app.tar.gz` is the
+  auto-updater payload, not a download.)
+- **Windows** — run `msi/CoolProp_*.msi` (or `nsis/CoolProp_*-setup.exe`).
+- **Linux** — install `deb/*.deb` or `rpm/*.rpm`, or run `appimage/*.AppImage`.
+
+### Gatekeeper / SmartScreen on unsigned builds
+
+A build produced without active signing is **unsigned**, and macOS Gatekeeper
+blocks an unsigned `.dmg`/`.app` on first launch ("App is damaged" / "from an
+unidentified developer"). Clear quarantine to run it:
 
 ```sh
-xattr -dr com.apple.quarantine /path/to/CoolProp.app
-open /path/to/CoolProp.app
+xattr -dr com.apple.quarantine /Applications/CoolProp.app
+open /Applications/CoolProp.app
 ```
 
-The same applies if you run a `.app` extracted from a CI-built `.dmg` —
-strip quarantine on the installed copy after dragging it to Applications.
+Signed + notarized builds (release tags) open with no workaround. See **Code
+signing (production)** below for what enables signing.
 
 ### Code signing (production)
 

@@ -528,7 +528,25 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: coolprop-gui-${{ matrix.os }}
-          path: wrappers/GUI/src-tauri/target/release/bundle
+          # Upload only the user-facing installers (+ the updater .tar.gz/.sig
+          # the release job consumes), NOT the whole bundle tree. Two reasons:
+          #  - the raw macos/CoolProp.app directory is BROKEN once GitHub
+          #    re-zips the artifact (a macOS app bundle loses its signature /
+          #    executable bits through a plain zip) — the .dmg is the correct,
+          #    self-contained macOS format to ship;
+          #  - bundle_dmg.sh / icon.icns / create-dmg are build scaffolding.
+          # Including all of that made the download confusing about what to open.
+          # Each glob matches only on the OS that produces it; if-no-files-found
+          # checks the aggregate, so every OS still uploads its installer(s).
+          path: |
+            wrappers/GUI/src-tauri/target/release/bundle/dmg/*.dmg
+            wrappers/GUI/src-tauri/target/release/bundle/macos/*.app.tar.gz
+            wrappers/GUI/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig
+            wrappers/GUI/src-tauri/target/release/bundle/deb/*.deb
+            wrappers/GUI/src-tauri/target/release/bundle/rpm/*.rpm
+            wrappers/GUI/src-tauri/target/release/bundle/appimage/*.AppImage
+            wrappers/GUI/src-tauri/target/release/bundle/msi/*.msi
+            wrappers/GUI/src-tauri/target/release/bundle/nsis/*-setup.exe
           if-no-files-found: error
           retention-days: 7
 
