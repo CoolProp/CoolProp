@@ -170,6 +170,17 @@ the signed installers back onto the bundle dir before the Windows smoke test
 and the release upload. It activates when the `SIGNPATH_API_TOKEN` secret is
 present, and no-ops to an unsigned build when it isn't (forks, secret unset).
 
+**Signing is opt-in** to avoid a SignPath email on every GUI build (SignPath
+has no per-state notification filter). A signing request fires only when:
+
+- the triggering commit's message contains the marker **`[gui-sign]`**, or
+- the build is for a **`gui-v*` release tag** (releases are always signed).
+
+Routine GUI commits therefore build unsigned and send no email; add
+`[gui-sign]` to a commit message (or push a release tag) when you want to
+exercise/validate SignPath. macOS notarization is *not* gated this way — it
+runs on every build whenever the Apple secrets are present.
+
 | Setting                | Where                | Value                                              |
 |------------------------|----------------------|----------------------------------------------------|
 | `SIGNPATH_API_TOKEN`   | repo **secret**      | SignPath REST API token for the CI user            |
