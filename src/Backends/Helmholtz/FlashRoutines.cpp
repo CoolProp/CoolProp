@@ -60,7 +60,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
     } else {
         if (HEOS.imposed_phase_index == iphase_not_imposed) {
             // Blind flash call
-            // Following the strategy of Gernert, 2014
+            // Instantiates stability tester (dispatches to Michelsen or Gernert based on config)
             StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
             if (!stability_tester.is_stable()) {
                 // There is a phase split and liquid and vapor phases are formed
@@ -73,13 +73,23 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 o.omega = 1.0;
                 CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
                 solver.solve();
+                // Fallback block: Catches mathematically trivial splits (beta ~ 0 or 1) caused by boundary
+                // floating-point noise in the Michelsen TPD solver, or false positives if using the legacy solver.
                 if (o.beta < 1e-10) {
                     HEOS.update_DmolarT_direct(o.rhomolar_liq, HEOS.T());
-                    try { HEOS.recalculate_singlephase_phase(); } catch (...) { HEOS._phase = iphase_liquid; }
+                    try {
+                        HEOS.recalculate_singlephase_phase();
+                    } catch (...) {
+                        HEOS._phase = iphase_liquid;
+                    }
                     HEOS._Q = -1;
                 } else if (o.beta > 1.0 - 1e-10) {
                     HEOS.update_DmolarT_direct(o.rhomolar_vap, HEOS.T());
-                    try { HEOS.recalculate_singlephase_phase(); } catch (...) { HEOS._phase = iphase_gas; }
+                    try {
+                        HEOS.recalculate_singlephase_phase();
+                    } catch (...) {
+                        HEOS._phase = iphase_gas;
+                    }
                     HEOS._Q = -1;
                 } else {
                     HEOS._phase = iphase_twophase;
@@ -94,8 +104,11 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 try {
                     HEOS.recalculate_singlephase_phase();
                 } catch (...) {
-                    if (rho < HEOS.Reducing->rhormolar(HEOS.get_mole_fractions())) { HEOS._phase = iphase_gas; }
-                    else { HEOS._phase = iphase_liquid; }
+                    if (rho < HEOS.Reducing->rhormolar(HEOS.get_mole_fractions())) {
+                        HEOS._phase = iphase_gas;
+                    } else {
+                        HEOS._phase = iphase_liquid;
+                    }
                 }
             }
         } else {
