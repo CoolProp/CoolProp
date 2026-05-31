@@ -118,11 +118,13 @@ One-time setup:
    → *Export*, choose Personal Information Exchange (.p12), set a password.
 4. **Base64-encode it for GitHub.**
    `base64 -i Cert.p12 | pbcopy` — paste into the GitHub secret value.
-5. **Generate a notarytool API key (recommended over app-passwords).**
+5. **Generate an App Store Connect API key (preferred over app-passwords —
+   it isn't tied to a person and won't break on 2FA / password changes).**
    App Store Connect → Users and Access → Integrations → App Store Connect
-   API → `+` → grant "Developer" role. Download the `.p8` once (you can't
-   get it back) and note the Issuer ID and Key ID. Base64 the `.p8`:
-   `base64 -i AuthKey_XXXXXXXXXX.p8 | pbcopy`.
+   API → `+` → grant the **Developer** role. Download the `.p8` once (you
+   can't get it back), and note the **Issuer ID** (the UUID above the keys
+   table) and the **Key ID** (the short identifier in the Key ID column).
+   Base64 the `.p8`: `base64 -i AuthKey_XXXXXXXXXX.p8 | pbcopy`.
 6. **Add the GitHub secrets** (Repo Settings → Secrets and variables →
    Actions → New repository secret):
 
@@ -135,11 +137,21 @@ One-time setup:
 
 Then **one** of the two notarization flows:
 
-- **API key flow (recommended):** `APPLE_API_KEY` (base64 of the `.p8`),
-  `APPLE_API_ISSUER` (Issuer ID UUID), `APPLE_API_KEY_PATH` (path the
-  workflow should write the decoded `.p8` to, e.g. `~/AuthKey.p8`).
-- **App-password flow:** `APPLE_ID` (Apple-ID email), `APPLE_PASSWORD`
-  (app-specific password from appleid.apple.com → Sign-In and Security).
+- **API-key flow (preferred):** three secrets —
+
+  | Secret                 | Value                                                       |
+  |------------------------|-------------------------------------------------------------|
+  | `APPLE_API_ISSUER`     | Issuer ID (UUID above the keys table)                       |
+  | `APPLE_API_KEY`        | **Key ID** — the short identifier, *not* the key body       |
+  | `APPLE_API_KEY_BASE64` | base64 of the downloaded `AuthKey_*.p8`                      |
+
+  The *Configure macOS signing* step decodes `APPLE_API_KEY_BASE64` to a
+  file on the runner and sets `APPLE_API_KEY_PATH` itself — you do **not**
+  add `APPLE_API_KEY_PATH` as a secret.
+
+- **App-specific-password flow (alternative):** `APPLE_ID` (Apple-ID email)
+  and `APPLE_PASSWORD` (app-specific password from appleid.apple.com →
+  Sign-In and Security). Uses `APPLE_TEAM_ID` from the table above.
 
 Once those exist, the workflow's *Configure macOS signing* step forwards
 them to `tauri-action`, which signs the `.app`, staples the notarization
