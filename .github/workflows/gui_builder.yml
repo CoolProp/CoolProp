@@ -271,7 +271,8 @@ jobs:
       # upload both see signed binaries.
       #
       # All steps no-op gracefully when SIGNPATH_API_TOKEN is absent (forks,
-      # secret unset), leaving an unsigned-but-functional build.
+      # secret unset) OR when the opt-in marker is missing (see the probe step
+      # above) — leaving an unsigned-but-functional build and sending no email.
       #
       # signing-policy-slug defaults to 'test-signing', which exercises the full
       # pipeline with SignPath's untrusted test certificate — it will NOT clear
@@ -288,12 +289,34 @@ jobs:
         shell: bash
         env:
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # On a PR the checked-out HEAD is a synthetic merge commit, so resolve
+          # the PR's real head SHA; on push/tag use the pushed SHA.
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          if [ -n "${SIGNPATH_API_TOKEN:-}" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
+          if [ -z "${SIGNPATH_API_TOKEN:-}" ]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             echo "SignPath: token not set — Windows bundle stays unsigned."
+            exit 0
+          fi
+          # Opt-in signing. SignPath has no per-state notification filter, so a
+          # signing request (and its email) fires ONLY when explicitly asked:
+          # the HEAD commit message carries the [gui-sign] marker, or this is a
+          # gui-v* release tag (releases are always signed). Routine GUI pushes
+          # then build unsigned and send no email. The commit message is read
+          # via the API so this works on PRs (merge-commit checkout) too.
+          msg=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}" --jq '.commit.message' 2>/dev/null || echo "")
+          sign=false
+          case "${GITHUB_REF:-}" in
+            refs/tags/gui-v*) sign=true ;;
+          esac
+          if printf '%s' "$msg" | grep -qF '[gui-sign]'; then sign=true; fi
+          if [ "$sign" = true ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "SignPath: signing enabled ([gui-sign] marker or gui-v* tag)."
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "SignPath: opt-in marker absent — skipping signing (no email). Add [gui-sign] to the commit message, or push a gui-v* tag, to sign + exercise SignPath."
           fi
 
       - name: Upload unsigned Windows bundle for SignPath
