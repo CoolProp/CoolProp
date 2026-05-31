@@ -172,6 +172,15 @@ certificate only after manually approving the project; once that lands, set the
 repo variable `SIGNPATH_POLICY_SLUG=release-signing` (Settings → Secrets and
 variables → Actions → Variables) to go live with no code change.
 
+**Signing the installed app binary too.** The CI step uploads the whole
+bundle (the `.msi` and the NSIS `-setup.exe`), so the *installed* executable
+(`coolprop-gui.exe`, embedded inside those installers) can be signed in the
+same request — no CI change needed. Enable it portal-side by ticking **"Sign
+nested files"** on the SignPath *artifact configuration*; SignPath then signs
+both the outer installer and the PE files it contains in a single pass. The
+workflow's post-overlay `Get-AuthenticodeSignature` check only verifies the
+outer installers; trust SignPath's nested-signing for the embedded binary.
+
 **Alternatives** (would require swapping the signing step): a direct
 Authenticode `.pfx` via `signtool` (set base64 `WINDOWS_CERTIFICATE` +
 `WINDOWS_CERTIFICATE_PASSWORD` secrets), or **Azure Trusted Signing**
