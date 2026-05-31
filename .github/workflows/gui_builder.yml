@@ -222,18 +222,12 @@ jobs:
               echo "OK: all shared libraries resolve on ubuntu:26.04"
             '
 
-      # 2) Launch the GUI on the runner under Xvfb, wait for the window,
-      #    capture a screenshot, and confirm the process is still alive.
-      #    Catches "binary starts but crashes initializing the WebView" and
-      #    "WebKit2GTK loads but the page never paints" types of bugs that
-      #    a static dep check can't see.
-      #
-      # TODO(CoolProp-dzq.16): Linux is currently capturing the bare Xvfb
-      # root (1-bit black) because we don't run a window manager — the
-      # GUI process opens but its window doesn't get composited onto the
-      # virtual display. Adding a tiny WM (openbox, metacity) before the
-      # launch would fix the capture and let us run the same blank-render
-      # check that macOS + Windows now use.
+      # 2) Launch the GUI on the runner under Xvfb (with a window manager so
+      #    the WebView maps onto the root), then poll a screenshot + render
+      #    check until the UI paints. Catches "binary starts but crashes
+      #    initializing the WebView" and "WebKit2GTK loads but the page never
+      #    paints" bugs that a static dep check — or a bare liveness check —
+      #    can't see.
       - name: Smoke-test Ubuntu launch + screenshot (Xvfb)
         if: matrix.os == 'ubuntu-22.04'
         run: |
