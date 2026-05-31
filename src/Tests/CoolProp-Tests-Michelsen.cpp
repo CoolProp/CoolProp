@@ -57,4 +57,19 @@ TEST_CASE("Michelsen Flash: Multi-component convergence (4-comp mix)", "[michels
     CHECK(AS->rhomolar() > 0);
 }
 
+TEST_CASE("Legacy Stability: check that legacy algorithm still works", "[stability][legacy]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+    std::vector<double> z = {0.5, 0.5};
+    AS->set_mole_fractions(z);
+
+    // Force legacy algorithm via configuration
+    CoolProp::set_config_int(MIXTURE_STABILITY_ALGORITHM, 0);
+
+    // Methane/Ethane at 200K, 1MPa is stable single-phase
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e6, 200.0));
+
+    // Reset to default
+    CoolProp::set_config_int(MIXTURE_STABILITY_ALGORITHM, 1);
+}
+
 #endif
