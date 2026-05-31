@@ -290,7 +290,7 @@ jobs:
 
       - name: Sign Windows installers via SignPath
         if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
-        uses: signpath/github-action-submit-signing-request@v1
+        uses: signpath/github-action-submit-signing-request@v2
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: e6ed0285-8cc0-431c-b527-6502f5b77e94
