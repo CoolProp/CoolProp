@@ -39,12 +39,6 @@ jobs:
   build:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    env:
-      # Exposed at job level so the Windows SignPath steps can gate on its
-      # presence in their `if:` conditions (the `env` context is available in
-      # `if`, the `secrets` context is not). Absent on forks / when the secret
-      # is unset, in which case signing no-ops and the build stays unsigned.
-      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -134,6 +128,14 @@ jobs:
           if [ -z "${APPLE_CERTIFICATE:-}" ]; then
             echo "macOS signing: APPLE_CERTIFICATE not set — building unsigned."
             exit 0
+          fi
+          # API-key and app-password notarization are mutually exclusive. If
+          # both sets of secrets are present, tauri-action would silently pick
+          # one — masking a secrets mistake. Reject the ambiguous config.
+          if [ -n "${APPLE_API_KEY_BASE64:-}${APPLE_API_KEY:-}${APPLE_API_ISSUER:-}" ] \
+             && [ -n "${APPLE_ID:-}${APPLE_PASSWORD:-}" ]; then
+            echo "::error::Both API-key (APPLE_API_*) and app-password (APPLE_ID/APPLE_PASSWORD) notarization secrets are set — configure exactly one flow."
+            exit 1
           fi
           # Forward the signing + plain-string notarization vars to later steps
           # (tauri-action reads them straight from the environment).
@@ -276,9 +278,27 @@ jobs:
       # SmartScreen. Once SignPath Foundation issues the release certificate, set
       # the repo variable SIGNPATH_POLICY_SLUG=release-signing to go live; no
       # code change required.
+      # Confine SIGNPATH_API_TOKEN to this probe step (and the signing action's
+      # `with:` input below) rather than exposing it to every matrix job via a
+      # job-level env. Emits a boolean the Windows signing steps gate on.
+      # 'false' on forks / when the secret is unset -> bundle stays unsigned.
+      - name: Check SignPath availability
+        id: signpath_check
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+        run: |
+          if [ -n "${SIGNPATH_API_TOKEN:-}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "SignPath: token not set — Windows bundle stays unsigned."
+          fi
+
       - name: Upload unsigned Windows bundle for SignPath
         id: signpath_upload
-        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
+        if: matrix.os == 'windows-latest' && steps.signpath_check.outputs.enabled == 'true'
         uses: actions/upload-artifact@v7
         with:
           # Name kept outside the coolprop-gui-* pattern the release job globs,
@@ -289,7 +309,7 @@ jobs:
           retention-days: 1
 
       - name: Sign Windows installers via SignPath
-        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
+        if: matrix.os == 'windows-latest' && steps.signpath_check.outputs.enabled == 'true'
         uses: signpath/github-action-submit-signing-request@v2
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -301,7 +321,7 @@ jobs:
           output-artifact-directory: signpath-signed
 
       - name: Overlay signed Windows installers onto bundle
-        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
+        if: matrix.os == 'windows-latest' && steps.signpath_check.outputs.enabled == 'true'
         shell: pwsh
         run: |
           # SignPath returns the signed copy of the whole uploaded artifact with
@@ -328,7 +348,14 @@ jobs:
           foreach ($f in $installers) {
             $sig = Get-AuthenticodeSignature $f.FullName
             Write-Host "$($f.Name): $($sig.Status) — signer: $($sig.SignerCertificate.Subject)"
-            if ($sig.Status -eq 'NotSigned') { throw "Installer not signed after overlay: $($f.FullName)" }
+            # Hard-fail on a genuinely bad signature: NotSigned (overlay left
+            # the unsigned original) or HashMismatch (tampered/corrupt). A
+            # test-signing cert yields 'UnknownError' (untrusted chain) and a
+            # release cert yields 'Valid' — both acceptable, so don't reject
+            # everything that isn't 'Valid' (that would fail test-signing).
+            if ($sig.Status -eq 'NotSigned' -or $sig.Status -eq 'HashMismatch') {
+              throw "Installer signature invalid ($($sig.Status)) after overlay: $($f.FullName)"
+            }
           }
           Write-Host "Verified $($installers.Count) signed installer(s)."
 
