@@ -15,6 +15,8 @@ name: Development checks
 #                  (informational, never gates)
 #   iwyu         — push to master + PR + workflow_dispatch + scheduled
 #                  weekly fallback (informational, never gates)
+#   type-stubs   — push to master + PR (build-free; gates the checked-in
+#                  Cython type stubs). No paths filter so it can be required.
 
 on:
   push:
@@ -366,3 +368,52 @@ jobs:
           name: CoolProp-${{ github.sha }}-iwyu
           path: iwyu.log
           if-no-files-found: warn
+
+  type-stubs:
+    name: python type stubs (PEP 561)
+    # Gates the checked-in Cython type stubs (wrappers/Python/CoolProp/*.pyi).
+    # Build-free (no C++ compile): the stub is generated from the .pyx/.pxd
+    # sources by a pinned dev toolchain and committed, so CI only proves it is
+    # (1) in sync, (2) valid under pyright, (3) valid under mypy. See
+    # dev/stubs/README.md. Runs on push to master + every PR — deliberately NO
+    # paths filter, so it can be a required check without deadlocking PRs that
+    # do not touch the stub paths (a path-filtered required check never reports
+    # a status and the PR waits forever). A C++-only change cannot make the stub
+    # stale (stubgen reads only .pyx/.pxd), so those PRs just pass fast.
+    # The runtime symbol-parity test (dev/stubs/test_stub_parity.py) needs a
+    # source-built CoolProp and runs in the wheel-build workflow, not here.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      # uv/uvx for the on-demand, version-pinned pyright + mypy runs.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      # 1. Drift gate (exact). Regenerate from the Cython sources with the pinned
+      #    generator toolchain (gen_stubs.sh provisions its own venv); any diff
+      #    means a .pyx changed without regenerating the .pyi.
+      - name: Drift gate (regenerate + diff)
+        run: |
+          ./dev/stubs/gen_stubs.sh
+          if ! git diff --exit-code -- 'wrappers/Python/CoolProp/*.pyi'; then
+            echo "::error::CoolProp.pyi is out of sync with the Cython sources. Run dev/stubs/gen_stubs.sh and commit the result."
+            exit 1
+          fi
+
+      # 2. Type-correctness (static, pinned). pyright resolves CoolProp from the
+      #    source tree (extraPaths) and needs numpy stubs; the smoke file uses
+      #    typing.assert_type, so it is checked, not executed.
+      - name: pyright type smoke
+        run: uvx --with numpy pyright@1.1.409 --project dev/stubs/pyrightconfig.smoke.json
+
+      # 3. Stub validity under mypy. --ignore-missing-imports drops noise from
+      #    sibling modules mypy pulls in transitively; the stub must be clean.
+      - name: mypy stub check
+        run: uvx mypy@1.19.1 --ignore-missing-imports wrappers/Python/CoolProp/CoolProp.pyi
