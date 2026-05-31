@@ -5581,6 +5581,72 @@ TEST_CASE("DmassSmass round-trip on the dew curve preserves enthalpy (#1907)", "
     }
 }
 
+TEST_CASE("D+{H,S,U} round-trip for sub-triple compressed-liquid water (CoolProp-lgk)", "[water_flash][HSU_D_subtriple][lgk]") {
+    // Dense liquid water exists below the triple-point temperature (273.16 K)
+    // wherever the state is above the melting curve Tmelt(p): ~266 K at 100 MPa,
+    // down toward ~251 K near the 209 MPa melting minimum.  IAPWS-95 is valid
+    // there, so a density+caloric flash must round-trip these compressed-liquid
+    // states.  Previously PHSU_D_flash bracketed the single-phase T-search at
+    // [Ttriple, Tmax*1.5] and threw "D < DLtriple" for any state colder than the
+    // triple-point isochore (i.e. all T < Ttriple), even above the melting line.
+    auto ref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    auto rt = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double Tt = Props1SI("Water", "Ttriple");
+
+    const CoolProp::input_pairs pair = GENERATE(CoolProp::DmassHmass_INPUTS, CoolProp::DmassSmass_INPUTS, CoolProp::DmassUmass_INPUTS);
+    CAPTURE(static_cast<int>(pair));
+
+    for (double p : {100e6, 150e6, 200e6}) {
+        const double Tmelt = ref->melting_line(CoolProp::iT, CoolProp::iP, p);
+        CAPTURE(p, Tmelt, Tt);
+        // The sampled band is [Tmelt+1, Tt-0.5]; require it non-inverted so the
+        // sweep genuinely lands below the triple point (not a vacuous pass).
+        REQUIRE(Tmelt + 1.0 < Tt - 0.5);
+        // Strictly above the melting curve, strictly below the triple point.
+        for (double T : linspace(Tmelt + 1.0, Tt - 0.5, 6)) {
+            CAPTURE(T);
+            ref->update(CoolProp::PT_INPUTS, p, T);
+            const double d = ref->rhomass();
+            double other = 0;
+            switch (pair) {
+                case CoolProp::DmassHmass_INPUTS:
+                    other = ref->hmass();
+                    break;
+                case CoolProp::DmassSmass_INPUTS:
+                    other = ref->smass();
+                    break;
+                default:
+                    other = ref->umass();
+                    break;
+            }
+            CAPTURE(d, other);
+            REQUIRE_NOTHROW(rt->update(pair, d, other));
+            CHECK(rt->rhomass() == Catch::Approx(d).epsilon(1e-5));
+            CHECK(rt->T() == Catch::Approx(T).epsilon(1e-4));
+        }
+    }
+
+    // Deep point near the melting-curve minimum (~251.2 K at ~208.5 MPa, the
+    // coldest liquid water attainable).  A coarse-scan-only floor lands ~1 K
+    // high (~252.3 K) and would wrongly reject this valid liquid state; the
+    // refined two-stage melting-minimum search must round-trip it.
+    {
+        const double p = 208.5e6;
+        const double Tmelt = ref->melting_line(CoolProp::iT, CoolProp::iP, p);
+        const double T = Tmelt + 0.5;  // valid liquid just above the melting line, well below Ttriple
+        REQUIRE(T < Tt);
+        ref->update(CoolProp::PT_INPUTS, p, T);
+        const double d = ref->rhomass();
+        const double other = (pair == CoolProp::DmassHmass_INPUTS)   ? ref->hmass()
+                             : (pair == CoolProp::DmassSmass_INPUTS) ? ref->smass()
+                                                                     : ref->umass();
+        CAPTURE(p, Tmelt, T, d, other);
+        REQUIRE_NOTHROW(rt->update(pair, d, other));
+        CHECK(rt->rhomass() == Catch::Approx(d).epsilon(1e-5));
+        CHECK(rt->T() == Catch::Approx(T).epsilon(1e-4));
+    }
+}
+
 TEST_CASE("REFPROP DmolarSmolar honours imposed phase (#2042)", "[REFPROP][2042]") {
     CoolProp::Skip_if_No_REFPROP();
     // Issue #2042: a multi-component natural-gas mixture with phase

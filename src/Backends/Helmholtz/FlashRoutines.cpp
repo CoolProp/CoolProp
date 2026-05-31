@@ -2007,7 +2007,100 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                 HEOS._phase = iphase_liquid;
                 HEOS._Q = 10000;
             } else {
-                throw ValueError(format("D < DLtriple %g %g", value, y));
+                // value <= y means the requested state sits below the triple-point
+                // isochore (T < Ttriple).  Compressed liquid still exists there
+                // above the melting curve (e.g. water down to ~251 K near the
+                // 209 MPa melting minimum; IAPWS-95 stays valid), so extend the
+                // single-phase solve below the triple point to the coldest point
+                // on the melting line rather than rejecting outright.  Only fluids
+                // with a melting line have a defined sub-triple liquid region
+                // (CoolProp-lgk).
+                if (!HEOS.has_melting_line()) {
+                    throw ValueError(format("D < DLtriple %g %g", value, y));
+                }
+                // Coldest liquid temperature = the global minimum of the melting
+                // curve.  The curve can be non-monotonic in p (water dips to
+                // ~251 K near 209 MPa) and its minimum can sit at a non-smooth
+                // segment corner, so neither the endpoint-based
+                // MeltingLineVariables::Tmin nor a single coarse scan pinpoints
+                // it: sweep coarsely in log(p), then refine linearly around the
+                // best point.  For normal fluids whose melting temperature rises
+                // monotonically with pressure this stays at ~Ttriple, so the sign
+                // check below still rejects (correctly -- they have no sub-triple
+                // liquid region).
+                MeltingLineVariables& ml = component.ancillaries.melting_line;
+                auto Tmelt_at = [&](CoolPropDbl p) -> CoolPropDbl {
+                    try {
+                        return HEOS.melting_line(iT, iP, p);
+                    } catch (...) {
+                        return _HUGE;  // p outside this curve's valid range; ignore this sample
+                    }
+                };
+                CoolPropDbl T_lo = ml.Tmin;
+                if (ml.pmin > 0 && ml.pmax > ml.pmin) {
+                    const int Ncoarse = 100;
+                    CoolPropDbl p_best = ml.pmin;
+                    for (int i = 0; i <= Ncoarse; ++i) {
+                        const CoolPropDbl p_scan = ml.pmin * std::pow(ml.pmax / ml.pmin, static_cast<CoolPropDbl>(i) / Ncoarse);
+                        const CoolPropDbl Tm = Tmelt_at(p_scan);
+                        if (Tm < T_lo) {
+                            T_lo = Tm;
+                            p_best = p_scan;
+                        }
+                    }
+                    // Refine within +/- one coarse log-step of the best pressure.
+                    const CoolPropDbl step = std::pow(ml.pmax / ml.pmin, 1.0 / Ncoarse);
+                    const CoolPropDbl p_a = (std::max)(ml.pmin, p_best / step);
+                    const CoolPropDbl p_b = (std::min)(ml.pmax, p_best * step);
+                    const int Nfine = 200;
+                    for (int i = 0; i <= Nfine; ++i) {
+                        const CoolPropDbl p_scan = p_a + (p_b - p_a) * static_cast<CoolPropDbl>(i) / Nfine;
+                        const CoolPropDbl Tm = Tmelt_at(p_scan);
+                        if (Tm < T_lo) {
+                            T_lo = Tm;
+                        }
+                    }
+                }
+                // y_lo is the caloric value on the requested isochore at the
+                // coldest liquid temperature.  Using the curve's global minimum
+                // (rather than the melting point at this exact density) makes the
+                // floor conservative on rejection: states below it are genuinely
+                // solid, while a thin metastable sliver just below the per-density
+                // melting point may still be accepted -- it round-trips correctly.
+                CoolPropDbl y_lo = NAN;
+                switch (other) {
+                    case iSmolar:
+                        y_lo = HEOS.calc_smolar_nocache(T_lo, HEOS._rhomolar);
+                        break;
+                    case iHmolar:
+                        y_lo = HEOS.calc_hmolar_nocache(T_lo, HEOS._rhomolar);
+                        break;
+                    case iUmolar:
+                        y_lo = HEOS.calc_umolar_nocache(T_lo, HEOS._rhomolar);
+                        break;
+                    default:  // iP
+                        y_lo = HEOS.calc_pressure_nocache(T_lo, HEOS._rhomolar);
+                        break;
+                }
+                if (!ValidNumber(y_lo) || value < y_lo) {
+                    // Colder than the coldest liquid attainable at this density:
+                    // genuinely below the melting line (solid / out of range).
+                    throw ValueError(format("D+X below melting line [other=%d]: %g < %g at Tmelt_min %g K", other, value, y_lo, T_lo));
+                }
+                solver_resid resid(&HEOS, HEOS._rhomolar, value, other, T_lo, TLtriple);
+                HEOS._phase = iphase_liquid;
+                CoolPropDbl T_converged;
+                try {
+                    T_converged = Halley(resid, 0.5 * (T_lo + TLtriple), DBL_EPSILON, 100);
+                } catch (...) {
+                    T_converged = Brent(resid, T_lo, TLtriple, DBL_EPSILON, 1e-12, 100);
+                }
+                // Re-evaluate at converged (rho, T) so alphar cache is
+                // consistent with the final state (#1907).
+                HEOS.unspecify_phase();
+                HEOS.update_DmolarT_direct(HEOS._rhomolar, T_converged);
+                HEOS._phase = iphase_liquid;
+                HEOS._Q = 10000;
             }
         }
         // Update the state for conditions where the state was guessed
