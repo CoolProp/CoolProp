@@ -1,4 +1,5 @@
 import { COOLPROP_VERSION, COOLPROP_GIT_HASH, NOTICES } from "../generated/notices";
+import { SPONSOR_URL } from "../constants";
 
 interface Props {
   onClose: () => void;
@@ -28,6 +29,12 @@ export default function AboutModal({ onClose }: Props) {
             >
               CoolProp
             </a>. Released under the MIT license.
+          </p>
+          <p>
+            Support CoolProp:{" "}
+            <a href={SPONSOR_URL} target="_blank" rel="noreferrer">
+              💚 Sponsor on GitHub
+            </a>
           </p>
 
           <details className="about-notices">

@@ -55,6 +55,7 @@ Help
 * (**Bugs, feature requests**) File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
 * `Docs for v4 of CoolProp <http://www.coolprop.org/v4/>`_
 * `Docs for development version of CoolProp <http://www.coolprop.org/dev/>`_
+* (**Support the project**) :ref:`Sponsor CoolProp <sponsor>`
 
 Projects Using CoolProp
 -----------------------------------

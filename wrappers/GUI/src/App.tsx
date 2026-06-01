@@ -5,6 +5,8 @@ import SaturationView from "./components/SaturationView";
 import HumidAirCalculator from "./components/HumidAirCalculator";
 import AboutModal from "./components/AboutModal";
 import UpdateChecker from "./components/UpdateChecker";
+import SponsorSplash from "./components/SponsorSplash";
+import { SPONSOR_URL } from "./constants";
 
 type Tab = "calculator" | "saturation" | "humidair" | "diagram";
 export type Basis = "mass" | "molar";
@@ -48,6 +50,15 @@ export default function App() {
               ))}
             </div>
           )}
+          <a
+            className="tab-btn sponsor-btn"
+            href={SPONSOR_URL}
+            target="_blank"
+            rel="noreferrer"
+            title="Support CoolProp on GitHub Sponsors"
+          >
+            💚 Sponsor
+          </a>
           <button
             className="tab-btn about-btn"
             onClick={() => setAboutOpen(true)}
@@ -74,6 +85,7 @@ export default function App() {
       </main>
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       <UpdateChecker />
+      <SponsorSplash />
     </div>
   );
 }
