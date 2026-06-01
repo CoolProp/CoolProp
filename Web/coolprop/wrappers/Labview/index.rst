@@ -13,7 +13,7 @@ Pre-compiled Binaries for windows
 Shared library
 --------------
 
-You will need to download the release shared library for windows from :sfdownloads:`sourceforge <shared_library/Windows>` or the development version of the shared library from :sfnightly:`the buildbot server <shared_library/Windows>`.  If you are on 32-bit windows, download the __cdecl version.  For 64-bit, there is only one calling convention.
+You will need to download the release shared library for windows from :sfdownloads:`sourceforge <shared_library/Windows>` or the development version of the shared library from :sfnightly:`the nightly builds <shared_library/Windows>`.  If you are on 32-bit windows, download the __cdecl version.  For 64-bit, there is only one calling convention.
 
 Place the downloaded shared library next to your library
 
@@ -45,7 +45,7 @@ To compile::
 Use pre-built toolchain from FirstForge
 ---------------------------------------
 
-Instructions from http://firstforge.wpi.edu/sf/wiki/do/viewPage/projects.c--11_toochain/wiki/BinaryInstall
+Instructions adapted from the WPILib C++11 toolchain wiki (formerly on FirstForge, no longer available).
 
 Debian GNU/Linux (Wheezy/Testing)
 
@@ -55,11 +55,11 @@ This currently uses GCC 4.8.0 and Binutils 2.22-8 (default in debian testing).
 
 Add this line to /etc/apt/sources.list to add the repository::
 
-    deb http://debian.repo.frc.s3.amazonaws.com jessie main
+    deb https://debian.repo.frc.s3.amazonaws.com jessie main
 
 Add the maintainer key for the repository::
 
-    sudo wget http://debian.repo.frc.s3.amazonaws.com/rbmj.gpg.key
+    sudo wget https://debian.repo.frc.s3.amazonaws.com/rbmj.gpg.key
     sudo apt-key add rbmj.gpg.key
 
 Run the following commands::
@@ -74,7 +74,7 @@ Set the WIND_BASE environmental variable (or add to ~/.profile)::
 Building your own toolchain for VxWorks Target
 ----------------------------------------------
 
-Instructions from http://firstforge.wpi.edu/sf/wiki/do/viewPage/projects.c--11_toochain/wiki/ManualInstall
+Instructions adapted from the WPILib C++11 toolchain wiki (formerly on FirstForge, no longer available).
 
 Generic Linux/UNIX
 
@@ -82,8 +82,8 @@ These are the instructions to build from source manually. Note that some lines b
 
 1: Download all the components::
 
-    $ wget http://ftp.gnu.org/gnu/gcc/gcc-4.8.2/gcc-4.8.2.tar.bz2
-    $ wget http://ftp.gnu.org/gnu/binutils/binutils-2.23.1.tar.bz2
+    $ wget https://ftp.gnu.org/gnu/gcc/gcc-4.8.2/gcc-4.8.2.tar.bz2
+    $ wget https://ftp.gnu.org/gnu/binutils/binutils-2.23.1.tar.bz2
     $ wget ftp://ftp.ni.com/pub/devzone/tut/updated_vxworks63gccdist.zip
 
 2: Set WIND_BASE::

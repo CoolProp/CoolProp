@@ -7,7 +7,7 @@ PHP Wrapper
 Pre-Compiled Binaries
 =====================
 
-* Download the shared library for your architecture from :sfdownloads:`PHP`, or from the development buildbot server at :sfnightly:`PHP`.  Also download the CoolProp.php platform-independent file.  Or build it yourself (see below)
+* Download the shared library for your architecture from :sfdownloads:`PHP`, or from the nightly builds at :sfnightly:`PHP`.  Also download the CoolProp.php platform-independent file.  Or build it yourself (see below)
 
 * Copy the libCoolPropPHP.so file into the extension-dir for php::
 

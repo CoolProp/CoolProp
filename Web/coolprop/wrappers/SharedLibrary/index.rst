@@ -12,16 +12,16 @@ Shared libraries are compiled code that can be accessed by other programs.  On w
 
 There are a few things that need to be considered when determining what shared library you should build/use:
 
-* `Calling convention <http://en.wikipedia.org/wiki/Calling_convention>`_: ``__stdcall`` or ``__cdecl`` - only a consideration on 32-bit windows
+* `Calling convention <https://en.wikipedia.org/wiki/Calling_convention>`_: ``__stdcall`` or ``__cdecl`` - only a consideration on 32-bit windows
 * Architecture: 32-bit or 64-bit
 * Compiler: Visual Studio, Mingw, GCC, clang
 
 Pre-Compiled Binaries
 ======================
 
-Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the development versions from the buildbot server at :sfnightly:`shared_library`.
+Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the nightly development versions at :sfnightly:`shared_library`.
 
-Users of the Borland compiler might find these instructions useful for using Visual Studio compiled shared libraries with Borland compiler: http://bcbjournal.org/articles/vol4/0012/Using_Visual_C_DLLs_with_CBuilder.htm
+Users of the Borland compiler might find these instructions useful for using Visual Studio compiled shared libraries with Borland compiler: https://bcbjournal.org/articles/vol4/0012/Using_Visual_C_DLLs_with_CBuilder.htm
 
 User-Compiled Binaries
 ======================
@@ -42,10 +42,10 @@ Your compiler options are:
 By default, cmake will use your most up to date version of visual studio it finds.
 
 .. warning::
-    MinGW has problems with the latest version of CoolProp.  This seems to be a GCC-related 
-    issue and using a more up-to-date version of GCC helps.  Unfortunately, MinGW is stuck 
-    at GCC 4.8.  You could try the `TDM-GCC distribution <http://tdm-gcc.tdragon.net>`_ 
-    that comes with the latest GCC. This version seems to work fine.
+    An old MinGW GCC may have problems building the latest version of CoolProp.  Use a
+    recent MinGW-w64 toolchain (for instance via `MSYS2 <https://www.msys2.org/>`_) or the
+    `TDM-GCC distribution <https://jmeubank.github.io/tdm-gcc/>`_, both of which ship a
+    modern GCC.
 
 Your calling convention options are:
 

@@ -165,7 +165,7 @@ For mixtures, cubic EOS (and their modifications) are heavily used.  Cubic EOS a
 Critical Points
 ---------------
 
-According to a forthcoming paper from Bell *et al.*, it is possible to calculate critical points of mixtures from cubic EOS.  For instance, here is how to calculate all the critical points (there can be more than one) that are found for an equimolar mixture of methane and ethane:
+Following the approach of Bell *et al.*, it is possible to calculate critical points of mixtures from cubic EOS.  For instance, here is how to calculate all the critical points (there can be more than one) that are found for an equimolar mixture of methane and ethane:
 
 .. ipython::
 
@@ -253,7 +253,7 @@ The cubic fluids in CoolProp are defined based on a JSON format, which could yie
 
 .. literalinclude:: fake_fluid.json
 
-The JSON-formatted fluid information is validated against the `JSON schema <http://json-schema.org>`_, which can be obtained by calling the ``get_global_param_string`` function:
+The JSON-formatted fluid information is validated against the `JSON schema <https://json-schema.org>`_, which can be obtained by calling the ``get_global_param_string`` function:
 
 .. ipython:: 
 
@@ -262,7 +262,7 @@ The JSON-formatted fluid information is validated against the `JSON schema <http
     # Just the first bit of the schema (it's a bit large; see below for the complete schema)
     In [0]: CP.get_global_param_string("cubic_fluids_schema")[0:60]
 
-A `JSON schema <http://json-schema.org>`_ defines the structure of the data, and places limits on the values, defines what values must be provided, etc..  There are a number of online tools that can be used to experiment with and validate JSON schemas: http://www.jsonschemavalidator.net , http://jsonschemalint.com/draft4/.
+A `JSON schema <https://json-schema.org>`_ defines the structure of the data, and places limits on the values, defines what values must be provided, etc..  There are a number of online tools that can be used to experiment with and validate JSON schemas, for instance https://www.jsonschemavalidator.net .
 
 .. ipython:: 
 
@@ -299,7 +299,7 @@ A `JSON schema <http://json-schema.org>`_ defines the structure of the data, and
 Complete fluid schema
 ---------------------
 
-For completeness, here is the whole `JSON schema <http://json-schema.org>`_ used for the cubic backends:
+For completeness, here is the whole `JSON schema <https://json-schema.org>`_ used for the cubic backends:
 
 .. ipython:: 
 

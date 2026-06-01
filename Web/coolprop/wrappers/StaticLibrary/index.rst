@@ -31,7 +31,7 @@ If you are using CMake, the process is quite trivial to integrate the CoolProp s
 
 Then CMakeLists.txt might have the contents::
 
-    # See also http://stackoverflow.com/a/18697099
+    # See also https://stackoverflow.com/a/18697099
     cmake_minimum_required (VERSION 2.8.11)
     project (main)
     set(COOLPROP_STATIC_LIBRARY true)
@@ -41,7 +41,7 @@ Then CMakeLists.txt might have the contents::
 
 Pre-compiled Binaries
 =====================
-Pre-compiled release binaries can be downloaded from :sfdownloads:`static_library`.  Development binaries coming from the buildbot server can be found at :sfnightly:`static_library`.  These static libraries are ONLY useful if the compiler used to build the static library agrees with the static library that will be used to build your other code.  This cannot be guaranteed, and no effort is made to that effect.  Build your own static libraries following the instructions below.
+Pre-compiled release binaries can be downloaded from :sfdownloads:`static_library`.  Nightly development binaries can be found at :sfnightly:`static_library`.  These static libraries are ONLY useful if the compiler used to build the static library agrees with the static library that will be used to build your other code.  This cannot be guaranteed, and no effort is made to that effect.  Build your own static libraries following the instructions below.
 
 .. warning::
 
@@ -115,7 +115,7 @@ This will result in an executable which can be run by the user.
 
 .. warning::
     
-    In gcc and mingw ports of gcc, make sure that the `-lCoolProp` is the last argument in the line, otherwise you will certainly get linking errors.  See also: http://www.mingw.org/wiki/specify_the_libraries_for_the_linker_to_use .
+    In gcc and mingw ports of gcc, make sure that the `-lCoolProp` is the last argument in the line, otherwise you will certainly get linking errors.  See also: https://www.mingw.org/wiki/specify_the_libraries_for_the_linker_to_use .
     
 Windows
 ^^^^^^^

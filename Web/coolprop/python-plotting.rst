@@ -5,7 +5,7 @@ Python Plotting
 
 .. note::
 
-    Please see also the new project `CoolPlot <http://github.com/CoolProp/CoolPlot>`_, aiming to build upon the routines in CoolProp for plotting.
+    Please see also the new project `CoolPlot <https://github.com/CoolProp/CoolPlot>`_, aiming to build upon the routines in CoolProp for plotting.
 
 The simplest and most straight forward use case is the generation of plots 
 with default isolines and spacing. Here is a brief example to demonstrate 
@@ -69,7 +69,7 @@ and at this time (May 2016) this list contains (:math:`T,s`), (:math:`p,h`),
 (:math:`h,s`), (:math:`p,s`), (:math:`p,\rho`), (:math:`T,\rho`), (:math:`p,T`) and 
 (:math:`p,u`) plots. 
 
-Some of the commonly used `Matplotlib <http://www.matplotlib.org>`_ functions,
+Some of the commonly used `Matplotlib <https://www.matplotlib.org>`_ functions,
 such as :func:`title`, :func:`grid`, :func:`xlabel` and :func:`ylabel` have been wrapped in
 the :py:class:`CoolProp.Plots.Common.BasePlot` class to make the plotting of
 graphs a little simpler, for example:
