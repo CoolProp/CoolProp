@@ -717,4 +717,13 @@ a.primary.sponsor-splash-cta {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  background: #2ea043;
+  color: #fff;
+  border: 1px solid #2ea043;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+a.primary.sponsor-splash-cta:hover {
+  background: #278c3a;
 }
