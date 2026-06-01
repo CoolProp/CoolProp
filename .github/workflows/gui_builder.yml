@@ -641,8 +641,10 @@ jobs:
             wrappers/GUI/src-tauri/target/release/bundle/deb/*.deb
             wrappers/GUI/src-tauri/target/release/bundle/rpm/*.rpm
             wrappers/GUI/src-tauri/target/release/bundle/appimage/*.AppImage
+            wrappers/GUI/src-tauri/target/release/bundle/appimage/*.AppImage.sig
             wrappers/GUI/src-tauri/target/release/bundle/msi/*.msi
             wrappers/GUI/src-tauri/target/release/bundle/nsis/*-setup.exe
+            wrappers/GUI/src-tauri/target/release/bundle/nsis/*-setup.exe.sig
           if-no-files-found: error
           retention-days: 7
 
@@ -685,6 +687,64 @@ jobs:
           ls -la release-files/
           [ "$(ls release-files | wc -l)" -ge 5 ] || { echo "expected at least 5 installer files"; exit 1; }
 
+      # Build the single updater manifest the app polls
+      # (plugins.updater.endpoints -> releases/latest/download/latest.json).
+      # `tauri build` emits the signed update bundles + .sig per platform but
+      # NOT latest.json (tauri-action only writes it when it manages the
+      # release, which we don't), so assemble it here: one manifest spanning
+      # all platforms, each url pointing at the release asset that the step
+      # above staged, each signature read from the bundle's .sig. The update
+      # bundles themselves (.app.tar.gz / -setup.exe / .AppImage) are already
+      # in release-files/ from the find above, so they get attached too.
+      - name: Generate updater manifest (latest.json)
+        env:
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          python3 - <<'PY'
+          import json, os, glob, datetime
+          tag = os.environ["TAG"]
+          version = tag[len("gui-v"):] if tag.startswith("gui-v") else tag
+          base = f"https://github.com/{os.environ['REPO']}/releases/download/{tag}"
+          # Tauri v2 updater target -> the bundle glob it ships for that target.
+          targets = {
+              "darwin-aarch64": "**/*.app.tar.gz",   # macos-latest is arm64
+              "windows-x86_64": "**/*-setup.exe",     # NSIS installer
+              "linux-x86_64":   "**/*.AppImage",
+          }
+          platforms = {}
+          for tgt, pat in targets.items():
+              hits = [f for f in glob.glob(f"artifacts/{pat}", recursive=True)
+                      if os.path.isfile(f + ".sig")]
+              if not hits:
+                  print(f"::warning::no signed updater artifact for {tgt} ({pat}); omitting")
+                  continue
+              f = hits[0]
+              platforms[tgt] = {
+                  "signature": open(f + ".sig").read().strip(),
+                  "url": f"{base}/{os.path.basename(f)}",
+              }
+          # The release job only runs when all three matrix builds succeed, so
+          # every target must be present + signed; a missing one would silently
+          # strip a whole platform from auto-update. Fail the release instead.
+          missing = [t for t in targets if t not in platforms]
+          if missing:
+              raise SystemExit(f"latest.json: missing signed updater artifact(s) for {missing}; "
+                               "a release must publish all platforms — aborting.")
+          manifest = {
+              "version": version,
+              "notes": f"CoolProp GUI {version}",
+              "pub_date": datetime.datetime.now(datetime.timezone.utc)
+                          .strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "platforms": platforms,
+          }
+          os.makedirs("release-files", exist_ok=True)
+          with open("release-files/latest.json", "w") as fh:
+              json.dump(manifest, fh, indent=2)
+          print(json.dumps(manifest, indent=2))
+          PY
+
       - name: Create draft release
         uses: softprops/action-gh-release@v3
         with:
@@ -695,6 +755,9 @@ jobs:
           files: release-files/*
           fail_on_unmatched_files: true
           body: |
-            CoolProp Desktop GUI release. Bundles are unsigned (Gatekeeper / SmartScreen workarounds documented in `wrappers/GUI/README.md`).
+            CoolProp Desktop GUI release. Includes `latest.json` for the in-app
+            auto-updater. macOS is signed + notarized; Windows is signed via
+            SignPath (test cert until the release cert is issued — see
+            `wrappers/GUI/README.md` for the Gatekeeper/SmartScreen status).
 
             <!-- Edit this body before publishing — testers only see what's here. -->
