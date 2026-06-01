@@ -1862,7 +1862,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     _stable = true;
     HEOS.SatL->set_mole_fractions(z);
     try {
-        CoolPropDbl rho_b = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatL->SRK_covolume());
+        CoolPropDbl rho_b = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, HEOS.SatL->calc_rhomolar_max_bound());
         HEOS.SatL->update_DmolarT_direct(rho_b, the_T);
     } catch (...) {
         throw;
@@ -1890,7 +1890,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                 y_norm[i] = Y[i] / sumY;
             HEOS.SatV->set_mole_fractions(y_norm);
             try {
-                CoolPropDbl rho_t = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatV->SRK_covolume());
+                CoolPropDbl rho_t = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, HEOS.SatV->calc_rhomolar_max_bound());
                 HEOS.SatV->update_DmolarT_direct(rho_t, the_T);
             } catch (...) {
                 break;
@@ -1937,8 +1937,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_legacy() {
         HEOS.SatV->calc_reducing_state();
 
         // Update the densities in each class
-        double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatL->SRK_covolume());
-        double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatV->SRK_covolume());
+        double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, HEOS.SatL->calc_rhomolar_max_bound());
+        double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, HEOS.SatV->calc_rhomolar_max_bound());
         HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
         HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
 
@@ -1965,7 +1965,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_legacy() {
     // Ok, we aren't sure about stability, need to keep going with the full tpd analysis
 
     // Use the global density solver to obtain the density root (or the lowest Gibbs energy root if more than one)
-    CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SRK_covolume());
+    CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, HEOS.calc_rhomolar_max_bound());
     HEOS.update_DmolarT_direct(rho_bulk, the_T);
 
     // Calculate the fugacity coefficient at initial composition of the bulk phase.
@@ -2053,8 +2053,8 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_global() {
     double the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
 
     // Calculate covolume of SRK, use it as the maximum density
-    double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatL->SRK_covolume());
-    double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatV->SRK_covolume());
+    double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, HEOS.SatL->calc_rhomolar_max_bound());
+    double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, HEOS.SatV->calc_rhomolar_max_bound());
     HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
     HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
 
@@ -2157,7 +2157,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         bool liquid_ok = false, vapor_ok = false;
         HEOS.SatL->set_mole_fractions(IO.x);
         try {
-            CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, 0.9 / HEOS.SatL->SRK_covolume());
+            CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatL->calc_rhomolar_max_bound());
             IO.rhomolar_liq = rL;
             HEOS.SatL->update_DmolarT_direct(rL, IO.T);
             liquid_ok = true;
@@ -2165,7 +2165,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         }
         HEOS.SatV->set_mole_fractions(IO.y);
         try {
-            CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, 0.9 / HEOS.SatV->SRK_covolume());
+            CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatV->calc_rhomolar_max_bound());
             IO.rhomolar_vap = rV;
             HEOS.SatV->update_DmolarT_direct(rV, IO.T);
             vapor_ok = true;
@@ -2236,9 +2236,9 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             }
             try {
                 HEOS.SatL->set_mole_fractions(x_trial);
-                CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, 0.9 / HEOS.SatL->SRK_covolume());
+                CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatL->calc_rhomolar_max_bound());
                 HEOS.SatV->set_mole_fractions(y_trial);
-                CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, 0.9 / HEOS.SatV->SRK_covolume());
+                CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatV->calc_rhomolar_max_bound());
                 if (ValidNumber(rL) && ValidNumber(rV) && rL > 0 && rV > 0) {
                     beta = V_new;
                     IO.x = x_trial;

@@ -77,19 +77,11 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 // floating-point noise in the Michelsen TPD solver, or false positives if using the legacy solver.
                 if (o.beta < 1e-10) {
                     HEOS.update_DmolarT_direct(o.rhomolar_liq, HEOS.T());
-                    try {
-                        HEOS.recalculate_singlephase_phase();
-                    } catch (...) {
-                        HEOS._phase = iphase_liquid;
-                    }
+                    HEOS._phase = (o.rhomolar_liq < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
                     HEOS._Q = -1;
                 } else if (o.beta > 1.0 - 1e-10) {
                     HEOS.update_DmolarT_direct(o.rhomolar_vap, HEOS.T());
-                    try {
-                        HEOS.recalculate_singlephase_phase();
-                    } catch (...) {
-                        HEOS._phase = iphase_gas;
-                    }
+                    HEOS._phase = (o.rhomolar_vap < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
                     HEOS._Q = -1;
                 } else {
                     HEOS._phase = iphase_twophase;
@@ -98,18 +90,10 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 }
             } else {
                 // It's single-phase
-                double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
+                double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), HEOS.calc_rhomolar_max_bound());
                 HEOS.update_DmolarT_direct(rho, HEOS.T());
                 HEOS._Q = -1;
-                try {
-                    HEOS.recalculate_singlephase_phase();
-                } catch (...) {
-                    if (rho < HEOS.Reducing->rhormolar(HEOS.get_mole_fractions())) {
-                        HEOS._phase = iphase_gas;
-                    } else {
-                        HEOS._phase = iphase_liquid;
-                    }
-                }
+                HEOS._phase = (rho < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
             }
         } else {
             // It's single-phase, and phase is imposed

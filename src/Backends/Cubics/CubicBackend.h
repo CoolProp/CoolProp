@@ -56,7 +56,6 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
      * @note This method correctly handles cases near the critical point where traditional
      *       Newton solvers often diverge.
      */
-    void cubic_PT_flash_mixture();
 
     /// Set the alpha function based on the alpha function defined in the components vector;
     void set_alpha_from_components();
@@ -128,6 +127,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         reducing.T = cubic->get_Tr();
         reducing.rhomolar = cubic->get_rhor();
         return reducing;
+    };
+    CoolPropDbl calc_rhomolar_max_bound() override {
+        return 0.9 / get_cubic()->bm_term(mole_fractions);
     };
     CoolPropDbl calc_reduced_density() override {
         return _rhomolar / get_cubic()->get_rhor();

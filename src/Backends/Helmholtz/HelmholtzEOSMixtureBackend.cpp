@@ -2774,6 +2774,10 @@ class SolverTPResid : public FuncWrapper1DWithThreeDerivs
                * (6 * HEOS->d2alphar_dDelta2() + 6 * delta * HEOS->d3alphar_dDelta3() + POW2(delta) * HEOS->calc_d4alphar_dDelta4()) / p;
     };
 };
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_max_bound() {
+    return 0.9 / SRK_covolume();
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
     double b = 0;
     for (std::size_t i = 0; i < mole_fractions.size(); ++i) {

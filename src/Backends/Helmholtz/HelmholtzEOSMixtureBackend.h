@@ -654,6 +654,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void calc_phase_envelope(const std::string& type) override;
 
     CoolPropDbl SRK_covolume();
+    virtual CoolPropDbl calc_rhomolar_max_bound();
 
     // ***************************************************************
     // ***************************************************************
