@@ -12,7 +12,7 @@ Information
 
 As C# and VB.net share the .NET framework, it is possible to call the C# wrapper code from VB.net, thus making it possible to access the entire code of CoolProp from VB.net.  The overall process is not too painful.
 
-Pre-compiled binaries of the C# wrapper can be downloaded from :sfdownloads:`Csharp`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Csharp`.  Download the ``platform-independent.7z`` file and expand it to a folder called ``platform-independent`` using 7-zip.  Download the special C# shared library for your system architecture to the same location from either :sfdownloads:`Csharp` (release) or :sfnightly:`Csharp` (development). 
+Pre-compiled binaries of the C# wrapper can be downloaded from :sfdownloads:`Csharp`.  Nightly development binaries can be found at :sfnightly:`Csharp`.  Download the ``platform-independent.7z`` file and expand it to a folder called ``platform-independent`` using 7-zip.  Download the special C# shared library for your system architecture to the same location from either :sfdownloads:`Csharp` (release) or :sfnightly:`Csharp` (development). 
 
 When you are finished, you should have a folder layout something like ::
 

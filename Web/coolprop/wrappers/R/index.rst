@@ -9,7 +9,7 @@ R Wrapper
 Pre-compiled Binaries
 =====================
 
-Pre-compiled binaries can be downloaded from :sfdownloads:`R`.  Development binaries coming from the buildbot server can be found at :sfnightly:`R`.  Download the shared library for your platform, as well as the ``CoolProp.R`` module
+Pre-compiled binaries can be downloaded from :sfdownloads:`R`.  Nightly development binaries can be found at :sfnightly:`R`.  Download the shared library for your platform, as well as the ``CoolProp.R`` module
 
 Usage
 -----
@@ -28,7 +28,7 @@ There is example code :ref:`at the end of this page <r_example>`
     
 .. warning::
 
-    If you want to use ``Rscript`` rather than ``R``, you need to pass the argument ``--default-packages=methods`` to get it to load the necessary packages for calling SWIGG-ed code.  Or call ``library(methods)`` at the top of the file (before ``source("CoolProp.R")``).  See also http://stackoverflow.com/a/19468533\n
+    If you want to use ``Rscript`` rather than ``R``, you need to pass the argument ``--default-packages=methods`` to get it to load the necessary packages for calling SWIGG-ed code.  Or call ``library(methods)`` at the top of the file (before ``source("CoolProp.R")``).  See also https://stackoverflow.com/a/19468533\n
 
 User-Compiled Binaries
 ======================
@@ -42,7 +42,7 @@ Also, you need to install R
 Windows
 -------
 
-You must install the MINGW compiler suite.  The `TDM suite <http://tdm-gcc.tdragon.net/>`_ is recommended.
+You must install the MINGW compiler suite.  The `TDM suite <https://jmeubank.github.io/tdm-gcc/>`_ is recommended.
 
 Build
 -----

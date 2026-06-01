@@ -18,7 +18,7 @@ From C++ and the SWIG wrappers, the values can be directly set/changed by using 
 
     In [1]: CP.set_config_bool(CP.CRITICAL_WITHIN_1UK, current_val)
 
-From all languages, the configuration state can obtained by retrieving the configuration state in the form of a  `JSON <http://json.org/>`_ formatted string.  For instance, in python, you can get the default configuration state from 
+From all languages, the configuration state can obtained by retrieving the configuration state in the form of a  `JSON <https://json.org/>`_ formatted string.  For instance, in python, you can get the default configuration state from 
 
 .. ipython::
 

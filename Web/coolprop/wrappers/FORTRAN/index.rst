@@ -18,7 +18,7 @@ Compilers
 
 On linux, you need gcc and gfortran, which are easy to install using your package manager.
 
-On windows, the most reliable mixed compilation seems to be using the gfortran/gcc combination from `MinGW-w64 <http://sourceforge.net/projects/mingw-w64/files>`_, whose installer allows you to install different versions of GCC, typically up to the last one. Version 5.3.0 is the one used as of February 10, 2016::
+On windows, the most reliable mixed compilation seems to be using the gfortran/gcc combination from `MinGW-w64 <https://sourceforge.net/projects/mingw-w64/files>`_, whose installer allows you to install different versions of GCC, typically up to the last one. Version 5.3.0 is the one used as of February 10, 2016::
 
     >C:\>gfortran --version
     GNU Fortran (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 5.3.0
@@ -52,7 +52,7 @@ The most reliable mixed compilation on linux seems to be with the true-gcc/g++ t
 
     brew install gcc-4.9
 
-where you can change ``4.9`` to the most up to date version.  Search `braumeister <http://braumeister.org/formula/gcc>`_ for the most recipe for gcc.  Looks like ``gcc`` also works.
+where you can change ``4.9`` to the most up to date version.  Search `braumeister <https://braumeister.org/formula/gcc>`_ for the most recipe for gcc.  Looks like ``gcc`` also works.
 
 .. _FORTRAN95:
 
@@ -160,7 +160,7 @@ FORTRAN77
 Pre-Compiled Binaries
 ---------------------
 
-* Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the development versions from the buildbot server at :sfnightly:`shared_library`. Or you can built it yourself given the instructions at :ref:`shared_library`.
+* Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the nightly development versions at :sfnightly:`shared_library`. Or you can built it yourself given the instructions at :ref:`shared_library`.
 
 Run
 ---

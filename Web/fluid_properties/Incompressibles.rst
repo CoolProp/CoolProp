@@ -37,7 +37,7 @@ You can read more about these reports in a dedicated
 All incompressible fluids have an arbitrary reference state for enthalpy and entropy.
 During initialisation, the reference state is defined as a temperature of 20 °C
 and a pressure of 1 atm according to the U.S. National Institute of Standards and
-Technology (`NIST <http://www.nist.gov>`_).
+Technology (`NIST <https://www.nist.gov>`_).
 
 .. math::
    T_\text{ref} &=  293.15\:\text{K}  &=     68\:\text{°F} \\
@@ -110,15 +110,14 @@ thermal conductivity. Hence, the available output keys are: ``T``, ``P``, ``D``,
 Mixture Examples
 ----------------
 
-Almost the same syntax can be used for mixtures. Please note that the mixture
-interface developed for CoolProp 5 has not been ported to the incompressible
-fluids, yet. For now, you have to use the ``PropsSI`` function with a special
+Almost the same syntax can be used for mixtures. Please note that the general
+mixture interface has not been ported to the incompressible fluids. For
+incompressible mixtures, you have to use the ``PropsSI`` function with a special
 composition notation. Depending on your fluid, you have to supply either the
 :ref:`mass fraction<MassMix>` or the :ref:`volume fraction<VoluMix>` as additional
 parameter. This is done via the fluid name by appending a dash and the
 fraction of the substance other than water. The fraction notation can be in the
-form of percent, ``LiBr-23%``, or as a fraction between 0 and 1, ``LiBr[0.23]``, which
-corresponds to the new mixture syntax in CoolProp v5.
+form of percent, ``LiBr-23%``, or as a fraction between 0 and 1, ``LiBr[0.23]``.
 
 ..  In addition to the properties available for the pure fluids (``D``, ``C``,
   ``U``, ``H``, ``S``, ``V``, ``L``,``Tmin`` and ``Tmax``, some mixtures also
@@ -280,10 +279,6 @@ composition will always affect all fluids consisting of the same components.
 
 .. _BaseValue:
 
-.. note::
-   The internal routines for the incompressibles were updated 2015-02-10, the documentation is not fully updated. 
-   We are going to add the new equation as soon as possible, probably mid-March 2015. Please be patient.
-
 .. .. math::
 .. 
 ..     c          &= \sum_{i=0}^n x^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot T^j \text{ yielding } \\
@@ -363,7 +358,7 @@ The exponential polynomial is used as a fall-back function for single variable
 fits and it is the only function used for multivariate fits, e.g. :math:`\mu(T,x)`.
 
 If you would like to know more about the fitting procedures, you can have a look
-at this `Python notebook <http://nbviewer.ipython.org/github/CoolProp/CoolProp/blob/master/dev/incompressible_liquids/LinearAlgebra.ipynb>`_,
+at this `Python notebook <https://nbviewer.org/github/CoolProp/CoolProp/blob/master/dev/incompressible_liquids/LinearAlgebra.ipynb>`_,
 which describes the basics of the multivariate polynomial fits employed in this
 software. Non-polynomial functions are fitted using the minimisation routines
 accessible through SciPy :cite:`Jones2001`. For the extremely curious, the
@@ -387,9 +382,9 @@ manufactures, two specific publications provided a lot of data used for the
 incompressible fluids: Åke Melinder's book *Properties of Secondary Working
 Fluids for Indirect Systems* :cite:`Melinder2010` has inspired both, the work on
 pure fluids and aqueous solutions. The second major source of inspiration is the
-`SecCool <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
+`SecCool <https://ipu.dk/products/seccool>`_
 :cite:`Skovrup2013` software, which contains data compiled by Morten Juel
-Skovrup. It is provided free of charge by his employer `IPU <http://en.ipu.dk>`_.
+Skovrup. It is provided free of charge by his employer `IPU <https://ipu.dk>`_.
 
 
 .. _Pure:
@@ -433,7 +428,7 @@ For slurry ice, the concentration :math:`x` refers to the solid content and the
 heat capacity includes the heat of fusion. It might be necessary to adjust the
 solid content during heat transfer. The implementation is based on the data
 available in `SecCool <https://www.ipu.dk/products/seccool>`_,
-which was originally recorded at the Danish Technological Institute `(DTI) <http://www.dti.dk/>`_.
+which was originally recorded at the Danish Technological Institute `(DTI) <https://www.dti.dk/>`_.
 
 
 .. figure:: /_static/fluid_properties/incompressibles_consistency.jpg

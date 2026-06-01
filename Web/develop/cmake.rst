@@ -11,7 +11,7 @@ using MinGW on windows).
 
 CMake is used to build each of the wrappers for CoolProp.
 
-To install CMake, please visit `CMake.org <http://www.cmake.org/>`_ or install
+To install CMake, please visit `CMake.org <https://www.cmake.org/>`_ or install
 it through your systems package manager. For Mac OSX, you can use ``homebrew``
 and run ``brew install cmake``. If you do not like that, you can also install
 it from the official binary release, you have to start it as

@@ -53,22 +53,16 @@ Help
 
 * (**General Discussion**) Create a new discussion at `Github CoolProp Discussions <https://github.com/CoolProp/CoolProp/discussions>`_
 * (**Bugs, feature requests**) File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
-* `Docs for v4 of CoolProp <http://www.coolprop.org/v4/>`_
-* `Docs for development version of CoolProp <http://www.coolprop.org/dev/>`_
 
 Projects Using CoolProp
 -----------------------------------
 
-* `Thermocycle <http://www.thermocycle.net/>`_
-* `PDSim <http://pdsim.sourceforge.net/>`_
-* `ACHP <http://achp.sourceforge.net/>`_
-* `DWSim <http://sourceforge.net/projects/dwsim/>`_
-* `StateCalc <https://itunes.apple.com/us/app/statecalc/id891848148?ls=1&mt=8>`_
-* `SmoWeb <http://platform.sysmoltd.com>`_
-* `T-Props <https://play.google.com/store/apps/details?id=com.innoversetech.tprops>`_
+* `Thermocycle <https://www.thermocycle.net/>`_
+* `PDSim <https://pdsim.sourceforge.net/>`_
+* `ACHP <https://achp.sourceforge.net/>`_
+* `DWSim <https://dwsim.org>`_
 * `fProperties <https://jfcoronel.github.io/fProperties/>`_
 * `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_
-* `pSolver <https://jfcoronel.github.io/psolver_org/app/>`_
 
 Main Developers
 ---------------

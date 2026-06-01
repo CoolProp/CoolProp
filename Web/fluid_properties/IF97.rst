@@ -15,10 +15,10 @@ Realizing the need for fast numerical computation of water properties, the IAPWS
 
 The IF97 backend in CoolProp is based on the latest `IAPWS Releases`_ for thermodynamic and transport properties.  It was originally coded as a fast water property calculation for the :ref:`Humid Air <Humid-Air>` backend.  It has matured to include most of the forward and backward formulations in all fluid phase regions as released by the IAPWS_ and can provide a much faster calculation of water properties than the default HEOS backend (or the :ref:`REFPROP <REFPROP>` backend, which is also based on IAPWS-95_).
 
-.. _IAPWS: http://www.iapws.org
-.. _IAPWS Releases: http://www.iapws.org/release.html
-.. _IAPWS-95: http://www.iapws.org/relguide/IAPWS-95.html
-.. _IAPWS-IF97: http://www.iapws.org/relguide/IF97-Rev.html
+.. _IAPWS: https://www.iapws.org
+.. _IAPWS Releases: https://www.iapws.org/release.html
+.. _IAPWS-95: https://www.iapws.org/relguide/IAPWS-95.html
+.. _IAPWS-IF97: https://www.iapws.org/relguide/IF97-Rev.html
 
 Piecewise structure of IAPWS-IF97
 ---------------------------------

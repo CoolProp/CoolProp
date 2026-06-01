@@ -59,18 +59,9 @@ print("Detected release: %s" % release)
 print("Public release  : %s" % "True" if isRelease else "False")
 print("")
 
-if isRelease:
-    extlinks = {'sfdownloads': (f'http://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', f'{release} %s'),
-                'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', 'nightly %s'),
-                # 'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
-                # 'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
-                }
-else:
-    extlinks = {'sfdownloads': (f'http://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', f'{release} %s'),
-                'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', 'nightly %s'),
-                # 'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
-                # 'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
-                }
+extlinks = {'sfdownloads': (f'https://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', f'{release} %s'),
+            'sfnightly': ('https://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', 'nightly %s'),
+            }
 import sys, os, datetime
 
 # ~ # If your extensions are in another directory, add it here. If the directory
@@ -85,14 +76,12 @@ except ImportError:
 
     print('Unable to import sphinxcontrib.doxylink; try to run "pip install sphinxcontrib-doxylink"')
 
-if isRelease:
-    doxylink = {
-        'cpapi': ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.org/_static/doxygen/html')
-    }
-else:
-    doxylink = {
-        'cpapi': ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.org/dev/_static/doxygen/html')
-    }
+# Docs deploy only on tags to GitHub Pages root (see docs_docker-run.yml), so
+# there is no separate /dev/ subtree anymore — the old dev path 404s.  Point
+# both release and dev builds at the single published Doxygen tree.
+doxylink = {
+    'cpapi': ('_static/doxygen/CoolPropDoxyLink.tag', 'https://coolprop.org/_static/doxygen/html')
+}
 
 # Execute all the notebooks.
 # Timeout is bumped from nbconvert's 30 s default to 1 h to accommodate
@@ -227,6 +216,30 @@ autoclass_content = 'both'
 
 # Fix the bibtext extension
 bibtex_bibfiles = ["../CoolPropBibTeXLibrary.bib"]
+
+# -- Options for the linkcheck builder -----------------------------------------
+# `make linkcheck` (also run non-blocking in CI) reports dead URLs.  Tune it so
+# the signal is useful and not drowned in false positives.
+linkcheck_timeout = 20
+linkcheck_retries = 2
+linkcheck_workers = 10
+# Don't check intra-page #anchors — many target sites are JS-rendered and report
+# spurious anchor-missing failures.
+linkcheck_anchors = False
+linkcheck_ignore = [
+    # Intentional placeholders that are not real URLs.
+    r'https?://YOURUSERNAME\.pythonanywhere\.com.*',
+    r'.*/CoolProp/X\.X\.X/.*',
+    r'https?://10\.0\.2\.2.*',          # Android emulator loopback address
+    # XML namespaces written as http:// URIs — not resolvable links.
+    r'https?://schemas\.android\.com/.*',
+    # Sites that hard-block automated requests (403/429) but work in a browser;
+    # these are stable canonical links (journal DOIs, package indexes).
+    r'https?://pubs\.acs\.org/.*',
+    r'https?://www\.tandfonline\.com/.*',
+    r'https?://braumeister\.org/.*',
+    r'https?://.*\.amazonaws\.com/.*',
+]
 
 # -- Options for HTML output ---------------------------------------------------
 

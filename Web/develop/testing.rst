@@ -3,43 +3,42 @@
 Diagnostics and Testing
 ***********************
 
-Travis Builds
--------------
+Continuous Integration
+----------------------
 
+CoolProp is tested on GitHub Actions; the workflow definitions live in
+``.github/workflows/``.  Pushes and pull requests trigger the test matrix
+automatically.
 
 Address Sanitizer
 -----------------
 
-Address sanitizer is a module of the clang compiler that can help to pinpoint several memory problems, like addressing memory that is out of range.  
+Address sanitizer (ASan) is an instrumentation mode of the clang and gcc
+compilers that can help to pinpoint several memory problems, like addressing
+memory that is out of range.
 
-The instructions here explain how to get address sanitizer working for CoolProp for testing purposes.  
-
-The easiest solution is to use OSX and download the binaries for LLVM+clang from http://llvm.org/releases/download.html.  You will need to expand the file with something like::
-
-    tar -xJf clang+llvm-3.5-x86_64-apple-darwin10.9.tar.xz
+Modern clang and gcc ship ASan as part of the standard toolchain, so no special
+compiler download is needed — any reasonably recent ``clang``/``clang++`` (or
+``gcc``/``g++``) will do.
 
 1. Check out CoolProp using git::
 
     git clone https://github.com/CoolProp/CoolProp
 
-2. Move into folder::
+2. Make a build folder::
 
     cd CoolProp && mkdir -p build/asan && cd build/asan
-    
-3. Set environmental variable to the root of the clang installation::
 
-    export CLANG_ROOT=/Users/Ian/Downloads/clang+llvm-3.5.0-macosx-apple-darwin
+3. Run the cmake call, enabling the address sanitizer build::
 
-4. Run the cmake call with the special clang version with asan support::
+    cmake ../.. -DCOOLPROP_CLANG_ADDRESS_SANITIZER=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
 
-    cmake ../.. -DCOOLPROP_CLANG_ADDRESS_SANITIZER=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_C_COMPILER=${CLANG_ROOT}/bin/clang -DCMAKE_CXX_COMPILER=${CLANG_ROOT}/bin/clang++
+4. Build::
 
-5. Build:: 
-    
     cmake --build .
 
-6. Execute::
+5. Execute, asking ASan to be verbose so you can confirm it is active::
 
-    DYLD_LIBRARY_PATH=${CLANG_ROOT}/lib/clang/3.5.0/lib/darwin/ ASAN_SYMBOLIZER_PATH=${CLANG_ROOT}/bin/llvm-symbolizer  ASAN_OPTIONS=verbosity=1 ./CatchTestRunner
+    ASAN_OPTIONS=verbosity=1 ./CatchTestRunner
 
-The ``verbosity=1`` is to make sure that ASAN is actually running
+The ``verbosity=1`` is to make sure that ASan is actually running.

@@ -118,10 +118,7 @@ to reconfigure and rebuild all files even when only one file changed.
 Nightly builds
 --------------
 
-If you dare, you can also try the latest nightly release from :sfnightly:`Python`
-or get it directly from the development server using::
-
-    pip install -vvv --pre --trusted-host www.coolprop.dreamhosters.com --find-links http://www.coolprop.dreamhosters.com/binaries/Python/ -U --no-cache --force-reinstall CoolProp
+If you dare, you can also try the latest nightly release from :sfnightly:`Python`.
 
 Manual installation
 ===================

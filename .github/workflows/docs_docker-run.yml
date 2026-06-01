@@ -135,7 +135,19 @@ jobs:
         source activate docs
         sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp
         make html
-        
+
+    - name: Check documentation links (non-blocking)
+      working-directory: ./Web
+      shell: bash
+      # Reports dead/broken URLs in the docs.  Non-blocking: external sites flap
+      # and a hard gate would cause spurious CI failures, so this never fails the
+      # build — review the step output (and the linkcheck output file) for broken
+      # links.  See linkcheck_ignore in conf.py for the curated allowlist.
+      continue-on-error: true
+      run: |
+        source activate docs
+        make linkcheck
+
     - name: Upload GitHub Pages artifact
       if: ${{ !env.ACT }} # skip during local actions testing
       uses: actions/upload-pages-artifact@v5
