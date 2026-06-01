@@ -95,12 +95,18 @@ button. Styled to match the existing header controls.
 **(b) About modal.** Add a "Support CoolProp 💚" link to
 `src/components/AboutModal.tsx`, near the existing CoolProp/MIT-license line.
 
-**(c) One-time startup splash.** New `src/components/SponsorSplash.tsx`, reusing
-the existing `modal-overlay` / `modal-card` styles. Behavior:
+**(c) Startup splash — once per major version.** New
+`src/components/SponsorSplash.tsx`, reusing the existing `modal-overlay` /
+`modal-card` styles. Behavior:
 
-- On app mount, read `localStorage` key `coolprop.sponsorSplash.seen.v1`.
-- If unset, render the splash; set the key when the user dismisses it (either
-  button), so it shows **once per install**.
+- Derive the current major version from the app version (e.g. `7` from the
+  `7.2.1` already surfaced via the generated `COOLPROP_VERSION` notices
+  constant). The `localStorage` key embeds it:
+  `coolprop.sponsorSplash.seen.major.<N>` (e.g. `…seen.major.7`).
+- On app mount, read that key. If unset, render the splash; set it when the
+  user dismisses (either button), so the splash shows **once per major
+  version** — returning users are re-prompted on the next major release
+  (e.g. 7.x → 8.0) but never on patch/minor updates.
 - Buttons: **Maybe later** (ghost, closes) and **Sponsor on GitHub** (primary,
   opens the Sponsors URL via the same `<a target="_blank">` pattern, then
   closes).
@@ -133,15 +139,17 @@ splash.
   × dismiss persists across page loads, nav link present, "Support CoolProp"
   page builds and is reachable from the toctree and the Help section.
 - **GUI** — vitest unit tests for `SponsorSplash`:
-  - renders when the `seen` key is absent;
-  - does not render when the key is set;
-  - dismissing (either button) sets the key.
+  - renders when the major-version `seen` key is absent;
+  - does not render when the current major-version key is set;
+  - renders again when only a *previous* major-version key is set (simulating
+    a major upgrade);
+  - dismissing (either button) sets the current major-version key.
   Confirm the existing `App` / `PropertyCalculator` tests stay green.
 
 ## Out of scope / YAGNI
 
 - No blocking/modal interrupts on the website (banner only).
-- No recurring or rate-limited re-prompting; both the GUI splash and web banner
-  are strictly once-until-dismissed.
+- No rate-limited or per-launch re-prompting. The web banner is
+  once-until-dismissed; the GUI splash re-shows only on a new major version.
 - No analytics/telemetry on sponsor clicks.
 - No changes to the legacy Python/wxPython GUI under `wrappers/Python`.
