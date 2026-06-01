@@ -24,3 +24,4 @@ This section includes information about the CoolProp software, listings of input
     IdealGas.ipynb
     SVDComponents.ipynb
     SVDSBTLValidation.ipynb
+    SVDSBTLHeatExchangerDemo.ipynb
