@@ -62,7 +62,7 @@ Each unit has one purpose, a defined interface, and is independently testable.
 Implementations:
 
 - **`HEOSProvider`** — one `HEOS` `AbstractState` for all calls.
-- **`SVDSBTLProvider`** — a `SVDSBTL&HEOS` `AbstractState` for `h_pT` / `Ts_ph`; saturation routed through a **separate fast HEOS ancillary** `AbstractState` (SVDSBTL exposes no public PQ / T_sat path). **Both** providers source saturation through the identical HEOS ancillary route, so the only timed difference is the `p,h ↔ T,ρ` table lookup — the isolation approved in the C++ spec's "saturation sourcing" judgment.
+- **`SVDSBTLProvider`** — one `SVDSBTL&HEOS` `AbstractState` for all calls. Saturation uses the backend's **own** `PQ_INPUTS` / `QT_INPUTS` pairs, which `SVDSBTL` supports directly (they route through the source's saturation line — verified to give values identical to `HEOS`). No separate HEOS ancillary is needed. (An earlier draft assumed "SVDSBTL exposes no public PQ / T_sat path" and added an ancillary state; that premise was wrong and the ancillary was removed.) Saturation is computed only at construction, never in the timed `run()` loop, so the only timed difference between backends is the `p,h ↔ T,ρ` table lookup.
 
 **`HeatExchanger`** — a faithful Python port of `dev/reference/HX.py`'s `HeatExchanger`, with every property call routed through a `PropertyProvider` instead of hardcoded `PropsSI`:
 

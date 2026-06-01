@@ -26,19 +26,22 @@ ORACLE_Q = 4577.242219
 
 
 class PropertyProvider(object):
-    """Property access for one fluid through a chosen backend.
+    """Property access for one fluid through a single chosen backend.
 
-    The ``p,h -> T`` transform (:meth:`h_pT`, :meth:`T_ph`) goes through the
-    chosen backend; saturation (:meth:`Tsat`, :meth:`hsat_TQ`) always goes
-    through a HEOS ancillary state, so saturation sourcing is identical for both
-    backends and the only timed difference is the table lookup.
+    Every call goes through one ``AbstractState`` for the chosen backend. The
+    ``p,h -> T`` transform (:meth:`h_pT`, :meth:`T_ph`) is the timed hot path.
+    Saturation (:meth:`Tsat`, :meth:`hsat_TQ`, :meth:`psat_TQ`) uses the
+    backend's own ``PQ_INPUTS`` / ``QT_INPUTS`` pairs -- on ``SVDSBTL`` these
+    route through the source's saturation line, giving values identical to
+    ``HEOS`` -- and is evaluated only at construction, never inside
+    :meth:`HeatExchanger.run`, so it has no effect on the measured speedup.
+    No separate ancillary state is needed.
     """
 
     backend = None  # set by subclasses
 
     def __init__(self, fluid):
         self.AS = CP.AbstractState(self.backend, fluid)
-        self.sat = CP.AbstractState('HEOS', fluid)
 
     def h_pT(self, p, T):
         self.AS.update(PT_INPUTS, p, T)
@@ -54,12 +57,16 @@ class PropertyProvider(object):
         return self.AS.T()
 
     def Tsat(self, p, Q):
-        self.sat.update(PQ_INPUTS, p, Q)
-        return self.sat.T()
+        self.AS.update(PQ_INPUTS, p, Q)
+        return self.AS.T()
 
     def hsat_TQ(self, T, Q):
-        self.sat.update(QT_INPUTS, Q, T)
-        return self.sat.hmass()
+        self.AS.update(QT_INPUTS, Q, T)
+        return self.AS.hmass()
+
+    def psat_TQ(self, T, Q):
+        self.AS.update(QT_INPUTS, Q, T)
+        return self.AS.p()
 
 
 class HEOSProvider(PropertyProvider):
@@ -208,8 +215,7 @@ def make_evaporator(backend, A=4.0):
         raise ValueError("backend must be 'HEOS' or 'SVDSBTL&HEOS', got %r" % (backend,))
     p_w = 101325.0
     h_w = ph.h_pT(p_w, 330.0)
-    pc.sat.update(QT_INPUTS, 1, 300.0)
-    p_r = pc.sat.p()
+    p_r = pc.psat_TQ(300.0, 1)
     h_r = pc.h_pT(p_r, 275.0)
     hx = HeatExchanger(ph, pc, mdot_h=0.1, p_hi=p_w, h_hi=h_w,
                        mdot_c=0.01, p_ci=p_r, h_ci=h_r)
