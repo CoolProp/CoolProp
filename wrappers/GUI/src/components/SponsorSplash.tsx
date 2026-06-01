@@ -62,7 +62,7 @@ export default function SponsorSplash({ version = APP_VERSION }: Props) {
             href={SPONSOR_URL}
             target="_blank"
             rel="noreferrer"
-            onClick={markSeen}
+            onClick={dismiss}
           >
             Sponsor on GitHub
           </a>

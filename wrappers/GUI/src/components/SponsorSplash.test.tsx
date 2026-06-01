@@ -44,5 +44,7 @@ describe("SponsorSplash", () => {
     expect(link).toHaveAttribute("href", "https://github.com/sponsors/CoolProp");
     await user.click(link);
     expect(localStorage.getItem(KEY_V7)).toBe("1");
+    // Clicking the CTA also dismisses the splash for the session.
+    expect(screen.queryByText(/Enjoying CoolProp/i)).not.toBeInTheDocument();
   });
 });

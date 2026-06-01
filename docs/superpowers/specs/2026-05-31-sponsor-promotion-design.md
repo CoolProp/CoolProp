@@ -75,11 +75,11 @@ Banner copy:
 The `localStorage` key is versioned, e.g. `coolprop.sponsorBanner.dismissed.v1`,
 so the banner can be intentionally re-shown later by bumping the suffix.
 
-**(c) Dedicated page.** New `Web/online/sponsor.rst` titled "Support CoolProp",
+**(c) Dedicated page.** New `Web/sponsor.rst` titled "Support CoolProp",
 explaining what sponsorship funds (ongoing maintenance, REFPROP-grade
 validation, build/CI infrastructure, the desktop GUI) with a prominent link to
-the Sponsors page. Add it to the `Web/online/index.rst` toctree and cross-link
-it from the **Help** section of `Web/index.rst`.
+the Sponsors page. Add it to the visible `Web/contents.rst` toctree and
+cross-link it from the **Help** section of `Web/index.rst`.
 
 ### 4. Desktop GUI (`wrappers/GUI/`, Tauri 2 + React 18)
 
