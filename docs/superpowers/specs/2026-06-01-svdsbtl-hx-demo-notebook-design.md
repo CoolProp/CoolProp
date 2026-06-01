@@ -56,7 +56,7 @@ Each unit has one purpose, a defined interface, and is independently testable.
 **`PropertyProvider`** — the interface the solver talks to, so the *same* solver runs against either backend. Constructed per fluid. Mirrors the C++ spec's interface:
 
 - `h_pT(p, T)` → hmass (via `PT_INPUTS`)
-- `Ts_ph(p, h)` → (T, smass) from one `HmassP_INPUTS` update (the hot-loop transform; one update, two reads)
+- `T_ph(p, h)` → T from one `HmassP_INPUTS` update (the hot-loop transform). Returns **T only** — the solver never needs entropy, and reading `smass()` here would add a separate entropy-surface evaluation on SVDSBTL, inflating the timed hot path and understating the measured speedup. (The original `HX.py` computed `s` only for its T-s plots, which are out of scope here.)
 - `Tsat(p, Q)`, `hsat_TQ(T, Q)` → saturation (init only, not in the hot loop)
 
 Implementations:
