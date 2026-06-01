@@ -126,35 +126,44 @@ ORACLE_Q = 4577.242219
 
 
 class PropertyProvider(object):
-    """Property access for one fluid through a chosen backend.
+    """Property access for one fluid through a single chosen backend.
 
-    The ``p,h <-> T,rho`` transforms (:meth:`h_pT`, :meth:`Ts_ph`) go through
-    the chosen backend; saturation (:meth:`Tsat`, :meth:`hsat_TQ`) always goes
-    through a HEOS ancillary state, so saturation sourcing is identical for both
-    backends and the only timed difference is the table lookup.
+    Every call goes through one ``AbstractState`` for the chosen backend. The
+    ``p,h -> T`` transform (:meth:`h_pT`, :meth:`T_ph`) is the timed hot path.
+    Saturation (:meth:`Tsat`, :meth:`hsat_TQ`, :meth:`psat_TQ`) uses the
+    backend's own ``PQ_INPUTS`` / ``QT_INPUTS`` pairs -- on ``SVDSBTL`` these
+    route through the source's saturation line, identical to ``HEOS`` -- and is
+    evaluated only at construction, never inside :meth:`HeatExchanger.run`, so
+    it has no effect on the measured speedup. No separate ancillary is needed.
     """
 
     backend = None  # set by subclasses
 
     def __init__(self, fluid):
         self.AS = CP.AbstractState(self.backend, fluid)
-        self.sat = CP.AbstractState('HEOS', fluid)
 
     def h_pT(self, p, T):
         self.AS.update(PT_INPUTS, p, T)
         return self.AS.hmass()
 
-    def Ts_ph(self, p, h):
+    def T_ph(self, p, h):
+        # T only -- the solver never needs entropy; reading smass() here would
+        # add a separate entropy-surface evaluation on SVDSBTL (overhead in the
+        # timed hot path that would understate the measured speedup).
         self.AS.update(HmassP_INPUTS, h, p)
-        return self.AS.T(), self.AS.smass()
+        return self.AS.T()
 
     def Tsat(self, p, Q):
-        self.sat.update(PQ_INPUTS, p, Q)
-        return self.sat.T()
+        self.AS.update(PQ_INPUTS, p, Q)
+        return self.AS.T()
 
     def hsat_TQ(self, T, Q):
-        self.sat.update(QT_INPUTS, Q, T)
-        return self.sat.hmass()
+        self.AS.update(QT_INPUTS, Q, T)
+        return self.AS.hmass()
+
+    def psat_TQ(self, T, Q):
+        self.AS.update(QT_INPUTS, Q, T)
+        return self.AS.p()
 
 
 class HEOSProvider(PropertyProvider):
@@ -172,8 +181,8 @@ class HeatExchanger(object):
         self.ph, self.pc = prov_h, prov_c
         self.mdot_h, self.p_hi, self.h_hi = mdot_h, p_hi, h_hi
         self.mdot_c, self.p_ci, self.h_ci = mdot_c, p_ci, h_ci
-        self.T_ci, _ = self.pc.Ts_ph(p_ci, h_ci)
-        self.T_hi, _ = self.ph.Ts_ph(p_hi, h_hi)
+        self.T_ci = self.pc.T_ph(p_ci, h_ci)
+        self.T_hi = self.ph.T_ph(p_hi, h_hi)
         self.T_cbubble = self.pc.Tsat(p_ci, 0)
         self.T_cdew = self.pc.Tsat(p_ci, 1)
         self.T_hbubble = self.ph.Tsat(p_hi, 0)
@@ -220,8 +229,8 @@ class HeatExchanger(object):
                 self.hvec_c.insert(k + 1, self.hvec_c[k] + Qcell_hk / self.mdot_c)
             k += 1
         assert len(self.hvec_h) == len(self.hvec_c)
-        self.Tvec_c = np.array([self.pc.Ts_ph(self.p_ci, h)[0] for h in self.hvec_c])
-        self.Tvec_h = np.array([self.ph.Ts_ph(self.p_hi, h)[0] for h in self.hvec_h])
+        self.Tvec_c = np.array([self.pc.T_ph(self.p_ci, h) for h in self.hvec_c])
+        self.Tvec_h = np.array([self.ph.T_ph(self.p_hi, h) for h in self.hvec_h])
         self.phases_h = self._phases(self.hvec_h, self.h_hbubble, self.h_hdew)
         self.phases_c = self._phases(self.hvec_c, self.h_cbubble, self.h_cdew)
 
@@ -303,8 +312,7 @@ def make_evaporator(backend, A=4.0):
         raise ValueError("backend must be 'HEOS' or 'SVDSBTL&HEOS', got %r" % (backend,))
     p_w = 101325.0
     h_w = ph.h_pT(p_w, 330.0)
-    pc.sat.update(QT_INPUTS, 1, 300.0)
-    p_r = pc.sat.p()
+    p_r = pc.psat_TQ(300.0, 1)
     h_r = pc.h_pT(p_r, 275.0)
     hx = HeatExchanger(ph, pc, mdot_h=0.1, p_hi=p_w, h_hi=h_w,
                        mdot_c=0.01, p_ci=p_r, h_ci=h_r)
