@@ -20,10 +20,11 @@ Build Sphinx documentation
     export LANG=en_US.UTF-8
     
 
-1. Check out the sources in the CoolProp/Web folder::
+1. Check out the sources.  All of the commands below are run from the repository
+   root unless stated otherwise::
 
     git clone https://github.com/CoolProp/CoolProp
-    cd CoolProp/Web
+    cd CoolProp
 
 2. Create the build environment.  The authoritative list of dependencies is
    ``dev/docker/conda_environment.yml`` (the same file the CI container is built
@@ -33,16 +34,20 @@ Build Sphinx documentation
     conda activate docs   # the environment is named "docs"
 
    You will also need a working install of the CoolProp Python wheel built from
-   the same checkout (``pip wheel .`` then ``pip install`` the resulting wheel),
-   so that the embedded examples run against the matching version of CoolProp.
+   the same checkout, so that the embedded examples run against the matching
+   version of CoolProp::
 
-3. Run setup script, ``CoolProp/Web/scripts/__init__.py`` to generate dynamic content::
+    pip wheel .
+    pip install ./CoolProp-*.whl
 
-    cd scripts
+3. Run the setup script ``Web/scripts/__init__.py`` to generate dynamic content::
+
+    cd Web/scripts
     python __init__.py
     cd ..
 
-4. To build the documentation, go into the CoolProp/Web folder and run::
+4. To build the documentation, run ``make`` from the ``Web`` folder (where you
+   now are after the previous step)::
 
     make html
 
@@ -89,7 +94,8 @@ a clean, MKL-backed scientific Python stack on Windows.
    variable, so that ``make`` is available from any command window.
 
 2. Install `Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ (or
-   Anaconda) for 64-bit Windows, then create the build environment::
+   Anaconda) for 64-bit Windows, then create the build environment from the
+   repository root::
 
     conda env create -f dev/docker/conda_environment.yml
     conda activate docs

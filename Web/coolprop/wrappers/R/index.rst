@@ -28,7 +28,7 @@ There is example code :ref:`at the end of this page <r_example>`
     
 .. warning::
 
-    If you want to use ``Rscript`` rather than ``R``, you need to pass the argument ``--default-packages=methods`` to get it to load the necessary packages for calling SWIGG-ed code.  Or call ``library(methods)`` at the top of the file (before ``source("CoolProp.R")``).  See also https://stackoverflow.com/a/19468533\n
+    If you want to use ``Rscript`` rather than ``R``, you need to pass the argument ``--default-packages=methods`` to get it to load the necessary packages for calling SWIGG-ed code.  Or call ``library(methods)`` at the top of the file (before ``source("CoolProp.R")``).  See also https://stackoverflow.com/a/19468533
 
 User-Compiled Binaries
 ======================

@@ -118,7 +118,13 @@ to reconfigure and rebuild all files even when only one file changed.
 Nightly builds
 --------------
 
-If you dare, you can also try the latest nightly release from :sfnightly:`Python`.
+If you dare, you can also try the latest development build, which is published to
+`TestPyPI <https://test.pypi.org/project/CoolProp/>`_::
+
+    pip install --pre --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ CoolProp
+
+The ``--extra-index-url`` lets pip pull CoolProp's dependencies (numpy, etc.) from the
+regular PyPI while taking CoolProp itself from TestPyPI.
 
 Manual installation
 ===================

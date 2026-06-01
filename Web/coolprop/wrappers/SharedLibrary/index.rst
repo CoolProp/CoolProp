@@ -19,7 +19,7 @@ There are a few things that need to be considered when determining what shared l
 Pre-Compiled Binaries
 ======================
 
-Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the nightly development versions at :sfnightly:`shared_library`.
+Download the appropriate shared library for your architecture from :sfdownloads:`shared_library`, or the nightly development versions at :sfnightly:`shared_library`.
 
 Users of the Borland compiler might find these instructions useful for using Visual Studio compiled shared libraries with Borland compiler: https://bcbjournal.org/articles/vol4/0012/Using_Visual_C_DLLs_with_CBuilder.htm
 

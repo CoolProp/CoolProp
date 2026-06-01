@@ -61,10 +61,10 @@ On Windows, download the newest binary installer for CMake from `CMake downloads
     C:\Users\XXXX>cmake -version
     cmake version 2.8.12.2
 
-For git, your best best is the installer from https://msysgit.github.io/.  Check that at the command prompt you can do something like::
+For git, your best bet is the installer from https://git-scm.com/download/win.  Check that at the command prompt you can do something like::
 
     C:\Users\XXXX>git --version
-    git version 1.9.4.msysgit.0
+    git version 2.43.0.windows.1
 
 For 7-zip, download the installer from https://www.7-zip.org/ .  Check that at the command prompt you can do something like::
 
@@ -77,24 +77,12 @@ For 7-zip, download the installer from https://www.7-zip.org/ .  Check that at t
 
 For python, you should be using `Anaconda/Miniconda <https://www.anaconda.com/download>`_ for your python installation.  Or, you can just install `Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_, which is sufficient.  You will also need to install the ``pip`` and ``six`` packages, which can be achieved by the following at a command prompt: ``conda install pip six``.
 
-For the C++ compiler, the options are a bit more complicated.  There are multiple (binary incompatible) versions of Visual Studio, as well as G++ ports for windows (MinGW).  Unless you are compiling the python wrappers, you can compile with MinGW.  The modern way to obtain a MinGW-w64 toolchain on Windows is via `MSYS2 <https://www.msys2.org/>`_; after installing it, install the toolchain with ``pacman -S mingw-w64-x86_64-gcc`` and add the ``mingw64\bin`` directory to your PATH.  Install to a path without spaces.
+For the C++ compiler on Windows you have two mainstream options:
 
-If you want to build 64-bit extensions, install the free Community edition of Visual Studio (the "Desktop development with C++" workload).  Python/Cython is built with a particular MSVC toolset, so the Visual Studio version should match your Python version as shown in the table below.  Since Visual Studio 2015 the C runtime (UCRT) is stable, so VS2015/2017/2019/2022 are mutually compatible for modern Python versions.
+* **MinGW-w64** (a Windows port of GCC), most easily obtained via `MSYS2 <https://www.msys2.org/>`_: after installing it, run ``pacman -S mingw-w64-x86_64-gcc`` and add the ``mingw64\bin`` directory to your PATH.  Install to a path without spaces.
+* **Visual Studio** — install the free Community edition with the "Desktop development with C++" workload.
 
-+---------------------------+-------------+-------------------------+
-| Visual Studio             | Visual C++  | Python Versions         |
-+===========================+=============+=========================+
-| 2008 Professional         | 9.0         | 2.6, 2.7, 3.0, 3.1, 3.2 |
-+---------------------------+-------------+-------------------------+
-| 2010 Professional         | 10.0        | 3.3, 3.4                |
-+---------------------------+-------------+-------------------------+
-| 2015/2017/2019/2022       | 14.x        | 3.5 and newer           |
-| Community                 |             |                         |
-+---------------------------+-------------+-------------------------+
-
-Otherwise, for wrappers other than Python, you can select a Visual Studio version freely.
-
-The older compilers can co-exist on the path with the newer ones.  Downloads of VS2008 and 2010 are getting harder to find, so this may influence your Python version of choice.  See this `WindowsCompilers <https://wiki.python.org/moin/WindowsCompilers>`_ page at wiki.python.org for more info on the Windows C++ compilers needed for the various Python/Cython versions and where to download them (most for free).
+Most users never need to compile the Python wrapper themselves, since pre-built CoolProp wheels are published on `PyPI <https://pypi.org/project/CoolProp/>`_.  If you do build from source, the old advice about matching a specific Visual Studio version to your Python version no longer applies: since Visual Studio 2015 the C runtime (UCRT) is stable, so any recent Visual Studio works.
 
 Linux
 -----
