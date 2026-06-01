@@ -1,0 +1,35 @@
+/* Sponsor banner injected by sponsor-banner.js on every docs page. */
+#coolprop-sponsor-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #e8f6ec;
+  color: #1b5e2a;
+  border-bottom: 1px solid #cfe8d6;
+  padding: 9px 16px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+#coolprop-sponsor-banner .cp-sponsor-text { flex: 1 1 auto; }
+#coolprop-sponsor-banner .cp-sponsor-text strong { color: #14532d; }
+#coolprop-sponsor-banner a.cp-sponsor-cta {
+  flex: 0 0 auto;
+  background: #2ea043;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+#coolprop-sponsor-banner button.cp-sponsor-dismiss {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: #6b8f74;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+#coolprop-sponsor-banner button.cp-sponsor-dismiss:hover { color: #14532d; }
