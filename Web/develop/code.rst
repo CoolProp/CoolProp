@@ -10,7 +10,7 @@ The source code of CoolProp is stored in a github repository at https://github.c
 Doxygen formatted documentation of the source files
 ---------------------------------------------------
 
-Builds of the `doxygen <http://www.stack.nl/~dimitri/doxygen/>`_ formatted HTML outputs for the 
+Builds of the `doxygen <https://www.doxygen.nl/>`_ formatted HTML outputs for the 
 current version can be found at :cpapi:`CoolProp`.
 
 More information

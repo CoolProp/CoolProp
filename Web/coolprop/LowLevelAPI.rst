@@ -8,7 +8,7 @@ Low Level Interface
 
 For more advanced use, it can be useful to have access to lower-level internals of the CoolProp code.  For simpler use, you can use the :ref:`high-level interface <high_level_api>`.  The primary reason why this low-level interface is useful is because it is much faster, and actually the high-level interface internally calls the low-level interface.  Furthermore, the low-level-interface exclusively operates using enumerated values (integers) and floating point numbers, and uses no strings.  String comparison and parsing is computationally expensive and the low-level interface allows for a very efficient execution.
 
-At the C++ level, the code is based on the use of an :cpapi:`AbstractState` `abstract base class  <http://en.wikipedia.org/wiki/Abstract_type>`_ which defines a protocol that :ref:`the property backends <backends>` must implement.  In this way, it is very easy to extend CoolProp to connect with another completely unrelated property library, as was done for REFPROP.  As long as the interface to the library can be coerced to work within the AbstractState structure, CoolProp can interface seamlessly with the library.
+At the C++ level, the code is based on the use of an :cpapi:`AbstractState` `abstract base class  <https://en.wikipedia.org/wiki/Abstract_type>`_ which defines a protocol that :ref:`the property backends <backends>` must implement.  In this way, it is very easy to extend CoolProp to connect with another completely unrelated property library, as was done for REFPROP.  As long as the interface to the library can be coerced to work within the AbstractState structure, CoolProp can interface seamlessly with the library.
 
 In order to make most effective use of the low-level interface, you should instantiate one instance of the backend for each fluid (or mixture), and then call methods within the instance.  There is a certain amount of computational overhead in calling the constructor for the backend instance, so in order to minimize it, only call the constructor once, and pass around your class instance.
 
@@ -435,7 +435,7 @@ Here is an example showing how to change the reference state and demonstrating t
 Low-level interface using REFPROP
 ---------------------------------
 
-If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP`` as the backend instead of ``HEOS``. For instance, as in python:
+If you have the `REFPROP library <https://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP`` as the backend instead of ``HEOS``. For instance, as in python:
 
 .. ipython::
 

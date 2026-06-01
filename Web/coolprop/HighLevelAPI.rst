@@ -433,7 +433,7 @@ For non-standard reference states, you can specify them directly for the given t
 Calling REFPROP
 ---------------
 
-If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP::`` preceding the fluid name. For instance, as in python:
+If you have the `REFPROP library <https://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP::`` preceding the fluid name. For instance, as in python:
 
 .. ipython::
 
@@ -448,7 +448,7 @@ If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installe
 Adding Fluids
 -------------
 
-The fluids in CoolProp are all compiled into the library itself, and are given in the `JSON <http://json.org>`_ format.  They are all stored in the ``dev/fluids`` folder relative to the root of the repository.  If you want to obtain the JSON data for a fluid from CoolProp, print out a part of it, and then load it back into CoolProp, you could do:
+The fluids in CoolProp are all compiled into the library itself, and are given in the `JSON <https://json.org>`_ format.  They are all stored in the ``dev/fluids`` folder relative to the root of the repository.  If you want to obtain the JSON data for a fluid from CoolProp, print out a part of it, and then load it back into CoolProp, you could do:
 
 .. ipython::
     :okexcept:

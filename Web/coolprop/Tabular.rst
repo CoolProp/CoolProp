@@ -70,12 +70,12 @@ The basic concept behind Tabular Taylor Series Extrapolation (TTSE) extrapolatio
     
     \Delta x = y-y_j
     
-See the `IAPWS TTSE report <http://www.iapws.org/relguide/TTSE.pdf>`_ for a description of the method.  Analytic derivatives are used to build the tables
+See the `IAPWS TTSE report <https://www.iapws.org/relguide/TTSE.pdf>`_ for a description of the method.  Analytic derivatives are used to build the tables
 
 Bicubic Interpolation
 ---------------------
 
-In bicubic interpolation, the values of the output parameter as well as its derivatives are evaluated at the corners of a unit square, and these values are used to fit a bicubic surface over the unit square. `Wikipedia <http://en.wikipedia.org/wiki/Bicubic_interpolation>`_ has excellent coverage of bicubic interpolation, and the method implemented in CoolProp is exactly this method.
+In bicubic interpolation, the values of the output parameter as well as its derivatives are evaluated at the corners of a unit square, and these values are used to fit a bicubic surface over the unit square. `Wikipedia <https://en.wikipedia.org/wiki/Bicubic_interpolation>`_ has excellent coverage of bicubic interpolation, and the method implemented in CoolProp is exactly this method.
 
 Normalized cell values are generated from
 

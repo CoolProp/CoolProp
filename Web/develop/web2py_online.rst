@@ -32,7 +32,7 @@ Running application locally
 
 Same basic protocol...
 
-1. Check out the source of web2py (http://www.web2py.com/init/default/download)
+1. Check out the source of web2py (https://www.web2py.com/init/default/download)
 2. Open shell in unzipped web2py folder
 3. ``cd applications``
 4. ``git clone https://github.com/CoolProp/CoolProp-Online coolpropgit`` to check out the application
@@ -43,5 +43,5 @@ Useful information
 ------------------
 
 * How to update web2py safely: https://www.pythonanywhere.com/forums/topic/881/#id_post_6624
-* Info on deploying on PythonAnywhere: http://web2py.com/books/default/chapter/29/13#Deploying-on-PythonAnywhere
-* Setting default app: http://www.ridgesolutions.ie/index.php/2013/02/20/web2py-make-your-app-the-default-web-application/
+* Info on deploying on PythonAnywhere: https://web2py.com/books/default/chapter/29/13#Deploying-on-PythonAnywhere
+* Setting default app: https://www.ridgesolutions.ie/index.php/2013/02/20/web2py-make-your-app-the-default-web-application/
