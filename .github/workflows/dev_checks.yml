@@ -417,3 +417,34 @@ jobs:
       #    sibling modules mypy pulls in transitively; the stub must be clean.
       - name: mypy stub check
         run: uvx mypy@1.19.1 --ignore-missing-imports wrappers/Python/CoolProp/CoolProp.pyi
+
+  superanc-pin:
+    name: superancillary docs reference pin
+    # Gates the fastchebpure release pinned by the docs superancillary plots
+    # (Web/scripts/fluid_properties.Superancillary.py) against the current EOS.
+    # Those plots divide CoolProp's superancillary by the pinned release's
+    # extended-precision reference, which fastchebpure generates from CoolProp's
+    # EOS at the commit it was tagged against. If an EOS is updated here after
+    # that pin -- the chicken-and-egg case in issue #3063 / R1233zd(E) -- the
+    # reference describes a different equation of state and the deviation plot
+    # is meaningless. This recomputes each fluid's source_eos_hash from
+    # dev/fluids and requires it to equal the hash the pinned release stamped,
+    # catching a forgotten pin bump at PR time instead of only in rendered docs.
+    # Build-free, stdlib-only (it downloads the pinned release zip). Like
+    # type-stubs, deliberately NO paths filter so it can be a required check
+    # without deadlocking unrelated PRs. The EOS<->embedded-SA twin is the C++
+    # test "Superancillary source_eos_hash matches current EOS at bit level" and
+    # dev/scripts/check_superanc_freshness.py. See
+    # dev/scripts/check_superanc_release_pin.py.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Check pinned fastchebpure release matches current EOS
+        run: python3 dev/scripts/check_superanc_release_pin.py
