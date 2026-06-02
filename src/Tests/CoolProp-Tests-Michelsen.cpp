@@ -57,6 +57,250 @@ TEST_CASE("Michelsen Flash: Multi-component convergence (4-comp mix)", "[michels
     CHECK(AS->rhomolar() > 0);
 }
 
+// ============================================================================
+// Benchmark test cases from the literature
+//
+// References:
+//   [M82a] Michelsen, M.L., "The isothermal flash problem. Part I. Stability",
+//          Fluid Phase Equilibria 9 (1982) 1-19.
+//   [M82b] Michelsen, M.L., "The isothermal flash problem. Part II. Phase-split
+//          calculation", Fluid Phase Equilibria 9 (1982) 21-40.
+//   [MM07] Michelsen, M.L. and Mollerup, J.M., "Thermodynamic Models:
+//          Fundamentals & Computational Aspects", 2nd ed., Tie-Line (2007),
+//          Chapters 9 (Stability Analysis) and 12 (Flash and Phase Envelope).
+// ============================================================================
+
+TEST_CASE("Michelsen Flash: 7-component natural gas [M82a,M82b]", "[michelsen][flash][benchmark]") {
+    // Composition from Michelsen (1982a) Table 1: synthetic natural gas
+    // z = {C1:0.9430, C2:0.0270, C3:0.0074, nC4:0.0049, nC5:0.0027, nC6:0.0010, N2:0.0140}
+    std::string fluids = "Methane&Ethane&Propane&n-Butane&n-Pentane&n-Hexane&Nitrogen";
+    std::vector<double> z = {0.9430, 0.0270, 0.0074, 0.0049, 0.0027, 0.0010, 0.0140};
+
+    SECTION("SRK two-phase at 190 K, 4 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 4e6, 190.0));
+        CHECK(AS->phase() == iphase_twophase);
+        CHECK(AS->Q() > 0);
+        CHECK(AS->Q() < 1);
+    }
+    SECTION("PR two-phase at 190 K, 4 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 4e6, 190.0));
+        CHECK(AS->phase() == iphase_twophase);
+        CHECK(AS->Q() > 0);
+        CHECK(AS->Q() < 1);
+    }
+    SECTION("SRK stable gas at 250 K, 1 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e6, 250.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR stable gas at 250 K, 1 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e6, 250.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
+TEST_CASE("Michelsen Flash: CH4/CO2 binary [MM07 Ch.9]", "[michelsen][flash][benchmark]") {
+    // 50/50 Methane/CO2 -- classic binary from Michelsen & Mollerup (2007) Ch. 9
+    // Mixture critical point near Tc~252 K, Pc~8.5 MPa (SRK estimate)
+    std::string fluids = "Methane&CarbonDioxide";
+    std::vector<double> z = {0.5, 0.5};
+
+    SECTION("SRK two-phase at 220 K, 3 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 3e6, 220.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("PR two-phase at 220 K, 3 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 3e6, 220.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("HEOS two-phase at 220 K, 3 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 3e6, 220.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("SRK stable supercritical at 300 K, 10 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 10e6, 300.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR stable supercritical at 300 K, 10 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 10e6, 300.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
+TEST_CASE("Michelsen Flash: CH4/C2H6/CO2 ternary [MM07 Ch.9]", "[michelsen][flash][benchmark]") {
+    // 30/30/40 Methane/Ethane/CO2 -- ternary from Michelsen & Mollerup (2007) Ch. 9
+    std::string fluids = "Methane&Ethane&CarbonDioxide";
+    std::vector<double> z = {0.3, 0.3, 0.4};
+
+    SECTION("SRK two-phase at 220 K, 2 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 2e6, 220.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("PR two-phase at 220 K, 2 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 2e6, 220.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("HEOS two-phase at 220 K, 2 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 2e6, 220.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("SRK stable gas at 300 K, 1 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e6, 300.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR stable gas at 300 K, 1 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e6, 300.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
+TEST_CASE("Michelsen Flash: CH4/n-C10 wide-boiling binary", "[michelsen][flash][benchmark]") {
+    // Wide-boiling pair: Tc(CH4)=190.6K vs Tc(nC10)=617.7K
+    // Stress test for log-K storage -- K-factors span several orders of magnitude
+    // See [M82b] Section 5 discussion on wide-boiling mixtures
+    std::string fluids = "Methane&n-Decane";
+    std::vector<double> z = {0.7, 0.3};
+
+    SECTION("SRK two-phase at 350 K, 5 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 5e6, 350.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("PR two-phase at 350 K, 5 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 5e6, 350.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("SRK two-phase at 300 K, 3 MPa (large K-spread)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 3e6, 300.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("PR two-phase at 300 K, 3 MPa (large K-spread)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 3e6, 300.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+}
+
+TEST_CASE("Michelsen Flash: CH4/H2S binary", "[michelsen][flash][benchmark]") {
+    // CH4/H2S system -- known to exhibit three-phase (VLLE) behavior at some
+    // conditions.  This tests that the two-phase VLE flash converges robustly
+    // in the classical VLE region.
+    // See: Heidemann, R.A. and Khalil, A.M., AIChE J. 26 (1980) 769-779.
+    std::string fluids = "Methane&HydrogenSulfide";
+    std::vector<double> z = {0.5, 0.5};
+
+    SECTION("SRK two-phase at 220 K, 2 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 2e6, 220.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("PR two-phase at 220 K, 2 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 2e6, 220.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+}
+
+TEST_CASE("Michelsen Flash: CH4/C2H6 near mixture critical [M82a]", "[michelsen][flash][benchmark]") {
+    // Near the mixture critical point, successive substitution converges slowly
+    // and second-order methods (GDEM acceleration, Newton with trust region)
+    // are essential.  See [M82a] Section 4.
+    std::string fluids = "Methane&Ethane";
+    std::vector<double> z = {0.5, 0.5};
+
+    SECTION("SRK two-phase at 230 K, 4 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 4e6, 230.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+    SECTION("PR two-phase at 230 K, 4 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 4e6, 230.0));
+        CHECK(AS->phase() == iphase_twophase);
+    }
+}
+
+TEST_CASE("Michelsen Flash: SRK vs PR cross-validation [M82b]", "[michelsen][flash][benchmark]") {
+    // Both cubic EOS should agree on phase identification for the same
+    // conditions, even though densities and thermodynamic properties differ.
+    // See [M82b] for the general methodology applied to cubic EOS.
+    std::string fluids = "Methane&Propane";
+    std::vector<double> z = {0.6, 0.4};
+
+    auto AS_srk = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+    auto AS_pr = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+    AS_srk->set_mole_fractions(z);
+    AS_pr->set_mole_fractions(z);
+
+    SECTION("Two-phase at 250 K, 3 MPa") {
+        CHECK_NOTHROW(AS_srk->update(PT_INPUTS, 3e6, 250.0));
+        CHECK_NOTHROW(AS_pr->update(PT_INPUTS, 3e6, 250.0));
+        CHECK(AS_srk->phase() == iphase_twophase);
+        CHECK(AS_pr->phase() == iphase_twophase);
+        // Vapor fractions should be qualitatively similar
+        CHECK(AS_srk->Q() > 0);
+        CHECK(AS_pr->Q() > 0);
+    }
+}
+
+TEST_CASE("Michelsen Flash: N2/CH4 cryogenic binary", "[michelsen][flash][benchmark]") {
+    // Nitrogen/Methane is relevant for LNG and air separation.
+    // Tests flash at cryogenic conditions where both components are near
+    // or below their critical temperatures.
+    std::string fluids = "Nitrogen&Methane";
+    std::vector<double> z = {0.2, 0.8};
+
+    SECTION("SRK stable gas at 200 K, 1 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e6, 200.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR stable gas at 200 K, 1 MPa") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e6, 200.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
 TEST_CASE("Legacy Stability: check that legacy algorithm still works", "[stability][legacy]") {
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
     std::vector<double> z = {0.5, 0.5};
