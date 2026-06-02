@@ -57,6 +57,15 @@ struct mixture_VLE_IO
     std::vector<CoolPropDbl> x, y, K;
 };
 
+/*! Returns the natural logarithm of K for component i using the method from Wilson as in
+    \f[
+    \ln K_i = \ln\left(\frac{p_{c,i}}{p}\right)+5.373(1+\omega_i)\left(1-\frac{T_{c,i}}{T}\right)
+    \f]
+    @param HEOS The Helmholtz EOS mixture backend
+    @param T Temperature [K]
+    @param p Pressure [Pa]
+    @param i Index of component [-]
+    */
 static CoolPropDbl Wilson_lnK_factor(const HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, CoolPropDbl p, std::size_t i) {
     const double pci = HEOS.get_fluid_constant(i, iP_critical);
     const double Tci = HEOS.get_fluid_constant(i, iT_critical);
@@ -107,15 +116,52 @@ inline int format_as(saturation_PHSU_pure_options::specified_variable_options op
 #endif
 
 void saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl specified_value, saturation_PHSU_pure_options& options);
+
+/* \brief This is a backup saturation_p solver for the case where the Newton solver cannot approach closely enough the solution
+     *
+     * This is especially a problem at low pressures where catastrophic truncation error occurs, especially in the saturated vapor side
+     *
+     * @param HEOS The Helmholtz EOS backend instance to be used
+     * @param p Imposed pressure in kPa
+     * @param options Options to be passed to the function (at least T, rhoL and rhoV must be provided)
+     */
 void saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl p, saturation_PHSU_pure_options& options);
+
+/* \brief This is a backup saturation_T solver for the case where the Newton solver cannot approach closely enough the solution
+     *
+     * This is especially a problem at low pressures where catastrophic truncation error occurs, especially in the saturated vapor side
+     *
+     * @param HEOS The Helmholtz EOS backend instance to be used
+     * @param T Imposed temperature in K
+     * @param options Options to be passed to the function (at least p, rhoL and rhoV must be provided)
+     */
 void saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, saturation_T_pure_options& options);
+
+/* \brief A robust but slow solver in the very-near-critical region
+     *
+     * @param HEOS The Helmholtz EOS backend instance to be used
+     * @param ykey The CoolProp::parameters key to be imposed - one of iT or iP
+     * @param y The value for the imposed variable
+     */
 void saturation_critical(HelmholtzEOSMixtureBackend& HEOS, CoolProp::parameters ykey, CoolPropDbl y);
 
 void successive_substitution(HelmholtzEOSMixtureBackend& HEOS, const CoolPropDbl beta, CoolPropDbl T, CoolPropDbl p,
                              const std::vector<CoolPropDbl>& z, std::vector<CoolPropDbl>& K, mixture_VLE_IO& options);
+/** \brief Extract the mole fractions of liquid (x) and vapor (y) given the bulk composition (z), vapor mole fraction and K-factors
+     * @param beta Vapor molar fraction [-]
+     * @param K K-factors for the components [-]
+     * @param z Bulk molar composition [-]
+     * @param x Liquid molar composition [-]
+     * @param y Vapor molar composition [-]
+     */
 void x_and_y_from_K(CoolPropDbl beta, const std::vector<CoolPropDbl>& K, const std::vector<CoolPropDbl>& z, std::vector<CoolPropDbl>& x,
                     std::vector<CoolPropDbl>& y);
 
+/*! A wrapper function around the residual to find the initial guess for the bubble point temperature
+    \f[
+    r = \sum_i \frac{z_i(K_i-1)}{1-beta+beta*K_i}
+    \f]
+    */
 class WilsonK_resid : public FuncWrapper1D
 {
    public:
@@ -239,6 +285,10 @@ struct newton_raphson_twophase_options
         imposed_variable(NO_VARIABLE_IMPOSED) {}
 };
 
+/** \brief A class to do newton raphson solver for mixture VLE for p,Q or T,Q
+     *
+     * A class is used rather than a function so that it is easier to store iteration histories, additional output values, etc.
+     */
 class newton_raphson_twophase
 {
    public:
@@ -317,6 +367,11 @@ struct newton_raphson_saturation_options
         imposed_variable(NO_VARIABLE_IMPOSED) {}
 };
 
+/** \brief A class to do newton raphson solver for mixture bubble point and dew point calculations
+     *
+     * A class is used rather than a function so that it is easier to store iteration histories, additional output
+     * values, etc.  This class is used in \ref PhaseEnvelopeRoutines for the construction of the phase envelope.
+     */
 class newton_raphson_saturation
 {
    public:
@@ -362,6 +417,14 @@ struct PTflash_twophase_options
       : Nstep_max(30), Nsteps(0), omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE), beta(0.5) {}
 };
 
+/**
+ * @brief Isothermal-Isobaric (PT) two-phase flash solver
+ *
+ * Implements a hybrid solver using Successive Substitution (SS) with GDEM
+ * acceleration for robust initialization, followed by a Second-Order Gibbs
+ * energy minimization (Newton-Raphson) for rapid quadratic convergence.
+ * K-factors are stored in log space to prevent overflow for wide-boiling mixtures.
+ */
 class PTflash_twophase
 {
    public:
@@ -384,6 +447,12 @@ class PTflash_twophase
 
 namespace StabilityRoutines {
 
+/** \brief Evaluate phase stability
+     *
+     * Implements Michelsen (1982) TPD stability analysis with successive substitution,
+     * GDEM acceleration, and second-order quasi-Newton TPD minimization.
+     * The legacy Gernert et al. (2014) algorithm is available via MIXTURE_STABILITY_ALGORITHM=0.
+     */
 class StabilityEvaluationClass
 {
    protected:
@@ -430,14 +499,32 @@ class StabilityEvaluationClass
     /** \brief Michelsen (1982) stability check */
     void check_stability_michelsen();
 
+    /** \brief Second-order TPD minimization in alpha variables (Michelsen 1982a, Eq. 25-27)
+     *
+     * Transforms to alpha_i = 2*sqrt(Y_i) for improved Hessian conditioning,
+     * then applies Hebden's trust-region quasi-Newton method.
+     *
+     * @param Y Trial composition (unnormalized mole numbers); updated in place
+     * @param ln_f_z Feed fugacity values: ln(z_i) + ln(phi_i(z))
+     * @param the_T Temperature [K]
+     * @param the_p Pressure [Pa]
+     * @param is_unstable Set to true if TPD minimum is negative
+     * @return true if minimization succeeded, false on solver failure
+     */
+    bool minimize_tpd(std::vector<CoolPropDbl>& Y, const std::vector<CoolPropDbl>& ln_f_z, CoolPropDbl the_T, CoolPropDbl the_p, bool& is_unstable);
+
     /** \brief Set which stability routine to use */
     void set_use_michelsen(bool value) {
         use_michelsen = value;
     }
 
     bool is_stable() {
-        trial_compositions();
-        successive_substitution(3);
+        if (!use_michelsen) {
+            // Legacy path needs trial compositions and a few SS steps
+            // before check_stability_legacy() can evaluate TPD
+            trial_compositions();
+            successive_substitution(3);
+        }
         check_stability();
         return _stable;
     }

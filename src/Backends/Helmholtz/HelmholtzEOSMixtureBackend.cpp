@@ -198,22 +198,31 @@ void HelmholtzEOSMixtureBackend::resize(std::size_t N) {
     }
 }
 void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase() {
-    if (p() > p_critical()) {
-        if (T() > T_critical()) {
-            _phase = iphase_supercritical;
-        } else {
-            _phase = iphase_supercritical_liquid;
-        }
-    } else {
-        if (T() > T_critical()) {
-            _phase = iphase_supercritical_gas;
-        } else {
-            // Liquid or vapor
-            if (rhomolar() > rhomolar_critical()) {
-                _phase = iphase_liquid;
+    try {
+        if (p() > p_critical()) {
+            if (T() > T_critical()) {
+                _phase = iphase_supercritical;
             } else {
-                _phase = iphase_gas;
+                _phase = iphase_supercritical_liquid;
             }
+        } else {
+            if (T() > T_critical()) {
+                _phase = iphase_supercritical_gas;
+            } else {
+                // Liquid or vapor
+                if (rhomolar() > rhomolar_critical()) {
+                    _phase = iphase_liquid;
+                } else {
+                    _phase = iphase_gas;
+                }
+            }
+        }
+    } catch (...) {
+        // Fallback for mixtures where critical point finding fails
+        if (rhomolar() > rhomolar_reducing()) {
+            _phase = iphase_liquid;
+        } else {
+            _phase = iphase_gas;
         }
     }
 }
@@ -1166,7 +1175,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
             //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].T;
         } else {
-            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+            return calc_T_reducing();
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
@@ -1185,7 +1194,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
             //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].p;
         } else {
-            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+            return calc_p_reducing();
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
@@ -1204,7 +1213,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical() {
             //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].rhomolar;
         } else {
-            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+            return calc_rhomolar_reducing();
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
