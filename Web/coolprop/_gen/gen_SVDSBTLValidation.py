@@ -1,10 +1,15 @@
-"""Generate the SVDSBTL validation notebook (6 fluids x {PT, HP} inputs, rho error).
+"""Generate the SVDSBTL validation notebook (8 fluids x {PT, HP} inputs, rho error).
 
 Writes ``Web/coolprop/SVDSBTLValidation.ipynb`` as a *stripped* notebook
-(no embedded outputs). The notebook carries per-notebook nbsphinx metadata
-that forces re-execution during ``make html`` (``execute='always'``, with a
-generous ``timeout`` because SVDSBTL surfaces lazily build the first time
-each (fluid, input_pair) is queried in a given environment).
+(no embedded outputs).  The docs build re-executes it in place on every
+``make html``: ``Web/conf.py`` walks every ``.ipynb`` and runs
+``jupyter nbconvert --execute`` (timeout bumped to 1 h, because SVDSBTL
+surfaces lazily build the first time each (fluid, input_pair) is queried
+in a given environment).  The committed copy therefore intentionally
+carries no outputs — they are regenerated at build time.
+
+This file is the single source of truth for the notebook; re-run it after
+any edit and commit the regenerated ``.ipynb`` (the two must stay in sync).
 
 Docs build environment must have:
   - CoolProp Python wrapper built from current source (``pip install .`` at repo root)
@@ -19,6 +24,8 @@ Local verification (renders the HTML the docs build would produce):
     --ExecutePreprocessor.timeout=3600 \\
     Web/coolprop/SVDSBTLValidation.ipynb
 """
+
+from pathlib import Path
 
 import nbformat as nbf
 
@@ -299,7 +306,7 @@ nb.cells.append(_md(
     "- Source generator: `Web/coolprop/_gen/gen_SVDSBTLValidation.py`.\n"
 ))
 
-out = '/Users/ianbell/Code/CoolProp/Web/coolprop/SVDSBTLValidation.ipynb'
+out = str(Path(__file__).resolve().parents[1] / 'SVDSBTLValidation.ipynb')
 with open(out, 'w') as f:
     nbf.write(nb, f)
 
