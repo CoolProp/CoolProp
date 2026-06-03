@@ -301,8 +301,8 @@ TEST_CASE("Michelsen Flash: N2/CH4 cryogenic binary", "[michelsen][flash][benchm
     }
 }
 
-TEST_CASE("Michelsen Flash: 8-component natural gas density-solver fallback", "[michelsen][flash][benchmark]") {
-    // Reported case: 8-component natural gas at 290.15K fails with "No density solutions"
+TEST_CASE("Michelsen Flash: Issue #3066 (8-comp natural gas density failure)", "[michelsen][flash][benchmark][3066]") {
+    // 8-component natural gas at 290.15K fails with "No density solutions"
     // for pressures between ~34.2 and ~35.5 bar because solver_rho_Tp_global encounters
     // an S-shaped isotherm with the target pressure between the spinodal pressures.
     // The fix falls back to SRK-seeded Newton solver (solver_rho_Tp) in this case.

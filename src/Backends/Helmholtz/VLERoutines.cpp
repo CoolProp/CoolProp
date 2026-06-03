@@ -1869,7 +1869,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         rho_b = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, HEOS.SatL->calc_rhomolar_max_bound());
     } catch (...) {
         // solver_rho_Tp_global can fail for multiparameter mixtures when the pressure
-        // lies between the spinodal pressures.  Fall back to SRK-seeded Newton solver.
+        // lies between the spinodal pressures.  Fall back to SRK-seeded solver.
         HEOS.SatL->specify_phase(iphase_gas);
         rho_b = HEOS.SatL->solver_rho_Tp(the_T, the_p);
         HEOS.SatL->unspecify_phase();

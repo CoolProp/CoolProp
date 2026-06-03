@@ -94,11 +94,10 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 try {
                     rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), HEOS.calc_rhomolar_max_bound());
                 } catch (...) {
-                    // solver_rho_Tp_global can fail for multiparameter mixtures when the
-                    // target pressure lies between the spinodal pressures on the S-shaped
-                    // isotherm. Fall back to solver_rho_Tp with an SRK-based initial guess,
-                    // choosing the gas branch (lower density) as default for mixtures where
-                    // the phase boundary is unresolved.
+                    // solver_rho_Tp_global can fail for multiparameter mixtures when
+                    // the target pressure lies between the spinodal pressures on the
+                    // S-shaped isotherm. Fall back to solver_rho_Tp with an SRK-based
+                    // initial guess, choosing the gas branch (lower density) as default.
                     HEOS._phase = iphase_gas;
                     rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
                 }
