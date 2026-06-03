@@ -13,7 +13,7 @@ using std::shared_ptr;
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Solvers.h"
 #include "CoolPropTools.h"
-#include "Ice.h"
+#include "CoolProp/fluids/Ice.h"
 #include "CoolProp.h"
 #include "Exceptions.h"
 #include "Configuration.h"

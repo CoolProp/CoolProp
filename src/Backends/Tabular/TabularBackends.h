@@ -2,7 +2,7 @@
 #define TABULAR_BACKENDS_H
 
 #include "AbstractState.h"
-#include "CPmsgpack.h"
+#include "CoolProp/detail/msgpack.h"
 #include <memory>
 using std::shared_ptr;
 #include "Exceptions.h"
