@@ -89,18 +89,27 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                     HEOS._rhomolar = 1.0 / (o.beta / o.rhomolar_vap + (1.0 - o.beta) / o.rhomolar_liq);
                 }
             } else {
-                // It's single-phase
+                // It's single-phase -- find the density.
+                // Use SRK to determine the density branch (gas vs liquid), then
+                // impose that phase for the actual solver so it can select the
+                // correct root without needing p_critical() (which triggers an
+                // expensive critical-point search for many-component mixtures).
                 double rho;
+                double rho_srk = HEOS.solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_gas);
+                if (rho_srk < 0 || !ValidNumber(rho_srk)) {
+                    rho_srk = HEOS.solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_liquid);
+                }
+                phases srk_phase = (rho_srk < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+                HEOS.specify_phase(srk_phase);
                 try {
-                    rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), HEOS.calc_rhomolar_max_bound());
+                    rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
                 } catch (...) {
-                    // solver_rho_Tp_global can fail for multiparameter mixtures when
-                    // the target pressure lies between the spinodal pressures on the
-                    // S-shaped isotherm. Fall back to solver_rho_Tp with an SRK-based
-                    // initial guess, choosing the gas branch (lower density) as default.
-                    HEOS._phase = iphase_gas;
+                    // If SRK-determined phase fails, try the other branch
+                    phases alt = (srk_phase == iphase_gas) ? iphase_liquid : iphase_gas;
+                    HEOS.specify_phase(alt);
                     rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
                 }
+                HEOS.unspecify_phase();
                 HEOS.update_DmolarT_direct(rho, HEOS.T());
                 HEOS._Q = -1;
                 HEOS._phase = (rho < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;

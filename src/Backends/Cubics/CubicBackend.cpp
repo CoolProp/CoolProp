@@ -559,8 +559,39 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
     _phase = iphase_twophase;
 }
 CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max) {
-    _rhomolar = solver_rho_Tp(T, p, 40000);
-    return static_cast<double>(_rhomolar);
+    int Nsoln = 0;
+    double rho0 = 0, rho1 = 0, rho2 = 0;
+    rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);
+
+    double rho;
+    if (Nsoln == 1) {
+        rho = rho0;
+    } else if (Nsoln == 3) {
+        if (imposed_phase_index != iphase_not_imposed) {
+            // Delegate to solver_rho_Tp which handles imposed phase
+            return solver_rho_Tp(T, p);
+        }
+        // Three roots, no imposed phase: pick the root with the lowest
+        // Gibbs energy.  This avoids the expensive p_critical() call that
+        // triggers all_critical_points() for many-component mixtures.
+        double rho_vap = (rho0 > 0) ? rho0 : rho1;
+        double rho_liq = rho2;
+        double g_vap = calc_gibbsmolar_nocache(T, rho_vap);
+        double g_liq = calc_gibbsmolar_nocache(T, rho_liq);
+        rho = (g_liq < g_vap) ? rho_liq : rho_vap;
+    } else {
+        throw ValueError("Obtained neither 1 nor three roots");
+    }
+
+    _rhomolar = rho;
+    update_DmolarT_direct(rho, T);
+    _Q = -1;
+    if (imposed_phase_index != iphase_not_imposed) {
+        _phase = imposed_phase_index;
+    } else {
+        _phase = (rho < rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+    }
+    return rho;
 }
 CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess) {
     int Nsoln = 0;

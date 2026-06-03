@@ -301,6 +301,33 @@ TEST_CASE("Michelsen Flash: N2/CH4 cryogenic binary", "[michelsen][flash][benchm
     }
 }
 
+TEST_CASE("Michelsen Flash: 11-comp PR hang at high pressure", "[michelsen][cubic][flash][benchmark]") {
+    // 11-component natural gas with PR backend hangs at T=520K, P=10.13 MPa.
+    // SRK works fine. The issue is the cubic blind flash takes excessive time
+    // or throws "cubic has three roots, but phase not imposed".
+    std::string fluids = "Methane&Nitrogen&CO2&Ethane&Propane&Isobutane&Butane&Isopentane&Pentane&Hexane&Heptane";
+    std::vector<double> z = {0.9092, 0.0271, 0.0018, 0.0386, 0.011, 0.0037, 0.0037, 0.00135, 0.00135, 0.0008, 0.0014};
+
+    SECTION("PR at 520 K, 1 MPa (works)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 999999.0, 520.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("SRK at 520 K, 10.13 MPa (works)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 10132500.0, 520.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR at 520 K, 10.13 MPa (previously hung)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 10132500.0, 520.0));
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
 TEST_CASE("Michelsen Flash: Issue #3066 (8-comp natural gas density failure)", "[michelsen][flash][benchmark][3066]") {
     // 8-component natural gas at 290.15K fails with "No density solutions"
     // for pressures between ~34.2 and ~35.5 bar because solver_rho_Tp_global encounters
