@@ -1864,7 +1864,16 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
 
     // Evaluate feed fugacities: d_i = ln(z_i) + ln(phi_i(z))
     HEOS.SatL->set_mole_fractions(z);
-    CoolPropDbl rho_b = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, HEOS.SatL->calc_rhomolar_max_bound());
+    CoolPropDbl rho_b;
+    try {
+        rho_b = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, HEOS.SatL->calc_rhomolar_max_bound());
+    } catch (...) {
+        // solver_rho_Tp_global can fail for multiparameter mixtures when the pressure
+        // lies between the spinodal pressures.  Fall back to SRK-seeded Newton solver.
+        HEOS.SatL->specify_phase(iphase_gas);
+        rho_b = HEOS.SatL->solver_rho_Tp(the_T, the_p);
+        HEOS.SatL->unspecify_phase();
+    }
     HEOS.SatL->update_DmolarT_direct(rho_b, the_T);
 
     std::vector<CoolPropDbl> ln_f_z(N);

@@ -301,6 +301,43 @@ TEST_CASE("Michelsen Flash: N2/CH4 cryogenic binary", "[michelsen][flash][benchm
     }
 }
 
+TEST_CASE("Michelsen Flash: 8-component natural gas density-solver fallback", "[michelsen][flash][benchmark]") {
+    // Reported case: 8-component natural gas at 290.15K fails with "No density solutions"
+    // for pressures between ~34.2 and ~35.5 bar because solver_rho_Tp_global encounters
+    // an S-shaped isotherm with the target pressure between the spinodal pressures.
+    // The fix falls back to SRK-seeded Newton solver (solver_rho_Tp) in this case.
+    std::string fluids = "Methane&Nitrogen&CO2&Ethane&Propane&n-Butane&n-Pentane&IsoButane";
+    std::vector<double> z = {0.9254, 0.007, 0.008, 0.048, 0.0085, 0.0014, 0.0002, 0.0015};
+
+    SECTION("HEOS at 290.15 K, 35.0 bar (previously failed)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 35.0e5, 290.15));
+        CHECK(AS->rhomolar() > 0);
+        // Density should be gas-like (~1500 mol/m3), consistent with SRK/PR results
+        CHECK(AS->rhomolar() > 1000);
+        CHECK(AS->rhomolar() < 3000);
+    }
+    SECTION("HEOS at 290.15 K, 34.5 bar (previously failed)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 34.5e5, 290.15));
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("HEOS at 290.15 K, 34.2 bar (boundary, previously worked)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 34.2e5, 290.15));
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("HEOS at 290.15 K, 35.5 bar (boundary, previously worked)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 35.5e5, 290.15));
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
 TEST_CASE("Legacy Stability: check that legacy algorithm still works", "[stability][legacy]") {
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
     std::vector<double> z = {0.5, 0.5};
