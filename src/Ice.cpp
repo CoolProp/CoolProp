@@ -11,7 +11,7 @@ static std::complex<double> r21(-0.557107698030123e-4, 0.464578634580806e-4);
 static std::complex<double> r22(0.234801409215913e-10, -0.285651142904972e-10);
 #endif
 
-#include "Ice.h"
+#include "CoolProp/fluids/Ice.h"
 
 static double T_t = 273.16,  ///< Triple point temperature in K
   p_t = 611.657,             ///< Triple point pressure in Pa
