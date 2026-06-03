@@ -77,8 +77,8 @@ add_custom_command(
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/generate_constants_module.py"
-        "${ROOT_DIR}/include/DataStructures.h"
-        "${ROOT_DIR}/include/Configuration.h"
+        "${ROOT_DIR}/include/CoolProp/DataStructures.h"
+        "${ROOT_DIR}/include/CoolProp/Configuration.h"
     COMMENT "Generating Cython constants module..."
     VERBATIM
 )
