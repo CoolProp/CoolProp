@@ -828,24 +828,16 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend& HE
 
         deltaL = rhoL / reduce.rhomolar;
         deltaV = rhoV / reduce.rhomolar;
-    } catch (NotImplementedError&) {  // NOLINT(bugprone-empty-catch)
+    } catch (NotImplementedError&) {
         // Backend doesn't implement the saturation-density ancillaries
-        // (e.g. PCSAFT, incompressible) — keep the deltaL/deltaV initial
-        // guess from the caller and let the Newton iteration below
-        // converge from there.  The commented-out Soave fallback was an
-        // earlier attempt at a guess-from-Tc/pc/omega path; left in
-        // place as a hint if anyone revisits this.
-        /*double Tc = crit.T;
-        double pc = crit.p.Pa;
-        double w = 6.67228479e-09*Tc*Tc*Tc-7.20464352e-06*Tc*Tc+3.16947758e-03*Tc-2.88760012e-01;
-        double q = -6.08930221451*w -5.42477887222;
-        double pt = exp(q*(Tc/T-1))*pc;*/
-
-        //double rhoL = density_Tp_Soave(T, pt, 0), rhoV = density_Tp_Soave(T, pt, 1);
-
-        //deltaL = rhoL/reduce.rhomolar;
-        //deltaV = rhoV/reduce.rhomolar;
-        //tau = reduce.T/T;
+        // (e.g. PCSAFT, incompressible).  Since ancillaries are never called
+        // when options.use_guesses == true, this catch is only reached with
+        // rhoL == _HUGE and deltaL == 0 (initial values), which would make the
+        // Newton loop below crash.  Seed it with near-critical estimates instead.
+        rhoL = reduce.rhomolar;         // liquid ≈ critical density (deltaL = 1)
+        rhoV = reduce.rhomolar * 0.01;  // dilute-vapour estimate (deltaV = 0.01)
+        deltaL = rhoL / reduce.rhomolar;
+        deltaV = rhoV / reduce.rhomolar;
     }
     //if (get_debug_level()>5){
     //        std::cout << format("%s:%d: Akasaka guess values deltaL = %g deltaV = %g tau = %g\n",__FILE__,__LINE__,deltaL, deltaV, tau).c_str();
@@ -1744,6 +1736,92 @@ class RachfordRiceResidual : public FuncWrapper1DWithDeriv
     }
 };
 
+void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
+                                                         CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z,
+                                                         int num_steps, double tol) {
+    const std::size_t N = z.size();
+    std::vector<CoolPropDbl> lnK(N, 0.0), K(N);
+    for (int ss = 0; ss < num_steps; ++ss) {
+        HEOS.SatL->set_mole_fractions(x);
+        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
+        HEOS.SatV->set_mole_fractions(y);
+        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
+        rhomolar_liq = HEOS.SatL->rhomolar();
+        rhomolar_vap = HEOS.SatV->rhomolar();
+
+        double g0 = 0, g1 = 0, max_lnK_change = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            double lnK_new = log(HEOS.SatL->fugacity_coefficient(i) / HEOS.SatV->fugacity_coefficient(i));
+            max_lnK_change = std::max(max_lnK_change, std::abs(lnK_new - lnK[i]));
+            lnK[i] = lnK_new;
+            K[i] = exp(lnK[i]);
+            g0 += z[i] * (K[i] - 1.0);
+            g1 += z[i] * (1.0 - 1.0 / K[i]);
+        }
+        if (ss > 0 && max_lnK_change < tol) {
+            // Converged: update x/y from the latest K before returning.
+            double beta_conv;
+            if (g0 < 0)
+                beta_conv = 0;
+            else if (g1 > 0)
+                beta_conv = 1;
+            else {
+                RachfordRiceResidual resid_conv(z, lnK);
+                beta_conv = Brent(resid_conv, 0, 1, DBL_EPSILON, 1e-10, 100);
+                // Brent can overshoot just past the nearest pole; bisect as fallback.
+                if (beta_conv < 0.0 || beta_conv > 1.0) {
+                    double a_b = 0.0, b_b = 1.0, f_a = g0;
+                    for (int sb = 0; sb < 60; ++sb) {
+                        double mid = 0.5 * (a_b + b_b);
+                        double f_mid = resid_conv.call(mid);
+                        if (f_a * f_mid > 0) {
+                            a_b = mid;
+                            f_a = f_mid;
+                        } else {
+                            b_b = mid;
+                        }
+                    }
+                    beta_conv = 0.5 * (a_b + b_b);
+                }
+            }
+            x_and_y_from_K(beta_conv, K, z, x, y);
+            normalize_vector(x);
+            normalize_vector(y);
+            break;
+        }
+
+        double beta;
+        if (g0 < 0)
+            beta = 0;
+        else if (g1 > 0)
+            beta = 1;
+        else {
+            RachfordRiceResidual resid(z, lnK);
+            beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+            // Brent can overshoot just past the nearest pole (at 1/(1-K_min), slightly
+            // above 1).  The Rachford-Rice function is strictly monotone on [0,1] with
+            // no poles there, so bisection is guaranteed to recover the interior root.
+            if (beta < 0.0 || beta > 1.0) {
+                double a_b = 0.0, b_b = 1.0, f_a = g0;
+                for (int sb = 0; sb < 60; ++sb) {
+                    double mid = 0.5 * (a_b + b_b);
+                    double f_mid = resid.call(mid);
+                    if (f_a * f_mid > 0) {
+                        a_b = mid;
+                        f_a = f_mid;
+                    } else {
+                        b_b = mid;
+                    }
+                }
+                beta = 0.5 * (a_b + b_b);
+            }
+        }
+        x_and_y_from_K(beta, K, z, x, y);
+        normalize_vector(x);
+        normalize_vector(y);
+    }
+}
+
 void StabilityRoutines::StabilityEvaluationClass::trial_compositions() {
 
     x.resize(z.size());
@@ -1778,6 +1856,21 @@ void StabilityRoutines::StabilityEvaluationClass::trial_compositions() {
         // Need to iterate to find beta that makes g of Rachford-Rice zero
         RachfordRiceResidual resid(z, lnK);
         beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+        // Brent can overshoot just past the nearest pole; bisect as fallback.
+        if (beta < 0.0 || beta > 1.0) {
+            double a_b = 0.0, b_b = 1.0, f_a = g0;
+            for (int sb = 0; sb < 60; ++sb) {
+                double mid = 0.5 * (a_b + b_b);
+                double f_mid = resid.call(mid);
+                if (f_a * f_mid > 0) {
+                    a_b = mid;
+                    f_a = f_mid;
+                } else {
+                    b_b = mid;
+                }
+            }
+            beta = 0.5 * (a_b + b_b);
+        }
     }
     // Get the compositions from given value for beta, K, z
     SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
@@ -1825,6 +1918,21 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         } else {
             // Need to iterate to find beta that makes g of Rachford-Rice zero
             beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+            // Brent can overshoot just past the nearest pole; bisect as fallback.
+            if (beta < 0.0 || beta > 1.0) {
+                double a_b = 0.0, b_b = 1.0, f_a = g0;
+                for (int sb = 0; sb < 60; ++sb) {
+                    double mid = 0.5 * (a_b + b_b);
+                    double f_mid = resid.call(mid);
+                    if (f_a * f_mid > 0) {
+                        a_b = mid;
+                        f_a = f_mid;
+                    } else {
+                        b_b = mid;
+                    }
+                }
+                beta = 0.5 * (a_b + b_b);
+            }
         }
 
         // Get the compositions from given values for beta, K, z
@@ -1963,6 +2071,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
             return;
         }
     }
+
     if (diffbulkH > 0.25 || diffbulkL > 0.25) {
         // At least one test phase is definitely not the bulk composition, so phase split predicted
         _stable = false;
@@ -2091,17 +2200,27 @@ void SaturationSolvers::PTflash_twophase::build_arrays() {
             }
         }
     }
-    // Next N-2 residuals are amount of substance balances
-    for (std::size_t i = 0; i < N - 2; ++i) {
-        std::size_t k = i + N;
-        r(k) = (IO.z[i] - IO.x[i]) / (IO.y[i] - IO.x[i]) - (IO.z[N - 1] - IO.x[N - 1]) / (IO.y[N - 1] - IO.x[N - 1]);
-        for (std::size_t j = 0; j < N - 2; ++j) {
-            J(k, j) = (IO.z[j] - IO.x[j]) / POW2(IO.y[j] - IO.x[j]);
-            J(k, j + N - 1) = -(IO.z[j] - IO.x[j]) / POW2(IO.y[j] - IO.x[j]);
+    // Next N-2 residuals are amount of substance balances.
+    // Jacobian derivation (independent vars: x_0..x_{N-2}, y_0..y_{N-2};
+    // dependent: x_{N-1}=1-Σx, y_{N-1}=1-Σy):
+    //   r_{N+i} = Q_i - Q_{N-1},  Q_j = (z_j - x_j)/(y_j - x_j)
+    //   ∂r_{N+i}/∂x_m = δ_{im}*(z_i-y_i)/(y_i-x_i)² + (z_{N-1}-y_{N-1})/(y_{N-1}-x_{N-1})²
+    //   ∂r_{N+i}/∂y_m = δ_{im}*(-(z_i-x_i)/(y_i-x_i)²) - (z_{N-1}-x_{N-1})/(y_{N-1}-x_{N-1})²
+    {
+        const double denom_Nm1_sq = POW2(IO.y[N - 1] - IO.x[N - 1]);
+        const double B_x = (IO.z[N - 1] - IO.y[N - 1]) / denom_Nm1_sq;   // off-diag x term
+        const double B_y = -(IO.z[N - 1] - IO.x[N - 1]) / denom_Nm1_sq;  // off-diag y term
+        for (std::size_t i = 0; i < N - 2; ++i) {
+            const std::size_t k = i + N;
+            r(k) = (IO.z[i] - IO.x[i]) / (IO.y[i] - IO.x[i]) - (IO.z[N - 1] - IO.x[N - 1]) / (IO.y[N - 1] - IO.x[N - 1]);
+            const double denom_i_sq = POW2(IO.y[i] - IO.x[i]);
+            const double diag_x_i = (IO.z[i] - IO.y[i]) / denom_i_sq;   // diagonal x term for row i
+            const double diag_y_i = -(IO.z[i] - IO.x[i]) / denom_i_sq;  // diagonal y term for row i
+            for (std::size_t m = 0; m < N - 1; ++m) {
+                J(k, m) = (m == i) ? (diag_x_i + B_x) : B_x;
+                J(k, m + N - 1) = (m == i) ? (diag_y_i + B_y) : B_y;
+            }
         }
-        std::size_t j = N - 2;
-        J(k, j) = -(IO.z[j] - IO.x[j]) / POW2(IO.y[j] - IO.x[j]);
-        J(k, j + N - 1) = +(IO.z[j] - IO.x[j]) / POW2(IO.y[j] - IO.x[j]);
     }
     this->error_rms = r.norm();
 }

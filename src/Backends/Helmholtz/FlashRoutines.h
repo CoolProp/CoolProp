@@ -187,6 +187,13 @@ class FlashRoutines
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iHmolar, iSmolar, iUmolar
     static void HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters other);
 
+    /// The mixture flash routine for the pairs (P,H), (P,S), and (P,U).
+    /// Solves for T such that Y(T,P,z) = value using a bounded 1-D solver.
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    /// @param other The index for the other input from CoolProp::parameters; allowed values are iHmolar, iSmolar, iUmolar
+    /// @param value The target value of the property identified by other
+    static void HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parameters other, CoolPropDbl value);
+
     /// The single-phase flash routine for the pairs (P,H), (P,S), and (P,U).  Similar analysis is needed
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iHmolar, iSmolar, iUmolar
@@ -304,6 +311,48 @@ class PY_singlephase_flash_resid : public FuncWrapper1D
         // Difference between the two is to be driven to zero
         return eos - value;
     };
+};
+
+/** A residual function for mixture f(P, Y) flash that supports both single-phase and two-phase.
+ *  Unlike PY_singlephase_flash_resid, this does NOT specify a phase and does NOT
+ *  re-update with DmolarT_INPUTS, so the two-phase state from PT_flash_mixtures is preserved.
+ */
+class PY_flash_resid : public FuncWrapper1D
+{
+   public:
+    HelmholtzEOSMixtureBackend* HEOS;
+    CoolPropDbl p;
+    parameters other;
+    CoolPropDbl value;
+    PY_flash_resid(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl p, parameters other, CoolPropDbl value)
+      : HEOS(&HEOS), p(p), other(other), value(value) {};
+    double call(double T) override {
+        // Run the solver with T,P as inputs; this delegates to PT_flash_mixtures
+        // which handles phase determination (stability analysis or phase envelope)
+        HEOS->update(PT_INPUTS, p, T);
+        // Get the value of the desired variable (works for both single-phase and two-phase)
+        CoolPropDbl eos = HEOS->keyed_output(other);
+        return eos - value;
+    };
+};
+
+/// Two-phase HSU_P residual parameterised by vapor fraction Q in [0, 1].
+/// At each Q calls HEOS.update(PQ_INPUTS, p, Q) and returns keyed_output - value.
+class PQ_flash_val_resid : public FuncWrapper1D
+{
+   public:
+    HelmholtzEOSMixtureBackend& HEOS;
+    CoolPropDbl p;
+    parameters other;
+    CoolPropDbl value;
+
+    PQ_flash_val_resid(HelmholtzEOSMixtureBackend& HEOS_, CoolPropDbl p_, parameters other_, CoolPropDbl value_)
+      : HEOS(HEOS_), p(p_), other(other_), value(value_) {}
+
+    double call(double Q) override {
+        HEOS.update(PQ_INPUTS, p, Q);
+        return HEOS.keyed_output(other) - value;
+    }
 };
 
 } /* namespace CoolProp */

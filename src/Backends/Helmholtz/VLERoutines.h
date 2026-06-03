@@ -164,6 +164,16 @@ void successive_substitution(HelmholtzEOSMixtureBackend& HEOS, const CoolPropDbl
 void x_and_y_from_K(CoolPropDbl beta, const std::vector<CoolPropDbl>& K, const std::vector<CoolPropDbl>& z, std::vector<CoolPropDbl>& x,
                     std::vector<CoolPropDbl>& y);
 
+/** \brief Run up to num_steps of fast successive-substitution using guess-based density updates.
+ *
+ * Requires good initial density guesses (e.g. from a traced phase envelope or a preceding
+ * global SS step).  x, y, rhomolar_liq and rhomolar_vap are updated in-place.  Stops early
+ * when the maximum |\Delta\ln K| across all components falls below tol.
+ */
+void successive_substitution_guessrho(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
+                                      CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z, int num_steps,
+                                      double tol = 1e-6);
+
 /*! A wrapper function around the residual to find the initial guess for the bubble point temperature
     \f[
     r = \sum_i \frac{z_i(K_i-1)}{1-beta+beta*K_i}
@@ -287,10 +297,23 @@ inline double saturation_Wilson(HelmholtzEOSMixtureBackend& HEOS, double beta, d
     } else {
         // Find first guess for output variable using Wilson K-factors
         WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
-        if (guess < 0 || !ValidNumber(guess))
-            out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100);
-        else
+        try {
+            // When input_type == imposed_T we are solving for pressure (Pa);
+            // use a wide pressure bracket [1 Pa, 1e9 Pa].
+            // When input_type == imposed_p we are solving for temperature (K);
+            // use [50 K, 10000 K].
+            if (input_type == imposed_T) {
+                out = Brent(Resid, 1.0, 1e9, 1e-10, 1e-10, 100);
+            } else {
+                out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100);
+            }
+        } catch (const std::exception&) {
+            // Brent failed to bracket; fall back to Secant from the provided guess
+            if (!ValidNumber(guess) || guess < 0) {
+                throw;
+            }
             out = Secant(Resid, guess, 0.001, 1e-10, 100);
+        }
         if (!ValidNumber(out)) {
             throw ValueError("saturation_p_Wilson failed to get good output value");
         }
@@ -373,7 +396,7 @@ class newton_raphson_twophase
     bool logging;
     int Nsteps;
     Eigen::MatrixXd J;
-    Eigen::Vector2d r, err_rel;
+    Eigen::VectorXd r, err_rel;
     std::vector<CoolPropDbl> K, x, y, z;
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
@@ -639,7 +662,8 @@ class StabilityEvaluationClass
     /** \brief Calculate trial compositions
          */
     void trial_compositions();
-    /** \brief Successive substitution
+    /** \brief Successive substitution using the global SRK-based density solver.
+         * @param num_steps  Number of SS iterations to perform.
          */
     void successive_substitution(int num_steps);
     /** \brief Check stability
