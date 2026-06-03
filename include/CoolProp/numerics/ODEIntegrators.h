@@ -9,6 +9,16 @@ namespace ODEIntegrators {
 class AbstractODEIntegrator
 {
    public:
+    // Polymorphic base: virtual destructor so deletion through a base pointer
+    // is well-defined; the rest of the special members are defaulted to satisfy
+    // the rule of five (cppcoreguidelines C.21) now that a destructor is declared.
+    AbstractODEIntegrator() = default;
+    virtual ~AbstractODEIntegrator() = default;
+    AbstractODEIntegrator(const AbstractODEIntegrator&) = default;
+    AbstractODEIntegrator& operator=(const AbstractODEIntegrator&) = default;
+    AbstractODEIntegrator(AbstractODEIntegrator&&) = default;
+    AbstractODEIntegrator& operator=(AbstractODEIntegrator&&) = default;
+
     virtual std::vector<double> get_initial_array() const = 0;
 
     virtual void pre_step_callback() = 0;
