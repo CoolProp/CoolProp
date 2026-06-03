@@ -28,17 +28,17 @@ surface tension                 N/m
 #undef REFPROP_IMPLEMENTATION
 #undef REFPROP_CSTYLE_REFERENCES
 
-#include "CoolPropTools.h"
+#include "CoolProp/detail/tools.h"
 #include "REFPROPMixtureBackend.h"
 #include "REFPROPBackend.h"
-#include "Exceptions.h"
-#include "Configuration.h"
-#include "CPfilepaths.h"
-#include "CoolProp.h"
-#include "Solvers.h"
-#include "IdealCurves.h"
-#include "DataStructures.h"
-#include "AbstractState.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/detail/filepaths.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/numerics/Solvers.h"
+#include "CoolProp/fluids/IdealCurves.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/AbstractState.h"
 #include "qmass_conversions.h"
 
 #include <cmath>
@@ -2760,7 +2760,7 @@ void REFPROP_SETREF(char* hrf, int ixflag, double* x0, double& h0, double& s0, d
 } /* namespace CoolProp */
 
 #ifdef ENABLE_CATCH
-#    include "CoolProp.h"
+#    include "CoolProp/CoolProp.h"
 #    include <catch2/catch_all.hpp>
 
 TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {

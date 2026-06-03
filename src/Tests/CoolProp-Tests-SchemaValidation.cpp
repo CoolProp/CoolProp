@@ -8,8 +8,8 @@
 #    include <string>
 
 #    include "CoolProp/SchemaValidation.h"
-#    include "Exceptions.h"
-#    include "rapidjson_include.h"
+#    include "CoolProp/Exceptions.h"
+#    include "CoolProp/detail/rapidjson.h"
 
 namespace {
 

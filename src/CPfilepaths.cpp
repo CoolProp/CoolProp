@@ -1,8 +1,8 @@
-#include "PlatformDetermination.h"
-#include "Exceptions.h"
-#include "CPfilepaths.h"
-#include "CPstrings.h"
-#include "CoolPropTools.h"
+#include "CoolProp/detail/PlatformDetermination.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/detail/filepaths.h"
+#include "CoolProp/detail/strings.h"
+#include "CoolProp/detail/tools.h"
 
 #include <fstream>
 #include <algorithm>

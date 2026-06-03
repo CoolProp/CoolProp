@@ -2,11 +2,11 @@
 #ifndef INCOMPRESSIBLELIBRARY_H
 #define INCOMPRESSIBLELIBRARY_H
 
-#include "DataStructures.h"
-#include "IncompressibleFluid.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/fluids/IncompressibleFluid.h"
 //#include "crossplatform_shared_ptr.h"
 
-#include "rapidjson_include.h"
+#include "CoolProp/detail/rapidjson.h"
 
 #include <map>
 

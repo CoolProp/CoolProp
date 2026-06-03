@@ -4,8 +4,8 @@
 #include <chrono>
 #include <memory>
 
-#include "CoolProp.h"
-#include "HumidAirProp.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/HumidAirProp.h"
 
 int main(int argc, const char* argv[]) {
 

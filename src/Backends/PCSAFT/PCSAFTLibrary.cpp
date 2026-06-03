@@ -4,12 +4,12 @@
 #include "all_pcsaft_JSON.h"                   // Makes a std::string variable called all_pcsaft_JSON
 #include "pcsaft_fluids_schema_JSON.h"         // Makes a std::string variable called pcsaft_fluids_schema_JSON
 #include "mixture_binary_pairs_pcsaft_JSON.h"  // Makes a std::string variable called mixture_binary_pairs_pcsaft_JSON
-#include "rapidjson_include.h"
-#include "CPstrings.h"
-#include "CoolProp.h"
-#include "Configuration.h"
+#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/strings.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
-#include "CoolPropTools.h"
+#include "CoolProp/detail/tools.h"
 
 namespace CoolProp {
 

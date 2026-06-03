@@ -2,8 +2,8 @@
 #include <vector>
 #include <cmath>
 
-#include "PCSAFTFluid.h"
-#include "rapidjson_include.h"
+#include "CoolProp/fluids/PCSAFTFluid.h"
+#include "CoolProp/detail/rapidjson.h"
 
 namespace CoolProp {
 

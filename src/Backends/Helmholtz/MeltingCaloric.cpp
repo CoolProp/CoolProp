@@ -1,8 +1,8 @@
-#include "MeltingCaloric.h"
+#include "CoolProp/fluids/MeltingCaloric.h"
 // NOTE: match the include paths/style that FlashRoutines.cpp (same directory) uses
 // for these two headers:
 #include "HelmholtzEOSMixtureBackend.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 #include "FlashRoutines.h"
 #include <algorithm>
 #include <cmath>

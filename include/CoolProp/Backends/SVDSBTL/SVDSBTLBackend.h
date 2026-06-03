@@ -10,13 +10,13 @@
 #include <unordered_map>
 #include <vector>
 
-#include "superancillary/superancillary.h"
+#include "CoolProp/superancillary/superancillary.h"
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "CoolProp/sbtl/SVDSurface.h"
 #include "CoolProp/sbtl/SaturationSurrogate.h"
-#include "DataStructures.h"
-#include "Exceptions.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/Exceptions.h"
 
 namespace CoolProp {
 

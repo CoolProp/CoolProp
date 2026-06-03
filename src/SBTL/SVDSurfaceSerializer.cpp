@@ -9,14 +9,14 @@
 #include <utility>
 #include <vector>
 
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 
 #include <msgpack.hpp>
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
-#include "CPfilepaths.h"
-#include "Configuration.h"
+#include "CoolProp/detail/filepaths.h"
+#include "CoolProp/Configuration.h"
 #include "CoolProp/region/ConstantCurve.h"
 #include "CoolProp/region/CubicSplineCurve.h"
 #include "CoolProp/region/PiecewiseChebyshevCurve.h"

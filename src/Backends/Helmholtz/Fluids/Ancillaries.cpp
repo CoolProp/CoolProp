@@ -1,11 +1,11 @@
-#include "Ancillaries.h"
+#include "CoolProp/fluids/Ancillaries.h"
 
 #include <cmath>
 #include <limits>
-#include "CoolProp.h"
-#include "DataStructures.h"
-#include "AbstractState.h"
-#include "Configuration.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/Configuration.h"
 
 #if defined(ENABLE_CATCH)
 

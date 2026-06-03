@@ -3,8 +3,8 @@
 #include <cmath>
 
 #include "VTPRBackend.h"
-#include "Configuration.h"
-#include "Exceptions.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/Exceptions.h"
 
 static UNIFACLibrary::UNIFACParameterLibrary lib;
 

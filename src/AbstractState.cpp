@@ -12,9 +12,9 @@
 #include <cmath>
 #include <cstdlib>
 #include "boost/math/tools/toms748_solve.hpp"
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "CoolProp/FactoryOptions.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 #include "qmass_conversions.h"
 #include "Backends/IF97/IF97Backend.h"
 #include "Backends/Cubics/CubicBackend.h"

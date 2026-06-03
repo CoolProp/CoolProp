@@ -1,8 +1,8 @@
 
-#include "MatrixMath.h"
+#include "CoolProp/numerics/MatrixMath.h"
 
-#include "CoolPropTools.h"
-#include "Exceptions.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/Exceptions.h"
 
 namespace CoolProp {}; /* namespace CoolProp */
 

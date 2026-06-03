@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "Exceptions.h"
-#include "rapidjson_include.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/detail/rapidjson.h"
 
 namespace CoolProp {
 

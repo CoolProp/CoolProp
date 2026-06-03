@@ -8,7 +8,7 @@
 #define MIXTURE_BINARY_PAIRS_H
 
 #include <vector>
-#include "CoolPropFluid.h"
+#include "CoolProp/CoolPropFluid.h"
 #include <memory>
 using std::shared_ptr;
 

@@ -8,8 +8,8 @@
 #ifndef REFPROPMIXTUREBACKEND_H_
 #define REFPROPMIXTUREBACKEND_H_
 
-#include "AbstractState.h"
-#include "DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/DataStructures.h"
 
 #include <vector>
 

@@ -356,11 +356,11 @@ list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories(${APP_INCLUDE_DIRS})
 
 set(SWIG_DEPENDENCIES
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/DataStructures.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/AbstractState.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/Configuration.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/PhaseEnvelope.h)
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/DataStructures.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/CoolProp.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/AbstractState.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/Configuration.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/fluids/PhaseEnvelope.h)
 
 set(COOLPROP_APP_SOURCES
     ${APP_SOURCES}
@@ -551,7 +551,7 @@ set(COOLPROP_LIBRARY_SOURCE
     CACHE STRING "The file that contains the exported functions")
 
 set(COOLPROP_LIBRARY_HEADER
-    "include/CoolPropLib.h"
+    "include/CoolProp/CoolPropLib.h"
     CACHE STRING "The file that contains the export header")
 
 set(COOLPROP_LIBRARY_NAME
@@ -619,6 +619,16 @@ if(COOLPROP_OBJECT_LIBRARY
     )
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
             DESTINATION static_library)
+    # GH #1280: ship the installable C++ header tree so downstream CMake can
+    # find_package(CoolProp) and get usable include paths. The flat deprecation
+    # shims ship alongside so consumers on the old "X.h" includes keep building
+    # (removed at v9). Generated DB headers (*_JSON.h) are excluded.
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
+            DESTINATION static_library/include FILES_MATCHING PATTERN "*.h")
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+            DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
+            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE
+            PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
   elseif(COOLPROP_SHARED_LIBRARY)
     list(APPEND APP_SOURCES
          "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
@@ -648,6 +658,14 @@ if(COOLPROP_OBJECT_LIBRARY
     )
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
             DESTINATION shared_library)
+    # GH #1280: ship the installable C++ header tree (+ flat back-compat shims,
+    # removed at v9; generated *_JSON.h excluded). See the static branch above.
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
+            DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h")
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+            DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
+            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE
+            PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
     set_property(
       TARGET ${LIB_NAME}
       APPEND_STRING
@@ -828,8 +846,15 @@ if(COOLPROP_DEBIAN_PACKAGE)
                            SOVERSION ${COOLPROP_VERSION_MAJOR})
   add_dependencies(${app_name} generate_headers)
   install(TARGETS ${app_name} DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/lib")
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolPropLib.h
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include")
+  # GH #1280: install the C++ header tree (incl. CoolProp/CoolPropLib.h) plus
+  # the flat back-compat shims, so both <CoolProp/CoolPropLib.h> and the legacy
+  # <CoolPropLib.h> resolve from /usr/include. Shims removed at v9.
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
+          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h")
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
+          PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE
+          PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
 endif()
 
 if(COOLPROP_VXWORKS_MAKEFILE)
@@ -1105,7 +1130,7 @@ if(COOLPROP_WINDOWS_PACKAGE)
     PRE_BUILD
     COMMAND
       ${CMAKE_COMMAND} ARGS "-E" "copy"
-      "${CMAKE_CURRENT_SOURCE_DIR}/include/CoolPropLib.h"
+      "${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/CoolPropLib.h"
       "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolPropLib.h"
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR}
     COMMENT "Copy the header file for the CoolProp library"

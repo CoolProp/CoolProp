@@ -8,8 +8,8 @@
 #    include <crtdbg.h>
 #endif
 
-#include "CoolProp.h"
-#include "AbstractState.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/AbstractState.h"
 
 #if defined(__ISWINDOWS__)
 #    include <windows.h>
@@ -37,15 +37,15 @@
 #include <cstdio>
 #include <string>
 #include <locale>
-#include "CoolPropTools.h"
-#include "Solvers.h"
-#include "MatrixMath.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/numerics/Solvers.h"
+#include "CoolProp/numerics/MatrixMath.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/Incompressible/IncompressibleLibrary.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Helmholtz/MixtureParameters.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 #include "Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "Backends/Cubics/CubicsLibrary.h"
 #include "Backends/PCSAFT/PCSAFTLibrary.h"

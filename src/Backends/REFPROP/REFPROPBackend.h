@@ -9,7 +9,7 @@
 #define REFPROPBACKEND_H_
 
 #include "REFPROPMixtureBackend.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 
 namespace CoolProp {
 

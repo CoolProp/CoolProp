@@ -1,12 +1,12 @@
 
 
-#include "AbstractState.h"
-#include "DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/DataStructures.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
-#include "superancillary/superancillary.h"
+#include "CoolProp/superancillary/superancillary.h"
 #include "miniz.h"
 #include <atomic>
 #include <map>
@@ -21,9 +21,9 @@
 
 #    include <memory>
 #    include <catch2/catch_all.hpp>
-#    include "CoolPropTools.h"
-#    include "CoolProp.h"
-#    include "HumidAirProp.h"
+#    include "CoolProp/detail/tools.h"
+#    include "CoolProp/CoolProp.h"
+#    include "CoolProp/HumidAirProp.h"
 
 using namespace CoolProp;
 
@@ -2608,7 +2608,7 @@ TEST_CASE("Check the first two-phase derivative using splines", "[first_two_phas
      --- a/main.cpp
      +++ b/main.cpp
      @@ -1,9 +1,18 @@
-      #include "CoolProp.h"
+      #include "CoolProp/CoolProp.h"
      +#include "CPState.h"
       #include <iostream>
       #include <stdlib.h>

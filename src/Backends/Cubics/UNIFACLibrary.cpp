@@ -1,6 +1,6 @@
 #include "UNIFACLibrary.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
-#include "Configuration.h"
+#include "CoolProp/Configuration.h"
 
 namespace UNIFACLibrary {
 

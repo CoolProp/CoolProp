@@ -29,7 +29,7 @@
 #include <utility>
 #include <vector>
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "CoolProp/sbtl/SVDSurface.h"
 #include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"

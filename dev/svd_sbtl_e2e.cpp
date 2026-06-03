@@ -43,7 +43,7 @@
 #include <string>
 #include <vector>
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 
 #include "CoolProp/region/AxisTransform.h"
 #include "CoolProp/region/CubicSplineCurve.h"

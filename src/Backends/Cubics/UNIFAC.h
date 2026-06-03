@@ -4,8 +4,8 @@
 #include <map>
 
 #include "UNIFACLibrary.h"
-#include "CachedElement.h"
-#include "Exceptions.h"
+#include "CoolProp/detail/CachedElement.h"
+#include "CoolProp/Exceptions.h"
 
 /// Structure containing data for the pure fluid in the mixture
 struct ComponentData

@@ -11,7 +11,7 @@
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "CoolProp/region/SuperancillaryBoundaryCurve.h"
 #include "CoolProp/region/SuperancillaryTemperatureBoundaryCurve.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 
 namespace CoolProp {
 namespace sbtl {

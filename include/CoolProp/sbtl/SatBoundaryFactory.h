@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "CoolProp/region/BoundaryCurve.h"
 #include "CoolProp/region/CubicSplineCurve.h"
 

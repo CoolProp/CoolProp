@@ -2,10 +2,10 @@
 #ifndef IF97BACKEND_H_
 #define IF97BACKEND_H_
 
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 #include <IF97.h>
-#include "AbstractState.h"
-#include "Exceptions.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/Exceptions.h"
 #include <vector>
 
 namespace CoolProp {

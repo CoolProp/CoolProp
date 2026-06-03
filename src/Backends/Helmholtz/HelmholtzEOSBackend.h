@@ -12,7 +12,7 @@
 #include "HelmholtzEOSMixtureBackend.h"
 #include "Fluids/FluidLibrary.h"
 #include "MixtureParameters.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 
 namespace CoolProp {
 

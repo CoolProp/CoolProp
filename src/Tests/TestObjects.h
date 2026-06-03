@@ -5,9 +5,9 @@
  *  and assures that the objects used for testing are the
  *  same in all places.
  */
-#include "IncompressibleFluid.h"
+#include "CoolProp/fluids/IncompressibleFluid.h"
 #include "Eigen/Core"
-#include "MatrixMath.h"
+#include "CoolProp/numerics/MatrixMath.h"
 
 #if defined ENABLE_CATCH
 namespace CoolPropTesting {

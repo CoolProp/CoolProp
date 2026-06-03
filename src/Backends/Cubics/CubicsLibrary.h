@@ -5,7 +5,7 @@
 
 #include <vector>
 #include <string>
-#include "CoolPropFluid.h"
+#include "CoolProp/CoolPropFluid.h"
 
 namespace CoolProp {
 

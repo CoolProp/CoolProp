@@ -23,10 +23,10 @@
 //   ./build_catch_rel/CatchTestRunner "[PXcdj]"        # CI default
 //   ./build_catch_rel/CatchTestRunner "[PXcdj_sweep]"  # opt-in heavy
 
-#include "AbstractState.h"
-#include "CoolProp.h"
-#include "CPstrings.h"
-#include "DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/detail/strings.h"
+#include "CoolProp/DataStructures.h"
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>

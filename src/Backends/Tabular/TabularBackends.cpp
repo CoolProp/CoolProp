@@ -2,7 +2,7 @@
 #if !defined(NO_TABULAR_BACKENDS)
 
 #    include "TabularBackends.h"
-#    include "CoolProp.h"
+#    include "CoolProp/CoolProp.h"
 #    include <cmath>
 #    include <sstream>
 #    include <ctime>

@@ -4,7 +4,7 @@
 #include <string>
 
 #if !defined(SWIG)
-#    include "rapidjson_include.h"
+#    include "CoolProp/detail/rapidjson.h"
 #endif
 
 namespace CoolProp {

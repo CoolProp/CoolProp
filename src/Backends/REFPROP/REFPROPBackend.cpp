@@ -7,7 +7,7 @@
 
 #include "REFPROPBackend.h"
 
-#include "CoolPropTools.h"
+#include "CoolProp/detail/tools.h"
 
 #if defined(_MSC_VER)
 #    define _CRTDBG_MAP_ALLOC

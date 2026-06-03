@@ -1,5 +1,5 @@
-#include "CPnumerics.h"
-#include "MatrixMath.h"
+#include "CoolProp/numerics/numerics.h"
+#include "CoolProp/numerics/MatrixMath.h"
 #include <cmath>
 #include <unsupported/Eigen/Polynomials>
 

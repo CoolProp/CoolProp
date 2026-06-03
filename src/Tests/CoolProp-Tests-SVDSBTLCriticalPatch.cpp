@@ -16,8 +16,8 @@
 #    include <memory>
 #    include <string>
 
-#    include "AbstractState.h"
-#    include "Exceptions.h"
+#    include "CoolProp/AbstractState.h"
+#    include "CoolProp/Exceptions.h"
 
 namespace {
 

@@ -37,9 +37,9 @@
 #include <string>
 #include <vector>
 
-#include "AbstractState.h"
-#include "Configuration.h"
-#include "DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/DataStructures.h"
 
 #include <IF97.h>
 

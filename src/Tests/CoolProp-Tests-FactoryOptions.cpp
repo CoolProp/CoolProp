@@ -14,7 +14,7 @@
 #    include <string>
 
 #    include "CoolProp/FactoryOptions.h"
-#    include "Exceptions.h"
+#    include "CoolProp/Exceptions.h"
 #    include "TestUtils.h"
 
 namespace {
@@ -146,7 +146,7 @@ TEST_CASE("parse_factory_options: clean_string preserves the full backend+fluid 
 // opted in.
 // ---------------------------------------------------------------------------
 
-#    include "AbstractState.h"
+#    include "CoolProp/AbstractState.h"
 
 TEST_CASE("AbstractState::factory: '?<options>' is stripped before backend dispatch", "[FactoryOptions]") {
     SECTION("no options — existing behaviour unchanged") {

@@ -1,6 +1,6 @@
 #include <iostream>
 #include "Eigen/Dense"
-#include "Helmholtz.h"
+#include "CoolProp/fluids/Helmholtz.h"
 
 class EOSFitter;
 #include "DataTypes.h"

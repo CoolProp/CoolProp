@@ -25,11 +25,11 @@
 #include <memory>
 #include <string>
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "CoolProp/region/RegionAtlas.h"
 #include "CoolProp/sbtl/SVDSurface.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 
 namespace {
 

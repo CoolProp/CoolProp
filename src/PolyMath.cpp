@@ -1,8 +1,8 @@
 
-#include "PolyMath.h"
+#include "CoolProp/numerics/PolyMath.h"
 
-#include "Exceptions.h"
-#include "MatrixMath.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/numerics/MatrixMath.h"
 
 #include <cmath>
 #include <vector>
@@ -11,7 +11,7 @@
 //#include <numeric>
 #include <iostream>
 
-#include "Solvers.h"
+#include "CoolProp/numerics/Solvers.h"
 
 #include "unsupported/Eigen/Polynomials"
 

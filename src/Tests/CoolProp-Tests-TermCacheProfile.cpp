@@ -25,11 +25,11 @@
 // production code; it only INSPECTS public state.  Run via:
 //   ./build_catch_rel/CatchTestRunner "[term_cache_profile]"
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
-#include "CoolPropFluid.h"
-#include "CoolProp.h"
-#include "Helmholtz.h"
+#include "CoolProp/CoolPropFluid.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/fluids/Helmholtz.h"
 
 #include <sstream>
 

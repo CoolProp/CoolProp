@@ -14,15 +14,15 @@ by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 #ifndef CUBICBACKEND_H_
 #define CUBICBACKEND_H_
 
-#include "CoolPropTools.h"
-#include "DataStructures.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/DataStructures.h"
 #include "GeneralizedCubic.h"
 #include "CubicsLibrary.h"
-#include "Configuration.h"
-#include "AbstractState.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
-#include "Exceptions.h"
-#include "superancillary/cubicsuperancillary.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/superancillary/cubicsuperancillary.h"
 #include <vector>
 
 namespace CoolProp {

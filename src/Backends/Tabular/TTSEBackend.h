@@ -4,7 +4,7 @@
 #include <utility>
 
 #include "TabularBackends.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 
 namespace CoolProp {
 

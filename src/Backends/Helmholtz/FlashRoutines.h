@@ -13,7 +13,7 @@ state is based.
 #define FLASHROUTINES_H
 
 #include "HelmholtzEOSMixtureBackend.h"
-#include "Solvers.h"
+#include "CoolProp/numerics/Solvers.h"
 #include <optional>
 
 namespace CoolProp {

@@ -1,4 +1,4 @@
-#include "CPstrings.h"
+#include "CoolProp/detail/strings.h"
 #include <memory>
 using std::shared_ptr;
 #include <vector>
@@ -54,8 +54,8 @@ std::string format(const char* fmt, ...) {
 #if defined(ENABLE_CATCH)
 
 #    include <catch2/catch_all.hpp>
-#    include "CoolPropTools.h"
-#    include "CoolProp.h"
+#    include "CoolProp/detail/tools.h"
+#    include "CoolProp/CoolProp.h"
 
 TEST_CASE("Test endswith function", "[endswith]") {
     REQUIRE(endswith("aaa", "-PengRobinson") == false);

@@ -20,15 +20,15 @@
 #endif
 
 #include <string>
-//#include "CoolProp.h"
+//#include "CoolProp/CoolProp.h"
 
-#include "CoolProp.h"
+#include "CoolProp/CoolProp.h"
 #include "HelmholtzEOSMixtureBackend.h"
 #include "HelmholtzEOSBackend.h"
 #include "Fluids/FluidLibrary.h"
 #include "Backends/Cubics/GeneralizedCubic.h"
-#include "Solvers.h"
-#include "MatrixMath.h"
+#include "CoolProp/numerics/Solvers.h"
+#include "CoolProp/numerics/MatrixMath.h"
 #include "VLERoutines.h"
 #include "FlashRoutines.h"
 #include "TransportRoutines.h"
@@ -36,7 +36,7 @@
 #include "PhaseEnvelopeRoutines.h"
 #include "ReducingFunctions.h"
 #include "MixtureParameters.h"
-#include "IdealCurves.h"
+#include "CoolProp/fluids/IdealCurves.h"
 #include "MixtureParameters.h"
 #include <atomic>
 #include <cstdlib>

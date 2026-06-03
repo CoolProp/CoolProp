@@ -2,10 +2,10 @@
 #ifndef INCOMPRESSIBLEBACKEND_H_
 #define INCOMPRESSIBLEBACKEND_H_
 
-#include "DataStructures.h"
-#include "IncompressibleFluid.h"
-#include "AbstractState.h"
-#include "Exceptions.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/fluids/IncompressibleFluid.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/Exceptions.h"
 
 #include <vector>
 

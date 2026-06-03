@@ -6,17 +6,17 @@
 #    include <cfenv>
 #endif
 
-#include "CoolPropLib.h"
+#include "CoolProp/CoolPropLib.h"
 #include "CoolProp/FPUGuard.h"
-#include "CoolProp.h"
-#include "HumidAirProp.h"
-#include "DataStructures.h"
-#include "Exceptions.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/HumidAirProp.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/Exceptions.h"
 #include <memory>
 using std::shared_ptr;
-#include "AbstractState.h"
-#include "Exceptions.h"
-#include "Configuration.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/MixtureParameters.h"
 
 #include <cstring>

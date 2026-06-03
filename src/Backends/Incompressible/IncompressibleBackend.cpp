@@ -11,14 +11,14 @@
 #endif
 
 #include <string>
-#include "CoolProp.h"
+#include "CoolProp/CoolProp.h"
 
 #include "IncompressibleBackend.h"
-#include "IncompressibleFluid.h"
+#include "CoolProp/fluids/IncompressibleFluid.h"
 #include "IncompressibleLibrary.h"
-#include "DataStructures.h"
-#include "Solvers.h"
-#include "MatrixMath.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/numerics/Solvers.h"
+#include "CoolProp/numerics/MatrixMath.h"
 
 namespace CoolProp {
 
@@ -578,7 +578,7 @@ double IncompressibleBackend::calc_dhdpatTx(double T, double rho, double drhodTa
 #    include <iostream>
 #    include <catch2/catch_all.hpp>
 
-#    include "TestObjects.h"
+#    include "Tests/TestObjects.h"
 
 TEST_CASE("Internal consistency checks and example use cases for the incompressible backend", "[IncompressibleBackend]") {
     CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("MMA2");

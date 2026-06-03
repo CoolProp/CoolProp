@@ -3,8 +3,8 @@
 #include <string>
 #include <chrono>
 
-#include "CoolProp.h"
-#include "HumidAirProp.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/HumidAirProp.h"
 
 //std::map<std::string, double> generate_values(double T, double R, double P = 101325) {
 //    double psi_w = HumidAir::HAPropsSI("psi_w", "T", T, "R", R, "P", P);

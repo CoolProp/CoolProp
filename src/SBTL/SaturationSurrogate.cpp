@@ -31,9 +31,9 @@
 #include <utility>
 #include <vector>
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "CoolProp/region/CubicSplineCurve.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 
 namespace CoolProp {
 namespace sbtl {

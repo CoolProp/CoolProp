@@ -5,9 +5,9 @@
 
 #include <vector>
 #include <string>
-#include "PCSAFTFluid.h"
-#include "CoolPropTools.h"
-#include "rapidjson_include.h"
+#include "CoolProp/fluids/PCSAFTFluid.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/detail/rapidjson.h"
 
 namespace CoolProp {
 
