@@ -16,9 +16,12 @@ HEOS-backed presets, at a disk footprint of ~7-14 MB per
 (fluid, input pair, source backend).
 
 This page is the **user-facing** page: how to use the backend, what it
-guarantees, and when to pick it.  For the underlying SVD math
-(rank-:math:`r` reconstruction, cubic Hermite slopes, axis transforms),
-see :doc:`SVDComponents`.
+guarantees, and when to pick it.  The rest of this section covers the
+internals and evidence: the underlying SVD math (rank-:math:`r`
+reconstruction, cubic Hermite slopes, axis transforms) in
+:doc:`SVDComponents`, the accuracy against HEOS across fluids and input
+pairs in :doc:`SVDSBTLValidation`, and an end-to-end speedup
+demonstration in :doc:`SVDSBTLHeatExchangerDemo`.
 
 .. _SVDSBTL-architecture:
 
@@ -613,3 +616,11 @@ options blob; there is no in-place setter.
 All other ``AbstractState`` methods (``rhomass``, ``hmass``, ``smass``,
 ``viscosity``, ``conductivity``, ``T_critical``, ``Ttriple``, etc.)
 work identically to other backends.
+
+.. toctree::
+    :maxdepth: 1
+    :caption: SVDSBTL in depth
+
+    SVDComponents.ipynb
+    SVDSBTLValidation.ipynb
+    SVDSBTLHeatExchangerDemo.ipynb

@@ -22,6 +22,3 @@ This section includes information about the CoolProp software, listings of input
     SuperAncillary.ipynb
     HSFlash.ipynb
     IdealGas.ipynb
-    SVDComponents.ipynb
-    SVDSBTLValidation.ipynb
-    SVDSBTLHeatExchangerDemo.ipynb
