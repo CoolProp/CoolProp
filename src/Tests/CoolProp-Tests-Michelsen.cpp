@@ -380,6 +380,274 @@ TEST_CASE("Legacy Stability: check that legacy algorithm still works", "[stabili
     CoolProp::set_config_int(MIXTURE_STABILITY_ALGORITHM, 1);
 }
 
+TEST_CASE("Blind PT flash: Methane/Ethane [0.5/0.5]", "[michelsen][blind][flash]") {
+    std::vector<double> z = {0.5, 0.5};
+    SECTION("SRK gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("SRK 2ph T=150 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 150.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("SRK liquid T=100 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 100.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR 2ph T=150 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 150.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("PR liquid T=100 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 100.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("HEOS gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("HEOS 2ph T=150 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 150.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("HEOS liquid T=100 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 100.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
+TEST_CASE("Blind PT flash: Methane/Propane [0.7/0.3]", "[michelsen][blind][flash]") {
+    std::vector<double> z = {0.7, 0.3};
+    SECTION("SRK gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Methane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("SRK 2ph T=150 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Methane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 150.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("SRK liquid T=100 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Methane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 100.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Methane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR 2ph T=150 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Methane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 150.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("PR liquid T=100 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Methane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 100.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("HEOS gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("HEOS 2ph T=150 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 150.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("HEOS liquid T=100 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 100.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
+TEST_CASE("Blind PT flash: Nitrogen/Oxygen [0.79/0.21]", "[michelsen][blind][flash]") {
+    std::vector<double> z = {0.79, 0.21};
+    SECTION("SRK gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Nitrogen&Oxygen"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("SRK 2ph T=80 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Nitrogen&Oxygen"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 80.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("SRK liquid T=75 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Nitrogen&Oxygen"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 75.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Nitrogen&Oxygen"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR 2ph T=80 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Nitrogen&Oxygen"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 80.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("PR liquid T=75 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Nitrogen&Oxygen"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 75.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("HEOS gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("HEOS 2ph T=80 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 80.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("HEOS liquid T=75 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 75.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
+TEST_CASE("Blind PT flash: N2/CH4/C2H6/C3H8 [0.1/0.5/0.25/0.15]", "[michelsen][blind][flash]") {
+    std::vector<double> z = {0.1, 0.5, 0.25, 0.15};
+    SECTION("SRK gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Nitrogen&Methane&Ethane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("SRK 2ph T=145 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Nitrogen&Methane&Ethane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 145.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("SRK liquid T=80 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", "Nitrogen&Methane&Ethane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 80.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Nitrogen&Methane&Ethane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("PR 2ph T=145 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Nitrogen&Methane&Ethane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 145.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("PR liquid T=80 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", "Nitrogen&Methane&Ethane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 80.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("HEOS gas T=300 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 300.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+    SECTION("HEOS 2ph T=145 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 145.0));
+        CHECK(AS->Q() >= 0);
+        CHECK(AS->Q() <= 1);
+    }
+    SECTION("HEOS liquid T=80 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
+        AS->set_mole_fractions(z);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 80.0));
+        CHECK(AS->Q() == -1);
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
 TEST_CASE("Legacy Flash: check that legacy Jacobian solver still works", "[flash][legacy]") {
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
     std::vector<double> z = {0.5, 0.5};
