@@ -51,23 +51,23 @@
 
 // This stuff will get included verbatim in CoolProp_wrap
 %{
-#include "DataStructures.h"
-#include "AbstractState.h"
-#include "CoolProp.h"
-#include "PhaseEnvelope.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/fluids/PhaseEnvelope.h"
 #define SWIG
-#include "Configuration.h"
+#include "CoolProp/Configuration.h"
 #undef SWIG
-#include "HumidAirProp.h"
+#include "CoolProp/HumidAirProp.h"
 #include "Backends/Helmholtz/MixtureParameters.h"
 %}
 
-%include "DataStructures.h"
-%include "AbstractState.h"
-%include "CoolProp.h"
-%include "PhaseEnvelope.h"
-%include "Configuration.h"
-%include "HumidAirProp.h"
+%include "CoolProp/DataStructures.h"
+%include "CoolProp/AbstractState.h"
+%include "CoolProp/CoolProp.h"
+%include "CoolProp/fluids/PhaseEnvelope.h"
+%include "CoolProp/Configuration.h"
+%include "CoolProp/HumidAirProp.h"
 namespace CoolProp {
 void apply_simple_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule);
 }
