@@ -3,7 +3,7 @@
 #    include "TTSEBackend.h"
 
 #    include <cmath>
-#    include "CoolProp.h"
+#    include "CoolProp/CoolProp.h"
 
 /** Use the single_phase table to evaluate an output for a transport property
  *

@@ -9,7 +9,7 @@
 #include <utility>
 
 #include "GeneralizedCubic.h"
-#include "Exceptions.h"
+#include "CoolProp/Exceptions.h"
 
 #ifndef VTPRCubic_h
 #    define VTPRCubic_h

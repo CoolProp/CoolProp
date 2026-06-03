@@ -4,8 +4,8 @@
 #include <memory>
 using std::shared_ptr;
 #include <vector>
-#include "CoolPropFluid.h"
-#include "Helmholtz.h"
+#include "CoolProp/CoolPropFluid.h"
+#include "CoolProp/fluids/Helmholtz.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 
 namespace CoolProp {

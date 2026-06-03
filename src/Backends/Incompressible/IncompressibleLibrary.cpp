@@ -1,8 +1,8 @@
 #include "IncompressibleLibrary.h"
-#include "MatrixMath.h"
-#include "DataStructures.h"
+#include "CoolProp/numerics/MatrixMath.h"
+#include "CoolProp/DataStructures.h"
 //#include "crossplatform_shared_ptr.h"
-#include "rapidjson_include.h"
+#include "CoolProp/detail/rapidjson.h"
 #include "all_incompressibles_JSON.h"  // Makes a std::string variable called all_incompressibles_JSON
 
 #include <mutex>

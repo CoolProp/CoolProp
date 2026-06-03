@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <memory>
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 
 namespace CoolProp {
 namespace region {

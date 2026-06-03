@@ -23,8 +23,8 @@
 #    include <memory>
 #    include <string>
 
-#    include "AbstractState.h"
-#    include "DataStructures.h"
+#    include "CoolProp/AbstractState.h"
+#    include "CoolProp/DataStructures.h"
 
 // ---------------------------------------------------------------------------
 // The two previously-failing Nitrogen states.  Both are supercritical-cold

@@ -1,5 +1,5 @@
 #include <cmath>
-#include "Helmholtz.h"
+#include "CoolProp/fluids/Helmholtz.h"
 #include "Backends/Cubics/GeneralizedCubic.h"
 
 #ifdef __ANDROID__

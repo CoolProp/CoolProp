@@ -3,10 +3,10 @@
 #include "CubicsLibrary.h"
 #include "all_cubics_JSON.h"           // Makes a std::string variable called all_cubics_JSON
 #include "cubic_fluids_schema_JSON.h"  // Makes a std::string variable called cubic_fluids_schema_JSON
-#include "rapidjson_include.h"
-#include "CPstrings.h"
-#include "CoolProp.h"
-#include "Configuration.h"
+#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/strings.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 
 namespace CoolProp {

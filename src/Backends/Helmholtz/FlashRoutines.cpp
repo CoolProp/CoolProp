@@ -4,12 +4,12 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdlib>
-#include "CoolProp.h"
+#include "CoolProp/CoolProp.h"
 #include "HelmholtzEOSMixtureBackend.h"
 #include "HelmholtzEOSBackend.h"
 #include "PhaseEnvelopeRoutines.h"
-#include "Configuration.h"
-#include "MeltingCaloric.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/fluids/MeltingCaloric.h"
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>

@@ -6,8 +6,8 @@
  *  same in all places.
  */
 #include "TestObjects.h"
-#include "DataStructures.h"
-#include "IncompressibleFluid.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/fluids/IncompressibleFluid.h"
 #include "Eigen/Core"
 
 #if defined ENABLE_CATCH

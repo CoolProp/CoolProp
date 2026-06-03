@@ -20,21 +20,21 @@
 
 #include "boost/math/tools/toms748_solve.hpp"
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
-#include "Configuration.h"
+#include "CoolProp/Configuration.h"
 #include "CoolProp/Hash.h"
 #include "CoolProp/SchemaValidation.h"
 #include "CoolProp/sbtl/SVDSurface.h"
 #include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
-#include "CPfilepaths.h"
+#include "CoolProp/detail/filepaths.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #include "CoolProp/sbtl/SaturationSurrogate.h"
 #include "CoolProp/schemas/SVDSBTLOptions.h"
-#include "DataStructures.h"
-#include "Exceptions.h"
-#include "rapidjson_include.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/detail/rapidjson.h"
 
 // File-scope suppression for bugprone-unchecked-optional-access: the
 // optionals on PointEvaluation are filled by resolve_point_() based on

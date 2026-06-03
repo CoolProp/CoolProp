@@ -1,5 +1,5 @@
 #include "GeneralizedCubic.h"
-#include "CPnumerics.h"
+#include "CoolProp/numerics/numerics.h"
 #include <cmath>
 #include <utility>
 

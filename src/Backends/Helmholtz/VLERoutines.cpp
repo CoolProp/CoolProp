@@ -3,9 +3,9 @@
 #include "VLERoutines.h"
 
 #include <cmath>
-#include "MatrixMath.h"
+#include "CoolProp/numerics/MatrixMath.h"
 #include "MixtureDerivatives.h"
-#include "Configuration.h"
+#include "CoolProp/Configuration.h"
 #include "FlashRoutines.h"
 
 namespace CoolProp {

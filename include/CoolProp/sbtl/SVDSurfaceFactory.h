@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "CoolProp/sbtl/SVDSurface.h"
 #include "CoolProp/sbtl/SurfaceSpec.h"
 #include "CoolProp/svd/SVDDecomposition.h"

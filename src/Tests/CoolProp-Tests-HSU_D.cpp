@@ -32,13 +32,13 @@
 // Built into CatchTestRunner when COOLPROP_CATCH_MODULE=ON.  Run the whole
 // suite with `CatchTestRunner "[HSU_D]"`.
 
-#include "AbstractState.h"
-#include "CoolProp.h"
-#include "CPstrings.h"
-#include "DataStructures.h"
-#include "Configuration.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/detail/strings.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/Configuration.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
-#include "superancillary/superancillary.h"
+#include "CoolProp/superancillary/superancillary.h"
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>

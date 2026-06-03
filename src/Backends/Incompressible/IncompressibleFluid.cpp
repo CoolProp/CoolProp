@@ -1,11 +1,11 @@
 
-#include "CoolProp.h"
-#include "DataStructures.h"
-#include "IncompressibleFluid.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/fluids/IncompressibleFluid.h"
 #include "IncompressibleLibrary.h"
 #include <cmath>
-#include "MatrixMath.h"
-#include "PolyMath.h"
+#include "CoolProp/numerics/MatrixMath.h"
+#include "CoolProp/numerics/PolyMath.h"
 #include <Eigen/Core>
 
 constexpr double INCOMP_EPSILON = DBL_EPSILON * 100.0;
@@ -500,7 +500,7 @@ bool IncompressibleFluid::checkX(double x) {
 #    include <math.h>
 #    include <iostream>
 #    include <catch2/catch_all.hpp>
-#    include "TestObjects.h"
+#    include "Tests/TestObjects.h"
 
 Eigen::MatrixXd makeMatrix(const std::vector<double>& coefficients) {
     //IncompressibleClass::checkCoefficients(coefficients,18);

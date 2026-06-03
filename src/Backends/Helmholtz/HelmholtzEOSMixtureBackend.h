@@ -2,14 +2,14 @@
 #ifndef HELMHOLTZEOSMIXTUREBACKEND_H_
 #define HELMHOLTZEOSMIXTUREBACKEND_H_
 
-#include "AbstractState.h"
-#include "CoolPropFluid.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/CoolPropFluid.h"
 #include "ReducingFunctions.h"
 #include "ExcessHEFunction.h"
-#include "Solvers.h"
-#include "PhaseEnvelope.h"
-#include "DataStructures.h"
-#include "Configuration.h"
+#include "CoolProp/numerics/Solvers.h"
+#include "CoolProp/fluids/PhaseEnvelope.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/Configuration.h"
 
 #include <vector>
 

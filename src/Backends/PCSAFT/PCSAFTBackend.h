@@ -1,12 +1,12 @@
 #ifndef PCSAFTBACKEND_H
 #define PCSAFTBACKEND_H
 
-#include "AbstractState.h"
-#include "CoolPropTools.h"
-#include "DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/DataStructures.h"
 #include "PCSAFTLibrary.h"
-#include "Configuration.h"
-#include "Exceptions.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/Exceptions.h"
 #include <vector>
 
 using std::vector;

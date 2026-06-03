@@ -9,14 +9,14 @@
 #include <memory>
 using std::shared_ptr;
 
-#include "HumidAirProp.h"
+#include "CoolProp/HumidAirProp.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
-#include "Solvers.h"
-#include "CoolPropTools.h"
+#include "CoolProp/numerics/Solvers.h"
+#include "CoolProp/detail/tools.h"
 #include "CoolProp/fluids/Ice.h"
-#include "CoolProp.h"
-#include "Exceptions.h"
-#include "Configuration.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/Configuration.h"
 
 #include <algorithm>  // std::next_permutation
 #include <cstdio>

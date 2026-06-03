@@ -1,4 +1,4 @@
-#include "Configuration.h"
+#include "CoolProp/Configuration.h"
 #include "src/Backends/REFPROP/REFPROPMixtureBackend.h"
 
 namespace CoolProp {

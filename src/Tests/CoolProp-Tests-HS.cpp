@@ -6,9 +6,9 @@
 // tests live in CoolProp-Tests-HS-prototypes.cpp; the active production code is
 // in src/Backends/Helmholtz/FlashRoutines.cpp.
 
-#include "AbstractState.h"
-#include "CoolProp.h"
-#include "DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/DataStructures.h"
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>

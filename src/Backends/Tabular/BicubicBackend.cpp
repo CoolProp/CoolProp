@@ -3,8 +3,8 @@
 #    include "BicubicBackend.h"
 
 #    include <cmath>
-#    include "MatrixMath.h"
-#    include "DataStructures.h"
+#    include "CoolProp/numerics/MatrixMath.h"
+#    include "CoolProp/DataStructures.h"
 #    include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 
 void CoolProp::BicubicBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& table,

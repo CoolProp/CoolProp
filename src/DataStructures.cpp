@@ -1,9 +1,9 @@
 
 
-#include "DataStructures.h"
-#include "Exceptions.h"
-#include "CoolPropTools.h"
-#include "CoolProp.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/CoolProp.h"
 #include <memory>
 
 namespace CoolProp {

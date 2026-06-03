@@ -18,11 +18,11 @@
 #    include <memory>
 #    include <string>
 
-#    include "AbstractState.h"
+#    include "CoolProp/AbstractState.h"
 #    include "CoolProp/Backends/SVDSBTL/SVDSBTLBackend.h"
 #    include "CoolProp/Hash.h"
 #    include "CoolProp/sbtl/SVDSurfaceSerializer.h"
-#    include "Exceptions.h"
+#    include "CoolProp/Exceptions.h"
 
 namespace cp_sbtl = CoolProp::sbtl;
 

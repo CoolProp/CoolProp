@@ -13,8 +13,8 @@
 #include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #include "CoolProp/sbtl/SatBoundaryFactory.h"
 #include "CoolProp/sbtl/SurfaceSpec.h"
-#include "DataStructures.h"
-#include "Exceptions.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/Exceptions.h"
 
 namespace CoolProp {
 namespace sbtl {

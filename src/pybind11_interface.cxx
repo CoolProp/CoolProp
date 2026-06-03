@@ -1,10 +1,10 @@
 #ifdef PYBIND11
 
-#    include "CoolProp.h"
-#    include "AbstractState.h"
-#    include "Configuration.h"
-#    include "HumidAirProp.h"
-#    include "DataStructures.h"
+#    include "CoolProp/CoolProp.h"
+#    include "CoolProp/AbstractState.h"
+#    include "CoolProp/Configuration.h"
+#    include "CoolProp/HumidAirProp.h"
+#    include "CoolProp/DataStructures.h"
 #    include "Backends/Helmholtz/MixtureParameters.h"
 
 #    include <pybind11/pybind11.h>

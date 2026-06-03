@@ -21,8 +21,8 @@
 #    include <fstream>
 #    include <string>
 
-#    include "AbstractState.h"
-#    include "CoolProp.h"
+#    include "CoolProp/AbstractState.h"
+#    include "CoolProp/CoolProp.h"
 #    include "TestUtils.h"
 
 namespace {

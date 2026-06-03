@@ -9,7 +9,7 @@
 #include "CoolProp/region/RegionAtlas.h"
 #include "CoolProp/svd/SVDDecomposition.h"
 #include "CoolProp/svd/SVDEvaluator.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 
 namespace CoolProp {
 namespace sbtl {

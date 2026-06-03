@@ -4,8 +4,8 @@
 #include <utility>
 
 #include "TabularBackends.h"
-#include "Exceptions.h"
-#include "DataStructures.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/DataStructures.h"
 #include "Eigen/Core"
 
 namespace CoolProp {

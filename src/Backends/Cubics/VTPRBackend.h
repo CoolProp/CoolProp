@@ -9,15 +9,15 @@
 #ifndef VTPRBackend_h
 #define VTPRBackend_h
 
-#include "CoolPropTools.h"
-#include "DataStructures.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/DataStructures.h"
 #include "GeneralizedCubic.h"
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
-#include "Exceptions.h"
+#include "CoolProp/Exceptions.h"
 #include <vector>
 #include "CubicBackend.h"
-#include "Configuration.h"
+#include "CoolProp/Configuration.h"
 #include "UNIFACLibrary.h"
 #include "UNIFAC.h"
 #include "VTPRCubic.h"

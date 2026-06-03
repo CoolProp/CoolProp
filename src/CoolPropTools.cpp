@@ -1,1 +1,1 @@
-#include "CoolPropTools.h"
+#include "CoolProp/detail/tools.h"

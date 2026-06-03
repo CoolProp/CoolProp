@@ -2,18 +2,18 @@
 #ifndef FLUIDLIBRARY_H
 #define FLUIDLIBRARY_H
 
-#include "CoolPropFluid.h"
+#include "CoolProp/CoolPropFluid.h"
 
-#include "rapidjson_include.h"
+#include "CoolProp/detail/rapidjson.h"
 #include <memory>
 using std::shared_ptr;
 
 #include <map>
 #include <algorithm>
-#include "Configuration.h"
+#include "CoolProp/Configuration.h"
 #include "Backends/Cubics/CubicsLibrary.h"
 #include "Backends/Cubics/GeneralizedCubic.h"
-#include "Helmholtz.h"
+#include "CoolProp/fluids/Helmholtz.h"
 
 namespace CoolProp {
 

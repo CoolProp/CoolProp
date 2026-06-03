@@ -19,14 +19,14 @@ using Catch::Approx;
 #    include <thread>
 #    include <vector>
 
-#    include "AbstractState.h"
-#    include "Configuration.h"
-#    include "CoolProp.h"
+#    include "CoolProp/AbstractState.h"
+#    include "CoolProp/Configuration.h"
+#    include "CoolProp/CoolProp.h"
 #    include "CoolProp/Backends/SVDSBTL/SVDSBTLBackend.h"
 #    include "CoolProp/sbtl/SatBoundaryFactory.h"
 #    include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #    include "CoolProp/sbtl/SVDSurfaceSerializer.h"
-#    include "DataStructures.h"
+#    include "CoolProp/DataStructures.h"
 #    include "TestUtils.h"
 
 namespace {

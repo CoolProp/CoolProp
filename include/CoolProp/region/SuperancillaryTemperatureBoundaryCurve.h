@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "CoolProp/region/BoundaryCurve.h"
-#include "superancillary/superancillary.h"
+#include "CoolProp/superancillary/superancillary.h"
 
 namespace CoolProp {
 namespace region {

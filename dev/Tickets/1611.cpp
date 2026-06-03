@@ -4,8 +4,8 @@
 #include <chrono>
 #include <memory>
 
-#include "CoolProp.h"
-#include "AbstractState.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/AbstractState.h"
 
 int main(int argc, const char* argv[]) {
 

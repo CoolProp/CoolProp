@@ -1,15 +1,15 @@
 #ifndef TABULAR_BACKENDS_H
 #define TABULAR_BACKENDS_H
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "CoolProp/detail/msgpack.h"
 #include <memory>
 using std::shared_ptr;
-#include "Exceptions.h"
-#include "CoolProp.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/CoolProp.h"
 #include <optional>
 #include <utility>
-#include "Configuration.h"
+#include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 
 /** ***MAGIC WARNING***!! X Macros in use

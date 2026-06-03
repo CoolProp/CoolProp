@@ -4,10 +4,10 @@
 #include "HelmholtzEOSMixtureBackend.h"
 #include "VLERoutines.h"
 #include "PhaseEnvelopeRoutines.h"
-#include "PhaseEnvelope.h"
-#include "CoolPropTools.h"
-#include "Configuration.h"
-#include "CPnumerics.h"
+#include "CoolProp/fluids/PhaseEnvelope.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/numerics/numerics.h"
 
 namespace CoolProp {
 

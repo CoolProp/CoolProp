@@ -9,13 +9,13 @@
 #include <thread>
 #include <vector>
 
-#include "AbstractState.h"
-#include "Configuration.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/Configuration.h"
 #include "CoolProp/region/Region.h"
 #include "CoolProp/sbtl/SatBoundaryFactory.h"
 #include "CoolProp/svd/SVDBuilder.h"
 #include "CoolProp/svd/SVDDecomposition.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 
 namespace CoolProp {
 namespace sbtl {

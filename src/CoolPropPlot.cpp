@@ -1,6 +1,6 @@
-#include "CoolPropPlot.h"
-#include "CoolProp.h"
-#include "CPnumerics.h"
+#include "CoolProp/plotting/CoolPropPlot.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/numerics/numerics.h"
 #include <cmath>
 #include <map>
 

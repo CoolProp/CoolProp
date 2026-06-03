@@ -11,18 +11,18 @@
 // All tests here are opt-in ([.]); invoke a tag explicitly, e.g.:
 //     CatchTestRunner "[HS_cont]"      CatchTestRunner "[HS_dep]" -c Water
 
-#include "AbstractState.h"
-#include "CoolProp.h"
-#include "DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/DataStructures.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "../Backends/Helmholtz/FlashRoutines.h"
-#include "MeltingCaloric.h"
+#include "CoolProp/fluids/MeltingCaloric.h"
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
 
 #    include "boost/math/tools/toms748_solve.hpp"
-#    include "CPstrings.h"
+#    include "CoolProp/detail/strings.h"
 #    include <array>
 #    include <chrono>
 #    include <cmath>

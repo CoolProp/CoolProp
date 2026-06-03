@@ -1,8 +1,8 @@
 #include <memory>
 using std::shared_ptr;
 #include "SpeedTest.h"
-#include "AbstractState.h"
-#include "DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/DataStructures.h"
 
 #include <ctime>
 

@@ -9,11 +9,11 @@
 #include <utility>
 #include <vector>
 
-#include "AbstractState.h"
+#include "CoolProp/AbstractState.h"
 #include "CoolProp/region/AxisTransform.h"
 #include "CoolProp/region/BoundaryCurve.h"
 #include "CoolProp/svd/SVDDecomposition.h"
-#include "DataStructures.h"
+#include "CoolProp/DataStructures.h"
 
 namespace CoolProp {
 namespace sbtl {

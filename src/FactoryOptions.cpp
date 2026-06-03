@@ -5,8 +5,8 @@
 #include <cstddef>
 #include <string>
 
-#include "CPfilepaths.h"
-#include "Exceptions.h"
+#include "CoolProp/detail/filepaths.h"
+#include "CoolProp/Exceptions.h"
 
 namespace CoolProp {
 

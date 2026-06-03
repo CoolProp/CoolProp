@@ -1,8 +1,8 @@
 
 #include "CoolProp/numerics/ODEIntegrators.h"
 #include "Eigen/Core"
-#include "CPstrings.h"
-#include "Exceptions.h"
+#include "CoolProp/detail/strings.h"
+#include "CoolProp/Exceptions.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>

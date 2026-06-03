@@ -3,8 +3,8 @@
 
 #include <vector>
 
-#include "rapidjson_include.h"
-#include "CoolPropFluid.h"
+#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/CoolPropFluid.h"
 
 namespace UNIFACLibrary {
 

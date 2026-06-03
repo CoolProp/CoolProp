@@ -1,9 +1,9 @@
 #include <cmath>
 #include <vector>
-#include "Solvers.h"
-#include "MatrixMath.h"
+#include "CoolProp/numerics/Solvers.h"
+#include "CoolProp/numerics/MatrixMath.h"
 #include <iostream>
-#include "CoolPropTools.h"
+#include "CoolProp/detail/tools.h"
 #include <Eigen/Dense>
 
 namespace CoolProp {

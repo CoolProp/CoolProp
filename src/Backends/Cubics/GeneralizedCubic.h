@@ -16,7 +16,7 @@
 #include <cmath>
 #include <memory>
 using std::shared_ptr;
-#include "Exceptions.h"
+#include "CoolProp/Exceptions.h"
 
 /// An abstract alpha function for the EOS, defining the interface for the alpha function
 class AbstractCubicAlphaFunction
