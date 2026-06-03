@@ -56,7 +56,7 @@ namespace {
 // The MVP set of input pairs.  Adding DU / HS / etc. in a follow-up
 // is a one-line append here plus the matching preset + load helpers
 // in `build_surface_for_pair_`.
-constexpr std::array<CoolProp::input_pairs, 2> kSupportedPairs = {CoolProp::HmassP_INPUTS, CoolProp::PT_INPUTS};
+constexpr std::array<CoolProp::input_pairs, 3> kSupportedPairs = {CoolProp::HmassP_INPUTS, CoolProp::PT_INPUTS, CoolProp::DmassT_INPUTS};
 
 // Resolved grid-shape knobs extracted from the validated options
 // document.  Used both to size the per-input-pair surfaces and to
@@ -155,6 +155,9 @@ CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& so
         case CoolProp::PT_INPUTS:
             spec = cp_sbtl::presets::pt_subcritical(source, g.NT, g.NR, g.rank);
             break;
+        case CoolProp::DmassT_INPUTS:
+            spec = cp_sbtl::presets::dt_subcritical(source, g.NT, g.NR, g.rank);
+            break;
         default:
             throw ValueError("SVDSBTL backend: no preset registered for the requested input pair");
     }
@@ -245,6 +248,17 @@ SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name,      // NOLINT(mod
         throw ValueError(format("SVDSBTL&IF97 is Water-only; got fluid '%s'", fluid_name.c_str()));
     }
     for (const auto pair : kSupportedPairs) {
+        // DmassT/DmolarT share the DmassT_INPUTS surface, built lazily on
+        // the first density-input query (see update()/fast_evaluate()).
+        // Building it eagerly here would (a) make HmassP/PT-only consumers
+        // pay for the heavy dt_subcritical dense SVD, and (b) THROW for an
+        // IF97 source — dt_subcritical can't be sampled on a (D,T) grid
+        // from IF97, producing an all-NaN matrix (this broke the
+        // SVDSBTL&IF97 docs example at construction).  (CoolProp-eal will
+        // generalize lazy loading to every pair.)
+        if (pair == ::CoolProp::DmassT_INPUTS) {
+            continue;
+        }
         ensure_surface_(pair);
     }
     build_critical_patch_(options_canonical_);
@@ -408,6 +422,16 @@ void SVDSBTLBackend::build_critical_patch_(const std::string& options_canonical)
     if (std::isfinite(h_lo) && std::isfinite(h_hi) && h_lo < h_hi) {
         critical_patch_.bbox_per_pair[static_cast<int>(::CoolProp::HmassP_INPUTS)] = CriticalPatchBbox{p_lo, p_hi, h_lo, h_hi};
     }
+
+    // NOTE: DmassT / DmolarT are intentionally NOT critical-patched yet.
+    // A DT bbox would route the whole critical box to patch_source_, but
+    // the patch source isn't guaranteed to serve DmassT_INPUTS (IF97 in
+    // particular), so an unconditional DT bbox would turn atlas-servable
+    // near-critical DT cells into OOB for SVDSBTL&IF97.  Doing it safely
+    // needs a patch-source DmassT capability probe + dedicated tests —
+    // tracked as a follow-up (PR #2984 / CoolProp-i7j).  Until then DT
+    // states in the [0.999, 1.001]·Tc gap fall through to the DT-dome
+    // path or OOB, same as the no-critical-patch default.
 }
 
 std::array<double, 4> SVDSBTLBackend::auto_calibrate_critical_bbox_() {
@@ -850,6 +874,12 @@ double SVDSBTLBackend::sat_eval_(double T, char what, int side) {
 }
 
 void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
+    // Idempotent: the lazy DmassT/DmolarT callers in update() /
+    // fast_evaluate() may invoke this on every query, so skip the
+    // load/build when the surface is already resident.
+    if (surfaces_.find(static_cast<int>(pair)) != surfaces_.end()) {
+        return;
+    }
     namespace cp_sbtl = CoolProp::sbtl;
     // Cache filename: <fluid>.<source>.<input_pair_name>.<opthash>.svd.bin.z
     //  - input_pair_name (e.g. "PT_INPUTS", "HmassP_INPUTS") instead
@@ -974,7 +1004,14 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
     }
 
     // --- Single-phase / dome routing through the surface atlas. ---
-    const auto surface_key = (input_pair == CoolProp::HmolarP_INPUTS) ? CoolProp::HmassP_INPUTS : input_pair;
+    // Molar input pairs share a surface with their mass-basis sibling;
+    // the conversion happens in the (a, b) extraction below.
+    auto surface_key = input_pair;
+    if (input_pair == CoolProp::HmolarP_INPUTS) {
+        surface_key = CoolProp::HmassP_INPUTS;
+    } else if (input_pair == CoolProp::DmolarT_INPUTS) {
+        surface_key = CoolProp::DmassT_INPUTS;
+    }
     const auto it = surfaces_.find(static_cast<int>(surface_key));
     if (it == surfaces_.end() || !it->second) {
         throw ValueError(std::string("SVDSBTL backend: no surface registered for this input pair (") + CoolProp::get_input_pair_short_desc(input_pair)
@@ -1005,6 +1042,22 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
             pt.p = value1;
             pt.T = value2;
             b = value2;
+            break;
+        case CoolProp::DmassT_INPUTS:
+            // DmassT_INPUTS: value1 = D (kg/m^3), value2 = T (K).
+            // DT preset uses T as primary, D as secondary.
+            a = value2;
+            pt.T = value2;
+            pt.rho_mass = value1;
+            b = value1;
+            break;
+        case CoolProp::DmolarT_INPUTS:
+            // DmolarT_INPUTS: value1 = D_molar (mol/m^3), value2 = T.
+            // Convert D_molar -> D_mass via M for surface lookup.
+            a = value2;
+            pt.T = value2;
+            pt.rho_mass = value1 * calc_molar_mass();
+            b = *pt.rho_mass;
             break;
         default:
             throw ValueError(std::string("SVDSBTL backend update: unsupported input pair (") + CoolProp::get_input_pair_short_desc(input_pair) + ")");
@@ -1180,6 +1233,82 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
             // No sat probe available — fall through to OOB.
         }
     }
+
+    // --- DT dome routing.  For DmassT / DmolarT an atlas miss inside
+    // the subcritical envelope means the (D, T) point landed in the
+    // two-phase dome (rho_sat,V(T) < D < rho_sat,L(T)).  The LIQUID /
+    // VAPOR sub-regions stop at the dome boundary by construction, so
+    // any miss with T < T_critical and D between the sat densities is
+    // two-phase.  P is well-defined (= P_sat(T)); Q comes from the
+    // lever rule on specific volume (NOT density — v is the additive
+    // quantity).  Routes through the same DomeBlend machinery the
+    // HmassP path uses; evaluate_property_ reads p / Q / blended
+    // caloric props off the endpoints. ---
+    if (input_pair == CoolProp::DmassT_INPUTS || input_pair == CoolProp::DmolarT_INPUTS) {
+        const double T_query = *pt.T;
+        const double M = calc_molar_mass();
+        const double rho_mol_query = *pt.rho_mass / M;
+        try {
+            auto src = source_reference_();
+            if (T_query < src->T_critical()) {
+                // rho_sat endpoints at T.  sat_eval_('D', ...) returns
+                // MOLAR density (mol/m^3) — same basis as the HmassP
+                // dome path's rhoL_mol / rhoV_mol.  Mirror that path's
+                // source-QT fallback: when the SA/surrogate sat provider
+                // can't supply an endpoint, take it from the source QT
+                // flash so DT two-phase queries still resolve on sources
+                // without a usable saturation provider.
+                double rhoL_mol = sat_eval_(T_query, 'D', 0);
+                double rhoV_mol = sat_eval_(T_query, 'D', 1);
+                if (!std::isfinite(rhoL_mol) || !std::isfinite(rhoV_mol)) {
+                    src->update(CoolProp::QT_INPUTS, 0.0, T_query);
+                    rhoL_mol = src->rhomolar();
+                    src->update(CoolProp::QT_INPUTS, 1.0, T_query);
+                    rhoV_mol = src->rhomolar();
+                }
+                if (std::isfinite(rhoL_mol) && std::isfinite(rhoV_mol) && rhoV_mol < rho_mol_query && rho_mol_query < rhoL_mol) {
+                    // Two-phase.  P_sat(T) from the source QT flash.
+                    src->update(CoolProp::QT_INPUTS, 0.0, T_query);
+                    const double p_sat = src->p();
+                    pt.kind = PointEvaluation::Kind::DomeBlend;
+                    pt.status = CoolProp::fast_evaluate_ok;
+                    pt.p = p_sat;
+                    pt.T = T_query;
+                    pt.T_sat = T_query;
+                    // Lever rule on specific volume (the additive
+                    // quantity): v = (1-Q)*vL + Q*vV.  Q is basis-
+                    // independent, so molar volumes give the same Q.
+                    const double v = 1.0 / rho_mol_query;
+                    const double vL = 1.0 / rhoL_mol;
+                    const double vV = 1.0 / rhoV_mol;
+                    pt.Q = (v - vL) / (vV - vL);
+                    // sat_eval_('H', ...) is already molar — don't scale.
+                    // Same source-QT fallback as the rho endpoints above.
+                    double hL_mol = sat_eval_(T_query, 'H', 0);
+                    double hV_mol = sat_eval_(T_query, 'H', 1);
+                    if (!std::isfinite(hL_mol) || !std::isfinite(hV_mol)) {
+                        src->update(CoolProp::QT_INPUTS, 0.0, T_query);
+                        hL_mol = src->hmolar();
+                        src->update(CoolProp::QT_INPUTS, 1.0, T_query);
+                        hV_mol = src->hmolar();
+                    }
+                    pt.hL_mol = hL_mol;
+                    pt.hV_mol = hV_mol;
+                    pt.rhoL_mol = rhoL_mol;
+                    pt.rhoV_mol = rhoV_mol;
+                    // Fill h_mass from the lever rule so iHmass/iHmolar
+                    // resolve via the top-level short-circuit (the
+                    // DomeBlend switch has no enthalpy arm — it
+                    // delegates to pt.h_mass, which the HmassP dome
+                    // path sets at resolve time and we must mirror).
+                    pt.h_mass = ((1.0 - pt.Q) * *pt.hL_mol + pt.Q * *pt.hV_mol) / M;
+                    return pt;
+                }
+            }
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+            // Sat endpoints / source unavailable — fall through to OOB.
+        }
+    }
     pt.kind = PointEvaluation::Kind::OutOfRange;
     pt.status = CoolProp::fast_evaluate_out_of_range;
     return pt;
@@ -1254,6 +1383,15 @@ double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::paramet
         // in-dome both populate it from the lever rule at resolve
         // time, so this also handles the DomeBlend case correctly.
         return *pt.h_mass * M;
+    }
+    // DmassT / DmolarT input shortcut — density is the input, not a
+    // surface-tabulated property, so return it directly.  Same
+    // single-source-of-truth pattern as h_mass above.
+    if (prop == CoolProp::iDmass && pt.rho_mass) {
+        return *pt.rho_mass;
+    }
+    if (prop == CoolProp::iDmolar && pt.rho_mass) {
+        return *pt.rho_mass / M;
     }
 
     switch (pt.kind) {
@@ -1357,6 +1495,12 @@ double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::paramet
 }
 
 void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // Lazily build the DmassT surface on first density-input query (it is
+    // deliberately kept out of the constructor's eager loop — see there).
+    // ensure_surface_ is idempotent, so this is a cheap no-op afterwards.
+    if (input_pair == CoolProp::DmassT_INPUTS || input_pair == CoolProp::DmolarT_INPUTS) {
+        ensure_surface_(CoolProp::DmassT_INPUTS);
+    }
     clear();
     _phase = iphase_not_imposed;
     active_eval_ = resolve_point_(input_pair, value1, value2);
@@ -1366,6 +1510,24 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
     // class still see consistent values.
     if (active_eval_.T) _T = *active_eval_.T;
     if (active_eval_.p) _p = *active_eval_.p;
+    // AbstractState::p() returns the cached _p directly (skipping
+    // calc_pressure / calc_p), so for input pairs where p is computed
+    // by the surface rather than supplied as input (currently:
+    // DmassT / DmolarT), we must populate _p here.  Single-phase
+    // only — Dome / Patched / OOB paths intentionally leave _p alone
+    // since they have their own ->p() routing.
+    if (!active_eval_.p && active_eval_.kind == PointEvaluation::Kind::SinglePhase
+        && (input_pair == CoolProp::DmassT_INPUTS || input_pair == CoolProp::DmolarT_INPUTS)) {
+        try {
+            const double p_surface = evaluate_property_(active_eval_, CoolProp::iP);
+            if (std::isfinite(p_surface) && p_surface > 0.0) {
+                _p = p_surface;
+                active_eval_.p = p_surface;  // also cache on the eval for AbstractState::T() and friends
+            }
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Surface eval failed; leave _p at its default (caller will see NaN/-inf which signals an OOB cell).
+        }
+    }
     // _Q is populated for every kind that has a well-defined Q so
     // legacy callers reading state->Q() see a value consistent with
     // what fast_evaluate(iQ) would return.  SinglePhase gets the -1
@@ -1540,19 +1702,33 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
     if (val1 == nullptr || val2 == nullptr || outputs == nullptr || out_buffer == nullptr || status_flags == nullptr) {
         throw ValueError("fast_evaluate: null pointer argument");
     }
+    // Lazily build the DmassT surface (kept out of the constructor's eager
+    // loop — see there).  fast_evaluate is an independent entry point, so it
+    // needs the same lazy ensure as update().  Idempotent.
+    if (input_pair == CoolProp::DmassT_INPUTS || input_pair == CoolProp::DmolarT_INPUTS) {
+        ensure_surface_(CoolProp::DmassT_INPUTS);
+    }
     if (N_outputs == 0) {
         for (std::size_t k = 0; k < N_inputs; ++k)
             status_flags[k] = CoolProp::fast_evaluate_ok;
         return;
     }
-    if (input_pair != CoolProp::HmassP_INPUTS && input_pair != CoolProp::HmolarP_INPUTS && input_pair != CoolProp::PT_INPUTS) {
-        throw ValueError(format("fast_evaluate (SVDSBTL): input_pair %s not supported (use HmassP_INPUTS, HmolarP_INPUTS, or PT_INPUTS)",
+    if (input_pair != CoolProp::HmassP_INPUTS && input_pair != CoolProp::HmolarP_INPUTS && input_pair != CoolProp::PT_INPUTS
+        && input_pair != CoolProp::DmassT_INPUTS && input_pair != CoolProp::DmolarT_INPUTS) {
+        throw ValueError(format("fast_evaluate (SVDSBTL): input_pair %s not supported "
+                                "(use HmassP_INPUTS, HmolarP_INPUTS, PT_INPUTS, DmassT_INPUTS, or DmolarT_INPUTS)",
                                 get_input_pair_short_desc(input_pair).c_str()));
     }
     // Validate the surface exists for this input pair before the per-
     // point loop so a malformed request fails fast (resolve_point_
-    // would otherwise throw on the first call).
-    const auto surface_key = (input_pair == CoolProp::HmolarP_INPUTS) ? CoolProp::HmassP_INPUTS : input_pair;
+    // would otherwise throw on the first call).  Molar input pairs
+    // share a surface with their mass-basis sibling.
+    auto surface_key = input_pair;
+    if (input_pair == CoolProp::HmolarP_INPUTS) {
+        surface_key = CoolProp::HmassP_INPUTS;
+    } else if (input_pair == CoolProp::DmolarT_INPUTS) {
+        surface_key = CoolProp::DmassT_INPUTS;
+    }
     const auto sit = surfaces_.find(static_cast<int>(surface_key));
     if (sit == surfaces_.end() || !sit->second) {
         throw ValueError(std::string("fast_evaluate (SVDSBTL): no surface registered for ") + CoolProp::get_input_pair_short_desc(input_pair));
@@ -1590,6 +1766,7 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
     // by the input pair.
     const bool input_is_PT = (input_pair == CoolProp::PT_INPUTS);
     const bool input_has_h = (input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS);
+    const bool input_has_D = (input_pair == CoolProp::DmassT_INPUTS || input_pair == CoolProp::DmolarT_INPUTS);
 
     // N_outputs is bounded by the caller's output schema (typically <
     // 10 for thermo-property batches), so a single heap allocation
@@ -1607,17 +1784,31 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
         switch (outputs[o]) {
             case CoolProp::iP:
             case CoolProp::iQ:
-                // Always-available shortcuts: iP comes off the input
-                // pair; iQ resolves trivially (-1 for SinglePhase, Q
-                // for DomeBlend) inside evaluate_property_.
+                // Resolved inside evaluate_property_, not via the
+                // batched surface multi-eval: iP is the input for
+                // PT/HmassP (and a per-point surface eval for DmassT,
+                // handled there); iQ resolves trivially (-1 for
+                // SinglePhase, Q for DomeBlend).  Either way these
+                // don't join the surface_props batch.
                 output_is_surface[o] = 0;
                 continue;
             case CoolProp::iT:
-                if (input_is_PT) {
+                if (input_is_PT || input_has_D) {
+                    // T is supplied directly by PT and DmassT/DmolarT.
                     output_is_surface[o] = 0;
                     continue;
                 }
                 // Falls through to surface eval (mass_prop = iT, scale = 1).
+                break;
+            case CoolProp::iDmass:
+                if (input_has_D) {
+                    // Density is the input, not a tabulated property —
+                    // evaluate_property_'s pt.rho_mass short-circuit
+                    // returns it.  (For non-D inputs, falls through to
+                    // surface eval via default below.)
+                    output_is_surface[o] = 0;
+                    continue;
+                }
                 break;
             case CoolProp::iHmass:
                 if (input_has_h) {
@@ -1638,6 +1829,11 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
                 scale = M;
                 break;
             case CoolProp::iDmolar:
+                if (input_has_D) {
+                    // evaluate_property_ shortcut: *pt.rho_mass / M.
+                    output_is_surface[o] = 0;
+                    continue;
+                }
                 mass_prop = CoolProp::iDmass;
                 scale = 1.0 / M;
                 break;

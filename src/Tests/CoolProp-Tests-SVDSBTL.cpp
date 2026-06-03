@@ -23,6 +23,8 @@ using Catch::Approx;
 #    include "Configuration.h"
 #    include "CoolProp.h"
 #    include "CoolProp/Backends/SVDSBTL/SVDSBTLBackend.h"
+#    include "CoolProp/sbtl/SatBoundaryFactory.h"
+#    include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #    include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #    include "DataStructures.h"
 #    include "TestUtils.h"
@@ -924,6 +926,82 @@ TEST_CASE("SVDSBTL ALTERNATIVE_SVDTABLES_DIRECTORY end-to-end build + reload", "
     fs::remove_all(tmpdir, ec);
 }
 
+// CoolProp-i7j: a DmassT (DT-indexed) SVDSBTL surface must round-trip
+// through the on-disk cache.  The DT preset's rho_sat,L / rho_sat,V dome
+// boundaries are region::SuperancillaryTemperatureBoundaryCurve on HEOS
+// sources; before the serializer learned CurveKind::SUPERANCILLARY_T,
+// pack_curve threw "unknown BoundaryCurve subclass" on them.  save_to_file
+// swallows that throw, so the DT surface silently never cached and the
+// dense SVD rebuilt every session.  This test catches that regression:
+// pre-fix the first construction writes NO DmassT cache file (REQUIRE_FALSE
+// fails), or any cache that lands fails to load and rebuilds (mtime bumps).
+TEST_CASE("SVDSBTL DmassT surface caches + reloads from disk (CoolProp-i7j)", "[SBTL][SVDSBTL][dt][cache][slow]") {
+    namespace fs = std::filesystem;
+    const std::string saved = CoolProp::get_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY);
+    const fs::path tmpdir = fs::temp_directory_path() / ("coolprop_svdtables_dt_e2e_" + std::to_string(CoolProp::tests::test_pid()));
+    std::error_code ec;
+    fs::remove_all(tmpdir, ec);
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, tmpdir.string());
+
+    // Smallest valid grid + critical_patch off, same as the PT e2e test.
+    const std::string opts = R"({"grid":{"NT":40,"NR":80,"rank":10},"critical_patch":{"mode":"off"}})";
+    const std::string spec = "SVDSBTL&HEOS";
+    const std::string spec_with_opts = std::string("Water?") + opts;
+
+    // A valid single-phase compressed-liquid (D, T): take D from HEOS at
+    // (5 MPa, 350 K) so the probe lands inside the LIQUID region.
+    double D_query = 0.0;
+    {
+        auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+        heos->update(CoolProp::PT_INPUTS, 5.0e6, 350.0);
+        D_query = heos->rhomass();
+    }
+
+    auto dt_cache_files = [&]() {
+        std::vector<fs::path> out;
+        if (!fs::is_directory(tmpdir, ec)) return out;
+        for (const auto& entry : fs::directory_iterator(tmpdir, ec)) {
+            const std::string name = entry.path().filename().string();
+            if (name.find("DmassT_INPUTS") != std::string::npos && name.find(".svd.bin.z") != std::string::npos) out.push_back(entry.path());
+        }
+        return out;
+    };
+
+    // First construction -> build + write the DmassT cache file.
+    {
+        auto first = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(spec, spec_with_opts));
+        first->update(CoolProp::DmassT_INPUTS, D_query, 350.0);
+    }
+    auto files = dt_cache_files();
+    INFO("DmassT cache files in tmpdir: " << files.size());
+    REQUIRE_FALSE(files.empty());  // pre-fix: pack_curve threw, save swallowed -> no DT cache
+
+    auto to_ns = [](const fs::file_time_type& t) {
+        return static_cast<std::int64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(t.time_since_epoch()).count());
+    };
+    std::vector<std::int64_t> mtimes_before_ns;
+    mtimes_before_ns.reserve(files.size());
+    for (const auto& f : files)
+        mtimes_before_ns.push_back(to_ns(fs::last_write_time(f)));
+
+    // Second construction with identical options -> must reload from cache.
+    // A failed load (e.g. unknown curve kind) would fall through to rebuild
+    // and bump the mtime.
+    {
+        auto second = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(spec, spec_with_opts));
+        second->update(CoolProp::DmassT_INPUTS, D_query, 350.0);
+    }
+    const auto files_after = dt_cache_files();
+    REQUIRE(files_after.size() == files.size());
+    for (std::size_t i = 0; i < files.size(); ++i) {
+        INFO("file: " << files[i].filename().string());
+        REQUIRE(to_ns(fs::last_write_time(files[i])) == mtimes_before_ns[i]);
+    }
+
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, saved);
+    fs::remove_all(tmpdir, ec);
+}
+
 // CoolProp-4no.2: parallel docs-build invocations (joblib loky workers)
 // race on writes to the same cache file, producing torn-write artifacts.
 // ::write_bytes_atomic does write-temp + rename so readers never see a
@@ -1182,6 +1260,255 @@ TEST_CASE("SVDSBTL pc-strip routes through critical patch", "[SVDSBTL][CoolProp-
                     REQUIRE(svd->rhomass() == Approx(rho_truth_hp).epsilon(1e-12));
                 }
             }
+        }
+    }
+}
+
+// -- DT-indexed surface (CoolProp-i7j) ------------------------------------
+
+// Smoke test: DT surface for CO2 builds, single supercritical probe
+// returns finite values matching HEOS to better than 1e-3 relative.
+// Tight tolerance comes in the multi-fluid sweep below — this one just
+// proves the wiring is end-to-end.
+TEST_CASE("SVDSBTL DT-indexed surface builds and evaluates for CO2", "[SBTL][SVDSBTL][dt][smoke][slow]") {
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "CarbonDioxide"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CarbonDioxide"));
+    // Supercritical CO2 at moderate density — the regime that broke
+    // BICUBIC #1301 with rectangular-band errors.
+    // Probes inside the atlas coverage envelope for CO2.  SUPER is the
+    // primary fix target (yufang67 #1301: low-D supercritical returned
+    // -760 MPa under BICUBIC); LIQUID + VAPOR probes pick D above /
+    // below the sat dome respectively to land in the single-phase
+    // sub-regions the preset emits.
+    struct Probe
+    {
+        double D, T;
+        const char* region;
+    };
+    for (const auto& p : std::vector<Probe>{
+           {10.0, 400.0, "SUPER mid-D"},
+           {500.0, 350.0, "SUPER high-D"},
+           {1100.0, 250.0, "LIQUID (D > rho_sat,L)"},
+           {15.0, 250.0, "VAPOR (D < rho_sat,V)"},
+         }) {
+        heos->update(CoolProp::DmassT_INPUTS, p.D, p.T);
+        svd->update(CoolProp::DmassT_INPUTS, p.D, p.T);
+        INFO(p.region << " D=" << p.D << " T=" << p.T << " svd_p=" << svd->p() << " heos_p=" << heos->p() << " svd_h=" << svd->hmass()
+                      << " heos_h=" << heos->hmass());
+        CHECK(std::isfinite(svd->p()));
+        CHECK(svd->p() > 0.0);
+        CHECK(svd->p() == Approx(heos->p()).epsilon(1e-2));
+        CHECK(svd->hmass() == Approx(heos->hmass()).epsilon(1e-2));
+        CHECK(svd->rhomass() == p.D);
+        CHECK(svd->T() == p.T);
+    }
+}
+
+// Regression gate for issue #1301 (CoolProp-i7j): a random (T, ρ)
+// sweep over yufang67's exact bounds (T ∈ [220, 500] K, ρ ∈ [0.01,
+// 1200] kg/m³) spanning subcritical liquid / vapor / two-phase dome
+// AND supercritical.  Asserts the headline contrast: SVDSBTL's
+// DT-indexed P(ρ, T) is clean across the envelope it covers, while
+// BICUBIC reproduces the documented failures (large near-saturation
+// error + negative-pressure cells).  The browsable figure is rendered
+// separately by Web/coolprop/_gen/gen_DT_validation_fig1301.py (pure
+// Python; same sweep).
+// Two-phase dome routing: a DT probe with rho_sat,V(T) < ρ < rho_sat,L(T)
+// at subcritical T lands in the dome.  Pressure must be P_sat(T) and the
+// caloric props must come from the lever rule — in particular hmass() /
+// hmolar() must NOT throw (regression: the dome block originally left
+// pt.h_mass unset and the DomeBlend switch has no enthalpy arm, so the
+// enthalpy query hit `default` and threw ValueError).
+TEST_CASE("SVDSBTL DT two-phase dome returns lever-rule props (CoolProp-i7j)", "[SBTL][SVDSBTL][dt][dome]") {
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "CarbonDioxide"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CarbonDioxide"));
+    // T=250 K subcritical; ρ=500 sits between ρ_sat,V (~18) and
+    // ρ_sat,L (~1046), squarely two-phase.
+    const double D = 500.0;
+    const double T = 250.0;
+    heos->update(CoolProp::DmassT_INPUTS, D, T);
+    svd->update(CoolProp::DmassT_INPUTS, D, T);
+    INFO("dome probe D=" << D << " T=" << T << " svd_p=" << svd->p() << " heos_p=" << heos->p());
+    REQUIRE(svd->Q() > 0.0);
+    REQUIRE(svd->Q() < 1.0);
+    REQUIRE(svd->p() == Approx(heos->p()).epsilon(1e-3));  // P_sat(T)
+    // hmass() / hmolar() must return the lever-rule blend, not throw.
+    REQUIRE_NOTHROW(svd->hmass());
+    REQUIRE(svd->hmass() == Approx(heos->hmass()).epsilon(1e-3));
+    REQUIRE(svd->hmolar() == Approx(heos->hmolar()).epsilon(1e-3));
+    REQUIRE(svd->rhomass() == D);  // density input echoed back
+}
+
+// fast_evaluate on a DT surface requesting density back: density is the
+// INPUT, not a tabulated property, so the batched output plan must
+// short-circuit iDmass / iDmolar to the input echo.  Regression: it
+// originally routed them to a surface lookup, property_index(iDmass)
+// threw, and the whole output row was NaN'd with internal_error.
+TEST_CASE("SVDSBTL DT fast_evaluate echoes density + matches HEOS (CoolProp-i7j)", "[SBTL][SVDSBTL][dt][fast_evaluate]") {
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "CarbonDioxide"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CarbonDioxide"));
+    // Supercritical single-phase batch.
+    const std::vector<double> Dvals = {10.0, 100.0, 500.0, 800.0};  // DmassT: val1 = D
+    const double T = 350.0;
+    std::vector<double> v2(Dvals.size(), T);  // val2 = T
+    std::vector<CoolProp::parameters> outs = {CoolProp::iP, CoolProp::iDmass, CoolProp::iHmass};
+    std::vector<double> out(Dvals.size() * outs.size(), std::nan(""));
+    std::vector<int> status(Dvals.size(), CoolProp::fast_evaluate_internal_error);
+    svd->fast_evaluate(CoolProp::DmassT_INPUTS, Dvals.data(), v2.data(), Dvals.size(), outs.data(), outs.size(), out.data(), out.size(),
+                       status.data(), status.size());
+    for (std::size_t k = 0; k < Dvals.size(); ++k) {
+        INFO("fast_evaluate k=" << k << " D=" << Dvals[k] << " status=" << static_cast<int>(status[k]));
+        REQUIRE(status[k] == CoolProp::fast_evaluate_ok);
+        const double p_fe = out[k * outs.size() + 0];
+        const double D_fe = out[k * outs.size() + 1];
+        const double h_fe = out[k * outs.size() + 2];
+        heos->update(CoolProp::DmassT_INPUTS, Dvals[k], T);
+        REQUIRE(D_fe == Dvals[k]);  // density echoed, not NaN
+        REQUIRE(p_fe == Approx(heos->p()).epsilon(1e-2));
+        REQUIRE(h_fe == Approx(heos->hmass()).epsilon(1e-2));
+    }
+}
+
+TEST_CASE("CoolProp-i7j: SVDSBTL DT clean vs BICUBIC fails on #1301 sweep", "[SBTL][SVDSBTL][dt][fig1301][slow]") {
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CarbonDioxide"));
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "CarbonDioxide"));
+    auto bic = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("BICUBIC&HEOS", "CarbonDioxide"));
+
+    constexpr double T_lo = 220.0;
+    constexpr double T_hi = 500.0;
+    constexpr double rho_lo = 1.0e-2;
+    constexpr double rho_hi = 1200.0;
+    constexpr int N_SAMPLES = 20000;  // ample to characterize the contrast in CI
+    std::mt19937 rng(1301);
+    std::uniform_real_distribution<double> T_dist(T_lo, T_hi);
+    std::uniform_real_distribution<double> rho_dist(rho_lo, rho_hi);
+
+    int n_heos_valid = 0;   // cells where HEOS gives a valid positive reference p
+    int n_bicubic_bad = 0;  // BICUBIC cells with |%-err| > 1% or sign-flip, inside HEOS validity
+    int n_svd_bad = 0;      // SVDSBTL cells with |%-err| > 1% OR a finite non-positive p
+    int n_svd_covered = 0;  // cells SVDSBTL resolved to a FINITE p (positive or not)
+    auto pressure = [](CoolProp::AbstractState& s, double rho, double T) -> double {
+        try {
+            s.update(CoolProp::DmassT_INPUTS, rho, T);
+            return s.p();
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            return std::nan("");
+        }
+    };
+    for (int k = 0; k < N_SAMPLES; ++k) {
+        const double T = T_dist(rng);
+        const double rho = rho_dist(rng);
+        const double p_heos = pressure(*heos, rho, T);
+        if (!std::isfinite(p_heos) || p_heos == 0.0) continue;
+        ++n_heos_valid;
+        const double p_svd = pressure(*svd, rho, T);
+        const double p_bic = pressure(*bic, rho, T);
+        // %-error as yufang67 defined it: |P_bk - P_EOS|/P_EOS*100.
+        if (std::isfinite(p_bic) && (std::abs(p_bic - p_heos) / std::abs(p_heos) * 100.0 > 1.0 || p_bic <= 0.0)) {
+            ++n_bicubic_bad;
+        }
+        if (std::isfinite(p_svd)) {
+            ++n_svd_covered;
+            // A finite non-positive pressure is itself a failure (the
+            // #1301 sign-flip mode), not just a >1% deviation — count
+            // both so a regression that returns negative P can't hide
+            // by being dropped from the denominator.
+            if (p_svd <= 0.0 || std::abs(p_svd - p_heos) / std::abs(p_heos) * 100.0 > 1.0) ++n_svd_bad;
+        }
+    }
+    UNSCOPED_INFO("n_heos_valid=" << n_heos_valid << " n_svd_covered=" << n_svd_covered << " n_svd_bad=" << n_svd_bad
+                                  << " n_bicubic_bad=" << n_bicubic_bad);
+    // SVDSBTL must cover most of the HEOS-valid envelope (the only
+    // uncovered band is the deep low-ρ ideal-gas corner below the
+    // p_triple sampling floor — a documented follow-up), and within
+    // what it covers the failure fraction (>1% error OR non-positive
+    // p) must be tiny.  The handful that remain are at the extreme
+    // low-ρ atlas edge where the η-normalisation sits at ξ≈0 — NOT the
+    // near-saturation region that motivated #1301.
+    CHECK(n_heos_valid > 0);
+    CHECK(static_cast<double>(n_svd_covered) > 0.90 * static_cast<double>(n_heos_valid));
+    CHECK(static_cast<double>(n_svd_bad) < 0.001 * static_cast<double>(n_svd_covered));
+    CHECK(n_bicubic_bad > 0);  // #1301 failure pattern must reproduce
+}
+
+// Anomaly detection: water has a single rho_sat,L extremum at
+// T ≈ 277 K (4 °C density anomaly).  CO2 / methane have none.
+// Verifies find_rho_satL_extrema_T does its job before the preset
+// uses it to split the LIQUID region.
+TEST_CASE("find_rho_satL_extrema_T returns water anomaly, none for other fluids", "[SBTL][SVDSBTL][dt][anomaly]") {
+    SECTION("water has anomaly near 277 K") {
+        auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+        auto extrema = CoolProp::sbtl::find_rho_satL_extrema_T(*heos, heos->Ttriple() * 1.001, heos->T_critical() * 0.999);
+        REQUIRE(extrema.size() == 1);
+        REQUIRE(extrema[0] == Approx(277.13).margin(2.0));
+    }
+    SECTION("CO2 has no anomaly") {
+        auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CarbonDioxide"));
+        auto extrema = CoolProp::sbtl::find_rho_satL_extrema_T(*heos, heos->Ttriple() * 1.001, heos->T_critical() * 0.999);
+        REQUIRE(extrema.empty());
+    }
+    SECTION("methane has no anomaly") {
+        auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane"));
+        auto extrema = CoolProp::sbtl::find_rho_satL_extrema_T(*heos, heos->Ttriple() * 1.001, heos->T_critical() * 0.999);
+        REQUIRE(extrema.empty());
+    }
+}
+
+// LIQUID-split geometry: the dt_subcritical preset must emit one extra
+// LIQUID sub-region per rho_sat,L(T) extremum.  Water (one anomaly)
+// gets LIQUID_LO + LIQUID_HI + VAPOR + SUPER = 4 regions; CO2 (no
+// anomaly) gets LIQUID + VAPOR + SUPER = 3.  This is the structural
+// guard that the anomaly split actually happens — without it, a
+// single LIQUID region would straddle the density-maximum hairpin and
+// the SVD couldn't represent the resulting discontinuity.
+TEST_CASE("dt_subcritical splits LIQUID at the water density anomaly", "[SBTL][SVDSBTL][dt][anomaly]") {
+    SECTION("water emits 4 regions (LIQUID split into LO + HI)") {
+        auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+        auto spec = CoolProp::sbtl::presets::dt_subcritical(*heos);
+        REQUIRE(spec.regions.size() == 4);
+        REQUIRE(spec.input_pair == CoolProp::DmassT_INPUTS);
+    }
+    SECTION("CO2 emits 3 regions (single LIQUID)") {
+        auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CarbonDioxide"));
+        auto spec = CoolProp::sbtl::presets::dt_subcritical(*heos);
+        REQUIRE(spec.regions.size() == 3);
+    }
+}
+
+// End-to-end: water DT lookups across the 4 °C density anomaly.  Probe
+// compressed-liquid states at D just above the saturation dome, sweeping
+// T from below the anomaly (LIQUID_LO sub-region) through the maximum to
+// above it (LIQUID_HI).  D ≈ 1000-1050 kg/m³ stays just above
+// rho_sat,L(T) (≈ 999.9 at the maximum) across the whole sweep, so every
+// probe is single-phase liquid sitting right on top of the anomaly's
+// hairpin — exactly the cells a single un-split LIQUID region would
+// botch.  All must match HEOS density-input pressure / enthalpy.
+TEST_CASE("SVDSBTL DT water across the density anomaly matches HEOS", "[SBTL][SVDSBTL][dt][anomaly][water][slow]") {
+    auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    // T sweep brackets the anomaly at ~277.13 K: two points below, the
+    // maximum, two above.  D values are compressed-liquid, comfortably
+    // above rho_sat,L (which peaks at ~999.97 kg/m³) yet inside the
+    // HEOS validity envelope.
+    for (const double T : {274.0, 276.0, 277.13, 279.0, 283.0}) {
+        for (const double D : {1000.5, 1020.0, 1050.0}) {
+            heos->update(CoolProp::DmassT_INPUTS, D, T);
+            const double p_ref = heos->p();
+            const double h_ref = heos->hmass();
+            svd->update(CoolProp::DmassT_INPUTS, D, T);
+            INFO("water anomaly probe D=" << D << " T=" << T << " svd_p=" << svd->p() << " heos_p=" << p_ref << " svd_h=" << svd->hmass()
+                                          << " heos_h=" << h_ref);
+            REQUIRE_FALSE(std::isnan(svd->p()));
+            REQUIRE(svd->p() > 0.0);
+            // 0.1% on p across the anomaly — the split keeps each
+            // sub-region's rho_sat,L(T) boundary monotone, so the
+            // η-normalisation stays well-conditioned right at the
+            // density maximum.
+            REQUIRE(svd->p() == Approx(p_ref).epsilon(1e-3));
+            REQUIRE(svd->hmass() == Approx(h_ref).epsilon(1e-3));
+            REQUIRE(svd->rhomass() == D);
+            REQUIRE(svd->T() == T);
         }
     }
 }

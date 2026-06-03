@@ -817,6 +817,312 @@ SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     return spec;
 }
 
+namespace {
+// Shared property list for DmassT_INPUTS: (D, T) inputs, so outputs
+// are p, h, s, u, w (speed of sound).  Pressure rides EXP since it
+// can span ~10 orders of magnitude across the (D, T) envelope (from
+// rarified vapor at low T to compressed liquid at high p_max_eos).
+std::vector<PropertySpec> dt_properties(::CoolProp::AbstractState& src) {
+    std::vector<PropertySpec> ps = {
+      {::CoolProp::iP, svd::OutputTransform::EXP},
+      {::CoolProp::iHmass, svd::OutputTransform::IDENTITY},
+      {::CoolProp::iSmass, svd::OutputTransform::IDENTITY},
+      {::CoolProp::iUmass, svd::OutputTransform::IDENTITY},
+      {::CoolProp::ispeed_sound, svd::OutputTransform::IDENTITY},
+    };
+    if (source_supports_transport_(src, ::CoolProp::iviscosity)) {
+        ps.push_back({::CoolProp::iviscosity, svd::OutputTransform::EXP});
+    }
+    if (source_supports_transport_(src, ::CoolProp::iconductivity)) {
+        ps.push_back({::CoolProp::iconductivity, svd::OutputTransform::EXP});
+    }
+    return ps;
+}
+
+// Per-knot D upper-bound: at each T knot, find the max pressure ≤
+// p_target that HEOS accepts (binary-search down if p_target itself
+// is rejected by the melting line at this T) and return D at that
+// (T, p).  Result is a CubicSplineCurve representing the "compressed-
+// liquid / supercritical-dense ceiling".
+//
+// Why per-knot rather than fixed isobar: the melting curve cuts into
+// the high-p part of the (T, p) envelope for steep-melting fluids
+// (CO2 T_melt(0.8 GPa) ≈ 327 K > Tc = 304 K), so a single
+// p_max_eos isobar isn't defined at the cold end of LIQUID or SUPER.
+// Per-knot walk-down gives the actual reachable D extent — narrower
+// at cold T (where melting limits p), wider at hot T.  The resulting
+// curve is monotonically non-decreasing in T-region-of-interest and
+// always above ρ_sat,L (since p_target > p_sat for liquid-side
+// queries).
+//
+// p_target is the EOS-validity ceiling (≤ 0.99 * pmax); p_floor is
+// the minimum acceptable pressure (typically ≥ pc / 2 or sat pressure
+// at T to ensure the curve stays above the dome).
+// Per-knot floor source: 'sat_L' anchors the walk-down at saturation
+// pressure (Q=0 PQ flash), used for LIQUID-side envelopes that must
+// stay above the sat dome.  'critical' uses p_critical, used for
+// SUPER-side envelopes that should stay supercritical.
+enum class WalkFloor : std::uint8_t
+{
+    SAT_L,
+    CRITICAL,
+};
+
+std::unique_ptr<region::CubicSplineCurve> build_rho_max_envelope(::CoolProp::AbstractState& heos, double T_min, double T_max, double p_target,
+                                                                 WalkFloor floor_source, std::size_t n_knots = 64) {
+    if (!(T_min > 0.0) || !(T_max > T_min) || n_knots < 2) {
+        throw std::invalid_argument("build_rho_max_envelope: invalid T range or n_knots");
+    }
+    std::vector<double> T_knots(n_knots);
+    std::vector<double> y(n_knots);
+    const double dT = (T_max - T_min) / static_cast<double>(n_knots - 1);
+    const double p_crit = heos.p_critical();
+    constexpr int kMaxHalvings = 50;
+    for (std::size_t k = 0; k < n_knots; ++k) {
+        T_knots[k] = T_min + static_cast<double>(k) * dT;
+        // Per-knot floor: just above sat pressure for LIQUID-side
+        // (don't cross the dome into vapor) or just above pc for
+        // SUPER-side (stay supercritical).
+        double p_floor = 0.0;
+        if (floor_source == WalkFloor::SAT_L) {
+            try {
+                heos.update(::CoolProp::QT_INPUTS, 0.0, T_knots[k]);
+                p_floor = heos.p() * 1.001;
+            } catch (const ::CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                p_floor = 1.0;                                // fluid without QT support at this T; defer to walk-down
+            }
+        } else {
+            p_floor = 1.001 * p_crit;
+        }
+        // Find the HIGHEST admissible pressure ≤ p_target at this T (the
+        // melting line caps it for steep-melting fluids like CO2).  Walk
+        // down from p_target to bracket a reachable pressure, then bisect
+        // upward: stopping at the first successful halving would freeze
+        // the envelope at ≤ 0.5·p_target and clip valid dense single-
+        // phase DT states near the real HEOS limit.
+        double p_try = std::max(p_target, p_floor);
+        double rho_found = std::nan("");
+        double p_ok = std::nan("");   // highest known-reachable p
+        double p_bad = std::nan("");  // lowest known-unreachable p (> p_ok)
+        for (int i = 0; i < kMaxHalvings; ++i) {
+            bool ok = false;
+            try {
+                heos.update(::CoolProp::PT_INPUTS, p_try, T_knots[k]);
+                const double rho = heos.rhomass();
+                if (std::isfinite(rho)) {
+                    rho_found = rho;
+                    p_ok = p_try;
+                    ok = true;
+                }
+            } catch (const ::CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                // Below the melting line at this (T, p); drop p.
+            }
+            if (ok) break;
+            p_bad = p_try;  // this p is unreachable
+            if (p_try <= p_floor) break;
+            p_try = std::max(0.5 * p_try, p_floor);
+        }
+        // If p_target itself was unreachable and we backed off to a lower
+        // p_ok, bisect (p_ok, p_bad) to recover the pressure ceiling we
+        // skipped past, maximizing rho_found.
+        if (std::isfinite(p_ok) && std::isfinite(p_bad) && p_bad > p_ok) {
+            for (int i = 0; i < kMaxHalvings; ++i) {
+                if ((p_bad - p_ok) <= 1e-6 * p_bad) break;
+                const double p_mid = 0.5 * (p_ok + p_bad);
+                bool ok = false;
+                try {
+                    heos.update(::CoolProp::PT_INPUTS, p_mid, T_knots[k]);
+                    const double rho = heos.rhomass();
+                    if (std::isfinite(rho)) {
+                        rho_found = rho;
+                        p_ok = p_mid;
+                        ok = true;
+                    }
+                } catch (const ::CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                    // (T, p_mid) below the melting line; shrink the bracket.
+                }
+                if (!ok) p_bad = p_mid;
+            }
+        }
+        if (!std::isfinite(rho_found)) {
+            throw std::runtime_error("build_rho_max_envelope: no reachable p ∈ [" + std::to_string(p_floor) + ", " + std::to_string(p_target)
+                                     + "] at T=" + std::to_string(T_knots[k]));
+        }
+        y[k] = rho_found;
+    }
+    return region::CubicSplineCurve::build(std::move(T_knots), std::move(y));
+}
+
+// Per-knot D lower-bound: D at (T, p_target) where p_target is a
+// low-pressure isobar.  No walk-down needed here — low p is always
+// reachable for the supported T range (vapor side; ideal-gas limit).
+// p_target should be ≤ p_triple for safety.
+std::unique_ptr<region::CubicSplineCurve> build_rho_min_envelope(::CoolProp::AbstractState& heos, double T_min, double T_max, double p_target,
+                                                                 std::size_t n_knots = 64) {
+    if (!(T_min > 0.0) || !(T_max > T_min) || n_knots < 2) {
+        throw std::invalid_argument("build_rho_min_envelope: invalid T range or n_knots");
+    }
+    std::vector<double> T_knots(n_knots);
+    std::vector<double> y(n_knots);
+    const double dT = (T_max - T_min) / static_cast<double>(n_knots - 1);
+    for (std::size_t k = 0; k < n_knots; ++k) {
+        T_knots[k] = T_min + static_cast<double>(k) * dT;
+        try {
+            heos.update(::CoolProp::PT_INPUTS, p_target, T_knots[k]);
+            y[k] = heos.rhomass();
+        } catch (const ::CoolProp::CoolPropBaseError& e) {
+            throw std::runtime_error("build_rho_min_envelope: HEOS rejected (T=" + std::to_string(T_knots[k]) + ", p=" + std::to_string(p_target)
+                                     + "): " + e.what());
+        }
+        if (!std::isfinite(y[k])) {
+            throw std::runtime_error("build_rho_min_envelope: non-finite rho at (T=" + std::to_string(T_knots[k]) + ", p=" + std::to_string(p_target)
+                                     + ")");
+        }
+    }
+    return region::CubicSplineCurve::build(std::move(T_knots), std::move(y));
+}
+}  // namespace
+
+SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
+    // DT-indexed surface — closes CoolProp-i7j and supersedes the
+    // BICUBIC invert_single_phase_y patch attempt at #2892 / #1301.
+    //
+    // (D, T) is the Helmholtz EOS's native coordinate, so every output
+    // property (p, h, s, u, w) is a direct evaluation at table-build
+    // time.  No inversion, no critical-region stiffness, no "cells
+    // with -760 MPa" failure modes.
+    //
+    // Three primary regions: LIQUID + VAPOR (sub-critical, dome-
+    // bounded) and SUPER (T > T_critical, EOS-validity bounded).
+    // Anomaly handling: when rho_sat,L(T) has interior extrema (water
+    // ~277 K, heavy water ~284 K), LIQUID is split into N+1 sub-
+    // regions, each spanning one monotonic piece of rho_sat,L(T).
+    const double T_triple = heos.Ttriple();
+    const double T_min_eos = std::max(T_triple, heos.Tmin());
+    const double T_max_eos = heos.Tmax();
+    const double Tc = heos.T_critical();
+
+    // Sub-critical T range with margins away from triple / critical.
+    const double T_sub_lo = std::max(T_min_eos, T_triple * 1.001);
+    const double T_sub_hi = Tc * 0.999;
+    // Super-critical T range with margin above critical / below T_max.
+    const double T_sup_lo = Tc * 1.001;
+    const double T_sup_hi = T_max_eos - 0.5;
+    // KNOWN GAP (CoolProp-i7j follow-up): the [0.999, 1.001]·Tc band is
+    // intentionally uncovered.  The LIQUID/VAPOR dome boundaries
+    // (ρ_sat,L, ρ_sat,V) pinch to ρ_c there, so the dome-bounded
+    // sub-regions degenerate to zero width and the SVD η-normalisation
+    // is ill-conditioned.  Unlike PT/HmassP, DmassT is NOT yet wired
+    // into build_critical_patch_, so single-phase DmassT queries in
+    // this ±0.1%·Tc band currently return OutOfRange rather than
+    // routing to the source backend.  Coverage impact is ~0.2% of the
+    // (D, T) envelope; closing it (a DmassT critical-patch bbox) is
+    // filed as a follow-up and is best done alongside the PT/HP patch
+    // machinery.
+
+    // p envelope for the non-dome D extents.  Sub-critical fluids
+    // have well-defined p_triple from PQ flash at T_triple; use that
+    // as the low-pressure floor for the vapor / super low-D side.
+    // p_max_target = 0.99 * heos.pmax() is the EOS-validity ceiling
+    // — the build_rho_max_envelope helper handles the per-knot
+    // walk-down to clear the melting line where it cuts into high-p.
+    heos.update(::CoolProp::QT_INPUTS, 0.0, T_triple * 1.001);
+    // p_min_eos must stay >= p_triple regardless of region.  Below
+    // p_triple HEOS's PT-input path invokes the melting-curve check
+    // (the curve's domain starts at p_triple), which throws on
+    // every fluid with a polynomial-in-Θ melting curve (CO2, water,
+    // most cryogenic fluids).  The thrown error is the same whether
+    // T is sub- or super-critical, so SUPER's low-D bound is
+    // similarly constrained.  Low-D ideal-gas territory (ρ < ρ_at_
+    // (T, p_triple)) is NOT covered by this preset's atlas; queries
+    // there should be added in a follow-up that handles the ideal-
+    // gas extension (file when needed).
+    const double p_min_eos = heos.p() * 1.01;
+    const double p_max_target = 0.99 * heos.pmax();
+
+    // Detect rho_sat,L(T) extrema and build a sorted list of LIQUID
+    // sub-region breakpoints: [T_sub_lo, extrema..., T_sub_hi].
+    std::vector<double> T_breaks = {T_sub_lo};
+    for (double T_anom : find_rho_satL_extrema_T(heos, T_sub_lo, T_sub_hi)) {
+        T_breaks.push_back(T_anom);
+    }
+    T_breaks.push_back(T_sub_hi);
+
+    SurfaceSpec spec;
+    spec.fluid_name = heos.fluid_names().empty() ? std::string{} : heos.fluid_names().front();
+    spec.input_pair = ::CoolProp::DmassT_INPUTS;
+    spec.NT = NT;
+    spec.NR = NR;
+    spec.rank = rank;
+    spec.properties = dt_properties(heos);
+
+    // LIQUID sub-region(s).  Primary = T (LINEAR — T span is at most
+    // factor ~3 from triple to critical, no orders-of-magnitude
+    // variation that would motivate log scaling).  Secondary = D in
+    // [rho_sat,L(T), rho_at(T, p_max_eos)].  Each sub-region spans
+    // ONE monotonic piece of rho_sat,L(T), so the CubicSplineCurve
+    // fits cleanly without the anomaly's hairpin.
+    for (std::size_t i = 0; i + 1 < T_breaks.size(); ++i) {
+        const double T_lo = T_breaks[i];
+        const double T_hi = T_breaks[i + 1];
+        if (!(T_hi > T_lo)) continue;
+        auto axis = region::AxisTransform::make(region::AxisScale::LINEAR, T_lo, T_hi);
+        auto b_lo = build_rho_sat_L(heos, T_lo, T_hi);                                         // dome side
+        auto b_hi = build_rho_max_envelope(heos, T_lo, T_hi, p_max_target, WalkFloor::SAT_L);  // compressed-liquid ceiling
+        spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi));
+    }
+    // VAPOR.  Secondary = D in [rho_at(T, p_min_eos), rho_sat,V(T)].
+    // No anomaly handling needed — rho_sat,V is monotone in T for
+    // every known fluid (increases from triple-vapor toward critical
+    // density as T → Tc).
+    if (T_sub_hi > T_sub_lo) {
+        auto axis = region::AxisTransform::make(region::AxisScale::LINEAR, T_sub_lo, T_sub_hi);
+        auto b_lo = build_rho_min_envelope(heos, T_sub_lo, T_sub_hi, p_min_eos);
+        auto b_hi = build_rho_sat_V(heos, T_sub_lo, T_sub_hi);
+        spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi));
+    }
+    // SUPER (T > T_critical).  Secondary D bounded by the two HEOS-
+    // validity isobars.  No dome above Tc — single region across the
+    // full D extent.  This is the region that fixes yufang67's #1301
+    // CO2 supercritical low-density failure: HEOS at low D / high T
+    // evaluates directly (P = ρ²(∂α/∂ρ)RT), no inverter, no
+    // rectangular bands, no -760 MPa cells.
+    if (T_sup_hi > T_sup_lo) {
+        auto axis = region::AxisTransform::make(region::AxisScale::LINEAR, T_sup_lo, T_sup_hi);
+        auto b_lo = build_rho_min_envelope(heos, T_sup_lo, T_sup_hi, p_min_eos);
+        auto b_hi = build_rho_max_envelope(heos, T_sup_lo, T_sup_hi, p_max_target, WalkFloor::CRITICAL);
+        spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi));
+    }
+
+    spec.update_state = [](::CoolProp::AbstractState& s, double T, double D) {
+        // SurfaceSpec passes (a, b) where a is primary (T) and b is
+        // secondary (D).  DmassT_INPUTS takes (D, T) in that order.
+        s.update(::CoolProp::DmassT_INPUTS, D, T);
+    };
+    spec.read_property = [](::CoolProp::AbstractState& s, ::CoolProp::parameters key) -> double {
+        switch (key) {
+            case ::CoolProp::iP:
+                return s.p();
+            case ::CoolProp::iHmass:
+                return s.hmass();
+            case ::CoolProp::iSmass:
+                return s.smass();
+            case ::CoolProp::iUmass:
+                return s.umass();
+            case ::CoolProp::ispeed_sound:
+                return s.speed_sound();
+            case ::CoolProp::iviscosity:
+                return s.viscosity();
+            case ::CoolProp::iconductivity:
+                return s.conductivity();
+            default:
+                throw std::invalid_argument("dt_subcritical: unsupported output property");
+        }
+    };
+
+    return spec;
+}
+
 }  // namespace presets
 }  // namespace sbtl
 }  // namespace CoolProp

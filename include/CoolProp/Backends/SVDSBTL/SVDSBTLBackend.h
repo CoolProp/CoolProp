@@ -288,6 +288,10 @@ class SVDSBTLBackend : public AbstractState
         std::optional<double> T;
         std::optional<double> p;
         std::optional<double> h_mass;
+        // Mass density input shortcut for DmassT / DmolarT inputs.
+        // Lets evaluate_property_ return iDmass directly without a
+        // surface eval (D is the input, not a stored property).
+        std::optional<double> rho_mass;
         double Q = -1.0;  // -1 sentinel for single-phase, [0, 1] in dome
 
         // SinglePhase / Patched routing.
