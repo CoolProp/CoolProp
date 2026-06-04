@@ -99,9 +99,11 @@ input pair `PT_INPUTS`
 
 ```bash
 python dev/pdsim_cimport_contract/run_contract.py          # standalone
-python -m pytest dev/pdsim_cimport_contract/test_pdsim_contract.py
+RUN_PDSIM_CIMPORT_CONTRACT=1 python -m pytest dev/pdsim_cimport_contract/test_pdsim_contract.py
 ```
 
-The build auto-locates fmt/rapidjson from any in-repo `build*/_deps/…`; override
-with `COOLPROP_FMT_INCLUDE` / `COOLPROP_RAPIDJSON_INCLUDE` if needed.
-```
+The pytest wrapper is opt-in (skips unless `RUN_PDSIM_CIMPORT_CONTRACT` is set)
+so it isn't pulled into default collection — it compiles a shim against the
+installed CoolProp. The build auto-locates fmt/rapidjson from any in-repo
+`build*/_deps/…`; override with `COOLPROP_FMT_INCLUDE` / `COOLPROP_RAPIDJSON_INCLUDE`
+if needed.

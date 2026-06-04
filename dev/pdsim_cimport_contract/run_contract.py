@@ -54,6 +54,7 @@ def check():
     expect("get_s [kJ/kg/K]", g["s"], SI("Smass") / 1000.0)
     expect("get_u [kJ/kg]", g["u"], SI("Umass") / 1000.0)
     expect("get_cp [kJ/kg/K]", g["cp"], SI("Cpmass") / 1000.0)
+    expect("get_cp0 [kJ/kg/K]", g["cp0"], SI("Cp0mass") / 1000.0)
     expect("get_cv [kJ/kg/K]", g["cv"], SI("Cvmass") / 1000.0)
     expect("get_speed_sound [m/s, SI]", g["speed_sound"], SI("speed_of_sound"))
     expect("get_rho [kg/m^3, SI]", g["rho"], RHO, rel=1e-9)

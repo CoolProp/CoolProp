@@ -17,10 +17,16 @@ import os
 import subprocess
 import sys
 
+import pytest
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def test_pdsim_cimport_contract():
+    # Opt-in: this builds a Cython extension against the *installed* CoolProp via
+    # subprocess, so it must not run in default `pytest` collection / CI sweeps.
+    if not os.environ.get("RUN_PDSIM_CIMPORT_CONTRACT"):
+        pytest.skip("set RUN_PDSIM_CIMPORT_CONTRACT=1 to run (needs installed CoolProp + compiles a shim)")
     proc = subprocess.run(
         [sys.executable, "run_contract.py"],
         cwd=HERE, capture_output=True, text=True,

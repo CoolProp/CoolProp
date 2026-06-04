@@ -48,6 +48,8 @@ def _find_dep_include(header_relpath, env_var, fetch_glob):
                 # --git-common-dir gives <main>/.git; its parent is the checkout
                 roots.append(os.path.dirname(out) if out.endswith(".git") else out)
         except Exception:
+            # git missing / not a repo / command failed: best-effort only, fall
+            # back to the other root candidates (env var, pkg include, system).
             pass
     candidates = []
     if os.environ.get(env_var):
