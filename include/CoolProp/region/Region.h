@@ -18,8 +18,18 @@ namespace region {
 //     interval.
 //   - Secondary axis b is bounded below by `b_lo(a)` and above by
 //     `b_hi(a)`, two BoundaryCurves that are explicit functions of a.
-//     The normalised coordinate eta = (b - b_lo(a)) / (b_hi(a) - b_lo(a))
-//     lives in [0, 1] when (a, b) is inside the region.
+//     The normalised coordinate eta lives in [0, 1] when (a, b) is inside
+//     the region.  Its scale is selectable (default LINEAR):
+//       LINEAR : eta = (b - b_lo(a)) / (b_hi(a) - b_lo(a))
+//       LOG    : eta = (log b - log b_lo(a)) / (log b_hi(a) - log b_lo(a))
+//     LOG is the right choice when b spans orders of magnitude *and* the
+//     tabulated property tracks b geometrically — e.g. the DmassT preset's
+//     VAPOR/SUPER regions, where rho_hi/rho_lo ~ 1e5 and p ∝ rho in the
+//     ideal-gas tail.  Under LINEAR that tail collapses below the first
+//     grid node and the EXP-SVD can't resolve the multi-decade pressure
+//     swing (CoolProp-wvtz); LOG gives it uniform-in-decade resolution.
+//     Only LINEAR and LOG are supported on the secondary axis (the POWER
+//     scales are primary-axis-only).
 //
 // Dispatch:
 //   `aabb_contains` is the cheap first-pass filter — four comparisons
@@ -45,7 +55,11 @@ class Region
         double b_max;
     };
 
-    Region(AxisTransform primary, std::unique_ptr<BoundaryCurve> b_lo, std::unique_ptr<BoundaryCurve> b_hi);
+    // secondary_scale selects how eta normalises the secondary axis
+    // (LINEAR default; LOG for wide-dynamic-range axes — see class
+    // docstring).  Throws std::invalid_argument for any other scale.
+    Region(AxisTransform primary, std::unique_ptr<BoundaryCurve> b_lo, std::unique_ptr<BoundaryCurve> b_hi,
+           AxisScale secondary_scale = AxisScale::LINEAR);
 
     Region(const Region&) = delete;
     Region& operator=(const Region&) = delete;
@@ -77,6 +91,9 @@ class Region
     [[nodiscard]] const AxisTransform& primary() const noexcept {
         return primary_;
     }
+    [[nodiscard]] AxisScale secondary_scale() const noexcept {
+        return secondary_scale_;
+    }
     [[nodiscard]] const BoundaryCurve& b_lo() const noexcept {
         return *b_lo_;
     }
@@ -89,6 +106,7 @@ class Region
 
    private:
     AxisTransform primary_;
+    AxisScale secondary_scale_;
     std::unique_ptr<BoundaryCurve> b_lo_;
     std::unique_ptr<BoundaryCurve> b_hi_;
     BBox bbox_;

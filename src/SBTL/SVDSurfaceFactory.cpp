@@ -296,7 +296,7 @@ SVDSurface build_surface(::CoolProp::AbstractState& heos, SurfaceSpec spec, cons
     for (std::size_t r = 0; r < spec.regions.size(); ++r) {
         // Move the RegionSpec's boundary curves into a real Region,
         // then immediately add it to the surface.
-        region::Region region(spec.regions[r].primary, std::move(spec.regions[r].b_lo), std::move(spec.regions[r].b_hi));
+        region::Region region(spec.regions[r].primary, std::move(spec.regions[r].b_lo), std::move(spec.regions[r].b_hi), spec.regions[r].secondary);
         // Sample HEOS for this region BEFORE moving it into the
         // surface — we need the (a, b) → from_normalized while we
         // still hold an immediate reference.
