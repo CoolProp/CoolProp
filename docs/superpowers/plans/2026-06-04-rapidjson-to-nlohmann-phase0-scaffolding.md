@@ -712,6 +712,13 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
+> **Implementation note (post-execution):** the snippet above is the initial
+> per-item guess. Per Step 2's "adapt to reality" instruction, the committed
+> `dev/validate_fluid_schemas.py` validates each data file as a **whole
+> document** (not per item), because all three schemas declare top-level
+> `type: array` and the C++ loaders validate the entire blob. Treat the
+> committed script — not this snippet — as the source of truth.
+
 - [ ] **Step 2: Run it to verify it validates the real data**
 
 Run:

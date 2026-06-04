@@ -3,6 +3,7 @@
 // full-DOM parse time of the embedded fluid blob with each library.
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -14,6 +15,10 @@
 
 static std::string read_file(const char* path) {
     std::ifstream f(path, std::ios::binary);
+    if (!f) {
+        std::fprintf(stderr, "cannot open %s\n", path);
+        std::exit(1);
+    }
     std::ostringstream ss;
     ss << f.rdbuf();
     return ss.str();

@@ -2,6 +2,7 @@
 // JSON exactly, including full-precision doubles. This is the logic a CI
 // byte-equivalence test would assert.
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -10,14 +11,22 @@
 
 using nlohmann::json;
 
+static void must_open(const std::ifstream& f, const char* p) {
+    if (!f) {
+        std::fprintf(stderr, "cannot open %s\n", p);
+        std::exit(1);
+    }
+}
 static std::string read_text(const char* p) {
     std::ifstream f(p, std::ios::binary);
+    must_open(f, p);
     std::ostringstream ss;
     ss << f.rdbuf();
     return ss.str();
 }
 static std::vector<std::uint8_t> read_bytes(const char* p) {
     std::ifstream f(p, std::ios::binary);
+    must_open(f, p);
     return std::vector<std::uint8_t>((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 }
 

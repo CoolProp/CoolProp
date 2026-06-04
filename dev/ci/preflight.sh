@@ -161,15 +161,28 @@ if skip_check json-symbols; then
 elif skip_check build; then
     skip "json-symbols" "--skip=build (shared build needed)"
 else
+    # A leak gate that silently skips on a broken shared build is fail-open —
+    # surface configure/build failures as a hard fail. Intentional skips go
+    # through --skip=json-symbols (handled above), not through swallowed errors.
+    SHARED_OK=1
     if [ ! -d build_shared ]; then
-        cmake -B build_shared -S . -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1 || true
+        if ! cmake -B build_shared -S . -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release >/tmp/preflight-shared-build.log 2>&1; then
+            fail "json-symbols (shared configure failed; see /tmp/preflight-shared-build.log)"
+            SHARED_OK=0
+        fi
     fi
-    if [ -d build_shared ]; then
-        cmake --build build_shared -j8 >/tmp/preflight-shared-build.log 2>&1 || true
+    if [ "$SHARED_OK" = 1 ] && ! cmake --build build_shared -j8 >/tmp/preflight-shared-build.log 2>&1; then
+        fail "json-symbols (shared build failed; see /tmp/preflight-shared-build.log)"
+        SHARED_OK=0
     fi
-    SHARED_LIB="$(find build_shared \( -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' \) 2>/dev/null | head -1 || true)"
-    if [ -z "$SHARED_LIB" ] || [ ! -f "$SHARED_LIB" ]; then
-        skip "json-symbols" "no shared CoolProp library found (see /tmp/preflight-shared-build.log)"
+    SHARED_LIB=""
+    if [ "$SHARED_OK" = 1 ]; then
+        SHARED_LIB="$(find build_shared \( -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' \) 2>/dev/null | head -1 || true)"
+    fi
+    if [ "$SHARED_OK" != 1 ]; then
+        : # configure/build failure already reported as a fail above
+    elif [ -z "$SHARED_LIB" ] || [ ! -f "$SHARED_LIB" ]; then
+        fail "json-symbols (shared build succeeded but no libCoolProp.so/.dylib found)"
     elif ./dev/ci/check-json-symbols.sh "$SHARED_LIB"; then
         ok "json-symbols (no nlohmann/valijson exported from $SHARED_LIB)"
     else

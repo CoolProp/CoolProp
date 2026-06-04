@@ -55,6 +55,15 @@ inline int get_integer(const nlohmann::json& v, const std::string& m) {
     auto it = v.find(m);
     if (it == v.end()) throw CoolProp::ValueError(format("Does not have member [%s]", m.c_str()));
     if (!it->is_number_integer()) throw CoolProp::ValueError(format("Member [%s] is not an integer", m.c_str()));
+    // is_number_integer() is true for unsigned values too; a uint64 above
+    // INT64_MAX would wrap to a negative int64 and slip past the range check,
+    // so handle the unsigned case explicitly before the signed one.
+    if (it->is_number_unsigned()) {
+        const std::uint64_t uval = it->get<std::uint64_t>();
+        if (uval > static_cast<std::uint64_t>(std::numeric_limits<int>::max()))
+            throw CoolProp::ValueError(format("Member [%s] is out of int range", m.c_str()));
+        return static_cast<int>(uval);
+    }
     const std::int64_t val = it->get<std::int64_t>();
     if (val < std::numeric_limits<int>::min() || val > std::numeric_limits<int>::max())
         throw CoolProp::ValueError(format("Member [%s] is out of int range", m.c_str()));

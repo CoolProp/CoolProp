@@ -17,10 +17,23 @@ if [[ -z "${LIB}" || ! -f "${LIB}" ]]; then
     exit 2
 fi
 
+# Fail fast if symbol extraction itself fails — masking it (|| true) would
+# yield an empty list and a false "OK", silently disabling the leak gate.
 case "$(uname -s)" in
-    Darwin) SYMS="$(nm -gU "${LIB}" 2>/dev/null | c++filt || true)" ;;
-    *)      SYMS="$(nm -D --defined-only "${LIB}" 2>/dev/null | c++filt || true)" ;;
+    Darwin) NM_OPTS=(-gU) ;;
+    *)      NM_OPTS=(-D --defined-only) ;;
 esac
+if ! SYMS_RAW="$(nm "${NM_OPTS[@]}" "${LIB}")"; then
+    echo "FAIL: unable to read symbols from ${LIB} (nm failed)" >&2
+    exit 1
+fi
+# Demangle when c++filt is present; mangled names still contain the literal
+# namespace text (e.g. "nlohmann"), so the pattern match works either way.
+if command -v c++filt >/dev/null 2>&1; then
+    SYMS="$(printf '%s\n' "${SYMS_RAW}" | c++filt)"
+else
+    SYMS="${SYMS_RAW}"
+fi
 
 LEAKS="$(printf '%s\n' "${SYMS}" | grep -E "${PATTERN}" || true)"
 if [[ -n "${LEAKS}" ]]; then

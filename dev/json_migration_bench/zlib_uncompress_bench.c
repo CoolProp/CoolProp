@@ -16,6 +16,10 @@ static double now_ms(void) {
 int main(int argc, char** argv) {
     const char* path = (argc > 1) ? argv[1] : "dev/all_fluids.json";
     FILE* f = fopen(path, "rb");
+    if (!f) {
+        fprintf(stderr, "cannot open %s\n", path);
+        return 1;
+    }
     fseek(f, 0, SEEK_END);
     long n = ftell(f);
     fseek(f, 0, SEEK_SET);

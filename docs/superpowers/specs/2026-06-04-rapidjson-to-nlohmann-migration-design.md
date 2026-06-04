@@ -92,13 +92,15 @@ Three cheap, mostly-mechanical layers. No standing wrapper library.
    Net effect: no JSON type — rapidjson or nlohmann — appears in any installed
    header.
 
-2. **Custom nlohmann namespace via macro.** Define the
-   `NLOHMANN_JSON_NAMESPACE_*` macros (as a compile definition on the CoolProp
-   targets, set through the CPM package options — *not* by editing a vendored
-   header) so CoolProp's nlohmann lives in a private inline namespace (e.g.
-   `nlohmann_coolprop`). Even an accidental instantiation cannot ODR-collide
-   with another library's `nlohmann::json`. This is the belt to the
-   "don't expose" suspenders.
+2. **~~Custom nlohmann namespace via macro.~~ DROPPED during implementation.**
+   The original idea was to rename nlohmann's namespace via the
+   `NLOHMANN_JSON_NAMESPACE_*` macros. This was **rejected**: Valijson's nlohmann
+   adapter references `nlohmann::json` literally, so renaming the namespace
+   breaks Valijson at compile time. The cross-version ODR protection it would
+   have provided is instead supplied by **nlohmann's own built-in versioned
+   inline namespace** (`nlohmann::json_abi_v3_x_x`), which already isolates
+   different nlohmann versions, combined with the localized hidden visibility in
+   layer 3. (See the Phase-0 plan's Architecture note.)
 
 3. **Localized hidden visibility around the JSON includes.** Wrap the
    nlohmann/Valijson `#include`s in `#pragma GCC visibility push(hidden)` /

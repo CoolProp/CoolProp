@@ -53,8 +53,13 @@ TEST_CASE("cpjson getters throw ValueError on missing/mistyped members", "[json]
 }
 
 TEST_CASE("cpjson::get_integer rejects out-of-int-range values", "[json]") {
+    // Signed value above INT_MAX but within int64.
     nlohmann::json j = cpjson::parse(R"({"big": 3000000000})");
     REQUIRE_THROWS_AS(cpjson::get_integer(j, "big"), CoolProp::ValueError);
+    // Unsigned value above INT64_MAX — must NOT wrap to a negative int and slip
+    // through; it has to throw.
+    nlohmann::json u = cpjson::parse(R"({"huge": 18446744073709551615})");
+    REQUIRE_THROWS_AS(cpjson::get_integer(u, "huge"), CoolProp::ValueError);
 }
 
 namespace {
