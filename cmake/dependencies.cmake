@@ -37,6 +37,25 @@ CPMAddPackage(
   DOWNLOAD_ONLY  YES
 )
 
+# nlohmann/json — replacement for rapidjson (GH: RapidJSON→nlohmann migration).
+# Header-only; included via the hidden-visibility wrapper include/CoolProp/detail/json.h.
+CPMAddPackage(
+  NAME nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG        v3.12.0
+  DOWNLOAD_ONLY  YES   # header-only; we only need the include dir
+)
+
+# Valijson — header-only JSON-Schema (draft-7) validator that validates an
+# nlohmann::json instance directly via its bundled adapter. Used for runtime
+# validation of user-supplied PC-SAFT / cubic fluids.
+CPMAddPackage(
+  NAME valijson
+  GIT_REPOSITORY https://github.com/tristanpenman/valijson.git
+  GIT_TAG        v1.0.6
+  DOWNLOAD_ONLY  YES   # header-only; adapters/ + the core headers are include-only
+)
+
 CPMAddPackage(
   NAME IF97
   GIT_REPOSITORY https://github.com/CoolProp/IF97
