@@ -2171,6 +2171,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-FPUGuard.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-TermCacheProfile.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-JSONHelpers.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
