@@ -1925,9 +1925,15 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                     //                - 2 - Force calculation in the vapor phase even if T<Ttrp
                     //                  3 - Input x is liquid composition along the freezing line(melting line)
                     //                  4 - Input x is vapor composition along the sublimation line
-                    SATPdll(&_p, &(mole_fractions[0]), &iFlsh, &_T, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &ierr,
-                            herr, errormessagelength);
-                    rho_mol_L = (iFlsh == 1) ? rhoLmol_L : rhoVmol_L;
+                    //
+                    // GH #1502: SATTP's iFlsh (3=bubble/P,xliq, 4=dew/P,xvap) is NOT SATP's kph
+                    // (3/4 mean freezing/sublimation lines).  Map to kph 1=liquid/bubble, 2=vapor/dew.
+                    // Also pass p_kPa (in kPa, as SATP expects): _p is -_HUGE here because clear()
+                    // ran and _p = value1 is not set until after this block.
+                    int kph = (iFlsh == 3) ? 1 : 2;
+                    SATPdll(&p_kPa, &(mole_fractions[0]), &kph, &_T, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),
+                            &ierr, herr, errormessagelength);
+                    rho_mol_L = (kph == 1) ? rhoLmol_L : rhoVmol_L;
                 }
                 if (ierr <= 0L) {
                     // Calculate everything else
@@ -2851,6 +2857,46 @@ TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
         // With the fix the round-trip is exact to ~1e-11 K; the THERMdll drift
         // shifts it by ~3e-5 K, so 1e-7 K cleanly separates the two.
         CHECK(std::abs(T_back - T) < 1e-7);
+    }
+    SECTION("PQ bubble/dew saturation is self-consistent with QT on a mixture (GH #1502)") {
+        // GH #1502: in the PQ saturation path the SATTPdll->SATPdll fallback used
+        // the wrong SATP phase flag (SATTP's iFlsh 3/4 = bubble/dew, but SATP's kph
+        // 3/4 = freezing/sublimation lines), a stale pressure, and an unconditional
+        // vapor-density pick.  Forcing the fallback (a genuine SATTPdll failure) is
+        // not deterministically reproducible across REFPROP versions, so this guards
+        // the public contract the fix restores: a PQ bubble/dew flash must land on
+        // the same equilibrium state as the QT flash that produced its pressure, and
+        // the bubble (liquid) density must exceed the dew (vapor) density.
+        shared_ptr<CoolProp::AbstractState> S(CoolProp::AbstractState::factory("REFPROP", "Methane&Ethane"));
+        std::vector<double> z = {0.4, 0.6};
+        S->set_mole_fractions(z);
+        const double T = 200;  // well subcritical (Tc ~ 276 K)
+
+        // Bubble point (Q=0): QT -> p, rho_liq; PQ(p,0) must recover both.
+        S->update(CoolProp::QT_INPUTS, 0, T);
+        double p_bub = S->p();
+        double rho_bub_QT = S->rhomolar();
+        S->update(CoolProp::PQ_INPUTS, p_bub, 0);
+        CAPTURE(p_bub);
+        CAPTURE(rho_bub_QT);
+        CAPTURE(S->rhomolar());
+        CHECK(std::abs(S->T() - T) < 1e-6);
+        CHECK(std::abs(S->rhomolar() - rho_bub_QT) / rho_bub_QT < 1e-6);
+
+        // Dew point (Q=1): QT -> p, rho_vap; PQ(p,1) must recover both.
+        S->update(CoolProp::QT_INPUTS, 1, T);
+        double p_dew = S->p();
+        double rho_dew_QT = S->rhomolar();
+        S->update(CoolProp::PQ_INPUTS, p_dew, 1);
+        CAPTURE(p_dew);
+        CAPTURE(rho_dew_QT);
+        CAPTURE(S->rhomolar());
+        CHECK(std::abs(S->T() - T) < 1e-6);
+        CHECK(std::abs(S->rhomolar() - rho_dew_QT) / rho_dew_QT < 1e-6);
+
+        // The saturated-liquid (bubble) density must exceed the saturated-vapor (dew)
+        // density — the ordering the buggy fallback inverted by always picking vapor.
+        CHECK(rho_bub_QT > rho_dew_QT);
     }
     SECTION("Enthalpy and entropy reference state") {
         std::vector<std::string> ss = strsplit(CoolProp::get_global_param_string("FluidsList"), ',');
