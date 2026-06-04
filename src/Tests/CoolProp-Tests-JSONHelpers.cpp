@@ -20,4 +20,41 @@ TEST_CASE("cpjson::parse throws ValueError on malformed JSON", "[json]") {
     REQUIRE_THROWS_AS(cpjson::parse("{not json}"), CoolProp::ValueError);
 }
 
+TEST_CASE("cpjson getters extract typed members", "[json]") {
+    nlohmann::json j = cpjson::parse(R"({
+        "i": 7, "x": 2.5, "b": true, "s": "hi",
+        "darr": [1.0, 2.0, 3.0],
+        "sarr": ["a", "b"],
+        "d2d": [[1.0, 2.0], [3.0]]
+    })");
+
+    REQUIRE(cpjson::get_integer(j, "i") == 7);
+    REQUIRE(cpjson::get_double(j, "x") == Catch::Approx(2.5));
+    REQUIRE(cpjson::get_bool(j, "b") == true);
+    REQUIRE(cpjson::get_string(j, "s") == "hi");
+
+    std::vector<double> darr = cpjson::get_double_array(j, "darr");
+    REQUIRE(darr.size() == 3);
+    REQUIRE(darr[2] == Catch::Approx(3.0));
+
+    std::vector<std::string> sarr = cpjson::get_string_array(j, "sarr");
+    REQUIRE(sarr.size() == 2);
+    REQUIRE(sarr[1] == "b");
+
+    std::vector<std::vector<double>> d2d = cpjson::get_double_array2D(j.at("d2d"));
+    REQUIRE(d2d.size() == 2);
+    REQUIRE(d2d[0][1] == Catch::Approx(2.0));
+}
+
+TEST_CASE("cpjson getters throw ValueError on missing/mistyped members", "[json]") {
+    nlohmann::json j = cpjson::parse(R"({"x": "not a number"})");
+    REQUIRE_THROWS_AS(cpjson::get_double(j, "missing"), CoolProp::ValueError);
+    REQUIRE_THROWS_AS(cpjson::get_double(j, "x"), CoolProp::ValueError);
+}
+
+TEST_CASE("cpjson::get_integer rejects out-of-int-range values", "[json]") {
+    nlohmann::json j = cpjson::parse(R"({"big": 3000000000})");
+    REQUIRE_THROWS_AS(cpjson::get_integer(j, "big"), CoolProp::ValueError);
+}
+
 #endif  // ENABLE_CATCH
