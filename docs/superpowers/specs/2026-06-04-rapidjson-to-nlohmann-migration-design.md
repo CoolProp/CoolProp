@@ -100,10 +100,39 @@ Three cheap, mostly-mechanical layers. No standing wrapper library.
    with another library's `nlohmann::json`. This is the belt to the
    "don't expose" suspenders.
 
-3. **Hidden visibility.** Build CoolProp targets with `-fvisibility=hidden`
-   and `-fvisibility-inlines-hidden` (the shared lib already curates exports via
-   `exports.txt` / version script, `CMakeLists.txt:688`). Internally-instantiated
-   JSON template symbols stay local rather than exported.
+3. **Localized hidden visibility around the JSON includes.** Wrap the
+   nlohmann/Valijson `#include`s in `#pragma GCC visibility push(hidden)` /
+   `pop` (equivalently, compile only the JSON-heavy translation units with
+   hidden visibility) so that *only* the JSON-library symbols become local while
+   the rest of CoolProp keeps its current default-visibility export behavior.
+   Internally-instantiated JSON template symbols stay local rather than
+   exported.
+
+   **Why localized, not global `-fvisibility=hidden`.** CoolProp does **not**
+   curate its exports today: there is no linker version script and no
+   visibility annotations. (The `exports.txt` / `headers.txt` outputs at
+   `CMakeLists.txt:683-701` are MSVC-only `dumpbin` *dumps* for inspection —
+   they do not filter exports.) On Unix/macOS every symbol with external
+   linkage is exported by default visibility, which is exactly why RapidJSON's
+   weak/inline symbols leak. Flipping `-fvisibility=hidden` *globally* would
+   therefore hide the **entire un-annotated public API** (the C API in
+   `CoolPropLib.h` and the whole C++ `AbstractState` surface), requiring a
+   `visibility("default")` export macro on every public symbol — a large,
+   separate ABI project. Localized hiding gets the no-leak result without that
+   overhaul. A proper project-wide export map (global `-fvisibility=hidden` +
+   annotated public API, or a version script / `-exported_symbols_list`) is
+   **deferred** — see Section 9.
+
+   **Platform note.** This is a Unix/macOS concern. MSVC is hidden-by-default
+   and only exports `dllexport`ed symbols, so nlohmann is already not exported
+   on Windows; the namespace macro (layer 2) is the defense-in-depth there.
+
+   **Exception-translation becomes load-bearing.** With JSON typeinfo hidden,
+   an nlohmann exception that propagated across a shared-library boundary could
+   not be caught by type. Every nlohmann/Valijson exception must therefore be
+   caught and translated to CoolProp's own `ValueError` (or similar) *before it
+   leaves a `.cpp`*. This is required for correctness, not just API hygiene, and
+   is covered by an explicit test (Section 7).
 
 The existing `cpjson` helpers are reimplemented as thin nlohmann one-liners and
 kept **only** where they aid readability. They are convenience, not a required
@@ -159,9 +188,13 @@ byte-stable output.
 ## 7. Testing & Verification
 
 - **Symbol-leak gate (headline invariant).** A post-build check runs
-  `nm -D` / `objdump -T` on the shared library and **fails the build** if any
-  exported symbol matches `nlohmann` or `rapidjson`. Active in CI from Phase 0
-  onward — the no-leak constraint becomes an enforced invariant, not a hope.
+  `nm -D` / `objdump -T` and **fails the build** if any exported symbol matches
+  `nlohmann` or `rapidjson`. The check must target a **shared product** (the
+  built shared library, and ideally the Python extension `.so`) — *not* the
+  static `.a`, because visibility attributes in a `.a` only take effect once it
+  is linked into a shared object, so `nm` on the archive would show JSON symbols
+  regardless and give a false reading. Active in CI from Phase 0 onward — the
+  no-leak constraint becomes an enforced invariant, not a hope.
 - **Behavior parity.** Existing Catch2 suites — the `[SBTL]` umbrella,
   fluid-loading, configuration round-trip, PC-SAFT/cubic user-fluid add — must
   stay green at every phase. Serializer round-trip and canonical-JSON tests
@@ -169,6 +202,10 @@ byte-stable output.
 - **Schema-error parity.** Add a test that feeds a deliberately-malformed user
   fluid and asserts a useful Valijson error message, so error quality does not
   silently regress.
+- **No escaping JSON exceptions.** Add a test asserting that malformed input at
+  the public boundary surfaces a CoolProp exception type (e.g. `ValueError`),
+  never a raw `nlohmann`/Valijson exception — guarding the catch-and-translate
+  contract that localized hidden visibility makes load-bearing (Section 4).
 - **Per-phase preflight.** `./dev/ci/preflight.sh` plus the
   `superpowers:code-reviewer` subagent before every PR, per CLAUDE.md. When
   changes touch `src/SBTL/`, `include/CoolProp/sbtl/`,
@@ -182,7 +219,8 @@ Staged. Each PR keeps the tree green and bisectable.
 - Add nlohmann/json and Valijson via `CPMAddPackage` in
   `cmake/dependencies.cmake`, each pinned to a tag.
 - Apply the `NLOHMANN_JSON_NAMESPACE_*` custom-namespace compile definition and
-  `-fvisibility=hidden` / `-fvisibility-inlines-hidden` to CoolProp targets.
+  the localized `#pragma GCC visibility push(hidden)` wrapping around the
+  JSON-library includes (Section 4) — not a global `-fvisibility=hidden`.
 - Delete `externals/nlohmann-json/` and remove its include path at
   `CMakeLists.txt:331`.
 - Wire the symbol-leak CI check.
@@ -211,3 +249,10 @@ public surface to strings, and runs the relevant backend / `[SBTL]` tags.
 - Migrating wrapper-side JSON (e.g. the Rust/Tauri GUI's `serde_json`) — those
   do not use the C++ RapidJSON and are unaffected.
 - Adopting JSON Schema drafts beyond Draft-7.
+- **Project-wide export map.** A curated public-export surface for CoolProp
+  (global `-fvisibility=hidden` + `visibility("default")` annotations on the C
+  and C++ public API, or a linker version script / macOS
+  `-exported_symbols_list`). This would supersede the localized hiding in
+  Section 4 and harden the ABI generally, but it is a large standalone ABI
+  project independent of the JSON migration and is not required to meet the
+  no-leak constraint here.
