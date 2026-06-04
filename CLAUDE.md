@@ -102,31 +102,42 @@ changed-file paths; running preflight is the safe default.
 
 ### Pre-PR adversarial review — MANDATORY
 
-Before any `gh pr create` invocation, **you MUST** invoke the
-`superpowers:code-reviewer` subagent against the diff.  The
-pre-push shell hook can't mechanically gate this (subagents are a
-Claude Code construct, not a CLI), so the gate is procedural — but it
-is NOT optional.  Every recent PR where CodeRabbit found a blocking
-issue (null-deref, FD-out-of-range, noexcept-on-throwing, NaN-
-absorbed-by-std::max) would have been caught by code-reviewer first
-at zero CI latency.  Skip this step and the same class of findings
-keeps recurring.
+Before any `gh pr create` invocation, **you MUST** invoke an adversarial
+review subagent against the diff.  The pre-push shell hook can't
+mechanically gate this (subagents are a Claude Code construct, not a CLI),
+so the gate is procedural — but it is NOT optional.  Every recent PR where
+CodeRabbit found a blocking issue (null-deref, FD-out-of-range,
+noexcept-on-throwing, NaN-absorbed-by-std::max, and `|| true` masking that
+silently disabled a CI gate) would have been caught by the reviewer first
+at zero CI latency.  Skip this step and the same class of findings keeps
+recurring.
+
+**Agent availability:** prefer `subagent_type: "superpowers:code-reviewer"`;
+if that agent type isn't registered in the current environment, fall back to
+`subagent_type: "general-purpose"` with the same prompt.  Do NOT skip the
+review because the named agent is missing.
 
 **Pre-`gh pr create` checklist (MUST complete in order):**
 
 1. `./dev/ci/preflight.sh` passes (or you can explain each `--skip`).
-2. `Agent({subagent_type: "superpowers:code-reviewer", ...})` returns
-   with no blocking findings, OR you've addressed/justified each one.
+2. The review subagent returns with no blocking findings, OR you've
+   addressed/justified each one.  Review the **final** diff vs the branch's
+   actual base (for a stacked branch that's the parent branch, NOT always
+   `origin/master`).
 3. `git push` (the pre-push hook re-runs preflight as a safety net).
 4. THEN `gh pr create`.
+5. **Re-review the delta.**  Any commit pushed AFTER step 2 (review-feedback
+   fixes, follow-on changes, CI fixes) is unreviewed — re-run the review on
+   those commits before treating the PR as done.  New files added late (e.g.
+   a benchmark program) are the easiest to ship unreviewed.
 
-Canonical code-reviewer invocation:
+Canonical review invocation:
 
 ```
 Agent({
-  subagent_type: "superpowers:code-reviewer",
+  subagent_type: "superpowers:code-reviewer",   // fall back to "general-purpose" if unavailable
   description: "Pre-PR review of <branch>",
-  prompt: "Adversarial review of the diff between <branch> and origin/master.
+  prompt: "Adversarial review of the diff between <branch> and its actual base.
            Project conventions are in CLAUDE.md.  Check for:
              - null-deref risk on shared_ptr inputs
              - noexcept on functions that can throw (resize/allocate/etc.)
@@ -135,8 +146,20 @@ Agent({
              - bit-exact compare where ULP-class noise exists
              - fopen without permission restriction
              - preconditions checked in the factory but not the public constructor
+             - integer narrowing / unsigned-overflow slipping past a range check
+             - CI/shell gate robustness: `|| true` or `2>/dev/null` that masks a
+               failure, swallowed exit codes, skip-on-error in a gate, `grep -c`
+               without `|| echo 0` under `set -e`, unguarded `find -o` precedence
+             - implementation that diverges from its own spec/plan without
+               updating the doc
              - bot-comment-class issues that recur across recent PRs
-           Report blocking findings only; skip style nits."
+           For EVERY check, gate, guard, or validation step in the diff, answer
+           explicitly: 'what input or failure makes this pass when it should
+           fail?'  A safeguard that can silently no-op (fail-open) is a BLOCKING
+           finding even if it does NOT fail CI.
+           Report blocking findings.  If you notice an issue and judge it an
+           acceptable trade-off, STILL report it as a flagged trade-off — never
+           silently dismiss it.  Skip pure style nits."
 })
 ```
 

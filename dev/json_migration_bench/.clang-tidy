@@ -1,0 +1,5 @@
+# Throwaway, reproducible benchmark/proof programs (not part of the CMake
+# build, no compile_commands entry). Disable clang-tidy here — printf-style
+# microbenchmark code is intentionally terse and shouldn't be linted.
+Checks: '-*'
+WarningsAsErrors: ''

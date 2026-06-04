@@ -37,6 +37,35 @@ CPMAddPackage(
   DOWNLOAD_ONLY  YES
 )
 
+# nlohmann/json — replacement for rapidjson (GH: RapidJSON→nlohmann migration).
+# Header-only; included via the hidden-visibility wrapper include/CoolProp/detail/json.h.
+CPMAddPackage(
+  NAME nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG        v3.12.0
+  DOWNLOAD_ONLY  YES   # header-only; we only need the include dir
+)
+
+# Valijson — header-only JSON-Schema (draft-7) validator that validates an
+# nlohmann::json instance directly via its bundled adapter. Used for runtime
+# validation of user-supplied PC-SAFT / cubic fluids.
+#
+# Use the release tarball, NOT a git clone: valijson's repo carries test-only
+# submodules (googletest, yaml-cpp, nlohmann-json, rapidjson, …) whose deeply-
+# nested test-fixture filenames exceed Windows' MAX_PATH and break a recursive
+# git checkout (notably the Tauri GUI build, which configures from an already-
+# deep path).  GIT_SUBMODULES "" does NOT help here because CMP0097 defaults to
+# OLD under this project's cmake_minimum_required, where empty means "all".  The
+# GitHub source archive contains no submodule contents, so the tarball sidesteps
+# both that and the Windows git-clone flakiness (same rationale as Eigen above).
+CPMAddPackage(
+  NAME valijson
+  VERSION 1.0.6
+  URL https://github.com/tristanpenman/valijson/archive/refs/tags/v1.0.6.tar.gz
+  URL_HASH SHA256=bf0839de19510ff7792d8a8aca94ea11a288775726b36c4c9a2662651870f8da
+  DOWNLOAD_ONLY YES   # header-only; we only need include/
+)
+
 CPMAddPackage(
   NAME IF97
   GIT_REPOSITORY https://github.com/CoolProp/IF97

@@ -328,12 +328,17 @@ set(APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}")
 list(APPEND APP_INCLUDE_DIRS "${Eigen_SOURCE_DIR}")
 list(APPEND APP_INCLUDE_DIRS "${msgpack-c_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1")
-list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann-json")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/dev")
 list(APPEND APP_INCLUDE_DIRS "${boost_headers_SOURCE_DIR}")
 list(APPEND APP_INCLUDE_DIRS "${fmt_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${rapidjson_SOURCE_DIR}/include")
+list(APPEND APP_INCLUDE_DIRS "${nlohmann_json_SOURCE_DIR}/include")
+list(APPEND APP_INCLUDE_DIRS "${valijson_SOURCE_DIR}/include")
+# Valijson is consumed header-only (DOWNLOAD_ONLY), so its INTERFACE
+# VALIJSON_USE_EXCEPTIONS define is not propagated. Set it explicitly so
+# Valijson throws catchable exceptions on internal errors instead of abort().
+add_compile_definitions(VALIJSON_USE_EXCEPTIONS=1)
 list(APPEND APP_INCLUDE_DIRS "${IF97_SOURCE_DIR}")
 list(APPEND APP_INCLUDE_DIRS "${REFPROP_headers_SOURCE_DIR}")
 
@@ -2169,6 +2174,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-FPUGuard.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-TermCacheProfile.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-JSONHelpers.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})

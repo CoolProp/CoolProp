@@ -13,6 +13,7 @@
 #   ./dev/ci/preflight.sh                # check against origin/master
 #   ./dev/ci/preflight.sh --base=HEAD~1  # check against an earlier ref
 #   ./dev/ci/preflight.sh --skip=cppcheck,clang-tidy   # subset
+#   ./dev/ci/preflight.sh --skip=json-symbols          # subset
 #
 # Tools resolved at runtime:
 #   - clang-format     : uvx clang-format@<version-from-.pre-commit-config>
@@ -141,6 +142,51 @@ if ! skip_check build && [ -d build_catch ]; then
         fail "build (see /tmp/preflight-build.log)"
     else
         ok "build CatchTestRunner"
+    fi
+fi
+
+# ---------- check 2b: JSON symbol-leak gate (shared library) ---------
+#
+# Headline enforced invariant of the RapidJSON->nlohmann migration: no
+# nlohmann/valijson symbol may be exported from CoolProp's shared
+# products.  Visibility attributes only take effect once linked into a
+# shared object, so this MUST inspect a .so/.dylib — never the static
+# .a (the Catch runner links the archive).  preflight builds the Catch
+# runner against a static/object lib, so we maintain a dedicated
+# build_shared dir for this gate.  RapidJSON is intentionally NOT in the
+# default pattern (it is still exported today, by design, mid-migration).
+step "JSON symbol leak (shared library)"
+if skip_check json-symbols; then
+    skip "json-symbols" "--skip=json-symbols"
+elif skip_check build; then
+    skip "json-symbols" "--skip=build (shared build needed)"
+else
+    # A leak gate that silently skips on a broken shared build is fail-open —
+    # surface configure/build failures as a hard fail. Intentional skips go
+    # through --skip=json-symbols (handled above), not through swallowed errors.
+    SHARED_OK=1
+    if [ ! -d build_shared ]; then
+        if ! cmake -B build_shared -S . -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release >/tmp/preflight-shared-build.log 2>&1; then
+            fail "json-symbols (shared configure failed; see /tmp/preflight-shared-build.log)"
+            SHARED_OK=0
+        fi
+    fi
+    if [ "$SHARED_OK" = 1 ] && ! cmake --build build_shared -j8 >/tmp/preflight-shared-build.log 2>&1; then
+        fail "json-symbols (shared build failed; see /tmp/preflight-shared-build.log)"
+        SHARED_OK=0
+    fi
+    SHARED_LIB=""
+    if [ "$SHARED_OK" = 1 ]; then
+        SHARED_LIB="$(find build_shared \( -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' \) 2>/dev/null | head -1 || true)"
+    fi
+    if [ "$SHARED_OK" != 1 ]; then
+        : # configure/build failure already reported as a fail above
+    elif [ -z "$SHARED_LIB" ] || [ ! -f "$SHARED_LIB" ]; then
+        fail "json-symbols (shared build succeeded but no libCoolProp.so/.dylib found)"
+    elif ./dev/ci/check-json-symbols.sh "$SHARED_LIB"; then
+        ok "json-symbols (no nlohmann/valijson exported from $SHARED_LIB)"
+    else
+        fail "json-symbols (nlohmann/valijson symbols exported from $SHARED_LIB)"
     fi
 fi
 
@@ -303,6 +349,39 @@ else
         fail "semgrep (see /tmp/preflight-semgrep.log)"
     else
         ok "semgrep ($(printf '%s\n' "$ALL_CPP" | wc -l | tr -d ' ') file(s))"
+    fi
+fi
+
+# ---------- check 7: fluid-data schema validation --------------------
+#
+# Build-time correctness gate for embedded fluid data (RapidJSON->nlohmann
+# migration spec, section 5): validate the source JSON data files under dev/
+# against their committed JSON schemas before they're compiled into headers
+# and embedded.  Scoped to runs where a dev/*.json file changed.  The
+# validator is pure Python and runs independently of the C++ build; resolve
+# the jsonschema dependency through uvx the same way clang-format/semgrep are
+# resolved (with a graceful fallback to a system jsonschema if uvx is absent).
+step "fluid-data schema validation"
+if skip_check schema-validate; then
+    skip "schema-validate" "--skip=schema-validate"
+elif ! printf '%s\n' "$ALL_PATHS" | grep -qE '^dev/(pcsaft|cubics|mixtures)/.*\.json$'; then
+    skip "schema-validate" "no dev/{pcsaft,cubics,mixtures}/*.json files in diff"
+else
+    SCHEMA_LOG=/tmp/preflight-schema-validate.log
+    SCHEMA_RC=0
+    if command -v uvx >/dev/null 2>&1; then
+        uvx --from jsonschema python dev/validate_fluid_schemas.py >"$SCHEMA_LOG" 2>&1 || SCHEMA_RC=$?
+    elif command -v python3 >/dev/null 2>&1; then
+        python3 dev/validate_fluid_schemas.py >"$SCHEMA_LOG" 2>&1 || SCHEMA_RC=$?
+    else
+        SCHEMA_RC=127
+        echo "no uvx or python3 on PATH" >"$SCHEMA_LOG"
+    fi
+    if [ "$SCHEMA_RC" -eq 0 ]; then
+        ok "schema-validate ($(grep -c '^OK' "$SCHEMA_LOG" 2>/dev/null || echo 0) data file(s) validated)"
+    else
+        tail -30 "$SCHEMA_LOG"
+        fail "schema-validate (see $SCHEMA_LOG)"
     fi
 fi
 
