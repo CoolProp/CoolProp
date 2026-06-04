@@ -16,6 +16,7 @@
 #include "CoolProp/AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "CoolProp/detail/filepaths.h"
+#include "CoolProp/detail/atomic_write.h"
 #include "CoolProp/Configuration.h"
 #include "CoolProp/region/ConstantCurve.h"
 #include "CoolProp/region/CubicSplineCurve.h"

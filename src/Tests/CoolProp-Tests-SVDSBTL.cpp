@@ -26,6 +26,7 @@ using Catch::Approx;
 #    include "CoolProp/sbtl/SatBoundaryFactory.h"
 #    include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #    include "CoolProp/sbtl/SVDSurfaceSerializer.h"
+#    include "CoolProp/detail/atomic_write.h"
 #    include "CoolProp/DataStructures.h"
 #    include "TestUtils.h"
 

@@ -38,7 +38,7 @@ def params_constants(enum_key):
 
 
 def config_constants():
-    fName = os.path.join('..', '..', 'include', 'CoolProp', 'Configuration.h')
+    fName = os.path.join('..', '..', 'include', 'CoolProp', 'detail', 'configuration_keys.h')
     contents = open(fName, 'r').readlines()
 
     matching_lines = [i for i, line in enumerate(contents) if "#define CONFIGURATION_KEYS_ENUM" in line]
@@ -67,7 +67,7 @@ def generate_cython(data, config_data):
         for param in entries:
             param = param.strip()
             pxd_output_file.write('\t\t' + param + '\n')
-    pxd_output_file.write('\n\ncdef extern from "CoolProp/Configuration.h":\n')
+    pxd_output_file.write('\n\ncdef extern from "CoolProp/detail/configuration_keys.h":\n')
     enum_key, entries = config_data
     pxd_output_file.write('\tctypedef enum ' + enum_key + ':\n')
     for param in entries:
