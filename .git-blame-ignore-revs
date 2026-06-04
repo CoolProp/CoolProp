@@ -26,3 +26,8 @@ ee879788a10365c13f812993c4db6e69cb2d51a7
 # loop-convert, use-equals-default, use-using, etc.)
 # (CoolProp-0xu, #2926 layer 2, PR #3019)
 fe950bbfa4c2cf53a79fb5a3d848b7c945dd1ddf
+
+# Header reorg Phase 1: bulk move of ~28 public headers into include/CoolProp/
+# tiers (+ CP-/_include- renames) and the mechanical #include rewrite across
+# the core library. Predominantly a pure relocation. (GH #1280, CoolProp-dfw)
+2bfcc6f263ab9c3f58faebc01ca5b9ffa241961f
