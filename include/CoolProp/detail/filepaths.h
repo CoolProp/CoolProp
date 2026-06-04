@@ -2,7 +2,6 @@
 #define COOLPROP_FILE_PATH_H
 
 #include <cstddef>
-#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -33,29 +32,8 @@ std::string get_file_contents(const char* filename);
 /// Get all the contents of a binary file
 std::vector<char> get_binary_file_contents(const char* filename);
 
-/// Atomically write `size` bytes from `bytes` to `target`.
-///
-/// Writes to a sibling `<target>.tmp.<process-salt>.<seq>` first, then
-/// `std::filesystem::rename`s onto the target.  The rename is atomic on
-/// POSIX same-filesystem and on Win32 (replace-existing semantics), so
-/// concurrent writers in different processes / threads either see the
-/// previous complete file or one complete writer's payload — never a
-/// partial-write file on the visible path.
-///
-/// The temp-path suffix combines a process-unique 64-bit salt (drawn
-/// once per process from `std::random_device`) with a process-local
-/// atomic counter, so concurrent writers never collide on their
-/// intermediates.
-///
-/// When `restrict_perms` is true, the temp file is chmod'd to
-/// owner-only (0600) *before* the rename, so the post-rename file
-/// inherits the tight permissions without a brief world-readable
-/// window.  No-op on Windows where the POSIX permission model doesn't
-/// apply.
-///
-/// Throws `std::runtime_error` on open/write/rename failure; the temp
-/// file is unlinked before throwing.  Assumes `target.parent_path()`
-/// already exists.
-void write_bytes_atomic(const std::filesystem::path& target, const void* bytes, std::size_t size, bool restrict_perms = false);
+// write_bytes_atomic moved to CoolProp/detail/atomic_write.h so this header
+// (pulled into the public surface via detail/tools.h) no longer needs
+// <filesystem>.  Include that header where you call it.
 
 #endif

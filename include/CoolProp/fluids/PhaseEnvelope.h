@@ -2,6 +2,7 @@
 #define PHASE_ENVELOPE_H
 
 #include "CoolProp/Exceptions.h"
+#include "CoolProp/detail/tools.h"  // for CoolPropDbl, used throughout the signatures below
 
 #define PHASE_ENVELOPE_MATRICES X(K) X(lnK) X(x) X(y)
 #define PHASE_ENVELOPE_VECTORS \

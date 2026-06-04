@@ -28,6 +28,7 @@
 #include "CoolProp/sbtl/SVDSurface.h"
 #include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
+#include "CoolProp/detail/atomic_write.h"
 #include "CoolProp/detail/filepaths.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #include "CoolProp/sbtl/SaturationSurrogate.h"
