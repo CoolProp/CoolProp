@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Fail if CoolProp's shared library exports any symbol matching the JSON-library
+# pattern. The pattern is the 2nd arg (or $JSON_SYMBOL_PATTERN), defaulting to
+# 'nlohmann|valijson'. RapidJSON is intentionally NOT in the default pattern
+# during the migration (it is still used with default visibility and its
+# symbols are expected to be exported); Phase Final tightens the pattern to
+# 'nlohmann|valijson|rapidjson' once RapidJSON is removed.
+#
+# Visibility attributes in a static .a only take effect once linked into a
+# shared object, so this MUST inspect a shared product, never the archive.
+set -euo pipefail
+
+LIB="${1:-}"
+PATTERN="${2:-${JSON_SYMBOL_PATTERN:-nlohmann|valijson}}"
+if [[ -z "${LIB}" || ! -f "${LIB}" ]]; then
+    echo "usage: $0 <path-to-shared-library (.so/.dylib)> [symbol-regex]" >&2
+    exit 2
+fi
+
+case "$(uname -s)" in
+    Darwin) SYMS="$(nm -gU "${LIB}" 2>/dev/null | c++filt || true)" ;;
+    *)      SYMS="$(nm -D --defined-only "${LIB}" 2>/dev/null | c++filt || true)" ;;
+esac
+
+LEAKS="$(printf '%s\n' "${SYMS}" | grep -E "${PATTERN}" || true)"
+if [[ -n "${LEAKS}" ]]; then
+    echo "FAIL: shared library exports JSON-library symbols matching /${PATTERN}/:" >&2
+    printf '%s\n' "${LEAKS}" | head -50 >&2
+    exit 1
+fi
+echo "OK: no symbols matching /${PATTERN}/ exported from ${LIB}"

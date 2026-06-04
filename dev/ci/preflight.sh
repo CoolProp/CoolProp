@@ -13,6 +13,7 @@
 #   ./dev/ci/preflight.sh                # check against origin/master
 #   ./dev/ci/preflight.sh --base=HEAD~1  # check against an earlier ref
 #   ./dev/ci/preflight.sh --skip=cppcheck,clang-tidy   # subset
+#   ./dev/ci/preflight.sh --skip=json-symbols          # subset
 #
 # Tools resolved at runtime:
 #   - clang-format     : uvx clang-format@<version-from-.pre-commit-config>
@@ -141,6 +142,38 @@ if ! skip_check build && [ -d build_catch ]; then
         fail "build (see /tmp/preflight-build.log)"
     else
         ok "build CatchTestRunner"
+    fi
+fi
+
+# ---------- check 2b: JSON symbol-leak gate (shared library) ---------
+#
+# Headline enforced invariant of the RapidJSON->nlohmann migration: no
+# nlohmann/valijson symbol may be exported from CoolProp's shared
+# products.  Visibility attributes only take effect once linked into a
+# shared object, so this MUST inspect a .so/.dylib — never the static
+# .a (the Catch runner links the archive).  preflight builds the Catch
+# runner against a static/object lib, so we maintain a dedicated
+# build_shared dir for this gate.  RapidJSON is intentionally NOT in the
+# default pattern (it is still exported today, by design, mid-migration).
+step "JSON symbol leak (shared library)"
+if skip_check json-symbols; then
+    skip "json-symbols" "--skip=json-symbols"
+elif skip_check build; then
+    skip "json-symbols" "--skip=build (shared build needed)"
+else
+    if [ ! -d build_shared ]; then
+        cmake -B build_shared -S . -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1 || true
+    fi
+    if [ -d build_shared ]; then
+        cmake --build build_shared -j8 >/tmp/preflight-shared-build.log 2>&1 || true
+    fi
+    SHARED_LIB="$(find build_shared \( -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' \) 2>/dev/null | head -1 || true)"
+    if [ -z "$SHARED_LIB" ] || [ ! -f "$SHARED_LIB" ]; then
+        skip "json-symbols" "no shared CoolProp library found (see /tmp/preflight-shared-build.log)"
+    elif ./dev/ci/check-json-symbols.sh "$SHARED_LIB"; then
+        ok "json-symbols (no nlohmann/valijson exported from $SHARED_LIB)"
+    else
+        fail "json-symbols (nlohmann/valijson symbols exported from $SHARED_LIB)"
     fi
 fi
 
