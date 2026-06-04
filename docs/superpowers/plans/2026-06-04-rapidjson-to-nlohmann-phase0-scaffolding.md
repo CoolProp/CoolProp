@@ -562,7 +562,7 @@ git commit -m "feat(json): add Valijson-backed cpjson::validate_schema + excepti
 
 ## Task 5: Symbol-leak CI gate
 
-Build CoolProp as a shared library and fail if any exported dynamic symbol matches `nlohmann` or `rapidjson`. Note: this Phase-0 wrapper header isn't yet referenced by library sources, so the check should currently PASS trivially — its value grows as loaders migrate. We still wire it now so the invariant is enforced from the first migration onward.
+Build CoolProp as a shared library and fail if any exported dynamic symbol matches the JSON-library pattern. **Important:** in Phase 0 the pattern is `nlohmann|valijson` ONLY — NOT `rapidjson`. RapidJSON is still used throughout the library with default visibility (its symbols are exported today; that pre-existing leak is the very thing we are migrating away from), so gating on `rapidjson` now would fail immediately. The script takes the pattern as an overridable parameter so Phase Final can tighten it to `nlohmann|valijson|rapidjson` once RapidJSON is removed. The new nlohmann/valijson wrapper isn't referenced by library sources yet, so the gate should PASS trivially in Phase 0 — its value grows as loaders migrate.
 
 **Files:**
 - Create: `dev/ci/check-json-symbols.sh`
@@ -574,15 +574,21 @@ Create `dev/ci/check-json-symbols.sh` (mode `0755`):
 
 ```bash
 #!/usr/bin/env bash
-# Fail if CoolProp's shared library exports any nlohmann or rapidjson symbol.
+# Fail if CoolProp's shared library exports any symbol matching the JSON-library
+# pattern. The pattern is the 2nd arg (or $JSON_SYMBOL_PATTERN), defaulting to
+# 'nlohmann|valijson'. RapidJSON is intentionally NOT in the default pattern
+# during the migration (it is still used with default visibility and its
+# symbols are expected to be exported); Phase Final tightens the pattern to
+# 'nlohmann|valijson|rapidjson' once RapidJSON is removed.
 #
 # Visibility attributes in a static .a only take effect once linked into a
 # shared object, so this MUST inspect a shared product, never the archive.
 set -euo pipefail
 
 LIB="${1:-}"
+PATTERN="${2:-${JSON_SYMBOL_PATTERN:-nlohmann|valijson}}"
 if [[ -z "${LIB}" || ! -f "${LIB}" ]]; then
-    echo "usage: $0 <path-to-shared-library (.so/.dylib)>" >&2
+    echo "usage: $0 <path-to-shared-library (.so/.dylib)> [symbol-regex]" >&2
     exit 2
 fi
 
@@ -591,13 +597,13 @@ case "$(uname -s)" in
     *)      SYMS="$(nm -D --defined-only "${LIB}" 2>/dev/null | c++filt || true)" ;;
 esac
 
-LEAKS="$(printf '%s\n' "${SYMS}" | grep -E 'nlohmann|rapidjson' || true)"
+LEAKS="$(printf '%s\n' "${SYMS}" | grep -E "${PATTERN}" || true)"
 if [[ -n "${LEAKS}" ]]; then
-    echo "FAIL: shared library exports JSON-library symbols:" >&2
+    echo "FAIL: shared library exports JSON-library symbols matching /${PATTERN}/:" >&2
     printf '%s\n' "${LEAKS}" | head -50 >&2
     exit 1
 fi
-echo "OK: no nlohmann/rapidjson symbols exported from ${LIB}"
+echo "OK: no symbols matching /${PATTERN}/ exported from ${LIB}"
 ```
 
 - [ ] **Step 2: Make it executable and run it against a built shared library**
@@ -610,7 +616,7 @@ cmake --build build_shared -j8
 SHARED_LIB="$(find build_shared -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' | head -1)"
 ./dev/ci/check-json-symbols.sh "${SHARED_LIB}"
 ```
-Expected: prints `OK: no nlohmann/rapidjson symbols exported …` (Phase 0: the wrapper isn't linked into any source yet, so this passes trivially).
+Expected: prints `OK: no symbols matching /nlohmann|valijson/ exported …` (Phase 0: the wrapper isn't linked into any library source yet, so this passes trivially).
 
 - [ ] **Step 3: Wire the check into preflight**
 
@@ -628,7 +634,7 @@ Expected: preflight runs the JSON-symbol step and reports OK (or, if the shared 
 
 ```bash
 git add dev/ci/check-json-symbols.sh dev/ci/preflight.sh
-git commit -m "ci(json): gate exported nlohmann/rapidjson symbols on the shared library"
+git commit -m "ci(json): gate exported nlohmann/valijson symbols on the shared library"
 ```
 
 ---
@@ -804,7 +810,7 @@ cmake --build build_shared -j8
 SHARED_LIB="$(find build_shared -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' | head -1)"
 ./dev/ci/check-json-symbols.sh "${SHARED_LIB}"
 ```
-Expected: `OK: no nlohmann/rapidjson symbols exported …`.
+Expected: `OK: no symbols matching /nlohmann|valijson/ exported …`. (RapidJSON is intentionally excluded from the Phase-0 pattern — it is still in use and exported; it joins the pattern in Phase Final.)
 
 - [ ] **Step 3: Pre-PR adversarial review (per CLAUDE.md, MANDATORY before any PR)**
 
@@ -838,4 +844,4 @@ These are **not** part of this plan; listed so the whole migration is legible.
 - **Phase 3 — PC-SAFT loader** (`PCSAFTLibrary.cpp/.h`, `fluids/PCSAFTFluid.h`): user-fluid validation now via `cpjson::validate_schema`.
 - **Phase 4 — Cubics/UNIFAC loader** (`CubicsLibrary.cpp`, `UNIFACLibrary.h`).
 - **Phase 5 — SVDSBTL options + Configuration** (`SVDSBTLBackend.cpp`, `Configuration.cpp/.h`, `SchemaValidation.cpp/.h`): public `SchemaValidation.h`/`Configuration.h` go string-in/string-out.
-- **Phase Final — Remove RapidJSON:** drop the `rapidjson` CPM block + include dir, delete `include/CoolProp/detail/rapidjson.h` and `rapidjson_include.h`, add the `detail/` install `EXCLUDE` (now that no public header includes `detail/`), grep-clean any residual `rapidjson::`, confirm the symbol gate is green.
+- **Phase Final — Remove RapidJSON:** drop the `rapidjson` CPM block + include dir, delete `include/CoolProp/detail/rapidjson.h` and `rapidjson_include.h`, add the `detail/` install `EXCLUDE` (now that no public header includes `detail/`), grep-clean any residual `rapidjson::`, **tighten the symbol-gate pattern to `nlohmann|valijson|rapidjson`** (the script already takes the pattern as a parameter), and confirm the gate is green.
