@@ -4,7 +4,7 @@ from libcpp.pair cimport pair
 from libcpp.string cimport string
 
 
-cdef extern from "superancillary/superancillary.h" namespace "CoolProp::superancillary":
+cdef extern from "CoolProp/superancillary/superancillary.h" namespace "CoolProp::superancillary":
     cdef struct MonotonicExpansionMatch:
         const size_t idx # The index of the expansion that has been matched
         const double ymin, ymax, xmin, xmax 

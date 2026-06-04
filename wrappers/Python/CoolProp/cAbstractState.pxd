@@ -6,19 +6,19 @@ from . cimport constants_header
 
 from .typedefs cimport CoolPropDbl
 
-cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
+cdef extern from "CoolProp/fluids/PhaseEnvelope.h" namespace "CoolProp":
     cdef cppclass PhaseEnvelopeData:
         bool TypeI
         size_t iTsat_max, ipsat_max, icrit
         vector[double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
         vector[vector[double]] x, y, K
 
-cdef extern from "DataStructures.h" namespace "CoolProp":
+cdef extern from "CoolProp/DataStructures.h" namespace "CoolProp":
     cdef cppclass CriticalState:
         double T, p, rhomolar, hmolar, smolar
         bool stable
 
-cdef extern from "AbstractState.h" namespace "CoolProp":
+cdef extern from "CoolProp/AbstractState.h" namespace "CoolProp":
 
     cdef cppclass GuessesStructure:
         double T, p, rhomolar, hmolar, smolar
@@ -245,5 +245,5 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
 
 
 # The static factory method for the AbstractState
-cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":
+cdef extern from "CoolProp/AbstractState.h" namespace "CoolProp::AbstractState":
     AbstractState* factory(const string &backend, const string &fluid_string) except+ValueError

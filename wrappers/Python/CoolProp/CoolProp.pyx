@@ -39,13 +39,13 @@ cdef extern from "Python.h":
 cdef extern from "Python.h":
     int __LINE__
 
-cdef extern from "CoolPropTools.h":
+cdef extern from "CoolProp/detail/tools.h":
     double get_HUGE()
 
-cdef extern from "CoolPropTools.h" namespace "CoolProp":
+cdef extern from "CoolProp/detail/tools.h" namespace "CoolProp":
     bint _ValidNumber "ValidNumber"(double)
 
-cdef extern from "Configuration.h" namespace "CoolProp":
+cdef extern from "CoolProp/Configuration.h" namespace "CoolProp":
     string _get_config_as_json_string "CoolProp::get_config_as_json_string"() except +
     void _set_config_as_json_string "CoolProp::set_config_as_json_string"(string) except +
     string _config_key_description "CoolProp::config_key_description"(string) except +
@@ -60,7 +60,7 @@ cdef extern from "Configuration.h" namespace "CoolProp":
     bint _get_config_bool "CoolProp::get_config_bool"(constants_header.configuration_keys) except +
     int _get_config_int "CoolProp::get_config_int"(constants_header.configuration_keys) except +
 
-cdef extern from "DataStructures.h" namespace "CoolProp":
+cdef extern from "CoolProp/DataStructures.h" namespace "CoolProp":
     string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
     int _get_parameter_index "CoolProp::get_parameter_index"(string) except +
     int _get_phase_index "CoolProp::get_phase_index"(string) except +
@@ -70,7 +70,7 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 cdef extern from "CoolPropLib.h":
     double _Props "Props"(const char* Output, const char Name1, double Prop1, const char Name2, double Prop2, const char* Ref)
 
-cdef extern from "CoolProp.h" namespace "CoolProp":
+cdef extern from "CoolProp/CoolProp.h" namespace "CoolProp":
     double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)
     double _PropsSI "CoolProp::PropsSI"(string Output, string Name1, double Prop1, string Name2, double Prop2, string FluidName)
     string _PhaseSI "CoolProp::PhaseSI"(string Name1, double Prop1, string Name2, double Prop2, string FluidName)
@@ -86,7 +86,7 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     double _saturation_ancillary "CoolProp::saturation_ancillary"(string, string, int, string, double) except +
     bint _add_fluids_as_JSON "CoolProp::add_fluids_as_JSON"(const string backend, const string JSON) except +
 
-cdef extern from "HumidAirProp.h" namespace "HumidAir":
+cdef extern from "CoolProp/HumidAirProp.h" namespace "HumidAir":
     double _HAPropsSI "HumidAir::HAPropsSI"(string OutputName, string Input1Name, double Input1, string Input2Name, double Input2, string Input3Name, double Input3)
     double _HAProps "HumidAir::HAProps"(string OutputName, string Input1Name, double Input1, string Input2Name, double Input2, string Input3Name, double Input3)
     double _HAProps_Aux "HumidAir::HAProps_Aux"(const char* Name,double T, double p, double W, char *units)
