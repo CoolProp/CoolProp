@@ -114,7 +114,7 @@ set(COOLPROP_INCLUDE_DIRS
     ${fmt_SOURCE_DIR}/include
     ${boost_headers_SOURCE_DIR}
     ${ROOT_DIR}/externals/incbin
-    ${ROOT_DIR}/externals/nlohmann-json
+    ${nlohmann_json_SOURCE_DIR}/include
     ${ROOT_DIR}/externals/miniz-3.1.1
     ${msgpack-c_SOURCE_DIR}/include
     ${rapidjson_SOURCE_DIR}/include
