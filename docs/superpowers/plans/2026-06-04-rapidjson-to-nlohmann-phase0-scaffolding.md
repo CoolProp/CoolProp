@@ -613,7 +613,7 @@ Run:
 chmod +x dev/ci/check-json-symbols.sh
 cmake -B build_shared -S . -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build_shared -j8
-SHARED_LIB="$(find build_shared -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' | head -1)"
+SHARED_LIB="$(find build_shared \( -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' \) | head -1)"
 ./dev/ci/check-json-symbols.sh "${SHARED_LIB}"
 ```
 Expected: prints `OK: no symbols matching /nlohmann|valijson/ exported …` (Phase 0: the wrapper isn't linked into any library source yet, so this passes trivially).
@@ -807,7 +807,7 @@ Expected: PASS. RapidJSON is untouched and all loaders still use it; nothing reg
 Run:
 ```bash
 cmake --build build_shared -j8
-SHARED_LIB="$(find build_shared -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' | head -1)"
+SHARED_LIB="$(find build_shared \( -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' \) | head -1)"
 ./dev/ci/check-json-symbols.sh "${SHARED_LIB}"
 ```
 Expected: `OK: no symbols matching /nlohmann|valijson/ exported …`. (RapidJSON is intentionally excluded from the Phase-0 pattern — it is still in use and exported; it joins the pattern in Phase Final.)
