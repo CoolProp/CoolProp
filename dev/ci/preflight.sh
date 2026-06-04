@@ -339,6 +339,39 @@ else
     fi
 fi
 
+# ---------- check 7: fluid-data schema validation --------------------
+#
+# Build-time correctness gate for embedded fluid data (RapidJSON->nlohmann
+# migration spec, section 5): validate the source JSON data files under dev/
+# against their committed JSON schemas before they're compiled into headers
+# and embedded.  Scoped to runs where a dev/*.json file changed.  The
+# validator is pure Python and runs independently of the C++ build; resolve
+# the jsonschema dependency through uvx the same way clang-format/semgrep are
+# resolved (with a graceful fallback to a system jsonschema if uvx is absent).
+step "fluid-data schema validation"
+if skip_check schema-validate; then
+    skip "schema-validate" "--skip=schema-validate"
+elif ! printf '%s\n' "$ALL_PATHS" | grep -qE '^dev/(pcsaft|cubics|mixtures)/.*\.json$'; then
+    skip "schema-validate" "no dev/{pcsaft,cubics,mixtures}/*.json files in diff"
+else
+    SCHEMA_LOG=/tmp/preflight-schema-validate.log
+    SCHEMA_RC=0
+    if command -v uvx >/dev/null 2>&1; then
+        uvx --from jsonschema python dev/validate_fluid_schemas.py >"$SCHEMA_LOG" 2>&1 || SCHEMA_RC=$?
+    elif command -v python3 >/dev/null 2>&1; then
+        python3 dev/validate_fluid_schemas.py >"$SCHEMA_LOG" 2>&1 || SCHEMA_RC=$?
+    else
+        SCHEMA_RC=127
+        echo "no uvx or python3 on PATH" >"$SCHEMA_LOG"
+    fi
+    if [ "$SCHEMA_RC" -eq 0 ]; then
+        ok "schema-validate ($(grep -c '^OK' "$SCHEMA_LOG" 2>/dev/null || echo 0) data file(s) validated)"
+    else
+        tail -30 "$SCHEMA_LOG"
+        fail "schema-validate (see $SCHEMA_LOG)"
+    fi
+fi
+
 # ---------- summary --------------------------------------------------
 
 echo
