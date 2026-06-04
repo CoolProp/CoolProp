@@ -40,9 +40,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <vector>
-#include "CoolProp.h"
+#include "CoolProp/CoolProp.h"
 #include "CoolPropLib.h"
-#include "CoolPropTools.h"
+#include "CoolProp/detail/tools.h"
 
 static bool EES_DEBUG = false;
 

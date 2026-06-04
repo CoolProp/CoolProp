@@ -40,7 +40,7 @@
 #include <string.h>
 #include <vector>
 
-#include "CoolPropTools.h"
+#include "CoolProp/detail/tools.h"
 #include <algorithm>
 #include <string>
 
