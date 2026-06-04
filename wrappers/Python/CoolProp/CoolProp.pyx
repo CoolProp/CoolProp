@@ -67,7 +67,7 @@ cdef extern from "CoolProp/DataStructures.h" namespace "CoolProp":
     bint _is_trivial_parameter "CoolProp::is_trivial_parameter"(int) except +
     constants_header.input_pairs _generate_update_pair "CoolProp::generate_update_pair"(constants_header.parameters key1, double value1, constants_header.parameters key2, double value2, double &out1, double &out2) except +
 
-cdef extern from "CoolPropLib.h":
+cdef extern from "CoolProp/CoolPropLib.h":
     double _Props "Props"(const char* Output, const char Name1, double Prop1, const char Name2, double Prop2, const char* Ref)
 
 cdef extern from "CoolProp/CoolProp.h" namespace "CoolProp":

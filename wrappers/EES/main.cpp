@@ -41,7 +41,7 @@
 #include <string.h>
 #include <vector>
 #include "CoolProp/CoolProp.h"
-#include "CoolPropLib.h"
+#include "CoolProp/CoolPropLib.h"
 #include "CoolProp/detail/tools.h"
 
 static bool EES_DEBUG = false;
