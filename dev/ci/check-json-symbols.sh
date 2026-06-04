@@ -27,6 +27,15 @@ if ! SYMS_RAW="$(nm "${NM_OPTS[@]}" "${LIB}")"; then
     echo "FAIL: unable to read symbols from ${LIB} (nm failed)" >&2
     exit 1
 fi
+# Guard against a vacuous pass: a real CoolProp shared library exports many
+# defined symbols. An empty list means we were handed the wrong file, a
+# stripped/empty library, or an unexpected nm format — i.e. we cannot actually
+# validate, which must be treated as a failure (fail-closed), not "OK".
+NSYMS="$(printf '%s\n' "${SYMS_RAW}" | grep -c '[^[:space:]]' || true)"
+if [[ "${NSYMS}" -eq 0 ]]; then
+    echo "FAIL: ${LIB} exports no defined symbols — wrong file or stripped library? Cannot validate." >&2
+    exit 1
+fi
 # Demangle when c++filt is present; mangled names still contain the literal
 # namespace text (e.g. "nlohmann"), so the pattern match works either way.
 if command -v c++filt >/dev/null 2>&1; then
