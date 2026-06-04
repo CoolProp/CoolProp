@@ -25,6 +25,10 @@
 #endif
 
 #include <nlohmann/json.hpp>
+#include <valijson/adapters/nlohmann_json_adapter.hpp>
+#include <valijson/schema.hpp>
+#include <valijson/schema_parser.hpp>
+#include <valijson/validator.hpp>
 
 #if defined(__GNUC__) || defined(__clang__)
 #    pragma GCC visibility pop
@@ -147,6 +151,66 @@ inline std::vector<std::string> get_string_array(const nlohmann::json& v, const 
     auto it = v.find(m);
     if (it == v.end()) throw CoolProp::ValueError(format("Does not have member [%s]", m.c_str()));
     return get_string_array(*it);
+}
+
+enum schema_validation_code
+{
+    SCHEMA_VALIDATION_OK = 0,
+    SCHEMA_INVALID_JSON,
+    INPUT_INVALID_JSON,
+    SCHEMA_NOT_VALIDATED
+};
+
+/// Validate a JSON-formatted input string against a JSON-formatted draft-07
+/// schema string. On a validation failure, `errstr` receives a
+/// human-comprehensible description. Never propagates a raw nlohmann or
+/// Valijson exception to the caller.
+inline schema_validation_code validate_schema(std::string_view schemaJson, std::string_view inputJson, std::string& errstr) {
+    nlohmann::json schemaDoc;
+    try {
+        schemaDoc = nlohmann::json::parse(schemaJson);
+    } catch (const std::exception& e) {
+        errstr = std::string("Invalid schema: ") + e.what();
+        return SCHEMA_INVALID_JSON;
+    }
+
+    nlohmann::json inputDoc;
+    try {
+        inputDoc = nlohmann::json::parse(inputJson);
+    } catch (const std::exception& e) {
+        errstr = std::string("Invalid input json: ") + e.what();
+        return INPUT_INVALID_JSON;
+    }
+
+    valijson::Schema schema;
+    valijson::SchemaParser parser;
+    valijson::adapters::NlohmannJsonAdapter schemaAdapter(schemaDoc);
+    try {
+        parser.populateSchema(schemaAdapter, schema);
+    } catch (const std::exception& e) {
+        errstr = std::string("Invalid schema: ") + e.what();
+        return SCHEMA_INVALID_JSON;
+    }
+
+    valijson::Validator validator;
+    valijson::ValidationResults results;
+    valijson::adapters::NlohmannJsonAdapter inputAdapter(inputDoc);
+    try {
+        if (!validator.validate(schema, inputAdapter, &results)) {
+            std::string msg;
+            valijson::ValidationResults::Error error;
+            while (results.popError(error)) {
+                for (const std::string& ctx : error.context) msg += ctx;
+                msg += ": " + error.description + "\n";
+            }
+            errstr = msg;
+            return SCHEMA_NOT_VALIDATED;
+        }
+    } catch (const std::exception& e) {
+        errstr = std::string("Schema validation internal error: ") + e.what();
+        return SCHEMA_NOT_VALIDATED;
+    }
+    return SCHEMA_VALIDATION_OK;
 }
 
 }  // namespace cpjson

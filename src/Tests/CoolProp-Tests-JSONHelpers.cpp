@@ -57,4 +57,47 @@ TEST_CASE("cpjson::get_integer rejects out-of-int-range values", "[json]") {
     REQUIRE_THROWS_AS(cpjson::get_integer(j, "big"), CoolProp::ValueError);
 }
 
+namespace {
+constexpr const char* kJsonSchema = R"({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["name", "T"],
+  "properties": {
+    "name": {"type": "string"},
+    "T":    {"type": "number", "exclusiveMinimum": 0}
+  }
+})";
+}
+
+TEST_CASE("cpjson::validate_schema accepts a conforming document", "[json]") {
+    std::string err;
+    cpjson::schema_validation_code code =
+        cpjson::validate_schema(kJsonSchema, R"({"name": "water", "T": 300.0})", err);
+    REQUIRE(code == cpjson::SCHEMA_VALIDATION_OK);
+    REQUIRE(err.empty());
+}
+
+TEST_CASE("cpjson::validate_schema rejects a non-conforming document with a message", "[json]") {
+    std::string err;
+    cpjson::schema_validation_code code =
+        cpjson::validate_schema(kJsonSchema, R"({"name": "water", "T": -5.0})", err);
+    REQUIRE(code == cpjson::SCHEMA_NOT_VALIDATED);
+    REQUIRE_FALSE(err.empty());  // human-comprehensible error preserved
+}
+
+TEST_CASE("cpjson::validate_schema reports malformed input JSON, never leaks nlohmann exception", "[json]") {
+    std::string err;
+    cpjson::schema_validation_code code =
+        cpjson::validate_schema(kJsonSchema, R"({not valid json)", err);
+    REQUIRE(code == cpjson::INPUT_INVALID_JSON);
+}
+
+TEST_CASE("cpjson::validate_schema reports malformed schema JSON", "[json]") {
+    std::string err;
+    cpjson::schema_validation_code code =
+        cpjson::validate_schema("{not a schema", R"({"name":"x","T":1})", err);
+    REQUIRE(code == cpjson::SCHEMA_INVALID_JSON);
+    REQUIRE_FALSE(err.empty());
+}
+
 #endif  // ENABLE_CATCH

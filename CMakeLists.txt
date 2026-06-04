@@ -336,6 +336,10 @@ list(APPEND APP_INCLUDE_DIRS "${fmt_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${rapidjson_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${nlohmann_json_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${valijson_SOURCE_DIR}/include")
+# Valijson is consumed header-only (DOWNLOAD_ONLY), so its INTERFACE
+# VALIJSON_USE_EXCEPTIONS define is not propagated. Set it explicitly so
+# Valijson throws catchable exceptions on internal errors instead of abort().
+add_compile_definitions(VALIJSON_USE_EXCEPTIONS=1)
 list(APPEND APP_INCLUDE_DIRS "${IF97_SOURCE_DIR}")
 list(APPEND APP_INCLUDE_DIRS "${REFPROP_headers_SOURCE_DIR}")
 
