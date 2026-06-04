@@ -839,7 +839,7 @@ Expected: preflight passes; push succeeds.
 
 These are **not** part of this plan; listed so the whole migration is legible.
 
-- **Phase 1 — Helmholtz loader** (`FluidLibrary.cpp/.h`, `fluids/Helmholtz.h`, `fluids/Ancillaries.h`): swap parse path to nlohmann, convert JSON-typed constructors/`to_json` to non-installed signatures, add `all_fluids.json` first-load benchmark.
+- **Phase 1 — Helmholtz loader** (`FluidLibrary.cpp/.h`, `fluids/Helmholtz.h`, `fluids/Ancillaries.h`): swap parse path to nlohmann, convert JSON-typed constructors/`to_json` to non-installed signatures. **Parse-perf gate already run** (spec §6, `dev/json_migration_bench/`): embed the fluid data as **uncompressed CBOR** and drop zlib/miniz from this path (lands first-load at ~35 ms, parity with today). Change the Python data-generation tooling to emit a CBOR blob (via `cbor2`) with a generation-time round-trip self-check, switch `FluidLibrary` from `uncompress()`+JSON-parse to `nlohmann::json::from_cbor`, and add a Catch2 `[cbor]` CI test asserting the embedded blob value-equals the source `dev/all_fluids.json` (catches encoder/decoder drift and staleness).
 - **Phase 2 — Incompressible loader** (`IncompressibleLibrary.cpp/.h`).
 - **Phase 3 — PC-SAFT loader** (`PCSAFTLibrary.cpp/.h`, `fluids/PCSAFTFluid.h`): user-fluid validation now via `cpjson::validate_schema`.
 - **Phase 4 — Cubics/UNIFAC loader** (`CubicsLibrary.cpp`, `UNIFACLibrary.h`).

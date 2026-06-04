@@ -170,16 +170,59 @@ header-only, making it the cleanest fit; Draft-7 capability is adequate here.
 
 ## 6. Data Loading & Parse Performance
 
-nlohmann parses more slowly than RapidJSON (commonly 3–8× on large documents),
-and `all_fluids.json` (~20 MB) is parsed on first Helmholtz-library use.
+**This was run as an up-front de-risking gate** (not deferred to Phase 1),
+because a catastrophic parse regression would change the whole strategy. The
+benchmark/proof programs live in `dev/json_migration_bench/`.
 
-Approach: **straight swap then benchmark.** Each loader's parse path
-(`Document::Parse` → `nlohmann::json::parse`) is converted directly. A focused
-micro-benchmark times first-load of `all_fluids.json` before/after and is
-reported in the relevant migration PR. If the regression is small, accept it.
-Only if it is material do we reach for mitigations (nlohmann parse tuning, or a
-pre-parsed CBOR/MessagePack embedded blob that nlohmann reads natively) — those
-are deferred, not designed in up front. No pre-optimization.
+Measured on the real `dev/all_fluids.json` (9.71 MB; the earlier "~20 MB"
+estimate was high), `-O2 -DNDEBUG`, warm cache, single dev machine, median of
+15 runs:
+
+| Pipeline | decompress | parse | total first-load |
+|----------|-----------:|------:|-----------------:|
+| **Current** — zlib + RapidJSON      | 24.6 ms | 12.8 ms | **~37 ms** |
+| **Naive swap** — zlib + nlohmann JSON | 24.6 ms | 82.4 ms | **~107 ms** |
+| **CBOR, embedded uncompressed** — no zlib + nlohmann `from_cbor` | 0 ms | 35.1 ms | **~35 ms** |
+
+Findings:
+
+- nlohmann JSON parse is ~6.4× slower than RapidJSON (12.8 → 82.4 ms), a
+  **~+70 ms** one-time first-load regression. Real but not catastrophic; it does
+  not block the migration.
+- The **zlib `uncompress()` is the dominant cost today** (24.6 ms vs RapidJSON's
+  12.8 ms parse), so a naive swap roughly **triples** total first-load
+  (37 → 107 ms).
+- nlohmann reads binary CBOR/MessagePack (~35 ms) far faster than text JSON, and
+  the binary blob is ~4.3 MB vs 9.71 MB text.
+
+**Decision (Phase 1): embed the fluid data as CBOR, uncompressed, and drop zlib
+from this path.** Because CBOR is already compact, embedding it uncompressed
+removes the miniz `uncompress()` step entirely and lands first-load at ~35 ms —
+**parity with today** — while *simplifying* the pipeline (no `.z` generation, no
+7×-output-buffer guess, no miniz dependency on the fluid-load path). The source
+of truth stays human-readable `dev/all_fluids.json`; only the embedded build
+artifact becomes binary. (MessagePack is an equivalent alternative; CBOR chosen
+as the IETF-standard format with a clean Python encoder. BSON is rejected: its
+top level must be an object, but the fluid data is a top-level array, and it is
+bulkier with no speed gain.)
+
+**Encoding toolchain & byte-equivalence guarantee.** The build-time blob is
+produced in the Python data-generation tooling via `cbor2` (encode the parsed
+JSON; default 64-bit-double float encoding is lossless). Verified end-to-end:
+Python `cbor2` → nlohmann `from_cbor` reproduces the source exactly — deep
+value-equality across all 136 fluids, canonical JSON dumps byte-identical
+(9,639,224 bytes), and full-precision doubles bit-exact (e.g.
+`-246119.46072729214`). Two guards keep it that way:
+
+1. **Generation self-check** — the encoder decodes its own output and asserts
+   equality with the source before writing the blob.
+2. **CI byte-equivalence test** (Phase 1) — a Catch2 `[cbor]` test decodes the
+   committed/embedded CBOR blob with nlohmann and asserts it value-equals the
+   parsed `dev/all_fluids.json`. This catches both encoder/decoder drift (a
+   `cbor2`/nlohmann version bump) and **staleness** (source JSON edited without
+   regenerating the blob). The assertion is on decoded *values* / canonical dump,
+   not raw CBOR bytes — two valid encoders may emit different-but-equivalent
+   CBOR, so value-equality is the encoder-agnostic invariant.
 
 `cpjson::to_canonical_json` (deterministic key-sorted serialization) is
 reimplemented on nlohmann's ordered/sorted serialization primitives, preserving
