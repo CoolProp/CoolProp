@@ -200,7 +200,8 @@ inline schema_validation_code validate_schema(std::string_view schemaJson, std::
             std::string msg;
             valijson::ValidationResults::Error error;
             while (results.popError(error)) {
-                for (const std::string& ctx : error.context) msg += ctx;
+                for (const std::string& ctx : error.context)
+                    msg += ctx;
                 msg += ": " + error.description + "\n";
             }
             errstr = msg;

@@ -71,31 +71,27 @@ constexpr const char* kJsonSchema = R"({
 
 TEST_CASE("cpjson::validate_schema accepts a conforming document", "[json]") {
     std::string err;
-    cpjson::schema_validation_code code =
-        cpjson::validate_schema(kJsonSchema, R"({"name": "water", "T": 300.0})", err);
+    cpjson::schema_validation_code code = cpjson::validate_schema(kJsonSchema, R"({"name": "water", "T": 300.0})", err);
     REQUIRE(code == cpjson::SCHEMA_VALIDATION_OK);
     REQUIRE(err.empty());
 }
 
 TEST_CASE("cpjson::validate_schema rejects a non-conforming document with a message", "[json]") {
     std::string err;
-    cpjson::schema_validation_code code =
-        cpjson::validate_schema(kJsonSchema, R"({"name": "water", "T": -5.0})", err);
+    cpjson::schema_validation_code code = cpjson::validate_schema(kJsonSchema, R"({"name": "water", "T": -5.0})", err);
     REQUIRE(code == cpjson::SCHEMA_NOT_VALIDATED);
     REQUIRE_FALSE(err.empty());  // human-comprehensible error preserved
 }
 
 TEST_CASE("cpjson::validate_schema reports malformed input JSON, never leaks nlohmann exception", "[json]") {
     std::string err;
-    cpjson::schema_validation_code code =
-        cpjson::validate_schema(kJsonSchema, R"({not valid json)", err);
+    cpjson::schema_validation_code code = cpjson::validate_schema(kJsonSchema, R"({not valid json)", err);
     REQUIRE(code == cpjson::INPUT_INVALID_JSON);
 }
 
 TEST_CASE("cpjson::validate_schema reports malformed schema JSON", "[json]") {
     std::string err;
-    cpjson::schema_validation_code code =
-        cpjson::validate_schema("{not a schema", R"({"name":"x","T":1})", err);
+    cpjson::schema_validation_code code = cpjson::validate_schema("{not a schema", R"({"name":"x","T":1})", err);
     REQUIRE(code == cpjson::SCHEMA_INVALID_JSON);
     REQUIRE_FALSE(err.empty());
 }
