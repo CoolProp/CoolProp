@@ -16,9 +16,9 @@ enum
 };  // substitute enumeration variable MC_STRING for STRING, use MC_STRING below
 #undef STRING  // undefine STRING as it conflicts with STRING enum in fmtlib/format.h
 
-#include "CoolProp.h"
-#include "DataStructures.h"
-#include "HumidAirProp.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/HumidAirProp.h"
 #include <Backends/Helmholtz/MixtureParameters.h>
 
 // Setup Dialog Window for debugging

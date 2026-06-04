@@ -6,7 +6,7 @@ The wrapper uses rust-bindgen to create the bindings to the C++ shared library o
 
 ## Prerequisites
 
-The CoolProp shared library (_libCoolProp.so_) and header file (_CoolPropLib.h_) must be installed on the computer in the systems folder. On Linux e. g. _/usr/lib64_ and _/usr/include_. Instructions to compile and install CoolProp for your system can be found on the project page of [CoolProp](https://github.com/CoolProp/CoolProp).
+The CoolProp shared library (_libCoolProp.so_) and header file (_CoolProp/CoolPropLib.h_) must be installed on the computer in the systems folder. On Linux e. g. _/usr/lib64_ and _/usr/include_. Instructions to compile and install CoolProp for your system can be found on the project page of [CoolProp](https://github.com/CoolProp/CoolProp).
 
 ## Installation
 
