@@ -26,26 +26,45 @@ CoolProp::AbstractState* factory(const std::string& backend, const std::string& 
 // The opaque handle carries a shared_ptr<AbstractState> directly.
 namespace {
 using _CAPI_SP = std::shared_ptr<CoolProp::AbstractState>;
-thread_local std::string g_capi_error;  // last C++ error message; "" == none
+thread_local std::string g_capi_error;  // message for the most recent failure; "" == none
+
+// Stash an error message without ever throwing out of the extern "C" frame (the
+// assignment allocates, hence the catch).  On OOM the message is left empty and
+// the shim falls back to its own generic text.
+void capi_set_error(const char* msg) noexcept {
+    try {
+        g_capi_error = (msg != nullptr) ? msg : "unknown C++ exception";
+    } catch (...) {
+        g_capi_error.clear();  // clear() is noexcept
+    }
+}
 void* capi_make(const char* backend, const char* fluids) {
     try {
         auto* p = new _CAPI_SP(CoolProp::AbstractState::factory(backend, fluids));
         g_capi_error.clear();
         return p;
     } catch (const std::exception& e) {
-        g_capi_error = e.what();
+        capi_set_error(e.what());
+        return nullptr;
+    } catch (...) {
+        capi_set_error(nullptr);
         return nullptr;
     }
 }
 void capi_destroy(void* h) {
-    delete static_cast<_CAPI_SP*>(h);
+    try {
+        delete static_cast<_CAPI_SP*>(h);
+    } catch (...) {  // ~AbstractState is effectively noexcept; defensive against future changes
+    }
 }
 void capi_update(void* h, long input_pair, double v1, double v2) {
     try {
         (*static_cast<_CAPI_SP*>(h))->update(static_cast<CoolProp::input_pairs>(input_pair), v1, v2);
         g_capi_error.clear();
     } catch (const std::exception& e) {
-        g_capi_error = e.what();
+        capi_set_error(e.what());
+    } catch (...) {
+        capi_set_error(nullptr);
     }
 }
 double capi_keyed_output(void* h, long key) {
@@ -54,7 +73,10 @@ double capi_keyed_output(void* h, long key) {
         g_capi_error.clear();
         return v;
     } catch (const std::exception& e) {
-        g_capi_error = e.what();
+        capi_set_error(e.what());
+        return NAN;
+    } catch (...) {
+        capi_set_error(nullptr);
         return NAN;
     }
 }
@@ -66,7 +88,10 @@ double capi_first_partial_deriv(void* h, long Of, long Wrt, long Constant) {
         g_capi_error.clear();
         return v;
     } catch (const std::exception& e) {
-        g_capi_error = e.what();
+        capi_set_error(e.what());
+        return NAN;
+    } catch (...) {
+        capi_set_error(nullptr);
         return NAN;
     }
 }
