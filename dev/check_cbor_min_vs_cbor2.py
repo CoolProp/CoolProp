@@ -63,7 +63,11 @@ def main():
     if os.path.exists(src):
         with open(src) as f:
             real = json.load(f)
-        fails += check(real, "all_fluids.json")
+        n = check(real, "all_fluids.json")
+        fails += n
+        if n == 0:
+            count = len(real) if isinstance(real, list) else 1
+            print(f"all_fluids.json: {count} fluids compared — byte-identical")
     else:
         print("note: dev/all_fluids.json not present; skipping real-data comparison")
 

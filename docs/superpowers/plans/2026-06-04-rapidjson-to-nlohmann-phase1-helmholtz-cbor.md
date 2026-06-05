@@ -6,7 +6,14 @@
 
 **Architecture:** Two commits in one PR. **Commit A**: convert `FluidLibrary`'s `parse_*` methods and `add_many`/`add_one` to `nlohmann::json` (format unchanged — still zlib+JSON, but parsed by nlohmann), de-publish the JSON-taking constructors as free-function factories in a non-installed header, and drop the `to_json` methods. **Commit B**: emit the fluid blob as CBOR via `cbor2` and load it with `from_cbor`, dropping zlib.
 
-**Tech Stack:** C++17 (CoolProp), nlohmann/json, CMake, Python `cbor2`, Catch2, incbin/miniz (B removes miniz from this path).
+**Tech Stack:** C++17 (CoolProp), nlohmann/json, CMake, Catch2, incbin/miniz (B removes miniz from this path).
+
+> **Implementation note (shipped):** `cbor2` (referenced throughout Commit B
+> below) was replaced during implementation by a vendored stdlib-only CBOR codec,
+> `dev/cbor_min.py` — `cbor2` is a compiled package that wouldn't install cleanly
+> into the interpreter CMake invokes across CoolProp's ~12 build workflows. The
+> generator uses `cbor_min`; a `test_catch2` CI step pins it byte-identical to
+> `cbor2` (`dev/check_cbor_min_vs_cbor2.py`). Read `cbor2` → `cbor_min` below.
 
 **Spec:** `docs/superpowers/specs/2026-06-04-rapidjson-to-nlohmann-phase1-helmholtz-cbor-design.md`
 

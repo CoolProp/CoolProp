@@ -9,10 +9,14 @@ encode it directly here.
 
 Supports exactly the JSON types: None, bool, int, float, str, list, dict (str
 keys). Floats are always written as 64-bit doubles to preserve full precision.
-The authoritative correctness gate is the C++ ``[cbor]`` byte-equivalence test
-(nlohmann ``from_cbor`` of the embedded blob == the source ``all_fluids.json``);
-``loads`` here exists only for the generation-time round-trip self-check.
+JSON has no NaN/Infinity, so non-finite floats are rejected loudly rather than
+encoded (cbor2 would shorten them to half-floats, which would also break the
+byte-identity gate). The authoritative correctness gate is the C++ ``[cbor]``
+byte-equivalence test (nlohmann ``from_cbor`` of the embedded blob == the source
+``all_fluids.json``); ``loads`` here exists only for the generation-time
+round-trip self-check.
 """
+import math
 import struct
 
 
@@ -51,6 +55,8 @@ def _encode(obj, out):
         else:
             _encode_head(1, -1 - obj, out)
     elif isinstance(obj, float):
+        if not math.isfinite(obj):
+            raise ValueError("non-finite float is not representable in JSON/CBOR: %r" % obj)
         out.append(0xFB)
         out += struct.pack(">d", obj)
     elif isinstance(obj, str):

@@ -101,7 +101,10 @@ jobs:
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        python -m pip install cbor2
+        # Pin the reference encoder: cbor_min is asserted byte-identical to this
+        # exact cbor2. A future cbor2 release that changed default encoding would
+        # otherwise red this gate spuriously; bump the pin and re-validate instead.
+        python -m pip install cbor2==6.1.2
         python dev/check_cbor_min_vs_cbor2.py
 
     # - name: Test

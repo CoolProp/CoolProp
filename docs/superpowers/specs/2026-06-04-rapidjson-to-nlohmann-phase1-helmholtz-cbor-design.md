@@ -38,6 +38,16 @@ with no de-publishing concern.
 
 ## 3. Decisions
 
+> **Implementation note (shipped, supersedes the `cbor2` references below):** the
+> encoder was changed during implementation from `cbor2` to a vendored stdlib-only
+> CBOR codec, `dev/cbor_min.py`. `cbor2` is a compiled (Rust) package, and getting
+> it installed into the exact interpreter CMake invokes across CoolProp's ~12
+> heterogeneous build workflows (manylinux/emscripten/MSVC/conda) proved
+> intractable. `cbor_min` needs no third-party dependency on the build path. A CI
+> job (`dev/check_cbor_min_vs_cbor2.py`, wired into the `test_catch2` hard gate)
+> asserts `cbor_min` is **byte-identical** to `cbor2`, so the wording below stands
+> with `cbor2` → `cbor_min` substituted on the build path.
+
 | Area | Decision |
 |------|----------|
 | **`parse_*` conversion** | Convert the ~23 `parse_*` methods to `const nlohmann::json&`, using the **nlohmann `cpjson` getters** (`cpjson::get_double(j,"x")`, `get_long_double_array(j,"n")`, …) — same names as the rapidjson ones, so it's a near-mechanical include-swap + member-access/iterator tweaks. Use native nlohmann only where clearly cleaner. |
