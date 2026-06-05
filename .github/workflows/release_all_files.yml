@@ -89,7 +89,7 @@ jobs:
         path: source
         
     - name: Install Python dependencies
-      run: pip install cbor2
+      run: pip install cbor2 --only-binary=cbor2
 
     - name: Update the headers
       run: |

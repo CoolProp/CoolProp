@@ -68,7 +68,7 @@ jobs:
         env:
           REFPROP_GPG_PASSPHRASE: ${{ secrets.REFPROP_GPG_PASSPHRASE }}
       - name: Install Python dependencies
-        run: python3 -m pip install --upgrade pip && python3 -m pip install cbor2
+        run: python3 -m pip install --upgrade pip && python3 -m pip install cbor2 --only-binary=cbor2
       - name: mkdir
         run: mkdir build && cd build
       - name: cmake config
@@ -164,7 +164,7 @@ jobs:
           clang-tidy --version
 
       - name: Install Python dependencies
-        run: python3 -m pip install --upgrade pip && python3 -m pip install cbor2
+        run: python3 -m pip install --upgrade pip && python3 -m pip install cbor2 --only-binary=cbor2
 
       - name: Configure
         run: |
@@ -248,7 +248,7 @@ jobs:
 
       - name: Install Python dependencies (cpp build)
         if: ${{ matrix.language == 'cpp' }}
-        run: python -m pip install --upgrade pip && python -m pip install cbor2
+        run: python -m pip install --upgrade pip && python -m pip install cbor2 --only-binary=cbor2
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -353,7 +353,7 @@ jobs:
           include-what-you-use --version || true
 
       - name: Install Python dependencies
-        run: python3 -m pip install --upgrade pip && python3 -m pip install cbor2
+        run: python3 -m pip install --upgrade pip && python3 -m pip install cbor2 --only-binary=cbor2
 
       - name: Configure with COOLPROP_IWYU
         run: |

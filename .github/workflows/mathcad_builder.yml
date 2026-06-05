@@ -41,7 +41,7 @@ jobs:
 
     - name: Install Python dependencies
       shell: bash
-      run: pip install cbor2
+      run: pip install cbor2 --only-binary=cbor2
 
     - name: Configure CMake
       run: cmake -DCOOLPROP_PRIME_MODULE:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="${{ github.workspace }}" -B build -S .

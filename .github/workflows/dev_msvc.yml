@@ -53,7 +53,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install Python dependencies
-        run: pip install cbor2
+        run: pip install cbor2 --only-binary=cbor2
 
       - name: Configure CMake
         run: cmake

@@ -32,7 +32,7 @@ jobs:
 
     - name: Install Python dependencies
       shell: bash
-      run: python3 -m pip install cbor2
+      run: python3 -m pip install cbor2 --only-binary=cbor2
 
     - name: Configure CMake
       shell: bash
