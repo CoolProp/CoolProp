@@ -82,6 +82,12 @@ jobs:
         working-directory: wrappers/GUI
         run: npm ci
 
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          python3 -m pip install --quiet --disable-pip-version-check cbor2 \
+            || python3 -m pip install --quiet --disable-pip-version-check --break-system-packages cbor2
+
       # Frontend unit tests (Vitest + RTL) — Linux only; platform-agnostic.
       - name: Run frontend unit tests
         if: matrix.os == 'ubuntu-22.04'

@@ -27,6 +27,14 @@ jobs:
       # use backports to get libreoffice > 7.3 on ubuntu-lastest (22.04)
       run: sudo apt-get update -y && sudo apt-get install -y -t $(lsb_release -cs)-backports libreoffice-dev
 
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.x'
+
+    - name: Install Python dependencies
+      shell: bash
+      run: pip install cbor2
+
     - name: Configure CMake
       shell: bash
       run: cmake -B build -S. -DCOOLPROP_LIBREOFFICE_MODULE=ON -DLO_PROGRAM_PATH=/usr/lib/libreoffice/program -DLO_SDK_PATH=/usr/lib/libreoffice/sdk

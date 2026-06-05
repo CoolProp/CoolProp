@@ -30,6 +30,10 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: Install Python dependencies
+      shell: bash
+      run: python3 -m pip install cbor2
+
     - name: Configure CMake
       shell: bash
       run: |

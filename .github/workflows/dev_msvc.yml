@@ -48,11 +48,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Install Python dependencies
+        run: pip install cbor2
+
       - name: Configure CMake
-        run: cmake 
+        run: cmake
                -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
-               -B ${{github.workspace}}/build 
-               -S . 
+               -B ${{github.workspace}}/build
+               -S .
 
       # Build is not required unless generated source files are used
       # For CoolProp: Needed to build dynamic fluids JSON header

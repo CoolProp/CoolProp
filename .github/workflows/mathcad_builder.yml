@@ -35,6 +35,14 @@ jobs:
         cp ../wrappers/MathCAD/Prime/libs/MCADINCL.H .
         cp ../wrappers/MathCAD/Prime/libs/mcaduser.lib .
 
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.x'
+
+    - name: Install Python dependencies
+      shell: bash
+      run: pip install cbor2
+
     - name: Configure CMake
       run: cmake -DCOOLPROP_PRIME_MODULE:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="${{ github.workspace }}" -B build -S .
 
