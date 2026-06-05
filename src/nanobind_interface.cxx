@@ -5,6 +5,7 @@
 #    include "CoolProp/Configuration.h"
 #    include "CoolProp/HumidAirProp.h"
 #    include "CoolProp/DataStructures.h"
+#    include "CoolProp/detail/state_capi.h"
 #    include "Backends/Helmholtz/MixtureParameters.h"
 
 #    include <nanobind/nanobind.h>
@@ -20,6 +21,60 @@ namespace nb = nanobind;
 CoolProp::AbstractState* factory(const std::string& backend, const std::string& fluid_names) {
     return CoolProp::AbstractState::factory(backend, fluid_names);
 }
+
+// ---- State C-ABI capsule (bridge for the frozen Cython `State` compat shim) --
+// The opaque handle carries a shared_ptr<AbstractState> directly.
+namespace {
+using _CAPI_SP = std::shared_ptr<CoolProp::AbstractState>;
+thread_local std::string g_capi_error;  // last C++ error message; "" == none
+void* capi_make(const char* backend, const char* fluids) {
+    try {
+        auto* p = new _CAPI_SP(CoolProp::AbstractState::factory(backend, fluids));
+        g_capi_error.clear();
+        return p;
+    } catch (const std::exception& e) {
+        g_capi_error = e.what();
+        return nullptr;
+    }
+}
+void capi_destroy(void* h) {
+    delete static_cast<_CAPI_SP*>(h);
+}
+void capi_update(void* h, long input_pair, double v1, double v2) {
+    try {
+        (*static_cast<_CAPI_SP*>(h))->update(static_cast<CoolProp::input_pairs>(input_pair), v1, v2);
+        g_capi_error.clear();
+    } catch (const std::exception& e) {
+        g_capi_error = e.what();
+    }
+}
+double capi_keyed_output(void* h, long key) {
+    try {
+        double v = (*static_cast<_CAPI_SP*>(h))->keyed_output(static_cast<CoolProp::parameters>(key));
+        g_capi_error.clear();
+        return v;
+    } catch (const std::exception& e) {
+        g_capi_error = e.what();
+        return NAN;
+    }
+}
+double capi_first_partial_deriv(void* h, long Of, long Wrt, long Constant) {
+    try {
+        double v = (*static_cast<_CAPI_SP*>(h))
+                     ->first_partial_deriv(static_cast<CoolProp::parameters>(Of), static_cast<CoolProp::parameters>(Wrt),
+                                           static_cast<CoolProp::parameters>(Constant));
+        g_capi_error.clear();
+        return v;
+    } catch (const std::exception& e) {
+        g_capi_error = e.what();
+        return NAN;
+    }
+}
+const char* capi_last_error() {
+    return g_capi_error.empty() ? nullptr : g_capi_error.c_str();
+}
+const CoolProp_StateCAPI g_state_capi = {capi_make, capi_destroy, capi_update, capi_keyed_output, capi_first_partial_deriv, capi_last_error};
+}  // namespace
 
 void init_CoolProp(nb::module_& m) {
     using namespace CoolProp;
@@ -383,8 +438,8 @@ void init_CoolProp(nb::module_& m) {
 
     m.def("get_config_as_json_string", &get_config_as_json_string);
     m.def("set_config_as_json_string", &set_config_as_json_string);
-    m.def("config_key_description", (std::string(*)(configuration_keys))&config_key_description);
-    m.def("config_key_description", (std::string(*)(const std::string&))&config_key_description);
+    m.def("config_key_description", (std::string(*)(configuration_keys)) & config_key_description);
+    m.def("config_key_description", (std::string(*)(const std::string&)) & config_key_description);
     m.def("set_config_string", &set_config_string);
     m.def("set_config_double", &set_config_double);
     m.def("set_departure_functions", &set_departure_functions);
@@ -427,6 +482,9 @@ void init_CoolProp(nb::module_& m) {
 #    if defined(COOLPROP_NANOBIND_MODULE)
 NB_MODULE(CoolProp, m) {
     init_CoolProp(m);
+    // Export the State C-ABI table so the frozen Cython `State` shim can forward
+    // through it (PDSim cimport compatibility without a Cython AbstractState).
+    m.attr("_capi") = nb::capsule(&g_state_capi, "CoolProp._capi");
 }
 #    endif
 
