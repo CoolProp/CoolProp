@@ -16,6 +16,13 @@ using std::shared_ptr;
 #include "Backends/Cubics/GeneralizedCubic.h"
 #include "CoolProp/fluids/Helmholtz.h"
 
+// Visibility helper: hide internal nlohmann-taking methods from the exported ABI
+#if defined(__GNUC__) || defined(__clang__)
+#    define CP_JSON_LOCAL __attribute__((visibility("hidden")))
+#else
+#    define CP_JSON_LOCAL
+#endif
+
 namespace CoolProp {
 
 // Forward declaration of the necessary debug function to avoid including the whole header
@@ -1199,9 +1206,9 @@ class JSONFluidLibrary
     static void add_many(const std::string& JSON_string);
 
     /// Add all the fluid entries in the nlohmann::json instance passed in
-    void add_many(const nlohmann::json& listing);
+    CP_JSON_LOCAL void add_many(const nlohmann::json& listing);
 
-    void add_one(const nlohmann::json& fluid_json);
+    CP_JSON_LOCAL void add_one(const nlohmann::json& fluid_json);
 
     std::string get_JSONstring(const std::string& key) {
         // Try to find it
