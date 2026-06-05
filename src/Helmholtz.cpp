@@ -347,49 +347,6 @@ mcx::MultiComplex<double> ResidualHelmholtzGeneralizedExponential::one_mcx(const
 }
 #endif
 
-void ResidualHelmholtzGeneralizedExponential::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-    el.AddMember("type", "GeneralizedExponential", doc.GetAllocator());
-    cpjson::set_double_array("n", n, el, doc);
-    cpjson::set_double_array("t", t, el, doc);
-    cpjson::set_double_array("d", d, el, doc);
-    cpjson::set_double_array("eta1", eta1, el, doc);
-    cpjson::set_double_array("eta2", eta2, el, doc);
-    cpjson::set_double_array("beta1", beta1, el, doc);
-    cpjson::set_double_array("beta2", beta2, el, doc);
-    cpjson::set_double_array("gamma1", gamma1, el, doc);
-    cpjson::set_double_array("gamma2", gamma2, el, doc);
-    cpjson::set_double_array("epsilon1", epsilon1, el, doc);
-    cpjson::set_double_array("epsilon2", epsilon2, el, doc);
-    cpjson::set_double_array("l_double", l_double, el, doc);
-    cpjson::set_int_array("l_int", l_int, el, doc);
-}
-
-void ResidualHelmholtzNonAnalytic::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-    el.AddMember("type", "ResidualHelmholtzNonAnalytic", doc.GetAllocator());
-
-    rapidjson::Value _n(rapidjson::kArrayType), _a(rapidjson::kArrayType), _b(rapidjson::kArrayType), _beta(rapidjson::kArrayType),
-      _A(rapidjson::kArrayType), _B(rapidjson::kArrayType), _C(rapidjson::kArrayType), _D(rapidjson::kArrayType);
-    for (unsigned int i = 0; i <= N; ++i) {
-        ResidualHelmholtzNonAnalyticElement& elem = elements[i];
-        _n.PushBack((double)elem.n, doc.GetAllocator());
-        _a.PushBack((double)elem.a, doc.GetAllocator());
-        _b.PushBack((double)elem.b, doc.GetAllocator());
-        _beta.PushBack((double)elem.beta, doc.GetAllocator());
-        _A.PushBack((double)elem.A, doc.GetAllocator());
-        _B.PushBack((double)elem.B, doc.GetAllocator());
-        _C.PushBack((double)elem.C, doc.GetAllocator());
-        _D.PushBack((double)elem.D, doc.GetAllocator());
-    }
-    el.AddMember("n", _n, doc.GetAllocator());
-    el.AddMember("a", _a, doc.GetAllocator());
-    el.AddMember("b", _b, doc.GetAllocator());
-    el.AddMember("beta", _beta, doc.GetAllocator());
-    el.AddMember("A", _A, doc.GetAllocator());
-    el.AddMember("B", _B, doc.GetAllocator());
-    el.AddMember("C", _C, doc.GetAllocator());
-    el.AddMember("D", _D, doc.GetAllocator());
-}
-
 void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl& tau_in, const CoolPropDbl& delta_in, HelmholtzDerivatives& derivs) {
     if (N == 0) {
         return;
@@ -824,14 +781,6 @@ mcx::MultiComplex<double> ResidualHelmholtzXiangDeiters::one_mcx(const mcx::Mult
 }
 #endif
 
-void ResidualHelmholtzSAFTAssociating::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-    el.AddMember("type", "ResidualHelmholtzSAFTAssociating", doc.GetAllocator());
-    el.AddMember("a", a, doc.GetAllocator());
-    el.AddMember("m", m, doc.GetAllocator());
-    el.AddMember("epsilonbar", epsilonbar, doc.GetAllocator());
-    el.AddMember("vbarn", vbarn, doc.GetAllocator());
-    el.AddMember("kappabar", kappabar, doc.GetAllocator());
-}
 CoolPropDbl ResidualHelmholtzSAFTAssociating::Deltabar(const CoolPropDbl& tau, const CoolPropDbl& delta) const {
     return this->g(this->eta(delta)) * (exp(this->epsilonbar * tau) - 1) * this->kappabar;
 }
@@ -1131,20 +1080,6 @@ mcx::MultiComplex<double> IdealHelmholtzCP0PolyT::one_mcx(const mcx::MultiComple
 }
 #endif
 
-void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-    el.AddMember("type", "IdealGasCP0Poly", doc.GetAllocator());
-
-    rapidjson::Value _c(rapidjson::kArrayType), _t(rapidjson::kArrayType);
-    for (std::size_t i = 0; i < N; ++i) {
-        _c.PushBack(static_cast<double>(c[i]), doc.GetAllocator());
-        _t.PushBack(static_cast<double>(t[i]), doc.GetAllocator());
-    }
-    el.AddMember("c", _c, doc.GetAllocator());
-    el.AddMember("t", _t, doc.GetAllocator());
-    el.AddMember("Tc", static_cast<double>(Tc), doc.GetAllocator());
-    el.AddMember("T0", static_cast<double>(T0), doc.GetAllocator());
-}
-
 void IdealHelmholtzLead::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
     if (!enabled) {
         return;
@@ -1426,17 +1361,6 @@ mcx::MultiComplex<double> IdealHelmholtzGERG2004Cosh::one_mcx(const mcx::MultiCo
 }
 #endif
 
-//void IdealHelmholtzCP0AlyLee::to_json(rapidjson::Value &el, rapidjson::Document &doc){
-//    el.AddMember("type","IdealGasHelmholtzCP0AlyLee",doc.GetAllocator());
-//    rapidjson::Value _n(rapidjson::kArrayType);
-//    for (std::size_t i=0; i<=4; ++i)
-//    {
-//        _n.PushBack(static_cast<double>(c[i]),doc.GetAllocator());
-//    }
-//    el.AddMember("c",_n,doc.GetAllocator());
-//    el.AddMember("Tc",static_cast<double>(Tc),doc.GetAllocator());
-//    el.AddMember("T0",static_cast<double>(T0),doc.GetAllocator());
-//}
 //CoolPropDbl IdealHelmholtzCP0AlyLee::base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
 //{
 //    if (!enabled){ return 0.0;}

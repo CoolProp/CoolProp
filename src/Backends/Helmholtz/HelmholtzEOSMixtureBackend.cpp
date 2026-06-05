@@ -4287,16 +4287,6 @@ void HelmholtzEOSMixtureBackend::get_critical_point_search_radii(double& R_delta
 std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::_calc_all_critical_points(bool find_critical_points) {
     // Populate the temporary class used to calculate the critical point(s)
     add_critical_state();
-    if (get_debug_level() > 10) {
-        rapidjson::Document doc;
-        doc.SetObject();
-        rapidjson::Value& val = doc;
-        std::vector<std::vector<DepartureFunctionPointer>>& mat = critical_state->residual_helmholtz->Excess.DepartureFunctionMatrix;
-        if (mat.size() > 0) {
-            mat[0][1]->phi.to_json(val, doc);
-            std::cout << cpjson::to_string(doc);
-        }
-    }
     critical_state->set_mole_fractions(this->get_mole_fractions_ref());
 
     // Specify state to be something homogeneous to shortcut phase evaluation
