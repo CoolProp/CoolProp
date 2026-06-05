@@ -46,6 +46,16 @@ inline nlohmann::json parse(std::string_view text) {
     }
 }
 
+/// Decode a CBOR byte buffer into an nlohmann::json document.
+/// Throws CoolProp::ValueError (never a raw nlohmann exception) on failure.
+inline nlohmann::json from_cbor(const std::uint8_t* data, std::size_t size) {
+    try {
+        return nlohmann::json::from_cbor(data, data + size);
+    } catch (const std::exception& e) {
+        throw CoolProp::ValueError(std::string("Unable to decode CBOR: ") + e.what());
+    }
+}
+
 /// Serialize an nlohmann::json value to a pretty-printed string.
 inline std::string json2string(const nlohmann::json& v) {
     return v.dump(4);

@@ -101,4 +101,16 @@ TEST_CASE("cpjson::validate_schema reports malformed schema JSON", "[json]") {
     REQUIRE_FALSE(err.empty());
 }
 
+TEST_CASE("cpjson::from_cbor round-trips a document", "[json]") {
+    nlohmann::json j = cpjson::parse(R"({"a": 1.5, "b": [1, 2, 3]})");
+    std::vector<std::uint8_t> blob = nlohmann::json::to_cbor(j);
+    nlohmann::json back = cpjson::from_cbor(blob.data(), blob.size());
+    REQUIRE(back == j);
+}
+
+TEST_CASE("cpjson::from_cbor throws ValueError on garbage", "[json]") {
+    std::vector<std::uint8_t> bad = {0xFF, 0xFF, 0xFF};
+    REQUIRE_THROWS_AS(cpjson::from_cbor(bad.data(), bad.size()), CoolProp::ValueError);
+}
+
 #endif  // ENABLE_CATCH
