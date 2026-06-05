@@ -544,7 +544,6 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
         finished = true;
     };
 
-
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
     //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 
@@ -724,7 +723,6 @@ class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm
 
     //Destructor. No Implementation
     ~ResidualHelmholtzSAFTAssociating() = default;
-
 
     CoolPropDbl dTau4(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() override {
         return 1e99;
