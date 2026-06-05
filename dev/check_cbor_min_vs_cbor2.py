@@ -61,7 +61,9 @@ def main():
     # The real embedded fluid data, if it has been generated.
     src = os.path.join(os.path.dirname(__file__), "all_fluids.json")
     if os.path.exists(src):
-        fails += check(json.load(open(src)), "all_fluids.json")
+        with open(src) as f:
+            real = json.load(f)
+        fails += check(real, "all_fluids.json")
     else:
         print("note: dev/all_fluids.json not present; skipping real-data comparison")
 

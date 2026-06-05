@@ -49,8 +49,12 @@ void load() {
                      "been defined"
                   << '\n';
     }
+    // Let a CBOR-decode failure propagate (it did, as a parse error, before this
+    // migration): under std::call_once a thrown load() leaves the once-flag unset
+    // so the error surfaces and a later call can retry, rather than silently
+    // leaving the global library empty. add_many keeps its original catch.
+    nlohmann::json dd = cpjson::from_cbor(gall_fluids_CBORData, gall_fluids_CBORSize);
     try {
-        nlohmann::json dd = cpjson::from_cbor(gall_fluids_CBORData, gall_fluids_CBORSize);
         library.add_many(dd);
     } catch (std::exception& e) {
         std::cout << e.what() << '\n';

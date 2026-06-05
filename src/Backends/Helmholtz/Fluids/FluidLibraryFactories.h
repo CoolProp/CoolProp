@@ -19,6 +19,9 @@ inline CoolProp::SurfaceTensionCorrelation make_surface_tension_correlation(cons
     CoolProp::SurfaceTensionCorrelation out;
     out.a = cpjson::get_long_double_array(j.at("a"));
     out.n = cpjson::get_long_double_array(j.at("n"));
+    if (out.a.size() != out.n.size()) {
+        throw CoolProp::ValueError("Surface tension 'a' and 'n' arrays must have equal length");
+    }
     out.Tc = cpjson::get_double(j, "Tc");
     out.BibTeX = cpjson::get_string(j, "BibTeX");
     out.N = out.n.size();
@@ -51,9 +54,12 @@ inline CoolProp::SaturationAncillaryFunction make_saturation_ancillary(const nlo
         else
             out.type = CoolProp::SaturationAncillaryFunction::TYPE_EXPONENTIAL;
         out.n = cpjson::get_double_array(j.at("n"));
+        out.t = cpjson::get_double_array(j.at("t"));
+        if (out.n.size() != out.t.size()) {
+            throw CoolProp::ValueError("Ancillary 'n' and 't' arrays must have equal length");
+        }
         out.N = out.n.size();
         out.s = out.n;
-        out.t = cpjson::get_double_array(j.at("t"));
         out.Tmin = cpjson::get_double(j, "Tmin");
         out.Tmax = cpjson::get_double(j, "Tmax");
         out.reducing_value = cpjson::get_double(j, "reducing_value");
