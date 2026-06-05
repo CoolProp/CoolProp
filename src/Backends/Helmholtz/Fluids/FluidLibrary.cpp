@@ -1,6 +1,7 @@
 
 #include "FluidLibrary.h"
 
+#include "CoolProp/detail/json.h"
 #include <mutex>
 
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
@@ -58,17 +59,12 @@ void load() {
                   << '\n';
     }
 
-    rapidjson::Document dd;
     // This json formatted string comes from the all_fluids_JSON.h header which is a C++-escaped version of the JSON file
-    dd.Parse<0>(buf.c_str());
-    if (dd.HasParseError()) {
-        throw ValueError("Unable to load all_fluids.json");
-    } else {
-        try {
-            library.add_many(dd);
-        } catch (std::exception& e) {
-            std::cout << e.what() << '\n';
-        }
+    try {
+        nlohmann::json dd = cpjson::parse(buf);
+        library.add_many(dd);
+    } catch (std::exception& e) {
+        std::cout << e.what() << '\n';
     }
 }
 
@@ -144,22 +140,21 @@ void JSONFluidLibrary::add_many(const std::string& JSON_string) {
     ensure_library_loaded();
 
     // Then, load the fluids we would like to add
-    rapidjson::Document doc;
-    cpjson::JSON_string_to_rapidjson(JSON_string, doc);
+    nlohmann::json doc = cpjson::parse(JSON_string);
     library.add_many(doc);
 };
 
-void JSONFluidLibrary::add_many(rapidjson::Value& listing) {
-    if (!listing.IsArray()) {
+void JSONFluidLibrary::add_many(const nlohmann::json& listing) {
+    if (!listing.is_array()) {
         add_one(listing);
         return;
     }
-    for (rapidjson::Value::ValueIterator itr = listing.Begin(); itr != listing.End(); ++itr) {
-        add_one(*itr);
+    for (const auto& fluid_json : listing) {
+        add_one(fluid_json);
     }
 };
 
-void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
+void JSONFluidLibrary::add_one(const nlohmann::json& fluid_json) {
     _is_empty = false;
 
     // The variable index is initialized to the size of the fluid_map.
@@ -172,7 +167,7 @@ void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
     // Assign the fluid properties based on the passed in fluid_json
     // =============================================================
     // Parse out Fluid name
-    fluid.name = fluid_json["INFO"]["NAME"].GetString();
+    fluid.name = fluid_json.at("INFO").at("NAME").get<std::string>();
 
     // Push the fluid name onto the name_vector used for returning the full list of library fluids
     // If it is found that this fluid already exists in the library, it will be popped back off below.
@@ -180,112 +175,112 @@ void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
 
     try {
         // CAS number
-        if (!fluid_json["INFO"].HasMember("CAS")) {
+        if (!fluid_json.at("INFO").contains("CAS")) {
             throw ValueError(format("fluid [%s] does not have \"CAS\" member", fluid.name.c_str()));
         }
-        fluid.CAS = fluid_json["INFO"]["CAS"].GetString();
+        fluid.CAS = fluid_json.at("INFO").at("CAS").get<std::string>();
 
         // REFPROP alias
-        if (!fluid_json["INFO"].HasMember("REFPROP_NAME")) {
+        if (!fluid_json.at("INFO").contains("REFPROP_NAME")) {
             throw ValueError(format("fluid [%s] does not have \"REFPROP_NAME\" member", fluid.name.c_str()));
         }
-        fluid.REFPROPname = fluid_json["INFO"]["REFPROP_NAME"].GetString();
+        fluid.REFPROPname = fluid_json.at("INFO").at("REFPROP_NAME").get<std::string>();
 
         // FORMULA
-        if (fluid_json["INFO"].HasMember("FORMULA")) {
-            fluid.formula = cpjson::get_string(fluid_json["INFO"], "FORMULA");
+        if (fluid_json.at("INFO").contains("FORMULA")) {
+            fluid.formula = cpjson::get_string(fluid_json.at("INFO"), "FORMULA");
         } else {
             fluid.formula = "N/A";
         }
 
         // Abstract references
-        if (fluid_json["INFO"].HasMember("INCHI_STRING")) {
-            fluid.InChI = cpjson::get_string(fluid_json["INFO"], "INCHI_STRING");
+        if (fluid_json.at("INFO").contains("INCHI_STRING")) {
+            fluid.InChI = cpjson::get_string(fluid_json.at("INFO"), "INCHI_STRING");
         } else {
             fluid.InChI = "N/A";
         }
 
-        if (fluid_json["INFO"].HasMember("INCHI_KEY")) {
-            fluid.InChIKey = cpjson::get_string(fluid_json["INFO"], "INCHI_KEY");
+        if (fluid_json.at("INFO").contains("INCHI_KEY")) {
+            fluid.InChIKey = cpjson::get_string(fluid_json.at("INFO"), "INCHI_KEY");
         } else {
             fluid.InChIKey = "N/A";
         }
 
-        if (fluid_json["INFO"].HasMember("SMILES")) {
-            fluid.smiles = cpjson::get_string(fluid_json["INFO"], "SMILES");
+        if (fluid_json.at("INFO").contains("SMILES")) {
+            fluid.smiles = cpjson::get_string(fluid_json.at("INFO"), "SMILES");
         } else {
             fluid.smiles = "N/A";
         }
 
-        if (fluid_json["INFO"].HasMember("CHEMSPIDER_ID")) {
-            fluid.ChemSpider_id = cpjson::get_integer(fluid_json["INFO"], "CHEMSPIDER_ID");
+        if (fluid_json.at("INFO").contains("CHEMSPIDER_ID")) {
+            fluid.ChemSpider_id = cpjson::get_integer(fluid_json.at("INFO"), "CHEMSPIDER_ID");
         } else {
             fluid.ChemSpider_id = -1;
         }
 
-        if (fluid_json["INFO"].HasMember("2DPNG_URL")) {
-            fluid.TwoDPNG_URL = cpjson::get_string(fluid_json["INFO"], "2DPNG_URL");
+        if (fluid_json.at("INFO").contains("2DPNG_URL")) {
+            fluid.TwoDPNG_URL = cpjson::get_string(fluid_json.at("INFO"), "2DPNG_URL");
         } else {
             fluid.TwoDPNG_URL = "N/A";
         }
 
         // Parse the environmental parameters
-        if (!(fluid_json["INFO"].HasMember("ENVIRONMENTAL"))) {
+        if (!(fluid_json.at("INFO").contains("ENVIRONMENTAL"))) {
             if (get_debug_level() > 0) {
                 std::cout << format("Environmental data are missing for fluid [%s]\n", fluid.name.c_str());
             }
         } else {
-            parse_environmental(fluid_json["INFO"]["ENVIRONMENTAL"], fluid);
+            parse_environmental(fluid_json.at("INFO").at("ENVIRONMENTAL"), fluid);
         }
 
         // Aliases
-        fluid.aliases = cpjson::get_string_array(fluid_json["INFO"]["ALIASES"]);
+        fluid.aliases = cpjson::get_string_array(fluid_json.at("INFO").at("ALIASES"));
 
         // Critical state
-        if (!fluid_json.HasMember("STATES")) {
+        if (!fluid_json.contains("STATES")) {
             throw ValueError(format("fluid [%s] does not have \"STATES\" member", fluid.name.c_str()));
         }
-        parse_states(fluid_json["STATES"], fluid);
+        parse_states(fluid_json.at("STATES"), fluid);
 
         if (get_debug_level() > 5) {
             std::cout << format("Loading fluid %s with CAS %s; %d fluids loaded\n", fluid.name.c_str(), fluid.CAS.c_str(), index);
         }
 
         // EOS
-        parse_EOS_listing(fluid_json["EOS"], fluid);
+        parse_EOS_listing(fluid_json.at("EOS"), fluid);
 
         // Validate the fluid
         validate(fluid);
 
         // Ancillaries for saturation
-        if (!fluid_json.HasMember("ANCILLARIES")) {
+        if (!fluid_json.contains("ANCILLARIES")) {
             throw ValueError(format("Ancillary curves are missing for fluid [%s]", fluid.name.c_str()));
         };
-        parse_ancillaries(fluid_json["ANCILLARIES"], fluid);
+        parse_ancillaries(fluid_json.at("ANCILLARIES"), fluid);
 
         // Surface tension
-        if (!(fluid_json["ANCILLARIES"].HasMember("surface_tension"))) {
+        if (!(fluid_json.at("ANCILLARIES").contains("surface_tension"))) {
             if (get_debug_level() > 0) {
                 std::cout << format("Surface tension curves are missing for fluid [%s]\n", fluid.name.c_str());
             }
         } else {
-            parse_surface_tension(fluid_json["ANCILLARIES"]["surface_tension"], fluid);
+            parse_surface_tension(fluid_json.at("ANCILLARIES").at("surface_tension"), fluid);
         }
 
         // Melting line
-        if (!(fluid_json["ANCILLARIES"].HasMember("melting_line"))) {
+        if (!(fluid_json.at("ANCILLARIES").contains("melting_line"))) {
             if (get_debug_level() > 0) {
                 std::cout << format("Melting line curves are missing for fluid [%s]\n", fluid.name.c_str());
             }
         } else {
-            parse_melting_line(fluid_json["ANCILLARIES"]["melting_line"], fluid);
+            parse_melting_line(fluid_json.at("ANCILLARIES").at("melting_line"), fluid);
         }
 
         // Parse the transport property (viscosity and/or thermal conductivity) parameters
-        if (!(fluid_json.HasMember("TRANSPORT"))) {
+        if (!(fluid_json.contains("TRANSPORT"))) {
             default_transport(fluid);
         } else {
-            parse_transport(fluid_json["TRANSPORT"], fluid);
+            parse_transport(fluid_json.at("TRANSPORT"), fluid);
         }
 
         // If the fluid is ok...
@@ -347,7 +342,7 @@ void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
         //    release the memory before adding in the new fluid object at the same location (index)
         if (fluid_exists) JSONstring_map.erase(JSONstring_map.find(index));
         // if not, it will add the new (index,JSONstring) pair to the map.
-        JSONstring_map[index] = cpjson::json2string(fluid_json);
+        JSONstring_map[index] = fluid_json.dump();
 
         // Add/Replace CAS->index mapping
         // This map helps find the index of a fluid in the fluid_map given a CAS string
