@@ -17,11 +17,11 @@ from pathlib import Path
 import pickle
 import tempfile
 
-try:
-    import cbor2
-except ImportError:
-    sys.exit('cbor2 is required to generate the embedded fluid data. '
-             f'Install it: "{sys.executable} -m pip install cbor2"')
+# Vendored stdlib-only CBOR codec (dev/cbor_min.py) — avoids a third-party
+# build-time dependency on the C++ build path. Ensure dev/ is importable
+# regardless of the CWD CMake invokes this script from.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import cbor_min
 
 json_options = {'indent': 2, 'sort_keys': True}
 
@@ -399,9 +399,9 @@ def combine_json(root_dir):
 
             
             
-        blob = cbor2.dumps(master)
+        blob = cbor_min.dumps(master)
         # Round-trip self-check: a bad encode must never be committed.
-        if cbor2.loads(blob) != master:
+        if cbor_min.loads(blob) != master:
             raise ValueError("CBOR round-trip self-check failed for all_fluids")
         with (Path(root_dir) / 'dev' / 'all_fluids.cbor').open('wb') as fp:
             fp.write(blob)

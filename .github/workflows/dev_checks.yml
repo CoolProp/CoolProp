@@ -67,8 +67,6 @@ jobs:
           echo COOLPROP_REFPROP_ROOT=`pwd`/gpgREFPROP/REFPROP-cmake/bld >> $GITHUB_ENV
         env:
           REFPROP_GPG_PASSPHRASE: ${{ secrets.REFPROP_GPG_PASSPHRASE }}
-      - name: Install Python dependencies
-        run: python3 -m pip install --upgrade pip && python3 -m pip install cbor2 --only-binary=cbor2
       - name: mkdir
         run: mkdir build && cd build
       - name: cmake config
@@ -163,9 +161,6 @@ jobs:
             /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-18 100
           clang-tidy --version
 
-      - name: Install Python dependencies
-        run: python3 -m pip install --upgrade pip && python3 -m pip install cbor2 --only-binary=cbor2
-
       - name: Configure
         run: |
           cmake -G Ninja \
@@ -245,10 +240,6 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.x'
-
-      - name: Install Python dependencies (cpp build)
-        if: ${{ matrix.language == 'cpp' }}
-        run: python -m pip install --upgrade pip && python -m pip install cbor2 --only-binary=cbor2
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -351,9 +342,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y iwyu ninja-build
           include-what-you-use --version || true
-
-      - name: Install Python dependencies
-        run: python3 -m pip install --upgrade pip && python3 -m pip install cbor2 --only-binary=cbor2
 
       - name: Configure with COOLPROP_IWYU
         run: |

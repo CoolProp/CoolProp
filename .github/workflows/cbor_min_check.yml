@@ -1,0 +1,31 @@
+name: CBOR encoder check
+
+# Pins the vendored stdlib-only CBOR encoder (dev/cbor_min.py), which embeds the
+# fluid data, byte-for-byte against the reference cbor2. cbor2 is installed here
+# in a controlled standard-runner env — it is deliberately NOT on the C++ build
+# path (that's the whole point of vendoring cbor_min).
+
+on:
+  push:
+    paths:
+      - 'dev/cbor_min.py'
+      - 'dev/check_cbor_min_vs_cbor2.py'
+      - '.github/workflows/cbor_min_check.yml'
+  pull_request:
+    paths:
+      - 'dev/cbor_min.py'
+      - 'dev/check_cbor_min_vs_cbor2.py'
+      - '.github/workflows/cbor_min_check.yml'
+
+jobs:
+  cbor-min-vs-cbor2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: Install cbor2 (reference encoder)
+        run: python -m pip install --upgrade pip && python -m pip install cbor2
+      - name: cbor_min must be byte-identical to cbor2
+        run: python dev/check_cbor_min_vs_cbor2.py

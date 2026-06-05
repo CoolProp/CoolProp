@@ -133,7 +133,7 @@ jobs:
         # notebooks (SVDSBTLValidation, SVDSBTLHeatExchangerDemo); without them
         # nbconvert --allow-errors silently renders those pages as import-error
         # tracebacks.
-        pip install pydata-sphinx-theme tqdm ninja sphinx-design plotly joblib cbor2 --only-binary=cbor2
+        pip install pydata-sphinx-theme tqdm ninja sphinx-design plotly joblib
         
     - name: Test the installed CoolProp version
       shell: bash

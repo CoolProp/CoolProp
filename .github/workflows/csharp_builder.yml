@@ -45,14 +45,6 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install swig -y --no-progress
 
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.x'
-
-      - name: Install Python dependencies
-        shell: bash
-        run: pip install cbor2 --only-binary=cbor2
-
       - name: Configure
         shell: bash
         run: cmake -B build -S . -DCOOLPROP_CSHARP_MODULE=ON -DCMAKE_BUILD_TYPE=Release

@@ -88,9 +88,6 @@ jobs:
         ref: ${{ needs.set_vars.outputs.branch }}
         path: source
         
-    - name: Install Python dependencies
-      run: pip install cbor2 --only-binary=cbor2
-
     - name: Update the headers
       run: |
         pushd source
