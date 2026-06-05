@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.10", "cython>=0.29"]
+requires = ["scikit-build-core>=0.10", "cython>=0.29", "cbor2"]
 build-backend = "scikit_build_core.build"
 
 [project]

@@ -1210,6 +1210,8 @@ class JSONFluidLibrary
 
     CP_JSON_LOCAL void add_one(const nlohmann::json& fluid_json);
 
+#undef CP_JSON_LOCAL
+
     std::string get_JSONstring(const std::string& key) {
         // Try to find it
         auto it = string_to_index_map.find(key);

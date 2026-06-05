@@ -16,38 +16,12 @@ import glob
 from pathlib import Path
 import pickle
 import tempfile
-import zlib
 
-# cbor2 is required to emit the embedded fluid blob (all_fluids.cbor).  It is
-# not part of the Python standard library, and the interpreter that CMake
-# drives this script with (Python_EXECUTABLE) may not have it installed.  To
-# keep `cmake --build` self-contained we transparently pip-install it on
-# first miss rather than hard-failing the build.
-def _ensure_cbor2():
-    try:
-        import cbor2  # noqa: F401
-        return
-    except ImportError:
-        pass
-    print('cbor2 not found; attempting to pip-install it into the build interpreter')
-    base = [sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check']
-    # Some interpreters are PEP-668 "externally managed" (Homebrew, many
-    # Linux distros).  Try a vanilla install first, then progressively
-    # less-restrictive variants so the build doesn't dead-end.
-    for extra in ([], ['--user'], ['--break-system-packages'], ['--user', '--break-system-packages']):
-        try:
-            subprocess.check_call(base + extra + ['cbor2'])
-            return
-        except subprocess.CalledProcessError:
-            continue
-    raise RuntimeError(
-        'cbor2 is required to generate the embedded fluid data but could not be '
-        'imported or pip-installed.  Install it manually: '
-        f'"{sys.executable} -m pip install cbor2".')
-
-
-_ensure_cbor2()
-import cbor2  # noqa: E402,F401
+try:
+    import cbor2
+except ImportError:
+    sys.exit('cbor2 is required to generate the embedded fluid data. '
+             f'Install it: "{sys.executable} -m pip install cbor2"')
 
 json_options = {'indent': 2, 'sort_keys': True}
 
@@ -398,6 +372,12 @@ def combine_json(root_dir):
                                   cachefile=Path(__file__).parent / '.fluiddepcache')
     
     needs, reason = depfluids.needs_build()
+    # Force regeneration when all_fluids.json is absent even if all_fluids.cbor
+    # exists — the [cbor] Catch2 test reads all_fluids.json directly and will
+    # fail if it is missing while the .cbor is stale-fresh.
+    all_fluids_json = Path(root_dir) / 'dev' / 'all_fluids.json'
+    if not needs and not all_fluids_json.exists():
+        needs, reason = True, "dev/all_fluids.json is missing"
     if needs:
         print(f'fluids JSON need packaging because {reason}')
         
