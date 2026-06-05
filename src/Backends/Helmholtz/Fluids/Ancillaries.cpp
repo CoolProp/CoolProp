@@ -17,37 +17,6 @@ using std::shared_ptr;
 
 namespace CoolProp {
 
-SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value& json_code) {
-    std::string type = cpjson::get_string(json_code, "type");
-    if (!type.compare("rational_polynomial")) {
-        this->type = TYPE_RATIONAL_POLYNOMIAL;
-        num_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["A"]));
-        den_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["B"]));
-        max_abs_error = cpjson::get_double(json_code, "max_abs_error");
-        try {
-            Tmin = cpjson::get_double(json_code, "Tmin");
-            Tmax = cpjson::get_double(json_code, "Tmax");
-        } catch (...) {
-            Tmin = _HUGE;
-            Tmax = _HUGE;
-        }
-    } else {
-        if (!type.compare("rhoLnoexp"))
-            this->type = TYPE_NOT_EXPONENTIAL;
-        else
-            this->type = TYPE_EXPONENTIAL;
-        n = cpjson::get_double_array(json_code["n"]);
-        N = n.size();
-        s = n;
-        t = cpjson::get_double_array(json_code["t"]);
-        Tmin = cpjson::get_double(json_code, "Tmin");
-        Tmax = cpjson::get_double(json_code, "Tmax");
-        reducing_value = cpjson::get_double(json_code, "reducing_value");
-        using_tau_r = cpjson::get_bool(json_code, "using_tau_r");
-        T_r = cpjson::get_double(json_code, "T_r");
-    }
-};
-
 double SaturationAncillaryFunction::evaluate(double T) {
     if (type == TYPE_NOT_SET) {
         throw ValueError(format("type not set"));
