@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <vector>
 #include "CoolProp/detail/tools.h"  // for CoolPropDbl
 //#include "Eigen/Core"

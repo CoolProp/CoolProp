@@ -48,7 +48,12 @@ class CubicsLibraryClass
                 val.alpha_type = "default";
             }
             if (itr->HasMember("alpha0") && (*itr)["alpha0"].IsArray()) {
-                val.alpha0 = JSONFluidLibrary::parse_alpha0((*itr)["alpha0"]);
+                // JSONFluidLibrary::parse_alpha0 now consumes nlohmann::json, but the
+                // cubic loader is still rapidjson-based; bridge the single call by
+                // round-tripping the alpha0 node through a string. (Removed once the
+                // cubic loader migrates off rapidjson.)
+                nlohmann::json alpha0_json = cpjson::parse(cpjson::json2string((*itr)["alpha0"]));
+                val.alpha0 = JSONFluidLibrary::parse_alpha0(alpha0_json);
             }
             std::pair<std::map<std::string, CubicsValues>::iterator, bool> ret;
             ret = fluid_map.emplace(upper(val.name), val);
@@ -142,7 +147,13 @@ namespace {
 /// the get_library() singleton (which would recurse into its own constructor).
 void add_fluids_from_JSON_string(CubicsLibraryClass& dest, const std::string_view& JSON) {
     std::string errstr;
-    cpjson::schema_validation_code val_code = cpjson::validate_schema(cubic_fluids_schema_JSON, JSON, errstr);
+    // FluidLibrary.h (transitively) now also pulls in the nlohmann cpjson
+    // wrapper, whose validate_schema overload is ambiguous with the rapidjson
+    // one for these string arguments. Select the rapidjson overload explicitly
+    // until the cubic loader migrates off rapidjson.
+    auto validate_schema_rapidjson =
+      static_cast<cpjson::schema_validation_code (*)(const std::string_view&, const std::string_view&, std::string&)>(&cpjson::validate_schema);
+    cpjson::schema_validation_code val_code = validate_schema_rapidjson(cubic_fluids_schema_JSON, JSON, errstr);
     if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
         rapidjson::Document dd;
         dd.Parse<0>(JSON.data(), JSON.size());

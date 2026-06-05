@@ -162,6 +162,13 @@ inline std::vector<std::string> get_string_array(const nlohmann::json& v, const 
     return get_string_array(*it);
 }
 
+// During the rapidjson->nlohmann migration both this header and the legacy
+// detail/rapidjson.h can be pulled into the same translation unit (e.g. a
+// loader that uses nlohmann while still including Configuration.h, which
+// pulls rapidjson.h). Both declare an identical cpjson::schema_validation_code
+// enum, so guard it with a shared macro to avoid a redefinition error.
+#ifndef CPJSON_SCHEMA_VALIDATION_CODE_DEFINED
+#    define CPJSON_SCHEMA_VALIDATION_CODE_DEFINED
 enum schema_validation_code
 {
     SCHEMA_VALIDATION_OK = 0,
@@ -169,6 +176,7 @@ enum schema_validation_code
     INPUT_INVALID_JSON,
     SCHEMA_NOT_VALIDATED
 };
+#endif
 
 /// Validate a JSON-formatted input string against a JSON-formatted draft-07
 /// schema string. On a validation failure, `errstr` receives a

@@ -61,7 +61,12 @@ void UNIFACParameterLibrary::populate(rapidjson::Value& group_data, rapidjson::V
             c.alpha_type = "default";
         }
         if ((*itr).HasMember("alpha0") && (*itr)["alpha0"].IsArray()) {
-            c.alpha0 = CoolProp::JSONFluidLibrary::parse_alpha0((*itr)["alpha0"]);
+            // JSONFluidLibrary::parse_alpha0 now consumes nlohmann::json, but the
+            // UNIFAC loader is still rapidjson-based; bridge the single call by
+            // round-tripping the alpha0 node through a string. (Removed once the
+            // UNIFAC loader migrates off rapidjson.)
+            nlohmann::json alpha0_json = cpjson::parse(cpjson::json2string((*itr)["alpha0"]));
+            c.alpha0 = CoolProp::JSONFluidLibrary::parse_alpha0(alpha0_json);
         }
         rapidjson::Value& groups = (*itr)["groups"];
         for (rapidjson::Value::ValueIterator itrg = groups.Begin(); itrg != groups.End(); ++itrg) {
