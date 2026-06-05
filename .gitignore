@@ -80,8 +80,10 @@ Web/fluid_properties/fluids/molecule_geometry_status.md
 /.vscode/
 
 bld/
-*_z.h 
+*_z.h
 *.json.z
+/dev/all_fluids.cbor
+/include/all_fluids_CBOR.h
 
 compile_commands.json
 cppcheck.txt
