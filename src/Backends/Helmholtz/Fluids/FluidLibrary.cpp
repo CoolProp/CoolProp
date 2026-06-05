@@ -5,22 +5,21 @@
 #include <mutex>
 
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
-#include "miniz.h"
 
 #if defined(COOLPROP_NO_INCBIN)
 #    define INCBIN_CONST
 #    define INCBIN_ALIGN
-#    include "all_fluids_JSON_z.h"
+#    include "all_fluids_CBOR.h"
 #    undef INCBIN_CONST
 #    undef INCBIN_ALIGN
 #else
 #    include "incbin.h"
-// Use the magic of the incbin library to include binary data in compressed form
+// Use the magic of the incbin library to include the binary CBOR data
 #    if defined(_MSC_VER)
-#        include "all_fluids_JSON_z.h"
+#        include "all_fluids_CBOR.h"
 #    else
 
-INCBIN(all_fluids_JSON_z, "all_fluids.json.z");
+INCBIN(all_fluids_CBOR, "all_fluids.cbor");
 #    endif
 #endif
 
@@ -45,23 +44,13 @@ static void ensure_library_loaded() {
 }
 
 void load() {
-    std::vector<unsigned char> outbuffer(gall_fluids_JSON_zSize * 7);
-    auto outlen = static_cast<uLong>(outbuffer.size());
-    auto code = uncompress(&outbuffer[0], &outlen, gall_fluids_JSON_zData, gall_fluids_JSON_zSize);
-    std::string buf(outbuffer.begin(), outbuffer.begin() + outlen);
-    if (code != 0) {
-        throw ValueError("Unable to uncompress the fluid data from z compressed form");
-    }
-
     if (getenv("COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY")) {
         std::cout << "CoolProp: superancillaries have been disabled because the COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY environment variable has "
                      "been defined"
                   << '\n';
     }
-
-    // This json formatted string comes from the all_fluids_JSON.h header which is a C++-escaped version of the JSON file
     try {
-        nlohmann::json dd = cpjson::parse(buf);
+        nlohmann::json dd = cpjson::from_cbor(gall_fluids_CBORData, gall_fluids_CBORSize);
         library.add_many(dd);
     } catch (std::exception& e) {
         std::cout << e.what() << '\n';

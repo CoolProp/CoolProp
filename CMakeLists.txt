@@ -632,7 +632,7 @@ if(COOLPROP_OBJECT_LIBRARY
             DESTINATION static_library/include FILES_MATCHING PATTERN "*.h")
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
             DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
-            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE
+            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
             PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
   elseif(COOLPROP_SHARED_LIBRARY)
     list(APPEND APP_SOURCES
@@ -669,7 +669,7 @@ if(COOLPROP_OBJECT_LIBRARY
             DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h")
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
             DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
-            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE
+            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
             PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
     set_property(
       TARGET ${LIB_NAME}
@@ -858,7 +858,7 @@ if(COOLPROP_DEBIAN_PACKAGE)
           DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h")
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
           DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
-          PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE
+          PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
           PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
 endif()
 

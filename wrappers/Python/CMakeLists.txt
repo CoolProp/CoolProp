@@ -41,7 +41,7 @@ file(GLOB MIXTURE_JSON_FILES "${ROOT_DIR}/dev/mixtures/*.json")
 add_custom_command(
     OUTPUT
         "${ROOT_DIR}/include/all_fluids_JSON.h"
-        "${ROOT_DIR}/include/all_fluids_JSON_z.h"
+        "${ROOT_DIR}/include/all_fluids_CBOR.h"
         "${ROOT_DIR}/include/cpversion.h"
         "${ROOT_DIR}/include/gitrevision.h"
     COMMAND ${Python_EXECUTABLE} "${ROOT_DIR}/dev/generate_headers.py"
@@ -62,7 +62,7 @@ add_custom_command(
 add_custom_target(generate_headers_target
     DEPENDS
         "${ROOT_DIR}/include/all_fluids_JSON.h"
-        "${ROOT_DIR}/include/all_fluids_JSON_z.h"
+        "${ROOT_DIR}/include/all_fluids_CBOR.h"
         "${ROOT_DIR}/include/cpversion.h"
         "${ROOT_DIR}/include/gitrevision.h"
 )

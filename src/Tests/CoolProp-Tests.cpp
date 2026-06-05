@@ -7,7 +7,7 @@
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
 #include "CoolProp/superancillary/superancillary.h"
-#include "miniz.h"
+#include "CoolProp/detail/json.h"
 #include <atomic>
 #include <map>
 #include <set>
@@ -3510,8 +3510,8 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary functions are av
 
 extern "C"
 {
-    extern unsigned char gall_fluids_JSON_zData[];
-    extern unsigned int gall_fluids_JSON_zSize;
+    extern unsigned char gall_fluids_CBORData[];
+    extern unsigned int gall_fluids_CBORSize;
 }
 
 TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[ancillary]") {
@@ -3707,12 +3707,9 @@ TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[a
         CHECK(fixture_hasher.hex() == "8e75626511d00b5c");
     }
 
-    // Decompress the raw all_fluids JSON bytes — the same blob FluidLibrary
-    // loads, but without the subsequent rapidjson round-trip.
-    std::vector<unsigned char> buf(gall_fluids_JSON_zSize * 7);
-    auto out_len = static_cast<mz_ulong>(buf.size());
-    REQUIRE(mz_uncompress(buf.data(), &out_len, gall_fluids_JSON_zData, gall_fluids_JSON_zSize) == MZ_OK);
-    auto all_fluids = nlohmann::json::parse(buf.begin(), buf.begin() + out_len);
+    // Decode the raw all_fluids CBOR bytes — the same blob FluidLibrary
+    // loads, but without the subsequent runtime round-trip.
+    auto all_fluids = cpjson::from_cbor(gall_fluids_CBORData, gall_fluids_CBORSize);
 
     int fluids_checked = 0;
     for (const auto& jfluid : all_fluids) {
