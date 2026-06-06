@@ -1267,8 +1267,85 @@ TEST_CASE("SVDSBTL pc-strip routes through critical patch", "[SVDSBTL][CoolProp-
 
 // -- DT-indexed surface (CoolProp-i7j) ------------------------------------
 
-// Smoke test: DT surface for CO2 builds, single supercritical probe
-// returns finite values matching HEOS to better than 1e-3 relative.
+// Regression gate for CoolProp-4z79: the near-critical band [0.99,1.01]*Tc
+// used to be a structural GAP in the DmassT atlas (the dome-bounded
+// LIQUID/VAPOR regions can't reach Tc — rho_sat,L/V pinch to rho_c).  The
+// NC sub-regions (POWER/POWER_LO T axis + an isobar-bounded region that
+// spans Tc) now carry the *table* through the whole band, including the
+// critical isotherm, at all densities — no HEOS fallback.  This test
+// asserts BOTH: (1) no gap — every single-phase (T,rho) in the band is
+// served (svd->update does not throw); (2) accuracy — p(rho,T) matches
+// HEOS to <1e-4 (the observed worst is ~2e-5; the IAPWS budget is 2e-4).
+// Helium is included on purpose: its critical-region PT solver fails
+// within ~1 nanoK of Tc, which earlier aborted the surface build (the
+// 1e-6 NC handoff margin fixes it).
+TEST_CASE("SVDSBTL DT near-critical band is gap-free and accurate (CoolProp-4z79)", "[SBTL][SVDSBTL][dt][near_critical][regression][slow]") {
+    for (const std::string& fluid : {std::string("Water"), std::string("CarbonDioxide"), std::string("Helium")}) {
+        auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", fluid));
+        auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
+        const double Tc = heos->T_critical();
+        const double rho_c = heos->rhomass_critical();
+        int single_phase_points = 0;
+        for (double tf : {0.99, 0.999, 0.9999, 1.0, 1.0001, 1.001, 1.01}) {
+            const double T = tf * Tc;
+            for (double rf : {0.1, 0.3, 0.6, 0.9, 1.0, 1.1, 1.5, 2.0}) {
+                const double rho = rf * rho_c;
+                double p_ref = 0.0;
+                try {
+                    heos->update(CoolProp::DmassT_INPUTS, rho, T);
+                    if (heos->Q() > 0.0 && heos->Q() < 1.0) continue;  // dome: lever-rule routed
+                    p_ref = heos->p();
+                } catch (...) {
+                    continue;  // outside HEOS validity
+                }
+                INFO(fluid << " T=" << T << " (" << tf << "Tc)  rho=" << rho << " (" << rf << "rho_c)  p_ref=" << p_ref);
+                // (1) no gap: the surrogate MUST serve this single-phase point.
+                REQUIRE_NOTHROW(svd->update(CoolProp::DmassT_INPUTS, rho, T));
+                const double p_svd = svd->p();
+                // (2) accuracy: table holds <1e-4 across the band, incl. the cusp.
+                CHECK(std::isfinite(p_svd));
+                CHECK(p_svd == Approx(p_ref).epsilon(1e-4));
+                CHECK(svd->rhomass() == rho);  // density input echoed back
+                ++single_phase_points;
+            }
+        }
+        INFO(fluid << " single-phase points checked: " << single_phase_points);
+        REQUIRE(single_phase_points > 20);  // guard against the sweep silently skipping everything
+    }
+}
+
+// CoolProp-4z79 dome-routing guard: the isobar-bounded NC_SUPER region
+// dips below Tc, so its AABB spans the two-phase dome.  A two-phase DT
+// query in that sub-Tc sliver must still be routed to the lever rule
+// (p = P_sat(T), Q from the lever rule), NOT read as single-phase off the
+// surface's interpolated-across-the-dome cells.  This is the exact hole
+// the resolve-order dome PRE-CHECK closes; the [near_critical] sweep above
+// skips dome points and can't see it, so it is gated explicitly here.
+TEST_CASE("SVDSBTL DT two-phase routing holds inside the NC sub-Tc sliver (CoolProp-4z79)",
+          "[SBTL][SVDSBTL][dt][near_critical][dome][regression][slow]") {
+    for (const std::string& fluid : {std::string("Water"), std::string("CarbonDioxide")}) {
+        auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", fluid));
+        auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
+        const double Tc = heos->T_critical();
+        const double rho_c = heos->rhomass_critical();
+        // Just below Tc but inside the NC_SUPER span (Tc*(1-1e-6) .. Tc),
+        // at rho_c — squarely inside the (vanishing) dome there.
+        for (double tf : {1.0 - 5.0e-7, 1.0 - 1.0e-7}) {
+            const double T = tf * Tc;
+            heos->update(CoolProp::DmassT_INPUTS, rho_c, T);
+            if (!(heos->Q() > 0.0 && heos->Q() < 1.0)) continue;  // require it actually be two-phase
+            const double p_sat = heos->p();
+            const double Q_ref = heos->Q();
+            INFO(fluid << " T=" << T << " (" << tf << "Tc) rho=rho_c=" << rho_c << " expect two-phase p_sat=" << p_sat);
+            REQUIRE_NOTHROW(svd->update(CoolProp::DmassT_INPUTS, rho_c, T));
+            CHECK(svd->Q() > 0.0);
+            CHECK(svd->Q() < 1.0);
+            CHECK(svd->p() == Approx(p_sat).epsilon(1e-3));  // P_sat(T), not an interpolated surface value
+            CHECK(svd->Q() == Approx(Q_ref).epsilon(1e-2));
+        }
+    }
+}
+
 // Tight tolerance comes in the multi-fluid sweep below — this one just
 // proves the wiring is end-to-end.
 TEST_CASE("SVDSBTL DT-indexed surface builds and evaluates for CO2", "[SBTL][SVDSBTL][dt][smoke][slow]") {
@@ -1507,23 +1584,24 @@ TEST_CASE("find_rho_satL_extrema_T returns water anomaly, none for other fluids"
 }
 
 // LIQUID-split geometry: the dt_subcritical preset must emit one extra
-// LIQUID sub-region per rho_sat,L(T) extremum.  Water (one anomaly)
-// gets LIQUID_LO + LIQUID_HI + VAPOR + SUPER = 4 regions; CO2 (no
-// anomaly) gets LIQUID + VAPOR + SUPER = 3.  This is the structural
-// guard that the anomaly split actually happens — without it, a
-// single LIQUID region would straddle the density-maximum hairpin and
-// the SVD couldn't represent the resulting discontinuity.
+// LIQUID sub-region per rho_sat,L(T) extremum, plus the three fixed NC
+// near-critical regions (NC_LIQUID + NC_VAPOR + NC_SUPER, CoolProp-4z79).
+// Water (one anomaly) gets LIQUID_LO + LIQUID_HI + VAPOR + SUPER + 3 NC = 7
+// regions; CO2 (no anomaly) gets LIQUID + VAPOR + SUPER + 3 NC = 6.  This
+// is the structural guard that the anomaly split actually happens —
+// without it, a single LIQUID region would straddle the density-maximum
+// hairpin and the SVD couldn't represent the resulting discontinuity.
 TEST_CASE("dt_subcritical splits LIQUID at the water density anomaly", "[SBTL][SVDSBTL][dt][anomaly]") {
-    SECTION("water emits 4 regions (LIQUID split into LO + HI)") {
+    SECTION("water emits 7 regions (LIQUID split LO + HI, + 3 NC)") {
         auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
         auto spec = CoolProp::sbtl::presets::dt_subcritical(*heos);
-        REQUIRE(spec.regions.size() == 4);
+        REQUIRE(spec.regions.size() == 7);
         REQUIRE(spec.input_pair == CoolProp::DmassT_INPUTS);
     }
-    SECTION("CO2 emits 3 regions (single LIQUID)") {
+    SECTION("CO2 emits 6 regions (single LIQUID, + 3 NC)") {
         auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CarbonDioxide"));
         auto spec = CoolProp::sbtl::presets::dt_subcritical(*heos);
-        REQUIRE(spec.regions.size() == 3);
+        REQUIRE(spec.regions.size() == 6);
     }
 }
 

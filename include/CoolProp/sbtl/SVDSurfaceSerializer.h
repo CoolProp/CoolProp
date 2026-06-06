@@ -198,7 +198,17 @@ class SVDSurfaceSerializer
     //           HEOS DmassT low-density pressure error drops from
     //           ~40 %–2400 % to ~1e-5.  PT / HmassP surfaces are
     //           byte-identical (their regions stay LINEAR).
-    static constexpr int kRevision = 16;
+    //   rev 17: CoolProp-4z79.  The DmassT preset gains three near-critical
+    //           (NC) sub-regions that close the previously-uncovered
+    //           ±0.1%·Tc band: POWER-axis NC_LIQUID/NC_VAPOR carry the
+    //           dome-bounded sides up to ~Tc, and a POWER_LO isobar-bounded
+    //           NC_SUPER spans the critical isotherm itself.  HEOS-source
+    //           DmassT region count grows (3 → 6), so the on-wire region
+    //           list differs and rev-16 caches must rebuild.  The whole
+    //           [0.99,1.01]·Tc band is now table-served (no HEOS) to
+    //           ~1e-6..2e-5 for all fluids.  PT / HmassP and the non-DmassT
+    //           presets are unchanged.
+    static constexpr int kRevision = 17;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

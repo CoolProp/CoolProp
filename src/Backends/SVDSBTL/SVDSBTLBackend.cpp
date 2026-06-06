@@ -1142,6 +1142,86 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
         }
     }
 
+    // --- DT dome PRE-CHECK (must run BEFORE the atlas resolve).  For
+    // DmassT / DmolarT a point with T < T_critical and rho between the
+    // saturation densities (rho_sat,V(T) < D < rho_sat,L(T)) is two-phase.
+    // The dome-bounded LIQUID/VAPOR/NC regions stop at the sat boundary,
+    // but the isobar-bounded NC_SUPER region (CoolProp-4z79) dips below Tc
+    // and its AABB SPANS the dome, so without this pre-check a dome point
+    // would atlas-resolve to NC_SUPER and be read as single-phase off an
+    // interpolated-across-the-dome surface value instead of P_sat(T).
+    // P is well-defined (= P_sat(T)); Q comes from the lever rule on
+    // specific volume (NOT density — v is the additive quantity).  Routes
+    // through the same DomeBlend machinery the HmassP path uses;
+    // evaluate_property_ reads p / Q / blended caloric props off the
+    // endpoints. ---
+    if (input_pair == CoolProp::DmassT_INPUTS || input_pair == CoolProp::DmolarT_INPUTS) {
+        const double T_query = *pt.T;
+        const double M = calc_molar_mass();
+        const double rho_mol_query = *pt.rho_mass / M;
+        try {
+            auto src = source_reference_();
+            if (T_query < src->T_critical()) {
+                // rho_sat endpoints at T.  sat_eval_('D', ...) returns
+                // MOLAR density (mol/m^3) — same basis as the HmassP
+                // dome path's rhoL_mol / rhoV_mol.  Mirror that path's
+                // source-QT fallback: when the SA/surrogate sat provider
+                // can't supply an endpoint, take it from the source QT
+                // flash so DT two-phase queries still resolve on sources
+                // without a usable saturation provider.
+                double rhoL_mol = sat_eval_(T_query, 'D', 0);
+                double rhoV_mol = sat_eval_(T_query, 'D', 1);
+                if (!std::isfinite(rhoL_mol) || !std::isfinite(rhoV_mol)) {
+                    src->update(CoolProp::QT_INPUTS, 0.0, T_query);
+                    rhoL_mol = src->rhomolar();
+                    src->update(CoolProp::QT_INPUTS, 1.0, T_query);
+                    rhoV_mol = src->rhomolar();
+                }
+                if (std::isfinite(rhoL_mol) && std::isfinite(rhoV_mol) && rhoV_mol < rho_mol_query && rho_mol_query < rhoL_mol) {
+                    // Two-phase.  P_sat(T) from the source QT flash.
+                    src->update(CoolProp::QT_INPUTS, 0.0, T_query);
+                    const double p_sat = src->p();
+                    pt.kind = PointEvaluation::Kind::DomeBlend;
+                    pt.status = CoolProp::fast_evaluate_ok;
+                    pt.p = p_sat;
+                    pt.T = T_query;
+                    pt.T_sat = T_query;
+                    // Lever rule on specific volume (the additive
+                    // quantity): v = (1-Q)*vL + Q*vV.  Q is basis-
+                    // independent, so molar volumes give the same Q.
+                    const double v = 1.0 / rho_mol_query;
+                    const double vL = 1.0 / rhoL_mol;
+                    const double vV = 1.0 / rhoV_mol;
+                    pt.Q = (v - vL) / (vV - vL);
+                    // sat_eval_('H', ...) is already molar — don't scale.
+                    // Same source-QT fallback as the rho endpoints above.
+                    double hL_mol = sat_eval_(T_query, 'H', 0);
+                    double hV_mol = sat_eval_(T_query, 'H', 1);
+                    if (!std::isfinite(hL_mol) || !std::isfinite(hV_mol)) {
+                        src->update(CoolProp::QT_INPUTS, 0.0, T_query);
+                        hL_mol = src->hmolar();
+                        src->update(CoolProp::QT_INPUTS, 1.0, T_query);
+                        hV_mol = src->hmolar();
+                    }
+                    pt.hL_mol = hL_mol;
+                    pt.hV_mol = hV_mol;
+                    pt.rhoL_mol = rhoL_mol;
+                    pt.rhoV_mol = rhoV_mol;
+                    // Fill h_mass from the lever rule so iHmass/iHmolar
+                    // resolve via the top-level short-circuit (the
+                    // DomeBlend switch has no enthalpy arm — it
+                    // delegates to pt.h_mass, which the HmassP dome
+                    // path sets at resolve time and we must mirror).
+                    pt.h_mass = ((1.0 - pt.Q) * *pt.hL_mol + pt.Q * *pt.hV_mol) / M;
+                    return pt;
+                }
+            }
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+            // Sat endpoints / source unavailable — fall through to the
+            // atlas resolve (best available; a true dome point is rare).
+        }
+    }
+
     // Atlas resolve.  region_idx < 0 means the point landed inside
     // the saturation dome (for HmassP) or outside every region's bbox
     // (for PT or genuinely OOB HmassP).
@@ -1235,81 +1315,6 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
         }
     }
 
-    // --- DT dome routing.  For DmassT / DmolarT an atlas miss inside
-    // the subcritical envelope means the (D, T) point landed in the
-    // two-phase dome (rho_sat,V(T) < D < rho_sat,L(T)).  The LIQUID /
-    // VAPOR sub-regions stop at the dome boundary by construction, so
-    // any miss with T < T_critical and D between the sat densities is
-    // two-phase.  P is well-defined (= P_sat(T)); Q comes from the
-    // lever rule on specific volume (NOT density — v is the additive
-    // quantity).  Routes through the same DomeBlend machinery the
-    // HmassP path uses; evaluate_property_ reads p / Q / blended
-    // caloric props off the endpoints. ---
-    if (input_pair == CoolProp::DmassT_INPUTS || input_pair == CoolProp::DmolarT_INPUTS) {
-        const double T_query = *pt.T;
-        const double M = calc_molar_mass();
-        const double rho_mol_query = *pt.rho_mass / M;
-        try {
-            auto src = source_reference_();
-            if (T_query < src->T_critical()) {
-                // rho_sat endpoints at T.  sat_eval_('D', ...) returns
-                // MOLAR density (mol/m^3) — same basis as the HmassP
-                // dome path's rhoL_mol / rhoV_mol.  Mirror that path's
-                // source-QT fallback: when the SA/surrogate sat provider
-                // can't supply an endpoint, take it from the source QT
-                // flash so DT two-phase queries still resolve on sources
-                // without a usable saturation provider.
-                double rhoL_mol = sat_eval_(T_query, 'D', 0);
-                double rhoV_mol = sat_eval_(T_query, 'D', 1);
-                if (!std::isfinite(rhoL_mol) || !std::isfinite(rhoV_mol)) {
-                    src->update(CoolProp::QT_INPUTS, 0.0, T_query);
-                    rhoL_mol = src->rhomolar();
-                    src->update(CoolProp::QT_INPUTS, 1.0, T_query);
-                    rhoV_mol = src->rhomolar();
-                }
-                if (std::isfinite(rhoL_mol) && std::isfinite(rhoV_mol) && rhoV_mol < rho_mol_query && rho_mol_query < rhoL_mol) {
-                    // Two-phase.  P_sat(T) from the source QT flash.
-                    src->update(CoolProp::QT_INPUTS, 0.0, T_query);
-                    const double p_sat = src->p();
-                    pt.kind = PointEvaluation::Kind::DomeBlend;
-                    pt.status = CoolProp::fast_evaluate_ok;
-                    pt.p = p_sat;
-                    pt.T = T_query;
-                    pt.T_sat = T_query;
-                    // Lever rule on specific volume (the additive
-                    // quantity): v = (1-Q)*vL + Q*vV.  Q is basis-
-                    // independent, so molar volumes give the same Q.
-                    const double v = 1.0 / rho_mol_query;
-                    const double vL = 1.0 / rhoL_mol;
-                    const double vV = 1.0 / rhoV_mol;
-                    pt.Q = (v - vL) / (vV - vL);
-                    // sat_eval_('H', ...) is already molar — don't scale.
-                    // Same source-QT fallback as the rho endpoints above.
-                    double hL_mol = sat_eval_(T_query, 'H', 0);
-                    double hV_mol = sat_eval_(T_query, 'H', 1);
-                    if (!std::isfinite(hL_mol) || !std::isfinite(hV_mol)) {
-                        src->update(CoolProp::QT_INPUTS, 0.0, T_query);
-                        hL_mol = src->hmolar();
-                        src->update(CoolProp::QT_INPUTS, 1.0, T_query);
-                        hV_mol = src->hmolar();
-                    }
-                    pt.hL_mol = hL_mol;
-                    pt.hV_mol = hV_mol;
-                    pt.rhoL_mol = rhoL_mol;
-                    pt.rhoV_mol = rhoV_mol;
-                    // Fill h_mass from the lever rule so iHmass/iHmolar
-                    // resolve via the top-level short-circuit (the
-                    // DomeBlend switch has no enthalpy arm — it
-                    // delegates to pt.h_mass, which the HmassP dome
-                    // path sets at resolve time and we must mirror).
-                    pt.h_mass = ((1.0 - pt.Q) * *pt.hL_mol + pt.Q * *pt.hV_mol) / M;
-                    return pt;
-                }
-            }
-        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
-            // Sat endpoints / source unavailable — fall through to OOB.
-        }
-    }
     pt.kind = PointEvaluation::Kind::OutOfRange;
     pt.status = CoolProp::fast_evaluate_out_of_range;
     return pt;

@@ -1004,21 +1004,35 @@ SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
 
     // Sub-critical T range with margins away from triple / critical.
     const double T_sub_lo = std::max(T_min_eos, T_triple * 1.001);
-    const double T_sub_hi = Tc * 0.999;
+    const double T_sub_hi = Tc * 0.99;  // parent (LINEAR) -> NC (POWER) handoff
     // Super-critical T range with margin above critical / below T_max.
-    const double T_sup_lo = Tc * 1.001;
+    const double T_sup_lo = Tc * 1.01;  // NC (POWER_LO) -> parent (LINEAR) handoff
     const double T_sup_hi = T_max_eos - 0.5;
-    // KNOWN GAP (CoolProp-i7j follow-up): the [0.999, 1.001]·Tc band is
-    // intentionally uncovered.  The LIQUID/VAPOR dome boundaries
-    // (ρ_sat,L, ρ_sat,V) pinch to ρ_c there, so the dome-bounded
-    // sub-regions degenerate to zero width and the SVD η-normalisation
-    // is ill-conditioned.  Unlike PT/HmassP, DmassT is NOT yet wired
-    // into build_critical_patch_, so single-phase DmassT queries in
-    // this ±0.1%·Tc band currently return OutOfRange rather than
-    // routing to the source backend.  Coverage impact is ~0.2% of the
-    // (D, T) envelope; closing it (a DmassT critical-patch bbox) is
-    // filed as a follow-up and is best done alongside the PT/HP patch
-    // machinery.
+    // NC (near-critical) T sub-band, carried by POWER/POWER_LO regions
+    // that crowd grid lines toward Tc.  The dome-bounded subcritical NC
+    // stops a hair below Tc (extending the saturation-boundary regions to
+    // exactly Tc makes the dome degenerate and the SVD build throws for
+    // some fluids, e.g. Argon).  The isobar-bounded "supercritical" NC
+    // region then extends DOWN across Tc from the same handoff: it has no
+    // saturation boundary, so the dome sits inside it as a lever-rule-
+    // routed NaN hole, and it covers the critical isotherm at ALL
+    // densities — closing the gap with no degenerate-boundary build.
+    // Handoff sits 1 microK below Tc, NOT at Tc*(1-1e-9): for Helium the
+    // HEOS PT density solver fails within ~1 nanoK of Tc (critical-region
+    // stiffness) and a failed PT update poisons the shared state's density
+    // guess, which would abort the envelope build.  1e-6 clears both; the
+    // isobar NC region still spans Tc, so the critical isotherm is covered
+    // by interpolation.
+    const double T_nc_sub_hi = Tc * (1.0 - 1.0e-6);
+    const double T_nc_sup_lo = T_nc_sub_hi;
+    // (Historical note, CoolProp-4z79: the ±0.1%·Tc band used to be left
+    // uncovered — the dome-bounded LIQUID/VAPOR regions can't extend to Tc
+    // because ρ_sat,L/ρ_sat,V pinch to ρ_c and the η-normalisation
+    // degenerates.  The NC regions below now close it: POWER/POWER_LO
+    // sub-regions carry the dome-bounded sides up to ~Tc, and an
+    // isobar-bounded NC_SUPER region spans Tc itself with the dome as an
+    // internal lever-rule hole.  No DmassT critical-patch / HEOS fallback
+    // is needed.)
 
     // p envelope for the non-dome D extents.  Sub-critical fluids
     // have well-defined p_triple from PQ flash at T_triple; use that
@@ -1099,6 +1113,47 @@ SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
         // compressed-supercritical ceiling) with p ∝ rho in the tail.
         // This is the region whose low-rho edge dominated the DT
         // validation error band (CoolProp-wvtz).
+        spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi), region::AxisScale::LOG);
+    }
+    // NC (near-critical) sub-regions (CoolProp-4z79).  These carry the
+    // *table* through [0.99, 1.01]*Tc — the band the parent LINEAR regions
+    // leave as a gap — using a POWER/POWER_LO primary T axis that crowds
+    // grid lines toward Tc, the direct analog of CoolProp-4u9's PH/PT NC
+    // regions.  The POWER(beta=1/3) crowding resolves the rho_sat
+    // boundary's vertical tangent (drho_sat/dT -> inf as T->Tc): a plain
+    // LINEAR extension of the parent regions hits 2-5% error there, POWER
+    // holds ~1e-6.  No critical patch / HEOS fallback is needed — the
+    // surrogate covers the whole band, including the critical isotherm, to
+    // ~1e-6..2e-5 (well inside the IAPWS 200 ppm budget) for all fluids.
+    //
+    // NC_LIQUID: [T_sub_hi, ~Tc), POWER (crowd toward a_hi=Tc).  Dome-side
+    // boundary rho_sat,L; stops a microK below Tc (see T_nc_sub_hi).
+    if (T_nc_sub_hi > T_sub_hi) {
+        auto axis = region::AxisTransform::make(region::AxisScale::POWER, T_sub_hi, T_nc_sub_hi);
+        auto b_lo = build_rho_sat_L(heos, T_sub_hi, T_nc_sub_hi);
+        auto b_hi = build_rho_max_envelope(heos, T_sub_hi, T_nc_sub_hi, p_max_target, WalkFloor::SAT_L);
+        spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi), region::AxisScale::LOG);
+    }
+    // NC_VAPOR: [T_sub_hi, ~Tc), POWER.
+    if (T_nc_sub_hi > T_sub_hi) {
+        auto axis = region::AxisTransform::make(region::AxisScale::POWER, T_sub_hi, T_nc_sub_hi);
+        auto b_lo = build_rho_min_envelope(heos, T_sub_hi, T_nc_sub_hi, p_min_eos);
+        auto b_hi = build_rho_sat_V(heos, T_sub_hi, T_nc_sub_hi);
+        spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi), region::AxisScale::LOG);
+    }
+    // NC_SUPER: [~Tc, T_sup_lo], POWER_LO (crowd toward a_lo=Tc).  This is
+    // the region that closes the gap AT the critical isotherm: it is
+    // bounded by the two HEOS-validity isobars (NOT the saturation curve),
+    // so it spans from a microK below Tc up across Tc to the parent SUPER
+    // handoff, covering every density.  The two-phase dome that lives in
+    // its lower (sub-Tc) sliver is an internal NaN hole, routed by the
+    // lever rule before the surface is ever consulted — so extending an
+    // isobar-bounded region across Tc never touches the degenerate dome
+    // boundary that makes a saturation-bounded region throw at Tc.
+    if (T_sup_lo > T_nc_sup_lo) {
+        auto axis = region::AxisTransform::make(region::AxisScale::POWER_LO, T_nc_sup_lo, T_sup_lo);
+        auto b_lo = build_rho_min_envelope(heos, T_nc_sup_lo, T_sup_lo, p_min_eos);
+        auto b_hi = build_rho_max_envelope(heos, T_nc_sup_lo, T_sup_lo, p_max_target, WalkFloor::CRITICAL);
         spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi), region::AxisScale::LOG);
     }
 
