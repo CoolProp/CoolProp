@@ -1,18 +1,23 @@
 # distutils: language = c++
 # cython: language_level=3
 """
-Frozen `State` compat shim (full surface — increment 2).
+Frozen ``State`` compatibility shim for the nanobind-based CoolProp.
 
-PDSim cimports this instead of CoolProp's old Cython `State`.  Every call is
-forwarded through the `CoolProp._capi` PyCapsule the (nanobind) core exports;
-there is no Cython AbstractState anywhere.  Link-free: the function table is
-fetched from the already-imported core at import time.
+PDSim (and other downstream code) ``cimport``/``import`` this module exactly as
+they did the legacy Cython ``State``.  Every call is forwarded through the
+``CoolProp._capi`` PyCapsule that the nanobind core exports; there is no Cython
+``AbstractState`` anywhere.  The shim is link-free -- the C-ABI function table is
+fetched from the already-imported core at import time -- so it contains no
+CoolProp C++ and does not duplicate the core in the wheel.
 
-Unit convention is the legacy one pinned by dev/pdsim_cimport_contract:
-  - State getters return kPa / kJ (get_p = p()/1000, get_h/u/s/cp/cp0/cv = …/1000,
-    get_dpdT = first_partial_deriv(iP,iT,iDmolar)/1000); get_rho / get_speed_sound
-    / get_T are SI; cached p_ is kPa, rho_/T_ are SI.
-  - Props() and everything via .pAS are SI.
+Unit convention (the legacy one, pinned by ``dev/state_capsule`` parity test):
+  - the kPa/kJ getters: ``get_p`` = p/1000, ``get_h``/``u``/``s``/``cp``/``cp0``/
+    ``cv`` = .../1000, ``get_dpdT`` = first_partial_deriv(iP,iT,iDmolar)/1000;
+  - ``get_MM`` returns g/mol and ``get_cond`` returns kW/m/K (both 1000x the SI
+    value the core reports);
+  - ``get_rho``/``get_T``/``get_visc``/``get_speed_sound`` are SI; cached ``p_``
+    is kPa, ``T_``/``rho_`` are SI;
+  - ``Props()`` and everything reached via ``.pAS`` are SI.
 """
 from cpython.pycapsule cimport PyCapsule_GetPointer
 
@@ -63,19 +68,22 @@ cdef inline void _raise_if_error() except *:
         raise ValueError("CoolProp: " + e.decode("utf-8", "replace"))
 
 
-cdef inline double _ko(void* h, long key) except *:
-    cdef double v = _C.keyed_output(h, key)
+cdef inline double _keyed_output(void* handle, long key) except *:
+    # One keyed output (SI), with the C++ error re-raised as Python.
+    cdef double v = _C.keyed_output(handle, key)
     _raise_if_error()
     return v
 
 
-cdef inline void _upd(void* h, long pair, double v1, double v2) except *:
-    _C.update(h, pair, v1, v2)
+cdef inline void _update(void* handle, long input_pair, double value1, double value2) except *:
+    # Update the handle's state from an (input_pair, value1, value2) triple.
+    _C.update(handle, input_pair, value1, value2)
     _raise_if_error()
 
 
-cdef inline double _fpd(void* h, long Of, long Wrt, long Constant) except *:
-    cdef double v = _C.first_partial_deriv(h, Of, Wrt, Constant)
+cdef inline double _first_partial_deriv(void* handle, long Of, long Wrt, long Constant) except *:
+    # First partial derivative d(Of)/d(Wrt) at constant `Constant` (SI).
+    cdef double v = _C.first_partial_deriv(handle, Of, Wrt, Constant)
     _raise_if_error()
     return v
 
@@ -97,29 +105,54 @@ cdef tuple _resolve_pair(dict params):
 
 
 cdef class _AbstractStateView:
-    # Non-owning view of the same handle: the AbstractState methods PDSim
-    # reaches through `State.pAS` (SI units, like the real AbstractState).
+    """Non-owning view of the same ``AbstractState`` handle as its owning ``State``.
+
+    Reached as ``State.pAS``; mirrors the subset of the real ``AbstractState``
+    that downstream code uses, and (unlike the ``State`` getters) returns plain
+    SI units.  It does not own the handle, so it has no destructor.
+    """
     cpdef double keyed_output(self, long key) except *:
-        return _ko(self.handle,key)
+        """Value of CoolProp parameter ``key`` for the current state [SI]."""
+        return _keyed_output(self.handle, key)
     cpdef double rhomass(self) except *:
-        return _ko(self.handle,_iDmass)
+        """Mass density [kg/m^3, SI]."""
+        return _keyed_output(self.handle, _iDmass)
     cpdef double cpmass(self) except *:
-        return _ko(self.handle,_iCpmass)
+        """Mass constant-pressure specific heat [J/kg/K, SI]."""
+        return _keyed_output(self.handle, _iCpmass)
     cpdef double cvmass(self) except *:
-        return _ko(self.handle,_iCvmass)
+        """Mass constant-volume specific heat [J/kg/K, SI]."""
+        return _keyed_output(self.handle, _iCvmass)
     cpdef double T(self) except *:
-        return _ko(self.handle,_iT)
+        """Temperature [K, SI]."""
+        return _keyed_output(self.handle, _iT)
     cpdef double p(self) except *:
-        return _ko(self.handle,_iP)
+        """Pressure [Pa, SI]."""
+        return _keyed_output(self.handle, _iP)
     cpdef update(self, long input_pair, double value1, double value2):
-        _upd(self.handle,input_pair, value1, value2)
+        """Update the underlying state from an SI ``input_pair`` and two values."""
+        _update(self.handle, input_pair, value1, value2)
     cpdef double first_partial_deriv(self, long Of, long Wrt, long Constant) except *:
-        return _fpd(self.handle,Of, Wrt, Constant)
+        """First partial derivative d(Of)/d(Wrt) at constant ``Constant`` [SI]."""
+        return _first_partial_deriv(self.handle, Of, Wrt, Constant)
     cpdef fluid_names(self):
+        """List of the constituent fluid names."""
         return self.fluids.split('&')
 
 
 cdef class State:
+    """Drop-in replacement for the legacy Cython ``CoolProp.State.State``.
+
+    Holds an ``AbstractState`` (created for backend ``"HEOS"``) via the C-ABI
+    capsule and exposes the legacy kPa/kJ getter surface plus the ``.pAS`` view
+    (SI).  Constructed from a fluid name and an input dict, e.g.
+    ``State("Water", {"T": 300, "D": 1000})`` or ``State("R134a", {"T": 300, "P": 500})``
+    (pressures in kPa).  See the module docstring for the full unit convention.
+
+    Cached attributes (refreshed on every update): ``T_`` [K], ``p_`` [kPa],
+    ``rho_`` [kg/m^3]; ``Fluid`` (bytes), ``phase`` (bytes); ``pAS`` -- the
+    :class:`_AbstractStateView` over the same handle.
+    """
     def __cinit__(self, object Fluid, dict params):
         self._fluids = Fluid if isinstance(Fluid, str) else Fluid.decode()
         self.handle = _C.make(b"HEOS", self._fluids.encode())
@@ -138,91 +171,132 @@ cdef class State:
             _C.destroy(self.handle)
 
     cdef _refresh(self):
-        self.T_ = _ko(self.handle,_iT)             # K
-        self.p_ = _ko(self.handle,_iP) / 1000.0    # kPa
-        self.rho_ = _ko(self.handle,_iDmass)       # kg/m^3 (SI)
+        # Refresh the cached T_/p_/rho_ after a state change.
+        self.T_ = _keyed_output(self.handle, _iT)             # K
+        self.p_ = _keyed_output(self.handle, _iP) / 1000.0    # kPa
+        self.rho_ = _keyed_output(self.handle, _iDmass)       # kg/m^3 (SI)
 
     cpdef update(self, dict params):
+        """Update the state from a legacy input dict.
+
+        ``params`` holds exactly two of T/D/P/Q/H, e.g. ``{'T': K, 'D': kg/m^3}``,
+        ``{'T': K, 'P': kPa}``, ``{'T': K, 'Q': -}``, ``{'P': kPa, 'Q': -}`` or
+        ``{'P': kPa, 'H': kJ/kg}`` (P/H given in the legacy kPa/kJ units).
+        """
         cdef long pair
         cdef double v1, v2
         pair, v1, v2 = _resolve_pair(params)
-        _upd(self.handle,pair, v1, v2)
+        _update(self.handle, pair, v1, v2)
         self._refresh()
 
     cpdef update_Trho(self, double T, double rho):
-        _upd(self.handle, _DmassT, rho, T)
+        """Update from temperature ``T`` [K] and mass density ``rho`` [kg/m^3]."""
+        _update(self.handle, _DmassT, rho, T)
         self._refresh()
 
-    cpdef update_ph(self, double p, double h):  # p [kPa], h [kJ/kg]
-        _upd(self.handle,_HmassP, h * 1000.0, p * 1000.0)
+    cpdef update_ph(self, double p, double h):
+        """Update from pressure ``p`` [kPa] and mass enthalpy ``h`` [kJ/kg]."""
+        _update(self.handle, _HmassP, h * 1000.0, p * 1000.0)
         self._refresh()
 
     cpdef State copy(self):
+        """Return an independent ``State`` for the same fluid at this (T, rho)."""
         return State(self._fluids, {'T': self.T_, 'D': self.rho_})
 
     cpdef double Props(self, long key) except *:
-        return _ko(self.handle,key)                # SI
+        """Raw keyed output for CoolProp parameter ``key`` [SI]."""
+        return _keyed_output(self.handle, key)
 
     cpdef double get_T(self) except *:
-        return _ko(self.handle,_iT)                # K
+        """Temperature [K]."""
+        return _keyed_output(self.handle, _iT)
     cpdef double get_p(self) except *:
-        return _ko(self.handle,_iP) / 1000.0       # kPa
+        """Pressure [kPa]."""
+        return _keyed_output(self.handle, _iP) / 1000.0
     cpdef double get_h(self) except *:
-        return _ko(self.handle,_iHmass) / 1000.0   # kJ/kg
+        """Mass enthalpy [kJ/kg]."""
+        return _keyed_output(self.handle, _iHmass) / 1000.0
     cpdef double get_rho(self) except *:
-        return _ko(self.handle,_iDmass)            # kg/m^3 (SI)
+        """Mass density [kg/m^3]."""
+        return _keyed_output(self.handle, _iDmass)
     cpdef double get_s(self) except *:
-        return _ko(self.handle,_iSmass) / 1000.0
+        """Mass entropy [kJ/kg/K]."""
+        return _keyed_output(self.handle, _iSmass) / 1000.0
     cpdef double get_u(self) except *:
-        return _ko(self.handle,_iUmass) / 1000.0
+        """Mass internal energy [kJ/kg]."""
+        return _keyed_output(self.handle, _iUmass) / 1000.0
     cpdef double get_cp(self) except *:
-        return _ko(self.handle,_iCpmass) / 1000.0
+        """Mass constant-pressure specific heat [kJ/kg/K]."""
+        return _keyed_output(self.handle, _iCpmass) / 1000.0
     cpdef double get_cp0(self) except *:
-        return _ko(self.handle,_iCp0mass) / 1000.0
+        """Mass ideal-gas specific heat [kJ/kg/K]."""
+        return _keyed_output(self.handle, _iCp0mass) / 1000.0
     cpdef double get_cv(self) except *:
-        return _ko(self.handle,_iCvmass) / 1000.0
+        """Mass constant-volume specific heat [kJ/kg/K]."""
+        return _keyed_output(self.handle, _iCvmass) / 1000.0
     cpdef double get_MM(self) except *:
-        return _ko(self.handle,_imolar_mass) * 1000.0   # g/mol (legacy State convention; core is kg/mol SI)
+        """Molar mass [g/mol] (legacy convention; the core reports kg/mol)."""
+        return _keyed_output(self.handle, _imolar_mass) * 1000.0
     cpdef double get_dpdT(self) except *:
-        return _fpd(self.handle,_iP, _iT, _iDmolar) / 1000.0
+        """(dp/dT) at constant density [kPa/K]."""
+        return _first_partial_deriv(self.handle, _iP, _iT, _iDmolar) / 1000.0
     cpdef double get_visc(self) except *:
-        return _ko(self.handle,_iviscosity)
+        """Viscosity [Pa.s]."""
+        return _keyed_output(self.handle, _iviscosity)
     cpdef double get_cond(self) except *:
-        return _ko(self.handle,_iconductivity) / 1000.0   # kW/m/K (legacy State convention; core is W/m/K SI)
+        """Thermal conductivity [kW/m/K] (legacy convention; the core reports W/m/K)."""
+        return _keyed_output(self.handle, _iconductivity) / 1000.0
     cpdef double get_speed_sound(self) except *:
-        return _ko(self.handle,_ispeed_sound)      # m/s (SI)
+        """Speed of sound [m/s]."""
+        return _keyed_output(self.handle, _ispeed_sound)
     cpdef double get_Q(self) except *:
-        return _ko(self.handle,_iQ)
+        """Vapor quality [-]."""
+        return _keyed_output(self.handle, _iQ)
 
-    # Python-level property accessors (the legacy State exposes these in
-    # addition to the get_* methods; PDSim's .py code uses state.p, state.T, ...)
+    # Python-level property accessors (the legacy State exposes these alongside
+    # the get_* methods; PDSim's .py code uses state.p, state.T, ...).
     property Q:
+        """Vapor quality [-]."""
         def __get__(self): return self.get_Q()
     property MM:
+        """Molar mass [g/mol]."""
         def __get__(self): return self.get_MM()
     property rho:
+        """Mass density [kg/m^3]."""
         def __get__(self): return self.get_rho()
     property p:
+        """Pressure [kPa]."""
         def __get__(self): return self.get_p()
     property T:
+        """Temperature [K]."""
         def __get__(self): return self.get_T()
     property h:
+        """Mass enthalpy [kJ/kg]."""
         def __get__(self): return self.get_h()
     property u:
+        """Mass internal energy [kJ/kg]."""
         def __get__(self): return self.get_u()
     property s:
+        """Mass entropy [kJ/kg/K]."""
         def __get__(self): return self.get_s()
     property cp0:
+        """Mass ideal-gas specific heat [kJ/kg/K]."""
         def __get__(self): return self.get_cp0()
     property cp:
+        """Mass constant-pressure specific heat [kJ/kg/K]."""
         def __get__(self): return self.get_cp()
     property cv:
+        """Mass constant-volume specific heat [kJ/kg/K]."""
         def __get__(self): return self.get_cv()
     property visc:
+        """Viscosity [Pa.s]."""
         def __get__(self): return self.get_visc()
     property k:
+        """Thermal conductivity [kW/m/K]."""
         def __get__(self): return self.get_cond()
     property dpdT:
+        """(dp/dT) at constant density [kPa/K]."""
         def __get__(self): return self.get_dpdT()
     property speed_sound:
+        """Speed of sound [m/s]."""
         def __get__(self): return self.get_speed_sound()
