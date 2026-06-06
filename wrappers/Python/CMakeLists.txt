@@ -40,8 +40,7 @@ file(GLOB MIXTURE_JSON_FILES "${ROOT_DIR}/dev/mixtures/*.json")
 # won't unnecessarily regenerate files
 add_custom_command(
     OUTPUT
-        "${ROOT_DIR}/include/all_fluids_JSON.h"
-        "${ROOT_DIR}/include/all_fluids_JSON_z.h"
+        "${ROOT_DIR}/include/all_fluids_CBOR.h"
         "${ROOT_DIR}/include/cpversion.h"
         "${ROOT_DIR}/include/gitrevision.h"
     COMMAND ${Python_EXECUTABLE} "${ROOT_DIR}/dev/generate_headers.py"
@@ -61,8 +60,7 @@ add_custom_command(
 # Create a custom target that depends on generated headers
 add_custom_target(generate_headers_target
     DEPENDS
-        "${ROOT_DIR}/include/all_fluids_JSON.h"
-        "${ROOT_DIR}/include/all_fluids_JSON_z.h"
+        "${ROOT_DIR}/include/all_fluids_CBOR.h"
         "${ROOT_DIR}/include/cpversion.h"
         "${ROOT_DIR}/include/gitrevision.h"
 )
@@ -115,6 +113,7 @@ set(COOLPROP_INCLUDE_DIRS
     ${boost_headers_SOURCE_DIR}
     ${ROOT_DIR}/externals/incbin
     ${nlohmann_json_SOURCE_DIR}/include
+    ${valijson_SOURCE_DIR}/include
     ${ROOT_DIR}/externals/miniz-3.1.1
     ${msgpack-c_SOURCE_DIR}/include
     ${rapidjson_SOURCE_DIR}/include

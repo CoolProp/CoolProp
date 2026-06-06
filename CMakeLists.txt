@@ -632,7 +632,7 @@ if(COOLPROP_OBJECT_LIBRARY
             DESTINATION static_library/include FILES_MATCHING PATTERN "*.h")
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
             DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
-            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE
+            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
             PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
   elseif(COOLPROP_SHARED_LIBRARY)
     list(APPEND APP_SOURCES
@@ -669,7 +669,7 @@ if(COOLPROP_OBJECT_LIBRARY
             DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h")
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
             DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
-            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE
+            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
             PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
     set_property(
       TARGET ${LIB_NAME}
@@ -858,7 +858,7 @@ if(COOLPROP_DEBIAN_PACKAGE)
           DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h")
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
           DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
-          PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE
+          PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
           PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
 endif()
 
@@ -2176,6 +2176,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-TermCacheProfile.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-JSONHelpers.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CBOR.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
@@ -2183,6 +2185,7 @@ if(COOLPROP_CATCH_MODULE)
 
   target_link_libraries(CatchTestRunner PRIVATE Catch2::Catch2WithMain)
   target_compile_definitions(CatchTestRunner PRIVATE ENABLE_CATCH)
+  target_compile_definitions(CatchTestRunner PRIVATE COOLPROP_ALL_FLUIDS_JSON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/dev/all_fluids.json")
   target_compile_definitions(CatchTestRunner PRIVATE COOLPROP_NO_INCBIN) # Incbin is disabled for Catch2 because of a weird behavior where out-of-date zlib-compressed fluid information were being used.
   if(UNIX)
     target_link_libraries(CatchTestRunner PRIVATE ${CMAKE_DL_LIBS})

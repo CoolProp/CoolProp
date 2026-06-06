@@ -4,7 +4,8 @@
 
 #include "CoolProp/CoolPropFluid.h"
 
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/json.h"
+#include "FluidLibraryFactories.h"
 #include <memory>
 using std::shared_ptr;
 
@@ -15,6 +16,13 @@ using std::shared_ptr;
 #include "Backends/Cubics/GeneralizedCubic.h"
 #include "CoolProp/fluids/Helmholtz.h"
 
+// Visibility helper: hide internal nlohmann-taking methods from the exported ABI
+#if defined(__GNUC__) || defined(__clang__)
+#    define CP_JSON_LOCAL __attribute__((visibility("hidden")))
+#else
+#    define CP_JSON_LOCAL
+#endif
+
 namespace CoolProp {
 
 // Forward declaration of the necessary debug function to avoid including the whole header
@@ -23,8 +31,8 @@ extern int get_debug_level();
 /// A container for the fluid parameters for the CoolProp fluids
 /**
 This container holds copies of all of the fluid instances for the fluids that are loaded in CoolProp.
-New fluids can be added by passing in a rapidjson::Value instance to the add_one function, or
-a rapidjson array of fluids to the add_many function.
+New fluids can be added by passing in an nlohmann::json instance to the add_one function, or
+an nlohmann::json array of fluids to the add_many function.
 */
 class JSONFluidLibrary
 {
@@ -38,34 +46,31 @@ class JSONFluidLibrary
 
    public:
     /// Parse the contributions to the residual Helmholtz energy
-    static ResidualHelmholtzContainer parse_alphar(rapidjson::Value& jsonalphar) {
+    static ResidualHelmholtzContainer parse_alphar(const nlohmann::json& jsonalphar) {
         ResidualHelmholtzContainer alphar;
 
-        for (rapidjson::Value::ValueIterator itr = jsonalphar.Begin(); itr != jsonalphar.End(); ++itr) {
-            // A reference for code cleanness
-            rapidjson::Value& contribution = *itr;
-
+        for (const auto& contribution : jsonalphar) {
             // Get the type (required!)
-            std::string type = contribution["type"].GetString();
+            std::string type = cpjson::get_string(contribution, "type");
 
             if (!type.compare("ResidualHelmholtzPower")) {
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);
-                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
-                std::vector<CoolPropDbl> l = cpjson::get_long_double_array(contribution["l"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution.at("d"));
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
+                std::vector<CoolPropDbl> l = cpjson::get_long_double_array(contribution.at("l"));
                 assert(n.size() == d.size());
                 assert(n.size() == t.size());
                 assert(n.size() == l.size());
 
                 alphar.GenExp.add_Power(n, d, t, l);
             } else if (!type.compare("ResidualHelmholtzGaussian")) {
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);
-                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
-                std::vector<CoolPropDbl> eta = cpjson::get_long_double_array(contribution["eta"]);
-                std::vector<CoolPropDbl> epsilon = cpjson::get_long_double_array(contribution["epsilon"]);
-                std::vector<CoolPropDbl> beta = cpjson::get_long_double_array(contribution["beta"]);
-                std::vector<CoolPropDbl> gamma = cpjson::get_long_double_array(contribution["gamma"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution.at("d"));
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
+                std::vector<CoolPropDbl> eta = cpjson::get_long_double_array(contribution.at("eta"));
+                std::vector<CoolPropDbl> epsilon = cpjson::get_long_double_array(contribution.at("epsilon"));
+                std::vector<CoolPropDbl> beta = cpjson::get_long_double_array(contribution.at("beta"));
+                std::vector<CoolPropDbl> gamma = cpjson::get_long_double_array(contribution.at("gamma"));
                 assert(n.size() == d.size());
                 assert(n.size() == t.size());
                 assert(n.size() == eta.size());
@@ -74,14 +79,14 @@ class JSONFluidLibrary
                 assert(n.size() == gamma.size());
                 alphar.GenExp.add_Gaussian(n, d, t, eta, epsilon, beta, gamma);
             } else if (!type.compare("ResidualHelmholtzGaoB")) {
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
-                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);
-                std::vector<CoolPropDbl> eta = cpjson::get_long_double_array(contribution["eta"]);
-                std::vector<CoolPropDbl> beta = cpjson::get_long_double_array(contribution["beta"]);
-                std::vector<CoolPropDbl> gamma = cpjson::get_long_double_array(contribution["gamma"]);
-                std::vector<CoolPropDbl> epsilon = cpjson::get_long_double_array(contribution["epsilon"]);
-                std::vector<CoolPropDbl> b = cpjson::get_long_double_array(contribution["b"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
+                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution.at("d"));
+                std::vector<CoolPropDbl> eta = cpjson::get_long_double_array(contribution.at("eta"));
+                std::vector<CoolPropDbl> beta = cpjson::get_long_double_array(contribution.at("beta"));
+                std::vector<CoolPropDbl> gamma = cpjson::get_long_double_array(contribution.at("gamma"));
+                std::vector<CoolPropDbl> epsilon = cpjson::get_long_double_array(contribution.at("epsilon"));
+                std::vector<CoolPropDbl> b = cpjson::get_long_double_array(contribution.at("b"));
                 assert(n.size() == t.size());
                 assert(n.size() == d.size());
                 assert(n.size() == eta.size());
@@ -94,14 +99,14 @@ class JSONFluidLibrary
                 if (alphar.NonAnalytic.N > 0) {
                     throw ValueError("Cannot add ");
                 }
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> a = cpjson::get_long_double_array(contribution["a"]);
-                std::vector<CoolPropDbl> b = cpjson::get_long_double_array(contribution["b"]);
-                std::vector<CoolPropDbl> beta = cpjson::get_long_double_array(contribution["beta"]);
-                std::vector<CoolPropDbl> A = cpjson::get_long_double_array(contribution["A"]);
-                std::vector<CoolPropDbl> B = cpjson::get_long_double_array(contribution["B"]);
-                std::vector<CoolPropDbl> C = cpjson::get_long_double_array(contribution["C"]);
-                std::vector<CoolPropDbl> D = cpjson::get_long_double_array(contribution["D"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> a = cpjson::get_long_double_array(contribution.at("a"));
+                std::vector<CoolPropDbl> b = cpjson::get_long_double_array(contribution.at("b"));
+                std::vector<CoolPropDbl> beta = cpjson::get_long_double_array(contribution.at("beta"));
+                std::vector<CoolPropDbl> A = cpjson::get_long_double_array(contribution.at("A"));
+                std::vector<CoolPropDbl> B = cpjson::get_long_double_array(contribution.at("B"));
+                std::vector<CoolPropDbl> C = cpjson::get_long_double_array(contribution.at("C"));
+                std::vector<CoolPropDbl> D = cpjson::get_long_double_array(contribution.at("D"));
                 assert(n.size() == a.size());
                 assert(n.size() == b.size());
                 assert(n.size() == beta.size());
@@ -111,24 +116,24 @@ class JSONFluidLibrary
                 assert(n.size() == D.size());
                 alphar.NonAnalytic = ResidualHelmholtzNonAnalytic(n, a, b, beta, A, B, C, D);
             } else if (!type.compare("ResidualHelmholtzLemmon2005")) {
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);
-                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
-                std::vector<CoolPropDbl> l = cpjson::get_long_double_array(contribution["l"]);
-                std::vector<CoolPropDbl> m = cpjson::get_long_double_array(contribution["m"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution.at("d"));
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
+                std::vector<CoolPropDbl> l = cpjson::get_long_double_array(contribution.at("l"));
+                std::vector<CoolPropDbl> m = cpjson::get_long_double_array(contribution.at("m"));
                 assert(n.size() == d.size());
                 assert(n.size() == t.size());
                 assert(n.size() == l.size());
                 assert(n.size() == m.size());
                 alphar.GenExp.add_Lemmon2005(n, d, t, l, m);
             } else if (!type.compare("ResidualHelmholtzDoubleExponential")) {
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);
-                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
-                std::vector<CoolPropDbl> gt = cpjson::get_long_double_array(contribution["gt"]);
-                std::vector<CoolPropDbl> lt = cpjson::get_long_double_array(contribution["lt"]);
-                std::vector<CoolPropDbl> gd = cpjson::get_long_double_array(contribution["gd"]);
-                std::vector<CoolPropDbl> ld = cpjson::get_long_double_array(contribution["ld"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution.at("d"));
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
+                std::vector<CoolPropDbl> gt = cpjson::get_long_double_array(contribution.at("gt"));
+                std::vector<CoolPropDbl> lt = cpjson::get_long_double_array(contribution.at("lt"));
+                std::vector<CoolPropDbl> gd = cpjson::get_long_double_array(contribution.at("gd"));
+                std::vector<CoolPropDbl> ld = cpjson::get_long_double_array(contribution.at("ld"));
 
                 assert(n.size() == d.size());
                 assert(n.size() == t.size());
@@ -138,11 +143,11 @@ class JSONFluidLibrary
                 assert(n.size() == ld.size());
                 alphar.GenExp.add_DoubleExponential(n, d, t, gd, ld, gt, lt);
             } else if (!type.compare("ResidualHelmholtzExponential")) {
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);
-                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
-                std::vector<CoolPropDbl> g = cpjson::get_long_double_array(contribution["g"]);
-                std::vector<CoolPropDbl> l = cpjson::get_long_double_array(contribution["l"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution.at("d"));
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
+                std::vector<CoolPropDbl> g = cpjson::get_long_double_array(contribution.at("g"));
+                std::vector<CoolPropDbl> l = cpjson::get_long_double_array(contribution.at("l"));
                 assert(n.size() == d.size());
                 assert(n.size() == t.size());
                 assert(n.size() == g.size());
@@ -170,19 +175,16 @@ class JSONFluidLibrary
     };
 
     /// Parse the contributions to the ideal-gas Helmholtz energy
-    static IdealHelmholtzContainer parse_alpha0(rapidjson::Value& jsonalpha0) {
-        if (!jsonalpha0.IsArray()) {
+    static IdealHelmholtzContainer parse_alpha0(const nlohmann::json& jsonalpha0) {
+        if (!jsonalpha0.is_array()) {
             throw ValueError();
         }
 
         IdealHelmholtzContainer alpha0;
 
-        for (rapidjson::Value::ConstValueIterator itr = jsonalpha0.Begin(); itr != jsonalpha0.End(); ++itr) {
-            // A reference for code cleanness
-            const rapidjson::Value& contribution = *itr;
-
+        for (const auto& contribution : jsonalpha0) {
             // Get the type (required!)
-            std::string type = contribution["type"].GetString();
+            std::string type = cpjson::get_string(contribution, "type");
 
             if (!type.compare("IdealGasHelmholtzLead")) {
                 if (alpha0.Lead.is_enabled() == true) {
@@ -196,8 +198,8 @@ class JSONFluidLibrary
                 if (alpha0.Power.is_enabled() == true) {
                     throw ValueError("Cannot add ");
                 }
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
 
                 alpha0.Power = IdealHelmholtzPower(n, t);
             } else if (!type.compare("IdealGasHelmholtzLogTau")) {
@@ -209,11 +211,11 @@ class JSONFluidLibrary
                 alpha0.LogTau = IdealHelmholtzLogTau(a);
             } else if (!type.compare("IdealGasHelmholtzPlanckEinsteinGeneralized")) {
                 // Retrieve the values
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
 
-                std::vector<CoolPropDbl> c = cpjson::get_long_double_array(contribution["c"]);
-                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);
+                std::vector<CoolPropDbl> c = cpjson::get_long_double_array(contribution.at("c"));
+                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution.at("d"));
 
                 if (alpha0.PlanckEinstein.is_enabled() == true) {
                     alpha0.PlanckEinstein.extend(n, t, c, d);
@@ -222,8 +224,8 @@ class JSONFluidLibrary
                 }
             } else if (!type.compare("IdealGasHelmholtzPlanckEinstein")) {
                 // Retrieve the values
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
                 // Flip the sign of theta
                 for (auto& i : t) {
                     i *= -1;
@@ -238,8 +240,8 @@ class JSONFluidLibrary
                 }
             } else if (!type.compare("IdealGasHelmholtzPlanckEinsteinFunctionT")) {
                 // Retrieve the values
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> v = cpjson::get_long_double_array(contribution["v"]), theta(n.size(), 0.0);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> v = cpjson::get_long_double_array(contribution.at("v")), theta(n.size(), 0.0);
                 // Calculate theta
                 double Tc = cpjson::get_double(contribution, "Tcrit");
                 for (std::size_t i = 0; i < v.size(); ++i) {
@@ -255,8 +257,8 @@ class JSONFluidLibrary
                 }
             } else if (!type.compare("IdealGasHelmholtzGERG2004Cosh")) {
                 // Retrieve the values
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> theta = cpjson::get_long_double_array(contribution["theta"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> theta = cpjson::get_long_double_array(contribution.at("theta"));
                 double Tc = cpjson::get_double(contribution, "Tcrit");
                 if (alpha0.GERG2004Cosh.is_enabled() == true) {
                     alpha0.GERG2004Cosh.extend(n, theta);
@@ -265,8 +267,8 @@ class JSONFluidLibrary
                 }
             } else if (!type.compare("IdealGasHelmholtzGERG2004Sinh")) {
                 // Retrieve the values
-                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<CoolPropDbl> theta = cpjson::get_long_double_array(contribution["theta"]);
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
+                std::vector<CoolPropDbl> theta = cpjson::get_long_double_array(contribution.at("theta"));
                 double Tc = cpjson::get_double(contribution, "Tcrit");
                 if (alpha0.GERG2004Sinh.is_enabled() == true) {
                     alpha0.GERG2004Sinh.extend(n, theta);
@@ -285,14 +287,14 @@ class JSONFluidLibrary
                 if (alpha0.CP0PolyT.is_enabled() == true) {
                     throw ValueError("Cannot add another CP0PolyT term; join them together");
                 }
-                std::vector<CoolPropDbl> c = cpjson::get_long_double_array(contribution["c"]);
-                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
+                std::vector<CoolPropDbl> c = cpjson::get_long_double_array(contribution.at("c"));
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
                 CoolPropDbl Tc = cpjson::get_double(contribution, "Tc");
                 CoolPropDbl T0 = cpjson::get_double(contribution, "T0");
                 alpha0.CP0PolyT = IdealHelmholtzCP0PolyT(c, t, Tc, T0);
             } else if (!type.compare("IdealGasHelmholtzCP0AlyLee")) {
 
-                std::vector<CoolPropDbl> constants = cpjson::get_long_double_array(contribution["c"]);
+                std::vector<CoolPropDbl> constants = cpjson::get_long_double_array(contribution.at("c"));
                 CoolPropDbl Tc = cpjson::get_double(contribution, "Tc");
                 CoolPropDbl T0 = cpjson::get_double(contribution, "T0");
 
@@ -340,7 +342,7 @@ class JSONFluidLibrary
 
    protected:
     /// Parse the environmental parameters (ODP, GWP, etc.)
-    void parse_environmental(rapidjson::Value& json, CoolPropFluid& fluid) {
+    void parse_environmental(const nlohmann::json& json, CoolPropFluid& fluid) {
         fluid.environment.ASHRAE34 = cpjson::get_string(json, "ASHRAE34");
         fluid.environment.GWP20 = cpjson::get_double(json, "GWP20");
         fluid.environment.GWP100 = cpjson::get_double(json, "GWP100");
@@ -352,7 +354,7 @@ class JSONFluidLibrary
     }
 
     /// Parse the Equation of state JSON entry
-    void parse_EOS(rapidjson::Value& EOS_json, CoolPropFluid& fluid) {
+    void parse_EOS(const nlohmann::json& EOS_json, CoolPropFluid& fluid) {
         EquationOfState E;
         fluid.EOSVector.push_back(E);
 
@@ -367,9 +369,9 @@ class JSONFluidLibrary
         EOS.limits.Tmax = cpjson::get_double(EOS_json, "T_max");
         EOS.limits.pmax = cpjson::get_double(EOS_json, "p_max");
 
-        rapidjson::Value& reducing_state = EOS_json["STATES"]["reducing"];
-        rapidjson::Value& satminL_state = EOS_json["STATES"]["sat_min_liquid"];
-        rapidjson::Value& satminV_state = EOS_json["STATES"]["sat_min_vapor"];
+        const nlohmann::json& reducing_state = EOS_json.at("STATES").at("reducing");
+        const nlohmann::json& satminL_state = EOS_json.at("STATES").at("sat_min_liquid");
+        const nlohmann::json& satminV_state = EOS_json.at("STATES").at("sat_min_vapor");
 
         // Reducing state
         EOS.reduce.T = cpjson::get_double(reducing_state, "T");
@@ -394,24 +396,22 @@ class JSONFluidLibrary
         EOS.BibTeX_EOS = cpjson::get_string(EOS_json, "BibTeX_EOS");
         EOS.BibTeX_CP0 = cpjson::get_string(EOS_json, "BibTeX_CP0");
 
-        if (EOS_json.HasMember("SUPERANCILLARY")) {
+        if (EOS_json.contains("SUPERANCILLARY")) {
             if (getenv("COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY")) {
             } else {
-                // This is inefficient as we do JSON(rapidjson) -> string -> JSON(nlohmann)
-                // which implies two large parsing passes
-                EOS.set_superancillaries_str(cpjson::json2string(EOS_json["SUPERANCILLARY"]));
+                EOS.set_superancillaries_str(EOS_json.at("SUPERANCILLARY").dump());
             }
         }
 
-        EOS.alphar = parse_alphar(EOS_json["alphar"]);
-        EOS.alpha0 = parse_alpha0(EOS_json["alpha0"]);
+        EOS.alphar = parse_alphar(EOS_json.at("alphar"));
+        EOS.alpha0 = parse_alpha0(EOS_json.at("alpha0"));
 
         // Store the prefactor multipliying alpha0 if present
-        if (EOS_json.HasMember("alpha0_prefactor")) {
+        if (EOS_json.contains("alpha0_prefactor")) {
             EOS.alpha0.set_prefactor(cpjson::get_double(EOS_json, "alpha0_prefactor"));
         }
-        if (EOS_json["STATES"].HasMember("hs_anchor")) {
-            rapidjson::Value& hs_anchor = EOS_json["STATES"]["hs_anchor"];
+        if (EOS_json.at("STATES").contains("hs_anchor")) {
+            const nlohmann::json& hs_anchor = EOS_json.at("STATES").at("hs_anchor");
             EOS.hs_anchor.T = cpjson::get_double(hs_anchor, "T");
             EOS.hs_anchor.p = cpjson::get_double(hs_anchor, "p");
             EOS.hs_anchor.rhomolar = cpjson::get_double(hs_anchor, "rhomolar");
@@ -419,36 +419,36 @@ class JSONFluidLibrary
             EOS.hs_anchor.smolar = cpjson::get_double(hs_anchor, "smolar");
         }
 
-        if (EOS_json["STATES"].HasMember("pressure_max_sat")) {
-            rapidjson::Value& s = EOS_json["STATES"]["pressure_max_sat"];
+        if (EOS_json.at("STATES").contains("pressure_max_sat")) {
+            const nlohmann::json& s = EOS_json.at("STATES").at("pressure_max_sat");
             EOS.max_sat_p.T = cpjson::get_double(s, "T");
             EOS.max_sat_p.p = cpjson::get_double(s, "p");
             EOS.max_sat_p.rhomolar = cpjson::get_double(s, "rhomolar");
-            if (s.HasMember("hmolar")) {
+            if (s.contains("hmolar")) {
                 EOS.max_sat_p.hmolar = cpjson::get_double(s, "hmolar");
                 EOS.max_sat_p.smolar = cpjson::get_double(s, "smolar");
             }
         }
 
-        if (EOS_json["STATES"].HasMember("temperature_max_sat")) {
-            rapidjson::Value& s = EOS_json["STATES"]["temperature_max_sat"];
+        if (EOS_json.at("STATES").contains("temperature_max_sat")) {
+            const nlohmann::json& s = EOS_json.at("STATES").at("temperature_max_sat");
             EOS.max_sat_T.T = cpjson::get_double(s, "T");
             EOS.max_sat_T.p = cpjson::get_double(s, "p");
             EOS.max_sat_T.rhomolar = cpjson::get_double(s, "rhomolar");
-            if (s.HasMember("hmolar")) {
+            if (s.contains("hmolar")) {
                 EOS.max_sat_T.hmolar = cpjson::get_double(s, "hmolar");
                 EOS.max_sat_T.smolar = cpjson::get_double(s, "smolar");
             }
         }
 
-        if (EOS_json.HasMember("critical_region_splines")) {
-            rapidjson::Value& spline = EOS_json["critical_region_splines"];
+        if (EOS_json.contains("critical_region_splines")) {
+            const nlohmann::json& spline = EOS_json.at("critical_region_splines");
             EOS.critical_region_splines.T_min = cpjson::get_double(spline, "T_min");
             EOS.critical_region_splines.T_max = cpjson::get_double(spline, "T_max");
             EOS.critical_region_splines.rhomolar_min = cpjson::get_double(spline, "rhomolar_min");
             EOS.critical_region_splines.rhomolar_max = cpjson::get_double(spline, "rhomolar_max");
-            EOS.critical_region_splines.cL = cpjson::get_double_array(spline["cL"]);
-            EOS.critical_region_splines.cV = cpjson::get_double_array(spline["cV"]);
+            EOS.critical_region_splines.cL = cpjson::get_double_array(spline.at("cL"));
+            EOS.critical_region_splines.cV = cpjson::get_double_array(spline.at("cV"));
             EOS.critical_region_splines.enabled = true;
         }
 
@@ -457,15 +457,15 @@ class JSONFluidLibrary
     }
 
     /// Parse the list of possible equations of state
-    void parse_EOS_listing(rapidjson::Value& EOS_array, CoolPropFluid& fluid) {
-        for (rapidjson::Value::ValueIterator itr = EOS_array.Begin(); itr != EOS_array.End(); ++itr) {
-            parse_EOS(*itr, fluid);
+    void parse_EOS_listing(const nlohmann::json& EOS_array, CoolPropFluid& fluid) {
+        for (const auto& EOS_json : EOS_array) {
+            parse_EOS(EOS_json, fluid);
         }
     };
 
     /// Parse the transport properties
-    void parse_dilute_viscosity(rapidjson::Value& dilute, CoolPropFluid& fluid) {
-        if (dilute.HasMember("hardcoded")) {
+    void parse_dilute_viscosity(const nlohmann::json& dilute, CoolPropFluid& fluid) {
+        if (dilute.contains("hardcoded")) {
             std::string target = cpjson::get_string(dilute, "hardcoded");
             if (!target.compare("Ethane")) {
                 fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE;
@@ -489,8 +489,8 @@ class JSONFluidLibrary
             fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL;
 
             // Load up the values
-            CI.a = cpjson::get_long_double_array(dilute["a"]);
-            CI.t = cpjson::get_long_double_array(dilute["t"]);
+            CI.a = cpjson::get_long_double_array(dilute.at("a"));
+            CI.t = cpjson::get_long_double_array(dilute.at("t"));
             CI.molar_mass = cpjson::get_double(dilute, "molar_mass");
             CI.C = cpjson::get_double(dilute, "C");
         } else if (!type.compare("kinetic_theory")) {
@@ -500,16 +500,16 @@ class JSONFluidLibrary
             CoolProp::ViscosityDiluteGasPowersOfT& CI = fluid.transport.viscosity_dilute.powers_of_T;
 
             // Load up the values
-            CI.a = cpjson::get_long_double_array(dilute["a"]);
-            CI.t = cpjson::get_long_double_array(dilute["t"]);
+            CI.a = cpjson::get_long_double_array(dilute.at("a"));
+            CI.t = cpjson::get_long_double_array(dilute.at("t"));
 
             fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_T;
         } else if (!type.compare("powers_of_Tr")) {
             // Get a reference to the entry in the fluid instance
             CoolProp::ViscosityDiluteGasPowersOfTr& CI = fluid.transport.viscosity_dilute.powers_of_Tr;
             // Load up the values
-            CI.a = cpjson::get_long_double_array(dilute["a"]);
-            CI.t = cpjson::get_long_double_array(dilute["t"]);
+            CI.a = cpjson::get_long_double_array(dilute.at("a"));
+            CI.t = cpjson::get_long_double_array(dilute.at("t"));
             CI.T_reducing = cpjson::get_double(dilute, "T_reducing");
             fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_TR;
         } else if (!type.compare("collision_integral_powers_of_Tstar")) {
@@ -517,8 +517,8 @@ class JSONFluidLibrary
             CoolProp::ViscosityDiluteCollisionIntegralPowersOfTstarData& CI = fluid.transport.viscosity_dilute.collision_integral_powers_of_Tstar;
 
             // Load up the values
-            CI.a = cpjson::get_long_double_array(dilute["a"]);
-            CI.t = cpjson::get_long_double_array(dilute["t"]);
+            CI.a = cpjson::get_long_double_array(dilute.at("a"));
+            CI.t = cpjson::get_long_double_array(dilute.at("t"));
             CI.T_reducing = cpjson::get_double(dilute, "T_reducing");
             CI.C = cpjson::get_double(dilute, "C");
 
@@ -529,15 +529,15 @@ class JSONFluidLibrary
     };
 
     /// Parse the transport properties
-    void parse_initial_density_viscosity(rapidjson::Value& initial_density, CoolPropFluid& fluid) {
+    void parse_initial_density_viscosity(const nlohmann::json& initial_density, CoolPropFluid& fluid) {
         std::string type = cpjson::get_string(initial_density, "type");
         if (!type.compare("Rainwater-Friend")) {
             // Get a reference to the entry in the fluid instance
             CoolProp::ViscosityRainWaterFriendData& RF = fluid.transport.viscosity_initial.rainwater_friend;
 
             // Load up the values
-            RF.b = cpjson::get_long_double_array(initial_density["b"]);
-            RF.t = cpjson::get_long_double_array(initial_density["t"]);
+            RF.b = cpjson::get_long_double_array(initial_density.at("b"));
+            RF.t = cpjson::get_long_double_array(initial_density.at("t"));
 
             // Set the type flag
             fluid.transport.viscosity_initial.type = CoolProp::ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND;
@@ -546,9 +546,9 @@ class JSONFluidLibrary
             CoolProp::ViscosityInitialDensityEmpiricalData& EM = fluid.transport.viscosity_initial.empirical;
 
             // Load up the values
-            EM.n = cpjson::get_long_double_array(initial_density["n"]);
-            EM.d = cpjson::get_long_double_array(initial_density["d"]);
-            EM.t = cpjson::get_long_double_array(initial_density["t"]);
+            EM.n = cpjson::get_long_double_array(initial_density.at("n"));
+            EM.d = cpjson::get_long_double_array(initial_density.at("d"));
+            EM.t = cpjson::get_long_double_array(initial_density.at("t"));
             EM.T_reducing = cpjson::get_double(initial_density, "T_reducing");
             EM.rhomolar_reducing = cpjson::get_double(initial_density, "rhomolar_reducing");
 
@@ -560,9 +560,9 @@ class JSONFluidLibrary
     };
 
     /// Parse the transport properties
-    void parse_higher_order_viscosity(rapidjson::Value& higher, CoolPropFluid& fluid) {
+    void parse_higher_order_viscosity(const nlohmann::json& higher, CoolPropFluid& fluid) {
         // First check for hardcoded higher-order term
-        if (higher.HasMember("hardcoded")) {
+        if (higher.contains("hardcoded")) {
             std::string target = cpjson::get_string(higher, "hardcoded");
             if (!target.compare("Hydrogen")) {
                 fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN;
@@ -602,25 +602,25 @@ class JSONFluidLibrary
             BH.T_reduce = cpjson::get_double(higher, "T_reduce");
             BH.rhomolar_reduce = cpjson::get_double(higher, "rhomolar_reduce");
             // Load up the values
-            BH.a = cpjson::get_long_double_array(higher["a"]);
-            BH.t1 = cpjson::get_long_double_array(higher["t1"]);
-            BH.d1 = cpjson::get_long_double_array(higher["d1"]);
-            BH.gamma = cpjson::get_long_double_array(higher["gamma"]);
-            BH.l = cpjson::get_long_double_array(higher["l"]);
+            BH.a = cpjson::get_long_double_array(higher.at("a"));
+            BH.t1 = cpjson::get_long_double_array(higher.at("t1"));
+            BH.d1 = cpjson::get_long_double_array(higher.at("d1"));
+            BH.gamma = cpjson::get_long_double_array(higher.at("gamma"));
+            BH.l = cpjson::get_long_double_array(higher.at("l"));
             assert(BH.a.size() == BH.t1.size());
             assert(BH.a.size() == BH.d1.size());
             assert(BH.a.size() == BH.gamma.size());
             assert(BH.a.size() == BH.l.size());
-            BH.f = cpjson::get_long_double_array(higher["f"]);
-            BH.t2 = cpjson::get_long_double_array(higher["t2"]);
-            BH.d2 = cpjson::get_long_double_array(higher["d2"]);
+            BH.f = cpjson::get_long_double_array(higher.at("f"));
+            BH.t2 = cpjson::get_long_double_array(higher.at("t2"));
+            BH.d2 = cpjson::get_long_double_array(higher.at("d2"));
             assert(BH.f.size() == BH.t2.size());
             assert(BH.f.size() == BH.d2.size());
-            BH.g = cpjson::get_long_double_array(higher["g"]);
-            BH.h = cpjson::get_long_double_array(higher["h"]);
+            BH.g = cpjson::get_long_double_array(higher.at("g"));
+            BH.h = cpjson::get_long_double_array(higher.at("h"));
             assert(BH.g.size() == BH.h.size());
-            BH.p = cpjson::get_long_double_array(higher["p"]);
-            BH.q = cpjson::get_long_double_array(higher["q"]);
+            BH.p = cpjson::get_long_double_array(higher.at("p"));
+            BH.q = cpjson::get_long_double_array(higher.at("q"));
             assert(BH.p.size() == BH.q.size());
         } else if (!type.compare("friction_theory")) {
             // Get a reference to the entry in the fluid instance to simplify the code that follows
@@ -630,10 +630,10 @@ class JSONFluidLibrary
             fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_FRICTION_THEORY;
 
             // Always need these terms
-            F.Ai = cpjson::get_long_double_array(higher["Ai"]);
-            F.Aa = cpjson::get_long_double_array(higher["Aa"]);
-            F.Aaa = cpjson::get_long_double_array(higher["Aaa"]);
-            F.Ar = cpjson::get_long_double_array(higher["Ar"]);
+            F.Ai = cpjson::get_long_double_array(higher.at("Ai"));
+            F.Aa = cpjson::get_long_double_array(higher.at("Aa"));
+            F.Aaa = cpjson::get_long_double_array(higher.at("Aaa"));
+            F.Ar = cpjson::get_long_double_array(higher.at("Ar"));
 
             F.Na = cpjson::get_integer(higher, "Na");
             F.Naa = cpjson::get_integer(higher, "Naa");
@@ -647,22 +647,22 @@ class JSONFluidLibrary
 
             F.T_reduce = cpjson::get_double(higher, "T_reduce");
 
-            if (higher.HasMember("Arr") && !higher.HasMember("Adrdr")) {
-                F.Arr = cpjson::get_long_double_array(higher["Arr"]);
+            if (higher.contains("Arr") && !higher.contains("Adrdr")) {
+                F.Arr = cpjson::get_long_double_array(higher.at("Arr"));
                 assert(F.Arr.size() == 3);
-            } else if (higher.HasMember("Adrdr") && !higher.HasMember("Arr")) {
-                F.Adrdr = cpjson::get_long_double_array(higher["Adrdr"]);
+            } else if (higher.contains("Adrdr") && !higher.contains("Arr")) {
+                F.Adrdr = cpjson::get_long_double_array(higher.at("Adrdr"));
                 assert(F.Adrdr.size() == 3);
             } else {
                 throw ValueError(format("can only provide one of Arr or Adrdr for fluid %s", fluid.name.c_str()));
             }
-            if (higher.HasMember("Aii")) {
-                F.Aii = cpjson::get_long_double_array(higher["Aii"]);
+            if (higher.contains("Aii")) {
+                F.Aii = cpjson::get_long_double_array(higher.at("Aii"));
                 F.Nii = cpjson::get_integer(higher, "Nii");
             }
-            if (higher.HasMember("Aaaa") && higher.HasMember("Arrr")) {
-                F.Aaaa = cpjson::get_long_double_array(higher["Aaaa"]);
-                F.Arrr = cpjson::get_long_double_array(higher["Arrr"]);
+            if (higher.contains("Aaaa") && higher.contains("Arrr")) {
+                F.Aaaa = cpjson::get_long_double_array(higher.at("Aaaa"));
+                F.Arrr = cpjson::get_long_double_array(higher.at("Arrr"));
                 F.Naaa = cpjson::get_integer(higher, "Naaa");
                 F.Nrrr = cpjson::get_integer(higher, "Nrrr");
             }
@@ -672,32 +672,32 @@ class JSONFluidLibrary
         }
     };
 
-    void parse_ECS_conductivity(rapidjson::Value& conductivity, CoolPropFluid& fluid) {
+    void parse_ECS_conductivity(const nlohmann::json& conductivity, CoolPropFluid& fluid) {
         fluid.transport.conductivity_ecs.reference_fluid = cpjson::get_string(conductivity, "reference_fluid");
 
         // Parameters for correction polynomials
-        fluid.transport.conductivity_ecs.psi_a = cpjson::get_long_double_array(conductivity["psi"]["a"]);
-        fluid.transport.conductivity_ecs.psi_t = cpjson::get_long_double_array(conductivity["psi"]["t"]);
-        fluid.transport.conductivity_ecs.psi_rhomolar_reducing = cpjson::get_double(conductivity["psi"], "rhomolar_reducing");
-        fluid.transport.conductivity_ecs.f_int_a = cpjson::get_long_double_array(conductivity["f_int"]["a"]);
-        fluid.transport.conductivity_ecs.f_int_t = cpjson::get_long_double_array(conductivity["f_int"]["t"]);
-        fluid.transport.conductivity_ecs.f_int_T_reducing = cpjson::get_double(conductivity["f_int"], "T_reducing");
+        fluid.transport.conductivity_ecs.psi_a = cpjson::get_long_double_array(conductivity.at("psi").at("a"));
+        fluid.transport.conductivity_ecs.psi_t = cpjson::get_long_double_array(conductivity.at("psi").at("t"));
+        fluid.transport.conductivity_ecs.psi_rhomolar_reducing = cpjson::get_double(conductivity.at("psi"), "rhomolar_reducing");
+        fluid.transport.conductivity_ecs.f_int_a = cpjson::get_long_double_array(conductivity.at("f_int").at("a"));
+        fluid.transport.conductivity_ecs.f_int_t = cpjson::get_long_double_array(conductivity.at("f_int").at("t"));
+        fluid.transport.conductivity_ecs.f_int_T_reducing = cpjson::get_double(conductivity.at("f_int"), "T_reducing");
 
         fluid.transport.conductivity_using_ECS = true;
     }
 
-    void parse_ECS_viscosity(rapidjson::Value& viscosity, CoolPropFluid& fluid) {
+    void parse_ECS_viscosity(const nlohmann::json& viscosity, CoolPropFluid& fluid) {
         fluid.transport.viscosity_ecs.reference_fluid = cpjson::get_string(viscosity, "reference_fluid");
 
         // Parameters for correction polynomial
-        fluid.transport.viscosity_ecs.psi_a = cpjson::get_long_double_array(viscosity["psi"]["a"]);
-        fluid.transport.viscosity_ecs.psi_t = cpjson::get_long_double_array(viscosity["psi"]["t"]);
-        fluid.transport.viscosity_ecs.psi_rhomolar_reducing = cpjson::get_double(viscosity["psi"], "rhomolar_reducing");
+        fluid.transport.viscosity_ecs.psi_a = cpjson::get_long_double_array(viscosity.at("psi").at("a"));
+        fluid.transport.viscosity_ecs.psi_t = cpjson::get_long_double_array(viscosity.at("psi").at("t"));
+        fluid.transport.viscosity_ecs.psi_rhomolar_reducing = cpjson::get_double(viscosity.at("psi"), "rhomolar_reducing");
 
         fluid.transport.viscosity_using_ECS = true;
     }
 
-    void parse_Chung_viscosity(rapidjson::Value& viscosity, CoolPropFluid& fluid) {
+    void parse_Chung_viscosity(const nlohmann::json& viscosity, CoolPropFluid& fluid) {
         // These in base SI units
         fluid.transport.viscosity_Chung.rhomolar_critical = cpjson::get_double(viscosity, "rhomolar_critical");
         fluid.transport.viscosity_Chung.T_critical = cpjson::get_double(viscosity, "T_critical");
@@ -707,7 +707,7 @@ class JSONFluidLibrary
         fluid.transport.viscosity_using_Chung = true;
     }
 
-    void parse_rhosr_viscosity(rapidjson::Value& viscosity, CoolPropFluid& fluid) {
+    void parse_rhosr_viscosity(const nlohmann::json& viscosity, CoolPropFluid& fluid) {
         fluid.transport.viscosity_rhosr.C = cpjson::get_double(viscosity, "C");
         fluid.transport.viscosity_rhosr.c_liq = cpjson::get_double_array(viscosity, "c_liq");
         fluid.transport.viscosity_rhosr.c_vap = cpjson::get_double_array(viscosity, "c_vap");
@@ -717,11 +717,10 @@ class JSONFluidLibrary
     }
 
     /// Parse the transport properties
-    void parse_viscosity(rapidjson::Value& viscosity, CoolPropFluid& fluid) {
+    void parse_viscosity(const nlohmann::json& viscosity, CoolPropFluid& fluid) {
         // If an array, use the first one, and then stop;
-        if (viscosity.IsArray()) {
-            rapidjson::Value::ValueIterator itr = viscosity.Begin();
-            parse_viscosity(*itr, fluid);
+        if (viscosity.is_array()) {
+            parse_viscosity(viscosity.front(), fluid);
             return;
         }
 
@@ -729,7 +728,7 @@ class JSONFluidLibrary
         fluid.transport.BibTeX_viscosity = cpjson::get_string(viscosity, "BibTeX");
 
         // Set the Lennard-Jones 12-6 potential variables, or approximate them from method of Chung
-        if (!viscosity.HasMember("sigma_eta") || !viscosity.HasMember("epsilon_over_k")) {
+        if (!viscosity.contains("sigma_eta") || !viscosity.contains("epsilon_over_k")) {
             default_transport(fluid);
         } else {
             fluid.transport.sigma_eta = cpjson::get_double(viscosity, "sigma_eta");
@@ -737,25 +736,25 @@ class JSONFluidLibrary
         }
 
         // If it is using ECS, set ECS parameters and quit
-        if (viscosity.HasMember("type") && !cpjson::get_string(viscosity, "type").compare("ECS")) {
+        if (viscosity.contains("type") && !cpjson::get_string(viscosity, "type").compare("ECS")) {
             parse_ECS_viscosity(viscosity, fluid);
             return;
         }
 
         // If it is using rho*sr CS, set parameters and quit
-        if (viscosity.HasMember("type") && !cpjson::get_string(viscosity, "type").compare("rhosr-CS")) {
+        if (viscosity.contains("type") && !cpjson::get_string(viscosity, "type").compare("rhosr-CS")) {
             parse_rhosr_viscosity(viscosity, fluid);
             return;
         }
 
         // Use the method of Chung
         // If it is using ECS, set ECS parameters and quit
-        if (viscosity.HasMember("type") && !cpjson::get_string(viscosity, "type").compare("Chung")) {
+        if (viscosity.contains("type") && !cpjson::get_string(viscosity, "type").compare("Chung")) {
             parse_Chung_viscosity(viscosity, fluid);
             return;
         }
 
-        if (viscosity.HasMember("hardcoded")) {
+        if (viscosity.contains("hardcoded")) {
             std::string target = cpjson::get_string(viscosity, "hardcoded");
             if (!target.compare("Water")) {
                 fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER;
@@ -787,22 +786,22 @@ class JSONFluidLibrary
         }
 
         // Load dilute viscosity term
-        if (viscosity.HasMember("dilute")) {
-            parse_dilute_viscosity(viscosity["dilute"], fluid);
+        if (viscosity.contains("dilute")) {
+            parse_dilute_viscosity(viscosity.at("dilute"), fluid);
         }
         // Load initial density term
-        if (viscosity.HasMember("initial_density")) {
-            parse_initial_density_viscosity(viscosity["initial_density"], fluid);
+        if (viscosity.contains("initial_density")) {
+            parse_initial_density_viscosity(viscosity.at("initial_density"), fluid);
         }
         // Load higher_order term
-        if (viscosity.HasMember("higher_order")) {
-            parse_higher_order_viscosity(viscosity["higher_order"], fluid);
+        if (viscosity.contains("higher_order")) {
+            parse_higher_order_viscosity(viscosity.at("higher_order"), fluid);
         }
     };
 
     /// Parse the transport properties
-    void parse_dilute_conductivity(rapidjson::Value& dilute, CoolPropFluid& fluid) {
-        if (dilute.HasMember("hardcoded")) {
+    void parse_dilute_conductivity(const nlohmann::json& dilute, CoolPropFluid& fluid) {
+        if (dilute.contains("hardcoded")) {
             std::string target = cpjson::get_string(dilute, "hardcoded");
             if (!target.compare("CO2")) {
                 fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2;
@@ -830,10 +829,10 @@ class JSONFluidLibrary
             fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS;
 
             // Load up the values
-            data.A = cpjson::get_long_double_array(dilute["A"]);
-            data.B = cpjson::get_long_double_array(dilute["B"]);
-            data.n = cpjson::get_long_double_array(dilute["n"]);
-            data.m = cpjson::get_long_double_array(dilute["m"]);
+            data.A = cpjson::get_long_double_array(dilute.at("A"));
+            data.B = cpjson::get_long_double_array(dilute.at("B"));
+            data.n = cpjson::get_long_double_array(dilute.at("n"));
+            data.m = cpjson::get_long_double_array(dilute.at("m"));
             data.T_reducing = cpjson::get_double(dilute, "T_reducing");
         } else if (!type.compare("eta0_and_poly")) {
             // Get a reference to the entry in the fluid instance
@@ -843,16 +842,16 @@ class JSONFluidLibrary
             fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETA0_AND_POLY;
 
             // Load up the values
-            data.A = cpjson::get_long_double_array(dilute["A"]);
-            data.t = cpjson::get_long_double_array(dilute["t"]);
+            data.A = cpjson::get_long_double_array(dilute.at("A"));
+            data.t = cpjson::get_long_double_array(dilute.at("t"));
         } else {
             throw ValueError(format("type [%s] is not understood for fluid %s", type.c_str(), fluid.name.c_str()));
         }
     };
 
     /// Parse the transport properties
-    void parse_residual_conductivity(rapidjson::Value& dilute, CoolPropFluid& fluid) {
-        if (dilute.HasMember("hardcoded")) {
+    void parse_residual_conductivity(const nlohmann::json& dilute, CoolPropFluid& fluid) {
+        if (dilute.contains("hardcoded")) {
             std::string target = cpjson::get_string(dilute, "hardcoded");
             if (!target.compare("CO2")) {
                 fluid.transport.conductivity_residual.type = CoolProp::ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_CO2;
@@ -871,9 +870,9 @@ class JSONFluidLibrary
             fluid.transport.conductivity_residual.type = CoolProp::ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL;
 
             // Load up the values
-            data.B = cpjson::get_long_double_array(dilute["B"]);
-            data.d = cpjson::get_long_double_array(dilute["d"]);
-            data.t = cpjson::get_long_double_array(dilute["t"]);
+            data.B = cpjson::get_long_double_array(dilute.at("B"));
+            data.d = cpjson::get_long_double_array(dilute.at("d"));
+            data.t = cpjson::get_long_double_array(dilute.at("t"));
             data.T_reducing = cpjson::get_double(dilute, "T_reducing");
             data.rhomass_reducing = cpjson::get_double(dilute, "rhomass_reducing");
         } else if (!type.compare("polynomial_and_exponential")) {
@@ -884,18 +883,18 @@ class JSONFluidLibrary
             fluid.transport.conductivity_residual.type = CoolProp::ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL;
 
             // Load up the values
-            data.A = cpjson::get_long_double_array(dilute["A"]);
-            data.d = cpjson::get_long_double_array(dilute["d"]);
-            data.t = cpjson::get_long_double_array(dilute["t"]);
-            data.gamma = cpjson::get_long_double_array(dilute["gamma"]);
-            data.l = cpjson::get_long_double_array(dilute["l"]);
+            data.A = cpjson::get_long_double_array(dilute.at("A"));
+            data.d = cpjson::get_long_double_array(dilute.at("d"));
+            data.t = cpjson::get_long_double_array(dilute.at("t"));
+            data.gamma = cpjson::get_long_double_array(dilute.at("gamma"));
+            data.l = cpjson::get_long_double_array(dilute.at("l"));
         } else {
             throw ValueError(format("type [%s] is not understood for fluid %s", type.c_str(), fluid.name.c_str()));
         }
     };
 
-    void parse_critical_conductivity(rapidjson::Value& critical, CoolPropFluid& fluid) {
-        if (critical.HasMember("hardcoded")) {
+    void parse_critical_conductivity(const nlohmann::json& critical, CoolPropFluid& fluid) {
+        if (critical.contains("hardcoded")) {
             std::string target = cpjson::get_string(critical, "hardcoded");
             if (!target.compare("R123")) {
                 fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_R123;
@@ -923,22 +922,22 @@ class JSONFluidLibrary
             fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS;
 
             // Set values if they are found - otherwise fall back to default values
-            if (critical.HasMember("qD")) {
+            if (critical.contains("qD")) {
                 data.qD = cpjson::get_double(critical, "qD");
             }
-            if (critical.HasMember("zeta0")) {
+            if (critical.contains("zeta0")) {
                 data.zeta0 = cpjson::get_double(critical, "zeta0");
             }
-            if (critical.HasMember("GAMMA")) {
+            if (critical.contains("GAMMA")) {
                 data.GAMMA = cpjson::get_double(critical, "GAMMA");
             }
-            if (critical.HasMember("gamma")) {
+            if (critical.contains("gamma")) {
                 data.gamma = cpjson::get_double(critical, "gamma");
             }
-            if (critical.HasMember("R0")) {
+            if (critical.contains("R0")) {
                 data.R0 = cpjson::get_double(critical, "R0");
             }
-            if (critical.HasMember("T_ref")) {
+            if (critical.contains("T_ref")) {
                 data.T_ref = cpjson::get_double(critical, "T_ref");
             }
         } else {
@@ -947,17 +946,17 @@ class JSONFluidLibrary
     };
 
     /// Parse the thermal conductivity data
-    void parse_thermal_conductivity(rapidjson::Value& conductivity, CoolPropFluid& fluid) {
+    void parse_thermal_conductivity(const nlohmann::json& conductivity, CoolPropFluid& fluid) {
         // Load the BibTeX key
         fluid.transport.BibTeX_conductivity = cpjson::get_string(conductivity, "BibTeX");
 
         // If it is using ECS, set ECS parameters and quit
-        if (conductivity.HasMember("type") && !cpjson::get_string(conductivity, "type").compare("ECS")) {
+        if (conductivity.contains("type") && !cpjson::get_string(conductivity, "type").compare("ECS")) {
             parse_ECS_conductivity(conductivity, fluid);
             return;
         }
 
-        if (conductivity.HasMember("hardcoded")) {
+        if (conductivity.contains("hardcoded")) {
             std::string target = cpjson::get_string(conductivity, "hardcoded");
             if (!target.compare("Water")) {
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER;
@@ -981,31 +980,31 @@ class JSONFluidLibrary
         }
 
         // Load dilute conductivity term
-        if (conductivity.HasMember("dilute")) {
-            parse_dilute_conductivity(conductivity["dilute"], fluid);
+        if (conductivity.contains("dilute")) {
+            parse_dilute_conductivity(conductivity.at("dilute"), fluid);
         }
         // Load residual conductivity term
-        if (conductivity.HasMember("residual")) {
-            parse_residual_conductivity(conductivity["residual"], fluid);
+        if (conductivity.contains("residual")) {
+            parse_residual_conductivity(conductivity.at("residual"), fluid);
         }
         // Load critical conductivity term
-        if (conductivity.HasMember("critical")) {
-            parse_critical_conductivity(conductivity["critical"], fluid);
+        if (conductivity.contains("critical")) {
+            parse_critical_conductivity(conductivity.at("critical"), fluid);
         }
     };
 
     /// Parse the transport properties
-    void parse_transport(rapidjson::Value& transport, CoolPropFluid& fluid) {
+    void parse_transport(const nlohmann::json& transport, CoolPropFluid& fluid) {
 
         // Parse viscosity
-        if (transport.HasMember("viscosity")) {
-            parse_viscosity(transport["viscosity"], fluid);
+        if (transport.contains("viscosity")) {
+            parse_viscosity(transport.at("viscosity"), fluid);
             fluid.transport.viscosity_model_provided = true;
         }
 
         // Parse thermal conductivity
-        if (transport.HasMember("conductivity")) {
-            parse_thermal_conductivity(transport["conductivity"], fluid);
+        if (transport.contains("conductivity")) {
+            parse_thermal_conductivity(transport.at("conductivity"), fluid);
             fluid.transport.conductivity_model_provided = true;
         }
     };
@@ -1020,49 +1019,49 @@ class JSONFluidLibrary
         fluid.transport.epsilon_over_k = Tc / 1.2593;                                                        // [K]
     }
 
-    void parse_melting_line(rapidjson::Value& melting_line, CoolPropFluid& fluid) {
+    void parse_melting_line(const nlohmann::json& melting_line, CoolPropFluid& fluid) {
         fluid.ancillaries.melting_line.T_m = cpjson::get_double(melting_line, "T_m");
         fluid.ancillaries.melting_line.BibTeX = cpjson::get_string(melting_line, "BibTeX");
 
-        if (melting_line.HasMember("type")) {
+        if (melting_line.contains("type")) {
             std::string type = cpjson::get_string(melting_line, "type");
             if (!type.compare("Simon")) {
-                rapidjson::Value& parts = melting_line["parts"];
+                const nlohmann::json& parts = melting_line.at("parts");
                 fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_SIMON_TYPE;
-                for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr) {
+                for (const auto& part : parts) {
                     MeltingLinePiecewiseSimonSegment data;
-                    data.a = cpjson::get_double((*itr), "a");
-                    data.c = cpjson::get_double((*itr), "c");
-                    data.T_min = cpjson::get_double((*itr), "T_min");
-                    data.T_max = cpjson::get_double((*itr), "T_max");
-                    data.T_0 = cpjson::get_double((*itr), "T_0");
-                    data.p_0 = cpjson::get_double((*itr), "p_0");
+                    data.a = cpjson::get_double(part, "a");
+                    data.c = cpjson::get_double(part, "c");
+                    data.T_min = cpjson::get_double(part, "T_min");
+                    data.T_max = cpjson::get_double(part, "T_max");
+                    data.T_0 = cpjson::get_double(part, "T_0");
+                    data.p_0 = cpjson::get_double(part, "p_0");
                     fluid.ancillaries.melting_line.simon.parts.push_back(data);
                 }
             } else if (!type.compare("polynomial_in_Tr")) {
-                rapidjson::Value& parts = melting_line["parts"];
+                const nlohmann::json& parts = melting_line.at("parts");
                 fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_TR_TYPE;
-                for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr) {
+                for (const auto& part : parts) {
                     MeltingLinePiecewisePolynomialInTrSegment data;
-                    data.a = cpjson::get_long_double_array((*itr), "a");
-                    data.t = cpjson::get_long_double_array((*itr), "t");
-                    data.T_min = cpjson::get_double((*itr), "T_min");
-                    data.T_max = cpjson::get_double((*itr), "T_max");
-                    data.T_0 = cpjson::get_double((*itr), "T_0");
-                    data.p_0 = cpjson::get_double((*itr), "p_0");
+                    data.a = cpjson::get_long_double_array(part, "a");
+                    data.t = cpjson::get_long_double_array(part, "t");
+                    data.T_min = cpjson::get_double(part, "T_min");
+                    data.T_max = cpjson::get_double(part, "T_max");
+                    data.T_0 = cpjson::get_double(part, "T_0");
+                    data.p_0 = cpjson::get_double(part, "p_0");
                     fluid.ancillaries.melting_line.polynomial_in_Tr.parts.push_back(data);
                 }
             } else if (!type.compare("polynomial_in_Theta")) {
-                rapidjson::Value& parts = melting_line["parts"];
+                const nlohmann::json& parts = melting_line.at("parts");
                 fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE;
-                for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr) {
+                for (const auto& part : parts) {
                     MeltingLinePiecewisePolynomialInThetaSegment data;
-                    data.a = cpjson::get_long_double_array((*itr), "a");
-                    data.t = cpjson::get_long_double_array((*itr), "t");
-                    data.T_min = cpjson::get_double((*itr), "T_min");
-                    data.T_max = cpjson::get_double((*itr), "T_max");
-                    data.T_0 = cpjson::get_double((*itr), "T_0");
-                    data.p_0 = cpjson::get_double((*itr), "p_0");
+                    data.a = cpjson::get_long_double_array(part, "a");
+                    data.t = cpjson::get_long_double_array(part, "t");
+                    data.T_min = cpjson::get_double(part, "T_min");
+                    data.T_max = cpjson::get_double(part, "T_max");
+                    data.T_0 = cpjson::get_double(part, "T_0");
+                    data.p_0 = cpjson::get_double(part, "p_0");
                     fluid.ancillaries.melting_line.polynomial_in_Theta.parts.push_back(data);
                 }
             } else {
@@ -1076,22 +1075,22 @@ class JSONFluidLibrary
     };
 
     /// Parse the critical state for the given EOS
-    void parse_states(rapidjson::Value& states, CoolPropFluid& fluid) {
-        if (!states.HasMember("critical")) {
+    void parse_states(const nlohmann::json& states, CoolPropFluid& fluid) {
+        if (!states.contains("critical")) {
             throw ValueError(format(R"(fluid["STATES"] [%s] does not have "critical" member)", fluid.name.c_str()));
         }
-        rapidjson::Value& crit = states["critical"];
+        const nlohmann::json& crit = states.at("critical");
         fluid.crit.T = cpjson::get_double(crit, "T");
         fluid.crit.p = cpjson::get_double(crit, "p");
         fluid.crit.rhomolar = cpjson::get_double(crit, "rhomolar");
         fluid.crit.hmolar = cpjson::get_double(crit, "hmolar");
         fluid.crit.smolar = cpjson::get_double(crit, "smolar");
 
-        if (!states.HasMember("triple_liquid")) {
+        if (!states.contains("triple_liquid")) {
             throw ValueError(format(R"(fluid["STATES"] [%s] does not have "triple_liquid" member)", fluid.name.c_str()));
         }
-        rapidjson::Value& triple_liquid = states["triple_liquid"];
-        if (triple_liquid.ObjectEmpty()) {
+        const nlohmann::json& triple_liquid = states.at("triple_liquid");
+        if (triple_liquid.empty()) {
             // State is empty - probably because the triple point temperature is below the minimum saturation temperature
             fluid.triple_liquid.T = -1;
             fluid.triple_liquid.p = -1;
@@ -1106,11 +1105,11 @@ class JSONFluidLibrary
             fluid.triple_liquid.smolar = cpjson::get_double(triple_liquid, "smolar");
         }
 
-        if (!states.HasMember("triple_vapor")) {
+        if (!states.contains("triple_vapor")) {
             throw ValueError(format(R"(fluid["STATES"] [%s] does not have "triple_vapor" member)", fluid.name.c_str()));
         }
-        rapidjson::Value& triple_vapor = states["triple_vapor"];
-        if (triple_vapor.ObjectEmpty()) {
+        const nlohmann::json& triple_vapor = states.at("triple_vapor");
+        if (triple_vapor.empty()) {
             // State is empty - probably because the triple point temperature is below the minimum saturation temperature
             fluid.triple_vapor.T = -1;
             fluid.triple_vapor.p = -1;
@@ -1127,50 +1126,50 @@ class JSONFluidLibrary
     };
 
     /// Parse the critical state for the given EOS
-    void parse_ancillaries(rapidjson::Value& ancillaries, CoolPropFluid& fluid) {
-        if (!ancillaries.HasMember("rhoL") || !ancillaries.HasMember("rhoV")) {
+    void parse_ancillaries(const nlohmann::json& ancillaries, CoolPropFluid& fluid) {
+        if (!ancillaries.contains("rhoL") || !ancillaries.contains("rhoV")) {
             throw ValueError("Ancillary curves for either rhoL or rhoV are missing");
         }
-        fluid.ancillaries.rhoL = SaturationAncillaryFunction(ancillaries["rhoL"]);
-        fluid.ancillaries.rhoV = SaturationAncillaryFunction(ancillaries["rhoV"]);
+        fluid.ancillaries.rhoL = cpjson::make_saturation_ancillary(ancillaries.at("rhoL"));
+        fluid.ancillaries.rhoV = cpjson::make_saturation_ancillary(ancillaries.at("rhoV"));
 
         // If a pseudo-pure fluid, has pL and pV curves
-        if (ancillaries.HasMember("pL") && ancillaries.HasMember("pV")) {
-            fluid.ancillaries.pL = SaturationAncillaryFunction(ancillaries["pL"]);
-            fluid.ancillaries.pV = SaturationAncillaryFunction(ancillaries["pV"]);
+        if (ancillaries.contains("pL") && ancillaries.contains("pV")) {
+            fluid.ancillaries.pL = cpjson::make_saturation_ancillary(ancillaries.at("pL"));
+            fluid.ancillaries.pV = cpjson::make_saturation_ancillary(ancillaries.at("pV"));
         }
         // Otherwise has a single pS curve and not pL and not pV
-        else if (!ancillaries.HasMember("pL") && !ancillaries.HasMember("pV") && ancillaries.HasMember("pS")) {
-            fluid.ancillaries.pL = SaturationAncillaryFunction(ancillaries["pS"]);
-            fluid.ancillaries.pV = SaturationAncillaryFunction(ancillaries["pS"]);
+        else if (!ancillaries.contains("pL") && !ancillaries.contains("pV") && ancillaries.contains("pS")) {
+            fluid.ancillaries.pL = cpjson::make_saturation_ancillary(ancillaries.at("pS"));
+            fluid.ancillaries.pV = cpjson::make_saturation_ancillary(ancillaries.at("pS"));
         } else {
             throw ValueError("Pressure ancillary curves are missing or invalid");
         }
 
-        if (ancillaries.HasMember("hL")) {
-            fluid.ancillaries.hL = SaturationAncillaryFunction(ancillaries["hL"]);
+        if (ancillaries.contains("hL")) {
+            fluid.ancillaries.hL = cpjson::make_saturation_ancillary(ancillaries.at("hL"));
         } else {
             if (get_debug_level() > 0) {
                 std::cout << "Missing hL ancillary for fluid " << fluid.name;
             }
         }
-        if (ancillaries.HasMember("hLV")) {
-            fluid.ancillaries.hLV = SaturationAncillaryFunction(ancillaries["hLV"]);
+        if (ancillaries.contains("hLV")) {
+            fluid.ancillaries.hLV = cpjson::make_saturation_ancillary(ancillaries.at("hLV"));
         } else {
             if (get_debug_level() > 0) {
                 std::cout << "Missing hLV ancillary for fluid " << fluid.name;
             }
         }
 
-        if (ancillaries.HasMember("sL")) {
-            fluid.ancillaries.sL = SaturationAncillaryFunction(ancillaries["sL"]);
+        if (ancillaries.contains("sL")) {
+            fluid.ancillaries.sL = cpjson::make_saturation_ancillary(ancillaries.at("sL"));
         } else {
             if (get_debug_level() > 0) {
                 std::cout << "Missing sL ancillary for fluid " << fluid.name;
             }
         }
-        if (ancillaries.HasMember("sLV")) {
-            fluid.ancillaries.sLV = SaturationAncillaryFunction(ancillaries["sLV"]);
+        if (ancillaries.contains("sLV")) {
+            fluid.ancillaries.sLV = cpjson::make_saturation_ancillary(ancillaries.at("sLV"));
         } else {
             if (get_debug_level() > 0) {
                 std::cout << "Missing sLV ancillary for fluid " << fluid.name;
@@ -1182,8 +1181,8 @@ class JSONFluidLibrary
     };
 
     /// Parse the surface_tension
-    void parse_surface_tension(rapidjson::Value& surface_tension, CoolPropFluid& fluid) {
-        fluid.ancillaries.surface_tension = SurfaceTensionCorrelation(surface_tension);
+    void parse_surface_tension(const nlohmann::json& surface_tension, CoolPropFluid& fluid) {
+        fluid.ancillaries.surface_tension = cpjson::make_surface_tension_correlation(surface_tension);
     };
 
     /// Validate the fluid file that was just constructed
@@ -1206,10 +1205,12 @@ class JSONFluidLibrary
     /// Add all the fluid entries in the JSON-encoded string passed in
     static void add_many(const std::string& JSON_string);
 
-    /// Add all the fluid entries in the rapidjson::Value instance passed in
-    void add_many(rapidjson::Value& listing);
+    /// Add all the fluid entries in the nlohmann::json instance passed in
+    CP_JSON_LOCAL void add_many(const nlohmann::json& listing);
 
-    void add_one(rapidjson::Value& fluid_json);
+    CP_JSON_LOCAL void add_one(const nlohmann::json& fluid_json);
+
+#undef CP_JSON_LOCAL
 
     std::string get_JSONstring(const std::string& key) {
         // Try to find it
@@ -1218,13 +1219,10 @@ class JSONFluidLibrary
 
             auto it2 = JSONstring_map.find(it->second);
             if (it2 != JSONstring_map.end()) {
-                // Then, load the fluids we would like to add
-                rapidjson::Document doc;
-                cpjson::JSON_string_to_rapidjson(it2->second, doc);
-                rapidjson::Document doc2;
-                doc2.SetArray();
-                doc2.PushBack(doc, doc.GetAllocator());
-                return cpjson::json2string(doc2);
+                // Wrap the stored single-fluid JSON object in a one-element array
+                nlohmann::json doc2 = nlohmann::json::array();
+                doc2.push_back(cpjson::parse(it2->second));
+                return doc2.dump();
             } else {
                 throw ValueError(format("Unable to obtain JSON string for this identifier [%d]", it->second));
             }

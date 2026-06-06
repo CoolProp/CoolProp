@@ -4,8 +4,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <vector>
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/tools.h"  // for CoolPropDbl
 //#include "Eigen/Core"
 #include "time.h"
 #include "CoolProp/detail/CachedElement.h"
@@ -543,8 +544,6 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
         finished = true;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
-
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
     //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 
@@ -591,7 +590,6 @@ class ResidualHelmholtzNonAnalytic : public BaseHelmholtzTerm
             elements.push_back(el);
         }
     };
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 #if ENABLE_CATCH
     mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
@@ -617,7 +615,6 @@ class ResidualHelmholtzGeneralizedCubic : public BaseHelmholtzTerm
         z = std::vector<double>(1, 1);  // Init the vector to [1.0]
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
@@ -643,7 +640,6 @@ class ResidualHelmholtzGaoB : public BaseHelmholtzTerm
 
         };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 
 #if ENABLE_CATCH
@@ -727,8 +723,6 @@ class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm
 
     //Destructor. No Implementation
     ~ResidualHelmholtzSAFTAssociating() = default;
-
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
 
     CoolPropDbl dTau4(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() override {
         return 1e99;
@@ -923,12 +917,6 @@ class IdealHelmholtzLead : public BaseHelmholtzTerm
         return enabled;
     }
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-        el.AddMember("type", "IdealHelmholtzLead", doc.GetAllocator());
-        el.AddMember("a1", static_cast<double>(a1), doc.GetAllocator());
-        el.AddMember("a2", static_cast<double>(a2), doc.GetAllocator());
-    };
-
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
@@ -988,11 +976,6 @@ class IdealHelmholtzEnthalpyEntropyOffset : public BaseHelmholtzTerm
         return a2;
     }
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-        el.AddMember("type", "IdealHelmholtzEnthalpyEntropyOffset", doc.GetAllocator());
-        el.AddMember("a1", static_cast<double>(a1), doc.GetAllocator());
-        el.AddMember("a2", static_cast<double>(a2), doc.GetAllocator());
-    };
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
@@ -1018,10 +1001,6 @@ class IdealHelmholtzLogTau : public BaseHelmholtzTerm
         return enabled;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-        el.AddMember("type", "IdealHelmholtzLogTau", doc.GetAllocator());
-        el.AddMember("a1", static_cast<double>(a1), doc.GetAllocator());
-    };
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
@@ -1047,11 +1026,6 @@ class IdealHelmholtzPower : public BaseHelmholtzTerm
         return enabled;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-        el.AddMember("type", "IdealHelmholtzPower", doc.GetAllocator());
-        cpjson::set_long_double_array("n", n, el, doc);
-        cpjson::set_long_double_array("t", t, el, doc);
-    };
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
@@ -1130,11 +1104,6 @@ class IdealHelmholtzPlanckEinsteinGeneralized : public BaseHelmholtzTerm
         return enabled;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-        el.AddMember("type", "IdealHelmholtzPlanckEinsteinGeneralized", doc.GetAllocator());
-        cpjson::set_long_double_array("n", n, el, doc);
-        cpjson::set_long_double_array("theta", theta, el, doc);
-    };
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
 };
 
@@ -1163,13 +1132,6 @@ class IdealHelmholtzCP0Constant : public BaseHelmholtzTerm
 
     bool is_enabled() const {
         return enabled;
-    };
-
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-        el.AddMember("type", "IdealGasHelmholtzCP0Constant", doc.GetAllocator());
-        el.AddMember("cp_over_R", cp_over_R, doc.GetAllocator());
-        el.AddMember("Tc", Tc, doc.GetAllocator());
-        el.AddMember("T0", T0, doc.GetAllocator());
     };
 
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() override;
@@ -1202,7 +1164,6 @@ class IdealHelmholtzCP0PolyT : public BaseHelmholtzTerm
         return enabled;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 #if ENABLE_CATCH
     mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
@@ -1344,8 +1305,6 @@ class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
 //    ~IdealHelmholtzCP0AlyLee(){};
 //
 //    bool is_enabled() const {return enabled;};
-//
-//    void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 //
 //
 //    /// The antiderivative given by \f$ \displaystyle\int \frac{1}{\tau^2}\frac{c_p^0}{R_u}d\tau \f$

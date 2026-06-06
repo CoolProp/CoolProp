@@ -52,7 +52,6 @@ Web/fluid_properties/fluids/molecule_geometry_status.md
 /doc-v5
 /dev/all_fluids_verbose.json
 /dev/all_fluids.json
-/include/all_fluids_JSON.h
 /include/all_pcsaft_JSON.h
 /include/gitrevision.h
 /include/mixture_excess_term_JSON.h
@@ -80,8 +79,10 @@ Web/fluid_properties/fluids/molecule_geometry_status.md
 /.vscode/
 
 bld/
-*_z.h 
+*_z.h
 *.json.z
+/dev/all_fluids.cbor
+/include/all_fluids_CBOR.h
 
 compile_commands.json
 cppcheck.txt

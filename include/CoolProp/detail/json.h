@@ -46,6 +46,16 @@ inline nlohmann::json parse(std::string_view text) {
     }
 }
 
+/// Decode a CBOR byte buffer into an nlohmann::json document.
+/// Throws CoolProp::ValueError (never a raw nlohmann exception) on failure.
+inline nlohmann::json from_cbor(const std::uint8_t* data, std::size_t size) {
+    try {
+        return nlohmann::json::from_cbor(data, data + size);
+    } catch (const std::exception& e) {
+        throw CoolProp::ValueError(std::string("Unable to decode CBOR: ") + e.what());
+    }
+}
+
 /// Serialize an nlohmann::json value to a pretty-printed string.
 inline std::string json2string(const nlohmann::json& v) {
     return v.dump(4);
@@ -162,6 +172,16 @@ inline std::vector<std::string> get_string_array(const nlohmann::json& v, const 
     return get_string_array(*it);
 }
 
+// During the rapidjson->nlohmann migration both this header and the legacy
+// detail/rapidjson.h can be pulled into the same translation unit (e.g. a
+// loader that uses nlohmann while still including Configuration.h, which
+// pulls rapidjson.h). Both declare an identical cpjson::schema_validation_code
+// enum, so guard it with a shared macro to avoid a redefinition error.
+// TODO(rapidjson->nlohmann Phase Final): once detail/rapidjson.h is deleted,
+// drop the CPJSON_SCHEMA_VALIDATION_CODE_DEFINED guard and keep this single
+// unguarded definition.
+#ifndef CPJSON_SCHEMA_VALIDATION_CODE_DEFINED
+#    define CPJSON_SCHEMA_VALIDATION_CODE_DEFINED
 enum schema_validation_code
 {
     SCHEMA_VALIDATION_OK = 0,
@@ -169,6 +189,7 @@ enum schema_validation_code
     INPUT_INVALID_JSON,
     SCHEMA_NOT_VALIDATED
 };
+#endif
 
 /// Validate a JSON-formatted input string against a JSON-formatted draft-07
 /// schema string. On a validation failure, `errstr` receives a

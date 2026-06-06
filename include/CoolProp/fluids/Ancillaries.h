@@ -4,9 +4,23 @@
 #include "CoolProp/Exceptions.h"
 #include <utility>
 #include <vector>
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/tools.h"  // for CoolPropDbl
 #include "Eigen/Core"
 #include "CoolProp/numerics/PolyMath.h"
+
+// Forward declaration so that the (non-installed) factory in
+// FluidLibraryFactories.h can be friended below without dragging the full
+// nlohmann/json header into this installed header. The factory needs to
+// populate SaturationAncillaryFunction's private members directly.
+#include <nlohmann/json_fwd.hpp>
+
+namespace CoolProp {
+class SaturationAncillaryFunction;
+}  // namespace CoolProp
+
+namespace cpjson {
+CoolProp::SaturationAncillaryFunction make_saturation_ancillary(const nlohmann::json& j);
+}  // namespace cpjson
 
 namespace CoolProp {
 
@@ -33,20 +47,6 @@ class SurfaceTensionCorrelation
     std::string BibTeX;          ///< The BiBTeX key for the surface tension curve in use
 
     SurfaceTensionCorrelation() : Tc(_HUGE), N(0) {}
-    SurfaceTensionCorrelation(rapidjson::Value& json_code) {
-        a = cpjson::get_long_double_array(json_code["a"]);
-        n = cpjson::get_long_double_array(json_code["n"]);
-
-        Tc = cpjson::get_double(json_code, "Tc");
-        BibTeX = cpjson::get_string(json_code, "BibTeX");
-
-        // NB: N and s derive from n, which is populated above in the body, so
-        // they must NOT be hoisted into a member-initializer list (clang-tidy
-        // cppcoreguidelines-prefer-member-initializer) — at init-list time n is
-        // still empty, which would silently make every surface tension 0.
-        this->N = n.size();  // NOLINT(cppcoreguidelines-prefer-member-initializer)
-        s = n;               // NOLINT(cppcoreguidelines-prefer-member-initializer)
-    };
     /// Actually evaluate the surface tension equation
     CoolPropDbl evaluate(CoolPropDbl T) {
         if (a.empty()) {
@@ -118,7 +118,12 @@ class SaturationAncillaryFunction
       : type(TYPE_NOT_SET), Tmin(_HUGE), Tmax(_HUGE) {
 
         };
-    SaturationAncillaryFunction(rapidjson::Value& json_code);
+
+    // The JSON-construction logic lives in the non-installed factory
+    // cpjson::make_saturation_ancillary (FluidLibraryFactories.h); it is
+    // friended here so it can populate the private members below directly,
+    // keeping the nlohmann::json type out of this installed header.
+    friend SaturationAncillaryFunction cpjson::make_saturation_ancillary(const nlohmann::json& j);
 
     /// Return true if the ancillary is enabled (type is not TYPE_NOT_SET)
     bool enabled() {

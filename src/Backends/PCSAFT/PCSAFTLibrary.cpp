@@ -29,7 +29,13 @@ namespace {
 /// the get_library() singleton (which would recurse into its own constructor).
 void add_fluids_from_JSON_string(PCSAFTLibraryClass& dest, const std::string_view& JSON) {
     std::string errstr;
-    cpjson::schema_validation_code val_code = cpjson::validate_schema(pcsaft_fluids_schema_JSON, JSON, errstr);
+    // FluidLibrary.h (transitively) now also pulls in the nlohmann cpjson
+    // wrapper, whose validate_schema overload is ambiguous with the rapidjson
+    // one for these string arguments. Select the rapidjson overload explicitly
+    // until the PCSAFT loader migrates off rapidjson.
+    auto validate_schema_rapidjson =
+      static_cast<cpjson::schema_validation_code (*)(const std::string_view&, const std::string_view&, std::string&)>(&cpjson::validate_schema);
+    cpjson::schema_validation_code val_code = validate_schema_rapidjson(pcsaft_fluids_schema_JSON, JSON, errstr);
     if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
         rapidjson::Document dd;
         dd.Parse<0>(JSON.data(), JSON.size());
