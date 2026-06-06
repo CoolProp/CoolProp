@@ -59,17 +59,22 @@ def main():
     fails += check(CASES, "all-cases-array")
 
     # The real embedded fluid data, if it has been generated.
+    # The real embedded fluid data is the point of this check — require it.
+    # A missing file is a hard failure (not a silent edge-case-only pass): in CI
+    # this step runs after the build, which generates all_fluids.json; locally,
+    # run dev/generate_headers.py first.
     src = os.path.join(os.path.dirname(__file__), "all_fluids.json")
-    if os.path.exists(src):
-        with open(src) as f:
-            real = json.load(f)
-        n = check(real, "all_fluids.json")
-        fails += n
-        if n == 0:
-            count = len(real) if isinstance(real, list) else 1
-            print(f"all_fluids.json: {count} fluids compared — byte-identical")
-    else:
-        print("note: dev/all_fluids.json not present; skipping real-data comparison")
+    if not os.path.exists(src):
+        print(f"FAIL: {src} not found — run dev/generate_headers.py first so the "
+              "real embedded fluid data is compared, not just synthetic cases.")
+        return 1
+    with open(src) as f:
+        real = json.load(f)
+    n = check(real, "all_fluids.json")
+    fails += n
+    if n == 0:
+        count = len(real) if isinstance(real, list) else 1
+        print(f"all_fluids.json: {count} fluids compared — byte-identical")
 
     if fails:
         print(f"\n{fails} divergence(s) between cbor_min and cbor2 — FAIL")

@@ -177,6 +177,9 @@ inline std::vector<std::string> get_string_array(const nlohmann::json& v, const 
 // loader that uses nlohmann while still including Configuration.h, which
 // pulls rapidjson.h). Both declare an identical cpjson::schema_validation_code
 // enum, so guard it with a shared macro to avoid a redefinition error.
+// TODO(rapidjson->nlohmann Phase Final): once detail/rapidjson.h is deleted,
+// drop the CPJSON_SCHEMA_VALIDATION_CODE_DEFINED guard and keep this single
+// unguarded definition.
 #ifndef CPJSON_SCHEMA_VALIDATION_CODE_DEFINED
 #    define CPJSON_SCHEMA_VALIDATION_CODE_DEFINED
 enum schema_validation_code

@@ -40,7 +40,6 @@ file(GLOB MIXTURE_JSON_FILES "${ROOT_DIR}/dev/mixtures/*.json")
 # won't unnecessarily regenerate files
 add_custom_command(
     OUTPUT
-        "${ROOT_DIR}/include/all_fluids_JSON.h"
         "${ROOT_DIR}/include/all_fluids_CBOR.h"
         "${ROOT_DIR}/include/cpversion.h"
         "${ROOT_DIR}/include/gitrevision.h"
@@ -61,7 +60,6 @@ add_custom_command(
 # Create a custom target that depends on generated headers
 add_custom_target(generate_headers_target
     DEPENDS
-        "${ROOT_DIR}/include/all_fluids_JSON.h"
         "${ROOT_DIR}/include/all_fluids_CBOR.h"
         "${ROOT_DIR}/include/cpversion.h"
         "${ROOT_DIR}/include/gitrevision.h"

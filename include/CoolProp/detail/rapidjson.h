@@ -303,6 +303,8 @@ inline void set_long_double_array(const char* const key, const std::vector<CoolP
 // See note in detail/json.h: this enum is shared between the rapidjson and
 // nlohmann cpjson wrappers; guard it so including both in one TU does not
 // trigger a redefinition error during the migration.
+// TODO(rapidjson->nlohmann Phase Final): this whole header is removed at Phase
+// Final; the guard and this duplicate enum go with it.
 #ifndef CPJSON_SCHEMA_VALIDATION_CODE_DEFINED
 #    define CPJSON_SCHEMA_VALIDATION_CODE_DEFINED
 enum schema_validation_code
