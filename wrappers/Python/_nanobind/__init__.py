@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 """
 Package init for the nanobind-based CoolProp build (COOLPROP_NANOBIND=ON).
 
@@ -8,20 +7,18 @@ the link-free capsule shim.  This intentionally stays minimal -- the full set of
 legacy conveniences (AbstractState/HumidAirProp re-exports, etc.) is the nanobind
 parity-completion work (bd CoolProp-q2sh), not State packaging.
 """
-# Order matters: import the core first so `_capi` is present on the package
-# before the State shim (which does `import CoolProp`) is imported below.
+from __future__ import absolute_import
+
+# Order matters: import the core first so its `_capi` capsule exists before the
+# State shim (which does `import CoolProp`) is imported below.  `import *` also
+# brings get_global_param_string into the package namespace.
 from .CoolProp import *      # nanobind core: PropsSI, the bound API, enums, _capi
-from . import CoolProp       # submodule handle for the helpers below
 from . import State          # the capsule State shim (CoolProp.State.State)
+from . import constants      # generated runtime enum values
+from .constants import *
 
-try:
-    from . import constants
-    from .constants import *
-except Exception:
-    pass
-
-__version__ = CoolProp.get_global_param_string('version')
-__gitrevision__ = CoolProp.get_global_param_string('gitrevision')
+__version__ = get_global_param_string('version')
+__gitrevision__ = get_global_param_string('gitrevision')
 
 
 def get_include_directory():

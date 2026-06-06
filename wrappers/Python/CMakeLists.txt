@@ -12,7 +12,14 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Find Python
-find_package(Python REQUIRED COMPONENTS Interpreter Development.Module
+# FindPython's Development.Module component requires CMake >= 3.18; fall back to
+# the full Development component on 3.15-3.17.
+if(CMAKE_VERSION VERSION_LESS 3.18)
+    set(_py_dev_component Development)
+else()
+    set(_py_dev_component Development.Module)
+endif()
+find_package(Python REQUIRED COMPONENTS Interpreter ${_py_dev_component}
              OPTIONAL_COMPONENTS Development.SABIModule)
 
 # Find Cython

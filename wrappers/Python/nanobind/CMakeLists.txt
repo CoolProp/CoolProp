@@ -15,9 +15,16 @@ add_subdirectory("${ROOT_DIR}" "_CoolProp")
 # Mirrors wrappers/Python/pybind11 1:1; the binding source is
 # src/nanobind_interface.cxx (a direct translation of pybind11_interface.cxx).
 
+# FindPython's Development.Module component requires CMake >= 3.18; fall back to
+# the full Development component on 3.15-3.17 (the minimum above).
+if(CMAKE_VERSION VERSION_LESS 3.18)
+    set(_py_dev_component Development)
+else()
+    set(_py_dev_component Development.Module)
+endif()
 # Development.SABIModule (CPython >= 3.12, CMake >= 3.26) enables the stable ABI;
 # requested optionally so the build still works on older Pythons.
-find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module
+find_package(Python 3.8 REQUIRED COMPONENTS Interpreter ${_py_dev_component}
              OPTIONAL_COMPONENTS Development.SABIModule)
 
 # Locate the active interpreter's nanobind (provides nanobind-config.cmake)
