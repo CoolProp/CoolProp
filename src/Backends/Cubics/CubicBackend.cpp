@@ -889,13 +889,16 @@ void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, Cool
 /**
  * @brief Robust Isothermal-Isobaric (PT) Flash for Cubic Equations of State
  *
- * Implements the stability analysis and phase split (flash) algorithms based on the 
+ * Implements the stability analysis and phase split (flash) algorithms based on the
  * methodology of Michelsen and Mollerup.
- * 
+ *
  * References:
- * 1. Michelsen, M. L. (1982). "The isothermal flash problem. Part I. Stability." 
+ * 1. Michelsen, M. L. (1982). "The isothermal flash problem. Part I. Stability."
  *    Fluid Phase Equilibria, 9(1), 1-19.
- * 2. Michelsen, M. L. (1982). "The isothermal flash problem. Part II. Phase-split calculation." 
+ *    DOI:  10.1016/0378-3812(82)85001-2
+ * 2. Michelsen, M. L. (1982). "The isothermal flash problem. Part II. Phase-split calculation."
  *    Fluid Phase Equilibria, 9(1), 21-40.
+ *    DOI: 10.1016/0378-3812(82)85002-4
  * 3. Michelsen, M. L., & Mollerup, J. M. (2007). "Thermodynamic Models: Fundamentals & Computational Aspects."
+ *    ISBN: 87-989961-1-8
  */
