@@ -1346,6 +1346,43 @@ TEST_CASE("SVDSBTL DT two-phase routing holds inside the NC sub-Tc sliver (CoolP
     }
 }
 
+// Regression gate for CoolProp-jh6a: the DmassT parent SUPER region uses a
+// LOG primary-T axis so that wide-supercritical fluids stay accurate.
+// Helium is the witness: Tc=5.2 K, Tmax=2000 K (~380x), where a LINEAR
+// axis gave ~1% (p90 ~4%) pressure error across the whole SUPER region.
+// LOG holds ~1e-7.  This test sweeps the supercritical region well away
+// from the critical point and the dome and asserts <1e-3 -- a tolerance
+// that PASSES under LOG (~1e-7) and FAILS under the old LINEAR axis (~1e-2).
+TEST_CASE("SVDSBTL DT supercritical accuracy holds for wide-T-range fluids (CoolProp-jh6a)", "[SBTL][SVDSBTL][dt][supercritical][regression][slow]") {
+    for (const std::string& fluid : {std::string("Helium"), std::string("Hydrogen")}) {
+        auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", fluid));
+        auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
+        const double Tc = heos->T_critical();
+        const double rho_c = heos->rhomass_critical();
+        int checked = 0;
+        for (double tf : {1.05, 1.15, 1.3}) {
+            const double T = tf * Tc;
+            for (double rf : {0.3, 0.6, 1.0, 1.5, 2.0}) {
+                const double rho = rf * rho_c;
+                double p_ref = 0.0;
+                try {
+                    heos->update(CoolProp::DmassT_INPUTS, rho, T);
+                    p_ref = heos->p();
+                } catch (...) {
+                    continue;  // outside HEOS validity (e.g. above the melting line)
+                }
+                if (!(p_ref > 0)) continue;
+                INFO(fluid << " T=" << T << " (" << tf << "Tc) rho=" << rho << " (" << rf << "rho_c) p_ref=" << p_ref);
+                REQUIRE_NOTHROW(svd->update(CoolProp::DmassT_INPUTS, rho, T));
+                CHECK(svd->p() == Approx(p_ref).epsilon(1e-3));
+                ++checked;
+            }
+        }
+        INFO(fluid << " supercritical points checked: " << checked);
+        REQUIRE(checked > 8);
+    }
+}
+
 // Tight tolerance comes in the multi-fluid sweep below — this one just
 // proves the wiring is end-to-end.
 TEST_CASE("SVDSBTL DT-indexed surface builds and evaluates for CO2", "[SBTL][SVDSBTL][dt][smoke][slow]") {

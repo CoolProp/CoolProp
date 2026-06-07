@@ -1106,7 +1106,15 @@ SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     // evaluates directly (P = ρ²(∂α/∂ρ)RT), no inverter, no
     // rectangular bands, no -760 MPa cells.
     if (T_sup_hi > T_sup_lo) {
-        auto axis = region::AxisTransform::make(region::AxisScale::LINEAR, T_sup_lo, T_sup_hi);
+        // LOG primary-T axis (CoolProp-jh6a).  The supercritical T range is
+        // [1.01*Tc, Tmax]; for low-Tc fluids that ratio is huge (Helium
+        // Tc=5.2 K, Tmax=2000 K -> ~380x), and a LINEAR axis then starves
+        // the near-Tc supercritical zone (where properties vary fastest) of
+        // grid lines relative to the vast hot tail -> ~1% pressure error
+        // across Helium's whole SUPER region.  LOG distributes grid lines
+        // per-decade and drops that to ~1e-8.  For modest-ratio fluids
+        // (Water ~3x, CO2 ~6x) LOG ~ LINEAR, so it is a no-op there.
+        auto axis = region::AxisTransform::make(region::AxisScale::LOG, T_sup_lo, T_sup_hi);
         auto b_lo = build_rho_min_envelope(heos, T_sup_lo, T_sup_hi, p_min_eos);
         auto b_hi = build_rho_max_envelope(heos, T_sup_lo, T_sup_hi, p_max_target, WalkFloor::CRITICAL);
         // LOG secondary: rho_hi/rho_lo ~ 1e5 here (ideal-gas floor to
