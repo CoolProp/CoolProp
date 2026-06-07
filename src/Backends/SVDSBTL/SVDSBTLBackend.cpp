@@ -35,7 +35,7 @@
 #include "CoolProp/schemas/SVDSBTLOptions.h"
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/Exceptions.h"
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/json.h"
 
 // File-scope suppression for bugprone-unchecked-optional-access: the
 // optionals on PointEvaluation are filled by resolve_point_() based on
@@ -129,13 +129,13 @@ void polish_patch_state_(::CoolProp::AbstractState& s, double p, double h) {
 // Read `grid.NT/NR/rank` out of a validated options document.  Missing
 // keys (and missing `grid` itself) leave the corresponding default in
 // place — the validator has already rejected anything ill-formed.
-ResolvedGrid resolve_grid(const rapidjson::Document& opts) {
+ResolvedGrid resolve_grid(const nlohmann::json& opts) {
     ResolvedGrid g = kDefaultGrid;
-    if (opts.IsObject() && opts.HasMember("grid") && opts["grid"].IsObject()) {
-        const auto& grid = opts["grid"];
-        if (grid.HasMember("NT")) g.NT = static_cast<std::size_t>(grid["NT"].GetInt());
-        if (grid.HasMember("NR")) g.NR = static_cast<std::size_t>(grid["NR"].GetInt());
-        if (grid.HasMember("rank")) g.rank = grid["rank"].GetInt();
+    if (opts.is_object() && opts.contains("grid") && opts.at("grid").is_object()) {
+        const auto& grid = opts.at("grid");
+        if (grid.contains("NT")) g.NT = static_cast<std::size_t>(cpjson::get_integer(grid, "NT"));
+        if (grid.contains("NR")) g.NR = static_cast<std::size_t>(cpjson::get_integer(grid, "NR"));
+        if (grid.contains("rank")) g.rank = cpjson::get_integer(grid, "rank");
     }
     return g;
 }
@@ -311,19 +311,18 @@ void SVDSBTLBackend::build_critical_patch_(const std::string& options_canonical)
     std::string patch_source;
 
     if (!options_canonical.empty()) {
-        rapidjson::Document opts;
-        opts.Parse(options_canonical.c_str(), options_canonical.size());
-        if (opts.IsObject() && opts.HasMember("critical_patch") && opts["critical_patch"].IsObject()) {
-            const auto& cp = opts["critical_patch"];
-            if (cp.HasMember("mode") && cp["mode"].IsString()) {
-                mode = cp["mode"].GetString();
+        const nlohmann::json opts = cpjson::parse(options_canonical);
+        if (opts.is_object() && opts.contains("critical_patch") && opts.at("critical_patch").is_object()) {
+            const auto& cp = opts.at("critical_patch");
+            if (cp.contains("mode") && cp.at("mode").is_string()) {
+                mode = cp.at("mode").get<std::string>();
             }
-            if (cp.HasMember("source") && cp["source"].IsString()) {
-                patch_source = cp["source"].GetString();
+            if (cp.contains("source") && cp.at("source").is_string()) {
+                patch_source = cp.at("source").get<std::string>();
             }
-            if (cp.HasMember("bbox") && cp["bbox"].IsArray() && cp["bbox"].Size() == 4) {
+            if (cp.contains("bbox") && cp.at("bbox").is_array() && cp.at("bbox").size() == 4) {
                 for (std::size_t i = 0; i < 4; ++i) {
-                    bbox_mult[i] = cp["bbox"][static_cast<rapidjson::SizeType>(i)].GetDouble();
+                    bbox_mult[i] = cp.at("bbox").at(i).get<double>();
                 }
                 user_supplied_bbox = true;
             }
@@ -904,8 +903,7 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
 
     if (!surface) {
         auto source = source_reference_();
-        rapidjson::Document opts;
-        opts.Parse(options_canonical_.empty() ? "{}" : options_canonical_.c_str());
+        const nlohmann::json opts = cpjson::parse(options_canonical_.empty() ? "{}" : options_canonical_);
         const ResolvedGrid grid = resolve_grid(opts);
         surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, source_backend_, pair, grid));
         try {

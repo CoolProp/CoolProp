@@ -29,7 +29,7 @@ surface tension                 N/m
 #undef REFPROP_CSTYLE_REFERENCES
 
 #include "CoolProp/detail/tools.h"
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/json.h"
 #include "REFPROPMixtureBackend.h"
 #include "REFPROPBackend.h"
 #include "CoolProp/Exceptions.h"
@@ -2918,10 +2918,9 @@ TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
             double h_CP = S1->hmass();
             double s_CP = S1->smass();
             auto j = S1->fluid_param_string("JSON");
-            rapidjson::Document doc;
-            doc.Parse<0>(j.c_str());
-            auto& v = doc[0]["EOS"][0]["alpha0"];
-            auto s = cpjson::to_string(v);
+            const nlohmann::json doc = cpjson::parse(j);
+            const auto& v = doc.at(0).at("EOS").at(0).at("alpha0");
+            auto s = cpjson::json2string(v);
             CAPTURE(s);
 
             shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
