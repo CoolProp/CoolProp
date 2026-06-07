@@ -14,10 +14,35 @@
 #include "CoolProp/Exceptions.h"
 #include "CoolProp/detail/tools.h"  // for CoolProp::format / CoolPropDbl
 
+// STOPGAP (CoolProp-rj2i): pre-include — at DEFAULT visibility, BEFORE the
+// hidden-visibility pragma below — the system headers that nlohmann/json and
+// valijson reach. GCC pins a symbol's ELF visibility at its FIRST declaration
+// in a TU. <cassert> re-declares __assert_fail UNGUARDED on every include (to
+// support NDEBUG toggling), so if its first declaration lands inside the hidden
+// region (as it did once these headers were pulled into the loader TUs),
+// __assert_fail becomes GLOBAL HIDDEN UND and the non-NDEBUG shared link (e.g.
+// the docs Octave .oct) cannot bind it. Pinning these externs here keeps them
+// DEFAULT. <cassert> is the essential one (uniquely unguarded); the rest are
+// defense-in-depth for differing include orders. This block AND the pragma are
+// deleted by the link-time export-control rework (Option A) — see
+// docs/superpowers/specs/2026-06-07-json-symbol-visibility-strategy-reassessment-design.md
+#include <cassert>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <exception>
+#include <iostream>
 #include <limits>
+#include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
+#include <typeinfo>
 #include <vector>
 
 #if defined(__GNUC__) || defined(__clang__)
