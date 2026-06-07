@@ -12,10 +12,26 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Find Python
-find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+# FindPython's Development.Module component requires CMake >= 3.18; fall back to
+# the full Development component on 3.15-3.17.
+if(CMAKE_VERSION VERSION_LESS 3.18)
+    set(_py_dev_component Development)
+else()
+    set(_py_dev_component Development.Module)
+endif()
+find_package(Python REQUIRED COMPONENTS Interpreter ${_py_dev_component}
+             OPTIONAL_COMPONENTS Development.SABIModule)
 
 # Find Cython
 find_package(Cython REQUIRED)
+
+# Opt-in: build the nanobind core + the capsule `State` shim instead of the
+# legacy Cython interface, reusing this same harness (constants generation,
+# package assembly, install rules, scikit-build wheel).  Default OFF -> the
+# shipped (legacy Cython) wheel is completely unchanged.  When ON, the nanobind
+# core (CoolProp.<abi3>.so) replaces the legacy Cython CoolProp module and the
+# link-free State capsule shim is built as CoolProp.State.
+option(COOLPROP_NANOBIND "Build the nanobind-based CoolProp package (core + State capsule shim)" OFF)
 
 # Set root directory
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
@@ -134,6 +150,22 @@ set(CYTHON_FLAGS
     --directive c_string_encoding=ascii
 )
 
+# Generate _constants module (common to both the legacy and nanobind interfaces)
+add_custom_command(
+    OUTPUT CoolProp/_constants.cpp
+    COMMAND ${Python_EXECUTABLE} -m cython ${CYTHON_FLAGS}
+        -o "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/_constants.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/_constants.pyx"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/_constants.pyx"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
+        generate_constants_target
+    COMMENT "Cythonizing _constants.pyx"
+    VERBATIM
+)
+
+if(NOT COOLPROP_NANOBIND)
+
 # Generate CoolProp module
 add_custom_command(
     OUTPUT CoolProp/CoolProp.cpp
@@ -145,20 +177,6 @@ add_custom_command(
         "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
         generate_constants_target
     COMMENT "Cythonizing CoolProp.pyx"
-    VERBATIM
-)
-
-# Generate _constants module
-add_custom_command(
-    OUTPUT CoolProp/_constants.cpp
-    COMMAND ${Python_EXECUTABLE} -m cython ${CYTHON_FLAGS}
-        -o "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/_constants.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/_constants.pyx"
-    DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/_constants.pyx"
-        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
-        generate_constants_target
-    COMMENT "Cythonizing _constants.pyx"
     VERBATIM
 )
 
@@ -190,6 +208,54 @@ else()
     target_compile_options(CoolProp_module PRIVATE -std=c++17)
 endif()
 
+else()  # COOLPROP_NANOBIND: nanobind core + capsule State shim
+
+# ---- nanobind core (CoolProp.<abi3>.so) replaces the legacy Cython module ----
+execute_process(
+    COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+    OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_DIR)
+find_package(nanobind CONFIG REQUIRED)
+nanobind_add_module(CoolProp_module STABLE_ABI
+    ${COOLPROP_SOURCES} "${ROOT_DIR}/src/nanobind_interface.cxx")
+add_dependencies(CoolProp_module generate_headers_target)
+target_compile_definitions(CoolProp_module PRIVATE NANOBIND COOLPROP_NANOBIND_MODULE)
+target_include_directories(CoolProp_module PRIVATE
+    ${COOLPROP_INCLUDE_DIRS}
+    ${Python_INCLUDE_DIRS}
+)
+target_link_libraries(CoolProp_module PRIVATE miniz)
+set_target_properties(CoolProp_module PROPERTIES OUTPUT_NAME "CoolProp" PREFIX "")
+
+# ---- capsule State shim -> CoolProp.State (link-free; forwards through _capi) ----
+# No CoolProp C++ is compiled in here; the shim only needs the C-ABI struct
+# header and grabs the function table from the already-imported core at runtime.
+add_custom_command(
+    OUTPUT CoolProp/State.cpp
+    COMMAND ${Python_EXECUTABLE} -m cython ${CYTHON_FLAGS}
+        -o "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/State.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/State.pyx"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/State.pyx"
+        "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/State.pxd"
+    COMMENT "Cythonizing State.pyx (capsule shim)"
+    VERBATIM
+)
+Python_add_library(State_module MODULE WITH_SOABI
+    "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/State.cpp"
+)
+target_include_directories(State_module PRIVATE
+    "${ROOT_DIR}/include"
+    ${Python_INCLUDE_DIRS}
+)
+set_target_properties(State_module PROPERTIES OUTPUT_NAME "State" PREFIX "")
+if(WIN32)
+    target_compile_options(State_module PRIVATE /utf-8 /std:c++17)
+else()
+    target_compile_options(State_module PRIVATE -std=c++17)
+endif()
+
+endif()  # COOLPROP_NANOBIND
+
 # Create _constants extension module
 Python_add_library(_constants_module MODULE WITH_SOABI
     "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/_constants.cpp"
@@ -210,6 +276,8 @@ if(WIN32)
 else()
     target_compile_options(_constants_module PRIVATE -std=c++17)
 endif()
+
+if(NOT COOLPROP_NANOBIND)
 
 # Install the modules to the CoolProp package
 install(TARGETS CoolProp_module _constants_module
@@ -233,6 +301,32 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/"
     PATTERN "__pycache__" EXCLUDE
     PATTERN "*.pyc" EXCLUDE
 )
+
+else()  # COOLPROP_NANOBIND
+
+# nanobind core + capsule State shim + generated constants module
+install(TARGETS CoolProp_module State_module _constants_module
+    LIBRARY DESTINATION CoolProp
+    RUNTIME DESTINATION CoolProp
+)
+# The legacy CoolProp/*.py and *.pxd are NOT nanobind-compatible, so the package
+# files are installed explicitly (not by globbing the source dir):
+#  - the nanobind __init__ (from __init__.nanobind.py)
+#  - the capsule shim's cimport contract, shipped as State.pxd
+#  - a package __init__.pxd so `from CoolProp cimport ...` resolves downstream
+#  - the generated runtime constants + cimport header (PDSim consumes these)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/__init__.py"
+    DESTINATION CoolProp)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/__init__.pxd"
+    DESTINATION CoolProp)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/State.pxd"
+    DESTINATION CoolProp)
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants.py"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
+    DESTINATION CoolProp)
+
+endif()  # COOLPROP_NANOBIND
 
 # Install header files directly from ROOT_DIR (for packaging)
 # These are copied at install time, not during build, to avoid
