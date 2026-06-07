@@ -17,6 +17,29 @@ using std::shared_ptr;
 
 namespace CoolProp {
 
+// The anonymous union (max_abs_error vs. {using_tau_r, reducing_value, T_r, N})
+// is intentionally written one active member per branch; the `type` discriminant
+// gates every read, so the inactive members are never accessed. clang-tidy's
+// union-access / member-init guidance does not model discriminated unions, so it
+// is suppressed across this constructor.
+// NOLINTBEGIN(cppcoreguidelines-pro-type-member-init,cppcoreguidelines-pro-type-union-access)
+SaturationAncillaryFunction::SaturationAncillaryFunction(const Values& v) : type(v.type), Tmin(v.Tmin), Tmax(v.Tmax) {
+    if (type == TYPE_RATIONAL_POLYNOMIAL) {
+        num_coeffs = v.num_coeffs;
+        den_coeffs = v.den_coeffs;
+        max_abs_error = v.max_abs_error;
+    } else {
+        n = v.n;
+        t = v.t;
+        N = n.size();
+        s = n;
+        reducing_value = v.reducing_value;
+        using_tau_r = v.using_tau_r;
+        T_r = v.T_r;
+    }
+}
+// NOLINTEND(cppcoreguidelines-pro-type-member-init,cppcoreguidelines-pro-type-union-access)
+
 double SaturationAncillaryFunction::evaluate(double T) {
     if (type == TYPE_NOT_SET) {
         throw ValueError(format("type not set"));
