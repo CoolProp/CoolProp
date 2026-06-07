@@ -629,7 +629,8 @@ if(COOLPROP_OBJECT_LIBRARY
     # shims ship alongside so consumers on the old "X.h" includes keep building
     # (removed at v9). Generated DB headers (*_JSON.h) are excluded.
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
-            DESTINATION static_library/include FILES_MATCHING PATTERN "*.h")
+            DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
+            REGEX "detail/json\\.h$" EXCLUDE)
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
             DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
             PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
@@ -666,7 +667,8 @@ if(COOLPROP_OBJECT_LIBRARY
     # GH #1280: ship the installable C++ header tree (+ flat back-compat shims,
     # removed at v9; generated *_JSON.h excluded). See the static branch above.
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
-            DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h")
+            DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
+            REGEX "detail/json\\.h$" EXCLUDE)
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
             DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
             PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
@@ -855,7 +857,8 @@ if(COOLPROP_DEBIAN_PACKAGE)
   # the flat back-compat shims, so both <CoolProp/CoolPropLib.h> and the legacy
   # <CoolPropLib.h> resolve from /usr/include. Shims removed at v9.
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h")
+          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
+          REGEX "detail/json\\.h$" EXCLUDE)
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
           DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
           PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
