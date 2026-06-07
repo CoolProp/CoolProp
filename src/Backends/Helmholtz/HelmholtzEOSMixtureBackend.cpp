@@ -198,6 +198,18 @@ void HelmholtzEOSMixtureBackend::resize(std::size_t N) {
     }
 }
 void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase() {
+    if (!is_pure_or_pseudopure) {
+        // For mixtures, use the reducing density as a cheap proxy.
+        // The true critical point triggers calc_all_critical_points()
+        // (an expensive, uncached solver) for each of p_critical(),
+        // T_critical(), and rhomolar_critical().
+        if (rhomolar() > rhomolar_reducing()) {
+            _phase = iphase_liquid;
+        } else {
+            _phase = iphase_gas;
+        }
+        return;
+    }
     try {
         if (p() > p_critical()) {
             if (T() > T_critical()) {
@@ -218,7 +230,6 @@ void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase() {
             }
         }
     } catch (...) {
-        // Fallback for mixtures where critical point finding fails
         if (rhomolar() > rhomolar_reducing()) {
             _phase = iphase_liquid;
         } else {
