@@ -14,6 +14,7 @@
 #   ./dev/ci/preflight.sh --base=HEAD~1  # check against an earlier ref
 #   ./dev/ci/preflight.sh --skip=cppcheck,clang-tidy   # subset
 #   ./dev/ci/preflight.sh --skip=json-symbols          # subset
+#   ./dev/ci/preflight.sh --skip=install-headers        # subset
 #
 # Tools resolved at runtime:
 #   - clang-format     : uvx clang-format@<version-from-.pre-commit-config>
@@ -188,6 +189,25 @@ else
     else
         fail "json-symbols (nlohmann/valijson symbols exported from $SHARED_LIB)"
     fi
+fi
+
+# ---------- check 2c: installed-header hygiene -----------------------
+#
+# Companion to the symbol-leak gate on the install side: assert that
+# detail/json.h (which pulls nlohmann/json.hpp + valijson) is not shipped
+# in the installed headers.  Reuses build_shared (built by the json-symbols
+# step above).  Fail-closed lives in the script.
+step "installed-header hygiene"
+if skip_check install-headers; then
+    skip "install-headers" "--skip=install-headers"
+elif skip_check build; then
+    skip "install-headers" "--skip=build (shared build needed)"
+elif [ ! -d build_shared ]; then
+    skip "install-headers" "build_shared not available (run without --skip=json-symbols)"
+elif ./dev/ci/check-installed-headers.sh build_shared; then
+    ok "install-headers (detail/json.h not shipped)"
+else
+    fail "install-headers (detail/json.h shipped, or install failed; see /tmp/install-headers-check.log)"
 fi
 
 # ---------- check 3: Catch2 tests with auto-selected tag scope -------
