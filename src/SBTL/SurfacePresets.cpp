@@ -1079,7 +1079,11 @@ SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
         auto axis = region::AxisTransform::make(region::AxisScale::LINEAR, T_sub_lo, T_sub_hi);
         auto b_lo = build_rho_min_envelope(heos, T_sub_lo, T_sub_hi, p_min_eos);
         auto b_hi = build_rho_sat_V(heos, T_sub_lo, T_sub_hi);
-        spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi));
+        // LOG secondary: rho spans from the near-ideal-gas floor
+        // rho(T, p_min_eos) up to rho_sat,V — orders of magnitude at low
+        // T — and p ∝ rho there.  Linear-eta strands that tail below the
+        // first grid node (CoolProp-wvtz); log-eta resolves it.
+        spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi), region::AxisScale::LOG);
     }
     // SUPER (T > T_critical).  Secondary D bounded by the two HEOS-
     // validity isobars.  No dome above Tc — single region across the
@@ -1091,7 +1095,11 @@ SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
         auto axis = region::AxisTransform::make(region::AxisScale::LINEAR, T_sup_lo, T_sup_hi);
         auto b_lo = build_rho_min_envelope(heos, T_sup_lo, T_sup_hi, p_min_eos);
         auto b_hi = build_rho_max_envelope(heos, T_sup_lo, T_sup_hi, p_max_target, WalkFloor::CRITICAL);
-        spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi));
+        // LOG secondary: rho_hi/rho_lo ~ 1e5 here (ideal-gas floor to
+        // compressed-supercritical ceiling) with p ∝ rho in the tail.
+        // This is the region whose low-rho edge dominated the DT
+        // validation error band (CoolProp-wvtz).
+        spec.regions.emplace_back(axis, std::move(b_lo), std::move(b_hi), region::AxisScale::LOG);
     }
 
     spec.update_state = [](::CoolProp::AbstractState& s, double T, double D) {

@@ -1305,6 +1305,57 @@ TEST_CASE("SVDSBTL DT-indexed surface builds and evaluates for CO2", "[SBTL][SVD
     }
 }
 
+// Regression gate for CoolProp-wvtz: the low-density (near-ideal-gas)
+// edge of the DT preset's VAPOR/SUPER regions.  The secondary (density)
+// axis is normalised η = (ρ − ρ_lo)/(ρ_hi − ρ_lo); with a LINEAR scale
+// and ρ_hi/ρ_lo ~ 1e5 the entire ideal-gas tail (where p ∝ ρ sweeps
+// several decades) collapses below the first sampled grid node, so the
+// EXP-SVD extrapolates and p(ρ, T) was off by 40 %–2400 % there
+// (SVDSBTLValidation DT panels showed a high-error band at low ρ).
+// A LOG secondary axis (this fix) gives the tail real resolution and
+// makes log p ≈ log ρ + const linear in η, so the EXP-SVD is near-exact.
+// Probe densities are derived from a low p_target via HEOS PT so they
+// land in genuine single-phase low-ρ territory, mirroring the validation
+// methodology.
+TEST_CASE("SVDSBTL DT low-density pressure matches HEOS (CoolProp-wvtz)", "[SBTL][SVDSBTL][dt][low_density][regression][slow]") {
+    struct Case
+    {
+        const char* fluid;
+        double T_factor;  // probe temperature as a multiple of Tc
+        const char* region;
+    };
+    // Reliably-broken pre-fix cases (rev-15 linear-η): Water's wide SUPER/
+    // VAPOR regions show 20×–2000× error in the first cell; Argon's SUPER
+    // shows ~17 %.  Each probe sits just above the region's low-density
+    // floor ρ_lo — exactly where the validation heatmap's left edge lives.
+    for (const Case& c : {Case{"Water", 1.05, "SUPER"}, Case{"Water", 0.85, "VAPOR"}, Case{"Argon", 1.05, "SUPER"}}) {
+        auto svd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", c.fluid));
+        auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", c.fluid));
+        const double T = c.T_factor * heos->T_critical();
+
+        // Replicate the preset's low-density floor: p_min_eos ≈ p_sat at
+        // the triple point.  ρ_lo = ρ(T, p_floor) is the region's bottom
+        // boundary; probe a hair above it (1.3·ρ_lo) so the point is
+        // unambiguously inside the atlas yet inside the first η cell, the
+        // near-ideal-gas tail where the linear-η surface failed.
+        heos->update(CoolProp::QT_INPUTS, 0.0, heos->Ttriple() * 1.001);
+        const double p_floor = heos->p() * 1.02;
+        heos->update(CoolProp::PT_INPUTS, p_floor, T);
+        const double rho = 1.3 * heos->rhomass();
+
+        heos->update(CoolProp::DmassT_INPUTS, rho, T);
+        const double p_ref = heos->p();
+        svd->update(CoolProp::DmassT_INPUTS, rho, T);
+        const double p_svd = svd->p();
+        INFO(c.fluid << " " << c.region << " T=" << T << " ρ=" << rho << " p_ref=" << p_ref << " p_svd=" << p_svd
+                     << " rel_err=" << std::abs(p_svd - p_ref) / p_ref);
+        CHECK(std::isfinite(p_svd));
+        CHECK(p_svd > 0.0);
+        CHECK(p_svd == Approx(p_ref).epsilon(5e-3));
+        CHECK(svd->rhomass() == rho);  // density input echoed back
+    }
+}
+
 // Regression gate for issue #1301 (CoolProp-i7j): a random (T, ρ)
 // sweep over yufang67's exact bounds (T ∈ [220, 500] K, ρ ∈ [0.01,
 // 1200] kg/m³) spanning subcritical liquid / vapor / two-phase dome

@@ -157,7 +157,7 @@ void pack_decomp(Packer& pk, std::size_t region_idx, ::CoolProp::parameters prop
 template <typename Packer>
 void pack_region(Packer& pk, const region::Region& r) {
     const auto& axis = r.primary();
-    pk.pack_array(8);
+    pk.pack_array(9);
     pk.pack(static_cast<std::uint8_t>(axis.scale));
     pk.pack(axis.a_lo);
     pk.pack(axis.a_hi);
@@ -166,6 +166,9 @@ void pack_region(Packer& pk, const region::Region& r) {
     pk.pack(axis.inv_span_t);
     pack_curve(pk, r.b_lo());
     pack_curve(pk, r.b_hi());
+    // Secondary-axis (eta) scale — element [8], appended in rev 16.
+    // LINEAR (0) for every pre-rev-16 surface; DmassT VAPOR/SUPER use LOG.
+    pk.pack(static_cast<std::uint8_t>(r.secondary_scale()));
 }
 
 template <typename Packer>
@@ -311,7 +314,10 @@ std::unique_ptr<region::BoundaryCurve> unpack_curve(const msgpack::object& o,
 }
 
 region::Region unpack_region(const msgpack::object& o, const std::shared_ptr<region::SuperancillaryBoundaryCurve::SuperAncillary_t>& sa) {
-    check_array(o, 8, "region");
+    // 9 elements since rev 16 (secondary-axis scale at [8]).  The load()
+    // revision gate rejects pre-rev-16 streams before they reach here, so
+    // the 9th element is always present.
+    check_array(o, 9, "region");
     const auto scale = static_cast<region::AxisScale>(as<std::uint8_t>(o.via.array.ptr[0]));
     const auto a_lo = as<double>(o.via.array.ptr[1]);
     const auto a_hi = as<double>(o.via.array.ptr[2]);
@@ -321,7 +327,8 @@ region::Region unpack_region(const msgpack::object& o, const std::shared_ptr<reg
     // trip diagnostics only.
     auto b_lo = unpack_curve(o.via.array.ptr[6], sa);
     auto b_hi = unpack_curve(o.via.array.ptr[7], sa);
-    return {axis, std::move(b_lo), std::move(b_hi)};
+    const auto secondary = static_cast<region::AxisScale>(as<std::uint8_t>(o.via.array.ptr[8]));
+    return {axis, std::move(b_lo), std::move(b_hi), secondary};
 }
 
 svd::SVDDecomposition unpack_decomp(const msgpack::object& o, std::size_t* out_region_idx, ::CoolProp::parameters* out_prop) {

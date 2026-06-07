@@ -186,7 +186,19 @@ class SVDSurfaceSerializer
     //           large enough to keep the SuperAncillary sat-curve
     //           well-defined, and tightening reduces the patch-only
     //           sliver around pc.
-    static constexpr int kRevision = 15;
+    //   rev 16: CoolProp-wvtz.  Region gains a selectable secondary-axis
+    //           (eta) scale, packed as a 9th region-blob element.  The
+    //           DmassT preset's VAPOR + SUPER regions switch to
+    //           AxisScale::LOG so the near-ideal-gas low-density tail
+    //           (rho_hi/rho_lo ~ 1e5, p ∝ rho) gets uniform-in-decade
+    //           sampling instead of collapsing below the first linear-eta
+    //           grid node.  The stored grid sample positions and U/slopes
+    //           for those regions change, and the on-wire region array
+    //           grows from 8 to 9 elements, so rev-15 caches must rebuild.
+    //           HEOS DmassT low-density pressure error drops from
+    //           ~40 %–2400 % to ~1e-5.  PT / HmassP surfaces are
+    //           byte-identical (their regions stay LINEAR).
+    static constexpr int kRevision = 16;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

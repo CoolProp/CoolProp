@@ -31,10 +31,14 @@ struct RegionSpec
     region::AxisTransform primary{region::AxisScale::LINEAR, 0.0, 1.0, 0.0, 1.0, 1.0};
     std::unique_ptr<region::BoundaryCurve> b_lo;
     std::unique_ptr<region::BoundaryCurve> b_hi;
+    // Secondary-axis (eta) normalisation scale.  LINEAR by default; set
+    // LOG for wide-dynamic-range secondary axes (see region::Region).
+    region::AxisScale secondary{region::AxisScale::LINEAR};
 
     RegionSpec() = default;
-    RegionSpec(region::AxisTransform p, std::unique_ptr<region::BoundaryCurve> lo, std::unique_ptr<region::BoundaryCurve> hi)
-      : primary(p), b_lo(std::move(lo)), b_hi(std::move(hi)) {}
+    RegionSpec(region::AxisTransform p, std::unique_ptr<region::BoundaryCurve> lo, std::unique_ptr<region::BoundaryCurve> hi,
+               region::AxisScale sec = region::AxisScale::LINEAR)
+      : primary(p), b_lo(std::move(lo)), b_hi(std::move(hi)), secondary(sec) {}
     RegionSpec(const RegionSpec&) = delete;
     RegionSpec& operator=(const RegionSpec&) = delete;
     RegionSpec(RegionSpec&&) = default;
