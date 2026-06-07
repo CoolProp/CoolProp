@@ -3396,7 +3396,7 @@ class PropertyLimitsFixture
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[superanc]") {
 
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
-    superancillary::SuperAncillary<std::vector<double>> anc{json};
+    superancillary::SuperAncillary<std::vector<double>> anc{json.dump()};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
     auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
@@ -3453,7 +3453,7 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmark class construction", "[supe
 TEST_CASE_METHOD(SuperAncillaryOffFixture, "Check superancillary-like calculations with superancillary disabled for water", "[superanc]") {
 
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
-    superancillary::SuperAncillary<std::vector<double>> anc{json};
+    superancillary::SuperAncillary<std::vector<double>> anc{json.dump()};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
     auto& approxrhoL = anc.get_approx1d('D', 0);
@@ -3770,7 +3770,7 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Superancillary eval matches extended-
         // than silently skip — a new fluid added without re-running
         // inject_superanc_check_points.py should not slip past this test.
         REQUIRE(jsuper.contains("check_points"));
-        superancillary::SuperAncillary<std::vector<double>> anc{jsuper};
+        superancillary::SuperAncillary<std::vector<double>> anc{jsuper.dump()};
         for (const auto& pt : anc.get_check_points()) {
             CAPTURE(pt.T);
             const double tol_p = std::max(std::abs(pt.p_SA_ratio - 1.0), floor_tol) * safety_factor;
