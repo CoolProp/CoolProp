@@ -22,6 +22,23 @@ CoolProp::AbstractState* factory(const std::string& backend, const std::string& 
     return CoolProp::AbstractState::factory(backend, fluid_names);
 }
 
+// Split a delimited param string into a list, mirroring the str.split() used by
+// the Cython high-level convenience wrappers below (FluidsList, get_aliases).
+static std::vector<std::string> _split_str(const std::string& s, char delim) {
+    std::vector<std::string> out;
+    std::string cur;
+    for (char c : s) {
+        if (c == delim) {
+            out.push_back(cur);
+            cur.clear();
+        } else {
+            cur += c;
+        }
+    }
+    out.push_back(cur);
+    return out;
+}
+
 // ---- State C-ABI capsule (bridge for the frozen Cython `State` compat shim) --
 // The opaque handle carries a shared_ptr<AbstractState> directly.
 namespace {
@@ -398,6 +415,22 @@ void init_CoolProp(nb::module_& m) {
       .def("helmholtzmass_excess", &AbstractState::helmholtzmass_excess)
       .def("volumemolar_excess", &AbstractState::volumemolar_excess)
       .def("volumemass_excess", &AbstractState::volumemass_excess)
+      // q2sh: Cython-parity additions -- idealgas/residual decompositions
+      .def("hmolar_idealgas", &AbstractState::hmolar_idealgas)
+      .def("hmass_idealgas", &AbstractState::hmass_idealgas)
+      .def("hmolar_residual", &AbstractState::hmolar_residual)
+      .def("smolar_idealgas", &AbstractState::smolar_idealgas)
+      .def("smass_idealgas", &AbstractState::smass_idealgas)
+      .def("smolar_residual", &AbstractState::smolar_residual)
+      .def("umolar_idealgas", &AbstractState::umolar_idealgas)
+      .def("umass_idealgas", &AbstractState::umass_idealgas)
+      .def("gibbsmolar_residual", &AbstractState::gibbsmolar_residual)
+      .def("neff", &AbstractState::neff)
+      // q2sh: fluid-constant / cubic-alpha / superancillary accessors
+      .def("get_fluid_constant", &AbstractState::get_fluid_constant)
+      .def("get_fluid_parameter_double", &AbstractState::get_fluid_parameter_double)
+      .def("set_cubic_alpha_C", &AbstractState::set_cubic_alpha_C)
+      .def("update_QT_pure_superanc", &AbstractState::update_QT_pure_superanc)
       .def("speed_sound", &AbstractState::speed_sound)
       .def("isothermal_compressibility", &AbstractState::isothermal_compressibility)
       .def("isobaric_expansion_coefficient", &AbstractState::isobaric_expansion_coefficient)
@@ -472,6 +505,8 @@ void init_CoolProp(nb::module_& m) {
     m.def("get_config_string", &get_config_string);
     m.def("get_config_double", &get_config_double);
     m.def("get_config_bool", &get_config_bool);
+    m.def("get_config_int", &get_config_int);
+    m.def("set_config_int", &set_config_int);
     m.def("get_parameter_information", &get_parameter_information);
     m.def("get_parameter_index", &get_parameter_index);
     m.def("get_phase_index", &get_phase_index);
@@ -492,7 +527,7 @@ void init_CoolProp(nb::module_& m) {
     m.def("saturation_ancillary", &saturation_ancillary);
     m.def("add_fluids_as_JSON", &add_fluids_as_JSON);
     m.def("HAPropsSI", &HumidAir::HAPropsSI);
-    m.def("HAProps", &HumidAir::HAProps);
+    // HAProps (non-SI humid air) intentionally NOT bound -- removed for v8 (SI-only); use HAPropsSI.
     m.def("HAProps_Aux", [](std::string out_string, double T, double p, double psi_w) {
         std::array<char, 1000> units{};
         double out = HumidAir::HAProps_Aux(out_string.c_str(), T, p, psi_w, units.data());
@@ -502,6 +537,32 @@ void init_CoolProp(nb::module_& m) {
     m.def("get_mixture_binary_pair_data", &get_mixture_binary_pair_data);
     m.def("set_mixture_binary_pair_data", &set_mixture_binary_pair_data);
     m.def("apply_simple_mixing_rule", &apply_simple_mixing_rule);
+
+    // ---- q2sh: remaining Cython-parity module functions ---------------------
+    // Lower-level C++-backed wrappers
+    m.def("set_interaction_parameters", &set_interaction_parameters);
+    m.def("set_predefined_mixtures", &set_predefined_mixtures);
+    m.def("get_mixture_binary_pair_pcsaft", &get_mixture_binary_pair_pcsaft);
+    m.def("set_mixture_binary_pair_pcsaft", &set_mixture_binary_pair_pcsaft);
+    // Higher-level convenience wrappers (mirror the Cython module surface; the
+    // lower-level get_global_param_string / get_fluid_param_string stay above).
+    m.def("FluidsList", []() { return _split_str(get_global_param_string("FluidsList"), ','); });
+    m.def("get_aliases", [](const std::string& Fluid) { return _split_str(get_fluid_param_string(Fluid, "aliases_bar"), '|'); });
+    m.def("get_REFPROPname", [](const std::string& Fluid) { return get_fluid_param_string(Fluid, "REFPROP_name"); });
+    m.def("get_BibTeXKey", [](const std::string& Fluid, const std::string& key) { return get_fluid_param_string(Fluid, "BibTeX-" + key); });
+    m.def("get_errstr", []() { return get_global_param_string("errstring"); });
+    // set_reference_state: keep the low-level D/S binds above and add the unified
+    // (FluidName, *args) dispatcher that the Cython module exposes.
+    m.def("set_reference_state", [](const std::string& FluidName, nb::args args) {
+        if (args.size() == 1) {
+            set_reference_stateS(FluidName, nb::cast<std::string>(args[0]));
+        } else if (args.size() == 4) {
+            set_reference_stateD(FluidName, nb::cast<double>(args[0]), nb::cast<double>(args[1]), nb::cast<double>(args[2]),
+                                 nb::cast<double>(args[3]));
+        } else {
+            throw std::invalid_argument("Invalid number of inputs to set_reference_state");
+        }
+    });
 }
 
 #    if defined(COOLPROP_NANOBIND_MODULE)
