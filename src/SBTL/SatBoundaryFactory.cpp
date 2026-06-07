@@ -185,8 +185,13 @@ std::unique_ptr<region::CubicSplineCurve> build_h_isotherm_floor(::CoolProp::Abs
             try {
                 heos.update(::CoolProp::PT_INPUTS, p, T_try);
                 return heos.hmass();
-            } catch (...) {  // NOLINT(bugprone-empty-catch)
-                // Below melting line at this p; bump T up and retry.
+            } catch (...) {
+                // Below melting line at this p; bump T up and retry.  Reset
+                // the state first: a failed update can leave a poisoned
+                // guess that makes the next (T_try, p) probe on this same
+                // reused state fail spuriously — the same retry-on-melting-
+                // reject hazard as build_rho_max_envelope (CoolProp-i9t8).
+                heos.clear();
             }
         }
         throw std::runtime_error("build_h_isotherm_floor: floor unreachable within " + std::to_string(walk_steps / 2) + " K of T_min");

@@ -888,8 +888,9 @@ std::unique_ptr<region::CubicSplineCurve> build_rho_max_envelope(::CoolProp::Abs
             try {
                 heos.update(::CoolProp::QT_INPUTS, 0.0, T_knots[k]);
                 p_floor = heos.p() * 1.001;
-            } catch (const ::CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
-                p_floor = 1.0;                                // fluid without QT support at this T; defer to walk-down
+            } catch (const ::CoolProp::CoolPropBaseError&) {
+                p_floor = 1.0;  // fluid without QT support at this T; defer to walk-down
+                heos.clear();   // reset the poisoned density guess (CoolProp-i9t8)
             }
         } else {
             p_floor = 1.001 * p_crit;
@@ -914,8 +915,14 @@ std::unique_ptr<region::CubicSplineCurve> build_rho_max_envelope(::CoolProp::Abs
                     p_ok = p_try;
                     ok = true;
                 }
-            } catch (const ::CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
-                // Below the melting line at this (T, p); drop p.
+            } catch (const ::CoolProp::CoolPropBaseError&) {
+                // Below the melting line at this (T, p); drop p.  Reset the
+                // state: a failed PT update (e.g. the melting-line reject at
+                // high p) leaves a corrupted density guess that would make
+                // the NEXT, valid, lower-p probe fail spuriously with
+                // "p is not a valid number" on the same reused state
+                // (CoolProp-i9t8).
+                heos.clear();
             }
             if (ok) break;
             p_bad = p_try;  // this p is unreachable
@@ -938,8 +945,9 @@ std::unique_ptr<region::CubicSplineCurve> build_rho_max_envelope(::CoolProp::Abs
                         p_ok = p_mid;
                         ok = true;
                     }
-                } catch (const ::CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                } catch (const ::CoolProp::CoolPropBaseError&) {
                     // (T, p_mid) below the melting line; shrink the bracket.
+                    heos.clear();  // reset poisoned guess (CoolProp-i9t8)
                 }
                 if (!ok) p_bad = p_mid;
             }
