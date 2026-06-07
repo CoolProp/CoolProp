@@ -173,12 +173,8 @@ std::string parse_and_canonicalise(const std::string& options_json) {
     if (options_json.empty()) {
         return "{}";
     }
-    rapidjson::Document opts;
-    if (opts.Parse(options_json.c_str(), options_json.size()).HasParseError()) {
-        throw ValueError("SVDSBTL options: invalid JSON (offset " + std::to_string(opts.GetErrorOffset()) + ")");
-    }
-    CoolProp::validate_against_schema(opts, kSVDSBTLOptionsSchemaJson);
-    return CoolProp::to_canonical_json(opts);
+    CoolProp::validate_json_against_schema(options_json, kSVDSBTLOptionsSchemaJson);
+    return CoolProp::to_canonical_json_str(options_json);
 }
 
 // FNV-1a 64 over the canonical options blob — mirrors the opthash the
