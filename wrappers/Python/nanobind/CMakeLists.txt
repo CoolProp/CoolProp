@@ -12,8 +12,8 @@ add_subdirectory("${ROOT_DIR}" "_CoolProp")
 # ----------------------------
 # Build nanobind python module
 # ----------------------------
-# Mirrors wrappers/Python/pybind11 1:1; the binding source is
-# src/nanobind_interface.cxx (a direct translation of pybind11_interface.cxx).
+# The binding source is src/nanobind_interface.cxx.  (It began as a 1:1
+# translation of the former pybind11 interface, which has since been removed.)
 
 # FindPython's Development.Module component requires CMake >= 3.18; fall back to
 # the full Development component on 3.15-3.17 (the minimum above).
