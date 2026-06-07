@@ -6,7 +6,14 @@
 #include "CoolProp/fluids/IncompressibleFluid.h"
 //#include "crossplatform_shared_ptr.h"
 
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/json.h"
+
+// Visibility helper: hide internal nlohmann-taking methods from the exported ABI
+#if defined(__GNUC__) || defined(__clang__)
+#    define CP_JSON_LOCAL __attribute__((visibility("hidden")))
+#else
+#    define CP_JSON_LOCAL
+#endif
 
 #include <map>
 
@@ -129,8 +136,8 @@ extern int get_debug_level();
 /// A container for the fluid parameters for the incompressible fluids
 /**
 This container holds copies of all of the fluid instances for the fluids that are loaded in incompressible.
-New fluids can be added by passing in a rapidjson::Value instance to the add_one function, or
-a rapidjson array of fluids to the add_many function.
+New fluids can be added by passing in a nlohmann::json instance to the add_one function, or
+a nlohmann::json array of fluids to the add_many function.
 */
 
 //typedef shared_ptr<IncompressibleFluid> IncompressibleFluidPointer;
@@ -148,9 +155,9 @@ class JSONIncompressibleLibrary
 
    protected:
     /// A general function to parse the json files that hold the coefficient matrices
-    IncompressibleData parse_coefficients(rapidjson::Value& obj, const std::string& id, bool vital);
-    double parse_value(rapidjson::Value& obj, const std::string& id, bool vital, double def);
-    composition_types parse_ifrac(rapidjson::Value& obj, const std::string& id);
+    CP_JSON_LOCAL IncompressibleData parse_coefficients(const nlohmann::json& obj, const std::string& id, bool vital);
+    CP_JSON_LOCAL double parse_value(const nlohmann::json& obj, const std::string& id, bool vital, double def);
+    CP_JSON_LOCAL composition_types parse_ifrac(const nlohmann::json& obj, const std::string& id);
 
    public:
     // Default constructor;
@@ -161,9 +168,10 @@ class JSONIncompressibleLibrary
         return _is_empty;
     };
 
-    /// Add all the fluid entries in the rapidjson::Value instance passed in
-    void add_many(rapidjson::Value& listing);
-    void add_one(rapidjson::Value& fluid_json);
+    /// Add all the fluid entries in the nlohmann::json array passed in
+    CP_JSON_LOCAL void add_many(const nlohmann::json& listing);
+    CP_JSON_LOCAL void add_one(const nlohmann::json& fluid_json);
+#undef CP_JSON_LOCAL
     void add_obj(const IncompressibleFluid& fluid_obj);
 
     /** \brief Get an IncompressibleFluid instance stored in this library

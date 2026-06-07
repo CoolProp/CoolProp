@@ -7,7 +7,14 @@
 #include <string>
 #include "CoolProp/fluids/PCSAFTFluid.h"
 #include "CoolProp/detail/tools.h"
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/json.h"
+
+// Visibility helper: hide internal nlohmann-taking methods from the exported ABI
+#if defined(__GNUC__) || defined(__clang__)
+#    define CP_JSON_LOCAL __attribute__((visibility("hidden")))
+#else
+#    define CP_JSON_LOCAL
+#endif
 
 namespace CoolProp {
 
@@ -25,7 +32,7 @@ class PCSAFTLibraryClass
     /// Map from sorted pair of CAS numbers to interaction parameter map.  The interaction parameter map is a map from key (string) to value (double)
     std::map<std::vector<std::string>, std::vector<Dictionary>> m_binary_pair_map;
 
-    void load_from_JSON(rapidjson::Document& doc);
+    CP_JSON_LOCAL void load_from_JSON(const nlohmann::json& doc);
     void load_from_string(const std::string_view& str);
 
    public:
@@ -35,7 +42,8 @@ class PCSAFTLibraryClass
         return empty;
     };
 
-    int add_many(rapidjson::Value& listing);
+    CP_JSON_LOCAL int add_many(const nlohmann::json& listing);
+#undef CP_JSON_LOCAL
 
     PCSAFTFluid& get(const std::string& key);
     PCSAFTFluid& get(std::size_t key);

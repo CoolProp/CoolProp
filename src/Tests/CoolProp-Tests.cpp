@@ -5001,6 +5001,61 @@ TEST_CASE("Qmass: SRK cubic mixture output works after Q-pair flash", "[Qmass][c
     CHECK(AS2->Q() == Catch::Approx(0.0).epsilon(1e-10));
 }
 
+TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
+    // --- Cubic (SRK) ---
+    // 1. Structurally invalid JSON must throw unconditionally.
+    SECTION("Cubic SRK - invalid JSON syntax throws") {
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("SRK", "this is not json"), CoolProp::ValueError);
+    }
+    // 2. Valid JSON array but missing required schema fields (Tc_units, pc_units,
+    //    molemass_units, acentric) — the Valijson validator catches the omissions
+    //    and add_fluids_from_JSON_string throws unconditionally for cubics.
+    SECTION("Cubic SRK - schema-invalid payload (missing required fields) throws") {
+        // Provides name, CAS, Tc, pc, molemass but omits the *_units fields and
+        // acentric, all of which are listed in the cubic schema's "required" array.
+        const std::string bad_cubic =
+          R"([{"name":"BadFluid","CAS":"000-00-0","Tc":400.0,"pc":3e6,"molemass":0.04}])";
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("SRK", bad_cubic), CoolProp::ValueError);
+    }
+
+    // --- PC-SAFT ---
+    // The PCSAFT loader only throws on validation failure when debug_level > 0
+    // (at level 0 it silently returns); raise it for these checks and restore
+    // unconditionally via RAII, so other tests are unaffected even if the
+    // assertion throws an unexpected type.
+
+    // 3. Structurally invalid JSON under debug_level > 0 must throw.
+    SECTION("PCSAFT - invalid JSON syntax throws at debug_level > 0") {
+        // PCSAFT's loader only surfaces validation failures when debug_level > 0
+        // (at level 0 it silently returns); raise it for this check and restore
+        // unconditionally via RAII, so other tests are unaffected even if the
+        // assertion throws an unexpected type.
+        struct DebugLevelGuard {
+            int saved;
+            DebugLevelGuard() : saved(CoolProp::get_debug_level()) {}
+            ~DebugLevelGuard() { CoolProp::set_debug_level(saved); }
+        } guard;
+        CoolProp::set_debug_level(1);
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("PCSAFT", "this is not json"), CoolProp::ValueError);
+    }
+
+    // 4. Valid JSON array but missing required schema fields (m, sigma, sigma_units,
+    //    u, u_units, molemass, molemass_units) — the PCSAFT schema marks these in its
+    //    "required" array, so Valijson rejects the payload and the loader throws when
+    //    debug_level > 0.
+    SECTION("PCSAFT - schema-invalid payload (missing required fields) throws at debug_level > 0") {
+        struct DebugLevelGuard {
+            int saved;
+            DebugLevelGuard() : saved(CoolProp::get_debug_level()) {}
+            ~DebugLevelGuard() { CoolProp::set_debug_level(saved); }
+        } guard;
+        CoolProp::set_debug_level(1);
+        // Provides name and CAS but omits m, sigma, sigma_units, u, u_units,
+        // molemass, molemass_units — all listed in the PCSAFT schema's "required" array.
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("PCSAFT", R"([{"name":"Bogus","CAS":"000-00-0"}])"), CoolProp::ValueError);
+    }
+}
+
 TEST_CASE("Water TS_INPUTS flash near 631-634 K is smooth (no spike to 6e13 Pa)", "[water_flash][2079]") {
     // Issue #2079: previously CP.PropsSI('P','T',T,'S',6763.617,'Water')
     // for T in {631, 632, 633, 634} returned ~6e13 Pa (vs ~3.1 MPa

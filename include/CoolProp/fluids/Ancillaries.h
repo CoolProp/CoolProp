@@ -8,20 +8,6 @@
 #include "Eigen/Core"
 #include "CoolProp/numerics/PolyMath.h"
 
-// Forward declaration so that the (non-installed) factory in
-// FluidLibraryFactories.h can be friended below without dragging the full
-// nlohmann/json header into this installed header. The factory needs to
-// populate SaturationAncillaryFunction's private members directly.
-#include <nlohmann/json_fwd.hpp>
-
-namespace CoolProp {
-class SaturationAncillaryFunction;
-}  // namespace CoolProp
-
-namespace cpjson {
-CoolProp::SaturationAncillaryFunction make_saturation_ancillary(const nlohmann::json& j);
-}  // namespace cpjson
-
 namespace CoolProp {
 
 /**
@@ -47,6 +33,21 @@ class SurfaceTensionCorrelation
     std::string BibTeX;          ///< The BiBTeX key for the surface tension curve in use
 
     SurfaceTensionCorrelation() : Tc(_HUGE), N(0) {}
+
+    /// Plain-typed bundle of already-parsed surface-tension values, mirroring
+    /// the SaturationAncillaryFunction::Values boundary: the non-installed
+    /// factory cpjson::make_surface_tension_correlation parses JSON into this
+    /// and constructs, so no JSON type crosses this installed header.
+    struct Values
+    {
+        std::vector<CoolPropDbl> a, n;
+        CoolPropDbl Tc = _HUGE;
+        std::string BibTeX;
+    };
+
+    explicit SurfaceTensionCorrelation(const Values& v)
+      : a(v.a), n(v.n), s(v.n), Tc(v.Tc), N(v.n.size()), BibTeX(v.BibTeX) {}
+
     /// Actually evaluate the surface tension equation
     CoolPropDbl evaluate(CoolPropDbl T) {
         if (a.empty()) {
@@ -88,6 +89,31 @@ class SurfaceTensionCorrelation
 */
 class SaturationAncillaryFunction
 {
+   public:
+    enum ancillaryfunctiontypes
+    {
+        TYPE_NOT_SET = 0,
+        TYPE_NOT_EXPONENTIAL,     ///< It is a non-exponential type of equation
+        TYPE_EXPONENTIAL,         ///< It is an exponential type equation, with or without the T_c/T term
+        TYPE_RATIONAL_POLYNOMIAL  ///< It is a rational polynomial equation
+    };
+
+    /// Plain-typed bundle of already-parsed ancillary values. This is the
+    /// de-coupling boundary: the non-installed factory
+    /// cpjson::make_saturation_ancillary (FluidLibraryFactories.h) does all the
+    /// nlohmann parsing and hands one of these across, keeping every JSON type
+    /// out of this installed header.
+    struct Values
+    {
+        ancillaryfunctiontypes type = TYPE_NOT_SET;
+        Eigen::MatrixXd num_coeffs, den_coeffs;
+        std::vector<double> n, t;
+        CoolPropDbl max_abs_error = _HUGE;
+        bool using_tau_r = false;
+        CoolPropDbl reducing_value = _HUGE, T_r = _HUGE;
+        CoolPropDbl Tmin = _HUGE, Tmax = _HUGE;
+    };
+
    private:
     Eigen::MatrixXd num_coeffs,   ///< Coefficients for numerator in rational polynomial
       den_coeffs;                 ///< Coefficients for denominator in rational polynomial
@@ -105,25 +131,17 @@ class SaturationAncillaryFunction
     };
     CoolPropDbl Tmax,  ///< The maximum temperature in K
       Tmin;            ///< The minimum temperature in K
-    enum ancillaryfunctiontypes
-    {
-        TYPE_NOT_SET = 0,
-        TYPE_NOT_EXPONENTIAL,     ///< It is a non-exponential type of equation
-        TYPE_EXPONENTIAL,         ///< It is an exponential type equation, with or without the T_c/T term
-        TYPE_RATIONAL_POLYNOMIAL  ///< It is a rational polynomial equation
-    };
     ancillaryfunctiontypes type;  ///< The type of ancillary curve being used
+
    public:
     SaturationAncillaryFunction()
       : type(TYPE_NOT_SET), Tmin(_HUGE), Tmax(_HUGE) {
 
         };
 
-    // The JSON-construction logic lives in the non-installed factory
-    // cpjson::make_saturation_ancillary (FluidLibraryFactories.h); it is
-    // friended here so it can populate the private members below directly,
-    // keeping the nlohmann::json type out of this installed header.
-    friend SaturationAncillaryFunction cpjson::make_saturation_ancillary(const nlohmann::json& j);
+    /// Build from a plain-typed Values bundle (defined out-of-line in
+    /// Ancillaries.cpp). All JSON parsing happens in the non-installed factory.
+    explicit SaturationAncillaryFunction(const Values& v);
 
     /// Return true if the ancillary is enabled (type is not TYPE_NOT_SET)
     bool enabled() {
