@@ -198,22 +198,42 @@ void HelmholtzEOSMixtureBackend::resize(std::size_t N) {
     }
 }
 void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase() {
-    if (p() > p_critical()) {
-        if (T() > T_critical()) {
-            _phase = iphase_supercritical;
+    if (!is_pure_or_pseudopure) {
+        // For mixtures, use the reducing density as a cheap proxy.
+        // The true critical point triggers calc_all_critical_points()
+        // (an expensive, uncached solver) for each of p_critical(),
+        // T_critical(), and rhomolar_critical().
+        if (rhomolar() > rhomolar_reducing()) {
+            _phase = iphase_liquid;
         } else {
-            _phase = iphase_supercritical_liquid;
+            _phase = iphase_gas;
         }
-    } else {
-        if (T() > T_critical()) {
-            _phase = iphase_supercritical_gas;
-        } else {
-            // Liquid or vapor
-            if (rhomolar() > rhomolar_critical()) {
-                _phase = iphase_liquid;
+        return;
+    }
+    try {
+        if (p() > p_critical()) {
+            if (T() > T_critical()) {
+                _phase = iphase_supercritical;
             } else {
-                _phase = iphase_gas;
+                _phase = iphase_supercritical_liquid;
             }
+        } else {
+            if (T() > T_critical()) {
+                _phase = iphase_supercritical_gas;
+            } else {
+                // Liquid or vapor
+                if (rhomolar() > rhomolar_critical()) {
+                    _phase = iphase_liquid;
+                } else {
+                    _phase = iphase_gas;
+                }
+            }
+        }
+    } catch (...) {
+        if (rhomolar() > rhomolar_reducing()) {
+            _phase = iphase_liquid;
+        } else {
+            _phase = iphase_gas;
         }
     }
 }
@@ -1166,7 +1186,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
             //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].T;
         } else {
-            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
@@ -1185,7 +1205,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
             //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].p;
         } else {
-            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
@@ -1204,7 +1224,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical() {
             //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].rhomolar;
         } else {
-            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
@@ -2774,6 +2794,10 @@ class SolverTPResid : public FuncWrapper1DWithThreeDerivs
                * (6 * HEOS->d2alphar_dDelta2() + 6 * delta * HEOS->d3alphar_dDelta3() + POW2(delta) * HEOS->calc_d4alphar_dDelta4()) / p;
     };
 };
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_max_bound() {
+    return 0.9 / SRK_covolume();
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
     double b = 0;
     for (std::size_t i = 0; i < mole_fractions.size(); ++i) {

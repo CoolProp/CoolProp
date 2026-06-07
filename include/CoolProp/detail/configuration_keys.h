@@ -90,6 +90,7 @@
     X(TABULAR_NX, "TABULAR_NX", static_cast<int>(200),                                                                                               \
       "Number of x-axis grid points (T for PT table, h for PH table) for the BICUBIC and TTSE tabular backends. Increase for higher accuracy in "    \
       "regions with steep gradients (e.g. near the critical point). Memory and build cost scale as O(Nx*Ny). Tables auto-rebuild when changed.")     \
+    X(MIXTURE_STABILITY_ALGORITHM, "MIXTURE_STABILITY_ALGORITHM", 1, "0: legacy, 1: Michelsen (default)")                                            \
     X(TABULAR_NY, "TABULAR_NY", static_cast<int>(200),                                                                                               \
       "Number of y-axis grid points (log P) for the BICUBIC and TTSE tabular backends. Increase for higher accuracy. Memory and build cost scale "   \
       "as O(Nx*Ny). Tables auto-rebuild when changed.")

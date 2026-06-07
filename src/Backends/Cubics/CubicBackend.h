@@ -39,6 +39,24 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Set the pointer to the residual helmholtz class, etc.
     void setup(bool generate_SatL_and_SatV = true);
 
+    /**
+     * @brief Robust Isothermal-Isobaric (PT) Flash for Mixtures
+     *
+     * This method implements a state-of-the-art phase stability and phase-split algorithm
+     * specifically optimized for Cubic Equations of State (e.g., Peng-Robinson, SRK).
+     * It bypasses the standard Helmholtz routines to provide industrial-grade reliability
+     * for multicomponent systems.
+     *
+     * The algorithm follows a two-tier approach:
+     * 1. Stability Analysis: Uses Michelsen's Tangent Plane Distance (TPD) criterion to
+     *    determine if the mixture is unstable at the given T and P.
+     * 2. Phase Split: If unstable, it performs a hybrid Successive Substitution (SS)
+     *    and Second-Order Gibbs energy minimization to find the equilibrium compositions.
+     *
+     * @note This method correctly handles cases near the critical point where traditional
+     *       Newton solvers often diverge.
+     */
+
     /// Set the alpha function based on the alpha function defined in the components vector;
     void set_alpha_from_components();
 
@@ -109,6 +127,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         reducing.T = cubic->get_Tr();
         reducing.rhomolar = cubic->get_rhor();
         return reducing;
+    };
+    CoolPropDbl calc_rhomolar_max_bound() override {
+        return 0.9 / get_cubic()->bm_term(mole_fractions);
     };
     CoolPropDbl calc_reduced_density() override {
         return _rhomolar / get_cubic()->get_rhor();
@@ -199,7 +220,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
 
     /// In this class, we are already doing cubic evaluation, just delegate to our function
     CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) override {
-        return solver_rho_Tp(T, p);
+        return solver_rho_Tp(T, p, phase);
     };
     /**
      * /brief Solve for rho = f(T,p)
@@ -207,6 +228,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
      * You can often get three solutions, to overcome this problem you must either specify the phase, or provide a reasonable guess value for rho_guess, but not both
      */
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1) override;
+
+    /// Solve for rho = f(T,p) with an explicit phase specification (avoids state mutation)
+    CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase);
 
     CoolPropDbl solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax) override;
 

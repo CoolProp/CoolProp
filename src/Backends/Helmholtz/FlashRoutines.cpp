@@ -60,7 +60,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
     } else {
         if (HEOS.imposed_phase_index == iphase_not_imposed) {
             // Blind flash call
-            // Following the strategy of Gernert, 2014
+            // Instantiates stability tester (dispatches to Michelsen or Gernert based on config)
             StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
             if (!stability_tester.is_stable()) {
                 // There is a phase split and liquid and vapor phases are formed
@@ -73,15 +73,46 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 o.omega = 1.0;
                 CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
                 solver.solve();
-                HEOS._phase = iphase_twophase;
-                HEOS._Q = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);  // All vapor qualities are the same (these are the residuals in the solver)
-                HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+                // Fallback block: Catches mathematically trivial splits (beta ~ 0 or 1) caused by boundary
+                // floating-point noise in the Michelsen TPD solver, or false positives if using the legacy solver.
+                if (o.beta < 1e-10) {
+                    HEOS.update_DmolarT_direct(o.rhomolar_liq, HEOS.T());
+                    HEOS._phase = (o.rhomolar_liq < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+                    HEOS._Q = -1;
+                } else if (o.beta > 1.0 - 1e-10) {
+                    HEOS.update_DmolarT_direct(o.rhomolar_vap, HEOS.T());
+                    HEOS._phase = (o.rhomolar_vap < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+                    HEOS._Q = -1;
+                } else {
+                    HEOS._phase = iphase_twophase;
+                    HEOS._Q = o.beta;
+                    HEOS._rhomolar = 1.0 / (o.beta / o.rhomolar_vap + (1.0 - o.beta) / o.rhomolar_liq);
+                }
             } else {
-                // It's single-phase
-                double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
+                // It's single-phase -- find the density.
+                // Use SRK to determine the density branch (gas vs liquid), then
+                // impose that phase for the actual solver so it can select the
+                // correct root without needing p_critical() (which triggers an
+                // expensive critical-point search for many-component mixtures).
+                double rho;
+                double rho_srk = HEOS.solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_gas);
+                if (rho_srk < 0 || !ValidNumber(rho_srk)) {
+                    rho_srk = HEOS.solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_liquid);
+                }
+                phases srk_phase = (rho_srk < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+                HEOS.specify_phase(srk_phase);
+                try {
+                    rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
+                } catch (...) {
+                    // If SRK-determined phase fails, try the other branch
+                    phases alt = (srk_phase == iphase_gas) ? iphase_liquid : iphase_gas;
+                    HEOS.specify_phase(alt);
+                    rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
+                }
+                HEOS.unspecify_phase();
                 HEOS.update_DmolarT_direct(rho, HEOS.T());
                 HEOS._Q = -1;
-                HEOS._phase = iphase_liquid;
+                HEOS._phase = (rho < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
             }
         } else {
             // It's single-phase, and phase is imposed

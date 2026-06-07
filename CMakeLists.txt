@@ -2171,6 +2171,7 @@ if(COOLPROP_CATCH_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PXFlash.cpp")
   list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-Michelsen.cpp"
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-FPUGuard.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-TermCacheProfile.cpp")

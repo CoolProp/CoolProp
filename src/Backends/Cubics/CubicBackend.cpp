@@ -4,6 +4,8 @@
 #include "CoolProp/numerics/Solvers.h"
 #include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
+#include "Backends/Helmholtz/MixtureDerivatives.h"
+#include <Eigen/Dense>
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     N = cubic->get_Tc().size();
@@ -341,7 +343,11 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
         case PT_INPUTS:
             _p = value1;
             _T = value2;
-            _rhomolar = solver_rho_Tp(value2 /*T*/, value1 /*p*/);
+            if (is_pure_or_pseudopure || imposed_phase_index != iphase_not_imposed) {
+                _rhomolar = solver_rho_Tp(value2 /*T*/, value1 /*p*/);
+            } else {
+                HelmholtzEOSMixtureBackend::update(PT_INPUTS, value1, value2);
+            }
             break;
         case QT_INPUTS:
             _Q = value1;
@@ -553,68 +559,111 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
     _phase = iphase_twophase;
 }
 CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max) {
-    _rhomolar = solver_rho_Tp(T, p, 40000);
-    return static_cast<double>(_rhomolar);
+    int Nsoln = 0;
+    double rho0 = 0, rho1 = 0, rho2 = 0;
+    rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);
+
+    double rho;
+    if (Nsoln == 1) {
+        rho = rho0;
+    } else if (Nsoln == 3) {
+        if (imposed_phase_index != iphase_not_imposed) {
+            // Delegate to solver_rho_Tp which handles imposed phase
+            return solver_rho_Tp(T, p);
+        }
+        // Three roots, no imposed phase: pick the root with the lowest
+        // Gibbs energy.  This avoids the expensive p_critical() call that
+        // triggers all_critical_points() for many-component mixtures.
+        double rho_vap = (rho0 > 0) ? rho0 : rho1;
+        double rho_liq = rho2;
+        double g_vap = calc_gibbsmolar_nocache(T, rho_vap);
+        double g_liq = calc_gibbsmolar_nocache(T, rho_liq);
+        rho = (g_liq < g_vap) ? rho_liq : rho_vap;
+    } else {
+        throw ValueError("Obtained neither 1 nor three roots");
+    }
+
+    _rhomolar = rho;
+    update_DmolarT_direct(rho, T);
+    _Q = -1;
+    if (imposed_phase_index != iphase_not_imposed) {
+        _phase = imposed_phase_index;
+    } else {
+        _phase = (rho < rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+    }
+    return rho;
 }
-CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess) {
+CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase) {
     int Nsoln = 0;
     double rho0 = 0, rho1 = 0, rho2 = 0, rho = -1;
     rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);  // Densities are sorted in increasing order
     if (Nsoln == 1) {
         rho = rho0;
     } else if (Nsoln == 3) {
-        if (imposed_phase_index != iphase_not_imposed) {
-            // Use imposed phase to select root
-            if (imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) {
-                if (rho0 > 0) {
+        if (phase == iphase_gas || phase == iphase_supercritical_gas) {
+            if (rho0 > 0) {
+                rho = rho0;
+            } else if (rho1 > 0) {
+                rho = rho1;
+            } else if (rho2 > 0) {
+                rho = rho2;
+            } else {
+                throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
+            }
+        } else if (phase == iphase_liquid || phase == iphase_supercritical_liquid) {
+            rho = rho2;
+        } else {
+            throw ValueError("Specified phase is invalid");
+        }
+    } else {
+        throw ValueError("Obtained neither 1 nor three roots");
+    }
+    _phase = phase;
+    _Q = -1;
+    return rho;
+}
+
+CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess) {
+    if (imposed_phase_index != iphase_not_imposed) {
+        return solver_rho_Tp(T, p, imposed_phase_index);
+    }
+    int Nsoln = 0;
+    double rho0 = 0, rho1 = 0, rho2 = 0, rho = -1;
+    rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);  // Densities are sorted in increasing order
+    if (Nsoln == 1) {
+        rho = rho0;
+    } else if (Nsoln == 3) {
+        if (p < p_critical()) {
+            add_transient_pure_state();
+            transient_pure_state->set_mole_fractions(this->mole_fractions);
+            transient_pure_state->update(PQ_INPUTS, p, 0);
+            if (T > transient_pure_state->T()) {
+                double rhoV = transient_pure_state->saturated_vapor_keyed_output(iDmolar);
+                // Gas
+                if (rho0 > 0 && rho0 < rhoV) {
                     rho = rho0;
-                } else if (rho1 > 0) {
+                } else if (rho1 > 0 && rho1 < rhoV) {
                     rho = rho1;
-                } else if (rho2 > 0) {
-                    rho = rho2;
                 } else {
                     throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
                 }
-            } else if (imposed_phase_index == iphase_liquid || imposed_phase_index == iphase_supercritical_liquid) {
-                rho = rho2;
             } else {
-                throw ValueError("Specified phase is invalid");
+                // Liquid
+                rho = rho2;
             }
         } else {
-            if (p < p_critical()) {
-                add_transient_pure_state();
-                transient_pure_state->set_mole_fractions(this->mole_fractions);
-                transient_pure_state->update(PQ_INPUTS, p, 0);
-                if (T > transient_pure_state->T()) {
-                    double rhoV = transient_pure_state->saturated_vapor_keyed_output(iDmolar);
-                    // Gas
-                    if (rho0 > 0 && rho0 < rhoV) {
-                        rho = rho0;
-                    } else if (rho1 > 0 && rho1 < rhoV) {
-                        rho = rho1;
-                    } else {
-                        throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
-                    }
-                } else {
-                    // Liquid
-                    rho = rho2;
-                }
-            } else {
-                throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
-            }
+            throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
         }
     } else {
         throw ValueError("Obtained neither 1 nor three roots");
     }
     if (is_pure_or_pseudopure) {
-        // Set some variables at the end
         this->recalculate_singlephase_phase();
     } else {
-        if (imposed_phase_index != iphase_not_imposed) {
-            // Use the imposed phase index
-            _phase = imposed_phase_index;
+        if (rho < rhomolar_reducing()) {
+            _phase = iphase_gas;
         } else {
-            _phase = iphase_gas;  // TODO: fix this
+            _phase = iphase_liquid;
         }
     }
     _Q = -1;
@@ -846,3 +895,20 @@ void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, Cool
 
     post_update(false);
 }
+
+/**
+ * @brief Robust Isothermal-Isobaric (PT) Flash for Cubic Equations of State
+ *
+ * Implements the stability analysis and phase split (flash) algorithms based on the
+ * methodology of Michelsen and Mollerup.
+ *
+ * References:
+ * 1. Michelsen, M. L. (1982). "The isothermal flash problem. Part I. Stability."
+ *    Fluid Phase Equilibria, 9(1), 1-19.
+ *    DOI:  10.1016/0378-3812(82)85001-2
+ * 2. Michelsen, M. L. (1982). "The isothermal flash problem. Part II. Phase-split calculation."
+ *    Fluid Phase Equilibria, 9(1), 21-40.
+ *    DOI: 10.1016/0378-3812(82)85002-4
+ * 3. Michelsen, M. L., & Mollerup, J. M. (2007). "Thermodynamic Models: Fundamentals & Computational Aspects."
+ *    ISBN: 87-989961-1-8
+ */

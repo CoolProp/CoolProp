@@ -1,12 +1,14 @@
 
 #include "HelmholtzEOSMixtureBackend.h"
 #include "VLERoutines.h"
+#include <numeric>
 
 #include <cmath>
 #include "CoolProp/numerics/MatrixMath.h"
 #include "MixtureDerivatives.h"
 #include "CoolProp/Configuration.h"
 #include "FlashRoutines.h"
+#include <Eigen/Dense>
 
 namespace CoolProp {
 
@@ -1837,7 +1839,400 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         }
     }
 }
+/**
+ * @brief Performs a rigorous Tangent Plane Distance (TPD) stability analysis
+ *
+ * This implementation follows Michelsen (1982a) and uses the Sum(Y) > 1 criterion
+ * to identify instability. It is designed to be EoS-agnostic and robust for
+ * multicomponent HEOS mixtures.
+ *
+ * @see Michelsen, M. L. (1982). "The isothermal flash problem. Part I. Stability." 
+ *      Fluid Phase Equilibria, 9(1), 1-19.
+ */
 void StabilityRoutines::StabilityEvaluationClass::check_stability() {
+    if (use_michelsen) {
+        check_stability_michelsen();
+    } else {
+        check_stability_legacy();
+    }
+}
+void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
+    const std::size_t N = z.size();
+    CoolPropDbl the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
+    CoolPropDbl the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
+    _stable = true;
+
+    // Evaluate feed fugacities: d_i = ln(z_i) + ln(phi_i(z))
+    HEOS.SatL->set_mole_fractions(z);
+    CoolPropDbl rho_b;
+    try {
+        rho_b = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, HEOS.SatL->calc_rhomolar_max_bound());
+    } catch (...) {
+        // solver_rho_Tp_global can fail for multiparameter mixtures when the pressure
+        // lies between the spinodal pressures.  Fall back to SRK-seeded solver.
+        HEOS.SatL->specify_phase(iphase_gas);
+        rho_b = HEOS.SatL->solver_rho_Tp(the_T, the_p);
+        HEOS.SatL->unspecify_phase();
+    }
+    HEOS.SatL->update_DmolarT_direct(rho_b, the_T);
+
+    std::vector<CoolPropDbl> ln_f_z(N);
+    for (std::size_t i = 0; i < N; ++i) {
+        if (z[i] > 0)
+            ln_f_z[i] = std::log(z[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
+        else
+            ln_f_z[i] = -1e30;  // Effectively -inf for absent components
+    }
+
+    // Build two trial compositions from Wilson K-factors ([Michelsen1982a] Eq. 28):
+    //   K_i = (Pc_i/P) * exp(5.373*(1+omega_i)*(1-Tc_i/T))
+    std::vector<CoolPropDbl> yV(N), xL(N);
+    for (std::size_t i = 0; i < N; ++i) {
+        double Ki = std::exp(SaturationSolvers::Wilson_lnK_factor(HEOS, the_T, the_p, i));
+        yV[i] = z[i] * Ki;
+        xL[i] = z[i] / Ki;
+    }
+
+    // Test both trial directions (vapor-like and liquid-like)
+    std::vector<std::vector<CoolPropDbl>> trials = {yV, xL};
+    for (std::size_t t = 0; t < trials.size(); ++t) {
+        auto& Y = trials[t];
+
+        // --- Phase 1: Successive substitution with GDEM acceleration ---
+        // Fixed-point map: ln(Y_i^new) = d_i - ln(phi_i(y_norm))
+        // See [Michelsen1982a] Eq. 19 and [M&M2007] Ch. 12, Sec. 12.6
+        const int max_ss_loops = 4;  // Each loop does 2 SS steps + 1 GDEM step
+        const double cntol = 1e-7;
+        bool ss_decided = false;
+
+        for (int loop = 0; loop < max_ss_loops && !ss_decided; ++loop) {
+            std::array<double, 2> esq_pair;
+            std::vector<CoolPropDbl> err(N);
+
+            for (int kk = 0; kk < 2 && !ss_decided; ++kk) {
+                // Normalize Y to get trial composition
+                CoolPropDbl sumY = 0;
+                for (std::size_t i = 0; i < N; ++i)
+                    sumY += Y[i];
+                std::vector<CoolPropDbl> y_norm(N);
+                for (std::size_t i = 0; i < N; ++i)
+                    y_norm[i] = Y[i] / sumY;
+
+                // Evaluate fugacity coefficients at trial composition
+                HEOS.SatV->set_mole_fractions(y_norm);
+                try {
+                    CoolPropDbl rho_t = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, HEOS.SatV->calc_rhomolar_max_bound());
+                    HEOS.SatV->update_DmolarT_direct(rho_t, the_T);
+                } catch (...) {
+                    ss_decided = true;
+                    break;
+                }
+
+                // Compute new Y, objective function, and convergence metrics
+                CoolPropDbl tm = 1.0;  // Modified TPD: tm = 1 + sum Y_i*(ln Y_i + ln phi_i - d_i - 1)
+                CoolPropDbl gmax = 0;
+                double esq = 0;
+                for (std::size_t i = 0; i < N; ++i) {
+                    double ln_phi_y = std::log(HEOS.SatV->fugacity_coefficient(i));
+                    double ln_Y_new = ln_f_z[i] - ln_phi_y;
+                    double ln_Y_old = std::log(std::max(Y[i], 1e-300));
+                    double diff = ln_Y_new - ln_Y_old;
+                    err[i] = diff;
+                    esq += Y[i] * diff * diff;
+                    gmax = std::max(gmax, std::abs(diff));
+
+                    double s_i = ln_Y_old + ln_phi_y - ln_f_z[i];
+                    tm += Y[i] * (s_i - 1.0);
+
+                    Y[i] = std::exp(ln_Y_new);
+                }
+
+                // Early exit: tm < 0 means unstable
+                if (tm < -cntol) {
+                    _stable = false;
+                    CoolPropDbl sY = 0;
+                    for (std::size_t i = 0; i < N; ++i)
+                        sY += Y[i];
+                    for (std::size_t i = 0; i < N; ++i)
+                        y_norm[i] = Y[i] / sY;
+                    if (t == 0) {
+                        this->y = y_norm;
+                        this->x = z;
+                    } else {
+                        this->x = y_norm;
+                        this->y = z;
+                    }
+                    return;
+                }
+
+                // Converged to a stationary point
+                if (gmax < cntol) {
+                    ss_decided = true;
+                    break;
+                }
+
+                // Proximity test: if trial is close to feed and curvature is positive, stable
+                CoolPropDbl distance_sq = 0, curvature = 0;
+                for (std::size_t i = 0; i < N; ++i) {
+                    double zysq = std::sqrt(Y[i] * z[i]);
+                    distance_sq += Y[i] + z[i] - 2.0 * zysq;
+                    curvature -= (Y[i] - zysq) * err[i];
+                }
+                if (distance_sq < 0) distance_sq = -distance_sq;
+                if (std::sqrt(distance_sq) < 0.1 && curvature > 0 && tm / curvature > 0.8) {
+                    ss_decided = true;
+                    break;
+                }
+
+                esq_pair[kk] = esq;
+            }
+
+            if (ss_decided) break;
+
+            // GDEM extrapolation step ([M&M2007] Ch. 12, Sec. 12.6)
+            if (esq_pair[0] > 0) {
+                double ratio = std::sqrt(esq_pair[1] / esq_pair[0]);
+                if (ratio < 0 || ratio >= 0.95) ratio = 0.95;
+                double factor = ratio / (1.0 - ratio);
+                for (std::size_t i = 0; i < N; ++i) {
+                    double ln_Y = std::log(std::max(Y[i], 1e-300));
+                    ln_Y += factor * err[i];
+                    Y[i] = std::exp(ln_Y);
+                }
+            }
+        }  // end SS+GDEM loops
+
+        // --- Phase 2: Second-order TPD minimization ---
+        // If SS did not conclusively decide stability, use quasi-Newton
+        // minimization in alpha variables. See [Michelsen1982a] Eq. 25-27.
+        bool trial_unstable = false;
+        if (minimize_tpd(Y, ln_f_z, the_T, the_p, trial_unstable)) {
+            if (trial_unstable) {
+                _stable = false;
+                CoolPropDbl sY = 0;
+                for (std::size_t i = 0; i < N; ++i)
+                    sY += Y[i];
+                std::vector<CoolPropDbl> y_norm(N);
+                for (std::size_t i = 0; i < N; ++i)
+                    y_norm[i] = Y[i] / sY;
+                if (t == 0) {
+                    this->y = y_norm;
+                    this->x = z;
+                } else {
+                    this->x = y_norm;
+                    this->y = z;
+                }
+                return;
+            }
+        }
+        // If minimize_tpd fails or finds tm >= 0, try the other trial direction
+    }
+    // Both trials indicate stability
+    _stable = true;
+}
+
+/**
+ * @brief Second-order TPD minimization using alpha-variable transformation
+ *
+ * Transforms to alpha_i = 2*sqrt(Y_i) so the Hessian is the identity at
+ * the ideal-gas limit, improving conditioning.  Uses Hebden's restricted-step
+ * (trust-region) quasi-Newton method.
+ *
+ * See [Michelsen1982a] Eq. 25-27 and [M&M2007] Ch. 12, Sec. 12.4.
+ */
+bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolPropDbl>& Y, const std::vector<CoolPropDbl>& ln_f_z, CoolPropDbl the_T,
+                                                               CoolPropDbl the_p, bool& is_unstable) {
+
+    const std::size_t N = Y.size();
+    const double cntol = 1e-7;
+    const int max_iter = 20;
+    is_unstable = false;
+
+    // Alpha variables: alpha_i = 2*sqrt(Y_i)
+    std::vector<CoolPropDbl> alpha(N), alpha_old(N);
+    for (std::size_t i = 0; i < N; ++i)
+        alpha[i] = 2.0 * std::sqrt(std::max(Y[i], 1e-300));
+
+    double trust_radius = 0.25;  // Initial trust-region size
+    double diagonal_shift = 0.0;
+
+    for (int iter = 0; iter < max_iter; ++iter) {
+        // Update Y from alpha
+        for (std::size_t i = 0; i < N; ++i) {
+            Y[i] = (0.5 * alpha[i]) * (0.5 * alpha[i]);
+            alpha_old[i] = alpha[i];
+        }
+
+        // Evaluate fugacity coefficients at normalized trial composition
+        CoolPropDbl sumY = 0;
+        for (std::size_t i = 0; i < N; ++i)
+            sumY += Y[i];
+        std::vector<CoolPropDbl> y_norm(N);
+        for (std::size_t i = 0; i < N; ++i)
+            y_norm[i] = Y[i] / sumY;
+
+        HEOS.SatV->set_mole_fractions(y_norm);
+        CoolPropDbl rho_t;
+        try {
+            rho_t = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, HEOS.SatV->calc_rhomolar_max_bound());
+            HEOS.SatV->update_DmolarT_direct(rho_t, the_T);
+        } catch (...) {
+            return false;  // Density solve failed
+        }
+
+        // Compute gradient and Hessian in alpha variables
+        // s_i = ln(Y_i) + ln(phi_i(y)) - d_i  (scaled gradient component)
+        // grad_i = -alpha_i/2 * s_i
+        // H_ij = delta_ij * (1 + s_i/2) + (alpha_i*alpha_j)/(4*N_tot) * d(ln phi_i)/dn_j
+        std::vector<CoolPropDbl> scaled_grad(N), grad(N), half_alpha(N);
+        double max_gradient = 0, obj_old = 1.0;
+
+        for (std::size_t i = 0; i < N; ++i) {
+            half_alpha[i] = alpha[i] * 0.5;
+            if (z[i] > 0) {
+                double ln_Y = std::log(std::max(Y[i], 1e-300));
+                double ln_phi = std::log(HEOS.SatV->fugacity_coefficient(i));
+                scaled_grad[i] = ln_Y + ln_phi - ln_f_z[i];
+            } else {
+                scaled_grad[i] = 0;
+            }
+            grad[i] = -scaled_grad[i] * half_alpha[i];
+            max_gradient = std::max(max_gradient, std::abs(grad[i]));
+            obj_old += Y[i] * (scaled_grad[i] - 1.0);
+        }
+
+        // Converged?
+        if (max_gradient < cntol) {
+            is_unstable = (obj_old < -cntol);
+            return true;
+        }
+
+        // Build Hessian
+        Eigen::MatrixXd H(N, N);
+        for (std::size_t i = 0; i < N; ++i) {
+            double ahi = half_alpha[i] / sumY;
+            for (std::size_t j = 0; j <= i; ++j) {
+                double dln_phi_dnj = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, XN_INDEPENDENT);
+                double term = ahi * half_alpha[j] * dln_phi_dnj;
+                H(i, j) = term;
+                H(j, i) = term;
+            }
+            H(i, i) += 1.0 + 0.5 * scaled_grad[i];
+        }
+
+        // Solve (H + lambda*I) * delta_alpha = -grad using trust-region method
+        // Simplified Hebden: try full Newton step, shrink trust region if objective increases
+        Eigen::VectorXd g_vec(N), delta_alpha(N);
+        for (std::size_t i = 0; i < N; ++i)
+            g_vec(i) = grad[i];
+
+        // Inner loop: adjust diagonal_shift until step is accepted
+        const int max_inner = 20;
+        bool step_accepted = false;
+        for (int inner = 0; inner < max_inner; ++inner) {
+            Eigen::MatrixXd H_shifted = H;
+            H_shifted.diagonal().array() += diagonal_shift;
+
+            delta_alpha = H_shifted.colPivHouseholderQr().solve(g_vec);
+
+            // Clamp to prevent negative alpha
+            double step_norm_sq = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                double da = delta_alpha(i);
+                if (da + alpha_old[i] <= 0) da = -0.9 * alpha_old[i];
+                delta_alpha(i) = da;
+                alpha[i] = alpha_old[i] + da;
+                Y[i] = (0.5 * alpha[i]) * (0.5 * alpha[i]);
+                step_norm_sq += da * da;
+            }
+            double step_size = std::sqrt(step_norm_sq);
+
+            // Check if step is within trust region
+            if (step_size > trust_radius && diagonal_shift == 0) {
+                // Step too large, add regularization
+                diagonal_shift = step_size / trust_radius - 1.0;
+                // Restore alpha
+                for (std::size_t i = 0; i < N; ++i) {
+                    alpha[i] = alpha_old[i];
+                    Y[i] = (0.5 * alpha[i]) * (0.5 * alpha[i]);
+                }
+                continue;
+            }
+
+            // Evaluate new objective
+            sumY = 0;
+            for (std::size_t i = 0; i < N; ++i)
+                sumY += Y[i];
+            for (std::size_t i = 0; i < N; ++i)
+                y_norm[i] = Y[i] / sumY;
+
+            HEOS.SatV->set_mole_fractions(y_norm);
+            try {
+                rho_t = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, HEOS.SatV->calc_rhomolar_max_bound());
+                HEOS.SatV->update_DmolarT_direct(rho_t, the_T);
+            } catch (...) {
+                // Density solve failed, shrink trust region
+                trust_radius = step_size / 3.0;
+                diagonal_shift = 0;
+                for (std::size_t i = 0; i < N; ++i) {
+                    alpha[i] = alpha_old[i];
+                    Y[i] = (0.5 * alpha[i]) * (0.5 * alpha[i]);
+                }
+                continue;
+            }
+
+            double obj_new = 1.0;
+            for (std::size_t i = 0; i < N; ++i) {
+                double ln_Y = std::log(std::max(Y[i], 1e-300));
+                double ln_phi = std::log(HEOS.SatV->fugacity_coefficient(i));
+                obj_new += Y[i] * (ln_Y + ln_phi - ln_f_z[i] - 1.0);
+            }
+
+            // Quick exit if already found unstable
+            if (obj_new < -cntol) {
+                is_unstable = true;
+                return true;
+            }
+
+            // Check actual vs predicted reduction
+            if (obj_new > obj_old + 1e-12) {
+                // Objective increased, shrink trust region
+                trust_radius = step_size / 3.0;
+                diagonal_shift = 0;
+                for (std::size_t i = 0; i < N; ++i) {
+                    alpha[i] = alpha_old[i];
+                    Y[i] = (0.5 * alpha[i]) * (0.5 * alpha[i]);
+                }
+                continue;
+            }
+
+            // Compute predicted reduction for trust-region update
+            Eigen::VectorXd Hd = H * delta_alpha;
+            double predicted = 0.5 * delta_alpha.dot(Hd) - delta_alpha.dot(g_vec);
+            double actual = obj_new - obj_old;
+            double ratio = (predicted != 0) ? actual / predicted : 1.0;
+
+            if (ratio < 0.25) {
+                trust_radius = step_size / 2.0;
+            } else if (ratio > 0.75 && diagonal_shift > 0) {
+                trust_radius = step_size * 2.0;
+            } else {
+                trust_radius = step_size;
+            }
+            diagonal_shift = 0;
+            step_accepted = true;
+            break;
+        }
+
+        if (!step_accepted) {
+            // Could not find an acceptable step
+            return false;
+        }
+    }
+    return true;  // Reached max iterations without convergence; treat as stable
+}
+
+void StabilityRoutines::StabilityEvaluationClass::check_stability_legacy() {
     std::vector<double> tpdL, tpdH;
 
     // Calculate the temperature and pressure to be used
@@ -1854,8 +2249,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
         HEOS.SatV->calc_reducing_state();
 
         // Update the densities in each class
-        double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatL->SRK_covolume());
-        double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatV->SRK_covolume());
+        double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, HEOS.SatL->calc_rhomolar_max_bound());
+        double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, HEOS.SatV->calc_rhomolar_max_bound());
         HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
         HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
 
@@ -1882,16 +2277,10 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
     // Ok, we aren't sure about stability, need to keep going with the full tpd analysis
 
     // Use the global density solver to obtain the density root (or the lowest Gibbs energy root if more than one)
-    CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SRK_covolume());
+    CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, HEOS.calc_rhomolar_max_bound());
     HEOS.update_DmolarT_direct(rho_bulk, the_T);
 
     // Calculate the fugacity coefficient at initial composition of the bulk phase.
-    // The bulk HEOS state is a hypothetical homogeneous root forced via
-    // update_DmolarT_direct above, but _phase isn't reset by that call (it can
-    // be iphase_twophase from a prior PQ flash).  Call MixtureDerivatives
-    // directly to bypass the phase-dispatch in calc_fugacity / calc_fugacity_coefficient
-    // and get the actual bulk-composition values — same pattern used in the
-    // tpd_L / tpd_H accumulation just below.
     std::vector<double> fugacity_coefficient0(z.size()), fugacity0(z.size());
     for (std::size_t i = 0; i < z.size(); ++i) {
         fugacity_coefficient0[i] = exp(MixtureDerivatives::ln_fugacity_coefficient(HEOS, i, XN_DEPENDENT));
@@ -1976,8 +2365,8 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_global() {
     double the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
 
     // Calculate covolume of SRK, use it as the maximum density
-    double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatL->SRK_covolume());
-    double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9 / HEOS.SatV->SRK_covolume());
+    double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, HEOS.SatL->calc_rhomolar_max_bound());
+    double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, HEOS.SatV->calc_rhomolar_max_bound());
     HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
     HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
 
@@ -2026,7 +2415,259 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_SRK_translated() {
     }
 }
 
+/**
+ * @brief Solves the two-phase isothermal-isobaric flash problem
+ *
+ * A hybrid implementation that combines:
+ * 1. Robust Successive Substitution (SS) for initialization (Michelsen 1982b).
+ * 2. Second-Order Gibbs minimization using analytical reduced Hessians for quadratic convergence.
+ *
+ * Includes a restricted-step line search to handle HEOS density divergence.
+ */
 void SaturationSolvers::PTflash_twophase::solve() {
+    if (get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {
+        solve_michelsen();
+    } else {
+        solve_legacy();
+    }
+}
+void SaturationSolvers::PTflash_twophase::solve_michelsen() {
+    const std::size_t N = IO.x.size();
+    if (!ValidNumber(IO.p)) IO.p = HEOS.p();
+    if (!ValidNumber(IO.T)) IO.T = HEOS.T();
+
+    // Store K-factors in log space to prevent overflow for wide-boiling mixtures.
+    // lnK[i] = ln(phi_i^L / phi_i^V) = ln(K_i).  See [Michelsen1982b] Eq. 5.
+    std::vector<CoolPropDbl> lnK(N);
+    for (std::size_t i = 0; i < N; ++i) {
+        double ratio = IO.y[i] / std::max(IO.x[i], 1e-300);
+        lnK[i] = std::log(std::max(ratio, 1e-300));
+    }
+    CoolPropDbl beta = IO.beta;
+
+    // Helper: solve Rachford-Rice in log-K space with Newton + bisection safeguards
+    auto solve_rachford_rice = [&]() {
+        CoolPropDbl beta_min = 0, beta_max = 1.0;
+        for (int rr_iter = 0; rr_iter < 50; ++rr_iter) {
+            CoolPropDbl r = 0, dr = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                double Ki = std::exp(lnK[i]);
+                double term = Ki - 1.0;
+                double denom = 1.0 + beta * term;
+                r += IO.z[i] * term / denom;
+                dr -= IO.z[i] * term * term / (denom * denom);
+            }
+            if (r > 0)
+                beta_min = beta;
+            else
+                beta_max = beta;
+            if (std::abs(r) < 1e-11) break;
+            CoolPropDbl beta_new = beta - r / dr;
+            if (beta_new <= beta_min || beta_new >= beta_max) beta_new = 0.5 * (beta_min + beta_max);
+            if (std::abs(beta_new - beta) < 1e-11) break;
+            beta = beta_new;
+        }
+        for (std::size_t i = 0; i < N; ++i) {
+            double Ki = std::exp(lnK[i]);
+            IO.x[i] = IO.z[i] / (1.0 + beta * (Ki - 1.0));
+            IO.y[i] = Ki * IO.x[i];
+        }
+        normalize_vector(IO.x);
+        normalize_vector(IO.y);
+    };
+
+    // Helper: evaluate phase densities and fugacities
+    auto evaluate_phases = [&]() -> bool {
+        HEOS.SatL->set_mole_fractions(IO.x);
+        try {
+            CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatL->calc_rhomolar_max_bound());
+            IO.rhomolar_liq = rL;
+            HEOS.SatL->update_DmolarT_direct(rL, IO.T);
+        } catch (...) {
+            return false;
+        }
+        HEOS.SatV->set_mole_fractions(IO.y);
+        try {
+            CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatV->calc_rhomolar_max_bound());
+            IO.rhomolar_vap = rV;
+            HEOS.SatV->update_DmolarT_direct(rV, IO.T);
+        } catch (...) {
+            return false;
+        }
+        return true;
+    };
+
+    // --- Phase 1: Successive substitution with GDEM acceleration ---
+    // K_i^new = phi_i^L(x) / phi_i^V(y).  Exit when K-factors converge or
+    // after max_ss_loops.  See [Michelsen1982b] Eq. 5-9 and [M&M2007] Sec. 12.6.
+    const int max_ss_loops = 4;  // Each loop: 2 SS steps + 1 GDEM extrapolation
+    const double ss_tol = 1e-7;
+    bool ss_converged = false;
+
+    for (int loop = 0; loop < max_ss_loops && !ss_converged; ++loop) {
+        std::array<double, 2> esq_pair = {0, 0};
+        std::vector<CoolPropDbl> err(N);
+
+        for (int kk = 0; kk < 2 && !ss_converged; ++kk) {
+            solve_rachford_rice();
+            if (!evaluate_phases()) {
+                throw SolutionError("PT flash lost a phase density solve during successive substitution");
+            }
+            double gmax = 0;
+            double esq = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                double lnK_new = std::log(HEOS.SatL->fugacity_coefficient(i)) - std::log(HEOS.SatV->fugacity_coefficient(i));
+                double diff = lnK_new - lnK[i];
+                err[i] = diff;
+                esq += IO.z[i] * diff * diff;
+                gmax = std::max(gmax, std::abs(diff));
+                lnK[i] = lnK_new;
+            }
+            esq_pair[kk] = esq;
+            if (gmax < ss_tol) {
+                ss_converged = true;
+            }
+        }
+
+        if (ss_converged) break;
+
+        // GDEM extrapolation ([M&M2007] Ch. 12, Sec. 12.6)
+        if (esq_pair[0] > 0) {
+            double ratio = std::sqrt(esq_pair[1] / esq_pair[0]);
+            if (ratio < 0 || ratio >= 0.95) ratio = 0.95;
+            double factor = ratio / (1.0 - ratio);
+            for (std::size_t i = 0; i < N; ++i) {
+                lnK[i] += factor * err[i];
+            }
+        }
+    }
+
+    // Ensure phases are up-to-date after SS
+    solve_rachford_rice();
+    if (!evaluate_phases()) {
+        throw SolutionError("PT flash lost a phase density solve after successive substitution");
+    }
+
+    // --- Phase 2: Second-order Gibbs energy minimization ---
+    // See [Michelsen1982b] Appendix B.  The reduced gradient is
+    // g_i = beta_L*beta_V*(ln f_i^V - ln f_i^L) and the reduced Hessian
+    // uses d(ln phi)/dn derivatives from both phases.
+
+    // Compute Gibbs energy of current state for objective-decrease checking
+    auto compute_gibbs = [&]() -> double {
+        double G = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            if (IO.x[i] > 0) G += (1.0 - beta) * IO.x[i] * (std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i)));
+            if (IO.y[i] > 0) G += beta * IO.y[i] * (std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i)));
+        }
+        return G;
+    };
+
+    double G_old = compute_gibbs();
+
+    for (int gibbs_iter = 0; gibbs_iter < 30; ++gibbs_iter) {
+        Eigen::VectorXd g(N);
+        Eigen::MatrixXd H(N, N);
+        CoolPropDbl L_frac = 1.0 - beta;
+        CoolPropDbl V_frac = beta;
+        CoolPropDbl max_g = 0;
+        Eigen::MatrixXd DL(N, N), DV(N, N);
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                DL(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatL.get()), i, j, CoolProp::XN_INDEPENDENT);
+                DV(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, CoolProp::XN_INDEPENDENT);
+            }
+        }
+        for (std::size_t i = 0; i < N; ++i) {
+            CoolPropDbl sum_x_DL = 0, sum_y_DV = 0;
+            for (std::size_t k = 0; k < N; ++k) {
+                sum_x_DL += IO.x[k] * DL(i, k);
+                sum_y_DV += IO.y[k] * DV(i, k);
+            }
+            for (std::size_t j = 0; j < N; ++j) {
+                CoolPropDbl dln_phi_L_dnj = DL(i, j) - sum_x_DL;
+                CoolPropDbl dln_phi_V_dnj = DV(i, j) - sum_y_DV;
+                H(i, j) = V_frac * dln_phi_L_dnj + L_frac * dln_phi_V_dnj - 1.0;
+            }
+            H(i, i) += (V_frac / IO.x[i]) + (L_frac / IO.y[i]);
+            CoolPropDbl l_act = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
+            CoolPropDbl v_act = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
+            g(i) = V_frac * L_frac * (v_act - l_act);
+            max_g = std::max(max_g, std::abs(v_act - l_act));
+        }
+        if (max_g < 1e-9) {
+            break;
+        }
+        Eigen::VectorXd delta_v = H.colPivHouseholderQr().solve(-g);
+
+        // Compute maximum feasible step scale (keep mole numbers positive)
+        CoolPropDbl step_scale = 1.0;
+        for (std::size_t i = 0; i < N; ++i) {
+            CoolPropDbl v_old = beta * IO.y[i];
+            if (delta_v(i) > 0 && v_old + delta_v(i) > IO.z[i]) step_scale = std::min(step_scale, 0.99 * (IO.z[i] - v_old) / delta_v(i));
+            if (delta_v(i) < 0 && v_old + delta_v(i) < 0) step_scale = std::min(step_scale, 0.99 * (-v_old) / delta_v(i));
+        }
+
+        // Line search with objective-decrease check
+        bool step_ok = false;
+        while (step_scale > 1e-6) {
+            CoolPropDbl V_new = 0, L_new = 0;
+            std::vector<CoolPropDbl> v_new(N), l_new(N);
+            for (std::size_t i = 0; i < N; ++i) {
+                v_new[i] = beta * IO.y[i] + step_scale * delta_v(i);
+                l_new[i] = IO.z[i] - v_new[i];
+                V_new += v_new[i];
+                L_new += l_new[i];
+            }
+            std::vector<CoolPropDbl> x_trial(N), y_trial(N);
+            for (std::size_t i = 0; i < N; ++i) {
+                y_trial[i] = v_new[i] / V_new;
+                x_trial[i] = l_new[i] / L_new;
+            }
+            try {
+                HEOS.SatL->set_mole_fractions(x_trial);
+                CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatL->calc_rhomolar_max_bound());
+                HEOS.SatV->set_mole_fractions(y_trial);
+                CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatV->calc_rhomolar_max_bound());
+                if (ValidNumber(rL) && ValidNumber(rV) && rL > 0 && rV > 0) {
+                    HEOS.SatL->update_DmolarT_direct(rL, IO.T);
+                    HEOS.SatV->update_DmolarT_direct(rV, IO.T);
+
+                    // Check that the Gibbs energy actually decreased
+                    double beta_save = beta;
+                    auto x_save = IO.x;
+                    auto y_save = IO.y;
+                    beta = V_new;
+                    IO.x = x_trial;
+                    IO.y = y_trial;
+                    IO.rhomolar_liq = rL;
+                    IO.rhomolar_vap = rV;
+                    double G_new = compute_gibbs();
+
+                    if (G_new < G_old + 1e-12) {
+                        G_old = G_new;
+                        step_ok = true;
+                        break;
+                    } else {
+                        // Objective increased, restore and shrink step
+                        beta = beta_save;
+                        IO.x = x_save;
+                        IO.y = y_save;
+                        step_scale *= 0.5;
+                    }
+                } else {
+                    step_scale *= 0.5;
+                }
+            } catch (...) {
+                step_scale *= 0.5;
+            }
+        }
+        if (!step_ok) break;
+    }
+    IO.beta = beta;
+}
+
+void SaturationSolvers::PTflash_twophase::solve_legacy() {
     const std::size_t N = IO.x.size();
     int iter = 0;
     double min_rel_change = NAN;
