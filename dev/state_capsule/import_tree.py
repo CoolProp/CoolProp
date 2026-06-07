@@ -5,7 +5,7 @@ for the import-tree parity acceptance gate (bd CoolProp-r9sq.3).
 Compare nanobind vs legacy; import_tree_legacy.json pins stock 7.2.0 as the
 'before' reference.  Deviations must be closed or explicitly approved by Ian.
 """
-import importlib, pkgutil, sys, json
+import importlib, pkgutil, json
 ROOT = "CoolProp"
 def names(mod):
     return sorted(n for n in dir(mod) if not n.startswith('_'))
