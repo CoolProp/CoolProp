@@ -218,6 +218,9 @@ TEST_CASE("SVDSBTL backend PQ_INPUTS two-phase blend matches HEOS", "[SVDSBTL][t
             // so use an absolute margin (in J/kg).
             REQUIRE(AS->hmass() == Approx(heos->hmass()).margin(1e-6));
             REQUIRE(AS->smass() == Approx(heos->smass()).margin(1e-9));
+            // h / u for a PQ dome point now flow through the LAZY DomeBlend
+            // arms (the resolve no longer pre-fills enthalpy, CoolProp-qp0n).
+            REQUIRE(AS->umass() == Approx(heos->umass()).margin(1e-6));
             // p / Q flow through verbatim.
             REQUIRE(AS->p() == Approx(p).margin(0.0));
             REQUIRE(AS->Q() == Approx(Q).margin(0.0));
@@ -237,6 +240,8 @@ TEST_CASE("SVDSBTL backend QT_INPUTS two-phase blend matches HEOS", "[SVDSBTL][t
             REQUIRE(AS->p() == Approx(heos->p()).margin(1e-3));
             REQUIRE(AS->rhomass() == Approx(heos->rhomass()).margin(1e-9));
             REQUIRE(AS->hmass() == Approx(heos->hmass()).margin(1e-6));
+            // h / u via the LAZY DomeBlend arms (CoolProp-qp0n).
+            REQUIRE(AS->umass() == Approx(heos->umass()).margin(1e-6));
             REQUIRE(AS->T() == Approx(T).margin(0.0));
             REQUIRE(AS->Q() == Approx(Q).margin(0.0));
         }
@@ -1498,10 +1503,17 @@ TEST_CASE("SVDSBTL DT two-phase dome returns lever-rule props (CoolProp-i7j)", "
     REQUIRE(svd->Q() > 0.0);
     REQUIRE(svd->Q() < 1.0);
     REQUIRE(svd->p() == Approx(heos->p()).epsilon(1e-3));  // P_sat(T)
-    // hmass() / hmolar() must return the lever-rule blend, not throw.
+    // hmass() / hmolar() / umass() / umolar() must return the lever-rule
+    // blend, not throw.  For a DmassT dome point these now flow through the
+    // LAZY DomeBlend enthalpy arms (ensure_dome_h_endpoints_, CoolProp-qp0n)
+    // — the resolve no longer eagerly fills h — so this both checks the
+    // values and exercises the lazy path for h and u.
     REQUIRE_NOTHROW(svd->hmass());
     REQUIRE(svd->hmass() == Approx(heos->hmass()).epsilon(1e-3));
     REQUIRE(svd->hmolar() == Approx(heos->hmolar()).epsilon(1e-3));
+    REQUIRE_NOTHROW(svd->umass());
+    REQUIRE(svd->umass() == Approx(heos->umass()).epsilon(1e-3));
+    REQUIRE(svd->umolar() == Approx(heos->umolar()).epsilon(1e-3));
     REQUIRE(svd->rhomass() == D);  // density input echoed back
 }
 
