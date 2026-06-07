@@ -3,7 +3,7 @@
 #include "CubicsLibrary.h"
 #include "all_cubics_JSON.h"           // Makes a std::string variable called all_cubics_JSON
 #include "cubic_fluids_schema_JSON.h"  // Makes a std::string variable called cubic_fluids_schema_JSON
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/json.h"
 #include "CoolProp/detail/strings.h"
 #include "CoolProp/CoolProp.h"
 #include "CoolProp/Configuration.h"
@@ -26,39 +26,33 @@ class CubicsLibraryClass
     bool is_empty() {
         return empty;
     };
-    int add_many(rapidjson::Value& listing) {
+    int add_many(const nlohmann::json& listing) {
         int counter = 0;
-        for (rapidjson::Value::ValueIterator itr = listing.Begin(); itr != listing.End(); ++itr) {
+        for (const auto& el : listing) {
             CubicsValues val;
-            val.Tc = cpjson::get_double(*itr, "Tc");
-            val.pc = cpjson::get_double(*itr, "pc");
-            val.acentric = cpjson::get_double(*itr, "acentric");
-            val.molemass = cpjson::get_double(*itr, "molemass");
-            val.name = cpjson::get_string(*itr, "name");
-            val.aliases = cpjson::get_string_array(*itr, "aliases");
-            val.CAS = cpjson::get_string(*itr, "CAS");
-            if (itr->HasMember("rhomolarc") && (*itr)["rhomolarc"].IsNumber()) {
-                val.rhomolarc = cpjson::get_double(*itr, "rhomolarc");
+            val.Tc = cpjson::get_double(el, "Tc");
+            val.pc = cpjson::get_double(el, "pc");
+            val.acentric = cpjson::get_double(el, "acentric");
+            val.molemass = cpjson::get_double(el, "molemass");
+            val.name = cpjson::get_string(el, "name");
+            val.aliases = cpjson::get_string_array(el, "aliases");
+            val.CAS = cpjson::get_string(el, "CAS");
+            if (el.contains("rhomolarc") && el.at("rhomolarc").is_number()) {
+                val.rhomolarc = cpjson::get_double(el, "rhomolarc");
             }
-            if (itr->HasMember("alpha") && (*itr)["alpha"].IsObject()) {
-                rapidjson::Value& alpha = (*itr)["alpha"];
+            if (el.contains("alpha") && el.at("alpha").is_object()) {
+                const nlohmann::json& alpha = el.at("alpha");
                 val.alpha_type = cpjson::get_string(alpha, "type");
                 val.alpha_coeffs = cpjson::get_double_array(alpha, "c");
             } else {
                 val.alpha_type = "default";
             }
-            if (itr->HasMember("alpha0") && (*itr)["alpha0"].IsArray()) {
-                // JSONFluidLibrary::parse_alpha0 now consumes nlohmann::json, but the
-                // cubic loader is still rapidjson-based; bridge the single call by
-                // round-tripping the alpha0 node through a string. (Removed once the
-                // cubic loader migrates off rapidjson.)
-                nlohmann::json alpha0_json = cpjson::parse(cpjson::json2string((*itr)["alpha0"]));
-                val.alpha0 = JSONFluidLibrary::parse_alpha0(alpha0_json);
+            if (el.contains("alpha0") && el.at("alpha0").is_array()) {
+                val.alpha0 = JSONFluidLibrary::parse_alpha0(el.at("alpha0"));
             }
             std::pair<std::map<std::string, CubicsValues>::iterator, bool> ret;
             ret = fluid_map.emplace(upper(val.name), val);
             if (ret.second == false && get_config_bool(OVERWRITE_FLUIDS)) {
-                // Already there, see http://www.cplusplus.com/reference/map/map/insert/
                 fluid_map.erase(ret.first);
                 ret = fluid_map.emplace(upper(val.name), val);
                 if (get_debug_level() > 0) {
@@ -66,28 +60,21 @@ class CubicsLibraryClass
                 }
                 assert(ret.second == true);
             }
-
             for (auto it = val.aliases.begin(); it != val.aliases.end(); ++it) {
                 if (aliases_map.find(*it) == aliases_map.end()) {
-                    // It's not already in aliases map
                     aliases_map.emplace(*it, upper(val.name));
                 }
             }
-
-            // Add/Replace name->JSONstring mapping to easily pull out if the user wants it
-            // Convert fuid_json to a string and store it in the map.
             std::pair<std::map<std::string, std::string>::iterator, bool> addJson;
-            addJson = JSONstring_map.emplace(upper(val.name), cpjson::json2string(*itr));
+            addJson = JSONstring_map.emplace(upper(val.name), el.dump());
             if (addJson.second == false && get_config_bool(OVERWRITE_FLUIDS)) {
-                // Already there, see http://www.cplusplus.com/reference/map/map/insert/
                 JSONstring_map.erase(addJson.first);
-                addJson = JSONstring_map.emplace(upper(val.name), cpjson::json2string(*itr));
+                addJson = JSONstring_map.emplace(upper(val.name), el.dump());
                 if (get_debug_level() > 0) {
                     std::cout << "added the cubic fluid: " + val.name << '\n';
                 }
                 assert(addJson.second == true);
             }
-
             counter++;
         }
         return counter;
@@ -107,13 +94,11 @@ class CubicsLibraryClass
                 throw ValueError(format("Fluid identifier [%s] was not found in CubicsLibrary", uppercase_identifier.c_str()));
             }
         }
-        // Then, load the fluids we would like to add
-        rapidjson::Document doc;
-        cpjson::JSON_string_to_rapidjson(it->second, doc);
-        rapidjson::Document doc2;
-        doc2.SetArray();
-        doc2.PushBack(doc, doc.GetAllocator());
-        return cpjson::json2string(doc2);
+        // Then, wrap the single fluid object in an array, as callers expect
+        nlohmann::json doc = cpjson::parse(it->second);
+        nlohmann::json doc2 = nlohmann::json::array();
+        doc2.push_back(doc);
+        return doc2.dump();
     }
 
     CubicsValues get(const std::string& identifier) {
@@ -147,24 +132,22 @@ namespace {
 /// the get_library() singleton (which would recurse into its own constructor).
 void add_fluids_from_JSON_string(CubicsLibraryClass& dest, const std::string_view& JSON) {
     std::string errstr;
-    // FluidLibrary.h (transitively) now also pulls in the nlohmann cpjson
-    // wrapper, whose validate_schema overload is ambiguous with the rapidjson
-    // one for these string arguments. Select the rapidjson overload explicitly
-    // until the cubic loader migrates off rapidjson.
-    auto validate_schema_rapidjson =
-      static_cast<cpjson::schema_validation_code (*)(const std::string_view&, const std::string_view&, std::string&)>(&cpjson::validate_schema);
-    cpjson::schema_validation_code val_code = validate_schema_rapidjson(cubic_fluids_schema_JSON, JSON, errstr);
+    // FluidLibrary.h transitively includes detail/rapidjson.h (via
+    // Configuration.h), so both validate_schema overloads are visible here and
+    // the call is ambiguous. The two overloads differ ONLY in their string_view
+    // parameters: rapidjson takes `const std::string_view&`, nlohmann takes
+    // `std::string_view` by value. The cast's by-value signature therefore
+    // selects the nlohmann/Valijson overload. Remove this cast (the call becomes
+    // unambiguous) once detail/rapidjson.h is deleted at Phase Final.
+    auto validate_schema_nlohmann =
+      static_cast<cpjson::schema_validation_code (*)(std::string_view, std::string_view, std::string&)>(&cpjson::validate_schema);
+    cpjson::schema_validation_code val_code = validate_schema_nlohmann(cubic_fluids_schema_JSON, JSON, errstr);
     if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
-        rapidjson::Document dd;
-        dd.Parse<0>(JSON.data(), JSON.size());
-        if (dd.HasParseError()) {
-            throw ValueError("Cubics JSON is not valid JSON");
-        } else {
-            try {
-                dest.add_many(dd);
-            } catch (std::exception& /* e */) {
-                throw ValueError(format("Unable to load cubics library with error: %s", errstr.c_str()));
-            }
+        nlohmann::json dd = cpjson::parse(JSON);
+        try {
+            dest.add_many(dd);
+        } catch (std::exception& e) {
+            throw ValueError(format("Unable to load cubics library with error: %s", e.what()));
         }
     } else {
         throw ValueError(format("Unable to validate cubics library against schema with error: %s", errstr.c_str()));

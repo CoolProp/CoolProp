@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/json.h"
 #include "CoolProp/CoolPropFluid.h"
 
 namespace UNIFACLibrary {
@@ -88,10 +88,10 @@ struct UNIFACParameterLibrary
     std::vector<Component> components;                          ///< The collection of components that are included in this library
 
     /// Convert string to JSON document
-    void jsonize(std::string& s, rapidjson::Document& doc);
+    void jsonize(std::string& s, nlohmann::json& doc);
 
-    /// Populate internal data structures based on rapidjson Documents
-    void populate(rapidjson::Value& group_data, rapidjson::Value& interaction_data, rapidjson::Value& decomp_data);
+    /// Populate internal data structures based on nlohmann::json arrays
+    void populate(const nlohmann::json& group_data, const nlohmann::json& interaction_data, const nlohmann::json& decomp_data);
 
    public:
     UNIFACParameterLibrary() : m_populated(false) {};

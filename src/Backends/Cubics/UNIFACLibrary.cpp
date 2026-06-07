@@ -4,74 +4,64 @@
 
 namespace UNIFACLibrary {
 
-void UNIFACParameterLibrary::jsonize(std::string& s, rapidjson::Document& d) {
-    d.Parse<0>(s.c_str());
-    if (d.HasParseError()) {
-        throw -1;
-    } else {
-        return;
-    }
+void UNIFACParameterLibrary::jsonize(std::string& s, nlohmann::json& d) {
+    d = cpjson::parse(s);
 }
-void UNIFACParameterLibrary::populate(rapidjson::Value& group_data, rapidjson::Value& interaction_data, rapidjson::Value& comp_data) {
+void UNIFACParameterLibrary::populate(const nlohmann::json& group_data, const nlohmann::json& interaction_data, const nlohmann::json& comp_data) {
     if (CoolProp::get_config_bool(VTPR_ALWAYS_RELOAD_LIBRARY)) {
         groups.clear();
         interaction_parameters.clear();
         components.clear();
     }
     // Schema should have been used to validate the data already, so by this point we are can safely consume the data without checking ...
-    for (rapidjson::Value::ValueIterator itr = group_data.Begin(); itr != group_data.End(); ++itr) {
+    for (const auto& el : group_data) {
         Group g;
-        g.sgi = (*itr)["sgi"].GetInt();
-        g.mgi = (*itr)["mgi"].GetInt();
-        g.R_k = (*itr)["R_k"].GetDouble();
-        g.Q_k = (*itr)["Q_k"].GetDouble();
+        g.sgi = el.at("sgi").get<int>();
+        g.mgi = el.at("mgi").get<int>();
+        g.R_k = el.at("R_k").get<double>();
+        g.Q_k = el.at("Q_k").get<double>();
         groups.push_back(g);
     }
-    for (rapidjson::Value::ValueIterator itr = interaction_data.Begin(); itr != interaction_data.End(); ++itr) {
+    for (const auto& el : interaction_data) {
         InteractionParameters ip;
-        ip.mgi1 = (*itr)["mgi1"].GetInt();
-        ip.mgi2 = (*itr)["mgi2"].GetInt();
-        ip.a_ij = (*itr)["a_ij"].GetDouble();
-        ip.a_ji = (*itr)["a_ji"].GetDouble();
-        ip.b_ij = (*itr)["b_ij"].GetDouble();
-        ip.b_ji = (*itr)["b_ji"].GetDouble();
-        ip.c_ij = (*itr)["c_ij"].GetDouble();
-        ip.c_ji = (*itr)["c_ji"].GetDouble();
+        ip.mgi1 = el.at("mgi1").get<int>();
+        ip.mgi2 = el.at("mgi2").get<int>();
+        ip.a_ij = el.at("a_ij").get<double>();
+        ip.a_ji = el.at("a_ji").get<double>();
+        ip.b_ij = el.at("b_ij").get<double>();
+        ip.b_ji = el.at("b_ji").get<double>();
+        ip.c_ij = el.at("c_ij").get<double>();
+        ip.c_ji = el.at("c_ji").get<double>();
         interaction_parameters.push_back(ip);
     }
-    for (rapidjson::Value::ValueIterator itr = comp_data.Begin(); itr != comp_data.End(); ++itr) {
+    for (const auto& el : comp_data) {
         Component c;
-        c.inchikey = (*itr)["inchikey"].GetString();
-        c.registry_number = (*itr)["registry_number"].GetString();
-        c.name = (*itr)["name"].GetString();
-        c.Tc = (*itr)["Tc"].GetDouble();
-        c.pc = (*itr)["pc"].GetDouble();
-        c.acentric = (*itr)["acentric"].GetDouble();
-        c.molemass = (*itr)["molemass"].GetDouble();
+        c.inchikey = el.at("inchikey").get<std::string>();
+        c.registry_number = el.at("registry_number").get<std::string>();
+        c.name = el.at("name").get<std::string>();
+        c.Tc = el.at("Tc").get<double>();
+        c.pc = el.at("pc").get<double>();
+        c.acentric = el.at("acentric").get<double>();
+        c.molemass = el.at("molemass").get<double>();
         // userid is an optional user identifier
-        if ((*itr).HasMember("userid")) {
-            c.userid = (*itr)["userid"].GetString();
+        if (el.contains("userid")) {
+            c.userid = el.at("userid").get<std::string>();
         }
         // If provided, store information about the alpha function in use
-        if ((*itr).HasMember("alpha") && (*itr)["alpha"].IsObject()) {
-            rapidjson::Value& alpha = (*itr)["alpha"];
+        if (el.contains("alpha") && el.at("alpha").is_object()) {
+            const nlohmann::json& alpha = el.at("alpha");
             c.alpha_type = cpjson::get_string(alpha, "type");
             c.alpha_coeffs = cpjson::get_double_array(alpha, "c");
         } else {
             c.alpha_type = "default";
         }
-        if ((*itr).HasMember("alpha0") && (*itr)["alpha0"].IsArray()) {
-            // JSONFluidLibrary::parse_alpha0 now consumes nlohmann::json, but the
-            // UNIFAC loader is still rapidjson-based; bridge the single call by
-            // round-tripping the alpha0 node through a string. (Removed once the
-            // UNIFAC loader migrates off rapidjson.)
-            nlohmann::json alpha0_json = cpjson::parse(cpjson::json2string((*itr)["alpha0"]));
-            c.alpha0 = CoolProp::JSONFluidLibrary::parse_alpha0(alpha0_json);
+        if (el.contains("alpha0") && el.at("alpha0").is_array()) {
+            c.alpha0 = CoolProp::JSONFluidLibrary::parse_alpha0(el.at("alpha0"));
         }
-        rapidjson::Value& groups = (*itr)["groups"];
-        for (rapidjson::Value::ValueIterator itrg = groups.Begin(); itrg != groups.End(); ++itrg) {
-            int count = (*itrg)["count"].GetInt();
-            int sgi = (*itrg)["sgi"].GetInt();
+        const nlohmann::json& comp_groups = el.at("groups");
+        for (const auto& g : comp_groups) {
+            int count = g.at("count").get<int>();
+            int sgi = g.at("sgi").get<int>();
             if (has_group(sgi)) {
                 ComponentGroup cg(count, get_group(sgi));
                 c.groups.push_back(cg);
@@ -81,11 +71,9 @@ void UNIFACParameterLibrary::populate(rapidjson::Value& group_data, rapidjson::V
     }
 }
 void UNIFACParameterLibrary::populate(std::string& group_data, std::string& interaction_data, std::string& decomp_data) {
-    rapidjson::Document group_JSON;
+    nlohmann::json group_JSON, interaction_JSON, decomp_JSON;
     jsonize(group_data, group_JSON);
-    rapidjson::Document interaction_JSON;
     jsonize(interaction_data, interaction_JSON);
-    rapidjson::Document decomp_JSON;
     jsonize(decomp_data, decomp_JSON);
     populate(group_JSON, interaction_JSON, decomp_JSON);
     m_populated = true;
