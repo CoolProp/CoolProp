@@ -15,6 +15,8 @@
 #    include <nanobind/stl/tuple.h>
 #    include <nanobind/stl/pair.h>
 #    include <nanobind/stl/map.h>
+#    include <nanobind/ndarray.h>  // vectorized PropsSI returns a numpy array
+#    include <algorithm>
 #    include <array>
 namespace nb = nanobind;
 
@@ -42,6 +44,39 @@ static std::vector<std::string> _split_str(const std::string& s, char delim) {
         out.push_back(cur);
     }
     return out;
+}
+
+// Scalar-or-sequence -> vector<double> for the vectorized PropsSI/HAPropsSI
+// overloads; is_seq reports whether the input was array-like (vs a scalar).
+static std::vector<double> _to_vec(nb::handle o, bool& is_seq) {
+    double d;
+    if (nb::try_cast<double>(o, d)) {
+        is_seq = false;
+        return {d};
+    }
+    is_seq = true;
+    // Reject multi-dimensional arrays rather than silently flattening them
+    // (matches the legacy "Input is not one-dimensional" ValueError).
+    if (nb::hasattr(o, "ndim") && nb::cast<long>(nb::getattr(o, "ndim")) > 1) {
+        PyErr_SetString(PyExc_ValueError, "vectorized PropsSI/HAPropsSI input is not one-dimensional");
+        throw nb::python_error();
+    }
+    return nb::cast<std::vector<double>>(o);
+}
+
+// Broadcast a size-1 vector up to length n; lengths other than 1 or n are an error.
+static void _broadcast_to(std::vector<double>& v, std::size_t n, const char* which) {
+    if (v.size() == n) {
+        return;
+    }
+    if (v.size() == 1) {
+        double val = v[0];  // copy first: v[0] aliases the vector that assign() clears
+        v.assign(n, val);
+        return;
+    }
+    // Match the legacy Cython wrapper, which raises TypeError on a length mismatch.
+    PyErr_SetString(PyExc_TypeError, (std::string("vectorized input ") + which + " has an incompatible length").c_str());
+    throw nb::python_error();
 }
 
 // ---- State C-ABI capsule (bridge for the frozen Cython `State` compat shim) --
@@ -519,6 +554,42 @@ void init_CoolProp(nb::module_& m) {
     m.def("generate_update_pair", &generate_update_pair<double>);
     m.def("Props1SI", &Props1SI);
     m.def("PropsSI", &PropsSI);
+    // Vectorized PropsSI: list/ndarray Prop1/Prop2 (with scalar broadcast) dispatch
+    // to the C++ PropsSImulti path and return a numpy array, matching the legacy
+    // Cython wrapper. Registered after the scalar overload so scalars bind there.
+    m.def("PropsSI", [](const std::string& Output, const std::string& Name1, nb::object Prop1, const std::string& Name2, nb::object Prop2,
+                        const std::string& FluidName) {
+        bool s1 = false, s2 = false;
+        std::vector<double> v1 = _to_vec(Prop1, s1);
+        std::vector<double> v2 = _to_vec(Prop2, s2);
+        // Empty state inputs -> empty array (mirrors the legacy #2417 short-circuit).
+        if ((s1 && v1.empty()) || (s2 && v2.empty())) {
+            auto* empty = new double[1];
+            nb::capsule owner(empty, [](void* p) noexcept { delete[] static_cast<double*>(p); });
+            return nb::ndarray<nb::numpy, double>(empty, {static_cast<std::size_t>(0)}, owner);
+        }
+        std::size_t n = std::max(v1.size(), v2.size());
+        _broadcast_to(v1, n, "Prop1");
+        _broadcast_to(v2, n, "Prop2");
+        std::string backend, fluid;
+        extract_backend(FluidName, backend, fluid);
+        std::vector<double> fractions{1.0};
+        std::string delimited = extract_fractions(fluid, fractions);
+        std::vector<std::string> fluids = _split_str(delimited, '&');
+        std::vector<std::vector<double>> out = PropsSImulti({Output}, Name1, v1, Name2, v2, backend, fluids, fractions);
+        if (out.empty() || out[0].empty()) {
+            throw std::runtime_error(get_global_param_string("errstring"));
+        }
+        // PropsSImulti returns a matrix indexed [input][output]; a single Output
+        // means one column, so take out[i][0] across the inputs.
+        std::size_t n_out = out.size();
+        auto* data = new double[n_out];
+        for (std::size_t i = 0; i < n_out; ++i) {
+            data[i] = out[i][0];
+        }
+        nb::capsule owner(data, [](void* p) noexcept { delete[] static_cast<double*>(p); });
+        return nb::ndarray<nb::numpy, double>(data, {n_out}, owner);
+    });
     // Legacy compatibility: the Cython PropsSI also accepted the 2-arg trivial
     // form PropsSI("Tcrit", "Water") (order-lenient).  Restore it as an overload
     // dispatching to Props1SI so e.g. PropsSI("M", fluid) keeps working.
@@ -536,6 +607,22 @@ void init_CoolProp(nb::module_& m) {
     m.def("saturation_ancillary", &saturation_ancillary);
     m.def("add_fluids_as_JSON", &add_fluids_as_JSON);
     m.def("HAPropsSI", &HumidAir::HAPropsSI);
+    // Vectorized HAPropsSI: array inputs loop over the scalar C++ HAPropsSI and
+    // return a list, matching the legacy Cython wrapper (no vectorized C++ path).
+    m.def("HAPropsSI", [](const std::string& Output, const std::string& N1, nb::object V1, const std::string& N2, nb::object V2,
+                          const std::string& N3, nb::object V3) {
+        bool s1 = false, s2 = false, s3 = false;
+        std::vector<double> v1 = _to_vec(V1, s1), v2 = _to_vec(V2, s2), v3 = _to_vec(V3, s3);
+        std::size_t n = std::max({v1.size(), v2.size(), v3.size()});
+        _broadcast_to(v1, n, "Input1");
+        _broadcast_to(v2, n, "Input2");
+        _broadcast_to(v3, n, "Input3");
+        std::vector<double> out(n);
+        for (std::size_t i = 0; i < n; ++i) {
+            out[i] = HumidAir::HAPropsSI(Output, N1, v1[i], N2, v2[i], N3, v3[i]);
+        }
+        return out;
+    });
     // HAProps (non-SI humid air) intentionally NOT bound -- removed for v8 (SI-only); use HAPropsSI.
     m.def("HAProps_Aux", [](std::string out_string, double T, double p, double psi_w) {
         std::array<char, 1000> units{};
