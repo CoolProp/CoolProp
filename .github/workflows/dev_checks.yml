@@ -132,6 +132,34 @@ jobs:
             name: CoolProp-${{ github.sha }}-clang_format.patch
             path: clang_format.patch
 
+  nanobind-pytest:
+    name: nanobind pytest suite
+    # PR-only (same rationale as clang-format above): avoid master going red
+    # retroactively. Open a draft PR to exercise it on a branch.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build the nanobind wheel and run the pytest suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv venv --python 3.13
+          source .venv/bin/activate
+          uv pip install nanobind cython scikit-build-core ninja pytest
+          # Release: the wheel compiles the whole core (incl. SVDSBTL); Debug is
+          # very slow. COOLPROP_NANOBIND=ON selects the nanobind core + State shim.
+          uv build --wheel --no-build-isolation \
+            --config-setting=cmake.define.COOLPROP_NANOBIND=ON \
+            --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
+            --out-dir dist .
+          uv pip install --force-reinstall dist/coolprop-*.whl
+          pytest wrappers/Python/pytest -q
+
   clang-tidy:
     name: clang-tidy (diff-only, informational)
     # Runs clang-tidy on lines changed in the PR via clang-tidy-diff.py and
