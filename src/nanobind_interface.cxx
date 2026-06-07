@@ -35,7 +35,12 @@ static std::vector<std::string> _split_str(const std::string& s, char delim) {
             cur += c;
         }
     }
-    out.push_back(cur);
+    // Keep Python str.split() semantics for non-empty input (trailing/empty
+    // tokens preserved), but return [] -- not [""] -- for an empty input, so
+    // e.g. an empty FluidsList/aliases string yields an empty list.
+    if (!cur.empty() || !s.empty()) {
+        out.push_back(cur);
+    }
     return out;
 }
 
