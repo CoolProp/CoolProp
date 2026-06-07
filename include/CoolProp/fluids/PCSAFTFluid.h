@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/tools.h"
 
 namespace CoolProp {
 
@@ -33,7 +33,10 @@ class PCSAFTFluid
 
    public:
     PCSAFTFluid() = default;
-    PCSAFTFluid(rapidjson::Value::ValueIterator itr);
+    PCSAFTFluid(std::string name, std::string CAS, CoolPropDbl molemass,
+                std::vector<std::string> aliases, PCSAFTValues params)
+      : name(std::move(name)), CAS(std::move(CAS)), molemass(molemass),
+        aliases(std::move(aliases)), params(std::move(params)) {}
     ~PCSAFTFluid() = default;
 
     std::string getName() const {

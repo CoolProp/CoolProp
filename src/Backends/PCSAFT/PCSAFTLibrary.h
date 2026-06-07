@@ -7,7 +7,7 @@
 #include <string>
 #include "CoolProp/fluids/PCSAFTFluid.h"
 #include "CoolProp/detail/tools.h"
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/json.h"
 
 namespace CoolProp {
 
@@ -25,7 +25,7 @@ class PCSAFTLibraryClass
     /// Map from sorted pair of CAS numbers to interaction parameter map.  The interaction parameter map is a map from key (string) to value (double)
     std::map<std::vector<std::string>, std::vector<Dictionary>> m_binary_pair_map;
 
-    void load_from_JSON(rapidjson::Document& doc);
+    void load_from_JSON(const nlohmann::json& doc);
     void load_from_string(const std::string_view& str);
 
    public:
@@ -35,7 +35,7 @@ class PCSAFTLibraryClass
         return empty;
     };
 
-    int add_many(rapidjson::Value& listing);
+    int add_many(const nlohmann::json& listing);
 
     PCSAFTFluid& get(const std::string& key);
     PCSAFTFluid& get(std::size_t key);

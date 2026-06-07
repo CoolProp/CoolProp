@@ -4,7 +4,8 @@
 #include "all_pcsaft_JSON.h"                   // Makes a std::string variable called all_pcsaft_JSON
 #include "pcsaft_fluids_schema_JSON.h"         // Makes a std::string variable called pcsaft_fluids_schema_JSON
 #include "mixture_binary_pairs_pcsaft_JSON.h"  // Makes a std::string variable called mixture_binary_pairs_pcsaft_JSON
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/json.h"
+#include "PCSAFTFluidFactory.h"
 #include "CoolProp/detail/strings.h"
 #include "CoolProp/CoolProp.h"
 #include "CoolProp/Configuration.h"
@@ -29,24 +30,22 @@ namespace {
 /// the get_library() singleton (which would recurse into its own constructor).
 void add_fluids_from_JSON_string(PCSAFTLibraryClass& dest, const std::string_view& JSON) {
     std::string errstr;
-    // FluidLibrary.h (transitively) now also pulls in the nlohmann cpjson
-    // wrapper, whose validate_schema overload is ambiguous with the rapidjson
-    // one for these string arguments. Select the rapidjson overload explicitly
-    // until the PCSAFT loader migrates off rapidjson.
-    auto validate_schema_rapidjson =
-      static_cast<cpjson::schema_validation_code (*)(const std::string_view&, const std::string_view&, std::string&)>(&cpjson::validate_schema);
-    cpjson::schema_validation_code val_code = validate_schema_rapidjson(pcsaft_fluids_schema_JSON, JSON, errstr);
+    // FluidLibrary.h transitively includes detail/rapidjson.h (via
+    // Configuration.h), so both validate_schema overloads are visible here and
+    // the call is ambiguous. The two overloads differ ONLY in their string_view
+    // parameters: rapidjson takes `const std::string_view&`, nlohmann takes
+    // `std::string_view` by value. The cast's by-value signature therefore
+    // selects the nlohmann/Valijson overload. Remove this cast (the call becomes
+    // unambiguous) once detail/rapidjson.h is deleted at Phase Final.
+    auto validate_schema_nlohmann =
+      static_cast<cpjson::schema_validation_code (*)(std::string_view, std::string_view, std::string&)>(&cpjson::validate_schema);
+    cpjson::schema_validation_code val_code = validate_schema_nlohmann(pcsaft_fluids_schema_JSON, JSON, errstr);
     if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
-        rapidjson::Document dd;
-        dd.Parse<0>(JSON.data(), JSON.size());
-        if (dd.HasParseError()) {
-            throw ValueError("Unable to load all_pcsaft_JSON.json");
-        } else {
-            try {
-                dest.add_many(dd);
-            } catch (std::exception& e) {
-                std::cout << e.what() << '\n';
-            }
+        nlohmann::json dd = cpjson::parse(JSON);
+        try {
+            dest.add_many(dd);
+        } catch (std::exception& e) {
+            std::cout << e.what() << '\n';
         }
     } else {
         if (get_debug_level() > 0) {
@@ -108,12 +107,12 @@ void add_fluids_as_JSON(const std::string_view& JSON) {
     add_fluids_from_JSON_string(get_library(), JSON);
 }
 
-int PCSAFTLibraryClass::add_many(rapidjson::Value& listing) {
+int PCSAFTLibraryClass::add_many(const nlohmann::json& listing) {
     int counter = 0;
     std::string fluid_name;
-    for (rapidjson::Value::ValueIterator itr = listing.Begin(); itr != listing.End(); ++itr) {
+    for (const auto& fluid_json : listing) {
         try {
-            PCSAFTFluid fluid(itr);
+            PCSAFTFluid fluid = cpjson::make_pcsaft_fluid(fluid_json);
             fluid_name = fluid.getName();
 
             // If the fluid is ok...
@@ -337,23 +336,23 @@ void PCSAFTLibraryClass::set_binary_interaction_pcsaft(const std::string& CAS1, 
     }
 }
 
-void PCSAFTLibraryClass::load_from_JSON(rapidjson::Document& doc) {
-    for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr) {
+void PCSAFTLibraryClass::load_from_JSON(const nlohmann::json& doc) {
+    for (const auto& el : doc) {
         // Get the empty dictionary to be filled by the appropriate interaction parameter
         Dictionary dict;
 
         // Get the vector of CAS numbers
         std::vector<std::string> CAS;
-        CAS.push_back(cpjson::get_string(*itr, "CAS1"));
-        CAS.push_back(cpjson::get_string(*itr, "CAS2"));
-        std::string name1 = cpjson::get_string(*itr, "Name1");
-        std::string name2 = cpjson::get_string(*itr, "Name2");
+        CAS.push_back(cpjson::get_string(el, "CAS1"));
+        CAS.push_back(cpjson::get_string(el, "CAS2"));
+        std::string name1 = cpjson::get_string(el, "Name1");
+        std::string name2 = cpjson::get_string(el, "Name2");
 
         // Sort the CAS number vector
         std::sort(CAS.begin(), CAS.end());
 
         // A sort was carried out, names/CAS were swapped
-        bool swapped = CAS[0].compare(cpjson::get_string(*itr, "CAS1")) != 0;
+        bool swapped = CAS[0].compare(cpjson::get_string(el, "CAS1")) != 0;
 
         if (swapped) {
             std::swap(name1, name2);
@@ -362,14 +361,14 @@ void PCSAFTLibraryClass::load_from_JSON(rapidjson::Document& doc) {
         // Populate the dictionary with common terms
         dict.add_string("name1", name1);
         dict.add_string("name2", name2);
-        dict.add_string("BibTeX", cpjson::get_string(*itr, "BibTeX"));
-        if (itr->HasMember("kij")) {
-            dict.add_number("kij", cpjson::get_double(*itr, "kij"));
+        dict.add_string("BibTeX", cpjson::get_string(el, "BibTeX"));
+        if (el.contains("kij")) {
+            dict.add_number("kij", cpjson::get_double(el, "kij"));
         } else {
             std::cout << "Loading error: binary pair of " << name1 << " & " << name2 << "does not provide kij" << '\n';
         }
-        if (itr->HasMember("kijT")) {
-            dict.add_number("kijT", cpjson::get_double(*itr, "kijT"));
+        if (el.contains("kijT")) {
+            dict.add_number("kijT", cpjson::get_double(el, "kijT"));
         }
 
         auto it = m_binary_pair_map.find(CAS);
@@ -394,11 +393,7 @@ void PCSAFTLibraryClass::load_from_JSON(rapidjson::Document& doc) {
 }
 
 void PCSAFTLibraryClass::load_from_string(const std::string_view& str) {
-    rapidjson::Document doc;
-    doc.Parse<0>(str.data(), str.size());
-    if (doc.HasParseError()) {
-        throw ValueError("Unable to parse PC-SAFT binary interaction parameter string");
-    }
+    nlohmann::json doc = cpjson::parse(str);
     load_from_JSON(doc);
 }
 
