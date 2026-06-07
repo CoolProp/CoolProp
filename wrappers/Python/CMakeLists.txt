@@ -352,6 +352,7 @@ install(DIRECTORY "${ROOT_DIR}/include/"
     PATTERN "*.hpp"
     PATTERN "*_JSON.h" EXCLUDE
     PATTERN "*_JSON_z.h" EXCLUDE
+    REGEX "detail/json\\.h$" EXCLUDE
 )
 
 # Install fmtlib headers (for packaging).  fmt is CPM-fetched (fmt_SOURCE_DIR);
