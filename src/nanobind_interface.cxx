@@ -55,6 +55,12 @@ static std::vector<double> _to_vec(nb::handle o, bool& is_seq) {
         return {d};
     }
     is_seq = true;
+    // Reject multi-dimensional arrays rather than silently flattening them
+    // (matches the legacy "Input is not one-dimensional" ValueError).
+    if (nb::hasattr(o, "ndim") && nb::cast<long>(nb::getattr(o, "ndim")) > 1) {
+        PyErr_SetString(PyExc_ValueError, "vectorized PropsSI/HAPropsSI input is not one-dimensional");
+        throw nb::python_error();
+    }
     return nb::cast<std::vector<double>>(o);
 }
 
@@ -68,7 +74,9 @@ static void _broadcast_to(std::vector<double>& v, std::size_t n, const char* whi
         v.assign(n, val);
         return;
     }
-    throw std::invalid_argument(std::string("vectorized input ") + which + " has an incompatible length");
+    // Match the legacy Cython wrapper, which raises TypeError on a length mismatch.
+    PyErr_SetString(PyExc_TypeError, (std::string("vectorized input ") + which + " has an incompatible length").c_str());
+    throw nb::python_error();
 }
 
 // ---- State C-ABI capsule (bridge for the frozen Cython `State` compat shim) --
