@@ -8,12 +8,6 @@
 
 #include "CoolProp/detail/json.h"
 
-// Visibility helper: hide internal nlohmann-taking methods from the exported ABI
-#if defined(__GNUC__) || defined(__clang__)
-#    define CP_JSON_LOCAL __attribute__((visibility("hidden")))
-#else
-#    define CP_JSON_LOCAL
-#endif
 
 #include <map>
 
@@ -155,9 +149,9 @@ class JSONIncompressibleLibrary
 
    protected:
     /// A general function to parse the json files that hold the coefficient matrices
-    CP_JSON_LOCAL IncompressibleData parse_coefficients(const nlohmann::json& obj, const std::string& id, bool vital);
-    CP_JSON_LOCAL double parse_value(const nlohmann::json& obj, const std::string& id, bool vital, double def);
-    CP_JSON_LOCAL composition_types parse_ifrac(const nlohmann::json& obj, const std::string& id);
+    IncompressibleData parse_coefficients(const nlohmann::json& obj, const std::string& id, bool vital);
+    double parse_value(const nlohmann::json& obj, const std::string& id, bool vital, double def);
+    composition_types parse_ifrac(const nlohmann::json& obj, const std::string& id);
 
    public:
     // Default constructor;
@@ -169,9 +163,8 @@ class JSONIncompressibleLibrary
     };
 
     /// Add all the fluid entries in the nlohmann::json array passed in
-    CP_JSON_LOCAL void add_many(const nlohmann::json& listing);
-    CP_JSON_LOCAL void add_one(const nlohmann::json& fluid_json);
-#undef CP_JSON_LOCAL
+    void add_many(const nlohmann::json& listing);
+    void add_one(const nlohmann::json& fluid_json);
     void add_obj(const IncompressibleFluid& fluid_obj);
 
     /** \brief Get an IncompressibleFluid instance stored in this library
