@@ -220,12 +220,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
 
     /// In this class, we are already doing cubic evaluation, just delegate to our function
     CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) override {
-        // Impose the requested phase so the cubic root selector does not
-        // need to call p_critical() (expensive for many-component mixtures).
-        specify_phase(phase);
-        CoolPropDbl rho = solver_rho_Tp(T, p);
-        unspecify_phase();
-        return rho;
+        return solver_rho_Tp(T, p, phase);
     };
     /**
      * /brief Solve for rho = f(T,p)
@@ -233,6 +228,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
      * You can often get three solutions, to overcome this problem you must either specify the phase, or provide a reasonable guess value for rho_guess, but not both
      */
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1) override;
+
+    /// Solve for rho = f(T,p) with an explicit phase specification (avoids state mutation)
+    CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase);
 
     CoolPropDbl solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax) override;
 

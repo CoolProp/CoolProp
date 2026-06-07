@@ -593,52 +593,66 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp_global(CoolPropDbl T, 
     }
     return rho;
 }
-CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess) {
+CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase) {
     int Nsoln = 0;
     double rho0 = 0, rho1 = 0, rho2 = 0, rho = -1;
     rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);  // Densities are sorted in increasing order
     if (Nsoln == 1) {
         rho = rho0;
     } else if (Nsoln == 3) {
-        if (imposed_phase_index != iphase_not_imposed) {
-            // Use imposed phase to select root
-            if (imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) {
-                if (rho0 > 0) {
+        if (phase == iphase_gas || phase == iphase_supercritical_gas) {
+            if (rho0 > 0) {
+                rho = rho0;
+            } else if (rho1 > 0) {
+                rho = rho1;
+            } else if (rho2 > 0) {
+                rho = rho2;
+            } else {
+                throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
+            }
+        } else if (phase == iphase_liquid || phase == iphase_supercritical_liquid) {
+            rho = rho2;
+        } else {
+            throw ValueError("Specified phase is invalid");
+        }
+    } else {
+        throw ValueError("Obtained neither 1 nor three roots");
+    }
+    _phase = phase;
+    _Q = -1;
+    return rho;
+}
+
+CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess) {
+    if (imposed_phase_index != iphase_not_imposed) {
+        return solver_rho_Tp(T, p, imposed_phase_index);
+    }
+    int Nsoln = 0;
+    double rho0 = 0, rho1 = 0, rho2 = 0, rho = -1;
+    rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);  // Densities are sorted in increasing order
+    if (Nsoln == 1) {
+        rho = rho0;
+    } else if (Nsoln == 3) {
+        if (p < p_critical()) {
+            add_transient_pure_state();
+            transient_pure_state->set_mole_fractions(this->mole_fractions);
+            transient_pure_state->update(PQ_INPUTS, p, 0);
+            if (T > transient_pure_state->T()) {
+                double rhoV = transient_pure_state->saturated_vapor_keyed_output(iDmolar);
+                // Gas
+                if (rho0 > 0 && rho0 < rhoV) {
                     rho = rho0;
-                } else if (rho1 > 0) {
+                } else if (rho1 > 0 && rho1 < rhoV) {
                     rho = rho1;
-                } else if (rho2 > 0) {
-                    rho = rho2;
                 } else {
                     throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
                 }
-            } else if (imposed_phase_index == iphase_liquid || imposed_phase_index == iphase_supercritical_liquid) {
-                rho = rho2;
             } else {
-                throw ValueError("Specified phase is invalid");
+                // Liquid
+                rho = rho2;
             }
         } else {
-            if (p < p_critical()) {
-                add_transient_pure_state();
-                transient_pure_state->set_mole_fractions(this->mole_fractions);
-                transient_pure_state->update(PQ_INPUTS, p, 0);
-                if (T > transient_pure_state->T()) {
-                    double rhoV = transient_pure_state->saturated_vapor_keyed_output(iDmolar);
-                    // Gas
-                    if (rho0 > 0 && rho0 < rhoV) {
-                        rho = rho0;
-                    } else if (rho1 > 0 && rho1 < rhoV) {
-                        rho = rho1;
-                    } else {
-                        throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
-                    }
-                } else {
-                    // Liquid
-                    rho = rho2;
-                }
-            } else {
-                throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
-            }
+            throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
         }
     } else {
         throw ValueError("Obtained neither 1 nor three roots");
@@ -646,14 +660,10 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
     if (is_pure_or_pseudopure) {
         this->recalculate_singlephase_phase();
     } else {
-        if (imposed_phase_index != iphase_not_imposed) {
-            _phase = imposed_phase_index;
+        if (rho < rhomolar_reducing()) {
+            _phase = iphase_gas;
         } else {
-            if (rho < rhomolar_reducing()) {
-                _phase = iphase_gas;
-            } else {
-                _phase = iphase_liquid;
-            }
+            _phase = iphase_liquid;
         }
     }
     _Q = -1;
