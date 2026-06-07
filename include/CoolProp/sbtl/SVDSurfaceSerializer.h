@@ -208,7 +208,16 @@ class SVDSurfaceSerializer
     //           [0.99,1.01]·Tc band is now table-served (no HEOS) to
     //           ~1e-6..2e-5 for all fluids.  PT / HmassP and the non-DmassT
     //           presets are unchanged.
-    static constexpr int kRevision = 17;
+    //   rev 18: CoolProp-jh6a.  The DmassT parent SUPER region's primary-T
+    //           axis switches LINEAR → LOG.  For low-Tc / wide-supercritical
+    //           fluids (Helium: Tc 5.2 K, Tmax 2000 K, ~380× range) LINEAR
+    //           starved the near-Tc supercritical zone of grid lines, giving
+    //           ~1% pressure error across the whole SUPER region; LOG drops
+    //           it to ~1e-8.  No region-count change (same 6 regions), but
+    //           the SUPER grid sample positions and U/slopes shift, so
+    //           rev-17 caches must rebuild.  Modest-ratio fluids (Water ~3×,
+    //           CO2 ~6×) are unchanged in practice (LOG ≈ LINEAR there).
+    static constexpr int kRevision = 18;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);
