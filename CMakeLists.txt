@@ -383,6 +383,8 @@ set(COOLPROP_INCLUDE_DIRECTORIES
 #######################################
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
                       "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(CoolPropJSONVisibility)
 
 message(STATUS "Looking for Python")
 find_package(Python REQUIRED COMPONENTS Interpreter)
@@ -720,6 +722,7 @@ if(COOLPROP_OBJECT_LIBRARY
   if(NOT COOLPROP_OBJECT_LIBRARY)
     target_link_libraries(${LIB_NAME} ${CMAKE_DL_LIBS})
   endif()
+  coolprop_hide_json_symbols(${LIB_NAME})
 
   # For windows systems, bug workaround for Eigen
   if(MSVC90)
@@ -1411,6 +1414,7 @@ if(COOLPROP_OCTAVE_MODULE)
   else()
     swig_link_libraries(CoolProp ${OCTAVE_LIBRARIES})
   endif()
+  coolprop_hide_json_symbols(CoolProp)
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
   add_dependencies(${app_name} generate_headers generate_examples)
@@ -1457,6 +1461,7 @@ if(COOLPROP_CSHARP_MODULE)
 
   swig_add_module(CoolProp csharp ${I_FILE} ${APP_SOURCES})
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropCsharp")
+  coolprop_hide_json_symbols(CoolProp)
 
   add_definitions(-DNO_ERROR_CATCHING)
 
@@ -1546,6 +1551,7 @@ if(COOLPROP_VBDOTNET_MODULE)
   set_property(SOURCE ${I_FILE} PROPERTY SWIG_FLAGS ${SWIG_OPTIONS})
   swig_add_module(CoolProp csharp ${I_FILE} ${APP_SOURCES})
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropCsharp")
+  coolprop_hide_json_symbols(CoolProp)
 
   add_definitions(-DNO_ERROR_CATCHING)
 
@@ -1622,6 +1628,7 @@ if(COOLPROP_R_MODULE)
 
   swig_add_module(CoolProp r ${I_FILE} ${APP_SOURCES})
   swig_link_libraries(CoolProp "${R_LIBRARY}")
+  coolprop_hide_json_symbols(CoolProp)
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropR")
 
   # No lib prefix for the shared library
@@ -1682,6 +1689,7 @@ if(COOLPROP_JAVA_MODULE)
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   swig_add_module(CoolProp java ${I_FILE} ${APP_SOURCES})
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropJava")
+  coolprop_hide_json_symbols(CoolProp)
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -1831,6 +1839,7 @@ if(COOLPROP_PHP_MODULE)
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   swig_add_module(CoolProp php ${I_FILE} ${APP_SOURCES})
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropPHP")
+  coolprop_hide_json_symbols(CoolProp)
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -2031,6 +2040,7 @@ if(COOLPROP_MATHEMATICA_MODULE)
   include_directories(${APP_INCLUDE_DIRS})
   add_library(CoolProp SHARED ${APP_SOURCES})
   add_dependencies(CoolProp generate_headers)
+  coolprop_hide_json_symbols(CoolProp)
 
   if(MSVC)
     add_custom_command(
