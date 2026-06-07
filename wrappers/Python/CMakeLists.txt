@@ -325,6 +325,20 @@ install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants.py"
     "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
     DESTINATION CoolProp)
+# HumidAirProp re-export shim (SI surface from the core; non-SI HAProps removed)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/HumidAirProp.py"
+    DESTINATION CoolProp)
+# Pure-Python submodules, shipped unchanged from the source package so the v8
+# import tree matches the legacy one (CoolProp.Plots/BibtexParser/GUI/tests).
+# tests/ is required: it is the q2sh "existing suite runs green" done-gate.
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/Plots"
+    DESTINATION CoolProp FILES_MATCHING PATTERN "*.py" PATTERN "psyrc")
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/GUI"
+    DESTINATION CoolProp FILES_MATCHING PATTERN "*.py")
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/tests"
+    DESTINATION CoolProp FILES_MATCHING PATTERN "*.py")
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/BibtexParser.py"
+    DESTINATION CoolProp)
 
 endif()  # COOLPROP_NANOBIND
 
