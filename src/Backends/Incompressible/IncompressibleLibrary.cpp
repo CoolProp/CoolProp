@@ -2,7 +2,7 @@
 #include "CoolProp/numerics/MatrixMath.h"
 #include "CoolProp/DataStructures.h"
 //#include "crossplatform_shared_ptr.h"
-#include "CoolProp/detail/rapidjson.h"
+#include "CoolProp/detail/json.h"
 #include "all_incompressibles_JSON.h"  // Makes a std::string variable called all_incompressibles_JSON
 
 #include <mutex>
@@ -345,38 +345,36 @@ JSONIncompressibleLibrary::~JSONIncompressibleLibrary() {
 };
 
 /// A general function to parse the json files that hold the coefficient matrices
-IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Value& obj, const std::string& id, bool vital) {
+IncompressibleData JSONIncompressibleLibrary::parse_coefficients(const nlohmann::json& obj, const std::string& id, bool vital) {
     IncompressibleData fluidData;
-    if (obj.HasMember(id.c_str())) {
-        //rapidjson::Value value = obj[id.c_str()];
-        if (obj[id.c_str()].HasMember("type")) {
-            if (obj[id.c_str()].HasMember("coeffs")) {
-                std::string type = cpjson::get_string(obj[id.c_str()], "type");
+    if (obj.contains(id)) {
+        const nlohmann::json& entry = obj.at(id);
+        if (entry.contains("type")) {
+            if (entry.contains("coeffs")) {
+                std::string type = cpjson::get_string(entry, "type");
                 if (!type.compare("polynomial")) {
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
-                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(obj[id.c_str()]["coeffs"]));
+                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(entry.at("coeffs")));
                     return fluidData;
                 } else if (!type.compare("exponential")) {
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL;
-                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
+                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(entry.at("coeffs")));
                     return fluidData;
                 } else if (!type.compare("logexponential")) {
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL;
-                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
+                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(entry.at("coeffs")));
                     return fluidData;
                 } else if (!type.compare("exppolynomial")) {
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL;
-                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(obj[id.c_str()]["coeffs"]));
+                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(entry.at("coeffs")));
                     return fluidData;
                 } else if (!type.compare("polyoffset")) {
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYOFFSET;
-                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
+                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(entry.at("coeffs")));
                     return fluidData;
                 } else if (vital) {
                     throw ValueError(format("The type [%s] is not understood for [%s] of incompressible fluids. Please check your JSON file.",
                                             type.c_str(), id.c_str()));
-                } else {
-                    //std::cout << format("The type [%s] is not understood for [%s] of incompressible fluids. Please check your JSON file.\n", type.c_str(), id.c_str());
                 }
             } else {
                 throw ValueError(format("Your file does not have an entry for \"coeffs\" in [%s], which is vital for this function.", id.c_str()));
@@ -393,8 +391,8 @@ IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Valu
 }
 
 /// Get a double from the JSON storage if it is defined, otherwise return def
-double JSONIncompressibleLibrary::parse_value(rapidjson::Value& obj, const std::string& id, bool vital, double def = 0.0) {
-    if (obj.HasMember(id.c_str())) {
+double JSONIncompressibleLibrary::parse_value(const nlohmann::json& obj, const std::string& id, bool vital, double def = 0.0) {
+    if (obj.contains(id)) {
         return cpjson::get_double(obj, id);
     } else {
         if (vital) {
@@ -406,7 +404,7 @@ double JSONIncompressibleLibrary::parse_value(rapidjson::Value& obj, const std::
 }
 
 /// Get an integer from the JSON storage to identify the composition
-composition_types JSONIncompressibleLibrary::parse_ifrac(rapidjson::Value& obj, const std::string& id) {
+composition_types JSONIncompressibleLibrary::parse_ifrac(const nlohmann::json& obj, const std::string& id) {
     std::string res = cpjson::get_string(obj, id);
     if (!res.compare("mass")) return IFRAC_MASS;
     if (!res.compare("mole")) return IFRAC_MOLE;
@@ -418,14 +416,14 @@ composition_types JSONIncompressibleLibrary::parse_ifrac(rapidjson::Value& obj, 
     return IFRAC_UNDEFINED;
 }
 
-/// Add all the fluid entries in the rapidjson::Value instance passed in
-void JSONIncompressibleLibrary::add_many(rapidjson::Value& listing) {
-    for (rapidjson::Value::ValueIterator itr = listing.Begin(); itr != listing.End(); ++itr) {
-        add_one(*itr);
+/// Add all the fluid entries in the nlohmann::json array passed in
+void JSONIncompressibleLibrary::add_many(const nlohmann::json& listing) {
+    for (const auto& fluid_json : listing) {
+        add_one(fluid_json);
     }
 };
 
-void JSONIncompressibleLibrary::add_one(rapidjson::Value& fluid_json) {
+void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
     _is_empty = false;
 
     // Get the next index for this fluid
@@ -552,17 +550,12 @@ static void ensure_library_loaded() {
 }
 
 void load_incompressible_library() {
-    rapidjson::Document dd;
-    // This json formatted string comes from the all_incompressibles_JSON.h header which is a C++-escaped version of the JSON file
-    dd.Parse<0>(all_incompressibles_JSON.data(), all_incompressibles_JSON.size());
-    if (dd.HasParseError()) {
-        throw ValueError("Unable to load all_incompressibles_JSON.json");
-    } else {
-        try {
-            library.add_many(dd);
-        } catch (std::exception& e) {
-            std::cout << e.what() << '\n';
-        }
+    // This json formatted string comes from the all_incompressibles_JSON.h header
+    nlohmann::json dd = cpjson::parse(all_incompressibles_JSON);
+    try {
+        library.add_many(dd);
+    } catch (std::exception& e) {
+        std::cout << e.what() << '\n';
     }
     // TODO: Implement LiBr in the source code!
     //library.add_obj(LiBrSolution());
