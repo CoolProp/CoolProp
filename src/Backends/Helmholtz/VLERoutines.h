@@ -139,6 +139,13 @@ void saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, sat
 
 /* \brief A robust but slow solver in the very-near-critical region
      *
+     * This solver operates in the following fashion:
+     * 1. Using a bounded interval for rho'':[rhoc, rhoc-??], guess a value for rho''
+     * 2. For guessed value of rho'' and given value of T, calculate p
+     * 3. Using a Brent solver on the other co-existing phase (rho'), calculate the (bounded) value of rho' that yields the same pressure
+     * 4. Use another outer Brent solver on rho'' to enforce the same Gibbs function between liquid and vapor
+     * 5. Fin.
+     *
      * @param HEOS The Helmholtz EOS backend instance to be used
      * @param ykey The CoolProp::parameters key to be imposed - one of iT or iP
      * @param y The value for the imposed variable
@@ -173,13 +180,19 @@ class WilsonK_resid : public FuncWrapper1D
 
     WilsonK_resid(const HelmholtzEOSMixtureBackend& HEOS, double beta, double imposed_value, sstype_enum input_type,
                   const std::vector<CoolPropDbl>& z, std::vector<CoolPropDbl>& K)
-      : input_type(input_type), T(imposed_value), p(imposed_value), beta(beta), z(z), K(K), HEOS(HEOS) {}
+      : input_type(input_type),
+        T(imposed_value),
+        p(imposed_value),
+        beta(beta),
+        z(z),
+        K(K),
+        HEOS(HEOS) {}  // if input_type == imposed_T -> use T, else use p; init both
     double call(double input_value) override {
         double summer = 0;
         if (input_type == imposed_T) {
-            p = input_value;
+            p = input_value;  // Iterate on pressure
         } else {
-            T = input_value;
+            T = input_value;  // Iterate on temperature, pressure imposed
         }
         for (unsigned int i = 0; i < z.size(); i++) {
             K[i] = exp(Wilson_lnK_factor(HEOS, T, p, i));
@@ -191,18 +204,22 @@ class WilsonK_resid : public FuncWrapper1D
 inline double saturation_preconditioner(HelmholtzEOSMixtureBackend& HEOS, double input_value, sstype_enum input_type,
                                         const std::vector<CoolPropDbl>& z) {
     double ptriple = 0, pcrit = 0, Ttriple = 0, Tcrit = 0;
+
     if (HEOS.get_components().empty()) {
         return -1;
     }
+
     for (unsigned int i = 0; i < z.size(); i++) {
         Tcrit += HEOS.get_fluid_constant(i, iT_critical) * z[i];
         pcrit += HEOS.get_fluid_constant(i, iP_critical) * z[i];
         Ttriple += HEOS.get_fluid_constant(i, iT_triple) * z[i];
         ptriple += HEOS.get_fluid_constant(i, iP_triple) * z[i];
     }
+    // Return an invalid number if either triple point temperature or pressure are not available
     if (!ValidNumber(Ttriple) || !ValidNumber(ptriple)) {
         return _HUGE;
     }
+
     if (input_type == imposed_T) {
         return exp(log(pcrit / ptriple) / (Tcrit - Ttriple) * (input_value - Ttriple) + log(ptriple));
     } else if (input_type == imposed_p) {
@@ -211,12 +228,42 @@ inline double saturation_preconditioner(HelmholtzEOSMixtureBackend& HEOS, double
         throw ValueError();
     }
 }
+/**
+     * Wilson gives the K-factor as
+     * \f[
+     * \ln K_i = \ln\left(\frac{p_{c,i}}{p}\right)+5.373(1+\omega_i)\left(1-\frac{T_{c,i}}{T}\right)
+     * \f]
+     *
+     * From Rachford-Rice:
+     * \f[
+     * \sum_i \frac{x_i(K_i-1)}{1 - \beta + \beta K_i} = 0
+     * \f]
+     * When \f$T\f$ is known for \f$\beta=0\f$, \f$p\f$ can be obtained from
+     * \f[
+     * -1+\sum_i K_ix_i=0,
+     * \f]
+     * or
+     * \f[
+     * p = \sum_i x_ip_{c,i}\exp(5.373(1+\omega_i)(1-T_{c,i}/T).
+     * \f]
+     * Or when \f$T\f$ is known for \f$\beta=1\f$, \f$p\f$can be obtained from
+     * \f[
+     * -1+\sum_ix_i=0,
+     * \f]
+     * or
+     * \f[
+     * p = \left[ \sum_i \frac{y_i}{p_{c,i}\exp(5.373(1+\omega_i)(1-T_{c,i}/T)} \right]^{-1}
+     * \f]
+     */
 inline double saturation_Wilson(HelmholtzEOSMixtureBackend& HEOS, double beta, double input_value, sstype_enum input_type,
                                 const std::vector<CoolPropDbl>& z, double guess) {
     double out = 0;
+    std::string errstr;
+
+    // If T is input and beta = 0 or beta = 1, explicit solution for p is possible
     if (input_type == imposed_T && (std::abs(beta) < 1e-12 || std::abs(beta - 1) < 1e-12)) {
         const std::vector<double> z = HEOS.get_mole_fractions_ref();
-        bool beta0 = std::abs(beta) < 1e-12;
+        bool beta0 = std::abs(beta) < 1e-12;  // True is beta is approx. zero
         for (int i = 0; i < static_cast<int>(z.size()); ++i) {
             double pci = HEOS.get_fluid_constant(i, iP_critical);
             double Tci = HEOS.get_fluid_constant(i, iT_critical);
@@ -227,8 +274,8 @@ inline double saturation_Wilson(HelmholtzEOSMixtureBackend& HEOS, double beta, d
                 out += z[i] / (pci * exp(5.373 * (1 + omegai) * (1 - Tci / input_value)));
             }
         }
-        if (!beta0) {
-            out = 1 / out;
+        if (!beta0) {       // beta = 1
+            out = 1 / out;  // summation is for 1/p, take reciprocal to get p
         }
         std::vector<CoolPropDbl>& K = HEOS.get_K();
         for (int i = 0; i < static_cast<int>(z.size()); ++i) {
@@ -238,6 +285,7 @@ inline double saturation_Wilson(HelmholtzEOSMixtureBackend& HEOS, double beta, d
             K[i] = pci / out * exp(5.373 * (1 + omegai) * (1 - Tci / input_value));
         }
     } else {
+        // Find first guess for output variable using Wilson K-factors
         WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
         if (guess < 0 || !ValidNumber(guess))
             out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100);
@@ -282,12 +330,38 @@ struct newton_raphson_twophase_options
         hmolar_vap(_HUGE),
         smolar_liq(_HUGE),
         smolar_vap(_HUGE),
-        imposed_variable(NO_VARIABLE_IMPOSED) {}
+        imposed_variable(NO_VARIABLE_IMPOSED) {}  // Defaults
 };
 
 /** \brief A class to do newton raphson solver for mixture VLE for p,Q or T,Q
      *
      * A class is used rather than a function so that it is easier to store iteration histories, additional output values, etc.
+     *
+     * As in Gernert, FPE, 2014, except that only one of T and P are known
+     *
+     * The independent variables are \f$N-1\f$ mole fractions in liquid, \f$N-1\f$ mole fractions in vapor, and the non-specified variable in p or T, for a total of \f$2N-1\f$ independent variables
+     *
+     * First N residuals are from
+     *
+     * \f$F_k = \ln f_i(T,p,\mathbf{x}) - \ln f_i(T,p,\mathbf{y})\f$ for \f$i = 1, ... N\f$ and \f$k=i\f$
+     *
+     * Derivatives are the same as for the saturation solver \ref newton_raphson_saturation
+     *
+     * Second N-1 residuals are from
+     *
+     * \f$F_k = \dfrac{z_i-x_i}{y_i-x_i} - \beta_{spec}\f$ for \f$ i = 1, ... N-2\f$ and \f$k = i+N\f$
+     *
+     * Gernert eq. 35
+     *
+     * \f$\dfrac{\partial F_k}{\partial x_i} = \dfrac{z_i-y_i}{(y_i-x_i)^2}\f$
+     *
+     * Gernert eq. 36
+     *
+     * \f$\dfrac{\partial F_k}{\partial y_i} = -\dfrac{z_i-x_i}{(y_i-x_i)^2}\f$
+     *
+     * \f$\dfrac{\partial F_k}{\partial T} = 0\f$ Because x, y and T are independent by definition of the formulation
+     *
+     * \f$\dfrac{\partial F_k}{\partial p} = 0\f$ Because x, y and p are independent by definition of the formulation
      */
 class newton_raphson_twophase
 {
@@ -318,6 +392,8 @@ class newton_raphson_twophase
         Nsteps(0) {};
 
     void resize(unsigned int N);
+
+    // Reset the state of all the internal variables
     void pre_call() {
         K.clear();
         x.clear();
@@ -330,7 +406,21 @@ class newton_raphson_twophase
         T = _HUGE;
         p = _HUGE;
     };
+
+    /** \brief Call the Newton-Raphson VLE Solver
+         *
+         * This solver must be passed reasonable guess values for the mole fractions,
+         * densities, etc.  You may want to take a few steps of successive substitution
+         * before you start with Newton Raphson.
+         *
+         * @param HEOS HelmholtzEOSMixtureBackend instance
+         * @param IO The input/output data structure
+         */
     void call(HelmholtzEOSMixtureBackend& HEOS, newton_raphson_twophase_options& IO);
+
+    /* \brief Build the arrays for the Newton-Raphson solve
+         *
+         */
     void build_arrays();
 };
 
@@ -364,13 +454,35 @@ struct newton_raphson_saturation_options
         hmolar_vap(_HUGE),
         smolar_liq(_HUGE),
         smolar_vap(_HUGE),
-        imposed_variable(NO_VARIABLE_IMPOSED) {}
+        imposed_variable(NO_VARIABLE_IMPOSED) {}  // Defaults
 };
 
 /** \brief A class to do newton raphson solver for mixture bubble point and dew point calculations
      *
      * A class is used rather than a function so that it is easier to store iteration histories, additional output
      * values, etc.  This class is used in \ref PhaseEnvelopeRoutines for the construction of the phase envelope.
+     *
+     * This class only handles bubble and dew lines.  The independent variables are the first N-1 mole fractions
+     * in the incipient phase along with one of T, p, or \f$\rho''\f$.
+     *
+     * These methods are based on the work of Gernert, FPE, 2014, the thesis of Gernert, as well as much
+     * help from Andreas Jaeger of Uni. Bochum.
+     *
+     * There are N residuals from
+     *
+     * \f$F_i = \ln f_i(T, p, \mathbf{x}) - \ln f_i(T, p, \mathbf{y})\f$ for \f$i = 1, ... N\f$
+     *
+     * if either T or p are imposed. In this case a solver is used to find \f$\rho\f$ given \f$T\f$ and \f$p\f$.
+     *
+     * In the case that \f$\rho''\f$ is imposed, the case is much nicer and the first \f$N\f$ residuals are
+     *
+     * \f$F_i = \ln f_i(T, \rho', \mathbf{x}) - \ln f_i(T, \rho'', \mathbf{y})\f$ for \f$i = 1, ... N\f$
+     *
+     * which requires no iteration. A final residual is set up to ensure the same pressures in the phases:
+     *
+     * \f$p(T,\rho',\mathbf{x})-p(T,\rho'',\mathbf{y}) = 0\f$
+     *
+     * Documentation of the derivatives needed can be found in the work of Gernert, FPE, 2014
      */
 class newton_raphson_saturation
 {
@@ -389,7 +501,10 @@ class newton_raphson_saturation
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
     newton_raphson_saturation() = default;
+
     void resize(std::size_t N);
+
+    // Reset the state of all the internal variables
     void pre_call() {
         step_logger.clear();
         error_rms = 1e99;
@@ -399,16 +514,41 @@ class newton_raphson_saturation
         T = _HUGE;
         p = _HUGE;
     };
+
+    /** \brief Call the Newton-Raphson VLE Solver
+         *
+         * This solver must be passed reasonable guess values for the mole fractions,
+         * densities, etc.  You may want to take a few steps of successive substitution
+         * before you start with Newton Raphson.
+         *
+         * @param HEOS HelmholtzEOSMixtureBackend instance
+         * @param z Bulk mole fractions [-]
+         * @param z_incipient Initial guesses for the mole fractions of the incipient phase [-]
+         * @param IO The input/output data structure
+         */
     void call(HelmholtzEOSMixtureBackend& HEOS, const std::vector<CoolPropDbl>& z, std::vector<CoolPropDbl>& z_incipient,
               newton_raphson_saturation_options& IO);
+
+    /** \brief Build the arrays for the Newton-Raphson solve
+         *
+         * This method builds the Jacobian matrix, the sensitivity matrix, etc.
+         *
+         */
     void build_arrays();
+
+    /** \brief Check the derivatives in the Jacobian using numerical derivatives.
+         */
     void check_Jacobian();
 };
 
+/**
+ * @brief Options and results for the PT flash two-phase solver
+ */
 struct PTflash_twophase_options
 {
-    int Nstep_max;
-    std::size_t Nsteps;
+    int Nstep_max;       ///< Maximum number of iterations for the solver
+    std::size_t Nsteps;  ///< Number of steps actually taken
+    /** Intermediate and result variables */
     CoolPropDbl omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, beta;
     std::vector<CoolPropDbl> x,  ///< Liquid mole fractions
       y,                         ///< Vapor mole fractions
@@ -438,9 +578,23 @@ class PTflash_twophase
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
     PTflash_twophase(HelmholtzEOSMixtureBackend& HEOS, PTflash_twophase_options& IO) : HEOS(HEOS), IO(IO) {};
+
+    /** \brief Call the Newton-Raphson Solver to solve the equilibrium conditions
+         *
+         * This solver must be passed reasonable guess values for the mole fractions,
+         * densities, etc.  You may want to take a few steps of successive substitution
+         * before you start with Newton Raphson.
+         *
+         */
     void solve();
     void solve_legacy();
     void solve_michelsen();
+
+    /** \brief Build the arrays for the Newton-Raphson solve
+         *
+         * This method builds the Jacobian matrix, the sensitivity matrix, etc.
+         *
+         */
     void build_arrays();
 };
 };  // namespace SaturationSolvers
@@ -460,7 +614,8 @@ class StabilityEvaluationClass
     std::vector<double> lnK, K, K0, x, y, xL, xH;
     const std::vector<double>& z;
     double rhomolar_liq, rhomolar_vap, beta, tpd_liq, tpd_vap, DELTAG_nRT;
-    double m_T, m_p;
+    double m_T,  ///< The temperature to be used (if specified, otherwise that from HEOS)
+      m_p;       ///< The pressure to be used (if specified, otherwise that from HEOS)
 
    private:
     bool _stable;
@@ -482,17 +637,33 @@ class StabilityEvaluationClass
         _stable(false),
         debug(false),
         use_michelsen(get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {};
+    /** \brief Specify T&P, otherwise they are loaded the HEOS instance
+         */
     void set_TP(double T, double p) {
         m_T = T;
         m_p = p;
     };
+    /** \brief Calculate the liquid and vapor phase densities based on the guess values
+         */
     void rho_TP_w_guesses();
+    /** \brief Calculate the liquid and vapor phase densities using the global analysis
+         */
     void rho_TP_global();
+    /** \brief Calculate the liquid and vapor phase densities based on SRK, with Peneloux volume translation afterwards
+         */
     void rho_TP_SRK_translated();
+
+    /** \brief Calculate trial compositions
+         */
     void trial_compositions();
+    /** \brief Successive substitution
+         */
     void successive_substitution(int num_steps);
 
-    /** \brief Check stability */
+    /** \brief Check stability
+         * 1. Check stability by looking at tpd', tpd'' and \f$ \Delta G/(nRT)\f$
+         * 2. Do a full TPD analysis
+         */
     void check_stability();
     /** \brief Legacy stability check from Gernert et al. (2014) */
     void check_stability_legacy();
@@ -518,6 +689,8 @@ class StabilityEvaluationClass
         use_michelsen = value;
     }
 
+    /** \brief Return best estimate for the stability of the point
+         */
     bool is_stable() {
         if (!use_michelsen) {
             // Legacy path needs trial compositions and a few SS steps
@@ -528,10 +701,12 @@ class StabilityEvaluationClass
         check_stability();
         return _stable;
     }
+    /// Accessor for liquid-phase composition and density
     void get_liq(std::vector<double>& x, double& rhomolar) {
         x = this->x;
         rhomolar = rhomolar_liq;
     }
+    /// Accessor for vapor-phase composition and density
     void get_vap(std::vector<double>& y, double& rhomolar) {
         y = this->y;
         rhomolar = rhomolar_vap;
