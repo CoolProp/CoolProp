@@ -10,7 +10,7 @@ PDSim does not use the high-level Python API; it ``cimport``s CoolProp's
 ``State`` / ``AbstractState`` cdef classes and the ``constants_header`` enum
 module, then calls their methods at C speed inside its ODE loops.  That makes
 those declarations a binary/source *contract*.  The v8 reorg (dropping the
-hand-written Cython interface in favour of nanobind/pybind11 + a thin frozen
+hand-written Cython interface in favour of a nanobind core + a thin frozen
 ``State`` shim) MUST preserve this surface or PDSim breaks.
 
 This module reproduces *exactly* the members PDSim touches (extracted from

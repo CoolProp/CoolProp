@@ -2,7 +2,7 @@
 
 The exact C-level surface that **ibell/pdsim** consumes from CoolProp via
 `cimport` (extracted from `ibell/pdsim @ main`).  Dropping the hand-written
-Cython interface in v8 (→ nanobind/pybind11 core + a thin frozen `State` shim)
+Cython interface in v8 (→ nanobind core + a thin frozen `State` shim)
 **must preserve everything below**, or PDSim breaks at compile time — or worse,
 silently returns wrong numbers.
 
