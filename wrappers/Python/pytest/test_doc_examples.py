@@ -122,7 +122,7 @@ _XFAIL = {
 def _params():
     params = []
     for p in _PAGES:
-        rel = os.path.relpath(p, _WEB)
+        rel = os.path.relpath(p, _WEB).replace(os.sep, "/")  # forward slashes on Windows too
         marks = [pytest.mark.xfail(reason=_XFAIL[rel], strict=True)] if rel in _XFAIL else []
         params.append(pytest.param(p, id=rel, marks=marks))
     return params
@@ -145,9 +145,17 @@ def test_doc_page_examples(rst_path):
     try:
         exec(compile(code, rst_path, "exec"), ns)
     except Exception as e:  # noqa: BLE001 -- this is the compat signal
-        # Absent optional libs (matplotlib/pybtex/scipy/...) surface as ImportError
-        # and are skipped by type. REFPROP load failures are RuntimeError, so match
-        # those by message. Everything else is a genuine compat failure -> raise.
-        if isinstance(e, (ImportError, ModuleNotFoundError)) or "refprop" in str(e).lower():
+        # Skip ONLY for a genuinely-optional dependency or REFPROP. A broken
+        # CoolProp import (or a removed API imported by an example) is a real
+        # compat failure and must NOT be masked as a skip.
+        optional_roots = {"matplotlib", "pybtex", "scipy", "pandas"}
+        missing_root = (getattr(e, "name", None) or "").split(".")[0]
+        msg = str(e).lower()
+        is_optional = (
+            (isinstance(e, ModuleNotFoundError) and missing_root in optional_roots)
+            or (isinstance(e, ImportError) and any(r in msg for r in optional_roots))
+            or "refprop" in msg
+        )
+        if is_optional:
             pytest.skip("requires an absent optional dependency / REFPROP: %s" % str(e)[:80])
         raise
