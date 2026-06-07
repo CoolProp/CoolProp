@@ -17,6 +17,7 @@ Highlights:
 * New native desktop GUI built with Tauri + React (`#2715`), plus a much-expanded Mathcad wrapper and interactive 3D molecule viewers on the fluid documentation pages.
 * Build-system modernization: git submodules replaced by CPM.cmake (boost fetched as a trimmed subset from ``CoolProp/boost-headers``), Eigen bumped to 5.0.1, and a broad C++17 cleanup that also cuts compile times.
 * Repository-wide code-quality program: enforced ``clang-format`` (pre-commit + CI), diff-only ``clang-tidy``, ``cppcheck``, CodeQL, include-what-you-use, and a single-script ``dev/ci/preflight.sh`` pre-push gate.
+* **Python wrapper rebuilt on nanobind** — a modern, lower-maintenance binding that ships as a single stable-ABI (``abi3``) wheel per platform on Python ≥ 3.12 (one wheel instead of one per Python version).  The public import tree is preserved, so it is a drop-in for almost all code; the legacy non-SI ``Props`` / ``HAProps`` are removed (use ``PropsSI`` / ``HAPropsSI``).  See the behavior-changes note below.
 
 **Behavior changes (potentially breaking):**
 
@@ -40,6 +41,34 @@ Highlights:
   Update your ``DllImport`` (C#/VB.NET), ``System.loadLibrary`` (Java),
   or ``dyn.load`` (R) calls to the new name. See GitHub
   `#1674 <https://github.com/CoolProp/CoolProp/issues/1674>`_.
+
+* **Python wrapper: the interface is now built on nanobind.** The hand-written
+  Cython ``AbstractState`` interface has been replaced by a `nanobind
+  <https://github.com/wjakob/nanobind>`_ core, and the parallel (and
+  incomplete) pybind11 interface has been removed. The **public import tree is
+  preserved** — ``CoolProp.CoolProp`` (now the nanobind core),
+  ``CoolProp.AbstractState``, ``CoolProp.HumidAirProp``, ``CoolProp.State``,
+  ``CoolProp.Plots``, ``CoolProp.BibtexParser`` and the rest resolve at exactly
+  the same paths — so the large majority of user code needs no change.
+  Downstream Cython that ``cimport``\ s CoolProp's ``State`` /
+  ``AbstractState`` / ``constants_header`` surface (e.g. PDSim) also keeps
+  working: a link-free, capsule-forwarding ``State`` shim preserves the
+  cimportable contract. On Python ≥ 3.12 the wrapper ships as a single
+  stable-ABI (``abi3``) wheel per platform instead of one wheel per Python
+  version.
+
+  The following **removals are breaking** (all long-deprecated or never part of
+  the intended API):
+
+  - the non-SI free function ``Props`` (deprecated behind a warning for years) —
+    use ``PropsSI`` (SI units). The ``State`` class keeps its ``Props(key)``
+    *method* (a keyed-output accessor); only the free function is gone.
+  - the non-SI humid-air function ``HAProps`` — use ``HAPropsSI`` (SI units).
+    ``CoolProp.HumidAirProp.HAProps`` now raises with a message pointing at
+    ``HAPropsSI``; ``HAPropsSI``, ``HAProps_Aux`` and ``cair_sat`` are unchanged.
+  - ``re_split`` (an accidental re-export of Python's ``re.split``) and
+    ``rebuildState`` (an internal ``State``-unpickling helper) are no longer
+    exported from ``CoolProp.CoolProp``.
 
 * Default ``update`` for ``HmolarQ_INPUTS``, ``QSmolar_INPUTS``,
   ``DmolarQ_INPUTS`` (and their mass-input equivalents) on pure fluids
