@@ -1,7 +1,6 @@
 #ifndef VLEROUTINES_H
 #define VLEROUTINES_H
 
-#include "Configuration.h"
 #include "HelmholtzEOSMixtureBackend.h"
 
 namespace CoolProp {
