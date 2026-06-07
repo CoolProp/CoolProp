@@ -1,4 +1,5 @@
 #include "MixtureParameters.h"
+#include "CoolProp/detail/rapidjson.h"
 #include "CoolProp/detail/strings.h"
 #include "mixture_departure_functions_JSON.h"  // Creates the variable mixture_departure_functions_JSON
 #include "mixture_binary_pairs_JSON.h"         // Creates the variable mixture_binary_pairs_JSON

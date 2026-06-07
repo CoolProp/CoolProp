@@ -29,6 +29,7 @@ surface tension                 N/m
 #undef REFPROP_CSTYLE_REFERENCES
 
 #include "CoolProp/detail/tools.h"
+#include "CoolProp/detail/rapidjson.h"
 #include "REFPROPMixtureBackend.h"
 #include "REFPROPBackend.h"
 #include "CoolProp/Exceptions.h"

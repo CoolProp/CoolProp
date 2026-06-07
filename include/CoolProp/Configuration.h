@@ -6,10 +6,6 @@
 #include <cstdlib>
 #include <unordered_map>
 
-#if !defined(SWIG)  // Hide this for swig - Swig gets confused
-#    include "CoolProp/detail/rapidjson.h"
-#endif
-
 /* See http://stackoverflow.com/a/148610
  * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
  * This will be used to generate an enum like:
@@ -121,75 +117,6 @@ class ConfigurationItem
     configuration_keys get_key() const {
         return this->key;
     }
-#if !defined(SWIG)
-    /// Cast to rapidjson::Value
-    void add_to_json(rapidjson::Value& val, rapidjson::Document& d) const {
-        std::string name_string = config_key_to_string(key);
-        rapidjson::Value name(name_string.c_str(), d.GetAllocator());
-        switch (type) {
-            case CONFIGURATION_BOOL_TYPE: {
-                rapidjson::Value v(v_bool);
-                val.AddMember(name, v, d.GetAllocator());
-                break;
-            }
-            case CONFIGURATION_INTEGER_TYPE: {
-                rapidjson::Value v(v_integer);
-                val.AddMember(name, v, d.GetAllocator());
-                break;
-            }
-            case CONFIGURATION_DOUBLE_TYPE: {
-                rapidjson::Value v(v_double);  // Try to upcast
-                val.AddMember(name, v, d.GetAllocator());
-                break;
-            }
-            case CONFIGURATION_STRING_TYPE: {
-                rapidjson::Value v(v_string.c_str(), d.GetAllocator());
-                val.AddMember(name, v, d.GetAllocator());
-                break;
-            }
-            case CONFIGURATION_ENDOFLIST_TYPE:
-            case CONFIGURATION_NOT_DEFINED_TYPE:
-                throw ValueError();
-        }
-    }
-    void set_from_json(rapidjson::Value& val) {
-        switch (type) {
-            case CONFIGURATION_BOOL_TYPE:
-                if (!val.IsBool()) {
-                    throw ValueError(format("Input is not boolean"));
-                };
-                v_bool = val.GetBool();
-                break;
-            case CONFIGURATION_INTEGER_TYPE:
-                if (!val.IsInt()) {
-                    throw ValueError(format("Input is not integer"));
-                };
-                v_integer = val.GetInt();
-                break;
-            case CONFIGURATION_DOUBLE_TYPE: {
-                if (!val.IsDouble() && !val.IsInt()) {
-                    throw ValueError(format("Input [%s] is not double (or something that can be cast to double)", cpjson::to_string(val).c_str()));
-                };
-                if (val.IsDouble()) {
-                    v_double = val.GetDouble();
-                } else {
-                    v_double = static_cast<double>(val.GetInt());
-                }
-                break;
-            }
-            case CONFIGURATION_STRING_TYPE:
-                if (!val.IsString()) {
-                    throw ValueError(format("Input is not string"));
-                };
-                v_string = val.GetString();
-                break;
-            case CONFIGURATION_ENDOFLIST_TYPE:
-            case CONFIGURATION_NOT_DEFINED_TYPE:
-                throw ValueError();
-        }
-    }
-#endif  // !defined(SWIG)
-
    private:
     void check_data_type(ConfigurationDataTypes type) const {
         if (type != this->type) {
@@ -342,9 +269,6 @@ int get_config_int(configuration_keys key);
 double get_config_double(configuration_keys key);
 /// Return the value of a string configuration key
 std::string get_config_string(configuration_keys key);
-#if !defined(SWIG)  // Hide this for swig - Swig gets confused
-void get_config_as_json(rapidjson::Document& doc);
-#endif
 /// Get all the values in the configuration as a json-formatted string
 std::string get_config_as_json_string();
 
@@ -360,10 +284,6 @@ void set_config_int(configuration_keys key, int val);
 void set_config_double(configuration_keys key, double val);
 /// Set the value of a string configuration value
 void set_config_string(configuration_keys key, const std::string& val);
-/// Set values in the configuration based on a json file
-#if !defined(SWIG)  // Hide this for swig - Swig gets confused
-void set_config_json(rapidjson::Document& doc);
-#endif
 /// Set the entire configuration based on a json-formatted string
 void set_config_as_json_string(const std::string& s);
 }  // namespace CoolProp
