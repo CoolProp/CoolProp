@@ -226,6 +226,18 @@ target_include_directories(CoolProp_module PRIVATE
 target_link_libraries(CoolProp_module PRIVATE miniz)
 set_target_properties(CoolProp_module PROPERTIES OUTPUT_NAME "CoolProp" PREFIX "")
 
+# ---- PEP 561 type stub for the nanobind core (parity with the legacy wheel) ----
+# The core .so is self-contained (no Python-level imports at init), so nanobind's
+# stubgen can import it directly from the build dir to emit CoolProp.pyi.
+nanobind_add_stub(
+    CoolProp_stub
+    MODULE CoolProp
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.pyi"
+    PYTHON_PATH "$<TARGET_FILE_DIR:CoolProp_module>"
+    DEPENDS CoolProp_module
+    MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/py.typed"
+)
+
 # ---- capsule State shim -> CoolProp.State (link-free; forwards through _capi) ----
 # No CoolProp C++ is compiled in here; the shim only needs the C-ABI struct
 # header and grabs the function table from the already-imported core at runtime.
@@ -327,6 +339,9 @@ install(FILES
     DESTINATION CoolProp)
 # HumidAirProp re-export shim (SI surface from the core; non-SI HAProps removed)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/HumidAirProp.py"
+    DESTINATION CoolProp)
+# PEP 561 type stub for the nanobind core + py.typed marker (generated above)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.pyi" "${CMAKE_CURRENT_BINARY_DIR}/py.typed"
     DESTINATION CoolProp)
 # Pure-Python submodules, shipped unchanged from the source package so the v8
 # import tree matches the legacy one (CoolProp.Plots/BibtexParser/GUI/tests).
