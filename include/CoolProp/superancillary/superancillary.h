@@ -43,7 +43,6 @@ Subsequent edits by Ian Bell
 #include <Eigen/Dense>
 
 #include "boost/math/tools/toms748_solve.hpp"
-#include "nlohmann/json.hpp"
 
 namespace CoolProp {
 namespace superancillary {
@@ -821,6 +820,18 @@ class SuperAncillary
         double rhoV_SA_ratio;  ///< rho''(SA) / rho''(mp) as reported by fastchebpure
     };
 
+    /// Plain-typed bundle of already-parsed superancillary data. The non-installed
+    /// src/superancillary.cpp parses the JSON into one of these and constructs a
+    /// SuperAncillary from it via the private delegating ctor below, keeping the
+    /// JSON-library type out of this installed header.
+    struct LoadedData
+    {
+        std::vector<ChebyshevExpansion<ArrayType>> rhoL, rhoV, p;
+        double Tcrit_num = 0;
+        double rhocrit_num = 0;
+        std::vector<CheckPoint> check_points;
+    };
+
    private:
     /// These ones must always be present
     ChebyshevApproximation1D<ArrayType> m_rhoL,  ///< Approximation of \f$\rho'(T)\f$
@@ -876,25 +887,22 @@ class SuperAncillary
     /// observers can read it.
     mutable std::atomic<unsigned int> m_caloric_build_count{0};
 
-    /** A convenience function to load a ChebyshevExpansion from a JSON data structure
-     \param j The JSON data
-     \param key The key to be loaded from the superancillary block, probably one of "jexpansions_rhoL", "jexpansions_rhoV", or "jexpansions_p"
-     */
-    auto loader(const nlohmann::json& j, const std::string& key) {
-        std::vector<ChebyshevExpansion<ArrayType>> buf;
-        // If you want to use Eigen...
-        // auto toeig = [](const nlohmann::json &j) -> Eigen::ArrayXd{
-        //     auto vec = j.get<std::vector<double>>();
-        //     return Eigen::Map<const Eigen::ArrayXd>(&vec[0], vec.size());
-        // };
-        // for (auto& block : j[key]){
-        //     buf.emplace_back(block.at("xmin"), block.at("xmax"), toeig(block.at("coef")));
-        // }
-        for (auto& block : j[key]) {
-            buf.emplace_back(block.at("xmin"), block.at("xmax"), block.at("coef"));
-        }
-        return buf;
-    }
+    /// Member-initializing constructor from an already-parsed LoadedData bundle.
+    /// Member-init (not assignment) is required because ChebyshevApproximation1D is
+    /// non-assignable (it has a const member). The init-list order matches the member
+    /// declaration order above. Reproduces the field-by-field semantics of the former
+    /// JSON-consuming constructor; the JSON parsing now lives in the non-installed
+    /// src/superancillary.cpp, keeping the JSON-library type out of this header.
+    explicit SuperAncillary(LoadedData&& d)
+      : m_rhoL(std::move(d.rhoL)),
+        m_rhoV(std::move(d.rhoV)),
+        m_p(std::move(d.p)),
+        m_Tmin(m_p.xmin()),
+        m_Tcrit_num(d.Tcrit_num),
+        m_rhocrit_num(d.rhocrit_num),
+        m_pmin(m_p.eval(m_p.xmin())),
+        m_pmax(m_p.eval(m_p.xmax())),
+        m_check_points(std::move(d.check_points)) {}
 
     /** Make an inverse ChebyshevApproximation1D for T(p)
      \param Ndegree The degree of the expansion in each interval. In double precision, 12 to 16 is a good plan if you will not be doing eigenvalue rootfinding. If you will be doing eigenvalue rootfinding, use a lower degree expansion, 8 is good.
@@ -933,30 +941,14 @@ class SuperAncillary
     // using PropertyPairs = properties::PropertyPairs; ///< A convenience alias to save some typing
 
    public:
-    /// Reading in a data structure in the JSON format of https://pubs.aip.org/aip/jpr/article/53/1/013102/3270194
-    /// which includes sets of Chebyshev expansions for rhoL, rhoV, and p
-    SuperAncillary(const nlohmann::json& j)
-      : m_rhoL(std::move(loader(j, "jexpansions_rhoL"))),
-        m_rhoV(std::move(loader(j, "jexpansions_rhoV"))),
-        m_p(std::move(loader(j, "jexpansions_p"))),
-        m_Tmin(m_p.xmin()),
-        m_Tcrit_num(j.at("meta").at("Tcrittrue / K")),
-        m_rhocrit_num(j.at("meta").at("rhocrittrue / mol/m^3")),
-        m_pmin(m_p.eval(m_p.xmin())),
-        m_pmax(m_p.eval(m_p.xmax())) {
-        if (j.contains("check_points")) {
-            for (const auto& pt : j.at("check_points")) {
-                m_check_points.push_back({pt.at("T / K").get<double>(), pt.at("p(mp) / Pa").get<double>(), pt.at("rho'(mp) / mol/m^3").get<double>(),
-                                          pt.at("rho''(mp) / mol/m^3").get<double>(), pt.at("p(SA)/p(mp)").get<double>(),
-                                          pt.at("rho'(SA)/rho'(mp)").get<double>(), pt.at("rho''(SA)/rho''(mp)").get<double>()});
-            }
-        }
-    };
-
-    /** Load the superancillary with the data passed in as a string blob. This constructor delegates directly to the the one that consumes JSON
+    /** Load the superancillary with the data passed in as a string blob of JSON. The
+     * JSON parsing is defined out-of-line in the non-installed src/superancillary.cpp and
+     * explicitly instantiated for std::vector<double>, so this installed header carries no
+     * JSON-library type. (Construction is therefore available only for the instantiated
+     * ArrayType(s).)
      * \param s The string-encoded JSON data for the superancillaries
      */
-    SuperAncillary(const std::string& s) : SuperAncillary(nlohmann::json::parse(s)) {};
+    explicit SuperAncillary(const std::string& s);
 
     /** Get a const reference to a ChebyshevApproximation1D
      
