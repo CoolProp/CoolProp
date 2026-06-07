@@ -519,6 +519,10 @@ void init_CoolProp(nb::module_& m) {
     m.def("generate_update_pair", &generate_update_pair<double>);
     m.def("Props1SI", &Props1SI);
     m.def("PropsSI", &PropsSI);
+    // Legacy compatibility: the Cython PropsSI also accepted the 2-arg trivial
+    // form PropsSI("Tcrit", "Water") (order-lenient).  Restore it as an overload
+    // dispatching to Props1SI so e.g. PropsSI("M", fluid) keeps working.
+    m.def("PropsSI", [](const std::string& Output, const std::string& FluidName) { return Props1SI(Output, FluidName); });
     m.def("PhaseSI", &PhaseSI);
     m.def("PropsSImulti", &PropsSImulti);
     m.def("get_global_param_string", &get_global_param_string);
