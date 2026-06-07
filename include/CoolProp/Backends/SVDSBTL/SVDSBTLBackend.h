@@ -336,6 +336,7 @@ class SVDSBTLBackend : public AbstractState
     // caller actually requests are pulled from SuperAncillary / source.
     void ensure_dome_rho_endpoints_(PointEvaluation& pt);
     void ensure_dome_s_endpoints_(PointEvaluation& pt);
+    void ensure_dome_h_endpoints_(PointEvaluation& pt);
 
     // Load <fluid>.<pair>.svd.bin.z from the default cache; if absent,
     // build via the matching preset and save it.  Inserts into surfaces_.

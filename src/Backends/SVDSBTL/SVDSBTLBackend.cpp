@@ -957,40 +957,32 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
         // Try SA-or-surrogate fast path first; only fall through to
         // source.update PQ/QT when neither sat provider is available.
         // sat_T_from_p_ / sat_eval_ return NaN when both are missing.
+        //
+        // Only the dome p / T endpoints are resolved here — the saturation
+        // ENTHALPY endpoints (hL/hV) and h_mass are NOT (CoolProp-qp0n): a
+        // PQ/QT -> p / Q / rho query never needs them, so they are left to
+        // the lazy ensure_dome_h_endpoints_ arm, matching the lazy rho / s
+        // endpoints and the DmassT dome path.
         const double T_sat_fast = (input_pair == CoolProp::PQ_INPUTS) ? sat_T_from_p_(p_sat) : T_sat;
-        double hL_fast = std::nan("");
-        double hV_fast = std::nan("");
         double p_sat_fast = (input_pair == CoolProp::PQ_INPUTS) ? p_sat : std::nan("");
-        if (std::isfinite(T_sat_fast)) {
-            hL_fast = sat_eval_(T_sat_fast, 'H', 0);
-            hV_fast = sat_eval_(T_sat_fast, 'H', 1);
-            if (input_pair == CoolProp::QT_INPUTS) {
-                p_sat_fast = sat_eval_(T_sat_fast, 'P', 0);
-            }
+        if (input_pair == CoolProp::QT_INPUTS && std::isfinite(T_sat_fast)) {
+            p_sat_fast = sat_eval_(T_sat_fast, 'P', 0);
         }
-        if (std::isfinite(T_sat_fast) && std::isfinite(hL_fast) && std::isfinite(hV_fast) && std::isfinite(p_sat_fast)) {
+        if (std::isfinite(T_sat_fast) && std::isfinite(p_sat_fast)) {
             T_sat = T_sat_fast;
             p_sat = p_sat_fast;
-            pt.hL_mol = hL_fast;
-            pt.hV_mol = hV_fast;
         } else {
             // Last-resort source-backend PQ/QT fallback — only reached when
             // both SA and the surrogate are unavailable (truly degenerate
             // source, or surrogate-build failure on a fluid REFPROP can't
-            // sample cleanly).
+            // sample cleanly).  Reads only T_sat / p_sat; hL/hV stay lazy.
             auto src = source_reference_();
             if (input_pair == CoolProp::PQ_INPUTS) {
                 src->update(CoolProp::PQ_INPUTS, p_sat, 0.0);
                 T_sat = src->T();
-                pt.hL_mol = src->hmolar();
-                src->update(CoolProp::PQ_INPUTS, p_sat, 1.0);
-                pt.hV_mol = src->hmolar();
             } else {
                 src->update(CoolProp::QT_INPUTS, 0.0, T_sat);
                 p_sat = src->p();
-                pt.hL_mol = src->hmolar();
-                src->update(CoolProp::QT_INPUTS, 1.0, T_sat);
-                pt.hV_mol = src->hmolar();
             }
         }
         pt.kind = PointEvaluation::Kind::DomeBlend;
@@ -999,8 +991,9 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
         pt.T_sat = T_sat;
         pt.p = p_sat;
         pt.Q = Q;
-        const double M = calc_molar_mass();
-        pt.h_mass = ((1.0 - Q) * *pt.hL_mol + Q * *pt.hV_mol) / M;
+        // h_mass / hL / hV left unset: the DomeBlend iHmass/iHmolar/iUmass
+        // arms fill them lazily via ensure_dome_h_endpoints_ if an h / u
+        // query arrives (CoolProp-qp0n).
         return pt;
     }
 
@@ -1193,26 +1186,16 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
                     const double vL = 1.0 / rhoL_mol;
                     const double vV = 1.0 / rhoV_mol;
                     pt.Q = (v - vL) / (vV - vL);
-                    // sat_eval_('H', ...) is already molar — don't scale.
-                    // Same source-QT fallback as the rho endpoints above.
-                    double hL_mol = sat_eval_(T_query, 'H', 0);
-                    double hV_mol = sat_eval_(T_query, 'H', 1);
-                    if (!std::isfinite(hL_mol) || !std::isfinite(hV_mol)) {
-                        src->update(CoolProp::QT_INPUTS, 0.0, T_query);
-                        hL_mol = src->hmolar();
-                        src->update(CoolProp::QT_INPUTS, 1.0, T_query);
-                        hV_mol = src->hmolar();
-                    }
-                    pt.hL_mol = hL_mol;
-                    pt.hV_mol = hV_mol;
                     pt.rhoL_mol = rhoL_mol;
                     pt.rhoV_mol = rhoV_mol;
-                    // Fill h_mass from the lever rule so iHmass/iHmolar
-                    // resolve via the top-level short-circuit (the
-                    // DomeBlend switch has no enthalpy arm — it
-                    // delegates to pt.h_mass, which the HmassP dome
-                    // path sets at resolve time and we must mirror).
-                    pt.h_mass = ((1.0 - pt.Q) * *pt.hL_mol + pt.Q * *pt.hV_mol) / M;
+                    // Enthalpy endpoints (hL/hV) and h_mass are NOT computed
+                    // here (CoolProp-qp0n): a (T, D) -> p / Q query never
+                    // needs them.  The DomeBlend iHmass/iHmolar/iUmass arms
+                    // fill them lazily via ensure_dome_h_endpoints_() if an
+                    // h / u query actually arrives, mirroring the lazy rho /
+                    // s endpoints.  pt.h_mass is left unset, so the top-level
+                    // h short-circuit correctly does NOT fire for this point
+                    // and the lazy arms are reached.
                     return pt;
                 }
             }
@@ -1352,6 +1335,22 @@ void SVDSBTLBackend::ensure_dome_s_endpoints_(PointEvaluation& pt) {
     pt.sV_mol = src->smolar();
 }
 
+void SVDSBTLBackend::ensure_dome_h_endpoints_(PointEvaluation& pt) {
+    if (pt.hL_mol && pt.hV_mol) return;
+    const double hL_fast = sat_eval_(*pt.T_sat, 'H', 0);
+    const double hV_fast = sat_eval_(*pt.T_sat, 'H', 1);
+    if (std::isfinite(hL_fast) && std::isfinite(hV_fast)) {
+        pt.hL_mol = hL_fast;
+        pt.hV_mol = hV_fast;
+        return;
+    }
+    auto src = source_reference_();
+    src->update(CoolProp::QT_INPUTS, 0.0, *pt.T_sat);
+    pt.hL_mol = src->hmolar();
+    src->update(CoolProp::QT_INPUTS, 1.0, *pt.T_sat);
+    pt.hV_mol = src->hmolar();
+}
+
 // evaluate_property_: the per-output kernel.  Pure dispatch over the
 // PointEvaluation kind — no business logic beyond input-pair
 // shortcuts, surface eval routing, dome Q-blend, and patch deref.
@@ -1385,9 +1384,13 @@ double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::paramet
         return *pt.h_mass;
     }
     if (prop == CoolProp::iHmolar && pt.h_mass) {
-        // pt.h_mass is the single source of truth: PQ/QT and HmassP-
-        // in-dome both populate it from the lever rule at resolve
-        // time, so this also handles the DomeBlend case correctly.
+        // pt.h_mass is populated at resolve time ONLY for HmassP/HmolarP,
+        // where it IS the input (free).  Every dome resolve — DmassT/DmolarT
+        // and PQ/QT alike — leaves it UNSET (CoolProp-qp0n): computing the
+        // saturation enthalpy endpoints there is wasted work for a
+        // p/Q/rho-only query, so this short-circuit does not fire for dome
+        // points and they are served lazily by the DomeBlend iHmass/iHmolar
+        // arm instead.
         return *pt.h_mass * M;
     }
     // DmassT / DmolarT input shortcut — density is the input, not a
@@ -1460,18 +1463,27 @@ double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::paramet
                     const double s_molar = (1.0 - Q) * *pt.sL_mol + Q * *pt.sV_mol;
                     return (prop == CoolProp::iSmass) ? s_molar / M : s_molar;
                 }
+                case CoolProp::iHmass:
+                case CoolProp::iHmolar: {
+                    // Reached for DmassT/DmolarT and PQ/QT dome points, whose
+                    // resolves leave the enthalpy endpoints lazy
+                    // (CoolProp-qp0n).  Only HmassP/HmolarP dome points
+                    // populate pt.h_mass (it is the input) and are served by
+                    // the top-level h short-circuit before this switch.
+                    ensure_dome_h_endpoints_(pt);
+                    const double h_molar = (1.0 - Q) * *pt.hL_mol + Q * *pt.hV_mol;
+                    return (prop == CoolProp::iHmass) ? h_molar / M : h_molar;
+                }
                 case CoolProp::iUmass:
                 case CoolProp::iUmolar: {
                     ensure_dome_rho_endpoints_(pt);
+                    ensure_dome_h_endpoints_(pt);
                     // u = h - p/rho per the thermodynamic identity.
                     const double uL_mol = *pt.hL_mol - *pt.p / *pt.rhoL_mol;
                     const double uV_mol = *pt.hV_mol - *pt.p / *pt.rhoV_mol;
                     const double u_molar = (1.0 - Q) * uL_mol + Q * uV_mol;
                     return (prop == CoolProp::iUmass) ? u_molar / M : u_molar;
                 }
-                // iHmass / iHmolar are served by the lever-rule short-circuit
-                // above (pt.h_mass is populated in resolve_point_); no
-                // duplicate arms here.
                 case CoolProp::ispeed_sound:
                     throw NotImplementedError("SVDSBTL backend: speed_sound is not defined in the two-phase region");
                 case CoolProp::iviscosity:
