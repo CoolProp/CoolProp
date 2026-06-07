@@ -1186,7 +1186,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
             //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].T;
         } else {
-            return calc_T_reducing();
+            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
@@ -1205,7 +1205,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
             //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].p;
         } else {
-            return calc_p_reducing();
+            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
@@ -1224,7 +1224,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical() {
             //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].rhomolar;
         } else {
-            return calc_rhomolar_reducing();
+            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
