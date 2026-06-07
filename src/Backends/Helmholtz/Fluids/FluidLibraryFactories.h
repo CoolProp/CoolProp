@@ -7,27 +7,32 @@
 // Neither factory requires friendship: make_surface_tension_correlation uses
 // only public members, and make_saturation_ancillary builds a plain-typed
 // SaturationAncillaryFunction::Values bundle and constructs from it.
+//
+// Convention: every value type constructed from JSON exposes a nested public
+// `struct Values` (plain/POD fields) plus a single `explicit T(const Values&)`
+// ctor; these factories own all nlohmann parsing and hand a Values across, so
+// no JSON type appears in any installed header. (This is distinct from the
+// CP_JSON_LOCAL hidden-visibility treatment used on internal *loader* methods
+// that must take nlohmann::json directly to consume parsed arrays.)
 
 #include "CoolProp/detail/json.h"
 #include "CoolProp/fluids/Ancillaries.h"
 
 namespace cpjson {
 
-/// Build a SurfaceTensionCorrelation from its JSON description. Mirrors the
-/// (now-removed) inline rapidjson constructor that previously lived in
-/// include/CoolProp/fluids/Ancillaries.h.
+/// Build a SurfaceTensionCorrelation from its JSON description. Parses into a
+/// plain-typed SurfaceTensionCorrelation::Values bundle and constructs from
+/// it, so no nlohmann type crosses the installed-header boundary.
 inline CoolProp::SurfaceTensionCorrelation make_surface_tension_correlation(const nlohmann::json& j) {
-    CoolProp::SurfaceTensionCorrelation out;
-    out.a = cpjson::get_long_double_array(j.at("a"));
-    out.n = cpjson::get_long_double_array(j.at("n"));
-    if (out.a.size() != out.n.size()) {
+    CoolProp::SurfaceTensionCorrelation::Values vals;
+    vals.a = cpjson::get_long_double_array(j.at("a"));
+    vals.n = cpjson::get_long_double_array(j.at("n"));
+    if (vals.a.size() != vals.n.size()) {
         throw CoolProp::ValueError("Surface tension 'a' and 'n' arrays must have equal length");
     }
-    out.Tc = cpjson::get_double(j, "Tc");
-    out.BibTeX = cpjson::get_string(j, "BibTeX");
-    out.N = out.n.size();
-    out.s = out.n;
-    return out;
+    vals.Tc = cpjson::get_double(j, "Tc");
+    vals.BibTeX = cpjson::get_string(j, "BibTeX");
+    return CoolProp::SurfaceTensionCorrelation(vals);
 }
 
 /// Build a SaturationAncillaryFunction from its JSON description. Parses into a

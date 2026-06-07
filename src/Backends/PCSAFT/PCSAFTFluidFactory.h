@@ -23,9 +23,13 @@ inline CoolProp::PCSAFTFluid make_pcsaft_fluid(const nlohmann::json& fluid) {
     params.dipnum = (fluid.contains("dipnum") && fluid.at("dipnum").is_number()) ? cpjson::get_double(fluid, "dipnum") : 0.;
     params.z = (fluid.contains("charge") && fluid.at("charge").is_number()) ? cpjson::get_double(fluid, "charge") : 0.;
 
-    return CoolProp::PCSAFTFluid(cpjson::get_string(fluid, "name"), cpjson::get_string(fluid, "CAS"),
-                                 cpjson::get_double(fluid, "molemass"), cpjson::get_string_array(fluid, "aliases"),
-                                 std::move(params));
+    CoolProp::PCSAFTFluid::Values vals;
+    vals.name = cpjson::get_string(fluid, "name");
+    vals.CAS = cpjson::get_string(fluid, "CAS");
+    vals.molemass = cpjson::get_double(fluid, "molemass");
+    vals.aliases = cpjson::get_string_array(fluid, "aliases");
+    vals.params = std::move(params);
+    return CoolProp::PCSAFTFluid(vals);
 }
 
 }  // namespace cpjson

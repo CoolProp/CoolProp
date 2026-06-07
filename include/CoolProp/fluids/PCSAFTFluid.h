@@ -32,11 +32,21 @@ class PCSAFTFluid
     PCSAFTValues params;
 
    public:
+    /// Plain-typed bundle of already-parsed PC-SAFT fluid values. The
+    /// non-installed factory cpjson::make_pcsaft_fluid (PCSAFTFluidFactory.h)
+    /// does the nlohmann parsing and hands one of these across, keeping every
+    /// JSON type out of this installed header.
+    struct Values
+    {
+        std::string name, CAS;
+        CoolPropDbl molemass = 0;
+        std::vector<std::string> aliases;
+        PCSAFTValues params;
+    };
+
     PCSAFTFluid() = default;
-    PCSAFTFluid(std::string name, std::string CAS, CoolPropDbl molemass,
-                std::vector<std::string> aliases, PCSAFTValues params)
-      : name(std::move(name)), CAS(std::move(CAS)), molemass(molemass),
-        aliases(std::move(aliases)), params(std::move(params)) {}
+    explicit PCSAFTFluid(const Values& v)
+      : name(v.name), CAS(v.CAS), molemass(v.molemass), aliases(v.aliases), params(v.params) {}
     ~PCSAFTFluid() = default;
 
     std::string getName() const {

@@ -33,6 +33,21 @@ class SurfaceTensionCorrelation
     std::string BibTeX;          ///< The BiBTeX key for the surface tension curve in use
 
     SurfaceTensionCorrelation() : Tc(_HUGE), N(0) {}
+
+    /// Plain-typed bundle of already-parsed surface-tension values, mirroring
+    /// the SaturationAncillaryFunction::Values boundary: the non-installed
+    /// factory cpjson::make_surface_tension_correlation parses JSON into this
+    /// and constructs, so no JSON type crosses this installed header.
+    struct Values
+    {
+        std::vector<CoolPropDbl> a, n;
+        CoolPropDbl Tc = _HUGE;
+        std::string BibTeX;
+    };
+
+    explicit SurfaceTensionCorrelation(const Values& v)
+      : a(v.a), n(v.n), s(v.n), Tc(v.Tc), N(v.n.size()), BibTeX(v.BibTeX) {}
+
     /// Actually evaluate the surface tension equation
     CoolPropDbl evaluate(CoolPropDbl T) {
         if (a.empty()) {
