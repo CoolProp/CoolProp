@@ -114,7 +114,7 @@ _PAGES = _doc_pages()
 # Compat gaps the harvester surfaced; xfail (strict) until fixed -- when the gap
 # is closed the page xpasses, turning the suite red so the xfail entry is removed.
 _XFAIL = {
-    "coolprop/LowLevelAPI.rst": "bd CoolProp-r9sq.15 (generate_update_pair binding broken)",
+    "coolprop/LowLevelAPI.rst": "bd CoolProp-r9sq.18 (remaining low-level gaps; generate_update_pair + iphase_not_imposed fixed)",
     "coolprop/HighLevelAPI.rst": "bd CoolProp-r9sq.16 (set_reference_state D-form -> std::bad_cast)",
 }
 
