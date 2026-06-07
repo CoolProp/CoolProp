@@ -13,39 +13,39 @@ void UNIFACParameterLibrary::populate(const nlohmann::json& group_data, const nl
         interaction_parameters.clear();
         components.clear();
     }
-    // Schema should have been used to validate the data already, so by this point we are can safely consume the data without checking ...
+    // Callers are expected to validate against the UNIFAC schema before calling populate; the cpjson::get_* helpers below still throw CoolProp::ValueError on missing/mistyped fields as a safety net.
     for (const auto& el : group_data) {
         Group g;
-        g.sgi = el.at("sgi").get<int>();
-        g.mgi = el.at("mgi").get<int>();
-        g.R_k = el.at("R_k").get<double>();
-        g.Q_k = el.at("Q_k").get<double>();
+        g.sgi = cpjson::get_integer(el, "sgi");
+        g.mgi = cpjson::get_integer(el, "mgi");
+        g.R_k = cpjson::get_double(el, "R_k");
+        g.Q_k = cpjson::get_double(el, "Q_k");
         groups.push_back(g);
     }
     for (const auto& el : interaction_data) {
         InteractionParameters ip;
-        ip.mgi1 = el.at("mgi1").get<int>();
-        ip.mgi2 = el.at("mgi2").get<int>();
-        ip.a_ij = el.at("a_ij").get<double>();
-        ip.a_ji = el.at("a_ji").get<double>();
-        ip.b_ij = el.at("b_ij").get<double>();
-        ip.b_ji = el.at("b_ji").get<double>();
-        ip.c_ij = el.at("c_ij").get<double>();
-        ip.c_ji = el.at("c_ji").get<double>();
+        ip.mgi1 = cpjson::get_integer(el, "mgi1");
+        ip.mgi2 = cpjson::get_integer(el, "mgi2");
+        ip.a_ij = cpjson::get_double(el, "a_ij");
+        ip.a_ji = cpjson::get_double(el, "a_ji");
+        ip.b_ij = cpjson::get_double(el, "b_ij");
+        ip.b_ji = cpjson::get_double(el, "b_ji");
+        ip.c_ij = cpjson::get_double(el, "c_ij");
+        ip.c_ji = cpjson::get_double(el, "c_ji");
         interaction_parameters.push_back(ip);
     }
     for (const auto& el : comp_data) {
         Component c;
-        c.inchikey = el.at("inchikey").get<std::string>();
-        c.registry_number = el.at("registry_number").get<std::string>();
-        c.name = el.at("name").get<std::string>();
-        c.Tc = el.at("Tc").get<double>();
-        c.pc = el.at("pc").get<double>();
-        c.acentric = el.at("acentric").get<double>();
-        c.molemass = el.at("molemass").get<double>();
+        c.inchikey = cpjson::get_string(el, "inchikey");
+        c.registry_number = cpjson::get_string(el, "registry_number");
+        c.name = cpjson::get_string(el, "name");
+        c.Tc = cpjson::get_double(el, "Tc");
+        c.pc = cpjson::get_double(el, "pc");
+        c.acentric = cpjson::get_double(el, "acentric");
+        c.molemass = cpjson::get_double(el, "molemass");
         // userid is an optional user identifier
         if (el.contains("userid")) {
-            c.userid = el.at("userid").get<std::string>();
+            c.userid = cpjson::get_string(el, "userid");
         }
         // If provided, store information about the alpha function in use
         if (el.contains("alpha") && el.at("alpha").is_object()) {
@@ -60,8 +60,8 @@ void UNIFACParameterLibrary::populate(const nlohmann::json& group_data, const nl
         }
         const nlohmann::json& comp_groups = el.at("groups");
         for (const auto& g : comp_groups) {
-            int count = g.at("count").get<int>();
-            int sgi = g.at("sgi").get<int>();
+            int count = cpjson::get_integer(g, "count");
+            int sgi = cpjson::get_integer(g, "sgi");
             if (has_group(sgi)) {
                 ComponentGroup cg(count, get_group(sgi));
                 c.groups.push_back(cg);

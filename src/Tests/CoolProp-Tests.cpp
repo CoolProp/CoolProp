@@ -5019,16 +5019,40 @@ TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads"
     }
 
     // --- PC-SAFT ---
-    // The PCSAFT loader only throws on validation failure when debug_level > 0.
-    // Save the current level and restore it after the section — even if a
-    // CHECK fails, the SECTION exits normally and the restore still runs.
-    const int saved_debug = CoolProp::get_debug_level();
+    // The PCSAFT loader only throws on validation failure when debug_level > 0
+    // (at level 0 it silently returns); raise it for these checks and restore
+    // unconditionally via RAII, so other tests are unaffected even if the
+    // assertion throws an unexpected type.
 
     // 3. Structurally invalid JSON under debug_level > 0 must throw.
     SECTION("PCSAFT - invalid JSON syntax throws at debug_level > 0") {
+        // PCSAFT's loader only surfaces validation failures when debug_level > 0
+        // (at level 0 it silently returns); raise it for this check and restore
+        // unconditionally via RAII, so other tests are unaffected even if the
+        // assertion throws an unexpected type.
+        struct DebugLevelGuard {
+            int saved;
+            DebugLevelGuard() : saved(CoolProp::get_debug_level()) {}
+            ~DebugLevelGuard() { CoolProp::set_debug_level(saved); }
+        } guard;
         CoolProp::set_debug_level(1);
         CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("PCSAFT", "this is not json"), CoolProp::ValueError);
-        CoolProp::set_debug_level(saved_debug);
+    }
+
+    // 4. Valid JSON array but missing required schema fields (m, sigma, sigma_units,
+    //    u, u_units, molemass, molemass_units) — the PCSAFT schema marks these in its
+    //    "required" array, so Valijson rejects the payload and the loader throws when
+    //    debug_level > 0.
+    SECTION("PCSAFT - schema-invalid payload (missing required fields) throws at debug_level > 0") {
+        struct DebugLevelGuard {
+            int saved;
+            DebugLevelGuard() : saved(CoolProp::get_debug_level()) {}
+            ~DebugLevelGuard() { CoolProp::set_debug_level(saved); }
+        } guard;
+        CoolProp::set_debug_level(1);
+        // Provides name and CAS but omits m, sigma, sigma_units, u, u_units,
+        // molemass, molemass_units — all listed in the PCSAFT schema's "required" array.
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("PCSAFT", R"([{"name":"Bogus","CAS":"000-00-0"}])"), CoolProp::ValueError);
     }
 }
 
