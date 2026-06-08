@@ -20,6 +20,7 @@ cdef class _AbstractStateView:
 cdef class State:
     cdef void* handle
     cdef object _fluids
+    cdef object _spec  # full reconstructable fluid spec (backend::bracketed) for copy()/get_Tsat
     cdef readonly _AbstractStateView pAS
     cdef readonly double T_, p_, rho_
     cdef readonly bytes Fluid, phase

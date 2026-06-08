@@ -51,6 +51,36 @@ class TestSetFluid:
         S.update({"T": 300.0, "Q": 0.0})
         assert S.Fluid == b"R134a"
 
+    def test_copy_pure_fluid_independent(self):
+        # copy() rebuilds from the full spec and is an independent object.
+        S = State("Water", {"T": 350.0, "P": 2000.0})
+        c = S.copy()
+        assert c.Fluid == b"Water"
+        assert c.rho == pytest.approx(S.rho, rel=1e-9)
+        c.update({"T": 400.0, "P": 2000.0})
+        assert S.T == pytest.approx(350.0)  # the original is untouched
+
+    def test_get_Tsat_mixture_keeps_composition(self):
+        # get_Tsat rebuilds a temp State from the full spec, so a mixture keeps its
+        # fractions -- without that the temp state would have no composition and
+        # fail. (copy() of a mixture is separately limited by CoolProp's DmassT
+        # flash not supporting mixtures, exactly as the legacy State was.)
+        import math
+
+        S = State("R32[0.5]&R125[0.5]", {"T": 280.0, "P": 800.0})
+        Tsat = S.get_Tsat(1.0)
+        assert Tsat is None or (math.isfinite(Tsat) and Tsat > 0)
+
+    def test_failed_set_fluid_keeps_state_usable(self):
+        # A failed re-fluid (bad name) must leave the prior state + .pAS valid --
+        # the new handle is made before the old one is freed (no use-after-free).
+        S = State("Water", {"T": 300.0, "D": 1000.0})
+        rho_before = S.rho
+        with pytest.raises(Exception):  # noqa: PT011 -- any failure, just must not corrupt state
+            S.set_Fluid("NotARealFluid", "HEOS")
+        assert S.rho == pytest.approx(rho_before, rel=1e-9)
+        assert S.pAS.rhomass() == pytest.approx(rho_before, rel=1e-9)
+
     def test_bracket_mixture_construction(self):
         # Bracketed mole-fraction mixtures are fully supported: the fractions are
         # parsed out and set on the handle (like the legacy State.set_Fluid).

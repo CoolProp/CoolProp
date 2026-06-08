@@ -81,7 +81,10 @@ cdef inline void _raise_if_error() except *:
     # (PDSim's ODE solver catches these and rejects the step -- like the old State).
     cdef const char* e = _C.last_error()
     if e is not NULL:
-        raise ValueError("CoolProp: " + e.decode("utf-8", "replace"))
+        # Cast through bytes explicitly: under `c_string_type=unicode` a bare
+        # ``char*`` coerces straight to str (no .decode), which would mask the
+        # real CoolProp message with an AttributeError.
+        raise ValueError("CoolProp: " + (<bytes>e).decode("utf-8", "replace"))
 
 
 cdef inline double _keyed_output(void* handle, long key) except *:
@@ -182,6 +185,7 @@ cdef class State:
         cdef str _backend
         self.handle = NULL
         self.pAS = None
+        self._spec = _fl
         self.phase = b"" if phase is None else (phase.encode() if isinstance(phase, str) else phase)
         if _fl == 'none':  # legacy no-op construction (e.g. the bare State get_Tsat builds)
             self._fluids = 'none'
@@ -223,6 +227,9 @@ cdef class State:
             _backend = backend
         else:
             _backend = backend.decode()
+        # Keep the original (bracketed) fluid spec so copy()/get_Tsat can rebuild
+        # the SAME state -- backend + mixture fractions included -- below.
+        cdef str _orig_fl = _fl
         # Parse bracketed mole fractions, e.g. "R32[0.5]&R134a[0.5]" -> names
         # "R32&R134a" + fracs [0.5, 0.5] (mirrors the legacy set_Fluid).
         cdef list names = []
@@ -235,17 +242,27 @@ cdef class State:
                 fracs.append(float(frac.strip(']')))
             _fl = '&'.join(names)
             set_fractions = True
-        if self.handle != NULL:
-            _C.destroy(self.handle)
-            self.handle = NULL
-        self.handle = _C.make(_backend.encode(), _fl.encode())
-        if self.handle == NULL:
+        # Make the NEW handle BEFORE destroying the old one, so a failed creation
+        # leaves the current state (and .pAS) valid rather than dangling on freed
+        # memory.
+        cdef void* new_handle = _C.make(_backend.encode(), _fl.encode())
+        if new_handle == NULL:
             _raise_if_error()
             raise ValueError("State: could not create AbstractState for " + _fl)
         if set_fractions:
-            _set_mole_fractions(self.handle, fracs)
+            try:
+                _set_mole_fractions(new_handle, fracs)
+            except:
+                _C.destroy(new_handle)  # don't leak; keep the prior state intact
+                raise
+        # Success -- retire the old handle and adopt the new one.
+        if self.handle != NULL:
+            _C.destroy(self.handle)
+        self.handle = new_handle
         self._fluids = _fl
         self.Fluid = _fl.encode()
+        # Reconstructable spec (backend + bracketed fluid) for copy()/get_Tsat.
+        self._spec = _backend + "::" + _orig_fl
         if self.pAS is None:
             self.pAS = _AbstractStateView.__new__(_AbstractStateView)
         self.pAS.handle = self.handle
@@ -293,8 +310,12 @@ cdef class State:
         self._refresh()
 
     cpdef State copy(self):
-        """Return an independent ``State`` for the same fluid at this (T, rho)."""
-        return State(self._fluids, {'T': self.T_, 'D': self.rho_})
+        """Return an independent ``State`` for the same fluid at this (T, rho).
+
+        Rebuilds from the full spec (backend + mixture fractions), not just the
+        normalized names, so a mixture / non-HEOS copy is faithful.
+        """
+        return State(self._spec, {'T': self.T_, 'D': self.rho_})
 
     cpdef double Props(self, long key) except *:
         """Raw keyed output for CoolProp parameter ``key`` [SI]."""
@@ -309,7 +330,7 @@ cdef class State:
     cpdef get_Tsat(self, double Q=1):
         """Saturation temperature [K] at the current pressure (``Q=1`` dew, ``Q=0``
         bubble), or ``None`` if the pressure is outside the two-phase range."""
-        cdef State state = State(self._fluids, None)
+        cdef State state = State(self._spec, None)  # full spec: backend + fractions
         cdef double pc, pt
         try:
             pc = state.Props(_iP_critical)   # SI Pa
