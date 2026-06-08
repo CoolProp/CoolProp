@@ -98,6 +98,29 @@ if __name__ == '__main__':
         exit(0)
 
     current_v = version.Version(current_v)
+    base_v = current_v.base_version
+
+    # TestPyPI development builds.  CI passes --version <timestamp>
+    # (date +%Y%m%d%H%M%S -- monotonic and unique), so the correctly-ordered,
+    # collision-free name is simply "<base>.dev<timestamp>": a PEP 440
+    # *developmental* release that sorts BEFORE the eventual "<base>" final.
+    #
+    # The previous scheme emitted "<base>.post<timestamp>", which PEP 440 sorts
+    # *after* a "<base>" that has not been released yet (PyPI is at 7.2.0 while
+    # the dev line targets 7.2.1), so the nightly would shadow the real 7.2.1 on
+    # any combined index.  It was also self-perpetuating: the "elif max_v.dev"
+    # branch below rewrites ".dev" back to ".post", so the scheme could never
+    # converge on ".dev" by incrementing.  Because the timestamp alone
+    # guarantees uniqueness we short-circuit here and never query or increment
+    # existing releases for this path.
+    if args.version and not args.pypi:
+        new_v = version.Version(f"{base_v}.dev{args.version}")
+        if args.replace_version:
+            print(f"Version to be injected on TestPyPi: {new_v}")
+            replace_version_file(new_v=new_v)
+        else:
+            print(new_v, end="")
+        exit(0)
 
     releases = parse_pypi_version(pypi=args.pypi)
 
