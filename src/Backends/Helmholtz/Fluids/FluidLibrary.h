@@ -16,7 +16,6 @@ using std::shared_ptr;
 #include "Backends/Cubics/GeneralizedCubic.h"
 #include "CoolProp/fluids/Helmholtz.h"
 
-
 namespace CoolProp {
 
 // Forward declaration of the necessary debug function to avoid including the whole header

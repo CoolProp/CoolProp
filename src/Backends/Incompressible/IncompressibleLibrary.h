@@ -8,7 +8,6 @@
 
 #include "CoolProp/detail/json.h"
 
-
 #include <map>
 
 namespace CoolProp {

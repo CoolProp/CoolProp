@@ -6,7 +6,6 @@
 #include "CoolProp/detail/json.h"
 #include "CoolProp/CoolPropFluid.h"
 
-
 namespace UNIFACLibrary {
 
 /// A structure containing references for a single group (its multiplicity, main group index, etc.)

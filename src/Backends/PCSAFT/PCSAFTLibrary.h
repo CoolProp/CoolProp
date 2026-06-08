@@ -9,7 +9,6 @@
 #include "CoolProp/detail/tools.h"
 #include "CoolProp/detail/json.h"
 
-
 namespace CoolProp {
 
 std::string get_mixture_binary_pair_pcsaft(const std::string& CAS1, const std::string& CAS2, const std::string& key);
