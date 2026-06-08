@@ -30,13 +30,6 @@ CPMAddPackage(
   DOWNLOAD_ONLY  YES
 )
 
-CPMAddPackage(
-  NAME rapidjson
-  GIT_REPOSITORY https://github.com/Tencent/rapidjson.git
-  GIT_TAG        24b5e7a8b27f42fa16b96fc70aade9106cf7102f
-  DOWNLOAD_ONLY  YES
-)
-
 # nlohmann/json — replacement for rapidjson (GH: RapidJSON→nlohmann migration).
 # Header-only; included via the hidden-visibility wrapper include/CoolProp/detail/json.h.
 CPMAddPackage(

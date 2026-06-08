@@ -3605,8 +3605,8 @@ TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[a
     //
     // Two subtleties motivate the implementation below:
     //
-    //   1. We must bypass CoolProp's runtime rapidjson parse: it doesn't
-    //      enable kParseFullPrecisionFlag and so rounds some doubles 1 ULP
+    //   1. We must bypass CoolProp's runtime JSON parse: it historically
+    //      rounded some doubles 1 ULP
     //      away from the JSON text value. Decompressing the raw compiled-in
     //      blob and parsing with nlohmann::json (correctly-rounded by
     //      default) yields the same doubles Python saw at inject time.

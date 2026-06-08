@@ -135,7 +135,6 @@ set(COOLPROP_INCLUDE_DIRS
     ${valijson_SOURCE_DIR}/include
     ${ROOT_DIR}/externals/miniz-3.1.1
     ${msgpack-c_SOURCE_DIR}/include
-    ${rapidjson_SOURCE_DIR}/include
     ${IF97_SOURCE_DIR}
     ${REFPROP_headers_SOURCE_DIR}
 )
