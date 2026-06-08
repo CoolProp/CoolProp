@@ -132,8 +132,8 @@ jobs:
             name: CoolProp-${{ github.sha }}-clang_format.patch
             path: clang_format.patch
 
-  nanobind-abi3:
-    name: nanobind abi3 wheel (build once on 3.12, run on 3.12/3.13/3.14)
+  nanobind-wheels:
+    name: nanobind wheels (build the publish matrix, test 3.9-3.14)
     # PR-only (same rationale as clang-format above): avoid master going red
     # retroactively. Open a draft PR to exercise it on a branch.
     if: github.event_name == 'pull_request'
@@ -144,47 +144,60 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
-      - name: Build the cp312-abi3 nanobind wheel (once, on 3.12)
+      - name: Build the nanobind wheel matrix (3.9-3.11 per-version + cp312-abi3)
         shell: bash
         run: |
           set -euo pipefail
-          uv venv --python 3.12 .venv-build
-          source .venv-build/bin/activate
-          uv pip install nanobind cython scikit-build-core ninja
-          # COOLPROP_NANOBIND=ON is the SINGLE signal: it selects the nanobind
-          # core + abi3 Cython sidecars (USE_SABI) in CMake AND triggers
-          # scikit-build-core's wheel.py-api=cp312 override (pyproject.toml), so
-          # this produces ONE cp312-abi3 wheel covering 3.12/3.13/3.14. Release:
-          # the wheel compiles the whole core (incl. SVDSBTL); Debug is very slow.
-          COOLPROP_NANOBIND=ON uv build --wheel --no-build-isolation \
-            --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
-            --out-dir dist .
+          # Mirror the published v8 matrix (bd CoolProp-r9sq.6): per-version wheels
+          # for 3.9-3.11 (below nanobind's stable-ABI floor) and ONE cp312-abi3
+          # wheel for 3.12+. COOLPROP_NANOBIND=ON drives both the nanobind CMake
+          # build and (on Py>=3.12) the abi3 wheel tag via the pyproject overrides.
+          # Release: the wheel compiles the whole core (incl. SVDSBTL); Debug is slow.
+          for PY in 3.9 3.10 3.11 3.12; do
+            echo "::group::build nanobind wheel on Python $PY"
+            uv venv --python "$PY" ".venv-build-$PY"
+            source ".venv-build-$PY/bin/activate"
+            uv pip install nanobind cython scikit-build-core ninja
+            COOLPROP_NANOBIND=ON uv build --wheel --no-build-isolation \
+              --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
+              --out-dir dist .
+            deactivate
+            echo "::endgroup::"
+          done
           ls -l dist/
           # Fail loudly if the abi3 single-wheel promise regressed (e.g. a sidecar
           # lost USE_SABI, or the wheel.py-api override stopped matching).
           ls dist/coolprop-*-cp312-abi3-*.whl >/dev/null
 
-      - name: Run the pytest suite on 3.12, 3.13 and 3.14 against the one wheel
+      - name: Run the pytest suite on 3.9-3.14 against the matching wheel
         shell: bash
         run: |
           set -euo pipefail
-          # The crux of abi3: the SAME cp312 wheel must install and pass on every
-          # supported interpreter >= 3.12. A version-specific .so or wheel tag
-          # would make pip reject it on 3.13/3.14 here.
-          WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl)
+          # 3.9-3.11 use their own per-version wheel; 3.12/3.13/3.14 all install the
+          # single cp312-abi3 wheel (the crux of abi3 -- it must work on each).
           ran=0
-          for PY in 3.12 3.13 3.14; do
-            echo "::group::pytest on Python $PY (cp312-abi3 wheel)"
+          for PY in 3.9 3.10 3.11 3.12 3.13 3.14; do
+            case "$PY" in
+              3.9 | 3.10 | 3.11)
+                tag="cp${PY/./}"
+                WHL=$(ls dist/coolprop-*-"${tag}"-"${tag}"-*.whl 2>/dev/null || true)
+                ;;
+              *)
+                WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl 2>/dev/null || true)
+                ;;
+            esac
+            if [ -z "$WHL" ]; then
+              echo "::warning::no nanobind wheel found for Python $PY"
+              continue
+            fi
+            echo "::group::pytest on Python $PY ($(basename "$WHL"))"
             uv venv --python "$PY" ".venv-$PY"
             source ".venv-$PY/bin/activate"
             # Guard the runtime-dep install: a brand-new interpreter may transiently
-            # lack pytest/numpy cp wheels, which is a toolchain gap, not an abi3
-            # regression -- warn and skip that leg rather than redding the gate. The
-            # `ran` counter below still fails the job if NO interpreter could run, so
-            # a real total breakage can't pass silently. (mypy is best-effort too:
-            # test_stub.py importorskips it.)
+            # lack pytest/numpy cp wheels (a toolchain gap, not a regression) -- warn
+            # and skip that leg. The `ran` counter still fails the job if NO leg ran.
             if ! uv pip install pytest numpy "$WHL"; then
-              echo "::warning::runtime deps unavailable on Python $PY; skipping this leg (abi3 still proven on the other interpreters)"
+              echo "::warning::runtime deps unavailable on Python $PY; skipping this leg"
               deactivate; echo "::endgroup::"; continue
             fi
             uv pip install mypy || echo "::warning::mypy unavailable on $PY; test_stub mypy check will skip"
@@ -194,7 +207,7 @@ jobs:
             deactivate
             echo "::endgroup::"
           done
-          test "$ran" -gt 0 || { echo "::error::no Python interpreter could run the cp312-abi3 wheel"; exit 1; }
+          test "$ran" -gt 0 || { echo "::error::no Python interpreter could run a nanobind wheel"; exit 1; }
 
   clang-tidy:
     name: clang-tidy (diff-only, informational)

@@ -1,5 +1,7 @@
 [build-system]
-requires = ["scikit-build-core>=0.10", "cython>=0.29"]
+# nanobind is required for the v8 core (built whenever COOLPROP_NANOBIND=ON,
+# which is now the default for the published wheels -- bd CoolProp-r9sq.6).
+requires = ["scikit-build-core>=0.10", "cython>=0.29", "nanobind>=2.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
