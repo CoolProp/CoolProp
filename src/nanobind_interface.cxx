@@ -340,6 +340,7 @@ void init_CoolProp(nb::module_& m) {
       .value("iphase_gas", phases::iphase_gas)
       .value("iphase_twophase", phases::iphase_twophase)
       .value("iphase_unknown", phases::iphase_unknown)
+      .value("iphase_not_imposed", phases::iphase_not_imposed)
       .export_values();
 
     nb::class_<AbstractState>(m, "_AbstractState")
@@ -551,7 +552,14 @@ void init_CoolProp(nb::module_& m) {
     m.def("get_parameter_index", &get_parameter_index);
     m.def("get_phase_index", &get_phase_index);
     m.def("is_trivial_parameter", &is_trivial_parameter);
-    m.def("generate_update_pair", &generate_update_pair<double>);
+    // generate_update_pair has two out-reference params and returns the input_pair;
+    // wrap it to return (input_pair, out1, out2) like the legacy Cython wrapper
+    // (binding &generate_update_pair<double> directly exposes an unusable signature).
+    m.def("generate_update_pair", [](parameters key1, double value1, parameters key2, double value2) {
+        double out1 = 0.0, out2 = 0.0;
+        input_pairs pair = generate_update_pair<double>(key1, value1, key2, value2, out1, out2);
+        return nb::make_tuple(pair, out1, out2);
+    });
     m.def("Props1SI", &Props1SI);
     m.def("PropsSI", &PropsSI);
     // Vectorized PropsSI: list/ndarray Prop1/Prop2 (with scalar broadcast) dispatch
