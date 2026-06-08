@@ -17,7 +17,9 @@
 #include "CoolProp/Exceptions.h"
 #include "CoolProp/detail/tools.h"  // for CoolProp::format / CoolPropDbl
 
+#include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <limits>
 #include <stdexcept>
 #include <string>

@@ -849,6 +849,7 @@ if(COOLPROP_DEBIAN_PACKAGE)
   endif()
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   add_library(${app_name} SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(${app_name})
   set_target_properties(
     ${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
   set_target_properties(
@@ -920,6 +921,7 @@ if(COOLPROP_PRIME_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
   add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(CoolPropMathcadWrapper)
   include_directories("${COOLPROP_PRIME_ROOT}/Custom Functions")
   target_link_libraries(CoolPropMathcadWrapper
                         "${COOLPROP_PRIME_ROOT}/Custom Functions/mcaduser.lib")
@@ -957,6 +959,7 @@ if(COOLPROP_MATHCAD15_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
   add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(CoolPropMathcadWrapper)
   include_directories("${COOLPROP_MATHCAD15_ROOT}/userefi/microsft/include")
   target_link_libraries(
     CoolPropMathcadWrapper
@@ -987,6 +990,7 @@ if(COOLPROP_EES_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
   add_library(COOLPROP_EES SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(COOLPROP_EES)
   # Modify the target and add dependencies
   add_dependencies(COOLPROP_EES generate_headers)
   set_target_properties(
