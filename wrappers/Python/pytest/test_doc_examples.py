@@ -115,7 +115,9 @@ _PAGES = _doc_pages()
 # is closed the page xpasses, turning the suite red so the xfail entry is removed.
 _XFAIL = {
     "coolprop/LowLevelAPI.rst": "bd CoolProp-r9sq.18 (remaining low-level gaps; generate_update_pair + iphase_not_imposed fixed)",
-    "coolprop/HighLevelAPI.rst": "bd CoolProp-r9sq.16 (set_reference_state D-form -> std::bad_cast)",
+    # HighLevelAPI: r9sq.16 (set_reference_state D-form -> std::bad_cast) is fixed
+    # (covered by test_parity.py::TestSetReferenceState); the page is REFPROP-gated
+    # so it skips where REFPROP is absent rather than running.
 }
 
 

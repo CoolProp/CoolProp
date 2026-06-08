@@ -5,6 +5,7 @@
 #    include "CoolProp/Configuration.h"
 #    include "CoolProp/HumidAirProp.h"
 #    include "CoolProp/DataStructures.h"
+#    include "CoolProp/numerics/numerics.h"  // ValidNumber: scalar PropsSI/HAPropsSI raise on non-finite (Cython parity)
 #    include "CoolProp/detail/state_capi.h"
 #    include "Backends/Helmholtz/MixtureParameters.h"
 
@@ -48,20 +49,47 @@ static std::vector<std::string> _split_str(const std::string& s, char delim) {
 
 // Scalar-or-sequence -> vector<double> for the vectorized PropsSI/HAPropsSI
 // overloads; is_seq reports whether the input was array-like (vs a scalar).
+//
+// Mirrors the legacy Cython `iterable()` test: a 1-D list/tuple/ndarray is a
+// sequence; a 0-D array, a numpy scalar (np.float64/np.int64), a Python int or
+// float -- anything with __float__ -- is a SCALAR.  Crucially this keeps the
+// canonical int-literal call PropsSI("T","P",101325,...) on the scalar path so
+// it returns a float, not a 1-element ndarray (bd CoolProp-r9sq.21).
 static std::vector<double> _to_vec(nb::handle o, bool& is_seq) {
-    double d;
-    if (nb::try_cast<double>(o, d)) {
-        is_seq = false;
-        return {d};
+    if (nb::hasattr(o, "ndim")) {  // numpy array / scalar: dispatch on ndim
+        long ndim = nb::cast<long>(nb::getattr(o, "ndim"));
+        if (ndim > 1) {
+            // Reject multi-dimensional input rather than silently flattening it.
+            PyErr_SetString(PyExc_ValueError, "vectorized PropsSI/HAPropsSI input is not one-dimensional");
+            throw nb::python_error();
+        }
+        if (ndim == 0) {  // 0-D array is a scalar
+            is_seq = false;
+            return {nb::cast<double>(nb::float_(o))};
+        }
+        is_seq = true;  // 1-D ndarray
+        return nb::cast<std::vector<double>>(o);
     }
-    is_seq = true;
-    // Reject multi-dimensional arrays rather than silently flattening them
-    // (matches the legacy "Input is not one-dimensional" ValueError).
-    if (nb::hasattr(o, "ndim") && nb::cast<long>(nb::getattr(o, "ndim")) > 1) {
-        PyErr_SetString(PyExc_ValueError, "vectorized PropsSI/HAPropsSI input is not one-dimensional");
+    if (nb::isinstance<nb::list>(o) || nb::isinstance<nb::tuple>(o)) {
+        is_seq = true;
+        return nb::cast<std::vector<double>>(o);
+    }
+    // Scalar: Python int/float, numpy scalar, or anything with __float__.  Coerce
+    // through nb::float_ (PyNumber_Float) so int/np.float64 are accepted as scalars.
+    is_seq = false;
+    return {nb::cast<double>(nb::float_(o))};
+}
+
+// Raise a Python ValueError carrying CoolProp's global error string if x is not
+// finite -- the legacy scalar PropsSI/HAPropsSI raised ValueError rather than
+// returning inf/nan (bd CoolProp-r9sq.21/.22).
+static void _raise_if_invalid(double x) {
+    // Qualified: this helper is at file scope, before init_CoolProp's `using namespace CoolProp`.
+    // (ValidNumber lives in the global namespace; get_global_param_string in CoolProp.)
+    if (!ValidNumber(x)) {
+        PyErr_SetString(PyExc_ValueError, CoolProp::get_global_param_string("errstring").c_str());
         throw nb::python_error();
     }
-    return nb::cast<std::vector<double>>(o);
 }
 
 // Broadcast a size-1 vector up to length n; lengths other than 1 or n are an error.
@@ -180,9 +208,10 @@ void init_CoolProp(nb::module_& m) {
       .def_rw("y", &GuessesStructure::y)
       .def("clear", &GuessesStructure::clear);
 
-    nb::class_<CriticalState, SimpleState>(m, "CriticalState").def_rw("stable", &CriticalState::stable);
+    nb::class_<CriticalState, SimpleState>(m, "CriticalState").def(nb::init<>()).def_rw("stable", &CriticalState::stable);
 
     nb::class_<PhaseEnvelopeData>(m, "PhaseEnvelopeData")
+      .def(nb::init<>())
       .def_rw("K", &PhaseEnvelopeData::K)
       .def_rw("lnK", &PhaseEnvelopeData::lnK)
       .def_rw("x", &PhaseEnvelopeData::x)
@@ -290,6 +319,23 @@ void init_CoolProp(nb::module_& m) {
       .value("iPH", parameters::iPH)
       .value("iODP", parameters::iODP)
       .value("iPhase", parameters::iPhase)
+      // bd CoolProp-r9sq.23: values the hand-written enum had drifted from
+      // DataStructures.h (mass-basis quality, ideal-gas decompositions, the
+      // isentropic-expansion + alpha0 derivatives).
+      .value("INVALID_PARAMETER", parameters::INVALID_PARAMETER)
+      .value("iQmass", parameters::iQmass)
+      .value("iHmolar_idealgas", parameters::iHmolar_idealgas)
+      .value("iSmolar_idealgas", parameters::iSmolar_idealgas)
+      .value("iUmolar_idealgas", parameters::iUmolar_idealgas)
+      .value("iHmass_idealgas", parameters::iHmass_idealgas)
+      .value("iSmass_idealgas", parameters::iSmass_idealgas)
+      .value("iUmass_idealgas", parameters::iUmass_idealgas)
+      .value("iisentropic_expansion_coefficient", parameters::iisentropic_expansion_coefficient)
+      .value("idalphar_dtau_constdelta", parameters::idalphar_dtau_constdelta)
+      .value("ialpha0", parameters::ialpha0)
+      .value("idalpha0_ddelta_consttau", parameters::idalpha0_ddelta_consttau)
+      .value("id2alpha0_ddelta2_consttau", parameters::id2alpha0_ddelta2_consttau)
+      .value("id3alpha0_ddelta3_consttau", parameters::id3alpha0_ddelta3_consttau)
       .value("iundefined_parameter", parameters::iundefined_parameter)
       .export_values();
 
@@ -329,6 +375,17 @@ void init_CoolProp(nb::module_& m) {
       .value("DmolarSmolar_INPUTS", input_pairs::DmolarSmolar_INPUTS)
       .value("DmassUmass_INPUTS", input_pairs::DmassUmass_INPUTS)
       .value("DmolarUmolar_INPUTS", input_pairs::DmolarUmolar_INPUTS)
+      // bd CoolProp-r9sq.23: the mass-basis quality pairs (needed for
+      // AbstractState.update(QmassT_INPUTS, ...)) + INVALID were missing.
+      .value("INPUT_PAIR_INVALID", input_pairs::INPUT_PAIR_INVALID)
+      .value("QmassT_INPUTS", input_pairs::QmassT_INPUTS)
+      .value("PQmass_INPUTS", input_pairs::PQmass_INPUTS)
+      .value("QmassSmolar_INPUTS", input_pairs::QmassSmolar_INPUTS)
+      .value("QmassSmass_INPUTS", input_pairs::QmassSmass_INPUTS)
+      .value("HmolarQmass_INPUTS", input_pairs::HmolarQmass_INPUTS)
+      .value("HmassQmass_INPUTS", input_pairs::HmassQmass_INPUTS)
+      .value("DmolarQmass_INPUTS", input_pairs::DmolarQmass_INPUTS)
+      .value("DmassQmass_INPUTS", input_pairs::DmassQmass_INPUTS)
       .export_values();
 
     nb::enum_<phases>(m, "phases", nb::is_arithmetic())
@@ -342,6 +399,44 @@ void init_CoolProp(nb::module_& m) {
       .value("iphase_unknown", phases::iphase_unknown)
       .value("iphase_not_imposed", phases::iphase_not_imposed)
       .export_values();
+
+    // bd CoolProp-r9sq.23: enums the legacy interface exposed but the nanobind
+    // interface did not bind at all.
+    nb::enum_<fluid_types>(m, "fluid_types", nb::is_arithmetic())
+      .value("FLUID_TYPE_PURE", fluid_types::FLUID_TYPE_PURE)
+      .value("FLUID_TYPE_PSEUDOPURE", fluid_types::FLUID_TYPE_PSEUDOPURE)
+      .value("FLUID_TYPE_REFPROP", fluid_types::FLUID_TYPE_REFPROP)
+      .value("FLUID_TYPE_INCOMPRESSIBLE_LIQUID", fluid_types::FLUID_TYPE_INCOMPRESSIBLE_LIQUID)
+      .value("FLUID_TYPE_INCOMPRESSIBLE_SOLUTION", fluid_types::FLUID_TYPE_INCOMPRESSIBLE_SOLUTION)
+      .value("FLUID_TYPE_UNDEFINED", fluid_types::FLUID_TYPE_UNDEFINED)
+      .export_values();
+
+    nb::enum_<fast_evaluate_status>(m, "fast_evaluate_status", nb::is_arithmetic())
+      .value("fast_evaluate_ok", fast_evaluate_status::fast_evaluate_ok)
+      .value("fast_evaluate_out_of_range", fast_evaluate_status::fast_evaluate_out_of_range)
+      .value("fast_evaluate_two_phase_disallowed", fast_evaluate_status::fast_evaluate_two_phase_disallowed)
+      .value("fast_evaluate_unsupported_input", fast_evaluate_status::fast_evaluate_unsupported_input)
+      .value("fast_evaluate_unsupported_output", fast_evaluate_status::fast_evaluate_unsupported_output)
+      .value("fast_evaluate_internal_error", fast_evaluate_status::fast_evaluate_internal_error)
+      .export_values();
+
+    // bd CoolProp-r9sq.24: register SpinodalData so get_spinodal_data() (below)
+    // can convert its return value instead of raising a cast error.
+    nb::class_<SpinodalData>(m, "SpinodalData")
+      .def(nb::init<>())
+      .def_ro("tau", &SpinodalData::tau)
+      .def_ro("delta", &SpinodalData::delta)
+      .def_ro("M1", &SpinodalData::M1);
+
+    // bd CoolProp-r9sq.18/.24: the bound state structs use the C++ names
+    // (CriticalState, GuessesStructure, PhaseEnvelopeData, SpinodalData); retain
+    // the legacy Cython Py*-prefixed names as backwards-compatibility aliases so
+    // downstream code (e.g. CoolProp.Plots.Common imports + constructs
+    // PyCriticalState / PyGuessesStructure) keeps working against the v8 core.
+    m.attr("PyCriticalState") = m.attr("CriticalState");
+    m.attr("PyGuessesStructure") = m.attr("GuessesStructure");
+    m.attr("PyPhaseEnvelopeData") = m.attr("PhaseEnvelopeData");
+    m.attr("PySpinodalData") = m.attr("SpinodalData");
 
     nb::class_<AbstractState>(m, "_AbstractState")
       .def("set_T", &AbstractState::set_T)
@@ -480,7 +575,13 @@ void init_CoolProp(nb::module_& m) {
       .def("chemical_potential", &AbstractState::chemical_potential)
       .def("fundamental_derivative_of_gas_dynamics", &AbstractState::fundamental_derivative_of_gas_dynamics)
       .def("PIP", &AbstractState::PIP)
-      .def("true_critical_point", &AbstractState::true_critical_point)
+      // bd CoolProp-r9sq.24: out-reference params -> return a (T, rho) tuple.
+      .def("true_critical_point",
+           [](AbstractState& AS) {
+               double T = 0, rho = 0;
+               AS.true_critical_point(T, rho);
+               return nb::make_tuple(T, rho);
+           })
       .def("ideal_curve",
            [](AbstractState& AS, const std::string& name) {
                std::vector<double> T, p;
@@ -500,12 +601,42 @@ void init_CoolProp(nb::module_& m) {
       .def("melting_line", &AbstractState::melting_line)
       .def("saturation_ancillary", &AbstractState::saturation_ancillary)
       .def("viscosity", &AbstractState::viscosity)
-      .def("viscosity_contributions", &AbstractState::viscosity_contributions)
+      // bd CoolProp-r9sq.24: out-reference params -> return the legacy dict.
+      .def("viscosity_contributions",
+           [](AbstractState& AS) {
+               CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+               AS.viscosity_contributions(dilute, initial_density, residual, critical);
+               nb::dict d;
+               d["dilute"] = static_cast<double>(dilute);
+               d["initial_density"] = static_cast<double>(initial_density);
+               d["residual"] = static_cast<double>(residual);
+               d["critical"] = static_cast<double>(critical);
+               return d;
+           })
       .def("conductivity", &AbstractState::conductivity)
-      .def("conductivity_contributions", &AbstractState::conductivity_contributions)
+      .def("conductivity_contributions",
+           [](AbstractState& AS) {
+               CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+               AS.conductivity_contributions(dilute, initial_density, residual, critical);
+               nb::dict d;
+               d["dilute"] = static_cast<double>(dilute);
+               d["initial_density"] = static_cast<double>(initial_density);
+               d["residual"] = static_cast<double>(residual);
+               d["critical"] = static_cast<double>(critical);
+               return d;
+           })
       .def("surface_tension", &AbstractState::surface_tension)
       .def("Prandtl", &AbstractState::Prandtl)
-      .def("conformal_state", &AbstractState::conformal_state)
+      // bd CoolProp-r9sq.24: T/rho are in/out -> return dict(T, rhomolar) like legacy.
+      .def("conformal_state",
+           [](AbstractState& AS, const std::string& reference_fluid, double T, double rho) {
+               CoolPropDbl T0 = T, rho0 = rho;
+               AS.conformal_state(reference_fluid, T0, rho0);
+               nb::dict d;
+               d["T"] = static_cast<double>(T0);
+               d["rhomolar"] = static_cast<double>(rho0);
+               return d;
+           })
       .def("change_EOS", &AbstractState::change_EOS)
       .def("alpha0", &AbstractState::alpha0)
       .def("dalpha0_dDelta", &AbstractState::dalpha0_dDelta)
@@ -561,76 +692,137 @@ void init_CoolProp(nb::module_& m) {
         return nb::make_tuple(pair, out1, out2);
     });
     m.def("Props1SI", &Props1SI);
-    m.def("PropsSI", &PropsSI);
-    // Vectorized PropsSI: list/ndarray Prop1/Prop2 (with scalar broadcast) dispatch
-    // to the C++ PropsSImulti path and return a numpy array, matching the legacy
-    // Cython wrapper. Registered after the scalar overload so scalars bind there.
-    m.def("PropsSI", [](const std::string& Output, const std::string& Name1, nb::object Prop1, const std::string& Name2, nb::object Prop2,
+    // Scalar PropsSI (all-float args): raise ValueError on a non-finite result
+    // rather than silently returning inf/nan, matching the legacy Cython wrapper
+    // (bd CoolProp-r9sq.21).
+    m.def("PropsSI", [](const std::string& Output, const std::string& Name1, double Prop1, const std::string& Name2, double Prop2,
                         const std::string& FluidName) {
-        bool s1 = false, s2 = false;
-        std::vector<double> v1 = _to_vec(Prop1, s1);
-        std::vector<double> v2 = _to_vec(Prop2, s2);
-        // Empty state inputs -> empty array (mirrors the legacy #2417 short-circuit).
-        if ((s1 && v1.empty()) || (s2 && v2.empty())) {
-            auto* empty = new double[1];
-            nb::capsule owner(empty, [](void* p) noexcept { delete[] static_cast<double*>(p); });
-            return nb::ndarray<nb::numpy, double>(empty, {static_cast<std::size_t>(0)}, owner);
-        }
-        std::size_t n = std::max(v1.size(), v2.size());
-        _broadcast_to(v1, n, "Prop1");
-        _broadcast_to(v2, n, "Prop2");
-        std::string backend, fluid;
-        extract_backend(FluidName, backend, fluid);
-        std::vector<double> fractions{1.0};
-        std::string delimited = extract_fractions(fluid, fractions);
-        std::vector<std::string> fluids = _split_str(delimited, '&');
-        std::vector<std::vector<double>> out = PropsSImulti({Output}, Name1, v1, Name2, v2, backend, fluids, fractions);
-        if (out.empty() || out[0].empty()) {
-            throw std::runtime_error(get_global_param_string("errstring"));
-        }
-        // PropsSImulti returns a matrix indexed [input][output]; a single Output
-        // means one column, so take out[i][0] across the inputs.
-        std::size_t n_out = out.size();
-        auto* data = new double[n_out];
-        for (std::size_t i = 0; i < n_out; ++i) {
-            data[i] = out[i][0];
-        }
-        nb::capsule owner(data, [](void* p) noexcept { delete[] static_cast<double*>(p); });
-        return nb::ndarray<nb::numpy, double>(data, {n_out}, owner);
+        double val = PropsSI(Output, Name1, Prop1, Name2, Prop2, FluidName);
+        _raise_if_invalid(val);
+        return val;
     });
+    // Vectorized PropsSI: list/ndarray Prop1/Prop2 (with scalar broadcast) dispatch
+    // to the C++ PropsSImulti path.  Returns a numpy array for array inputs, but a
+    // plain float when every input was scalar -- so the canonical int-literal call
+    // PropsSI("T","P",101325,"Q",0,"Water") (whose int args do NOT match the all-double
+    // scalar overload above and so bind here) returns a float, not a 1-element ndarray
+    // (bd CoolProp-r9sq.21).
+    m.def("PropsSI",
+          [](const std::string& Output, const std::string& Name1, nb::object Prop1, const std::string& Name2, nb::object Prop2,
+             const std::string& FluidName) -> nb::object {
+              bool s1 = false, s2 = false;
+              std::vector<double> v1 = _to_vec(Prop1, s1);
+              std::vector<double> v2 = _to_vec(Prop2, s2);
+              bool any_seq = s1 || s2;
+              // Empty state inputs -> empty array (mirrors the legacy #2417 short-circuit).
+              if ((s1 && v1.empty()) || (s2 && v2.empty())) {
+                  auto* empty = new double[1];
+                  nb::capsule owner(empty, [](void* p) noexcept { delete[] static_cast<double*>(p); });
+                  return nb::cast(nb::ndarray<nb::numpy, double>(empty, {static_cast<std::size_t>(0)}, owner));
+              }
+              std::size_t n = std::max(v1.size(), v2.size());
+              _broadcast_to(v1, n, "Prop1");
+              _broadcast_to(v2, n, "Prop2");
+              std::string backend, fluid;
+              extract_backend(FluidName, backend, fluid);
+              std::vector<double> fractions{1.0};
+              std::string delimited = extract_fractions(fluid, fractions);
+              std::vector<std::string> fluids = _split_str(delimited, '&');
+              std::vector<std::vector<double>> out = PropsSImulti({Output}, Name1, v1, Name2, v2, backend, fluids, fractions);
+              if (out.empty() || out[0].empty()) {
+                  // Legacy raised ValueError (not RuntimeError) on a failed evaluation.
+                  PyErr_SetString(PyExc_ValueError, get_global_param_string("errstring").c_str());
+                  throw nb::python_error();
+              }
+              // All-scalar inputs -> a scalar float, guarded for finiteness like the
+              // all-float scalar overload above.
+              if (!any_seq) {
+                  _raise_if_invalid(out[0][0]);
+                  return nb::float_(out[0][0]);
+              }
+              // PropsSImulti returns a matrix indexed [input][output]; a single Output
+              // means one column, so take out[i][0] across the inputs.
+              std::size_t n_out = out.size();
+              auto* data = new double[n_out];
+              for (std::size_t i = 0; i < n_out; ++i) {
+                  data[i] = out[i][0];
+              }
+              nb::capsule owner(data, [](void* p) noexcept { delete[] static_cast<double*>(p); });
+              return nb::cast(nb::ndarray<nb::numpy, double>(data, {n_out}, owner));
+          });
     // Legacy compatibility: the Cython PropsSI also accepted the 2-arg trivial
     // form PropsSI("Tcrit", "Water") (order-lenient).  Restore it as an overload
-    // dispatching to Props1SI so e.g. PropsSI("M", fluid) keeps working.
-    m.def("PropsSI", [](const std::string& Output, const std::string& FluidName) { return Props1SI(Output, FluidName); });
+    // dispatching to Props1SI; raise ValueError on a non-finite result (parity).
+    m.def("PropsSI", [](const std::string& Output, const std::string& FluidName) {
+        double val = Props1SI(Output, FluidName);
+        _raise_if_invalid(val);
+        return val;
+    });
     m.def("PhaseSI", &PhaseSI);
     m.def("PropsSImulti", &PropsSImulti);
     m.def("get_global_param_string", &get_global_param_string);
     m.def("get_debug_level", &get_debug_level);
     m.def("set_debug_level", &set_debug_level);
     m.def("get_fluid_param_string", &get_fluid_param_string);
-    m.def("extract_backend", &extract_backend);
-    m.def("extract_fractions", &extract_fractions);
+    // bd CoolProp-r9sq.24: these have C++ out-reference params; bind the legacy
+    // one-string-in, tuple-out forms (extract_backend("REFPROP::Water") -> (backend,
+    // fluid); extract_fractions("R32&R125[0.7]") -> (fluids_list, fractions)).
+    m.def("extract_backend", [](const std::string& in_str) {
+        std::string backend, fluid;
+        extract_backend(in_str, backend, fluid);
+        return nb::make_tuple(backend, fluid);
+    });
+    m.def("extract_fractions", [](const std::string& in_str) {
+        std::vector<double> fractions;
+        std::string delimited = extract_fractions(in_str, fractions);
+        return nb::make_tuple(_split_str(delimited, '&'), fractions);
+    });
     m.def("set_reference_stateS", &set_reference_stateS);
     m.def("set_reference_stateD", &set_reference_stateD);
     m.def("saturation_ancillary", &saturation_ancillary);
     m.def("add_fluids_as_JSON", &add_fluids_as_JSON);
-    m.def("HAPropsSI", &HumidAir::HAPropsSI);
-    // Vectorized HAPropsSI: array inputs loop over the scalar C++ HAPropsSI and
-    // return a list, matching the legacy Cython wrapper (no vectorized C++ path).
-    m.def("HAPropsSI", [](const std::string& Output, const std::string& N1, nb::object V1, const std::string& N2, nb::object V2,
-                          const std::string& N3, nb::object V3) {
-        bool s1 = false, s2 = false, s3 = false;
-        std::vector<double> v1 = _to_vec(V1, s1), v2 = _to_vec(V2, s2), v3 = _to_vec(V3, s3);
-        std::size_t n = std::max({v1.size(), v2.size(), v3.size()});
-        _broadcast_to(v1, n, "Input1");
-        _broadcast_to(v2, n, "Input2");
-        _broadcast_to(v3, n, "Input3");
-        std::vector<double> out(n);
-        for (std::size_t i = 0; i < n; ++i) {
-            out[i] = HumidAir::HAPropsSI(Output, N1, v1[i], N2, v2[i], N3, v3[i]);
-        }
-        return out;
-    });
+    // Scalar HAPropsSI (all-float args): raise ValueError on a non-finite result,
+    // matching the legacy Cython wrapper (bd CoolProp-r9sq.22).
+    m.def("HAPropsSI",
+          [](const std::string& Output, const std::string& N1, double V1, const std::string& N2, double V2, const std::string& N3, double V3) {
+              double val = HumidAir::HAPropsSI(Output, N1, V1, N2, V2, N3, V3);
+              _raise_if_invalid(val);
+              return val;
+          });
+    // Vectorized HAPropsSI: array inputs loop over the scalar C++ HAPropsSI.  Returns
+    // a float when every input was scalar (so HAPropsSI('H','T',298.15,'P',101325,'R',0.5)
+    // with an int pressure returns a float, not a 1-element list), a numpy array when any
+    // input was an ndarray (preserving the array type), else a list -- matching the legacy
+    // Cython wrapper (bd CoolProp-r9sq.22).
+    m.def("HAPropsSI",
+          [](const std::string& Output, const std::string& N1, nb::object V1, const std::string& N2, nb::object V2, const std::string& N3,
+             nb::object V3) -> nb::object {
+              bool s1 = false, s2 = false, s3 = false;
+              std::vector<double> v1 = _to_vec(V1, s1), v2 = _to_vec(V2, s2), v3 = _to_vec(V3, s3);
+              bool any_seq = s1 || s2 || s3;
+              bool any_ndarray = (s1 && nb::hasattr(V1, "ndim")) || (s2 && nb::hasattr(V2, "ndim")) || (s3 && nb::hasattr(V3, "ndim"));
+              std::size_t n = std::max({v1.size(), v2.size(), v3.size()});
+              _broadcast_to(v1, n, "Input1");
+              _broadcast_to(v2, n, "Input2");
+              _broadcast_to(v3, n, "Input3");
+              std::vector<double> out(n);
+              for (std::size_t i = 0; i < n; ++i) {
+                  out[i] = HumidAir::HAPropsSI(Output, N1, v1[i], N2, v2[i], N3, v3[i]);
+              }
+              if (!any_seq) {
+                  _raise_if_invalid(out[0]);
+                  return nb::float_(out[0]);
+              }
+              if (any_ndarray) {
+                  auto* data = new double[n != 0u ? n : 1u];
+                  for (std::size_t i = 0; i < n; ++i) {
+                      data[i] = out[i];
+                  }
+                  nb::capsule owner(data, [](void* p) noexcept { delete[] static_cast<double*>(p); });
+                  return nb::cast(nb::ndarray<nb::numpy, double>(data, {n}, owner));
+              }
+              return nb::cast(out);  // list input -> list output
+          });
     // HAProps (non-SI humid air) intentionally NOT bound -- removed for v8 (SI-only); use HAPropsSI.
     m.def("HAProps_Aux", [](std::string out_string, double T, double p, double psi_w) {
         std::array<char, 1000> units{};
@@ -661,8 +853,12 @@ void init_CoolProp(nb::module_& m) {
         if (args.size() == 1) {
             set_reference_stateS(FluidName, nb::cast<std::string>(args[0]));
         } else if (args.size() == 4) {
-            set_reference_stateD(FluidName, nb::cast<double>(args[0]), nb::cast<double>(args[1]), nb::cast<double>(args[2]),
-                                 nb::cast<double>(args[3]));
+            // Coerce via the Python __float__ protocol (nb::float_ -> PyNumber_Float)
+            // so numpy scalars / 1-element arrays (e.g. a density from PropsSI) are
+            // accepted, matching the legacy Cython `<double>obj` coercion. nb::cast<double>
+            // would raise std::bad_cast on a non-float object (bd CoolProp-r9sq.16).
+            set_reference_stateD(FluidName, nb::cast<double>(nb::float_(args[0])), nb::cast<double>(nb::float_(args[1])),
+                                 nb::cast<double>(nb::float_(args[2])), nb::cast<double>(nb::float_(args[3])));
         } else {
             throw std::invalid_argument("Invalid number of inputs to set_reference_state");
         }
