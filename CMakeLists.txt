@@ -332,7 +332,6 @@ list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/dev")
 list(APPEND APP_INCLUDE_DIRS "${boost_headers_SOURCE_DIR}")
 list(APPEND APP_INCLUDE_DIRS "${fmt_SOURCE_DIR}/include")
-list(APPEND APP_INCLUDE_DIRS "${rapidjson_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${nlohmann_json_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${valijson_SOURCE_DIR}/include")
 # Valijson is consumed header-only (DOWNLOAD_ONLY), so its INTERFACE

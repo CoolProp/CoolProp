@@ -2,10 +2,10 @@
 #define COOLPROP_DETAIL_CONFIGURATION_KEYS_H
 
 // Lean home of the configuration-key X-macro and the `configuration_keys`
-// enum.  Split out of Configuration.h (GH: de-leak rapidjson) so the enum can
-// be consumed -- e.g. by the generated Cython constants module -- WITHOUT
-// pulling in rapidjson, which Configuration.h needs only for its JSON
-// (de)serialization.  This header has no includes by design; keep it that way.
+// enum.  Split out of Configuration.h so the enum can be consumed -- e.g. by
+// the generated Cython constants module -- WITHOUT pulling in Configuration.h's
+// JSON-(de)serialization includes.  This header has no includes by design;
+// keep it that way.
 
 #define CONFIGURATION_KEYS_ENUM                                                                                                                      \
     X(NORMALIZE_GAS_CONSTANTS, "NORMALIZE_GAS_CONSTANTS", true, "If true, for mixtures, the molar gas constant (R) will be set to the CODATA value") \
