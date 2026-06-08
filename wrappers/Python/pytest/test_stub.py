@@ -24,7 +24,9 @@ _PYI = os.path.join(_PKG, "CoolProp.pyi")
 
 def _stub_toplevel_names():
     names = set()
-    for n in ast.parse(open(_PYI, encoding="utf-8").read()).body:
+    with open(_PYI, encoding="utf-8") as f:
+        tree = ast.parse(f.read())
+    for n in tree.body:
         if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
             names.add(n.name)
         elif isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name):
@@ -37,7 +39,8 @@ def _stub_toplevel_names():
 def test_stub_and_marker_ship_and_parse():
     assert os.path.exists(_PYI), "CoolProp.pyi not shipped in the wheel"
     assert os.path.exists(os.path.join(_PKG, "py.typed")), "py.typed marker not shipped"
-    ast.parse(open(_PYI, encoding="utf-8").read())  # valid Python (raises on failure)
+    with open(_PYI, encoding="utf-8") as f:
+        ast.parse(f.read())  # valid Python (raises on failure)
 
 
 def test_stub_symbol_parity_with_runtime():
