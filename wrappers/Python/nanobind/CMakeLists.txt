@@ -47,3 +47,8 @@ nanobind_add_module(CoolProp STABLE_ABI ${COOLPROP_APP_SOURCES} "${ROOT_DIR}/src
 # generated headers (gitrevision.h, cpversion.h, all_fluids_JSON*.h, ...).
 # Depend on the core's generator target so a fresh checkout builds in one shot.
 add_dependencies(CoolProp generate_headers)
+
+# Hide nlohmann/valijson symbols from the module's dynamic export table (link-time
+# export control), matching the main wrappers/Python build. nanobind already
+# compiles -fvisibility=hidden, so this is defense-in-depth + consistency.
+coolprop_hide_json_symbols(CoolProp)

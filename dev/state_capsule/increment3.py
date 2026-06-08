@@ -61,8 +61,7 @@ def build_extensions():
     from Cython.Build import cythonize
 
     incs = [INCLUDE, os.path.join(sys.prefix, "include", f"python{sys.version_info.major}.{sys.version_info.minor}")]
-    for hdr, g in [("fmt/format.h", "build*/_deps/fmt-src/include"),
-                   ("rapidjson/rapidjson.h", "build*/_deps/rapidjson-src/include")]:
+    for hdr, g in [("fmt/format.h", "build*/_deps/fmt-src/include")]:
         d = find_dep(hdr, g)
         if d:
             incs.append(d)

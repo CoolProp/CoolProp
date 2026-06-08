@@ -154,8 +154,9 @@ fi
 # shared object, so this MUST inspect a .so/.dylib — never the static
 # .a (the Catch runner links the archive).  preflight builds the Catch
 # runner against a static/object lib, so we maintain a dedicated
-# build_shared dir for this gate.  RapidJSON is intentionally NOT in the
-# default pattern (it is still exported today, by design, mid-migration).
+# build_shared dir for this gate.  The gate's default pattern is
+# `nlohmann|valijson|rapidjson`; RapidJSON has been removed, so its
+# symbols must not be exported either.
 step "JSON symbol leak (shared library)"
 if skip_check json-symbols; then
     skip "json-symbols" "--skip=json-symbols"

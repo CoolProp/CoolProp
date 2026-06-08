@@ -50,10 +50,9 @@ TEST_CASE("SVDSBTL options: schema validation rejects bad payloads", "[SVDSBTL][
         REQUIRE_THROWS_AS(factory(R"({"grid":{"NT":1}})"), CoolProp::ValueError);
     }
     SECTION("grid.NT above schema maximum (would overflow GetInt() otherwise)") {
-        // Schema caps NT at 100_000 so RapidJSON's GetInt() (int32) is
-        // safe inside resolve_grid().  Without this the validator would
-        // accept NT >= 2 unbounded and GetInt() could hit a RapidJSON
-        // assertion on values past INT32_MAX.
+        // Schema caps NT at 100_000 so integer parsing in resolve_grid()
+        // stays within range.  Without this cap the validator would accept
+        // NT >= 2 unbounded, and values past INT32_MAX would overflow.
         REQUIRE_THROWS_AS(factory(R"({"grid":{"NT":2147483648}})"), CoolProp::ValueError);
         REQUIRE_THROWS_AS(factory(R"({"grid":{"NR":2147483648}})"), CoolProp::ValueError);
         REQUIRE_THROWS_AS(factory(R"({"grid":{"rank":2147483648}})"), CoolProp::ValueError);

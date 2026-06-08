@@ -1,4 +1,4 @@
-// Byte-equivalence gate (RapidJSON->nlohmann Phase 1): the embedded CBOR blob
+// Byte-equivalence gate: the embedded CBOR blob
 // must decode to exactly the source dev/all_fluids.json (value-equality). Catches
 // encoder/decoder drift (cbor2/nlohmann version bumps) and staleness.
 #if defined(ENABLE_CATCH)

@@ -115,8 +115,9 @@ logging.  The shared helper:
 
 * Sorts object keys recursively.
 * Preserves array order.
-* Uses RapidJSON's default formatting for scalars (deterministic
-  within a single CoolProp build).
+* Uses nlohmann/json's ``std::map``-backed object serialisation, which
+  sorts keys at every nesting level (deterministic within a single
+  CoolProp build).
 
 It is **not** strict `RFC 8785 (JCS)
 <https://datatracker.ietf.org/doc/html/rfc8785>`_ — no NFC string
@@ -158,11 +159,11 @@ override the options-aware ``AbstractStateGenerator`` virtual:
        AbstractState* get_AbstractState(
            const std::vector<std::string>& fluid_names,
            const std::string& options_json) override {
-           rapidjson::Document opts;
-           if (!options_json.empty()) opts.Parse(options_json);
-           else                       opts.SetObject();
-           validate_against_schema(opts, kMyBackendOptionsSchemaJson);
-           // ...construct using the parsed options...
+           // Validate the options JSON string against the backend's schema
+           // (throws CoolProp::ValueError on a mismatch).
+           CoolProp::validate_json_against_schema(options_json, kMyBackendOptionsSchemaJson);
+           // ...parse internally if needed (auto opts = cpjson::parse(options_json);)
+           // and construct using the validated options...
        }
        AbstractState* get_AbstractState(
            const std::vector<std::string>& fluid_names) override {
