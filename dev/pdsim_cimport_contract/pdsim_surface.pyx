@@ -94,6 +94,23 @@ cpdef dict exercise_twophase(object Fluid, double T, double Q):
     return {'Q': S.get_Q(), 'T': S.get_T(), 'p': S.get_p()}
 
 
+cpdef dict exercise_refrigeration(object Fluid, double P_kPa, double T):
+    """The refrigeration-cycle surface PDSim cimports, widened for v8
+    (bd CoolProp-r9sq.26): bare ``State(Fluid, None)`` construction, the
+    cimport-level ``set_Fluid``, the integer ``Phase()``, and the saturation
+    quantities ``Tsat`` / ``subcooling`` / ``superheat`` (P in legacy kPa)."""
+    cdef State S = State(Fluid, None)               # bare construction (no state update)
+    S.set_Fluid(Fluid, b'HEOS')                     # cimport-level set_Fluid
+    S.update({'P': P_kPa, 'T': T})
+    cdef long ph = S.Phase()                        # integer phase flag
+    return {
+        'phase': ph,
+        'Tsat': S.get_Tsat(1.0),
+        'subcooling': S.get_subcooling(),
+        'superheat': S.get_superheat(),
+    }
+
+
 cpdef double hot_loop(object Fluid, double T, double rho, int n):
     """Mirror PDSim's inner pattern: repeated update_Trho + getters + .pAS."""
     cdef State S = State(Fluid, {'T': T, 'D': rho})

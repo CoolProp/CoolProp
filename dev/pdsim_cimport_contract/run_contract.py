@@ -79,6 +79,14 @@ def check():
     expect("two-phase p [kPa]", tp["p"],
            PropsSI("P", "T", 373.0, "Q", 0.4, FLUID) / 1000.0)
 
+    # v8-widened refrigeration surface (set_Fluid, Phase, Tsat/subcooling/superheat)
+    rf = pdsim_surface.exercise_refrigeration(FLUID, 101.325, 320.0)  # subcooled liquid
+    Tsat_ref = PropsSI("T", "P", 101325.0, "Q", 1.0, FLUID)  # float Q: scalar PropsSI
+    expect("Tsat [K]", rf["Tsat"], Tsat_ref, rel=1e-4)
+    expect("subcooling [K]", rf["subcooling"], Tsat_ref - 320.0, rel=1e-4)
+    if not isinstance(rf["phase"], int):
+        fails.append(f"Phase() did not return an int: {rf['phase']!r}")
+
     # hot loop (PDSim's inner pattern) just has to run and produce a finite sum
     acc = pdsim_surface.hot_loop(FLUID, T, RHO, 1000)
     if not (math.isfinite(acc) and acc != 0.0):

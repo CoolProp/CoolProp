@@ -23,6 +23,11 @@ cdef class State:
     cdef readonly double T_, p_, rho_
     cdef readonly bytes Fluid, phase
     cdef _refresh(self)
+    cpdef set_Fluid(self, Fluid, backend)
+    cpdef long Phase(self) except *
+    cpdef get_Tsat(self, double Q=*)
+    cpdef get_subcooling(self)
+    cpdef get_superheat(self)
     cpdef update(self, dict params)
     cpdef update_Trho(self, double T, double rho)
     cpdef update_ph(self, double p, double h)
