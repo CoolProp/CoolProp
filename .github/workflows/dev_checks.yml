@@ -476,3 +476,28 @@ jobs:
 
       - name: Check pinned fastchebpure release matches current EOS
         run: python3 dev/scripts/check_superanc_release_pin.py
+
+  installed-header-gate:
+    name: Installed-header hygiene gate
+    # Fail if any internal/JSON-pulling header (detail/json.h, or anything
+    # that #includes nlohmann/valijson) is shipped in the installed tree.
+    # This is the install-side companion to the symbol-leak gate
+    # (check-json-symbols.sh): the symbol gate catches runtime ABI leaks;
+    # this gate catches source-level leaks that would expose nlohmann/valijson
+    # to downstream consumers at compile time.  Real gate — no continue-on-error.
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure shared build
+        run: |
+          cmake -B build_shared -S . \
+            -DCOOLPROP_SHARED_LIBRARY=ON \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build shared library
+        run: cmake --build build_shared -j$(nproc)
+
+      - name: Run installed-header hygiene gate
+        run: ./dev/ci/check-installed-headers.sh build_shared

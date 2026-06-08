@@ -205,9 +205,9 @@ elif skip_check build; then
 elif [ ! -d build_shared ]; then
     skip "install-headers" "build_shared not available (run without --skip=json-symbols)"
 elif ./dev/ci/check-installed-headers.sh build_shared; then
-    ok "install-headers (detail/json.h not shipped)"
+    ok "install-headers (detail/json.h not shipped; no installed header pulls nlohmann/valijson)"
 else
-    fail "install-headers (detail/json.h shipped, or install failed; see /tmp/install-headers-check.log)"
+    fail "install-headers (detail/json.h shipped, or a header pulls nlohmann/valijson, or install failed; see /tmp/install-headers-check.log)"
 fi
 
 # ---------- check 3: Catch2 tests with auto-selected tag scope -------
