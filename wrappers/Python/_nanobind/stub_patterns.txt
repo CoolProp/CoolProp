@@ -20,7 +20,7 @@ CoolProp\.__prefix__:
 CoolProp\._capi$:
     _capi: object = ...
 
-CoolProp\._AbstractState\.get_spinodal_data$:
+CoolProp\.AbstractState\.get_spinodal_data$:
     def get_spinodal_data(self) -> object: ...
 
 CoolProp\.PropsSI$:
