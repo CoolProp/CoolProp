@@ -30,16 +30,7 @@ namespace {
 /// the get_library() singleton (which would recurse into its own constructor).
 void add_fluids_from_JSON_string(PCSAFTLibraryClass& dest, const std::string_view& JSON) {
     std::string errstr;
-    // FluidLibrary.h transitively includes detail/rapidjson.h (via
-    // Configuration.h), so both validate_schema overloads are visible here and
-    // the call is ambiguous. The two overloads differ ONLY in their string_view
-    // parameters: rapidjson takes `const std::string_view&`, nlohmann takes
-    // `std::string_view` by value. The cast's by-value signature therefore
-    // selects the nlohmann/Valijson overload. Remove this cast (the call becomes
-    // unambiguous) once detail/rapidjson.h is deleted at Phase Final.
-    auto validate_schema_nlohmann =
-      static_cast<cpjson::schema_validation_code (*)(std::string_view, std::string_view, std::string&)>(&cpjson::validate_schema);
-    cpjson::schema_validation_code val_code = validate_schema_nlohmann(pcsaft_fluids_schema_JSON, JSON, errstr);
+    cpjson::schema_validation_code val_code = cpjson::validate_schema(pcsaft_fluids_schema_JSON, JSON, errstr);
     if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
         nlohmann::json dd = cpjson::parse(JSON);
         try {

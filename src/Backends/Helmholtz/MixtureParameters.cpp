@@ -1,4 +1,5 @@
 #include "MixtureParameters.h"
+#include "CoolProp/detail/json.h"
 #include "CoolProp/detail/strings.h"
 #include "mixture_departure_functions_JSON.h"  // Creates the variable mixture_departure_functions_JSON
 #include "mixture_binary_pairs_JSON.h"         // Creates the variable mixture_binary_pairs_JSON
@@ -22,29 +23,24 @@ class PredefinedMixturesLibrary
     }
 
     void load_from_string(const std::string_view& str) {
-        rapidjson::Document doc;
-        doc.Parse<0>(str.data(), str.size());
-        if (doc.HasParseError()) {
-            std::cout << str << '\n';
-            throw ValueError("Unable to parse predefined mixture string");
-        }
+        nlohmann::json doc = cpjson::parse(str);
         load_from_JSON(doc);
     }
 
-    void load_from_JSON(rapidjson::Document& doc) {
-        if (!doc.IsArray() || !doc[0].IsObject()) {
+    void load_from_JSON(const nlohmann::json& doc) {
+        if (!doc.is_array() || !doc[0].is_object()) {
             throw ValueError("You must provide an array of objects");
         }
         // Iterate over the papers in the listing
-        for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr) {
+        for (const auto& el : doc) {
             // Instantiate the empty dictionary to be filled
             Dictionary dict;
             // Get the name
-            std::string name = cpjson::get_string(*itr, "name") + ".mix";
+            std::string name = cpjson::get_string(el, "name") + ".mix";
             // Get the fluid names
-            dict.add_string_vector("fluids", cpjson::get_string_array(*itr, "fluids"));
+            dict.add_string_vector("fluids", cpjson::get_string_array(el, "fluids"));
             // Get the mole fractions
-            dict.add_double_vector("mole_fractions", cpjson::get_double_array(*itr, "mole_fractions"));
+            dict.add_double_vector("mole_fractions", cpjson::get_double_array(el, "mole_fractions"));
             // Add to the map
             predefined_mixture_map.emplace(name, dict);
             // Also add the uppercase version to the map
@@ -99,12 +95,7 @@ class MixtureBinaryPairLibrary
     };
 
     void load_from_string(const std::string_view& str) {
-        rapidjson::Document doc;
-        doc.Parse<0>(str.data(), str.size());
-        if (doc.HasParseError()) {
-            std::cout << str << '\n';
-            throw ValueError("Unable to parse binary interaction function string");
-        }
+        nlohmann::json doc = cpjson::parse(str);
         load_from_JSON(doc);
     }
 
@@ -122,25 +113,25 @@ class MixtureBinaryPairLibrary
      *
      * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.
      */
-    void load_from_JSON(rapidjson::Document& doc) {
+    void load_from_JSON(const nlohmann::json& doc) {
 
         // Iterate over the papers in the listing
-        for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr) {
+        for (const auto& el : doc) {
             // Get the empty dictionary to be filled by the appropriate reducing parameter filling function
             Dictionary dict;
 
             // Get the vector of CAS numbers
             std::vector<std::string> CAS;
-            CAS.push_back(cpjson::get_string(*itr, "CAS1"));
-            CAS.push_back(cpjson::get_string(*itr, "CAS2"));
-            std::string name1 = cpjson::get_string(*itr, "Name1");
-            std::string name2 = cpjson::get_string(*itr, "Name2");
+            CAS.push_back(cpjson::get_string(el, "CAS1"));
+            CAS.push_back(cpjson::get_string(el, "CAS2"));
+            std::string name1 = cpjson::get_string(el, "Name1");
+            std::string name2 = cpjson::get_string(el, "Name2");
 
             // Sort the CAS number vector
             std::sort(CAS.begin(), CAS.end());
 
             // A sort was carried out, names/CAS were swapped
-            bool swapped = CAS[0].compare(cpjson::get_string(*itr, "CAS1")) != 0;
+            bool swapped = CAS[0].compare(cpjson::get_string(el, "CAS1")) != 0;
 
             if (swapped) {
                 std::swap(name1, name2);
@@ -149,24 +140,24 @@ class MixtureBinaryPairLibrary
             // Populate the dictionary with common terms
             dict.add_string("name1", name1);
             dict.add_string("name2", name2);
-            dict.add_string("BibTeX", cpjson::get_string(*itr, "BibTeX"));
-            dict.add_number("F", cpjson::get_double(*itr, "F"));
+            dict.add_string("BibTeX", cpjson::get_string(el, "BibTeX"));
+            dict.add_number("F", cpjson::get_double(el, "F"));
             if (std::abs(dict.get_number("F")) > DBL_EPSILON) {
-                dict.add_string("function", cpjson::get_string(*itr, "function"));
+                dict.add_string("function", cpjson::get_string(el, "function"));
             }
 
-            if (itr->HasMember("xi") && itr->HasMember("zeta")) {
+            if (el.contains("xi") && el.contains("zeta")) {
                 dict.add_string("type", "Lemmon-xi-zeta");
                 // Air and HFC mixtures from Lemmon - we could also directly do the conversion
-                dict.add_number("xi", cpjson::get_double(*itr, "xi"));
-                dict.add_number("zeta", cpjson::get_double(*itr, "zeta"));
-            } else if (itr->HasMember("gammaT") && itr->HasMember("gammaV") && itr->HasMember("betaT") && itr->HasMember("betaV")) {
+                dict.add_number("xi", cpjson::get_double(el, "xi"));
+                dict.add_number("zeta", cpjson::get_double(el, "zeta"));
+            } else if (el.contains("gammaT") && el.contains("gammaV") && el.contains("betaT") && el.contains("betaV")) {
                 dict.add_string("type", "GERG-2008");
-                dict.add_number("gammaV", cpjson::get_double(*itr, "gammaV"));
-                dict.add_number("gammaT", cpjson::get_double(*itr, "gammaT"));
+                dict.add_number("gammaV", cpjson::get_double(el, "gammaV"));
+                dict.add_number("gammaT", cpjson::get_double(el, "gammaT"));
 
-                double betaV = cpjson::get_double(*itr, "betaV");
-                double betaT = cpjson::get_double(*itr, "betaT");
+                double betaV = cpjson::get_double(el, "betaV");
+                double betaT = cpjson::get_double(el, "betaT");
                 if (swapped) {
                     dict.add_number("betaV", 1 / betaV);
                     dict.add_number("betaT", 1 / betaT);
@@ -424,54 +415,49 @@ class MixtureDepartureFunctionsLibrary
     };
 
     void load_from_string(const std::string_view& str) {
-        rapidjson::Document doc;
-        doc.Parse<0>(str.data(), str.size());
-        if (doc.HasParseError()) {
-            std::cout << str << '\n';
-            throw ValueError("Unable to parse departure function string");
-        }
+        nlohmann::json doc = cpjson::parse(str);
         load_from_JSON(doc);
     }
-    void load_from_JSON(rapidjson::Document& doc) {
+    void load_from_JSON(const nlohmann::json& doc) {
         // Iterate over the departure functions in the listing
-        for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr) {
+        for (const auto& el : doc) {
             // Get the empty dictionary to be filled in
             Dictionary dict;
 
             // Populate the dictionary with common terms
-            std::string Name = cpjson::get_string(*itr, "Name");
-            std::string type = cpjson::get_string(*itr, "type");
+            std::string Name = cpjson::get_string(el, "Name");
+            std::string type = cpjson::get_string(el, "type");
             dict.add_string("Name", Name);
-            dict.add_string("BibTeX", cpjson::get_string(*itr, "BibTeX"));
-            dict.add_string_vector("aliases", cpjson::get_string_array(*itr, "aliases"));
+            dict.add_string("BibTeX", cpjson::get_string(el, "BibTeX"));
+            dict.add_string_vector("aliases", cpjson::get_string_array(el, "aliases"));
             dict.add_string("type", type);
 
             // Terms for the power (common to both types)
-            dict.add_double_vector("n", cpjson::get_double_array(*itr, "n"));
-            dict.add_double_vector("d", cpjson::get_double_array(*itr, "d"));
-            dict.add_double_vector("t", cpjson::get_double_array(*itr, "t"));
+            dict.add_double_vector("n", cpjson::get_double_array(el, "n"));
+            dict.add_double_vector("d", cpjson::get_double_array(el, "d"));
+            dict.add_double_vector("t", cpjson::get_double_array(el, "t"));
 
             // Now we need to load additional terms
             if (!type.compare("GERG-2008")) {
                 // Number of terms that are power terms
-                dict.add_number("Npower", cpjson::get_double(*itr, "Npower"));
+                dict.add_number("Npower", cpjson::get_double(el, "Npower"));
                 // Terms for the gaussian
-                dict.add_double_vector("eta", cpjson::get_double_array(*itr, "eta"));
-                dict.add_double_vector("epsilon", cpjson::get_double_array(*itr, "epsilon"));
-                dict.add_double_vector("beta", cpjson::get_double_array(*itr, "beta"));
-                dict.add_double_vector("gamma", cpjson::get_double_array(*itr, "gamma"));
+                dict.add_double_vector("eta", cpjson::get_double_array(el, "eta"));
+                dict.add_double_vector("epsilon", cpjson::get_double_array(el, "epsilon"));
+                dict.add_double_vector("beta", cpjson::get_double_array(el, "beta"));
+                dict.add_double_vector("gamma", cpjson::get_double_array(el, "gamma"));
             } else if (type == "Gaussian+Exponential") {
                 // Number of terms that are power terms
-                dict.add_number("Npower", cpjson::get_double(*itr, "Npower"));
+                dict.add_number("Npower", cpjson::get_double(el, "Npower"));
                 // The decay strength parameters
-                dict.add_double_vector("l", cpjson::get_double_array(*itr, "l"));
+                dict.add_double_vector("l", cpjson::get_double_array(el, "l"));
                 // Terms for the gaussian part
-                dict.add_double_vector("eta", cpjson::get_double_array(*itr, "eta"));
-                dict.add_double_vector("epsilon", cpjson::get_double_array(*itr, "epsilon"));
-                dict.add_double_vector("beta", cpjson::get_double_array(*itr, "beta"));
-                dict.add_double_vector("gamma", cpjson::get_double_array(*itr, "gamma"));
+                dict.add_double_vector("eta", cpjson::get_double_array(el, "eta"));
+                dict.add_double_vector("epsilon", cpjson::get_double_array(el, "epsilon"));
+                dict.add_double_vector("beta", cpjson::get_double_array(el, "beta"));
+                dict.add_double_vector("gamma", cpjson::get_double_array(el, "gamma"));
             } else if (!type.compare("Exponential")) {
-                dict.add_double_vector("l", cpjson::get_double_array(*itr, "l"));
+                dict.add_double_vector("l", cpjson::get_double_array(el, "l"));
             } else {
                 throw ValueError(format("It was not possible to parse departure function with type [%s]", type.c_str()));
             }
@@ -811,62 +797,54 @@ void set_departure_functions(const std::string& string_data) {
         parse_HMX_BNC(string_data, BIP, functions);
 
         {
-            rapidjson::Document doc;
-            doc.SetArray();
+            nlohmann::json doc = nlohmann::json::array();
             for (const auto& bip : BIP) {
-                rapidjson::Value el;
-                el.SetObject();
-                el.AddMember("CAS1", rapidjson::Value(bip.CAS1.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                el.AddMember("CAS2", rapidjson::Value(bip.CAS2.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                el.AddMember("Name1", "??", doc.GetAllocator());
-                el.AddMember("Name2", "??", doc.GetAllocator());
-                el.AddMember("betaT", bip.betaT, doc.GetAllocator());
-                el.AddMember("gammaT", bip.gammaT, doc.GetAllocator());
-                el.AddMember("betaV", bip.betaV, doc.GetAllocator());
-                el.AddMember("gammaV", bip.gammaV, doc.GetAllocator());
-                el.AddMember("F", bip.Fij, doc.GetAllocator());
-                el.AddMember("function", rapidjson::Value(bip.model.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                std::string tex_string = "(from HMX.BNC format)::" + strjoin(bip.comments, "\n");
-                el.AddMember("BibTeX", rapidjson::Value(tex_string.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                doc.PushBack(el, doc.GetAllocator());
+                nlohmann::json el;
+                el["CAS1"] = bip.CAS1;
+                el["CAS2"] = bip.CAS2;
+                el["Name1"] = "??";
+                el["Name2"] = "??";
+                el["betaT"] = bip.betaT;
+                el["gammaT"] = bip.gammaT;
+                el["betaV"] = bip.betaV;
+                el["gammaV"] = bip.gammaV;
+                el["F"] = bip.Fij;
+                el["function"] = bip.model;
+                el["BibTeX"] = "(from HMX.BNC format)::" + strjoin(bip.comments, "\n");
+                doc.push_back(std::move(el));
             }
             mixturebinarypairlibrary.load_from_JSON(doc);
         }
         {
-            rapidjson::Document doc;
-            doc.SetArray();
+            nlohmann::json doc = nlohmann::json::array();
             for (const auto& func : functions) {
-                rapidjson::Value el;
-                el.SetObject();
-                el.AddMember("Name", rapidjson::Value(func.model.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                std::vector<std::string> aliases;
-                cpjson::set_string_array("aliases", aliases, el, doc);
-                cpjson::set_double_array("n", func.a, el, doc);
-                cpjson::set_double_array("d", func.d, el, doc);
-                cpjson::set_double_array("t", func.t, el, doc);
+                nlohmann::json el;
+                el["Name"] = func.model;
+                el["aliases"] = nlohmann::json::array();
+                el["n"] = func.a;
+                el["d"] = func.d;
+                el["t"] = func.t;
                 if (func.Nterms_special > 0 || func.Nterms_power == 3) {
-                    el.AddMember("type", "GERG-2008", doc.GetAllocator());
-                    el.AddMember("Npower", func.Npower, doc.GetAllocator());
+                    el["type"] = "GERG-2008";
+                    el["Npower"] = func.Npower;
                     if (func.Nterms_power == 3 && func.Nspecial == 0) {
-                        std::vector<double> zeros(func.a.size(), 0);
-                        cpjson::set_double_array("eta", zeros, el, doc);
-                        cpjson::set_double_array("epsilon", zeros, el, doc);
-                        cpjson::set_double_array("beta", zeros, el, doc);
-                        cpjson::set_double_array("gamma", zeros, el, doc);
+                        std::vector<double> zeros(func.a.size(), 0.0);
+                        el["eta"] = zeros;
+                        el["epsilon"] = zeros;
+                        el["beta"] = zeros;
+                        el["gamma"] = zeros;
                     } else {
-                        cpjson::set_double_array("eta", func.eta, el, doc);
-                        cpjson::set_double_array("epsilon", func.epsilon, el, doc);
-                        cpjson::set_double_array("beta", func.beta, el, doc);
-                        cpjson::set_double_array("gamma", func.gamma, el, doc);
+                        el["eta"] = func.eta;
+                        el["epsilon"] = func.epsilon;
+                        el["beta"] = func.beta;
+                        el["gamma"] = func.gamma;
                     }
                 } else {
-                    el.AddMember("type", "Exponential", doc.GetAllocator());
-                    cpjson::set_double_array("l", func.e, el, doc);
+                    el["type"] = "Exponential";
+                    el["l"] = func.e;
                 }
-
-                std::string tex_string = "(from HMX.BNC format)::" + strjoin(func.comments, "\n");
-                el.AddMember("BibTeX", rapidjson::Value(tex_string.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                doc.PushBack(el, doc.GetAllocator());
+                el["BibTeX"] = "(from HMX.BNC format)::" + strjoin(func.comments, "\n");
+                doc.push_back(std::move(el));
             }
             mixturedeparturefunctionslibrary.load_from_JSON(doc);
         }
