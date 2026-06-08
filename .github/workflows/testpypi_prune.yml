@@ -1,8 +1,8 @@
 name: Prune old TestPyPI releases
 
 # TestPyPI enforces a per-project storage quota and every non-tag CI run
-# uploads the full wheel matrix (~43 files per .postNNN release).  This job
-# keeps only the newest N pre/post releases and deletes the rest.
+# uploads the full wheel matrix (~43 files per .dev<timestamp> nightly).  This
+# job keeps only the newest N development builds and deletes the rest.
 #
 # Deletion is NOT possible with the publish API token -- it requires a real
 # web session.  We use `pypi-cleanup`, authenticating as a dedicated bot
@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       keep:
-        description: 'Number of newest pre/post releases to retain'
+        description: 'Number of newest development builds to retain'
         required: false
         default: '10'
       do_delete:

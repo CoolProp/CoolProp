@@ -1,8 +1,9 @@
 """Compute which TestPyPI (or PyPI) CoolProp releases to prune.
 
 TestPyPI enforces a per-project storage quota, and every non-tag CI run
-uploads the full wheel matrix (~43 files per ``.postNNN`` release).  To stay
-under the ceiling we keep only the newest ``--keep`` *pre/post* releases and
+uploads the full wheel matrix (~43 files per ``.dev<timestamp>`` nightly).  To
+stay under the ceiling we keep only the newest ``--keep`` development builds
+(any non-final release -- ``.dev``/pre-release, and ``.post`` defensively) and
 delete the rest.
 
 This script is **read-only**.  It queries the public JSON API, decides the
@@ -30,9 +31,17 @@ from packaging import version
 
 
 def fetch_release_keys(package, pypi=False):
-    """Return the raw release-version strings from the JSON API."""
+    """Return the raw release-version strings from the JSON API.
+
+    A 404 means the project has no releases at all (a freshly-wiped or
+    brand-new project, e.g. before the first dev upload).  Treat that as an
+    empty release set so the prune is a clean no-op rather than a hard failure;
+    any other HTTP error still raises.
+    """
     host = "https://pypi.org" if pypi else "https://test.pypi.org"
     response = requests.get(f"{host}/pypi/{package}/json", timeout=30)
+    if response.status_code == 404:
+        return []
     response.raise_for_status()
     return list(response.json()["releases"].keys())
 
@@ -40,11 +49,11 @@ def fetch_release_keys(package, pypi=False):
 def select_delete_set(release_keys, keep):
     """Split release keys into (keep_keys, delete_keys).
 
-    Only dev/pre/post releases are candidates.  Candidates are ordered by
-    parsed version (for ``.postNNN`` timestamps that is chronological), the
-    newest ``keep`` are retained, and the remainder are returned as the
-    delete set.  Final releases are returned in neither list -- they are
-    untouchable.
+    Only non-final releases are candidates (``.dev``/pre-release, and ``.post``
+    defensively).  Candidates are ordered by parsed version (for the
+    ``.dev<timestamp>`` nightlies that is chronological), the newest ``keep``
+    are retained, and the remainder are returned as the delete set.  Final
+    releases are returned in neither list -- they are untouchable.
     """
     if keep < 1:
         raise ValueError("--keep must be >= 1 (refusing to delete everything)")
@@ -79,10 +88,10 @@ def build_regex(delete_keys):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Compute the TestPyPI/PyPI prune regex (keep newest N pre/post releases)")
+        description="Compute the TestPyPI/PyPI prune regex (keep newest N development builds)")
     parser.add_argument("--package", default="CoolProp", help="package name")
     parser.add_argument("--keep", type=int, default=10,
-                        help="number of newest pre/post releases to retain")
+                        help="number of newest development (non-final) builds to retain")
     parser.add_argument("--pypi", action="store_true",
                         help="target real PyPI instead of TestPyPI")
     args = parser.parse_args()
@@ -92,7 +101,7 @@ if __name__ == "__main__":
 
     remote = "PyPI" if args.pypi else "TestPyPI"
     print(f"{remote} {args.package}: {len(keys)} total releases; "
-          f"keeping {len(keep_keys)} newest pre/post, deleting {len(delete_keys)}.",
+          f"keeping {len(keep_keys)} newest dev builds, deleting {len(delete_keys)}.",
           file=sys.stderr)
     for k in delete_keys:
         print(f"  DELETE {k}", file=sys.stderr)
