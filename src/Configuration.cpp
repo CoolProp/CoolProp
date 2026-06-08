@@ -41,8 +41,7 @@ void item_from_json(CoolProp::ConfigurationItem& item, const nlohmann::json& val
             break;
         case CONFIGURATION_DOUBLE_TYPE:
             if (!val.is_number()) {
-                throw CoolProp::ValueError(
-                  format("Input [%s] is not double (or something that can be cast to double)", val.dump().c_str()));
+                throw CoolProp::ValueError(format("Input [%s] is not double (or something that can be cast to double)", val.dump().c_str()));
             }
             item.set_double(val.get<double>());
             break;

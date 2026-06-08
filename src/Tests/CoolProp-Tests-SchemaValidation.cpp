@@ -68,8 +68,7 @@ TEST_CASE("validate_against_schema: fully populated valid instance passes", "[Sc
 }
 
 TEST_CASE("validate_against_schema: unknown top-level key throws", "[SchemaValidation]") {
-    REQUIRE_THROWS_AS(CoolProp::validate_json_against_schema(R"({"schema": 1, "frobnitz": true})", std::string(kSchema)),
-                      CoolProp::ValueError);
+    REQUIRE_THROWS_AS(CoolProp::validate_json_against_schema(R"({"schema": 1, "frobnitz": true})", std::string(kSchema)), CoolProp::ValueError);
 }
 
 TEST_CASE("validate_against_schema: unknown nested key throws", "[SchemaValidation]") {
@@ -78,15 +77,13 @@ TEST_CASE("validate_against_schema: unknown nested key throws", "[SchemaValidati
 }
 
 TEST_CASE("validate_against_schema: type mismatch throws", "[SchemaValidation]") {
-    REQUIRE_THROWS_AS(
-        CoolProp::validate_json_against_schema(R"({"schema": 1, "grid": {"NT": "two-hundred"}})", std::string(kSchema)),
-        CoolProp::ValueError);
+    REQUIRE_THROWS_AS(CoolProp::validate_json_against_schema(R"({"schema": 1, "grid": {"NT": "two-hundred"}})", std::string(kSchema)),
+                      CoolProp::ValueError);
 }
 
 TEST_CASE("validate_against_schema: enum violation throws", "[SchemaValidation]") {
-    REQUIRE_THROWS_AS(
-        CoolProp::validate_json_against_schema(R"({"schema": 1, "critical_patch": {"mode": "ON"}})", std::string(kSchema)),
-        CoolProp::ValueError);
+    REQUIRE_THROWS_AS(CoolProp::validate_json_against_schema(R"({"schema": 1, "critical_patch": {"mode": "ON"}})", std::string(kSchema)),
+                      CoolProp::ValueError);
 }
 
 TEST_CASE("validate_against_schema: required key missing throws", "[SchemaValidation]") {
@@ -94,9 +91,8 @@ TEST_CASE("validate_against_schema: required key missing throws", "[SchemaValida
 }
 
 TEST_CASE("validate_against_schema: bbox wrong size throws", "[SchemaValidation]") {
-    REQUIRE_THROWS_AS(
-        CoolProp::validate_json_against_schema(R"({"schema": 1, "critical_patch": {"bbox": [1, 2, 3]}})", std::string(kSchema)),
-        CoolProp::ValueError);
+    REQUIRE_THROWS_AS(CoolProp::validate_json_against_schema(R"({"schema": 1, "critical_patch": {"bbox": [1, 2, 3]}})", std::string(kSchema)),
+                      CoolProp::ValueError);
 }
 
 TEST_CASE("validate_against_schema: invalid schema JSON throws", "[SchemaValidation]") {

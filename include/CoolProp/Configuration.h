@@ -117,6 +117,7 @@ class ConfigurationItem
     configuration_keys get_key() const {
         return this->key;
     }
+
    private:
     void check_data_type(ConfigurationDataTypes type) const {
         if (type != this->type) {
