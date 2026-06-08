@@ -31,6 +31,15 @@ find_package(Cython REQUIRED)
 # shipped (legacy Cython) wheel is completely unchanged.  When ON, the nanobind
 # core (CoolProp.<abi3>.so) replaces the legacy Cython CoolProp module and the
 # link-free State capsule shim is built as CoolProp.State.
+#
+# A `COOLPROP_NANOBIND=ON` *environment* build flips this on via a
+# scikit-build-core override (pyproject.toml) that injects
+# cmake.define.COOLPROP_NANOBIND=ON; the same env var (on Py>=3.12) also turns
+# on the abi3 wheel tag.  Both signals flow through ONE scikit-build-core
+# override block, so they cannot diverge.  `-DCOOLPROP_NANOBIND=ON` directly
+# (or via cmake.define) still works for nanobind selection; abi3-ness of the
+# Cython sidecars follows scikit-build-core's own SKBUILD_SABI_VERSION below, so
+# a define-only build simply yields a valid per-version nanobind wheel.
 option(COOLPROP_NANOBIND "Build the nanobind-based CoolProp package (core + State capsule shim)" OFF)
 
 # Set root directory
@@ -166,6 +175,14 @@ add_custom_command(
     VERBATIM
 )
 
+# Extra args injected into the Cython sidecars' Python_add_library() calls.
+# Empty for the legacy build (sidecars stay per-version, WITH_SOABI).  The
+# nanobind branch fills this with `USE_SABI <ver>` whenever scikit-build-core
+# tagged the wheel abi3 (SKBUILD_SABI_VERSION), so the State + _constants
+# extensions are limited-API and the whole wheel is a single cp312-abi3 artifact.
+# See the COOLPROP_NANOBIND branch below.
+set(_sidecar_sabi "")
+
 if(NOT COOLPROP_NANOBIND)
 
 # Generate CoolProp module
@@ -212,6 +229,28 @@ else()
 endif()
 
 else()  # COOLPROP_NANOBIND: nanobind core + capsule State shim
+
+# The nanobind core uses STABLE_ABI (abi3) on Python >= 3.12 automatically; for
+# the wheel to be a single cp312-abi3 artifact the two Cython sidecars (State,
+# _constants) must ALSO be limited-API.  Drive that off scikit-build-core's OWN
+# signal -- SKBUILD_SABI_VERSION, which it sets to e.g. "3.12" exactly when
+# wheel.py-api tagged the wheel abi3, and leaves empty otherwise.  Following the
+# wheel-tag decision (rather than re-deriving abi3 from the Python version or a
+# second env read) guarantees the .so ABI and the wheel tag can never disagree:
+# an abi3-tagged wheel always gets abi3 sidecars, a version-specific wheel always
+# gets per-version sidecars.  So Py<3.12, a define-only nanobind build (no abi3
+# tag), and a direct cmake build all correctly fall back to per-version sidecars.
+# USE_SABI (FindPython) defines Py_LIMITED_API, links Python::SABIModule, and
+# gives the module the .abi3 SOABI suffix.
+if(DEFINED SKBUILD_SABI_VERSION AND SKBUILD_SABI_VERSION)
+    if(NOT TARGET Python::SABIModule)
+        message(FATAL_ERROR
+            "scikit-build-core requested an abi3 wheel (SABI ${SKBUILD_SABI_VERSION}) "
+            "but the Development.SABIModule component (CMake >= 3.26) is missing, so "
+            "the Cython sidecars cannot be built limited-API; have CMake ${CMAKE_VERSION}.")
+    endif()
+    set(_sidecar_sabi USE_SABI ${SKBUILD_SABI_VERSION})
+endif()
 
 # ---- nanobind core (CoolProp.<abi3>.so) replaces the legacy Cython module ----
 execute_process(
@@ -261,7 +300,7 @@ add_custom_command(
     COMMENT "Cythonizing State.pyx (capsule shim)"
     VERBATIM
 )
-Python_add_library(State_module MODULE WITH_SOABI
+Python_add_library(State_module MODULE WITH_SOABI ${_sidecar_sabi}
     "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/State.cpp"
 )
 target_include_directories(State_module PRIVATE
@@ -277,8 +316,9 @@ endif()
 
 endif()  # COOLPROP_NANOBIND
 
-# Create _constants extension module
-Python_add_library(_constants_module MODULE WITH_SOABI
+# Create _constants extension module.  `_sidecar_sabi` is empty for the legacy
+# build (per-version) and `USE_SABI <ver>` for the nanobind abi3 build.
+Python_add_library(_constants_module MODULE WITH_SOABI ${_sidecar_sabi}
     "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/_constants.cpp"
 )
 
