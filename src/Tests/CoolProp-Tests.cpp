@@ -2774,6 +2774,87 @@ TEST_CASE("Check the PC-SAFT pressure function", "[pcsaft_pressure]") {
     CHECK(abs((p_calc / p) - 1) < 1e-4);
 }
 
+TEST_CASE("Tkaczuk et al. (2020) cryogenic mixtures reproduce Table 8", "[Tkaczuk]") {
+    // Validation points from Tkaczuk, Lemmon, Bell, Luchier, Millet,
+    // J. Phys. Chem. Ref. Data 49, 023101 (2020), Table 8: equimolar
+    // (0.50/0.50) composition at T = 200 K and rho = 10 mol/dm^3.
+    const double T = 200.0, rhomolar = 10000.0;  // 10 mol/dm^3 -> mol/m^3
+    std::vector<double> z(2, 0.5);
+
+    // The reference pressures were generated (see the paper's supplementary
+    // CoolProp validation script) with NORMALIZE_GAS_CONSTANTS = false, i.e.
+    // each mixture uses the mole-fraction-weighted average of its components'
+    // own EOS gas constants rather than the harmonized CODATA value.  Forcing
+    // CODATA instead shifts the argon-containing pairs by ~2.7e-6 (argon's EOS
+    // R = 8.31451 vs CODATA 8.314463), so match the paper's convention here.
+    // RAII so the global config is restored even if a CHECK below throws.
+    struct NormalizeGuard
+    {
+        bool prev;
+        NormalizeGuard() : prev(CoolProp::get_config_bool(NORMALIZE_GAS_CONSTANTS)) {
+            CoolProp::set_config_bool(NORMALIZE_GAS_CONSTANTS, false);
+        }
+        ~NormalizeGuard() {
+            CoolProp::set_config_bool(NORMALIZE_GAS_CONSTANTS, prev);
+        }
+    } normalize_guard;
+
+    struct
+    {
+        const char* fluids;
+        double p_ref;
+    } cases[] = {
+      {"Helium&Neon", 18430775.292601},
+      {"Helium&Argon", 17128034.388363},
+      {"Neon&Argon", 15905875.375781},
+    };
+    for (auto& c : cases) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", c.fluids));
+        AS->set_mole_fractions(z);
+        // T = 200 K is above the critical temperature of every constituent
+        // (Ar Tc = 150.7 K is the highest), so the state is single-phase.
+        // Impose the phase: the HEOS density-temperature flash does not yet
+        // run the phase determination for mixtures, but it evaluates the
+        // pressure directly from (rho, T) when a phase is imposed.
+        AS->specify_phase(CoolProp::iphase_supercritical_gas);
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+        double p = AS->p();
+        CAPTURE(c.fluids);
+        CAPTURE(p);
+        CAPTURE(c.p_ref);
+        // CoolProp reproduces the published pressures essentially to machine
+        // precision (observed < 1e-12); 1e-10 leaves a little platform margin.
+        CHECK(std::abs(p / c.p_ref - 1) < 1e-10);
+    }
+
+    // The equimolar pressures above are algebraically invariant under
+    // beta -> 1/beta (the GERG reducing weight x1*x2*(x1+x2)/(beta^2*x1+x2)
+    // collapses to beta/(beta^2+1) at x1=x2), so they cannot detect a
+    // Name1/Name2 (and hence beta) inversion in the binary-pair table.  Pin
+    // the reducing temperature and density at a NON-equimolar composition,
+    // where the asymmetric reducing parameters do matter.  Reference values
+    // computed directly from the GERG reducing rules (paper Eq. 3) with the
+    // Table 6 parameters in the documented (i,j) order and CoolProp's pure
+    // reducing constants; an inverted betaT shifts T_r by 0.4-3%.
+    struct
+    {
+        const char* fluids;
+        double Tr_ref, rhor_ref;
+    } redcases[] = {
+      {"Helium&Neon", 26.3675566619, 23988.632514},
+      {"Helium&Argon", 87.5390792465, 15166.941197},
+      {"Neon&Argon", 111.4722707992, 15642.518187},
+    };
+    std::vector<double> znq{0.3, 0.7};
+    for (auto& c : redcases) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", c.fluids));
+        AS->set_mole_fractions(znq);
+        CAPTURE(c.fluids);
+        CHECK(std::abs(AS->T_reducing() / c.Tr_ref - 1) < 1e-8);
+        CHECK(std::abs(AS->rhomolar_reducing() / c.rhor_ref - 1) < 1e-6);
+    }
+}
+
 TEST_CASE("Check the PC-SAFT density function", "[pcsaft_density]") {
     double den = 9033.114209728405;
     double den_calc = CoolProp::PropsSI("Dmolar", "T|liquid", 320., "P", 101325., "PCSAFT::TOLUENE");
@@ -5013,8 +5094,7 @@ TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads"
     SECTION("Cubic SRK - schema-invalid payload (missing required fields) throws") {
         // Provides name, CAS, Tc, pc, molemass but omits the *_units fields and
         // acentric, all of which are listed in the cubic schema's "required" array.
-        const std::string bad_cubic =
-          R"([{"name":"BadFluid","CAS":"000-00-0","Tc":400.0,"pc":3e6,"molemass":0.04}])";
+        const std::string bad_cubic = R"([{"name":"BadFluid","CAS":"000-00-0","Tc":400.0,"pc":3e6,"molemass":0.04}])";
         CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("SRK", bad_cubic), CoolProp::ValueError);
     }
 
@@ -5030,10 +5110,13 @@ TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads"
         // (at level 0 it silently returns); raise it for this check and restore
         // unconditionally via RAII, so other tests are unaffected even if the
         // assertion throws an unexpected type.
-        struct DebugLevelGuard {
+        struct DebugLevelGuard
+        {
             int saved;
             DebugLevelGuard() : saved(CoolProp::get_debug_level()) {}
-            ~DebugLevelGuard() { CoolProp::set_debug_level(saved); }
+            ~DebugLevelGuard() {
+                CoolProp::set_debug_level(saved);
+            }
         } guard;
         CoolProp::set_debug_level(1);
         CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("PCSAFT", "this is not json"), CoolProp::ValueError);
@@ -5044,10 +5127,13 @@ TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads"
     //    "required" array, so Valijson rejects the payload and the loader throws when
     //    debug_level > 0.
     SECTION("PCSAFT - schema-invalid payload (missing required fields) throws at debug_level > 0") {
-        struct DebugLevelGuard {
+        struct DebugLevelGuard
+        {
             int saved;
             DebugLevelGuard() : saved(CoolProp::get_debug_level()) {}
-            ~DebugLevelGuard() { CoolProp::set_debug_level(saved); }
+            ~DebugLevelGuard() {
+                CoolProp::set_debug_level(saved);
+            }
         } guard;
         CoolProp::set_debug_level(1);
         // Provides name and CAS but omits m, sigma, sigma_units, u, u_units,
