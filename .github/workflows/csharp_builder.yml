@@ -75,8 +75,10 @@ jobs:
         run: |
           set -euo pipefail
           # The shared object keeps the platform 'lib' prefix on ELF/Mach-O
-          # (PREFIX "" is Windows-only) → libCoolPropCsharp.{so,dylib}.
-          wrapper=$(find build install_root -type f \( -name '*CoolPropCsharp.so' -o -name '*CoolPropCsharp.dylib' \) | head -1)
+          # (PREFIX "" is Windows-only) → libCoolPropCsharp.{so,dylib}. Include
+          # the SONAME-versioned forms (libCoolPropCsharp.so.<ver>, the regular
+          # file behind the symlink) so -type f still finds it if versioned.
+          wrapper=$(find build install_root -type f \( -name '*CoolPropCsharp.so' -o -name '*CoolPropCsharp.so.*' -o -name '*CoolPropCsharp.dylib' -o -name '*CoolPropCsharp.*.dylib' \) | head -1)
           if [ -z "$wrapper" ]; then
             echo "FAIL: CoolPropCsharp shared object not found under build/ or install_root/" >&2
             exit 1

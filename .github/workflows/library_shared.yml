@@ -63,7 +63,10 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        lib=$(find build install_root -type f \( -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' \) | head -1)
+        # Match the SONAME-versioned real file too: install gives libCoolProp.so
+        # as a symlink to libCoolProp.so.<ver> (the regular file), and -type f
+        # excludes the symlink — so name the versioned forms explicitly.
+        lib=$(find build install_root -type f \( -name 'libCoolProp.so' -o -name 'libCoolProp.so.*' -o -name 'libCoolProp.dylib' -o -name 'libCoolProp.*.dylib' \) | head -1)
         if [ -z "$lib" ]; then
           echo "FAIL: libCoolProp shared object not found under build/ or install_root/" >&2
           exit 1
