@@ -150,7 +150,7 @@ jobs:
           set -euo pipefail
           uv venv --python 3.13
           source .venv/bin/activate
-          uv pip install nanobind cython scikit-build-core ninja pytest
+          uv pip install nanobind cython scikit-build-core ninja pytest mypy numpy
           # Release: the wheel compiles the whole core (incl. SVDSBTL); Debug is
           # very slow. COOLPROP_NANOBIND=ON selects the nanobind core + State shim.
           uv build --wheel --no-build-isolation \
