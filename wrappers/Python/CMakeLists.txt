@@ -40,6 +40,9 @@ set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
 include("${ROOT_DIR}/cmake/CPM.cmake")
 include("${ROOT_DIR}/cmake/dependencies.cmake")
 
+list(APPEND CMAKE_MODULE_PATH "${ROOT_DIR}/cmake")
+include(CoolPropJSONVisibility)
+
 # ============================================================================
 # Generate headers and constants (only when dependencies change)
 # ============================================================================
@@ -195,6 +198,7 @@ target_include_directories(CoolProp_module PRIVATE
 )
 
 target_link_libraries(CoolProp_module PRIVATE miniz)
+coolprop_hide_json_symbols(CoolProp_module)
 
 # Set output name to CoolProp (not CoolProp_module)
 set_target_properties(CoolProp_module PROPERTIES
@@ -225,6 +229,7 @@ target_include_directories(CoolProp_module PRIVATE
 )
 target_link_libraries(CoolProp_module PRIVATE miniz)
 set_target_properties(CoolProp_module PROPERTIES OUTPUT_NAME "CoolProp" PREFIX "")
+coolprop_hide_json_symbols(CoolProp_module)
 
 # ---- PEP 561 type stub for the nanobind core (parity with the legacy wheel) ----
 # The core .so is self-contained (no Python-level imports at init), so nanobind's

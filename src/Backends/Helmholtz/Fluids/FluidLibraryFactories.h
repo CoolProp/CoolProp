@@ -12,8 +12,8 @@
 // `struct Values` (plain/POD fields) plus a single `explicit T(const Values&)`
 // ctor; these factories own all nlohmann parsing and hand a Values across, so
 // no JSON type appears in any installed header. (This is distinct from the
-// CP_JSON_LOCAL hidden-visibility treatment used on internal *loader* methods
-// that must take nlohmann::json directly to consume parsed arrays.)
+// link-time export control via cmake/CoolPropJSONVisibility.cmake that hides
+// nlohmann/valijson symbols per shared product at link time.)
 
 #include "CoolProp/detail/json.h"
 #include "CoolProp/fluids/Ancillaries.h"

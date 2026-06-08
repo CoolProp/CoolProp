@@ -3,61 +3,34 @@
 
 // Internal, NON-INSTALLED wrapper around nlohmann/json.
 //
-// Symbol-leak strategy (see migration spec §4): nlohmann is included under
-// hidden ELF/Mach-O visibility so none of its (weak/inline) symbols are
-// exported from CoolProp's shared products. Combined with nlohmann's own
-// versioned inline namespace (nlohmann::json_abi_v3_x_x), this prevents the
-// cross-library ODR/symbol clashes that motivated the migration. Do NOT
-// rename nlohmann's namespace here: Valijson's nlohmann adapter references
-// nlohmann::json literally and a rename would break it.
+// Symbol-leak strategy: nlohmann and valijson symbols are hidden at LINK time
+// per shared product via cmake/CoolPropJSONVisibility.cmake, which applies an
+// ELF --version-script (Linux/ELF) or a Mach-O -unexported_symbols_list
+// (macOS) hide-list to every shared product. This replaces the former
+// compile-time GCC visibility pragma (which poisoned __assert_fail in
+// non-NDEBUG loader builds). Combined with nlohmann's own versioned inline
+// namespace (nlohmann::json_abi_v3_x_x), this prevents cross-library
+// ODR/symbol clashes. Do NOT rename nlohmann's namespace here: Valijson's
+// nlohmann adapter references nlohmann::json literally and a rename would
+// break it.
 
 #include "CoolProp/Exceptions.h"
 #include "CoolProp/detail/tools.h"  // for CoolProp::format / CoolPropDbl
 
-// STOPGAP (CoolProp-rj2i): pre-include — at DEFAULT visibility, BEFORE the
-// hidden-visibility pragma below — the system headers that nlohmann/json and
-// valijson reach. GCC pins a symbol's ELF visibility at its FIRST declaration
-// in a TU. <cassert> re-declares __assert_fail UNGUARDED on every include (to
-// support NDEBUG toggling), so if its first declaration lands inside the hidden
-// region (as it did once these headers were pulled into the loader TUs),
-// __assert_fail becomes GLOBAL HIDDEN UND and the non-NDEBUG shared link (e.g.
-// the docs Octave .oct) cannot bind it. Pinning these externs here keeps them
-// DEFAULT. <cassert> is the essential one (uniquely unguarded); the rest are
-// defense-in-depth for differing include orders. This block AND the pragma are
-// deleted by the link-time export-control rework (Option A) — see
-// docs/superpowers/specs/2026-06-07-json-symbol-visibility-strategy-reassessment-design.md
-#include <cassert>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <exception>
-#include <iostream>
 #include <limits>
-#include <memory>
-#include <new>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <system_error>
-#include <typeinfo>
 #include <vector>
-
-#if defined(__GNUC__) || defined(__clang__)
-#    pragma GCC visibility push(hidden)
-#endif
 
 #include <nlohmann/json.hpp>
 #include <valijson/adapters/nlohmann_json_adapter.hpp>
 #include <valijson/schema.hpp>
 #include <valijson/schema_parser.hpp>
 #include <valijson/validator.hpp>
-
-#if defined(__GNUC__) || defined(__clang__)
-#    pragma GCC visibility pop
-#endif
 
 namespace cpjson {
 
