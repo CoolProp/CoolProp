@@ -1,5 +1,4 @@
-// Catch2 tests for the nlohmann-backed cpjson helpers and Valijson schema
-// validation (RapidJSON→nlohmann migration, Phase 0).
+// Catch2 tests for the nlohmann-backed cpjson helpers and Valijson schema validation.
 
 #if defined(ENABLE_CATCH)
 

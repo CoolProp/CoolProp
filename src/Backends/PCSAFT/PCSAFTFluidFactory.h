@@ -3,7 +3,7 @@
 
 // NON-INSTALLED factory that builds a PCSAFTFluid from nlohmann::json. Lives
 // under src/ so the nlohmann::json type never appears in the installed
-// PCSAFTFluid.h. Mirrors the (now-removed) rapidjson constructor.
+// PCSAFTFluid.h. Mirrors the former JSON-document constructor this factory replaced.
 
 #include "CoolProp/detail/json.h"
 #include "CoolProp/fluids/PCSAFTFluid.h"

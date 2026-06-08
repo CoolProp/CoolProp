@@ -56,7 +56,7 @@ values = [
     # all_fluids is embedded as CBOR (all_fluids_CBOR.h via zvalues below); the
     # uncompressed all_fluids_JSON.h string header is no longer consumed by any
     # source and is not generated. The remaining *_JSON.h headers are still used
-    # by the (rapidjson-based) incompressible / mixture / cubic / PC-SAFT loaders.
+    # by the (nlohmann/json-based) incompressible / mixture / cubic / PC-SAFT loaders.
     ('all_incompressibles.json', 'all_incompressibles_JSON.h', 'all_incompressibles_JSON'),
     ('mixtures/mixture_departure_functions.json', 'mixture_departure_functions_JSON.h', 'mixture_departure_functions_JSON'),
     ('mixtures/mixture_binary_pairs.json', 'mixture_binary_pairs_JSON.h', 'mixture_binary_pairs_JSON'),

@@ -19,8 +19,8 @@
 # detail/configuration_keys.h, detail/strings.h, detail/tools.h,
 # detail/CachedElement.h, detail/filepaths.h, detail/msgpack.h,
 # detail/PlatformDetermination.h, detail/state_capi.h, detail/atomic_write.h.
-# This control does NOT name detail/rapidjson.h because Phase Final will
-# delete that header; any of the above is sufficient.
+# This control does NOT name detail/rapidjson.h (that header was deleted in
+# Phase Final); any of the above is sufficient.
 #
 # Fail-closed: a failed `cmake --install`, an empty install tree, or a
 # violated assertion is a FAILURE, never a vacuous pass (same discipline as
