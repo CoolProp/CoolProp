@@ -1,13 +1,10 @@
 
 #include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
 #include <cmath>
 
 #include "VTPRBackend.h"
-#include "Configuration.h"
-#include "Exceptions.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/Exceptions.h"
 
 static UNIFACLibrary::UNIFACParameterLibrary lib;
 
@@ -19,7 +16,7 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string>& names, bool ge
     is_pure_or_pseudopure = (N == 1);
 
     // Reset the residual Helmholtz energy class
-    residual_helmholtz.reset(new CubicResidualHelmholtz(this));
+    residual_helmholtz = std::make_shared<CubicResidualHelmholtz>(this);
 
     // If pure, set the mole fractions to be unity
     if (is_pure_or_pseudopure) {
@@ -27,9 +24,9 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string>& names, bool ge
     }
 
     // Now set the reducing function for the mixture
-    Reducing.reset(new ConstantReducingFunction(cubic->get_Tr(), cubic->get_rhor()));
+    Reducing = std::make_shared<ConstantReducingFunction>(cubic->get_Tr(), cubic->get_rhor());
 
-    VTPRCubic* _cubic = static_cast<VTPRCubic*>(cubic.get());
+    auto* _cubic = static_cast<VTPRCubic*>(cubic.get());
     _cubic->get_unifaq().set_components("name", names);
     _cubic->get_unifaq().set_interaction_parameters();
 
@@ -67,7 +64,7 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string>& names, bool ge
 
 void CoolProp::VTPRBackend::set_alpha_from_components() {
 
-    VTPRCubic* _cubic = static_cast<VTPRCubic*>(cubic.get());
+    auto* _cubic = static_cast<VTPRCubic*>(cubic.get());
     const std::vector<UNIFACLibrary::Component>& components = _cubic->get_unifaq().get_components();
 
     /// If components is not present, you are using a vanilla cubic, so don't do anything
@@ -81,7 +78,7 @@ void CoolProp::VTPRBackend::set_alpha_from_components() {
             const std::vector<double>& c = components[i].alpha_coeffs;
             shared_ptr<AbstractCubicAlphaFunction> acaf;
             if (alpha_type == "Twu") {
-                acaf.reset(new TwuAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]));
+                acaf = std::make_shared<TwuAlphaFunction>(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]);
             } else if (alpha_type == "MathiasCopeman" || alpha_type == "Mathias-Copeman") {
                 acaf.reset(
                   new MathiasCopemanAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]));
@@ -93,7 +90,7 @@ void CoolProp::VTPRBackend::set_alpha_from_components() {
     }
 }
 
-CoolPropDbl CoolProp::VTPRBackend::calc_molar_mass(void) {
+CoolPropDbl CoolProp::VTPRBackend::calc_molar_mass() {
     double summer = 0;
     for (unsigned int i = 0; i < N; ++i) {
         summer += mole_fractions[i] * molemass[i];
@@ -104,18 +101,18 @@ CoolPropDbl CoolProp::VTPRBackend::calc_molar_mass(void) {
 void CoolProp::VTPRBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                           const double value) {
     // bound-check indices
-    if (i < 0 || i >= N) {
-        if (j < 0 || j >= N) {
-            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N-1));
+    if (i >= N) {
+        if (j >= N) {
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
-            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
-    } else if (j < 0 || j >= N) {
-        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N-1));
-    }    
+    } else if (j >= N) {
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
+    }
     cubic->set_interaction_parameter(i, j, parameter, value);
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        (*it)->set_binary_interaction_double(i, j, parameter, value);
+    for (auto& linked_state : linked_states) {
+        linked_state->set_binary_interaction_double(i, j, parameter, value);
     }
 };
 
@@ -125,15 +122,15 @@ void CoolProp::VTPRBackend::set_Q_k(const size_t sgi, const double value) {
 
 double CoolProp::VTPRBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) {
     // bound-check indices
-    if (i < 0 || i >= N) {
-        if (j < 0 || j >= N) {
-            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N-1));
+    if (i >= N) {
+        if (j >= N) {
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
-            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
-    } else if (j < 0 || j >= N) {
-        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N-1));
-    }    
+    } else if (j >= N) {
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
+    }
     return cubic->get_interaction_parameter(i, j, parameter);
 };
 
@@ -159,7 +156,7 @@ const UNIFACLibrary::UNIFACParameterLibrary& CoolProp::VTPRBackend::LoadLibrary(
 
 CoolPropDbl CoolProp::VTPRBackend::calc_fugacity_coefficient(std::size_t i) {
     //double slower = log(HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(i));
-    VTPRCubic* _cubic = static_cast<VTPRCubic*>(cubic.get());
+    auto* _cubic = static_cast<VTPRCubic*>(cubic.get());
     std::vector<double> here = _cubic->ln_fugacity_coefficient(mole_fractions, rhomolar(), p(), T());
     return exp(here[i]);
 }

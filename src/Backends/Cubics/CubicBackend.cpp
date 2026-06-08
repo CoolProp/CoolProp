@@ -1,7 +1,11 @@
 #include "CubicBackend.h"
-#include "Solvers.h"
-#include "Configuration.h"
+
+#include <cmath>
+#include "CoolProp/numerics/Solvers.h"
+#include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
+#include "Backends/Helmholtz/MixtureDerivatives.h"
+#include <Eigen/Dense>
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     N = cubic->get_Tc().size();
@@ -13,7 +17,7 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     resize(N);
 
     // Reset the residual Helmholtz energy class
-    residual_helmholtz.reset(new CubicResidualHelmholtz(this));
+    residual_helmholtz = std::make_shared<CubicResidualHelmholtz>(this);
     // If pure, set the mole fractions to be unity
     if (is_pure_or_pseudopure) {
         mole_fractions = std::vector<CoolPropDbl>(1, 1.0);
@@ -21,7 +25,7 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
         mole_fractions.clear();
     }
     // Now set the reducing function for the mixture
-    Reducing.reset(new ConstantReducingFunction(cubic->get_Tr(), cubic->get_rhor()));
+    Reducing = std::make_shared<ConstantReducingFunction>(cubic->get_Tr(), cubic->get_rhor());
 
     // Set the alpha function based on the components in use
     set_alpha_from_components();
@@ -54,7 +58,7 @@ void CoolProp::AbstractCubicBackend::set_alpha_from_components() {
             const std::vector<double>& c = components[i].alpha_coeffs;
             shared_ptr<AbstractCubicAlphaFunction> acaf;
             if (alpha_type == "Twu") {
-                acaf.reset(new TwuAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]));
+                acaf = std::make_shared<TwuAlphaFunction>(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]);
             } else if (alpha_type == "MathiasCopeman" || alpha_type == "Mathias-Copeman") {
                 acaf.reset(
                   new MathiasCopemanAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]));
@@ -78,7 +82,7 @@ void CoolProp::AbstractCubicBackend::set_alpha0_from_components() {
 
     for (std::size_t i = 0; i < N; ++i) {
         CoolPropFluid fld;
-        fld.EOSVector.push_back(EquationOfState());
+        fld.EOSVector.emplace_back();
         fld.EOS().alpha0 = components[i].alpha0;
         _components.push_back(fld);
     }
@@ -124,10 +128,11 @@ std::string CoolProp::AbstractCubicBackend::fluid_param_string(const std::string
     }
 }
 
-std::vector<std::string> CoolProp::AbstractCubicBackend::calc_fluid_names(void) {
+std::vector<std::string> CoolProp::AbstractCubicBackend::calc_fluid_names() {
     std::vector<std::string> out;
-    for (std::size_t i = 0; i < components.size(); ++i) {
-        out.push_back(components[i].name);
+    out.reserve(components.size());
+    for (auto& component : components) {
+        out.push_back(component.name);
     }
     return out;
 }
@@ -152,7 +157,7 @@ void CoolProp::AbstractCubicBackend::get_critical_point_search_radii(double& R_d
     CoolProp::HelmholtzEOSMixtureBackend::get_critical_point_search_radii(R_delta, R_tau);
 
     // Now we scale them to get the appropriate search radii
-    double Tr_GERGlike, rhor_GERGlike;
+    double Tr_GERGlike = NAN, rhor_GERGlike = NAN;
     get_linear_reducing_parameters(rhor_GERGlike, Tr_GERGlike);
     R_delta *= rhor_GERGlike / rhomolar_reducing() * 5;
     R_tau *= T_reducing() / Tr_GERGlike * 5;
@@ -184,7 +189,7 @@ void CoolProp::AbstractCubicBackend::get_critical_point_starting_values(double& 
     // delta0 = rho/rhor_GERG*(rhor_GERGlike/rhor_cubic)
     // tau0 = Tr_GERG/T*(Tr_cubic/Tr_GERGlike)
     //
-    double Tr_GERGlike, rhor_GERGlike;
+    double Tr_GERGlike = NAN, rhor_GERGlike = NAN;
     get_linear_reducing_parameters(rhor_GERGlike, Tr_GERGlike);
     delta0 *= rhor_GERGlike / rhomolar_reducing();
     tau0 *= T_reducing() / Tr_GERGlike;
@@ -196,14 +201,47 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_pressure_nocache(CoolPropDbl T,
     return _rhomolar * gas_constant() * _T * (1 + delta * cubic->alphar(tau, delta, this->get_mole_fractions_doubleref(), 0, 1));
 }
 void CoolProp::AbstractCubicBackend::update_DmolarT() {
-    // Only works for now when phase is specified
     if (this->imposed_phase_index != iphase_not_imposed) {
         _p = calc_pressure_nocache(_T, _rhomolar);
         _Q = -1;
         _phase = imposed_phase_index;
-    } else {
-        // Pass call to parent class
+        return;
+    }
+    // Mixtures don't have a cubic superancillary; fall through to the HEOS path so the
+    // user sees the same diagnostic as before for unsupported mixture DmolarT input.
+    if (!is_pure_or_pseudopure || get_superanc_eos_code() == CubicSuperAncillary::UNKNOWN_CODE) {
         HelmholtzEOSMixtureBackend::update(DmolarT_INPUTS, this->_rhomolar, this->_T);
+        return;
+    }
+    // Pure SRK/PR: use the Chebyshev superancillary to bracket the dome at T, then pick
+    // the matching EOS root.  Above the superancillary Tmax we are unambiguously single-
+    // phase and just evaluate the EOS directly.
+    const double Tmax = calc_superanc_Tmax();
+    if (_T >= Tmax) {
+        _p = calc_pressure_nocache(_T, _rhomolar);
+        _Q = -1;
+        recalculate_singlephase_phase();
+        return;
+    }
+    const double rhoL_sat = calc_saturation_ancillary(iDmolar, 0, iT, _T);
+    const double rhoV_sat = calc_saturation_ancillary(iDmolar, 1, iT, _T);
+    if (_rhomolar >= rhoL_sat) {
+        _p = calc_pressure_nocache(_T, _rhomolar);
+        _Q = -1;
+        _phase = iphase_liquid;
+    } else if (_rhomolar <= rhoV_sat) {
+        _p = calc_pressure_nocache(_T, _rhomolar);
+        _Q = -1;
+        _phase = iphase_gas;
+    } else {
+        // Inside the dome: pressure is the saturation pressure and quality follows from
+        // the lever rule, 1/rho = (1-Q)/rhoL + Q/rhoV.
+        const double rho = _rhomolar;
+        _p = calc_saturation_ancillary(iP, 0, iT, _T);
+        _Q = (rhoV_sat * (rhoL_sat - rho)) / (rho * (rhoL_sat - rhoV_sat));
+        _phase = iphase_twophase;
+        SatL->update_TDmolarP_unchecked(_T, rhoL_sat, _p);
+        SatV->update_TDmolarP_unchecked(_T, rhoV_sat, _p);
     }
 };
 
@@ -284,7 +322,16 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
-                  << std::endl;
+                  << '\n';
+    }
+
+    // Mass-quality input pair on a true mixture: solve iteratively for Qmolar
+    // before delegating to the molar-pair flash. The inherited HEOS override of
+    // calc_phase_molar_masses (using SatL/SatV->mole_fractions and components[i].molar_mass())
+    // works for cubic backends since they share the same SatL/SatV machinery.
+    if (CoolProp::is_Qmass_pair(input_pair) && mole_fractions.size() > 1) {
+        update_Qmass_pair(input_pair, value1, value2);
+        return;
     }
 
     CoolPropDbl ld_value1 = value1, ld_value2 = value2;
@@ -296,7 +343,11 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
         case PT_INPUTS:
             _p = value1;
             _T = value2;
-            _rhomolar = solver_rho_Tp(value2 /*T*/, value1 /*p*/);
+            if (is_pure_or_pseudopure || imposed_phase_index != iphase_not_imposed) {
+                _rhomolar = solver_rho_Tp(value2 /*T*/, value1 /*p*/);
+            } else {
+                HelmholtzEOSMixtureBackend::update(PT_INPUTS, value1, value2);
+            }
             break;
         case QT_INPUTS:
             _Q = value1;
@@ -366,13 +417,13 @@ class SaturationResidual : public CoolProp::FuncWrapper1D
     double imposed_variable;
     double deltaL, deltaV;
 
-    SaturationResidual(){};
+    SaturationResidual() = default;
     SaturationResidual(CoolProp::AbstractCubicBackend* ACB, CoolProp::input_pairs inputs, double imposed_variable)
-      : ACB(ACB), inputs(inputs), imposed_variable(imposed_variable){};
+      : ACB(ACB), inputs(inputs), imposed_variable(imposed_variable) {};
 
-    double call(double value) {
+    double call(double value) override {
         int Nsolns = 0;
-        double rho0 = -1, rho1 = -1, rho2 = -1, T, p;
+        double rho0 = -1, rho1 = -1, rho2 = -1, T = NAN, p = NAN;
 
         if (inputs == CoolProp::PQ_INPUTS) {
             T = value;
@@ -425,8 +476,8 @@ std::vector<double> CoolProp::AbstractCubicBackend::spinodal_densities() {
     double crho2 = ((-Delta_1 * Delta_1 - Delta_2 * Delta_2 - 4 * Delta_1 * Delta_2) * R * _T * powInt(b, 2) + a * b * (Delta_1 + Delta_2 - 4));
     double crho1 = -2 * (Delta_1 + Delta_2) * R * _T * b + 2 * a;
     double crho0 = -R * _T;
-    double rho0, rho1, rho2, rho3;
-    int Nsoln;
+    double rho0 = NAN, rho1 = NAN, rho2 = NAN, rho3 = NAN;
+    int Nsoln = 0;
     solve_quartic(crho4, crho3, crho2, crho1, crho0, Nsoln, rho0, rho1, rho2, rho3);
     std::vector<double> roots;
     if (rho0 > 0 && 1 / rho0 > b) {
@@ -477,7 +528,7 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
             double neg_log10_pr = (acentric + 1) / (1 / 0.7 - 1) * (Tc / _T - 1);
             double ps_est = pc * pow(10.0, -neg_log10_pr);
 
-            double ps;
+            double ps = NAN;
             if (roots.size() == 2) {
                 double p0 = calc_pressure_nocache(_T, roots[0]);
                 double p1 = calc_pressure_nocache(_T, roots[1]);
@@ -508,75 +559,118 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
     _phase = iphase_twophase;
 }
 CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max) {
-    _rhomolar = solver_rho_Tp(T, p, 40000);
-    return static_cast<double>(_rhomolar);
+    int Nsoln = 0;
+    double rho0 = 0, rho1 = 0, rho2 = 0;
+    rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);
+
+    double rho;
+    if (Nsoln == 1) {
+        rho = rho0;
+    } else if (Nsoln == 3) {
+        if (imposed_phase_index != iphase_not_imposed) {
+            // Delegate to solver_rho_Tp which handles imposed phase
+            return solver_rho_Tp(T, p);
+        }
+        // Three roots, no imposed phase: pick the root with the lowest
+        // Gibbs energy.  This avoids the expensive p_critical() call that
+        // triggers all_critical_points() for many-component mixtures.
+        double rho_vap = (rho0 > 0) ? rho0 : rho1;
+        double rho_liq = rho2;
+        double g_vap = calc_gibbsmolar_nocache(T, rho_vap);
+        double g_liq = calc_gibbsmolar_nocache(T, rho_liq);
+        rho = (g_liq < g_vap) ? rho_liq : rho_vap;
+    } else {
+        throw ValueError("Obtained neither 1 nor three roots");
+    }
+
+    _rhomolar = rho;
+    update_DmolarT_direct(rho, T);
+    _Q = -1;
+    if (imposed_phase_index != iphase_not_imposed) {
+        _phase = imposed_phase_index;
+    } else {
+        _phase = (rho < rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+    }
+    return rho;
 }
-CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess) {
+CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase) {
     int Nsoln = 0;
     double rho0 = 0, rho1 = 0, rho2 = 0, rho = -1;
     rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);  // Densities are sorted in increasing order
     if (Nsoln == 1) {
         rho = rho0;
     } else if (Nsoln == 3) {
-        if (imposed_phase_index != iphase_not_imposed) {
-            // Use imposed phase to select root
-            if (imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) {
-                if (rho0 > 0) {
+        if (phase == iphase_gas || phase == iphase_supercritical_gas) {
+            if (rho0 > 0) {
+                rho = rho0;
+            } else if (rho1 > 0) {
+                rho = rho1;
+            } else if (rho2 > 0) {
+                rho = rho2;
+            } else {
+                throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
+            }
+        } else if (phase == iphase_liquid || phase == iphase_supercritical_liquid) {
+            rho = rho2;
+        } else {
+            throw ValueError("Specified phase is invalid");
+        }
+    } else {
+        throw ValueError("Obtained neither 1 nor three roots");
+    }
+    _phase = phase;
+    _Q = -1;
+    return rho;
+}
+
+CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess) {
+    if (imposed_phase_index != iphase_not_imposed) {
+        return solver_rho_Tp(T, p, imposed_phase_index);
+    }
+    int Nsoln = 0;
+    double rho0 = 0, rho1 = 0, rho2 = 0, rho = -1;
+    rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);  // Densities are sorted in increasing order
+    if (Nsoln == 1) {
+        rho = rho0;
+    } else if (Nsoln == 3) {
+        if (p < p_critical()) {
+            add_transient_pure_state();
+            transient_pure_state->set_mole_fractions(this->mole_fractions);
+            transient_pure_state->update(PQ_INPUTS, p, 0);
+            if (T > transient_pure_state->T()) {
+                double rhoV = transient_pure_state->saturated_vapor_keyed_output(iDmolar);
+                // Gas
+                if (rho0 > 0 && rho0 < rhoV) {
                     rho = rho0;
-                } else if (rho1 > 0) {
+                } else if (rho1 > 0 && rho1 < rhoV) {
                     rho = rho1;
-                } else if (rho2 > 0) {
-                    rho = rho2;
                 } else {
                     throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
                 }
-            } else if (imposed_phase_index == iphase_liquid || imposed_phase_index == iphase_supercritical_liquid) {
-                rho = rho2;
             } else {
-                throw ValueError("Specified phase is invalid");
+                // Liquid
+                rho = rho2;
             }
         } else {
-            if (p < p_critical()) {
-                add_transient_pure_state();
-                transient_pure_state->set_mole_fractions(this->mole_fractions);
-                transient_pure_state->update(PQ_INPUTS, p, 0);
-                if (T > transient_pure_state->T()) {
-                    double rhoV = transient_pure_state->saturated_vapor_keyed_output(iDmolar);
-                    // Gas
-                    if (rho0 > 0 && rho0 < rhoV) {
-                        rho = rho0;
-                    } else if (rho1 > 0 && rho1 < rhoV) {
-                        rho = rho1;
-                    } else {
-                        throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
-                    }
-                } else {
-                    // Liquid
-                    rho = rho2;
-                }
-            } else {
-                throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
-            }
+            throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
         }
     } else {
         throw ValueError("Obtained neither 1 nor three roots");
     }
     if (is_pure_or_pseudopure) {
-        // Set some variables at the end
         this->recalculate_singlephase_phase();
     } else {
-        if (imposed_phase_index != iphase_not_imposed) {
-            // Use the imposed phase index
-            _phase = imposed_phase_index;
+        if (rho < rhomolar_reducing()) {
+            _phase = iphase_gas;
         } else {
-            _phase = iphase_gas;  // TODO: fix this
+            _phase = iphase_liquid;
         }
     }
     _Q = -1;
     return rho;
 }
 
-CoolPropDbl CoolProp::AbstractCubicBackend::calc_molar_mass(void) {
+CoolPropDbl CoolProp::AbstractCubicBackend::calc_molar_mass() {
     double summer = 0;
     for (unsigned int i = 0; i < N; ++i) {
         summer += mole_fractions[i] * components[i].molemass;
@@ -587,13 +681,13 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_molar_mass(void) {
 void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                    const double value) {
     // bound-check indices
-    if (i < 0 || i >= N) {
-        if (j < 0 || j >= N) {
+    if (i >= N) {
+        if (j >= N) {
             throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
             throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
-    } else if (j < 0 || j >= N) {
+    } else if (j >= N) {
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
     }
     if (parameter == "kij" || parameter == "k_ij") {
@@ -601,19 +695,19 @@ void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::si
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        (*it)->set_binary_interaction_double(i, j, parameter, value);
+    for (auto& state : linked_states) {
+        state->set_binary_interaction_double(i, j, parameter, value);
     }
 };
 double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) {
     // bound-check indices
-    if (i < 0 || i >= N) {
-        if (j < 0 || j >= N) {
+    if (i >= N) {
+        if (j >= N) {
             throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
             throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
-    } else if (j < 0 || j >= N) {
+    } else if (j >= N) {
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
     }
     if (parameter == "kij" || parameter == "k_ij") {
@@ -625,16 +719,16 @@ double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::
 
 void CoolProp::AbstractCubicBackend::copy_all_alpha_functions(AbstractCubicBackend* donor) {
     get_cubic()->set_all_alpha_functions(donor->get_cubic()->get_all_alpha_functions());
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+    for (auto& state : linked_states) {
+        auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->copy_all_alpha_functions(this);
     }
 }
 
 void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend* donor) {
     get_cubic()->set_kmat(donor->get_cubic()->get_kmat());
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+    for (auto& state : linked_states) {
+        auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->copy_k(this);
     }
 }
@@ -645,8 +739,8 @@ void CoolProp::AbstractCubicBackend::copy_internals(AbstractCubicBackend& donor)
     this->components = donor.components;
     this->set_alpha_from_components();
     this->set_alpha0_from_components();
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+    for (auto& state : linked_states) {
+        auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->components = donor.components;
         ACB->set_alpha_from_components();
         ACB->set_alpha0_from_components();
@@ -656,7 +750,7 @@ void CoolProp::AbstractCubicBackend::copy_internals(AbstractCubicBackend& donor)
 void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std::string& parameter, const double c1, const double c2,
                                                        const double c3) {
     // bound-check indices
-    if (i < 0 || i >= N) {
+    if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
     if (parameter == "MC" || parameter == "mc" || parameter == "Mathias-Copeman") {
@@ -666,28 +760,28 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+    for (auto& state : linked_states) {
+        auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->set_cubic_alpha_C(i, parameter, c1, c2, c3);
     }
 }
 
 void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) {
     // bound-check indices
-    if (i < 0 || i >= N) {
+    if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
     // Set the volume translation parrameter, currently applied to the whole fluid, not to components.
     if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
         get_cubic()->set_cm(value);
-        for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-            AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+        for (auto& state : linked_states) {
+            auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
             ACB->set_fluid_parameter_double(i, parameter, value);
         }
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
         get_cubic()->set_Q_k(i, value);
-        for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-            AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+        for (auto& state : linked_states) {
+            auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
             ACB->set_fluid_parameter_double(i, parameter, value);
         }
     } else {
@@ -696,7 +790,7 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
 }
 double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
     // bound-check indices
-    if (i < 0 || i >= N) {
+    if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
     // Get the volume translation parrameter, currently applied to the whole fluid, not to components.
@@ -708,3 +802,113 @@ double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
 }
+
+double CoolProp::AbstractCubicBackend::calc_superanc_Tmax() {
+    if (!is_pure_or_pseudopure) {
+        throw ValueError("calc_superanc_Tmax: fluid must be pure");
+    }
+    int eos_code = get_superanc_eos_code();
+    if (eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
+        throw NotImplementedError("calc_superanc_Tmax: no superancillary available for this cubic EOS");
+    }
+    double Ttilde_max = CubicSuperAncillary::get_Ttilde_max(eos_code);
+    std::vector<double> x = {1.0};
+    // tau = T_r/Tc gives alpha=1 regardless of whether T_r is 1.0 or Tc
+    double tau_at_Tc = cubic->get_Tr() / cubic->get_Tc()[0];
+    double a0 = cubic->am_term(tau_at_Tc, x, 0);
+    double bm = cubic->bm_term(x);
+    return Ttilde_max * a0 / (cubic->get_R_u() * bm);
+}
+
+CoolPropDbl CoolProp::AbstractCubicBackend::calc_saturation_ancillary(parameters param, int Q, parameters given, double value) {
+    if (!is_pure_or_pseudopure) {
+        throw NotImplementedError("calc_saturation_ancillary is not implemented for mixtures in the cubic backend");
+    }
+    int eos_code = get_superanc_eos_code();
+    if (eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
+        throw NotImplementedError("calc_saturation_ancillary: no superancillary available for this cubic EOS");
+    }
+    if (given != iT) {
+        throw NotImplementedError(format("calc_saturation_ancillary: only T-given is supported for cubic EOS; got given=%s",
+                                         get_parameter_information(given, "short").c_str()));
+    }
+    double T = value;
+    double Tmax = calc_superanc_Tmax();
+    if (T > Tmax) {
+        throw ValueError(format("calc_saturation_ancillary: T (%g K) exceeds superancillary Tmax (%g K)", T, Tmax));
+    }
+    std::vector<double> x = {1.0};
+    double tau = cubic->get_Tr() / T;
+    double am = cubic->am_term(tau, x, 0);
+    double bm = cubic->bm_term(x);
+    double Ttilde = cubic->get_R_u() * T * bm / am;
+
+    using namespace CubicSuperAncillary;
+    if (param == iP) {
+        double p_tilde = supercubic(eos_code, P_CODE, Ttilde);
+        return p_tilde * am / (bm * bm);
+    } else if (param == iDmolar) {
+        if (Q == 0) {
+            return supercubic(eos_code, RHOL_CODE, Ttilde) / bm;
+        } else {
+            return supercubic(eos_code, RHOV_CODE, Ttilde) / bm;
+        }
+    } else {
+        throw NotImplementedError(
+          format("calc_saturation_ancillary: unsupported param=%s for cubic EOS", get_parameter_information(param, "short").c_str()));
+    }
+}
+
+void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) {
+    if (!is_pure_or_pseudopure) {
+        throw ValueError("update_QT_pure_superanc: fluid must be pure");
+    }
+    int eos_code = get_superanc_eos_code();
+    if (eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
+        throw NotImplementedError("update_QT_pure_superanc: no superancillary available for this cubic EOS");
+    }
+    double Tmax = calc_superanc_Tmax();
+    if (T > Tmax) {
+        throw ValueError(format("update_QT_pure_superanc: T (%g K) exceeds superancillary Tmax (%g K)", T, Tmax));
+    }
+
+    std::vector<double> x = {1.0};
+    double tau = cubic->get_Tr() / T;
+    double am = cubic->am_term(tau, x, 0);
+    double bm = cubic->bm_term(x);
+    double Ttilde = cubic->get_R_u() * T * bm / am;
+
+    using namespace CubicSuperAncillary;
+    CoolPropDbl rhoL = supercubic(eos_code, RHOL_CODE, Ttilde) / bm;
+    CoolPropDbl rhoV = supercubic(eos_code, RHOV_CODE, Ttilde) / bm;
+    CoolPropDbl p = supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm);
+
+    clear();
+    _Q = Q;
+    _T = T;
+    _p = p;
+    _rhomolar = 1.0 / (Q / rhoV + (1.0 - Q) / rhoL);
+    _phase = iphase_twophase;
+
+    SatL->update_TDmolarP_unchecked(T, rhoL, p);
+    SatV->update_TDmolarP_unchecked(T, rhoV, p);
+
+    post_update(false);
+}
+
+/**
+ * @brief Robust Isothermal-Isobaric (PT) Flash for Cubic Equations of State
+ *
+ * Implements the stability analysis and phase split (flash) algorithms based on the
+ * methodology of Michelsen and Mollerup.
+ *
+ * References:
+ * 1. Michelsen, M. L. (1982). "The isothermal flash problem. Part I. Stability."
+ *    Fluid Phase Equilibria, 9(1), 1-19.
+ *    DOI:  10.1016/0378-3812(82)85001-2
+ * 2. Michelsen, M. L. (1982). "The isothermal flash problem. Part II. Phase-split calculation."
+ *    Fluid Phase Equilibria, 9(1), 21-40.
+ *    DOI: 10.1016/0378-3812(82)85002-4
+ * 3. Michelsen, M. L., & Mollerup, J. M. (2007). "Thermodynamic Models: Fundamentals & Computational Aspects."
+ *    ISBN: 87-989961-1-8
+ */

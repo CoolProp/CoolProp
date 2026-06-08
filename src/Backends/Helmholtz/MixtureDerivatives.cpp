@@ -1035,13 +1035,13 @@ CoolPropDbl MixtureDerivatives::dpsir_dxi(HelmholtzEOSMixtureBackend& HEOS, std:
 }
 
 CoolPropDbl MixtureDerivatives::d_rhorTr_dxi(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
-    GERG2008ReducingFunction* GERG = static_cast<GERG2008ReducingFunction*>(HEOS.Reducing.get());
+    auto* GERG = static_cast<GERG2008ReducingFunction*>(HEOS.Reducing.get());
     return HEOS.rhomolar_reducing() * GERG->dTrdxi__constxj(HEOS.mole_fractions, i, xN_flag)
            + HEOS.T_reducing() * GERG->drhormolardxi__constxj(HEOS.mole_fractions, i, xN_flag);
 }
 
 CoolPropDbl MixtureDerivatives::d2_rhorTr_dxidxj(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) {
-    GERG2008ReducingFunction* GERG = static_cast<GERG2008ReducingFunction*>(HEOS.Reducing.get());
+    auto* GERG = static_cast<GERG2008ReducingFunction*>(HEOS.Reducing.get());
     return (HEOS.rhomolar_reducing() * GERG->d2Trdxidxj(HEOS.mole_fractions, i, j, xN_flag)
             + GERG->drhormolardxi__constxj(HEOS.mole_fractions, j, xN_flag) * GERG->dTrdxi__constxj(HEOS.mole_fractions, i, xN_flag)
             + HEOS.T_reducing() * GERG->d2rhormolardxidxj(HEOS.mole_fractions, i, j, xN_flag)
@@ -1118,7 +1118,7 @@ double mix_deriv_err_func(double numeric, double analytic) {
     }
 }
 
-typedef CoolProp::MixtureDerivatives MD;
+using MD = CoolProp::MixtureDerivatives;
 
 enum derivative
 {
@@ -1136,44 +1136,37 @@ enum derivative
     CONST_TRHO
 };
 
-typedef double (*zero_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, CoolProp::x_N_dependency_flag xN_flag);
-typedef double (*one_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag);
-typedef double (*two_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
-                                            CoolProp::x_N_dependency_flag xN_flag);
-typedef double (*three_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
-                                              CoolProp::x_N_dependency_flag xN_flag);
+using zero_mole_fraction_pointer = double (*)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, CoolProp::x_N_dependency_flag xN_flag);
+using one_mole_fraction_pointer = double (*)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag);
+using two_mole_fraction_pointer = double (*)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
+                                             CoolProp::x_N_dependency_flag xN_flag);
+using three_mole_fraction_pointer = double (*)(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
+                                               CoolProp::x_N_dependency_flag xN_flag);
 
 template <class backend>
 class DerivativeFixture
 {
    public:
-    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS, HEOS_plus_tau, HEOS_minus_tau, HEOS_plus_delta, HEOS_minus_delta, HEOS_plus_2tau, HEOS_minus_2tau, HEOS_plus_2delta, HEOS_minus_2delta, HEOS_plus_T__constp,
-      HEOS_minus_T__constp, HEOS_plus_p__constT, HEOS_minus_p__constT, HEOS_plus_T__constrho, HEOS_minus_T__constrho, HEOS_plus_rho__constT,
-      HEOS_minus_rho__constT;
+    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS, HEOS_plus_tau, HEOS_minus_tau, HEOS_plus_delta, HEOS_minus_delta, HEOS_plus_2tau,
+      HEOS_minus_2tau, HEOS_plus_2delta, HEOS_minus_2delta, HEOS_plus_T__constp, HEOS_minus_T__constp, HEOS_plus_p__constT, HEOS_minus_p__constT,
+      HEOS_plus_T__constrho, HEOS_minus_T__constrho, HEOS_plus_rho__constT, HEOS_minus_rho__constT;
     std::vector<shared_ptr<CoolProp::HelmholtzEOSMixtureBackend>> HEOS_plus_z, HEOS_minus_z, HEOS_plus_z__constTrho, HEOS_minus_z__constTrho,
       HEOS_plus_n, HEOS_minus_n, HEOS_plus_2z, HEOS_minus_2z, HEOS_plus_2z__constTrho, HEOS_minus_2z__constTrho;
     CoolProp::x_N_dependency_flag xN;
     double dtau, ddelta, dz, dn, tol, dT, drho, dp;
-    DerivativeFixture() : xN(XN_INDEPENDENT) {
-        dtau = 1e-6;
-        ddelta = 1e-6;
-        dz = 1e-6;
-        dn = 1e-6;
-        dT = 1e-3;
-        drho = 1e-3;
-        dp = 1;
-        tol = 5e-6;
+    DerivativeFixture() : xN(XN_INDEPENDENT), dtau(1e-6), ddelta(1e-6), dz(1e-6), dn(1e-6), dT(1e-3), drho(1e-3), dp(1), tol(5e-6) {
+
         std::vector<std::string> names;
-        names.push_back("n-Pentane");
-        names.push_back("Ethane");
-        names.push_back("n-Propane");
-        names.push_back("n-Butane");
+        names.emplace_back("n-Pentane");
+        names.emplace_back("Ethane");
+        names.emplace_back("n-Propane");
+        names.emplace_back("n-Butane");
         std::vector<CoolPropDbl> mole_fractions;
         mole_fractions.push_back(0.1);
         mole_fractions.push_back(0.12);
         mole_fractions.push_back(0.18);
         mole_fractions.push_back(0.6);
-        HEOS.reset(new backend(names));
+        HEOS = std::make_shared<backend>(names);
         HEOS->set_mole_fractions(mole_fractions);
         HEOS->specify_phase(CoolProp::iphase_gas);
         HEOS->update_DmolarT_direct(300, 300);
@@ -1197,12 +1190,14 @@ class DerivativeFixture
         // Constant composition, varying state
         HEOS_plus_tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta() * HEOS->rhomolar_reducing(), HEOS->T_reducing() / (HEOS->tau() + dtau));
         HEOS_minus_tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta() * HEOS->rhomolar_reducing(), HEOS->T_reducing() / (HEOS->tau() - dtau));
-        HEOS_plus_2tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta() * HEOS->rhomolar_reducing(), HEOS->T_reducing() / (HEOS->tau() + 2*dtau));
-        HEOS_minus_2tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta() * HEOS->rhomolar_reducing(), HEOS->T_reducing() / (HEOS->tau() - 2*dtau));
+        HEOS_plus_2tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta() * HEOS->rhomolar_reducing(), HEOS->T_reducing() / (HEOS->tau() + 2 * dtau));
+        HEOS_minus_2tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta() * HEOS->rhomolar_reducing(), HEOS->T_reducing() / (HEOS->tau() - 2 * dtau));
         HEOS_plus_delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta() + ddelta) * HEOS->rhomolar_reducing(), HEOS->T_reducing() / HEOS->tau());
         HEOS_minus_delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta() - ddelta) * HEOS->rhomolar_reducing(), HEOS->T_reducing() / HEOS->tau());
-        HEOS_plus_2delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta() + 2*ddelta) * HEOS->rhomolar_reducing(), HEOS->T_reducing() / HEOS->tau());
-        HEOS_minus_2delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta() - 2*ddelta) * HEOS->rhomolar_reducing(), HEOS->T_reducing() / HEOS->tau());
+        HEOS_plus_2delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta() + 2 * ddelta) * HEOS->rhomolar_reducing(),
+                                 HEOS->T_reducing() / HEOS->tau());
+        HEOS_minus_2delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta() - 2 * ddelta) * HEOS->rhomolar_reducing(),
+                                  HEOS->T_reducing() / HEOS->tau());
         HEOS_plus_T__constp->update(CoolProp::PT_INPUTS, HEOS->p(), HEOS->T() + dT);
         HEOS_minus_T__constp->update(CoolProp::PT_INPUTS, HEOS->p(), HEOS->T() - dT);
         HEOS_plus_p__constT->update(CoolProp::PT_INPUTS, HEOS->p() + dp, HEOS->T());
@@ -1293,7 +1288,7 @@ class DerivativeFixture
         other->set_mole_fractions(HEOS->get_mole_fractions());
         other->specify_phase(CoolProp::iphase_gas);  // Something homogeneous
     }
-    void zero(const std::string& name, zero_mole_fraction_pointer f, zero_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV) {
+    void zero(const std::string& name, zero_mole_fraction_pointer f, zero_mole_fraction_pointer g = nullptr, derivative wrt = NO_DERIV) {
         double analytic = f(*HEOS, xN);
         double numeric = 0;
         if (wrt == TAU) {
@@ -1309,7 +1304,7 @@ class DerivativeFixture
         CAPTURE(error);
         CHECK(error < tol);
     }
-    void one(const std::string& name, one_mole_fraction_pointer f, one_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV) {
+    void one(const std::string& name, one_mole_fraction_pointer f, one_mole_fraction_pointer g = nullptr, derivative wrt = NO_DERIV) {
         for (int i = 0; i < 4; ++i) {
             double analytic = f(*HEOS, i, xN);
             double numeric = 0;
@@ -1362,7 +1357,7 @@ class DerivativeFixture
             CHECK(error < tol);
         }
     }
-    void two(const std::string& name, two_mole_fraction_pointer f, two_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV) {
+    void two(const std::string& name, two_mole_fraction_pointer f, two_mole_fraction_pointer g = nullptr, derivative wrt = NO_DERIV) {
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 double analytic = f(*HEOS, i, j, xN);
@@ -1411,16 +1406,20 @@ class DerivativeFixture
             }
         }
     }
-    void three(const std::string& name, three_mole_fraction_pointer f, three_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV) {
+    void three(const std::string& name, three_mole_fraction_pointer f, three_mole_fraction_pointer g = nullptr, derivative wrt = NO_DERIV) {
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 for (int k = 0; k < 4; ++k) {
                     double analytic = f(*HEOS, i, j, k, xN);
                     double numeric = 0;
                     if (wrt == TAU) {
-                        numeric = (-1.0/12.0*g(*HEOS_plus_2tau, i, j, k, xN) + 2.0/3.0*g(*HEOS_plus_tau, i, j, k, xN) -2.0/3.0*g(*HEOS_minus_tau, i, j, k, xN) +1.0/12.0*g(*HEOS_minus_2tau, i, j, k, xN)) / dtau;
+                        numeric = (-1.0 / 12.0 * g(*HEOS_plus_2tau, i, j, k, xN) + 2.0 / 3.0 * g(*HEOS_plus_tau, i, j, k, xN)
+                                   - 2.0 / 3.0 * g(*HEOS_minus_tau, i, j, k, xN) + 1.0 / 12.0 * g(*HEOS_minus_2tau, i, j, k, xN))
+                                  / dtau;
                     } else if (wrt == DELTA) {
-                        numeric = (-1.0/12.0*g(*HEOS_plus_2delta, i, j, k, xN) + 2.0/3.0*g(*HEOS_plus_delta, i, j, k, xN) -2.0/3.0*g(*HEOS_minus_delta, i, j, k, xN) +1.0/12.0*g(*HEOS_minus_2delta, i, j, k, xN)) / ddelta;
+                        numeric = (-1.0 / 12.0 * g(*HEOS_plus_2delta, i, j, k, xN) + 2.0 / 3.0 * g(*HEOS_plus_delta, i, j, k, xN)
+                                   - 2.0 / 3.0 * g(*HEOS_minus_delta, i, j, k, xN) + 1.0 / 12.0 * g(*HEOS_minus_2delta, i, j, k, xN))
+                                  / ddelta;
                     }
                     CAPTURE(name);
                     CAPTURE(i);
@@ -1461,7 +1460,7 @@ class DerivativeFixture
             }
         }
     }
-    Eigen::MatrixXd get_matrix(CoolProp::HelmholtzEOSMixtureBackend& HEOS, const std::string name) {
+    Eigen::MatrixXd get_matrix(CoolProp::HelmholtzEOSMixtureBackend& HEOS, const std::string& name) {
         Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(HEOS, xN);
         if (name == "Lstar") {
             return Lstar;
@@ -1471,7 +1470,7 @@ class DerivativeFixture
             throw ValueError("Must be one of Lstar or Mstar");
         }
     }
-    void matrix_derivative(const std::string name, const std::string& wrt) {
+    void matrix_derivative(const std::string& name, const std::string& wrt) {
         CAPTURE(name);
         CAPTURE(wrt);
         double err = 10000;
@@ -1676,11 +1675,11 @@ TEST_CASE_METHOD(DerivativeFixture<SRKBackend>, "Check derivatives for SRK", "[m
     tol = 1e-3;  // Relax the tolerance a bit
     run_checks();
 };
-    // Make sure you set the VTPR UNIFAC path with something like set_config_string(VTPR_UNIFAC_PATH, "/Users/ian/Code/CUBAC/dev/unifaq/");
-    //TEST_CASE_METHOD(DerivativeFixture<VTPRBackend>, "Check derivatives for VTPR", "[mixture_derivs2]")
-    //{
-    //    tol = 1e-4; // Relax the tolerance a bit
-    //    run_checks();
-    //};
+// Make sure you set the VTPR UNIFAC path with something like set_config_string(VTPR_UNIFAC_PATH, "/Users/ian/Code/CUBAC/dev/unifaq/");
+//TEST_CASE_METHOD(DerivativeFixture<VTPRBackend>, "Check derivatives for VTPR", "[mixture_derivs2]")
+//{
+//    tol = 1e-4; // Relax the tolerance a bit
+//    run_checks();
+//};
 
 #endif

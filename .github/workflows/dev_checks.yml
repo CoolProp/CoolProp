@@ -1,0 +1,539 @@
+name: Development checks
+
+# Consolidated dev-checks workflow (CoolProp-rog). Replaces the six
+# previous dev_*.yml files (asan, clangformat, clangtidy, codeql, cppcheck,
+# iwyu) with a single workflow whose jobs run in parallel. Each job's
+# `if:` preserves the original trigger semantics of the file it replaced,
+# so this is a UI/UX consolidation — not a change in what runs when.
+#
+# Trigger semantics per job (matches the retired workflows):
+#   asan         — push to master + PR
+#   clang-format — PR only (push retired in CoolProp-2uw.1; see job comment)
+#   clang-tidy   — PR + workflow_dispatch (informational, never gates)
+#   codeql       — push to master + PR + scheduled twice-weekly fallback
+#   cppcheck     — PR + workflow_dispatch + scheduled weekly fallback
+#                  (informational, never gates)
+#   iwyu         — push to master + PR + workflow_dispatch + scheduled
+#                  weekly fallback (informational, never gates)
+#   type-stubs   — push to master + PR (build-free; gates the checked-in
+#                  Cython type stubs). No paths filter so it can be required.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master, main, develop]
+  schedule:
+    - cron: '15 8 * * 0'    # weekly Sunday — cppcheck, iwyu fallback
+    - cron: '15 8 * * 0,4'  # twice weekly Sun+Thu — codeql fallback
+  workflow_dispatch:
+
+concurrency:
+  # Cancel superseded runs on the same ref to cut CI backlog on heavy
+  # dev days (repeated pushes to an open PR).  Protected: master / main
+  # / develop and tags never cancel, so mainline + release runs always
+  # complete.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  asan:
+    name: address sanitizer
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ${{ matrix.os }}
+    # Guardrail (CoolProp-xuu).  Without this the job inherits GitHub's 6-hour
+    # default cap; when a test runs away the job is silently reported as
+    # `cancelled` rather than a real failure (that is exactly how the
+    # detect_stack_use_after_return BDCSVD blow-up hid for so long).  The full
+    # ASan suite + REFPROP completes in ~12 min locally (~40-50 min expected on
+    # the slower 2-vCPU runner); 90 min is a ~2x headroom that still surfaces a
+    # genuine runaway fast and visibly instead of burning six hours.
+    timeout-minutes: 90
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.13]
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Build REFPROP
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        run: |
+          set -x
+          cd .github/workflows
+          chmod +x buildREFPROP.sh
+          ./buildREFPROP.sh
+          echo COOLPROP_REFPROP_ROOT=`pwd`/gpgREFPROP/REFPROP-cmake/bld >> $GITHUB_ENV
+        env:
+          REFPROP_GPG_PASSPHRASE: ${{ secrets.REFPROP_GPG_PASSPHRASE }}
+      - name: mkdir
+        run: mkdir build && cd build
+      - name: cmake config
+        run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Asan -DCOOLPROP_ASAN=ON -DCOOLPROP_CATCH_MODULE=ON
+      - name: build all Catch tests
+        run: cmake --build build --config Asan
+      - name: run all the compiled Catch tests with address sanitizer
+        # detect_stack_use_after_return is deliberately NOT enabled here
+        # (CoolProp-xuu).  With REFPROP present — which CI builds — the 5
+        # SVDSBTL&REFPROP [source] tests build large BDCSVD surfaces, and
+        # under detect_stack_use_after_return=1 the per-coefficient
+        # __asan_stack_malloc inside Eigen's O(n^2-n^3) singular-value inner
+        # loop becomes unbounded (a single such test went from 87s to a
+        # >38-minute hang locally).  That is what drove the whole job into
+        # GitHub's 6-hour cap, where it was silently reported as `cancelled`
+        # rather than producing a real pass/fail.  ASan's heap/global/UAF
+        # checks all still run; only the fake-stack (use-after-return)
+        # instrumentation is dropped.
+        run: cd build && ASAN_OPTIONS=verbosity=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
+
+  clang-format:
+    name: clang-format (PR diff)
+    # PR-only — push triggers were retired (CoolProp-2uw.1) because master kept
+    # going red retroactively after every merge that introduced a violation.
+    # If you need to test the workflow on a branch, open a draft PR.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # Fetch all history (especially branches)
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Run clang-format against C++ files touched by the PR
+        shell: bash
+        run: |
+            echo "GITHUB_REF=$GITHUB_REF GITHUB_BASE_REF=$GITHUB_BASE_REF GITHUB_HEAD_REF=$GITHUB_HEAD_REF"
+            # Pin clang-format to the version declared in .pre-commit-config.yaml
+            # so CI and the local pre-commit hook always run the same binary.
+            VER=$(awk '/mirrors-clang-format/{f=1} f && /^[[:space:]]*rev:/{print $2; exit}' .pre-commit-config.yaml | tr -d 'v"')
+            export CLANG_FORMAT="uvx clang-format@$VER"
+            $CLANG_FORMAT --version
+            # Use SHAs directly so this works for both fork PRs and local-branch PRs.
+            # remotes/origin/<branch> is unreliable for fork PRs because the fork's
+            # branch is not fetched into origin.
+            #
+            # HEAD must be pull_request.head.sha (the actual PR tip), NOT github.sha
+            # (the synthetic refs/pull/N/merge commit). Using the merge SHA causes
+            # `git diff base..merge` to include every change master made after the
+            # PR was opened — so any file master modified gets flagged on every
+            # downstream PR even when the PR did not touch it.
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            echo "Comparing HEAD $HEAD_SHA against base $BASE_SHA"
+            ./dev/ci/clang-format.sh "$HEAD_SHA" "$BASE_SHA"
+
+      - name: Upload clang-format patch as artifact
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+            name: CoolProp-${{ github.sha }}-clang_format.patch
+            path: clang_format.patch
+
+  nanobind-abi3:
+    name: nanobind abi3 wheel (build once on 3.12, run on 3.12/3.13/3.14)
+    # PR-only (same rationale as clang-format above): avoid master going red
+    # retroactively. Open a draft PR to exercise it on a branch.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build the cp312-abi3 nanobind wheel (once, on 3.12)
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv venv --python 3.12 .venv-build
+          source .venv-build/bin/activate
+          uv pip install nanobind cython scikit-build-core ninja
+          # COOLPROP_NANOBIND=ON is the SINGLE signal: it selects the nanobind
+          # core + abi3 Cython sidecars (USE_SABI) in CMake AND triggers
+          # scikit-build-core's wheel.py-api=cp312 override (pyproject.toml), so
+          # this produces ONE cp312-abi3 wheel covering 3.12/3.13/3.14. Release:
+          # the wheel compiles the whole core (incl. SVDSBTL); Debug is very slow.
+          COOLPROP_NANOBIND=ON uv build --wheel --no-build-isolation \
+            --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
+            --out-dir dist .
+          ls -l dist/
+          # Fail loudly if the abi3 single-wheel promise regressed (e.g. a sidecar
+          # lost USE_SABI, or the wheel.py-api override stopped matching).
+          ls dist/coolprop-*-cp312-abi3-*.whl >/dev/null
+
+      - name: Run the pytest suite on 3.12, 3.13 and 3.14 against the one wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The crux of abi3: the SAME cp312 wheel must install and pass on every
+          # supported interpreter >= 3.12. A version-specific .so or wheel tag
+          # would make pip reject it on 3.13/3.14 here.
+          WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl)
+          ran=0
+          for PY in 3.12 3.13 3.14; do
+            echo "::group::pytest on Python $PY (cp312-abi3 wheel)"
+            uv venv --python "$PY" ".venv-$PY"
+            source ".venv-$PY/bin/activate"
+            # Guard the runtime-dep install: a brand-new interpreter may transiently
+            # lack pytest/numpy cp wheels, which is a toolchain gap, not an abi3
+            # regression -- warn and skip that leg rather than redding the gate. The
+            # `ran` counter below still fails the job if NO interpreter could run, so
+            # a real total breakage can't pass silently. (mypy is best-effort too:
+            # test_stub.py importorskips it.)
+            if ! uv pip install pytest numpy "$WHL"; then
+              echo "::warning::runtime deps unavailable on Python $PY; skipping this leg (abi3 still proven on the other interpreters)"
+              deactivate; echo "::endgroup::"; continue
+            fi
+            uv pip install mypy || echo "::warning::mypy unavailable on $PY; test_stub mypy check will skip"
+            python -c "import sys; print('Python', sys.version.split()[0])"
+            pytest wrappers/Python/pytest -q
+            ran=$((ran + 1))
+            deactivate
+            echo "::endgroup::"
+          done
+          test "$ran" -gt 0 || { echo "::error::no Python interpreter could run the cp312-abi3 wheel"; exit 1; }
+
+  clang-tidy:
+    name: clang-tidy (diff-only, informational)
+    # Runs clang-tidy on lines changed in the PR via clang-tidy-diff.py and
+    # uploads the report as an artifact. Informational by design: never gates
+    # a PR. Empirical noise survey on representative src/ files (Solvers.cpp,
+    # CPstrings.cpp, HelmholtzEOSMixtureBackend.cpp) showed the strict
+    # .clang-tidy config (WarningsAsErrors: '*') would surface a high-volume
+    # cascade — mostly misc-include-cleaner / misc-const-correctness /
+    # readability-isolate-declaration noise — on virtually every PR touching
+    # src/, before any meaningful bug-finding signal could be acted on.
+    #
+    # Both the `continue-on-error` on the run step and `if: always()` on the
+    # upload are load-bearing: they keep this workflow informational across
+    # every code path.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # full history for git diff against base
+
+      - name: Install clang-tidy-18 + ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy-18 ninja-build
+          sudo update-alternatives --install \
+            /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-18 100
+          clang-tidy --version
+
+      - name: Configure
+        run: |
+          cmake -G Ninja \
+            -DCOOLPROP_MY_MAIN=dev/ci/main.cpp \
+            -DCOOLPROP_STATIC_LIBRARY=ON \
+            -B ${{ github.workspace }}/build \
+            -S .
+
+      - name: Generate auto-generated headers
+        # The all_*_JSON.h headers are generated at build time from
+        # dev/fluids/. clang-tidy needs them on disk to parse src/ files.
+        run: cmake --build ${{ github.workspace }}/build --target generate_headers
+
+      - name: Locate clang-tidy-diff.py
+        id: diff_script
+        run: |
+          path=$(find /usr -name 'clang-tidy-diff*.py' 2>/dev/null | head -1)
+          if [ -z "$path" ]; then
+            echo "clang-tidy-diff.py not found via apt; falling back to upstream raw"
+            curl -sSL -o /tmp/clang-tidy-diff.py \
+              https://raw.githubusercontent.com/llvm/llvm-project/release/18.x/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
+            path=/tmp/clang-tidy-diff.py
+          fi
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "Using: $path"
+
+      - name: Run clang-tidy-diff on PR-touched lines
+        continue-on-error: true   # informational by design — see top-of-job
+        shell: bash
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+          echo "Comparing $HEAD_SHA against $BASE_SHA"
+          # Negative pathspecs skip vendored / auto-generated files. Anything
+          # that lives outside src/ + include/ won't have a compile_commands
+          # entry anyway and would just produce errors.
+          git diff -U0 "$BASE_SHA" "$HEAD_SHA" -- \
+            ':!externals/' \
+            ':!include/*_JSON*.h' \
+            ':!include/gitrevision.h' \
+            ':!include/miniz.h' \
+            | python3 ${{ steps.diff_script.outputs.path }} \
+                -p1 \
+                -path ${{ github.workspace }}/build \
+                -regex '.*\.(c|cpp|h|hpp)$' \
+                -j$(nproc) \
+                2>&1 | tee clang-tidy-diff.log
+          echo "clang-tidy-diff.log size: $(wc -l < clang-tidy-diff.log) lines"
+
+      - name: Upload clang-tidy report as artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: CoolProp-${{ github.sha }}-clang-tidy-diff
+          path: clang-tidy-diff.log
+          if-no-files-found: warn
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    # Runs on push to master, every PR, and the twice-weekly cron fallback.
+    # Skip the Sunday-only cppcheck/iwyu cron — codeql only wants the Sun+Thu one.
+    if: github.event_name != 'schedule' || github.event.schedule == '15 8 * * 0,4'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [cpp, python]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Autobuild Python
+        if: ${{ matrix.language == 'python' }}
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Configure CPP
+        if: ${{ matrix.language == 'cpp' }}
+        run: cmake
+               -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
+               -B ${{github.workspace}}/build
+               -S .
+
+      - name: Build CPP
+        if: ${{ matrix.language == 'cpp' }}
+        run: cmake
+               --build ${{github.workspace}}/build
+               --config Release
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  cppcheck:
+    name: cppcheck (informational)
+    # Warning-only — cppcheck output drives an artifact + summary, never fails
+    # the PR. cppcheck is high-noise on a 937KLOC mature codebase, so we keep
+    # it advisory while we work down the queue.
+    # Triggers: PR + workflow_dispatch + Sunday cron (skip Thursday codeql cron).
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule == '15 8 * * 0')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck
+          cppcheck --version
+
+      - name: Run cppcheck
+        shell: bash
+        continue-on-error: true
+        run: |
+          cppcheck \
+            --std=c++17 \
+            --enable=warning,style,information \
+            --suppress=noExplicitConstructor \
+            --suppress=useStlAlgorithm \
+            --suppress=unmatchedSuppression \
+            --suppress=unusedPrivateFunction \
+            --suppress=functionStatic:src/Backends/Helmholtz/Fluids/FluidLibrary.h \
+            --inline-suppr \
+            --inconclusive \
+            --template='[{file}:{line}]:({severity}),[{id}],{message}' \
+            -j $(nproc) \
+            --force \
+            ./src \
+            3>&1 1>&2 2>&3 | tee cppcheck.txt || true
+
+      - name: Parse and colorize cppcheck
+        if: ${{ always() }}
+        continue-on-error: true
+        shell: bash
+        run: python ./dev/ci/colorize_cppcheck_results.py
+
+      - name: Upload cppcheck results as artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: CoolProp-${{ github.sha }}-cppcheck_results.txt
+          path: cppcheck.txt
+
+  iwyu:
+    name: include-what-you-use (informational)
+    # Warning-only — IWYU is high-noise and its suggestions need per-file
+    # judgment, so this job uploads the full report as an artifact and
+    # never fails a PR. The intent is to surface signal contributors can
+    # triage incrementally, not to gate.
+    #
+    # How: IWYU is wired into CMakeLists.txt via the COOLPROP_IWYU option
+    # (see src/Backends and the find_program(iwyu_path ...) blocks). When
+    # enabled, CMake sets CXX_INCLUDE_WHAT_YOU_USE on the Main target and
+    # the build output IS the IWYU report.
+    # Triggers: push master + PR + workflow_dispatch + Sunday cron.
+    if: github.event_name != 'schedule' || github.event.schedule == '15 8 * * 0'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install include-what-you-use
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iwyu ninja-build
+          include-what-you-use --version || true
+
+      - name: Configure with COOLPROP_IWYU
+        run: |
+          cmake -G Ninja \
+            -DCOOLPROP_IWYU=ON \
+            -DCOOLPROP_MY_MAIN=dev/ci/main.cpp \
+            -B ${{ github.workspace }}/build \
+            -S .
+
+      - name: Build (produces IWYU report)
+        continue-on-error: true
+        shell: bash
+        run: |
+          cmake --build ${{ github.workspace }}/build --config Release \
+            2>&1 | tee iwyu.log
+          # IWYU's exit codes don't follow build conventions; protect against
+          # tee swallowing a non-zero pipefail.
+          echo "iwyu.log size: $(wc -l < iwyu.log) lines"
+
+      - name: Upload IWYU report as artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: CoolProp-${{ github.sha }}-iwyu
+          path: iwyu.log
+          if-no-files-found: warn
+
+  type-stubs:
+    name: python type stubs (PEP 561)
+    # Gates the checked-in Cython type stubs (wrappers/Python/CoolProp/*.pyi).
+    # Build-free (no C++ compile): the stub is generated from the .pyx/.pxd
+    # sources by a pinned dev toolchain and committed, so CI only proves it is
+    # (1) in sync, (2) valid under pyright, (3) valid under mypy. See
+    # dev/stubs/README.md. Runs on push to master + every PR — deliberately NO
+    # paths filter, so it can be a required check without deadlocking PRs that
+    # do not touch the stub paths (a path-filtered required check never reports
+    # a status and the PR waits forever). A C++-only change cannot make the stub
+    # stale (stubgen reads only .pyx/.pxd), so those PRs just pass fast.
+    # The runtime symbol-parity test (dev/stubs/test_stub_parity.py) needs a
+    # source-built CoolProp and runs in the wheel-build workflow, not here.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      # uv/uvx for the on-demand, version-pinned pyright + mypy runs.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      # 1. Drift gate (exact). Regenerate from the Cython sources with the pinned
+      #    generator toolchain (gen_stubs.sh provisions its own venv); any diff
+      #    means a .pyx changed without regenerating the .pyi.
+      - name: Drift gate (regenerate + diff)
+        run: |
+          ./dev/stubs/gen_stubs.sh
+          if ! git diff --exit-code -- 'wrappers/Python/CoolProp/*.pyi'; then
+            echo "::error::CoolProp.pyi is out of sync with the Cython sources. Run dev/stubs/gen_stubs.sh and commit the result."
+            exit 1
+          fi
+
+      # 2. Type-correctness (static, pinned). pyright resolves CoolProp from the
+      #    source tree (extraPaths) and needs numpy stubs; the smoke file uses
+      #    typing.assert_type, so it is checked, not executed.
+      - name: pyright type smoke
+        run: uvx --with numpy pyright@1.1.409 --project dev/stubs/pyrightconfig.smoke.json
+
+      # 3. Stub validity under mypy. --ignore-missing-imports drops noise from
+      #    sibling modules mypy pulls in transitively; the stub must be clean.
+      - name: mypy stub check
+        run: uvx mypy@1.19.1 --ignore-missing-imports wrappers/Python/CoolProp/CoolProp.pyi
+
+  superanc-pin:
+    name: superancillary docs reference pin
+    # Gates the fastchebpure release pinned by the docs superancillary plots
+    # (Web/scripts/fluid_properties.Superancillary.py) against the current EOS.
+    # Those plots divide CoolProp's superancillary by the pinned release's
+    # extended-precision reference, which fastchebpure generates from CoolProp's
+    # EOS at the commit it was tagged against. If an EOS is updated here after
+    # that pin -- the chicken-and-egg case in issue #3063 / R1233zd(E) -- the
+    # reference describes a different equation of state and the deviation plot
+    # is meaningless. This recomputes each fluid's source_eos_hash from
+    # dev/fluids and requires it to equal the hash the pinned release stamped,
+    # catching a forgotten pin bump at PR time instead of only in rendered docs.
+    # Build-free, stdlib-only (it downloads the pinned release zip). Like
+    # type-stubs, deliberately NO paths filter so it can be a required check
+    # without deadlocking unrelated PRs. The EOS<->embedded-SA twin is the C++
+    # test "Superancillary source_eos_hash matches current EOS at bit level" and
+    # dev/scripts/check_superanc_freshness.py. See
+    # dev/scripts/check_superanc_release_pin.py.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Check pinned fastchebpure release matches current EOS
+        run: python3 dev/scripts/check_superanc_release_pin.py
+
+  installed-header-gate:
+    name: Installed-header hygiene gate
+    # Fail if any internal/JSON-pulling header (detail/json.h, or anything
+    # that #includes nlohmann/valijson) is shipped in the installed tree.
+    # This is the install-side companion to the symbol-leak gate
+    # (check-json-symbols.sh): the symbol gate catches runtime ABI leaks;
+    # this gate catches source-level leaks that would expose nlohmann/valijson
+    # to downstream consumers at compile time.  Real gate — no continue-on-error.
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure shared build
+        run: |
+          cmake -B build_shared -S . \
+            -DCOOLPROP_SHARED_LIBRARY=ON \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build shared library
+        run: cmake --build build_shared -j$(nproc)
+
+      - name: Run installed-header hygiene gate
+        run: ./dev/ci/check-installed-headers.sh build_shared

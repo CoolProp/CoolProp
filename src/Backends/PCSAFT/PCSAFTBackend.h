@@ -1,12 +1,12 @@
 #ifndef PCSAFTBACKEND_H
 #define PCSAFTBACKEND_H
 
-#include "AbstractState.h"
-#include "CoolPropTools.h"
-#include "DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/DataStructures.h"
 #include "PCSAFTLibrary.h"
-#include "Configuration.h"
-#include "Exceptions.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/Exceptions.h"
 #include <vector>
 
 using std::vector;
@@ -15,24 +15,26 @@ namespace CoolProp {
 
 const static double kb = 1.380649e-23;  // Boltzmann constant, J K^-1
 const static double PI = 3.141592653589793;
-const static double N_AV = 6.02214076e23;       // Avagadro's number
-const static double E_CHRG = 1.6021766208e-19; // elementary charge, units of coulomb
-const static double perm_vac = 8.854187817e-22; //permittivity in vacuum, C V^-1 Angstrom^-1
+const static double N_AV = 6.02214076e23;        // Avagadro's number
+const static double E_CHRG = 1.6021766208e-19;   // elementary charge, units of coulomb
+const static double perm_vac = 8.854187817e-22;  //permittivity in vacuum, C V^-1 Angstrom^-1
 
-class PCSAFTBackend : public AbstractState  {
+class PCSAFTBackend : public AbstractState
+{
 
-protected:
-    std::vector<PCSAFTFluid> components; ///< The components that are in use
-    std::vector<int> assoc_num; ///< The number of association sites for each molecule
-    std::vector<int> assoc_matrix; ///< Whether or not association occurs between two association sites. 0 means no association, any nonzero number signifies association
-    std::vector<double> k_ij; ///< binary interaction parameters
-    std::vector<double> k_ijT; ///< temperature dependent binary interaction parameters
-    bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
-    std::vector<CoolPropDbl> mole_fractions; ///< The bulk mole fractions of the mixture
-    std::vector<double> mole_fractions_double; ///< A copy of the bulk mole fractions of the mixture stored as doubles
-    std::vector<CoolPropDbl> K, ///< The K factors for the components
-                             lnK; ///< The natural logarithms of the K factors of the components
-    double dielc; ///< The dielectric constant of the solvent, if ion term is used
+   protected:
+    std::vector<PCSAFTFluid> components;  ///< The components that are in use
+    std::vector<int> assoc_num;           ///< The number of association sites for each molecule
+    std::vector<int>
+      assoc_matrix;  ///< Whether or not association occurs between two association sites. 0 means no association, any nonzero number signifies association
+    std::vector<double> k_ij;                   ///< binary interaction parameters
+    std::vector<double> k_ijT;                  ///< temperature dependent binary interaction parameters
+    bool is_pure_or_pseudopure;                 ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
+    std::vector<CoolPropDbl> mole_fractions;    ///< The bulk mole fractions of the mixture
+    std::vector<double> mole_fractions_double;  ///< A copy of the bulk mole fractions of the mixture stored as doubles
+    std::vector<CoolPropDbl> K,                 ///< The K factors for the components
+      lnK;                                      ///< The natural logarithms of the K factors of the components
+    double dielc;                               ///< The dielectric constant of the solvent, if ion term is used
 
     shared_ptr<PCSAFTBackend> SatL;
     shared_ptr<PCSAFTBackend> SatV;
@@ -48,20 +50,18 @@ protected:
     void post_update(bool optional_checks = true);
 
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase);
-    double estimate_flash_p(PCSAFTBackend &PCSAFT);
-    double estimate_flash_t(PCSAFTBackend &PCSAFT);
-    double outerTQ(double p_guess, PCSAFTBackend &PCSAFT);
-    double outerPQ(double t_guess, PCSAFTBackend &PCSAFT);
+    double estimate_flash_p(PCSAFTBackend& PCSAFT);
+    double estimate_flash_t(PCSAFTBackend& PCSAFT);
+    double outerTQ(double p_guess, PCSAFTBackend& PCSAFT);
+    double outerPQ(double t_guess, PCSAFTBackend& PCSAFT);
     phases calc_phase_internal(CoolProp::input_pairs input_pair);
     CoolPropDbl reduced_to_molar(CoolPropDbl nu, CoolPropDbl T);
 
     // these functions are used internally to solve for association parameters
-    vector<double> XA_find(vector<double> XA_guess, vector<double> delta_ij, double den,
-        vector<double> x);
-    vector<double> dXAdx_find(vector<int> assoc_num, vector<double> delta_ij,
-        double den, vector<double> XA, vector<double> ddelta_dx, vector<double> x);
-    vector<double> dXAdt_find(vector<double> delta_ij, double den,
-        vector<double> XA, vector<double> ddelta_dt, vector<double> x);
+    vector<double> XA_find(vector<double> XA_guess, vector<double> delta_ij, double den, vector<double> x);
+    vector<double> dXAdx_find(vector<int> assoc_num, vector<double> delta_ij, double den, vector<double> XA, vector<double> ddelta_dx,
+                              vector<double> x);
+    vector<double> dXAdt_find(vector<double> delta_ij, double den, vector<double> XA, vector<double> ddelta_dt, vector<double> x);
     void set_assoc_matrix();
     double dielc_water(double t);
 
@@ -71,34 +71,34 @@ protected:
     virtual PCSAFTBackend* get_copy(bool generate_SatL_and_SatV = true);
 
     /// The name of the backend being used
-    std::string backend_name(void) {
+    std::string backend_name() override {
         return get_backend_string(PCSAFT_BACKEND);
     }
 
-    bool using_mole_fractions(void) {
+    bool using_mole_fractions() override {
         return true;
     };
-    bool using_mass_fractions(void) {
+    bool using_mass_fractions() override {
         return false;
     };
-    bool using_volu_fractions(void) {
+    bool using_volu_fractions() override {
         return false;
     };
 
-    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions);
-    void set_volu_fractions(const std::vector<CoolPropDbl>& volu_fractions) {
+    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override;
+    void set_volu_fractions(const std::vector<CoolPropDbl>& volu_fractions) override {
         throw NotImplementedError("Volume composition has not been implemented.");
     };
-    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions);
-    const std::vector<CoolPropDbl>& get_mole_fractions(void) {
+    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override;
+    const std::vector<CoolPropDbl>& get_mole_fractions() override {
         return this->mole_fractions;
     };
 
     void resize(std::size_t N);
 
-    virtual void update(CoolProp::input_pairs input_pair, double value1, double value2);  // %%checked
+    void update(CoolProp::input_pairs input_pair, double value1, double value2) override;  // %%checked
 
-    const double get_fluid_constant(std::size_t i, parameters param) const {
+    const double get_fluid_constant(std::size_t i, parameters param) const override {
         // const PCSAFTFluid &fld = components[i];
         // switch(param){
         //     case im: return fld.m;
@@ -121,39 +121,39 @@ protected:
     // ************************************************************************* //
     //
     /// Calculate the pressure
-    CoolPropDbl calc_pressure(void);
+    CoolPropDbl calc_pressure() override;
 
     /// Update the state for DT inputs if phase is imposed. Otherwise delegate to base class
     CoolPropDbl update_DmolarT(CoolPropDbl rho);
 
-    // CoolPropDbl calc_alpha0(void); // ideal gas helmholtz energy term
-    CoolPropDbl calc_alphar(void);  // residual helmholtz energy
-    CoolPropDbl calc_dadt(void);    // derivative of the residual helmholtz energy with respect to temperature
-    CoolPropDbl calc_hmolar_residual(void);
-    CoolPropDbl calc_smolar_residual(void);
-    vector<CoolPropDbl> calc_fugacity_coefficients(void);
-    CoolPropDbl calc_gibbsmolar_residual(void);
-    // CoolPropDbl calc_cpmolar(void); // TODO implement these heat capacity functions
-    // CoolPropDbl calc_cp0molar(void);
-    CoolPropDbl calc_compressibility_factor(void);
+    // CoolPropDbl calc_alpha0(); // ideal gas helmholtz energy term
+    CoolPropDbl calc_alphar() override;  // residual helmholtz energy
+    CoolPropDbl calc_dadt();             // derivative of the residual helmholtz energy with respect to temperature
+    CoolPropDbl calc_hmolar_residual() override;
+    CoolPropDbl calc_smolar_residual() override;
+    vector<CoolPropDbl> calc_fugacity_coefficients() override;
+    CoolPropDbl calc_gibbsmolar_residual() override;
+    // CoolPropDbl calc_cpmolar(); // TODO implement these heat capacity functions
+    // CoolPropDbl calc_cp0molar();
+    CoolPropDbl calc_compressibility_factor() override;
 
     void flash_QT(PCSAFTBackend& PCSAFT);
     void flash_PQ(PCSAFTBackend& PCSAFT);
 
-    phases calc_phase(void) {
+    phases calc_phase() override {
         return _phase;
     };
     /** \brief Specify the phase - this phase will always be used in calculations
      *
      * @param phase_index The index from CoolProp::phases
      */
-    void calc_specify_phase(phases phase_index) {
+    void calc_specify_phase(phases phase_index) override {
         imposed_phase_index = phase_index;
         _phase = phase_index;
     }
     /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
      */
-    void calc_unspecify_phase() {
+    void calc_unspecify_phase() override {
         imposed_phase_index = iphase_not_imposed;
     }
     //
@@ -161,7 +161,8 @@ protected:
     //                         Trivial Functions                                 //
     // ************************************************************************* //
     //
-    double calc_molar_mass(void);
+    double calc_molar_mass() override;
+    PhaseMolarMasses calc_phase_molar_masses() override;
     //
 };
 } /* namespace CoolProp */

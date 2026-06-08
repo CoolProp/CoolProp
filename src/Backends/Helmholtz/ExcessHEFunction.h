@@ -2,15 +2,15 @@
 #define EXCESSHE_FUNCTIONS_H
 
 #include <memory>
+using std::shared_ptr;
 #include <vector>
-#include "CoolPropFluid.h"
-#include "crossplatform_shared_ptr.h"
-#include "Helmholtz.h"
+#include "CoolProp/CoolPropFluid.h"
+#include "CoolProp/fluids/Helmholtz.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 
 namespace CoolProp {
 
-typedef std::vector<std::vector<CoolPropDbl>> STLMatrix;
+using STLMatrix = std::vector<std::vector<CoolPropDbl>>;
 
 /** \brief The abstract base class for departure functions used in the excess part of the Helmholtz energy
  *
@@ -20,9 +20,9 @@ typedef std::vector<std::vector<CoolPropDbl>> STLMatrix;
 class DepartureFunction
 {
    public:
-    DepartureFunction(){};
-    DepartureFunction(const ResidualHelmholtzGeneralizedExponential& _phi) : phi(_phi){};
-    virtual ~DepartureFunction(){};
+    DepartureFunction() = default;
+    DepartureFunction(const ResidualHelmholtzGeneralizedExponential& _phi) : phi(_phi) {};
+    virtual ~DepartureFunction() = default;
     ResidualHelmholtzGeneralizedExponential phi;
     HelmholtzDerivatives derivs;
 
@@ -104,7 +104,7 @@ class DepartureFunction
 class GERG2008DepartureFunction : public DepartureFunction
 {
    public:
-    GERG2008DepartureFunction(){};
+    GERG2008DepartureFunction() = default;
     GERG2008DepartureFunction(const std::vector<double>& n, const std::vector<double>& d, const std::vector<double>& t,
                               const std::vector<double>& eta, const std::vector<double>& epsilon, const std::vector<double>& beta,
                               const std::vector<double>& gamma, std::size_t Npower) {
@@ -127,8 +127,9 @@ class GERG2008DepartureFunction : public DepartureFunction
             std::vector<CoolPropDbl> _gamma(gamma.begin() + Npower, gamma.end());
             phi.add_GERG2008Gaussian(_n, _d, _t, _eta, _epsilon, _beta, _gamma);
         }
+        phi.finish();
     };
-    ~GERG2008DepartureFunction(){};
+    ~GERG2008DepartureFunction() = default;
 };
 
 /** \brief A hybrid gaussian with temperature and density dependence along with
@@ -142,7 +143,7 @@ class GERG2008DepartureFunction : public DepartureFunction
 class GaussianExponentialDepartureFunction : public DepartureFunction
 {
    public:
-    GaussianExponentialDepartureFunction(){};
+    GaussianExponentialDepartureFunction() = default;
     GaussianExponentialDepartureFunction(const std::vector<double>& n, const std::vector<double>& d, const std::vector<double>& t,
                                          const std::vector<double>& l, const std::vector<double>& eta, const std::vector<double>& epsilon,
                                          const std::vector<double>& beta, const std::vector<double>& gamma, std::size_t Npower) {
@@ -167,7 +168,7 @@ class GaussianExponentialDepartureFunction : public DepartureFunction
         }
         phi.finish();
     };
-    ~GaussianExponentialDepartureFunction(){};
+    ~GaussianExponentialDepartureFunction() = default;
 };
 
 /** \brief A polynomial/exponential departure function
@@ -181,7 +182,7 @@ class GaussianExponentialDepartureFunction : public DepartureFunction
 class ExponentialDepartureFunction : public DepartureFunction
 {
    public:
-    ExponentialDepartureFunction(){};
+    ExponentialDepartureFunction() = default;
     ExponentialDepartureFunction(const std::vector<double>& n, const std::vector<double>& d, const std::vector<double>& t,
                                  const std::vector<double>& l) {
         std::vector<CoolPropDbl> _n(n.begin(), n.begin() + n.size());
@@ -189,11 +190,12 @@ class ExponentialDepartureFunction : public DepartureFunction
         std::vector<CoolPropDbl> _t(t.begin(), t.begin() + t.size());
         std::vector<CoolPropDbl> _l(l.begin(), l.begin() + l.size());
         phi.add_Power(_n, _d, _t, _l);
+        phi.finish();
     };
-    ~ExponentialDepartureFunction(){};
+    ~ExponentialDepartureFunction() = default;
 };
 
-typedef shared_ptr<DepartureFunction> DepartureFunctionPointer;
+using DepartureFunctionPointer = shared_ptr<DepartureFunction>;
 
 class ExcessTerm
 {
@@ -202,19 +204,13 @@ class ExcessTerm
     std::vector<std::vector<DepartureFunctionPointer>> DepartureFunctionMatrix;
     STLMatrix F;
 
-    ExcessTerm() : N(0){};
+    ExcessTerm() : N(0) {};
 
-    // copy assignment
-    ExcessTerm& operator=(ExcessTerm& other) {
-        for (std::size_t i = 0; i < N; ++i) {
-            for (std::size_t j = 0; j < N; ++j) {
-                if (i != j) {
-                    *(other.DepartureFunctionMatrix[i][j].get()) = *(other.DepartureFunctionMatrix[i][j].get());
-                }
-            }
-        }
-        return *this;
-    }
+    // operator= and copy-ctor: rely on the compiler-generated defaults, which
+    // shallow-copy N, F, and DepartureFunctionMatrix (vector of shared_ptr).
+    // The hand-written operator= that lived here did not actually copy any
+    // member of *this and self-assigned other's matrix — see ::copy() below
+    // for an explicit deep-copy variant.
 
     ExcessTerm copy() {
         ExcessTerm _term;

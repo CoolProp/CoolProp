@@ -1,6 +1,11 @@
 *~
 *.pyc
 *.swp
+
+# PubChem SDF cache (committed) — *.sdf and manifest.json are tracked,
+# transient .failed flags and the generated freshness/status report are not.
+Web/fluid_properties/fluids/molecule_sdf/*.failed
+Web/fluid_properties/fluids/molecule_geometry_status.md
 *.o
 *.obj
 *.h.gch
@@ -9,6 +14,8 @@
 .version
 
 /bld*
+/.cpm_cache/
+/.cache
 
 /dev/VS2010
 
@@ -16,7 +23,6 @@
 
 /dev/figs
 /dev/builder
-/boost_CoolProp
 
 /wrappers/Python/build
 /wrappers/Python/cmake_build
@@ -30,6 +36,8 @@
 /wrappers/Python/CoolProp/_constants.*
 /wrappers/Python/CoolProp/constants*
 /wrappers/Python/CoolProp/HumidAirProp.html
+/wrappers/Python/CoolProp/include/
+/wrappers/Python/CoolProp/CoolPropBibTeXLibrary.bib
 /wrappers/Excel/CoolProp_x64.dll
 /wrappers/Excel/CoolProp.dll
 
@@ -39,11 +47,11 @@
 
 /wrappers/Labview/CoolProp.dll
 /Web/_static/doxygen
+/Web/_static/3Dmol-min.js
 /Web/Fluids
 /doc-v5
 /dev/all_fluids_verbose.json
 /dev/all_fluids.json
-/include/all_fluids_JSON.h
 /include/all_pcsaft_JSON.h
 /include/gitrevision.h
 /include/mixture_excess_term_JSON.h
@@ -53,6 +61,7 @@
 /include/pcsaft_fluids_schema_JSON.h
 /include/version.h
 /include/catch.hpp
+/install_root/
 /build*/
 /dev/hashes.json
 /include/cpversion.h
@@ -70,9 +79,20 @@
 /.vscode/
 
 bld/
-*_z.h 
+*_z.h
 *.json.z
+/dev/all_fluids.cbor
+/include/all_fluids_CBOR.h
 
 compile_commands.json
 cppcheck.txt
 **.pyd
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+
+# bv (beads viewer) local config and caches
+.bv/
+.superpowers/

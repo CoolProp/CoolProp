@@ -11,18 +11,24 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
 
+concurrency:
+  # Cancel superseded runs on the same ref to cut CI backlog on heavy
+  # dev days (repeated pushes to an open PR).  Protected: master / main
+  # / develop and tags never cancel, so mainline + release runs always
+  # complete.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   build:
 
     runs-on: ubuntu-latest
     container:
-      image: emscripten/emsdk
+      image: emscripten/emsdk@sha256:744fb6a68941970951bacf9d6632041a0398260492232691ef22bbf54b0585c6 # 4.0.12
       options: --user 1001
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
+    - uses: actions/checkout@v6
 
     - name: Configure CMake
       shell: bash
@@ -37,7 +43,7 @@ jobs:
         set -x
         cmake --build build --target install -j $(nproc) --config $BUILD_TYPE
 
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       with:
         node-version: 24
 
@@ -51,7 +57,7 @@ jobs:
 
     - name: Archive artifacts
       if: ${{ !env.ACT }} # skip during local actions testing
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
           name: Javascript
           path: install_root/Javascript

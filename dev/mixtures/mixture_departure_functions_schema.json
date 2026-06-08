@@ -17,7 +17,7 @@
             "type": {
                 "description": "Type of the binary pair reducing function",
                 "type": "string",
-                "enum": ["GERG-2008", "Exponential"]
+                "enum": ["GERG-2008", "Exponential", "Gaussian+Exponential"]
             },
             "n": {
                 "type": "array",

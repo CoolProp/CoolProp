@@ -5,7 +5,8 @@ the build to avoid double declaration of the main function and
 Catch clashing
 */
 #include "Tests.h"
-#include "time.h"
+#include <ctime>
+#include <iostream>
 
 #if defined ENABLE_CATCH
 #    include <catch2/catch_all.hpp>
@@ -18,7 +19,7 @@ int run_fast_tests() {
 #ifdef ENABLE_CATCH
     Catch::ConfigData& config = session.configData();
     config.testsOrTags.clear();
-    config.testsOrTags.push_back("[fast]");
+    config.testsOrTags.emplace_back("[fast]");
     session.useConfigData(config);
     return session.run();
 #else
@@ -30,14 +31,14 @@ int run_not_slow_tests() {
 #ifdef ENABLE_CATCH
     Catch::ConfigData& config = session.configData();
     config.testsOrTags.clear();
-    config.testsOrTags.push_back("~[slow]");
+    config.testsOrTags.emplace_back("~[slow]");
     session.useConfigData(config);
 
     time_t t1, t2;
     t1 = clock();
     session.run();
     t2 = clock();
-    printf("Elapsed time for not slow tests: %g s", (double)(t2 - t1) / CLOCKS_PER_SEC);
+    std::cout << "Elapsed time for not slow tests: " << ((double)(t2 - t1) / CLOCKS_PER_SEC) << " s";
 
     return 1;
 #else
@@ -49,8 +50,8 @@ int run_user_defined_tests(const std::vector<std::string>& tests_or_tags) {
 #ifdef ENABLE_CATCH
     Catch::ConfigData& config = session.configData();
     config.testsOrTags.clear();
-    for (unsigned int i = 0; i < tests_or_tags.size(); i++) {
-        config.testsOrTags.push_back(tests_or_tags[i]);
+    for (const auto& tests_or_tag : tests_or_tags) {
+        config.testsOrTags.push_back(tests_or_tag);
     }
     session.useConfigData(config);
 
@@ -58,7 +59,7 @@ int run_user_defined_tests(const std::vector<std::string>& tests_or_tags) {
     t1 = clock();
     session.run();
     t2 = clock();
-    printf("Elapsed time for user defined tests: %g s", (double)(t2 - t1) / CLOCKS_PER_SEC);
+    std::cout << "Elapsed time for user defined tests: " << ((double)(t2 - t1) / CLOCKS_PER_SEC) << " s";
 
     return 1;
 #else

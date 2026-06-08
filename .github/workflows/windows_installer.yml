@@ -11,20 +11,32 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
 
+concurrency:
+  # Cancel superseded runs on the same ref to cut CI backlog on heavy
+  # dev days (repeated pushes to an open PR).  Protected: master / main
+  # / develop and tags never cancel, so mainline + release runs always
+  # complete.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   build:
 
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
+    - uses: actions/checkout@v6
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         python -m pip install requests packaging
+
+    # See: https://github.com/actions/runner-images/issues/12464
+    - name: Install Inno Setup
+      shell: powershell
+      run: |
+        choco install innosetup -y
 
     - name: Extract CoolProp version from CMakeLists.txt
       shell: bash
@@ -62,7 +74,7 @@ jobs:
     #     zip -r CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip ./Installers/*
 
     - name: Archive artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
           name: Installers
           path: build/InnoScript/bin/Installers

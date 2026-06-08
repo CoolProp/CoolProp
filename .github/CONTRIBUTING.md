@@ -2,7 +2,7 @@
 
 Thank you for taking the time to contribute!
 
-The following is a set of guidelines for contributing to CoolProp and its submodules, which are hosted at [CoolProp](https://github.com/CoolProp) on GitHub. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
+The following is a set of guidelines for contributing to CoolProp, which is hosted at [CoolProp](https://github.com/CoolProp) on GitHub. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
 
 #### Table Of Contents
 
@@ -118,6 +118,32 @@ CoolProp can be developed locally on your machine.  Once code changes are comple
 * Avoid platform-dependent code 
 
 ## Styleguides
+
+### C++ formatting (clang-format)
+
+C/C++ files are auto-formatted with `clang-format` (config in `.clang-format`). The version is pinned in `.pre-commit-config.yaml` (`clang-format 18.1.x`) so CI and every contributor's machine produce identical output.
+
+One-time setup per clone:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+That installs a git pre-commit hook that blocks commits with formatting violations on staged C/C++ files. Two CMake targets are also available once you've configured a build:
+
+```bash
+cmake --build build --target format-check   # dry-run, fail on violations
+cmake --build build --target format         # apply clang-format -i in place
+```
+
+CI's `dev_checks.yml` workflow (job `clang-format`) runs the same `clang-format` against PR-touched files and fails the build on any diff. Full contributor doc: [`dev/ci/README.md`](../dev/ci/README.md).
+
+The repo also ships a `.git-blame-ignore-revs` file listing SHAs of pure-formatting commits (the one-shot reformat). Opt in once per clone so `git blame` looks through them:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
 
 ### Git Commit Messages
 

@@ -1,59 +1,10 @@
 #include <string>
 #include <vector>
-#include <map>
-#include <math.h>
+#include <cmath>
 
-#include "PCSAFTFluid.h"
-#include "rapidjson_include.h"
+#include "CoolProp/fluids/PCSAFTFluid.h"
 
 namespace CoolProp {
-
-PCSAFTFluid::PCSAFTFluid(rapidjson::Value::ValueIterator itr) {
-    name = cpjson::get_string(*itr, "name");
-    CAS = cpjson::get_string(*itr, "CAS");
-    params.m = cpjson::get_double(*itr, "m");
-    params.sigma = cpjson::get_double(*itr, "sigma");
-    params.u = cpjson::get_double(*itr, "u");
-
-    if (itr->HasMember("uAB") && (*itr)["uAB"].IsNumber()) {
-        params.uAB = cpjson::get_double(*itr, "uAB");
-    } else {
-        params.uAB = 0.;
-    }
-
-    if (itr->HasMember("volA") && (*itr)["volA"].IsNumber()) {
-        params.volA = cpjson::get_double(*itr, "volA");
-    } else {
-        params.volA = 0.;
-    }
-
-    if (itr->HasMember("assocScheme")) {
-        params.assocScheme = cpjson::get_string_array(*itr, "assocScheme");
-    } else {
-        params.assocScheme = {};
-    }
-
-    if (itr->HasMember("dipm") && (*itr)["dipm"].IsNumber()) {
-        params.dipm = cpjson::get_double(*itr, "dipm");
-    } else {
-        params.dipm = 0.;
-    }
-
-    if (itr->HasMember("dipnum") && (*itr)["dipnum"].IsNumber()) {
-        params.dipnum = cpjson::get_double(*itr, "dipnum");
-    } else {
-        params.dipnum = 0.;
-    }
-
-    if (itr->HasMember("charge") && (*itr)["charge"].IsNumber()) {
-        params.z = cpjson::get_double(*itr, "charge");
-    } else {
-        params.z = 0.;
-    }
-
-    molemass = cpjson::get_double(*itr, "molemass");
-    aliases = cpjson::get_string_array(*itr, "aliases");
-}
 
 void PCSAFTFluid::calc_water_sigma(double t) {
     if (t > 473.16) {

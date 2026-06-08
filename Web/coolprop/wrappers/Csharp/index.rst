@@ -134,14 +134,14 @@ Pre-compiled Binaries
 To Use
 ------
 
-Pre-compiled binaries can be downloaded from :sfdownloads:`Csharp`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Csharp`.
+Pre-compiled binaries can be downloaded from :sfdownloads:`Csharp`.  Nightly development binaries can be found at :sfnightly:`Csharp`.
 
 Download the ``platform-independent.7z`` file and expand it to a folder called ``platform-independent`` using 7-zip.  Download the special C# shared library for your system architecture to the same location from either :sfdownloads:`Csharp` (release) or :sfnightly:`Csharp` (development).  Copy the Example.cs file to the same location.  You will need to have a copy of some version of C#.
 
 When you are finished, you should have a folder layout something like ::
 
     main
-     |- CoolProp.dll
+     |- CoolPropCsharp.dll
      |- Example.cs
      |- platform-independent
         |- AbstractState.cs
@@ -208,7 +208,7 @@ Compile
 Once mono c# is installed, you can run the builder and tests using::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder

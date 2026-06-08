@@ -1,0 +1,28 @@
+version: 2
+
+# Closes #2815. Adds version-update monitoring for the GitHub Actions workflows
+# under .github/workflows/ — independent of the security-alert-driven npm/cargo
+# bumps Dependabot already opens against this repo.
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # All third-party action references (uses: foo/bar@vX) get tracked here;
+    # actions/* and tauri-apps/* are the main consumers in our workflows.
+    groups:
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci(deps)"
+      include: scope
+    labels:
+      - "dependencies"
+      - "github-actions"

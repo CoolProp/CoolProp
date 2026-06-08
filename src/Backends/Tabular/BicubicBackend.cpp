@@ -1,8 +1,10 @@
 #if !defined(NO_TABULAR_BACKENDS)
 
 #    include "BicubicBackend.h"
-#    include "MatrixMath.h"
-#    include "DataStructures.h"
+
+#    include <cmath>
+#    include "CoolProp/numerics/MatrixMath.h"
+#    include "CoolProp/DataStructures.h"
 #    include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 
 void CoolProp::BicubicBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& table,
@@ -11,9 +13,11 @@ void CoolProp::BicubicBackend::find_native_nearest_good_indices(SinglePhaseGridd
     table.find_native_nearest_good_cell(x, y, i, j);
     const CellCoeffs& cell = coeffs[i][j];
     if (!cell.valid()) {
-        if (cell.has_valid_neighbor()) {
+        if (auto alt = cell.get_alternate()) {
             // Get new good neighbor
-            cell.get_alternate(i, j);
+            auto [ai, aj] = *alt;
+            i = ai;
+            j = aj;
         } else {
             if (!cell.valid()) {
                 throw ValueError(format("Cell is invalid and has no good neighbors for x = %g, y= %g", x, y));
@@ -29,9 +33,11 @@ void CoolProp::BicubicBackend::find_nearest_neighbor(SinglePhaseGriddedTableData
     table.find_nearest_neighbor(variable1, value1, otherkey, otherval, i, j);
     const CellCoeffs& cell = coeffs[i][j];
     if (!cell.valid()) {
-        if (cell.has_valid_neighbor()) {
+        if (auto alt = cell.get_alternate()) {
             // Get new good neighbor
-            cell.get_alternate(i, j);
+            auto [ai, aj] = *alt;
+            i = ai;
+            j = aj;
         } else {
             if (!cell.valid()) {
                 throw ValueError(format("Cell is invalid and has no good neighbors for x = %g, y = %g", value1, otherval));
@@ -50,7 +56,7 @@ void CoolProp::BicubicBackend::find_nearest_neighbor(SinglePhaseGriddedTableData
 double CoolProp::BicubicBackend::evaluate_single_phase_transport(SinglePhaseGriddedTableData& table, parameters output, double x, double y,
                                                                  std::size_t i, std::size_t j) {
     // By definition i,i+1,j,j+1 are all in range and valid
-    std::vector<std::vector<double>>* f = NULL;
+    std::vector<std::vector<double>>* f = nullptr;
     switch (output) {
         case iconductivity:
             f = &table.cond;
@@ -85,6 +91,16 @@ double CoolProp::BicubicBackend::evaluate_single_phase(const SinglePhaseGriddedT
                                                        const std::size_t j) {
     // Get the cell
     const CellCoeffs& cell = coeffs[i][j];
+
+    // Defense-in-depth: cells in the table's two-phase notch carry no bicubic
+    // coefficients. Caller should have routed through find_native_nearest_good_indices
+    // (or the saturation-curve cell-bump logic in TabularBackend::update) which
+    // already resolve to a good neighbour. This guard catches the residual case
+    // (e.g. #1950: PT_INPUTS at sub-saturation) so an invalid cell raises a
+    // ValueError instead of dereferencing an empty alpha[] vector and segfaulting.
+    if (!cell.valid()) {
+        throw ValueError(format("evaluate_single_phase called on cell (%zu, %zu) with no bicubic coefficients (x=%g, y=%g)", i, j, x, y));
+    }
 
     // Get the alpha coefficients
     const std::vector<double>& alpha = cell.get(output);
@@ -198,7 +214,7 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
     double c = alpha[1 + 0 * 4] * y_0 + alpha[1 + 1 * 4] * y_1 + alpha[1 + 2 * 4] * y_2 + alpha[1 + 3 * 4] * y_3;          // factors of xhat
     double d = alpha[0 + 0 * 4] * y_0 + alpha[0 + 1 * 4] * y_1 + alpha[0 + 2 * 4] * y_2 + alpha[0 + 3 * 4] * y_3 - other;  // constant factors
     int N = 0;
-    double xhat0, xhat1, xhat2, val, xhat = _HUGE;
+    double xhat0 = NAN, xhat1 = NAN, xhat2 = NAN, val = NAN, xhat = _HUGE;
     solve_cubic(a, b, c, d, N, xhat0, xhat1, xhat2);
     if (N == 1) {
         xhat = xhat0;
@@ -254,7 +270,7 @@ void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTab
     double c = alpha[0 + 1 * 4] * x_0 + alpha[1 + 1 * 4] * x_1 + alpha[2 + 1 * 4] * x_2 + alpha[3 + 1 * 4] * x_3;          // factors of yhat
     double d = alpha[0 + 0 * 4] * x_0 + alpha[1 + 0 * 4] * x_1 + alpha[2 + 0 * 4] * x_2 + alpha[3 + 0 * 4] * x_3 - other;  // constant factors
     int N = 0;
-    double yhat0, yhat1, yhat2, val, yhat = _HUGE;
+    double yhat0 = NAN, yhat1 = NAN, yhat2 = NAN, val = NAN, yhat = _HUGE;
     solve_cubic(a, b, c, d, N, yhat0, yhat1, yhat2);
     if (N == 1) {
         yhat = yhat0;

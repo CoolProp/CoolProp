@@ -4,10 +4,10 @@
 #include "HelmholtzEOSMixtureBackend.h"
 #include "VLERoutines.h"
 #include "PhaseEnvelopeRoutines.h"
-#include "PhaseEnvelope.h"
-#include "CoolPropTools.h"
-#include "Configuration.h"
-#include "CPnumerics.h"
+#include "CoolProp/fluids/PhaseEnvelope.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/numerics/numerics.h"
 
 namespace CoolProp {
 
@@ -66,7 +66,13 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
         for (std::size_t i = 0; i < Tbp.size() - 1; ++i) {
             CoolPropDbl Tmin = Tbp[i], Tmax = Tbp[i + 1];
             std::size_t N = Nbp[i];
-            for (CoolPropDbl T = Tmin; is_in_closed_range(Tmin, Tmax, T); T += (Tmax - Tmin) / (N - 1)) {
+            // Integer-indexed grid (cert-flp30-c): N samples from Tmin
+            // to Tmax inclusive — exactly the count the original
+            // is_in_closed_range / `T += (Tmax-Tmin)/(N-1)` targeted,
+            // without FP roundoff dropping or duplicating the endpoint.
+            const CoolPropDbl dT_pe = (Tmax - Tmin) / static_cast<CoolPropDbl>(N - 1);
+            for (std::size_t k_pe = 0; k_pe < N; ++k_pe) {
+                const CoolPropDbl T = Tmin + static_cast<CoolPropDbl>(k_pe) * dT_pe;
                 try {
                     HEOS.update(QT_INPUTS, Qbp[i], T);
                 } catch (...) {
@@ -248,7 +254,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
                 }
             } catch (std::exception& e) {
                 if (debug) {
-                    std::cout << e.what() << std::endl;
+                    std::cout << e.what() << '\n';
                 }
                 //std::cout << IO.T << " " << IO.p << std::endl;
                 // Try again, but with a smaller step
@@ -265,7 +271,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
             if (debug) {
                 std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p << " hl " << IO.hmolar_liq
                           << " hv " << IO.hmolar_vap << " sl " << IO.smolar_liq << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")
-                          << " Ns " << IO.Nsteps << " factor " << factor << std::endl;
+                          << " Ns " << IO.Nsteps << " factor " << factor << '\n';
             }
             env.store_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y);
 
@@ -386,7 +392,9 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
         double factor = pow(rhomolar_vap_end / rhomolar_vap_start, 1.0 / N);
 
         int failure_count = 0;
-        for (double rhomolar_vap = rhomolar_vap_start * factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor) {
+        // Geometric density sweep (factor = (end/start)^(1/N)); ~N
+        // iterations, no FP accumulation issue worth converting.
+        for (double rhomolar_vap = rhomolar_vap_start * factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor) {  // NOLINT(cert-flp30-c)
             IO.rhomolar_vap = rhomolar_vap;
             IO.x.resize(IO.y.size());
             if (i < env.T.size() - 3) {
@@ -413,7 +421,7 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
                 if (debug) {
                     std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p << " hl " << IO.hmolar_liq
                               << " hv " << IO.hmolar_vap << " sl " << IO.smolar_liq << " sv " << IO.smolar_vap << " x "
-                              << vec_to_string(IO.x, "%0.10Lg") << " Ns " << IO.Nsteps << std::endl;
+                              << vec_to_string(IO.x, "%0.10Lg") << " Ns " << IO.Nsteps << '\n';
                 }
             } catch (...) {
                 failure_count++;
@@ -430,7 +438,7 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
 }
 double PhaseEnvelopeRoutines::evaluate(const PhaseEnvelopeData& env, parameters output, parameters iInput1, double value1, std::size_t& i) {
     int _i = static_cast<int>(i);
-    std::vector<double> const *x, *y;
+    std::vector<double> const *x = nullptr, *y = nullptr;
 
     switch (output) {
         case iT:
@@ -513,7 +521,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
         PMAX_SAT = 0,
         TMAX_SAT = 1
     };
-    std::size_t imax;  // Index of the maximal temperature or pressure
+    std::size_t imax = 0;  // Index of the maximal temperature or pressure
 
     PhaseEnvelopeData& env = HEOS.PhaseEnvelope;
 
@@ -591,11 +599,10 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
                 HelmholtzEOSMixtureBackend* HEOS;
                 SaturationSolvers::newton_raphson_saturation NR;
                 SaturationSolvers::newton_raphson_saturation_options IO;
-                solver_resid(HelmholtzEOSMixtureBackend& HEOS, std::size_t imax, maxima_points maxima) {
+                solver_resid(HelmholtzEOSMixtureBackend& HEOS, std::size_t imax, maxima_points maxima) : maxima(maxima) {
                     this->HEOS = &HEOS, this->imax = imax;
-                    this->maxima = maxima;
                 };
-                double call(double rhomolar_vap) {
+                double call(double rhomolar_vap) override {
                     PhaseEnvelopeData& env = HEOS->PhaseEnvelope;
                     IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::RHOV_IMPOSED;
                     IO.bubble_point = false;
@@ -633,7 +640,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
 
                 env.insert_variables(resid.IO.T, resid.IO.p, resid.IO.rhomolar_liq, resid.IO.rhomolar_vap, resid.IO.hmolar_liq, resid.IO.hmolar_vap,
                                      resid.IO.smolar_liq, resid.IO.smolar_vap, resid.IO.x, resid.IO.y, imax);
-            } catch (...) {
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
                 // Don't do the insertion
             }
         }
@@ -678,7 +685,7 @@ std::vector<std::pair<std::size_t, std::size_t>> PhaseEnvelopeRoutines::find_int
         }
 
         if (matched) {
-            intersections.push_back(std::pair<std::size_t, std::size_t>(i, i + 1));
+            intersections.emplace_back(i, i + 1);
         }
     }
     return intersections;
@@ -718,7 +725,7 @@ bool PhaseEnvelopeRoutines::is_inside(const PhaseEnvelopeData& env, parameters i
             throw ValueError("for now only even value accepted is 2");
         }
         std::vector<std::size_t> other_indices(4, 0);
-        std::vector<double> const* y;
+        std::vector<double> const* y = nullptr;
         std::vector<double> other_values(4, 0);
         other_indices[0] = intersections[0].first;
         other_indices[1] = intersections[0].second;
@@ -783,7 +790,7 @@ bool PhaseEnvelopeRoutines::is_inside(const PhaseEnvelopeData& env, parameters i
             closest_state.Q = env.Q[iclosest];
 
             if (get_debug_level() > 5) {
-                std::cout << format("is_inside: it is not inside") << std::endl;
+                std::cout << format("is_inside: it is not inside") << '\n';
             }
             return false;
         } else {

@@ -7,7 +7,6 @@ import pybtex.plugin, pybtex.database.input.bibtex, pybtex.errors
 import io
 import codecs, latexcodec
 import os
-import six
 
 # Here we are going to simply hack the formatting of the article class such that it preserves the
 # desired spacing and capitalization.  Probably this problem could be better solved with new styles,
@@ -82,7 +81,7 @@ class BibTeXerClass(object):
         if encoding == "latex":
             for tag in self.library.entries:
                 entry = self.library.entries[tag]
-                for key, value in six.iteritems(entry.fields):
+                for key, value in entry.fields.items():
                     entry.fields[key] = self.stripCurls(value)
                     if key == 'Title':
                         entry.fields[key] = u'{' + entry.fields[key] + '}'
@@ -192,7 +191,10 @@ class BibTeXerClass(object):
 
         if fmt == "latex":
             contents = contents.replace(u"\\newblock ", "")
-            contents = codecs.encode(contents, "latex")
+            # latexcodec's "latex" codec encodes str -> bytes (ASCII LaTeX); decode
+            # back to str so the trailing newline strip below works and getEntry
+            # returns a consistent str type across all formats.
+            contents = codecs.encode(contents, "latex").decode("utf-8")
         elif fmt == "html":
             contents = contents.replace(u"<dd>", "")
             contents = contents.replace(u"</dd>", "")

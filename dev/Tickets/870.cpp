@@ -1,5 +1,5 @@
 
-#include "crossplatform_shared_ptr.h"
+#include <memory>
 #include <AbstractState.h>
 #include <CoolProp.h>
 
@@ -22,5 +22,5 @@ int main(int argc, const char* argv[]) {
 		break
 		plt.plot(x, y1, label = 'Two-phase (splined, tabular)', ls = '--', lw = 3)
 
-		´*/
+		*/
 }

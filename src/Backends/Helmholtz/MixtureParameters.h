@@ -40,7 +40,6 @@ std::string get_mixture_binary_pair_data(const std::string& CAS1, const std::str
  * @param CAS2 The CAS # for the second fluid (order matters!)
  * @param param The parameter you want to set
  * @param val The value of the parameter
- * @return None
  */
 void set_mixture_binary_pair_data(const std::string& CAS1, const std::string& CAS2, const std::string& param, const double val);
 
@@ -75,7 +74,7 @@ struct REFPROP_binary_element
 /// A data structure for holding departure functions coming from REFPROP
 struct REFPROP_departure_function
 {
-    short Npower, Nspecial, Nterms_power, Nterms_special;
+    short Npower = 0, Nspecial = 0, Nterms_power = 0, Nterms_special = 0;
     std::string model;
     std::vector<double> a, t, d, e, eta, epsilon, beta, gamma;
     std::vector<std::string> comments;

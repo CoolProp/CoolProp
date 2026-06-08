@@ -6,8 +6,10 @@
 //
 //
 
+#include <utility>
+
 #include "GeneralizedCubic.h"
-#include "Exceptions.h"
+#include "CoolProp/Exceptions.h"
 
 #ifndef VTPRCubic_h
 #    define VTPRCubic_h
@@ -18,12 +20,12 @@ class VTPRCubic : public PengRobinson
     UNIFAC::UNIFACMixture unifaq;
 
    public:
-    VTPRCubic(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
+    VTPRCubic(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
               const UNIFACLibrary::UNIFACParameterLibrary& lib)
-      : PengRobinson(Tc, pc, acentric, R_u), unifaq(lib, T_r){};
+      : PengRobinson(Tc, std::move(pc), std::move(acentric), R_u), unifaq(lib, T_r) {};
 
     VTPRCubic(double Tc, double pc, double acentric, double R_u, const UNIFACLibrary::UNIFACParameterLibrary& lib)
-      : PengRobinson(std::vector<double>(1, Tc), std::vector<double>(1, pc), std::vector<double>(1, acentric), R_u), unifaq(lib, T_r){};
+      : PengRobinson(std::vector<double>(1, Tc), std::vector<double>(1, pc), std::vector<double>(1, acentric), R_u), unifaq(lib, T_r) {};
 
     /// Get a reference to the managed UNIFAC instance
     UNIFAC::UNIFACMixture& get_unifaq() {
@@ -108,7 +110,7 @@ class VTPRCubic : public PengRobinson
             }
         }
     }
-    double am_term(double tau, const std::vector<double>& x, std::size_t itau) {
+    double am_term(double tau, const std::vector<double>& x, std::size_t itau) override {
         return bm_term(x) * (sum_xi_aii_bii(tau, x, itau) + gE_R(tau, x, itau) / (-0.53087));
     }
     double sum_xi_aii_bii(double tau, const std::vector<double>& x, std::size_t itau) {
@@ -125,11 +127,11 @@ class VTPRCubic : public PengRobinson
             return aii_term(tau, i, itau) / b0_ii(i) - aii_term(tau, N - 1, itau) / b0_ii(N - 1);
         }
     }
-    double d_am_term_dxi(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, bool xN_independent) {
+    double d_am_term_dxi(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, bool xN_independent) override {
         return d_bm_term_dxi(x, i, xN_independent) * (sum_xi_aii_bii(tau, x, itau) + gE_R(tau, x, itau) / (-0.53087))
                + bm_term(x) * (d_sum_xi_aii_bii_dxi(tau, x, itau, i, xN_independent) + d_gE_R_dxi(tau, x, itau, i, xN_independent) / (-0.53087));
     }
-    double d2_am_term_dxidxj(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, std::size_t j, bool xN_independent) {
+    double d2_am_term_dxidxj(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, std::size_t j, bool xN_independent) override {
         return d2_bm_term_dxidxj(x, i, j, xN_independent) * (sum_xi_aii_bii(tau, x, itau) + gE_R(tau, x, itau) / (-0.53087))
                + d_bm_term_dxi(x, i, xN_independent)
                    * (d_sum_xi_aii_bii_dxi(tau, x, itau, i, xN_independent) + d_gE_R_dxi(tau, x, itau, i, xN_independent) / (-0.53087))
@@ -137,7 +139,7 @@ class VTPRCubic : public PengRobinson
                    * (d_sum_xi_aii_bii_dxi(tau, x, itau, i, xN_independent) + d_gE_R_dxi(tau, x, itau, i, xN_independent) / (-0.53087));
     }
     double d3_am_term_dxidxjdxk(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, std::size_t j, std::size_t k,
-                                bool xN_independent) {
+                                bool xN_independent) override {
         return d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent) * (sum_xi_aii_bii(tau, x, itau) + gE_R(tau, x, itau) / (-0.53087))
                + d2_bm_term_dxidxj(x, i, k, xN_independent)
                    * (d_sum_xi_aii_bii_dxi(tau, x, itau, i, xN_independent) + d_gE_R_dxi(tau, x, itau, i, xN_independent) / (-0.53087))
@@ -145,7 +147,7 @@ class VTPRCubic : public PengRobinson
                    * (d_sum_xi_aii_bii_dxi(tau, x, itau, i, xN_independent) + d_gE_R_dxi(tau, x, itau, i, xN_independent) / (-0.53087));
     }
 
-    double bm_term(const std::vector<double>& x) {
+    double bm_term(const std::vector<double>& x) override {
         double summerbm = 0;
         for (int i = 0; i < N; ++i) {
             for (int j = 0; j < N; ++j) {
@@ -157,7 +159,7 @@ class VTPRCubic : public PengRobinson
     double bij_term(std::size_t i, std::size_t j) {
         return pow((pow(b0_ii(i), 0.75) + pow(b0_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
     }
-    double d_bm_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent) {
+    double d_bm_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent) override {
         double summer = 0;
         if (xN_independent) {
             for (int j = N - 1; j >= 0; --j) {
@@ -171,33 +173,33 @@ class VTPRCubic : public PengRobinson
             return 2 * (summer + x[N - 1] * (bij_term(N - 1, i) - bij_term(N - 1, N - 1)));
         }
     }
-    double d2_bm_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {
+    double d2_bm_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) override {
         if (xN_independent) {
             return 2 * bij_term(i, j);
         } else {
             return 2 * (bij_term(i, j) - bij_term(j, N - 1) - bij_term(N - 1, i) + bij_term(N - 1, N - 1));
         }
     }
-    double d3_bm_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) {
+    double d3_bm_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) override {
         return 0;
     }
     // Allows to modify the unifac interaction parameters aij, bij and cij
-    void set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string& parameter, const double value) {
+    void set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string& parameter, const double value) override {
         unifaq.set_interaction_parameter(mgi1, mgi2, parameter, value);
     }
 
     // Allows to modify the surface parameter Q_k of the sub group sgi
-    void set_Q_k(const size_t sgi, const double value) {
+    void set_Q_k(const size_t sgi, const double value) override {
         unifaq.set_Q_k(sgi, value);
     }
 
     // Get the surface parameter Q_k of the sub group sgi
-    double get_Q_k(const size_t sgi) const {
+    double get_Q_k(const size_t sgi) const override {
         return unifaq.get_Q_k(sgi);
     }
 
     // Allows to modify the unifac interaction parameters aij, bij and cij
-    double get_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string& parameter) {
+    double get_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string& parameter) override {
         return unifaq.get_interaction_parameter(mgi1, mgi2, parameter);
     }
     std::vector<double> ln_fugacity_coefficient(const std::vector<double>& z, double rhomolar, double p, double T) {

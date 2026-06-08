@@ -4,7 +4,7 @@
 EES Wrapper
 ***********
 
-EES is an acausal solver that can be used to solve a wide range of technical problems.  It can be obtained from http://www.fchart.com/ees/.  Though EES has its own set of thermodynamic properties, CoolProp also implements a number of things that are not in EES (incompressibles, interpolation methods, etc.).
+EES is an acausal solver that can be used to solve a wide range of technical problems.  It can be obtained from https://www.fchart.com/ees/.  Though EES has its own set of thermodynamic properties, CoolProp also implements a number of things that are not in EES (incompressibles, interpolation methods, etc.).
 
 Users
 =====
@@ -42,7 +42,7 @@ Requirements
 ------------
 Compilation of the EES wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
-Additionally, you must download `InnoSetup <http://www.jrsoftware.org/isinfo.php>`_ and add it to the system path.
+Additionally, you must download `InnoSetup <https://www.jrsoftware.org/isinfo.php>`_ and add it to the system path.
 
 Build
 -----
@@ -50,7 +50,7 @@ Build
 Once the dependencies are installed, you can run the installer with::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Make a build folder
     mkdir CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake

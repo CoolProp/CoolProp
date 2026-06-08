@@ -4,7 +4,6 @@ from __future__ import print_function, division, absolute_import
 import matplotlib.pyplot as plt
 import numpy as np
 from abc import ABCMeta
-from six import with_metaclass
 import warnings
 
 import CoolProp
@@ -92,10 +91,7 @@ def interpolate_values_1d(x, y, x_points=None, kind='linear'):
 
 
 def is_string(in_obj):
-    try:
-        return isinstance(in_obj, basestring)
-    except NameError:
-        return isinstance(in_obj, str)
+    return isinstance(in_obj, str)
     # except:
     #    return False
 
@@ -205,7 +201,7 @@ class BaseDimension(BaseQuantity):
     def unit(self, value): self._unit = value
 
 
-class PropertyDict(with_metaclass(ABCMeta), object):
+class PropertyDict(object, metaclass=ABCMeta):
     """A collection of dimensions for all the required quantities"""
 
     def __init__(self):
@@ -298,6 +294,7 @@ class PropertyDict(with_metaclass(ABCMeta), object):
 
 class SIunits(PropertyDict):
     def __init__(self):
+        super(SIunits, self).__init__()
         self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density', symbol=u'd', unit=u'kg/m3')
         self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy', symbol=u'h', unit=u'J/kg')
         self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure', symbol=u'p', unit=u'Pa')
@@ -329,7 +326,7 @@ class EURunits(KSIunits):
         self.T.unit = u'deg C'
 
 
-class Base2DObject(with_metaclass(ABCMeta), object):
+class Base2DObject(object, metaclass=ABCMeta):
     """A container for shared settings and constants for the
     isolines and the property plots."""
 
@@ -889,7 +886,7 @@ consider replacing it with \"_get_sat_bounds\".",
         dim = self._system[CoolProp.iP]
         limits[2] = dim.to_SI(limits[2])
         limits[3] = dim.to_SI(limits[3])
-        self.limits = limits
+        self.limits = tuple(limits)
 
     def get_Tp_limits(self):
         """Get the limits for the graphs in temperature and pressure, based on
@@ -1083,8 +1080,14 @@ consider replacing it with \"_get_sat_bounds\".",
         """
         This will give the coordinates and rotation required to align a label with
         a line on a plot in SI units.
+
+        Exactly one of ``x`` or ``y`` must be supplied; the other is found by
+        interpolation along ``(xv, yv)``.
         """
-        if y is None and x is not None:
+        if (x is None) == (y is None):
+            raise ValueError("Provide exactly one of `x` or `y`; the other is interpolated.")
+
+        if y is None:
             trash = 0
             (xv, yv) = self._to_pixel_coords(xv, yv)
             # x is provided but y isn't
@@ -1094,7 +1097,7 @@ consider replacing it with \"_get_sat_bounds\".",
             x, y, dy_dx = BasePlot.get_x_y_dydx(xv, yv, x)
             rot = np.arctan(dy_dx) / np.pi * 180.
 
-        elif x is None and y is not None:
+        else:
             # y is provided, but x isn't
             _xv = xv[::-1]
             _yv = yv[::-1]

@@ -1,6 +1,6 @@
 recursive-include src *.*
 recursive-include include *.*
 recursive-include externals *
-recursive-include _py_backend *
 include dev/gitrevision.txt
+include .version
 include *.*

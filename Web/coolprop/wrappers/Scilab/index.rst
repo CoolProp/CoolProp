@@ -58,18 +58,21 @@ Calling through PIMS
 
 .. warning::
 
-    Only python 2.7 is supported.  The default python on your system must be python 2.7 and not python 3.4.  I have no idea if you can switch which python it uses, it doesn't seem so.
-    
+    The Scilab wrapper drives CoolProp through Scilab's Python bridge, so the Python
+    interpreter that Scilab finds must match the one CoolProp was built against.  This
+    wrapper was originally developed and tested against Python 2.7; if you are using a
+    newer Python and run into trouble, please file an issue.
+
     Also, numpy is required, but you should be using anaconda anyway, which includes numpy
 
-Once it is installed, make sure that it can find python, and that the python it finds is a 2.7.x version of python::
+Once it is installed, make sure that it can find python, and check the version it finds::
 
-    pyEvalStr('import sys; print sys.version')
-    
+    pyEvalStr('import sys; print(sys.version)')
+
 which should yield something like (OS-dependent)::
 
-    2.7.11 |Continuum Analytics, Inc.| (default, Dec  7 2015, 14:10:42) [MSC v.1500 64 bit (AMD64)]
-    
+    3.11.5 (main, Sep 11 2023, 13:54:46) [MSC v.1936 64 bit (AMD64)]
+
 Then, you can use CoolProp just like in Python. Here is an example of calling the low-level interface to get the normal-boiling-point temperature of water::
 
     pyImport CoolProp.CoolProp

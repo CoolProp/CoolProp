@@ -59,16 +59,14 @@ def parse_cmake_version_info():
     return coolprop_version
 
 
-def replace_setup_py(new_v: version.Version):
-    fp = ROOT_DIR / 'wrappers/Python/setup.py'
-
-    with open(fp, 'r') as f:
-        content = f.read()
+def replace_version_file(new_v: version.Version):
+    """Update the .version file which is used by pyproject.toml"""
+    fp = ROOT_DIR / '.version'
 
     with open(fp, 'w') as f:
-        f.write(content.replace('version=version,', f"version='{new_v}',"))
+        f.write(str(new_v))
 
-    print(f"Replaced version '{new_v}' in {fp}")
+    print(f"Updated version '{new_v}' in {fp}")
 
 
 if __name__ == '__main__':
@@ -87,9 +85,9 @@ if __name__ == '__main__':
                         action='store_true',
                         help="Check current version instead of incrementing by one")
 
-    parser.add_argument("--replace-setup-py", default=False,
+    parser.add_argument("--replace-version", default=False,
                         action='store_true',
-                        help="Do replacement in setup.py")
+                        help="Update .version file")
     
     parser.add_argument("--version", type=str, help="Use this version")
 
@@ -130,10 +128,10 @@ if __name__ == '__main__':
         new_v = str(current_v)
 
     new_v = version.Version(new_v)
-    if args.replace_setup_py:
+    if args.replace_version:
         remote = "PyPi" if args.pypi else "TestPyPi"
         print(f"Version to be injected on {remote}: {new_v}")
 
-        replace_setup_py(new_v=new_v)
+        replace_version_file(new_v=new_v)
     else:
         print(new_v, end="")

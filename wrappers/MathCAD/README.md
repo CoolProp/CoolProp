@@ -50,7 +50,7 @@ To Build
 
 * **Recursively clone the CoolProp library to a local repository.**::
 
-	git clone https://github.com/CoolProp/CoolProp --recursive
+	git clone https://github.com/CoolProp/CoolProp
 
 * **Change directory (cd) to the CoolProp directory you just created.**::
 

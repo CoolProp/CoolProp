@@ -2,14 +2,13 @@
 #ifndef INCOMPRESSIBLELIBRARY_H
 #define INCOMPRESSIBLELIBRARY_H
 
-#include "DataStructures.h"
-#include "IncompressibleFluid.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/fluids/IncompressibleFluid.h"
 //#include "crossplatform_shared_ptr.h"
 
-#include "rapidjson_include.h"
+#include "CoolProp/detail/json.h"
 
 #include <map>
-#include <algorithm>
 
 namespace CoolProp {
 
@@ -130,8 +129,8 @@ extern int get_debug_level();
 /// A container for the fluid parameters for the incompressible fluids
 /**
 This container holds copies of all of the fluid instances for the fluids that are loaded in incompressible.
-New fluids can be added by passing in a rapidjson::Value instance to the add_one function, or
-a rapidjson array of fluids to the add_many function.
+New fluids can be added by passing in a nlohmann::json instance to the add_one function, or
+a nlohmann::json array of fluids to the add_many function.
 */
 
 //typedef shared_ptr<IncompressibleFluid> IncompressibleFluidPointer;
@@ -149,22 +148,22 @@ class JSONIncompressibleLibrary
 
    protected:
     /// A general function to parse the json files that hold the coefficient matrices
-    IncompressibleData parse_coefficients(rapidjson::Value& obj, const std::string& id, bool vital);
-    double parse_value(rapidjson::Value& obj, const std::string& id, bool vital, double def);
-    composition_types parse_ifrac(rapidjson::Value& obj, const std::string& id);
+    IncompressibleData parse_coefficients(const nlohmann::json& obj, const std::string& id, bool vital);
+    double parse_value(const nlohmann::json& obj, const std::string& id, bool vital, double def);
+    composition_types parse_ifrac(const nlohmann::json& obj, const std::string& id);
 
    public:
     // Default constructor;
     JSONIncompressibleLibrary();
     ~JSONIncompressibleLibrary();
 
-    bool is_empty(void) {
+    bool is_empty() {
         return _is_empty;
     };
 
-    /// Add all the fluid entries in the rapidjson::Value instance passed in
-    void add_many(rapidjson::Value& listing);
-    void add_one(rapidjson::Value& fluid_json);
+    /// Add all the fluid entries in the nlohmann::json array passed in
+    void add_many(const nlohmann::json& listing);
+    void add_one(const nlohmann::json& fluid_json);
     void add_obj(const IncompressibleFluid& fluid_obj);
 
     /** \brief Get an IncompressibleFluid instance stored in this library
@@ -180,23 +179,23 @@ class JSONIncompressibleLibrary
     IncompressibleFluid& get(std::size_t key);
 
     /// Return a comma-separated list of incompressible pure fluid names
-    std::string get_incompressible_list_pure(void) {
+    std::string get_incompressible_list_pure() {
         return strjoin(name_vector_pure, ",");
     };
     /// Return a comma-separated list of solution names
-    std::string get_incompressible_list_solution(void) {
+    std::string get_incompressible_list_solution() {
         return strjoin(name_vector_solution, ",");
     };
 };
 
 /// Get a reference to the library instance
-JSONIncompressibleLibrary& get_incompressible_library(void);
+JSONIncompressibleLibrary& get_incompressible_library();
 
 /// Return a comma-separated list of incompressible pure fluid names
-std::string get_incompressible_list_pure(void);
+std::string get_incompressible_list_pure();
 
 /// Return a comma-separated list of solution names
-std::string get_incompressible_list_solution(void);
+std::string get_incompressible_list_solution();
 
 /// Get the fluid structure returned as a reference
 IncompressibleFluid& get_incompressible_fluid(const std::string& fluid_string);

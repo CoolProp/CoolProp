@@ -4,9 +4,8 @@
 #include <chrono>
 #include <memory>
 
-#include "CoolProp.h"
-#include "AbstractState.h"
-
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/AbstractState.h"
 
 int main(int argc, const char* argv[]) {
 
@@ -34,7 +33,6 @@ int main(int argc, const char* argv[]) {
     ptr->update(CoolProp::PQ_INPUTS, p, Q);
     s = 4000;
     ptr->update(CoolProp::PSmass_INPUTS, p, s);
-
 
     return 0;
 }

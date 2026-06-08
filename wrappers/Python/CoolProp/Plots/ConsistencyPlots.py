@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division, absolute_import
+import os
 
 
 import matplotlib.pyplot as plt
 import numpy as np
 import time, timeit
-import six
 import pandas
 import CoolProp as CP
+from CoolProp.Plots._consistency_report import format_time
 
 CP.CoolProp.set_debug_level(00)
 from matplotlib.backends.backend_pdf import PdfPages
@@ -94,7 +95,7 @@ class ConsistencyFigure(object):
         self.axes_list = []
         for row in self.axes:
             for ax in row:
-                pair = six.next(pairs_generator)
+                pair = next(pairs_generator)
                 kwargs = dict(p_limits_1phase=p_limits_1phase, T_limits_1phase=T_limits_1phase, NT_1phase=NT_1phase, Np_1phase=Np_1phase,
                               NT_2phase=NT_2phase, NQ_2phase=NQ_2phase)
                 self.axes_list.append(ConsistencyAxis(ax, self, pair, self.fluid, self.backend, *states, **kwargs))
@@ -119,11 +120,16 @@ class ConsistencyFigure(object):
             if pair not in not_implemented_solvers and pair not in additional_skips:
                 errors.append(ax.consistency_check_singlephase())
                 if pair not in no_two_phase_solvers:
-                    ax.consistency_check_twophase()
+                    errors.append(ax.consistency_check_twophase())
             else:
                 ax.cross_out_axis()
 
-        self.errors = pandas.concat(errors, sort=True)
+        self.errors = pandas.concat(errors, sort=True) if errors else pandas.DataFrame()
+        self.errors['fluid'] = self.fluid
+        self.errors['backend'] = self.backend
+
+        for ax in self.axes_list:
+            ax.annotate_timing()
 
     def calc_saturation_curves(self):
         """
@@ -256,6 +262,8 @@ class ConsistencyAxis(object):
         self.Np_1phase = Np_1phase
         self.NQ_2phase = NQ_2phase
         self.NT_2phase = NT_2phase
+        self.mean_elapsed_1phase = None
+        self.mean_elapsed_2phase = None
         # self.saturation_curves()
 
     def label_axes(self):
@@ -353,37 +361,51 @@ class ConsistencyAxis(object):
                     # Update the state using PT inputs in order to calculate all the remaining inputs
                     self.state_PT.update(CP.PT_INPUTS, p, T)
                 except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1="P", val1=p, in2="T", val2=T))
+                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", phase_region="1phase", in1="P", val1=p, in2="T", val2=T, P=p, T=T))
                     myprint(1, 'consistency', VE)
                     continue
-
-                _exception = False
-                tic2 = timeit.default_timer()
-                try:
-                    val1, val2 = self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)
-                    self.state.update(pairkey, val1, val2)
-                    toc2 = timeit.default_timer()
-                except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2))
-                    myprint(1, 'update(1p)', self.pair, 'P', p, 'T', T, 'D', self.state_PT.keyed_output(CP.iDmolar), '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), VE)
-                    _exception = True
 
                 x = self.to_axis_units(xparam, self.state_PT.keyed_output(xkey))
                 y = self.to_axis_units(yparam, self.state_PT.keyed_output(ykey))
 
+                _exception = False
+                val1, val2 = self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)
+                tic2 = timeit.default_timer()
+                try:
+                    self.state.update(pairkey, val1, val2)
+                    elapsed = timeit.default_timer() - tic2
+                except ValueError as VE:
+                    elapsed = timeit.default_timer() - tic2
+                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", phase_region="1phase",
+                                     in1=param1, val1=val1, in2=param2, val2=val2, P=p, T=T, x=x, y=y, elapsed=elapsed))
+                    myprint(1, 'update(1p)', self.pair, 'P', p, 'T', T, 'D', self.state_PT.keyed_output(CP.iDmolar), '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), VE)
+                    _exception = True
+
                 if not _exception:
                     # Check the error on the density
-                    if abs(self.state_PT.rhomolar() / self.state.rhomolar() - 1) < 1e-3 and abs(self.state_PT.p() / self.state.p() - 1) < 1e-3 and abs(self.state_PT.T() - self.state.T()) < 1e-3:
-                        data.append(dict(cls="GOOD", x=x, y=y, elapsed=toc2 - tic2))
+                    drho = abs(self.state_PT.rhomolar() / self.state.rhomolar() - 1)
+                    dp = abs(self.state_PT.p() / self.state.p() - 1)
+                    dT = abs(self.state_PT.T() - self.state.T())
+                    if drho < 1e-3 and dp < 1e-3 and dT < 1e-3:
+                        data.append(dict(cls="GOOD", phase_region="1phase", x=x, y=y, elapsed=elapsed))
                         if 'REFPROP' not in self.backend:
                             if self.state_PT.phase() != self.state.phase():
+                                data.append(dict(cls="BAD_PHASE", phase_region="1phase", in1=param1, val1=val1,
+                                                 in2=param2, val2=val2, P=p, T=T, x=x, y=y, elapsed=elapsed,
+                                                 err='phase {0} instead of {1}'.format(self.state.phase(), self.state_PT.phase())))
                                 myprint(1, 'bad phase', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_PT.phase())
                     else:
-                        data.append(dict(cls="INCONSISTENT", type="update", in1=param1, val1=val1, in2=param2, val2=val2, x=x, y=y))
-                        myprint(1, 'bad', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), 'T:', self.state_PT.T(), 'Drho:', abs(self.state_PT.rhomolar() / self.state.rhomolar() - 1), abs(self.state_PT.p() / self.state.p() - 1), 'DT:', abs(self.state_PT.T() - self.state.T()))
+                        data.append(dict(cls="INCONSISTENT", type="update", phase_region="1phase",
+                                         in1=param1, val1=val1, in2=param2, val2=val2, P=p, T=T, x=x, y=y,
+                                         elapsed=elapsed, dev=max(drho, dp)))
+                        myprint(1, 'bad', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), 'T:', self.state_PT.T(), 'Drho:', drho, dp, 'DT:', dT)
 
         toc = time.time()
         df = pandas.DataFrame(data)
+        df['pair'] = self.pair
+        if 'elapsed' in df.columns and 'cls' in df.columns:
+            timed = df[(df['cls'] != 'BAD_PHASE') & df['elapsed'].notna()]
+            self.mean_elapsed_1phase = float(timed['elapsed'].mean()) if len(timed) else None
         bad = df[df.cls == 'INCONSISTENT']
         good = df[df.cls == 'GOOD']
         slowgood = good[good.elapsed > 0.01]
@@ -398,12 +420,6 @@ class ConsistencyAxis(object):
 
         print('1-phase took ' + str(toc - tic) + ' s for ' + self.pair)
 
-        if self.pair == 'HmolarSmolar':
-            # plt.plot(good.elapsed)
-            # plt.title(self.pair)
-            # plt.show()
-
-            good.to_excel('times_water.xlsx')
         return df[df.cls != 'GOOD']
 
     def consistency_check_twophase(self):
@@ -414,7 +430,7 @@ class ConsistencyAxis(object):
         try:
             if state.fluid_param_string('pure') == 'false':
                 print("Not a pure-fluid, skipping two-phase evaluation")
-                return
+                return pandas.DataFrame()
         except:
             pass
 
@@ -440,48 +456,95 @@ class ConsistencyAxis(object):
                     # Update the state using QT inputs in order to calculate all the remaining inputs
                     self.state_QT.update(CP.QT_INPUTS, q, T)
                 except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1="Q", val1=q, in2="T", val2=T))
+                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", phase_region="2phase", in1="Q", val1=q, in2="T", val2=T, P=state.p(), T=T))
                     myprint(1, 'consistency', VE)
                     continue
-
-                _exception = False
-                try:
-                    val1, val2 = self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)
-                    state.update(pairkey, val1, val2)
-                except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2))
-                    myprint(1, 'update_QT', T, q)
-                    myprint(1, 'update', param1, self.state_QT.keyed_output(key1), param2, self.state_QT.keyed_output(key2), VE)
-                    _exception = True
 
                 x = self.to_axis_units(xparam, self.state_QT.keyed_output(xkey))
                 y = self.to_axis_units(yparam, self.state_QT.keyed_output(ykey))
 
+                _exception = False
+                val1, val2 = self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)
+                tic2 = timeit.default_timer()
+                try:
+                    state.update(pairkey, val1, val2)
+                    elapsed = timeit.default_timer() - tic2
+                except ValueError as VE:
+                    elapsed = timeit.default_timer() - tic2
+                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", phase_region="2phase",
+                                     in1=param1, val1=val1, in2=param2, val2=val2, P=self.state_QT.p(), T=T, x=x, y=y, elapsed=elapsed))
+                    myprint(1, 'update_QT', T, q)
+                    myprint(1, 'update', param1, self.state_QT.keyed_output(key1), param2, self.state_QT.keyed_output(key2), VE)
+                    _exception = True
+
                 if not _exception:
                     # Check the error on the density
-                    if abs(self.state_QT.rhomolar() / self.state.rhomolar() - 1) < 1e-3 and abs(self.state_QT.p() / self.state.p() - 1) < 1e-3 and abs(self.state_QT.T() - self.state.T()) < 1e-3:
-                        data.append(dict(cls="GOOD", x=x, y=y))
-                        if 'REFPROP' not in self.backend:
+                    drho = abs(self.state_QT.rhomolar() / self.state.rhomolar() - 1)
+                    dp = abs(self.state_QT.p() / self.state.p() - 1)
+                    dT = abs(self.state_QT.T() - self.state.T())
+                    if drho < 1e-3 and dp < 1e-3 and dT < 1e-3:
+                        data.append(dict(cls="GOOD", phase_region="2phase", x=x, y=y, elapsed=elapsed))
+                        # The two-phase phase-equality check is skipped for two
+                        # INDEPENDENT, intentional reasons:
+                        #  - q == 0/1 saturation boundaries (this PR): a point sitting
+                        #    exactly on the phase boundary rounds between single-phase
+                        #    and two-phase, so a mismatch there is numerical noise
+                        #    rather than a flash-routine bug.
+                        #  - REFPROP backend (long-standing, since #1057): REFPROP and
+                        #    CoolProp use different phase-index conventions for two-phase
+                        #    states, so the labels disagree by design across the whole
+                        #    dome -- not just at the boundary -- and reporting them would
+                        #    flood the plot with convention noise, not real flash bugs.
+                        if 'REFPROP' not in self.backend and 0.0 < q < 1.0:
                             if self.state_QT.phase() != self.state.phase():
+                                data.append(dict(cls="BAD_PHASE", phase_region="2phase", in1=param1, val1=val1,
+                                                 in2=param2, val2=val2, P=self.state_QT.p(), T=T, x=x, y=y, elapsed=elapsed,
+                                                 err='phase {0} instead of {1}'.format(self.state.phase(), self.state_QT.phase())))
                                 myprint(1, 'bad phase (2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_QT.phase())
 
                     else:
                         myprint(1, 'Q', q)
-                        myprint(1, 'bad(2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), 'pnew:', self.state.p(), 'pold:', self.state_QT.p(), 'Tnew:', self.state.T(), 'T:', self.state_QT.T(), 'Drho:', abs(self.state_QT.rhomolar() / self.state.rhomolar() - 1), 'DP', abs(self.state_QT.p() / self.state.p() - 1), 'DT:', abs(self.state_QT.T() - self.state.T()))
-                        data.append(dict(cls="INCONSISTENT", type="update", in1=param1, val1=val1, in2=param2, val2=val2, x=x, y=y))
+                        myprint(1, 'bad(2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), 'pnew:', self.state.p(), 'pold:', self.state_QT.p(), 'Tnew:', self.state.T(), 'T:', self.state_QT.T(), 'Drho:', drho, 'DP', dp, 'DT:', dT)
+                        data.append(dict(cls="INCONSISTENT", type="update", phase_region="2phase",
+                                         in1=param1, val1=val1, in2=param2, val2=val2, P=self.state_QT.p(), T=T, x=x, y=y,
+                                         elapsed=elapsed, dev=max(drho, dp)))
 
         toc = time.time()
         df = pandas.DataFrame(data)
+        df['pair'] = self.pair
+        if 'elapsed' in df.columns and 'cls' in df.columns:
+            timed = df[(df['cls'] != 'BAD_PHASE') & df['elapsed'].notna()]
+            self.mean_elapsed_2phase = float(timed['elapsed'].mean()) if len(timed) else None
         bad = df[df.cls == 'INCONSISTENT']
         good = df[df.cls == 'GOOD']
         excep = df[df.cls == 'EXCEPTION']
         badphase = df[df.cls == 'BAD_PHASE']
 
-        self.ax.plot(bad.x, bad.y, 'r+', ms=3)
-        self.ax.plot(good.x, good.y, 'k.', ms=1)
-        self.ax.plot(excep.x, excep.y, 'rx', ms=3)
-        self.ax.plot(badphase.x, badphase.y, 'o', ms=3, mfc='none')
+        if not bad.empty:
+            self.ax.plot(bad.x, bad.y, 'r+', ms=3)
+        if not good.empty:
+            self.ax.plot(good.x, good.y, 'k.', ms=1)
+        if not excep.empty: 
+            self.ax.plot(excep.x, excep.y, 'rx', ms=3)
+        if not badphase.empty:
+            self.ax.plot(badphase.x, badphase.y, 'o', ms=3, mfc='none')
         print('2-phase took ' + str(toc - tic) + ' s for ' + self.pair)
+
+        return df[df.cls != 'GOOD']
+
+    def annotate_timing(self):
+        """Annotate the panel with mean flash time per point (1-phase and 2-phase
+        reported separately, since their solver costs differ markedly)."""
+        parts = []
+        if self.mean_elapsed_1phase is not None:
+            parts.append('1ph ' + format_time(self.mean_elapsed_1phase))
+        if self.mean_elapsed_2phase is not None:
+            parts.append('2ph ' + format_time(self.mean_elapsed_2phase))
+        if not parts:
+            return
+        self.ax.text(0.02, 0.98, u'mean t/pt: ' + u', '.join(parts),
+                     transform=self.ax.transAxes, ha='left', va='top', fontsize=9,
+                     bbox=dict(fc='white', ec='none', alpha=0.7, pad=1))
 
     def cross_out_axis(self):
         xlims = self.ax.get_xlim()
@@ -499,18 +562,43 @@ class ConsistencyAxis(object):
 
         self.ax.text(x, y, 'Not\nImplemented', ha='center', va='center', bbox=dict(fc='white'))
 
+def do_one_fluid(fluid):
+    tic = timeit.default_timer()
+    # skips = ['DmolarHmolar', 'DmolarSmolar', 'DmolarUmolar', 'HmolarSmolar']
+    ff = ConsistencyFigure(fluid, backend='HEOS', additional_skips=[], NT_1phase=200, Np_1phase=200, NT_2phase=20, NQ_2phase=20)
+    ff.errors.to_csv('StandardErrors' + fluid + '.csv')
+    ff.errors['fluid'] = fluid
+    toc = timeit.default_timer()
+    print('Time to build:', toc - tic, 'seconds')
+    # ff.add_to_pdf(PVT)
+    ff.savefig(fluid + '.png')
+    ff.savefig(fluid + '.pdf')
+    plt.close(ff.fig)
+    return ff.errors
 
 if __name__ == '__main__':
+
+    # Use process_map to apply the function in parallel with a progress bar
+    from tqdm.contrib.concurrent import process_map
+    fluids = CP.__fluids__
+    # fluids = ['R134a']
+    all_errors = process_map(do_one_fluid, fluids, max_workers=2)
+    pandas.concat(all_errors, sort=True).to_csv('AllErrors.csv')
+    quit()
+
     PVT = PdfPages('Consistency.pdf')
     CP.CoolProp.set_debug_level(0)
     open('timelog.txt', 'w')
+    all_errors = []
     with open('timelog.txt', 'a+', buffering=1) as fp:
-        for fluid in ['METHANOL']:  # CP.__fluids__:
+        for fluid in CP.__fluids__:
             tic = timeit.default_timer()
             skips = ['DmolarHmolar', 'DmolarSmolar', 'DmolarUmolar', 'HmolarSmolar']
             skips = []
-            ff = ConsistencyFigure(fluid, backend='HEOS', additional_skips=skips)  # , NT_1phase = 10, Np_1phase = 10, NT_2phase = 100, NQ_2phase = 0)
-            ff.errors.to_excel('Errors' + fluid + '.xlsx')
+            ff = ConsistencyFigure(fluid, backend='HEOS', additional_skips=skips, NT_1phase = 200, Np_1phase = 200, NT_2phase = 20, NQ_2phase = 20)
+            ff.errors.to_csv('StandardErrors' + fluid + '.csv')
+            ff.errors['fluid'] = fluid
+            all_errors.append(ff.errors)
             toc = timeit.default_timer()
             print('Time to build:', toc - tic, 'seconds')
             ff.add_to_pdf(PVT)
@@ -520,3 +608,4 @@ if __name__ == '__main__':
             fp.write('Time to build: {0} seconds for {1}\n'.format(toc - tic, fluid))
             del ff
     PVT.close()
+    

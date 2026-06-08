@@ -4,8 +4,8 @@
 #include <map>
 
 #include "UNIFACLibrary.h"
-#include "CachedElement.h"
-#include "Exceptions.h"
+#include "CoolProp/detail/CachedElement.h"
+#include "CoolProp/Exceptions.h"
 
 /// Structure containing data for the pure fluid in the mixture
 struct ComponentData
@@ -51,14 +51,9 @@ class UNIFACMixture
     std::vector<ComponentData> pure_data;
 
    public:
-    UNIFACMixture(const UNIFACLibrary::UNIFACParameterLibrary& library, const double T_r) : library(library), T_r(T_r){};
+    UNIFACMixture(const UNIFACLibrary::UNIFACParameterLibrary& library, const double T_r) : library(library), T_r(T_r) {};
 
-    /**
-        * \brief Set all the interaction parameters between groups
-        *
-        * \param subgroups A vector of the set of the unique Group forming the mixture - these
-        * permutations represent the set of posisble binary interactions
-        */
+    /** \brief Set all the interaction parameters between groups */
     void set_interaction_parameters();
     void set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string& parameter, const double value);
     /// Get one of the mgi-mgi interaction pairs
@@ -93,7 +88,7 @@ class UNIFACMixture
     /// Add a component with the defined groups defined by (count, sgi) pairs
     void add_component(const UNIFACLibrary::Component& comp);
 
-    void set_components(const std::string& identifier_type, std::vector<std::string> identifiers);
+    void set_components(const std::string& identifier_type, const std::vector<std::string>& identifiers);
 
     const std::vector<UNIFACLibrary::Component>& get_components() {
         return components;

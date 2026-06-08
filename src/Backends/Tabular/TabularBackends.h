@@ -1,14 +1,15 @@
 #ifndef TABULAR_BACKENDS_H
 #define TABULAR_BACKENDS_H
 
-#include "AbstractState.h"
-#include "CPmsgpack.h"
-#include <msgpack/fbuffer.hpp>
-#include "crossplatform_shared_ptr.h"
-#include "Exceptions.h"
-#include "CoolProp.h"
-#include <sstream>
-#include "Configuration.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/detail/msgpack.h"
+#include <memory>
+using std::shared_ptr;
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/CoolProp.h"
+#include <optional>
+#include <utility>
+#include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 
 /** ***MAGIC WARNING***!! X Macros in use
@@ -97,7 +98,7 @@ class PackablePhaseEnvelopeData : public PhaseEnvelopeData
    public:
     int revision;
 
-    PackablePhaseEnvelopeData() : revision(0){};
+    PackablePhaseEnvelopeData() : revision(0) {};
 
     void copy_from_nonpackable(const PhaseEnvelopeData& PED) {
 /* Use X macros to auto-generate the copying */
@@ -106,7 +107,7 @@ class PackablePhaseEnvelopeData : public PhaseEnvelopeData
 #undef X
 /* Use X macros to auto-generate the copying */
 #define X(name) name = PED.name;
-        PHASE_ENVELOPE_MATRICES
+          PHASE_ENVELOPE_MATRICES
 #undef X
     };
 
@@ -123,18 +124,18 @@ class PackablePhaseEnvelopeData : public PhaseEnvelopeData
 #undef X
 /* Use X macros to auto-generate the packing code; each will look something like: matrices.insert(std::pair<std::string, std::vector<std::vector<CoolPropDbl> > >("T", T)); */
 #define X(name) matrices.insert(std::pair<std::string, std::vector<std::vector<double>>>(#name, name));
-        PHASE_ENVELOPE_MATRICES
+          PHASE_ENVELOPE_MATRICES
 #undef X
     };
     std::map<std::string, std::vector<double>>::iterator get_vector_iterator(const std::string& name) {
-        std::map<std::string, std::vector<double>>::iterator it = vectors.find(name);
+        auto it = vectors.find(name);
         if (it == vectors.end()) {
             throw UnableToLoadError(format("could not find vector %s", name.c_str()));
         }
         return it;
     }
     std::map<std::string, std::vector<std::vector<double>>>::iterator get_matrix_iterator(const std::string& name) {
-        std::map<std::string, std::vector<std::vector<double>>>::iterator it = matrices.find(name);
+        auto it = matrices.find(name);
         if (it == matrices.end()) {
             throw UnableToLoadError(format("could not find matrix %s", name.c_str()));
         }
@@ -227,10 +228,7 @@ class PureFluidSaturationTableData
     std::size_t N;
     shared_ptr<CoolProp::AbstractState> AS;
 
-    PureFluidSaturationTableData() {
-        N = 1000;
-        revision = 1;
-    }
+    PureFluidSaturationTableData() : N(1000), revision(1) {}
 
     /// Build this table
     void build(shared_ptr<CoolProp::AbstractState>& AS);
@@ -258,37 +256,26 @@ class PureFluidSaturationTableData
 
          \note If PQ or QT are inputs, yL and yV will correspond to the other main variable: p->T or T->p
          */
-    bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t& iL, std::size_t& iV, CoolPropDbl& yL,
-                   CoolPropDbl& yV) {
-        std::vector<double>*yvecL = NULL, *yvecV = NULL;
-        switch (other) {
-            case iT:
-                yvecL = &TL;
-                yvecV = &TV;
-                break;
-            case iHmolar:
-                yvecL = &hmolarL;
-                yvecV = &hmolarV;
-                break;
-            case iQ:
-                yvecL = &TL;
-                yvecV = &TV;
-                break;
-            case iSmolar:
-                yvecL = &smolarL;
-                yvecV = &smolarV;
-                break;
-            case iUmolar:
-                yvecL = &umolarL;
-                yvecV = &umolarV;
-                break;
-            case iDmolar:
-                yvecL = &rhomolarL;
-                yvecV = &rhomolarV;
-                break;
-            default:
-                throw ValueError("invalid input for other in is_inside");
-        }
+    [[nodiscard]] bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t& iL, std::size_t& iV, CoolPropDbl& yL,
+                                 CoolPropDbl& yV) {
+        auto [yvecL, yvecV] = [&]() -> std::pair<std::vector<double>*, std::vector<double>*> {
+            switch (other) {
+                case iT:
+                    return {&TL, &TV};
+                case iHmolar:
+                    return {&hmolarL, &hmolarV};
+                case iQ:
+                    return {&TL, &TV};
+                case iSmolar:
+                    return {&smolarL, &smolarV};
+                case iUmolar:
+                    return {&umolarL, &umolarV};
+                case iDmolar:
+                    return {&rhomolarL, &rhomolarV};
+                default:
+                    throw ValueError("invalid input for other in is_inside");
+            }
+        }();
 
         // Trivial checks
         if (main == iP) {
@@ -391,7 +378,7 @@ class PureFluidSaturationTableData
 #undef X
     };
     std::map<std::string, std::vector<double>>::iterator get_vector_iterator(const std::string& name) {
-        std::map<std::string, std::vector<double>>::iterator it = vectors.find(name);
+        auto it = vectors.find(name);
         if (it == vectors.end()) {
             throw UnableToLoadError(format("could not find vector %s", name.c_str()));
         }
@@ -611,18 +598,12 @@ class SinglePhaseGriddedTableData
 
     virtual void set_limits() = 0;
 
-    SinglePhaseGriddedTableData() {
-        Nx = 200;
-        Ny = 200;
-        revision = 0;
-        xkey = INVALID_PARAMETER;
-        ykey = INVALID_PARAMETER;
-        logx = false;
-        logy = false;
-        xmin = _HUGE;
-        xmax = _HUGE;
-        ymin = _HUGE;
-        ymax = _HUGE;
+    SinglePhaseGriddedTableData()
+      : revision(0), xkey(INVALID_PARAMETER), ykey(INVALID_PARAMETER), logx(false), logy(false), xmin(_HUGE), xmax(_HUGE), ymin(_HUGE), ymax(_HUGE) {
+        const int nx_cfg = get_config_int(TABULAR_NX);
+        const int ny_cfg = get_config_int(TABULAR_NY);
+        Nx = (nx_cfg > 1) ? static_cast<std::size_t>(nx_cfg) : 200;
+        Ny = (ny_cfg > 1) ? static_cast<std::size_t>(ny_cfg) : 200;
     }
 
 /* Use X macros to auto-generate the variables; each will look something like: std::vector< std::vector<double> > T; */
@@ -644,7 +625,7 @@ class SinglePhaseGriddedTableData
         make_axis_vectors();
     };
     /// Make vectors for the x-axis values and the y-axis values
-    void make_axis_vectors(void) {
+    void make_axis_vectors() {
         if (logx) {
             xvec = logspace(xmin, xmax, Nx);
         } else {
@@ -657,7 +638,7 @@ class SinglePhaseGriddedTableData
         }
     };
     /// Make matrices of good neighbors if the current value for i,j corresponds to a bad node
-    void make_good_neighbors(void) {
+    void make_good_neighbors() {
         nearest_neighbor_i.resize(Nx, std::vector<std::size_t>(Ny, std::numeric_limits<std::size_t>::max()));
         nearest_neighbor_j.resize(Nx, std::vector<std::size_t>(Ny, std::numeric_limits<std::size_t>::max()));
         for (std::size_t i = 0; i < xvec.size(); ++i) {
@@ -690,7 +671,7 @@ class SinglePhaseGriddedTableData
 #undef X
     };
     std::map<std::string, std::vector<std::vector<double>>>::iterator get_matrices_iterator(const std::string& name) {
-        std::map<std::string, std::vector<std::vector<double>>>::iterator it = matrices.find(name);
+        auto it = matrices.find(name);
         if (it == matrices.end()) {
             throw UnableToLoadError(format("could not find matrix %s", name.c_str()));
         }
@@ -825,8 +806,8 @@ class LogPHTable : public SinglePhaseGriddedTableData
         logy = true;
         logx = false;
     };
-    void set_limits() {
-        if (this->AS.get() == NULL) {
+    void set_limits() override {
+        if (this->AS.get() == nullptr) {
             throw ValueError("AS is not yet set");
         }
         CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
@@ -849,7 +830,9 @@ class LogPHTable : public SinglePhaseGriddedTableData
         deserialized.convert(temp);
         temp.unpack();
         if (Nx != temp.Nx || Ny != temp.Ny) {
-            throw ValueError(format("old [%dx%d] and new [%dx%d] dimensions don't agree", temp.Nx, temp.Ny, Nx, Ny));
+            // Cached file was built at a different grid resolution than the current
+            // TABULAR_NX/TABULAR_NY config requests; force a rebuild via check_tables().
+            throw UnableToLoadError(format("Cached LogPH grid [%dx%d] does not match requested [%dx%d]; will rebuild", temp.Nx, temp.Ny, Nx, Ny));
         } else if (revision > temp.revision) {
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
         } else if ((std::abs(xmin) > 1e-10 && std::abs(xmax) > 1e-10)
@@ -877,8 +860,8 @@ class LogPTTable : public SinglePhaseGriddedTableData
         xmax = _HUGE;
         ymax = _HUGE;
     };
-    void set_limits() {
-        if (this->AS.get() == NULL) {
+    void set_limits() override {
+        if (this->AS.get() == nullptr) {
             throw ValueError("AS is not yet set");
         }
         CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
@@ -894,7 +877,9 @@ class LogPTTable : public SinglePhaseGriddedTableData
         deserialized.convert(temp);
         temp.unpack();
         if (Nx != temp.Nx || Ny != temp.Ny) {
-            throw ValueError(format("old [%dx%d] and new [%dx%d] dimensions don't agree", temp.Nx, temp.Ny, Nx, Ny));
+            // Cached file was built at a different grid resolution than the current
+            // TABULAR_NX/TABULAR_NY config requests; force a rebuild via check_tables().
+            throw UnableToLoadError(format("Cached LogPT grid [%dx%d] does not match requested [%dx%d]; will rebuild", temp.Nx, temp.Ny, Nx, Ny));
         } else if (revision > temp.revision) {
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
         } else if ((std::abs(xmin) > 1e-10 && std::abs(xmax) > 1e-10)
@@ -919,14 +904,7 @@ class CellCoeffs
 
    public:
     double dx_dxhat, dy_dyhat;
-    CellCoeffs() {
-        _valid = false;
-        _has_valid_neighbor = false;
-        dx_dxhat = _HUGE;
-        dy_dyhat = _HUGE;
-        alt_i = 9999999;
-        alt_j = 9999999;
-    }
+    CellCoeffs() : _valid(false), _has_valid_neighbor(false), dx_dxhat(_HUGE), dy_dyhat(_HUGE), alt_i(9999999), alt_j(9999999) {}
     std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
     /// Return a const reference to the desired matrix
     const std::vector<double>& get(const parameters params) const {
@@ -973,7 +951,7 @@ class CellCoeffs
         }
     };
     /// Returns true if the cell coefficients seem to have been calculated properly
-    bool valid() const {
+    [[nodiscard]] bool valid() const {
         return _valid;
     };
     /// Call this function to set the valid flag to true
@@ -990,18 +968,12 @@ class CellCoeffs
         alt_j = j;
         _has_valid_neighbor = true;
     }
-    /// Get neighboring(alternate) cell to be used if this cell is invalid
-    void get_alternate(std::size_t& i, std::size_t& j) const {
+    /// Get neighboring (alternate) cell indices, or nullopt if none exists
+    [[nodiscard]] std::optional<std::pair<std::size_t, std::size_t>> get_alternate() const {
         if (_has_valid_neighbor) {
-            i = alt_i;
-            j = alt_j;
-        } else {
-            throw ValueError("No valid neighbor");
+            return std::make_pair(alt_i, alt_j);
         }
-    }
-    /// Returns true if cell is invalid and it has valid neighbor
-    bool has_valid_neighbor() const {
-        return _has_valid_neighbor;
+        return std::nullopt;
     }
 };
 
@@ -1016,9 +988,7 @@ class TabularDataSet
     PackablePhaseEnvelopeData phase_envelope;
     std::vector<std::vector<CellCoeffs>> coeffs_ph, coeffs_pT;
 
-    TabularDataSet() {
-        tables_loaded = false;
-    }
+    TabularDataSet() : tables_loaded(false) {}
     /// Write the tables to files on the computer
     void write_tables(const std::string& path_to_tables);
     /// Load the tables from file
@@ -1035,11 +1005,12 @@ class TabularDataLibrary
     std::map<std::string, TabularDataSet> data;
 
    public:
-    TabularDataLibrary(){};
+    TabularDataLibrary() = default;
     std::string path_to_tables(shared_ptr<CoolProp::AbstractState>& AS) {
         std::vector<std::string> fluids = AS->fluid_names();
         std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
         std::vector<std::string> components;
+        components.reserve(fluids.size());
         for (std::size_t i = 0; i < fluids.size(); ++i) {
             components.push_back(format("%s[%0.10Lf]", fluids[i].c_str(), fractions[i]));
         }
@@ -1050,8 +1021,8 @@ class TabularDataLibrary
         }
         return table_directory + AS->backend_name() + "(" + strjoin(components, "&") + ")";
     }
-    /// Return a pointer to the set of tabular datasets
-    TabularDataSet* get_set_of_tables(shared_ptr<AbstractState>& AS, bool& loaded);
+    /// Return a pointer to the set of tabular datasets and whether tables were already loaded
+    std::pair<TabularDataSet*, bool> get_set_of_tables(shared_ptr<AbstractState>& AS);
 };
 
 /**
@@ -1084,32 +1055,34 @@ class TabularBackend : public AbstractState
 
    public:
     shared_ptr<CoolProp::AbstractState> AS;
-    TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), is_mixture(false), AS(AS) {
-        selected_table = SELECTED_NO_TABLE;
-        // Flush the cached indices (set to large number)
-        cached_single_phase_i = std::numeric_limits<std::size_t>::max();
-        cached_single_phase_j = std::numeric_limits<std::size_t>::max();
-        cached_saturation_iL = std::numeric_limits<std::size_t>::max();
-        cached_saturation_iV = std::numeric_limits<std::size_t>::max();
-        z = NULL;
-        dzdx = NULL;
-        dzdy = NULL;
-        d2zdx2 = NULL;
-        d2zdxdy = NULL;
-        d2zdy2 = NULL;
-        dataset = NULL;
-        imposed_phase_index = iphase_not_imposed;
-    };
+    TabularBackend(shared_ptr<CoolProp::AbstractState> AS)
+      : imposed_phase_index(iphase_not_imposed),
+        tables_loaded(false),
+        using_single_phase_table(false),
+        is_mixture(false),
+        selected_table(SELECTED_NO_TABLE),
+        cached_single_phase_i(std::numeric_limits<std::size_t>::max()),
+        cached_single_phase_j(std::numeric_limits<std::size_t>::max()),
+        cached_saturation_iL(std::numeric_limits<std::size_t>::max()),
+        cached_saturation_iV(std::numeric_limits<std::size_t>::max()),
+        z(nullptr),
+        dzdx(nullptr),
+        dzdy(nullptr),
+        d2zdx2(nullptr),
+        d2zdxdy(nullptr),
+        d2zdy2(nullptr),
+        AS(std::move(AS)),
+        dataset(nullptr) {};
 
     // None of the tabular methods are available from the high-level interface
-    bool available_in_high_level(void) {
+    bool available_in_high_level() override {
         return false;
     }
 
-    std::string calc_name(void) {
+    std::string calc_name() override {
         return AS->name();
     }
-    std::vector<std::string> calc_fluid_names(void) {
+    std::vector<std::string> calc_fluid_names() override {
         return AS->fluid_names();
     }
 
@@ -1192,13 +1165,13 @@ class TabularBackend : public AbstractState
         *
         * @param phase_index The index from CoolProp::phases
         */
-    void calc_specify_phase(phases phase_index) {
+    void calc_specify_phase(phases phase_index) override {
         imposed_phase_index = phase_index;
     };
 
     /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
         */
-    void calc_unspecify_phase() {
+    void calc_unspecify_phase() override {
         imposed_phase_index = iphase_not_imposed;
     };
 
@@ -1206,6 +1179,11 @@ class TabularBackend : public AbstractState
     virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
     virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
     virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
+
+    /// Vectorized direct evaluation; see AbstractState::fast_evaluate for contract.
+    void fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
+                       const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer, std::size_t out_buffer_size, int* status_flags,
+                       std::size_t status_flags_size, CoolProp::phases imposed_phase = CoolProp::iphase_not_imposed) override;
     virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
     virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
 
@@ -1223,65 +1201,65 @@ class TabularBackend : public AbstractState
     virtual void invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
                                        parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
 
-    phases calc_phase(void) {
+    phases calc_phase() override {
         return _phase;
     }
-    CoolPropDbl calc_T_critical(void) {
+    CoolPropDbl calc_T_critical() override {
         return this->AS->T_critical();
     };
-    CoolPropDbl calc_Ttriple(void) {
+    CoolPropDbl calc_Ttriple() override {
         return this->AS->Ttriple();
     };
-    CoolPropDbl calc_p_triple(void) {
+    CoolPropDbl calc_p_triple() override {
         return this->AS->p_triple();
     };
-    CoolPropDbl calc_pmax(void) {
+    CoolPropDbl calc_pmax() override {
         return this->AS->pmax();
     };
-    CoolPropDbl calc_Tmax(void) {
+    CoolPropDbl calc_Tmax() override {
         return this->AS->Tmax();
     };
-    CoolPropDbl calc_Tmin(void) {
+    CoolPropDbl calc_Tmin() override {
         return this->AS->Tmin();
     };
-    CoolPropDbl calc_p_critical(void) {
+    CoolPropDbl calc_p_critical() override {
         return this->AS->p_critical();
     }
-    CoolPropDbl calc_rhomolar_critical(void) {
+    CoolPropDbl calc_rhomolar_critical() override {
         return this->AS->rhomolar_critical();
     }
-    bool using_mole_fractions(void) {
+    bool using_mole_fractions() override {
         return true;
     }
-    bool using_mass_fractions(void) {
+    bool using_mass_fractions() override {
         return false;
     }
-    bool using_volu_fractions(void) {
+    bool using_volu_fractions() override {
         return false;
     }
-    void update(CoolProp::input_pairs input_pair, double Value1, double Value2);
-    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) {
+    void update(CoolProp::input_pairs input_pair, double Value1, double Value2) override;
+    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override {
         this->AS->set_mole_fractions(mole_fractions);
     };
-    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) {
+    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override {
         throw NotImplementedError("set_mass_fractions not implemented for Tabular backends");
     };
-    const std::vector<CoolPropDbl>& get_mole_fractions() {
+    const std::vector<CoolPropDbl>& get_mole_fractions() override {
         return AS->get_mole_fractions();
     };
-    const std::vector<CoolPropDbl> calc_mass_fractions(void) {
+    const std::vector<CoolPropDbl> calc_mass_fractions() override {
         return AS->get_mass_fractions();
     };
 
-    CoolPropDbl calc_molar_mass(void) {
+    CoolPropDbl calc_molar_mass() override {
         return AS->molar_mass();
     };
 
-    CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
-    CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
+    [[nodiscard]] CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) override;
+    [[nodiscard]] CoolPropDbl calc_saturated_vapor_keyed_output(parameters key) override;
 
     /// Returns the path to the tables that shall be written
-    std::string path_to_tables(void);
+    std::string path_to_tables();
     /// Load the tables from file; throws UnableToLoadException if there is a problem
     void load_tables();
     void pack_matrices() {
@@ -1303,36 +1281,36 @@ class TabularBackend : public AbstractState
         CoolPropDbl yV = PhaseEnvelopeRoutines::evaluate(phase_envelope, output, iInput1, value1, cached_saturation_iV);
         return _Q * yV + (1 - _Q) * yL;
     }
-    CoolPropDbl calc_cpmolar_idealgas(void) {
+    CoolPropDbl calc_cpmolar_idealgas() override {
         this->AS->set_T(_T);
         return this->AS->cp0molar();
     }
     /// Calculate the surface tension using the wrapped class (fast enough)
-    CoolPropDbl calc_surface_tension(void) {
+    CoolPropDbl calc_surface_tension() override {
         this->AS->set_T(_T);
         return this->AS->surface_tension();
         this->AS->set_T(_HUGE);
     }
-    CoolPropDbl calc_p(void);
-    CoolPropDbl calc_T(void);
-    CoolPropDbl calc_rhomolar(void);
-    CoolPropDbl calc_hmolar(void);
-    CoolPropDbl calc_smolar(void);
-    CoolPropDbl calc_umolar(void);
-    CoolPropDbl calc_cpmolar(void);
-    CoolPropDbl calc_cvmolar(void);
-    CoolPropDbl calc_viscosity(void);
-    CoolPropDbl calc_conductivity(void);
+    CoolPropDbl calc_p();
+    CoolPropDbl calc_T() override;
+    CoolPropDbl calc_rhomolar() override;
+    CoolPropDbl calc_hmolar() override;
+    CoolPropDbl calc_smolar() override;
+    CoolPropDbl calc_umolar() override;
+    CoolPropDbl calc_cpmolar() override;
+    CoolPropDbl calc_cvmolar() override;
+    CoolPropDbl calc_viscosity() override;
+    CoolPropDbl calc_conductivity() override;
     /// Calculate the speed of sound using a tabular backend [m/s]
-    CoolPropDbl calc_speed_sound(void);
-    CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
+    CoolPropDbl calc_speed_sound() override;
+    CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant) override;
     /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
         */
-    CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
-    CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
+    CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1) override;
+    CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant) override;
 
     /// If you need all three values (drho_dh__p, drho_dp__h and rho_spline), you should calculate drho_dp__h first to avoid duplicate calculations.
-    CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
+    CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end) override;
 
     void check_tables() {
         if (!tables_loaded) {
@@ -1347,11 +1325,7 @@ class TabularBackend : public AbstractState
                 }
                 /// Check directory size
                 std::string table_path = path_to_tables();
-#if defined(__ISWINDOWS__)
-                double directory_size_in_GB = CalculateDirSize(std::wstring(table_path.begin(), table_path.end())) / POW3(1024.0);
-#else
                 double directory_size_in_GB = CalculateDirSize(table_path) / POW3(1024.0);
-#endif
                 double allowed_size_in_GB = get_config_double(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB);
                 if (get_debug_level() > 0) {
                     std::cout << "Tabular directory size is " << directory_size_in_GB << " GB\n";

@@ -8,12 +8,13 @@
 #define MIXTURE_BINARY_PAIRS_H
 
 #include <vector>
-#include "CoolPropFluid.h"
-#include "crossplatform_shared_ptr.h"
+#include "CoolProp/CoolPropFluid.h"
+#include <memory>
+using std::shared_ptr;
 
 namespace CoolProp {
 
-typedef std::vector<std::vector<CoolPropDbl>> STLMatrix;
+using STLMatrix = std::vector<std::vector<CoolPropDbl>>;
 
 enum x_N_dependency_flag
 {
@@ -34,8 +35,8 @@ class ReducingFunction
     std::size_t N;
 
    public:
-    ReducingFunction() : N(0){};
-    virtual ~ReducingFunction(){};
+    ReducingFunction() : N(0) {};
+    virtual ~ReducingFunction() = default;
 
     virtual ReducingFunction* copy() = 0;
 
@@ -157,12 +158,9 @@ class GERG2008ReducingFunction : public ReducingFunction
 
    public:
     GERG2008ReducingFunction(const std::vector<CoolPropFluid>& pFluids, const STLMatrix& beta_v, const STLMatrix& gamma_v, const STLMatrix& beta_T,
-                             const STLMatrix& gamma_T) {
-        this->pFluids = pFluids;
-        this->beta_v = beta_v;
-        this->gamma_v = gamma_v;
-        this->beta_T = beta_T;
-        this->gamma_T = gamma_T;
+                             const STLMatrix& gamma_T)
+      : pFluids(pFluids), beta_v(beta_v), gamma_v(gamma_v), beta_T(beta_T), gamma_T(gamma_T) {
+
         this->N = pFluids.size();
         T_c.resize(N, std::vector<CoolPropDbl>(N, 0));
         v_c.resize(N, std::vector<CoolPropDbl>(N, 0));
@@ -178,24 +176,24 @@ class GERG2008ReducingFunction : public ReducingFunction
         }
     };
 
-    ReducingFunction* copy() {
+    ReducingFunction* copy() override {
         return new GERG2008ReducingFunction(pFluids, beta_v, gamma_v, beta_T, gamma_T);
     };
 
     /// Default destructor
-    ~GERG2008ReducingFunction(){};
+    ~GERG2008ReducingFunction() = default;
 
     /// Set all beta and gamma values in one shot
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, double betaT, double gammaT, double betaV, double gammaV) {
         // bound-check indices
-        if (i < 0 || i >= N) {
-            if (j < 0 || j >= N) {
-                throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N-1));
+        if (i >= N) {
+            if (j >= N) {
+                throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
             } else {
-                throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+                throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
             }
-        } else if (j < 0 || j >= N) {
-            throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N-1));
+        } else if (j >= N) {
+            throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
         }
         beta_T[i][j] = betaT;
         beta_T[j][i] = 1 / betaT;
@@ -208,16 +206,16 @@ class GERG2008ReducingFunction : public ReducingFunction
     }
 
     /// Set a parameter
-    virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, double value) {
+    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, double value) override {
         // bound-check indices
-        if (i < 0 || i >= N) {
-            if (j < 0 || j >= N) {
-                throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N-1));
+        if (i >= N) {
+            if (j >= N) {
+                throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
             } else {
-                throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+                throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
             }
-        } else if (j < 0 || j >= N) {
-            throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N-1));
+        } else if (j >= N) {
+            throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
         }
         if (parameter == "betaT") {
             beta_T[i][j] = value;
@@ -236,7 +234,7 @@ class GERG2008ReducingFunction : public ReducingFunction
         }
     }
     /// Get a parameter
-    virtual double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) const {
+    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) const override {
         if (parameter == "betaT") {
             return beta_T[i][j];
         } else if (parameter == "gammaT") {
@@ -253,46 +251,47 @@ class GERG2008ReducingFunction : public ReducingFunction
     /** \brief The reducing temperature
      * Calculated from \ref Yr with \f$T = Y\f$
      */
-    CoolPropDbl Tr(const std::vector<CoolPropDbl>& x) const;
+    CoolPropDbl Tr(const std::vector<CoolPropDbl>& x) const override;
 
     /** \brief The derivative of reducing temperature with respect to gammaT
-     * Calculated from \ref dYr_gamma with \f$T = Y\f$
+     * Calculated from dYr_gamma with \f$T = Y\f$
      */
-    CoolPropDbl dTr_dgammaT(const std::vector<CoolPropDbl>& x) const;
+    CoolPropDbl dTr_dgammaT(const std::vector<CoolPropDbl>& x) const override;
 
     /** \brief The derivative of reducing temperature with respect to betaT
-     * Calculated from \ref dYr_beta with \f$T = Y\f$
+     * Calculated from dYr_beta with \f$T = Y\f$
      */
-    CoolPropDbl dTr_dbetaT(const std::vector<CoolPropDbl>& x) const;
+    CoolPropDbl dTr_dbetaT(const std::vector<CoolPropDbl>& x) const override;
 
     /** \brief The derivative of reducing temperature with respect to gammaT and composition
     */
-    CoolPropDbl d2Tr_dxidgammaT(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl d2Tr_dxidgammaT(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override;
 
     /** \brief The derivative of reducing temperature with respect to betaT and composition
     */
-    CoolPropDbl d2Tr_dxidbetaT(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl d2Tr_dxidbetaT(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override;
 
     /** \brief The derivative of reducing temperature with respect to component i mole fraction
      *
      * Calculated from \ref dYrdxi__constxj with \f$T = Y\f$
      */
-    CoolPropDbl dTrdxi__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl dTrdxi__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override;
     /** \brief The second derivative of reducing temperature with respect to component i mole fraction
      *
      * Calculated from \ref d2Yrdxi2__constxj with \f$T = Y\f$
      */
-    CoolPropDbl d2Trdxi2__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl d2Trdxi2__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override;
     /** \brief The second derivative of reducing temperature with respect to component i and j mole fractions
      *
      * Calculated from \ref d2Yrdxidxj with \f$T = Y\f$
      */
-    CoolPropDbl d2Trdxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl d2Trdxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const override;
     /** \brief The third derivative of reducing temperature with respect to component i, j and k mole fractions
 	*
 	* Calculated from \ref d3Yrdxidxjdxk with \f$T = Y\f$
 	*/
-    CoolPropDbl d3Trdxidxjdxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl d3Trdxidxjdxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k,
+                              x_N_dependency_flag xN_flag) const override;
 
     /** \brief The derivative of reducing molar volume with respect to component i mole fraction
      *
@@ -318,17 +317,17 @@ class GERG2008ReducingFunction : public ReducingFunction
      *
      * Given by \f$ \rho_r = 1/v_r \f$
      */
-    CoolPropDbl rhormolar(const std::vector<CoolPropDbl>& x) const;
+    CoolPropDbl rhormolar(const std::vector<CoolPropDbl>& x) const override;
 
     /** \brief The derivative of reducing density with respect to gammaV
-     * Calculated from \ref dYr_gamma with \f$v = Y\f$
+     * Calculated from dYr_gamma with \f$v = Y\f$
      */
-    CoolPropDbl drhormolar_dgammaV(const std::vector<CoolPropDbl>& x) const;
+    CoolPropDbl drhormolar_dgammaV(const std::vector<CoolPropDbl>& x) const override;
 
     /** \brief The derivative of reducing density with respect to betaV
-     * Calculated from \ref dYr_beta with \f$v = Y\f$
+     * Calculated from dYr_beta with \f$v = Y\f$
      */
-    CoolPropDbl drhormolar_dbetaV(const std::vector<CoolPropDbl>& x) const;
+    CoolPropDbl drhormolar_dbetaV(const std::vector<CoolPropDbl>& x) const override;
 
     /** \brief The derivative of reducing volume with respect to gammaV and composition
     */
@@ -340,11 +339,11 @@ class GERG2008ReducingFunction : public ReducingFunction
 
     /** \brief The derivative of reducing density with respect to betaV and composition
     */
-    CoolPropDbl d2rhormolar_dxidbetaV(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl d2rhormolar_dxidbetaV(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override;
 
     /** \brief The derivative of reducing density with respect to gammaV and composition
     */
-    CoolPropDbl d2rhormolar_dxidgammaV(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl d2rhormolar_dxidgammaV(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override;
 
     /** \brief Derivative of the molar reducing density with respect to component i mole fraction
      *
@@ -353,7 +352,7 @@ class GERG2008ReducingFunction : public ReducingFunction
      * \left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_{i\neq j}} = -\rho_r^2\left(\frac{\partial v_r}{\partial x_i}\right)_{x_{i\neq j}}
      * \f]
      */
-    CoolPropDbl drhormolardxi__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl drhormolardxi__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override;
     /** \brief Derivative of the molar reducing density with respect to component i mole fraction
      *
      * See also GERG 2004, Eqn. 7.58
@@ -361,7 +360,7 @@ class GERG2008ReducingFunction : public ReducingFunction
      * \left(\frac{\partial^2 \rho_r}{\partial x_i^2}\right)_{x_{i\neq j}} = 2\rho_r^3\left(\left(\frac{\partial v_r}{\partial x_i}\right)_{x_{i\neq j}}\right)^2-\rho_r\left(\left(\frac{\partial^2 v_r}{\partial x_i^2}\right)_{x_{i\neq j}}\right)
      * \f]
      */
-    CoolPropDbl d2rhormolardxi2__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl d2rhormolardxi2__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override;
     /** \brief Derivative of the molar reducing density with respect to component i  and j mole fractions
      *
      * See also GERG 2004, Eqn. 7.59
@@ -369,12 +368,12 @@ class GERG2008ReducingFunction : public ReducingFunction
      * \left(\frac{\partial^2 \rho_r}{\partial x_i\partial x_j}\right) = 2\rho_r^3\left(\left(\frac{\partial v_r}{\partial x_i}\right)_{x_{i\neq j}}\right)\left(\left(\frac{\partial v_r}{\partial x_j}\right)_{x_{i\neq j}}\right)-\rho_r^2\left(\left(\frac{\partial v_r}{\partial x_i\partial x_j}\right)\right)
      * \f]
      */
-    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const;
+    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const override;
     /** \brief Derivative of the molar reducing density with respect to component i, j, and k mole fractions
 	*
 	*/
     CoolPropDbl d3rhormolardxidxjdxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k,
-                                     x_N_dependency_flag xN_flag) const;
+                                     x_N_dependency_flag xN_flag) const override;
 
     /** \brief Generalized reducing term \f$Y_r\f$
      *
@@ -550,85 +549,86 @@ class ConstantReducingFunction : public ReducingFunction
     double T_c, rhomolar_c;
 
    public:
-    ConstantReducingFunction(const double T_c, const double rhomolar_c) : T_c(T_c), rhomolar_c(rhomolar_c){};
+    ConstantReducingFunction(const double T_c, const double rhomolar_c) : T_c(T_c), rhomolar_c(rhomolar_c) {};
 
-    ReducingFunction* copy() {
+    ReducingFunction* copy() override {
         return new ConstantReducingFunction(T_c, rhomolar_c);
     };
 
-    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, double value) {
+    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, double value) override {
         return;
     }
-    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) const {
+    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) const override {
         return _HUGE;
     }
 
     /// \brief The reducing temperature
-    CoolPropDbl Tr(const std::vector<CoolPropDbl>& x) const {
+    CoolPropDbl Tr(const std::vector<CoolPropDbl>& x) const override {
         return T_c;
     };
     /// \brief The derivative of reducing temperature with respect to component i mole fraction
-    CoolPropDbl dTrdxi__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl dTrdxi__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override {
         return 0;
     };
     /// \brief The second derivative of reducing temperature with respect to component i mole fraction
-    CoolPropDbl d2Trdxi2__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d2Trdxi2__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override {
         return 0;
     };
     /// \brief The second derivative of reducing temperature with respect to component i and j mole fractions
-    CoolPropDbl d2Trdxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d2Trdxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const override {
         return 0;
     };
     /// \brief The third derivative of reducing temperature with respect to component i, j and k mole fractions
-    CoolPropDbl d3Trdxidxjdxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d3Trdxidxjdxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k,
+                              x_N_dependency_flag xN_flag) const override {
         return 0;
     };
 
     /// \brief The molar reducing density
-    CoolPropDbl rhormolar(const std::vector<CoolPropDbl>& x) const {
+    CoolPropDbl rhormolar(const std::vector<CoolPropDbl>& x) const override {
         return rhomolar_c;
     };
     /// \brief Derivative of the molar reducing density with respect to component i mole fraction
-    CoolPropDbl drhormolardxi__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl drhormolardxi__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override {
         return 0;
     };
     /// \brief Derivative of the molar reducing density with respect to component i mole fraction
-    CoolPropDbl d2rhormolardxi2__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d2rhormolardxi2__constxj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override {
         return 0;
     };
     /// \brief Derivative of the molar reducing density with respect to component i  and j mole fractions
-    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const override {
         return 0;
     };
     /// \brief Derivative of the molar reducing density with respect to component i, j, and k mole fractions
     CoolPropDbl d3rhormolardxidxjdxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k,
-                                     x_N_dependency_flag xN_flag) const {
+                                     x_N_dependency_flag xN_flag) const override {
         return 0;
     };
 
-    CoolPropDbl dTr_dgammaT(const std::vector<CoolPropDbl>& x) const {
+    CoolPropDbl dTr_dgammaT(const std::vector<CoolPropDbl>& x) const override {
         return 0;
     }
-    CoolPropDbl dTr_dbetaT(const std::vector<CoolPropDbl>& x) const {
+    CoolPropDbl dTr_dbetaT(const std::vector<CoolPropDbl>& x) const override {
         return 0;
     }
-    CoolPropDbl drhormolar_dgammaV(const std::vector<CoolPropDbl>& x) const {
+    CoolPropDbl drhormolar_dgammaV(const std::vector<CoolPropDbl>& x) const override {
         return 0;
     }
-    CoolPropDbl drhormolar_dbetaV(const std::vector<CoolPropDbl>& x) const {
+    CoolPropDbl drhormolar_dbetaV(const std::vector<CoolPropDbl>& x) const override {
         return 0;
     }
 
-    CoolPropDbl d2Tr_dxidgammaT(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d2Tr_dxidgammaT(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override {
         return 0;
     }
-    CoolPropDbl d2Tr_dxidbetaT(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d2Tr_dxidbetaT(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override {
         return 0;
     }
-    CoolPropDbl d2rhormolar_dxidgammaV(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d2rhormolar_dxidgammaV(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override {
         return 0;
     }
-    CoolPropDbl d2rhormolar_dxidbetaV(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d2rhormolar_dxidbetaV(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override {
         return 0;
     }
 
@@ -640,24 +640,24 @@ class ConstantReducingFunction : public ReducingFunction
     //virtual CoolPropDbl ndTrdni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };
 
     /// Note: this one is one, not zero
-    virtual CoolPropDbl PSI_rho(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl PSI_rho(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override {
         return 1;
     };
-    virtual CoolPropDbl d_PSI_rho_dxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d_PSI_rho_dxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const override {
         return 0;
     };
-    virtual CoolPropDbl d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k,
-                                           x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k,
+                                   x_N_dependency_flag xN_flag) const override {
         return 0;
     };
-    virtual CoolPropDbl PSI_T(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl PSI_T(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const override {
         return 0;
     };
-    virtual CoolPropDbl d_PSI_T_dxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d_PSI_T_dxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const override {
         return 0;
     };
-    virtual CoolPropDbl d2_PSI_T_dxj_dxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k,
-                                         x_N_dependency_flag xN_flag) const {
+    CoolPropDbl d2_PSI_T_dxj_dxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k,
+                                 x_N_dependency_flag xN_flag) const override {
         return 0;
     };
 };

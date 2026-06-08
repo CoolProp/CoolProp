@@ -1,6 +1,6 @@
-#include "CPstrings.h"
-#include "crossplatform_shared_ptr.h"
-#include <cstdio>
+#include "CoolProp/detail/strings.h"
+#include <memory>
+using std::shared_ptr;
 #include <vector>
 #include <string>
 
@@ -22,7 +22,7 @@ std::vector<std::string> strsplit(const std::string& s, char del) {
     std::string::const_iterator i1 = s.begin(), i2;
     while (true) {
         i2 = std::find(i1, s.end(), del);
-        v.push_back(std::string(i1, i2));
+        v.emplace_back(i1, i2);
         if (i2 == s.end()) break;
         i1 = i2 + 1;
     }
@@ -37,7 +37,7 @@ std::string format(const char* fmt, ...) {
         static void delarray(char* p) {
             delete[] p;
         }
-    };                                                           // to use delete[]
+    };  // to use delete[]
     shared_ptr<char> buffer(new char[size], deleter::delarray);  // I'd prefer unique_ptr, but it's only available since c++11
     va_list vl;
     va_start(vl, fmt);
@@ -53,10 +53,9 @@ std::string format(const char* fmt, ...) {
 
 #if defined(ENABLE_CATCH)
 
-#    include "crossplatform_shared_ptr.h"
 #    include <catch2/catch_all.hpp>
-#    include "CoolPropTools.h"
-#    include "CoolProp.h"
+#    include "CoolProp/detail/tools.h"
+#    include "CoolProp/CoolProp.h"
 
 TEST_CASE("Test endswith function", "[endswith]") {
     REQUIRE(endswith("aaa", "-PengRobinson") == false);

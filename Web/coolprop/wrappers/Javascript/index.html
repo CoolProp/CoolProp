@@ -13,7 +13,7 @@
 </script>
 
 <!-- (Problems with CORS) script src="http://www.coolprop.sourceforge.net/jscript/coolprop.js"></script -->
-<script src="coolprop.js"></script>
+
 </head>
 
 <body>
@@ -53,7 +53,10 @@
         <p id="output">
     </div>
 
-    <script>
+    <script  type="module">
+    import Module from './coolprop.js';
+    var coolprop = await Module();
+    
     function text2key(text)
     {
         if (text == 'Pressure [Pa]')
@@ -71,14 +74,20 @@
         var val1 = parseFloat($('#Value1').val())
         var val2 = parseFloat($('#Value2').val())
         
-        var T = Module.PropsSI('T', key1, val1, key2, val2, name)
-        var rho = Module.PropsSI('D', key1, val1, key2, val2, name)
-        var p = Module.PropsSI('P', key1, val1, key2, val2, name)
-        var s = Module.PropsSI('S', key1, val1, key2, val2, name)
-        var h = Module.PropsSI('H', key1, val1, key2, val2, name)
-        var cp = Module.PropsSI('C', key1, val1, key2, val2, name)
+        var T = coolprop.PropsSI('T', key1, val1, key2, val2, name)
+        var rho = coolprop.PropsSI('D', key1, val1, key2, val2, name)
+        var p = coolprop.PropsSI('P', key1, val1, key2, val2, name)
+        var s = coolprop.PropsSI('S', key1, val1, key2, val2, name)
+        var h = coolprop.PropsSI('H', key1, val1, key2, val2, name)
+        var cp = coolprop.PropsSI('C', key1, val1, key2, val2, name)
+        console.log('T = ' + T + ' K')
+        console.log('rho = ' + rho + ' kg/m^3')
+        console.log('p = ' + p + ' Pa')
+        console.log('s = ' + s + ' J/kg/K')
+        console.log('h = ' + h + ' J/kg')
+        console.log('cp = ' + cp + ' J/kg/K')
         
-        text = ''
+        var text = ''
         text += 'T = ' + T + ' K\n' + '<br>'
         text += 'rho = ' + rho + ' kg/m&#179; <br>'
         text += 'p = ' + p + ' Pa<br>'

@@ -11,10 +11,12 @@
 #ifndef CUBIC_H
 #define CUBIC_H
 
+#include <utility>
 #include <vector>
 #include <cmath>
-#include "crossplatform_shared_ptr.h"
-#include "Exceptions.h"
+#include <memory>
+using std::shared_ptr;
+#include "CoolProp/Exceptions.h"
 
 /// An abstract alpha function for the EOS, defining the interface for the alpha function
 class AbstractCubicAlphaFunction
@@ -25,13 +27,13 @@ class AbstractCubicAlphaFunction
       sqrt_Tr_Tci;          ///< The sqrt of the (constant) reducing temperature divided by the critical temperature of the pure component
     std::vector<double> c;  ///< The vector of constants
    public:
-    virtual ~AbstractCubicAlphaFunction(){};
+    virtual ~AbstractCubicAlphaFunction() = default;
     virtual double term(double tau, std::size_t itau) = 0;
     void set_Tr_over_Tci(double Tr_over_Tci) {
         this->Tr_over_Tci = Tr_over_Tci;
         this->sqrt_Tr_Tci = sqrt(Tr_over_Tci);
     };
-    AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)){};
+    AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)) {};
 };
 
 /// An implementation of AbstractCubicAlphaFunction for the baseline alpha function of PR or SRK
@@ -39,10 +41,11 @@ class BasicMathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction
 {
     double m;  ///< The term coming from the function of omega
    public:
-    BasicMathiasCopemanAlphaFunction(double a0, double m_ii, double Tr_over_Tci) : AbstractCubicAlphaFunction(a0, Tr_over_Tci) {
-        this->m = m_ii;
-    };
-    double term(double tau, std::size_t itau);
+    BasicMathiasCopemanAlphaFunction(double a0, double m_ii, double Tr_over_Tci)
+      : AbstractCubicAlphaFunction(a0, Tr_over_Tci), m(m_ii) {
+
+        };
+    double term(double tau, std::size_t itau) override;
 };
 
 /// An implementation of AbstractCubicAlphaFunction for the Twu alpha function
@@ -55,7 +58,7 @@ class TwuAlphaFunction : public AbstractCubicAlphaFunction
         c[1] = M;
         c[2] = N;
     };
-    double term(double tau, std::size_t itau);
+    double term(double tau, std::size_t itau) override;
 };
 
 /// An implementation of AbstractCubicAlphaFunction for the Mathias-Copeman alpha function
@@ -68,7 +71,7 @@ class MathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction
         c[1] = c2;
         c[2] = c3;
     };
-    double term(double tau, std::size_t itau);
+    double term(double tau, std::size_t itau) override;
 };
 
 class AbstractCubic
@@ -97,10 +100,10 @@ class AbstractCubic
      so long as it has the formulation given in this work.
 
      */
-    AbstractCubic(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1, double Delta_2,
-                  std::vector<double> C1 = std::vector<double>(), std::vector<double> C2 = std::vector<double>(),
-                  std::vector<double> C3 = std::vector<double>());
-    virtual ~AbstractCubic(){};
+    AbstractCubic(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1, double Delta_2,
+                  const std::vector<double>& C1 = std::vector<double>(), const std::vector<double>& C2 = std::vector<double>(),
+                  const std::vector<double>& C3 = std::vector<double>());
+    virtual ~AbstractCubic() = default;
     /// Set the constants for the Mathias-Copeman alpha function, or if C1,C2,C3 are all empty, set the default alpha model
     void set_alpha(const std::vector<double>& C1, const std::vector<double>& C2, const std::vector<double>& C3);
     /// Set the alpha function for the i-th component
@@ -183,11 +186,11 @@ class AbstractCubic
 
     /// Set the three Mathias-Copeman constants in one shot for the component i of a mixture
     void set_C_MC(std::size_t i, double c1, double c2, double c3) {
-        alpha[i].reset(new MathiasCopemanAlphaFunction(a0_ii(i), c1, c2, c3, T_r / Tc[i]));
+        alpha[i] = std::make_shared<MathiasCopemanAlphaFunction>(a0_ii(i), c1, c2, c3, T_r / Tc[i]);
     }
     /// Set the three Twu constants in one shot for the component i of a mixture
     void set_C_Twu(std::size_t i, double L, double M, double N) {
-        alpha[i].reset(new TwuAlphaFunction(a0_ii(i), L, M, N, T_r / Tc[i]));
+        alpha[i] = std::make_shared<TwuAlphaFunction>(a0_ii(i), L, M, N, T_r / Tc[i]);
     }
     /// Get the leading constant in the expression for the pure fluid attractive energy term
     /// (must be implemented by derived classes)
@@ -612,10 +615,10 @@ class AbstractCubic
 class PengRobinson : public AbstractCubic
 {
    public:
-    PengRobinson(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
-                 std::vector<double> C1 = std::vector<double>(), std::vector<double> C2 = std::vector<double>(),
-                 std::vector<double> C3 = std::vector<double>())
-      : AbstractCubic(Tc, pc, acentric, R_u, 1 + sqrt(2.0), 1 - sqrt(2.0), C1, C2, C3) {
+    PengRobinson(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
+                 const std::vector<double>& C1 = std::vector<double>(), const std::vector<double>& C2 = std::vector<double>(),
+                 const std::vector<double>& C3 = std::vector<double>())
+      : AbstractCubic(Tc, std::move(pc), std::move(acentric), R_u, 1 + sqrt(2.0), 1 - sqrt(2.0), C1, C2, C3) {
         set_alpha(C1, C2, C3);
     };
 
@@ -624,17 +627,18 @@ class PengRobinson : public AbstractCubic
         set_alpha(std::vector<double>(), std::vector<double>(), std::vector<double>());
     };
 
-    double a0_ii(std::size_t i);
-    double b0_ii(std::size_t i);
-    double m_ii(std::size_t i);
+    double a0_ii(std::size_t i) override;
+    double b0_ii(std::size_t i) override;
+    double m_ii(std::size_t i) override;
 };
 
 class SRK : public AbstractCubic
 {
    public:
-    SRK(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, std::vector<double> C1 = std::vector<double>(),
-        std::vector<double> C2 = std::vector<double>(), std::vector<double> C3 = std::vector<double>())
-      : AbstractCubic(Tc, pc, acentric, R_u, 1, 0, C1, C2, C3) {
+    SRK(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u,
+        const std::vector<double>& C1 = std::vector<double>(), const std::vector<double>& C2 = std::vector<double>(),
+        const std::vector<double>& C3 = std::vector<double>())
+      : AbstractCubic(Tc, std::move(pc), std::move(acentric), R_u, 1, 0, C1, C2, C3) {
         set_alpha(C1, C2, C3);
     };
     SRK(double Tc, double pc, double acentric, double R_u)
@@ -642,9 +646,9 @@ class SRK : public AbstractCubic
         set_alpha(std::vector<double>(), std::vector<double>(), std::vector<double>());
     };
 
-    double a0_ii(std::size_t i);
-    double b0_ii(std::size_t i);
-    double m_ii(std::size_t i);
+    double a0_ii(std::size_t i) override;
+    double b0_ii(std::size_t i) override;
+    double m_ii(std::size_t i) override;
 };
 
 #endif

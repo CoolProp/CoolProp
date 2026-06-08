@@ -11,6 +11,14 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
 
+concurrency:
+  # Cancel superseded runs on the same ref to cut CI backlog on heavy
+  # dev days (repeated pushes to an open PR).  Protected: master / main
+  # / develop and tags never cancel, so mainline + release runs always
+  # complete.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   build:
 
@@ -22,11 +30,9 @@ jobs:
         os: [windows-latest, ubuntu-latest, macOS-latest]
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
+    - uses: actions/checkout@v6
 
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v6
       with:
         python-version: '3.x'
 
@@ -47,6 +53,26 @@ jobs:
 
     - name: Build
       run: cmake --build build --target install -j $(nproc) --config ${{ env.BUILD_TYPE }}
+
+    - name: JSON symbol-leak gate (libCoolProp, Linux/macOS)
+      # Fail if nlohmann/valijson/rapidjson symbols leak into libCoolProp's
+      # dynamic export table. Rides the shared build produced above (ELF on
+      # ubuntu, Mach-O on macOS) — no separate build. nm-based, so the Windows
+      # PE legs are skipped (exports are opt-in via src/CoolPropLib.def).
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Match the SONAME-versioned real file too: install gives libCoolProp.so
+        # as a symlink to libCoolProp.so.<ver> (the regular file), and -type f
+        # excludes the symlink — so name the versioned forms explicitly.
+        lib=$(find build install_root -type f \( -name 'libCoolProp.so' -o -name 'libCoolProp.so.*' -o -name 'libCoolProp.dylib' -o -name 'libCoolProp.*.dylib' \) | head -1)
+        if [ -z "$lib" ]; then
+          echo "FAIL: libCoolProp shared object not found under build/ or install_root/" >&2
+          exit 1
+        fi
+        echo "Gating $lib"
+        ./dev/ci/check-json-symbols.sh "$lib"
 
     # Create a special case for Windows since we also need 2 flavours of 32bit binaries
     - name: Configure CMake for 32bit Windows stdcall
@@ -82,7 +108,7 @@ jobs:
     #     tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz ./*
 
     - name: Archive artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
           # Upload to unique artifact names tagged with suffix of matrix.os
           # This is now requried by upload-artifact@v4, but will be merged later
@@ -104,7 +130,7 @@ jobs:
     needs: build
     steps:
     - name: Merge Artifacts
-      uses: actions/upload-artifact/merge@v4
+      uses: actions/upload-artifact/merge@v7
       with:
         # Merge all existing artifacts built above that start with pattern "shared_library-*"
         pattern: shared_library-*

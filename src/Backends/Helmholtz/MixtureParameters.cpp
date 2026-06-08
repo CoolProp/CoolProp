@@ -1,8 +1,11 @@
 #include "MixtureParameters.h"
-#include "CPstrings.h"
+#include "CoolProp/detail/json.h"
+#include "CoolProp/detail/strings.h"
 #include "mixture_departure_functions_JSON.h"  // Creates the variable mixture_departure_functions_JSON
 #include "mixture_binary_pairs_JSON.h"         // Creates the variable mixture_binary_pairs_JSON
 #include "predefined_mixtures_JSON.h"          // Makes a std::string variable called predefined_mixtures_JSON
+
+#include <mutex>
 
 namespace CoolProp {
 
@@ -19,34 +22,29 @@ class PredefinedMixturesLibrary
         load_from_string(predefined_mixtures_JSON);
     }
 
-    void load_from_string(const std::string& str) {
-        rapidjson::Document doc;
-        doc.Parse<0>(str.c_str());
-        if (doc.HasParseError()) {
-            std::cout << str << std::endl;
-            throw ValueError("Unable to parse predefined mixture string");
-        }
+    void load_from_string(const std::string_view& str) {
+        nlohmann::json doc = cpjson::parse(str);
         load_from_JSON(doc);
     }
 
-    void load_from_JSON(rapidjson::Document & doc){
-        if (!doc.IsArray() || !doc[0].IsObject()){
+    void load_from_JSON(const nlohmann::json& doc) {
+        if (!doc.is_array() || !doc[0].is_object()) {
             throw ValueError("You must provide an array of objects");
         }
         // Iterate over the papers in the listing
-        for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr) {
+        for (const auto& el : doc) {
             // Instantiate the empty dictionary to be filled
             Dictionary dict;
             // Get the name
-            std::string name = cpjson::get_string(*itr, "name") + ".mix";
+            std::string name = cpjson::get_string(el, "name") + ".mix";
             // Get the fluid names
-            dict.add_string_vector("fluids", cpjson::get_string_array(*itr, "fluids"));
+            dict.add_string_vector("fluids", cpjson::get_string_array(el, "fluids"));
             // Get the mole fractions
-            dict.add_double_vector("mole_fractions", cpjson::get_double_array(*itr, "mole_fractions"));
+            dict.add_double_vector("mole_fractions", cpjson::get_double_array(el, "mole_fractions"));
             // Add to the map
-            predefined_mixture_map.insert(std::pair<std::string, Dictionary>(name, dict));
+            predefined_mixture_map.emplace(name, dict);
             // Also add the uppercase version to the map
-            predefined_mixture_map.insert(std::pair<std::string, Dictionary>(upper(name), dict));
+            predefined_mixture_map.emplace(upper(name), dict);
         }
     }
 };
@@ -54,15 +52,15 @@ static PredefinedMixturesLibrary predefined_mixtures_library;
 
 std::string get_csv_predefined_mixtures() {
     std::vector<std::string> out;
-    for (std::map<std::string, Dictionary>::const_iterator it = predefined_mixtures_library.predefined_mixture_map.begin();
-         it != predefined_mixtures_library.predefined_mixture_map.end(); ++it) {
-        out.push_back(it->first);
+    out.reserve(predefined_mixtures_library.predefined_mixture_map.size());
+    for (const auto& [key, val] : predefined_mixtures_library.predefined_mixture_map) {
+        out.push_back(key);
     }
     return strjoin(out, ",");
 }
 
 bool is_predefined_mixture(const std::string& name, Dictionary& dict) {
-    std::map<std::string, Dictionary>::const_iterator iter = predefined_mixtures_library.predefined_mixture_map.find(name);
+    auto iter = predefined_mixtures_library.predefined_mixture_map.find(name);
     if (iter != predefined_mixtures_library.predefined_mixture_map.end()) {
         dict = iter->second;
         return true;
@@ -85,24 +83,24 @@ class MixtureBinaryPairLibrary
    private:
     /// Map from sorted pair of CAS numbers to reducing parameter map.  The reducing parameter map is a map from key (string) to value (double)
     std::map<std::vector<std::string>, std::vector<Dictionary>> m_binary_pair_map;
+    /// Guards single-threaded population of m_binary_pair_map. Without it,
+    /// concurrent first calls to binary_pair_map() race in load_defaults()
+    /// (gh-2787).
+    std::once_flag m_load_flag;
 
    public:
     std::map<std::vector<std::string>, std::vector<Dictionary>>& binary_pair_map() {
-        // Set the default departure functions if none have been provided yet
-        if (m_binary_pair_map.size() == 0) {
-            load_defaults();
-        }
+        load_defaults_if_needed();
         return m_binary_pair_map;
     };
 
-    void load_from_string(const std::string& str) {
-        rapidjson::Document doc;
-        doc.Parse<0>(str.c_str());
-        if (doc.HasParseError()) {
-            std::cout << str << std::endl;
-            throw ValueError("Unable to parse binary interaction function string");
-        }
+    void load_from_string(const std::string_view& str) {
+        nlohmann::json doc = cpjson::parse(str);
         load_from_JSON(doc);
+    }
+
+    void load_defaults_if_needed() {
+        std::call_once(m_load_flag, [this] { load_defaults(); });
     }
 
     // Load the defaults that come from the JSON-encoded string compiled into library
@@ -115,25 +113,25 @@ class MixtureBinaryPairLibrary
      *
      * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.
      */
-    void load_from_JSON(rapidjson::Document& doc) {
+    void load_from_JSON(const nlohmann::json& doc) {
 
         // Iterate over the papers in the listing
-        for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr) {
+        for (const auto& el : doc) {
             // Get the empty dictionary to be filled by the appropriate reducing parameter filling function
             Dictionary dict;
 
             // Get the vector of CAS numbers
             std::vector<std::string> CAS;
-            CAS.push_back(cpjson::get_string(*itr, "CAS1"));
-            CAS.push_back(cpjson::get_string(*itr, "CAS2"));
-            std::string name1 = cpjson::get_string(*itr, "Name1");
-            std::string name2 = cpjson::get_string(*itr, "Name2");
+            CAS.push_back(cpjson::get_string(el, "CAS1"));
+            CAS.push_back(cpjson::get_string(el, "CAS2"));
+            std::string name1 = cpjson::get_string(el, "Name1");
+            std::string name2 = cpjson::get_string(el, "Name2");
 
             // Sort the CAS number vector
             std::sort(CAS.begin(), CAS.end());
 
             // A sort was carried out, names/CAS were swapped
-            bool swapped = CAS[0].compare(cpjson::get_string(*itr, "CAS1")) != 0;
+            bool swapped = CAS[0].compare(cpjson::get_string(el, "CAS1")) != 0;
 
             if (swapped) {
                 std::swap(name1, name2);
@@ -142,24 +140,24 @@ class MixtureBinaryPairLibrary
             // Populate the dictionary with common terms
             dict.add_string("name1", name1);
             dict.add_string("name2", name2);
-            dict.add_string("BibTeX", cpjson::get_string(*itr, "BibTeX"));
-            dict.add_number("F", cpjson::get_double(*itr, "F"));
+            dict.add_string("BibTeX", cpjson::get_string(el, "BibTeX"));
+            dict.add_number("F", cpjson::get_double(el, "F"));
             if (std::abs(dict.get_number("F")) > DBL_EPSILON) {
-                dict.add_string("function", cpjson::get_string(*itr, "function"));
+                dict.add_string("function", cpjson::get_string(el, "function"));
             }
 
-            if (itr->HasMember("xi") && itr->HasMember("zeta")) {
+            if (el.contains("xi") && el.contains("zeta")) {
                 dict.add_string("type", "Lemmon-xi-zeta");
                 // Air and HFC mixtures from Lemmon - we could also directly do the conversion
-                dict.add_number("xi", cpjson::get_double(*itr, "xi"));
-                dict.add_number("zeta", cpjson::get_double(*itr, "zeta"));
-            } else if (itr->HasMember("gammaT") && itr->HasMember("gammaV") && itr->HasMember("betaT") && itr->HasMember("betaV")) {
+                dict.add_number("xi", cpjson::get_double(el, "xi"));
+                dict.add_number("zeta", cpjson::get_double(el, "zeta"));
+            } else if (el.contains("gammaT") && el.contains("gammaV") && el.contains("betaT") && el.contains("betaV")) {
                 dict.add_string("type", "GERG-2008");
-                dict.add_number("gammaV", cpjson::get_double(*itr, "gammaV"));
-                dict.add_number("gammaT", cpjson::get_double(*itr, "gammaT"));
+                dict.add_number("gammaV", cpjson::get_double(el, "gammaV"));
+                dict.add_number("gammaT", cpjson::get_double(el, "gammaT"));
 
-                double betaV = cpjson::get_double(*itr, "betaV");
-                double betaT = cpjson::get_double(*itr, "betaT");
+                double betaV = cpjson::get_double(el, "betaV");
+                double betaT = cpjson::get_double(el, "betaT");
                 if (swapped) {
                     dict.add_number("betaV", 1 / betaV);
                     dict.add_number("betaT", 1 / betaT);
@@ -169,21 +167,20 @@ class MixtureBinaryPairLibrary
                 }
             } else {
                 std::cout << "Loading error: binary pair of " << name1 << " & " << name2
-                          << "does not provide either a) xi and zeta b) gammaT, gammaV, betaT, and betaV" << std::endl;
+                          << "does not provide either a) xi and zeta b) gammaT, gammaV, betaT, and betaV" << '\n';
                 continue;
             }
 
-            std::map<std::vector<std::string>, std::vector<Dictionary>>::iterator it = m_binary_pair_map.find(CAS);
+            auto it = m_binary_pair_map.find(CAS);
             if (it == m_binary_pair_map.end()) {
                 // Add to binary pair map by creating one-element vector
-                m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary>>(CAS, std::vector<Dictionary>(1, dict)));
+                m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
             } else {
                 if (get_config_bool(OVERWRITE_BINARY_INTERACTION)) {
                     // Already there, see http://www.cplusplus.com/reference/map/map/insert/, so we are going to pop it and overwrite it
                     m_binary_pair_map.erase(it);
                     std::pair<std::map<std::vector<std::string>, std::vector<Dictionary>>::iterator, bool> ret;
-                    ret =
-                      m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary>>(CAS, std::vector<Dictionary>(1, dict)));
+                    ret = m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
                     assert(ret.second == true);
                 } else {
                     // Error if already in map!
@@ -208,7 +205,7 @@ class MixtureBinaryPairLibrary
             CAS1 = identifier1;
         } else {
             std::vector<std::string> names1(1, identifier1);
-            HEOS1.reset(new CoolProp::HelmholtzEOSMixtureBackend(names1));
+            HEOS1 = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(names1);
             CAS1 = HEOS1->fluid_param_string("CAS");
         }
 
@@ -217,7 +214,7 @@ class MixtureBinaryPairLibrary
             CAS2 = identifier2;
         } else {
             std::vector<std::string> names2(1, identifier2);
-            HEOS2.reset(new CoolProp::HelmholtzEOSMixtureBackend(names2));
+            HEOS2 = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(names2);
             CAS2 = HEOS2->fluid_param_string("CAS");
         }
 
@@ -243,8 +240,8 @@ class MixtureBinaryPairLibrary
 
         if (rule == "linear") {
             // Terms for linear mixing
-            HEOS1.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1, name1)));
-            HEOS2.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1, name2)));
+            HEOS1 = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(std::vector<std::string>(1, name1));
+            HEOS2 = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(std::vector<std::string>(1, name2));
 
             dict.add_number("gammaT", 0.5 * (HEOS1->T_critical() + HEOS2->T_critical()) / sqrt(HEOS1->T_critical() * HEOS2->T_critical()));
             double rhoc1 = HEOS1->rhomolar_critical(), rhoc2 = HEOS2->rhomolar_critical();
@@ -262,16 +259,16 @@ class MixtureBinaryPairLibrary
             throw ValueError(format("Your simple mixing rule [%s] was not understood", rule.c_str()));
         }
 
-        std::map<std::vector<std::string>, std::vector<Dictionary>>::iterator it = m_binary_pair_map.find(CAS);
+        auto it = m_binary_pair_map.find(CAS);
         if (it == m_binary_pair_map.end()) {
             // Add to binary pair map by creating one-element vector
-            m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary>>(CAS, std::vector<Dictionary>(1, dict)));
+            m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
         } else {
             if (get_config_bool(OVERWRITE_BINARY_INTERACTION)) {
                 // Already there, see http://www.cplusplus.com/reference/map/map/insert/, so we are going to pop it and overwrite it
                 m_binary_pair_map.erase(it);
                 std::pair<std::map<std::vector<std::string>, std::vector<Dictionary>>::iterator, bool> ret;
-                ret = m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary>>(CAS, std::vector<Dictionary>(1, dict)));
+                ret = m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
                 assert(ret.second == true);
             } else {
                 // Error if already in map!
@@ -284,20 +281,18 @@ class MixtureBinaryPairLibrary
 };
 // The modifiable parameter library
 static MixtureBinaryPairLibrary mixturebinarypairlibrary;
-// A fixed parameter library containing the default values
-static MixtureBinaryPairLibrary mixturebinarypairlibrary_default;
 
 /// Add a simple mixing rule
 void apply_simple_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule) {
+    mixturebinarypairlibrary.load_defaults_if_needed();
     mixturebinarypairlibrary.add_simple_mixing_rule(identifier1, identifier2, rule);
 }
 
 std::string get_csv_mixture_binary_pairs() {
 
     std::vector<std::string> out;
-    for (std::map<std::vector<std::string>, std::vector<Dictionary>>::const_iterator it = mixturebinarypairlibrary.binary_pair_map().begin();
-         it != mixturebinarypairlibrary.binary_pair_map().end(); ++it) {
-        out.push_back(strjoin(it->first, "&"));
+    for (const auto& [key, val] : mixturebinarypairlibrary.binary_pair_map()) {
+        out.push_back(strjoin(key, "&"));
     }
     return strjoin(out, ",");
 }
@@ -337,7 +332,10 @@ std::string get_mixture_binary_pair_data(const std::string& CAS1, const std::str
                 return format("%0.16g", v[0].get_double("betaV"));
             } else {
             }
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Dictionary lookup threw (e.g. key present but wrong type);
+            // fall through to the ValueError below so the caller sees a
+            // uniform "could not match the parameter" message.
         }
         throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(),
                                 CAS1.c_str(), CAS2.c_str()));
@@ -407,65 +405,59 @@ class MixtureDepartureFunctionsLibrary
    private:
     /// Map from sorted pair of CAS numbers to departure term dictionary.
     std::map<std::string, Dictionary> m_departure_function_map;
+    /// Guards single-threaded population of m_departure_function_map.
+    std::once_flag m_load_flag;
 
    public:
     std::map<std::string, Dictionary>& departure_function_map() {
-        // Set the default departure functions if none have been provided yet
-        if (m_departure_function_map.size() == 0) {
-            load_defaults();
-        }
+        load_defaults_if_needed();
         return m_departure_function_map;
     };
 
-    void load_from_string(const std::string& str) {
-        rapidjson::Document doc;
-        doc.Parse<0>(str.c_str());
-        if (doc.HasParseError()) {
-            std::cout << str << std::endl;
-            throw ValueError("Unable to parse departure function string");
-        }
+    void load_from_string(const std::string_view& str) {
+        nlohmann::json doc = cpjson::parse(str);
         load_from_JSON(doc);
     }
-    void load_from_JSON(rapidjson::Document& doc) {
+    void load_from_JSON(const nlohmann::json& doc) {
         // Iterate over the departure functions in the listing
-        for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr) {
+        for (const auto& el : doc) {
             // Get the empty dictionary to be filled in
             Dictionary dict;
 
             // Populate the dictionary with common terms
-            std::string Name = cpjson::get_string(*itr, "Name");
-            std::string type = cpjson::get_string(*itr, "type");
+            std::string Name = cpjson::get_string(el, "Name");
+            std::string type = cpjson::get_string(el, "type");
             dict.add_string("Name", Name);
-            dict.add_string("BibTeX", cpjson::get_string(*itr, "BibTeX"));
-            dict.add_string_vector("aliases", cpjson::get_string_array(*itr, "aliases"));
+            dict.add_string("BibTeX", cpjson::get_string(el, "BibTeX"));
+            dict.add_string_vector("aliases", cpjson::get_string_array(el, "aliases"));
             dict.add_string("type", type);
 
             // Terms for the power (common to both types)
-            dict.add_double_vector("n", cpjson::get_double_array(*itr, "n"));
-            dict.add_double_vector("d", cpjson::get_double_array(*itr, "d"));
-            dict.add_double_vector("t", cpjson::get_double_array(*itr, "t"));
+            dict.add_double_vector("n", cpjson::get_double_array(el, "n"));
+            dict.add_double_vector("d", cpjson::get_double_array(el, "d"));
+            dict.add_double_vector("t", cpjson::get_double_array(el, "t"));
 
             // Now we need to load additional terms
             if (!type.compare("GERG-2008")) {
                 // Number of terms that are power terms
-                dict.add_number("Npower", cpjson::get_double(*itr, "Npower"));
+                dict.add_number("Npower", cpjson::get_double(el, "Npower"));
                 // Terms for the gaussian
-                dict.add_double_vector("eta", cpjson::get_double_array(*itr, "eta"));
-                dict.add_double_vector("epsilon", cpjson::get_double_array(*itr, "epsilon"));
-                dict.add_double_vector("beta", cpjson::get_double_array(*itr, "beta"));
-                dict.add_double_vector("gamma", cpjson::get_double_array(*itr, "gamma"));
+                dict.add_double_vector("eta", cpjson::get_double_array(el, "eta"));
+                dict.add_double_vector("epsilon", cpjson::get_double_array(el, "epsilon"));
+                dict.add_double_vector("beta", cpjson::get_double_array(el, "beta"));
+                dict.add_double_vector("gamma", cpjson::get_double_array(el, "gamma"));
             } else if (type == "Gaussian+Exponential") {
                 // Number of terms that are power terms
-                dict.add_number("Npower", cpjson::get_double(*itr, "Npower"));
+                dict.add_number("Npower", cpjson::get_double(el, "Npower"));
                 // The decay strength parameters
-                dict.add_double_vector("l", cpjson::get_double_array(*itr, "l"));
+                dict.add_double_vector("l", cpjson::get_double_array(el, "l"));
                 // Terms for the gaussian part
-                dict.add_double_vector("eta", cpjson::get_double_array(*itr, "eta"));
-                dict.add_double_vector("epsilon", cpjson::get_double_array(*itr, "epsilon"));
-                dict.add_double_vector("beta", cpjson::get_double_array(*itr, "beta"));
-                dict.add_double_vector("gamma", cpjson::get_double_array(*itr, "gamma"));
+                dict.add_double_vector("eta", cpjson::get_double_array(el, "eta"));
+                dict.add_double_vector("epsilon", cpjson::get_double_array(el, "epsilon"));
+                dict.add_double_vector("beta", cpjson::get_double_array(el, "beta"));
+                dict.add_double_vector("gamma", cpjson::get_double_array(el, "gamma"));
             } else if (!type.compare("Exponential")) {
-                dict.add_double_vector("l", cpjson::get_double_array(*itr, "l"));
+                dict.add_double_vector("l", cpjson::get_double_array(el, "l"));
             } else {
                 throw ValueError(format("It was not possible to parse departure function with type [%s]", type.c_str()));
             }
@@ -473,16 +465,16 @@ class MixtureDepartureFunctionsLibrary
             add_one(Name, dict);
             std::vector<std::string> aliases = dict.get_string_vector("aliases");
             // Add the aliases too;
-            for (std::vector<std::string>::const_iterator it = aliases.begin(); it != aliases.end(); ++it) {
+            for (const auto& alias : aliases) {
                 // Add the alias;
-                add_one(*it, dict);
+                add_one(alias, dict);
             }
         }
     }
     void add_one(const std::string& name, Dictionary& dict) {
 
         // Check if this name is already in use
-        std::map<std::string, Dictionary>::iterator it = m_departure_function_map.find(name);
+        auto it = m_departure_function_map.find(name);
         if (it == m_departure_function_map.end()) {
             // Not in map, add new entry to map with dictionary as value and Name as key
             m_departure_function_map.insert(std::pair<std::string, Dictionary>(name, dict));
@@ -491,21 +483,24 @@ class MixtureDepartureFunctionsLibrary
                 // Already there, see http://www.cplusplus.com/reference/map/map/insert/
                 m_departure_function_map.erase(it);
                 std::pair<std::map<std::string, Dictionary>::iterator, bool> ret;
-                ret = m_departure_function_map.insert(std::pair<std::string, Dictionary>(name, dict));
+                ret = m_departure_function_map.emplace(name, dict);
                 assert(ret.second == true);
             } else {
                 // Error if already in map!
                 //
                 // Collect all the current names for departure functions for a nicer error message
                 std::vector<std::string> names;
-                for (std::map<std::string, Dictionary>::const_iterator it = m_departure_function_map.begin(); it != m_departure_function_map.end();
-                     ++it) {
-                    names.push_back(it->first);
+                names.reserve(m_departure_function_map.size());
+                for (const auto& [name, dict] : m_departure_function_map) {
+                    names.push_back(name);
                 }
                 throw ValueError(format("Name of departure function [%s] is already loaded. Current departure function names are: %s", name.c_str(),
                                         strjoin(names, ",").c_str()));
             }
         }
+    }
+    void load_defaults_if_needed() {
+        std::call_once(m_load_flag, [this] { load_defaults(); });
     }
     // Load the defaults that come from the JSON-encoded string compiled into library
     // as the variable mixture_departure_functions_JSON
@@ -634,7 +629,7 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend& HEOS)
             if (std::abs(HEOS.residual_helmholtz->Excess.F[i][j]) < DBL_EPSILON) {
                 // Empty departure function that will just return 0
                 std::vector<double> n(1, 0), d(1, 1), t(1, 1), l(1, 0);
-                HEOS.residual_helmholtz->Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n, d, t, l));
+                HEOS.residual_helmholtz->Excess.DepartureFunctionMatrix[i][j] = std::make_shared<ExponentialDepartureFunction>(n, d, t, l);
                 continue;
             }
 
@@ -645,7 +640,7 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend& HEOS)
         }
     }
     // We have obtained all the parameters needed for the reducing function, now set the reducing function for the mixture
-    HEOS.Reducing = shared_ptr<ReducingFunction>(new GERG2008ReducingFunction(components, beta_v, gamma_v, beta_T, gamma_T));
+    HEOS.Reducing = std::make_shared<GERG2008ReducingFunction>(components, beta_v, gamma_v, beta_T, gamma_T);
 }
 
 void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BIP, std::vector<REFPROP_departure_function>& functions) {
@@ -653,12 +648,12 @@ void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BI
     bool block_started = false;
     std::size_t i_started = 0, i_ended = 0, i = 0;
     std::vector<std::string> lines = strsplit(s, '\n');
-    for (std::vector<std::string>::iterator it = lines.begin(); it != lines.end(); ++it) {
-        if (strstartswith(strstrip(*it), "#BNC")) {
+    for (auto& line : lines) {
+        if (strstartswith(strstrip(line), "#BNC")) {
             block_started = true;
             i_started = i + 1;
         }
-        if (block_started && strstrip(*it).empty()) {
+        if (block_started && strstrip(line).empty()) {
             i_ended = i - 1;
             break;
         }
@@ -682,16 +677,16 @@ void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BI
     }
     // Parse each chunk
     std::vector<REFPROP_binary_element> chunks;
-    for (std::vector<std::pair<std::size_t, std::size_t>>::iterator it = bounds.begin(); it != bounds.end(); ++it) {
+    for (const auto& [bstart, bend] : bounds) {
         REFPROP_binary_element bnc;
-        for (std::size_t i = it->first; i <= it->second; ++i) {
+        for (std::size_t i = bstart; i <= bend; ++i) {
             // Store comments
             if (strstartswith(lines[i], "?")) {
                 bnc.comments.push_back(lines[i]);
                 continue;
             }
             // Parse the line with the thermo BIP
-            if (lines[i].find("/") > 0) {
+            if (lines[i].find('/') > 0) {
                 // Split at ' '
                 std::vector<std::string> bits = strsplit(strstrip(lines[i]), ' ');
                 // Remove empty elements
@@ -701,7 +696,7 @@ void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BI
                     }
                 }
                 // Get the line that contains the thermo BIP
-                if (bits[0].find("/") > 0 && bits[1].size() == 3) {
+                if (bits[0].find('/') > 0 && bits[1].size() == 3) {
                     std::vector<std::string> theCAS = strsplit(bits[0], '/');
                     bnc.CAS1 = theCAS[0];
                     bnc.CAS2 = theCAS[1];
@@ -728,7 +723,7 @@ void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BI
     //      Parse the departure functions
     // ****************************************
     for (std::size_t i = i_ended + 1; i < lines.size(); ++i) {
-        std::size_t j_end;
+        std::size_t j_end = 0;
         // Find the end of this block
         for (j_end = i + 1; j_end < lines.size(); ++j_end) {
             if (strstrip(lines[j_end]).empty()) {
@@ -761,10 +756,10 @@ void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BI
 
                 if (dep.Npower < 0) {  // Not extracted yet, let's do it now
                     // Extract the number of terms
-                    dep.Npower = static_cast<short>(strtol(bits[0].c_str(), NULL, 10));
-                    dep.Nterms_power = static_cast<short>(strtol(bits[1].c_str(), NULL, 10));
-                    dep.Nspecial = static_cast<short>(strtol(bits[3].c_str(), NULL, 10));
-                    dep.Nterms_special = static_cast<short>(strtol(bits[4].c_str(), NULL, 10));
+                    dep.Npower = static_cast<short>(strtol(bits[0].c_str(), nullptr, 10));
+                    dep.Nterms_power = static_cast<short>(strtol(bits[1].c_str(), nullptr, 10));
+                    dep.Nspecial = static_cast<short>(strtol(bits[3].c_str(), nullptr, 10));
+                    dep.Nterms_special = static_cast<short>(strtol(bits[4].c_str(), nullptr, 10));
                 } else {
                     dep.a.push_back(string2double(bits[0]));
                     dep.t.push_back(string2double(bits[1]));
@@ -774,7 +769,7 @@ void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BI
                         dep.e.push_back(string2double(bits[3]));
                     }
                     if (dep.Nspecial > 0) {
-                        if (dep.a.size() - 1 < dep.Npower) {
+                        if (dep.a.size() - 1 < static_cast<size_t>(dep.Npower)) {
                             dep.eta.push_back(0);
                             dep.epsilon.push_back(0);
                             dep.beta.push_back(0);
@@ -802,62 +797,54 @@ void set_departure_functions(const std::string& string_data) {
         parse_HMX_BNC(string_data, BIP, functions);
 
         {
-            rapidjson::Document doc;
-            doc.SetArray();
-            for (std::vector<REFPROP_binary_element>::const_iterator it = BIP.begin(); it < BIP.end(); ++it) {
-                rapidjson::Value el;
-                el.SetObject();
-                el.AddMember("CAS1", rapidjson::Value(it->CAS1.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                el.AddMember("CAS2", rapidjson::Value(it->CAS2.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                el.AddMember("Name1", "??", doc.GetAllocator());
-                el.AddMember("Name2", "??", doc.GetAllocator());
-                el.AddMember("betaT", it->betaT, doc.GetAllocator());
-                el.AddMember("gammaT", it->gammaT, doc.GetAllocator());
-                el.AddMember("betaV", it->betaV, doc.GetAllocator());
-                el.AddMember("gammaV", it->gammaV, doc.GetAllocator());
-                el.AddMember("F", it->Fij, doc.GetAllocator());
-                el.AddMember("function", rapidjson::Value(it->model.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                std::string tex_string = "(from HMX.BNC format)::" + strjoin(it->comments, "\n");
-                el.AddMember("BibTeX", rapidjson::Value(tex_string.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                doc.PushBack(el, doc.GetAllocator());
+            nlohmann::json doc = nlohmann::json::array();
+            for (const auto& bip : BIP) {
+                nlohmann::json el;
+                el["CAS1"] = bip.CAS1;
+                el["CAS2"] = bip.CAS2;
+                el["Name1"] = "??";
+                el["Name2"] = "??";
+                el["betaT"] = bip.betaT;
+                el["gammaT"] = bip.gammaT;
+                el["betaV"] = bip.betaV;
+                el["gammaV"] = bip.gammaV;
+                el["F"] = bip.Fij;
+                el["function"] = bip.model;
+                el["BibTeX"] = "(from HMX.BNC format)::" + strjoin(bip.comments, "\n");
+                doc.push_back(std::move(el));
             }
             mixturebinarypairlibrary.load_from_JSON(doc);
         }
         {
-            rapidjson::Document doc;
-            doc.SetArray();
-            for (std::vector<REFPROP_departure_function>::const_iterator it = functions.begin(); it < functions.end(); ++it) {
-                rapidjson::Value el;
-                el.SetObject();
-                el.AddMember("Name", rapidjson::Value(it->model.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                std::vector<std::string> aliases;
-                cpjson::set_string_array("aliases", aliases, el, doc);
-                cpjson::set_double_array("n", it->a, el, doc);
-                cpjson::set_double_array("d", it->d, el, doc);
-                cpjson::set_double_array("t", it->t, el, doc);
-                if (it->Nterms_special > 0 || it->Nterms_power == 3) {
-                    el.AddMember("type", "GERG-2008", doc.GetAllocator());
-                    el.AddMember("Npower", it->Npower, doc.GetAllocator());
-                    if (it->Nterms_power == 3 && it->Nspecial == 0) {
-                        std::vector<double> zeros(it->a.size(), 0);
-                        cpjson::set_double_array("eta", zeros, el, doc);
-                        cpjson::set_double_array("epsilon", zeros, el, doc);
-                        cpjson::set_double_array("beta", zeros, el, doc);
-                        cpjson::set_double_array("gamma", zeros, el, doc);
+            nlohmann::json doc = nlohmann::json::array();
+            for (const auto& func : functions) {
+                nlohmann::json el;
+                el["Name"] = func.model;
+                el["aliases"] = nlohmann::json::array();
+                el["n"] = func.a;
+                el["d"] = func.d;
+                el["t"] = func.t;
+                if (func.Nterms_special > 0 || func.Nterms_power == 3) {
+                    el["type"] = "GERG-2008";
+                    el["Npower"] = func.Npower;
+                    if (func.Nterms_power == 3 && func.Nspecial == 0) {
+                        std::vector<double> zeros(func.a.size(), 0.0);
+                        el["eta"] = zeros;
+                        el["epsilon"] = zeros;
+                        el["beta"] = zeros;
+                        el["gamma"] = zeros;
                     } else {
-                        cpjson::set_double_array("eta", it->eta, el, doc);
-                        cpjson::set_double_array("epsilon", it->epsilon, el, doc);
-                        cpjson::set_double_array("beta", it->beta, el, doc);
-                        cpjson::set_double_array("gamma", it->gamma, el, doc);
+                        el["eta"] = func.eta;
+                        el["epsilon"] = func.epsilon;
+                        el["beta"] = func.beta;
+                        el["gamma"] = func.gamma;
                     }
                 } else {
-                    el.AddMember("type", "Exponential", doc.GetAllocator());
-                    cpjson::set_double_array("l", it->e, el, doc);
+                    el["type"] = "Exponential";
+                    el["l"] = func.e;
                 }
-
-                std::string tex_string = "(from HMX.BNC format)::" + strjoin(it->comments, "\n");
-                el.AddMember("BibTeX", rapidjson::Value(tex_string.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
-                doc.PushBack(el, doc.GetAllocator());
+                el["BibTeX"] = "(from HMX.BNC format)::" + strjoin(func.comments, "\n");
+                doc.push_back(std::move(el));
             }
             mixturedeparturefunctionslibrary.load_from_JSON(doc);
         }

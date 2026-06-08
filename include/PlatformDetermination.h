@@ -1,19 +1,7 @@
-#ifndef PLATFORMDETERMINATION_H
-#define PLATFORMDETERMINATION_H
-
-// See also http://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
-#if _WIN64
-#    define __ISWINDOWS__
-#elif _WIN32
-#    define __ISWINDOWS__
-#elif __APPLE__
-#    define __ISAPPLE__
-#elif __linux || __unix || __posix
-#    define __ISLINUX__
-#elif __powerpc__
-#    define __ISPOWERPC__
-#else
-#    pragma error
+// DEPRECATED forwarding shim (GH #1280). Remove at v9.
+// The canonical location is <CoolProp/detail/PlatformDetermination.h>.
+#ifndef COOLPROP_NO_DEPRECATED_HEADER_WARNINGS
+#    pragma message( \
+      "PlatformDetermination.h is deprecated; include \"CoolProp/detail/PlatformDetermination.h\". Define COOLPROP_NO_DEPRECATED_HEADER_WARNINGS to silence.")
 #endif
-
-#endif
+#include "CoolProp/detail/PlatformDetermination.h"

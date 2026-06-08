@@ -1,14 +1,8 @@
 
-#include "MatrixMath.h"
+#include "CoolProp/numerics/MatrixMath.h"
 
-#include "CoolPropTools.h"
-#include "Exceptions.h"
-
-#include <string>
-#include <sstream>
-#include <vector>
-#include <numeric>
-#include <math.h>
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/Exceptions.h"
 
 namespace CoolProp {}; /* namespace CoolProp */
 
@@ -36,35 +30,35 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h", 
 
         Eigen::MatrixXd matrix = Eigen::MatrixXd::Random(4, 1);
         std::string tmpStr;
-        if (PRINT) std::cout << std::endl;
+        if (PRINT) std::cout << '\n';
 
         CHECK_NOTHROW(tmpStr = CoolProp::vec_to_string(cHeat[0]));
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
         CHECK_NOTHROW(tmpStr = CoolProp::vec_to_string(cHeat));
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
         CHECK_NOTHROW(tmpStr = CoolProp::vec_to_string(cHeat2D));
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
 
         CHECK_NOTHROW(tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat[0])));
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
         CHECK_NOTHROW(tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat, 1)));
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
         CHECK_THROWS(tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat, 2)));
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
         CHECK_NOTHROW(tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat2D)));
-        if (PRINT) std::cout << tmpStr << std::endl;
+        if (PRINT) std::cout << tmpStr << '\n';
     }
 
     SECTION("Matrix modifications") {
         Eigen::MatrixXd matrix = CoolProp::vec_to_eigen(cHeat2D);
 
-        if (PRINT) std::cout << CoolProp::mat_to_string(matrix) << std::endl;
+        if (PRINT) std::cout << CoolProp::mat_to_string(matrix) << '\n';
 
         CHECK_NOTHROW(CoolProp::removeColumn(matrix, 1));
-        if (PRINT) std::cout << CoolProp::mat_to_string(matrix) << std::endl;
+        if (PRINT) std::cout << CoolProp::mat_to_string(matrix) << '\n';
 
         CHECK_NOTHROW(CoolProp::removeRow(matrix, 1));
-        if (PRINT) std::cout << CoolProp::mat_to_string(matrix) << std::endl;
+        if (PRINT) std::cout << CoolProp::mat_to_string(matrix) << '\n';
 
         CHECK_THROWS(CoolProp::removeColumn(matrix, 10));
         CHECK_THROWS(CoolProp::removeRow(matrix, 10));

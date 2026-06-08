@@ -1,6 +1,7 @@
 #include "GeneralizedCubic.h"
-#include "CPnumerics.h"
+#include "CoolProp/numerics/numerics.h"
 #include <cmath>
+#include <utility>
 
 double BasicMathiasCopemanAlphaFunction::term(double tau, std::size_t itau) {
 
@@ -91,7 +92,7 @@ double TwuAlphaFunction::term(double tau, std::size_t itau) {
                  : -N / powInt(tau, 4)
                      * (L * powInt(M, 4) * powInt(N, 3) * A + 6 * L * M * M * M * N * N * A + 11 * L * M * M * N * A + 6 * L * M * A - 6 * M + 6);
 
-    double dam_dtau, d2am_dtau2, d3am_dtau3, d4am_dtau4;
+    double dam_dtau = NAN, d2am_dtau2 = NAN, d3am_dtau3 = NAN, d4am_dtau4 = NAN;
     double am = a0 * pow(Tr_over_Tci / tau, N * (M - 1)) * exp(L * (1 - A));
 
     if (itau == 0) {
@@ -117,15 +118,22 @@ double TwuAlphaFunction::term(double tau, std::size_t itau) {
     }
 }
 
-AbstractCubic::AbstractCubic(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1, double Delta_2,
-                             std::vector<double> C1, std::vector<double> C2, std::vector<double> C3)
-  : Tc(Tc), pc(pc), acentric(acentric), R_u(R_u), Delta_1(Delta_1), Delta_2(Delta_2) {
-    N = static_cast<int>(Tc.size());
+AbstractCubic::AbstractCubic(const std::vector<double>& Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1,
+                             double Delta_2, const std::vector<double>& C1, const std::vector<double>& C2, const std::vector<double>& C3)
+  : T_r(1.0),
+    rho_r(1.0),
+    Tc(Tc),
+    pc(std::move(pc)),
+    acentric(std::move(acentric)),
+    R_u(R_u),
+    Delta_1(Delta_1),
+    Delta_2(Delta_2),
+    N(static_cast<int>(Tc.size())),
+    cm(0.) {
+
     k.resize(N, std::vector<double>(N, 0));
-    cm = 0.;
+
     alpha.resize(N);
-    T_r = 1.0;
-    rho_r = 1.0;
 };
 
 void AbstractCubic::set_alpha(const std::vector<double>& C1, const std::vector<double>& C2, const std::vector<double>& C3) {
@@ -134,12 +142,12 @@ void AbstractCubic::set_alpha(const std::vector<double>& C1, const std::vector<d
     /// If no Mathias-Copeman coefficients are passed in (all empty vectors), use the predictive scheme for m_ii
     if (C1.empty() && C2.empty() && C3.empty()) {
         for (std::size_t i = 0; i < Tc.size(); ++i) {
-            alpha[i].reset(new BasicMathiasCopemanAlphaFunction(a0_ii(i), m_ii(i), T_r / Tc[i]));
+            alpha[i] = std::make_shared<BasicMathiasCopemanAlphaFunction>(a0_ii(i), m_ii(i), T_r / Tc[i]);
         }
     } else {
         /// Use the Mathias-Copeman constants passed in to initialize Mathias-Copeman alpha functions
         for (std::size_t i = 0; i < Tc.size(); ++i) {
-            alpha[i].reset(new MathiasCopemanAlphaFunction(a0_ii(i), C1[i], C2[i], C3[i], T_r / Tc[i]));
+            alpha[i] = std::make_shared<MathiasCopemanAlphaFunction>(a0_ii(i), C1[i], C2[i], C3[i], T_r / Tc[i]);
         }
     }
 }
@@ -634,13 +642,13 @@ double AbstractCubic::d3_alphar_dxidxjdxk(double tau, double delta, const std::v
 }
 
 double SRK::a0_ii(std::size_t i) {
-    // Values from Soave, 1972 (Equilibrium constants from a ..)
-    double a = 0.42747 * R_u * R_u * Tc[i] * Tc[i] / pc[i];
+    // Exact value: 1/(9*(2^(1/3)-1)); see Bell and Deiters, IECR, 2021
+    double a = 0.42748023335403414043900347952220 * R_u * R_u * Tc[i] * Tc[i] / pc[i];
     return a;
 }
 double SRK::b0_ii(std::size_t i) {
-    // Values from Soave, 1972 (Equilibrium constants from a ..)
-    double b = 0.08664 * R_u * Tc[i] / pc[i];
+    // Exact value: (2^(1/3)-1)/3; see Bell and Deiters, IECR, 2021
+    double b = 0.08664034999649577215890158147700 * R_u * Tc[i] / pc[i];
     return b;
 }
 double SRK::m_ii(std::size_t i) {
@@ -651,11 +659,13 @@ double SRK::m_ii(std::size_t i) {
 }
 
 double PengRobinson::a0_ii(std::size_t i) {
-    double a = 0.45724 * R_u * R_u * Tc[i] * Tc[i] / pc[i];
+    // Exact value; see Bell and Deiters, IECR, 2021
+    double a = 0.45723552892138218938000849856422 * R_u * R_u * Tc[i] * Tc[i] / pc[i];
     return a;
 }
 double PengRobinson::b0_ii(std::size_t i) {
-    double b = 0.07780 * R_u * Tc[i] / pc[i];
+    // Exact value; see Bell and Deiters, IECR, 2021
+    double b = 0.07779607390388455972148597969400 * R_u * Tc[i] / pc[i];
     return b;
 }
 double PengRobinson::m_ii(std::size_t i) {

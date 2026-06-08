@@ -1,11 +1,13 @@
 
-#include "ODEIntegrators.h"
+#include "CoolProp/numerics/ODEIntegrators.h"
 #include "Eigen/Core"
-#include "CPstrings.h"
-#include "Exceptions.h"
+#include "CoolProp/detail/strings.h"
+#include "CoolProp/Exceptions.h"
 #include <algorithm>
+#include <cmath>
+#include <iostream>
 
-bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, double tend, double hmin, double hmax, double eps_allowed,
+bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tmin, double tmax, double hmin, double hmax, double eps_allowed,
                                   double step_relax) {
     // Get the starting array of variables of integration
     std::vector<double> xold = ode.get_initial_array();
@@ -13,17 +15,17 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
 
     // Start at an index of 0
     int Itheta = 0;
-    double t0 = tstart;
+    double t0 = tmin;
     double h = hmin;
 
     // Figure out if t is increasing or decreasing in the integration and set a flag
-    bool forwards_integration = ((tend - tstart) > 0);
+    bool forwards_integration = ((tmax - tmin) > 0);
     // If backwards integration, flip the sign of the step
     if (!forwards_integration) {
         h *= -1;
     }
 
-    double max_error;
+    double max_error = NAN;
 
     std::vector<double> xnew1(N), xnew2(N), xnew3(N), xnew4(N), xnew5(N), f1(N), f2(N), f3(N), f4(N), f5(N), f6(N), error(N), xnew(N);
 
@@ -45,19 +47,20 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
 
             // If the step would go beyond the end of the region of integration,
             // just take a step to the end of the region of integration
-            if (forwards_integration && (t0 + h > tend)) {
+            if (forwards_integration && (t0 + h > tmax)) {
                 disableAdaptive = true;
-                h = tend - t0;
+                h = tmax - t0;
             }
-            if (!forwards_integration && (t0 + h < tend)) {
+            if (!forwards_integration && (t0 + h < tmax)) {
                 disableAdaptive = true;
-                h = tend - t0;
+                h = tmax - t0;
             }
 
             ode.pre_step_callback();
 
             // We check stepAccepted again because if the derived class
-            // sets the variable stepAccepted, we should not actually do the evaluation
+            // sets the variable stepAccepted, we should not actually do the evaluation.
+            // cppcheck-suppress identicalInnerCondition
             if (!stepAccepted) {
 
                 Eigen::Map<Eigen::VectorXd> xold_w(&(xold[0]), N);
@@ -152,13 +155,13 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
         }
 
         // Overshot the end, oops...  That's an error
-        if (forwards_integration && (t0 - tend > +1e-3)) {
-            throw CoolProp::ValueError(format("t0 - tend [%g] > 1e-3", t0 - tend));
+        if (forwards_integration && (t0 - tmax > +1e-3)) {
+            throw CoolProp::ValueError(format("t0 - tmax [%g] > 1e-3", t0 - tmax));
         }
-        if (!forwards_integration && (t0 - tend < -1e-3)) {
-            throw CoolProp::ValueError(format("t0 - tend [%g] < -1e-3", t0 - tend));
+        if (!forwards_integration && (t0 - tmax < -1e-3)) {
+            throw CoolProp::ValueError(format("t0 - tmax [%g] < -1e-3", t0 - tmax));
         }
-    } while (((forwards_integration) && t0 < tend - 1e-10) || ((!forwards_integration) && t0 > tend + 1e-10));
+    } while (((forwards_integration) && t0 < tmax - 1e-10) || ((!forwards_integration) && t0 > tmax + 1e-10));
 
     // No termination was requested
     return false;
@@ -173,25 +176,25 @@ TEST_CASE("Integrate y'=y", "[ODEIntegrator]") {
        public:
         std::vector<double> t, h, y;
 
-        virtual std::vector<double> get_initial_array() const {
+        std::vector<double> get_initial_array() const override {
             return std::vector<double>(1, 1);
         }
 
-        virtual void pre_step_callback(){};
+        void pre_step_callback() override {};
 
-        virtual void post_deriv_callback(){};
+        void post_deriv_callback() override {};
 
-        virtual void post_step_callback(double t, double h, std::vector<double>& y) {
+        void post_step_callback(double t, double h, std::vector<double>& y) override {
             this->t.push_back(t);
             this->h.push_back(h);
             this->y.push_back(y[0]);
         };
 
-        virtual bool premature_termination() {
+        bool premature_termination() override {
             return false;
         };
 
-        virtual void derivs(double t, std::vector<double>& y, std::vector<double>& yprime) {
+        void derivs(double t, std::vector<double>& y, std::vector<double>& yprime) override {
             yprime[0] = y[0];
         };
     };

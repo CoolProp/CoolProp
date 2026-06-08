@@ -9,14 +9,14 @@ Java Wrapper
 Pre-compiled Binaries
 =====================
 
-Pre-compiled binaries can be downloaded from :sfdownloads:`Java`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Java`.
+Pre-compiled binaries can be downloaded from :sfdownloads:`Java`.  Nightly development binaries can be found at :sfnightly:`Java`.
 
 Download the ``platform-independent.7z`` file and expand it to a folder called ``platform-independent`` using 7-zip.  Download the special Java shared library for your system architecture to the same location from either :sfdownloads:`Java` (release) or :sfnightly:`Java` (development).  Copy the Example.java file to the same location.  You will need to have a copy of some version of java.
 
 When you are finished, you should have a folder layout something like ::
 
     main
-     |- CoolProp.dll
+     |- CoolPropJava.dll
      |- Example.java
      |- platform-independent
         |- AbstractState.java
@@ -42,7 +42,7 @@ Compilation of the Java wrapper requires a few :ref:`common wrapper pre-requisit
 Linux & OSX
 -----------
 
-1. Download a zip file of the Java Development Kit (JDK) for Java from `Oracle downloads <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_. If you are in a 32-bit system, download the 32-bit system, else download the 64-bit version.
+1. Download a zip file of the Java Development Kit (JDK) for Java from `Oracle downloads <https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_. If you are in a 32-bit system, download the 32-bit system, else download the 64-bit version.
 
 2. Expand the zip file you downloaded
 
@@ -55,7 +55,7 @@ Linux & OSX
 Windows
 -------
 
-Download and run the JDK installer from `Oracle downloads <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_. If you are in a 32-bit system, download the 32-bit system, else download the 64-bit version.
+Download and run the JDK installer from `Oracle downloads <https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_. If you are in a 32-bit system, download the 32-bit system, else download the 64-bit version.
 
 Build
 -----
@@ -66,7 +66,7 @@ Linux and OSX
 Once the dependencies are installed, you can run the builder and tests using::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     mkdir -p  CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake
@@ -88,7 +88,7 @@ Windows (32-bit and 64-bit)
 You need to just slightly modify the building procedure::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder

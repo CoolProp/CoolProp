@@ -1,6 +1,6 @@
 
 #ifndef __powerpc__
-#    include <math.h>
+#    include <cmath>
 #    include <complex>
 #    include <iostream>
 static std::complex<double> t1(0.368017112855051e-1, 0.510878114959572e-1);
@@ -11,7 +11,7 @@ static std::complex<double> r21(-0.557107698030123e-4, 0.464578634580806e-4);
 static std::complex<double> r22(0.234801409215913e-10, -0.285651142904972e-10);
 #endif
 
-#include "Ice.h"
+#include "CoolProp/fluids/Ice.h"
 
 static double T_t = 273.16,  ///< Triple point temperature in K
   p_t = 611.657,             ///< Triple point pressure in Pa
@@ -37,7 +37,7 @@ double psub_Ice(double T) {
 #ifndef __powerpc__
     double a[] = {0, -0.212144006e2, 0.273203819e2, -0.610598130e1};
     double b[] = {0, 0.333333333e-2, 0.120666667e1, 0.170333333e1};
-    double summer = 0, theta;
+    double summer = 0, theta = NAN;
     theta = T / T_t;
     for (int i = 1; i <= 3; i++) {
         summer += a[i] * pow(theta, b[i]);
@@ -51,7 +51,7 @@ double psub_Ice(double T) {
 double g_Ice(double T, double p) {
 #ifndef __powerpc__
     std::complex<double> r2, term1, term2;
-    double g0, theta, pi, pi_0;
+    double g0 = NAN, theta = NAN, pi = NAN, pi_0 = NAN;
     theta = T / T_t;
     pi = p / p_t;
     pi_0 = p_0 / p_t;
@@ -69,7 +69,7 @@ double g_Ice(double T, double p) {
 double dg_dp_Ice(double T, double p) {
 #ifndef __powerpc__
     std::complex<double> r2_p;
-    double g0_p, theta, pi, pi_0;
+    double g0_p = NAN, theta = NAN, pi = NAN, pi_0 = NAN;
     theta = T / T_t;
     pi = p / p_t;
     pi_0 = p_0 / p_t;
@@ -85,7 +85,7 @@ double dg_dp_Ice(double T, double p) {
 double dg2_dp2_Ice(double T, double p) {
 #ifndef __powerpc__
     std::complex<double> r2_pp;
-    double g0_pp, theta, pi, pi_0;
+    double g0_pp = NAN, theta = NAN, pi = NAN, pi_0 = NAN;
     theta = T / T_t;
     pi = p / p_t;
     pi_0 = p_0 / p_t;
@@ -101,7 +101,7 @@ double dg2_dp2_Ice(double T, double p) {
 double dg_dT_Ice(double T, double p) {
 #ifndef __powerpc__
     std::complex<double> r2, term1, term2;
-    double theta, pi, pi_0;
+    double theta = NAN, pi = NAN, pi_0 = NAN;
     theta = T / T_t;
     pi = p / p_t;
     pi_0 = p_0 / p_t;

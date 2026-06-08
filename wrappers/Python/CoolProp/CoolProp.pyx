@@ -39,13 +39,13 @@ cdef extern from "Python.h":
 cdef extern from "Python.h":
     int __LINE__
 
-cdef extern from "CoolPropTools.h":
+cdef extern from "CoolProp/detail/tools.h":
     double get_HUGE()
 
-cdef extern from "CoolPropTools.h" namespace "CoolProp":
+cdef extern from "CoolProp/detail/tools.h" namespace "CoolProp":
     bint _ValidNumber "ValidNumber"(double)
 
-cdef extern from "Configuration.h" namespace "CoolProp":
+cdef extern from "CoolProp/Configuration.h" namespace "CoolProp":
     string _get_config_as_json_string "CoolProp::get_config_as_json_string"() except +
     void _set_config_as_json_string "CoolProp::set_config_as_json_string"(string) except +
     string _config_key_description "CoolProp::config_key_description"(string) except +
@@ -60,17 +60,17 @@ cdef extern from "Configuration.h" namespace "CoolProp":
     bint _get_config_bool "CoolProp::get_config_bool"(constants_header.configuration_keys) except +
     int _get_config_int "CoolProp::get_config_int"(constants_header.configuration_keys) except +
 
-cdef extern from "DataStructures.h" namespace "CoolProp":
+cdef extern from "CoolProp/DataStructures.h" namespace "CoolProp":
     string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
     int _get_parameter_index "CoolProp::get_parameter_index"(string) except +
     int _get_phase_index "CoolProp::get_phase_index"(string) except +
     bint _is_trivial_parameter "CoolProp::is_trivial_parameter"(int) except +
     constants_header.input_pairs _generate_update_pair "CoolProp::generate_update_pair"(constants_header.parameters key1, double value1, constants_header.parameters key2, double value2, double &out1, double &out2) except +
 
-cdef extern from "CoolPropLib.h":
+cdef extern from "CoolProp/CoolPropLib.h":
     double _Props "Props"(const char* Output, const char Name1, double Prop1, const char Name2, double Prop2, const char* Ref)
 
-cdef extern from "CoolProp.h" namespace "CoolProp":
+cdef extern from "CoolProp/CoolProp.h" namespace "CoolProp":
     double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)
     double _PropsSI "CoolProp::PropsSI"(string Output, string Name1, double Prop1, string Name2, double Prop2, string FluidName)
     string _PhaseSI "CoolProp::PhaseSI"(string Name1, double Prop1, string Name2, double Prop2, string FluidName)
@@ -86,7 +86,7 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     double _saturation_ancillary "CoolProp::saturation_ancillary"(string, string, int, string, double) except +
     bint _add_fluids_as_JSON "CoolProp::add_fluids_as_JSON"(const string backend, const string JSON) except +
 
-cdef extern from "HumidAirProp.h" namespace "HumidAir":
+cdef extern from "CoolProp/HumidAirProp.h" namespace "HumidAir":
     double _HAPropsSI "HumidAir::HAPropsSI"(string OutputName, string Input1Name, double Input1, string Input2Name, double Input2, string Input3Name, double Input3)
     double _HAProps "HumidAir::HAProps"(string OutputName, string Input1Name, double Input1, string Input2Name, double Input2, string Input3Name, double Input3)
     double _HAProps_Aux "HumidAir::HAProps_Aux"(const char* Name,double T, double p, double W, char *units)
@@ -143,9 +143,9 @@ cdef class ChebyshevExpansion:
     def solve_for_x(self, double y, double a, double b, unsigned int bits, size_t max_iter, double boundstytol):
         return self.m_exp.solve_for_x(y, a, b, bits, max_iter, boundstytol)
 
-    def solve_for_x_many(self, double[::1]  y, double a, double b, unsigned int bits, size_t max_iter, double boundstytol, double[::1] x, double [::1] counts):
+    def solve_for_x_many(self, double[::1]  y, double a, double b, unsigned int bits, size_t max_iter, double boundstytol, double[::1] x, size_t [::1] counts):
         cdef size_t N = y.shape[0]
-        return self.m_exp.solve_for_x_manyC(&y[0], N, a, b, bits, max_iter, boundstytol, &x[0], &counts[0])
+        self.m_exp.solve_for_x_manyC[double, size_t](&y[0], N, a, b, bits, max_iter, boundstytol, &x[0], &counts[0])
 
 ctypedef supanc.ChebyshevApproximation1D[ArrayType] ChebApprox1D
 from cython.operator cimport dereference as deref
@@ -176,10 +176,10 @@ cdef class ChebyshevApproximation1D:
     def get_x_for_y(self, double y, unsigned int bits, size_t max_iter, double boundstytol):
         return self.thisptr.get_x_for_y(y, bits, max_iter, boundstytol)
 
-    def count_x_for_y_many(self, double[::1] y, unsigned int bits, size_t max_iter, double boundstytol, double[::1] counts):
+    def count_x_for_y_many(self, double[::1] y, unsigned int bits, size_t max_iter, double boundstytol, size_t[::1] counts):
         assert y.shape[0] == counts.shape[0]
         cdef size_t N = y.shape[0]
-        return self.thisptr.count_x_for_y_manyC(&y[0], N, bits, max_iter, boundstytol, &counts[0])
+        self.thisptr.count_x_for_y_manyC[double, size_t](&y[0], N, bits, max_iter, boundstytol, &counts[0])
 
     def monotonic_intervals(self):
         return self.thisptr.get_monotonic_intervals()
@@ -217,7 +217,14 @@ cdef bint iterable(object a):
 
 cdef ndarray_or_iterable(object input):
     if _numpy_supported:
-        return np.squeeze(np.array(input))
+        result = np.squeeze(np.array(input))
+        # np.squeeze of a (1,1) input collapses to a 0-d array, which
+        # has no len() and confuses callers (#2417). Restore at least
+        # one dimension so list-shaped inputs always yield array-shaped
+        # outputs.
+        if result.ndim == 0:
+            result = result.reshape(-1)
+        return result
     else:
         return input
 
@@ -517,6 +524,16 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             raise ValueError("Input 5 is not one-dimensional")
 
         if is_iterable1 or is_iterable3 or is_iterable5:
+            # Empty state inputs -> empty result (no work to do).
+            # Without this short-circuit, _PropsSImulti returns an empty
+            # IO vector, which the post-call check below would raise on
+            # as if it were an error (#2417).
+            if (is_iterable3 and len(in3) == 0) or (is_iterable5 and len(in5) == 0):
+                if _numpy_supported:
+                    return np.array([])
+                else:
+                    return []
+
             # Prepare the output datatype
             if not is_iterable1:
                 vin1.push_back(in1)
@@ -595,12 +612,17 @@ cpdef list FluidsList():
     """
     return _get_global_param_string(b"FluidsList").split(',')
 
+from re import split as re_split
+
 cpdef get_aliases(Fluid):
     """
-    Return a comma separated string of aliases for the given fluid
+    Return a list of aliases for the given fluid.
+    Uses regex to properly handle cases like '1,2-dichloroethane' where the comma
+    is part of the chemical name rather than a separator.
     """
     cdef bytes _Fluid = Fluid.encode('ascii')
-    return [F for F in _get_fluid_param_string(_Fluid, b'aliases').split(',')]
+    # Use negative lookbehind to avoid splitting on commas that follow a digit
+    return _get_fluid_param_string(_Fluid, b'aliases_bar').split('|')
 
 cpdef string get_REFPROPname(Fluid):
     """
@@ -724,7 +746,7 @@ cdef toSI(constants_header.parameters key, double val):
     """
     Convert a value in kSI system to SI system (supports a limited subset of variables)
     """
-    if key in [iT, iDmass, iQ]:
+    if key in [iT, iDmass, iQ, iQmass]:
         return val
     elif key in [iP, iHmass, iSmass, iUmass]:
         return val*1000
@@ -734,6 +756,7 @@ cdef toSI(constants_header.parameters key, double val):
 #A dictionary mapping parameter index to string for use with non-CoolProp fluids
 cdef dict paras = {iDmass : 'D',
                    iQ : 'Q',
+                   iQmass : 'Qmass',
                    imolar_mass : 'M',
                    iT : 'T',
                    iHmass : 'H',

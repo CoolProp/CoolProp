@@ -8,7 +8,11 @@ REFPROP Interface
 
 The thermophysical property library REFPROP developed by researchers at the National Institute of Standards and Technology in Boulder, Colorado is the gold standard in thermophysical properties.  It is mature and stable, and is currently the library most used in industry and for scientific applications.
 
-CoolProp allows for full interaction with the REFPROP library, while using the nicely abstracted C++ interface for all target languages that CoolProp supports. 
+CoolProp allows for full interaction with the REFPROP library, while using the nicely abstracted C++ interface for all target languages that CoolProp supports.
+
+.. seealso::
+
+    For throughput-bound workloads against the REFPROP backend, the :doc:`SVDSBTL </coolprop/SVDSBTL>` SVD-compressed tabular backend can sample REFPROP once at table-build time and serve subsequent ``(p, h)`` / ``(p, T)`` queries at sub-microsecond per-probe in the single-phase envelope — ``SVDSBTL&REFPROP::<Fluid>``.  Matches REFPROP truth on the sat curves within REFPROP's own numerical-noise floor; falls through to REFPROP's PQ flash for two-phase endpoints.
 
 The core difference between using CoolProp's internal routines and REFPROP's routines is that you have to change the backend from ``HEOS`` to ``REFPROP``.  In the high-level interface this is demonstrated as:
 
@@ -156,7 +160,7 @@ Other Platforms
 
 On linux and OSX, you can build your own copy of REFPROP shared library using the instructions here: https://github.com/usnistgov/REFPROP-cmake
 
-On linux, here are instructions for adding your shared library to the ``LD_LIBRARY_PATH`` variable: http://stackoverflow.com/a/13428971/1360263
+On linux, here are instructions for adding your shared library to the ``LD_LIBRARY_PATH`` variable: https://stackoverflow.com/a/13428971/1360263
 
 Other Features
 --------------

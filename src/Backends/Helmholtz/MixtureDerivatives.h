@@ -535,6 +535,7 @@ class MixtureDerivatives
     * \f]
     * @param HEOS The HelmholtzEOSMixtureBackend to be used
     * @param i The index of interest
+    * @param j The second index of interest
     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
     */
     static CoolPropDbl d2_ndalphardni_dxj_dDelta__consttau_xi(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
@@ -552,6 +553,7 @@ class MixtureDerivatives
     * \f]
     * @param HEOS The HelmholtzEOSMixtureBackend to be used
     * @param i The index of interest
+    * @param j The second index of interest
     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
     */
     static CoolPropDbl d2_ndalphardni_dxj_dTau__constdelta_xi(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,

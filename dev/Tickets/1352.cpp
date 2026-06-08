@@ -1,5 +1,5 @@
 
-#include "crossplatform_shared_ptr.h"
+#include <memory>
 #include <AbstractState.h>
 #include <CoolProp.h>
 

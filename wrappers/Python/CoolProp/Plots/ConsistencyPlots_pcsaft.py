@@ -5,7 +5,6 @@ from __future__ import print_function, division, absolute_import
 import matplotlib.pyplot as plt
 import numpy as np
 import time, timeit
-import six
 import pandas
 import CoolProp as CP
 from math import ceil
@@ -102,14 +101,14 @@ class ConsistencyFigure(object):
         if len(self.axes.shape) > 1:
             for row in self.axes:
                 for ax in row:
-                    pair = six.next(pairs_generator)
+                    pair = next(pairs_generator)
                     kwargs = dict(p_limits_1phase=p_limits_1phase, T_limits_1phase=T_limits_1phase, NT_1phase=NT_1phase, Np_1phase=Np_1phase,
                                   NT_2phase=NT_2phase, NQ_2phase=NQ_2phase)
                     self.axes_list.append(ConsistencyAxis(ax, self, pair, self.fluid, self.backend, self.additional_backend, *states, *states_pcsaft, **kwargs))
                     ax.set_title(pair)
         else:
             for ax in self.axes:
-                pair = six.next(pairs_generator)
+                pair = next(pairs_generator)
                 kwargs = dict(p_limits_1phase=p_limits_1phase, T_limits_1phase=T_limits_1phase, NT_1phase=NT_1phase, Np_1phase=Np_1phase,
                               NT_2phase=NT_2phase, NQ_2phase=NQ_2phase)
                 self.axes_list.append(ConsistencyAxis(ax, self, pair, self.fluid, self.backend, self.additional_backend, *states, *states_pcsaft, **kwargs))
@@ -444,7 +443,7 @@ class ConsistencyAxis(object):
         state = self.state
 
         try:
-            if state_pcsaft.fluid_param_string('pure') == 'false':
+            if state.fluid_param_string('pure') == 'false':
                 print("Not a pure-fluid, skipping two-phase evaluation")
                 return
         except:

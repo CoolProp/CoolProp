@@ -10,15 +10,21 @@ on:
   # ========= Run on call from other workflows
   workflow_call:
 
+concurrency:
+  # Cancel superseded runs on the same ref to cut CI backlog on heavy
+  # dev days (repeated pushes to an open PR).  Protected: master / main
+  # / develop and tags never cancel, so mainline + release runs always
+  # complete.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   build:
 
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
+    - uses: actions/checkout@v6
 
     # Get the PTC build library and header in the proper location
     - name: Get dependencies
@@ -38,7 +44,7 @@ jobs:
         cmake --build build --target install --config Release
 
     - name: Archive artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
           name: MathcadPrime
           path: install_root/MathcadPrime

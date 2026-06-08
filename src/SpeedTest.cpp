@@ -1,10 +1,10 @@
 #include <memory>
+using std::shared_ptr;
 #include "SpeedTest.h"
-#include "AbstractState.h"
-#include "DataStructures.h"
-#include "crossplatform_shared_ptr.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/DataStructures.h"
 
-#include <time.h>
+#include <ctime>
 
 // A hack to make powerpc happy since sysClkRateGet not found
 #if defined(__powerpc__)
@@ -15,7 +15,7 @@ namespace CoolProp {
 
 void compare_REFPROP_and_CoolProp(const std::string& fluid, CoolProp::input_pairs inputs, double val1, double val2, std::size_t N, double d1,
                                   double d2) {
-    time_t t1, t2;
+    time_t t1 = 0, t2 = 0;
 
     shared_ptr<AbstractState> State(AbstractState::factory("HEOS", fluid));
     t1 = clock();

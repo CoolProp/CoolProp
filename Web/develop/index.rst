@@ -9,7 +9,6 @@ Information for Developers
   code.rst
   backends.rst
   cmake.rst
-  buildbot.rst
   documentation.rst
   release.rst
   testing.rst

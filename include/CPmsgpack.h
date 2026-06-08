@@ -1,20 +1,6 @@
-// Workaround MSVC warnings
-#ifdef _MSC_VER
-#    pragma warning(push)
-#    pragma warning(disable : 4267)
+// DEPRECATED forwarding shim (GH #1280). Remove at v9.
+// Renamed + relocated; the canonical location is <CoolProp/detail/msgpack.h>.
+#ifndef COOLPROP_NO_DEPRECATED_HEADER_WARNINGS
+#    pragma message("CPmsgpack.h is deprecated; include \"CoolProp/detail/msgpack.h\". Define COOLPROP_NO_DEPRECATED_HEADER_WARNINGS to silence.")
 #endif
-
-//// Workaround MSVC endiannes issues
-//#if defined(_MSC_VER) && ( defined(_M_ARM) || defined(_M_ARM64) )
-//#    define MSGPACK_ENDIAN_LITTLE_BYTE
-//#endif
-
-#include "msgpack.hpp"
-
-/* #if defined (MSGPACK_ENDIAN_LITTLE_BYTE)
-#    undef MSGPACK_ENDIAN_LITTLE_BYTE
-#endif*/
-
-#ifdef _MSC_VER
-#    pragma warning(pop)
-#endif
+#include "CoolProp/detail/msgpack.h"

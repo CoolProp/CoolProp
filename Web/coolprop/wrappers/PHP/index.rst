@@ -7,11 +7,11 @@ PHP Wrapper
 Pre-Compiled Binaries
 =====================
 
-* Download the shared library for your architecture from :sfdownloads:`PHP`, or from the development buildbot server at :sfnightly:`PHP`.  Also download the CoolProp.php platform-independent file.  Or build it yourself (see below)
+* Download the shared library for your architecture from :sfdownloads:`PHP`, or from the nightly builds at :sfnightly:`PHP`.  Also download the CoolProp.php platform-independent file.  Or build it yourself (see below)
 
-* Copy the libCoolProp.so file into the extension-dir for php::
+* Copy the libCoolPropPHP.so file into the extension-dir for php::
 
-    sudo cp libCoolProp.so `php-config --extension-dir`
+    sudo cp libCoolPropPHP.so `php-config --extension-dir`
 
   This copies the shared library into a location that PHP can load.  sudo is needed to make the copy. Alternatively, in the following step you will need to use the full path to the extension, which is just a bit more annoying.
 
@@ -19,9 +19,9 @@ Pre-Compiled Binaries
 
 * Modify the PHP.ini file that PHP will load to add::
 
-    extension = "libCoolProp.so"
+    extension = "libCoolPropPHP.so"
 
-  after ``[PHP]``. If you didn't copy libCoolProp.so into the folder given by ```php-config --extension-dir``` you will need to use the absolute path
+  after ``[PHP]``. If you didn't copy libCoolPropPHP.so into the folder given by ``php-config --extension-dir`` you will need to use the absolute path
 
 * You can determine the php.ini file that you should be modifying by creating a file on the server with the contents
 
@@ -110,7 +110,7 @@ Linux
 
 1. Check out CoolProp::
 
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
 
 2. Folder creating::
 
@@ -124,6 +124,13 @@ Linux
 
     cmake --build .
 
-  This will generate the file libCoolProp.so and the php module CoolProp.php
+  This will generate the file libCoolPropPHP.so.
+
+  .. note::
+
+     With SWIG 4.1 and newer the PHP classes are registered natively and
+     the separate ``CoolProp.php`` proxy file is no longer generated; the
+     references to ``CoolProp.php`` above apply only to builds made with
+     SWIG older than 4.1.
 
 5. See the above instructions in the Pre-Compiled Binaries section for installation instructions

@@ -9,13 +9,13 @@ R Wrapper
 Pre-compiled Binaries
 =====================
 
-Pre-compiled binaries can be downloaded from :sfdownloads:`R`.  Development binaries coming from the buildbot server can be found at :sfnightly:`R`.  Download the shared library for your platform, as well as the ``CoolProp.R`` module
+Pre-compiled binaries can be downloaded from :sfdownloads:`R`.  Nightly development binaries can be found at :sfnightly:`R`.  Download the shared library for your platform, as well as the ``CoolProp.R`` module
 
 Usage
 -----
 At the R console, run::
 
-    dyn.load(paste("CoolProp", .Platform$dynlib.ext, sep=""))
+    dyn.load(paste("CoolPropR", .Platform$dynlib.ext, sep=""))
     source("CoolProp.R")
     cacheMetaData(1)
     PropsSI("T","P",101325,"Q",0,"Water")
@@ -28,7 +28,7 @@ There is example code :ref:`at the end of this page <r_example>`
     
 .. warning::
 
-    If you want to use ``Rscript`` rather than ``R``, you need to pass the argument ``--default-packages=methods`` to get it to load the necessary packages for calling SWIGG-ed code.  Or call ``library(methods)`` at the top of the file (before ``source("CoolProp.R")``).  See also http://stackoverflow.com/a/19468533\n
+    If you want to use ``Rscript`` rather than ``R``, you need to pass the argument ``--default-packages=methods`` to get it to load the necessary packages for calling SWIGG-ed code.  Or call ``library(methods)`` at the top of the file (before ``source("CoolProp.R")``).  See also https://stackoverflow.com/a/19468533
 
 User-Compiled Binaries
 ======================
@@ -42,7 +42,7 @@ Also, you need to install R
 Windows
 -------
 
-You must install the MINGW compiler suite.  The `TDM suite <http://tdm-gcc.tdragon.net/>`_ is recommended.
+You must install the MINGW compiler suite.  The `TDM suite <https://jmeubank.github.io/tdm-gcc/>`_ is recommended.
 
 Build
 -----
@@ -53,7 +53,7 @@ Linux and OSX
 Once the dependencies are installed, you can run the builder and tests using::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     mkdir -p  CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake
@@ -67,7 +67,7 @@ Windows (32-bit and 64-bit)
 You need to just slightly modify the building procedure::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder

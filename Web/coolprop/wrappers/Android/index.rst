@@ -14,7 +14,7 @@ Common Requirements
 -------------------
 Compilation of the Android wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
-Furthermore, you will need to install swig, which can be obtained from http://www.swig.org/download.html for windows users (add the unzipped directory to your PATH variable), or from your package manager (apt, homebrew, etc.) on other platforms.
+Furthermore, you will need to install swig, which can be obtained from https://www.swig.org/download.html for windows users (add the unzipped directory to your PATH variable), or from your package manager (apt, homebrew, etc.) on other platforms.
 
 Windows
 -------
@@ -27,7 +27,9 @@ Windows
 
 .. warning::
 
-    As of Aug 2016, the version 12 of the NDK does not compile CoolProp correctly.  You must use 10e for some reason.  See also https://github.com/CoolProp/CoolProp/issues/1178
+    Some NDK versions have historically failed to compile CoolProp correctly (for example,
+    NDK 12 required falling back to NDK 10e).  If you hit build errors with the NDK, see
+    https://github.com/CoolProp/CoolProp/issues/1178 for background and known-working versions.
 
 Linux & OSX
 -----------
@@ -37,7 +39,7 @@ Linux & OSX
 * To Build
     - Check out the sources for CoolProp::
 
-        git clone https://github.com/CoolProp/CoolProp --recursive
+        git clone https://github.com/CoolProp/CoolProp
 
     - Open the CMakeLists.txt file in the CoolProp directory for editing
     - Within the COOLPROP_ANDROID_MODULE modify the command:  ``set(ANDROID_PACKAGE_NAME "CoolProp")`` to reflect your package name

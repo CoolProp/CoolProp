@@ -4,7 +4,7 @@ from libcpp.pair cimport pair
 from libcpp.string cimport string
 
 
-cdef extern from "superancillary/superancillary.h" namespace "CoolProp::superancillary":
+cdef extern from "CoolProp/superancillary/superancillary.h" namespace "CoolProp::superancillary":
     cdef struct MonotonicExpansionMatch:
         const size_t idx # The index of the expansion that has been matched
         const double ymin, ymax, xmin, xmax 
@@ -27,7 +27,7 @@ cdef extern from "superancillary/superancillary.h" namespace "CoolProp::superanc
         U eval[U](const U& x) const
         void eval_manyC[U](const U x[], U v[], size_t) const
         double solve_for_x(double, double, double, unsigned int, size_t, double) const
-        void solve_for_x_manyC[U](const U[], size_t, double, double, unsigned int, size_t, double, U[], U[]) const
+        void solve_for_x_manyC[T, CountsT](const T[], size_t, double, double, unsigned int, size_t, double, T[], CountsT[]) const
 
     cdef cppclass ChebyshevApproximation1D[ArrayType]:
         ChebyshevApproximation1D(vector[ChebyshevExpansion[ArrayType]]&&) except +ValueError
@@ -39,7 +39,7 @@ cdef extern from "superancillary/superancillary.h" namespace "CoolProp::superanc
         const vector[double] m_x_at_extrema # The values of the independent variable at the extrema of the expansions
         const vector[IntervalMatch] get_monotonic_intervals() # The intervals that are monotonic
         vector[pair[double, int]] get_x_for_y(double, unsigned int, size_t, double) const
-        void count_x_for_y_manyC[U](const U[], size_t, unsigned int, size_t, double, U[]) const
+        void count_x_for_y_manyC[YContainer, CountContainer](const YContainer[], size_t, unsigned int, size_t, double, CountContainer[]) const
 
     cdef cppclass SuperAncillary[ArrayType]:
         SuperAncillary(const string&) except +ValueError

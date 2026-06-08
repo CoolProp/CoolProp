@@ -1,0 +1,7 @@
+# Generated / compiled artifacts — source lives in *.pyx / *.pxd
+build/
+_pkg/
+*.cpp
+*.so
+*.html
+__pycache__/

@@ -79,75 +79,141 @@ install, use::
 
     conda install conda-forge::coolprop
 
-If you dare, you can also try the latest nightly release from :sfnightly:`Python`
-or get it directly from the development server using::
+Using uv (fast Python package manager)
+---------------------------------------
 
-    pip install -vvv --pre --trusted-host www.coolprop.dreamhosters.com --find-links http://www.coolprop.dreamhosters.com/binaries/Python/ -U --no-cache --force-reinstall CoolProp
+`uv <https://docs.astral.sh/uv/>`__ is an extremely fast Python package and project manager written in Rust.
+To use CoolProp with uv::
+
+    # Install CoolProp in the current environment
+    uv pip install CoolProp
+
+    # Or create a new project with CoolProp
+    uv init my-project
+    cd my-project
+    uv add CoolProp
+
+    # Run a script with CoolProp (uv will automatically manage the environment)
+    uv run python my_script.py
+
+For development from source::
+
+    # Clone the repository
+    git clone https://github.com/CoolProp/CoolProp
+    cd CoolProp
+
+    # Create a virtual environment (recommended)
+    uv venv
+
+    # Install build dependencies
+    uv pip install --python .venv/bin/python scikit-build-core cython
+
+    # Install in editable mode with incremental build support
+    uv pip install -ve . --python .venv/bin/python --no-build-isolation
+
+**Important**: The ``--no-build-isolation`` flag is required for incremental builds to work properly.
+Without it, each build will use a temporary isolated environment with different paths, causing CMake
+to reconfigure and rebuild all files even when only one file changed.
+
+Nightly builds
+--------------
+
+If you dare, you can also try the latest development build, which is published to
+`TestPyPI <https://test.pypi.org/project/CoolProp/>`_::
+
+    pip install --pre --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ CoolProp
+
+The ``--extra-index-url`` lets pip pull CoolProp's dependencies (numpy, etc.) from the
+regular PyPI while taking CoolProp itself from TestPyPI.
 
 Manual installation
 ===================
 
 Compilation of the python wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
-On all platforms, if it is not already there, you need Cython to be installed::
+CoolProp uses a modern build system based on CMake via scikit-build-core. The build dependencies
+(including Cython and CMake) are automatically installed by pip.
 
-    sudo pip install Cython
-
-Then, follow the commands::
+To build and install from source::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
-    cd CoolProp/wrappers/Python
-    # Start the installation
-    sudo python setup.py install
+    cd CoolProp
+    # Install (pip will automatically handle the build)
+    pip install .
 
-If you would like to install CoolProp just for a given version of Python (for
-example if ``python`` links to ``python3.4`` and you also have a ``python2.7``
-executable), simply use this version of python to execute the ``setup.py``
-script::
+Development with Editable Install
+++++++++++++++++++++++++++++++++++
 
-    sudo python2.7 setup.py install
+An editable install (also known as "development mode") allows you to make changes to the C++
+source code and have them take effect after a simple rebuild, without reinstalling the package.
 
-If you have multiple versions of Visual Studio installed and need to specify the version to use and choice of 32-bit or 64-bit compilation, you can use::
+Using pip::
 
-    # 64-bit using VS2008 on Pytnon 2.7
-    sudo python setup.py install --cmake-compiler vc9 --cmake-bitness 64
+    # Install in editable mode
+    pip install -ve .
 
-or, equivalently::
+Using uv (recommended for faster builds and better dependency management)::
 
-    sudo python setup.py install cmake=vc9,64
+    # Create a virtual environment
+    uv venv
 
-Omitting the cmake options will use the default (latest) compiler on the machine.
+    # Install build dependencies first (required for --no-build-isolation)
+    uv pip install --python .venv/bin/python scikit-build-core cython
 
+    # Install in editable mode with incremental build support
+    uv pip install -ve . --python .venv/bin/python --no-build-isolation
+
+When you modify C++ source files, trigger an incremental rebuild::
+
+    # With pip (incremental builds work automatically)
+    pip install -ve .
+
+    # With uv (must use --no-build-isolation for incremental builds)
+    uv pip install -ve . --python .venv/bin/python --no-build-isolation
+
+The build system (scikit-build-core with CMake/Ninja) will automatically detect which files
+have changed and only recompile those files, making the rebuild much faster than a full rebuild.
+
+**Incremental Build Performance**:
+
+* Without ``--no-build-isolation``: Each build uses a fresh isolated environment, causing CMake
+  to reconfigure and rebuild all ~60 source files (~50 seconds)
+* With ``--no-build-isolation``: CMake reuses the existing build directory and only rebuilds
+  changed files (~4 seconds for a single file change)
+
+**Note**: If you use ``--no-build-isolation``, you must manually install the build dependencies
+(``scikit-build-core`` and ``cython``) in your virtual environment first.
 
 Local installation
 ------------------
 
-If you prefer not to be sudoer when compiling coolprop on Linux/MacOS, you can
-also install it locally using the ``--user`` switch::
+If you prefer not to install system-wide, you can install locally using the ``--user`` flag::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
-    cd CoolProp/wrappers/Python
-    # Start the installation
-    python setup.py install --user
+    cd CoolProp
+    # Install locally
+    pip install --user .
 
-For Pyzo users
---------------
+For specific Python versions
+-----------------------------
 
-Suppose the directory containing pyzo is on your Desktop in
-``~/Desktop/pyzo2014a/``. Then you can install CoolProp to be used within pyzo
-by following the same lines as above::
+If you have multiple Python versions installed, use the specific Python's pip::
 
-    # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
-    # Move into the folder you just created
-    cd CoolProp/wrappers/Python
-    # Start the installation (~/Desktop/pyzo2014a/ to be changed according to
-    # your effective installation)
-    sudo ~/Desktop/pyzo2014a/bin/python setup.py install
+    # For Python 3.11 specifically
+    python3.11 -m pip install .
+
+Building with specific compilers
+---------------------------------
+
+You can control CMake options via environment variables::
+
+    # Example: Specify a different C++ compiler
+    export CXX=/usr/bin/g++-11
+    pip install .
 
 Usage
 =====
@@ -212,40 +278,24 @@ Suppressing warning messages
 ----------------------------
 
 The calling code can suppress or ignore these warning messages by overriding the default
-warnings filter and changing the behavior of the warnings module.  As an example, the
-following script will result in a `DeprecationWarning` on each call to the deprecated function
-Props()::
-
-    from CoolProp.CoolProp import Props
-    Rho = Props('D','T',298.15,'P',10000,'R744')
-    print("R744 Density at {} K and {} kPa      = {} kg/m³".format(298.15, 10000, Rho))
-    H = Props('H','T',298.15,'Q',1,'R134a');
-    print("R134a Saturated Liquid Enthalpy at {} K = {} kJ/kg".format(298.15, H))
-
-Example output::
-
-    TestProps.py:14: DeprecationWarning: Props() function is deprecated; Use the PropsSI() function
-    Rho = Props('D','T',298.15,'P',10000,'R744')
-    R744 Density at 298.15 K and 10000 kPa      = 817.6273812375758 kg/m³
-    TestProps.py:16: DeprecationWarning: Props() function is deprecated; Use the PropsSI() function
-    H = Props('H','T',298.15,'Q',1,'R134a');
-    R134a Saturated Liquid Enthalpy at 298.15 K = 412.33395323186807 kJ/kg
-
-Legacy applications can create a filter override to ignore *all* deprecation warnings by including
-the following code just *after* the last import from CoolProp, but *before* any calls to CoolProp::
+warnings filter and changing the behavior of the warnings module.  A legacy or third-party
+caller can ignore *all* deprecation warnings by including the following code *after* the last
+import from CoolProp, but *before* any calls to CoolProp::
 
     import warnings
     warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-To suppress, for example, *only* deprecation warning messages that contain the string "Props()",
-the second parameter to filterwarnings() can be a pattern matching regular expression::
+The second parameter to ``filterwarnings()`` can be a regular expression matching only
+selected messages, and the first parameter (``ignore``) can be set to ``once`` to issue a
+given message only once and then ignore further instances.
 
-    import warnings
-    warnings.filterwarnings('ignore', '.*Props()*.', category=DeprecationWarning)
+.. note::
 
-This filter will suppress any `DeprecationWarning` messages that contain the string "Props()" but will
-allow all other warning messages to be displayed.  The first parameter, `ignore`, can also be set to
-`once`, which will result in a given message to be issued only once and then ignored on further instances.
+   The non-SI ``Props()`` and ``HAProps()`` functions — long deprecated — were **removed in
+   CoolProp 8.0**.  Use the SI functions ``PropsSI()`` and ``HAPropsSI()`` instead, with all
+   inputs and outputs in base SI units (Pa, K, J, kg).  For example the old
+   ``Props('D', 'T', 298.15, 'P', 10000, 'R744')`` (pressure in kPa) becomes
+   ``PropsSI('D', 'T', 298.15, 'P', 10e6, 'R744')`` (pressure in Pa).
 
 See `Python >>> Module Warnings <https://docs.python.org/3/library/warnings.html#module-warnings>`_ for more information on using `filterwarnings()`
 

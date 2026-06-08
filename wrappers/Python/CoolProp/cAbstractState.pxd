@@ -6,19 +6,19 @@ from . cimport constants_header
 
 from .typedefs cimport CoolPropDbl
 
-cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
+cdef extern from "CoolProp/fluids/PhaseEnvelope.h" namespace "CoolProp":
     cdef cppclass PhaseEnvelopeData:
         bool TypeI
         size_t iTsat_max, ipsat_max, icrit
         vector[double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
         vector[vector[double]] x, y, K
 
-cdef extern from "DataStructures.h" namespace "CoolProp":
+cdef extern from "CoolProp/DataStructures.h" namespace "CoolProp":
     cdef cppclass CriticalState:
         double T, p, rhomolar, hmolar, smolar
         bool stable
 
-cdef extern from "AbstractState.h" namespace "CoolProp":
+cdef extern from "CoolProp/AbstractState.h" namespace "CoolProp":
 
     cdef cppclass GuessesStructure:
         double T, p, rhomolar, hmolar, smolar
@@ -64,6 +64,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
 
         string name() except +ValueError
         string backend_name() except +ValueError
+        string build_options_json() except +ValueError
         vector[string] fluid_names() except +ValueError
         string fluid_param_string(const string &) except +ValueError
         void set_cubic_alpha_C(const size_t, const string&, const double, const double, const double) except +ValueError
@@ -108,6 +109,14 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         ## Uses the indices in CoolProp for the input parameters
         void update_with_guesses(constants_header.input_pairs iInput1, double Value1, double Value2, GuessesStructure) except +ValueError
 
+        ## Vectorized, cache-bypassing direct evaluation (Tabular/IF97 only)
+        void fast_evaluate(constants_header.input_pairs input_pair,
+                           const double* val1, const double* val2, size_t N_inputs,
+                           const constants_header.parameters* outputs, size_t N_outputs,
+                           double* out_buffer, size_t out_buffer_size,
+                           int* status_flags, size_t status_flags_size,
+                           constants_header.phases imposed_phase) except +ValueError
+
         ## Bulk properties accessors - temperature, pressure and density are directly calculated every time
         ## All other parameters are calculated on an as-needed basis
         ## If single-phase, just plug into the EOS, otherwise need to do two-phase analysis
@@ -117,6 +126,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double p() except +ValueError
         double compressibility_factor() except +ValueError
         double Q() except +ValueError
+        double Qmass() except +ValueError
         double hmolar() except +ValueError
         double hmass() except +ValueError
         double smolar() except +ValueError
@@ -159,6 +169,13 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double hmolar_residual() except +ValueError
         double smolar_residual() except +ValueError
         double neff() except +ValueError
+
+        double hmolar_idealgas() except +ValueError
+        double hmass_idealgas() except +ValueError
+        double smolar_idealgas() except +ValueError
+        double smass_idealgas() except +ValueError
+        double umolar_idealgas() except +ValueError
+        double umass_idealgas() except +ValueError
 
         double surface_tension() except +ValueError
         double Prandtl() except +ValueError
@@ -228,5 +245,5 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
 
 
 # The static factory method for the AbstractState
-cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":
+cdef extern from "CoolProp/AbstractState.h" namespace "CoolProp::AbstractState":
     AbstractState* factory(const string &backend, const string &fluid_string) except+ValueError

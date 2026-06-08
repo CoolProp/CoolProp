@@ -5,9 +5,9 @@
 
 #include <vector>
 #include <string>
-#include "PCSAFTFluid.h"
-#include "CoolPropTools.h"
-#include "rapidjson_include.h"
+#include "CoolProp/fluids/PCSAFTFluid.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/detail/json.h"
 
 namespace CoolProp {
 
@@ -25,8 +25,8 @@ class PCSAFTLibraryClass
     /// Map from sorted pair of CAS numbers to interaction parameter map.  The interaction parameter map is a map from key (string) to value (double)
     std::map<std::vector<std::string>, std::vector<Dictionary>> m_binary_pair_map;
 
-    void load_from_JSON(rapidjson::Document& doc);
-    void load_from_string(const std::string& str);
+    void load_from_JSON(const nlohmann::json& doc);
+    void load_from_string(const std::string_view& str);
 
    public:
     PCSAFTLibraryClass();
@@ -35,7 +35,7 @@ class PCSAFTLibraryClass
         return empty;
     };
 
-    int add_many(rapidjson::Value& listing);
+    int add_many(const nlohmann::json& listing);
 
     PCSAFTFluid& get(const std::string& key);
     PCSAFTFluid& get(std::size_t key);
@@ -51,12 +51,12 @@ class PCSAFTLibraryClass
 /** \brief Add an array of fluids to the PC-SAFT library (as a JSON-formatted string)
  * @param JSON A JSON-formatted string with the fluid information
  */
-void add_fluids_as_JSON(const std::string& JSON);
+void add_fluids_as_JSON(const std::string_view& JSON);
 
 /// Get the schema used to validate the PC-SAFT fluids
-std::string get_pcsaft_fluids_schema();
+std::string_view get_pcsaft_fluids_schema();
 
-PCSAFTLibraryClass& get_library(void);
+PCSAFTLibraryClass& get_library();
 }  // namespace PCSAFTLibrary
 } /* namespace CoolProp */
 

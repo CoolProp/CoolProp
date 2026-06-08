@@ -44,7 +44,7 @@ More information:
 
 All :ref:`the wrappers <wrappers>` wrap this function in exactly the same way.
 
-For pure and pseudo-pure fluids, two state variables are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), followed by input pairs where neither :math:`T` nor :math:`\rho` are specified, like :math:`P,H`; these will be much slower.  If speed is an issue, you can look into table-based interpolation methods using :ref:`TTSE or bicubic interpolation <Tabular_Interpolation>`; or if you are only interested in Water properties, you can look into using the :ref:`IF97 <IF97>` (industrial formulation) backend.
+For pure and pseudo-pure fluids, two state variables are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), followed by input pairs where neither :math:`T` nor :math:`\rho` are specified, like :math:`P,H`; these will be much slower.  If speed is an issue, you can look into the :ref:`SVDSBTL <SVDSBTL>` SVD-compressed tabular backend; or if you are only interested in Water properties, you can look into using the :ref:`IF97 <IF97>` (industrial formulation) backend.
 
 Vapor, Liquid, and Saturation States
 ------------------------------------
@@ -433,7 +433,7 @@ For non-standard reference states, you can specify them directly for the given t
 Calling REFPROP
 ---------------
 
-If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP::`` preceding the fluid name. For instance, as in python:
+If you have the `REFPROP library <https://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP::`` preceding the fluid name. For instance, as in python:
 
 .. ipython::
 
@@ -448,7 +448,7 @@ If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installe
 Adding Fluids
 -------------
 
-The fluids in CoolProp are all compiled into the library itself, and are given in the `JSON <http://json.org>`_ format.  They are all stored in the ``dev/fluids`` folder relative to the root of the repository.  If you want to obtain the JSON data for a fluid from CoolProp, print out a part of it, and then load it back into CoolProp, you could do:
+The fluids in CoolProp are all compiled into the library itself, and are given in the `JSON <https://json.org>`_ format.  They are all stored in the ``dev/fluids`` folder relative to the root of the repository.  If you want to obtain the JSON data for a fluid from CoolProp, print out a part of it, and then load it back into CoolProp, you could do:
 
 .. ipython::
     :okexcept:

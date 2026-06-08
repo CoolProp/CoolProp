@@ -11,6 +11,8 @@ This section includes information about the CoolProp software, listings of input
     HighLevelAPI.rst
     LowLevelAPI.rst
     Tabular.rst
+    SVDSBTL.rst
+    BackendOptions.rst
     Configuration.rst
     REFPROP.rst
     Cubics.rst
@@ -18,3 +20,5 @@ This section includes information about the CoolProp software, listings of input
     examples.rst
     changelog.rst
     SuperAncillary.ipynb
+    HSFlash.ipynb
+    IdealGas.ipynb

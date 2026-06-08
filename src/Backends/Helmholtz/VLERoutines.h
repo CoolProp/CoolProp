@@ -1,4 +1,3 @@
-
 #ifndef VLEROUTINES_H
 #define VLEROUTINES_H
 
@@ -32,10 +31,16 @@ struct saturation_D_pure_options
     CoolPropDbl omega, rhoL, rhoV, pL, pV;
     int imposed_rho;
     int max_iterations;
-    saturation_D_pure_options() : use_guesses(false), rhoL(_HUGE), rhoV(_HUGE), pL(_HUGE), pV(_HUGE), imposed_rho(0), max_iterations(200) {
-        use_logdelta = true;
-        omega = 1.0;
-    }  // Defaults
+    saturation_D_pure_options()
+      : use_guesses(false),
+        use_logdelta(true),
+        omega(1.0),
+        rhoL(_HUGE),
+        rhoV(_HUGE),
+        pL(_HUGE),
+        pV(_HUGE),
+        imposed_rho(0),
+        max_iterations(200) {}  // Defaults
 };
 
 enum sstype_enum
@@ -90,11 +95,17 @@ struct saturation_PHSU_pure_options
       use_logdelta;    ///< True to use partials with respect to log(delta) rather than delta
     specified_variable_options specified_variable;
     CoolPropDbl omega, rhoL, rhoV, pL, pV, T, p;
-    saturation_PHSU_pure_options() : use_logdelta(true), rhoL(_HUGE), rhoV(_HUGE), pL(_HUGE), pV(_HUGE), T(_HUGE), p(_HUGE) {
-        specified_variable = IMPOSED_INVALID_INPUT;
-        use_guesses = true;
-        omega = 1.0;
-    }
+    saturation_PHSU_pure_options()
+      : use_guesses(true),
+        use_logdelta(true),
+        specified_variable(IMPOSED_INVALID_INPUT),
+        omega(1.0),
+        rhoL(_HUGE),
+        rhoV(_HUGE),
+        pL(_HUGE),
+        pV(_HUGE),
+        T(_HUGE),
+        p(_HUGE) {}
 };
 
 #if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
@@ -175,7 +186,7 @@ class WilsonK_resid : public FuncWrapper1D
         z(z),
         K(K),
         HEOS(HEOS) {}  // if input_type == imposed_T -> use T, else use p; init both
-    double call(double input_value) {
+    double call(double input_value) override {
         double summer = 0;
         if (input_type == imposed_T) {
             p = input_value;  // Iterate on pressure
@@ -226,7 +237,7 @@ inline double saturation_preconditioner(HelmholtzEOSMixtureBackend& HEOS, double
      * \f[
      * \sum_i \frac{x_i(K_i-1)}{1 - \beta + \beta K_i} = 0
      * \f]
-     * When \f$T\f$ is known for \f$\beta=0$, \f$p\f$can be obtained from
+     * When \f$T\f$ is known for \f$\beta=0\f$, \f$p\f$ can be obtained from
      * \f[
      * -1+\sum_i K_ix_i=0,
      * \f]
@@ -366,7 +377,7 @@ class newton_raphson_twophase
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
     newton_raphson_twophase()
-      : HEOS(NULL),
+      : HEOS(nullptr),
         imposed_variable(newton_raphson_twophase_options::NO_VARIABLE_IMPOSED),
         error_rms(_HUGE),
         rhomolar_liq(_HUGE),
@@ -377,7 +388,7 @@ class newton_raphson_twophase
         beta(_HUGE),
         N(0),
         logging(false),
-        Nsteps(0){};
+        Nsteps(0) {};
 
     void resize(unsigned int N);
 
@@ -428,7 +439,9 @@ struct newton_raphson_saturation_options
     imposed_variable_options imposed_variable;
     std::vector<CoolPropDbl> x, y;
     newton_raphson_saturation_options()
-      : bubble_point(false),
+      : Nstep_max(30),
+        bubble_point(false),
+        Nsteps(0),
         omega(_HUGE),
         rhomolar_liq(_HUGE),
         rhomolar_vap(_HUGE),
@@ -440,16 +453,13 @@ struct newton_raphson_saturation_options
         hmolar_vap(_HUGE),
         smolar_liq(_HUGE),
         smolar_vap(_HUGE),
-        imposed_variable(NO_VARIABLE_IMPOSED) {
-        Nstep_max = 30;
-        Nsteps = 0;
-    }  // Defaults
+        imposed_variable(NO_VARIABLE_IMPOSED) {}  // Defaults
 };
 
-/** \brief A class to do newton raphson solver mixture bubble point and dew point calculations
+/** \brief A class to do newton raphson solver for mixture bubble point and dew point calculations
      *
      * A class is used rather than a function so that it is easier to store iteration histories, additional output
-     * values, etc.  This class is used in \ref PhaseEnvelopeRoutines for the construction of the phase envelope
+     * values, etc.  This class is used in \ref PhaseEnvelopeRoutines for the construction of the phase envelope.
      *
      * This class only handles bubble and dew lines.  The independent variables are the first N-1 mole fractions
      * in the incipient phase along with one of T, p, or \f$\rho''\f$.
@@ -489,7 +499,7 @@ class newton_raphson_saturation
     Eigen::VectorXd r, err_rel;
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
-    newton_raphson_saturation(){};
+    newton_raphson_saturation() = default;
 
     void resize(std::size_t N);
 
@@ -530,20 +540,30 @@ class newton_raphson_saturation
     void check_Jacobian();
 };
 
+/**
+ * @brief Options and results for the PT flash two-phase solver
+ */
 struct PTflash_twophase_options
 {
-    int Nstep_max;
-    std::size_t Nsteps;
-    CoolPropDbl omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T;
+    int Nstep_max;       ///< Maximum number of iterations for the solver
+    std::size_t Nsteps;  ///< Number of steps actually taken
+    /** Intermediate and result variables */
+    CoolPropDbl omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, beta;
     std::vector<CoolPropDbl> x,  ///< Liquid mole fractions
       y,                         ///< Vapor mole fractions
       z;                         ///< Bulk mole fractions
-    PTflash_twophase_options() : omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE) {
-        Nstep_max = 30;
-        Nsteps = 0;  // Defaults
-    }
+    PTflash_twophase_options()
+      : Nstep_max(30), Nsteps(0), omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE), beta(0.5) {}
 };
 
+/**
+ * @brief Isothermal-Isobaric (PT) two-phase flash solver
+ *
+ * Implements a hybrid solver using Successive Substitution (SS) with GDEM
+ * acceleration for robust initialization, followed by a Second-Order Gibbs
+ * energy minimization (Newton-Raphson) for rapid quadratic convergence.
+ * K-factors are stored in log space to prevent overflow for wide-boiling mixtures.
+ */
 class PTflash_twophase
 {
    public:
@@ -556,7 +576,7 @@ class PTflash_twophase
     PTflash_twophase_options& IO;
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
-    PTflash_twophase(HelmholtzEOSMixtureBackend& HEOS, PTflash_twophase_options& IO) : HEOS(HEOS), IO(IO){};
+    PTflash_twophase(HelmholtzEOSMixtureBackend& HEOS, PTflash_twophase_options& IO) : HEOS(HEOS), IO(IO) {};
 
     /** \brief Call the Newton-Raphson Solver to solve the equilibrium conditions
          *
@@ -566,6 +586,8 @@ class PTflash_twophase
          *
          */
     void solve();
+    void solve_legacy();
+    void solve_michelsen();
 
     /** \brief Build the arrays for the Newton-Raphson solve
          *
@@ -579,7 +601,10 @@ class PTflash_twophase
 namespace StabilityRoutines {
 
 /** \brief Evaluate phase stability
-     * Based on the work of Gernert et al., J. Chem. Thermodyn., 2014 http://dx.doi.org/10.1016/j.fluid.2014.05.012
+     *
+     * Implements Michelsen (1982) TPD stability analysis with successive substitution,
+     * GDEM acceleration, and second-order quasi-Newton TPD minimization.
+     * The legacy Gernert et al. (2014) algorithm is available via MIXTURE_STABILITY_ALGORITHM=0.
      */
 class StabilityEvaluationClass
 {
@@ -590,9 +615,11 @@ class StabilityEvaluationClass
     double rhomolar_liq, rhomolar_vap, beta, tpd_liq, tpd_vap, DELTAG_nRT;
     double m_T,  ///< The temperature to be used (if specified, otherwise that from HEOS)
       m_p;       ///< The pressure to be used (if specified, otherwise that from HEOS)
+
    private:
     bool _stable;
     bool debug;
+    bool use_michelsen;
 
    public:
     StabilityEvaluationClass(HelmholtzEOSMixtureBackend& HEOS)
@@ -607,7 +634,8 @@ class StabilityEvaluationClass
         m_T(-1),
         m_p(-1),
         _stable(false),
-        debug(false){};
+        debug(false),
+        use_michelsen(get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {};
     /** \brief Specify T&P, otherwise they are loaded the HEOS instance
          */
     void set_TP(double T, double p) {
@@ -630,16 +658,45 @@ class StabilityEvaluationClass
     /** \brief Successive substitution
          */
     void successive_substitution(int num_steps);
+
     /** \brief Check stability
          * 1. Check stability by looking at tpd', tpd'' and \f$ \Delta G/(nRT)\f$
          * 2. Do a full TPD analysis
          */
     void check_stability();
+    /** \brief Legacy stability check from Gernert et al. (2014) */
+    void check_stability_legacy();
+    /** \brief Michelsen (1982) stability check */
+    void check_stability_michelsen();
+
+    /** \brief Second-order TPD minimization in alpha variables (Michelsen 1982a, Eq. 25-27)
+     *
+     * Transforms to alpha_i = 2*sqrt(Y_i) for improved Hessian conditioning,
+     * then applies Hebden's trust-region quasi-Newton method.
+     *
+     * @param Y Trial composition (unnormalized mole numbers); updated in place
+     * @param ln_f_z Feed fugacity values: ln(z_i) + ln(phi_i(z))
+     * @param the_T Temperature [K]
+     * @param the_p Pressure [Pa]
+     * @param is_unstable Set to true if TPD minimum is negative
+     * @return true if minimization succeeded, false on solver failure
+     */
+    bool minimize_tpd(std::vector<CoolPropDbl>& Y, const std::vector<CoolPropDbl>& ln_f_z, CoolPropDbl the_T, CoolPropDbl the_p, bool& is_unstable);
+
+    /** \brief Set which stability routine to use */
+    void set_use_michelsen(bool value) {
+        use_michelsen = value;
+    }
+
     /** \brief Return best estimate for the stability of the point
          */
     bool is_stable() {
-        trial_compositions();
-        successive_substitution(3);
+        if (!use_michelsen) {
+            // Legacy path needs trial compositions and a few SS steps
+            // before check_stability_legacy() can evaluate TPD
+            trial_compositions();
+            successive_substitution(3);
+        }
         check_stability();
         return _stable;
     }

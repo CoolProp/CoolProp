@@ -8,7 +8,13 @@ Especially when evaluating inputs as a function of pressure and enthalpy (common
 
 As of version 5.1 of CoolProp, the tabular interpolation methods of CoolProp v4 have been brought back from the dead, and significantly improved.  They are approximately 4 times faster than the equivalent methods in v4 of CoolProp due to a more optimized structure.  In order to make the most effective use of the tabular interpolation methods, you must be using the :ref:`low-level interface <low_level_api>`, otherwise significant overhead and slowdown will be experienced.  Thus, this method is best suited to C++, python, and the SWIG wrappers.
 
-There are two backends implemented for tabular interpolation, ``BICUBIC`` and ``TTSE``.  Both consume the same gridded tabular data that is stored to your user home directory in the folder ``HOME/.CoolProp/Tables``.  If you want to find the directory that CoolProp is using as your home directory (``HOME``), you can do something like 
+There are two backends implemented for tabular interpolation, ``BICUBIC`` and ``TTSE``.  Both consume the same gridded tabular data that is stored to your user home directory in the folder ``HOME/.CoolProp/Tables``.
+
+.. seealso::
+
+    For sub-microsecond per-probe evaluation with IAPWS-G13-15 conformance for water (``SVDSBTL&IF97``) and single-digit-percent accuracy on a multi-fluid HEOS-backed envelope (``SVDSBTL&HEOS``), see the :doc:`SVDSBTL backend </coolprop/SVDSBTL>`.  SVDSBTL combines a region atlas with per-region SVD compression and is the recommended throughput-oriented tabular backend for new code; BICUBIC and TTSE remain for backward compatibility.
+
+If you want to find the directory that CoolProp is using as your home directory (``HOME``), you can do something like
 
 .. ipython::
 
@@ -39,6 +45,16 @@ Two sets of tables are generated and written to disk: pressure-enthalpy and pres
 
 It is critical that you try to only initialize one AbstractState instance and then call its methods. The overhead for generating an AbstractState instance when using TTSE or BICUBIC is not too punitive, but you should try to only do it once.  Each time an instance is generated, all the tabular data is loaded into it.
 
+The default grid is :math:`200 \times 200` cells.  Cells span the full state range, so cell width near the critical point can be coarse (~14 K for CO\ :sub:`2`); interpolation across that cell can therefore be the limiting source of error in critical-region calculations.  The grid resolution can be increased via the :ref:`configuration variables <configuration>` ``TABULAR_NX`` and ``TABULAR_NY`` (default ``200``):
+
+.. code-block:: python
+
+    import CoolProp.CoolProp as CP
+    CP.set_config_int(CP.TABULAR_NX, 400)
+    CP.set_config_int(CP.TABULAR_NY, 400)
+
+Memory and build time scale as :math:`\mathcal{O}(N_x N_y)`.  Tables are cached per fluid in the tables directory and auto-rebuild when the resolution changes; the cost is paid once per (fluid, resolution) pair.
+
 TTSE Interpolation
 ------------------
 
@@ -54,12 +70,12 @@ The basic concept behind Tabular Taylor Series Extrapolation (TTSE) extrapolatio
     
     \Delta x = y-y_j
     
-See the `IAPWS TTSE report <http://www.iapws.org/relguide/TTSE.pdf>`_ for a description of the method.  Analytic derivatives are used to build the tables
+See the `IAPWS TTSE report <https://www.iapws.org/relguide/TTSE.pdf>`_ for a description of the method.  Analytic derivatives are used to build the tables
 
 Bicubic Interpolation
 ---------------------
 
-In bicubic interpolation, the values of the output parameter as well as its derivatives are evaluated at the corners of a unit square, and these values are used to fit a bicubic surface over the unit square. `Wikipedia <http://en.wikipedia.org/wiki/Bicubic_interpolation>`_ has excellent coverage of bicubic interpolation, and the method implemented in CoolProp is exactly this method.
+In bicubic interpolation, the values of the output parameter as well as its derivatives are evaluated at the corners of a unit square, and these values are used to fit a bicubic surface over the unit square. `Wikipedia <https://en.wikipedia.org/wiki/Bicubic_interpolation>`_ has excellent coverage of bicubic interpolation, and the method implemented in CoolProp is exactly this method.
 
 Normalized cell values are generated from
 

@@ -1,5 +1,6 @@
-#include <numeric>
-#include "Helmholtz.h"
+#include <cmath>
+#include "CoolProp/fluids/Helmholtz.h"
+#include "Backends/Cubics/GeneralizedCubic.h"
 
 #ifdef __ANDROID__
 #    undef _A
@@ -11,7 +12,7 @@
 namespace CoolProp {
 
 CoolPropDbl kahanSum(const std::vector<CoolPropDbl>& x) {
-    CoolPropDbl sum = x[0], y, t;
+    CoolPropDbl sum = x[0], y = NAN, t = NAN;
     CoolPropDbl c = 0.0;  //A running compensation for lost low-order bits.
     for (std::size_t i = 1; i < x.size(); ++i) {
         y = x[i] - c;       //So far, so good: c is zero.
@@ -135,7 +136,14 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, c
 };
 */
 void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
-    CoolPropDbl log_tau = log(tau), log_delta = log(delta), ndteu, one_over_delta = 1 / delta,
+    // Defense-in-depth: finish() populates SoA arrays (n, d, t, ...) and sets
+    // per-term l_is_int flags used below for the powInt fast path.  All
+    // properly-constructed subclasses of DepartureFunction call finish() in
+    // their ctor; the lazy auto-call here covers any future subclass that
+    // forgets.  Cost: one well-predicted branch per call after first.
+    if (!finished) finish();
+
+    CoolPropDbl log_tau = log(tau), log_delta = log(delta), ndteu = NAN, one_over_delta = 1 / delta,
                 one_over_tau = 1 / tau;  // division is much slower than multiplication, so do one division here
 
     // Maybe split the construction of u and other parts into two separate loops?
@@ -159,7 +167,7 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
         if (delta_li_in_u) {
             CoolPropDbl ci = el.c, l_double = el.l_double;
             if (ValidNumber(l_double) && l_double > 0 && std::abs(ci) > DBL_EPSILON) {
-                const CoolPropDbl u_increment = (el.l_is_int) ? -ci * powInt(delta, el.l_int) : -ci * pow(delta, l_double);
+                const CoolPropDbl u_increment = (el.l_is_int) ? -ci * powInt(delta, el.l_int) : -ci * exp(l_double * log_delta);
                 const CoolPropDbl du_ddelta_increment = l_double * u_increment * one_over_delta;
                 const CoolPropDbl d2u_ddelta2_increment = (l_double - 1) * du_ddelta_increment * one_over_delta;
                 const CoolPropDbl d3u_ddelta3_increment = (l_double - 2) * d2u_ddelta2_increment * one_over_delta;
@@ -174,7 +182,7 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
         if (tau_mi_in_u) {
             CoolPropDbl omegai = el.omega, m_double = el.m_double;
             if (std::abs(m_double) > 0) {
-                const CoolPropDbl u_increment = -omegai * pow(tau, m_double);
+                const CoolPropDbl u_increment = -omegai * exp(m_double * log_tau);
                 const CoolPropDbl du_dtau_increment = m_double * u_increment * one_over_tau;
                 const CoolPropDbl d2u_dtau2_increment = (m_double - 1) * du_dtau_increment * one_over_tau;
                 const CoolPropDbl d3u_dtau3_increment = (m_double - 2) * d2u_dtau2_increment * one_over_tau;
@@ -287,7 +295,7 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
 mcx::MultiComplex<double> ResidualHelmholtzGeneralizedExponential::one_mcx(const mcx::MultiComplex<double>& tau,
                                                                            const mcx::MultiComplex<double>& delta) const {
     //throw CoolProp::NotImplementedError("Nope");
-    mcx::MultiComplex<double> sum00 = 0.0*tau*delta;
+    mcx::MultiComplex<double> sum00 = 0.0 * tau * delta;
     auto ln_tau = log(tau);
     auto ln_delta = log(delta);
     const std::size_t N = elements.size();
@@ -338,49 +346,6 @@ mcx::MultiComplex<double> ResidualHelmholtzGeneralizedExponential::one_mcx(const
     return sum00;
 }
 #endif
-
-void ResidualHelmholtzGeneralizedExponential::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-    el.AddMember("type", "GeneralizedExponential", doc.GetAllocator());
-    cpjson::set_double_array("n", n, el, doc);
-    cpjson::set_double_array("t", t, el, doc);
-    cpjson::set_double_array("d", d, el, doc);
-    cpjson::set_double_array("eta1", eta1, el, doc);
-    cpjson::set_double_array("eta2", eta2, el, doc);
-    cpjson::set_double_array("beta1", beta1, el, doc);
-    cpjson::set_double_array("beta2", beta2, el, doc);
-    cpjson::set_double_array("gamma1", gamma1, el, doc);
-    cpjson::set_double_array("gamma2", gamma2, el, doc);
-    cpjson::set_double_array("epsilon1", epsilon1, el, doc);
-    cpjson::set_double_array("epsilon2", epsilon2, el, doc);
-    cpjson::set_double_array("l_double", l_double, el, doc);
-    cpjson::set_int_array("l_int", l_int, el, doc);
-}
-
-void ResidualHelmholtzNonAnalytic::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-    el.AddMember("type", "ResidualHelmholtzNonAnalytic", doc.GetAllocator());
-
-    rapidjson::Value _n(rapidjson::kArrayType), _a(rapidjson::kArrayType), _b(rapidjson::kArrayType), _beta(rapidjson::kArrayType),
-      _A(rapidjson::kArrayType), _B(rapidjson::kArrayType), _C(rapidjson::kArrayType), _D(rapidjson::kArrayType);
-    for (unsigned int i = 0; i <= N; ++i) {
-        ResidualHelmholtzNonAnalyticElement& elem = elements[i];
-        _n.PushBack((double)elem.n, doc.GetAllocator());
-        _a.PushBack((double)elem.a, doc.GetAllocator());
-        _b.PushBack((double)elem.b, doc.GetAllocator());
-        _beta.PushBack((double)elem.beta, doc.GetAllocator());
-        _A.PushBack((double)elem.A, doc.GetAllocator());
-        _B.PushBack((double)elem.B, doc.GetAllocator());
-        _C.PushBack((double)elem.C, doc.GetAllocator());
-        _D.PushBack((double)elem.D, doc.GetAllocator());
-    }
-    el.AddMember("n", _n, doc.GetAllocator());
-    el.AddMember("a", _a, doc.GetAllocator());
-    el.AddMember("b", _b, doc.GetAllocator());
-    el.AddMember("beta", _beta, doc.GetAllocator());
-    el.AddMember("A", _A, doc.GetAllocator());
-    el.AddMember("B", _B, doc.GetAllocator());
-    el.AddMember("C", _C, doc.GetAllocator());
-    el.AddMember("D", _D, doc.GetAllocator());
-}
 
 void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl& tau_in, const CoolPropDbl& delta_in, HelmholtzDerivatives& derivs) {
     if (N == 0) {
@@ -592,8 +557,7 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl& tau_in, const CoolProp
 }
 
 #if ENABLE_CATCH
-mcx::MultiComplex<double> ResidualHelmholtzNonAnalytic::one_mcx(const mcx::MultiComplex<double>& tau,
-                                                                const mcx::MultiComplex<double>& delta) const {
+mcx::MultiComplex<double> ResidualHelmholtzNonAnalytic::one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
 
     mcx::MultiComplex<double> sum00 = 0.0 * tau * delta;
     for (unsigned int i = 0; i < N; ++i) {
@@ -752,12 +716,11 @@ void ResidualHelmholtzGaoB::all(const CoolPropDbl& tau, const CoolPropDbl& delta
     }
 }
 
-
 #if ENABLE_CATCH
 mcx::MultiComplex<double> ResidualHelmholtzGaoB::one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
     mcx::MultiComplex<double> sum00 = 0.0;
     for (std::size_t i = 0; i < static_cast<int>(n.size()); ++i) {
-        auto u = b[i] + beta[i] * (tau-gamma[i])*(tau-gamma[i]);
+        auto u = b[i] + beta[i] * (tau - gamma[i]) * (tau - gamma[i]);
         auto Ftau = pow(tau, t[i]) * exp(1.0 / u);
         auto Fdelta = pow(delta, d[i]) * exp(eta[i] * pow(delta - epsilon[i], 2));
         sum00 += n[i] * Ftau * Fdelta;
@@ -768,7 +731,7 @@ mcx::MultiComplex<double> ResidualHelmholtzGaoB::one_mcx(const mcx::MultiComplex
 
 ResidualHelmholtzXiangDeiters::ResidualHelmholtzXiangDeiters(const CoolPropDbl Tc, const CoolPropDbl pc, const CoolPropDbl rhomolarc,
                                                              const CoolPropDbl acentric, const CoolPropDbl R)
-  : Tc(Tc), pc(pc), rhomolarc(rhomolarc), acentric(acentric), R(R) {
+  : enabled(true), Tc(Tc), pc(pc), rhomolarc(rhomolarc), acentric(acentric), R(R) {
     double Zc = pc / (R * Tc * rhomolarc);
     theta = POW2(Zc - 0.29);
 
@@ -794,8 +757,6 @@ ResidualHelmholtzXiangDeiters::ResidualHelmholtzXiangDeiters(const CoolPropDbl T
     phi0.add_Exponential(a0, d, t, g, l);
     phi1.add_Exponential(a1, d, t, g, l);
     phi2.add_Exponential(a2, d, t, g, l);
-
-    enabled = true;
 };
 
 void ResidualHelmholtzXiangDeiters::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
@@ -820,14 +781,6 @@ mcx::MultiComplex<double> ResidualHelmholtzXiangDeiters::one_mcx(const mcx::Mult
 }
 #endif
 
-void ResidualHelmholtzSAFTAssociating::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-    el.AddMember("type", "ResidualHelmholtzSAFTAssociating", doc.GetAllocator());
-    el.AddMember("a", a, doc.GetAllocator());
-    el.AddMember("m", m, doc.GetAllocator());
-    el.AddMember("epsilonbar", epsilonbar, doc.GetAllocator());
-    el.AddMember("vbarn", vbarn, doc.GetAllocator());
-    el.AddMember("kappabar", kappabar, doc.GetAllocator());
-}
 CoolPropDbl ResidualHelmholtzSAFTAssociating::Deltabar(const CoolPropDbl& tau, const CoolPropDbl& delta) const {
     return this->g(this->eta(delta)) * (exp(this->epsilonbar * tau) - 1) * this->kappabar;
 }
@@ -1111,8 +1064,7 @@ void ResidualHelmholtzSAFTAssociating::all(const CoolPropDbl& tau, const CoolPro
 }
 
 #if ENABLE_CATCH
-mcx::MultiComplex<double> IdealHelmholtzCP0PolyT::one_mcx(const mcx::MultiComplex<double>& tau,
-                                                          const mcx::MultiComplex<double>& delta) const {
+mcx::MultiComplex<double> IdealHelmholtzCP0PolyT::one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
     mcx::MultiComplex<double> sum = 0.0;
     for (std::size_t i = 0; i < N; ++i) {
         if (std::abs(t[i]) < 10 * DBL_EPSILON) {
@@ -1127,20 +1079,6 @@ mcx::MultiComplex<double> IdealHelmholtzCP0PolyT::one_mcx(const mcx::MultiComple
     return sum;
 }
 #endif
-
-void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
-    el.AddMember("type", "IdealGasCP0Poly", doc.GetAllocator());
-
-    rapidjson::Value _c(rapidjson::kArrayType), _t(rapidjson::kArrayType);
-    for (std::size_t i = 0; i < N; ++i) {
-        _c.PushBack(static_cast<double>(c[i]), doc.GetAllocator());
-        _t.PushBack(static_cast<double>(t[i]), doc.GetAllocator());
-    }
-    el.AddMember("c", _c, doc.GetAllocator());
-    el.AddMember("t", _t, doc.GetAllocator());
-    el.AddMember("Tc", static_cast<double>(Tc), doc.GetAllocator());
-    el.AddMember("T0", static_cast<double>(T0), doc.GetAllocator());
-}
 
 void IdealHelmholtzLead::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
     if (!enabled) {
@@ -1212,53 +1150,30 @@ void IdealHelmholtzPower::all(const CoolPropDbl& tau, const CoolPropDbl& delta, 
     }
 }
 void IdealHelmholtzPlanckEinsteinGeneralized::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
-    // First pre-calculate exp(theta[i]*tau) for each contribution; used in each term
-    std::vector<double> expthetatau(N);
-    for (std::size_t i = 0; i < N; ++i) {
-        expthetatau[i] = exp(theta[i] * tau);
-    }
 
     if (!enabled) {
         return;
     }
-    {
-        CoolPropDbl s = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            s += n[i] * log(c[i] + d[i] * expthetatau[i]);
-        }
-        derivs.alphar += s;
+
+    CoolPropDbl s00 = 0, s01 = 0, s02 = 0, s03 = 0, s04 = 0;
+
+    for (std::size_t i = 0; i < N; ++i) {
+        const CoolPropDbl expthetataui = exp(theta[i] * tau);
+        const CoolPropDbl para = c[i] + d[i] * expthetataui;
+
+        s00 += n[i] * log(para);
+        s01 += n[i] * theta[i] * d[i] * expthetataui / para;
+        s02 += n[i] * POW2(theta[i]) * c[i] * d[i] * expthetataui / POW2(para);
+        s03 += n[i] * POW3(theta[i]) * c[i] * d[i] * (c[i] - d[i] * expthetataui) * expthetataui / POW3(para);
+        const CoolPropDbl bracket =
+          6 * POW3(d[i]) * POW3(expthetataui) - 12 * d[i] * d[i] * para * POW2(expthetataui) + 7 * d[i] * POW2(para) * expthetataui - POW3(para);
+        s04 += -n[i] * d[i] * POW4(theta[i]) * bracket * expthetataui / POW4(para);
     }
-    {
-        CoolPropDbl s = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            s += n[i] * theta[i] * d[i] * expthetatau[i] / (c[i] + d[i] * expthetatau[i]);
-        }
-        derivs.dalphar_dtau += s;
-    }
-    {
-        CoolPropDbl s = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            s += n[i] * POW2(theta[i]) * c[i] * d[i] * expthetatau[i] / pow(c[i] + d[i] * expthetatau[i], 2);
-        }
-        derivs.d2alphar_dtau2 += s;
-    }
-    {
-        CoolPropDbl s = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            s += n[i] * POW3(theta[i]) * c[i] * d[i] * (c[i] - d[i] * expthetatau[i]) * expthetatau[i] / pow(c[i] + d[i] * expthetatau[i], 3);
-        }
-        derivs.d3alphar_dtau3 += s;
-    }
-    {
-        CoolPropDbl s = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            const CoolPropDbl para = c[i] + d[i] * expthetatau[i];
-            const CoolPropDbl bracket = 6 * POW3(d[i]) * POW3(expthetatau[i]) - 12 * d[i] * d[i] * para * POW2(expthetatau[i])
-                                        + 7 * d[i] * POW2(para) * expthetatau[i] - POW3(para);
-            s += -n[i] * d[i] * pow(theta[i], 4) * bracket * expthetatau[i] / pow(c[i] + d[i] * expthetatau[i], 4);
-        }
-        derivs.d4alphar_dtau4 += s;
-    }
+    derivs.alphar += s00;
+    derivs.dalphar_dtau += s01;
+    derivs.d2alphar_dtau2 += s02;
+    derivs.d3alphar_dtau3 += s03;
+    derivs.d4alphar_dtau4 += s04;
 }
 void IdealHelmholtzCP0Constant::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
     if (!enabled) {
@@ -1446,18 +1361,6 @@ mcx::MultiComplex<double> IdealHelmholtzGERG2004Cosh::one_mcx(const mcx::MultiCo
 }
 #endif
 
-
-//void IdealHelmholtzCP0AlyLee::to_json(rapidjson::Value &el, rapidjson::Document &doc){
-//    el.AddMember("type","IdealGasHelmholtzCP0AlyLee",doc.GetAllocator());
-//    rapidjson::Value _n(rapidjson::kArrayType);
-//    for (std::size_t i=0; i<=4; ++i)
-//    {
-//        _n.PushBack(static_cast<double>(c[i]),doc.GetAllocator());
-//    }
-//    el.AddMember("c",_n,doc.GetAllocator());
-//    el.AddMember("Tc",static_cast<double>(Tc),doc.GetAllocator());
-//    el.AddMember("T0",static_cast<double>(T0),doc.GetAllocator());
-//}
 //CoolPropDbl IdealHelmholtzCP0AlyLee::base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
 //{
 //    if (!enabled){ return 0.0;}
@@ -1499,7 +1402,8 @@ IdealHelmholtzEnthalpyEntropyOffset EnthalpyEntropyOffset;
 #ifdef ENABLE_CATCH
 #    include <math.h>
 #    include <catch2/catch_all.hpp>
-#    include "crossplatform_shared_ptr.h"
+#    include <memory>
+using std::shared_ptr;
 
 class HelmholtzConsistencyFixture
 {
@@ -1511,27 +1415,33 @@ class HelmholtzConsistencyFixture
     shared_ptr<CoolProp::ResidualHelmholtzGeneralizedExponential> Gaussian, Lemmon2005, Exponential, GERG2008, Power;
 
     HelmholtzConsistencyFixture() {
-        shared_ptr<AbstractCubic> _SRK(new SRK(300, 4e6, 0.3, 8.314461));
-        _SRK->set_Tr(300);
-        _SRK->set_rhor(4000);
-        Soave.reset(new CoolProp::ResidualHelmholtzGeneralizedCubic(_SRK));
+        // Construct as the derived type, then implicit upcast to the base
+        // shared_ptr<AbstractCubic>. Single allocation; the control block
+        // tracks the derived type so ~SRK() / ~PengRobinson() are called
+        // correctly via the virtual destructor on AbstractCubic.
+        auto _SRK_derived = std::make_shared<SRK>(300, 4e6, 0.3, 8.314461);
+        _SRK_derived->set_Tr(300);
+        _SRK_derived->set_rhor(4000);
+        shared_ptr<AbstractCubic> _SRK = _SRK_derived;
+        Soave = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedCubic>(_SRK);
 
-        shared_ptr<AbstractCubic> _PR(new PengRobinson(300, 4e6, 0.3, 8.314461));
-        _PR->set_Tr(300);
-        _PR->set_rhor(4000);
-        PR.reset(new CoolProp::ResidualHelmholtzGeneralizedCubic(_PR));
+        auto _PR_derived = std::make_shared<PengRobinson>(300, 4e6, 0.3, 8.314461);
+        _PR_derived->set_Tr(300);
+        _PR_derived->set_rhor(4000);
+        shared_ptr<AbstractCubic> _PR = _PR_derived;
+        PR = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedCubic>(_PR);
 
         {
             // Signs of eta are flipped relative to paper from Gao et al., implemented with opposite sign in CoolProp
             std::vector<CoolPropDbl> beta = {0.3696, 0.2962}, epsilon = {0.4478, 0.44689}, eta = {-2.8452, -2.8342}, gamma = {1.108, 1.313},
-                        n = {-1.6909858, 0.93739074}, t = {4.3315, 4.015}, d = {1, 1}, b = {1.244, 0.6826};
-            GaoB.reset(new CoolProp::ResidualHelmholtzGaoB(n, t, d, eta, beta, gamma, epsilon, b));
+                                     n = {-1.6909858, 0.93739074}, t = {4.3315, 4.015}, d = {1, 1}, b = {1.244, 0.6826};
+            GaoB = std::make_shared<CoolProp::ResidualHelmholtzGaoB>(n, t, d, eta, beta, gamma, epsilon, b);
         }
 
-        XiangDeiters.reset(new CoolProp::ResidualHelmholtzXiangDeiters(300, 4e6, 4000, 0.3, 8.3144621));
+        XiangDeiters = std::make_shared<CoolProp::ResidualHelmholtzXiangDeiters>(300, 4e6, 4000, 0.3, 8.3144621);
 
-        Lead.reset(new CoolProp::IdealHelmholtzLead(1, 3));
-        LogTau.reset(new CoolProp::IdealHelmholtzLogTau(1.5));
+        Lead = std::make_shared<CoolProp::IdealHelmholtzLead>(1, 3);
+        LogTau = std::make_shared<CoolProp::IdealHelmholtzLogTau>(1.5);
         {
             std::vector<CoolPropDbl> n(4, 0), t(4, 1);
             n[0] = -0.1;
@@ -1539,7 +1449,7 @@ class HelmholtzConsistencyFixture
             t[1] = -1;
             t[2] = -2;
             t[3] = 2;
-            IGPower.reset(new CoolProp::IdealHelmholtzPower(n, t));
+            IGPower = std::make_shared<CoolProp::IdealHelmholtzPower>(n, t);
         }
         {
             std::vector<CoolPropDbl> n(4, 0), t(4, 1), c(4, 1), d(4, -1);
@@ -1549,7 +1459,7 @@ class HelmholtzConsistencyFixture
             t[1] = -1;
             t[2] = -2;
             t[3] = -2;
-            PlanckEinstein.reset(new CoolProp::IdealHelmholtzPlanckEinsteinGeneralized(n, t, c, d));
+            PlanckEinstein = std::make_shared<CoolProp::IdealHelmholtzPlanckEinsteinGeneralized>(n, t, c, d);
         }
         {
             std::vector<CoolPropDbl> c(3, 1), t(3, 0);
@@ -1558,9 +1468,9 @@ class HelmholtzConsistencyFixture
             c[1] = 2;
             c[2] = 3;
             CoolPropDbl T0 = 273.15, Tc = 345.857;
-            CP0PolyT.reset(new CoolProp::IdealHelmholtzCP0PolyT(c, t, Tc, T0));
+            CP0PolyT = std::make_shared<CoolProp::IdealHelmholtzCP0PolyT>(c, t, Tc, T0);
         }
-        CP0Constant.reset(new CoolProp::IdealHelmholtzCP0Constant(4 / 8.314472, 300, 250));
+        CP0Constant = std::make_shared<CoolProp::IdealHelmholtzCP0Constant>(4 / 8.314472, 300, 250);
         {
             // Nitrogen
             std::vector<CoolPropDbl> n(2, 0.0);
@@ -1570,7 +1480,7 @@ class HelmholtzConsistencyFixture
             theta[0] = 5.251822620;
             theta[1] = 13.788988208;
             CoolPropDbl rhomolar_crit = 11183.900000, T_crit = 126.192000000;
-            GERG2004Cosh.reset(new CoolProp::IdealHelmholtzGERG2004Cosh(n, theta, T_crit));
+            GERG2004Cosh = std::make_shared<CoolProp::IdealHelmholtzGERG2004Cosh>(n, theta, T_crit);
             static_cast<CoolProp::IdealHelmholtzGERG2004Cosh*>(GERG2004Cosh.get())->set_Tred(T_crit * 1.3);
         }
         {
@@ -1580,7 +1490,7 @@ class HelmholtzConsistencyFixture
             std::vector<CoolPropDbl> theta(1, 0.0);
             theta[0] = -5.393067706;
             CoolPropDbl rhomolar_crit = 11183.900000, T_crit = 126.192000000;
-            GERG2004Sinh.reset(new CoolProp::IdealHelmholtzGERG2004Sinh(n, theta, T_crit));
+            GERG2004Sinh = std::make_shared<CoolProp::IdealHelmholtzGERG2004Sinh>(n, theta, T_crit);
             static_cast<CoolProp::IdealHelmholtzGERG2004Sinh*>(GERG2004Sinh.get())->set_Tred(T_crit * 1.3);
         }
 
@@ -1589,7 +1499,7 @@ class HelmholtzConsistencyFixture
                         epsilon[] = {0.6734, 0.9239, 0.8636, 1.0507, 0.8482, 0.7522}, eta[] = {0.9667, 1.5154, 1.0591, 1.6642, 12.4856, 0.9662},
                         gamma[] = {1.2827, 0.4317, 1.1217, 1.1871, 1.1243, 0.4203},
                         n[] = {1.2198, -0.4883, -0.0033293, -0.0035387, -0.51172, -0.16882}, t[] = {1, 2.124, 0.4, 3.5, 0.5, 2.7};
-            Gaussian.reset(new CoolProp::ResidualHelmholtzGeneralizedExponential());
+            Gaussian = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedExponential>();
             Gaussian->add_Gaussian(
               std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(d[0])),
               std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(t[0])), std::vector<CoolPropDbl>(eta, eta + sizeof(eta) / sizeof(eta[0])),
@@ -1603,7 +1513,7 @@ class HelmholtzConsistencyFixture
                         n[] = {5.28076,   -8.67658,   0.7501127,   0.7590023,   0.01451899, 4.777189,    -3.330988, 3.775673,    -2.290919,
                                0.8888268, -0.6234864, -0.04127263, -0.08455389, -0.1308752, 0.008344962, -1.532005, -0.05883649, 0.02296658},
                         t[] = {0.669, 1.05, 2.75, 0.956, 1, 2, 2.75, 2.38, 3.37, 3.47, 2.63, 3.45, 0.72, 4.23, 0.2, 4.5, 29, 24};
-            Lemmon2005.reset(new CoolProp::ResidualHelmholtzGeneralizedExponential());
+            Lemmon2005 = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedExponential>();
             Lemmon2005->add_Lemmon2005(
               std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(d[0])),
               std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(t[0])), std::vector<CoolPropDbl>(l, l + sizeof(l) / sizeof(l[0])),
@@ -1613,30 +1523,30 @@ class HelmholtzConsistencyFixture
             CoolPropDbl d[] = {1, 1, 1, 3, 7, 1, 2, 5, 1, 1, 4, 2}, l[] = {0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3},
                         n[] = {1.0038, -2.7662, 0.42921, 0.081363, 0.00024174, 0.48246, 0.75542, -0.00743, -0.4146, -0.016558, -0.10644, -0.021704},
                         t[] = {0.25, 1.25, 1.5, 0.25, 0.875, 2.375, 2, 2.125, 3.5, 6.5, 4.75, 12.5};
-            Power.reset(new CoolProp::ResidualHelmholtzGeneralizedExponential());
+            Power = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedExponential>();
             Power->add_Power(std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(d[0])),
                              std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(t[0])), std::vector<CoolPropDbl>(l, l + sizeof(l) / sizeof(l[0])));
         }
         {
 
             CoolPropDbl a = 1, epsilonbar = 12.2735737, kappabar = 1.09117041e-05, m = 1.01871348, vbarn = 0.0444215309;
-            SAFT.reset(new CoolProp::ResidualHelmholtzSAFTAssociating(a, m, epsilonbar, vbarn, kappabar));
+            SAFT = std::make_shared<CoolProp::ResidualHelmholtzSAFTAssociating>(a, m, epsilonbar, vbarn, kappabar);
         }
         {
             CoolPropDbl n[] = {-0.666422765408, 0.726086323499, 0.0550686686128}, A[] = {0.7, 0.7, 0.7}, B[] = {0.3, 0.3, 1}, C[] = {10, 10, 12.5},
                         D[] = {275, 275, 275}, a[] = {3.5, 3.5, 3}, b[] = {0.875, 0.925, 0.875}, beta[] = {0.3, 0.3, 0.3};
-            NonAnalytic.reset(new CoolProp::ResidualHelmholtzNonAnalytic(
+            NonAnalytic = std::make_shared<CoolProp::ResidualHelmholtzNonAnalytic>(
               std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(a, a + sizeof(a) / sizeof(a[0])),
               std::vector<CoolPropDbl>(b, b + sizeof(b) / sizeof(b[0])), std::vector<CoolPropDbl>(beta, beta + sizeof(beta) / sizeof(beta[0])),
               std::vector<CoolPropDbl>(A, A + sizeof(A) / sizeof(A[0])), std::vector<CoolPropDbl>(B, B + sizeof(B) / sizeof(B[0])),
-              std::vector<CoolPropDbl>(C, C + sizeof(C) / sizeof(C[0])), std::vector<CoolPropDbl>(D, D + sizeof(D) / sizeof(D[0]))));
+              std::vector<CoolPropDbl>(C, C + sizeof(C) / sizeof(C[0])), std::vector<CoolPropDbl>(D, D + sizeof(D) / sizeof(D[0])));
         }
         {
             CoolPropDbl d[] = {2, 2, 2, 0, 0, 0}, g[] = {1.65533788, 1.65533788, 1.65533788, 1.65533788, 1.65533788, 1.65533788},
                         l[] = {2, 2, 2, 2, 2, 2},
                         n[] = {-3.821884669859, 8.30345065618981, -4.4832307260286, -1.02590136933231, 2.20786016506394, -1.07889905203761},
                         t[] = {3, 4, 5, 3, 4, 5};
-            Exponential.reset(new CoolProp::ResidualHelmholtzGeneralizedExponential());
+            Exponential = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedExponential>();
             Exponential->add_Exponential(
               std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(n[0])),
               std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(d[0])), std::vector<CoolPropDbl>(g, g + sizeof(g) / sizeof(t[0])),
@@ -1648,7 +1558,7 @@ class HelmholtzConsistencyFixture
                                0.069243379775168,   -0.31022508148249,   0.24495491753226,   0.22369816716981},
                         eta[] = {0.0, 0.0, 1.0, 1.0, 0.25, 0.0, 0.0, 0.0, 0.0}, epsilon[] = {0.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5},
                         beta[] = {0.0, 0.0, 1.0, 1.0, 2.5, 3.0, 3.0, 3.0, 3.0}, gamma[] = {0.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
-            GERG2008.reset(new CoolProp::ResidualHelmholtzGeneralizedExponential());
+            GERG2008 = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedExponential>();
             GERG2008->add_GERG2008Gaussian(
               std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(n[0])),
               std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(d[0])), std::vector<CoolPropDbl>(eta, eta + sizeof(eta) / sizeof(eta[0])),
@@ -1657,7 +1567,7 @@ class HelmholtzConsistencyFixture
               std::vector<CoolPropDbl>(gamma, gamma + sizeof(gamma) / sizeof(gamma[0])));
         }
     }
-    void call(std::string d, shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void call(const std::string& d, const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         if (!d.compare("dTau")) {
             return dTau(term, tau, delta, ddelta);
         } else if (!d.compare("dTau2")) {
@@ -1690,7 +1600,7 @@ class HelmholtzConsistencyFixture
             throw CoolProp::ValueError("don't understand deriv type");
         }
     }
-    shared_ptr<CoolProp::BaseHelmholtzTerm> get(std::string t) {
+    shared_ptr<CoolProp::BaseHelmholtzTerm> get(const std::string& t) {
         if (!t.compare("Lead")) {
             return Lead;
         } else if (!t.compare("LogTau")) {
@@ -1735,85 +1645,85 @@ class HelmholtzConsistencyFixture
             throw CoolProp::ValueError(format("don't understand helmholtz type: %s", t.c_str()));
         }
     }
-    void dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
+    void dTau(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
         CoolPropDbl term_plus = term->base(tau + dtau, delta);
         CoolPropDbl term_minus = term->base(tau - dtau, delta);
         numerical = (term_plus - term_minus) / (2 * dtau);
         analytic = term->dTau(tau, delta);
     };
-    void dTau2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
+    void dTau2(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
         CoolPropDbl term_plus = term->dTau(tau + dtau, delta);
         CoolPropDbl term_minus = term->dTau(tau - dtau, delta);
         numerical = (term_plus - term_minus) / (2 * dtau);
         analytic = term->dTau2(tau, delta);
     };
-    void dTau3(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
+    void dTau3(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
         CoolPropDbl term_plus = term->dTau2(tau + dtau, delta);
         CoolPropDbl term_minus = term->dTau2(tau - dtau, delta);
         numerical = (term_plus - term_minus) / (2 * dtau);
         analytic = term->dTau3(tau, delta);
     };
-    void dTau4(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
+    void dTau4(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau) {
         CoolPropDbl term_plus = term->dTau3(tau + dtau, delta);
         CoolPropDbl term_minus = term->dTau3(tau - dtau, delta);
         numerical = (term_plus - term_minus) / (2 * dtau);
         analytic = term->dTau4(tau, delta);
     };
-    void dDelta(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->base(tau, delta + ddelta);
         CoolPropDbl term_minus = term->base(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta(tau, delta);
     };
-    void dDelta2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta2(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta2(tau, delta);
     };
-    void dDelta3(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta3(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta2(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta2(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta3(tau, delta);
     };
-    void dDelta4(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta4(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta3(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta3(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta4(tau, delta);
     };
-    void dDelta_dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta_dTau(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dTau(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dTau(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta_dTau(tau, delta);
     };
-    void dDelta_dTau2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta_dTau2(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dTau2(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dTau2(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta_dTau2(tau, delta);
     };
-    void dDelta2_dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta2_dTau(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta_dTau(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta_dTau(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta2_dTau(tau, delta);
     };
-    void dDelta3_dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta3_dTau(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta2_dTau(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta2_dTau(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta3_dTau(tau, delta);
     };
-    void dDelta2_dTau2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta2_dTau2(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dDelta_dTau2(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dDelta_dTau2(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta2_dTau2(tau, delta);
     };
-    void dDelta_dTau3(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
+    void dDelta_dTau3(const shared_ptr<CoolProp::BaseHelmholtzTerm>& term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta) {
         CoolPropDbl term_plus = term->dTau3(tau, delta + ddelta);
         CoolPropDbl term_minus = term->dTau3(tau, delta - ddelta);
         numerical = (term_plus - term_minus) / (2 * ddelta);
@@ -1840,23 +1750,12 @@ class HelmholtzConsistencyFixture
 std::string terms[] = {"Lead",         "LogTau",       "IGPower", "PlanckEinstein", "CP0Constant", "CP0PolyT", "Gaussian",
                        "Lemmon2005",   "Power",        "SAFT",    "NonAnalytic",    "Exponential", "GERG2008", "SRK",
                        "PengRobinson", "XiangDeiters", "GaoB",    "GERG2004Cosh",   "GERG2004Sinh"};
-std::string derivs[] = {"dTau",         "dTau2",        "dTau3", "dDelta",       "dDelta2",       "dDelta3",      "dDelta_dTau",
-                        "dDelta_dTau2", "dDelta2_dTau", "dTau4", "dDelta_dTau3", "dDelta2_dTau2", "dDelta3_dTau", "dDelta4"};
+const std::vector<std::string> derivs = {"dTau",         "dTau2",        "dTau3", "dDelta",       "dDelta2",       "dDelta3",      "dDelta_dTau",
+                                         "dDelta_dTau2", "dDelta2_dTau", "dTau4", "dDelta_dTau3", "dDelta2_dTau2", "dDelta3_dTau", "dDelta4"};
 std::map<std::string, std::tuple<int, int>> counts = {
-    {"dTau", {1, 0}},
-    {"dTau2", {2, 0}},
-    {"dTau3", {3, 0}},
-    {"dTau4", {4, 0}},
-    {"dDelta", {0, 1}},
-    {"dDelta2", {0, 2}},
-    {"dDelta3", {0, 3}},
-    {"dDelta4", {0, 4}},
-    {"dDelta_dTau", {1, 1}},
-    {"dDelta_dTau2", {2, 1}},
-    {"dDelta2_dTau", {1, 2}},
-    {"dDelta_dTau3", {3, 1}},
-    {"dDelta2_dTau2", {2, 2}},
-    {"dDelta3_dTau", {1, 3}},
+  {"dTau", {1, 0}},         {"dTau2", {2, 0}},        {"dTau3", {3, 0}},         {"dTau4", {4, 0}},        {"dDelta", {0, 1}},
+  {"dDelta2", {0, 2}},      {"dDelta3", {0, 3}},      {"dDelta4", {0, 4}},       {"dDelta_dTau", {1, 1}},  {"dDelta_dTau2", {2, 1}},
+  {"dDelta2_dTau", {1, 2}}, {"dDelta_dTau3", {3, 1}}, {"dDelta2_dTau2", {2, 2}}, {"dDelta3_dTau", {1, 3}},
 };
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]") {
@@ -1864,30 +1763,32 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
     std::size_t n = sizeof(terms) / sizeof(terms[0]);
     for (std::size_t i = 0; i < n; ++i) {
         term = get(terms[i]);
-        for (std::size_t j = 0; j < sizeof(derivs) / sizeof(derivs[0]); ++j) {
+        for (const auto& deriv : derivs) {
             if (terms[i] == "SAFT"
-                && (derivs[j] == "dTau4" || derivs[j] == "dDelta_dTau3" || derivs[j] == "dDelta2_dTau2" || derivs[j] == "dDelta3_dTau"
-                    || derivs[j] == "dDelta4")) {
+                && (deriv == "dTau4" || deriv == "dDelta_dTau3" || deriv == "dDelta2_dTau2" || deriv == "dDelta3_dTau" || deriv == "dDelta4")) {
                 continue;
             }
             double tau = 1.3, delta = 0.9;
-            call(derivs[j], term, tau, delta, 1e-5);
+            call(deriv, term, tau, delta, 1e-5);
             double alphar = term->base(tau, delta);
 
             // Do calculations with multicomplex, if the one_mcx function has been implemented
-            auto [ntau, ndelta] = counts.at(derivs[j]);
+            auto [ntau, ndelta] = counts.at(deriv);
             double numerical_mcx = _HUGE;
             double alphar_mcx = _HUGE;
             try {
                 numerical_mcx = get_analytic_mcx(term, tau, delta, ntau, ndelta);
                 alphar_mcx = term->one_mcx(tau, delta).real();
-            } catch (std::exception& /* e */) {
+            } catch (std::exception& /* e */) {  // NOLINT(bugprone-empty-catch)
+                // one_mcx isn't implemented for every term; leave
+                // numerical_mcx/alphar_mcx at _HUGE so the CAPTURE
+                // below shows the gap rather than aborting the test.
                 //std::cout << e.what() << std::endl;
             }
             CAPTURE(alphar_mcx);
             CAPTURE(numerical_mcx);
 
-            CAPTURE(derivs[j]);
+            CAPTURE(deriv);
             CAPTURE(alphar);
             double numerical_finitediff = numerical;
             CAPTURE(numerical_finitediff);
@@ -1895,7 +1796,7 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
             CAPTURE(terms[i]);
             double deriv_tolerance = 1e-9;
             if (terms[i] == "GERG2004Cosh" || terms[i] == "GERG2004Sinh" || terms[i] == "CP0PolyT") {
-                deriv_tolerance = 1e-7; // due to, I think, a loss in precision in the log function of multicomplex
+                deriv_tolerance = 1e-7;  // due to, I think, a loss in precision in the log function of multicomplex
             }
             double val_tolerance = 1e-14;
             if (terms[i] == "CP0PolyT") {

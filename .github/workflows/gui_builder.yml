@@ -1,0 +1,763 @@
+name: GUI builder
+
+# Builds the Tauri desktop GUI (wrappers/GUI) on macOS, Windows, and Linux.
+# CoolProp is compiled as a static library inside the GUI's build.rs, so this
+# workflow also exercises that build path on each platform.
+
+on:
+  push:
+    branches: [master, main, develop, ib/GUI]
+    paths:
+      - 'wrappers/GUI/**'
+      - 'include/**'
+      - 'src/**'
+      - 'externals/**'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - '.github/workflows/gui_builder.yml'
+    tags: ['gui-v*']
+  pull_request:
+    paths:
+      - 'wrappers/GUI/**'
+      - 'include/**'
+      - 'src/**'
+      - 'externals/**'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - '.github/workflows/gui_builder.yml'
+  workflow_dispatch:
+
+concurrency:
+  # Cancel superseded runs on the same ref to cut CI backlog on heavy
+  # dev days (repeated pushes to an open PR).  Protected: master / main
+  # / develop and tags never cancel, so mainline + release runs always
+  # complete.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: wrappers/GUI/package-lock.json
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo + Tauri build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wrappers/GUI/src-tauri -> target
+
+      # Tauri 2 on Linux needs WebKit 4.1, GTK, and a few extras.
+      - name: Install Linux WebKit dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install GUI npm dependencies
+        working-directory: wrappers/GUI
+        run: npm ci
+
+      # Frontend unit tests (Vitest + RTL) — Linux only; platform-agnostic.
+      - name: Run frontend unit tests
+        if: matrix.os == 'ubuntu-22.04'
+        working-directory: wrappers/GUI
+        run: npm test
+
+      # Rust unit tests (Linux only — platform-agnostic FFI / state-table
+      # logic; per-OS coverage comes from the build + smoke-test steps).
+      # Runs in release mode so the resulting CoolProp static lib + cargo
+      # build artifacts are reused by `tauri build` below.
+      - name: Run Rust unit tests
+        if: matrix.os == 'ubuntu-22.04'
+        working-directory: wrappers/GUI/src-tauri
+        run: cargo test --release --no-fail-fast
+
+      # Forward macOS signing/notarization secrets into $GITHUB_ENV only when
+      # APPLE_CERTIFICATE is actually set. Tauri 2's bundler attempts to codesign
+      # whenever APPLE_CERTIFICATE is defined — even an empty value — and fails
+      # at `security import`, so we must NOT plumb empty `${{ secrets.X }}` env
+      # vars into the build step. The shell guard handles the empty case.
+      # (GitHub Actions disallows `secrets.X` in step-level `if:` conditions, so
+      # the gating happens inside the run script rather than in the if.)
+      - name: Configure macOS signing
+        if: matrix.os == 'macos-latest'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Notarization, App Store Connect API-key flow (preferred):
+          #   APPLE_API_ISSUER     issuer UUID (above the keys table)
+          #   APPLE_API_KEY        the Key ID (short identifier), NOT the key body
+          #   APPLE_API_KEY_BASE64 base64 of the downloaded AuthKey_*.p8 — this
+          #                        step decodes it to a file and exports
+          #                        APPLE_API_KEY_PATH for tauri-action.
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          # Notarization, app-specific-password flow (alternative):
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APPLE_CERTIFICATE:-}" ]; then
+            echo "macOS signing: APPLE_CERTIFICATE not set — building unsigned."
+            exit 0
+          fi
+          # API-key and app-password notarization are mutually exclusive. If
+          # both sets of secrets are present, tauri-action would silently pick
+          # one — masking a secrets mistake. Reject the ambiguous config.
+          if [ -n "${APPLE_API_KEY_BASE64:-}${APPLE_API_KEY:-}${APPLE_API_ISSUER:-}" ] \
+             && [ -n "${APPLE_ID:-}${APPLE_PASSWORD:-}" ]; then
+            echo "::error::Both API-key (APPLE_API_*) and app-password (APPLE_ID/APPLE_PASSWORD) notarization secrets are set — configure exactly one flow."
+            exit 1
+          fi
+          # Forward the signing + plain-string notarization vars to later steps
+          # (tauri-action reads them straight from the environment).
+          for var in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY \
+                     APPLE_TEAM_ID APPLE_ID APPLE_PASSWORD \
+                     APPLE_API_ISSUER APPLE_API_KEY; do
+            val=$(printenv "$var" 2>/dev/null || true)
+            if [ -n "$val" ]; then
+              printf '%s<<__SIGN_EOF__\n%s\n__SIGN_EOF__\n' "$var" "$val" >> "$GITHUB_ENV"
+            fi
+          done
+          # API-key flow: tauri-action wants APPLE_API_KEY_PATH to point at the
+          # actual AuthKey_*.p8 on disk, so decode the base64 secret to a file
+          # and export the path. base64.b64decode tolerates wrapped/unwrapped
+          # input (it drops non-alphabet chars), sidestepping BSD-vs-GNU
+          # base64 flag differences on the macOS runner.
+          if [ -n "${APPLE_API_KEY_BASE64:-}" ]; then
+            # Fail fast on a half-configured API-key flow rather than letting
+            # tauri-action fail later with an opaque notarization error.
+            if [ -z "${APPLE_API_KEY:-}" ] || [ -z "${APPLE_API_ISSUER:-}" ]; then
+              echo "::error::APPLE_API_KEY_BASE64 is set but APPLE_API_KEY (Key ID) and/or APPLE_API_ISSUER is missing — the API-key notarization flow needs all three."
+              exit 1
+            fi
+            key_path="$RUNNER_TEMP/AuthKey.p8"
+            KEY_PATH="$key_path" python3 -c 'import base64,os; open(os.environ["KEY_PATH"],"wb").write(base64.b64decode(os.environ["APPLE_API_KEY_BASE64"]))'
+            chmod 600 "$key_path"
+            echo "APPLE_API_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+            echo "macOS signing: decoded App Store Connect API key to $key_path."
+          fi
+          echo "macOS signing: APPLE_* env forwarded to subsequent steps."
+
+      # Builds the frontend (Vite), compiles CoolProp via build.rs (CMake),
+      # links the Rust crate, and produces native bundles under
+      # wrappers/GUI/src-tauri/target/release/bundle/. tauri-action picks up
+      # any APPLE_* env vars set by the previous step.
+      #
+      # NOTE: tagName/releaseName intentionally NOT passed here. With three
+      # matrix jobs racing, each tauri-action invocation creates its own
+      # draft release for the same tag, leaving 3 separate drafts that have
+      # to be hand-merged. The dedicated `release` job below downloads each
+      # OS's uploaded bundle artifact and creates a single consolidated
+      # release in one shot.
+      - name: Build Tauri bundle
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Tauri auto-updater signing — when present, tauri-action signs the
+          # update artifacts and emits latest.json next to each platform
+          # bundle. Without these the build still succeeds; the updater
+          # plugin just won't accept the signatures, so updates won't work
+          # for that release. Activate by adding both repo secrets.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: wrappers/GUI
+          tauriScript: npm run tauri
+
+      # ─── Linux smoke tests ────────────────────────────────────────────────
+      # 1) Forward-compat: install .deb in a clean ubuntu:26.04 container,
+      #    let apt-get -f install resolve declared deps from 26.04 repos,
+      #    confirm all the binary's shared libs resolve.
+      - name: Smoke-test Ubuntu .deb (ubuntu:26.04 container, deps + ldd)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          set -e
+          BUNDLE_DIR="$PWD/wrappers/GUI/src-tauri/target/release/bundle"
+          docker run --rm \
+            -v "$BUNDLE_DIR":/art:ro \
+            ubuntu:26.04 bash -c '
+              set -eu
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -qq
+              apt-get install -y --no-install-recommends ca-certificates file >/dev/null
+              dpkg -i /art/deb/*.deb >/dev/null 2>&1 || true
+              apt-get install -y -f >/dev/null
+              echo "=== package ==="; dpkg -l cool-prop | tail -1
+              BIN=$(dpkg -L cool-prop | xargs -I{} sh -c "[ -f {} ] && [ -x {} ] && echo {}" | grep -v "/share/" | head -1)
+              echo "=== binary: $BIN ==="; file "$BIN"
+              if ldd "$BIN" | grep -q "not found"; then
+                echo "FAIL: unresolved shared libraries:"
+                ldd "$BIN" | grep "not found"
+                exit 1
+              fi
+              echo "OK: all shared libraries resolve on ubuntu:26.04"
+            '
+
+      # 2) Launch the GUI on the runner under Xvfb (with a window manager so
+      #    the WebView maps onto the root), then poll a screenshot + render
+      #    check until the UI paints. Catches "binary starts but crashes
+      #    initializing the WebView" and "WebKit2GTK loads but the page never
+      #    paints" bugs that a static dep check — or a bare liveness check —
+      #    can't see.
+      - name: Smoke-test Ubuntu launch + screenshot (Xvfb)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          set -e
+          # openbox: without a window manager the WebView window is never
+          # mapped onto the Xvfb root, so `import -window root` grabbed a
+          # uniform black frame and the render check was meaningless on Linux
+          # — process-liveness only (gh CoolProp-dzq.16, follow-up to dzq.15
+          # which shipped the macOS/Windows render checks). A WM maps it.
+          # Headless rendering + capture toolchain:
+          #   openbox         WM so the WebView window maps onto the Xvfb root
+          #   x11-apps        xwd — capture fallback if imagemagick's import fails
+          #   xdotool         locate the app's client window (capture content only)
+          #   libgl1-mesa-dri Mesa software GL (llvmpipe); LIBGL_ALWAYS_SOFTWARE
+          #                   has nothing to load without it, so WebKitGTK's GL
+          #                   init fails and the page paints blank
+          sudo apt-get install -y --no-install-recommends \
+            xvfb imagemagick dbus-x11 openbox x11-apps xdotool libgl1-mesa-dri
+          # Pillow drives the blank-render check (same script as macOS/Windows).
+          # Try plain first (older pip / non-PEP668), fall back to the
+          # PEP668 override on a newer marked interpreter.
+          python3 -m pip install --quiet --disable-pip-version-check Pillow \
+            || python3 -m pip install --quiet --disable-pip-version-check --break-system-packages Pillow
+          DEB=$(ls "$PWD/wrappers/GUI/src-tauri/target/release/bundle/deb/"*.deb)
+          sudo dpkg -i "$DEB" || sudo apt-get install -y -f
+          mkdir -p artifacts/screenshots
+          SHOT="artifacts/screenshots/linux-startup.png"      # full root (for the artifact)
+          CONTENT="artifacts/screenshots/linux-content.png"    # client window only (for the check)
+
+          # +extension GLX +render so Mesa can create a (software) GL context
+          # on the virtual display.
+          Xvfb :99 -screen 0 1280x900x24 -ac +extension GLX +render -noreset >/tmp/xvfb.log 2>&1 &
+          XVFB_PID=$!
+          sleep 2
+          export DISPLAY=:99
+          export NO_AT_BRIDGE=1
+          # Make WebKitGTK actually paint on a GPU-less Xvfb display:
+          #  - disable the DMABUF / accelerated-compositing path (needs real EGL)
+          #  - force Mesa's llvmpipe software rasterizer (driver pkg installed above)
+          # Without this the window maps but the React UI never appears (blank).
+          export WEBKIT_DISABLE_DMABUF_RENDERER=1
+          export WEBKIT_DISABLE_COMPOSITING_MODE=1
+          export LIBGL_ALWAYS_SOFTWARE=1
+          export GALLIUM_DRIVER=llvmpipe
+          # WebKitGTK spawns Network/Web helper processes that need a session
+          # bus; without one they fail to initialise and the page stays blank.
+          eval "$(dbus-launch --sh-syntax)"
+          openbox >/tmp/openbox.log 2>&1 &
+          WM_PID=$!
+          sleep 1
+          /usr/bin/coolprop-gui >/tmp/coolprop-gui.log 2>&1 &
+          APP_PID=$!
+
+          # Poll capture + render-check every 2s up to 30s — mirrors the macOS
+          # and Windows steps so WebView cold-start jitter doesn't flake a
+          # fixed sleep (CoolProp-8j0). Fast renders exit in a couple seconds;
+          # a persistently blank frame fails at the deadline.
+          cleanup() { kill "$APP_PID" "$WM_PID" "$XVFB_PID" "${DBUS_SESSION_BUS_PID:-}" 2>/dev/null || true; }
+          DEADLINE=$(( $(date +%s) + 30 ))
+          RENDER_EXIT=1
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            sleep 2
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              echo "FAIL: GUI exited before render; log:"
+              cat /tmp/coolprop-gui.log
+              cleanup
+              exit 1
+            fi
+            # Full-root capture for the uploaded artifact (shows window + chrome).
+            import -display :99 -window root "$SHOT" \
+              || xwd -display :99 -root | convert xwd:- "$SHOT"
+            # The render CHECK runs on the app's CLIENT window only. A full-root
+            # capture false-passes: the openbox title bar + black Xvfb-root
+            # margin alone score std-dev ~35 (> threshold) even when the
+            # WebView content is uniformly blank (verified: blank interior =
+            # std-dev 0). Capturing just the client window means a blank render
+            # scores ~0 and correctly fails (gh CoolProp-dzq.16).
+            WID=$(xdotool search --onlyvisible --name "CoolProp" 2>/dev/null | head -1 || true)
+            if [ -z "$WID" ]; then continue; fi   # window not mapped yet — retry
+            import -display :99 -window "$WID" "$CONTENT" \
+              || xwd -display :99 -id "$WID" | convert xwd:- "$CONTENT"
+            RENDER_EXIT=0
+            python3 wrappers/GUI/scripts/check-screenshot-rendered.py "$CONTENT" 20 \
+              || RENDER_EXIT=$?
+            if [ "$RENDER_EXIT" -eq 0 ]; then
+              break
+            fi
+            if [ "$RENDER_EXIT" -ge 2 ]; then
+              cleanup
+              echo "FAIL: render check failed to run (exit $RENDER_EXIT)"
+              exit "$RENDER_EXIT"
+            fi
+          done
+
+          ls -la "$SHOT"
+          cleanup
+
+          if [ "$RENDER_EXIT" -ne 0 ]; then
+            echo "FAIL: screenshot looks blank — render didn't paint (gh-2825 regression?)"
+            echo "── coolprop-gui stderr (WebKit/GL diagnostics) ──"
+            cat /tmp/coolprop-gui.log || true
+            echo "── Xvfb log ──"
+            tail -40 /tmp/xvfb.log || true
+            exit 1
+          fi
+          echo "OK: GUI started, rendered, and screenshot captured"
+
+      # ─── Windows code signing via SignPath (gh CoolProp-dzq.8) ──────────────
+      # SignPath (Foundation OSS) keeps the certificate in its HSM and signs an
+      # *already-uploaded* GitHub artifact — it cannot sign in place the way
+      # signtool did. Flow: upload the unsigned bundle as a throwaway GH
+      # artifact, submit it to SignPath, download the signed bundle back, then
+      # overlay it onto the bundle dir so the Windows smoke test and the release
+      # upload both see signed binaries.
+      #
+      # All steps no-op gracefully when SIGNPATH_API_TOKEN is absent (forks,
+      # secret unset) OR when the opt-in marker is missing (see the probe step
+      # above) — leaving an unsigned-but-functional build and sending no email.
+      #
+      # signing-policy-slug defaults to 'test-signing', which exercises the full
+      # pipeline with SignPath's untrusted test certificate — it will NOT clear
+      # SmartScreen. Once SignPath Foundation issues the release certificate, set
+      # the repo variable SIGNPATH_POLICY_SLUG=release-signing to go live; no
+      # code change required.
+      # Confine SIGNPATH_API_TOKEN to this probe step (and the signing action's
+      # `with:` input below) rather than exposing it to every matrix job via a
+      # job-level env. Emits a boolean the Windows signing steps gate on.
+      # 'false' on forks / when the secret is unset -> bundle stays unsigned.
+      - name: Check SignPath availability
+        id: signpath_check
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # On a PR the checked-out HEAD is a synthetic merge commit, so resolve
+          # the PR's real head SHA; on push/tag use the pushed SHA.
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -z "${SIGNPATH_API_TOKEN:-}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "SignPath: token not set — Windows bundle stays unsigned."
+            exit 0
+          fi
+          # Opt-in signing. SignPath has no per-state notification filter, so a
+          # signing request (and its email) fires ONLY when explicitly asked:
+          # the HEAD commit message carries the [gui-sign] marker, or this is a
+          # gui-v* release tag (releases are always signed). Routine GUI pushes
+          # then build unsigned and send no email. The commit message is read
+          # via the API so this works on PRs (merge-commit checkout) too.
+          msg=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}" --jq '.commit.message' 2>/dev/null || echo "")
+          sign=false
+          case "${GITHUB_REF:-}" in
+            refs/tags/gui-v*) sign=true ;;
+          esac
+          if printf '%s' "$msg" | grep -qF '[gui-sign]'; then sign=true; fi
+          if [ "$sign" = true ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "SignPath: signing enabled ([gui-sign] marker or gui-v* tag)."
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "SignPath: opt-in marker absent — skipping signing (no email). Add [gui-sign] to the commit message, or push a gui-v* tag, to sign + exercise SignPath."
+          fi
+
+      - name: Upload unsigned Windows bundle for SignPath
+        id: signpath_upload
+        if: matrix.os == 'windows-latest' && steps.signpath_check.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          # Name kept outside the coolprop-gui-* pattern the release job globs,
+          # so this unsigned copy can never reach a release.
+          name: signpath-unsigned-windows
+          path: wrappers/GUI/src-tauri/target/release/bundle
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Sign Windows installers via SignPath
+        if: matrix.os == 'windows-latest' && steps.signpath_check.outputs.enabled == 'true'
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: e6ed0285-8cc0-431c-b527-6502f5b77e94
+          project-slug: coolprop
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'test-signing' }}
+          github-artifact-id: ${{ steps.signpath_upload.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signpath-signed
+
+      - name: Overlay signed Windows installers onto bundle
+        if: matrix.os == 'windows-latest' && steps.signpath_check.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          # SignPath returns the signed copy of the whole uploaded artifact with
+          # its original layout (msi/, nsis/); copy it back over the bundle dir
+          # so downstream steps consume the signed binaries.
+          $signed = "$PWD\signpath-signed"
+          $bundle = "$PWD\wrappers\GUI\src-tauri\target\release\bundle"
+          if (-not (Test-Path $signed)) { throw "SignPath output dir not found: $signed" }
+          if (-not (Get-ChildItem $signed -Recurse -File)) { throw "SignPath output dir is empty: $signed" }
+          Copy-Item -Path "$signed\*" -Destination $bundle -Recurse -Force
+          Write-Host "Overlaid SignPath-signed artifacts onto $bundle"
+
+          # Verify the overlay actually replaced the installers with signed
+          # ones. Copy-Item overlays the tree rather than replacing it, so a
+          # layout mismatch in SignPath's output could otherwise leave the
+          # original UNSIGNED .msi/.exe in place and ship it under a "signed"
+          # banner. Fail loudly if any installer lacks an Authenticode
+          # signature. (A test-signing cert is untrusted but still produces a
+          # signature, so Status is NotSigned only when truly unsigned.)
+          $installers = @()
+          $installers += Get-ChildItem -Path "$bundle\msi\*.msi" -File -ErrorAction SilentlyContinue
+          $installers += Get-ChildItem -Path "$bundle\nsis\*.exe" -File -ErrorAction SilentlyContinue
+          if ($installers.Count -eq 0) { throw "No .msi/.exe installers found under $bundle to verify" }
+          foreach ($f in $installers) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            Write-Host "$($f.Name): $($sig.Status) — signer: $($sig.SignerCertificate.Subject)"
+            # Hard-fail on a genuinely bad signature: NotSigned (overlay left
+            # the unsigned original) or HashMismatch (tampered/corrupt). A
+            # test-signing cert yields 'UnknownError' (untrusted chain) and a
+            # release cert yields 'Valid' — both acceptable, so don't reject
+            # everything that isn't 'Valid' (that would fail test-signing).
+            if ($sig.Status -eq 'NotSigned' -or $sig.Status -eq 'HashMismatch') {
+              throw "Installer signature invalid ($($sig.Status)) after overlay: $($f.FullName)"
+            }
+          }
+          Write-Host "Verified $($installers.Count) signed installer(s)."
+
+      # ─── macOS smoke test ──────────────────────────────────────────────────
+      # Open the bundled .app, poll a screenshot + render check every 2s up
+      # to 30s. Cold-start WebView paint on a fresh macos-latest runner is
+      # variable, so a fixed sleep either over-waits or flake-fails (see
+      # CoolProp-8j0 / gh-2826 alpha.2). Polling lets fast renders exit in
+      # a few seconds and slow renders still get a fair shot before failing,
+      # catching the blank-WebView regression from gh-2825 at the timeout.
+      - name: Smoke-test macOS .app launch + screenshot
+        if: matrix.os == 'macos-latest'
+        run: |
+          set -e
+          APP="$PWD/wrappers/GUI/src-tauri/target/release/bundle/macos/CoolProp.app"
+          if [ ! -d "$APP" ]; then
+            echo "FAIL: $APP not found"
+            ls -la "$PWD/wrappers/GUI/src-tauri/target/release/bundle/" || true
+            exit 1
+          fi
+          mkdir -p artifacts/screenshots
+          SHOT="artifacts/screenshots/macos-startup.png"
+
+          # Pillow is the only non-stdlib dep of the render check; install
+          # before the polling loop. macos-latest's Homebrew Python is
+          # PEP 668-marked, so --break-system-packages is required (this is
+          # an ephemeral runner — no host environment to corrupt).
+          python3 -m pip install --quiet --disable-pip-version-check \
+            --break-system-packages Pillow
+
+          open "$APP"
+          DEADLINE=$(( $(date +%s) + 30 ))
+          RENDER_EXIT=1
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            sleep 2
+            if ! pgrep -x coolprop-gui >/dev/null; then
+              echo "FAIL: GUI exited before render"
+              ls -la "$HOME/Library/Logs/DiagnosticReports/" 2>/dev/null || true
+              exit 1
+            fi
+            screencapture -x "$SHOT"
+            RENDER_EXIT=0
+            python3 wrappers/GUI/scripts/check-screenshot-rendered.py "$SHOT" 20 \
+              || RENDER_EXIT=$?
+            if [ "$RENDER_EXIT" -eq 0 ]; then
+              break
+            fi
+            if [ "$RENDER_EXIT" -ge 2 ]; then
+              pkill -x coolprop-gui || true
+              echo "FAIL: render check failed to run (exit $RENDER_EXIT)"
+              exit "$RENDER_EXIT"
+            fi
+          done
+
+          ls -la "$SHOT"
+          pkill -x coolprop-gui || true
+
+          if [ "$RENDER_EXIT" -ne 0 ]; then
+            echo "FAIL: screenshot looks blank — render didn't paint (gh-2825 regression?)"
+            exit 1
+          fi
+          echo "OK: GUI started, rendered, and screenshot captured"
+
+      # ─── Windows smoke test ────────────────────────────────────────────────
+      # Silent-install the .msi, launch the binary visibly so a screenshot
+      # captures the actual window, then verify it stayed alive.
+      - name: Smoke-test Windows MSI launch + screenshot
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $bundle = "$PWD\wrappers\GUI\src-tauri\target\release\bundle"
+          $msi = Get-ChildItem -Path "$bundle\msi\*.msi" | Select-Object -First 1
+          if (-not $msi) { throw "No .msi found under $bundle\msi" }
+          Write-Host "Installing $($msi.FullName) ..."
+          $log = "$env:TEMP\coolprop-msi-install.log"
+          $p = Start-Process msiexec.exe `
+            -ArgumentList "/i", "`"$($msi.FullName)`"", "/quiet", "/norestart", "/l*v", "`"$log`"" `
+            -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            Write-Host "msiexec exit $($p.ExitCode); tail of log:"
+            Get-Content $log -Tail 60
+            throw "MSI install failed"
+          }
+          $candidates = @(
+            "C:\Program Files\CoolProp\coolprop-gui.exe",
+            "C:\Program Files\CoolProp\CoolProp.exe"
+          )
+          $bin = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $bin) { throw "Installed binary not found in: $($candidates -join '; ')" }
+          Write-Host "Installed at: $bin"
+
+          New-Item -ItemType Directory -Force -Path artifacts\screenshots | Out-Null
+
+          # gh-2825 debug: dump what the WebView will actually load.
+          # The Vite-built dist/ is embedded into the .exe by Tauri's resources
+          # table, so the index.html we want to verify is *not* on disk next to
+          # the binary on Windows (unlike macOS, which keeps it in Resources/).
+          # Print the dist/index.html the build produced — that's the same bytes
+          # the WebView is being handed.
+          $distIndex = "$PWD\wrappers\GUI\dist\index.html"
+          if (Test-Path $distIndex) {
+            Write-Host "── dist/index.html shipped to WebView ──"
+            Get-Content $distIndex
+            Write-Host "── end ──"
+          } else {
+            Write-Host "WARN: $distIndex not found"
+          }
+
+          $proc = Start-Process -FilePath $bin -PassThru
+
+          # Pillow isn't preinstalled on windows-latest's Python toolcache;
+          # install once before the polling loop.
+          python -m pip install --quiet --disable-pip-version-check Pillow
+
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName System.Drawing
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $shot = "artifacts\screenshots\windows-startup.png"
+
+          # Cold-start of WebView2 on a fresh windows-latest runner is
+          # variable — a fixed 15s sleep flake-failed an otherwise-identical
+          # tag push (CoolProp-8j0 / gh-2826 alpha.2). Poll a screenshot +
+          # render check every 2s up to 30s so fast renders exit quickly
+          # and slow renders still get a fair shot at painting before the
+          # job fails with the gh-2825 blank-render diagnostic.
+          $deadline = (Get-Date).AddSeconds(30)
+          $renderExit = 1
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 2
+            if ($proc.HasExited) {
+              throw "Binary exited (exit $($proc.ExitCode)) — likely missing DLL / WebView2 init failure"
+            }
+            $bmp = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+            $bmp.Save($shot, [System.Drawing.Imaging.ImageFormat]::Png)
+            $g.Dispose(); $bmp.Dispose()
+
+            python wrappers\GUI\scripts\check-screenshot-rendered.py $shot 20
+            $renderExit = $LASTEXITCODE
+            if ($renderExit -eq 0) { break }
+            if ($renderExit -ge 2) {
+              Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+              throw "render check failed to run (exit $renderExit)"
+            }
+          }
+
+          Write-Host "Screenshot saved to $shot"
+          Get-Item $shot | Format-List Name, Length
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+
+          switch ($renderExit) {
+            0 { Write-Host "OK: GUI started, rendered, and screenshot captured" }
+            1 { throw "screenshot looks blank — render didn't paint (gh-2825 regression?)" }
+            default { throw "render check failed to run (exit $renderExit)" }
+          }
+
+      - name: Upload startup screenshot
+        # Run on failure too so a blank-render regression leaves the
+        # offending screenshot behind for triage.
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coolprop-gui-${{ matrix.os }}-screenshot
+          path: artifacts/screenshots/*.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: coolprop-gui-${{ matrix.os }}
+          # Upload only the user-facing installers (+ the updater .tar.gz/.sig
+          # the release job consumes), NOT the whole bundle tree. Two reasons:
+          #  - the raw macos/CoolProp.app directory is BROKEN once GitHub
+          #    re-zips the artifact (a macOS app bundle loses its signature /
+          #    executable bits through a plain zip) — the .dmg is the correct,
+          #    self-contained macOS format to ship;
+          #  - bundle_dmg.sh / icon.icns / create-dmg are build scaffolding.
+          # Including all of that made the download confusing about what to open.
+          # Each glob matches only on the OS that produces it; if-no-files-found
+          # checks the aggregate, so every OS still uploads its installer(s).
+          path: |
+            wrappers/GUI/src-tauri/target/release/bundle/dmg/*.dmg
+            wrappers/GUI/src-tauri/target/release/bundle/macos/*.app.tar.gz
+            wrappers/GUI/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig
+            wrappers/GUI/src-tauri/target/release/bundle/deb/*.deb
+            wrappers/GUI/src-tauri/target/release/bundle/rpm/*.rpm
+            wrappers/GUI/src-tauri/target/release/bundle/appimage/*.AppImage
+            wrappers/GUI/src-tauri/target/release/bundle/appimage/*.AppImage.sig
+            wrappers/GUI/src-tauri/target/release/bundle/msi/*.msi
+            wrappers/GUI/src-tauri/target/release/bundle/nsis/*-setup.exe
+            wrappers/GUI/src-tauri/target/release/bundle/nsis/*-setup.exe.sig
+          if-no-files-found: error
+          retention-days: 7
+
+  # ─── Consolidated release ────────────────────────────────────────────────
+  # Runs only on gui-v* tag pushes after every platform build succeeds.
+  # Pulls the three platform bundle artifacts produced by the matrix above,
+  # picks out the user-facing installer files, and creates a single draft
+  # GitHub Release with all of them attached. Replaces the per-matrix-job
+  # auto-release path that left three duplicate drafts behind on every tag.
+  release:
+    if: startsWith(github.ref, 'refs/tags/gui-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all bundle artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          pattern: coolprop-gui-*
+          merge-multiple: false
+
+      - name: Stage installer files
+        id: stage
+        run: |
+          set -e
+          mkdir -p release-files
+          # tauri's bundle/ layout emits the user-facing installers under
+          # per-format subdirs. Pull only what testers actually download.
+          find artifacts -type f \( \
+            -name "*.dmg" -o \
+            -name "*.app.tar.gz" -o \
+            -name "*.deb" -o \
+            -name "*.rpm" -o \
+            -name "*.AppImage" -o \
+            -name "*.msi" -o \
+            -name "*-setup.exe" \
+          \) -exec cp -v {} release-files/ \;
+          ls -la release-files/
+          [ "$(ls release-files | wc -l)" -ge 5 ] || { echo "expected at least 5 installer files"; exit 1; }
+
+      # Build the single updater manifest the app polls
+      # (plugins.updater.endpoints -> releases/latest/download/latest.json).
+      # `tauri build` emits the signed update bundles + .sig per platform but
+      # NOT latest.json (tauri-action only writes it when it manages the
+      # release, which we don't), so assemble it here: one manifest spanning
+      # all platforms, each url pointing at the release asset that the step
+      # above staged, each signature read from the bundle's .sig. The update
+      # bundles themselves (.app.tar.gz / -setup.exe / .AppImage) are already
+      # in release-files/ from the find above, so they get attached too.
+      - name: Generate updater manifest (latest.json)
+        env:
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          python3 - <<'PY'
+          import json, os, glob, datetime
+          tag = os.environ["TAG"]
+          version = tag[len("gui-v"):] if tag.startswith("gui-v") else tag
+          base = f"https://github.com/{os.environ['REPO']}/releases/download/{tag}"
+          # Tauri v2 updater target -> the bundle glob it ships for that target.
+          targets = {
+              "darwin-aarch64": "**/*.app.tar.gz",   # macos-latest is arm64
+              "windows-x86_64": "**/*-setup.exe",     # NSIS installer
+              "linux-x86_64":   "**/*.AppImage",
+          }
+          platforms = {}
+          for tgt, pat in targets.items():
+              hits = [f for f in glob.glob(f"artifacts/{pat}", recursive=True)
+                      if os.path.isfile(f + ".sig")]
+              if not hits:
+                  print(f"::warning::no signed updater artifact for {tgt} ({pat}); omitting")
+                  continue
+              f = hits[0]
+              platforms[tgt] = {
+                  "signature": open(f + ".sig").read().strip(),
+                  "url": f"{base}/{os.path.basename(f)}",
+              }
+          # The release job only runs when all three matrix builds succeed, so
+          # every target must be present + signed; a missing one would silently
+          # strip a whole platform from auto-update. Fail the release instead.
+          missing = [t for t in targets if t not in platforms]
+          if missing:
+              raise SystemExit(f"latest.json: missing signed updater artifact(s) for {missing}; "
+                               "a release must publish all platforms — aborting.")
+          manifest = {
+              "version": version,
+              "notes": f"CoolProp GUI {version}",
+              "pub_date": datetime.datetime.now(datetime.timezone.utc)
+                          .strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "platforms": platforms,
+          }
+          os.makedirs("release-files", exist_ok=True)
+          with open("release-files/latest.json", "w") as fh:
+              json.dump(manifest, fh, indent=2)
+          print(json.dumps(manifest, indent=2))
+          PY
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: CoolProp GUI ${{ github.ref_name }}
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          files: release-files/*
+          fail_on_unmatched_files: true
+          body: |
+            CoolProp Desktop GUI release. Includes `latest.json` for the in-app
+            auto-updater. macOS is signed + notarized; Windows is signed via
+            SignPath (test cert until the release cert is issued — see
+            `wrappers/GUI/README.md` for the Gatekeeper/SmartScreen status).
+
+            <!-- Edit this body before publishing — testers only see what's here. -->

@@ -70,7 +70,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu]
-        workflow: [javascript_builder.yml, library_shared.yml, windows_installer.yml, docs_docker-run.yml, libreoffice_builder.yml, mathcad_builder.yml] # , python_buildwheels.yml]
+        workflow: [javascript_builder.yml, library_shared.yml, windows_installer.yml, docs_docker-run.yml, libreoffice_builder.yml, mathcad_builder.yml, csharp_builder.yml] # , python_buildwheels.yml]
     uses: ./.github/workflows/release_get_artifact.yml
     with:
       branch: ${{ needs.set_vars.outputs.branch }}
@@ -83,10 +83,9 @@ jobs:
     steps:
     
     - name: Fetch the sources
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: ${{ needs.set_vars.outputs.branch }}
-        submodules: 'recursive'
         path: source
         
     - name: Update the headers
@@ -101,7 +100,7 @@ jobs:
         mv CoolProp_sources.zip binaries/source/
         
     - name: Store artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: binaries-source
         path: binaries
@@ -115,10 +114,10 @@ jobs:
     steps:  
     
     - name: Download binaries
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         # Get all unique artifacts starting with "binaries-" per the pattern
-        # per requirements of actions/download-artifact@v4
+        # per requirements of actions/download-artifact@v8
         pattern: binaries-*
         # Allow multiple artifacts matching the patter to be merged
         # into the same binaries directory.

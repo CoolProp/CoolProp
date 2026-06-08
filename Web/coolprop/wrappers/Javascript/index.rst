@@ -8,13 +8,11 @@ Javascript Wrapper
 Pre-Compiled Binaries
 =====================
 
-* Download the precompiled binaries from :sfdownloads:`Javascript`, or the development versions from the buildbot server at :sfnightly:`Javascript`. Remember to get both files, ``coolprop.js`` and ``coolprop.wasm``.
+* Download the precompiled binaries from :sfdownloads:`Javascript`, or the nightly development versions at :sfnightly:`Javascript`. Remember to get both files, ``coolprop.js`` and ``coolprop.wasm``.
 
-* You can load your js file into your website, following the structure of `the example here <https://github.com/CoolProp/CoolProp/blob/master/Web/coolprop/wrappers/Javascript/index.html>`_, which is also included at the above download. 
+* You can load your js file into your website, following the structure of `the example here <https://github.com/CoolProp/CoolProp/blob/master/Web/coolprop/wrappers/Javascript/index.html>`_, which is also included at the above download.
 
-* Alternatively, you can link to our server directly to make sure that you always have the latest version of CoolProp. To do so, include the address ``<script src="http://www.coolprop.sourceforge.net/jscript/coolprop.js"></script>`` in your HTML header instead of the relative path ``<script src="coolprop.js"></script>``.
-
-* A live demo of the Javascript library in action can also be found `online <http://www.coolprop.sourceforge.net/jscript/index.html>`_.
+* A live demo of the Javascript library in action can be found in the `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_ repository.
 
 
 Serving the JS
@@ -48,7 +46,7 @@ We run the emscripten-based builds in a docker container and you can follow `the
 
 Linux (deprecated)
 ------------------
-We are following the instructions from `emscripten.org <http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_ - download the portable emscripten SDK `emsdk` for linux.
+We are following the instructions from `emscripten.org <https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_ - download the portable emscripten SDK `emsdk` for linux.
 
 1. First download node.js, clang++ and llvm using::
 
@@ -74,7 +72,7 @@ We are following the instructions from `emscripten.org <http://kripken.github.io
 
 8. Check out coolprop::
 
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
 
 9. Folder creating::
 
@@ -86,7 +84,7 @@ We are following the instructions from `emscripten.org <http://kripken.github.io
 
 Windows (deprecated)
 --------------------
-1. Download the `EMSDK installer <http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_, run the web download installer, that will install everything, and get you ready.
+1. Download the `EMSDK installer <https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_, run the web download installer, that will install everything, and get you ready.
 
 2. In the ``%HOME%/.emscripten`` file, make sure that there is only one entry for NODE_JS and it points to the right place.  Mine looks like::
 

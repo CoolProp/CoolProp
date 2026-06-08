@@ -2,9 +2,10 @@
 #if !defined(NO_TABULAR_BACKENDS)
 
 #    include "TabularBackends.h"
-#    include "CoolProp.h"
+#    include "CoolProp/CoolProp.h"
+#    include <cmath>
 #    include <sstream>
-#    include "time.h"
+#    include <ctime>
 #    include "miniz.h"
 #    include <fstream>
 
@@ -36,7 +37,7 @@ void load_table(T& table, const std::string& path_to_tables, const std::string& 
     double tic = clock();
     std::string path_to_table = path_to_tables + "/" + filename;
     if (get_debug_level() > 0) {
-        std::cout << format("Loading table: %s", path_to_table.c_str()) << std::endl;
+        std::cout << format("Loading table: %s", path_to_table.c_str()) << '\n';
     }
     std::vector<char> raw;
     try {
@@ -44,14 +45,14 @@ void load_table(T& table, const std::string& path_to_tables, const std::string& 
     } catch (...) {
         std::string err = format("Unable to load file %s", path_to_table.c_str());
         if (get_debug_level() > 0) {
-            std::cout << "err:" << err << std::endl;
+            std::cout << "err:" << err << '\n';
         }
         throw UnableToLoadError(err);
     }
     std::vector<unsigned char> newBuffer(raw.size() * 5);
-    uLong newBufferSize = static_cast<uLong>(newBuffer.size());
-    mz_ulong rawBufferSize = static_cast<mz_ulong>(raw.size());
-    int code;
+    auto newBufferSize = static_cast<uLong>(newBuffer.size());
+    auto rawBufferSize = static_cast<mz_ulong>(raw.size());
+    int code = 0;
     do {
         code = uncompress((unsigned char*)(&(newBuffer[0])), &newBufferSize, (unsigned char*)(&(raw[0])), rawBufferSize);
         if (code == Z_BUF_ERROR) {
@@ -61,7 +62,7 @@ void load_table(T& table, const std::string& path_to_tables, const std::string& 
         } else if (code != 0) {  // Something else, a big problem
             std::string err = format("Unable to uncompress file %s with miniz code %d", path_to_table.c_str(), code);
             if (get_debug_level() > 0) {
-                std::cout << "uncompress err:" << err << std::endl;
+                std::cout << "uncompress err:" << err << '\n';
             }
             throw UnableToLoadError(err);
         }
@@ -77,12 +78,12 @@ void load_table(T& table, const std::string& path_to_tables, const std::string& 
         table.deserialize(deserialized);
         double toc = clock();
         if (get_debug_level() > 0) {
-            std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc - tic) / CLOCKS_PER_SEC) << std::endl;
+            std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc - tic) / CLOCKS_PER_SEC) << '\n';
         }
     } catch (std::exception& e) {
         std::string err = format("Unable to msgpack deserialize %s; err: %s", path_to_table.c_str(), e.what());
         if (get_debug_level() > 0) {
-            std::cout << "err: " << err << std::endl;
+            std::cout << "err: " << err << '\n';
         }
         throw UnableToLoadError(err);
     }
@@ -94,7 +95,7 @@ void write_table(const T& table, const std::string& path_to_tables, const std::s
     std::string tabPath = std::string(path_to_tables + "/" + name + ".bin");
     std::string zPath = tabPath + ".z";
     std::vector<char> buffer(sbuf.size());
-    uLong outSize = static_cast<uLong>(buffer.size());
+    auto outSize = static_cast<uLong>(buffer.size());
     compress((unsigned char*)(&(buffer[0])), &outSize, (unsigned char*)(sbuf.data()), static_cast<mz_ulong>(sbuf.size()));
     std::ofstream ofs2(zPath.c_str(), std::ofstream::binary);
     ofs2.write(&buffer[0], outSize);
@@ -122,7 +123,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
     AS->update(QT_INPUTS, 0, Tmin);
     CoolPropDbl p_triple = AS->p();
-    CoolPropDbl p, pmin = p_triple, pmax = 0.9999 * AS->p_critical();
+    CoolPropDbl p = NAN, pmin = p_triple, pmax = 0.9999 * AS->p_critical();
     for (std::size_t i = 0; i < N - 1; ++i) {
         if (i == 0) {
             CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, true);
@@ -147,7 +148,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
         } catch (std::exception& e) {
             // That failed for some reason, go to the next pair
             if (debug) {
-                std::cout << " " << e.what() << std::endl;
+                std::cout << " " << e.what() << '\n';
             }
             continue;
         }
@@ -158,7 +159,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
             logviscL[i] = log(viscL[i]);
         } catch (std::exception& e) {
             if (debug) {
-                std::cout << " " << e.what() << std::endl;
+                std::cout << " " << e.what() << '\n';
             }
         }
         // Saturated vapor
@@ -178,7 +179,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
         } catch (std::exception& e) {
             // That failed for some reason, go to the next pair
             if (debug) {
-                std::cout << " " << e.what() << std::endl;
+                std::cout << " " << e.what() << '\n';
             }
             continue;
         }
@@ -189,7 +190,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
             logviscV[i] = log(viscV[i]);
         } catch (std::exception& e) {
             if (debug) {
-                std::cout << " " << e.what() << std::endl;
+                std::cout << " " << e.what() << '\n';
             }
         }
         if (i == 0) {
@@ -222,7 +223,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
 }
 
 void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState>& AS) {
-    CoolPropDbl x, y;
+    CoolPropDbl x = NAN, y = NAN;
     const bool debug = get_debug_level() > 5 || false;
 
     resize(Nx, Ny);
@@ -257,11 +258,11 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             yvec[j] = y;
 
             if (debug) {
-                std::cout << "x: " << x << " y: " << y << std::endl;
+                std::cout << "x: " << x << " y: " << y << '\n';
             }
 
             // Generate the input pair
-            CoolPropDbl v1, v2;
+            CoolPropDbl v1 = NAN, v2 = NAN;
             input_pairs input_pair = generate_update_pair(xkey, x, ykey, y, v1, v2);
 
             // --------------------
@@ -275,7 +276,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             } catch (std::exception& e) {
                 // That failed for some reason, go to the next pair
                 if (debug) {
-                    std::cout << " " << e.what() << std::endl;
+                    std::cout << " " << e.what() << '\n';
                 }
                 continue;
             }
@@ -283,7 +284,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             // Skip two-phase states - they will remain as _HUGE holes in the table
             if (is_in_closed_range(0.0, 1.0, AS->Q())) {
                 if (debug) {
-                    std::cout << " 2Phase" << std::endl;
+                    std::cout << " 2Phase" << '\n';
                 }
                 continue;
             };
@@ -304,7 +305,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             try {
                 visc[i][j] = AS->viscosity();
                 cond[i][j] = AS->conductivity();
-            } catch (std::exception&) {
+            } catch (std::exception&) {  // NOLINT(bugprone-empty-catch)
                 // Failures will remain as holes in table
             }
 
@@ -348,10 +349,11 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
         }
     }
 }
-std::string CoolProp::TabularBackend::path_to_tables(void) {
+std::string CoolProp::TabularBackend::path_to_tables() {
     std::vector<std::string> fluids = AS->fluid_names();
     std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
     std::vector<std::string> components;
+    components.reserve(fluids.size());
     for (std::size_t i = 0; i < fluids.size(); ++i) {
         components.push_back(format("%s[%0.10Lf]", fluids[i].c_str(), fractions[i]));
     }
@@ -366,8 +368,7 @@ std::string CoolProp::TabularBackend::path_to_tables(void) {
 void CoolProp::TabularBackend::write_tables() {
     std::string path_to_tables = this->path_to_tables();
     make_dirs(path_to_tables);
-    bool loaded = false;
-    dataset = library.get_set_of_tables(this->AS, loaded);
+    dataset = library.get_set_of_tables(this->AS).first;
     PackablePhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     SinglePhaseGriddedTableData& single_phase_logph = dataset->single_phase_logph;
@@ -378,13 +379,13 @@ void CoolProp::TabularBackend::write_tables() {
     write_table(phase_envelope, path_to_tables, "phase_envelope");
 }
 void CoolProp::TabularBackend::load_tables() {
-    bool loaded = false;
-    dataset = library.get_set_of_tables(this->AS, loaded);
-    if (loaded == false) {
+    auto [ds, loaded] = library.get_set_of_tables(this->AS);
+    dataset = ds;
+    if (!loaded) {
         throw UnableToLoadError("Could not load tables");
     }
     if (get_debug_level() > 0) {
-        std::cout << "Tables loaded" << std::endl;
+        std::cout << "Tables loaded" << '\n';
     }
 }
 
@@ -411,7 +412,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_saturated_liquid_keyed_output(paramet
     }
 };
 
-CoolPropDbl CoolProp::TabularBackend::calc_p(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_p() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     if (using_single_phase_table) {
         return _p;
@@ -423,7 +424,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_p(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_T(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_T() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -448,7 +449,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_T(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_rhomolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_rhomolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -469,7 +470,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_rhomolar(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_hmolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_hmolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -490,7 +491,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_hmolar(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_smolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_smolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -511,7 +512,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_smolar(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_umolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_umolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -535,7 +536,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_umolar(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_cpmolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_cpmolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -548,7 +549,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_cpmolar(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_cvmolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_cvmolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -562,7 +563,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_cvmolar(void) {
     }
 }
 
-CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_viscosity() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -583,7 +584,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_conductivity() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -604,7 +605,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_speed_sound(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_speed_sound() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -619,7 +620,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_speed_sound(void) {
 }
 CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant) {
     if (using_single_phase_table) {
-        CoolPropDbl dOf_dx, dOf_dy, dWrt_dx, dWrt_dy, dConstant_dx, dConstant_dy;
+        CoolPropDbl dOf_dx = NAN, dOf_dy = NAN, dWrt_dx = NAN, dWrt_dy = NAN, dConstant_dx = NAN, dConstant_dy = NAN;
 
         // If a mass-based parameter is provided, get a conversion factor and change the key to the molar-based key
         double Of_conversion_factor = 1.0, Wrt_conversion_factor = 1.0, Constant_conversion_factor = 1.0, MM = AS->molar_mass();
@@ -833,6 +834,194 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_two_phase_deriv_splined(paramet
     return _HUGE;
 }
 
+namespace {
+/// Categorize an output key for routing to the appropriate eval kernel inside
+/// TabularBackend::fast_evaluate. Values >0 mean the output is supported.
+enum FastEvalOutputKind : unsigned char
+{
+    fe_unsupported = 0,
+    fe_single_phase = 1,  // iT, iP, iDmolar, iHmolar, iSmolar, iUmolar
+    fe_transport = 2,     // iviscosity, iconductivity
+};
+
+FastEvalOutputKind classify_fast_eval_output(CoolProp::parameters key) {
+    using namespace CoolProp;
+    switch (key) {
+        case iT:
+        case iP:
+        case iDmolar:
+        case iHmolar:
+        case iSmolar:
+        case iUmolar:
+            return fe_single_phase;
+        case iviscosity:
+        case iconductivity:
+            return fe_transport;
+        default:
+            return fe_unsupported;
+    }
+}
+}  // namespace
+
+void CoolProp::TabularBackend::fast_evaluate(CoolProp::input_pairs input_pair, const double* val1, const double* val2, std::size_t N_inputs,
+                                             const CoolProp::parameters* outputs, std::size_t N_outputs, double* out_buffer,
+                                             std::size_t out_buffer_size, int* status_flags, std::size_t status_flags_size,
+                                             CoolProp::phases imposed_phase) {
+    // Pre-loop validation. These conditions are programmer errors (mismatched
+    // buffers, unsupported keys), not data errors — throw so misuse fails loud.
+    if (N_outputs != 0 && N_inputs > std::numeric_limits<std::size_t>::max() / N_outputs) {
+        throw ValueError(format("fast_evaluate: N_inputs * N_outputs would overflow size_t (N_inputs=%zu, N_outputs=%zu)", N_inputs, N_outputs));
+    }
+    const std::size_t required_out = N_inputs * N_outputs;
+    if (out_buffer_size < required_out) {
+        throw ValueError(format("fast_evaluate: out_buffer_size=%zu < required %zu (N_inputs * N_outputs)", out_buffer_size, required_out));
+    }
+    if (status_flags_size < N_inputs) {
+        throw ValueError(format("fast_evaluate: status_flags_size=%zu < required %zu (N_inputs)", status_flags_size, N_inputs));
+    }
+    if (N_inputs == 0) return;
+    // Null-pointer check BEFORE the N_outputs==0 early-write path: that path
+    // dereferences status_flags, so the check has to dominate it.
+    if (val1 == nullptr || val2 == nullptr || outputs == nullptr || out_buffer == nullptr || status_flags == nullptr) {
+        throw ValueError("fast_evaluate: null pointer argument");
+    }
+    if (N_outputs == 0) {
+        for (std::size_t k = 0; k < N_inputs; ++k)
+            status_flags[k] = CoolProp::fast_evaluate_ok;
+        return;
+    }
+
+    const bool is_ph = (input_pair == HmolarP_INPUTS);
+    const bool is_pT = (input_pair == PT_INPUTS);
+    if (!is_ph && !is_pT) {
+        throw ValueError(
+          format("fast_evaluate: input_pair %s not supported (use HmolarP_INPUTS or PT_INPUTS)", get_input_pair_short_desc(input_pair).c_str()));
+    }
+
+    // Validate output keys up-front (caller passes typically a few; fits on stack)
+    constexpr std::size_t MAX_FE_OUTPUTS = 64;
+    if (N_outputs > MAX_FE_OUTPUTS) {
+        throw ValueError(format("fast_evaluate: N_outputs=%zu exceeds compile-time limit %zu", N_outputs, MAX_FE_OUTPUTS));
+    }
+    FastEvalOutputKind output_kinds[MAX_FE_OUTPUTS];
+    for (std::size_t o = 0; o < N_outputs; ++o) {
+        output_kinds[o] = classify_fast_eval_output(outputs[o]);
+        if (output_kinds[o] == fe_unsupported) {
+            throw ValueError(format("fast_evaluate: output[%zu]=%s not supported", o, get_parameter_information(outputs[o], "short").c_str()));
+        }
+    }
+
+    // Build tables if not already built; this is the only "lazy alloc" we tolerate
+    // here, and it happens at most once per AS lifetime — outside the hot loop.
+    check_tables();
+
+    // The two tables are concrete derived types of SinglePhaseGriddedTableData;
+    // bind through a pointer to the common base for the conditional.
+    SinglePhaseGriddedTableData* table_ptr = is_ph ? static_cast<SinglePhaseGriddedTableData*>(&dataset->single_phase_logph)
+                                                   : static_cast<SinglePhaseGriddedTableData*>(&dataset->single_phase_logpT);
+    SinglePhaseGriddedTableData& table = *table_ptr;
+    const std::vector<std::vector<CellCoeffs>>& coeffs = is_ph ? dataset->coeffs_ph : dataset->coeffs_pT;
+
+    // Apply imposed phase for the duration of the call; restore at end. (The
+    // existing per-output kernels do not consult imposed_phase_index — they
+    // operate on the (i,j) we already located — but downstream callers and
+    // diagnostic paths do, so keeping it in sync avoids surprises.)
+    const phases saved_imposed_phase = imposed_phase_index;
+    if (imposed_phase != iphase_not_imposed) {
+        imposed_phase_index = imposed_phase;
+    }
+
+    const double NaN = std::numeric_limits<double>::quiet_NaN();
+
+    auto fill_nan_row = [&](std::size_t k) {
+        for (std::size_t o = 0; o < N_outputs; ++o) {
+            out_buffer[k * N_outputs + o] = NaN;
+        }
+    };
+
+    for (std::size_t k = 0; k < N_inputs; ++k) {
+        // x is the table's primary axis (logh for ph table, logT-equivalent for pT)
+        // and y is the secondary (logp). The table internally translates from
+        // (h,p) or (T,p) → (x,y); we just pass the raw inputs.
+        const double v1 = val1[k];
+        const double v2 = val2[k];
+        const double x = is_ph ? v1 : v2;  // logph: x=h ; logpT: x=T
+        const double y = is_ph ? v2 : v1;  // y is always p
+
+        if (!table.native_inputs_are_in_range(x, y)) {
+            status_flags[k] = fast_evaluate_out_of_range;
+            fill_nan_row(k);
+            continue;
+        }
+
+        std::size_t i = 0, j = 0;
+        try {
+            find_native_nearest_good_indices(table, coeffs, x, y, i, j);
+        } catch (const std::exception&) {
+            // Cell exists but has no valid neighbour (e.g., deep inside the table's
+            // two-phase notch with no alternate). Report and skip.
+            status_flags[k] = fast_evaluate_out_of_range;
+            fill_nan_row(k);
+            continue;
+        }
+
+        // The per-output kernels in BicubicBackend / TTSEBackend read from
+        // _hmolar/_p (ph) or _T/_p (pT) to recompute the normalised cell coords.
+        // We must set those before each call; we restore at the end of the
+        // function so the AS's cached state is not silently polluted.
+        if (is_ph) {
+            _hmolar = v1;
+            _p = v2;
+        } else {
+            _T = v2;
+            _p = v1;
+        }
+
+        bool eval_failed = false;
+        for (std::size_t o = 0; o < N_outputs; ++o) {
+            const parameters out_key = outputs[o];
+            const FastEvalOutputKind kind = output_kinds[o];
+            try {
+                double val;
+                if (kind == fe_transport) {
+                    val = is_ph ? evaluate_single_phase_phmolar_transport(out_key, i, j) : evaluate_single_phase_pT_transport(out_key, i, j);
+                } else {
+                    // For the (h,p) table requesting iHmolar, or (T,p) table requesting
+                    // iT/iP, the answer is just the input — short-circuit to skip
+                    // pointless polynomial evaluation. iP is always one of the inputs.
+                    if (out_key == iP) {
+                        val = is_ph ? v2 : v1;
+                    } else if (is_ph && out_key == iHmolar) {
+                        val = v1;
+                    } else if (is_pT && out_key == iT) {
+                        val = v2;
+                    } else {
+                        val = is_ph ? evaluate_single_phase_phmolar(out_key, i, j) : evaluate_single_phase_pT(out_key, i, j);
+                    }
+                }
+                out_buffer[k * N_outputs + o] = val;
+            } catch (const std::exception&) {
+                eval_failed = true;
+                out_buffer[k * N_outputs + o] = NaN;
+            }
+        }
+        // API contract: when status_flags[k] is non-zero, the entire row is NaN.
+        // The per-output catch above only NaNs the specific failing output;
+        // finish the job here so callers don't see partial rows.
+        if (eval_failed) {
+            fill_nan_row(k);
+            status_flags[k] = fast_evaluate_internal_error;
+        } else {
+            status_flags[k] = fast_evaluate_ok;
+        }
+    }
+
+    // Restore phase override and clear the AS cache so no per-point residue
+    // leaks into subsequent keyed_output() / T() / p() calls on this instance.
+    imposed_phase_index = saved_imposed_phase;
+    clear();
+}
+
 void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double val1, double val2) {
 
     if (get_debug_level() > 0) {
@@ -951,6 +1140,26 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
 
                     if (imposed_phase_index != iphase_not_imposed) {
                         double rhoc = rhomolar_critical();
+                        // Lambda: validate the bumped cell. If the imposed-phase walk lands on a
+                        // table cell with no bicubic coefficients (i.e., inside the two-phase
+                        // notch of the table), evaluate_single_phase_pT will dereference an
+                        // empty alpha[] vector and segfault. Resolve to a good neighbour or
+                        // throw cleanly. Same fix idiom as the non-imposed branch below.
+                        auto ensure_bumped_cell_valid = [&](const char* context) {
+                            const auto& cell = dataset->coeffs_pT[cached_single_phase_i][cached_single_phase_j];
+                            if (!cell.valid()) {
+                                if (auto alt = cell.get_alternate()) {
+                                    auto [ai, aj] = *alt;
+                                    cached_single_phase_i = ai;
+                                    cached_single_phase_j = aj;
+                                } else {
+                                    throw ValueError(
+                                      format("Imposed phase %s: bumped cell (%zu, %zu) has no bicubic coefficients and no good neighbour "
+                                             "(p=%g Pa, T=%g K)",
+                                             context, cached_single_phase_i, cached_single_phase_j, _p, static_cast<double>(_T)));
+                                }
+                            }
+                        };
                         if (imposed_phase_index == iphase_liquid && cached_single_phase_i > 0) {
                             // We want a liquid solution, but we got a vapor solution
                             if (_p < this->AS->p_critical()) {
@@ -959,6 +1168,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     // Bump to lower temperature
                                     cached_single_phase_i--;
                                 }
+                                ensure_bumped_cell_valid("liquid");
                                 double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
                                 if (rho < rhoc) {
                                     // Didn't work
@@ -977,6 +1187,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     // Bump to lower temperature
                                     cached_single_phase_i++;
                                 }
+                                ensure_bumped_cell_valid("gas");
                                 double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
                                 if (rho > rhoc) {
                                     // Didn't work
@@ -1009,6 +1220,25 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     // It's vapor, move to the right
                                     cached_single_phase_i++;
                                 }
+                                // The bumped cell may land in the table's two-phase region where
+                                // CellCoeffs has no bicubic alpha[] populated. Subsequent
+                                // evaluate_single_phase dereferences alpha[] without checking
+                                // validity → segfault (#1950: N2 BICUBIC at PT=2e5,78 K).
+                                // Resolve the same way find_native_nearest_good_indices does:
+                                // try the cell's alternate; otherwise throw cleanly.
+                                const auto& bumped_cell = dataset->coeffs_pT[cached_single_phase_i][cached_single_phase_j];
+                                if (!bumped_cell.valid()) {
+                                    if (auto alt = bumped_cell.get_alternate()) {
+                                        auto [ai, aj] = *alt;
+                                        cached_single_phase_i = ai;
+                                        cached_single_phase_j = aj;
+                                    } else {
+                                        throw ValueError(
+                                          format("P,T near saturation: bumped cell (%zu, %zu) has no bicubic coefficients and no good neighbour "
+                                                 "(p=%g Pa, T=%g K, Tsat=%g K)",
+                                                 cached_single_phase_i, cached_single_phase_j, _p, static_cast<double>(_T), Ts));
+                                    }
+                                }
                             }
                         }
                     }
@@ -1021,7 +1251,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         case PUmolar_INPUTS:
         case PSmolar_INPUTS:
         case DmolarP_INPUTS: {
-            CoolPropDbl otherval;
+            CoolPropDbl otherval = NAN;
             parameters otherkey;
             switch (input_pair) {
                 case PUmolar_INPUTS:
@@ -1104,7 +1334,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         }
         case SmolarT_INPUTS:
         case DmolarT_INPUTS: {
-            CoolPropDbl otherval;
+            CoolPropDbl otherval = NAN;
             parameters otherkey;
             switch (input_pair) {
                 case SmolarT_INPUTS:
@@ -1239,7 +1469,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                     pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
                     pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
                 } else {
-                    pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV);
+                    (void)pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV);
                 }
                 _p = _Q * pV + (1 - _Q) * pL;
                 cached_saturation_iL = iL;
@@ -1273,7 +1503,7 @@ void CoolProp::TabularDataSet::load_tables(const std::string& path_to_tables, sh
     load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
     tables_loaded = true;
     if (get_debug_level() > 0) {
-        std::cout << "Tables loaded" << std::endl;
+        std::cout << "Tables loaded" << '\n';
     }
 };
 
@@ -1296,31 +1526,45 @@ void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState>&
     tables_loaded = true;
 }
 
-/// Return the set of tabular datasets
-CoolProp::TabularDataSet* CoolProp::TabularDataLibrary::get_set_of_tables(shared_ptr<AbstractState>& AS, bool& loaded) {
+/// Return the set of tabular datasets and whether tables were already loaded
+std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set_of_tables(shared_ptr<AbstractState>& AS) {
     const std::string path = path_to_tables(AS);
+    const int cfg_Nx = get_config_int(TABULAR_NX);
+    const int cfg_Ny = get_config_int(TABULAR_NY);
     // Try to find tabular set if it is already loaded
-    std::map<std::string, TabularDataSet>::iterator it = data.find(path);
-    // It is already in the map, return it
+    auto it = data.find(path);
     if (it != data.end()) {
-        loaded = it->second.tables_loaded;
-        return &(it->second);
-    }
-    // It is not in the map, build it
-    else {
-        TabularDataSet set;
-        data.insert(std::pair<std::string, TabularDataSet>(path, set));
-        TabularDataSet& dataset = data[path];
-        try {
-            if (!dataset.tables_loaded) {
-                dataset.load_tables(path, AS);
-            }
-            loaded = true;
-        } catch (std::exception&) {
-            loaded = false;
+        // Verify the cached dataset's grid matches the current TABULAR_NX/TABULAR_NY
+        // config; if not, evict so we rebuild at the requested resolution rather than
+        // handing back a mis-sized table (would risk OOB reads downstream in BICUBIC/TTSE
+        // coefficient lookups).
+        const TabularDataSet& cached = it->second;
+        const bool grid_matches =
+          (static_cast<int>(cached.single_phase_logph.Nx) == cfg_Nx && static_cast<int>(cached.single_phase_logph.Ny) == cfg_Ny
+           && static_cast<int>(cached.single_phase_logpT.Nx) == cfg_Nx && static_cast<int>(cached.single_phase_logpT.Ny) == cfg_Ny);
+        if (grid_matches) {
+            return {&(it->second), it->second.tables_loaded};
         }
-        return &(dataset);
+        if (get_debug_level() > 0) {
+            std::cout << format("TABULAR_NX/NY changed (cached %zux%zu, config %dx%d); evicting cached dataset for %s\n",
+                                cached.single_phase_logph.Nx, cached.single_phase_logph.Ny, cfg_Nx, cfg_Ny, path.c_str());
+        }
+        data.erase(it);
     }
+    // Not in the map (or just evicted) -- build a fresh entry
+    TabularDataSet set;
+    data.insert(std::pair<std::string, TabularDataSet>(path, set));
+    TabularDataSet& dataset = data[path];
+    bool loaded = false;
+    try {
+        if (!dataset.tables_loaded) {
+            dataset.load_tables(path, AS);
+        }
+        loaded = true;
+    } catch (std::exception&) {
+        loaded = false;
+    }
+    return {&(dataset), loaded};
 }
 
 void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
@@ -1330,7 +1574,7 @@ void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, 
     const bool debug = get_debug_level() > 5 || false;
     const int param_count = 6;
     parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
-    std::vector<std::vector<double>>*f = NULL, *fx = NULL, *fy = NULL, *fxy = NULL;
+    std::vector<std::vector<double>>*f = nullptr, *fx = nullptr, *fy = nullptr, *fxy = nullptr;
 
     clock_t t1 = clock();
 
@@ -1338,8 +1582,7 @@ void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, 
     coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
 
     int valid_cell_count = 0;
-    for (std::size_t k = 0; k < param_count; ++k) {
-        parameters param = param_list[k];
+    for (auto param : param_list) {
         if (param == table.xkey || param == table.ykey) {
             continue;
         }  // Skip tables that match either of the input variables
@@ -1477,15 +1720,15 @@ static shared_ptr<CoolProp::AbstractState> ASHEOS, ASTTSE, ASBICUBIC;
 class TabularFixture
 {
    public:
-    TabularFixture() {}
+    TabularFixture() = default;
     void setup() {
-        if (ASHEOS.get() == NULL) {
+        if (ASHEOS.get() == nullptr) {
             ASHEOS.reset(CoolProp::AbstractState::factory("HEOS", "Water"));
         }
-        if (ASTTSE.get() == NULL) {
+        if (ASTTSE.get() == nullptr) {
             ASTTSE.reset(CoolProp::AbstractState::factory("TTSE&HEOS", "Water"));
         }
-        if (ASBICUBIC.get() == NULL) {
+        if (ASBICUBIC.get() == nullptr) {
             ASBICUBIC.reset(CoolProp::AbstractState::factory("BICUBIC&HEOS", "Water"));
         }
     }
@@ -1674,6 +1917,120 @@ TEST_CASE_METHOD(TabularFixture, "Tests for tabular backends with water", "[Tabu
         CHECK(std::abs((expected - actual_TTSE) / expected) < 1e-3);
         CHECK(std::abs((expected - actual_BICUBIC) / expected) < 1e-3);
     }
+
+    SECTION("fast_evaluate single point matches keyed_output (PT, BICUBIC)") {
+        setup();
+        const double T = 400, p = 1e6;
+        // Reference via the standard path
+        ASHEOS->update(CoolProp::PT_INPUTS, p, T);
+        const double ref_D = ASHEOS->rhomolar();
+        const double ref_H = ASHEOS->hmolar();
+        const double ref_S = ASHEOS->smolar();
+
+        const double val1[1] = {p};
+        const double val2[1] = {T};
+        const CoolProp::parameters outs[3] = {CoolProp::iDmolar, CoolProp::iHmolar, CoolProp::iSmolar};
+        double buf[3] = {0, 0, 0};
+        int status[1] = {-1};
+        ASBICUBIC->fast_evaluate(CoolProp::PT_INPUTS, val1, val2, 1, outs, 3, buf, 3, status, 1);
+        CAPTURE(status[0]);
+        CHECK(status[0] == CoolProp::fast_evaluate_ok);
+        CHECK(std::abs((ref_D - buf[0]) / ref_D) < 1e-3);
+        CHECK(std::abs((ref_H - buf[1]) / ref_H) < 1e-3);
+        CHECK(std::abs((ref_S - buf[2]) / ref_S) < 1e-3);
+    }
+
+    SECTION("fast_evaluate batch — Hmolar/p inputs over a range (BICUBIC)") {
+        setup();
+        constexpr std::size_t N = 32;
+        const double p = 5e5;
+        std::vector<double> hs(N), ps(N, p);
+        // Pick a band of single-phase enthalpies above saturation at 500 kPa.
+        ASHEOS->update(CoolProp::PQ_INPUTS, p, 1.0);
+        const double h_satV = ASHEOS->hmolar();
+        for (std::size_t k = 0; k < N; ++k) {
+            hs[k] = h_satV + 100.0 + k * 50.0;  // walk above saturation
+        }
+        const CoolProp::parameters outs[2] = {CoolProp::iT, CoolProp::iDmolar};
+        std::vector<double> buf(2 * N, 0);
+        std::vector<int> status(N, -1);
+        ASBICUBIC->fast_evaluate(CoolProp::HmolarP_INPUTS, hs.data(), ps.data(), N, outs, 2, buf.data(), buf.size(), status.data(), status.size());
+        for (std::size_t k = 0; k < N; ++k) {
+            CAPTURE(k);
+            CAPTURE(status[k]);
+            CHECK(status[k] == CoolProp::fast_evaluate_ok);
+            // Compare against the cached path
+            ASBICUBIC->update(CoolProp::HmolarP_INPUTS, hs[k], p);
+            CHECK(std::abs((ASBICUBIC->T() - buf[2 * k + 0]) / ASBICUBIC->T()) < 1e-9);
+            CHECK(std::abs((ASBICUBIC->rhomolar() - buf[2 * k + 1]) / ASBICUBIC->rhomolar()) < 1e-9);
+        }
+    }
+
+    SECTION("fast_evaluate validates buffer sizes") {
+        setup();
+        const double v1[1] = {1e6};
+        const double v2[1] = {400};
+        const CoolProp::parameters outs[2] = {CoolProp::iDmolar, CoolProp::iHmolar};
+        double buf[2] = {0, 0};
+        int status[1] = {0};
+        // out_buffer too small (1 instead of N*M=2)
+        CHECK_THROWS(ASBICUBIC->fast_evaluate(CoolProp::PT_INPUTS, v1, v2, 1, outs, 2, buf, 1, status, 1));
+        // status_flags too small (0 instead of N=1)
+        CHECK_THROWS(ASBICUBIC->fast_evaluate(CoolProp::PT_INPUTS, v1, v2, 1, outs, 2, buf, 2, status, 0));
+        // Unsupported input pair
+        CHECK_THROWS(ASBICUBIC->fast_evaluate(CoolProp::QT_INPUTS, v1, v2, 1, outs, 2, buf, 2, status, 1));
+    }
+
+    SECTION("fast_evaluate out-of-range point reports NaN + flag, others ok") {
+        setup();
+        const double v1[2] = {1e6, 1e20};  // p: 1 MPa (ok), 1e20 Pa (out of range)
+        const double v2[2] = {400, 400};
+        const CoolProp::parameters outs[1] = {CoolProp::iDmolar};
+        double buf[2] = {-1, -1};
+        int status[2] = {-1, -1};
+        ASBICUBIC->fast_evaluate(CoolProp::PT_INPUTS, v1, v2, 2, outs, 1, buf, 2, status, 2);
+        CHECK(status[0] == CoolProp::fast_evaluate_ok);
+        CHECK(status[1] == CoolProp::fast_evaluate_out_of_range);
+        CHECK(std::isnan(buf[1]));
+        CHECK(buf[0] > 0);  // a sensible density value
+    }
+}
+
+TEST_CASE("fast_evaluate works with IF97 backend", "[fast_evaluate][IF97]") {
+    using namespace CoolProp;
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("IF97", "Water"));
+
+    SECTION("PT batch matches the cached path") {
+        constexpr std::size_t N = 16;
+        std::vector<double> ps(N), Ts(N);
+        for (std::size_t k = 0; k < N; ++k) {
+            ps[k] = 1e5 + k * 1e4;
+            Ts[k] = 500 + k * 5.0;  // superheated vapor / supercritical band
+        }
+        const parameters outs[3] = {iDmass, iHmass, iSmass};
+        std::vector<double> buf(3 * N, 0);
+        std::vector<int> status(N, -1);
+        AS->fast_evaluate(PT_INPUTS, ps.data(), Ts.data(), N, outs, 3, buf.data(), buf.size(), status.data(), status.size());
+        for (std::size_t k = 0; k < N; ++k) {
+            CAPTURE(k);
+            CHECK(status[k] == fast_evaluate_ok);
+            AS->update(PT_INPUTS, ps[k], Ts[k]);
+            CHECK(std::abs((AS->rhomass() - buf[3 * k + 0]) / AS->rhomass()) < 1e-12);
+            CHECK(std::abs((AS->hmass() - buf[3 * k + 1]) / AS->hmass()) < 1e-12);
+            CHECK(std::abs((AS->smass() - buf[3 * k + 2]) / AS->smass()) < 1e-12);
+        }
+    }
+}
+
+TEST_CASE("fast_evaluate is not implemented for HEOS backend", "[fast_evaluate][HEOS]") {
+    using namespace CoolProp;
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Water"));
+    const double v1[1] = {1e6};
+    const double v2[1] = {400};
+    const parameters outs[1] = {iDmolar};
+    double buf[1] = {0};
+    int status[1] = {0};
+    CHECK_THROWS(AS->fast_evaluate(PT_INPUTS, v1, v2, 1, outs, 1, buf, 1, status, 1));
 }
 #    endif  // ENABLE_CATCH
 

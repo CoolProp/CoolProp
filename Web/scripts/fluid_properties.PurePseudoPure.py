@@ -1,5 +1,5 @@
 from CPWeb.BibtexTools import getCitationOrAlternative, getBibtexParser
-from CPWeb.SphinxTools import FluidGenerator
+from CPWeb.SphinxTools import FluidGenerator, write_geometry_status_report
 import os.path
 import CoolProp
 CP = CoolProp.CoolProp
@@ -59,6 +59,11 @@ for fluid in CoolProp.__fluids__:
         except ValueError as E:
             d.add(key, '')
 
+write_geometry_status_report(
+    os.path.join(fluids_path, 'molecule_geometry_status.md'),
+    cache_dir=os.path.join(fluids_path, 'molecule_sdf'),
+)
+
 import pandas
 df = pandas.DataFrame(d.data)
 df = df.sort_values(by=['name'], ascending=[1])
@@ -88,3 +93,4 @@ with open(indexfile, 'w') as fp:
     fp.write('.. toctree::\n    :hidden:\n\n')
     for index, row in df.iterrows():
         fp.write('    fluids/' + row['name'] + '.rst\n')
+    fp.write('    ConsistencyReport.rst\n')

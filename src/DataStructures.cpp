@@ -1,9 +1,9 @@
 
 
-#include "DataStructures.h"
-#include "Exceptions.h"
-#include "CoolPropTools.h"
-#include "CoolProp.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/CoolProp.h"
 #include <memory>
 
 namespace CoolProp {
@@ -32,6 +32,7 @@ const std::vector<parameter_info> parameter_info_list = {
   {iGmass, "Gmass", "O", "J/kg", "Mass specific Gibbs energy", false},
   {iHelmholtzmass, "Helmholtzmass", "O", "J/kg", "Mass specific Helmholtz energy", false},
   {iQ, "Q", "IO", "mol/mol", "Molar vapor quality", false},
+  {iQmass, "Qmass", "IO", "kg/kg", "Mass-basis vapor quality", false},
   {iDelta, "Delta", "IO", "-", "Reduced density (rho/rhoc)", false},
   {iTau, "Tau", "IO", "-", "Reciprocal reduced temperature (Tc/T)", false},
   /// Output only
@@ -41,9 +42,15 @@ const std::vector<parameter_info> parameter_info_list = {
   {iCvmass, "Cvmass", "O", "J/kg/K", "Mass specific constant volume specific heat", false},
   {iCp0molar, "Cp0molar", "O", "J/mol/K", "Ideal gas molar specific constant pressure specific heat", false},
   {iCp0mass, "Cp0mass", "O", "J/kg/K", "Ideal gas mass specific constant pressure specific heat", false},
-  {iHmolar_residual, "Hmolar_residual", "O", "J/mol/K", "Residual molar enthalpy", false},
+  {iHmolar_residual, "Hmolar_residual", "O", "J/mol", "Residual molar enthalpy", false},
   {iSmolar_residual, "Smolar_residual", "O", "J/mol/K", "Residual molar entropy (sr/R = s(T,rho) - s^0(T,rho))", false},
-  {iGmolar_residual, "Gmolar_residual", "O", "J/mol/K", "Residual molar Gibbs energy", false},
+  {iGmolar_residual, "Gmolar_residual", "O", "J/mol", "Residual molar Gibbs energy", false},
+  {iHmolar_idealgas, "Hmolar_idealgas", "O", "J/mol", "Ideal gas molar enthalpy", false},
+  {iSmolar_idealgas, "Smolar_idealgas", "O", "J/mol/K", "Ideal gas molar entropy", false},
+  {iUmolar_idealgas, "Umolar_idealgas", "O", "J/mol", "Ideal gas molar internal energy", false},
+  {iHmass_idealgas, "Hmass_idealgas", "O", "J/kg", "Ideal gas specific enthalpy", false},
+  {iSmass_idealgas, "Smass_idealgas", "O", "J/kg/K", "Ideal gas specific entropy", false},
+  {iUmass_idealgas, "Umass_idealgas", "O", "J/kg", "Ideal gas specific internal energy", false},
   {iGWP20, "GWP20", "O", "-", "20-year global warming potential", true},
   {iGWP100, "GWP100", "O", "-", "100-year global warming potential", true},
   {iGWP500, "GWP500", "O", "-", "500-year global warming potential", true},
@@ -112,12 +119,12 @@ class ParameterInformation
     std::map<std::string, int> index_map;
     ParameterInformation() {
         for (auto& el : parameter_info_list) {
-            short_desc_map.insert(std::pair<int, std::string>(el.key, el.short_desc));
-            IO_map.insert(std::pair<int, std::string>(el.key, el.IO));
-            units_map.insert(std::pair<int, std::string>(el.key, el.units));
-            description_map.insert(std::pair<int, std::string>(el.key, el.description));
+            short_desc_map.emplace(el.key, el.short_desc);
+            IO_map.emplace(el.key, el.IO);
+            units_map.emplace(el.key, el.units);
+            description_map.emplace(el.key, el.description);
             index_map_insert(el.short_desc, el.key);
-            trivial_map.insert(std::pair<int, bool>(el.key, el.trivial));
+            trivial_map.emplace(el.key, el.trivial);
         }
         // Backward compatibility aliases
         index_map_insert("D", iDmass);
@@ -148,8 +155,8 @@ class ParameterInformation
 
    private:
     void index_map_insert(const std::string& desc, int key) {
-        index_map.insert(std::pair<std::string, int>(desc, key));
-        index_map.insert(std::pair<std::string, int>(upper(desc), key));
+        index_map.emplace(desc, key);
+        index_map.emplace(upper(desc), key);
     }
 };
 
@@ -170,33 +177,34 @@ bool is_trivial_parameter(int key) {
     throw ValueError(format("Unable to match the key [%d: %s] in is_trivial_parameter", key, get_parameter_information(key, "short").c_str()));
 }
 
-std::string get_parameter_information(int key, const std::string& info) {
-    const std::map<int, std::string>* M;
+std::string get_parameter_information(int key, std::string_view info) {
+    const std::map<int, std::string>* M = nullptr;
     auto& parameter_information = get_parameter_information();
     // Hook up the right map (since they are all of the same type)
-    if (!info.compare("IO")) {
+    if (info == "IO") {
         M = &(parameter_information.IO_map);
-    } else if (!info.compare("short")) {
+    } else if (info == "short") {
         M = &(parameter_information.short_desc_map);
-    } else if (!info.compare("long")) {
+    } else if (info == "long") {
         M = &(parameter_information.description_map);
-    } else if (!info.compare("units")) {
+    } else if (info == "units") {
         M = &(parameter_information.units_map);
     } else {
-        throw ValueError(format("Bad info string [%s] to get_parameter_information", info.c_str()));
+        throw ValueError(format("Bad info string [%s] to get_parameter_information", std::string(info).c_str()));
     }
 
     auto it = M->find(key);
     if (it != M->end()) {
         return it->second;
     }
-    throw ValueError(format("Unable to match the key [%d] in get_parameter_information for info [%s]", key, info.c_str()));
+    throw ValueError(format("Unable to match the key [%d] in get_parameter_information for info [%s]", key, std::string(info).c_str()));
 }
 
 /// Return a list of parameters
 std::string get_csv_parameter_list() {
     auto& parameter_information = get_parameter_information();
     std::vector<std::string> strings;
+    strings.reserve(parameter_information.index_map.size());
     for (auto& it : parameter_information.index_map) {
         strings.push_back(it.first);
     }
@@ -205,7 +213,7 @@ std::string get_csv_parameter_list() {
 bool is_valid_parameter(const std::string& param_name, parameters& iOutput) {
     auto& parameter_information = get_parameter_information();
     // Try to find it
-    std::map<std::string, int>::const_iterator it = parameter_information.index_map.find(param_name);
+    auto it = parameter_information.index_map.find(param_name);
     // If equal to end, not found
     if (it != parameter_information.index_map.end()) {
         // Found, return it
@@ -234,15 +242,15 @@ bool is_valid_first_derivative(const std::string& name, parameters& iOf, paramet
         return false;
     }
 
-    std::size_t i0 = split_at_slash[0].find("(");
-    std::size_t i1 = split_at_slash[0].find(")", i0);
+    std::size_t i0 = split_at_slash[0].find('(');
+    std::size_t i1 = split_at_slash[0].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
     std::string num = split_at_slash[0].substr(i0 + 1, i1 - i0 - 1);
 
-    i0 = split_at_slash[1].find("(");
-    i1 = split_at_slash[1].find(")", i0);
+    i0 = split_at_slash[1].find('(');
+    i1 = split_at_slash[1].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
@@ -277,15 +285,15 @@ bool is_valid_first_saturation_derivative(const std::string& name, parameters& i
         return false;
     }
 
-    std::size_t i0 = split_at_slash[0].find("(");
-    std::size_t i1 = split_at_slash[0].find(")", i0);
+    std::size_t i0 = split_at_slash[0].find('(');
+    std::size_t i1 = split_at_slash[0].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
     std::string num = split_at_slash[0].substr(i0 + 1, i1 - i0 - 1);
 
-    i0 = split_at_slash[1].find("(");
-    i1 = split_at_slash[1].find(")", i0);
+    i0 = split_at_slash[1].find('(');
+    i1 = split_at_slash[1].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
@@ -325,8 +333,8 @@ bool is_valid_second_derivative(const std::string& name, parameters& iOf1, param
     std::string left_of_slash = left_of_bar.substr(0, i);    // "d(d(P)/d(Dmolar)|T)"
     std::string right_of_slash = left_of_bar.substr(i + 1);  // "d(Dmolar)"
 
-    i = left_of_slash.find("(");
-    std::size_t i1 = left_of_slash.rfind(")");
+    i = left_of_slash.find('(');
+    std::size_t i1 = left_of_slash.rfind(')');
     if (!((i > 0) && (i != std::string::npos) && (i1 > (i + 1)) && (i1 != std::string::npos))) {
         return false;
     }
@@ -335,8 +343,8 @@ bool is_valid_second_derivative(const std::string& name, parameters& iOf1, param
         return false;
     }
 
-    i = right_of_slash.find("(");
-    i1 = right_of_slash.rfind(")");
+    i = right_of_slash.find('(');
+    i1 = right_of_slash.rfind(')');
     if (!((i > 0) && (i != std::string::npos) && (i1 > (i + 1)) && (i1 != std::string::npos))) {
         return false;
     }
@@ -375,9 +383,9 @@ class PhaseInformation
     PhaseInformation() {
         const phase_info* const end = phase_info_list + sizeof(phase_info_list) / sizeof(phase_info_list[0]);
         for (const phase_info* el = phase_info_list; el != end; ++el) {
-            short_desc_map.insert(std::pair<phases, std::string>(el->key, el->short_desc));
-            long_desc_map.insert(std::pair<phases, std::string>(el->key, el->long_desc));
-            index_map.insert(std::pair<std::string, phases>(el->short_desc, el->key));
+            short_desc_map.emplace(el->key, el->short_desc);
+            long_desc_map.emplace(el->key, el->long_desc);
+            index_map.emplace(el->short_desc, el->key);
         }
     }
 };
@@ -401,7 +409,7 @@ const std::string& get_phase_short_desc(phases phase) {
 bool is_valid_phase(const std::string& phase_name, phases& iOutput) {
     auto& phase_information = get_phase_information();
     // Try to find it
-    std::map<std::string, phases>::const_iterator it = phase_information.index_map.find(phase_name);
+    auto it = phase_information.index_map.find(phase_name);
     // If equal to end, not found
     if (it != phase_information.index_map.end()) {
         // Found, return it
@@ -428,27 +436,19 @@ struct scheme_info
 };
 
 const scheme_info scheme_info_list[] = {
-    { i1,                "1"},
-    { i2a,               "2A"},
-    { i2b,               "2B"},
-    { i3a,               "3A"},
-    { i3b,               "3B"},
-    { i4a,               "4A"},
-    { i4b,               "4B"},
-    { i4c,               "4C"},
+  {i1, "1"}, {i2a, "2A"}, {i2b, "2B"}, {i3a, "3A"}, {i3b, "3B"}, {i4a, "4A"}, {i4b, "4B"}, {i4c, "4C"},
 };
 
-class SchemeInformation {
-public:
+class SchemeInformation
+{
+   public:
     std::map<schemes, std::string> short_desc_map;
     std::map<std::string, schemes> index_map;
-    SchemeInformation()
-    {
+    SchemeInformation() {
         const scheme_info* const end = scheme_info_list + sizeof(scheme_info_list) / sizeof(scheme_info_list[0]);
-        for (const scheme_info* el = scheme_info_list; el != end; ++el)
-        {
-            short_desc_map.insert(std::pair<schemes, std::string>(el->key, el->short_desc));
-            index_map.insert(std::pair<std::string, schemes>(el->short_desc, el->key));
+        for (const scheme_info* el = scheme_info_list; el != end; ++el) {
+            short_desc_map.emplace(el->key, el->short_desc);
+            index_map.emplace(el->short_desc, el->key);
         }
     }
 };
@@ -470,27 +470,25 @@ const std::string& get_scheme_short_desc(schemes scheme) {
     throw ValueError("Cannot find the short scheme description.");
 }
 
-bool is_valid_scheme(const std::string &scheme_name, schemes &iOutput) {
+bool is_valid_scheme(const std::string& scheme_name, schemes& iOutput) {
     auto& scheme_information = get_scheme_information();
     auto it = scheme_information.index_map.find(scheme_name);
     // If equal to end, not found
-    if (it != scheme_information.index_map.end()){
+    if (it != scheme_information.index_map.end()) {
         // Found, return it
         iOutput = static_cast<schemes>(it->second);
         return true;
-    }
-    else{
+    } else {
         return false;
     }
 }
 
-schemes get_scheme_index(const std::string &param_name) {
+schemes get_scheme_index(const std::string& scheme_name) {
     schemes iScheme;
-    if (is_valid_scheme(param_name, iScheme)){
+    if (is_valid_scheme(scheme_name, iScheme)) {
         return iScheme;
-    }
-    else{
-        throw ValueError(format("Your input name [%s] is not valid in get_scheme_index (names are case sensitive)",param_name.c_str()));
+    } else {
+        throw ValueError(format("Your input name [%s] is not valid in get_scheme_index (names are case sensitive)", scheme_name.c_str()));
     }
 }
 
@@ -511,14 +509,22 @@ struct input_pair_info
 
 const input_pair_info input_pair_list[] = {
   {QT_INPUTS, "QT_INPUTS", "Molar quality, Temperature in K"},
+  {QmassT_INPUTS, "QmassT_INPUTS", "Mass-basis quality, Temperature in K"},
   {QSmolar_INPUTS, "QS_INPUTS", "Molar quality, Entropy in J/mol/K"},
+  {QmassSmolar_INPUTS, "QmassS_INPUTS", "Mass-basis quality, Entropy in J/mol/K"},
   {QSmass_INPUTS, "QS_INPUTS", "Molar quality, Entropy in J/kg/K"},
+  {QmassSmass_INPUTS, "QmassS_INPUTS", "Mass-basis quality, Entropy in J/kg/K"},
   {HmolarQ_INPUTS, "HQ_INPUTS", "Enthalpy in J/mol, Molar quality"},
+  {HmolarQmass_INPUTS, "HQmass_INPUTS", "Enthalpy in J/mol, Mass-basis quality"},
   {HmassQ_INPUTS, "HQ_INPUTS", "Enthalpy in J/kg, Molar quality"},
+  {HmassQmass_INPUTS, "HQmass_INPUTS", "Enthalpy in J/kg, Mass-basis quality"},
   {DmassQ_INPUTS, "DmassQ_INPUTS", "Molar density kg/m^3, Molar quality"},
+  {DmassQmass_INPUTS, "DmassQmass_INPUTS", "Mass density kg/m^3, Mass-basis quality"},
   {DmolarQ_INPUTS, "DmolarQ_INPUTS", "Molar density in mol/m^3, Molar quality"},
+  {DmolarQmass_INPUTS, "DmolarQmass_INPUTS", "Molar density in mol/m^3, Mass-basis quality"},
 
   {PQ_INPUTS, "PQ_INPUTS", "Pressure in Pa, Molar quality"},
+  {PQmass_INPUTS, "PQmass_INPUTS", "Pressure in Pa, Mass-basis quality"},
 
   {PT_INPUTS, "PT_INPUTS", "Pressure in Pa, Temperature in K"},
 
@@ -561,9 +567,9 @@ class InputPairInformation
     InputPairInformation() {
         const input_pair_info* const end = input_pair_list + sizeof(input_pair_list) / sizeof(input_pair_list[0]);
         for (const input_pair_info* el = input_pair_list; el != end; ++el) {
-            short_desc_map.insert(std::pair<input_pairs, std::string>(el->key, el->short_desc));
-            long_desc_map.insert(std::pair<input_pairs, std::string>(el->key, el->long_desc));
-            index_map.insert(std::pair<std::string, input_pairs>(el->short_desc, el->key));
+            short_desc_map.emplace(el->key, el->short_desc);
+            long_desc_map.emplace(el->key, el->long_desc);
+            index_map.emplace(el->short_desc, el->key);
         }
     }
 };
@@ -607,25 +613,49 @@ void split_input_pair(input_pairs pair, parameters& p1, parameters& p2) {
             p1 = iQ;
             p2 = iT;
             break;
+        case QmassT_INPUTS:
+            p1 = iQmass;
+            p2 = iT;
+            break;
         case QSmolar_INPUTS:
             p1 = iQ;
+            p2 = iSmolar;
+            break;
+        case QmassSmolar_INPUTS:
+            p1 = iQmass;
             p2 = iSmolar;
             break;
         case QSmass_INPUTS:
             p1 = iQ;
             p2 = iSmass;
             break;
+        case QmassSmass_INPUTS:
+            p1 = iQmass;
+            p2 = iSmass;
+            break;
         case HmolarQ_INPUTS:
             p1 = iHmolar;
             p2 = iQ;
+            break;
+        case HmolarQmass_INPUTS:
+            p1 = iHmolar;
+            p2 = iQmass;
             break;
         case HmassQ_INPUTS:
             p1 = iHmass;
             p2 = iQ;
             break;
+        case HmassQmass_INPUTS:
+            p1 = iHmass;
+            p2 = iQmass;
+            break;
         case PQ_INPUTS:
             p1 = iP;
             p2 = iQ;
+            break;
+        case PQmass_INPUTS:
+            p1 = iP;
+            p2 = iQmass;
             break;
         case PT_INPUTS:
             p1 = iP;
@@ -675,9 +705,17 @@ void split_input_pair(input_pairs pair, parameters& p1, parameters& p2) {
             p1 = iDmass;
             p2 = iQ;
             break;
+        case DmassQmass_INPUTS:
+            p1 = iDmass;
+            p2 = iQmass;
+            break;
         case DmolarQ_INPUTS:
             p1 = iDmolar;
             p2 = iQ;
+            break;
+        case DmolarQmass_INPUTS:
+            p1 = iDmolar;
+            p2 = iQmass;
             break;
         case HmassP_INPUTS:
             p1 = iHmass;
@@ -764,23 +802,22 @@ struct backend_info
 const std::vector<backend_family_info> backend_family_list = {
   {HEOS_BACKEND_FAMILY, "HEOS"},   {REFPROP_BACKEND_FAMILY, "REFPROP"}, {INCOMP_BACKEND_FAMILY, "INCOMP"},   {IF97_BACKEND_FAMILY, "IF97"},
   {TREND_BACKEND_FAMILY, "TREND"}, {TTSE_BACKEND_FAMILY, "TTSE"},       {BICUBIC_BACKEND_FAMILY, "BICUBIC"}, {SRK_BACKEND_FAMILY, "SRK"},
-  {PR_BACKEND_FAMILY, "PR"},       {VTPR_BACKEND_FAMILY, "VTPR"},       {PCSAFT_BACKEND_FAMILY, "PCSAFT"}};
+  {PR_BACKEND_FAMILY, "PR"},       {VTPR_BACKEND_FAMILY, "VTPR"},       {PCSAFT_BACKEND_FAMILY, "PCSAFT"},   {SVDSBTL_BACKEND_FAMILY, "SVDSBTL"}};
 
-const std::vector<backend_info> backend_list = {
-    {HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
-    {HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY},
-    {REFPROP_BACKEND_PURE, "REFPROPBackend", REFPROP_BACKEND_FAMILY},
-    {REFPROP_BACKEND_MIX, "REFPROPMixtureBackend", REFPROP_BACKEND_FAMILY},
-    {INCOMP_BACKEND, "IncompressibleBackend", INCOMP_BACKEND_FAMILY},
-    {IF97_BACKEND, "IF97Backend", IF97_BACKEND_FAMILY},
-    {TREND_BACKEND, "TRENDBackend", TREND_BACKEND_FAMILY},
-    {TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY},
-    {BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY},
-    {SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY},
-    {PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY},
-    {VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY},
-    {PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY}
-};
+const std::vector<backend_info> backend_list = {{HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
+                                                {HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY},
+                                                {REFPROP_BACKEND_PURE, "REFPROPBackend", REFPROP_BACKEND_FAMILY},
+                                                {REFPROP_BACKEND_MIX, "REFPROPMixtureBackend", REFPROP_BACKEND_FAMILY},
+                                                {INCOMP_BACKEND, "IncompressibleBackend", INCOMP_BACKEND_FAMILY},
+                                                {IF97_BACKEND, "IF97Backend", IF97_BACKEND_FAMILY},
+                                                {TREND_BACKEND, "TRENDBackend", TREND_BACKEND_FAMILY},
+                                                {TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY},
+                                                {BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY},
+                                                {SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY},
+                                                {PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY},
+                                                {VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY},
+                                                {PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY},
+                                                {SVDSBTL_BACKEND, "SVDSBTLBackend", SVDSBTL_BACKEND_FAMILY}};
 
 class BackendInformation
 {
@@ -794,14 +831,14 @@ class BackendInformation
 
     BackendInformation() {
         for (auto& el : backend_family_list) {
-            family_name_map.insert(std::pair<backend_families, std::string>(el.family, el.name));
-            family_name_map_r.insert(std::pair<std::string, backend_families>(el.name, el.family));
+            family_name_map.emplace(el.family, el.name);
+            family_name_map_r.emplace(el.name, el.family);
         }
         for (auto& el : backend_list) {
-            backend_family_map.insert(std::pair<backends, backend_families>(el.backend, el.family));
-            backend_name_map.insert(std::pair<backends, std::string>(el.backend, el.name));
-            backend_name_map_r.insert(std::pair<std::string, backends>(el.name, el.backend));
-            family_name_map_r.insert(std::pair<std::string, backend_families>(el.name, el.family));
+            backend_family_map.emplace(el.backend, el.family);
+            backend_name_map.emplace(el.backend, el.name);
+            backend_name_map_r.emplace(el.name, el.backend);
+            family_name_map_r.emplace(el.name, el.family);
         }
     }
 };
@@ -815,11 +852,11 @@ const BackendInformation& get_backend_information() {
 }
 
 /// Convert a string into the enum values
-void extract_backend_families(std::string backend_string, backend_families& f1, backend_families& f2) {
+void extract_backend_families(const std::string& backend_string, backend_families& f1, backend_families& f2) {
     auto& backend_information = get_backend_information();
     f1 = INVALID_BACKEND_FAMILY;
     f2 = INVALID_BACKEND_FAMILY;
-    std::size_t i = backend_string.find("&");
+    std::size_t i = backend_string.find('&');
     std::map<std::string, backend_families>::const_iterator it;
     if (i != std::string::npos) {
         it = backend_information.family_name_map_r.find(backend_string.substr(0, i));  // Before "&"
@@ -835,7 +872,7 @@ void extract_backend_families(std::string backend_string, backend_families& f1, 
 void extract_backend_families_string(std::string backend_string, backend_families& f1, std::string& f2) {
     auto& backend_information = get_backend_information();
     backend_families f2_enum;
-    extract_backend_families(backend_string, f1, f2_enum);
+    extract_backend_families(std::move(backend_string), f1, f2_enum);
     std::map<backend_families, std::string>::const_iterator it;
     it = backend_information.family_name_map.find(f2_enum);
     if (it != backend_information.family_name_map.end())
@@ -851,7 +888,7 @@ std::string get_backend_string(backends backend) {
     if (it != backend_information.backend_name_map.end())
         return it->second;
     else
-        return std::string("");
+        return {""};
 }
 
 } /* namespace CoolProp */
@@ -859,6 +896,7 @@ std::string get_backend_string(backends backend) {
 #ifdef ENABLE_CATCH
 #    include <catch2/catch_all.hpp>
 #    include <sstream>
+#    include <utility>
 
 TEST_CASE("Check that csv list of parameters is possible", "[parameter_list]") {
     CHECK_NOTHROW(CoolProp::get_csv_parameter_list());

@@ -1,6 +1,6 @@
 #include "coolpropsolver.h"
-#include "CoolPropTools.h"
-#include "CoolProp.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/CoolProp.h"
 #include "CPState.h"
 #include <iostream>
 #include <string>

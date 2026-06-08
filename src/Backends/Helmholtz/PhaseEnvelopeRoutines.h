@@ -11,12 +11,14 @@ class PhaseEnvelopeRoutines
     /** \brief Build the phase envelope
      *
      * @param HEOS The HelmholtzEOSMixtureBackend instance to be used
+     * @param level The level of detail for the envelope construction
      */
     static void build(HelmholtzEOSMixtureBackend& HEOS, const std::string& level = "");
 
     /** \brief Refine the phase envelope, adding points in places that are sparse
      *
      * @param HEOS The HelmholtzEOSMixtureBackend instance to be used
+     * @param level The level of detail for the refinement
      */
     static void refine(HelmholtzEOSMixtureBackend& HEOS, const std::string& level = "");
 

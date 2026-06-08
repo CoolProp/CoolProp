@@ -28,7 +28,7 @@ class CoolPropSolver : public BaseSolver
 
    public:
     CoolPropSolver(const std::string& mediumName, const std::string& libraryName, const std::string& substanceName);
-    ~CoolPropSolver(){};
+    ~CoolPropSolver() {};
     virtual void setFluidConstants();
 
     virtual void setSat_p(double& p, ExternalSaturationProperties* const properties);

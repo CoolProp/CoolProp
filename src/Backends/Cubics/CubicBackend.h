@@ -14,14 +14,15 @@ by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 #ifndef CUBICBACKEND_H_
 #define CUBICBACKEND_H_
 
-#include "CoolPropTools.h"
-#include "DataStructures.h"
+#include "CoolProp/detail/tools.h"
+#include "CoolProp/DataStructures.h"
 #include "GeneralizedCubic.h"
 #include "CubicsLibrary.h"
-#include "Configuration.h"
-#include "AbstractState.h"
+#include "CoolProp/Configuration.h"
+#include "CoolProp/AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
-#include "Exceptions.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/superancillary/cubicsuperancillary.h"
 #include <vector>
 
 namespace CoolProp {
@@ -38,6 +39,24 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Set the pointer to the residual helmholtz class, etc.
     void setup(bool generate_SatL_and_SatV = true);
 
+    /**
+     * @brief Robust Isothermal-Isobaric (PT) Flash for Mixtures
+     *
+     * This method implements a state-of-the-art phase stability and phase-split algorithm
+     * specifically optimized for Cubic Equations of State (e.g., Peng-Robinson, SRK).
+     * It bypasses the standard Helmholtz routines to provide industrial-grade reliability
+     * for multicomponent systems.
+     *
+     * The algorithm follows a two-tier approach:
+     * 1. Stability Analysis: Uses Michelsen's Tangent Plane Distance (TPD) criterion to
+     *    determine if the mixture is unstable at the given T and P.
+     * 2. Phase Split: If unstable, it performs a hybrid Successive Substitution (SS)
+     *    and Second-Order Gibbs energy minimization to find the equilibrium compositions.
+     *
+     * @note This method correctly handles cases near the critical point where traditional
+     *       Newton solvers often diverge.
+     */
+
     /// Set the alpha function based on the alpha function defined in the components vector;
     void set_alpha_from_components();
 
@@ -49,29 +68,29 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         return cubic;
     };
 
-    std::vector<std::string> calc_fluid_names(void);
+    std::vector<std::string> calc_fluid_names() override;
 
-    bool using_mole_fractions(void) {
+    bool using_mole_fractions() override {
         return true;
     };
-    bool using_mass_fractions(void) {
+    bool using_mass_fractions() override {
         return false;
     };
-    bool using_volu_fractions(void) {
+    bool using_volu_fractions() override {
         return false;
     };
 
-    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) {
+    void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override {
         throw NotImplementedError("Mass composition has not been implemented.");
     };
-    void set_volu_fractions(const std::vector<CoolPropDbl>& volu_fractions) {
+    void set_volu_fractions(const std::vector<CoolPropDbl>& volu_fractions) override {
         throw NotImplementedError("Volume composition has not been implemented.");
     };
-    const std::vector<CoolPropDbl>& get_mole_fractions(void) {
+    const std::vector<CoolPropDbl>& get_mole_fractions() override {
         return this->mole_fractions;
     };
 
-    const double get_fluid_constant(std::size_t i, parameters param) const {
+    const double get_fluid_constant(std::size_t i, parameters param) const override {
         switch (param) {
             case iP_critical:
                 return cubic->get_pc()[i];
@@ -95,50 +114,53 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param, "short").c_str()));
         }
     }
-    
+
     /// Return a string from the backend for the mixture/fluid
-    std::string fluid_param_string(const std::string&);
+    std::string fluid_param_string(const std::string&) override;
     /// Calculate the gas constant in J/mol/K
-    CoolPropDbl calc_gas_constant(void) {
+    CoolPropDbl calc_gas_constant() override {
         return cubic->get_R_u();
     };
     /// Get the reducing state to be used
-    SimpleState calc_reducing_state_nocache(const std::vector<CoolPropDbl>& mole_fractions) {
+    SimpleState calc_reducing_state_nocache(const std::vector<CoolPropDbl>& mole_fractions) override {
         SimpleState reducing;
         reducing.T = cubic->get_Tr();
         reducing.rhomolar = cubic->get_rhor();
         return reducing;
     };
-    CoolPropDbl calc_reduced_density(void) {
+    CoolPropDbl calc_rhomolar_max_bound() override {
+        return 0.9 / get_cubic()->bm_term(mole_fractions);
+    };
+    CoolPropDbl calc_reduced_density() override {
         return _rhomolar / get_cubic()->get_rhor();
     };
-    CoolPropDbl calc_reciprocal_reduced_temperature(void) {
+    CoolPropDbl calc_reciprocal_reduced_temperature() override {
         return get_cubic()->get_Tr() / _T;
     };
     std::vector<double> spinodal_densities();
 
-    CoolPropDbl calc_T_critical(void) {
+    CoolPropDbl calc_T_critical() override {
         if (is_pure_or_pseudopure) {
             return cubic->get_Tc()[0];
         } else {
             return HelmholtzEOSMixtureBackend::calc_T_critical();
         }
     };
-    CoolPropDbl calc_p_critical(void) {
+    CoolPropDbl calc_p_critical() override {
         if (is_pure_or_pseudopure) {
             return cubic->get_pc()[0];
         } else {
             return HelmholtzEOSMixtureBackend::calc_p_critical();
         }
     };
-    CoolPropDbl calc_acentric_factor(void) {
+    CoolPropDbl calc_acentric_factor() override {
         if (is_pure_or_pseudopure) {
             return cubic->get_acentric()[0];
         } else {
             throw ValueError("acentric factor cannot be calculated for mixtures");
         }
     }
-    CoolPropDbl calc_rhomolar_critical(void) {
+    CoolPropDbl calc_rhomolar_critical() override {
         if (is_pure_or_pseudopure) {
             // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
             double v_c_Lmol = 2.14107171795 * (cubic->get_Tc()[0] / cubic->get_pc()[0] * 1000) + 0.00773144012514;  // [L/mol]
@@ -153,16 +175,16 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     void get_linear_reducing_parameters(double& rhomolar, double& T);
 
     /// Get the the starting values for the critical point evaluation routines
-    void get_critical_point_starting_values(double& delta0, double& tau0);
+    void get_critical_point_starting_values(double& delta0, double& tau0) override;
 
     /// Get the search radius in delta and tau for the tracer, scaled appropriately for cubic
-    void get_critical_point_search_radii(double& R_delta, double& R_tau);
+    void get_critical_point_search_radii(double& R_delta, double& R_tau) override;
 
     /// Checking function to see if we should stop the tracing of the critical contour
-    bool get_critical_is_terminated(double& delta, double& tau);
+    bool get_critical_is_terminated(double& delta, double& tau) override;
 
     CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau,
-                                          const CoolPropDbl& delta);
+                                          const CoolPropDbl& delta) override;
 
     /// Calculate the pressure in most computationally efficient manner
     CoolPropDbl calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
@@ -170,7 +192,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Update the state for DT inputs if phase is imposed. Otherwise delegate to base class
     virtual void update_DmolarT();
 
-    virtual void update(CoolProp::input_pairs input_pair, double value1, double value2);
+    void update(CoolProp::input_pairs input_pair, double value1, double value2) override;
 
     /** Use the cubic EOS to solve for density
      *
@@ -197,17 +219,20 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     void rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int& Nsolns, double& rho0, double& rho1, double& rho2);
 
     /// In this class, we are already doing cubic evaluation, just delegate to our function
-    CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) {
-        return solver_rho_Tp(T, p);
+    CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) override {
+        return solver_rho_Tp(T, p, phase);
     };
     /**
      * /brief Solve for rho = f(T,p)
      *
      * You can often get three solutions, to overcome this problem you must either specify the phase, or provide a reasonable guess value for rho_guess, but not both
      */
-    CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
+    CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1) override;
 
-    CoolPropDbl solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax);
+    /// Solve for rho = f(T,p) with an explicit phase specification (avoids state mutation)
+    CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase);
+
+    CoolPropDbl solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax) override;
 
     /// Update the state used to calculate the tangent-plane-distance
     void update_TPD_state() {
@@ -217,20 +242,20 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Cubic backend flashes for PQ, and QT
     void saturation(CoolProp::input_pairs inputs);
 
-    CoolPropDbl calc_molar_mass(void);
+    CoolPropDbl calc_molar_mass() override;
 
-    void set_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string& parameter, const double value);
-    double get_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string& parameter);
+    void set_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string& parameter, const double value) override;
+    double get_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string& parameter) override;
 
-    void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter, const double value) {
+    void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter, const double value) override {
         throw ValueError("set_binary_interaction_double not defined for AbstractCubic not defined for CAS #");
     }
-    double get_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) {
+    double get_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) override {
         throw ValueError("get_binary_interaction_double not defined for AbstractCubic not defined for CAS #");
     };
 
     // Return a 1-1 copy of this class
-    virtual HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) = 0;
+    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) override = 0;
 
     // Copy the entire kij matrix from another instance in one shot
     void copy_k(AbstractCubicBackend* donor);
@@ -242,13 +267,27 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     void copy_internals(AbstractCubicBackend& donor);
 
     // Set the cubic alpha function's constants:
-    void set_cubic_alpha_C(const size_t i, const std::string& parameter, const double c1, const double c2, const double c3);
+    void set_cubic_alpha_C(const size_t i, const std::string& parameter, const double c1, const double c2, const double c3) override;
 
     // Set fluid parameter (currently the volume translation parameter)
-    void set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value);
+    void set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) override;
 
     // Get fluid parameter (currently the volume translation parameter)
-    double get_fluid_parameter_double(const size_t i, const std::string& parameter);
+    double get_fluid_parameter_double(const size_t i, const std::string& parameter) override;
+
+    /// Return the integer code for the EOS type used in the cubic superancillary lookup.
+    /// Derived classes (SRKBackend, PengRobinsonBackend) override this.
+    virtual int get_superanc_eos_code() const {
+        return CubicSuperAncillary::UNKNOWN_CODE;
+    }
+
+    CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value) override;
+
+    void update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) override;
+
+    /// Return the maximum temperature [K] supported by the cubic superancillary.
+    /// Inverts Ttilde_max = R*T*b/a(T) analytically using am evaluated at T=Tc.
+    double calc_superanc_Tmax();
 };
 
 class SRKBackend : public AbstractCubicBackend
@@ -257,14 +296,14 @@ class SRKBackend : public AbstractCubicBackend
    public:
     SRKBackend(const std::vector<double>& Tc, const std::vector<double>& pc, const std::vector<double>& acentric, double R_u,
                bool generate_SatL_and_SatV = true) {
-        cubic.reset(new SRK(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<SRK>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     };
     SRKBackend(double Tc, double pc, double acentric, double R_u, bool generate_SatL_and_SatV = true) {
-        cubic.reset(new SRK(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<SRK>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     }
-    SRKBackend(const std::vector<std::string> fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
+    SRKBackend(const std::vector<std::string>& fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
                bool generate_SatL_and_SatV = true) {
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
@@ -275,16 +314,19 @@ class SRKBackend : public AbstractCubicBackend
             pc.push_back(components[i].pc);
             acentric.push_back(components[i].acentric);
         }
-        cubic.reset(new SRK(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<SRK>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     }
-    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) {
+    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) override {
         AbstractCubicBackend* ACB = new SRKBackend(cubic->get_Tc(), cubic->get_pc(), cubic->get_acentric(), cubic->get_R_u(), generate_SatL_and_SatV);
         ACB->copy_internals(*this);
         return static_cast<HelmholtzEOSMixtureBackend*>(ACB);
     }
-    std::string backend_name(void) {
+    std::string backend_name() override {
         return get_backend_string(SRK_BACKEND);
+    }
+    int get_superanc_eos_code() const override {
+        return CubicSuperAncillary::SRK_CODE;
     }
 };
 
@@ -292,17 +334,17 @@ class PengRobinsonBackend : public AbstractCubicBackend
 {
 
    public:
-    PengRobinsonBackend(){};  // Default constructor (make sure you know what you are doing)
+    PengRobinsonBackend() = default;  // Default constructor (make sure you know what you are doing)
     PengRobinsonBackend(const std::vector<double>& Tc, const std::vector<double>& pc, const std::vector<double>& acentric, double R_u,
                         bool generate_SatL_and_SatV = true) {
-        cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<PengRobinson>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     };
     PengRobinsonBackend(double Tc, double pc, double acentric, double R_u, bool generate_SatL_and_SatV = true) {
-        cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<PengRobinson>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     };
-    PengRobinsonBackend(const std::vector<std::string> fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
+    PengRobinsonBackend(const std::vector<std::string>& fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
                         bool generate_SatL_and_SatV = true) {
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
@@ -313,17 +355,20 @@ class PengRobinsonBackend : public AbstractCubicBackend
             pc.push_back(components[i].pc);
             acentric.push_back(components[i].acentric);
         }
-        cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<PengRobinson>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     };
-    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) {
+    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) override {
         AbstractCubicBackend* ACB =
           new PengRobinsonBackend(cubic->get_Tc(), cubic->get_pc(), cubic->get_acentric(), cubic->get_R_u(), generate_SatL_and_SatV);
         ACB->copy_internals(*this);
         return static_cast<HelmholtzEOSMixtureBackend*>(ACB);
     }
-    std::string backend_name(void) {
+    std::string backend_name() override {
         return get_backend_string(PR_BACKEND);
+    }
+    int get_superanc_eos_code() const override {
+        return CubicSuperAncillary::PR_CODE;
     }
 };
 
@@ -338,10 +383,11 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
     AbstractCubicBackend* ACB;
 
    public:
-    CubicResidualHelmholtz() {
-        ACB = NULL;
-    };
-    CubicResidualHelmholtz(AbstractCubicBackend* ACB) : ACB(ACB){};
+    CubicResidualHelmholtz()
+      : ACB(nullptr) {
+
+        };
+    CubicResidualHelmholtz(AbstractCubicBackend* ACB) : ACB(ACB) {};
 
     // copy assignment
     CubicResidualHelmholtz& operator=(CubicResidualHelmholtz& other) {
@@ -350,8 +396,8 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
     }
 
     /// All the derivatives of the residual Helmholtz energy w.r.t. tau and delta that do not involve composition derivative
-    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend& HEOS, const std::vector<CoolPropDbl>& mole_fractions, double tau, double delta,
-                                     bool cache_values = false) {
+    HelmholtzDerivatives all(HelmholtzEOSMixtureBackend& HEOS, const std::vector<CoolPropDbl>& mole_fractions, double tau, double delta,
+                             bool cache_values = false) override {
         HelmholtzDerivatives a;
         std::vector<double> z = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
         shared_ptr<AbstractCubic>& cubic = ACB->get_cubic();
@@ -372,74 +418,74 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
         a.d4alphar_ddelta4 = cubic->alphar(tau, delta, z, 0, 4);
         return a;
     }
-    virtual CoolPropDbl dalphar_dxi(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    CoolPropDbl dalphar_dxi(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 0, i, xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 1, 0, i, xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 1, i, xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d3alphar_dxi_dTau2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d3alphar_dxi_dTau2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 2, 0, i, xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d3alphar_dxi_dDelta_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d3alphar_dxi_dDelta_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 1, 1, i, xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d3alphar_dxi_dDelta2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d3alphar_dxi_dDelta2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 2, i, xN_flag == XN_INDEPENDENT);
     }
 
-    virtual CoolPropDbl d2alphardxidxj(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d2alphardxidxj(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 0, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d3alphar_dxi_dxj_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d3alphar_dxi_dxj_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 1, 0, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d3alphar_dxi_dxj_dDelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d3alphar_dxi_dxj_dDelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 1, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }
 
-    virtual CoolPropDbl d4alphar_dxi_dTau3(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d4alphar_dxi_dTau3(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 3, 0, i, xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d4alphar_dxi_dDelta2_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d4alphar_dxi_dDelta2_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 1, 2, i, xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d4alphar_dxi_dDelta_dTau2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d4alphar_dxi_dDelta_dTau2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 2, 1, i, xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d4alphar_dxi_dDelta3(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d4alphar_dxi_dDelta3(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 3, i, xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d4alphar_dxi_dxj_dTau2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d4alphar_dxi_dxj_dTau2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 2, 0, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d4alphar_dxi_dxj_dDelta_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d4alphar_dxi_dxj_dDelta_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 1, 1, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d4alphar_dxi_dxj_dDelta2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) {
+    CoolPropDbl d4alphar_dxi_dxj_dDelta2(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 2, i, j,
                                                   xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d3alphardxidxjdxk(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
-                                          x_N_dependency_flag xN_flag) {
+    CoolPropDbl d3alphardxidxjdxk(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
+                                  x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d3_alphar_dxidxjdxk(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 0, i, j, k,
                                                      xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d4alphar_dxi_dxj_dxk_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
-                                                  x_N_dependency_flag xN_flag) {
+    CoolPropDbl d4alphar_dxi_dxj_dxk_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
+                                          x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d3_alphar_dxidxjdxk(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 1, 0, i, j, k,
                                                      xN_flag == XN_INDEPENDENT);
     }
-    virtual CoolPropDbl d4alphar_dxi_dxj_dxk_dDelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
-                                                    x_N_dependency_flag xN_flag) {
+    CoolPropDbl d4alphar_dxi_dxj_dxk_dDelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
+                                            x_N_dependency_flag xN_flag) override {
         return ACB->get_cubic()->d3_alphar_dxidxjdxk(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 1, i, j, k,
                                                      xN_flag == XN_INDEPENDENT);
     }

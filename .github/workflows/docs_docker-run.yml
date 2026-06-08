@@ -16,10 +16,29 @@ on:
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
 
+concurrency:
+  # Cancel superseded runs on the same ref to cut CI backlog on heavy
+  # dev days (repeated pushes to an open PR).  Protected: master / main
+  # / develop and tags never cancel, so mainline + release runs always
+  # complete.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
+    env:
+      # Persist the (expensive, cold-built) SVDSBTL SVD surfaces under the
+      # workspace so actions/cache can cache them across builds.  The
+      # SVDSBTLValidation / SVDSBTLHeatExchangerDemo notebooks read this via
+      # os.environ (and joblib loky workers inherit it); their default
+      # ~/.CoolProp/SVDTables-docs lives in the container home, which is NOT
+      # on the cacheable workspace.  Must be an absolute path inside the
+      # container — github.workspace is the bind-mounted workspace, so the
+      # host-side actions/cache step sees the same files.
+      COOLPROP_ALTERNATIVE_SVDTABLES_DIRECTORY: ${{ github.workspace }}/.svdtables-cache
+
     container:
       image: ghcr.io/coolprop/coolprop_docs_02_builder:dev
       # options: --user 1001 --group 1001
@@ -28,11 +47,18 @@ jobs:
          password: ${{ secrets.GITHUB_TOKEN }}
          
     steps: 
-    - uses: actions/checkout@v4.2.2
+    - uses: actions/checkout@v6
       with:
-        submodules: recursive
+        fetch-depth: 0  # Fetch all history for git revision info
     
-    - uses: actions/cache@v4
+    - name: Set up Git
+      run: |
+        git config --global --add safe.directory $GITHUB_WORKSPACE
+        # Get the full git revision hash
+        git rev-parse HEAD > dev/gitrevision.txt
+        echo "Git revision: $(cat dev/gitrevision.txt)"
+    
+    - uses: actions/cache@v5
       if: ${{ !env.ACT }} # skip during local actions testing
       id: cached-props # steps.cached-props.outputs.cache-hit != 'true'
       with:
@@ -44,11 +70,30 @@ jobs:
           ./Web/fluid_properties/Incompressibles_volume-based-fluids.csv
           ./Web/fluid_properties/Incompressibles_pure-fluids.csv
           ./Web/scripts/incompressibles_consistency
-        key: cached-props
-        #key: cached-props-${{ github.sha }}
-        #restore-keys: |
-        #  cached-props-
-        
+        # Key depends on the fluid list so adding/removing a fluid invalidates
+        # the cache and triggers a consistency-plot refresh for the new fluid.
+        # The restore-keys fallback still seeds the directory with prior plots
+        # so the incremental Consistency.py only has to regenerate what changed.
+        key: cached-props-${{ hashFiles('dev/fluids/*.json', 'dev/incompressible_liquids/json/*.json') }}
+        restore-keys: |
+          cached-props-
+
+    # Cache the SVDSBTL SVD surfaces (COOLPROP_ALTERNATIVE_SVDTABLES_DIRECTORY,
+    # set at job level).  Without this they are rebuilt cold every run (~370 s
+    # per panel of SVDSBTLValidation / SVDSBTLHeatExchangerDemo).  Surfaces are
+    # serialized and content-addressed, but the on-disk opthash covers only the
+    # grid options — NOT the EOS coefficients or the SVDSBTL algorithm — so the
+    # key busts on the fluid JSONs + SVDSBTL/SBTL/Region sources + the notebook
+    # generator (fluid/grid list).  No restore-keys fallback ON PURPOSE: a
+    # partial restore could seed a surface that is stale w.r.t. an EOS/algorithm
+    # change the opthash cannot see.  Exact key only => any relevant change
+    # triggers a clean cold rebuild; otherwise surfaces load in ~80 ms.
+    - uses: actions/cache@v5
+      if: ${{ !env.ACT }}
+      with:
+        path: .svdtables-cache
+        key: svd-tables-${{ hashFiles('dev/fluids/*.json', 'src/SBTL/**', 'src/Backends/SVDSBTL/**', 'src/Region/**', 'include/CoolProp/sbtl/**', 'Web/coolprop/_gen/gen_SVDSBTLValidation.py') }}
+
     - name: Schedule calculations
       id: schedule_calculation
       shell: bash
@@ -74,12 +119,21 @@ jobs:
     - name: Build and install wheel using bdist_wheel
       shell: bash
       run: |
-        git config --global --add safe.directory /__w/CoolProp/CoolProp
-        echo "$(git rev-parse HEAD)" > dev/gitrevision.txt
         source activate docs
+        # Ensure the gitrevision.txt is used for the build
+        python dev/generate_headers.py
+        # Build and install the wheel
         pip -vv wheel .
         pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls *.whl`
-        pip install pydata-sphinx-theme
+        # sphinx-design, plotly and joblib are in conda_environment.yml, but that
+        # env is baked into the prebuilt docs container; the image isn't rebuilt
+        # for PRs, so install them at runtime here (same escape hatch as the
+        # packages above) to unblock the build until the next docs image rebuild
+        # on master.  plotly+joblib are required by the SVDSBTL validation
+        # notebooks (SVDSBTLValidation, SVDSBTLHeatExchangerDemo); without them
+        # nbconvert --allow-errors silently renders those pages as import-error
+        # tracebacks.
+        pip install pydata-sphinx-theme tqdm ninja sphinx-design plotly joblib
         
     - name: Test the installed CoolProp version
       shell: bash
@@ -112,10 +166,22 @@ jobs:
         source activate docs
         sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp
         make html
-        
+
+    - name: Check documentation links (non-blocking)
+      working-directory: ./Web
+      shell: bash
+      # Reports dead/broken URLs in the docs.  Non-blocking: external sites flap
+      # and a hard gate would cause spurious CI failures, so this never fails the
+      # build — review the step output (and the linkcheck output file) for broken
+      # links.  See linkcheck_ignore in conf.py for the curated allowlist.
+      continue-on-error: true
+      run: |
+        source activate docs
+        make linkcheck
+
     - name: Upload GitHub Pages artifact
       if: ${{ !env.ACT }} # skip during local actions testing
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v5
       with:
         path: ./Web/_build/html/
     
@@ -128,7 +194,7 @@ jobs:
     
     - name: Archive TGZ or ZIP artifacts
       if: ${{ !env.ACT }} # skip during local actions testing
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
           name: docs
           path: |
@@ -169,4 +235,4 @@ jobs:
       #if: contains(github.ref, 'refs/tags')
       if: ${{ !env.ACT }} # skip during local actions testing
       id: deployment
-      uses: actions/deploy-pages@v4
+      uses: actions/deploy-pages@v5

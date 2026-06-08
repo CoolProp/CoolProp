@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# Sample pre-push git hook — invokes dev/ci/preflight.sh against
+# origin/master so a passing preflight predicts a green CI before
+# any `git push` succeeds.  Closes CoolProp-6r6.
+#
+# Install with:
+#
+#   ln -s ../../dev/ci/pre-push.sample .git/hooks/pre-push
+#
+# Bypass intentionally with `git push --no-verify` — agents and
+# contributors should only use that when the preflight is broken
+# (not when they want to skip a real failure).  `git commit
+# --no-verify` does NOT bypass this hook; only the explicit
+# `git push --no-verify` does.
+#
+# Override the base ref preflight compares against:
+#
+#   PREFLIGHT_BASE=upstream/main git push
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PREFLIGHT="$REPO_ROOT/dev/ci/preflight.sh"
+
+if [ ! -x "$PREFLIGHT" ]; then
+    echo "pre-push: $PREFLIGHT missing or not executable; skipping preflight" >&2
+    exit 0
+fi
+
+BASE="${PREFLIGHT_BASE:-origin/master}"
+exec "$PREFLIGHT" --base="$BASE"

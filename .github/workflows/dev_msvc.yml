@@ -27,6 +27,14 @@ env:
   build: '${{ github.workspace }}/build'
   config: 'Release'
 
+concurrency:
+  # Cancel superseded runs on the same ref to cut CI backlog on heavy
+  # dev days (repeated pushes to an open PR).  Protected: master / main
+  # / develop and tags never cancel, so mainline + release runs always
+  # complete.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   analyze:
     permissions:
@@ -38,9 +46,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
+        uses: actions/checkout@v6
 
       - name: Configure CMake
         run: cmake 
@@ -76,7 +82,7 @@ jobs:
 
       # Upload SARIF file as an Artifact to download and view
       - name: Upload SARIF as an Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sarif-file
           path: ${{ steps.run-analysis.outputs.sarif }}

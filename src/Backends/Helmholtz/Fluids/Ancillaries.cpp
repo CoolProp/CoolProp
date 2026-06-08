@@ -1,47 +1,44 @@
-#include "Ancillaries.h"
-#include "DataStructures.h"
-#include "AbstractState.h"
-#include "Configuration.h"
+#include "CoolProp/fluids/Ancillaries.h"
+
+#include <cmath>
+#include <limits>
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/DataStructures.h"
+#include "CoolProp/AbstractState.h"
+#include "CoolProp/Configuration.h"
 
 #if defined(ENABLE_CATCH)
 
-#    include "crossplatform_shared_ptr.h"
+#    include <memory>
+using std::shared_ptr;
 #    include <catch2/catch_all.hpp>
 
 #endif
 
 namespace CoolProp {
 
-SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value& json_code) {
-    std::string type = cpjson::get_string(json_code, "type");
-    if (!type.compare("rational_polynomial")) {
-        this->type = TYPE_RATIONAL_POLYNOMIAL;
-        num_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["A"]));
-        den_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["B"]));
-        max_abs_error = cpjson::get_double(json_code, "max_abs_error");
-        try {
-            Tmin = cpjson::get_double(json_code, "Tmin");
-            Tmax = cpjson::get_double(json_code, "Tmax");
-        } catch (...) {
-            Tmin = _HUGE;
-            Tmax = _HUGE;
-        }
+// The anonymous union (max_abs_error vs. {using_tau_r, reducing_value, T_r, N})
+// is intentionally written one active member per branch; the `type` discriminant
+// gates every read, so the inactive members are never accessed. clang-tidy's
+// union-access / member-init guidance does not model discriminated unions, so it
+// is suppressed across this constructor.
+// NOLINTBEGIN(cppcoreguidelines-pro-type-member-init,cppcoreguidelines-pro-type-union-access)
+SaturationAncillaryFunction::SaturationAncillaryFunction(const Values& v) : type(v.type), Tmin(v.Tmin), Tmax(v.Tmax) {
+    if (type == TYPE_RATIONAL_POLYNOMIAL) {
+        num_coeffs = v.num_coeffs;
+        den_coeffs = v.den_coeffs;
+        max_abs_error = v.max_abs_error;
     } else {
-        if (!type.compare("rhoLnoexp"))
-            this->type = TYPE_NOT_EXPONENTIAL;
-        else
-            this->type = TYPE_EXPONENTIAL;
-        n = cpjson::get_double_array(json_code["n"]);
+        n = v.n;
+        t = v.t;
         N = n.size();
         s = n;
-        t = cpjson::get_double_array(json_code["t"]);
-        Tmin = cpjson::get_double(json_code, "Tmin");
-        Tmax = cpjson::get_double(json_code, "Tmax");
-        reducing_value = cpjson::get_double(json_code, "reducing_value");
-        using_tau_r = cpjson::get_bool(json_code, "using_tau_r");
-        T_r = cpjson::get_double(json_code, "T_r");
+        reducing_value = v.reducing_value;
+        using_tau_r = v.using_tau_r;
+        T_r = v.T_r;
     }
-};
+}
+// NOLINTEND(cppcoreguidelines-pro-type-member-init,cppcoreguidelines-pro-type-union-access)
 
 double SaturationAncillaryFunction::evaluate(double T) {
     if (type == TYPE_NOT_SET) {
@@ -51,6 +48,19 @@ double SaturationAncillaryFunction::evaluate(double T) {
         return poly.evaluate(num_coeffs, T) / poly.evaluate(den_coeffs, T);
     } else {
         double THETA = 1 - T / T_r;
+        // Saturation ancillaries are only defined at or below the reducing
+        // temperature. For T > T_r, pow(THETA, t) with non-integer t was
+        // pow(negative, fractional), producing NaN and (depending on FP
+        // trap settings) sometimes a SIGFPE that escaped C++ try/catch
+        // (#1611). Many internal callers (mixture critical-point search,
+        // VLE initialisers, etc.) legitimately probe ancillaries at T
+        // ranges where the pure component is supercritical and rely on
+        // the result being well-behaved-but-invalid (NaN) rather than an
+        // exception. Return NaN explicitly so the caller's existing
+        // sanity check / fallback runs without a SIGFPE.
+        if (THETA < 0) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
 
         for (std::size_t i = 0; i < N; ++i) {
             s[i] = n[i] * pow(THETA, t[i]);
@@ -60,7 +70,7 @@ double SaturationAncillaryFunction::evaluate(double T) {
         if (type == TYPE_NOT_EXPONENTIAL) {
             return reducing_value * (1 + summer);
         } else {
-            double tau_r_value;
+            double tau_r_value = NAN;
             if (using_tau_r)
                 tau_r_value = T_r / T;
             else
@@ -80,13 +90,12 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
 
         solver_resid(SaturationAncillaryFunction* anc, CoolPropDbl value) : anc(anc), value(value) {}
 
-        double call(double T) {
+        double call(double T) override {
             CoolPropDbl current_value = anc->evaluate(T);
             return current_value - value;
         }
     };
     solver_resid resid(this, value);
-    std::string errstring;
     if (min_bound < 0) {
         min_bound = Tmin - 0.01;
     }
@@ -99,16 +108,15 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
         // because then you get (negative number)^(double) which is undefined.
         return Brent(resid, min_bound, max_bound, DBL_EPSILON, 1e-10, 100);
     } catch (...) {
-        return ExtrapolatingSecant(resid,max_bound, -0.01, 1e-12, 100);
+        return ExtrapolatingSecant(resid, max_bound, -0.01, 1e-12, 100);
     }
 }
 
-void MeltingLineVariables::set_limits(void) {
+void MeltingLineVariables::set_limits() {
     if (type == MELTING_LINE_SIMON_TYPE) {
 
         // Fill in the min and max pressures for each part
-        for (std::size_t i = 0; i < simon.parts.size(); ++i) {
-            MeltingLinePiecewiseSimonSegment& part = simon.parts[i];
+        for (auto& part : simon.parts) {
             part.p_min = part.p_0 + part.a * (pow(part.T_min / part.T_0, part.c) - 1);
             part.p_max = part.p_0 + part.a * (pow(part.T_max / part.T_0, part.c) - 1);
         }
@@ -118,8 +126,7 @@ void MeltingLineVariables::set_limits(void) {
         Tmax = simon.parts.back().T_max;
     } else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE) {
         // Fill in the min and max pressures for each part
-        for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i) {
-            MeltingLinePiecewisePolynomialInTrSegment& part = polynomial_in_Tr.parts[i];
+        for (auto& part : polynomial_in_Tr.parts) {
             part.p_min = part.evaluate(part.T_min);
             part.p_max = part.evaluate(part.T_max);
         }
@@ -129,8 +136,7 @@ void MeltingLineVariables::set_limits(void) {
         pmax = polynomial_in_Tr.parts.back().p_max;
     } else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE) {
         // Fill in the min and max pressures for each part
-        for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i) {
-            MeltingLinePiecewisePolynomialInThetaSegment& part = polynomial_in_Theta.parts[i];
+        for (auto& part : polynomial_in_Theta.parts) {
             part.p_min = part.evaluate(part.T_min);
             part.p_max = part.evaluate(part.T_max);
         }
@@ -159,8 +165,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
         CoolPropDbl T = value;
         if (type == MELTING_LINE_SIMON_TYPE) {
             // Need to find the right segment
-            for (std::size_t i = 0; i < simon.parts.size(); ++i) {
-                MeltingLinePiecewiseSimonSegment& part = simon.parts[i];
+            for (auto& part : simon.parts) {
                 if (is_in_closed_range(part.T_min, part.T_max, T)) {
                     return part.p_0 + part.a * (pow(T / part.T_0, part.c) - 1);
                 }
@@ -168,8 +173,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             throw ValueError("unable to calculate melting line (p,T) for Simon curve");
         } else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE) {
             // Need to find the right segment
-            for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i) {
-                MeltingLinePiecewisePolynomialInTrSegment& part = polynomial_in_Tr.parts[i];
+            for (auto& part : polynomial_in_Tr.parts) {
                 if (is_in_closed_range(part.T_min, part.T_max, T)) {
                     return part.evaluate(T);
                 }
@@ -177,8 +181,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             throw ValueError("unable to calculate melting line (p,T) for polynomial_in_Tr curve");
         } else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE) {
             // Need to find the right segment
-            for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i) {
-                MeltingLinePiecewisePolynomialInThetaSegment& part = polynomial_in_Theta.parts[i];
+            for (auto& part : polynomial_in_Theta.parts) {
                 if (is_in_closed_range(part.T_min, part.T_max, T)) {
                     return part.evaluate(T);
                 }
@@ -190,8 +193,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
     } else {
         if (type == MELTING_LINE_SIMON_TYPE) {
             // Need to find the right segment
-            for (std::size_t i = 0; i < simon.parts.size(); ++i) {
-                MeltingLinePiecewiseSimonSegment& part = simon.parts[i];
+            for (auto& part : simon.parts) {
                 //  p = part.p_0 + part.a*(pow(T/part.T_0,part.c)-1);
                 CoolPropDbl T = pow((value - part.p_0) / part.a + 1, 1 / part.c) * part.T_0;
                 if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS) || (T >= part.T_0 && T <= part.T_max)) {
@@ -205,8 +207,8 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                public:
                 MeltingLinePiecewisePolynomialInTrSegment* part;
                 CoolPropDbl given_p;
-                solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p){};
-                double call(double T) {
+                solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
+                double call(double T) override {
 
                     CoolPropDbl calc_p = part->evaluate(T);
 
@@ -216,8 +218,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             };
 
             // Need to find the right segment
-            for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i) {
-                MeltingLinePiecewisePolynomialInTrSegment& part = polynomial_in_Tr.parts[i];
+            for (auto& part : polynomial_in_Tr.parts) {
                 if (is_in_closed_range(part.p_min, part.p_max, value)) {
                     solver_resid resid(&part, value);
                     double T = Brent(resid, part.T_min, part.T_max, DBL_EPSILON, 1e-12, 100);
@@ -233,8 +234,8 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                public:
                 MeltingLinePiecewisePolynomialInThetaSegment* part;
                 CoolPropDbl given_p;
-                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p){};
-                double call(double T) {
+                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
+                double call(double T) override {
 
                     CoolPropDbl calc_p = part->evaluate(T);
 
@@ -244,8 +245,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             };
 
             // Need to find the right segment
-            for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i) {
-                MeltingLinePiecewisePolynomialInThetaSegment& part = polynomial_in_Theta.parts[i];
+            for (auto& part : polynomial_in_Theta.parts) {
                 if (is_in_closed_range(part.p_min, part.p_max, value)) {
                     solver_resid resid(&part, value);
                     double T = Brent(resid, part.T_min, part.T_max, DBL_EPSILON, 1e-12, 100);
@@ -259,6 +259,21 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             throw ValueError(format("Invalid melting line type T(p) [%d]", type));
         }
     }
+}
+
+std::vector<std::pair<CoolPropDbl, CoolPropDbl>> MeltingLineVariables::get_parts_pranges() const {
+    std::vector<std::pair<CoolPropDbl, CoolPropDbl>> out;
+    if (type == MELTING_LINE_SIMON_TYPE) {
+        for (const auto& p : simon.parts)
+            out.emplace_back(p.p_min, p.p_max);
+    } else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE) {
+        for (const auto& p : polynomial_in_Tr.parts)
+            out.emplace_back(p.p_min, p.p_max);
+    } else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE) {
+        for (const auto& p : polynomial_in_Theta.parts)
+            out.emplace_back(p.p_min, p.p_max);
+    }
+    return out;
 }
 
 }; /* namespace CoolProp */
@@ -300,11 +315,15 @@ TEST_CASE("Water melting line", "[melting]") {
 TEST_CASE("Tests for values from melting lines", "[melting]") {
     int iT = CoolProp::iT, iP = CoolProp::iP;
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-    for (std::size_t i = 0; i < fluids.size(); ++i) {
-        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+    for (const auto& fluid : fluids) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
 
-        // Water has its own better tests; skip fluids without melting line
-        if (!AS->has_melting_line() || !fluids[i].compare("Water")) {
+        // Skip fluids without a melting line. Also skip Water and HeavyWater:
+        // their melting curves are anomalous (the ice-Ih branch folds back BELOW
+        // the triple temperature), which violates this generic test's
+        // actual_T > Tmin / actual_T < Tmax bounds. Both have dedicated
+        // check-value tests instead (see the "[melting]" cases in CoolProp-Tests).
+        if (!AS->has_melting_line() || !fluid.compare("Water") || !fluid.compare("HeavyWater")) {
             continue;
         }
 
@@ -315,7 +334,7 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
 
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss0;
-        ss0 << "Check melting line limits for fluid " << fluids[i];
+        ss0 << "Check melting line limits for fluid " << fluid;
         SECTION(ss0.str(), "") {
             CAPTURE(Tmin);
             CAPTURE(Tmax);
@@ -325,10 +344,16 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
             CHECK(pmax > pmin);
             CHECK(pmin > 0);
         }
-        for (double p = 0.1 * (pmax - pmin) + pmin; p < pmax; p += 0.2 * (pmax - pmin)) {
+        // Integer-indexed grid (cert-flp30-c): the original
+        //   for (p = 0.1*range + pmin; p < pmax; p += 0.2*range)
+        // intends 5 samples at p_i = pmin + (0.1 + 0.2*i)*range for
+        // i in {0..4}; preserve that count exactly.
+        const double p_range = pmax - pmin;
+        for (int p_i = 0; p_i < 5; ++p_i) {
+            const double p = pmin + (0.1 + 0.2 * p_i) * p_range;
             // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
             std::ostringstream ss1;
-            ss1 << "Melting line for " << fluids[i] << " at p=" << p;
+            ss1 << "Melting line for " << fluid << " at p=" << p;
             SECTION(ss1.str(), "") {
                 double actual_T = AS->melting_line(iT, iP, p);
                 CAPTURE(Tmin);
@@ -340,16 +365,20 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
         }
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss2;
-        ss2 << "Ensure melting line valid for " << fluids[i] << " @ EOS pmax";
+        ss2 << "Ensure melting line valid for " << fluid << " @ EOS pmax";
         SECTION(ss2.str(), "") {
             double actual_T = -_HUGE;
             double EOS_pmax = AS->pmax();
             double T_pmax_required = -1;
-            try{
+            try {
                 CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, true);
                 T_pmax_required = AS->melting_line(iT, iP, EOS_pmax);
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+                // Best-effort probe: T_pmax_required stays at its -1
+                // sentinel and shows up in the CAPTURE below.  The real
+                // assertion is CHECK_NOTHROW on the next melting_line
+                // call.
             }
-            catch(...){}
             CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, false);
             CAPTURE(T_pmax_required);
             CAPTURE(EOS_pmax);
@@ -361,17 +390,16 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
 
 TEST_CASE("Test that hs_anchor enthalpy/entropy agrees with EOS", "[ancillaries]") {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-    for (std::size_t i = 0; i < fluids.size(); ++i) {
-        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+    for (const auto& fluid : fluids) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
 
         CoolProp::SimpleState hs_anchor = AS->get_state("hs_anchor");
 
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss1;
-        ss1 << "Check hs_anchor for " << fluids[i];
+        ss1 << "Check hs_anchor for " << fluid;
         SECTION(ss1.str(), "") {
-            std::string note =
-              "The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS";
+            INFO("The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS");
             AS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);
             double EOS_hmolar = AS->hmolar();
             double EOS_smolar = AS->smolar();

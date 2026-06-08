@@ -16,6 +16,4 @@
 #    include <sys/stat.h>
 #endif
 
-#include <string>
-
 #include "HelmholtzEOSBackend.h"

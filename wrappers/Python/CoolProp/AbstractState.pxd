@@ -61,6 +61,7 @@ cdef class AbstractState:
 
     cpdef name(self)
     cpdef backend_name(self)
+    cpdef build_options_json(self)
     cpdef fluid_names(self)
     cpdef fluid_param_string(self, string key)
     cpdef set_cubic_alpha_C(self, size_t i, string parameter, double c1, double c2, double c3)
@@ -105,6 +106,7 @@ cdef class AbstractState:
     cpdef double T(self) except *
     cpdef double p(self) except *
     cpdef double Q(self) except *
+    cpdef double Qmass(self) except *
     cpdef double compressibility_factor(self) except *
     cpdef double rhomolar(self) except *
     cpdef double hmolar(self) except *
@@ -163,7 +165,12 @@ cdef class AbstractState:
     cpdef double smolar_residual(self) except *
     cpdef double neff(self) except *
 
-
+    cpdef double hmolar_idealgas(self) except *
+    cpdef double hmass_idealgas(self) except *
+    cpdef double smolar_idealgas(self) except *
+    cpdef double smass_idealgas(self) except *
+    cpdef double umolar_idealgas(self) except *
+    cpdef double umass_idealgas(self) except *
 
 
     cpdef double molar_mass(self) except *

@@ -3,7 +3,7 @@
 
 #include <vector>
 #include "DataTypes.h"
-#include "Helmholtz.h"
+#include "CoolProp/fluids/Helmholtz.h"
 
 class EOSFitter
 {

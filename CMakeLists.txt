@@ -1,6 +1,15 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.14)
+
+# Always export compile_commands.json for clang-tidy, IWYU, and editor LSPs
+# (CoolProp-2uw.7). Honored by Makefile and Ninja generators; harmless on others.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(CheckIncludeFileCXX)
+
+# Dependency management via CPM.cmake (replaces git submodules).
+# Set CPM_SOURCE_CACHE (e.g. ~/.cache/CPM) to share downloads across worktrees.
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
 
 if(DEFINED COOLPROP_INSTALL_PREFIX)
   #set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
@@ -69,6 +78,22 @@ option(
 
 option(COOLPROP_NO_EXAMPLES
        "Do not generate example code, does only apply to some wrappers." OFF)
+
+option(COOLPROP_SVD_E2E
+       "Build the SVD-SBTL end-to-end validation tool at dev/svd_sbtl_e2e.cpp"
+       OFF)
+
+option(COOLPROP_BUILD_SVD_TABLES
+       "Build the SVDSBTL bulk-table builder at dev/build_svd_tables.cpp"
+       OFF)
+
+option(COOLPROP_BUILD_SVDSBTL_BENCH
+       "Build the SVDSBTL state-point benchmark at dev/bench_svdsbtl_ph.cpp"
+       OFF)
+
+option(COOLPROP_BUILD_SVDSBTL_PROFILE
+       "Build the SVDSBTL per-stage profiler at dev/profile_svdsbtl.cpp"
+       OFF)
 
 #option (DARWIN_USE_LIBCPP
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
@@ -183,8 +208,8 @@ set(app_name ${project_name})
 project(${project_name})
 
 # Project version
-set(COOLPROP_VERSION_MAJOR 6)
-set(COOLPROP_VERSION_MINOR 8)
+set(COOLPROP_VERSION_MAJOR 7)
+set(COOLPROP_VERSION_MINOR 2)
 set(COOLPROP_VERSION_PATCH 1)
 set(COOLPROP_VERSION_REVISION dev)
 set(COOLPROP_VERSION
@@ -244,18 +269,7 @@ endif()
 set(COOLPROP_MSVC_ALL "/MTd" "/MT" "/MDd" "/MD"
 )# order matters "/MXd" before "/MX"
 
-set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/docker/boost_bcp_docker/boost_CoolProp.tar.xz")
-set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_CoolProp/boost/version.hpp")
-if (EXISTS ${ZIPFN})
-    if(NOT EXISTS ${OUTFN})
-        execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xJf ${ZIPFN}
-                      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-        message(STATUS "Untarred boost headers")
-    endif()
-else()
-    message(FATAL_ERROR "tar.xz of boost sources needed for teqp cannot be found")
-endif()
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/boost_CoolProp")
+include_directories("${boost_headers_SOURCE_DIR}")
 
 
 #######################################
@@ -282,8 +296,18 @@ set(COOLPROP_ENABLED_BACKENDS
 # Get everything in the src/ directory (always), but not recursive
 file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
+# Generic SVD / Region components — sources live under src/SVD/ and
+# src/Region/, headers under include/CoolProp/{svd,region}/.
+# SBTL adapter layer (Phase 2b) sits on top — sources under src/SBTL/,
+# headers under include/CoolProp/sbtl/.
+file(GLOB SVD_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/SVD/*.cpp")
+file(GLOB REGION_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Region/*.cpp")
+file(GLOB SBTL_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/SBTL/*.cpp")
+file(GLOB SVDSBTL_BACKEND_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Backends/SVDSBTL/*.cpp")
+list(APPEND APP_SOURCES ${SVD_SOURCES} ${REGION_SOURCES} ${SBTL_SOURCES} ${SVDSBTL_BACKEND_SOURCES})
+
 # Add the miniz source file
-list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.0.2/miniz.c")
+list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1/miniz.c")
 
 # For each enabled backend, grab its files
 foreach(backend ${COOLPROP_ENABLED_BACKENDS})
@@ -301,28 +325,26 @@ list(REMOVE_ITEM APP_SOURCES
 list(REMOVE_ITEM APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
 
 set(APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}")
-list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.0.2")
-     list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann-json")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/dev")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/boost_CoolProp")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/externals/fmtlib/include")
-list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/fmtlib"
-)# should be deprecated
+list(APPEND APP_INCLUDE_DIRS "${Eigen_SOURCE_DIR}")
+list(APPEND APP_INCLUDE_DIRS "${msgpack-c_SOURCE_DIR}/include")
+list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1")
+list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
+list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/dev")
+list(APPEND APP_INCLUDE_DIRS "${boost_headers_SOURCE_DIR}")
+list(APPEND APP_INCLUDE_DIRS "${fmt_SOURCE_DIR}/include")
+list(APPEND APP_INCLUDE_DIRS "${nlohmann_json_SOURCE_DIR}/include")
+list(APPEND APP_INCLUDE_DIRS "${valijson_SOURCE_DIR}/include")
+# Valijson is consumed header-only (DOWNLOAD_ONLY), so its INTERFACE
+# VALIJSON_USE_EXCEPTIONS define is not propagated. Set it explicitly so
+# Valijson throws catchable exceptions on internal errors instead of abort().
+add_compile_definitions(VALIJSON_USE_EXCEPTIONS=1)
+list(APPEND APP_INCLUDE_DIRS "${IF97_SOURCE_DIR}")
+list(APPEND APP_INCLUDE_DIRS "${REFPROP_headers_SOURCE_DIR}")
 
 if (MSVC)
   # fmtlib requires that the utf-8 support be compiled in
   # TODO: add the fmt target from fmtlib directly which does this 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8 -D_CRT_SECURE_NO_WARNINGS")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /MP /utf-8 -D_CRT_SECURE_NO_WARNINGS")
 endif()
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
@@ -338,18 +360,18 @@ list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories(${APP_INCLUDE_DIRS})
 
 set(SWIG_DEPENDENCIES
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/DataStructures.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/AbstractState.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/Configuration.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/PhaseEnvelope.h)
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/DataStructures.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/CoolProp.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/AbstractState.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/Configuration.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/fluids/PhaseEnvelope.h)
 
 set(COOLPROP_APP_SOURCES
     ${APP_SOURCES}
-    CACHE LIST "List of CPP sources needed for CoolProp")
+    CACHE STRING "List of CPP sources needed for CoolProp")
 set(COOLPROP_INCLUDE_DIRECTORIES
     ${APP_INCLUDE_DIRS}
-    CACHE LIST "List of include directories needed for CoolProp")
+    CACHE STRING "List of include directories needed for CoolProp")
 
 #######################################
 #         REQUIRED MODULES            #
@@ -360,15 +382,12 @@ set(COOLPROP_INCLUDE_DIRECTORIES
 #######################################
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
                       "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(CoolPropJSONVisibility)
 
 message(STATUS "Looking for Python")
-find_package(Python COMPONENTS Interpreter)
-if(Python_Interpreter_FOUND)
-	set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
-endif()
-if(NOT PYTHON_EXECUTABLE)
-  message(WARNING "Could not find Python, be prepared for errors.")
-endif()
+find_package(Python REQUIRED COMPONENTS Interpreter)
+set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 
 if(CMAKE_DL_LIBS)
   find_package(${CMAKE_DL_LIBS} REQUIRED)
@@ -538,7 +557,7 @@ set(COOLPROP_LIBRARY_SOURCE
     CACHE STRING "The file that contains the exported functions")
 
 set(COOLPROP_LIBRARY_HEADER
-    "include/CoolPropLib.h"
+    "include/CoolProp/CoolPropLib.h"
     CACHE STRING "The file that contains the export header")
 
 set(COOLPROP_LIBRARY_NAME
@@ -606,9 +625,31 @@ if(COOLPROP_OBJECT_LIBRARY
     )
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
             DESTINATION static_library)
+    # GH #1280: ship the installable C++ header tree so downstream CMake can
+    # find_package(CoolProp) and get usable include paths. The flat deprecation
+    # shims ship alongside so consumers on the old "X.h" includes keep building
+    # (removed at v9). Generated DB headers (*_JSON.h) are excluded.
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
+            DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
+            REGEX "detail/json\\.h$" EXCLUDE)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+            DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
+            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
+            PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
   elseif(COOLPROP_SHARED_LIBRARY)
     list(APPEND APP_SOURCES
          "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
+    # Embed Windows VERSIONINFO so CoolProp.dll's Properties dialog shows
+    # FileVersion/ProductVersion fields (#2391). The .rc is configured from
+    # COOLPROP_VERSION_{MAJOR,MINOR,PATCH} above and added to the source
+    # list only on MSVC, where rc.exe is available.
+    if(MSVC)
+      configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/dev/CoolProp.rc.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc"
+        @ONLY)
+      list(APPEND APP_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc")
+    endif()
     add_library(${LIB_NAME} SHARED ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
 	
 	## For arm64 builds, put the shared library in the Windows/64bit__arm64 folder
@@ -624,6 +665,15 @@ if(COOLPROP_OBJECT_LIBRARY
     )
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
             DESTINATION shared_library)
+    # GH #1280: ship the installable C++ header tree (+ flat back-compat shims,
+    # removed at v9; generated *_JSON.h excluded). See the static branch above.
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
+            DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
+            REGEX "detail/json\\.h$" EXCLUDE)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+            DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
+            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
+            PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
     set_property(
       TARGET ${LIB_NAME}
       APPEND_STRING
@@ -671,6 +721,7 @@ if(COOLPROP_OBJECT_LIBRARY
   if(NOT COOLPROP_OBJECT_LIBRARY)
     target_link_libraries(${LIB_NAME} ${CMAKE_DL_LIBS})
   endif()
+  coolprop_hide_json_symbols(${LIB_NAME})
 
   # For windows systems, bug workaround for Eigen
   if(MSVC90)
@@ -797,6 +848,7 @@ if(COOLPROP_DEBIAN_PACKAGE)
   endif()
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   add_library(${app_name} SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(${app_name})
   set_target_properties(
     ${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
   set_target_properties(
@@ -804,8 +856,16 @@ if(COOLPROP_DEBIAN_PACKAGE)
                            SOVERSION ${COOLPROP_VERSION_MAJOR})
   add_dependencies(${app_name} generate_headers)
   install(TARGETS ${app_name} DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/lib")
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolPropLib.h
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include")
+  # GH #1280: install the C++ header tree (incl. CoolProp/CoolPropLib.h) plus
+  # the flat back-compat shims, so both <CoolProp/CoolPropLib.h> and the legacy
+  # <CoolPropLib.h> resolve from /usr/include. Shims removed at v9.
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
+          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
+          REGEX "detail/json\\.h$" EXCLUDE)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
+          PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE
+          PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
 endif()
 
 if(COOLPROP_VXWORKS_MAKEFILE)
@@ -860,6 +920,7 @@ if(COOLPROP_PRIME_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
   add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(CoolPropMathcadWrapper)
   include_directories("${COOLPROP_PRIME_ROOT}/Custom Functions")
   target_link_libraries(CoolPropMathcadWrapper
                         "${COOLPROP_PRIME_ROOT}/Custom Functions/mcaduser.lib")
@@ -873,6 +934,10 @@ if(COOLPROP_PRIME_MODULE)
   install(
     FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/Prime/CoolPropFluidProperties.mcdx"
+    DESTINATION MathcadPrime)
+  install(
+    FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/Prime/README.md"
     DESTINATION MathcadPrime)
 endif()
 
@@ -893,6 +958,7 @@ if(COOLPROP_MATHCAD15_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
   add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(CoolPropMathcadWrapper)
   include_directories("${COOLPROP_MATHCAD15_ROOT}/userefi/microsft/include")
   target_link_libraries(
     CoolPropMathcadWrapper
@@ -923,6 +989,7 @@ if(COOLPROP_EES_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
   add_library(COOLPROP_EES SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(COOLPROP_EES)
   # Modify the target and add dependencies
   add_dependencies(COOLPROP_EES generate_headers)
   set_target_properties(
@@ -994,8 +1061,7 @@ if(COOLPROP_WINDOWS_PACKAGE)
   # Pointers to the sources
   set(COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR
       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Excel")
-  set(COOLPROP_WINDOWS_PACKAGE_ISS_DIR
-      "${CMAKE_CURRENT_SOURCE_DIR}/externals/ExcelAddinInstaller")
+  set(COOLPROP_WINDOWS_PACKAGE_ISS_DIR "${ExcelAddinInstaller_SOURCE_DIR}")
   # Generator for DLLs
   set(COOLPROP_WINDOWS_PACKAGE_DLL_GEN "${CMAKE_GENERATOR}"
   )# Use the currently selected generator, architecture is hard-coded below
@@ -1078,7 +1144,7 @@ if(COOLPROP_WINDOWS_PACKAGE)
     PRE_BUILD
     COMMAND
       ${CMAKE_COMMAND} ARGS "-E" "copy"
-      "${CMAKE_CURRENT_SOURCE_DIR}/include/CoolPropLib.h"
+      "${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/CoolPropLib.h"
       "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolPropLib.h"
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR}
     COMMENT "Copy the header file for the CoolProp library"
@@ -1351,6 +1417,7 @@ if(COOLPROP_OCTAVE_MODULE)
   else()
     swig_link_libraries(CoolProp ${OCTAVE_LIBRARIES})
   endif()
+  coolprop_hide_json_symbols(CoolProp)
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
   add_dependencies(${app_name} generate_headers generate_examples)
@@ -1376,14 +1443,17 @@ if(COOLPROP_CSHARP_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 
-  if(WIN32)
-    set(MORE_SWIG_FLAGS -dllimport \"CoolProp\")
-  endif()
+  # SWIG's -dllimport sets the library name embedded in the generated C#
+  # [DllImport(...)] attributes.  It must match the renamed native OUTPUT_NAME
+  # ("CoolPropCsharp") on EVERY platform, not just Windows -- otherwise the
+  # macOS/Linux bindings target the default "CoolProp" module name and fail to
+  # load the renamed shared library.
+  set(MORE_SWIG_FLAGS -dllimport \"CoolPropCsharp\")
 
   # Define which headers the CoolProp wrapper is dependent on
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
 
-  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}" "${MORE_SWIG_FLAGS}")
+  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}" "${MORE_SWIG_FLAGS}" "-DSWIG_CSHARP_NO_STRING_WITH_LENGTH_HELPER")
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
   message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
 
@@ -1393,6 +1463,8 @@ if(COOLPROP_CSHARP_MODULE)
                                                    CPLUSPLUS ON)
 
   swig_add_module(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropCsharp")
+  coolprop_hide_json_symbols(CoolProp)
 
   add_definitions(-DNO_ERROR_CATCHING)
 
@@ -1466,13 +1538,13 @@ if(COOLPROP_VBDOTNET_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB)
 
-  set(MORE_SWIG_FLAGS -dllimport \"CoolProp\" -namespace CoolProp)
+  set(MORE_SWIG_FLAGS -dllimport \"CoolPropCsharp\" -namespace CoolProp)
   set(CMAKE_SWIG_OUTDIR CoolPropVB/CsharpClassLibrary)
 
   # Define which headers the CoolProp wrapper is dependent on
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
 
-  set(SWIG_OPTIONS "${MORE_SWIG_FLAGS}")
+  set(SWIG_OPTIONS "${MORE_SWIG_FLAGS}" "-DSWIG_CSHARP_NO_STRING_WITH_LENGTH_HELPER")
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
   message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
 
@@ -1481,6 +1553,8 @@ if(COOLPROP_VBDOTNET_MODULE)
   set_property(SOURCE ${I_FILE} PROPERTY CPLUSPLUS ON)
   set_property(SOURCE ${I_FILE} PROPERTY SWIG_FLAGS ${SWIG_OPTIONS})
   swig_add_module(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropCsharp")
+  coolprop_hide_json_symbols(CoolProp)
 
   add_definitions(-DNO_ERROR_CATCHING)
 
@@ -1557,9 +1631,19 @@ if(COOLPROP_R_MODULE)
 
   swig_add_module(CoolProp r ${I_FILE} ${APP_SOURCES})
   swig_link_libraries(CoolProp "${R_LIBRARY}")
+  coolprop_hide_json_symbols(CoolProp)
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropR")
 
   # No lib prefix for the shared library
   set_target_properties(CoolProp PROPERTIES PREFIX "")
+
+  # Patch the generated R proxy's PACKAGE= references to the renamed library (#1674)
+  add_custom_command(
+    TARGET CoolProp
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -DRFILE=${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R -P
+            ${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/patch_r_package.cmake
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
   add_dependencies(${app_name} generate_headers generate_examples)
   #add_custom_command(TARGET CoolProp
@@ -1607,6 +1691,8 @@ if(COOLPROP_JAVA_MODULE)
 
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   swig_add_module(CoolProp java ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropJava")
+  coolprop_hide_json_symbols(CoolProp)
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -1755,6 +1841,8 @@ if(COOLPROP_PHP_MODULE)
 
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   swig_add_module(CoolProp php ${I_FILE} ${APP_SOURCES})
+  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropPHP")
+  coolprop_hide_json_symbols(CoolProp)
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -1767,7 +1855,7 @@ if(COOLPROP_PHP_MODULE)
   add_dependencies(CoolProp generate_headers)
 
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/cross-platform)
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/cross-platform OPTIONAL)
   install(TARGETS ${app_name}
           DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/${CMAKE_SYSTEM_NAME})
 
@@ -1936,7 +2024,7 @@ if(COOLPROP_MATHEMATICA_MODULE)
 
   set(CMAKE_MODULE_PATH
       ${CMAKE_MODULE_PATH}
-      "${CMAKE_CURRENT_SOURCE_DIR}/externals/FindMathematica/CMake/Mathematica/"
+      "${FindMathematica_SOURCE_DIR}/CMake/Mathematica/"
   )
   find_package(Mathematica COMPONENTS WolframLibrary)
   message(
@@ -1955,6 +2043,7 @@ if(COOLPROP_MATHEMATICA_MODULE)
   include_directories(${APP_INCLUDE_DIRS})
   add_library(CoolProp SHARED ${APP_SOURCES})
   add_dependencies(CoolProp generate_headers)
+  coolprop_hide_json_symbols(CoolProp)
 
   if(MSVC)
     add_custom_command(
@@ -2033,8 +2122,9 @@ endif()
 
 # Use like cmake ..\CoolProp.git -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx
 if(COOLPROP_MY_MAIN)
-  list(APPEND APP_SOURCES "${COOLPROP_MY_MAIN}")
-  add_executable(Main ${APP_SOURCES})
+  set(_MY_MAIN_SOURCES ${APP_SOURCES})
+  list(APPEND _MY_MAIN_SOURCES "${COOLPROP_MY_MAIN}")
+  add_executable(Main ${_MY_MAIN_SOURCES})
   add_dependencies(Main generate_headers)
   if(UNIX)
     target_link_libraries(Main ${CMAKE_DL_LIBS})
@@ -2056,14 +2146,6 @@ if(COOLPROP_MAIN_MODULE)
                                           "${COMPILE_FLAGS} -DENABLE_CATCH")
   endif()
 
-  if(COOLPROP_IWYU)
-    find_program(iwyu_path NAMES include-what-you-use iwyu)
-    if(NOT iwyu_path)
-      message(FATAL_ERROR "Could not find the program include-what-you-use")
-    endif()
-    set_property(TARGET Main PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
-  endif()
-
   if(UNIX)
     target_link_libraries(Main ${CMAKE_DL_LIBS})
   endif()
@@ -2072,11 +2154,47 @@ endif()
 ###      COOLPROP TESTING APP       ###
 if(COOLPROP_CATCH_MODULE)
 
-  add_subdirectory("externals/Catch2")
   enable_testing()
 
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDComponents.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SBTLAdapter.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDSBTL.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-FactoryOptions.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SchemaValidation.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PropsSIOptions.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDSBTLOptions.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDSBTLCriticalPatch.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDSBTLFailMap.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-HS.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-HS-prototypes.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-HSU_D.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PXcdj.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PXFlash.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-Michelsen.cpp"
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-FPUGuard.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-TermCacheProfile.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-JSONHelpers.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CBOR.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
@@ -2084,31 +2202,26 @@ if(COOLPROP_CATCH_MODULE)
 
   target_link_libraries(CatchTestRunner PRIVATE Catch2::Catch2WithMain)
   target_compile_definitions(CatchTestRunner PRIVATE ENABLE_CATCH)
+  target_compile_definitions(CatchTestRunner PRIVATE COOLPROP_ALL_FLUIDS_JSON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/dev/all_fluids.json")
   target_compile_definitions(CatchTestRunner PRIVATE COOLPROP_NO_INCBIN) # Incbin is disabled for Catch2 because of a weird behavior where out-of-date zlib-compressed fluid information were being used.
   if(UNIX)
     target_link_libraries(CatchTestRunner PRIVATE ${CMAKE_DL_LIBS})
   endif()
-  target_include_directories(CatchTestRunner PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/externals/multicomplex/multicomplex/include")
+  target_include_directories(CatchTestRunner PRIVATE "${multicomplex_SOURCE_DIR}/multicomplex/include")
 
   include(CTest)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2/extras/Catch.cmake)
+  include(${Catch2_SOURCE_DIR}/extras/Catch.cmake)
   
   if (NOT CMAKE_GENERATOR STREQUAL Xcode)
     # Test discovery doesn't work in Xcode, due to a signing bug in Xcode which causes disovery to fail: https://github.com/catchorg/Catch2/issues/2411
     catch_discover_tests(CatchTestRunner DISCOVERY_MODE PRE_TEST)
   endif()
 
-  if(COOLPROP_IWYU)
-    find_program(iwyu_path NAMES include-what-you-use iwyu)
-    if(NOT iwyu_path)
-      message(FATAL_ERROR "Could not find the program include-what-you-use")
-    endif()
-    set_property(TARGET CatchTestRunner PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-                                                 ${iwyu_path})
-  endif()
-  
   if(COOLPROP_LAZY_LOAD_SUPERANCILLARIES)
     target_compile_definitions(CatchTestRunner PRIVATE LAZY_LOAD_SUPERANCILLARIES)
+  else()
+    # lazy load superancillaries by default in debug mode
+    target_compile_definitions(CatchTestRunner PUBLIC $<$<CONFIG:Debug>:LAZY_LOAD_SUPERANCILLARIES>)
   endif()
 endif()
 
@@ -2121,6 +2234,64 @@ if(COOLPROP_CPP_EXAMPLE_TEST)
     target_link_libraries(docuTest.exe ${CMAKE_DL_LIBS})
   endif()
   add_test(DocumentationTest docuTest.exe)
+endif()
+
+if(COOLPROP_SVD_E2E)
+  # Standalone Phase 2a validation tool.  Builds a self-contained
+  # executable that compiles every CoolProp source plus the e2e harness
+  # — same pattern as COOLPROP_MAIN_MODULE / CatchTestRunner.  Run with
+  # ./SVDSBTL_E2E [csv_dir].
+  #
+  # Filter any main() implementation out of APP_SOURCES so co-enabling
+  # COOLPROP_MY_MAIN / COOLPROP_MAIN_MODULE doesn't trigger a duplicate-
+  # main link error when this target is also on.
+  set(SVDSBTL_E2E_SOURCES ${APP_SOURCES})
+  list(REMOVE_ITEM SVDSBTL_E2E_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cxx")
+  add_executable(SVDSBTL_E2E
+                 ${SVDSBTL_E2E_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/svd_sbtl_e2e.cpp")
+  add_dependencies(SVDSBTL_E2E generate_headers)
+  if(UNIX)
+    target_link_libraries(SVDSBTL_E2E ${CMAKE_DL_LIBS})
+  endif()
+endif()
+
+if(COOLPROP_BUILD_SVD_TABLES)
+  # Phase 2b bulk-table builder.  Writes one .svd.bin.z per fluid per
+  # input pair under ~/.CoolProp/SVDTables/.  Same pattern as
+  # COOLPROP_MAIN_MODULE / CatchTestRunner: link the whole project
+  # statically into the standalone executable.
+  add_executable(build_svd_tables
+                 ${APP_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/build_svd_tables.cpp")
+  add_dependencies(build_svd_tables generate_headers)
+  if(UNIX)
+    target_link_libraries(build_svd_tables ${CMAKE_DL_LIBS})
+  endif()
+endif()
+
+if(COOLPROP_BUILD_SVDSBTL_BENCH)
+  # Phase 2c state-point benchmark.  Walks an (h, p) grid and writes a
+  # CSV with per-point rel-err vs HEOS + ns/call for both backends.
+  add_executable(bench_svdsbtl_ph
+                 ${APP_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/bench_svdsbtl_ph.cpp")
+  add_dependencies(bench_svdsbtl_ph generate_headers)
+  if(UNIX)
+    target_link_libraries(bench_svdsbtl_ph ${CMAKE_DL_LIBS})
+  endif()
+endif()
+
+if(COOLPROP_BUILD_SVDSBTL_PROFILE)
+  # Phase 2c per-stage profiler.  Picks one representative state and
+  # decomposes the SVDSBTL per-call cost into stages.
+  add_executable(profile_svdsbtl
+                 ${APP_SOURCES}
+                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/profile_svdsbtl.cpp")
+  add_dependencies(profile_svdsbtl generate_headers)
+  if(UNIX)
+    target_link_libraries(profile_svdsbtl ${CMAKE_DL_LIBS})
+  endif()
 endif()
 
 if(COOLPROP_SNIPPETS)
@@ -2230,3 +2401,59 @@ endif()
 #include_directories("${CMAKE_CURRENT_SOURCE_DIR}/CoolProp")
 #FILE(GLOB coolprop_files "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/*.cpp")
 #add_library(coolprop STATIC ${coolprop_files})
+
+# include-what-you-use wiring (CoolProp-2uw.11). Placed at the bottom so it
+# fires after every target-creation path: Main is created either inside
+# `if(COOLPROP_MY_MAIN)` (used by CodeQL/Coverity/IWYU CI) or inside
+# `if(COOLPROP_MAIN_MODULE)`; CatchTestRunner inside `if(COOLPROP_CATCH_MODULE)`.
+# An earlier version of this wiring lived inside one of those conditionals
+# and silently no-op'd for the IWYU CI path.
+if(COOLPROP_IWYU)
+  find_program(iwyu_path NAMES include-what-you-use iwyu)
+  if(NOT iwyu_path)
+    message(FATAL_ERROR "Could not find the program include-what-you-use")
+  endif()
+  foreach(_iwyu_target Main CatchTestRunner)
+    if(TARGET ${_iwyu_target})
+      set_property(TARGET ${_iwyu_target} PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+                                                   ${iwyu_path})
+    endif()
+  endforeach()
+endif()
+
+# clang-format developer targets (CoolProp-2uw.2)
+# Whole-tree mode over src/ + include/, mirroring dev/ci/clang-format.sh's
+# fallback path. Re-run cmake after adding new files for them to be picked up.
+# Excludes:
+#   - include/*_JSON.h, include/cubic_fluids_schema_JSON.h — auto-generated from
+#     dev/fluids/ JSON, contain raw-string literals up to 60 MB; reformatting
+#     them is wasteful and will be overwritten on the next regeneration.
+#   - include/gitrevision.h — auto-generated.
+#   - include/miniz.h — vendored copy of upstream miniz; format upstream, not us.
+find_program(CLANG_FORMAT_EXE NAMES clang-format-18 clang-format)
+if(CLANG_FORMAT_EXE)
+  file(GLOB_RECURSE COOLPROP_FORMAT_FILES
+       LIST_DIRECTORIES false
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp"
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/*.c"
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/*.cpp"
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h"
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")
+  list(FILTER COOLPROP_FORMAT_FILES EXCLUDE REGEX
+       "/include/(.*_JSON.*|gitrevision|miniz)\\.h$")
+  add_custom_target(format
+                    COMMAND ${CLANG_FORMAT_EXE} -style=file -fallback-style=none
+                            -i ${COOLPROP_FORMAT_FILES}
+                    COMMENT "clang-format -i over src/ and include/ (${CLANG_FORMAT_EXE})"
+                    VERBATIM)
+  add_custom_target(format-check
+                    COMMAND ${CLANG_FORMAT_EXE} -style=file -fallback-style=none
+                            --dry-run --Werror ${COOLPROP_FORMAT_FILES}
+                    COMMENT "clang-format dry-run check over src/ and include/ (${CLANG_FORMAT_EXE})"
+                    VERBATIM)
+else()
+  message(STATUS "clang-format not found; 'format' and 'format-check' targets disabled")
+endif()

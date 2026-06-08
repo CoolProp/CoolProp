@@ -1,0 +1,47 @@
+rules:
+  # Catches the pattern that flagged CoolProp PR #2947 in CodeQL:
+  # std::fopen("...", "w*") creates the file with default permissions
+  # (0666 modified by umask, typically 0644), leaving it world-readable.
+  # On a multi-user host this is rarely actually wanted for cache files.
+  # Mitigation: follow the fopen("wb") with std::filesystem::permissions
+  # restricting to owner_read | owner_write, or use POSIX open() with
+  # explicit mode bits.
+  - id: cpp-fopen-without-restricted-permissions
+    message: >-
+      std::fopen with a write mode creates the file with default
+      permissions (typically 0644). For caches / non-public outputs
+      restrict to owner-only with std::filesystem::permissions(path,
+      perms::owner_read | perms::owner_write, replace) after the close,
+      or use POSIX open(..., O_CREAT | O_WRONLY, 0600).  See PR #2947
+      for the prior incident.
+    severity: WARNING
+    languages: [cpp, c]
+    # Semgrep's C++ string literals don't bind metavariables inside the
+    # quotes, so enumerate the common write modes explicitly.  Add new
+    # entries here if other modes show up in the codebase.
+    pattern-either:
+      - pattern: std::fopen($PATH, "w")
+      - pattern: std::fopen($PATH, "wb")
+      - pattern: std::fopen($PATH, "w+")
+      - pattern: std::fopen($PATH, "wb+")
+      - pattern: std::fopen($PATH, "a")
+      - pattern: std::fopen($PATH, "ab")
+      - pattern: std::fopen($PATH, "a+")
+      - pattern: std::fopen($PATH, "ab+")
+      - pattern: fopen($PATH, "w")
+      - pattern: fopen($PATH, "wb")
+      - pattern: fopen($PATH, "w+")
+      - pattern: fopen($PATH, "wb+")
+      - pattern: fopen($PATH, "a")
+      - pattern: fopen($PATH, "ab")
+      - pattern: fopen($PATH, "a+")
+      - pattern: fopen($PATH, "ab+")
+
+  # Note: the corresponding "getenv-into-fopen" path-injection check
+  # (the other CodeQL finding from PR #2947) is harder to express as a
+  # pure pattern rule in semgrep's C++ engine — it really needs taint-
+  # mode dataflow.  The mitigation pattern (validate caller-supplied
+  # path components for '/', '\\', "..") is documented at
+  # SVDSurfaceSerializer::default_cache_path and is the convention
+  # reviewers should look for; the file-permissions rule above catches
+  # the more frequently-recurring "write without 0600" pattern.

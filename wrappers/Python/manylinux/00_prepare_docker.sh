@@ -1,14 +1,12 @@
 #!/bin/bash
 
 BITNESS="$1"
-if [[ "$BITNESS" == "64" ]] 
+if [[ "$BITNESS" == "64" ]]
 then
   DOCKER_IMG_NAME="coolprop/manylinux"
-  SETUP_PY_ARGS="cmake=default,64"
-elif [[ "$BITNESS" == "32" ]] 
+elif [[ "$BITNESS" == "32" ]]
 then
   DOCKER_IMG_NAME="coolprop/manylinux32"
-  SETUP_PY_ARGS="cmake=default,32"
 else
   echo "Received an unknown argument, aborting."
   exit 1
@@ -55,14 +53,14 @@ pushd ${CUR_DIR}/../../..
 
 # Run the build script
 chmod +x ${CUR_DIR}/01_build_wheels.sh
-# Rewmove the manylinux container if it didn't complete properly last time (see also https://stackoverflow.com/a/38225298/1360263)
+# Remove the manylinux container if it didn't complete properly last time (see also https://stackoverflow.com/a/38225298/1360263)
 docker stop manylinux || true && docker rm manylinux || true
-# docker run --rm -v `pwd`:/io ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
+# docker run --rm -v `pwd`:/io ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} /io/wrappers/Python/manylinux/01_build_wheels.sh
 docker run -itd --name manylinux ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} bash
 docker cp . manylinux:/io
-docker exec manylinux /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
-docker cp manylinux:/io/install_root install_root
-docker stop manylinux 
+docker exec manylinux /io/wrappers/Python/manylinux/01_build_wheels.sh
+docker cp manylinux:/io/wrappers/Python/install_root install_root
+docker stop manylinux
 docker rm manylinux
 
 popd 

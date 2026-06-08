@@ -1,11 +1,10 @@
 name: Run devdocs deployment
 
 on:
+  workflow_dispatch:
   push:
     branches: [ 'master', 'main']
     tags: [ 'v*' ]
-  pull_request:
-    branches: [ 'master', 'main']
 
 jobs:
   build:
@@ -13,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Fire devdocs
       shell: bash

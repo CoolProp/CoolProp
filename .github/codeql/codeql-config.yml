@@ -1,0 +1,27 @@
+name: "CoolProp CodeQL config"
+
+# Keep the default security-and-quality query suite (added by the workflow
+# via `queries: +security-and-quality`).
+
+# Exclude vendored / fetched third-party sources we cannot patch.
+# - build/_deps/**     : CPM/FetchContent downloads (Eigen, fmt, msgpack, …)
+# - externals/miniz-*  : vendored miniz copy
+# - externals/fmt*     : any in-tree fmt copy (defensive; fetched copy lives under build/_deps)
+# - .claude/worktrees  : local Claude Code worktrees, never analysed
+paths-ignore:
+  - build/**
+  - build_*/**
+  - "**/_deps/**"
+  - externals/miniz-*/**
+  - externals/fmt*/**
+  - .claude/**
+
+# Suppress individual queries that are pure noise on this codebase.
+# Unlike paths-ignore (inert for built C/C++), query-filters are applied at
+# result-interpretation time and DO take effect for compiled languages.
+# - cpp/commented-out-code: 250 first-party hits, all low-signal style; the
+#   commented-out blocks are deliberate (alternative formulations, disabled
+#   debug, doc snippets) and reviewing them yields no security/correctness value.
+query-filters:
+  - exclude:
+      id: cpp/commented-out-code

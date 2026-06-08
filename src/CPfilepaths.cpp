@@ -1,91 +1,88 @@
-#include "PlatformDetermination.h"
-#include "Exceptions.h"
-#include "CPfilepaths.h"
-#include "CPstrings.h"
-#include "CoolPropTools.h"
+#include "CoolProp/detail/PlatformDetermination.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/detail/filepaths.h"
+#include "CoolProp/detail/strings.h"
+#include "CoolProp/detail/tools.h"
 
 #include <fstream>
 #include <algorithm>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <atomic>
 #include <cerrno>
+#include <filesystem>
+#include <random>
+#include <sstream>
+#include <stdexcept>
+#include <system_error>
 
 // This will kill the horrible min and max macros
 #ifndef NOMINMAX
 #    define NOMINMAX
 #endif
 
+namespace fs = std::filesystem;
+
+// Platform-specific includes needed by get_home_dir
 #if defined(__ISWINDOWS__)
 #    define UNICODE
 #    define _UNICODE
 #    include "Windows.h"
-#    include <windows.h>  // for the CreateDirectory function
+#    include <windows.h>
 #else
+#    include <sys/types.h>
+#    include <sys/stat.h>
 #    include <unistd.h>
 #    if !defined(__powerpc__)
 #        include <pwd.h>
 #    endif
 #endif
 
-#if defined(__ISWINDOWS__)
-/// From http://stackoverflow.com/a/17827724/1360263
-bool IsBrowsePath(const std::wstring& path) {
-    return (path == L"." || path == L"..");
-}
-unsigned long long CalculateDirSize(const std::wstring& path, std::vector<std::wstring>* errVect) {
+// ---- CalculateDirSize -------------------------------------------------------
+
+unsigned long long CalculateDirSize(const std::string& path) {
     unsigned long long size = 0;
-    WIN32_FIND_DATAW data;
-    HANDLE sh = NULL;
-    sh = FindFirstFileW((path + L"\\*").c_str(), &data);
-
-    if (sh == INVALID_HANDLE_VALUE) {
-        //if we want, store all happened error
-        if (errVect != NULL) errVect->push_back(path);
-        return size;
-    }
-
-    do {
-        // skip current and parent
-        if (!IsBrowsePath(data.cFileName)) {
-            // if found object is ...
-            if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                // directory, then search it recursievly
-                size += CalculateDirSize(path + L"\\" + data.cFileName, NULL);
-            else
-                // otherwise get object size and add it to directory size
-                size += data.nFileSizeHigh * (unsigned long long)(MAXDWORD) + data.nFileSizeLow;
+    std::error_code ec;
+    for (const auto& entry : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied, ec)) {
+        if (!ec && entry.is_regular_file(ec) && !ec) {
+            size += entry.file_size(ec);
+            ec.clear();
         }
-
-    } while (FindNextFileW(sh, &data));  // do
-
-    FindClose(sh);
-
+    }
     return size;
 }
-#elif defined(__ANDROID__) || defined(__powerpc__)
-// Android doesn't have ftw.h, also doesn't accept not having this file
-unsigned long long CalculateDirSize(const std::string& path) {
-    return 0;
-}
-#else
-#    include <ftw.h>
-#    include <stdint.h>
-#    include <iostream>
 
-static thread_local unsigned long long ftw_summer;  // An evil global variable for the ftw function
-int ftw_function(const char* fpath, const struct stat* sb, int tflag, struct FTW* ftwbuf) {
-    ftw_summer += sb->st_size;
-    return 0; /* To tell nftw() to continue */
-}
-unsigned long long CalculateDirSize(const std::string& path) {
-    ftw_summer = 0;
-    int flags = 0 | FTW_DEPTH | FTW_PHYS;
-    nftw(path.c_str(), ftw_function, 20, flags);
-    double temp = ftw_summer;
-    ftw_summer = 0;
-    return temp;
-}
-#endif
+// Legacy implementations kept for reference (powerpc / pre-NDK-r23 Android):
+//
+// #if defined(__ISWINDOWS__)
+// /// From http://stackoverflow.com/a/17827724/1360263
+// static bool IsBrowsePath(const std::wstring& path) {
+//     return (path == L"." || path == L"..");
+// }
+// unsigned long long CalculateDirSize(const std::wstring& path, std::vector<std::wstring>* errVect) {
+//     unsigned long long size = 0;
+//     WIN32_FIND_DATAW data;
+//     HANDLE sh = NULL;
+//     sh = FindFirstFileW((path + L"\\*").c_str(), &data);
+//     if (sh == INVALID_HANDLE_VALUE) {
+//         if (errVect != NULL) errVect->push_back(path);
+//         return size;
+//     }
+//     do {
+//         if (!IsBrowsePath(data.cFileName)) {
+//             if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+//                 size += CalculateDirSize(path + L"\\" + data.cFileName, NULL);
+//             else
+//                 size += data.nFileSizeHigh * (unsigned long long)(MAXDWORD) + data.nFileSizeLow;
+//         }
+//     } while (FindNextFileW(sh, &data));
+//     FindClose(sh);
+//     return size;
+// }
+// #else
+// // Android / powerpc fallback — stub returning 0
+// unsigned long long CalculateDirSize(const std::string& path) { return 0; }
+// #endif
+
+// ---- get_binary_file_contents -----------------------------------------------
 
 std::vector<char> get_binary_file_contents(const char* filename) {
     std::ifstream in(filename, std::ios::in | std::ios::binary);
@@ -101,73 +98,148 @@ std::vector<char> get_binary_file_contents(const char* filename) {
     throw(errno);
 }
 
-void make_dirs(std::string file_path) {
-    std::replace(file_path.begin(), file_path.end(), '\\', '/');  // replace all '\' with '/'
+// ---- write_bytes_atomic -----------------------------------------------------
+//
+// Write-temp + atomic-rename helper for cache files that may be written
+// concurrently by multiple processes/threads (notably the SVDSBTL
+// validation notebook's joblib loky workers — CoolProp-4no.2).  See
+// declaration in CPfilepaths.h for full contract.
 
-#if defined(__ISWINDOWS__)
-    const char sep = '\\';  // well, Windows (and DOS) allows forward slash "/", too :)
-#else
-    const char sep = '/';
-#endif
+namespace {
 
-    std::vector<std::string> pathsplit = strsplit(file_path, '/');
-    std::string path = pathsplit[0];  // will throw if pathsplit.size() == 0
-    for (std::size_t i = 0, sz = pathsplit.size(); i < sz; i++) {
-        if (!path_exists(path)) {
-#if defined(__ISWINDOWS__)  // Defined for 32-bit and 64-bit windows
-            int errcode = CreateDirectoryA((LPCSTR)path.c_str(), NULL);
-            if (errcode == 0) {
-                switch (GetLastError()) {
-                    case ERROR_ALREADY_EXISTS:
-                        break;
-                    case ERROR_PATH_NOT_FOUND:
-                        throw CoolProp::ValueError(format("Unable to make the directory %s", path.c_str()));
-                    default:
-                        break;
-                }
-            }
-#else
-#    if defined(__powerpc__)
-#    else
-            mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-#    endif
-#endif
-        }
-        if (i < (sz - 1)) path += format("%c%s", sep, pathsplit[i + 1].c_str());
-    }
-};
+// Process-unique 64-bit salt: drawn once per process from
+// std::random_device so two concurrent processes writing the same
+// target don't collide on temp-file paths.  Combined with a process-
+// local atomic counter inside make_temp_sibling() to disambiguate
+// threads / repeated writes within the same process.
+const std::uint64_t kProcessSalt = []() {
+    std::random_device rd;
+    return (static_cast<std::uint64_t>(rd()) << 32) | static_cast<std::uint64_t>(rd());
+}();
 
-std::string get_separator(void) {
-#if defined(__ISLINUX__)
-    return std::string("/");
-#elif defined(__ISAPPLE__)
-    return std::string("/");
-#elif defined(__ISWINDOWS__)
-    return std::string("\\");
-#else
-    throw CoolProp::NotImplementedError("This function is not defined for your platform.");
-#endif
+std::filesystem::path make_temp_sibling(const std::filesystem::path& target) {
+    static std::atomic<std::uint64_t> counter{0};
+    const auto seq = counter.fetch_add(1, std::memory_order_relaxed);
+    std::ostringstream oss;
+    oss << ".tmp." << std::hex << kProcessSalt << '.' << seq;
+    auto temp = target;
+    temp += oss.str();
+    return temp;
 }
 
-std::string get_home_dir(void) {
+}  // namespace
+
+void write_bytes_atomic(const std::filesystem::path& target, const void* bytes, std::size_t size, bool restrict_perms) {
+    const auto temp = make_temp_sibling(target);
+    {
+        std::ofstream out(temp, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            throw std::runtime_error("write_bytes_atomic: cannot open temp " + temp.string());
+        }
+        if (size > 0) {
+            out.write(reinterpret_cast<const char*>(bytes), static_cast<std::streamsize>(size));
+        }
+        out.flush();
+        if (!out) {
+            std::error_code ec_rm;
+            std::filesystem::remove(temp, ec_rm);
+            throw std::runtime_error("write_bytes_atomic: write failed for temp " + temp.string());
+        }
+    }
+    if (restrict_perms) {
+        std::error_code perm_ec;
+        std::filesystem::permissions(temp, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write,
+                                     std::filesystem::perm_options::replace, perm_ec);
+        // perm_ec ignored — owner-only is best-effort (no-op on Windows
+        // where the POSIX permission model doesn't apply).
+    }
+    std::error_code rename_ec;
+    std::filesystem::rename(temp, target, rename_ec);
+    if (rename_ec) {
+        std::error_code ec_rm;
+        std::filesystem::remove(temp, ec_rm);
+        throw std::runtime_error("write_bytes_atomic: rename to " + target.string() + " failed: " + rename_ec.message());
+    }
+}
+
+// ---- make_dirs --------------------------------------------------------------
+
+void make_dirs(const std::string& file_path) {
+    std::error_code ec;
+    fs::create_directories(fs::path(file_path), ec);
+    // Ignore errors (same behaviour as legacy code which silently skipped failures)
+}
+
+// Legacy implementation kept for reference (powerpc / pre-NDK-r23 Android):
+//
+// void make_dirs(std::string file_path) {
+//     std::replace(file_path.begin(), file_path.end(), '\\', '/');
+// #    if defined(__ISWINDOWS__)
+//     const char sep = '\\';
+// #    else
+//     const char sep = '/';
+// #    endif
+//     std::vector<std::string> pathsplit = strsplit(file_path, '/');
+//     std::string path = pathsplit[0];
+//     for (std::size_t i = 0, sz = pathsplit.size(); i < sz; i++) {
+//         if (!path_exists(path)) {
+// #        if defined(__ISWINDOWS__)
+//             int errcode = CreateDirectoryA((LPCSTR)path.c_str(), NULL);
+//             if (errcode == 0) {
+//                 switch (GetLastError()) {
+//                     case ERROR_ALREADY_EXISTS: break;
+//                     case ERROR_PATH_NOT_FOUND:
+//                         throw CoolProp::ValueError(format("Unable to make the directory %s", path.c_str()));
+//                     default: break;
+//                 }
+//             }
+// #        elif !defined(__powerpc__)
+//             mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+// #        endif
+//         }
+//         if (i < (sz - 1)) path += format("%c%s", sep, pathsplit[i + 1].c_str());
+//     }
+// }
+
+// ---- get_separator ----------------------------------------------------------
+
+std::string get_separator() {
+    return {1, fs::path::preferred_separator};
+}
+
+// Legacy implementation kept for reference (powerpc / pre-NDK-r23 Android):
+//
+// std::string get_separator() {
+// #if defined(__ISLINUX__)
+//     return std::string("/");
+// #elif defined(__ISAPPLE__)
+//     return std::string("/");
+// #elif defined(__ISWINDOWS__)
+//     return std::string("\\");
+// #else
+//     throw CoolProp::NotImplementedError("This function is not defined for your platform.");
+// #endif
+// }
+
+// ---- get_home_dir -----------------------------------------------------------
+
+std::string get_home_dir() {
 // See http://stackoverflow.com/questions/2552416/how-can-i-find-the-users-home-dir-in-a-cross-platform-manner-using-c
-#if defined(__ISLINUX__)
-    char* home = NULL;
+#if defined(__ISLINUX__) || defined(__ISAPPLE__)
+    char* home = nullptr;
     home = getenv("HOME");
-    return std::string(home);
-#elif defined(__ISAPPLE__)
-    char* home = NULL;
-    home = getenv("HOME");
+#    if defined(__ISAPPLE__)
     if (home == NULL) {
         struct passwd* pwd = getpwuid(getuid());
         if (pwd) {
             home = pwd->pw_dir;
         }
     }
-    if (home == NULL) {
+#    endif
+    if (home == nullptr) {
         throw CoolProp::NotImplementedError("Could not detect home directory.");
     }
-    return std::string(home);
+    return {home};
 #elif defined(__ISWINDOWS__)
 #    if defined(_MSC_VER)
 #        pragma warning(push)
@@ -193,48 +265,56 @@ std::string get_home_dir(void) {
 #endif
 };
 
-bool path_exists(const std::string& path) {
-    std::string path_cpy;
-    if (endswith(path, get_separator())) {
-        path_cpy = path.substr(0, path.size() - 1);
-    } else {
-        path_cpy = path;
-    }
+// ---- path_exists ------------------------------------------------------------
 
-#if defined(__ISWINDOWS__)  // Defined for 32-bit and 64-bit windows
-    struct _stat buf;
-    // Get data associated with path using the windows libraries,
-    // and if you can (result == 0), the path exists
-    if (_stat(path_cpy.c_str(), &buf) == 0) {
-        return true;
-    } else {
-        return false;
-    }
-#elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-    struct stat st;
-    if (lstat(path_cpy.c_str(), &st) == 0) {
-        if (S_ISDIR(st.st_mode)) return true;
-        if (S_ISREG(st.st_mode)) return true;
-        return false;
-    } else {
-        return false;
-    }
-#else
-    throw CoolProp::NotImplementedError("This function is not defined for your platform.");
-#endif
-};
+bool path_exists(const std::string& path) {
+    std::error_code ec;
+    return fs::exists(fs::path(path), ec);
+}
+
+// Legacy implementation kept for reference (powerpc / pre-NDK-r23 Android):
+//
+// bool path_exists(const std::string& path) {
+//     std::string path_cpy;
+//     if (endswith(path, get_separator())) {
+//         path_cpy = path.substr(0, path.size() - 1);
+//     } else {
+//         path_cpy = path;
+//     }
+// #    if defined(__ISWINDOWS__)
+//     struct _stat buf;
+//     return (_stat(path_cpy.c_str(), &buf) == 0);
+// #    elif defined(__ISLINUX__) || defined(__ISAPPLE__)
+//     struct stat st;
+//     if (lstat(path_cpy.c_str(), &st) == 0)
+//         return S_ISDIR(st.st_mode) || S_ISREG(st.st_mode);
+//     return false;
+// #    else
+//     throw CoolProp::NotImplementedError("This function is not defined for your platform.");
+// #    endif
+// }
+
+// ---- join_path --------------------------------------------------------------
 
 std::string join_path(const std::string& one, const std::string& two) {
-    std::string result;
-    std::string separator = get_separator();
-    if (!endswith(one, separator) && !one.empty()) {
-        result = one + separator;
-    } else {
-        result = one;
-    }
-    result.append(two);
-    return result;
+    return (fs::path(one) / two).string();
 }
+
+// Legacy implementation kept for reference (powerpc / pre-NDK-r23 Android):
+//
+// std::string join_path(const std::string& one, const std::string& two) {
+//     std::string result;
+//     std::string separator = get_separator();
+//     if (!endswith(one, separator) && !one.empty()) {
+//         result = one + separator;
+//     } else {
+//         result = one;
+//     }
+//     result.append(two);
+//     return result;
+// }
+
+// ---- get_file_contents ------------------------------------------------------
 
 std::string get_file_contents(const char* filename) {
     std::ifstream in(filename, std::ios::in | std::ios::binary);

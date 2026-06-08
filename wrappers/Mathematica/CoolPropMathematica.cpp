@@ -1,7 +1,7 @@
 
 /* Include required header */
-#include "CoolProp.h"
-#include "HumidAirProp.h"
+#include "CoolProp/CoolProp.h"
+#include "CoolProp/HumidAirProp.h"
 #include "WolframLibrary.h"
 
 /* Return the version of Library Link */

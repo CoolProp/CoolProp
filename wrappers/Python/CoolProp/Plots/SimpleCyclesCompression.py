@@ -20,7 +20,7 @@ class BaseCompressionCycle(BaseCycle):
         BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
 
     def eta_carnot_heating(self):
-        """Carnot efficiency
+        r"""Carnot efficiency
 
         Calculates the Carnot efficiency for a heating process, :math:`\eta_c = \frac{T_h}{T_h-T_c}`.
 
@@ -32,7 +32,7 @@ class BaseCompressionCycle(BaseCycle):
         return np.max(Tvector) / (np.max(Tvector) - np.min(Tvector))
 
     def eta_carnot_cooling(self):
-        """Carnot efficiency
+        r"""Carnot efficiency
 
         Calculates the Carnot efficiency for a cooling process, :math:`\eta_c = \frac{T_c}{T_h-T_c}`.
 
@@ -202,8 +202,8 @@ class SimpleCompressionCycle(BaseCompressionCycle):
 
         if not SI:
             conv_t = self._system[CoolProp.iT].to_SI
-            Te = conv_p(Te)
-            Tc = conv_p(Tc)
+            Te = conv_t(Te)
+            Tc = conv_t(Tc)
 
         # Get the saturation conditions
         self.state.update(CoolProp.QT_INPUTS, 1.0, Te)

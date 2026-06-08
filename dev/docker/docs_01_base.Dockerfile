@@ -20,7 +20,7 @@ FROM continuumio/miniconda3
 
 RUN apt-get -y -m update && \
     apt-get install -y \
-        g++ make cmake swig doxygen p7zip-full \
+        g++ make cmake ninja-build swig doxygen p7zip-full \
         mono-mcs \
         octave liboctave-dev \
         r-base-dev \

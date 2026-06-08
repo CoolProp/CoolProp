@@ -37,7 +37,7 @@ Manual Installation
 
   1. Place the CoolProp DLL files in the alternate location
   2. Place the CoolProp xlam file in a writable location and open it.
-  3. You will get an Excel error, ``File not found - CoolProp_stdcall.dll``.  Clicking **Ok** on the error will only clear the first of many.  Press and hold the **``Enter``** key until all of the errors clear.
+  3. You will get an Excel error, ``File not found - CoolProp_stdcall.dll``.  Clicking **Ok** on the error will only clear the first of many.  Press and hold the ``Enter`` key until all of the errors clear.
   4. Make sure that the Developer ribbon is visible on the main menu.  If not
   
      - Go to **File | Options** on the main menu and select Cusomize Ribbon
@@ -85,14 +85,14 @@ Follow the below instructions depending on the version of Excel you have.  If yo
 32-bit
 ^^^^^^
 
-Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit/`.  Development binaries coming from the buildbot server can be found at :sfnightly:`shared_library/Darwin/32bit/`. 
+Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit/`.  Nightly development binaries can be found at :sfnightly:`shared_library/Darwin/32bit/`. 
 
 Place the downloaded file ``libCoolProp.dylib`` in the folder ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office`` too, but RENAME it to ``libCoolProp_32bit.dylib`` (this is to ensure that there is no name clash with the standard 64-bit shared library).
 
 64-bit
 ^^^^^^
 
-Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/64bit/`.  Development binaries coming from the buildbot server can be found at :sfnightly:`shared_library/Darwin/64bit/`. 
+Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/64bit/`.  Nightly development binaries can be found at :sfnightly:`shared_library/Darwin/64bit/`. 
 
 Place the downloaded file ``libCoolProp.dylib`` in the folder ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office``.
 
@@ -136,7 +136,7 @@ You can also call REFPROP through the Excel wrapper of CoolProp, but it requires
 3. To set the environment variable ``COOLPROP_REFPROP_PATH``, save these contents as the file ``~/Library/LaunchAgents/my.startup.plist`` (obviously replace ``ihb`` with the appropriate user name)::
 
     <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
     <plist version="1.0">
     <dict>
     <key>Label</key>
@@ -170,7 +170,7 @@ Build
 The instructions here are for a 64-bit windows system that will compile both 64-bit and 32-bit versions of the DLL::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder for the 32-bit DLL

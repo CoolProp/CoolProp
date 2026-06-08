@@ -1,8 +1,8 @@
 #include <iostream>
 #include "Eigen/Dense"
 #include "time.h"
-#include "Helmholtz.h"
-#include "CoolProp.h"
+#include "CoolProp/fluids/Helmholtz.h"
+#include "CoolProp/CoolProp.h"
 
 class EOSFitter;
 #include "Fitter.h"
