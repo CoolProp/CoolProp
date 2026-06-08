@@ -236,6 +236,11 @@ nanobind_add_stub(
     PYTHON_PATH "$<TARGET_FILE_DIR:CoolProp_module>"
     DEPENDS CoolProp_module
     MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/py.typed"
+    # INCLUDE_PRIVATE emits the underscore-named _AbstractState class that the
+    # AbstractState() factory returns; the pattern file replaces the auto
+    # PropsSI/HAPropsSI overloads (object-typed -> overlap) with typed ones.
+    INCLUDE_PRIVATE
+    PATTERN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/stub_patterns.txt"
 )
 
 # ---- capsule State shim -> CoolProp.State (link-free; forwards through _capi) ----

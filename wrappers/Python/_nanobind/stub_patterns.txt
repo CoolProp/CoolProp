@@ -1,0 +1,37 @@
+# nanobind stubgen pattern file (bd CoolProp-r9sq.10).
+#
+# Fixes applied to the auto-generated stub so it type-checks (mypy.stubtest):
+#  - re-add the numpy / NDArray imports (stubgen prunes them once the PropsSI/
+#    HAPropsSI overloads that used them are replaced below) + the _Scalar/_Num
+#    aliases.
+#  - replace the auto PropsSI/HAPropsSI overloads (object-typed -> overlap with
+#    incompatible return types) with explicitly-typed scalar/array overloads
+#    (mirrors dev/stubs/overloads_coolprop.pyi).
+#  - give the private _capi capsule a valid type (was the undefined PyCapsule).
+#  - fix get_spinodal_data, whose return leaks the unbound C++ type name.
+
+CoolProp\.__prefix__:
+    import numpy
+    from numpy.typing import NDArray
+    _Scalar = float
+    _Num = float | Sequence[float] | NDArray[numpy.float64]
+
+CoolProp\._capi$:
+    _capi: object = ...
+
+CoolProp\._AbstractState\.get_spinodal_data$:
+    def get_spinodal_data(self) -> object: ...
+
+CoolProp\.PropsSI$:
+    @overload
+    def PropsSI(Output: str, FluidName: str, /) -> float: ...
+    @overload
+    def PropsSI(Output: str, Name1: str, Prop1: _Scalar, Name2: str, Prop2: _Scalar, FluidName: str, /) -> float: ...  # type: ignore[overload-overlap]
+    @overload
+    def PropsSI(Output: str, Name1: str, Prop1: _Num, Name2: str, Prop2: _Num, FluidName: str, /) -> NDArray[numpy.float64]: ...
+
+CoolProp\.HAPropsSI$:
+    @overload
+    def HAPropsSI(Output: str, Name1: str, Value1: _Scalar, Name2: str, Value2: _Scalar, Name3: str, Value3: _Scalar, /) -> float: ...  # type: ignore[overload-overlap]
+    @overload
+    def HAPropsSI(Output: str, Name1: str, Value1: _Num, Name2: str, Value2: _Num, Name3: str, Value3: _Num, /) -> NDArray[numpy.float64]: ...
