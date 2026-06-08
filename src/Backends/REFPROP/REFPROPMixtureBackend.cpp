@@ -41,6 +41,7 @@ surface tension                 N/m
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/AbstractState.h"
 #include "qmass_conversions.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 
 #include <cmath>
 #include <optional>
@@ -346,6 +347,23 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
     } else {
         int ierr = 0;
         this->fluid_names = fluid_names;
+
+        // Resolve each name through the CoolProp fluid library so that any
+        // CoolProp alias (e.g. "R600", "n-Butane") is translated to the
+        // REFPROP filename (e.g. "BUTANE") before building the .FLD path.
+        std::vector<std::string> resolved_names(fluid_names);
+        for (std::size_t i = 0; i < resolved_names.size(); ++i) {
+            try {
+                CoolPropFluid fluid = get_library().get(fluid_names[i]);
+                if (!fluid.REFPROPname.empty()) {
+                    resolved_names[i] = fluid.REFPROPname;
+                }
+            } catch (...) {
+                // Not a known CoolProp fluid — pass the name through unchanged
+                // so REFPROP can try to load it directly (e.g. a path or .MIX).
+            }
+        }
+
         std::array<char, 10000> component_string{};
         std::array<char, errormessagelength> herr{};
         std::string components_joined = strjoin(fluid_names, "|");
@@ -427,9 +445,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
             // Build the mixture string
             for (unsigned int j = 0; j < (unsigned int)N; j++) {
                 if (j == 0) {
-                    components_joined = join_path(fdPath, upper(fluid_names[j]) + endings[k]);
+                    components_joined = join_path(fdPath, upper(resolved_names[j]) + endings[k]);
                 } else {
-                    components_joined += "|" + join_path(fdPath, upper(fluid_names[j]) + endings[k]);
+                    components_joined += "|" + join_path(fdPath, upper(resolved_names[j]) + endings[k]);
                 }
             }
 
