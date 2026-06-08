@@ -456,6 +456,7 @@ void init_CoolProp(nb::module_& m) {
       .def("update", &AbstractState::update)
       .def("update_with_guesses", &AbstractState::update_with_guesses)
       .def("available_in_high_level", &AbstractState::available_in_high_level)
+      .def("build_options_json", &AbstractState::build_options_json)  // bd CoolProp-r9sq.25
       .def("fluid_param_string", &AbstractState::fluid_param_string)
       .def("fluid_names", &AbstractState::fluid_names)
       .def("set_binary_interaction_double", (void(AbstractState::*)(const std::string&, const std::string&, const std::string&, const double))
@@ -505,6 +506,39 @@ void init_CoolProp(nb::module_& m) {
       .def("dipole_moment", &AbstractState::dipole_moment)
       .def("keyed_output", &AbstractState::keyed_output)
       .def("trivial_keyed_output", &AbstractState::trivial_keyed_output)
+      // bd CoolProp-r9sq.25: zero-allocation vectorized batch path (tabular / IF97
+      // backends).  Caller-allocated, shape-validated contiguous buffers, mirroring
+      // the legacy Cython fast_evaluate; out is (N_inputs, N_outputs), filled in place.
+      .def(
+        "fast_evaluate",
+        [](AbstractState& AS, input_pairs input_pair, nb::ndarray<const double, nb::ndim<1>, nb::c_contig> val1,
+           nb::ndarray<const double, nb::ndim<1>, nb::c_contig> val2, nb::ndarray<const int, nb::ndim<1>, nb::c_contig> outputs,
+           nb::ndarray<double, nb::ndim<2>, nb::c_contig> out, nb::ndarray<int, nb::ndim<1>, nb::c_contig> status, phases imposed_phase) {
+            std::size_t N = val1.shape(0);
+            std::size_t M = outputs.shape(0);
+            if (val2.shape(0) != N) {
+                throw nb::value_error("val1 and val2 must have the same length");
+            }
+            if (out.shape(0) != N || out.shape(1) != M) {
+                throw nb::value_error("out must have shape (N_inputs, N_outputs)");
+            }
+            if (status.shape(0) != N) {
+                throw nb::value_error("status must have length N_inputs");
+            }
+            if (N == 0) {
+                return;
+            }
+            if (M == 0) {  // nothing to compute per point; C++ contract: status=ok, no output writes
+                for (std::size_t k = 0; k < N; ++k) {
+                    status.data()[k] = 0;
+                }
+                return;
+            }
+            AS.fast_evaluate(input_pair, val1.data(), val2.data(), N, reinterpret_cast<const parameters*>(outputs.data()), M, out.data(), N * M,
+                             status.data(), N, imposed_phase);
+        },
+        nb::arg("input_pair"), nb::arg("val1"), nb::arg("val2"), nb::arg("outputs"), nb::arg("out"), nb::arg("status"),
+        nb::arg("imposed_phase") = phases::iphase_not_imposed)
       .def("saturated_liquid_keyed_output", &AbstractState::saturated_liquid_keyed_output)
       .def("saturated_vapor_keyed_output", &AbstractState::saturated_vapor_keyed_output)
       .def("T", &AbstractState::T)

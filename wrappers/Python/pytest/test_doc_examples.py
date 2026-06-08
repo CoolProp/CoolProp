@@ -113,12 +113,11 @@ _PAGES = _doc_pages()
 
 # Compat gaps the harvester surfaced; xfail (strict) until fixed -- when the gap
 # is closed the page xpasses, turning the suite red so the xfail entry is removed.
-_XFAIL = {
-    "coolprop/LowLevelAPI.rst": "bd CoolProp-r9sq.18 (remaining low-level gaps; generate_update_pair + iphase_not_imposed fixed)",
-    # HighLevelAPI: r9sq.16 (set_reference_state D-form -> std::bad_cast) is fixed
-    # (covered by test_parity.py::TestSetReferenceState); the page is REFPROP-gated
-    # so it skips where REFPROP is absent rather than running.
-}
+# Both former entries are now fixed: r9sq.16 (set_reference_state, #3120) and
+# r9sq.18 (the LowLevelAPI HEOS path -- generate_update_pair, iphase_not_imposed,
+# the PyGuessesStructure alias, and the out-param/enum marshalling). Both pages
+# are REFPROP-gated, so they skip where REFPROP is absent rather than running.
+_XFAIL = {}
 
 
 def _params():
