@@ -62,10 +62,18 @@ cdef long _iP_triple = int(_CP.iP_triple)
 cdef long _iphase_gas = int(_CP.iphase_gas)
 cdef long _iphase_liquid = int(_CP.iphase_liquid)
 cdef long _DmassT = int(_CP.DmassT_INPUTS)
-cdef long _QT = int(_CP.QT_INPUTS)
-cdef long _PT = int(_CP.PT_INPUTS)
-cdef long _PQ = int(_CP.PQ_INPUTS)
 cdef long _HmassP = int(_CP.HmassP_INPUTS)
+
+# Single-char State.update keys -> the core parameter enum, mass-basis (as the
+# legacy State used). update() hands any two of these to generate_update_pair --
+# so it accepts every pair CoolProp recognises, not a hand-picked few.
+_generate_update_pair = _CP.generate_update_pair
+cdef dict _STATE_KEY = {
+    'T': _CP.iT, 'P': _CP.iP, 'D': _CP.iDmass, 'Q': _CP.iQ,
+    'H': _CP.iHmass, 'S': _CP.iSmass, 'U': _CP.iUmass,
+}
+# Keys whose legacy value (kPa / kJ) is 1000x smaller than SI (Pa / J).
+cdef frozenset _STATE_KEY_KSI = frozenset(('P', 'H', 'S', 'U'))
 
 
 cdef inline void _raise_if_error() except *:
@@ -110,22 +118,6 @@ cdef inline void _specify_phase(void* handle, long phase) except *:
     # Impose a phase (a phases enum value) on the handle.
     _C.specify_phase(handle, phase)
     _raise_if_error()
-
-
-cdef tuple _resolve_pair(dict params):
-    # Map a legacy State dict (kPa/kJ values for P/H/S) to an SI update triple.
-    cdef set keys = set(params.keys())
-    if keys == {'T', 'D'}:
-        return (_DmassT, params['D'], params['T'])
-    elif keys == {'T', 'Q'}:
-        return (_QT, params['Q'], params['T'])
-    elif keys == {'T', 'P'}:
-        return (_PT, params['P'] * 1000.0, params['T'])
-    elif keys == {'P', 'Q'}:
-        return (_PQ, params['P'] * 1000.0, params['Q'])
-    elif keys == {'P', 'H'}:
-        return (_HmassP, params['H'] * 1000.0, params['P'] * 1000.0)
-    raise ValueError("State shim: unsupported input pair " + repr(sorted(keys)))
 
 
 cdef class _AbstractStateView:
@@ -268,14 +260,26 @@ cdef class State:
     cpdef update(self, dict params):
         """Update the state from a legacy input dict.
 
-        ``params`` holds exactly two of T/D/P/Q/H, e.g. ``{'T': K, 'D': kg/m^3}``,
-        ``{'T': K, 'P': kPa}``, ``{'T': K, 'Q': -}``, ``{'P': kPa, 'Q': -}`` or
-        ``{'P': kPa, 'H': kJ/kg}`` (P/H given in the legacy kPa/kJ units).
+        ``params`` holds exactly two single-char keys from T/D/P/Q/H/S/U -- any
+        pair CoolProp's ``generate_update_pair`` accepts (e.g. ``{'T': K, 'D':
+        kg/m^3}``, ``{'P': kPa, 'H': kJ/kg}``, ``{'P': kPa, 'S': kJ/kg/K}``,
+        ``{'D': kg/m^3, 'P': kPa}``).  P is in kPa and H/S/U in the legacy kJ
+        units; T/D/Q are SI -- the conversion + pair resolution mirror the legacy
+        State.update exactly.
         """
-        cdef long pair
-        cdef double v1, v2
-        pair, v1, v2 = _resolve_pair(params)
-        _update(self.handle, pair, v1, v2)
+        cdef list items = list(params.items())
+        if len(items) != 2:
+            raise ValueError("State shim: update() needs exactly two inputs, got " + repr(sorted(params.keys())))
+        k1, v1 = items[0]
+        k2, v2 = items[1]
+        if k1 not in _STATE_KEY or k2 not in _STATE_KEY:
+            raise ValueError("State shim: unsupported input key(s) " + repr(sorted(params.keys())))
+        # Convert legacy kPa/kJ values to SI, then let the core resolve the input
+        # pair (paras_inverse + toSI + generate_update_pair, as in the old State).
+        cdef double si1 = v1 * 1000.0 if k1 in _STATE_KEY_KSI else v1
+        cdef double si2 = v2 * 1000.0 if k2 in _STATE_KEY_KSI else v2
+        pair, o1, o2 = _generate_update_pair(_STATE_KEY[k1], si1, _STATE_KEY[k2], si2)
+        _update(self.handle, int(pair), o1, o2)
         self._refresh()
 
     cpdef update_Trho(self, double T, double rho):

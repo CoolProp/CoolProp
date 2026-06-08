@@ -70,6 +70,37 @@ class TestSetFluid:
         assert math.isfinite(S.rho) and S.rho > 0
 
 
+class TestGenericInputPairs:
+    """update() accepts any pair generate_update_pair resolves, not just the 5
+    common ones -- matching the legacy State.update (bd CoolProp-r9sq.26)."""
+
+    def test_PS_pair(self):
+        # {P, S}: round-trip a superheated-vapor state through pressure + entropy.
+        ref = State("Water", {"T": 400.0, "P": 200.0})  # 200 kPa, vapor
+        S = State("Water", {"P": 200.0, "S": ref.s})    # S in legacy kJ/kg/K
+        assert S.T == pytest.approx(400.0, rel=1e-3)
+
+    def test_DP_pair(self):
+        # {D, P}: density + pressure (note the non-default key order, too).
+        ref = State("Water", {"T": 300.0, "D": 1000.0})
+        S = State("Water", {"D": 1000.0, "P": ref.p})   # P in kPa
+        assert S.T == pytest.approx(300.0, rel=1e-3)
+
+    def test_PH_still_works(self):
+        # The previously-special-cased pair must still behave identically.
+        ref = State("Water", {"T": 350.0, "P": 101.325})
+        S = State("Water", {"P": 101.325, "H": ref.h})  # H in kJ/kg
+        assert S.rho == pytest.approx(ref.rho, rel=1e-3)
+
+    def test_unsupported_key_raises(self):
+        with pytest.raises(ValueError):
+            State("Water", {"T": 300.0, "X": 5.0})
+
+    def test_one_input_raises(self):
+        with pytest.raises(ValueError):
+            State("Water", {"T": 300.0})
+
+
 class TestPhaseAndSaturation:
     def test_phase_returns_int(self):
         S = State("Water", {"T": 300.0, "D": 1000.0})
