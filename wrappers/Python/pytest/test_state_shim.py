@@ -37,9 +37,23 @@ class TestSetFluid:
         S.update({"T": 300.0, "Q": 0.0})
         assert S.Fluid == b"R134a"
 
-    def test_bracket_mixture_raises_notimplemented(self):
-        with pytest.raises(NotImplementedError):
-            State("R32[0.5]&R134a[0.5]", {"T": 300.0, "Q": 0.0})
+    def test_bracket_mixture_construction(self):
+        # Bracketed mole-fraction mixtures are fully supported: the fractions are
+        # parsed out and set on the handle (like the legacy State.set_Fluid).
+        import math
+
+        S = State("R32[0.5]&R125[0.5]", {"T": 300.0, "P": 2000.0})  # P in kPa
+        assert b"R32" in S.Fluid and b"R125" in S.Fluid
+        assert S.T == pytest.approx(300.0)
+        assert math.isfinite(S.rho) and S.rho > 0
+
+    def test_set_fluid_to_mixture(self):
+        import math
+
+        S = State("Water", {"T": 300.0, "D": 1000.0})
+        S.set_Fluid("R32[0.7]&R125[0.3]", "HEOS")
+        S.update({"T": 300.0, "P": 2000.0})
+        assert math.isfinite(S.rho) and S.rho > 0
 
 
 class TestPhaseAndSaturation:

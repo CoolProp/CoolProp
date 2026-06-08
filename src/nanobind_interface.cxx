@@ -155,7 +155,23 @@ double capi_first_partial_deriv(void* h, long Of, long Wrt, long Constant) {
 const char* capi_last_error() {
     return g_capi_error.empty() ? nullptr : g_capi_error.c_str();
 }
-const CoolProp_StateCAPI g_state_capi = {capi_make, capi_destroy, capi_update, capi_keyed_output, capi_first_partial_deriv, capi_last_error};
+void capi_set_mole_fractions(void* h, const double* z, long n) {
+    if (n < 0) {  // defensive at the C-ABI boundary; the Cython caller always passes size()
+        capi_set_error("set_mole_fractions: negative length");
+        return;
+    }
+    try {
+        std::vector<double> fractions(z, z + n);  // binds the vector<double> set_mole_fractions overload
+        (*static_cast<_CAPI_SP*>(h))->set_mole_fractions(fractions);
+        g_capi_error.clear();
+    } catch (const std::exception& e) {
+        capi_set_error(e.what());
+    } catch (...) {
+        capi_set_error(nullptr);
+    }
+}
+const CoolProp_StateCAPI g_state_capi = {capi_make,       capi_destroy,           capi_update, capi_keyed_output, capi_first_partial_deriv,
+                                         capi_last_error, capi_set_mole_fractions};
 }  // namespace
 
 void init_CoolProp(nb::module_& m) {

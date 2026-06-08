@@ -38,6 +38,10 @@ extern "C"
         // it (or NULL) so the Cython shim can re-raise a Python exception -- matching
         // the legacy State's `except *` behaviour.  Cleared on the next successful call.
         const char* (*last_error)();
+        // Set the composition (mole fractions) of a mixture handle, so the shim's
+        // set_Fluid can honour bracketed strings like "R32[0.5]&R134a[0.5]".
+        // Appended after last_error to keep the existing field offsets stable.
+        void (*set_mole_fractions)(void* handle, const double* fractions, long n);
     } CoolProp_StateCAPI;
 
 #ifdef __cplusplus

@@ -20,6 +20,7 @@ Unit convention (the legacy one, pinned by ``dev/state_capsule`` parity test):
   - ``Props()`` and everything reached via ``.pAS`` are SI.
 """
 from cpython.pycapsule cimport PyCapsule_GetPointer
+from libcpp.vector cimport vector
 
 cdef extern from "CoolProp/detail/state_capi.h":
     ctypedef struct CoolProp_StateCAPI:
@@ -29,6 +30,7 @@ cdef extern from "CoolProp/detail/state_capi.h":
         double (*keyed_output)(void*, long)
         double (*first_partial_deriv)(void*, long, long, long)
         const char* (*last_error)()
+        void (*set_mole_fractions)(void*, const double*, long)
 
 import CoolProp as _CP  # the nanobind core: exports `_capi` + the int-convertible enums
 if not hasattr(_CP, "_capi"):
@@ -89,6 +91,16 @@ cdef inline double _first_partial_deriv(void* handle, long Of, long Wrt, long Co
     cdef double v = _C.first_partial_deriv(handle, Of, Wrt, Constant)
     _raise_if_error()
     return v
+
+
+cdef inline void _set_mole_fractions(void* handle, list fracs) except *:
+    # Set the mixture mole fractions on the handle (used for bracketed fluids).
+    cdef vector[double] z
+    cdef double f
+    for f in fracs:
+        z.push_back(f)
+    _C.set_mole_fractions(handle, z.data(), <long>z.size())
+    _raise_if_error()
 
 
 cdef tuple _resolve_pair(dict params):
@@ -190,9 +202,9 @@ cdef class State:
     cpdef set_Fluid(self, Fluid, backend):
         """(Re)create the underlying ``AbstractState`` for ``Fluid`` on ``backend``.
 
-        Plain and ``&``-joined fluid names work; bracketed mole-fraction mixtures
-        (e.g. ``R32[0.5]&R134a[0.5]``) are not yet supported through the capsule
-        (no set_mole_fractions hook) and raise NotImplementedError.
+        Plain names, ``&``-joined mixtures, and bracketed mole-fraction mixtures
+        (e.g. ``R32[0.5]&R134a[0.5]``) all work -- the bracket fractions are parsed
+        out and set on the handle, exactly like the legacy ``State.set_Fluid``.
         """
         cdef str _fl = Fluid if isinstance(Fluid, str) else Fluid.decode()
         cdef str _backend
@@ -202,10 +214,18 @@ cdef class State:
             _backend = backend
         else:
             _backend = backend.decode()
+        # Parse bracketed mole fractions, e.g. "R32[0.5]&R134a[0.5]" -> names
+        # "R32&R134a" + fracs [0.5, 0.5] (mirrors the legacy set_Fluid).
+        cdef list names = []
+        cdef list fracs = []
+        cdef bint set_fractions = False
         if '[' in _fl and ']' in _fl:
-            raise NotImplementedError(
-                "State shim: bracketed mole-fraction mixtures ('" + _fl + "') are not yet "
-                "supported; set fractions via the core AbstractState (bd CoolProp-r9sq.26)")
+            for pair in _fl.split('&'):
+                name, frac = pair.split('[')
+                names.append(name)
+                fracs.append(float(frac.strip(']')))
+            _fl = '&'.join(names)
+            set_fractions = True
         if self.handle != NULL:
             _C.destroy(self.handle)
             self.handle = NULL
@@ -213,6 +233,8 @@ cdef class State:
         if self.handle == NULL:
             _raise_if_error()
             raise ValueError("State: could not create AbstractState for " + _fl)
+        if set_fractions:
+            _set_mole_fractions(self.handle, fracs)
         self._fluids = _fl
         self.Fluid = _fl.encode()
         if self.pAS is None:
