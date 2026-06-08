@@ -156,8 +156,18 @@ const char* capi_last_error() {
     return g_capi_error.empty() ? nullptr : g_capi_error.c_str();
 }
 void capi_set_mole_fractions(void* h, const double* z, long n) {
-    if (n < 0) {  // defensive at the C-ABI boundary; the Cython caller always passes size()
+    // Validate the C-ABI pointers/length before constructing or dereferencing
+    // (a null handle/fractions or negative length from any consumer must not crash).
+    if (h == nullptr) {
+        capi_set_error("set_mole_fractions: null handle");
+        return;
+    }
+    if (n < 0) {
         capi_set_error("set_mole_fractions: negative length");
+        return;
+    }
+    if (n > 0 && z == nullptr) {
+        capi_set_error("set_mole_fractions: null fractions pointer");
         return;
     }
     try {
@@ -170,8 +180,22 @@ void capi_set_mole_fractions(void* h, const double* z, long n) {
         capi_set_error(nullptr);
     }
 }
-const CoolProp_StateCAPI g_state_capi = {capi_make,       capi_destroy,           capi_update, capi_keyed_output, capi_first_partial_deriv,
-                                         capi_last_error, capi_set_mole_fractions};
+void capi_specify_phase(void* h, long phase) {
+    if (h == nullptr) {
+        capi_set_error("specify_phase: null handle");
+        return;
+    }
+    try {
+        (*static_cast<_CAPI_SP*>(h))->specify_phase(static_cast<CoolProp::phases>(phase));
+        g_capi_error.clear();
+    } catch (const std::exception& e) {
+        capi_set_error(e.what());
+    } catch (...) {
+        capi_set_error(nullptr);
+    }
+}
+const CoolProp_StateCAPI g_state_capi = {
+  capi_make, capi_destroy, capi_update, capi_keyed_output, capi_first_partial_deriv, capi_last_error, capi_set_mole_fractions, capi_specify_phase};
 }  // namespace
 
 void init_CoolProp(nb::module_& m) {

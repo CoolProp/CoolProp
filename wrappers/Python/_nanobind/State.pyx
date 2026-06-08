@@ -31,6 +31,7 @@ cdef extern from "CoolProp/detail/state_capi.h":
         double (*first_partial_deriv)(void*, long, long, long)
         const char* (*last_error)()
         void (*set_mole_fractions)(void*, const double*, long)
+        void (*specify_phase)(void*, long)
 
 import CoolProp as _CP  # the nanobind core: exports `_capi` + the int-convertible enums
 if not hasattr(_CP, "_capi"):
@@ -58,6 +59,8 @@ cdef long _iQ = int(_CP.iQ)
 cdef long _iPhase = int(_CP.iPhase)
 cdef long _iP_critical = int(_CP.iP_critical)
 cdef long _iP_triple = int(_CP.iP_triple)
+cdef long _iphase_gas = int(_CP.iphase_gas)
+cdef long _iphase_liquid = int(_CP.iphase_liquid)
 cdef long _DmassT = int(_CP.DmassT_INPUTS)
 cdef long _QT = int(_CP.QT_INPUTS)
 cdef long _PT = int(_CP.PT_INPUTS)
@@ -100,6 +103,12 @@ cdef inline void _set_mole_fractions(void* handle, list fracs) except *:
     for f in fracs:
         z.push_back(f)
     _C.set_mole_fractions(handle, z.data(), <long>z.size())
+    _raise_if_error()
+
+
+cdef inline void _specify_phase(void* handle, long phase) except *:
+    # Impose a phase (a phases enum value) on the handle.
+    _C.specify_phase(handle, phase)
     _raise_if_error()
 
 
@@ -147,6 +156,9 @@ cdef class _AbstractStateView:
     cpdef update(self, long input_pair, double value1, double value2):
         """Update the underlying state from an SI ``input_pair`` and two values."""
         _update(self.handle, input_pair, value1, value2)
+    cpdef specify_phase(self, long phase):
+        """Impose a phase (an ``iphase_*`` constant) for subsequent updates."""
+        _specify_phase(self.handle, phase)
     cpdef double first_partial_deriv(self, long Of, long Wrt, long Constant) except *:
         """First partial derivative d(Of)/d(Wrt) at constant ``Constant`` [SI]."""
         return _first_partial_deriv(self.handle, Of, Wrt, Constant)
@@ -172,8 +184,8 @@ cdef class State:
         # Widened to the legacy State.__init__ surface (bd CoolProp-r9sq.26):
         # optional ``params`` (None -> no state update, used by get_Tsat/copy),
         # an explicit ``backend``, a ``BACKEND::Fluid`` fluid string, and the
-        # (legacy-deprecated) ``phase`` flag -- recorded on ``.phase`` but, since
-        # the capsule exposes no specify_phase, not imposed on the state.
+        # ``phase`` flag -- recorded on ``.phase`` and imposed (gas/liquid) on the
+        # handle before the state update, exactly like the legacy State.
         cdef str _fl = Fluid if isinstance(Fluid, str) else Fluid.decode()
         cdef str _backend
         self.handle = NULL
@@ -192,6 +204,11 @@ cdef class State:
         else:
             _backend = backend.decode()
         self.set_Fluid(_fl, _backend)
+        # Impose the phase hint (gas/liquid) like the legacy State, before any update.
+        if self.phase.lower() == b'gas':
+            self.pAS.specify_phase(_iphase_gas)
+        elif self.phase.lower() == b'liquid':
+            self.pAS.specify_phase(_iphase_liquid)
         if params is not None:
             self.update(params)
 

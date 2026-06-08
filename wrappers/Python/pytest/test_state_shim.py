@@ -17,9 +17,23 @@ class TestConstructorWidening:
         assert S.Fluid == b"Water"
 
     def test_phase_kwarg_accepted(self):
-        # Legacy accepted a (deprecated) phase= flag; must not TypeError.
         S = State("Water", {"T": 300.0, "P": 101.325}, phase="liquid")
         assert S.T == pytest.approx(300.0)
+
+    def test_phase_is_imposed_not_swallowed(self):
+        # The phase= flag must actually be imposed (like legacy), not silently
+        # ignored: at a near-saturation P,T it forces the liquid vs (metastable)
+        # gas root, giving very different densities.
+        liq = State("Water", {"T": 372.0, "P": 101.325}, phase="liquid")
+        gas = State("Water", {"T": 372.0, "P": 101.325}, phase="gas")
+        assert liq.rho > 100.0 * gas.rho  # ~960 kg/m^3 vs ~0.6 kg/m^3
+
+    def test_view_specify_phase(self):
+        # The pAS view exposes specify_phase (legacy State.pAS.specify_phase).
+        from CoolProp import CoolProp as C
+
+        S = State("Water", {"T": 300.0, "D": 1000.0})
+        S.pAS.specify_phase(int(C.iphase_liquid))  # must not raise
 
     def test_backend_colon_syntax(self):
         S = State("HEOS::Water", {"T": 300.0, "D": 1000.0})

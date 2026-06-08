@@ -42,6 +42,9 @@ extern "C"
         // set_Fluid can honour bracketed strings like "R32[0.5]&R134a[0.5]".
         // Appended after last_error to keep the existing field offsets stable.
         void (*set_mole_fractions)(void* handle, const double* fractions, long n);
+        // Impose a phase (a `phases` enum value) on the handle, so the shim's
+        // ``State(..., phase=...)`` can force the gas/liquid root like legacy.
+        void (*specify_phase)(void* handle, long phase);
     } CoolProp_StateCAPI;
 
 #ifdef __cplusplus

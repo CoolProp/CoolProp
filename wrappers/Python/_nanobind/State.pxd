@@ -13,6 +13,7 @@ cdef class _AbstractStateView:
     cpdef double T(self) except *
     cpdef double p(self) except *
     cpdef update(self, long input_pair, double value1, double value2)
+    cpdef specify_phase(self, long phase)
     cpdef double first_partial_deriv(self, long Of, long Wrt, long Constant) except *
     cpdef fluid_names(self)
 
