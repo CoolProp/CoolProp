@@ -165,8 +165,13 @@ jobs:
             echo "::endgroup::"
           done
           ls -l dist/
-          # Fail loudly if the abi3 single-wheel promise regressed (e.g. a sidecar
-          # lost USE_SABI, or the wheel.py-api override stopped matching).
+          # Hard-gate EVERY expected wheel (under `set -e` a missing/mis-tagged one
+          # fails the step): the per-version wheels for 3.9-3.11 AND the cp312-abi3
+          # wheel. Without this, a per-version tagging regression would only warn in
+          # the test step below (whose final guard is just `ran > 0`).
+          for tag in cp39 cp310 cp311; do
+            ls dist/coolprop-*-"${tag}"-"${tag}"-*.whl >/dev/null
+          done
           ls dist/coolprop-*-cp312-abi3-*.whl >/dev/null
 
       - name: Run the pytest suite on 3.9-3.14 against the matching wheel
