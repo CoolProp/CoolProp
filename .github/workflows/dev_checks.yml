@@ -537,3 +537,47 @@ jobs:
 
       - name: Run installed-header hygiene gate
         run: ./dev/ci/check-installed-headers.sh build_shared
+
+  json-symbol-gate:
+    name: JSON symbol-leak gate (lib + Octave .oct)
+    # Fail if nlohmann/valijson (or rapidjson) symbols leak into the dynamic
+    # export table of a shipped shared product. Covers libCoolProp AND the
+    # Octave .oct wrapper — the wrapper where the hidden-visibility regression
+    # (CoolProp-rj2i) actually bit. The preflight gate (dev/ci/check-json-symbols.sh
+    # invoked locally) only ever checked libCoolProp; this job closes that gap by
+    # running the same script against the .oct in CI where Octave is available.
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Octave + SWIG toolchain
+        run: sudo apt-get update && sudo apt-get install -y octave liboctave-dev swig
+
+      - name: Configure libCoolProp shared library
+        run: cmake -B build_shared -S . -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build libCoolProp shared library
+        run: cmake --build build_shared -j$(nproc)
+
+      - name: Gate libCoolProp (fail-closed if artifact missing)
+        shell: bash
+        run: |
+          set -euo pipefail
+          lib=$(find build_shared -name 'libCoolProp.so' | head -1)
+          if [ -z "$lib" ]; then echo "FAIL: no libCoolProp.so produced"; exit 1; fi
+          ./dev/ci/check-json-symbols.sh "$lib"
+
+      - name: Configure Octave .oct module
+        run: cmake -B build_oct -S . -DCOOLPROP_OCTAVE_MODULE=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Octave .oct module
+        run: cmake --build build_oct -j$(nproc)
+
+      - name: Gate Octave .oct (fail-closed if artifact missing)
+        shell: bash
+        run: |
+          set -euo pipefail
+          oct=$(find build_oct -name '*.oct' | head -1)
+          if [ -z "$oct" ]; then echo "FAIL: no .oct produced"; exit 1; fi
+          ./dev/ci/check-json-symbols.sh "$oct"
