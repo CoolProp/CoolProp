@@ -13,6 +13,7 @@
 CoolProp\.__prefix__:
     import numpy
     from numpy.typing import NDArray
+    from collections.abc import Sequence
     _Scalar = float
     _Num = float | Sequence[float] | NDArray[numpy.float64]
 
