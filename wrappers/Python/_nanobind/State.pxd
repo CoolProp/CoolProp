@@ -13,6 +13,7 @@ cdef class _AbstractStateView:
     cpdef double T(self) except *
     cpdef double p(self) except *
     cpdef update(self, long input_pair, double value1, double value2)
+    cpdef specify_phase(self, long phase)
     cpdef double first_partial_deriv(self, long Of, long Wrt, long Constant) except *
     cpdef fluid_names(self)
 
@@ -23,6 +24,11 @@ cdef class State:
     cdef readonly double T_, p_, rho_
     cdef readonly bytes Fluid, phase
     cdef _refresh(self)
+    cpdef set_Fluid(self, Fluid, backend)
+    cpdef long Phase(self) except *
+    cpdef get_Tsat(self, double Q=*)
+    cpdef get_subcooling(self)
+    cpdef get_superheat(self)
     cpdef update(self, dict params)
     cpdef update_Trho(self, double T, double rho)
     cpdef update_ph(self, double p, double h)
