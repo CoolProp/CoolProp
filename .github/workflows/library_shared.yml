@@ -54,6 +54,23 @@ jobs:
     - name: Build
       run: cmake --build build --target install -j $(nproc) --config ${{ env.BUILD_TYPE }}
 
+    - name: JSON symbol-leak gate (libCoolProp, Linux/macOS)
+      # Fail if nlohmann/valijson/rapidjson symbols leak into libCoolProp's
+      # dynamic export table. Rides the shared build produced above (ELF on
+      # ubuntu, Mach-O on macOS) — no separate build. nm-based, so the Windows
+      # PE legs are skipped (exports are opt-in via src/CoolPropLib.def).
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        lib=$(find build install_root -type f \( -name 'libCoolProp.so' -o -name 'libCoolProp.dylib' \) | head -1)
+        if [ -z "$lib" ]; then
+          echo "FAIL: libCoolProp shared object not found under build/ or install_root/" >&2
+          exit 1
+        fi
+        echo "Gating $lib"
+        ./dev/ci/check-json-symbols.sh "$lib"
+
     # Create a special case for Windows since we also need 2 flavours of 32bit binaries
     - name: Configure CMake for 32bit Windows stdcall
       if: startsWith(matrix.os, 'windows')
