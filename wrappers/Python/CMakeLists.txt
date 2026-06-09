@@ -269,6 +269,14 @@ target_link_libraries(CoolProp_module PRIVATE miniz)
 set_target_properties(CoolProp_module PROPERTIES OUTPUT_NAME "CoolProp" PREFIX "")
 coolprop_hide_json_symbols(CoolProp_module)
 
+if(WIN32)
+    # The nanobind module compiles the whole core (incl. fmtlib, which static_asserts
+    # unless built /utf-8) plus the large nanobind_interface.cxx TU (needs /bigobj).
+    # The legacy Cython branch sets these on its CoolProp_module; the nanobind branch
+    # must too, otherwise the Windows wheel build fails (bd CoolProp-r9sq.6).
+    target_compile_options(CoolProp_module PRIVATE /utf-8 /bigobj)
+endif()
+
 # ---- PEP 561 type stub for the nanobind core (parity with the legacy wheel) ----
 # The core .so is self-contained (no Python-level imports at init), so nanobind's
 # stubgen can import it directly from the build dir to emit CoolProp.pyi.

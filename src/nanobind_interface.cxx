@@ -940,8 +940,10 @@ void init_CoolProp(nb::module_& m) {
             // so numpy scalars / 1-element arrays (e.g. a density from PropsSI) are
             // accepted, matching the legacy Cython `<double>obj` coercion. nb::cast<double>
             // would raise std::bad_cast on a non-float object (bd CoolProp-r9sq.16).
-            set_reference_stateD(FluidName, nb::cast<double>(nb::float_(args[0])), nb::cast<double>(nb::float_(args[1])),
-                                 nb::cast<double>(nb::float_(args[2])), nb::cast<double>(nb::float_(args[3])));
+            // Take an nb::handle explicitly: MSVC won't function-style-cast an
+            // args[] accessor straight to nb::float_, but accessor->handle is implicit.
+            auto _as_double = [](nb::handle h) { return nb::cast<double>(nb::float_(h)); };
+            set_reference_stateD(FluidName, _as_double(args[0]), _as_double(args[1]), _as_double(args[2]), _as_double(args[3]));
         } else {
             throw std::invalid_argument("Invalid number of inputs to set_reference_state");
         }
