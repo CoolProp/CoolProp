@@ -3478,8 +3478,141 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                     throw ValueError(format("Input is invalid"));
             }
         } else {
-            HEOS._phase = iphase_gas;
-            throw NotImplementedError("DHSU_T_flash does not support mixtures (yet)");
+            // Mixtures
+            if (other == iDmolar) {
+                // T and D fully specify the single-phase state — no root-finding needed.
+                // NOTE: two-phase detection for mixtures is not yet implemented.
+                // If the (T, rho) state falls inside the two-phase envelope, this
+                // code evaluates the single-phase EOS at that point (on the van der
+                // Waals loop) rather than performing a full VLE flash.  Detecting
+                // two-phase for mixtures requires solving the equilibrium at T for
+                // multiple trial pressures — a future enhancement.
+                HEOS.update_DmolarT_direct(HEOS._rhomolar, HEOS._T);
+                HEOS._Q = -1;
+                HEOS.recalculate_singlephase_phase();
+            } else {
+                // T + H/S/U: solve for density at fixed T.
+                // Uses update_DmolarT_direct (single-phase EOS) with TOMS748 in both
+                // gas and liquid density ranges, then picks the lower-Gibbs root.
+                // Same pattern as solver_rho_Tp_global / solver_for_rho_given_T_oneof_HSU.
+                CoolPropDbl T = HEOS._T;
+                CoolPropDbl value;
+                switch (other) {
+                    case iHmolar: value = HEOS._hmolar; break;
+                    case iSmolar: value = HEOS._smolar; break;
+                    case iUmolar: value = HEOS._umolar; break;
+                    default: throw ValueError(format("Invalid input for DHSU_T_flash mixture"));
+                }
+
+                CoolPropDbl rho_min = 1e-10;
+                CoolPropDbl rho_max = HEOS.calc_rhomolar_max_bound();
+                CoolPropDbl rho_reducing = HEOS.rhomolar_reducing();
+
+                // Residual functor using nocache variants.
+                // These compute H/S/U from (T, rho) using _reducing and mole_fractions
+                // directly, avoiding update_DmolarT_direct which leaves _phase as
+                // iphase_unknown (causing calc_hmolar() to throw).
+                auto resid = [&](double rho) -> double {
+                    switch (other) {
+                        case iHmolar: return HEOS.calc_hmolar_nocache(T, rho) - value;
+                        case iSmolar: return HEOS.calc_smolar_nocache(T, rho) - value;
+                        case iUmolar: return HEOS.calc_umolar_nocache(T, rho) - value;
+                        default: return _HUGE;
+                    }
+                };
+
+                // Try gas density range [rho_min, rho_reducing].
+                // At supercritical T this always brackets.  At subcritical T
+                // the upper end is in the unstable region but TOMS748 may still
+                // converge to a mechanically stable root if one exists.
+                double rho_gas = -1;
+                try {
+                    boost::uintmax_t max_iter = 100;
+                    auto bracket = boost::math::tools::toms748_solve(
+                        resid, static_cast<double>(rho_min), static_cast<double>(rho_reducing),
+                        boost::math::tools::eps_tolerance<double>(40), max_iter);
+                    double rho_cand = (bracket.first + bracket.second) / 2.0;
+                    if (HEOS.calc_pressure_nocache(T, rho_cand) > 0) {
+                        rho_gas = rho_cand;
+                    }
+                } catch (...) {}
+
+                // Try liquid density range [rho_reducing, rho_max].
+                // At subcritical T, rho_reducing sits deep in the mechanically
+                // unstable region where EOS properties are wildly unphysical.
+                // If this bracket fails, fall back to a scan from rho_max
+                // downward to find the stable liquid boundary.
+                double rho_liq = -1;
+                try {
+                    boost::uintmax_t max_iter = 100;
+                    auto bracket = boost::math::tools::toms748_solve(
+                        resid, static_cast<double>(rho_reducing), static_cast<double>(rho_max),
+                        boost::math::tools::eps_tolerance<double>(40), max_iter);
+                    double rho_cand = (bracket.first + bracket.second) / 2.0;
+                    if (HEOS.calc_pressure_nocache(T, rho_cand) > 0) {
+                        rho_liq = rho_cand;
+                    }
+                } catch (...) {}
+
+                // Fallback: if no liquid root found, locate the liquid
+                // spinodal — the lower edge of the stable liquid region where
+                // P crosses from negative to positive.  Scan downward from
+                // rho_max to find the transition, then bisect to precisely
+                // locate the P = 0 boundary.
+                if (rho_liq < 0) {
+                    double rho_neg = -1, rho_pos = -1;
+                    double rho_prev = rho_max;
+                    double P_prev = HEOS.calc_pressure_nocache(T, rho_prev);
+                    for (double rho_scan = rho_max * 0.95; rho_scan > rho_reducing; rho_scan *= 0.95) {
+                        double P_scan = HEOS.calc_pressure_nocache(T, rho_scan);
+                        if (P_prev > 0 && P_scan < 0) {
+                            rho_pos = rho_prev;
+                            rho_neg = rho_scan;
+                            break;
+                        }
+                        rho_prev = rho_scan;
+                        P_prev = P_scan;
+                    }
+                    // Bisect to refine the P = 0 boundary
+                    if (rho_neg > 0 && rho_pos > 0) {
+                        for (int i = 0; i < 30; i++) {
+                            double rho_mid = (rho_neg + rho_pos) / 2.0;
+                            if (HEOS.calc_pressure_nocache(T, rho_mid) > 0) {
+                                rho_pos = rho_mid;
+                            } else {
+                                rho_neg = rho_mid;
+                            }
+                        }
+                        // rho_pos is now the lowest density with P > 0
+                        try {
+                            boost::uintmax_t max_iter = 100;
+                            auto bracket = boost::math::tools::toms748_solve(
+                                resid, rho_pos, static_cast<double>(rho_max),
+                                boost::math::tools::eps_tolerance<double>(40), max_iter);
+                            rho_liq = (bracket.first + bracket.second) / 2.0;
+                        } catch (...) {}
+                    }
+                }
+
+                double rho;
+                if (rho_gas > 0 && rho_liq > 0) {
+                    // Both roots found — pick lower Gibbs energy
+                    double G_gas = HEOS.calc_gibbsmolar_nocache(T, rho_gas);
+                    double G_liq = HEOS.calc_gibbsmolar_nocache(T, rho_liq);
+                    rho = (G_liq <= G_gas) ? rho_liq : rho_gas;
+                } else if (rho_gas > 0) {
+                    rho = rho_gas;
+                } else if (rho_liq > 0) {
+                    rho = rho_liq;
+                } else {
+                    throw ValueError(format("DHSU_T_flash for mixture: no density root found for T=%Lg", T));
+                }
+
+                // Set final state
+                HEOS.update_DmolarT_direct(rho, T);
+                HEOS._Q = -1;
+                HEOS.recalculate_singlephase_phase();
+            }
         }
     }
 
