@@ -104,7 +104,15 @@ jobs:
         # reliable *indicator*-based ODR detection — so a real duplicate-symbol
         # violation (e.g. the JSON-symbol-visibility concern) still fails CI —
         # and drops only the poisoning check.  See CoolProp-xma3.
-        run: cd build && ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
+        #
+        # COOLPROP_SVDSBTL_SAMPLING_THREADS=$(nproc): the SVDSBTL surface builds
+        # (the test run's long pole — each fills a 200x800 grid by sampling the
+        # source EOS) sample serially by default.  Enabling the existing parallel
+        # sampler across the runner's cores cuts that wall time (the parallel
+        # path is gated to non-REFPROP sources, so the REFPROP surfaces stay
+        # serial).  Running it here also exercises the parallel sampler under
+        # ASan's heap/UAF checks.
+        run: cd build && COOLPROP_SVDSBTL_SAMPLING_THREADS=$(nproc) ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
 
   clang-format:
     name: clang-format (PR diff)
