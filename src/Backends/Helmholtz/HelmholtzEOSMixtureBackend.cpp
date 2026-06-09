@@ -103,6 +103,12 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPro
 }
 void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV) {
 
+    // Drop the cached ECS transport reference fluids: they are tied to the
+    // OLD component's reference-fluid name, so a post-construction component
+    // swap must rebuild them.  (No-op at construction, where they are null.)
+    viscosity_ecs_reference_state.reset();
+    conductivity_ecs_reference_state.reset();
+
     // Copy the components
     this->components = components;
     this->N = components.size();
@@ -834,13 +840,17 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilut
 
         // Check if using ECS
         if (component.transport.viscosity_using_ECS) {
-            // Get reference fluid name
-            std::string fluid_name = component.transport.viscosity_ecs.reference_fluid;
-            std::vector<std::string> names(1, fluid_name);
-            // Get a managed pointer to the reference fluid for ECS
-            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid = std::make_shared<HelmholtzEOSMixtureBackend>(names);
+            // Build the reference fluid once and cache it — viscosity_ECS resets
+            // its state on every call (conformal_state_solver + update_DmolarT_direct),
+            // so reusing the backend is safe and avoids deep-copying the entire
+            // reference-fluid EOS on every viscosity evaluation.
+            if (!viscosity_ecs_reference_state) {
+                std::string fluid_name = component.transport.viscosity_ecs.reference_fluid;
+                std::vector<std::string> names(1, fluid_name);
+                viscosity_ecs_reference_state = std::make_shared<HelmholtzEOSMixtureBackend>(names);
+            }
             // Get the viscosity using ECS and stick in the critical value
-            critical = TransportRoutines::viscosity_ECS(*this, *ref_fluid);
+            critical = TransportRoutines::viscosity_ECS(*this, *viscosity_ecs_reference_state);
             return;
         }
 
@@ -926,13 +936,17 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
 
         // Check if using ECS
         if (component.transport.conductivity_using_ECS) {
-            // Get reference fluid name
-            std::string fluid_name = component.transport.conductivity_ecs.reference_fluid;
-            std::vector<std::string> name(1, fluid_name);
-            // Get a managed pointer to the reference fluid for ECS
-            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid = std::make_shared<HelmholtzEOSMixtureBackend>(name);
-            // Get the viscosity using ECS and store in initial_density (not normally used);
-            initial_density = TransportRoutines::conductivity_ECS(*this, *ref_fluid);  // Warning: not actually initial_density
+            // Build the reference fluid once and cache it — conductivity_ECS resets
+            // its state on every call, so reusing the backend is safe and avoids
+            // deep-copying the entire reference-fluid EOS on every conductivity
+            // evaluation (the dominant cost of SVDSBTL surface builds for ECS fluids).
+            if (!conductivity_ecs_reference_state) {
+                std::string fluid_name = component.transport.conductivity_ecs.reference_fluid;
+                std::vector<std::string> name(1, fluid_name);
+                conductivity_ecs_reference_state = std::make_shared<HelmholtzEOSMixtureBackend>(name);
+            }
+            // Get the conductivity using ECS and store in initial_density (not normally used);
+            initial_density = TransportRoutines::conductivity_ECS(*this, *conductivity_ecs_reference_state);  // Warning: not actually initial_density
             return;
         }
 
