@@ -44,12 +44,16 @@ jobs:
     # Guardrail (CoolProp-xuu).  Without this the job inherits GitHub's 6-hour
     # default cap; when a test runs away the job is silently reported as
     # `cancelled` rather than a real failure (that is exactly how the
-    # detect_stack_use_after_return BDCSVD blow-up hid for so long).  With the
-    # Asan build now actually optimized (-O2; see the CMakeLists Asan flags fix)
-    # the full suite + REFPROP runs in ~3 min locally / ~10 min on the 2-vCPU
-    # runner, down from ~45 min when the build was silently -O0.  30 min is a
-    # ~3x headroom that still surfaces a genuine runaway fast and visibly.
-    timeout-minutes: 30
+    # detect_stack_use_after_return BDCSVD blow-up hid for so long).
+    # On the 2-vCPU runner with the optimized (-O2) Asan build the measured
+    # steps are REFPROP+config ~1 min and compile ~7.5 min; the single-threaded
+    # test run is the long pole and is much slower per-core than a dev laptop
+    # (~187 s locally).  A prior 30 min cap cancelled the job mid-test (the
+    # test run alone was still going at 21.5 min), so the full duration is not
+    # yet known precisely.  90 min is a deliberately safe envelope that still
+    # surfaces a genuine runaway well under GitHub's 6-hour default; re-tighten
+    # once a clean run reports the true wall time.
+    timeout-minutes: 90
     strategy:
       matrix:
         os: [ubuntu-latest]
