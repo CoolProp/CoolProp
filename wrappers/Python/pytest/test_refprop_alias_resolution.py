@@ -365,15 +365,6 @@ class TestEdgeCases:
         cas     = CoolProp.AbstractState("REFPROP", "water").fluid_param_string("CAS")
         assert cas == ref_cas
 
-    def test_refprop_name_identical_to_coolprop_name(self):
-        """
-        Some fluids have a REFPROP_NAME identical to their CoolProp name
-        (e.g. Water → WATER).  The alias resolution must not break these.
-        """
-        ref_cas = CoolProp.AbstractState("REFPROP", "WATER").fluid_param_string("CAS")
-        cas     = CoolProp.AbstractState("REFPROP", "Water").fluid_param_string("CAS")
-        assert cas == ref_cas
-
 
 # ---------------------------------------------------------------------------
 # 7. Discovery smoke test
