@@ -218,11 +218,27 @@ jobs:
           diff -u wrappers/Python/_nanobind/CoolProp.pyi _stubcheck/CoolProp/CoolProp.pyi || ok=0
           diff -u wrappers/Python/_nanobind/py.typed     _stubcheck/CoolProp/py.typed     || ok=0
           if [ "$ok" -ne 1 ]; then
-            echo "::error::Committed nanobind stub is stale. Regenerate with a native"
-            echo "::error::nanobind==2.12.0 abi3 build: COOLPROP_NANOBIND=ON uv build --wheel"
-            echo "::error::--config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON, then"
-            echo "::error::unzip CoolProp/CoolProp.pyi + CoolProp/py.typed from the built wheel"
-            echo "::error::into wrappers/Python/_nanobind/ and commit. See _nanobind/README.md."
+            # The unified diff above shows exactly what drifted. Emit a copy-paste
+            # regen recipe (matches wrappers/Python/_nanobind/README.md), then fail
+            # with a single concise annotation.
+            {
+              echo
+              echo "Committed nanobind stub is out of sync with stubgen output."
+              echo "Regenerate it from a NATIVE abi3 build and commit the result:"
+              echo
+              echo "  uv pip install 'nanobind==2.12.0' cython scikit-build-core ninja"
+              echo "  COOLPROP_NANOBIND=ON uv build --wheel --no-build-isolation \\"
+              echo "    --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \\"
+              echo "    --config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON \\"
+              echo "    --out-dir dist ."
+              echo "  unzip -o -j dist/coolprop-*-cp312-abi3-*.whl \\"
+              echo "    CoolProp/CoolProp.pyi CoolProp/py.typed -d wrappers/Python/_nanobind/"
+              echo
+              echo "(nanobind must be PINNED to the gate's version for a byte-exact match;"
+              echo " see wrappers/Python/_nanobind/README.md.)"
+              echo
+            } >&2
+            echo "::error::Committed nanobind stub is stale — see the regen recipe in the log above."
             exit 1
           fi
           echo "Committed nanobind stub is in sync."
