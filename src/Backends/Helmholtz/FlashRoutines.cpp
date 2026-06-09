@@ -81,6 +81,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             }
             return;
         } catch (...) {
+            HEOS.unspecify_phase();
             // Envelope-guided flash failed; fall through to blind flash below
         }
     }
@@ -140,8 +141,10 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                     double G_gas = HEOS.calc_gibbsmolar_nocache(HEOS.T(), rho_gas);
                     double G_liq = HEOS.calc_gibbsmolar_nocache(HEOS.T(), rho_liq);
                     rho = (G_liq <= G_gas) ? rho_liq : rho_gas;
-                } else {
+                } else if (rho_gas > 0 || rho_liq > 0) {
                     rho = (rho_gas > 0) ? rho_gas : rho_liq;
+                } else {
+                    throw ValueError("Unable to obtain either HEOS density root in PT_flash_mixtures");
                 }
             } else {
                 // Only one SRK root valid (or neither) — solve that branch,
@@ -153,7 +156,12 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                     rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
                 } catch (...) {
                     HEOS.specify_phase(fallback);
-                    rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
+                    try {
+                        rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
+                    } catch (...) {
+                        HEOS.unspecify_phase();
+                        throw;
+                    }
                 }
                 HEOS.unspecify_phase();
             }
