@@ -88,7 +88,19 @@ jobs:
         # rather than producing a real pass/fail.  ASan's heap/global/UAF
         # checks all still run; only the fake-stack (use-after-return)
         # instrumentation is dropped.
-        run: cd build && ASAN_OPTIONS=verbosity=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
+        #
+        # detect_odr_violation=1 (default is 2): at -O2 the compiler merges the
+        # two identical-content static (internal-linkage) arrays in vendored
+        # externals/miniz-3.1.1/miniz.c — s_tdefl_num_probes and
+        # s_tdefl_png_num_probes — onto one address.  ASan's level-2 *poisoning*
+        # ODR check then false-positives on the shared address (two distinct
+        # names, same storage).  Internal-linkage globals cannot ODR-violate
+        # across TUs by definition, so this is a benign false positive that only
+        # surfaced once the build was actually optimized.  Level 1 keeps the
+        # reliable *indicator*-based ODR detection — so a real duplicate-symbol
+        # violation (e.g. the JSON-symbol-visibility concern) still fails CI —
+        # and drops only the poisoning check.  See CoolProp-xma3.
+        run: cd build && ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
 
   clang-format:
     name: clang-format (PR diff)
