@@ -78,7 +78,7 @@ jobs:
         platforms: all
 
     - name: Build and test wheels
-      uses: pypa/cibuildwheel@v3.4.1
+      uses: pypa/cibuildwheel@v4.0.0
       env:
         # Make pip tolerant of transient DNS / connection failures on the
         # post-build wheel test (most often hits macOS runners pulling
