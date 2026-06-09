@@ -172,9 +172,22 @@ jobs:
             echo "::group::build nanobind wheel on Python $PY"
             uv venv --python "$PY" ".venv-build-$PY"
             source ".venv-build-$PY/bin/activate"
-            uv pip install nanobind cython scikit-build-core ninja
+            # Pin nanobind: the cp312 wheel below regenerates the committed type
+            # stub (REGEN_STUB), and the drift gate diffs it byte-for-byte, so the
+            # stubgen toolchain must be reproducible.  Bump deliberately together
+            # with wrappers/Python/_nanobind/CoolProp.pyi (bd CoolProp-1gas).
+            uv pip install "nanobind==2.12.0" cython scikit-build-core ninja
+            # Only the native cp312-abi3 build regenerates the stub (stubgen imports
+            # the just-built CoolProp.abi3.so -- safe natively, impossible when
+            # cross-compiling). The published wheels never set this; they ship the
+            # committed copy.  Here it lets the drift gate compare against fresh output.
+            regen=""
+            if [ "$PY" = "3.12" ]; then
+              regen="--config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON"
+            fi
             COOLPROP_NANOBIND=ON uv build --wheel --no-build-isolation \
               --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
+              $regen \
               --out-dir dist .
             deactivate
             echo "::endgroup::"
@@ -188,6 +201,31 @@ jobs:
             ls dist/coolprop-*-"${tag}"-"${tag}"-*.whl >/dev/null
           done
           ls dist/coolprop-*-cp312-abi3-*.whl >/dev/null
+
+      - name: Drift gate — committed nanobind stub matches stubgen output
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The cp312 leg above built with COOLPROP_NANOBIND_REGEN_STUB=ON, so its
+          # wheel carries a FRESHLY regenerated CoolProp.pyi (stubgen run against the
+          # just-built native .so). It must match the committed copy that every
+          # OTHER (incl. cross-compiled) wheel ships verbatim; a diff means a binding
+          # changed without regenerating the stub (bd CoolProp-1gas).
+          WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl)
+          rm -rf _stubcheck && mkdir _stubcheck
+          unzip -q -o "$WHL" -d _stubcheck "CoolProp/CoolProp.pyi" "CoolProp/py.typed"
+          ok=1
+          diff -u wrappers/Python/_nanobind/CoolProp.pyi _stubcheck/CoolProp/CoolProp.pyi || ok=0
+          diff -u wrappers/Python/_nanobind/py.typed     _stubcheck/CoolProp/py.typed     || ok=0
+          if [ "$ok" -ne 1 ]; then
+            echo "::error::Committed nanobind stub is stale. Regenerate with a native"
+            echo "::error::nanobind==2.12.0 abi3 build: COOLPROP_NANOBIND=ON uv build --wheel"
+            echo "::error::--config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON, then"
+            echo "::error::unzip CoolProp/CoolProp.pyi + CoolProp/py.typed from the built wheel"
+            echo "::error::into wrappers/Python/_nanobind/ and commit. See _nanobind/README.md."
+            exit 1
+          fi
+          echo "Committed nanobind stub is in sync."
 
       - name: Run the pytest suite on 3.9-3.14 against the matching wheel
         shell: bash
