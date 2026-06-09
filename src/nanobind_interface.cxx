@@ -478,7 +478,14 @@ void init_CoolProp(nb::module_& m) {
     m.attr("PyPhaseEnvelopeData") = m.attr("PhaseEnvelopeData");
     m.attr("PySpinodalData") = m.attr("SpinodalData");
 
-    nb::class_<AbstractState>(m, "_AbstractState")
+    // bd CoolProp-r9sq.28: register AbstractState as a real TYPE with a factory
+    // constructor (nb::new_), not a module-level factory FUNCTION returning a
+    // private _AbstractState.  So `AbstractState("HEOS","Water")` still builds a
+    // state AND `isinstance(x, AbstractState)` works (it previously raised
+    // "arg 2 must be a type", forcing callers like Plots/Common.py to reach into
+    // the private class).  nb::new_ binds __new__ to `factory` + a no-op __init__.
+    nb::class_<AbstractState>(m, "AbstractState")
+      .def(nb::new_(&factory))
       .def("set_T", &AbstractState::set_T)
       .def("backend_name", &AbstractState::backend_name)
       .def("using_mole_fractions", &AbstractState::using_mole_fractions)
@@ -738,7 +745,9 @@ void init_CoolProp(nb::module_& m) {
       .def("d4alphar_dDelta_dTau3", &AbstractState::d4alphar_dDelta_dTau3)
       .def("d4alphar_dTau4", &AbstractState::d4alphar_dTau4);
 
-    m.def("AbstractState", &factory);
+    // NOTE: `AbstractState(backend, fluids)` is the class constructor registered
+    // above via nb::new_(&factory) -- no separate module-level factory function
+    // (bd CoolProp-r9sq.28), so isinstance(x, AbstractState) works.
 
     m.def("get_config_as_json_string", &get_config_as_json_string);
     m.def("set_config_as_json_string", &set_config_as_json_string);

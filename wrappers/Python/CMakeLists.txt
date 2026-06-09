@@ -279,9 +279,10 @@ nanobind_add_stub(
     PYTHON_PATH "$<TARGET_FILE_DIR:CoolProp_module>"
     DEPENDS CoolProp_module
     MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/py.typed"
-    # INCLUDE_PRIVATE emits the underscore-named _AbstractState class that the
-    # AbstractState() factory returns; the pattern file replaces the auto
-    # PropsSI/HAPropsSI overloads (object-typed -> overlap) with typed ones.
+    # INCLUDE_PRIVATE emits underscore-named members (e.g. the _capi capsule);
+    # the pattern file replaces the auto PropsSI/HAPropsSI overloads
+    # (object-typed -> overlap) with typed ones.  (AbstractState is now a public
+    # type with a factory constructor -- bd CoolProp-r9sq.28 -- not a private class.)
     INCLUDE_PRIVATE
     PATTERN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/stub_patterns.txt"
 )
