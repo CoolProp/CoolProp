@@ -44,11 +44,12 @@ jobs:
     # Guardrail (CoolProp-xuu).  Without this the job inherits GitHub's 6-hour
     # default cap; when a test runs away the job is silently reported as
     # `cancelled` rather than a real failure (that is exactly how the
-    # detect_stack_use_after_return BDCSVD blow-up hid for so long).  The full
-    # ASan suite + REFPROP completes in ~12 min locally (~40-50 min expected on
-    # the slower 2-vCPU runner); 90 min is a ~2x headroom that still surfaces a
-    # genuine runaway fast and visibly instead of burning six hours.
-    timeout-minutes: 90
+    # detect_stack_use_after_return BDCSVD blow-up hid for so long).  With the
+    # Asan build now actually optimized (-O2; see the CMakeLists Asan flags fix)
+    # the full suite + REFPROP runs in ~3 min locally / ~10 min on the 2-vCPU
+    # runner, down from ~45 min when the build was silently -O0.  30 min is a
+    # ~3x headroom that still surfaces a genuine runaway fast and visibly.
+    timeout-minutes: 30
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -72,7 +73,9 @@ jobs:
       - name: cmake config
         run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Asan -DCOOLPROP_ASAN=ON -DCOOLPROP_CATCH_MODULE=ON
       - name: build all Catch tests
-        run: cmake --build build --config Asan
+        # -j$(nproc): every other build job already parallelises; the ASan job
+        # historically did not, leaving the compile serial on the multi-vCPU runner.
+        run: cmake --build build --config Asan -j$(nproc)
       - name: run all the compiled Catch tests with address sanitizer
         # detect_stack_use_after_return is deliberately NOT enabled here
         # (CoolProp-xuu).  With REFPROP present — which CI builds — the 5
