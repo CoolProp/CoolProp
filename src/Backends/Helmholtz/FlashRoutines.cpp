@@ -3161,23 +3161,34 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             HEOS.recalculate_singlephase_phase();
         }
     } else {
-        if (HEOS.PhaseEnvelope.built) {
-            // Determine whether you are inside or outside
-            SimpleState closest_state;
-            std::size_t iclosest = 0;
-            bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, other, value, iclosest, closest_state);
+        // Mixture: bracket-solve for T at fixed P using TOMS748.
+        // Each iteration calls update(PT_INPUTS, ...) which dispatches to
+        // PT_flash_mixtures (stability analysis + two-phase solver).  The
+        // full update path ensures SatL/SatV are set for two-phase states,
+        // so keyed_output(other) returns correct H/S/U for any phase.
+        CoolPropDbl Tmin = HEOS.calc_Tmin();
+        CoolPropDbl Tmax = HEOS.calc_Tmax();
+        CoolPropDbl p = HEOS._p;
 
-            if (!twophase) {
-                PY_singlephase_flash_resid resid(HEOS, HEOS._p, other, value);
-                // If that fails, try a bounded solver
-                Brent(resid, closest_state.T + 10, 1000, DBL_EPSILON, 1e-10, 100);
-                HEOS.unspecify_phase();
-            } else {
-                throw ValueError("two-phase solution for Y");
-            }
+        // Residual functor: given T, do PT flash and return Y - Y_target
+        auto resid = [&](double T) -> double {
+            HEOS.update(PT_INPUTS, p, T);
+            return HEOS.keyed_output(other) - value;
+        };
 
-        } else {
-            throw ValueError("phase envelope must be built to carry out HSU_P_flash for mixture");
+        try {
+            boost::uintmax_t max_iter = 100;
+            auto bracket = boost::math::tools::toms748_solve(
+                resid, static_cast<double>(Tmin), static_cast<double>(Tmax),
+                boost::math::tools::eps_tolerance<double>(40), max_iter);
+            double T_sol = (bracket.first + bracket.second) / 2.0;
+
+            // Final PT flash at the converged temperature to set HEOS state
+            HEOS.update(PT_INPUTS, p, T_sol);
+        } catch (std::exception& e) {
+            throw ValueError(
+                format("HSU_P_flash for mixture failed with Tmin=%Lg, Tmax=%Lg, p=%Lg: %s",
+                       Tmin, Tmax, p, e.what()));
         }
     }
 }

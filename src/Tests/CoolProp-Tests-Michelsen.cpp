@@ -1139,4 +1139,108 @@ TEST_CASE("Stability sweep: blind two-phase classification + fugacity (CoolProp-
     }
 }
 
+// Helper: run a round-trip HSU_P flash test.
+// 1. PT flash at (P, T) to get reference state
+// 2. Read the target property (H, S, or U)
+// 3. Flash with (Y, P) inputs on a fresh object
+// 4. Check that T and rho match the reference
+static void hsu_p_roundtrip(const std::string& backend, const std::string& fluids,
+                            const std::vector<double>& z, double P, double T,
+                            CoolProp::input_pairs flash_pair, double eps = 1e-6) {
+    using namespace CoolProp;
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
+    AS->set_mole_fractions(z);
+    AS->update(PT_INPUTS, P, T);
+    double T_ref = AS->T();
+    double rho_ref = AS->rhomolar();
+
+    double y_ref;
+    switch (flash_pair) {
+        case HmolarP_INPUTS: y_ref = AS->hmolar(); break;
+        case PSmolar_INPUTS: y_ref = AS->smolar(); break;
+        case PUmolar_INPUTS: y_ref = AS->umolar(); break;
+        default: throw ValueError("unsupported flash pair in hsu_p_roundtrip");
+    }
+
+    auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
+    AS2->set_mole_fractions(z);
+    // HmolarP_INPUTS: (H, P);  PSmolar_INPUTS: (P, S);  PUmolar_INPUTS: (P, U)
+    if (flash_pair == HmolarP_INPUTS) {
+        AS2->update(flash_pair, y_ref, P);
+    } else {
+        AS2->update(flash_pair, P, y_ref);
+    }
+    CHECK(AS2->T() == Catch::Approx(T_ref).epsilon(eps));
+    CHECK(AS2->rhomolar() == Catch::Approx(rho_ref).epsilon(eps));
+}
+
+TEST_CASE("HSU_P flash: mixture HP round-trip", "[michelsen][flash][HSU_P]") {
+    SECTION("N2/O2 gas T=300 P=1e5") {
+        hsu_p_roundtrip("HEOS", "Nitrogen&Oxygen", {0.79, 0.21}, 1e5, 300.0, HmolarP_INPUTS);
+    }
+    SECTION("N2/O2 liquid T=75 P=1e5") {
+        hsu_p_roundtrip("HEOS", "Nitrogen&Oxygen", {0.79, 0.21}, 1e5, 75.0, HmolarP_INPUTS);
+    }
+    SECTION("CH4/C2H6 gas T=250 P=1e6") {
+        hsu_p_roundtrip("HEOS", "Methane&Ethane", {0.85, 0.15}, 1e6, 250.0, HmolarP_INPUTS);
+    }
+    SECTION("4-component gas T=300 P=1e5") {
+        hsu_p_roundtrip("HEOS", "Nitrogen&Methane&Ethane&Propane", {0.1, 0.5, 0.25, 0.15}, 1e5, 300.0, HmolarP_INPUTS);
+    }
+}
+
+TEST_CASE("HSU_P flash: mixture SP round-trip", "[michelsen][flash][HSU_P]") {
+    SECTION("N2/O2 gas T=300 P=1e5") {
+        hsu_p_roundtrip("HEOS", "Nitrogen&Oxygen", {0.79, 0.21}, 1e5, 300.0, PSmolar_INPUTS);
+    }
+    SECTION("N2/O2 liquid T=75 P=1e5") {
+        hsu_p_roundtrip("HEOS", "Nitrogen&Oxygen", {0.79, 0.21}, 1e5, 75.0, PSmolar_INPUTS);
+    }
+    SECTION("CH4/C2H6 gas T=250 P=1e6") {
+        hsu_p_roundtrip("HEOS", "Methane&Ethane", {0.85, 0.15}, 1e6, 250.0, PSmolar_INPUTS);
+    }
+    SECTION("4-component gas T=300 P=1e5") {
+        hsu_p_roundtrip("HEOS", "Nitrogen&Methane&Ethane&Propane", {0.1, 0.5, 0.25, 0.15}, 1e5, 300.0, PSmolar_INPUTS);
+    }
+}
+
+TEST_CASE("HSU_P flash: mixture UP round-trip", "[michelsen][flash][HSU_P]") {
+    SECTION("N2/O2 gas T=300 P=1e5") {
+        hsu_p_roundtrip("HEOS", "Nitrogen&Oxygen", {0.79, 0.21}, 1e5, 300.0, PUmolar_INPUTS);
+    }
+    SECTION("N2/O2 liquid T=75 P=1e5") {
+        hsu_p_roundtrip("HEOS", "Nitrogen&Oxygen", {0.79, 0.21}, 1e5, 75.0, PUmolar_INPUTS);
+    }
+    SECTION("CH4/C2H6 gas T=250 P=1e6") {
+        hsu_p_roundtrip("HEOS", "Methane&Ethane", {0.85, 0.15}, 1e6, 250.0, PUmolar_INPUTS);
+    }
+    SECTION("4-component gas T=300 P=1e5") {
+        hsu_p_roundtrip("HEOS", "Nitrogen&Methane&Ethane&Propane", {0.1, 0.5, 0.25, 0.15}, 1e5, 300.0, PUmolar_INPUTS);
+    }
+}
+
+TEST_CASE("HSU_P flash: mixture two-phase HP round-trip", "[michelsen][flash][HSU_P]") {
+    // For N2/O2, the two-phase region at 1 bar spans ~78-90 K.
+    // Flash at a two-phase (T, P), read H, then HP-flash and verify
+    // that T, Q, and rho are recovered.
+    using namespace CoolProp;
+    SECTION("N2/O2 two-phase T=80 P=1e5") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS->set_mole_fractions({0.79, 0.21});
+        AS->update(PT_INPUTS, 1e5, 80.0);
+        REQUIRE(AS->phase() == iphase_twophase);
+        double T_ref = AS->T();
+        double rho_ref = AS->rhomolar();
+        double Q_ref = AS->Q();
+        double h_ref = AS->hmolar();
+
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        AS2->update(HmolarP_INPUTS, h_ref, 1e5);
+        CHECK(AS2->T() == Catch::Approx(T_ref).epsilon(1e-4));
+        CHECK(AS2->rhomolar() == Catch::Approx(rho_ref).epsilon(1e-4));
+        CHECK(AS2->Q() == Catch::Approx(Q_ref).margin(0.01));
+    }
+}
+
 #endif
