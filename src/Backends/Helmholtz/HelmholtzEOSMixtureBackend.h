@@ -70,6 +70,13 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     shared_ptr<HelmholtzEOSMixtureBackend> transient_pure_state;  ///< A temporary state used for calculations of pure fluid properties
     shared_ptr<HelmholtzEOSMixtureBackend> TPD_state;             ///< A temporary state used for calculations of the tangent-plane-distance
     shared_ptr<HelmholtzEOSMixtureBackend> critical_state;        ///< A temporary state used for calculations of the critical point(s)
+    /// Cached ECS reference-fluid backends for transport (viscosity / conductivity).
+    /// The reference fluid is fixed for this backend's lifetime, so it is built
+    /// once on first use and reused.  Building one deep-copies the entire
+    /// reference-fluid EOS; this previously happened on EVERY transport-property
+    /// call (the dominant cost of e.g. SVDSBTL surface builds for ECS fluids).
+    shared_ptr<HelmholtzEOSMixtureBackend> viscosity_ecs_reference_state;
+    shared_ptr<HelmholtzEOSMixtureBackend> conductivity_ecs_reference_state;
     /// Update the state class used to calculate the tangent-plane-distance
     virtual void add_TPD_state() {
         if (TPD_state.get() == nullptr) {
