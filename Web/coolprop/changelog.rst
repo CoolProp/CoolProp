@@ -56,7 +56,12 @@ Highlights:
   working: a link-free, capsule-forwarding ``State`` shim preserves the
   cimportable contract. On Python ≥ 3.12 the wrapper ships as a single
   stable-ABI (``abi3``) wheel per platform instead of one wheel per Python
-  version.
+  version (Python 3.9–3.11 get per-version wheels, below nanobind's
+  stable-ABI floor).
+
+  ``AbstractState`` is now a genuine Python *type*: ``AbstractState("HEOS",
+  "Water")`` still constructs a state, but ``isinstance(x, AbstractState)``
+  now works too (previously the factory was a function and the check raised).
 
   The following **removals are breaking** (all long-deprecated or never part of
   the intended API):
