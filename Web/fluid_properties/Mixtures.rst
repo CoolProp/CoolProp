@@ -139,6 +139,237 @@ You can download the script that generated the following figure here: :download:
 
 .. image:: methane-ethane.png
 
+.. _pt-flash:
+
+Isothermal-Isobaric (PT) Flash
+-------------------------------
+
+Given a feed composition :math:`\mathbf{z}`, temperature :math:`T`, and pressure
+:math:`P`, the PT flash determines whether the mixture is single-phase or splits
+into vapour and liquid, and if so, computes the equilibrium phase compositions
+and fractions.  CoolProp implements the classical two-stage Michelsen approach
+:cite:`Michelsen-FPE-1982a,Michelsen-FPE-1982b,Michelsen-BOOK-2007` for both the
+multi-parameter Helmholtz (HEOS) and cubic (SRK/PR) backends.
+
+The algorithm selection is controlled by the configuration key
+``MIXTURE_STABILITY_ALGORITHM``:
+
+* ``1`` (default, from v8.0) -- Michelsen (1982) stability and phase-split
+* ``0`` -- Legacy algorithm from Gernert et al. :cite:`Gernert-FPE-2014` (sole option in v7.x and earlier)
+
+Overview
+^^^^^^^^
+
+The flash proceeds in two stages:
+
+1. **Stability analysis** -- determine whether the feed is thermodynamically
+   stable as a single phase, or whether a phase split will occur.
+2. **Phase-split calculation** -- if the feed is unstable, compute the
+   equilibrium compositions :math:`\mathbf{x}` (liquid), :math:`\mathbf{y}`
+   (vapour), vapour fraction :math:`\beta`, and phase densities.
+
+Both stages share the same equation-of-state evaluations (fugacity
+coefficients and their composition derivatives) and density solvers.
+The following sections describe the Michelsen algorithm as implemented.
+
+.. _flash-logic-diagram:
+
+Logic diagram
+^^^^^^^^^^^^^
+
+.. figure:: pt-flash-flowchart.png
+   :width: 100%
+   :align: center
+   :alt: Flowchart of the blind PT flash algorithm showing initialisation,
+         Stage 1 (stability analysis) and Stage 2 (phase-split calculation).
+
+   Overview of the blind PT flash algorithm.  Initialisation checks for
+   pre-computed phase boundaries or caller-imposed phases before entering
+   the Michelsen two-stage procedure.  Stage 1 evaluates the tangent plane
+   distance (TPD) to detect instability; Stage 2 solves the phase split
+   via successive substitution, GDEM acceleration and, if needed, a
+   second-order Gibbs energy minimisation.
+
+.. _tpd-stability:
+
+Stage 1: Phase stability analysis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The stability test determines whether a single-phase mixture at the given
+:math:`(T, P, \mathbf{z})` is a true equilibrium state, or whether the Gibbs
+energy can be lowered by splitting into two phases.  The method follows
+Michelsen :cite:`Michelsen-FPE-1982a`.
+
+**Tangent Plane Distance (TPD).**
+A phase with composition :math:`\mathbf{z}` is stable if and only if the
+tangent plane distance is non-negative for all trial compositions
+:math:`\mathbf{Y}`:
+
+.. math::
+
+   \mathrm{TPD}(\mathbf{Y}) = \sum_i Y_i \bigl[\ln Y_i + \ln \hat{\varphi}_i(\mathbf{Y})
+   - h_i\bigr] \geq 0
+
+where :math:`h_i = \ln z_i + \ln \hat{\varphi}_i(\mathbf{z})` are the feed
+chemical potentials.  A stationary point with :math:`\mathrm{TPD} < 0` proves
+instability.
+
+**Wilson K-factor initialisation.**
+The initial K-factors for the two-sided test come from the Wilson correlation:
+
+.. math::
+
+   \ln K_i = \ln\!\left(\frac{P_{c,i}}{P}\right)
+   + 5.373\,(1 + \omega_i)\!\left(1 - \frac{T_{c,i}}{T}\right)
+
+Two trial compositions are formed:
+
+* Vapour-like: :math:`Y_i = z_i \, K_i`
+* Liquid-like: :math:`Y_i = z_i / K_i`
+
+**Successive substitution with GDEM.**
+For each trial, the stationarity condition
+:math:`\ln Y_i + \ln \hat{\varphi}_i(\mathbf{Y}) = h_i` is iterated as:
+
+.. math::
+
+   \ln Y_i^{(k+1)} = h_i - \ln \hat{\varphi}_i\!\bigl(\mathbf{Y}^{(k)}\bigr)
+
+Up to 4 rounds of 2 successive-substitution steps are performed.  After each
+pair, the Generalised Dominant Eigenvalue Method (GDEM)
+:cite:`CroweNishio-AIChE-1975`, as applied to flash calculations by
+Michelsen and Mollerup :cite:`Michelsen-BOOK-2007`, accelerates convergence by
+extrapolating along the dominant error direction:
+
+.. math::
+
+   \ln Y_i^{\,\text{extrap}} = \ln Y_i^{(k)}
+   + \frac{r}{1 - r}\,e_i^{(k)}
+
+where :math:`r = \sqrt{e^2_k / e^2_{k-1}}` (clamped to :math:`r < 0.95`) and
+:math:`e_i` is the error vector from the latest step.
+
+Early termination occurs if:
+
+* :math:`\mathrm{TPD} < -10^{-7}` -- instability detected (fast path)
+* :math:`\max_i |\Delta \ln Y_i| < 10^{-7}` -- converged to a stationary point
+* Trial composition close to feed with positive curvature -- trivial solution
+
+**Second-order TPD minimisation.**
+If successive substitution is inconclusive, a trust-region quasi-Newton
+minimisation of the TPD is performed in the transformed variables
+:math:`\alpha_i = 2\sqrt{Y_i}` :cite:`Michelsen-FPE-1982a`.  This
+transformation eliminates the non-negativity constraint on :math:`Y_i` and
+improves the conditioning of the Hessian, which approaches the identity matrix
+in the ideal-gas limit.
+
+The gradient and Hessian in :math:`\alpha` variables are:
+
+.. math::
+
+   q_i &= \sqrt{Y_i}\bigl(\ln Y_i + \ln \hat{\varphi}_i - h_i\bigr) \\
+   A_{ij} &= \delta_{ij}\bigl(1 + \tfrac{1}{2}s_i\bigr)
+   + \tfrac{1}{4}\alpha_i \alpha_j \,
+   \frac{\partial \ln \hat{\varphi}_i}{\partial n_j}
+
+where :math:`s_i = \ln Y_i + \ln \hat{\varphi}_i - h_i`.
+A Hebden-type restricted-step method :cite:`Hebden-1973` adjusts the
+trust-region radius based on the ratio of actual to predicted objective
+reduction.  The minimisation converges when the gradient norm falls below
+:math:`10^{-7}`, with a maximum of 20 iterations.
+
+.. _phase-split:
+
+Stage 2: Phase-split calculation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When the stability test finds the feed to be unstable, the equilibrium phase
+compositions and fractions are determined following
+Michelsen :cite:`Michelsen-FPE-1982b`.
+
+**Rachford-Rice equation.**
+Given K-factors :math:`K_i = y_i / x_i` and feed :math:`\mathbf{z}`, the
+vapour fraction :math:`\beta` is found from the Rachford-Rice equation
+:cite:`RachfordRice-1952`:
+
+.. math::
+
+   \sum_{i=1}^{N_c} \frac{z_i\,(K_i - 1)}{1 + (K_i - 1)\,\beta} = 0
+
+solved by Newton-Raphson with bisection safeguards.  The phase compositions
+follow from:
+
+.. math::
+
+   x_i = \frac{z_i}{1 + (K_i - 1)\,\beta}, \qquad y_i = K_i \, x_i
+
+**Successive substitution with GDEM.**
+The K-factors are updated from the fugacity-coefficient ratio:
+
+.. math::
+
+   \ln K_i^{\,\text{new}} = \ln \hat{\varphi}_i^{(L)}(\mathbf{x})
+   - \ln \hat{\varphi}_i^{(V)}(\mathbf{y})
+
+As in the stability test, up to 4 rounds of 2 successive-substitution steps
+with GDEM extrapolation :cite:`CroweNishio-AIChE-1975` are performed.
+K-factors are stored in log space
+(:math:`\ln K_i`) to avoid overflow for wide-boiling mixtures.  Convergence is
+declared when :math:`\max_i |\Delta \ln K_i| < 10^{-7}`.
+
+**Second-order Gibbs energy minimisation.**
+If successive substitution has not converged to the required tolerance, a
+Newton-Raphson minimisation of the Gibbs energy is employed.  The independent
+variables are the vapour-phase mole numbers :math:`v_i = \beta\,y_i`, from
+which the liquid mole numbers are :math:`l_i = z_i - v_i`.
+
+The reduced gradient and Hessian (Michelsen :cite:`Michelsen-FPE-1982b`,
+Appendix B) are:
+
+.. math::
+
+   g_i &= \beta(1-\beta)\bigl[\ln y_i + \ln \hat{\varphi}_i^{(V)}
+   - \ln x_i - \ln \hat{\varphi}_i^{(L)}\bigr] \\
+   H_{ij} &= \frac{\delta_{ij}\,\beta}{x_i}
+   + \frac{\delta_{ij}(1-\beta)}{y_i}
+   + \beta\,\frac{\partial \ln \hat{\varphi}_i^{(L)}}{\partial n_j}
+   + (1-\beta)\,\frac{\partial \ln \hat{\varphi}_i^{(V)}}{\partial n_j} - 1
+
+The Newton step :math:`\Delta\mathbf{v} = -\mathbf{H}^{-1}\mathbf{g}` is
+accepted only if the Gibbs energy decreases; otherwise the step is halved
+(backtracking line search).  Feasibility is maintained by scaling the step so
+that all mole numbers remain positive.  Convergence requires
+:math:`\max_i |g_i| < 10^{-9}`, with a maximum of 30 iterations.
+
+.. _legacy-algorithm:
+
+Legacy algorithm
+^^^^^^^^^^^^^^^^
+
+Setting ``MIXTURE_STABILITY_ALGORITHM`` to ``0`` selects the legacy algorithm
+from Gernert et al. :cite:`Gernert-FPE-2014`, which was the sole option up to
+and including CoolProp v7.x.  This algorithm uses successive substitution for
+stability testing (up to 100 iterations, no GDEM or second-order TPD
+minimisation) and a simultaneous Newton-Raphson solver on the iso-fugacity and
+material-balance residuals for the phase split.  The Michelsen algorithm
+(available from v8.0) is recommended for improved robustness, particularly near
+critical points and for mixtures with components of very different volatility.
+
+.. _flash-configuration:
+
+Configuration
+^^^^^^^^^^^^^
+
+The stability algorithm is selected via:
+
+.. code-block:: python
+
+   import CoolProp.CoolProp as CP
+   # Michelsen (default)
+   CP.set_config_int(CP.MIXTURE_STABILITY_ALGORITHM, 1)
+   # Legacy (Gernert et al.)
+   CP.set_config_int(CP.MIXTURE_STABILITY_ALGORITHM, 0)
+
 Reducing Parameters
 -------------------
 
