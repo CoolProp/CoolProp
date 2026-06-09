@@ -65,14 +65,18 @@ jobs:
           fi
           echo "Mode: $(if $full; then echo full; else echo subset; fi)"
           echo "full=$full" >> "$GITHUB_OUTPUT"
+          # v8 go-live (bd CoolProp-r9sq.6): the wheels are now nanobind. The cp312
+          # build is abi3-tagged (one cp312-abi3 wheel covers 3.12/3.13/3.14), so
+          # 3.13/3.14 are dropped from the matrix to avoid building duplicate abi3
+          # wheels; 3.9-3.11 stay per-version (below nanobind's stable-ABI floor).
           if $full; then
-            echo 'py_versions=[39, 310, 311, 312, 313, 314]' >> "$GITHUB_OUTPUT"
+            echo 'py_versions=[39, 310, 311, 312]' >> "$GITHUB_OUTPUT"
             echo 'ubuntu_archs=["x86_64"]' >> "$GITHUB_OUTPUT"
             echo 'ubuntu_arm_archs=["aarch64"]' >> "$GITHUB_OUTPUT"
             echo 'windows_archs=["AMD64", "x86", "ARM64"]' >> "$GITHUB_OUTPUT"
             echo 'macos_archs=["x86_64", "arm64"]' >> "$GITHUB_OUTPUT"
           else
-            echo 'py_versions=[313]' >> "$GITHUB_OUTPUT"
+            echo 'py_versions=[312]' >> "$GITHUB_OUTPUT"
             echo 'ubuntu_archs=["x86_64"]' >> "$GITHUB_OUTPUT"
             echo 'ubuntu_arm_archs=["aarch64"]' >> "$GITHUB_OUTPUT"
             echo 'windows_archs=["AMD64"]' >> "$GITHUB_OUTPUT"

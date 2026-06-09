@@ -88,11 +88,16 @@ jobs:
         PIP_TIMEOUT: 60
         PIP_DEFAULT_TIMEOUT: 60
         MACOSX_DEPLOYMENT_TARGET: 11.0
-        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk CPM_SOURCE_CACHE=$HOME/.cache/CPM PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60
+        # COOLPROP_NANOBIND=ON is the v8 go-live signal (bd CoolProp-r9sq.6): it
+        # drives both the nanobind CMake build and (on Py>=3.12) the abi3 wheel tag
+        # via the scikit-build-core overrides in pyproject.toml.  Set on every
+        # platform so the published wheel is the nanobind core + State shim.
+        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk CPM_SOURCE_CACHE=$HOME/.cache/CPM PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60 COOLPROP_NANOBIND=ON
         CIBW_BEFORE_BUILD_LINUX: >
           pip install ninja &&
           git config --global --add safe.directory "*"
-        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE CPM_SOURCE_CACHE=/root/.cache/CPM PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60
+        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE CPM_SOURCE_CACHE=/root/.cache/CPM PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60 COOLPROP_NANOBIND=ON
+        CIBW_ENVIRONMENT_WINDOWS: COOLPROP_NANOBIND=ON PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60
         # Linux wheels build inside the manylinux container, which does not
         # inherit host env vars; forward the resolved version through so the
         # version provider sees it. macOS/Windows build on the host directly.
@@ -101,7 +106,9 @@ jobs:
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
         CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 # ARM64 creates problems with msgpack-c
         CIBW_ARCHS_LINUX: ${{ inputs.arch }} # i686 x86_64 aarch64 ppc64le s390x
-        CIBW_TEST_COMMAND: python -c "import CoolProp; assert '?' not in CoolProp.__gitrevision__"
+        # Smoke-test the published v8 wheel: it imports, the nanobind PropsSI works
+        # (returns a float for int args), and the State capsule shim loads.
+        CIBW_TEST_COMMAND: python -c "import CoolProp; from CoolProp.CoolProp import PropsSI; from CoolProp.State import State; assert '?' not in CoolProp.__gitrevision__; assert isinstance(PropsSI('T','P',101325,'Q',0,'Water'), float)"
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
