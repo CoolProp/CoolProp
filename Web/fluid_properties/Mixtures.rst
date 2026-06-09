@@ -270,7 +270,7 @@ The gradient and Hessian in :math:`\alpha` variables are:
    q_i &= \sqrt{Y_i}\bigl(\ln Y_i + \ln \hat{\varphi}_i - h_i\bigr) \\
    A_{ij} &= \delta_{ij}\bigl(1 + \tfrac{1}{2}s_i\bigr)
    + \tfrac{1}{4}\alpha_i \alpha_j \,
-   \frac{\partial \ln \hat{\varphi}_i}{\partial n_j}
+   \left(\frac{\partial \ln \hat{\varphi}_i}{\partial n_j}\right)_{T,P}
 
 where :math:`s_i = \ln Y_i + \ln \hat{\varphi}_i - h_i`.
 A Hebden-type restricted-step method :cite:`Hebden-1973` adjusts the
@@ -332,8 +332,8 @@ Appendix B) are:
    - \ln x_i - \ln \hat{\varphi}_i^{(L)}\bigr] \\
    H_{ij} &= \frac{\delta_{ij}\,\beta}{x_i}
    + \frac{\delta_{ij}(1-\beta)}{y_i}
-   + \beta\,\frac{\partial \ln \hat{\varphi}_i^{(L)}}{\partial n_j}
-   + (1-\beta)\,\frac{\partial \ln \hat{\varphi}_i^{(V)}}{\partial n_j} - 1
+   + \beta\,\left(\frac{\partial \ln \hat{\varphi}_i^{(L)}}{\partial n_j}\right)_{T,P}
+   + (1-\beta)\,\left(\frac{\partial \ln \hat{\varphi}_i^{(V)}}{\partial n_j}\right)_{T,P} - 1
 
 The Newton step :math:`\Delta\mathbf{v} = -\mathbf{H}^{-1}\mathbf{g}` is
 accepted only if the Gibbs energy decreases; otherwise the step is halved
