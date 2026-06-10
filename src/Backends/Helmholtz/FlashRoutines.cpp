@@ -33,8 +33,8 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 // Single-phase: determine gas vs liquid from temperature relative to closest envelope point
                 // Save T and p before solver calls — solver_rho_Tp may corrupt
                 // HEOS._T/_p on failure (Householder sets them to -inf).
-                const double T_saved = HEOS._T;
-                const double p_saved = HEOS._p;
+                const CoolPropDbl T_saved = HEOS._T;
+                const CoolPropDbl p_saved = HEOS._p;
                 phases phase_guess = (T_saved > closest_state.T) ? iphase_gas : iphase_liquid;
                 HEOS.specify_phase(phase_guess);
                 double rho;
@@ -124,8 +124,8 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             // It's single-phase -- find the density.
             // Save T and p before any solver calls — solver_rho_Tp may corrupt
             // HEOS._T/_p on failure (Householder sets them to -inf).
-            const double T_saved = HEOS.T();
-            const double p_saved = HEOS.p();
+            const CoolPropDbl T_saved = HEOS.T();
+            const CoolPropDbl p_saved = HEOS.p();
 
             // Solve SRK cubic for both gas and liquid roots to decide which
             // HEOS branch(es) to solve.  When both roots are valid, solve
@@ -180,8 +180,8 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         }
     } else {
         // It's single-phase, and phase is imposed
-        const double T_saved = HEOS.T();
-        const double p_saved = HEOS.p();
+        const CoolPropDbl T_saved = HEOS.T();
+        const CoolPropDbl p_saved = HEOS.p();
         double rho = HEOS.solver_rho_Tp(T_saved, p_saved);
         HEOS.update_DmolarT_direct(rho, T_saved);
         HEOS._Q = -1;
