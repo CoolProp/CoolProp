@@ -64,31 +64,28 @@ input pair `PT_INPUTS`
    root (site-packages). v8 should ship `__init__.pxd` (even empty) to make the
    surface cleanly cimportable.
 
-3. **The public surface *leaks* implementation includes — fmt and rapidjson
-   are NOT part of PDSim's interface.** Nothing in the `State`/`AbstractState`
-   API signatures uses an fmt or rapidjson type; they are dragged in purely by
-   transitive `#include`:
-     * **rapidjson** ← `constants_header.pxd` does `cdef extern from
-       "Configuration.h"` just to read the `configuration_keys` enum, and
-       `Configuration.h` pulls `rapidjson_include.h`.
+3. **The public surface *leaks* fmt — it is NOT part of PDSim's interface.**
+   Nothing in the `State`/`AbstractState` API signatures uses an fmt type;
+   it is dragged in purely by transitive `#include`:
      * **fmt** ← `AbstractState.h → CachedElement.h → CoolPropTools.h →
        CPstrings.h`, whose inline `format()` helpers call `fmt::sprintf`.
      * **C++17 `std::filesystem`** ← `CoolPropTools.h → CPfilepaths.h`
        (`write_bytes_atomic`).
 
-   The fix is header hygiene, **not** bundling: split a lean
-   `configuration_keys` enum header (no rapidjson) for the pxd to extern from;
-   move the `format()` bodies out of `CPstrings.h` into a `.cpp`;
-   forward-declare/pimpl the `std::filesystem::path` parameter. After that a
-   downstream consumer (and the frozen v8 `State` shim) compiles with only
-   `CoolProp.get_include_directory()` and **zero** third-party `-I` flags.
+   **RapidJSON leak resolved (v8 migration).** The former rapidjson leak via
+   `Configuration.h → rapidjson_include.h` was eliminated by the v8
+   RapidJSON→nlohmann/json migration: JSON types no longer appear in installed
+   headers, and link-time symbol hiding (`coolprop_hide_json_symbols`) keeps
+   nlohmann/valijson out of the dynamic export table.
 
-   This also unblocks retiring rapidjson (last release ~2016): once it no
-   longer appears in the *public/cimport* surface, swapping it out is a pure
-   implementation change — invisible to PDSim and to this contract test. The
-   fmt/rapidjson `-I` paths in `setup_contract.py` are a STOPGAP for today's
-   leakage; once the surface is cleaned, delete them and this test becomes the
-   regression guard that the leak has not returned.
+   The remaining fix is header hygiene for fmt: move the `format()` bodies out
+   of `CPstrings.h` into a `.cpp` and forward-declare/pimpl the
+   `std::filesystem::path` parameter. After that a downstream consumer (and the
+   frozen v8 `State` shim) compiles with only `CoolProp.get_include_directory()`
+   and **zero** third-party `-I` flags. The fmt `-I` path in `setup_contract.py`
+   is a STOPGAP for today's remaining leakage; once the surface is cleaned,
+   delete it and this test becomes the regression guard that the leak has not
+   returned.
 
 4. **The contract is link-free.** The built module links with no `-lCoolProp`
    (`-undefined dynamic_lookup`); the cdef-class methods resolve at runtime
@@ -104,6 +101,5 @@ RUN_PDSIM_CIMPORT_CONTRACT=1 python -m pytest dev/pdsim_cimport_contract/test_pd
 
 The pytest wrapper is opt-in (skips unless `RUN_PDSIM_CIMPORT_CONTRACT` is set)
 so it isn't pulled into default collection — it compiles a shim against the
-installed CoolProp. The build auto-locates fmt/rapidjson from any in-repo
-`build*/_deps/…`; override with `COOLPROP_FMT_INCLUDE` / `COOLPROP_RAPIDJSON_INCLUDE`
-if needed.
+installed CoolProp. The build auto-locates fmt from any in-repo
+`build*/_deps/…`; override with `COOLPROP_FMT_INCLUDE` if needed.

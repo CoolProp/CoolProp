@@ -121,21 +121,32 @@ if (COOLPROP_ASAN)
       endif()
   endif()
 
+  # Optimize the Asan build: -O2 -g -DNDEBUG (the RelWithDebInfo level, plus
+  # ASan).  ASan instrumentation is unaffected by optimization level, so this
+  # is the standard way to run ASan; -O is set EXPLICITLY rather than inherited
+  # from ${CMAKE_*_FLAGS_RELWITHDEBINFO} because this block executes before the
+  # project() call (line ~217) that canonically populates those per-config
+  # defaults -- depending on them here is order-fragile.  (Historically this
+  # referenced the mixed-case ${CMAKE_*_FLAGS_RelWithDebInfo}, an undefined ->
+  # empty variable, so the Asan build silently compiled at -O0.  That made the
+  # dense-SVD SVDSBTL surface builds crawl and was the primary reason the ASan
+  # CI job took ~45 min; with -O2 the full suite runs ~3 min locally / ~10 min
+  # on the 2-vCPU runner.)  Keep these in sync with RelWithDebInfo if it changes.
   set(CMAKE_C_FLAGS_ASAN
-      "${CMAKE_C_FLAGS_RelWithDebInfo} -fsanitize=address -fno-omit-frame-pointer" CACHE STRING
+      "-O2 -g -DNDEBUG -fsanitize=address -fno-omit-frame-pointer" CACHE STRING
       "Flags used by the C compiler for Asan build type or configuration." FORCE)
 
   set(CMAKE_CXX_FLAGS_ASAN
-      "${CMAKE_CXX_FLAGS_RelWithDebInfo} -fsanitize=address -fno-omit-frame-pointer" CACHE STRING
+      "-O2 -g -DNDEBUG -fsanitize=address -fno-omit-frame-pointer" CACHE STRING
       "Flags used by the C++ compiler for Asan build type or configuration." FORCE)
 
   set(CMAKE_EXE_LINKER_FLAGS_ASAN
-      "${CMAKE_EXE_LINKER_FLAGS_RelWithDebInfo} -fsanitize=address" CACHE STRING
+      "-fsanitize=address" CACHE STRING
       "Linker flags to be used to create executables for Asan build type." FORCE)
 
   set(CMAKE_SHARED_LINKER_FLAGS_ASAN
-      "${CMAKE_SHARED_LINKER_FLAGS_RelWithDebInfo} -fsanitize=address" CACHE STRING
-      "Linker lags to be used to create shared libraries for Asan build type." FORCE)
+      "-fsanitize=address" CACHE STRING
+      "Linker flags to be used to create shared libraries for Asan build type." FORCE)
 
 endif()
 
@@ -332,7 +343,6 @@ list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/dev")
 list(APPEND APP_INCLUDE_DIRS "${boost_headers_SOURCE_DIR}")
 list(APPEND APP_INCLUDE_DIRS "${fmt_SOURCE_DIR}/include")
-list(APPEND APP_INCLUDE_DIRS "${rapidjson_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${nlohmann_json_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${valijson_SOURCE_DIR}/include")
 # Valijson is consumed header-only (DOWNLOAD_ONLY), so its INTERFACE
@@ -383,6 +393,8 @@ set(COOLPROP_INCLUDE_DIRECTORIES
 #######################################
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
                       "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(CoolPropJSONVisibility)
 
 message(STATUS "Looking for Python")
 find_package(Python REQUIRED COMPONENTS Interpreter)
@@ -720,6 +732,7 @@ if(COOLPROP_OBJECT_LIBRARY
   if(NOT COOLPROP_OBJECT_LIBRARY)
     target_link_libraries(${LIB_NAME} ${CMAKE_DL_LIBS})
   endif()
+  coolprop_hide_json_symbols(${LIB_NAME})
 
   # For windows systems, bug workaround for Eigen
   if(MSVC90)
@@ -846,6 +859,7 @@ if(COOLPROP_DEBIAN_PACKAGE)
   endif()
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   add_library(${app_name} SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(${app_name})
   set_target_properties(
     ${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
   set_target_properties(
@@ -917,6 +931,7 @@ if(COOLPROP_PRIME_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
   add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(CoolPropMathcadWrapper)
   include_directories("${COOLPROP_PRIME_ROOT}/Custom Functions")
   target_link_libraries(CoolPropMathcadWrapper
                         "${COOLPROP_PRIME_ROOT}/Custom Functions/mcaduser.lib")
@@ -954,6 +969,7 @@ if(COOLPROP_MATHCAD15_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
   add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(CoolPropMathcadWrapper)
   include_directories("${COOLPROP_MATHCAD15_ROOT}/userefi/microsft/include")
   target_link_libraries(
     CoolPropMathcadWrapper
@@ -984,6 +1000,7 @@ if(COOLPROP_EES_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
   add_library(COOLPROP_EES SHARED ${APP_SOURCES})
+  coolprop_hide_json_symbols(COOLPROP_EES)
   # Modify the target and add dependencies
   add_dependencies(COOLPROP_EES generate_headers)
   set_target_properties(
@@ -1411,6 +1428,7 @@ if(COOLPROP_OCTAVE_MODULE)
   else()
     swig_link_libraries(CoolProp ${OCTAVE_LIBRARIES})
   endif()
+  coolprop_hide_json_symbols(CoolProp)
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
   add_dependencies(${app_name} generate_headers generate_examples)
@@ -1457,6 +1475,7 @@ if(COOLPROP_CSHARP_MODULE)
 
   swig_add_module(CoolProp csharp ${I_FILE} ${APP_SOURCES})
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropCsharp")
+  coolprop_hide_json_symbols(CoolProp)
 
   add_definitions(-DNO_ERROR_CATCHING)
 
@@ -1546,6 +1565,7 @@ if(COOLPROP_VBDOTNET_MODULE)
   set_property(SOURCE ${I_FILE} PROPERTY SWIG_FLAGS ${SWIG_OPTIONS})
   swig_add_module(CoolProp csharp ${I_FILE} ${APP_SOURCES})
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropCsharp")
+  coolprop_hide_json_symbols(CoolProp)
 
   add_definitions(-DNO_ERROR_CATCHING)
 
@@ -1622,6 +1642,7 @@ if(COOLPROP_R_MODULE)
 
   swig_add_module(CoolProp r ${I_FILE} ${APP_SOURCES})
   swig_link_libraries(CoolProp "${R_LIBRARY}")
+  coolprop_hide_json_symbols(CoolProp)
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropR")
 
   # No lib prefix for the shared library
@@ -1682,6 +1703,7 @@ if(COOLPROP_JAVA_MODULE)
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   swig_add_module(CoolProp java ${I_FILE} ${APP_SOURCES})
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropJava")
+  coolprop_hide_json_symbols(CoolProp)
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -1831,6 +1853,7 @@ if(COOLPROP_PHP_MODULE)
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   swig_add_module(CoolProp php ${I_FILE} ${APP_SOURCES})
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropPHP")
+  coolprop_hide_json_symbols(CoolProp)
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -2031,6 +2054,7 @@ if(COOLPROP_MATHEMATICA_MODULE)
   include_directories(${APP_INCLUDE_DIRS})
   add_library(CoolProp SHARED ${APP_SOURCES})
   add_dependencies(CoolProp generate_headers)
+  coolprop_hide_json_symbols(CoolProp)
 
   if(MSVC)
     add_custom_command(

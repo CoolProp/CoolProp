@@ -20,6 +20,7 @@ Unit convention (the legacy one, pinned by ``dev/state_capsule`` parity test):
   - ``Props()`` and everything reached via ``.pAS`` are SI.
 """
 from cpython.pycapsule cimport PyCapsule_GetPointer
+from libcpp.vector cimport vector
 
 cdef extern from "CoolProp/detail/state_capi.h":
     ctypedef struct CoolProp_StateCAPI:
@@ -29,6 +30,8 @@ cdef extern from "CoolProp/detail/state_capi.h":
         double (*keyed_output)(void*, long)
         double (*first_partial_deriv)(void*, long, long, long)
         const char* (*last_error)()
+        void (*set_mole_fractions)(void*, const double*, long)
+        void (*specify_phase)(void*, long)
 
 import CoolProp as _CP  # the nanobind core: exports `_capi` + the int-convertible enums
 if not hasattr(_CP, "_capi"):
@@ -53,11 +56,24 @@ cdef long _iviscosity = int(_CP.iviscosity)
 cdef long _iconductivity = int(_CP.iconductivity)
 cdef long _ispeed_sound = int(_CP.ispeed_sound)
 cdef long _iQ = int(_CP.iQ)
+cdef long _iPhase = int(_CP.iPhase)
+cdef long _iP_critical = int(_CP.iP_critical)
+cdef long _iP_triple = int(_CP.iP_triple)
+cdef long _iphase_gas = int(_CP.iphase_gas)
+cdef long _iphase_liquid = int(_CP.iphase_liquid)
 cdef long _DmassT = int(_CP.DmassT_INPUTS)
-cdef long _QT = int(_CP.QT_INPUTS)
-cdef long _PT = int(_CP.PT_INPUTS)
-cdef long _PQ = int(_CP.PQ_INPUTS)
 cdef long _HmassP = int(_CP.HmassP_INPUTS)
+
+# Single-char State.update keys -> the core parameter enum, mass-basis (as the
+# legacy State used). update() hands any two of these to generate_update_pair --
+# so it accepts every pair CoolProp recognises, not a hand-picked few.
+_generate_update_pair = _CP.generate_update_pair
+cdef dict _STATE_KEY = {
+    'T': _CP.iT, 'P': _CP.iP, 'D': _CP.iDmass, 'Q': _CP.iQ,
+    'H': _CP.iHmass, 'S': _CP.iSmass, 'U': _CP.iUmass,
+}
+# Keys whose legacy value (kPa / kJ) is 1000x smaller than SI (Pa / J).
+cdef frozenset _STATE_KEY_KSI = frozenset(('P', 'H', 'S', 'U'))
 
 
 cdef inline void _raise_if_error() except *:
@@ -88,20 +104,20 @@ cdef inline double _first_partial_deriv(void* handle, long Of, long Wrt, long Co
     return v
 
 
-cdef tuple _resolve_pair(dict params):
-    # Map a legacy State dict (kPa/kJ values for P/H/S) to an SI update triple.
-    cdef set keys = set(params.keys())
-    if keys == {'T', 'D'}:
-        return (_DmassT, params['D'], params['T'])
-    elif keys == {'T', 'Q'}:
-        return (_QT, params['Q'], params['T'])
-    elif keys == {'T', 'P'}:
-        return (_PT, params['P'] * 1000.0, params['T'])
-    elif keys == {'P', 'Q'}:
-        return (_PQ, params['P'] * 1000.0, params['Q'])
-    elif keys == {'P', 'H'}:
-        return (_HmassP, params['H'] * 1000.0, params['P'] * 1000.0)
-    raise ValueError("State shim: unsupported input pair " + repr(sorted(keys)))
+cdef inline void _set_mole_fractions(void* handle, list fracs) except *:
+    # Set the mixture mole fractions on the handle (used for bracketed fluids).
+    cdef vector[double] z
+    cdef double f
+    for f in fracs:
+        z.push_back(f)
+    _C.set_mole_fractions(handle, z.data(), <long>z.size())
+    _raise_if_error()
+
+
+cdef inline void _specify_phase(void* handle, long phase) except *:
+    # Impose a phase (a phases enum value) on the handle.
+    _C.specify_phase(handle, phase)
+    _raise_if_error()
 
 
 cdef class _AbstractStateView:
@@ -132,6 +148,9 @@ cdef class _AbstractStateView:
     cpdef update(self, long input_pair, double value1, double value2):
         """Update the underlying state from an SI ``input_pair`` and two values."""
         _update(self.handle, input_pair, value1, value2)
+    cpdef specify_phase(self, long phase):
+        """Impose a phase (an ``iphase_*`` constant) for subsequent updates."""
+        _specify_phase(self.handle, phase)
     cpdef double first_partial_deriv(self, long Of, long Wrt, long Constant) except *:
         """First partial derivative d(Of)/d(Wrt) at constant ``Constant`` [SI]."""
         return _first_partial_deriv(self.handle, Of, Wrt, Constant)
@@ -153,22 +172,84 @@ cdef class State:
     ``rho_`` [kg/m^3]; ``Fluid`` (bytes), ``phase`` (bytes); ``pAS`` -- the
     :class:`_AbstractStateView` over the same handle.
     """
-    def __cinit__(self, object Fluid, dict params):
-        self._fluids = Fluid if isinstance(Fluid, str) else Fluid.decode()
-        self.handle = _C.make(b"HEOS", self._fluids.encode())
-        if self.handle == NULL:
-            _raise_if_error()
-            raise ValueError("State: could not create AbstractState for " + self._fluids)
-        self.Fluid = self._fluids.encode()
-        self.phase = b""
-        self.pAS = _AbstractStateView.__new__(_AbstractStateView)
-        self.pAS.handle = self.handle
-        self.pAS.fluids = self._fluids
-        self.update(params)
+    def __cinit__(self, object Fluid, params=None, object phase=None, object backend=None):
+        # Widened to the legacy State.__init__ surface (bd CoolProp-r9sq.26):
+        # optional ``params`` (None -> no state update, used by get_Tsat/copy),
+        # an explicit ``backend``, a ``BACKEND::Fluid`` fluid string, and the
+        # ``phase`` flag -- recorded on ``.phase`` and imposed (gas/liquid) on the
+        # handle before the state update, exactly like the legacy State.
+        cdef str _fl = Fluid if isinstance(Fluid, str) else Fluid.decode()
+        cdef str _backend
+        self.handle = NULL
+        self.pAS = None
+        self.phase = b"" if phase is None else (phase.encode() if isinstance(phase, str) else phase)
+        if _fl == 'none':  # legacy no-op construction (e.g. the bare State get_Tsat builds)
+            self._fluids = 'none'
+            self.Fluid = b'none'
+            return
+        if '::' in _fl:
+            _backend, _fl = _fl.split('::')
+        elif backend is None:
+            _backend = "HEOS"
+        elif isinstance(backend, str):
+            _backend = backend
+        else:
+            _backend = backend.decode()
+        self.set_Fluid(_fl, _backend)
+        # Impose the phase hint (gas/liquid) like the legacy State, before any update.
+        if self.phase.lower() == b'gas':
+            self.pAS.specify_phase(_iphase_gas)
+        elif self.phase.lower() == b'liquid':
+            self.pAS.specify_phase(_iphase_liquid)
+        if params is not None:
+            self.update(params)
 
     def __dealloc__(self):
         if self.handle != NULL:
             _C.destroy(self.handle)
+
+    cpdef set_Fluid(self, Fluid, backend):
+        """(Re)create the underlying ``AbstractState`` for ``Fluid`` on ``backend``.
+
+        Plain names, ``&``-joined mixtures, and bracketed mole-fraction mixtures
+        (e.g. ``R32[0.5]&R134a[0.5]``) all work -- the bracket fractions are parsed
+        out and set on the handle, exactly like the legacy ``State.set_Fluid``.
+        """
+        cdef str _fl = Fluid if isinstance(Fluid, str) else Fluid.decode()
+        cdef str _backend
+        if backend is None:
+            _backend = "HEOS"
+        elif isinstance(backend, str):
+            _backend = backend
+        else:
+            _backend = backend.decode()
+        # Parse bracketed mole fractions, e.g. "R32[0.5]&R134a[0.5]" -> names
+        # "R32&R134a" + fracs [0.5, 0.5] (mirrors the legacy set_Fluid).
+        cdef list names = []
+        cdef list fracs = []
+        cdef bint set_fractions = False
+        if '[' in _fl and ']' in _fl:
+            for pair in _fl.split('&'):
+                name, frac = pair.split('[')
+                names.append(name)
+                fracs.append(float(frac.strip(']')))
+            _fl = '&'.join(names)
+            set_fractions = True
+        if self.handle != NULL:
+            _C.destroy(self.handle)
+            self.handle = NULL
+        self.handle = _C.make(_backend.encode(), _fl.encode())
+        if self.handle == NULL:
+            _raise_if_error()
+            raise ValueError("State: could not create AbstractState for " + _fl)
+        if set_fractions:
+            _set_mole_fractions(self.handle, fracs)
+        self._fluids = _fl
+        self.Fluid = _fl.encode()
+        if self.pAS is None:
+            self.pAS = _AbstractStateView.__new__(_AbstractStateView)
+        self.pAS.handle = self.handle
+        self.pAS.fluids = self._fluids
 
     cdef _refresh(self):
         # Refresh the cached T_/p_/rho_ after a state change.
@@ -179,14 +260,26 @@ cdef class State:
     cpdef update(self, dict params):
         """Update the state from a legacy input dict.
 
-        ``params`` holds exactly two of T/D/P/Q/H, e.g. ``{'T': K, 'D': kg/m^3}``,
-        ``{'T': K, 'P': kPa}``, ``{'T': K, 'Q': -}``, ``{'P': kPa, 'Q': -}`` or
-        ``{'P': kPa, 'H': kJ/kg}`` (P/H given in the legacy kPa/kJ units).
+        ``params`` holds exactly two single-char keys from T/D/P/Q/H/S/U -- any
+        pair CoolProp's ``generate_update_pair`` accepts (e.g. ``{'T': K, 'D':
+        kg/m^3}``, ``{'P': kPa, 'H': kJ/kg}``, ``{'P': kPa, 'S': kJ/kg/K}``,
+        ``{'D': kg/m^3, 'P': kPa}``).  P is in kPa and H/S/U in the legacy kJ
+        units; T/D/Q are SI -- the conversion + pair resolution mirror the legacy
+        State.update exactly.
         """
-        cdef long pair
-        cdef double v1, v2
-        pair, v1, v2 = _resolve_pair(params)
-        _update(self.handle, pair, v1, v2)
+        cdef list items = list(params.items())
+        if len(items) != 2:
+            raise ValueError("State shim: update() needs exactly two inputs, got " + repr(sorted(params.keys())))
+        k1, v1 = items[0]
+        k2, v2 = items[1]
+        if k1 not in _STATE_KEY or k2 not in _STATE_KEY:
+            raise ValueError("State shim: unsupported input key(s) " + repr(sorted(params.keys())))
+        # Convert legacy kPa/kJ values to SI, then let the core resolve the input
+        # pair (paras_inverse + toSI + generate_update_pair, as in the old State).
+        cdef double si1 = v1 * 1000.0 if k1 in _STATE_KEY_KSI else v1
+        cdef double si2 = v2 * 1000.0 if k2 in _STATE_KEY_KSI else v2
+        pair, o1, o2 = _generate_update_pair(_STATE_KEY[k1], si1, _STATE_KEY[k2], si2)
+        _update(self.handle, int(pair), o1, o2)
         self._refresh()
 
     cpdef update_Trho(self, double T, double rho):
@@ -205,7 +298,43 @@ cdef class State:
 
     cpdef double Props(self, long key) except *:
         """Raw keyed output for CoolProp parameter ``key`` [SI]."""
+        if key < 0:  # legacy parity: ValueError on an invalid (negative) key
+            raise ValueError('Your output is invalid')
         return _keyed_output(self.handle, key)
+
+    cpdef long Phase(self) except *:
+        """Integer phase flag for the current state (an ``iphase_*`` constant)."""
+        return <long>_keyed_output(self.handle, _iPhase)
+
+    cpdef get_Tsat(self, double Q=1):
+        """Saturation temperature [K] at the current pressure (``Q=1`` dew, ``Q=0``
+        bubble), or ``None`` if the pressure is outside the two-phase range."""
+        cdef State state = State(self._fluids, None)
+        cdef double pc, pt
+        try:
+            pc = state.Props(_iP_critical)   # SI Pa
+        except ValueError:
+            pc = -1
+        try:
+            pt = state.Props(_iP_triple)     # SI Pa
+        except ValueError:
+            pt = -1
+        # self.p_ is kPa; pc/pt are Pa -> compare against 0.001*p [kPa].
+        if pc > 0:
+            if self.p_ > 0.001 * pc or (pt > 0 and self.p_ < 0.001 * pt):
+                return None
+        state.update({'P': self.p_, 'Q': Q})
+        return state.T
+
+    cpdef get_superheat(self):
+        """Superheat above the dew temperature [K], or ``None`` outside two-phase."""
+        Tsat = self.get_Tsat(1)
+        return None if Tsat is None else self.T_ - Tsat
+
+    cpdef get_subcooling(self):
+        """Subcooling below the bubble temperature [K], or ``None`` outside two-phase."""
+        Tsat = self.get_Tsat(0)
+        return None if Tsat is None else Tsat - self.T_
 
     cpdef double get_T(self) except *:
         """Temperature [K]."""
@@ -300,3 +429,15 @@ cdef class State:
     property speed_sound:
         """Speed of sound [m/s]."""
         def __get__(self): return self.get_speed_sound()
+    property Tsat:
+        """Saturation (dew) temperature at the current pressure [K]."""
+        def __get__(self): return self.get_Tsat(1.0)
+    property superheat:
+        """Superheat above the dew temperature [K] (None outside two-phase)."""
+        def __get__(self): return self.get_superheat()
+    property subcooling:
+        """Subcooling below the bubble temperature [K] (None outside two-phase)."""
+        def __get__(self): return self.get_subcooling()
+    property Prandtl:
+        """Prandtl number cp*mu/k [-]."""
+        def __get__(self): return self.cp * self.visc / self.k

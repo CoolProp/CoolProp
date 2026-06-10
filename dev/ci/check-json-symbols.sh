@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 # Fail if CoolProp's shared library exports any symbol matching the JSON-library
 # pattern. The pattern is the 2nd arg (or $JSON_SYMBOL_PATTERN), defaulting to
-# 'nlohmann|valijson'. RapidJSON is intentionally NOT in the default pattern
-# during the migration (it is still used with default visibility and its
-# symbols are expected to be exported); Phase Final tightens the pattern to
-# 'nlohmann|valijson|rapidjson' once RapidJSON is removed.
+# 'nlohmann|valijson|rapidjson'. RapidJSON has been removed from CoolProp
+# (Phase Final), so its symbols must no longer be exported either.
 #
 # Visibility attributes in a static .a only take effect once linked into a
 # shared object, so this MUST inspect a shared product, never the archive.
 set -euo pipefail
 
 LIB="${1:-}"
-PATTERN="${2:-${JSON_SYMBOL_PATTERN:-nlohmann|valijson}}"
+PATTERN="${2:-${JSON_SYMBOL_PATTERN:-nlohmann|valijson|rapidjson}}"
 if [[ -z "${LIB}" || ! -f "${LIB}" ]]; then
     echo "usage: $0 <path-to-shared-library (.so/.dylib)> [symbol-regex]" >&2
     exit 2

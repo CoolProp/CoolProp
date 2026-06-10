@@ -1,0 +1,54 @@
+# nanobind stubgen pattern file (bd CoolProp-r9sq.10).
+#
+# Fixes applied to the auto-generated stub so it type-checks (mypy.stubtest):
+#  - re-add the numpy / NDArray imports (stubgen prunes them once the PropsSI/
+#    HAPropsSI overloads that used them are replaced below) + the _Scalar/_Num
+#    aliases.
+#  - replace the auto PropsSI/HAPropsSI overloads (object-typed -> overlap with
+#    incompatible return types) with explicitly-typed scalar/array overloads
+#    (mirrors dev/stubs/overloads_coolprop.pyi).
+#  - give the private _capi capsule a valid type (was the undefined PyCapsule).
+#  - fix get_spinodal_data, whose return leaks the unbound C++ type name.
+#  - replace set_reference_state's loose (FluidName, *args) with the two real
+#    arities its runtime dispatcher accepts (string ref-state, or 4 numbers).
+
+CoolProp\.__prefix__:
+    import numpy
+    from numpy.typing import NDArray
+    from collections.abc import Sequence
+    _Scalar = float
+    _Num = float | Sequence[float] | NDArray[numpy.float64]
+
+CoolProp\._capi$:
+    _capi: object = ...
+
+CoolProp\.AbstractState\.get_spinodal_data$:
+    def get_spinodal_data(self) -> object: ...
+
+CoolProp\.PropsSI$:
+    @overload
+    def PropsSI(Output: str, FluidName: str, /) -> float: ...
+    @overload
+    def PropsSI(Output: str, Name1: str, Prop1: _Scalar, Name2: str, Prop2: _Scalar, FluidName: str, /) -> float: ...  # type: ignore[overload-overlap]
+    @overload
+    def PropsSI(Output: str, Name1: str, Prop1: _Num, Name2: str, Prop2: _Num, FluidName: str, /) -> NDArray[numpy.float64]: ...
+    @overload
+    def PropsSI(Output: list[str] | tuple[str, ...] | NDArray[numpy.str_], Name1: str, Prop1: _Num, Name2: str, Prop2: _Num, FluidName: str, /) -> NDArray[numpy.float64]: ...
+
+CoolProp\.HAPropsSI$:
+    @overload
+    def HAPropsSI(Output: str, Name1: str, Value1: _Scalar, Name2: str, Value2: _Scalar, Name3: str, Value3: _Scalar, /) -> float: ...  # type: ignore[overload-overlap]
+    @overload
+    def HAPropsSI(Output: str, Name1: str, Value1: _Num, Name2: str, Value2: _Num, Name3: str, Value3: _Num, /) -> NDArray[numpy.float64]: ...
+
+# The runtime is a (FluidName, *args) dispatcher (src/nanobind_interface.cxx)
+# that accepts ONLY two arities -- 1 string (a named reference state, -> the
+# stateS bind) or 4 floats (T0, rhomolar, hmolar0, smolar0, -> the stateD bind);
+# any other count raises.  stubgen emits the bare ``*args``, which type-checks
+# every wrong arity.  Replace it with the two real overloads (positional-only,
+# matching the dispatcher; floats, matching set_reference_stateD above).
+CoolProp\.set_reference_state$:
+    @overload
+    def set_reference_state(FluidName: str, reference_state: str, /) -> None: ...
+    @overload
+    def set_reference_state(FluidName: str, T0: float, rhomolar: float, hmolar0: float, smolar0: float, /) -> None: ...

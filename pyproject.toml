@@ -1,5 +1,7 @@
 [build-system]
-requires = ["scikit-build-core>=0.10", "cython>=0.29"]
+# nanobind is required for the v8 core (built whenever COOLPROP_NANOBIND=ON,
+# which is now the default for the published wheels -- bd CoolProp-r9sq.6).
+requires = ["scikit-build-core>=0.10", "cython>=0.29", "nanobind>=2.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -85,6 +87,28 @@ wheel.exclude = [
 [tool.scikit-build.metadata.version]
 provider = "coolprop_version_provider"
 provider-path = "dev"
+
+# v8 nanobind build, driven by a single COOLPROP_NANOBIND=ON environment signal
+# (bd CoolProp-r9sq.19).  Both overrides key on the same env var so the build
+# selection and the abi3 wheel tag cannot diverge:
+#
+#   1. select the nanobind package (any Python) by injecting the cmake define --
+#      overrides cannot see -D defines, so the env var is the canonical signal;
+#   2. on Python >= 3.12, also tag the wheel cp312-abi3.  scikit-build-core then
+#      sets SKBUILD_SABI_VERSION, which CMakeLists uses to build the Cython
+#      sidecars (State, _constants) limited-API -- so nanobind's STABLE_ABI core
+#      and the sidecars are all abi3 and ONE wheel covers 3.12/3.13/3.14.
+#
+# Gating (2) on Py>=3.12 leaves the legacy wheel and the 3.9-3.11 per-version
+# nanobind fallback (below nanobind's stable-ABI floor) untouched.
+[[tool.scikit-build.overrides]]
+if.env.COOLPROP_NANOBIND = true
+cmake.define.COOLPROP_NANOBIND = "ON"
+
+[[tool.scikit-build.overrides]]
+if.env.COOLPROP_NANOBIND = true
+if.python-version = ">=3.12"
+wheel.py-api = "cp312"
 
 [tool.cibuildwheel]
 # Build for multiple Python versions (CPython only)

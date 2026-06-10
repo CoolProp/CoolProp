@@ -6,13 +6,6 @@
 #include "CoolProp/detail/json.h"
 #include "CoolProp/CoolPropFluid.h"
 
-// Visibility helper: hide internal nlohmann-taking methods from the exported ABI
-#if defined(__GNUC__) || defined(__clang__)
-#    define CP_JSON_LOCAL __attribute__((visibility("hidden")))
-#else
-#    define CP_JSON_LOCAL
-#endif
-
 namespace UNIFACLibrary {
 
 /// A structure containing references for a single group (its multiplicity, main group index, etc.)
@@ -95,11 +88,10 @@ struct UNIFACParameterLibrary
     std::vector<Component> components;                          ///< The collection of components that are included in this library
 
     /// Convert string to JSON document
-    CP_JSON_LOCAL void jsonize(std::string& s, nlohmann::json& doc);
+    void jsonize(std::string& s, nlohmann::json& doc);
 
     /// Populate internal data structures based on nlohmann::json arrays
-    CP_JSON_LOCAL void populate(const nlohmann::json& group_data, const nlohmann::json& interaction_data, const nlohmann::json& decomp_data);
-#undef CP_JSON_LOCAL
+    void populate(const nlohmann::json& group_data, const nlohmann::json& interaction_data, const nlohmann::json& decomp_data);
 
    public:
     UNIFACParameterLibrary() : m_populated(false) {};

@@ -2594,16 +2594,43 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Kunz-JCED-2012",
+    "BibTeX": "Tkaczuk-JPCRD-2020",
     "CAS1": "7440-59-7",
     "CAS2": "7440-37-1",
-    "F": 0,
+    "F": 1.0,
     "Name1": "Helium",
     "Name2": "Argon",
-    "betaT": 1.0,
-    "betaV": 1.0,
-    "gammaT": 1.0,
-    "gammaV": 1.0
+    "betaT": 1.031,
+    "betaV": 1.048,
+    "function": "Helium-Argon",
+    "gammaT": 1.113,
+    "gammaV": 0.862
+  },
+  {
+    "BibTeX": "Tkaczuk-JPCRD-2020",
+    "CAS1": "7440-59-7",
+    "CAS2": "7440-01-9",
+    "F": 1.0,
+    "Name1": "Helium",
+    "Name2": "Neon",
+    "betaT": 0.793,
+    "betaV": 1.142,
+    "function": "Helium-Neon",
+    "gammaT": 0.728,
+    "gammaV": 0.75
+  },
+  {
+    "BibTeX": "Tkaczuk-JPCRD-2020",
+    "CAS1": "7440-01-9",
+    "CAS2": "7440-37-1",
+    "F": 1.0,
+    "Name1": "Neon",
+    "Name2": "Argon",
+    "betaT": 1.033,
+    "betaV": 0.919,
+    "function": "Neon-Argon",
+    "gammaT": 0.967,
+    "gammaV": 1.035
   },
   {
     "BibTeX": "From REFPROP 9.1 with permission",

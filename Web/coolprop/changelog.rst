@@ -17,6 +17,7 @@ Highlights:
 * New native desktop GUI built with Tauri + React (`#2715`), plus a much-expanded Mathcad wrapper and interactive 3D molecule viewers on the fluid documentation pages.
 * Build-system modernization: git submodules replaced by CPM.cmake (boost fetched as a trimmed subset from ``CoolProp/boost-headers``), Eigen bumped to 5.0.1, and a broad C++17 cleanup that also cuts compile times.
 * Repository-wide code-quality program: enforced ``clang-format`` (pre-commit + CI), diff-only ``clang-tidy``, ``cppcheck``, CodeQL, include-what-you-use, and a single-script ``dev/ci/preflight.sh`` pre-push gate.
+* **RapidJSON removed; JSON now on nlohmann/json + Valijson.**  All JSON parsing and JSON-Schema validation were migrated off RapidJSON to `nlohmann/json <https://github.com/nlohmann/json>`_ (with CBOR support) and `Valijson <https://github.com/tristanpenman/valijson>`_, and RapidJSON was deleted from the tree.  Crucially, **no nlohmann/valijson symbols are exported from any shipped binary and no JSON-library type appears in any installed public header**, so the JSON libraries are an internal implementation detail that cannot ODR-clash with a downstream consumer's own copy.  The symbol hiding is enforced at *link* time per shared product (ELF ``--version-script`` / Mach-O ``-unexported_symbols_list``), with CI gates over ``libCoolProp`` and the SWIG wrappers plus an installed-header hygiene check.  See PRs `#3094`, `#3100`, `#3104`, `#3106`, `#3108`, `#3111`, `#3112`, `#3116`, `#3117`.
 * **Python wrapper rebuilt on nanobind** — a modern, lower-maintenance binding that ships as a single stable-ABI (``abi3``) wheel per platform on Python ≥ 3.12 (one wheel instead of one per Python version).  The public import tree is preserved, so it is a drop-in for almost all code; the legacy non-SI ``Props`` / ``HAProps`` are removed (use ``PropsSI`` / ``HAPropsSI``).  See the behavior-changes note below.
 
 **Behavior changes (potentially breaking):**
@@ -55,7 +56,12 @@ Highlights:
   working: a link-free, capsule-forwarding ``State`` shim preserves the
   cimportable contract. On Python ≥ 3.12 the wrapper ships as a single
   stable-ABI (``abi3``) wheel per platform instead of one wheel per Python
-  version.
+  version (Python 3.9–3.11 get per-version wheels, below nanobind's
+  stable-ABI floor).
+
+  ``AbstractState`` is now a genuine Python *type*: ``AbstractState("HEOS",
+  "Water")`` still constructs a state, but ``isinstance(x, AbstractState)``
+  now works too (previously the factory was a function and the check raised).
 
   The following **removals are breaking** (all long-deprecated or never part of
   the intended API):

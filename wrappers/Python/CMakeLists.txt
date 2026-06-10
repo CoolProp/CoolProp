@@ -31,6 +31,15 @@ find_package(Cython REQUIRED)
 # shipped (legacy Cython) wheel is completely unchanged.  When ON, the nanobind
 # core (CoolProp.<abi3>.so) replaces the legacy Cython CoolProp module and the
 # link-free State capsule shim is built as CoolProp.State.
+#
+# A `COOLPROP_NANOBIND=ON` *environment* build flips this on via a
+# scikit-build-core override (pyproject.toml) that injects
+# cmake.define.COOLPROP_NANOBIND=ON; the same env var (on Py>=3.12) also turns
+# on the abi3 wheel tag.  Both signals flow through ONE scikit-build-core
+# override block, so they cannot diverge.  `-DCOOLPROP_NANOBIND=ON` directly
+# (or via cmake.define) still works for nanobind selection; abi3-ness of the
+# Cython sidecars follows scikit-build-core's own SKBUILD_SABI_VERSION below, so
+# a define-only build simply yields a valid per-version nanobind wheel.
 option(COOLPROP_NANOBIND "Build the nanobind-based CoolProp package (core + State capsule shim)" OFF)
 
 # Set root directory
@@ -39,6 +48,9 @@ set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
 # Use CPM.cmake for dependency management (consistent with the main build)
 include("${ROOT_DIR}/cmake/CPM.cmake")
 include("${ROOT_DIR}/cmake/dependencies.cmake")
+
+list(APPEND CMAKE_MODULE_PATH "${ROOT_DIR}/cmake")
+include(CoolPropJSONVisibility)
 
 # ============================================================================
 # Generate headers and constants (only when dependencies change)
@@ -132,7 +144,6 @@ set(COOLPROP_INCLUDE_DIRS
     ${valijson_SOURCE_DIR}/include
     ${ROOT_DIR}/externals/miniz-3.1.1
     ${msgpack-c_SOURCE_DIR}/include
-    ${rapidjson_SOURCE_DIR}/include
     ${IF97_SOURCE_DIR}
     ${REFPROP_headers_SOURCE_DIR}
 )
@@ -163,6 +174,14 @@ add_custom_command(
     COMMENT "Cythonizing _constants.pyx"
     VERBATIM
 )
+
+# Extra args injected into the Cython sidecars' Python_add_library() calls.
+# Empty for the legacy build (sidecars stay per-version, WITH_SOABI).  The
+# nanobind branch fills this with `USE_SABI <ver>` whenever scikit-build-core
+# tagged the wheel abi3 (SKBUILD_SABI_VERSION), so the State + _constants
+# extensions are limited-API and the whole wheel is a single cp312-abi3 artifact.
+# See the COOLPROP_NANOBIND branch below.
+set(_sidecar_sabi "")
 
 if(NOT COOLPROP_NANOBIND)
 
@@ -195,6 +214,7 @@ target_include_directories(CoolProp_module PRIVATE
 )
 
 target_link_libraries(CoolProp_module PRIVATE miniz)
+coolprop_hide_json_symbols(CoolProp_module)
 
 # Set output name to CoolProp (not CoolProp_module)
 set_target_properties(CoolProp_module PROPERTIES
@@ -209,6 +229,28 @@ else()
 endif()
 
 else()  # COOLPROP_NANOBIND: nanobind core + capsule State shim
+
+# The nanobind core uses STABLE_ABI (abi3) on Python >= 3.12 automatically; for
+# the wheel to be a single cp312-abi3 artifact the two Cython sidecars (State,
+# _constants) must ALSO be limited-API.  Drive that off scikit-build-core's OWN
+# signal -- SKBUILD_SABI_VERSION, which it sets to e.g. "3.12" exactly when
+# wheel.py-api tagged the wheel abi3, and leaves empty otherwise.  Following the
+# wheel-tag decision (rather than re-deriving abi3 from the Python version or a
+# second env read) guarantees the .so ABI and the wheel tag can never disagree:
+# an abi3-tagged wheel always gets abi3 sidecars, a version-specific wheel always
+# gets per-version sidecars.  So Py<3.12, a define-only nanobind build (no abi3
+# tag), and a direct cmake build all correctly fall back to per-version sidecars.
+# USE_SABI (FindPython) defines Py_LIMITED_API, links Python::SABIModule, and
+# gives the module the .abi3 SOABI suffix.
+if(DEFINED SKBUILD_SABI_VERSION AND SKBUILD_SABI_VERSION)
+    if(NOT TARGET Python::SABIModule)
+        message(FATAL_ERROR
+            "scikit-build-core requested an abi3 wheel (SABI ${SKBUILD_SABI_VERSION}) "
+            "but the Development.SABIModule component (CMake >= 3.26) is missing, so "
+            "the Cython sidecars cannot be built limited-API; have CMake ${CMAKE_VERSION}.")
+    endif()
+    set(_sidecar_sabi USE_SABI ${SKBUILD_SABI_VERSION})
+endif()
 
 # ---- nanobind core (CoolProp.<abi3>.so) replaces the legacy Cython module ----
 execute_process(
@@ -225,6 +267,58 @@ target_include_directories(CoolProp_module PRIVATE
 )
 target_link_libraries(CoolProp_module PRIVATE miniz)
 set_target_properties(CoolProp_module PROPERTIES OUTPUT_NAME "CoolProp" PREFIX "")
+coolprop_hide_json_symbols(CoolProp_module)
+
+if(WIN32)
+    # The nanobind module compiles the whole core (incl. fmtlib, which static_asserts
+    # unless built /utf-8) plus the large nanobind_interface.cxx TU (needs /bigobj).
+    # The legacy Cython branch sets these on its CoolProp_module; the nanobind branch
+    # must too, otherwise the Windows wheel build fails (bd CoolProp-r9sq.6).
+    target_compile_options(CoolProp_module PRIVATE /utf-8 /bigobj)
+endif()
+
+# ---- PEP 561 type stub for the nanobind core (parity with the legacy wheel) ----
+# The stub is shipped as a COMMITTED copy (wrappers/Python/_nanobind/CoolProp.pyi)
+# and installed verbatim below -- the wheel build does NOT regenerate it.  This is
+# load-bearing for CROSS-COMPILED wheels: nanobind's stubgen *imports* the
+# freshly-built CoolProp.abi3.so to introspect it, which the host interpreter
+# cannot do when the .so targets another arch (macOS x86_64 on an arm64 runner,
+# Windows ARM64 on x64) -- it dies with "ImportError: incompatible architecture"
+# and fails the whole wheel build (bd CoolProp-1gas).  The generated stub is
+# architecture-independent (verified byte-identical across macOS arm64 / Linux
+# x86_64 with the pinned nanobind), so a single committed copy serves every wheel.
+#
+# COOLPROP_NANOBIND_REGEN_STUB regenerates that committed copy via stubgen.  It is
+# for NATIVE builds only -- the CI drift gate sets it so a binding change that was
+# not reflected in the committed .pyi is caught by a diff -- and must NEVER be set
+# for a cross build (it reintroduces the import-the-target-arch-.so failure above).
+option(COOLPROP_NANOBIND_REGEN_STUB
+    "Regenerate the committed nanobind CoolProp.pyi via stubgen (native builds only; used by the CI drift gate)"
+    OFF)
+if(COOLPROP_NANOBIND_REGEN_STUB)
+    nanobind_add_stub(
+        CoolProp_stub
+        MODULE CoolProp
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.pyi"
+        PYTHON_PATH "$<TARGET_FILE_DIR:CoolProp_module>"
+        DEPENDS CoolProp_module
+        MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/py.typed"
+        # INCLUDE_PRIVATE emits underscore-named members (e.g. the _capi capsule);
+        # the pattern file replaces the auto PropsSI/HAPropsSI overloads
+        # (object-typed -> overlap) with typed ones.  (AbstractState is now a public
+        # type with a factory constructor -- bd CoolProp-r9sq.28 -- not a private class.)
+        INCLUDE_PRIVATE
+        PATTERN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/stub_patterns.txt"
+    )
+    # Ship the freshly regenerated stub so the gate can extract it from the wheel
+    # and diff against the committed copy.
+    set(_nb_stub_pyi "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.pyi")
+    set(_nb_stub_pytyped "${CMAKE_CURRENT_BINARY_DIR}/py.typed")
+else()
+    # Default / publish / cross builds: ship the committed copy, no import needed.
+    set(_nb_stub_pyi "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/CoolProp.pyi")
+    set(_nb_stub_pytyped "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/py.typed")
+endif()
 
 # ---- capsule State shim -> CoolProp.State (link-free; forwards through _capi) ----
 # No CoolProp C++ is compiled in here; the shim only needs the C-ABI struct
@@ -240,7 +334,7 @@ add_custom_command(
     COMMENT "Cythonizing State.pyx (capsule shim)"
     VERBATIM
 )
-Python_add_library(State_module MODULE WITH_SOABI
+Python_add_library(State_module MODULE WITH_SOABI ${_sidecar_sabi}
     "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/State.cpp"
 )
 target_include_directories(State_module PRIVATE
@@ -256,8 +350,9 @@ endif()
 
 endif()  # COOLPROP_NANOBIND
 
-# Create _constants extension module
-Python_add_library(_constants_module MODULE WITH_SOABI
+# Create _constants extension module.  `_sidecar_sabi` is empty for the legacy
+# build (per-version) and `USE_SABI <ver>` for the nanobind abi3 build.
+Python_add_library(_constants_module MODULE WITH_SOABI ${_sidecar_sabi}
     "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/_constants.cpp"
 )
 
@@ -327,6 +422,11 @@ install(FILES
     DESTINATION CoolProp)
 # HumidAirProp re-export shim (SI surface from the core; non-SI HAProps removed)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/HumidAirProp.py"
+    DESTINATION CoolProp)
+# PEP 561 type stub for the nanobind core + py.typed marker.  Source resolved
+# above: the committed copy by default (cross-safe -- no stubgen import), or the
+# freshly regenerated one under COOLPROP_NANOBIND_REGEN_STUB (bd CoolProp-1gas).
+install(FILES "${_nb_stub_pyi}" "${_nb_stub_pytyped}"
     DESTINATION CoolProp)
 # Pure-Python submodules, shipped unchanged from the source package so the v8
 # import tree matches the legacy one (CoolProp.Plots/BibtexParser/GUI/tests).

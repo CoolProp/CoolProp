@@ -27,13 +27,12 @@ include_dirs = [
 def _find_dep_include(header_relpath, env_var, fetch_glob):
     """STOPGAP for header leakage, not a real PDSim dependency.
 
-    CoolProp's public/cimport surface currently *leaks* fmt and rapidjson as
-    transitive includes (fmt via CPstrings.h's inline format() helpers;
-    rapidjson via constants_header.pxd -> Configuration.h, only for the
-    configuration_keys enum).  Neither appears in any State/AbstractState API
-    signature.  Until the headers are de-leaked (see SURFACE.md finding 3),
-    this build needs the extra -I paths; after that, delete these calls and the
-    contract still compiles with only CoolProp.get_include_directory()."""
+    CoolProp's public/cimport surface currently *leaks* fmt as a transitive
+    include (fmt via CPstrings.h's inline format() helpers).  It does NOT
+    appear in any State/AbstractState API signature.  Until the header is
+    de-leaked (see SURFACE.md finding 3), this build needs the extra -I path;
+    after that, delete these calls and the contract still compiles with only
+    CoolProp.get_include_directory()."""
     import glob
     import subprocess
     # Search build trees in every checkout that shares this repo: this worktree
@@ -68,8 +67,6 @@ def _find_dep_include(header_relpath, env_var, fetch_glob):
 
 include_dirs.append(_find_dep_include(
     "fmt/format.h", "COOLPROP_FMT_INCLUDE", "build*/_deps/fmt-src/include"))
-include_dirs.append(_find_dep_include(
-    "rapidjson/rapidjson.h", "COOLPROP_RAPIDJSON_INCLUDE", "build*/_deps/rapidjson-src/include"))
 
 ext = Extension(
     "pdsim_surface",

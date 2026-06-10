@@ -52,7 +52,36 @@ jobs:
       run: cmake -B build -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON
 
     - name: Build
-      run: cmake --build build --target install -j $(nproc) --config ${{ env.BUILD_TYPE }}
+      shell: bash
+      # `nproc` is GNU coreutils: absent on macOS (and not a command in
+      # Windows pwsh), so `$(nproc)` silently expands empty here, leaving a
+      # bare `-j` — which goes *serial* on the macOS Unix Makefiles leg
+      # (30+ min vs ~4 min on Linux). Resolve the core count portably and
+      # under bash on all three runners. Mirrors csharp_builder.yml.
+      run: |
+        JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
+        echo "Building with -j$JOBS"
+        cmake --build build --target install -j "$JOBS" --config ${{ env.BUILD_TYPE }}
+
+    - name: JSON symbol-leak gate (libCoolProp, Linux/macOS)
+      # Fail if nlohmann/valijson/rapidjson symbols leak into libCoolProp's
+      # dynamic export table. Rides the shared build produced above (ELF on
+      # ubuntu, Mach-O on macOS) — no separate build. nm-based, so the Windows
+      # PE legs are skipped (exports are opt-in via src/CoolPropLib.def).
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Match the SONAME-versioned real file too: install gives libCoolProp.so
+        # as a symlink to libCoolProp.so.<ver> (the regular file), and -type f
+        # excludes the symlink — so name the versioned forms explicitly.
+        lib=$(find build install_root -type f \( -name 'libCoolProp.so' -o -name 'libCoolProp.so.*' -o -name 'libCoolProp.dylib' -o -name 'libCoolProp.*.dylib' \) | head -1)
+        if [ -z "$lib" ]; then
+          echo "FAIL: libCoolProp shared object not found under build/ or install_root/" >&2
+          exit 1
+        fi
+        echo "Gating $lib"
+        ./dev/ci/check-json-symbols.sh "$lib"
 
     # Create a special case for Windows since we also need 2 flavours of 32bit binaries
     - name: Configure CMake for 32bit Windows stdcall
@@ -61,7 +90,11 @@ jobs:
       
     - name: Build with CMake for 32bit Windows stdcall
       if: startsWith(matrix.os, 'windows')
-      run: cmake --build build_stdc --target install -j $(nproc) --config ${{ env.BUILD_TYPE }}
+      shell: bash
+      run: |
+        JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
+        echo "Building with -j$JOBS"
+        cmake --build build_stdc --target install -j "$JOBS" --config ${{ env.BUILD_TYPE }}
 
     - name: Configure CMake for 32bit Windows cdecl
       if: startsWith(matrix.os, 'windows')
@@ -69,7 +102,11 @@ jobs:
       
     - name: Build with CMake for 32bit Windows cdecl
       if: startsWith(matrix.os, 'windows')
-      run: cmake --build build_cdecl --target install -j $(nproc) --config ${{ env.BUILD_TYPE }}
+      shell: bash
+      run: |
+        JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
+        echo "Building with -j$JOBS"
+        cmake --build build_cdecl --target install -j "$JOBS" --config ${{ env.BUILD_TYPE }}
 
     - name: Configure CMake for 64bit Windows arm64
       if: startsWith(matrix.os, 'windows')
@@ -77,7 +114,11 @@ jobs:
       
     - name: Build with CMake for 64bit Windows arm64
       if: startsWith(matrix.os, 'windows')
-      run: cmake --build build_arm64 --target install -j $(nproc) --config ${{ env.BUILD_TYPE }}
+      shell: bash
+      run: |
+        JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
+        echo "Building with -j$JOBS"
+        cmake --build build_arm64 --target install -j "$JOBS" --config ${{ env.BUILD_TYPE }}
 
 
     # - name: Tar.gz the shared library to maintain case sensitivy and file permissions
