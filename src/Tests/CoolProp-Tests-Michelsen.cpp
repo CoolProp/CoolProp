@@ -1779,4 +1779,98 @@ TEST_CASE("DHSU_T flash: single-phase mixture regression", "[michelsen][dhsu_t]"
     }
 }
 
+TEST_CASE("HSU_D flash: two-phase N2/O2 HEOS round-trip", "[michelsen][hsu_d][twophase]") {
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+    AS->set_mole_fractions({0.79, 0.21});
+    AS->update(PQ_INPUTS, 1e5, 0.5);
+    double T = AS->T(), H = AS->hmolar(), S = AS->smolar();
+    double U = AS->umolar(), rho = AS->rhomolar();
+
+    SECTION("DmolarHmolar") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(DmolarHmolar_INPUTS, rho, H));
+        CHECK(AS2->T() == Catch::Approx(T).epsilon(0.01));
+        CHECK(AS2->Q() >= 0);
+        CHECK(AS2->Q() <= 1);
+    }
+    SECTION("DmolarSmolar") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(DmolarSmolar_INPUTS, rho, S));
+        CHECK(AS2->T() == Catch::Approx(T).epsilon(0.01));
+        CHECK(AS2->Q() >= 0);
+        CHECK(AS2->Q() <= 1);
+    }
+    SECTION("DmolarUmolar") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(DmolarUmolar_INPUTS, rho, U));
+        CHECK(AS2->T() == Catch::Approx(T).epsilon(0.01));
+        CHECK(AS2->Q() >= 0);
+        CHECK(AS2->Q() <= 1);
+    }
+}
+
+TEST_CASE("HSU_D flash: two-phase N2/O2 cubic round-trip", "[michelsen][hsu_d][twophase][cubic]") {
+    for (const std::string& backend : {"SRK", "PR"}) {
+        DYNAMIC_SECTION("Backend: " << backend) {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(backend, "Nitrogen&Oxygen"));
+            AS->set_mole_fractions({0.79, 0.21});
+            AS->update(PQ_INPUTS, 1e5, 0.5);
+            double T = AS->T(), H = AS->hmolar(), S = AS->smolar();
+            double U = AS->umolar(), rho = AS->rhomolar();
+
+            SECTION("DmolarHmolar") {
+                auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory(backend, "Nitrogen&Oxygen"));
+                AS2->set_mole_fractions({0.79, 0.21});
+                REQUIRE_NOTHROW(AS2->update(DmolarHmolar_INPUTS, rho, H));
+                CHECK(AS2->T() == Catch::Approx(T).epsilon(0.01));
+            }
+            SECTION("DmolarSmolar") {
+                auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory(backend, "Nitrogen&Oxygen"));
+                AS2->set_mole_fractions({0.79, 0.21});
+                REQUIRE_NOTHROW(AS2->update(DmolarSmolar_INPUTS, rho, S));
+                CHECK(AS2->T() == Catch::Approx(T).epsilon(0.01));
+            }
+            SECTION("DmolarUmolar") {
+                auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory(backend, "Nitrogen&Oxygen"));
+                AS2->set_mole_fractions({0.79, 0.21});
+                REQUIRE_NOTHROW(AS2->update(DmolarUmolar_INPUTS, rho, U));
+                CHECK(AS2->T() == Catch::Approx(T).epsilon(0.01));
+            }
+        }
+    }
+}
+
+TEST_CASE("HSU_D flash: single-phase N2/O2 HEOS regression", "[michelsen][hsu_d][singlephase]") {
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+    AS->set_mole_fractions({0.79, 0.21});
+    AS->update(PT_INPUTS, 1e5, 300.0);
+    double T = AS->T(), P = AS->p(), H = AS->hmolar(), S = AS->smolar();
+    double U = AS->umolar(), rho = AS->rhomolar();
+
+    SECTION("DmolarHmolar") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(DmolarHmolar_INPUTS, rho, H));
+        CHECK(AS2->T() == Catch::Approx(T).epsilon(0.001));
+        CHECK(AS2->p() == Catch::Approx(P).epsilon(0.001));
+    }
+    SECTION("DmolarSmolar") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(DmolarSmolar_INPUTS, rho, S));
+        CHECK(AS2->T() == Catch::Approx(T).epsilon(0.001));
+        CHECK(AS2->p() == Catch::Approx(P).epsilon(0.001));
+    }
+    SECTION("DmolarUmolar") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(DmolarUmolar_INPUTS, rho, U));
+        CHECK(AS2->T() == Catch::Approx(T).epsilon(0.001));
+        CHECK(AS2->p() == Catch::Approx(P).epsilon(0.001));
+    }
+}
+
 #endif
