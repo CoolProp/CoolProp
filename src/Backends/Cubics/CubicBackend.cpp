@@ -364,7 +364,9 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
             _T = value2;
             update_DmolarT();
             break;
+        case HmolarT_INPUTS:
         case SmolarT_INPUTS:
+        case TUmolar_INPUTS:
         case DmolarP_INPUTS:
         case DmolarHmolar_INPUTS:
         case DmolarSmolar_INPUTS:
