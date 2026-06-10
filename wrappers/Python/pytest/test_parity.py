@@ -139,10 +139,11 @@ class TestPropsSIMultiOutput:
         assert isinstance(r, np.ndarray) and r.shape == (0,)
 
     def test_failed_eval_raises_valueerror(self):
-        # A wholly invalid output list yields an empty matrix -> ValueError (parity
-        # with the single-output vectorized path, not RuntimeError).
+        # An invalid output name yields an empty matrix -> ValueError (parity with
+        # the single-output vectorized path, not RuntimeError).  Use a VALID fluid
+        # so the raise is provoked by the bad output, not by backend init.
         with pytest.raises(ValueError):
-            PropsSI(["ZZZ"], "P", [1e5], "Q", [0.0], "Nonexistium")
+            PropsSI(["ZZZ"], "P", [1e5], "Q", [0.0], "Water")
 
 
 # --------------------------------------------------------------------------- #
