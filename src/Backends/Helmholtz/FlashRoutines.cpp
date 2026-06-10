@@ -3377,19 +3377,48 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             return HEOS.keyed_output(other) - value;
         };
 
-        try {
-            boost::uintmax_t max_iter = 100;
-            auto bracket = boost::math::tools::toms748_solve(
-                resid, static_cast<double>(Tmin), static_cast<double>(Tmax),
-                boost::math::tools::eps_tolerance<double>(40), max_iter);
-            double T_sol = (bracket.first + bracket.second) / 2.0;
+        // Pre-evaluate endpoints to verify they bracket a root before
+        // calling toms748_solve (which throws an opaque domain_error if
+        // the signs are the same).  On failure, fall back to the endpoint
+        // whose residual is closest to zero.
+        double resid_lo = _HUGE, resid_hi = _HUGE;
+        bool lo_ok = false, hi_ok = false;
+        try { resid_lo = resid(static_cast<double>(Tmin)); lo_ok = std::isfinite(resid_lo); } catch (...) {}
+        try { resid_hi = resid(static_cast<double>(Tmax)); hi_ok = std::isfinite(resid_hi); } catch (...) {}
 
-            // Final PT flash at the converged temperature to set HEOS state
-            HEOS.update(PT_INPUTS, p, T_sol);
-        } catch (std::exception& e) {
+        if (lo_ok && hi_ok && resid_lo * resid_hi < 0) {
+            // Endpoints bracket the root — use TOMS748 with pre-computed values
+            try {
+                boost::uintmax_t max_iter = 100;
+                auto bracket = boost::math::tools::toms748_solve(
+                    resid, static_cast<double>(Tmin), static_cast<double>(Tmax),
+                    resid_lo, resid_hi,
+                    boost::math::tools::eps_tolerance<double>(40), max_iter);
+                double T_sol = (bracket.first + bracket.second) / 2.0;
+
+                // Final PT flash at the converged temperature to set HEOS state
+                HEOS.update(PT_INPUTS, p, T_sol);
+            } catch (std::exception& e) {
+                throw ValueError(
+                    format("HSU_P_flash for mixture failed with Tmin=%Lg, Tmax=%Lg, p=%Lg: %s",
+                           Tmin, Tmax, p, e.what()));
+            }
+        } else if (lo_ok || hi_ok) {
+            // Endpoints do not bracket — pick the one with smaller |residual|
+            double T_best = (!hi_ok || (lo_ok && std::abs(resid_lo) <= std::abs(resid_hi)))
+                            ? static_cast<double>(Tmin) : static_cast<double>(Tmax);
+            try {
+                HEOS.update(PT_INPUTS, p, T_best);
+            } catch (std::exception& e) {
+                throw ValueError(
+                    format("HSU_P_flash for mixture: endpoints do not bracket (resid_lo=%g, resid_hi=%g) "
+                           "and fallback at T=%g failed: %s",
+                           resid_lo, resid_hi, T_best, e.what()));
+            }
+        } else {
             throw ValueError(
-                format("HSU_P_flash for mixture failed with Tmin=%Lg, Tmax=%Lg, p=%Lg: %s",
-                       Tmin, Tmax, p, e.what()));
+                format("HSU_P_flash for mixture: neither endpoint evaluable (Tmin=%Lg, Tmax=%Lg, p=%Lg)",
+                       Tmin, Tmax, p));
         }
     }
 }
