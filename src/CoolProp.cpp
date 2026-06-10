@@ -37,6 +37,7 @@
 #include <cstdio>
 #include <string>
 #include <locale>
+#include <atomic>
 #include "CoolProp/detail/tools.h"
 #include "CoolProp/numerics/Solvers.h"
 #include "CoolProp/numerics/MatrixMath.h"
@@ -56,9 +57,17 @@
 
 namespace CoolProp {
 
-static int debug_level = 0;
-static std::string error_string;
-static std::string warning_string;
+// debug_level is written via set_debug_level and read from 30+ hot-path sites;
+// make it atomic so those concurrent accesses are not a data race (bd CoolProp-4qf).
+static std::atomic<int> debug_level{0};
+// error_string / warning_string are written from any exception handler and
+// read-then-cleared by get_global_param_string("errstring"/"warnstring"). As
+// shared globals that was a data race on std::string (UB) that also lost or
+// double-observed messages when threads raced. Make them thread_local so each
+// thread captures and drains its own message -- this matches per-thread
+// exception semantics and the State capsule shim's existing thread_local error.
+static thread_local std::string error_string;
+static thread_local std::string warning_string;
 
 void set_debug_level(int level) {
     debug_level = level;
