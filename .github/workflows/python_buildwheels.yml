@@ -170,12 +170,23 @@ jobs:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
-        os: [windows-latest]
         python-version: ${{ fromJSON(needs.set-matrix.outputs.py_versions) }}
         arch: ${{ fromJSON(needs.set-matrix.outputs.windows_archs) }}
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
-      os: ${{ matrix.os }}
+      # Runner selection for Windows ARM64 (CoolProp-6z0a):
+      #   • CPython ships a native win_arm64 interpreter only for 3.11+, so
+      #     ARM64 on py>=3.11 builds NATIVELY on the windows-11-arm runner.
+      #     Native build means delvewheel (cibuildwheel 4.0's default Windows
+      #     repair) can resolve the ARM64 VC runtime, so the wheel repairs.
+      #   • ARM64 on py3.9/3.10 has no native interpreter; it must cross-compile
+      #     on the x64 windows-latest host, where delvewheel can't find the
+      #     ARM64 msvcp140.dll — so repair is disabled on that leg (see the
+      #     reusable workflow's CIBW_REPAIR_WHEEL_COMMAND_WINDOWS).
+      #   • AMD64/x86 always run on windows-latest with the default repair.
+      # python-version is encoded as 39/310/311/312 (monotonic with the real
+      # version), so `>= 311` correctly means CPython >= 3.11.
+      os: ${{ (matrix.arch == 'ARM64' && matrix.python-version >= 311) && 'windows-11-arm' || 'windows-latest' }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
       TESTPYPI_VERSION: ${{ needs.set-version.outputs.testpypiversion }}
