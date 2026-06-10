@@ -7,6 +7,7 @@
 #    include "CoolProp/DataStructures.h"
 #    include "CoolProp/numerics/numerics.h"  // ValidNumber: scalar PropsSI/HAPropsSI raise on non-finite (Cython parity)
 #    include "CoolProp/detail/state_capi.h"
+#    include "CoolProp/superancillary/superancillary.h"
 #    include "Backends/Helmholtz/MixtureParameters.h"
 
 #    include <nanobind/nanobind.h>
@@ -258,8 +259,133 @@ const CoolProp_StateCAPI g_state_capi = {
   capi_specify_phase, capi_unspecify_phase};
 }  // namespace
 
+// Bind the superancillary classes (Chebyshev rootfinding building blocks +
+// the SuperAncillary saturation evaluator).  1:1 mirror of the legacy Cython
+// surface in wrappers/Python/CoolProp/CoolProp.pyx, with the raw-pointer C
+// methods wrapped to take/return contiguous 1-D numpy arrays.  ArrayType is
+// std::vector<double> to match the legacy bindings.  See CoolProp-1tbe.5.
+static void init_superancillary(nb::module_& m) {
+    namespace sa = CoolProp::superancillary;
+    using SAArray = std::vector<double>;
+    using ChebExp = sa::ChebyshevExpansion<SAArray>;
+    using ChebApprox1D = sa::ChebyshevApproximation1D<SAArray>;
+    using SuperAnc = sa::SuperAncillary<SAArray>;
+    using ArrD = nb::ndarray<double, nb::ndim<1>, nb::c_contig>;
+    using ArrSz = nb::ndarray<std::size_t, nb::ndim<1>, nb::c_contig>;
+
+    // The two POD structs returned by ChebyshevApproximation1D::monotonic_intervals().
+    nb::class_<sa::MonotonicExpansionMatch>(m, "MonotonicExpansionMatch")
+      .def_ro("idx", &sa::MonotonicExpansionMatch::idx)
+      .def_ro("ymin", &sa::MonotonicExpansionMatch::ymin)
+      .def_ro("ymax", &sa::MonotonicExpansionMatch::ymax)
+      .def_ro("xmin", &sa::MonotonicExpansionMatch::xmin)
+      .def_ro("xmax", &sa::MonotonicExpansionMatch::xmax);
+
+    nb::class_<sa::IntervalMatch>(m, "IntervalMatch")
+      .def_ro("expansioninfo", &sa::IntervalMatch::expansioninfo)
+      .def_ro("xmin", &sa::IntervalMatch::xmin)
+      .def_ro("xmax", &sa::IntervalMatch::xmax)
+      .def_ro("ymin", &sa::IntervalMatch::ymin)
+      .def_ro("ymax", &sa::IntervalMatch::ymax);
+
+    nb::class_<ChebExp>(m, "ChebyshevExpansion")
+      .def(nb::init<double, double, SAArray>(), nb::arg("xmin"), nb::arg("xmax"), nb::arg("coef"))
+      .def("xmin", &ChebExp::xmin)
+      .def("xmax", &ChebExp::xmax)
+      .def("coeff", [](const ChebExp& e) { return e.coeff(); })
+      .def(
+        "eval_many",
+        [](const ChebExp& e, ArrD x, ArrD y) {
+            if (x.shape(0) != y.shape(0)) {
+                throw nb::value_error("x and y are not the same size");
+            }
+            e.eval_manyC<double>(x.data(), y.data(), x.shape(0));
+        },
+        nb::arg("x"), nb::arg("y"))
+      .def("solve_for_x", &ChebExp::solve_for_x, nb::arg("y"), nb::arg("a"), nb::arg("b"), nb::arg("bits"), nb::arg("max_iter"),
+           nb::arg("boundstytol"))
+      .def(
+        "solve_for_x_many",
+        [](const ChebExp& e, ArrD y, double a, double b, unsigned int bits, std::size_t max_iter, double boundstytol, ArrD x, ArrSz counts) {
+            if (y.shape(0) != x.shape(0) || y.shape(0) != counts.shape(0)) {
+                throw nb::value_error("y, x and counts are not the same size");
+            }
+            e.solve_for_x_manyC<double, std::size_t>(y.data(), y.shape(0), a, b, bits, max_iter, boundstytol, x.data(), counts.data());
+        },
+        nb::arg("y"), nb::arg("a"), nb::arg("b"), nb::arg("bits"), nb::arg("max_iter"), nb::arg("boundstytol"), nb::arg("x"), nb::arg("counts"));
+
+    nb::class_<ChebApprox1D>(m, "ChebyshevApproximation1D")
+      // By-value in nb::init: nanobind materializes the vector from the Python
+      // list and passes it as an rvalue, binding the C++ `vector&&` ctor.  (An
+      // `nb::init<vector&&>` mis-handles the rvalue-ref caster and segfaults.)
+      .def(nb::init<std::vector<ChebExp>>(), nb::arg("expansions"))
+      .def("xmin", &ChebApprox1D::xmin)
+      .def("xmax", &ChebApprox1D::xmax)
+      .def("is_monotonic", &ChebApprox1D::is_monotonic)
+      .def(
+        "eval_many",
+        [](const ChebApprox1D& a, ArrD x, ArrD y) {
+            if (x.shape(0) != y.shape(0)) {
+                throw nb::value_error("x and y are not the same size");
+            }
+            a.eval_manyC<double>(x.data(), y.data(), x.shape(0));
+        },
+        nb::arg("x"), nb::arg("y"))
+      .def("get_x_for_y", &ChebApprox1D::get_x_for_y, nb::arg("y"), nb::arg("bits"), nb::arg("max_iter"), nb::arg("boundstytol"))
+      .def(
+        "count_x_for_y_many",
+        [](const ChebApprox1D& a, ArrD y, unsigned int bits, std::size_t max_iter, double boundstytol, ArrSz counts) {
+            if (y.shape(0) != counts.shape(0)) {
+                throw nb::value_error("y and counts are not the same size");
+            }
+            a.count_x_for_y_manyC<double, std::size_t>(y.data(), y.shape(0), bits, max_iter, boundstytol, counts.data());
+        },
+        nb::arg("y"), nb::arg("bits"), nb::arg("max_iter"), nb::arg("boundstytol"), nb::arg("counts"))
+      .def("monotonic_intervals", [](const ChebApprox1D& a) { return a.get_monotonic_intervals(); });
+
+    nb::class_<SuperAnc>(m, "SuperAncillary")
+      .def(nb::init<const std::string&>(), nb::arg("json_as_string"))
+      .def(
+        "eval_sat",
+        [](const SuperAnc& s, double T, const std::string& prop, short Q) {
+            if (prop.empty()) {
+                throw nb::value_error("prop must be a non-empty string");
+            }
+            return s.eval_sat(T, prop[0], Q);
+        },
+        nb::arg("T"), nb::arg("prop"), nb::arg("Q"))
+      .def(
+        "eval_sat_many",
+        [](const SuperAnc& s, ArrD T, const std::string& prop, short Q, ArrD y) {
+            if (prop.empty()) {
+                throw nb::value_error("prop must be a non-empty string");
+            }
+            if (T.shape(0) != y.shape(0)) {
+                throw nb::value_error("T and y are not the same size");
+            }
+            s.eval_sat_manyC<double>(T.data(), T.shape(0), prop[0], Q, y.data());
+        },
+        nb::arg("T"), nb::arg("prop"), nb::arg("Q"), nb::arg("y"));
+}
+
 void init_CoolProp(nb::module_& m) {
     using namespace CoolProp;
+
+    // Map every CoolProp C++ exception to a Python ValueError, matching the
+    // legacy Cython wrapper (which declared `except +ValueError` on every
+    // bound method).  Without this, nanobind's default translator sends
+    // CoolPropBaseError -- which derives from std::exception, not one of the
+    // std types nanobind special-cases -- to RuntimeError, silently breaking
+    // the canonical `try: ... except ValueError` pattern around a failed
+    // AbstractState.update() (incl. CoolProp's own shipped Plots code).
+    // See CoolProp-1tbe.2.
+    nb::register_exception_translator([](const std::exception_ptr& p, void* /*payload*/) {
+        try {
+            std::rethrow_exception(p);
+        } catch (const CoolProp::CoolPropBaseError& e) {
+            PyErr_SetString(PyExc_ValueError, e.what());
+        }
+    });
 
     nb::class_<SimpleState>(m, "SimpleState")
       .def(nb::init<>())
@@ -1042,6 +1168,9 @@ void init_CoolProp(nb::module_& m) {
             throw std::invalid_argument("Invalid number of inputs to set_reference_state");
         }
     });
+
+    // Chebyshev rootfinding + SuperAncillary saturation evaluator classes.
+    init_superancillary(m);
 }
 
 #    if defined(COOLPROP_NANOBIND_MODULE)
