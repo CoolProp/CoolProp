@@ -30,6 +30,9 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             bool twophase = PhaseEnvelopeRoutines::is_inside(env, iP, HEOS._p, iT, HEOS._T, iclosest, closest_state);
 
             if (!twophase) {
+                if (!ValidNumber(closest_state.T)) {
+                    throw ValueError("Phase envelope is_inside returned false without populating closest_state");
+                }
                 // Single-phase: determine gas vs liquid from temperature relative to closest envelope point
                 // Save T and p before solver calls — solver_rho_Tp may corrupt
                 // HEOS._T/_p on failure (Householder sets them to -inf).
