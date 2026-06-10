@@ -105,4 +105,64 @@ TEST_CASE("P+X single-phase round-trips (PH/PS/PU)", "[PXflash]") {
     }
 }
 
+// ---------------------------------------------------------------------------
+// High-pressure quantum-fluid P+X reliability (bd CoolProp-r1w7.1).
+//
+// At p >> psat_max (hundreds of MPa) with T just above Tc, the HSU_P flash's
+// T-search bracket straddles Tc.  Without a melting line the search floor is
+// the bare EOS triple temperature, so trial T < Tc probe the cold solid-region
+// isotherm (a van der Waals loop pinned near p~0); solver_rho_Tp cannot find the
+// high-density root there and threw "Inputs in Brent [...] do not bracket the
+// root", aborting the flash before it could reach the valid T > Tc solution.
+// This was the largest exception bucket in the HEOS consistency report and is
+// perfectly correlated with a missing melting line (Hydrogen / ParaHydrogen,
+// which HAVE one, do not fail; OrthoHydrogen and the Deuterium isotopes, which
+// did not, failed ~684-702 times each).  The fix gives these fluids a melting
+// line so the flash floors its T-search at Tmelt(p), above the loop.  Points are
+// taken from the per-fluid consistency CSVs.
+// ---------------------------------------------------------------------------
+TEST_CASE("P+X high-pressure quantum-fluid reliability (was failing)", "[PXflash]") {
+    struct Case
+    {
+        const char* fluid;
+        double T;  // K  (> Tc, but the flash's T-search dips below Tc)
+        double p;  // Pa (>> psat_max)
+    };
+    // Genuine fluid states (T > Tmelt(p)) at p >> psat_max that failed in the
+    // consistency report.  Lower-T grid points at the same pressure are below the
+    // melting line (solid) and are correctly rejected, not solved.  Adding the
+    // melting line (Datchi-2000 for H2; Diatschenko-1985 for the D2 isotopes)
+    // floors the HSU_P T-search at Tmelt(p) so these no longer fail.
+    const Case c =
+      GENERATE(Case{"OrthoHydrogen", 90.86892307692308, 404007839.5225975}, Case{"Deuterium", 79.32923076923078, 448875035.8934926},
+               Case{"OrthoDeuterium", 79.32923076923078, 448875035.8934926}, Case{"ParaDeuterium", 79.32923076923078, 448875035.8934926});
+    CAPTURE(c.fluid, c.T, c.p);
+
+    auto ref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", c.fluid));
+    auto wrk = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", c.fluid));
+
+    REQUIRE_NOTHROW(ref->update(CoolProp::PT_INPUTS, c.p, c.T));
+    const double h = ref->hmolar();
+    const double s = ref->smolar();
+    const double u = ref->umolar();
+    const double rho = ref->rhomolar();
+    REQUIRE(std::isfinite(rho));
+
+    SECTION("PH") {
+        REQUIRE_NOTHROW(wrk->update(CoolProp::HmolarP_INPUTS, h, c.p));
+        CHECK(wrk->T() == Catch::Approx(c.T).epsilon(1e-5));
+        CHECK(wrk->rhomolar() == Catch::Approx(rho).epsilon(1e-5));
+    }
+    SECTION("PS") {
+        REQUIRE_NOTHROW(wrk->update(CoolProp::PSmolar_INPUTS, c.p, s));
+        CHECK(wrk->T() == Catch::Approx(c.T).epsilon(1e-5));
+        CHECK(wrk->rhomolar() == Catch::Approx(rho).epsilon(1e-5));
+    }
+    SECTION("PU") {
+        REQUIRE_NOTHROW(wrk->update(CoolProp::PUmolar_INPUTS, c.p, u));
+        CHECK(wrk->T() == Catch::Approx(c.T).epsilon(1e-5));
+        CHECK(wrk->rhomolar() == Catch::Approx(rho).epsilon(1e-5));
+    }
+}
+
 #endif  // ENABLE_CATCH

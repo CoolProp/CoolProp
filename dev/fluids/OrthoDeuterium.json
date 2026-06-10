@@ -44,6 +44,21 @@
       "max_abs_error_units": "J/mol",
       "type": "rational_polynomial"
     },
+    "melting_line": {
+      "BibTeX": "Diatschenko-PRB-1985",
+      "T_m": 18.724,
+      "parts": [
+        {
+          "T_0": 1,
+          "T_max": 175,
+          "T_min": 19.72,
+          "a": 366000.0,
+          "c": 1.677,
+          "p_0": -53944000.0
+        }
+      ],
+      "type": "Simon"
+    },
     "pS": {
       "T_r": 38.34,
       "Tmax": 38.33999999999991,

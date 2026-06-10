@@ -44,6 +44,21 @@
       "max_abs_error_units": "J/mol",
       "type": "rational_polynomial"
     },
+    "melting_line": {
+      "BibTeX": "Datchi-PRB-2000",
+      "T_m": 14.009985,
+      "parts": [
+        {
+          "T_0": 1,
+          "T_max": 700,
+          "T_min": 13.957,
+          "a": 231000.0,
+          "c": 1.7627,
+          "p_0": -236200.0
+        }
+      ],
+      "type": "Simon"
+    },
     "pS": {
       "T_r": 33.22,
       "Tmax": 33.219999999999914,
