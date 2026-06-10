@@ -39,8 +39,15 @@ jobs:
       run: cmake -DCOOLPROP_PRIME_MODULE:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="${{ github.workspace }}" -B build -S .
 
     - name: Build
-      run: | 
-        cmake --build build --target CoolPropMathcadWrapper -j $(nproc) --config Release
+      # `$(nproc)` is empty in the default Windows pwsh shell (nproc is a
+      # GNU coreutils binary, not a pwsh command), collapsing to a bare `-j`.
+      # Run under Git-Bash and resolve the core count portably. Mirrors
+      # csharp_builder.yml / library_shared.yml.
+      shell: bash
+      run: |
+        JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
+        echo "Building with -j$JOBS"
+        cmake --build build --target CoolPropMathcadWrapper -j "$JOBS" --config Release
         cmake --build build --target install --config Release
 
     - name: Archive artifacts
