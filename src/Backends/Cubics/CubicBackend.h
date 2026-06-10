@@ -175,6 +175,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// are zero for cubics.  Use 100 * max(pc_i) as a practical upper bound.
     CoolPropDbl calc_pmax() override {
         const std::vector<double>& pc = cubic->get_pc();
+        if (pc.empty()) {
+            throw ValueError("CubicBackend::calc_pmax: Critical pressure vector is empty. Missing cubic parameters.");
+        }
         double pc_max = *std::max_element(pc.begin(), pc.end());
         return 100.0 * pc_max;
     };
@@ -183,6 +186,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// zero for cubics.  Use 0.01 * min(pc_i) as a conservative lower bound.
     CoolPropDbl calc_p_triple() override {
         const std::vector<double>& pc = cubic->get_pc();
+        if (pc.empty()) {
+            throw ValueError("CubicBackend::calc_p_triple: Critical pressure vector is empty. Missing cubic parameters.");
+        }
         double pc_min = *std::min_element(pc.begin(), pc.end());
         return 0.01 * pc_min;
     };
@@ -191,6 +197,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// are zero for cubics.  Use 0.3 * min(Tc_i) as a practical lower bound.
     CoolPropDbl calc_Tmin() override {
         const std::vector<double>& Tc = cubic->get_Tc();
+        if (Tc.empty()) {
+            throw ValueError("CubicBackend::calc_Tmin: Critical temperature vector is empty. Missing cubic parameters.");
+        }
         double Tc_min = *std::min_element(Tc.begin(), Tc.end());
         return 0.3 * Tc_min;
     };
@@ -199,6 +208,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// are zero for cubics.  Use 10.0 * max(Tc_i) as a practical upper bound.
     CoolPropDbl calc_Tmax() override {
         const std::vector<double>& Tc = cubic->get_Tc();
+        if (Tc.empty()) {
+            throw ValueError("CubicBackend::calc_Tmax: Critical temperature vector is empty. Missing cubic parameters.");
+        }
         double Tc_max = *std::max_element(Tc.begin(), Tc.end());
         return 10.0 * Tc_max;
     };
