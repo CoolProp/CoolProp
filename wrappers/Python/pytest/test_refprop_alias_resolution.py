@@ -370,6 +370,15 @@ class TestEdgeCases:
         cas     = CoolProp.AbstractState("REFPROP", "water").fluid_param_string("CAS")
         assert cas == ref_cas
 
+    def test_canonical_refprop_name_works_when_resolution_disabled(self):
+        """When REFPROP_RESOLVE_COOLPROP_ALIASES is False, canonical REFPROP names
+        (e.g. 'BUTANE') must still load successfully."""
+        CP.set_config_bool(CP.REFPROP_RESOLVE_COOLPROP_ALIASES, False)
+        try:
+            CoolProp.AbstractState("REFPROP", "BUTANE")
+        finally:
+            CP.set_config_bool(CP.REFPROP_RESOLVE_COOLPROP_ALIASES, True)  # restore so later tests are unaffected
+
     def test_alias_resolution_disabled_raises(self):
         """When REFPROP_RESOLVE_COOLPROP_ALIASES is False, a CoolProp alias that is
         not a valid REFPROP filename must fail to load."""
@@ -378,7 +387,7 @@ class TestEdgeCases:
             with pytest.raises(ValueError):
                 CoolProp.AbstractState("REFPROP", "R600")
         finally:
-            CP.set_config_bool(CP.REFPROP_RESOLVE_COOLPROP_ALIASES, True)
+            CP.set_config_bool(CP.REFPROP_RESOLVE_COOLPROP_ALIASES, True)  # restore so later tests are unaffected
 
 
 # ---------------------------------------------------------------------------
