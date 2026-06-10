@@ -60,15 +60,20 @@ import CoolProp.CoolProp as CP
 
 def _find_refprop_fluids_dir() -> str | None:
     """Return the REFPROP FLUIDS directory, or None if not found."""
-    candidates = [
-        os.path.join(os.getenv("RPPREFIX", ""), "FLUIDS"),
-        os.path.join(os.getenv("COOLPROP_REFPROP_ROOT", ""), "FLUIDS"),
-        "/opt/refprop/FLUIDS",
-        "/home/francesco/refprop/REFPROP/FLUIDS",
-    ]
-    for path in candidates:
-        if path and os.path.isdir(path):
-            return path
+    # Prefer the path CoolProp itself is configured to use so the tests
+    # exercise the same installation that AbstractState will load.
+    for root in [
+        CP.get_config_string(CP.ALTERNATIVE_REFPROP_PATH),
+        os.getenv("COOLPROP_REFPROP_ROOT", ""),
+        os.getenv("RPPREFIX", ""),
+        "/opt/refprop",
+        r"C:\Program Files\REFPROP",
+        r"C:\Program Files (x86)\REFPROP",
+    ]:
+        if root:
+            candidate = os.path.join(root, "FLUIDS")
+            if os.path.isdir(candidate):
+                return candidate
     return None
 
 
