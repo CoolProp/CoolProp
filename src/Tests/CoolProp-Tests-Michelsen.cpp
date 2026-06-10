@@ -957,6 +957,7 @@ TEST_CASE("Methanol-benzene PT flash at problematic compositions", "[michelsen][
             CAPTURE(rho);
             CHECK(std::isfinite(rho));
             CHECK(rho > 0);
+            CHECK(std::isfinite(AS->gibbsmolar()));
         }
     }
 }
