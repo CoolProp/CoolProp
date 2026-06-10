@@ -11,12 +11,11 @@ authors = [
 ]
 description = "Open-source thermodynamic and transport properties database"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -112,7 +111,7 @@ wheel.py-api = "cp312"
 
 [tool.cibuildwheel]
 # Build for multiple Python versions (CPython only)
-build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
+build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 
 # Skip musllinux for now
 skip = "*-musllinux_*"
