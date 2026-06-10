@@ -77,6 +77,18 @@ jobs:
       with:
         platforms: all
 
+    # cibuildwheel 4.0 makes delvewheel the default Windows repair command, but
+    # the cross-compiled win_arm64 wheels (py3.9/3.10 on the x64 windows-latest
+    # host) can't be repaired there — delvewheel can't find the ARM64
+    # msvcp140.dll and aborts.  Disable repair on that cross leg ONLY, matching
+    # pre-4.0 behavior; native ARM64 (windows-11-arm) and AMD64/x86 keep the
+    # default delvewheel repair.  Setting the var empty = "skip repair";
+    # leaving it unset = cibuildwheel default.  (CoolProp-6z0a)
+    - name: Disable delvewheel repair on cross-compiled Windows ARM64
+      if: ${{ inputs.os == 'windows-latest' && inputs.arch == 'ARM64' }}
+      shell: bash
+      run: echo "CIBW_REPAIR_WHEEL_COMMAND_WINDOWS=" >> "$GITHUB_ENV"
+
     - name: Build and test wheels
       uses: pypa/cibuildwheel@v4.0.0
       env:
@@ -104,7 +116,7 @@ jobs:
         CIBW_ENVIRONMENT_PASS_LINUX: COOLPROP_VERSION_OVERRIDE
         CIBW_BUILD: cp${{ inputs.python-version }}-*
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
-        CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 # ARM64 creates problems with msgpack-c
+        CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 ARM64 (ARM64: native on windows-11-arm for py>=3.11, else cross-compiled — see CoolProp-6z0a)
         CIBW_ARCHS_LINUX: ${{ inputs.arch }} # i686 x86_64 aarch64 ppc64le s390x
         # Smoke-test the published v8 wheel: it imports, the nanobind PropsSI works
         # (returns a float for int args), and the State capsule shim loads.
