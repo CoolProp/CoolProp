@@ -3371,6 +3371,61 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
         CoolPropDbl Tmax = HEOS.calc_Tmax();
         CoolPropDbl p = HEOS._p;
 
+        // --- Change 1: PQ-based bracket narrowing ---
+        // Try PQ flash at Q=0 (bubble) and Q=1 (dew) to narrow the
+        // bracket and potentially shortcut exact saturation states.
+        CoolPropDbl T_bubble = -1, T_dew = -1;
+        CoolPropDbl val_bubble = _HUGE, val_dew = _HUGE;
+        bool pq_ok = false;
+        try {
+            HEOS.update(PQ_INPUTS, p, 0.0);
+            T_bubble = HEOS.T();
+            val_bubble = HEOS.keyed_output(other);
+            HEOS.update(PQ_INPUTS, p, 1.0);
+            T_dew = HEOS.T();
+            val_dew = HEOS.keyed_output(other);
+            pq_ok = std::isfinite(static_cast<double>(T_bubble))
+                 && std::isfinite(static_cast<double>(T_dew))
+                 && std::isfinite(static_cast<double>(val_bubble))
+                 && std::isfinite(static_cast<double>(val_dew));
+        } catch (...) {
+            pq_ok = false;
+        }
+
+        if (pq_ok) {
+            // Shortcut: exact saturation match (bubble)
+            double tol_sat = 1e-6 * (std::abs(static_cast<double>(value)) + 1.0);
+            if (std::abs(static_cast<double>(value - val_bubble)) < tol_sat) {
+                HEOS.update(PQ_INPUTS, p, 0.0);
+                return;
+            }
+            // Shortcut: exact saturation match (dew)
+            if (std::abs(static_cast<double>(value - val_dew)) < tol_sat) {
+                HEOS.update(PQ_INPUTS, p, 1.0);
+                return;
+            }
+
+            // Classify phase and narrow bracket.
+            // Use actual computed values — don't assume val_bubble < val_dew.
+            CoolPropDbl val_lo = (val_bubble < val_dew) ? val_bubble : val_dew;
+            CoolPropDbl val_hi = (val_bubble < val_dew) ? val_dew : val_bubble;
+            CoolPropDbl T_at_lo = (val_bubble < val_dew) ? T_bubble : T_dew;
+            CoolPropDbl T_at_hi = (val_bubble < val_dew) ? T_dew : T_bubble;
+
+            if (value < val_lo) {
+                // Below both saturation values → on the low-T side
+                Tmax = T_at_lo;
+            } else if (value > val_hi) {
+                // Above both saturation values → on the high-T side
+                Tmin = T_at_hi;
+            }
+            // else: value between val_lo and val_hi → two-phase region;
+            // sweep over [T_bubble, T_dew] (PT flash handles two-phase)
+            // Keep [Tmin, Tmax] as-is so the resid functor can find it.
+        }
+        // When !pq_ok (supercritical P, PQ solver failure): fall through
+        // to the full [Tmin, Tmax] bracket — no regression.
+
         // Residual functor: given T, do PT flash and return Y - Y_target
         auto resid = [&](double T) -> double {
             HEOS.update(PT_INPUTS, p, T);
@@ -3385,6 +3440,45 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
         bool lo_ok = false, hi_ok = false;
         try { resid_lo = resid(static_cast<double>(Tmin)); lo_ok = std::isfinite(resid_lo); } catch (...) {}
         try { resid_hi = resid(static_cast<double>(Tmax)); hi_ok = std::isfinite(resid_hi); } catch (...) {}
+
+        // --- Change 2: Binary-search validity recovery ---
+        // When one endpoint fails (e.g., Tmin below melting line), bisect
+        // inward from the failing endpoint toward the working one.
+        if (!lo_ok && hi_ok) {
+            double a = static_cast<double>(Tmin), b = static_cast<double>(Tmax);
+            for (int i = 0; i < 50 && (b - a) > 0.01; ++i) {
+                double mid = 0.5 * (a + b);
+                try {
+                    resid_lo = resid(mid);
+                    if (std::isfinite(resid_lo)) {
+                        lo_ok = true;
+                        Tmin = mid;
+                        b = mid;  // tighten toward the boundary
+                    } else {
+                        a = mid;
+                    }
+                } catch (...) {
+                    a = mid;
+                }
+            }
+        } else if (!hi_ok && lo_ok) {
+            double a = static_cast<double>(Tmin), b = static_cast<double>(Tmax);
+            for (int i = 0; i < 50 && (b - a) > 0.01; ++i) {
+                double mid = 0.5 * (a + b);
+                try {
+                    resid_hi = resid(mid);
+                    if (std::isfinite(resid_hi)) {
+                        hi_ok = true;
+                        Tmax = mid;
+                        a = mid;  // tighten toward the boundary
+                    } else {
+                        b = mid;
+                    }
+                } catch (...) {
+                    b = mid;
+                }
+            }
+        }
 
         if (lo_ok && hi_ok && resid_lo * resid_hi < 0) {
             // Endpoints bracket the root — use TOMS748 with pre-computed values
