@@ -351,36 +351,39 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         // Resolve each name through the CoolProp fluid library so that any
         // CoolProp alias (e.g. "R600", "n-Butane") is translated to the
         // REFPROP filename (e.g. "BUTANE") before building the .FLD path.
+        // Can be disabled via set_config_bool("REFPROP_RESOLVE_COOLPROP_ALIASES", false).
         std::vector<std::string> resolved_names(fluid_names);
-        for (std::size_t i = 0; i < resolved_names.size(); ++i) {
-            try {
-                CoolPropFluid fluid = get_library().get(fluid_names[i]);
-                // REFPROPname holds the .FLD stem; when absent, fluid.name is
-                // the REFPROP-valid name by documented contract (CoolPropFluid.h).
-                resolved_names[i] = fluid.REFPROPname.empty() ? fluid.name : fluid.REFPROPname;
-            } catch (const CoolProp::ValueError&) {
-                // Direct lookup failed.  If the name carries a REFPROP file
-                // extension (e.g. "R600.FLD"), strip it and retry so that
-                // aliases like "R600.FLD" resolve the same way as "R600".
-                static const std::array<std::string, 4> exts{".FLD", ".fld", ".PPF", ".ppf"};
-                for (const auto& ext : exts) {
-                    if (endswith(fluid_names[i], ext)) {
-                        const std::string stem = fluid_names[i].substr(0, fluid_names[i].size() - ext.size());
-                        // Try the stem as-is first, then uppercased (the library
-                        // stores both original and uppercased alias forms, but not
-                        // every mixed-case variant).
-                        for (const auto& lookup : {stem, upper(stem)}) {
-                            try {
-                                CoolPropFluid fluid = get_library().get(lookup);
-                                resolved_names[i] = fluid.REFPROPname.empty() ? fluid.name : fluid.REFPROPname;
-                                break;
-                            } catch (const CoolProp::ValueError&) {}
+        if (get_config_bool(REFPROP_RESOLVE_COOLPROP_ALIASES)) {
+            for (std::size_t i = 0; i < resolved_names.size(); ++i) {
+                try {
+                    CoolPropFluid fluid = get_library().get(fluid_names[i]);
+                    // REFPROPname holds the .FLD stem; when absent, fluid.name is
+                    // the REFPROP-valid name by documented contract (CoolPropFluid.h).
+                    resolved_names[i] = fluid.REFPROPname.empty() ? fluid.name : fluid.REFPROPname;
+                } catch (const CoolProp::ValueError&) {
+                    // Direct lookup failed.  If the name carries a REFPROP file
+                    // extension (e.g. "R600.FLD"), strip it and retry so that
+                    // aliases like "R600.FLD" resolve the same way as "R600".
+                    static const std::array<std::string, 4> exts{".FLD", ".fld", ".PPF", ".ppf"};
+                    for (const auto& ext : exts) {
+                        if (endswith(fluid_names[i], ext)) {
+                            const std::string stem = fluid_names[i].substr(0, fluid_names[i].size() - ext.size());
+                            // Try the stem as-is first, then uppercased (the library
+                            // stores both original and uppercased alias forms, but not
+                            // every mixed-case variant).
+                            for (const auto& lookup : {stem, upper(stem)}) {
+                                try {
+                                    CoolPropFluid fluid = get_library().get(lookup);
+                                    resolved_names[i] = fluid.REFPROPname.empty() ? fluid.name : fluid.REFPROPname;
+                                    break;
+                                } catch (const CoolProp::ValueError&) {}
+                            }
+                            break;
                         }
-                        break;
                     }
+                    // If still unresolved, pass the name through unchanged so
+                    // REFPROP can try to load it directly (e.g. a full path or .MIX).
                 }
-                // If still unresolved, pass the name through unchanged so
-                // REFPROP can try to load it directly (e.g. a full path or .MIX).
             }
         }
 

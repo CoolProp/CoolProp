@@ -370,6 +370,16 @@ class TestEdgeCases:
         cas     = CoolProp.AbstractState("REFPROP", "water").fluid_param_string("CAS")
         assert cas == ref_cas
 
+    def test_alias_resolution_disabled_raises(self):
+        """When REFPROP_RESOLVE_COOLPROP_ALIASES is False, a CoolProp alias that is
+        not a valid REFPROP filename must fail to load."""
+        CP.set_config_bool(CP.REFPROP_RESOLVE_COOLPROP_ALIASES, False)
+        try:
+            with pytest.raises(ValueError):
+                CoolProp.AbstractState("REFPROP", "R600")
+        finally:
+            CP.set_config_bool(CP.REFPROP_RESOLVE_COOLPROP_ALIASES, True)
+
 
 # ---------------------------------------------------------------------------
 # 7. Discovery smoke test
