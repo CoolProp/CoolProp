@@ -23,6 +23,7 @@ by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "CoolProp/Exceptions.h"
 #include "CoolProp/superancillary/cubicsuperancillary.h"
+#include <algorithm>
 #include <vector>
 
 namespace CoolProp {
@@ -168,6 +169,22 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         } else {
             return HelmholtzEOSMixtureBackend::calc_rhomolar_critical();
         }
+    };
+    /// Maximum pressure bound for cubic EOS.
+    /// The inherited version reads limits.pmax from CoolPropFluid objects, which
+    /// are zero for cubics.  Use 100 * max(pc_i) as a practical upper bound.
+    CoolPropDbl calc_pmax() override {
+        const std::vector<double>& pc = cubic->get_pc();
+        double pc_max = *std::max_element(pc.begin(), pc.end());
+        return 100.0 * pc_max;
+    };
+    /// Triple-point pressure estimate for cubic EOS.
+    /// The inherited version reads ptriple from CoolPropFluid objects, which are
+    /// zero for cubics.  Use 0.01 * min(pc_i) as a conservative lower bound.
+    CoolPropDbl calc_p_triple() override {
+        const std::vector<double>& pc = cubic->get_pc();
+        double pc_min = *std::min_element(pc.begin(), pc.end());
+        return 0.01 * pc_min;
     };
 
     /// \brief Get linear mole fraction weighting of the critical molar volumes and temperatures

@@ -1650,4 +1650,133 @@ TEST_CASE("PQ flash: 6-component no-throw sweep", "[michelsen][flash][PQ_flash]"
     }
 }
 
+// ============================================================================
+// DHSU_T flash: two-phase round-trip tests
+//
+// These verify that HmolarT, SmolarT, DmolarT, and TUmolar flashes
+// correctly recover a known two-phase state created via PQ flash.
+// Previously, the mixture DHSU_T flash only handled single-phase states,
+// silently returning wrong results (on the Van der Waals loop) for
+// two-phase inputs.
+// ============================================================================
+
+TEST_CASE("DHSU_T flash: two-phase N2/O2 HEOS round-trip", "[michelsen][dhsu_t][twophase]") {
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+    AS->set_mole_fractions({0.79, 0.21});
+    AS->update(PQ_INPUTS, 1e5, 0.5);
+    double T = AS->T(), H = AS->hmolar(), S = AS->smolar();
+    double U = AS->umolar(), rho = AS->rhomolar(), Q = AS->Q();
+
+    SECTION("HmolarT recovers two-phase state") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(HmolarT_INPUTS, H, T));
+        CHECK(AS2->rhomolar() == Catch::Approx(rho).epsilon(0.01));
+        CHECK(AS2->Q() >= 0);
+        CHECK(AS2->Q() <= 1);
+        CHECK(AS2->Q() == Catch::Approx(Q).margin(0.05));
+    }
+    SECTION("SmolarT recovers two-phase state") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(SmolarT_INPUTS, S, T));
+        CHECK(AS2->rhomolar() == Catch::Approx(rho).epsilon(0.01));
+        CHECK(AS2->Q() >= 0);
+        CHECK(AS2->Q() <= 1);
+        CHECK(AS2->Q() == Catch::Approx(Q).margin(0.05));
+    }
+    // DmolarT is NOT tested for two-phase round-trip.  For mixtures,
+    // (T, rho_overall) is ambiguous: the lever-rule overall density can also
+    // be achieved as a valid single-phase gas at a different P.  The flash
+    // legitimately returns the single-phase solution.
+    SECTION("TUmolar recovers two-phase state") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(TUmolar_INPUTS, T, U));
+        CHECK(AS2->rhomolar() == Catch::Approx(rho).epsilon(0.01));
+        CHECK(AS2->Q() >= 0);
+        CHECK(AS2->Q() <= 1);
+        CHECK(AS2->Q() == Catch::Approx(Q).margin(0.05));
+    }
+}
+
+TEST_CASE("DHSU_T flash: two-phase cubic round-trip", "[michelsen][dhsu_t][twophase][cubic]") {
+    const std::vector<std::string> backends = {"SRK", "PR"};
+    for (const auto& be : backends) {
+        DYNAMIC_SECTION(be << " backend") {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(be, "Nitrogen&Oxygen"));
+            AS->set_mole_fractions({0.79, 0.21});
+            AS->update(PQ_INPUTS, 1e5, 0.5);
+            double T = AS->T(), H = AS->hmolar(), S = AS->smolar();
+            double rho = AS->rhomolar(), Q = AS->Q();
+
+            SECTION("HmolarT") {
+                auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory(be, "Nitrogen&Oxygen"));
+                AS2->set_mole_fractions({0.79, 0.21});
+                REQUIRE_NOTHROW(AS2->update(HmolarT_INPUTS, H, T));
+                CHECK(AS2->rhomolar() == Catch::Approx(rho).epsilon(0.02));
+                CHECK(AS2->Q() >= 0);
+                CHECK(AS2->Q() <= 1);
+            }
+            SECTION("SmolarT") {
+                auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory(be, "Nitrogen&Oxygen"));
+                AS2->set_mole_fractions({0.79, 0.21});
+                REQUIRE_NOTHROW(AS2->update(SmolarT_INPUTS, S, T));
+                CHECK(AS2->rhomolar() == Catch::Approx(rho).epsilon(0.02));
+                CHECK(AS2->Q() >= 0);
+                CHECK(AS2->Q() <= 1);
+            }
+            SECTION("TUmolar") {
+                double U = AS->umolar();
+                auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory(be, "Nitrogen&Oxygen"));
+                AS2->set_mole_fractions({0.79, 0.21});
+                REQUIRE_NOTHROW(AS2->update(TUmolar_INPUTS, T, U));
+                CHECK(AS2->rhomolar() == Catch::Approx(rho).epsilon(0.02));
+                CHECK(AS2->Q() >= 0);
+                CHECK(AS2->Q() <= 1);
+            }
+        }
+    }
+}
+
+TEST_CASE("DHSU_T flash: single-phase mixture regression", "[michelsen][dhsu_t]") {
+    // Verify that single-phase HEOS mixture states still work after the
+    // two-phase P-sweep was added (fast-path regression test).
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+    AS->set_mole_fractions({0.79, 0.21});
+    // Gas state at 300 K, 1 atm — well above the dew point
+    AS->update(PT_INPUTS, 1e5, 300.0);
+    double T = AS->T(), H = AS->hmolar(), S = AS->smolar();
+    double U = AS->umolar(), rho = AS->rhomolar();
+
+    SECTION("HmolarT single-phase") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(HmolarT_INPUTS, H, T));
+        CHECK(AS2->rhomolar() == Catch::Approx(rho).epsilon(0.001));
+        CHECK(AS2->p() == Catch::Approx(1e5).epsilon(0.001));
+    }
+    SECTION("SmolarT single-phase") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(SmolarT_INPUTS, S, T));
+        CHECK(AS2->rhomolar() == Catch::Approx(rho).epsilon(0.001));
+        CHECK(AS2->p() == Catch::Approx(1e5).epsilon(0.001));
+    }
+    SECTION("DmolarT single-phase") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(DmolarT_INPUTS, rho, T));
+        CHECK(AS2->hmolar() == Catch::Approx(H).epsilon(0.001));
+        CHECK(AS2->p() == Catch::Approx(1e5).epsilon(0.001));
+    }
+    SECTION("TUmolar single-phase") {
+        auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Oxygen"));
+        AS2->set_mole_fractions({0.79, 0.21});
+        REQUIRE_NOTHROW(AS2->update(TUmolar_INPUTS, T, U));
+        CHECK(AS2->rhomolar() == Catch::Approx(rho).epsilon(0.001));
+        CHECK(AS2->p() == Catch::Approx(1e5).epsilon(0.001));
+    }
+}
+
 #endif
