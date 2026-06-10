@@ -151,6 +151,52 @@ def main():
     if not (math.isfinite(acc) and acc != 0.0):
         fails.append(f"hot_loop acc {acc}")
 
+    # --- mixtures (GH #3151) -------------------------------------------------
+    # HEOS has no (T, D) flash for mixtures (DHSU_T_flash does not support
+    # mixtures yet), so a bare (T, D) mixture construction must raise that REAL
+    # error -- not the bogus "'str' object has no attribute 'decode'" that the
+    # broken _raise_if_error used to mask it with.
+    MIX = "HEOS::R32[0.7]&R125[0.3]"
+    try:
+        State.State(MIX, {"T": 300.0, "D": 30.0})
+        fails.append("mixture (T,D) without phase unexpectedly succeeded")
+    except ValueError as e:
+        msg = str(e)
+        if "decode" in msg or "AttributeError" in msg:
+            fails.append(f"mixture error still masked by decode bug: {msg}")
+        elif "mixtures" not in msg:
+            fails.append(f"mixture (T,D) raised an unexpected error: {msg}")
+    except Exception as e:  # not even a ValueError -> the mask is back
+        fails.append(f"mixture (T,D) raised {type(e).__name__}, not a clear ValueError: {e}")
+
+    # With a phase hint the (T, D) update is a direct evaluation and works; the
+    # composition must be honoured (fractions forwarded to the backend).
+    Smix = State.State(MIX, {"T": 300.0, "D": 30.0}, phase="gas")
+    if not math.isclose(Smix.get_T(), 300.0, rel_tol=1e-12):
+        fails.append(f"mixture get_T {Smix.get_T()}")
+    if not math.isclose(Smix.get_rho(), 30.0, rel_tol=1e-12):
+        fails.append(f"mixture get_rho {Smix.get_rho()}")
+    if sorted(n.lower() for n in Smix.pAS.fluid_names()) != ["r125", "r32"]:
+        fails.append(f"mixture fluid_names {Smix.pAS.fluid_names()}")
+
+    # copy() must forward the composition AND reproduce the phase (PDSim's
+    # guess_outlet_temp path) -- bit-for-bit the same state as the source.
+    Cmix = Smix.copy()
+    for name, a, b in (("T", Smix.get_T(), Cmix.get_T()),
+                       ("p", Smix.get_p(), Cmix.get_p()),
+                       ("rho", Smix.get_rho(), Cmix.get_rho()),
+                       ("h", Smix.get_h(), Cmix.get_h()),
+                       ("s", Smix.get_s(), Cmix.get_s())):
+        if not math.isclose(a, b, rel_tol=1e-12):
+            fails.append(f"mixture copy() {name}: source {a:.12g} != copy {b:.12g}")
+    # the copy must have lifted the imposed phase: a later update on a different
+    # (supported) input pair auto-detects, i.e. does not crash with a stale phase.
+    try:
+        Cmix.update({"P": Cmix.get_p(), "T": Cmix.get_T() + 20.0})
+        _ = Cmix.get_h()  # lazy calc under the (now auto-detected) phase
+    except Exception as e:
+        fails.append(f"mixture copy() left an imposed phase (later update failed): {e}")
+
     # cimport-level: PDSim's `cdef State` + cdef method/.pAS calls compile & run
     import cimport_check   # noqa: E402
     cc = cimport_check.check("Water", 320.0, 1000.0)

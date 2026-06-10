@@ -45,6 +45,13 @@ extern "C"
         // Impose a phase (a `phases` enum value) on the handle, so the shim's
         // ``State(..., phase=...)`` can force the gas/liquid root like legacy.
         void (*specify_phase)(void* handle, long phase);
+        // Lift a previously-imposed phase so the backend resumes auto-detecting it.
+        // (specify_phase(iphase_not_imposed) is NOT a substitute: it also clobbers
+        // the cached _phase, breaking lazy property evaluation.)  copy() uses this
+        // to reproduce a mixture state under an imposed phase, then restore
+        // auto-detect on the returned handle.  Appended last to keep field offsets
+        // stable.
+        void (*unspecify_phase)(void* handle);
     } CoolProp_StateCAPI;
 
 #ifdef __cplusplus

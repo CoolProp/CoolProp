@@ -20,6 +20,7 @@ cdef class _AbstractStateView:
 cdef class State:
     cdef void* handle
     cdef object _fluids
+    cdef object _fractions   # parsed mixture mole fractions (None for pure), for copy()
     cdef readonly _AbstractStateView pAS
     cdef readonly double T_, p_, rho_
     cdef readonly bytes Fluid, phase
