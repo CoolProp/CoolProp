@@ -2192,8 +2192,206 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
         if (HEOS.phase() != iphase_twophase) {
             HEOS.recalculate_singlephase_phase();
         }
-    } else
-        throw NotImplementedError("PHSU_D_flash not ready for mixtures");
+    } else {
+        // Mixtures: HSU_D flash with two-phase support.
+        // Strategy:
+        //   Fast path — T-sweep at fixed rho using nocache functions.
+        //               If root found and stability confirms single-phase, accept.
+        //   Slow path — nested 1D: outer T-sweep, inner P-sweep with PT flash.
+        //               The inner P-sweep finds P where rho(T,P) = D_target.
+        //               The outer T-sweep finds T where X(T,P(T)) = X_target.
+
+        CoolPropDbl rho_target = HEOS._rhomolar;
+        CoolPropDbl value;
+        switch (other) {
+            case iHmolar:
+                value = HEOS._hmolar;
+                break;
+            case iSmolar:
+                value = HEOS._smolar;
+                break;
+            case iUmolar:
+                value = HEOS._umolar;
+                break;
+            default:
+                throw ValueError("Invalid input for HSU_D_flash mixture");
+        }
+
+        bool solved = false;
+
+        // --- Fast path: T-sweep at fixed rho using nocache ---
+        // Sweep T in [Tmin, Tmax].  At each T, evaluate the caloric property
+        // directly from the EOS at (T, rho_target) using nocache functions.
+        // This is O(1) per evaluation (no flash).
+        {
+            CoolPropDbl Tmin = HEOS.calc_Tmin();
+            CoolPropDbl Tmax = HEOS.calc_Tmax();
+
+            auto nocache_resid = [&](double T) -> double {
+                switch (other) {
+                    case iHmolar:
+                        return HEOS.calc_hmolar_nocache(T, rho_target) - value;
+                    case iSmolar:
+                        return HEOS.calc_smolar_nocache(T, rho_target) - value;
+                    case iUmolar:
+                        return HEOS.calc_umolar_nocache(T, rho_target) - value;
+                    default:
+                        return _HUGE;
+                }
+            };
+
+            // Mechanical stability check: dP/drho_T > 0
+            auto is_mechanically_stable = [&](double T) -> bool {
+                double eps = std::max(static_cast<double>(rho_target) * 1e-6, 1e-10);
+                double P_lo = HEOS.calc_pressure_nocache(T, rho_target - eps);
+                double P_hi = HEOS.calc_pressure_nocache(T, rho_target + eps);
+                return (P_hi - P_lo) > 0;
+            };
+
+            try {
+                boost::uintmax_t max_iter = 100;
+                auto bracket = boost::math::tools::toms748_solve(nocache_resid, static_cast<double>(Tmin),
+                                                                 static_cast<double>(Tmax),
+                                                                 boost::math::tools::eps_tolerance<double>(40), max_iter);
+                double T_cand = (bracket.first + bracket.second) / 2.0;
+
+                // Validate: P > 0, mechanically stable, thermodynamically stable
+                double P_eos = HEOS.calc_pressure_nocache(T_cand, rho_target);
+                if (P_eos > 0 && is_mechanically_stable(T_cand)) {
+                    try {
+                        HEOS._T = T_cand;
+                        HEOS._p = P_eos;
+                        StabilityRoutines::StabilityEvaluationClass stab(HEOS);
+                        stab.set_TP(T_cand, P_eos);
+                        if (stab.is_stable()) {
+                            HEOS.update_DmolarT_direct(rho_target, T_cand);
+                            HEOS._Q = -1;
+                            HEOS.recalculate_singlephase_phase();
+                            solved = true;
+                        }
+                    } catch (...) {
+                        // Stability check failed — fall through to slow path
+                    }
+                }
+            } catch (...) {
+                // No bracket or solver failure — fall through to slow path
+            }
+        }
+
+        // --- Slow path: nested 1D (outer T, inner P) ---
+        if (!solved) {
+            CoolPropDbl Tmin = HEOS.calc_Tmin();
+            CoolPropDbl Tmax = HEOS.calc_Tmax();
+            CoolPropDbl Pmin_bound = HEOS.calc_p_triple();
+            CoolPropDbl Pmax_bound = HEOS.calc_pmax();
+            if (Pmin_bound < 100) Pmin_bound = 100;
+
+            // Inner solver: given T, find P where rho(T, P) = rho_target.
+            // Returns the caloric property value at the found state, or NaN
+            // if no bracket found.
+            // Uses logarithmic P-scan + TOMS748, identical to DHSU_T P-sweep.
+            auto solve_for_caloric_at_T = [&](double T) -> double {
+                auto rho_resid = [&](double P) -> double {
+                    HEOS.update(PT_INPUTS, P, T);
+                    return HEOS.keyed_output(iDmolar) - rho_target;
+                };
+
+                // Log-scan to find P bracket
+                double logPmin = std::log10(static_cast<double>(Pmin_bound));
+                double logPmax = std::log10(static_cast<double>(Pmax_bound));
+                double dlogP = 0.5;
+                int nsteps = static_cast<int>((logPmax - logPmin) / dlogP) + 1;
+                double P_lo = -1, P_hi = -1;
+                double f_prev = 0, P_prev = 0;
+                bool have_prev = false;
+
+                for (int i = 0; i <= nsteps; i++) {
+                    double logP = logPmin + i * dlogP;
+                    if (logP > logPmax) logP = logPmax;
+                    double P = std::pow(10.0, logP);
+                    double f;
+                    try {
+                        f = rho_resid(P);
+                    } catch (...) {
+                        have_prev = false;
+                        continue;
+                    }
+                    if (have_prev && f_prev * f < 0) {
+                        P_lo = P_prev;
+                        P_hi = P;
+                        break;
+                    }
+                    P_prev = P;
+                    f_prev = f;
+                    have_prev = true;
+                }
+
+                if (P_lo < 0 || P_hi < 0) return std::numeric_limits<double>::quiet_NaN();
+
+                boost::uintmax_t max_iter = 100;
+                auto bracket = boost::math::tools::toms748_solve(rho_resid, P_lo, P_hi,
+                                                                 boost::math::tools::eps_tolerance<double>(40), max_iter);
+                double P_sol = (bracket.first + bracket.second) / 2.0;
+                HEOS.update(PT_INPUTS, P_sol, T);
+                return HEOS.keyed_output(other);
+            };
+
+            // Outer T-sweep: logarithmic scan to find T bracket where
+            // X(T) - X_target changes sign.
+            double logTmin = std::log10(static_cast<double>(Tmin));
+            double logTmax = std::log10(static_cast<double>(Tmax));
+            double dlogT = 0.1;  // ~10 steps per decade
+            int nsteps_T = static_cast<int>((logTmax - logTmin) / dlogT) + 1;
+
+            double T_lo = -1, T_hi = -1;
+            double f_prev_T = 0, T_prev = 0;
+            bool have_prev_T = false;
+
+            for (int i = 0; i <= nsteps_T; i++) {
+                double logT = logTmin + i * dlogT;
+                if (logT > logTmax) logT = logTmax;
+                double T = std::pow(10.0, logT);
+                double X;
+                try {
+                    X = solve_for_caloric_at_T(T);
+                } catch (...) {
+                    have_prev_T = false;
+                    continue;
+                }
+                if (std::isnan(X)) {
+                    have_prev_T = false;
+                    continue;
+                }
+                double f = X - value;
+                if (have_prev_T && f_prev_T * f < 0) {
+                    T_lo = T_prev;
+                    T_hi = T;
+                    break;
+                }
+                T_prev = T;
+                f_prev_T = f;
+                have_prev_T = true;
+            }
+
+            if (T_lo > 0 && T_hi > 0) {
+                auto outer_resid = [&](double T) -> double {
+                    double X = solve_for_caloric_at_T(T);
+                    if (std::isnan(X)) throw ValueError("inner P-sweep failed during T-sweep");
+                    return X - value;
+                };
+                boost::uintmax_t max_iter = 100;
+                auto bracket = boost::math::tools::toms748_solve(outer_resid, T_lo, T_hi,
+                                                                 boost::math::tools::eps_tolerance<double>(40), max_iter);
+                double T_sol = (bracket.first + bracket.second) / 2.0;
+                solve_for_caloric_at_T(T_sol);
+                // HEOS is now set at the converged (T, P) state
+            } else {
+                throw ValueError(format("HSU_D_flash for mixture: no T bracket found in [%Lg, %Lg] "
+                                        "for target %s=%Lg at rho=%Lg",
+                                        Tmin, Tmax, get_parameter_information(other, "short").c_str(), value, rho_target));
+            }
+        }
+    }
 }
 
 void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend& HEOS, parameters other, CoolPropDbl T0, CoolPropDbl rhomolar0) {
