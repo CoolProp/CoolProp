@@ -83,6 +83,23 @@ static std::vector<double> _to_vec(nb::handle o, bool& is_seq) {
 // Raise a Python ValueError carrying CoolProp's global error string if x is not
 // finite -- the legacy scalar PropsSI/HAPropsSI raised ValueError rather than
 // returning inf/nan (bd CoolProp-r9sq.21/.22).
+// A single output name -> 1-element vector; a list/tuple/ndarray of names ->
+// the corresponding vector<string>.  Drives the multi-output PropsSI overload
+// (first argument a sequence of outputs), mirroring the legacy Cython
+// iterable(in1) branch that builds vin1 from a string-or-sequence in1.
+static std::vector<std::string> _to_str_vec(nb::handle o) {
+    if (nb::isinstance<nb::str>(o)) {
+        return {nb::cast<std::string>(o)};
+    }
+    // list/tuple/ndarray of strings (or any other iterable of str): iterate so a
+    // numpy '<U..' string array works as well as a Python list/tuple.
+    std::vector<std::string> out;
+    for (nb::handle item : o) {
+        out.push_back(nb::cast<std::string>(item));
+    }
+    return out;
+}
+
 static void _raise_if_invalid(double x) {
     // Qualified: this helper is at file scope, before init_CoolProp's `using namespace CoolProp`.
     // (ValidNumber lives in the global namespace; get_global_param_string in CoolProp.)
@@ -832,6 +849,68 @@ void init_CoolProp(nb::module_& m) {
               }
               nb::capsule owner(data, [](void* p) noexcept { delete[] static_cast<double*>(p); });
               return nb::cast(nb::ndarray<nb::numpy, double>(data, {n_out}, owner));
+          });
+    // Multi-output vectorized PropsSI: the FIRST argument is a sequence of output
+    // names (list/tuple/ndarray of str).  This is the legacy Cython `iterable(in1)`
+    // branch, which dispatches to PropsSImulti and returns np.squeeze(np.array(out))
+    // of the [input][output] matrix.  Registered AFTER the single-string overloads
+    // so a plain str Output still binds to those (this one only catches a sequence
+    // first argument).  GitHub #3145 / bd CoolProp-9eoj: restore the legacy
+    // PropsSI(["Dmass","viscosity"], "T", [...], "P", ..., "Water") matrix form.
+    m.def("PropsSI",
+          [](nb::object Output, const std::string& Name1, nb::object Prop1, const std::string& Name2, nb::object Prop2,
+             const std::string& FluidName) -> nb::object {
+              std::vector<std::string> outputs = _to_str_vec(Output);
+              bool s1 = false, s2 = false;
+              std::vector<double> v1 = _to_vec(Prop1, s1);
+              std::vector<double> v2 = _to_vec(Prop2, s2);
+              // Empty state inputs -> empty array (mirrors the legacy #2417 short-circuit).
+              if ((s1 && v1.empty()) || (s2 && v2.empty())) {
+                  auto* empty = new double[1];
+                  nb::capsule owner(empty, [](void* p) noexcept { delete[] static_cast<double*>(p); });
+                  return nb::cast(nb::ndarray<nb::numpy, double>(empty, {static_cast<std::size_t>(0)}, owner));
+              }
+              std::size_t n = std::max(v1.size(), v2.size());
+              _broadcast_to(v1, n, "Prop1");
+              _broadcast_to(v2, n, "Prop2");
+              std::string backend, fluid;
+              extract_backend(FluidName, backend, fluid);
+              std::vector<double> fractions{1.0};
+              std::string delimited = extract_fractions(fluid, fractions);
+              std::vector<std::string> fluids = _split_str(delimited, '&');
+              std::vector<std::vector<double>> out = PropsSImulti(outputs, Name1, v1, Name2, v2, backend, fluids, fractions);
+              if (out.empty() || out[0].empty()) {
+                  // Legacy raised ValueError (not RuntimeError) on a failed evaluation.
+                  PyErr_SetString(PyExc_ValueError, get_global_param_string("errstring").c_str());
+                  throw nb::python_error();
+              }
+              // out is the [input][output] matrix: nrows inputs, m_out outputs.  Take
+              // the row count from the returned matrix (not the pre-call broadcast n)
+              // so the buffer and shape can never disagree with what PropsSImulti gave
+              // back, mirroring the single-output overload above.  Lay it out row-major
+              // and apply the legacy np.squeeze rule -- drop any singleton axis, but
+              // never collapse below 1-D (ndarray_or_iterable's ndim==0 -> reshape(-1)
+              // guard).  So (n,m)->(n,m); (n,1)->(n,); (1,m)->(m,); (1,1)->(1,).
+              std::size_t nrows = out.size();
+              std::size_t m_out = out[0].size();
+              auto* data = new double[std::max<std::size_t>(1, nrows * m_out)];
+              nb::capsule owner(data, [](void* p) noexcept { delete[] static_cast<double*>(p); });
+              for (std::size_t i = 0; i < nrows; ++i) {
+                  for (std::size_t j = 0; j < m_out; ++j) {
+                      data[i * m_out + j] = out[i][j];
+                  }
+              }
+              std::vector<std::size_t> shape;
+              if (nrows > 1) {
+                  shape.push_back(nrows);
+              }
+              if (m_out > 1) {
+                  shape.push_back(m_out);
+              }
+              if (shape.empty()) {
+                  shape.push_back(1);  // (1,1) collapses to a 1-element 1-D array, not a scalar
+              }
+              return nb::cast(nb::ndarray<nb::numpy, double>(data, shape.size(), shape.data(), owner));
           });
     // Legacy compatibility: the Cython PropsSI also accepted the 2-arg trivial
     // form PropsSI("Tcrit", "Water") (order-lenient).  Restore it as an overload
