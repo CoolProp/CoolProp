@@ -96,6 +96,67 @@ Highlights:
 * New exception type :cpapi:`CoolProp::MultipleSolutionsError`
   (subclass of :cpapi:`CoolProp::ValueError`).
 
+* **Multicomponent PT-flash results and** ``phase()`` **output change for
+  mixtures (#3026).** The blind PT flash for mixtures (Cubic and HEOS
+  backends) now runs a rigorous Michelsen TPD stability analysis followed by
+  a Successive-Substitution / second-order Gibbs phase split, replacing the
+  previous more limited blind-flash handling that could misclassify two-phase
+  mixture states as single-phase. This changes computed compositions,
+  densities and the reported phase for some mixture states. A new ``MIXTURE_STABILITY_ALGORITHM``
+  config key selects the algorithm (``1`` = Michelsen, the new default;
+  ``0`` = the legacy Gernert et al. 2014 path).
+
+* **He–Ar mixture results change (#3118).** Helium–argon (and the new
+  helium–neon and neon–argon) mixtures now use the Tkaczuk et al. (2020)
+  reducing parameters and departure function instead of the previous
+  ideal-mixing assumption.
+
+* **Public C++ headers reorganized into an** ``include/CoolProp/`` **tier
+  tree (GH #1280).** [BREAKING for C++ consumers, with back-compat shims.]
+  The previously flat ``include/`` layout has been restructured into a
+  namespaced tree rooted at ``include/CoolProp/``. The canonical include
+  path for the primary API is now ``"CoolProp/CoolProp.h"`` (and
+  ``"CoolProp/CoolPropLib.h"``, ``"CoolProp/AbstractState.h"``,
+  ``"CoolProp/HumidAirProp.h"``, etc.). The tiers are: the top-level
+  ``CoolProp/`` primary API; ``CoolProp/detail/`` (internal support);
+  ``CoolProp/fluids/``, ``CoolProp/numerics/``, ``CoolProp/region/``,
+  ``CoolProp/sbtl/``, ``CoolProp/svd/``, ``CoolProp/schemas/``,
+  ``CoolProp/superancillary/``, ``CoolProp/plotting/`` and
+  ``CoolProp/Backends/SVDSBTL/``.
+
+  **Back-compat shims.** Every old flat path (``CoolProp.h``,
+  ``AbstractState.h``, ``HumidAirProp.h``, ``MatrixMath.h``, …) still exists,
+  but is now a one-line forwarding shim that ``#include``\ s the new location
+  and emits a ``#pragma message`` on first include pointing at the canonical
+  path. Existing C++ that includes the old paths keeps compiling unchanged; it
+  just prints a deprecation notice. To silence the notices, compile with
+  ``-DCOOLPROP_NO_DEPRECATED_HEADER_WARNINGS``. **The flat shims are slated for
+  removal at v9** — migrate your includes before then.
+
+  **Six headers were deleted outright** (no shim): ``miniz.h``,
+  ``rapidjson_include.h``, ``crossplatform_shared_ptr.h``, ``Tests.h``,
+  ``SpeedTest.h`` and ``TestObjects.h`` — internal third-party / compatibility
+  wrappers with no public consumer (RapidJSON itself was removed) and test-only
+  scaffolding that was never part of the shipped API.
+
+  **What downstream C++ consumers must do.** Switch your includes from
+  ``"CoolProp.h"`` (and friends) to ``"CoolProp/CoolProp.h"``. The install
+  rules now ship the full ``include/CoolProp/`` tree (plus the flat shims), so
+  a manual include of that directory gives usable include paths out of the box.
+  Two transitive dependencies are exposed by the public headers: the
+  ``fluids/`` and ``numerics/`` tiers pull in **Eigen**, so Eigen must be on
+  your include path if you include those headers; and
+  ``CoolProp/detail/strings.h`` includes **fmt** unless you compile with
+  ``-DNO_FMTLIB``. (The generated database headers — ``*_JSON.h`` /
+  ``*_CBOR.h`` — and the JSON-backed ``detail/json.h`` are intentionally *not*
+  installed.) See PRs #3074, #3075 and #3078 (the #1280 phases), plus #3082
+  (the related rapidjson / ``<filesystem>`` public-surface de-leak).
+
+* **Build-system requirements (packagers).** Git submodules have been replaced
+  by CPM.cmake, so a fresh configure now needs **network access** to fetch
+  dependencies unless ``CPM_SOURCE_CACHE`` points at a populated cache. The
+  minimum CMake is now **3.14** and a **C++17** compiler is required.
+
 Issues closed:
 
 * `#2254 <https://github.com/CoolProp/CoolProp/issues/2254>`_ : CSharp wrapper folder missing from download location since version 6.4.2
@@ -400,11 +461,34 @@ Pull requests merged:
 * `#2992 <https://github.com/CoolProp/CoolProp/pull/2992>`_ : refactor(svdsbtl): use IF97::Region23_p for B23 boundary, drop local copy
 * `#2993 <https://github.com/CoolProp/CoolProp/pull/2993>`_ : fix(ci): publish unique TestPyPI wheel versions (#2988)
 * `#2994 <https://github.com/CoolProp/CoolProp/pull/2994>`_ : docs: fix RST escaping and formatting issues in Web docs
+* `#2995 <https://github.com/CoolProp/CoolProp/pull/2995>`_ : Superancillary happy-path for the D+{H,S,U} flashes (HEOS)
 * `#2996 <https://github.com/CoolProp/CoolProp/pull/2996>`_ : ci: cancel a merged PR's in-flight CI runs
 * `#2997 <https://github.com/CoolProp/CoolProp/pull/2997>`_ : style: clang-format whole codebase (pinned 18.1.8) [skip ci]
 * `#2998 <https://github.com/CoolProp/CoolProp/pull/2998>`_ : ci(asan): drop detect_stack_use_after_return + add 90-min timeout (CoolProp-xuu)
+* `#2999 <https://github.com/CoolProp/CoolProp/pull/2999>`_ : Superancillary happy-path for the H,S flash
+* `#3000 <https://github.com/CoolProp/CoolProp/pull/3000>`_ : Correct D+{H,S,U} round-trip for sub-triple-point compressed liquid
 * `#3001 <https://github.com/CoolProp/CoolProp/pull/3001>`_ : feat(plots/docs): consistency-plot failure reporting, per-panel timing, REFPROP support
 * `#3003 <https://github.com/CoolProp/CoolProp/pull/3003>`_ : docs(virial): exact-virials/Axy derivations, plans & beads (#2991) [skip ci]
+* `#3006 <https://github.com/CoolProp/CoolProp/pull/3006>`_ : fix(REFPROP): honor melting-line bound sentinels in calc_melting_line
+* `#3009 <https://github.com/CoolProp/CoolProp/pull/3009>`_ : fix(HumidAir): drop a spurious 1e6 factor in the vbar_ws ice branch (#2657)
+* `#3011 <https://github.com/CoolProp/CoolProp/pull/3011>`_ : fix(REFPROP): preserve the SATTP saturation pressure in the QT flash (#2671)
+* `#3016 <https://github.com/CoolProp/CoolProp/pull/3016>`_ : fix: mask floating-point exceptions at the C-interface entry points
+* `#3022 <https://github.com/CoolProp/CoolProp/pull/3022>`_ : fix: extend HEOS two-phase awareness to chemical_potential and fugacity_coefficient (follow-up to #2345)
+* `#3026 <https://github.com/CoolProp/CoolProp/pull/3026>`_ : Multicomponent TP-flash: Michelsen stability analysis + phase-split for the Cubic and HEOS backends (changes mixture results / phase(); adds MIXTURE_STABILITY_ALGORITHM)
+* `#3029 <https://github.com/CoolProp/CoolProp/pull/3029>`_ : fix: MPG2 incompressible viscosity was 10x too small (#1374)
+* `#3031 <https://github.com/CoolProp/CoolProp/pull/3031>`_ : fix: HEOS melting-line PT guards honor DONT_CHECK_PROPERTY_LIMITS (#1936)
+* `#3033 <https://github.com/CoolProp/CoolProp/pull/3033>`_ : Melting-line caloric seeding for the cold-compressed-liquid H,S flash
+* `#3034 <https://github.com/CoolProp/CoolProp/pull/3034>`_ : perf: direct-EOS cache-bypass on warm probes in HSU_P_flash_singlephase_Brent
+* `#3036 <https://github.com/CoolProp/CoolProp/pull/3036>`_ : Add the D2O (heavy water) melting-line ancillary (Herrig et al. 2018)
+* `#3041 <https://github.com/CoolProp/CoolProp/pull/3041>`_ : fix: GERG-2008 / ExponentialDepartureFunction now calls phi.finish()
+* `#3042 <https://github.com/CoolProp/CoolProp/pull/3042>`_ : feat(python): ship PEP 561 type stubs (CoolProp.pyi) for the Cython wrapper
+* `#3081 <https://github.com/CoolProp/CoolProp/pull/3081>`_ : fix(REFPROP): correct the SATP phase flag / pressure / density in the PQ saturation fallback (GH #1502)
+* `#3110 <https://github.com/CoolProp/CoolProp/pull/3110>`_ : feat(python): ship PEP 561 type stubs for the v8 wheel via nanobind stubgen
+* `#3118 <https://github.com/CoolProp/CoolProp/pull/3118>`_ : feat(mixtures): add Tkaczuk et al. (2020) He-Ne, He-Ar, Ne-Ar cryogenic models (changes He-Ar results)
+* `#3127 <https://github.com/CoolProp/CoolProp/pull/3127>`_ : ci: match the SONAME-versioned libCoolProp.so.<ver> in the symbol-leak gate
+* `#3130 <https://github.com/CoolProp/CoolProp/pull/3130>`_ : fix(ci): name TestPyPI dev builds X.Y.Z.dev<ts> not .post<ts>
+* `#3141 <https://github.com/CoolProp/CoolProp/pull/3141>`_ : perf(transport): cache the ECS reference fluid instead of rebuilding it per call
+* `#3146 <https://github.com/CoolProp/CoolProp/pull/3146>`_ : fix(core): make debug_level + error/warning string globals thread-safe (per-thread error strings)
 
 7.2.0
 -----
