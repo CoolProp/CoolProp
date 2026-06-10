@@ -338,6 +338,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
             CoolPropDbl max_fraction = *std::max_element(IO.x.begin(), IO.x.end());
             if (iter > 4 && (IO.p < env.p[0] || std::abs(1.0 - max_fraction) < 1e-9)) {
                 env.built = true;
+                env.closed = (IO.p < env.p[0]);
                 if (debug) {
                     std::cout << format("envelope built.\n");
                     std::cout << format("closest fraction to 1.0: distance %g\n", 1 - max_fraction);
