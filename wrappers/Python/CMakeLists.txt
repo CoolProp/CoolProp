@@ -269,22 +269,56 @@ target_link_libraries(CoolProp_module PRIVATE miniz)
 set_target_properties(CoolProp_module PROPERTIES OUTPUT_NAME "CoolProp" PREFIX "")
 coolprop_hide_json_symbols(CoolProp_module)
 
+if(WIN32)
+    # The nanobind module compiles the whole core (incl. fmtlib, which static_asserts
+    # unless built /utf-8) plus the large nanobind_interface.cxx TU (needs /bigobj).
+    # The legacy Cython branch sets these on its CoolProp_module; the nanobind branch
+    # must too, otherwise the Windows wheel build fails (bd CoolProp-r9sq.6).
+    target_compile_options(CoolProp_module PRIVATE /utf-8 /bigobj)
+endif()
+
 # ---- PEP 561 type stub for the nanobind core (parity with the legacy wheel) ----
-# The core .so is self-contained (no Python-level imports at init), so nanobind's
-# stubgen can import it directly from the build dir to emit CoolProp.pyi.
-nanobind_add_stub(
-    CoolProp_stub
-    MODULE CoolProp
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.pyi"
-    PYTHON_PATH "$<TARGET_FILE_DIR:CoolProp_module>"
-    DEPENDS CoolProp_module
-    MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/py.typed"
-    # INCLUDE_PRIVATE emits the underscore-named _AbstractState class that the
-    # AbstractState() factory returns; the pattern file replaces the auto
-    # PropsSI/HAPropsSI overloads (object-typed -> overlap) with typed ones.
-    INCLUDE_PRIVATE
-    PATTERN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/stub_patterns.txt"
-)
+# The stub is shipped as a COMMITTED copy (wrappers/Python/_nanobind/CoolProp.pyi)
+# and installed verbatim below -- the wheel build does NOT regenerate it.  This is
+# load-bearing for CROSS-COMPILED wheels: nanobind's stubgen *imports* the
+# freshly-built CoolProp.abi3.so to introspect it, which the host interpreter
+# cannot do when the .so targets another arch (macOS x86_64 on an arm64 runner,
+# Windows ARM64 on x64) -- it dies with "ImportError: incompatible architecture"
+# and fails the whole wheel build (bd CoolProp-1gas).  The generated stub is
+# architecture-independent (verified byte-identical across macOS arm64 / Linux
+# x86_64 with the pinned nanobind), so a single committed copy serves every wheel.
+#
+# COOLPROP_NANOBIND_REGEN_STUB regenerates that committed copy via stubgen.  It is
+# for NATIVE builds only -- the CI drift gate sets it so a binding change that was
+# not reflected in the committed .pyi is caught by a diff -- and must NEVER be set
+# for a cross build (it reintroduces the import-the-target-arch-.so failure above).
+option(COOLPROP_NANOBIND_REGEN_STUB
+    "Regenerate the committed nanobind CoolProp.pyi via stubgen (native builds only; used by the CI drift gate)"
+    OFF)
+if(COOLPROP_NANOBIND_REGEN_STUB)
+    nanobind_add_stub(
+        CoolProp_stub
+        MODULE CoolProp
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.pyi"
+        PYTHON_PATH "$<TARGET_FILE_DIR:CoolProp_module>"
+        DEPENDS CoolProp_module
+        MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/py.typed"
+        # INCLUDE_PRIVATE emits underscore-named members (e.g. the _capi capsule);
+        # the pattern file replaces the auto PropsSI/HAPropsSI overloads
+        # (object-typed -> overlap) with typed ones.  (AbstractState is now a public
+        # type with a factory constructor -- bd CoolProp-r9sq.28 -- not a private class.)
+        INCLUDE_PRIVATE
+        PATTERN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/stub_patterns.txt"
+    )
+    # Ship the freshly regenerated stub so the gate can extract it from the wheel
+    # and diff against the committed copy.
+    set(_nb_stub_pyi "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.pyi")
+    set(_nb_stub_pytyped "${CMAKE_CURRENT_BINARY_DIR}/py.typed")
+else()
+    # Default / publish / cross builds: ship the committed copy, no import needed.
+    set(_nb_stub_pyi "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/CoolProp.pyi")
+    set(_nb_stub_pytyped "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/py.typed")
+endif()
 
 # ---- capsule State shim -> CoolProp.State (link-free; forwards through _capi) ----
 # No CoolProp C++ is compiled in here; the shim only needs the C-ABI struct
@@ -389,8 +423,10 @@ install(FILES
 # HumidAirProp re-export shim (SI surface from the core; non-SI HAProps removed)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/HumidAirProp.py"
     DESTINATION CoolProp)
-# PEP 561 type stub for the nanobind core + py.typed marker (generated above)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.pyi" "${CMAKE_CURRENT_BINARY_DIR}/py.typed"
+# PEP 561 type stub for the nanobind core + py.typed marker.  Source resolved
+# above: the committed copy by default (cross-safe -- no stubgen import), or the
+# freshly regenerated one under COOLPROP_NANOBIND_REGEN_STUB (bd CoolProp-1gas).
+install(FILES "${_nb_stub_pyi}" "${_nb_stub_pytyped}"
     DESTINATION CoolProp)
 # Pure-Python submodules, shipped unchanged from the source package so the v8
 # import tree matches the legacy one (CoolProp.Plots/BibtexParser/GUI/tests).

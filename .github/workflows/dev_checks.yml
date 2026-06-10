@@ -44,10 +44,15 @@ jobs:
     # Guardrail (CoolProp-xuu).  Without this the job inherits GitHub's 6-hour
     # default cap; when a test runs away the job is silently reported as
     # `cancelled` rather than a real failure (that is exactly how the
-    # detect_stack_use_after_return BDCSVD blow-up hid for so long).  The full
-    # ASan suite + REFPROP completes in ~12 min locally (~40-50 min expected on
-    # the slower 2-vCPU runner); 90 min is a ~2x headroom that still surfaces a
-    # genuine runaway fast and visibly instead of burning six hours.
+    # detect_stack_use_after_return BDCSVD blow-up hid for so long).
+    # On the 2-vCPU runner with the optimized (-O2) Asan build the measured
+    # steps are REFPROP+config ~1 min and compile ~7.5 min; the single-threaded
+    # test run is the long pole and is much slower per-core than a dev laptop
+    # (~187 s locally).  A prior 30 min cap cancelled the job mid-test (the
+    # test run alone was still going at 21.5 min), so the full duration is not
+    # yet known precisely.  90 min is a deliberately safe envelope that still
+    # surfaces a genuine runaway well under GitHub's 6-hour default; re-tighten
+    # once a clean run reports the true wall time.
     timeout-minutes: 90
     strategy:
       matrix:
@@ -72,7 +77,9 @@ jobs:
       - name: cmake config
         run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Asan -DCOOLPROP_ASAN=ON -DCOOLPROP_CATCH_MODULE=ON
       - name: build all Catch tests
-        run: cmake --build build --config Asan
+        # -j$(nproc): every other build job already parallelises; the ASan job
+        # historically did not, leaving the compile serial on the multi-vCPU runner.
+        run: cmake --build build --config Asan -j$(nproc)
       - name: run all the compiled Catch tests with address sanitizer
         # detect_stack_use_after_return is deliberately NOT enabled here
         # (CoolProp-xuu).  With REFPROP present — which CI builds — the 5
@@ -85,7 +92,19 @@ jobs:
         # rather than producing a real pass/fail.  ASan's heap/global/UAF
         # checks all still run; only the fake-stack (use-after-return)
         # instrumentation is dropped.
-        run: cd build && ASAN_OPTIONS=verbosity=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
+        #
+        # detect_odr_violation=1 (default is 2): at -O2 the compiler merges the
+        # two identical-content static (internal-linkage) arrays in vendored
+        # externals/miniz-3.1.1/miniz.c — s_tdefl_num_probes and
+        # s_tdefl_png_num_probes — onto one address.  ASan's level-2 *poisoning*
+        # ODR check then false-positives on the shared address (two distinct
+        # names, same storage).  Internal-linkage globals cannot ODR-violate
+        # across TUs by definition, so this is a benign false positive that only
+        # surfaced once the build was actually optimized.  Level 1 keeps the
+        # reliable *indicator*-based ODR detection — so a real duplicate-symbol
+        # violation (e.g. the JSON-symbol-visibility concern) still fails CI —
+        # and drops only the poisoning check.  See CoolProp-xma3.
+        run: cd build && ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
 
   clang-format:
     name: clang-format (PR diff)
@@ -132,8 +151,8 @@ jobs:
             name: CoolProp-${{ github.sha }}-clang_format.patch
             path: clang_format.patch
 
-  nanobind-abi3:
-    name: nanobind abi3 wheel (build once on 3.12, run on 3.12/3.13/3.14)
+  nanobind-wheels:
+    name: nanobind wheels (build the publish matrix, test 3.9-3.14)
     # PR-only (same rationale as clang-format above): avoid master going red
     # retroactively. Open a draft PR to exercise it on a branch.
     if: github.event_name == 'pull_request'
@@ -144,47 +163,119 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
-      - name: Build the cp312-abi3 nanobind wheel (once, on 3.12)
+      - name: Build the nanobind wheel matrix (3.9-3.11 per-version + cp312-abi3)
         shell: bash
         run: |
           set -euo pipefail
-          uv venv --python 3.12 .venv-build
-          source .venv-build/bin/activate
-          uv pip install nanobind cython scikit-build-core ninja
-          # COOLPROP_NANOBIND=ON is the SINGLE signal: it selects the nanobind
-          # core + abi3 Cython sidecars (USE_SABI) in CMake AND triggers
-          # scikit-build-core's wheel.py-api=cp312 override (pyproject.toml), so
-          # this produces ONE cp312-abi3 wheel covering 3.12/3.13/3.14. Release:
-          # the wheel compiles the whole core (incl. SVDSBTL); Debug is very slow.
-          COOLPROP_NANOBIND=ON uv build --wheel --no-build-isolation \
-            --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
-            --out-dir dist .
+          # Mirror the published v8 matrix (bd CoolProp-r9sq.6): per-version wheels
+          # for 3.9-3.11 (below nanobind's stable-ABI floor) and ONE cp312-abi3
+          # wheel for 3.12+. COOLPROP_NANOBIND=ON drives both the nanobind CMake
+          # build and (on Py>=3.12) the abi3 wheel tag via the pyproject overrides.
+          # Release: the wheel compiles the whole core (incl. SVDSBTL); Debug is slow.
+          for PY in 3.9 3.10 3.11 3.12; do
+            echo "::group::build nanobind wheel on Python $PY"
+            uv venv --python "$PY" ".venv-build-$PY"
+            source ".venv-build-$PY/bin/activate"
+            # Pin nanobind: the cp312 wheel below regenerates the committed type
+            # stub (REGEN_STUB), and the drift gate diffs it byte-for-byte, so the
+            # stubgen toolchain must be reproducible.  Bump deliberately together
+            # with wrappers/Python/_nanobind/CoolProp.pyi (bd CoolProp-1gas).
+            uv pip install "nanobind==2.12.0" cython scikit-build-core ninja
+            # Only the native cp312-abi3 build regenerates the stub (stubgen imports
+            # the just-built CoolProp.abi3.so -- safe natively, impossible when
+            # cross-compiling). The published wheels never set this; they ship the
+            # committed copy.  Here it lets the drift gate compare against fresh output.
+            regen=""
+            if [ "$PY" = "3.12" ]; then
+              regen="--config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON"
+            fi
+            COOLPROP_NANOBIND=ON uv build --wheel --no-build-isolation \
+              --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
+              $regen \
+              --out-dir dist .
+            deactivate
+            echo "::endgroup::"
+          done
           ls -l dist/
-          # Fail loudly if the abi3 single-wheel promise regressed (e.g. a sidecar
-          # lost USE_SABI, or the wheel.py-api override stopped matching).
+          # Hard-gate EVERY expected wheel (under `set -e` a missing/mis-tagged one
+          # fails the step): the per-version wheels for 3.9-3.11 AND the cp312-abi3
+          # wheel. Without this, a per-version tagging regression would only warn in
+          # the test step below (whose final guard is just `ran > 0`).
+          for tag in cp39 cp310 cp311; do
+            ls dist/coolprop-*-"${tag}"-"${tag}"-*.whl >/dev/null
+          done
           ls dist/coolprop-*-cp312-abi3-*.whl >/dev/null
 
-      - name: Run the pytest suite on 3.12, 3.13 and 3.14 against the one wheel
+      - name: Drift gate — committed nanobind stub matches stubgen output
         shell: bash
         run: |
           set -euo pipefail
-          # The crux of abi3: the SAME cp312 wheel must install and pass on every
-          # supported interpreter >= 3.12. A version-specific .so or wheel tag
-          # would make pip reject it on 3.13/3.14 here.
+          # The cp312 leg above built with COOLPROP_NANOBIND_REGEN_STUB=ON, so its
+          # wheel carries a FRESHLY regenerated CoolProp.pyi (stubgen run against the
+          # just-built native .so). It must match the committed copy that every
+          # OTHER (incl. cross-compiled) wheel ships verbatim; a diff means a binding
+          # changed without regenerating the stub (bd CoolProp-1gas).
           WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl)
+          rm -rf _stubcheck && mkdir _stubcheck
+          unzip -q -o "$WHL" -d _stubcheck "CoolProp/CoolProp.pyi" "CoolProp/py.typed"
+          ok=1
+          diff -u wrappers/Python/_nanobind/CoolProp.pyi _stubcheck/CoolProp/CoolProp.pyi || ok=0
+          diff -u wrappers/Python/_nanobind/py.typed     _stubcheck/CoolProp/py.typed     || ok=0
+          if [ "$ok" -ne 1 ]; then
+            # The unified diff above shows exactly what drifted. Emit a copy-paste
+            # regen recipe (matches wrappers/Python/_nanobind/README.md), then fail
+            # with a single concise annotation.
+            {
+              echo
+              echo "Committed nanobind stub is out of sync with stubgen output."
+              echo "Regenerate it from a NATIVE abi3 build and commit the result:"
+              echo
+              echo "  uv pip install 'nanobind==2.12.0' cython scikit-build-core ninja"
+              echo "  COOLPROP_NANOBIND=ON uv build --wheel --no-build-isolation \\"
+              echo "    --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \\"
+              echo "    --config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON \\"
+              echo "    --out-dir dist ."
+              echo "  unzip -o -j dist/coolprop-*-cp312-abi3-*.whl \\"
+              echo "    CoolProp/CoolProp.pyi CoolProp/py.typed -d wrappers/Python/_nanobind/"
+              echo
+              echo "(nanobind must be PINNED to the gate's version for a byte-exact match;"
+              echo " see wrappers/Python/_nanobind/README.md.)"
+              echo
+            } >&2
+            echo "::error::Committed nanobind stub is stale — see the regen recipe in the log above."
+            exit 1
+          fi
+          echo "Committed nanobind stub is in sync."
+
+      - name: Run the pytest suite on 3.9-3.14 against the matching wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 3.9-3.11 use their own per-version wheel; 3.12/3.13/3.14 all install the
+          # single cp312-abi3 wheel (the crux of abi3 -- it must work on each).
           ran=0
-          for PY in 3.12 3.13 3.14; do
-            echo "::group::pytest on Python $PY (cp312-abi3 wheel)"
+          for PY in 3.9 3.10 3.11 3.12 3.13 3.14; do
+            case "$PY" in
+              3.9 | 3.10 | 3.11)
+                tag="cp${PY/./}"
+                WHL=$(ls dist/coolprop-*-"${tag}"-"${tag}"-*.whl 2>/dev/null || true)
+                ;;
+              *)
+                WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl 2>/dev/null || true)
+                ;;
+            esac
+            if [ -z "$WHL" ]; then
+              echo "::warning::no nanobind wheel found for Python $PY"
+              continue
+            fi
+            echo "::group::pytest on Python $PY ($(basename "$WHL"))"
             uv venv --python "$PY" ".venv-$PY"
             source ".venv-$PY/bin/activate"
             # Guard the runtime-dep install: a brand-new interpreter may transiently
-            # lack pytest/numpy cp wheels, which is a toolchain gap, not an abi3
-            # regression -- warn and skip that leg rather than redding the gate. The
-            # `ran` counter below still fails the job if NO interpreter could run, so
-            # a real total breakage can't pass silently. (mypy is best-effort too:
-            # test_stub.py importorskips it.)
+            # lack pytest/numpy cp wheels (a toolchain gap, not a regression) -- warn
+            # and skip that leg. The `ran` counter still fails the job if NO leg ran.
             if ! uv pip install pytest numpy "$WHL"; then
-              echo "::warning::runtime deps unavailable on Python $PY; skipping this leg (abi3 still proven on the other interpreters)"
+              echo "::warning::runtime deps unavailable on Python $PY; skipping this leg"
               deactivate; echo "::endgroup::"; continue
             fi
             uv pip install mypy || echo "::warning::mypy unavailable on $PY; test_stub mypy check will skip"
@@ -194,7 +285,7 @@ jobs:
             deactivate
             echo "::endgroup::"
           done
-          test "$ran" -gt 0 || { echo "::error::no Python interpreter could run the cp312-abi3 wheel"; exit 1; }
+          test "$ran" -gt 0 || { echo "::error::no Python interpreter could run a nanobind wheel"; exit 1; }
 
   clang-tidy:
     name: clang-tidy (diff-only, informational)

@@ -58,12 +58,17 @@ Help
 Projects Using CoolProp
 -----------------------------------
 
-* `Thermocycle <https://www.thermocycle.net/>`_
+* `Thermocycle <https://github.com/thermocycle/thermocycle-library>`_
 * `PDSim <https://pdsim.sourceforge.net/>`_
 * `ACHP <https://achp.sourceforge.net/>`_
 * `DWSim <https://dwsim.org>`_
-* `fProperties <https://jfcoronel.github.io/fProperties/>`_
+* `fProperties <https://fproperties.jfcoronel.org/>`_
 * `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_
+* `pSolver <https://psolver.jfcoronel.org/>`_
+* `HydDown <https://andr1976.github.io/HydDown/>`_
+* `HYRAM+ <https://energy.sandia.gov/programs/sustainable-transportation/hydrogen/hydrogen-safety-codes-and-standards/hyram/>`_
+* `Underground Hydrogen Salt Cavern (UH2SC) Simulation Tool <https://github.com/sandialabs/uh2sc>`_
+
 
 Main Developers
 ---------------

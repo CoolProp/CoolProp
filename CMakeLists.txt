@@ -121,21 +121,32 @@ if (COOLPROP_ASAN)
       endif()
   endif()
 
+  # Optimize the Asan build: -O2 -g -DNDEBUG (the RelWithDebInfo level, plus
+  # ASan).  ASan instrumentation is unaffected by optimization level, so this
+  # is the standard way to run ASan; -O is set EXPLICITLY rather than inherited
+  # from ${CMAKE_*_FLAGS_RELWITHDEBINFO} because this block executes before the
+  # project() call (line ~217) that canonically populates those per-config
+  # defaults -- depending on them here is order-fragile.  (Historically this
+  # referenced the mixed-case ${CMAKE_*_FLAGS_RelWithDebInfo}, an undefined ->
+  # empty variable, so the Asan build silently compiled at -O0.  That made the
+  # dense-SVD SVDSBTL surface builds crawl and was the primary reason the ASan
+  # CI job took ~45 min; with -O2 the full suite runs ~3 min locally / ~10 min
+  # on the 2-vCPU runner.)  Keep these in sync with RelWithDebInfo if it changes.
   set(CMAKE_C_FLAGS_ASAN
-      "${CMAKE_C_FLAGS_RelWithDebInfo} -fsanitize=address -fno-omit-frame-pointer" CACHE STRING
+      "-O2 -g -DNDEBUG -fsanitize=address -fno-omit-frame-pointer" CACHE STRING
       "Flags used by the C compiler for Asan build type or configuration." FORCE)
 
   set(CMAKE_CXX_FLAGS_ASAN
-      "${CMAKE_CXX_FLAGS_RelWithDebInfo} -fsanitize=address -fno-omit-frame-pointer" CACHE STRING
+      "-O2 -g -DNDEBUG -fsanitize=address -fno-omit-frame-pointer" CACHE STRING
       "Flags used by the C++ compiler for Asan build type or configuration." FORCE)
 
   set(CMAKE_EXE_LINKER_FLAGS_ASAN
-      "${CMAKE_EXE_LINKER_FLAGS_RelWithDebInfo} -fsanitize=address" CACHE STRING
+      "-fsanitize=address" CACHE STRING
       "Linker flags to be used to create executables for Asan build type." FORCE)
 
   set(CMAKE_SHARED_LINKER_FLAGS_ASAN
-      "${CMAKE_SHARED_LINKER_FLAGS_RelWithDebInfo} -fsanitize=address" CACHE STRING
-      "Linker lags to be used to create shared libraries for Asan build type." FORCE)
+      "-fsanitize=address" CACHE STRING
+      "Linker flags to be used to create shared libraries for Asan build type." FORCE)
 
 endif()
 

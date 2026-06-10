@@ -183,7 +183,47 @@ double capi_first_partial_deriv(void* h, long Of, long Wrt, long Constant) {
 const char* capi_last_error() {
     return g_capi_error.empty() ? nullptr : g_capi_error.c_str();
 }
-const CoolProp_StateCAPI g_state_capi = {capi_make, capi_destroy, capi_update, capi_keyed_output, capi_first_partial_deriv, capi_last_error};
+void capi_set_mole_fractions(void* h, const double* z, long n) {
+    // Validate the C-ABI pointers/length before constructing or dereferencing
+    // (a null handle/fractions or negative length from any consumer must not crash).
+    if (h == nullptr) {
+        capi_set_error("set_mole_fractions: null handle");
+        return;
+    }
+    if (n < 0) {
+        capi_set_error("set_mole_fractions: negative length");
+        return;
+    }
+    if (n > 0 && z == nullptr) {
+        capi_set_error("set_mole_fractions: null fractions pointer");
+        return;
+    }
+    try {
+        std::vector<double> fractions(z, z + n);  // binds the vector<double> set_mole_fractions overload
+        (*static_cast<_CAPI_SP*>(h))->set_mole_fractions(fractions);
+        g_capi_error.clear();
+    } catch (const std::exception& e) {
+        capi_set_error(e.what());
+    } catch (...) {
+        capi_set_error(nullptr);
+    }
+}
+void capi_specify_phase(void* h, long phase) {
+    if (h == nullptr) {
+        capi_set_error("specify_phase: null handle");
+        return;
+    }
+    try {
+        (*static_cast<_CAPI_SP*>(h))->specify_phase(static_cast<CoolProp::phases>(phase));
+        g_capi_error.clear();
+    } catch (const std::exception& e) {
+        capi_set_error(e.what());
+    } catch (...) {
+        capi_set_error(nullptr);
+    }
+}
+const CoolProp_StateCAPI g_state_capi = {
+  capi_make, capi_destroy, capi_update, capi_keyed_output, capi_first_partial_deriv, capi_last_error, capi_set_mole_fractions, capi_specify_phase};
 }  // namespace
 
 void init_CoolProp(nb::module_& m) {
@@ -438,7 +478,14 @@ void init_CoolProp(nb::module_& m) {
     m.attr("PyPhaseEnvelopeData") = m.attr("PhaseEnvelopeData");
     m.attr("PySpinodalData") = m.attr("SpinodalData");
 
-    nb::class_<AbstractState>(m, "_AbstractState")
+    // bd CoolProp-r9sq.28: register AbstractState as a real TYPE with a factory
+    // constructor (nb::new_), not a module-level factory FUNCTION returning a
+    // private _AbstractState.  So `AbstractState("HEOS","Water")` still builds a
+    // state AND `isinstance(x, AbstractState)` works (it previously raised
+    // "arg 2 must be a type", forcing callers like Plots/Common.py to reach into
+    // the private class).  nb::new_ binds __new__ to `factory` + a no-op __init__.
+    nb::class_<AbstractState>(m, "AbstractState")
+      .def(nb::new_(&factory))
       .def("set_T", &AbstractState::set_T)
       .def("backend_name", &AbstractState::backend_name)
       .def("using_mole_fractions", &AbstractState::using_mole_fractions)
@@ -456,6 +503,7 @@ void init_CoolProp(nb::module_& m) {
       .def("update", &AbstractState::update)
       .def("update_with_guesses", &AbstractState::update_with_guesses)
       .def("available_in_high_level", &AbstractState::available_in_high_level)
+      .def("build_options_json", &AbstractState::build_options_json)  // bd CoolProp-r9sq.25
       .def("fluid_param_string", &AbstractState::fluid_param_string)
       .def("fluid_names", &AbstractState::fluid_names)
       .def("set_binary_interaction_double", (void(AbstractState::*)(const std::string&, const std::string&, const std::string&, const double))
@@ -505,6 +553,39 @@ void init_CoolProp(nb::module_& m) {
       .def("dipole_moment", &AbstractState::dipole_moment)
       .def("keyed_output", &AbstractState::keyed_output)
       .def("trivial_keyed_output", &AbstractState::trivial_keyed_output)
+      // bd CoolProp-r9sq.25: zero-allocation vectorized batch path (tabular / IF97
+      // backends).  Caller-allocated, shape-validated contiguous buffers, mirroring
+      // the legacy Cython fast_evaluate; out is (N_inputs, N_outputs), filled in place.
+      .def(
+        "fast_evaluate",
+        [](AbstractState& AS, input_pairs input_pair, nb::ndarray<const double, nb::ndim<1>, nb::c_contig> val1,
+           nb::ndarray<const double, nb::ndim<1>, nb::c_contig> val2, nb::ndarray<const int, nb::ndim<1>, nb::c_contig> outputs,
+           nb::ndarray<double, nb::ndim<2>, nb::c_contig> out, nb::ndarray<int, nb::ndim<1>, nb::c_contig> status, phases imposed_phase) {
+            std::size_t N = val1.shape(0);
+            std::size_t M = outputs.shape(0);
+            if (val2.shape(0) != N) {
+                throw nb::value_error("val1 and val2 must have the same length");
+            }
+            if (out.shape(0) != N || out.shape(1) != M) {
+                throw nb::value_error("out must have shape (N_inputs, N_outputs)");
+            }
+            if (status.shape(0) != N) {
+                throw nb::value_error("status must have length N_inputs");
+            }
+            if (N == 0) {
+                return;
+            }
+            if (M == 0) {  // nothing to compute per point; C++ contract: status=ok, no output writes
+                for (std::size_t k = 0; k < N; ++k) {
+                    status.data()[k] = 0;
+                }
+                return;
+            }
+            AS.fast_evaluate(input_pair, val1.data(), val2.data(), N, reinterpret_cast<const parameters*>(outputs.data()), M, out.data(), N * M,
+                             status.data(), N, imposed_phase);
+        },
+        nb::arg("input_pair"), nb::arg("val1"), nb::arg("val2"), nb::arg("outputs"), nb::arg("out"), nb::arg("status"),
+        nb::arg("imposed_phase") = phases::iphase_not_imposed)
       .def("saturated_liquid_keyed_output", &AbstractState::saturated_liquid_keyed_output)
       .def("saturated_vapor_keyed_output", &AbstractState::saturated_vapor_keyed_output)
       .def("T", &AbstractState::T)
@@ -664,7 +745,9 @@ void init_CoolProp(nb::module_& m) {
       .def("d4alphar_dDelta_dTau3", &AbstractState::d4alphar_dDelta_dTau3)
       .def("d4alphar_dTau4", &AbstractState::d4alphar_dTau4);
 
-    m.def("AbstractState", &factory);
+    // NOTE: `AbstractState(backend, fluids)` is the class constructor registered
+    // above via nb::new_(&factory) -- no separate module-level factory function
+    // (bd CoolProp-r9sq.28), so isinstance(x, AbstractState) works.
 
     m.def("get_config_as_json_string", &get_config_as_json_string);
     m.def("set_config_as_json_string", &set_config_as_json_string);
@@ -857,8 +940,10 @@ void init_CoolProp(nb::module_& m) {
             // so numpy scalars / 1-element arrays (e.g. a density from PropsSI) are
             // accepted, matching the legacy Cython `<double>obj` coercion. nb::cast<double>
             // would raise std::bad_cast on a non-float object (bd CoolProp-r9sq.16).
-            set_reference_stateD(FluidName, nb::cast<double>(nb::float_(args[0])), nb::cast<double>(nb::float_(args[1])),
-                                 nb::cast<double>(nb::float_(args[2])), nb::cast<double>(nb::float_(args[3])));
+            // Take an nb::handle explicitly: MSVC won't function-style-cast an
+            // args[] accessor straight to nb::float_, but accessor->handle is implicit.
+            auto _as_double = [](nb::handle h) { return nb::cast<double>(nb::float_(h)); };
+            set_reference_stateD(FluidName, _as_double(args[0]), _as_double(args[1]), _as_double(args[2]), _as_double(args[3]));
         } else {
             throw std::invalid_argument("Invalid number of inputs to set_reference_state");
         }

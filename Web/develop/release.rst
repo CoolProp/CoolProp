@@ -56,8 +56,9 @@ the CoolProp library.
       zipped sources.
     - Bump the version number in the CMake file and commit.
     - Announce the new features if you like.
-    - Remove artifacts from TestPYPI. First with ``pypi-cleanup -t https://test.pypi.org -p coolprop --query-only -r ".*post\d.*""`` 
-      to determine what will be deleted and then with your username ``-u username --do-it`` 
-      (and without ``--query-only``) to do it
+    - Remove artifacts from TestPYPI. First with ``pypi-cleanup -t https://test.pypi.org -p coolprop --query-only -r ".*\.dev\d.*"``
+      to determine what will be deleted and then with your username ``-u username --do-it``
+      (and without ``--query-only``) to do it. The ``.dev`` pattern matches the
+      ``X.Y.Z.dev<timestamp>`` nightlies that CI publishes to TestPyPI.
 
 That's all folks.
