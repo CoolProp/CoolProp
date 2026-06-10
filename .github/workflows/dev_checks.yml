@@ -287,6 +287,27 @@ jobs:
           done
           test "$ran" -gt 0 || { echo "::error::no Python interpreter could run a nanobind wheel"; exit 1; }
 
+      - name: PDSim cimport contract (compile + run against the abi3 wheel)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PDSim consumes CoolProp's cdef State / AbstractState / constants
+          # surface via `cimport` (dev/pdsim_cimport_contract/SURFACE.md), incl.
+          # `from CoolProp.CoolProp cimport State`.  Compile + run the frozen
+          # contract against the installed v8 wheel so a drift in that surface
+          # fails CI here rather than silently breaking PDSim's next build
+          # (CoolProp-1tbe.6).  Fail-closed: a missing wheel is a hard error.
+          WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl 2>/dev/null || true)
+          if [ -z "$WHL" ]; then
+            echo "::error::no cp312-abi3 wheel found for the PDSim cimport contract"
+            exit 1
+          fi
+          uv venv --python 3.12 .venv-pdsim
+          source .venv-pdsim/bin/activate
+          uv pip install "cython>=3.1" setuptools numpy "$WHL"
+          python dev/pdsim_cimport_contract/run_contract.py
+          deactivate
+
   clang-tidy:
     name: clang-tidy (diff-only, informational)
     # Runs clang-tidy on lines changed in the PR via clang-tidy-diff.py and

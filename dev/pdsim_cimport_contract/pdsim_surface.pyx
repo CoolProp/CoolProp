@@ -28,6 +28,7 @@ Keep this list in sync with SURFACE.md.  Anything added here should be a
 deliberate, reviewed widening of the contract.
 """
 from CoolProp.State cimport State                   # the cdef class (CoolProp.State path)
+from CoolProp.CoolProp cimport State as StateViaCoolProp  # PDSim core/state_flooded path
 cimport CoolProp.constants_header as constants      # enum module (constants.iXxx)
 from CoolProp.constants_header cimport parameters   # enum used as a C type
 
@@ -120,3 +121,14 @@ cpdef double hot_loop(object Fluid, double T, double rho, int n):
         S.update_Trho(T + 0.001 * i, rho)
         acc += S.get_p() + S.get_h() + S.pAS.keyed_output(constants.iSmass)
     return acc
+
+
+cpdef double exercise_state_flooded_path(object Fluid, double T, double rho):
+    """Exercise the `from CoolProp.CoolProp cimport State` path that PDSim's
+    core/state_flooded uses (SURFACE.md), distinct from the CoolProp.State
+    path above.  Statically typing the local as ``StateViaCoolProp`` forces
+    Cython to resolve the cdef class through CoolProp.CoolProp at compile
+    time; constructing + reading a value proves it is the same working class
+    at runtime.  CoolProp-1tbe.6."""
+    cdef StateViaCoolProp S = StateViaCoolProp(Fluid, {'T': T, 'D': rho})
+    return S.get_p()

@@ -87,6 +87,11 @@ def check():
     if not isinstance(rf["phase"], int):
         fails.append(f"Phase() did not return an int: {rf['phase']!r}")
 
+    # the `from CoolProp.CoolProp cimport State` path (PDSim core/state_flooded)
+    # must resolve to the same working cdef class as CoolProp.State
+    p_via_cc = pdsim_surface.exercise_state_flooded_path(FLUID, T, RHO)
+    expect("State via CoolProp.CoolProp cimport [kPa]", p_via_cc, SI("P") / 1000.0)
+
     # hot loop (PDSim's inner pattern) just has to run and produce a finite sum
     acc = pdsim_surface.hot_loop(FLUID, T, RHO, 1000)
     if not (math.isfinite(acc) and acc != 0.0):
