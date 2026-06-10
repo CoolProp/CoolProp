@@ -239,8 +239,23 @@ void capi_specify_phase(void* h, long phase) {
         capi_set_error(nullptr);
     }
 }
+void capi_unspecify_phase(void* h) {
+    if (h == nullptr) {
+        capi_set_error("unspecify_phase: null handle");
+        return;
+    }
+    try {
+        (*static_cast<_CAPI_SP*>(h))->unspecify_phase();
+        g_capi_error.clear();
+    } catch (const std::exception& e) {
+        capi_set_error(e.what());
+    } catch (...) {
+        capi_set_error(nullptr);
+    }
+}
 const CoolProp_StateCAPI g_state_capi = {
-  capi_make, capi_destroy, capi_update, capi_keyed_output, capi_first_partial_deriv, capi_last_error, capi_set_mole_fractions, capi_specify_phase};
+  capi_make,          capi_destroy,        capi_update, capi_keyed_output, capi_first_partial_deriv, capi_last_error, capi_set_mole_fractions,
+  capi_specify_phase, capi_unspecify_phase};
 }  // namespace
 
 void init_CoolProp(nb::module_& m) {

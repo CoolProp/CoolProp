@@ -32,6 +32,7 @@ cdef extern from "CoolProp/detail/state_capi.h":
         const char* (*last_error)()
         void (*set_mole_fractions)(void*, const double*, long)
         void (*specify_phase)(void*, long)
+        void (*unspecify_phase)(void*)
 
 import CoolProp as _CP  # the nanobind core: exports `_capi` + the int-convertible enums
 if not hasattr(_CP, "_capi"):
@@ -61,6 +62,19 @@ cdef long _iP_critical = int(_CP.iP_critical)
 cdef long _iP_triple = int(_CP.iP_triple)
 cdef long _iphase_gas = int(_CP.iphase_gas)
 cdef long _iphase_liquid = int(_CP.iphase_liquid)
+# Determinate single-phase indices.  Imposing one of these on a handle makes a
+# mixture (T, D) update a direct evaluation (no flash needed) -- which is how
+# copy() reproduces a state without the unsupported mixture DHSU_T_flash.
+# twophase / critical_point / unknown / not_imposed are deliberately excluded:
+# a mixture (T, D) with one of those imposed has no supported direct path, so
+# copy() must NOT impose it (it would route into an unsupported mixture flash
+# branch and risk a silently-wrong result) -- it falls back to a plain update
+# that raises the clear core error instead.
+cdef frozenset _SINGLE_PHASE = frozenset((
+    int(_CP.iphase_liquid), int(_CP.iphase_supercritical),
+    int(_CP.iphase_supercritical_gas), int(_CP.iphase_supercritical_liquid),
+    int(_CP.iphase_gas),
+))
 cdef long _DmassT = int(_CP.DmassT_INPUTS)
 cdef long _HmassP = int(_CP.HmassP_INPUTS)
 
@@ -81,7 +95,14 @@ cdef inline void _raise_if_error() except *:
     # (PDSim's ODE solver catches these and rejects the step -- like the old State).
     cdef const char* e = _C.last_error()
     if e is not NULL:
-        raise ValueError("CoolProp: " + e.decode("utf-8", "replace"))
+        # Cast to ``bytes`` first, THEN decode.  This module is cythonised with
+        # ``c_string_type=unicode`` (see wrappers/Python/CMakeLists.txt), under
+        # which a bare ``char*`` auto-coerces to ``str`` -- so ``e.decode(...)``
+        # would run ``.decode`` on a ``str`` and raise ``'str' object has no
+        # attribute 'decode'``, masking the *real* CoolProp error (GH #3151).
+        # ``<bytes>e`` forces the C-string -> bytes conversion regardless of the
+        # directive, so ``.decode`` always sees ``bytes``.
+        raise ValueError("CoolProp: " + (<bytes>e).decode("utf-8", "replace"))
 
 
 cdef inline double _keyed_output(void* handle, long key) except *:
@@ -117,6 +138,12 @@ cdef inline void _set_mole_fractions(void* handle, list fracs) except *:
 cdef inline void _specify_phase(void* handle, long phase) except *:
     # Impose a phase (a phases enum value) on the handle.
     _C.specify_phase(handle, phase)
+    _raise_if_error()
+
+
+cdef inline void _unspecify_phase(void* handle) except *:
+    # Lift a previously-imposed phase so the backend resumes auto-detecting it.
+    _C.unspecify_phase(handle)
     _raise_if_error()
 
 
@@ -244,6 +271,12 @@ cdef class State:
             raise ValueError("State: could not create AbstractState for " + _fl)
         if set_fractions:
             _set_mole_fractions(self.handle, fracs)
+            self._fractions = fracs
+        else:
+            # Plain name or bare ``&``-joined mixture: no bracket fractions to
+            # carry.  ``None`` (not ``[]``) so ``copy()`` can tell "no composition
+            # to forward" from "an explicit empty list".
+            self._fractions = None
         self._fluids = _fl
         self.Fluid = _fl.encode()
         if self.pAS is None:
@@ -293,8 +326,37 @@ cdef class State:
         self._refresh()
 
     cpdef State copy(self):
-        """Return an independent ``State`` for the same fluid at this (T, rho)."""
-        return State(self._fluids, {'T': self.T_, 'D': self.rho_})
+        """Return an independent ``State`` for the same fluid at this (T, rho).
+
+        For a mixture the constituent mole fractions are forwarded (``self._fluids``
+        is the bracket-stripped name, so a plain ``State(self._fluids, ...)`` would
+        drop the composition and fail with "Mole fractions must be set"), and the
+        source state's phase is imposed for the (T, rho) update.  HEOS mixtures have
+        no (T, D) flash -- ``DHSU_T_flash does not support mixtures (yet)`` -- so
+        without the imposed phase the copy of a perfectly valid mixture state would
+        fail there (this is PDSim's ``guess_outlet_temp`` path, GH #3151).  The
+        imposition is then lifted (``unspecify_phase``) so the returned State
+        auto-detects phase on any later update, exactly like a freshly built one.
+
+        Only a determinate single-phase source (gas/liquid/supercritical*) gets
+        its phase imposed; a two-phase (or otherwise indeterminate) mixture has no
+        supported direct (T, D) path, so the copy falls through to a plain update
+        that raises the clear core error rather than a silently-wrong result.
+        """
+        cdef State s = State(self._fluids, None)
+        cdef long ph
+        if self._fractions is not None:
+            _set_mole_fractions(s.handle, self._fractions)
+            ph = <long>_keyed_output(self.handle, _iPhase)   # this state's phase
+            if ph in _SINGLE_PHASE:
+                _specify_phase(s.handle, ph)                 # skip the missing flash
+                s.update({'T': self.T_, 'D': self.rho_})
+                _unspecify_phase(s.handle)                   # back to auto-detect
+                return s
+        # Pure fluid, or a mixture with no supported direct (T, D) path: plain
+        # update (correct for pure; clear core error for such a mixture).
+        s.update({'T': self.T_, 'D': self.rho_})
+        return s
 
     cpdef double Props(self, long key) except *:
         """Raw keyed output for CoolProp parameter ``key`` [SI]."""
