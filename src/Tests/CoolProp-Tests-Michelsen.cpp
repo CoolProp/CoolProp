@@ -1,13 +1,13 @@
 #if defined(ENABLE_CATCH)
 
-#    include "AbstractState.h"
-#    include "DataStructures.h"
+#    include "CoolProp/AbstractState.h"
+#    include "CoolProp/DataStructures.h"
 #    include "../Backends/Cubics/CubicBackend.h"
 #    include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #    include <memory>
 #    include <catch2/catch_all.hpp>
-#    include "CoolPropTools.h"
-#    include "CoolProp.h"
+#    include "CoolProp/detail/tools.h"
+#    include "CoolProp/CoolProp.h"
 
 using namespace CoolProp;
 

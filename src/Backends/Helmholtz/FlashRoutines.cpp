@@ -141,9 +141,15 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 // Both SRK roots valid — solve both HEOS roots, pick lower Gibbs
                 double rho_gas = -1, rho_liq = -1;
                 HEOS.specify_phase(iphase_gas);
-                try { rho_gas = HEOS.solver_rho_Tp(T_saved, p_saved); } catch (...) {}
+                try {
+                    rho_gas = HEOS.solver_rho_Tp(T_saved, p_saved);
+                } catch (...) {
+                }
                 HEOS.specify_phase(iphase_liquid);
-                try { rho_liq = HEOS.solver_rho_Tp(T_saved, p_saved); } catch (...) {}
+                try {
+                    rho_liq = HEOS.solver_rho_Tp(T_saved, p_saved);
+                } catch (...) {
+                }
                 HEOS.unspecify_phase();
 
                 if (rho_gas > 0 && rho_liq > 0) {
