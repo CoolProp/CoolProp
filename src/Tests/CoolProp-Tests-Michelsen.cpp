@@ -3,6 +3,7 @@
 #    include "AbstractState.h"
 #    include "DataStructures.h"
 #    include "../Backends/Cubics/CubicBackend.h"
+#    include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #    include <memory>
 #    include <catch2/catch_all.hpp>
 #    include "CoolPropTools.h"
@@ -940,6 +941,23 @@ TEST_CASE("PE flash: N2/CH4/C2H6/C3H8 [0.1/0.5/0.25/0.15]", "[michelsen][phase_e
         ref->update(PT_INPUTS, 1e5, 80.0);
         CHECK(AS->Q() == -1);
         CHECK(AS->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-6));
+    }
+}
+
+TEST_CASE("Methanol-benzene PT flash at problematic compositions", "[michelsen][meoh_benz]") {
+    // Regression test: x_methanol = 0.56 and 0.78 at 308.15 K / 101325 Pa
+    // previously failed because solver_rho_Tp corrupted HEOS._T/_p to -inf
+    // on the gas-phase attempt, causing the liquid fallback to also fail.
+    for (double x : {0.54, 0.56, 0.58, 0.76, 0.78, 0.80}) {
+        DYNAMIC_SECTION("x_methanol = " << x) {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "methanol&benzene"));
+            AS->set_mole_fractions({x, 1.0 - x});
+            REQUIRE_NOTHROW(AS->update(PT_INPUTS, 101325, 308.15));
+            double rho = AS->rhomolar();
+            CAPTURE(rho);
+            CHECK(std::isfinite(rho));
+            CHECK(rho > 0);
+        }
     }
 }
 
