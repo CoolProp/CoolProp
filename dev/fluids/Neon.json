@@ -45,19 +45,25 @@
       "type": "rational_polynomial"
     },
     "melting_line": {
-      "BibTeX": "SantamariaPerez-PRB-2010",
+      "BibTeX": "Bell-NeonMelting-2026",
       "T_m": -1,
       "parts": [
         {
-          "T_0": 24.4,
-          "T_max": 700,
-          "T_min": 24.56,
-          "a": 1700000000.0,
-          "c": 1.2987012987012987,
-          "p_0": 101325
+          "T_0": 24.556,
+          "T_max": 330,
+          "T_min": 24.556,
+          "a": [
+            3552.0834,
+            1447.21543
+          ],
+          "p_0": 43417.232458065846,
+          "t": [
+            1.0,
+            1.60834
+          ]
         }
       ],
-      "type": "Simon"
+      "type": "polynomial_in_Theta"
     },
     "pS": {
       "T_r": 44.4918,
