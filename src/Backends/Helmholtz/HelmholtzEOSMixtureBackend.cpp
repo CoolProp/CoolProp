@@ -4185,6 +4185,7 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
         delta(delta0),
         tau(tau0),
         M1_last(_HUGE),
+        theta_last(_HUGE),
         R_delta_tracer(0.1),
         R_tau_tracer(0.1),
         N_critical_points(0),

@@ -23,10 +23,10 @@ class UNIFACMixture
 
     CoolProp::CachedElement _T;  ///< The cached temperature
 
-    std::size_t N;  ///< Number of components
+    std::size_t N = 0;  ///< Number of components
 
-    double m_T;  ///< The temperature in K
-    double T_r;  ///< Reducing temperature
+    double m_T = _HUGE;  ///< The temperature in K
+    double T_r;          ///< Reducing temperature
 
     std::map<std::pair<std::size_t, std::size_t>, double> Psi_;  /// < temporary storage for Psi
 
