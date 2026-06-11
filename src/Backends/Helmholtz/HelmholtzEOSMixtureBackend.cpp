@@ -1712,8 +1712,11 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         switch (other) {
             case iT: {
                 // Check for the presence of the melting line (skipped when the caller has
-                // opted out of property-limit checks, mirroring the subcritical path below)
-                if (has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
+                // opted out of property-limit checks, mirroring the subcritical path below).
+                // Also skip when _p is below the lower bound of the melting-line fit
+                // (i.e. below the triple-point pressure); the fit is undefined there and
+                // the fluid must be gas or gas+solid, never liquid.
+                if (has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS) && _p > calc_melting_line(iP_min, -1, -1)) {
                     double Tm = melting_line(iT, iP, _p);
                     if (_T < Tm - 0.001) {
                         throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
@@ -1789,7 +1792,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
 
                 if (other == iT) {
                     if (value < Tsat - 100 * DBL_EPSILON) {
-                        if (has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
+                        if (has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS) && _p > calc_melting_line(iP_min, -1, -1)) {
                             double Tm = melting_line(iT, iP, _p);
                             if (_T < Tm - 0.001) {
                                 throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
@@ -1859,7 +1862,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         switch (other) {
             case iT: {
 
-                if (has_melting_line()) {
+                if (has_melting_line() && _p > calc_melting_line(iP_min, -1, -1)) {
                     double Tm = melting_line(iT, iP, _p);
                     if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
                         _phase = iphase_liquid;
@@ -2176,7 +2179,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
 
     // Check for the presence of the melting line (skipped when the caller has opted out
     // of property-limit checks, mirroring p_phase_determination_pure_or_pseudopure)
-    if (other == iP && has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
+    if (other == iP && has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS) && value > calc_melting_line(iP_min, -1, -1)) {
         double Tm = melting_line(iT, iP, value);
         if (_T < Tm - 0.001) {
             throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
