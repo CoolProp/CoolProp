@@ -59,10 +59,9 @@ typename SuperAncillary<ArrayType>::LoadedData parse_loaded(const std::string& s
     d.rhocrit_num = j.at("meta").at("rhocrittrue / mol/m^3");
     if (j.contains("check_points")) {
         for (const auto& pt : j.at("check_points")) {
-            d.check_points.push_back({pt.at("T / K").get<double>(), pt.at("p(mp) / Pa").get<double>(),
-                                      pt.at("rho'(mp) / mol/m^3").get<double>(), pt.at("rho''(mp) / mol/m^3").get<double>(),
-                                      pt.at("p(SA)/p(mp)").get<double>(), pt.at("rho'(SA)/rho'(mp)").get<double>(),
-                                      pt.at("rho''(SA)/rho''(mp)").get<double>()});
+            d.check_points.push_back({pt.at("T / K").get<double>(), pt.at("p(mp) / Pa").get<double>(), pt.at("rho'(mp) / mol/m^3").get<double>(),
+                                      pt.at("rho''(mp) / mol/m^3").get<double>(), pt.at("p(SA)/p(mp)").get<double>(),
+                                      pt.at("rho'(SA)/rho'(mp)").get<double>(), pt.at("rho''(SA)/rho''(mp)").get<double>()});
         }
     }
     return d;
