@@ -270,9 +270,9 @@ template <typename ArrayType>
 class ChebyshevExpansion
 {
    private:
-    double m_xmin,      ///< The minimum value of the independent variable
-      m_xmax;           ///< The maximum value of the independent variable
-    ArrayType m_coeff;  ///< The coefficients of the expansion
+    double m_xmin = 0.0,  ///< The minimum value of the independent variable
+      m_xmax = 0.0;       ///< The maximum value of the independent variable
+    ArrayType m_coeff;    ///< The coefficients of the expansion
    public:
     ChebyshevExpansion() = default;
 
