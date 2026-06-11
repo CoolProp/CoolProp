@@ -439,7 +439,7 @@ if __name__ == '__main__':
         os.path.join(CProot, 'boost_CoolProp'),
         os.path.join(CProot, 'externals', 'incbin'),
         os.path.join(CProot, 'externals', 'nlohmann-json'),
-        os.path.join(CProot, 'externals', 'miniz-3.0.2'),
+        os.path.join(CProot, 'externals', 'miniz-3.1.1'),
         os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
     # If the file is run directly without any parameters, clean, build and install
@@ -490,7 +490,7 @@ if __name__ == '__main__':
     here = str(Path('.').parent.absolute())
     
     
-    miniz = ('miniz', {'sources': [str(Path(CProot) / 'externals' / 'miniz-3.0.2' / 'miniz.c')], 'build_temp': here})
+    miniz = ('miniz', {'sources': [str(Path(CProot) / 'externals' / 'miniz-3.1.1' / 'miniz.c')], 'build_temp': here})
     from setuptools.command.build_clib import build_clib
     
     # This class is needed to work around a bug in build_clib that the temporary folder used as the destination for 

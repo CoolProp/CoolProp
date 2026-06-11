@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include "../../../include/CoolPropLib.h"
+#include "../../../include/CoolProp/CoolPropLib.h"
 #include "compat.h"
 
 static int lua_coolprop_Props1SI(lua_State* L) {

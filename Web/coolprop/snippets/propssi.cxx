@@ -1,4 +1,4 @@
-#include "CoolProp.h"
+#include "CoolProp/CoolProp.h"
 #include <iostream>
 #include <stdlib.h>
 using namespace CoolProp;

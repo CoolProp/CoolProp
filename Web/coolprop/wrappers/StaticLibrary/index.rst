@@ -95,7 +95,7 @@ Usage
 
 For all platforms we start with a simple example file here called main.cpp; the "Hello world" of CoolProp ::
 
-    #include "CoolProp.h"
+    #include "CoolProp/CoolProp.h"
     #include <iostream>
 
     int main()
