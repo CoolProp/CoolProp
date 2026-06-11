@@ -2702,6 +2702,33 @@ void SaturationSolvers::PTflash_twophase::solve_legacy() {
             throw ValueError(format("PTflash_twophase::call reached max number of iterations [%d]", IO.Nstep_max));
         }
     } while (this->error_rms > 1e-9 && min_rel_change > 1000 * DBL_EPSILON && iter < IO.Nstep_max);
+
+    // Recover the vapor molar fraction (beta) from the converged overall mass
+    // balance z_i = (1 - beta) x_i + beta y_i.  The amount-of-substance
+    // residuals in build_arrays() drive (z_i - x_i)/(y_i - x_i) to a single
+    // common value across all components, so any component yields the same
+    // beta; pick the one with the largest phase separation |y_i - x_i| for
+    // numerical robustness.  Without this the caller (PT_flash_mixtures) reads
+    // the default beta = 0.5 and reports a wrong vapor quality and bulk density
+    // for every two-phase mixture (CoolProp-1tbe.1); solve_michelsen() sets
+    // IO.beta with the same convention.
+    std::size_t i_best = 0;
+    CoolPropDbl sep_best = -1;
+    for (std::size_t i = 0; i < N; ++i) {
+        CoolPropDbl sep = std::abs(IO.y[i] - IO.x[i]);
+        if (sep > sep_best) {
+            sep_best = sep;
+            i_best = i;
+        }
+    }
+    if (sep_best > 10 * DBL_EPSILON) {
+        IO.beta = (IO.z[i_best] - IO.x[i_best]) / (IO.y[i_best] - IO.x[i_best]);
+    } else {
+        // Degenerate (trivial) split: the phases are numerically identical, so
+        // beta is undefined.  Signal a non-split so the caller falls back to
+        // the single-phase branch rather than dividing by ~zero.
+        IO.beta = 0;
+    }
 }
 void SaturationSolvers::PTflash_twophase::build_arrays() {
     const std::size_t N = IO.x.size();
@@ -2784,6 +2811,61 @@ TEST_CASE("Check the PT flash calculation for two-phase inputs", "[PTflash_twoph
     // Now do the blind flash call with PT as inputs
     AS->update(CoolProp::PT_INPUTS, AS->p(), AS->T() - 2);
     REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+}
+
+TEST_CASE("Legacy PT flash recovers the vapor quality (not pinned at 0.5)", "[PTflash_twophase]") {
+    // Regression for CoolProp-1tbe.1: solve_legacy() never wrote IO.beta, so
+    // a blind PT flash with MIXTURE_STABILITY_ALGORITHM=0 read the default
+    // beta = 0.5 and reported a wrong vapor quality (and bulk density) for
+    // every two-phase mixture.  Build a reference two-phase point at a known,
+    // non-trivial quality, then confirm both stability algorithms recover it.
+    const std::string fluids = "Methane&Ethane";
+    const std::vector<double> z = {0.6, 0.4};
+    const double Qtarget = 0.25;
+
+    // RAII so the global config is restored even if a CHECK below throws.
+    struct StabilityAlgoGuard
+    {
+        int prev;
+        StabilityAlgoGuard() : prev(CoolProp::get_config_int(MIXTURE_STABILITY_ALGORITHM)) {}
+        StabilityAlgoGuard(const StabilityAlgoGuard&) = delete;
+        StabilityAlgoGuard& operator=(const StabilityAlgoGuard&) = delete;
+        StabilityAlgoGuard(StabilityAlgoGuard&&) = delete;
+        StabilityAlgoGuard& operator=(StabilityAlgoGuard&&) = delete;
+        ~StabilityAlgoGuard() {
+            CoolProp::set_config_int(MIXTURE_STABILITY_ALGORITHM, prev);
+        }
+    } stability_guard;
+
+    // Reference point at a known quality, built with the default algorithm.
+    double p_ref, T_ref;
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        AS->update(CoolProp::PQ_INPUTS, 2e6, Qtarget);
+        p_ref = AS->p();
+        T_ref = AS->T();
+    }
+
+    auto flash_Q = [&](int algo) {
+        CoolProp::set_config_int(MIXTURE_STABILITY_ALGORITHM, algo);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        AS->update(CoolProp::PT_INPUTS, p_ref, T_ref);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        return AS->Q();
+    };
+
+    const double Q_michelsen = flash_Q(1);
+    const double Q_legacy = flash_Q(0);
+
+    // Both algorithms recover the target quality...
+    CHECK(Q_michelsen == Catch::Approx(Qtarget).margin(0.02));
+    CHECK(Q_legacy == Catch::Approx(Qtarget).margin(0.02));
+    // ...and the legacy path agrees with Michelsen rather than being pinned
+    // at the default 0.5 (the bug).
+    CHECK(Q_legacy == Catch::Approx(Q_michelsen).margin(0.01));
+    CHECK(std::abs(Q_legacy - 0.5) > 0.1);
 }
 
 #endif
