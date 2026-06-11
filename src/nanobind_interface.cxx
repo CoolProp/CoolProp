@@ -161,6 +161,10 @@ void capi_destroy(void* h) {
     }
 }
 void capi_update(void* h, long input_pair, double v1, double v2) {
+    if (h == nullptr) {
+        capi_set_error("update: null handle");
+        return;
+    }
     try {
         (*static_cast<_CAPI_SP*>(h))->update(static_cast<CoolProp::input_pairs>(input_pair), v1, v2);
         g_capi_error.clear();
@@ -171,6 +175,10 @@ void capi_update(void* h, long input_pair, double v1, double v2) {
     }
 }
 double capi_keyed_output(void* h, long key) {
+    if (h == nullptr) {
+        capi_set_error("keyed_output: null handle");
+        return NAN;
+    }
     try {
         double v = (*static_cast<_CAPI_SP*>(h))->keyed_output(static_cast<CoolProp::parameters>(key));
         g_capi_error.clear();
@@ -184,6 +192,10 @@ double capi_keyed_output(void* h, long key) {
     }
 }
 double capi_first_partial_deriv(void* h, long Of, long Wrt, long Constant) {
+    if (h == nullptr) {
+        capi_set_error("first_partial_deriv: null handle");
+        return NAN;
+    }
     try {
         double v = (*static_cast<_CAPI_SP*>(h))
                      ->first_partial_deriv(static_cast<CoolProp::parameters>(Of), static_cast<CoolProp::parameters>(Wrt),
@@ -1111,9 +1123,13 @@ void init_CoolProp(nb::module_& m) {
               std::vector<double> out(n);
               for (std::size_t i = 0; i < n; ++i) {
                   out[i] = HumidAir::HAPropsSI(Output, N1, v1[i], N2, v2[i], N3, v3[i]);
+                  // Legacy HAPropsSI raised ValueError on the FIRST non-finite result for
+                  // vector inputs too (HumidAirProp.pyx), not just the all-scalar case --
+                  // validate every element so a NaN/inf cannot pass silently through an
+                  // array/list result (CoolProp-1tbe.11).
+                  _raise_if_invalid(out[i]);
               }
               if (!any_seq) {
-                  _raise_if_invalid(out[0]);
                   return nb::float_(out[0]);
               }
               if (any_ndarray) {

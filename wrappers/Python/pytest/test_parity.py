@@ -175,6 +175,15 @@ class TestHAPropsSI:
         with pytest.raises(ValueError):
             HAPropsSI("T", "P", 101325.0, "R", 2.0, "B", 290.0)  # R out of range
 
+    def test_bad_element_in_array_raises_valueerror(self):
+        # Legacy HAPropsSI raised on the first non-finite element of a vector
+        # input; the nanobind array path must not pass NaN/inf through silently
+        # (CoolProp-1tbe.11).  Second element (R=5.0) is unphysical.
+        with pytest.raises(ValueError):
+            HAPropsSI("H", "T", [298.15, 300.0], "P", 101325.0, "R", [0.5, 5.0])
+        with pytest.raises(ValueError):
+            HAPropsSI("H", "T", [298.15, 300.0], "P", 101325.0, "R", np.array([0.5, 5.0]))
+
 
 # --------------------------------------------------------------------------- #
 # r9sq.23 -- enum completeness
