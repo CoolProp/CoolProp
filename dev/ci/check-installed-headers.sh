@@ -17,8 +17,9 @@
 # CMake EXCLUDE is specific to json.h and is not over-broad (e.g. wiping the
 # whole detail/ subtree).  Candidates that satisfy this today:
 # detail/configuration_keys.h, detail/strings.h, detail/tools.h,
-# detail/CachedElement.h, detail/filepaths.h, detail/msgpack.h,
+# detail/CachedElement.h, detail/filepaths.h,
 # detail/PlatformDetermination.h, detail/state_capi.h, detail/atomic_write.h.
+# (detail/json.h and detail/msgpack.h are NOT candidates -- both are excluded.)
 # This control does NOT name detail/rapidjson.h (that header was deleted in
 # Phase Final); any of the above is sufficient.
 #
@@ -56,24 +57,75 @@ if [ -z "$DETAIL_OTHER" ]; then
     exit 1
 fi
 
-# Assertion 1: detail/json.h must NOT ship.
-LEAKED="$(find "$PREFIX" -path '*/detail/json.h' || true)"
+# Assertion 1: the internal-only detail/json.h and detail/msgpack.h must NOT
+# ship.  detail/json.h pulls nlohmann/json.hpp + valijson; detail/msgpack.h
+# pulls msgpack.hpp.  None of those third-party headers are installed, so
+# shipping either makes the installed tree non-self-contained for downstream.
+LEAKED="$(find "$PREFIX" \( -path '*/detail/json.h' -o -path '*/detail/msgpack.h' -o -name 'CPmsgpack.h' \) || true)"
 if [ -n "$LEAKED" ]; then
-    echo "FAIL: detail/json.h is shipped in the installed headers (it pulls nlohmann/json.hpp + valijson):" >&2
+    echo "FAIL: an internal-only header (detail/json.h, detail/msgpack.h, or the CPmsgpack.h shim) is shipped in the installed headers:" >&2
     printf '%s\n' "$LEAKED" >&2
     exit 1
 fi
 
-# Assertion 2: no shipped header may #include nlohmann or valijson.
+# Assertion 2: no shipped header may #include nlohmann, valijson, msgpack or
+# boost (the internal-only third-party libraries that are NOT installed).
 # grep -El exits 1 on no match (the PASS case) and 0 on match (the FAIL case).
 # The `|| true` prevents set -e from aborting on the no-match exit code; the
 # actual gate is the `-n` test below, which is fail-closed.
-LEAKING_INCLUDES="$(grep -rEl '#[[:space:]]*include[[:space:]]*[<"]((nlohmann|valijson)/)' \
+LEAKING_INCLUDES="$(grep -rEl '#[[:space:]]*include[[:space:]]*[<"]((nlohmann|valijson|boost)/|msgpack)' \
     "$PREFIX" --include='*.h' --include='*.hpp' || true)"
 if [ -n "$LEAKING_INCLUDES" ]; then
-    echo "FAIL: installed header(s) #include nlohmann/valijson (must stay internal):" >&2
+    echo "FAIL: installed header(s) #include nlohmann/valijson/msgpack/boost (must stay internal):" >&2
     printf '%s\n' "$LEAKING_INCLUDES" >&2
     exit 1
 fi
 
-echo "OK: detail/json.h not installed; no shipped header pulls nlohmann/valijson; detail/ control header present (${NHEADERS} headers from ${BUILD_DIR})"
+# Assertion 3: every installed header must compile STANDALONE.  This catches the
+# general non-self-contained case the grep above cannot -- e.g. a shipped header
+# that #includes a non-installed header by some other path (the old
+# detail/msgpack.h pulling msgpack.hpp slipped past the nlohmann/valijson grep).
+# Compile each installed *.h as its own translation unit.  The installed surface
+# depends only on Eigen (the fluids/numerics/superancillary tiers) and on fmt
+# unless NO_FMTLIB is defined; resolve Eigen from the build's CPM cache and
+# define NO_FMTLIB so fmt is not required.  Boost is deliberately NOT on the
+# path: the superancillary rootfinder routes through an out-of-line helper
+# (src/superancillary.cpp), so a regression that re-introduces a boost include
+# into an installed header fails this compile (and assertion 2 above).
+CXX_BIN="${CXX:-c++}"
+CACHE="$BUILD_DIR/CMakeCache.txt"
+if [ ! -f "$CACHE" ]; then
+    echo "FAIL: $CACHE not found -- '$BUILD_DIR' is not a configured CMake build dir; cannot resolve Eigen for the self-containedness check." >&2
+    exit 1
+fi
+EIGEN_DIR="$(sed -n 's/^CPM_PACKAGE_Eigen_SOURCE_DIR:INTERNAL=//p' "$CACHE" | head -1)"
+if [ -z "$EIGEN_DIR" ] || [ ! -d "$EIGEN_DIR" ]; then
+    echo "FAIL: could not resolve the Eigen include dir from $CACHE -- cannot run the self-containedness check (fail-closed)." >&2
+    exit 1
+fi
+INC_ROOT="$(find "$PREFIX" -path '*/include/CoolProp/CoolProp.h' | head -1)"
+INC_ROOT="${INC_ROOT%/CoolProp/CoolProp.h}"
+if [ -z "$INC_ROOT" ] || [ ! -d "$INC_ROOT" ]; then
+    echo "FAIL: could not locate the installed include root (no CoolProp/CoolProp.h) -- cannot validate self-containedness." >&2
+    exit 1
+fi
+SC_LOG=/tmp/installed-headers-selfcontained.log
+: >"$SC_LOG"
+SC_FAIL=0
+while IFS= read -r hdr; do
+    rel="${hdr#"$INC_ROOT"/}"
+    if ! printf '#include "%s"\n' "$rel" | "$CXX_BIN" -std=c++17 -fsyntax-only \
+            -DNO_FMTLIB -DCOOLPROP_NO_DEPRECATED_HEADER_WARNINGS \
+            -I"$INC_ROOT" -I"$EIGEN_DIR" -x c++ - >>"$SC_LOG" 2>&1; then
+        echo "FAIL: installed header is not self-contained: $rel" >&2
+        SC_FAIL=$((SC_FAIL + 1))
+    fi
+done < <(find "$INC_ROOT" -name '*.h')
+if [ "$SC_FAIL" -ne 0 ]; then
+    echo "FAIL: $SC_FAIL installed header(s) do not compile standalone (see $SC_LOG)." >&2
+    echo "      A shipped header that #includes a non-installed header (internal or third-party)" >&2
+    echo "      is broken for downstream consumers." >&2
+    exit 1
+fi
+
+echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack/boost; all ${NHEADERS} installed headers compile standalone (-DNO_FMTLIB, Eigen-only on the path) from ${BUILD_DIR}"

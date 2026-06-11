@@ -40,14 +40,29 @@ Subsequent edits by Ian Bell
 #include <set>
 #include <utility>
 #include <optional>
+#include <functional>
+#include <sstream>
+#include <iomanip>
 #include <Eigen/Dense>
 
-#include "boost/math/tools/toms748_solve.hpp"
+// NOTE: boost (the TOMS 748 rootfinder) is intentionally NOT included here.  Its
+// only uses are routed through detail::toms748 (declared below, defined in
+// src/superancillary.cpp), so this installed public header needs only Eigen on
+// the include path -- not boost -- for downstream consumers (CoolProp-1tbe.14).
 
 namespace CoolProp {
 namespace superancillary {
 
 namespace detail {
+
+/// Bracketing rootfinder (Boost's TOMS 748).  Declared here but DEFINED
+/// out-of-line in src/superancillary.cpp so the boost dependency stays internal
+/// to the compiled CoolProp library -- consumers of this installed header do
+/// not need boost on their include path.  \a f is the residual function and
+/// [\a a, \a b] a bracket with \a fa = f(a), \a fb = f(b); \a bits is the
+/// TOMS 748 bit tolerance and \a max_iter the function-call cap.  Returns the
+/// midpoint of the final bracket.
+double toms748(const std::function<double(double)>& f, double a, double b, double fa, double fb, unsigned int bits, std::size_t max_iter);
 
 // From https://arxiv.org/pdf/1401.5766.pdf (Algorithm #3)
 template <typename Matrix>
@@ -354,7 +369,6 @@ class ChebyshevExpansion
     \return Tuple of value of x and the number of function evaluations required
      */
     auto solve_for_x_count(double y, double a, double b, unsigned int bits, std::size_t max_iter, double boundsytol) const {
-        using namespace boost::math::tools;
         std::size_t counter = 0;
         auto f = [&](double x) {
             counter++;
@@ -368,9 +382,8 @@ class ChebyshevExpansion
         if (std::abs(fb) < boundsytol) {
             return std::make_tuple(b, std::size_t{2});
         }
-        auto max_iter_ = static_cast<boost::math::uintmax_t>(max_iter);
-        auto [l, r] = toms748_solve(f, a, b, fa, fb, eps_tolerance<double>(bits), max_iter_);
-        return std::make_tuple((r + l) / 2.0, counter);
+        double root = detail::toms748(f, a, b, fa, fb, bits, max_iter);
+        return std::make_tuple(root, counter);
     }
 
     /// Return the value of x only for given value of y
@@ -1351,7 +1364,6 @@ class SuperAncillary
             double resid = get_yval(T_, q_fromv1, ch2) - val2;
             return resid;
         };
-        using namespace boost::math::tools;
         double fTmin = f(Tmin), fTmax = f(Tmax);
 
         // First we check if we are converged enough (TOMS748 does not stop based on function value)
@@ -1382,9 +1394,7 @@ class SuperAncillary
         }
         // Neither bound meets the convergence criterion, we need to iterate on temperature
         try {
-            auto max_iter_ = static_cast<boost::math::uintmax_t>(max_iter);
-            auto [l, r] = toms748_solve(f, Tmin, Tmax, fTmin, fTmax, eps_tolerance<double>(bits), max_iter_);
-            T = (r + l) / 2.0;
+            T = detail::toms748(f, Tmin, Tmax, fTmin, fTmax, bits, max_iter);
             return returner();
         } catch (...) {
             fprintf(stderr, "fTmin,fTmax: %g,%g\n", fTmin, fTmax);
