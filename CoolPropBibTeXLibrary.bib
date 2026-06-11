@@ -695,6 +695,25 @@
   Timestamp                = {2013.04.08}
 }
 
+@Misc{Bell-NeonMelting-2026,
+  Author                   = {Ian H. Bell},
+  Title                    = {{Melting line correlation for neon}},
+  Year                     = {2026},
+  Note                     = {Polynomial-in-theta correlation, p = p_t [1 + sum_i a_i (T/T_t - 1)^{t_i}],
+                              fit to the solid-liquid (crystal phase C1) melting data evaluated in the
+                              NIST ThermoData Engine (Frenkel et al., J. Chem. Inf. Model. 45, 816 (2005)).
+                              The triple point (T_t = 24.556 K, p_t = 43.417 kPa) and the saturated-liquid
+                              molar volume are taken from the Thol et al. neon EOS (J. Phys. Chem. Ref.
+                              Data 48, 023101 (2019)) as implemented in CoolProp. The leading linear term
+                              is constrained so that the slope at the triple point matches the
+                              Clausius-Clapeyron value dp/dT = dS_fus/dV_fus = 6.28 MPa/K, using
+                              dH_fus = 335 J/mol and a solid density of 1.444 g/cm^3. The correlation
+                              reproduces the experimental melting temperatures to 0.97 K RMS (3.0 K
+                              maximum) over 24.6-328 K, and supersedes the prior fit that was high by
+                              roughly a factor of 16. Crystal phase: neon has a single solid phase
+                              (fcc, C1) along the melting line in this range, so no phase ambiguity arises.}
+}
+
 @Article{Diatschenko-PRB-1985,
   Title                    = {{Melting curves of molecular hydrogen and molecular deuterium under high pressures between 20 and 373 K}},
   Author                   = {V. Diatschenko and C. W. Chu and D. H. Liebenberg and D. A. Young and M. Ross and R. L. Mills},
