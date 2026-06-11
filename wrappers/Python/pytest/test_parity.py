@@ -86,6 +86,67 @@ class TestPropsSIScalar:
 
 
 # --------------------------------------------------------------------------- #
+# vecPropsSI -- multi-output PropsSI: a sequence first argument (list of output
+# names) returns a matrix, np.squeeze'd exactly like the legacy Cython wrapper
+# (issue #2736).  Shapes, with n = broadcast input length, m = number of outputs:
+#   n>1, m>1 -> (n, m)    n>1, m==1 -> (n,)
+#   n==1, m>1 -> (m,)     n==1, m==1 -> (1,)
+# --------------------------------------------------------------------------- #
+class TestPropsSIMultiOutput:
+    def test_issue_2736_2d_shape_and_values(self):
+        # The exact reported call: 2 outputs x 3 input points -> (3, 2).
+        T = [300.0, 600.0, 900.0]
+        r = PropsSI(["Dmass", "viscosity"], "T", T, "P", 101325, "Water")
+        assert isinstance(r, np.ndarray) and r.shape == (3, 2)
+        # Column j must equal the single-output PropsSI for that output.
+        for i, Ti in enumerate(T):
+            assert r[i, 0] == pytest.approx(PropsSI("Dmass", "T", Ti, "P", 101325, "Water"))
+            assert r[i, 1] == pytest.approx(PropsSI("viscosity", "T", Ti, "P", 101325, "Water"))
+
+    def test_list_outputs_scalar_inputs_1d(self):
+        # m>1, n==1 -> squeeze to (m,)
+        r = PropsSI(["T", "Dmass"], "P", 101325, "Q", 0, "Water")
+        assert isinstance(r, np.ndarray) and r.shape == (2,)
+        assert r[0] == pytest.approx(PropsSI("T", "P", 101325, "Q", 0, "Water"))
+        assert r[1] == pytest.approx(PropsSI("Dmass", "P", 101325, "Q", 0, "Water"))
+
+    def test_single_element_list_output_vector_inputs_1d(self):
+        # m==1, n>1 -> squeeze to (n,)
+        r = PropsSI(["T"], "P", [1e5, 2e5], "Q", [0.0, 0.0], "Water")
+        assert isinstance(r, np.ndarray) and r.shape == (2,)
+
+    def test_single_element_list_output_scalar_inputs_1d(self):
+        # m==1, n==1 -> never collapses below 1-D: (1,)
+        r = PropsSI(["T"], "P", 101325, "Q", 0, "Water")
+        assert isinstance(r, np.ndarray) and r.shape == (1,)
+        assert r[0] == pytest.approx(PropsSI("T", "P", 101325, "Q", 0, "Water"))
+
+    def test_tuple_outputs_like_list(self):
+        r = PropsSI(("Dmass", "viscosity"), "T", [300.0, 600.0], "P", 101325, "Water")
+        assert isinstance(r, np.ndarray) and r.shape == (2, 2)
+
+    def test_ndarray_str_outputs(self):
+        r = PropsSI(np.array(["Dmass", "viscosity"]), "T", [300.0, 600.0], "P", 101325, "Water")
+        assert isinstance(r, np.ndarray) and r.shape == (2, 2)
+
+    def test_scalar_broadcast_against_vector(self):
+        # One vector input, one scalar input, multiple outputs -> (n, m).
+        r = PropsSI(["T", "Dmass"], "P", [1e5, 2e5, 3e5], "Q", 0, "Water")
+        assert isinstance(r, np.ndarray) and r.shape == (3, 2)
+
+    def test_empty_input_returns_empty(self):
+        r = PropsSI(["T", "Dmass"], "P", [], "Q", [], "Water")
+        assert isinstance(r, np.ndarray) and r.shape == (0,)
+
+    def test_failed_eval_raises_valueerror(self):
+        # An invalid output name yields an empty matrix -> ValueError (parity with
+        # the single-output vectorized path, not RuntimeError).  Use a VALID fluid
+        # so the raise is provoked by the bad output, not by backend init.
+        with pytest.raises(ValueError):
+            PropsSI(["ZZZ"], "P", [1e5], "Q", [0.0], "Water")
+
+
+# --------------------------------------------------------------------------- #
 # r9sq.22 -- HAPropsSI scalar/array typing
 # --------------------------------------------------------------------------- #
 class TestHAPropsSI:
@@ -113,6 +174,15 @@ class TestHAPropsSI:
     def test_bad_input_raises_valueerror(self):
         with pytest.raises(ValueError):
             HAPropsSI("T", "P", 101325.0, "R", 2.0, "B", 290.0)  # R out of range
+
+    def test_bad_element_in_array_raises_valueerror(self):
+        # Legacy HAPropsSI raised on the first non-finite element of a vector
+        # input; the nanobind array path must not pass NaN/inf through silently
+        # (CoolProp-1tbe.11).  Second element (R=5.0) is unphysical.
+        with pytest.raises(ValueError):
+            HAPropsSI("H", "T", [298.15, 300.0], "P", 101325.0, "R", [0.5, 5.0])
+        with pytest.raises(ValueError):
+            HAPropsSI("H", "T", [298.15, 300.0], "P", 101325.0, "R", np.array([0.5, 5.0]))
 
 
 # --------------------------------------------------------------------------- #

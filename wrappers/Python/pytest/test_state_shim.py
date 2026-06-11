@@ -141,3 +141,19 @@ class TestMiscParity:
         S = State("Water", {"T": 300.0, "D": 1000.0})
         with pytest.raises(ValueError):
             S.Props(-1)
+
+
+class TestNullHandleGuard:
+    # State('none') is the legacy no-op construction (used internally by
+    # get_Tsat/copy); it leaves the underlying handle NULL.  Calling a property
+    # method on it must raise a clean ValueError, not segfault by dereferencing
+    # the null handle in the C-ABI capsule (CoolProp-1tbe.11).
+    def test_keyed_output_on_none_state_raises(self):
+        S = State("none")
+        with pytest.raises(ValueError):
+            S.get_T()
+
+    def test_update_on_none_state_raises(self):
+        S = State("none")
+        with pytest.raises(ValueError):
+            S.update_Trho(300.0, 1000.0)

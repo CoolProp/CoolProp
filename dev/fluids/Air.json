@@ -44,6 +44,21 @@
       "max_abs_error_units": "J/mol",
       "type": "rational_polynomial"
     },
+    "melting_line": {
+      "BibTeX": "Lemmon-JPCRD-2000",
+      "T_m": -1,
+      "parts": [
+        {
+          "T_0": 59.75,
+          "T_max": 265,
+          "T_min": 59.75,
+          "a": 186844210.7644081,
+          "c": 1.78963,
+          "p_0": 5264.1810687705665
+        }
+      ],
+      "type": "Simon"
+    },
     "pL": {
       "T_r": 132.6312,
       "Tmax": 132.6312,

@@ -27,20 +27,22 @@ find_package(Cython REQUIRED)
 
 # Opt-in: build the nanobind core + the capsule `State` shim instead of the
 # legacy Cython interface, reusing this same harness (constants generation,
-# package assembly, install rules, scikit-build wheel).  Default OFF -> the
-# shipped (legacy Cython) wheel is completely unchanged.  When ON, the nanobind
-# core (CoolProp.<abi3>.so) replaces the legacy Cython CoolProp module and the
-# link-free State capsule shim is built as CoolProp.State.
+# package assembly, install rules, scikit-build wheel).  Default ON for v8 ->
+# the nanobind core (CoolProp.<abi3>.so) is the shipped CoolProp module and the
+# link-free State capsule shim is built as CoolProp.State.  Building the
+# retired legacy Cython wrapper is now an explicit opt-OUT via
+# `-DCOOLPROP_NANOBIND=OFF`.  Flipping the default ON is what makes a plain
+# `pip install` from the sdist (no env var) build the v8 nanobind interface
+# rather than silently falling back to the legacy Cython one (CoolProp-1tbe.4).
 #
-# A `COOLPROP_NANOBIND=ON` *environment* build flips this on via a
-# scikit-build-core override (pyproject.toml) that injects
-# cmake.define.COOLPROP_NANOBIND=ON; the same env var (on Py>=3.12) also turns
-# on the abi3 wheel tag.  Both signals flow through ONE scikit-build-core
-# override block, so they cannot diverge.  `-DCOOLPROP_NANOBIND=ON` directly
-# (or via cmake.define) still works for nanobind selection; abi3-ness of the
-# Cython sidecars follows scikit-build-core's own SKBUILD_SABI_VERSION below, so
-# a define-only build simply yields a valid per-version nanobind wheel.
-option(COOLPROP_NANOBIND "Build the nanobind-based CoolProp package (core + State capsule shim)" OFF)
+# CI's `COOLPROP_NANOBIND=ON` environment signal still flows through the
+# scikit-build-core overrides in pyproject.toml: on Py>=3.12 the same env var
+# also turns on the abi3 wheel tag (the override cannot see -D defines, so the
+# env var remains the canonical signal for the abi3 publish matrix).  With the
+# default now ON, the env-var *selection* override is redundant but harmless; a
+# define-only / env-less build (e.g. an sdist `pip install`) simply yields a
+# valid per-version nanobind wheel, abi3-ness following SKBUILD_SABI_VERSION.
+option(COOLPROP_NANOBIND "Build the nanobind-based CoolProp package (core + State capsule shim)" ON)
 
 # Set root directory
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
@@ -415,6 +417,10 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/__init__.py"
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/__init__.pxd"
     DESTINATION CoolProp)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/State.pxd"
+    DESTINATION CoolProp)
+# Re-export pxd so `from CoolProp.CoolProp cimport State` (PDSim
+# core/state_flooded) resolves to the CoolProp.State cdef class.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/CoolProp.pxd"
     DESTINATION CoolProp)
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants.py"

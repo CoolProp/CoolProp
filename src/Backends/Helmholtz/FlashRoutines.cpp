@@ -21,66 +21,60 @@
 namespace CoolProp {
 
 void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
-    if (HEOS.PhaseEnvelope.built) {
-        // Use the phase envelope if already constructed to determine phase boundary
-        // Determine whether you are inside (two-phase) or outside (single-phase)
-        SimpleState closest_state;
-        std::size_t i = 0;
-        bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, iT, HEOS._T, i, closest_state);
-        if (!twophase && HEOS._T > closest_state.T) {
-            // Gas solution - bounded between phase envelope temperature and very high temperature
-            //
-            // Start with a guess value from SRK
-            CoolPropDbl rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_gas);
+    if (HEOS.PhaseEnvelope.built && HEOS.PhaseEnvelope.closed) {
+        // Use the closed phase envelope to classify the (T, p) point
+        try {
+            SimpleState closest_state;
+            std::size_t iclosest = 0;
+            const PhaseEnvelopeData& env = HEOS.PhaseEnvelope;
+            bool twophase = PhaseEnvelopeRoutines::is_inside(env, iP, HEOS._p, iT, HEOS._T, iclosest, closest_state);
 
-            solver_TP_resid resid(HEOS, HEOS._T, HEOS._p);
-            HEOS.specify_phase(iphase_gas);
-            try {
-                // Try using Newton's method
-                CoolPropDbl rhomolar = Newton(resid, rhomolar_guess, 1e-10, 100);
-                // Make sure the solution is within the bounds
-                if (!is_in_closed_range(static_cast<CoolPropDbl>(closest_state.rhomolar), static_cast<CoolPropDbl>(0.0), rhomolar)) {
-                    throw ValueError("out of range");
+            if (!twophase) {
+                // Single-phase: determine gas vs liquid from temperature relative to closest envelope point
+                // Save T and p before solver calls — solver_rho_Tp may corrupt
+                // HEOS._T/_p on failure (Householder sets them to -inf).
+                const CoolPropDbl T_saved = HEOS._T;
+                const CoolPropDbl p_saved = HEOS._p;
+                phases phase_guess = (T_saved > closest_state.T) ? iphase_gas : iphase_liquid;
+                HEOS.specify_phase(phase_guess);
+                double rho;
+                try {
+                    rho = HEOS.solver_rho_Tp(T_saved, p_saved);
+                } catch (...) {
+                    // If guessed phase fails, try the other branch
+                    phases alt = (phase_guess == iphase_gas) ? iphase_liquid : iphase_gas;
+                    HEOS.specify_phase(alt);
+                    rho = HEOS.solver_rho_Tp(T_saved, p_saved);
                 }
-                HEOS.update_DmolarT_direct(rhomolar, HEOS._T);
-            } catch (...) {
-                // If that fails, try a bounded solver
-                CoolPropDbl rhomolar = Brent(resid, closest_state.rhomolar, 1e-10, DBL_EPSILON, 1e-10, 100);
-                // Make sure the solution is within the bounds
-                if (!is_in_closed_range(static_cast<CoolPropDbl>(closest_state.rhomolar), static_cast<CoolPropDbl>(0.0), rhomolar)) {
-                    throw ValueError("out of range");
-                }
-            }
-            HEOS.unspecify_phase();
-            HEOS._Q = -1;
-        } else {
-            // Liquid solution
-            throw ValueError();
-        }
-    } else {
-        if (HEOS.imposed_phase_index == iphase_not_imposed) {
-            // Blind flash call
-            // Instantiates stability tester (dispatches to Michelsen or Gernert based on config)
-            StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
-            if (!stability_tester.is_stable()) {
-                // There is a phase split and liquid and vapor phases are formed
+                HEOS.unspecify_phase();
+                HEOS.update_DmolarT_direct(rho, T_saved);
+                HEOS._Q = -1;
+                HEOS._phase = (rho < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+            } else {
+                // Two-phase: seed PT flash from the closest envelope point
+                std::size_t N = env.K.size();
                 CoolProp::SaturationSolvers::PTflash_twophase_options o;
-                stability_tester.get_liq(o.x, o.rhomolar_liq);
-                stability_tester.get_vap(o.y, o.rhomolar_vap);
+                o.x.resize(N);
+                o.y.resize(N);
+                for (std::size_t k = 0; k < N; ++k) {
+                    o.x[k] = env.x[k][iclosest];
+                    o.y[k] = env.y[k][iclosest];
+                }
+                o.rhomolar_liq = env.rhomolar_liq[iclosest];
+                o.rhomolar_vap = env.rhomolar_vap[iclosest];
                 o.z = HEOS.get_mole_fractions();
-                o.T = HEOS.T();
-                o.p = HEOS.p();
+                o.T = HEOS._T;
+                o.p = HEOS._p;
                 o.omega = 1.0;
                 CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
                 solver.solve();
-                // Fallback block: Catches mathematically trivial splits (beta ~ 0 or 1) caused by boundary
-                // floating-point noise in the Michelsen TPD solver, or false positives if using the legacy solver.
+                // Beta-fallback: collapse trivial splits to single-phase
                 if (o.beta < 1e-10) {
-                    HEOS.update_DmolarT_direct(o.rhomolar_liq, HEOS.T());
+                    HEOS.update_DmolarT_direct(o.rhomolar_liq, HEOS._T);
                     HEOS._phase = (o.rhomolar_liq < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
                     HEOS._Q = -1;
                 } else if (o.beta > 1.0 - 1e-10) {
-                    HEOS.update_DmolarT_direct(o.rhomolar_vap, HEOS.T());
+                    HEOS.update_DmolarT_direct(o.rhomolar_vap, HEOS._T);
                     HEOS._phase = (o.rhomolar_vap < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
                     HEOS._Q = -1;
                 } else {
@@ -88,39 +82,116 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                     HEOS._Q = o.beta;
                     HEOS._rhomolar = 1.0 / (o.beta / o.rhomolar_vap + (1.0 - o.beta) / o.rhomolar_liq);
                 }
-            } else {
-                // It's single-phase -- find the density.
-                // Use SRK to determine the density branch (gas vs liquid), then
-                // impose that phase for the actual solver so it can select the
-                // correct root without needing p_critical() (which triggers an
-                // expensive critical-point search for many-component mixtures).
-                double rho;
-                double rho_srk = HEOS.solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_gas);
-                if (rho_srk < 0 || !ValidNumber(rho_srk)) {
-                    rho_srk = HEOS.solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_liquid);
-                }
-                phases srk_phase = (rho_srk < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
-                HEOS.specify_phase(srk_phase);
-                try {
-                    rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
-                } catch (...) {
-                    // If SRK-determined phase fails, try the other branch
-                    phases alt = (srk_phase == iphase_gas) ? iphase_liquid : iphase_gas;
-                    HEOS.specify_phase(alt);
-                    rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
-                }
-                HEOS.unspecify_phase();
-                HEOS.update_DmolarT_direct(rho, HEOS.T());
+            }
+            return;
+        } catch (...) {
+            HEOS.unspecify_phase();
+            // Envelope-guided flash failed; fall through to blind flash below
+        }
+    }
+
+    if (HEOS.imposed_phase_index == iphase_not_imposed) {
+        // Blind flash call
+        // Instantiates stability tester (dispatches to Michelsen or Gernert based on config)
+        StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
+        if (!stability_tester.is_stable()) {
+            // There is a phase split and liquid and vapor phases are formed
+            CoolProp::SaturationSolvers::PTflash_twophase_options o;
+            stability_tester.get_liq(o.x, o.rhomolar_liq);
+            stability_tester.get_vap(o.y, o.rhomolar_vap);
+            o.z = HEOS.get_mole_fractions();
+            o.T = HEOS.T();
+            o.p = HEOS.p();
+            o.omega = 1.0;
+            CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
+            solver.solve();
+            // Fallback block: Catches mathematically trivial splits (beta ~ 0 or 1) caused by boundary
+            // floating-point noise in the Michelsen TPD solver, or false positives if using the legacy solver.
+            if (o.beta < 1e-10) {
+                HEOS.update_DmolarT_direct(o.rhomolar_liq, HEOS.T());
+                HEOS._phase = (o.rhomolar_liq < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
                 HEOS._Q = -1;
-                HEOS._phase = (rho < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+            } else if (o.beta > 1.0 - 1e-10) {
+                HEOS.update_DmolarT_direct(o.rhomolar_vap, HEOS.T());
+                HEOS._phase = (o.rhomolar_vap < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+                HEOS._Q = -1;
+            } else {
+                HEOS._phase = iphase_twophase;
+                HEOS._Q = o.beta;
+                HEOS._rhomolar = 1.0 / (o.beta / o.rhomolar_vap + (1.0 - o.beta) / o.rhomolar_liq);
             }
         } else {
-            // It's single-phase, and phase is imposed
-            double rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
-            HEOS.update_DmolarT_direct(rho, HEOS.T());
+            // It's single-phase -- find the density.
+            // Save T and p before any solver calls — solver_rho_Tp may corrupt
+            // HEOS._T/_p on failure (Householder sets them to -inf).
+            const CoolPropDbl T_saved = HEOS.T();
+            const CoolPropDbl p_saved = HEOS.p();
+
+            // Solve SRK cubic for both gas and liquid roots to decide which
+            // HEOS branch(es) to solve.  When both roots are valid, solve
+            // both HEOS densities and pick the phase with lower Gibbs energy.
+            // This mirrors the pattern in solver_rho_Tp_global().
+            double rho;
+            double rho_srk_gas = HEOS.solver_rho_Tp_SRK(T_saved, p_saved, iphase_gas);
+            double rho_srk_liq = HEOS.solver_rho_Tp_SRK(T_saved, p_saved, iphase_liquid);
+            bool gas_ok = rho_srk_gas > 0 && ValidNumber(rho_srk_gas);
+            bool liq_ok = rho_srk_liq > 0 && ValidNumber(rho_srk_liq);
+
+            if (gas_ok && liq_ok) {
+                // Both SRK roots valid — solve both HEOS roots, pick lower Gibbs
+                double rho_gas = -1, rho_liq = -1;
+                HEOS.specify_phase(iphase_gas);
+                try {
+                    rho_gas = HEOS.solver_rho_Tp(T_saved, p_saved);
+                } catch (...) {
+                }
+                HEOS.specify_phase(iphase_liquid);
+                try {
+                    rho_liq = HEOS.solver_rho_Tp(T_saved, p_saved);
+                } catch (...) {
+                }
+                HEOS.unspecify_phase();
+
+                if (rho_gas > 0 && rho_liq > 0) {
+                    double G_gas = HEOS.calc_gibbsmolar_nocache(T_saved, rho_gas);
+                    double G_liq = HEOS.calc_gibbsmolar_nocache(T_saved, rho_liq);
+                    rho = (G_liq <= G_gas) ? rho_liq : rho_gas;
+                } else if (rho_gas > 0 || rho_liq > 0) {
+                    rho = (rho_gas > 0) ? rho_gas : rho_liq;
+                } else {
+                    throw ValueError("Unable to obtain either HEOS density root in PT_flash_mixtures");
+                }
+            } else {
+                // Only one SRK root valid (or neither) — solve that branch,
+                // fall back to the other if HEOS throws.
+                phases primary = gas_ok ? iphase_gas : (liq_ok ? iphase_liquid : iphase_gas);
+                phases fallback = (primary == iphase_gas) ? iphase_liquid : iphase_gas;
+                HEOS.specify_phase(primary);
+                try {
+                    rho = HEOS.solver_rho_Tp(T_saved, p_saved);
+                } catch (...) {
+                    HEOS.specify_phase(fallback);
+                    try {
+                        rho = HEOS.solver_rho_Tp(T_saved, p_saved);
+                    } catch (...) {
+                        HEOS.unspecify_phase();
+                        throw;
+                    }
+                }
+                HEOS.unspecify_phase();
+            }
+            HEOS.update_DmolarT_direct(rho, T_saved);
             HEOS._Q = -1;
-            HEOS._phase = HEOS.imposed_phase_index;
+            HEOS._phase = (rho < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
         }
+    } else {
+        // It's single-phase, and phase is imposed
+        const CoolPropDbl T_saved = HEOS.T();
+        const CoolPropDbl p_saved = HEOS.p();
+        double rho = HEOS.solver_rho_Tp(T_saved, p_saved);
+        HEOS.update_DmolarT_direct(rho, T_saved);
+        HEOS._Q = -1;
+        HEOS._phase = HEOS.imposed_phase_index;
     }
 }
 void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend& HEOS) {

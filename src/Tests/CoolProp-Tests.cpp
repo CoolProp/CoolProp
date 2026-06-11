@@ -4126,6 +4126,42 @@ TEST_CASE_METHOD(PropertyLimitsFixture, "Below-melting PT guard honors DONT_CHEC
     }
 }
 
+TEST_CASE("PT update below melting-line pmin succeeds without specify_phase for all HEOS fluids", "[melting]") {
+    // Before the fix in HelmholtzEOSMixtureBackend.cpp, the phase-determination
+    // paths called melting_line(iT, iP, p) unconditionally for any fluid with a
+    // melting-line fit, including when p was below pmin (the triple-point pressure).
+    // The evaluator threw an out-of-bounds error in that case, breaking any call
+    // that omits specify_phase when the pressure is below the fit's lower bound --
+    // for example Argon in an air mixture where the partial pressure (~941 Pa) is
+    // far below Argon's pmin (~69 688 Pa).
+    using namespace CoolProp;
+    const std::vector<std::string> all_fluids = strsplit(get_global_param_string("fluids_list"), ',');
+    for (const auto& name : all_fluids) {
+        std::shared_ptr<AbstractState> AS;
+        try {
+            AS.reset(AbstractState::factory("HEOS", name));
+        } catch (...) {
+            continue;
+        }
+        if (!AS->has_melting_line()) continue;
+
+        const double pmin = AS->melting_line(iP_min, -1, -1);
+        // Just below the lower bound of the melting-line fit
+        const double p_test = 0.99 * pmin;
+        // Well above the triple point temperature -- unambiguously gas at p < ptriple
+        const double T_test = AS->Ttriple() * 1.1;
+
+        SECTION(name) {
+            CAPTURE(pmin);
+            CAPTURE(p_test);
+            CAPTURE(T_test);
+            CHECK_NOTHROW(AS->update(PT_INPUTS, p_test, T_test));
+            CHECK(ValidNumber(AS->rhomolar()));
+            CHECK(AS->rhomolar() > 0);
+        }
+    }
+}
+
 TEST_CASE("HeavyWater (D2O) melting line matches Herrig et al. check values", "[melting]") {
     // Melting-pressure equations Eqs. (4)-(7) of Herrig, Thol, Harvey, Lemmon,
     // "A Reference Equation of State for Heavy Water," J. Phys. Chem. Ref. Data

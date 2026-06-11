@@ -7,6 +7,7 @@
 #    include "CoolProp/DataStructures.h"
 #    include "CoolProp/numerics/numerics.h"  // ValidNumber: scalar PropsSI/HAPropsSI raise on non-finite (Cython parity)
 #    include "CoolProp/detail/state_capi.h"
+#    include "CoolProp/superancillary/superancillary.h"
 #    include "Backends/Helmholtz/MixtureParameters.h"
 
 #    include <nanobind/nanobind.h>
@@ -83,6 +84,23 @@ static std::vector<double> _to_vec(nb::handle o, bool& is_seq) {
 // Raise a Python ValueError carrying CoolProp's global error string if x is not
 // finite -- the legacy scalar PropsSI/HAPropsSI raised ValueError rather than
 // returning inf/nan (bd CoolProp-r9sq.21/.22).
+// A single output name -> 1-element vector; a list/tuple/ndarray of names ->
+// the corresponding vector<string>.  Drives the multi-output PropsSI overload
+// (first argument a sequence of outputs), mirroring the legacy Cython
+// iterable(in1) branch that builds vin1 from a string-or-sequence in1.
+static std::vector<std::string> _to_str_vec(nb::handle o) {
+    if (nb::isinstance<nb::str>(o)) {
+        return {nb::cast<std::string>(o)};
+    }
+    // list/tuple/ndarray of strings (or any other iterable of str): iterate so a
+    // numpy '<U..' string array works as well as a Python list/tuple.
+    std::vector<std::string> out;
+    for (nb::handle item : o) {
+        out.push_back(nb::cast<std::string>(item));
+    }
+    return out;
+}
+
 static void _raise_if_invalid(double x) {
     // Qualified: this helper is at file scope, before init_CoolProp's `using namespace CoolProp`.
     // (ValidNumber lives in the global namespace; get_global_param_string in CoolProp.)
@@ -143,6 +161,10 @@ void capi_destroy(void* h) {
     }
 }
 void capi_update(void* h, long input_pair, double v1, double v2) {
+    if (h == nullptr) {
+        capi_set_error("update: null handle");
+        return;
+    }
     try {
         (*static_cast<_CAPI_SP*>(h))->update(static_cast<CoolProp::input_pairs>(input_pair), v1, v2);
         g_capi_error.clear();
@@ -153,6 +175,10 @@ void capi_update(void* h, long input_pair, double v1, double v2) {
     }
 }
 double capi_keyed_output(void* h, long key) {
+    if (h == nullptr) {
+        capi_set_error("keyed_output: null handle");
+        return NAN;
+    }
     try {
         double v = (*static_cast<_CAPI_SP*>(h))->keyed_output(static_cast<CoolProp::parameters>(key));
         g_capi_error.clear();
@@ -166,6 +192,10 @@ double capi_keyed_output(void* h, long key) {
     }
 }
 double capi_first_partial_deriv(void* h, long Of, long Wrt, long Constant) {
+    if (h == nullptr) {
+        capi_set_error("first_partial_deriv: null handle");
+        return NAN;
+    }
     try {
         double v = (*static_cast<_CAPI_SP*>(h))
                      ->first_partial_deriv(static_cast<CoolProp::parameters>(Of), static_cast<CoolProp::parameters>(Wrt),
@@ -222,12 +252,152 @@ void capi_specify_phase(void* h, long phase) {
         capi_set_error(nullptr);
     }
 }
+void capi_unspecify_phase(void* h) {
+    if (h == nullptr) {
+        capi_set_error("unspecify_phase: null handle");
+        return;
+    }
+    try {
+        (*static_cast<_CAPI_SP*>(h))->unspecify_phase();
+        g_capi_error.clear();
+    } catch (const std::exception& e) {
+        capi_set_error(e.what());
+    } catch (...) {
+        capi_set_error(nullptr);
+    }
+}
 const CoolProp_StateCAPI g_state_capi = {
-  capi_make, capi_destroy, capi_update, capi_keyed_output, capi_first_partial_deriv, capi_last_error, capi_set_mole_fractions, capi_specify_phase};
+  capi_make,          capi_destroy,        capi_update, capi_keyed_output, capi_first_partial_deriv, capi_last_error, capi_set_mole_fractions,
+  capi_specify_phase, capi_unspecify_phase};
 }  // namespace
+
+// Bind the superancillary classes (Chebyshev rootfinding building blocks +
+// the SuperAncillary saturation evaluator).  1:1 mirror of the legacy Cython
+// surface in wrappers/Python/CoolProp/CoolProp.pyx, with the raw-pointer C
+// methods wrapped to take/return contiguous 1-D numpy arrays.  ArrayType is
+// std::vector<double> to match the legacy bindings.  See CoolProp-1tbe.5.
+static void init_superancillary(nb::module_& m) {
+    namespace sa = CoolProp::superancillary;
+    using SAArray = std::vector<double>;
+    using ChebExp = sa::ChebyshevExpansion<SAArray>;
+    using ChebApprox1D = sa::ChebyshevApproximation1D<SAArray>;
+    using SuperAnc = sa::SuperAncillary<SAArray>;
+    using ArrD = nb::ndarray<double, nb::ndim<1>, nb::c_contig>;
+    using ArrSz = nb::ndarray<std::size_t, nb::ndim<1>, nb::c_contig>;
+
+    // The two POD structs returned by ChebyshevApproximation1D::monotonic_intervals().
+    nb::class_<sa::MonotonicExpansionMatch>(m, "MonotonicExpansionMatch")
+      .def_ro("idx", &sa::MonotonicExpansionMatch::idx)
+      .def_ro("ymin", &sa::MonotonicExpansionMatch::ymin)
+      .def_ro("ymax", &sa::MonotonicExpansionMatch::ymax)
+      .def_ro("xmin", &sa::MonotonicExpansionMatch::xmin)
+      .def_ro("xmax", &sa::MonotonicExpansionMatch::xmax);
+
+    nb::class_<sa::IntervalMatch>(m, "IntervalMatch")
+      .def_ro("expansioninfo", &sa::IntervalMatch::expansioninfo)
+      .def_ro("xmin", &sa::IntervalMatch::xmin)
+      .def_ro("xmax", &sa::IntervalMatch::xmax)
+      .def_ro("ymin", &sa::IntervalMatch::ymin)
+      .def_ro("ymax", &sa::IntervalMatch::ymax);
+
+    nb::class_<ChebExp>(m, "ChebyshevExpansion")
+      .def(nb::init<double, double, SAArray>(), nb::arg("xmin"), nb::arg("xmax"), nb::arg("coef"))
+      .def("xmin", &ChebExp::xmin)
+      .def("xmax", &ChebExp::xmax)
+      .def("coeff", [](const ChebExp& e) { return e.coeff(); })
+      .def(
+        "eval_many",
+        [](const ChebExp& e, ArrD x, ArrD y) {
+            if (x.shape(0) != y.shape(0)) {
+                throw nb::value_error("x and y are not the same size");
+            }
+            e.eval_manyC<double>(x.data(), y.data(), x.shape(0));
+        },
+        nb::arg("x"), nb::arg("y"))
+      .def("solve_for_x", &ChebExp::solve_for_x, nb::arg("y"), nb::arg("a"), nb::arg("b"), nb::arg("bits"), nb::arg("max_iter"),
+           nb::arg("boundstytol"))
+      .def(
+        "solve_for_x_many",
+        [](const ChebExp& e, ArrD y, double a, double b, unsigned int bits, std::size_t max_iter, double boundstytol, ArrD x, ArrSz counts) {
+            if (y.shape(0) != x.shape(0) || y.shape(0) != counts.shape(0)) {
+                throw nb::value_error("y, x and counts are not the same size");
+            }
+            e.solve_for_x_manyC<double, std::size_t>(y.data(), y.shape(0), a, b, bits, max_iter, boundstytol, x.data(), counts.data());
+        },
+        nb::arg("y"), nb::arg("a"), nb::arg("b"), nb::arg("bits"), nb::arg("max_iter"), nb::arg("boundstytol"), nb::arg("x"), nb::arg("counts"));
+
+    nb::class_<ChebApprox1D>(m, "ChebyshevApproximation1D")
+      // By-value in nb::init: nanobind materializes the vector from the Python
+      // list and passes it as an rvalue, binding the C++ `vector&&` ctor.  (An
+      // `nb::init<vector&&>` mis-handles the rvalue-ref caster and segfaults.)
+      .def(nb::init<std::vector<ChebExp>>(), nb::arg("expansions"))
+      .def("xmin", &ChebApprox1D::xmin)
+      .def("xmax", &ChebApprox1D::xmax)
+      .def("is_monotonic", &ChebApprox1D::is_monotonic)
+      .def(
+        "eval_many",
+        [](const ChebApprox1D& a, ArrD x, ArrD y) {
+            if (x.shape(0) != y.shape(0)) {
+                throw nb::value_error("x and y are not the same size");
+            }
+            a.eval_manyC<double>(x.data(), y.data(), x.shape(0));
+        },
+        nb::arg("x"), nb::arg("y"))
+      .def("get_x_for_y", &ChebApprox1D::get_x_for_y, nb::arg("y"), nb::arg("bits"), nb::arg("max_iter"), nb::arg("boundstytol"))
+      .def(
+        "count_x_for_y_many",
+        [](const ChebApprox1D& a, ArrD y, unsigned int bits, std::size_t max_iter, double boundstytol, ArrSz counts) {
+            if (y.shape(0) != counts.shape(0)) {
+                throw nb::value_error("y and counts are not the same size");
+            }
+            a.count_x_for_y_manyC<double, std::size_t>(y.data(), y.shape(0), bits, max_iter, boundstytol, counts.data());
+        },
+        nb::arg("y"), nb::arg("bits"), nb::arg("max_iter"), nb::arg("boundstytol"), nb::arg("counts"))
+      .def("monotonic_intervals", [](const ChebApprox1D& a) { return a.get_monotonic_intervals(); });
+
+    nb::class_<SuperAnc>(m, "SuperAncillary")
+      .def(nb::init<const std::string&>(), nb::arg("json_as_string"))
+      .def(
+        "eval_sat",
+        [](const SuperAnc& s, double T, const std::string& prop, short Q) {
+            if (prop.empty()) {
+                throw nb::value_error("prop must be a non-empty string");
+            }
+            return s.eval_sat(T, prop[0], Q);
+        },
+        nb::arg("T"), nb::arg("prop"), nb::arg("Q"))
+      .def(
+        "eval_sat_many",
+        [](const SuperAnc& s, ArrD T, const std::string& prop, short Q, ArrD y) {
+            if (prop.empty()) {
+                throw nb::value_error("prop must be a non-empty string");
+            }
+            if (T.shape(0) != y.shape(0)) {
+                throw nb::value_error("T and y are not the same size");
+            }
+            s.eval_sat_manyC<double>(T.data(), T.shape(0), prop[0], Q, y.data());
+        },
+        nb::arg("T"), nb::arg("prop"), nb::arg("Q"), nb::arg("y"));
+}
 
 void init_CoolProp(nb::module_& m) {
     using namespace CoolProp;
+
+    // Map every CoolProp C++ exception to a Python ValueError, matching the
+    // legacy Cython wrapper (which declared `except +ValueError` on every
+    // bound method).  Without this, nanobind's default translator sends
+    // CoolPropBaseError -- which derives from std::exception, not one of the
+    // std types nanobind special-cases -- to RuntimeError, silently breaking
+    // the canonical `try: ... except ValueError` pattern around a failed
+    // AbstractState.update() (incl. CoolProp's own shipped Plots code).
+    // See CoolProp-1tbe.2.
+    nb::register_exception_translator([](const std::exception_ptr& p, void* /*payload*/) {
+        try {
+            std::rethrow_exception(p);
+        } catch (const CoolProp::CoolPropBaseError& e) {
+            PyErr_SetString(PyExc_ValueError, e.what());
+        }
+    });
 
     nb::class_<SimpleState>(m, "SimpleState")
       .def(nb::init<>())
@@ -833,6 +1003,68 @@ void init_CoolProp(nb::module_& m) {
               nb::capsule owner(data, [](void* p) noexcept { delete[] static_cast<double*>(p); });
               return nb::cast(nb::ndarray<nb::numpy, double>(data, {n_out}, owner));
           });
+    // Multi-output vectorized PropsSI: the FIRST argument is a sequence of output
+    // names (list/tuple/ndarray of str).  This is the legacy Cython `iterable(in1)`
+    // branch, which dispatches to PropsSImulti and returns np.squeeze(np.array(out))
+    // of the [input][output] matrix.  Registered AFTER the single-string overloads
+    // so a plain str Output still binds to those (this one only catches a sequence
+    // first argument).  GitHub #3145 / bd CoolProp-9eoj: restore the legacy
+    // PropsSI(["Dmass","viscosity"], "T", [...], "P", ..., "Water") matrix form.
+    m.def("PropsSI",
+          [](nb::object Output, const std::string& Name1, nb::object Prop1, const std::string& Name2, nb::object Prop2,
+             const std::string& FluidName) -> nb::object {
+              std::vector<std::string> outputs = _to_str_vec(Output);
+              bool s1 = false, s2 = false;
+              std::vector<double> v1 = _to_vec(Prop1, s1);
+              std::vector<double> v2 = _to_vec(Prop2, s2);
+              // Empty state inputs -> empty array (mirrors the legacy #2417 short-circuit).
+              if ((s1 && v1.empty()) || (s2 && v2.empty())) {
+                  auto* empty = new double[1];
+                  nb::capsule owner(empty, [](void* p) noexcept { delete[] static_cast<double*>(p); });
+                  return nb::cast(nb::ndarray<nb::numpy, double>(empty, {static_cast<std::size_t>(0)}, owner));
+              }
+              std::size_t n = std::max(v1.size(), v2.size());
+              _broadcast_to(v1, n, "Prop1");
+              _broadcast_to(v2, n, "Prop2");
+              std::string backend, fluid;
+              extract_backend(FluidName, backend, fluid);
+              std::vector<double> fractions{1.0};
+              std::string delimited = extract_fractions(fluid, fractions);
+              std::vector<std::string> fluids = _split_str(delimited, '&');
+              std::vector<std::vector<double>> out = PropsSImulti(outputs, Name1, v1, Name2, v2, backend, fluids, fractions);
+              if (out.empty() || out[0].empty()) {
+                  // Legacy raised ValueError (not RuntimeError) on a failed evaluation.
+                  PyErr_SetString(PyExc_ValueError, get_global_param_string("errstring").c_str());
+                  throw nb::python_error();
+              }
+              // out is the [input][output] matrix: nrows inputs, m_out outputs.  Take
+              // the row count from the returned matrix (not the pre-call broadcast n)
+              // so the buffer and shape can never disagree with what PropsSImulti gave
+              // back, mirroring the single-output overload above.  Lay it out row-major
+              // and apply the legacy np.squeeze rule -- drop any singleton axis, but
+              // never collapse below 1-D (ndarray_or_iterable's ndim==0 -> reshape(-1)
+              // guard).  So (n,m)->(n,m); (n,1)->(n,); (1,m)->(m,); (1,1)->(1,).
+              std::size_t nrows = out.size();
+              std::size_t m_out = out[0].size();
+              auto* data = new double[std::max<std::size_t>(1, nrows * m_out)];
+              nb::capsule owner(data, [](void* p) noexcept { delete[] static_cast<double*>(p); });
+              for (std::size_t i = 0; i < nrows; ++i) {
+                  for (std::size_t j = 0; j < m_out; ++j) {
+                      data[i * m_out + j] = out[i][j];
+                  }
+              }
+              std::vector<std::size_t> shape;
+              if (nrows > 1) {
+                  shape.push_back(nrows);
+              }
+              if (m_out > 1) {
+                  shape.push_back(m_out);
+              }
+              if (shape.empty()) {
+                  shape.push_back(1);  // (1,1) collapses to a 1-element 1-D array, not a scalar
+              }
+              return nb::cast(nb::ndarray<nb::numpy, double>(data, shape.size(), shape.data(), owner));
+          });
     // Legacy compatibility: the Cython PropsSI also accepted the 2-arg trivial
     // form PropsSI("Tcrit", "Water") (order-lenient).  Restore it as an overload
     // dispatching to Props1SI; raise ValueError on a non-finite result (parity).
@@ -891,9 +1123,13 @@ void init_CoolProp(nb::module_& m) {
               std::vector<double> out(n);
               for (std::size_t i = 0; i < n; ++i) {
                   out[i] = HumidAir::HAPropsSI(Output, N1, v1[i], N2, v2[i], N3, v3[i]);
+                  // Legacy HAPropsSI raised ValueError on the FIRST non-finite result for
+                  // vector inputs too (HumidAirProp.pyx), not just the all-scalar case --
+                  // validate every element so a NaN/inf cannot pass silently through an
+                  // array/list result (CoolProp-1tbe.11).
+                  _raise_if_invalid(out[i]);
               }
               if (!any_seq) {
-                  _raise_if_invalid(out[0]);
                   return nb::float_(out[0]);
               }
               if (any_ndarray) {
@@ -948,6 +1184,9 @@ void init_CoolProp(nb::module_& m) {
             throw std::invalid_argument("Invalid number of inputs to set_reference_state");
         }
     });
+
+    // Chebyshev rootfinding + SuperAncillary saturation evaluator classes.
+    init_superancillary(m);
 }
 
 #    if defined(COOLPROP_NANOBIND_MODULE)

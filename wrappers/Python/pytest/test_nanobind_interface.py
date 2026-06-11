@@ -55,6 +55,16 @@ def test_abstractstate_update_pt(water):
     assert water.T() == pytest.approx(300.0)
 
 
+def test_abstractstate_update_failure_raises_valueerror(water):
+    # A failing AbstractState.update() must raise ValueError, matching the
+    # legacy Cython wrapper.  Without the nanobind exception translator the
+    # underlying CoolPropBaseError surfaces as RuntimeError, silently breaking
+    # the canonical `try: ... except ValueError` pattern (incl. CoolProp's own
+    # shipped Plots code).  CoolProp-1tbe.2.
+    with pytest.raises(ValueError):
+        water.update(CP.PT_INPUTS, -1.0, -1.0)
+
+
 def test_get_fluid_constant(water):
     assert water.get_fluid_constant(0, CP.iT_critical) == pytest.approx(647.096, rel=1e-4)
 

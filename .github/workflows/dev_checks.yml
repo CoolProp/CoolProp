@@ -254,7 +254,9 @@ jobs:
           # 3.9-3.11 use their own per-version wheel; 3.12/3.13/3.14 all install the
           # single cp312-abi3 wheel (the crux of abi3 -- it must work on each).
           ran=0
+          ran_abi3=0   # legs that ran the cp312-abi3 wheel (3.12/3.13/3.14)
           for PY in 3.9 3.10 3.11 3.12 3.13 3.14; do
+            is_abi3=0
             case "$PY" in
               3.9 | 3.10 | 3.11)
                 tag="cp${PY/./}"
@@ -262,6 +264,7 @@ jobs:
                 ;;
               *)
                 WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl 2>/dev/null || true)
+                is_abi3=1
                 ;;
             esac
             if [ -z "$WHL" ]; then
@@ -271,21 +274,50 @@ jobs:
             echo "::group::pytest on Python $PY ($(basename "$WHL"))"
             uv venv --python "$PY" ".venv-$PY"
             source ".venv-$PY/bin/activate"
-            # Guard the runtime-dep install: a brand-new interpreter may transiently
+            # Install the TEST DEPS first: a brand-new interpreter may transiently
             # lack pytest/numpy cp wheels (a toolchain gap, not a regression) -- warn
-            # and skip that leg. The `ran` counter still fails the job if NO leg ran.
-            if ! uv pip install pytest numpy "$WHL"; then
-              echo "::warning::runtime deps unavailable on Python $PY; skipping this leg"
+            # and skip that leg. But the CoolProp wheel ITSELF failing to install is a
+            # real defect, so install it SEPARATELY (below) under `set -e` -- a broken
+            # or mis-built wheel must fail the job, not warn-and-skip (CoolProp-1tbe.12).
+            if ! uv pip install pytest numpy; then
+              echo "::warning::test deps (pytest/numpy) unavailable on Python $PY; skipping this leg"
               deactivate; echo "::endgroup::"; continue
             fi
+            uv pip install "$WHL"   # broken/incompatible wheel -> hard fail via set -e
             uv pip install mypy || echo "::warning::mypy unavailable on $PY; test_stub mypy check will skip"
             python -c "import sys; print('Python', sys.version.split()[0])"
             pytest wrappers/Python/pytest -q
             ran=$((ran + 1))
+            if [ "$is_abi3" -eq 1 ]; then ran_abi3=$((ran_abi3 + 1)); fi
             deactivate
             echo "::endgroup::"
           done
           test "$ran" -gt 0 || { echo "::error::no Python interpreter could run a nanobind wheel"; exit 1; }
+          # The cp312-abi3 wheel is the v8 crux (one wheel for 3.12/3.13/3.14); it must
+          # actually be exercised on at least one of them, else a broken abi3 wheel
+          # could green the job on the 3.9-3.11 per-version legs alone (CoolProp-1tbe.12).
+          test "$ran_abi3" -gt 0 || { echo "::error::the cp312-abi3 wheel ran on NO interpreter (3.12/3.13/3.14) -- it is the v8 crux and must be tested"; exit 1; }
+
+      - name: PDSim cimport contract (compile + run against the abi3 wheel)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PDSim consumes CoolProp's cdef State / AbstractState / constants
+          # surface via `cimport` (dev/pdsim_cimport_contract/SURFACE.md), incl.
+          # `from CoolProp.CoolProp cimport State`.  Compile + run the frozen
+          # contract against the installed v8 wheel so a drift in that surface
+          # fails CI here rather than silently breaking PDSim's next build
+          # (CoolProp-1tbe.6).  Fail-closed: a missing wheel is a hard error.
+          WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl 2>/dev/null || true)
+          if [ -z "$WHL" ]; then
+            echo "::error::no cp312-abi3 wheel found for the PDSim cimport contract"
+            exit 1
+          fi
+          uv venv --python 3.12 .venv-pdsim
+          source .venv-pdsim/bin/activate
+          uv pip install "cython>=3.1" setuptools numpy "$WHL"
+          python dev/pdsim_cimport_contract/run_contract.py
+          deactivate
 
   clang-tidy:
     name: clang-tidy (diff-only, informational)

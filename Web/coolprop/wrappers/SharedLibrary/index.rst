@@ -199,7 +199,7 @@ Here is another snippet of using the shared library in windows when (for your ap
     // This is to get all the function prototypes from the header
     #define EXPORT_CODE extern "C" __declspec(dllimport)
     #define CONVENTION __stdcall
-    #include "CoolPropLib.h"
+    #include "CoolProp/CoolPropLib.h"
     #undef EXPORT_CODE
     #undef CONVENTION
 
@@ -219,7 +219,7 @@ Based on the discussion on `GitHub <https://github.com/CoolProp/CoolProp/issues/
 
     cat <<EOF > main.cpp
     #include <iostream>
-    #include "CoolPropLib.h"
+    #include "CoolProp/CoolPropLib.h"
     int main(){
         double T{293.15};
         double P{1e5};

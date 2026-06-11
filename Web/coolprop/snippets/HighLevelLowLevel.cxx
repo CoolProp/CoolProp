@@ -1,5 +1,5 @@
-#include "CoolPropLib.h"
-#include "CoolPropTools.h"
+#include "CoolProp/CoolPropLib.h"
+#include "CoolProp/detail/tools.h"
 #include <vector>
 #include <time.h>
 

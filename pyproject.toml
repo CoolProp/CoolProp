@@ -1,7 +1,14 @@
 [build-system]
 # nanobind is required for the v8 core (built whenever COOLPROP_NANOBIND=ON,
 # which is now the default for the published wheels -- bd CoolProp-r9sq.6).
-requires = ["scikit-build-core>=0.10", "cython>=0.29", "nanobind>=2.0"]
+# nanobind is PINNED to match the stub drift gate (.github/workflows/dev_checks.yml
+# installs nanobind==2.12.0): isolated builds (publish cibuildwheel, sdist
+# pip install) resolve build-system.requires, so an unpinned `>=2.0` could build
+# the published wheel with a newer nanobind than the gate validated, drifting the
+# generated bindings/stub. Bump this and the gate version together (CoolProp-1tbe.13).
+# Cython >= 3.1 is required for the limited-API (Py_LIMITED_API) State/_constants
+# sidecars that make the single cp312-abi3 wheel.
+requires = ["scikit-build-core>=0.10", "cython>=3.1", "nanobind==2.12.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -11,19 +18,18 @@ authors = [
 ]
 description = "Open-source thermodynamic and transport properties database"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Other Environment",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
@@ -112,7 +118,7 @@ wheel.py-api = "cp312"
 
 [tool.cibuildwheel]
 # Build for multiple Python versions (CPython only)
-build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
+build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 
 # Skip musllinux for now
 skip = "*-musllinux_*"

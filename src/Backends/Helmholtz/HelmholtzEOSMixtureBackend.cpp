@@ -103,6 +103,12 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPro
 }
 void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV) {
 
+    // Drop the cached ECS transport reference fluids: they are tied to the
+    // OLD component's reference-fluid name, so a post-construction component
+    // swap must rebuild them.  (No-op at construction, where they are null.)
+    viscosity_ecs_reference_state.reset();
+    conductivity_ecs_reference_state.reset();
+
     // Copy the components
     this->components = components;
     this->N = components.size();
@@ -834,13 +840,17 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilut
 
         // Check if using ECS
         if (component.transport.viscosity_using_ECS) {
-            // Get reference fluid name
-            std::string fluid_name = component.transport.viscosity_ecs.reference_fluid;
-            std::vector<std::string> names(1, fluid_name);
-            // Get a managed pointer to the reference fluid for ECS
-            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid = std::make_shared<HelmholtzEOSMixtureBackend>(names);
+            // Build the reference fluid once and cache it — viscosity_ECS resets
+            // its state on every call (conformal_state_solver + update_DmolarT_direct),
+            // so reusing the backend is safe and avoids deep-copying the entire
+            // reference-fluid EOS on every viscosity evaluation.
+            if (!viscosity_ecs_reference_state) {
+                std::string fluid_name = component.transport.viscosity_ecs.reference_fluid;
+                std::vector<std::string> names(1, fluid_name);
+                viscosity_ecs_reference_state = std::make_shared<HelmholtzEOSMixtureBackend>(names);
+            }
             // Get the viscosity using ECS and stick in the critical value
-            critical = TransportRoutines::viscosity_ECS(*this, *ref_fluid);
+            critical = TransportRoutines::viscosity_ECS(*this, *viscosity_ecs_reference_state);
             return;
         }
 
@@ -926,13 +936,17 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
 
         // Check if using ECS
         if (component.transport.conductivity_using_ECS) {
-            // Get reference fluid name
-            std::string fluid_name = component.transport.conductivity_ecs.reference_fluid;
-            std::vector<std::string> name(1, fluid_name);
-            // Get a managed pointer to the reference fluid for ECS
-            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid = std::make_shared<HelmholtzEOSMixtureBackend>(name);
-            // Get the viscosity using ECS and store in initial_density (not normally used);
-            initial_density = TransportRoutines::conductivity_ECS(*this, *ref_fluid);  // Warning: not actually initial_density
+            // Build the reference fluid once and cache it — conductivity_ECS resets
+            // its state on every call, so reusing the backend is safe and avoids
+            // deep-copying the entire reference-fluid EOS on every conductivity
+            // evaluation (the dominant cost of SVDSBTL surface builds for ECS fluids).
+            if (!conductivity_ecs_reference_state) {
+                std::string fluid_name = component.transport.conductivity_ecs.reference_fluid;
+                std::vector<std::string> name(1, fluid_name);
+                conductivity_ecs_reference_state = std::make_shared<HelmholtzEOSMixtureBackend>(name);
+            }
+            // Get the conductivity using ECS and store in initial_density (not normally used);
+            initial_density = TransportRoutines::conductivity_ECS(*this, *conductivity_ecs_reference_state);  // Warning: not actually initial_density
             return;
         }
 
@@ -1698,8 +1712,11 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         switch (other) {
             case iT: {
                 // Check for the presence of the melting line (skipped when the caller has
-                // opted out of property-limit checks, mirroring the subcritical path below)
-                if (has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
+                // opted out of property-limit checks, mirroring the subcritical path below).
+                // Also skip when _p is below the lower bound of the melting-line fit
+                // (i.e. below the triple-point pressure); the fit is undefined there and
+                // the fluid must be gas or gas+solid, never liquid.
+                if (has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS) && _p > calc_melting_line(iP_min, -1, -1)) {
                     double Tm = melting_line(iT, iP, _p);
                     if (_T < Tm - 0.001) {
                         throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
@@ -1775,7 +1792,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
 
                 if (other == iT) {
                     if (value < Tsat - 100 * DBL_EPSILON) {
-                        if (has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
+                        if (has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS) && _p > calc_melting_line(iP_min, -1, -1)) {
                             double Tm = melting_line(iT, iP, _p);
                             if (_T < Tm - 0.001) {
                                 throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
@@ -1845,7 +1862,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         switch (other) {
             case iT: {
 
-                if (has_melting_line()) {
+                if (has_melting_line() && _p > calc_melting_line(iP_min, -1, -1)) {
                     double Tm = melting_line(iT, iP, _p);
                     if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
                         _phase = iphase_liquid;
@@ -2162,7 +2179,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
 
     // Check for the presence of the melting line (skipped when the caller has opted out
     // of property-limit checks, mirroring p_phase_determination_pure_or_pseudopure)
-    if (other == iP && has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
+    if (other == iP && has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS) && value > calc_melting_line(iP_min, -1, -1)) {
         double Tm = melting_line(iT, iP, value);
         if (_T < Tm - 0.001) {
             throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
