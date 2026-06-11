@@ -1906,7 +1906,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         bool ss_decided = false;
 
         for (int loop = 0; loop < max_ss_loops && !ss_decided; ++loop) {
-            std::array<double, 2> esq_pair;
+            std::array<double, 2> esq_pair = {0, 0};
             std::vector<CoolPropDbl> err(N);
 
             for (int kk = 0; kk < 2 && !ss_decided; ++kk) {
@@ -1992,7 +1992,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
             // GDEM extrapolation step ([M&M2007] Ch. 12, Sec. 12.6)
             if (esq_pair[0] > 0) {
                 double ratio = std::sqrt(esq_pair[1] / esq_pair[0]);
-                if (ratio < 0 || ratio >= 0.95) ratio = 0.95;
+                if (!ValidNumber(ratio) || ratio < 0 || ratio >= 0.95) ratio = 0.95;
                 double factor = ratio / (1.0 - ratio);
                 for (std::size_t i = 0; i < N; ++i) {
                     double ln_Y = std::log(std::max(Y[i], 1e-300));
@@ -2534,7 +2534,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         // GDEM extrapolation ([M&M2007] Ch. 12, Sec. 12.6)
         if (esq_pair[0] > 0) {
             double ratio = std::sqrt(esq_pair[1] / esq_pair[0]);
-            if (ratio < 0 || ratio >= 0.95) ratio = 0.95;
+            if (!ValidNumber(ratio) || ratio < 0 || ratio >= 0.95) ratio = 0.95;
             double factor = ratio / (1.0 - ratio);
             for (std::size_t i = 0; i < N; ++i) {
                 lnK[i] += factor * err[i];
