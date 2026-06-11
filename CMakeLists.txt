@@ -643,9 +643,11 @@ if(COOLPROP_OBJECT_LIBRARY
     # DB headers (*_JSON.h / *_CBOR.h), and detail/json.h + detail/msgpack.h
     # (they pull the un-shipped nlohmann/valijson and msgpack.hpp) plus the
     # CPmsgpack.h shim that forwards to the latter. The shipped fluids/numerics/
-    # superancillary tiers transitively require Eigen and boost on the include
-    # path, and fmt unless NO_FMTLIB is defined; dev/ci/check-installed-headers.sh
-    # compile-checks every shipped header standalone to keep this honest.
+    # superancillary tiers transitively require Eigen on the include path, and
+    # fmt unless NO_FMTLIB is defined (boost is NOT required -- the superancillary
+    # rootfinder is defined out-of-line in src/superancillary.cpp);
+    # dev/ci/check-installed-headers.sh compile-checks every shipped header
+    # standalone (Eigen-only) to keep this honest.
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
             DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
             REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)

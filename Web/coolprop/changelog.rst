@@ -143,11 +143,12 @@ Highlights:
   ``"CoolProp.h"`` (and friends) to ``"CoolProp/CoolProp.h"``. The install
   rules now ship the full ``include/CoolProp/`` tree (plus the flat shims), so
   a manual include of that directory gives usable include paths out of the box.
-  Transitive dependencies exposed by the public headers: the ``fluids/`` and
-  ``numerics/`` tiers pull in **Eigen** and the ``superancillary/`` tier pulls
-  in **boost** (headers-only), so both must be on your include path if you
-  include those tiers; and ``CoolProp/detail/strings.h`` includes **fmt**
-  unless you compile with ``-DNO_FMTLIB``. (The generated database headers —
+  Transitive dependencies exposed by the public headers: the ``fluids/``,
+  ``numerics/`` and ``superancillary/`` tiers pull in **Eigen**, so Eigen must
+  be on your include path if you include those tiers; and
+  ``CoolProp/detail/strings.h`` includes **fmt** unless you compile with
+  ``-DNO_FMTLIB``. (Boost is *not* required: the superancillary rootfinder is
+  defined out-of-line in the compiled library.) (The generated database headers —
   ``*_JSON.h`` / ``*_CBOR.h`` — and the internal ``detail/json.h`` /
   ``detail/msgpack.h`` are intentionally *not* installed.) See PRs #3074,
   #3075 and #3078 (the #1280 phases), plus #3082

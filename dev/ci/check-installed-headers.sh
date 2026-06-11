@@ -68,15 +68,15 @@ if [ -n "$LEAKED" ]; then
     exit 1
 fi
 
-# Assertion 2: no shipped header may #include nlohmann, valijson or msgpack
-# (the internal-only third-party libraries that are NOT installed).
+# Assertion 2: no shipped header may #include nlohmann, valijson, msgpack or
+# boost (the internal-only third-party libraries that are NOT installed).
 # grep -El exits 1 on no match (the PASS case) and 0 on match (the FAIL case).
 # The `|| true` prevents set -e from aborting on the no-match exit code; the
 # actual gate is the `-n` test below, which is fail-closed.
-LEAKING_INCLUDES="$(grep -rEl '#[[:space:]]*include[[:space:]]*[<"]((nlohmann|valijson)/|msgpack)' \
+LEAKING_INCLUDES="$(grep -rEl '#[[:space:]]*include[[:space:]]*[<"]((nlohmann|valijson|boost)/|msgpack)' \
     "$PREFIX" --include='*.h' --include='*.hpp' || true)"
 if [ -n "$LEAKING_INCLUDES" ]; then
-    echo "FAIL: installed header(s) #include nlohmann/valijson/msgpack (must stay internal):" >&2
+    echo "FAIL: installed header(s) #include nlohmann/valijson/msgpack/boost (must stay internal):" >&2
     printf '%s\n' "$LEAKING_INCLUDES" >&2
     exit 1
 fi
@@ -86,19 +86,21 @@ fi
 # that #includes a non-installed header by some other path (the old
 # detail/msgpack.h pulling msgpack.hpp slipped past the nlohmann/valijson grep).
 # Compile each installed *.h as its own translation unit.  The installed surface
-# legitimately depends on Eigen + boost (the fluids/numerics/superancillary
-# tiers) and on fmt unless NO_FMTLIB is defined; resolve Eigen/boost from the
-# build's CPM cache and define NO_FMTLIB so fmt is not required.
+# depends only on Eigen (the fluids/numerics/superancillary tiers) and on fmt
+# unless NO_FMTLIB is defined; resolve Eigen from the build's CPM cache and
+# define NO_FMTLIB so fmt is not required.  Boost is deliberately NOT on the
+# path: the superancillary rootfinder routes through an out-of-line helper
+# (src/superancillary.cpp), so a regression that re-introduces a boost include
+# into an installed header fails this compile (and assertion 2 above).
 CXX_BIN="${CXX:-c++}"
 CACHE="$BUILD_DIR/CMakeCache.txt"
 if [ ! -f "$CACHE" ]; then
-    echo "FAIL: $CACHE not found -- '$BUILD_DIR' is not a configured CMake build dir; cannot resolve Eigen/boost for the self-containedness check." >&2
+    echo "FAIL: $CACHE not found -- '$BUILD_DIR' is not a configured CMake build dir; cannot resolve Eigen for the self-containedness check." >&2
     exit 1
 fi
 EIGEN_DIR="$(sed -n 's/^CPM_PACKAGE_Eigen_SOURCE_DIR:INTERNAL=//p' "$CACHE" | head -1)"
-BOOST_DIR="$(sed -n 's/^CPM_PACKAGE_boost_headers_SOURCE_DIR:INTERNAL=//p' "$CACHE" | head -1)"
-if [ -z "$EIGEN_DIR" ] || [ ! -d "$EIGEN_DIR" ] || [ -z "$BOOST_DIR" ] || [ ! -d "$BOOST_DIR" ]; then
-    echo "FAIL: could not resolve Eigen/boost include dirs from $CACHE -- cannot run the self-containedness check (fail-closed)." >&2
+if [ -z "$EIGEN_DIR" ] || [ ! -d "$EIGEN_DIR" ]; then
+    echo "FAIL: could not resolve the Eigen include dir from $CACHE -- cannot run the self-containedness check (fail-closed)." >&2
     exit 1
 fi
 INC_ROOT="$(find "$PREFIX" -path '*/include/CoolProp/CoolProp.h' | head -1)"
@@ -114,7 +116,7 @@ while IFS= read -r hdr; do
     rel="${hdr#"$INC_ROOT"/}"
     if ! printf '#include "%s"\n' "$rel" | "$CXX_BIN" -std=c++17 -fsyntax-only \
             -DNO_FMTLIB -DCOOLPROP_NO_DEPRECATED_HEADER_WARNINGS \
-            -I"$INC_ROOT" -I"$EIGEN_DIR" -I"$BOOST_DIR" -x c++ - >>"$SC_LOG" 2>&1; then
+            -I"$INC_ROOT" -I"$EIGEN_DIR" -x c++ - >>"$SC_LOG" 2>&1; then
         echo "FAIL: installed header is not self-contained: $rel" >&2
         SC_FAIL=$((SC_FAIL + 1))
     fi
@@ -126,4 +128,4 @@ if [ "$SC_FAIL" -ne 0 ]; then
     exit 1
 fi
 
-echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack; all ${NHEADERS} installed headers compile standalone (-DNO_FMTLIB, Eigen+boost on the path) from ${BUILD_DIR}"
+echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack/boost; all ${NHEADERS} installed headers compile standalone (-DNO_FMTLIB, Eigen-only on the path) from ${BUILD_DIR}"

@@ -8,12 +8,35 @@
 
 #include "CoolProp/superancillary/superancillary.h"
 #include "nlohmann/json.hpp"
+#include "boost/math/tools/toms748_solve.hpp"
 
+#include <functional>
 #include <string>
 #include <vector>
 
 namespace CoolProp {
 namespace superancillary {
+
+namespace detail {
+
+// Out-of-line definition of the TOMS 748 bracketing rootfinder declared in the
+// installed header.  Keeping the boost dependency here (rather than in the
+// header) lets downstream consumers compile against superancillary.h with only
+// Eigen on the include path, not boost (CoolProp-1tbe.14).  The callable is
+// type-erased through std::function: this is the inverse (rootfinding) path,
+// NOT the hot eval_sat path, and the std::function is built once per rootfind,
+// so its indirection -- plus a possible one-time small-buffer heap allocation
+// for the larger residual closures (they exceed libc++'s 16-byte SBO) -- is
+// negligible against the tens of Chebyshev evaluations each rootfind performs.
+double toms748(const std::function<double(double)>& f, double a, double b, double fa, double fb, unsigned int bits, std::size_t max_iter) {
+    using namespace boost::math::tools;
+    auto max_iter_ = static_cast<boost::math::uintmax_t>(max_iter);
+    auto [l, r] = toms748_solve(f, a, b, fa, fb, eps_tolerance<double>(bits), max_iter_);
+    return (l + r) / 2.0;
+}
+
+}  // namespace detail
+
 namespace {
 
 template <typename ArrayType>
