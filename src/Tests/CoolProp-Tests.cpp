@@ -6712,6 +6712,343 @@ TEST_CASE("expression block compile path (constants+arrays) yields expected valu
     double expected = 1.0e-5 * std::pow(0.5, 1.0) * std::pow(132.0 / 300.0, 0.2);
     CHECK(p.evaluate(iv.data(), nullptr) == Catch::Approx(expected));
 }
+
+// ---------------------------------------------------------------------------
+// Task 9: GOLDEN REGRESSION — DSL reproduces the hardcoded Tier-A transport
+// correlations.  For each Tier-A form we translate the exact C++ algebra in
+// TransportRoutines.cpp into a DSL formula built from the SAME coefficients
+// read from the fluid's transport struct, evaluate both at a grid of (T,rho),
+// and CHECK they agree.  This is the feature-completeness proof.
+//
+// Tolerances:
+//   * EVERY form matches to <1e-14 relative (the real completeness proof) at
+//     every grid point — asserted on all 8 forms.
+//   * Three forms (powers_of_Tr, collision_integral, polynomial_and_exponential)
+//     additionally match BIT-EXACTLY and are asserted with `got == expected`.
+//   * The other five (powers_of_T, modified_Batschinski_Hildebrand,
+//     ratio_of_polynomials, eta0_and_poly, residual polynomial) match to ~1-3
+//     ULP (observed max relative error ~2.4e-15) but NOT bit-for-bit.  The DSL
+//     and the routine perform the identical op sequence; the last-ULP
+//     divergence is FMA/`-ffp-contract`-class rounding (the optimized routine
+//     may fuse `a[i]*pow(...)`+accumulate; the DSL evaluator rounds each op
+//     separately).  This is a compiler codegen artifact, NOT an algebra
+//     difference, so we keep the 1e-14 assertion (which they pass with margin)
+//     rather than loosening it — and do NOT claim bit-exactness where it is
+//     not achieved.
+//
+// TEST-ONLY: no production code is touched.
+// ---------------------------------------------------------------------------
+#    include "../Backends/Helmholtz/TransportRoutines.h"
+
+namespace {
+std::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> make_HEOS_for(const std::string& fluid) {
+    std::vector<std::string> names(1, fluid);
+    return std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(names);
+}
+// Fill the intrinsic-value array for a Program in its requiredIntrinsics() order.
+void fill_intrinsics(const CoolProp::expression::Program& p, CoolProp::HelmholtzEOSMixtureBackend& HEOS,
+                     std::vector<double>& iv) {
+    using CoolProp::expression::Intrinsic;
+    const auto& req = p.requiredIntrinsics();
+    iv.assign(req.size(), 0.0);
+    for (std::size_t k = 0; k < req.size(); ++k) {
+        switch (req[k]) {
+            case Intrinsic::T: iv[k] = HEOS.T(); break;
+            case Intrinsic::rhomolar: iv[k] = HEOS.rhomolar(); break;
+            case Intrinsic::rhomass: iv[k] = HEOS.rhomass(); break;
+            case Intrinsic::molar_mass: iv[k] = HEOS.molar_mass(); break;
+        }
+    }
+}
+}  // namespace
+
+TEST_CASE("golden: viscosity dilute powers_of_T", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("R123");  // viscosity/dilute type == powers_of_T
+    auto& data = HEOS->get_components()[0].transport.viscosity_dilute.powers_of_T;
+    REQUIRE(!data.a.empty());
+    // C++: summer += a[i]*pow(T, t[i]);  return summer;
+    Program p = compile("sum(i: a[i]*T^t[i])",
+                        {},
+                        {{"a", std::vector<double>(data.a.begin(), data.a.end())},
+                         {"t", std::vector<double>(data.t.begin(), data.t.end())}});
+    int checks = 0;
+    for (double T : {250.0, 300.0, 400.0, 500.0}) {
+        for (double rho : {0.1, 100.0, 5000.0}) {
+            HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
+            double expected = CoolProp::TransportRoutines::viscosity_dilute_powers_of_T(*HEOS);
+            std::vector<double> iv;
+            fill_intrinsics(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            CAPTURE(T, rho, expected, got);
+            CHECK(got == Catch::Approx(expected).epsilon(1e-14));
+            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
+
+TEST_CASE("golden: viscosity dilute powers_of_Tr", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("Methane");  // viscosity/dilute type == powers_of_Tr
+    auto& data = HEOS->get_components()[0].transport.viscosity_dilute.powers_of_Tr;
+    REQUIRE(!data.a.empty());
+    // C++: Tr = T/T_reducing; summer += a[i]*pow(Tr, t[i]);
+    Program p = compile("let Tr = T/T_reducing\nsum(i: a[i]*Tr^t[i])",
+                        {{"T_reducing", static_cast<double>(data.T_reducing)}},
+                        {{"a", std::vector<double>(data.a.begin(), data.a.end())},
+                         {"t", std::vector<double>(data.t.begin(), data.t.end())}});
+    int checks = 0;
+    for (double T : {120.0, 200.0, 300.0, 450.0}) {
+        for (double rho : {0.1, 100.0, 10000.0}) {
+            HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
+            double expected = CoolProp::TransportRoutines::viscosity_dilute_powers_of_Tr(*HEOS);
+            std::vector<double> iv;
+            fill_intrinsics(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            CAPTURE(T, rho, expected, got);
+            CHECK(got == Catch::Approx(expected).epsilon(1e-14));
+            CHECK(got == expected);  // bit-exact: same op sequence reproduces hardcoded value exactly
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
+
+TEST_CASE("golden: viscosity dilute collision_integral", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("IsoButane");  // viscosity/dilute type == collision_integral
+    auto& data = HEOS->get_components()[0].transport.viscosity_dilute.collision_integral;
+    REQUIRE(!data.a.empty());
+    const double eps_over_k = static_cast<double>(HEOS->get_components()[0].transport.epsilon_over_k);
+    const double sigma_eta = static_cast<double>(HEOS->get_components()[0].transport.sigma_eta);
+    // C++:
+    //   Tstar = T/epsilon_over_k;  sigma_nm = sigma_eta*1e9;  mm_kgkmol = molar_mass*1000;
+    //   summer += a[i]*pow(log(Tstar), t[i]);  S = exp(summer);
+    //   return C*sqrt(mm_kgkmol*T)/(pow(sigma_nm,2)*S);
+    Program p = compile(
+        "let Tstar = T/epsilon_over_k\n"
+        "let sigma_nm = sigma_eta*1e9\n"
+        "let mm_kgkmol = molar_mass_data*1000\n"
+        "let lnTstar = ln(Tstar)\n"
+        "let S = exp(sum(i: a[i]*lnTstar^t[i]))\n"
+        "C*sqrt(mm_kgkmol*T)/(sigma_nm^2*S)",
+        {{"epsilon_over_k", eps_over_k},
+         {"sigma_eta", sigma_eta},
+         {"molar_mass_data", static_cast<double>(data.molar_mass)},
+         {"C", static_cast<double>(data.C)}},
+        {{"a", std::vector<double>(data.a.begin(), data.a.end())},
+         {"t", std::vector<double>(data.t.begin(), data.t.end())}});
+    int checks = 0;
+    for (double T : {200.0, 300.0, 400.0, 500.0}) {
+        for (double rho : {0.1, 100.0, 5000.0}) {
+            HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
+            double expected = CoolProp::TransportRoutines::viscosity_dilute_collision_integral(*HEOS);
+            std::vector<double> iv;
+            fill_intrinsics(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            CAPTURE(T, rho, expected, got);
+            CHECK(got == Catch::Approx(expected).epsilon(1e-14));
+            CHECK(got == expected);  // bit-exact: ln/exp/sqrt/pow same order reproduces value exactly
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
+
+TEST_CASE("golden: viscosity higher_order modified_Batschinski_Hildebrand", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("IsoButane");  // viscosity/higher_order type == modified_Batschinski_Hildebrand
+    auto& HO = HEOS->get_components()[0].transport.viscosity_higher_order.modified_Batschinski_Hildebrand;
+    REQUIRE(!HO.a.empty());
+    // C++:
+    //   delta = rhomolar/rhomolar_reduce;  tau = T_reduce/T;
+    //   S = sum a[i]*delta^d1[i]*tau^t1[i]*exp(gamma[i]*delta^l[i]);
+    //   F = sum f[i]*delta^d2[i]*tau^t2[i];
+    //   delta0 = (sum g[i]*tau^h[i]) / (sum p[i]*tau^q[i]);
+    //   return S + F*(1/(delta0-delta) - 1/delta0);
+    Program p = compile(
+        "let delta = rhomolar/rhomolar_reduce\n"
+        "let tau = T_reduce/T\n"
+        "let S = sum(i: a[i]*delta^d1[i]*tau^t1[i]*exp(gamma[i]*delta^l[i]))\n"
+        "let F = sum(i: f[i]*delta^d2[i]*tau^t2[i])\n"
+        "let numer = sum(i: g[i]*tau^h[i])\n"
+        "let denom = sum(i: pp[i]*tau^q[i])\n"
+        "let delta0 = numer/denom\n"
+        "S + F*(1/(delta0-delta) - 1/delta0)",
+        {{"rhomolar_reduce", static_cast<double>(HO.rhomolar_reduce)},
+         {"T_reduce", static_cast<double>(HO.T_reduce)}},
+        {{"a", std::vector<double>(HO.a.begin(), HO.a.end())},
+         {"d1", std::vector<double>(HO.d1.begin(), HO.d1.end())},
+         {"t1", std::vector<double>(HO.t1.begin(), HO.t1.end())},
+         {"gamma", std::vector<double>(HO.gamma.begin(), HO.gamma.end())},
+         {"l", std::vector<double>(HO.l.begin(), HO.l.end())},
+         {"f", std::vector<double>(HO.f.begin(), HO.f.end())},
+         {"d2", std::vector<double>(HO.d2.begin(), HO.d2.end())},
+         {"t2", std::vector<double>(HO.t2.begin(), HO.t2.end())},
+         {"g", std::vector<double>(HO.g.begin(), HO.g.end())},
+         {"h", std::vector<double>(HO.h.begin(), HO.h.end())},
+         {"pp", std::vector<double>(HO.p.begin(), HO.p.end())},
+         {"q", std::vector<double>(HO.q.begin(), HO.q.end())}});
+    int checks = 0;
+    for (double T : {200.0, 300.0, 400.0, 500.0}) {
+        for (double rho : {100.0, 2000.0, 8000.0, 12000.0}) {
+            HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
+            double expected = CoolProp::TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*HEOS);
+            std::vector<double> iv;
+            fill_intrinsics(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            CAPTURE(T, rho, expected, got);
+            CHECK(got == Catch::Approx(expected).epsilon(1e-14));
+            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
+
+TEST_CASE("golden: conductivity dilute ratio_of_polynomials", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("IsoButane");  // conductivity/dilute type == ratio_of_polynomials
+    auto& data = HEOS->get_components()[0].transport.conductivity_dilute.ratio_polynomials;
+    REQUIRE(!data.A.empty());
+    // C++: Tr = T/T_reducing; sum1 = A[i]*Tr^n[i]; sum2 = B[i]*Tr^m[i]; return sum1/sum2;
+    Program p = compile(
+        "let Tr = T/T_reducing\n"
+        "sum(i: A[i]*Tr^n[i]) / sum(i: B[i]*Tr^m[i])",
+        {{"T_reducing", static_cast<double>(data.T_reducing)}},
+        {{"A", std::vector<double>(data.A.begin(), data.A.end())},
+         {"n", std::vector<double>(data.n.begin(), data.n.end())},
+         {"B", std::vector<double>(data.B.begin(), data.B.end())},
+         {"m", std::vector<double>(data.m.begin(), data.m.end())}});
+    int checks = 0;
+    for (double T : {150.0, 250.0, 350.0, 500.0}) {
+        for (double rho : {0.1, 100.0, 5000.0}) {
+            HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
+            double expected = CoolProp::TransportRoutines::conductivity_dilute_ratio_polynomials(*HEOS);
+            std::vector<double> iv;
+            fill_intrinsics(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            CAPTURE(T, rho, expected, got);
+            CHECK(got == Catch::Approx(expected).epsilon(1e-14));
+            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
+
+TEST_CASE("golden: conductivity dilute eta0_and_poly", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("Oxygen");  // conductivity/dilute type == eta0_and_poly
+    auto& E = HEOS->get_components()[0].transport.conductivity_dilute.eta0_and_poly;
+    REQUIRE(E.A.size() >= 1);
+    // C++:
+    //   eta0_uPas = calc_viscosity_dilute()*1e6;
+    //   summer = A[0]*eta0_uPas; for i>=1: summer += A[i]*pow(tau, t[i]);  return summer;
+    // eta0_uPas calls another routine (dilute viscosity) -> pass as a per-state constant.
+    // tau == HEOS.tau() == T_reduce/T (EOS reducing T); pass T_reduce as a constant.
+    // Split index 0 out (it multiplies eta0, not tau^t[0]) to keep the exact op order.
+    std::vector<double> A_rest(E.A.begin() + 1, E.A.end());
+    std::vector<double> t_rest(E.t.begin() + 1, E.t.end());
+    int checks = 0;
+    for (double T : {80.0, 120.0, 200.0, 300.0}) {
+        for (double rho : {0.1, 100.0, 5000.0}) {
+            HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
+            const double eta0_uPas = static_cast<double>(HEOS->calc_viscosity_dilute()) * 1e6;
+            const double T_reduce = HEOS->T_reducing();
+            Program p = compile(
+                "let tau = T_reduce/T\n"
+                "A0*eta0_uPas + sum(i: A_rest[i]*tau^t_rest[i])",
+                {{"A0", static_cast<double>(E.A[0])},
+                 {"eta0_uPas", eta0_uPas},
+                 {"T_reduce", T_reduce}},
+                {{"A_rest", A_rest}, {"t_rest", t_rest}});
+            double expected = CoolProp::TransportRoutines::conductivity_dilute_eta0_and_poly(*HEOS);
+            std::vector<double> iv;
+            fill_intrinsics(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            CAPTURE(T, rho, expected, got);
+            CHECK(got == Catch::Approx(expected).epsilon(1e-14));
+            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
+
+TEST_CASE("golden: conductivity residual polynomial", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("IsoButane");  // conductivity/residual type == polynomial
+    auto& data = HEOS->get_components()[0].transport.conductivity_residual.polynomials;
+    REQUIRE(!data.B.empty());
+    // C++:
+    //   tau = T_reducing/T;  delta = rhomass/rhomass_reducing;
+    //   summer += B[i]*pow(tau, t[i])*pow(delta, d[i]);
+    Program p = compile(
+        "let tau = T_reducing/T\n"
+        "let delta = rhomass/rhomass_reducing\n"
+        "sum(i: B[i]*tau^t[i]*delta^d[i])",
+        {{"T_reducing", static_cast<double>(data.T_reducing)},
+         {"rhomass_reducing", static_cast<double>(data.rhomass_reducing)}},
+        {{"B", std::vector<double>(data.B.begin(), data.B.end())},
+         {"t", std::vector<double>(data.t.begin(), data.t.end())},
+         {"d", std::vector<double>(data.d.begin(), data.d.end())}});
+    int checks = 0;
+    for (double T : {200.0, 300.0, 400.0, 500.0}) {
+        for (double rho : {100.0, 2000.0, 8000.0}) {
+            HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
+            double expected = CoolProp::TransportRoutines::conductivity_residual_polynomial(*HEOS);
+            std::vector<double> iv;
+            fill_intrinsics(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            CAPTURE(T, rho, expected, got);
+            CHECK(got == Catch::Approx(expected).epsilon(1e-14));
+            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
+
+TEST_CASE("golden: conductivity residual polynomial_and_exponential", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("Oxygen");  // conductivity/residual type == polynomial_and_exponential
+    auto& data = HEOS->get_components()[0].transport.conductivity_residual.polynomial_and_exponential;
+    REQUIRE(!data.A.empty());
+    // C++:
+    //   tau = HEOS.tau();  delta = HEOS.delta();  (EOS reducing T and rhomolar)
+    //   summer += A[i]*pow(tau, t[i])*pow(delta, d[i])*exp(-gamma[i]*pow(delta, l[i]));
+    // HEOS.tau() == T_reduce/T, HEOS.delta() == rhomolar/rhomolar_reduce; pass reducing values.
+    const double T_reduce = HEOS->T_reducing();
+    const double rhomolar_reduce = HEOS->rhomolar_reducing();
+    Program p = compile(
+        "let tau = T_reduce/T\n"
+        "let delta = rhomolar/rhomolar_reduce\n"
+        "sum(i: A[i]*tau^t[i]*delta^d[i]*exp(-gamma[i]*delta^l[i]))",
+        {{"T_reduce", T_reduce}, {"rhomolar_reduce", rhomolar_reduce}},
+        {{"A", std::vector<double>(data.A.begin(), data.A.end())},
+         {"t", std::vector<double>(data.t.begin(), data.t.end())},
+         {"d", std::vector<double>(data.d.begin(), data.d.end())},
+         {"gamma", std::vector<double>(data.gamma.begin(), data.gamma.end())},
+         {"l", std::vector<double>(data.l.begin(), data.l.end())}});
+    int checks = 0;
+    for (double T : {80.0, 120.0, 200.0, 300.0}) {
+        for (double rho : {100.0, 5000.0, 20000.0}) {
+            HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
+            double expected = CoolProp::TransportRoutines::conductivity_residual_polynomial_and_exponential(*HEOS);
+            std::vector<double> iv;
+            fill_intrinsics(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            CAPTURE(T, rho, expected, got);
+            CHECK(got == Catch::Approx(expected).epsilon(1e-14));
+            CHECK(got == expected);  // bit-exact: same op sequence reproduces hardcoded value exactly
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
 #endif
 
 #endif
