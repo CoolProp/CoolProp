@@ -3956,13 +3956,17 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
     // rejected by the acceptance gate and fall through to the sad path.
     {
         static const bool hs_disabled_na = (std::getenv("COOLPROP_DISABLE_SUPERANC_HS") != nullptr);
-        // Decide whether the superancillary happy path above was available; if so it
-        // already ran (returning on success), so skip.  get_superanc() THROWS for a
-        // pseudo-pure fluid, so it must be guarded behind is_pure() -- only then is it
-        // safe to query.  This block therefore targets pseudo-pure fluids (Air, R407C,
-        // ...) and pure fluids with no superancillary built.
+        // Restrict this block to fluids that genuinely HAVE no superancillary, so that
+        // any fluid which does have one keeps its dome veto (the cascade only applies
+        // hs_inside_dome when sa != nullptr; without it, hs_accept can admit an in-dome
+        // METASTABLE root for a two-phase (h,s) input).  The probe is on superancillary
+        // *existence*, NOT the ENABLE_SUPERANCILLARIES config flag: a pure fluid that has
+        // a superancillary built must never enter the null-sa cascade even when the
+        // config is off -- it falls to the legacy two-phase-aware path instead.
+        // get_superanc() THROWS for a pseudo-pure fluid, so guard it behind is_pure();
+        // for pseudo-pure (Air, R407C, ...) superanc_available stays false by design.
         bool superanc_available = false;
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
+        if (HEOS.is_pure()) {
             try {
                 superanc_available = (HEOS.get_superanc() != nullptr);
             } catch (...) {  // NOLINT(bugprone-empty-catch) -- treat as "no superancillary"
