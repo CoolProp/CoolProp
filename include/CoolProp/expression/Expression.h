@@ -1,6 +1,7 @@
 #ifndef COOLPROP_EXPRESSION_H
 #define COOLPROP_EXPRESSION_H
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
@@ -10,9 +11,9 @@ namespace CoolProp {
 namespace expression {
 
 /// EOS-free independent state and pure fluid metadata, filled by the host per eval.
-enum class Intrinsic { T, rhomolar, rhomass, molar_mass };
+enum class Intrinsic : std::uint8_t { T, rhomolar, rhomass, molar_mass };
 /// State-dependent quantities the EOS must compute; v1 registry holds only p.
-enum class Derived { p };
+enum class Derived : std::uint8_t { p };
 
 namespace detail {
 struct ProgramData;
@@ -24,11 +25,11 @@ class Program
    public:
     /// Evaluate. intrinsicVals/derivedVals are arrays in the order given by
     /// requiredIntrinsics()/requiredDerived(); pass nullptr when none are required.
-    double evaluate(const double* intrinsicVals, const double* derivedVals) const;
+    [[nodiscard]] double evaluate(const double* intrinsicVals, const double* derivedVals) const;
     /// Intrinsics this program references, in the order evaluate() expects them.
-    const std::vector<Intrinsic>& requiredIntrinsics() const;
+    [[nodiscard]] const std::vector<Intrinsic>& requiredIntrinsics() const;
     /// Derived quantities this program references, in the order evaluate() expects them.
-    const std::vector<Derived>& requiredDerived() const;
+    [[nodiscard]] const std::vector<Derived>& requiredDerived() const;
 
    private:
     friend Program compile(const std::string&, const std::map<std::string, double>&,
