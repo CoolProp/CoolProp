@@ -29,8 +29,20 @@ class AbstractCubicAlphaFunction
     double Tr_over_Tci,     ///< The (constant) reducing temperature divided by the critical temperature of the pure component
       sqrt_Tr_Tci;          ///< The sqrt of the (constant) reducing temperature divided by the critical temperature of the pure component
     std::vector<double> c;  ///< The vector of constants
+    /// Incremented every time a parameter that affects term() changes (e.g., set_Tr_over_Tci());
+    /// used by AbstractCubic's aii cache to detect when cached term() values are stale.
+    unsigned long m_version = 0;
    public:
     virtual ~AbstractCubicAlphaFunction() = default;
+    /**
+     * \brief A "term" is the value of a_ii(tau) = a0_ii * alpha(tau), or one of its tau-derivatives,
+     * for this pure component's attractive energy parameter.
+     *
+     * \param tau The reciprocal reduced temperature, Tr/T
+     * \param itau The order of the derivative with respect to tau to return: itau=0 returns a_ii
+     *             itself, itau=1 returns da_ii/dtau, itau=2 the second derivative, and so on.
+     *             Implementations support itau in the range 0-4 and throw for higher orders.
+     */
     virtual double term(double tau, std::size_t itau) = 0;
     /// Compute all 5 tau-derivatives at once. Default falls back to 5 separate term() calls.
     virtual void calc_all_terms(double tau, std::array<double, 5>& terms) {
@@ -40,7 +52,14 @@ class AbstractCubicAlphaFunction
     void set_Tr_over_Tci(double Tr_over_Tci) {
         this->Tr_over_Tci = Tr_over_Tci;
         this->sqrt_Tr_Tci = sqrt(Tr_over_Tci);
+        ++m_version;
     };
+    /// Monotonically increasing counter bumped whenever this alpha function's parameters change;
+    /// callers that cache term() values (e.g., AbstractCubic::_ensure_aii_cache) can compare this
+    /// against a previously-recorded value to detect stale cache entries.
+    unsigned long version() const {
+        return m_version;
+    }
     AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)) {};
 };
 
@@ -104,11 +123,27 @@ class AbstractCubic
     /// Cache: aii_term values for the most recent tau.  Populated lazily by _ensure_aii_cache().
     mutable double m_tau_cache;
     mutable std::vector<std::array<double, 5>> m_aii_cache;
+    /// alpha[i]->version() values recorded when m_aii_cache was last populated; used together with
+    /// m_tau_cache to detect when an alpha function was mutated (e.g., via set_Tr_over_Tci()) without
+    /// going through one of AbstractCubic's own cache-invalidating setters.
+    mutable std::vector<unsigned long> m_alpha_versions_cache;
     void _ensure_aii_cache(double tau) const {
-        if (std::memcmp(&tau, &m_tau_cache, sizeof(double)) != 0) {
+        bool stale = (std::memcmp(&tau, &m_tau_cache, sizeof(double)) != 0) || (m_alpha_versions_cache.size() != alpha.size());
+        if (!stale) {
+            for (int i = 0; i < N; ++i) {
+                if (alpha[i]->version() != m_alpha_versions_cache[i]) {
+                    stale = true;
+                    break;
+                }
+            }
+        }
+        if (stale) {
             m_aii_cache.resize(N);
-            for (int i = 0; i < N; ++i)
+            m_alpha_versions_cache.resize(N);
+            for (int i = 0; i < N; ++i) {
                 alpha[i]->calc_all_terms(tau, m_aii_cache[i]);
+                m_alpha_versions_cache[i] = alpha[i]->version();
+            }
             m_tau_cache = tau;
         }
     }

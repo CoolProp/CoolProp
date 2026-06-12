@@ -295,6 +295,11 @@ double AbstractCubic::cm_term() {
 }
 
 double AbstractCubic::aii_term(double tau, std::size_t i, std::size_t itau) {
+    if (itau > 4) {
+        // m_aii_cache[i] only stores derivatives for itau = 0..4 (see calc_all_terms()); higher
+        // orders are unsupported, matching the contract of AbstractCubicAlphaFunction::term().
+        throw -1;
+    }
     _ensure_aii_cache(tau);
     return m_aii_cache[i][itau];
 }
