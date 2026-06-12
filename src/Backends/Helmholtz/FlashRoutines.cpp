@@ -1954,6 +1954,73 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
 
         CoolPropFluid& component = HEOS.components[0];
 
+        // Supercritical single-phase fast path.  The region logic below is anchored on the
+        // triple-point states (unset for pseudo-pure fluids like Air, where they default to
+        // -1) and on saturation_D_pure, which is numerically unstable near rho_c.  Together
+        // these route Air's near-critical supercritical D+X back-flashes to a branch whose
+        // Ttriple-anchored temperature bracket spans the two-phase dome, producing
+        // "p is not a valid number".  But if the caloric input lies above its value on the
+        // critical isotherm at this density, the solution temperature is above Tc, so the
+        // state is unambiguously single-phase and needs no saturation: h, s and u all
+        // increase with T at fixed rho, so bracket the residual directly on [Tc, 1.5*Tmax]
+        // and solve with TOMS748.  Any failure falls through to the legacy region logic.
+        if (other == iHmolar || other == iSmolar || other == iUmolar) {
+            const double rho_in = HEOS._rhomolar;
+            const double value_in = (other == iHmolar) ? HEOS._hmolar : ((other == iSmolar) ? HEOS._smolar : HEOS._umolar);
+            bool fast_ok = false;
+            try {
+                const double Tc_ = HEOS.T_critical();
+                const double Tb = HEOS.Tmax() * 1.5;
+                // Restrict to rho < 2*rho_c.  The Air D+X failures sit at rho/rho_c ~ 0.8-1.005,
+                // so the bound must reach just past rho_c, but it must stay well below the dense-
+                // liquid extrapolation (rho >> rho_c, e.g. ~3*rho_c) where the critical-isotherm
+                // probe X(Tc, rho) is unreliable/non-monotonic and could mis-fire onto a spurious
+                // root.  In [rho_c, 2*rho_c] a subcritical state still has value < X(Tc, rho) (X is
+                // monotonic in T there), so the probe only fires for genuinely supercritical states.
+                if (rho_in > 0 && rho_in < 2.0 * HEOS.rhomolar_critical()) {
+                    const double X_Tc = (other == iHmolar)   ? HEOS.calc_hmolar_nocache(Tc_, rho_in)
+                                        : (other == iSmolar) ? HEOS.calc_smolar_nocache(Tc_, rho_in)
+                                                             : HEOS.calc_umolar_nocache(Tc_, rho_in);
+                    if (ValidNumber(X_Tc) && ValidNumber(value_in) && value_in > X_Tc) {
+                        solver_resid resid(&HEOS, rho_in, value_in, other, Tc_, Tb);
+                        const double fa = resid.call(Tc_), fb = resid.call(Tb);
+                        if (ValidNumber(fa) && ValidNumber(fb) && fa * fb < 0) {
+                            boost::math::uintmax_t max_iter = 100;
+                            auto f = [&resid](double T) { return resid.call(T); };
+                            auto [l, r] = toms748_solve(f, Tc_, Tb, fa, fb, boost::math::tools::eps_tolerance<double>(44), max_iter);
+                            HEOS.update_DmolarT_direct(rho_in, 0.5 * (l + r));
+                            // Accept only a state that reproduces the caloric input (and rho, which
+                            // update_DmolarT_direct restored by construction); otherwise fall through.
+                            const double xout = HEOS.keyed_output(other);
+                            if (ValidNumber(xout) && std::abs(xout - value_in) <= 1e-6 * std::abs(value_in) + 1e-3) {
+                                HEOS._p = HEOS.calc_pressure_nocache(HEOS.T(), HEOS.rhomolar());
+                                HEOS._Q = 10000;
+                                HEOS.unspecify_phase();
+                                HEOS.recalculate_singlephase_phase();
+                                fast_ok = true;
+                            }
+                        }
+                    }
+                }
+            } catch (...) {  // NOLINT(bugprone-empty-catch) -- fall through to the legacy region logic below
+            }
+            if (fast_ok) {
+                return;
+            }
+            // The probes above (solver_resid::call -> update_DmolarT_direct -> clear()) overwrite
+            // the cached caloric inputs; restore the originals so the legacy path below solves for
+            // the correct target instead of a corrupted one.
+            HEOS._rhomolar = rho_in;
+            if (other == iHmolar) {
+                HEOS._hmolar = value_in;
+            } else if (other == iSmolar) {
+                HEOS._smolar = value_in;
+            } else {
+                HEOS._umolar = value_in;
+            }
+            HEOS.unspecify_phase();
+        }
+
         shared_ptr<HelmholtzEOSMixtureBackend> Sat;
         CoolPropDbl rhoLtriple = component.triple_liquid.rhomolar;
         CoolPropDbl rhoVtriple = component.triple_vapor.rhomolar;
