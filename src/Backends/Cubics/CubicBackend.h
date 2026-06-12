@@ -218,9 +218,22 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
      */
     void rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int& Nsolns, double& rho0, double& rho1, double& rho2);
 
-    /// In this class, we are already doing cubic evaluation, just delegate to our function
+    /// In this class, we are already doing cubic evaluation, just delegate to our function.
+    /// solver_rho_Tp(T, p, phase) THROWS when the requested-phase root does not exist, but
+    /// callers of solver_rho_Tp_SRK (e.g. FlashRoutines::PT_flash_mixtures) expect the
+    /// base-class negative-sentinel contract -- they test `rho > 0 && ValidNumber(rho)` and
+    /// are not wrapped in a try/catch.  Honor that contract here so a cubic-mixture
+    /// single-phase PT flash where one branch's root is absent does not throw uncaught from
+    /// update() (CoolProp-1tbe.8 finding 3B).
     CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) override {
-        return solver_rho_Tp(T, p, phase);
+        // Catch only the expected "no root" CoolProp error (a ValueError, which
+        // derives from CoolPropBaseError) -- let std::bad_alloc / programming
+        // errors propagate rather than silently degrading them to a -1 sentinel.
+        try {
+            return solver_rho_Tp(T, p, phase);
+        } catch (const CoolPropBaseError&) {
+            return -1;
+        }
     };
     /**
      * /brief Solve for rho = f(T,p)

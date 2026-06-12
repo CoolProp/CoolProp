@@ -1906,7 +1906,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         bool ss_decided = false;
 
         for (int loop = 0; loop < max_ss_loops && !ss_decided; ++loop) {
-            std::array<double, 2> esq_pair;
+            std::array<double, 2> esq_pair = {0, 0};
             std::vector<CoolPropDbl> err(N);
 
             for (int kk = 0; kk < 2 && !ss_decided; ++kk) {
@@ -1992,7 +1992,9 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
             // GDEM extrapolation step ([M&M2007] Ch. 12, Sec. 12.6)
             if (esq_pair[0] > 0) {
                 double ratio = std::sqrt(esq_pair[1] / esq_pair[0]);
-                if (ratio < 0 || ratio >= 0.95) ratio = 0.95;
+                // A NaN ratio (non-finite esq) passes both < 0 and >= 0.95, so guard it
+                // explicitly -- otherwise it poisons the GDEM lnK/Y update (CoolProp-1tbe.8 finding 4c).
+                if (!ValidNumber(ratio) || ratio < 0 || ratio >= 0.95) ratio = 0.95;
                 double factor = ratio / (1.0 - ratio);
                 for (std::size_t i = 0; i < N; ++i) {
                     double ln_Y = std::log(std::max(Y[i], 1e-300));
@@ -2534,7 +2536,9 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         // GDEM extrapolation ([M&M2007] Ch. 12, Sec. 12.6)
         if (esq_pair[0] > 0) {
             double ratio = std::sqrt(esq_pair[1] / esq_pair[0]);
-            if (ratio < 0 || ratio >= 0.95) ratio = 0.95;
+            // A NaN ratio (non-finite esq) passes both < 0 and >= 0.95, so guard it
+            // explicitly -- otherwise it poisons the GDEM lnK/Y update (CoolProp-1tbe.8 finding 4c).
+            if (!ValidNumber(ratio) || ratio < 0 || ratio >= 0.95) ratio = 0.95;
             double factor = ratio / (1.0 - ratio);
             for (std::size_t i = 0; i < N; ++i) {
                 lnK[i] += factor * err[i];
@@ -2637,6 +2641,12 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                     double beta_save = beta;
                     auto x_save = IO.x;
                     auto y_save = IO.y;
+                    // Save the densities too so a rejected trial restores a
+                    // CONSISTENT (beta, x, y, rhomolar_liq, rhomolar_vap); otherwise
+                    // a later !step_ok exit publishes densities from the rejected
+                    // trial composition (CoolProp-1tbe.8 finding 2).
+                    CoolPropDbl rhoL_save = IO.rhomolar_liq;
+                    CoolPropDbl rhoV_save = IO.rhomolar_vap;
                     beta = V_new;
                     IO.x = x_trial;
                     IO.y = y_trial;
@@ -2653,6 +2663,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                         beta = beta_save;
                         IO.x = x_save;
                         IO.y = y_save;
+                        IO.rhomolar_liq = rhoL_save;
+                        IO.rhomolar_vap = rhoV_save;
                         step_scale *= 0.5;
                     }
                 } else {
