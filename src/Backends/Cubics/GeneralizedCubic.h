@@ -32,6 +32,7 @@ class AbstractCubicAlphaFunction
     /// Incremented every time a parameter that affects term() changes (e.g., set_Tr_over_Tci());
     /// used by AbstractCubic's aii cache to detect when cached term() values are stale.
     unsigned long m_version = 0;
+
    public:
     virtual ~AbstractCubicAlphaFunction() = default;
     /**

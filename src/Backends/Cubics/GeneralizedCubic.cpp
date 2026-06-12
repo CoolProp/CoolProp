@@ -164,7 +164,7 @@ void MathiasCopemanAlphaFunction::calc_all_terms(double tau, std::array<double, 
     // a common power chain.  All five derivatives share these values.
     const double sq = sqrt_Tr_Tci / sqrt(tau);  // sqrt(Tr_over_Tci / tau)
     const double Di = 1.0 - sq;
-    const double p = sq / tau;                   // sqrt_Tr_Tci / tau^1.5
+    const double p = sq / tau;  // sqrt_Tr_Tci / tau^1.5
     const double d1Di = 0.5 * p;
     const double d2Di = -0.75 * p / tau;
     const double d3Di = 1.875 * p / (tau * tau);
@@ -178,15 +178,11 @@ void MathiasCopemanAlphaFunction::calc_all_terms(double tau, std::array<double, 
     // Many polynomial factors in (n^2-3n+2) and (n^3-6n^2+11n-6) vanish for small n.
     const double Bi = 1.0 + c0 * Di + c1 * Di2 + c2 * Di3;
     const double dBi = d1Di * (c0 + 2.0 * c1 * Di + 3.0 * c2 * Di2);
-    const double d2Bi = c0 * d2Di
-                      + 2.0 * c1 * (d1Di * d1Di + Di * d2Di)
-                      + 3.0 * c2 * Di * (2.0 * d1Di * d1Di + Di * d2Di);
-    const double d3Bi = c0 * d3Di
-                      + 2.0 * c1 * (3.0 * d1Di * d2Di + Di * d3Di)
-                      + 3.0 * c2 * (6.0 * Di * d1Di * d2Di + 2.0 * d1Di * d1Di * d1Di + Di2 * d3Di);
-    const double d4Bi = c0 * d4Di
-                      + 2.0 * c1 * (4.0 * d1Di * d3Di + 3.0 * d2Di * d2Di + Di * d4Di)
-                      + 3.0 * c2 * (12.0 * d1Di * d1Di * d2Di + Di * (8.0 * d1Di * d3Di + 6.0 * d2Di * d2Di) + Di2 * d4Di);
+    const double d2Bi = c0 * d2Di + 2.0 * c1 * (d1Di * d1Di + Di * d2Di) + 3.0 * c2 * Di * (2.0 * d1Di * d1Di + Di * d2Di);
+    const double d3Bi =
+      c0 * d3Di + 2.0 * c1 * (3.0 * d1Di * d2Di + Di * d3Di) + 3.0 * c2 * (6.0 * Di * d1Di * d2Di + 2.0 * d1Di * d1Di * d1Di + Di2 * d3Di);
+    const double d4Bi = c0 * d4Di + 2.0 * c1 * (4.0 * d1Di * d3Di + 3.0 * d2Di * d2Di + Di * d4Di)
+                        + 3.0 * c2 * (12.0 * d1Di * d1Di * d2Di + Di * (8.0 * d1Di * d3Di + 6.0 * d2Di * d2Di) + Di2 * d4Di);
 
     terms[0] = a0 * Bi * Bi;
     terms[1] = 2.0 * a0 * Bi * dBi;
