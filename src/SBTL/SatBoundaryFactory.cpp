@@ -107,6 +107,39 @@ std::unique_ptr<region::BoundaryCurve> build_h_sat_V(::CoolProp::AbstractState& 
     });
 }
 
+std::unique_ptr<region::BoundaryCurve> build_s_sat_L(::CoolProp::AbstractState& heos, double p_min, double p_max,
+                                                     const SatBoundaryBuildOptions& opts) {
+    if (auto sa = try_get_superanc(heos, /*need_caloric=*/true)) {
+        try {
+            // SuperAncillary returns molar entropy (J/mol/K); SBTL
+            // stores mass-basis (J/kg/K).  s_mass = s_mol / M.
+            const double inv_M = 1.0 / heos.molar_mass();
+            return region::SuperancillaryBoundaryCurve::build(sa, p_min, p_max, 'S', 0, inv_M);
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // Fall through to the spline path on SA range mismatch.
+        }
+    }
+    return spline_through_log_p_samples(p_min, p_max, opts.n_knots, [&](double p) {
+        heos.update(::CoolProp::PQ_INPUTS, p, 0.0);
+        return heos.smass();
+    });
+}
+
+std::unique_ptr<region::BoundaryCurve> build_s_sat_V(::CoolProp::AbstractState& heos, double p_min, double p_max,
+                                                     const SatBoundaryBuildOptions& opts) {
+    if (auto sa = try_get_superanc(heos, /*need_caloric=*/true)) {
+        try {
+            const double inv_M = 1.0 / heos.molar_mass();
+            return region::SuperancillaryBoundaryCurve::build(sa, p_min, p_max, 'S', 1, inv_M);
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+        }
+    }
+    return spline_through_log_p_samples(p_min, p_max, opts.n_knots, [&](double p) {
+        heos.update(::CoolProp::PQ_INPUTS, p, 1.0);
+        return heos.smass();
+    });
+}
+
 namespace {
 // T-parameterized cubic-spline sampler.  Mirror of
 // spline_through_log_p_samples, but linear-T spacing since the T span
@@ -203,6 +236,34 @@ std::unique_ptr<region::CubicSplineCurve> build_h_isotherm_ceiling(::CoolProp::A
     return spline_through_log_p_samples(p_min, p_max, opts.n_knots, [&](double p) {
         heos.update(::CoolProp::PT_INPUTS, p, T_max);
         return heos.hmass();
+    });
+}
+
+std::unique_ptr<region::CubicSplineCurve> build_s_isotherm_floor(::CoolProp::AbstractState& heos, double p_min, double p_max, double T_min,
+                                                                 const SatBoundaryBuildOptions& opts) {
+    // Entropy analog of build_h_isotherm_floor — same melting-line
+    // T-walk + heos.clear() reset on reject (CoolProp-i9t8), reads
+    // smass() instead of hmass().
+    const std::size_t walk_steps = opts.t_floor_walk_steps;
+    return spline_through_log_p_samples(p_min, p_max, opts.n_knots, [&, walk_steps](double p) {
+        for (std::size_t k = 0; k < walk_steps; ++k) {
+            const double T_try = T_min + 0.5 * static_cast<double>(k);
+            try {
+                heos.update(::CoolProp::PT_INPUTS, p, T_try);
+                return heos.smass();
+            } catch (...) {
+                heos.clear();
+            }
+        }
+        throw std::runtime_error("build_s_isotherm_floor: floor unreachable within " + std::to_string(walk_steps / 2) + " K of T_min");
+    });
+}
+
+std::unique_ptr<region::CubicSplineCurve> build_s_isotherm_ceiling(::CoolProp::AbstractState& heos, double p_min, double p_max, double T_max,
+                                                                   const SatBoundaryBuildOptions& opts) {
+    return spline_through_log_p_samples(p_min, p_max, opts.n_knots, [&](double p) {
+        heos.update(::CoolProp::PT_INPUTS, p, T_max);
+        return heos.smass();
     });
 }
 

@@ -200,6 +200,66 @@ TEST_CASE("SVDSurface PH preset builds + evals against HEOS", "[SBTL][SVDSurface
     REQUIRE(max_rel < 5e-2);
 }
 
+TEST_CASE("SVDSurface PS preset builds + evals against HEOS", "[SBTL][SVDSurface][preset_ps][slow]") {
+    auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
+    auto spec = cp_sbtl::presets::ps_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
+    REQUIRE(spec.input_pair == ::CoolProp::PSmass_INPUTS);
+    // Same 6-region geometry as the PH preset.
+    REQUIRE(spec.regions.size() == 6);
+    // 5 thermodynamic properties (ρ, T, h, u, w) — note iHmass replaces
+    // iSmass relative to PH, since s is now the input — plus 2 optional
+    // transport properties when the source exposes them (HEOS Water does).
+    REQUIRE(spec.properties.size() == 7);
+    auto spec_has = [&spec](::CoolProp::parameters key) {
+        return std::any_of(spec.properties.begin(), spec.properties.end(), [key](const cp_sbtl::PropertySpec& ps) { return ps.key == key; });
+    };
+    REQUIRE(spec_has(::CoolProp::iDmass));
+    REQUIRE(spec_has(::CoolProp::iT));
+    REQUIRE(spec_has(::CoolProp::iHmass));  // h is an output for PS (s is the input)
+    REQUIRE(spec_has(::CoolProp::iUmass));
+    REQUIRE(spec_has(::CoolProp::ispeed_sound));
+    REQUIRE(spec_has(::CoolProp::iviscosity));
+    REQUIRE(spec_has(::CoolProp::iconductivity));
+    REQUIRE_FALSE(spec_has(::CoolProp::iSmass));  // s is the input axis, not tabulated
+
+    auto surface = cp_sbtl::build_surface(*heos, std::move(spec));
+    REQUIRE(surface.sealed());
+    REQUIRE(surface.region_count() == 6);
+
+    // Probe single-phase Water states in (T, p) → look up via (p, s).
+    std::mt19937 rng(57);
+    const auto [p_min, p_max] = cp_sbtl::subcritical_pressure_range(*heos);
+    std::uniform_real_distribution<double> uT(290.0, heos->Tmax() - 1.0);
+    std::uniform_real_distribution<double> u_log_p(std::log(p_min * 1.5), std::log(p_max * 0.9));
+
+    int kept = 0;
+    double max_rel = 0;
+    for (int trial = 0; trial < 200 && kept < 30; ++trial) {
+        const double T = uT(rng);
+        const double p = std::exp(u_log_p(rng));
+        try {
+            heos->update(::CoolProp::PT_INPUTS, p, T);
+            if (heos->Q() > 0.0 && heos->Q() < 1.0) {
+                continue;
+            }
+            const double s = heos->smass();
+            const double rho_truth = heos->rhomass();
+            const double rho_pred = surface.eval(::CoolProp::iDmass, p, s);
+            if (std::isnan(rho_pred)) {
+                continue;
+            }
+            const double rel = std::abs(rho_pred - rho_truth) / rho_truth;
+            max_rel = std::max(max_rel, rel);
+            ++kept;
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            // skip
+        }
+    }
+    INFO("kept=" << kept << " max_rel=" << max_rel);
+    REQUIRE(kept >= 10);
+    REQUIRE(max_rel < 5e-2);
+}
+
 TEST_CASE("SVDSurface save/load round-trip is bit-identical", "[SBTL][serializer][slow]") {
     auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
     auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
@@ -287,7 +347,11 @@ TEST_CASE("SVDSurfaceSerializer rejects corrupt input", "[SBTL][serializer]") {
         const char hello[] = "hello world";
         bogus_payload.resize(64);
         auto out_size = static_cast<mz_ulong>(bogus_payload.size());
-        const int rc = compress((unsigned char*)bogus_payload.data(), &out_size, (const unsigned char*)hello, sizeof(hello) - 1);
+        // miniz's compress() takes (unsigned char*); our buffers are char*,
+        // so the reinterpret_cast is unavoidable here (raw byte buffers).
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        const int rc = compress(reinterpret_cast<unsigned char*>(bogus_payload.data()), &out_size, reinterpret_cast<const unsigned char*>(hello),
+                                sizeof(hello) - 1);
         // miniz returns MZ_OK == Z_OK == 0.  Failing here means the
         // test setup itself is broken (not what we're trying to
         // validate), so REQUIRE rather than silently resizing.

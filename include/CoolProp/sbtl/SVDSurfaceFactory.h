@@ -54,6 +54,12 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200
 // PT_INPUTS preset.  (a, b) = (p, T).  Output properties: rho, h, s, u.
 SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200, std::size_t NR = 800, std::int32_t rank = 20);
 
+// PSmass_INPUTS preset.  (a, b) = (p, s).  Output properties: rho, T, h, u.
+// Entropy analog of ph_subcritical: s is the secondary axis + query
+// input; the same region geometry (LIQUID/VAPOR/NC/SUPER, IF97 R2/R3/R5
+// split) applies with the build_s_* boundary curves.
+SurfaceSpec ps_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200, std::size_t NR = 800, std::int32_t rank = 20);
+
 // DmassT_INPUTS preset.  (a, b) = (T, D).  Output properties: p, h, s, u.
 //
 // Primary advantage over PT/PH: (D, T) is the Helmholtz EOS's native
