@@ -376,7 +376,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                                     CoolPropFluid fluid = get_library().get(lookup);
                                     resolved_names[i] = fluid.REFPROPname.empty() ? fluid.name : fluid.REFPROPname;
                                     break;
-                                } catch (const CoolProp::ValueError&) {}
+                                } catch (const CoolProp::ValueError&) {
+                                }
                             }
                             break;
                         }
