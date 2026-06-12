@@ -6686,6 +6686,13 @@ TEST_CASE("DSL intrinsics rhomass and molar_mass resolve", "[expression]") {
         iv[k] = (p.requiredIntrinsics()[k] == Intrinsic::rhomass) ? 2.0 : 3.0;
     CHECK(p.evaluate(iv.data(), nullptr) == Catch::Approx(6.0));
 }
+
+#    include "CoolProp/expression/ExpressionCorrelation.h"
+
+TEST_CASE("ExpressionData default-constructs unset", "[expression]") {
+    CoolProp::ExpressionData d;
+    CHECK(!d.correlation);
+}
 #endif
 
 #endif
