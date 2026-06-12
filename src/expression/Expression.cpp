@@ -367,7 +367,7 @@ std::vector<Token> lex(const std::string& s) {
             ++i;
             continue;
         }
-        if (std::isdigit(static_cast<unsigned char>(c)) || c == '.') {
+        if (std::isdigit(static_cast<unsigned char>(c)) != 0 || c == '.') {
             const char* start = s.c_str() + i;
             char* end = nullptr;
             double v = std::strtod(start, &end);
@@ -377,9 +377,9 @@ std::vector<Token> lex(const std::string& s) {
             out.push_back(tk);
             continue;
         }
-        if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
+        if (std::isalpha(static_cast<unsigned char>(c)) != 0 || c == '_') {
             std::size_t j = i;
-            while (j < n && (std::isalnum(static_cast<unsigned char>(s[j])) || s[j] == '_')) ++j;
+            while (j < n && (std::isalnum(static_cast<unsigned char>(s[j])) != 0 || s[j] == '_')) ++j;
             std::string id = s.substr(i, j - i);
             TokenType tt = TokenType::Ident;
             if (id == "let") tt = TokenType::Keyword_let;
@@ -571,6 +571,7 @@ class Binder
             if (static_cast<int>(call->args.size()) != arity)
                 throw ValueError(format("function '%s' expects %d argument(s)", call->name.c_str(), arity));
             std::vector<NodePtr> bound;
+            bound.reserve(call->args.size());
             for (auto& a : call->args) bound.push_back(bind(a, indexName));
             return std::make_unique<CallNode>(f, std::move(bound));
         }
