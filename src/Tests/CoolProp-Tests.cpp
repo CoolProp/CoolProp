@@ -6693,6 +6693,25 @@ TEST_CASE("ExpressionData default-constructs unset", "[expression]") {
     CoolProp::ExpressionData d;
     CHECK(!d.correlation);
 }
+
+TEST_CASE("expression block compile path (constants+arrays) yields expected value", "[expression]") {
+    using namespace CoolProp::expression;
+    std::map<std::string, double> consts{{"T_reduce", 132.0}, {"rhomolar_reduce", 10000.0}};
+    std::map<std::string, std::vector<double>> arrays{{"a", {1.0e-5}}, {"d1", {1.0}}, {"t1", {0.2}}};
+    Program p = compile(
+        "let delta = rhomolar/rhomolar_reduce\nlet tau = T_reduce/T\nsum(i: a[i]*delta^d1[i]*tau^t1[i])",
+        consts, arrays);
+    std::vector<double> iv(p.requiredIntrinsics().size());
+    for (std::size_t k = 0; k < iv.size(); ++k) {
+        switch (p.requiredIntrinsics()[k]) {
+            case Intrinsic::T: iv[k] = 300.0; break;
+            case Intrinsic::rhomolar: iv[k] = 5000.0; break;
+            default: iv[k] = 0.0; break;
+        }
+    }
+    double expected = 1.0e-5 * std::pow(0.5, 1.0) * std::pow(132.0 / 300.0, 0.2);
+    CHECK(p.evaluate(iv.data(), nullptr) == Catch::Approx(expected));
+}
 #endif
 
 #endif
