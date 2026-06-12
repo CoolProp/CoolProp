@@ -2409,6 +2409,9 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
         CoolPropDbl eos0, eos1, rhomolar, rhomolar0, rhomolar1;
         CoolPropDbl Tmin, Tmax;
         bool direct_path_enabled;
+        // Critical pressure, used to gate the warm-density shortcut off for
+        // supercritical-pressure probes — see the note in call().
+        CoolPropDbl p_crit;
 
         solver_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl p, CoolPropDbl value, parameters other, double Tmin, double Tmax,
                      bool direct_path_enabled)
@@ -2424,7 +2427,8 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             rhomolar1(_HUGE),
             Tmin(Tmin),
             Tmax(Tmax),
-            direct_path_enabled(direct_path_enabled) {
+            direct_path_enabled(direct_path_enabled),
+            p_crit(HEOS->p_critical()) {
             // Specify the state to avoid saturation calls, but only if phase is subcritical
             switch (CoolProp::phases phase = HEOS->phase()) {
                 case iphase_liquid:
@@ -2540,8 +2544,29 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             // to master.  iter < 2 cold iters are amortized; the win is from
             // bypassing the cached inner Householder4 on the warm probes that
             // dominate TOMS748's iteration count.
+            //
+            // EXCEPTION (CoolProp-5sh8): for supercritical pressure (p > p_crit)
+            // the warm carried-rho density Newton is unreliable across the whole
+            // near-critical region, in TWO distinct ways:
+            //   * below T_crit the isotherm p(rho, T) still has a van der Waals
+            //     loop, so the warm Newton (seeded from a neighbouring probe's
+            //     rho) can converge to the spurious low-density root — observed
+            //     for Argon PSmass: T = 127 K returned for a 152 K state;
+            //   * just above T_crit dp/drho -> 0, so the Newton step blows up and
+            //     converges to a garbage density (observed for Oxygen PSmass:
+            //     rho ~ 2600 kg/m3, a negative entropy).
+            // Either way the property evaluated at the bad density is wrong, the
+            // outer residual becomes NON-MONOTONIC in T, and Brent latches onto a
+            // false sign change at the wrong T.  But for p > p_crit the residual
+            // is PHYSICALLY monotone in T (e.g. ds/dT|p = cp/T > 0), so force the
+            // robust cold update(PT_INPUTS) path — whose phase-imposed
+            // solver_rho_Tp (with the #3176 dense-branch TOMS748 fallback)
+            // returns the correct single-phase root — for every supercritical-
+            // pressure probe.  Subcritical p keeps the warm shortcut (single
+            // density branch per imposed phase, no loop).
+            const bool force_robust_density = (p > p_crit);
             const bool want_warm = (iter >= 2 && std::abs(rhomolar1 / rhomolar0 - 1) <= 0.05);
-            if (direct_path_enabled && want_warm) {
+            if (direct_path_enabled && want_warm && !force_robust_density) {
                 try {
                     // WARM: bypass the cached inner solve; reuse the carried
                     // rhomolar (identical to what update_TP_guessrho would seed).
@@ -2590,8 +2615,9 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
                 }
             }
 
-            if (iter < 2 || std::abs(rhomolar1 / rhomolar0 - 1) > 0.05) {
+            if (iter < 2 || std::abs(rhomolar1 / rhomolar0 - 1) > 0.05 || force_robust_density) {
                 // Run the solver with T,P as inputs; but only if the last change in density was greater than a few percent
+                // (or we are in the supercritical-pressure vdW-loop region, where the carried-rho guess can hop branches).
                 HEOS->update(PT_INPUTS, p, T);
             } else {
                 // Run the solver with T,P as inputs; but use the guess value for density from before
