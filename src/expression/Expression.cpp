@@ -127,6 +127,218 @@ struct SumNode : Node
     }
 };
 
+// ---------------------------------------------------------------------------
+// Parse-time-only nodes: identifiers are unresolved (by name). The binder
+// (Task 5) rewrites each into a runtime node once slots are known.
+// Their eval() must never run.
+// ---------------------------------------------------------------------------
+
+struct NameNode : Node  // a bare identifier: intrinsic/constant/derived/let, or sum index
+{
+    std::string name;
+    explicit NameNode(std::string nm) : name(std::move(nm)) {}
+    double eval(EvalState&) const override {
+        throw ValueError("internal: unbound NameNode evaluated");
+    }
+};
+
+struct ArrayRefNode : Node  // name[index]; index identifier captured for validation
+{
+    std::string arrayName, indexName;
+    ArrayRefNode(std::string a, std::string idx) : arrayName(std::move(a)), indexName(std::move(idx)) {}
+    double eval(EvalState&) const override {
+        throw ValueError("internal: unbound ArrayRefNode evaluated");
+    }
+};
+
+struct ParseSumNode : Node  // sum(indexName: body); length resolved at bind
+{
+    std::string indexName;
+    NodePtr body;
+    double eval(EvalState&) const override {
+        throw ValueError("internal: unbound ParseSumNode evaluated");
+    }
+};
+
+struct NamedCallNode : Node  // funcName(args...); resolved to Func at bind
+{
+    std::string name;
+    std::vector<NodePtr> args;
+    NamedCallNode(std::string nm, std::vector<NodePtr> a) : name(std::move(nm)), args(std::move(a)) {}
+    double eval(EvalState&) const override {
+        throw ValueError("internal: unbound NamedCallNode evaluated");
+    }
+};
+
+struct LetStmt
+{
+    std::string name;
+    NodePtr expr;
+    std::size_t col;
+};
+
+struct ParseResult
+{
+    std::vector<LetStmt> lets;
+    NodePtr result;
+};
+
+// ---------------------------------------------------------------------------
+// Pratt (recursive-descent) parser
+// ---------------------------------------------------------------------------
+
+class Parser
+{
+   public:
+    explicit Parser(std::vector<Token> toks) : t(std::move(toks)) {}
+
+    ParseResult parse() {
+        ParseResult pr;
+        skipSeps();
+        while (peek().type == TokenType::Keyword_let) {
+            pr.lets.push_back(parseLet());
+            skipSeps();
+        }
+        pr.result = parseExpr(0);
+        skipSeps();
+        expect(TokenType::End, "trailing tokens after final expression");
+        return pr;
+    }
+
+   private:
+    std::vector<Token> t;
+    std::size_t pos = 0;
+
+    const Token& peek() const { return t[pos]; }
+    const Token& advance() { return t[pos++]; }
+    bool match(TokenType tt) {
+        if (t[pos].type == tt) {
+            ++pos;
+            return true;
+        }
+        return false;
+    }
+    void skipSeps() {
+        while (t[pos].type == TokenType::StmtSep) ++pos;
+    }
+    const Token& expect(TokenType tt, const char* what) {
+        if (t[pos].type != tt)
+            throw ValueError(format("expected %s at col %d", what, (int)t[pos].col));
+        return t[pos++];
+    }
+
+    LetStmt parseLet() {
+        std::size_t col = advance().col;  // consume 'let'
+        const Token& id = expect(TokenType::Ident, "identifier after 'let'");
+        std::string name = id.text;
+        expect(TokenType::Equals, "'=' in let binding");
+        NodePtr e = parseExpr(0);
+        if (peek().type != TokenType::StmtSep && peek().type != TokenType::End)
+            throw ValueError(format("expected end of let statement at col %d", (int)peek().col));
+        return LetStmt{name, std::move(e), col};
+    }
+
+    int lbp(TokenType tt) const {
+        switch (tt) {
+            case TokenType::Plus:
+            case TokenType::Minus:
+                return 10;
+            case TokenType::Star:
+            case TokenType::Slash:
+                return 20;
+            case TokenType::Caret:
+                return 30;
+            default:
+                return 0;
+        }
+    }
+
+    char opChar(TokenType tt) const {
+        switch (tt) {
+            case TokenType::Plus: return '+';
+            case TokenType::Minus: return '-';
+            case TokenType::Star: return '*';
+            case TokenType::Slash: return '/';
+            case TokenType::Caret: return '^';
+            default: return '?';
+        }
+    }
+
+    NodePtr parseExpr(int minbp) {
+        NodePtr left = parsePrefix();
+        for (;;) {
+            TokenType tt = peek().type;
+            int bp = lbp(tt);
+            if (bp == 0 || bp < minbp) break;
+            char op = opChar(tt);
+            advance();
+            int nextMin = (tt == TokenType::Caret) ? bp : bp + 1;  // ^ right-assoc
+            NodePtr right = parseExpr(nextMin);
+            left = std::make_unique<BinNode>(op, std::move(left), std::move(right));
+        }
+        return left;
+    }
+
+    NodePtr parsePrefix() {
+        if (match(TokenType::Minus)) return std::make_unique<NegNode>(parseExpr(40));  // unary binds tight
+        return parsePrimary();
+    }
+
+    NodePtr parsePrimary() {
+        const Token& tk = peek();
+        if (tk.type == TokenType::Number) {
+            double v = advance().number;
+            return std::make_unique<NumNode>(v);
+        }
+        if (tk.type == TokenType::LParen) {
+            advance();
+            NodePtr e = parseExpr(0);
+            expect(TokenType::RParen, "')'");
+            return e;
+        }
+        if (tk.type == TokenType::Keyword_sum) return parseSum();
+        if (tk.type == TokenType::Ident) {
+            std::string name = advance().text;
+            if (peek().type == TokenType::LParen) return parseCall(name);
+            if (match(TokenType::LBracket)) {
+                const Token& idx = expect(TokenType::Ident, "index identifier inside '[]'");
+                std::string idxname = idx.text;
+                expect(TokenType::RBracket, "']'");
+                return std::make_unique<ArrayRefNode>(name, idxname);
+            }
+            return std::make_unique<NameNode>(name);
+        }
+        throw ValueError(format("unexpected token at col %d", (int)tk.col));
+    }
+
+    NodePtr parseSum() {
+        advance();  // 'sum'
+        expect(TokenType::LParen, "'(' after sum");
+        const Token& idx = expect(TokenType::Ident, "index identifier in sum");
+        std::string idxname = idx.text;
+        expect(TokenType::Colon, "':' in sum");
+        NodePtr body = parseExpr(0);
+        expect(TokenType::RParen, "')' to close sum");
+        auto s = std::make_unique<ParseSumNode>();
+        s->indexName = idxname;
+        s->body = std::move(body);
+        return s;
+    }
+
+    NodePtr parseCall(const std::string& name) {
+        advance();  // '('
+        std::vector<NodePtr> args;
+        if (peek().type != TokenType::RParen) {
+            args.push_back(parseExpr(0));
+            while (match(TokenType::Comma)) args.push_back(parseExpr(0));
+        }
+        expect(TokenType::RParen, "')' to close call");
+        return std::make_unique<NamedCallNode>(name, std::move(args));
+    }
+};
+
+// ---------------------------------------------------------------------------
+
 struct ProgramData
 {
     std::vector<Intrinsic> intrinsics;
