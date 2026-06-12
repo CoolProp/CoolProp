@@ -5,6 +5,7 @@
 #include <array>
 #include <cctype>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <map>
@@ -16,34 +17,43 @@ namespace expression {
 namespace detail {
 
 // Function intrinsics supported by the grammar.
+// NOLINTNEXTLINE(performance-enum-size) -- already uses std::uint8_t; false positive on some clang-tidy versions
 enum class Func : std::uint8_t { exp, ln, log10, sqrt, abs, pow, sinh, cosh, tanh, sin, cos, atan };
 
 // Evaluation context: scalars indexed by slot, arrays indexed by slot, and the
 // single active summation index `i` (v1 forbids nested sums, so one is enough).
 struct EvalState
 {
+    // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
+    // non-owning views; valid for the bounded eval lifetime
     std::vector<double>& scalars;
     const std::vector<std::vector<double>>& arrays;
+    // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
     long i = 0;
 };
 
 struct Node
 {
+    Node() = default;
     virtual ~Node() = default;
+    Node(const Node&) = delete;
+    Node& operator=(const Node&) = delete;
+    Node(Node&&) = delete;
+    Node& operator=(Node&&) = delete;
     virtual double eval(EvalState& st) const = 0;
 };
 using NodePtr = std::unique_ptr<Node>;
 
 struct NumNode : Node
 {
-    double v;
+    double v = 0.0;
     explicit NumNode(double value) : v(value) {}
     double eval(EvalState&) const override { return v; }
 };
 
 struct ScalarNode : Node  // intrinsic, constant, derived, or let — all read a slot
 {
-    int slot;
+    int slot = 0;
     explicit ScalarNode(int s) : slot(s) {}
     double eval(EvalState& st) const override { return st.scalars[slot]; }
 };
@@ -55,7 +65,7 @@ struct IndexNode : Node  // bare summation index used as a value
 
 struct ArrayNode : Node  // arr[i]
 {
-    int slot;
+    int slot = 0;
     explicit ArrayNode(int s) : slot(s) {}
     double eval(EvalState& st) const override {
         return st.arrays[slot][static_cast<std::size_t>(st.i)];
@@ -64,58 +74,62 @@ struct ArrayNode : Node  // arr[i]
 
 struct NegNode : Node
 {
-    NodePtr child;
+    NodePtr child{};
     explicit NegNode(NodePtr c) : child(std::move(c)) {}
     double eval(EvalState& st) const override { return -child->eval(st); }
 };
 
 struct BinNode : Node
 {
-    char op;  // '+','-','*','/','^'
-    NodePtr l, r;
+    char op = '+';  // '+','-','*','/','^'
+    NodePtr l{}, r{};
     BinNode(char o, NodePtr a, NodePtr b) : op(o), l(std::move(a)), r(std::move(b)) {}
     double eval(EvalState& st) const override {
         double a = l->eval(st), b = r->eval(st);
+        // NOLINTBEGIN(bugprone-branch-clone) -- distinct arithmetic ops; clang-tidy false-positive
         switch (op) {
             case '+': return a + b;
             case '-': return a - b;
             case '*': return a * b;
             case '/': return a / b;
             case '^': return std::pow(a, b);
+            default: throw ValueError("internal: invalid binary operator");
         }
-        return 0.0;  // unreachable; op validated at parse time
+        // NOLINTEND(bugprone-branch-clone)
     }
 };
 
 struct CallNode : Node
 {
-    Func fn;
-    std::vector<NodePtr> args;
+    Func fn = Func::exp;
+    std::vector<NodePtr> args{};
     CallNode(Func f, std::vector<NodePtr> a) : fn(f), args(std::move(a)) {}
     double eval(EvalState& st) const override {
         double x = args[0]->eval(st);
+        // NOLINTBEGIN(bugprone-branch-clone) -- distinct std:: calls; clang-tidy false-positives them as identical
         switch (fn) {
-            case Func::exp: return std::exp(x);
-            case Func::ln: return std::log(x);
+            case Func::exp:   return std::exp(x);
+            case Func::ln:    return std::log(x);
             case Func::log10: return std::log10(x);
-            case Func::sqrt: return std::sqrt(x);
-            case Func::abs: return std::fabs(x);
-            case Func::pow: return std::pow(x, args[1]->eval(st));
-            case Func::sinh: return std::sinh(x);
-            case Func::cosh: return std::cosh(x);
-            case Func::tanh: return std::tanh(x);
-            case Func::sin: return std::sin(x);
-            case Func::cos: return std::cos(x);
-            case Func::atan: return std::atan(x);
+            case Func::sqrt:  return std::sqrt(x);
+            case Func::abs:   return std::fabs(x);
+            case Func::pow:   return std::pow(x, args[1]->eval(st));
+            case Func::sinh:  return std::sinh(x);
+            case Func::cosh:  return std::cosh(x);
+            case Func::tanh:  return std::tanh(x);
+            case Func::sin:   return std::sin(x);
+            case Func::cos:   return std::cos(x);
+            case Func::atan:  return std::atan(x);
+            default: throw ValueError("internal: invalid function");
         }
-        return 0.0;
+        // NOLINTEND(bugprone-branch-clone)
     }
 };
 
 struct SumNode : Node
 {
-    long n;  // fixed array length, resolved at bind time
-    NodePtr body;
+    long n = 0;  // fixed array length, resolved at bind time
+    NodePtr body{};
     SumNode(long length, NodePtr b) : n(length), body(std::move(b)) {}
     double eval(EvalState& st) const override {
         double s = 0.0;
@@ -137,7 +151,7 @@ struct SumNode : Node
 
 struct NameNode : Node  // a bare identifier: intrinsic/constant/derived/let, or sum index
 {
-    std::string name;
+    std::string name{};
     explicit NameNode(std::string nm) : name(std::move(nm)) {}
     double eval(EvalState&) const override {
         throw ValueError("internal: unbound NameNode evaluated");
@@ -146,7 +160,7 @@ struct NameNode : Node  // a bare identifier: intrinsic/constant/derived/let, or
 
 struct ArrayRefNode : Node  // name[index]; index identifier captured for validation
 {
-    std::string arrayName, indexName;
+    std::string arrayName{}, indexName{};
     ArrayRefNode(std::string a, std::string idx) : arrayName(std::move(a)), indexName(std::move(idx)) {}
     double eval(EvalState&) const override {
         throw ValueError("internal: unbound ArrayRefNode evaluated");
@@ -155,8 +169,8 @@ struct ArrayRefNode : Node  // name[index]; index identifier captured for valida
 
 struct ParseSumNode : Node  // sum(indexName: body); length resolved at bind
 {
-    std::string indexName;
-    NodePtr body;
+    std::string indexName{};
+    NodePtr body{};
     double eval(EvalState&) const override {
         throw ValueError("internal: unbound ParseSumNode evaluated");
     }
@@ -164,8 +178,8 @@ struct ParseSumNode : Node  // sum(indexName: body); length resolved at bind
 
 struct NamedCallNode : Node  // funcName(args...); resolved to Func at bind
 {
-    std::string name;
-    std::vector<NodePtr> args;
+    std::string name{};
+    std::vector<NodePtr> args{};
     NamedCallNode(std::string nm, std::vector<NodePtr> a) : name(std::move(nm)), args(std::move(a)) {}
     double eval(EvalState&) const override {
         throw ValueError("internal: unbound NamedCallNode evaluated");
@@ -174,9 +188,9 @@ struct NamedCallNode : Node  // funcName(args...); resolved to Func at bind
 
 struct LetStmt
 {
-    std::string name;
-    NodePtr expr;
-    std::size_t col;
+    std::string name{};
+    NodePtr expr{};
+    std::size_t col = 0;
 };
 
 struct ParseResult
@@ -208,10 +222,10 @@ class Parser
     }
 
    private:
-    std::vector<Token> t;
+    std::vector<Token> t{};
     std::size_t pos = 0;
 
-    const Token& peek() const { return t[pos]; }
+    [[nodiscard]] const Token& peek() const { return t[pos]; }
     const Token& advance() { return t[pos++]; }
     bool match(TokenType tt) {
         if (t[pos].type == tt) {
@@ -240,7 +254,7 @@ class Parser
         return LetStmt{name, std::move(e), col};
     }
 
-    int lbp(TokenType tt) const {
+    [[nodiscard]] int lbp(TokenType tt) const {
         switch (tt) {
             case TokenType::Plus:
             case TokenType::Minus:
@@ -255,7 +269,7 @@ class Parser
         }
     }
 
-    char opChar(TokenType tt) const {
+    [[nodiscard]] char opChar(TokenType tt) const {
         switch (tt) {
             case TokenType::Plus: return '+';
             case TokenType::Minus: return '-';
@@ -431,14 +445,14 @@ static bool funcForName(const std::string& nm, Func& out, int& arity) {
 struct ProgramData
 {
     int numScalars = 0;
-    std::vector<std::pair<int, double>> constantInits;     // (slot, value)
-    std::vector<std::pair<Intrinsic, int>> intrinsicSlots; // (kind, slot)
-    std::vector<std::pair<Derived, int>> derivedSlots;     // (kind, slot)
-    std::vector<std::pair<int, NodePtr>> lets;             // (slot, node) in order
-    NodePtr result;
-    std::vector<std::vector<double>> arrays;               // by array slot
-    std::vector<Intrinsic> intrinsicOrder;                 // cached for required* accessors
-    std::vector<Derived> derivedOrder;
+    std::vector<std::pair<int, double>> constantInits{};     // (slot, value)
+    std::vector<std::pair<Intrinsic, int>> intrinsicSlots{}; // (kind, slot)
+    std::vector<std::pair<Derived, int>> derivedSlots{};     // (kind, slot)
+    std::vector<std::pair<int, NodePtr>> lets{};             // (slot, node) in order
+    NodePtr result{};
+    std::vector<std::vector<double>> arrays{};               // by array slot
+    std::vector<Intrinsic> intrinsicOrder{};                 // cached for required* accessors
+    std::vector<Derived> derivedOrder{};
 };
 
 // ---------------------------------------------------------------------------
@@ -464,30 +478,27 @@ class Binder
     }
 
    private:
+    // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
+    // non-owning views; valid for the bounded bind lifetime
     ProgramData& d;
     const std::map<std::string, double>& constants;
     const std::map<std::string, std::vector<double>>& arraysIn;
+    // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
     int nextScalar = 0;
-    std::map<std::string, int> letNames;
-    std::map<std::string, int> constSlots;
-    std::map<std::string, int> intrinSlots;
-    std::map<std::string, int> derivSlots;
-    std::map<std::string, int> arraySlots;
+    std::map<std::string, int> letNames{};
+    std::map<std::string, int> constSlots{};
+    std::map<std::string, int> intrinSlots{};
+    std::map<std::string, int> derivSlots{};
+    std::map<std::string, int> arraySlots{};
 
     int newScalarSlot() { return nextScalar++; }
 
     int resolveScalar(const std::string& nm) {
+        // Resolution order: let → intrinsic → constant → derived.
+        // Intrinsics are checked before constants so that a JSON constant can
+        // never shadow the built-in state variables T/rhomolar/rhomass/molar_mass.
         auto itL = letNames.find(nm);
         if (itL != letNames.end()) return itL->second;
-        auto itC = constants.find(nm);
-        if (itC != constants.end()) {
-            auto s = constSlots.find(nm);
-            if (s != constSlots.end()) return s->second;
-            int slot = newScalarSlot();
-            constSlots[nm] = slot;
-            d.constantInits.emplace_back(slot, itC->second);
-            return slot;
-        }
         Intrinsic ik;
         if (intrinsicForName(nm, ik)) {
             auto s = intrinSlots.find(nm);
@@ -496,6 +507,15 @@ class Binder
             intrinSlots[nm] = slot;
             d.intrinsicSlots.emplace_back(ik, slot);
             d.intrinsicOrder.push_back(ik);
+            return slot;
+        }
+        auto itC = constants.find(nm);
+        if (itC != constants.end()) {
+            auto s = constSlots.find(nm);
+            if (s != constSlots.end()) return s->second;
+            int slot = newScalarSlot();
+            constSlots[nm] = slot;
+            d.constantInits.emplace_back(slot, itC->second);
             return slot;
         }
         Derived dk;

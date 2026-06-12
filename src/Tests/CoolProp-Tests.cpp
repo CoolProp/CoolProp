@@ -6646,6 +6646,46 @@ TEST_CASE("compile errors: unknown var, sum length mismatch, bad arity", "[expre
     CHECK_THROWS_AS(compile("exp(1, 2)", {}, {}), CoolProp::ValueError);
     CHECK_THROWS_AS(compile("a[i]", {}, {{"a", {1.0}}}), CoolProp::ValueError);
 }
+
+TEST_CASE("DSL scientific-notation evaluates; pow two-arg; trig", "[expression]") {
+    using namespace CoolProp::expression;
+    CHECK(compile("1e3 + 1", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(1001.0));
+    CHECK(compile("pow(2, 10)", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(1024.0));
+    CHECK(compile("sqrt(2)^2", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(2.0));
+}
+
+TEST_CASE("DSL let chaining: a let sees earlier lets, not itself", "[expression]") {
+    using namespace CoolProp::expression;
+    CHECK(compile("let x = a*2\nlet y = x+1\ny", {{"a", 5.0}}, {}).evaluate(nullptr, nullptr) == Catch::Approx(11.0));
+    CHECK_THROWS_AS(compile("let x = x+1\nx", {}, {}), CoolProp::ValueError);  // self-ref unknown
+}
+
+TEST_CASE("DSL nested summation is rejected in v1", "[expression]") {
+    using namespace CoolProp::expression;
+    CHECK_THROWS_AS(compile("sum(i: sum(j: a[i]*b[j]))", {}, {{"a", {1, 2}}, {"b", {3, 4}}}),
+                    CoolProp::ValueError);
+}
+
+TEST_CASE("DSL derived p is reported and injected by position", "[expression]") {
+    using namespace CoolProp::expression;
+    Program p = compile("p*2 + T", {}, {});
+    REQUIRE(p.requiredDerived().size() == 1);
+    CHECK(p.requiredDerived()[0] == Derived::p);
+    REQUIRE(p.requiredIntrinsics().size() == 1);
+    double iv[1] = {300.0};   // T
+    double dv[1] = {1e5};     // p
+    CHECK(p.evaluate(iv, dv) == Catch::Approx(2e5 + 300.0));
+}
+
+TEST_CASE("DSL intrinsics rhomass and molar_mass resolve", "[expression]") {
+    using namespace CoolProp::expression;
+    Program p = compile("rhomass * molar_mass", {}, {});
+    REQUIRE(p.requiredIntrinsics().size() == 2);
+    std::vector<double> iv(2);
+    for (std::size_t k = 0; k < 2; ++k)
+        iv[k] = (p.requiredIntrinsics()[k] == Intrinsic::rhomass) ? 2.0 : 3.0;
+    CHECK(p.evaluate(iv.data(), nullptr) == Catch::Approx(6.0));
+}
 #endif
 
 #endif
