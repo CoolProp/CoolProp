@@ -35,7 +35,7 @@ struct BibTeXKeysStruct
 
 struct EnvironmentalFactorsStruct
 {
-    double GWP20 = _HUGE, GWP100 = _HUGE, GWP500 = _HUGE, ODP = _HUGE, HH = _HUGE, PH = _HUGE, FH = _HUGE;
+    double GWP20, GWP100, GWP500, ODP, HH, PH, FH;
     std::string ASHRAE34;
 };
 struct CriticalRegionSplines
@@ -283,13 +283,13 @@ struct ViscosityInitialDensityVariables
 struct ViscosityModifiedBatschinskiHildebrandData
 {
     std::vector<CoolPropDbl> a, d1, d2, t1, t2, f, g, h, p, q, gamma, l;
-    CoolPropDbl T_reduce = _HUGE, rhomolar_reduce = _HUGE;
+    CoolPropDbl T_reduce, rhomolar_reduce;
 };
 struct ViscosityFrictionTheoryData
 {
     std::vector<CoolPropDbl> Aa, Aaa, Aaaa, Ar, Arr, Adrdr, Arrr, Ai, Aii, AdrAdr;
-    int Na = 0, Naa = 0, Naaa = 0, Nr = 0, Nrr = 0, Nrrr = 0, Nii = 0;
-    CoolPropDbl c1 = _HUGE, c2 = _HUGE, T_reduce = _HUGE, rhomolar_reduce = _HUGE;
+    int Na, Naa, Naaa, Nr, Nrr, Nrrr, Nii;
+    CoolPropDbl c1, c2, T_reduce, rhomolar_reduce;
 };
 struct ViscosityHigherOrderVariables
 {
@@ -317,7 +317,7 @@ struct ViscosityHigherOrderVariables
 struct ViscosityRhoSrVariables
 {
     std::vector<double> c_liq, c_vap;
-    double C = _HUGE, x_crossover = _HUGE, rhosr_critical = _HUGE;
+    double C, x_crossover, rhosr_critical;
 };
 struct ViscosityECSVariables
 {
