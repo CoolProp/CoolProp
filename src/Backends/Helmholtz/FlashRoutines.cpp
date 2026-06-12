@@ -339,7 +339,53 @@ void FlashRoutines::DP_flash(HelmholtzEOSMixtureBackend& HEOS) {
             }
             // Then, do the solver using the full EOS
             solver_DP_resid resid(&HEOS, HEOS.rhomolar(), HEOS.p());
-            Halley(resid, T0, 1e-10, 100);
+            bool dp_ok = false;
+            try {
+                Halley(resid, T0, 1e-10, 100);
+                // Halley is unbounded: from a poor PR/ancillary seed at extreme (rho, p)
+                // it can diverge to a nonphysical (negative / out-of-range) temperature, or
+                // stall at a range-valid point that does not satisfy the residual.  Accept
+                // only a finite, positive, in-range root that actually converged (re-checking
+                // the normalized pressure residual, which also leaves the state consistent).
+                if (ValidNumber(HEOS._T) && HEOS._T > 0 && HEOS._T <= 1.5 * HEOS.Tmax() && std::abs(resid.call(HEOS._T)) < 1e-7) {
+                    dp_ok = true;
+                }
+            } catch (...) {
+                dp_ok = false;  // Halley threw (non-convergence); the bracketed fallback below handles it.
+            }
+            if (!dp_ok) {
+                // p(T, rho) is monotonic in T at fixed rho, so bracket on the EOS
+                // temperature range and solve with TOMS748 (asymptotically optimal,
+                // matching the other P+X legs in this file).  Use the residual's
+                // captured (rho, p): the failed Halley above may have left _p corrupted.
+                const CoolPropDbl Tlo = HEOS.Tmin(), Thi = 1.5 * HEOS.Tmax();
+                CoolPropDbl flo = NAN, fhi = NAN;
+                try {
+                    flo = resid.call(Tlo);
+                    fhi = resid.call(Thi);
+                } catch (...) {
+                    // Endpoint EOS evaluation threw; force the NaN guard below to treat it as "no bracket".
+                    flo = fhi = NAN;
+                }
+                if (ValidNumber(flo) && ValidNumber(fhi) && flo * fhi < 0) {
+                    try {
+                        boost::math::uintmax_t max_iter = 100;
+                        auto f = [&resid](const double T) { return resid.call(T); };
+                        auto [l, r] = toms748_solve(f, static_cast<double>(Tlo), static_cast<double>(Thi), static_cast<double>(flo),
+                                                    static_cast<double>(fhi), boost::math::tools::eps_tolerance<double>(30), max_iter);
+                        // Re-evaluate at the bracket midpoint so HEOS is left at the converged state.
+                        resid.call(0.5 * (l + r));
+                    } catch (...) {
+                        // An interior EOS evaluation threw inside the bracket; degrade to a clean
+                        // ValueError rather than letting a non-ValueError exception escape the flash.
+                        throw ValueError(format("DP_flash TOMS748 fallback failed for rho=%Lg mol/m^3, p=%Lg Pa",
+                                                static_cast<CoolPropDbl>(resid.rhomolar), static_cast<CoolPropDbl>(resid.p)));
+                    }
+                } else {
+                    throw ValueError(format("DP_flash could not bracket T for rho=%Lg mol/m^3, p=%Lg Pa (Halley diverged)",
+                                            static_cast<CoolPropDbl>(resid.rhomolar), static_cast<CoolPropDbl>(resid.p)));
+                }
+            }
             HEOS._Q = -1;
             // Update the state for conditions where the state was guessed
             HEOS.recalculate_singlephase_phase();
@@ -2184,7 +2230,15 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         y_lo = HEOS.calc_pressure_nocache(T_lo, HEOS._rhomolar);
                         break;
                 }
-                if (!ValidNumber(y_lo) || value < y_lo) {
+                // Floor tolerance: the consistency grid lands points exactly ON the
+                // melting line, where `value` (from the forward path) and `y_lo`
+                // (recomputed here via calc_*_nocache) differ only at ULP level.  A
+                // strict `value < y_lo` then rejects a valid melting-line state on
+                // last-bit noise.  Allow a small relative slack so boundary states pass
+                // (consistent with the conservative-floor intent noted above) while
+                // states genuinely below the melting line are still rejected.
+                const CoolPropDbl floor_tol = 1e-8 * std::abs(y_lo) + 1e-10;
+                if (!ValidNumber(y_lo) || value < y_lo - floor_tol) {
                     // Colder than the coldest liquid attainable at this density:
                     // genuinely below the melting line (solid / out of range).
                     throw ValueError(format("D+X below melting line [other=%d]: %g < %g at Tmelt_min %g K", other, value, y_lo, T_lo));
@@ -3995,7 +4049,54 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (rmin * rmax > 0 && std::abs(rmax) < std::abs(rmin)) {
         throw CoolProp::ValueError(format("HS inputs correspond to temperature above maximum temperature of EOS [%g K]", HEOS.Tmax()));
     }
-    Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
+    // The residual h(SmolarT(s, T)) - h_target is frequently NON-MONOTONIC: the inner
+    // SmolarT solve degrades (or returns a wildly different branch) at high T for
+    // low-entropy cold-liquid inputs, so f(Tmin) and f(Tmax) often share a sign while
+    // the true root sits just above Tmin -- a plain Brent(Tmin, Tmax) then reports
+    // "do not bracket".  Scan upward from Tmin for the FIRST sign change and solve that
+    // sub-interval with TOMS748, skipping temperatures where the inner solve throws and
+    // never reaching the pathological high-T region.
+    bool hs_solved = false;
+    if (ValidNumber(rmin)) {
+        const int Nscan = 50;
+        double T_prev = Tmin, f_prev = rmin;
+        int i_prev = 0;  // grid index of the last VALID sample (Tmin is index 0)
+        for (int i = 1; i <= Nscan; ++i) {
+            const double Tt = Tmin + (Tmax - Tmin) * static_cast<double>(i) / Nscan;
+            double ft = NAN;
+            try {
+                ft = resid.call(Tt);
+            } catch (...) {
+                continue;  // inner SmolarT solve failed at this T; skip and keep scanning
+            }
+            if (!ValidNumber(ft)) {
+                continue;
+            }
+            // Only bracket between ADJACENT valid samples (i == i_prev + 1).  If a sample was
+            // skipped in between, the interval (T_prev, Tt) spans temperatures where the inner
+            // solve throws, so TOMS748's interior probes there would escape -- don't bracket
+            // across that gap; advance and look for a clean adjacent sign change instead.
+            if (i == i_prev + 1 && f_prev * ft <= 0) {
+                try {
+                    boost::math::uintmax_t max_iter = 100;
+                    auto f = [&resid](const double T) { return resid.call(T); };
+                    auto [l, r] = toms748_solve(f, T_prev, Tt, f_prev, ft, boost::math::tools::eps_tolerance<double>(30), max_iter);
+                    resid.call(0.5 * (l + r));  // leave HEOS at the converged state
+                    hs_solved = true;
+                    break;
+                } catch (...) {  // NOLINT(bugprone-empty-catch) -- intentional: keep scanning, then fall to Brent
+                }
+            }
+            T_prev = Tt;
+            f_prev = ft;
+            i_prev = i;
+        }
+    }
+    if (!hs_solved) {
+        // No interior sign change found by the scan; fall back to the original assumption
+        // that [Tmin, Tmax] brackets the root.
+        Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
+    }
 }
 
 #if defined(ENABLE_CATCH)
