@@ -186,7 +186,8 @@ void successive_substitution_guessrho(HelmholtzEOSMixtureBackend& HEOS, std::vec
  * (CoolProp-zgpy).
  */
 bool guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y, CoolPropDbl& rhomolar_liq,
-                             CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z, CoolPropDbl T, CoolPropDbl p, int num_steps);
+                             CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z, CoolPropDbl T, CoolPropDbl p, int num_steps,
+                             bool require_bracket = true);
 
 /*! A wrapper function around the residual to find the initial guess for the bubble point temperature
     \f[
@@ -643,6 +644,7 @@ class StabilityEvaluationClass
 
    private:
     bool _stable;
+    bool _uncertain;  ///< stability verdict was non-conclusive (minimize_tpd could not decide)
     bool debug;
     bool use_michelsen;
 
@@ -659,6 +661,7 @@ class StabilityEvaluationClass
         m_T(-1),
         m_p(-1),
         _stable(false),
+        _uncertain(false),
         debug(false),
         use_michelsen(get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {};
     /** \brief Specify T&P, otherwise they are loaded the HEOS instance
@@ -724,6 +727,12 @@ class StabilityEvaluationClass
         }
         check_stability();
         return _stable;
+    }
+    /// True when the stability verdict was non-conclusive (e.g. minimize_tpd could not
+    /// find an acceptable step) rather than a clean "stable".  The caller should then
+    /// attempt a verified two-phase split instead of trusting the fail-open "stable".
+    bool is_uncertain() const {
+        return _uncertain;
     }
     /// Accessor for liquid-phase composition and density
     void get_liq(std::vector<double>& x, double& rhomolar) {

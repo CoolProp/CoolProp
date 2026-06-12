@@ -1824,7 +1824,7 @@ void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBack
 
 bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
                                                 CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z,
-                                                CoolPropDbl T, CoolPropDbl p, int num_steps) {
+                                                CoolPropDbl T, CoolPropDbl p, int num_steps, bool require_bracket) {
     // Seed a two-phase guess from the ideal (Wilson) K-factor estimate and refine it
     // by successive substitution.  Returns false when the Wilson estimate does not
     // bracket a two-phase Rachford-Rice root (the feed is outside its bubble/dew
@@ -1845,10 +1845,15 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
         g1 += z[i] * (1.0 - 1.0 / K[i]);       // Rachford-Rice residual at beta = 1
     }
     // Two-phase iff the residual changes sign on (0, 1): g0 > 0 (z above its bubble
-    // point) AND g1 < 0 (z below its dew point).
-    if (g0 <= 0 || g1 >= 0) return false;
+    // point) AND g1 < 0 (z below its dew point).  When require_bracket is false the
+    // caller (a non-conclusive stability verdict) forces an attempt even though the
+    // IDEAL Wilson estimate places the feed outside (0, 1); the EOS-based SS refinement
+    // below then decides, and the flash's verify/fallback rejects it if it does not
+    // converge to a genuine equilibrium split.
+    bool bracketed = (g0 > 0 && g1 < 0);
+    if (require_bracket && !bracketed) return false;
 
-    CoolPropDbl beta = rachford_rice_beta_bisect(z, K);
+    CoolPropDbl beta = bracketed ? rachford_rice_beta_bisect(z, K) : 0.5;
     x.resize(N);
     y.resize(N);
     x_and_y_from_K(beta, K, z, x, y);
@@ -1983,6 +1988,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     CoolPropDbl the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
     CoolPropDbl the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
     _stable = true;
+    _uncertain = false;
+    bool any_uncertain = false;  // a trial's minimize_tpd was non-conclusive (step/density fail, max-iter)
 
     // Evaluate feed fugacities: d_i = ln(z_i) + ln(phi_i(z))
     HEOS.SatL->set_mole_fractions(z);
@@ -2130,7 +2137,9 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         // If SS did not conclusively decide stability, use quasi-Newton
         // minimization in alpha variables. See [Michelsen1982a] Eq. 25-27.
         bool trial_unstable = false;
-        if (minimize_tpd(Y, ln_f_z, the_T, the_p, trial_unstable)) {
+        bool trial_ok = minimize_tpd(Y, ln_f_z, the_T, the_p, trial_unstable);
+        if (!trial_ok) any_uncertain = true;  // could not conclude this trial -> not a clean "stable"
+        if (trial_ok) {
             if (trial_unstable) {
                 _stable = false;
                 CoolPropDbl sY = 0;
@@ -2151,7 +2160,9 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         }
         // If minimize_tpd fails or finds tm >= 0, try the other trial direction
     }
-    // Both trials indicate stability
+    // Both trials indicate stability -- but flag a non-conclusive verdict so the caller
+    // attempts a verified split instead of trusting a fail-open (CoolProp-zgpy).
+    _uncertain = any_uncertain;
     _stable = true;
 }
 
@@ -2353,7 +2364,7 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
             return false;
         }
     }
-    return true;  // Reached max iterations without convergence; treat as stable
+    return false;  // Reached max iterations without convergence -> non-conclusive (caller decides)
 }
 
 void StabilityRoutines::StabilityEvaluationClass::check_stability_legacy() {
