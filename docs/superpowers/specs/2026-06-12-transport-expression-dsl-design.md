@@ -65,8 +65,8 @@ Reproducing all of these to ULP is the **completeness proof** for the scope.
 | Implementation | Hand-rolled, zero third-party dependencies |
 | Evaluator | Tree-walking AST, compiled once per fluid at load, evaluated many |
 | Sum syntax | `sum(i: <body>)` explicit index; arrays subscripted `arr[i]` |
-| Variables | Raw state + JSON-declared constants/arrays + `let` bindings |
-| Derived vars | 4-bucket name resolution incl. a derived-state registry, **shipped empty in v1** |
+| Variables | Raw state + JSON-declared constants/arrays + `let` bindings; **all quantities base SI, always** |
+| Derived vars | 4-bucket name resolution incl. a derived-state registry, **seeded with one entry — `p` (pressure, Pa) — in v1** as the worked example |
 
 ### Why tree-walking AST, not bytecode VM
 
@@ -109,8 +109,11 @@ formula string ──Lexer──▶ tokens ──Parser──▶ AST ──Binde
 
 At bind time each identifier resolves against, in order:
 
-1. **Intrinsic state** (hardwired, always present): `T` (K), `rhomolar`
-   (mol/m³), `rhomass` (kg/m³), `molar_mass` (kg/mol).
+1. **Intrinsic state** (hardwired, always present, EOS-free): `T` (K),
+   `rhomolar` (mol/m³), `rhomass` (kg/m³), `molar_mass` (kg/mol). These are the
+   independent state variables and pure fluid metadata — available without
+   evaluating the EOS. Pressure is **not** here: `p` requires the EOS at the
+   current state, so it lives in the derived-state registry (§2b).
 2. **Block-declared constants** — scalars from the JSON `constants` object
    (e.g. `T_reduce`, `epsilon_over_k`, `sigma_eta`, `C`).
 3. **Block-declared arrays** — vectors from the JSON `arrays` object, usable only
@@ -118,16 +121,27 @@ At bind time each identifier resolves against, in order:
 4. **Derived-state registry** (§2b).
 
 A name found in none of the four buckets is a descriptive compile error
-(`unknown variable '<name>' at col <n>`). Unit conversions (`*1e9`, `*1000`) are
-written explicitly in the formula, mirroring the current C++.
+(`unknown variable '<name>' at col <n>`).
 
-### 2b. Derived-state registry (ships empty in v1)
+**All intrinsic and derived quantities are exposed in base SI, always** (`T` in
+K, `rhomolar` in mol/m³, `p` in Pa, result in Pa·s or W/m/K). The DSL imposes no
+unit handling and there is no units metadata field — a formula yields base SI by
+construction. Where the underlying physics needs a non-SI quantity (e.g. a
+collision-integral correlation tabulated in nm and kg/kmol), the conversion
+factor (`*1e9`, `*1000`) is written explicitly in the formula, exactly as the
+current C++ does.
+
+### 2b. Derived-state registry (one entry — `p` — in v1)
 
 A host-side table mapping a canonical DSL name → a getter on
 `HelmholtzEOSMixtureBackend`, for state-dependent quantities the EOS must compute
 (e.g. a future `smolar_residual`, `cpmolar`, `dpdrho__constT`). Resolution and
-dependency-tracking are built into the binder now (~30 lines); **the table is
-registered with zero entries in v1**, because no Tier-A form needs it.
+dependency-tracking are built into the binder now (~30 lines). **In v1 the table
+is seeded with exactly one entry — `p` (pressure, Pa)** — both because pressure
+is a genuinely useful always-derivable quantity and because it exercises the
+registry path end-to-end (a worked example) before any Tier-B input depends on
+it. No Tier-A *completeness* form uses `p`; it is proven by a dedicated unit
+test, not by the golden regression.
 
 Mechanism: when the binder resolves an identifier to bucket 4, it records that
 the compiled `Program` depends on that derived name. At eval time the host layer
@@ -136,12 +150,13 @@ eval context before the tree walk. The evaluator itself stays EOS-free.
 
 Extension cost, made explicit:
 
-- Adding a **new** derived quantity = one registration line in host C++ plus a
-  CoolProp recompile:
+- The v1 seed is one such line:
   ```cpp
-  registry.add("smolar_residual",
-               [](HelmholtzEOSMixtureBackend& H){ return H.smolar_residual(); });
+  registry.add("p", [](HelmholtzEOSMixtureBackend& H){ return H.p(); });
   ```
+  Adding any **new** derived quantity later is the same one-line pattern plus a
+  CoolProp recompile, e.g.
+  `registry.add("smolar_residual", [](auto& H){ return H.smolar_residual(); });`.
 - After that, **every fluid and formula** can use that name as pure JSON data,
   no further code. The grammar/parser never changes.
 
@@ -156,7 +171,6 @@ A transport sub-block (`dilute`, `initial_density`, `higher_order`, `residual`,
 ```json
 "higher_order": {
   "type": "expression",
-  "result_units": "Pa-s",
   "formula": "let delta = rhomolar/rhomolar_reduce\nlet tau = T_reduce/T\nsum(i: a[i]*delta^d1[i]*tau^t1[i]*exp(gamma[i]*delta^l[i]))",
   "constants": { "T_reduce": 132.6312, "rhomolar_reduce": 10447.7 },
   "arrays": { "a": [1.072e-05], "d1": [1], "t1": [0.2], "gamma": [0], "l": [0] }
@@ -164,14 +178,13 @@ A transport sub-block (`dilute`, `initial_density`, `higher_order`, `residual`,
 ```
 
 - `formula` (string, required): the DSL source. Newlines separate `let`
-  statements.
-- `constants` (object, optional): name → scalar.
+  statements. Yields base SI by construction (Pa·s for viscosity, W/m/K for
+  conductivity).
+- `constants` (object, optional): name → scalar (base SI).
 - `arrays` (object, optional): name → array of numbers.
-- `result_units` (string, required): the SI unit the formula yields (`"Pa-s"`
-  for viscosity, `"W/m/K"` for conductivity). The host **validates** it matches
-  the expected unit for the stage; it is a correctness assertion, not a
-  conversion directive (the formula already returns SI). Rationale: catches a
-  formula that forgot an inline conversion factor.
+
+There is no units field: every exposed quantity and the result are base SI
+always (§2), so a units annotation would be redundant.
 
 ### 4. Components
 
@@ -214,12 +227,20 @@ New Catch2 tag `[expression]`.
    variable, unknown function, arity mismatch, malformed input → clean
    `ValueError`, never a crash. Evaluator correctness on hand-checked
    expressions, including derived-var injection via a directly-populated context
-   (proves the evaluator is EOS-free).
+   (proves the evaluator is EOS-free). **Registry path:** a formula referencing
+   `p` binds to the registry, and the host computes pressure from `HEOS` and
+   injects it — assert the formula's value matches `HEOS.p()` at the state.
 2. **Golden regression (the gate):** for **every Tier-A form**, author its DSL
    equivalent, then for several representative fluids compare
    `ExpressionCorrelation::eval` against the existing hardcoded C++ routine across
-   a `(T, ρ)` grid spanning the fluid's transport validity range. Assert relative
-   error `< 1e-12`. If all Tier-A forms reproduce to ULP, the DSL is provably
+   a `(T, ρ)` grid spanning the fluid's transport validity range. Default gate is
+   relative error `< 1e-14` (~tens of ULP). Because the DSL replicates the same
+   library calls (`std::pow/exp/log`) in the same accumulation order, most forms
+   match far tighter; the only expected divergence class is a hand-written
+   `x*x`/`x*x*x` in some C++ routines vs the DSL's `x^2`/`x^3` (→ `std::pow`).
+   **Where a form uses the identical operation sequence, assert bit-exact
+   (0 ULP) per-form** and reserve the `1e-14` band only for the `pow`-vs-multiply
+   forms. If all Tier-A forms reproduce within this gate, the DSL is provably
    complete for the scope.
 
 Per project convention (`CLAUDE.md`), changes here run under `[SBTL]`-style
@@ -229,12 +250,15 @@ prove no regression. `./dev/ci/preflight.sh` selects scope from changed paths.
 
 ## Risks / open trade-offs
 
-- **`^` semantics:** chosen as `pow`. Bit-exact match to the C++ depends on the
-  same `std::pow` calls in the same order; the golden tolerance is ULP-class
-  (`1e-12` relative), not bit-exact, to absorb benign reassociation. Accepted.
-- **Derived registry unused in v1:** ~30 lines of binder machinery with zero
-  registered entries. Accepted as the cheap insurance that makes Tier B additive
-  rather than a binder rewrite.
+- **`^` semantics:** chosen as `pow`. Forms whose C++ uses the identical
+  operation sequence match bit-exact; the only divergence is `x^2`/`x^3` (→
+  `std::pow`) vs a hand-written `x*x` in some routines. Golden gate is `1e-14`
+  relative (~tens of ULP) with per-form bit-exact assertions where applicable.
+  Accepted.
+- **Derived registry, one entry in v1:** ~30 lines of binder machinery plus a
+  single registered getter (`p`). Accepted as cheap insurance that makes Tier B
+  additive (a registration table) rather than a binder rewrite, and the `p` seed
+  proves the path end-to-end.
 - **Performance unproven at production scale for `sum`:** Tier-A evals are
   `pow`/`exp`-bound and compiled once; expected tens-to-hundreds of ns. If
   profiling later shows an expression in a tight solver loop, bytecode is the
