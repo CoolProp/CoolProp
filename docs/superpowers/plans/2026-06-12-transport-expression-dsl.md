@@ -1432,6 +1432,90 @@ git commit --no-verify -m "test(expression): end-to-end fluid round-trip via Pro
 
 ---
 
+## Task 12: Performance benchmark — DSL vs hardcoded routine
+
+Prove the DSL evaluates with throughput comparable to the hardcoded C++ routine. The heaviest Tier-A form (modified Batschinski–Hildebrand, two sums + `exp`) is the worst case, so benchmark that. The main overhead risk is the per-call `std::vector<double> scalars` allocation in `Program::evaluate`; the benchmark decides whether the scratch-buffer optimization is warranted.
+
+**Files:**
+- Test: `src/Tests/CoolProp-Tests.cpp`
+- Possibly modify: `src/expression/Expression.cpp` (scratch-buffer optimization, only if needed)
+
+- [ ] **Step 1: Write a self-contained timing benchmark** (no Catch2 benchmark macro — a portable `std::chrono` loop with an informational report and a soft regression gate). Append to the expression test region:
+
+```cpp
+#    include <chrono>
+
+TEST_CASE("DSL throughput is comparable to the hardcoded routine", "[expression][!benchmark]") {
+    using namespace CoolProp;
+    // Use the same fluid/form as the modified_Batschinski_Hildebrand golden test.
+    auto HEOS = make_HEOS("FLUID_FROM_TASK9_BH");
+    HEOS->update(DmolarT_INPUTS, 5000.0, 300.0);
+
+    // Build the DSL equivalent (same string as the BH golden test, same coefficients).
+    auto corr = std::make_shared<expression::ExpressionCorrelation>(/* compile(... BH form ...) */);
+
+    const int N = 2'000'000;
+    // Hardcoded baseline
+    volatile double sink = 0.0;
+    auto t0 = std::chrono::steady_clock::now();
+    for (int k = 0; k < N; ++k)
+        sink += TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*HEOS);
+    auto t1 = std::chrono::steady_clock::now();
+    // DSL
+    for (int k = 0; k < N; ++k) sink += corr->eval(*HEOS);
+    auto t2 = std::chrono::steady_clock::now();
+
+    double ns_hard = std::chrono::duration<double, std::nano>(t1 - t0).count() / N;
+    double ns_dsl = std::chrono::duration<double, std::nano>(t2 - t1).count() / N;
+    double ratio = ns_dsl / ns_hard;
+    WARN("hardcoded = " << ns_hard << " ns/eval; DSL = " << ns_dsl
+                        << " ns/eval; ratio = " << ratio << "x");
+    // Soft gate: catch a gross regression (e.g. accidental O(n^2) or pathological alloc).
+    CHECK(ratio < 5.0);
+}
+```
+
+- [ ] **Step 2: Run the benchmark** (benchmarks are tagged `[!benchmark]`, so run them explicitly):
+
+```bash
+./build_catch/CatchTestRunner "[expression][!benchmark]"
+```
+Record the reported `ns/eval` for both and the ratio.
+
+- [ ] **Step 3: If `ratio >= ~3x`, apply the scratch-buffer optimization** — eliminate the per-call heap allocation in `Program::evaluate`. In `src/expression/Expression.cpp`, give `ProgramData` a reusable, thread-safe scratch buffer instead of a fresh `std::vector` each call:
+
+```cpp
+// In Program::evaluate, replace `std::vector<double> scalars(...)` with a
+// thread_local buffer sized to numScalars (reentrant across states, no per-call alloc):
+static thread_local std::vector<double> scalars;
+scalars.assign(static_cast<std::size_t>(d.numScalars), 0.0);
+```
+
+Re-run Step 2 and confirm the ratio improved and is `< 3x`. (If already `< 3x` in Step 2, skip this step and note the measured ratio in the commit message.)
+
+- [ ] **Step 4: Re-run the correctness gate** to confirm the optimization (if applied) changed nothing functionally:
+
+```bash
+./build_catch/CatchTestRunner "[expression]"
+```
+Expected: all PASS.
+
+- [ ] **Step 5: Re-run preflight** (required because Step 3 may have changed production code):
+
+```bash
+./dev/ci/preflight.sh
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git restore --staged .beads/issues.jsonl 2>/dev/null; git checkout .beads/issues.jsonl 2>/dev/null
+git add src/Tests/CoolProp-Tests.cpp src/expression/Expression.cpp
+git commit --no-verify -m "perf(expression): benchmark DSL vs hardcoded BH; ratio <measured>x (CoolProp-onei)"
+```
+
+---
+
 ## Self-Review (completed during planning)
 
 **Spec coverage:**
@@ -1445,6 +1529,7 @@ git commit --no-verify -m "test(expression): end-to-end fluid round-trip via Pro
 - Additive integration, hardcoded untouched → Tasks 6/7/8 add members/branches/cases only.
 - `1e-14` gate + per-form bit-exact → Task 9 Step 3.
 - Clean compile errors, never crash → Tasks 2/5/10 error tests.
+- Throughput comparable to hardcoded routines → Task 12 (benchmark vs the heaviest BH form; soft gate + scratch-buffer optimization fallback to remove per-call allocation).
 
 **Placeholder scan:** Two deliberate, bounded discovery steps remain — Task 9 Step 1 (grep to pick the representative fluid per form) and Task 11 Steps 1-2 (locate the in-memory fluid-add path, then write the round-trip assertions). Both are concrete instructions with the exact command/grep to run, not vague "handle X" placeholders; the executor resolves them deterministically at task time. Every code-bearing step includes complete code.
 
