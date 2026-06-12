@@ -7099,6 +7099,117 @@ TEST_CASE("golden: conductivity residual polynomial_and_exponential", "[expressi
     }
     CHECK(checks > 0);
 }
+
+// ---------------------------------------------------------------------------
+// Task 11: END-TO-END round-trip — a real fluid carrying a type:expression
+// dilute-viscosity block flows through the ACTUAL load + dispatch path.
+//
+// Unlike the golden tests (which call compile()+the static routine directly),
+// this test exercises:
+//   JSON ("type":"expression") -> FluidLibrary::parse_expression_block
+//     -> ExpressionData on the loaded CoolPropFluid
+//     -> add_fluids_as_JSON("HEOS", ...) registers a NEW fluid
+//     -> PropsSI("V", ...) -> calc_viscosity_dilute()'s
+//        `case VISCOSITY_DILUTE_EXPRESSION:` dispatch arm
+//        -> ExpressionCorrelation::eval.
+//
+// Construction: take R123's own full library JSON (dilute viscosity is the
+// `powers_of_T` form, summer += a[i]*pow(T,t[i])), copy its a/t coefficients
+// verbatim into a {"type":"expression"} block whose formula is the exact DSL
+// translation `sum(i: a[i]*T^t[i])`, give the fluid a fresh NAME/CAS/ALIASES so
+// it registers as a distinct entry, then compare PropsSI("V") of the new fluid
+// against the original over a (T,rho) grid.  Every other EOS/transport stage is
+// byte-identical to R123, so any disagreement is isolated to the dispatch arm.
+// Agreement must be < 1e-12 relative.
+// ---------------------------------------------------------------------------
+TEST_CASE("expression end-to-end: JSON load + dispatch round-trip (dilute viscosity)", "[expression]") {
+    using nlohmann::json;
+
+    // Pull R123's full library JSON (returned as a one-element array).
+    json arr = json::parse(CoolProp::get_fluid_param_string("R123", "JSON"));
+    REQUIRE(arr.is_array());
+    REQUIRE(arr.size() == 1);
+    json fluid = arr[0];
+
+    // Sanity: the dilute viscosity block is the powers_of_T form we translate.
+    REQUIRE(fluid.contains("TRANSPORT"));
+    REQUIRE(fluid["TRANSPORT"].contains("viscosity"));
+    json& visc = fluid["TRANSPORT"]["viscosity"];
+    REQUIRE(visc.contains("dilute"));
+    REQUIRE(visc["dilute"].at("type").get<std::string>() == "powers_of_T");
+
+    // Copy the a/t coefficients verbatim from the original block.
+    std::vector<double> a = visc["dilute"].at("a").get<std::vector<double>>();
+    std::vector<double> t = visc["dilute"].at("t").get<std::vector<double>>();
+    REQUIRE(!a.empty());
+    REQUIRE(a.size() == t.size());
+
+    // Replace the dilute block with an equivalent type:expression block.
+    // C++ routine: summer += a[i]*pow(T, t[i]); => DSL: sum(i: a[i]*T^t[i]).
+    json expr_block;
+    expr_block["type"] = "expression";
+    expr_block["formula"] = "sum(i: a[i]*T^t[i])";
+    expr_block["arrays"]["a"] = a;
+    expr_block["arrays"]["t"] = t;
+    visc["dilute"] = expr_block;
+
+    // Give the fluid a fresh identity so it registers as a NEW entry (no
+    // collision with R123) -- name, CAS, and all aliases must be unique.
+    fluid["INFO"]["NAME"] = "R123_EXPR_E2E";
+    fluid["INFO"]["CAS"] = "999-99-90";  // synthetic, collision-free
+    fluid["INFO"]["ALIASES"] = json::array({"R123_EXPR_E2E_ALIAS"});
+
+    // Register through the real public load path.
+    json doc = json::array();
+    doc.push_back(fluid);
+    REQUIRE(CoolProp::add_fluids_as_JSON("HEOS", doc.dump()));
+
+    // Compare viscosity of the expression-backed fluid vs the original over a
+    // (T,rho) grid -- exercising the VISCOSITY_DILUTE_EXPRESSION dispatch arm.
+    int checks = 0;
+    for (double T : {250.0, 300.0, 400.0, 500.0}) {
+        for (double rho : {0.1, 100.0, 5000.0}) {
+            double v_expr = CoolProp::PropsSI("V", "T", T, "Dmolar", rho, "R123_EXPR_E2E");
+            double v_orig = CoolProp::PropsSI("V", "T", T, "Dmolar", rho, "R123");
+            CAPTURE(T, rho, v_expr, v_orig);
+            REQUIRE(ValidNumber(v_expr));
+            REQUIRE(ValidNumber(v_orig));
+            REQUIRE(v_orig != 0.0);
+            CHECK(std::abs(v_expr - v_orig) / std::abs(v_orig) < 1e-12);
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
+
+// ---------------------------------------------------------------------------
+// Task 10/11 follow-up: derived-`p` HOST-path check.  Build an
+// ExpressionCorrelation from compile("p", {}, {}) and evaluate it against a
+// backend at a known state; the registry `p` getter is wired to HEOS.p(), so
+// the result must equal HEOS->p() bit-for-bit (same getter, no algebra).  This
+// proves the Derived::p path threads through ExpressionCorrelation::eval ->
+// fetchDerived -> HEOS.p().
+// ---------------------------------------------------------------------------
+TEST_CASE("expression host path: derived p equals HEOS.p()", "[expression]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("R123");
+    Program prog = compile("p", {}, {});
+    REQUIRE(prog.requiredDerived().size() == 1);
+    REQUIRE(prog.requiredDerived()[0] == Derived::p);
+    ExpressionCorrelation corr(std::move(prog));
+    int checks = 0;
+    for (double T : {300.0, 400.0, 500.0}) {
+        for (double rho : {100.0, 5000.0}) {
+            HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
+            double got = corr.eval(*HEOS);
+            double expected = static_cast<double>(HEOS->p());
+            CAPTURE(T, rho, got, expected);
+            CHECK(got == expected);  // identical getter, no rounding divergence
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
 #endif
 
 #endif
