@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstring>  // for std::memset, used below -- libstdc++ does not pull it in transitively
 #include <vector>
 #include "CoolProp/detail/tools.h"  // for CoolPropDbl
 //#include "Eigen/Core"
@@ -757,8 +758,8 @@ class BaseHelmholtzContainer
 
    public:
     void clear() {
-        memset(cache.data(), 0, sizeof(cache));
-        memset(is_cached.data(), false, sizeof(is_cached));
+        std::memset(cache.data(), 0, sizeof(cache));
+        std::memset(is_cached.data(), false, sizeof(is_cached));
     };
 
     virtual void empty_the_EOS() = 0;
@@ -879,7 +880,7 @@ class ResidualHelmholtzContainer : public BaseHelmholtzContainer
             cache[i03] = derivs.d3alphar_dtau3;
             cache[i21] = derivs.d3alphar_ddelta2_dtau;
             cache[i12] = derivs.d3alphar_ddelta_dtau2;
-            memset(is_cached.data(), true, sizeof(is_cached));
+            std::memset(is_cached.data(), true, sizeof(is_cached));
         }
         return derivs;
     };
@@ -1447,7 +1448,7 @@ class IdealHelmholtzContainer : public BaseHelmholtzContainer
             cache[i03] = derivs.d3alphar_dtau3 * _prefactor;
             cache[i21] = derivs.d3alphar_ddelta2_dtau * _prefactor;
             cache[i12] = derivs.d3alphar_ddelta_dtau2 * _prefactor;
-            memset(is_cached.data(), true, sizeof(is_cached));
+            std::memset(is_cached.data(), true, sizeof(is_cached));
         }
         return derivs * _prefactor;
     };
