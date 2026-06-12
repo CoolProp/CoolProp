@@ -2,10 +2,12 @@
 #include "CoolProp/expression/detail/Lexer.h"
 #include "CoolProp/Exceptions.h"
 #include "CoolProp/detail/strings.h"
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
 #include <functional>
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -280,7 +282,7 @@ class Parser
     }
 
     NodePtr parsePrefix() {
-        if (match(TokenType::Minus)) return std::make_unique<NegNode>(parseExpr(40));  // unary binds tight
+        if (match(TokenType::Minus)) return std::make_unique<NegNode>(parseExpr(25));  // unary minus: looser than ^ (30), tighter than +/- (10)
         return parsePrimary();
     }
 
@@ -339,12 +341,6 @@ class Parser
 
 // ---------------------------------------------------------------------------
 
-struct ProgramData
-{
-    std::vector<Intrinsic> intrinsics;
-    std::vector<Derived> deriveds;
-};
-
 std::vector<Token> lex(const std::string& s) {
     std::vector<Token> out;
     std::size_t i = 0, n = s.size();
@@ -401,24 +397,235 @@ std::vector<Token> lex(const std::string& s) {
     return out;
 }
 
+// ---------------------------------------------------------------------------
+// Name-resolution helpers
+// ---------------------------------------------------------------------------
+
+static bool intrinsicForName(const std::string& nm, Intrinsic& out) {
+    if (nm == "T") { out = Intrinsic::T; return true; }
+    if (nm == "rhomolar") { out = Intrinsic::rhomolar; return true; }
+    if (nm == "rhomass") { out = Intrinsic::rhomass; return true; }
+    if (nm == "molar_mass") { out = Intrinsic::molar_mass; return true; }
+    return false;
+}
+static bool derivedForName(const std::string& nm, Derived& out) {
+    if (nm == "p") { out = Derived::p; return true; }
+    return false;
+}
+static bool funcForName(const std::string& nm, Func& out, int& arity) {
+    struct E { const char* n; Func f; int a; };
+    static const std::array<E, 12> table = {{
+        {"exp", Func::exp, 1},   {"ln", Func::ln, 1},     {"log10", Func::log10, 1},
+        {"sqrt", Func::sqrt, 1}, {"abs", Func::abs, 1},   {"pow", Func::pow, 2},
+        {"sinh", Func::sinh, 1}, {"cosh", Func::cosh, 1}, {"tanh", Func::tanh, 1},
+        {"sin", Func::sin, 1},   {"cos", Func::cos, 1},   {"atan", Func::atan, 1}}};
+    for (const auto& e : table)
+        if (nm == e.n) { out = e.f; arity = e.a; return true; }
+    return false;
+}
+
+// ---------------------------------------------------------------------------
+// Real ProgramData
+// ---------------------------------------------------------------------------
+
+struct ProgramData
+{
+    int numScalars = 0;
+    std::vector<std::pair<int, double>> constantInits;     // (slot, value)
+    std::vector<std::pair<Intrinsic, int>> intrinsicSlots; // (kind, slot)
+    std::vector<std::pair<Derived, int>> derivedSlots;     // (kind, slot)
+    std::vector<std::pair<int, NodePtr>> lets;             // (slot, node) in order
+    NodePtr result;
+    std::vector<std::vector<double>> arrays;               // by array slot
+    std::vector<Intrinsic> intrinsicOrder;                 // cached for required* accessors
+    std::vector<Derived> derivedOrder;
+};
+
+// ---------------------------------------------------------------------------
+// Binder: rewrites parse-time nodes into runtime nodes; assigns slots
+// ---------------------------------------------------------------------------
+
+class Binder
+{
+   public:
+    Binder(ProgramData& pd, const std::map<std::string, double>& consts,
+           const std::map<std::string, std::vector<double>>& arrays)
+        : d(pd), constants(consts), arraysIn(arrays) {}
+
+    void run(ParseResult& pr) {
+        for (auto& L : pr.lets) {
+            NodePtr bound = bind(L.expr, /*indexName*/ "");
+            int slot = newScalarSlot();
+            letNames[L.name] = slot;  // available to later statements + result
+            d.lets.emplace_back(slot, std::move(bound));
+        }
+        d.result = bind(pr.result, "");
+        d.numScalars = nextScalar;
+    }
+
+   private:
+    ProgramData& d;
+    const std::map<std::string, double>& constants;
+    const std::map<std::string, std::vector<double>>& arraysIn;
+    int nextScalar = 0;
+    std::map<std::string, int> letNames;
+    std::map<std::string, int> constSlots;
+    std::map<std::string, int> intrinSlots;
+    std::map<std::string, int> derivSlots;
+    std::map<std::string, int> arraySlots;
+
+    int newScalarSlot() { return nextScalar++; }
+
+    int resolveScalar(const std::string& nm) {
+        auto itL = letNames.find(nm);
+        if (itL != letNames.end()) return itL->second;
+        auto itC = constants.find(nm);
+        if (itC != constants.end()) {
+            auto s = constSlots.find(nm);
+            if (s != constSlots.end()) return s->second;
+            int slot = newScalarSlot();
+            constSlots[nm] = slot;
+            d.constantInits.emplace_back(slot, itC->second);
+            return slot;
+        }
+        Intrinsic ik;
+        if (intrinsicForName(nm, ik)) {
+            auto s = intrinSlots.find(nm);
+            if (s != intrinSlots.end()) return s->second;
+            int slot = newScalarSlot();
+            intrinSlots[nm] = slot;
+            d.intrinsicSlots.emplace_back(ik, slot);
+            d.intrinsicOrder.push_back(ik);
+            return slot;
+        }
+        Derived dk;
+        if (derivedForName(nm, dk)) {
+            auto s = derivSlots.find(nm);
+            if (s != derivSlots.end()) return s->second;
+            int slot = newScalarSlot();
+            derivSlots[nm] = slot;
+            d.derivedSlots.emplace_back(dk, slot);
+            d.derivedOrder.push_back(dk);
+            return slot;
+        }
+        throw ValueError(format("unknown variable '%s'", nm.c_str()));
+    }
+
+    int resolveArray(const std::string& nm) {
+        auto it = arraysIn.find(nm);
+        if (it == arraysIn.end()) throw ValueError(format("unknown array '%s'", nm.c_str()));
+        auto s = arraySlots.find(nm);
+        if (s != arraySlots.end()) return s->second;
+        int slot = static_cast<int>(d.arrays.size());
+        d.arrays.push_back(it->second);
+        arraySlots[nm] = slot;
+        return slot;
+    }
+
+    NodePtr bind(NodePtr& node, const std::string& indexName) {
+        if (auto* num = dynamic_cast<NumNode*>(node.get())) {
+            return std::make_unique<NumNode>(num->v);
+        }
+        if (auto* nm = dynamic_cast<NameNode*>(node.get())) {
+            if (!indexName.empty() && nm->name == indexName) return std::make_unique<IndexNode>();
+            return std::make_unique<ScalarNode>(resolveScalar(nm->name));
+        }
+        if (auto* ar = dynamic_cast<ArrayRefNode*>(node.get())) {
+            if (indexName.empty() || ar->indexName != indexName)
+                throw ValueError(format("array '%s' subscript must be the enclosing sum index",
+                                        ar->arrayName.c_str()));
+            return std::make_unique<ArrayNode>(resolveArray(ar->arrayName));
+        }
+        if (auto* neg = dynamic_cast<NegNode*>(node.get())) {
+            return std::make_unique<NegNode>(bind(neg->child, indexName));
+        }
+        if (auto* bn = dynamic_cast<BinNode*>(node.get())) {
+            NodePtr l = bind(bn->l, indexName);
+            NodePtr r = bind(bn->r, indexName);
+            return std::make_unique<BinNode>(bn->op, std::move(l), std::move(r));
+        }
+        if (auto* call = dynamic_cast<NamedCallNode*>(node.get())) {
+            Func f; int arity;
+            if (!funcForName(call->name, f, arity))
+                throw ValueError(format("unknown function '%s'", call->name.c_str()));
+            if (static_cast<int>(call->args.size()) != arity)
+                throw ValueError(format("function '%s' expects %d argument(s)", call->name.c_str(), arity));
+            std::vector<NodePtr> bound;
+            for (auto& a : call->args) bound.push_back(bind(a, indexName));
+            return std::make_unique<CallNode>(f, std::move(bound));
+        }
+        if (auto* sum = dynamic_cast<ParseSumNode*>(node.get())) {
+            if (!indexName.empty())
+                throw ValueError("nested summation is not supported in v1");
+            long n = sumLength(*sum, sum->indexName);
+            NodePtr body = bind(sum->body, sum->indexName);
+            return std::make_unique<SumNode>(n, std::move(body));
+        }
+        throw ValueError("internal: unhandled parse node in binder");
+    }
+
+    long sumLength(ParseSumNode& sum, const std::string& idx) {
+        long len = -1;
+        std::function<void(Node*)> scan = [&](Node* nd) {
+            if (auto* ar = dynamic_cast<ArrayRefNode*>(nd)) {
+                if (ar->indexName == idx) {
+                    auto it = arraysIn.find(ar->arrayName);
+                    if (it == arraysIn.end())
+                        throw ValueError(format("unknown array '%s'", ar->arrayName.c_str()));
+                    long n = static_cast<long>(it->second.size());
+                    if (len == -1) len = n;
+                    else if (len != n)
+                        throw ValueError(format("array '%s' length %ld != %ld in sum",
+                                                ar->arrayName.c_str(), n, len));
+                }
+            } else if (auto* neg = dynamic_cast<NegNode*>(nd)) {
+                scan(neg->child.get());
+            } else if (auto* bn = dynamic_cast<BinNode*>(nd)) {
+                scan(bn->l.get()); scan(bn->r.get());
+            } else if (auto* call = dynamic_cast<NamedCallNode*>(nd)) {
+                for (auto& a : call->args) scan(a.get());
+            }
+        };
+        scan(sum.body.get());
+        if (len <= 0) throw ValueError("sum body references no array subscripted by the index");
+        return len;
+    }
+};
+
 }  // namespace detail
 
-double Program::evaluate(const double*, const double*) const {
-    // Stub: real implementation lands in Task 5.
-    return 7.0;
-}
-const std::vector<Intrinsic>& Program::requiredIntrinsics() const {
-    return m_data->intrinsics;
-}
-const std::vector<Derived>& Program::requiredDerived() const {
-    return m_data->deriveds;
+// ---------------------------------------------------------------------------
+// Program methods + compile (namespace CoolProp::expression)
+// ---------------------------------------------------------------------------
+
+double Program::evaluate(const double* intrinsicVals, const double* derivedVals) const {
+    const detail::ProgramData& d = *m_data;
+    std::vector<double> scalars(static_cast<std::size_t>(d.numScalars), 0.0);
+    for (const auto& c : d.constantInits) scalars[c.first] = c.second;
+    for (std::size_t k = 0; k < d.intrinsicSlots.size(); ++k)
+        scalars[d.intrinsicSlots[k].second] = intrinsicVals[k];
+    for (std::size_t k = 0; k < d.derivedSlots.size(); ++k)
+        scalars[d.derivedSlots[k].second] = derivedVals[k];
+    detail::EvalState st{scalars, d.arrays, 0};
+    for (const auto& L : d.lets) scalars[L.first] = L.second->eval(st);
+    return d.result->eval(st);
 }
 
-Program compile(const std::string&, const std::map<std::string, double>&,
-                const std::map<std::string, std::vector<double>>&) {
-    Program p;
-    p.m_data = std::make_shared<detail::ProgramData>();
-    return p;
+const std::vector<Intrinsic>& Program::requiredIntrinsics() const { return m_data->intrinsicOrder; }
+const std::vector<Derived>& Program::requiredDerived() const { return m_data->derivedOrder; }
+
+Program compile(const std::string& source, const std::map<std::string, double>& constants,
+                const std::map<std::string, std::vector<double>>& arrays) {
+    using namespace detail;
+    std::vector<Token> toks = lex(source);
+    Parser parser(std::move(toks));
+    ParseResult pr = parser.parse();
+    auto pd = std::make_shared<ProgramData>();
+    Binder binder(*pd, constants, arrays);
+    binder.run(pr);
+    Program prog;
+    prog.m_data = pd;
+    return prog;
 }
 
 }  // namespace expression

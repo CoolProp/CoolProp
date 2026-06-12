@@ -6608,6 +6608,44 @@ TEST_CASE("lexer rejects an illegal character", "[expression]") {
     using namespace CoolProp::expression::detail;
     CHECK_THROWS_AS(lex("a @ b"), CoolProp::ValueError);
 }
+
+TEST_CASE("compile evaluates arithmetic, precedence, right-assoc power", "[expression]") {
+    using namespace CoolProp::expression;
+    CHECK(compile("2 + 3*4", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(14.0));
+    CHECK(compile("2^3^2", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(512.0));
+    CHECK(compile("-2^2", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(-4.0));
+}
+
+TEST_CASE("compile resolves constants and let bindings", "[expression]") {
+    using namespace CoolProp::expression;
+    Program p = compile("let y = a*2\ny + 1", {{"a", 5.0}}, {});
+    CHECK(p.evaluate(nullptr, nullptr) == Catch::Approx(11.0));
+}
+
+TEST_CASE("compile sum over co-indexed arrays", "[expression]") {
+    using namespace CoolProp::expression;
+    Program p = compile("sum(i: a[i]*b[i])", {}, {{"a", {1, 2, 3}}, {"b", {4, 5, 6}}});
+    CHECK(p.evaluate(nullptr, nullptr) == Catch::Approx(32.0));
+}
+
+TEST_CASE("compile binds intrinsics in required order", "[expression]") {
+    using namespace CoolProp::expression;
+    Program p = compile("T + rhomolar", {}, {});
+    REQUIRE(p.requiredIntrinsics().size() == 2);
+    std::vector<double> iv(2);
+    for (std::size_t k = 0; k < 2; ++k)
+        iv[k] = (p.requiredIntrinsics()[k] == Intrinsic::T) ? 300.0 : 50.0;
+    CHECK(p.evaluate(iv.data(), nullptr) == Catch::Approx(350.0));
+}
+
+TEST_CASE("compile errors: unknown var, sum length mismatch, bad arity", "[expression]") {
+    using namespace CoolProp::expression;
+    CHECK_THROWS_AS(compile("nope + 1", {}, {}), CoolProp::ValueError);
+    CHECK_THROWS_AS(compile("sum(i: a[i]*b[i])", {}, {{"a", {1, 2}}, {"b", {1, 2, 3}}}),
+                    CoolProp::ValueError);
+    CHECK_THROWS_AS(compile("exp(1, 2)", {}, {}), CoolProp::ValueError);
+    CHECK_THROWS_AS(compile("a[i]", {}, {{"a", {1.0}}}), CoolProp::ValueError);
+}
 #endif
 
 #endif
