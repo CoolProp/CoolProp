@@ -11,6 +11,7 @@
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/fluids/Helmholtz.h"
 #include "CoolProp/numerics/Solvers.h"
+#include "CoolProp/expression/ExpressionCorrelation.h"
 
 #include <numeric>
 #include <string>
@@ -140,11 +141,13 @@ struct ConductivityDiluteVariables
         CONDUCTIVITY_DILUTE_CO2_HUBER_JPCRD_2016,
         CONDUCTIVITY_DILUTE_ETHANE,
         CONDUCTIVITY_DILUTE_NONE,
+        CONDUCTIVITY_DILUTE_EXPRESSION,
         CONDUCTIVITY_DILUTE_NOT_SET
     };
     int type = CONDUCTIVITY_DILUTE_NOT_SET;
     ConductivityDiluteRatioPolynomialsData ratio_polynomials;
     ConductivityDiluteEta0AndPolyData eta0_and_poly;
+    ExpressionData expression_data{};
 };
 
 struct ConductivityResidualPolynomialAndExponentialData
@@ -166,11 +169,13 @@ struct ConductivityResidualVariables
         CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL,
         CONDUCTIVITY_RESIDUAL_R123,
         CONDUCTIVITY_RESIDUAL_CO2,
+        CONDUCTIVITY_RESIDUAL_EXPRESSION,
         CONDUCTIVITY_RESIDUAL_NOT_SET
     };
     int type = CONDUCTIVITY_RESIDUAL_NOT_SET;
     ConductivityResidualPolynomialData polynomials;
     ConductivityResidualPolynomialAndExponentialData polynomial_and_exponential;
+    ExpressionData expression_data{};
 };
 
 struct ConductivityCriticalSimplifiedOlchowySengersData
@@ -240,6 +245,7 @@ struct ViscosityDiluteVariables
         VISCOSITY_DILUTE_CO2_LAESECKE_JPCRD_2017,             ///< Use \ref TransportRoutines::viscosity_dilute_CO2_LaeseckeJPCRD2017
         VISCOSITY_DILUTE_POWERS_OF_T,                         ///< Use \ref TransportRoutines::viscosity_dilute_powers_of_T
         VISCOSITY_DILUTE_POWERS_OF_TR,                        ///< Use \ref TransportRoutines::viscosity_dilute_powers_of_Tr
+        VISCOSITY_DILUTE_EXPRESSION,
         VISCOSITY_DILUTE_NOT_SET
     };
     ViscosityDiluteType type = VISCOSITY_DILUTE_NOT_SET;
@@ -248,6 +254,7 @@ struct ViscosityDiluteVariables
       collision_integral_powers_of_Tstar;       ///< Data for \ref TransportRoutines::viscosity_dilute_collision_integral_powers_of_T
     ViscosityDiluteGasPowersOfT powers_of_T;    ///< Data for \ref TransportRoutines::viscosity_dilute_powers_of_T
     ViscosityDiluteGasPowersOfTr powers_of_Tr;  ///< Data for \ref TransportRoutines::viscosity_dilute_powers_of_Tr
+    ExpressionData expression_data{};
 };
 
 struct ViscosityRainWaterFriendData
@@ -297,12 +304,14 @@ struct ViscosityHigherOrderVariables
         VISCOSITY_HIGHER_ORDER_TOLUENE,                  ///< Use \ref TransportRoutines::viscosity_toluene_higher_order_hardcoded
         VISCOSITY_HIGHER_ORDER_CO2_LAESECKE_JPCRD_2017,  ///< Use \ref TransportRoutines::viscosity_CO2_higher_order_hardcoded_LaeseckeJPCRD2017
         VISCOSITY_HIGHER_ORDER_FRICTION_THEORY,          ///< Use \ref TransportRoutines::viscosity_higher_order_friction_theory
+        VISCOSITY_HIGHER_ORDER_EXPRESSION,
         VISCOSITY_HIGHER_ORDER_NOT_SET
     };
     ViscosityHigherOrderEnum type = VISCOSITY_HIGHER_ORDER_NOT_SET;
     ViscosityModifiedBatschinskiHildebrandData
       modified_Batschinski_Hildebrand;            ///< Data for \ref TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand
     ViscosityFrictionTheoryData friction_theory;  ///< Data for \ref TransportRoutines::viscosity_higher_order_friction_theory
+    ExpressionData expression_data{};
 };
 
 struct ViscosityRhoSrVariables
