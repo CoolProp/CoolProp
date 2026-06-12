@@ -61,7 +61,7 @@ extern "C"
     __declspec(dllexport) double COOLPROP_EES(char fluid[256], int mode, struct EesParamRec* input_rec) {
         double In1 = _HUGE, In2 = _HUGE, out;  // Two inputs, one output
         int NInputs;                           // Ninputs is the number of inputs
-        char NInputs_string[3], err_str[1000];
+        char err_str[1000];
         std::string fluid_string = fluid;
 
         std::vector<double> z;
@@ -114,8 +114,8 @@ extern "C"
         };
 
         if (NInputs < 2) {
-            sprintf(NInputs_string, "Number of inputs [%d] < 2", NInputs);
-            strcpy(fluid, NInputs_string);
+            sprintf(err_str, "Number of inputs [%d] < 2", NInputs);
+            strcpy(fluid, err_str);
             return 0;
         }
 
