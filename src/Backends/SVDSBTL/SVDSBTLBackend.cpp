@@ -298,7 +298,12 @@ SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name,      // NOLINT(mod
         // from IF97, producing an all-NaN matrix (this broke the
         // SVDSBTL&IF97 docs example at construction).  (CoolProp-eal will
         // generalize lazy loading to every pair.)
-        if (pair == ::CoolProp::DmassT_INPUTS) {
+        //
+        // PSmass/PSmolar are likewise lazy: PS is a secondary pair, so
+        // HmassP/PT-only consumers should not pay the heavy ps_subcritical
+        // dense SVD up front.  Built on the first (p, s) query in
+        // update()/fast_evaluate().
+        if (pair == ::CoolProp::DmassT_INPUTS || pair == ::CoolProp::PSmass_INPUTS) {
             continue;
         }
         ensure_surface_(pair);
@@ -1681,6 +1686,8 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
     // ensure_surface_ is idempotent, so this is a cheap no-op afterwards.
     if (input_pair == CoolProp::DmassT_INPUTS || input_pair == CoolProp::DmolarT_INPUTS) {
         ensure_surface_(CoolProp::DmassT_INPUTS);
+    } else if (input_pair == CoolProp::PSmass_INPUTS || input_pair == CoolProp::PSmolar_INPUTS) {
+        ensure_surface_(CoolProp::PSmass_INPUTS);
     }
     clear();
     _phase = iphase_not_imposed;
@@ -1749,8 +1756,13 @@ void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, dou
             // tag iphase_twophase as a best-effort label.  Preserve
             // that to avoid surprising callers that check phase()
             // in this corner case.
-            if (input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS || input_pair == CoolProp::PSmass_INPUTS
-                || input_pair == CoolProp::PSmolar_INPUTS) {
+            // PSmass/PSmolar are intentionally NOT included: this is a
+            // legacy back-compat quirk for existing HmassP callers, and PS
+            // is a new pair with no such callers.  A genuine OOB PS query
+            // should report its real (unclassified) phase, not a spurious
+            // two-phase label (resolve_point_ already routes in-dome PS
+            // states to DomeBlend).
+            if (input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS) {
                 _phase = iphase_twophase;
             }
             break;
@@ -1884,11 +1896,13 @@ void SVDSBTLBackend::fast_evaluate(CoolProp::input_pairs input_pair, const doubl
     if (val1 == nullptr || val2 == nullptr || outputs == nullptr || out_buffer == nullptr || status_flags == nullptr) {
         throw ValueError("fast_evaluate: null pointer argument");
     }
-    // Lazily build the DmassT surface (kept out of the constructor's eager
-    // loop — see there).  fast_evaluate is an independent entry point, so it
-    // needs the same lazy ensure as update().  Idempotent.
+    // Lazily build the DmassT / PS surfaces (kept out of the constructor's
+    // eager loop — see there).  fast_evaluate is an independent entry point,
+    // so it needs the same lazy ensure as update().  Idempotent.
     if (input_pair == CoolProp::DmassT_INPUTS || input_pair == CoolProp::DmolarT_INPUTS) {
         ensure_surface_(CoolProp::DmassT_INPUTS);
+    } else if (input_pair == CoolProp::PSmass_INPUTS || input_pair == CoolProp::PSmolar_INPUTS) {
+        ensure_surface_(CoolProp::PSmass_INPUTS);
     }
     if (N_outputs == 0) {
         for (std::size_t k = 0; k < N_inputs; ++k)

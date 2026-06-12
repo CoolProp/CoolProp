@@ -118,8 +118,10 @@ Four input pairs are currently tabulated per fluid:
 
 ``HmolarP_INPUTS``, ``PSmolar_INPUTS`` and ``DmolarT_INPUTS`` are served
 from their mass-basis tables by multiplying / dividing by the molar
-mass.  Two-phase ``PQ_INPUTS`` and ``QT_INPUTS`` route directly through
-the source's saturation line — no separate table is required.
+mass.  Two-phase ``PQ_INPUTS`` and ``QT_INPUTS`` are resolved on the
+saturation line — via the SuperAncillary / surrogate fast path when one
+is available, falling back to a source flash otherwise — so no separate
+table is required.
 
 The ``PSmass_INPUTS`` table mirrors ``HmassP_INPUTS`` exactly with
 entropy in place of enthalpy as the secondary axis and query input: it

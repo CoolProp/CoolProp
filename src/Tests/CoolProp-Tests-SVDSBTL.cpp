@@ -296,6 +296,29 @@ TEST_CASE("SVDSBTL backend PS lookup matches HEOS within tolerance", "[SVDSBTL][
     REQUIRE(AS->p() == Approx(p).epsilon(1e-12));
 }
 
+TEST_CASE("SVDSBTL backend PSmolar lookup matches HEOS within tolerance", "[SVDSBTL][ps][psmolar][water][slow]") {
+    // Molar-basis mirror of the PSmass lookup — exercises the
+    // s_molar -> s_mass conversion in resolve_point_ and the iSmolar /
+    // iHmolar / iDmolar output scaling.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    const double p = 5.0e5;
+    const double T = 400.0;
+    heos->update(CoolProp::PT_INPUTS, p, T);
+    const double s_molar = heos->smolar();
+
+    AS->update(CoolProp::PSmolar_INPUTS, p, s_molar);
+    INFO("at (p, T)=(" << p << ", " << T << ")  s_molar=" << s_molar);
+    REQUIRE(AS->rhomolar() == Approx(heos->rhomolar()).epsilon(5e-3));
+    REQUIRE(AS->T() == Approx(T).epsilon(5e-3));
+    REQUIRE(AS->hmolar() == Approx(heos->hmolar()).epsilon(5e-3));
+
+    // The user-supplied molar entropy flows through directly; p round-trips.
+    REQUIRE(AS->smolar() == Approx(s_molar).epsilon(1e-12));
+    REQUIRE(AS->p() == Approx(p).epsilon(1e-12));
+}
+
 TEST_CASE("SVDSBTL backend PSmass_INPUTS dome-hit routes to two-phase blend", "[SVDSBTL][twophase][ps_dome][water][slow]") {
     // Entropy twin of the HmassP dome test: take s half-way between sL
     // and sV at p_sat and confirm SVDSBTL recovers the same Q as HEOS.
