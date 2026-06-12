@@ -6576,4 +6576,14 @@ TEST_CASE("Surface tension of water is nonzero and matches IAPWS", "[surface_ten
     CHECK(CoolProp::PropsSI("I", "T", 300, "Q", 0, "R134a") > 0.0);
 }
 
+#if defined(ENABLE_CATCH)
+#    include "CoolProp/expression/Expression.h"
+
+TEST_CASE("expression module links and evaluates a constant", "[expression]") {
+    using namespace CoolProp::expression;
+    Program prog = compile("3 + 4", {}, {});
+    CHECK(prog.evaluate(nullptr, nullptr) == Catch::Approx(7.0));
+}
+#endif
+
 #endif
