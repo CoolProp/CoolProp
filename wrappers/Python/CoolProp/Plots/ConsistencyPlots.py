@@ -332,6 +332,37 @@ class ConsistencyAxis(object):
             p_min = self.state.keyed_output(CP.iP_min) * 1.01
             p_max = self.state.keyed_output(CP.iP_max)
 
+        # Maximum-density (REFPROP Dmax) domain bound for fluids without a melting line:
+        # the densest validated fluid state is the triple-point saturated liquid, so colder
+        # states at a given pressure would be a compressed solid / unvalidated extrapolation.
+        # Precompute that density (and a spare state to map it to a per-isobar temperature
+        # floor below).  Fluids with a melting line are bounded by the melting-line floor
+        # instead, so this is skipped for them.
+        rho_max_1phase = None
+        pc_1phase = None
+        state_rhomax = None
+        # The maximum-density (REFPROP Dmax = triple-point liquid density) bound is a
+        # pure-fluid concept.  Pseudo-pure blends (Air, R404A, ...) have a saturation glide,
+        # so QT Q=0 is not a clean maximum density and the floor mis-bounds the grid; skip
+        # them (the density solver already improves them) and apply the bound to pure fluids.
+        is_pure_fluid = False
+        try:
+            from CoolProp.CoolProp import get_fluid_param_string
+            is_pure_fluid = (get_fluid_param_string(self.fluid, "pure") == "true")
+        except Exception:
+            is_pure_fluid = False
+        if self.T_limits_1phase is None and is_pure_fluid and not self.state.has_melting_line():
+            try:
+                state_rhomax = CP.AbstractState(self.backend, self.fluid)
+                state_rhomax.update(CP.QT_INPUTS, 0, self.state.keyed_output(CP.iT_triple))
+                rho_max_1phase = state_rhomax.rhomolar()
+                pc_1phase = self.state.keyed_output(CP.iP_critical)
+            except Exception as E:
+                # Could not establish the maximum-density bound; disable it (the grid then
+                # behaves as before this feature) but report why rather than silently swallowing.
+                rho_max_1phase = None
+                myprint(1, 'Dmax precompute:', self.fluid, E)
+
         for p in np.logspace(np.log10(p_min), np.log10(p_max), self.Np_1phase):
 
             if self.T_limits_1phase is None:
@@ -350,7 +381,34 @@ class ConsistencyAxis(object):
                         myprint(1, 'MeltingLine:', E)
                 else:
                     T0 = Tmin + 1.1
-                Tvec = np.linspace(T0, self.state.keyed_output(CP.iT_max), self.NT_1phase)
+                Tmax_1phase = self.state.keyed_output(CP.iT_max)
+                if (not self.state.has_melting_line() and rho_max_1phase is not None
+                        and pc_1phase is not None and p >= pc_1phase):
+                    # At supercritical pressure, floor T where rho(p, T) reaches the maximum
+                    # (triple-point liquid) density (REFPROP's default Dmax); colder states
+                    # are denser than any validated fluid (compressed solid / unvalidated
+                    # extrapolation).  Restricted to p >= pc on purpose: there is no
+                    # saturation curve to collide with (at subcritical p the rho=rho_L,triple
+                    # contour hugs the dome, where the forward PT flash fails), and the dense
+                    # subcritical region is already handled robustly by the density solver.
+                    # Density falls monotonically with T at fixed p, so if even the hottest
+                    # point on the isobar is already denser than the maximum, the whole isobar
+                    # is out of the validated domain and is skipped.
+                    try:
+                        state_rhomax.update(CP.PT_INPUTS, p, Tmax_1phase)
+                        if state_rhomax.rhomolar() > rho_max_1phase:
+                            continue
+                        state_rhomax.update(CP.DmolarP_INPUTS, rho_max_1phase, p)
+                        if state_rhomax.T() > T0:
+                            T0 = state_rhomax.T()
+                    except Exception as E:
+                        # Could not establish the Dmax floor on this isobar; test it from the
+                        # default floor (the pre-bound behaviour) rather than skipping it -- the
+                        # solver handles the dense region -- but report why.
+                        myprint(1, 'Dmax floor (p=%g):' % p, self.fluid, E)
+                if T0 >= Tmax_1phase:
+                    continue
+                Tvec = np.linspace(T0, Tmax_1phase, self.NT_1phase)
             else:
                 # Use the provided limits for T
                 Tvec = np.linspace(self.T_limits_1phase[0], self.T_limits_1phase[1], self.NT_1phase)

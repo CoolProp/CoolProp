@@ -29,6 +29,7 @@
 #include "Backends/Cubics/GeneralizedCubic.h"
 #include "CoolProp/numerics/Solvers.h"
 #include "CoolProp/numerics/MatrixMath.h"
+#include "boost/math/tools/toms748_solve.hpp"
 #include "VLERoutines.h"
 #include "FlashRoutines.h"
 #include "TransportRoutines.h"
@@ -2958,11 +2959,71 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
                 }
                 return rhomolar;
             } catch (...) {
-                double rhomolar = Brent(resid, rhoLancval * 0.99, rhoLtripleancval * 1.1, DBL_EPSILON, 1e-8, 100);
-                if (!ValidNumber(rhomolar)) {
-                    throw ValueError();
+                try {
+                    double rhomolar = Brent(resid, rhoLancval * 0.99, rhoLtripleancval * 1.1, DBL_EPSILON, 1e-8, 100);
+                    if (!ValidNumber(rhomolar)) {
+                        throw ValueError();
+                    }
+                    return rhomolar;
+                } catch (...) {
+                    // Robust dense-branch TOMS748 fallback (CoolProp-r1w7, critical-region
+                    // "p is not a valid number").  Near the critical isotherm the ancillary-
+                    // anchored brackets above start near rho_c -- inside the van der Waals loop,
+                    // where p(rho) is non-monotonic and Brent can return a non-finite density
+                    // (-> NaN pressure, caught only by post_update).  Build a monotonic bracket
+                    // on the STABLE dense branch by walking the upper bound up until it brackets
+                    // p_target, then the lower bound down until p < p_target, and TOMS748-solve.
+                    // The walk does NOT require a spinodal, so it is also correct for EOS whose
+                    // isotherms are monotonic (no van der Waals loop, e.g. some nitrogen models).
+                    // limits.rhomax is unreliable (0/unset for some fluids, e.g. R21), so anchor
+                    // the upper bound on the reducing density and bump it up until it brackets p.
+                    const double pTarget = p;
+                    // Whole-fallback guard: every calc_pressure_nocache probe below (the bracket
+                    // walk, the fa/fb endpoint evals, and the TOMS748 interior probes) is wrapped
+                    // so a non-finite/throwing EOS evaluation degrades to the ValueError at the
+                    // end rather than escaping solver_rho_Tp as an unexpected exception type.
+                    double rhoMolarFallback = NAN;
+                    try {
+                        double rhoHi = 5 * rhomolar_reducing();
+                        for (int i = 0; i < 60 && calc_pressure_nocache(T, rhoHi) < pTarget; ++i) {
+                            rhoHi *= 1.5;
+                        }
+                        double rhoLo = rhoHi;
+                        bool bracketed = false;
+                        for (int i = 0; i < 400; ++i) {
+                            rhoLo /= 1.05;
+                            if (rhoLo <= 1e-10) {
+                                break;
+                            }
+                            if (calc_pressure_nocache(T, rhoLo) < pTarget) {
+                                bracketed = true;
+                                break;
+                            }
+                        }
+                        if (bracketed) {
+                            auto f = [this, T, pTarget](double rho) { return this->calc_pressure_nocache(T, rho) - pTarget; };
+                            double fa = f(rhoLo), fb = f(rhoHi);
+                            if (ValidNumber(fa) && ValidNumber(fb) && fa * fb < 0) {
+                                boost::math::uintmax_t max_iter = 100;
+                                auto bracket =
+                                  boost::math::tools::toms748_solve(f, rhoLo, rhoHi, fa, fb, boost::math::tools::eps_tolerance<double>(48), max_iter);
+                                const double rho = 0.5 * (bracket.first + bracket.second);
+                                if (ValidNumber(rho) && rho > 0) {
+                                    rhoMolarFallback = rho;
+                                }
+                            }
+                        }
+                    } catch (...) {  // NOLINT(bugprone-empty-catch) -- an EOS evaluation in the fallback threw; degrade to the ValueError below
+                    }
+                    if (ValidNumber(rhoMolarFallback) && rhoMolarFallback > 0) {
+                        // Restore the live state at the converged density: the failed Brent attempts
+                        // above left _p corrupted (NaN) via update_DmolarT_direct, and the bracketing
+                        // above used calc_pressure_nocache (no state write).
+                        update_DmolarT_direct(rhoMolarFallback, T);
+                        return rhoMolarFallback;
+                    }
+                    throw ValueError(format("solver_rho_Tp could not find a supercritical_liquid density for T=%Lg, p=%Lg", T, pTarget));
                 }
-                return rhomolar;
             }
         }
     }
