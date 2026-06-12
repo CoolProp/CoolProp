@@ -120,6 +120,29 @@ def build_one_fluid(fluid):
         failure = str(exc)
         print('BUILD FAILED for', fluid, ':', failure)
     finally:
+        if failure is not None:
+            # Drop stale per-fluid data artifacts on failure. These dirs are
+            # restored from cache, so a prior SUCCESSFUL run may have left a
+            # <fluid>-summary.csv (which the consolidated report aggregates
+            # unconditionally below) and a <fluid>-consistency.csv (whose
+            # presence, with the png, marks the fluid "cached" so the next run
+            # skips it). Leaving them would make this build report stale success
+            # for a fluid that actually failed, and mask the failure on reruns.
+            # Removing them excludes the fluid from this run's aggregation and
+            # forces a clean regeneration next run; build_failures still records
+            # it for the report's failure list.
+            for stale in (fluid + '-summary.csv', fluid + '-consistency.csv'):
+                stale_path = os.path.join(plots_path, stale)
+                try:
+                    if os.path.exists(stale_path):
+                        os.remove(stale_path)
+                except OSError as exc:
+                    # Best effort: failing to delete a stale artifact must not
+                    # escape this finally (it would surface via ex.map and abort
+                    # every other fluid). A leftover stale file is the lesser
+                    # evil and is logged.
+                    print('WARN: could not remove stale %s: %s' % (stale_path, exc))
+
         # Guarantee the per-fluid HEOS report fragment exists. The fluid page
         # includes it unconditionally, so a crash before the subprocess wrote it
         # (or a partial cache) must not leave a dangling `.. include::`.

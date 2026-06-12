@@ -111,10 +111,18 @@ jobs:
     # runs, not just within a single run.  ccache is content-addressed and
     # self-managed (bounded by its own max-size), so a rolling per-SHA key with
     # a restore-keys fallback is the right pattern: always seed from the most
-    # recent prior cache, then save a fresh snapshot.  A stale object is never a
-    # correctness risk — ccache keys on the preprocessed source + compiler args,
-    # so any real change is a natural miss.
-    - uses: actions/cache@v5
+    # recent prior cache.  A stale object is never a correctness risk — ccache
+    # keys on the preprocessed source + compiler args, so any real change is a
+    # natural miss.
+    #
+    # Restore on every event, but SAVE only on trusted (non-PR) events: the
+    # later steps compile + execute native artifacts out of this cache, so an
+    # untrusted PR must never populate a store a trusted push/schedule run could
+    # later restore.  (GitHub's cache scope already isolates PR-created caches
+    # from default-branch runs; this is defense-in-depth and also keeps PR churn
+    # from evicting the mainline cache.)  Hence the cache/restore + conditional
+    # cache/save split instead of the combined actions/cache action.
+    - uses: actions/cache/restore@v5
       if: ${{ !env.ACT }}
       with:
         path: .ccache
@@ -191,7 +199,23 @@ jobs:
         source activate docs
         echo "Calling: python -u __init__.py ${{ env.COOLPROP_EXPENSIVE }}"
         python -u __init__.py ${{ env.COOLPROP_EXPENSIVE }}
-        
+
+    # Save the ccache populated by the wrapper-example builds above — but only
+    # on a trusted event and only if the build SUCCEEDED.  An explicit `if:`
+    # drops the implicit success() check, so success() must be restated or the
+    # save would fire after a failed/partial build and persist a bad snapshot
+    # that a later run restores.  The event allowlist (push — incl. tags —,
+    # schedule, workflow_dispatch; all require write access) is used instead of
+    # `!= 'pull_request'` so a future pull_request_target trigger can't slip
+    # through and poison the trusted cache.  Placed right after the homepage
+    # build (the only ccache writer) so a later doxygen/sphinx failure doesn't
+    # discard a cache from an otherwise-good wrapper build.
+    - uses: actions/cache/save@v5
+      if: ${{ success() && !env.ACT && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+      with:
+        path: .ccache
+        key: docs-ccache-${{ github.sha }}
+
     - name: Build documentation with Doxygen
       shell: bash
       run: |
