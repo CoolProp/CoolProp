@@ -6822,8 +6822,8 @@ TEST_CASE("golden: viscosity dilute collision_integral", "[expression][golden]")
     auto HEOS = make_HEOS_for("IsoButane");  // viscosity/dilute type == collision_integral
     auto& data = HEOS->get_components()[0].transport.viscosity_dilute.collision_integral;
     REQUIRE(!data.a.empty());
-    const double eps_over_k = static_cast<double>(HEOS->get_components()[0].transport.epsilon_over_k);
-    const double sigma_eta = static_cast<double>(HEOS->get_components()[0].transport.sigma_eta);
+    const auto eps_over_k = static_cast<double>(HEOS->get_components()[0].transport.epsilon_over_k);
+    const auto sigma_eta = static_cast<double>(HEOS->get_components()[0].transport.sigma_eta);
     // C++:
     //   Tstar = T/epsilon_over_k;  sigma_nm = sigma_eta*1e9;  mm_kgkmol = molar_mass*1000;
     //   summer += a[i]*pow(log(Tstar), t[i]);  S = exp(summer);
@@ -7202,7 +7202,7 @@ TEST_CASE("expression host path: derived p equals HEOS.p()", "[expression]") {
         for (double rho : {100.0, 5000.0}) {
             HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
             double got = corr.eval(*HEOS);
-            double expected = static_cast<double>(HEOS->p());
+            auto expected = static_cast<double>(HEOS->p());
             CAPTURE(T, rho, got, expected);
             CHECK(got == expected);  // identical getter, no rounding divergence
             ++checks;
