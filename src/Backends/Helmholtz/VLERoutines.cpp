@@ -1746,6 +1746,128 @@ class RachfordRiceResidual : public FuncWrapper1DWithDeriv
     }
 };
 
+// Solve the Rachford-Rice residual  sum_i z_i (K_i - 1) / (1 - beta + beta K_i) = 0
+// for beta on [0, 1] by bisection.  The caller ensures the residual does not change
+// sign in the wrong direction (residual >= 0 at beta = 0 and <= 0 at beta = 1); the
+// residual is strictly decreasing with no interior pole (1 + beta (K_i - 1) > 0 for
+// K_i > 0 and beta in [0, 1]), so bisection converges to the (possibly boundary) root.
+// Used in place of the double-typed RachfordRiceResidual + Brent so the
+// CoolPropDbl (incl. long-double) build is type-consistent and no solver throws here.
+static CoolPropDbl rachford_rice_beta_bisect(const std::vector<CoolPropDbl>& z, const std::vector<CoolPropDbl>& K) {
+    CoolPropDbl a = 0.0, b = 1.0;
+    for (int it = 0; it < 100; ++it) {
+        CoolPropDbl beta = 0.5 * (a + b);
+        CoolPropDbl g = 0;
+        for (std::size_t i = 0; i < z.size(); ++i)
+            g += z[i] * (K[i] - 1.0) / (1.0 - beta + beta * K[i]);
+        if (g > 0)
+            a = beta;  // residual is decreasing: g > 0 means beta is too small
+        else
+            b = beta;
+    }
+    return 0.5 * (a + b);
+}
+
+void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
+                                                         CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z,
+                                                         int num_steps, double tol) {
+    // Successive-substitution refinement of a two-phase guess at fixed (T, p).
+    // Adapted from jakobreichert's PR #2720: re-solve each phase density near its
+    // current guess, recompute K from the fugacity-coefficient ratio, and re-split
+    // via Rachford-Rice.
+    const std::size_t N = z.size();
+    std::vector<CoolPropDbl> lnK(N, 0.0), K(N);
+    for (int ss = 0; ss < num_steps; ++ss) {
+        HEOS.SatL->set_mole_fractions(x);
+        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
+        HEOS.SatV->set_mole_fractions(y);
+        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
+        rhomolar_liq = HEOS.SatL->rhomolar();
+        rhomolar_vap = HEOS.SatV->rhomolar();
+
+        CoolPropDbl g0 = 0, g1 = 0, max_lnK_change = 0;
+        bool finite = true;
+        for (std::size_t i = 0; i < N; ++i) {
+            CoolPropDbl lnK_new = log(HEOS.SatL->fugacity_coefficient(i) / HEOS.SatV->fugacity_coefficient(i));
+            if (!ValidNumber(lnK_new)) {
+                finite = false;
+                break;
+            }
+            max_lnK_change = std::max(max_lnK_change, std::abs(lnK_new - lnK[i]));
+            lnK[i] = lnK_new;
+            K[i] = exp(lnK[i]);
+            if (!ValidNumber(K[i])) {  // exp overflow at an extreme lnK -> step is unusable
+                finite = false;
+                break;
+            }
+            g0 += z[i] * (K[i] - 1.0);
+            g1 += z[i] * (1.0 - 1.0 / K[i]);
+        }
+        // A non-finite fugacity coefficient (e.g. a bad density root) makes this SS step
+        // meaningless; stop and keep the last valid x/y/rho for the Newton solver.
+        if (!finite) break;
+
+        CoolPropDbl beta;
+        if (g0 < 0)
+            beta = 0;
+        else if (g1 > 0)
+            beta = 1;
+        else
+            beta = rachford_rice_beta_bisect(z, K);
+        x_and_y_from_K(beta, K, z, x, y);
+        normalize_vector(x);
+        normalize_vector(y);
+
+        if (ss > 0 && max_lnK_change < tol) break;
+    }
+}
+
+bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
+                                                CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z,
+                                                CoolPropDbl T, CoolPropDbl p, int num_steps) {
+    // Seed a two-phase guess from the ideal (Wilson) K-factor estimate and refine it
+    // by successive substitution.  Returns false when the Wilson estimate does not
+    // bracket a two-phase Rachford-Rice root (the feed is outside its bubble/dew
+    // points) or when a phase density cannot be obtained.  May also throw from the
+    // underlying density solver; the blind-flash caller treats any throw as "not
+    // two-phase" and falls back to the single-phase path.  Used to recover a genuinely
+    // two-phase state that the TPD stability test reported as single-phase, e.g. for
+    // cubic mixtures at high vapor fraction near the dew point (CoolProp-zgpy).
+    const std::size_t N = z.size();
+    std::vector<CoolPropDbl> K(N), lnK(N);
+    CoolPropDbl g0 = 0, g1 = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        lnK[i] = Wilson_lnK_factor(HEOS, T, p, i);
+        if (!ValidNumber(lnK[i])) return false;
+        K[i] = exp(lnK[i]);
+        if (!ValidNumber(K[i])) return false;  // exp overflow at an extreme lnK -> no usable estimate
+        g0 += z[i] * (K[i] - 1.0);             // Rachford-Rice residual at beta = 0
+        g1 += z[i] * (1.0 - 1.0 / K[i]);       // Rachford-Rice residual at beta = 1
+    }
+    // Two-phase iff the residual changes sign on (0, 1): g0 > 0 (z above its bubble
+    // point) AND g1 < 0 (z below its dew point).
+    if (g0 <= 0 || g1 >= 0) return false;
+
+    CoolPropDbl beta = rachford_rice_beta_bisect(z, K);
+    x.resize(N);
+    y.resize(N);
+    x_and_y_from_K(beta, K, z, x, y);
+    normalize_vector(x);
+    normalize_vector(y);
+
+    // Density guesses at the (heavy-rich) liquid and (light-rich) vapor compositions --
+    // NOT the feed, whose single (vapor) root at high vapor fraction would collapse the
+    // split to the trivial solution.
+    HEOS.SatL->set_mole_fractions(x);
+    rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(T, p, HEOS.SatL->calc_rhomolar_max_bound());
+    HEOS.SatV->set_mole_fractions(y);
+    rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
+    if (!ValidNumber(rhomolar_liq) || rhomolar_liq <= 0 || !ValidNumber(rhomolar_vap) || rhomolar_vap <= 0) return false;
+
+    successive_substitution_guessrho(HEOS, x, y, rhomolar_liq, rhomolar_vap, z, num_steps);
+    return true;
+}
+
 void StabilityRoutines::StabilityEvaluationClass::trial_compositions() {
 
     x.resize(z.size());
