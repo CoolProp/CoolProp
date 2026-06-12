@@ -109,6 +109,10 @@ formula string ──Lexer──▶ tokens ──Parser──▶ AST ──Binde
 
 At bind time each identifier resolves against, in order:
 
+0. **`let` bindings** (highest precedence) — names introduced by `let <name> = …`
+   earlier in the same formula. A `let` may therefore shadow an intrinsic/constant
+   name within its formula (conventional local-shadows-global scoping); this is
+   intentional and harmless. The remaining buckets follow.
 1. **Intrinsic state** (hardwired, always present, EOS-free): `T` (K),
    `rhomolar` (mol/m³), `rhomass` (kg/m³), `molar_mass` (kg/mol). These are the
    independent state variables and pure fluid metadata — available without

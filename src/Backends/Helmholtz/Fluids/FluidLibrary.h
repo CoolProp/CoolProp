@@ -458,24 +458,26 @@ class JSONFluidLibrary
 
     // Build an ExpressionData from a transport sub-block of type "expression".
     static inline CoolProp::ExpressionData parse_expression_block(const nlohmann::json& j, const std::string& fluidname) {
-        std::map<std::string, double> constants;
-        std::map<std::string, std::vector<double>> arrays;
-        if (j.contains("constants")) {
-            for (auto it = j["constants"].begin(); it != j["constants"].end(); ++it)
-                constants[it.key()] = it.value().get<double>();
-        }
-        if (j.contains("arrays")) {
-            for (auto it = j["arrays"].begin(); it != j["arrays"].end(); ++it)
-                arrays[it.key()] = it.value().get<std::vector<double>>();
-        }
-        std::string formula = cpjson::get_string(j, "formula");
+        // Everything (JSON extraction + compile) inside the try so that a malformed
+        // constants/arrays/formula entry is reported with the fluid-name context too.
         try {
+            std::map<std::string, double> constants;
+            std::map<std::string, std::vector<double>> arrays;
+            if (j.contains("constants")) {
+                for (auto it = j["constants"].begin(); it != j["constants"].end(); ++it)
+                    constants[it.key()] = it.value().get<double>();
+            }
+            if (j.contains("arrays")) {
+                for (auto it = j["arrays"].begin(); it != j["arrays"].end(); ++it)
+                    arrays[it.key()] = it.value().get<std::vector<double>>();
+            }
+            std::string formula = cpjson::get_string(j, "formula");
             CoolProp::expression::Program prog = CoolProp::expression::compile(formula, constants, arrays);
             CoolProp::ExpressionData data;
             data.correlation = std::make_shared<CoolProp::expression::ExpressionCorrelation>(std::move(prog));
             return data;
         } catch (std::exception& e) {
-            throw ValueError(format("expression compile failed for fluid %s: %s", fluidname.c_str(), e.what()));
+            throw ValueError(format("expression block failed for fluid %s: %s", fluidname.c_str(), e.what()));
         }
     }
 
