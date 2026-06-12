@@ -284,12 +284,24 @@ inline double saturation_Wilson(HelmholtzEOSMixtureBackend& HEOS, double beta, d
             K[i] = pci / out * exp(5.373 * (1 + omegai) * (1 - Tci / input_value));
         }
     } else {
-        // Find first guess for output variable using Wilson K-factors
+        // Find first guess for output variable using Wilson K-factors.
+        // Always try Brent (bounded) first — Secant (unbounded) can diverge
+        // for multi-component mixtures at certain Q values.
+        // Fix from jakobreichert PR CoolProp/CoolProp#2720.
         WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
-        if (guess < 0 || !ValidNumber(guess))
-            out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100);
-        else
+        try {
+            if (input_type == imposed_T) {
+                out = Brent(Resid, 1.0, 1e9, 1e-10, 1e-10, 100);
+            } else {
+                out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100);
+            }
+        } catch (const std::exception&) {
+            // Brent failed to bracket; fall back to Secant from the provided guess
+            if (!ValidNumber(guess) || guess < 0) {
+                throw;
+            }
             out = Secant(Resid, guess, 0.001, 1e-10, 100);
+        }
         if (!ValidNumber(out)) {
             throw ValueError("saturation_p_Wilson failed to get good output value");
         }
