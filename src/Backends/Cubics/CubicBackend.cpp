@@ -412,10 +412,10 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
 class SaturationResidual : public CoolProp::FuncWrapper1D
 {
    public:
-    CoolProp::AbstractCubicBackend* ACB;
-    CoolProp::input_pairs inputs;
-    double imposed_variable;
-    double deltaL, deltaV;
+    CoolProp::AbstractCubicBackend* ACB = nullptr;
+    CoolProp::input_pairs inputs = CoolProp::INPUT_PAIR_INVALID;
+    double imposed_variable = _HUGE;
+    double deltaL = _HUGE, deltaV = _HUGE;
 
     SaturationResidual() = default;
     SaturationResidual(CoolProp::AbstractCubicBackend* ACB, CoolProp::input_pairs inputs, double imposed_variable)
