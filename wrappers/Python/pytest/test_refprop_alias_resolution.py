@@ -118,12 +118,15 @@ def _cp_rp_index() -> dict[str, tuple[str, str, list[str]]]:
     index: dict[str, tuple[str, str, list[str]]] = {}
     for cp_name in CP.get_global_param_string("FluidsList").split(","):
         try:
-            info = json.loads(CP.get_fluid_param_string(cp_name, "JSON"))[0]["INFO"]
-        except Exception:
+            raw = CP.get_fluid_param_string(cp_name, "JSON")
+            info = json.loads(raw)[0]["INFO"]
+            rp_name: str = info["REFPROP_NAME"]
+            canonical: str = info["NAME"]
+            aliases: list[str] = info.get("ALIASES", [])
+        except (ValueError, json.JSONDecodeError, KeyError, IndexError, TypeError):
             continue
-        rp_name: str = info["REFPROP_NAME"]
         if rp_name.upper() in available:
-            index[cp_name] = (rp_name, info["NAME"], info["ALIASES"])
+            index[cp_name] = (rp_name, canonical, aliases)
     return index
 
 
