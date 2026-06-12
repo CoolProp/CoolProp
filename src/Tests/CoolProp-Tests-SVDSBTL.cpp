@@ -272,6 +272,53 @@ TEST_CASE("SVDSBTL backend HmassP_INPUTS dome-hit routes to two-phase blend", "[
     }
 }
 
+TEST_CASE("SVDSBTL backend PS lookup matches HEOS within tolerance", "[SVDSBTL][ps][water][slow]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    // Build a (p, T) probe via HEOS, then ask SVDSBTL for the same point
+    // via (p, s) — entropy twin of the PH lookup test.
+    const double p = 5.0e5;
+    const double T = 400.0;
+    heos->update(CoolProp::PT_INPUTS, p, T);
+    const double s = heos->smass();
+
+    AS->update(CoolProp::PSmass_INPUTS, p, s);
+    INFO("at (p, T)=(" << p << ", " << T << ")  s=" << s);
+    INFO("rho HEOS=" << heos->rhomass() << "  SVDSBTL=" << AS->rhomass());
+    INFO("T   HEOS=" << T << "  SVDSBTL=" << AS->T());
+    REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(5e-3));
+    REQUIRE(AS->T() == Approx(T).epsilon(5e-3));
+    REQUIRE(AS->hmass() == Approx(heos->hmass()).epsilon(5e-3));
+
+    // The user-supplied s flows through directly; p round-trips.
+    REQUIRE(AS->smass() == Approx(s).epsilon(1e-12));
+    REQUIRE(AS->p() == Approx(p).epsilon(1e-12));
+}
+
+TEST_CASE("SVDSBTL backend PSmass_INPUTS dome-hit routes to two-phase blend", "[SVDSBTL][twophase][ps_dome][water][slow]") {
+    // Entropy twin of the HmassP dome test: take s half-way between sL
+    // and sV at p_sat and confirm SVDSBTL recovers the same Q as HEOS.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    for (const double p : {2.0e5, 1.0e6, 5.0e6}) {
+        heos->update(CoolProp::PQ_INPUTS, p, 0.0);
+        const double sL = heos->smass();
+        heos->update(CoolProp::PQ_INPUTS, p, 1.0);
+        const double sV = heos->smass();
+        const double s_mid = 0.5 * (sL + sV);
+        AS->update(CoolProp::PSmass_INPUTS, p, s_mid);
+        heos->update(CoolProp::PSmass_INPUTS, p, s_mid);
+        INFO("p=" << p << "  s_mid=" << s_mid);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        REQUIRE(AS->Q() == Approx(heos->Q()).margin(1e-9));
+        REQUIRE(AS->T() == Approx(heos->T()).margin(1e-9));
+        REQUIRE(AS->rhomass() == Approx(heos->rhomass()).margin(1e-9));
+        REQUIRE(AS->smass() == Approx(s_mid).margin(1e-9));  // input round-trip
+    }
+}
+
 TEST_CASE("SVDSBTL backend speed of sound matches HEOS in single phase", "[SVDSBTL][speed_sound][water][slow]") {
     // Speed of sound is the 5th property on both PH and PT surfaces.
     // For typical single-phase Water states, SVDSBTL should agree with
@@ -505,6 +552,54 @@ TEST_CASE("SVDSBTL&IF97 single-phase PT lookup matches IF97 truth", "[SVDSBTL][s
     if97->update(CoolProp::PT_INPUTS, p, T);
     REQUIRE(AS->rhomass() == Approx(if97->rhomass()).epsilon(1e-3));
     REQUIRE(AS->hmass() == Approx(if97->hmass()).epsilon(1e-3));
+}
+
+TEST_CASE("SVDSBTL&IF97 single-phase PS lookup matches IF97 truth", "[SVDSBTL][source][if97][ps][slow]") {
+    if (!source_backend_available("IF97", "Water")) {
+        SKIP("IF97 backend not available; skipping SVDSBTL&IF97 PS test");
+    }
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&IF97", "Water"));
+    auto if97 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    // 500 K, 3 MPa — IAPWS Table 5 region (compressed liquid).  Build s
+    // from IF97, then query SVDSBTL via (p, s).
+    const double T = 500.0;
+    const double p = 3.0e6;
+    if97->update(CoolProp::PT_INPUTS, p, T);
+    const double s = if97->smass();
+    AS->update(CoolProp::PSmass_INPUTS, p, s);
+    REQUIRE(AS->rhomass() == Approx(if97->rhomass()).epsilon(1e-3));
+    REQUIRE(AS->T() == Approx(T).epsilon(1e-3));
+    REQUIRE(AS->hmass() == Approx(if97->hmass()).epsilon(1e-3));
+
+    // Supercritical point across the R2/R3 kink: 700 K, 30 MPa (R3).
+    const double T2 = 700.0;
+    const double p2 = 3.0e7;
+    if97->update(CoolProp::PT_INPUTS, p2, T2);
+    const double s2 = if97->smass();
+    AS->update(CoolProp::PSmass_INPUTS, p2, s2);
+    REQUIRE(AS->rhomass() == Approx(if97->rhomass()).epsilon(1e-3));
+    REQUIRE(AS->T() == Approx(T2).epsilon(1e-3));
+}
+
+TEST_CASE("SVDSBTL&REFPROP PSmass single-phase matches REFPROP truth", "[SVDSBTL][source][refprop][psmass][slow]") {
+    if (!source_backend_available("REFPROP", "Water")) {
+        SKIP("REFPROP not available; skipping SVDSBTL&REFPROP PSmass test");
+    }
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&REFPROP", "Water"));
+    auto refprop = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    // Subcritical liquid: T=400 K, p=10 MPa.  Compute s from REFPROP,
+    // then feed (p, s) to SVDSBTL.
+    refprop->update(CoolProp::PT_INPUTS, 1.0e7, 400.0);
+    const double s_liq = refprop->smass();
+    AS->update(CoolProp::PSmass_INPUTS, 1.0e7, s_liq);
+    REQUIRE(AS->T() == Approx(refprop->T()).epsilon(1e-3));
+    REQUIRE(AS->rhomass() == Approx(refprop->rhomass()).epsilon(1e-3));
+    // Superheated vapor: T=600 K, p=0.5 MPa.
+    refprop->update(CoolProp::PT_INPUTS, 5.0e5, 600.0);
+    const double s_vap = refprop->smass();
+    AS->update(CoolProp::PSmass_INPUTS, 5.0e5, s_vap);
+    REQUIRE(AS->T() == Approx(refprop->T()).epsilon(1e-3));
+    REQUIRE(AS->rhomass() == Approx(refprop->rhomass()).epsilon(1e-3));
 }
 
 TEST_CASE("SVDSBTL&HEOS and SVDSBTL&REFPROP produce distinct cache files", "[SVDSBTL][source][cache]") {

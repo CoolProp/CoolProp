@@ -106,16 +106,27 @@ The currently-supported source backends are ``HEOS``, ``REFPROP``, and
 default truth source, since the choice changes both the sampled
 property values and the cache filename.
 
-Two input pairs are currently tabulated per fluid:
+Four input pairs are currently tabulated per fluid:
 
 * ``HmassP_INPUTS`` (the dominant industrial use case)
 * ``PT_INPUTS`` (where the user already has :math:`(p, T)` and wants to
   skip the inverse :math:`T(p, h)` solve)
+* ``PSmass_INPUTS`` (pressure–entropy; the natural coordinate for
+  isentropic compression / expansion paths)
+* ``DmassT_INPUTS`` (density–temperature; the Helmholtz EOS's native
+  coordinate, so every output property is a direct evaluation)
 
-``HmolarP_INPUTS`` is served from the ``HmassP_INPUTS`` table by
-multiplying by molar mass.  Two-phase ``PQ_INPUTS`` and ``QT_INPUTS``
-route directly through the source's saturation line — no separate
-table is required.
+``HmolarP_INPUTS``, ``PSmolar_INPUTS`` and ``DmolarT_INPUTS`` are served
+from their mass-basis tables by multiplying / dividing by the molar
+mass.  Two-phase ``PQ_INPUTS`` and ``QT_INPUTS`` route directly through
+the source's saturation line — no separate table is required.
+
+The ``PSmass_INPUTS`` table mirrors ``HmassP_INPUTS`` exactly with
+entropy in place of enthalpy as the secondary axis and query input: it
+tabulates :math:`(\rho, T, h, u, w)` over :math:`(p, s)`, uses the same
+LIQUID / VAPOR / near-critical / supercritical region atlas, and (for
+the ``IF97`` source) the same R2/R3/R5 split that keeps water within
+IAPWS G13-15.
 
 A planned follow-up adds ``HmassSmass`` and ``Dmass-Umass`` for the
 remaining G13-15 input-pair coverage (Tables 14-17); see bd

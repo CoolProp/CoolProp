@@ -84,6 +84,27 @@ std::vector<PropertySpec> pt_properties(::CoolProp::AbstractState& src) {
     return ps;
 }
 
+// Shared property list for PSmass_INPUTS: s is the input (secondary
+// axis), so the outputs are ρ, T, h, u, w (speed of sound).  Mirror of
+// ph_properties with iHmass tabulated where ph tabulated iSmass (the
+// roles of h and s swap between input and output).
+std::vector<PropertySpec> ps_properties(::CoolProp::AbstractState& src) {
+    std::vector<PropertySpec> ps = {
+      {::CoolProp::iDmass, svd::OutputTransform::EXP},
+      {::CoolProp::iT, svd::OutputTransform::IDENTITY},
+      {::CoolProp::iHmass, svd::OutputTransform::IDENTITY},
+      {::CoolProp::iUmass, svd::OutputTransform::IDENTITY},
+      {::CoolProp::ispeed_sound, svd::OutputTransform::IDENTITY},
+    };
+    if (source_supports_transport_(src, ::CoolProp::iviscosity)) {
+        ps.push_back({::CoolProp::iviscosity, svd::OutputTransform::EXP});
+    }
+    if (source_supports_transport_(src, ::CoolProp::iconductivity)) {
+        ps.push_back({::CoolProp::iconductivity, svd::OutputTransform::EXP});
+    }
+    return ps;
+}
+
 // NOTE on the IF97 R2/R3 boundary: T_B23(p) comes straight from the
 // if97 library's IF97::Region23_p(p) — no local copy of the B23
 // coefficients (henningjp, PR #2938).  CoolProp builds the if97 dep
@@ -179,6 +200,82 @@ double solve_T_from_h_toms748(::CoolProp::AbstractState& s, double p, double h_t
         // Returning the endpoint with smaller residual would re-mutate
         // `s`; callers that want to fall through to the HmassP_INPUTS
         // state must check *ok and skip the subsequent PT_INPUTS update.
+        return (std::abs(r_lo) < std::abs(r_hi)) ? T_lo : T_hi;
+    }
+    std::uintmax_t max_iter = 30;
+    const auto bracket = boost::math::tools::toms748_solve(resid, T_lo, T_hi, r_lo, r_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
+    if (ok != nullptr) {
+        *ok = true;
+    }
+    return 0.5 * (bracket.first + bracket.second);
+}
+
+// Entropy analogs of build_h_R1R3_curve / build_h_B23_curve — return
+// s = s_IF97(T_boundary, p) along the IF97 R1/R3 isotherm (623.15 K)
+// and the R2/R3 B23 curve respectively, used to split the PS SUPER
+// region at the same IF97 kinks ph_subcritical splits at.
+std::unique_ptr<region::CubicSplineCurve> build_s_R1R3_curve(::CoolProp::AbstractState& heos, double p_lo, double p_hi) {
+    constexpr double kT_R1R3 = 623.15;
+    constexpr double kP_R1R3_lo_MPa = 16.529;
+    const double p_lo_clamped = std::max(p_lo, kP_R1R3_lo_MPa * 1.0e6);
+    if (!(p_lo_clamped < p_hi)) {
+        throw std::invalid_argument("build_s_R1R3_curve: p range does not overlap IF97 R1/R3 isotherm's validity (p > 16.529 MPa)");
+    }
+    constexpr std::size_t n_knots = 64;
+    std::vector<double> p_knots(n_knots);
+    std::vector<double> s_knots(n_knots);
+    const double log_p_lo = std::log(p_lo_clamped);
+    const double log_p_hi = std::log(p_hi);
+    for (std::size_t k = 0; k < n_knots; ++k) {
+        const double p = std::exp(log_p_lo + static_cast<double>(k) * (log_p_hi - log_p_lo) / static_cast<double>(n_knots - 1));
+        heos.update(::CoolProp::PT_INPUTS, p, kT_R1R3);
+        p_knots[k] = p;
+        s_knots[k] = heos.smass();
+    }
+    return region::CubicSplineCurve::build(std::move(p_knots), std::move(s_knots));
+}
+
+std::unique_ptr<region::CubicSplineCurve> build_s_B23_curve(::CoolProp::AbstractState& heos, double p_lo, double p_hi) {
+    constexpr double kP_B23_lo_MPa = 16.529;
+    constexpr double kP_B23_hi_MPa = 100.0;
+    const double p_lo_clamped = std::max(p_lo, kP_B23_lo_MPa * 1.0e6);
+    const double p_hi_clamped = std::min(p_hi, kP_B23_hi_MPa * 1.0e6);
+    if (!(p_lo_clamped < p_hi_clamped)) {
+        throw std::invalid_argument("build_s_B23_curve: p range does not overlap IF97 B23 curve's [16.529, 100] MPa validity");
+    }
+    constexpr std::size_t n_knots = 64;
+    std::vector<double> p_knots(n_knots);
+    std::vector<double> s_knots(n_knots);
+    const double log_p_lo = std::log(p_lo_clamped);
+    const double log_p_hi = std::log(p_hi_clamped);
+    for (std::size_t k = 0; k < n_knots; ++k) {
+        const double p = std::exp(log_p_lo + static_cast<double>(k) * (log_p_hi - log_p_lo) / static_cast<double>(n_knots - 1));
+        const double T_B23 = IF97::Region23_p(p);
+        heos.update(::CoolProp::PT_INPUTS, p, T_B23);
+        p_knots[k] = p;
+        s_knots[k] = heos.smass();
+    }
+    return region::CubicSplineCurve::build(std::move(p_knots), std::move(s_knots));
+}
+
+// Entropy analog of solve_T_from_h_toms748.  s(T) at fixed p is
+// strictly increasing (ds/dT|p = cp/T > 0), so the bracket is at least
+// as robust as the enthalpy case.
+double solve_T_from_s_toms748(::CoolProp::AbstractState& s, double p, double s_target, double T_lo, double T_hi, bool* ok = nullptr) {
+    auto resid = [&s, p, s_target](double T) -> double {
+        try {
+            s.update(::CoolProp::PT_INPUTS, p, T);
+            return s.smass() - s_target;
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
+            return std::nan("");
+        }
+    };
+    const double r_lo = resid(T_lo);
+    const double r_hi = resid(T_hi);
+    if (!std::isfinite(r_lo) || !std::isfinite(r_hi) || r_lo * r_hi > 0.0) {
+        if (ok != nullptr) {
+            *ok = false;
+        }
         return (std::abs(r_lo) < std::abs(r_hi)) ? T_lo : T_hi;
     }
     std::uintmax_t max_iter = 30;
@@ -618,6 +715,258 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
                 return s.conductivity();
             default:
                 throw std::invalid_argument("ph_subcritical: unsupported output property");
+        }
+    };
+
+    return spec;
+}
+
+SurfaceSpec ps_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
+    // Entropy-indexed twin of ph_subcritical.  Identical region
+    // geometry — LIQUID + VAPOR + SUPER, optional NC_LIQUID/NC_VAPOR/
+    // NC_SUPER near pc, and (for IF97 source) the R2/R3/R5 SUPER split
+    // — with the secondary axis being s instead of h.  See
+    // ph_subcritical for the full rationale behind each region; the
+    // comments here are abbreviated to the entropy-specific points.
+    const auto [p_min, p_max_sub_raw] = subcritical_pressure_range(heos);
+    const auto [p_min_sup_raw, p_max_sup] = supercritical_pressure_range(heos);
+    const double T_min_eos = std::max(heos.Ttriple(), heos.Tmin());
+    const double T_max_eos = heos.Tmax();
+    const double pc = heos.p_critical();
+
+    const bool source_is_if97 = (heos.backend_name() == "IF97Backend");
+    constexpr double kNC_p_lo_mult = 0.9;
+    constexpr double kNC_p_hi_mult = 1.0 - 1.0e-10;
+    constexpr double kNC_sup_p_lo_mult = 1.0 + 1.0e-10;
+    constexpr double kNC_sup_p_hi_mult = 1.1;
+    const bool nc_enabled = !source_is_if97;
+    const double p_nc_lo = nc_enabled ? kNC_p_lo_mult * pc : 0.0;
+    const double p_nc_hi = nc_enabled ? kNC_p_hi_mult * pc : 0.0;
+    const double p_nc_sup_lo = nc_enabled ? kNC_sup_p_lo_mult * pc : 0.0;
+    const double p_nc_sup_hi = nc_enabled ? kNC_sup_p_hi_mult * pc : 0.0;
+    const double p_max_sub = nc_enabled ? std::min(p_max_sub_raw, p_nc_lo) : p_max_sub_raw;
+    const double p_min_sup = nc_enabled ? std::max(p_min_sup_raw, p_nc_sup_hi) : p_min_sup_raw;
+
+    SurfaceSpec spec;
+    spec.fluid_name = heos.fluid_names().empty() ? std::string{} : heos.fluid_names().front();
+    spec.input_pair = ::CoolProp::PSmass_INPUTS;
+    spec.NT = NT;
+    spec.NR = NR;
+    spec.rank = rank;
+    spec.properties = ps_properties(heos);
+
+    // LIQUID region: primary = log p, secondary = s in [s(T_min, p), s_sat,L(p)].
+    if (p_min < p_max_sub) {
+        auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max_sub);
+        auto lo = build_s_isotherm_floor(heos, p_min, p_max_sub, T_min_eos);
+        auto hi = build_s_sat_L(heos, p_min, p_max_sub);
+        spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+    }
+    // VAPOR region: secondary = s in [s_sat,V(p), s(T_max - 0.5 K, p)].
+    if (p_min < p_max_sub) {
+        auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min, p_max_sub);
+        auto lo = build_s_sat_V(heos, p_min, p_max_sub);
+        auto hi = build_s_isotherm_ceiling(heos, p_min, p_max_sub, T_max_eos - 0.5);
+        spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+    }
+    // NC_LIQUID + NC_VAPOR: near-critical POWER(β=1/3) sub-regions.
+    if (nc_enabled && p_nc_lo < p_nc_hi) {
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::POWER, p_nc_lo, p_nc_hi);
+            auto lo = build_s_isotherm_floor(heos, p_nc_lo, p_nc_hi, T_min_eos);
+            auto hi = build_s_sat_L(heos, p_nc_lo, p_nc_hi);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::POWER, p_nc_lo, p_nc_hi);
+            auto lo = build_s_sat_V(heos, p_nc_lo, p_nc_hi);
+            auto hi = build_s_isotherm_ceiling(heos, p_nc_lo, p_nc_hi, T_max_eos - 0.5);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+    }
+    // NC_SUPER: super-critical near-critical POWER_LO(β=1/3) sub-region.
+    if (nc_enabled && p_nc_sup_lo < p_nc_sup_hi) {
+        auto axis = region::AxisTransform::make(region::AxisScale::POWER_LO, p_nc_sup_lo, p_nc_sup_hi);
+        auto lo = build_s_isotherm_floor(heos, p_nc_sup_lo, p_nc_sup_hi, T_min_eos);
+        auto hi = build_s_isotherm_ceiling(heos, p_nc_sup_lo, p_nc_sup_hi, T_max_eos - 0.5);
+        spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+    }
+    // SUPER region: p > p_crit.  For IF97 source, split along the R1/R3
+    // isotherm and the R2/R3 B23 curve (in entropy coords) and add the
+    // R5 high-T slab, exactly as ph_subcritical does in enthalpy coords.
+    constexpr double kP_B23_hi = 100.0e6;
+    if (source_is_if97 && p_min_sup < kP_B23_hi) {
+        const double p_split_hi = std::min(p_max_sup, kP_B23_hi);
+        // SUPER_R1_super: s ∈ [s_floor(p), s_R1R3(p)).
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_split_hi);
+            auto lo = build_s_isotherm_floor(heos, p_min_sup, p_split_hi, T_min_eos);
+            auto hi = build_s_R1R3_curve(heos, p_min_sup, p_split_hi);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+        // SUPER_R3_proper: s ∈ [s_R1R3(p), s_B23(p)).
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_split_hi);
+            auto lo = build_s_R1R3_curve(heos, p_min_sup, p_split_hi);
+            auto hi = build_s_B23_curve(heos, p_min_sup, p_split_hi);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+        // SUPER_R2: high-s side of the R2/R3 kink.
+        {
+            auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_split_hi);
+            auto lo = build_s_B23_curve(heos, p_min_sup, p_split_hi);
+            auto hi = build_s_isotherm_ceiling(heos, p_min_sup, p_split_hi, T_max_eos - 0.5);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+        // SUPER_HIGH_P: above the B23 curve's valid p range, one region.
+        if (p_max_sup > kP_B23_hi) {
+            auto axis = region::AxisTransform::make(region::AxisScale::LOG, kP_B23_hi, p_max_sup);
+            auto lo = build_s_isotherm_floor(heos, kP_B23_hi, p_max_sup, T_min_eos);
+            auto hi = build_s_isotherm_ceiling(heos, kP_B23_hi, p_max_sup, T_max_eos - 0.5);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+        // SUPER_R5: IAPWS R7-97 Region 5 high-T slab (mirror of the PH
+        // R5 region; see ph_subcritical for the 1073.15 K dispatch note).
+        const double kT_R5_lo = std::nextafter(1073.15, 2273.15);
+        constexpr double kT_R5_hi = 2273.15;
+        constexpr double kP_R5_hi = 50.0e6;
+        constexpr double kP_R5_lo = 700.0;
+        if (kP_R5_lo < kP_R5_hi) {
+            const double p_r5_hi = std::min(p_max_sup, kP_R5_hi);
+            auto axis = region::AxisTransform::make(region::AxisScale::LOG, kP_R5_lo, p_r5_hi);
+            auto lo = build_s_isotherm_floor(heos, kP_R5_lo, p_r5_hi, kT_R5_lo);
+            auto hi = build_s_isotherm_ceiling(heos, kP_R5_lo, p_r5_hi, kT_R5_hi);
+            spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+        }
+    } else if (p_min_sup < p_max_sup) {
+        auto axis = region::AxisTransform::make(region::AxisScale::LOG, p_min_sup, p_max_sup);
+        auto lo = build_s_isotherm_floor(heos, p_min_sup, p_max_sup, T_min_eos);
+        auto hi = build_s_isotherm_ceiling(heos, p_min_sup, p_max_sup, T_max_eos - 0.5);
+        spec.regions.emplace_back(axis, std::move(lo), std::move(hi));
+    }
+
+    // Thermodynamics glue: PS update + per-property readout.  PSmass_INPUTS
+    // takes (p, s) — pressure first, unlike HmassP_INPUTS's (h, p).
+    if (source_is_if97) {
+        spec.update_state = [](::CoolProp::AbstractState& s_state, double p, double s_val) {
+            // Mirror of ph_subcritical's IF97 sampling lambda, with the
+            // entropy backward equation (IF97::T_psmass) as the seed and
+            // a forward-s TOMS748 polish.  R3 has no published backward
+            // equation (same as enthalpy); R5 likewise — both fall back
+            // to a bracketed forward solve.
+            //
+            // The R3-vs-R5 fallback dispatch keys on an entropy threshold
+            // (the enthalpy twin uses 3 MJ/kg).  Probed from IF97 (Water):
+            // R3's max s along the B23 boundary is ≈ 5254 J/(kg·K); R5's
+            // global min s (50 MPa, 1073.16 K) is ≈ 6523 J/(kg·K).  5.9e3
+            // is the midpoint of that gap — a conservative split.  The
+            // bracket sign-check in solve_T_from_s_toms748 is the real
+            // safety net: a mis-routed target simply fails the R5 bracket
+            // and falls through to the R3 solve.
+            ::CoolProp::phases phase0 = ::CoolProp::iphase_not_imposed;
+            bool single_phase = false;
+            bool seeded_via_smass = true;
+            try {
+                s_state.update(::CoolProp::PSmass_INPUTS, p, s_val);
+                phase0 = s_state.phase();
+                single_phase =
+                  (phase0 == ::CoolProp::iphase_liquid || phase0 == ::CoolProp::iphase_gas || phase0 == ::CoolProp::iphase_supercritical_liquid
+                   || phase0 == ::CoolProp::iphase_supercritical_gas || phase0 == ::CoolProp::iphase_supercritical);
+            } catch (...) {  // NOLINT(bugprone-empty-catch)
+                seeded_via_smass = false;
+            }
+            bool pinned = false;
+            if (single_phase) {
+                s_state.specify_phase(phase0);
+                pinned = true;
+            }
+            try {
+                if (!seeded_via_smass) {
+                    const double kR5_T_lo = std::nextafter(1073.15, 2273.15);
+                    constexpr double kR5_T_hi = 2273.15;
+                    constexpr double kR5_P_hi = 50.0e6;
+                    constexpr double kS_R3_vs_R5_split = 5.9e3;
+                    constexpr double kP_B23_lo_Pa = 16.529e6;
+                    constexpr double kP_B23_hi_Pa = 100.0e6;
+
+                    bool resolved = false;
+                    if (s_val >= kS_R3_vs_R5_split && p <= kR5_P_hi) {
+                        bool ok = false;
+                        const double T_R5 = solve_T_from_s_toms748(s_state, p, s_val, kR5_T_lo, kR5_T_hi, &ok);
+                        if (ok) {
+                            s_state.update(::CoolProp::PT_INPUTS, p, T_R5);
+                            resolved = true;
+                        }
+                    }
+                    if (!resolved) {
+                        if (!(p >= kP_B23_lo_Pa && p <= kP_B23_hi_Pa)) {
+                            throw ::CoolProp::ValueError(
+                              "ps_subcritical IF97 sampling: neither R5 (s<5.9kJ/kg/K or p>50MPa) nor R3 (p outside [16.529, 100] MPa) "
+                              "fallback applies — PSmass backward seed failed and no bracket is defined");
+                        }
+                        const double T_R3_lo = 623.15;
+                        const double T_R3_hi = IF97::Region23_p(p);
+                        if (!(T_R3_lo < T_R3_hi)) {
+                            throw ::CoolProp::ValueError("ps_subcritical IF97 sampling: degenerate R3 bracket (T_B23(p) <= 623.15 K)");
+                        }
+                        bool ok = false;
+                        const double T_R3 = solve_T_from_s_toms748(s_state, p, s_val, T_R3_lo, T_R3_hi, &ok);
+                        if (!ok) {
+                            throw ::CoolProp::ValueError("ps_subcritical IF97 sampling: R3 TOMS748 missed bracket; cell will be NaN-filled");
+                        }
+                        s_state.update(::CoolProp::PT_INPUTS, p, T_R3);
+                    }
+                } else {
+                    // Polish R7-97 backward seed against forward s.
+                    const double T_seed = s_state.T();
+                    constexpr double kIF97_T_min = 273.16;
+                    constexpr double kIF97_T_max = 2273.15;
+                    const double T_lo = std::max(T_seed - 0.5, kIF97_T_min);
+                    const double T_hi = std::min(T_seed + 0.5, kIF97_T_max);
+                    if (T_lo < T_hi) {
+                        bool ok = false;
+                        const double T_polished = solve_T_from_s_toms748(s_state, p, s_val, T_lo, T_hi, &ok);
+                        if (ok) {
+                            s_state.update(::CoolProp::PT_INPUTS, p, T_polished);
+                        } else {
+                            try {
+                                s_state.update(::CoolProp::PSmass_INPUTS, p, s_val);
+                            } catch (...) {  // NOLINT(bugprone-empty-catch)
+                            }
+                        }
+                    }
+                }
+            } catch (...) {
+                if (pinned) s_state.unspecify_phase();
+                throw;
+            }
+            if (pinned) s_state.unspecify_phase();
+        };
+    } else {
+        spec.update_state = [](::CoolProp::AbstractState& s_state, double p, double s_val) {
+            // SurfaceSpec passes (a, b) = (p, s); PSmass_INPUTS takes
+            // (p, s) in that order.
+            s_state.update(::CoolProp::PSmass_INPUTS, p, s_val);
+        };
+    }
+    spec.read_property = [](::CoolProp::AbstractState& s_state, ::CoolProp::parameters key) -> double {
+        switch (key) {
+            case ::CoolProp::iDmass:
+                return s_state.rhomass();
+            case ::CoolProp::iT:
+                return s_state.T();
+            case ::CoolProp::iHmass:
+                return s_state.hmass();
+            case ::CoolProp::iUmass:
+                return s_state.umass();
+            case ::CoolProp::ispeed_sound:
+                return s_state.speed_sound();
+            case ::CoolProp::iviscosity:
+                return s_state.viscosity();
+            case ::CoolProp::iconductivity:
+                return s_state.conductivity();
+            default:
+                throw std::invalid_argument("ps_subcritical: unsupported output property");
         }
     };
 
