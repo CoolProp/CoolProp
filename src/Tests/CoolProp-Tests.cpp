@@ -9,6 +9,7 @@
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
 #include <atomic>
+#include <chrono>
 #include <map>
 #include <set>
 #include <thread>
@@ -6906,6 +6907,55 @@ TEST_CASE("golden: viscosity higher_order modified_Batschinski_Hildebrand", "[ex
         }
     }
     CHECK(checks > 0);
+}
+
+TEST_CASE("DSL throughput is comparable to the hardcoded routine", "[expression][!benchmark]") {
+    using namespace CoolProp;
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("IsoButane");
+    HEOS->update(DmolarT_INPUTS, 5000.0, 300.0);
+
+    auto& HO = HEOS->get_components()[0].transport.viscosity_higher_order.modified_Batschinski_Hildebrand;
+    REQUIRE(!HO.a.empty());
+    Program prog = compile(
+        "let delta = rhomolar/rhomolar_reduce\n"
+        "let tau = T_reduce/T\n"
+        "let S = sum(i: a[i]*delta^d1[i]*tau^t1[i]*exp(gamma[i]*delta^l[i]))\n"
+        "let F = sum(i: f[i]*delta^d2[i]*tau^t2[i])\n"
+        "let numer = sum(i: g[i]*tau^h[i])\n"
+        "let denom = sum(i: pp[i]*tau^q[i])\n"
+        "let delta0 = numer/denom\n"
+        "S + F*(1/(delta0-delta) - 1/delta0)",
+        {{"rhomolar_reduce", static_cast<double>(HO.rhomolar_reduce)},
+         {"T_reduce", static_cast<double>(HO.T_reduce)}},
+        {{"a", std::vector<double>(HO.a.begin(), HO.a.end())},
+         {"d1", std::vector<double>(HO.d1.begin(), HO.d1.end())},
+         {"t1", std::vector<double>(HO.t1.begin(), HO.t1.end())},
+         {"gamma", std::vector<double>(HO.gamma.begin(), HO.gamma.end())},
+         {"l", std::vector<double>(HO.l.begin(), HO.l.end())},
+         {"f", std::vector<double>(HO.f.begin(), HO.f.end())},
+         {"d2", std::vector<double>(HO.d2.begin(), HO.d2.end())},
+         {"t2", std::vector<double>(HO.t2.begin(), HO.t2.end())},
+         {"g", std::vector<double>(HO.g.begin(), HO.g.end())},
+         {"h", std::vector<double>(HO.h.begin(), HO.h.end())},
+         {"pp", std::vector<double>(HO.p.begin(), HO.p.end())},
+         {"q", std::vector<double>(HO.q.begin(), HO.q.end())}});
+    auto corr = std::make_shared<ExpressionCorrelation>(std::move(prog));
+
+    const int N = 2'000'000;
+    volatile double sink = 0.0;
+    auto t0 = std::chrono::steady_clock::now();
+    for (int k = 0; k < N; ++k)
+        sink += TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*HEOS);
+    auto t1 = std::chrono::steady_clock::now();
+    for (int k = 0; k < N; ++k) sink += corr->eval(*HEOS);
+    auto t2 = std::chrono::steady_clock::now();
+
+    double ns_hard = std::chrono::duration<double, std::nano>(t1 - t0).count() / N;
+    double ns_dsl = std::chrono::duration<double, std::nano>(t2 - t1).count() / N;
+    double ratio = ns_dsl / ns_hard;
+    WARN("hardcoded = " << ns_hard << " ns/eval; DSL = " << ns_dsl << " ns/eval; ratio = " << ratio << "x");
+    CHECK(ratio < 5.0);
 }
 
 TEST_CASE("golden: conductivity dilute ratio_of_polynomials", "[expression][golden]") {
