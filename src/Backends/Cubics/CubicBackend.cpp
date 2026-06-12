@@ -412,10 +412,10 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
 class SaturationResidual : public CoolProp::FuncWrapper1D
 {
    public:
-    CoolProp::AbstractCubicBackend* ACB;
-    CoolProp::input_pairs inputs;
-    double imposed_variable;
-    double deltaL, deltaV;
+    CoolProp::AbstractCubicBackend* ACB = nullptr;
+    CoolProp::input_pairs inputs = CoolProp::INPUT_PAIR_INVALID;
+    double imposed_variable = _HUGE;
+    double deltaL = _HUGE, deltaV = _HUGE;
 
     SaturationResidual() = default;
     SaturationResidual(CoolProp::AbstractCubicBackend* ACB, CoolProp::input_pairs inputs, double imposed_variable)
@@ -576,9 +576,21 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp_global(CoolPropDbl T, 
         // triggers all_critical_points() for many-component mixtures.
         double rho_vap = (rho0 > 0) ? rho0 : rho1;
         double rho_liq = rho2;
-        double g_vap = calc_gibbsmolar_nocache(T, rho_vap);
-        double g_liq = calc_gibbsmolar_nocache(T, rho_liq);
-        rho = (g_liq < g_vap) ? rho_liq : rho_vap;
+        // Guard against a non-physical (<= 0) candidate root: its Gibbs energy is
+        // garbage/NaN, and `g_liq < g_vap` is false for a NaN g_vap, which would
+        // silently select the non-physical root (CoolProp-1tbe.8 finding 3A).
+        bool vap_ok = rho_vap > 0;
+        bool liq_ok = rho_liq > 0;
+        if (vap_ok && liq_ok) {
+            double g_vap = calc_gibbsmolar_nocache(T, rho_vap);
+            double g_liq = calc_gibbsmolar_nocache(T, rho_liq);
+            // Prefer the lower-Gibbs root; if one Gibbs is non-finite, keep the finite one.
+            rho = (ValidNumber(g_liq) && (!ValidNumber(g_vap) || g_liq < g_vap)) ? rho_liq : rho_vap;
+        } else if (vap_ok || liq_ok) {
+            rho = vap_ok ? rho_vap : rho_liq;
+        } else {
+            throw ValueError("solver_rho_Tp_global: no positive density root among the three cubic roots");
+        }
     } else {
         throw ValueError("Obtained neither 1 nor three roots");
     }

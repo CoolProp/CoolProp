@@ -486,15 +486,15 @@ struct newton_raphson_saturation_options
 class newton_raphson_saturation
 {
    public:
-    newton_raphson_saturation_options::imposed_variable_options imposed_variable;
-    CoolPropDbl error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change;
-    std::size_t N;
-    bool logging;
-    bool bubble_point;
-    int Nsteps;
+    newton_raphson_saturation_options::imposed_variable_options imposed_variable = newton_raphson_saturation_options::NO_VARIABLE_IMPOSED;
+    CoolPropDbl error_rms = _HUGE, rhomolar_liq = _HUGE, rhomolar_vap = _HUGE, T = _HUGE, p = _HUGE, min_rel_change = _HUGE;
+    std::size_t N = 0;
+    bool logging = false;
+    bool bubble_point = false;
+    int Nsteps = 0;
     Eigen::MatrixXd J;
-    HelmholtzEOSMixtureBackend* HEOS;
-    CoolPropDbl dTsat_dPsat, dPsat_dTsat;
+    HelmholtzEOSMixtureBackend* HEOS = nullptr;
+    CoolPropDbl dTsat_dPsat = _HUGE, dPsat_dTsat = _HUGE;
     std::vector<CoolPropDbl> K, x, y;
     Eigen::VectorXd r, err_rel;
     std::vector<SuccessiveSubstitutionStep> step_logger;
@@ -583,9 +583,9 @@ struct PTflash_twophase_options
 class PTflash_twophase
 {
    public:
-    double error_rms;
-    bool logging;
-    int Nsteps;
+    double error_rms = _HUGE;
+    bool logging = false;
+    int Nsteps = 0;
     Eigen::MatrixXd J;
     Eigen::VectorXd r, err_rel;
     HelmholtzEOSMixtureBackend& HEOS;
