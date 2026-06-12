@@ -6578,11 +6578,35 @@ TEST_CASE("Surface tension of water is nonzero and matches IAPWS", "[surface_ten
 
 #if defined(ENABLE_CATCH)
 #    include "CoolProp/expression/Expression.h"
+#    include "CoolProp/expression/detail/Lexer.h"
 
 TEST_CASE("expression module links and evaluates a constant", "[expression]") {
     using namespace CoolProp::expression;
     Program prog = compile("3 + 4", {}, {});
     CHECK(prog.evaluate(nullptr, nullptr) == Catch::Approx(7.0));
+}
+
+TEST_CASE("lexer tokenizes numbers, idents, operators", "[expression]") {
+    using namespace CoolProp::expression::detail;
+    std::vector<Token> t = lex("let x = a[i]*T^2.66958e-08 + sum(i: b)");
+    REQUIRE(t.front().type == TokenType::Keyword_let);
+    bool sawScientific = false, sawCaret = false, sawColon = false, sawLBracket = false;
+    for (const auto& tok : t) {
+        if (tok.type == TokenType::Number && tok.number == Catch::Approx(2.66958e-08)) sawScientific = true;
+        if (tok.type == TokenType::Caret) sawCaret = true;
+        if (tok.type == TokenType::Colon) sawColon = true;
+        if (tok.type == TokenType::LBracket) sawLBracket = true;
+    }
+    CHECK(sawScientific);
+    CHECK(sawCaret);
+    CHECK(sawColon);
+    CHECK(sawLBracket);
+    CHECK(t.back().type == TokenType::End);
+}
+
+TEST_CASE("lexer rejects an illegal character", "[expression]") {
+    using namespace CoolProp::expression::detail;
+    CHECK_THROWS_AS(lex("a @ b"), CoolProp::ValueError);
 }
 #endif
 
