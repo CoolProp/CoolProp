@@ -136,9 +136,12 @@ extern "C"
         }
 
         if (EES_DEBUG) {
-            // This redirects standard output to log_stdout.txt
-            freopen("log_stdout.txt", "w", stdout);
-            ::set_debug_level(100000);  // Maximum debugging
+            // This redirects standard output to log_stdout.txt; only crank up
+            // the debug output if the redirect succeeded, so we don't spew to a
+            // broken stdout when the log file can't be opened.
+            if (freopen("log_stdout.txt", "w", stdout) != NULL) {
+                ::set_debug_level(100000);  // Maximum debugging
+            }
         }
 
         try {
@@ -163,11 +166,13 @@ extern "C"
                     out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr);
                 }
             } else {
-                if (In1str.size() != 0) {
+                if (In1str.size() != 1) {
                     strcpy(fluid, format("Input #1 [%s] can only be 1 character long for coolprop()", In1str.c_str()).c_str());
+                    return 0;
                 }
-                if (In2str.size() != 0) {
+                if (In2str.size() != 1) {
                     strcpy(fluid, format("Input #2 [%s] can only be 1 character long for coolprop()", In2str.c_str()).c_str());
+                    return 0;
                 }
                 // Mole fractions are not given
                 out = Props(Outstr.c_str(), In1str[0], In1, In2str[0], In2, Fluidstr.c_str());
