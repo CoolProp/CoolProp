@@ -4094,7 +4094,7 @@ TEST_CASE("calc_all_terms matches term() for non-default alpha functions", "[cub
         BasicMathiasCopemanAlphaFunction alpha(a0, m, Tr_over_Tci);
         for (double tau : tau_vals) {
             CAPTURE(tau);
-            double terms[5];
+            std::array<double, 5> terms;
             alpha.calc_all_terms(tau, terms);
             for (int k = 0; k < 5; ++k) {
                 CAPTURE(k);
@@ -4113,7 +4113,7 @@ TEST_CASE("calc_all_terms matches term() for non-default alpha functions", "[cub
         MathiasCopemanAlphaFunction alpha(a0, c1, c2, c3, Tr_over_Tci);
         for (double tau : tau_vals) {
             CAPTURE(tau);
-            double terms[5];
+            std::array<double, 5> terms;
             alpha.calc_all_terms(tau, terms);
             for (int k = 0; k < 5; ++k) {
                 CAPTURE(k);
@@ -4132,7 +4132,7 @@ TEST_CASE("calc_all_terms matches term() for non-default alpha functions", "[cub
         TwuAlphaFunction alpha(a0, L, M, N, Tr_over_Tci);
         for (double tau : tau_vals) {
             CAPTURE(tau);
-            double terms[5];
+            std::array<double, 5> terms;
             alpha.calc_all_terms(tau, terms);
             for (int k = 0; k < 5; ++k) {
                 CAPTURE(k);
@@ -4150,7 +4150,7 @@ TEST_CASE("calc_all_terms matches term() for non-default alpha functions", "[cub
         TwuAlphaFunction alpha(a0, L, M, N, Tr_over_Tci);
         for (double tau : tau_vals) {
             CAPTURE(tau);
-            double terms[5];
+            std::array<double, 5> terms;
             alpha.calc_all_terms(tau, terms);
             for (int k = 0; k < 5; ++k) {
                 CAPTURE(k);

@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <array>
 #include <memory>
@@ -32,7 +33,7 @@ class AbstractCubicAlphaFunction
     virtual ~AbstractCubicAlphaFunction() = default;
     virtual double term(double tau, std::size_t itau) = 0;
     /// Compute all 5 tau-derivatives at once. Default falls back to 5 separate term() calls.
-    virtual void calc_all_terms(double tau, double terms[5]) {
+    virtual void calc_all_terms(double tau, std::array<double, 5>& terms) {
         for (int k = 0; k < 5; ++k)
             terms[k] = term(tau, k);
     }
@@ -53,7 +54,7 @@ class BasicMathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction
 
         };
     double term(double tau, std::size_t itau) override;
-    void calc_all_terms(double tau, double terms[5]) override;
+    void calc_all_terms(double tau, std::array<double, 5>& terms) override;
 };
 
 /// An implementation of AbstractCubicAlphaFunction for the Twu alpha function
@@ -67,7 +68,7 @@ class TwuAlphaFunction : public AbstractCubicAlphaFunction
         c[2] = N;
     };
     double term(double tau, std::size_t itau) override;
-    void calc_all_terms(double tau, double terms[5]) override;
+    void calc_all_terms(double tau, std::array<double, 5>& terms) override;
 };
 
 /// An implementation of AbstractCubicAlphaFunction for the Mathias-Copeman alpha function
@@ -81,7 +82,7 @@ class MathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction
         c[2] = c3;
     };
     double term(double tau, std::size_t itau) override;
-    void calc_all_terms(double tau, double terms[5]) override;
+    void calc_all_terms(double tau, std::array<double, 5>& terms) override;
 };
 
 class AbstractCubic
@@ -104,10 +105,10 @@ class AbstractCubic
     mutable double m_tau_cache;
     mutable std::vector<std::array<double, 5>> m_aii_cache;
     void _ensure_aii_cache(double tau) const {
-        if (tau != m_tau_cache) {
+        if (std::memcmp(&tau, &m_tau_cache, sizeof(double)) != 0) {
             m_aii_cache.resize(N);
             for (int i = 0; i < N; ++i)
-                alpha[i]->calc_all_terms(tau, m_aii_cache[i].data());
+                alpha[i]->calc_all_terms(tau, m_aii_cache[i]);
             m_tau_cache = tau;
         }
     }

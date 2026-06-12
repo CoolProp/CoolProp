@@ -120,7 +120,7 @@ double TwuAlphaFunction::term(double tau, std::size_t itau) {
     }
 }
 
-void BasicMathiasCopemanAlphaFunction::calc_all_terms(double tau, double terms[5]) {
+void BasicMathiasCopemanAlphaFunction::calc_all_terms(double tau, std::array<double, 5>& terms) {
     // Compute B and shared powers of tau once, then fill all 5 derivatives
     const double sq = sqrt_Tr_Tci / sqrt(tau);  // sqrt(Tr/Tci / tau)
     const double B = 1.0 + m * (1.0 - sq);
@@ -138,7 +138,7 @@ void BasicMathiasCopemanAlphaFunction::calc_all_terms(double tau, double terms[5
     terms[4] = (3.0 / 8.0) * a0 * m * (29.0 * m * t5 - 35.0 * B * t45);
 }
 
-void TwuAlphaFunction::calc_all_terms(double tau, double terms[5]) {
+void TwuAlphaFunction::calc_all_terms(double tau, std::array<double, 5>& terms) {
     const double L = c[0], M = c[1], N = c[2];
     // Compute the two pow() and one exp() calls exactly once
     const double A = pow(Tr_over_Tci / tau, M * N);
@@ -159,7 +159,7 @@ void TwuAlphaFunction::calc_all_terms(double tau, double terms[5]) {
     terms[4] = B1 * d3am + am * d3B1 + 3.0 * dB1 * d2am + 3.0 * d2B1 * dam;
 }
 
-void MathiasCopemanAlphaFunction::calc_all_terms(double tau, double terms[5]) {
+void MathiasCopemanAlphaFunction::calc_all_terms(double tau, std::array<double, 5>& terms) {
     // Compute Di = 1 - sqrt(Tr/Tci / tau) and its tau-derivatives once, reusing
     // a common power chain.  All five derivatives share these values.
     const double sq = sqrt_Tr_Tci / sqrt(tau);  // sqrt(Tr_over_Tci / tau)
