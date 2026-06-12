@@ -92,36 +92,12 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
 
     if (HEOS.imposed_phase_index == iphase_not_imposed) {
         // Blind flash call
-        // Instantiates stability tester (dispatches to Michelsen or Gernert based on config)
-        StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
-        if (!stability_tester.is_stable()) {
-            // There is a phase split and liquid and vapor phases are formed
-            CoolProp::SaturationSolvers::PTflash_twophase_options o;
-            stability_tester.get_liq(o.x, o.rhomolar_liq);
-            stability_tester.get_vap(o.y, o.rhomolar_vap);
-            o.z = HEOS.get_mole_fractions();
-            o.T = HEOS.T();
-            o.p = HEOS.p();
-            o.omega = 1.0;
-            CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
-            solver.solve();
-            // Fallback block: Catches mathematically trivial splits (beta ~ 0 or 1) caused by boundary
-            // floating-point noise in the Michelsen TPD solver, or false positives if using the legacy solver.
-            if (o.beta < 1e-10) {
-                HEOS.update_DmolarT_direct(o.rhomolar_liq, HEOS.T());
-                HEOS._phase = (o.rhomolar_liq < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
-                HEOS._Q = -1;
-            } else if (o.beta > 1.0 - 1e-10) {
-                HEOS.update_DmolarT_direct(o.rhomolar_vap, HEOS.T());
-                HEOS._phase = (o.rhomolar_vap < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
-                HEOS._Q = -1;
-            } else {
-                HEOS._phase = iphase_twophase;
-                HEOS._Q = o.beta;
-                HEOS._rhomolar = 1.0 / (o.beta / o.rhomolar_vap + (1.0 - o.beta) / o.rhomolar_liq);
-            }
-        } else {
-            // It's single-phase -- find the density.
+
+        // Single-phase density determination via Gibbs-minimizing root selection.
+        // Used both for a stable feed and as the fallback when a flagged two-phase
+        // split fails to converge — e.g. a stability false-positive at a single-phase
+        // liquid state where both "phases" collapse to liquid-like roots (GitHub #3168).
+        auto solve_single_phase = [&]() {
             // Save T and p before any solver calls — solver_rho_Tp may corrupt
             // HEOS._T/_p on failure (Householder sets them to -inf).
             const CoolPropDbl T_saved = HEOS.T();
@@ -183,6 +159,56 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             HEOS.update_DmolarT_direct(rho, T_saved);
             HEOS._Q = -1;
             HEOS._phase = (rho < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+        };
+
+        // Instantiates stability tester (dispatches to Michelsen or Gernert based on config)
+        StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
+        if (!stability_tester.is_stable()) {
+            // There is a phase split and liquid and vapor phases are formed
+            CoolProp::SaturationSolvers::PTflash_twophase_options o;
+            stability_tester.get_liq(o.x, o.rhomolar_liq);
+            stability_tester.get_vap(o.y, o.rhomolar_vap);
+            o.z = HEOS.get_mole_fractions();
+            o.T = HEOS.T();
+            o.p = HEOS.p();
+            o.omega = 1.0;
+            CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
+            bool split_converged = true;
+            try {
+                solver.solve();
+            } catch (const CoolProp::CoolPropBaseError&) {
+                // Only the convergence gate in solve_michelsen (o.nonconvergence,
+                // GitHub #3168) routes to the single-phase fallback: its usual cause is
+                // a stability false-positive at a single-phase state, where publishing
+                // the unconverged split would be a wrong answer.  Any other failure
+                // (e.g. an upstream density-solve loss) is not evidence of a single
+                // phase, so it is re-thrown rather than silently masked.
+                if (!o.nonconvergence) {
+                    throw;
+                }
+                split_converged = false;
+            }
+            if (!split_converged) {
+                HEOS.unspecify_phase();
+                solve_single_phase();
+            } else if (o.beta < 1e-10) {
+                // Fallback block: trivial splits (beta ~ 0 or 1) from boundary
+                // floating-point noise collapse to single-phase.
+                HEOS.update_DmolarT_direct(o.rhomolar_liq, HEOS.T());
+                HEOS._phase = (o.rhomolar_liq < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+                HEOS._Q = -1;
+            } else if (o.beta > 1.0 - 1e-10) {
+                HEOS.update_DmolarT_direct(o.rhomolar_vap, HEOS.T());
+                HEOS._phase = (o.rhomolar_vap < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+                HEOS._Q = -1;
+            } else {
+                HEOS._phase = iphase_twophase;
+                HEOS._Q = o.beta;
+                HEOS._rhomolar = 1.0 / (o.beta / o.rhomolar_vap + (1.0 - o.beta) / o.rhomolar_liq);
+            }
+        } else {
+            // It's single-phase -- find the density.
+            solve_single_phase();
         }
     } else {
         // It's single-phase, and phase is imposed
