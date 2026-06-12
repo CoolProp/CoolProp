@@ -55,6 +55,16 @@ struct EesParamRec
 
 using namespace CoolProp;
 
+// EES always passes `fluid` as a fixed 256-char buffer (see the header comment
+// at the top of this file).  Route every write to it through this helper so a
+// long fluid/input string or error/warning message is truncated to fit instead
+// of overrunning the buffer; the result is always NUL-terminated.
+static void set_fluid(char* fluid, const std::string& message) {
+    const std::size_t n = std::min(message.size(), static_cast<std::size_t>(255));
+    message.copy(fluid, n);
+    fluid[n] = '\0';
+}
+
 // Tell C++ to use the "C" style calling conventions rather than the C++ mangled names
 extern "C"
 {
@@ -70,7 +80,7 @@ extern "C"
         std::vector<std::string> fluid_split;
 
         if (mode == -1) {
-            strcpy(fluid, "T = PropsSI('T','P',101325,'Q',0,'Water')");
+            set_fluid(fluid, "T = PropsSI('T','P',101325,'Q',0,'Water')");
             return 0;
         }
 
@@ -78,7 +88,7 @@ extern "C"
         fluid_split = strsplit(fluid_string, '~');
         if (fluid_split.size() != 5) {
             sprintf(err_str, "fluid[%s] length[%d] not 5 elements long", fluid_string.c_str(), fluid_split.size());
-            strcpy(fluid, err_str);
+            set_fluid(fluid, err_str);
             if (EES_DEBUG) {
                 FILE* fp;
                 fp = fopen("log.txt", "a+");
@@ -115,7 +125,7 @@ extern "C"
 
         if (NInputs < 2) {
             sprintf(err_str, "Number of inputs [%d] < 2", NInputs);
-            strcpy(fluid, err_str);
+            set_fluid(fluid, err_str);
             return 0;
         }
 
@@ -167,11 +177,11 @@ extern "C"
                 }
             } else {
                 if (In1str.size() != 1) {
-                    strcpy(fluid, format("Input #1 [%s] can only be 1 character long for coolprop()", In1str.c_str()).c_str());
+                    set_fluid(fluid, format("Input #1 [%s] can only be 1 character long for coolprop()", In1str.c_str()));
                     return 0;
                 }
                 if (In2str.size() != 1) {
-                    strcpy(fluid, format("Input #2 [%s] can only be 1 character long for coolprop()", In2str.c_str()).c_str());
+                    set_fluid(fluid, format("Input #2 [%s] can only be 1 character long for coolprop()", In2str.c_str()));
                     return 0;
                 }
                 // Mole fractions are not given
@@ -187,7 +197,7 @@ extern "C"
                 fprintf(fp, "Error: %s \n", err_str.c_str());
                 fclose(fp);
             }
-            strcpy(fluid, err_str.c_str());
+            set_fluid(fluid, err_str);
 
             return 0.0;
         }
@@ -201,7 +211,7 @@ extern "C"
                 fprintf(fp, "Error: %s \n", err_str.c_str());
                 fclose(fp);
             }
-            strcpy(fluid, err_str.c_str());
+            set_fluid(fluid, err_str);
             return 0.0;
         } else {
             // Check if there was a warning
@@ -214,7 +224,7 @@ extern "C"
                     fclose(fp);
                 }
                 // There was a warning, write it back
-                strcpy(fluid, warn_string.c_str());
+                set_fluid(fluid, warn_string);
             }
             if (EES_DEBUG) {
                 FILE* fp;
