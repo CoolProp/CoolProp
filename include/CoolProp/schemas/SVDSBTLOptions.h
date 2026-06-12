@@ -24,6 +24,10 @@ inline constexpr const char kSVDSBTLOptionsSchemaJson[] = R"JSON({
       "const": 1,
       "description": "Schema version. Bump when the layout below changes."
     },
+    "prebuild": {
+      "type": "boolean",
+      "description": "When true, eagerly build every supported input-pair surface (PT, HmassP, DmassT, PSmass) at construction instead of lazy-loading the secondary pairs on first query. Opt-in complement to the default lazy loading: materializes the whole fluid up front (docs / benchmarking / warm-cache pre-fill) and turns a build/env failure into a loud construction-time error instead of a silent blank later."
+    },
     "grid": {
       "type": "object",
       "additionalProperties": false,

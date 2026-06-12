@@ -335,6 +335,23 @@ nb.cells = [
         "    return fig\n"
     ),
     _md(
+        "### Environment preflight\n\n"
+        "Before the parallel grid below, eagerly materialize **all four** input-pair "
+        "surfaces for a single fluid via the SVDSBTL `prebuild` option. This fails "
+        "**loudly here** if the CoolProp build / kernel environment can't produce them "
+        "(e.g. a stale wheel without `PSmass` support) — rather than letting every PS / DT "
+        "panel downstream render as a silent blank. `prebuild` strips itself from the "
+        "cache key, so these surfaces are shared with the plain `SVDSBTL&HEOS` "
+        "constructions the panels use.\n"
+    ),
+    _code(
+        "# prebuild=true builds PT + HmassP + DmassT + PSmass for Water in a single\n"
+        "# construction; a build / env failure raises here and fails the docs build,\n"
+        "# which is the intended loud signal (vs. a quietly blank panel).\n"
+        "CP.AbstractState('SVDSBTL&HEOS', 'Water?{\"prebuild\": true}')\n"
+        "print('preflight OK: all SVDSBTL input-pair surfaces build for Water')\n"
+    ),
+    _md(
         "### Grid computation\n\n"
         "Each `(fluid, input_pair)` pair is an independent unit of work, so we compute "
         "all of them concurrently via `joblib` "
