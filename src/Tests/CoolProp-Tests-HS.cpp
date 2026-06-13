@@ -131,4 +131,66 @@ TEST_CASE("HS production single-phase round-trip (phase-diagram sweep)", "[HS][H
     CHECK(ok == total);  // every single-phase (h,s) round-tripped
 }
 
+// ---------------------------------------------------------------------------
+// Single-phase H,S round-trip for fluids WITHOUT a superancillary: the
+// pseudo-pure fluids (Air, the R-40x/50x blends, SES36) and any pure fluid
+// built without one.  These cannot take the is_pure()-gated superancillary
+// happy path, so they exercise the dedicated superancillary-free fast path in
+// HS_flash (dome-free cascade legs: supercritical isentrope, ideal-gas
+// departure, melting-line anchor).  Guards both correctness (round-trips to
+// the forward (T, rho)) and that the fast path does not throw where the legacy
+// blind scan succeeded.  A looser tolerance than [HS_prod1ph] is used because
+// pseudo-pure property surfaces are ill-conditioned near the critical point
+// (the underlying mixture's temperature glide is collapsed); see the Air
+// critical-region harness for the same rationale.
+//
+//     CatchTestRunner "[HS_pseudopure]"
+// ---------------------------------------------------------------------------
+TEST_CASE("HS single-phase round-trip (no-superancillary / pseudo-pure fluids)", "[HS][HS_pseudopure]") {
+    const std::string fluid = GENERATE(as<std::string>{}, "Air", "R407C", "R410A", "R404A", "R507A", "SES36");
+    CAPTURE(fluid);
+    auto ref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
+    auto wrk = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
+
+    const double Tmin = ref->Tmin(), Tmax = ref->Tmax(), pmax = ref->pmax();
+    double plo;
+    try {
+        plo = std::max(ref->p_triple(), pmax * 1e-6);
+    } catch (...) {
+        plo = pmax * 1e-6;
+    }
+    const double tol = 2e-4;  // pseudo-pure critical-region ill-conditioning slack
+    std::size_t total = 0, ok = 0;
+    for (double T : linspace(Tmin + 0.5, Tmax, 20)) {
+        for (std::size_t j = 0; j < 20; ++j) {
+            const double p = plo * std::pow(pmax / plo, static_cast<double>(j) / 19.0);
+            try {
+                ref->update(CoolProp::PT_INPUTS, p, T);  // throws inside the dome for a pseudo-pure -> skip
+            } catch (...) {
+                continue;
+            }
+            const double h = ref->hmolar(), s = ref->smolar(), rho = ref->rhomolar(), Tt = ref->T();
+            if (!std::isfinite(h) || !std::isfinite(s) || !std::isfinite(rho)) continue;
+            ++total;
+            CAPTURE(T, p, rho, h, s);
+            try {
+                wrk->update(CoolProp::HmolarSmolar_INPUTS, h, s);
+            } catch (const std::exception& e) {
+                FAIL_CHECK("single-phase HS threw: " << e.what());
+                continue;
+            }
+            const bool good = std::abs(wrk->T() - Tt) / Tt < tol && std::abs(wrk->rhomolar() - rho) / rho < tol;
+            if (good)
+                ++ok;
+            else {
+                CAPTURE(wrk->T(), wrk->rhomolar());
+                CHECK(good);
+            }
+        }
+    }
+    std::printf("[HS_pseudopure] %s: %zu/%zu single-phase round-trips\n", fluid.c_str(), ok, total);
+    REQUIRE(total > 0);  // grid actually exercised the flash
+    CHECK(ok == total);  // every single-phase (h,s) round-tripped
+}
+
 #endif  // ENABLE_CATCH

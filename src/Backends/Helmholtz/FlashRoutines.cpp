@@ -4065,6 +4065,61 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
             }
         }
     }
+    // ============ superancillary-free single-phase happy path =============
+    // Pseudo-pure fluids (e.g. Air) and any pure fluid without a built superancillary
+    // skip the block above, and would otherwise hit the ~50-iteration blind T-scan in the
+    // legacy sad path below (Air HS measured ~160 ms/call).  But the cascade's dome-free
+    // legs -- supercritical isentrope (T=Tmax anchor), ideal-gas departure, and melting --
+    // need no saturation curve, and their stability-based acceptance (hs_accept: reproduces
+    // (h,s) AND dp/drho|_T>0 AND cv>0) makes the single-phase (h,s)->(T,rho) root unique.
+    // So run the cascade with a NULL superancillary for the common single-phase case
+    // (~tens of us, like the pure-fluid happy path).  Two-phase or cascade-miss inputs are
+    // rejected by the acceptance gate and fall through to the sad path.
+    {
+        static const bool hs_disabled_na = (std::getenv("COOLPROP_DISABLE_SUPERANC_HS") != nullptr);
+        // Restrict this block to fluids that genuinely HAVE no superancillary, so that
+        // any fluid which does have one keeps its dome veto (the cascade only applies
+        // hs_inside_dome when sa != nullptr; without it, hs_accept can admit an in-dome
+        // METASTABLE root for a two-phase (h,s) input).  The probe is on superancillary
+        // *existence*, NOT the ENABLE_SUPERANCILLARIES config flag: a pure fluid that has
+        // a superancillary built must never enter the null-sa cascade even when the
+        // config is off -- it falls to the legacy two-phase-aware path instead.
+        // get_superanc() THROWS for a pseudo-pure fluid, so guard it behind is_pure();
+        // for pseudo-pure (Air, R407C, ...) superanc_available stays false by design.
+        bool superanc_available = false;
+        if (HEOS.is_pure()) {
+            try {
+                superanc_available = (HEOS.get_superanc() != nullptr);
+            } catch (...) {  // NOLINT(bugprone-empty-catch) -- treat as "no superancillary"
+            }
+        }
+        if (!hs_disabled_na && HEOS.is_pure_or_pseudopure && !superanc_available) {
+            const double h_t = HEOS._hmolar, s_t = HEOS._smolar;
+            bool ok = false;
+            try {
+                double T = 0, rho = 0;
+                if (hs_cascade(HEOS, nullptr, h_t, s_t, T, rho)) {
+                    HEOS.update_DmolarT_direct(rho, T);
+                    HEOS._Q = 10000;
+                    HEOS._p = HEOS.calc_pressure_nocache(HEOS.T(), HEOS.rhomolar());
+                    HEOS.unspecify_phase();
+                    HEOS.recalculate_singlephase_phase();
+                    const double hh = HEOS.hmolar(), ss = HEOS.smolar();
+                    ok = std::isfinite(hh) && std::isfinite(ss) && std::abs(hh - h_t) <= 1e-6 * std::abs(h_t) + 1e-3
+                         && std::abs(ss - s_t) <= 1e-6 * std::abs(s_t) + 1e-5;
+                }
+            } catch (...) {  // NOLINT(bugprone-empty-catch) -- fall through to the sad path
+            }
+            if (ok) {
+                return;
+            }
+            // The cascade's probes (update_DmolarT_direct -> clear) overwrite the cached
+            // caloric inputs; restore them so the sad path solves for the original target.
+            HEOS._hmolar = h_t;
+            HEOS._smolar = s_t;
+            HEOS.unspecify_phase();
+        }
+    }
     // ===================== legacy "sad path" =====================
     // Use TS flash and iterate on T (known to be between Tmin and Tmax)
     // in order to find H
