@@ -1312,6 +1312,109 @@ TEST_CASE("SVDSBTLBackend uses surrogate when source has no SuperAncillary", "[S
     REQUIRE(rp_be->sat_surrogate_consulted());
 }
 
+// CoolProp-rhb5: the opt-in `prebuild` option materializes every
+// supported input-pair surface at construction instead of lazy-loading
+// the secondary pairs (DmassT / PSmass) on first query.
+TEST_CASE("SVDSBTL prebuild option eagerly builds all surfaces", "[SBTL][SVDSBTL][prebuild][slow]") {
+    auto contains = [](const std::vector<CoolProp::input_pairs>& v, CoolProp::input_pairs p) {
+        return std::find(v.begin(), v.end(), p) != v.end();
+    };
+    // Small grid keeps the four dense SVD builds fast for a unit test.
+    const char* small_grid = R"({"grid":{"NT":40,"NR":80,"rank":10}})";
+    const char* small_grid_prebuild = R"({"prebuild":true,"grid":{"NT":40,"NR":80,"rank":10}})";
+
+    // Default (lazy): only the eager pairs PT + HmassP are registered at
+    // construction; DmassT / PSmass are absent until first queried.
+    {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(
+          CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + small_grid));
+        auto* be = dynamic_cast<CoolProp::SVDSBTLBackend*>(AS.get());
+        REQUIRE(be != nullptr);
+        const auto pairs = be->registered_input_pairs();
+        REQUIRE(contains(pairs, CoolProp::PT_INPUTS));
+        REQUIRE(contains(pairs, CoolProp::HmassP_INPUTS));
+        REQUIRE_FALSE(contains(pairs, CoolProp::DmassT_INPUTS));
+        REQUIRE_FALSE(contains(pairs, CoolProp::PSmass_INPUTS));
+    }
+    // prebuild=true: all four supported pairs are registered eagerly.
+    {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(
+          CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + small_grid_prebuild));
+        auto* be = dynamic_cast<CoolProp::SVDSBTLBackend*>(AS.get());
+        REQUIRE(be != nullptr);
+        const auto pairs = be->registered_input_pairs();
+        REQUIRE(contains(pairs, CoolProp::PT_INPUTS));
+        REQUIRE(contains(pairs, CoolProp::HmassP_INPUTS));
+        REQUIRE(contains(pairs, CoolProp::DmassT_INPUTS));
+        REQUIRE(contains(pairs, CoolProp::PSmass_INPUTS));
+    }
+}
+
+TEST_CASE("SVDSBTL&IF97 prebuild skips the unbuildable DmassT surface", "[SBTL][SVDSBTL][prebuild][if97][slow]") {
+    if (!source_backend_available("IF97", "Water")) {
+        SKIP("IF97 backend not available; skipping SVDSBTL&IF97 prebuild test");
+    }
+    auto contains = [](const std::vector<CoolProp::input_pairs>& v, CoolProp::input_pairs p) {
+        return std::find(v.begin(), v.end(), p) != v.end();
+    };
+    // DmassT can't be sampled on a (D,T) grid from IF97 (all-NaN matrix),
+    // so prebuild builds PT + HmassP + PSmass but leaves DmassT out rather
+    // than throwing at construction.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(
+      CoolProp::AbstractState::factory("SVDSBTL&IF97", std::string(R"(Water?{"prebuild":true,"grid":{"NT":40,"NR":80,"rank":10}})")));
+    auto* be = dynamic_cast<CoolProp::SVDSBTLBackend*>(AS.get());
+    REQUIRE(be != nullptr);
+    const auto pairs = be->registered_input_pairs();
+    REQUIRE(contains(pairs, CoolProp::PT_INPUTS));
+    REQUIRE(contains(pairs, CoolProp::HmassP_INPUTS));
+    REQUIRE(contains(pairs, CoolProp::PSmass_INPUTS));
+    REQUIRE_FALSE(contains(pairs, CoolProp::DmassT_INPUTS));
+}
+
+// prebuild must NOT change the cache key: a {"prebuild":true} build has
+// to share its serialized surfaces with a plain no-prebuild instance (the
+// opthash is stripped of the build-eagerness flag).  Otherwise the docs
+// pre-warm would cache under a different opthash than the panels load.
+TEST_CASE("SVDSBTL prebuild shares the surface cache with a plain instance", "[SBTL][SVDSBTL][prebuild][cache][slow]") {
+    namespace fs = std::filesystem;
+    const std::string saved = CoolProp::get_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY);
+    const fs::path tmpdir = fs::temp_directory_path() / ("coolprop_svdtables_prebuild_" + std::to_string(CoolProp::tests::test_pid()));
+    std::error_code ec;
+    fs::remove_all(tmpdir, ec);
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, tmpdir.string());
+
+    auto count_ps_files = [&]() {
+        int n = 0;
+        for (const auto& e : fs::directory_iterator(tmpdir, ec)) {
+            const auto name = e.path().filename().string();
+            if (name.find("PSmass_INPUTS") != std::string::npos && name.find(".svd.bin.z") != std::string::npos) ++n;
+        }
+        return n;
+    };
+
+    // critical_patch off so we don't pay the bbox-calibration loop; small
+    // grid so the four builds are a few seconds.
+    const char* prebuild_opts = R"({"prebuild":true,"critical_patch":{"mode":"off"},"grid":{"NT":40,"NR":80,"rank":10}})";
+    const char* plain_opts = R"({"critical_patch":{"mode":"off"},"grid":{"NT":40,"NR":80,"rank":10}})";
+
+    // Prebuild instance: writes one PSmass surface to the tmpdir.
+    { auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + prebuild_opts)); }
+    REQUIRE(count_ps_files() == 1);
+
+    // Plain instance (same grid, NO prebuild): a PS query must LOAD the
+    // already-cached surface — the opthash strip means it looks for the
+    // same file, so no second PSmass cache file appears.
+    auto plain = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + plain_opts));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    heos->update(CoolProp::PT_INPUTS, 5.0e5, 400.0);
+    plain->update(CoolProp::PSmass_INPUTS, 5.0e5, heos->smass());
+    REQUIRE(plain->rhomass() == Approx(heos->rhomass()).epsilon(1e-1));  // coarse grid; just confirms it resolved
+    REQUIRE(count_ps_files() == 1);  // shared, not a second opthash
+
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, saved);
+    fs::remove_all(tmpdir, ec);
+}
+
 // CoolProp-4u9: the tiny p-strip immediately around pc (sub: p ∈
 // [(1−1e-10)·pc, pc]; super: p ∈ [pc, (1+1e-10)·pc]) sits outside
 // the NC sub-regions (which stop at (1−1e-10)·pc on the sub-side

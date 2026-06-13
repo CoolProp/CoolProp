@@ -467,9 +467,22 @@ Configuration keys
 Backend options JSON (``factory("SVDSBTL&HEOS", "Water",
 '{"grid": {"NT": 200, "NR": 800, "rank": 20}}')``) lets per-instance
 overrides tune the SVD grid and rank; see :doc:`BackendOptions`.  Any
-non-default options change the table's ``OptHash`` and therefore its
-cache filename, so multiple grid sizes for the same fluid coexist
-peacefully on disk.
+content-affecting option (grid, rank, transport) changes the table's
+``OptHash`` and therefore its cache filename, so multiple grid sizes for
+the same fluid coexist peacefully on disk.
+
+``{"prebuild": true}`` is an opt-in flag that eagerly builds **every**
+supported input-pair surface (PT, HmassP, DmassT, PSmass) at construction
+instead of lazy-loading the secondary pairs (DmassT / PSmass) on first
+query.  Use it to materialize a whole fluid up front — docs rendering,
+benchmarking, warm-cache pre-fill — or to turn a build / environment
+failure into a loud construction-time error rather than a silent NaN on a
+later query.  Because ``prebuild`` only changes *when* surfaces are built,
+not their content, it is stripped from the ``OptHash``: a
+``{"prebuild": true}`` instance shares its serialized surfaces with plain
+``SVDSBTL&HEOS`` queries (and with an IF97 source it builds PT / HmassP /
+PSmass but skips DmassT, which can't be sampled on a ``(D, T)`` grid from
+IF97).
 
 .. _SVDSBTL-decision-guide:
 

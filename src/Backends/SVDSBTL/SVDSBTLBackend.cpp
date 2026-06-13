@@ -289,6 +289,29 @@ SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name,      // NOLINT(mod
     if (source_backend_ == "IF97" && fluid_name != "Water") {
         throw ValueError(format("SVDSBTL&IF97 is Water-only; got fluid '%s'", fluid_name.c_str()));
     }
+    // Opt-in `prebuild`: materialize every supported surface at
+    // construction instead of lazy-loading the secondary pairs.  Off by
+    // default (lazy); turned on for docs / benchmarking / warm-cache
+    // pre-fill, where building up front also turns a build/env failure
+    // into a loud construction-time throw instead of a silent blank on
+    // the first query.  (CoolProp-rhb5)
+    bool prebuild = false;
+    {
+        nlohmann::json opts = cpjson::parse(options_canonical_.empty() ? "{}" : options_canonical_);
+        if (opts.is_object() && opts.contains("prebuild")) {
+            prebuild = cpjson::get_bool(opts, "prebuild");
+            // prebuild is build-eagerness only — it changes neither surface
+            // nor critpatch content.  Strip it from the canonical options
+            // so the cache opthash (and the critpatch sidecar key) are
+            // identical to a default no-prebuild instance: a
+            // {"prebuild":true} build therefore shares its serialized
+            // surfaces with plain SVDSBTL&<source> queries (and vice
+            // versa), rather than caching a redundant copy under a
+            // different opthash.
+            opts.erase("prebuild");
+            options_canonical_ = to_canonical_json_str(opts.dump());
+        }
+    }
     for (const auto pair : kSupportedPairs) {
         // DmassT/DmolarT share the DmassT_INPUTS surface, built lazily on
         // the first density-input query (see update()/fast_evaluate()).
@@ -303,7 +326,15 @@ SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name,      // NOLINT(mod
         // HmassP/PT-only consumers should not pay the heavy ps_subcritical
         // dense SVD up front.  Built on the first (p, s) query in
         // update()/fast_evaluate().
-        if (pair == ::CoolProp::DmassT_INPUTS || pair == ::CoolProp::PSmass_INPUTS) {
+        //
+        // `prebuild` overrides reason (a) — the caller has asked for the
+        // whole fluid — but NOT reason (b): a DmassT surface still can't
+        // be sampled from an IF97 source, so it stays skipped for IF97
+        // even under prebuild (PT/HmassP/PSmass build fine for IF97).
+        if (!prebuild && (pair == ::CoolProp::DmassT_INPUTS || pair == ::CoolProp::PSmass_INPUTS)) {
+            continue;
+        }
+        if (pair == ::CoolProp::DmassT_INPUTS && source_backend_ == "IF97") {
             continue;
         }
         ensure_surface_(pair);
