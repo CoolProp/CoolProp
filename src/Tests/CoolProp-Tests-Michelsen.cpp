@@ -962,4 +962,154 @@ TEST_CASE("Methanol-benzene PT flash at problematic compositions", "[michelsen][
     }
 }
 
+// Independently recompute the equal-fugacity residual max_i |ln f_i^V - ln f_i^L|
+// for a published two-phase split using fresh single-phase sub-states, so a trivial
+// (x == y) or unconverged split cannot hide behind the flash's own internal state.
+static double equilibrium_residual(const std::string& backend, const std::string& fluids, const std::vector<double>& x, const std::vector<double>& y,
+                                   double T, double p) {
+    auto L = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
+    L->set_mole_fractions(x);
+    L->specify_phase(iphase_liquid);
+    L->update(PT_INPUTS, p, T);
+    auto V = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
+    V->set_mole_fractions(y);
+    V->specify_phase(iphase_gas);
+    V->update(PT_INPUTS, p, T);
+    double maxresid = 0;
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        if (std::min(x[i], y[i]) < 1e-4) continue;  // trace in one phase: skip machine-precision noise
+        double fL = L->fugacity(i), fV = V->fugacity(i);
+        if (fL > 1e-15 && fV > 1e-15) maxresid = std::max(maxresid, std::abs(std::log(fV / fL)));
+    }
+    return maxresid;
+}
+
+TEST_CASE("Blind PT flash: near-dew two-phase classification (CoolProp-zgpy)", "[michelsen][blind][flash][zgpy]") {
+    // Regression for CoolProp-zgpy: for cubic mixtures at high vapor fraction the
+    // Michelsen stability trials can converge to the trivial (feed) solution and report
+    // a false "stable" verdict, so a genuinely two-phase near-dew state was published as
+    // single-phase liquid.  A Wilson bubble/dew cross-check (guess_split_from_wilson)
+    // now recovers the split.  Mixture + condition from jakobreichert's report on
+    // GitHub #3168: 5-component natural gas at P = 3 bar.  T = 220 K sits at ~0.98 vapor
+    // fraction, well inside the two-phase region (T_bub ~ 93 K, T_dew ~ 245 K), and was
+    // classified single-phase liquid on master for SRK and PR.
+    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    const double p = 3e5, T = 220.0;
+
+    for (const std::string& backend : {std::string("SRK"), std::string("PR")}) {
+        DYNAMIC_SECTION(backend << " two-phase at 220 K, 3 bar") {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
+            AS->set_mole_fractions(z);
+            REQUIRE_NOTHROW(AS->update(PT_INPUTS, p, T));
+
+            // Must be two-phase, not the single-phase-liquid false negative.
+            CHECK(AS->phase() == iphase_twophase);
+            CHECK(AS->Q() > 0.0);
+            CHECK(AS->Q() < 1.0);
+
+            std::vector<double> x = AS->mole_fractions_liquid();
+            std::vector<double> y = AS->mole_fractions_vapor();
+
+            // Guard against a trivial (x == y) split passed off as two-phase: the
+            // incipient liquid is heavy-rich, so the phase compositions must differ.
+            double spread = 0;
+            for (std::size_t i = 0; i < x.size(); ++i)
+                spread = std::max(spread, std::abs(x[i] - y[i]));
+            CHECK(spread > 1e-2);
+
+            // The published split must be at genuine equilibrium (independently checked).
+            CHECK(equilibrium_residual(backend, fluids, x, y, T, p) < 1e-6);
+        }
+    }
+}
+
+// Port of jakobreichert's scan_twophase_PT.py (GitHub #3168): sweep the two-phase region
+// of several mixtures with a BLIND PT flash and classify each result with an INDEPENDENT
+// equal-fugacity check, so the test suite (not a Python script against a possibly-stale
+// build) is the source of truth.  Per point: twophase + fug<1e-6 = good; non-twophase =
+// misclassification; twophase with x==y = trivial/degenerate split; twophase with
+// fug>1e-6 (or a phase that cannot be re-solved) = unconverged.  Hard guard: no trivial
+// split is ever published; the misclass/bad-fug counts are reported (WARN) for tracking.
+TEST_CASE("Stability sweep: blind two-phase classification + fugacity (CoolProp-zgpy)", "[michelsen][stability_sweep][zgpy]") {
+    struct SweepCase
+    {
+        std::string fluids;
+        std::vector<double> z;
+        double p;
+    };
+    std::vector<SweepCase> cases = {
+      {"Nitrogen&Methane&Ethane&Butane&Pentane", {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 3e5},
+      {"Nitrogen&Methane&Ethane&Propane", {0.1, 0.5, 0.25, 0.15}, 1e6},
+      {"Methane&Ethane", {0.5, 0.5}, 1e6},
+    };
+    const int NT = 40;
+    for (const std::string backend : {std::string("SRK"), std::string("PR"), std::string("HEOS")}) {
+        for (const SweepCase& c : cases) {
+            double Tbub = -1, Tdew = -1;
+            try {
+                auto S = std::shared_ptr<AbstractState>(AbstractState::factory(backend, c.fluids));
+                S->set_mole_fractions(c.z);
+                S->update(PQ_INPUTS, c.p, 0.0);
+                Tbub = S->T();
+                S->update(PQ_INPUTS, c.p, 1.0);
+                Tdew = S->T();
+            } catch (...) {
+                continue;  // backend can't bracket this mixture; skip
+            }
+            if (!(Tbub > 0 && Tdew > Tbub)) continue;
+
+            int misclass = 0, bad_fug = 0, trivial = 0;
+            for (int k = 0; k < NT; ++k) {
+                double T = Tbub + (Tdew - Tbub) * (k + 0.5) / NT;
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(backend, c.fluids));
+                AS->set_mole_fractions(c.z);
+                try {
+                    AS->update(PT_INPUTS, c.p, T);
+                } catch (...) {
+                    ++misclass;
+                    continue;
+                }
+                if (AS->phase() != iphase_twophase) {
+                    ++misclass;
+                    continue;
+                }
+                try {
+                    std::vector<double> x = AS->mole_fractions_liquid(), y = AS->mole_fractions_vapor();
+                    double spread = 0;
+                    for (std::size_t i = 0; i < x.size(); ++i)
+                        spread = std::max(spread, std::abs(x[i] - y[i]));
+                    if (spread < 1e-6)
+                        ++trivial;
+                    else if (equilibrium_residual(backend, c.fluids, x, y, T, c.p) > 1e-6)
+                        ++bad_fug;
+                } catch (...) {
+                    ++bad_fug;  // published a split whose phases cannot be independently re-solved
+                }
+            }
+            WARN(backend << " " << c.fluids << " P=" << c.p << "  misclass=" << misclass << " bad_fug=" << bad_fug << " trivial=" << trivial << " / "
+                         << NT);
+            CHECK(trivial == 0);
+
+            // False-positive guard: superheated-vapor points above the dew point must stay
+            // single phase -- the speculative/forced attempt must never publish a clearly
+            // single-phase feed as two-phase.  (Only the vapor side is checked: for these
+            // heavy mixtures the subcooled-liquid side falls below some components' triple
+            // points, a pre-existing sub-triple-point region unrelated to this fix.)
+            for (double Tsp : {Tdew + 30.0, Tdew + 80.0}) {
+                if (Tsp <= 0) continue;
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(backend, c.fluids));
+                AS->set_mole_fractions(c.z);
+                try {
+                    AS->update(PT_INPUTS, c.p, Tsp);
+                } catch (...) {
+                    continue;  // outside the model's valid range for this mixture/backend
+                }
+                INFO(backend << " " << c.fluids << " single-phase check at T=" << Tsp);
+                CHECK(AS->phase() != iphase_twophase);
+            }
+        }
+    }
+}
+
 #endif

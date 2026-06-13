@@ -94,17 +94,90 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         // Blind flash call
         // Instantiates stability tester (dispatches to Michelsen or Gernert based on config)
         StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
-        if (!stability_tester.is_stable()) {
+        bool do_twophase = !stability_tester.is_stable();
+        CoolProp::SaturationSolvers::PTflash_twophase_options o;
+        o.z = HEOS.get_mole_fractions();
+        bool wilson_seeded = false;
+
+        // CoolProp-zgpy: the Michelsen stability test can report a false "stable" verdict
+        // near a phase boundary -- its trial minimization can converge to the trivial
+        // (feed) solution (cubic mixtures at high vapor fraction) or fail to conclude at
+        // all -- so a genuinely two-phase state gets mislabeled single-phase liquid.
+        // Cross-check a "stable" verdict against a cheap Wilson K-factor estimate and, if
+        // warranted, attempt a split seeded from it.  When the verdict was non-conclusive
+        // (is_uncertain), force the attempt even where the IDEAL estimate does not bracket
+        // (require_bracket = false); the EOS-based refinement and the verify below decide.
+        // A genuinely single-phase point fails the Wilson test or the verify and falls
+        // back to single phase.  (Lever from jakobreichert's PR #2720.)
+        if (!do_twophase) {
+            const bool uncertain = stability_tester.is_uncertain();
+            try {
+                if (CoolProp::SaturationSolvers::guess_split_from_wilson(HEOS, o.x, o.y, o.rhomolar_liq, o.rhomolar_vap, o.z, HEOS.T(), HEOS.p(), 10,
+                                                                         !uncertain)) {
+                    do_twophase = true;
+                    wilson_seeded = true;
+                }
+            } catch (const CoolProp::CoolPropBaseError&) {
+                // Speculative seed failed (e.g. no liquid density root at this state);
+                // trust the stability verdict and stay on the single-phase path.
+                do_twophase = false;
+                wilson_seeded = false;
+            }
+        }
+
+        if (do_twophase) {
             // There is a phase split and liquid and vapor phases are formed
-            CoolProp::SaturationSolvers::PTflash_twophase_options o;
-            stability_tester.get_liq(o.x, o.rhomolar_liq);
-            stability_tester.get_vap(o.y, o.rhomolar_vap);
-            o.z = HEOS.get_mole_fractions();
+            if (!wilson_seeded) {
+                stability_tester.get_liq(o.x, o.rhomolar_liq);
+                stability_tester.get_vap(o.y, o.rhomolar_vap);
+            }
             o.T = HEOS.T();
             o.p = HEOS.p();
             o.omega = 1.0;
             CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
-            solver.solve();
+            if (wilson_seeded) {
+                // The Wilson split is speculative (the stability test said "stable"): a
+                // failure to converge, or a trivial (x == y) result, must fall back to the
+                // single-phase path rather than abort the flash or publish a bogus split.
+                try {
+                    solver.solve();
+                } catch (const CoolProp::CoolPropBaseError&) {
+                    do_twophase = false;
+                }
+                if (do_twophase) {
+                    // Accept the speculative split only if it is a genuine, non-degenerate
+                    // equilibrium: a non-trivial composition spread AND equal fugacities
+                    // (recomputed on the published split).  This guards the forced path
+                    // against publishing a degenerate (x == y) or unconverged split, since
+                    // the base two-phase solver does not itself gate on convergence.
+                    bool ok = false;
+                    try {
+                        CoolPropDbl spread = 0;
+                        for (std::size_t i = 0; i < o.z.size(); ++i)
+                            spread = std::max(spread, std::abs(o.x[i] - o.y[i]));
+                        HEOS.SatL->set_mole_fractions(o.x);
+                        HEOS.SatL->update_DmolarT_direct(o.rhomolar_liq, o.T);
+                        HEOS.SatV->set_mole_fractions(o.y);
+                        HEOS.SatV->update_DmolarT_direct(o.rhomolar_vap, o.T);
+                        CoolPropDbl fug_resid = 0;
+                        for (std::size_t i = 0; i < o.z.size(); ++i) {
+                            if (o.x[i] < 1e-12 || o.y[i] < 1e-12) continue;  // trace in one phase
+                            CoolPropDbl lnfL = std::log(o.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
+                            CoolPropDbl lnfV = std::log(o.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
+                            fug_resid = std::max(fug_resid, std::abs(lnfV - lnfL));
+                        }
+                        ok = (spread >= 1e-6) && ValidNumber(fug_resid) && (fug_resid <= 1e-7);
+                    } catch (const CoolProp::CoolPropBaseError&) {
+                        ok = false;
+                    }
+                    if (!ok) do_twophase = false;  // trivial / unconverged / unverifiable -> single phase
+                }
+            } else {
+                solver.solve();
+            }
+        }
+
+        if (do_twophase) {
             // Fallback block: Catches mathematically trivial splits (beta ~ 0 or 1) caused by boundary
             // floating-point noise in the Michelsen TPD solver, or false positives if using the legacy solver.
             if (o.beta < 1e-10) {
