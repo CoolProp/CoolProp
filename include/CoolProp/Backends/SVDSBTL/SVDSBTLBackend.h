@@ -288,6 +288,10 @@ class SVDSBTLBackend : public AbstractState
         std::optional<double> T;
         std::optional<double> p;
         std::optional<double> h_mass;
+        // Mass entropy input shortcut for PSmass / PSmolar inputs — the
+        // entropy twin of h_mass.  s is the query input + secondary axis,
+        // so evaluate_property_ returns it directly without a surface eval.
+        std::optional<double> s_mass;
         // Mass density input shortcut for DmassT / DmolarT inputs.
         // Lets evaluate_property_ return iDmass directly without a
         // surface eval (D is the input, not a stored property).

@@ -21,6 +21,7 @@ FROM continuumio/miniconda3
 RUN apt-get -y -m update && \
     apt-get install -y \
         g++ make cmake ninja-build swig doxygen p7zip-full \
+        ccache \
         mono-mcs \
         octave liboctave-dev \
         r-base-dev \

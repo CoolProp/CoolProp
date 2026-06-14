@@ -46,7 +46,14 @@ jobs:
       run: |
         set -euo pipefail
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
-          COOLPROP_VERSION_OVERRIDE=$(python dev/extract_version.py --pypi)
+          # Gate (CoolProp-1tbe.3): the published REAL-PyPI version is derived
+          # from CMakeLists.txt, NOT the tag name. Assert the tag matches the
+          # CMakeLists version and is not a .dev release before publishing
+          # (else e.g. a v8.0.0b1 tag on an unbumped 7.2.1dev tree would publish
+          # 7.2.1.dev0). --current pins the published version to CMakeLists (no
+          # auto-increment), so tag == CMakeLists == published.
+          python dev/ci/check_tag_version.py "$GITHUB_REF"
+          COOLPROP_VERSION_OVERRIDE=$(python dev/extract_version.py --pypi --current)
         else
           COOLPROP_VERSION_OVERRIDE=$(python dev/extract_version.py --version "${{ inputs.TESTPYPI_VERSION }}")
         fi

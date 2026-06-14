@@ -163,37 +163,107 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
 
         // Instantiates stability tester (dispatches to Michelsen or Gernert based on config)
         StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
-        if (!stability_tester.is_stable()) {
+        bool do_twophase = !stability_tester.is_stable();
+        CoolProp::SaturationSolvers::PTflash_twophase_options o;
+        o.z = HEOS.get_mole_fractions();
+        bool wilson_seeded = false;
+
+        // CoolProp-zgpy (#3174): the Michelsen stability test can report a false "stable"
+        // verdict near a phase boundary -- its trial minimization can converge to the trivial
+        // (feed) solution (cubic mixtures at high vapor fraction) or fail to conclude at all --
+        // so a genuinely two-phase state gets mislabeled single-phase liquid.  Cross-check a
+        // "stable" verdict against a cheap Wilson K-factor estimate and, if warranted, attempt
+        // a split seeded from it.  When the verdict was non-conclusive (is_uncertain), force the
+        // attempt even where the IDEAL estimate does not bracket (require_bracket = false); the
+        // EOS-based refinement and the verify below decide.  A genuinely single-phase point
+        // fails the Wilson test or the verify and falls back to single phase.  (Lever from
+        // jakobreichert's PR #2720.)
+        if (!do_twophase) {
+            const bool uncertain = stability_tester.is_uncertain();
+            try {
+                if (CoolProp::SaturationSolvers::guess_split_from_wilson(HEOS, o.x, o.y, o.rhomolar_liq, o.rhomolar_vap, o.z, HEOS.T(), HEOS.p(), 10,
+                                                                         !uncertain)) {
+                    do_twophase = true;
+                    wilson_seeded = true;
+                }
+            } catch (const CoolProp::CoolPropBaseError&) {
+                // Speculative seed failed (e.g. no liquid density root at this state);
+                // trust the stability verdict and stay on the single-phase path.
+                do_twophase = false;
+                wilson_seeded = false;
+            }
+        }
+
+        if (do_twophase) {
             // There is a phase split and liquid and vapor phases are formed
-            CoolProp::SaturationSolvers::PTflash_twophase_options o;
-            stability_tester.get_liq(o.x, o.rhomolar_liq);
-            stability_tester.get_vap(o.y, o.rhomolar_vap);
-            o.z = HEOS.get_mole_fractions();
+            if (!wilson_seeded) {
+                stability_tester.get_liq(o.x, o.rhomolar_liq);
+                stability_tester.get_vap(o.y, o.rhomolar_vap);
+            }
             o.T = HEOS.T();
             o.p = HEOS.p();
             o.omega = 1.0;
             CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
-            bool split_converged = true;
-            try {
-                solver.solve();
-            } catch (const CoolProp::CoolPropBaseError&) {
-                // Only the convergence gate in solve_michelsen (o.nonconvergence,
-                // GitHub #3168) routes to the single-phase fallback: its usual cause is
-                // a stability false-positive at a single-phase state, where publishing
-                // the unconverged split would be a wrong answer.  Any other failure
-                // (e.g. an upstream density-solve loss) is not evidence of a single
-                // phase, so it is re-thrown rather than silently masked.
-                if (!o.nonconvergence) {
-                    throw;
+            if (wilson_seeded) {
+                // The Wilson split is speculative (the stability test said "stable"): a failure
+                // to converge, or a trivial (x == y) result, must fall back to the single-phase
+                // path rather than abort the flash or publish a bogus split.
+                try {
+                    solver.solve();
+                } catch (const CoolProp::CoolPropBaseError&) {
+                    do_twophase = false;
                 }
-                split_converged = false;
+                if (do_twophase) {
+                    // Accept the speculative split only if it is a genuine, non-degenerate
+                    // equilibrium: a non-trivial composition spread AND equal fugacities
+                    // (recomputed on the published split).  This guards the forced path against
+                    // publishing a degenerate (x == y) or unconverged split, since the base
+                    // two-phase solver does not itself gate on convergence.
+                    bool ok = false;
+                    try {
+                        CoolPropDbl spread = 0;
+                        for (std::size_t i = 0; i < o.z.size(); ++i)
+                            spread = std::max(spread, std::abs(o.x[i] - o.y[i]));
+                        HEOS.SatL->set_mole_fractions(o.x);
+                        HEOS.SatL->update_DmolarT_direct(o.rhomolar_liq, o.T);
+                        HEOS.SatV->set_mole_fractions(o.y);
+                        HEOS.SatV->update_DmolarT_direct(o.rhomolar_vap, o.T);
+                        CoolPropDbl fug_resid = 0;
+                        for (std::size_t i = 0; i < o.z.size(); ++i) {
+                            if (o.x[i] < 1e-12 || o.y[i] < 1e-12) continue;  // trace in one phase
+                            CoolPropDbl lnfL = std::log(o.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
+                            CoolPropDbl lnfV = std::log(o.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
+                            fug_resid = std::max(fug_resid, std::abs(lnfV - lnfL));
+                        }
+                        ok = (spread >= 1e-6) && ValidNumber(fug_resid) && (fug_resid <= 1e-7);
+                    } catch (const CoolProp::CoolPropBaseError&) {
+                        ok = false;
+                    }
+                    if (!ok) do_twophase = false;  // trivial / unconverged / unverifiable -> single phase
+                }
+            } else {
+                // Genuine instability from the stability test.  #3170: solve_michelsen's
+                // convergence gate (o.nonconvergence, GitHub #3168) throws on a non-converged
+                // split -- its usual cause is a stability false-positive at a single-phase state,
+                // where publishing the unconverged split would be a wrong answer -- and we fall
+                // back to single phase.  Any OTHER failure (e.g. an upstream density-solve loss)
+                // is not evidence of a single phase, so it is re-thrown rather than silently
+                // masked.
+                try {
+                    solver.solve();
+                } catch (const CoolProp::CoolPropBaseError&) {
+                    if (!o.nonconvergence) {
+                        throw;
+                    }
+                    do_twophase = false;
+                }
             }
-            if (!split_converged) {
-                HEOS.unspecify_phase();
-                solve_single_phase();
-            } else if (o.beta < 1e-10) {
-                // Fallback block: trivial splits (beta ~ 0 or 1) from boundary
-                // floating-point noise collapse to single-phase.
+        }
+
+        if (do_twophase) {
+            // Fallback block: trivial splits (beta ~ 0 or 1) from boundary floating-point
+            // noise in the Michelsen TPD solver collapse to single-phase.
+            if (o.beta < 1e-10) {
                 HEOS.update_DmolarT_direct(o.rhomolar_liq, HEOS.T());
                 HEOS._phase = (o.rhomolar_liq < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
                 HEOS._Q = -1;
@@ -207,7 +277,8 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 HEOS._rhomolar = 1.0 / (o.beta / o.rhomolar_vap + (1.0 - o.beta) / o.rhomolar_liq);
             }
         } else {
-            // It's single-phase -- find the density.
+            // Single-phase: a stable feed, or a speculative / non-converged split rejected above.
+            HEOS.unspecify_phase();
             solve_single_phase();
         }
     } else {
@@ -365,7 +436,53 @@ void FlashRoutines::DP_flash(HelmholtzEOSMixtureBackend& HEOS) {
             }
             // Then, do the solver using the full EOS
             solver_DP_resid resid(&HEOS, HEOS.rhomolar(), HEOS.p());
-            Halley(resid, T0, 1e-10, 100);
+            bool dp_ok = false;
+            try {
+                Halley(resid, T0, 1e-10, 100);
+                // Halley is unbounded: from a poor PR/ancillary seed at extreme (rho, p)
+                // it can diverge to a nonphysical (negative / out-of-range) temperature, or
+                // stall at a range-valid point that does not satisfy the residual.  Accept
+                // only a finite, positive, in-range root that actually converged (re-checking
+                // the normalized pressure residual, which also leaves the state consistent).
+                if (ValidNumber(HEOS._T) && HEOS._T > 0 && HEOS._T <= 1.5 * HEOS.Tmax() && std::abs(resid.call(HEOS._T)) < 1e-7) {
+                    dp_ok = true;
+                }
+            } catch (...) {
+                dp_ok = false;  // Halley threw (non-convergence); the bracketed fallback below handles it.
+            }
+            if (!dp_ok) {
+                // p(T, rho) is monotonic in T at fixed rho, so bracket on the EOS
+                // temperature range and solve with TOMS748 (asymptotically optimal,
+                // matching the other P+X legs in this file).  Use the residual's
+                // captured (rho, p): the failed Halley above may have left _p corrupted.
+                const CoolPropDbl Tlo = HEOS.Tmin(), Thi = 1.5 * HEOS.Tmax();
+                CoolPropDbl flo = NAN, fhi = NAN;
+                try {
+                    flo = resid.call(Tlo);
+                    fhi = resid.call(Thi);
+                } catch (...) {
+                    // Endpoint EOS evaluation threw; force the NaN guard below to treat it as "no bracket".
+                    flo = fhi = NAN;
+                }
+                if (ValidNumber(flo) && ValidNumber(fhi) && flo * fhi < 0) {
+                    try {
+                        boost::math::uintmax_t max_iter = 100;
+                        auto f = [&resid](const double T) { return resid.call(T); };
+                        auto [l, r] = toms748_solve(f, static_cast<double>(Tlo), static_cast<double>(Thi), static_cast<double>(flo),
+                                                    static_cast<double>(fhi), boost::math::tools::eps_tolerance<double>(30), max_iter);
+                        // Re-evaluate at the bracket midpoint so HEOS is left at the converged state.
+                        resid.call(0.5 * (l + r));
+                    } catch (...) {
+                        // An interior EOS evaluation threw inside the bracket; degrade to a clean
+                        // ValueError rather than letting a non-ValueError exception escape the flash.
+                        throw ValueError(format("DP_flash TOMS748 fallback failed for rho=%Lg mol/m^3, p=%Lg Pa",
+                                                static_cast<CoolPropDbl>(resid.rhomolar), static_cast<CoolPropDbl>(resid.p)));
+                    }
+                } else {
+                    throw ValueError(format("DP_flash could not bracket T for rho=%Lg mol/m^3, p=%Lg Pa (Halley diverged)",
+                                            static_cast<CoolPropDbl>(resid.rhomolar), static_cast<CoolPropDbl>(resid.p)));
+                }
+            }
             HEOS._Q = -1;
             // Update the state for conditions where the state was guessed
             HEOS.recalculate_singlephase_phase();
@@ -1934,6 +2051,73 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
 
         CoolPropFluid& component = HEOS.components[0];
 
+        // Supercritical single-phase fast path.  The region logic below is anchored on the
+        // triple-point states (unset for pseudo-pure fluids like Air, where they default to
+        // -1) and on saturation_D_pure, which is numerically unstable near rho_c.  Together
+        // these route Air's near-critical supercritical D+X back-flashes to a branch whose
+        // Ttriple-anchored temperature bracket spans the two-phase dome, producing
+        // "p is not a valid number".  But if the caloric input lies above its value on the
+        // critical isotherm at this density, the solution temperature is above Tc, so the
+        // state is unambiguously single-phase and needs no saturation: h, s and u all
+        // increase with T at fixed rho, so bracket the residual directly on [Tc, 1.5*Tmax]
+        // and solve with TOMS748.  Any failure falls through to the legacy region logic.
+        if (other == iHmolar || other == iSmolar || other == iUmolar) {
+            const double rho_in = HEOS._rhomolar;
+            const double value_in = (other == iHmolar) ? HEOS._hmolar : ((other == iSmolar) ? HEOS._smolar : HEOS._umolar);
+            bool fast_ok = false;
+            try {
+                const double Tc_ = HEOS.T_critical();
+                const double Tb = HEOS.Tmax() * 1.5;
+                // Restrict to rho < 2*rho_c.  The Air D+X failures sit at rho/rho_c ~ 0.8-1.005,
+                // so the bound must reach just past rho_c, but it must stay well below the dense-
+                // liquid extrapolation (rho >> rho_c, e.g. ~3*rho_c) where the critical-isotherm
+                // probe X(Tc, rho) is unreliable/non-monotonic and could mis-fire onto a spurious
+                // root.  In [rho_c, 2*rho_c] a subcritical state still has value < X(Tc, rho) (X is
+                // monotonic in T there), so the probe only fires for genuinely supercritical states.
+                if (rho_in > 0 && rho_in < 2.0 * HEOS.rhomolar_critical()) {
+                    const double X_Tc = (other == iHmolar)   ? HEOS.calc_hmolar_nocache(Tc_, rho_in)
+                                        : (other == iSmolar) ? HEOS.calc_smolar_nocache(Tc_, rho_in)
+                                                             : HEOS.calc_umolar_nocache(Tc_, rho_in);
+                    if (ValidNumber(X_Tc) && ValidNumber(value_in) && value_in > X_Tc) {
+                        solver_resid resid(&HEOS, rho_in, value_in, other, Tc_, Tb);
+                        const double fa = resid.call(Tc_), fb = resid.call(Tb);
+                        if (ValidNumber(fa) && ValidNumber(fb) && fa * fb < 0) {
+                            boost::math::uintmax_t max_iter = 100;
+                            auto f = [&resid](double T) { return resid.call(T); };
+                            auto [l, r] = toms748_solve(f, Tc_, Tb, fa, fb, boost::math::tools::eps_tolerance<double>(44), max_iter);
+                            HEOS.update_DmolarT_direct(rho_in, 0.5 * (l + r));
+                            // Accept only a state that reproduces the caloric input (and rho, which
+                            // update_DmolarT_direct restored by construction); otherwise fall through.
+                            const double xout = HEOS.keyed_output(other);
+                            if (ValidNumber(xout) && std::abs(xout - value_in) <= 1e-6 * std::abs(value_in) + 1e-3) {
+                                HEOS._p = HEOS.calc_pressure_nocache(HEOS.T(), HEOS.rhomolar());
+                                HEOS._Q = 10000;
+                                HEOS.unspecify_phase();
+                                HEOS.recalculate_singlephase_phase();
+                                fast_ok = true;
+                            }
+                        }
+                    }
+                }
+            } catch (...) {  // NOLINT(bugprone-empty-catch) -- fall through to the legacy region logic below
+            }
+            if (fast_ok) {
+                return;
+            }
+            // The probes above (solver_resid::call -> update_DmolarT_direct -> clear()) overwrite
+            // the cached caloric inputs; restore the originals so the legacy path below solves for
+            // the correct target instead of a corrupted one.
+            HEOS._rhomolar = rho_in;
+            if (other == iHmolar) {
+                HEOS._hmolar = value_in;
+            } else if (other == iSmolar) {
+                HEOS._smolar = value_in;
+            } else {
+                HEOS._umolar = value_in;
+            }
+            HEOS.unspecify_phase();
+        }
+
         shared_ptr<HelmholtzEOSMixtureBackend> Sat;
         CoolPropDbl rhoLtriple = component.triple_liquid.rhomolar;
         CoolPropDbl rhoVtriple = component.triple_vapor.rhomolar;
@@ -2210,7 +2394,15 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         y_lo = HEOS.calc_pressure_nocache(T_lo, HEOS._rhomolar);
                         break;
                 }
-                if (!ValidNumber(y_lo) || value < y_lo) {
+                // Floor tolerance: the consistency grid lands points exactly ON the
+                // melting line, where `value` (from the forward path) and `y_lo`
+                // (recomputed here via calc_*_nocache) differ only at ULP level.  A
+                // strict `value < y_lo` then rejects a valid melting-line state on
+                // last-bit noise.  Allow a small relative slack so boundary states pass
+                // (consistent with the conservative-floor intent noted above) while
+                // states genuinely below the melting line are still rejected.
+                const CoolPropDbl floor_tol = 1e-8 * std::abs(y_lo) + 1e-10;
+                if (!ValidNumber(y_lo) || value < y_lo - floor_tol) {
                     // Colder than the coldest liquid attainable at this density:
                     // genuinely below the melting line (solid / out of range).
                     throw ValueError(format("D+X below melting line [other=%d]: %g < %g at Tmelt_min %g K", other, value, y_lo, T_lo));
@@ -2381,6 +2573,9 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
         CoolPropDbl eos0, eos1, rhomolar, rhomolar0, rhomolar1;
         CoolPropDbl Tmin, Tmax;
         bool direct_path_enabled;
+        // Critical pressure, used to gate the warm-density shortcut off for
+        // supercritical-pressure probes — see the note in call().
+        CoolPropDbl p_crit;
 
         solver_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl p, CoolPropDbl value, parameters other, double Tmin, double Tmax,
                      bool direct_path_enabled)
@@ -2396,7 +2591,8 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             rhomolar1(_HUGE),
             Tmin(Tmin),
             Tmax(Tmax),
-            direct_path_enabled(direct_path_enabled) {
+            direct_path_enabled(direct_path_enabled),
+            p_crit(HEOS->p_critical()) {
             // Specify the state to avoid saturation calls, but only if phase is subcritical
             switch (CoolProp::phases phase = HEOS->phase()) {
                 case iphase_liquid:
@@ -2512,8 +2708,29 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             // to master.  iter < 2 cold iters are amortized; the win is from
             // bypassing the cached inner Householder4 on the warm probes that
             // dominate TOMS748's iteration count.
+            //
+            // EXCEPTION (CoolProp-5sh8): for supercritical pressure (p > p_crit)
+            // the warm carried-rho density Newton is unreliable across the whole
+            // near-critical region, in TWO distinct ways:
+            //   * below T_crit the isotherm p(rho, T) still has a van der Waals
+            //     loop, so the warm Newton (seeded from a neighbouring probe's
+            //     rho) can converge to the spurious low-density root — observed
+            //     for Argon PSmass: T = 127 K returned for a 152 K state;
+            //   * just above T_crit dp/drho -> 0, so the Newton step blows up and
+            //     converges to a garbage density (observed for Oxygen PSmass:
+            //     rho ~ 2600 kg/m3, a negative entropy).
+            // Either way the property evaluated at the bad density is wrong, the
+            // outer residual becomes NON-MONOTONIC in T, and Brent latches onto a
+            // false sign change at the wrong T.  But for p > p_crit the residual
+            // is PHYSICALLY monotone in T (e.g. ds/dT|p = cp/T > 0), so force the
+            // robust cold update(PT_INPUTS) path — whose phase-imposed
+            // solver_rho_Tp (with the #3176 dense-branch TOMS748 fallback)
+            // returns the correct single-phase root — for every supercritical-
+            // pressure probe.  Subcritical p keeps the warm shortcut (single
+            // density branch per imposed phase, no loop).
+            const bool force_robust_density = (p > p_crit);
             const bool want_warm = (iter >= 2 && std::abs(rhomolar1 / rhomolar0 - 1) <= 0.05);
-            if (direct_path_enabled && want_warm) {
+            if (direct_path_enabled && want_warm && !force_robust_density) {
                 try {
                     // WARM: bypass the cached inner solve; reuse the carried
                     // rhomolar (identical to what update_TP_guessrho would seed).
@@ -2562,8 +2779,9 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
                 }
             }
 
-            if (iter < 2 || std::abs(rhomolar1 / rhomolar0 - 1) > 0.05) {
+            if (iter < 2 || std::abs(rhomolar1 / rhomolar0 - 1) > 0.05 || force_robust_density) {
                 // Run the solver with T,P as inputs; but only if the last change in density was greater than a few percent
+                // (or we are in the supercritical-pressure vdW-loop region, where the carried-rho guess can hop branches).
                 HEOS->update(PT_INPUTS, p, T);
             } else {
                 // Run the solver with T,P as inputs; but use the guess value for density from before
@@ -3970,6 +4188,61 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
             }
         }
     }
+    // ============ superancillary-free single-phase happy path =============
+    // Pseudo-pure fluids (e.g. Air) and any pure fluid without a built superancillary
+    // skip the block above, and would otherwise hit the ~50-iteration blind T-scan in the
+    // legacy sad path below (Air HS measured ~160 ms/call).  But the cascade's dome-free
+    // legs -- supercritical isentrope (T=Tmax anchor), ideal-gas departure, and melting --
+    // need no saturation curve, and their stability-based acceptance (hs_accept: reproduces
+    // (h,s) AND dp/drho|_T>0 AND cv>0) makes the single-phase (h,s)->(T,rho) root unique.
+    // So run the cascade with a NULL superancillary for the common single-phase case
+    // (~tens of us, like the pure-fluid happy path).  Two-phase or cascade-miss inputs are
+    // rejected by the acceptance gate and fall through to the sad path.
+    {
+        static const bool hs_disabled_na = (std::getenv("COOLPROP_DISABLE_SUPERANC_HS") != nullptr);
+        // Restrict this block to fluids that genuinely HAVE no superancillary, so that
+        // any fluid which does have one keeps its dome veto (the cascade only applies
+        // hs_inside_dome when sa != nullptr; without it, hs_accept can admit an in-dome
+        // METASTABLE root for a two-phase (h,s) input).  The probe is on superancillary
+        // *existence*, NOT the ENABLE_SUPERANCILLARIES config flag: a pure fluid that has
+        // a superancillary built must never enter the null-sa cascade even when the
+        // config is off -- it falls to the legacy two-phase-aware path instead.
+        // get_superanc() THROWS for a pseudo-pure fluid, so guard it behind is_pure();
+        // for pseudo-pure (Air, R407C, ...) superanc_available stays false by design.
+        bool superanc_available = false;
+        if (HEOS.is_pure()) {
+            try {
+                superanc_available = (HEOS.get_superanc() != nullptr);
+            } catch (...) {  // NOLINT(bugprone-empty-catch) -- treat as "no superancillary"
+            }
+        }
+        if (!hs_disabled_na && HEOS.is_pure_or_pseudopure && !superanc_available) {
+            const double h_t = HEOS._hmolar, s_t = HEOS._smolar;
+            bool ok = false;
+            try {
+                double T = 0, rho = 0;
+                if (hs_cascade(HEOS, nullptr, h_t, s_t, T, rho)) {
+                    HEOS.update_DmolarT_direct(rho, T);
+                    HEOS._Q = 10000;
+                    HEOS._p = HEOS.calc_pressure_nocache(HEOS.T(), HEOS.rhomolar());
+                    HEOS.unspecify_phase();
+                    HEOS.recalculate_singlephase_phase();
+                    const double hh = HEOS.hmolar(), ss = HEOS.smolar();
+                    ok = std::isfinite(hh) && std::isfinite(ss) && std::abs(hh - h_t) <= 1e-6 * std::abs(h_t) + 1e-3
+                         && std::abs(ss - s_t) <= 1e-6 * std::abs(s_t) + 1e-5;
+                }
+            } catch (...) {  // NOLINT(bugprone-empty-catch) -- fall through to the sad path
+            }
+            if (ok) {
+                return;
+            }
+            // The cascade's probes (update_DmolarT_direct -> clear) overwrite the cached
+            // caloric inputs; restore them so the sad path solves for the original target.
+            HEOS._hmolar = h_t;
+            HEOS._smolar = s_t;
+            HEOS.unspecify_phase();
+        }
+    }
     // ===================== legacy "sad path" =====================
     // Use TS flash and iterate on T (known to be between Tmin and Tmax)
     // in order to find H
@@ -4021,7 +4294,54 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (rmin * rmax > 0 && std::abs(rmax) < std::abs(rmin)) {
         throw CoolProp::ValueError(format("HS inputs correspond to temperature above maximum temperature of EOS [%g K]", HEOS.Tmax()));
     }
-    Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
+    // The residual h(SmolarT(s, T)) - h_target is frequently NON-MONOTONIC: the inner
+    // SmolarT solve degrades (or returns a wildly different branch) at high T for
+    // low-entropy cold-liquid inputs, so f(Tmin) and f(Tmax) often share a sign while
+    // the true root sits just above Tmin -- a plain Brent(Tmin, Tmax) then reports
+    // "do not bracket".  Scan upward from Tmin for the FIRST sign change and solve that
+    // sub-interval with TOMS748, skipping temperatures where the inner solve throws and
+    // never reaching the pathological high-T region.
+    bool hs_solved = false;
+    if (ValidNumber(rmin)) {
+        const int Nscan = 50;
+        double T_prev = Tmin, f_prev = rmin;
+        int i_prev = 0;  // grid index of the last VALID sample (Tmin is index 0)
+        for (int i = 1; i <= Nscan; ++i) {
+            const double Tt = Tmin + (Tmax - Tmin) * static_cast<double>(i) / Nscan;
+            double ft = NAN;
+            try {
+                ft = resid.call(Tt);
+            } catch (...) {
+                continue;  // inner SmolarT solve failed at this T; skip and keep scanning
+            }
+            if (!ValidNumber(ft)) {
+                continue;
+            }
+            // Only bracket between ADJACENT valid samples (i == i_prev + 1).  If a sample was
+            // skipped in between, the interval (T_prev, Tt) spans temperatures where the inner
+            // solve throws, so TOMS748's interior probes there would escape -- don't bracket
+            // across that gap; advance and look for a clean adjacent sign change instead.
+            if (i == i_prev + 1 && f_prev * ft <= 0) {
+                try {
+                    boost::math::uintmax_t max_iter = 100;
+                    auto f = [&resid](const double T) { return resid.call(T); };
+                    auto [l, r] = toms748_solve(f, T_prev, Tt, f_prev, ft, boost::math::tools::eps_tolerance<double>(30), max_iter);
+                    resid.call(0.5 * (l + r));  // leave HEOS at the converged state
+                    hs_solved = true;
+                    break;
+                } catch (...) {  // NOLINT(bugprone-empty-catch) -- intentional: keep scanning, then fall to Brent
+                }
+            }
+            T_prev = Tt;
+            f_prev = ft;
+            i_prev = i;
+        }
+    }
+    if (!hs_solved) {
+        // No interior sign change found by the scan; fall back to the original assumption
+        // that [Tmin, Tmax] brackets the root.
+        Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
+    }
 }
 
 #if defined(ENABLE_CATCH)

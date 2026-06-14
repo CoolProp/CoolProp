@@ -106,16 +106,29 @@ The currently-supported source backends are ``HEOS``, ``REFPROP``, and
 default truth source, since the choice changes both the sampled
 property values and the cache filename.
 
-Two input pairs are currently tabulated per fluid:
+Four input pairs are currently tabulated per fluid:
 
 * ``HmassP_INPUTS`` (the dominant industrial use case)
 * ``PT_INPUTS`` (where the user already has :math:`(p, T)` and wants to
   skip the inverse :math:`T(p, h)` solve)
+* ``PSmass_INPUTS`` (pressure–entropy; the natural coordinate for
+  isentropic compression / expansion paths)
+* ``DmassT_INPUTS`` (density–temperature; the Helmholtz EOS's native
+  coordinate, so every output property is a direct evaluation)
 
-``HmolarP_INPUTS`` is served from the ``HmassP_INPUTS`` table by
-multiplying by molar mass.  Two-phase ``PQ_INPUTS`` and ``QT_INPUTS``
-route directly through the source's saturation line — no separate
+``HmolarP_INPUTS``, ``PSmolar_INPUTS`` and ``DmolarT_INPUTS`` are served
+from their mass-basis tables by multiplying / dividing by the molar
+mass.  Two-phase ``PQ_INPUTS`` and ``QT_INPUTS`` are resolved on the
+saturation line — via the SuperAncillary / surrogate fast path when one
+is available, falling back to a source flash otherwise — so no separate
 table is required.
+
+The ``PSmass_INPUTS`` table mirrors ``HmassP_INPUTS`` exactly with
+entropy in place of enthalpy as the secondary axis and query input: it
+tabulates :math:`(\rho, T, h, u, w)` over :math:`(p, s)`, uses the same
+LIQUID / VAPOR / near-critical / supercritical region atlas, and (for
+the ``IF97`` source) the same R2/R3/R5 split that keeps water within
+IAPWS G13-15.
 
 A planned follow-up adds ``HmassSmass`` and ``Dmass-Umass`` for the
 remaining G13-15 input-pair coverage (Tables 14-17); see bd
@@ -454,9 +467,22 @@ Configuration keys
 Backend options JSON (``factory("SVDSBTL&HEOS", "Water",
 '{"grid": {"NT": 200, "NR": 800, "rank": 20}}')``) lets per-instance
 overrides tune the SVD grid and rank; see :doc:`BackendOptions`.  Any
-non-default options change the table's ``OptHash`` and therefore its
-cache filename, so multiple grid sizes for the same fluid coexist
-peacefully on disk.
+content-affecting option (grid, rank, transport) changes the table's
+``OptHash`` and therefore its cache filename, so multiple grid sizes for
+the same fluid coexist peacefully on disk.
+
+``{"prebuild": true}`` is an opt-in flag that eagerly builds **every**
+supported input-pair surface (PT, HmassP, DmassT, PSmass) at construction
+instead of lazy-loading the secondary pairs (DmassT / PSmass) on first
+query.  Use it to materialize a whole fluid up front — docs rendering,
+benchmarking, warm-cache pre-fill — or to turn a build / environment
+failure into a loud construction-time error rather than a silent NaN on a
+later query.  Because ``prebuild`` only changes *when* surfaces are built,
+not their content, it is stripped from the ``OptHash``: a
+``{"prebuild": true}`` instance shares its serialized surfaces with plain
+``SVDSBTL&HEOS`` queries (and with an IF97 source it builds PT / HmassP /
+PSmass but skips DmassT, which can't be sampled on a ``(D, T)`` grid from
+IF97).
 
 .. _SVDSBTL-decision-guide:
 

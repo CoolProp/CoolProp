@@ -272,6 +272,76 @@ TEST_CASE("SVDSBTL backend HmassP_INPUTS dome-hit routes to two-phase blend", "[
     }
 }
 
+TEST_CASE("SVDSBTL backend PS lookup matches HEOS within tolerance", "[SVDSBTL][ps][water][slow]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    // Build a (p, T) probe via HEOS, then ask SVDSBTL for the same point
+    // via (p, s) — entropy twin of the PH lookup test.
+    const double p = 5.0e5;
+    const double T = 400.0;
+    heos->update(CoolProp::PT_INPUTS, p, T);
+    const double s = heos->smass();
+
+    AS->update(CoolProp::PSmass_INPUTS, p, s);
+    INFO("at (p, T)=(" << p << ", " << T << ")  s=" << s);
+    INFO("rho HEOS=" << heos->rhomass() << "  SVDSBTL=" << AS->rhomass());
+    INFO("T   HEOS=" << T << "  SVDSBTL=" << AS->T());
+    REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(5e-3));
+    REQUIRE(AS->T() == Approx(T).epsilon(5e-3));
+    REQUIRE(AS->hmass() == Approx(heos->hmass()).epsilon(5e-3));
+
+    // The user-supplied s flows through directly; p round-trips.
+    REQUIRE(AS->smass() == Approx(s).epsilon(1e-12));
+    REQUIRE(AS->p() == Approx(p).epsilon(1e-12));
+}
+
+TEST_CASE("SVDSBTL backend PSmolar lookup matches HEOS within tolerance", "[SVDSBTL][ps][psmolar][water][slow]") {
+    // Molar-basis mirror of the PSmass lookup — exercises the
+    // s_molar -> s_mass conversion in resolve_point_ and the iSmolar /
+    // iHmolar / iDmolar output scaling.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    const double p = 5.0e5;
+    const double T = 400.0;
+    heos->update(CoolProp::PT_INPUTS, p, T);
+    const double s_molar = heos->smolar();
+
+    AS->update(CoolProp::PSmolar_INPUTS, p, s_molar);
+    INFO("at (p, T)=(" << p << ", " << T << ")  s_molar=" << s_molar);
+    REQUIRE(AS->rhomolar() == Approx(heos->rhomolar()).epsilon(5e-3));
+    REQUIRE(AS->T() == Approx(T).epsilon(5e-3));
+    REQUIRE(AS->hmolar() == Approx(heos->hmolar()).epsilon(5e-3));
+
+    // The user-supplied molar entropy flows through directly; p round-trips.
+    REQUIRE(AS->smolar() == Approx(s_molar).epsilon(1e-12));
+    REQUIRE(AS->p() == Approx(p).epsilon(1e-12));
+}
+
+TEST_CASE("SVDSBTL backend PSmass_INPUTS dome-hit routes to two-phase blend", "[SVDSBTL][twophase][ps_dome][water][slow]") {
+    // Entropy twin of the HmassP dome test: take s half-way between sL
+    // and sV at p_sat and confirm SVDSBTL recovers the same Q as HEOS.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    for (const double p : {2.0e5, 1.0e6, 5.0e6}) {
+        heos->update(CoolProp::PQ_INPUTS, p, 0.0);
+        const double sL = heos->smass();
+        heos->update(CoolProp::PQ_INPUTS, p, 1.0);
+        const double sV = heos->smass();
+        const double s_mid = 0.5 * (sL + sV);
+        AS->update(CoolProp::PSmass_INPUTS, p, s_mid);
+        heos->update(CoolProp::PSmass_INPUTS, p, s_mid);
+        INFO("p=" << p << "  s_mid=" << s_mid);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        REQUIRE(AS->Q() == Approx(heos->Q()).margin(1e-9));
+        REQUIRE(AS->T() == Approx(heos->T()).margin(1e-9));
+        REQUIRE(AS->rhomass() == Approx(heos->rhomass()).margin(1e-9));
+        REQUIRE(AS->smass() == Approx(s_mid).margin(1e-9));  // input round-trip
+    }
+}
+
 TEST_CASE("SVDSBTL backend speed of sound matches HEOS in single phase", "[SVDSBTL][speed_sound][water][slow]") {
     // Speed of sound is the 5th property on both PH and PT surfaces.
     // For typical single-phase Water states, SVDSBTL should agree with
@@ -505,6 +575,54 @@ TEST_CASE("SVDSBTL&IF97 single-phase PT lookup matches IF97 truth", "[SVDSBTL][s
     if97->update(CoolProp::PT_INPUTS, p, T);
     REQUIRE(AS->rhomass() == Approx(if97->rhomass()).epsilon(1e-3));
     REQUIRE(AS->hmass() == Approx(if97->hmass()).epsilon(1e-3));
+}
+
+TEST_CASE("SVDSBTL&IF97 single-phase PS lookup matches IF97 truth", "[SVDSBTL][source][if97][ps][slow]") {
+    if (!source_backend_available("IF97", "Water")) {
+        SKIP("IF97 backend not available; skipping SVDSBTL&IF97 PS test");
+    }
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&IF97", "Water"));
+    auto if97 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    // 500 K, 3 MPa — IAPWS Table 5 region (compressed liquid).  Build s
+    // from IF97, then query SVDSBTL via (p, s).
+    const double T = 500.0;
+    const double p = 3.0e6;
+    if97->update(CoolProp::PT_INPUTS, p, T);
+    const double s = if97->smass();
+    AS->update(CoolProp::PSmass_INPUTS, p, s);
+    REQUIRE(AS->rhomass() == Approx(if97->rhomass()).epsilon(1e-3));
+    REQUIRE(AS->T() == Approx(T).epsilon(1e-3));
+    REQUIRE(AS->hmass() == Approx(if97->hmass()).epsilon(1e-3));
+
+    // Supercritical point across the R2/R3 kink: 700 K, 30 MPa (R3).
+    const double T2 = 700.0;
+    const double p2 = 3.0e7;
+    if97->update(CoolProp::PT_INPUTS, p2, T2);
+    const double s2 = if97->smass();
+    AS->update(CoolProp::PSmass_INPUTS, p2, s2);
+    REQUIRE(AS->rhomass() == Approx(if97->rhomass()).epsilon(1e-3));
+    REQUIRE(AS->T() == Approx(T2).epsilon(1e-3));
+}
+
+TEST_CASE("SVDSBTL&REFPROP PSmass single-phase matches REFPROP truth", "[SVDSBTL][source][refprop][psmass][slow]") {
+    if (!source_backend_available("REFPROP", "Water")) {
+        SKIP("REFPROP not available; skipping SVDSBTL&REFPROP PSmass test");
+    }
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&REFPROP", "Water"));
+    auto refprop = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    // Subcritical liquid: T=400 K, p=10 MPa.  Compute s from REFPROP,
+    // then feed (p, s) to SVDSBTL.
+    refprop->update(CoolProp::PT_INPUTS, 1.0e7, 400.0);
+    const double s_liq = refprop->smass();
+    AS->update(CoolProp::PSmass_INPUTS, 1.0e7, s_liq);
+    REQUIRE(AS->T() == Approx(refprop->T()).epsilon(1e-3));
+    REQUIRE(AS->rhomass() == Approx(refprop->rhomass()).epsilon(1e-3));
+    // Superheated vapor: T=600 K, p=0.5 MPa.
+    refprop->update(CoolProp::PT_INPUTS, 5.0e5, 600.0);
+    const double s_vap = refprop->smass();
+    AS->update(CoolProp::PSmass_INPUTS, 5.0e5, s_vap);
+    REQUIRE(AS->T() == Approx(refprop->T()).epsilon(1e-3));
+    REQUIRE(AS->rhomass() == Approx(refprop->rhomass()).epsilon(1e-3));
 }
 
 TEST_CASE("SVDSBTL&HEOS and SVDSBTL&REFPROP produce distinct cache files", "[SVDSBTL][source][cache]") {
@@ -1192,6 +1310,109 @@ TEST_CASE("SVDSBTLBackend uses surrogate when source has no SuperAncillary", "[S
     REQUIRE(rp_be != nullptr);
     rp->update(CoolProp::PQ_INPUTS, 0.4 * rp->p_critical(), 0.5);
     REQUIRE(rp_be->sat_surrogate_consulted());
+}
+
+// CoolProp-rhb5: the opt-in `prebuild` option materializes every
+// supported input-pair surface at construction instead of lazy-loading
+// the secondary pairs (DmassT / PSmass) on first query.
+TEST_CASE("SVDSBTL prebuild option eagerly builds all surfaces", "[SBTL][SVDSBTL][prebuild][slow]") {
+    auto contains = [](const std::vector<CoolProp::input_pairs>& v, CoolProp::input_pairs p) {
+        return std::find(v.begin(), v.end(), p) != v.end();
+    };
+    // Small grid keeps the four dense SVD builds fast for a unit test.
+    const char* small_grid = R"({"grid":{"NT":40,"NR":80,"rank":10}})";
+    const char* small_grid_prebuild = R"({"prebuild":true,"grid":{"NT":40,"NR":80,"rank":10}})";
+
+    // Default (lazy): only the eager pairs PT + HmassP are registered at
+    // construction; DmassT / PSmass are absent until first queried.
+    {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(
+          CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + small_grid));
+        auto* be = dynamic_cast<CoolProp::SVDSBTLBackend*>(AS.get());
+        REQUIRE(be != nullptr);
+        const auto pairs = be->registered_input_pairs();
+        REQUIRE(contains(pairs, CoolProp::PT_INPUTS));
+        REQUIRE(contains(pairs, CoolProp::HmassP_INPUTS));
+        REQUIRE_FALSE(contains(pairs, CoolProp::DmassT_INPUTS));
+        REQUIRE_FALSE(contains(pairs, CoolProp::PSmass_INPUTS));
+    }
+    // prebuild=true: all four supported pairs are registered eagerly.
+    {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(
+          CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + small_grid_prebuild));
+        auto* be = dynamic_cast<CoolProp::SVDSBTLBackend*>(AS.get());
+        REQUIRE(be != nullptr);
+        const auto pairs = be->registered_input_pairs();
+        REQUIRE(contains(pairs, CoolProp::PT_INPUTS));
+        REQUIRE(contains(pairs, CoolProp::HmassP_INPUTS));
+        REQUIRE(contains(pairs, CoolProp::DmassT_INPUTS));
+        REQUIRE(contains(pairs, CoolProp::PSmass_INPUTS));
+    }
+}
+
+TEST_CASE("SVDSBTL&IF97 prebuild skips the unbuildable DmassT surface", "[SBTL][SVDSBTL][prebuild][if97][slow]") {
+    if (!source_backend_available("IF97", "Water")) {
+        SKIP("IF97 backend not available; skipping SVDSBTL&IF97 prebuild test");
+    }
+    auto contains = [](const std::vector<CoolProp::input_pairs>& v, CoolProp::input_pairs p) {
+        return std::find(v.begin(), v.end(), p) != v.end();
+    };
+    // DmassT can't be sampled on a (D,T) grid from IF97 (all-NaN matrix),
+    // so prebuild builds PT + HmassP + PSmass but leaves DmassT out rather
+    // than throwing at construction.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(
+      CoolProp::AbstractState::factory("SVDSBTL&IF97", std::string(R"(Water?{"prebuild":true,"grid":{"NT":40,"NR":80,"rank":10}})")));
+    auto* be = dynamic_cast<CoolProp::SVDSBTLBackend*>(AS.get());
+    REQUIRE(be != nullptr);
+    const auto pairs = be->registered_input_pairs();
+    REQUIRE(contains(pairs, CoolProp::PT_INPUTS));
+    REQUIRE(contains(pairs, CoolProp::HmassP_INPUTS));
+    REQUIRE(contains(pairs, CoolProp::PSmass_INPUTS));
+    REQUIRE_FALSE(contains(pairs, CoolProp::DmassT_INPUTS));
+}
+
+// prebuild must NOT change the cache key: a {"prebuild":true} build has
+// to share its serialized surfaces with a plain no-prebuild instance (the
+// opthash is stripped of the build-eagerness flag).  Otherwise the docs
+// pre-warm would cache under a different opthash than the panels load.
+TEST_CASE("SVDSBTL prebuild shares the surface cache with a plain instance", "[SBTL][SVDSBTL][prebuild][cache][slow]") {
+    namespace fs = std::filesystem;
+    const std::string saved = CoolProp::get_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY);
+    const fs::path tmpdir = fs::temp_directory_path() / ("coolprop_svdtables_prebuild_" + std::to_string(CoolProp::tests::test_pid()));
+    std::error_code ec;
+    fs::remove_all(tmpdir, ec);
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, tmpdir.string());
+
+    auto count_ps_files = [&]() {
+        int n = 0;
+        for (const auto& e : fs::directory_iterator(tmpdir, ec)) {
+            const auto name = e.path().filename().string();
+            if (name.find("PSmass_INPUTS") != std::string::npos && name.find(".svd.bin.z") != std::string::npos) ++n;
+        }
+        return n;
+    };
+
+    // critical_patch off so we don't pay the bbox-calibration loop; small
+    // grid so the four builds are a few seconds.
+    const char* prebuild_opts = R"({"prebuild":true,"critical_patch":{"mode":"off"},"grid":{"NT":40,"NR":80,"rank":10}})";
+    const char* plain_opts = R"({"critical_patch":{"mode":"off"},"grid":{"NT":40,"NR":80,"rank":10}})";
+
+    // Prebuild instance: writes one PSmass surface to the tmpdir.
+    { auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + prebuild_opts)); }
+    REQUIRE(count_ps_files() == 1);
+
+    // Plain instance (same grid, NO prebuild): a PS query must LOAD the
+    // already-cached surface — the opthash strip means it looks for the
+    // same file, so no second PSmass cache file appears.
+    auto plain = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + plain_opts));
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    heos->update(CoolProp::PT_INPUTS, 5.0e5, 400.0);
+    plain->update(CoolProp::PSmass_INPUTS, 5.0e5, heos->smass());
+    REQUIRE(plain->rhomass() == Approx(heos->rhomass()).epsilon(1e-1));  // coarse grid; just confirms it resolved
+    REQUIRE(count_ps_files() == 1);  // shared, not a second opthash
+
+    CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, saved);
+    fs::remove_all(tmpdir, ec);
 }
 
 // CoolProp-4u9: the tiny p-strip immediately around pc (sub: p ∈

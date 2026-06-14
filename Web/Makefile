@@ -40,13 +40,13 @@ clean:
 	@echo "Removing existing _build directory."
 	$(REMOVE_BUILD)
 
-html: 
-	$(SPHINXBUILD) -j3 -T -b html $(ALLSPHINXOPTS) _build/html
+html:
+	$(SPHINXBUILD) -j auto -T -b html $(ALLSPHINXOPTS) _build/html
 	@echo
 	@echo "Build finished. The HTML pages are in _build/html."
 
-html_release: 
-	$(SPHINXBUILD) -j3 -T -b html -t Release $(ALLSPHINXOPTS)  _build/html
+html_release:
+	$(SPHINXBUILD) -j auto -T -b html -t Release $(ALLSPHINXOPTS)  _build/html
 	@echo
 	@echo "Build finished. The HTML pages are in _build/html."
     

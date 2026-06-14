@@ -38,7 +38,6 @@
 #include <algorithm>
 #include <string>
 #include <stdio.h>
-#include <string.h>
 #include <vector>
 #include "CoolProp/CoolProp.h"
 #include "CoolProp/CoolPropLib.h"
@@ -55,36 +54,52 @@ struct EesParamRec
 
 using namespace CoolProp;
 
+// EES always passes `fluid` as a fixed 256-char buffer (see the header comment
+// at the top of this file).  Route every write to it through this helper so a
+// long fluid/input string or error/warning message is truncated to fit instead
+// of overrunning the buffer; the result is always NUL-terminated.
+static void set_fluid(char* fluid, const std::string& message) {
+    const std::size_t n = std::min(message.size(), static_cast<std::size_t>(255));
+    message.copy(fluid, n);
+    fluid[n] = '\0';
+}
+
+// Append a line to the EES debug log, skipping silently if the file can't be
+// opened.  Debug logging must never crash or abort the EES call, so the fopen
+// result is always checked before use.
+static void log_debug(const std::string& line) {
+    FILE* fp = fopen("log.txt", "a+");
+    if (fp != nullptr) {
+        fputs(line.c_str(), fp);
+        fclose(fp);
+    }
+}
+
 // Tell C++ to use the "C" style calling conventions rather than the C++ mangled names
 extern "C"
 {
     __declspec(dllexport) double COOLPROP_EES(char fluid[256], int mode, struct EesParamRec* input_rec) {
-        double In1 = _HUGE, In2 = _HUGE, out;  // Two inputs, one output
-        int NInputs;                           // Ninputs is the number of inputs
-        char NInputs_string[3], err_str[1000];
+        double In1 = _HUGE, In2 = _HUGE, out = _HUGE;  // Two inputs, one output
+        int NInputs = 0;                               // Ninputs is the number of inputs
         std::string fluid_string = fluid;
 
         std::vector<double> z;
 
-        std::string ErrorMsg, Outstr, In1str, In2str, Fluidstr, Units;
+        std::string Outstr, In1str, In2str, Fluidstr, Units;
         std::vector<std::string> fluid_split;
 
         if (mode == -1) {
-            strcpy(fluid, "T = PropsSI('T','P',101325,'Q',0,'Water')");
+            set_fluid(fluid, "T = PropsSI('T','P',101325,'Q',0,'Water')");
             return 0;
         }
 
         // Split the string that is passed in at the '~' delimiter that was used to join it
         fluid_split = strsplit(fluid_string, '~');
         if (fluid_split.size() != 5) {
-            sprintf(err_str, "fluid[%s] length[%d] not 5 elements long", fluid_string.c_str(), fluid_split.size());
-            strcpy(fluid, err_str);
+            const std::string msg = format("fluid[%s] length[%d] not 5 elements long", fluid_string.c_str(), static_cast<int>(fluid_split.size()));
+            set_fluid(fluid, msg);
             if (EES_DEBUG) {
-                FILE* fp;
-                fp = fopen("log.txt", "a+");
-                fprintf(fp, "%s %s %g %s %g %s\n", Outstr.c_str(), In1str.c_str(), In1, In2str.c_str(), In2, Fluidstr.c_str());
-                fprintf(fp, "%s\n", err_str);
-                fclose(fp);
+                log_debug(format("%s %s %g %s %g %s\n%s\n", Outstr.c_str(), In1str.c_str(), In1, In2str.c_str(), In2, Fluidstr.c_str(), msg.c_str()));
             }
             return 0;
         } else {
@@ -95,17 +110,17 @@ extern "C"
             Units = upper(fluid_split[4]);
         }
 
-        if (Fluidstr.find("$DEBUG") != std::string::npos) {
+        const std::size_t debug_pos = Fluidstr.find("$DEBUG");
+        if (debug_pos != std::string::npos) {
             EES_DEBUG = true;
-            Fluidstr = Fluidstr.substr(0, Fluidstr.find("$DEBUG"));
+            Fluidstr.resize(debug_pos);
         } else {
             EES_DEBUG = false;
         }
 
         // Check the number of inputs
-        NInputs = 0;
         EesParamRec* aninput_rec = input_rec;
-        while (aninput_rec != 0) {
+        while (aninput_rec != nullptr) {
             if (NInputs >= 2) {
                 z.push_back(aninput_rec->value);
             }
@@ -114,8 +129,7 @@ extern "C"
         };
 
         if (NInputs < 2) {
-            sprintf(NInputs_string, "Number of inputs [%d] < 2", NInputs);
-            strcpy(fluid, NInputs_string);
+            set_fluid(fluid, format("Number of inputs [%d] < 2", NInputs));
             return 0;
         }
 
@@ -129,25 +143,26 @@ extern "C"
         //This block can be used to debug the code by writing output or intermediate values to a text file
 
         if (EES_DEBUG) {
-            FILE* fp;
-            fp = fopen("log.txt", "a+");
-            fprintf(fp, "Inputs: %s %s %g %s %g %s %s\n", Outstr.c_str(), In1str.c_str(), In1, In2str.c_str(), In2, Fluidstr.c_str(), Units.c_str());
-            fclose(fp);
+            log_debug(
+              format("Inputs: %s %s %g %s %g %s %s\n", Outstr.c_str(), In1str.c_str(), In1, In2str.c_str(), In2, Fluidstr.c_str(), Units.c_str()));
         }
 
         if (EES_DEBUG) {
-            // This redirects standard output to log_stdout.txt
-            freopen("log_stdout.txt", "w", stdout);
-            ::set_debug_level(100000);  // Maximum debugging
+            // This redirects standard output to log_stdout.txt; only crank up
+            // the debug output if the redirect succeeded, so we don't spew to a
+            // broken stdout when the log file can't be opened.
+            if (freopen("log_stdout.txt", "w", stdout) != nullptr) {
+                ::set_debug_level(100000);  // Maximum debugging
+            }
         }
 
         try {
-            if (!Units.compare("SI")) {
-                if (z.size() > 0) {
-                    std::string backend, fluid;
-                    extract_backend(Fluidstr, backend, fluid);
+            if (Units == "SI") {
+                if (!z.empty()) {
+                    std::string backend, fluid_only;
+                    extract_backend(Fluidstr, backend, fluid_only);
                     // Vectorize the inputs
-                    std::vector<std::string> fluids = strsplit(fluid, '&');
+                    std::vector<std::string> fluids = strsplit(fluid_only, '&');
                     std::vector<std::string> outputs(1, Outstr);
                     std::vector<double> val1(1, In1);
                     std::vector<double> val2(1, In2);
@@ -163,59 +178,49 @@ extern "C"
                     out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr);
                 }
             } else {
-                if (In1str.size() != 0) {
-                    strcpy(fluid, format("Input #1 [%s] can only be 1 character long for coolprop()", In1str.c_str()).c_str());
+                if (In1str.size() != 1) {
+                    set_fluid(fluid, format("Input #1 [%s] can only be 1 character long for coolprop()", In1str.c_str()));
+                    return 0;
                 }
-                if (In2str.size() != 0) {
-                    strcpy(fluid, format("Input #2 [%s] can only be 1 character long for coolprop()", In2str.c_str()).c_str());
+                if (In2str.size() != 1) {
+                    set_fluid(fluid, format("Input #2 [%s] can only be 1 character long for coolprop()", In2str.c_str()));
+                    return 0;
                 }
                 // Mole fractions are not given
                 out = Props(Outstr.c_str(), In1str[0], In1, In2str[0], In2, Fluidstr.c_str());
             }
         } catch (...) {
-            std::string err_str = format("Uncaught error: \"%s\",\"%s\",%g,\"%s\",%g,\"%s\"\n", Outstr.c_str(), In1str.c_str(), In1, In2str.c_str(),
-                                         In2, Fluidstr.c_str());
+            std::string error_message = format("Uncaught error: \"%s\",\"%s\",%g,\"%s\",%g,\"%s\"\n", Outstr.c_str(), In1str.c_str(), In1,
+                                               In2str.c_str(), In2, Fluidstr.c_str());
             // There was an error
             if (EES_DEBUG) {
-                FILE* fp;
-                fp = fopen("log.txt", "a+");
-                fprintf(fp, "Error: %s \n", err_str.c_str());
-                fclose(fp);
+                log_debug(format("Error: %s \n", error_message.c_str()));
             }
-            strcpy(fluid, err_str.c_str());
+            set_fluid(fluid, error_message);
 
             return 0.0;
         }
 
         if (!ValidNumber(out)) {
-            std::string err_str = CoolProp::get_global_param_string("errstring");
+            std::string error_message = CoolProp::get_global_param_string("errstring");
             // There was an error
             if (EES_DEBUG) {
-                FILE* fp;
-                fp = fopen("log.txt", "a+");
-                fprintf(fp, "Error: %s \n", err_str.c_str());
-                fclose(fp);
+                log_debug(format("Error: %s \n", error_message.c_str()));
             }
-            strcpy(fluid, err_str.c_str());
+            set_fluid(fluid, error_message);
             return 0.0;
         } else {
             // Check if there was a warning
             std::string warn_string = CoolProp::get_global_param_string("warnstring");
             if (!warn_string.empty()) {
                 if (EES_DEBUG) {
-                    FILE* fp;
-                    fp = fopen("log.txt", "a+");
-                    fprintf(fp, "Warning: %s \n", warn_string.c_str());
-                    fclose(fp);
+                    log_debug(format("Warning: %s \n", warn_string.c_str()));
                 }
                 // There was a warning, write it back
-                strcpy(fluid, warn_string.c_str());
+                set_fluid(fluid, warn_string);
             }
             if (EES_DEBUG) {
-                FILE* fp;
-                fp = fopen("log.txt", "a+");
-                fprintf(fp, "Output: %g\n", out);
-                fclose(fp);
+                log_debug(format("Output: %g\n", out));
             }
             return out;
         }

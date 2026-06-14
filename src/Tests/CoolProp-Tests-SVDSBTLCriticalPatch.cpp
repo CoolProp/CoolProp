@@ -113,6 +113,25 @@ TEST_CASE("critical_patch: HmassP_INPUTS routing matches source backend in the b
     REQUIRE(AS->smass() == Catch::Approx(heos->smass()).margin(1e-9));
 }
 
+TEST_CASE("critical_patch: PSmass_INPUTS routing matches source backend in the bbox", "[SVDSBTL][critical_patch]") {
+    auto AS = make_svdsbtl();
+    auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    // Same critical-region state as the HmassP case, expressed in (p, s).
+    const double Tc = heos->T_critical();
+    const double pc = heos->p_critical();
+    heos->update(CoolProp::PT_INPUTS, 1.05 * pc, Tc);
+    const double s = heos->smass();
+    const double p = 1.05 * pc;
+
+    AS->update(CoolProp::PSmass_INPUTS, p, s);
+    heos->update(CoolProp::PSmass_INPUTS, p, s);
+
+    REQUIRE(AS->rhomass() == Catch::Approx(heos->rhomass()).margin(1e-9));
+    REQUIRE(AS->T() == Catch::Approx(heos->T()).margin(1e-9));
+    REQUIRE(AS->hmass() == Catch::Approx(heos->hmass()).margin(1e-9));
+}
+
 TEST_CASE("critical_patch: HEOS source must NOT polish (regression for low-Tc drift)", "[SVDSBTL][critical_patch][hydrogen][slow]") {
     // polish_patch_state_ was added (d176979e7) to fix IF97's R7-97
     // backward-equation floor (±25 mK forward-consistency).  HEOS's

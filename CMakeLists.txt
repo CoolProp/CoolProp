@@ -219,10 +219,15 @@ set(app_name ${project_name})
 project(${project_name})
 
 # Project version
-set(COOLPROP_VERSION_MAJOR 7)
-set(COOLPROP_VERSION_MINOR 2)
-set(COOLPROP_VERSION_PATCH 1)
-set(COOLPROP_VERSION_REVISION dev)
+# REVISION is concatenated onto the patch and PEP 440-normalized by the version
+# tooling (dev/extract_version.py, dev/coolprop_version_provider.py): "b1" ->
+# 8.0.0b1 (a beta pre-release), "dev" -> 8.0.0.dev0, "" -> 8.0.0 (final).
+# The dev_checks tag gate (dev/ci/check_tag_version.py) requires a v* tag to
+# match this version, so bump here before tagging a release/beta.
+set(COOLPROP_VERSION_MAJOR 8)
+set(COOLPROP_VERSION_MINOR 0)
+set(COOLPROP_VERSION_PATCH 0)
+set(COOLPROP_VERSION_REVISION b1)
 set(COOLPROP_VERSION
     "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}"
 )
@@ -2206,9 +2211,13 @@ if(COOLPROP_CATCH_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PXFlash.cpp")
   list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CubicAlpha.cpp")
+  list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-NeonMelting.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-AirMelting.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-AirCritical.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-Michelsen.cpp"
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-FPUGuard.cpp")

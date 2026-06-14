@@ -69,6 +69,18 @@ std::unique_ptr<region::BoundaryCurve> build_h_sat_L(::CoolProp::AbstractState& 
 std::unique_ptr<region::BoundaryCurve> build_h_sat_V(::CoolProp::AbstractState& heos, double p_min, double p_max,
                                                      const SatBoundaryBuildOptions& opts = {});
 
+// s_sat,L(p) — mass entropy on the saturated-liquid side of the dome.
+// Entropy analog of build_h_sat_L: SuperAncillary prop_key 'S', Q = 0,
+// output_scale = 1/M (J/mol/K -> J/kg/K).  Spline fallback samples via
+// PQ_INPUTS with Q = 0 and reads smass().
+std::unique_ptr<region::BoundaryCurve> build_s_sat_L(::CoolProp::AbstractState& heos, double p_min, double p_max,
+                                                     const SatBoundaryBuildOptions& opts = {});
+
+// s_sat,V(p) — mass entropy on the saturated-vapor side of the dome.
+// Same dispatch as build_s_sat_L; PQ_INPUTS with Q = 1 in the fallback.
+std::unique_ptr<region::BoundaryCurve> build_s_sat_V(::CoolProp::AbstractState& heos, double p_min, double p_max,
+                                                     const SatBoundaryBuildOptions& opts = {});
+
 // T_sat(p) — saturation temperature.  Single-valued for pure fluids
 // (LIQUID and VAPOR sat curves coincide on T).  Same dispatch — the
 // SuperAncillary path uses its own inverse-p Chebyshev expansion.
@@ -114,6 +126,15 @@ std::unique_ptr<region::CubicSplineCurve> build_h_isotherm_floor(::CoolProp::Abs
 // Isobar h-ceiling: h on the hot-isotherm boundary (T = T_max - margin
 // so we stay strictly inside the HEOS validity envelope).
 std::unique_ptr<region::CubicSplineCurve> build_h_isotherm_ceiling(::CoolProp::AbstractState& heos, double p_min, double p_max, double T_max,
+                                                                   const SatBoundaryBuildOptions& opts = {});
+
+// Isobar s-floor / s-ceiling: entropy analogs of build_h_isotherm_floor
+// / build_h_isotherm_ceiling.  Same cold-isotherm melting-line T-walk
+// in the floor variant; both read smass() instead of hmass().
+std::unique_ptr<region::CubicSplineCurve> build_s_isotherm_floor(::CoolProp::AbstractState& heos, double p_min, double p_max, double T_min,
+                                                                 const SatBoundaryBuildOptions& opts = {});
+
+std::unique_ptr<region::CubicSplineCurve> build_s_isotherm_ceiling(::CoolProp::AbstractState& heos, double p_min, double p_max, double T_max,
                                                                    const SatBoundaryBuildOptions& opts = {});
 
 // Locate the interior extrema of rho_sat,L(T) inside [T_min, T_max] —

@@ -163,6 +163,32 @@ void successive_substitution(HelmholtzEOSMixtureBackend& HEOS, const CoolPropDbl
 void x_and_y_from_K(CoolPropDbl beta, const std::vector<CoolPropDbl>& K, const std::vector<CoolPropDbl>& z, std::vector<CoolPropDbl>& x,
                     std::vector<CoolPropDbl>& y);
 
+/** \brief Refine a two-phase guess (x, y, rhomolar_liq, rhomolar_vap) in place by
+ * successive substitution at fixed (T, p): re-solve each phase density near its
+ * current guess, recompute the K-factors from the fugacity-coefficient ratio, and
+ * re-split via Rachford-Rice.  Stops early when max |Δln K| across components falls
+ * below tol.  Used to seed the second-order (Michelsen) PT phase-split solver from a
+ * cheap estimate.  (Adapted from jakobreichert's PR #2720.)
+ * @param num_steps Maximum number of successive-substitution steps
+ * @param tol Early-exit tolerance on max |Δln K|
+ */
+void successive_substitution_guessrho(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
+                                      CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z, int num_steps,
+                                      double tol = 1e-6);
+
+/** \brief Seed a two-phase guess (x, y, rhomolar_liq, rhomolar_vap) from the ideal
+ * (Wilson) K-factor estimate at fixed (T, p) and refine it by successive substitution.
+ * The liquid phase is seeded at the incipient (heavy-rich) composition rather than the
+ * feed, so the split does not collapse to the trivial solution near the dew point.
+ * Returns false when the Wilson estimate places the feed outside its bubble/dew points
+ * (no two-phase Rachford-Rice root) or a phase density cannot be obtained.  Used to
+ * recover a two-phase state that the TPD stability test reported as single-phase
+ * (CoolProp-zgpy).
+ */
+bool guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y, CoolPropDbl& rhomolar_liq,
+                             CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z, CoolPropDbl T, CoolPropDbl p, int num_steps,
+                             bool require_bracket = true);
+
 /*! A wrapper function around the residual to find the initial guess for the bubble point temperature
     \f[
     r = \sum_i \frac{z_i(K_i-1)}{1-beta+beta*K_i}
@@ -634,6 +660,7 @@ class StabilityEvaluationClass
 
    private:
     bool _stable;
+    bool _uncertain;  ///< stability verdict was non-conclusive (minimize_tpd could not decide)
     bool debug;
     bool use_michelsen;
 
@@ -650,6 +677,7 @@ class StabilityEvaluationClass
         m_T(-1),
         m_p(-1),
         _stable(false),
+        _uncertain(false),
         debug(false),
         use_michelsen(get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {};
     /** \brief Specify T&P, otherwise they are loaded the HEOS instance
@@ -715,6 +743,12 @@ class StabilityEvaluationClass
         }
         check_stability();
         return _stable;
+    }
+    /// True when the stability verdict was non-conclusive (e.g. minimize_tpd could not
+    /// find an acceptable step) rather than a clean "stable".  The caller should then
+    /// attempt a verified two-phase split instead of trusting the fail-open "stable".
+    bool is_uncertain() const {
+        return _uncertain;
     }
     /// Accessor for liquid-phase composition and density
     void get_liq(std::vector<double>& x, double& rhomolar) {
