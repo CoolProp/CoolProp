@@ -2610,6 +2610,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     const std::size_t N = IO.x.size();
     if (!ValidNumber(IO.p)) IO.p = HEOS.p();
     if (!ValidNumber(IO.T)) IO.T = HEOS.T();
+    // Reset the convergence-failure flag so it reflects only THIS solve attempt.  IO is held
+    // by reference, so a reused options object could otherwise carry a stale nonconvergence=true
+    // from a prior attempt into the single-phase gate in PT_flash_mixtures.
+    IO.nonconvergence = false;
     // Warm-start density roots for the liquid/vapor phases (tracked across SS + Newton
     // iterations; first solve per phase falls back to the global solver inside the helper).
     CoolPropDbl rho_warm_L = -1, rho_warm_V = -1;
