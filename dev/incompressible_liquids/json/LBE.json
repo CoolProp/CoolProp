@@ -1,0 +1,114 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 500.0,
+  "Tmax": 700.0,
+  "Tmin": 300.0,
+  "TminPsat": 300.0,
+  "conductivity": {
+    "NRMS": 3.565316009093439e-10,
+    "coeffs": [
+      [
+        10.79275000201243
+      ],
+      [
+        0.013865000016598891
+      ],
+      [
+        -2.3050000361181942e-06
+      ],
+      [
+        -3.4457806268213415e-16
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 1.3232495330632081e-12,
+    "coeffs": [
+      [
+        10418.499999999995
+      ],
+      [
+        -1.2930000000000867
+      ],
+      [
+        7.849276784098889e-17
+      ],
+      [
+        1.936853099222062e-16
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "description": "LBE",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "LBE",
+  "reference": "LBE",
+  "saturation_pressure": {
+    "NRMS": 0.003270558805735532,
+    "coeffs": [
+      [
+        -21.728908486242126
+      ],
+      [
+        0.08936470179157377
+      ],
+      [
+        -0.0002127063569269017
+      ],
+      [
+        4.4559947883053437e-07
+      ]
+    ],
+    "type": "exppolynomial"
+  },
+  "specific_heat": {
+    "NRMS": 0.004809702015650409,
+    "coeffs": [
+      [
+        146.43418134055716
+      ],
+      [
+        -0.019826249840042616
+      ],
+      [
+        -1.637182270381813e-05
+      ],
+      [
+        8.029513312788106e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "viscosity": {
+    "NRMS": 1.0388407370797301e-07,
+    "coeffs": [
+      754.0995583217433,
+      -0.00014047324159835472,
+      7.61297467666158
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}

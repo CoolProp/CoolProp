@@ -3,6 +3,32 @@ import numpy as np
 from .DataObjects import PureData
 
 
+class LBE(PureData):
+    """
+    Heat transfer fluid Lead-bismuth Eutectic Alloy 
+    """
+
+    def __init__(self):
+        PureData.__init__(self)
+        self.density.source = self.density.SOURCE_DATA
+        self.specific_heat.source = self.specific_heat.SOURCE_DATA
+        self.conductivity.source = self.conductivity.SOURCE_DATA
+        self.viscosity.source = self.viscosity.SOURCE_DATA
+        self.saturation_pressure.source = self.saturation_pressure.SOURCE_DATA
+        self.temperature.data = np.array([300.0,325.0,350.0,375.0,400.0,425.0,450.0,475.0,500.0,525.0,550.0,575.0,600.0,625.0,650.0,675.0,700.0])  # kelvin
+        self.density.data = np.array([10677.1,10644.775,10612.45,10580.125,10547.8,10515.475,10483.15,10450.825,10418.5,10386.175,10353.85,10321.525,10289.2,10256.875,10224.55,10192.225,10159.9])         # kg/m3
+        self.specific_heat.data = np.array([149.038333,148.998153,148.818801,148.540146,148.190000,147.788245,147.349398,146.884260,146.401000,145.905891,145.403812,144.898606,144.393333,143.890453,143.391960,142.899489,142.414388])   # J/kg-K
+        self.conductivity.data = np.array([7.92755,8.295784375,8.6611375,9.023609375,9.3832,9.739909375,10.0937375,10.44468438,10.79275,11.13793438,11.4802375,11.81965938,12.1562,12.48985938,12.8206375,13.14853438,13.47355])         # W/m-K
+        self.viscosity.data = np.array([6.100965,5.02833,4.260351,3.690321,3.254473,2.912853,2.639417,2.416594,2.232183,2.077492,1.946185,1.833558,1.736052,1.650932,1.576069,1.509782,1.450729]) * 1.E-3        # Pa-s
+        self.saturation_pressure.data = np.array([2.747869e-23,8.919318e-21,1.267375e-18,9.299696e-17,3.988751e-15,1.099415e-13,2.096286e-12,2.930705e-11,3.147324e-10,2.696021e-09,1.899795e-08,1.129673e-07,5.789991e-07,2.603905e-06,1.043148e-05,3.770686e-05,1.243462e-04]) # Pa
+        self.Tmin = np.min(self.temperature.data)
+        self.Tmax = np.max(self.temperature.data)
+        self.TminPsat = self.Tmin
+        self.name = "LBE"
+        self.description = "LBE"
+        self.reference = "LBE"
+        self.reshapeAll()
+
 class LiquidSodium(PureData):
     """
     Heat transfer fluid Liquid Sodium
