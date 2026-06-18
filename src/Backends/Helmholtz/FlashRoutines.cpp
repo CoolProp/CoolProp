@@ -948,15 +948,21 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
         // Load the outputs
         HEOS._phase = iphase_twophase;
     } else {
-        // The envelope-guided fast path (PT_Q_flash_mixtures) is only reliable for the dew-
-        // and bubble-point lookups (Q==0 / Q==1), which use newton_raphson_saturation.  For a
-        // genuine two-phase split (0 < Q < 1) it routes to newton_raphson_twophase, which is
-        // both crash-prone and ~1% inaccurate (GH #3192); fall through to the blind
-        // successive-substitution + newton_raphson_saturation path (converges to ~1e-9%).
-        const bool dew_or_bubble = std::abs(HEOS._Q) < 100 * DBL_EPSILON || std::abs(HEOS._Q - 1) < 100 * DBL_EPSILON;
-        if (HEOS.PhaseEnvelope.built && dew_or_bubble) {
-            PT_Q_flash_mixtures(HEOS, iT, HEOS._T);
-        } else {
+        // With a phase envelope available, try the envelope-guided fast path: it warm-starts
+        // the dew/bubble and two-phase solves from the envelope.  The two-phase solver now
+        // damps its Newton step and reports non-convergence rather than returning a stale
+        // guess (GH #3192); as a safety net, any failure falls back to the blind
+        // successive-substitution + newton_raphson_saturation path, which is robust to ~1e-9%.
+        bool solved_with_envelope = false;
+        if (HEOS.PhaseEnvelope.built) {
+            try {
+                PT_Q_flash_mixtures(HEOS, iT, HEOS._T);
+                solved_with_envelope = true;
+            } catch (...) {
+                solved_with_envelope = false;  // fall back to the blind solver below
+            }
+        }
+        if (!solved_with_envelope) {
             // Set some input options
             SaturationSolvers::mixture_VLE_IO options;
             options.sstype = SaturationSolvers::imposed_T;
@@ -1225,12 +1231,19 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
             HEOS._T = HEOS.SatL->T();
         }
     } else {
-        // Only use the envelope fast path for dew/bubble points (Q==0 / Q==1); route genuine
-        // two-phase states (0 < Q < 1) to the blind branch.  See QT_flash above (GH #3192).
-        const bool dew_or_bubble = std::abs(HEOS._Q) < 100 * DBL_EPSILON || std::abs(HEOS._Q - 1) < 100 * DBL_EPSILON;
-        if (HEOS.PhaseEnvelope.built && dew_or_bubble) {
-            PT_Q_flash_mixtures(HEOS, iP, HEOS._p);
-        } else {
+        // Try the envelope-guided fast path when an envelope is available; on any failure fall
+        // back to the blind successive-substitution + newton_raphson_saturation path.  See
+        // QT_flash above (GH #3192).
+        bool solved_with_envelope = false;
+        if (HEOS.PhaseEnvelope.built) {
+            try {
+                PT_Q_flash_mixtures(HEOS, iP, HEOS._p);
+                solved_with_envelope = true;
+            } catch (...) {
+                solved_with_envelope = false;  // fall back to the blind solver below
+            }
+        }
+        if (!solved_with_envelope) {
 
             // Set some input options
             SaturationSolvers::mixture_VLE_IO io;

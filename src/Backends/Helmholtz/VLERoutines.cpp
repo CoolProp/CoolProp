@@ -1611,42 +1611,75 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
         // Build the Jacobian and residual vectors
         build_arrays();
 
+        // A previous step may have left the composition/density infeasible, making the
+        // fugacity (hence the residual) non-finite.  Fail loudly so the caller falls back
+        // to the blind solver, rather than letting "NaN > tol == false" silently exit the
+        // loop and return a stale, unconverged state (GH #3192 follow-up).
+        if (!ValidNumber(error_rms)) {
+            throw ValueError("newton_raphson_twophase::call produced a non-finite residual");
+        }
+
         // Solve for the step; v is the step with the contents
         // [delta(x_0), delta(x_1), ..., delta(x_{N-2}), delta(spec)]
-
-        // Uncomment to see Jacobian and residual at every step
-        // std::cout << vec_to_string(J, "%0.12Lg") << std::endl;
-        // std::cout << vec_to_string(negative_r, "%0.12Lg") << std::endl;
-
         Eigen::VectorXd v = J.colPivHouseholderQr().solve(-r);
 
+        // Damp the Newton step so neither phase composition leaves the open interval (0,1).
+        // An undamped step routinely overshoots (x_i < 0 or y_i > 1); the next fugacity
+        // evaluation then returns NaN and the solve diverges (GH #3192 follow-up).  tau is
+        // the largest fraction of the full step that keeps every stepped mole fraction
+        // inside (0,1), backed off by step_safety so it stays strictly interior.
+        double tau = 1.0;
+        const double step_safety = 0.8;
+        for (std::size_t i = 0; i < N - 1; ++i) {
+            const double dx = v[i], dy = v[i + (N - 1)];
+            if (x[i] + dx <= 0.0) {
+                tau = std::min(tau, step_safety * (-x[i] / dx));
+            } else if (x[i] + dx >= 1.0) {
+                tau = std::min(tau, step_safety * ((1.0 - x[i]) / dx));
+            }
+            if (y[i] + dy <= 0.0) {
+                tau = std::min(tau, step_safety * (-y[i] / dy));
+            } else if (y[i] + dy >= 1.0) {
+                tau = std::min(tau, step_safety * ((1.0 - y[i]) / dy));
+            }
+        }
+
         for (unsigned int i = 0; i < N - 1; ++i) {
-            err_rel[i] = v[i] / x[i];
-            x[i] += v[i];
-            err_rel[i + (N - 1)] = v[i + (N - 1)] / y[i];
-            y[i] += v[i + (N - 1)];
+            err_rel[i] = tau * v[i] / x[i];
+            x[i] += tau * v[i];
+            err_rel[i + (N - 1)] = tau * v[i + (N - 1)] / y[i];
+            y[i] += tau * v[i + (N - 1)];
         }
         x[N - 1] = 1 - std::accumulate(x.begin(), x.end() - 1, 0.0);
         y[N - 1] = 1 - std::accumulate(y.begin(), y.end() - 1, 0.0);
 
         if (imposed_variable == newton_raphson_twophase_options::P_IMPOSED) {
-            T += v[2 * N - 2];
-            err_rel[2 * N - 2] = v[2 * N - 2] / T;
+            T += tau * v[2 * N - 2];
+            err_rel[2 * N - 2] = tau * v[2 * N - 2] / T;
         } else if (imposed_variable == newton_raphson_twophase_options::T_IMPOSED) {
-            p += v[2 * N - 2];
-            err_rel[2 * N - 2] = v[2 * N - 2] / p;
+            p += tau * v[2 * N - 2];
+            err_rel[2 * N - 2] = tau * v[2 * N - 2] / p;
         } else {
             throw ValueError("invalid imposed_variable");
         }
-        //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
 
-        min_rel_change = err_rel.cwiseAbs().minCoeff();
+        // Stop only when the LARGEST relative change is small (maxCoeff, not minCoeff: a
+        // single near-stationary variable must not terminate the iteration prematurely).
+        min_rel_change = err_rel.cwiseAbs().maxCoeff();
         iter++;
 
         if (iter == IO.Nstep_max) {
-            throw ValueError(format("newton_raphson_saturation::call reached max number of iterations [%d]", IO.Nstep_max));
+            throw ValueError(format("newton_raphson_twophase::call reached max number of iterations [%d]", IO.Nstep_max));
         }
     } while (this->error_rms > 1e-9 && min_rel_change > 1000 * DBL_EPSILON && iter < IO.Nstep_max);
+
+    // Refresh the residual at the final iterate (this also leaves SatL/SatV holding the
+    // converged state) and require genuine convergence; otherwise signal failure so the
+    // caller can fall back to the blind solver instead of returning the last guess.
+    build_arrays();
+    if (!ValidNumber(error_rms) || error_rms > 1e-7) {
+        throw ValueError(format("newton_raphson_twophase::call did not converge (error_rms = %g)", static_cast<double>(error_rms)));
+    }
 
     IO.Nsteps = iter;
     IO.p = p;
@@ -1664,6 +1697,13 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
 void SaturationSolvers::newton_raphson_twophase::build_arrays() {
     // References to the classes for concision
     HelmholtzEOSMixtureBackend &rSatL = *(HEOS->SatL.get()), &rSatV = *(HEOS->SatV.get());
+
+    // Zero the Jacobian first: the beta-constraint rows (k = N .. 2N-2) below only write the
+    // two mole-fraction columns the constraint depends on; the imposed-variable (T/p) column,
+    // and for N>=3 the off-diagonal mole-fraction columns, are left untouched and their true
+    // value is 0.  Eigen::resize() does not zero storage, so without this those entries are
+    // uninitialized memory feeding the Newton solve (GH #3192 follow-up).
+    J.setZero();
 
     // Step 0:
     // -------

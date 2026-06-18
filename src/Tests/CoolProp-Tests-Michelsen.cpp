@@ -758,9 +758,10 @@ TEST_CASE("PQ/QT flash with built envelope at 0<Q<1 (GH #3192)", "[michelsen][ph
     // genuine two-phase state (0 < Q < 1) used to route to newton_raphson_twophase, whose
     // residual vectors r/err_rel were Eigen::Vector2d (fixed size 2) but need 2N-1 (>=3)
     // entries -> out-of-bounds write -> HARD CRASH (process abort, not a C++ exception, so it
-    // cannot be caught — pre-fix this test binary terminates here).  These states are now
-    // routed to the accurate blind branch (newton_raphson_saturation), which must (a) not
-    // crash and (b) match the blind (no-envelope) flash closely.
+    // cannot be caught — pre-fix this test binary terminates here).  The two-phase solver is
+    // now hardened (step damping + non-finite/convergence guards), so the envelope fast path
+    // is used and must (a) not crash and (b) match the blind (no-envelope) flash closely; any
+    // solver failure falls back to the blind path.
     std::vector<double> z = {0.5, 0.5};
 
     auto make_pe = [&]() {
@@ -811,6 +812,39 @@ TEST_CASE("PQ/QT flash with built envelope at 0<Q<1 (GH #3192)", "[michelsen][ph
         ref->update(PQ_INPUTS, 1e5, 0.0);
         CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-6));
     }
+
+    SECTION("pq -> pt -> q roundtrip recovers the imposed quality") {
+        // The reporter's accuracy metric: a two-phase PQ flash followed by a PT flash at the
+        // recovered T must return the original quality.  Before the rework the envelope branch
+        // returned its unconverged interpolation guess and the roundtrip was off by ~0.4%.
+        auto AS = make_pe();
+        REQUIRE(AS->get_phase_envelope_data().built);
+        AS->update(PQ_INPUTS, 1e5, 0.5);
+        const double T_2ph = AS->T();
+        auto rt = make_blind();
+        rt->update(PT_INPUTS, 1e5, T_2ph);
+        CHECK(rt->Q() == Catch::Approx(0.5).epsilon(1e-4));
+    }
+}
+
+TEST_CASE("PQ flash with built envelope, ternary two-phase (GH #3192, N>=3)", "[michelsen][phase_envelope]") {
+    // Locks in N>=3.  The Newton-step damping bounds only the N-1 independent mole fractions,
+    // so for ternary+ mixtures the dependent component's feasibility leans on the
+    // throw -> blind-fallback safety net.  A ternary two-phase PQ flash must still converge and
+    // match the blind solver (verified during review to ~1e-9 across 0.5-4 MPa).
+    std::vector<double> z = {0.4, 0.35, 0.25};
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+    AS->set_mole_fractions(z);
+    AS->build_phase_envelope("");
+    auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+    ref->set_mole_fractions(z);
+
+    CHECK_NOTHROW(AS->update(PQ_INPUTS, 1e6, 0.5));
+    ref->update(PQ_INPUTS, 1e6, 0.5);
+    CHECK(AS->phase() == iphase_twophase);
+    CHECK(std::isfinite(AS->T()));
+    CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-5));
+    CHECK(AS->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-5));
 }
 
 // ============================================================================
