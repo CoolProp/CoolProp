@@ -398,7 +398,10 @@ class newton_raphson_twophase
     bool logging;
     int Nsteps;
     Eigen::MatrixXd J;
-    Eigen::Vector2d r, err_rel;
+    // r and err_rel hold 2N-1 residuals/relative-errors (see class docstring), so they MUST
+    // be dynamically sized.  They were Eigen::Vector2d (fixed size 2), which overflowed for
+    // every mixture (N>=2 -> 2N-1>=3) and hard-crashed via out-of-bounds writes (GH #3192).
+    Eigen::VectorXd r, err_rel;
     std::vector<CoolPropDbl> K, x, y, z;
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
