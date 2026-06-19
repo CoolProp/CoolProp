@@ -955,10 +955,17 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
         // successive-substitution + newton_raphson_saturation path, which is robust to ~1e-9%.
         bool solved_with_envelope = false;
         if (HEOS.PhaseEnvelope.built) {
+            // PT_Q_flash_mixtures mutates HEOS._T/_p while seeding its solve.  Save the caller's
+            // inputs and restore them on failure so the blind fallback runs from the original
+            // state.  (The blind QT path only reads the imposed HEOS._T, which the seed preserves,
+            // so this is defensive; it keeps the contract explicit if either side changes.)
+            const CoolPropDbl T_in = HEOS._T, p_in = HEOS._p;
             try {
                 PT_Q_flash_mixtures(HEOS, iT, HEOS._T);
                 solved_with_envelope = true;
             } catch (...) {
+                HEOS._T = T_in;
+                HEOS._p = p_in;
                 solved_with_envelope = false;  // fall back to the blind solver below
             }
         }
@@ -1236,10 +1243,15 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
         // QT_flash above (GH #3192).
         bool solved_with_envelope = false;
         if (HEOS.PhaseEnvelope.built) {
+            // Save/restore the caller's inputs around the envelope solve (see QT_flash): the blind
+            // PQ fallback reads the imposed HEOS._p (preserved by the seed), so this is defensive.
+            const CoolPropDbl T_in = HEOS._T, p_in = HEOS._p;
             try {
                 PT_Q_flash_mixtures(HEOS, iP, HEOS._p);
                 solved_with_envelope = true;
             } catch (...) {
+                HEOS._T = T_in;
+                HEOS._p = p_in;
                 solved_with_envelope = false;  // fall back to the blind solver below
             }
         }

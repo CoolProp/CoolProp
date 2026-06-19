@@ -828,14 +828,16 @@ TEST_CASE("PQ/QT flash with built envelope at 0<Q<1 (GH #3192)", "[michelsen][ph
 }
 
 TEST_CASE("PQ flash with built envelope, ternary two-phase (GH #3192, N>=3)", "[michelsen][phase_envelope]") {
-    // Locks in N>=3.  The Newton-step damping bounds only the N-1 independent mole fractions,
-    // so for ternary+ mixtures the dependent component's feasibility leans on the
-    // throw -> blind-fallback safety net.  A ternary two-phase PQ flash must still converge and
-    // match the blind solver (verified during review to ~1e-9 across 0.5-4 MPa).
+    // Locks in N>=3.  The Newton-step damping bounds the dependent mole fraction x[N-1]=1-sum as
+    // well as the N-1 independent ones, so a ternary two-phase PQ flash must converge through the
+    // envelope path and match the blind solver (verified during review to ~1e-9 across 0.5-4 MPa).
     std::vector<double> z = {0.4, 0.35, 0.25};
     auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
     AS->set_mole_fractions(z);
     AS->build_phase_envelope("");
+    // Guard against vacuous coverage: if the envelope did not build, the dispatch would silently
+    // use the blind path and this test would no longer exercise the envelope-guided solver.
+    REQUIRE(AS->get_phase_envelope_data().built);
     auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
     ref->set_mole_fractions(z);
 

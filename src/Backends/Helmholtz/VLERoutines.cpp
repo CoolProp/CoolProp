@@ -1630,8 +1630,15 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
         // inside (0,1), backed off by step_safety so it stays strictly interior.
         double tau = 1.0;
         const double step_safety = 0.8;
+        // The dependent mole fractions x[N-1] = 1 - sum(x[0..N-2]) and y[N-1] likewise change by
+        // minus the sum of the independent steps; accumulate those so the dependent component is
+        // bounded to (0,1) too (otherwise it can still overshoot for N>=3 and reintroduce the
+        // non-finite fugacity path this damping is meant to prevent).
+        double dx_last = 0.0, dy_last = 0.0;
         for (std::size_t i = 0; i < N - 1; ++i) {
             const double dx = v[i], dy = v[i + (N - 1)];
+            dx_last -= dx;
+            dy_last -= dy;
             if (x[i] + dx <= 0.0) {
                 tau = std::min(tau, step_safety * (-x[i] / dx));
             } else if (x[i] + dx >= 1.0) {
@@ -1642,6 +1649,18 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
             } else if (y[i] + dy >= 1.0) {
                 tau = std::min(tau, step_safety * ((1.0 - y[i]) / dy));
             }
+        }
+        // Bound the dependent (Nth) mole fraction with the same rule.
+        const double x_last = x[N - 1], y_last = y[N - 1];
+        if (x_last + dx_last <= 0.0) {
+            tau = std::min(tau, step_safety * (-x_last / dx_last));
+        } else if (x_last + dx_last >= 1.0) {
+            tau = std::min(tau, step_safety * ((1.0 - x_last) / dx_last));
+        }
+        if (y_last + dy_last <= 0.0) {
+            tau = std::min(tau, step_safety * (-y_last / dy_last));
+        } else if (y_last + dy_last >= 1.0) {
+            tau = std::min(tau, step_safety * ((1.0 - y_last) / dy_last));
         }
 
         for (unsigned int i = 0; i < N - 1; ++i) {
