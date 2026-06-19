@@ -8,8 +8,38 @@
 #    include <catch2/catch_all.hpp>
 #    include "CoolProp/detail/tools.h"
 #    include "CoolProp/CoolProp.h"
+#    include <cmath>
 
 using namespace CoolProp;
+
+namespace {
+// Recompute the equal-fugacity equilibrium residual max_i |ln(f_i^V / f_i^L)| from a
+// converged two-phase flash result, by re-solving each reported phase composition as a
+// single-phase state at (p, T).  A correctly converged split drives this to ~0; the
+// #3168 bug published splits with residuals of order 1e-1..1e0.  Asserting on this (not
+// just phase()==twophase) is what keeps a grossly-unconverged split from passing CI.
+// Trace components (mole fraction < 1e-4 in either phase) are skipped: their fugacities
+// carry machine-precision noise that would otherwise dominate the max.  (Signature is
+// (..., T, p) -- the merge of #3170 and #3174 standardized on this order; see #3174.)
+double equilibrium_residual(const std::string& backend, const std::string& fluids, const std::vector<double>& x, const std::vector<double>& y,
+                            double T, double p) {
+    auto L = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
+    L->set_mole_fractions(x);
+    L->specify_phase(iphase_liquid);
+    L->update(PT_INPUTS, p, T);
+    auto V = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
+    V->set_mole_fractions(y);
+    V->specify_phase(iphase_gas);
+    V->update(PT_INPUTS, p, T);
+    double maxresid = 0;
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        if (std::min(x[i], y[i]) < 1e-4) continue;  // trace in one phase: skip machine-precision noise
+        double fL = L->fugacity(i), fV = V->fugacity(i);
+        if (fL > 1e-15 && fV > 1e-15) maxresid = std::max(maxresid, std::abs(std::log(fV / fL)));
+    }
+    return maxresid;
+}
+}  // namespace
 
 TEST_CASE("Michelsen Flash: Issue #2333 (PR mixture 264.65 K, 6.51 MPa)", "[michelsen][cubic][flash][2333]") {
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("PR", "CarbonDioxide&Nitrogen"));
@@ -83,6 +113,9 @@ TEST_CASE("Michelsen Flash: 7-component natural gas [M82a,M82b]", "[michelsen][f
         CHECK(AS->phase() == iphase_twophase);
         CHECK(AS->Q() > 0);
         CHECK(AS->Q() < 1);
+        // #3168: the published split must actually be at equilibrium, not a
+        // grossly-unconverged one accepted on phase()/Q() alone.
+        CHECK(equilibrium_residual("SRK", fluids, AS->mole_fractions_liquid_double(), AS->mole_fractions_vapor_double(), 190.0, 4e6) < 1e-6);
     }
     SECTION("PR two-phase at 190 K, 4 MPa") {
         auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("PR", fluids));
@@ -91,6 +124,7 @@ TEST_CASE("Michelsen Flash: 7-component natural gas [M82a,M82b]", "[michelsen][f
         CHECK(AS->phase() == iphase_twophase);
         CHECK(AS->Q() > 0);
         CHECK(AS->Q() < 1);
+        CHECK(equilibrium_residual("PR", fluids, AS->mole_fractions_liquid_double(), AS->mole_fractions_vapor_double(), 190.0, 4e6) < 1e-6);
     }
     SECTION("SRK stable gas at 250 K, 1 MPa") {
         auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("SRK", fluids));
@@ -948,6 +982,13 @@ TEST_CASE("Methanol-benzene PT flash at problematic compositions", "[michelsen][
     // Regression test: x_methanol = 0.56 and 0.78 at 308.15 K / 101325 Pa
     // previously failed because solver_rho_Tp corrupted HEOS._T/_p to -inf
     // on the gas-phase attempt, causing the liquid fallback to also fail.
+    //
+    // At 308.15 K / 1 atm this mixture is subcooled single-phase liquid (bubble
+    // pressure ~34 kPa << 101 kPa).  #3168: the Michelsen stability check produces
+    // a false-positive two-phase classification at x_methanol = 0.54 whose split
+    // never converges (both roots liquid-like, rho_vap > rho_liq).  The convergence
+    // gate + single-phase fallback must recover the correct single-phase liquid
+    // result rather than publishing the unconverged split.
     for (double x : {0.54, 0.56, 0.58, 0.76, 0.78, 0.80}) {
         DYNAMIC_SECTION("x_methanol = " << x) {
             auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "methanol&benzene"));
@@ -958,6 +999,10 @@ TEST_CASE("Methanol-benzene PT flash at problematic compositions", "[michelsen][
             CHECK(std::isfinite(rho));
             CHECK(rho > 0);
             CHECK(std::isfinite(AS->gibbsmolar()));
+            // Subcooled liquid: single phase, liquid-like density.
+            CHECK(AS->Q() == -1);
+            CHECK(AS->phase() == iphase_liquid);
+            CHECK(rho > 9000);
         }
     }
 }
@@ -965,24 +1010,6 @@ TEST_CASE("Methanol-benzene PT flash at problematic compositions", "[michelsen][
 // Independently recompute the equal-fugacity residual max_i |ln f_i^V - ln f_i^L|
 // for a published two-phase split using fresh single-phase sub-states, so a trivial
 // (x == y) or unconverged split cannot hide behind the flash's own internal state.
-static double equilibrium_residual(const std::string& backend, const std::string& fluids, const std::vector<double>& x, const std::vector<double>& y,
-                                   double T, double p) {
-    auto L = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
-    L->set_mole_fractions(x);
-    L->specify_phase(iphase_liquid);
-    L->update(PT_INPUTS, p, T);
-    auto V = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
-    V->set_mole_fractions(y);
-    V->specify_phase(iphase_gas);
-    V->update(PT_INPUTS, p, T);
-    double maxresid = 0;
-    for (std::size_t i = 0; i < x.size(); ++i) {
-        if (std::min(x[i], y[i]) < 1e-4) continue;  // trace in one phase: skip machine-precision noise
-        double fL = L->fugacity(i), fV = V->fugacity(i);
-        if (fL > 1e-15 && fV > 1e-15) maxresid = std::max(maxresid, std::abs(std::log(fV / fL)));
-    }
-    return maxresid;
-}
 
 TEST_CASE("Blind PT flash: near-dew two-phase classification (CoolProp-zgpy)", "[michelsen][blind][flash][zgpy]") {
     // Regression for CoolProp-zgpy: for cubic mixtures at high vapor fraction the

@@ -2610,6 +2610,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     const std::size_t N = IO.x.size();
     if (!ValidNumber(IO.p)) IO.p = HEOS.p();
     if (!ValidNumber(IO.T)) IO.T = HEOS.T();
+    // Reset the convergence-failure flag so it reflects only THIS solve attempt.  IO is held
+    // by reference, so a reused options object could otherwise carry a stale nonconvergence=true
+    // from a prior attempt into the single-phase gate in PT_flash_mixtures.
+    IO.nonconvergence = false;
     // Warm-start density roots for the liquid/vapor phases (tracked across SS + Newton
     // iterations; first solve per phase falls back to the global solver inside the helper).
     CoolPropDbl rho_warm_L = -1, rho_warm_V = -1;
@@ -2741,114 +2745,228 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
 
     double G_old = compute_gibbs();
 
-    for (int gibbs_iter = 0; gibbs_iter < 30; ++gibbs_iter) {
-        Eigen::VectorXd g(N);
-        Eigen::MatrixXd H(N, N);
-        CoolPropDbl L_frac = 1.0 - beta;
-        CoolPropDbl V_frac = beta;
-        CoolPropDbl max_g = 0;
-        Eigen::MatrixXd DL(N, N), DV(N, N);
-        for (std::size_t i = 0; i < N; ++i) {
-            for (std::size_t j = 0; j < N; ++j) {
-                DL(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatL.get()), i, j, CoolProp::XN_INDEPENDENT);
-                DV(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, CoolProp::XN_INDEPENDENT);
-            }
-        }
-        for (std::size_t i = 0; i < N; ++i) {
-            CoolPropDbl sum_x_DL = 0, sum_y_DV = 0;
-            for (std::size_t k = 0; k < N; ++k) {
-                sum_x_DL += IO.x[k] * DL(i, k);
-                sum_y_DV += IO.y[k] * DV(i, k);
-            }
-            for (std::size_t j = 0; j < N; ++j) {
-                CoolPropDbl dln_phi_L_dnj = DL(i, j) - sum_x_DL;
-                CoolPropDbl dln_phi_V_dnj = DV(i, j) - sum_y_DV;
-                H(i, j) = V_frac * dln_phi_L_dnj + L_frac * dln_phi_V_dnj - 1.0;
-            }
-            H(i, i) += (V_frac / IO.x[i]) + (L_frac / IO.y[i]);
-            CoolPropDbl l_act = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
-            CoolPropDbl v_act = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
-            g(i) = V_frac * L_frac * (v_act - l_act);
-            max_g = std::max(max_g, std::abs(v_act - l_act));
-        }
-        if (max_g < 1e-9) {
-            break;
-        }
-        Eigen::VectorXd delta_v = H.colPivHouseholderQr().solve(-g);
+    // Convergence target on the equal-fugacity residual max_i |ln f_i^V - ln f_i^L|.
+    // The post-loop gate below (GitHub #3168) throws when we exit worse than the SS
+    // tolerance, restoring solve_legacy's "no silent wrong answer" contract.
+    const double gibbs_tol = 1e-9;
+    const int max_gibbs_iter = 50;
+    const int max_restart = 2;
+    const int max_inner = 40;
+    bool converged = false;
+    double last_max_g = 1e300;
 
-        // Compute maximum feasible step scale (keep mole numbers positive)
-        CoolPropDbl step_scale = 1.0;
-        for (std::size_t i = 0; i < N; ++i) {
-            CoolPropDbl v_old = beta * IO.y[i];
-            if (delta_v(i) > 0 && v_old + delta_v(i) > IO.z[i]) step_scale = std::min(step_scale, 0.99 * (IO.z[i] - v_old) / delta_v(i));
-            if (delta_v(i) < 0 && v_old + delta_v(i) < 0) step_scale = std::min(step_scale, 0.99 * (-v_old) / delta_v(i));
-        }
+    for (int restart = 0; restart < max_restart && !converged; ++restart) {
+        // Trust-region radius in scaled-variable (u = D*v) units; restart with a
+        // tighter radius if a previous pass stalled.
+        double trust_radius = (restart == 0) ? 1.0 : 0.2;
 
-        // Line search with objective-decrease check
-        bool step_ok = false;
-        while (step_scale > 1e-6) {
-            CoolPropDbl V_new = 0, L_new = 0;
-            std::vector<CoolPropDbl> v_new(N), l_new(N);
+        for (int gibbs_iter = 0; gibbs_iter < max_gibbs_iter && !converged; ++gibbs_iter) {
+            const CoolPropDbl L_frac = 1.0 - beta;
+            const CoolPropDbl V_frac = beta;
+
+            // Re-sync the SatL/SatV backends to the current (IO.x, IO.y) before reading
+            // their fugacity coefficients and composition derivatives below.  A rejected
+            // or density-failed trial in the previous iteration's inner loop may have
+            // left them on a trial composition; re-syncing here keeps the gradient,
+            // Hessian, and the convergence residual (max_g) consistent with the state
+            // that will actually be published.
+            HEOS.SatL->set_mole_fractions(IO.x);
+            HEOS.SatL->update_DmolarT_direct(IO.rhomolar_liq, IO.T);
+            HEOS.SatV->set_mole_fractions(IO.y);
+            HEOS.SatV->update_DmolarT_direct(IO.rhomolar_vap, IO.T);
+
+            // Reduced gradient g_i = beta*(1-beta)*(ln f_i^V - ln f_i^L), reduced
+            // Hessian H ([Michelsen1982b] Eq. B6), and the diagonal conditioning
+            // scale dia_i = sqrt(z_i/(x_i*y_i)) ([Michelsen1982b] Appendix B).  The
+            // raw Newton system is badly conditioned near the mixture critical point
+            // and for wide-boiling mixtures, so we scale and then take a Hebden
+            // restricted (trust-region) step.
+            Eigen::VectorXd g(N), dia(N);
+            Eigen::MatrixXd H(N, N);
+            CoolPropDbl max_g = 0;
+            Eigen::MatrixXd DL(N, N), DV(N, N);
             for (std::size_t i = 0; i < N; ++i) {
-                v_new[i] = beta * IO.y[i] + step_scale * delta_v(i);
-                l_new[i] = IO.z[i] - v_new[i];
-                V_new += v_new[i];
-                L_new += l_new[i];
-            }
-            std::vector<CoolPropDbl> x_trial(N), y_trial(N);
-            for (std::size_t i = 0; i < N; ++i) {
-                y_trial[i] = v_new[i] / V_new;
-                x_trial[i] = l_new[i] / L_new;
-            }
-            try {
-                HEOS.SatL->set_mole_fractions(x_trial);
-                CoolPropDbl rL = solve_trial_rho_warm(*HEOS.SatL, IO.T, IO.p, rho_warm_L);
-                HEOS.SatV->set_mole_fractions(y_trial);
-                CoolPropDbl rV = solve_trial_rho_warm(*HEOS.SatV, IO.T, IO.p, rho_warm_V);
-                if (ValidNumber(rL) && ValidNumber(rV) && rL > 0 && rV > 0) {
-                    HEOS.SatL->update_DmolarT_direct(rL, IO.T);
-                    HEOS.SatV->update_DmolarT_direct(rV, IO.T);
-
-                    // Check that the Gibbs energy actually decreased
-                    double beta_save = beta;
-                    auto x_save = IO.x;
-                    auto y_save = IO.y;
-                    // Save the densities too so a rejected trial restores a
-                    // CONSISTENT (beta, x, y, rhomolar_liq, rhomolar_vap); otherwise
-                    // a later !step_ok exit publishes densities from the rejected
-                    // trial composition (CoolProp-1tbe.8 finding 2).
-                    CoolPropDbl rhoL_save = IO.rhomolar_liq;
-                    CoolPropDbl rhoV_save = IO.rhomolar_vap;
-                    beta = V_new;
-                    IO.x = x_trial;
-                    IO.y = y_trial;
-                    IO.rhomolar_liq = rL;
-                    IO.rhomolar_vap = rV;
-                    double G_new = compute_gibbs();
-
-                    if (G_new < G_old + 1e-12) {
-                        G_old = G_new;
-                        step_ok = true;
-                        break;
-                    } else {
-                        // Objective increased, restore and shrink step
-                        beta = beta_save;
-                        IO.x = x_save;
-                        IO.y = y_save;
-                        IO.rhomolar_liq = rhoL_save;
-                        IO.rhomolar_vap = rhoV_save;
-                        step_scale *= 0.5;
-                    }
-                } else {
-                    step_scale *= 0.5;
+                for (std::size_t j = 0; j < N; ++j) {
+                    DL(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatL.get()), i, j, CoolProp::XN_INDEPENDENT);
+                    DV(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, CoolProp::XN_INDEPENDENT);
                 }
-            } catch (...) {
-                step_scale *= 0.5;
             }
+            for (std::size_t i = 0; i < N; ++i) {
+                CoolPropDbl sum_x_DL = 0, sum_y_DV = 0;
+                for (std::size_t k = 0; k < N; ++k) {
+                    sum_x_DL += IO.x[k] * DL(i, k);
+                    sum_y_DV += IO.y[k] * DV(i, k);
+                }
+                for (std::size_t j = 0; j < N; ++j) {
+                    CoolPropDbl dln_phi_L_dnj = DL(i, j) - sum_x_DL;
+                    CoolPropDbl dln_phi_V_dnj = DV(i, j) - sum_y_DV;
+                    H(i, j) = V_frac * dln_phi_L_dnj + L_frac * dln_phi_V_dnj - 1.0;
+                }
+                H(i, i) += (V_frac / IO.x[i]) + (L_frac / IO.y[i]);
+                CoolPropDbl l_act = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
+                CoolPropDbl v_act = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
+                g(i) = V_frac * L_frac * (v_act - l_act);
+                max_g = std::max(max_g, std::abs(v_act - l_act));
+                // Conditioning scale.  The fallback to 1.0 only keeps the scaled system
+                // D^{-1} H D^{-1} finite if dia underflows to ~0; it does not make a
+                // zero-feed component (z_i = 0) usable here (the H and ln(x_i) terms
+                // above already require z_i > 0, as in the original solver).
+                CoolPropDbl dia_i = std::sqrt(IO.z[i] / std::max(IO.x[i] * IO.y[i], 1e-300));
+                dia(i) = (dia_i > 1e-300) ? dia_i : 1.0;
+            }
+            last_max_g = max_g;
+            if (max_g < gibbs_tol) {
+                converged = true;
+                break;
+            }
+
+            // Scale the Newton system: Hs = D^{-1} H D^{-1}, gs = D^{-1} g (D = diag(dia)).
+            Eigen::VectorXd gs(N);
+            Eigen::MatrixXd Hs(N, N);
+            for (std::size_t i = 0; i < N; ++i) {
+                gs(i) = g(i) / dia(i);
+                for (std::size_t j = 0; j < N; ++j) {
+                    Hs(i, j) = H(i, j) / (dia(i) * dia(j));
+                }
+            }
+
+            // Hebden restricted step: pick a diagonal shift so that (Hs + shift*I) is
+            // positive definite (guaranteeing a descent direction; see [Michelsen1982b]
+            // "Positive definiteness of the Hessian matrix") and the scaled step stays
+            // within the trust radius.  Accept on a Gibbs decrease, adapting the radius.
+            double diagonal_shift = 0.0;
+            bool step_ok = false;
+            for (int inner = 0; inner < max_inner; ++inner) {
+                Eigen::MatrixXd Hl = Hs;
+                Hl.diagonal().array() += diagonal_shift;
+
+                // Positive-definiteness guard via the smallest eigenvalue (N is small).
+                Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(Hl, Eigen::EigenvaluesOnly);
+                double min_eig = es.eigenvalues().minCoeff();
+                if (!ValidNumber(min_eig)) break;
+                if (min_eig < 1e-8) {
+                    diagonal_shift += (1e-8 - min_eig);
+                    continue;
+                }
+
+                Eigen::VectorXd ds = Hl.ldlt().solve(-gs);
+                double step_norm = ds.norm();
+
+                // Enforce the trust region by adding more shift if the step is too long.
+                if (step_norm > trust_radius) {
+                    diagonal_shift = (diagonal_shift > 0.0) ? diagonal_shift * 3.0 : (step_norm / trust_radius - 1.0) * std::max(min_eig, 1e-3);
+                    continue;
+                }
+
+                // Unscale to the mole-number step delta_v_i = ds_i / dia_i and clamp to
+                // keep vapor/liquid mole numbers positive.
+                Eigen::VectorXd delta_v(N);
+                for (std::size_t i = 0; i < N; ++i) {
+                    delta_v(i) = ds(i) / dia(i);
+                }
+                CoolPropDbl pos_scale = 1.0;
+                for (std::size_t i = 0; i < N; ++i) {
+                    CoolPropDbl v_old = beta * IO.y[i];
+                    if (delta_v(i) > 0 && v_old + delta_v(i) > IO.z[i]) pos_scale = std::min(pos_scale, 0.99 * (IO.z[i] - v_old) / delta_v(i));
+                    if (delta_v(i) < 0 && v_old + delta_v(i) < 0) pos_scale = std::min(pos_scale, 0.99 * (-v_old) / delta_v(i));
+                }
+
+                CoolPropDbl V_new = 0, L_new = 0;
+                std::vector<CoolPropDbl> v_new(N), l_new(N);
+                for (std::size_t i = 0; i < N; ++i) {
+                    v_new[i] = beta * IO.y[i] + pos_scale * delta_v(i);
+                    l_new[i] = IO.z[i] - v_new[i];
+                    V_new += v_new[i];
+                    L_new += l_new[i];
+                }
+                std::vector<CoolPropDbl> x_trial(N), y_trial(N);
+                for (std::size_t i = 0; i < N; ++i) {
+                    y_trial[i] = v_new[i] / V_new;
+                    x_trial[i] = l_new[i] / L_new;
+                }
+
+                bool eval_ok = false;
+                try {
+                    HEOS.SatL->set_mole_fractions(x_trial);
+                    CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatL->calc_rhomolar_max_bound());
+                    HEOS.SatV->set_mole_fractions(y_trial);
+                    CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatV->calc_rhomolar_max_bound());
+                    if (ValidNumber(rL) && ValidNumber(rV) && rL > 0 && rV > 0) {
+                        HEOS.SatL->update_DmolarT_direct(rL, IO.T);
+                        HEOS.SatV->update_DmolarT_direct(rV, IO.T);
+
+                        // Tentatively adopt the trial state and check the Gibbs energy.
+                        double beta_save = beta;
+                        auto x_save = IO.x;
+                        auto y_save = IO.y;
+                        CoolPropDbl rL_save = IO.rhomolar_liq, rV_save = IO.rhomolar_vap;
+                        beta = V_new;
+                        IO.x = x_trial;
+                        IO.y = y_trial;
+                        IO.rhomolar_liq = rL;
+                        IO.rhomolar_vap = rV;
+                        double G_new = compute_gibbs();
+
+                        if (G_new < G_old + 1e-12) {
+                            G_old = G_new;
+                            step_ok = true;
+                            eval_ok = true;
+                            // Grow the trust region if the step rode its boundary.
+                            if (step_norm > 0.8 * trust_radius) trust_radius = std::min(2.0 * trust_radius, 1e3);
+                        } else {
+                            // Gibbs increased: restore composition and density.  The
+                            // SatL/SatV backends are left on the rejected trial, but the
+                            // next inner attempt overwrites them and the next outer
+                            // iteration re-syncs them to IO.x/IO.y at its top.
+                            beta = beta_save;
+                            IO.x = x_save;
+                            IO.y = y_save;
+                            IO.rhomolar_liq = rL_save;
+                            IO.rhomolar_vap = rV_save;
+                        }
+                    }
+                } catch (...) {
+                    // density solve threw — treated as a rejected step below
+                }
+                if (eval_ok) break;
+                // Density failure or no decrease: shrink the trust region, reset shift.
+                trust_radius = 0.5 * step_norm;
+                if (trust_radius < 1e-10) break;
+                diagonal_shift = 0.0;
+            }
+            if (!step_ok) break;
         }
-        if (!step_ok) break;
     }
     IO.beta = beta;
+
+    // Recompute the equal-fugacity residual on the FINAL published (IO.x, IO.y) state
+    // so the gate below tests exactly what is returned, not a pre-step value captured
+    // at the top of the last iteration (which could over-throw a split that converged
+    // on its final accepted step).
+    {
+        HEOS.SatL->set_mole_fractions(IO.x);
+        HEOS.SatL->update_DmolarT_direct(IO.rhomolar_liq, IO.T);
+        HEOS.SatV->set_mole_fractions(IO.y);
+        HEOS.SatV->update_DmolarT_direct(IO.rhomolar_vap, IO.T);
+        double final_max_g = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            double l_act = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
+            double v_act = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
+            final_max_g = std::max(final_max_g, std::abs(v_act - l_act));
+        }
+        last_max_g = final_max_g;
+        converged = (final_max_g < gibbs_tol);
+    }
+
+    // Convergence gate (GitHub #3168): never publish a grossly-unconverged split.  If
+    // the second-order minimization could not satisfy the equal-fugacity condition,
+    // fail loudly rather than returning a wrong two-phase composition / quality.  The
+    // 1e-7 threshold matches the SS tolerance, so this only fires on genuine failure.
+    if (!converged && last_max_g > 1e-7) {
+        IO.nonconvergence = true;
+        throw SolutionError(format("PTflash_twophase::solve_michelsen failed to converge: max|ln f_V - ln f_L| = %g at T = %g K, p = %g Pa",
+                                   last_max_g, static_cast<double>(IO.T), static_cast<double>(IO.p)));
+    }
 }
 
 void SaturationSolvers::PTflash_twophase::solve_legacy() {

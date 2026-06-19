@@ -578,8 +578,24 @@ struct PTflash_twophase_options
     std::vector<CoolPropDbl> x,  ///< Liquid mole fractions
       y,                         ///< Vapor mole fractions
       z;                         ///< Bulk mole fractions
+    /** Set true when the phase-split solver throws specifically because the
+     *  second-order minimization could not reach the equal-fugacity condition
+     *  (GitHub #3168), as opposed to an upstream density-solve failure.  Lets
+     *  the caller distinguish "no convergent split here" from "could not
+     *  evaluate", and fall back to single-phase only in the former case. */
+    bool nonconvergence;
     PTflash_twophase_options()
-      : Nstep_max(30), Nsteps(0), omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE), beta(0.5) {}
+      : Nstep_max(30),
+        Nsteps(0),
+        omega(_HUGE),
+        rhomolar_liq(_HUGE),
+        rhomolar_vap(_HUGE),
+        pL(_HUGE),
+        pV(_HUGE),
+        p(_HUGE),
+        T(_HUGE),
+        beta(0.5),
+        nonconvergence(false) {}
 };
 
 /**
