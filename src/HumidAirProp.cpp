@@ -450,6 +450,17 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
     } else {
         W = CoolProp::Brent(BSR, W_min, W_max, 1e-7, 1e-7, 50);
     }
+    // Validate that the returned humidity ratio actually reproduces the requested output.  As in
+    // Brent_HAProps_T, the same-sign (unbracketed) branch extrapolates with an unbounded secant
+    // that returns its last iterate even on non-convergence, silently producing a wrong W for an
+    // out-of-range target instead of signalling that the input is impossible (bd CoolProp-eaok).
+    double r_check = ValidNumber(W) ? BSR.call(W) : _HUGE;
+    if (!ValidNumber(r_check) || std::abs(r_check) > 1e-4 * std::abs(TargetVal) + 1e-6) {
+        throw CoolProp::ValueError(
+          format("Brent_HAProps_W: no humidity ratio in [%g, %g] yields the requested output [%g] (closest residual %g); the input is out of range",
+                 W_min, W_max, TargetVal, r_check)
+            .c_str());
+    }
     return W;
 }
 static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double Input1, double TargetVal, double T_min, double T_max) {
@@ -517,6 +528,18 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
     } else {
         double mach_eps = 1e-15, tol = 1e-10;
         T = CoolProp::Brent(BSR, T_min, T_max, mach_eps, tol, 50);
+    }
+    // Validate that the returned temperature actually reproduces the requested output.  When the
+    // endpoints do not bracket the root (same-sign residuals, i.e. the target is out of the
+    // achievable range), the secant above extrapolates and CoolProp::Secant returns its last
+    // iterate even when it never converged -- which silently yields a plausible but wrong T
+    // instead of signalling that the input is impossible (bd CoolProp-eaok).
+    double r_check = ValidNumber(T) ? BSR.call(T) : _HUGE;
+    if (!ValidNumber(r_check) || std::abs(r_check) > 1e-4 * std::abs(TargetVal) + 1e-6) {
+        throw CoolProp::ValueError(
+          format("Brent_HAProps_T: no temperature in [%g, %g] K yields the requested output [%g] (closest residual %g); the input is out of range",
+                 T_min, T_max, TargetVal, r_check)
+            .c_str());
     }
     return T;
 }
@@ -2606,6 +2629,33 @@ TEST_CASE("Assorted tests", "[HAPropsSI]") {
     CHECK(ValidNumber(HumidAir::HAPropsSI("T", "H", 267769, "P", 104300, "W", 0.0)));
     CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B", 252.84, "W", 5.097e-4, "P", 101325)));
     CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B", 290, "R", 1, "P", 101325)));
+}
+
+// An inverse solve (T-from-H or W-from-X) with a target that is not achievable for the other
+// given inputs must fail, not silently return a plausible-but-wrong value.  The unbracketed
+// branch of Brent_HAProps_T / Brent_HAProps_W extrapolates with an unbounded secant that returns
+// its last (non-converged) iterate; without the residual validation the call below returned
+// 58.31 C, whose actual enthalpy is ~3.6e5 J -- an order of magnitude above the requested
+// 2.8028e4 J.  At W=0.1155 the minimum achievable humid-air enthalpy is ~2.35e5 J, so 2.8028e4 J
+// is impossible.  HumidAir::HAPropsSI catches the resulting out-of-range ValueError and returns
+// _HUGE, so the result must NOT be a valid number (bd CoolProp-eaok).
+TEST_CASE("HAPropsSI rejects out-of-range inverse inputs", "[HAPropsSI]") {
+    const double p = 101325, W = 0.11552736;
+    SECTION("T from an impossible enthalpy is rejected (reported case)") {
+        CHECK_FALSE(ValidNumber(HumidAir::HAPropsSI("T", "H", 2.8028e4, "P", p, "W", W)));
+    }
+    SECTION("the achievable enthalpy still solves correctly and round-trips") {
+        double T = HumidAir::HAPropsSI("T", "H", 3.5975e5, "P", p, "W", W);
+        REQUIRE(ValidNumber(T));
+        CHECK(T == Catch::Approx(58.31 + 273.15).margin(0.5));
+        // the solved T must reproduce the requested enthalpy (no spurious root)
+        CHECK(HumidAir::HAPropsSI("H", "T", T, "P", p, "W", W) == Catch::Approx(3.5975e5).epsilon(1e-3));
+    }
+    SECTION("W from an impossible enthalpy is rejected") {
+        // At T = 300 K the dry-air (W=0) enthalpy is the minimum; a negative target enthalpy is
+        // unreachable for any humidity ratio, so solving for W must fail.
+        CHECK_FALSE(ValidNumber(HumidAir::HAPropsSI("W", "H", -1.0e5, "P", p, "T", 300.0)));
+    }
 }
 
 // Concurrent HAPropsSI calls must each return the per-thread expected result.
