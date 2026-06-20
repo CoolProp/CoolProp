@@ -34,8 +34,11 @@ Usage
 
     # Pull the session from a different browser, or paste a cookie explicitly
     # if browser extraction is unavailable (e.g. Keychain access denied).
-    python dev/testpypi_delete.py --keep 10 --browser safari --do-it
-    PYPI_SESSION_COOKIE='session=...; ...' python dev/testpypi_delete.py --do-it
+    python dev/testpypi_delete.py --keep 10 --browser firefox --do-it
+    PYPI_SESSION_COOKIE='session_id=...' python dev/testpypi_delete.py --do-it
+
+If anything goes wrong, the script prints explicit, copy-pasteable recovery steps
+(re-login, the one-time macOS Keychain grant, or the paste-a-cookie fallback).
 
 The delete *set* is computed by the same read-only logic the CI prune job uses
 (:mod:`testpypi_prune`), so final/tagged releases are never candidates.
@@ -52,6 +55,51 @@ import requests
 # lives next to testpypi_prune.py in dev/.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from testpypi_prune import fetch_release_keys, select_delete_set  # noqa: E402
+
+# How this script is invoked, for copy-pasteable advice in error messages.
+SCRIPT = "dev/testpypi_delete.py"
+
+
+def _host(base):
+    """'https://test.pypi.org' -> 'test.pypi.org'."""
+    return base.split("//", 1)[1]
+
+
+def _login_help(base, browser):
+    """Actionable recovery steps when the browser session isn't logged in."""
+    return (
+        "\nHOW TO FIX -- the browser session is not logged in to this site:\n"
+        f"  1. Open {base}/manage/projects/ in {browser} and log in\n"
+        "     (username + password + TOTP).  You should NOT be asked for email\n"
+        "     verification if this browser is already a trusted device -- the\n"
+        "     'remember_device' cookie skips it.\n"
+        "  2. Confirm you can see your project(s) listed on that page.\n"
+        f"  3. Re-run the same command:  python3 {SCRIPT} ...\n"
+        "\nKEYCHAIN-FREE ALTERNATIVE (no browser cookie reading at all):\n"
+        f"  In {browser} DevTools -> Application -> Cookies -> {base}, copy the\n"
+        "  'session_id' cookie value, then run:\n"
+        f"    PYPI_SESSION_COOKIE='session_id=<value>' python3 {SCRIPT} ...\n"
+        "  (paste it fresh each time -- the session cookie is short-lived.)"
+    )
+
+
+def _keychain_help(base, browser):
+    """Actionable recovery steps when the browser cookie store can't be read."""
+    host = _host(base)
+    return (
+        f"\nHOW TO FIX -- macOS could not read {browser}'s encrypted cookies:\n"
+        "  - This needs a ONE-TIME Keychain grant.  Run this in your own terminal\n"
+        "    (foreground, so the dialog is visible) and click 'Always Allow' on\n"
+        "    the 'Chrome Safe Storage' prompt:\n"
+        f"      python3 -c \"import browser_cookie3 as b; print(len(list(b.chrome(domain_name='{host}'))), 'cookies')\"\n"
+        f"  - Then re-run:  python3 {SCRIPT} ...\n"
+        "  - Safari is NOT a usable fallback here: macOS blocks its cookie file\n"
+        "    unless your terminal has Full Disk Access.\n"
+        "\nOR SKIP KEYCHAIN ENTIRELY (paste the cookie):\n"
+        f"  In {browser} DevTools -> Application -> Cookies -> {base}, copy the\n"
+        "  'session_id' cookie value, then run:\n"
+        f"    PYPI_SESSION_COOKIE='session_id=<value>' python3 {SCRIPT} ..."
+    )
 
 
 class _DeleteFormCsrf(HTMLParser):
@@ -110,40 +158,39 @@ def load_session(browser, cookie_string, base):
     session = requests.Session()
     session.headers["User-Agent"] = "coolprop-prune/1.0 (local browser-session reuse)"
 
+    host = _host(base)
+
     if cookie_string:
-        host = base.split("//", 1)[1]
         for part in cookie_string.split(";"):
             part = part.strip()
             if not part or "=" not in part:
                 continue
             name, value = part.split("=", 1)
             session.cookies.set(name.strip(), value.strip(), domain=host)
+        if "session_id" not in {c.name for c in session.cookies}:
+            print("WARNING: the pasted cookie has no 'session_id' -- auth will likely fail.\n"
+                  "         Copy the 'session_id' cookie value, not some other cookie.",
+                  file=sys.stderr)
         return session
 
     try:
         import browser_cookie3
     except ImportError:
         raise SystemExit(
-            "browser_cookie3 is not installed and no --session-cookie was given.\n"
-            "  Install it:  python -m pip install browser_cookie3\n"
-            "  or paste a cookie:  PYPI_SESSION_COOKIE='session=...' python dev/testpypi_delete.py ...")
+            "browser_cookie3 is not installed and no --session-cookie / $PYPI_SESSION_COOKIE was given."
+            + _keychain_help(base, browser))
 
-    host = base.split("//", 1)[1]
     loader = getattr(browser_cookie3, browser, None)
     if loader is None:
-        raise SystemExit(f"Unknown --browser {browser!r}; expected chrome/safari/firefox/edge/brave.")
+        raise SystemExit(
+            f"Unknown --browser {browser!r}; expected one of: chrome, firefox, edge, brave, opera, safari.")
     try:
         jar = loader(domain_name=host)
     except Exception as exc:  # decryption / Keychain / locked-DB failures
-        raise SystemExit(
-            f"Could not read {host} cookies from {browser}: {exc}\n"
-            "  If macOS Keychain access was denied, re-run and click 'Always Allow',\n"
-            "  or paste the cookie instead:  PYPI_SESSION_COOKIE='session=...' python dev/testpypi_delete.py ...")
+        raise SystemExit(f"Could not read {host} cookies from {browser}: {exc}" + _keychain_help(base, browser))
     session.cookies.update(jar)
     if not list(session.cookies):
-        raise SystemExit(
-            f"No {host} cookies found in {browser}. Log in to {base} in {browser} first, "
-            "then re-run.")
+        raise SystemExit(f"No {host} cookies found in {browser}." + _login_help(base, browser))
     return session
 
 
@@ -160,12 +207,17 @@ def verify_authenticated(session, base):
     return ok, final
 
 
-def delete_release(session, base, package, version, do_it):
+def delete_release(session, base, package, version, do_it, browser):
     """Delete a single release via the real web confirm-delete POST.
 
     In dry-run mode we still GET the release page (proving the session can reach
     it and the delete form is present) but never POST.  Returns a status string.
     """
+    # The release-management path uses the PEP 440-*normalized* version, which is
+    # exactly what select_delete_set returns (str(version.parse(...))).  If a raw
+    # JSON key were ever non-normalized the URL wouldn't match the stored path --
+    # but that fails closed: the GET 404s and we report "already-gone" rather than
+    # deleting some other release.
     action = f"/manage/project/{package}/release/{version}/"
     url = f"{base}{action}"
 
@@ -175,16 +227,17 @@ def delete_release(session, base, package, version, do_it):
     r.raise_for_status()
     if "login" in r.url or "two-factor" in r.url:
         raise SystemExit(
-            f"Session lost authentication while fetching {action} (redirected to {r.url}). "
-            "Re-log in to TestPyPI in your browser and retry.")
+            f"Session lost authentication while fetching {action} (redirected to {r.url})."
+            + _login_help(base, browser))
 
     parser = _DeleteFormCsrf(action)
     parser.feed(r.text)
     csrf = parser.csrf or parser.any_csrf
     if not csrf:
         raise SystemExit(
-            f"No csrf_token found on {action} -- the page served was probably not the "
-            f"release-management page (auth/verification issue). Final URL: {r.url}")
+            f"No csrf_token found on {action} -- the page served was probably a login or "
+            f"device-verification page, not the release-management page (final URL: {r.url})."
+            + _login_help(base, browser))
 
     if not do_it:
         return "would-delete"
@@ -236,19 +289,28 @@ def main():
     authed, final = verify_authenticated(session, base)
     if not authed:
         raise SystemExit(
-            f"Browser session is not authenticated to {remote} (landed on {final}).\n"
-            f"  Log in to {base} in {args.browser} (complete any email verification), then re-run.")
+            f"Browser session is NOT authenticated to {remote} (landed on {final})."
+            + _login_help(base, args.browser))
     print(f"Authenticated to {remote} via {('pasted cookie' if args.session_cookie else args.browser)} session. OK.")
 
     if not args.do_it:
         print(f"\nDRY RUN -- would delete {len(delete_keys)} releases (re-run with --do-it):")
     else:
+        # Deleting from the real PyPI is irreversible and production-facing, so
+        # require an explicit typed confirmation on top of --do-it.  (TestPyPI
+        # deletes proceed with just --do-it.)
+        if args.pypi:
+            answer = input(f"About to DELETE {len(delete_keys)} releases from PRODUCTION {remote}. "
+                           f"Type the package name {args.package!r} to confirm: ")
+            if answer.strip() != args.package:
+                raise SystemExit("Confirmation did not match; aborting without deleting anything.")
         print(f"\n!!! DELETING {len(delete_keys)} releases from {remote} !!!")
 
     failures = 0
     for i, version in enumerate(delete_keys, 1):
         try:
-            status = delete_release(session, base, args.package, version, args.do_it)
+            status = delete_release(session, base, args.package, version, args.do_it,
+                                    "pasted cookie" if args.session_cookie else args.browser)
         except requests.RequestException as exc:
             status = f"ERROR ({exc})"
         if status.startswith(("FAILED", "ERROR")):
