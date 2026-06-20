@@ -229,43 +229,67 @@ void AbstractCubic::set_alpha(const std::vector<double>& C1, const std::vector<d
     }
 }
 
+// #3192 cubic perf: a_m = sum_ij x_i x_j a_ij with a_ij = (1-k_ij)*d^itau(s_i s_j), s_i = sqrt(a_i).
+// We build the per-tau s/a_ij caches ONCE (via _ensure_aux_cache) and then (a) collapse the value's
+// double sum with the geometric-mean identity -- the k_ij=0 part is sum_p C(itau,p) S_p S_{itau-p}
+// with S_p = sum_i x_i s_i^(p), O(N) -- and (b) read the cached a_ij matrix directly for the gradient
+// and Hessian (no per-element aij_term() call, hence no per-element cache-validity check).
+namespace {
+constexpr double k_binom[5][5] = {{1, 0, 0, 0, 0}, {1, 1, 0, 0, 0}, {1, 2, 1, 0, 0}, {1, 3, 3, 1, 0}, {1, 4, 6, 4, 1}};
+}  // namespace
 double AbstractCubic::am_term(double tau, const std::vector<double>& x, std::size_t itau) {
-    // am_term and its composition-derivatives are the only callers of aij_term/u_term, so we
-    // validate/populate the aii cache for this tau once here.  The inner u_term reads then go
-    // straight to m_aii_cache instead of re-validating the cache on every aii lookup, which was
-    // the dominant cost (~38% of self-time) in the pure-fluid hot path.
-    _ensure_aii_cache(tau);
-    double summer = 0;
-    for (int i = N - 1; i >= 0; --i) {
-        for (int j = N - 1; j >= 0; --j) {
-            summer += x[i] * x[j] * aij_term(tau, i, j, itau);
+    _ensure_aux_cache(tau);
+    // Geometric-mean collapse of the k_ij = 0 part:  sum_p C(itau,p) (sum_i x_i s_i^(p)) (sum_j x_j s_j^(itau-p))
+    std::array<double, 5> S = {0, 0, 0, 0, 0};
+    for (int i = 0; i < N; ++i) {
+        const double xi = x[i];
+        const std::array<double, 5>& s = m_s_cache[i];
+        for (std::size_t p = 0; p <= itau; ++p)
+            S[p] += xi * s[p];
+    }
+    double val = 0;
+    for (std::size_t p = 0; p <= itau; ++p)
+        val += k_binom[itau][p] * S[p] * S[itau - p];
+    // Explicit pairwise correction only over the nonzero-k_ij entries:  - sum_ij x_i x_j k_ij d^itau(s_i s_j)
+    for (int i = 0; i < N; ++i) {
+        const std::array<double, 5>& si = m_s_cache[i];
+        for (int j = 0; j < N; ++j) {
+            const double kij = k[i][j];
+            if (kij == 0.0) continue;
+            const std::array<double, 5>& sj = m_s_cache[j];
+            double d = 0;
+            for (std::size_t p = 0; p <= itau; ++p)
+                d += k_binom[itau][p] * si[p] * sj[itau - p];
+            val -= x[i] * x[j] * kij * d;
         }
     }
-    return summer;
+    return val;
 }
 double AbstractCubic::d_am_term_dxi(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, bool xN_independent) {
-    _ensure_aii_cache(tau);  // see am_term: guarantees u_term can read m_aii_cache directly
+    _ensure_aux_cache(tau);
+    const auto& A = m_aij_cache;
     if (xN_independent) {
         double summer = 0;
         for (int j = N - 1; j >= 0; --j) {
-            summer += x[j] * aij_term(tau, i, j, itau);
+            summer += x[j] * A[i][j][itau];
         }
         return 2 * summer;
     } else {
         double summer = 0;
-        for (int k = N - 2; k >= 0; --k) {
-            summer += x[k] * (aij_term(tau, i, k, itau) - aij_term(tau, k, N - 1, itau));
+        for (int m = N - 2; m >= 0; --m) {
+            summer += x[m] * (A[i][m][itau] - A[m][N - 1][itau]);
         }
-        return 2 * (summer + x[N - 1] * (aij_term(tau, N - 1, i, itau) - aij_term(tau, N - 1, N - 1, itau)));
+        return 2 * (summer + x[N - 1] * (A[N - 1][i][itau] - A[N - 1][N - 1][itau]));
     }
 }
 double AbstractCubic::d2_am_term_dxidxj(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, std::size_t j,
                                         bool xN_independent) {
-    _ensure_aii_cache(tau);  // see am_term: guarantees u_term can read m_aii_cache directly
+    _ensure_aux_cache(tau);
+    const auto& A = m_aij_cache;
     if (xN_independent) {
-        return 2 * aij_term(tau, i, j, itau);
+        return 2 * A[i][j][itau];
     } else {
-        return 2 * (aij_term(tau, i, j, itau) - aij_term(tau, j, N - 1, itau) - aij_term(tau, N - 1, i, itau) + aij_term(tau, N - 1, N - 1, itau));
+        return 2 * (A[i][j][itau] - A[j][N - 1][itau] - A[N - 1][i][itau] + A[N - 1][N - 1][itau]);
     }
 }
 
@@ -348,36 +372,13 @@ double AbstractCubic::u_term(double tau, std::size_t i, std::size_t j, std::size
     }
 }
 double AbstractCubic::aij_term(double tau, std::size_t i, std::size_t j, std::size_t itau) {
-    // Half-integer powers of u are written as u^k * sqrt(u), and integer powers as repeated
-    // multiplication, to avoid std::pow (the dominant cost of the residual hot path).  u_term
-    // values are pulled into locals so each is computed once.  Results differ from the previous
-    // std::pow formulation only at the last ULP.
-    const double u = u_term(tau, i, j, 0);
-    const double su = sqrt(u);
-    const double kf = 1 - k[i][j];
-
-    switch (itau) {
-        case 0:
-            return kf * su;
-        case 1:
-            return kf / (2.0 * su) * u_term(tau, i, j, 1);
-        case 2: {
-            const double u1 = u_term(tau, i, j, 1);
-            return kf / (4.0 * u * su) * (2 * u * u_term(tau, i, j, 2) - u1 * u1);
-        }
-        case 3: {
-            const double u1 = u_term(tau, i, j, 1), u2 = u_term(tau, i, j, 2);
-            return kf / (8.0 * u * u * su) * (4 * u * u * u_term(tau, i, j, 3) - 6 * u * u1 * u2 + 3 * u1 * u1 * u1);
-        }
-        case 4: {
-            const double u1 = u_term(tau, i, j, 1), u2 = u_term(tau, i, j, 2);
-            return kf / (16.0 * u * u * u * su)
-                   * (-4 * u * u * (4 * u1 * u_term(tau, i, j, 3) + 3 * u2 * u2) + 8 * u * u * u * u_term(tau, i, j, 4) + 36 * u * u1 * u1 * u2
-                      - 15 * u1 * u1 * u1 * u1);
-        }
-        default:
-            throw -1;
-    }
+    if (itau > 4) throw -1;
+    // #3192: a_ij = (1-k_ij)*sqrt(a_i*a_j) and its tau-derivatives are composition-independent and
+    // constant at fixed tau.  Read them from the per-tau cache (built once via the s=sqrt(a) recurrence)
+    // instead of re-deriving sqrt(u=a_i*a_j) on every call (was the dominant flash hotspot).  Identical
+    // quantity to the legacy u_term-based formula, to round-off.
+    _ensure_aux_cache(tau);
+    return m_aij_cache[i][j][itau];
 }
 double AbstractCubic::psi_minus(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta) {
     if (itau > 0) return 0.0;

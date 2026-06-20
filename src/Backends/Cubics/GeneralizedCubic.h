@@ -156,7 +156,53 @@ class AbstractCubic
                 m_alpha_versions_cache[i] = alpha[i]->version();
             }
             m_tau_cache = tau;
+            m_aux_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate s/aij caches built from a different aii state
         }
+    }
+
+    /// Caches built ON TOP of the aii cache, keyed on the same tau (#3192 cubic perf):
+    ///   m_s_cache[i][p]    = d^p/dtau^p of sqrt(a_i(tau))  (the geometric-mean factor s_i and its tau-derivatives)
+    ///   m_aij_cache[i][j]  = the 5 tau-derivatives of a_ij = (1 - k_ij) * sqrt(a_i*a_j) = (1 - k_ij) * s_i*s_j
+    /// Both are composition-independent and constant at fixed tau, so they are built once per tau and reused across
+    /// every phase/composition/derivative evaluation of a flash (was: re-derived ~1e6x per flash).  s_i is obtained
+    /// from the cached a_i derivatives by the recurrence s^(n) = (a^(n) - sum_{p=1}^{n-1} C(n,p) s^(p) s^(n-p))/(2 s0).
+    mutable double m_aux_tau_cache = std::numeric_limits<double>::quiet_NaN();
+    mutable std::vector<std::array<double, 5>> m_s_cache;
+    mutable std::vector<std::vector<std::array<double, 5>>> m_aij_cache;
+    void _ensure_aux_cache(double tau) const {
+        _ensure_aii_cache(tau);  // refreshes m_aii_cache (and NaNs m_aux_tau_cache on a rebuild)
+        if (std::memcmp(&tau, &m_aux_tau_cache, sizeof(double)) == 0) return;
+        // --- per-component sqrt(a_i) and its tau-derivatives, via the s^2 = a recurrence ---
+        m_s_cache.resize(N);
+        static const double binom[5][5] = {{1, 0, 0, 0, 0}, {1, 1, 0, 0, 0}, {1, 2, 1, 0, 0}, {1, 3, 3, 1, 0}, {1, 4, 6, 4, 1}};
+        for (int i = 0; i < N; ++i) {
+            const std::array<double, 5>& a = m_aii_cache[i];
+            std::array<double, 5>& s = m_s_cache[i];
+            s[0] = std::sqrt(a[0]);
+            const double inv2s0 = 1.0 / (2.0 * s[0]);
+            for (int n = 1; n < 5; ++n) {
+                double conv = 0.0;
+                for (int p = 1; p < n; ++p)
+                    conv += binom[n][p] * s[p] * s[n - p];
+                s[n] = (a[n] - conv) * inv2s0;
+            }
+        }
+        // --- a_ij = (1-k_ij)*s_i*s_j and its tau-derivatives (Leibniz over s_i*s_j) ---
+        m_aij_cache.assign(N, std::vector<std::array<double, 5>>(N));
+        for (int i = 0; i < N; ++i) {
+            for (int j = 0; j <= i; ++j) {
+                const double one_minus_k = 1.0 - k[i][j];
+                std::array<double, 5>& aij = m_aij_cache[i][j];
+                for (int n = 0; n < 5; ++n) {
+                    double d = 0.0;
+                    for (int p = 0; p <= n; ++p)
+                        d += binom[n][p] * m_s_cache[i][p] * m_s_cache[j][n - p];
+                    aij[n] = one_minus_k * d;
+                }
+                if (j != i) m_aij_cache[j][i] = aij;  // symmetric
+            }
+        }
+        m_aux_tau_cache = tau;
     }
 
    public:
