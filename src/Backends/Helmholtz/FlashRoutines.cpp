@@ -3514,6 +3514,21 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                 format("HSU_P_flash for mixture: neither endpoint evaluable (Tmin=%Lg, Tmax=%Lg, p=%Lg)",
                        Tmin, Tmax, p));
         }
+
+        // Verify the result actually satisfies the specification (#3192).  TOMS748 returns a
+        // bracket endpoint even when the residual never reached zero -- e.g. keyed_output(T) is
+        // discontinuous across a phase misclassification, so the sign flips without a true root --
+        // and the non-bracketing fallback returns a closest-endpoint guess by construction.
+        // Without this check the flash SILENTLY returns a wrong T (the GitHub #3148 CO2/Water
+        // flaw: a ~15 K error with H(T_returned) != H_target).  Fail loudly instead so the caller
+        // is never handed a wrong state that passes for success.
+        const double resid_final = static_cast<double>(HEOS.keyed_output(other) - value);
+        const double resid_scale = std::abs(static_cast<double>(value)) + 1.0;
+        if (!ValidNumber(resid_final) || std::abs(resid_final) > 1e-6 * resid_scale) {
+            throw ValueError(format("HSU_P_flash for mixture did not converge to the specification: residual %g (target %g) "
+                                    "at T=%g K, p=%g Pa -- the (T,p) flash is misclassifying the phase for this mixture",
+                                    resid_final, static_cast<double>(value), static_cast<double>(HEOS.T()), static_cast<double>(p)));
+        }
     }
 }
 void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, CoolPropDbl value, parameters other) {
