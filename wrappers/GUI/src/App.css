@@ -294,6 +294,17 @@ button.primary:disabled {
   overflow: auto;
 }
 
+.about-sponsors {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.about-sponsors-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
 .about-notices summary {
   cursor: pointer;
   font-weight: 500;
