@@ -1247,6 +1247,54 @@ TEST_CASE("HSU_P flash: mixture two-phase HP round-trip", "[michelsen][flash][HS
     }
 }
 
+// Regression for the mixture HSU_P flash (PR #3148 / hsu_p_native_flaw.py):
+// for a hard CO2/Water/N2/Ar/O2 mixture the native HmolarP / PSmolar flash
+// silently converges to a temperature ~16 K off, so the returned state does
+// NOT reproduce the requested enthalpy/entropy.  A PT flash at the same
+// (T, P) is the reference: the back-flash must recover that T (and rho), and
+// the enthalpy at the returned state must match the request -- the solver
+// must satisfy its own specification, independent of the reference T.
+TEST_CASE("HSU_P flash: CO2/Water/N2/Ar/O2 mixture round-trip (GitHub #3148)", "[michelsen][flash][HSU_P]") {
+    using namespace CoolProp;
+    const std::string fluids = "CarbonDioxide&Water&Nitrogen&Argon&Oxygen";
+    const std::vector<double> z = {0.90, 0.02, 0.04, 0.01, 0.03};
+    const double P = 2.05e6;  // Pa
+
+    for (double T_true : {255.0, 260.0, 270.0, 280.0, 290.0, 300.0}) {
+        DYNAMIC_SECTION("HP round-trip at T_true = " << T_true << " K") {
+            // Reference enthalpy/density from a PT flash at the target temperature.
+            auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+            ref->set_mole_fractions(z);
+            ref->update(PT_INPUTS, P, T_true);
+            const double H_target = ref->hmolar();
+            const double rho_ref = ref->rhomolar();
+
+            // Native HmolarP back-flash on a fresh object.
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+            AS->set_mole_fractions(z);
+            REQUIRE_NOTHROW(AS->update(HmolarP_INPUTS, H_target, P));
+            const double T_native = AS->T();
+
+            // Independently re-evaluate the enthalpy the flash claims to have matched.
+            auto chk = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+            chk->set_mole_fractions(z);
+            chk->update(PT_INPUTS, P, T_native);
+            const double H_at_native = chk->hmolar();
+
+            CAPTURE(T_true, T_native, H_target, H_at_native);
+            // Spec: H(T_returned, P) must equal the requested enthalpy.
+            CHECK(H_at_native == Catch::Approx(H_target).epsilon(1e-6));
+            // And the flash must land on the reference temperature / density.
+            CHECK(T_native == Catch::Approx(T_true).epsilon(1e-4));
+            CHECK(AS->rhomolar() == Catch::Approx(rho_ref).epsilon(1e-4));
+        }
+    }
+
+    SECTION("SP round-trip at T_true = 270 K") {
+        hsu_p_roundtrip("HEOS", fluids, z, P, 270.0, PSmolar_INPUTS, 1e-4);
+    }
+}
+
 // Helper: run a round-trip DHSU_T flash test.
 // 1. PT flash at (P, T) to get reference state
 // 2. Read the target property (D, H, S, or U)
