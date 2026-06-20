@@ -30,6 +30,9 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             bool twophase = PhaseEnvelopeRoutines::is_inside(env, iP, HEOS._p, iT, HEOS._T, iclosest, closest_state);
 
             if (!twophase) {
+                if (!ValidNumber(closest_state.T)) {
+                    throw ValueError("Phase envelope is_inside returned false without populating closest_state");
+                }
                 // Single-phase: determine gas vs liquid from temperature relative to closest envelope point
                 // Save T and p before solver calls — solver_rho_Tp may corrupt
                 // HEOS._T/_p on failure (Householder sets them to -inf).
@@ -2427,8 +2430,222 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
         if (HEOS.phase() != iphase_twophase) {
             HEOS.recalculate_singlephase_phase();
         }
-    } else
-        throw NotImplementedError("PHSU_D_flash not ready for mixtures");
+    } else {
+        // Mixtures: HSU_D flash with two-phase support.
+        // Strategy:
+        //   Fast path — T-sweep at fixed rho using nocache functions.
+        //               If root found and stability confirms single-phase, accept.
+        //   Slow path — nested 1D: outer T-sweep, inner P-sweep with PT flash.
+        //               The inner P-sweep finds P where rho(T,P) = D_target.
+        //               The outer T-sweep finds T where X(T,P(T)) = X_target.
+
+        CoolPropDbl rho_target = HEOS._rhomolar;
+        CoolPropDbl value;
+        switch (other) {
+            case iHmolar:
+                value = HEOS._hmolar;
+                break;
+            case iSmolar:
+                value = HEOS._smolar;
+                break;
+            case iUmolar:
+                value = HEOS._umolar;
+                break;
+            default:
+                throw ValueError("Invalid input for HSU_D_flash mixture");
+        }
+
+        bool solved = false;
+
+        // --- Fast path: T-sweep at fixed rho using nocache ---
+        // Sweep T in [Tmin, Tmax].  At each T, evaluate the caloric property
+        // directly from the EOS at (T, rho_target) using nocache functions.
+        // This is O(1) per evaluation (no flash).
+        {
+            CoolPropDbl Tmin = HEOS.calc_Tmin();
+            CoolPropDbl Tmax = HEOS.calc_Tmax();
+
+            auto nocache_resid = [&](double T) -> double {
+                switch (other) {
+                    case iHmolar:
+                        return HEOS.calc_hmolar_nocache(T, rho_target) - value;
+                    case iSmolar:
+                        return HEOS.calc_smolar_nocache(T, rho_target) - value;
+                    case iUmolar:
+                        return HEOS.calc_umolar_nocache(T, rho_target) - value;
+                    default:
+                        return _HUGE;
+                }
+            };
+
+            // Mechanical stability check: dP/drho_T > 0
+            auto is_mechanically_stable = [&](double T) -> bool {
+                double eps = std::max(static_cast<double>(rho_target) * 1e-6, 1e-10);
+                double P_lo = HEOS.calc_pressure_nocache(T, rho_target - eps);
+                double P_hi = HEOS.calc_pressure_nocache(T, rho_target + eps);
+                return (P_hi - P_lo) > 0;
+            };
+
+            try {
+                boost::uintmax_t max_iter = 100;
+                auto bracket = boost::math::tools::toms748_solve(nocache_resid, static_cast<double>(Tmin), static_cast<double>(Tmax),
+                                                                 boost::math::tools::eps_tolerance<double>(40), max_iter);
+                double T_cand = (bracket.first + bracket.second) / 2.0;
+
+                // Validate: P > 0, mechanically stable, thermodynamically stable
+                double P_eos = HEOS.calc_pressure_nocache(T_cand, rho_target);
+                if (P_eos > 0 && is_mechanically_stable(T_cand)) {
+                    try {
+                        HEOS._T = T_cand;
+                        HEOS._p = P_eos;
+                        StabilityRoutines::StabilityEvaluationClass stab(HEOS);
+                        stab.set_TP(T_cand, P_eos);
+                        if (stab.is_stable()) {
+                            HEOS.update_DmolarT_direct(rho_target, T_cand);
+                            HEOS._Q = -1;
+                            HEOS.recalculate_singlephase_phase();
+                            solved = true;
+                        }
+                    } catch (...) {
+                        // Stability check failed — fall through to slow path
+                    }
+                }
+            } catch (...) {
+                // No bracket or solver failure — fall through to slow path
+            }
+        }
+
+        // --- Slow path: nested 1D (outer T, inner P) ---
+        if (!solved) {
+            CoolPropDbl Tmin = HEOS.calc_Tmin();
+            CoolPropDbl Tmax = HEOS.calc_Tmax();
+            CoolPropDbl Pmin_bound = HEOS.calc_p_triple();
+            CoolPropDbl Pmax_bound = HEOS.calc_pmax();
+            if (Pmin_bound < 100) Pmin_bound = 100;
+
+            // Inner solver: given T, find P where rho(T, P) = rho_target.
+            // Returns the caloric property value at the found state, or NaN
+            // if no bracket found.
+            // Uses logarithmic P-scan + TOMS748, identical to DHSU_T P-sweep.
+            auto solve_for_caloric_at_T = [&](double T) -> double {
+                auto rho_resid = [&](double P) -> double {
+                    HEOS.update(PT_INPUTS, P, T);
+                    return HEOS.keyed_output(iDmolar) - rho_target;
+                };
+
+                // Log-scan to find P bracket
+                double logPmin = std::log10(static_cast<double>(Pmin_bound));
+                double logPmax = std::log10(static_cast<double>(Pmax_bound));
+                double dlogP = 0.5;
+                int nsteps = static_cast<int>((logPmax - logPmin) / dlogP) + 1;
+                double P_lo = -1, P_hi = -1;
+                double f_prev = 0, P_prev = 0;
+                bool have_prev = false;
+
+                for (int i = 0; i <= nsteps; i++) {
+                    double logP = logPmin + i * dlogP;
+                    if (logP > logPmax) logP = logPmax;
+                    double P = std::pow(10.0, logP);
+                    double f;
+                    try {
+                        f = rho_resid(P);
+                    } catch (...) {
+                        have_prev = false;
+                        continue;
+                    }
+                    if (have_prev && f_prev * f < 0) {
+                        P_lo = P_prev;
+                        P_hi = P;
+                        break;
+                    }
+                    P_prev = P;
+                    f_prev = f;
+                    have_prev = true;
+                }
+
+                if (P_lo < 0 || P_hi < 0) return std::numeric_limits<double>::quiet_NaN();
+
+                boost::uintmax_t max_iter = 100;
+                auto bracket = boost::math::tools::toms748_solve(rho_resid, P_lo, P_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
+                double P_sol = (bracket.first + bracket.second) / 2.0;
+                HEOS.update(PT_INPUTS, P_sol, T);
+                return HEOS.keyed_output(other);
+            };
+
+            // Outer T-sweep: logarithmic scan to find T bracket where
+            // X(T) - X_target changes sign.
+            double logTmin = std::log10(static_cast<double>(Tmin));
+            double logTmax = std::log10(static_cast<double>(Tmax));
+            double dlogT = 0.1;  // ~10 steps per decade
+            int nsteps_T = static_cast<int>((logTmax - logTmin) / dlogT) + 1;
+
+            double T_lo = -1, T_hi = -1;
+            double f_prev_T = 0, T_prev = 0;
+            bool have_prev_T = false;
+
+            for (int i = 0; i <= nsteps_T; i++) {
+                double logT = logTmin + i * dlogT;
+                if (logT > logTmax) logT = logTmax;
+                double T = std::pow(10.0, logT);
+                double X;
+                try {
+                    X = solve_for_caloric_at_T(T);
+                } catch (...) {
+                    have_prev_T = false;
+                    continue;
+                }
+                if (std::isnan(X)) {
+                    have_prev_T = false;
+                    continue;
+                }
+                double f = X - value;
+                if (have_prev_T && f_prev_T * f < 0) {
+                    T_lo = T_prev;
+                    T_hi = T;
+                    break;
+                }
+                T_prev = T;
+                f_prev_T = f;
+                have_prev_T = true;
+            }
+
+            if (T_lo > 0 && T_hi > 0) {
+                auto outer_resid = [&](double T) -> double {
+                    double X = solve_for_caloric_at_T(T);
+                    if (std::isnan(X)) throw ValueError("inner P-sweep failed during T-sweep");
+                    return X - value;
+                };
+                boost::uintmax_t max_iter = 100;
+                auto bracket = boost::math::tools::toms748_solve(outer_resid, T_lo, T_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
+                double T_sol = (bracket.first + bracket.second) / 2.0;
+                solve_for_caloric_at_T(T_sol);
+                // HEOS is now set at the converged (T, P) state
+            } else {
+                throw ValueError(format("HSU_D_flash for mixture: no T bracket found in [%Lg, %Lg] "
+                                        "for target %s=%Lg at rho=%Lg",
+                                        Tmin, Tmax, get_parameter_information(other, "short").c_str(), value, rho_target));
+            }
+        }
+
+        // Verify the mixture result reproduces BOTH requested inputs (#3148/#3192): the density
+        // (matched by the inner P-sweep) and the caloric H/S/U (matched by the outer T-sweep).
+        // TOMS748 can return a bracket endpoint where these are not actually hit (e.g. a
+        // discontinuity from a phase misclassification), so without this check the flash could
+        // SILENTLY return a wrong state.  Mirrors the HSU_P / DHSU_T guards.
+        {
+            const auto resid_cal = static_cast<double>(HEOS.keyed_output(other) - value);
+            const auto resid_rho = static_cast<double>(HEOS.keyed_output(iDmolar) - rho_target);
+            const double scale_cal = std::abs(static_cast<double>(value)) + 1.0;
+            const double scale_rho = std::abs(static_cast<double>(rho_target)) + 1.0;
+            if (!ValidNumber(resid_cal) || std::abs(resid_cal) > 1e-6 * scale_cal || !ValidNumber(resid_rho)
+                || std::abs(resid_rho) > 1e-6 * scale_rho) {
+                throw ValueError(format("HSU_D_flash for mixture did not converge to the specification: caloric residual %g "
+                                        "(target %s=%g), density residual %g (target %g) -- the (T,p) flash is misclassifying the phase",
+                                        resid_cal, get_parameter_information(other, "short").c_str(), static_cast<double>(value), resid_rho,
+                                        static_cast<double>(rho_target)));
+            }
+        }
+    }
 }
 
 void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend& HEOS, parameters other, CoolPropDbl T0, CoolPropDbl rhomolar0) {
@@ -3161,23 +3378,170 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             HEOS.recalculate_singlephase_phase();
         }
     } else {
-        if (HEOS.PhaseEnvelope.built) {
-            // Determine whether you are inside or outside
-            SimpleState closest_state;
-            std::size_t iclosest = 0;
-            bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, other, value, iclosest, closest_state);
+        // Mixture: bracket-solve for T at fixed P using TOMS748.
+        // Each iteration calls update(PT_INPUTS, ...) which dispatches to
+        // PT_flash_mixtures (stability analysis + two-phase solver).  The
+        // full update path ensures SatL/SatV are set for two-phase states,
+        // so keyed_output(other) returns correct H/S/U for any phase.
+        CoolPropDbl Tmin = HEOS.calc_Tmin();
+        CoolPropDbl Tmax = HEOS.calc_Tmax();
+        CoolPropDbl p = HEOS._p;
 
-            if (!twophase) {
-                PY_singlephase_flash_resid resid(HEOS, HEOS._p, other, value);
-                // If that fails, try a bounded solver
-                Brent(resid, closest_state.T + 10, 1000, DBL_EPSILON, 1e-10, 100);
-                HEOS.unspecify_phase();
-            } else {
-                throw ValueError("two-phase solution for Y");
+        // --- Change 1: PQ-based bracket narrowing ---
+        // Try PQ flash at Q=0 (bubble) and Q=1 (dew) to narrow the
+        // bracket and potentially shortcut exact saturation states.
+        CoolPropDbl T_bubble = -1, T_dew = -1;
+        CoolPropDbl val_bubble = _HUGE, val_dew = _HUGE;
+        bool pq_ok = false;
+        try {
+            HEOS.update(PQ_INPUTS, p, 0.0);
+            T_bubble = HEOS.T();
+            val_bubble = HEOS.keyed_output(other);
+            HEOS.update(PQ_INPUTS, p, 1.0);
+            T_dew = HEOS.T();
+            val_dew = HEOS.keyed_output(other);
+            pq_ok = std::isfinite(static_cast<double>(T_bubble)) && std::isfinite(static_cast<double>(T_dew))
+                    && std::isfinite(static_cast<double>(val_bubble)) && std::isfinite(static_cast<double>(val_dew));
+        } catch (...) {
+            pq_ok = false;
+        }
+
+        if (pq_ok) {
+            // Shortcut: exact saturation match (bubble)
+            double tol_sat = 1e-6 * (std::abs(static_cast<double>(value)) + 1.0);
+            if (std::abs(static_cast<double>(value - val_bubble)) < tol_sat) {
+                HEOS.update(PQ_INPUTS, p, 0.0);
+                return;
+            }
+            // Shortcut: exact saturation match (dew)
+            if (std::abs(static_cast<double>(value - val_dew)) < tol_sat) {
+                HEOS.update(PQ_INPUTS, p, 1.0);
+                return;
             }
 
+            // Classify phase and narrow bracket.
+            // Use actual computed values — don't assume val_bubble < val_dew.
+            CoolPropDbl val_lo = (val_bubble < val_dew) ? val_bubble : val_dew;
+            CoolPropDbl val_hi = (val_bubble < val_dew) ? val_dew : val_bubble;
+            CoolPropDbl T_at_lo = (val_bubble < val_dew) ? T_bubble : T_dew;
+            CoolPropDbl T_at_hi = (val_bubble < val_dew) ? T_dew : T_bubble;
+
+            if (value < val_lo) {
+                // Below both saturation values → on the low-T side
+                Tmax = T_at_lo;
+            } else if (value > val_hi) {
+                // Above both saturation values → on the high-T side
+                Tmin = T_at_hi;
+            }
+            // else: value between val_lo and val_hi → two-phase region;
+            // sweep over [T_bubble, T_dew] (PT flash handles two-phase)
+            // Keep [Tmin, Tmax] as-is so the resid functor can find it.
+        }
+        // When !pq_ok (supercritical P, PQ solver failure): fall through
+        // to the full [Tmin, Tmax] bracket — no regression.
+
+        // Residual functor: given T, do PT flash and return Y - Y_target
+        auto resid = [&](double T) -> double {
+            HEOS.update(PT_INPUTS, p, T);
+            return HEOS.keyed_output(other) - value;
+        };
+
+        // Pre-evaluate endpoints to verify they bracket a root before
+        // calling toms748_solve (which throws an opaque domain_error if
+        // the signs are the same).  On failure, fall back to the endpoint
+        // whose residual is closest to zero.
+        double resid_lo = _HUGE, resid_hi = _HUGE;
+        bool lo_ok = false, hi_ok = false;
+        try {
+            resid_lo = resid(static_cast<double>(Tmin));
+            lo_ok = std::isfinite(resid_lo);
+        } catch (...) {
+        }
+        try {
+            resid_hi = resid(static_cast<double>(Tmax));
+            hi_ok = std::isfinite(resid_hi);
+        } catch (...) {
+        }
+
+        // --- Change 2: Binary-search validity recovery ---
+        // When one endpoint fails (e.g., Tmin below melting line), bisect
+        // inward from the failing endpoint toward the working one.
+        if (!lo_ok && hi_ok) {
+            double a = static_cast<double>(Tmin), b = static_cast<double>(Tmax);
+            for (int i = 0; i < 50 && (b - a) > 0.01; ++i) {
+                double mid = 0.5 * (a + b);
+                try {
+                    resid_lo = resid(mid);
+                    if (std::isfinite(resid_lo)) {
+                        lo_ok = true;
+                        Tmin = mid;
+                        b = mid;  // tighten toward the boundary
+                    } else {
+                        a = mid;
+                    }
+                } catch (...) {
+                    a = mid;
+                }
+            }
+        } else if (!hi_ok && lo_ok) {
+            double a = static_cast<double>(Tmin), b = static_cast<double>(Tmax);
+            for (int i = 0; i < 50 && (b - a) > 0.01; ++i) {
+                double mid = 0.5 * (a + b);
+                try {
+                    resid_hi = resid(mid);
+                    if (std::isfinite(resid_hi)) {
+                        hi_ok = true;
+                        Tmax = mid;
+                        a = mid;  // tighten toward the boundary
+                    } else {
+                        b = mid;
+                    }
+                } catch (...) {
+                    b = mid;
+                }
+            }
+        }
+
+        if (lo_ok && hi_ok && resid_lo * resid_hi < 0) {
+            // Endpoints bracket the root — use TOMS748 with pre-computed values
+            try {
+                boost::uintmax_t max_iter = 100;
+                auto bracket = boost::math::tools::toms748_solve(resid, static_cast<double>(Tmin), static_cast<double>(Tmax), resid_lo, resid_hi,
+                                                                 boost::math::tools::eps_tolerance<double>(40), max_iter);
+                double T_sol = (bracket.first + bracket.second) / 2.0;
+
+                // Final PT flash at the converged temperature to set HEOS state
+                HEOS.update(PT_INPUTS, p, T_sol);
+            } catch (std::exception& e) {
+                throw ValueError(format("HSU_P_flash for mixture failed with Tmin=%Lg, Tmax=%Lg, p=%Lg: %s", Tmin, Tmax, p, e.what()));
+            }
+        } else if (lo_ok || hi_ok) {
+            // Endpoints do not bracket — pick the one with smaller |residual|
+            double T_best = (!hi_ok || (lo_ok && std::abs(resid_lo) <= std::abs(resid_hi))) ? static_cast<double>(Tmin) : static_cast<double>(Tmax);
+            try {
+                HEOS.update(PT_INPUTS, p, T_best);
+            } catch (std::exception& e) {
+                throw ValueError(format("HSU_P_flash for mixture: endpoints do not bracket (resid_lo=%g, resid_hi=%g) "
+                                        "and fallback at T=%g failed: %s",
+                                        resid_lo, resid_hi, T_best, e.what()));
+            }
         } else {
-            throw ValueError("phase envelope must be built to carry out HSU_P_flash for mixture");
+            throw ValueError(format("HSU_P_flash for mixture: neither endpoint evaluable (Tmin=%Lg, Tmax=%Lg, p=%Lg)", Tmin, Tmax, p));
+        }
+
+        // Verify the result actually satisfies the specification (#3192).  TOMS748 returns a
+        // bracket endpoint even when the residual never reached zero -- e.g. keyed_output(T) is
+        // discontinuous across a phase misclassification, so the sign flips without a true root --
+        // and the non-bracketing fallback returns a closest-endpoint guess by construction.
+        // Without this check the flash SILENTLY returns a wrong T (the GitHub #3148 CO2/Water
+        // flaw: a ~15 K error with H(T_returned) != H_target).  Fail loudly instead so the caller
+        // is never handed a wrong state that passes for success.
+        const auto resid_final = static_cast<double>(HEOS.keyed_output(other) - value);
+        const double resid_scale = std::abs(static_cast<double>(value)) + 1.0;
+        if (!ValidNumber(resid_final) || std::abs(resid_final) > 1e-6 * resid_scale) {
+            throw ValueError(format("HSU_P_flash for mixture did not converge to the specification: residual %g (target %g) "
+                                    "at T=%g K, p=%g Pa -- the (T,p) flash is misclassifying the phase for this mixture",
+                                    resid_final, static_cast<double>(value), static_cast<double>(HEOS.T()), static_cast<double>(p)));
         }
     }
 }
@@ -3467,8 +3831,282 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                     throw ValueError(format("Input is invalid"));
             }
         } else {
-            HEOS._phase = iphase_gas;
-            throw NotImplementedError("DHSU_T_flash does not support mixtures (yet)");
+            // Mixtures: DHSU_T flash with two-phase support.
+            //
+            // Strategy:
+            //   Fast path — try single-phase nocache density sweep (existing approach).
+            //               If a root is found and stability analysis confirms it is
+            //               in a single-phase region, accept it.
+            //   Slow path — sweep P at fixed T using TOMS748.  Each evaluation calls
+            //               HEOS.update(PT_INPUTS, P, T), which dispatches to
+            //               PT_flash_mixtures (stability analysis + phase split).
+            //               The PT flash sets correct lever-rule properties for
+            //               two-phase states automatically.
+            //
+            // This mirrors the HSU_P mixture implementation (line ~2902) which sweeps
+            // T at fixed P with PT flash inside.
+
+            CoolPropDbl T = HEOS._T;
+            CoolPropDbl value;
+            switch (other) {
+                case iDmolar:
+                    value = HEOS._rhomolar;
+                    break;
+                case iHmolar:
+                    value = HEOS._hmolar;
+                    break;
+                case iSmolar:
+                    value = HEOS._smolar;
+                    break;
+                case iUmolar:
+                    value = HEOS._umolar;
+                    break;
+                default:
+                    throw ValueError(format("Invalid input for DHSU_T_flash mixture"));
+            }
+
+            bool solved = false;
+
+            // --- Fast path: single-phase nocache approach ---
+            if (other == iDmolar) {
+                // DT: compute P from EOS at (T, rho).  If P > 0, check stability.
+                CoolPropDbl P_eos = HEOS.calc_pressure_nocache(T, value);
+                if (P_eos > 0) {
+                    try {
+                        // Set T and P on the HEOS object for the stability tester
+                        HEOS._T = T;
+                        HEOS._p = P_eos;
+                        StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
+                        stability_tester.set_TP(T, P_eos);
+                        if (stability_tester.is_stable()) {
+                            HEOS.update_DmolarT_direct(value, T);
+                            HEOS._Q = -1;
+                            HEOS.recalculate_singlephase_phase();
+                            solved = true;
+                        }
+                    } catch (...) {
+                        // Stability check failed — fall through to P-sweep
+                    }
+                }
+                // If P_eos <= 0 or unstable, fall through to P-sweep
+            } else {
+                // HSU_T: try nocache density sweep in gas and liquid ranges.
+                // Roots are validated with a mechanical stability check
+                // (dP/drho_T > 0) to reject Van der Waals loop solutions.
+                CoolPropDbl rho_min = 1e-10;
+                CoolPropDbl rho_max = HEOS.calc_rhomolar_max_bound();
+                CoolPropDbl rho_reducing = HEOS.rhomolar_reducing();
+
+                // Check whether a density root is mechanically stable:
+                // dP/drho_T > 0 (positive compressibility).
+                auto is_mechanically_stable = [&](double rho) -> bool {
+                    double eps_rho = std::max(rho * 1e-6, 1e-10);
+                    double P_lo = HEOS.calc_pressure_nocache(T, rho - eps_rho);
+                    double P_hi = HEOS.calc_pressure_nocache(T, rho + eps_rho);
+                    return (P_hi - P_lo) > 0;  // dP/drho > 0
+                };
+
+                auto rho_resid = [&](double rho) -> double {
+                    switch (other) {
+                        case iHmolar:
+                            return HEOS.calc_hmolar_nocache(T, rho) - value;
+                        case iSmolar:
+                            return HEOS.calc_smolar_nocache(T, rho) - value;
+                        case iUmolar:
+                            return HEOS.calc_umolar_nocache(T, rho) - value;
+                        default:
+                            return _HUGE;
+                    }
+                };
+
+                // Try gas density range [rho_min, rho_reducing]
+                double rho_gas = -1;
+                try {
+                    boost::uintmax_t max_iter = 100;
+                    auto bracket = boost::math::tools::toms748_solve(rho_resid, static_cast<double>(rho_min), static_cast<double>(rho_reducing),
+                                                                     boost::math::tools::eps_tolerance<double>(40), max_iter);
+                    double rho_cand = (bracket.first + bracket.second) / 2.0;
+                    if (HEOS.calc_pressure_nocache(T, rho_cand) > 0 && is_mechanically_stable(rho_cand)) {
+                        rho_gas = rho_cand;
+                    }
+                } catch (...) {
+                }
+
+                // Try liquid density range [rho_reducing, rho_max]
+                double rho_liq = -1;
+                try {
+                    boost::uintmax_t max_iter = 100;
+                    auto bracket = boost::math::tools::toms748_solve(rho_resid, static_cast<double>(rho_reducing), static_cast<double>(rho_max),
+                                                                     boost::math::tools::eps_tolerance<double>(40), max_iter);
+                    double rho_cand = (bracket.first + bracket.second) / 2.0;
+                    if (HEOS.calc_pressure_nocache(T, rho_cand) > 0 && is_mechanically_stable(rho_cand)) {
+                        rho_liq = rho_cand;
+                    }
+                } catch (...) {
+                }
+
+                // Fallback: locate liquid spinodal if no liquid root found
+                if (rho_liq < 0) {
+                    double rho_neg = -1, rho_pos = -1;
+                    double rho_prev = rho_max;
+                    double P_prev = HEOS.calc_pressure_nocache(T, rho_prev);
+                    for (double rho_scan = rho_max * 0.95; rho_scan > rho_reducing; rho_scan *= 0.95) {
+                        double P_scan = HEOS.calc_pressure_nocache(T, rho_scan);
+                        if (P_prev > 0 && P_scan < 0) {
+                            rho_pos = rho_prev;
+                            rho_neg = rho_scan;
+                            break;
+                        }
+                        rho_prev = rho_scan;
+                        P_prev = P_scan;
+                    }
+                    if (rho_neg > 0 && rho_pos > 0) {
+                        for (int i = 0; i < 30; i++) {
+                            double rho_mid = (rho_neg + rho_pos) / 2.0;
+                            if (HEOS.calc_pressure_nocache(T, rho_mid) > 0) {
+                                rho_pos = rho_mid;
+                            } else {
+                                rho_neg = rho_mid;
+                            }
+                        }
+                        try {
+                            boost::uintmax_t max_iter = 100;
+                            auto bracket = boost::math::tools::toms748_solve(rho_resid, rho_pos, static_cast<double>(rho_max),
+                                                                             boost::math::tools::eps_tolerance<double>(40), max_iter);
+                            double rho_cand = (bracket.first + bracket.second) / 2.0;
+                            if (is_mechanically_stable(rho_cand)) {
+                                rho_liq = rho_cand;
+                            }
+                        } catch (...) {
+                        }
+                    }
+                }
+
+                // Accept mechanically stable root(s).
+                // If both gas and liquid roots survive the stability filter,
+                // pick the one with lower Gibbs energy (standard VLE criterion).
+                double rho_cand = -1;
+                if (rho_gas > 0 && rho_liq > 0) {
+                    double G_gas = HEOS.calc_gibbsmolar_nocache(T, rho_gas);
+                    double G_liq = HEOS.calc_gibbsmolar_nocache(T, rho_liq);
+                    rho_cand = (G_liq <= G_gas) ? rho_liq : rho_gas;
+                } else if (rho_gas > 0) {
+                    rho_cand = rho_gas;
+                } else if (rho_liq > 0) {
+                    rho_cand = rho_liq;
+                }
+
+                if (rho_cand > 0) {
+                    // Validate via thermodynamic stability analysis
+                    CoolPropDbl P_eos = HEOS.calc_pressure_nocache(T, rho_cand);
+                    if (P_eos > 0) {
+                        try {
+                            HEOS._T = T;
+                            HEOS._p = P_eos;
+                            StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
+                            stability_tester.set_TP(T, P_eos);
+                            if (stability_tester.is_stable()) {
+                                HEOS.update_DmolarT_direct(rho_cand, T);
+                                HEOS._Q = -1;
+                                HEOS.recalculate_singlephase_phase();
+                                solved = true;
+                            }
+                        } catch (...) {
+                            // Stability check failed — fall through to P-sweep
+                        }
+                    }
+                }
+            }
+
+            // --- Slow path: P-sweep with PT flash ---
+            // Sweep P at fixed T.  At each P, HEOS.update(PT_INPUTS, P, T) runs
+            // the full PT flash (stability analysis + phase split), so
+            // keyed_output(target) returns the correct value for any phase.
+            //
+            // H(P), S(P), rho(P), U(P) are NOT globally monotonic over
+            // [Ptriple, Pmax]: at extreme compressed-liquid pressures the
+            // properties swing back.  So we cannot blindly bracket [Pmin, Pmax].
+            // Instead, do a coarse logarithmic scan to locate a sign change in
+            // the residual, then refine with TOMS748 on the tight sub-interval.
+            if (!solved) {
+                CoolPropDbl Pmin_bound = HEOS.calc_p_triple();
+                CoolPropDbl Pmax_bound = HEOS.calc_pmax();
+                if (Pmin_bound < 100) Pmin_bound = 100;
+
+                auto p_resid = [&](double P) -> double {
+                    HEOS.update(PT_INPUTS, P, T);
+                    return HEOS.keyed_output(other) - value;
+                };
+
+                // Logarithmic scan to find a bracket where f changes sign.
+                // Half-decade steps (2 points per decade, ~14 total for 7 decades).
+                double logPmin = std::log10(static_cast<double>(Pmin_bound));
+                double logPmax = std::log10(static_cast<double>(Pmax_bound));
+                double dlogP = 0.5;  // half-decade steps
+                int nsteps = static_cast<int>((logPmax - logPmin) / dlogP) + 1;
+
+                double P_lo = -1, P_hi = -1;  // bracket endpoints
+                double f_prev = 0;
+                double P_prev = 0;
+                bool have_prev = false;
+
+                for (int i = 0; i <= nsteps; i++) {
+                    double logP = logPmin + i * dlogP;
+                    if (logP > logPmax) logP = logPmax;
+                    double P = std::pow(10.0, logP);
+                    double f;
+                    try {
+                        f = p_resid(P);
+                    } catch (...) {
+                        have_prev = false;
+                        continue;
+                    }
+                    if (have_prev && f_prev * f < 0) {
+                        // Sign change detected — bracket found
+                        P_lo = P_prev;
+                        P_hi = P;
+                        break;
+                    }
+                    P_prev = P;
+                    f_prev = f;
+                    have_prev = true;
+                }
+
+                if (P_lo > 0 && P_hi > 0) {
+                    try {
+                        boost::uintmax_t max_iter = 100;
+                        auto bracket =
+                          boost::math::tools::toms748_solve(p_resid, P_lo, P_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
+                        double P_sol = (bracket.first + bracket.second) / 2.0;
+                        HEOS.update(PT_INPUTS, P_sol, T);
+                    } catch (std::exception& e) {
+                        throw ValueError(format("DHSU_T_flash P-sweep TOMS748 for mixture failed: T=%Lg, target=%s, value=%Lg, "
+                                                "bracket=[%g, %g]: %s",
+                                                T, get_parameter_information(other, "short").c_str(), value, P_lo, P_hi, e.what()));
+                    }
+                } else {
+                    throw ValueError(format("DHSU_T_flash P-sweep for mixture: no bracket found scanning P in [%Lg, %Lg] at T=%Lg "
+                                            "for target %s=%Lg",
+                                            Pmin_bound, Pmax_bound, T, get_parameter_information(other, "short").c_str(), value));
+                }
+            }
+
+            // Verify the mixture result reproduces the requested property (#3148/#3192).  The
+            // P-sweep + TOMS748 (and the fast-path density sweep) can return a state where
+            // keyed_output(other) != value -- e.g. a discontinuity from a phase misclassification
+            // -- so without this check the flash could SILENTLY return a wrong state.  D+T is a
+            // direct evaluation and needs no check; H/S/U at fixed T solve for the state and must
+            // be verified.  Mirrors the HSU_P guard.
+            if (other != iDmolar) {
+                const auto resid_dhsu = static_cast<double>(HEOS.keyed_output(other) - value);
+                const double scale_dhsu = std::abs(static_cast<double>(value)) + 1.0;
+                if (!ValidNumber(resid_dhsu) || std::abs(resid_dhsu) > 1e-6 * scale_dhsu) {
+                    throw ValueError(format("DHSU_T_flash for mixture did not converge to the specification: residual %g "
+                                            "(target %s=%g) at T=%g K -- the (T,p) flash is misclassifying the phase for this mixture",
+                                            resid_dhsu, get_parameter_information(other, "short").c_str(), static_cast<double>(value),
+                                            static_cast<double>(HEOS.T())));
+                }
+            }
         }
     }
 

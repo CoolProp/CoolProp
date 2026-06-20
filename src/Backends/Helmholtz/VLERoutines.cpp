@@ -2627,9 +2627,26 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     }
     CoolPropDbl beta = IO.beta;
 
+    // Reject a non-finite seed up front.  A stability false-positive at a single-phase point
+    // (e.g. below the bubble) can hand in a NaN trial composition; without this guard the NaN
+    // propagates through Rachford-Rice into x/y and surfaces as a misleading "lost a phase
+    // density solve" error instead of a clean single-phase fallback (#3192).  Reporting
+    // nonconvergence routes PT_flash_mixtures to its single-phase branch.
+    for (std::size_t i = 0; i < N; ++i) {
+        if (!ValidNumber(lnK[i]) || !ValidNumber(IO.x[i]) || !ValidNumber(IO.y[i])) {
+            IO.nonconvergence = true;
+            throw SolutionError(format("PTflash_twophase::solve_michelsen got a non-finite seed at T = %g K, p = %g Pa", static_cast<double>(IO.T),
+                                       static_cast<double>(IO.p)));
+        }
+    }
+
     // Helper: solve Rachford-Rice in log-K space with Newton + bisection safeguards
     auto solve_rachford_rice = [&]() {
         CoolPropDbl beta_min = 0, beta_max = 1.0;
+        // Guard a non-finite / out-of-range Newton start (e.g. a stale beta carried in from a
+        // prior failed iterate): an invalid beta makes denom=1+beta*term hit a pole, poisoning
+        // r/dr -> NaN below (#3192).
+        if (!ValidNumber(beta) || beta < 0.0 || beta > 1.0) beta = 0.5;
         for (int rr_iter = 0; rr_iter < 50; ++rr_iter) {
             CoolPropDbl r = 0, dr = 0;
             for (std::size_t i = 0; i < N; ++i) {
@@ -2645,7 +2662,11 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 beta_max = beta;
             if (std::abs(r) < 1e-11) break;
             CoolPropDbl beta_new = beta - r / dr;
-            if (beta_new <= beta_min || beta_new >= beta_max) beta_new = 0.5 * (beta_min + beta_max);
+            // A non-finite Newton step (dr -> 0, or a denom pole when beta strays to a bracket
+            // edge) must fall back to bisection, not slip through: NaN passes BOTH the <= and >=
+            // comparisons, so without the ValidNumber guard a NaN beta would poison x/y and the
+            // downstream density solve (#3192; same failure class as the #3167 GDEM-ratio guard).
+            if (!ValidNumber(beta_new) || beta_new <= beta_min || beta_new >= beta_max) beta_new = 0.5 * (beta_min + beta_max);
             if (std::abs(beta_new - beta) < 1e-11) break;
             beta = beta_new;
         }
@@ -2958,14 +2979,26 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         converged = (final_max_g < gibbs_tol);
     }
 
-    // Convergence gate (GitHub #3168): never publish a grossly-unconverged split.  If
-    // the second-order minimization could not satisfy the equal-fugacity condition,
-    // fail loudly rather than returning a wrong two-phase composition / quality.  The
-    // 1e-7 threshold matches the SS tolerance, so this only fires on genuine failure.
-    if (!converged && last_max_g > 1e-7) {
-        IO.nonconvergence = true;
-        throw SolutionError(format("PTflash_twophase::solve_michelsen failed to converge: max|ln f_V - ln f_L| = %g at T = %g K, p = %g Pa",
-                                   last_max_g, static_cast<double>(IO.T), static_cast<double>(IO.p)));
+    // Convergence gate (GitHub #3168, refined for #3192): never publish a grossly-unconverged
+    // or trivial split -- the stability-false-positive signature #3168 targets -- but DO accept
+    // a genuine, near-converged equilibrium.  The original hard 1e-7 throw also discarded real
+    // wide-boiling splits that converge only to ~1e-6 (SS converges linearly and the second-order
+    // stage stalls for stiff mixtures), so a true two-phase state was silently misclassified as
+    // single-phase.  Distinguish the two: a genuine split has a non-trivial composition spread
+    // AND an interior phase fraction AND an equal-fugacity residual at engineering tolerance; a
+    // false positive is trivial (x==y), collapsed (beta -> 0/1), or grossly unconverged.
+    if (!converged) {
+        CoolPropDbl spread = 0;
+        for (std::size_t i = 0; i < N; ++i)
+            spread = std::max(spread, std::abs(IO.x[i] - IO.y[i]));
+        const bool genuine = ValidNumber(last_max_g) && last_max_g <= 1e-5  // near-converged equilibrium
+                             && spread >= 1e-4                              // not a trivial (x==y) split
+                             && beta > 1e-8 && beta < 1.0 - 1e-8;           // not a collapsed phase
+        if (!genuine) {
+            IO.nonconvergence = true;
+            throw SolutionError(format("PTflash_twophase::solve_michelsen failed to converge: max|ln f_V - ln f_L| = %g at T = %g K, p = %g Pa",
+                                       last_max_g, static_cast<double>(IO.T), static_cast<double>(IO.p)));
+        }
     }
 }
 
