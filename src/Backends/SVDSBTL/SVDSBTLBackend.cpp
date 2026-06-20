@@ -60,6 +60,15 @@ namespace {
 constexpr std::array<CoolProp::input_pairs, 4> kSupportedPairs = {CoolProp::HmassP_INPUTS, CoolProp::PT_INPUTS, CoolProp::DmassT_INPUTS,
                                                                   CoolProp::PSmass_INPUTS};
 
+// Quality tolerance for the #3190 dome-edge guards.  A Q=0/1 round-trip
+// (y_mass = y_sat/M forward, y_mol = y_mass*M back) is not bit-exact, so an
+// input sitting on the saturation boundary can land a few ULP outside
+// [yL, yV].  Accepting within this band (and clamping Q to [0, 1]) keeps the
+// round-trip two-phase; matches the +/-1e-9 Q band HEOS p_phase_determination
+// uses at the dome edge.  Shared by try_fast_dome_reclassify_ (atlas-hit path)
+// and both atlas-miss dome-blend blocks in resolve_point_.
+constexpr double kDomeQTol = 1e-9;
+
 // Resolved grid-shape knobs extracted from the validated options
 // document.  Used both to size the per-input-pair surfaces and to
 // stamp the canonical-options form into the cache filename.
@@ -1034,11 +1043,9 @@ bool SVDSBTLBackend::try_fast_dome_reclassify_(PointEvaluation& pt, char what, d
     const double Q = (y_mol - yL) / (yV - yL);
     // Boundary inclusive, with a small tolerance band so a round-trip
     // input that lands a few ULP outside [yL, yV] (h(p, Q=0) re-flashed
-    // is yL +/- rounding) still classifies two-phase.  Mirrors the
-    // +/-1e-9 Q band HEOS's own p_phase_determination uses at the dome
-    // edge.  Outside the band the point is genuinely single-phase.
-    constexpr double kQtol = 1e-9;
-    if (Q < -kQtol || Q > 1.0 + kQtol) {
+    // is yL +/- rounding) still classifies two-phase.  Outside the band
+    // the point is genuinely single-phase.  See kDomeQTol.
+    if (Q < -kDomeQTol || Q > 1.0 + kDomeQTol) {
         return false;
     }
     pt.kind = PointEvaluation::Kind::DomeBlend;
@@ -1463,14 +1470,21 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
             } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
             }
         }
-        if (sat_resolved) {
+        if (sat_resolved && hV_mol > hL_mol) {
             const double h_mol = h_mass * M;
-            if (hL_mol <= h_mol && h_mol <= hV_mol) {
+            const double Qd = (h_mol - hL_mol) / (hV_mol - hL_mol);
+            // Tolerance + clamp (issue #3190): a Q=0/1 round-trip can land a
+            // ULP outside [hL, hV] -- the forward h_mass = hV/M then back
+            // h_mol = h_mass*M re-scaling is not bit-exact -- which a strict
+            // containment check would drop to OutOfRange (reported Q=-inf).
+            // Accept within kDomeQTol of the dome and clamp Q onto [0, 1].
+            // Mirrors try_fast_dome_reclassify_ on the atlas-hit path.
+            if (Qd >= -kDomeQTol && Qd <= 1.0 + kDomeQTol) {
                 pt.kind = PointEvaluation::Kind::DomeBlend;
                 pt.status = CoolProp::fast_evaluate_ok;
                 pt.T = T_sat;
                 pt.T_sat = T_sat;
-                pt.Q = (h_mol - hL_mol) / (hV_mol - hL_mol);
+                pt.Q = std::min(1.0, std::max(0.0, Qd));
                 pt.hL_mol = hL_mol;
                 pt.hV_mol = hV_mol;
                 pt.rhoL_mol = rhoL_mol_seed;
@@ -1523,14 +1537,19 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
             } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
             }
         }
-        if (sat_resolved) {
+        if (sat_resolved && sV_mol > sL_mol) {
             const double s_mol = s_mass * M;
-            if (sL_mol <= s_mol && s_mol <= sV_mol) {
+            const double Qd = (s_mol - sL_mol) / (sV_mol - sL_mol);
+            // Tolerance + clamp (issue #3190): entropy twin of the HmassP
+            // atlas-miss block above -- a Q=0/1 round-trip can land a ULP
+            // outside [sL, sV] and a strict check would drop it to
+            // OutOfRange (reported Q=-inf).  Accept within kDomeQTol, clamp [0,1].
+            if (Qd >= -kDomeQTol && Qd <= 1.0 + kDomeQTol) {
                 pt.kind = PointEvaluation::Kind::DomeBlend;
                 pt.status = CoolProp::fast_evaluate_ok;
                 pt.T = T_sat;
                 pt.T_sat = T_sat;
-                pt.Q = (s_mol - sL_mol) / (sV_mol - sL_mol);
+                pt.Q = std::min(1.0, std::max(0.0, Qd));
                 pt.sL_mol = sL_mol;
                 pt.sV_mol = sV_mol;
                 pt.rhoL_mol = rhoL_mol_seed;
