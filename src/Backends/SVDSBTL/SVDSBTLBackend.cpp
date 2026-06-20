@@ -13,6 +13,7 @@
 #include <exception>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -69,17 +70,12 @@ constexpr std::array<CoolProp::input_pairs, 4> kSupportedPairs = {CoolProp::Hmas
 // and both atlas-miss dome-blend blocks in resolve_point_.
 constexpr double kDomeQTol = 1e-9;
 
-// Resolved grid-shape knobs extracted from the validated options
-// document.  Used both to size the per-input-pair surfaces and to
-// stamp the canonical-options form into the cache filename.
-struct ResolvedGrid
-{
-    std::size_t NT;
-    std::size_t NR;
-    std::int32_t rank;
-};
-
-constexpr ResolvedGrid kDefaultGrid = {200, 800, 20};
+// Build-time preset knobs (grid shape + pmin override) extracted from
+// the validated options document.  This is the shared
+// CoolProp::sbtl::presets::PresetOptions struct, so a new knob is a new
+// field there (plus its resolve line below) — not a new parameter
+// threaded through every preset signature.
+using PresetOptions = CoolProp::sbtl::presets::PresetOptions;
 
 // Polish the patch backend's T after an HmassP_INPUTS update so the
 // returned state is forward-consistent in h(T, p), not just R7-97-
@@ -177,41 +173,51 @@ void polish_patch_state_s_(::CoolProp::AbstractState& s, double p, double s_val)
     }
 }
 
-// Read `grid.NT/NR/rank` out of a validated options document.  Missing
-// keys (and missing `grid` itself) leave the corresponding default in
-// place — the validator has already rejected anything ill-formed.
-ResolvedGrid resolve_grid(const nlohmann::json& opts) {
-    ResolvedGrid g = kDefaultGrid;
+// Read the preset build knobs out of a validated options document:
+// `grid.NT/NR/rank` and the optional `pmin` lower-pressure override.
+// Missing keys leave the struct defaults in place — the validator has
+// already rejected anything ill-formed.  The schema guarantees pmin > 0
+// when present; the >= p_triple check lives in subcritical_pressure_range
+// (it needs the fluid to resolve p_triple).  A future knob = one more
+// field read here, no signature changes downstream.
+PresetOptions resolve_preset_options(const nlohmann::json& opts) {
+    PresetOptions po;
     if (opts.is_object() && opts.contains("grid") && opts.at("grid").is_object()) {
         const auto& grid = opts.at("grid");
-        if (grid.contains("NT")) g.NT = static_cast<std::size_t>(cpjson::get_integer(grid, "NT"));
-        if (grid.contains("NR")) g.NR = static_cast<std::size_t>(cpjson::get_integer(grid, "NR"));
-        if (grid.contains("rank")) g.rank = cpjson::get_integer(grid, "rank");
+        if (grid.contains("NT")) po.NT = static_cast<std::size_t>(cpjson::get_integer(grid, "NT"));
+        if (grid.contains("NR")) po.NR = static_cast<std::size_t>(cpjson::get_integer(grid, "NR"));
+        if (grid.contains("rank")) po.rank = cpjson::get_integer(grid, "rank");
     }
-    return g;
+    if (opts.is_object() && opts.contains("pmin")) {
+        po.p_min = opts.at("pmin").get<double>();
+    }
+    return po;
 }
 
 // Sample-and-build for a given input pair using the matching preset.
-// Grid shape comes from `g` so the caller can drive NT/NR/rank from
-// the options blob.  The source_backend string is threaded into the
-// SurfaceSpec so sample_grid can spawn per-thread AbstractState
-// instances when PARALLEL_SVDSBTL_SAMPLING is on (CoolProp-43h).
+// Build knobs come from `po` so the caller can drive NT/NR/rank and the
+// pmin floor from the options blob.  The source_backend string is
+// threaded into the SurfaceSpec so sample_grid can spawn per-thread
+// AbstractState instances when PARALLEL_SVDSBTL_SAMPLING is on
+// (CoolProp-43h).
 CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& source, const std::string& source_backend, CoolProp::input_pairs pair,
-                                                   const ResolvedGrid& g) {
+                                                   const PresetOptions& po) {
     namespace cp_sbtl = CoolProp::sbtl;
     cp_sbtl::SurfaceSpec spec;
     switch (pair) {
         case CoolProp::HmassP_INPUTS:
-            spec = cp_sbtl::presets::ph_subcritical(source, g.NT, g.NR, g.rank);
+            spec = cp_sbtl::presets::ph_subcritical(source, po);
             break;
         case CoolProp::PT_INPUTS:
-            spec = cp_sbtl::presets::pt_subcritical(source, g.NT, g.NR, g.rank);
+            spec = cp_sbtl::presets::pt_subcritical(source, po);
             break;
         case CoolProp::DmassT_INPUTS:
-            spec = cp_sbtl::presets::dt_subcritical(source, g.NT, g.NR, g.rank);
+            // DmassT is temperature-indexed — dt_subcritical ignores
+            // po.p_min (the pressure floor does not apply there).
+            spec = cp_sbtl::presets::dt_subcritical(source, po);
             break;
         case CoolProp::PSmass_INPUTS:
-            spec = cp_sbtl::presets::ps_subcritical(source, g.NT, g.NR, g.rank);
+            spec = cp_sbtl::presets::ps_subcritical(source, po);
             break;
         default:
             throw ValueError("SVDSBTL backend: no preset registered for the requested input pair");
@@ -1005,8 +1011,8 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     if (!surface) {
         auto source = source_reference_();
         const nlohmann::json opts = cpjson::parse(options_canonical_.empty() ? "{}" : options_canonical_);
-        const ResolvedGrid grid = resolve_grid(opts);
-        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, source_backend_, pair, grid));
+        const PresetOptions preset_opts = resolve_preset_options(opts);
+        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, source_backend_, pair, preset_opts));
         try {
             cp_sbtl::SVDSurfaceSerializer::save_to_file(*surface, path);
         } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)

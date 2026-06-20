@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -288,13 +289,17 @@ double solve_T_from_s_toms748(::CoolProp::AbstractState& s, double p, double s_t
 
 }  // namespace
 
-SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
+SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, const PresetOptions& opts) {
+    const std::size_t NT = opts.NT;
+    const std::size_t NR = opts.NR;
+    const std::int32_t rank = opts.rank;
+    const std::optional<double> p_min_override = opts.p_min;
     // Name is historical: this preset now also registers a SUPER
     // region above p_crit so the surface covers the full HEOS
     // (p, h) envelope.  Three regions: LIQUID + VAPOR + SUPER, plus
     // an optional NC_LIQUID/NC_VAPOR pair near pc when source is
     // HEOS/REFPROP (CoolProp-4u9).
-    const auto [p_min, p_max_sub_raw] = subcritical_pressure_range(heos);
+    const auto [p_min, p_max_sub_raw] = subcritical_pressure_range(heos, p_min_override);
     const auto [p_min_sup_raw, p_max_sup] = supercritical_pressure_range(heos);
     const double T_min_eos = std::max(heos.Ttriple(), heos.Tmin());
     const double T_max_eos = heos.Tmax();
@@ -721,14 +726,18 @@ SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std:
     return spec;
 }
 
-SurfaceSpec ps_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
+SurfaceSpec ps_subcritical(::CoolProp::AbstractState& heos, const PresetOptions& opts) {
+    const std::size_t NT = opts.NT;
+    const std::size_t NR = opts.NR;
+    const std::int32_t rank = opts.rank;
+    const std::optional<double> p_min_override = opts.p_min;
     // Entropy-indexed twin of ph_subcritical.  Identical region
     // geometry — LIQUID + VAPOR + SUPER, optional NC_LIQUID/NC_VAPOR/
     // NC_SUPER near pc, and (for IF97 source) the R2/R3/R5 SUPER split
     // — with the secondary axis being s instead of h.  See
     // ph_subcritical for the full rationale behind each region; the
     // comments here are abbreviated to the entropy-specific points.
-    const auto [p_min, p_max_sub_raw] = subcritical_pressure_range(heos);
+    const auto [p_min, p_max_sub_raw] = subcritical_pressure_range(heos, p_min_override);
     const auto [p_min_sup_raw, p_max_sup] = supercritical_pressure_range(heos);
     const double T_min_eos = std::max(heos.Ttriple(), heos.Tmin());
     const double T_max_eos = heos.Tmax();
@@ -1012,12 +1021,16 @@ std::unique_ptr<region::CubicSplineCurve> pt_T_floor_curve_(::CoolProp::Abstract
 }
 }  // namespace
 
-SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
+SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, const PresetOptions& opts) {
+    const std::size_t NT = opts.NT;
+    const std::size_t NR = opts.NR;
+    const std::int32_t rank = opts.rank;
+    const std::optional<double> p_min_override = opts.p_min;
     // Historical name; now covers the full phase diagram via three
     // regions: LIQUID + VAPOR (subcritical) + SUPER (p > p_crit), plus
     // an optional NC_LIQUID/NC_VAPOR pair near pc when source is
     // HEOS/REFPROP (CoolProp-4u9).
-    const auto [p_min, p_max_raw] = subcritical_pressure_range(heos);
+    const auto [p_min, p_max_raw] = subcritical_pressure_range(heos, p_min_override);
     const auto [p_min_sup_raw, p_max_sup] = supercritical_pressure_range(heos);
     const double T_min_eos = std::max(heos.Ttriple(), heos.Tmin());
     const double T_max_eos = heos.Tmax();
@@ -1340,7 +1353,12 @@ std::unique_ptr<region::CubicSplineCurve> build_rho_min_envelope(::CoolProp::Abs
 }
 }  // namespace
 
-SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT, std::size_t NR, std::int32_t rank) {
+SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, const PresetOptions& opts) {
+    // DmassT is temperature-indexed, so opts.p_min (the pressure floor)
+    // does not apply here and is intentionally unused.
+    const std::size_t NT = opts.NT;
+    const std::size_t NR = opts.NR;
+    const std::int32_t rank = opts.rank;
     // DT-indexed surface — closes CoolProp-i7j and supersedes the
     // BICUBIC invert_single_phase_y patch attempt at #2892 / #1301.
     //

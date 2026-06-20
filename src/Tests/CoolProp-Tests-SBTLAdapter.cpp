@@ -137,7 +137,7 @@ TEST_CASE("SVDSurface PH preset builds + evals against HEOS", "[SBTL][SVDSurface
     // qualitatively (must reproduce HEOS to a few percent on a
     // handful of single-phase probes).  Phase 2a's e2e tool covers
     // production-resolution accuracy.
-    auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
+    auto spec = cp_sbtl::presets::ph_subcritical(*heos, {/*NT=*/40, /*NR=*/80, /*rank=*/10});
     REQUIRE(spec.input_pair == ::CoolProp::HmassP_INPUTS);
     // 6 regions: LIQUID, VAPOR, NC_LIQUID, NC_VAPOR, NC_SUPER, SUPER.
     // The NC_* regions are the near-critical sub-regions added in
@@ -202,7 +202,7 @@ TEST_CASE("SVDSurface PH preset builds + evals against HEOS", "[SBTL][SVDSurface
 
 TEST_CASE("SVDSurface PS preset builds + evals against HEOS", "[SBTL][SVDSurface][preset_ps][slow]") {
     auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
-    auto spec = cp_sbtl::presets::ps_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
+    auto spec = cp_sbtl::presets::ps_subcritical(*heos, {/*NT=*/40, /*NR=*/80, /*rank=*/10});
     REQUIRE(spec.input_pair == ::CoolProp::PSmass_INPUTS);
     // Same 6-region geometry as the PH preset.
     REQUIRE(spec.regions.size() == 6);
@@ -262,7 +262,7 @@ TEST_CASE("SVDSurface PS preset builds + evals against HEOS", "[SBTL][SVDSurface
 
 TEST_CASE("SVDSurface save/load round-trip is bit-identical", "[SBTL][serializer][slow]") {
     auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
-    auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
+    auto spec = cp_sbtl::presets::ph_subcritical(*heos, {/*NT=*/40, /*NR=*/80, /*rank=*/10});
     auto surface_before = cp_sbtl::build_surface(*heos, std::move(spec));
 
     // Save to a byte buffer and load back.
@@ -370,7 +370,7 @@ TEST_CASE("SVDSurface PH preset across multi-fluid set", "[SBTL][SVDSurface][pre
     for (const auto* fluid : {"R134a", "Ammonia", "Methane", "Propane", "CarbonDioxide"}) {
         SECTION(fluid) {
             auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", fluid));
-            auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/30, /*NR=*/50, /*rank=*/8);
+            auto spec = cp_sbtl::presets::ph_subcritical(*heos, {/*NT=*/30, /*NR=*/50, /*rank=*/8});
             cp_sbtl::SVDSurface surface = cp_sbtl::build_surface(*heos, std::move(spec));
             REQUIRE(surface.sealed());
             REQUIRE(surface.region_count() == 6);  // CoolProp-4u9: NC_LIQUID + NC_VAPOR + NC_SUPER
@@ -420,7 +420,7 @@ TEST_CASE("SVDSurface PH preset across multi-fluid set", "[SBTL][SVDSurface][pre
 
 TEST_CASE("SVDSurface PT preset water round-trip", "[SBTL][SVDSurface][preset_pt][slow]") {
     auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
-    auto spec = cp_sbtl::presets::pt_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
+    auto spec = cp_sbtl::presets::pt_subcritical(*heos, {/*NT=*/40, /*NR=*/80, /*rank=*/10});
     REQUIRE(spec.input_pair == ::CoolProp::PT_INPUTS);
     REQUIRE(spec.regions.size() == 6);  // CoolProp-4u9: NC_LIQUID + NC_VAPOR + NC_SUPER
 
@@ -443,7 +443,7 @@ TEST_CASE("SVDSurface PT preset water round-trip", "[SBTL][SVDSurface][preset_pt
 
 TEST_CASE("SVDSurfaceSerializer file save/load round-trip", "[SBTL][serializer][slow]") {
     auto heos = std::shared_ptr<::CoolProp::AbstractState>(::CoolProp::AbstractState::factory("HEOS", "Water"));
-    auto spec = cp_sbtl::presets::ph_subcritical(*heos, /*NT=*/40, /*NR=*/80, /*rank=*/10);
+    auto spec = cp_sbtl::presets::ph_subcritical(*heos, {/*NT=*/40, /*NR=*/80, /*rank=*/10});
     auto surface = cp_sbtl::build_surface(*heos, std::move(spec));
 
     // Save to a tmp file and load back via the file API.  Use

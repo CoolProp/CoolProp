@@ -10,6 +10,7 @@ using Catch::Approx;
 #    include <algorithm>
 #    include <atomic>
 #    include <chrono>
+#    include <cmath>
 #    include <cstdint>
 #    include <filesystem>
 #    include <fstream>
@@ -118,6 +119,74 @@ TEST_CASE("SVDSBTL backend PT lookup matches HEOS within tolerance", "[SVDSBTL][
     // Stored T / p round-trip the user's inputs verbatim.
     REQUIRE(AS->T() == Approx(T).epsilon(1e-12));
     REQUIRE(AS->p() == Approx(p).epsilon(1e-12));
+}
+
+TEST_CASE("SVDSBTL backend resolves PT down to the triple-point pressure (issue #3189)", "[SVDSBTL][pt][low_pressure][issue_3189][slow]") {
+    // Regression for issue #3189 / CoolProp-naqt.  The subcritical PT
+    // surface used to floor its lowest isobar at ~1.01-1.03·p_triple
+    // (subcritical_pressure_range returned p_triple*1.01, and the
+    // p_triple it used was itself a QT sample at Ttriple*1.001, ~1-2%
+    // high).  A low-pressure gas query at p == p_triple() with T well
+    // above the saturation temperature therefore landed below the grid
+    // and returned NaN.  The floor is now the true triple-point pressure
+    // (heos.p_triple()), so p == p_triple() resolves and matches HEOS.
+    const std::vector<std::string> fluids = {"Water", "Nitrogen", "Methane", "Hydrogen"};
+    for (const auto& fluid : fluids) {
+        SECTION(fluid) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", fluid));
+            auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid));
+
+            const double p_tri = AS->p_triple();
+            const double T = 400.0;  // gas: T >> T_sat(p_triple) for all four fluids
+
+            // Exactly at the triple pressure — the boundary that used to fail.
+            AS->update(CoolProp::PT_INPUTS, p_tri, T);
+            heos->update(CoolProp::PT_INPUTS, p_tri, T);
+            INFO(fluid << " at p=p_triple=" << p_tri << " T=" << T);
+            INFO("rho HEOS=" << heos->rhomass() << "  SVDSBTL=" << AS->rhomass());
+            INFO("h   HEOS=" << heos->hmass() << "    SVDSBTL=" << AS->hmass());
+            REQUIRE(std::isfinite(AS->hmass()));
+            REQUIRE(std::isfinite(AS->rhomass()));
+            REQUIRE(AS->rhomass() == Approx(heos->rhomass()).epsilon(5e-3));
+            REQUIRE(AS->hmass() == Approx(heos->hmass()).epsilon(5e-3));
+
+            // A point just inside the floor (1% above p_triple) also resolves.
+            const double p_hi = 1.01 * p_tri;
+            AS->update(CoolProp::PT_INPUTS, p_hi, T);
+            heos->update(CoolProp::PT_INPUTS, p_hi, T);
+            REQUIRE(AS->hmass() == Approx(heos->hmass()).epsilon(5e-3));
+
+            // Strictly below the triple line remains out of the tabulated
+            // domain by design (p_triple is the documented floor): a
+            // property read on an out-of-range point is NaN.
+            AS->update(CoolProp::PT_INPUTS, 0.9 * p_tri, T);
+            REQUIRE_FALSE(std::isfinite(AS->hmass()));
+        }
+    }
+}
+
+TEST_CASE("SVDSBTL pmin option overrides the subcritical lower pressure bound", "[SVDSBTL][pmin][options][slow]") {
+    // The `pmin` option (absolute Pa) raises the PT/PH/PS table floor.
+    // Use Water (p_triple ~= 611 Pa) with a small grid to keep the fresh
+    // surface build cheap — this test exercises geometry, not accuracy.
+    const std::string opts = R"({"pmin": 2000.0, "grid": {"NT": 40, "NR": 80, "rank": 8}})";
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water?" + opts));
+
+    const double T = 400.0;
+    // Below the raised floor (but above p_triple) -> out of range -> NaN.
+    AS->update(CoolProp::PT_INPUTS, 1000.0, T);
+    REQUIRE_FALSE(std::isfinite(AS->hmass()));
+    // Above the floor -> resolves.
+    AS->update(CoolProp::PT_INPUTS, 5000.0, T);
+    REQUIRE(std::isfinite(AS->hmass()));
+}
+
+TEST_CASE("SVDSBTL pmin below the triple pressure is rejected", "[SVDSBTL][pmin][options][reject]") {
+    // A sub-triple pmin has no liquid-vapour saturation boundary to bound
+    // the subcritical regions, so construction (which eagerly builds the
+    // PT surface) throws rather than failing obscurely deep in sampling.
+    const std::string opts = R"({"pmin": 100.0})";  // < Water p_triple (~611 Pa)
+    REQUIRE_THROWS_AS(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water?" + opts), CoolProp::ValueError);
 }
 
 TEST_CASE("SVDSBTL backend PH lookup matches HEOS within tolerance", "[SVDSBTL][ph][water][slow]") {
