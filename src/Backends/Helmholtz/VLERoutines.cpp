@@ -2627,9 +2627,26 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     }
     CoolPropDbl beta = IO.beta;
 
+    // Reject a non-finite seed up front.  A stability false-positive at a single-phase point
+    // (e.g. below the bubble) can hand in a NaN trial composition; without this guard the NaN
+    // propagates through Rachford-Rice into x/y and surfaces as a misleading "lost a phase
+    // density solve" error instead of a clean single-phase fallback (#3192).  Reporting
+    // nonconvergence routes PT_flash_mixtures to its single-phase branch.
+    for (std::size_t i = 0; i < N; ++i) {
+        if (!ValidNumber(lnK[i]) || !ValidNumber(IO.x[i]) || !ValidNumber(IO.y[i])) {
+            IO.nonconvergence = true;
+            throw SolutionError(format("PTflash_twophase::solve_michelsen got a non-finite seed at T = %g K, p = %g Pa",
+                                       static_cast<double>(IO.T), static_cast<double>(IO.p)));
+        }
+    }
+
     // Helper: solve Rachford-Rice in log-K space with Newton + bisection safeguards
     auto solve_rachford_rice = [&]() {
         CoolPropDbl beta_min = 0, beta_max = 1.0;
+        // Guard a non-finite / out-of-range Newton start (e.g. a stale beta carried in from a
+        // prior failed iterate): an invalid beta makes denom=1+beta*term hit a pole, poisoning
+        // r/dr -> NaN below (#3192).
+        if (!ValidNumber(beta) || beta < 0.0 || beta > 1.0) beta = 0.5;
         for (int rr_iter = 0; rr_iter < 50; ++rr_iter) {
             CoolPropDbl r = 0, dr = 0;
             for (std::size_t i = 0; i < N; ++i) {
@@ -2645,7 +2662,11 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 beta_max = beta;
             if (std::abs(r) < 1e-11) break;
             CoolPropDbl beta_new = beta - r / dr;
-            if (beta_new <= beta_min || beta_new >= beta_max) beta_new = 0.5 * (beta_min + beta_max);
+            // A non-finite Newton step (dr -> 0, or a denom pole when beta strays to a bracket
+            // edge) must fall back to bisection, not slip through: NaN passes BOTH the <= and >=
+            // comparisons, so without the ValidNumber guard a NaN beta would poison x/y and the
+            // downstream density solve (#3192; same failure class as the #3167 GDEM-ratio guard).
+            if (!ValidNumber(beta_new) || beta_new <= beta_min || beta_new >= beta_max) beta_new = 0.5 * (beta_min + beta_max);
             if (std::abs(beta_new - beta) < 1e-11) break;
             beta = beta_new;
         }
