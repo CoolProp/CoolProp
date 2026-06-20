@@ -1657,6 +1657,51 @@ TEST_CASE("PQ flash: 5-component two-phase consistency", "[michelsen][flash][VLE
     }
 }
 
+// Regression for the #3192 convergence-gate refinement (follow-up to #3168).  For a
+// wide-boiling mixture the Michelsen two-phase split converges only to ~1e-6 (SS converges
+// linearly and the second-order stage stalls), and the original hard 1e-7 gate discarded it
+// -- silently misclassifying a genuine two-phase state as single-phase.  The refined gate
+// accepts a non-trivial, near-converged equilibrium.  This pins that behaviour: a blind PT
+// flash well inside the two-phase region must report two-phase with an independently-verified,
+// non-trivial equal-fugacity split.  (Reverting the gate to the hard 1e-7 throw fails this.)
+TEST_CASE("PT flash: wide-boiling split survives the convergence gate (GitHub #3192)", "[michelsen][flash][VLE]") {
+    using namespace CoolProp;
+    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    const double P = 3e5;
+
+    auto sat = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+    sat->set_mole_fractions(z);
+    sat->update(PQ_INPUTS, P, 0.0);
+    const double T_bub = sat->T();
+    sat->update(PQ_INPUTS, P, 1.0);
+    const double T_dew = sat->T();
+    REQUIRE(T_dew > T_bub);
+
+    // Points in the narrow band just above the bubble point, where the wide-boiling split
+    // converges only to ~1e-6 and the pre-refinement hard 1e-7 gate threw nonconvergence
+    // (this mixture was misclassified single-phase liquid at T ~ 91-96 K on master).
+    for (double frac : {0.005, 0.01, 0.02, 0.03, 0.05}) {
+        const double T = T_bub + frac * (T_dew - T_bub);
+        DYNAMIC_SECTION("frac = " << frac << " (T = " << T << " K)") {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+            AS->set_mole_fractions(z);
+            REQUIRE_NOTHROW(AS->update(PT_INPUTS, P, T));
+            CHECK(AS->phase() == iphase_twophase);
+            CHECK(AS->Q() > 0.0);
+            CHECK(AS->Q() < 1.0);
+
+            const auto x = AS->mole_fractions_liquid_double();
+            const auto y = AS->mole_fractions_vapor_double();
+            double spread = 0;
+            for (std::size_t i = 0; i < z.size(); ++i)
+                spread = std::max(spread, std::abs(x[i] - y[i]));
+            CHECK(spread > 1e-2);  // genuine, non-trivial split (not a trivial x==y collapse)
+            CHECK(equilibrium_residual("HEOS", fluids, x, y, T, P) < 1e-5);  // at equilibrium
+        }
+    }
+}
+
 TEST_CASE("PQ flash with built PE: N2/CH4", "[michelsen][flash][PQ_flash][PhaseEnvelope]") {
     // PQ flash works when the phase envelope is built.
     // Adapted from jakobreichert PR #2720.

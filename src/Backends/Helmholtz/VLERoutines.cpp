@@ -2958,14 +2958,26 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         converged = (final_max_g < gibbs_tol);
     }
 
-    // Convergence gate (GitHub #3168): never publish a grossly-unconverged split.  If
-    // the second-order minimization could not satisfy the equal-fugacity condition,
-    // fail loudly rather than returning a wrong two-phase composition / quality.  The
-    // 1e-7 threshold matches the SS tolerance, so this only fires on genuine failure.
-    if (!converged && last_max_g > 1e-7) {
-        IO.nonconvergence = true;
-        throw SolutionError(format("PTflash_twophase::solve_michelsen failed to converge: max|ln f_V - ln f_L| = %g at T = %g K, p = %g Pa",
-                                   last_max_g, static_cast<double>(IO.T), static_cast<double>(IO.p)));
+    // Convergence gate (GitHub #3168, refined for #3192): never publish a grossly-unconverged
+    // or trivial split -- the stability-false-positive signature #3168 targets -- but DO accept
+    // a genuine, near-converged equilibrium.  The original hard 1e-7 throw also discarded real
+    // wide-boiling splits that converge only to ~1e-6 (SS converges linearly and the second-order
+    // stage stalls for stiff mixtures), so a true two-phase state was silently misclassified as
+    // single-phase.  Distinguish the two: a genuine split has a non-trivial composition spread
+    // AND an interior phase fraction AND an equal-fugacity residual at engineering tolerance; a
+    // false positive is trivial (x==y), collapsed (beta -> 0/1), or grossly unconverged.
+    if (!converged) {
+        CoolPropDbl spread = 0;
+        for (std::size_t i = 0; i < N; ++i)
+            spread = std::max(spread, std::abs(IO.x[i] - IO.y[i]));
+        const bool genuine = ValidNumber(last_max_g) && last_max_g <= 1e-5  // near-converged equilibrium
+                             && spread >= 1e-4                              // not a trivial (x==y) split
+                             && beta > 1e-8 && beta < 1.0 - 1e-8;           // not a collapsed phase
+        if (!genuine) {
+            IO.nonconvergence = true;
+            throw SolutionError(format("PTflash_twophase::solve_michelsen failed to converge: max|ln f_V - ln f_L| = %g at T = %g K, p = %g Pa",
+                                       last_max_g, static_cast<double>(IO.T), static_cast<double>(IO.p)));
+        }
     }
 }
 
