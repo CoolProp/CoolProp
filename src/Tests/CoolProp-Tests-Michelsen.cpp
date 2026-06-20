@@ -1148,8 +1148,7 @@ TEST_CASE("Stability sweep: blind two-phase classification + fugacity (CoolProp-
 // 2. Read the target property (H, S, or U)
 // 3. Flash with (Y, P) inputs on a fresh object
 // 4. Check that T and rho match the reference
-static void hsu_p_roundtrip(const std::string& backend, const std::string& fluids,
-                            const std::vector<double>& z, double P, double T,
+static void hsu_p_roundtrip(const std::string& backend, const std::string& fluids, const std::vector<double>& z, double P, double T,
                             CoolProp::input_pairs flash_pair, double eps = 1e-6) {
     using namespace CoolProp;
     auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
@@ -1160,10 +1159,17 @@ static void hsu_p_roundtrip(const std::string& backend, const std::string& fluid
 
     double y_ref;
     switch (flash_pair) {
-        case HmolarP_INPUTS: y_ref = AS->hmolar(); break;
-        case PSmolar_INPUTS: y_ref = AS->smolar(); break;
-        case PUmolar_INPUTS: y_ref = AS->umolar(); break;
-        default: throw ValueError("unsupported flash pair in hsu_p_roundtrip");
+        case HmolarP_INPUTS:
+            y_ref = AS->hmolar();
+            break;
+        case PSmolar_INPUTS:
+            y_ref = AS->smolar();
+            break;
+        case PUmolar_INPUTS:
+            y_ref = AS->umolar();
+            break;
+        default:
+            throw ValueError("unsupported flash pair in hsu_p_roundtrip");
     }
 
     auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
@@ -1310,9 +1316,8 @@ TEST_CASE("HSU_P flash: CO2/Water/N2/Ar/O2 mixture no silent wrong answer (GitHu
 // 2. Read the target property (D, H, S, or U)
 // 3. Flash with (Y, T) inputs on a fresh object
 // 4. Check that P and rho match the reference
-static void dhsu_t_roundtrip(const std::string& backend, const std::string& fluids,
-                              const std::vector<double>& z, double P, double T,
-                              CoolProp::input_pairs flash_pair, double eps = 1e-6) {
+static void dhsu_t_roundtrip(const std::string& backend, const std::string& fluids, const std::vector<double>& z, double P, double T,
+                             CoolProp::input_pairs flash_pair, double eps = 1e-6) {
     using namespace CoolProp;
     auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
     AS->set_mole_fractions(z);
@@ -1322,11 +1327,20 @@ static void dhsu_t_roundtrip(const std::string& backend, const std::string& flui
 
     double y_ref;
     switch (flash_pair) {
-        case DmolarT_INPUTS: y_ref = AS->rhomolar(); break;
-        case HmolarT_INPUTS: y_ref = AS->hmolar(); break;
-        case SmolarT_INPUTS: y_ref = AS->smolar(); break;
-        case TUmolar_INPUTS: y_ref = AS->umolar(); break;
-        default: throw ValueError("unsupported flash pair in dhsu_t_roundtrip");
+        case DmolarT_INPUTS:
+            y_ref = AS->rhomolar();
+            break;
+        case HmolarT_INPUTS:
+            y_ref = AS->hmolar();
+            break;
+        case SmolarT_INPUTS:
+            y_ref = AS->smolar();
+            break;
+        case TUmolar_INPUTS:
+            y_ref = AS->umolar();
+            break;
+        default:
+            throw ValueError("unsupported flash pair in dhsu_t_roundtrip");
     }
 
     auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory(backend, fluids));
@@ -1367,7 +1381,6 @@ TEST_CASE("DHSU_T flash: mixture HT round-trip", "[michelsen][flash][DHSU_T]") {
         dhsu_t_roundtrip("HEOS", "Nitrogen&Methane&Ethane&Propane", {0.1, 0.5, 0.25, 0.15}, 1e5, 300.0, HmolarT_INPUTS);
     }
 }
-
 
 TEST_CASE("DHSU_T flash: mixture ST round-trip", "[michelsen][flash][DHSU_T]") {
     SECTION("N2/O2 gas T=300 P=1e5") {
@@ -1422,18 +1435,16 @@ TEST_CASE("HSU_P flash: near saturation Propane/Butane", "[michelsen][flash][HSU
     sat->update(PQ_INPUTS, P, 1.0);
     const double T_dew = sat->T();
 
-    struct Case {
+    struct Case
+    {
         std::string label;
         double T;
         phases ph;
     };
     std::vector<Case> cases = {
-      {"subcooled T_bub-0.5", T_bub - 0.5, iphase_liquid},
-      {"subcooled T_bub-1", T_bub - 1.0, iphase_liquid},
-      {"two-phase T_bub+1", T_bub + 1.0, iphase_twophase},
-      {"two-phase midpoint", 0.5 * (T_bub + T_dew), iphase_twophase},
-      {"two-phase T_dew-1", T_dew - 1.0, iphase_twophase},
-      {"superheated T_dew+1", T_dew + 1.0, iphase_gas},
+      {"subcooled T_bub-0.5", T_bub - 0.5, iphase_liquid}, {"subcooled T_bub-1", T_bub - 1.0, iphase_liquid},
+      {"two-phase T_bub+1", T_bub + 1.0, iphase_twophase}, {"two-phase midpoint", 0.5 * (T_bub + T_dew), iphase_twophase},
+      {"two-phase T_dew-1", T_dew - 1.0, iphase_twophase}, {"superheated T_dew+1", T_dew + 1.0, iphase_gas},
     };
 
     for (auto& c : cases) {
@@ -1490,7 +1501,8 @@ TEST_CASE("HSU_P flash: near saturation 5-component N2-HC", "[michelsen][flash][
     sat->update(PQ_INPUTS, P, 1.0);
     const double T_dew = sat->T();
 
-    struct Case {
+    struct Case
+    {
         std::string label;
         double T;
         phases ph;
@@ -1706,7 +1718,7 @@ TEST_CASE("PT flash: wide-boiling split survives the convergence gate (GitHub #3
             double spread = 0;
             for (std::size_t i = 0; i < z.size(); ++i)
                 spread = std::max(spread, std::abs(x[i] - y[i]));
-            CHECK(spread > 1e-2);  // genuine, non-trivial split (not a trivial x==y collapse)
+            CHECK(spread > 1e-2);                                            // genuine, non-trivial split (not a trivial x==y collapse)
             CHECK(equilibrium_residual("HEOS", fluids, x, y, T, P) < 1e-5);  // at equilibrium
         }
     }

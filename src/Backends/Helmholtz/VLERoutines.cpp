@@ -2635,8 +2635,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     for (std::size_t i = 0; i < N; ++i) {
         if (!ValidNumber(lnK[i]) || !ValidNumber(IO.x[i]) || !ValidNumber(IO.y[i])) {
             IO.nonconvergence = true;
-            throw SolutionError(format("PTflash_twophase::solve_michelsen got a non-finite seed at T = %g K, p = %g Pa",
-                                       static_cast<double>(IO.T), static_cast<double>(IO.p)));
+            throw SolutionError(format("PTflash_twophase::solve_michelsen got a non-finite seed at T = %g K, p = %g Pa", static_cast<double>(IO.T),
+                                       static_cast<double>(IO.p)));
         }
     }
 

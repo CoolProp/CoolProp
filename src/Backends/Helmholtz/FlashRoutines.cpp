@@ -2488,8 +2488,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
 
             try {
                 boost::uintmax_t max_iter = 100;
-                auto bracket = boost::math::tools::toms748_solve(nocache_resid, static_cast<double>(Tmin),
-                                                                 static_cast<double>(Tmax),
+                auto bracket = boost::math::tools::toms748_solve(nocache_resid, static_cast<double>(Tmin), static_cast<double>(Tmax),
                                                                  boost::math::tools::eps_tolerance<double>(40), max_iter);
                 double T_cand = (bracket.first + bracket.second) / 2.0;
 
@@ -2567,8 +2566,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                 if (P_lo < 0 || P_hi < 0) return std::numeric_limits<double>::quiet_NaN();
 
                 boost::uintmax_t max_iter = 100;
-                auto bracket = boost::math::tools::toms748_solve(rho_resid, P_lo, P_hi,
-                                                                 boost::math::tools::eps_tolerance<double>(40), max_iter);
+                auto bracket = boost::math::tools::toms748_solve(rho_resid, P_lo, P_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
                 double P_sol = (bracket.first + bracket.second) / 2.0;
                 HEOS.update(PT_INPUTS, P_sol, T);
                 return HEOS.keyed_output(other);
@@ -2618,8 +2616,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     return X - value;
                 };
                 boost::uintmax_t max_iter = 100;
-                auto bracket = boost::math::tools::toms748_solve(outer_resid, T_lo, T_hi,
-                                                                 boost::math::tools::eps_tolerance<double>(40), max_iter);
+                auto bracket = boost::math::tools::toms748_solve(outer_resid, T_lo, T_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
                 double T_sol = (bracket.first + bracket.second) / 2.0;
                 solve_for_caloric_at_T(T_sol);
                 // HEOS is now set at the converged (T, P) state
@@ -2636,8 +2633,8 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
         // discontinuity from a phase misclassification), so without this check the flash could
         // SILENTLY return a wrong state.  Mirrors the HSU_P / DHSU_T guards.
         {
-            const double resid_cal = static_cast<double>(HEOS.keyed_output(other) - value);
-            const double resid_rho = static_cast<double>(HEOS.keyed_output(iDmolar) - rho_target);
+            const auto resid_cal = static_cast<double>(HEOS.keyed_output(other) - value);
+            const auto resid_rho = static_cast<double>(HEOS.keyed_output(iDmolar) - rho_target);
             const double scale_cal = std::abs(static_cast<double>(value)) + 1.0;
             const double scale_rho = std::abs(static_cast<double>(rho_target)) + 1.0;
             if (!ValidNumber(resid_cal) || std::abs(resid_cal) > 1e-6 * scale_cal || !ValidNumber(resid_rho)
@@ -3403,10 +3400,8 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             HEOS.update(PQ_INPUTS, p, 1.0);
             T_dew = HEOS.T();
             val_dew = HEOS.keyed_output(other);
-            pq_ok = std::isfinite(static_cast<double>(T_bubble))
-                 && std::isfinite(static_cast<double>(T_dew))
-                 && std::isfinite(static_cast<double>(val_bubble))
-                 && std::isfinite(static_cast<double>(val_dew));
+            pq_ok = std::isfinite(static_cast<double>(T_bubble)) && std::isfinite(static_cast<double>(T_dew))
+                    && std::isfinite(static_cast<double>(val_bubble)) && std::isfinite(static_cast<double>(val_dew));
         } catch (...) {
             pq_ok = false;
         }
@@ -3457,8 +3452,16 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
         // whose residual is closest to zero.
         double resid_lo = _HUGE, resid_hi = _HUGE;
         bool lo_ok = false, hi_ok = false;
-        try { resid_lo = resid(static_cast<double>(Tmin)); lo_ok = std::isfinite(resid_lo); } catch (...) {}
-        try { resid_hi = resid(static_cast<double>(Tmax)); hi_ok = std::isfinite(resid_hi); } catch (...) {}
+        try {
+            resid_lo = resid(static_cast<double>(Tmin));
+            lo_ok = std::isfinite(resid_lo);
+        } catch (...) {
+        }
+        try {
+            resid_hi = resid(static_cast<double>(Tmax));
+            hi_ok = std::isfinite(resid_hi);
+        } catch (...) {
+        }
 
         // --- Change 2: Binary-search validity recovery ---
         // When one endpoint fails (e.g., Tmin below melting line), bisect
@@ -3503,35 +3506,27 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             // Endpoints bracket the root — use TOMS748 with pre-computed values
             try {
                 boost::uintmax_t max_iter = 100;
-                auto bracket = boost::math::tools::toms748_solve(
-                    resid, static_cast<double>(Tmin), static_cast<double>(Tmax),
-                    resid_lo, resid_hi,
-                    boost::math::tools::eps_tolerance<double>(40), max_iter);
+                auto bracket = boost::math::tools::toms748_solve(resid, static_cast<double>(Tmin), static_cast<double>(Tmax), resid_lo, resid_hi,
+                                                                 boost::math::tools::eps_tolerance<double>(40), max_iter);
                 double T_sol = (bracket.first + bracket.second) / 2.0;
 
                 // Final PT flash at the converged temperature to set HEOS state
                 HEOS.update(PT_INPUTS, p, T_sol);
             } catch (std::exception& e) {
-                throw ValueError(
-                    format("HSU_P_flash for mixture failed with Tmin=%Lg, Tmax=%Lg, p=%Lg: %s",
-                           Tmin, Tmax, p, e.what()));
+                throw ValueError(format("HSU_P_flash for mixture failed with Tmin=%Lg, Tmax=%Lg, p=%Lg: %s", Tmin, Tmax, p, e.what()));
             }
         } else if (lo_ok || hi_ok) {
             // Endpoints do not bracket — pick the one with smaller |residual|
-            double T_best = (!hi_ok || (lo_ok && std::abs(resid_lo) <= std::abs(resid_hi)))
-                            ? static_cast<double>(Tmin) : static_cast<double>(Tmax);
+            double T_best = (!hi_ok || (lo_ok && std::abs(resid_lo) <= std::abs(resid_hi))) ? static_cast<double>(Tmin) : static_cast<double>(Tmax);
             try {
                 HEOS.update(PT_INPUTS, p, T_best);
             } catch (std::exception& e) {
-                throw ValueError(
-                    format("HSU_P_flash for mixture: endpoints do not bracket (resid_lo=%g, resid_hi=%g) "
-                           "and fallback at T=%g failed: %s",
-                           resid_lo, resid_hi, T_best, e.what()));
+                throw ValueError(format("HSU_P_flash for mixture: endpoints do not bracket (resid_lo=%g, resid_hi=%g) "
+                                        "and fallback at T=%g failed: %s",
+                                        resid_lo, resid_hi, T_best, e.what()));
             }
         } else {
-            throw ValueError(
-                format("HSU_P_flash for mixture: neither endpoint evaluable (Tmin=%Lg, Tmax=%Lg, p=%Lg)",
-                       Tmin, Tmax, p));
+            throw ValueError(format("HSU_P_flash for mixture: neither endpoint evaluable (Tmin=%Lg, Tmax=%Lg, p=%Lg)", Tmin, Tmax, p));
         }
 
         // Verify the result actually satisfies the specification (#3192).  TOMS748 returns a
@@ -3541,7 +3536,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
         // Without this check the flash SILENTLY returns a wrong T (the GitHub #3148 CO2/Water
         // flaw: a ~15 K error with H(T_returned) != H_target).  Fail loudly instead so the caller
         // is never handed a wrong state that passes for success.
-        const double resid_final = static_cast<double>(HEOS.keyed_output(other) - value);
+        const auto resid_final = static_cast<double>(HEOS.keyed_output(other) - value);
         const double resid_scale = std::abs(static_cast<double>(value)) + 1.0;
         if (!ValidNumber(resid_final) || std::abs(resid_final) > 1e-6 * resid_scale) {
             throw ValueError(format("HSU_P_flash for mixture did not converge to the specification: residual %g (target %g) "
@@ -3854,11 +3849,20 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
             CoolPropDbl T = HEOS._T;
             CoolPropDbl value;
             switch (other) {
-                case iDmolar: value = HEOS._rhomolar; break;
-                case iHmolar: value = HEOS._hmolar; break;
-                case iSmolar: value = HEOS._smolar; break;
-                case iUmolar: value = HEOS._umolar; break;
-                default: throw ValueError(format("Invalid input for DHSU_T_flash mixture"));
+                case iDmolar:
+                    value = HEOS._rhomolar;
+                    break;
+                case iHmolar:
+                    value = HEOS._hmolar;
+                    break;
+                case iSmolar:
+                    value = HEOS._smolar;
+                    break;
+                case iUmolar:
+                    value = HEOS._umolar;
+                    break;
+                default:
+                    throw ValueError(format("Invalid input for DHSU_T_flash mixture"));
             }
 
             bool solved = false;
@@ -3904,10 +3908,14 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
 
                 auto rho_resid = [&](double rho) -> double {
                     switch (other) {
-                        case iHmolar: return HEOS.calc_hmolar_nocache(T, rho) - value;
-                        case iSmolar: return HEOS.calc_smolar_nocache(T, rho) - value;
-                        case iUmolar: return HEOS.calc_umolar_nocache(T, rho) - value;
-                        default: return _HUGE;
+                        case iHmolar:
+                            return HEOS.calc_hmolar_nocache(T, rho) - value;
+                        case iSmolar:
+                            return HEOS.calc_smolar_nocache(T, rho) - value;
+                        case iUmolar:
+                            return HEOS.calc_umolar_nocache(T, rho) - value;
+                        default:
+                            return _HUGE;
                     }
                 };
 
@@ -3915,27 +3923,27 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                 double rho_gas = -1;
                 try {
                     boost::uintmax_t max_iter = 100;
-                    auto bracket = boost::math::tools::toms748_solve(
-                        rho_resid, static_cast<double>(rho_min), static_cast<double>(rho_reducing),
-                        boost::math::tools::eps_tolerance<double>(40), max_iter);
+                    auto bracket = boost::math::tools::toms748_solve(rho_resid, static_cast<double>(rho_min), static_cast<double>(rho_reducing),
+                                                                     boost::math::tools::eps_tolerance<double>(40), max_iter);
                     double rho_cand = (bracket.first + bracket.second) / 2.0;
                     if (HEOS.calc_pressure_nocache(T, rho_cand) > 0 && is_mechanically_stable(rho_cand)) {
                         rho_gas = rho_cand;
                     }
-                } catch (...) {}
+                } catch (...) {
+                }
 
                 // Try liquid density range [rho_reducing, rho_max]
                 double rho_liq = -1;
                 try {
                     boost::uintmax_t max_iter = 100;
-                    auto bracket = boost::math::tools::toms748_solve(
-                        rho_resid, static_cast<double>(rho_reducing), static_cast<double>(rho_max),
-                        boost::math::tools::eps_tolerance<double>(40), max_iter);
+                    auto bracket = boost::math::tools::toms748_solve(rho_resid, static_cast<double>(rho_reducing), static_cast<double>(rho_max),
+                                                                     boost::math::tools::eps_tolerance<double>(40), max_iter);
                     double rho_cand = (bracket.first + bracket.second) / 2.0;
                     if (HEOS.calc_pressure_nocache(T, rho_cand) > 0 && is_mechanically_stable(rho_cand)) {
                         rho_liq = rho_cand;
                     }
-                } catch (...) {}
+                } catch (...) {
+                }
 
                 // Fallback: locate liquid spinodal if no liquid root found
                 if (rho_liq < 0) {
@@ -3963,14 +3971,14 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                         }
                         try {
                             boost::uintmax_t max_iter = 100;
-                            auto bracket = boost::math::tools::toms748_solve(
-                                rho_resid, rho_pos, static_cast<double>(rho_max),
-                                boost::math::tools::eps_tolerance<double>(40), max_iter);
+                            auto bracket = boost::math::tools::toms748_solve(rho_resid, rho_pos, static_cast<double>(rho_max),
+                                                                             boost::math::tools::eps_tolerance<double>(40), max_iter);
                             double rho_cand = (bracket.first + bracket.second) / 2.0;
                             if (is_mechanically_stable(rho_cand)) {
                                 rho_liq = rho_cand;
                             }
-                        } catch (...) {}
+                        } catch (...) {
+                        }
                     }
                 }
 
@@ -4067,22 +4075,19 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                 if (P_lo > 0 && P_hi > 0) {
                     try {
                         boost::uintmax_t max_iter = 100;
-                        auto bracket = boost::math::tools::toms748_solve(
-                            p_resid, P_lo, P_hi,
-                            boost::math::tools::eps_tolerance<double>(40), max_iter);
+                        auto bracket =
+                          boost::math::tools::toms748_solve(p_resid, P_lo, P_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
                         double P_sol = (bracket.first + bracket.second) / 2.0;
                         HEOS.update(PT_INPUTS, P_sol, T);
                     } catch (std::exception& e) {
-                        throw ValueError(
-                            format("DHSU_T_flash P-sweep TOMS748 for mixture failed: T=%Lg, target=%s, value=%Lg, "
-                                   "bracket=[%g, %g]: %s",
-                                   T, get_parameter_information(other, "short").c_str(), value, P_lo, P_hi, e.what()));
+                        throw ValueError(format("DHSU_T_flash P-sweep TOMS748 for mixture failed: T=%Lg, target=%s, value=%Lg, "
+                                                "bracket=[%g, %g]: %s",
+                                                T, get_parameter_information(other, "short").c_str(), value, P_lo, P_hi, e.what()));
                     }
                 } else {
-                    throw ValueError(
-                        format("DHSU_T_flash P-sweep for mixture: no bracket found scanning P in [%Lg, %Lg] at T=%Lg "
-                               "for target %s=%Lg",
-                               Pmin_bound, Pmax_bound, T, get_parameter_information(other, "short").c_str(), value));
+                    throw ValueError(format("DHSU_T_flash P-sweep for mixture: no bracket found scanning P in [%Lg, %Lg] at T=%Lg "
+                                            "for target %s=%Lg",
+                                            Pmin_bound, Pmax_bound, T, get_parameter_information(other, "short").c_str(), value));
                 }
             }
 
@@ -4093,7 +4098,7 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
             // direct evaluation and needs no check; H/S/U at fixed T solve for the state and must
             // be verified.  Mirrors the HSU_P guard.
             if (other != iDmolar) {
-                const double resid_dhsu = static_cast<double>(HEOS.keyed_output(other) - value);
+                const auto resid_dhsu = static_cast<double>(HEOS.keyed_output(other) - value);
                 const double scale_dhsu = std::abs(static_cast<double>(value)) + 1.0;
                 if (!ValidNumber(resid_dhsu) || std::abs(resid_dhsu) > 1e-6 * scale_dhsu) {
                     throw ValueError(format("DHSU_T_flash for mixture did not converge to the specification: residual %g "
