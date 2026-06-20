@@ -205,6 +205,25 @@ class AbstractCubic
         m_aux_tau_cache = tau;
     }
 
+    /// Composition-scoped cache of bm = sum_i x_i b_i (#3192 perf).  bm is a pure function of the
+    /// composition, but the residual-Helmholtz volume helpers (c_term/A_term/psi_*) recompute it
+    /// ~dozens of times per alphar-derivative evaluation.  _sync_comp(x) is called once at each
+    /// alphar-level entry (alphar / d_alphar_dxi / d2_alphar_dxidxj / d3_alphar_dxidxjdxk) and rebuilds
+    /// m_bm only when the composition actually changed (one O(N) memcmp -- a composition "generation"
+    /// check); the nested helpers then read m_bm directly (O(1)).  Those helpers are private to
+    /// GeneralizedCubic and reachable ONLY through those four entries, so m_bm is current where read.
+    std::vector<double> m_comp_x_cache;
+    double m_bm = std::numeric_limits<double>::quiet_NaN();
+    void _sync_comp(const std::vector<double>& x) {
+        const std::size_t n = static_cast<std::size_t>(N);
+        if (m_comp_x_cache.size() == n && x.size() >= n && std::memcmp(x.data(), m_comp_x_cache.data(), n * sizeof(double)) == 0) {
+            return;
+        }
+        // Virtual dispatch: linear sum_i x_i b_i for SRK/PR, quadratic sum_ij x_i x_j b_ij for VTPR.
+        m_bm = bm_term(x);
+        m_comp_x_cache.assign(x.begin(), x.begin() + N);
+    }
+
    public:
     /**
      \brief The abstract base clase for the concrete implementations of the cubic equations of state
@@ -651,7 +670,7 @@ class AbstractCubic
      * \param x The vector of mole fractions
      */
     double c_term(const std::vector<double>& x) {
-        return 1 / bm_term(x);
+        return 1 / m_bm;
     };
     /**
      * \brief The first composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -660,7 +679,7 @@ class AbstractCubic
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d_c_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent) {
-        return -d_bm_term_dxi(x, i, xN_independent) / pow(bm_term(x), 2);
+        return -d_bm_term_dxi(x, i, xN_independent) / pow(m_bm, 2);
     };
     /**
      * \brief The second composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -670,7 +689,7 @@ class AbstractCubic
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d2_c_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {
-        double bm = bm_term(x);
+        double bm = m_bm;
         return (2 * d_bm_term_dxi(x, i, xN_independent) * d_bm_term_dxi(x, j, xN_independent) - bm * d2_bm_term_dxidxj(x, i, j, xN_independent))
                / pow(bm, 3);
     };
@@ -683,7 +702,7 @@ class AbstractCubic
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d3_c_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) {
-        double bm = bm_term(x);
+        double bm = m_bm;
         return 1 / pow(bm, 4)
                * (2 * bm
                     * (d_bm_term_dxi(x, i, xN_independent) * d2_bm_term_dxidxj(x, j, k, xN_independent)
@@ -704,7 +723,7 @@ class AbstractCubic
      * \param x The vector of mole fractions
      */
     double A_term(double delta, const std::vector<double>& x) {
-        double bm = bm_term(x);
+        double bm = m_bm;
         double cm = cm_term();
         return log((delta * rho_r * (Delta_1 * bm + cm) + 1) / (delta * rho_r * (Delta_2 * bm + cm) + 1));
     };
