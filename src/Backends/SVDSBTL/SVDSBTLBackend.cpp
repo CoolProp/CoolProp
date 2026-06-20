@@ -1009,6 +1009,58 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     surfaces_[static_cast<int>(pair)] = std::move(surface);
 }
 
+// Near-dome reclassification guard (issue #3190).  See header for the
+// full rationale.  Fast-only: never falls back to source-PQ, so the
+// single-phase hot path stays cheap.  Leaves `pt` untouched on a false
+// return (the caller then accepts the atlas single-phase classification).
+bool SVDSBTLBackend::try_fast_dome_reclassify_(PointEvaluation& pt, char what, double p_val, double value_mass) {
+    double T_sat = std::numeric_limits<double>::quiet_NaN();
+    double yL = std::numeric_limits<double>::quiet_NaN();
+    double yV = std::numeric_limits<double>::quiet_NaN();
+    try {
+        T_sat = sat_T_from_p_(p_val);
+        if (!std::isfinite(T_sat)) {
+            return false;
+        }
+        yL = sat_eval_(T_sat, what, 0);
+        yV = sat_eval_(T_sat, what, 1);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — mirrors the atlas-miss dome blend
+        return false;
+    }
+    if (!std::isfinite(yL) || !std::isfinite(yV) || !(yV > yL)) {
+        return false;
+    }
+    const double y_mol = value_mass * calc_molar_mass();
+    const double Q = (y_mol - yL) / (yV - yL);
+    // Boundary inclusive, with a small tolerance band so a round-trip
+    // input that lands a few ULP outside [yL, yV] (h(p, Q=0) re-flashed
+    // is yL +/- rounding) still classifies two-phase.  Mirrors the
+    // +/-1e-9 Q band HEOS's own p_phase_determination uses at the dome
+    // edge.  Outside the band the point is genuinely single-phase.
+    constexpr double kQtol = 1e-9;
+    if (Q < -kQtol || Q > 1.0 + kQtol) {
+        return false;
+    }
+    pt.kind = PointEvaluation::Kind::DomeBlend;
+    pt.status = CoolProp::fast_evaluate_ok;
+    pt.T = T_sat;
+    pt.T_sat = T_sat;
+    // Clamp sub-tolerance noise onto [0, 1] so the saturated endpoint
+    // reports exactly Q=0 / Q=1 and the lever rule returns rhoL / rhoV.
+    pt.Q = std::min(1.0, std::max(0.0, Q));
+    // Stash the endpoints we already computed so the DomeBlend caloric
+    // arms don't re-evaluate them; the opposite-property and rho
+    // endpoints stay lazy (ensure_dome_*_endpoints_).
+    if (what == 'H') {
+        pt.hL_mol = yL;
+        pt.hV_mol = yV;
+    } else {  // 'S'
+        pt.sL_mol = yL;
+        pt.sV_mol = yV;
+    }
+    return true;
+}
+
 // resolve_point_: the shared kernel called by both update() and
 // fast_evaluate().  Maps (input_pair, v1, v2) to a PointEvaluation
 // without mutating any backend state.  The same routing logic — input-
@@ -1334,6 +1386,36 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
     // (for PT or genuinely OOB HmassP).
     pt.resolved = surface->resolve(a, b);
     if (pt.resolved.region_idx >= 0) {
+        // Near-dome guard (issue #3190).  The atlas single-phase regions'
+        // dome-side boundary is an interpolated sat curve whose fit error
+        // makes it overshoot the true bubble/dew line, so a caloric input
+        // sitting exactly on the saturation boundary resolves single-phase
+        // (Q = -1) instead of two-phase.  resolve() returns the secondary-
+        // axis (h / s) normalised coordinate eta in svd_x; the misclassified
+        // band hugs a region edge (eta -> 1 on the LIQUID dome side, eta ->
+        // 0 on the VAPOR dome side), spanning only ~1e-6 in eta.  When eta
+        // is within a thin band of either edge, re-test against the
+        // authoritative sat provider (the same one the forward PQ flash
+        // uses) so the round-trip is consistent.  kDomeEtaBand must comfortably
+        // exceed the boundary-curve fit error in eta units; 1e-2 leaves a
+        // ~1000x margin while still sparing >98% of single-phase queries
+        // the sat lookup.  The check itself only reclassifies points that
+        // are genuinely in the dome, so the wider band only costs the
+        // occasional wasted (correct) sat eval at a non-dome region edge.
+        constexpr double kDomeEtaBand = 1e-2;
+        const double eta = pt.resolved.svd_x;
+        const bool near_edge = std::isfinite(eta) && (eta < kDomeEtaBand || eta > 1.0 - kDomeEtaBand);
+        if (near_edge) {
+            if (input_pair == CoolProp::HmassP_INPUTS || input_pair == CoolProp::HmolarP_INPUTS) {
+                if (try_fast_dome_reclassify_(pt, 'H', *pt.p, *pt.h_mass)) {
+                    return pt;
+                }
+            } else if (input_pair == CoolProp::PSmass_INPUTS || input_pair == CoolProp::PSmolar_INPUTS) {
+                if (try_fast_dome_reclassify_(pt, 'S', *pt.p, *pt.s_mass)) {
+                    return pt;
+                }
+            }
+        }
         pt.kind = PointEvaluation::Kind::SinglePhase;
         pt.status = CoolProp::fast_evaluate_ok;
         return pt;

@@ -272,6 +272,51 @@ TEST_CASE("SVDSBTL backend HmassP_INPUTS dome-hit routes to two-phase blend", "[
     }
 }
 
+TEST_CASE("SVDSBTL backend HmassP_INPUTS on the bubble/dew line stays two-phase (issue #3190)",
+          "[SVDSBTL][twophase][hp_dome][regression][issue_3190][water][slow]") {
+    // Round-trip h(p, Q) -> (p, h) on the saturation boundary itself.
+    // The atlas single-phase regions' dome-side boundary is an
+    // interpolated sat curve that overshoots the true bubble/dew line by
+    // its fit error, so a point sitting EXACTLY on the boundary used to
+    // resolve single-phase (Q=-1, iphase_not_imposed).  The near-dome
+    // eta guard must reclassify it as two-phase with Q == Q_in.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+
+    const double p_tri = AS->p_triple();
+    const double p_crit = AS->p_critical();
+    for (const double Q_in : {0.0, 1.0}) {
+        for (int i = 1; i <= 12; ++i) {
+            const double p = p_tri + (p_crit - p_tri) * (static_cast<double>(i) / 13.0);
+            AS->update(CoolProp::PQ_INPUTS, p, Q_in);
+            const double h = AS->hmass();
+            AS->update(CoolProp::HmassP_INPUTS, h, p);
+            INFO("Q_in=" << Q_in << "  p=" << p << "  h=" << h << "  -> phase=" << AS->phase() << "  Q=" << AS->Q());
+            REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+            REQUIRE(AS->Q() == Approx(Q_in).margin(1e-6));
+        }
+    }
+}
+
+TEST_CASE("SVDSBTL backend PSmass_INPUTS on the bubble/dew line stays two-phase (issue #3190)",
+          "[SVDSBTL][twophase][ps_dome][regression][issue_3190][water][slow]") {
+    // Entropy twin of the HmassP bubble/dew-line round-trip above.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
+
+    const double p_tri = AS->p_triple();
+    const double p_crit = AS->p_critical();
+    for (const double Q_in : {0.0, 1.0}) {
+        for (int i = 1; i <= 12; ++i) {
+            const double p = p_tri + (p_crit - p_tri) * (static_cast<double>(i) / 13.0);
+            AS->update(CoolProp::PQ_INPUTS, p, Q_in);
+            const double s = AS->smass();
+            AS->update(CoolProp::PSmass_INPUTS, p, s);
+            INFO("Q_in=" << Q_in << "  p=" << p << "  s=" << s << "  -> phase=" << AS->phase() << "  Q=" << AS->Q());
+            REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+            REQUIRE(AS->Q() == Approx(Q_in).margin(1e-6));
+        }
+    }
+}
+
 TEST_CASE("SVDSBTL backend PS lookup matches HEOS within tolerance", "[SVDSBTL][ps][water][slow]") {
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", "Water"));
     auto heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
