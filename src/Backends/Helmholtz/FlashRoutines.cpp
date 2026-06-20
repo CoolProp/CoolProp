@@ -2629,6 +2629,25 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                                         Tmin, Tmax, get_parameter_information(other, "short").c_str(), value, rho_target));
             }
         }
+
+        // Verify the mixture result reproduces BOTH requested inputs (#3148/#3192): the density
+        // (matched by the inner P-sweep) and the caloric H/S/U (matched by the outer T-sweep).
+        // TOMS748 can return a bracket endpoint where these are not actually hit (e.g. a
+        // discontinuity from a phase misclassification), so without this check the flash could
+        // SILENTLY return a wrong state.  Mirrors the HSU_P / DHSU_T guards.
+        {
+            const double resid_cal = static_cast<double>(HEOS.keyed_output(other) - value);
+            const double resid_rho = static_cast<double>(HEOS.keyed_output(iDmolar) - rho_target);
+            const double scale_cal = std::abs(static_cast<double>(value)) + 1.0;
+            const double scale_rho = std::abs(static_cast<double>(rho_target)) + 1.0;
+            if (!ValidNumber(resid_cal) || std::abs(resid_cal) > 1e-6 * scale_cal || !ValidNumber(resid_rho)
+                || std::abs(resid_rho) > 1e-6 * scale_rho) {
+                throw ValueError(format("HSU_D_flash for mixture did not converge to the specification: caloric residual %g "
+                                        "(target %s=%g), density residual %g (target %g) -- the (T,p) flash is misclassifying the phase",
+                                        resid_cal, get_parameter_information(other, "short").c_str(), static_cast<double>(value), resid_rho,
+                                        static_cast<double>(rho_target)));
+            }
+        }
     }
 }
 
@@ -4064,6 +4083,23 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                         format("DHSU_T_flash P-sweep for mixture: no bracket found scanning P in [%Lg, %Lg] at T=%Lg "
                                "for target %s=%Lg",
                                Pmin_bound, Pmax_bound, T, get_parameter_information(other, "short").c_str(), value));
+                }
+            }
+
+            // Verify the mixture result reproduces the requested property (#3148/#3192).  The
+            // P-sweep + TOMS748 (and the fast-path density sweep) can return a state where
+            // keyed_output(other) != value -- e.g. a discontinuity from a phase misclassification
+            // -- so without this check the flash could SILENTLY return a wrong state.  D+T is a
+            // direct evaluation and needs no check; H/S/U at fixed T solve for the state and must
+            // be verified.  Mirrors the HSU_P guard.
+            if (other != iDmolar) {
+                const double resid_dhsu = static_cast<double>(HEOS.keyed_output(other) - value);
+                const double scale_dhsu = std::abs(static_cast<double>(value)) + 1.0;
+                if (!ValidNumber(resid_dhsu) || std::abs(resid_dhsu) > 1e-6 * scale_dhsu) {
+                    throw ValueError(format("DHSU_T_flash for mixture did not converge to the specification: residual %g "
+                                            "(target %s=%g) at T=%g K -- the (T,p) flash is misclassifying the phase for this mixture",
+                                            resid_dhsu, get_parameter_information(other, "short").c_str(), static_cast<double>(value),
+                                            static_cast<double>(HEOS.T())));
                 }
             }
         }
