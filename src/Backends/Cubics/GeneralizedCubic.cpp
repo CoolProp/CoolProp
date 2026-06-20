@@ -299,15 +299,15 @@ double AbstractCubic::d3_am_term_dxidxjdxk(double tau, const std::vector<double>
 double AbstractCubic::bm_term(const std::vector<double>& x) {
     double summer = 0;
     for (int i = N - 1; i >= 0; --i) {
-        summer += x[i] * b0_ii(i);
+        summer += x[i] * b0i_cached(i);
     }
     return summer;
 }
 double AbstractCubic::d_bm_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent) {
     if (xN_independent) {
-        return b0_ii(i);
+        return b0i_cached(i);
     } else {
-        return b0_ii(i) - b0_ii(N - 1);
+        return b0i_cached(i) - b0i_cached(N - 1);
     }
 }
 double AbstractCubic::d2_bm_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {

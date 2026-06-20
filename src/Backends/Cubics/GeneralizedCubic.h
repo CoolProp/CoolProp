@@ -199,6 +199,19 @@ class AbstractCubic
         m_aux_tau_cache = tau;
     }
 
+    /// Per-component covolume b_i = b0_ii(i).  Constant for the object's lifetime (it depends only on
+    /// Tc[i]/pc[i], which never change after construction), so it is filled once on first use instead of
+    /// re-evaluating the closed-form b_i on every bm_term/d_bm_term call (a flash hotspot).
+    std::vector<double> m_b0_cache;
+    double b0i_cached(std::size_t i) {
+        if (m_b0_cache.empty()) {
+            m_b0_cache.resize(N);
+            for (int j = 0; j < N; ++j)
+                m_b0_cache[j] = b0_ii(j);
+        }
+        return m_b0_cache[i];
+    }
+
    public:
     /**
      \brief The abstract base clase for the concrete implementations of the cubic equations of state
