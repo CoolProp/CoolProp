@@ -266,11 +266,13 @@ class AbstractCubic
     /// Set the entire kij matrix in one shot
     void set_kmat(const std::vector<std::vector<double>>& k) {
         this->k = k;
+        m_aux_tau_cache = std::numeric_limits<double>::quiet_NaN();  // k_ij is baked into m_aij_cache; force a rebuild
     };
     /// Set the kij factor for the ij pair
     void set_kij(std::size_t i, std::size_t j, double val) {
         k[i][j] = val;
         k[j][i] = val;
+        m_aux_tau_cache = std::numeric_limits<double>::quiet_NaN();  // k_ij is baked into m_aij_cache; force a rebuild
     }
     /// Get the kij factor for the ij pair
     double get_kij(std::size_t i, std::size_t j) {

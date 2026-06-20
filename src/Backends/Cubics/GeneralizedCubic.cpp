@@ -238,6 +238,7 @@ namespace {
 constexpr double k_binom[5][5] = {{1, 0, 0, 0, 0}, {1, 1, 0, 0, 0}, {1, 2, 1, 0, 0}, {1, 3, 3, 1, 0}, {1, 4, 6, 4, 1}};
 }  // namespace
 double AbstractCubic::am_term(double tau, const std::vector<double>& x, std::size_t itau) {
+    if (itau > 4) throw -1;  // only tau-derivatives 0..4 are cached (matches the legacy aij_term contract)
     _ensure_aux_cache(tau);
     // Geometric-mean collapse of the k_ij = 0 part:  sum_p C(itau,p) (sum_i x_i s_i^(p)) (sum_j x_j s_j^(itau-p))
     std::array<double, 5> S = {0, 0, 0, 0, 0};
@@ -266,6 +267,7 @@ double AbstractCubic::am_term(double tau, const std::vector<double>& x, std::siz
     return val;
 }
 double AbstractCubic::d_am_term_dxi(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, bool xN_independent) {
+    if (itau > 4) throw -1;  // only tau-derivatives 0..4 are cached (matches the legacy aij_term contract)
     _ensure_aux_cache(tau);
     const auto& A = m_aij_cache;
     if (xN_independent) {
@@ -284,6 +286,7 @@ double AbstractCubic::d_am_term_dxi(double tau, const std::vector<double>& x, st
 }
 double AbstractCubic::d2_am_term_dxidxj(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, std::size_t j,
                                         bool xN_independent) {
+    if (itau > 4) throw -1;  // only tau-derivatives 0..4 are cached (matches the legacy aij_term contract)
     _ensure_aux_cache(tau);
     const auto& A = m_aij_cache;
     if (xN_independent) {

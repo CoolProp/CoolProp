@@ -5205,6 +5205,26 @@ TEST_CASE("Qmass: SRK cubic mixture output works after Q-pair flash", "[Qmass][c
     CHECK(AS2->Q() == Catch::Approx(0.0).epsilon(1e-10));
 }
 
+TEST_CASE("Cubic: changing kij invalidates the cached a_ij at the same tau (GitHub #3192)", "[cubic][mixture]") {
+    // The per-tau a_ij cache bakes in (1 - k_ij), keyed on tau alone.  Changing k_ij and
+    // re-evaluating a_m at the SAME tau must reflect the new k_ij -- so set_kij must invalidate
+    // the cache.  Pre-fix the second am_term call returned the stale a_ij (old k_ij).  Probed at
+    // the cubic level on purpose: a full update() flash evaluates at several tau and rebuilds the
+    // cache as a side effect, which would mask the staleness.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PR", "Methane&Ethane"));
+    auto* ACB = dynamic_cast<CoolProp::AbstractCubicBackend*>(AS.get());
+    REQUIRE(ACB != nullptr);
+    auto& cubic = ACB->get_cubic();
+    const double tau = cubic->get_Tr() / 300.0;
+    // Probe aij_term: it returns the cached a_ij = (1 - k_ij)*sqrt(a_i*a_j) matrix that the gradient
+    // and Hessian (d_am_term/d2_am_term) consume.  (am_term itself reads k live via the geometric
+    // collapse, so it would not expose the staleness.)
+    const double aij_k0 = cubic->aij_term(tau, 0, 1, 0);   // builds the a_ij cache at this tau (k01 = 0)
+    ACB->set_binary_interaction_double(0, 1, "kij", 0.1);  // public API -> set_kij -> must invalidate
+    const double aij_k1 = cubic->aij_term(tau, 0, 1, 0);   // same tau -> must reflect the new k01
+    CHECK(std::abs(aij_k1 - aij_k0) > 1e-6 * std::abs(aij_k0));
+}
+
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
     // --- Cubic (SRK) ---
     // 1. Structurally invalid JSON must throw unconditionally.
