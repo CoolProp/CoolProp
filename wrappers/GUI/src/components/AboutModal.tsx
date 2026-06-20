@@ -37,6 +37,25 @@ export default function AboutModal({ onClose }: Props) {
             </a>
           </p>
 
+          <div className="about-sponsors">
+            <div className="about-sponsors-title">Sponsors</div>
+            <p>
+              Free code signing on Windows provided by{" "}
+              <a
+                href="https://about.signpath.io/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                SignPath.io
+              </a>
+              , certificate by{" "}
+              <a href="https://signpath.org/" target="_blank" rel="noreferrer">
+                SignPath Foundation
+              </a>
+              .
+            </p>
+          </div>
+
           <details className="about-notices">
             <summary>Third-party notices</summary>
             <pre className="about-notices-pre">{NOTICES}</pre>
