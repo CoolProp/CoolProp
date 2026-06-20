@@ -360,7 +360,7 @@ double AbstractCubic::aij_term(double tau, std::size_t i, std::size_t j, std::si
 }
 double AbstractCubic::psi_minus(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta) {
     if (itau > 0) return 0.0;
-    double bmc = bm_term(x) - cm_term();  // appears only in the form (b-c) in the equations
+    double bmc = m_bm - cm_term();  // appears only in the form (b-c) in the equations
     double bracket = 1 - bmc * delta * rho_r;
 
     switch (idelta) {
@@ -381,7 +381,7 @@ double AbstractCubic::psi_minus(double delta, const std::vector<double>& x, std:
 double AbstractCubic::d_psi_minus_dxi(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta, std::size_t i,
                                       bool xN_independent) {
     if (itau > 0) return 0.0;
-    double bmc = bm_term(x) - cm_term();  // appears only in the form (b-c) in the equations
+    double bmc = m_bm - cm_term();  // appears only in the form (b-c) in the equations
     double db_dxi = d_bm_term_dxi(x, i, xN_independent);
     double bracket = 1 - bmc * delta * rho_r;
 
@@ -403,7 +403,7 @@ double AbstractCubic::d_psi_minus_dxi(double delta, const std::vector<double>& x
 double AbstractCubic::d2_psi_minus_dxidxj(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta, std::size_t i,
                                           std::size_t j, bool xN_independent) {
     if (itau > 0) return 0.0;
-    double bmc = bm_term(x) - cm_term();  // appears only in the form (b-c) in the equations
+    double bmc = m_bm - cm_term();  // appears only in the form (b-c) in the equations
     double db_dxi = d_bm_term_dxi(x, i, xN_independent), db_dxj = d_bm_term_dxi(x, j, xN_independent),
            d2b_dxidxj = d2_bm_term_dxidxj(x, i, j, xN_independent);
     double bracket = 1 - bmc * delta * rho_r;
@@ -429,7 +429,7 @@ double AbstractCubic::d2_psi_minus_dxidxj(double delta, const std::vector<double
 double AbstractCubic::d3_psi_minus_dxidxjdxk(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta, std::size_t i,
                                              std::size_t j, std::size_t k, bool xN_independent) {
     if (itau > 0) return 0.0;
-    double bmc = bm_term(x) - cm_term();  // appears only in the form (b-c) in the equations
+    double bmc = m_bm - cm_term();  // appears only in the form (b-c) in the equations
     double db_dxi = d_bm_term_dxi(x, i, xN_independent), db_dxj = d_bm_term_dxi(x, j, xN_independent), db_dxk = d_bm_term_dxi(x, k, xN_independent),
            d2b_dxidxj = d2_bm_term_dxidxj(x, i, j, xN_independent), d2b_dxidxk = d2_bm_term_dxidxj(x, i, k, xN_independent),
            d2b_dxjdxk = d2_bm_term_dxidxj(x, j, k, xN_independent), d3b_dxidxjdxk = d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent);
@@ -447,7 +447,7 @@ double AbstractCubic::d3_psi_minus_dxidxjdxk(double delta, const std::vector<dou
     }
 }
 double AbstractCubic::PI_12(double delta, const std::vector<double>& x, std::size_t idelta) {
-    double bm = bm_term(x);
+    double bm = m_bm;
     double cm = cm_term();
     switch (idelta) {
         case 0:
@@ -465,7 +465,7 @@ double AbstractCubic::PI_12(double delta, const std::vector<double>& x, std::siz
     }
 }
 double AbstractCubic::d_PI_12_dxi(double delta, const std::vector<double>& x, std::size_t idelta, std::size_t i, bool xN_independent) {
-    double bm = bm_term(x);
+    double bm = m_bm;
     double cm = cm_term();
     double db_dxi = d_bm_term_dxi(x, i, xN_independent);
     switch (idelta) {
@@ -485,7 +485,7 @@ double AbstractCubic::d_PI_12_dxi(double delta, const std::vector<double>& x, st
 }
 double AbstractCubic::d2_PI_12_dxidxj(double delta, const std::vector<double>& x, std::size_t idelta, std::size_t i, std::size_t j,
                                       bool xN_independent) {
-    double bm = bm_term(x);
+    double bm = m_bm;
     double cm = cm_term();
     double db_dxi = d_bm_term_dxi(x, i, xN_independent), db_dxj = d_bm_term_dxi(x, j, xN_independent),
            d2b_dxidxj = d2_bm_term_dxidxj(x, i, j, xN_independent);
@@ -511,7 +511,7 @@ double AbstractCubic::d2_PI_12_dxidxj(double delta, const std::vector<double>& x
 }
 double AbstractCubic::d3_PI_12_dxidxjdxk(double delta, const std::vector<double>& x, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k,
                                          bool xN_independent) {
-    double bm = bm_term(x);
+    double bm = m_bm;
     double cm = cm_term();
     double db_dxi = d_bm_term_dxi(x, i, xN_independent), db_dxj = d_bm_term_dxi(x, j, xN_independent), db_dxk = d_bm_term_dxi(x, k, xN_independent),
            d2b_dxidxj = d2_bm_term_dxidxj(x, i, j, xN_independent), d2b_dxidxk = d2_bm_term_dxidxj(x, i, k, xN_independent),
@@ -705,10 +705,12 @@ double AbstractCubic::d3_tau_times_a_dxidxjdxk(double tau, const std::vector<dou
     }
 }
 double AbstractCubic::alphar(double tau, double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta) {
+    _sync_comp(x);  // refresh the composition-scoped bm cache once for this evaluation
     return psi_minus(delta, x, itau, idelta) - tau_times_a(tau, x, itau) / (R_u * T_r) * psi_plus(delta, x, idelta);
 }
 double AbstractCubic::d_alphar_dxi(double tau, double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta, std::size_t i,
                                    bool xN_independent) {
+    _sync_comp(x);
     return (d_psi_minus_dxi(delta, x, itau, idelta, i, xN_independent)
             - 1 / (R_u * T_r)
                 * (d_tau_times_a_dxi(tau, x, itau, i, xN_independent) * psi_plus(delta, x, idelta)
@@ -716,6 +718,7 @@ double AbstractCubic::d_alphar_dxi(double tau, double delta, const std::vector<d
 }
 double AbstractCubic::d2_alphar_dxidxj(double tau, double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta, std::size_t i,
                                        std::size_t j, bool xN_independent) {
+    _sync_comp(x);
     return (d2_psi_minus_dxidxj(delta, x, itau, idelta, i, j, xN_independent)
             - 1 / (R_u * T_r)
                 * (d2_tau_times_a_dxidxj(tau, x, itau, i, j, xN_independent) * psi_plus(delta, x, idelta)
@@ -725,6 +728,7 @@ double AbstractCubic::d2_alphar_dxidxj(double tau, double delta, const std::vect
 }
 double AbstractCubic::d3_alphar_dxidxjdxk(double tau, double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta, std::size_t i,
                                           std::size_t j, std::size_t k, bool xN_independent) {
+    _sync_comp(x);
     return (d3_psi_minus_dxidxjdxk(delta, x, itau, idelta, i, j, k, xN_independent)
             - 1 / (R_u * T_r)
                 * (d2_tau_times_a_dxidxj(tau, x, itau, i, j, xN_independent) * d_psi_plus_dxi(delta, x, idelta, k, xN_independent)
