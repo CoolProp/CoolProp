@@ -791,6 +791,102 @@ TEST_CASE("PT flash with built phase envelope", "[michelsen][phase_envelope]") {
     }
 }
 
+TEST_CASE("PQ/QT flash with built envelope at 0<Q<1 (GH #3192)", "[michelsen][phase_envelope]") {
+    // Regression for GH #3192.  With a built phase envelope a mixture PQ/QT flash for a
+    // genuine two-phase state (0 < Q < 1) used to route to newton_raphson_twophase, whose
+    // residual vectors r/err_rel were Eigen::Vector2d (fixed size 2) but need 2N-1 (>=3)
+    // entries -> out-of-bounds write -> HARD CRASH (process abort, not a C++ exception, so it
+    // cannot be caught — pre-fix this test binary terminates here).  The two-phase solver is
+    // now hardened (step damping + non-finite/convergence guards), so the envelope fast path
+    // is used and must (a) not crash and (b) match the blind (no-envelope) flash closely; any
+    // solver failure falls back to the blind path.
+    std::vector<double> z = {0.5, 0.5};
+
+    auto make_pe = [&]() {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        AS->build_phase_envelope("");
+        return AS;
+    };
+    auto make_blind = [&]() {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane"));
+        AS->set_mole_fractions(z);
+        return AS;
+    };
+
+    SECTION("PQ flash, P=1e5, Q=0.5 (exact reporter repro)") {
+        auto AS = make_pe();
+        auto ref = make_blind();
+        // Guard: the fix is only exercised if the envelope is actually built; otherwise the
+        // dispatch already falls through to the blind branch and the test is vacuous.
+        REQUIRE(AS->get_phase_envelope_data().built);
+        CHECK_NOTHROW(AS->update(PQ_INPUTS, 1e5, 0.5));
+        ref->update(PQ_INPUTS, 1e5, 0.5);
+        CHECK(AS->phase() == iphase_twophase);
+        CHECK(std::isfinite(AS->T()));
+        CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-6));
+        CHECK(AS->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-6));
+    }
+
+    SECTION("QT flash, Q=0.5, T=180 K") {
+        auto AS = make_pe();
+        auto ref = make_blind();
+        REQUIRE(AS->get_phase_envelope_data().built);
+        CHECK_NOTHROW(AS->update(QT_INPUTS, 0.5, 180.0));
+        ref->update(QT_INPUTS, 0.5, 180.0);
+        CHECK(AS->phase() == iphase_twophase);
+        CHECK(AS->p() == Catch::Approx(ref->p()).epsilon(1e-6));
+        CHECK(AS->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-6));
+    }
+
+    SECTION("Dew/bubble (Q==0, Q==1) still use the envelope fast path and stay accurate") {
+        auto AS = make_pe();
+        auto ref = make_blind();
+        REQUIRE(AS->get_phase_envelope_data().built);
+        CHECK_NOTHROW(AS->update(PQ_INPUTS, 1e5, 1.0));  // dew point
+        ref->update(PQ_INPUTS, 1e5, 1.0);
+        CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-6));
+        CHECK_NOTHROW(AS->update(PQ_INPUTS, 1e5, 0.0));  // bubble point
+        ref->update(PQ_INPUTS, 1e5, 0.0);
+        CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-6));
+    }
+
+    SECTION("pq -> pt -> q roundtrip recovers the imposed quality") {
+        // The reporter's accuracy metric: a two-phase PQ flash followed by a PT flash at the
+        // recovered T must return the original quality.  Before the rework the envelope branch
+        // returned its unconverged interpolation guess and the roundtrip was off by ~0.4%.
+        auto AS = make_pe();
+        REQUIRE(AS->get_phase_envelope_data().built);
+        AS->update(PQ_INPUTS, 1e5, 0.5);
+        const double T_2ph = AS->T();
+        auto rt = make_blind();
+        rt->update(PT_INPUTS, 1e5, T_2ph);
+        CHECK(rt->Q() == Catch::Approx(0.5).epsilon(1e-4));
+    }
+}
+
+TEST_CASE("PQ flash with built envelope, ternary two-phase (GH #3192, N>=3)", "[michelsen][phase_envelope]") {
+    // Locks in N>=3.  The Newton-step damping bounds the dependent mole fraction x[N-1]=1-sum as
+    // well as the N-1 independent ones, so a ternary two-phase PQ flash must converge through the
+    // envelope path and match the blind solver (verified during review to ~1e-9 across 0.5-4 MPa).
+    std::vector<double> z = {0.4, 0.35, 0.25};
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+    AS->set_mole_fractions(z);
+    AS->build_phase_envelope("");
+    // Guard against vacuous coverage: if the envelope did not build, the dispatch would silently
+    // use the blind path and this test would no longer exercise the envelope-guided solver.
+    REQUIRE(AS->get_phase_envelope_data().built);
+    auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+    ref->set_mole_fractions(z);
+
+    CHECK_NOTHROW(AS->update(PQ_INPUTS, 1e6, 0.5));
+    ref->update(PQ_INPUTS, 1e6, 0.5);
+    CHECK(AS->phase() == iphase_twophase);
+    CHECK(std::isfinite(AS->T()));
+    CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-5));
+    CHECK(AS->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-5));
+}
+
 // ============================================================================
 // Phase-envelope-guided PT flash tests
 //

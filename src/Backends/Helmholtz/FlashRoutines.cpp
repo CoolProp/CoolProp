@@ -975,9 +975,28 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
         // Load the outputs
         HEOS._phase = iphase_twophase;
     } else {
+        // With a phase envelope available, try the envelope-guided fast path: it warm-starts
+        // the dew/bubble and two-phase solves from the envelope.  The two-phase solver now
+        // damps its Newton step and reports non-convergence rather than returning a stale
+        // guess (GH #3192); as a safety net, any failure falls back to the blind
+        // successive-substitution + newton_raphson_saturation path, which is robust to ~1e-9%.
+        bool solved_with_envelope = false;
         if (HEOS.PhaseEnvelope.built) {
-            PT_Q_flash_mixtures(HEOS, iT, HEOS._T);
-        } else {
+            // PT_Q_flash_mixtures mutates HEOS._T/_p while seeding its solve.  Save the caller's
+            // inputs and restore them on failure so the blind fallback runs from the original
+            // state.  (The blind QT path only reads the imposed HEOS._T, which the seed preserves,
+            // so this is defensive; it keeps the contract explicit if either side changes.)
+            const CoolPropDbl T_in = HEOS._T, p_in = HEOS._p;
+            try {
+                PT_Q_flash_mixtures(HEOS, iT, HEOS._T);
+                solved_with_envelope = true;
+            } catch (...) {
+                HEOS._T = T_in;
+                HEOS._p = p_in;
+                solved_with_envelope = false;  // fall back to the blind solver below
+            }
+        }
+        if (!solved_with_envelope) {
             // Set some input options
             SaturationSolvers::mixture_VLE_IO options;
             options.sstype = SaturationSolvers::imposed_T;
@@ -1246,9 +1265,24 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
             HEOS._T = HEOS.SatL->T();
         }
     } else {
+        // Try the envelope-guided fast path when an envelope is available; on any failure fall
+        // back to the blind successive-substitution + newton_raphson_saturation path.  See
+        // QT_flash above (GH #3192).
+        bool solved_with_envelope = false;
         if (HEOS.PhaseEnvelope.built) {
-            PT_Q_flash_mixtures(HEOS, iP, HEOS._p);
-        } else {
+            // Save/restore the caller's inputs around the envelope solve (see QT_flash): the blind
+            // PQ fallback reads the imposed HEOS._p (preserved by the seed), so this is defensive.
+            const CoolPropDbl T_in = HEOS._T, p_in = HEOS._p;
+            try {
+                PT_Q_flash_mixtures(HEOS, iP, HEOS._p);
+                solved_with_envelope = true;
+            } catch (...) {
+                HEOS._T = T_in;
+                HEOS._p = p_in;
+                solved_with_envelope = false;  // fall back to the blind solver below
+            }
+        }
+        if (!solved_with_envelope) {
 
             // Set some input options
             SaturationSolvers::mixture_VLE_IO io;
@@ -1424,6 +1458,14 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parame
 
     PhaseEnvelopeData& env = HEOS.PhaseEnvelope;
 
+    // The CubicInterp guesses below use a 4-point stencil [i-1 .. i+2], so the envelope must
+    // hold at least 4 points for the index clamps to keep that stencil in range.  A
+    // successfully built envelope always has many more, but guard defensively: too few points
+    // -> throw, so the caller's try/catch falls back to the blind solver (GH #3192).
+    if (env.T.size() < 4) {
+        throw ValueError(format("Phase envelope has too few points (%d) for envelope-guided flash", static_cast<int>(env.T.size())));
+    }
+
     enum quality_options
     {
         SATURATED_LIQUID,
@@ -1458,16 +1500,12 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parame
 
             std::size_t& imax = solutions[0];
 
-            // Shift the solution if needed to ensure that imax+2 and imax-1 are both in range
-            if (imax + 2 >= env.T.size()) {
-                imax--;
-            } else if (imax == 0) {
-                imax++;
-            }
-            // Here imax+2 or imax-1 is still possibly out of range:
-            // 1. If imax initially is 1, and env.T.size() <= 3, then imax will become 0.
-            // 2. If imax initially is 0, and env.T.size() <= 2, then imax will become MAX_UINT.
-            // 3. If imax+2 initially is more than env.T.size(), then single decrement will not bring it to range
+            // Clamp imax so the 4-point CubicInterp stencil [imax-1 .. imax+2] stays within
+            // [0, env.T.size()-1].  env.T.size() >= 4 is guaranteed above, so size-3 >= 1 and
+            // the two clamps are consistent (ported from PR #2720, GH #3192).  The previous
+            // imax--/imax++ shift could still leave an index out of range for short envelopes.
+            imax = std::min(imax, env.T.size() - 3);  // ensures imax+2 <= env.T.size()-1
+            imax = std::max(imax, std::size_t(1));    // ensures imax-1 >= 0
 
             SaturationSolvers::newton_raphson_saturation NR;
             SaturationSolvers::newton_raphson_saturation_options IO;
@@ -1540,6 +1578,17 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parame
         }
         std::size_t iliq = liquid_solutions[0], ivap = vapor_solutions[0];
 
+        // Clamp ivap and iliq so the 4-point CubicInterp stencil [i-1 .. i+2] below stays
+        // within [0, env.T.size()-1].  Without this an envelope intersection at index 0 or
+        // near the end indexes out of bounds (size_t underflow on i-1) -> UB, which the
+        // try/catch fallback cannot trap.  env.T.size() >= 4 is guaranteed above, so
+        // size-3 >= 1 and the min/max clamps are consistent (ported from PR #2720, GH #3192).
+        const std::size_t Nenv = env.T.size();
+        ivap = std::min(ivap, Nenv - 3);
+        iliq = std::min(iliq, Nenv - 3);
+        ivap = std::max(ivap, std::size_t(1));
+        iliq = std::max(iliq, std::size_t(1));
+
         SaturationSolvers::newton_raphson_twophase NR;
         SaturationSolvers::newton_raphson_twophase_options IO;
         IO.beta = HEOS._Q;
@@ -1604,6 +1653,17 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parame
         }
         IO.x[IO.x.size() - 1] = 1 - std::accumulate(IO.x.begin(), IO.x.end() - 1, 0.0);
         IO.y[IO.y.size() - 1] = 1 - std::accumulate(IO.y.begin(), IO.y.end() - 1, 0.0);
+
+        // Refine the envelope-interpolated composition/density guess with a few bounded
+        // successive-substitution steps before the Newton solve.  SS updates x,y via
+        // x_and_y_from_K + normalize, so they stay inside the simplex by construction and the
+        // (damped) Newton-Raphson gets a feasible, fugacity-consistent start, improving
+        // robustness and the round-trip accuracy (ported from PR #2720, GH #3192).  SS runs at
+        // fixed (T,p), so seed both from the interpolated guess; T (or p) is then refined by NR.
+        HEOS._T = IO.T;
+        HEOS._p = IO.p;
+        SaturationSolvers::successive_substitution_guessrho(HEOS, IO.x, IO.y, IO.rhomolar_liq, IO.rhomolar_vap, IO.z, 5);
+
         NR.call(HEOS, IO);
     }
 }
