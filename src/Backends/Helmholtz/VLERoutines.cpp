@@ -1778,6 +1778,10 @@ void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBack
     const std::size_t N = z.size();
     std::vector<CoolPropDbl> lnK(N, 0.0), K(N);
     for (int ss = 0; ss < num_steps; ++ss) {
+        // Preserve the current (last-good) densities so a bad density root this step can be
+        // rolled back: update_TP_guessrho overwrites rhomolar_liq/vap before the finite check
+        // below, and on !finite the caller's Newton solver must still receive a valid seed.
+        const CoolPropDbl rho_liq_prev = rhomolar_liq, rho_vap_prev = rhomolar_vap;
         HEOS.SatL->set_mole_fractions(x);
         HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
         HEOS.SatV->set_mole_fractions(y);
@@ -1804,8 +1808,13 @@ void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBack
             g1 += z[i] * (1.0 - 1.0 / K[i]);
         }
         // A non-finite fugacity coefficient (e.g. a bad density root) makes this SS step
-        // meaningless; stop and keep the last valid x/y/rho for the Newton solver.
-        if (!finite) break;
+        // meaningless; restore the last-good densities (x/y are not yet updated this step) and
+        // stop, so the Newton solver receives the last valid x/y/rho.
+        if (!finite) {
+            rhomolar_liq = rho_liq_prev;
+            rhomolar_vap = rho_vap_prev;
+            break;
+        }
 
         CoolPropDbl beta;
         if (g0 < 0)
@@ -2650,9 +2659,15 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         for (int rr_iter = 0; rr_iter < 50; ++rr_iter) {
             CoolPropDbl r = 0, dr = 0;
             for (std::size_t i = 0; i < N; ++i) {
-                double Ki = std::exp(lnK[i]);
-                double term = Ki - 1.0;
-                double denom = 1.0 + beta * term;
+                // Clamp lnK before exp() so a wide-boiling step (lnK grows unbounded via the
+                // GDEM acceleration that feeds this solve) cannot overflow Ki -- nor term*term /
+                // denom*denom below -- to +inf and poison r/dr with NaN.  At the clamp Ki
+                // dominates, so term/denom -> 1/beta and term^2/denom^2 -> 1/beta^2, i.e. the
+                // exact Ki->inf asymptotic limits; 350 keeps term*term (~exp(2*lnK)) in range.
+                // CoolPropDbl (not double) matches lnK's storage type.
+                CoolPropDbl Ki = std::exp(std::min(lnK[i], static_cast<CoolPropDbl>(350.0)));
+                CoolPropDbl term = Ki - 1.0;
+                CoolPropDbl denom = 1.0 + beta * term;
                 r += IO.z[i] * term / denom;
                 dr -= IO.z[i] * term * term / (denom * denom);
             }
@@ -2671,7 +2686,9 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             beta = beta_new;
         }
         for (std::size_t i = 0; i < N; ++i) {
-            double Ki = std::exp(lnK[i]);
+            // Same clamp as the residual loop: keeps a heavy component's Ki finite so x_i -> 0
+            // and y_i -> z_i/beta (the correct Ki->inf limits) instead of inf/NaN.
+            CoolPropDbl Ki = std::exp(std::min(lnK[i], static_cast<CoolPropDbl>(350.0)));
             IO.x[i] = IO.z[i] / (1.0 + beta * (Ki - 1.0));
             IO.y[i] = Ki * IO.x[i];
         }
