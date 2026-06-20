@@ -1361,9 +1361,7 @@ TEST_CASE("SVDSBTLBackend uses surrogate when source has no SuperAncillary", "[S
 // supported input-pair surface at construction instead of lazy-loading
 // the secondary pairs (DmassT / PSmass) on first query.
 TEST_CASE("SVDSBTL prebuild option eagerly builds all surfaces", "[SBTL][SVDSBTL][prebuild][slow]") {
-    auto contains = [](const std::vector<CoolProp::input_pairs>& v, CoolProp::input_pairs p) {
-        return std::find(v.begin(), v.end(), p) != v.end();
-    };
+    auto contains = [](const std::vector<CoolProp::input_pairs>& v, CoolProp::input_pairs p) { return std::find(v.begin(), v.end(), p) != v.end(); };
     // Small grid keeps the four dense SVD builds fast for a unit test.
     const char* small_grid = R"({"grid":{"NT":40,"NR":80,"rank":10}})";
     const char* small_grid_prebuild = R"({"prebuild":true,"grid":{"NT":40,"NR":80,"rank":10}})";
@@ -1371,8 +1369,7 @@ TEST_CASE("SVDSBTL prebuild option eagerly builds all surfaces", "[SBTL][SVDSBTL
     // Default (lazy): only the eager pairs PT + HmassP are registered at
     // construction; DmassT / PSmass are absent until first queried.
     {
-        auto AS = std::shared_ptr<CoolProp::AbstractState>(
-          CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + small_grid));
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + small_grid));
         auto* be = dynamic_cast<CoolProp::SVDSBTLBackend*>(AS.get());
         REQUIRE(be != nullptr);
         const auto pairs = be->registered_input_pairs();
@@ -1383,8 +1380,8 @@ TEST_CASE("SVDSBTL prebuild option eagerly builds all surfaces", "[SBTL][SVDSBTL
     }
     // prebuild=true: all four supported pairs are registered eagerly.
     {
-        auto AS = std::shared_ptr<CoolProp::AbstractState>(
-          CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + small_grid_prebuild));
+        auto AS =
+          std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SVDSBTL&HEOS", std::string("Water?") + small_grid_prebuild));
         auto* be = dynamic_cast<CoolProp::SVDSBTLBackend*>(AS.get());
         REQUIRE(be != nullptr);
         const auto pairs = be->registered_input_pairs();
@@ -1399,9 +1396,7 @@ TEST_CASE("SVDSBTL&IF97 prebuild skips the unbuildable DmassT surface", "[SBTL][
     if (!source_backend_available("IF97", "Water")) {
         SKIP("IF97 backend not available; skipping SVDSBTL&IF97 prebuild test");
     }
-    auto contains = [](const std::vector<CoolProp::input_pairs>& v, CoolProp::input_pairs p) {
-        return std::find(v.begin(), v.end(), p) != v.end();
-    };
+    auto contains = [](const std::vector<CoolProp::input_pairs>& v, CoolProp::input_pairs p) { return std::find(v.begin(), v.end(), p) != v.end(); };
     // DmassT can't be sampled on a (D,T) grid from IF97 (all-NaN matrix),
     // so prebuild builds PT + HmassP + PSmass but leaves DmassT out rather
     // than throwing at construction.
@@ -1454,7 +1449,7 @@ TEST_CASE("SVDSBTL prebuild shares the surface cache with a plain instance", "[S
     heos->update(CoolProp::PT_INPUTS, 5.0e5, 400.0);
     plain->update(CoolProp::PSmass_INPUTS, 5.0e5, heos->smass());
     REQUIRE(plain->rhomass() == Approx(heos->rhomass()).epsilon(1e-1));  // coarse grid; just confirms it resolved
-    REQUIRE(count_ps_files() == 1);  // shared, not a second opthash
+    REQUIRE(count_ps_files() == 1);                                      // shared, not a second opthash
 
     CoolProp::set_config_string(ALTERNATIVE_SVDTABLES_DIRECTORY, saved);
     fs::remove_all(tmpdir, ec);
