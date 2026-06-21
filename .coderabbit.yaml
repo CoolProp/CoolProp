@@ -1,0 +1,14 @@
+# CodeRabbit configuration
+# Schema: https://docs.coderabbit.ai/reference/configuration
+language: en-US
+
+reviews:
+  # Project-wide guidance for the reviewer.
+  path_instructions:
+    - path: "**"
+      instructions: >
+        Do not comment on identifier naming conventions or casing style.
+        In particular, never suggest renaming identifiers to camelCase, and
+        do not flag snake_case, PascalCase, or other casing as an issue.
+        Naming style is a deliberate project choice and is out of scope for
+        review.
