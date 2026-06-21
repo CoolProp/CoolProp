@@ -138,6 +138,10 @@ high-level interfaces.
 ```jsonc
 {
   "schema": 1,
+  "pmin": 611.655,                         // absolute Pa; lower-pressure bound
+                                           // for the PT/PH/PS surfaces.
+                                           // Default = fluid p_triple; must be
+                                           // >= p_triple (no sat boundary below).
   "grid": { "NT": 200, "NR": 800, "rank": 20 },
   "properties": {
     "transport": "auto"                    // auto | on | off

@@ -28,6 +28,11 @@ inline constexpr const char kSVDSBTLOptionsSchemaJson[] = R"JSON({
       "type": "boolean",
       "description": "When true, eagerly build every supported input-pair surface (PT, HmassP, DmassT, PSmass) at construction instead of lazy-loading the secondary pairs on first query. Opt-in complement to the default lazy loading: materializes the whole fluid up front (docs / benchmarking / warm-cache pre-fill) and turns a build/env failure into a loud construction-time error instead of a silent blank later."
     },
+    "pmin": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Lower pressure bound (absolute Pa) for the subcritical PT / HmassP / PSmass surfaces. Defaults to the fluid's triple-point pressure. Must be >= p_triple: the subcritical regions are bounded by the liquid-vapour saturation curve, which does not exist below the triple line. The DmassT surface is temperature-indexed and unaffected."
+    },
     "grid": {
       "type": "object",
       "additionalProperties": false,

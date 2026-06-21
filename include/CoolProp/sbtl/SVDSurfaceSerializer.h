@@ -217,7 +217,17 @@ class SVDSurfaceSerializer
     //           the SUPER grid sample positions and U/slopes shift, so
     //           rev-17 caches must rebuild.  Modest-ratio fluids (Water ~3×,
     //           CO2 ~6×) are unchanged in practice (LOG ≈ LINEAR there).
-    static constexpr int kRevision = 18;
+    //   rev 19: CoolProp-naqt / issue #3189.  The subcritical PT / HmassP /
+    //           PSmass presets lower their default p_min from
+    //           ~1.01-1.03·p_triple to the true triple-point pressure
+    //           (heos.p_triple()), so a PT query at p == p_triple() now
+    //           resolves instead of returning NaN.  The log-p primary axis
+    //           span shifts (lower bottom isobar), so the grid sample
+    //           positions and SVD U/slopes change and rev-18 caches must
+    //           rebuild.  (A non-default `pmin` option already produces a
+    //           distinct cache via the opthash; this rev covers the
+    //           all-defaults "{}" case whose opthash is unchanged.)
+    static constexpr int kRevision = 19;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

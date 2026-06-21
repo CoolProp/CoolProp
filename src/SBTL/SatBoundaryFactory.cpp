@@ -9,6 +9,8 @@
 #include "boost/math/tools/toms748_solve.hpp"
 
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#include "CoolProp/Exceptions.h"
+#include "CoolProp/detail/strings.h"
 #include "CoolProp/region/SuperancillaryBoundaryCurve.h"
 #include "CoolProp/region/SuperancillaryTemperatureBoundaryCurve.h"
 #include "CoolProp/DataStructures.h"
@@ -267,13 +269,45 @@ std::unique_ptr<region::CubicSplineCurve> build_s_isotherm_ceiling(::CoolProp::A
     });
 }
 
-std::pair<double, double> subcritical_pressure_range(::CoolProp::AbstractState& heos) {
+std::pair<double, double> subcritical_pressure_range(::CoolProp::AbstractState& heos, std::optional<double> p_min_override) {
     const double p_crit = heos.p_critical();
-    // Sample HEOS at triple T to get p_triple.  A tiny margin (1%)
-    // helps PQ flashes converge at the boundary.
-    heos.update(::CoolProp::QT_INPUTS, 0.0, heos.Ttriple() * 1.001);
-    const double p_triple = heos.p();
-    return {p_triple * 1.01, 0.999 * p_crit};
+    // True triple-point pressure.  Prefer the fluid's stored p_triple()
+    // (the same value users get back and query against), falling back to
+    // a QT flash at the triple temperature when that is not available
+    // (NaN / non-positive).  The lowest tabulated isobar sits exactly
+    // here so a PT query at p == p_triple() resolves (CoolProp-naqt /
+    // issue #3189): RegionAtlas containment is inclusive and
+    // PQ(p_triple, 0) converges, so build_T_sat can sample the bottom
+    // knot.  The fallback samples at exactly Ttriple (QT there converges
+    // to the true p_triple for every tested fluid); an elevated estimate
+    // would reintroduce the very floor this fix removes.
+    double p_triple = heos.p_triple();
+    if (!std::isfinite(p_triple) || p_triple <= 0.0) {
+        heos.update(::CoolProp::QT_INPUTS, 0.0, heos.Ttriple());
+        p_triple = heos.p();
+    }
+    if (!std::isfinite(p_triple) || p_triple <= 0.0) {
+        throw ValueError("SVDSBTL: unable to resolve a finite, positive triple-point pressure for the subcritical floor.");
+    }
+    double p_min = p_triple;
+    if (p_min_override) {
+        // The subcritical regions are bounded above (in T) by the
+        // liquid-vapour saturation curve, which does not exist below the
+        // triple line.  Reject a non-finite / sub-triple floor loudly
+        // rather than let build_T_sat fail obscurely on a PQ flash below
+        // p_triple, or let a NaN slip past the `< p_triple` test (NaN
+        // compares false) into the axis transform.
+        if (!std::isfinite(*p_min_override) || *p_min_override <= 0.0) {
+            throw ValueError(format("SVDSBTL: pmin (%g Pa) must be a finite, positive pressure.", *p_min_override));
+        }
+        if (*p_min_override < p_triple) {
+            throw ValueError(format("SVDSBTL: pmin (%g Pa) is below the triple-point pressure (%g Pa); the subcritical "
+                                    "surfaces have no saturation boundary below the triple line.",
+                                    *p_min_override, p_triple));
+        }
+        p_min = *p_min_override;
+    }
+    return {p_min, 0.999 * p_crit};
 }
 
 std::pair<double, double> supercritical_pressure_range(::CoolProp::AbstractState& heos) {

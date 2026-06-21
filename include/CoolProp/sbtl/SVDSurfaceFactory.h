@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 #include "CoolProp/AbstractState.h"
 #include "CoolProp/sbtl/SVDSurface.h"
@@ -48,17 +49,35 @@ SVDSurface build_surface(::CoolProp::AbstractState& heos, SurfaceSpec spec, cons
 // changes to build_surface() or downstream consumers.
 namespace presets {
 
+// Build-time knobs shared by the subcritical presets and the backend.
+// Bundling them in one struct means a future knob is a new field here
+// (plus where it is parsed and consumed) — NOT a new positional
+// parameter rippling through every preset signature, the dispatcher,
+// and every call site.
+struct PresetOptions
+{
+    std::size_t NT = 200;    // points along the secondary (non-log) axis
+    std::size_t NR = 800;    // points along the primary (log-p) axis
+    std::int32_t rank = 20;  // SVD truncation rank
+    // Absolute-Pa lower-pressure bound for the PT / HmassP / PSmass
+    // surfaces (the backend's `pmin` option).  nullopt -> default
+    // p_triple floor; must be >= p_triple (see
+    // subcritical_pressure_range).  Ignored by the DmassT preset, which
+    // is temperature-indexed and has no pressure floor.
+    std::optional<double> p_min;
+};
+
 // HmassP_INPUTS preset.  (a, b) = (p, h).  Output properties: rho, T, s, u.
-SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200, std::size_t NR = 800, std::int32_t rank = 20);
+SurfaceSpec ph_subcritical(::CoolProp::AbstractState& heos, const PresetOptions& opts = {});
 
 // PT_INPUTS preset.  (a, b) = (p, T).  Output properties: rho, h, s, u.
-SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200, std::size_t NR = 800, std::int32_t rank = 20);
+SurfaceSpec pt_subcritical(::CoolProp::AbstractState& heos, const PresetOptions& opts = {});
 
 // PSmass_INPUTS preset.  (a, b) = (p, s).  Output properties: rho, T, h, u.
 // Entropy analog of ph_subcritical: s is the secondary axis + query
 // input; the same region geometry (LIQUID/VAPOR/NC/SUPER, IF97 R2/R3/R5
 // split) applies with the build_s_* boundary curves.
-SurfaceSpec ps_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200, std::size_t NR = 800, std::int32_t rank = 20);
+SurfaceSpec ps_subcritical(::CoolProp::AbstractState& heos, const PresetOptions& opts = {});
 
 // DmassT_INPUTS preset.  (a, b) = (T, D).  Output properties: p, h, s, u.
 //
@@ -81,7 +100,7 @@ SurfaceSpec ps_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200
 // gracefully falls back to a single LIQUID region when no SA is
 // available (REFPROP / IF97 sources, or fluids without a SA in
 // HEOS).
-SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, std::size_t NT = 200, std::size_t NR = 800, std::int32_t rank = 20);
+SurfaceSpec dt_subcritical(::CoolProp::AbstractState& heos, const PresetOptions& opts = {});
 
 }  // namespace presets
 

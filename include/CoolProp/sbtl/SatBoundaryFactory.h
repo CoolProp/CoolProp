@@ -2,6 +2,7 @@
 #define COOLPROP_SBTL_SAT_BOUNDARY_FACTORY_H
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "CoolProp/AbstractState.h"
@@ -162,10 +163,22 @@ std::unique_ptr<region::CubicSplineCurve> build_s_isotherm_ceiling(::CoolProp::A
 std::vector<double> find_rho_satL_extrema_T(::CoolProp::AbstractState& heos, double T_min, double T_max);
 
 // Convenience: subcritical pressure range for `fluid`.  Returns
-// (p_min, p_max) ≈ (p_triple * 1.01, p_crit * 0.999) so PQ flashes
-// don't fail at the exact boundary.  Driven by the fluid's HEOS
-// AbstractState — needs an instance already constructed by the caller.
-std::pair<double, double> subcritical_pressure_range(::CoolProp::AbstractState& heos);
+// (p_min, p_max) = (p_triple, p_crit * 0.999), where p_triple is the
+// fluid's true triple-point pressure (heos.p_triple(), with a
+// QT-at-Ttriple fallback when that is not finite/positive).  The lowest
+// tabulated isobar therefore sits exactly at p_triple so a PT query at
+// p == p_triple() resolves (RegionAtlas containment is inclusive);
+// PQ(p_triple, 0) converges, so build_T_sat can sample the bottom knot.
+// Driven by the fluid's HEOS AbstractState — needs an instance already
+// constructed by the caller.
+//
+// `p_min_override` (absolute Pa, from the backend's `pmin` option)
+// replaces the p_triple floor when supplied.  It MUST be >= p_triple:
+// below the triple line the liquid-vapour saturation boundary that
+// bounds the subcritical regions does not exist, so a sub-triple floor
+// is rejected with ValueError rather than failing obscurely deep in the
+// boundary-curve sampling.
+std::pair<double, double> subcritical_pressure_range(::CoolProp::AbstractState& heos, std::optional<double> p_min_override = std::nullopt);
 
 // Convenience: supercritical pressure range for `fluid`.  Returns
 // (p_min, p_max) ≈ (p_crit * 1.001, pmax_eos * 0.99) — a thin margin
