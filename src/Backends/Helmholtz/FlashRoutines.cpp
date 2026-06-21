@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include "CoolProp/CoolProp.h"
 #include "HelmholtzEOSMixtureBackend.h"
@@ -2547,7 +2548,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             };
 
             try {
-                boost::uintmax_t max_iter = 100;
+                std::uintmax_t max_iter = 100;
                 auto bracket = boost::math::tools::toms748_solve(nocache_resid, static_cast<double>(Tmin), static_cast<double>(Tmax),
                                                                  boost::math::tools::eps_tolerance<double>(40), max_iter);
                 double T_cand = (bracket.first + bracket.second) / 2.0;
@@ -2625,7 +2626,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
 
                 if (P_lo < 0 || P_hi < 0) return std::numeric_limits<double>::quiet_NaN();
 
-                boost::uintmax_t max_iter = 100;
+                std::uintmax_t max_iter = 100;
                 auto bracket = boost::math::tools::toms748_solve(rho_resid, P_lo, P_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
                 double P_sol = (bracket.first + bracket.second) / 2.0;
                 HEOS.update(PT_INPUTS, P_sol, T);
@@ -2675,7 +2676,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     if (std::isnan(X)) throw ValueError("inner P-sweep failed during T-sweep");
                     return X - value;
                 };
-                boost::uintmax_t max_iter = 100;
+                std::uintmax_t max_iter = 100;
                 auto bracket = boost::math::tools::toms748_solve(outer_resid, T_lo, T_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
                 double T_sol = (bracket.first + bracket.second) / 2.0;
                 solve_for_caloric_at_T(T_sol);
@@ -3565,7 +3566,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
         if (lo_ok && hi_ok && resid_lo * resid_hi < 0) {
             // Endpoints bracket the root — use TOMS748 with pre-computed values
             try {
-                boost::uintmax_t max_iter = 100;
+                std::uintmax_t max_iter = 100;
                 auto bracket = boost::math::tools::toms748_solve(resid, static_cast<double>(Tmin), static_cast<double>(Tmax), resid_lo, resid_hi,
                                                                  boost::math::tools::eps_tolerance<double>(40), max_iter);
                 double T_sol = (bracket.first + bracket.second) / 2.0;
@@ -3982,7 +3983,7 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                 // Try gas density range [rho_min, rho_reducing]
                 double rho_gas = -1;
                 try {
-                    boost::uintmax_t max_iter = 100;
+                    std::uintmax_t max_iter = 100;
                     auto bracket = boost::math::tools::toms748_solve(rho_resid, static_cast<double>(rho_min), static_cast<double>(rho_reducing),
                                                                      boost::math::tools::eps_tolerance<double>(40), max_iter);
                     double rho_cand = (bracket.first + bracket.second) / 2.0;
@@ -3995,7 +3996,7 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                 // Try liquid density range [rho_reducing, rho_max]
                 double rho_liq = -1;
                 try {
-                    boost::uintmax_t max_iter = 100;
+                    std::uintmax_t max_iter = 100;
                     auto bracket = boost::math::tools::toms748_solve(rho_resid, static_cast<double>(rho_reducing), static_cast<double>(rho_max),
                                                                      boost::math::tools::eps_tolerance<double>(40), max_iter);
                     double rho_cand = (bracket.first + bracket.second) / 2.0;
@@ -4030,7 +4031,7 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                             }
                         }
                         try {
-                            boost::uintmax_t max_iter = 100;
+                            std::uintmax_t max_iter = 100;
                             auto bracket = boost::math::tools::toms748_solve(rho_resid, rho_pos, static_cast<double>(rho_max),
                                                                              boost::math::tools::eps_tolerance<double>(40), max_iter);
                             double rho_cand = (bracket.first + bracket.second) / 2.0;
@@ -4134,7 +4135,7 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
 
                 if (P_lo > 0 && P_hi > 0) {
                     try {
-                        boost::uintmax_t max_iter = 100;
+                        std::uintmax_t max_iter = 100;
                         auto bracket =
                           boost::math::tools::toms748_solve(p_resid, P_lo, P_hi, boost::math::tools::eps_tolerance<double>(40), max_iter);
                         double P_sol = (bracket.first + bracket.second) / 2.0;
