@@ -375,6 +375,22 @@ class SVDSBTLBackend : public AbstractState
     [[nodiscard]] double sat_T_from_p_(double p);
     [[nodiscard]] double sat_eval_(double T, char what, int side);
 
+    // Near-dome reclassification guard for a single-phase atlas hit
+    // (issue #3190).  The atlas LIQUID/VAPOR regions' dome-side boundary
+    // is an interpolated saturation curve that can disagree with the
+    // authoritative sat endpoints by its fit error (~1 J/kg), so a point
+    // sitting on the true bubble/dew line resolves single-phase instead
+    // of two-phase.  When the resolved point is within a thin eta band of
+    // a region edge, this re-tests it against the same saturation
+    // provider the forward PQ flash uses.  `what` is 'H' (HmassP/HmolarP)
+    // or 'S' (PSmass/PSmolar); `value_mass` is the mass-basis h or s.
+    // Uses ONLY the fast sat provider (SA -> surrogate): if no provider
+    // is available it returns false (leaving `pt` untouched) so the
+    // single-phase hot path never pays for an expensive source-PQ flash.
+    // Returns true and rewrites `pt` to a DomeBlend iff the point is
+    // genuinely inside the dome (yL <= y <= yV, boundary inclusive).
+    [[nodiscard]] bool try_fast_dome_reclassify_(PointEvaluation& pt, char what, double p_val, double value_mass);
+
     std::string fluid_name_;
     std::string source_backend_;               // "HEOS" / "REFPROP" / "IF97"
     std::vector<CoolPropDbl> mole_fractions_;  // always {1.0}
