@@ -83,7 +83,7 @@ jobs:
     steps:
     
     - name: Fetch the sources
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         ref: ${{ needs.set_vars.outputs.branch }}
         path: source
