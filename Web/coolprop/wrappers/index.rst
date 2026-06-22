@@ -23,7 +23,7 @@ Target                                                  Operating Systems       
 :ref:`Java <Java>`                                      linux, OSX, win              Wrapper is SWIG based
 :ref:`R <R>`                                            linux, OSX, win              Wrapper is SWIG based
 :ref:`Scilab <Scilab>`                                  linux, OSX, win              Wrapper is SWIG based (experimental)
-:ref:`Julia <Julia>`                                    linux, OSX, win              
+:ref:`Julia <Julia>`                                    linux, OSX, win
 `Modelica <https://github.com/modelica/ExternalMedia>`_ linux, OSX, win
 :ref:`PHP <PHP>`                                        linux, OSX, win              Mostly used on linux
 :ref:`Javascript <Javascript>`                          cross-platform               Works in all internet browsers
@@ -37,8 +37,8 @@ Target                                                  Operating Systems       
 :ref:`Microsoft Excel <Excel>`                          Windows only                 Included in the Windows :ref:`installer <Installers>`
 :ref:`LibreOffice <LibreOffice>`                        Windows, linux
 :ref:`Delphi & Lazarus <Delphi>`                        linux, OSX, win
-:ref:`iOS (iPhone) <ios>`                       
-:ref:`Android <Android>`                       
+:ref:`iOS (iPhone) <ios>`
+:ref:`Android <Android>`
 ======================================================= ===========================  =====================================================
 
 .. _wrapper_common_prereqs:
@@ -59,7 +59,7 @@ Windows
 On Windows, download the newest binary installer for CMake from `CMake downloads <https://www.cmake.org/cmake/resources/software.html>`_.  Run the installer.  Check that at the command prompt you can do something like::
 
     C:\Users\XXXX>cmake -version
-    cmake version 2.8.12.2
+    cmake version 4.3.2
 
 For git, your best bet is the installer from https://git-scm.com/download/win.  Check that at the command prompt you can do something like::
 
@@ -70,7 +70,7 @@ For 7-zip, download the installer from https://www.7-zip.org/ .  Check that at t
 
     C:\Users\XXXX>7z
 
-    7-Zip [64] 9.20  Copyright (c) 1999-2010 Igor Pavlov  2010-11-18
+    7-Zip [64] 26.00  Copyright (c) 1999-2010 Igor Pavlov  2010-11-18
 
     Usage: 7z <command> [<switches>...] <archive_name> [<file_names>...]
            [<@listfiles...>]
@@ -79,7 +79,7 @@ For python, you should be using `Anaconda/Miniconda <https://www.anaconda.com/do
 
 For the C++ compiler on Windows you have two mainstream options:
 
-* **MinGW-w64** (a Windows port of GCC), most easily obtained via `MSYS2 <https://www.msys2.org/>`_: after installing it, run ``pacman -S mingw-w64-x86_64-gcc`` and add the ``mingw64\bin`` directory to your PATH.  Install to a path without spaces.
+* **MSYS2/UCRT64** (a Windows port of GCC and modern version of **MINGW**), most easily obtained via `MSYS2 <https://www.msys2.org/>`_: See :ref:`CoolProp MSYS2 Setup <MSYS2>` guidance.
 * **Visual Studio** — install the free Community edition with the "Desktop development with C++" workload.
 
 Most users never need to compile the Python wrapper themselves, since pre-built CoolProp wheels are published on `PyPI <https://pypi.org/project/CoolProp/>`_.  If you do build from source, the old advice about matching a specific Visual Studio version to your Python version no longer applies: since Visual Studio 2015 the C runtime (UCRT) is stable, so any recent Visual Studio works.
@@ -97,7 +97,7 @@ OSX
 OSX should come with a c++ compiler (clang), for git and cmake your best bet is `Homebrew <https://brew.sh/>`_.  With Homebrew installed, you can just do::
 
     brew install cmake git p7zip
-    
+
 OSX includes a python version, but you should be using `Anaconda/Miniconda <https://www.anaconda.com/download>`_ for your python installation.  Or, you can just install `Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_, which is sufficient. For python, you need the ``six`` package, a ``pip install six`` should do it.
 
 If you have never done any command-line compilation before on OSX, chances are that you do not have the utilities needed. Thus you need to first install Xcode: see the description on the page https://guide.macports.org/#installing.xcode . After installing, you need to accept the license by running the following command in the Terminal::
@@ -135,3 +135,4 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     VB.net/index.rst
     R/index.rst
     Installers/index.rst
+    MSYS2/index.rst

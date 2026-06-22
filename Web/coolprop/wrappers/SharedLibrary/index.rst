@@ -36,16 +36,13 @@ On windows, the greatest amount of complexity is experienced.
 
 Your compiler options are:
 
-* MinGW (a windows port of GCC)
+* `MSYS2 <https://www.msys2.org/>`_ UCRT64 (formerly MinGW, a windows port of GCC)
 * Visual Studio, multiple versions can be installed in parallel
 
-By default, cmake will use your most up to date version of visual studio it finds.
+By default, cmake will use your most up to date version of MS Visual Studio it finds.
 
 .. warning::
-    An old MinGW GCC may have problems building the latest version of CoolProp.  Use a
-    recent MinGW-w64 toolchain (for instance via `MSYS2 <https://www.msys2.org/>`_) or the
-    `TDM-GCC distribution <https://jmeubank.github.io/tdm-gcc/>`_, both of which ship a
-    modern GCC.
+    The old MinGW GCC may have problems building the latest version of CoolProp.  Use a more recent toolchain (for instance via `MSYS2 <https://www.msys2.org/>`_) that ships a modern GCC.
 
 Your calling convention options are:
 
@@ -54,6 +51,9 @@ Your calling convention options are:
 * 64-bit (``-DCOOLPROP_SHARED_LIBRARY=ON``)
 
 You can select the compiler in the call to cmake below.
+
+.. note::
+   If using `MSYS2/UCRT64 <https://www.msys2.org/>`_, perform these steps in a UCRT64 terminal.  If using Visual Studio, you can use a command window (cmd) or a PowerShell terminal.
 
 1. Check out sources and go into the build directory::
 
@@ -64,45 +64,62 @@ You can select the compiler in the call to cmake below.
     # Make a build folder
     mkdir build && cd build
 
-2. Generate the build file.  Here is where it gets complicated.
+2. Generate the build file.  Here is where it gets a little complicated.
 
-    A. If you use MinGW, these are your options:
+   A. If you use `MSYS2/UCRT64 <https://www.msys2.org/>`_, these are your options:
 
-    For 64-bit DLL::
+      For 64-bit DLL (default)::
 
-        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -G "Ninja" -DCMAKE_BUILD_TYPE=Release
 
-    For 32-bit __stdcall DLL::
+      For 32-bit __stdcall DLL::
 
-        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_STDCALL_LIBRARY=ON -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_STDCALL_LIBRARY=ON -G "Ninja" -DCMAKE_BUILD_TYPE=Release
 
-    For 32-bit __cdecl DLL::
+      For 32-bit __cdecl DLL::
 
-        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_CDECL_LIBRARY=ON -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-        
-    You can cross-compile by forcing a non-native bitness by using the additional flags ``-DFORCE_BITNESS_32=ON`` and ``-DFORCE_BITNESS_64=ON``.
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_CDECL_LIBRARY=ON -G "Ninja" -DCMAKE_BUILD_TYPE=Release
 
-    B. If you use Visual Studio, you will need to replace the visual studio version with the version that you are using.  Running the command ``cmake`` at the command prompt will tell you what generators are supported
+      You can cross-compile by forcing a non-native bitness by using the additional flags ``-DFORCE_BITNESS_32=ON`` and ``-DFORCE_BITNESS_64=ON``.
 
-    For 64-bit DLL (Watch out for the 64-bit flag with Win64)::
+   .. note::
+      The commands above should be executed *within* an **MSYS2/UCRT64** environment window (see `MSYS2 <https://www.msys2.org/>`_ for setup).  This window will remove windows system paths to native Windows tools and, instead, rely on the UCRT64 toolchain and your ``.bashrc`` file. **UCRT64** versions of ``gcc``, ``CMake`` and ``Ninja`` should be installed as part of this tool chain using the ``pacman`` package manager.  The ``Ninja`` generator simplifies the process by choosing the MingW, Ming-w64, or ucrt64 gcc/g++ compiler, depending on the environment window in which the commands are executed.
 
-        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -G "Visual Studio 10 2010 Win64"
+   B. If using Visual Studio, replace the Visual Studio version with the version that you are using (see Note below).  Running the command ``cmake`` at the command prompt will tell you which generators are supported
 
-    For 32-bit __stdcall DLL::
+      For 64-bit DLL (Watch out for the 64-bit flag with Win64)::
 
-        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_STDCALL_LIBRARY=ON -G "Visual Studio 10 2010"
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -G "Visual Studio 17 2022" -A x64
 
-    For 32-bit __cdecl DLL::
+      For 32-bit __stdcall DLL::
 
-        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_CDECL_LIBRARY=ON -G "Visual Studio 10 2010"
-        
-    Since you already selected the bitness via the Visual Studio version, passing an additional flag to force a certain bitness will cause a n error and make the process terminate prematurely. 
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_STDCALL_LIBRARY=ON -G "Visual Studio 17 2022" -A x64
+
+      For 32-bit __cdecl DLL::
+
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_CDECL_LIBRARY=ON -G "Visual Studio 17 2022" -A x64
+
+   .. note::
+      With Visual Studio 2019 or later, the bitness is no longer embedded in the ``-G`` parameter, but specified with an additional ``-A`` parameter followed by either ``Win32`` or ``x64``.  As of Visual Studio 2017, 64-bit is the default.
+
+      Example: for 64-bit,
+
+        -G "Visual Studio 17 2022" -A x64
+
+      or for 32-bit,
+
+        -G "Visual Studio 17 2022" -A Win32
+
+
+   Since the bitness for Visual Studio is already specified with the ``-A`` switch (*or embedded in the ``-G`` string for older VS versions*), passing an additional flag to force a certain bitness will cause an error and the process will terminate.
 
 3. Do the build::
 
     cmake --build . --config Release
 
-If you are using MinGW, you can leave off the ``--config Release``, the default build configuration is release
+   .. note::
+      Alternatively, if using MSYS2 UCRT64, you can simply issue the comman: ``ninja``
+|
 
 Linux & OSX
 -----------
@@ -142,7 +159,7 @@ For 64-bit compilation::
 On Linux, installation could be done by::
 
     # Change "32" to match your system bitness
-    sudo cp libCoolProp.so /usr/local/lib/libCoolProp.so.32.:version: 
+    sudo cp libCoolProp.so /usr/local/lib/libCoolProp.so.32.:version:
     pushd /usr/local/lib
     sudo ln -sf libCoolProp.so.32.:version: libCoolProp.so.5
     sudo ln -sf libCoolProp.so.5 libCoolProp.so
@@ -193,7 +210,7 @@ Here is a small example for calling the shared library from C on windows, as con
             printf("Could not load CoolProp DLL.");
         }
     }
-    
+
 Here is another snippet of using the shared library in windows when (for your application), you MUST use a Visual Studio 32-bit stdcall dll of CoolProp for compatibility with other tools::
 
     // This is to get all the function prototypes from the header
@@ -211,7 +228,7 @@ Here is another snippet of using the shared library in windows when (for your ap
         return 1;
     }
 
-    
+
 Linux
 -----
 
