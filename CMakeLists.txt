@@ -2127,10 +2127,10 @@ if(COOLPROP_MATHEMATICA_MODULE)
   list(APPEND APP_INCLUDE_DIRS "${Mathematica_WolframLibrary_INCLUDE_DIR}")
   include_directories(${APP_INCLUDE_DIRS})
   
-  # Embed Windows VERSIONINFO so CoolPropPrimeWrapper.dll's Properties dialog shows
+  # Embed Windows VERSIONINFO so the Mathematica CoolProp.dll Properties dialog shows
   # FileVersion/ProductVersion fields (#2391). The .rc is configured from
   # COOLPROP_VERSION_{MAJOR,MINOR,PATCH} above and added to the source list.
-  # NOTE: Only here if WIN32, where rc.exe (or MSYS2 windres) is available.
+  # NOTE: Only if WIN32, where rc.exe (or MSYS2 windres) is available.
   if(MSVC OR MINGW)
     configure_file(
       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Mathematica/CoolProp.rc.in"
