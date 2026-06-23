@@ -248,6 +248,23 @@ if(MSVC
   add_definitions(-D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING)
 endif()
 
+if(MINGW)
+  if (DEFINED ENV{MSYSTEM})
+    message(STATUS "MSYS2 $ENV{MSYSTEM} environment detected")
+    if ("$ENV{MSYSTEM}" STREQUAL "MINGW64")
+      message(STATUS "MINGW64 environment detected. Ming-w64 is being phased out in favor of MSYS2 UCRT64, but it is still supported for now.")
+      message(STATUS "To compile with MSYS2 UCRT64, run CMake from within the MSYS2 UCRT64 shell.")
+    endif()
+    if ("$ENV{MSYSTEM}" STREQUAL "MSYS")
+      message(STATUS "MSYS environment detected. The MSYS environment is not recommended for building CoolProp.")
+      message(FATAL_ERROR "To compile with MSYS2 UCRT64, run CMake from within the MSYS2 UCRT64 shell.")
+    endif()
+  else()
+      message(STATUS "Original MINGW Detected. MinGW is deprecated in favor of MSYS2 UCRT64.")
+      message(FATAL_ERROR "To compile with MSYS2 UCRT64, run CMake from within the MSYS2 UCRT64 shell.")
+  endif()
+endif()
+
 if(COOLPROP_RELEASE AND COOLPROP_DEBUG)
   message(FATAL_ERROR "You can only make a release OR and debug build.")
 endif()
@@ -261,6 +278,16 @@ elseif(COOLPROP_DEBUG)
   #  ELSE ()
   #    SET(CMAKE_BUILD_TYPE Release)
   #  ENDIF()
+endif()
+
+# Ensure MSYS2/UCRT outputs are grouped by build type - emmulates MSVC behavior
+if(MINGW AND DEFINED ENV{MSYSTEM})
+  if("${CMAKE_BUILD_TYPE}" STREQUAL "")
+    set(CMAKE_BUILD_TYPE Release)
+  endif()
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
 endif()
 
 if(COOLPROP_MSVC_STATIC)
@@ -448,7 +475,8 @@ endmacro()
 #        Calculate if 32 or 64        #
 #######################################
 
-if(WIN32)
+## If WIN32 (but NOT MINGW where bitness is determined from SIZEOF_VOID_P)
+if(WIN32 AND NOT MINGW)
   if(CMAKE_CL_64)
     set(BITNESS "64")
   else()
@@ -469,19 +497,19 @@ if(MSVC AND (FORCE_BITNESS_32 OR FORCE_BITNESS_64))
   )
   message(
     STATUS
+      "Pass '-G \"Visual Studio 17 2022\" -A x64' to CMake to make a 64bit binary using VS2017 or later."
+  )
+  message(
+    STATUS
+      "Pass '-G \"Visual Studio 17 2022\" -A win32' to CMake to make a 32bit binary using VS2017 or later."
+  )
+  message(
+    STATUS
       "Pass '-G \"Visual Studio 10 2010 Win64\"' to CMake to make a 64bit binary using VS2010."
   )
   message(
     STATUS
       "Pass '-G \"Visual Studio 10 2010\"' to CMake to make a 32bit binary using VS2010."
-  )
-  message(
-    STATUS
-      "Pass '-G \"Visual Studio 9 2008 Win64\"' to CMake to make a 64bit binary using VS2008."
-  )
-  message(
-    STATUS
-      "Pass '-G \"Visual Studio 9 2008\"' to CMake to make a 32bit binary using VS2008."
   )
   message(FATAL_ERROR "Fix that and try again...")
 endif()
@@ -666,8 +694,8 @@ if(COOLPROP_OBJECT_LIBRARY
     # Embed Windows VERSIONINFO so CoolProp.dll's Properties dialog shows
     # FileVersion/ProductVersion fields (#2391). The .rc is configured from
     # COOLPROP_VERSION_{MAJOR,MINOR,PATCH} above and added to the source
-    # list only on MSVC, where rc.exe is available.
-    if(MSVC)
+    # list only on MSVC and MSYS2 (MinGW), where rc.exe (or MSYS2 windres) is available.
+    if(MSVC OR MINGW)
       configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/dev/CoolProp.rc.in"
         "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc"
@@ -732,6 +760,23 @@ if(COOLPROP_OBJECT_LIBRARY
         DESTINATION ${OUTPUT_FOLDER}
 	  )
     endif()
+
+    # MSYS2(MINGW) specific stuff
+    if(MINGW AND DEFINED ENV{MSYSTEM})
+      # Add postfix for debugging (same as MSVC)
+      set_property(TARGET ${LIB_NAME} PROPERTY DEBUG_POSTFIX d)
+      set_property(TARGET ${LIB_NAME} PROPERTY RELEASE_POSTFIX)
+      # No lib prefix for the shared library (same as MSVC)
+      set_property(TARGET ${LIB_NAME} PROPERTY PREFIX "")
+      set_target_properties(${LIB_NAME} PROPERTIES IMPORT_PREFIX "" IMPORT_SUFFIX ".a")
+      # Statically link all MINGW libraries and make the file truly portable
+      # See (https://stackoverflow.com/questions/13768515/how-to-do-static-linking-of-libwinpthread-1-dll-in-mingw)
+      # NOTE: use MSYS2/UCRT64 ntldd to check dependencies, MSYS2 & cygwin ldd will give false ucrt64 dependencies
+      target_link_options(${LIB_NAME} PRIVATE -static-libgcc -static-libstdc++)
+      target_link_libraries(${LIB_NAME} PRIVATE -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic)  #scopes only winpthreads
+      # Note that Windows system DLLs (ucrt, kernel32, etc.) remain dynamically linked.
+    endif()
+
     # For Linux
     if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
       set_property(TARGET ${LIB_NAME} PROPERTY VERSION ${COOLPROP_VERSION})
@@ -826,7 +871,11 @@ if(COOLPROP_OBJECT_LIBRARY
   message(STATUS "COOLPROP_STATIC_LIBRARY: ${COOLPROP_STATIC_LIBRARY}")
   message(STATUS "COOLPROP_SHARED_LIBRARY: ${COOLPROP_SHARED_LIBRARY}")
   message(STATUS "COOLPROP_OBJECT_LIBRARY: ${COOLPROP_OBJECT_LIBRARY}")
-  message(STATUS "CONVENTION: ${CONVENTION}")
+  if(("${CONVENTION}" STREQUAL "NULL") OR ("${CONVENTION}" STREQUAL ""))
+     message(STATUS "CONVENTION: Not Set")
+  else()
+     message(STATUS "CONVENTION: ${CONVENTION}")
+  endif()
   message(STATUS "COOLPROP_LIBRARY_HEADER: ${COOLPROP_LIBRARY_HEADER}")
   message(STATUS "COOLPROP_LIBRARY_SOURCE: ${COOLPROP_LIBRARY_SOURCE}")
   #
@@ -2042,7 +2091,6 @@ if(COOLPROP_MATHEMATICA_MODULE)
 
   if(MSVC)
     modify_msvc_flags("/MT")
-
     # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
   endif()
 
@@ -2060,14 +2108,56 @@ if(COOLPROP_MATHEMATICA_MODULE)
   )
   message(STATUS "Mathematica_USERBASE_DIR=${Mathematica_USERBASE_DIR}")
 
+  # Build a fresh source list: core CoolProp sources WITHOUT CoolPropLib.cpp.
+  set(MATHEMATICA_SOURCES ${APP_SOURCES})
+  list(REMOVE_ITEM MATHEMATICA_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   list(
-    APPEND APP_SOURCES
+    APPEND MATHEMATICA_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Mathematica/CoolPropMathematica.cpp")
   list(APPEND APP_INCLUDE_DIRS "${Mathematica_WolframLibrary_INCLUDE_DIR}")
   include_directories(${APP_INCLUDE_DIRS})
-  add_library(CoolProp SHARED ${APP_SOURCES})
+  add_library(CoolProp SHARED ${MATHEMATICA_SOURCES})
   add_dependencies(CoolProp generate_headers)
   coolprop_hide_json_symbols(CoolProp)
+  if(MINGW AND DEFINED ENV{MSYSTEM})
+    # Add postfix for debugging (same as MSVC)
+    set_property(TARGET ${app_name} PROPERTY PREFIX "")
+    set_target_properties(${app_name} PROPERTIES IMPORT_PREFIX "" IMPORT_SUFFIX ".a")
+    # COFF section-number overflow fix: HelmholtzEOSMixtureBackend.cpp emits
+    # 33K+ COMDAT sections (one per template instantiation from Eigen/fmt/etc).
+    # Standard COFF stores section numbers as a signed 16-bit integer (max 32767);
+    # sections numbered above that get a negative SectionNumber in symbol-table
+    # entries, making vtable symbols appear undefined to the linker.
+    # -O1 inlines enough small template functions at call sites to keep the
+    # per-TU section count below 32767 without requiring assembler bigobj support.
+    # (Release builds already pass -O2/-O3 via CMAKE_BUILD_TYPE, so this only
+    # matters for Debug/unoptimized builds.)
+    if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+      target_compile_options(${app_name} PRIVATE -O1)
+    endif()
+    # Statically link all MINGW libraries and make the file truly Windows portable
+    # See (https://stackoverflow.com/questions/13768515/how-to-do-static-linking-of-libwinpthread-1-dll-in-mingw)
+    # NOTE: use MSYS2/UCRT64 ntldd to check dependencies, MSYS2 & cygwin ldd will give false ucrt64 dependencies
+    # Use -static-libgcc/-static-libstdc++ embed the GCC/C++ runtimes; -Bstatic/-Bdynamic scopes only winpthread
+    target_link_options(${app_name} PRIVATE -static-libgcc -static-libstdc++)
+    # Use -Bstatic/-Bdynamic scopes only winpthread so that Windows system DLLs (ucrt, kernel32, etc.) remain dynamically linked.
+    target_link_libraries(${app_name} PRIVATE -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic)
+  endif()
+
+  # Set the bitness
+  if(NOT MSVC)
+    if(NOT "${BITNESS}" STREQUAL "NATIVE")
+      message(STATUS "Setting bitness flag -m${BITNESS}")
+      set_property(
+        TARGET ${app_name}
+        APPEND_STRING
+        PROPERTY COMPILE_FLAGS " -m${BITNESS}")
+      set_property(
+        TARGET ${app_name}
+        APPEND_STRING
+        PROPERTY LINK_FLAGS " -m${BITNESS}")
+    endif()
+  endif()
 
   if(MSVC)
     add_custom_command(

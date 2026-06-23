@@ -69,25 +69,25 @@ You can build the static library using::
     cmake .. -DCOOLPROP_STATIC_LIBRARY=ON
     # Make the static library
     cmake --build .
-    
+
 .. note::
 
-    If you use mingw port of gcc on windows, you should add the generator name to the first call of cmake so that it reads something like::
-    
-        cmake .. -G "MinGW Makefiles" -DCOOLPROP_STATIC_LIBRARY=ON
-        
+    If you use the modern mingw (MSYS2/UCRT) port of gcc on windows, you should run from within the UCRT64 environment and add the generator name to the first call of cmake so that it reads something like::
+
+        cmake .. -G "Ninja" -DCOOLPROP_STATIC_LIBRARY=ON -DCOOLPROP_RELEASE=ON
+
 .. note::
 
     If you use Microsoft Visual Studio, you should tell cmake what exact version of visual studio you would like it to use, by doing something like::
-    
-        cmake .. -G "Visual Studio 12 2013 Win64" -DCOOLPROP_STATIC_LIBRARY=ON
-        
-    which is a 64-bit build for Microsoft Visual Studio 2013 (even express version) for instance.  You can get the full list of supported generators on your machine by doing `cmake --help`.
-    
+
+        cmake .. -G "Visual Studio 17 2022" -A x64 -DCOOLPROP_STATIC_LIBRARY=ON
+
+    which is a 64-bit build for Microsoft Visual Studio 2022 (even express version) for instance.  You can get the full list of supported generators on your machine by doing `cmake --help`.
+
 .. note::
-    
+
     If you use gcc with libstdc++ (like on ubuntu) and want to build the debug library, you should add the proper cxx flags to link to the correct debug libstdc++ librariries::
-    
+
         cmake .. -DCOOLPROP_DEBUG=ON -DCMAKE_CXX_FLAGS_DEBUG='-g -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC'
 
 Usage
@@ -114,17 +114,17 @@ On linux and OSX, you can use the compiled static library in your application by
 This will result in an executable which can be run by the user.
 
 .. warning::
-    
+
     In gcc and mingw ports of gcc, make sure that the `-lCoolProp` is the last argument in the line, otherwise you will certainly get linking errors.  See also: https://www.mingw.org/wiki/specify_the_libraries_for_the_linker_to_use .
-    
+
 Windows
 ^^^^^^^
 
-On windows the two main compiler families are Visual Studio and MINGW+GCC.
+On windows the two main compiler families are Visual Studio and MSYS2(UCRT64)+gcc.
 
-**Mingw+gcc**: If you use mingw, follow the instructions like for linux and OSX, and leave off the ``-ldl`` argument to the compilation.
+**MSYS2(UCRT64)+gcc**: If you use MSYS2(UCRT64) (*formerly MINGW*), follow the instructions like for linux and OSX, and leave off the ``-ldl`` argument to the compilation.
 
-**Visual Studio**: 
+**Visual Studio**:
 
 a) Generate the static library following the command line instructions above, ensuring that you have selected the proper visual studio version as well as ``Win64`` in your generator if you would like a 64-bit static library
 b) Create a new empty project in visual studio, change to 64-bit (x64) build type if you would like

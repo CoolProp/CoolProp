@@ -23,6 +23,17 @@ Microsoft Excel
 
 The add-in for Microsoft Excel can also be installed from this package and it automatically determines which of the two available add-ins is needed.  There is ``CoolProp.xla`` for Microsoft Office versions prior to version 2007 and ``CoolProp.xlam`` for more recent Office installations. The add-ins are installed into the user's add-in directory and they are activated by default.  Please note that the Excel add-in includes the installation of some of the shared libraries.  Upon installation, an example file is placed on the user's desktop.  This file demonstrates some of the features of the Excel wrapper and can be moved or deleted freely, it will not be removed by the uninstaller. Have a look at the dedicated :ref:`page <Excel>` for more information.
 
+.. note::
+   If the CoolProp functions in the calculation cells display ``=Name?`` you may have to "dirty" the cell equations (i.e., re-enter them) to get the functions to work.  The easiest and fastest way to do this for an entire worksheet is to:
+
+   1. Press ``Ctrl + A`` to select the entire worksheet.
+   2. Press ``Ctrl + H`` to open the Find and Replace dialog box.
+   3. Type an equals sign (``=``) into the **Find what** field.
+   4. Type an equals sign (``=``) into the **Replace with** field.
+   5. Click **Replace All**.
+
+   This effectively replaces the ``=`` sign in the formulas with itself so that Excel thinks this is a new formula. This should properly evaluate all cells containing CoolProp functions.
+
 Engineering Equation Solver
 ===========================
 

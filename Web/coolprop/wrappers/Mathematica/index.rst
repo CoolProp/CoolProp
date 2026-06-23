@@ -48,25 +48,31 @@ You need to just slightly modify the building procedure
     # Make a build folder
     mkdir build && cd build
 
-2. Pick a toolchain (A or B)
+2. Pick a toolchain (A or B):
 
-    A: Building using Visual Studio::
-
-        # Build the makefile using CMake
-        cmake .. -DCOOLPROP_MATHEMATICA_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -G "Visual Studio 17 2022" -A x64"
-
-.. note::
-    If you have a different version of Visual Studio installed, replace the generator name in the ``-G`` argument.  Note that the DLL must be 64-bit by using the ``-A x64`` option at the end.  Prior to VS 2017, this "bitness" was embedded in the ``-G`` argument using the format **-G "Visual Studio 14 2015 Win64"** and will not use the ``-A`` option.
-
-    B: Building using MinGW::
+    A: Create the Build system using **Visual Studio**::
 
         # Build the makefile using CMake
-        cmake .. -DCOOLPROP_MATHEMATICA_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -G "MinGW Makefiles"
+        cmake .. -DCOOLPROP_MATHEMATICA_MODULE=ON -G "Visual Studio 17 2022" -A x64
 
-3. Actually do the build::
+    .. note::
+        If you have a different version of Visual Studio installed, replace the generator name in the ``-G`` argument.  Note that the DLL must be 64-bit by using the ``-A x64`` option at the end.  Prior to VS 2017, this "bitness" was embedded in the ``-G`` argument using the format **-G "Visual Studio 14 2015 Win64"** and will not use the ``-A`` option.
 
-    # Make the shared library
-    cmake --build . --config Release
+    B: Create the Build system using **MSYS2 UCRT64** (MinGW) from within a ``UCRT64`` shell terminal::
+
+        # From with a UCRT64 window, build the makefile using CMake
+        cmake -G Ninja -DCOOLPROP_MATHEMATICA_MODULE=ON -DCOOLPROP_RELEASE=ON ..
+
+3. Actually do the build
+
+    Under both toolchains::
+
+        # Make the shared library
+        cmake --build . --config Release
+
+    .. note::
+        Alternatively, if using MSYS2 UCRT64, you can simply issue the comman: ``ninja``
+
 
 Install and Verify
 ==================
@@ -80,6 +86,6 @@ There is a small example file ``example.nb`` in the CoolProp repository under ``
 
 Future Work
 ===========
-As of Wolfram Mathematica 14.0, the Wolfram Language has the ability to make API calls *directly to the CoolProp shared library*.  This can be done from a Wolfram Language ``paclet`` that obviates the need for compiling a C++ wrapper and can be handled solely through Mathematica's **Paclet Manager**.  This means that the wrapper can be built with automation scripts by any user for any version of Mathematica greater than v14.0.
+As of Wolfram Mathematica 14.0, the Wolfram Language has the ability to make API calls *directly to the CoolProp shared library*.  This can be done from a Wolfram Language ``package``/``paclet`` that obviates the need for compiling a C++ wrapper and can be handled solely through Mathematica's **Paclet Manager**.  This means that the wrapper can be built with automation scripts by any user for any version of Mathematica greater than v14.0.
 
 We welcome any Wolfram Language users to take this on and contribute to the CoolProp project.
