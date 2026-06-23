@@ -992,6 +992,16 @@ if(COOLPROP_PRIME_MODULE)
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
+  # Embed Windows VERSIONINFO so CoolPropPrimeWrapper.dll's Properties dialog shows
+  # FileVersion/ProductVersion fields (#2391). The .rc is configured from
+  # COOLPROP_VERSION_{MAJOR,MINOR,PATCH} above and added to the source list.
+  # NOTE: Only here if WIN32, where rc.exe (or MSYS2 windres) is available.
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolProp.rc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc"
+    @ONLY)
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc")
+  # Source list complete, add all to library
   add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
   coolprop_hide_json_symbols(CoolPropMathcadWrapper)
   include_directories("${COOLPROP_PRIME_ROOT}/Custom Functions")
@@ -2116,6 +2126,20 @@ if(COOLPROP_MATHEMATICA_MODULE)
     "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Mathematica/CoolPropMathematica.cpp")
   list(APPEND APP_INCLUDE_DIRS "${Mathematica_WolframLibrary_INCLUDE_DIR}")
   include_directories(${APP_INCLUDE_DIRS})
+  
+  # Embed Windows VERSIONINFO so CoolPropPrimeWrapper.dll's Properties dialog shows
+  # FileVersion/ProductVersion fields (#2391). The .rc is configured from
+  # COOLPROP_VERSION_{MAJOR,MINOR,PATCH} above and added to the source list.
+  # NOTE: Only here if WIN32, where rc.exe (or MSYS2 windres) is available.
+  if(MSVC OR MINGW)
+    configure_file(
+      "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Mathematica/CoolProp.rc.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc"
+      @ONLY)
+    list(APPEND MATHEMATICA_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc")
+  endif()
+  # Source list complete, add all to library
+
   add_library(CoolProp SHARED ${MATHEMATICA_SOURCES})
   add_dependencies(CoolProp generate_headers)
   coolprop_hide_json_symbols(CoolProp)
