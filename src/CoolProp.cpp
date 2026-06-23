@@ -38,6 +38,8 @@
 #include <string>
 #include <locale>
 #include <atomic>
+#include <mutex>
+#include <thread>
 #include "CoolProp/detail/tools.h"
 #include "CoolProp/numerics/Solvers.h"
 #include "CoolProp/numerics/MatrixMath.h"
@@ -61,13 +63,26 @@ namespace CoolProp {
 // make it atomic so those concurrent accesses are not a data race (bd CoolProp-4qf).
 static std::atomic<int> debug_level{0};
 // error_string / warning_string are written from any exception handler and
-// read-then-cleared by get_global_param_string("errstring"/"warnstring"). As
-// shared globals that was a data race on std::string (UB) that also lost or
-// double-observed messages when threads raced. Make them thread_local so each
-// thread captures and drains its own message -- this matches per-thread
-// exception semantics and the State capsule shim's existing thread_local error.
-static thread_local std::string error_string;
-static thread_local std::string warning_string;
+// read-then-cleared by get_global_param_string("errstring"/"warnstring").
+//
+// These form a process-global "outbox": the public contract is that one call
+// (e.g. PropsSI) writes the message and a SEPARATE later call drains it.
+// Thread-pooled hosts (Mathcad Prime, COM/Excel) dispatch those two calls on
+// DIFFERENT threads, so the slot must be shared across threads.  CoolProp-4qf
+// (PR #3146) made these thread_local to fix the data race, but that gave every
+// thread its own outbox and silently broke cross-thread retrieval (#3211).
+//
+// The race that #3146 targeted was the non-atomic read-then-clear of a shared
+// std::string (UB).  Restore the single shared slot and guard every access with
+// message_mutex so the read-then-clear is atomic -- this kills the UB without
+// breaking the cross-thread retrieval the wrappers rely on.  The lock is taken
+// only on the error path and on explicit errstring/warnstring drains, never on
+// the PropsSI success hot path.  (Two threads racing UNRELATED failures still
+// clobber one another last-writer-wins -- inherent to a single global slot and
+// the pre-#3146 behaviour -- but no longer UB.)
+static std::string error_string;
+static std::string warning_string;
+static std::mutex message_mutex;
 
 void set_debug_level(int level) {
     debug_level = level;
@@ -81,9 +96,11 @@ int get_debug_level() {
 #include "cpversion.h"    // Contents are like "char version [] = "2.5";"
 
 void set_warning_string(const std::string& warning) {
+    std::scoped_lock lock(message_mutex);
     warning_string = warning;
 }
 void set_error_string(const std::string& error) {
+    std::scoped_lock lock(message_mutex);
     error_string = error;
 }
 
@@ -1028,10 +1045,12 @@ std::string get_global_param_string(const std::string& ParamName) {
     } else if (ParamName == "gitrevision") {
         return gitrevision;
     } else if (ParamName == "errstring") {
+        std::scoped_lock lock(message_mutex);
         std::string temp = error_string;
         error_string = "";
         return temp;
     } else if (ParamName == "warnstring") {
+        std::scoped_lock lock(message_mutex);
         std::string temp = warning_string;
         warning_string = "";
         return temp;
@@ -1075,6 +1094,41 @@ TEST_CASE("Check inputs to get_global_param_string", "[get_global_param_string]"
         };
     }
     CHECK_THROWS(CoolProp::get_global_param_string(""));
+};
+
+// Regression test for #3211: the error/warning "outbox" is a process-global slot
+// whose contract is that one call sets the message and a SEPARATE later call
+// drains it.  Thread-pooled hosts (Mathcad Prime, COM/Excel) make those two
+// calls land on DIFFERENT threads.  PR #3146 made the slot thread_local, which
+// gave each thread its own outbox and silently broke this cross-thread handoff.
+// Set the message on one thread and require it to be readable from another.
+TEST_CASE("errstring/warnstring survive cross-thread retrieval", "[get_global_param_string],[3211]") {
+    // Drain any residual message so we observe only what this test writes.
+    CoolProp::get_global_param_string("errstring");
+    CoolProp::get_global_param_string("warnstring");
+
+    const std::string emsg = "cross-thread error payload #3211";
+    const std::string wmsg = "cross-thread warning payload #3211";
+
+    // Writer thread A stashes the messages...
+    std::thread([&] {
+        CoolProp::set_error_string(emsg);
+        CoolProp::set_warning_string(wmsg);
+    }).join();
+
+    // ...reader thread B must see them (would be blank if the slot were thread_local).
+    std::string got_err, got_warn;
+    std::thread([&] {
+        got_err = CoolProp::get_global_param_string("errstring");
+        got_warn = CoolProp::get_global_param_string("warnstring");
+    }).join();
+
+    CHECK(got_err == emsg);
+    CHECK(got_warn == wmsg);
+
+    // The read-then-clear must have drained the slot (on any thread).
+    CHECK(CoolProp::get_global_param_string("errstring").empty());
+    CHECK(CoolProp::get_global_param_string("warnstring").empty());
 };
 #endif
 std::string get_fluid_param_string(const std::string& FluidName, const std::string& ParamName) {
