@@ -1,10 +1,10 @@
-.. _msys2:
+.. _MSYS2:
 
 ***********
 MSYS2 Setup
 ***********
 
-.. image:: https://www.msys2.org/logo.svg
+.. image:: https://www.msys2.org/logo.png
    :alt: MSYS2 Logo
    :width: 75px
    :align: left
