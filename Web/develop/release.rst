@@ -62,3 +62,82 @@ the CoolProp library.
       ``X.Y.Z.dev<timestamp>`` nightlies that CI publishes to TestPyPI.
 
 That's all folks.
+
+*****************************
+Desktop GUI release (Tauri)
+*****************************
+
+The cross-platform desktop GUI (``wrappers/GUI``, a Tauri + React app) is
+**released on its own ``gui-vX.X.X`` tag** by the ``gui_builder.yml``
+workflow — independently of the library's ``vX.X.X`` tag and the
+SourceForge/PyPI flow above. A ``gui-v*`` tag builds all three platforms,
+code-signs them, and creates a single **draft** GitHub Release with the
+installers plus the ``latest.json`` auto-updater manifest attached.
+
+Signing is engaged on every ``gui-v*`` tag (and on any build whose HEAD
+commit message contains the ``[gui-sign]`` marker). macOS is signed +
+notarized; Windows is signed through SignPath. **Routine pushes build
+unsigned** and send no signing email.
+
+**Preconditions (verify before tagging — all fail *open* to an
+unsigned-but-functional build, so check them explicitly):**
+
+* **GUI version**: the bundle is stamped from the **committed** version in
+  ``wrappers/GUI/package.json`` / ``src-tauri/tauri.conf.json`` /
+  ``src-tauri/Cargo.toml`` (plus their lockfiles). A build-time sync
+  (``scripts/generate-licenses.mjs``, run via ``beforeBuildCommand``) derives
+  the version from ``CMakeLists.txt`` and rewrites these files — but Tauri
+  reads ``tauri.conf.json`` *before* that sync runs, so the sync does **not**
+  fix the in-flight bundle; the committed value is what lands on the
+  ``.dmg`` / ``.msi`` / ``.deb``. So bump the four version fields (run
+  ``npm run build:licenses`` in ``wrappers/GUI`` after bumping
+  ``CMakeLists.txt``, or edit them directly) **and commit them** before
+  tagging. Use plain semver (e.g. ``8.0.0``); a CMake ``REVISION`` qualifier
+  like ``b1`` is not valid for Cargo/npm and is dropped by the sync.
+* **Apple agreements current**: notarization returns HTTP 403 *"a required
+  agreement is missing or has expired"* if either the **Apple Developer
+  Program License Agreement** (developer.apple.com/account, accepted by the
+  Account Holder) or the **App Store Connect → Business** agreement has
+  lapsed. Clear any pending banner first.
+* **Apple secrets present**: ``APPLE_CERTIFICATE`` /
+  ``APPLE_CERTIFICATE_PASSWORD`` / ``APPLE_SIGNING_IDENTITY`` /
+  ``APPLE_TEAM_ID`` and the App Store Connect API-key trio
+  (``APPLE_API_ISSUER`` / ``APPLE_API_KEY`` / ``APPLE_API_KEY_BASE64``).
+* **Auto-updater secrets present**: ``TAURI_SIGNING_PRIVATE_KEY`` (+
+  password) — without them the release ships but in-app updates won't
+  verify.
+* **Windows / SignPath**: the repo variable ``SIGNPATH_POLICY_SLUG`` must be
+  ``release-signing`` (it defaults to the untrusted ``test-signing`` cert,
+  which does **not** clear SmartScreen), the org secret
+  ``SIGNPATH_API_TOKEN`` must be set, and the ``CI builds`` submitter must
+  be on the ``release-signing`` policy's submitters list.
+
+**Cutting the release:**
+
+#. Push the tag: ``git tag gui-vX.X.X && git push origin gui-vX.X.X``.
+#. **Approve the Windows signing request.** The ``release-signing`` policy
+   requires a manual approval (1 approver). When the Windows job reaches the
+   SignPath step it submits the request and **blocks Pending approval** —
+   approve it in the SignPath dashboard
+   (``coolprop`` → ``release-signing``) within the action's
+   ``wait-for-completion-timeout-in-seconds`` (currently 3600 s / 1 h) or
+   the job times out and fails. (A real approval in validation took ~41 min,
+   so don't trim this much.)
+#. Let all three platform builds finish. The release job's ``latest.json``
+   step is **all-or-nothing** — a single failed/unsigned platform aborts the
+   whole release, so a macOS notarization or Windows approval failure means
+   *no* release is produced.
+#. The ``Overlay signed Windows installers onto bundle`` step prints each
+   Windows installer's Authenticode ``Status`` — confirm ``Valid`` (the
+   release cert), not ``UnknownError`` (the test cert) or ``NotSigned``.
+#. Edit the **draft** release body (testers only see what's there) and
+   publish. Publishing is what arms the in-app auto-updater
+   (``releases/latest/download/latest.json``), so don't publish a build you
+   don't want pushed to existing users.
+
+.. note::
+
+   The draft's "prerelease" flag is auto-set only for tags containing
+   ``-alpha`` / ``-beta`` / ``-rc``. A PEP 440-style ``gui-v8.0.0b1`` is
+   **not** matched — tick *Set as a pre-release* by hand before publishing a
+   beta.
