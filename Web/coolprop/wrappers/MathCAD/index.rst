@@ -1,4 +1,4 @@
-.. _mathcad:
+.. _Mathcad:
 
 ***************
 Mathcad Wrapper

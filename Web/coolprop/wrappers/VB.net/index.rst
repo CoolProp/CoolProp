@@ -1,4 +1,4 @@
-.. _VBdotnet:
+.. _VBdotNet:
 
 **************
 VB.net Wrapper
