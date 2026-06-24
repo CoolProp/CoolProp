@@ -636,7 +636,12 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
     // Get the current state
     GETKTVdll(&icomp, &jcomp, hmodij.data(), fij, hfmix.data(), hfij.data(), hbinp.data(), hmxrul.data(), 3, 255, 255, 255, 255);
 
-    std::string shmodij(hmodij.data());
+    // hmodij is a fixed 3-character REFPROP (FORTRAN) field with no NUL
+    // terminator; read exactly the field width (constructing from a C-string
+    // over-reads past the 3-byte buffer, CWE-126) and trim the trailing space
+    // padding that FORTRAN uses.
+    std::string shmodij(hmodij.data(), hmodij.size());
+    shmodij.erase(shmodij.find_last_not_of(' ') + 1);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
     if (parameter == "model") {
