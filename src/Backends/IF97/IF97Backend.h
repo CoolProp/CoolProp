@@ -393,7 +393,7 @@ class IF97Backend : public AbstractState
                             throw NotImplementedError(format("Viscosity not valid in two phase region"));
                             break;
                         case iconductivity:
-                            throw NotImplementedError(format("Viscosity not valid in two phase region"));
+                            throw NotImplementedError(format("Conductivity not valid in two phase region"));
                             break;
                         case isurface_tension:
                             return IF97::sigma97(_T);
