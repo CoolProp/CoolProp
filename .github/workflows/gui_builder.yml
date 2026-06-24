@@ -414,6 +414,12 @@ jobs:
           signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'test-signing' }}
           github-artifact-id: ${{ steps.signpath_upload.outputs.artifact-id }}
           wait-for-completion: true
+          # The release-signing policy requires a manual approval (1 approver),
+          # so the submitted request sits Pending until a human approves it in
+          # the SignPath dashboard. The action's default wait is 600s (10 min),
+          # a tight scramble on release day. Give the approver an hour — a real
+          # approval was observed taking ~41 min in validation.
+          wait-for-completion-timeout-in-seconds: 3600
           output-artifact-directory: signpath-signed
 
       - name: Overlay signed Windows installers onto bundle
