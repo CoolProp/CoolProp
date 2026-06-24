@@ -399,10 +399,13 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         std::array<char, 255> hmx_bnc{};
         const std::string HMX_path = get_REFPROP_HMX_BNC_path();
         const char* _HMX_path = HMX_path.c_str();
-        if (strlen(_HMX_path) > refpropcharlength) {
-            throw ValueError(format("Full HMX path (%s) is too long; max length is 255 characters", _HMX_path));
+        // The copy writes strlen+1 bytes (incl. the NUL), so the safe maximum is
+        // one less than the buffer; reject at >= to avoid a 1-byte overflow.
+        if (strlen(_HMX_path) >= refpropcharlength) {
+            throw ValueError(
+              format("Full HMX path (%s) is too long; max length is %d characters", _HMX_path, static_cast<int>(refpropcharlength) - 1));
         }
-        strcpy(hmx_bnc.data(), _HMX_path);
+        memcpy(hmx_bnc.data(), _HMX_path, strlen(_HMX_path) + 1);  // +1 for the NUL; length checked above
 
         if (get_config_bool(REFPROP_USE_GERG)) {
             int iflag = 1,  // Tell REFPROP to use GERG04; 0 unsets GERG usage
@@ -424,10 +427,11 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
 
             std::string path_to_MIX_file = join_path(get_REFPROP_mixtures_path_prefix(), components_joined_raw);
             const char* _components_joined_raw = path_to_MIX_file.c_str();
-            if (strlen(_components_joined_raw) > 255) {
+            // The copy appends a NUL, so the safe maximum is sizeof(mix)-1.
+            if (strlen(_components_joined_raw) >= sizeof(mix)) {
                 throw ValueError(format("components (%s) is too long", components_joined_raw.c_str()));
             }
-            strcpy(mix, _components_joined_raw);
+            memcpy(mix, _components_joined_raw, strlen(_components_joined_raw) + 1);  // +1 for the NUL; length checked above
 
             SETMIXdll(mix, hmx_bnc.data(), reference_state, &N, component_string.data(), &(x[0]), &ierr, herr.data(), 255, 255, 3, 10000, 255);
             if (static_cast<int>(ierr) <= 0) {
@@ -481,10 +485,12 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
 
             // Copy over the list of components
             const char* _components_joined = components_joined.c_str();
-            if (strlen(_components_joined) > 10000) {
+            // The safe maximum is component_string.size()-1; the space-padding
+            // loop below fills the remainder, so no NUL terminator is needed.
+            if (strlen(_components_joined) >= component_string.size()) {
                 throw ValueError(format("components_joined (%s) is too long", _components_joined));
             }
-            strcpy(component_string.data(), _components_joined);
+            memcpy(component_string.data(), _components_joined, strlen(_components_joined));
             // Pad the fluid string all the way to 10k characters with spaces to deal with string parsing bug in REFPROP in SETUPdll
             for (int i = static_cast<int>(components_joined.size()); i < 10000; ++i) {
                 component_string[i] = ' ';
@@ -670,11 +676,15 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
     GETKTVdll(&icomp, &jcomp, hmodij.data(), fij, hfmix.data(), hfij.data(), hbinp.data(), hmxrul.data(), 3, 255, 255, 255, 255);
 
     if (parameter == "model") {
-        if (value.length() > 4) {
-            throw ValueError(format("Model parameter (%s) is longer than 4 characters.", value));
-        } else {
-            strcpy(hmodij.data(), value.c_str());
+        // hmodij is a fixed 3-character REFPROP (FORTRAN) field with no room for a
+        // NUL terminator, so strcpy is unsafe here: reject anything longer than the
+        // field and copy without a NUL, space-padding the remainder per FORTRAN
+        // fixed-width string convention.
+        if (value.length() > hmodij.size()) {
+            throw ValueError(format("Model parameter (%s) is longer than %d characters.", value.c_str(), static_cast<int>(hmodij.size())));
         }
+        hmodij.fill(' ');
+        memcpy(hmodij.data(), value.data(), value.length());
     } else {
         throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
     }
