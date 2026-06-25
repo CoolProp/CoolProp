@@ -14,6 +14,8 @@ by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 #ifndef CUBICBACKEND_H_
 #define CUBICBACKEND_H_
 
+#include <array>
+
 #include "CoolProp/detail/tools.h"
 #include "CoolProp/DataStructures.h"
 #include "GeneralizedCubic.h"
@@ -459,21 +461,37 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
         HelmholtzDerivatives a;
         std::vector<double> z = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
         shared_ptr<AbstractCubic>& cubic = ACB->get_cubic();
-        a.alphar = cubic->alphar(tau, delta, z, 0, 0);
-        a.dalphar_dtau = cubic->alphar(tau, delta, z, 1, 0);
-        a.dalphar_ddelta = cubic->alphar(tau, delta, z, 0, 1);
-        a.d2alphar_dtau2 = cubic->alphar(tau, delta, z, 2, 0);
-        a.d2alphar_ddelta_dtau = cubic->alphar(tau, delta, z, 1, 1);
-        a.d2alphar_ddelta2 = cubic->alphar(tau, delta, z, 0, 2);
-        a.d3alphar_dtau3 = cubic->alphar(tau, delta, z, 3, 0);
-        a.d3alphar_ddelta_dtau2 = cubic->alphar(tau, delta, z, 2, 1);
-        a.d3alphar_ddelta2_dtau = cubic->alphar(tau, delta, z, 1, 2);
-        a.d3alphar_ddelta3 = cubic->alphar(tau, delta, z, 0, 3);
-        a.d4alphar_dtau4 = cubic->alphar(tau, delta, z, 4, 0);
-        a.d4alphar_ddelta_dtau3 = cubic->alphar(tau, delta, z, 3, 1);
-        a.d4alphar_ddelta2_dtau2 = cubic->alphar(tau, delta, z, 2, 2);
-        a.d4alphar_ddelta3_dtau = cubic->alphar(tau, delta, z, 1, 3);
-        a.d4alphar_ddelta4 = cubic->alphar(tau, delta, z, 0, 4);
+
+        // AbstractCubic::alphar(itau, idelta) is
+        //     psi_minus(delta, itau, idelta) - tau_times_a(tau, itau)/(R_u*T_r) * psi_plus(delta, idelta),
+        // and psi_minus is identically zero for itau > 0.  So all 15 derivatives factor over three
+        // small sets of intermediates -- psi_minus[idelta], tau_times_a[itau], psi_plus[idelta] --
+        // which the 15 separate alphar() calls would otherwise each rebuild from scratch (the am/bm/psi
+        // mixing terms dominated the residual hot path).  Compute each once, then assemble.  The
+        // assembly is term-for-term identical to alphar() (same operands, same grouping, with the
+        // literal 0.0 standing in for psi_minus at itau > 0), so results are bit-for-bit unchanged.
+        std::array<double, 5> psi_minus{}, psi_plus{}, tau_times_a{};
+        for (std::size_t n = 0; n <= 4; ++n) {
+            psi_minus[n] = cubic->psi_minus(delta, z, 0, n);
+            psi_plus[n] = cubic->psi_plus(delta, z, n);
+            tau_times_a[n] = cubic->tau_times_a(tau, z, n);
+        }
+        const double den = cubic->get_R_u() * cubic->get_Tr();
+        a.alphar = psi_minus[0] - tau_times_a[0] / den * psi_plus[0];
+        a.dalphar_dtau = 0.0 - tau_times_a[1] / den * psi_plus[0];
+        a.dalphar_ddelta = psi_minus[1] - tau_times_a[0] / den * psi_plus[1];
+        a.d2alphar_dtau2 = 0.0 - tau_times_a[2] / den * psi_plus[0];
+        a.d2alphar_ddelta_dtau = 0.0 - tau_times_a[1] / den * psi_plus[1];
+        a.d2alphar_ddelta2 = psi_minus[2] - tau_times_a[0] / den * psi_plus[2];
+        a.d3alphar_dtau3 = 0.0 - tau_times_a[3] / den * psi_plus[0];
+        a.d3alphar_ddelta_dtau2 = 0.0 - tau_times_a[2] / den * psi_plus[1];
+        a.d3alphar_ddelta2_dtau = 0.0 - tau_times_a[1] / den * psi_plus[2];
+        a.d3alphar_ddelta3 = psi_minus[3] - tau_times_a[0] / den * psi_plus[3];
+        a.d4alphar_dtau4 = 0.0 - tau_times_a[4] / den * psi_plus[0];
+        a.d4alphar_ddelta_dtau3 = 0.0 - tau_times_a[3] / den * psi_plus[1];
+        a.d4alphar_ddelta2_dtau2 = 0.0 - tau_times_a[2] / den * psi_plus[2];
+        a.d4alphar_ddelta3_dtau = 0.0 - tau_times_a[1] / den * psi_plus[3];
+        a.d4alphar_ddelta4 = psi_minus[4] - tau_times_a[0] / den * psi_plus[4];
         return a;
     }
     CoolPropDbl dalphar_dxi(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) override {
