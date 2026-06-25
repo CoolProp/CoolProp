@@ -1,7 +1,9 @@
 #include "GeneralizedCubic.h"
 #include "CoolProp/numerics/numerics.h"
 #include <array>
+#include <cassert>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <utility>
 
@@ -228,6 +230,11 @@ void AbstractCubic::set_alpha(const std::vector<double>& C1, const std::vector<d
 }
 
 double AbstractCubic::am_term(double tau, const std::vector<double>& x, std::size_t itau) {
+    // am_term and its composition-derivatives are the only callers of aij_term/u_term, so we
+    // validate/populate the aii cache for this tau once here.  The inner u_term reads then go
+    // straight to m_aii_cache instead of re-validating the cache on every aii lookup, which was
+    // the dominant cost (~38% of self-time) in the pure-fluid hot path.
+    _ensure_aii_cache(tau);
     double summer = 0;
     for (int i = N - 1; i >= 0; --i) {
         for (int j = N - 1; j >= 0; --j) {
@@ -237,6 +244,7 @@ double AbstractCubic::am_term(double tau, const std::vector<double>& x, std::siz
     return summer;
 }
 double AbstractCubic::d_am_term_dxi(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, bool xN_independent) {
+    _ensure_aii_cache(tau);  // see am_term: guarantees u_term can read m_aii_cache directly
     if (xN_independent) {
         double summer = 0;
         for (int j = N - 1; j >= 0; --j) {
@@ -253,6 +261,7 @@ double AbstractCubic::d_am_term_dxi(double tau, const std::vector<double>& x, st
 }
 double AbstractCubic::d2_am_term_dxidxj(double tau, const std::vector<double>& x, std::size_t itau, std::size_t i, std::size_t j,
                                         bool xN_independent) {
+    _ensure_aii_cache(tau);  // see am_term: guarantees u_term can read m_aii_cache directly
     if (xN_independent) {
         return 2 * aij_term(tau, i, j, itau);
     } else {
@@ -300,20 +309,25 @@ double AbstractCubic::aii_term(double tau, std::size_t i, std::size_t itau) {
     return m_aii_cache[i][itau];
 }
 double AbstractCubic::u_term(double tau, std::size_t i, std::size_t j, std::size_t itau) {
-    double aii = aii_term(tau, i, 0), ajj = aii_term(tau, j, 0);
+    // Read the aii derivatives straight from the cache.  The only callers (the am_term family)
+    // populate it for this tau first; the assert pins that invariant in debug builds so a future
+    // caller that forgets to do so fails loudly instead of silently returning stale values.
+    assert(std::memcmp(&tau, &m_tau_cache, sizeof(double)) == 0 && "u_term: aii cache not populated for this tau");
+    (void)tau;
+    const std::array<double, 5>& ai = m_aii_cache[i];
+    const std::array<double, 5>& aj = m_aii_cache[j];
+    const double aii = ai[0], ajj = aj[0];
     switch (itau) {
         case 0:
             return aii * ajj;
         case 1:
-            return aii * aii_term(tau, j, 1) + ajj * aii_term(tau, i, 1);
+            return aii * aj[1] + ajj * ai[1];
         case 2:
-            return (aii * aii_term(tau, j, 2) + 2 * aii_term(tau, i, 1) * aii_term(tau, j, 1) + ajj * aii_term(tau, i, 2));
+            return (aii * aj[2] + 2 * ai[1] * aj[1] + ajj * ai[2]);
         case 3:
-            return (aii * aii_term(tau, j, 3) + 3 * aii_term(tau, i, 1) * aii_term(tau, j, 2) + 3 * aii_term(tau, i, 2) * aii_term(tau, j, 1)
-                    + ajj * aii_term(tau, i, 3));
+            return (aii * aj[3] + 3 * ai[1] * aj[2] + 3 * ai[2] * aj[1] + ajj * ai[3]);
         case 4:
-            return (aii * aii_term(tau, j, 4) + 4 * aii_term(tau, i, 1) * aii_term(tau, j, 3) + 6 * aii_term(tau, i, 2) * aii_term(tau, j, 2)
-                    + 4 * aii_term(tau, i, 3) * aii_term(tau, j, 1) + ajj * aii_term(tau, i, 4));
+            return (aii * aj[4] + 4 * ai[1] * aj[3] + 6 * ai[2] * aj[2] + 4 * ai[3] * aj[1] + ajj * ai[4]);
         default:
             throw -1;
     }
