@@ -80,7 +80,7 @@ For python, you should be using `Anaconda/Miniconda <https://www.anaconda.com/do
 
 For the C++ compiler on Windows you have two mainstream options:
 
-* **MSYS2/UCRT64** (a Windows port of GCC and modern version of **MINGW**), most easily obtained via `MSYS2 <https://www.msys2.org/>`_. (See :ref:`CoolProp MSYS2 Setup <MSYS2>` guidance.)
+* **MSYS2/UCRT64** (a Windows port of GCC and modern version of **MINGW**), most easily obtained via `MSYS2 <https://www.msys2.org/>`_. (See :ref:`CoolProp MSYS2 Setup guidance <MSYS2>`.)
 * **Visual Studio** — install the free Community edition with the "Desktop development with C++" workload.
 
 Most users never need to compile the Python wrapper themselves, since pre-built CoolProp wheels are published on `PyPI <https://pypi.org/project/CoolProp/>`_.  If you do build from source, the old advice about matching a specific Visual Studio version to your Python version no longer applies. Since the release of Visual Studio 2015, the C runtime (UCRT) is stable, so any recent Visual Studio works.
