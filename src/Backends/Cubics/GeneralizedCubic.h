@@ -13,6 +13,10 @@
 
 #include <utility>
 #include <vector>
+#include <array>
+#include <cmath>
+#include <cstring>
+#include <limits>
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -146,7 +150,85 @@ class AbstractCubic
                 m_alpha_versions_cache[i] = alpha[i]->version();
             }
             m_tau_cache = tau;
+            m_aux_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate s/aij caches built from a different aii state
         }
+    }
+
+    /// Caches built ON TOP of the aii cache, keyed on the same tau (#3192 cubic perf):
+    ///   m_s_cache[i][p]    = d^p/dtau^p of sqrt(a_i(tau))  (the geometric-mean factor s_i and its tau-derivatives)
+    ///   m_aij_cache[i][j]  = the 5 tau-derivatives of a_ij = (1 - k_ij) * sqrt(a_i*a_j) = (1 - k_ij) * s_i*s_j
+    /// Both are composition-independent and constant at fixed tau, so they are built once per tau and reused across
+    /// every phase/composition/derivative evaluation of a flash (was: re-derived ~1e6x per flash).  s_i is obtained
+    /// from the cached a_i derivatives by the recurrence s^(n) = (a^(n) - sum_{p=1}^{n-1} C(n,p) s^(p) s^(n-p))/(2 s0).
+    mutable double m_aux_tau_cache = std::numeric_limits<double>::quiet_NaN();
+    mutable std::vector<std::array<double, 5>> m_s_cache;
+    mutable std::vector<std::vector<std::array<double, 5>>> m_aij_cache;
+    void _ensure_aux_cache(double tau) const {
+        _ensure_aii_cache(tau);  // refreshes m_aii_cache (and NaNs m_aux_tau_cache on a rebuild)
+        if (std::memcmp(&tau, &m_aux_tau_cache, sizeof(double)) == 0) return;
+        // --- per-component sqrt(a_i) and its tau-derivatives, via the s^2 = a recurrence ---
+        m_s_cache.resize(N);
+        static const double binom[5][5] = {{1, 0, 0, 0, 0}, {1, 1, 0, 0, 0}, {1, 2, 1, 0, 0}, {1, 3, 3, 1, 0}, {1, 4, 6, 4, 1}};
+        for (int i = 0; i < N; ++i) {
+            const std::array<double, 5>& a = m_aii_cache[i];
+            std::array<double, 5>& s = m_s_cache[i];
+            s[0] = std::sqrt(a[0]);
+            const double inv2s0 = 1.0 / (2.0 * s[0]);
+            for (int n = 1; n < 5; ++n) {
+                double conv = 0.0;
+                for (int p = 1; p < n; ++p)
+                    conv += binom[n][p] * s[p] * s[n - p];
+                s[n] = (a[n] - conv) * inv2s0;
+            }
+        }
+        // --- a_ij = (1-k_ij)*s_i*s_j and its tau-derivatives (Leibniz over s_i*s_j) ---
+        m_aij_cache.assign(N, std::vector<std::array<double, 5>>(N));
+        for (int i = 0; i < N; ++i) {
+            for (int j = 0; j <= i; ++j) {
+                const double one_minus_k = 1.0 - k[i][j];
+                std::array<double, 5>& aij = m_aij_cache[i][j];
+                for (int n = 0; n < 5; ++n) {
+                    double d = 0.0;
+                    for (int p = 0; p <= n; ++p)
+                        d += binom[n][p] * m_s_cache[i][p] * m_s_cache[j][n - p];
+                    aij[n] = one_minus_k * d;
+                }
+                if (j != i) m_aij_cache[j][i] = aij;  // symmetric
+            }
+        }
+        m_aux_tau_cache = tau;
+    }
+
+    /// Per-component covolume b_i = b0_ii(i).  Constant for the object's lifetime (it depends only on
+    /// Tc[i]/pc[i], which never change after construction), so it is filled once on first use instead of
+    /// re-evaluating the closed-form b_i on every bm_term/d_bm_term call (a flash hotspot).
+    std::vector<double> m_b0_cache;
+    double b0i_cached(std::size_t i) {
+        if (m_b0_cache.empty()) {
+            m_b0_cache.resize(N);
+            for (int j = 0; j < N; ++j)
+                m_b0_cache[j] = b0_ii(j);
+        }
+        return m_b0_cache[i];
+    }
+
+    /// Composition-scoped cache of bm = sum_i x_i b_i (#3192 perf).  bm is a pure function of the
+    /// composition, but the residual-Helmholtz volume helpers (c_term/A_term/psi_*) recompute it
+    /// ~dozens of times per alphar-derivative evaluation.  _sync_comp(x) is called once at each
+    /// alphar-level entry (alphar / d_alphar_dxi / d2_alphar_dxidxj / d3_alphar_dxidxjdxk) and rebuilds
+    /// m_bm only when the composition actually changed (one O(N) memcmp -- a composition "generation"
+    /// check); the nested helpers then read m_bm directly (O(1)).  Those helpers are private to
+    /// GeneralizedCubic and reachable ONLY through those four entries, so m_bm is current where read.
+    std::vector<double> m_comp_x_cache;
+    double m_bm = std::numeric_limits<double>::quiet_NaN();
+    void _sync_comp(const std::vector<double>& x) {
+        const std::size_t n = static_cast<std::size_t>(N);
+        if (m_comp_x_cache.size() == n && x.size() >= n && std::memcmp(x.data(), m_comp_x_cache.data(), n * sizeof(double)) == 0) {
+            return;
+        }
+        // Virtual dispatch: linear sum_i x_i b_i for SRK/PR, quadratic sum_ij x_i x_j b_ij for VTPR.
+        m_bm = bm_term(x);
+        m_comp_x_cache.assign(x.begin(), x.begin() + N);
     }
 
    public:
@@ -191,11 +273,13 @@ class AbstractCubic
     /// Set the entire kij matrix in one shot
     void set_kmat(const std::vector<std::vector<double>>& k) {
         this->k = k;
+        m_aux_tau_cache = std::numeric_limits<double>::quiet_NaN();  // k_ij is baked into m_aij_cache; force a rebuild
     };
     /// Set the kij factor for the ij pair
     void set_kij(std::size_t i, std::size_t j, double val) {
         k[i][j] = val;
         k[j][i] = val;
+        m_aux_tau_cache = std::numeric_limits<double>::quiet_NaN();  // k_ij is baked into m_aij_cache; force a rebuild
     }
     /// Get the kij factor for the ij pair
     double get_kij(std::size_t i, std::size_t j) {
@@ -560,7 +644,7 @@ class AbstractCubic
      * \param x The vector of mole fractions
      */
     double c_term(const std::vector<double>& x) {
-        return 1 / bm_term(x);
+        return 1 / m_bm;
     };
     /**
      * \brief The first composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -569,7 +653,7 @@ class AbstractCubic
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d_c_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent) {
-        return -d_bm_term_dxi(x, i, xN_independent) / pow(bm_term(x), 2);
+        return -d_bm_term_dxi(x, i, xN_independent) / pow(m_bm, 2);
     };
     /**
      * \brief The second composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -579,7 +663,7 @@ class AbstractCubic
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d2_c_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {
-        double bm = bm_term(x);
+        double bm = m_bm;
         return (2 * d_bm_term_dxi(x, i, xN_independent) * d_bm_term_dxi(x, j, xN_independent) - bm * d2_bm_term_dxidxj(x, i, j, xN_independent))
                / pow(bm, 3);
     };
@@ -592,7 +676,7 @@ class AbstractCubic
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d3_c_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) {
-        double bm = bm_term(x);
+        double bm = m_bm;
         return 1 / pow(bm, 4)
                * (2 * bm
                     * (d_bm_term_dxi(x, i, xN_independent) * d2_bm_term_dxidxj(x, j, k, xN_independent)
@@ -613,7 +697,7 @@ class AbstractCubic
      * \param x The vector of mole fractions
      */
     double A_term(double delta, const std::vector<double>& x) {
-        double bm = bm_term(x);
+        double bm = m_bm;
         double cm = cm_term();
         return log((delta * rho_r * (Delta_1 * bm + cm) + 1) / (delta * rho_r * (Delta_2 * bm + cm) + 1));
     };
