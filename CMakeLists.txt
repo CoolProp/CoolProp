@@ -95,10 +95,6 @@ option(COOLPROP_BUILD_SVDSBTL_PROFILE
        "Build the SVDSBTL per-stage profiler at dev/profile_svdsbtl.cpp"
        OFF)
 
-option(COOLPROP_BUILD_CUBIC_U_BENCH
-       "Build the cubic-EOS u(T,rho) benchmark at dev/bench_cubic_u.cpp"
-       OFF)
-
 #option (DARWIN_USE_LIBCPP
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
@@ -2331,6 +2327,8 @@ if(COOLPROP_CATCH_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CubicAlpha.cpp")
   list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CubicU.cpp")
+  list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-NeonMelting.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-AirMelting.cpp")
@@ -2441,18 +2439,6 @@ if(COOLPROP_BUILD_SVDSBTL_PROFILE)
   add_dependencies(profile_svdsbtl generate_headers)
   if(UNIX)
     target_link_libraries(profile_svdsbtl ${CMAKE_DL_LIBS})
-  endif()
-endif()
-
-if(COOLPROP_BUILD_CUBIC_U_BENCH)
-  # Cubic-EOS u(T,rho) forward-eval benchmark (SRK/PR vs HEOS), for
-  # sizing the UV-tabular-input work in SVDSBTL.
-  add_executable(bench_cubic_u
-                 ${APP_SOURCES}
-                 "${CMAKE_CURRENT_SOURCE_DIR}/dev/bench_cubic_u.cpp")
-  add_dependencies(bench_cubic_u generate_headers)
-  if(UNIX)
-    target_link_libraries(bench_cubic_u ${CMAKE_DL_LIBS})
   endif()
 endif()
 
