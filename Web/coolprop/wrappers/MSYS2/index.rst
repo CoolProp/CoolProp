@@ -14,7 +14,7 @@ This is not a wrapper in itself, but guidance on using the MSYS2 toolchain to co
 Background
 ==========
 
-Prior versions of CoolProp supported **MINGW** as a Windows port of gcc.  However, the original **MINGW** has been frozen since 2013 and is no longer compatible.  Mingw-x64 (*with 32 and 64-bit compilers*) was forked form MinGW in 2007 to add 64-bit support and coverage of newer Windows APIs absent from the original project.  `MSYS2 <https://www.msys2.org/>`_ followed in the 2010s, building on Mingw-x64 while adding the ``pacman`` package manager and a modernized distribution model. There is also a `VS Code extension <https://code.visualstudio.com/docs/cpp/config-mingw#_prerequisites>`_ facilitating use of **VS Code** as the IDE to run the g++ compiler and GDB debugger.  `MSYS2 <https://www.msys2.org/>`_ is the best place to download this set of GNU compiler tools as well as help on
+Prior versions of CoolProp supported **MINGW** as a Windows port of gcc.  However, the original **MINGW** has been frozen since 2013 and is no longer compatible.  Mingw-x64 (*with 32 and 64-bit compilers*) was forked form MinGW in 2007 to add 64-bit support and coverage of newer Windows APIs absent from the original project.  `MSYS2 <https://www.msys2.org/>`__ followed in the 2010s, building on Mingw-x64 while adding the ``pacman`` package manager and a modernized distribution model. There is also a `VS Code extension <https://code.visualstudio.com/docs/cpp/config-mingw#_prerequisites>`_ facilitating use of **VS Code** as the IDE to run the g++ compiler and GDB debugger.  `MSYS2 <https://www.msys2.org/>`__ is the best place to download this set of GNU compiler tools as well as help on
 
 * Installing and setting up the MSYS2/UCRT64 environment
 * Terminals for command line operations in the UCRT64 environment
@@ -69,7 +69,7 @@ MSYS2 has its own version of cmake that is **UCRT64** aware.  Install it with::
    pacman -S --needed mingw-w64-ucrt-x86_64-cmake
 
 
-**Install UCRT64 Git**::
+**Install UCRT64 Git**
 
 This is practically identical to the standalone "Git for Windows", but it is neatly bundled and pre-configured by the MSYS2 team to seamlessly integrate with your UCRT64 pathing and shell settings.  Install with::
 
@@ -81,7 +81,7 @@ This is practically identical to the standalone "Git for Windows", but it is nea
 
 **Install UCRT64 Ninja**
 
-MSYS2 **Ninja** is a compact, ultra-fast, low-level build system optimized strictly for execution speed. On `MSYS2 <https://www.msys2.org/>`_.  Install it with::
+MSYS2 **Ninja** is a compact, ultra-fast, low-level build system optimized strictly for execution speed. On `MSYS2 <https://www.msys2.org/>`__.  Install it with::
 
     pacman -S --needed mingw-w64-ucrt-x86_64-ninja
 
