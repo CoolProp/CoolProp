@@ -190,10 +190,12 @@ int main(int argc, char** argv) {
     bench_raw_dalphar_dtau("PR", fluid, T, rho_molar, repeats);
 
     std::printf("\n  -- bit-exactness of shared-intermediate all() vs 15 alphar() calls --\n");
-    verify_bitexact("SRK", fluid);
-    verify_bitexact("PR", fluid);
+    int mismatches = 0;
+    mismatches += verify_bitexact("SRK", fluid);
+    mismatches += verify_bitexact("PR", fluid);
 
-    return 0;
+    // Propagate any bit-exact mismatch to the exit status so automated runs fail loudly.
+    return mismatches == 0 ? 0 : 1;
 }
 
 // NOLINTEND(cppcoreguidelines-pro-type-vararg,cert-err33-c,hicpp-vararg,cppcoreguidelines-missing-std-forward,cert-exp42-c,bugprone-suspicious-memory-comparison,cert-flp37-c,bugprone-exception-escape,cert-err34-c,cppcoreguidelines-pro-bounds-pointer-arithmetic,modernize-avoid-c-arrays)

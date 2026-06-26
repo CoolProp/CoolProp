@@ -459,16 +459,27 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
     HelmholtzDerivatives all(HelmholtzEOSMixtureBackend& HEOS, const std::vector<CoolPropDbl>& mole_fractions, double tau, double delta,
                              bool cache_values = false) override {
         HelmholtzDerivatives a;
-        std::vector<double> z = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
+        // The cubic mixing functions take a std::vector<double>; mole_fractions is a
+        // std::vector<CoolPropDbl>, which is std::vector<double> in every build this class
+        // is compiled for (its dalphar_dxi/... overrides below already call
+        // HelmholtzEOSMixtureBackend::get_mole_fractions_doubleref(), which only type-checks
+        // when CoolPropDbl == double).  So bind a const reference instead of copying
+        // element-by-element -- no per-call heap allocation in the residual hot path.
+        const std::vector<double>& z = mole_fractions;
         shared_ptr<AbstractCubic>& cubic = ACB->get_cubic();
 
         // AbstractCubic::alphar(itau, idelta) is
         //     psi_minus(delta, itau, idelta) - tau_times_a(tau, itau)/(R_u*T_r) * psi_plus(delta, idelta),
         // and psi_minus is identically zero for itau > 0.  So all 15 derivatives factor over three
-        // small sets of intermediates -- psi_minus[idelta], tau_times_a[itau], psi_plus[idelta] --
-        // which the 15 separate alphar() calls would otherwise each rebuild from scratch (the am/bm/psi
-        // mixing terms dominated the residual hot path).  Compute each once, then assemble.  The
-        // assembly is term-for-term identical to alphar() (same operands, same grouping, with the
+        // small sets of intermediates, each filled below at every derivative order n in [0, 4] and
+        // indexed by the order it carries -- note n means a delta-derivative for the two psi arrays
+        // but a tau-derivative for tau_times_a:
+        //     psi_minus[n]   = psi_minus(delta, itau=0, idelta=n)  -- n-th delta-derivative of psi_minus
+        //     psi_plus[n]    = psi_plus(delta, idelta=n)           -- n-th delta-derivative of psi_plus
+        //     tau_times_a[n] = tau_times_a(tau, itau=n)            -- n-th tau-derivative of tau*a
+        // The 15 separate alphar() calls would otherwise each rebuild these from scratch (the
+        // am/bm/psi mixing terms dominated the residual hot path).  Compute each once, then assemble.
+        // The assembly is term-for-term identical to alphar() (same operands, same grouping, with the
         // literal 0.0 standing in for psi_minus at itau > 0), so results are bit-for-bit unchanged.
         std::array<double, 5> psi_minus{}, psi_plus{}, tau_times_a{};
         for (std::size_t n = 0; n <= 4; ++n) {
