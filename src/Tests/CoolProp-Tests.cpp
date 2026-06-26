@@ -6505,6 +6505,48 @@ TEST_CASE("REFPROP saturation derivs work for a mixture", "[REFPROPsat]") {
     CHECK_THROWS(RP->first_two_phase_deriv_splined(iDmolar, iHmolar, iP, 0.5));
 }
 
+TEST_CASE("REFPROP set_binary_interaction_string model param is length-guarded (CoolProp-tw7t)", "[REFPROP][refprop][binary_interaction]") {
+    Skip_if_No_REFPROP();
+    std::shared_ptr<AbstractState> RP(AbstractState::factory("REFPROP", "Methane&Ethane"));
+    RP->set_mole_fractions({0.6, 0.4});
+
+    // hmodij is a 3-character REFPROP (FORTRAN) field. An over-long model value
+    // must be rejected by the length guard, NOT strcpy'd into the 3-byte buffer
+    // (which overflowed the stack by 1-2 bytes — CoolProp-tw7t). The length-4
+    // case is the precise regression: the old guard `value.length() > 4` let it
+    // through and overflowed; ASAN only flags it with a boundary-length input,
+    // which no prior test supplied.
+    CHECK_THROWS_AS(RP->set_binary_interaction_string(0, 1, "model", "ABCD"), CoolProp::ValueError);     // 4 chars
+    CHECK_THROWS_AS(RP->set_binary_interaction_string(0, 1, "model", "TOOLONG"), CoolProp::ValueError);  // 7 chars
+    // An unknown parameter must also fail cleanly rather than silently no-op.
+    CHECK_THROWS_AS(RP->set_binary_interaction_string(0, 1, "bogus", "x"), CoolProp::ValueError);
+
+    // A valid-length (<=3 char) model exercises the bounded copy: it must not
+    // overflow hmodij[3]. Whether REFPROP accepts the specific code is version-
+    // dependent, so we only require the call does not corrupt the stack (ASAN
+    // would abort the binary if it did).
+    CHECK_NOTHROW([&] {
+        try {
+            RP->set_binary_interaction_string(0, 1, "model", "KW0");
+        } catch (const CoolProp::ValueError&) { /* REFPROP may reject the code; acceptable */
+        }
+    }());
+
+    // The getter reads the same fixed 3-char field; constructing a std::string
+    // from hmodij as a C-string over-reads past the 3-byte buffer (CWE-126), so
+    // it must read exactly the field width and trim the FORTRAN space padding.
+    // Exercise the read path (ASAN guards the over-read); CAS: Methane=74-82-8,
+    // Ethane=74-84-0. The CAS lookup is REFPROP-version dependent, so tolerate
+    // a ValueError but require a within-field-width result when it succeeds.
+    CHECK_NOTHROW([&] {
+        try {
+            std::string m = RP->get_binary_interaction_string("74-82-8", "74-84-0", "model");
+            CHECK(m.size() <= 3);
+        } catch (const CoolProp::ValueError&) { /* CAS lookup version-dependent; acceptable */
+        }
+    }());
+}
+
 TEST_CASE("REFPROP cross-check: sat-state fugacity_coefficient agrees with HEOS for Methane/Ethane/Propane", "[REFPROPsat][2345-followup]") {
     Skip_if_No_REFPROP();
     const std::vector<double> z = {0.25, 0.25, 0.5};
