@@ -160,6 +160,9 @@ Highlights:
   dependencies unless ``CPM_SOURCE_CACHE`` points at a populated cache. The
   minimum CMake is now **3.14** and a **C++17** compiler is required.
 
+Contributors to this release (everyone with a merged PR since 7.2.0):
+`ibell <https://github.com/ibell>`_, `henningjp <https://github.com/henningjp>`_, `andr1976 <https://github.com/andr1976>`_, `fwitte <https://github.com/fwitte>`_, `volkan-a <https://github.com/volkan-a>`_, `tobias-loew <https://github.com/tobias-loew>`_, `thorade <https://github.com/thorade>`_, `portyanikhin <https://github.com/portyanikhin>`_, `luzechao <https://github.com/luzechao>`_, `jakobreichert <https://github.com/jakobreichert>`_, `HaSchneider <https://github.com/HaSchneider>`_, `friederikeboehm <https://github.com/friederikeboehm>`_
+
 Issues closed:
 
 * `#2254 <https://github.com/CoolProp/CoolProp/issues/2254>`_ : CSharp wrapper folder missing from download location since version 6.4.2
