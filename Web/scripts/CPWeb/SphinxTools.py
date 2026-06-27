@@ -67,6 +67,7 @@ The following figure shows the accuracy of the superancillary functions relative
     You can download the script that generated the following figure here: :download:`(link to script)<Superancillaryplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<Superancillaryplots/{fluid:s}.pdf>`.
 
 .. image:: Superancillaryplots/{fluid:s}.png
+    :width: 400px
 
 """
 
