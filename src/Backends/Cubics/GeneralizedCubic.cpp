@@ -275,9 +275,18 @@ double AbstractCubic::d3_am_term_dxidxjdxk(double tau, const std::vector<double>
 }
 
 double AbstractCubic::bm_term(const std::vector<double>& x) {
+    // b0_ii(i) is a constant (R_u*Tc[i]/pc[i] scaled); cache it once so this sum -- called many
+    // times per all() via psi_minus/psi_plus/PI_12 -- avoids the repeated division.  Bit-exact:
+    // m_b0_ii_cache[i] holds exactly the value b0_ii(i) returns.
+    if (m_b0_ii_cache.size() != static_cast<std::size_t>(N)) {
+        m_b0_ii_cache.resize(N);
+        for (int i = 0; i < N; ++i) {
+            m_b0_ii_cache[i] = b0_ii(i);
+        }
+    }
     double summer = 0;
     for (int i = N - 1; i >= 0; --i) {
-        summer += x[i] * b0_ii(i);
+        summer += x[i] * m_b0_ii_cache[i];
     }
     return summer;
 }
@@ -333,23 +342,33 @@ double AbstractCubic::u_term(double tau, std::size_t i, std::size_t j, std::size
     }
 }
 double AbstractCubic::aij_term(double tau, std::size_t i, std::size_t j, std::size_t itau) {
-    double u = u_term(tau, i, j, 0);
+    // Half-integer powers of u are written as u^k * sqrt(u), and integer powers as repeated
+    // multiplication, to avoid std::pow (the dominant cost of the residual hot path).  u_term
+    // values are pulled into locals so each is computed once.  Results differ from the previous
+    // std::pow formulation only at the last ULP.
+    const double u = u_term(tau, i, j, 0);
+    const double su = sqrt(u);
+    const double kf = 1 - k[i][j];
 
     switch (itau) {
         case 0:
-            return (1 - k[i][j]) * sqrt(u);
+            return kf * su;
         case 1:
-            return (1 - k[i][j]) / (2.0 * sqrt(u)) * u_term(tau, i, j, 1);
-        case 2:
-            return (1 - k[i][j]) / (4.0 * pow(u, 3.0 / 2.0)) * (2 * u * u_term(tau, i, j, 2) - pow(u_term(tau, i, j, 1), 2));
-        case 3:
-            return (1 - k[i][j]) / (8.0 * pow(u, 5.0 / 2.0))
-                   * (4 * pow(u, 2) * u_term(tau, i, j, 3) - 6 * u * u_term(tau, i, j, 1) * u_term(tau, i, j, 2) + 3 * pow(u_term(tau, i, j, 1), 3));
-        case 4:
-            return (1 - k[i][j]) / (16.0 * pow(u, 7.0 / 2.0))
-                   * (-4 * pow(u, 2) * (4 * u_term(tau, i, j, 1) * u_term(tau, i, j, 3) + 3 * pow(u_term(tau, i, j, 2), 2))
-                      + 8 * pow(u, 3) * u_term(tau, i, j, 4) + 36 * u * pow(u_term(tau, i, j, 1), 2) * u_term(tau, i, j, 2)
-                      - 15 * pow(u_term(tau, i, j, 1), 4));
+            return kf / (2.0 * su) * u_term(tau, i, j, 1);
+        case 2: {
+            const double u1 = u_term(tau, i, j, 1);
+            return kf / (4.0 * u * su) * (2 * u * u_term(tau, i, j, 2) - u1 * u1);
+        }
+        case 3: {
+            const double u1 = u_term(tau, i, j, 1), u2 = u_term(tau, i, j, 2);
+            return kf / (8.0 * u * u * su) * (4 * u * u * u_term(tau, i, j, 3) - 6 * u * u1 * u2 + 3 * u1 * u1 * u1);
+        }
+        case 4: {
+            const double u1 = u_term(tau, i, j, 1), u2 = u_term(tau, i, j, 2);
+            return kf / (16.0 * u * u * u * su)
+                   * (-4 * u * u * (4 * u1 * u_term(tau, i, j, 3) + 3 * u2 * u2) + 8 * u * u * u * u_term(tau, i, j, 4) + 36 * u * u1 * u1 * u2
+                      - 15 * u1 * u1 * u1 * u1);
+        }
         default:
             throw -1;
     }
@@ -364,12 +383,18 @@ double AbstractCubic::psi_minus(double delta, const std::vector<double>& x, std:
             return -log(bracket);
         case 1:
             return bmc * rho_r / bracket;
-        case 2:
-            return pow(bmc * rho_r / bracket, 2);
-        case 3:
-            return 2 * pow(bmc * rho_r / bracket, 3);
-        case 4:
-            return 6 * pow(bmc * rho_r / bracket, 4);
+        case 2: {
+            const double r = bmc * rho_r / bracket;
+            return r * r;
+        }
+        case 3: {
+            const double r = bmc * rho_r / bracket;
+            return 2 * r * r * r;
+        }
+        case 4: {
+            const double r = bmc * rho_r / bracket;
+            return 6 * r * r * r * r;
+        }
         default:
             throw -1;
     }
@@ -451,7 +476,7 @@ double AbstractCubic::PI_12(double delta, const std::vector<double>& x, std::siz
         case 1:
             return rho_r * (2 * (bm * Delta_1 + cm) * (bm * Delta_2 + cm) * delta * rho_r + (Delta_1 + Delta_2) * bm + 2 * cm);
         case 2:
-            return 2 * (Delta_1 * bm + cm) * (Delta_2 * bm + cm) * pow(rho_r, 2);
+            return 2 * (Delta_1 * bm + cm) * (Delta_2 * bm + cm) * rho_r * rho_r;
         case 3:
             return 0;
         case 4:
@@ -531,14 +556,19 @@ double AbstractCubic::psi_plus(double delta, const std::vector<double>& x, std::
             return A_term(delta, x) * c_term(x) / (Delta_1 - Delta_2);
         case 1:
             return rho_r / PI_12(delta, x, 0);
-        case 2:
-            return -rho_r / pow(PI_12(delta, x, 0), 2) * PI_12(delta, x, 1);
-        case 3:
-            return rho_r * (-PI_12(delta, x, 0) * PI_12(delta, x, 2) + 2 * pow(PI_12(delta, x, 1), 2)) / pow(PI_12(delta, x, 0), 3);
-        case 4:
+        case 2: {
+            const double p0 = PI_12(delta, x, 0), p1 = PI_12(delta, x, 1);
+            return -rho_r / (p0 * p0) * p1;
+        }
+        case 3: {
+            const double p0 = PI_12(delta, x, 0), p1 = PI_12(delta, x, 1), p2 = PI_12(delta, x, 2);
+            return rho_r * (-p0 * p2 + 2 * p1 * p1) / (p0 * p0 * p0);
+        }
+        case 4: {
             // Term -PI_12(delta,x,0)*PI_12(delta,x,3) in the numerator is zero (and removed) since PI_12(delta,x,3) = 0
-            return rho_r * (6 * PI_12(delta, x, 0) * PI_12(delta, x, 1) * PI_12(delta, x, 2) - 6 * pow(PI_12(delta, x, 1), 3))
-                   / pow(PI_12(delta, x, 0), 4);
+            const double p0 = PI_12(delta, x, 0), p1 = PI_12(delta, x, 1), p2 = PI_12(delta, x, 2);
+            return rho_r * (6 * p0 * p1 * p2 - 6 * p1 * p1 * p1) / (p0 * p0 * p0 * p0);
+        }
         default:
             throw -1;
     }

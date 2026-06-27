@@ -128,6 +128,10 @@ class AbstractCubic
     /// m_tau_cache to detect when an alpha function was mutated (e.g., via set_Tr_over_Tci()) without
     /// going through one of AbstractCubic's own cache-invalidating setters.
     mutable std::vector<unsigned long> m_alpha_versions_cache;
+    /// Cache: per-component covolumes b0_ii(i).  These depend only on Tc, pc and R_u (fixed at
+    /// construction), so they are computed once on first use; bm_term() reads them instead of
+    /// re-evaluating the R_u*Tc/pc division on every call.
+    mutable std::vector<double> m_b0_ii_cache;
     void _ensure_aii_cache(double tau) const {
         bool stale = (std::memcmp(&tau, &m_tau_cache, sizeof(double)) != 0) || (m_alpha_versions_cache.size() != alpha.size());
         if (!stale) {

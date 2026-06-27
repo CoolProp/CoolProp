@@ -460,12 +460,14 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
                              bool cache_values = false) override {
         HelmholtzDerivatives a;
         // The cubic mixing functions take a std::vector<double>; mole_fractions is a
-        // std::vector<CoolPropDbl>, which is std::vector<double> in every build this class
-        // is compiled for (its dalphar_dxi/... overrides below already call
-        // HelmholtzEOSMixtureBackend::get_mole_fractions_doubleref(), which only type-checks
-        // when CoolPropDbl == double).  So bind a const reference instead of copying
-        // element-by-element -- no per-call heap allocation in the residual hot path.
+        // std::vector<CoolPropDbl>.  When CoolPropDbl == double (the default config) the two types
+        // are identical, so bind a const reference and skip the per-call heap allocation in the
+        // residual hot path; the long-double config still needs the converting copy.
+#ifdef COOLPROPDBL_MAPS_TO_DOUBLE
         const std::vector<double>& z = mole_fractions;
+#else
+        std::vector<double> z = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
+#endif
         shared_ptr<AbstractCubic>& cubic = ACB->get_cubic();
 
         // AbstractCubic::alphar(itau, idelta) is
