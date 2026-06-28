@@ -669,12 +669,13 @@ static void copy_component_vector(const std::vector<double>& src, double* values
             values[i] = src[i];
         }
     } else {
-        throw CoolProp::ValueError(format("Length of array [%d] is greater than allocated buffer length [%d]", *N, maxN));
+        throw CoolProp::ValueError(format("Length of array [%ld] is greater than allocated buffer length [%ld]", *N, maxN));
     }
 }
 EXPORT_CODE void CONVENTION AbstractState_get_fugacities(const long handle, double* values, const long maxN, long* N, long* errcode,
                                                          char* message_buffer, const long buffer_length) {
     *errcode = 0;
+    *N = 0;  // so a throw before the copy leaves a well-defined count, not a stale one
     fpu_reset_guard guard;
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
@@ -686,6 +687,7 @@ EXPORT_CODE void CONVENTION AbstractState_get_fugacities(const long handle, doub
 EXPORT_CODE void CONVENTION AbstractState_get_fugacity_coefficients(const long handle, double* values, const long maxN, long* N, long* errcode,
                                                                     char* message_buffer, const long buffer_length) {
     *errcode = 0;
+    *N = 0;  // so a throw before the copy leaves a well-defined count, not a stale one
     fpu_reset_guard guard;
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
@@ -697,6 +699,7 @@ EXPORT_CODE void CONVENTION AbstractState_get_fugacity_coefficients(const long h
 EXPORT_CODE void CONVENTION AbstractState_get_chemical_potentials(const long handle, double* values, const long maxN, long* N, long* errcode,
                                                                   char* message_buffer, const long buffer_length) {
     *errcode = 0;
+    *N = 0;  // so a throw before the copy leaves a well-defined count, not a stale one
     fpu_reset_guard guard;
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
