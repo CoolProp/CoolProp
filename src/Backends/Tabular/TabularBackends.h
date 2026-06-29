@@ -1242,7 +1242,11 @@ class TabularBackend : public AbstractState
         this->AS->set_mole_fractions(mole_fractions);
     };
     void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override {
-        throw NotImplementedError("set_mass_fractions not implemented for Tabular backends");
+        // Let the inner backend do the mass→mole conversion, then forward the
+        // resulting mole fractions through set_mole_fractions so that derived
+        // classes (e.g. BicubicBackend) can trigger table construction.
+        this->AS->set_mass_fractions(mass_fractions);
+        this->set_mole_fractions(this->AS->get_mole_fractions());
     };
     const std::vector<CoolPropDbl>& get_mole_fractions() override {
         return AS->get_mole_fractions();
