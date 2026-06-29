@@ -229,8 +229,9 @@ The primary motivation for the use of tabular interpolation is the improvement i
 Mixtures
 --------
 
-Tabular backends work with multi-component mixtures. The workflow differs from
-pure fluids in two ways:
+Tabular backends work with multi-component mixtures. It is compatible with the
+``BICUBIC`` and ``TTSE`` back-ends. The workflow differs from pure fluids in
+two ways:
 
 1. **Fractions must be set as mole fractions.** ``set_mass_fractions`` is not
    implemented for tabular backends and will raise an error. Convert from mass
