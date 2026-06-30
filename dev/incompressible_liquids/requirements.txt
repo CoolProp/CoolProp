@@ -1,0 +1,16 @@
+# Dependencies for the incompressible-fluid fitting pipeline
+# (all_incompressibles.py, CPIncomp/*, test_fitting_regression.py).
+#
+# Issue #2488 ("Incompressible fitting code is no longer working") happened
+# because an unpinned numpy upgrade silently changed fit behavior with no
+# automated test to catch it. These are floors at the versions this pipeline
+# is verified to run cleanly against (no deprecation warnings, fit output
+# matches json/*.json within test_fitting_regression.py's tolerance).
+#
+# Pinning loosely (>=) rather than exactly so a deliberate upgrade is still
+# easy -- test_fitting_regression.py is the actual safety net: run it after
+# bumping any of these before trusting newly-generated JSON output.
+numpy>=2.4.6
+scipy>=1.17.1
+matplotlib>=3.11.0
+pytest>=9.1.1
