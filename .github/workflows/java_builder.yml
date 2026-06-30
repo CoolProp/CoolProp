@@ -74,7 +74,7 @@ jobs:
 
       - name: JSON symbol-leak gate (Java native wrapper)
         # The SWIG Java module compiles the CoolProp sources (incl. the JSON
-        # loaders) into CoolPropJava.{so,dylib} — the same exposure the Octave
+        # loaders) into CoolPropJava.{so,jnilib} — the same exposure the Octave
         # .oct carries, the wrapper where the hidden-visibility regression
         # (CoolProp-rj2i) bit. Assert the link-time export control keeps
         # nlohmann/valijson/rapidjson out of the wrapper's dynamic symbol table.
@@ -85,10 +85,10 @@ jobs:
         run: |
           set -euo pipefail
           # The shared object keeps the platform 'lib' prefix on ELF/Mach-O
-          # (PREFIX "" is Windows-only) → libCoolPropJava.{so,dylib}. Include
+          # (PREFIX "" is Windows-only) → libCoolPropJava.{so,jnilib}. Include
           # the SONAME-versioned forms (libCoolPropJava.so.<ver>, the regular
           # file behind the symlink) so -type f still finds it if versioned.
-          wrapper=$(find build install_root -type f \( -name '*CoolPropJava.so' -o -name '*CoolPropJava.so.*' -o -name '*CoolPropJava.dylib' -o -name '*CoolPropJava.*.dylib' \) | head -1)
+          wrapper=$(find build install_root -type f \( -name '*CoolPropJava.so' -o -name '*CoolPropJava.so.*' -o -name '*CoolPropJava.jnilib' -o -name '*CoolPropJava.*.jnilib' \) | head -1)
           if [ -z "$wrapper" ]; then
             echo "FAIL: CoolPropJava shared object not found under build/ or install_root/" >&2
             exit 1
