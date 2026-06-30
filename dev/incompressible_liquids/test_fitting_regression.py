@@ -43,11 +43,18 @@ from CPIncomp import getPureFluids, getSolutionFluids, getSecCoolFluids
 
 JSON_DIR = os.path.join(os.path.dirname(__file__), "json")
 
-# Tolerances are relative to the magnitude of the checked-in coefficients;
-# this comfortably covers numpy/scipy solver-version noise (observed ~1e-4
+# Tolerance is numpy.allclose-style (absolute + relative): a fixed global
+# absolute floor doesn't work here because a single fit's coefficients span
+# many orders of magnitude (leading terms vs. high-order ones), so the
+# absolute floor is tied to that property's own dominant coefficient instead
+# of a universal constant -- otherwise a tiny higher-order term (e.g. DowJ's
+# conductivity has terms ~1e-11) gets judged against a floor of the same
+# order as itself and flakes on ordinary solver-version noise. This
+# comfortably covers numpy/scipy solver-version noise (observed ~1e-4
 # relative on the fluids below) while still catching an order-of-magnitude
 # or wrong-fit-type regression like #2488/#2447.
 RELATIVE_TOLERANCE = 1e-2
+ABSOLUTE_TOLERANCE_FRACTION = 1e-6  # of the property's own largest coefficient
 PROPERTIES = ["density", "specific_heat", "viscosity", "conductivity"]
 
 
@@ -71,9 +78,11 @@ def _assert_close_to_disk(fluidObject):
             continue  # property not defined/fitted for this fluid -- nothing to compare
         fittedCoeffs = np.array(fittedCoeffs, dtype=float)
         assert fittedCoeffs.shape == onDisk.shape, f"{name}.{prop}: shape changed, {fittedCoeffs.shape} vs {onDisk.shape}"
-        scale = np.maximum(np.abs(onDisk), 1e-12)
-        relDiff = np.max(np.abs(fittedCoeffs - onDisk) / scale)
-        assert relDiff < RELATIVE_TOLERANCE, f"{name}.{prop}: refit drifted {relDiff:.3e} relative from json/{name}.json (tolerance {RELATIVE_TOLERANCE:.0e})"
+        magnitude = np.max(np.abs(onDisk)) if onDisk.size else 0.0
+        absoluteFloor = max(magnitude * ABSOLUTE_TOLERANCE_FRACTION, 1e-12)
+        tolerance = absoluteFloor + RELATIVE_TOLERANCE * np.abs(onDisk)
+        worstExcess = np.max(np.abs(fittedCoeffs - onDisk) - tolerance)
+        assert worstExcess <= 0, f"{name}.{prop}: refit drifted beyond tolerance (worst excess {worstExcess:.3e}) from json/{name}.json"
 
 
 def test_pure_fluid_refit_matches_disk():
