@@ -342,8 +342,10 @@ class SVDSBTLBackend : public AbstractState
     void ensure_dome_s_endpoints_(PointEvaluation& pt);
     void ensure_dome_h_endpoints_(PointEvaluation& pt);
 
-    // Load <fluid>.<pair>.svd.bin.z from the default cache; if absent,
-    // build via the matching preset and save it.  Inserts into surfaces_.
+    // Resolve the surface for `pair`: first the process-wide
+    // SVDSurfaceCache, then <fluid>.<pair>.svd.bin.z on disk; if
+    // neither has it, build via the matching preset and populate
+    // both.  Inserts into surfaces_.
     void ensure_surface_(CoolProp::input_pairs pair);
 
     // Resolve the SuperAncillary handle for this fluid (cached after
@@ -417,7 +419,11 @@ class SVDSBTLBackend : public AbstractState
 
     // One surface per supported input pair.  Heap-allocated so the
     // ResolvedPoint pointers below stay valid across map growth.
-    std::unordered_map<int /*input_pairs as int*/, std::unique_ptr<CoolProp::sbtl::SVDSurface>> surfaces_;
+    // shared_ptr (not unique_ptr) because the surface may be a hit
+    // from the process-wide SVDSurfaceCache and therefore aliased by
+    // other SVDSBTLBackend instances; the surface is read-only after
+    // seal() so concurrent const access is safe.
+    std::unordered_map<int /*input_pairs as int*/, std::shared_ptr<const CoolProp::sbtl::SVDSurface>> surfaces_;
 
     // The most recent update()'s resolved point.  All calc_*() methods
     // dispatch through evaluate_property_(active_eval_, ...).
