@@ -11,6 +11,30 @@
 constexpr double INCOMP_EPSILON = DBL_EPSILON * 100.0;
 constexpr double INCOMP_DELTA = INCOMP_EPSILON * 10.0;
 
+namespace {
+/// The exponential-type fits (baseExponential, baseLogexponential) have a real,
+/// non-removable pole where their denominator x_den crosses zero: the
+/// function genuinely diverges there, unlike the removable 0/0 that shows up
+/// when differentiating an ordinary polynomial (see Polynomial2DFrac::evaluate
+/// in PolyMath.cpp, which can resolve that case exactly instead of
+/// approximating). Away from the pole, evaluate fnc directly; within a tiny
+/// epsilon band around it, linearly interpolate between two points just
+/// outside the band rather than evaluating at (or near) the singularity.
+template <typename Func>
+double evaluateAwayFromPole(double x_den, Func fnc) {
+    double x_lo = -INCOMP_EPSILON;
+    double x_hi = +INCOMP_EPSILON;
+    if (x_den < x_lo || x_den > x_hi) {
+        return fnc(x_den);
+    }
+    x_lo -= INCOMP_DELTA;
+    x_hi += INCOMP_DELTA;
+    const double f_lo = fnc(x_lo);
+    const double f_hi = fnc(x_hi);
+    return (f_hi - f_lo) / (x_hi - x_lo) * (x_den - x_lo) + f_lo;
+}
+}  // namespace
+
 namespace CoolProp {
 
 /// A thermophysical property provider for all properties
@@ -34,56 +58,27 @@ bool IncompressibleFluid::is_pure() {
     return false;
 }
 
-/// Base exponential function
+/// Base exponential function: exp(coeffs[0] / ((y - ybase) + coeffs[1]) - coeffs[2])
 double IncompressibleFluid::baseExponential(const IncompressibleData& data, double y, double ybase) {
     Eigen::VectorXd coeffs = makeVector(data.coeffs);
     size_t r = coeffs.rows(), c = coeffs.cols();
     if (strict && (r != 3 || c != 1)) {
         throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
     }
-
-    // Guard the function against zero denominators in exp((double)(coeffs[0] / ((y - ybase) + coeffs[1]) - coeffs[2]))
-    auto fnc = [&](double x) { return exp((double)(coeffs[0] / (x)-coeffs[2])); };
-    double x_den = (y - ybase) + coeffs[1];
-    double x_lo = -INCOMP_EPSILON;
-    double x_hi = +INCOMP_EPSILON;
-    if (x_den < x_lo || x_den > x_hi) {
-        return fnc(x_den);
-    }
-    // ... now we know that we are in the danger zone
-    // step away from the zero-crossing
-    x_lo -= INCOMP_DELTA;
-    x_hi += INCOMP_DELTA;
-    const double f_lo = fnc(x_lo);
-    const double f_hi = fnc(x_hi);
-    // Linearize around the zero-crossing
-    return (f_hi - f_lo) / (x_hi - x_lo) * (x_den - x_lo) + f_lo;
+    const double x_den = (y - ybase) + coeffs[1];
+    return evaluateAwayFromPole(x_den, [&](double x) { return exp(coeffs[0] / x - coeffs[2]); });
 }
 
-/// Base exponential function with logarithmic term
+/// Base exponential function with logarithmic term:
+/// exp(log(1/x + 1/x^2) * coeffs[1] + coeffs[2]) with x = (y - ybase) + coeffs[0]
 double IncompressibleFluid::baseLogexponential(const IncompressibleData& data, double y, double ybase) {
     Eigen::VectorXd coeffs = makeVector(data.coeffs);
     size_t r = coeffs.rows(), c = coeffs.cols();
     if (strict && (r != 3 || c != 1)) {
         throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
     }
-
-    // Guard the function against zero denominators in exp((double)(log((double)(1.0 / ((y - ybase) + coeffs[0]) + 1.0 / ((y - ybase) + coeffs[0]) / ((y - ybase) + coeffs[0]))) * coeffs[1] + coeffs[2]))
-    auto fnc = [&](double x) { return exp((double)(log((double)(1.0 / (x) + 1.0 / (x) / (x))) * coeffs[1] + coeffs[2])); };
-    double x_den = (y - ybase) + coeffs[0];
-    double x_lo = -INCOMP_EPSILON;
-    double x_hi = +INCOMP_EPSILON;
-    if (x_den < x_lo || x_den > x_hi) {
-        return fnc(x_den);
-    }
-    // ... now we know that we are in the danger zone
-    // step away from the zero-crossing
-    x_lo -= INCOMP_DELTA;
-    x_hi += INCOMP_DELTA;
-    const double f_lo = fnc(x_lo);
-    const double f_hi = fnc(x_hi);
-    // Linearize around the zero-crossing
-    return (f_hi - f_lo) / (x_hi - x_lo) * (x_den - x_lo) + f_lo;
+    const double x_den = (y - ybase) + coeffs[0];
+    return evaluateAwayFromPole(x_den, [&](double x) { return exp(log(1.0 / x + 1.0 / x / x) * coeffs[1] + coeffs[2]); });
 }
 
 double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, double z) {
