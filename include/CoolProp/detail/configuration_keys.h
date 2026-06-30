@@ -80,9 +80,11 @@
     X(LIST_STRING_DELIMITER, "LIST_STRING_DELIMITER", ",", "The delimiter to be used when converting a list of strings to a string")                 \
     X(ALLOW_SVDSBTL_IN_PROPSSI, "ALLOW_SVDSBTL_IN_PROPSSI", false,                                                                                   \
       "If true, the SVDSBTL backend is usable through the high-level PropsSI interface.  By default it is rejected (mirroring the BICUBIC/TTSE "     \
-      "tabular backends) because PropsSI rebuilds the AbstractState on every call, and loading an SVDSurface from cache costs ~80 ms -- over four "  \
-      "orders of magnitude slower per call than the actual SVD eval.  For batched workloads use AbstractState directly and call update() in a "      \
-      "loop, or use fast_evaluate for a vectorized batch.")                                                                                          \
+      "tabular backends) because PropsSI rebuilds the AbstractState on every call, and loading an SVDSurface from disk cache costs ~80 ms -- over "  \
+      "four orders of magnitude slower per call than the actual SVD eval.  The process-wide SVDSurfaceCache (see "                                   \
+      "SVDSBTL_SURFACE_CACHE_MAX_ENTRIES/_MAX_SIZE_MB) makes a repeat call for the same (fluid, source, input_pair, options) cheap within one "      \
+      "process, but a cold/first-touch surface or a workload that varies the fluid/options per call still pays the full cost.  For batched "         \
+      "workloads use AbstractState directly and call update() in a loop, or use fast_evaluate for a vectorized batch.")                              \
     X(SVDSBTL_SAMPLING_THREADS, "SVDSBTL_SAMPLING_THREADS", static_cast<int>(1),                                                                     \
       "Number of worker threads for SVDSBTL table-build sampling.  1 (default) = serial (no extra threads).  N > 1 = use N worker threads, each "    \
       "with its own source AbstractState.  0 = auto (use std::thread::hardware_concurrency()).  Typical 4-8x build-time speedup at N >= 4 on a "     \

@@ -102,11 +102,25 @@ class SVDSBTLBackend : public AbstractState
     // ceiling.  See also the BICUBIC / TTSE tabular backends which
     // are gated the same way.
     //
+    // SVDSurfaceCache (process-wide, see ensure_surface_) makes a
+    // SECOND-and-later construction for the same (fluid, source,
+    // input_pair, options) tuple in the same process cheap — a map
+    // lookup instead of a disk read + deserialize — but the IF97
+    // conformance script sweeps many distinct (T, p) inputs against
+    // ONE fluid, so most of its surfaces ARE shared; a workload that
+    // instead varies the fluid/options per call, or runs cold each
+    // process, still pays the full cost every time.  The gate stays
+    // closed by default because PropsSI's per-call AbstractState
+    // construction overhead (option parsing, eager PT/HmassP surface
+    // resolution) is still real even on a cache hit.
+    //
     // The ALLOW_SVDSBTL_IN_PROPSSI configuration key lets advanced
     // callers opt back in (e.g. for one-off interactive queries where
-    // the cache load cost is fine).  For any throughput-sensitive
-    // workload, use AbstractState directly + update() in a loop, or
-    // fast_evaluate for a vectorized batch.
+    // the cache load cost is fine, or repeated queries against a
+    // small fixed set of fluids where the in-memory cache does most
+    // of the work).  For any throughput-sensitive workload, use
+    // AbstractState directly + update() in a loop, or fast_evaluate
+    // for a vectorized batch.
     bool available_in_high_level() override;
 
     // Canonical JSON of the options this instance was built with

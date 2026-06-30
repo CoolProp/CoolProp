@@ -361,11 +361,16 @@ SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name,      // NOLINT(mod
 bool SVDSBTLBackend::available_in_high_level() {
     // Off by default — PropsSI rebuilds the AbstractState per call and
     // loading an SVDSurface from .svd.bin.z costs ~80 ms per
-    // construction, vs ~5 us for the actual evaluation.  Throughput
+    // construction, vs ~5 us for the actual evaluation.  The
+    // process-wide SVDSurfaceCache (see ensure_surface_) makes repeat
+    // constructions for the same (fluid, source, input_pair, options)
+    // tuple cheap, but PropsSI's own per-call construction overhead
+    // and a cold/first-touch surface still cost real time.  Throughput
     // workloads should use AbstractState directly + update() / batched
     // fast_evaluate.  Set ALLOW_SVDSBTL_IN_PROPSSI=true to opt back
-    // in (e.g. for one-off interactive queries where the constructor
-    // cost is irrelevant).
+    // in (e.g. for one-off interactive queries, or repeated queries
+    // against a small fixed set of fluids where the in-memory cache
+    // does most of the work).
     return get_config_bool(ALLOW_SVDSBTL_IN_PROPSSI);
 }
 
