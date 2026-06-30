@@ -231,6 +231,26 @@ compositions as independent fluids. This should be kept in mind when comparing
 properties for different compositions. Setting the reference state for one
 composition will always affect all fluids consisting of the same components.
 
+.. warning::
+   Enthalpy and entropy for incompressible mixtures are obtained purely by
+   integrating the fitted heat capacity :math:`c(T,x)` in temperature; there is
+   **no enthalpy or entropy of mixing term** anywhere in this calculation. Two
+   states at different compositions that happen to be queried at the same
+   :math:`T` and :math:`p` do **not** have enthalpies that are comparable across
+   that composition change, and a mixing/energy balance across streams of
+   different concentration (for example, an absorption chiller's generator or
+   absorber) will silently omit the heat of mixing. This is a known,
+   long-standing limitation, not a bug to be patched incrementally — see
+   `#533 <https://github.com/CoolProp/CoolProp/issues/533>`_,
+   `#781 <https://github.com/CoolProp/CoolProp/issues/781>`_, and
+   `#1690 <https://github.com/CoolProp/CoolProp/issues/1690>`_. A proper fix
+   needs a composition-dependent excess-property formulation (e.g. a
+   Gibbs-energy-based model, as used for some published LiBr/H2O and NH3/H2O
+   correlations) rather than an incremental change to the current
+   heat-capacity-integration approach; see
+   ``dev/incompressible_liquids/NOTES_mixing_models.md`` for research notes
+   toward that future work.
+
 .. The approach described in textbooks like Cengel and Boles :cite:`Cengel2007`
 .. is that the internal energy :math:`u` only depends on temperature and does not
 .. change with pressure.
@@ -299,27 +319,42 @@ Therefore, all solutions have a base temperature and concentration in the origin
 works as well as in CoolProp: :math:`x_\text{in} = x - x_\text{base}`
 and :math:`T_\text{in} = T - T_\text{base}`, this technique does not affect the calculation
 of the derived quantity internal energy since the formula contains temperature differences.
-However, integrating :math:`c(x_\text{in},T_\text{in})T_\text{in}^{-1}dT_\text{in}` for the entropy requires some changes due to
-the logarithm.
+However, computing :math:`c(x_\text{in},T_\text{in})/T` for the entropy requires some changes
+because the integral is taken with respect to the physical temperature :math:`T`, not
+:math:`T_\text{in}`, even though :math:`c` itself is expressed in the centred variable.
 
-.. warning::
-   You must **not** use the base temperature :math:`T_\text{base}`
-   as reference temperature for your thermodynamic states. This will lead to an
-   error caused by a division by zero during the integration carried out to
-   obtain the entropy.
-
-To structure the problem, we introduce a variable :math:`f(j,T)`,
-which will be expressed by a third sum. As a first step for simplification, one
-has to expand the the binomial :math:`(T-T_{base})^n` to a series. Only
-containing :math:`j` and :math:`T`, :math:`f` is independent from :math:`x_\text{in}` and
-can be computed outside the loop for enhanced computational efficiency. An
-integration of the expanded binomial then yields the final factor :math:`F` to
-be multiplied with the other coefficients and the concentration.
+To structure the problem, we introduce a variable :math:`D(j,T)`,
+the indefinite integral of :math:`(T-T_\text{base})^j/T` with respect to :math:`T`,
+evaluated at the point :math:`T`. As a first step for simplification, one
+has to expand the binomial :math:`(T-T_{base})^j` to a series before dividing by
+:math:`T` and integrating term by term:
 
 .. math::
 
-    \int_{0}^{1} \left( \frac{\partial s}{\partial T} \right)_p dT          &= \int_{0}^{1} \frac{c\left( x_\text{in},T_\text{in} \right)}{T_\text{in}} dT_\text{in} = \sum_{i=0}^n x_\text{in}^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot F(j,T_\text{in,0},T_\text{in,1}) \\
-    F          &= (-1)^j \cdot \ln \left( \frac{T_\text{in,1}}{T_\text{in,0}} \right) \cdot T_{base}^j + \sum_{k=0}^{j-1} \binom{j}{k} \cdot \frac{(-1)^k}{j-k} \cdot \left( T_\text{in,1}^{j-k} - T_\text{in,0}^{j-k} \right) \cdot T_{base}^k
+    \left( \frac{\partial s}{\partial T} \right)_p          &= \frac{c\left( x_\text{in},T_\text{in} \right)}{T} \quad\text{so that}\quad \int \left( \frac{\partial s}{\partial T} \right)_p dT = \sum_{i=0}^n x_\text{in}^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot D(j,T) \\
+    D(j,T)          &= (-1)^j \cdot \ln \left( T \right) \cdot T_{base}^j + \sum_{k=0}^{j-1} \binom{j}{k} \cdot \frac{(-1)^k}{j-k} \cdot T^{j-k} \cdot T_{base}^k
+
+Dividing by the physical :math:`T` rather than :math:`T_\text{in}` is what keeps this
+well-defined at :math:`T = T_\text{base}`: the only term that depends on a logarithm
+is :math:`\ln(T)`, which is finite for any :math:`T>0` regardless of where
+:math:`T_\text{base}` falls, so there is no removable singularity at
+:math:`T=T_\text{base}` to guard against here. :math:`D(j,T)` is the *indefinite*
+integral; entropy and enthalpy differences between two states are obtained by
+evaluating it once per state and subtracting (see ``IncompressibleBackend::raw_calc_smass``
+and the reference-state handling around it), not by passing two temperatures into
+a single call.
+
+A related, narrower issue does exist in :math:`(\partial \rho/\partial T)_{p,x}`
+(used internally by both enthalpy and entropy through the pressure-dependent terms):
+differentiating a fitted, centred polynomial introduces a bookkeeping term that
+divides by :math:`(T-T_\text{base})`. For an ordinary (non-fractional) fit, that
+term's coefficient is *exactly* zero — not merely small — so CoolProp returns the
+exact value at :math:`T=T_\text{base}` rather than approximating it. The
+exponential-type fits used for some fluids' viscosity, vapour pressure, and
+freezing temperature have a different, genuine pole in their own functional form
+(at a fit-coefficient-dependent point, not necessarily :math:`T_\text{base}`); that
+case is still handled by a tiny linear interpolation across the pole rather than
+an exact formula, since the function genuinely diverges there.
 
 .. _Equations:
 
