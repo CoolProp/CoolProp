@@ -65,8 +65,15 @@ def _assert_close_to_disk(fluidObject):
         onDisk = _load_json_coeffs(name, prop)
         fitted = getattr(fluidObject, prop, None)
         fittedCoeffs = None if fitted is None else getattr(fitted, "coeffs", None)
-        if onDisk is None or fittedCoeffs is None:
-            continue  # property not defined/fitted for this fluid -- nothing to compare
+        if onDisk is None:
+            continue  # property not defined for this fluid -- nothing to compare
+        # fitFluidList swallows TypeError/ValueError from a failed fit and only
+        # prints, leaving coeffs unset. Skipping that case here would report a
+        # green golden-master run for exactly the crash this test exists to
+        # catch, so a property committed to json/ must also come back fitted.
+        assert fittedCoeffs is not None, (
+            f"{name}.{prop}: committed in json/{name}.json but the refit produced no coefficients "
+            f"(a swallowed fit failure -- check the fitter output above)")
         fittedCoeffs = np.array(fittedCoeffs, dtype=float)
         assert fittedCoeffs.shape == onDisk.shape, f"{name}.{prop}: shape changed, {fittedCoeffs.shape} vs {onDisk.shape}"
         magnitude = np.max(np.abs(onDisk)) if onDisk.size else 0.0

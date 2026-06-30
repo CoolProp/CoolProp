@@ -19,14 +19,16 @@ your data, and run one script.
 
 ## Prerequisites
 
-Python 3 with `numpy` and `scipy` (see `requirements.txt`):
+Python 3 with `numpy` and `scipy`:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt            # fit fluids and write json/
+pip install -r requirements-reports.txt    # + matplotlib, for reports/plots
+pip install -r requirements-dev.txt        # + pytest, to run the tests here
 ```
 
-That is enough to fit fluids and write JSON. `matplotlib` and a built
-CoolProp Python package are only needed if you also want the fitting
+The first line is enough to fit fluids and write JSON. `matplotlib` and a
+built CoolProp Python package are only needed if you also want the fitting
 reports, plots and documentation tables.
 
 ## Adding a new pure fluid, step by step

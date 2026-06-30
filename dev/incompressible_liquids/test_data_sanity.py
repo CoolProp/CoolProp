@@ -8,10 +8,9 @@ order. These tests pin that behavior for every data-backed fluid.
 Needs numpy (the loaders do); skips cleanly without it.
 """
 
-import numpy as np
 import pytest
 
-pytest.importorskip("numpy")
+np = pytest.importorskip("numpy")
 
 from CPIncomp.SecCoolFluids import SecCoolSolutionData
 
@@ -29,18 +28,26 @@ def _loaded_axes(obj, dataID):
     return arr[1:, 0], arr[0, 1:]
 
 
-def test_hfe7100_descending_source_loads_ascending():
+@pytest.fixture(scope="module")
+def seccool_fluids():
+    # factory() instantiates and file-loads every SecCool fluid (and prints
+    # progress); build it once for the module rather than per test.
+    return SecCoolSolutionData.factory()
+
+
+def test_hfe7100_descending_source_loads_ascending(seccool_fluids):
     # The one real ordering hazard found by the audit: raw HFE-7100 files
     # store T from +64 down to -80 degC.
-    fluid = next(o for o in SecCoolSolutionData.factory() if getattr(o, "sFile", "") == "HFE-7100")
+    fluid = next((o for o in seccool_fluids if getattr(o, "sFile", "") == "HFE-7100"), None)
+    assert fluid is not None, "HFE-7100 not found among the SecCool fluids"
     for dataID in PROPERTY_IDS:
         T, _x = _loaded_axes(fluid, dataID)
         assert T is not None, dataID
         assert np.all(np.diff(T) > 0), (dataID, T)
 
 
-def test_all_seccool_grids_load_with_increasing_axes():
-    for fluid in SecCoolSolutionData.factory():
+def test_all_seccool_grids_load_with_increasing_axes(seccool_fluids):
+    for fluid in seccool_fluids:
         if not hasattr(fluid, "sFile"):
             continue
         if type(fluid).getFromFile is not SecCoolSolutionData.getFromFile:

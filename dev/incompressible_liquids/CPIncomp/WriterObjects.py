@@ -38,6 +38,19 @@ except ImportError:
     BibTeXerClass = None
 
 
+def ensure_parent_directory(path):
+    """Create the directory holding ``path``, if it names one.
+
+    ``os.path.dirname`` returns "" for a bare relative filename such as
+    "table.csv", and ``os.makedirs("")`` raises FileNotFoundError -- so the
+    plain "create the dirname if it is missing" idiom crashes on exactly the
+    default arguments generateRstTable/generateTexTable use (path="table").
+    """
+    directory = os.path.dirname(path)
+    if directory and not os.path.exists(directory):
+        os.makedirs(directory)
+
+
 class SolutionDataWriter(object):
     """
     A base class that defines all the variables needed
@@ -49,11 +62,10 @@ class SolutionDataWriter(object):
     # Optimizer starting guesses for the iterative (exponential-type) fits in
     # fitAll. Kept as named constants because clearUnfittedCoefficients also
     # needs them to recognise a fit that silently failed.
-    VISCOSITY_GUESS = np.array([+5e+2, -6e+1, +1e+1])
-    PSAT_GUESS = np.array([-5e+3, +6e+1, -1e+1])
-    TFREEZE_GUESS = np.array([+7e+2, -6e+1, +1e+1])
-    # The log-exponential retry guess hardcoded in IncompressibleData.fitCoeffs
-    LOGEXP_GUESS = np.array([-250.0, 1.5, 10.0])
+    VISCOSITY_GUESS = IncompressibleData.VISCOSITY_GUESS
+    PSAT_GUESS = IncompressibleData.PSAT_GUESS
+    TFREEZE_GUESS = IncompressibleData.TFREEZE_GUESS
+    LOGEXP_GUESS = IncompressibleData.LOGEXP_GUESS
 
     def __init__(self):
         """Set up optional dependencies, page geometry and fit-guess constants.
@@ -378,8 +390,7 @@ class SolutionDataWriter(object):
             hashes[name] = hash
             self.write_hashes(hashes)
             path = self.get_json_file(name)
-            if not os.path.exists(os.path.dirname(path)):
-                os.makedirs(os.path.dirname(path))
+            ensure_parent_directory(path)
             with open(path, 'w') as fp:
                 fp.write(dump)
 
@@ -518,8 +529,7 @@ class SolutionDataWriter(object):
             pdfFile = None
 
         if not pdfFile is None:
-            if not os.path.exists(os.path.dirname(pdfFile)):
-                os.makedirs(os.path.dirname(pdfFile))
+            ensure_parent_directory(pdfFile)
             with PdfPages(pdfFile) as pdfObj:
                 for obj in fluidObjs:
                     matplotlib.pyplot.close("all")
@@ -1152,8 +1162,7 @@ class SolutionDataWriter(object):
         if json_time < report_time:
             if not quiet: print(" ({0})".format("i"), end="")
         else:
-            if not os.path.exists(os.path.dirname(report_path)):
-                os.makedirs(os.path.dirname(report_path))
+            ensure_parent_directory(report_path)
 
             fig.savefig(report_path)
 
@@ -1296,8 +1305,7 @@ class SolutionDataWriter(object):
     def writeTextToFile(self, path, text):
         """Write ``text`` to ``path``, creating the parent dir. Raises on failure."""
         #print("Writing to file: {0}".format(path))
-        if not os.path.exists(os.path.dirname(path)):
-            os.makedirs(os.path.dirname(path))
+        ensure_parent_directory(path)
         with open(path, 'w') as f:
             f.write(text)
 
@@ -1305,8 +1313,7 @@ class SolutionDataWriter(object):
 
     def writeCsvTableToFile(self, path, table):
         """Write ``table`` to ``<path>.csv`` as UTF-8 CSV. Needs no matplotlib."""
-        if not os.path.exists(os.path.dirname(path + ".csv")):
-            os.makedirs(os.path.dirname(path + ".csv"))
+        ensure_parent_directory(path + ".csv")
         with codecs.open(path + ".csv", 'w', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerows(table)

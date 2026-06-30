@@ -275,13 +275,7 @@ class SecCoolSolutionData(DigitalData):
                     if i == 0: nu = 0.0  # Dummy for tables without concentration (TFreeze and Vol2Mass)
                     pass
                 numbers[i, j] = nu
-        # Some source tables ship with descending axes (the HFE-7100 files
-        # store T from +64 down to -80 degC). Sort rows/columns by their
-        # axis values instead of trusting the file order -- a sort also
-        # covers files that are shuffled rather than exactly reversed.
-        numbers[1:, :] = numbers[1:, :][np.argsort(numbers[1:, 0]), :]
-        numbers[:, 1:] = numbers[:, 1:][:, np.argsort(numbers[0, 1:])]
-        return numbers
+        return IncompressibleFitter.sortGridAxes(numbers)
 
     def writeToFile(self, data, array):
         raise ValueError("You should not overwrite the SecCool data.")
@@ -503,13 +497,7 @@ class SecCoolIceData(SecCoolSolutionData):
                     if i == 0: nu = 0.0  # Dummy for tables without concentration (TFreeze and Vol2Mass)
                     pass
                 numbers[i, j] = nu
-        # Some source tables ship with descending axes (the HFE-7100 files
-        # store T from +64 down to -80 degC). Sort rows/columns by their
-        # axis values instead of trusting the file order -- a sort also
-        # covers files that are shuffled rather than exactly reversed.
-        numbers[1:, :] = numbers[1:, :][np.argsort(numbers[1:, 0]), :]
-        numbers[:, 1:] = numbers[:, 1:][:, np.argsort(numbers[0, 1:])]
-        return numbers
+        return IncompressibleFitter.sortGridAxes(numbers)
 
 
 class ThermogenVP1869(PureData, DigitalData):

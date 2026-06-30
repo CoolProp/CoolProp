@@ -24,8 +24,12 @@ from CPIncomp.WriterObjects import SolutionDataWriter
 
 
 def getTime(path):
+    # Modification time, not ctime: this feeds an "is the combined report
+    # older than its inputs?" comparison, and on POSIX ctime is the inode
+    # change time -- it moves on a chmod or a rename, so it can report a
+    # stale report as fresh (or force a needless rebuild).
     if os.path.isfile(path):
-        return os.path.getctime(path)
+        return os.path.getmtime(path)
     return 0
 
 
