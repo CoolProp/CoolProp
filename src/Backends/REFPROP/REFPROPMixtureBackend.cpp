@@ -176,7 +176,7 @@ std::string get_REFPROP_HMX_BNC_path() {
 
 /// Return the REFPROP .FLD stem for a CoolPropFluid, falling back to fluid.name
 /// when REFPROPname is absent or the sentinel "N/A".
-static std::string refprop_stem(const CoolPropFluid& fluid) {
+static std::string refprop_stem(const CoolProp::CoolPropFluid& fluid) {
     if (!fluid.REFPROPname.empty() && fluid.REFPROPname != "N/A") {
         return fluid.REFPROPname;
     }
