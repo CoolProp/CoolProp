@@ -1,7 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from scipy.optimize._minimize import minimize
-from scipy.optimize.minpack import curve_fit
+from scipy.optimize import minimize, curve_fit
 import sys
 
 # Here we define the types. This is done to keep the definitions at one
