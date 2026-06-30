@@ -6,11 +6,14 @@
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
+#include "../Backends/Incompressible/IncompressibleLibrary.h"
+#include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
 #include <atomic>
 #include <map>
 #include <set>
+#include <sstream>
 #include <thread>
 
 // ############################################
@@ -5301,6 +5304,71 @@ TEST_CASE("Incompressible enthalpy is finite and continuous at T == Tbase (#1578
         const double midpoint = 0.5 * (h_lo + h_hi);
         CHECK(std::abs(h_mid - midpoint) < 1.0);  // [J/kg]
     }
+}
+TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped fluid", "[INCOMP]") {
+    // Generalizes the #1578 regression test above (which only names 4
+    // fluids) to the whole library: the Python fit generator places Tbase at
+    // (Tmin+Tmax)/2 by default (CPIncomp/DigitalFluids.py) or at a hardcoded
+    // value such as 273.15K, both of which routinely fall inside a fluid's
+    // valid range. Any newly-added or re-fit fluid that lands Tbase in-range
+    // is now covered automatically instead of waiting for a bug report.
+    const double p = 101325.0;
+    std::vector<std::string> names;
+    {
+        std::istringstream ss(CoolProp::get_global_param_string("incompressible_list_pure") + ","
+                              + CoolProp::get_global_param_string("incompressible_list_solution"));
+        std::string name;
+        while (std::getline(ss, name, ',')) {
+            if (!name.empty()) names.push_back(name);
+        }
+    }
+    REQUIRE(!names.empty());
+
+    int testedCount = 0;
+    for (const std::string& name : names) {
+        CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
+        const double Tbase = fluid.getTbase();
+        const double Tmin = fluid.getTmin();
+        const double Tmax = fluid.getTmax();
+        // Only fluids where Tbase actually falls strictly inside the valid
+        // range can exercise the pole; skip the rest rather than asserting
+        // something meaningless about them.
+        if (!(Tbase > Tmin && Tbase < Tmax)) continue;
+
+        std::string fluidString = "INCOMP::" + name;
+        if (!fluid.is_pure()) {
+            const double xmid = 0.5 * (fluid.getxmin() + fluid.getxmax());
+            fluidString += "[" + std::to_string(xmid) + "]";
+        }
+        ++testedCount;
+
+        const double dT = 0.1;
+        double h_lo = 0, h_mid = 0, h_hi = 0, s_lo = 0, s_mid = 0, s_hi = 0;
+        CAPTURE(fluidString);
+        CAPTURE(Tbase);
+        CHECK_NOTHROW(h_lo = CoolProp::PropsSI("Hmass", "T", Tbase - dT, "P", p, fluidString));
+        CHECK_NOTHROW(h_mid = CoolProp::PropsSI("Hmass", "T", Tbase, "P", p, fluidString));
+        CHECK_NOTHROW(h_hi = CoolProp::PropsSI("Hmass", "T", Tbase + dT, "P", p, fluidString));
+        CHECK_NOTHROW(s_lo = CoolProp::PropsSI("Smass", "T", Tbase - dT, "P", p, fluidString));
+        CHECK_NOTHROW(s_mid = CoolProp::PropsSI("Smass", "T", Tbase, "P", p, fluidString));
+        CHECK_NOTHROW(s_hi = CoolProp::PropsSI("Smass", "T", Tbase + dT, "P", p, fluidString));
+        CAPTURE(h_lo);
+        CAPTURE(h_mid);
+        CAPTURE(h_hi);
+        CAPTURE(s_lo);
+        CAPTURE(s_mid);
+        CAPTURE(s_hi);
+        CHECK(ValidNumber(h_mid));
+        CHECK(ValidNumber(s_mid));
+        // Same linearity-residual continuity check as #1578, generalized to entropy too.
+        CHECK(std::abs(h_mid - 0.5 * (h_lo + h_hi)) < 1.0);   // [J/kg]
+        CHECK(std::abs(s_mid - 0.5 * (s_lo + s_hi)) < 0.01);  // [J/kg/K]
+    }
+    CAPTURE(testedCount);
+    // If this hits zero, the Tbase-in-range filter or the fluid-list parsing
+    // above is broken -- the whole point of this test is to exercise fluids
+    // where Tbase is in range, and most shipped fluids are.
+    CHECK(testedCount > 0);
 }
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {
     // Issue #1374: the fitted viscosity (and hence Prandtl number) of MPG2
