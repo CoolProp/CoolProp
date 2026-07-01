@@ -1,6 +1,7 @@
 // CoolPropMathcad.cpp : Defines the exported functions for the DLL Add-in.
 //
 
+#include <limits>
 #include <string>
 #include <cstring>
 
@@ -149,8 +150,7 @@ static LRESULT AllocateToMathcadArray(LPCOMPLEXARRAY dest, const std::vector<std
 
 // Helper: Get IEEE 754 double precision NaN value for returning in case of errors in array outputs
 static double get_nan() {
-    unsigned long long nan_pattern = 0xFFF8000000000000ULL;
-    return *(double*)&nan_pattern;
+    return std::numeric_limits<double>::quiet_NaN();
 }
 
 // Helper: check that a complex scalar input is Real and return proper Mathcad error
