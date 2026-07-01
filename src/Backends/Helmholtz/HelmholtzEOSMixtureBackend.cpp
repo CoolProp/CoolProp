@@ -39,6 +39,7 @@
 #include "MixtureParameters.h"
 #include "CoolProp/fluids/IdealCurves.h"
 #include "MixtureParameters.h"
+#include "CoolProp/expression/ExpressionCorrelation.h"
 #include <atomic>
 #include <cstdlib>
 
@@ -739,6 +740,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_dilute() {
             case ViscosityDiluteVariables::VISCOSITY_DILUTE_CO2_LAESECKE_JPCRD_2017:
                 eta_dilute = TransportRoutines::viscosity_dilute_CO2_LaeseckeJPCRD2017(*this);
                 break;
+            case ViscosityDiluteVariables::VISCOSITY_DILUTE_EXPRESSION:
+                if (!components[0].transport.viscosity_dilute.expression_data.correlation)
+                    throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+                eta_dilute = components[0].transport.viscosity_dilute.expression_data.correlation->eval(*this);
+                break;
             default:
                 throw ValueError(
                   format("dilute viscosity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
@@ -798,6 +804,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
             break;
         case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_CO2_LAESECKE_JPCRD_2017:
             residual = TransportRoutines::viscosity_CO2_higher_order_hardcoded_LaeseckeJPCRD2017(*this);
+            break;
+        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_EXPRESSION:
+            if (!components[0].transport.viscosity_higher_order.expression_data.correlation)
+                throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+            residual = components[0].transport.viscosity_higher_order.expression_data.correlation->eval(*this);
             break;
         default:
             throw ValueError(
@@ -1001,6 +1012,11 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
             case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_NONE:
                 dilute = 0.0;
                 break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_EXPRESSION:
+                if (!components[0].transport.conductivity_dilute.expression_data.correlation)
+                    throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+                dilute = components[0].transport.conductivity_dilute.expression_data.correlation->eval(*this);
+                break;
             default:
                 throw ValueError(
                   format("dilute conductivity type [%d] is invalid for fluid %s", components[0].transport.conductivity_dilute.type, name().c_str()));
@@ -1044,6 +1060,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background() {
             break;
         case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL:
             lambda_residual = TransportRoutines::conductivity_residual_polynomial_and_exponential(*this);
+            break;
+        case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_EXPRESSION:
+            if (!components[0].transport.conductivity_residual.expression_data.correlation)
+                throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+            lambda_residual = components[0].transport.conductivity_residual.expression_data.correlation->eval(*this);
             break;
         default:
             throw ValueError(

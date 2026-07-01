@@ -359,6 +359,10 @@ foreach(backend ${COOLPROP_ENABLED_BACKENDS})
   list(APPEND APP_SOURCES ${BACKEND_SOURCES})
 endforeach()
 
+# Expression DSL for runtime-loaded transport correlations
+file(GLOB EXPRESSION_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/expression/*.cpp")
+list(APPEND APP_SOURCES ${EXPRESSION_SOURCES})
+
 ## You can exclude this file, in case you want to run your own tests or use Catch
 list(REMOVE_ITEM APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/Tests.cpp")
 list(REMOVE_ITEM APP_SOURCES
