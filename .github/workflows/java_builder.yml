@@ -122,13 +122,13 @@ jobs:
           set -eux
           mkdir -p Java
           for d in staging/Java-*/; do
-            [ -f "${d}Example.cs" ] && cp -n "${d}Example.cs" Java/ || true
+            [ -f "${d}Example.java" ] && cp -n "${d}Example.java" Java/ || true
             [ -f "${d}platform-independent.7z" ] && cp -n "${d}platform-independent.7z" Java/ || true
             find "$d" -maxdepth 1 -type d -name '*bit' -exec cp -r {} Java/ \;
           done
           ls -R Java
 
-      - name: Upload unified Csharp artifact
+      - name: Upload unified Java artifact
         uses: actions/upload-artifact@v7
         with:
           name: Java
