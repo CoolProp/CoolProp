@@ -72,6 +72,10 @@ jobs:
           JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
           cmake --build build --target install --config Release -j "$JOBS"
 
+      - name: Run Java tests
+        shell: bash
+        run: ctest --test-dir build -C Release --output-on-failure -R Java
+
       - name: JSON symbol-leak gate (Java native wrapper)
         # The SWIG Java module compiles the CoolProp sources (incl. the JSON
         # loaders) into CoolPropJava.{so,jnilib} — the same exposure the Octave
