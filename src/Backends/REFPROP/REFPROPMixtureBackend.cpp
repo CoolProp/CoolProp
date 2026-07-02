@@ -174,6 +174,17 @@ std::string get_REFPROP_HMX_BNC_path() {
     }
 }
 
+/// Return the REFPROP .FLD stem for a CoolPropFluid.
+/// Falls back to `fallback` when REFPROPname is absent or the sentinel "N/A",
+/// so the original user-supplied name is preserved rather than fluid.name
+/// (which may differ, e.g. "R1336mzz(E)" vs the file "R1336MZZE.FLD").
+static std::string refprop_stem(const CoolProp::CoolPropFluid& fluid, const std::string& fallback) {
+    if (!fluid.REFPROPname.empty() && fluid.REFPROPname != "N/A") {
+        return fluid.REFPROPname;
+    }
+    return fallback;
+}
+
 namespace CoolProp {
 
 class REFPROPGenerator : public AbstractStateGenerator
@@ -357,9 +368,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
             for (std::size_t i = 0; i < resolved_names.size(); ++i) {
                 try {
                     CoolPropFluid fluid = get_library().get(fluid_names[i]);
-                    // REFPROPname holds the .FLD stem; when absent, fluid.name is
-                    // the REFPROP-valid name by documented contract (CoolPropFluid.h).
-                    resolved_names[i] = fluid.REFPROPname.empty() ? fluid.name : fluid.REFPROPname;
+                    resolved_names[i] = refprop_stem(fluid, fluid_names[i]);
                 } catch (const CoolProp::ValueError&) {
                     // Direct lookup failed.  If the name carries a REFPROP file
                     // extension (e.g. "R600.FLD"), strip it and retry so that
@@ -374,7 +383,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                             for (const auto& lookup : {stem, upper(stem)}) {
                                 try {
                                     CoolPropFluid fluid = get_library().get(lookup);
-                                    resolved_names[i] = fluid.REFPROPname.empty() ? fluid.name : fluid.REFPROPname;
+                                    resolved_names[i] = refprop_stem(fluid, stem);
                                     break;
                                 } catch (const CoolProp::ValueError&) {
                                 }
