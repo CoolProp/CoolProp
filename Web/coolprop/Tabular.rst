@@ -4,11 +4,11 @@
 Tabular Interpolation
 **********************
 
-Especially when evaluating inputs as a function of pressure and enthalpy (common in many engineering applications), evaluation of the full equation of state is simply too slow, and it is necessary to come up with some means to speed up the calculations.  
+Especially when evaluating inputs as a function of pressure and enthalpy (common in many engineering applications), evaluation of the full equation of state is simply too slow, and it is necessary to come up with some means to speed up the calculations.
 
 As of version 5.1 of CoolProp, the tabular interpolation methods of CoolProp v4 have been brought back from the dead, and significantly improved.  They are approximately 4 times faster than the equivalent methods in v4 of CoolProp due to a more optimized structure.  In order to make the most effective use of the tabular interpolation methods, you must be using the :ref:`low-level interface <low_level_api>`, otherwise significant overhead and slowdown will be experienced.  Thus, this method is best suited to C++, python, and the SWIG wrappers.
 
-There are two backends implemented for tabular interpolation, ``BICUBIC`` and ``TTSE``.  Both consume the same gridded tabular data that is stored to your user home directory in the folder ``HOME/.CoolProp/Tables``.
+There are three backends implemented for tabular interpolation, ``BICUBIC``, ``TTSE`` and ``SVDSBTL``.  ``BICUBIC`` and ``TTSE`` consume the same gridded tabular data that is stored to your user home directory in the folder ``HOME/.CoolProp/Tables``.
 
 .. seealso::
 
@@ -225,6 +225,64 @@ Speed comparison
 The primary motivation for the use of tabular interpolation is the improvement in computational speed.  Thus a small summary could be useful.  This tabular data was obtained by this python script : :download:`(link to script) <speed_script.py>`.
 
 .. include :: tabular_data.rst.in
+
+Mixtures
+--------
+
+Tabular backends work with multi-component mixtures. It is compatible with the
+``BICUBIC`` and ``TTSE`` back-ends. The workflow differs from pure fluids in
+two ways:
+
+1. **Fractions must be set as mole fractions.** ``set_mass_fractions`` is not
+   implemented for tabular backends and will raise an error. Convert from mass
+   fractions to mole fractions manually before calling ``set_mole_fractions``.
+
+2. **The call to** ``set_mole_fractions`` **triggers table construction.** For
+   pure fluids the tables are built in the constructor; for mixtures they are
+   built (or loaded from the cache) when ``set_mole_fractions`` is called. You
+   must therefore call ``set_mole_fractions`` before the first ``update`` call.
+
+Example for a 50 % / 50 % mass-fraction mixture of Isopentane and n-Butane:
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+
+    In [1]: MW_A = CP.PropsSI("M", "Isopentane")
+
+    In [2]: MW_B = CP.PropsSI("M", "n-Butane")
+
+    In [3]: w_A, w_B = 0.5, 0.5  # mass fractions
+
+    In [4]: x_A = (w_A / MW_A) / (w_A / MW_A + w_B / MW_B)  # mole fraction
+
+    In [5]: x_B = 1.0 - x_A
+
+    In [6]: AS = CP.AbstractState("BICUBIC&HEOS", "Isopentane&n-Butane")
+
+    In [7]: AS.set_mole_fractions([x_A, x_B])  # builds / loads tables
+
+    In [8]: AS.update(CP.PT_INPUTS, 5e5, 333.15)
+
+    In [9]: print(AS.rhomass(), AS.hmass())
+
+Table folder naming
+~~~~~~~~~~~~~~~~~~~
+
+The cache sub-folder is named after the full C++ backend class, not the short
+factory key, and distinguishes pure fluids from mixtures:
+
++-------------------+----------------------------+-------------------------------+
+| Factory string    | Pure-fluid folder prefix   | Mixture folder prefix         |
++===================+============================+===============================+
+| ``...&HEOS``      | ``HelmholtzEOSBackend``    | ``HelmholtzEOSMixtureBackend``|
++-------------------+----------------------------+-------------------------------+
+| ``...&REFPROP``   | ``REFPROPBackend``         | ``REFPROPMixtureBackend``     |
++-------------------+----------------------------+-------------------------------+
+
+So for the example above the tables live in::
+
+    HOME/.CoolProp/Tables/HelmholtzEOSMixtureBackend(Isopentane[<x_A>]&n-Butane[<x_B>])/
 
 More Information
 ----------------
