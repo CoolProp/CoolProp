@@ -27,6 +27,7 @@
 #include "CoolProp/Hash.h"
 #include "CoolProp/SchemaValidation.h"
 #include "CoolProp/sbtl/SVDSurface.h"
+#include "CoolProp/sbtl/SVDSurfaceCache.h"
 #include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #include "CoolProp/detail/atomic_write.h"
@@ -360,11 +361,16 @@ SVDSBTLBackend::SVDSBTLBackend(const std::string& fluid_name,      // NOLINT(mod
 bool SVDSBTLBackend::available_in_high_level() {
     // Off by default — PropsSI rebuilds the AbstractState per call and
     // loading an SVDSurface from .svd.bin.z costs ~80 ms per
-    // construction, vs ~5 us for the actual evaluation.  Throughput
+    // construction, vs ~5 us for the actual evaluation.  The
+    // process-wide SVDSurfaceCache (see ensure_surface_) makes repeat
+    // constructions for the same (fluid, source, input_pair, options)
+    // tuple cheap, but PropsSI's own per-call construction overhead
+    // and a cold/first-touch surface still cost real time.  Throughput
     // workloads should use AbstractState directly + update() / batched
     // fast_evaluate.  Set ALLOW_SVDSBTL_IN_PROPSSI=true to opt back
-    // in (e.g. for one-off interactive queries where the constructor
-    // cost is irrelevant).
+    // in (e.g. for one-off interactive queries, or repeated queries
+    // against a small fixed set of fluids where the in-memory cache
+    // does most of the work).
     return get_config_bool(ALLOW_SVDSBTL_IN_PROPSSI);
 }
 
@@ -996,11 +1002,18 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     //    intended cache file).
     const std::string opthash = to_hex16(fnv1a_64(options_canonical_.empty() ? std::string{"{}"} : options_canonical_));
     const std::string path = cp_sbtl::SVDSurfaceSerializer::default_cache_path(fluid_name_, source_backend_, pair, opthash);
-    std::unique_ptr<cp_sbtl::SVDSurface> surface;
 
-    if (std::filesystem::exists(path)) {
+    // Process-wide in-memory cache, keyed by the same string used for
+    // the on-disk path: a hit here skips both the ~80ms disk read AND
+    // the msgpack/zlib deserialize that load_from_file() would
+    // otherwise pay on every backend construction (the dominant cost
+    // for PropsSI-style call patterns that rebuild the backend per
+    // call).
+    std::shared_ptr<const cp_sbtl::SVDSurface> surface = cp_sbtl::SVDSurfaceCache::instance().get(path);
+
+    if (!surface && std::filesystem::exists(path)) {
         try {
-            surface = std::make_unique<cp_sbtl::SVDSurface>(cp_sbtl::SVDSurfaceSerializer::load_from_file(path));
+            surface = std::make_shared<cp_sbtl::SVDSurface>(cp_sbtl::SVDSurfaceSerializer::load_from_file(path));
         } catch (const std::exception&) {
             // Corrupted cache — fall through to rebuild.  Logging would
             // be nice here but TabularBackend doesn't log either.
@@ -1012,7 +1025,7 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
         auto source = source_reference_();
         const nlohmann::json opts = cpjson::parse(options_canonical_.empty() ? "{}" : options_canonical_);
         const PresetOptions preset_opts = resolve_preset_options(opts);
-        surface = std::make_unique<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, source_backend_, pair, preset_opts));
+        surface = std::make_shared<cp_sbtl::SVDSurface>(build_surface_for_pair_(*source, source_backend_, pair, preset_opts));
         try {
             cp_sbtl::SVDSurfaceSerializer::save_to_file(*surface, path);
         } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
@@ -1021,6 +1034,7 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
         }
     }
 
+    cp_sbtl::SVDSurfaceCache::instance().put(path, surface);
     surfaces_[static_cast<int>(pair)] = std::move(surface);
 }
 

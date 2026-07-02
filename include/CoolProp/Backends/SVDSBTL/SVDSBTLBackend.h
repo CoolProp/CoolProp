@@ -102,11 +102,25 @@ class SVDSBTLBackend : public AbstractState
     // ceiling.  See also the BICUBIC / TTSE tabular backends which
     // are gated the same way.
     //
+    // SVDSurfaceCache (process-wide, see ensure_surface_) makes a
+    // SECOND-and-later construction for the same (fluid, source,
+    // input_pair, options) tuple in the same process cheap — a map
+    // lookup instead of a disk read + deserialize — but the IF97
+    // conformance script sweeps many distinct (T, p) inputs against
+    // ONE fluid, so most of its surfaces ARE shared; a workload that
+    // instead varies the fluid/options per call, or runs cold each
+    // process, still pays the full cost every time.  The gate stays
+    // closed by default because PropsSI's per-call AbstractState
+    // construction overhead (option parsing, eager PT/HmassP surface
+    // resolution) is still real even on a cache hit.
+    //
     // The ALLOW_SVDSBTL_IN_PROPSSI configuration key lets advanced
     // callers opt back in (e.g. for one-off interactive queries where
-    // the cache load cost is fine).  For any throughput-sensitive
-    // workload, use AbstractState directly + update() in a loop, or
-    // fast_evaluate for a vectorized batch.
+    // the cache load cost is fine, or repeated queries against a
+    // small fixed set of fluids where the in-memory cache does most
+    // of the work).  For any throughput-sensitive workload, use
+    // AbstractState directly + update() in a loop, or fast_evaluate
+    // for a vectorized batch.
     bool available_in_high_level() override;
 
     // Canonical JSON of the options this instance was built with
@@ -342,8 +356,10 @@ class SVDSBTLBackend : public AbstractState
     void ensure_dome_s_endpoints_(PointEvaluation& pt);
     void ensure_dome_h_endpoints_(PointEvaluation& pt);
 
-    // Load <fluid>.<pair>.svd.bin.z from the default cache; if absent,
-    // build via the matching preset and save it.  Inserts into surfaces_.
+    // Resolve the surface for `pair`: first the process-wide
+    // SVDSurfaceCache, then <fluid>.<pair>.svd.bin.z on disk; if
+    // neither has it, build via the matching preset and populate
+    // both.  Inserts into surfaces_.
     void ensure_surface_(CoolProp::input_pairs pair);
 
     // Resolve the SuperAncillary handle for this fluid (cached after
@@ -417,7 +433,11 @@ class SVDSBTLBackend : public AbstractState
 
     // One surface per supported input pair.  Heap-allocated so the
     // ResolvedPoint pointers below stay valid across map growth.
-    std::unordered_map<int /*input_pairs as int*/, std::unique_ptr<CoolProp::sbtl::SVDSurface>> surfaces_;
+    // shared_ptr (not unique_ptr) because the surface may be a hit
+    // from the process-wide SVDSurfaceCache and therefore aliased by
+    // other SVDSBTLBackend instances; the surface is read-only after
+    // seal() so concurrent const access is safe.
+    std::unordered_map<int /*input_pairs as int*/, std::shared_ptr<const CoolProp::sbtl::SVDSurface>> surfaces_;
 
     // The most recent update()'s resolved point.  All calc_*() methods
     // dispatch through evaluate_property_(active_eval_, ...).
