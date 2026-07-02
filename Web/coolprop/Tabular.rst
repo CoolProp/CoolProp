@@ -229,18 +229,10 @@ The primary motivation for the use of tabular interpolation is the improvement i
 Mixtures
 --------
 
-Tabular backends work with multi-component mixtures. It is compatible with the
-``BICUBIC`` and ``TTSE`` back-ends. The workflow differs from pure fluids in
-two ways:
-
-1. **Fractions must be set as mole fractions.** ``set_mass_fractions`` is not
-   implemented for tabular backends and will raise an error. Convert from mass
-   fractions to mole fractions manually before calling ``set_mole_fractions``.
-
-2. **The call to** ``set_mole_fractions`` **triggers table construction.** For
-   pure fluids the tables are built in the constructor; for mixtures they are
-   built (or loaded from the cache) when ``set_mole_fractions`` is called. You
-   must therefore call ``set_mole_fractions`` before the first ``update`` call.
+Tabular backends (``BICUBIC`` and ``TTSE``) work with multi-component mixtures.
+Table construction (built, or loaded from the cache, on first call) is
+triggered by calling ``set_mass_fractions`` or ``set_mole_fractions`` . Call
+one of the two before the first ``update``.
 
 Example for a 50 % / 50 % mass-fraction mixture of Isopentane and n-Butane:
 
@@ -248,29 +240,21 @@ Example for a 50 % / 50 % mass-fraction mixture of Isopentane and n-Butane:
 
     In [0]: import CoolProp.CoolProp as CP
 
-    In [1]: MW_A = CP.PropsSI("M", "Isopentane")
+    In [1]: AS = CP.AbstractState("BICUBIC&HEOS", "Isopentane&n-Butane")
 
-    In [2]: MW_B = CP.PropsSI("M", "n-Butane")
+    In [2]: AS.set_mass_fractions([0.5, 0.5])  # builds / loads tables
 
-    In [3]: w_A, w_B = 0.5, 0.5  # mass fractions
+    In [3]: AS.update(CP.PT_INPUTS, 5e5, 333.15)
 
-    In [4]: x_A = (w_A / MW_A) / (w_A / MW_A + w_B / MW_B)  # mole fraction
-
-    In [5]: x_B = 1.0 - x_A
-
-    In [6]: AS = CP.AbstractState("BICUBIC&HEOS", "Isopentane&n-Butane")
-
-    In [7]: AS.set_mole_fractions([x_A, x_B])  # builds / loads tables
-
-    In [8]: AS.update(CP.PT_INPUTS, 5e5, 333.15)
-
-    In [9]: print(AS.rhomass(), AS.hmass())
+    In [4]: print(AS.rhomass(), AS.hmass())
 
 Table folder naming
 ~~~~~~~~~~~~~~~~~~~
 
 The cache sub-folder is named after the full C++ backend class, not the short
-factory key, and distinguishes pure fluids from mixtures:
+factory key, and distinguishes pure fluids from mixtures. Composition in the
+folder name is always given in mole fractions, even when the mixture was set
+via ``set_mass_fractions``.
 
 +-------------------+----------------------------+-------------------------------+
 | Factory string    | Pure-fluid folder prefix   | Mixture folder prefix         |
