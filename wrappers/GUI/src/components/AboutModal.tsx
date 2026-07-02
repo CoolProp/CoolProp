@@ -1,5 +1,6 @@
 import { COOLPROP_VERSION, COOLPROP_GIT_HASH, NOTICES } from "../generated/notices";
 import { SPONSOR_URL } from "../constants";
+import ExternalLink from "./ExternalLink";
 
 interface Props {
   onClose: () => void;
@@ -22,36 +23,28 @@ export default function AboutModal({ onClose }: Props) {
           </p>
           <p>
             Built with Tauri, React, and{" "}
-            <a
-              href="https://github.com/CoolProp/CoolProp"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <ExternalLink href="https://github.com/CoolProp/CoolProp">
               CoolProp
-            </a>. Released under the MIT license.
+            </ExternalLink>. Released under the MIT license.
           </p>
           <p>
             Support CoolProp:{" "}
-            <a href={SPONSOR_URL} target="_blank" rel="noreferrer">
+            <ExternalLink href={SPONSOR_URL}>
               💚 Sponsor on GitHub
-            </a>
+            </ExternalLink>
           </p>
 
           <div className="about-sponsors">
             <div className="about-sponsors-title">Sponsors</div>
             <p>
               Free code signing on Windows provided by{" "}
-              <a
-                href="https://about.signpath.io/"
-                target="_blank"
-                rel="noreferrer"
-              >
+              <ExternalLink href="https://about.signpath.io/">
                 SignPath.io
-              </a>
+              </ExternalLink>
               , certificate by{" "}
-              <a href="https://signpath.org/" target="_blank" rel="noreferrer">
+              <ExternalLink href="https://signpath.org/">
                 SignPath Foundation
-              </a>
+              </ExternalLink>
               .
             </p>
           </div>
