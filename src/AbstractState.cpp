@@ -940,9 +940,15 @@ double AbstractState::fugacity(std::size_t i) {
     // TODO: Cache the fug. coeff for each component
     return calc_fugacity(i);
 }
+std::vector<double> AbstractState::fugacities() {
+    return calc_fugacities();
+}
 double AbstractState::chemical_potential(std::size_t i) {
     // TODO: Cache the chemical potential for each component
     return calc_chemical_potential(i);
+}
+std::vector<double> AbstractState::chemical_potentials() {
+    return calc_chemical_potentials();
 }
 void AbstractState::build_phase_envelope(const std::string& type) {
     calc_phase_envelope(type);

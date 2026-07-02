@@ -5436,6 +5436,61 @@ TEST_CASE("Two-phase chemical_potential mirrors sat-state values; fugacity_coeff
     }
 }
 
+TEST_CASE("Vector per-component mixture getters mirror the scalar getters (#3024)", "[mixtures][3024]") {
+    // The vector-returning fugacities()/fugacity_coefficients()/chemical_potentials()
+    // default-loop the scalar calc_*(i) virtuals, so they must agree element-by-element
+    // with the existing scalar getters and inherit the same two-phase semantics.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+    const std::vector<double> z{0.25, 0.25, 0.5};
+    AS->set_mole_fractions(z);
+
+    SECTION("single-phase: all three vectors equal the scalar loop") {
+        AS->update(CoolProp::PT_INPUTS, 5e6, 500);  // hot single-phase gas, well above the dome
+        REQUIRE(AS->phase() != CoolProp::iphase_twophase);
+
+        const std::vector<double> f = AS->fugacities();
+        const std::vector<double> phi = AS->fugacity_coefficients();
+        const std::vector<double> mu = AS->chemical_potentials();
+        REQUIRE(f.size() == z.size());
+        REQUIRE(phi.size() == z.size());
+        REQUIRE(mu.size() == z.size());
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            CAPTURE(i);
+            CHECK(f[i] == Catch::Approx(AS->fugacity(i)));
+            CHECK(phi[i] == Catch::Approx(AS->fugacity_coefficient(i)));
+            CHECK(mu[i] == Catch::Approx(AS->chemical_potential(i)));
+        }
+    }
+
+    SECTION("two-phase: fugacities/chemical_potentials finite, fugacity_coefficients throws whole-vector") {
+        AS->update(CoolProp::PQ_INPUTS, 500e3, 0.5);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+
+        const std::vector<double> f = AS->fugacities();
+        const std::vector<double> mu = AS->chemical_potentials();
+        REQUIRE(f.size() == z.size());
+        REQUIRE(mu.size() == z.size());
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            CAPTURE(i);
+            CHECK(f[i] == Catch::Approx(AS->fugacity(i)));
+            CHECK(mu[i] == Catch::Approx(AS->chemical_potential(i)));
+        }
+        // Whole-vector throw: the scalar fugacity_coefficient(0) throws, so the
+        // default-loop aborts on the first component rather than returning a
+        // partially-filled / NaN-padded vector.
+        CHECK_THROWS(AS->fugacity_coefficients());
+    }
+
+    SECTION("composition not set: vector getters throw rather than returning empty") {
+        auto fresh = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+        // No set_mole_fractions / update: the default-loop must fail loudly so the
+        // misuse path does not silently fail-open with an empty vector.
+        CHECK_THROWS(fresh->fugacities());
+        CHECK_THROWS(fresh->fugacity_coefficients());
+        CHECK_THROWS(fresh->chemical_potentials());
+    }
+}
+
 TEST_CASE("HAPropsSI Twb at high T (T > Tsat) returns the physical root (#2255)", "[HAPropsSI][2255]") {
     // Issue #2255: HAPropsSI('Twb','T',200+273.15,'W',0.2,'P',1000E3)
     // returned 180.7241 C (essentially Tsat at 1 MPa) instead of the
