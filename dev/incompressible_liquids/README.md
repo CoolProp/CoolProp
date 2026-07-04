@@ -98,6 +98,10 @@ data axis -- see `SolutionExample` in `CPIncomp/ExampleObjects.py` and the
 - The fit is centred around `Tbase`/`xbase` (defaults: the midpoint of your
   data range). The enthalpy/entropy the backend later reports are derived
   exactly from the fitted density and heat-capacity polynomials.
+- Four fluids (Air, Acetone, Ethanol, Hexane) are sampled from CoolProp's
+  own equations of state, so *re-fitting those four* needs the CoolProp
+  Python package installed; without it they are skipped and their committed
+  JSON stays as-is. All other fluids fit from the data in this directory.
 - Fit output can drift slightly across numpy/scipy versions; that is what
   `test_fitting_regression.py` guards. If it fails after a fluid addition
   that did not touch the three reference fluids, suspect your environment,
