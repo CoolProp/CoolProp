@@ -107,22 +107,31 @@ class DigitalExamplePure(PureData, DigitalData):
         self.temperature.data = self.getTrange()
         self.concentration.data = self.getxrange()
 
-        import CoolProp.CoolProp as CP
+        # The property functions need the CoolProp Python package. Without
+        # it, fall back to the cached grids in data/ExampleDigitalPure_*.txt
+        # (getArray with func=None reads the file instead of regenerating).
+        try:
+            import CoolProp.CoolProp as CP
+        except ImportError:
+            CP = None
 
-        def funcD(T, x):
-            return CP.PropsSI('D', 'T', T, 'P', 1e7, 'water')
+        if CP is not None:
+            def funcD(T, x):
+                return CP.PropsSI('D', 'T', T, 'P', 1e7, 'water')
 
-        def funcC(T, x):
-            return CP.PropsSI('C', 'T', T, 'P', 1e7, 'water')
+            def funcC(T, x):
+                return CP.PropsSI('C', 'T', T, 'P', 1e7, 'water')
 
-        def funcL(T, x):
-            return CP.PropsSI('L', 'T', T, 'P', 1e7, 'water')
+            def funcL(T, x):
+                return CP.PropsSI('L', 'T', T, 'P', 1e7, 'water')
 
-        def funcV(T, x):
-            return CP.PropsSI('V', 'T', T, 'P', 1e7, 'water')
+            def funcV(T, x):
+                return CP.PropsSI('V', 'T', T, 'P', 1e7, 'water')
 
-        def funcP(T, x):
-            return CP.PropsSI('P', 'T', T, 'Q', 0.0, 'water')
+            def funcP(T, x):
+                return CP.PropsSI('P', 'T', T, 'Q', 0.0, 'water')
+        else:
+            funcD = funcC = funcL = funcV = funcP = None
 
         self.density.xData, self.density.yData, self.density.data = self.getArray(dataID="D", func=funcD, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.density.DEBUG)
         self.density.source = self.density.SOURCE_EQUATION
