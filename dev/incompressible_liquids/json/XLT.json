@@ -59,12 +59,8 @@
   "reference": "Dow1997", 
   "saturation_pressure": {
     "NRMS": null, 
-    "coeffs": [
-      -5.000000e+03, 
-      6.000000e+01, 
-      -1.000000e+01
-    ], 
-    "type": "exponential"
+    "coeffs": "null", 
+    "type": "notdefined"
   }, 
   "specific_heat": {
     "NRMS": 3.305015e-04, 
