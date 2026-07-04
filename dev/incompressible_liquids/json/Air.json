@@ -59,12 +59,8 @@
   "reference": "Lemmon-JPCRD-2000; Lemmon-IJT-2004",
   "saturation_pressure": {
     "NRMS": null,
-    "coeffs": [
-      -5000.0,
-      60.0,
-      -10.0
-    ],
-    "type": "exponential"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "specific_heat": {
     "NRMS": 0.0015192579258026188,
