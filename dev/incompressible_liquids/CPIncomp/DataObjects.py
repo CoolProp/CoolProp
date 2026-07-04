@@ -1,4 +1,3 @@
-from __future__ import division, print_function
 import numpy as np
 import os, math
 from .BaseObjects import IncompressibleData, IncompressibleFitter
@@ -61,20 +60,6 @@ class SolutionData(object):
         self.uref = 0.0
         self.rhoref = 0.0
 
-#    def getDataObjects(self):
-#        objList  = {}
-#        objList["temperature"] = self.temperature
-#        objList["concentration"] = self.concentration
-#        objList["density"] = self.density
-#        objList["specific_heat"] = self.specific_heat
-#        objList["viscosity"] = self.viscosity
-#        objList["conductivity"] = self.conductivity
-#        objList["saturation_pressure"] = self.saturation_pressure
-#        objList["T_freeze"] = self.T_freeze
-#        objList["volume2mass"] = self.volume2mass
-#        objList["mass2mole"] = self.mass2mole
-#        return objList
-
     def roundSingle(self, x):
         if x == 0.0: return 0.0
         return round(x, self.significantDigits - int(math.floor(math.log10(abs(x)))) - 1)
@@ -87,24 +72,6 @@ class SolutionData(object):
                 if np.isfinite(res[i, j]):
                     res[i, j] = self.roundSingle(res[i, j])
         return res
-
-#    def getPolyObjects(self):
-#        objList  = {}
-#        objList["density"] = self.density
-#        objList["specific heat"] = self.specific_heat
-##        objList["viscosity"] = self.viscosity
-#        objList["conductivity"] = self.conductivity
-##        objList["saturation_pressure"] = self.saturation_pressure
-##        objList["T_freeze"] = self.T_freeze
-##        objList["volume2mass"] = self.volume2mass
-##        objList["mass2mole"] = self.mass2mole
-#        return objList
-#
-#    def getExpPolyObjects(self):
-#        objList  = {}
-#        objList["viscosity"] = self.viscosity
-#        objList["saturation pressure"] = self.saturation_pressure
-#        return objList
 
     def checkT(self, T, p, x):
         if self.Tmin <= 0.: raise ValueError("Please specify the minimum temperature.")
@@ -525,26 +492,6 @@ class CoefficientData(SolutionData):
         return tmp
 
     def setMelinderMatrix(self, matrix):
-#        matrix = np.array([
-#        [-26.29           , 958.1           ,3887           ,   0.4175            ,   1.153           ],
-#        [ -0.000002575    ,  -0.4151        ,   7.201       ,   0.0007271         ,  -0.03866         ],
-#        [ -0.000006732    ,  -0.002261      ,  -0.08979     ,   0.0000002823      ,   0.0002779       ],
-#        [  0.000000163    ,   0.0000002998  ,  -0.000439    ,   0.000000009718    ,  -0.000001543     ],
-#        [ -1.187          ,  -1.391         , -18.5         ,  -0.004421          ,   0.005448        ],
-#        [ -0.00001609     ,  -0.0151        ,   0.2984      ,  -0.00002952        ,   0.0001008       ],
-#        [  0.000000342    ,   0.0001113     ,  -0.001865    ,   0.00000007336     ,  -0.000002809     ],
-#        [  0.0000000005687,  -0.0000003264  ,  -0.00001718  ,   0.0000000004328   ,   0.000000009811  ],
-#        [ -0.01218        ,  -0.01105       ,  -0.03769     ,   0.00002044        ,  -0.0005552       ],
-#        [  0.0000003865   ,   0.0001828     ,  -0.01196     ,   0.0000003413      ,   0.000008384     ],
-#        [  0.000000008768 ,  -0.000001641   ,   0.00009801  ,  -0.000000003665    ,  -0.00000003997   ],
-#        [ -0.0000000002095,   0.0000000151  ,   0.000000666 ,  -0.00000000002791  ,  -0.0000000003466 ],
-#        [ -0.00006823     ,  -0.0001208     ,  -0.003776    ,   0.0000002943      ,   0.000003038     ],
-#        [  0.00000002137  ,   0.000002992   ,  -0.00005611  ,  -0.0000000009646   ,  -0.00000007435   ],
-#        [ -0.0000000004271,   0.000000001455,  -0.0000007811,   0.00000000003174  ,   0.0000000007442 ],
-#        [  0.0000001297   ,   0.000004927   ,  -0.0001504   ,  -0.0000000008666   ,   0.00000006669   ],
-#        [ -0.0000000005407,  -0.0000001325  ,   0.000007373 ,  -0.0000000000004573,  -0.0000000009105 ],
-#        [  0.00000002363  ,  -0.00000007727 ,   0.000006433 ,  -0.0000000002033   ,  -0.0000000008472 ]
-#        ])
 
         coeffs = self.convertMelinderMatrix(matrix).T
 
@@ -553,7 +500,6 @@ class CoefficientData(SolutionData):
         self.T_freeze.coeffs = self.convertMelinderArray(coeffs[0])
         self.T_freeze.coeffs[0, 0] += 273.15
         self.T_freeze.coeffs = np.array([self.T_freeze.coeffs[0]])
-        # print(self.T_freeze.coeffs)
 
         self.density.source = self.density.SOURCE_COEFFS
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
