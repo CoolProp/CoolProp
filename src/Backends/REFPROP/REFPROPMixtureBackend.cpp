@@ -174,17 +174,6 @@ std::string get_REFPROP_HMX_BNC_path() {
     }
 }
 
-/// Return the REFPROP .FLD stem for a CoolPropFluid.
-/// Falls back to `fallback` when REFPROPname is absent or the sentinel "N/A",
-/// so the original user-supplied name is preserved rather than fluid.name
-/// (which may differ, e.g. "R1336mzz(E)" vs the file "R1336MZZE.FLD").
-static std::string refprop_stem(const CoolProp::CoolPropFluid& fluid, const std::string& fallback) {
-    if (!fluid.REFPROPname.empty() && fluid.REFPROPname != "N/A") {
-        return fluid.REFPROPname;
-    }
-    return fallback;
-}
-
 namespace CoolProp {
 
 class REFPROPGenerator : public AbstractStateGenerator

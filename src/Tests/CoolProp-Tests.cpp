@@ -1988,6 +1988,23 @@ TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
         }
     }
 }
+TEST_CASE("refprop_stem falls back to user-supplied name when REFPROPname is unusable", "[REFPROPName][refprop_stem]") {
+    CoolPropFluid fluid;
+    fluid.name = "R1336mzz(E)";
+
+    SECTION("empty REFPROPname returns fallback") {
+        fluid.REFPROPname = "";
+        CHECK(CoolProp::refprop_stem(fluid, "R1336MZZE") == "R1336MZZE");
+    }
+    SECTION("N/A REFPROPname returns fallback") {
+        fluid.REFPROPname = "N/A";
+        CHECK(CoolProp::refprop_stem(fluid, "R1336MZZE") == "R1336MZZE");
+    }
+    SECTION("valid REFPROPname is returned unchanged") {
+        fluid.REFPROPname = "BUTANE";
+        CHECK(CoolProp::refprop_stem(fluid, "R600") == "BUTANE");
+    }
+}
 TEST_CASE("Backwards compatibility for REFPROP v4 fluid name convention", "[REFPROP_backwards_compatibility]") {
     Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
 
