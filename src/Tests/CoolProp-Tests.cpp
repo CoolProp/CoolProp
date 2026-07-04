@@ -5312,7 +5312,6 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
     // value such as 273.15K, both of which routinely fall inside a fluid's
     // valid range. Any newly-added or re-fit fluid that lands Tbase in-range
     // is now covered automatically instead of waiting for a bug report.
-    const double p = 101325.0;
     std::vector<std::string> names;
     {
         std::istringstream ss(CoolProp::get_global_param_string("incompressible_list_pure") + ","
@@ -5336,16 +5335,31 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         if (!(Tbase > Tmin && Tbase < Tmax)) continue;
 
         std::string fluidString = "INCOMP::" + name;
+        double xmid = 0.0;
         if (!fluid.is_pure()) {
-            const double xmid = 0.5 * (fluid.getxmin() + fluid.getxmax());
+            xmid = 0.5 * (fluid.getxmin() + fluid.getxmax());
             fluidString += "[" + std::to_string(xmid) + "]";
         }
         ++testedCount;
 
         const double dT = 0.1;
+        // The backend (correctly) rejects states below the saturation curve,
+        // and PropsSI reports that rejection as _HUGE rather than throwing.
+        // For fluids whose Tbase lies above their atmospheric boiling point
+        // (Water's Tbase is exactly 373.15 K; liquid sodium's 1450 K), a
+        // fixed 1 atm query would test the rejection path instead of the
+        // Tbase pole, so query at a pressure safely above psat(Tbase + dT).
+        double p = 101325.0;
+        try {
+            p = std::max(p, 2.0 * fluid.psat(Tbase + dT, xmid));
+        } catch (...) {
+            // psat not defined (or not valid) here -- 1 atm is fine then.
+        }
+
         double h_lo = 0, h_mid = 0, h_hi = 0, s_lo = 0, s_mid = 0, s_hi = 0;
         CAPTURE(fluidString);
         CAPTURE(Tbase);
+        CAPTURE(p);
         CHECK_NOTHROW(h_lo = CoolProp::PropsSI("Hmass", "T", Tbase - dT, "P", p, fluidString));
         CHECK_NOTHROW(h_mid = CoolProp::PropsSI("Hmass", "T", Tbase, "P", p, fluidString));
         CHECK_NOTHROW(h_hi = CoolProp::PropsSI("Hmass", "T", Tbase + dT, "P", p, fluidString));
@@ -5358,11 +5372,26 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         CAPTURE(s_lo);
         CAPTURE(s_mid);
         CAPTURE(s_hi);
+        // PropsSI signals errors by returning _HUGE, so check every value,
+        // not just the midpoints -- an invalid neighbour would otherwise
+        // surface as a cryptic "inf < 1.0" in the continuity check below.
+        CHECK(ValidNumber(h_lo));
         CHECK(ValidNumber(h_mid));
+        CHECK(ValidNumber(h_hi));
+        CHECK(ValidNumber(s_lo));
         CHECK(ValidNumber(s_mid));
-        // Same linearity-residual continuity check as #1578, generalized to entropy too.
-        CHECK(std::abs(h_mid - 0.5 * (h_lo + h_hi)) < 1.0);   // [J/kg]
-        CHECK(std::abs(s_mid - 0.5 * (s_lo + s_hi)) < 0.01);  // [J/kg/K]
+        CHECK(ValidNumber(s_hi));
+        // Same linearity-residual continuity check as #1578, generalized to
+        // entropy. The tolerance scales with the local span because genuine
+        // curvature over +-dT is fluid-dependent -- the ice slurries fold the
+        // latent heat of melting into cp(T), so their enthalpy is strongly
+        // curved (residual ~1.4 J/kg over a ~16000 J/kg span) without any
+        // discontinuity. A mishandled pole produces a residual of the same
+        // order as the span itself (or a non-finite value, caught above).
+        const double h_tol = 1.0 + 1e-3 * std::abs(h_hi - h_lo);   // [J/kg]
+        const double s_tol = 0.01 + 1e-3 * std::abs(s_hi - s_lo);  // [J/kg/K]
+        CHECK(std::abs(h_mid - 0.5 * (h_lo + h_hi)) < h_tol);
+        CHECK(std::abs(s_mid - 0.5 * (s_lo + s_hi)) < s_tol);
     }
     CAPTURE(testedCount);
     // If this hits zero, the Tbase-in-range filter or the fluid-list parsing
