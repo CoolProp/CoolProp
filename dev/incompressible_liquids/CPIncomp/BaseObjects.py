@@ -1,4 +1,3 @@
-from __future__ import division, print_function
 import numpy as np
 from scipy.optimize import minimize, curve_fit
 import sys
@@ -110,9 +109,6 @@ class IncompressibleData(object):
         if x is None and not self.xData is None: x = self.xData
         if y is None and not self.yData is None: y = self.yData
 
-        #res = None
-        #r2 = None
-
         res, sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
                   xbase=xbase, ybase=ybase, \
                   eqnType=self.type, \
@@ -151,14 +147,6 @@ class IncompressibleData(object):
                           eqnType=self.type, \
                           coeffs=self.coeffs, DEBUG=self.DEBUG)
 
-#            elif self.type==IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL:
-#                if self.DEBUG: print("Poor solution found with exponential polynomial, trying once more with normal polynomial.")
-#                self.type=IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
-#                self.coeffs = np.zeros((4,6))
-#                res,sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
-#                      xbase=xbase, ybase=ybase, \
-#                      eqnType=self.type, \
-#                      coeffs=self.coeffs, DEBUG=self.DEBUG)
 
             RMS = np.sqrt(np.square(sErr).mean()).sum()
             if RMS < bestRMS:  # Better fit
@@ -188,9 +176,6 @@ class IncompressibleData(object):
                 raise ValueError("Unknown function.")
 
             #if self.DEBUG: print("Fitting statistics:")
-            # SSE = np.square(self.sErr).sum() # Sum of squares due to error
-            #SST = ((zData-zData.mean())**2).sum()
-            #R2  = 1-(ssErr/ssTot )
 
     def setxData(self, xData):
         if self.xData is None:
@@ -389,15 +374,6 @@ class IncompressibleFitter(object):
             raise ValueError("Unknown function.")
 
 
-#    def getCoeffs1d(self, x, z, order):
-#        if (len(x)<order+1):
-#            raise ValueError("You have only {0} elements and try to fit {1} coefficients, please reduce the order.".format(len(x),order+1))
-#        A = np.vander(x,order+1)[:,::-1]
-#        #Anew = np.dot(A.T,A)
-#        #znew = np.dot(A.T,z)
-#        #coeffs = np.linalg.solve(Anew, znew)
-#        coeffs, resids, rank, singulars  = np.linalg.lstsq(A, z)
-#        return np.reshape(coeffs, (len(x),1))
 
     @staticmethod
     def getCoeffs2d(x_in, y_in, z_in, x_order, y_order, DEBUG=False):

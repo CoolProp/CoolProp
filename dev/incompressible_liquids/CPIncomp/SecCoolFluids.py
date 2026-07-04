@@ -1,4 +1,3 @@
-from __future__ import division, print_function
 import numpy as np
 from .BaseObjects import IncompressibleData, IncompressibleFitter
 from .DataObjects import DigitalData, PureData
