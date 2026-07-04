@@ -99,6 +99,55 @@ only and never enters h/s.
   density/cp fits at JSON-writing time so the constraint is visible where
   fluids are added.
 
+## Chebyshev basis for the caloric fits — validated (2026-07-04)
+
+Question: if the rho/cp data fits switch from centered monomials to
+Chebyshev expansions, can entropy still be derived? **Yes — validated
+empirically in `prototype_chebyshev_caloric.py`** (numpy+scipy only) on
+Water (smooth pure), LiqNa (400-2500 K range), LiBr (2D solution) and IceEA
+(latent-heat-in-cp ice slurry). Measured, per fluid:
+
+- **Entropy**: the recommended route re-expands `cp(T)/T` by sampling at
+  Chebyshev-Lobatto nodes (adaptive degree until the coefficient tail hits
+  ~1e-13; `cp/T` is analytic on `[Tmin,Tmax]` so decay is geometric) and
+  integrates with the exact Chebyshev antiderivative recurrence. Agreement
+  with adaptive quadrature of the same fit: **<= 4.2e-16 relative** on all
+  four fluids.
+- An independent closed form exists (Chebyshev division by `(u - u0)`,
+  `u0 = -(Tmax+Tmin)/(Tmax-Tmin)`, giving a quotient integral plus exactly
+  one `r*ln T` term — the Chebyshev analogue of today's
+  `fracIntCentralDvector`), and cross-checks route A to 1e-10..1e-16. Its
+  own accuracy degrades as `|u0|` grows (the remainder is the cp series
+  extrapolated to `u0`, outside `[-1,1]`) — the same cancellation family
+  that makes the current monomial binomial expansion fragile. Conclusion:
+  **sample-and-integrate is the production path, division/closed-form only
+  as a cross-check.**
+- Enthalpy: exact antiderivative recurrence, `dh/dT = cp` to 2e-16.
+- `ds/dT = cp/T` to 3.4e-15; Maxwell `(ds/dp)_T = -(dv/dT)_p` exactly 0;
+  reference-state pinning (`s = 0` at 293.15 K / 101325 Pa) bit-exact, same
+  subtract-the-reference scheme the backend uses today.
+- Fit quality: same least-squares space as monomials at equal order (as
+  expected), but the design matrix stays well-conditioned to degree 12+
+  (cond <= 1.3e4 on real data grids vs the monomial Vandermonde blowup),
+  so strongly-curved cp like the ice slurries can simply use higher order:
+  IceEA cp RMS drops 53 -> 0.01 J/kg/K from degree 4 to 5.
+- **The whole `T == Tbase` singularity class (#1578) does not exist in this
+  basis** — no centering, no `0/0`, no epsilon guards in the caloric path.
+
+What the eventual C++ path needs (all verified against the existing code):
+`ChebyshevExpansion` in `include/CoolProp/superancillary/superancillary.h`
+already has Clenshaw eval, interval-rescaled derivatives (`do_derivs`),
+Lobatto-node interpolation (the L-matrix used by `dyadic_splitting`) and
+root-finding; it lacks only a ~15-line `antiderivative()`. The 2D
+composition direction keeps a low-order monomial in `(x - xbase)` per
+T-coefficient, collapsed to 1D at the queried x (same row-combination
+`Polynomial2DFrac` does today). JSON: a `type: "chebyshev"` entry storing
+`Tmin/Tmax` + the coefficient matrix, aligned with the CoolProp-r5h
+Chebyshev tooling epic's conventions; derive the h- and s-expansions **at
+load time from the single stored cp expansion** so consistency is by
+construction. No product operator is required (cp/T is built by sampling,
+not expansion arithmetic; products are planned separately in CoolProp-89d).
+
 ## Suggested order, when picked up
 
 1. Decide the cp question (option above) -- small, self-contained, testable
