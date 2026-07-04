@@ -249,12 +249,15 @@ class SolutionDataWriter(object):
             if data.type == IncompressibleData.INCOMPRESSIBLE_NOT_SET:
                 continue
             coeffs = data.coeffs
-            unfitted = coeffs is None or not np.any(coeffs)  # never assigned, or still the all-zero template
+            # Unfitted: never assigned, still the all-zero template, non-finite
+            # (a diverged fit), or still one of the known starting guesses.
+            unfitted = coeffs is None or not np.any(coeffs) or not np.all(np.isfinite(coeffs))
             if not unfitted:
                 unfitted = any(IncompressibleFitter.allClose(coeffs, guess) for guess in knownGuesses)
             if unfitted:
                 print("{0}: could not fit {1}, marking it as not defined".format(fluidObject.name, label))
                 data.type = IncompressibleData.INCOMPRESSIBLE_NOT_SET
+                data.source = IncompressibleData.SOURCE_NOT_SET
                 data.coeffs = None
                 data.NRMS = None
 

@@ -5352,8 +5352,8 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         double p = 101325.0;
         try {
             p = std::max(p, 2.0 * fluid.psat(Tbase + dT, xmid));
-        } catch (...) {
-            // psat not defined (or not valid) here -- 1 atm is fine then.
+        } catch (const std::exception&) {
+            p = 101325.0;  // psat not defined (or not valid) here -- 1 atm is fine then
         }
 
         double h_lo = 0, h_mid = 0, h_hi = 0, s_lo = 0, s_mid = 0, s_hi = 0;
