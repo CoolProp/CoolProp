@@ -10,41 +10,8 @@
   "TminPsat": 416.4806533698651,
   "conductivity": {
     "NRMS": null,
-    "coeffs": [
-      [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ],
-      [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ],
-      [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ],
-      [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ]
-    ],
-    "type": "polynomial"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "density": {
     "NRMS": 0.001003907946811843,
@@ -79,12 +46,8 @@
   "reference": "Lemmon-JCED-2006; ; ; ",
   "saturation_pressure": {
     "NRMS": null,
-    "coeffs": [
-      -5000.0,
-      60.0,
-      -10.0
-    ],
-    "type": "exponential"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "specific_heat": {
     "NRMS": 0.004496558569769559,
@@ -106,12 +69,8 @@
   },
   "viscosity": {
     "NRMS": null,
-    "coeffs": [
-      500.0,
-      -60.0,
-      10.0
-    ],
-    "type": "exponential"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "volume2input": {
     "NRMS": null,

@@ -1,12 +1,8 @@
 {
   "T_freeze": {
     "NRMS": null, 
-    "coeffs": [
-      7.000000e+02, 
-      -6.000000e+01, 
-      1.000000e+01
-    ], 
-    "type": "exponential"
+    "coeffs": "null", 
+    "type": "notdefined"
   }, 
   "Tbase": 3.331500e+02, 
   "Tmax": 3.931500e+02, 
