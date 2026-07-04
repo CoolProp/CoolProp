@@ -15,14 +15,10 @@ numpy/scipy versions solve the same least-squares problem with slightly
 different rounding. A *large* drift, a different fit type, or a crash is
 exactly the class of regression #2488 needs caught before release.
 
-This shares the same prerequisites as dev/incompressible_liquids/all_incompressibles.py
-itself: a built-and-installed CoolProp Python package (CPIncomp.WriterObjects
-imports CoolProp.BibtexParser), plus numpy/scipy/matplotlib. The project's
-docs CI (.github/workflows/docs_docker-run.yml) already builds and installs
-that wheel before touching this directory, so run this test as part of (or
-after) that step, not standalone. If the prerequisites aren't met, the test
-collects as skipped rather than failing -- it cannot be exercised in a
-sandbox without a built CoolProp wheel.
+Prerequisites: numpy and scipy (see requirements.txt). matplotlib and a
+built CoolProp Python package are only needed for the optional report/plot
+paths, not for the fitting exercised here. If numpy/scipy aren't available,
+the test collects as skipped rather than failing.
 """
 
 import json
@@ -32,13 +28,8 @@ import pytest
 
 np = pytest.importorskip("numpy")
 pytest.importorskip("scipy")
-pytest.importorskip("matplotlib")
 
-try:
-    from CPIncomp.WriterObjects import SolutionDataWriter
-except ImportError as exc:
-    pytest.skip(f"CPIncomp.WriterObjects requires a built CoolProp Python package: {exc}", allow_module_level=True)
-
+from CPIncomp.WriterObjects import SolutionDataWriter
 from CPIncomp import getPureFluids, getSolutionFluids, getSecCoolFluids
 
 JSON_DIR = os.path.join(os.path.dirname(__file__), "json")

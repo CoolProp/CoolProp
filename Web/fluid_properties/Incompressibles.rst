@@ -481,22 +481,27 @@ Adding New Fluids
 -----------------
 
 To add a fluid to the backend for incompressible fluids, you have to have the tabulated
-property data available. Pure fluids are added to the ``PureFluids.py`` and binary 
-mixtures, like aqueous mixtures, have to be added to the ``SolutionFLuids.py``. 
+property data available. Pure fluids are added to the ``PureFluids.py`` and binary
+mixtures, like aqueous mixtures, have to be added to the ``SolutionFluids.py``. A
+step-by-step walk-through, including the expected units and the commands to run, is in
+``dev/incompressible_liquids/README.md``.
 
 The basic state variable for incompressible fluids is temperature, which should be provided
 as a one-dimensional numpy array with length :math:`N`. For pure fluids, all properties should match
 this temperature array in size since there is a 1-to-1 relation between the temperature points
-and the other quantities. 
+and the other quantities.
 
 For binary mixtures, you also need a composition vector to define the data points properly.
-This composition vector is also a one-dimensional numpy array of the lenghth :math:`M` and forms the 
+This composition vector is also a one-dimensional numpy array of the length :math:`M` and forms the
 second axis for your property space with :math:`N \times M` data points.
 
-Note that all properties have to have the same grid in terms of temperature and composition. 
+Note that all properties have to have the same grid in terms of temperature and composition.
+Properties you have no data for should simply not be set: they are then marked as
+``notdefined`` in the generated JSON and the backend raises a clear error when they are
+queried, instead of returning made-up values.
 
-Once you haver added your fluid data, you can regenrate the JSON files with the fitted 
-parameters by running the script located at ``dev/incompressible_liquids/all_incompressibles.py``. 
+Once you have added your fluid data, you can regenerate the JSON files with the fitted
+parameters by running the script located at ``dev/incompressible_liquids/all_incompressibles.py``.
 Your new fluid is now part of the codebase and should be available to all CoolProp functions as
 soon as you recompile the sources.
 
