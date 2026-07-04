@@ -15,6 +15,7 @@ it only reads the committed JSON files.
 
 import glob
 import json
+import math
 import os
 
 JSON_DIR = os.path.join(os.path.dirname(__file__), "json")
@@ -67,4 +68,4 @@ def test_all_coefficients_finite():
     for name, prop, flat in _iter_property_coeffs():
         for value in flat:
             assert isinstance(value, (int, float)), "{0}: {1} has non-numeric coefficient {2!r}".format(name, prop, value)
-            assert value == value and abs(value) != float("inf"), "{0}: {1} has non-finite coefficient".format(name, prop)
+            assert not math.isnan(value) and abs(value) != float("inf"), "{0}: {1} has non-finite coefficient".format(name, prop)
