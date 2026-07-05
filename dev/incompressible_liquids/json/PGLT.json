@@ -1,114 +1,150 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 4.231500e+02, 
-  "Tmax": 5.881500e+02, 
-  "Tmin": 2.581500e+02, 
-  "TminPsat": 4.731500e+02, 
+  },
+  "Tbase": 423.15,
+  "Tmax": 588.15,
+  "Tmin": 258.15,
+  "TminPsat": 473.15,
   "conductivity": {
-    "NRMS": 1.103062e-02, 
+    "NRMS": 0.01103062,
     "coeffs": [
       [
-        1.228766e-01
-      ], 
+        0.1228766
+      ],
       [
         -7.996282e-05
-      ], 
+      ],
       [
         6.066426e-10
-      ], 
+      ],
       [
-        -3.543260e-12
+        -3.54326e-12
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 1.255966e-03, 
+    "NRMS": 0.001255966,
     "coeffs": [
       [
-        7.866099e+02
-      ], 
+        786.6099
+      ],
       [
-        -6.973919e-01
-      ], 
+        -0.6973919
+      ],
       [
         3.689239e-07
-      ], 
+      ],
       [
-        1.614770e-09
+        1.61477e-09
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Paratherm GLT", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "PGLT", 
-  "reference": "Paratherm2013", 
-  "saturation_pressure": {
-    "NRMS": 1.579751e-02, 
+  },
+  "density_cheb": {
+    "NRMS": 0.0012560433516650479,
+    "Trange": [
+      258.15,
+      588.15
+    ],
     "coeffs": [
       [
-        6.503475e+00
-      ], 
+        786.6132930513597
+      ],
       [
-        2.738860e-02
-      ], 
+        -115.06528227714482
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Paratherm GLT",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "PGLT",
+  "reference": "Paratherm2013",
+  "saturation_pressure": {
+    "NRMS": 0.01579751,
+    "coeffs": [
+      [
+        6.503475
+      ],
+      [
+        0.0273886
+      ],
       [
         1.487609e-05
-      ], 
+      ],
       [
         -1.679013e-07
       ]
-    ], 
+    ],
     "type": "exppolynomial"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": 2.702553e-02, 
+    "NRMS": 0.02702553,
     "coeffs": [
       [
-        2.346560e+03
-      ], 
+        2346.56
+      ],
       [
-        3.229713e+00
-      ], 
+        3.229713
+      ],
       [
-        1.617412e-04
-      ], 
+        0.0001617412
+      ],
       [
         -1.975084e-06
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 4.101552e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.027080158333582162,
+    "Trange": [
+      258.15,
+      588.15
+    ],
     "coeffs": [
-      9.153925e+02, 
-      -1.626026e+02, 
-      1.019416e+01
-    ], 
+      [
+        2348.036253776438
+      ],
+      [
+        527.5470461908048
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.004101552,
+    "coeffs": [
+      915.3925,
+      -162.6026,
+      10.19416
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

@@ -1,101 +1,143 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 3.066500e+02, 
-  "Tmax": 3.631500e+02, 
-  "Tmin": 2.501500e+02, 
-  "TminPsat": 3.631500e+02, 
+  },
+  "Tbase": 306.65,
+  "Tmax": 363.15,
+  "Tmin": 250.15,
+  "TminPsat": 363.15,
   "conductivity": {
-    "NRMS": 2.118671e-05, 
+    "NRMS": 2.118671e-05,
     "coeffs": [
       [
-        5.146694e-01
-      ], 
+        0.5146694
+      ],
       [
-        1.197680e-03
-      ], 
+        0.00119768
+      ],
       [
         -1.193761e-06
-      ], 
+      ],
       [
         4.280064e-12
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 4.814588e-09, 
+    "NRMS": 4.814588e-09,
     "coeffs": [
       [
-        1.176057e+03
-      ], 
+        1176.057
+      ],
       [
-        -5.326629e-01
-      ], 
+        -0.5326629
+      ],
       [
         2.220446e-16
-      ], 
+      ],
       [
         5.137643e-13
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Zitrec S25, Potassium formate/Sodium propionate", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "ZS25", 
-  "reference": "Arteco2010,Skovrup2013", 
-  "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "specific_heat": {
-    "NRMS": 5.830334e-06, 
+  },
+  "density_cheb": {
+    "NRMS": 4.820509326583346e-09,
+    "Trange": [
+      250.14999999999998,
+      363.15
+    ],
     "coeffs": [
       [
-        3.200503e+03
-      ], 
+        1176.057068
+      ],
       [
-        4.320836e-01
-      ], 
+        -30.095453208237966
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Zitrec S25, Potassium formate/Sodium propionate",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "ZS25",
+  "reference": "Arteco2010,Skovrup2013",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": 5.830334e-06,
+    "coeffs": [
       [
-        2.410343e-04
-      ], 
+        3200.503
+      ],
+      [
+        0.4320836
+      ],
+      [
+        0.0002410343
+      ],
       [
         -4.562187e-10
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 2.679967e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 5.8303340793718275e-06,
+    "Trange": [
+      248.14999999999998,
+      363.15
+    ],
     "coeffs": [
-      4.128631e+02, 
-      -1.637610e+02, 
-      9.304576e+00
-    ], 
+      [
+        3200.470103292493
+      ],
+      [
+        24.81702328566126
+      ],
+      [
+        0.3984621228745177
+      ],
+      [
+        -2.1682865419842844e-05
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.002679967,
+    "coeffs": [
+      412.8631,
+      -163.761,
+      9.304576
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }
