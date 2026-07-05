@@ -35,8 +35,16 @@ hash (a pre-2026.04.23 release format), are reported as warnings, not
 failures: the docs script already degrades those to an annotated placeholder
 rather than a wrong curve, so they cannot mislead.
 
-Exit status 0 if every covered fluid matches (or is allowlisted); 1 if any
-non-allowlisted fluid's pinned reference is stale.
+The gate also requires every OTHER `outputversion = '...'` pin under Web/
+(currently the SuperAncillary.ipynb docs notebook, which downloads the same
+release archive independently) to equal the docs-script pin.  The notebook is
+executed at docs-build time with `--allow-errors`, so a stale pin there fails
+soft: the build succeeds and the rendered plots silently compare against an
+old release (the same #3063 failure mode this gate exists to prevent).
+
+Exit status 0 if every covered fluid matches (or is allowlisted) and all
+secondary pins agree; 1 if any non-allowlisted fluid's pinned reference is
+stale or a secondary pin has drifted.
 """
 import os
 import re
@@ -71,6 +79,51 @@ def pinned_version():
     if not m:
         raise RuntimeError(f'could not find outputversion in {DOCS_SCRIPT}')
     return m.group(1)
+
+
+# Files under Web/ that are KNOWN to carry their own `outputversion` pin.
+# Each must yield at least one parseable pin equal to the docs-script pin;
+# a file listed here in which the scan finds NO pin at all fails the gate
+# too (a rename/f-string refactor/deleted cell must not silently drop the
+# file out of coverage -- that is the fail-open this check exists to close).
+# If a pin is legitimately removed (e.g. derived from the docs script
+# instead), delete the entry here in the same commit.
+EXPECTED_SECONDARY_PIN_FILES = [
+    Path('Web') / 'coolprop' / 'SuperAncillary.ipynb',
+]
+
+
+def secondary_pin_drift(version):
+    """Return [(path, problem), ...] for every `outputversion = ...`
+    assignment found in notebooks or scripts under Web/ (outside the
+    canonical docs script) whose value does not equal the docs-script pin,
+    plus an entry for every EXPECTED_SECONDARY_PIN_FILES member in which no
+    pin could be parsed at all.
+
+    Notebooks embed their source as JSON strings, so the assignment is
+    matched unanchored against the raw file text (an `^` anchor would never
+    match mid-string), with optional escaped quotes (a double-quoted pin
+    appears as \\" in raw notebook text) and an optional 1-2 letter string
+    prefix (f/r/rb...).  The captured value may be empty or non-numeric --
+    a malformed pin must FAIL the equality check, not evade the match."""
+    drift = []
+    found_in = set()
+    pat = re.compile(r"""outputversion\s*=\s*[A-Za-z]{0,2}(?:\\?['"])([^'"\\]*)(?:\\?['"])""")
+    for path in sorted((REPO / 'Web').rglob('*')):
+        if path.suffix not in ('.ipynb', '.py') or '.ipynb_checkpoints' in path.parts:
+            continue
+        if path == DOCS_SCRIPT or path.resolve() == DOCS_SCRIPT.resolve():
+            continue
+        rel = path.relative_to(REPO)
+        for found in pat.findall(path.read_text(encoding='utf-8')):
+            found_in.add(rel)
+            if found != version:
+                drift.append((rel, repr(found)))
+    for rel in EXPECTED_SECONDARY_PIN_FILES:
+        if rel not in found_in:
+            drift.append((rel, 'no parseable outputversion pin found '
+                               '(expected one; see EXPECTED_SECONDARY_PIN_FILES)'))
+    return drift
 
 
 def release_data(version):
@@ -175,6 +228,17 @@ def main():
               'now MATCH the pinned release -- remove their stale exemption:')
         print('  ' + ', '.join(stale_exempt))
 
+    drift = secondary_pin_drift(version)
+    if drift:
+        print(f'\nDRIFTED SECONDARY PIN(S): {len(drift)} other outputversion '
+              f'pin(s) under Web/ disagree with the docs-script pin ({version}):')
+        for path, found in drift:
+            print(f'  {path}: {found}')
+        print('These download the fastchebpure release independently of the docs '
+              'script; a stale pin renders plots against an old release without '
+              'failing the docs build (the notebook executes with --allow-errors). '
+              'Bump them to match.')
+
     if stale:
         print(f'\nSTALE: {len(stale)} fluid(s) whose pinned docs reference was '
               'built from a different EOS than CoolProp currently ships:')
@@ -187,9 +251,12 @@ def main():
               'to a fastchebpure release regenerated against the current EOS, or -- '
               'if the regeneration is still pending upstream -- add the fluid(s) to '
               'PENDING_UPSTREAM with a tracking-issue reference.')
+
+    if stale or drift:
         return 1
 
-    print('\nAll hashed, shipped SA-bearing fluids match the pinned release EOS.')
+    print('\nAll hashed, shipped SA-bearing fluids match the pinned release EOS, '
+          'and all secondary pins agree.')
     return 0
 
 
