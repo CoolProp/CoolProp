@@ -1,110 +1,149 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 2.906500e+02, 
-  "Tmax": 3.631500e+02, 
-  "Tmin": 2.181500e+02, 
-  "TminPsat": 3.631500e+02, 
+  },
+  "Tbase": 290.65,
+  "Tmax": 363.15,
+  "Tmin": 218.15,
+  "TminPsat": 363.15,
   "conductivity": {
-    "NRMS": 2.288109e-05, 
+    "NRMS": 2.288109e-05,
     "coeffs": [
       [
-        4.515986e-01
-      ], 
+        0.4515986
+      ],
       [
-        8.656319e-04
-      ], 
+        0.0008656319
+      ],
       [
         5.280352e-07
-      ], 
+      ],
       [
         -1.144975e-12
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 3.297977e-09, 
+    "NRMS": 3.297977e-09,
     "coeffs": [
       [
-        1.313147e+03
-      ], 
+        1313.147
+      ],
       [
-        -6.044286e-01
-      ], 
+        -0.6044286
+      ],
       [
         -5.668595e-12
-      ], 
+      ],
       [
         -3.964548e-15
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Zitrec S55, Potassium formate/Sodium propionate", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "ZS55", 
-  "reference": "Arteco2010,Skovrup2013", 
-  "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "specific_heat": {
-    "NRMS": 1.021918e-06, 
+  },
+  "density_cheb": {
+    "NRMS": 3.2995415796196933e-09,
+    "Trange": [
+      218.14999999999998,
+      363.15
+    ],
     "coeffs": [
       [
-        2.557025e+03
-      ], 
+        1313.1467857103175
+      ],
       [
-        1.995099e+00
-      ], 
+        -43.82107142861295
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Zitrec S55, Potassium formate/Sodium propionate",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "ZS55",
+  "reference": "Arteco2010,Skovrup2013",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": 1.021918e-06,
+    "coeffs": [
       [
-        4.743056e-03
-      ], 
+        2557.025
+      ],
+      [
+        1.995099
+      ],
+      [
+        0.004743056
+      ],
       [
         1.001109e-10
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 2.316919e-08, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 1.0221135335755061e-06,
+    "Trange": [
+      218.14999999999998,
+      363.15
+    ],
     "coeffs": [
       [
-        -5.601012e+00
-      ], 
+        2569.4899523955673
+      ],
       [
-        -2.583587e-02
-      ], 
+        144.6447165875913
+      ],
       [
-        2.521265e-04
-      ], 
+        12.465344965491852
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 2.316919e-08,
+    "coeffs": [
+      [
+        -5.601012
+      ],
+      [
+        -0.02583587
+      ],
+      [
+        0.0002521265
+      ],
       [
         -1.648687e-06
       ]
-    ], 
+    ],
     "type": "exppolynomial"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

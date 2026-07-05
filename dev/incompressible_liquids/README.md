@@ -93,6 +93,21 @@ data axis -- see `SolutionExample` in `CPIncomp/ExampleObjects.py` and the
 "Adding New Fluids" section of the online documentation
 (`Web/fluid_properties/Incompressibles.rst`).
 
+## Chebyshev caloric entries
+
+Every fluid's JSON also carries optional `density_cheb` /
+`specific_heat_cheb` entries (`type: "chebyshev"`): Chebyshev-in-T
+coefficients on the explicit `Trange`, one column per `(x - xbase)` power.
+They are produced automatically by the writer — fitted from your raw data
+when the fluid has any, otherwise an exact basis conversion of the
+polynomial fit — and were introduced because enthalpy/entropy integrals of
+a Chebyshev cp fit are exact and singularity-free (see
+`NOTES_thermodynamic_consistency.md` and `CPIncomp/ChebyshevFits.py`).
+`add_chebyshev_entries.py` is the one-shot migration tool that added them
+to the committed files without refitting the polynomial entries;
+`test_chebyshev_entries.py` guards their quality (positivity across the
+whole domain, agreement with data and with the polynomial fits).
+
 ## Notes
 
 - The fit is centred around `Tbase`/`xbase` (defaults: the midpoint of your

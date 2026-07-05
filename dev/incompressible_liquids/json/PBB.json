@@ -1,101 +1,143 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 4.481500e+02, 
-  "Tmax": 5.731500e+02, 
-  "Tmin": 3.231500e+02, 
-  "TminPsat": 5.731500e+02, 
+  },
+  "Tbase": 448.15,
+  "Tmax": 573.15,
+  "Tmin": 323.15,
+  "TminPsat": 573.15,
   "conductivity": {
-    "NRMS": 5.082813e-03, 
+    "NRMS": 0.005082813,
     "coeffs": [
       [
-        1.190188e-01
-      ], 
+        0.1190188
+      ],
       [
         -6.761949e-05
-      ], 
+      ],
       [
         4.150793e-08
-      ], 
+      ],
       [
         -4.304526e-10
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 1.817647e-03, 
+    "NRMS": 0.001817647,
     "coeffs": [
       [
-        7.756875e+02
-      ], 
+        775.6875
+      ],
       [
-        -6.434788e-01
-      ], 
+        -0.6434788
+      ],
       [
         -7.142857e-05
-      ], 
+      ],
       [
         -1.037037e-06
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Pirobloc HTF-BASIC", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "PBB", 
-  "reference": "http://www.fluidotermico.com", 
-  "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "specific_heat": {
-    "NRMS": 2.506330e-03, 
+  },
+  "density_cheb": {
+    "NRMS": 0.0018176472946312228,
+    "Trange": [
+      323.15,
+      573.15
+    ],
     "coeffs": [
       [
-        2.480286e+03
-      ], 
+        775.1294642857147
+      ],
       [
-        3.948856e+00
-      ], 
+        -81.95395171957688
+      ],
       [
-        1.495286e-04
-      ], 
+        -0.5580357142856345
+      ],
+      [
+        -0.5063657407408021
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Pirobloc HTF-BASIC",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "PBB",
+  "reference": "http://www.fluidotermico.com",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": 0.00250633,
+    "coeffs": [
+      [
+        2480.286
+      ],
+      [
+        3.948856
+      ],
+      [
+        0.0001495286
+      ],
       [
         2.170933e-06
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 5.638711e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.0028210575001223555,
+    "Trange": [
+      323.15,
+      573.15
+    ],
     "coeffs": [
-      1.172256e+03, 
-      -1.427991e+02, 
-      1.071900e+01
-    ], 
+      [
+        2481.3767958513336
+      ],
+      [
+        497.03297059757125
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.005638711,
+    "coeffs": [
+      1172.256,
+      -142.7991,
+      10.719
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }
