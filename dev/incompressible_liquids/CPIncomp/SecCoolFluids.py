@@ -279,8 +279,8 @@ class SecCoolSolutionData(DigitalData):
         # store T from +64 down to -80 degC). Sort rows/columns by their
         # axis values instead of trusting the file order -- a sort also
         # covers files that are shuffled rather than exactly reversed.
-        numbers[1:, :] = numbers[1:, :][np.argsort(numbers[1:, 0]), :]
-        numbers[:, 1:] = numbers[:, 1:][:, np.argsort(numbers[0, 1:])]
+        numbers[1:, :] = numbers[1:, :][np.argsort(numbers[1:, 0], kind="stable"), :]
+        numbers[:, 1:] = numbers[:, 1:][:, np.argsort(numbers[0, 1:], kind="stable")]
         return numbers
 
     def writeToFile(self, data, array):
@@ -507,8 +507,8 @@ class SecCoolIceData(SecCoolSolutionData):
         # store T from +64 down to -80 degC). Sort rows/columns by their
         # axis values instead of trusting the file order -- a sort also
         # covers files that are shuffled rather than exactly reversed.
-        numbers[1:, :] = numbers[1:, :][np.argsort(numbers[1:, 0]), :]
-        numbers[:, 1:] = numbers[:, 1:][:, np.argsort(numbers[0, 1:])]
+        numbers[1:, :] = numbers[1:, :][np.argsort(numbers[1:, 0], kind="stable"), :]
+        numbers[:, 1:] = numbers[:, 1:][:, np.argsort(numbers[0, 1:], kind="stable")]
         return numbers
 
 

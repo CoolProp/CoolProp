@@ -101,6 +101,7 @@ export default function App() {
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       {addFluidOpen && (
         <AddFluidDialog
+          existingFluids={incompFluids}
           onSaved={() => {
             setAddFluidOpen(false);
             refreshIncompFluids();

@@ -46,24 +46,47 @@ const HEADER_ALIASES: Record<string, PropertyKey_ | "T"> = {
 const DEFAULT_COLUMN_ORDER: (PropertyKey_ | "T")[] = ["T", "density", "specific_heat", "conductivity", "viscosity"];
 
 /** Parse a pasted table (TSV/CSV/whitespace). First row may be a header
- * naming the columns (T, rho, cp, k, mu ...); without one, columns are
- * assumed in the order T, density, cp, conductivity, viscosity. All values
- * SI: K, kg/m3, J/kg/K, W/m/K, Pa.s. Blank cells = no data. */
+ * naming the columns (T, rho, cp, k, mu ..., optionally with units in
+ * parentheses); without one, columns are assumed in the order
+ * T, density, cp, conductivity, viscosity. All values SI: K, kg/m3,
+ * J/kg/K, W/m/K, Pa.s. Blank cells = no data.
+ *
+ * Structural problems throw rather than warn: a header cell mapping to two
+ * properties or a row longer than the header would otherwise assign values
+ * to the wrong property and fit a silently wrong fluid. */
 export function parseTable(text: string): ParsedTable {
   const warnings: string[] = [];
+  // One delimiter for the whole table: a spreadsheet paste is tab-separated
+  // (so "T (K)" stays one cell); otherwise fall back to ; then , then runs
+  // of spaces. Never mix -- mixing is how header cells with units get split
+  // into stray one-letter tokens that alias to the wrong property.
+  const delimiter = text.includes("\t") ? /\t/ : text.includes(";") ? /;/ : text.includes(",") ? /,/ : / +/;
   const rows = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
-    .map((line) => line.split(/[\t;,]| +/).map((cell) => cell.trim()));
+    .map((line) => line.split(delimiter).map((cell) => cell.trim()));
   if (rows.length === 0) return { T: [], columns: {} as ParsedTable["columns"], warnings: ["no data"] };
 
   let mapping: (PropertyKey_ | "T" | null)[];
   let dataRows = rows;
   const firstRowNumeric = rows[0].every((c) => c === "" || Number.isFinite(parseFloat(c)));
   if (!firstRowNumeric) {
-    mapping = rows[0].map((h) => HEADER_ALIASES[h.toLowerCase().replace(/[^a-z_]/g, "")] ?? null);
-    if (!mapping.includes("T")) warnings.push("header row found but no temperature column recognised");
+    mapping = rows[0].map((h) => {
+      // strip parenthesized units ("rho (kg/m3)") before alias lookup
+      const bare = h.replace(/\(.*?\)/g, "").trim().toLowerCase().replace(/[^a-z_]/g, "");
+      return HEADER_ALIASES[bare] ?? null;
+    });
+    rows[0].forEach((h, i) => {
+      if (mapping[i] === null && h !== "") warnings.push(`column "${h}" not recognised, ignored`);
+    });
+    if (!mapping.includes("T")) throw new Error("header row found but no temperature column recognised");
+    const seen = new Set<string>();
+    for (const key of mapping) {
+      if (!key) continue;
+      if (seen.has(key)) throw new Error(`two header columns map to the same property (${key})`);
+      seen.add(key);
+    }
     dataRows = rows.slice(1);
   } else {
     mapping = DEFAULT_COLUMN_ORDER.slice(0, rows[0].length);
@@ -74,6 +97,9 @@ export function parseTable(text: string): ParsedTable {
   for (const key of mapping) if (key && key !== "T") columns[key] = [];
 
   for (const row of dataRows) {
+    if (row.length > mapping.length) {
+      throw new Error(`row "${row.join(" ")}" has ${row.length} cells but the header has ${mapping.length} columns`);
+    }
     const tIdx = mapping.indexOf("T");
     const tVal = parseFloat(row[tIdx] ?? "");
     if (!Number.isFinite(tVal)) {

@@ -55,11 +55,13 @@ const PROPERTY_LABELS: Record<string, string> = {
 };
 
 interface Props {
+  /** Names already registered with the INCOMP backend (shipped + user). */
+  existingFluids?: string[];
   onSaved: (name: string) => void;
   onCancel: () => void;
 }
 
-export default function AddFluidDialog({ onSaved, onCancel }: Props) {
+export default function AddFluidDialog({ existingFluids = [], onSaved, onCancel }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [reference, setReference] = useState("");
@@ -70,12 +72,19 @@ export default function AddFluidDialog({ onSaved, onCancel }: Props) {
   const preview = useMemo(() => {
     if (!tableText.trim() || !name.trim()) return null;
     try {
+      const trimmed = name.trim();
+      // Overwriting the user's own earlier definition is the edit flow;
+      // clobbering a shipped fluid (the core replaces same-name fluids in
+      // place) must be refused.
+      if (existingFluids.includes(trimmed) && !(trimmed in loadUserFluidDefinitions())) {
+        throw new Error(`"${trimmed}" already exists in the incompressible library; choose another name`);
+      }
       const table = parseTable(tableText);
-      return { ok: true as const, ...fitFluid({ name: name.trim(), description, reference, table }) };
+      return { ok: true as const, ...fitFluid({ name: trimmed, description, reference, table }) };
     } catch (e) {
       return { ok: false as const, message: String(e instanceof Error ? e.message : e) };
     }
-  }, [tableText, name, description, reference]);
+  }, [tableText, name, description, reference, existingFluids]);
 
   const handleSave = async () => {
     if (!preview || !preview.ok) return;

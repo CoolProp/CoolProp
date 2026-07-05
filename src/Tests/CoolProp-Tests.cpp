@@ -5472,6 +5472,33 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         const double s1 = CoolProp::PropsSI("Smass", "T", 300.0, "P", p, fluid);
         const double s2 = CoolProp::PropsSI("Smass", "T", 340.0, "P", p, fluid);
         CHECK(std::abs((s2 - s1) - 2000.0 * std::log(340.0 / 300.0)) < 0.5);
+
+        // Re-adding the same name replaces the fluid in place: the fluid list
+        // must not grow a duplicate entry, and the new definition must win.
+        const std::string updated = R"([{
+            "name": "ClaudeTestFluid", "description": "runtime-added test fluid, v2", "reference": "none",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", updated));
+        const std::string pure_list = CoolProp::get_global_param_string("incompressible_list_pure");
+        std::size_t occurrences = 0;
+        for (std::size_t pos = pure_list.find("ClaudeTestFluid"); pos != std::string::npos; pos = pure_list.find("ClaudeTestFluid", pos + 1)) {
+            ++occurrences;
+        }
+        CHECK(occurrences == 1);
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) - 900.0) < 1e-9);
+
+        // Malformed definitions must throw, not register garbage: an empty
+        // coefficient matrix would otherwise evaluate rho to 0 silently.
+        const std::string empty_coeffs = R"([{
+            "name": "ClaudeBadFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": []},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        CHECK_THROWS(CoolProp::add_fluids_as_JSON("INCOMP", empty_coeffs));
     }
 }
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {

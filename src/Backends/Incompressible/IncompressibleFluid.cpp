@@ -75,6 +75,12 @@ double chebClenshaw(const Eigen::VectorXd& a, double u) {
 /// Evaluate a coefficient matrix that shares data's domain and xbase
 /// (data.coeffs itself, or one of the derived matrices).
 double chebEvalMatrix(const Eigen::MatrixXd& M, const CoolProp::IncompressibleData& data, double T, double x) {
+    if (M.rows() < 1 || M.cols() < 1) {
+        // An empty matrix would silently evaluate to 0.0 (Clenshaw over no
+        // coefficients) -- rho == 0 / a missing cp integral must be loud.
+        // Derived matrices are only built by IncompressibleFluid::validate().
+        throw CoolProp::ValueError("Chebyshev coefficient matrix is empty; the fluid was not loaded through validate().");
+    }
     const double u = (2.0 * T - (data.cheb_Tmax + data.cheb_Tmin)) / (data.cheb_Tmax - data.cheb_Tmin);
     return chebClenshaw(chebCollapse(M, x, data.cheb_xbase), u);
 }
@@ -175,6 +181,9 @@ void IncompressibleFluid::validate() {
         if (!(data->cheb_Tmin > 0.0) || !(data->cheb_Tmax > data->cheb_Tmin)) {
             throw ValueError(format("%s (%d): Chebyshev fit for %s needs 0 < Tmin < Tmax, got [%g, %g].", __FILE__, __LINE__, name.c_str(),
                                     data->cheb_Tmin, data->cheb_Tmax));
+        }
+        if (data->coeffs.rows() < 1 || data->coeffs.cols() < 1) {
+            throw ValueError(format("%s (%d): Chebyshev fit for %s has an empty coefficient matrix.", __FILE__, __LINE__, name.c_str()));
         }
         data->cheb_ddT = chebDerivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
     }
