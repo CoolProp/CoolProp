@@ -123,10 +123,12 @@ const PHASE_NAMES: Record<number, string> = {
 
 interface Props {
   fluids: string[];
+  incompFluids?: string[];
   basis: Basis;
+  onAddFluid?: () => void;
 }
 
-export default function PropertyCalculator({ fluids, basis }: Props) {
+export default function PropertyCalculator({ fluids, incompFluids = [], basis, onAddFluid }: Props) {
   const [fluid, setFluid] = useState("Water");
   const [pairIdx, setPairIdx] = useState(0);
   const [v1, setV1] = useState(getInputPairs(basis)[0].v1Default);
@@ -136,7 +138,11 @@ export default function PropertyCalculator({ fluids, basis }: Props) {
   const [computing, setComputing] = useState(false);
   const { width: leftWidth, startDrag } = useDraggableSplit(240, 180, 600);
 
-  const state = useAbstractState("HEOS", fluid);
+  // Incompressible fluids share the same name space in the dropdown but run
+  // on the INCOMP backend; HEOS names win a collision (e.g. "Water" exists
+  // in both, and the HEOS equation of state is the better model for it).
+  const isIncomp = incompFluids.includes(fluid) && !fluids.includes(fluid);
+  const state = useAbstractState(isIncomp ? "INCOMP" : "HEOS", fluid);
 
   // Reset input values and clear results when basis changes
   useEffect(() => {
@@ -186,10 +192,26 @@ export default function PropertyCalculator({ fluids, basis }: Props) {
         <div className="field-group">
           <label>Fluid</label>
           <select value={fluid} onChange={(e) => setFluid(e.target.value)}>
-            {(fluids.length > 0 ? fluids : ["Water"]).map((f) => (
-              <option key={f} value={f}>{f}</option>
-            ))}
+            <optgroup label="Fluids (HEOS)">
+              {(fluids.length > 0 ? fluids : ["Water"]).map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </optgroup>
+            {incompFluids.length > 0 && (
+              <optgroup label="Incompressible (INCOMP)">
+                {incompFluids
+                  .filter((f) => !fluids.includes(f))
+                  .map((f) => (
+                    <option key={"incomp-" + f} value={f}>{f}</option>
+                  ))}
+              </optgroup>
+            )}
           </select>
+          {onAddFluid && (
+            <button className="btn-secondary" style={{ marginTop: 4 }} onClick={onAddFluid}>
+              + Add incompressible fluid…
+            </button>
+          )}
         </div>
 
         {state.error && <div className="error-msg">{state.error}</div>}

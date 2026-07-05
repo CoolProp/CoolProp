@@ -69,6 +69,30 @@ pub fn get_fluids_list() -> Result<Vec<String>, String> {
     Ok(list)
 }
 
+/// Pure incompressible fluids (INCOMP backend), including any added at
+/// runtime through add_incompressible_fluid.
+#[tauri::command]
+pub fn get_incompressible_fluids_list() -> Result<Vec<String>, String> {
+    let raw = coolprop_ffi::cp_get_global_param("incompressible_list_pure")?;
+    let mut list: Vec<String> = raw
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    list.sort_unstable();
+    Ok(list)
+}
+
+/// Register a user-defined incompressible fluid from a JSON definition
+/// (a single fluid object or an array; schema as in
+/// dev/incompressible_liquids/json/*.json). The fluid becomes available
+/// as INCOMP::<name> for the lifetime of the process; the frontend
+/// persists the JSON and re-registers it on startup.
+#[tauri::command]
+pub fn add_incompressible_fluid(fluid_json: String) -> Result<(), String> {
+    coolprop_ffi::cp_add_fluids_as_json("INCOMP", &fluid_json)
+}
+
 // ---------- fluid EOS limits ---------------------------------------------
 
 #[derive(Serialize)]
@@ -225,6 +249,37 @@ mod tests {
         assert!((lim.t_max - 647.096).abs() < 0.05, "t_max = {}", lim.t_max);
         assert!(lim.p_min > 0.0 && lim.p_min < 1000.0, "p_min = {}", lim.p_min);
         assert!(lim.p_max > 1e6 && lim.p_max < 1e9, "p_max = {}", lim.p_max);
+    }
+
+    #[test]
+    fn incompressible_list_and_runtime_add() {
+        let before = get_incompressible_fluids_list().expect("incompressible list");
+        assert!(before.iter().any(|f| f == "Water"), "INCOMP list missing Water");
+
+        // Chebyshev caloric entries with hand-checkable values: on
+        // T in [280, 360], u(T) = (T - 320)/40, rho = 1000 - 5*u, cp = 2000.
+        let json = r#"[{
+            "name": "GuiTestFluid", "description": "runtime-added test fluid", "reference": "none",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[1000.0], [-5.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }]"#;
+        add_incompressible_fluid(json.to_string()).expect("add_incompressible_fluid");
+
+        let after = get_incompressible_fluids_list().expect("incompressible list after add");
+        assert!(after.iter().any(|f| f == "GuiTestFluid"), "added fluid missing from list");
+
+        let id = create_state("INCOMP".into(), "GuiTestFluid".into()).expect("create INCOMP state");
+        update_state(id, "PT_INPUTS".into(), 101325.0, 320.0).expect("update INCOMP state");
+        let rho = get_property(id, "Dmass".into()).expect("Dmass");
+        assert!((rho - 1000.0).abs() < 1e-6, "rho = {rho}");
+        let cp = get_property(id, "Cpmass".into()).expect("Cpmass");
+        assert!((cp - 2000.0).abs() < 1e-6, "cp = {cp}");
+        // h and s exist and are finite (reference-pinned values)
+        let h = get_property(id, "Hmass".into()).expect("Hmass");
+        let s = get_property(id, "Smass".into()).expect("Smass");
+        assert!(h.is_finite() && s.is_finite(), "h = {h}, s = {s}");
+        free_state(id).expect("free INCOMP state");
     }
 
     #[test]
