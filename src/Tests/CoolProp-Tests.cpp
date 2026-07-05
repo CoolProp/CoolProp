@@ -5399,6 +5399,81 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
     // where Tbase is in range, and most shipped fluids are.
     CHECK(testedCount > 0);
 }
+TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[INCOMP]") {
+    const double p = 101325.0;
+    SECTION("Basis-converted fluids reproduce the committed polynomial fit") {
+        // MEG's caloric entries are exact basis conversions of the committed
+        // centered polynomial (fit_source == basis_conversion), so the values
+        // must match the polynomial evaluation at reference precision, not
+        // merely at fit level. Golden values computed directly from the
+        // committed MEG.json polynomial coefficients.
+        const std::string fluid = "INCOMP::MEG[0.35]";
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 300.0, "P", p, fluid) / 1041.843589 - 1) < 1e-9);
+        CHECK(std::abs(CoolProp::PropsSI("C", "T", 300.0, "P", p, fluid) / 3644.159653 - 1) < 1e-9);
+    }
+    SECTION("dh/dT == cp and ds/dT == cp/T through the public interface") {
+        // The h/s integrals are derived from the SAME cp expansion at load
+        // time, so central finite differences of h and s must reproduce cp
+        // to discretization error. Run on a conversion (MEG), a raw-data
+        // refit (Water) and an ice slurry (IceEA, strongly curved cp).
+        struct Probe
+        {
+            std::string fluid;
+            double T;
+        };
+        for (const Probe& probe : {Probe{"INCOMP::MEG[0.35]", 300.0}, Probe{"INCOMP::Water", 350.0}, Probe{"INCOMP::IceEA[0.2]", 255.0}}) {
+            const double dT = 0.01;
+            CAPTURE(probe.fluid);
+            const double cp = CoolProp::PropsSI("C", "T", probe.T, "P", p, probe.fluid);
+            const double h_lo = CoolProp::PropsSI("Hmass", "T", probe.T - dT, "P", p, probe.fluid);
+            const double h_hi = CoolProp::PropsSI("Hmass", "T", probe.T + dT, "P", p, probe.fluid);
+            const double s_lo = CoolProp::PropsSI("Smass", "T", probe.T - dT, "P", p, probe.fluid);
+            const double s_hi = CoolProp::PropsSI("Smass", "T", probe.T + dT, "P", p, probe.fluid);
+            const double dhdT = (h_hi - h_lo) / (2 * dT);
+            const double dsdT = (s_hi - s_lo) / (2 * dT);
+            CAPTURE(cp);
+            CAPTURE(dhdT);
+            CAPTURE(dsdT);
+            // dh/dT differs from cp by the pressure term p*d(dh/dp)/dT
+            // (documented model property, see NOTES_thermodynamic_consistency
+            // .md), which is O(0.1 J/kg/K) at 1 atm -- inside this tolerance.
+            CHECK(std::abs(dhdT / cp - 1) < 1e-4);
+            CHECK(std::abs(dsdT / (cp / probe.T) - 1) < 1e-4);
+        }
+    }
+    SECTION("Runtime addition of an incompressible fluid via add_fluids_as_JSON (#2384)") {
+        // Minimal pure fluid with Chebyshev caloric entries: rho(T) linear,
+        // cp(T) constant 2000, on T in [280, 360]. T_1 has coefficient 1 in
+        // the density entry, so rho = 1000 - 5*u with u in [-1, 1].
+        const std::string json = R"([{
+            "name": "ClaudeTestFluid", "description": "runtime-added test fluid", "reference": "none",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":       {"type": "polynomial", "coeffs": [[1000.0]]},
+            "specific_heat": {"type": "polynomial", "coeffs": [[2000.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[1000.0], [-5.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
+        const std::string fluid = "INCOMP::ClaudeTestFluid";
+        // rho at T=320 (u=0) is exactly 1000; at T=360 (u=1) exactly 995
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) - 1000.0) < 1e-9);
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 360.0, "P", p, fluid) - 995.0) < 1e-9);
+        CHECK(std::abs(CoolProp::PropsSI("C", "T", 320.0, "P", p, fluid) - 2000.0) < 1e-9);
+        // constant-cp enthalpy difference is exactly cp*dT (pressure terms
+        // cancel only in the T-part; keep p identical between the states)
+        const double h1 = CoolProp::PropsSI("Hmass", "T", 300.0, "P", p, fluid);
+        const double h2 = CoolProp::PropsSI("Hmass", "T", 340.0, "P", p, fluid);
+        const double drho_term =
+          p * (1.0 / CoolProp::PropsSI("D", "T", 340.0, "P", p, fluid) - 1.0 / CoolProp::PropsSI("D", "T", 300.0, "P", p, fluid));
+        CAPTURE(h2 - h1);
+        // T-part: 2000 * 40 = 80000 J/kg; pressure part is small but nonzero
+        CHECK(std::abs((h2 - h1) - 80000.0) < std::abs(drho_term) * 40 + 5.0);
+        // and s(T2)-s(T1) = cp*ln(T2/T1) for constant cp (T-part)
+        const double s1 = CoolProp::PropsSI("Smass", "T", 300.0, "P", p, fluid);
+        const double s2 = CoolProp::PropsSI("Smass", "T", 340.0, "P", p, fluid);
+        CHECK(std::abs((s2 - s1) - 2000.0 * std::log(340.0 / 300.0)) < 0.5);
+    }
+}
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {
     // Issue #1374: the fitted viscosity (and hence Prandtl number) of MPG2
     // (Melinder propylene glycol) was a uniform factor of 10 too small versus

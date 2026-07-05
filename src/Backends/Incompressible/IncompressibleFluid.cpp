@@ -6,6 +6,11 @@
 #include <cmath>
 #include "CoolProp/numerics/MatrixMath.h"
 #include "CoolProp/numerics/PolyMath.h"
+#include "CoolProp/numerics/Solvers.h"
+// For the Chebyshev-Lobatto interpolation matrix used at load time (validate)
+// to re-expand cp(T)/T; deliberately included in this .cpp only, the public
+// header carries plain Eigen members.
+#include "CoolProp/superancillary/superancillary.h"
 #include <Eigen/Core>
 
 constexpr double INCOMP_EPSILON = DBL_EPSILON * 100.0;
@@ -33,6 +38,122 @@ double evaluateAwayFromPole(double x_den, Func fnc) {
     const double f_hi = fnc(x_hi);
     return (f_hi - f_lo) / (x_hi - x_lo) * (x_den - x_lo) + f_lo;
 }
+
+// ---- Chebyshev caloric fits (type == INCOMPRESSIBLE_CHEBYSHEV) -------------
+//
+// The 2D layout mirrors the polynomial fits: rows are Chebyshev-in-T
+// coefficients on [cheb_Tmin, cheb_Tmax], columns multiply (x - cheb_xbase)^j.
+// Evaluation collapses the composition direction to an effective 1D
+// coefficient vector (a linear combination of the columns), then runs
+// Clenshaw -- the same collapse-then-evaluate structure Polynomial2DFrac uses.
+
+/// Effective 1D Chebyshev coefficients at composition x.
+Eigen::VectorXd chebCollapse(const Eigen::MatrixXd& C, double x, double xbase) {
+    Eigen::VectorXd dx(C.cols());
+    double power = 1.0;
+    for (Eigen::Index j = 0; j < C.cols(); ++j) {
+        dx(j) = power;
+        power *= (x - xbase);
+    }
+    return C * dx;
+}
+
+/// Clenshaw evaluation at the mapped argument u in [-1, 1]
+/// (mirrors superancillary::ChebyshevExpansion::eval).
+double chebClenshaw(const Eigen::VectorXd& a, double u) {
+    const int Norder = static_cast<int>(a.size()) - 1;
+    if (Norder < 1) return (Norder == 0) ? a(0) : 0.0;
+    double u_k = 0, u_kp1 = a(Norder), u_kp2 = 0;
+    for (int k = Norder - 1; k > 0; k--) {
+        u_k = 2.0 * u * u_kp1 - u_kp2 + a(k);
+        u_kp2 = u_kp1;
+        u_kp1 = u_k;
+    }
+    return a(0) + u * u_kp1 - u_kp2;
+}
+
+/// Evaluate a coefficient matrix that shares data's domain and xbase
+/// (data.coeffs itself, or one of the derived matrices).
+double chebEvalMatrix(const Eigen::MatrixXd& M, const CoolProp::IncompressibleData& data, double T, double x) {
+    const double u = (2.0 * T - (data.cheb_Tmax + data.cheb_Tmin)) / (data.cheb_Tmax - data.cheb_Tmin);
+    return chebClenshaw(chebCollapse(M, x, data.cheb_xbase), u);
+}
+
+/// Coefficients of d/dT, one column at a time. Standard descending
+/// recurrence d_{k} = d_{k+2} + 2(k+1) a_{k+1}, d_0 halved, times du/dT.
+Eigen::MatrixXd chebDerivativeMatrix(const Eigen::MatrixXd& C, double Tmin, double Tmax) {
+    const Eigen::Index n = C.rows() - 1;  // degree
+    const double scale = 2.0 / (Tmax - Tmin);
+    Eigen::MatrixXd D = Eigen::MatrixXd::Zero(std::max<Eigen::Index>(n, 1), C.cols());
+    for (Eigen::Index j = 0; j < C.cols(); ++j) {
+        for (Eigen::Index k = n - 1; k >= 0; --k) {
+            const double higher = (k + 2 <= n - 1) ? D(k + 2, j) : 0.0;
+            D(k, j) = higher + 2.0 * static_cast<double>(k + 1) * C(k + 1, j);
+        }
+        if (n >= 1) D(0, j) *= 0.5;
+        D.col(j) *= scale;
+    }
+    return D;
+}
+
+/// Coefficients of the indefinite integral over T, one column at a time.
+/// Standard antiderivative recurrence (the inverse of the derivative one),
+/// times dT/du = (Tmax - Tmin)/2. The b_0 coefficient is left at zero: the
+/// integration constant always cancels against the reference-state value.
+Eigen::MatrixXd chebAntiderivativeMatrix(const Eigen::MatrixXd& C, double Tmin, double Tmax) {
+    const Eigen::Index n = C.rows() - 1;  // degree
+    const double scale = 0.5 * (Tmax - Tmin);
+    Eigen::MatrixXd B = Eigen::MatrixXd::Zero(C.rows() + 1, C.cols());
+    for (Eigen::Index j = 0; j < C.cols(); ++j) {
+        B(1, j) = C(0, j);
+        if (n >= 1) B(2, j) = 0.25 * C(1, j);
+        for (Eigen::Index k = 2; k <= n; ++k) {
+            B(k + 1, j) += C(k, j) / (2.0 * static_cast<double>(k + 1));
+            B(k - 1, j) -= C(k, j) / (2.0 * static_cast<double>(k - 1));
+        }
+        B.col(j) *= scale;
+    }
+    return B;
+}
+
+/// Re-expand f(T)/T column-wise on the same domain by Chebyshev-Lobatto
+/// interpolation. f/T is analytic on [Tmin, Tmax] (Tmin > 0 is enforced at
+/// load), so the coefficients decay geometrically; the degree grows until
+/// the relative tail is at rounding level. Division by T is linear, so
+/// treating each (x - xbase)^j column independently is exact for every x.
+Eigen::MatrixXd chebDivideByTMatrix(const Eigen::MatrixXd& C, double Tmin, double Tmax) {
+    const double tail_target = 1e-13;
+    Eigen::Index degree = C.rows() + 8;
+    const Eigen::Index max_degree = 96;
+    while (true) {
+        const auto LU = CoolProp::superancillary::detail::get_LU_matrices(static_cast<std::size_t>(degree));
+        const Eigen::MatrixXd& L = std::get<0>(LU);
+        // Chebyshev-Lobatto nodes mapped to [Tmin, Tmax]
+        Eigen::VectorXd T_nodes(degree + 1);
+        for (Eigen::Index i = 0; i <= degree; ++i) {
+            const double u = std::cos(EIGEN_PI * static_cast<double>(i) / static_cast<double>(degree));
+            T_nodes(i) = 0.5 * ((Tmax - Tmin) * u + (Tmax + Tmin));
+        }
+        Eigen::MatrixXd out(degree + 1, C.cols());
+        double worst_tail = 0.0;
+        for (Eigen::Index j = 0; j < C.cols(); ++j) {
+            Eigen::VectorXd samples(degree + 1);
+            for (Eigen::Index i = 0; i <= degree; ++i) {
+                const double u = std::cos(EIGEN_PI * static_cast<double>(i) / static_cast<double>(degree));
+                samples(i) = chebClenshaw(C.col(j), u) / T_nodes(i);
+            }
+            out.col(j) = L * samples;
+            const double scale = out.col(j).cwiseAbs().maxCoeff();
+            if (scale > 0.0) {
+                worst_tail = std::max(worst_tail, out.col(j).tail(3).cwiseAbs().maxCoeff() / scale);
+            }
+        }
+        if (worst_tail < tail_target || degree >= max_degree) {
+            return out;
+        }
+        degree += 16;
+    }
+}
 }  // namespace
 
 namespace CoolProp {
@@ -46,11 +167,23 @@ and transport properties.
 //IncompressibleFluid::IncompressibleFluid();
 
 void IncompressibleFluid::validate() {
-    return;
-    // TODO: Implement validation function
-
-    // u and s have to be of the polynomial type!
-    //throw NotImplementedError("TODO");
+    // Chebyshev caloric fits: check the domain and build the derived
+    // coefficient matrices exactly once, at load time. Everything h/s need
+    // afterwards is a plain Clenshaw evaluation (see dhdTatPxdT/dsdTatPxdT).
+    for (IncompressibleData* data : {&density, &specific_heat}) {
+        if (data->type != IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) continue;
+        if (!(data->cheb_Tmin > 0.0) || !(data->cheb_Tmax > data->cheb_Tmin)) {
+            throw ValueError(format("%s (%d): Chebyshev fit for %s needs 0 < Tmin < Tmax, got [%g, %g].", __FILE__, __LINE__, name.c_str(),
+                                    data->cheb_Tmin, data->cheb_Tmax));
+        }
+        data->cheb_ddT = chebDerivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
+    }
+    if (specific_heat.type == IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
+        specific_heat.cheb_int_dT = chebAntiderivativeMatrix(specific_heat.coeffs, specific_heat.cheb_Tmin, specific_heat.cheb_Tmax);
+        specific_heat.cheb_int_dTdivT =
+          chebAntiderivativeMatrix(chebDivideByTMatrix(specific_heat.coeffs, specific_heat.cheb_Tmin, specific_heat.cheb_Tmax),
+                                   specific_heat.cheb_Tmin, specific_heat.cheb_Tmax);
+    }
 }
 
 bool IncompressibleFluid::is_pure() {
@@ -107,6 +240,8 @@ double IncompressibleFluid::rho(double T, double p, double x) {
     switch (density.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase);
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
+            return chebEvalMatrix(density.coeffs, density, T, x);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(density, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
@@ -127,8 +262,9 @@ double IncompressibleFluid::rho(double T, double p, double x) {
 double IncompressibleFluid::c(double T, double p, double x) {
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            //throw NotImplementedError("Here you should implement the polynomial.");
             return poly.evaluate(specific_heat.coeffs, T, x, 0, 0, Tbase, xbase);
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
+            return chebEvalMatrix(specific_heat.coeffs, specific_heat, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
                                     __LINE__, specific_heat.type));
@@ -237,6 +373,8 @@ double IncompressibleFluid::drhodTatPx(double T, double p, double x) {
     switch (density.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.derivative(density.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
+            return chebEvalMatrix(density.cheb_ddT, density, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
                                     __LINE__, density.type));
@@ -252,6 +390,9 @@ double IncompressibleFluid::dsdTatPxdT(double T, double p, double x) {
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase);
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
+            // Indefinite Int c/T dT, derived once at load time in validate()
+            return chebEvalMatrix(specific_heat.cheb_int_dTdivT, specific_heat, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
                                     __LINE__, specific_heat.type));
@@ -267,6 +408,9 @@ double IncompressibleFluid::dhdTatPxdT(double T, double p, double x) {
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
+            // Indefinite Int c dT, derived once at load time in validate()
+            return chebEvalMatrix(specific_heat.cheb_int_dT, specific_heat, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
                                     __LINE__, specific_heat.type));
@@ -400,6 +544,22 @@ double IncompressibleFluid::T_rho(double Dmass, double p, double x) {
     switch (density.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.solve_limits(density.coeffs, x, d_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV: {
+            // Brent on the forward evaluation over the fluid's range,
+            // mirroring the backend's HmassP/PSmass flashes; the Chebyshev
+            // basis has no (and needs no) direct polynomial root-solve.
+            class Residual : public FuncWrapper1D
+            {
+               public:
+                IncompressibleFluid* fluid;
+                double p, x, target;
+                Residual(IncompressibleFluid* fluid, double p, double x, double target) : fluid(fluid), p(p), x(x), target(target) {}
+                double call(double T) override {
+                    return fluid->rho(T, p, x) - target;
+                }
+            } res(this, p, x, d_raw);
+            return Brent(&res, Tmin, Tmax, DBL_EPSILON, 1e3 * DBL_EPSILON, 100);
+        }
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
                                     __LINE__, specific_heat.type));
@@ -414,6 +574,20 @@ double IncompressibleFluid::T_c(double Cmass, double p, double x) {
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.solve_limits(specific_heat.coeffs, x, c_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV: {
+            // See the matching comment in T_rho above.
+            class Residual : public FuncWrapper1D
+            {
+               public:
+                IncompressibleFluid* fluid;
+                double p, x, target;
+                Residual(IncompressibleFluid* fluid, double p, double x, double target) : fluid(fluid), p(p), x(x), target(target) {}
+                double call(double T) override {
+                    return fluid->c(T, p, x) - target;
+                }
+            } res(this, p, x, c_raw);
+            return Brent(&res, Tmin, Tmax, DBL_EPSILON, 1e3 * DBL_EPSILON, 100);
+        }
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
                                     __LINE__, specific_heat.type));

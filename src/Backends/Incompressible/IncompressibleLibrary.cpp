@@ -372,6 +372,24 @@ IncompressibleData JSONIncompressibleLibrary::parse_coefficients(const nlohmann:
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYOFFSET;
                     fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(entry.at("coeffs")));
                     return fluidData;
+                } else if (!type.compare("chebyshev")) {
+                    // Chebyshev-in-T x monomial-in-(x - xbase) caloric fit; the
+                    // fit domain is explicit per entry (it is the data range,
+                    // which need not equal the fluid-level Tmin/Tmax exactly).
+                    // The derived integral/derivative matrices are built in
+                    // IncompressibleFluid::validate() once the fluid is
+                    // assembled.
+                    fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV;
+                    fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(entry.at("coeffs")));
+                    std::vector<double> Trange = cpjson::get_double_array(entry, "Trange");
+                    if (Trange.size() != 2) {
+                        throw ValueError(
+                          format("The \"Trange\" of [%s] must have exactly 2 entries, got %d.", id.c_str(), static_cast<int>(Trange.size())));
+                    }
+                    fluidData.cheb_Tmin = Trange[0];
+                    fluidData.cheb_Tmax = Trange[1];
+                    fluidData.cheb_xbase = entry.contains("xbase") ? cpjson::get_double(entry, "xbase") : 0.0;
+                    return fluidData;
                 } else if (vital) {
                     throw ValueError(format("The type [%s] is not understood for [%s] of incompressible fluids. Please check your JSON file.",
                                             type.c_str(), id.c_str()));
@@ -454,8 +472,22 @@ void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
 
         /// Setters for the coefficients
         if (get_debug_level() >= 20) std::cout << format("Incompressible library: Loading coefficients for %s ", fluid.getName().c_str()) << '\n';
-        fluid.setDensity(parse_coefficients(fluid_json, "density", true));
-        fluid.setSpecificHeat(parse_coefficients(fluid_json, "specific_heat", true));
+        // The caloric properties prefer the Chebyshev entries when the JSON
+        // carries them (exact singularity-free enthalpy/entropy integrals,
+        // see dev/incompressible_liquids/NOTES_thermodynamic_consistency.md);
+        // the classic polynomial entries remain the fallback and the format
+        // for every other property. Flip this to false to A/B against the
+        // polynomial caloric path with the same library.
+        static constexpr bool prefer_chebyshev_caloric = true;
+        auto parse_caloric = [this, &fluid_json](const std::string& id) {
+            if (prefer_chebyshev_caloric && fluid_json.contains(id + "_cheb")) {
+                IncompressibleData data = parse_coefficients(fluid_json, id + "_cheb", false);
+                if (data.type == CoolProp::IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) return data;
+            }
+            return parse_coefficients(fluid_json, id, true);
+        };
+        fluid.setDensity(parse_caloric("density"));
+        fluid.setSpecificHeat(parse_caloric("specific_heat"));
         fluid.setViscosity(parse_coefficients(fluid_json, "viscosity", false));
         fluid.setConductivity(parse_coefficients(fluid_json, "conductivity", false));
         fluid.setPsat(parse_coefficients(fluid_json, "saturation_pressure", false));
