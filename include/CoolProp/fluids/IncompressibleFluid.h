@@ -35,11 +35,27 @@ struct IncompressibleData
         INCOMPRESSIBLE_EXPPOLYNOMIAL,
         INCOMPRESSIBLE_EXPONENTIAL,
         INCOMPRESSIBLE_LOGEXPONENTIAL,
-        INCOMPRESSIBLE_POLYOFFSET
+        INCOMPRESSIBLE_POLYOFFSET,
+        INCOMPRESSIBLE_CHEBYSHEV
     };
     IncompressibleTypeEnum type;
     Eigen::MatrixXd coeffs;  //TODO: Can we store the Eigen::Matrix objects more efficiently?
-    //std::vector<std::vector<double> > coeffs;
+
+    /// Chebyshev fits only (type == INCOMPRESSIBLE_CHEBYSHEV). The rows of
+    /// coeffs are Chebyshev-in-T coefficients on [cheb_Tmin, cheb_Tmax]; the
+    /// columns multiply powers of (x - cheb_xbase). The derived matrices are
+    /// built once at load time by IncompressibleFluid::validate():
+    ///  - cheb_ddT:        coefficients of d/dT (the density fit needs this
+    ///                     for the pressure terms of h and s)
+    ///  - cheb_int_dT:     coefficients of the indefinite Int f dT (enthalpy)
+    ///  - cheb_int_dTdivT: coefficients of the indefinite Int f/T dT
+    ///                     (entropy; from a Chebyshev-Lobatto re-expansion of
+    ///                     f/T, which converges geometrically since T > 0)
+    /// Integration constants are irrelevant: the backend always subtracts the
+    /// same expression evaluated at the reference state.
+    double cheb_Tmin = 0.0, cheb_Tmax = 0.0, cheb_xbase = 0.0;
+    Eigen::MatrixXd cheb_ddT, cheb_int_dT, cheb_int_dTdivT;
+
     IncompressibleData()
       : type(INCOMPRESSIBLE_NOT_SET) {
 
