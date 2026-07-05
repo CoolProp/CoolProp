@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import PropertyCalculator from "./components/PropertyCalculator";
 import SaturationView from "./components/SaturationView";
 import HumidAirCalculator from "./components/HumidAirCalculator";
 import AboutModal from "./components/AboutModal";
+import AddFluidDialog, { registerUserFluids } from "./components/AddFluidDialog";
 import UpdateChecker from "./components/UpdateChecker";
 import SponsorSplash from "./components/SponsorSplash";
 import { SPONSOR_URL } from "./constants";
@@ -14,12 +15,21 @@ export type Basis = "mass" | "molar";
 export default function App() {
   const [tab, setTab] = useState<Tab>("calculator");
   const [fluids, setFluids] = useState<string[]>([]);
+  const [incompFluids, setIncompFluids] = useState<string[]>([]);
   const [basis, setBasis] = useState<Basis>("mass");
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [addFluidOpen, setAddFluidOpen] = useState(false);
+
+  const refreshIncompFluids = useCallback(() => {
+    invoke<string[]>("get_incompressible_fluids_list").then(setIncompFluids).catch(console.error);
+  }, []);
 
   useEffect(() => {
     invoke<string[]>("get_fluids_list").then(setFluids).catch(console.error);
-  }, []);
+    // Re-register any user-defined incompressible fluids persisted from
+    // earlier sessions, then load the (now complete) INCOMP fluid list.
+    registerUserFluids().finally(refreshIncompFluids);
+  }, [refreshIncompFluids]);
 
   return (
     <div className="app">
@@ -71,7 +81,12 @@ export default function App() {
       <main className="app-main">
         {/* All tabs stay mounted so state (results, isolines, sat-table panels) persists. */}
         <div className="tab-pane" hidden={tab !== "calculator"}>
-          <PropertyCalculator fluids={fluids} basis={basis} />
+          <PropertyCalculator
+            fluids={fluids}
+            incompFluids={incompFluids}
+            basis={basis}
+            onAddFluid={() => setAddFluidOpen(true)}
+          />
         </div>
         <div className="tab-pane" hidden={tab !== "saturation"}>
           <SaturationView fluids={fluids} basis={basis} />
@@ -84,6 +99,15 @@ export default function App() {
         </div>
       </main>
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
+      {addFluidOpen && (
+        <AddFluidDialog
+          onSaved={() => {
+            setAddFluidOpen(false);
+            refreshIncompFluids();
+          }}
+          onCancel={() => setAddFluidOpen(false)}
+        />
+      )}
       <UpdateChecker />
       <SponsorSplash />
     </div>

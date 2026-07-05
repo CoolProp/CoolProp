@@ -60,6 +60,14 @@ extern "C" {
         name3: *const c_char,
         val3: c_double,
     ) -> c_double;
+
+    fn add_fluids_as_JSON(
+        backend: *const c_char,
+        fluidstring: *const c_char,
+        errcode: *mut c_long,
+        message_buffer: *mut c_char,
+        buffer_length: c_long,
+    );
 }
 
 fn cstring(s: &str) -> Result<CString, String> {
@@ -153,6 +161,18 @@ pub fn cp_ha_props(
             .unwrap_or_else(|_| format!("HAPropsSI({output}) returned no-data value"));
         Err(msg)
     }
+}
+
+/// Register additional fluids at runtime from a JSON definition string.
+/// For backend "INCOMP" the string is a single fluid object or an array of
+/// them, in the same schema as dev/incompressible_liquids/json/*.json.
+pub fn cp_add_fluids_as_json(backend: &str, fluid_json: &str) -> Result<(), String> {
+    let b = cstring(backend)?;
+    let j = cstring(fluid_json)?;
+    let mut ec: c_long = 0;
+    let mut buf = vec![0i8; BUF as usize];
+    unsafe { add_fluids_as_JSON(b.as_ptr(), j.as_ptr(), &mut ec, buf.as_mut_ptr(), BUF) };
+    check(ec, &buf)
 }
 
 pub fn cp_get_global_param(param: &str) -> Result<String, String> {

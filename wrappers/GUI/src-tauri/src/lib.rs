@@ -12,6 +12,8 @@ pub fn run() {
             state_manager::get_property,
             state_manager::free_state,
             state_manager::get_fluids_list,
+            state_manager::get_incompressible_fluids_list,
+            state_manager::add_incompressible_fluid,
             state_manager::get_fluid_limits,
             state_manager::compute_saturation_table,
             state_manager::compute_humid_air,
