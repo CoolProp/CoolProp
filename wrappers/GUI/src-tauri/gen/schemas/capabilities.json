@@ -1,1 +1,1 @@
-{}
+{"updater":{"identifier":"updater","description":"Allow the in-app auto-updater to check for, download, and install updates, and to relaunch the app afterwards.","local":true,"windows":["main"],"permissions":["updater:default","process:allow-restart"]}}
