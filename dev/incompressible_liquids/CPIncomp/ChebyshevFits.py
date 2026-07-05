@@ -163,7 +163,9 @@ def _fit_covers_fluid_range(rawT, rawGrid, Tmin, Tmax):
     T = np.asarray(rawT, dtype=float).ravel()[np.isfinite(grid).any(axis=1)]
     if T.size < MIN_TEMPERATURE_POINTS:
         return False
-    return (T.max() - T.min()) >= 0.9 * (Tmax - Tmin)
+    # require essentially full coverage: the C++ side checks positivity only
+    # inside Trange, so shipping extrapolation would be unguarded
+    return (T.max() - T.min()) >= 0.999 * (Tmax - Tmin)
 
 
 def build_entry(fluid_json, prop, rawT=None, rawX=None, rawGrid=None):

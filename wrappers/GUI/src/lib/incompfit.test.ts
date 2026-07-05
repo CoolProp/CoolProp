@@ -36,6 +36,24 @@ describe("parseTable", () => {
     expect(t.columns.density).toEqual([998, 994]);
   });
 
+  it("strips parenthesized units from header cells (spreadsheet paste)", () => {
+    const text = "T (K)\trho (kg/m3)\tcp (J/kg/K)\tk (W/m/K)\tmu (Pa.s)\n300\t998\t4184\t0.61\t0.00089\n310\t994\t4187\t0.62\t0.00069\n320\t989\t4190\t0.63\t0.00058";
+    const t = parseTable(text);
+    expect(t.T).toEqual([300, 310, 320]);
+    expect(t.columns.density).toEqual([998, 994, 989]);
+    expect(t.columns.specific_heat).toEqual([4184, 4187, 4190]);
+    expect(t.columns.conductivity).toEqual([0.61, 0.62, 0.63]);
+    expect(t.columns.viscosity).toEqual([0.00089, 0.00069, 0.00058]);
+  });
+
+  it("throws when two header columns map to the same property", () => {
+    expect(() => parseTable("T\trho\tdensity\n300\t998\t997")).toThrow(/same property/);
+  });
+
+  it("throws when a data row is longer than the header", () => {
+    expect(() => parseTable("T\trho\n300\t998\t4184")).toThrow(/cells/);
+  });
+
   it("sorts by temperature and keeps blank cells as null", () => {
     const t = parseTable("T\trho\tcp\n310\t994\t\n300\t998\t4184");
     expect(t.T).toEqual([300, 310]);

@@ -8,10 +8,9 @@ order. These tests pin that behavior for every data-backed fluid.
 Needs numpy (the loaders do); skips cleanly without it.
 """
 
-import numpy as np
 import pytest
 
-pytest.importorskip("numpy")
+np = pytest.importorskip("numpy")
 
 from CPIncomp.SecCoolFluids import SecCoolSolutionData
 

@@ -444,16 +444,11 @@ void JSONIncompressibleLibrary::add_many(const nlohmann::json& listing) {
 void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
     _is_empty = false;
 
-    // Get the next index for this fluid
-    std::size_t index = fluid_map.size();
-
-    // Add index->fluid mapping
-    fluid_map[index] = IncompressibleFluid();
-    //fluid_map[index].reset(new IncompressibleFluid());
-    //fluid_map[index].reset(new IncompressibleFluid());
-
-    // Create an instance of the fluid
-    IncompressibleFluid& fluid = fluid_map[index];
+    // Build the fluid locally first: nothing is registered until parsing and
+    // validation succeed, so a malformed definition (now reachable at runtime
+    // through add_fluids_as_JSON) cannot leave a half-initialized entry in
+    // the maps.
+    IncompressibleFluid fluid;
     fluid.setName("unloaded");
     try {
         fluid.setName(cpjson::get_string(fluid_json, "name"));
@@ -482,7 +477,14 @@ void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
         auto parse_caloric = [this, &fluid_json](const std::string& id) {
             if (prefer_chebyshev_caloric && fluid_json.contains(id + "_cheb")) {
                 IncompressibleData data = parse_coefficients(fluid_json, id + "_cheb", false);
-                if (data.type == CoolProp::IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) return data;
+                if (data.type != CoolProp::IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
+                    // The entry exists but did not parse as chebyshev (e.g. a
+                    // typo in "type"): failing loudly beats silently running
+                    // on the polynomial fallback while the author believes
+                    // the Chebyshev fit is in use.
+                    throw ValueError(format("The entry [%s_cheb] exists but its type is not \"chebyshev\"; fix or remove it.", id.c_str()));
+                }
+                return data;
             }
             return parse_coefficients(fluid_json, id, true);
         };
@@ -507,20 +509,40 @@ void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
 
         /// A function to check coefficients and equation types.
         fluid.validate();
-
-        // Add name->index mapping
-        string_to_index_map[fluid.getName()] = index;
-
-        // Add name to vector of names
-        if (fluid.is_pure()) {
-            this->name_vector_pure.push_back(fluid.getName());
-        } else {
-            this->name_vector_solution.push_back(fluid.getName());
-        }
     } catch (std::exception& e) {
         std::cout << format("Unable to load fluid: %s; error was %s\n", fluid.getName().c_str(), e.what());
         throw;
     }
+
+    const std::string name = fluid.getName();
+    // These characters would corrupt the comma-joined fluid lists or the
+    // "INCOMP::Name" / "Name[x]" fluid-string parsing.
+    if (name.find_first_of(",|[]:&") != std::string::npos) {
+        throw ValueError(format("Invalid incompressible fluid name [%s]: must not contain any of ',|[]:&'.", name.c_str()));
+    }
+
+    std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(name);
+    if (it != string_to_index_map.end()) {
+        // Re-adding an existing name replaces the fluid in place (idempotent
+        // re-registration and edit flows); the name vectors must not grow
+        // duplicates. A pure/solution flip would leave the name in the wrong
+        // list, so reject that instead of silently misfiling it.
+        if (fluid_map[it->second].is_pure() != fluid.is_pure()) {
+            throw ValueError(
+              format("Cannot replace incompressible fluid [%s]: pure/solution classification differs from the existing entry.", name.c_str()));
+        }
+        fluid_map[it->second] = std::move(fluid);
+        return;
+    }
+
+    const std::size_t index = fluid_map.size();
+    string_to_index_map[name] = index;
+    if (fluid.is_pure()) {
+        this->name_vector_pure.push_back(name);
+    } else {
+        this->name_vector_solution.push_back(name);
+    }
+    fluid_map[index] = std::move(fluid);
 };
 
 void JSONIncompressibleLibrary::add_obj(const IncompressibleFluid& fluid_obj) {

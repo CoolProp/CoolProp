@@ -80,6 +80,7 @@ pub fn get_incompressible_fluids_list() -> Result<Vec<String>, String> {
         .filter(|s| !s.is_empty())
         .collect();
     list.sort_unstable();
+    list.dedup();
     Ok(list)
 }
 
