@@ -4830,6 +4830,8 @@ TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables", "
        "Huber, Kazakov & Lemmon, IJT 2025, Table 4 row 3 (g_i != 1 in exponential terms)"},
       {"R1243zf", 280.0, 11000.0, 7.393335e6, 90.7467, 130.734, 648.467, 1e-5,
        "Akasaka & Lemmon, IJT 2025, Table 6 row 2 (3rd EOS, g_i != 1; supersedes Akasaka-JCED-2019)"},
+      {"R1132a", 295.0, 12000.0, 8.031807e6, 57.1438, 117.645, 379.545, 1e-5,
+       "Akasaka, Low & Lemmon, IJT 2026, Table 7 row 4 (g_i != 1 in exponential terms)"},
     };
 
     for (const auto& r : rows) {
