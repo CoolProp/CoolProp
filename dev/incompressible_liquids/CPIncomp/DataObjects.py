@@ -251,6 +251,11 @@ class DigitalData(SolutionData):
     def getFromFile(self, data):
         fullPath = self.getFile(data)
         _, _, res = IncompressibleFitter.shapeArray(np.loadtxt(fullPath))
+        # Order the grid by its own axis values (first column = temperature,
+        # first row = concentration) rather than trusting the file order --
+        # see the matching sort in SecCoolSolutionData.getFromFile.
+        res[1:, :] = res[1:, :][np.argsort(res[1:, 0]), :]
+        res[:, 1:] = res[:, 1:][:, np.argsort(res[0, 1:])]
         return res
 
     def writeToFile(self, data, array):
