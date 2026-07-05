@@ -1,114 +1,186 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 3.631500e+02, 
-  "Tmax": 4.831500e+02, 
-  "Tmin": 2.431500e+02, 
-  "TminPsat": 2.931500e+02, 
+  },
+  "Tbase": 363.15,
+  "Tmax": 483.15,
+  "Tmin": 243.15,
+  "TminPsat": 293.15,
   "conductivity": {
-    "NRMS": 2.117936e-13, 
+    "NRMS": 2.117936e-13,
     "coeffs": [
       [
-        5.890000e-01
-      ], 
+        0.589
+      ],
       [
-        1.000000e-03
-      ], 
+        0.001
+      ],
       [
-        0.000000e+00
-      ], 
+        0.0
+      ],
       [
         -9.225935e-20
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 2.097756e-03, 
+    "NRMS": 0.002097756,
     "coeffs": [
       [
-        1.239436e+03
-      ], 
+        1239.436
+      ],
       [
-        -5.102214e-01
-      ], 
+        -0.5102214
+      ],
       [
         -2.991453e-05
-      ], 
+      ],
       [
         1.142979e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Dynalene HC30", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "HC30", 
-  "reference": "Dynalene2014", 
-  "saturation_pressure": {
-    "NRMS": 9.689493e-03, 
+  },
+  "density_cheb": {
+    "NRMS": 0.0013610919365116315,
+    "Trange": [
+      243.15,
+      483.15
+    ],
     "coeffs": [
       [
-        1.073982e+01
-      ], 
+        1239.20144098618
+      ],
       [
-        3.952906e-02
-      ], 
+        -61.104215450363476
+      ],
       [
-        -1.214467e-04
-      ], 
+        -0.2558675673263696
+      ],
+      [
+        0.028707707658613475
+      ],
+      [
+        -0.08570117553226629
+      ],
+      [
+        -0.020089690299083873
+      ],
+      [
+        0.19101278562751803
+      ],
+      [
+        0.14081890415456536
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Dynalene HC30",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "HC30",
+  "reference": "Dynalene2014",
+  "saturation_pressure": {
+    "NRMS": 0.009689493,
+    "coeffs": [
+      [
+        10.73982
+      ],
+      [
+        0.03952906
+      ],
+      [
+        -0.0001214467
+      ],
       [
         1.919922e-07
       ]
-    ], 
+    ],
     "type": "exppolynomial"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": 5.244001e-04, 
+    "NRMS": 0.0005244001,
     "coeffs": [
       [
-        3.238461e+03
-      ], 
+        3238.461
+      ],
       [
-        2.307300e+00
-      ], 
+        2.3073
+      ],
       [
-        -4.087700e-06
-      ], 
+        -4.0877e-06
+      ],
       [
         3.220612e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 4.063771e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.00030951658754939057,
+    "Trange": [
+      243.15,
+      483.15
+    ],
     "coeffs": [
-      1.479132e+03, 
-      4.336454e+00, 
-      1.094097e+01
-    ], 
+      [
+        3238.4284627361126
+      ],
+      [
+        277.3427416592643
+      ],
+      [
+        -0.02969242295443876
+      ],
+      [
+        0.20644652207012965
+      ],
+      [
+        0.02711531265896329
+      ],
+      [
+        0.18788839875483715
+      ],
+      [
+        0.1141845376140074
+      ],
+      [
+        -0.20943047758196515
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.004063771,
+    "coeffs": [
+      1479.132,
+      4.336454,
+      10.94097
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

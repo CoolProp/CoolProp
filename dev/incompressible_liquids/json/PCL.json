@@ -1,101 +1,158 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 3.431500e+02, 
-  "Tmax": 4.531500e+02, 
-  "Tmin": 2.331500e+02, 
-  "TminPsat": 4.531500e+02, 
+  },
+  "Tbase": 343.15,
+  "Tmax": 453.15,
+  "Tmin": 233.15,
+  "TminPsat": 453.15,
   "conductivity": {
-    "NRMS": 1.796592e-02, 
+    "NRMS": 0.01796592,
     "coeffs": [
       [
-        1.438018e-01
-      ], 
+        0.1438018
+      ],
       [
-        -7.510210e-05
-      ], 
+        -7.51021e-05
+      ],
       [
         -4.302648e-10
-      ], 
+      ],
       [
         8.728436e-11
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 1.022247e-14, 
+    "NRMS": 1.022247e-14,
     "coeffs": [
       [
-        7.423000e+02
-      ], 
+        742.3
+      ],
       [
-        -7.100000e-01
-      ], 
+        -0.71
+      ],
       [
-        0.000000e+00
-      ], 
+        0.0
+      ],
       [
-        0.000000e+00
+        0.0
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Paracryol, Aliphatic Hydrocarbon", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "PCL", 
-  "reference": "Sulzer1999,Skovrup2013", 
-  "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "specific_heat": {
-    "NRMS": 2.922756e-04, 
+  },
+  "density_cheb": {
+    "NRMS": 1.2745663347188275e-15,
+    "Trange": [
+      233.14999999999998,
+      453.15
+    ],
     "coeffs": [
       [
-        2.190680e+03
-      ], 
+        742.3000000000002
+      ],
       [
-        4.012155e+00
-      ], 
+        -78.10000000000011
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Paracryol, Aliphatic Hydrocarbon",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "PCL",
+  "reference": "Sulzer1999,Skovrup2013",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": 0.0002922756,
+    "coeffs": [
+      [
+        2190.68
+      ],
+      [
+        4.012155
+      ],
       [
         2.851482e-05
-      ], 
+      ],
       [
         -1.955749e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 7.385037e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.00018169398777574103,
+    "Trange": [
+      233.14999999999998,
+      453.15
+    ],
     "coeffs": [
-      7.976255e+02, 
-      -9.239176e+01, 
-      5.714384e+00
-    ], 
+      [
+        2190.851708207973
+      ],
+      [
+        441.1267918075035
+      ],
+      [
+        0.17458664832910423
+      ],
+      [
+        -0.08898648502944753
+      ],
+      [
+        0.03624889725023511
+      ],
+      [
+        -0.06494026322296291
+      ],
+      [
+        -0.17851844929031474
+      ],
+      [
+        -0.01697843077992798
+      ],
+      [
+        0.1562235448257289
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.007385037,
+    "coeffs": [
+      797.6255,
+      -92.39176,
+      5.714384
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

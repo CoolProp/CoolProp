@@ -1,105 +1,180 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 3.900000e+02, 
-  "Tmax": 5.000000e+02, 
-  "Tmin": 2.800000e+02, 
-  "TminPsat": 2.800000e+02, 
+  },
+  "Tbase": 390.0,
+  "Tmax": 500.0,
+  "Tmin": 280.0,
+  "TminPsat": 280.0,
   "conductivity": {
-    "NRMS": 4.700863e-03, 
+    "NRMS": 0.004700863,
     "coeffs": [
       [
-        1.054674e+00
-      ], 
+        1.054674
+      ],
       [
-        1.726354e-03
-      ], 
+        0.001726354
+      ],
       [
-        -7.474010e-06
-      ], 
+        -7.47401e-06
+      ],
       [
         3.456054e-09
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 3.017280e-04, 
+    "NRMS": 0.000301728,
     "coeffs": [
       [
-        1.192776e+03
-      ], 
+        1192.776
+      ],
       [
-        -4.853294e-01
-      ], 
+        -0.4853294
+      ],
       [
         7.545341e-05
-      ], 
+      ],
       [
         -6.339948e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "water at 100 bar", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "ExampleDigitalPure", 
-  "reference": "none", 
-  "saturation_pressure": {
-    "NRMS": 2.485303e-04, 
-    "coeffs": [
-      -3.854484e+03, 
-      -4.425504e+01, 
-      -2.324501e+01
-    ], 
-    "type": "exponential"
-  }, 
-  "specific_heat": {
-    "NRMS": 1.382824e-01, 
+  },
+  "density_cheb": {
+    "NRMS": 1.7285715448866303e-05,
+    "Trange": [
+      280.0,
+      500.0
+    ],
     "coeffs": [
       [
-        3.688015e+03
-      ], 
+        1193.2354899984502
+      ],
       [
-        -1.955930e+00
-      ], 
+        -54.0199321375289
+      ],
       [
-        -4.093648e-03
-      ], 
+        0.46793574518090575
+      ],
       [
-        1.644080e-04
+        -0.21026484104475948
+      ],
+      [
+        0.043315921122780404
+      ],
+      [
+        0.007284709908612527
+      ],
+      [
+        -0.006980379009048605
+      ],
+      [
+        0.0027192044108638115
       ]
-    ], 
-    "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 4.275252e-03, 
-    "coeffs": [
-      3.655034e+02, 
-      -1.736257e+02, 
-      9.288918e+00
-    ], 
-    "type": "exponential"
-  }, 
-  "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "water at 100 bar",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "ExampleDigitalPure",
+  "reference": "none",
+  "saturation_pressure": {
+    "NRMS": 0.0002485303,
+    "coeffs": [
+      -3854.484,
+      -44.25504,
+      -23.24501
+    ],
+    "type": "exponential"
+  },
+  "specific_heat": {
+    "NRMS": 0.1382824,
+    "coeffs": [
+      [
+        3688.015
+      ],
+      [
+        -1.95593
+      ],
+      [
+        -0.004093648
+      ],
+      [
+        0.000164408
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.000431905892697939,
+    "Trange": [
+      280.0,
+      500.0
+    ],
+    "coeffs": [
+      [
+        3661.457094239557
+      ],
+      [
+        -52.054582688621565
+      ],
+      [
+        -33.59924516723981
+      ],
+      [
+        57.604635580079766
+      ],
+      [
+        -41.82465872492162
+      ],
+      [
+        20.817544484907174
+      ],
+      [
+        -8.17015228297315
+      ],
+      [
+        2.6386578471336493
+      ],
+      [
+        -0.7197294753479969
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.004275252,
+    "coeffs": [
+      365.5034,
+      -173.6257,
+      9.288918
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

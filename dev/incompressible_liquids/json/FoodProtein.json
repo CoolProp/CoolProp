@@ -35,6 +35,24 @@
     ],
     "type": "polynomial"
   },
+  "density_cheb": {
+    "NRMS": null,
+    "Trange": [
+      233.14999999999998,
+      423.15
+    ],
+    "coeffs": [
+      [
+        1301.3880000000001
+      ],
+      [
+        -49.24799999999997
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
   "description": "Food protein model from the 2006 ASHRAE Handbook based on data from Choi and Okos (1986)",
   "mass2input": {
     "NRMS": null,
@@ -67,6 +85,27 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": null,
+    "Trange": [
+      233.14999999999998,
+      423.15
+    ],
+    "coeffs": [
+      [
+        2064.7935162500003
+      ],
+      [
+        101.1256950000001
+      ],
+      [
+        -5.924461250000468
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "viscosity": {
     "NRMS": null,

@@ -1,114 +1,153 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 3.771500e+02, 
-  "Tmax": 4.911500e+02, 
-  "Tmin": 2.631500e+02, 
-  "TminPsat": 2.931500e+02, 
+  },
+  "Tbase": 377.15,
+  "Tmax": 491.15,
+  "Tmin": 263.15,
+  "TminPsat": 293.15,
   "conductivity": {
-    "NRMS": 2.948455e-14, 
+    "NRMS": 2.948455e-14,
     "coeffs": [
       [
-        6.080000e-01
-      ], 
+        0.608
+      ],
       [
-        1.000000e-03
-      ], 
+        0.001
+      ],
       [
         -1.324018e-19
-      ], 
+      ],
       [
-        7.146840e-21
+        7.14684e-21
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 2.590246e-03, 
+    "NRMS": 0.002590246,
     "coeffs": [
       [
-        1.151987e+03
-      ], 
+        1151.987
+      ],
       [
-        -4.536123e-01
-      ], 
+        -0.4536123
+      ],
       [
         2.842971e-05
-      ], 
+      ],
       [
         1.128434e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Dynalene HC10", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "HC10", 
-  "reference": "Dynalene2014", 
-  "saturation_pressure": {
-    "NRMS": 1.067737e-02, 
+  },
+  "density_cheb": {
+    "NRMS": 0.00260502871887291,
+    "Trange": [
+      263.15,
+      491.15
+    ],
     "coeffs": [
       [
-        1.144459e+01
-      ], 
+        1152.1725416643649
+      ],
       [
-        3.624262e-02
-      ], 
+        -51.602008543327216
+      ],
       [
-        -1.098890e-04
-      ], 
+        0.18568906271295826
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Dynalene HC10",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "HC10",
+  "reference": "Dynalene2014",
+  "saturation_pressure": {
+    "NRMS": 0.01067737,
+    "coeffs": [
+      [
+        11.44459
+      ],
+      [
+        0.03624262
+      ],
+      [
+        -0.000109889
+      ],
       [
         1.789975e-07
       ]
-    ], 
+    ],
     "type": "exppolynomial"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": 5.065798e-04, 
+    "NRMS": 0.0005065798,
     "coeffs": [
       [
-        3.528715e+03
-      ], 
+        3528.715
+      ],
       [
-        2.480640e+00
-      ], 
+        2.48064
+      ],
       [
         2.493117e-06
-      ], 
+      ],
       [
         -1.047586e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 4.665580e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.0005090533061283811,
+    "Trange": [
+      263.15,
+      491.15
+    ],
     "coeffs": [
-      1.309927e+03, 
-      -5.112309e+00, 
-      1.088090e+01
-    ], 
+      [
+        3528.726896399195
+      ],
+      [
+        282.69142962737624
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.00466558,
+    "coeffs": [
+      1309.927,
+      -5.112309,
+      10.8809
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

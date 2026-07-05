@@ -44,6 +44,30 @@
     ],
     "type": "polynomial"
   },
+  "density_cheb": {
+    "NRMS": 0.004810727683739646,
+    "Trange": [
+      198.14999999999998,
+      523.15
+    ],
+    "coeffs": [
+      [
+        1.0967609046278466
+      ],
+      [
+        -0.5238051751170018
+      ],
+      [
+        0.12362318413400042
+      ],
+      [
+        -0.029800139561363737
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
   "description": "Air, gaseous phase at 1 atm (101325 Pa)",
   "mass2input": {
     "NRMS": null,
@@ -79,6 +103,30 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.0015192579258026188,
+    "Trange": [
+      198.14999999999998,
+      523.15
+    ],
+    "coeffs": [
+      [
+        1015.4280114799908
+      ],
+      [
+        13.892484034188158
+      ],
+      [
+        5.289827812990723
+      ],
+      [
+        -0.09512955913203314
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "viscosity": {
     "NRMS": 0.0017310189869592459,

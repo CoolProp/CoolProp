@@ -31,6 +31,30 @@
     ],
     "type": "polynomial"
   },
+  "density_cheb": {
+    "NRMS": 0.001003907946811843,
+    "Trange": [
+      198.14999999999998,
+      416.4806533698651
+    ],
+    "coeffs": [
+      [
+        768.7386565432244
+      ],
+      [
+        -128.88933423493725
+      ],
+      [
+        -6.8821576270664195
+      ],
+      [
+        -2.0851502803295148
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
   "description": "Acetone, liquid phase at 10 bar",
   "mass2input": {
     "NRMS": null,
@@ -66,6 +90,30 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.004496558569769559,
+    "Trange": [
+      198.14999999999998,
+      416.4806533698651
+    ],
+    "coeffs": [
+      [
+        2232.8263787160467
+      ],
+      [
+        300.06143892781813
+      ],
+      [
+        71.53537919824964
+      ],
+      [
+        7.487045615748457
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "viscosity": {
     "NRMS": null,

@@ -1,101 +1,179 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 3.236500e+02, 
-  "Tmax": 3.731500e+02, 
-  "Tmin": 2.741500e+02, 
-  "TminPsat": 3.731500e+02, 
+  },
+  "Tbase": 323.65,
+  "Tmax": 373.15,
+  "Tmin": 274.15,
+  "TminPsat": 373.15,
   "conductivity": {
-    "NRMS": 5.690905e-04, 
+    "NRMS": 0.0005690905,
     "coeffs": [
       [
-        6.411327e-01
-      ], 
+        0.6411327
+      ],
       [
-        1.092154e-03
-      ], 
+        0.001092154
+      ],
       [
         -8.220646e-06
-      ], 
+      ],
       [
         2.097888e-08
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 1.558922e-03, 
+    "NRMS": 0.001558922,
     "coeffs": [
       [
-        9.879064e+02
-      ], 
+        987.9064
+      ],
       [
-        -4.619898e-01
-      ], 
+        -0.4619898
+      ],
       [
-        -3.554712e-03
-      ], 
+        -0.003554712
+      ],
       [
         1.592382e-05
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "NBS, Water", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "NBS", 
-  "reference": "Schmidt1979,Skovrup2013", 
-  "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "specific_heat": {
-    "NRMS": 4.062204e-02, 
+  },
+  "density_cheb": {
+    "NRMS": 8.873834079374711e-07,
+    "Trange": [
+      274.15,
+      373.15
+    ],
     "coeffs": [
       [
-        4.179527e+03
-      ], 
+        983.5288404034156
+      ],
       [
-        3.638603e-01
-      ], 
+        -21.410720298244755
+      ],
       [
-        1.252184e-02
-      ], 
+        -4.40731443944115
+      ],
       [
-        -1.278566e-04
+        0.49469755054100195
+      ],
+      [
+        -0.10273669118969404
+      ],
+      [
+        0.025112914897939605
+      ],
+      [
+        -0.006724736384135617
+      ],
+      [
+        0.0011338825032161186
+      ],
+      [
+        -6.209636922165655e-05
       ]
-    ], 
-    "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 1.238305e-03, 
-    "coeffs": [
-      5.184886e+02, 
-      -1.478012e+02, 
-      1.046933e+01
-    ], 
-    "type": "exponential"
-  }, 
-  "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "NBS, Water",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "NBS",
+  "reference": "Schmidt1979,Skovrup2013",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": 0.04062204,
+    "coeffs": [
+      [
+        4179.527
+      ],
+      [
+        0.3638603
+      ],
+      [
+        0.01252184
+      ],
+      [
+        -0.0001278566
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 2.895675198555592e-05,
+    "Trange": [
+      274.15,
+      373.15
+    ],
+    "coeffs": [
+      [
+        4195.387388102475
+      ],
+      [
+        6.12129989437685
+      ],
+      [
+        16.54641071888899
+      ],
+      [
+        -4.20893025736865
+      ],
+      [
+        2.365315262979361
+      ],
+      [
+        -0.7031088719912985
+      ],
+      [
+        0.15757638762715667
+      ],
+      [
+        -0.032771324735382835
+      ],
+      [
+        0.007279711096649834
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.001238305,
+    "coeffs": [
+      518.4886,
+      -147.8012,
+      10.46933
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

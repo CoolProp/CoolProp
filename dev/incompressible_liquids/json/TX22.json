@@ -1,114 +1,186 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 4.481500e+02, 
-  "Tmax": 6.231500e+02, 
-  "Tmin": 2.731500e+02, 
-  "TminPsat": 3.131500e+02, 
+  },
+  "Tbase": 448.15,
+  "Tmax": 623.15,
+  "Tmin": 273.15,
+  "TminPsat": 313.15,
   "conductivity": {
-    "NRMS": 1.062583e-02, 
+    "NRMS": 0.01062583,
     "coeffs": [
       [
-        1.227789e-01
-      ], 
+        0.1227789
+      ],
       [
         -7.574045e-05
-      ], 
+      ],
       [
         -1.454092e-08
-      ], 
+      ],
       [
         1.394756e-10
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 4.761243e-03, 
+    "NRMS": 0.004761243,
     "coeffs": [
       [
-        7.593228e+02
-      ], 
+        759.3228
+      ],
       [
-        -6.908328e-01
-      ], 
+        -0.6908328
+      ],
       [
-        -3.579964e-04
-      ], 
+        -0.0003579964
+      ],
       [
         -9.536542e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Texatherm22", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "TX22", 
-  "reference": "Chevron2004", 
-  "saturation_pressure": {
-    "NRMS": 4.789468e-02, 
+  },
+  "density_cheb": {
+    "NRMS": 0.0005332508227993688,
+    "Trange": [
+      273.15,
+      623.15
+    ],
     "coeffs": [
       [
-        2.412773e+00
-      ], 
+        754.40476194089
+      ],
       [
-        6.238442e-02
-      ], 
+        -122.66252708314396
+      ],
       [
-        -1.418307e-04
-      ], 
+        -4.835743060756442
+      ],
+      [
+        -0.2826619477013183
+      ],
+      [
+        -0.7636495801235557
+      ],
+      [
+        -1.8891209133762445
+      ],
+      [
+        -0.8108752348491582
+      ],
+      [
+        -1.6614426203308879
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Texatherm22",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "TX22",
+  "reference": "Chevron2004",
+  "saturation_pressure": {
+    "NRMS": 0.04789468,
+    "coeffs": [
+      [
+        2.412773
+      ],
+      [
+        0.06238442
+      ],
+      [
+        -0.0001418307
+      ],
       [
         -8.170467e-08
       ]
-    ], 
+    ],
     "type": "exppolynomial"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": 2.029765e-03, 
+    "NRMS": 0.002029765,
     "coeffs": [
       [
-        2.449690e+03
-      ], 
+        2449.69
+      ],
       [
-        3.634082e+00
-      ], 
+        3.634082
+      ],
       [
-        -2.150676e-04
-      ], 
+        -0.0002150676
+      ],
       [
         4.319118e-08
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 5.020758e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.00011645066778166053,
+    "Trange": [
+      273.15,
+      623.15
+    ],
     "coeffs": [
-      8.829595e+02, 
-      -1.726102e+02, 
-      9.646606e+00
-    ], 
+      [
+        2446.2046156524057
+      ],
+      [
+        637.4532952506648
+      ],
+      [
+        -4.072575330674506
+      ],
+      [
+        1.4556460810617604
+      ],
+      [
+        1.1624028628865735
+      ],
+      [
+        -2.4233529623006587
+      ],
+      [
+        1.6995211560908494
+      ],
+      [
+        -1.4809322894005155
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.005020758,
+    "coeffs": [
+      882.9595,
+      -172.6102,
+      9.646606
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

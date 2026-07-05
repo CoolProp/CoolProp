@@ -44,6 +44,30 @@
     ],
     "type": "polynomial"
   },
+  "density_cheb": {
+    "NRMS": 0.0020068251251058222,
+    "Trange": [
+      198.14999999999998,
+      438.18267759651576
+    ],
+    "coeffs": [
+      [
+        629.6101819289405
+      ],
+      [
+        -118.69096645469725
+      ],
+      [
+        -8.361004619981856
+      ],
+      [
+        -2.5158960561992103
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
   "description": "Hexane, liquid phase at 10 bar",
   "mass2input": {
     "NRMS": null,
@@ -79,6 +103,30 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.006369860782711523,
+    "Trange": [
+      198.14999999999998,
+      438.18267759651576
+    ],
+    "coeffs": [
+      [
+        2435.7490256769424
+      ],
+      [
+        539.7664393768205
+      ],
+      [
+        85.97264278563637
+      ],
+      [
+        4.919680250726515
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "viscosity": {
     "NRMS": 0.010406255683524131,

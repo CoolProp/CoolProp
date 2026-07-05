@@ -44,6 +44,30 @@
     ],
     "type": "polynomial"
   },
+  "density_cheb": {
+    "NRMS": 6.451329583178807e-05,
+    "Trange": [
+      233.14999999999998,
+      671.15
+    ],
+    "coeffs": [
+      [
+        782.4718893027014
+      ],
+      [
+        -216.28099920179332
+      ],
+      [
+        -11.422970828488758
+      ],
+      [
+        -4.395800032893029
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
   "description": "Syltherm 800",
   "mass2input": {
     "NRMS": null,
@@ -83,6 +107,24 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.003915195175090297,
+    "Trange": [
+      233.14999999999998,
+      671.15
+    ],
+    "coeffs": [
+      [
+        1880.0909090909104
+      ],
+      [
+        373.75606746194956
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "viscosity": {
     "NRMS": 0.008195934137120053,

@@ -44,6 +44,30 @@
     ],
     "type": "polynomial"
   },
+  "density_cheb": {
+    "NRMS": 0.002103015441363321,
+    "Trange": [
+      198.14999999999998,
+      423.84372495198846
+    ],
+    "coeffs": [
+      [
+        768.1164384556305
+      ],
+      [
+        -108.1243248540035
+      ],
+      [
+        -7.253699346886862
+      ],
+      [
+        -3.4017549830856524
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
   "description": "Ethanol, liquid phase at 10 bar",
   "mass2input": {
     "NRMS": null,
@@ -79,6 +103,30 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.0009046693742307961,
+    "Trange": [
+      198.14999999999998,
+      423.84372495198846
+    ],
+    "coeffs": [
+      [
+        2715.7385334151977
+      ],
+      [
+        949.8763648419554
+      ],
+      [
+        178.75078943945175
+      ],
+      [
+        -2.839600361081466
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "viscosity": {
     "NRMS": 0.002344080405126311,
