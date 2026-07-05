@@ -6,7 +6,19 @@ fn main() {
     let coolprop_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../..");
 
-    let dst = cmake::Config::new(&coolprop_root)
+    let mut cfg = cmake::Config::new(&coolprop_root);
+
+    // Pass through CPM dependency-source overrides (CPM_<Name>_SOURCE) so the
+    // CoolProp build works in network-restricted environments where the
+    // FetchContent tarball downloads are blocked and local clones are used
+    // instead. No effect when the variables are unset.
+    for (key, value) in std::env::vars() {
+        if key.starts_with("CPM_") && key.ends_with("_SOURCE") {
+            cfg.define(&key, &value);
+        }
+    }
+
+    let dst = cfg
         .define("COOLPROP_STATIC_LIBRARY", "ON")
         .define("COOLPROP_SHARED_LIBRARY", "OFF")
         .define("BUILD_TESTING", "OFF")
