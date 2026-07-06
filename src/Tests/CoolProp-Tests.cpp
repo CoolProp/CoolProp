@@ -6713,6 +6713,45 @@ TEST_CASE("REFPROP cross-check: sat-state fugacity_coefficient agrees with HEOS 
 // member-init list, where n is still empty (it's populated in the body), so
 // every surface tension silently evaluated to 0.0.  These checks fail loudly
 // if that ever recurs.  IAPWS reference values, ~1% tolerance.
+// GH docs-CI failure: BICUBIC&HEOS mixture table build needs third-order ideal-gas
+// Helmholtz derivatives, which the mixture branch of calc_alpha0_deriv_nocache did not
+// implement (bare throw ValueError() with empty message).  Validate all four third-order
+// terms against central finite differences of the (already implemented) second-order ones.
+TEST_CASE("Third-order ideal-gas Helmholtz derivatives for HEOS mixtures", "[Helmholtz],[mixtures],[alpha0_derivs]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Isopentane&n-Butane"));
+    AS->set_mole_fractions({0.4, 0.6});
+    AS->specify_phase(CoolProp::iphase_gas);
+    const double Tr = AS->T_reducing(), rhor = AS->rhomolar_reducing();
+    const double tau = 0.8, delta = 0.8;
+    auto set_state = [&](double tau_, double delta_) { AS->update(CoolProp::DmolarT_INPUTS, delta_ * rhor, Tr / tau_); };
+
+    set_state(tau, delta);
+    const double d3_tau3 = AS->d3alpha0_dTau3();
+    const double d3_delta_tau2 = AS->d3alpha0_dDelta_dTau2();
+    const double d3_delta2_tau = AS->d3alpha0_dDelta2_dTau();
+    const double d3_delta3 = AS->d3alpha0_dDelta3();
+
+    const double h = 1e-5;
+    set_state(tau + h, delta);
+    const double d2tau2_taup = AS->d2alpha0_dTau2(), d2deltatau_taup = AS->d2alpha0_dDelta_dTau(), d2delta2_taup = AS->d2alpha0_dDelta2();
+    set_state(tau - h, delta);
+    const double d2tau2_taum = AS->d2alpha0_dTau2(), d2deltatau_taum = AS->d2alpha0_dDelta_dTau(), d2delta2_taum = AS->d2alpha0_dDelta2();
+    set_state(tau, delta + h);
+    const double d2delta2_deltap = AS->d2alpha0_dDelta2();
+    set_state(tau, delta - h);
+    const double d2delta2_deltam = AS->d2alpha0_dDelta2();
+
+    CHECK(d3_tau3 == Catch::Approx((d2tau2_taup - d2tau2_taum) / (2 * h)).epsilon(1e-5).margin(1e-8));
+    // alpha0 is separable (ln(delta) + f(tau)), so the mixed derivatives are identically zero for
+    // every fluid; these two checks only guard against NaN or throw, not the scaling factors
+    CHECK(d3_delta_tau2 == Catch::Approx((d2deltatau_taup - d2deltatau_taum) / (2 * h)).epsilon(1e-5).margin(1e-8));
+    CHECK(d3_delta2_tau == Catch::Approx((d2delta2_taup - d2delta2_taum) / (2 * h)).epsilon(1e-5).margin(1e-8));
+    // Ideal-gas delta-dependence is ln(delta), so d3alpha0/dDelta3 = 2/delta^3 up to the
+    // per-component gas-constant ratio R_i/R_mix (deviates from 1 by ~1e-6 for these fluids)
+    CHECK(d3_delta3 == Catch::Approx((d2delta2_deltap - d2delta2_deltam) / (2 * h)).epsilon(1e-5).margin(1e-8));
+    CHECK(d3_delta3 == Catch::Approx(2.0 / POW3(delta)).epsilon(1e-5));
+}
+
 TEST_CASE("Surface tension of water is nonzero and matches IAPWS", "[surface_tension]") {
     const double st_300 = CoolProp::PropsSI("I", "T", 300, "Q", 0, "Water");
     const double st_350 = CoolProp::PropsSI("I", "T", 350, "Q", 0, "Water");

@@ -3625,7 +3625,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         } else if (nTau == 3 && nDelta == 0) {
             val = E.d3alpha0_dTau3(taustar, deltastar);
         } else {
-            throw ValueError();
+            throw ValueError(format("calc_alpha0_deriv_nocache: derivative order nTau: %d, nDelta: %d not implemented", nTau, nDelta));
         }
         val *= pow(rhor / rhomolarc, nDelta);
         val /= pow(Tr / Tc, nTau);
@@ -3667,8 +3667,16 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
                 summer += mole_fractions[i] * Rratio * rhor / rho_ci * T_ci / Tr * components[i].EOS().d2alpha0_dDelta_dTau(tau_i, delta_i);
             } else if (nTau == 2 && nDelta == 0) {
                 summer += mole_fractions[i] * Rratio * pow(T_ci / Tr, 2) * components[i].EOS().d2alpha0_dTau2(tau_i, delta_i);
+            } else if (nTau == 0 && nDelta == 3) {
+                summer += mole_fractions[i] * Rratio * pow(rhor / rho_ci, 3) * components[i].EOS().d3alpha0_dDelta3(tau_i, delta_i);
+            } else if (nTau == 1 && nDelta == 2) {
+                summer += mole_fractions[i] * Rratio * pow(rhor / rho_ci, 2) * T_ci / Tr * components[i].EOS().d3alpha0_dDelta2_dTau(tau_i, delta_i);
+            } else if (nTau == 2 && nDelta == 1) {
+                summer += mole_fractions[i] * Rratio * rhor / rho_ci * pow(T_ci / Tr, 2) * components[i].EOS().d3alpha0_dDelta_dTau2(tau_i, delta_i);
+            } else if (nTau == 3 && nDelta == 0) {
+                summer += mole_fractions[i] * Rratio * pow(T_ci / Tr, 3) * components[i].EOS().d3alpha0_dTau3(tau_i, delta_i);
             } else {
-                throw ValueError();
+                throw ValueError(format("calc_alpha0_deriv_nocache (mixture): derivative order nTau: %d, nDelta: %d not implemented", nTau, nDelta));
             }
         }
         return summer;
@@ -3696,6 +3704,9 @@ HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_all_alpha0_derivs_nocache(
         HelmholtzDerivatives ders;
 
         // See Table B5, GERG 2008 from Kunz Wagner, JCED, 2012
+        // Truncated at second order: the third-order fields of the returned struct stay at their
+        // zero-initialized values.  Callers needing third-order alpha0 derivatives for mixtures
+        // must use calc_alpha0_deriv_nocache, which implements them.
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer_00 = 0, summer_01 = 0, summer_10 = 0, summer_02 = 0, summer_11 = 0, summer_20 = 0;
         CoolPropDbl tau_i = NAN, delta_i = NAN, rho_ci = NAN, T_ci = NAN;
