@@ -1988,6 +1988,23 @@ TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
         }
     }
 }
+TEST_CASE("refprop_stem falls back to user-supplied name when REFPROPname is unusable", "[REFPROPName][refprop_stem]") {
+    CoolPropFluid fluid;
+    fluid.name = "R1336mzz(E)";
+
+    SECTION("empty REFPROPname returns fallback") {
+        fluid.REFPROPname = "";
+        CHECK(CoolProp::refprop_stem(fluid, "R1336MZZE") == "R1336MZZE");
+    }
+    SECTION("N/A REFPROPname returns fallback") {
+        fluid.REFPROPname = "N/A";
+        CHECK(CoolProp::refprop_stem(fluid, "R1336MZZE") == "R1336MZZE");
+    }
+    SECTION("valid REFPROPname is returned unchanged") {
+        fluid.REFPROPname = "BUTANE";
+        CHECK(CoolProp::refprop_stem(fluid, "R600") == "BUTANE");
+    }
+}
 TEST_CASE("Backwards compatibility for REFPROP v4 fluid name convention", "[REFPROP_backwards_compatibility]") {
     Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
 
@@ -4813,6 +4830,8 @@ TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables", "
        "Huber, Kazakov & Lemmon, IJT 2025, Table 4 row 3 (g_i != 1 in exponential terms)"},
       {"R1243zf", 280.0, 11000.0, 7.393335e6, 90.7467, 130.734, 648.467, 1e-5,
        "Akasaka & Lemmon, IJT 2025, Table 6 row 2 (3rd EOS, g_i != 1; supersedes Akasaka-JCED-2019)"},
+      {"R1132a", 295.0, 12000.0, 8.031807e6, 57.1438, 117.645, 379.545, 1e-5,
+       "Akasaka, Low & Lemmon, IJT 2026, Table 7 row 4 (g_i != 1 in exponential terms)"},
     };
 
     for (const auto& r : rows) {
@@ -5433,6 +5452,61 @@ TEST_CASE("Two-phase chemical_potential mirrors sat-state values; fugacity_coeff
         // but works on the sat states
         CHECK(std::isfinite(satL.fugacity_coefficient(i)));
         CHECK(std::isfinite(satV.fugacity_coefficient(i)));
+    }
+}
+
+TEST_CASE("Vector per-component mixture getters mirror the scalar getters (#3024)", "[mixtures][3024]") {
+    // The vector-returning fugacities()/fugacity_coefficients()/chemical_potentials()
+    // default-loop the scalar calc_*(i) virtuals, so they must agree element-by-element
+    // with the existing scalar getters and inherit the same two-phase semantics.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+    const std::vector<double> z{0.25, 0.25, 0.5};
+    AS->set_mole_fractions(z);
+
+    SECTION("single-phase: all three vectors equal the scalar loop") {
+        AS->update(CoolProp::PT_INPUTS, 5e6, 500);  // hot single-phase gas, well above the dome
+        REQUIRE(AS->phase() != CoolProp::iphase_twophase);
+
+        const std::vector<double> f = AS->fugacities();
+        const std::vector<double> phi = AS->fugacity_coefficients();
+        const std::vector<double> mu = AS->chemical_potentials();
+        REQUIRE(f.size() == z.size());
+        REQUIRE(phi.size() == z.size());
+        REQUIRE(mu.size() == z.size());
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            CAPTURE(i);
+            CHECK(f[i] == Catch::Approx(AS->fugacity(i)));
+            CHECK(phi[i] == Catch::Approx(AS->fugacity_coefficient(i)));
+            CHECK(mu[i] == Catch::Approx(AS->chemical_potential(i)));
+        }
+    }
+
+    SECTION("two-phase: fugacities/chemical_potentials finite, fugacity_coefficients throws whole-vector") {
+        AS->update(CoolProp::PQ_INPUTS, 500e3, 0.5);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+
+        const std::vector<double> f = AS->fugacities();
+        const std::vector<double> mu = AS->chemical_potentials();
+        REQUIRE(f.size() == z.size());
+        REQUIRE(mu.size() == z.size());
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            CAPTURE(i);
+            CHECK(f[i] == Catch::Approx(AS->fugacity(i)));
+            CHECK(mu[i] == Catch::Approx(AS->chemical_potential(i)));
+        }
+        // Whole-vector throw: the scalar fugacity_coefficient(0) throws, so the
+        // default-loop aborts on the first component rather than returning a
+        // partially-filled / NaN-padded vector.
+        CHECK_THROWS(AS->fugacity_coefficients());
+    }
+
+    SECTION("composition not set: vector getters throw rather than returning empty") {
+        auto fresh = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+        // No set_mole_fractions / update: the default-loop must fail loudly so the
+        // misuse path does not silently fail-open with an empty vector.
+        CHECK_THROWS(fresh->fugacities());
+        CHECK_THROWS(fresh->fugacity_coefficients());
+        CHECK_THROWS(fresh->chemical_potentials());
     }
 }
 

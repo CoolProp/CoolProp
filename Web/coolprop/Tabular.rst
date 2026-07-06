@@ -4,11 +4,11 @@
 Tabular Interpolation
 **********************
 
-Especially when evaluating inputs as a function of pressure and enthalpy (common in many engineering applications), evaluation of the full equation of state is simply too slow, and it is necessary to come up with some means to speed up the calculations.  
+Especially when evaluating inputs as a function of pressure and enthalpy (common in many engineering applications), evaluation of the full equation of state is simply too slow, and it is necessary to come up with some means to speed up the calculations.
 
 As of version 5.1 of CoolProp, the tabular interpolation methods of CoolProp v4 have been brought back from the dead, and significantly improved.  They are approximately 4 times faster than the equivalent methods in v4 of CoolProp due to a more optimized structure.  In order to make the most effective use of the tabular interpolation methods, you must be using the :ref:`low-level interface <low_level_api>`, otherwise significant overhead and slowdown will be experienced.  Thus, this method is best suited to C++, python, and the SWIG wrappers.
 
-There are two backends implemented for tabular interpolation, ``BICUBIC`` and ``TTSE``.  Both consume the same gridded tabular data that is stored to your user home directory in the folder ``HOME/.CoolProp/Tables``.
+There are three backends implemented for tabular interpolation, ``BICUBIC``, ``TTSE`` and ``SVDSBTL``.  ``BICUBIC`` and ``TTSE`` consume the same gridded tabular data that is stored to your user home directory in the folder ``HOME/.CoolProp/Tables``.
 
 .. seealso::
 
@@ -19,7 +19,7 @@ If you want to find the directory that CoolProp is using as your home directory 
 .. ipython::
 
     In [0]: import CoolProp.CoolProp as CP
-    
+
     In [1]: CP.get_global_param_string("HOME")
 
 This directory is used because the user should under almost all circumstances have read/write access to this folder.  Alternatively, if for some reason you want to use a different directory, you can set the configuration variable ``ALTERNATIVE_TABLES_DIRECTORY`` (see :ref:`configuration`).
@@ -27,15 +27,15 @@ This directory is used because the user should under almost all circumstances ha
 .. warning::
 
     Constructing the tables generates approximately 20 MB of data per fluid. The size of the directory of tabular data can get to be quite large if you use tables with lots of fluids.  By default, CoolProp will warn when this directory is greater than 1 GB in size, and error out at 1.5 x (1.0 GB).  This cap can be lifted by setting a configuration variable (see :ref:`configuration`) as shown here
-    
+
 .. ipython::
 
     In [0]: import CoolProp.CoolProp as CP, json
-    
+
     In [1]: jj = json.loads(CP.get_config_as_json_string())
-    
+
     In [2]: jj['MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB'] = 1.0
-    
+
     In [3]: jj = CP.set_config_as_json_string(json.dumps(jj))
 
 General Information
@@ -63,13 +63,13 @@ The basic concept behind Tabular Taylor Series Extrapolation (TTSE) extrapolatio
 .. math::
 
     z = z_{i,j}+\Delta x\left(\frac{\partial z}{\partial x}\right)_{y}+\Delta y\left(\frac{\partial z}{\partial y}\right)_{x}+\frac{1}{2}\Delta x^2\left(\frac{\partial^2 z}{\partial x^2}\right)_{y}+\frac{1}{2}\Delta y^2\left(\frac{\partial^2z}{\partial y^2}\right)_{y}+\Delta x\Delta y\left(\frac{\partial^2z}{\partial y\partial x}\right)
-       
+
 .. math::
 
     \Delta x = x-x_i
-    
+
     \Delta x = y-y_j
-    
+
 See the `IAPWS TTSE report <https://www.iapws.org/relguide/TTSE.pdf>`_ for a description of the method.  Analytic derivatives are used to build the tables
 
 Bicubic Interpolation
@@ -82,17 +82,17 @@ Normalized cell values are generated from
 .. math::
 
     \hat x = \frac{x-x_i}{x_{i+1}-x_{i}}
-    
+
     \hat y = \frac{y-y_j}{y_{j+1}-y_{j}}
-    
-And derivatives must be scaled to be in terms of unit cell values, or 
+
+And derivatives must be scaled to be in terms of unit cell values, or
 
 .. math::
 
     \frac{\partial z}{\partial \hat x} = \frac{\partial z}{\partial x}\frac{\partial x}{\partial \hat x}
-    
+
     \frac{\partial z}{\partial \hat y} = \frac{\partial z}{\partial y}\frac{\partial y}{\partial \hat y}
-    
+
 In CoolProp, after loading the tabular data, the coefficients for all cells are calculated in one shot.
 
 Accuracy comparison
@@ -103,17 +103,17 @@ Here is a simple comparison of accuracy, the density is obtained for R245fa usin
 .. ipython::
 
     In [0]: import CoolProp
-    
+
     In [1]: HEOS = CoolProp.AbstractState("HEOS", "R245fa")
-    
+
     In [2]: TTSE = CoolProp.AbstractState("TTSE&HEOS", "R245fa")
-    
+
     In [3]: BICU = CoolProp.AbstractState("BICUBIC&HEOS", "R245fa")
-    
+
     In [4]: HEOS.update(CoolProp.PT_INPUTS, 101325, 300); BICU.update(CoolProp.PT_INPUTS, 101325, 300); TTSE.update(CoolProp.PT_INPUTS, 101325, 300)
-    
+
     In [5]: print(HEOS.rhomolar(), TTSE.rhomolar(), BICU.rhomolar())
-    
+
 A more complete comparison of the accuracy of these methods can be obtained by studying the following figure for refrigerant R245fa.  You can download the script and change the fluid name to another fluid to investigate the behavior
 
 .. plot::
@@ -149,21 +149,21 @@ A more complete comparison of the accuracy of these methods can be obtained by s
     scalarMap = cmx.ScalarMappable(norm = cNorm, cmap = plt.get_cmap('jet'))
 
     for a_useless_counter in range(40000):
-            
+
         h = random.uniform(150000,590000)
         p = 10**random.uniform(np.log10(100000),np.log10(7000000))
         CP.set_debug_level(0)
         try:
-            
+
             EOS.update(CoolProp.HmassP_INPUTS, h, p)
             rhoEOS = EOS.rhomolar(); TEOS = EOS.T()
-            
+
             TTSE.update(CoolProp.HmassP_INPUTS, h, p)
             rhoTTSE = TTSE.rhomolar(); TTTSE = TTSE.T()
-            
+
             BICUBIC.update(CoolProp.HmassP_INPUTS, h, p)
             rhoBICUBIC = BICUBIC.rhomolar(); TBICUBIC = BICUBIC.T()
-            
+
             errorTTSE = abs(rhoTTSE/rhoEOS-1)*100
             errorBICUBIC = abs(rhoBICUBIC/rhoEOS-1)*100
             if errorTTSE > 100 or errorTTSE < 1e-12:
@@ -172,15 +172,15 @@ A more complete comparison of the accuracy of these methods can be obtained by s
             HHH1.append(h)
             PPP1.append(p)
             EEE1.append(errorTTSE)
-            
+
             HHH2.append(h)
             PPP2.append(p)
             EEE2.append(errorBICUBIC)
-            
+
         except ValueError as VE:
             print('ERROR', VE)
             pass
-        
+
     SC1 = ax1.scatter(HHH1, PPP1, s = 8, c = EEE1, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
     SC2 = ax2.scatter(HHH2, PPP2, s = 8, c = EEE2, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
 
@@ -188,18 +188,18 @@ A more complete comparison of the accuracy of these methods can be obtained by s
     ax2.set_title('Error in Density from Bicubic')
 
     for ax in [ax1, ax2]:
-        
+
         ax.set_xlim(250000, 550000)
         ax.set_ylim(100000, 7000000)
 
         ax.set_yscale('log')
-        
+
         ticks = [100000,200000,400000,600000,800000,1000000,2000000, 4000000, 6000000]
         labels = [str(tick) for tick in ticks]
         ax.set_yticks(ticks)
         ax.set_yticklabels(labels)
         ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-        
+
         ticks = [150000, 250000,350000,450000,550000]
         labels = [str(tick) for tick in ticks]
         ax.set_xticks(ticks)
@@ -225,6 +225,48 @@ Speed comparison
 The primary motivation for the use of tabular interpolation is the improvement in computational speed.  Thus a small summary could be useful.  This tabular data was obtained by this python script : :download:`(link to script) <speed_script.py>`.
 
 .. include :: tabular_data.rst.in
+
+Mixtures
+--------
+
+Tabular backends (``BICUBIC`` and ``TTSE``) work with multi-component mixtures.
+Table construction (built, or loaded from the cache) is triggered by calling
+``set_mass_fractions`` or ``set_mole_fractions`` . Call one of the two before
+the first ``update``.
+
+Example for a 50 % / 50 % mass-fraction mixture of Isopentane and n-Butane:
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+
+    In [1]: AS = CP.AbstractState("BICUBIC&HEOS", "Isopentane&n-Butane")
+
+    In [2]: AS.set_mass_fractions([0.5, 0.5])  # builds / loads tables
+
+    In [3]: AS.update(CP.PT_INPUTS, 5e5, 333.15)
+
+    In [4]: print(AS.rhomass(), AS.hmass())
+
+Table folder naming
+~~~~~~~~~~~~~~~~~~~
+
+The cache sub-folder is named after the full C++ backend class, not the short
+factory key, and distinguishes pure fluids from mixtures. Composition in the
+folder name is always given in mole fractions, even when the mixture was set
+via ``set_mass_fractions``.
+
++-------------------+----------------------------+-------------------------------+
+| Factory string    | Pure-fluid folder prefix   | Mixture folder prefix         |
++===================+============================+===============================+
+| ``...&HEOS``      | ``HelmholtzEOSBackend``    | ``HelmholtzEOSMixtureBackend``|
++-------------------+----------------------------+-------------------------------+
+| ``...&REFPROP``   | ``REFPROPBackend``         | ``REFPROPMixtureBackend``     |
++-------------------+----------------------------+-------------------------------+
+
+So for the example above the tables live in::
+
+    HOME/.CoolProp/Tables/HelmholtzEOSMixtureBackend(Isopentane[<x_A>]&n-Butane[<x_B>])/
 
 More Information
 ----------------
@@ -256,4 +298,4 @@ The tables are stored in a zipped format using the msgpack package and miniz.  I
         plt.plot(np.array(matrices['p']),np.array(matrices['T']),'-')
     plt.show()
 
-You'll need msgpack wrapper for your target language.        
+You'll need msgpack wrapper for your target language.

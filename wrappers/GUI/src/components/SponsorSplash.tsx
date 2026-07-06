@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SPONSOR_URL } from "../constants";
 import { APP_VERSION } from "../generated/notices";
+import ExternalLink from "./ExternalLink";
 
 interface Props {
   /** Semver string; the integer before the first "." is the major version.
@@ -57,15 +58,13 @@ export default function SponsorSplash({ version = APP_VERSION }: Props) {
         </div>
         <div className="modal-footer">
           <button onClick={dismiss}>Maybe later</button>
-          <a
+          <ExternalLink
             className="primary sponsor-splash-cta"
             href={SPONSOR_URL}
-            target="_blank"
-            rel="noreferrer"
             onClick={dismiss}
           >
             Sponsor on GitHub
-          </a>
+          </ExternalLink>
         </div>
       </div>
     </div>

@@ -791,6 +791,59 @@ TEST_CASE("PT flash with built phase envelope", "[michelsen][phase_envelope]") {
     }
 }
 
+TEST_CASE("PT flash: imposed phase honored after build_phase_envelope (GH #3243)", "[michelsen][phase_envelope][3243]") {
+    // Building the phase envelope must NOT poison subsequent
+    // specify_phase(iphase_gas) + update(PT_INPUTS) calls.  Prior to the fix,
+    // PT_flash_mixtures consulted the envelope to classify the (T,p) point and
+    // silently ignored the user's imposed phase, returning the metastable liquid
+    // root (~14000 mol/m^3) for low-T near-dew VAPOR states instead of the vapor
+    // root (~20 mol/m^3).  See GitHub #3243.
+
+    // R404A components (R125/R134A/R143A)
+    const std::vector<double> z = {0.357816784026318, 0.0382639950410712, 0.603919220932611};
+
+    auto make = []() {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R125&R134A&R143A"));
+        return AS;
+    };
+
+    // Reference: fresh state, no envelope built, imposed gas phase.
+    auto AS_ref = make();
+    AS_ref->set_mole_fractions(z);
+
+    // Test: build the envelope on this state first, then impose gas + PT.
+    auto AS_env = make();
+    AS_env->set_mole_fractions(z);
+    AS_env->build_phase_envelope("");
+
+    // A grid of single-phase vapor states well below the dew line (low T, low p).
+    struct Pt
+    {
+        double T, p;
+    };
+    const std::vector<Pt> pts = {{206.4, 30980.0}, {180.0, 10000.0}, {200.0, 50000.0}, {240.0, 200000.0}, {300.0, 1.0e6}};
+
+    for (const auto& pt : pts) {
+        CAPTURE(pt.T, pt.p);
+
+        AS_ref->specify_phase(CoolProp::iphase_gas);
+        AS_ref->update(CoolProp::PT_INPUTS, pt.p, pt.T);
+        const double rho_ref = AS_ref->rhomolar();
+        AS_ref->unspecify_phase();
+
+        AS_env->specify_phase(CoolProp::iphase_gas);
+        AS_env->update(CoolProp::PT_INPUTS, pt.p, pt.T);
+        const double rho_env = AS_env->rhomolar();
+        AS_env->unspecify_phase();
+
+        // The imposed-gas density must match the no-envelope reference, and must be
+        // a vapor-like density (near ideal gas), NOT the liquid root.
+        CHECK(rho_env == Catch::Approx(rho_ref).epsilon(1e-6));
+        CHECK(rho_env < 5.0 * pt.p / (8.314472 * pt.T));  // Z > 0.2 -> clearly vapor, not the ~14000 liquid root
+        CHECK(AS_env->phase() == CoolProp::iphase_gas);
+    }
+}
+
 TEST_CASE("PQ/QT flash with built envelope at 0<Q<1 (GH #3192)", "[michelsen][phase_envelope]") {
     // Regression for GH #3192.  With a built phase envelope a mixture PQ/QT flash for a
     // genuine two-phase state (0 < Q < 1) used to route to newton_raphson_twophase, whose

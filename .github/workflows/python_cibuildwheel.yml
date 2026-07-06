@@ -70,7 +70,7 @@ jobs:
         echo "COOLPROP_VERSION_OVERRIDE=$COOLPROP_VERSION_OVERRIDE" >> "$GITHUB_ENV"
 
     - name: Cache CPM packages
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/.cache/CPM
         key: cpm-${{ runner.os }}-${{ inputs.arch }}-${{ hashFiles('cmake/dependencies.cmake') }}
@@ -115,7 +115,18 @@ jobs:
         CIBW_BEFORE_BUILD_LINUX: >
           pip install ninja &&
           git config --global --add safe.directory "*"
-        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE CPM_SOURCE_CACHE=/root/.cache/CPM PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60 COOLPROP_NANOBIND=ON
+        # PIP_ONLY_BINARY=numpy: numpy stopped shipping manylinux2014 (glibc 2.17)
+        # wheels after 2.2.6, so the test-install inside the manylinux2014
+        # container was compiling numpy from its sdist; numpy 2.5's meson build
+        # hard-requires GCC >= 10.3 and the container has devtoolset-10 (10.2.1),
+        # which broke the cp312 Linux jobs.  Forcing binary-only makes pip
+        # backtrack to the newest numpy WITH a manylinux2014 wheel (2.2.6 for
+        # cp312; wheels exist for cp39-cp313 on x86_64 and aarch64).  numpy is a
+        # runtime dep only, not a build requirement, so this cannot affect the
+        # wheel build itself.  NOTE: a future cp314 Linux job has NO
+        # manylinux2014 numpy wheel at all -- migrating the images to
+        # manylinux_2_28 is the real fix (bd CoolProp-rcrj).
+        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE CPM_SOURCE_CACHE=/root/.cache/CPM PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60 COOLPROP_NANOBIND=ON PIP_ONLY_BINARY=numpy
         CIBW_ENVIRONMENT_WINDOWS: COOLPROP_NANOBIND=ON PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60
         # Linux wheels build inside the manylinux container, which does not
         # inherit host env vars; forward the resolved version through so the
@@ -127,7 +138,9 @@ jobs:
         CIBW_ARCHS_LINUX: ${{ inputs.arch }} # i686 x86_64 aarch64 ppc64le s390x
         # Smoke-test the published v8 wheel: it imports, the nanobind PropsSI works
         # (returns a float for int args), and the State capsule shim loads.
-        CIBW_TEST_COMMAND: python -c "import CoolProp; from CoolProp.CoolProp import PropsSI; from CoolProp.State import State; assert '?' not in CoolProp.__gitrevision__; assert isinstance(PropsSI('T','P',101325,'Q',0,'Water'), float)"
+        # import numpy guards the PIP_ONLY_BINARY backtrack above: a numpy wheel
+        # that installs but cannot import should fail the job.
+        CIBW_TEST_COMMAND: python -c "import numpy; import CoolProp; from CoolProp.CoolProp import PropsSI; from CoolProp.State import State; assert '?' not in CoolProp.__gitrevision__; assert isinstance(PropsSI('T','P',101325,'Q',0,'Water'), float)"
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014

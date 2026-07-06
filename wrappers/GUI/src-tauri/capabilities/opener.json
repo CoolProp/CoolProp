@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "opener",
+  "description": "Allow opening external https/http/mailto links (About dialog, Sponsor button, sponsor splash) in the system browser. Scoped to open-url only — no open-path or reveal-item-in-dir.",
+  "windows": ["main"],
+  "permissions": ["opener:allow-open-url", "opener:allow-default-urls"]
+}
