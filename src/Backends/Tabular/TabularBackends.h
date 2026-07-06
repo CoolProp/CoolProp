@@ -1242,7 +1242,11 @@ class TabularBackend : public AbstractState
         this->AS->set_mole_fractions(mole_fractions);
     };
     void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override {
-        throw NotImplementedError("set_mass_fractions not implemented for Tabular backends");
+        // Let the inner backend do the mass→mole conversion, then forward the
+        // resulting mole fractions through set_mole_fractions so that derived
+        // classes (e.g. BicubicBackend) can trigger table construction.
+        this->AS->set_mass_fractions(mass_fractions);
+        this->set_mole_fractions(this->AS->get_mole_fractions());
     };
     const std::vector<CoolPropDbl>& get_mole_fractions() override {
         return AS->get_mole_fractions();
@@ -1313,6 +1317,12 @@ class TabularBackend : public AbstractState
     CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end) override;
 
     void check_tables() {
+        // For mixtures, set_mole_fractions() must be called before the first
+        // update(). Without fractions the table path cannot be constructed and
+        // path_to_tables() will index into an empty vector and cause segfault.
+        if (this->AS->fluid_names().size() > 1 && this->AS->get_mole_fractions().empty()) {
+            throw ValueError("Mole fractions not yet set for mixture tabular backend; call set_mole_fractions() before update()");
+        }
         if (!tables_loaded) {
             try {
                 /// Try to load the tables if you can.

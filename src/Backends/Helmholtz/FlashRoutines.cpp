@@ -22,7 +22,17 @@
 namespace CoolProp {
 
 void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
-    if (HEOS.PhaseEnvelope.built && HEOS.PhaseEnvelope.closed) {
+    // Only use the phase envelope to classify the (T, p) point when the caller has
+    // NOT imposed a single homogeneous phase.  A user who called specify_phase(iphase_gas
+    // / iphase_liquid / ...) is explicitly asking for a particular root; the envelope-
+    // guided classifier below decides gas vs. liquid purely from the geometry of the
+    // closest envelope point and would silently override that request (returning e.g. the
+    // metastable liquid root for an imposed vapor state near the dew line — GitHub #3243).
+    // When a single phase is imposed we fall through to the imposed-phase branch, which
+    // solves solver_rho_Tp on the requested root directly.  An imposed iphase_twophase
+    // still benefits from the envelope-guided two-phase seeding, so it is left in.
+    const bool single_phase_imposed = HEOS.imposed_phase_index != iphase_not_imposed && HEOS.imposed_phase_index != iphase_twophase;
+    if (!single_phase_imposed && HEOS.PhaseEnvelope.built && HEOS.PhaseEnvelope.closed) {
         // Use the closed phase envelope to classify the (T, p) point
         try {
             SimpleState closest_state;
