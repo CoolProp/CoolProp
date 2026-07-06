@@ -568,8 +568,10 @@ if(NOT COOLPROP_NO_EXAMPLES)
     COMMAND "${PYTHON_EXECUTABLE}" example_generator.py R
             "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
     #COMMAND "${PYTHON_EXECUTABLE}" example_generator.py MATLAB "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${CMAKE_CURRENT_BINARY_DIR}/org/coolprop"
     COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Java
-            "${CMAKE_CURRENT_BINARY_DIR}/org//coolprop/Example.java"
+            "${CMAKE_CURRENT_BINARY_DIR}/org/coolprop/Example.java"
     COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Csharp
             "${CMAKE_CURRENT_BINARY_DIR}/Example.cs"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
