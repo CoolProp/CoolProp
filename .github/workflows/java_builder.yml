@@ -72,6 +72,10 @@ jobs:
           JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
           cmake --build build --target install --config Release -j "$JOBS"
 
+      - name: Run Java tests
+        shell: bash
+        run: ctest --test-dir build -C Release --output-on-failure -R Java
+
       - name: JSON symbol-leak gate (Java native wrapper)
         # The SWIG Java module compiles the CoolProp sources (incl. the JSON
         # loaders) into CoolPropJava.{so,jnilib} — the same exposure the Octave
@@ -122,13 +126,15 @@ jobs:
           set -eux
           mkdir -p Java
           for d in staging/Java-*/; do
-            [ -f "${d}Example.cs" ] && cp -n "${d}Example.cs" Java/ || true
+            [ -f "${d}Example.java" ] && cp -n "${d}Example.java" Java/ || true
+
             [ -f "${d}platform-independent.7z" ] && cp -n "${d}platform-independent.7z" Java/ || true
             find "$d" -maxdepth 1 -type d -name '*bit' -exec cp -r {} Java/ \;
           done
           ls -R Java
 
-      - name: Upload unified Csharp artifact
+      - name: Upload unified Java artifact
+
         uses: actions/upload-artifact@v7
         with:
           name: Java
