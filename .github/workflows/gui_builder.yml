@@ -179,7 +179,7 @@ jobs:
       # OS's uploaded bundle artifact and creates a single consolidated
       # release in one shot.
       - name: Build Tauri bundle
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Tauri auto-updater signing — when present, tauri-action signs the
