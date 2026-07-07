@@ -74,7 +74,7 @@ jobs:
 
       - name: Run Java tests
         shell: bash
-        run: ctest --test-dir build -C Release --output-on-failure -R Javattestbuild
+        run: ctest --test-dir build -C Release --output-on-failure -R Javatestbuild
 
       - name: JSON symbol-leak gate (Java native wrapper)
         # The SWIG Java module compiles the CoolProp sources (incl. the JSON
