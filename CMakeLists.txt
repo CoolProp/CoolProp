@@ -1751,6 +1751,9 @@ if(COOLPROP_JAVA_MODULE)
   find_package(Java REQUIRED)
   find_package(JNI)
 
+  # Compile Java bindings for Java 11 (maximum compatibility)
+  set(CMAKE_JAVA_COMPILE_FLAGS "-source 11 -target 11")
+  
   # Determine if there is a custom Java package being used and ensure correct directory structure.
   string(REGEX MATCH "-package[ ]+([A-Za-z0-9_.]+)" _pkg_match "${COOLPROP_SWIG_OPTIONS}")
   set(JAVA_PACKAGE "${CMAKE_MATCH_1}")
