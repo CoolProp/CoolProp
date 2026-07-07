@@ -806,6 +806,18 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
             auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
             ACB->set_fluid_parameter_double(i, parameter, value);
         }
+    } else if (parameter == "Tcrit" || parameter == "Tc") {
+        get_cubic()->set_Tci(i, value);
+        for (auto& state : linked_states) {
+            auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
+            ACB->set_fluid_parameter_double(i, parameter, value);
+        }
+    } else if (parameter == "pcrit" || parameter == "pc") {
+        get_cubic()->set_pci(i, value);
+        for (auto& state : linked_states) {
+            auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
+            ACB->set_fluid_parameter_double(i, parameter, value);
+        }
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
@@ -820,6 +832,10 @@ double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i
         return get_cubic()->get_cm();
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
         return get_cubic()->get_Q_k(i);
+    } else if (parameter == "Tcrit" || parameter == "Tc") {
+        return get_cubic()->get_Tc()[i];
+    } else if (parameter == "pcrit" || parameter == "pc") {
+        return get_cubic()->get_pc()[i];
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
