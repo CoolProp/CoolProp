@@ -1791,7 +1791,7 @@ if(COOLPROP_JAVA_MODULE)
       POST_BUILD
       COMMAND ${CMAKE_COMMAND} -D SRC_DIR="${CMAKE_CURRENT_BINARY_DIR}"
                                -D DST_DIR="${CMAKE_CURRENT_BINARY_DIR}/${JAVA_PACKAGE_DIR}"
-                               -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/relocate_java.cmake"
+                               -P "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/relocate_java.cmake"
   )
 
   if(WIN32)
