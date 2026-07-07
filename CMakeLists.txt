@@ -568,10 +568,8 @@ if(NOT COOLPROP_NO_EXAMPLES)
     COMMAND "${PYTHON_EXECUTABLE}" example_generator.py R
             "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
     #COMMAND "${PYTHON_EXECUTABLE}" example_generator.py MATLAB "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-            "${CMAKE_CURRENT_BINARY_DIR}/org/coolprop"
     COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Java
-            "${CMAKE_CURRENT_BINARY_DIR}/org/coolprop/Example.java"
+            "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
     COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Csharp
             "${CMAKE_CURRENT_BINARY_DIR}/Example.cs"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
@@ -1753,6 +1751,11 @@ if(COOLPROP_JAVA_MODULE)
   find_package(Java REQUIRED)
   find_package(JNI)
 
+  # Determine if there is a custom Java package being used and ensure correct directory structure.
+  string(REGEX MATCH "-package[ ]+([A-Za-z0-9_.]+)" _pkg_match "${COOLPROP_SWIG_OPTIONS}")
+  set(JAVA_PACKAGE "${CMAKE_MATCH_1}")
+  string(REPLACE "." "/" JAVA_PACKAGE_DIR "${JAVA_PACKAGE}")
+
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 
@@ -1779,6 +1782,15 @@ if(COOLPROP_JAVA_MODULE)
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropJava")
   coolprop_hide_json_symbols(CoolProp)
 
+  # Relocate SWIG-generated Java files into the package directory (cross-platform)
+  add_custom_command(
+      TARGET CoolProp
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -D SRC_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+                               -D DST_DIR="${CMAKE_CURRENT_BINARY_DIR}/${JAVA_PACKAGE_DIR}"
+                               -P "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/relocate_java.cmake"
+  )
+
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
     if(MSVC)
@@ -1799,7 +1811,7 @@ if(COOLPROP_JAVA_MODULE)
     TARGET CoolProp
     POST_BUILD
     COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z"
-            "${CMAKE_CURRENT_BINARY_DIR}/*.java" -x!Example.java
+            "${JAVA_PACKAGE_DIR}/*.java"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   #add_custom_command(TARGET CoolProp
   #                   POST_BUILD
@@ -1807,14 +1819,13 @@ if(COOLPROP_JAVA_MODULE)
   #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
   #
   # Install all the generated java files
-  install(
-    CODE "file( GLOB _GeneratedJavaSources \"${CMAKE_CURRENT_BINARY_DIR}/*.java\" )"
-    CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/platform-independent )"
-  )
+  get_filename_component(JAVA_PACKAGE_TOP "${JAVA_PACKAGE_DIR}" DIRECTORY)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
           DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
-  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z"
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
+  install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${JAVA_PACKAGE_TOP}"
+      DESTINATION Java/platform-independent)
+
+
   install(
     TARGETS ${app_name}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)

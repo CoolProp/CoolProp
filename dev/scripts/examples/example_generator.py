@@ -930,7 +930,7 @@ class Java(BaseParser):
         return l
 
     def header(self):
-        return 'package org.coolprop;\n\nimport org.coolprop.*;\n\npublic class Example {\n    static {\n        System.loadLibrary("CoolPropJava");\n    }\n\n    public static void main(String argv[]){\n'
+        return 'import org.coolprop.*;\n\npublic class Example {\n    static {\n        System.loadLibrary("CoolPropJava");\n    }\n\n    public static void main(String argv[]){\n'
 
     def footer(self):
         return '\n    }\n}'
