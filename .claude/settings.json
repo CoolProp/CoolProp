@@ -15,6 +15,15 @@
       {
         "hooks": [
           {
+            "command": "sh dev/ci/bootstrap-beads.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      },
+      {
+        "hooks": [
+          {
             "command": "bd prime",
             "type": "command"
           }
