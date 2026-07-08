@@ -137,6 +137,7 @@ class AbstractCubic
     /// construction), so they are computed once on first use; bm_term() reads them instead of
     /// re-evaluating the R_u*Tc/pc division on every call.
     mutable std::vector<double> m_b0_ii_cache;
+    mutable std::vector<char> m_b0_ii_cache_valid;
     void _ensure_aii_cache(double tau) const {
         bool stale = (std::memcmp(&tau, &m_tau_cache, sizeof(double)) != 0) || (m_alpha_versions_cache.size() != alpha.size());
         if (!stale) {
@@ -268,8 +269,10 @@ class AbstractCubic
         // Refresh both in the existing alpha function so its parameters stay consistent.
         alpha[i]->set_a0(a0_ii(i));
         alpha[i]->set_Tr_over_Tci(T_r / Tc[i]);
-        // b0_ii depends on Tc[i]/pc[i]; clear the lazy cache so it is recomputed.
-        m_b0_ii_cache.clear();
+        // b0_ii depends on Tc[i]/pc[i]; mark the affected entry as stale.
+        if (i < m_b0_ii_cache.size()) {
+            m_b0_ii_cache_valid[i] = 0;
+        }
         m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate aii cache
     }
     /**
@@ -282,8 +285,10 @@ class AbstractCubic
         pc[i] = pci;
         // a0_ii depends on Tc[i]^2/pc[i]; refresh it in the existing alpha function.
         alpha[i]->set_a0(a0_ii(i));
-        // b0_ii depends on Tc[i]/pc[i]; clear the lazy cache so it is recomputed.
-        m_b0_ii_cache.clear();
+        // b0_ii depends on Tc[i]/pc[i]; mark the affected entry as stale.
+        if (i < m_b0_ii_cache.size()) {
+            m_b0_ii_cache_valid[i] = 0;
+        }
         m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate aii cache
     }
     /// Set the three Mathias-Copeman constants in one shot for the component i of a mixture

@@ -4414,7 +4414,9 @@ TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic_DmolarT][2
 TEST_CASE("Cubic set/get Tc and pc via set_fluid_parameter_double", "[cubic_Tcpc]") {
     // Use PR backend with propane as a representative pure fluid
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("PR", "Propane"));
-    auto& ACB = *dynamic_cast<AbstractCubicBackend*>(AS.get());
+    AbstractCubicBackend* raw = dynamic_cast<AbstractCubicBackend*>(AS.get());
+    REQUIRE(raw != nullptr);
+    auto& ACB = *raw;
 
     const double Tc_orig = ACB.get_fluid_parameter_double(0, "Tcrit");
     const double pc_orig = ACB.get_fluid_parameter_double(0, "pcrit");
