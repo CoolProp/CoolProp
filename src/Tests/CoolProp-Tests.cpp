@@ -2533,12 +2533,13 @@ TEST_CASE("Check the second saturation derivatives", "[second_saturation_partial
 }
 
 TEST_CASE("Check the first two-phase derivative", "[first_two_phase_deriv]") {
-    const int number_of_pairs = 4;
+    const int number_of_pairs = 8;
     struct pair
     {
         parameters p1, p2, p3;
     };
-    pair pairs[number_of_pairs] = {{iDmass, iP, iHmass}, {iDmolar, iP, iHmolar}, {iDmolar, iHmolar, iP}, {iDmass, iHmass, iP}};
+    pair pairs[number_of_pairs] = {{iDmass, iP, iHmass}, {iDmolar, iP, iHmolar}, {iDmolar, iHmolar, iP}, {iDmass, iHmass, iP},
+                                   {iQ, iHmolar, iP},    {iQ, iP, iHmolar},      {iQmass, iHmass, iP},   {iQmass, iP, iHmass}};
     shared_ptr<CoolProp::HelmholtzEOSBackend> AS = std::make_shared<CoolProp::HelmholtzEOSBackend>("n-Propane");
     for (auto& pair : pairs) {
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
@@ -6537,6 +6538,10 @@ TEST_CASE("REFPROP first_two_phase_deriv matches HEOS for a pure fluid", "[REFPR
     HE->update(QT_INPUTS, 0.4, 300.0);
     CHECK(RP->first_two_phase_deriv(iDmolar, iHmolar, iP) == Catch::Approx(HE->first_two_phase_deriv(iDmolar, iHmolar, iP)).epsilon(1e-4));
     CHECK(RP->first_two_phase_deriv(iDmolar, iP, iHmolar) == Catch::Approx(HE->first_two_phase_deriv(iDmolar, iP, iHmolar)).epsilon(1e-3));
+    CHECK(RP->first_two_phase_deriv(iQ, iHmolar, iP) == Catch::Approx(HE->first_two_phase_deriv(iQ, iHmolar, iP)).epsilon(1e-4));
+    CHECK(RP->first_two_phase_deriv(iQ, iP, iHmolar) == Catch::Approx(HE->first_two_phase_deriv(iQ, iP, iHmolar)).epsilon(1e-3));
+    CHECK(RP->first_two_phase_deriv(iQmass, iHmass, iP) == Catch::Approx(HE->first_two_phase_deriv(iQmass, iHmass, iP)).epsilon(1e-4));
+    CHECK(RP->first_two_phase_deriv(iQmass, iP, iHmass) == Catch::Approx(HE->first_two_phase_deriv(iQmass, iP, iHmass)).epsilon(1e-3));
 }
 
 TEST_CASE("REFPROP saturated keyed output throws in single phase", "[REFPROPsat]") {
