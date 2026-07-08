@@ -5423,8 +5423,10 @@ TEST_CASE("Two-phase chemical_potential mirrors sat-state values; fugacity_coeff
     //   - mu_i^L == mu_i^V at VLE (the equilibrium condition), so the new code
     //     returns the Q-weighted sat-state value, which collapses to either
     //     endpoint up to flash tolerance.
-    //   - phi_i^L != phi_i^V because the phase compositions differ; the new
-    //     code throws to force callers to evaluate on SatL/SatV explicitly.
+    //   - phi_i^L != phi_i^V because the phase compositions differ; in the
+    //     genuine two-phase interior (0 < Q < 1) the code throws to force
+    //     callers to evaluate on SatL/SatV explicitly.  (The dome boundaries
+    //     Q == 0 / Q == 1 are well-defined and covered by the [3258] case below.)
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
     AS->set_mole_fractions({0.25, 0.25, 0.5});
     AS->update(CoolProp::PQ_INPUTS, 500e3, 0.5);
@@ -5447,11 +5449,47 @@ TEST_CASE("Two-phase chemical_potential mirrors sat-state values; fugacity_coeff
         // overall == Q-weighted combination of sat states (Q=0.5)
         CHECK(std::abs(mu - 0.5 * (muL + muV)) < 1e-9 * std::abs(0.5 * (muL + muV)));
 
-        // fugacity_coefficient throws in two-phase
+        // fugacity_coefficient throws in the genuine two-phase interior (Q = 0.5)
         CHECK_THROWS(AS->fugacity_coefficient(i));
         // but works on the sat states
         CHECK(std::isfinite(satL.fugacity_coefficient(i)));
         CHECK(std::isfinite(satV.fugacity_coefficient(i)));
+    }
+}
+
+TEST_CASE("Two-phase fugacity_coefficient at Q=0/Q=1 returns the sat-state value (GH #3258)", "[mixtures][3258]") {
+    // GH #3258: a low-level routine (Water&Ethanol PQ, Q=0) that worked in v7.2
+    // began throwing in v8.  PR #3022 made calc_fugacity_coefficient throw for ANY
+    // isTwoPhase() state, but at the dome boundaries the overall composition equals
+    // one saturated phase, so phi_i is well-defined and must equal SatL (Q=0) /
+    // SatV (Q=1) -- mirroring calc_fugacity.  Only the interior 0 < Q < 1 throws.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water&Ethanol"));
+    AS->set_mole_fractions({0.4, 0.6});
+
+    // Q = 0 (saturated liquid): overall == liquid composition, phi_i == SatL value.
+    AS->update(CoolProp::PQ_INPUTS, 101325, 0);
+    REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+    auto* heosL = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(heosL != nullptr);
+    auto& satL = heosL->get_SatL();
+    for (std::size_t i = 0; i < 2; ++i) {
+        CAPTURE(i);
+        const double phi = AS->fugacity_coefficient(i);  // must NOT throw
+        CHECK(std::isfinite(phi));
+        CHECK(phi == Catch::Approx(satL.fugacity_coefficient(i)));
+    }
+
+    // Q = 1 (saturated vapor): overall == vapor composition, phi_i == SatV value.
+    AS->update(CoolProp::PQ_INPUTS, 101325, 1);
+    REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+    auto* heosV = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(heosV != nullptr);
+    auto& satV = heosV->get_SatV();
+    for (std::size_t i = 0; i < 2; ++i) {
+        CAPTURE(i);
+        const double phi = AS->fugacity_coefficient(i);  // must NOT throw
+        CHECK(std::isfinite(phi));
+        CHECK(phi == Catch::Approx(satV.fugacity_coefficient(i)));
     }
 }
 
