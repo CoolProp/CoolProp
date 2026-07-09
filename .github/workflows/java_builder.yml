@@ -1,8 +1,8 @@
-name: C# wrapper
+name: Java Wrapper
 
 on:
   push:
-    branches: [ 'master', 'main', 'develop', 'actions_csharp' ]
+    branches: [ 'master', 'main', 'develop' ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
@@ -33,13 +33,23 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install SWIG + mono + 7zip (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update -y && sudo apt-get install -y swig mono-mcs p7zip-full
+      - name: Setup Java JDK
+        uses: actions/setup-java@v5.4.0
+        with:
+          # The Java version to set up. Takes a whole or semver Java version. See examples of supported syntax in README file
+          java-version: '25'
+          # Java distribution. See the list of supported distributions in README file
+          distribution: 'zulu'
+          # The package type (jdk, jre, jdk+fx, jre+fx)
+          java-package: 'jdk'
 
-      - name: Install SWIG + mono + 7zip (macOS)
+      - name: Install SWIG + 7zip (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -y && sudo apt-get install -y swig p7zip-full
+
+      - name: Install SWIG + 7zip (macOS)
         if: runner.os == 'macOS'
-        run: brew install swig mono p7zip
+        run: brew install swig p7zip
 
       - name: Install SWIG (Windows)
         if: runner.os == 'Windows'
@@ -47,7 +57,7 @@ jobs:
 
       - name: Configure
         shell: bash
-        run: cmake -B build -S . -DCOOLPROP_CSHARP_MODULE=ON -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -S . -DCOOLPROP_JAVA_MODULE=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCOOLPROP_SWIG_OPTIONS="-package org.coolprop"
 
       - name: Build and install
         shell: bash
@@ -62,9 +72,13 @@ jobs:
           JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
           cmake --build build --target install --config Release -j "$JOBS"
 
-      - name: JSON symbol-leak gate (C# native wrapper)
-        # The SWIG C# module compiles the CoolProp sources (incl. the JSON
-        # loaders) into CoolPropCsharp.{so,dylib} — the same exposure the Octave
+      - name: Run Java tests
+        shell: bash
+        run: ctest --test-dir build -C Release --output-on-failure -R Javatestbuild
+
+      - name: JSON symbol-leak gate (Java native wrapper)
+        # The SWIG Java module compiles the CoolProp sources (incl. the JSON
+        # loaders) into CoolPropJava.{so,jnilib} — the same exposure the Octave
         # .oct carries, the wrapper where the hidden-visibility regression
         # (CoolProp-rj2i) bit. Assert the link-time export control keeps
         # nlohmann/valijson/rapidjson out of the wrapper's dynamic symbol table.
@@ -75,12 +89,12 @@ jobs:
         run: |
           set -euo pipefail
           # The shared object keeps the platform 'lib' prefix on ELF/Mach-O
-          # (PREFIX "" is Windows-only) → libCoolPropCsharp.{so,dylib}. Include
-          # the SONAME-versioned forms (libCoolPropCsharp.so.<ver>, the regular
+          # (PREFIX "" is Windows-only) → libCoolPropJava.{so,jnilib}. Include
+          # the SONAME-versioned forms (libCoolPropJava.so.<ver>, the regular
           # file behind the symlink) so -type f still finds it if versioned.
-          wrapper=$(find build install_root -type f \( -name '*CoolPropCsharp.so' -o -name '*CoolPropCsharp.so.*' -o -name '*CoolPropCsharp.dylib' -o -name '*CoolPropCsharp.*.dylib' \) | head -1)
+          wrapper=$(find build install_root -type f \( -name '*CoolPropJava.so' -o -name '*CoolPropJava.so.*' -o -name '*CoolPropJava.jnilib' -o -name '*CoolPropJava.*.jnilib' \) | head -1)
           if [ -z "$wrapper" ]; then
-            echo "FAIL: CoolPropCsharp shared object not found under build/ or install_root/" >&2
+            echo "FAIL: CoolPropJava shared object not found under build/ or install_root/" >&2
             exit 1
           fi
           echo "Gating $wrapper"
@@ -89,8 +103,8 @@ jobs:
       - name: Upload per-OS artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Csharp-${{ matrix.sysname }}
-          path: install_root/Csharp
+          name: Java-${{ matrix.sysname }}
+          path: install_root/Java
 
   merge:
     needs: build
@@ -103,28 +117,31 @@ jobs:
       - name: Download per-OS artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: Csharp-*
+          pattern: Java-*
           path: staging
 
-      - name: Assemble unified Csharp tree
+      - name: Assemble unified Java tree
         shell: bash
         run: |
           set -eux
-          mkdir -p Csharp
-          for d in staging/Csharp-*/; do
-            [ -f "${d}Example.cs" ] && cp -n "${d}Example.cs" Csharp/ || true
-            [ -f "${d}platform-independent.7z" ] && cp -n "${d}platform-independent.7z" Csharp/ || true
-            find "$d" -maxdepth 1 -type d -name '*bit' -exec cp -r {} Csharp/ \;
-          done
-          ls -R Csharp
+          mkdir -p Java
+          for d in staging/Java-*/; do
+            [ -f "${d}Example.java" ] && cp -n "${d}Example.java" Java/ || true
 
-      - name: Upload unified Csharp artifact
+            [ -f "${d}platform-independent.7z" ] && cp -n "${d}platform-independent.7z" Java/ || true
+            find "$d" -maxdepth 1 -type d -name '*bit' -exec cp -r {} Java/ \;
+          done
+          ls -R Java
+
+      - name: Upload unified Java artifact
+
         uses: actions/upload-artifact@v7
         with:
-          name: Csharp
-          path: Csharp
+          name: Java
+          path: Java
 
       - name: Delete intermediate per-OS artifacts
         uses: geekyeggo/delete-artifact@v6
         with:
-          name: Csharp-*
+          name: Java-*
+          
