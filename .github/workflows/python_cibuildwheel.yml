@@ -78,12 +78,6 @@ jobs:
           cpm-${{ runner.os }}-${{ inputs.arch }}-
           cpm-${{ runner.os }}-
 
-    - name: Set up QEMU
-      if: ${{ runner.os == 'Linux' }}
-      uses: docker/setup-qemu-action@v4.1.0
-      with:
-        platforms: all
-
     # cibuildwheel 4.0 makes delvewheel the default Windows repair command, but
     # the cross-compiled win_arm64 wheels (py3.9/3.10 on the x64 windows-latest
     # host) can't be repaired there — delvewheel can't find the ARM64
