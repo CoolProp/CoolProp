@@ -3470,10 +3470,20 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_helmholtzmolar() {
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(std::size_t i) {
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
     if (isTwoPhase()) {
-        // phi_i = f_i / (x_i * p).  At VLE f_i^L == f_i^V but x_i^L != x_i^V, so
-        // phi_i^L != phi_i^V and no convex combination is physically meaningful for
-        // the overall two-phase state.  Force callers to evaluate on SatL or SatV.
-        throw ValueError(format("fugacity_coefficient is not well-defined in the two-phase region; evaluate on SatL or SatV instead"));
+        // phi_i = f_i / (x_i * p).  For a genuine two-phase state (0 < Q < 1) f_i^L == f_i^V
+        // at VLE but x_i^L != x_i^V, so phi_i^L != phi_i^V and no convex combination is
+        // physically meaningful for the overall state -- throw and force callers to SatL/SatV.
+        // At the dome boundaries Q == 0 (sat liquid) / Q == 1 (sat vapor) the overall
+        // composition equals one saturated phase, so phi_i IS well-defined; dispatch to the
+        // matching sat state, mirroring calc_fugacity (restores pre-#3022 / v7.2 behavior, GH #3258).
+        if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
+        if (std::abs(_Q) < DBL_EPSILON) {
+            return SatL->fugacity_coefficient(i);
+        } else if (std::abs(_Q - 1) < DBL_EPSILON) {
+            return SatV->fugacity_coefficient(i);
+        } else {
+            throw ValueError(format("fugacity_coefficient is not well-defined in the two-phase region; evaluate on SatL or SatV instead"));
+        }
     } else if (isHomogeneousPhase()) {
         return exp(MixtureDerivatives::ln_fugacity_coefficient(*this, i, xN_flag));
     } else {
