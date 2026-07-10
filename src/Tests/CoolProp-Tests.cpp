@@ -2572,6 +2572,19 @@ TEST_CASE("Check the first two-phase derivative", "[first_two_phase_deriv]") {
     }
 }
 
+TEST_CASE("Vapor-quality two-phase derivatives reject mixtures", "[first_two_phase_deriv]") {
+    // The lever-rule Q derivatives are only valid for pure/pseudo-pure fluids
+    // (matching the REFPROP backend, which rejects them for mixtures outright).
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", strsplit("Methane&Ethane", '&')));
+    std::vector<CoolPropDbl> z(2, 0.5);
+    AS->set_mole_fractions(z);
+    AS->update(QT_INPUTS, 0.3, 150);
+    CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iHmolar, iP), CoolProp::NotImplementedError);
+    CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iP, iHmolar), CoolProp::NotImplementedError);
+    CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iHmass, iP), CoolProp::NotImplementedError);
+    CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iP, iHmass), CoolProp::NotImplementedError);
+}
+
 TEST_CASE("Check the second two-phase derivative", "[second_two_phase_deriv]") {
     SECTION("d2rhodhdp", "") {
         shared_ptr<CoolProp::HelmholtzEOSBackend> AS = std::make_shared<CoolProp::HelmholtzEOSBackend>("n-Propane");
