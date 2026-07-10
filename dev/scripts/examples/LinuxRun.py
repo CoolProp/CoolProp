@@ -70,7 +70,9 @@ if __name__ == '__main__':
     J = Java()
     J.write('Java/Example.java', J.parse())
     kwargs = dict(stdout=sys.stdout, stderr=sys.stderr, shell=True, cwd='Java')
-    subprocess.check_call('cmake ../../../.. -G Ninja -DCOOLPROP_JAVA_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCOOLPROP_NO_EXAMPLES=ON' + CCACHE, **kwargs)
+    # The generated Example.java imports org.coolprop, so the wrapper must be
+    # built with the same SWIG package the official java_builder workflow uses
+    subprocess.check_call('cmake ../../../.. -G Ninja -DCOOLPROP_JAVA_MODULE=ON -DCOOLPROP_SWIG_OPTIONS="-package org.coolprop" -DCMAKE_VERBOSE_MAKEFILE=ON -DCOOLPROP_NO_EXAMPLES=ON' + CCACHE, **kwargs)
     subprocess.check_call('cmake --build .', **kwargs)
     subprocess.check_call(r'javac *.java', **kwargs)
     with codecs.open('Java/Example.out', 'w', encoding='utf-8') as fp:

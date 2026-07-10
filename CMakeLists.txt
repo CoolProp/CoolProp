@@ -1785,14 +1785,19 @@ if(COOLPROP_JAVA_MODULE)
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropJava")
   coolprop_hide_json_symbols(CoolProp)
 
-  # Relocate SWIG-generated Java files into the package directory (cross-platform)
-  add_custom_command(
-      TARGET CoolProp
-      POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -D SRC_DIR="${CMAKE_CURRENT_BINARY_DIR}"
-                               -D DST_DIR="${CMAKE_CURRENT_BINARY_DIR}/${JAVA_PACKAGE_DIR}"
-                               -P "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/relocate_java.cmake"
-  )
+  # Relocate SWIG-generated Java files into the package directory (cross-platform).
+  # Only when a -package was requested via COOLPROP_SWIG_OPTIONS: without one the
+  # generated sources belong in the default package (flat in the binary dir) and
+  # relocating would run with DST_DIR == SRC_DIR.
+  if(NOT JAVA_PACKAGE_DIR STREQUAL "")
+    add_custom_command(
+        TARGET CoolProp
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -D SRC_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+                                 -D DST_DIR="${CMAKE_CURRENT_BINARY_DIR}/${JAVA_PACKAGE_DIR}"
+                                 -P "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/relocate_java.cmake"
+    )
+  endif()
 
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -1810,11 +1815,20 @@ if(COOLPROP_JAVA_MODULE)
 
   add_dependencies(${app_name} generate_headers generate_examples)
 
+  # With a package, the .java sources live under the package directory after
+  # relocation; without one they are flat in the binary dir (the pre-package
+  # behavior, where an empty JAVA_PACKAGE_DIR would otherwise make the glob
+  # the literal filesystem root "/*.java" and archive nothing)
+  if(NOT JAVA_PACKAGE_DIR STREQUAL "")
+    set(JAVA_ARCHIVE_GLOB "${JAVA_PACKAGE_DIR}/*.java")
+  else()
+    set(JAVA_ARCHIVE_GLOB "${CMAKE_CURRENT_BINARY_DIR}/*.java" "-x!Example.java")
+  endif()
   add_custom_command(
     TARGET CoolProp
     POST_BUILD
     COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z"
-            "${JAVA_PACKAGE_DIR}/*.java"
+            ${JAVA_ARCHIVE_GLOB}
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   #add_custom_command(TARGET CoolProp
   #                   POST_BUILD
@@ -1822,11 +1836,30 @@ if(COOLPROP_JAVA_MODULE)
   #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
   #
   # Install all the generated java files
-  get_filename_component(JAVA_PACKAGE_TOP "${JAVA_PACKAGE_DIR}" DIRECTORY)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
           DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
-  install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${JAVA_PACKAGE_TOP}"
-      DESTINATION Java/platform-independent)
+  if(NOT JAVA_PACKAGE_DIR STREQUAL "")
+    # Install the package tree rooted at its FIRST path component so the full
+    # package layout is preserved under platform-independent/.  The parent-of-
+    # leaf form (get_filename_component ... DIRECTORY) is empty for a single-
+    # segment package -- which would install the entire binary dir -- and drops
+    # the top-level directory for packages more than two segments deep.
+    string(REGEX REPLACE "/.*" "" JAVA_PACKAGE_TOP "${JAVA_PACKAGE_DIR}")
+    if(JAVA_PACKAGE_TOP STREQUAL "")
+      # e.g. '-package .coolprop': an empty top component would make the
+      # DIRECTORY rule below install the entire binary dir
+      message(FATAL_ERROR "Invalid -package value in COOLPROP_SWIG_OPTIONS: '${JAVA_PACKAGE}'")
+    endif()
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${JAVA_PACKAGE_TOP}"
+        DESTINATION Java/platform-independent)
+  else()
+    # No package: flat default-package sources.  An empty JAVA_PACKAGE_TOP in
+    # the DIRECTORY form above would install the entire binary dir.
+    install(
+      CODE "file( GLOB _GeneratedJavaSources \"${CMAKE_CURRENT_BINARY_DIR}/*.java\" )"
+      CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/platform-independent )"
+    )
+  endif()
 
 
   install(
