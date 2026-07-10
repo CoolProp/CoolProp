@@ -3998,19 +3998,29 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of
     //   dQ/dh|p = 1/(h'' - h')
     //   dQ/dp|h = -[(1 - Q)*dh'/dp|sat + Q*dh''/dp|sat] / (h'' - h')
     // Molar quality (iQ) pairs with molar enthalpy; mass quality (iQmass) with mass
-    // enthalpy.  For pure/pseudo-pure fluids Q == Qmass numerically.
-    else if (Of == iQ && Wrt == iHmolar && Constant == iP) {
-        return 1 / (SatV->hmolar() - SatL->hmolar());
-    } else if (Of == iQmass && Wrt == iHmass && Constant == iP) {
-        return 1 / (SatV->hmass() - SatL->hmass());
-    } else if (Of == iQ && Wrt == iP && Constant == iHmolar) {
-        CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmolar, iP, *SatL, *SatV);
-        CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmolar, iP, *SatL, *SatV);
-        return -((1 - Q()) * dhL_dp + Q() * dhV_dp) / (SatV->hmolar() - SatL->hmolar());
-    } else if (Of == iQmass && Wrt == iP && Constant == iHmass) {
-        CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmass, iP, *SatL, *SatV);
-        CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmass, iP, *SatL, *SatV);
-        return -((1 - Qmass()) * dhL_dp + Qmass() * dhV_dp) / (SatV->hmass() - SatL->hmass());
+    // enthalpy.  For pure/pseudo-pure fluids Q == Qmass numerically.  The lever rule
+    // assumes composition-independent saturation states, so (matching REFPROP) these
+    // are restricted to pure/pseudo-pure fluids; mixtures have quality-dependent phase
+    // compositions (temperature glide) that invalidate the contract.
+    else if (Of == iQ || Of == iQmass) {
+        if (!is_pure_or_pseudopure) {
+            throw NotImplementedError("Vapor-quality two-phase derivatives are only implemented for pure and pseudo-pure fluids");
+        }
+        if (Of == iQ && Wrt == iHmolar && Constant == iP) {
+            return 1 / (SatV->hmolar() - SatL->hmolar());
+        } else if (Of == iQmass && Wrt == iHmass && Constant == iP) {
+            return 1 / (SatV->hmass() - SatL->hmass());
+        } else if (Of == iQ && Wrt == iP && Constant == iHmolar) {
+            CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmolar, iP, *SatL, *SatV);
+            CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmolar, iP, *SatL, *SatV);
+            return -((1 - Q()) * dhL_dp + Q() * dhV_dp) / (SatV->hmolar() - SatL->hmolar());
+        } else if (Of == iQmass && Wrt == iP && Constant == iHmass) {
+            CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmass, iP, *SatL, *SatV);
+            CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmass, iP, *SatL, *SatV);
+            return -((1 - Qmass()) * dhL_dp + Qmass() * dhV_dp) / (SatV->hmass() - SatL->hmass());
+        } else {
+            throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+        }
     } else {
         throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
     }
