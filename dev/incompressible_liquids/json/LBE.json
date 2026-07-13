@@ -1,0 +1,114 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 750.0,
+  "Tmax": 1100.0,
+  "Tmin": 400.0,
+  "TminPsat": 400.0,
+  "conductivity": {
+    "NRMS": 0.00030782277616131227,
+    "coeffs": [
+      [
+        14.115344209615623
+      ],
+      [
+        0.012717002860762425
+      ],
+      [
+        -2.321168140967736e-06
+      ],
+      [
+        -1.9521533636455747e-11
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 3.305232954254521e-05,
+    "coeffs": [
+      [
+        10095.246112965024
+      ],
+      [
+        -1.2929943223658193
+      ],
+      [
+        4.943764686515806e-08
+      ],
+      [
+        4.056446650717641e-11
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "description": "Lead-Bismuth Eutectic Alloy",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "LBE",
+  "reference": "Fazio2015",
+  "saturation_pressure": {
+    "NRMS": 0.005010688606950294,
+    "coeffs": [
+      [
+        -6.65983382387424
+      ],
+      [
+        0.03938427029254645
+      ],
+      [
+        -6.667115760236597e-05
+      ],
+      [
+        9.476803678176775e-08
+      ]
+    ],
+    "type": "exppolynomial"
+  },
+  "specific_heat": {
+    "NRMS": 0.002556356333722,
+    "coeffs": [
+      [
+        141.49354838709678
+      ],
+      [
+        -0.018668717174540533
+      ],
+      [
+        6.216430955028468e-06
+      ],
+      [
+        1.2264339295727695e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "viscosity": {
+    "NRMS": 0.0001687344458737014,
+    "coeffs": [
+      754.008475320349,
+      0.012515422511064817,
+      7.612777891007925
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}
