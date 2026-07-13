@@ -4408,6 +4408,74 @@ TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic_DmolarT][2
 }
 
 // ============================================================================
+// Tests for set_fluid_parameter_double("Tcrit"/"pcrit") on cubic backends
+// ============================================================================
+
+TEST_CASE("Cubic set/get Tc and pc via set_fluid_parameter_double", "[cubic_Tcpc]") {
+    // Use PR backend with propane as a representative pure fluid
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("PR", "Propane"));
+    AbstractCubicBackend* raw = dynamic_cast<AbstractCubicBackend*>(AS.get());
+    REQUIRE(raw != nullptr);
+    auto& ACB = *raw;
+
+    const double Tc_orig = ACB.get_fluid_parameter_double(0, "Tcrit");
+    const double pc_orig = ACB.get_fluid_parameter_double(0, "pcrit");
+
+    SECTION("get_fluid_parameter_double returns original Tc and pc") {
+        CHECK(Tc_orig > 0.0);
+        CHECK(pc_orig > 0.0);
+    }
+
+    SECTION("set and get Tc via 'Tcrit' key round-trips correctly") {
+        const double Tc_new = Tc_orig + 5.0;
+        AS->set_fluid_parameter_double(0, "Tcrit", Tc_new);
+        CHECK(ACB.get_fluid_parameter_double(0, "Tcrit") == Catch::Approx(Tc_new).epsilon(1e-12));
+        // Restore
+        AS->set_fluid_parameter_double(0, "Tcrit", Tc_orig);
+    }
+
+    SECTION("set and get pc via 'pcrit' key round-trips correctly") {
+        const double pc_new = pc_orig * 1.02;
+        AS->set_fluid_parameter_double(0, "pcrit", pc_new);
+        CHECK(ACB.get_fluid_parameter_double(0, "pcrit") == Catch::Approx(pc_new).epsilon(1e-12));
+        // Restore
+        AS->set_fluid_parameter_double(0, "pcrit", pc_orig);
+    }
+
+    SECTION("set Tc via 'Tc' alias also works") {
+        const double Tc_new = Tc_orig - 3.0;
+        AS->set_fluid_parameter_double(0, "Tc", Tc_new);
+        CHECK(ACB.get_fluid_parameter_double(0, "Tc") == Catch::Approx(Tc_new).epsilon(1e-12));
+    }
+
+    SECTION("set pc via 'pc' alias also works") {
+        const double pc_new = pc_orig * 0.98;
+        AS->set_fluid_parameter_double(0, "pc", pc_new);
+        CHECK(ACB.get_fluid_parameter_double(0, "pc") == Catch::Approx(pc_new).epsilon(1e-12));
+    }
+
+    SECTION("Twu alpha function: shifting Tc changes saturation pressure") {
+        // Use generic Twu parameters (L, M, N) – these are not from any specific
+        // source; the purpose is only to verify that the Tc change propagates
+        // through the alpha function.
+        const double L = 0.3, M = 0.8, N = 2.0;
+        AS->set_cubic_alpha_C(0, "Twu", L, M, N);
+
+        const double T_test = 300.0;
+        AS->update(QT_INPUTS, 0.0, T_test);
+        const double p_default = AS->p();
+
+        // Shift Tc by +10 K and verify that the saturation pressure changes
+        const double Tc_shifted = Tc_orig + 10.0;
+        AS->set_fluid_parameter_double(0, "Tcrit", Tc_shifted);
+        AS->update(QT_INPUTS, 0.0, T_test);
+        const double p_shifted = AS->p();
+
+        CHECK(std::abs(p_shifted - p_default) / p_default > 1e-4);
+    }
+}
+
+// ============================================================================
 // Lemmon-Akasaka 2022 R-1234yf EOS check values (Table 7)
 // Lemmon & Akasaka, Int. J. Thermophys. 43:119 (2022), DOI 10.1007/s10765-022-03015-y
 // Table 7: density in mol/dm^3, pressure in MPa, cv/cp in J/(mol K), w in m/s
