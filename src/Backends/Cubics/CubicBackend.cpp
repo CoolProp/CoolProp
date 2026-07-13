@@ -796,30 +796,18 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
     // Set the volume translation parrameter, currently applied to the whole fluid, not to components.
     if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
         get_cubic()->set_cm(value);
-        for (auto& state : linked_states) {
-            auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
-            ACB->set_fluid_parameter_double(i, parameter, value);
-        }
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
         get_cubic()->set_Q_k(i, value);
-        for (auto& state : linked_states) {
-            auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
-            ACB->set_fluid_parameter_double(i, parameter, value);
-        }
     } else if (parameter == "Tcrit" || parameter == "Tc") {
         get_cubic()->set_Tci(i, value);
-        for (auto& state : linked_states) {
-            auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
-            ACB->set_fluid_parameter_double(i, parameter, value);
-        }
     } else if (parameter == "pcrit" || parameter == "pc") {
         get_cubic()->set_pci(i, value);
-        for (auto& state : linked_states) {
-            auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
-            ACB->set_fluid_parameter_double(i, parameter, value);
-        }
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+    }
+    for (auto& state : linked_states) {
+        auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
+        ACB->set_fluid_parameter_double(i, parameter, value);
     }
 }
 double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
