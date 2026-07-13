@@ -234,19 +234,31 @@ Table construction (built, or loaded from the cache) is triggered by calling
 ``set_mass_fractions`` or ``set_mole_fractions`` . Call one of the two before
 the first ``update``.
 
-Example for a 50 % / 50 % mass-fraction mixture of Isopentane and n-Butane:
+Example for a 50 % / 50 % mass-fraction mixture of Isopentane and n-Butane.
+Mixture tables are much more expensive to construct than pure-fluid tables
+(every grid cell requires a mixture flash calculation), so a coarse grid is
+used here to keep the example fast; drop the ``TABULAR_NX``/``TABULAR_NY``
+lines to build at the default resolution.  Beware that on a coarse grid,
+accuracy degrades severely for states close to the phase boundary, because
+the interpolation cells there straddle the two-phase region:
 
 .. ipython::
 
     In [0]: import CoolProp.CoolProp as CP
 
-    In [1]: AS = CP.AbstractState("BICUBIC&HEOS", "Isopentane&n-Butane")
+    In [1]: nx, ny = CP.get_config_int(CP.TABULAR_NX), CP.get_config_int(CP.TABULAR_NY)
 
-    In [2]: AS.set_mass_fractions([0.5, 0.5])  # builds / loads tables
+    In [2]: CP.set_config_int(CP.TABULAR_NX, 40); CP.set_config_int(CP.TABULAR_NY, 40)
 
-    In [3]: AS.update(CP.PT_INPUTS, 5e5, 333.15)
+    In [3]: AS = CP.AbstractState("BICUBIC&HEOS", "Isopentane&n-Butane")
 
-    In [4]: print(AS.rhomass(), AS.hmass())
+    In [4]: AS.set_mass_fractions([0.5, 0.5])  # builds / loads tables
+
+    In [5]: AS.update(CP.PT_INPUTS, 2e6, 300.0)
+
+    In [6]: print(AS.rhomass(), AS.hmass())
+
+    In [7]: CP.set_config_int(CP.TABULAR_NX, nx); CP.set_config_int(CP.TABULAR_NY, ny)  # restore previous values
 
 Table folder naming
 ~~~~~~~~~~~~~~~~~~~
