@@ -5225,6 +5225,43 @@ TEST_CASE("Cubic: changing kij invalidates the cached a_ij at the same tau (GitH
     CHECK(std::abs(aij_k1 - aij_k0) > 1e-6 * std::abs(aij_k0));
 }
 
+TEST_CASE("Cubic: asymmetric kij matrix -> a_ij cache respects k per orientation (GitHub #3192)", "[cubic][mixture]") {
+    // set_kmat accepts an arbitrary matrix; a_ij = (1 - k_ij)*sqrt(a_i*a_j) is symmetric only when
+    // k_ij == k_ji.  The per-tau a_ij cache must build every [i][j] from its own k[i][j], NOT mirror one
+    // triangle onto the other (which would apply the transposed k to aij_term/gradient/Hessian).
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PR", "Methane&Ethane"));
+    auto* ACB = dynamic_cast<CoolProp::AbstractCubicBackend*>(AS.get());
+    REQUIRE(ACB != nullptr);
+    auto& cubic = ACB->get_cubic();
+    const double tau = cubic->get_Tr() / 300.0;
+    const double k01 = 0.05, k10 = 0.20;
+    cubic->set_kmat({{0.0, k01}, {k10, 0.0}});  // deliberately asymmetric
+    // The sqrt(a_i*a_j) factor is identical for (0,1) and (1,0); only the (1-k) prefactor differs, so
+    // aij_term(0,1)/aij_term(1,0) must equal (1-k01)/(1-k10).  Pre-fix the lower-triangle mirror made
+    // both return (1-k10)*sqrt(...), i.e. equal.
+    const double a01 = cubic->aij_term(tau, 0, 1, 0);
+    const double a10 = cubic->aij_term(tau, 1, 0, 0);
+    CHECK(a01 == Catch::Approx((1.0 - k01) / (1.0 - k10) * a10).epsilon(1e-12));
+    CHECK(std::abs(a01 - a10) > 1e-6 * std::abs(a10));
+}
+
+TEST_CASE("Cubic: changing Tc invalidates the cached bm at the same composition (GitHub #3192)", "[cubic][mixture]") {
+    // bm = sum_i x_i b0_ii is cached per composition (m_bm / _sync_comp).  b0_ii depends on Tc/pc, so
+    // set_Tci/set_pci must invalidate that cache -- otherwise a re-evaluation at the SAME composition
+    // returns a stale bm.  Probe psi_minus (itau=0, idelta=0) = -log(1 - (m_bm - cm)*delta*rho_r), which
+    // reads m_bm directly (small delta keeps the log argument safely positive).
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SRK", "Methane&Ethane"));
+    auto* ACB = dynamic_cast<CoolProp::AbstractCubicBackend*>(AS.get());
+    REQUIRE(ACB != nullptr);
+    auto& cubic = ACB->get_cubic();
+    const std::vector<double> x = {0.6, 0.4};
+    const double delta = 0.1;
+    const double bm_before = cubic->psi_minus(delta, x, 0, 0);  // caches m_bm for this composition
+    cubic->set_Tci(0, 250.0);                                   // b0_ii(0) = OmegaB*R*Tc/pc changes -> bm changes
+    const double bm_after = cubic->psi_minus(delta, x, 0, 0);   // SAME composition -> must reflect new bm
+    CHECK(std::abs(bm_after - bm_before) > 1e-6 * std::abs(bm_before));
+}
+
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
     // --- Cubic (SRK) ---
     // 1. Structurally invalid JSON must throw unconditionally.
