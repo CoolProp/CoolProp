@@ -384,6 +384,11 @@ double AbstractCubic::aij_term(double tau, std::size_t i, std::size_t j, std::si
     return m_aij_cache[i][j][itau];
 }
 double AbstractCubic::psi_minus(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta) {
+    // psi_minus reads m_bm; sync here so it is correct whether reached via alphar() or the batched
+    // CubicResidualHelmholtz::all() path, which (since #3221) calls psi_minus/psi_plus directly and
+    // never goes through alphar().  _sync_comp is a cheap memcmp guard, so bm is still built once per
+    // all() (the first psi call), and re-syncs are no-ops.
+    _sync_comp(x);
     if (itau > 0) return 0.0;
     double bmc = m_bm - cm_term();  // appears only in the form (b-c) in the equations
     double bracket = 1 - bmc * delta * rho_r;
@@ -561,6 +566,7 @@ double AbstractCubic::d3_PI_12_dxidxjdxk(double delta, const std::vector<double>
     }
 }
 double AbstractCubic::psi_plus(double delta, const std::vector<double>& x, std::size_t idelta) {
+    _sync_comp(x);  // psi_plus -> PI_12/A_term/c_term read m_bm; sync here too (all() calls psi_plus directly, bypassing alphar)
     switch (idelta) {
         case 0:
             return A_term(delta, x) * c_term(x) / (Delta_1 - Delta_2);

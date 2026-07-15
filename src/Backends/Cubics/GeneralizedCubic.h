@@ -207,11 +207,15 @@ class AbstractCubic
 
     /// Composition-scoped cache of bm = sum_i x_i b_i (#3192 perf).  bm is a pure function of the
     /// composition, but the residual-Helmholtz volume helpers (c_term/A_term/psi_*) recompute it
-    /// ~dozens of times per alphar-derivative evaluation.  _sync_comp(x) is called once at each
-    /// alphar-level entry (alphar / d_alphar_dxi / d2_alphar_dxidxj / d3_alphar_dxidxjdxk) and rebuilds
-    /// m_bm only when the composition actually changed (one O(N) memcmp -- a composition "generation"
-    /// check); the nested helpers then read m_bm directly (O(1)).  Those helpers are private to
-    /// GeneralizedCubic and reachable ONLY through those four entries, so m_bm is current where read.
+    /// ~dozens of times per alphar-derivative evaluation.  _sync_comp(x) rebuilds m_bm only when the
+    /// composition actually changed (one O(N) memcmp -- a composition "generation" check); the nested
+    /// helpers then read m_bm directly (O(1)).  Two families of entry points call _sync_comp:
+    ///   - the base helpers psi_minus / psi_plus sync themselves, so they are correct whether reached
+    ///     via alphar() OR via the batched CubicResidualHelmholtz::all() path, which (since #3221)
+    ///     calls psi_minus/psi_plus directly and never routes through alphar();
+    ///   - the composition-derivative entries d_alphar_dxi / d2_alphar_dxidxj / d3_alphar_dxidxjdxk
+    ///     sync at entry for their d_psi_*/d_PI_*/d_c_* helper family (reachable only through them).
+    /// Because the memcmp guard is cheap, bm is still built once per evaluation; extra syncs are no-ops.
     std::vector<double> m_comp_x_cache;
     double m_bm = std::numeric_limits<double>::quiet_NaN();
     void _sync_comp(const std::vector<double>& x) {
