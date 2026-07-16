@@ -291,6 +291,107 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
     return;
 };
 
+// Delta-only, low-order (<=4) evaluation used by the density-root residuals (pressure, dp/drho,
+// d2p/drho2, d3p/drho3), which never need tau-derivatives.  This is `all()` with every
+// tau-derivative and mixed term removed: the u-value (all six contributions, so ndteu is
+// identical), the delta-derivatives of u up to 4th order, the B_delta chain up to B_delta4, and the
+// alphar / dalphar_ddelta / d2alphar_ddelta2 / d3alphar_ddelta3 / d4alphar_ddelta4 accumulation +
+// scaling -- all expressions are term-for-term identical to all(), so the five populated
+// delta-fields are bit-for-bit equal.  The tau/mixed fields of `derivs` are left untouched and
+// must not be read.
+void ResidualHelmholtzGeneralizedExponential::all_deltaonly(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
+    if (!finished) finish();
+
+    CoolPropDbl log_tau = log(tau), log_delta = log(delta), ndteu = NAN, one_over_delta = 1 / delta;
+
+    const std::size_t N = elements.size();
+    for (std::size_t i = 0; i < N; ++i) {
+        ResidualHelmholtzGeneralizedExponentialElement& el = elements[i];
+        CoolPropDbl ni = el.n, di = el.d, ti = el.t;
+
+        CoolPropDbl u = 0;
+        CoolPropDbl du_ddelta = 0;
+        CoolPropDbl d2u_ddelta2 = 0;
+        CoolPropDbl d3u_ddelta3 = 0;
+        CoolPropDbl d4u_ddelta4 = 0;
+
+        if (delta_li_in_u) {
+            CoolPropDbl ci = el.c, l_double = el.l_double;
+            if (ValidNumber(l_double) && l_double > 0 && std::abs(ci) > DBL_EPSILON) {
+                const CoolPropDbl u_increment = (el.l_is_int) ? -ci * powInt(delta, el.l_int) : -ci * exp(l_double * log_delta);
+                const CoolPropDbl du_ddelta_increment = l_double * u_increment * one_over_delta;
+                const CoolPropDbl d2u_ddelta2_increment = (l_double - 1) * du_ddelta_increment * one_over_delta;
+                const CoolPropDbl d3u_ddelta3_increment = (l_double - 2) * d2u_ddelta2_increment * one_over_delta;
+                const CoolPropDbl d4u_ddelta4_increment = (l_double - 3) * d3u_ddelta3_increment * one_over_delta;
+                u += u_increment;
+                du_ddelta += du_ddelta_increment;
+                d2u_ddelta2 += d2u_ddelta2_increment;
+                d3u_ddelta3 += d3u_ddelta3_increment;
+                d4u_ddelta4 += d4u_ddelta4_increment;
+            }
+        }
+        if (tau_mi_in_u) {
+            CoolPropDbl omegai = el.omega, m_double = el.m_double;
+            if (std::abs(m_double) > 0) {
+                u += -omegai * exp(m_double * log_tau);  // contributes to the u value only (its delta-derivatives are zero)
+            }
+        }
+        if (eta1_in_u) {
+            CoolPropDbl eta1 = el.eta1, epsilon1 = el.epsilon1;
+            if (ValidNumber(eta1)) {
+                u += -eta1 * (delta - epsilon1);
+                du_ddelta += -eta1;
+            }
+        }
+        if (eta2_in_u) {
+            CoolPropDbl eta2 = el.eta2, epsilon2 = el.epsilon2;
+            if (ValidNumber(eta2)) {
+                u += -eta2 * POW2(delta - epsilon2);
+                du_ddelta += -2 * eta2 * (delta - epsilon2);
+                d2u_ddelta2 += -2 * eta2;
+            }
+        }
+        if (beta1_in_u) {
+            CoolPropDbl beta1 = el.beta1, gamma1 = el.gamma1;
+            if (ValidNumber(beta1)) {
+                u += -beta1 * (tau - gamma1);  // u value only
+            }
+        }
+        if (beta2_in_u) {
+            CoolPropDbl beta2 = el.beta2, gamma2 = el.gamma2;
+            if (ValidNumber(beta2)) {
+                u += -beta2 * POW2(tau - gamma2);  // u value only
+            }
+        }
+
+        ndteu = ni * exp(ti * log_tau + di * log_delta + u);
+
+        const CoolPropDbl dB_delta_ddelta = delta * d2u_ddelta2 + du_ddelta;
+        const CoolPropDbl d2B_delta_ddelta2 = delta * d3u_ddelta3 + 2 * d2u_ddelta2;
+        const CoolPropDbl d3B_delta_ddelta3 = delta * d4u_ddelta4 + 3 * d3u_ddelta3;
+
+        const CoolPropDbl B_delta = (delta * du_ddelta + di);
+        const CoolPropDbl B_delta2 = delta * dB_delta_ddelta + (B_delta - 1) * B_delta;
+        const CoolPropDbl dB_delta2_ddelta = delta * d2B_delta_ddelta2 + 2 * B_delta * dB_delta_ddelta;
+        const CoolPropDbl B_delta3 = delta * dB_delta2_ddelta + (B_delta - 2) * B_delta2;
+        const CoolPropDbl dB_delta3_ddelta = delta * delta * d3B_delta_ddelta3 + 3 * delta * B_delta * d2B_delta_ddelta2
+                                             + 3 * delta * POW2(dB_delta_ddelta) + 3 * B_delta * (B_delta - 1) * dB_delta_ddelta;
+        const CoolPropDbl B_delta4 = delta * dB_delta3_ddelta + (B_delta - 3) * B_delta3;
+
+        derivs.alphar += ndteu;
+        derivs.dalphar_ddelta += ndteu * B_delta;
+        derivs.d2alphar_ddelta2 += ndteu * B_delta2;
+        derivs.d3alphar_ddelta3 += ndteu * B_delta3;
+        derivs.d4alphar_ddelta4 += ndteu * B_delta4;
+    }
+    derivs.dalphar_ddelta *= one_over_delta;
+    derivs.d2alphar_ddelta2 *= POW2(one_over_delta);
+    derivs.d3alphar_ddelta3 *= POW3(one_over_delta);
+    derivs.d4alphar_ddelta4 *= POW4(one_over_delta);
+
+    return;
+};
+
 #if ENABLE_CATCH
 mcx::MultiComplex<double> ResidualHelmholtzGeneralizedExponential::one_mcx(const mcx::MultiComplex<double>& tau,
                                                                            const mcx::MultiComplex<double>& delta) const {

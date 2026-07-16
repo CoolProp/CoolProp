@@ -299,6 +299,14 @@ class BaseHelmholtzTerm
     };
 
     virtual void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) = 0;
+    /// Like all(), but guarantees ONLY the delta-derivatives up to 4th order are populated
+    /// (alphar, dalphar_ddelta, d2alphar_ddelta2, d3alphar_ddelta3, d4alphar_ddelta4); the
+    /// tau/mixed fields are left as-is and must NOT be read.  Used by the density-root residuals
+    /// (pressure, dp/drho, d2p/drho2, d3p/drho3) which never need tau-derivatives.  Default is the
+    /// full all() (correct); the generalized-exponential term overrides it for the delta-only speedup.
+    virtual void all_deltaonly(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
+        all(tau, delta, derivs);
+    }
 #if ENABLE_CATCH
     virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
         throw CoolProp::NotImplementedError("The mcx derivative function was not implemented");
@@ -546,6 +554,7 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     };
 
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
+    void all_deltaonly(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
     //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 
 #if ENABLE_CATCH
@@ -882,6 +891,18 @@ class ResidualHelmholtzContainer : public BaseHelmholtzContainer
             cache[i12] = derivs.d3alphar_ddelta_dtau2;
             std::memset(is_cached.data(), true, sizeof(is_cached));
         }
+        return derivs;
+    };
+    /// Delta-only (see BaseHelmholtzTerm::all_deltaonly): only the delta-derivatives (orders 0-4)
+    /// of the returned HelmholtzDerivatives are valid; the tau/mixed fields must not be read.
+    HelmholtzDerivatives all_deltaonly(const CoolPropDbl tau, const CoolPropDbl delta) {
+        HelmholtzDerivatives derivs;
+        GenExp.all_deltaonly(tau, delta, derivs);
+        NonAnalytic.all_deltaonly(tau, delta, derivs);
+        SAFT.all_deltaonly(tau, delta, derivs);
+        cubic.all_deltaonly(tau, delta, derivs);
+        XiangDeiters.all_deltaonly(tau, delta, derivs);
+        GaoB.all_deltaonly(tau, delta, derivs);
         return derivs;
     };
 };

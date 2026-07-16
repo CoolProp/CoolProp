@@ -2662,6 +2662,14 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
        public:
         HelmholtzEOSMixtureBackend* HEOS;
         CoolPropDbl T, p, delta, rhor, tau, R_u;
+        // Residual-alphar delta-derivatives at the current rho, plus the pressure there.  call()
+        // computes them once (delta-only: no tau-derivatives, no state write) and deriv()/
+        // second_deriv() reuse them -- the Halley solver always invokes those at the same rho right
+        // after call().  The previous path wrote the full state and recomputed the FULL derivative
+        // set in each accessor; p_last preserves the pressure the heavy slow-path below needs
+        // (it read this->p(), which used to be a side effect of the dropped state write).
+        HelmholtzDerivatives d;
+        CoolPropDbl p_last;
 
         dpdrho_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl p)
           : HEOS(HEOS),
@@ -2670,21 +2678,22 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             delta(_HUGE),
             rhor(HEOS->get_reducing_state().rhomolar),
             tau(HEOS->get_reducing_state().T / T),
-            R_u(HEOS->gas_constant()) {}
+            R_u(HEOS->gas_constant()),
+            p_last(_HUGE) {}
         double call(double rhomolar) override {
             delta = rhomolar / rhor;  // needed for derivative
-            HEOS->update_DmolarT_direct(rhomolar, T);
+            d = HEOS->calc_residual_deltaonly(tau, delta);
+            p_last = rhomolar * R_u * T * (1 + delta * d.dalphar_ddelta);
             // dp/drho|T
-            return R_u * T * (1 + 2 * delta * HEOS->dalphar_dDelta() + POW2(delta) * HEOS->d2alphar_dDelta2());
+            return R_u * T * (1 + 2 * delta * d.dalphar_ddelta + POW2(delta) * d.d2alphar_ddelta2);
         };
         double deriv(double rhomolar) override {
             // d2p/drho2|T
-            return R_u * T / rhor * (2 * HEOS->dalphar_dDelta() + 4 * delta * HEOS->d2alphar_dDelta2() + POW2(delta) * HEOS->calc_d3alphar_dDelta3());
+            return R_u * T / rhor * (2 * d.dalphar_ddelta + 4 * delta * d.d2alphar_ddelta2 + POW2(delta) * d.d3alphar_ddelta3);
         };
         double second_deriv(double rhomolar) override {
             // d3p/drho3|T
-            return R_u * T / POW2(rhor)
-                   * (6 * HEOS->d2alphar_dDelta2() + 6 * delta * HEOS->d3alphar_dDelta3() + POW2(delta) * HEOS->calc_d4alphar_dDelta4());
+            return R_u * T / POW2(rhor) * (6 * d.d2alphar_ddelta2 + 6 * delta * d.d3alphar_ddelta3 + POW2(delta) * d.d4alphar_ddelta4);
         };
     };
     dpdrho_resid resid(this, T, p);
@@ -2749,9 +2758,9 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             // Now we are going to do something VERY slow - decrease density until curvature is negative or pressure is negative
             double rho = rhomax;
             for (std::size_t counter = 0; counter <= 100; counter++) {
-                resid.call(rho);  // Updates the state
+                resid.call(rho);  // computes the residual's delta-only derivs + pressure at rho
                 double curvature = resid.deriv(rho);
-                if (curvature < 0 || this->p() < 0) {
+                if (curvature < 0 || resid.p_last < 0) {
                     heavy = rho;
                     break;
                 }
@@ -3583,9 +3592,21 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,
                                                                   const CoolPropDbl& tau, const CoolPropDbl& delta) {
+    // A pure-delta derivative (nTau == 0, orders 0-4) needs no tau-derivatives, so use the cheaper
+    // delta-only alphar evaluation.  all_deltaonly() is bit-for-bit identical to all() on those
+    // fields, so every such caller (the pressure / dp-drho / spinodal density residuals, and also
+    // the transport-property pressure evals) gets the same result -- just faster.  Any request that
+    // needs a tau-derivative (nTau > 0) or an out-of-range order falls through to the full path.
+    if (nTau == 0 && nDelta >= 0 && nDelta <= 4) {
+        HelmholtzDerivatives derivs = residual_helmholtz->all_deltaonly(*this, mole_fractions, tau, delta);
+        return derivs.get(0, nDelta);
+    }
     bool cache_values = false;
     HelmholtzDerivatives derivs = residual_helmholtz->all(*this, mole_fractions, tau, delta, cache_values);
     return derivs.get(nTau, nDelta);
+}
+HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_residual_deltaonly(const CoolPropDbl& tau, const CoolPropDbl& delta) {
+    return residual_helmholtz->all_deltaonly(*this, get_mole_fractions_ref(), tau, delta);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,
                                                                   const CoolPropDbl& tau, const CoolPropDbl& delta, const CoolPropDbl& Tr,
