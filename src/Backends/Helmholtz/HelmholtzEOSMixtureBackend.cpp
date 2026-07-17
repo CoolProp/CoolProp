@@ -2682,7 +2682,7 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             p_last(_HUGE) {}
         double call(double rhomolar) override {
             delta = rhomolar / rhor;  // needed for derivative
-            d = HEOS->calc_residual_deltaonly(tau, delta);
+            d = HEOS->calc_alphar_delta_derivs_nocache(tau, delta);
             p_last = rhomolar * R_u * T * (1 + delta * d.dalphar_ddelta);
             // dp/drho|T
             return R_u * T * (1 + 2 * delta * d.dalphar_ddelta + POW2(delta) * d.d2alphar_ddelta2);
@@ -3605,7 +3605,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau
     HelmholtzDerivatives derivs = residual_helmholtz->all(*this, mole_fractions, tau, delta, cache_values);
     return derivs.get(nTau, nDelta);
 }
-HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_residual_deltaonly(const CoolPropDbl& tau, const CoolPropDbl& delta) {
+HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_alphar_delta_derivs_nocache(const CoolPropDbl& tau, const CoolPropDbl& delta) {
     return residual_helmholtz->all_deltaonly(*this, get_mole_fractions_ref(), tau, delta);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,

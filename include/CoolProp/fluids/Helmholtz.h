@@ -601,6 +601,7 @@ class ResidualHelmholtzNonAnalytic : public BaseHelmholtzTerm
         }
     };
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
+    void all_deltaonly(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 #if ENABLE_CATCH
     mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif

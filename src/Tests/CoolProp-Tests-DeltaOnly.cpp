@@ -18,7 +18,7 @@
 #    include "CoolProp/DataStructures.h"
 #    include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 
-#    include <cstdint>
+#    include <array>
 #    include <cstring>
 #    include <memory>
 #    include <string>
@@ -28,11 +28,13 @@ using namespace CoolProp;
 
 namespace {
 
-// Reinterpret a double's storage as a uint64 so two values compare bit-for-bit (memcpy avoids the
-// suspicious-memory-comparison pitfall of memcmp on floating-point).
-std::uint64_t bits_of(double d) {
-    std::uint64_t u = 0;
-    std::memcpy(&u, &d, sizeof(u));
+// Reinterpret a value's full storage as a byte array so two values compare bit-for-bit.  Keyed on
+// CoolPropDbl (not double): when CoolPropDbl is long double, truncating to double would discard the
+// extended-precision bits and hide a real difference.  memcpy avoids the suspicious-memory-comparison
+// pitfall of memcmp on floating point; std::array gives a well-defined element-wise operator==.
+std::array<unsigned char, sizeof(CoolPropDbl)> bits_of(CoolPropDbl d) {
+    std::array<unsigned char, sizeof(CoolPropDbl)> u{};
+    std::memcpy(u.data(), &d, sizeof(CoolPropDbl));
     return u;
 }
 
@@ -48,7 +50,9 @@ TEST_CASE("HEOS all_deltaonly is bit-exact vs full all() on the delta-derivative
     const std::vector<MixCase> cases = {
       {"Methane", {1.0}},                                                            // generalized-exponential term only
       {"Methane&Ethane&Propane&n-Butane&Nitrogen", {0.80, 0.10, 0.05, 0.03, 0.02}},  // + GERG departure (excess term)
-      {"CarbonDioxide&Water", {0.98, 0.02}},                                         // + non-analytic term
+      {"Water", {1.0}},                                                              // non-analytic term (pure)
+      {"CarbonDioxide", {1.0}},                                                      // non-analytic term (pure)
+      {"CarbonDioxide&Water", {0.98, 0.02}},                                         // non-analytic term (mixture)
     };
     for (const auto& c : cases) {
         auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));

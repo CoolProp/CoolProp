@@ -616,7 +616,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// Residual-alphar delta-derivatives (orders 0-4) at (tau, delta) via the cheaper delta-only
     /// evaluation.  Only the alphar/dalphar_ddelta/.../d4alphar_ddelta4 fields of the result are
     /// valid; the tau/mixed fields are zero and must not be read.  Used by the density-root solvers.
-    HelmholtzDerivatives calc_residual_deltaonly(const CoolPropDbl& tau, const CoolPropDbl& delta);
+    HelmholtzDerivatives calc_alphar_delta_derivs_nocache(const CoolPropDbl& tau, const CoolPropDbl& delta);
 
     /**
     \brief Take derivatives of the ideal-gas part of the Helmholtz energy, don't use any cached values, or store any cached values
