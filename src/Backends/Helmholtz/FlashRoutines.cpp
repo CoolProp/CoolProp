@@ -251,6 +251,16 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                         for (std::size_t i = 0; i < o.z.size(); ++i)
                             spread = std::max(spread, std::abs(o.x[i] - o.y[i]));
                         if (!(spread >= 1e-6)) return false;
+                        // Material balance: the accepted (x, y, beta) must reconstruct the feed,
+                        // z_i = (1-beta)*x_i + beta*y_i, for EVERY component.  Equal fugacities and
+                        // phase-pressure consistency do not imply this on the loose recovery path,
+                        // where beta was seeded from a single widest-spread component (see the
+                        // beta seed above) -- an inconsistent split would reconstruct a different
+                        // feed, so verify it directly and cheaply before the EOS density updates.
+                        for (std::size_t i = 0; i < o.z.size(); ++i) {
+                            const CoolPropDbl z_recon = (1.0 - o.beta) * o.x[i] + o.beta * o.y[i];
+                            if (!ValidNumber(z_recon) || std::abs(z_recon - o.z[i]) > 1e-6) return false;
+                        }
                         HEOS.SatL->set_mole_fractions(o.x);
                         HEOS.SatL->update_DmolarT_direct(o.rhomolar_liq, o.T);
                         HEOS.SatV->set_mole_fractions(o.y);

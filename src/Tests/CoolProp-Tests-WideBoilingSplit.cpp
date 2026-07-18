@@ -29,6 +29,7 @@
 #    include "CoolProp/AbstractState.h"
 #    include "CoolProp/DataStructures.h"
 
+#    include <cmath>
 #    include <memory>
 #    include <string>
 #    include <vector>
@@ -76,6 +77,12 @@ void check_pt_matches_qt(const std::string& backend, const std::string& fluids, 
     CAPTURE(backend, fluids, T, Q, r.P, r.pt_Q, r.xL_light, r.yV_light);
     REQUIRE(r.qt_two_phase);   // sanity: the QT reference really is two-phase here
     CHECK(r.pt_two_phase);     // PT flash must agree; near-pure incipient phase must not be missed
+    // The PT flash must land on the SAME physical state as the QT reference, not merely on "a" split:
+    // its vapor fraction must match the imposed QT quality.  This guards the material-balance fix --
+    // a published split whose (x, y, beta) did not reconstruct the feed would report the wrong Q here.
+    if (r.pt_two_phase) {
+        CHECK(std::abs(r.pt_Q - Q) <= 0.05);
+    }
 }
 
 // False-positive guard: BELOW the water dew pressure a CO2-rich gas is genuinely single-phase.  The
