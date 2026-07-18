@@ -1906,7 +1906,9 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
     std::vector<CoolPropDbl> K(N), lnK(N);
     CoolPropDbl g0 = 0, g1 = 0;
     std::size_t imin = 0, imax = 0;  // least / most volatile components, for the near-pure fallback
-    double Kmin = HUGE_VAL, Kmax = 0;
+    // Keep the extrema in CoolPropDbl (K/lnK are CoolPropDbl): a double would truncate K[i] in a
+    // long-double build.  HUGE_VAL is the "unset" sentinel, matched by the Kmin < HUGE_VAL gate below.
+    CoolPropDbl Kmin = HUGE_VAL, Kmax = 0;
     for (std::size_t i = 0; i < N; ++i) {
         lnK[i] = Wilson_lnK_factor(HEOS, T, p, i);
         if (!ValidNumber(lnK[i])) return false;
@@ -1954,12 +1956,20 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
         normalize_vector(y);
         // Density guesses at the (heavy-rich) liquid and (light-rich) vapor compositions -- NOT the
         // feed, whose single (vapor) root at high vapor fraction would collapse the split to trivial.
-        HEOS.SatL->set_mole_fractions(x);
-        rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(T, p, HEOS.SatL->calc_rhomolar_max_bound());
-        HEOS.SatV->set_mole_fractions(y);
-        rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
-        if (ValidNumber(rhomolar_liq) && rhomolar_liq > 0 && ValidNumber(rhomolar_vap) && rhomolar_vap > 0) {
-            if (refine_nontrivial(num_steps, 1e-6)) return true;
+        // The global density solver can THROW when it cannot bracket a root for a poor ideal-Wilson
+        // seed (common for a wide-boiling mixture).  Catch it so Strategy 1 fails softly and the
+        // near-pure Strategy 2 below is still attempted -- letting the throw propagate would send the
+        // caller straight to the single-phase path, skipping the very recovery this routine exists for.
+        try {
+            HEOS.SatL->set_mole_fractions(x);
+            rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(T, p, HEOS.SatL->calc_rhomolar_max_bound());
+            HEOS.SatV->set_mole_fractions(y);
+            rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
+            if (ValidNumber(rhomolar_liq) && rhomolar_liq > 0 && ValidNumber(rhomolar_vap) && rhomolar_vap > 0) {
+                if (refine_nontrivial(num_steps, 1e-6)) return true;
+            }
+        } catch (const CoolProp::CoolPropBaseError&) {
+            // Strategy 1 density solve failed; fall through to the near-pure fallback (Strategy 2).
         }
     }
 
