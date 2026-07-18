@@ -2,15 +2,19 @@
 #define UNIFAC_H_
 
 #include <map>
+#include <set>
+#include <vector>
 
 #include "UNIFACLibrary.h"
 #include "CoolProp/detail/CachedElement.h"
 #include "CoolProp/Exceptions.h"
 
-/// Structure containing data for the pure fluid in the mixture
+/// Structure containing data for the pure fluid in the mixture.
+/// X/theta/lnGamma are dense vectors indexed by the mixture's compact group index
+/// (see UNIFACMixture::m_groups); entries for groups absent from this component are zero.
 struct ComponentData
 {
-    std::map<std::size_t, double> X, theta, lnGamma;
+    std::vector<double> X, theta, lnGamma;
     int group_count;  ///< The total number of groups in the pure fluid
 };
 
@@ -28,12 +32,29 @@ class UNIFACMixture
     double m_T = _HUGE;  ///< The temperature in K
     double T_r;          ///< Reducing temperature
 
-    std::map<std::pair<std::size_t, std::size_t>, double> Psi_;  /// < temporary storage for Psi
+    // Group-indexed quantities are stored in DENSE arrays indexed by a compact group index
+    // (0..m_G-1), built once in set_pure_data from the sorted set of unique subgroups.  This
+    // replaces the std::map<...> lookups that dominated the hot UNIFAC evaluation loops.  The
+    // compact index preserves the ascending-sgi ordering of the original std::map iteration, so
+    // summation order -- and therefore results -- are bit-for-bit unchanged.
+    std::size_t m_G = 0;                        ///< Number of unique subgroups in the mixture
+    std::vector<std::size_t> m_groups;          ///< Compact index -> subgroup index (sgi), ascending
+    std::map<std::size_t, std::size_t> m_gidx;  ///< sgi -> compact group index (cold-path lookups only)
 
-    std::map<std::size_t, double> m_Xg,  ///< Map from sgi to mole fraction of group in the mixture
-      m_thetag,                          ///< Map from sgi to theta for the group in the mixture
-      m_lnGammag,                        ///< Map from sgi to ln(Gamma) for the group in the mixture
-      m_Q;                               ///< Map from sgi to Q for the sgi
+    std::vector<double> Psi_;  ///< Dense m_G x m_G Psi table, row-major: Psi_[gi*m_G + gj]
+
+    std::vector<double> m_Xg,  ///< Compact-group-indexed mole fraction of group in the mixture
+      m_thetag,                ///< Compact-group-indexed theta for the group in the mixture
+      m_lnGammag,              ///< Compact-group-indexed ln(Gamma) for the group in the mixture
+      m_Q;                     ///< Compact-group-indexed Q for the group
+
+    std::vector<std::vector<int>> m_group_count;  ///< [component][compact group index] -> group count
+
+    /// Validity of the cached mixture group residual ln(Gamma) (m_lnGammag).  It depends on both T
+    /// and composition, so it is invalidated whenever the composition changes (set_mole_fractions)
+    /// and recomputed by set_temperature only when the temperature it was computed at differs.
+    bool m_lnGammag_valid = false;
+    double m_lnGammag_T = _HUGE;  ///< Temperature at which m_lnGammag was last computed
 
     /// A map from (i, j) indices for subgroup, subgroup indices to the interaction parameters for this pair
     std::map<std::pair<int, int>, UNIFACLibrary::InteractionParameters> interaction;
