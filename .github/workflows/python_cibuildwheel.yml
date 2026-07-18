@@ -15,6 +15,10 @@ on:
       TESTPYPI_VERSION:
         required: true 
         type: string
+      platform:
+        required: false
+        type: string
+        default: auto
 
 jobs:
 
@@ -122,6 +126,9 @@ jobs:
         # manylinux_2_28 is the real fix (bd CoolProp-rcrj).
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE CPM_SOURCE_CACHE=/root/.cache/CPM PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60 COOLPROP_NANOBIND=ON PIP_ONLY_BINARY=numpy
         CIBW_ENVIRONMENT_WINDOWS: COOLPROP_NANOBIND=ON PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60
+        # Platform and archs for Pyodide target
+        CIBW_PLATFORM: ${{ inputs.platform }}
+        CIBW_ARCHS_PYODIDE: ${{ inputs.arch }}
         # Linux wheels build inside the manylinux container, which does not
         # inherit host env vars; forward the resolved version through so the
         # version provider sees it. macOS/Windows build on the host directly.
