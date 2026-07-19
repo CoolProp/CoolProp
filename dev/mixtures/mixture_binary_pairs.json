@@ -10769,5 +10769,18 @@
     "betaV": 1.0,
     "gammaT": 1.118566,
     "gammaV": 1.000002
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7664-41-7",
+    "CAS2": "7732-18-5",
+    "F": 1.0,
+    "Name1": "AMMONIA",
+    "Name2": "Water",
+    "betaT": 0.933585,
+    "betaV": 1.044759,
+    "function": "Ammonia-Water-EOSCG2021",
+    "gammaT": 1.015826,
+    "gammaV": 1.189754
   }
 ]
