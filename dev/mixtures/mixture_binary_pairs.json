@@ -117,16 +117,17 @@
     "gammaV": 1.02971
   },
   {
-    "BibTeX": "Gernert-Thesis-2013",
+    "BibTeX": "Souza-AE-2019",
     "CAS1": "124-38-9",
     "CAS2": "630-08-0",
-    "F": 0.0,
+    "F": 1.0,
     "Name1": "CarbonDioxide",
     "Name2": "CarbonMonoxide",
-    "betaT": 0.993245,
-    "betaV": 1.030855,
-    "gammaT": 1.068392,
-    "gammaV": 1.245499
+    "betaT": 0.989782,
+    "betaV": 1.033802,
+    "function": "CarbonDioxide-CarbonMonoxide-EOSCG2021",
+    "gammaT": 1.16213,
+    "gammaV": 1.000162
   },
   {
     "BibTeX": "Gernert-Thesis-2013",
