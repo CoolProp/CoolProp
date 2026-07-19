@@ -3193,16 +3193,17 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Bell-JCED-2016",
+    "BibTeX": "Neumann-FPE-2020",
     "CAS1": "7664-41-7",
     "CAS2": "7440-37-1",
-    "F": 0.0,
+    "F": 1.0,
     "Name1": "AMMONIA",
     "Name2": "ARGON",
-    "betaT": 1.03498,
-    "betaV": 1.0,
-    "gammaT": 1.06504,
-    "gammaV": 1.0
+    "betaT": 0.8723521930061781,
+    "betaV": 1.3218316356609026,
+    "function": "Argon-Ammonia-Neumann2020",
+    "gammaT": 0.998353,
+    "gammaV": 1.041113
   },
   {
     "BibTeX": "Bell-JCED-2016",
