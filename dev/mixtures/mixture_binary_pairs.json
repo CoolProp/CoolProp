@@ -10796,5 +10796,17 @@
     "function": "Hydrogen-Ammonia-Neumann2020",
     "gammaT": 1.1266,
     "gammaV": 0.7298
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7446-09-5",
+    "CAS2": "7440-37-1",
+    "F": 0.0,
+    "Name1": "SO2",
+    "Name2": "Argon",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.14102,
+    "gammaV": 1.021291
   }
 ]
