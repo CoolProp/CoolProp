@@ -10808,5 +10808,17 @@
     "betaV": 1.0,
     "gammaT": 1.14102,
     "gammaV": 1.021291
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7446-09-5",
+    "CAS2": "630-08-0",
+    "F": 0.0,
+    "Name1": "SO2",
+    "Name2": "CarbonMonoxide",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.177903,
+    "gammaV": 1.007241
   }
 ]
