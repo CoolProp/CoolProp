@@ -10856,5 +10856,17 @@
     "betaV": 1.0,
     "gammaT": 1.914078,
     "gammaV": 1.03541
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7647-01-0",
+    "CAS2": "7440-37-1",
+    "F": 0.0,
+    "Name1": "HCL",
+    "Name2": "Argon",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.074563,
+    "gammaV": 1.001236
   }
 ]
