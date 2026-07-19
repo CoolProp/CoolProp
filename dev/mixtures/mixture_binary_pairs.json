@@ -10832,5 +10832,17 @@
     "betaV": 1.0,
     "gammaT": 1.940852,
     "gammaV": 1.035171
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7647-01-0",
+    "CAS2": "1333-74-0",
+    "F": 0.0,
+    "Name1": "HCL",
+    "Name2": "Hydrogen",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.724556,
+    "gammaV": 1.005948
   }
 ]
