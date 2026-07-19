@@ -104,17 +104,17 @@
     "gammaV": 1.08446
   },
   {
-    "BibTeX": "Gernert-Thesis-2013",
+    "BibTeX": "Loevseth-FPE-2018",
     "CAS1": "124-38-9",
     "CAS2": "7440-37-1",
     "F": 1.0,
     "Name1": "CarbonDioxide",
     "Name2": "Argon",
-    "betaT": 1.027147,
-    "betaV": 1.001378,
-    "function": "Argon-CarbonDioxide",
-    "gammaT": 0.968781,
-    "gammaV": 1.02971
+    "betaT": 0.998705,
+    "betaV": 1.003766,
+    "function": "CarbonDioxide-Argon-Loevseth2018",
+    "gammaT": 1.039675,
+    "gammaV": 1.013833
   },
   {
     "BibTeX": "Souza-AE-2019",
