@@ -10820,5 +10820,17 @@
     "betaV": 1.0,
     "gammaT": 1.177903,
     "gammaV": 1.007241
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7446-09-5",
+    "CAS2": "1333-74-0",
+    "F": 0.0,
+    "Name1": "SO2",
+    "Name2": "Hydrogen",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.940852,
+    "gammaV": 1.035171
   }
 ]
