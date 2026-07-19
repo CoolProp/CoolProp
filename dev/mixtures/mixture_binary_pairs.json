@@ -4606,16 +4606,16 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Bell-JCED-2016",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "7782-50-5",
     "CAS2": "7647-01-0",
     "F": 0.0,
     "Name1": "CHLORINE",
     "Name2": "HCL",
-    "betaT": 0.99601,
-    "betaV": 1.0,
-    "gammaT": 0.96115,
-    "gammaV": 1.0
+    "betaT": 1.007373,
+    "betaV": 0.9281,
+    "gammaT": 0.968865,
+    "gammaV": 0.917288
   },
   {
     "BibTeX": "Bell-JCED-2016",
