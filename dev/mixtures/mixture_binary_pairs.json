@@ -8038,16 +8038,16 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Bell-JCED-2016",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "7782-44-7",
     "CAS2": "7446-09-5",
     "F": 0.0,
     "Name1": "OXYGEN",
     "Name2": "SO2",
-    "betaT": 0.98436,
-    "betaV": 1.0,
-    "gammaT": 1.18081,
-    "gammaV": 1.0
+    "betaT": 1.077631495289134,
+    "betaV": 0.8201790286783799,
+    "gammaT": 1.035878,
+    "gammaV": 1.660632
   },
   {
     "BibTeX": "Bell-JCED-2016",
