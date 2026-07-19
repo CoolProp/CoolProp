@@ -140,7 +140,12 @@ void UNIFAC::UNIFACMixture::set_temperature(const double T) {
         throw CoolProp::ValueError("mole fractions must be set before calling set_temperature");
     }
 
-    // Fast path: the working tables already hold this T at the current composition.
+    // Fast path: the working tables already hold this T at the current composition.  The exact
+    // floating-point comparison is intentional: T is a cache key, not a physical tolerance -- the
+    // caller re-passes the identical T value (T_r/tau at fixed tau) across a flash, and the perturbed
+    // temperatures of the finite-difference tau-derivatives are likewise exact repeats.  A tolerance
+    // would wrongly return tables computed at a *different* temperature.  (Same rationale for the
+    // std::map<double, ...> lookup below.)
     if (m_tables_valid && m_T == T) {
         return;
     }
@@ -367,6 +372,14 @@ void UNIFAC::UNIFACMixture::set_pure_data() {
             cd.theta[g] /= summerxq;
         }
         pure_data.push_back(cd);
+    }
+
+    // If a composition was already set (e.g. set_Q_k called after set_mole_fractions), the mixture
+    // group surface fractions m_Xg/m_thetag depend on the group layout and Q that just changed, so
+    // refresh them from the stored composition.  (When called from set_components the composition is
+    // not yet set, so this is skipped.)
+    if (!mole_fractions.empty() && mole_fractions.size() == N) {
+        set_mole_fractions(std::vector<double>(mole_fractions));
     }
 }
 

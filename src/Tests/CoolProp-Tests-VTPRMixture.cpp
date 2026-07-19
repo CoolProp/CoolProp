@@ -60,11 +60,14 @@ std::string write_unifac_dataset() {
     return p;
 }
 
-// Restores VTPR config keys to their prior values on scope exit, so the test does not leak state.
+// Restores VTPR config on scope exit so the test does not leak state.  The VTPR UNIFAC library is a
+// process-global that this test overwrites with its minimal dataset; restoring only the config keys
+// would leave that dataset resident, so a later VTPR test could pick it up.  We therefore restore the
+// path but FORCE reload-on-next-use (rather than restoring the old flag), so any subsequent VTPR
+// construction reloads from its own path instead of reusing this test's library.
 struct VTPRConfigGuard
 {
     std::string old_path = get_config_string(VTPR_UNIFAC_PATH);
-    bool old_reload = get_config_bool(VTPR_ALWAYS_RELOAD_LIBRARY);
     VTPRConfigGuard() = default;
     VTPRConfigGuard(const VTPRConfigGuard&) = delete;
     VTPRConfigGuard& operator=(const VTPRConfigGuard&) = delete;
@@ -72,7 +75,7 @@ struct VTPRConfigGuard
     VTPRConfigGuard& operator=(VTPRConfigGuard&&) = delete;
     ~VTPRConfigGuard() {
         set_config_string(VTPR_UNIFAC_PATH, old_path);
-        set_config_bool(VTPR_ALWAYS_RELOAD_LIBRARY, old_reload);
+        set_config_bool(VTPR_ALWAYS_RELOAD_LIBRARY, true);
     }
 };
 
