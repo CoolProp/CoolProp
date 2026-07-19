@@ -10706,5 +10706,17 @@
     "betaV": 0.903625,
     "gammaT": 1.194659,
     "gammaV": 1.215581
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7782-50-5",
+    "CAS2": "7446-09-5",
+    "F": 0.0,
+    "Name1": "CHLORINE",
+    "Name2": "SO2",
+    "betaT": 1.015678,
+    "betaV": 1.024354,
+    "gammaT": 0.92782,
+    "gammaV": 1.016621
   }
 ]
