@@ -452,16 +452,17 @@
     "gammaV": 1.006102927
   },
   {
-    "BibTeX": "Kunz-JCED-2012",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "74-82-8",
     "CAS2": "7732-18-5",
-    "F": 0,
+    "F": 1.0,
     "Name1": "Methane",
     "Name2": "Water",
-    "betaT": 1.063333913,
-    "betaV": 1.012783169,
-    "gammaT": 0.775810513,
-    "gammaV": 1.585018334
+    "betaT": 1.263,
+    "betaV": 1.176,
+    "function": "Methane-Water-EOSCG2021",
+    "gammaT": 0.748,
+    "gammaV": 1.038
   },
   {
     "BibTeX": "Kunz-JCED-2012",
