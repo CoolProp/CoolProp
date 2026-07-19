@@ -10783,5 +10783,18 @@
     "function": "Ammonia-Water-EOSCG2021",
     "gammaT": 1.015826,
     "gammaV": 1.189754
+  },
+  {
+    "BibTeX": "Neumann-FPE-2020",
+    "CAS1": "1333-74-0",
+    "CAS2": "7664-41-7",
+    "F": 1.0,
+    "Name1": "Hydrogen",
+    "Name2": "AMMONIA",
+    "betaT": 0.98824,
+    "betaV": 1.0103,
+    "function": "Hydrogen-Ammonia-Neumann2020",
+    "gammaT": 1.1266,
+    "gammaV": 0.7298
   }
 ]
