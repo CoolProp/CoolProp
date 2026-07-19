@@ -10730,5 +10730,17 @@
     "betaV": 0.739937,
     "gammaT": 0.952705,
     "gammaV": 1.707
+  },
+  {
+    "BibTeX": "Neumann-FPE-2020",
+    "CAS1": "7727-37-9",
+    "CAS2": "7664-41-7",
+    "F": 0.0,
+    "Name1": "Nitrogen",
+    "Name2": "AMMONIA",
+    "betaT": 1.057512,
+    "betaV": 0.739937,
+    "gammaT": 0.952705,
+    "gammaV": 1.447261
   }
 ]
