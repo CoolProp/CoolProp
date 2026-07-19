@@ -2548,16 +2548,17 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Kunz-JCED-2012",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "7732-18-5",
     "CAS2": "7783-06-4",
-    "F": 0,
+    "F": 1.0,
     "Name1": "Water",
     "Name2": "HydrogenSulfide",
-    "betaT": 1.0,
-    "betaV": 1.0,
-    "gammaT": 0.940587083,
-    "gammaV": 1.014832832
+    "betaT": 1.0410962326891724,
+    "betaV": 1.0572858626078168,
+    "function": "HydrogenSulfide-Water-EOSCG2021",
+    "gammaT": 0.924026,
+    "gammaV": 1.189702
   },
   {
     "BibTeX": "Kunz-JCED-2012",
