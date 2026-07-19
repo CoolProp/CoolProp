@@ -7546,16 +7546,16 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Bell-JCED-2016",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "74-82-8",
     "CAS2": "7446-09-5",
     "F": 0.0,
     "Name1": "METHANE",
     "Name2": "SO2",
-    "betaT": 1.03694,
-    "betaV": 1.0,
-    "gammaT": 1.07082,
-    "gammaV": 1.0
+    "betaT": 1.0005683228073545,
+    "betaV": 0.7601475902561241,
+    "gammaT": 1.115714,
+    "gammaV": 1.119543
   },
   {
     "BibTeX": "Bell-JCED-2016",
