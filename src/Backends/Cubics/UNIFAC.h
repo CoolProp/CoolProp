@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "UNIFACLibrary.h"
-#include "CoolProp/detail/CachedElement.h"
 #include "CoolProp/Exceptions.h"
 
 /// Structure containing data for the pure fluid in the mixture.
@@ -24,8 +23,6 @@ class UNIFACMixture
    private:
     /// A const reference to the library of group and interaction parameters
     const UNIFACLibrary::UNIFACParameterLibrary& library;
-
-    CoolProp::CachedElement _T;  ///< The cached temperature
 
     std::size_t N = 0;  ///< Number of components
 
@@ -50,11 +47,23 @@ class UNIFACMixture
 
     std::vector<std::vector<int>> m_group_count;  ///< [component][compact group index] -> group count
 
-    /// Validity of the cached mixture group residual ln(Gamma) (m_lnGammag).  It depends on both T
-    /// and composition, so it is invalidated whenever the composition changes (set_mole_fractions)
-    /// and recomputed by set_temperature only when the temperature it was computed at differs.
-    bool m_lnGammag_valid = false;
-    double m_lnGammag_T = _HUGE;  ///< Temperature at which m_lnGammag was last computed
+    /// Temperature-keyed cache of the fully-computed group tables (dense Psi, per-component pure
+    /// reference ln(Gamma), and the mixture group residual ln(Gamma)) at the current composition.
+    /// The finite-difference tau-derivatives in ln_gamma_R evaluate at perturbed temperatures
+    /// (tau +/- dtau) that repeat across the per-component loop and across density iterations at
+    /// fixed (T, composition); keying by T (rather than a single slot) lets those repeats hit the
+    /// cache instead of rebuilding the tables.  All entries depend on the composition, so the cache
+    /// is cleared whenever the composition changes (set_mole_fractions) -- which, because the flash
+    /// Jacobian is analytical (not composition-perturbed), happens only per trial phase.
+    struct GroupTables
+    {
+        std::vector<double> Psi;           ///< dense m_G x m_G
+        std::vector<double> pure_lnGamma;  ///< N x m_G, flattened [i*m_G + g]
+        std::vector<double> lnGammag;      ///< m_G
+    };
+    std::map<double, GroupTables> m_T_cache;           ///< T -> tables (at the current composition)
+    bool m_tables_valid = false;                       ///< do the working tables hold the current (m_T, composition)?
+    static constexpr std::size_t m_T_cache_cap = 256;  ///< safety bound on distinct cached temperatures
 
     /// A map from (i, j) indices for subgroup, subgroup indices to the interaction parameters for this pair
     std::map<std::pair<int, int>, UNIFACLibrary::InteractionParameters> interaction;
@@ -72,7 +81,7 @@ class UNIFACMixture
     std::vector<ComponentData> pure_data;
 
    public:
-    UNIFACMixture(const UNIFACLibrary::UNIFACParameterLibrary& library, const double T_r) : library(library), T_r(T_r) {};
+    UNIFACMixture(const UNIFACLibrary::UNIFACParameterLibrary& library, const double T_r) : library(library), T_r(T_r){};
 
     /** \brief Set all the interaction parameters between groups */
     void set_interaction_parameters();
