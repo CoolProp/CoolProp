@@ -10718,5 +10718,17 @@
     "betaV": 1.024354,
     "gammaT": 0.92782,
     "gammaV": 1.016621
+  },
+  {
+    "BibTeX": "Neumann-FPE-2020",
+    "CAS1": "630-08-0",
+    "CAS2": "7664-41-7",
+    "F": 0.0,
+    "Name1": "CO",
+    "Name2": "AMMONIA",
+    "betaT": 1.057512,
+    "betaV": 0.739937,
+    "gammaT": 0.952705,
+    "gammaV": 1.707
   }
 ]
