@@ -62,3 +62,24 @@ Cl2-H2, HCl-Ar, O2-HCl.
 
 Validation tooling: `pxy_teqp.py` (teqp continuation VLE tracer reading these JSON
 parameters).
+
+## Ammonia-pair caveat: pure-fluid EOS mismatch
+
+The six NH3 binary pairs (CO-NH3, N2-NH3, CH4-NH3, NH3-O2, Ar-NH3, H2-NH3) and the
+NH3-H2O departure originate in Neumann et al., Fluid Phase Equilib. 511, 112496 (2020)
+(paywalled; not obtainable free) and were re-tabulated in EOS-CG-2021 (which we
+transcribe from, PDF-verified).  **EOS-CG-2021 built these NH3 models on the Gao et
+al. (2023) associating-term ammonia EOS** (J. Phys. Chem. Ref. Data 52, 013102,
+doi:10.1063/5.0128269), whereas **CoolProp's pure Ammonia EOS is Gao et al. (2020)**
+(`Gao-JPCRD-2020`, JPCRD 49, 013101).
+
+Both anchor to the same experimental critical point (Tc = 405.56 K, rhoc = 13696
+mol/m3), so the GERG-style reducing functions (beta/gamma ratios on the pure
+criticals) transfer correctly; the difference is only in the pure-NH3 residual
+Helmholtz shape, expected at the sub-percent level away from the association-dominated
+region.  Consequence:
+- NH3-mixture properties in CoolProp track EOS-CG-2021 closely but NOT exactly.
+- NH3 pairs are validated at *figure-scatter* tolerance against the EOS-CG-2021 p,x
+  diagrams (Figs 42-63), NOT to the ppm test-value precision achieved for CO2-CO /
+  CO2-Ar (which have matching pure EOS).
+- A future adoption of the Gao-2023 ammonia EOS in CoolProp would remove this caveat.
