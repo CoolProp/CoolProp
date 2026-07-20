@@ -134,4 +134,20 @@ TEST_CASE("EOS-CG-2021 SO2-HCl bubble matches Fig. 31 (290 K)", "[mixtures][EOS-
     }
 }
 
+TEST_CASE("EOS-CG-2021 Cl2-HCl bubble matches Fig. 63 (293 K)", "[mixtures][EOS-CG][CCS]") {
+    // Bubble line of Fig. 63 (x-axis is x_HCl).  Pure endpoints: Cl2 ~0.68 MPa, HCl ~4.2 MPa;
+    // mid-composition bubble read against the "This work" curve, figure-scatter tolerance.
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Chlorine&HydrogenChloride"));
+    struct B
+    {
+        double xHCl, p_MPa;
+    };
+    for (const auto& b : std::vector<B>{{0.20, 1.60}, {0.40, 2.35}, {0.60, 2.98}, {0.80, 3.57}}) {
+        CAPTURE(b.xHCl);
+        AS->set_mole_fractions({1 - b.xHCl, b.xHCl});  // component order: Cl2, HCl
+        AS->update(QT_INPUTS, 0.0, 293.15);
+        CHECK(AS->p() / 1e6 == Catch::Approx(b.p_MPa).epsilon(0.06));
+    }
+}
+
 #endif
