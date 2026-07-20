@@ -67,6 +67,7 @@ Projects Using CoolProp
 * `HydDown <https://andr1976.github.io/HydDown/>`_
 * `HYRAM+ <https://energy.sandia.gov/programs/sustainable-transportation/hydrogen/hydrogen-safety-codes-and-standards/hyram/>`_
 * `Underground Hydrogen Salt Cavern (UH2SC) Simulation Tool <https://github.com/sandialabs/uh2sc>`_
+* `Calcumber <https://calcumber.app/fluid-properties/>`_
 
 
 Main Developers
