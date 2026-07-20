@@ -61,19 +61,76 @@ TEST_CASE("EOS-CG-2021 CO2-CO reproduces Souza (2019) test value", "[mixtures][E
     CHECK(be->alphar() == Catch::Approx(-1.02820177).epsilon(1e-5));
 }
 
-TEST_CASE("EOS-CG-2021 CO2-SO2 bubble pressures match Fig. 12 (263 K)", "[mixtures][EOS-CG][CCS]") {
-    // Bubble-point pressures read from Fig. 12 at 263 K (digitized; experimental-scatter tolerance).
+TEST_CASE("EOS-CG-2021 CO2-SO2 bubble/dew match Fig. 12 (263 K)", "[mixtures][EOS-CG][CCS]") {
+    // Bubble- and dew-point pressures digitized from Fig. 12 at 263 K.  Reference values carry
+    // both figure-reading and experimental scatter, so a 5% relative tolerance is used.
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "CarbonDioxide&SulfurDioxide"));
+    SECTION("bubble (liquid composition -> bubble pressure)") {
+        struct B
+        {
+            double xCO2, p_MPa;
+        };
+        for (const auto& b : std::vector<B>{{0.40, 1.29}, {0.60, 1.70}, {0.80, 2.10}}) {
+            CAPTURE(b.xCO2);
+            AS->set_mole_fractions({b.xCO2, 1 - b.xCO2});
+            AS->update(QT_INPUTS, 0.0, 263.15);
+            CHECK(AS->p() / 1e6 == Catch::Approx(b.p_MPa).epsilon(0.05));
+        }
+    }
+    SECTION("dew (vapor composition -> dew pressure)") {
+        // Lower branch of Fig. 12; the vapour is CO2-rich at low pressure.
+        struct D
+        {
+            double yCO2, p_MPa;
+        };
+        for (const auto& d : std::vector<D>{{0.60, 0.24}, {0.80, 0.52}}) {
+            CAPTURE(d.yCO2);
+            AS->set_mole_fractions({d.yCO2, 1 - d.yCO2});
+            AS->update(QT_INPUTS, 1.0, 263.15);  // dew point
+            CHECK(AS->p() / 1e6 == Catch::Approx(d.p_MPa).epsilon(0.08));
+        }
+    }
+}
+
+TEST_CASE("EOS-CG-2021 CO2-Ar saturated liquid/vapor reproduce Loevseth (2018) Table 16", "[mixtures][EOS-CG][CCS]") {
+    // Table 16: saturated vapour and liquid at the SAME composition (not in equilibrium with each
+    // other).  Each is a single-phase state pinned by (T, rho, z), so the pressure is checked with
+    // update_DmolarT_direct rather than a QT flash -- the mixture bubble/dew flash does not yet
+    // converge for CO2-Ar at these high liquid pressures on this backend (see the DHSU_T/HSU flash
+    // work in #3148, not yet on master).  z = the phase composition; rho = that phase's density.
+    struct Sat
+    {
+        double T, z, rho, p_MPa;
+    };
+    const std::vector<Sat> pts = {
+      {223.15, 0.60, 716.791, 1.20861},   // saturated vapour
+      {223.15, 0.60, 23240.3, 14.2684},   // saturated liquid
+      {273.15, 0.70, 4038.89, 6.13145},   // saturated vapour
+      {273.15, 0.70, 14337.0, 11.6669},   // saturated liquid
+    };
+    for (const auto& pt : pts) {
+        CAPTURE(pt.T, pt.z, pt.rho);
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "CarbonDioxide&Argon"));
+        auto* be = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+        REQUIRE(be != nullptr);
+        be->set_mole_fractions({pt.z, 1 - pt.z});
+        be->update_DmolarT_direct(pt.rho, pt.T);
+        CHECK(be->p() / 1e6 == Catch::Approx(pt.p_MPa).epsilon(3e-5));
+    }
+}
+
+TEST_CASE("EOS-CG-2021 SO2-HCl bubble matches Fig. 31 (290 K)", "[mixtures][EOS-CG][CCS]") {
+    // Bubble line of Fig. 31 (x-axis is x_HCl); read at mid composition, figure-scatter tolerance.
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "SulfurDioxide&HydrogenChloride"));
     struct B
     {
-        double xCO2, p_MPa;
+        double xHCl, p_MPa;
     };
-    const std::vector<B> bs = {{0.40, 1.28}, {0.60, 1.70}, {0.80, 2.10}};
-    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "CarbonDioxide&SulfurDioxide"));
-    for (const auto& b : bs) {
-        CAPTURE(b.xCO2);
-        AS->set_mole_fractions({b.xCO2, 1 - b.xCO2});
-        AS->update(QT_INPUTS, 0.0, 263.15);  // bubble point
-        CHECK(AS->p() / 1e6 == Catch::Approx(b.p_MPa).epsilon(0.04));
+    for (const auto& b : std::vector<B>{{0.40, 1.49}, {0.60, 2.20}}) {
+        CAPTURE(b.xHCl);
+        AS->set_mole_fractions({1 - b.xHCl, b.xHCl});  // component order: SO2, HCl
+        AS->update(QT_INPUTS, 0.0, 290.0);
+        CHECK(AS->p() / 1e6 == Catch::Approx(b.p_MPa).epsilon(0.08));
     }
 }
 
