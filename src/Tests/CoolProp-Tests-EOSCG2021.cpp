@@ -150,4 +150,66 @@ TEST_CASE("EOS-CG-2021 Cl2-HCl bubble matches Fig. 63 (293 K)", "[mixtures][EOS-
     }
 }
 
+TEST_CASE("EOS-CG-2021 SO2-N2 pT-rho reproduces Koester-Vrabec Table S5", "[mixtures][EOS-CG][CCS]") {
+    // Single-phase simulated pT-rho points (EOS-CG-2021 Supplementary Material, Table S5, Koester &
+    // Vrabec).  State fixed by (T, rho, x); pressure checked with update_DmolarT_direct.  These
+    // points were part of the SO2-N2 fit and are reproduced to <1% in the gas/supercritical region
+    // sampled here (the SO2-rich dense-liquid points deviate more and are not used).
+    struct Pt
+    {
+        double x, rho_moldm3, T, p_MPa;
+    };
+    const std::vector<Pt> pts = {
+      {0.05, 0.531292, 450.0, 2.0}, {0.05, 0.598917, 400.0, 2.0}, {0.25, 0.619653, 300.0, 1.5},
+      {0.25, 0.480516, 500.0, 2.0}, {0.50, 2.173751, 380.0, 6.0}, {0.50, 0.486666, 500.0, 2.0},
+      {0.75, 0.496122, 500.0, 2.0}, {0.75, 0.561091, 450.0, 2.0},
+    };
+    for (const auto& pt : pts) {
+        CAPTURE(pt.T, pt.rho_moldm3, pt.x);
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "SulfurDioxide&Nitrogen"));
+        auto* be = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+        REQUIRE(be != nullptr);
+        be->set_mole_fractions({pt.x, 1 - pt.x});
+        be->update_DmolarT_direct(pt.rho_moldm3 * 1000.0, pt.T);  // mol/dm^3 -> mol/m^3
+        CHECK(be->p() / 1e6 == Catch::Approx(pt.p_MPa).epsilon(0.015));
+    }
+}
+
+TEST_CASE("EOS-CG-2021 SO2-HCl and Cl2-HCl reproduce Koester-Vrabec VLE (Table S5)", "[mixtures][EOS-CG][CCS]") {
+    // Simulated bubble points (EOS-CG-2021 Supplementary Material, Table S5).  At (T, x_liquid) the
+    // QT flash gives the bubble pressure and incipient-vapour composition; both are checked against
+    // the simulation, which the models represent within molecular-simulation scatter (~5% on p, a
+    // few mole-% on y).  Mid-composition points at 273.15 K are used (cleanest simulation region).
+    SECTION("SO2 + HCl") {
+        struct V
+        {
+            double x_SO2, p_MPa, y_SO2;
+        };
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "SulfurDioxide&HydrogenChloride"));
+        for (const auto& v : std::vector<V>{{0.7974, 0.55468, 0.2709}, {0.6691, 0.86487, 0.1749},
+                                            {0.4869, 1.27608, 0.0755}, {0.2952, 1.73630, 0.0350}}) {
+            CAPTURE(v.x_SO2);
+            AS->set_mole_fractions({v.x_SO2, 1 - v.x_SO2});  // component order: SO2, HCl
+            AS->update(QT_INPUTS, 0.0, 273.15);
+            CHECK(AS->p() / 1e6 == Catch::Approx(v.p_MPa).epsilon(0.05));
+            CHECK(AS->mole_fractions_vapor()[0] == Catch::Approx(v.y_SO2).margin(0.04));
+        }
+    }
+    SECTION("Cl2 + HCl") {
+        struct V
+        {
+            double x_Cl2, p_MPa, y_Cl2;
+        };
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Chlorine&HydrogenChloride"));
+        for (const auto& v : std::vector<V>{{0.8688, 0.80, 0.4454}, {0.8010, 0.99, 0.3464},
+                                            {0.7274, 1.20, 0.2816}, {0.5999, 1.44, 0.1802}}) {
+            CAPTURE(v.x_Cl2);
+            AS->set_mole_fractions({v.x_Cl2, 1 - v.x_Cl2});  // component order: Cl2, HCl
+            AS->update(QT_INPUTS, 0.0, 273.15);
+            CHECK(AS->p() / 1e6 == Catch::Approx(v.p_MPa).epsilon(0.05));
+            CHECK(AS->mole_fractions_vapor()[0] == Catch::Approx(v.y_Cl2).margin(0.04));
+        }
+    }
+}
+
 #endif
