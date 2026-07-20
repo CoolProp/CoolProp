@@ -126,9 +126,18 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             double rho_srk_liq = HEOS.solver_rho_Tp_SRK(T_saved, p_saved, iphase_liquid);
             bool gas_ok = rho_srk_gas > 0 && ValidNumber(rho_srk_gas);
             bool liq_ok = rho_srk_liq > 0 && ValidNumber(rho_srk_liq);
+            // solver_rho_Tp_SRK returns the SAME single root for both phase requests when the SRK
+            // cubic has only one real root (a single-phase state).  Only Gibbs-compare two HEOS
+            // branches when the SRK roots are genuinely DISTINCT (a real vapor+liquid pair).
+            // Otherwise the "gas" HEOS solve is seeded from a liquid-like SRK density and, on a
+            // pathological multiparameter mixture isotherm, can converge to a spurious middle root
+            // whose unphysical Gibbs energy is lower than the true liquid root's, so the Gibbs test
+            // selects it (GH #3283: Methane/Ethane/Propane subcooled liquid at 20 bar returning a
+            // bogus rho~6751 "gas" root at knife-edge temperatures 223.15/212.5/235 K).
+            bool srk_distinct = gas_ok && liq_ok && std::abs(rho_srk_gas - rho_srk_liq) > 1e-3 * std::max(rho_srk_gas, rho_srk_liq);
 
-            if (gas_ok && liq_ok) {
-                // Both SRK roots valid — solve both HEOS roots, pick lower Gibbs
+            if (srk_distinct) {
+                // Both SRK roots valid and distinct — solve both HEOS roots, pick lower Gibbs
                 double rho_gas = -1, rho_liq = -1;
                 HEOS.specify_phase(iphase_gas);
                 try {
@@ -152,9 +161,13 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                     throw ValueError("Unable to obtain either HEOS density root in PT_flash_mixtures");
                 }
             } else {
-                // Only one SRK root valid (or neither) — solve that branch,
-                // fall back to the other if HEOS throws.
-                phases primary = gas_ok ? iphase_gas : (liq_ok ? iphase_liquid : iphase_gas);
+                // A single SRK root (both requests returned the same value), or only one/none
+                // valid => a single phase.  Solve the branch whose density class matches the SRK
+                // seed (dense => liquid, else gas); this seeds solver_rho_Tp on the correct side
+                // and avoids converging to the spurious middle root.  Fall back to the other
+                // branch if HEOS throws.
+                double rho_srk = liq_ok ? rho_srk_liq : rho_srk_gas;
+                phases primary = (gas_ok || liq_ok) ? ((rho_srk > HEOS.rhomolar_reducing()) ? iphase_liquid : iphase_gas) : iphase_gas;
                 phases fallback = (primary == iphase_gas) ? iphase_liquid : iphase_gas;
                 HEOS.specify_phase(primary);
                 try {
