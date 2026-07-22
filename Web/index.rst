@@ -66,7 +66,7 @@ Projects Using CoolProp
 * `pSolver <https://psolver.jfcoronel.org/>`_ - analyze, solve and edit problems on a graphical sheet
 * `HydDown <https://andr1976.github.io/HydDown/>`_ - calculating hydrogen pressure vessel filling and discharge
 * `HYRAM+ <https://energy.sandia.gov/programs/sustainable-transportation/hydrogen/hydrogen-safety-codes-and-standards/hyram/>`_ - hydrogen and other alternative fuels risk assessment models
-* `Underground Hydrogen Salt Cavern (UH2SC) Simulation Tool <https://github.com/sandialabs/uh2sc>`_ - underground hydrogen salt cavern simulation tool
+* `UH2SC <https://github.com/sandialabs/uh2sc>`_ - underground hydrogen salt cavern simulation tool
 * `Calcumber <https://calcumber.app/fluid-properties/>`_ – notebook-style unit-aware web calculator
 
 Main Developers
