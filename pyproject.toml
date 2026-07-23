@@ -31,6 +31,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Development Status :: 5 - Production/Stable",
     "Environment :: Other Environment",
+    "Environment :: WebAssembly :: Emscripten",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -124,8 +125,8 @@ build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 skip = "*-musllinux_*"
 
 # Test command
-test-command = "python -c \"import CoolProp; print(CoolProp.__version__); CoolProp.CoolProp.PropsSI('T', 'P', 101325, 'Q', 0, 'Water')\""
-test-requires = ["numpy"]
+test-command = "pytest {project}/wrappers/Python/pytest/smoke_test.py"
+test-requires = ["numpy", "pytest"]
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
@@ -138,9 +139,18 @@ archs = ["x86_64", "aarch64"]
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
 
+[tool.cibuildwheel.pyodide]
+build-frontend = {name = "build", args = ["--exports", "whole_archive"]}
+
+[tool.cibuildwheel.pyodide.environment]
+CFLAGS = "-fwasm-exceptions -DCOOLPROP_NO_INCBIN"
+CXXFLAGS = "-fwasm-exceptions -DCOOLPROP_NO_INCBIN"
+LDFLAGS = "-fwasm-exceptions"
+
 [dependency-groups]
 dev = [
     "matplotlib>=3.7.5",
     "pandas>=2.0.3",
+    "pytest>=8.4.2",
     "scipy>=1.10.1",
 ]
