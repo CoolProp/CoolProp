@@ -368,7 +368,7 @@ packages from `PyPI <https://pypi.org/>`_ as part of the implementation of
 CoolProp 8.0.1, CoolProp WebAssembly wheels are provided on PyPI. However, for versions 
 of Pyodide that bundle CoolProp, the version of CoolProp needs to be specified as 
 ``>=8.0.1`` in the ``micropip`` call to get the latest CoolProp version since Pyodide 
-will use its bundled version first, if available (CoolProp 7.2.0 with Pyodide 314.02, 
+will use its bundled version first, if available (CoolProp 7.2.0 with Pyodide 314.0.2, 
 for example). Future versions of Pyodide will stop including CoolProp as part of the PEP 783 
 rollout making it no longer necessary to specify the CoolProp version to get the latest version.
 
