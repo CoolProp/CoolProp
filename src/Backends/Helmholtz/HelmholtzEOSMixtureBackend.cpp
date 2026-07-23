@@ -3699,7 +3699,30 @@ HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_all_alpha0_derivs_nocache(
         // Cache the reducing temperature in some terms that need it (GERG-2004 models)
         E.alpha0.set_Tred(Tc);
         double taustar = Tc / Tr * tau, deltastar = rhor / rhomolarc * delta;
-        return E.alpha0.all(taustar, deltastar, false);
+        HelmholtzDerivatives a = E.alpha0.all(taustar, deltastar, false);
+        // all() returns derivatives w.r.t. taustar=Tc/T and deltastar=rho/rhoc, but the caller
+        // needs them w.r.t. tau=Tr/T and delta=rho/rhor.  Apply the same chain-rule scaling as
+        // calc_alpha0_deriv_nocache (val *= pow(rhor/rhomolarc, nDelta); val /= pow(Tr/Tc, nTau))
+        // and the mixture branch below.  For multiparameter EOS Tc/Tr == 1 and rhoc/rhor == 1, so
+        // these are no-ops; only cubics (where Tr != Tc) were affected -- see GH #3287, where the
+        // missing tau factor made cubic Smolar/Smass values too steep in T.  The value (alphar)
+        // carries zero derivative order, so it is intentionally left unscaled.
+        const double fT = Tc / Tr, fD = rhor / rhomolarc;
+        a.dalphar_dtau *= fT;
+        a.dalphar_ddelta *= fD;
+        a.d2alphar_dtau2 *= fT * fT;
+        a.d2alphar_ddelta_dtau *= fT * fD;
+        a.d2alphar_ddelta2 *= fD * fD;
+        a.d3alphar_dtau3 *= fT * fT * fT;
+        a.d3alphar_ddelta_dtau2 *= fT * fT * fD;
+        a.d3alphar_ddelta2_dtau *= fT * fD * fD;
+        a.d3alphar_ddelta3 *= fD * fD * fD;
+        a.d4alphar_dtau4 *= fT * fT * fT * fT;
+        a.d4alphar_ddelta_dtau3 *= fT * fT * fT * fD;
+        a.d4alphar_ddelta2_dtau2 *= fT * fT * fD * fD;
+        a.d4alphar_ddelta3_dtau *= fT * fD * fD * fD;
+        a.d4alphar_ddelta4 *= fD * fD * fD * fD;
+        return a;
     } else {
         HelmholtzDerivatives ders;
 
