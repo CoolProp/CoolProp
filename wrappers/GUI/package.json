@@ -41,6 +41,7 @@
     "vitest": "^4.1.5"
   },
   "overrides": {
-    "protocol-buffers-schema": "3.6.1"
+    "protocol-buffers-schema": "3.6.1",
+    "brace-expansion@1": "^1.1.16"
   }
 }
