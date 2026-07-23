@@ -57,18 +57,17 @@ Help
 Projects Using CoolProp
 -----------------------------------
 
-* `Thermocycle <https://github.com/thermocycle/thermocycle-library>`_
-* `PDSim <https://pdsim.sourceforge.net/>`_
-* `ACHP <https://achp.sourceforge.net/>`_
-* `DWSim <https://dwsim.org>`_
-* `fProperties <https://fproperties.jfcoronel.org/>`_
-* `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_
-* `pSolver <https://psolver.jfcoronel.org/>`_
-* `HydDown <https://andr1976.github.io/HydDown/>`_
-* `HYRAM+ <https://energy.sandia.gov/programs/sustainable-transportation/hydrogen/hydrogen-safety-codes-and-standards/hyram/>`_
-* `Underground Hydrogen Salt Cavern (UH2SC) Simulation Tool <https://github.com/sandialabs/uh2sc>`_
-* `Calcumber <https://calcumber.app/fluid-properties/>`_
-
+* `Thermocycle <https://github.com/thermocycle/thermocycle-library>`_ - open-source library for dynamic modelling of thermal systems
+* `PDSim <https://pdsim.sourceforge.net/>`_ - quasi-steady simulation of positive displacement compressors and expanders
+* `ACHP <https://achp.sourceforge.net/>`_ - modelling direct expansion and secondary loops for residential-scale systems
+* `DWSim <https://dwsim.org>`_ - chemical process simulator
+* `fProperties <https://fproperties.jfcoronel.org/>`_ - fluid properties calculator
+* `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_ -  web calculator using mathjs
+* `pSolver <https://psolver.jfcoronel.org/>`_ - analyze, solve and edit problems on a graphical sheet
+* `HydDown <https://andr1976.github.io/HydDown/>`_ - calculating hydrogen pressure vessel filling and discharge
+* `HYRAM+ <https://energy.sandia.gov/programs/sustainable-transportation/hydrogen/hydrogen-safety-codes-and-standards/hyram/>`_ - hydrogen and other alternative fuels risk assessment models
+* `UH2SC <https://github.com/sandialabs/uh2sc>`_ - underground hydrogen salt cavern simulation tool
+* `Calcumber <https://calcumber.app/fluid-properties/>`_ – notebook-style unit-aware web calculator
 
 Main Developers
 ---------------
