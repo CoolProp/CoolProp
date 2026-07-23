@@ -3717,6 +3717,11 @@ HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_all_alpha0_derivs_nocache(
         a.d3alphar_ddelta_dtau2 *= fT * fT * fD;
         a.d3alphar_ddelta2_dtau *= fT * fD * fD;
         a.d3alphar_ddelta3 *= fD * fD * fD;
+        a.d4alphar_dtau4 *= fT * fT * fT * fT;
+        a.d4alphar_ddelta_dtau3 *= fT * fT * fT * fD;
+        a.d4alphar_ddelta2_dtau2 *= fT * fT * fD * fD;
+        a.d4alphar_ddelta3_dtau *= fT * fD * fD * fD;
+        a.d4alphar_ddelta4 *= fD * fD * fD * fD;
         return a;
     } else {
         HelmholtzDerivatives ders;
