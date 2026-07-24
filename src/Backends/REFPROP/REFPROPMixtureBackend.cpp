@@ -2518,6 +2518,21 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, par
         CoolPropDbl dxdp_h = (Q() * dhV_dp + (1 - Q()) * dhL_dp) / (SatL->hmass() - SatV->hmass());
         CoolPropDbl dvdp_h = dvL_dp + dxdp_h * (1 / SatV->rhomass() - 1 / SatL->rhomass()) + Q() * (dvV_dp - dvL_dp);
         return -POW2(rhomass()) * dvdp_h;
+    }
+    // Vapor-quality derivatives in the two-phase region (Thorade & Saadat, 2013).
+    // Mirrors HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv; see there for the derivation.
+    else if (Of == iQ && Wrt == iHmolar && Constant == iP) {
+        return 1 / (SatV->hmolar() - SatL->hmolar());
+    } else if (Of == iQmass && Wrt == iHmass && Constant == iP) {
+        return 1 / (SatV->hmass() - SatL->hmass());
+    } else if (Of == iQ && Wrt == iP && Constant == iHmolar) {
+        CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmolar, iP);
+        CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmolar, iP);
+        return -((1 - Q()) * dhL_dp + Q() * dhV_dp) / (SatV->hmolar() - SatL->hmolar());
+    } else if (Of == iQmass && Wrt == iP && Constant == iHmass) {
+        CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmass, iP);
+        CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmass, iP);
+        return -((1 - Qmass()) * dhL_dp + Qmass() * dhV_dp) / (SatV->hmass() - SatL->hmass());
     } else {
         throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
     }

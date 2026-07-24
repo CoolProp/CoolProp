@@ -349,7 +349,24 @@ The two-phase derivatives of Thorade :cite:`Thorade-EES-2013` are implemented in
     
     # The d(Dmass)/d(Hmass)|P two-phase derivative using splines
     In [0]: HEOS.first_two_phase_deriv_splined(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP, 0.3)
-    
+
+    # The d(Q)/d(Hmolar)|P two-phase derivative of vapor quality
+    In [0]: HEOS.first_two_phase_deriv(CoolProp.iQ, CoolProp.iHmolar, CoolProp.iP)
+
+    # The d(Q)/d(P)|Hmolar two-phase derivative of vapor quality
+    In [0]: HEOS.first_two_phase_deriv(CoolProp.iQ, CoolProp.iP, CoolProp.iHmolar)
+
+The vapor-quality derivatives ``d(Q)/d(Hmolar)|P`` and ``d(Q)/d(P)|Hmolar`` (and their mass-based
+counterparts ``iQmass`` with ``iHmass``) follow directly from the lever rule
+:math:`Q = (h - h')/(h'' - h')`, giving :math:`(\partial Q/\partial h)_p = 1/(h'' - h')` and
+:math:`(\partial Q/\partial p)_h = -[(1-Q)\,\mathrm{d}h'/\mathrm{d}p + Q\,\mathrm{d}h''/\mathrm{d}p]/(h'' - h')`,
+where :math:`h'` and :math:`h''` are the saturated-liquid and saturated-vapor enthalpies.  Pair the
+molar quality ``iQ`` with molar enthalpy ``iHmolar`` and the mass quality ``iQmass`` with mass
+enthalpy ``iHmass``; for pure and pseudo-pure fluids the two qualities are numerically equal.  As with
+the other two-phase derivatives, these are only defined inside the two-phase dome and are available
+through the low-level :cpapi:`CoolProp::AbstractState::first_two_phase_deriv` interface, not through
+the high-level ``PropsSI`` derivative strings.
+
 An example of plotting these derivatives is here:
 
 .. plot::
