@@ -830,8 +830,9 @@ class LogPHTable : public SinglePhaseGriddedTableData
         deserialized.convert(temp);
         temp.unpack();
         if (Nx != temp.Nx || Ny != temp.Ny) {
-            // Cached file was built at a different grid resolution than the current
-            // TABULAR_NX/TABULAR_NY config requests; force a rebuild via check_tables().
+            // Cached file was built at a different grid resolution than requested
+            // (TABULAR_NX/TABULAR_NY config or per-instance factory-string options);
+            // force a rebuild via check_tables().
             throw UnableToLoadError(format("Cached LogPH grid [%dx%d] does not match requested [%dx%d]; will rebuild", temp.Nx, temp.Ny, Nx, Ny));
         } else if (revision > temp.revision) {
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
@@ -877,8 +878,9 @@ class LogPTTable : public SinglePhaseGriddedTableData
         deserialized.convert(temp);
         temp.unpack();
         if (Nx != temp.Nx || Ny != temp.Ny) {
-            // Cached file was built at a different grid resolution than the current
-            // TABULAR_NX/TABULAR_NY config requests; force a rebuild via check_tables().
+            // Cached file was built at a different grid resolution than requested
+            // (TABULAR_NX/TABULAR_NY config or per-instance factory-string options);
+            // force a rebuild via check_tables().
             throw UnableToLoadError(format("Cached LogPT grid [%dx%d] does not match requested [%dx%d]; will rebuild", temp.Nx, temp.Ny, Nx, Ny));
         } else if (revision > temp.revision) {
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
@@ -989,6 +991,17 @@ class TabularDataSet
     std::vector<std::vector<CellCoeffs>> coeffs_ph, coeffs_pT;
 
     TabularDataSet() : tables_loaded(false) {}
+    /// Set the grid resolution of both single-phase tables.  Must be called
+    /// before load_tables()/build_tables(); used to apply a per-instance
+    /// resolution from factory-string options in place of the
+    /// TABULAR_NX/TABULAR_NY configuration globals the tables were
+    /// default-constructed from.
+    void set_grid(std::size_t Nx, std::size_t Ny) {
+        single_phase_logph.Nx = Nx;
+        single_phase_logph.Ny = Ny;
+        single_phase_logpT.Nx = Nx;
+        single_phase_logpT.Ny = Ny;
+    }
     /// Write the tables to files on the computer
     void write_tables(const std::string& path_to_tables);
     /// Load the tables from file
@@ -1021,8 +1034,10 @@ class TabularDataLibrary
         }
         return table_directory + AS->backend_name() + "(" + strjoin(components, "&") + ")";
     }
-    /// Return a pointer to the set of tabular datasets and whether tables were already loaded
-    std::pair<TabularDataSet*, bool> get_set_of_tables(shared_ptr<AbstractState>& AS);
+    /// Return a pointer to the set of tabular datasets and whether tables were already loaded.
+    /// Nx/Ny are the requested grid resolution; the in-memory cache is keyed by
+    /// (path, Nx, Ny) so instances at different resolutions coexist in one process.
+    std::pair<TabularDataSet*, bool> get_set_of_tables(shared_ptr<AbstractState>& AS, std::size_t Nx, std::size_t Ny);
 };
 
 /**
@@ -1052,10 +1067,24 @@ class TabularBackend : public AbstractState
     std::vector<std::vector<double>> const* d2zdxdy;
     std::vector<std::vector<double>> const* d2zdy2;
     std::vector<CoolPropDbl> mole_fractions;
+    /// Canonical form of the factory-string options this instance was built
+    /// with ("{}" when none were supplied); returned by build_options_json()
+    std::string options_canonical;
+    /// Per-instance grid resolution from factory-string options; 0 means
+    /// "not requested" and the TABULAR_NX/TABULAR_NY configuration globals apply
+    std::size_t Nx_requested, Ny_requested;
+
+    /// Validate + canonicalise the options blob and extract the per-instance
+    /// grid resolution; called from the constructor only (options are
+    /// immutable per instance).  Defined in TabularBackends.cpp
+    void parse_options(const std::string& options_json);
 
    public:
     shared_ptr<CoolProp::AbstractState> AS;
-    TabularBackend(shared_ptr<CoolProp::AbstractState> AS)
+    TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(std::move(AS), "") {}
+    /// Constructor accepting a factory-string options JSON blob; validated
+    /// against kTabularOptionsSchemaJson (unknown keys throw at construction)
+    TabularBackend(shared_ptr<CoolProp::AbstractState> AS, const std::string& options_json)
       : imposed_phase_index(iphase_not_imposed),
         tables_loaded(false),
         using_single_phase_table(false),
@@ -1071,8 +1100,34 @@ class TabularBackend : public AbstractState
         d2zdx2(nullptr),
         d2zdxdy(nullptr),
         d2zdy2(nullptr),
+        Nx_requested(0),
+        Ny_requested(0),
         AS(std::move(AS)),
-        dataset(nullptr) {};
+        dataset(nullptr) {
+        parse_options(options_json);
+    };
+
+    /// Grid resolution in effect for this instance: per-instance request if
+    /// options supplied one, otherwise the configuration globals (falling
+    /// back to the documented default of 200 for nonsense values <= 1, the
+    /// same guard the table constructors have always applied)
+    std::size_t effective_Nx() const {
+        if (Nx_requested > 0) {
+            return Nx_requested;
+        }
+        const int cfg = get_config_int(TABULAR_NX);
+        return (cfg > 1) ? static_cast<std::size_t>(cfg) : 200;
+    }
+    std::size_t effective_Ny() const {
+        if (Ny_requested > 0) {
+            return Ny_requested;
+        }
+        const int cfg = get_config_int(TABULAR_NY);
+        return (cfg > 1) ? static_cast<std::size_t>(cfg) : 200;
+    }
+    std::string build_options_json() const override {
+        return options_canonical;
+    }
 
     // None of the tabular methods are available from the high-level interface
     bool available_in_high_level() override {

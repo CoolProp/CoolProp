@@ -53,7 +53,14 @@ The default grid is :math:`200 \times 200` cells.  Cells span the full state ran
     CP.set_config_int(CP.TABULAR_NX, 400)
     CP.set_config_int(CP.TABULAR_NY, 400)
 
-Memory and build time scale as :math:`\mathcal{O}(N_x N_y)`.  Tables are cached per fluid in the tables directory and auto-rebuild when the resolution changes; the cost is paid once per (fluid, resolution) pair.
+Memory and build time scale as :math:`\mathcal{O}(N_x N_y)`.  Tables are cached per fluid in the tables directory and auto-rebuild when the resolution changes.  The on-disk cache keeps only the most recently written resolution per fluid, so alternating resolutions across program runs forces a rebuild each time; within one process, each distinct (fluid, resolution) pair keeps its own in-memory dataset for the lifetime of the process.
+
+The configuration variables are process-global: they affect every tabular instance constructed after they are set.  To set the resolution for a single instance, append the factory-string options suffix ``?{...}`` to the backend name instead (both axes must be given together; unknown keys raise an error at construction):
+
+.. code-block:: python
+
+    import CoolProp.CoolProp as CP
+    AS = CP.AbstractState('BICUBIC&HEOS?{"grid":{"Nx":400,"Ny":400}}', "Water")
 
 TTSE Interpolation
 ------------------
@@ -237,8 +244,11 @@ the first ``update``.
 Example for a 50 % / 50 % mass-fraction mixture of Isopentane and n-Butane.
 Mixture tables are much more expensive to construct than pure-fluid tables
 (every grid cell requires a mixture flash calculation), so a coarse grid is
-used here to keep the example fast; drop the ``TABULAR_NX``/``TABULAR_NY``
-lines to build at the default resolution.  Beware that on a coarse grid,
+used here to keep the example fast.  The grid resolution is set per instance
+with the factory-string options suffix ``?{...}`` (drop the suffix to build
+at the default resolution); unlike the ``TABULAR_NX``/``TABULAR_NY``
+configuration globals, the options apply to this instance only and other
+instances in the same process are unaffected.  Beware that on a coarse grid,
 accuracy degrades severely for states close to the phase boundary, because
 the interpolation cells there straddle the two-phase region:
 
@@ -246,19 +256,13 @@ the interpolation cells there straddle the two-phase region:
 
     In [0]: import CoolProp.CoolProp as CP
 
-    In [1]: nx, ny = CP.get_config_int(CP.TABULAR_NX), CP.get_config_int(CP.TABULAR_NY)
+    In [1]: AS = CP.AbstractState('BICUBIC&HEOS?{"grid":{"Nx":40,"Ny":40}}', "Isopentane&n-Butane")
 
-    In [2]: CP.set_config_int(CP.TABULAR_NX, 40); CP.set_config_int(CP.TABULAR_NY, 40)
+    In [2]: AS.set_mass_fractions([0.5, 0.5])  # builds / loads tables
 
-    In [3]: AS = CP.AbstractState("BICUBIC&HEOS", "Isopentane&n-Butane")
+    In [3]: AS.update(CP.PT_INPUTS, 2e6, 300.0)
 
-    In [4]: AS.set_mass_fractions([0.5, 0.5])  # builds / loads tables
-
-    In [5]: AS.update(CP.PT_INPUTS, 2e6, 300.0)
-
-    In [6]: print(AS.rhomass(), AS.hmass())
-
-    In [7]: CP.set_config_int(CP.TABULAR_NX, nx); CP.set_config_int(CP.TABULAR_NY, ny)  # restore previous values
+    In [4]: print(AS.rhomass(), AS.hmass())
 
 Table folder naming
 ~~~~~~~~~~~~~~~~~~~
