@@ -1,5 +1,7 @@
 #include "UNIFAC.h"
 
+#include <algorithm>
+
 void UNIFAC::UNIFACMixture::set_interaction_parameters() {
     for (const auto& isgi : unique_groups) {
         for (const auto& jsgi : unique_groups) {
@@ -61,40 +63,43 @@ void UNIFAC::UNIFACMixture::set_mole_fractions(const std::vector<double>& z) {
     if (this->N != z.size()) {
         throw CoolProp::ValueError("Size of molar fraction do not match number of components.");
     }
+    // Composition changed -> the temperature-keyed group-table cache (whose mixture group residual
+    // depends on the group surface fractions m_thetag computed below) is now stale.
+    m_T_cache.clear();
+    m_tables_valid = false;
 
-    std::map<std::size_t, double>&Xg = m_Xg, &thetag = m_thetag;
-    Xg.clear();
-    thetag.clear();
+    m_Xg.assign(m_G, 0.0);
+    m_thetag.assign(m_G, 0.0);
 
     // Iterate over the fluids
     double X_summer = 0;
     for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
         X_summer += this->mole_fractions[i] * pure_data[i].group_count;
     }
-    /// Calculations for each group in the total mixture
-    for (const auto& sgi : unique_groups) {
+    /// Calculations for each group in the total mixture (ascending compact-group order == ascending sgi)
+    for (std::size_t g = 0; g < m_G; ++g) {
         double X = 0;
         // Iterate over the fluids
         for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
-            X += this->mole_fractions[i] * group_count(i, sgi);
+            X += this->mole_fractions[i] * m_group_count[i][g];
         }
-        Xg.emplace(sgi, X);
+        m_Xg[g] = X;
     }
     /// Now come back through and divide by the sum(z_i*count) for this fluid
-    for (auto& [key, val] : Xg) {
-        val /= X_summer;
-        //printf("X_{%d}: %g\n", key, val);
+    for (std::size_t g = 0; g < m_G; ++g) {
+        m_Xg[g] /= X_summer;
+        //printf("X_{%d}: %g\n", m_groups[g], m_Xg[g]);
     }
     double theta_summer = 0;
-    for (const auto& sgi : unique_groups) {
-        double cont = Xg.find(sgi)->second * m_Q.find(sgi)->second;
+    for (std::size_t g = 0; g < m_G; ++g) {
+        double cont = m_Xg[g] * m_Q[g];
         theta_summer += cont;
-        thetag.emplace(sgi, cont);
+        m_thetag[g] = cont;
     }
     /// Now come back through and divide by the sum(X*Q) for this fluid
-    for (auto& [key, val] : thetag) {
-        val /= theta_summer;
-        //printf("theta_{%d}: %g\n", key, val);
+    for (std::size_t g = 0; g < m_G; ++g) {
+        m_thetag[g] /= theta_summer;
+        //printf("theta_{%d}: %g\n", m_groups[g], m_thetag[g]);
     }
 }
 
@@ -119,47 +124,68 @@ double UNIFAC::UNIFACMixture::Psi(std::size_t sgi1, std::size_t sgi2) const {
 }
 
 std::size_t UNIFAC::UNIFACMixture::group_count(std::size_t i, std::size_t sgi) const {
-    const UNIFACLibrary::Component& c = components[i];
-    for (const auto& cg : c.groups) {
-        if (cg.group.sgi == sgi) {
-            return cg.count;
-        }
+    auto it = m_gidx.find(sgi);
+    if (it == m_gidx.end()) {
+        return 0;
     }
-    return 0;
+    return static_cast<std::size_t>(m_group_count[i][it->second]);
 }
 
 double UNIFAC::UNIFACMixture::theta_pure(std::size_t i, std::size_t sgi) const {
-    return pure_data[i].theta.find(sgi)->second;
+    return pure_data[i].theta[m_gidx.find(sgi)->second];
 }
 
 void UNIFAC::UNIFACMixture::set_temperature(const double T) {
-    //    // Check whether you are using exactly the same temperature as last time
-    //    if (static_cast<bool>(_T) && std::abs(static_cast<double>(_T) - T) < 1e-15 {
-    //        //
-    //        return;
-    //    }
-    this->m_T = T;
-
     if (this->mole_fractions.empty()) {
         throw CoolProp::ValueError("mole fractions must be set before calling set_temperature");
     }
 
-    // Compute Psi once for the different calls
-    for (const auto& k : unique_groups) {
-        for (const auto& m : unique_groups) {
-            Psi_[std::pair<std::size_t, std::size_t>(k, m)] = Psi(k, m);
+    // Fast path: the working tables already hold this T at the current composition.  The exact
+    // floating-point comparison is intentional: T is a cache key, not a physical tolerance -- the
+    // caller re-passes the identical T value (T_r/tau at fixed tau) across a flash, and the perturbed
+    // temperatures of the finite-difference tau-derivatives are likewise exact repeats.  A tolerance
+    // would wrongly return tables computed at a *different* temperature.  (Same rationale for the
+    // std::map<double, ...> lookup below.)
+    if (m_tables_valid && m_T == T) {
+        return;
+    }
+    m_T = T;
+
+    // Cache hit: restore the fully-computed tables for this T (at the current composition).  The
+    // finite-difference tau-derivatives in ln_gamma_R evaluate at perturbed temperatures that repeat
+    // across the per-component loop and across density iterations, so this restore (a few small
+    // vector copies) replaces a full Psi + pure + group-residual rebuild.
+    auto it = m_T_cache.find(T);
+    if (it != m_T_cache.end()) {
+        const GroupTables& t = it->second;
+        Psi_ = t.Psi;
+        for (std::size_t i = 0; i < N; ++i) {
+            std::copy(t.pure_lnGamma.begin() + i * m_G, t.pure_lnGamma.begin() + (i + 1) * m_G, pure_data[i].lnGamma.begin());
+        }
+        m_lnGammag = t.lnGammag;
+        m_tables_valid = true;
+        return;
+    }
+
+    // Miss: compute the dense Psi table (row-major, [gk*m_G + gm]), the pure-component reference
+    // ln(Gamma), and the mixture group residual ln(Gamma), then store them keyed by T.
+    Psi_.assign(m_G * m_G, 0.0);
+    for (std::size_t gk = 0; gk < m_G; ++gk) {
+        for (std::size_t gm = 0; gm < m_G; ++gm) {
+            Psi_[gk * m_G + gm] = Psi(m_groups[gk], m_groups[gm]);
         }
     }
 
     for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
         const UNIFACLibrary::Component& c = components[i];
+        const std::vector<double>& theta_i = pure_data[i].theta;
         for (std::size_t k = 0; k < c.groups.size(); ++k) {
             double Q = c.groups[k].group.Q_k;
-            int sgik = c.groups[k].group.sgi;
+            std::size_t gk = m_gidx[c.groups[k].group.sgi];
             double sum1 = 0;
             for (const auto& group : c.groups) {
-                int sgim = group.group.sgi;
-                sum1 += theta_pure(i, sgim) * Psi_.find(std::pair<std::size_t, std::size_t>(sgim, sgik))->second;
+                std::size_t gm = m_gidx[group.group.sgi];
+                sum1 += theta_i[gm] * Psi_[gm * m_G + gk];
             }
             // sum1 > 0: c.groups is the set of groups present in component i, theta_pure
             // returns the (positive) surface-area fraction of each, and Psi = exp(-a/T) > 0.
@@ -167,48 +193,66 @@ void UNIFAC::UNIFACMixture::set_temperature(const double T) {
             // cppcheck-suppress invalidFunctionArg
             double s = 1 - log(sum1);
             for (std::size_t m = 0; m < c.groups.size(); ++m) {
-                int sgim = c.groups[m].group.sgi;
+                std::size_t gm = m_gidx[c.groups[m].group.sgi];
                 double sum2 = 0;
                 for (const auto& group : c.groups) {
-                    int sgin = group.group.sgi;
-                    sum2 += theta_pure(i, sgin) * Psi_.find(std::pair<std::size_t, std::size_t>(sgin, sgim))->second;
+                    std::size_t gn = m_gidx[group.group.sgi];
+                    sum2 += theta_i[gn] * Psi_[gn * m_G + gm];
                 }
-                s -= theta_pure(i, sgim) * Psi_.find(std::pair<std::size_t, std::size_t>(sgik, sgim))->second / sum2;
+                s -= theta_i[gm] * Psi_[gk * m_G + gm] / sum2;
             }
-            pure_data[i].lnGamma[sgik] = Q * s;
-            //printf("ln(Gamma)^(%d)_{%d}: %g\n", static_cast<int>(i + 1), sgik, Q*s);
+            pure_data[i].lnGamma[gk] = Q * s;
+            //printf("ln(Gamma)^(%d)_{%d}: %g\n", static_cast<int>(i + 1), m_groups[gk], Q*s);
         }
     }
 
-    std::map<std::size_t, double>&thetag = m_thetag, &lnGammag = m_lnGammag;
-    lnGammag.clear();
-
-    for (const auto& ksgi : unique_groups) {
+    m_lnGammag.assign(m_G, 0.0);
+    for (std::size_t gk = 0; gk < m_G; ++gk) {
         double sum1 = 0;
-        for (const auto& msgi : unique_groups) {
-            sum1 += thetag.find(msgi)->second * Psi_.find(std::pair<std::size_t, std::size_t>(msgi, ksgi))->second;
+        for (std::size_t gm = 0; gm < m_G; ++gm) {
+            sum1 += m_thetag[gm] * Psi_[gm * m_G + gk];
         }
+        // sum1 > 0: m_thetag are the (positive) group surface fractions and Psi = exp(-a/T) > 0,
+        // so the sum over the (non-empty) group set is strictly positive.  cppcheck cannot prove
+        // this symbolically.
+        // cppcheck-suppress invalidFunctionArg
         double s = 1 - log(sum1);
-        for (const auto& msgi : unique_groups) {
+        for (std::size_t gm = 0; gm < m_G; ++gm) {
             double sum3 = 0;
-            for (const auto& nsgi : unique_groups) {
-                sum3 += thetag.find(nsgi)->second * Psi_.find(std::pair<std::size_t, std::size_t>(nsgi, msgi))->second;
+            for (std::size_t gn = 0; gn < m_G; ++gn) {
+                sum3 += m_thetag[gn] * Psi_[gn * m_G + gm];
             }
-            s -= thetag.find(msgi)->second * Psi_.find(std::pair<std::size_t, std::size_t>(ksgi, msgi))->second / sum3;
+            s -= m_thetag[gm] * Psi_[gk * m_G + gm] / sum3;
         }
-        lnGammag.emplace(ksgi, m_Q.find(ksgi)->second * s);
-        //printf("log(Gamma)_{%d}: %g\n", itk->sgi, itk->Q_k*s);
+        m_lnGammag[gk] = m_Q[gk] * s;
+        //printf("log(Gamma)_{%d}: %g\n", m_groups[gk], m_Q[gk]*s);
     }
-    _T = m_T;
+    m_tables_valid = true;
+
+    // Store a snapshot for this T (at the current composition).  The cap bounds memory if a caller
+    // sweeps many distinct temperatures at fixed composition (e.g. a temperature-search flash).
+    if (m_T_cache.size() >= m_T_cache_cap) {
+        m_T_cache.clear();
+    }
+    GroupTables t;
+    t.Psi = Psi_;
+    t.pure_lnGamma.resize(N * m_G);
+    for (std::size_t i = 0; i < N; ++i) {
+        std::copy(pure_data[i].lnGamma.begin(), pure_data[i].lnGamma.end(), t.pure_lnGamma.begin() + i * m_G);
+    }
+    t.lnGammag = m_lnGammag;
+    m_T_cache.emplace(T, std::move(t));
 }
 double UNIFAC::UNIFACMixture::ln_gamma_R(const double tau, std::size_t i, std::size_t itau) {
     if (itau == 0) {
         set_temperature(T_r / tau);
         double summer = 0;
-        for (const auto& sgi : unique_groups) {
-            std::size_t count = group_count(i, sgi);
+        const std::vector<int>& gc_i = m_group_count[i];
+        const std::vector<double>& lnGamma_i = pure_data[i].lnGamma;
+        for (std::size_t g = 0; g < m_G; ++g) {
+            int count = gc_i[g];
             if (count > 0) {
-                summer += count * (m_lnGammag.find(sgi)->second - pure_data[i].lnGamma.find(sgi)->second);
+                summer += count * (m_lnGammag[g] - lnGamma_i[g]);
             }
         }
         //printf("log(gamma)_{%d}: %g\n", i+1, summer);
@@ -275,35 +319,67 @@ void UNIFAC::UNIFACMixture::set_components(const std::string& identifier_type, c
 
 /// Calculate the parameters X and theta for the pure components, which does not depend on temperature nor molar fraction
 void UNIFAC::UNIFACMixture::set_pure_data() {
+    // The group set / Q values are changing, so every cached temperature table is stale.
+    m_T_cache.clear();
+    m_tables_valid = false;
+
     pure_data.clear();
     unique_groups.clear();
-    m_Q.clear();
+    m_gidx.clear();
+    m_groups.clear();
+
+    // Pass 1: collect the unique subgroups across all components.  std::set keeps them ascending,
+    // which fixes the compact-group ordering so that summation order matches the previous
+    // std::map-based implementation (results stay bit-for-bit identical).
+    for (std::size_t i = 0; i < N; ++i) {
+        for (const auto& cg : components[i].groups) {
+            unique_groups.insert(cg.group.sgi);
+        }
+    }
+    m_G = unique_groups.size();
+    m_groups.assign(unique_groups.begin(), unique_groups.end());
+    for (std::size_t g = 0; g < m_G; ++g) {
+        m_gidx[m_groups[g]] = g;
+    }
+
+    // Pass 2: build the dense per-group Q, per-component group counts, and per-component X / theta.
+    m_Q.assign(m_G, 0.0);
+    m_lnGammag.assign(m_G, 0.0);
+    m_group_count.assign(N, std::vector<int>(m_G, 0));
     for (std::size_t i = 0; i < N; ++i) {
         const UNIFACLibrary::Component& c = components[i];
         ComponentData cd;
-        double summerxq = 0;
+        cd.X.assign(m_G, 0.0);
+        cd.theta.assign(m_G, 0.0);
+        cd.lnGamma.assign(m_G, 0.0);
         cd.group_count = 0;
+        double summerxq = 0;
         for (const auto& cg : c.groups) {
+            std::size_t g = m_gidx[cg.group.sgi];
             auto x = static_cast<double>(cg.count);
             auto theta = static_cast<double>(cg.count * cg.group.Q_k);
-            cd.X.emplace(cg.group.sgi, x);
-            cd.theta.emplace(cg.group.sgi, theta);
+            cd.X[g] = x;
+            cd.theta[g] = theta;
             cd.group_count += cg.count;
+            m_group_count[i][g] = cg.count;
             summerxq += x * cg.group.Q_k;
-            unique_groups.insert(cg.group.sgi);
-            m_Q.emplace(cg.group.sgi, cg.group.Q_k);
+            m_Q[g] = cg.group.Q_k;  // Q_k is a property of the subgroup, identical across components
         }
-        /// Now come back through and divide by the total # groups for this fluid
-        for (auto& [key, val] : cd.X) {
-            val /= cd.group_count;
-            //printf("X^(%d)_{%d}: %g\n", static_cast<int>(i + 1), static_cast<int>(key), val);
-        }
-        /// Now come back through and divide by the sum(X*Q) for this fluid
-        for (auto& [key, val] : cd.theta) {
-            val /= summerxq;
-            //printf("theta^(%d)_{%d}: %g\n", static_cast<int>(i+1), static_cast<int>(key), val);
+        /// Now come back through and divide by the total # groups / the sum(X*Q) for this fluid.
+        /// Entries for groups absent from this component stay zero (0 / c = 0) and are never read.
+        for (std::size_t g = 0; g < m_G; ++g) {
+            cd.X[g] /= cd.group_count;
+            cd.theta[g] /= summerxq;
         }
         pure_data.push_back(cd);
+    }
+
+    // If a composition was already set (e.g. set_Q_k called after set_mole_fractions), the mixture
+    // group surface fractions m_Xg/m_thetag depend on the group layout and Q that just changed, so
+    // refresh them from the stored composition.  (When called from set_components the composition is
+    // not yet set, so this is skipped.)
+    if (!mole_fractions.empty() && mole_fractions.size() == N) {
+        set_mole_fractions(std::vector<double>(mole_fractions));
     }
 }
 
