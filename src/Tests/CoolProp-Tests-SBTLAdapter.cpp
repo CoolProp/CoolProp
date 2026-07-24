@@ -14,9 +14,11 @@
 #    include <vector>
 
 #    include "CoolProp/AbstractState.h"
+#    include "CoolProp/Configuration.h"
 #    include "CoolProp/region/AxisTransform.h"
 #    include "CoolProp/region/ConstantCurve.h"
 #    include "CoolProp/sbtl/SVDSurface.h"
+#    include "CoolProp/sbtl/SVDSurfaceCache.h"
 #    include "CoolProp/sbtl/SVDSurfaceFactory.h"
 #    include "CoolProp/sbtl/SVDSurfaceSerializer.h"
 #    include "CoolProp/sbtl/SatBoundaryFactory.h"
@@ -48,6 +50,148 @@ TEST_CASE("SVDSurface rejects duplicate properties", "[SBTL][SVDSurface]") {
 
 TEST_CASE("SVDSurface rejects empty property list", "[SBTL][SVDSurface]") {
     REQUIRE_THROWS_AS(cp_sbtl::SVDSurface("X", ::CoolProp::PT_INPUTS, {}), std::invalid_argument);
+}
+
+// ============================================================
+// SVDSurfaceCache: process-wide bounded LRU cache in front of the
+// on-disk .svd.bin.z load.  Tests below use thermodynamics-free
+// fabricated surfaces (mirroring build_test_atlas()'s approach in
+// CoolProp-Tests-SVDComponents.cpp) so they stay fast — no HEOS
+// build, no disk I/O.
+// ============================================================
+
+namespace {
+
+// A sealed SVDSurface with zero regions: legal (seal() with no regions
+// registered is a no-op success, exercised by the "construction + seal"
+// test above) and always estimate_surface_bytes() == 0, which is all
+// the entry-count eviction tests need.
+std::shared_ptr<cp_sbtl::SVDSurface> make_empty_surface(const std::string& fluid) {
+    auto surface = std::make_shared<cp_sbtl::SVDSurface>(fluid, ::CoolProp::PT_INPUTS, std::vector<::CoolProp::parameters>{::CoolProp::iDmass});
+    surface->seal();
+    return surface;
+}
+
+// A sealed SVDSurface with one region and one NX x NY, rank-r
+// decomposition, all-zero data.  Used to exercise the byte-size
+// eviction path with a known, non-zero estimate_surface_bytes().
+std::shared_ptr<cp_sbtl::SVDSurface> make_filled_surface(const std::string& fluid, int NX, int NY, int rank) {
+    CoolProp::svd::SVDDecomposition decomp;
+    decomp.NX = NX;
+    decomp.NY = NY;
+    decomp.rank = rank;
+    decomp.x_grid.resize(static_cast<std::size_t>(NX));
+    decomp.y_grid.resize(static_cast<std::size_t>(NY));
+    for (int i = 0; i < NX; ++i) {
+        decomp.x_grid[static_cast<std::size_t>(i)] = static_cast<double>(i);
+    }
+    for (int j = 0; j < NY; ++j) {
+        decomp.y_grid[static_cast<std::size_t>(j)] = static_cast<double>(j);
+    }
+    decomp.U.assign(static_cast<std::size_t>(NX) * static_cast<std::size_t>(rank), 0.0);
+    decomp.dU_dx.assign(static_cast<std::size_t>(NX) * static_cast<std::size_t>(rank), 0.0);
+    decomp.V_S.assign(static_cast<std::size_t>(NY) * static_cast<std::size_t>(rank), 0.0);
+    decomp.dV_S_dy.assign(static_cast<std::size_t>(NY) * static_cast<std::size_t>(rank), 0.0);
+    decomp.S.assign(static_cast<std::size_t>(rank), 0.0);
+
+    auto surface = std::make_shared<cp_sbtl::SVDSurface>(fluid, ::CoolProp::PT_INPUTS, std::vector<::CoolProp::parameters>{::CoolProp::iDmass});
+    auto axis = cp_region::AxisTransform::make(cp_region::AxisScale::LINEAR, 0.0, static_cast<double>(NX - 1));
+    auto lo = std::make_unique<cp_region::ConstantCurve>(0.0, static_cast<double>(NX - 1), 0.0);
+    auto hi = std::make_unique<cp_region::ConstantCurve>(0.0, static_cast<double>(NX - 1), static_cast<double>(NY - 1));
+    const std::size_t region_idx = surface->add_region(cp_region::Region(axis, std::move(lo), std::move(hi)));
+    surface->add_region_property_svd(region_idx, ::CoolProp::iDmass, std::move(decomp));
+    surface->seal();
+    return surface;
+}
+
+}  // namespace
+
+TEST_CASE("estimate_surface_bytes sums decomposition vectors across regions/properties", "[SBTL][cache]") {
+    REQUIRE(cp_sbtl::estimate_surface_bytes(*make_empty_surface("Empty")) == 0);
+
+    constexpr int NX = 10, NY = 6, rank = 3;
+    const auto surface = make_filled_surface("Filled", NX, NY, rank);
+    // x_grid + y_grid + U + dU_dx + V_S + dV_S_dy + S, one region.
+    const std::size_t expected_doubles = static_cast<std::size_t>(NX) + NY + 2 * NX * rank + 2 * NY * rank + rank;
+    REQUIRE(cp_sbtl::estimate_surface_bytes(*surface) == expected_doubles * sizeof(double));
+}
+
+TEST_CASE("SVDSurfaceCache get/put round-trip and miss", "[SBTL][cache]") {
+    auto& cache = cp_sbtl::SVDSurfaceCache::instance();
+    cache.clear();
+
+    REQUIRE(cache.get("nonexistent-key") == nullptr);
+
+    const auto surface = make_empty_surface("Water");
+    cache.put("key-a", surface);
+    const auto hit = cache.get("key-a");
+    REQUIRE(hit != nullptr);
+    REQUIRE(hit == surface);  // same object, not a copy
+    REQUIRE(cache.entry_count() == 1);
+
+    cache.clear();
+    REQUIRE(cache.entry_count() == 0);
+    REQUIRE(cache.get("key-a") == nullptr);
+}
+
+TEST_CASE("SVDSurfaceCache evicts least-recently-used entry once max entry count is exceeded", "[SBTL][cache]") {
+    const int saved_max_entries = CoolProp::get_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES);
+    const int saved_max_mb = CoolProp::get_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB);
+    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES, 2);
+    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, 4096);  // not the binding constraint here
+
+    auto& cache = cp_sbtl::SVDSurfaceCache::instance();
+    cache.clear();
+
+    cache.put("a", make_empty_surface("A"));
+    cache.put("b", make_empty_surface("B"));
+    // Touch "a" so it's more-recently-used than "b".
+    REQUIRE(cache.get("a") != nullptr);
+    // Inserting a third entry must evict "b" (LRU), not "a".
+    cache.put("c", make_empty_surface("C"));
+
+    REQUIRE(cache.entry_count() == 2);
+    REQUIRE(cache.get("a") != nullptr);
+    REQUIRE(cache.get("b") == nullptr);
+    REQUIRE(cache.get("c") != nullptr);
+
+    cache.clear();
+    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES, saved_max_entries);
+    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, saved_max_mb);
+}
+
+TEST_CASE("SVDSurfaceCache evicts oldest entry once the byte-size budget is exceeded", "[SBTL][cache]") {
+    const int saved_max_entries = CoolProp::get_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES);
+    const int saved_max_mb = CoolProp::get_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB);
+    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES, 100);  // not the binding constraint here
+
+    // Each filled surface is one (1000 x 1000, rank 100) decomposition:
+    // (1000 + 1000 + 4*1000*100 + 100) doubles * 8 bytes ~= 3.07 MB.
+    constexpr int NX = 1000, NY = 1000, rank = 100;
+    const auto surface1 = make_filled_surface("Big1", NX, NY, rank);
+    const std::size_t one_surface_bytes = cp_sbtl::estimate_surface_bytes(*surface1);
+    INFO("one_surface_bytes=" << one_surface_bytes);
+    REQUIRE(one_surface_bytes > 1024 * 1024);
+
+    // Cap small enough to hold exactly one such surface, not two.
+    const int max_mb = static_cast<int>((one_surface_bytes * 3 / 2) / (1024 * 1024)) + 1;
+    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, max_mb);
+
+    auto& cache = cp_sbtl::SVDSurfaceCache::instance();
+    cache.clear();
+
+    cache.put("big1", surface1);
+    REQUIRE(cache.entry_count() == 1);
+    cache.put("big2", make_filled_surface("Big2", NX, NY, rank));
+
+    REQUIRE(cache.entry_count() == 1);
+    REQUIRE(cache.get("big1") == nullptr);  // evicted to make room
+    REQUIRE(cache.get("big2") != nullptr);
+    REQUIRE(cache.size_bytes() <= static_cast<std::size_t>(max_mb) * 1024 * 1024);
+
+    cache.clear();
+    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES, saved_max_entries);
+    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, saved_max_mb);
 }
 
 TEST_CASE("SatBoundaryFactory builds water sat curves matching HEOS", "[SBTL][SatBoundaryFactory][slow]") {
