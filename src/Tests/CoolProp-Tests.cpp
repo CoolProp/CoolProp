@@ -2640,8 +2640,7 @@ TEST_CASE("Vapor-quality two-phase derivatives do not return inf/NaN at the crit
     // platform-dependent, so accept either a thrown error or a finite value -- but never a
     // silent inf/NaN escaping to the caller.
     shared_ptr<CoolProp::HelmholtzEOSBackend> AS = std::make_shared<CoolProp::HelmholtzEOSBackend>("Water");
-    const parameters triplets[4][3] = {
-      {iQ, iHmolar, iP}, {iQ, iP, iHmolar}, {iQmass, iHmass, iP}, {iQmass, iP, iHmass}};
+    const parameters triplets[4][3] = {{iQ, iHmolar, iP}, {iQ, iP, iHmolar}, {iQmass, iHmass, iP}, {iQmass, iP, iHmass}};
     for (auto& t : triplets) {
         std::ostringstream ss;
         ss << "for (" << get_parameter_information(t[0], "short") << ", " << get_parameter_information(t[1], "short") << ", "
@@ -2652,8 +2651,13 @@ TEST_CASE("Vapor-quality two-phase derivatives do not return inf/NaN at the crit
                 CoolPropDbl v = AS->first_two_phase_deriv(t[0], t[1], t[2]);
                 CAPTURE(v);
                 CHECK(ValidNumber(v));
-            } catch (const CoolProp::CoolPropBaseError&) {
-                SUCCEED("threw rather than returning a non-finite value");
+            } catch (const CoolProp::CoolPropBaseError& e) {
+                // Require the message to be one of the two critical-point guards.  Catching
+                // any CoolPropBaseError would also swallow "These inputs are not supported",
+                // so a regression in triplet matching could pass this test vacuously.
+                const std::string msg = e.what();
+                CAPTURE(msg);
+                CHECK((msg.find("h'' <= h'") != std::string::npos || msg.find("not a finite number") != std::string::npos));
             }
         }
     }
@@ -6735,6 +6739,32 @@ TEST_CASE("REFPROP first_two_phase_deriv matches HEOS for a pure fluid", "[REFPR
     CHECK(RP->first_two_phase_deriv(iQ, iP, iHmolar) == Catch::Approx(HE->first_two_phase_deriv(iQ, iP, iHmolar)).epsilon(1e-3));
     CHECK(RP->first_two_phase_deriv(iQmass, iHmass, iP) == Catch::Approx(HE->first_two_phase_deriv(iQmass, iHmass, iP)).epsilon(1e-4));
     CHECK(RP->first_two_phase_deriv(iQmass, iP, iHmass) == Catch::Approx(HE->first_two_phase_deriv(iQmass, iP, iHmass)).epsilon(1e-3));
+}
+
+TEST_CASE("REFPROP vapor-quality two-phase derivatives reject pseudo-pure fluids", "[REFPROPsat]") {
+    Skip_if_No_REFPROP();
+    // A single .PPF pseudo-pure loads with Ncomp == 1, so it slips past the mixture gate,
+    // and REFPROP (unlike HEOS) accepts 0 < Q < 1 for one.  Its bubble and dew curves sit
+    // at different pressures for the same temperature, so the lever rule does not hold --
+    // without an explicit check dQ/dh|p silently returned a plausible-looking number.
+    for (const char* fluid : {"R410A", "R404A", "R507A"}) {
+        std::ostringstream ss;
+        ss << fluid;
+        SECTION(ss.str()) {
+            std::shared_ptr<AbstractState> AS(AbstractState::factory("REFPROP", fluid));
+            AS->update(QT_INPUTS, 0.4, 250.0);
+            // Confirm this fluid really is the bubble/dew-offset case being guarded against.
+            CoolPropDbl pL = AS->saturated_liquid_keyed_output(iP);
+            CoolPropDbl pV = AS->saturated_vapor_keyed_output(iP);
+            CAPTURE(pL);
+            CAPTURE(pV);
+            REQUIRE(std::abs(pV - pL) / pL > 1e-8);
+            CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iHmolar, iP), CoolProp::NotImplementedError);
+            CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iP, iHmolar), CoolProp::NotImplementedError);
+            CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iHmass, iP), CoolProp::NotImplementedError);
+            CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iP, iHmass), CoolProp::NotImplementedError);
+        }
+    }
 }
 
 TEST_CASE("REFPROP saturated keyed output throws in single phase", "[REFPROPsat]") {

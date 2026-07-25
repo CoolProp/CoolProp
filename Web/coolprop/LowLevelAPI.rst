@@ -372,7 +372,8 @@ because they require :math:`h'` and :math:`h''` to be functions of pressure alon
 quality-dependent phase compositions (temperature glide), and pseudo-pure fluids place the bubble and
 dew curves at different pressures for the same temperature, so in neither case does the lever rule
 above hold.  They also diverge at the critical point, where :math:`h'' - h'` vanishes; that case
-raises ``ValueError`` rather than returning a non-finite value.  Note too that the tabular backends
+raises ``ValueError`` rather than returning a non-finite value.  (These are the C++ exception types;
+the Python wrapper surfaces all of them as ``ValueError``.)  Note too that the tabular backends
 (``BICUBIC``, ``TTSE``) do not implement these two derivatives — request them from ``HEOS`` or
 ``REFPROP``.
 
