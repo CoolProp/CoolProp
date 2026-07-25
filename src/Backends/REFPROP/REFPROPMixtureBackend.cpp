@@ -2545,12 +2545,18 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, par
         // 10: that EOS-re-evaluation signal reaches 7.9e-04 for PURE ethanol at 159 K and
         // 6.2e-08 for PURE water at 293 K, overlapping pseudo-pure R507A at 230 K
         // (1.1e-04) -- so no threshold on it can separate the two populations.  The SATT
-        // pressures are instead exactly equal for every pure-fluid state tested, while
-        // reproducing the pseudo-pure offsets exactly, so 1e-10 discriminates cleanly with
-        // six orders of margin to the smallest pseudo-pure offset observed.
+        // pressures are instead bit-identical for every pure-fluid state tested (78 fluids x
+        // 202 temperatures from triple point to critical, max relative difference exactly
+        // 0), while reproducing the pseudo-pure offsets exactly, so 1e-10 discriminates
+        // cleanly.  At the states sampled away from Tc that leaves roughly six orders of
+        // margin to the smallest pseudo-pure offset (R507A, 3.9e-04 at 250 K), but the
+        // margin narrows continuously as T -> Tc.
         //
-        // Known gap: exactly at the critical temperature a pseudo-pure's bubble and dew
-        // pressures coincide, so this cannot reject it there.
+        // Known gap: a pseudo-pure's bubble and dew pressures converge as T -> Tc, so this
+        // check stops rejecting one within roughly 1e-9 in reduced temperature of the
+        // critical point (measured: R507A still accepted at 1 - T/Tc = 1e-9).  Exactly at
+        // Tc the DELTAh <= 0 guard below catches it; only that narrow band leaks, about
+        // 3e-7 K wide.
         CoolPropDbl p_bubble = saturation_pressure_at_T(T(), 0);
         CoolPropDbl p_dew = saturation_pressure_at_T(T(), 1);
         if (!ValidNumber(p_bubble) || !ValidNumber(p_dew) || p_bubble <= 0 || std::abs(p_dew - p_bubble) / p_bubble > 1e-10) {

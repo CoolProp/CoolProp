@@ -6753,9 +6753,14 @@ TEST_CASE("REFPROP vapor-quality two-phase derivatives reject pseudo-pure fluids
         SECTION(ss.str()) {
             std::shared_ptr<AbstractState> AS(AbstractState::factory("REFPROP", fluid));
             AS->update(QT_INPUTS, 0.4, 250.0);
-            // Independent confirmation that this fluid really has offset bubble/dew curves:
-            // take the two saturation pressures from separate Q=0 / Q=1 flashes rather than
-            // reusing the guard's own expression, which would be circular.
+            // Document the premise: this fluid really does have offset bubble/dew curves.
+            // Note this is NOT an independent signal -- update(QT_INPUTS, 0/1, T) takes the
+            // SATTP path and returns bit-identical doubles to the guard's own
+            // saturation_pressure_at_T, so it re-derives the same numbers through the public
+            // flash API.  (A lever-rule residual is non-discriminating here because REFPROP
+            // builds h from its own h'(T)/h''(T); a PH-flash finite difference fails to
+            // separate R507A from truncation noise.  Golden pressure literals would be
+            // independent but would pin the test to a REFPROP version.)
             std::shared_ptr<AbstractState> B(AbstractState::factory("REFPROP", fluid));
             B->update(QT_INPUTS, 0, 250.0);
             CoolPropDbl p_bubble = B->p();
@@ -6780,6 +6785,11 @@ TEST_CASE("REFPROP vapor-quality two-phase derivatives accept pure fluids across
     // branch that difference is round-off amplified by dp/drho|_T and reaches 6e-08 for
     // water at 293 K and 8e-04 for ethanol at 159 K -- so a threshold on it false-rejected
     // ordinary pure fluids as "pseudo-pure".  These states must all compute cleanly.
+    //
+    // Six of the nine are the discriminating ones: under the old signal Water 273.16/293.15/
+    // 303.15, Propane 100, Ethanol 159 and Toluene 200 all exceeded the old 1e-8 threshold
+    // and threw.  Water 400, Propane 250 and Nitrogen 65 sat below it and do NOT
+    // discriminate -- keep the other six if this list is ever trimmed.
     struct
     {
         const char* fluid;
@@ -6799,6 +6809,12 @@ TEST_CASE("REFPROP vapor-quality two-phase derivatives accept pure fluids across
             CoolPropDbl dQdp = AS->first_two_phase_deriv(iQ, iP, iHmolar);
             CAPTURE(dQdp);
             CHECK(ValidNumber(dQdp));
+            // Pin the values, not just finiteness: HEOS is an independent implementation of
+            // the same lever rule, so agreement makes this a correctness check as well.
+            std::shared_ptr<AbstractState> HE(AbstractState::factory("HEOS", c.fluid));
+            HE->update(QT_INPUTS, 0.4, c.T);
+            CHECK(dQdh == Catch::Approx(HE->first_two_phase_deriv(iQ, iHmolar, iP)).epsilon(1e-4));
+            CHECK(dQdp == Catch::Approx(HE->first_two_phase_deriv(iQ, iP, iHmolar)).epsilon(1e-3));
         }
     }
 }

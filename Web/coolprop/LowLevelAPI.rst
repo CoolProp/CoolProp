@@ -371,7 +371,9 @@ These two derivatives are restricted to **pure fluids** and raise ``NotImplement
 because they require :math:`h'` and :math:`h''` to be functions of pressure alone.  Mixtures have
 quality-dependent phase compositions (temperature glide), and pseudo-pure fluids place the bubble and
 dew curves at different pressures for the same temperature, so in neither case does the lever rule
-above hold.  They also diverge at the critical point, where :math:`h'' - h'` vanishes; that case
+above hold.  (For a pseudo-pure fluid in the ``REFPROP`` backend the rejection is detected from the
+bubble/dew pressure difference, which vanishes at the critical point; within roughly :math:`10^{-9}`
+in reduced temperature of :math:`T_c` such a fluid is not rejected.)  They also diverge at the critical point, where :math:`h'' - h'` vanishes; that case
 raises ``ValueError`` rather than returning a non-finite value.  (These are the C++ exception types;
 the Python wrapper surfaces all of them as ``ValueError``.)  Note too that the tabular backends
 (``BICUBIC``, ``TTSE``) do not implement these two derivatives — request them from ``HEOS`` or
