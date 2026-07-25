@@ -6747,22 +6747,58 @@ TEST_CASE("REFPROP vapor-quality two-phase derivatives reject pseudo-pure fluids
     // and REFPROP (unlike HEOS) accepts 0 < Q < 1 for one.  Its bubble and dew curves sit
     // at different pressures for the same temperature, so the lever rule does not hold --
     // without an explicit check dQ/dh|p silently returned a plausible-looking number.
-    for (const char* fluid : {"R410A", "R404A", "R507A"}) {
+    for (const char* fluid : {"R410A", "R404A", "R507A", "R407C"}) {
         std::ostringstream ss;
         ss << fluid;
         SECTION(ss.str()) {
             std::shared_ptr<AbstractState> AS(AbstractState::factory("REFPROP", fluid));
             AS->update(QT_INPUTS, 0.4, 250.0);
-            // Confirm this fluid really is the bubble/dew-offset case being guarded against.
-            CoolPropDbl pL = AS->saturated_liquid_keyed_output(iP);
-            CoolPropDbl pV = AS->saturated_vapor_keyed_output(iP);
-            CAPTURE(pL);
-            CAPTURE(pV);
-            REQUIRE(std::abs(pV - pL) / pL > 1e-8);
+            // Independent confirmation that this fluid really has offset bubble/dew curves:
+            // take the two saturation pressures from separate Q=0 / Q=1 flashes rather than
+            // reusing the guard's own expression, which would be circular.
+            std::shared_ptr<AbstractState> B(AbstractState::factory("REFPROP", fluid));
+            B->update(QT_INPUTS, 0, 250.0);
+            CoolPropDbl p_bubble = B->p();
+            std::shared_ptr<AbstractState> D(AbstractState::factory("REFPROP", fluid));
+            D->update(QT_INPUTS, 1, 250.0);
+            CoolPropDbl p_dew = D->p();
+            CAPTURE(p_bubble);
+            CAPTURE(p_dew);
+            REQUIRE(std::abs(p_dew - p_bubble) / p_bubble > 1e-10);
             CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iHmolar, iP), CoolProp::NotImplementedError);
             CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iP, iHmolar), CoolProp::NotImplementedError);
             CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iHmass, iP), CoolProp::NotImplementedError);
             CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iP, iHmass), CoolProp::NotImplementedError);
+        }
+    }
+}
+
+TEST_CASE("REFPROP vapor-quality two-phase derivatives accept pure fluids across the dome", "[REFPROPsat]") {
+    Skip_if_No_REFPROP();
+    // Regression guard for the purity check itself.  An earlier implementation compared
+    // SatL->p() with SatV->p(), which re-evaluates p_EOS(rho, T) per branch; on the liquid
+    // branch that difference is round-off amplified by dp/drho|_T and reaches 6e-08 for
+    // water at 293 K and 8e-04 for ethanol at 159 K -- so a threshold on it false-rejected
+    // ordinary pure fluids as "pseudo-pure".  These states must all compute cleanly.
+    struct
+    {
+        const char* fluid;
+        double T;
+    } cases[] = {{"Water", 273.16},  {"Water", 293.15},  {"Water", 303.15},  {"Water", 400.0},  {"Propane", 100.0},
+                 {"Propane", 250.0}, {"Ethanol", 159.0}, {"Toluene", 200.0}, {"Nitrogen", 65.0}};
+    for (auto& c : cases) {
+        std::ostringstream ss;
+        ss << c.fluid << " at T = " << c.T;
+        SECTION(ss.str()) {
+            std::shared_ptr<AbstractState> AS(AbstractState::factory("REFPROP", c.fluid));
+            AS->update(QT_INPUTS, 0.4, c.T);
+            CoolPropDbl dQdh = AS->first_two_phase_deriv(iQ, iHmolar, iP);
+            CAPTURE(dQdh);
+            CHECK(ValidNumber(dQdh));
+            CHECK(dQdh > 0);  // 1/(h'' - h'), and h'' > h' inside the dome
+            CoolPropDbl dQdp = AS->first_two_phase_deriv(iQ, iP, iHmolar);
+            CAPTURE(dQdp);
+            CHECK(ValidNumber(dQdp));
         }
     }
 }

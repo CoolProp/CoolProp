@@ -2534,16 +2534,28 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, par
             throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
         }
         // The mixture gate above does not catch pseudo-pure fluids: a single .PPF file
-        // loads with Ncomp == 1, and REFPROP (unlike HEOS) happily accepts 0 < Q < 1 for
-        // one.  Rather than sniff the file extension, test the precondition the lever rule
-        // actually needs -- both saturation states at a single pressure.  A true pure fluid
-        // agrees to round-off (~1e-13 relative); the pseudo-pures ship a bubble/dew offset
-        // several orders of magnitude larger (R507A ~4e-4, R404A ~2e-2), so 1e-8 separates
-        // them with room to spare.
-        CoolPropDbl pL = SatL->p(), pV = SatV->p();
-        if (!ValidNumber(pL) || !ValidNumber(pV) || pL <= 0 || std::abs(pV - pL) / pL > 1e-8) {
-            throw NotImplementedError("Vapor-quality two-phase derivatives are only implemented for pure fluids; the saturated liquid and "
-                                      "vapor states are not at a common pressure (a pseudo-pure fluid or mixture)");
+        // loads with Ncomp == 1, and REFPROP (unlike HEOS) accepts 0 < Q < 1 for one.  The
+        // lever rule needs h'(p) and h''(p) at a COMMON pressure, which a pseudo-pure does
+        // not provide -- its bubble and dew curves are offset (R407C by ~24% at 250 K).
+        //
+        // Compare the SATTdll bubble and dew pressures, NOT SatL->p() / SatV->p().  The
+        // latter re-evaluate p_EOS(rho, T) on each branch; on the liquid branch that is a
+        // difference of large terms whose round-off is amplified by dp/drho|_T, so it
+        // measures conditioning rather than any physical offset.  Verified against REFPROP
+        // 10: that EOS-re-evaluation signal reaches 7.9e-04 for PURE ethanol at 159 K and
+        // 6.2e-08 for PURE water at 293 K, overlapping pseudo-pure R507A at 230 K
+        // (1.1e-04) -- so no threshold on it can separate the two populations.  The SATT
+        // pressures are instead exactly equal for every pure-fluid state tested, while
+        // reproducing the pseudo-pure offsets exactly, so 1e-10 discriminates cleanly with
+        // six orders of margin to the smallest pseudo-pure offset observed.
+        //
+        // Known gap: exactly at the critical temperature a pseudo-pure's bubble and dew
+        // pressures coincide, so this cannot reject it there.
+        CoolPropDbl p_bubble = saturation_pressure_at_T(T(), 0);
+        CoolPropDbl p_dew = saturation_pressure_at_T(T(), 1);
+        if (!ValidNumber(p_bubble) || !ValidNumber(p_dew) || p_bubble <= 0 || std::abs(p_dew - p_bubble) / p_bubble > 1e-10) {
+            throw NotImplementedError("Vapor-quality two-phase derivatives are only implemented for pure fluids; the bubble and dew "
+                                      "pressures differ at this temperature (a pseudo-pure fluid)");
         }
         // h'' - h' is the latent heat: strictly positive inside the dome, collapsing to
         // zero at the critical point where these derivatives diverge.
