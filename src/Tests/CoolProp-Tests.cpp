@@ -2572,17 +2572,91 @@ TEST_CASE("Check the first two-phase derivative", "[first_two_phase_deriv]") {
     }
 }
 
-TEST_CASE("Vapor-quality two-phase derivatives reject mixtures", "[first_two_phase_deriv]") {
-    // The lever-rule Q derivatives are only valid for pure/pseudo-pure fluids
-    // (matching the REFPROP backend, which rejects them for mixtures outright).
-    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", strsplit("Methane&Ethane", '&')));
-    std::vector<CoolPropDbl> z(2, 0.5);
-    AS->set_mole_fractions(z);
-    AS->update(QT_INPUTS, 0.3, 150);
-    CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iHmolar, iP), CoolProp::NotImplementedError);
-    CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iP, iHmolar), CoolProp::NotImplementedError);
-    CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iHmass, iP), CoolProp::NotImplementedError);
-    CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iP, iHmass), CoolProp::NotImplementedError);
+TEST_CASE("Vapor-quality two-phase derivatives reject non-pure fluids", "[first_two_phase_deriv]") {
+    // The lever-rule Q derivatives need h'(p) and h''(p) to be functions of pressure
+    // alone, which holds only for pure fluids.
+    SECTION("mixture") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", strsplit("Methane&Ethane", '&')));
+        std::vector<CoolPropDbl> z(2, 0.5);
+        AS->set_mole_fractions(z);
+        AS->update(QT_INPUTS, 0.3, 150);
+        CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iHmolar, iP), CoolProp::NotImplementedError);
+        CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iP, iHmolar), CoolProp::NotImplementedError);
+        CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iHmass, iP), CoolProp::NotImplementedError);
+        CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iP, iHmass), CoolProp::NotImplementedError);
+
+        // The purity guard must not over-reach: the pre-existing density two-phase
+        // derivatives stay available to mixtures.
+        CHECK_NOTHROW(AS->first_two_phase_deriv(iDmolar, iHmolar, iP));
+
+        // An unsupported (Of, Wrt, Constant) triplet must still report ValueError rather
+        // than the purity NotImplementedError, which would misattribute the cause -- these
+        // triplets are unsupported for pure fluids too.
+        CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iT, iP), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iHmass, iP), CoolProp::ValueError);
+    }
+    SECTION("pseudo-pure") {
+        // A pseudo-pure fluid carries bubble and dew curves at different pressures for the
+        // same temperature, so "at constant p" is not well defined across the dome.
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R410A"));
+        AS->update(QT_INPUTS, 0, 250);
+        CHECK_THROWS_AS(AS->first_two_phase_deriv(iQ, iHmolar, iP), CoolProp::NotImplementedError);
+        CHECK_THROWS_AS(AS->first_two_phase_deriv(iQmass, iP, iHmass), CoolProp::NotImplementedError);
+    }
+}
+
+TEST_CASE("Vapor-quality two-phase derivatives at the dome endpoints", "[first_two_phase_deriv]") {
+    // dQ/dh|p carries no Q dependence at all, and dQ/dp|h collapses to the one-sided
+    // saturation derivative at each endpoint.  Assert those identities rather than
+    // hard-coded magnitudes.
+    shared_ptr<CoolProp::HelmholtzEOSBackend> AS = std::make_shared<CoolProp::HelmholtzEOSBackend>("n-Propane");
+    for (double Q : {0.0, 1.0}) {
+        std::ostringstream ss;
+        ss << "Q = " << Q;
+        SECTION(ss.str()) {
+            AS->update(QT_INPUTS, Q, 300);
+            CoolPropDbl hL = AS->saturated_liquid_keyed_output(iHmolar);
+            CoolPropDbl hV = AS->saturated_vapor_keyed_output(iHmolar);
+            CoolPropDbl DELTAh = hV - hL;
+            CHECK(AS->first_two_phase_deriv(iQ, iHmolar, iP) == Catch::Approx(1 / DELTAh).epsilon(1e-10));
+
+            // At Q=0 the state sits on the saturated-liquid curve and at Q=1 on the
+            // saturated-vapor curve, so first_saturation_deriv returns dh'/dp and dh''/dp
+            // respectively -- exactly the one term the lever rule weights at that endpoint.
+            CoolPropDbl dh_dp_endpoint = AS->first_saturation_deriv(iHmolar, iP);
+            AS->update(QT_INPUTS, Q, 300);  // restore the state
+            CoolPropDbl expected = -dh_dp_endpoint / DELTAh;
+            CoolPropDbl actual = AS->first_two_phase_deriv(iQ, iP, iHmolar);
+            CAPTURE(expected);
+            CAPTURE(actual);
+            CHECK(ValidNumber(actual));
+            CHECK(actual == Catch::Approx(expected).epsilon(1e-10));
+        }
+    }
+}
+
+TEST_CASE("Vapor-quality two-phase derivatives do not return inf/NaN at the critical point", "[first_two_phase_deriv]") {
+    // h'' - h' vanishes at the critical point.  Whether it lands exactly on zero is
+    // platform-dependent, so accept either a thrown error or a finite value -- but never a
+    // silent inf/NaN escaping to the caller.
+    shared_ptr<CoolProp::HelmholtzEOSBackend> AS = std::make_shared<CoolProp::HelmholtzEOSBackend>("Water");
+    const parameters triplets[4][3] = {
+      {iQ, iHmolar, iP}, {iQ, iP, iHmolar}, {iQmass, iHmass, iP}, {iQmass, iP, iHmass}};
+    for (auto& t : triplets) {
+        std::ostringstream ss;
+        ss << "for (" << get_parameter_information(t[0], "short") << ", " << get_parameter_information(t[1], "short") << ", "
+           << get_parameter_information(t[2], "short") << ")";
+        SECTION(ss.str()) {
+            AS->update(QT_INPUTS, 0.5, AS->T_critical());
+            try {
+                CoolPropDbl v = AS->first_two_phase_deriv(t[0], t[1], t[2]);
+                CAPTURE(v);
+                CHECK(ValidNumber(v));
+            } catch (const CoolProp::CoolPropBaseError&) {
+                SUCCEED("threw rather than returning a non-finite value");
+            }
+        }
+    }
 }
 
 TEST_CASE("Check the second two-phase derivative", "[second_two_phase_deriv]") {

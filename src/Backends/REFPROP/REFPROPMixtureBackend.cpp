@@ -2520,19 +2520,32 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, par
         return -POW2(rhomass()) * dvdp_h;
     }
     // Vapor-quality derivatives in the two-phase region (Thorade & Saadat, 2013).
-    // Mirrors HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv; see there for the derivation.
-    else if (Of == iQ && Wrt == iHmolar && Constant == iP) {
-        return 1 / (SatV->hmolar() - SatL->hmolar());
-    } else if (Of == iQmass && Wrt == iHmass && Constant == iP) {
-        return 1 / (SatV->hmass() - SatL->hmass());
-    } else if (Of == iQ && Wrt == iP && Constant == iHmolar) {
-        CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmolar, iP);
-        CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmolar, iP);
-        return -((1 - Q()) * dhL_dp + Q() * dhV_dp) / (SatV->hmolar() - SatL->hmolar());
-    } else if (Of == iQmass && Wrt == iP && Constant == iHmass) {
-        CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmass, iP);
-        CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmass, iP);
-        return -((1 - Qmass()) * dhL_dp + Qmass() * dhV_dp) / (SatV->hmass() - SatL->hmass());
+    // Mirrors HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv; see there for the
+    // derivation and for why these are restricted to pure fluids.  Mixtures are already
+    // rejected for every two-phase derivative at the top of this function.
+    else if (Of == iQ || Of == iQmass) {
+        // Match the (Of, Wrt, Constant) triplet before anything else so an unsupported
+        // triplet keeps reporting ValueError.
+        const bool use_mass = (Of == iQmass);
+        const parameters h_key = use_mass ? iHmass : iHmolar;
+        const bool wrt_h = (Wrt == h_key && Constant == iP);
+        const bool wrt_p = (Wrt == iP && Constant == h_key);
+        if (!wrt_h && !wrt_p) {
+            throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+        }
+        // h'' - h' collapses to zero at the critical point, where these derivatives
+        // diverge; return a diagnosable error rather than a silent inf/NaN.
+        CoolPropDbl DELTAh = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
+        if (!ValidNumber(DELTAh) || DELTAh == 0) {
+            throw ValueError("Vapor-quality two-phase derivatives are not defined where h'' == h' (at the critical point)");
+        }
+        if (wrt_h) {
+            return 1 / DELTAh;
+        }
+        CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(h_key, iP);
+        CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(h_key, iP);
+        CoolPropDbl q = use_mass ? Qmass() : Q();
+        return -((1 - q) * dhL_dp + q * dhV_dp) / DELTAh;
     } else {
         throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
     }

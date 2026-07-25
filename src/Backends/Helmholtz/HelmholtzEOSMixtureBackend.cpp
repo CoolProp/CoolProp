@@ -4063,29 +4063,43 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of
     //   dQ/dh|p = 1/(h'' - h')
     //   dQ/dp|h = -[(1 - Q)*dh'/dp|sat + Q*dh''/dp|sat] / (h'' - h')
     // Molar quality (iQ) pairs with molar enthalpy; mass quality (iQmass) with mass
-    // enthalpy.  For pure/pseudo-pure fluids Q == Qmass numerically.  The lever rule
-    // assumes composition-independent saturation states, so (matching REFPROP) these
-    // are restricted to pure/pseudo-pure fluids; mixtures have quality-dependent phase
-    // compositions (temperature glide) that invalidate the contract.
+    // enthalpy; for a pure fluid Q == Qmass numerically.
+    //
+    // These require h'(p) and h''(p) to be functions of pressure alone, which restricts
+    // them to *pure* fluids:
+    //   - mixtures have quality-dependent phase compositions (temperature glide), so the
+    //     lever rule does not hold;
+    //   - pseudo-pure fluids carry the bubble and dew curves at different pressures for
+    //     the same temperature, so "at constant p" is not well defined across the dome.
+    // (The REFPROP backend rejects *all* two-phase derivatives for mixtures; here only the
+    // quality ones are gated, since the pre-existing density branches predate this rule.)
     else if (Of == iQ || Of == iQmass) {
-        if (!is_pure_or_pseudopure) {
-            throw NotImplementedError("Vapor-quality two-phase derivatives are only implemented for pure and pseudo-pure fluids");
-        }
-        if (Of == iQ && Wrt == iHmolar && Constant == iP) {
-            return 1 / (SatV->hmolar() - SatL->hmolar());
-        } else if (Of == iQmass && Wrt == iHmass && Constant == iP) {
-            return 1 / (SatV->hmass() - SatL->hmass());
-        } else if (Of == iQ && Wrt == iP && Constant == iHmolar) {
-            CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmolar, iP, *SatL, *SatV);
-            CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmolar, iP, *SatL, *SatV);
-            return -((1 - Q()) * dhL_dp + Q() * dhV_dp) / (SatV->hmolar() - SatL->hmolar());
-        } else if (Of == iQmass && Wrt == iP && Constant == iHmass) {
-            CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmass, iP, *SatL, *SatV);
-            CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmass, iP, *SatL, *SatV);
-            return -((1 - Qmass()) * dhL_dp + Qmass() * dhV_dp) / (SatV->hmass() - SatL->hmass());
-        } else {
+        // Match the (Of, Wrt, Constant) triplet BEFORE testing composition, so that an
+        // unsupported triplet keeps reporting ValueError for every fluid; the purity
+        // restriction applies only to the four triplets that are actually implemented.
+        const bool use_mass = (Of == iQmass);
+        const parameters h_key = use_mass ? iHmass : iHmolar;
+        const bool wrt_h = (Wrt == h_key && Constant == iP);
+        const bool wrt_p = (Wrt == iP && Constant == h_key);
+        if (!wrt_h && !wrt_p) {
             throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
         }
+        if (!is_pure()) {
+            throw NotImplementedError("Vapor-quality two-phase derivatives are only implemented for pure fluids");
+        }
+        // h'' - h' collapses to zero at the critical point, where these derivatives
+        // diverge; return a diagnosable error rather than a silent inf/NaN.
+        CoolPropDbl DELTAh = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
+        if (!ValidNumber(DELTAh) || DELTAh == 0) {
+            throw ValueError("Vapor-quality two-phase derivatives are not defined where h'' == h' (at the critical point)");
+        }
+        if (wrt_h) {
+            return 1 / DELTAh;
+        }
+        CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(h_key, iP, *SatL, *SatV);
+        CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(h_key, iP, *SatL, *SatV);
+        CoolPropDbl q = use_mass ? Qmass() : Q();
+        return -((1 - q) * dhL_dp + q * dhV_dp) / DELTAh;
     } else {
         throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
     }

@@ -362,10 +362,19 @@ counterparts ``iQmass`` with ``iHmass``) follow directly from the lever rule
 :math:`(\partial Q/\partial p)_h = -[(1-Q)\,\mathrm{d}h'/\mathrm{d}p + Q\,\mathrm{d}h''/\mathrm{d}p]/(h'' - h')`,
 where :math:`h'` and :math:`h''` are the saturated-liquid and saturated-vapor enthalpies.  Pair the
 molar quality ``iQ`` with molar enthalpy ``iHmolar`` and the mass quality ``iQmass`` with mass
-enthalpy ``iHmass``; for pure and pseudo-pure fluids the two qualities are numerically equal.  As with
+enthalpy ``iHmass``; for a pure fluid the two qualities are numerically equal.  As with
 the other two-phase derivatives, these are only defined inside the two-phase dome and are available
 through the low-level :cpapi:`CoolProp::AbstractState::first_two_phase_deriv` interface, not through
 the high-level ``PropsSI`` derivative strings.
+
+These two derivatives are restricted to **pure fluids** and raise ``NotImplementedError`` otherwise,
+because they require :math:`h'` and :math:`h''` to be functions of pressure alone.  Mixtures have
+quality-dependent phase compositions (temperature glide), and pseudo-pure fluids place the bubble and
+dew curves at different pressures for the same temperature, so in neither case does the lever rule
+above hold.  They also diverge at the critical point, where :math:`h'' - h'` vanishes; that case
+raises ``ValueError`` rather than returning a non-finite value.  Note too that the tabular backends
+(``BICUBIC``, ``TTSE``) do not implement these two derivatives — request them from ``HEOS`` or
+``REFPROP``.
 
 An example of plotting these derivatives is here:
 
