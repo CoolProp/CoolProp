@@ -6,10 +6,11 @@
 // updated reducing parameters for H2 + {CH4, N2, CO, CO2}.  This test reproduces the single-phase
 // computer-implementation test values from Table S6 of the Supplementary Material (x_H2 = 0.4).
 //
-// Tolerance: the paper's reference values use the GERG-2008 gas constant R = 8.314472 J/mol/K for all
-// components, whereas CoolProp uses each pure fluid's native reference-EOS R (8.31451 for CH4/N2/CO2,
-// 8.314472 for H2/CO).  That convention difference, plus the limited digits of the published
-// parameters, gives a residual agreement of ~1-4 ppm, which this test checks at 2e-5.
+// Tolerance: the paper's reference values use the GERG-2008 gas constant R = 8.314472 J/mol/K,
+// whereas CoolProp's mixture gas constant defaults to the CODATA value R = 8.314462618 J/mol/K
+// (config NORMALIZE_GAS_CONSTANTS; the alternative is a mole-fraction-weighted average of the pure
+// fluids' R).  That ~1.1 ppm difference in R, plus the limited digits of the published parameters,
+// gives a residual agreement of ~1-4 ppm, which this test checks at 2e-5.
 
 #if defined(ENABLE_CATCH)
 

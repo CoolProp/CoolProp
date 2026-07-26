@@ -114,7 +114,8 @@ def build():
 
     # ---- departure functions JSON: append 4 new entries in the file's existing style ----
     dep_path = os.path.join(HERE, "mixture_departure_functions.json")
-    dep_txt = open(dep_path).read()
+    with open(dep_path) as f:
+        dep_txt = f.read()
     existing = {o["Name"] for _, _, o in _entry_spans(dep_txt)}
 
     def fmt_arr(a):
@@ -123,7 +124,8 @@ def build():
     new_blocks = []
     for name, d in departures.items():
         if name in existing:
-            print("  (already present)", name); continue
+            print("  (already present)", name)
+            continue
         L = len(d["n"])
         block = (
             "{\n"
@@ -148,11 +150,13 @@ def build():
         assert dep_txt.rstrip().endswith("]")
         head = dep_txt.rstrip()[:-1].rstrip()  # drop trailing ']'
         dep_txt = head + ",\n" + ",\n".join(new_blocks) + "\n]\n"
-        open(dep_path, "w").write(dep_txt)
+        with open(dep_path, "w") as f:
+            f.write(dep_txt)
 
     # ---- binary pairs JSON: replace ONLY the 4 target entries, leave the rest byte-identical ----
     bip_path = os.path.join(HERE, "mixture_binary_pairs.json")
-    bip_txt = open(bip_path).read()
+    with open(bip_path) as f:
+        bip_txt = f.read()
     targets = {frozenset({CAS[X], H2}): X for X in reducing_XH2}
     edits = []  # (start, end, new_text)
     for s, e_, obj in _entry_spans(bip_txt):
@@ -175,7 +179,8 @@ def build():
               f"betaT={bt:.9f} gammaT={gt} betaV={bv:.9f} gammaV={gv} function={FUNC[X]}")
     for s, e_, new_text in sorted(edits, reverse=True):
         bip_txt = bip_txt[:s] + new_text + bip_txt[e_:]
-    open(bip_path, "w").write(bip_txt)
+    with open(bip_path, "w") as f:
+        f.write(bip_txt)
 
 
 if __name__ == "__main__":
