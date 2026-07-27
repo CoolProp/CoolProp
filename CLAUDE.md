@@ -68,10 +68,15 @@ Set `BEADS_BOOTSTRAP_FORCE=1` to opt in anywhere else (e.g. to exercise the
 script locally). It is idempotent — hydration is checked with a `bd count`
 health probe rather than directory presence, so a partial or failed import is
 retried next session instead of latching "done" forever — and non-fatal: any
-failure warns on stderr and the session continues without bd. A single-shot
-mkdir lock (with dead-PID stealing, not a busy-wait) guards the hydration
-critical section against two SessionStart hooks racing in the same container.
-On a tree that was clean beforehand, it also restores the few tracked files
+failure warns on stderr and the session continues without bd. An `flock(1)`
+lock (not a busy-wait) guards the hydration critical section against two
+SessionStart hooks racing in the same container; a session that loses the
+race skips hydration *and* `bd prime` entirely for that run rather than
+risk reading the DB mid-rebuild, and retries from scratch next session.
+flock's kernel-level exclusivity is what makes the acquire itself atomic
+and self-releasing on any exit (including SIGKILL, which no trap can
+catch) — no separate staleness/steal logic needed. On a tree that was
+clean beforehand, it also restores the few tracked files
 (`.beads/config.yaml`, `.beads/.gitignore`, `.gitignore`) that `bd init
 --stealth` still normalizes even in stealth mode, via a trap on EXIT/INT/TERM
 so a *signal-interrupted* hook doesn't leave those files dirty; it never
