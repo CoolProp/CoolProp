@@ -280,12 +280,18 @@ double AbstractCubic::bm_term(const std::vector<double>& x) {
     // m_b0_ii_cache[i] holds exactly the value b0_ii(i) returns.
     if (m_b0_ii_cache.size() != static_cast<std::size_t>(N)) {
         m_b0_ii_cache.resize(N);
+        m_b0_ii_cache_valid.assign(N, 0);
         for (int i = 0; i < N; ++i) {
             m_b0_ii_cache[i] = b0_ii(i);
+            m_b0_ii_cache_valid[i] = 1;
         }
     }
     double summer = 0;
     for (int i = N - 1; i >= 0; --i) {
+        if (!m_b0_ii_cache_valid[i]) {
+            m_b0_ii_cache[i] = b0_ii(i);
+            m_b0_ii_cache_valid[i] = 1;
+        }
         summer += x[i] * m_b0_ii_cache[i];
     }
     return summer;

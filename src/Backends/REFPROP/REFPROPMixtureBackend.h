@@ -9,11 +9,24 @@
 #define REFPROPMIXTUREBACKEND_H_
 
 #include "CoolProp/AbstractState.h"
+#include "CoolProp/CoolPropFluid.h"
 #include "CoolProp/DataStructures.h"
 
+#include <string>
 #include <vector>
 
 namespace CoolProp {
+
+/// Return the REFPROP .FLD stem for a CoolPropFluid.
+/// Falls back to `fallback` when REFPROPname is absent or the sentinel "N/A",
+/// so the original user-supplied name is preserved rather than fluid.name
+/// (which may differ, e.g. "R1336mzz(E)" vs the file "R1336MZZE.FLD").
+inline std::string refprop_stem(const CoolPropFluid& fluid, const std::string& fallback) {
+    if (!fluid.REFPROPname.empty() && fluid.REFPROPname != "N/A") {
+        return fluid.REFPROPname;
+    }
+    return fallback;
+}
 
 struct THERM0dllOutputs
 {

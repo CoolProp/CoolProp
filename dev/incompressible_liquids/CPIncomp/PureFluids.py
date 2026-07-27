@@ -3,6 +3,32 @@ import numpy as np
 from .DataObjects import PureData
 
 
+class LBE(PureData):
+    """
+    Heat transfer fluid Lead-bismuth Eutectic Alloy 
+    """
+
+    def __init__(self):
+        PureData.__init__(self)
+        self.density.source = self.density.SOURCE_DATA
+        self.specific_heat.source = self.specific_heat.SOURCE_DATA
+        self.conductivity.source = self.conductivity.SOURCE_DATA
+        self.viscosity.source = self.viscosity.SOURCE_DATA
+        self.saturation_pressure.source = self.saturation_pressure.SOURCE_DATA
+        self.temperature.data = np.array([400.0,425.0,450.0,475.0,500.0,525.0,550.0,575.0,600.0,625.0,650.0,675.0,700.0,725.0,750.0,775.0,800.0,825.0,850.0,875.0,900.0,925.0,950.0,975.0,1000.0,1025.0,1050.0,1075.0,1100.0])  # kelvin
+        self.density.data = np.array([10547.8,10515.5,10483.1,10450.8,10418.5,10386.2,10353.9,10321.5,10289.2,10256.9,10224.5,10192.2,10159.9,10127.6,10095.2,10062.9,10030.6,9998.3,9966.0,9933.6,9901.3,9869.0,9836.6,9804.3,9772.0,9739.7,9707.4,9675.0,9642.7])         # kg/m3
+        self.specific_heat.data = np.array([148.2,147.8,147.3,146.9,146.4,145.9,145.4,144.9,144.4,143.9,143.4,142.9,142.4,141.9,141.5,141.0,140.6,140.1,139.7,139.3,138.9,138.5,138.1,137.8,137.4,137.1,136.8,136.5,136.2])   # J/kg-K
+        self.conductivity.data = np.array([9.38,9.74,10.09,10.44,10.79,11.14,11.48,11.82,12.16,12.49,12.82,13.15,13.47,13.80,14.11,14.43,14.74,15.06,15.36,15.67,15.97,16.27,16.57,16.86,17.15,17.44,17.72,18.00,18.28])         # W/m-K
+        self.viscosity.data = np.array([3.254,2.913,2.639,2.417,2.232,2.077,1.946,1.834,1.736,1.651,1.576,1.510,1.451,1.398,1.350,1.307,1.268,1.232,1.200,1.170,1.142,1.116,1.093,1.071,1.050,1.031,1.013,0.996,0.981]) * 1.E-3        # Pa-s
+        self.saturation_pressure.data = np.array([3.988751e-15,1.099415e-13,2.096286e-12,2.930705e-11,3.147324e-10,2.696021e-09,1.899795e-08,1.129673e-07,5.789991e-07,2.603905e-06,1.043148e-05,3.770686e-05,1.243462e-04,3.776642e-04,1.065159e-03,2.809769e-03,6.975870e-03,1.639046e-02,3.662358e-02,7.815881e-02,1.599209e-01,3.147934e-01,5.979515e-01,1.099049e+00,1.959524e+00,3.396517e+00,5.735108e+00,9.450779e+00,1.522416e+01]) # Pa
+        self.Tmin = np.min(self.temperature.data)
+        self.Tmax = np.max(self.temperature.data)
+        self.TminPsat = self.Tmin
+        self.name = "LBE"
+        self.description = "Lead-Bismuth Eutectic Alloy"
+        self.reference = "Fazio2015"
+        self.reshapeAll()
+
 class LiquidSodium(PureData):
     """
     Heat transfer fluid Liquid Sodium
@@ -20,7 +46,7 @@ class LiquidSodium(PureData):
         self.specific_heat.data = np.array([1372.0,1334.0,1301.0,1277.0,1260.0,1252.0,1252.0,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan])   # J/kg-K
         self.conductivity.data = np.array([87.22, 80.09, 73.70, 68.00, 62.90, 58.34, 54.24, 50.54, 47.16, 44.03, 41.08, 38.24, 35.44, 32.61, 29.68, 26.57, 23.21, 19.54, 15.48, 10.97, 5.92, 0.27])         # W/m-K
         self.viscosity.data = np.array([5.99, 4.15, 3.21, 2.64, 2.27, 2.01, 1.81, 1.66, 1.53, 1.43, 1.35, 1.28, 1.22, 1.17, 1.12, 1.08, 1.04, 1.01, 0.98, 0.95, 0.92, np.nan]) * 1.E-4        # Pa-s
-        self.saturation_pressure.data = np.array([1.8E-10, 8.99E-8, 5.57E-6, 1.05E-4, 9.41E-4, 5.147E-3, 1.995E-2, 6.016E-2, 0.1504, 0.3257, 0.6298, 1.113, 1.828, 2.828, 4.161, 5.870, 7.991, 10.55, 13.57, 17.06, 21.03, 25.47]) * 1000000.   # MPa
+        self.saturation_pressure.data = np.array([1.8E-10, 8.99E-8, 5.57E-6, 1.05E-4, 9.41E-4, 5.147E-3, 1.995E-2, 6.016E-2, 0.1504, 0.3257, 0.6298, 1.113, 1.828, 2.828, 4.161, 5.870, 7.991, 10.55, 13.57, 17.06, 21.03, 25.47]) * 1000000.   # MPa to Pa
         self.Tmin = np.min(self.temperature.data)
         self.Tmax = np.max(self.temperature.data)
         self.TminPsat = self.Tmin

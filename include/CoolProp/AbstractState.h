@@ -249,17 +249,58 @@ class AbstractState
     virtual CoolPropDbl calc_fugacity_coefficient(std::size_t i) {
         throw NotImplementedError("calc_fugacity_coefficient is not implemented for this backend");
     };
-    /// Using this backend, calculate the fugacity in Pa
+    /// Number of components used by the default per-component vector getters below.
+    /// Throws if the composition has not been set, so the vector forms fail loudly
+    /// (matching the scalar getters) rather than silently returning an empty vector.
+    std::size_t calc_n_components_for_vector() {
+        const std::size_t N = this->get_mole_fractions().size();
+        if (N == 0) {
+            throw ValueError("Mole fractions must be set before requesting per-component vector properties");
+        }
+        return N;
+    };
+    /// Using this backend, calculate the vector of fugacity coefficients (dimensionless)
+    /// for every component.  The default loops the scalar calc_fugacity_coefficient(i),
+    /// so it inherits that getter's semantics (e.g. a whole-vector throw if any
+    /// component is undefined, as in the two-phase region).  Backends with a faster
+    /// bespoke path (PCSAFT) override this.
     virtual std::vector<CoolPropDbl> calc_fugacity_coefficients() {
-        throw NotImplementedError("calc_fugacity_coefficients is not implemented for this backend");
+        const std::size_t N = calc_n_components_for_vector();
+        std::vector<CoolPropDbl> out(N);
+        for (std::size_t i = 0; i < N; ++i) {
+            out[i] = calc_fugacity_coefficient(i);
+        }
+        return out;
     };
     /// Using this backend, calculate the fugacity in Pa
     virtual CoolPropDbl calc_fugacity(std::size_t i) {
         throw NotImplementedError("calc_fugacity is not implemented for this backend");
     };
+    /// Using this backend, calculate the vector of fugacities in Pa for every
+    /// component.  The default loops the scalar calc_fugacity(i) and inherits its
+    /// semantics (Q-weighted sat-state values in the two-phase region).
+    virtual std::vector<CoolPropDbl> calc_fugacities() {
+        const std::size_t N = calc_n_components_for_vector();
+        std::vector<CoolPropDbl> out(N);
+        for (std::size_t i = 0; i < N; ++i) {
+            out[i] = calc_fugacity(i);
+        }
+        return out;
+    };
     /// Using this backend, calculate the chemical potential in J/mol
     virtual CoolPropDbl calc_chemical_potential(std::size_t i) {
         throw NotImplementedError("calc_chemical_potential is not implemented for this backend");
+    };
+    /// Using this backend, calculate the vector of chemical potentials in J/mol for
+    /// every component.  The default loops the scalar calc_chemical_potential(i) and
+    /// inherits its semantics (Q-weighted sat-state values in the two-phase region).
+    virtual std::vector<CoolPropDbl> calc_chemical_potentials() {
+        const std::size_t N = calc_n_components_for_vector();
+        std::vector<CoolPropDbl> out(N);
+        for (std::size_t i = 0; i < N; ++i) {
+            out[i] = calc_chemical_potential(i);
+        }
+        return out;
     };
     /// Using this backend, calculate the phase identification parameter (PIP)
     virtual CoolPropDbl calc_PIP() {
@@ -1288,8 +1329,12 @@ class AbstractState
     std::vector<double> fugacity_coefficients();
     /// Return the fugacity of the i-th component of the mixture
     double fugacity(std::size_t i);
+    /// Return a vector of the fugacities (in Pa) for all components in the mixture
+    std::vector<double> fugacities();
     /// Return the chemical potential of the i-th component of the mixture
     double chemical_potential(std::size_t i);
+    /// Return a vector of the chemical potentials (in J/mol) for all components in the mixture
+    std::vector<double> chemical_potentials();
     /** \brief Return the fundamental derivative of gas dynamics \f$ \Gamma \f$
      *
      * see also Colonna et al, FPE, 2010

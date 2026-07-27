@@ -824,6 +824,10 @@ void init_CoolProp(nb::module_& m) {
       .def("fugacity_coefficient", &AbstractState::fugacity_coefficient)
       .def("fugacity", &AbstractState::fugacity)
       .def("chemical_potential", &AbstractState::chemical_potential)
+      // Vector forms returning the full per-component arrays in one call (bd CoolProp-eax, #3024)
+      .def("fugacity_coefficients", &AbstractState::fugacity_coefficients)
+      .def("fugacities", &AbstractState::fugacities)
+      .def("chemical_potentials", &AbstractState::chemical_potentials)
       .def("fundamental_derivative_of_gas_dynamics", &AbstractState::fundamental_derivative_of_gas_dynamics)
       .def("PIP", &AbstractState::PIP)
       // bd CoolProp-r9sq.24: out-reference params -> return a (T, rho) tuple.

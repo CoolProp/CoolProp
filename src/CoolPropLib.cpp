@@ -648,6 +648,66 @@ EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long 
     }
     return _HUGE;
 }
+EXPORT_CODE double CONVENTION AbstractState_get_chemical_potential(const long handle, const long i, long* errcode, char* message_buffer,
+                                                                   const long buffer_length) {
+    *errcode = 0;
+    fpu_reset_guard guard;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->chemical_potential(i);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+// Shared helper: copy a vector-returning per-component getter into the caller's buffer
+// using the standard (values, maxN, N) contract shared with AbstractState_get_mole_fractions.
+static void copy_component_vector(const std::vector<double>& src, double* values, const long maxN, long* N) {
+    *N = static_cast<long>(src.size());
+    if (*N <= maxN) {
+        for (long i = 0; i < *N; i++) {
+            values[i] = src[i];
+        }
+    } else {
+        throw CoolProp::ValueError(format("Length of array [%ld] is greater than allocated buffer length [%ld]", *N, maxN));
+    }
+}
+EXPORT_CODE void CONVENTION AbstractState_get_fugacities(const long handle, double* values, const long maxN, long* N, long* errcode,
+                                                         char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    *N = 0;  // so a throw before the copy leaves a well-defined count, not a stale one
+    fpu_reset_guard guard;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        copy_component_vector(AS->fugacities(), values, maxN, N);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+EXPORT_CODE void CONVENTION AbstractState_get_fugacity_coefficients(const long handle, double* values, const long maxN, long* N, long* errcode,
+                                                                    char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    *N = 0;  // so a throw before the copy leaves a well-defined count, not a stale one
+    fpu_reset_guard guard;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        copy_component_vector(AS->fugacity_coefficients(), values, maxN, N);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+EXPORT_CODE void CONVENTION AbstractState_get_chemical_potentials(const long handle, double* values, const long maxN, long* N, long* errcode,
+                                                                  char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    *N = 0;  // so a throw before the copy leaves a well-defined count, not a stale one
+    fpu_reset_guard guard;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        copy_component_vector(AS->chemical_potentials(), values, maxN, N);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
 EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long input_pair, const double value1, const double value2, long* errcode,
                                                  char* message_buffer, const long buffer_length) {
     *errcode = 0;

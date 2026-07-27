@@ -15,6 +15,12 @@ vi.mock("@tauri-apps/api/core", () => ({
   }),
 }));
 
+// The opener plugin talks to Tauri's IPC layer, which isn't available in
+// jsdom. Stub openUrl so external-link clicks resolve cleanly under test.
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openUrl: vi.fn(async () => {}),
+}));
+
 // react-plotly.js pulls in plotly.js-dist-min, which references browser
 // APIs jsdom doesn't fully implement. Replace with a stub so component
 // trees that include <Plot/> can still mount under test.

@@ -1,6 +1,10 @@
 Changelog for CoolProp
 ======================
 
+Breaking Changes:
+
+* Reintroduced Java wrapper compilation. Java classes generated have been moved from default package, to "org.coolprop" package, in line with Java convention and recommended practice. Applications that previously used the Java wrappers will need to update their import references for CoolProp classes if switching to this version. Java wrappers are built with target Java 11, as Java 8 support has been deprecated. A JDK 11+ must be used to compile using these wrappers.
+
 8.0.0
 -----
 

@@ -1988,6 +1988,23 @@ TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
         }
     }
 }
+TEST_CASE("refprop_stem falls back to user-supplied name when REFPROPname is unusable", "[REFPROPName][refprop_stem]") {
+    CoolPropFluid fluid;
+    fluid.name = "R1336mzz(E)";
+
+    SECTION("empty REFPROPname returns fallback") {
+        fluid.REFPROPname = "";
+        CHECK(CoolProp::refprop_stem(fluid, "R1336MZZE") == "R1336MZZE");
+    }
+    SECTION("N/A REFPROPname returns fallback") {
+        fluid.REFPROPname = "N/A";
+        CHECK(CoolProp::refprop_stem(fluid, "R1336MZZE") == "R1336MZZE");
+    }
+    SECTION("valid REFPROPname is returned unchanged") {
+        fluid.REFPROPname = "BUTANE";
+        CHECK(CoolProp::refprop_stem(fluid, "R600") == "BUTANE");
+    }
+}
 TEST_CASE("Backwards compatibility for REFPROP v4 fluid name convention", "[REFPROP_backwards_compatibility]") {
     Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
 
@@ -4391,6 +4408,74 @@ TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic_DmolarT][2
 }
 
 // ============================================================================
+// Tests for set_fluid_parameter_double("Tcrit"/"pcrit") on cubic backends
+// ============================================================================
+
+TEST_CASE("Cubic set/get Tc and pc via set_fluid_parameter_double", "[cubic_Tcpc]") {
+    // Use PR backend with propane as a representative pure fluid
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("PR", "Propane"));
+    AbstractCubicBackend* raw = dynamic_cast<AbstractCubicBackend*>(AS.get());
+    REQUIRE(raw != nullptr);
+    auto& ACB = *raw;
+
+    const double Tc_orig = ACB.get_fluid_parameter_double(0, "Tcrit");
+    const double pc_orig = ACB.get_fluid_parameter_double(0, "pcrit");
+
+    SECTION("get_fluid_parameter_double returns original Tc and pc") {
+        CHECK(Tc_orig > 0.0);
+        CHECK(pc_orig > 0.0);
+    }
+
+    SECTION("set and get Tc via 'Tcrit' key round-trips correctly") {
+        const double Tc_new = Tc_orig + 5.0;
+        AS->set_fluid_parameter_double(0, "Tcrit", Tc_new);
+        CHECK(ACB.get_fluid_parameter_double(0, "Tcrit") == Catch::Approx(Tc_new).epsilon(1e-12));
+        // Restore
+        AS->set_fluid_parameter_double(0, "Tcrit", Tc_orig);
+    }
+
+    SECTION("set and get pc via 'pcrit' key round-trips correctly") {
+        const double pc_new = pc_orig * 1.02;
+        AS->set_fluid_parameter_double(0, "pcrit", pc_new);
+        CHECK(ACB.get_fluid_parameter_double(0, "pcrit") == Catch::Approx(pc_new).epsilon(1e-12));
+        // Restore
+        AS->set_fluid_parameter_double(0, "pcrit", pc_orig);
+    }
+
+    SECTION("set Tc via 'Tc' alias also works") {
+        const double Tc_new = Tc_orig - 3.0;
+        AS->set_fluid_parameter_double(0, "Tc", Tc_new);
+        CHECK(ACB.get_fluid_parameter_double(0, "Tc") == Catch::Approx(Tc_new).epsilon(1e-12));
+    }
+
+    SECTION("set pc via 'pc' alias also works") {
+        const double pc_new = pc_orig * 0.98;
+        AS->set_fluid_parameter_double(0, "pc", pc_new);
+        CHECK(ACB.get_fluid_parameter_double(0, "pc") == Catch::Approx(pc_new).epsilon(1e-12));
+    }
+
+    SECTION("Twu alpha function: shifting Tc changes saturation pressure") {
+        // Use generic Twu parameters (L, M, N) – these are not from any specific
+        // source; the purpose is only to verify that the Tc change propagates
+        // through the alpha function.
+        const double L = 0.3, M = 0.8, N = 2.0;
+        AS->set_cubic_alpha_C(0, "Twu", L, M, N);
+
+        const double T_test = 300.0;
+        AS->update(QT_INPUTS, 0.0, T_test);
+        const double p_default = AS->p();
+
+        // Shift Tc by +10 K and verify that the saturation pressure changes
+        const double Tc_shifted = Tc_orig + 10.0;
+        AS->set_fluid_parameter_double(0, "Tcrit", Tc_shifted);
+        AS->update(QT_INPUTS, 0.0, T_test);
+        const double p_shifted = AS->p();
+
+        CHECK(std::abs(p_shifted - p_default) / p_default > 1e-4);
+    }
+}
+
+// ============================================================================
 // Lemmon-Akasaka 2022 R-1234yf EOS check values (Table 7)
 // Lemmon & Akasaka, Int. J. Thermophys. 43:119 (2022), DOI 10.1007/s10765-022-03015-y
 // Table 7: density in mol/dm^3, pressure in MPa, cv/cp in J/(mol K), w in m/s
@@ -4813,6 +4898,8 @@ TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables", "
        "Huber, Kazakov & Lemmon, IJT 2025, Table 4 row 3 (g_i != 1 in exponential terms)"},
       {"R1243zf", 280.0, 11000.0, 7.393335e6, 90.7467, 130.734, 648.467, 1e-5,
        "Akasaka & Lemmon, IJT 2025, Table 6 row 2 (3rd EOS, g_i != 1; supersedes Akasaka-JCED-2019)"},
+      {"R1132a", 295.0, 12000.0, 8.031807e6, 57.1438, 117.645, 379.545, 1e-5,
+       "Akasaka, Low & Lemmon, IJT 2026, Table 7 row 4 (g_i != 1 in exponential terms)"},
     };
 
     for (const auto& r : rows) {
@@ -5404,8 +5491,10 @@ TEST_CASE("Two-phase chemical_potential mirrors sat-state values; fugacity_coeff
     //   - mu_i^L == mu_i^V at VLE (the equilibrium condition), so the new code
     //     returns the Q-weighted sat-state value, which collapses to either
     //     endpoint up to flash tolerance.
-    //   - phi_i^L != phi_i^V because the phase compositions differ; the new
-    //     code throws to force callers to evaluate on SatL/SatV explicitly.
+    //   - phi_i^L != phi_i^V because the phase compositions differ; in the
+    //     genuine two-phase interior (0 < Q < 1) the code throws to force
+    //     callers to evaluate on SatL/SatV explicitly.  (The dome boundaries
+    //     Q == 0 / Q == 1 are well-defined and covered by the [3258] case below.)
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
     AS->set_mole_fractions({0.25, 0.25, 0.5});
     AS->update(CoolProp::PQ_INPUTS, 500e3, 0.5);
@@ -5428,11 +5517,102 @@ TEST_CASE("Two-phase chemical_potential mirrors sat-state values; fugacity_coeff
         // overall == Q-weighted combination of sat states (Q=0.5)
         CHECK(std::abs(mu - 0.5 * (muL + muV)) < 1e-9 * std::abs(0.5 * (muL + muV)));
 
-        // fugacity_coefficient throws in two-phase
+        // fugacity_coefficient throws in the genuine two-phase interior (Q = 0.5)
         CHECK_THROWS(AS->fugacity_coefficient(i));
         // but works on the sat states
         CHECK(std::isfinite(satL.fugacity_coefficient(i)));
         CHECK(std::isfinite(satV.fugacity_coefficient(i)));
+    }
+}
+
+TEST_CASE("Two-phase fugacity_coefficient at Q=0/Q=1 returns the sat-state value (GH #3258)", "[mixtures][3258]") {
+    // GH #3258: a low-level routine (Water&Ethanol PQ, Q=0) that worked in v7.2
+    // began throwing in v8.  PR #3022 made calc_fugacity_coefficient throw for ANY
+    // isTwoPhase() state, but at the dome boundaries the overall composition equals
+    // one saturated phase, so phi_i is well-defined and must equal SatL (Q=0) /
+    // SatV (Q=1) -- mirroring calc_fugacity.  Only the interior 0 < Q < 1 throws.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water&Ethanol"));
+    AS->set_mole_fractions({0.4, 0.6});
+
+    // Q = 0 (saturated liquid): overall == liquid composition, phi_i == SatL value.
+    AS->update(CoolProp::PQ_INPUTS, 101325, 0);
+    REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+    auto* heosL = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(heosL != nullptr);
+    auto& satL = heosL->get_SatL();
+    for (std::size_t i = 0; i < 2; ++i) {
+        CAPTURE(i);
+        const double phi = AS->fugacity_coefficient(i);  // must NOT throw
+        CHECK(std::isfinite(phi));
+        CHECK(phi == Catch::Approx(satL.fugacity_coefficient(i)));
+    }
+
+    // Q = 1 (saturated vapor): overall == vapor composition, phi_i == SatV value.
+    AS->update(CoolProp::PQ_INPUTS, 101325, 1);
+    REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+    auto* heosV = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(heosV != nullptr);
+    auto& satV = heosV->get_SatV();
+    for (std::size_t i = 0; i < 2; ++i) {
+        CAPTURE(i);
+        const double phi = AS->fugacity_coefficient(i);  // must NOT throw
+        CHECK(std::isfinite(phi));
+        CHECK(phi == Catch::Approx(satV.fugacity_coefficient(i)));
+    }
+}
+
+TEST_CASE("Vector per-component mixture getters mirror the scalar getters (#3024)", "[mixtures][3024]") {
+    // The vector-returning fugacities()/fugacity_coefficients()/chemical_potentials()
+    // default-loop the scalar calc_*(i) virtuals, so they must agree element-by-element
+    // with the existing scalar getters and inherit the same two-phase semantics.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+    const std::vector<double> z{0.25, 0.25, 0.5};
+    AS->set_mole_fractions(z);
+
+    SECTION("single-phase: all three vectors equal the scalar loop") {
+        AS->update(CoolProp::PT_INPUTS, 5e6, 500);  // hot single-phase gas, well above the dome
+        REQUIRE(AS->phase() != CoolProp::iphase_twophase);
+
+        const std::vector<double> f = AS->fugacities();
+        const std::vector<double> phi = AS->fugacity_coefficients();
+        const std::vector<double> mu = AS->chemical_potentials();
+        REQUIRE(f.size() == z.size());
+        REQUIRE(phi.size() == z.size());
+        REQUIRE(mu.size() == z.size());
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            CAPTURE(i);
+            CHECK(f[i] == Catch::Approx(AS->fugacity(i)));
+            CHECK(phi[i] == Catch::Approx(AS->fugacity_coefficient(i)));
+            CHECK(mu[i] == Catch::Approx(AS->chemical_potential(i)));
+        }
+    }
+
+    SECTION("two-phase: fugacities/chemical_potentials finite, fugacity_coefficients throws whole-vector") {
+        AS->update(CoolProp::PQ_INPUTS, 500e3, 0.5);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+
+        const std::vector<double> f = AS->fugacities();
+        const std::vector<double> mu = AS->chemical_potentials();
+        REQUIRE(f.size() == z.size());
+        REQUIRE(mu.size() == z.size());
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            CAPTURE(i);
+            CHECK(f[i] == Catch::Approx(AS->fugacity(i)));
+            CHECK(mu[i] == Catch::Approx(AS->chemical_potential(i)));
+        }
+        // Whole-vector throw: the scalar fugacity_coefficient(0) throws, so the
+        // default-loop aborts on the first component rather than returning a
+        // partially-filled / NaN-padded vector.
+        CHECK_THROWS(AS->fugacity_coefficients());
+    }
+
+    SECTION("composition not set: vector getters throw rather than returning empty") {
+        auto fresh = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+        // No set_mole_fractions / update: the default-loop must fail loudly so the
+        // misuse path does not silently fail-open with an empty vector.
+        CHECK_THROWS(fresh->fugacities());
+        CHECK_THROWS(fresh->fugacity_coefficients());
+        CHECK_THROWS(fresh->chemical_potentials());
     }
 }
 
@@ -6601,6 +6781,45 @@ TEST_CASE("REFPROP cross-check: sat-state fugacity_coefficient agrees with HEOS 
 // member-init list, where n is still empty (it's populated in the body), so
 // every surface tension silently evaluated to 0.0.  These checks fail loudly
 // if that ever recurs.  IAPWS reference values, ~1% tolerance.
+// GH docs-CI failure: BICUBIC&HEOS mixture table build needs third-order ideal-gas
+// Helmholtz derivatives, which the mixture branch of calc_alpha0_deriv_nocache did not
+// implement (bare throw ValueError() with empty message).  Validate all four third-order
+// terms against central finite differences of the (already implemented) second-order ones.
+TEST_CASE("Third-order ideal-gas Helmholtz derivatives for HEOS mixtures", "[Helmholtz],[mixtures],[alpha0_derivs]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Isopentane&n-Butane"));
+    AS->set_mole_fractions({0.4, 0.6});
+    AS->specify_phase(CoolProp::iphase_gas);
+    const double Tr = AS->T_reducing(), rhor = AS->rhomolar_reducing();
+    const double tau = 0.8, delta = 0.8;
+    auto set_state = [&](double tau_, double delta_) { AS->update(CoolProp::DmolarT_INPUTS, delta_ * rhor, Tr / tau_); };
+
+    set_state(tau, delta);
+    const double d3_tau3 = AS->d3alpha0_dTau3();
+    const double d3_delta_tau2 = AS->d3alpha0_dDelta_dTau2();
+    const double d3_delta2_tau = AS->d3alpha0_dDelta2_dTau();
+    const double d3_delta3 = AS->d3alpha0_dDelta3();
+
+    const double h = 1e-5;
+    set_state(tau + h, delta);
+    const double d2tau2_taup = AS->d2alpha0_dTau2(), d2deltatau_taup = AS->d2alpha0_dDelta_dTau(), d2delta2_taup = AS->d2alpha0_dDelta2();
+    set_state(tau - h, delta);
+    const double d2tau2_taum = AS->d2alpha0_dTau2(), d2deltatau_taum = AS->d2alpha0_dDelta_dTau(), d2delta2_taum = AS->d2alpha0_dDelta2();
+    set_state(tau, delta + h);
+    const double d2delta2_deltap = AS->d2alpha0_dDelta2();
+    set_state(tau, delta - h);
+    const double d2delta2_deltam = AS->d2alpha0_dDelta2();
+
+    CHECK(d3_tau3 == Catch::Approx((d2tau2_taup - d2tau2_taum) / (2 * h)).epsilon(1e-5).margin(1e-8));
+    // alpha0 is separable (ln(delta) + f(tau)), so the mixed derivatives are identically zero for
+    // every fluid; these two checks only guard against NaN or throw, not the scaling factors
+    CHECK(d3_delta_tau2 == Catch::Approx((d2deltatau_taup - d2deltatau_taum) / (2 * h)).epsilon(1e-5).margin(1e-8));
+    CHECK(d3_delta2_tau == Catch::Approx((d2delta2_taup - d2delta2_taum) / (2 * h)).epsilon(1e-5).margin(1e-8));
+    // Ideal-gas delta-dependence is ln(delta), so d3alpha0/dDelta3 = 2/delta^3 up to the
+    // per-component gas-constant ratio R_i/R_mix (deviates from 1 by ~1e-6 for these fluids)
+    CHECK(d3_delta3 == Catch::Approx((d2delta2_deltap - d2delta2_deltam) / (2 * h)).epsilon(1e-5).margin(1e-8));
+    CHECK(d3_delta3 == Catch::Approx(2.0 / POW3(delta)).epsilon(1e-5));
+}
+
 TEST_CASE("Surface tension of water is nonzero and matches IAPWS", "[surface_tension]") {
     const double st_300 = CoolProp::PropsSI("I", "T", 300, "Q", 0, "Water");
     const double st_350 = CoolProp::PropsSI("I", "T", 350, "Q", 0, "Water");
