@@ -104,6 +104,30 @@ std::shared_ptr<cp_sbtl::SVDSurface> make_filled_surface(const std::string& flui
     return surface;
 }
 
+// RAII restore for the two cache-limit config keys plus the process-wide
+// cache itself.  The eviction tests below mutate global state, and Catch2's
+// REQUIRE throws on failure — restoring only at the end of the test body
+// would leak the mutated limits (and a populated singleton) into every
+// subsequent test in the binary on the first failure, turning one real
+// failure into a cascade of unrelated ones.
+struct CacheConfigGuard
+{
+    int saved_max_entries = CoolProp::get_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES);
+    int saved_max_mb = CoolProp::get_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB);
+
+    CacheConfigGuard(const CacheConfigGuard&) = delete;
+    CacheConfigGuard& operator=(const CacheConfigGuard&) = delete;
+    CacheConfigGuard(CacheConfigGuard&&) = delete;
+    CacheConfigGuard& operator=(CacheConfigGuard&&) = delete;
+    CacheConfigGuard() = default;
+
+    ~CacheConfigGuard() {
+        CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES, saved_max_entries);
+        CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, saved_max_mb);
+        cp_sbtl::SVDSurfaceCache::instance().clear();
+    }
+};
+
 }  // namespace
 
 TEST_CASE("estimate_surface_bytes sums decomposition vectors across regions/properties", "[SBTL][cache]") {
@@ -135,8 +159,7 @@ TEST_CASE("SVDSurfaceCache get/put round-trip and miss", "[SBTL][cache]") {
 }
 
 TEST_CASE("SVDSurfaceCache evicts least-recently-used entry once max entry count is exceeded", "[SBTL][cache]") {
-    const int saved_max_entries = CoolProp::get_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES);
-    const int saved_max_mb = CoolProp::get_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB);
+    const CacheConfigGuard guard;
     CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES, 2);
     CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, 4096);  // not the binding constraint here
 
@@ -154,15 +177,10 @@ TEST_CASE("SVDSurfaceCache evicts least-recently-used entry once max entry count
     REQUIRE(cache.get("a") != nullptr);
     REQUIRE(cache.get("b") == nullptr);
     REQUIRE(cache.get("c") != nullptr);
-
-    cache.clear();
-    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES, saved_max_entries);
-    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, saved_max_mb);
 }
 
 TEST_CASE("SVDSurfaceCache evicts oldest entry once the byte-size budget is exceeded", "[SBTL][cache]") {
-    const int saved_max_entries = CoolProp::get_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES);
-    const int saved_max_mb = CoolProp::get_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB);
+    const CacheConfigGuard guard;
     CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES, 100);  // not the binding constraint here
 
     // Each filled surface is one (1000 x 1000, rank 100) decomposition:
@@ -188,10 +206,6 @@ TEST_CASE("SVDSurfaceCache evicts oldest entry once the byte-size budget is exce
     REQUIRE(cache.get("big1") == nullptr);  // evicted to make room
     REQUIRE(cache.get("big2") != nullptr);
     REQUIRE(cache.size_bytes() <= static_cast<std::size_t>(max_mb) * 1024 * 1024);
-
-    cache.clear();
-    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES, saved_max_entries);
-    CoolProp::set_config_int(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, saved_max_mb);
 }
 
 TEST_CASE("SatBoundaryFactory builds water sat curves matching HEOS", "[SBTL][SatBoundaryFactory][slow]") {

@@ -1009,7 +1009,12 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
     // otherwise pay on every backend construction (the dominant cost
     // for PropsSI-style call patterns that rebuild the backend per
     // call).
-    std::shared_ptr<const cp_sbtl::SVDSurface> surface = cp_sbtl::SVDSurfaceCache::instance().get(path);
+    auto& surface_cache = cp_sbtl::SVDSurfaceCache::instance();
+    std::shared_ptr<const cp_sbtl::SVDSurface> surface = surface_cache.get(path);
+    // get() already promoted a hit to most-recently-used, so re-publishing it
+    // below would pay a second lock + byte re-estimate + erase/reinsert +
+    // eviction sweep for no benefit.  Only newly loaded/built surfaces need put().
+    const bool from_memory_cache = static_cast<bool>(surface);
 
     if (!surface && std::filesystem::exists(path)) {
         try {
@@ -1034,7 +1039,9 @@ void SVDSBTLBackend::ensure_surface_(CoolProp::input_pairs pair) {
         }
     }
 
-    cp_sbtl::SVDSurfaceCache::instance().put(path, surface);
+    if (!from_memory_cache) {
+        surface_cache.put(path, surface);
+    }
     surfaces_[static_cast<int>(pair)] = std::move(surface);
 }
 
