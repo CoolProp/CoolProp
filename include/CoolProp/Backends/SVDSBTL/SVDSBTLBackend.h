@@ -357,9 +357,14 @@ class SVDSBTLBackend : public AbstractState
     void ensure_dome_h_endpoints_(PointEvaluation& pt);
 
     // Resolve the surface for `pair`: first the process-wide
-    // SVDSurfaceCache, then <fluid>.<pair>.svd.bin.z on disk; if
-    // neither has it, build via the matching preset and populate
-    // both.  Inserts into surfaces_.
+    // SVDSurfaceCache, then the on-disk cache at
+    // <fluid>.<source>.<input_pair>.<opthash>.svd.bin.z (see
+    // SVDSurfaceSerializer::default_cache_path); if neither has it,
+    // build via the matching preset and populate both.  Inserts into
+    // surfaces_.
+    //
+    // The in-memory cache is keyed by that same full path string, so
+    // differing source backends or option sets never share an entry.
     void ensure_surface_(CoolProp::input_pairs pair);
 
     // Resolve the SuperAncillary handle for this fluid (cached after
