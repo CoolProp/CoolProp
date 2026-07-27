@@ -3,11 +3,10 @@
 language: en-US
 
 reviews:
-  # dev/incompressible_liquids/json/* are generated coefficient-data files,
-  # not code -- nothing there benefits from review comments. (Note: this
-  # does NOT count against CodeRabbit's per-PR file-count cap, which is
-  # computed on the raw diff before path_filters apply; it only trims what
-  # gets reviewed once a PR is under the cap.)
+  # TEMPORARY: PR #3292 trips CodeRabbit's 150-file review cap (180 files,
+  # 127 of them are dev/incompressible_liquids/json/* data files with no
+  # code to review). Exclude that directory so the review can run at all;
+  # revert this filter once the review has completed.
   path_filters:
     - "!dev/incompressible_liquids/json/**"
   # Project-wide guidance for the reviewer.

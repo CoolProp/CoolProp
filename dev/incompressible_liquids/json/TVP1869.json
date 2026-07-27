@@ -1,92 +1,128 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 2.731500e+02, 
-  "Tmax": 2.931500e+02, 
-  "Tmin": 1.931500e+02, 
-  "TminPsat": 2.931500e+02, 
+  },
+  "Tbase": 273.15,
+  "Tmax": 293.15,
+  "Tmin": 193.15,
+  "TminPsat": 293.15,
   "conductivity": {
-    "NRMS": null, 
+    "NRMS": null,
     "coeffs": [
       [
-        1.500000e-01
-      ], 
+        0.15
+      ],
       [
-        -1.545450e-04
+        -0.000154545
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": null, 
+    "NRMS": null,
     "coeffs": [
       [
-        9.455455e+02
-      ], 
+        945.5455
+      ],
       [
-        -1.054545e+00
+        -1.054545
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Thermogen VP 1869", 
+  },
+  "density_cheb": {
+    "NRMS": null,
+    "Trange": [
+      193.15,
+      293.15
+    ],
+    "coeffs": [
+      [
+        977.1818499999999
+      ],
+      [
+        -52.72725000000003
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Thermogen VP 1869",
   "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "name": "TVP1869", 
-  "reference": "Hoechst1995,Skovrup2013", 
+  },
+  "name": "TVP1869",
+  "reference": "Hoechst1995,Skovrup2013",
   "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": null, 
+    "NRMS": null,
     "coeffs": [
       [
-        2.322218e+03
-      ], 
+        2322.218
+      ],
       [
-        3.843636e+00
+        3.843636
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 3.712665e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": null,
+    "Trange": [
+      193.15,
+      293.15
+    ],
     "coeffs": [
       [
-        -5.651331e+00
-      ], 
+        2206.90892
+      ],
       [
-        -3.572436e-02
-      ], 
+        192.18179999999978
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.003712665,
+    "coeffs": [
       [
-        1.071302e-04
-      ], 
+        -5.651331
+      ],
+      [
+        -0.03572436
+      ],
+      [
+        0.0001071302
+      ],
       [
         -5.102013e-06
       ]
-    ], 
+    ],
     "type": "exppolynomial"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

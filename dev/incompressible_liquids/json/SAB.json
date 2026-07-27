@@ -1,89 +1,125 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 0.000000e+00, 
-  "Tmax": 3.731500e+02, 
-  "Tmin": 1.931500e+02, 
-  "TminPsat": 3.731500e+02, 
+  },
+  "Tbase": 0.0,
+  "Tmax": 373.15,
+  "Tmin": 193.15,
+  "TminPsat": 373.15,
   "conductivity": {
-    "NRMS": null, 
+    "NRMS": null,
     "coeffs": [
       [
-        2.083740e-01
-      ], 
+        0.208374
+      ],
       [
-        -2.616670e-04
+        -0.000261667
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": null, 
+    "NRMS": null,
     "coeffs": [
       [
-        1.102340e+03
-      ], 
+        1102.34
+      ],
       [
-        -8.016670e-01
+        -0.801667
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Synthetic alkyl benzene - Marlotherm X", 
+  },
+  "density_cheb": {
+    "NRMS": null,
+    "Trange": [
+      193.15,
+      373.15
+    ],
+    "coeffs": [
+      [
+        875.34798895
+      ],
+      [
+        -72.15003000000003
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Synthetic alkyl benzene - Marlotherm X",
   "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "name": "SAB", 
-  "reference": "Melinder2010", 
+  },
+  "name": "SAB",
+  "reference": "Melinder2010",
   "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": null, 
+    "NRMS": null,
     "coeffs": [
       [
-        1.360940e+03
-      ], 
+        1360.94
+      ],
       [
-        1.516670e+00
+        1.51667
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": null, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": null,
+    "Trange": [
+      193.15,
+      373.15
+    ],
     "coeffs": [
       [
-        5.212880e+00
-      ], 
+        1790.3851104999999
+      ],
       [
-        -6.657920e-02
-      ], 
-      [
-        8.506600e-05
+        136.50029999999984
       ]
-    ], 
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": null,
+    "coeffs": [
+      [
+        5.21288
+      ],
+      [
+        -0.0665792
+      ],
+      [
+        8.5066e-05
+      ]
+    ],
     "type": "exppolynomial"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

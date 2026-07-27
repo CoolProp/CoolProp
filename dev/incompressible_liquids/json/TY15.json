@@ -1,101 +1,137 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 2.831500e+02, 
-  "Tmax": 3.131500e+02, 
-  "Tmin": 2.531500e+02, 
-  "TminPsat": 3.131500e+02, 
+  },
+  "Tbase": 283.15,
+  "Tmax": 313.15,
+  "Tmin": 253.15,
+  "TminPsat": 313.15,
   "conductivity": {
-    "NRMS": 9.170581e-15, 
+    "NRMS": 9.170581e-15,
     "coeffs": [
       [
-        4.920000e-01
-      ], 
+        0.492
+      ],
       [
-        7.000000e-04
-      ], 
+        0.0007
+      ],
       [
         -2.168404e-19
-      ], 
+      ],
       [
         2.105202e-20
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 7.161598e-15, 
+    "NRMS": 7.161598e-15,
     "coeffs": [
       [
-        1.154000e+03
-      ], 
+        1154.0
+      ],
       [
-        -4.000000e-01
-      ], 
+        -0.4
+      ],
       [
         3.885781e-16
-      ], 
+      ],
       [
         1.275204e-17
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Tyfoxit 1.15, Potassium Acetate", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "TY15", 
-  "reference": "Tyfoprop1999,Skovrup2013", 
-  "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "specific_heat": {
-    "NRMS": 1.345873e-02, 
+  },
+  "density_cheb": {
+    "NRMS": 1.1876166099076285e-14,
+    "Trange": [
+      253.14999999999998,
+      313.15
+    ],
     "coeffs": [
       [
-        3.273333e+03
-      ], 
+        1153.9999999999998
+      ],
       [
-        2.408730e+00
-      ], 
-      [
-        2.380952e-03
-      ], 
-      [
-        -2.777778e-04
+        -11.99999999999979
       ]
-    ], 
-    "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 9.972837e-03, 
-    "coeffs": [
-      4.217587e+02, 
-      -1.621283e+02, 
-      9.250307e+00
-    ], 
-    "type": "exponential"
-  }, 
-  "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Tyfoxit 1.15, Potassium Acetate",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "TY15",
+  "reference": "Tyfoprop1999,Skovrup2013",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": 0.01345873,
+    "coeffs": [
+      [
+        3273.333
+      ],
+      [
+        2.40873
+      ],
+      [
+        0.002380952
+      ],
+      [
+        -0.0002777778
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.01903352535789975,
+    "Trange": [
+      253.14999999999998,
+      313.15
+    ],
+    "coeffs": [
+      [
+        3274.2857142857138
+      ],
+      [
+        66.42857142857189
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.009972837,
+    "coeffs": [
+      421.7587,
+      -162.1283,
+      9.250307
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

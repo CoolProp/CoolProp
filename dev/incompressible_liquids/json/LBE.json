@@ -44,6 +44,24 @@
     ],
     "type": "polynomial"
   },
+  "density_cheb": {
+    "NRMS": 3.312266696493293e-05,
+    "Trange": [
+      400.0,
+      1100.0
+    ],
+    "coeffs": [
+      [
+        10095.248275862066
+      ],
+      [
+        -452.54689655172314
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
   "description": "Lead-Bismuth Eutectic Alloy",
   "mass2input": {
     "NRMS": null,
@@ -92,6 +110,36 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.0015934199807373969,
+    "Trange": [
+      400.0,
+      1100.0
+    ],
+    "coeffs": [
+      [
+        141.87027095849393
+      ],
+      [
+        -6.138520798415175
+      ],
+      [
+        0.36936431894019894
+      ],
+      [
+        0.13407388719159097
+      ],
+      [
+        -0.033397285726294905
+      ],
+      [
+        0.00961196389655225
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "viscosity": {
     "NRMS": 0.0001687344458737014,
