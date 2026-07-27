@@ -52,13 +52,30 @@ bd close <id>         # Complete work
 ### `bd` in ephemeral (Claude Code web/CI) containers
 
 Fresh containers have no `bd` binary and no Dolt DB (the DB dir
-`.beads/embeddeddolt/` is gitignored). `dev/ci/bootstrap-beads.sh` — wired
-as the first `SessionStart` hook in `.claude/settings.json`, ahead of the
-beads-managed `bd prime` — installs `bd` via `go install` (the `curl|bash`
-installer's GitHub-release download is blocked by the agent proxy; the Go
-module proxy is allowed) and rehydrates the DB from the committed
-`.beads/issues.jsonl`. It is idempotent and non-fatal. First cold start
-takes ~2 min (Go toolchain fetch + build); warm containers skip both steps.
+`.beads/embeddeddolt/` is gitignored). `dev/ci/bootstrap-beads.sh` is the
+**only** `SessionStart` hook for beads (`.claude/settings.json`) — Claude Code
+runs same-event hooks concurrently rather than in array order, so a separate
+`bd prime` hook would race a `bd` this script hasn't finished installing yet.
+The script installs `bd` via `go install` (the `curl|bash` installer's
+GitHub-release download is blocked by the agent proxy; the Go module proxy is
+allowed), rehydrates the DB from the committed `.beads/issues.jsonl`, and
+finally runs `bd prime` itself once both are ready.
+
+It only bootstraps in recognized ephemeral environments (`CI=true` or
+`CLAUDE_CODE_REMOTE=true`) — a developer workstation with `go` on `PATH` is
+left alone rather than getting an unprompted `go install` / toolchain fetch.
+Set `BEADS_BOOTSTRAP_FORCE=1` to opt in anywhere else (e.g. to exercise the
+script locally). It is idempotent — hydration is checked with a `bd count`
+health probe rather than directory presence, so a partial or failed import is
+retried next session instead of latching "done" forever — and non-fatal: any
+failure warns on stderr and the session continues without bd. On a tree that
+was clean beforehand, it also restores the few tracked files
+(`.beads/config.yaml`, `.beads/.gitignore`, `.gitignore`) that `bd init
+--stealth` still normalizes even in stealth mode, via a trap so an
+interrupted hook doesn't leave those files dirty; it never touches a tree
+that already had pending edits to them. First cold start takes ~2-3 min (Go
+toolchain fetch + build); warm containers skip both install and hydration.
+
 To persist newly filed issues, append their `bd export --include-memories`
 lines to `.beads/issues.jsonl` and commit — do **not** overwrite the file
 wholesale (bd 1.1.0 re-serializes the `dependencies` field on unrelated

@@ -70,6 +70,25 @@ get caught locally.
 
 ---
 
+## bootstrap-beads.sh — bd in ephemeral containers
+
+`dev/ci/bootstrap-beads.sh` is the `SessionStart` hook (see
+`.claude/settings.json`) that makes `bd` (the beads issue tracker) usable in
+Claude Code web/CI containers, which start from a fresh clone with no `bd`
+binary and no Dolt database. It installs `bd` via `go install` (the
+`curl|bash` installer's GitHub-release download is blocked by the agent
+proxy; the Go module proxy is allowed), rehydrates the embedded DB from the
+committed `.beads/issues.jsonl`, and then runs `bd prime` itself — see
+CLAUDE.md's "`bd` in ephemeral (Claude Code web/CI) containers" section for
+the full story (gating, idempotency, and why it's the only `SessionStart`
+hook for beads).
+
+It only runs in recognized ephemeral environments (`CI=true` or
+`CLAUDE_CODE_REMOTE=true`); set `BEADS_BOOTSTRAP_FORCE=1` to exercise it on a
+workstation.
+
+---
+
 ## clang-format
 
 `.clang-format` at repo root is the source of truth for formatting rules.

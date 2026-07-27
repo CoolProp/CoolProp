@@ -13,27 +13,79 @@
 #     absent — it must be rehydrated from the committed .beads/issues.jsonl,
 #     which is the source of truth.
 #
-# This script is registered as the FIRST SessionStart hook (see
-# .claude/settings.json) so it runs before the beads-managed
-# `bd prime --hook-json` hook, which then finds an installed bd and a
-# populated database.
+# This is the ONLY SessionStart hook for beads (see .claude/settings.json).
+# Claude Code runs all hooks for one event concurrently — array position does
+# not sequence them — so a separate `bd prime` hook would race a `bd` this
+# script hasn't finished installing yet. Instead this script runs `bd prime`
+# itself as its last step, once bd and the DB are ready.
 #
-# It is idempotent and strictly non-fatal: a warm container already has bd on
-# PATH and the DB in place (both steps no-op), and any failure logs a warning
-# and exits 0 so a beads hiccup never blocks the session — the git hooks are
-# already guarded the same way.
+# Restricted to recognized ephemeral containers (CI=true or CLAUDE_CODE_REMOTE
+# set): a developer workstation with `go` on PATH must never get an
+# unprompted `go install` / toolchain fetch and multi-minute session stall.
+# Set BEADS_BOOTSTRAP_FORCE=1 to opt in anywhere else (e.g. to exercise this
+# script locally).
+#
+# It is idempotent (hydration is checked with a `bd count` health probe, not
+# directory presence, so a partial/failed import is retried next session
+# rather than latching "done" forever) and strictly non-fatal: a warm
+# container already has bd on PATH and the DB in place (both steps no-op),
+# and any failure logs a warning and lets the session continue without bd —
+# the git hooks are already guarded the same way.
 
 set -u
 
 BD_VERSION="v1.1.0"  # pinned: a future release must not silently wedge cold start
 
+cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || exit 0
+
+# Container gate: only bootstrap in recognized ephemeral environments, unless
+# explicitly opted in. Elsewhere, just prime an already-installed bd (if any)
+# and get out of the way.
+if [ -z "${BEADS_BOOTSTRAP_FORCE:-}" ] \
+    && [ "${CI:-}" != "true" ] \
+    && [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
+    command -v bd >/dev/null 2>&1 && bd prime
+    exit 0
+fi
+
+# Tracks whether we've started an import this run, and whether the tree was
+# clean beforehand — read by the trap below so an interrupted or completed
+# hydration never leaves the tree dirty (bd init normalizes a few tracked
+# config files even under --stealth; see step 2). Default pre_dirty=1 (i.e.
+# "don't restore") so a trap firing before either variable is computed can
+# never touch the tree.
+_bd_did_init=0
+_bd_pre_dirty=1
+
+_beads_bootstrap_cleanup() {
+    [ "$_bd_did_init" = 1 ] || return 0
+    [ "$_bd_pre_dirty" = 0 ] || return 0
+    for _f in .beads/config.yaml .beads/.gitignore .gitignore; do
+        git ls-files --error-unmatch "$_f" >/dev/null 2>&1 && git checkout -- "$_f" 2>/dev/null
+    done
+}
+trap '_beads_bootstrap_cleanup' EXIT
+# A trap alone does not terminate the shell on INT/TERM (dash keeps running
+# past the signal once it's caught) — exit explicitly after cleanup so an
+# external kill (e.g. a hook timeout) still takes effect promptly. This also
+# re-fires the EXIT trap above, which is a harmless no-op the second time.
+trap '_beads_bootstrap_cleanup; exit 130' INT
+trap '_beads_bootstrap_cleanup; exit 143' TERM
+
 # bd installs to $GOPATH/bin; make sure that's on PATH for this session.
 if command -v go >/dev/null 2>&1; then
     _gobin="$(go env GOPATH 2>/dev/null)/bin"
+    # On Windows/Git Bash, `go env GOPATH` prints a Windows path
+    # (C:\Users\...\go); a bare PATH-membership test never matches it, and
+    # prepending it verbatim would split on the drive-letter colon.
+    if command -v cygpath >/dev/null 2>&1; then
+        _gobin="$(cygpath -u "$_gobin")"
+    fi
     case ":${PATH}:" in
         *":${_gobin}:"*) ;;
         *) PATH="${_gobin}:${PATH}"; export PATH ;;
     esac
+    hash -r 2>/dev/null || true
 fi
 
 # 1. Install bd if missing.
@@ -44,43 +96,69 @@ if ! command -v bd >/dev/null 2>&1; then
         # requires (via the allowlisted module proxy) when the base toolchain
         # is older.
         if ! GOTOOLCHAIN=auto GOFLAGS=-mod=mod go install \
-            "github.com/steveyegge/beads/cmd/bd@${BD_VERSION}" >&2 2>&1; then
+            "github.com/steveyegge/beads/cmd/bd@${BD_VERSION}" >&2; then
             echo "beads-bootstrap: 'go install bd' failed — bd commands unavailable this session." >&2
         fi
+        hash -r 2>/dev/null || true
     else
         echo "beads-bootstrap: 'go' not found — cannot install bd." >&2
     fi
 fi
-command -v bd >/dev/null 2>&1 || exit 0
 
-# 2. Hydrate the embedded Dolt DB from the committed JSONL if it isn't there.
-#    Presence of the gitignored DB dir is the reliable "already hydrated" test
-#    (bd's own commands exit 0 even when no DB exists, so exit codes can't be
-#    used here).
-if [ ! -d .beads/embeddeddolt ]; then
-    # Record whether the tree already had changes, so the post-init restore
-    # below only runs on a clean fresh container and never touches a
-    # developer's in-progress edits to these config files.
-    _bd_pre_dirty="$(git status --porcelain -- .beads/config.yaml .beads/.gitignore .gitignore 2>/dev/null)"
-    echo "beads-bootstrap: hydrating beads DB from .beads/issues.jsonl..." >&2
-    # --stealth keeps beads files out of git (via .git/info/exclude), so init
-    #   makes NO commits and rewrites NO tracked files — critical in a hook,
-    #   which must never dirty the tree or auto-commit;
-    # --from-jsonl imports the committed .beads/issues.jsonl in the same step;
-    # --non-interactive / --quiet for the non-TTY container.
-    if ! bd init --stealth --non-interactive --quiet --from-jsonl >/dev/null 2>&1; then
-        echo "beads-bootstrap: 'bd init --from-jsonl' failed — beads DB unavailable this session." >&2
+if command -v bd >/dev/null 2>&1; then
+    # 2. Hydrate the embedded Dolt DB from the committed JSONL if needed.
+    #    "already hydrated" is checked with a health probe (bd count), not
+    #    directory presence: bd init creates .beads/embeddeddolt/ *before*
+    #    importing, so a partial/failed import would otherwise leave a
+    #    directory that latches "hydrated" forever. `bd count` also exits
+    #    non-zero when no DB exists at all, so a single probe covers both
+    #    "never initialized" and "initialized but empty".
+    _bd_hydrated() {
+        _n="$(bd count --quiet 2>/dev/null)" || return 1
+        [ -n "$_n" ] && [ "$_n" -gt 0 ] 2>/dev/null
+    }
+
+    if [ -f .beads/issues.jsonl ] && ! _bd_hydrated; then
+        _bd_did_init=1
+        # Record whether the tree already had changes, so the restore below
+        # (via the trap) only runs on a clean fresh container and never
+        # touches a developer's in-progress edits to these config files.
+        # Checked separately from emptiness: a `git status` that itself
+        # errors (index lock contention, git missing, cwd outside a repo)
+        # must not be read as "clean".
+        if _bd_dirty_out="$(git status --porcelain -- .beads/config.yaml .beads/.gitignore .gitignore 2>&1)"; then
+            [ -z "$_bd_dirty_out" ] && _bd_pre_dirty=0
+        fi
+
+        echo "beads-bootstrap: hydrating beads DB from .beads/issues.jsonl..." >&2
+        # Our own health probe just said "not hydrated", so nothing of value
+        # is lost by clearing whatever's here first. This matters because
+        # step 3's `bd prime` lazily creates an empty Dolt DB as a side
+        # effect whenever none exists (confirmed by testing, not documented
+        # behavior) — so a prior failed/skipped attempt in this same
+        # container can leave an empty DB behind, and `bd init --from-jsonl`
+        # refuses to run against ANY existing DB ("already initialized")
+        # without this.
+        rm -rf .beads/embeddeddolt
+        # --stealth keeps beads files out of git (via .git/info/exclude), so
+        #   init makes NO commits — critical in a hook, which must never
+        #   auto-commit;
+        # --from-jsonl imports the committed .beads/issues.jsonl in the same
+        #   step;
+        # --non-interactive / --quiet for the non-TTY container.
+        if ! bd init --stealth --non-interactive --quiet --from-jsonl >/dev/null; then
+            echo "beads-bootstrap: 'bd init --from-jsonl' failed — beads DB unavailable this session." >&2
+            rm -rf .beads/embeddeddolt
+        elif ! _bd_hydrated; then
+            echo "beads-bootstrap: bd init reported success but the DB has no issues — treating as a failed hydration so it retries next session." >&2
+            rm -rf .beads/embeddeddolt
+        fi
+        # The tracked-file restore itself happens in the EXIT trap above, so
+        # it also fires on an interrupted hook, not just a clean finish.
     fi
-    # --stealth avoids commits and the CLAUDE.md/AGENTS.md/settings rewrites,
-    # but bd init still normalizes a few tracked config files
-    # (.beads/config.yaml, .beads/.gitignore, .gitignore). Restore them so a
-    # fresh container's tree stays clean; the gitignored embedded DB is kept
-    # and remains usable (config.yaml holds only commented defaults). Guarded
-    # so it only runs when the pre-hook tree was clean (fresh container), never
-    # clobbering real in-progress edits.
-    if [ -z "$_bd_pre_dirty" ]; then
-        git checkout -- .beads/config.yaml .beads/.gitignore .gitignore 2>/dev/null || true
-    fi
+
+    # 3. Hand off to the beads-managed workflow-context hook.
+    bd prime
 fi
 
 exit 0
