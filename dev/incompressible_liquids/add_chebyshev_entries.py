@@ -30,8 +30,6 @@ import json
 import os
 import sys
 
-import numpy as np
-
 from CPIncomp import getPureFluids, getSolutionFluids, getSecCoolFluids, getDigitalFluids, getExampleNames
 from CPIncomp.WriterObjects import SolutionDataWriter
 from CPIncomp import ChebyshevFits
