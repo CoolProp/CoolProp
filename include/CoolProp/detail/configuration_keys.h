@@ -80,9 +80,11 @@
     X(LIST_STRING_DELIMITER, "LIST_STRING_DELIMITER", ",", "The delimiter to be used when converting a list of strings to a string")                 \
     X(ALLOW_SVDSBTL_IN_PROPSSI, "ALLOW_SVDSBTL_IN_PROPSSI", false,                                                                                   \
       "If true, the SVDSBTL backend is usable through the high-level PropsSI interface.  By default it is rejected (mirroring the BICUBIC/TTSE "     \
-      "tabular backends) because PropsSI rebuilds the AbstractState on every call, and loading an SVDSurface from cache costs ~80 ms -- over four "  \
-      "orders of magnitude slower per call than the actual SVD eval.  For batched workloads use AbstractState directly and call update() in a "      \
-      "loop, or use fast_evaluate for a vectorized batch.")                                                                                          \
+      "tabular backends) because PropsSI rebuilds the AbstractState on every call, and loading an SVDSurface from disk cache costs ~80 ms -- over "  \
+      "four orders of magnitude slower per call than the actual SVD eval.  The process-wide SVDSurfaceCache (see "                                   \
+      "SVDSBTL_SURFACE_CACHE_MAX_ENTRIES/_MAX_SIZE_MB) makes a repeat call for the same (fluid, source, input_pair, options) cheap within one "      \
+      "process, but a cold/first-touch surface or a workload that varies the fluid/options per call still pays the full cost.  For batched "         \
+      "workloads use AbstractState directly and call update() in a loop, or use fast_evaluate for a vectorized batch.")                              \
     X(SVDSBTL_SAMPLING_THREADS, "SVDSBTL_SAMPLING_THREADS", static_cast<int>(1),                                                                     \
       "Number of worker threads for SVDSBTL table-build sampling.  1 (default) = serial (no extra threads).  N > 1 = use N worker threads, each "    \
       "with its own source AbstractState.  0 = auto (use std::thread::hardware_concurrency()).  Typical 4-8x build-time speedup at N >= 4 on a "     \
@@ -96,7 +98,15 @@
     X(MIXTURE_STABILITY_ALGORITHM, "MIXTURE_STABILITY_ALGORITHM", 1, "0: legacy, 1: Michelsen (default)")                                            \
     X(TABULAR_NY, "TABULAR_NY", static_cast<int>(200),                                                                                               \
       "Number of y-axis grid points (log P) for the BICUBIC and TTSE tabular backends. Increase for higher accuracy. Memory and build cost scale "   \
-      "as O(Nx*Ny). Tables auto-rebuild when changed.")
+      "as O(Nx*Ny). Tables auto-rebuild when changed.")                                                                                              \
+    X(SVDSBTL_SURFACE_CACHE_MAX_ENTRIES, "SVDSBTL_SURFACE_CACHE_MAX_ENTRIES", static_cast<int>(16),                                                  \
+      "Maximum number of SVDSBTL surfaces (across all fluids/sources/input-pairs) kept resident in the process-wide in-memory LRU cache. "           \
+      "Surfaces beyond this count are evicted least-recently-used first.  0 disables the in-memory cache (every SVDSBTLBackend still reads/writes "  \
+      "the on-disk .svd.bin.z cache, but no surface is shared across backend instances).")                                                           \
+    X(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, "SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB", static_cast<int>(512),                                                 \
+      "Maximum total estimated resident size, in MB, of the process-wide SVDSBTL in-memory surface cache.  Evicted LRU-first alongside the entry-"   \
+      "count cap in SVDSBTL_SURFACE_CACHE_MAX_ENTRIES -- whichever limit is hit first triggers eviction.  Needed because surface size varies "       \
+      "widely with the NT/NR/rank build options, so an entry count alone can't bound memory.")
 
 // Use preprocessor to create the Enum
 enum configuration_keys

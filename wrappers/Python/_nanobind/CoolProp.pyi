@@ -337,6 +337,10 @@ class configuration_keys(enum.IntEnum):
 
     TABULAR_NY = 37
 
+    SVDSBTL_SURFACE_CACHE_MAX_ENTRIES = 38
+
+    SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB = 39
+
 NORMALIZE_GAS_CONSTANTS: configuration_keys = configuration_keys.NORMALIZE_GAS_CONSTANTS
 
 CRITICAL_WITHIN_1UK: configuration_keys = configuration_keys.CRITICAL_WITHIN_1UK
@@ -412,6 +416,10 @@ TABULAR_NX: configuration_keys = configuration_keys.TABULAR_NX
 MIXTURE_STABILITY_ALGORITHM: configuration_keys = configuration_keys.MIXTURE_STABILITY_ALGORITHM
 
 TABULAR_NY: configuration_keys = configuration_keys.TABULAR_NY
+
+SVDSBTL_SURFACE_CACHE_MAX_ENTRIES: configuration_keys = ...
+
+SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB: configuration_keys = ...
 
 class parameters(enum.IntEnum):
     igas_constant = 1
@@ -1300,6 +1308,12 @@ class AbstractState:
     def fugacity(self, arg: int, /) -> float: ...
 
     def chemical_potential(self, arg: int, /) -> float: ...
+
+    def fugacity_coefficients(self) -> list[float]: ...
+
+    def fugacities(self) -> list[float]: ...
+
+    def chemical_potentials(self) -> list[float]: ...
 
     def fundamental_derivative_of_gas_dynamics(self) -> float: ...
 

@@ -55,6 +55,11 @@ class AbstractCubicAlphaFunction
         this->sqrt_Tr_Tci = sqrt(Tr_over_Tci);
         ++m_version;
     };
+    /// Update the leading constant a0 that scales the alpha function (e.g., after a change to Tc or pc)
+    void set_a0(double a0_new) {
+        this->a0 = a0_new;
+        ++m_version;
+    };
     /// Monotonically increasing counter bumped whenever this alpha function's parameters change;
     /// callers that cache term() values (e.g., AbstractCubic::_ensure_aii_cache) can compare this
     /// against a previously-recorded value to detect stale cache entries.
@@ -132,6 +137,7 @@ class AbstractCubic
     /// construction), so they are computed once on first use; bm_term() reads them instead of
     /// re-evaluating the R_u*Tc/pc division on every call.
     mutable std::vector<double> m_b0_ii_cache;
+    mutable std::vector<char> m_b0_ii_cache_valid;
     void _ensure_aii_cache(double tau) const {
         bool stale = (std::memcmp(&tau, &m_tau_cache, sizeof(double)) != 0) || (m_alpha_versions_cache.size() != alpha.size());
         if (!stale) {
@@ -250,6 +256,41 @@ class AbstractCubic
         return rho_r;
     }
 
+    /**
+     * \brief Set the critical temperature of the i-th component [K]
+     *
+     * Updates Tc[i], refreshes the alpha function's a0 and Tr/Tci ratio, and
+     * invalidates the b0 and aii caches so that all subsequent evaluations pick
+     * up the new value consistently.
+     */
+    void set_Tci(std::size_t i, double Tci) {
+        Tc[i] = Tci;
+        // a0_ii depends on Tc[i]^2/pc[i], and Tr_over_Tci = T_r/Tc[i].
+        // Refresh both in the existing alpha function so its parameters stay consistent.
+        alpha[i]->set_a0(a0_ii(i));
+        alpha[i]->set_Tr_over_Tci(T_r / Tc[i]);
+        // b0_ii depends on Tc[i]/pc[i]; mark the affected entry as stale.
+        if (i < m_b0_ii_cache.size()) {
+            m_b0_ii_cache_valid[i] = 0;
+        }
+        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate aii cache
+    }
+    /**
+     * \brief Set the critical pressure of the i-th component [Pa]
+     *
+     * Updates pc[i], refreshes the alpha function's a0, and invalidates the b0
+     * cache so that all subsequent evaluations pick up the new value consistently.
+     */
+    void set_pci(std::size_t i, double pci) {
+        pc[i] = pci;
+        // a0_ii depends on Tc[i]^2/pc[i]; refresh it in the existing alpha function.
+        alpha[i]->set_a0(a0_ii(i));
+        // b0_ii depends on Tc[i]/pc[i]; mark the affected entry as stale.
+        if (i < m_b0_ii_cache.size()) {
+            m_b0_ii_cache_valid[i] = 0;
+        }
+        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate aii cache
+    }
     /// Set the three Mathias-Copeman constants in one shot for the component i of a mixture
     void set_C_MC(std::size_t i, double c1, double c2, double c3) {
         alpha[i] = std::make_shared<MathiasCopemanAlphaFunction>(a0_ii(i), c1, c2, c3, T_r / Tc[i]);

@@ -406,6 +406,56 @@ EXPORT_CODE double CONVENTION AbstractState_get_fugacity(const long handle, cons
 EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long handle, const long i, long* errcode, char* message_buffer,
                                                                      const long buffer_length);
 /**
+     * @brief Return the chemical potential (in J/mol) of the i-th component of the mixture.
+     * @param handle The integer handle for the state class stored in memory
+     * @param i i-th component of the mixture
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+EXPORT_CODE double CONVENTION AbstractState_get_chemical_potential(const long handle, const long i, long* errcode, char* message_buffer,
+                                                                   const long buffer_length);
+/**
+     * @brief Return the fugacities (in Pa) of all components of the mixture in one call.
+     * @param handle The integer handle for the state class stored in memory
+     * @param values The array into which the per-component fugacities are written
+     * @param maxN The length of the buffer for the values
+     * @param N The number of components actually written
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+EXPORT_CODE void CONVENTION AbstractState_get_fugacities(const long handle, double* values, const long maxN, long* N, long* errcode,
+                                                         char* message_buffer, const long buffer_length);
+/**
+     * @brief Return the fugacity coefficients (dimensionless) of all components of the mixture in one call.
+     * @param handle The integer handle for the state class stored in memory
+     * @param values The array into which the per-component fugacity coefficients are written
+     * @param maxN The length of the buffer for the values
+     * @param N The number of components actually written
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+EXPORT_CODE void CONVENTION AbstractState_get_fugacity_coefficients(const long handle, double* values, const long maxN, long* N, long* errcode,
+                                                                    char* message_buffer, const long buffer_length);
+/**
+     * @brief Return the chemical potentials (in J/mol) of all components of the mixture in one call.
+     * @param handle The integer handle for the state class stored in memory
+     * @param values The array into which the per-component chemical potentials are written
+     * @param maxN The length of the buffer for the values
+     * @param N The number of components actually written
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+EXPORT_CODE void CONVENTION AbstractState_get_chemical_potentials(const long handle, double* values, const long maxN, long* N, long* errcode,
+                                                                  char* message_buffer, const long buffer_length);
+/**
      * @brief Update the state of the AbstractState
      * @param handle The integer handle for the state class stored in memory
      * @param input_pair The integer value for the input pair obtained from XXXXXXXXXXXXXXXX
