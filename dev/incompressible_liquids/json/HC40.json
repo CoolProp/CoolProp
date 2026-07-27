@@ -1,150 +1,114 @@
 {
   "T_freeze": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "Tbase": 353.15,
-  "Tmax": 473.15,
-  "Tmin": 233.15,
-  "TminPsat": 293.15,
+  }, 
+  "Tbase": 3.531500e+02, 
+  "Tmax": 4.731500e+02, 
+  "Tmin": 2.331500e+02, 
+  "TminPsat": 2.931500e+02, 
   "conductivity": {
-    "NRMS": 1.952738e-13,
+    "NRMS": 1.952738e-13, 
     "coeffs": [
       [
-        0.569
-      ],
+        5.690000e-01
+      ], 
       [
-        0.001
-      ],
+        1.000000e-03
+      ], 
       [
         -8.454448e-20
-      ],
+      ], 
       [
         -2.535805e-20
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
+  }, 
   "density": {
-    "NRMS": 0.002067735,
+    "NRMS": 2.067735e-03, 
     "coeffs": [
       [
-        1281.449
-      ],
+        1.281449e+03
+      ], 
       [
-        -0.5604562
-      ],
+        -5.604562e-01
+      ], 
       [
         -1.531593e-05
-      ],
+      ], 
       [
         1.222892e-07
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
-  "density_cheb": {
-    "NRMS": 0.0021493524666518016,
-    "Trange": [
-      233.15,
-      473.15
-    ],
-    "coeffs": [
-      [
-        1281.3670914516413
-      ],
-      [
-        -67.12147446024203
-      ]
-    ],
-    "fit_source": "tabular_data",
-    "type": "chebyshev",
-    "xbase": 0.0
-  },
-  "description": "Dynalene HC40",
+  }, 
+  "description": "Dynalene HC40", 
   "mass2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
+  }, 
   "mole2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "name": "HC40",
-  "reference": "Dynalene2014",
+  }, 
+  "name": "HC40", 
+  "reference": "Dynalene2014", 
   "saturation_pressure": {
-    "NRMS": 0.009421324,
+    "NRMS": 9.421324e-03, 
     "coeffs": [
       [
-        10.23251
-      ],
+        1.023251e+01
+      ], 
       [
-        0.04175479
-      ],
+        4.175479e-02
+      ], 
       [
-        -0.0001256691
-      ],
+        -1.256691e-04
+      ], 
       [
         3.463987e-07
       ]
-    ],
+    ], 
     "type": "exppolynomial"
-  },
+  }, 
   "specific_heat": {
-    "NRMS": 0.00523994,
+    "NRMS": 5.239940e-03, 
     "coeffs": [
       [
-        3071.23
-      ],
+        3.071230e+03
+      ], 
       [
-        2.289047
-      ],
+        2.289047e+00
+      ], 
       [
         9.909498e-05
-      ],
+      ], 
       [
         -2.209948e-07
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
-  "specific_heat_cheb": {
-    "NRMS": 0.005305551405328218,
-    "Trange": [
-      233.15,
-      473.15
-    ],
-    "coeffs": [
-      [
-        3071.7536247147623
-      ],
-      [
-        274.4551869404955
-      ]
-    ],
-    "fit_source": "tabular_data",
-    "type": "chebyshev",
-    "xbase": 0.0
-  },
+  }, 
   "viscosity": {
-    "NRMS": 0.01067173,
+    "NRMS": 1.067173e-02, 
     "coeffs": [
-      677.9431,
-      -100.9829,
-      9.435541
-    ],
+      6.779431e+02, 
+      -1.009829e+02, 
+      9.435541e+00
+    ], 
     "type": "exponential"
-  },
+  }, 
   "volume2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "xbase": 0.0,
-  "xid": "pure",
-  "xmax": 1.0,
-  "xmin": 0.0
+  }, 
+  "xbase": 0.000000e+00, 
+  "xid": "pure", 
+  "xmax": 1.000000e+00, 
+  "xmin": 0.000000e+00
 }

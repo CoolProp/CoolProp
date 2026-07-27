@@ -1,150 +1,114 @@
 {
   "T_freeze": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "Tbase": 423.15,
-  "Tmax": 588.15,
-  "Tmin": 258.15,
-  "TminPsat": 473.15,
+  }, 
+  "Tbase": 4.231500e+02, 
+  "Tmax": 5.881500e+02, 
+  "Tmin": 2.581500e+02, 
+  "TminPsat": 4.731500e+02, 
   "conductivity": {
-    "NRMS": 0.01103062,
+    "NRMS": 1.103062e-02, 
     "coeffs": [
       [
-        0.1228766
-      ],
+        1.228766e-01
+      ], 
       [
         -7.996282e-05
-      ],
+      ], 
       [
         6.066426e-10
-      ],
+      ], 
       [
-        -3.54326e-12
+        -3.543260e-12
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
+  }, 
   "density": {
-    "NRMS": 0.001255966,
+    "NRMS": 1.255966e-03, 
     "coeffs": [
       [
-        786.6099
-      ],
+        7.866099e+02
+      ], 
       [
-        -0.6973919
-      ],
+        -6.973919e-01
+      ], 
       [
         3.689239e-07
-      ],
+      ], 
       [
-        1.61477e-09
+        1.614770e-09
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
-  "density_cheb": {
-    "NRMS": 0.0012560433516650479,
-    "Trange": [
-      258.15,
-      588.15
-    ],
-    "coeffs": [
-      [
-        786.6132930513597
-      ],
-      [
-        -115.06528227714482
-      ]
-    ],
-    "fit_source": "tabular_data",
-    "type": "chebyshev",
-    "xbase": 0.0
-  },
-  "description": "Paratherm GLT",
+  }, 
+  "description": "Paratherm GLT", 
   "mass2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
+  }, 
   "mole2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "name": "PGLT",
-  "reference": "Paratherm2013",
+  }, 
+  "name": "PGLT", 
+  "reference": "Paratherm2013", 
   "saturation_pressure": {
-    "NRMS": 0.01579751,
+    "NRMS": 1.579751e-02, 
     "coeffs": [
       [
-        6.503475
-      ],
+        6.503475e+00
+      ], 
       [
-        0.0273886
-      ],
+        2.738860e-02
+      ], 
       [
         1.487609e-05
-      ],
+      ], 
       [
         -1.679013e-07
       ]
-    ],
+    ], 
     "type": "exppolynomial"
-  },
+  }, 
   "specific_heat": {
-    "NRMS": 0.02702553,
+    "NRMS": 2.702553e-02, 
     "coeffs": [
       [
-        2346.56
-      ],
+        2.346560e+03
+      ], 
       [
-        3.229713
-      ],
+        3.229713e+00
+      ], 
       [
-        0.0001617412
-      ],
+        1.617412e-04
+      ], 
       [
         -1.975084e-06
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
-  "specific_heat_cheb": {
-    "NRMS": 0.027080158333582162,
-    "Trange": [
-      258.15,
-      588.15
-    ],
-    "coeffs": [
-      [
-        2348.036253776438
-      ],
-      [
-        527.5470461908048
-      ]
-    ],
-    "fit_source": "tabular_data",
-    "type": "chebyshev",
-    "xbase": 0.0
-  },
+  }, 
   "viscosity": {
-    "NRMS": 0.004101552,
+    "NRMS": 4.101552e-03, 
     "coeffs": [
-      915.3925,
-      -162.6026,
-      10.19416
-    ],
+      9.153925e+02, 
+      -1.626026e+02, 
+      1.019416e+01
+    ], 
     "type": "exponential"
-  },
+  }, 
   "volume2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "xbase": 0.0,
-  "xid": "pure",
-  "xmax": 1.0,
-  "xmin": 0.0
+  }, 
+  "xbase": 0.000000e+00, 
+  "xid": "pure", 
+  "xmax": 1.000000e+00, 
+  "xmin": 0.000000e+00
 }
