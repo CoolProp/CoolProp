@@ -68,13 +68,20 @@ Set `BEADS_BOOTSTRAP_FORCE=1` to opt in anywhere else (e.g. to exercise the
 script locally). It is idempotent — hydration is checked with a `bd count`
 health probe rather than directory presence, so a partial or failed import is
 retried next session instead of latching "done" forever — and non-fatal: any
-failure warns on stderr and the session continues without bd. On a tree that
-was clean beforehand, it also restores the few tracked files
+failure warns on stderr and the session continues without bd. A single-shot
+mkdir lock (with dead-PID stealing, not a busy-wait) guards the hydration
+critical section against two SessionStart hooks racing in the same container.
+On a tree that was clean beforehand, it also restores the few tracked files
 (`.beads/config.yaml`, `.beads/.gitignore`, `.gitignore`) that `bd init
---stealth` still normalizes even in stealth mode, via a trap so an
-interrupted hook doesn't leave those files dirty; it never touches a tree
-that already had pending edits to them. First cold start takes ~2-3 min (Go
-toolchain fetch + build); warm containers skip both install and hydration.
+--stealth` still normalizes even in stealth mode, via a trap on EXIT/INT/TERM
+so a *signal-interrupted* hook doesn't leave those files dirty; it never
+touches a tree that already had pending edits to them. No trap survives
+SIGKILL or a hard container teardown, though — a hydration killed that way
+can still leave those three files modified, and since the next session reads
+"already dirty" as a developer's in-progress edit, it won't auto-restore them
+either; `git checkout -- .beads/config.yaml .beads/.gitignore .gitignore`
+clears it manually. First cold start takes ~2-3 min (Go toolchain fetch +
+build); warm containers skip both install and hydration.
 
 To persist newly filed issues, append their `bd export --include-memories`
 lines to `.beads/issues.jsonl` and commit — do **not** overwrite the file

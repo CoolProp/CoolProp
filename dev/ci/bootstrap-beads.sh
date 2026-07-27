@@ -56,12 +56,17 @@ fi
 # never touch the tree.
 _bd_did_init=0
 _bd_pre_dirty=1
+_bd_lockdir=".beads/.bootstrap.lock"
+_bd_lock_held=0
 
 _beads_bootstrap_cleanup() {
+    [ "$_bd_lock_held" = 1 ] && rm -rf "$_bd_lockdir" 2>/dev/null
     [ "$_bd_did_init" = 1 ] || return 0
     [ "$_bd_pre_dirty" = 0 ] || return 0
     for _f in .beads/config.yaml .beads/.gitignore .gitignore; do
-        git ls-files --error-unmatch "$_f" >/dev/null 2>&1 && git checkout -- "$_f" 2>/dev/null
+        if git ls-files --error-unmatch "$_f" >/dev/null 2>&1; then
+            git checkout -- "$_f" || echo "beads-bootstrap: warning: failed to restore $_f — tree may be left dirty" >&2
+        fi
     done
 }
 trap '_beads_bootstrap_cleanup' EXIT
@@ -118,43 +123,77 @@ if command -v bd >/dev/null 2>&1; then
         [ -n "$_n" ] && [ "$_n" -gt 0 ] 2>/dev/null
     }
 
-    if [ -f .beads/issues.jsonl ] && ! _bd_hydrated; then
-        _bd_did_init=1
-        # Record whether the tree already had changes, so the restore below
-        # (via the trap) only runs on a clean fresh container and never
-        # touches a developer's in-progress edits to these config files.
-        # Checked separately from emptiness: a `git status` that itself
-        # errors (index lock contention, git missing, cwd outside a repo)
-        # must not be read as "clean".
-        if _bd_dirty_out="$(git status --porcelain -- .beads/config.yaml .beads/.gitignore .gitignore 2>&1)"; then
-            [ -z "$_bd_dirty_out" ] && _bd_pre_dirty=0
+    # Single-shot mutex around the hydration critical section below: two
+    # SessionStart hooks racing in the same container (e.g. two sessions
+    # attached to one environment) would otherwise both see "not hydrated"
+    # and both rm -rf/reinit .beads/embeddeddolt concurrently. No retry loop
+    # — if the lock is held by a live process we just skip hydration this
+    # run (self-heals next session via the same `bd count` probe); if the
+    # holder's PID is dead (e.g. it was SIGKILLed before it could release —
+    # no trap catches that), steal the lock instead of wedging forever.
+    _beads_bootstrap_acquire_lock() {
+        if mkdir "$_bd_lockdir" 2>/dev/null; then
+            echo "$$" >"$_bd_lockdir/pid" 2>/dev/null
+            _bd_lock_held=1
+            return 0
         fi
+        _lock_pid="$(cat "$_bd_lockdir/pid" 2>/dev/null)"
+        if [ -n "$_lock_pid" ] && ! kill -0 "$_lock_pid" 2>/dev/null; then
+            rm -rf "$_bd_lockdir" 2>/dev/null
+            if mkdir "$_bd_lockdir" 2>/dev/null; then
+                echo "$$" >"$_bd_lockdir/pid" 2>/dev/null
+                _bd_lock_held=1
+                return 0
+            fi
+        fi
+        return 1
+    }
 
-        echo "beads-bootstrap: hydrating beads DB from .beads/issues.jsonl..." >&2
-        # Our own health probe just said "not hydrated", so nothing of value
-        # is lost by clearing whatever's here first. This matters because
-        # step 3's `bd prime` lazily creates an empty Dolt DB as a side
-        # effect whenever none exists (confirmed by testing, not documented
-        # behavior) — so a prior failed/skipped attempt in this same
-        # container can leave an empty DB behind, and `bd init --from-jsonl`
-        # refuses to run against ANY existing DB ("already initialized")
-        # without this.
-        rm -rf .beads/embeddeddolt
-        # --stealth keeps beads files out of git (via .git/info/exclude), so
-        #   init makes NO commits — critical in a hook, which must never
-        #   auto-commit;
-        # --from-jsonl imports the committed .beads/issues.jsonl in the same
-        #   step;
-        # --non-interactive / --quiet for the non-TTY container.
-        if ! bd init --stealth --non-interactive --quiet --from-jsonl >/dev/null; then
-            echo "beads-bootstrap: 'bd init --from-jsonl' failed — beads DB unavailable this session." >&2
+    if [ -f .beads/issues.jsonl ] && ! _bd_hydrated; then
+        if _beads_bootstrap_acquire_lock; then
+            _bd_did_init=1
+            # Record whether the tree already had changes, so the restore
+            # below (via the trap) only runs on a clean fresh container and
+            # never touches a developer's in-progress edits to these config
+            # files. Checked separately from emptiness: a `git status` that
+            # itself errors (index lock contention, git missing, cwd outside
+            # a repo) must not be read as "clean". stderr is discarded, not
+            # merged into the captured text, so incidental stderr noise on
+            # an otherwise-successful, otherwise-empty status can't be
+            # mistaken for "dirty".
+            if _bd_dirty_out="$(git status --porcelain -- .beads/config.yaml .beads/.gitignore .gitignore 2>/dev/null)"; then
+                [ -z "$_bd_dirty_out" ] && _bd_pre_dirty=0
+            fi
+
+            echo "beads-bootstrap: hydrating beads DB from .beads/issues.jsonl..." >&2
+            # Our own health probe just said "not hydrated", so nothing of
+            # value is lost by clearing whatever's here first. This matters
+            # because step 3's `bd prime` lazily creates an empty Dolt DB as
+            # a side effect whenever none exists (confirmed by testing, not
+            # documented behavior) — so a prior failed/skipped attempt in
+            # this same container can leave an empty DB behind, and
+            # `bd init --from-jsonl` refuses to run against ANY existing DB
+            # ("already initialized") without this.
             rm -rf .beads/embeddeddolt
-        elif ! _bd_hydrated; then
-            echo "beads-bootstrap: bd init reported success but the DB has no issues — treating as a failed hydration so it retries next session." >&2
-            rm -rf .beads/embeddeddolt
+            # --stealth keeps beads files out of git (via .git/info/exclude), so
+            #   init makes NO commits — critical in a hook, which must never
+            #   auto-commit;
+            # --from-jsonl imports the committed .beads/issues.jsonl in the same
+            #   step;
+            # --non-interactive / --quiet for the non-TTY container.
+            if ! bd init --stealth --non-interactive --quiet --from-jsonl >/dev/null; then
+                echo "beads-bootstrap: 'bd init --from-jsonl' failed — beads DB unavailable this session." >&2
+                rm -rf .beads/embeddeddolt
+            elif ! _bd_hydrated; then
+                echo "beads-bootstrap: bd init reported success but the DB has no issues — treating as a failed hydration so it retries next session." >&2
+                rm -rf .beads/embeddeddolt
+            fi
+            # The tracked-file restore and the lock release both happen in
+            # the EXIT trap above, so they also fire on an interrupted hook,
+            # not just a clean finish.
+        else
+            echo "beads-bootstrap: another bootstrap appears to be in progress (lock held) — skipping hydration this session; it will retry next session." >&2
         fi
-        # The tracked-file restore itself happens in the EXIT trap above, so
-        # it also fires on an interrupted hook, not just a clean finish.
     fi
 
     # 3. Hand off to the beads-managed workflow-context hook.
