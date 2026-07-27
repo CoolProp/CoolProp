@@ -3,6 +3,12 @@
 language: en-US
 
 reviews:
+  # TEMPORARY: PR #3292 trips CodeRabbit's 150-file review cap (180 files,
+  # 127 of them are dev/incompressible_liquids/json/* data files with no
+  # code to review). Exclude that directory so the review can run at all;
+  # revert this filter once the review has completed.
+  path_filters:
+    - "!dev/incompressible_liquids/json/**"
   # Project-wide guidance for the reviewer.
   path_instructions:
     - path: "**"
