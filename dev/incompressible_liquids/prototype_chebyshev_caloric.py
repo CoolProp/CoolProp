@@ -36,7 +36,6 @@ fit-quality/conditioning tables, or under pytest for the pass/fail checks.
 Needs numpy + scipy only, like the rest of the fitting pipeline.
 """
 
-import math
 import sys
 
 import numpy as np
