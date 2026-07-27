@@ -49,6 +49,23 @@ bd close <id>         # Complete work
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
 
+### `bd` in ephemeral (Claude Code web/CI) containers
+
+Fresh containers have no `bd` binary and no Dolt DB (the DB dir
+`.beads/embeddeddolt/` is gitignored). `dev/ci/bootstrap-beads.sh` — wired
+as the first `SessionStart` hook in `.claude/settings.json`, ahead of the
+beads-managed `bd prime` — installs `bd` via `go install` (the `curl|bash`
+installer's GitHub-release download is blocked by the agent proxy; the Go
+module proxy is allowed) and rehydrates the DB from the committed
+`.beads/issues.jsonl`. It is idempotent and non-fatal. First cold start
+takes ~2 min (Go toolchain fetch + build); warm containers skip both steps.
+To persist newly filed issues, append their `bd export --include-memories`
+lines to `.beads/issues.jsonl` and commit — do **not** overwrite the file
+wholesale (bd 1.1.0 re-serializes the `dependencies` field on unrelated
+issues, and a plain `bd export` drops the persisted memories). `bd dolt
+push` in the session-completion steps above is a no-op here — there is no
+Dolt remote in web containers; committing `issues.jsonl` is the sync.
+
 
 ## Build & Test
 
