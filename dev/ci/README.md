@@ -325,11 +325,16 @@ That settles the sizing, and both current values turn out to be about right:
   variance as a timeout, which is the failure mode this gate exists to avoid.
 - `timeout-minutes: 90` is 1.49x the 60.6 min job total. Also fine to leave.
 
-Caveat: this baseline was taken with `verbosity=1` still set (see the section
-above, which removed it). The removal only makes the run faster, so 4200 s
-stays safe — but the 3041 s figure is an upper bound on the shipped config,
-not a measurement of it. Re-measure before tightening further, and do not
-tighten on the strength of one run either way.
+Both runs of the same scope, before and after `verbosity=1` was dropped:
+
+| Run | `verbosity=1` | Job total |
+| --- | --- | --- |
+| `30364245551` (`0d2af4f9`) | set | 60.6 min |
+| `30371990208` (`3a0f63a5`) | not set | 60.2 min |
+
+So the sizing above holds for the shipped config, and the two runs also
+bracket the run-to-run spread: 0.4 min apart. Do not tighten on the strength
+of two runs — that spread is a floor on the variance, not a measure of it.
 
 For contrast, the full-scope (`[slow]` included) predecessor on PR #3294 did
 not finish at all: it ran 09:33:03 -> 11:03:20, hit the 90 min cap, and its
@@ -337,8 +342,16 @@ log ends `Terminate orphan process: pid (4681) (CatchTestRunner)`.
 
 ### Why `verbosity=1` is not set
 
-The job used to run with `ASAN_OPTIONS=verbosity=1:...`. That was removed, and
-if you are tempted to put it back: it costs a great deal and buys nothing.
+The job used to run with `ASAN_OPTIONS=verbosity=1:...`. That was removed
+because it buys nothing and produces an enormous amount of log noise.
+
+**It is not a performance fix, despite appearances.** Removing it did not
+measurably speed the job up: 60.6 min with it, 60.2 min without. If you are
+looking for the wall-time lever, it is the `~[slow]` scope, not this. The
+volume figures below are why the noise is worth removing on its own terms —
+they are not evidence of a time saving, and the extrapolation that suggested
+one turned out not to hold (the 4365 lines/s rate is clearly not sustained
+across the whole run, or the difference would have shown up).
 
 At `verbosity>=1` ASan reports its own container-annotation bookkeeping, which
 for this Eigen- and `std::vector`-heavy suite is a sustained stream of

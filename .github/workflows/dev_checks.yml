@@ -150,7 +150,11 @@ jobs:
         # against a job that otherwise does not finish at all.
 
         # VERBOSITY: ASAN_OPTIONS deliberately does NOT set verbosity=1.
-        # It used to, and that is pure cost: at verbosity>=1 ASan VReports its
+        # It used to.  Note up front what this is and is NOT worth: removing it
+        # did NOT measurably speed the job up (60.6 min with it, 60.2 min
+        # without -- inside runner noise).  Do not re-add it expecting a
+        # slowdown to reappear, and do not cite it as a wall-time lever.  The
+        # reason it stays out is log hygiene: at verbosity>=1 ASan VReports its
         # internal container-annotation traffic, which for this Eigen- and
         # std::vector-heavy suite means a sustained flood of
         # "==pid==poisoning: 0x... <n>" lines -- 4365 lines/s measured over a
