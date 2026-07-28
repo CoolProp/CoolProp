@@ -5445,19 +5445,30 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
             const double psat = fluid.psat(Tbase + dT, xmid);
             // Check finiteness explicitly instead of letting std::max absorb a
             // bad value: std::max(p, NaN) returns p, so a NaN or _HUGE psat
-            // would silently masquerade as "1 atm is fine" rather than being
-            // noticed. Only a real, finite psat is allowed to raise p.
+            // would silently masquerade as "1 atm is fine". Only a real, finite
+            // psat is allowed to raise p -- and a non-finite one is asserted on
+            // rather than merely skipped, otherwise "noticed" would still mean
+            // "silently ignored": psat is exp(...) with no overflow guard, so
+            // an overflowing fit is exactly the garbage-coefficient class this
+            // sweep exists to catch.
             if (ValidNumber(psat)) {
                 p = std::max(p, 2.0 * psat);
+            } else {
+                CHECK(ValidNumber(psat));
             }
         } catch (const std::exception& e) {
-            // psat is not defined for every fluid; where it is not, the 1 atm
-            // default stands. Narrowed from `catch (...)` deliberately: every
-            // CoolProp error derives from std::exception (CoolPropBaseError),
-            // so the intended NotImplementedError/ValueError is still caught,
-            // while something genuinely unexpected propagates instead of being
-            // swallowed. Capturing the reason keeps the catch non-silent.
-            CAPTURE(e.what());
+            // psat is not defined for every fluid (100 of 127 shipped files
+            // type it "notdefined"); where it is not, the 1 atm default stands.
+            // Narrowed from `catch (...)` deliberately: every CoolProp error
+            // derives from std::exception (CoolPropBaseError), so the intended
+            // NotImplementedError/ValueError is still caught, while something
+            // genuinely unexpected propagates instead of being swallowed.
+            // UNSCOPED_INFO, not CAPTURE: a scoped CAPTURE here would be popped
+            // at the closing brace with no assertion in between, so the reason
+            // would never reach the reporter. This survives to the next failing
+            // assertion, and stays silent on the ~100 fluids where an
+            // undefined psat is simply expected.
+            UNSCOPED_INFO("psat threw for " << fluidString << ": " << e.what());
         }
 
         double h_lo = 0, h_mid = 0, h_hi = 0, s_lo = 0, s_mid = 0, s_hi = 0;
@@ -5498,10 +5509,14 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         CHECK(std::abs(s_mid - 0.5 * (s_lo + s_hi)) < s_tol);
     }
     CAPTURE(testedCount);
-    // If this hits zero, the Tbase-in-range filter or the fluid-list parsing
-    // above is broken -- the whole point of this test is to exercise fluids
-    // where Tbase is in range, and most shipped fluids are.
-    CHECK(testedCount > 0);
+    // 118 of the 127 shipped fluids qualify today. The floor is deliberately
+    // near that rather than at zero: a vital property typed "notdefined"
+    // makes parse_coefficients throw, add_one rethrow and add_many abort its
+    // loop, so the library silently truncates to however many fluids preceded
+    // the offender. `> 0` would still pass with a single fluid loaded and
+    // report green while ~117 went untested. 100 leaves room for fluids whose
+    // Tbase legitimately moves out of range without tolerating a truncation.
+    CHECK(testedCount > 100);
 }
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {
     // Issue #1374: the fitted viscosity (and hence Prandtl number) of MPG2

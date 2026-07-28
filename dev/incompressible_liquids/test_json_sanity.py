@@ -30,13 +30,23 @@ KNOWN_GUESSES = [
 ]
 PROPERTIES = ["density", "specific_heat", "conductivity", "viscosity", "saturation_pressure", "T_freeze"]
 
+# Properties that JSONIncompressibleLibrary::add_one parses with vital=true.
+# For these, parse_coefficients THROWS on an unrecognised "type" (including
+# "notdefined") rather than returning an empty block, and add_one rethrows --
+# which aborts add_many's loop, so every fluid after the offender silently
+# vanishes from the library. A cleared vital property is therefore not a
+# "property you cannot query", it is a broken file.
+VITAL_PROPERTIES = ("density", "specific_heat")
+
 
 def _flatten(coeffs):
     """Flatten an arbitrarily nested coefficient list into a flat list of scalars.
 
-    Coefficient blocks are 1D for pure fluids and 2D (temperature x composition)
-    for solutions, and the checks below only care about the scalar values, not
-    the shape.
+    Block shape follows the fit *type*, not pure-vs-solution: polynomial and
+    exppolynomial fits are 2D (temperature x composition) while exponential,
+    logexponential and polyoffset fits are 1D, and both shapes occur in pure
+    fluids and in solutions. The checks below only care about the scalar
+    values, so the shape is irrelevant here.
     """
     flat = []
     for value in coeffs:
@@ -64,34 +74,61 @@ def _iter_property_coeffs():
             # meant to catch.
             assert prop in fluid, "{0}: missing property block {1}".format(os.path.basename(path), prop)
             entry = fluid[prop]
-            coeffs = entry.get("coeffs")
+            # The "coeffs" KEY must exist even when the fit was cleared.
+            # parse_coefficients throws unconditionally when it is absent
+            # ("does not have an entry for \"coeffs\""), so entry.get("coeffs")
+            # alone would accept a file the C++ loader rejects -- the guard
+            # failing open one level below the block check above.
+            assert "coeffs" in entry, \
+                "{0}: {1} has no \"coeffs\" key; the C++ loader throws on that".format(os.path.basename(path), prop)
+            coeffs = entry["coeffs"]
             # Both spellings are accepted on purpose. The shipped files use the
             # STRING "null" as the cleared-coefficients placeholder -- that is
-            # the pre-existing convention, not a serialization bug: the C++
-            # parser (JSONIncompressibleLibrary::parse_coefficients) requires
-            # the "coeffs" key to *exist* (a missing one throws "vital"), but
-            # only ever reads its value inside a branch that matches "type".
-            # For type "notdefined" no branch matches, so the value is never
-            # parsed. Real JSON null would work identically; accept either so
-            # this test does not depend on which is used.
+            # the pre-existing convention, not a serialization bug: every
+            # entry.at("coeffs") in parse_coefficients sits inside a branch that
+            # matches on "type", so for "notdefined" the value is never parsed
+            # and only its presence matters. Real JSON null behaves identically;
+            # accept either so this test does not depend on which is used.
             if coeffs in (None, "null"):
                 assert entry.get("type", "notdefined") == "notdefined", \
                     "{0}: {1} has no coefficients but type {2!r}".format(os.path.basename(path), prop, entry.get("type"))
+                # Clearing a vital property does not merely make it
+                # unqueryable, it makes the whole library unloadable from this
+                # fluid onwards. See VITAL_PROPERTIES above.
+                assert prop not in VITAL_PROPERTIES, \
+                    "{0}: {1} is vital; type \"notdefined\" makes the C++ loader throw and truncates the fluid list".format(
+                        os.path.basename(path), prop)
                 continue
             yield os.path.basename(path), prop, _flatten(coeffs)
 
 
 def test_no_placeholder_guesses_shipped():
+    """No committed property carries an optimizer starting guess as its fit.
+
+    An exact match against KNOWN_GUESSES means the fit never converged (or
+    never ran) and the guess was serialized as though it were a result.
+    """
     offenders = [(name, prop) for name, prop, flat in _iter_property_coeffs() if flat in KNOWN_GUESSES]
     assert not offenders, "unfitted optimizer starting guesses shipped as coefficients: {0}".format(offenders)
 
 
 def test_no_all_zero_fits_shipped():
+    """No committed property ships the all-zero polynomial template as a fit.
+
+    An all-zero block is the untouched template: it evaluates without error to
+    a constant 0 (or exp(0) = 1), which is the "plausible-looking garbage"
+    failure mode this suite exists to prevent.
+    """
     offenders = [(name, prop) for name, prop, flat in _iter_property_coeffs() if all(v == 0.0 for v in flat)]
     assert not offenders, "all-zero coefficient matrices shipped as fits: {0}".format(offenders)
 
 
 def test_all_coefficients_finite():
+    """Every shipped coefficient is a real, finite number.
+
+    Rejects NaN and both infinities, and non-numeric JSON values -- including
+    booleans, which subclass int and would otherwise pass both checks.
+    """
     for name, prop, flat in _iter_property_coeffs():
         for value in flat:
             # `not isinstance(value, bool)` is load-bearing: bool subclasses

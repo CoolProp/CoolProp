@@ -15,6 +15,7 @@
 #   ./dev/ci/preflight.sh --skip=cppcheck,clang-tidy   # subset
 #   ./dev/ci/preflight.sh --skip=json-symbols          # subset
 #   ./dev/ci/preflight.sh --skip=install-headers        # subset
+#   ./dev/ci/preflight.sh --skip=incomp-sanity          # subset
 #
 # Tools resolved at runtime:
 #   - clang-format     : uvx clang-format@<version-from-.pre-commit-config>
@@ -464,6 +465,57 @@ else
     else
         tail -30 "$SCHEMA_LOG"
         fail "schema-validate (see $SCHEMA_LOG)"
+    fi
+fi
+
+# ---------- check 8: incompressible JSON sanity -----------------------
+#
+# The committed dev/incompressible_liquids/json/*.json files are guarded by
+# test_json_sanity.py: it rejects optimizer starting guesses, all-zero
+# coefficient templates, non-finite and boolean values, a missing "coeffs"
+# key, and a cleared property that the C++ loader treats as vital.  Nothing
+# ran it before this check -- CI's only pytest invocation is
+# `pytest wrappers/Python/pytest` -- so the guard fired only when someone
+# happened to run pytest in that directory by hand.  Scoped to runs that
+# touch the incompressible data or the writer that generates it.
+step "incompressible JSON sanity"
+if skip_check incomp-sanity; then
+    skip "incomp-sanity" "--skip=incomp-sanity"
+elif ! printf '%s\n' "$ALL_PATHS" | grep -qE '^dev/incompressible_liquids/'; then
+    skip "incomp-sanity" "no dev/incompressible_liquids/ files in diff"
+else
+    INCOMP_LOG=/tmp/preflight-incomp-sanity.log
+    INCOMP_RC=0
+    if ! command -v python3 >/dev/null 2>&1; then
+        INCOMP_RC=127
+        echo "no python3 on PATH" >"$INCOMP_LOG"
+    elif python3 -c 'import pytest' >/dev/null 2>&1; then
+        python3 -m pytest dev/incompressible_liquids/test_json_sanity.py -q >"$INCOMP_LOG" 2>&1 || INCOMP_RC=$?
+    else
+        # pytest is not a hard requirement here: the checks are plain asserts
+        # over committed JSON, so call them directly rather than skipping the
+        # gate.  Exiting non-zero when no test_* function is found matters --
+        # otherwise a renamed or emptied module would report a clean pass.
+        python3 - >"$INCOMP_LOG" 2>&1 <<'PY' || INCOMP_RC=$?
+import importlib.util, pathlib, sys
+
+path = pathlib.Path("dev/incompressible_liquids/test_json_sanity.py")
+spec = importlib.util.spec_from_file_location("test_json_sanity", path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+names = sorted(n for n in dir(module) if n.startswith("test_"))
+if not names:
+    sys.exit("no test_* functions found in {0}".format(path))
+for name in names:
+    getattr(module, name)()
+    print("OK", name)
+PY
+    fi
+    if [ "$INCOMP_RC" -eq 0 ]; then
+        ok "incomp-sanity ($(grep -cE '^(OK|[0-9]+ passed)' "$INCOMP_LOG" 2>/dev/null || echo 0) check group(s))"
+    else
+        tail -30 "$INCOMP_LOG"
+        fail "incomp-sanity (see $INCOMP_LOG)"
     fi
 fi
 

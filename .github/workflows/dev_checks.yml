@@ -747,6 +747,40 @@ jobs:
       - name: Check pinned fastchebpure release matches current EOS
         run: python3 dev/scripts/check_superanc_release_pin.py
 
+  incomp-json-sanity:
+    name: incompressible JSON sanity
+    # Guards the committed dev/incompressible_liquids/json/*.json against the
+    # "leaked placeholder" class of bug (issues #1331, #2567): a property whose
+    # fit failed or never ran kept the optimizer's starting guess, and the
+    # backend then evaluated it to plausible-looking garbage instead of
+    # throwing. Also rejects all-zero coefficient templates, non-finite and
+    # boolean values, a missing "coeffs" key, and a cleared property the C++
+    # loader treats as vital -- that last one makes parse_coefficients throw at
+    # load time, which truncates the whole fluid list.
+    #
+    # This test existed before this job but nothing ran it: the only other
+    # pytest invocation in CI is `pytest wrappers/Python/pytest`, so the guard
+    # fired solely when a developer ran pytest in that directory by hand.
+    # Build-free and reads only committed JSON. Like type-stubs and
+    # superanc-pin, deliberately NO paths filter so it can be a required check
+    # without deadlocking unrelated PRs. Local twin: the `incomp-sanity` check
+    # in dev/ci/preflight.sh.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install pytest
+        run: python3 -m pip install --upgrade pytest
+
+      - name: Run incompressible JSON sanity checks
+        run: python3 -m pytest dev/incompressible_liquids/test_json_sanity.py -q
+
   installed-header-gate:
     name: Installed-header hygiene gate
     # Fail if any internal/JSON-pulling header (detail/json.h, or anything

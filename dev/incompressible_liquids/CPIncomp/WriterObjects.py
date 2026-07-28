@@ -3,9 +3,12 @@
 """Fitting orchestration, JSON output and report generation.
 
 Fitting fluids and writing the json/*.json files needs only numpy and scipy.
-matplotlib (plots/reports) and a built CoolProp Python package (resolving
-BibTeX references) are optional: without them the fit-and-write-JSON path
-still works, only the report/table paths refuse to run.
+matplotlib and a built CoolProp Python package (resolving BibTeX references)
+are optional: without them the fit-and-write-JSON path still works, and only
+the plot and report paths refuse to run -- the ones that call
+``requireMatplotlib()``, namely :meth:`writeReportList`,
+:meth:`makeFitReportPage` and :meth:`makeSolutionPlots`. Plain table export
+(:meth:`writeCsvTableToFile`, :meth:`writeTableToFile`) does not need it.
 """
 import numpy as np
 
@@ -53,6 +56,16 @@ class SolutionDataWriter(object):
     LOGEXP_GUESS = np.array([-250.0, 1.5, 10.0])
 
     def __init__(self):
+        """Set up the writer's optional dependencies and report defaults.
+
+        Both heavyweight dependencies are optional and degrade rather than
+        raise here: without the CoolProp Python package ``bibtexer`` stays
+        ``None`` and citations print as raw keys, and without matplotlib the
+        plot styling is skipped (the plot/report methods themselves refuse to
+        run later, via :meth:`requireMatplotlib`). The remaining attributes are
+        page geometry and fit-guess constants used by the report and fitting
+        paths.
+        """
         # Resolving BibTeX references needs the CoolProp Python package; fall
         # back to printing the raw citation keys when it is not installed.
         if BibTeXerClass is not None:
@@ -128,12 +141,17 @@ class SolutionDataWriter(object):
     def fitAll(self, fluidObject=SolutionData()):
         """Fit every property of ``fluidObject`` in place.
 
-        Fills in ``Tbase``/``xbase`` when unset, then fits density,
-        specific heat, conductivity, viscosity, saturation pressure and
-        freezing temperature. A property whose fit raises is left with its
-        starting guess; :meth:`clearUnfittedCoefficients` is what stops
-        those reaching disk, so do not treat a populated ``coeffs`` here as
-        evidence of a successful fit.
+        Fills in ``Tbase``/``xbase`` when unset, then fits density, specific
+        heat, conductivity, viscosity and saturation pressure. Freezing
+        temperature is fitted only for actual solutions -- it is skipped when
+        ``xid`` is ``ifrac_pure`` or ``ifrac_undefined``.
+
+        A property whose fit raises keeps the starting guess it was seeded
+        with, so a populated ``coeffs`` mid-fit is not evidence of a
+        successful fit. This method's own final step is
+        :meth:`clearUnfittedCoefficients`, which resets those to
+        "not defined", so on return every remaining ``coeffs`` is either a
+        real fit or explicitly cleared.
         """
 
         if fluidObject.Tbase is None:
@@ -290,9 +308,14 @@ class SolutionDataWriter(object):
         return True
 
     def get_json_file(self, name):
+        """Return the ``json/<name>.json`` path for a fluid, relative to the CWD."""
         return os.path.join("json", "{0}.json".format(name))
 
     def get_report_file(self, name):
+        """Return the ``report/<name>_fitreport.<ext>`` path for a fluid's fit report.
+
+        The extension follows ``self.ext`` (``pdf`` by default).
+        """
         return os.path.join("report", "{0}_fitreport.{1}".format(name, self.ext))
 
     def toJSON(self, data, quiet=False):
@@ -453,6 +476,13 @@ class SolutionDataWriter(object):
         return
 
     def writeFluidList(self, fluidObjs):
+        """Serialize every fluid in ``fluidObjs`` to its ``json/<name>.json`` file.
+
+        A ``TypeError``/``ValueError`` from one fluid is reported and skipped so
+        one bad fluid does not abandon the rest of the batch. Note the
+        consequence: this returns normally even when some fluids failed to
+        write, so callers must not read a clean return as "all files written".
+        """
         print("Writing fluids to JSON:", end="")
         for obj in fluidObjs:
             self.printStatusID(fluidObjs, obj)
@@ -467,6 +497,14 @@ class SolutionDataWriter(object):
         return
 
     def writeReportList(self, fluidObjs, pdfFile=None):
+        """Render a fit report per fluid, either into one PDF or separate files.
+
+        Requires matplotlib and raises via :meth:`requireMatplotlib` when it is
+        unavailable. With ``pdfFile`` set, all reports are collected into that
+        single multi-page PDF; otherwise each fluid gets its own
+        :meth:`get_report_file` output. ``self.usetex`` forces the per-fluid
+        path, since LaTeX output cannot be accumulated into one ``PdfPages``.
+        """
         self.requireMatplotlib()
         print("Writing fitting reports:", end="")
 
@@ -1251,6 +1289,11 @@ class SolutionDataWriter(object):
         return r + u"\n"
 
     def writeTextToFile(self, path, text):
+        """Write ``text`` to ``path``, creating the parent directory if needed.
+
+        Returns ``True``; failures surface as the underlying ``OSError`` rather
+        than a ``False`` return. Needs no matplotlib.
+        """
         #print("Writing to file: {0}".format(path))
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
@@ -1260,6 +1303,12 @@ class SolutionDataWriter(object):
         return True
 
     def writeCsvTableToFile(self, path, table):
+        """Write ``table`` (a sequence of rows) to ``<path>.csv`` as UTF-8 CSV.
+
+        Creates the parent directory if needed and returns ``True``. Needs no
+        matplotlib -- CSV export stays available when only the plot and report
+        paths are unavailable.
+        """
         if not os.path.exists(os.path.dirname(path + ".csv")):
             os.makedirs(os.path.dirname(path + ".csv"))
         with codecs.open(path + ".csv", 'w', encoding='utf-8') as f:
@@ -1269,6 +1318,11 @@ class SolutionDataWriter(object):
 
     # Interface
     def writeTableToFile(self, path, table):
+        """Write ``table`` to ``<path>.csv``; alias for :meth:`writeCsvTableToFile`.
+
+        Kept as the format-neutral entry point for callers that should not care
+        which tabular format is emitted. Needs no matplotlib.
+        """
         self.writeCsvTableToFile(path, table)
         return True
 
