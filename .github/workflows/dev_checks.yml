@@ -459,11 +459,26 @@ jobs:
             /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-18 100
           clang-tidy --version
 
+      - name: Cache CPM packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: dev-checks-clang-tidy
+
       - name: Configure
         run: |
           cmake -G Ninja \
             -DCOOLPROP_MY_MAIN=dev/ci/main.cpp \
             -DCOOLPROP_STATIC_LIBRARY=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -B ${{ github.workspace }}/build \
             -S .
 
@@ -550,10 +565,33 @@ jobs:
         if: ${{ matrix.language == 'python' }}
         uses: github/codeql-action/autobuild@v4
 
+      # CPM (cmake/dependencies.cmake) fetches Eigen/msgpack-c/nlohmann_json/
+      # valijson/IF97/etc. from network on every configure with no cache, so
+      # every one of this workflow's five independent cmake-configuring jobs
+      # re-downloads the same dependency set. Persisting CPM's source cache
+      # (same path CPMAddPackage defaults to: <repo>/.cpm_cache) turns repeat
+      # runs into cache hits. cpp-only: the python leg never touches CMake.
+      - name: Cache CPM packages
+        if: ${{ matrix.language == 'cpp' }}
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      - name: Set up ccache
+        if: ${{ matrix.language == 'cpp' }}
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: dev-checks-codeql-cpp
+
       - name: Configure CPP
         if: ${{ matrix.language == 'cpp' }}
         run: cmake
                -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
+               -DCMAKE_C_COMPILER_LAUNCHER=ccache
+               -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
                -B ${{github.workspace}}/build
                -S .
 
@@ -640,6 +678,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y iwyu ninja-build
           include-what-you-use --version || true
+
+      - name: Cache CPM packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
 
       - name: Configure with COOLPROP_IWYU
         run: |
@@ -760,11 +806,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Cache CPM packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: dev-checks-installed-header-gate
+
       - name: Configure shared build
         run: |
           cmake -B build_shared -S . \
             -DCOOLPROP_SHARED_LIBRARY=ON \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build shared library
         run: cmake --build build_shared -j$(nproc)

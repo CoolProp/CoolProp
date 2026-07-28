@@ -48,6 +48,16 @@ jobs:
         COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
         echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
 
+    # cmake/dependencies.cmake fetches its CPM deps from network with no
+    # cache, so every OS leg here re-downloads the same dependency set.
+    - name: Cache CPM packages
+      uses: actions/cache@v6
+      with:
+        path: ${{ github.workspace }}/.cpm_cache
+        key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+        restore-keys: |
+          cpm-${{ runner.os }}-
+
     - name: Configure CMake
       run: cmake -B build -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON
 

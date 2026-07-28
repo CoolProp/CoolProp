@@ -58,6 +58,22 @@ jobs:
         restore-keys: |
           svdsbtl-${{ runner.os }}-
 
+    # cmake/dependencies.cmake fetches Eigen/msgpack-c/nlohmann_json/valijson/
+    # IF97/fmt/Catch2/etc. via CPM with no persistent cache, so every run
+    # re-downloads/re-clones the same dependency set from network.
+    - name: Cache CPM packages
+      uses: actions/cache@v6
+      with:
+        path: ${{ github.workspace }}/.cpm_cache
+        key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+        restore-keys: |
+          cpm-${{ runner.os }}-
+
+    - name: Set up ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: test-catch2
+
     - name: Build REFPROP
       if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
       shell: bash
@@ -83,7 +99,7 @@ jobs:
     - name: Configure CMake
       working-directory: ./build
       shell: bash
-      run: cmake -DCMAKE_BUILD_TYPE:STRING=$BUILD_TYPE -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -DCOOLPROP_CATCH_MODULE:BOOL=ON ..
+      run: cmake -DCMAKE_BUILD_TYPE:STRING=$BUILD_TYPE -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -DCOOLPROP_CATCH_MODULE:BOOL=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
 
     - name: Build
       working-directory: ./build
