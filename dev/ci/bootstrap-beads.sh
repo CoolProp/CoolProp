@@ -19,11 +19,14 @@
 # script hasn't finished installing yet. Instead this script runs `bd prime`
 # itself as its last step, once bd and the DB are ready.
 #
-# Restricted to recognized ephemeral containers (CI=true or CLAUDE_CODE_REMOTE
-# set): a developer workstation with `go` on PATH must never get an
-# unprompted `go install` / toolchain fetch and multi-minute session stall.
-# Set BEADS_BOOTSTRAP_FORCE=1 to opt in anywhere else (e.g. to exercise this
-# script locally).
+# Opt-in via BEADS_BOOTSTRAP=1, not auto-detected from CI/CLAUDE_CODE_REMOTE:
+# the cold-start install+hydrate can take a couple of minutes, a cost that
+# should be a deliberate choice for an environment, not a surprise sprung on
+# every session in every ephemeral container. Set it once in the persistent
+# env config for an environment that actually wants beads tracking; every
+# session there then gets bd automatically, cold start included. Without it,
+# this script only primes an already-installed bd (near-zero cost) and gets
+# out of the way — never installs, never hydrates.
 #
 # It is idempotent (hydration is checked with a `bd count` health probe, not
 # directory presence, so a partial/failed import is retried next session
@@ -38,12 +41,10 @@ BD_VERSION="v1.1.0"  # pinned: a future release must not silently wedge cold sta
 
 cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || exit 0
 
-# Container gate: only bootstrap in recognized ephemeral environments, unless
-# explicitly opted in. Elsewhere, just prime an already-installed bd (if any)
-# and get out of the way.
-if [ "${BEADS_BOOTSTRAP_FORCE:-}" != "1" ] \
-    && [ "${CI:-}" != "true" ] \
-    && [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
+# Opt-in gate: only bootstrap when explicitly enabled for this environment.
+# Elsewhere, just prime an already-installed bd (if any) and get out of the
+# way — no install, no hydration, no cold-start cost.
+if [ "${BEADS_BOOTSTRAP:-}" != "1" ]; then
     if command -v bd >/dev/null 2>&1; then
         bd prime || echo "beads-bootstrap: 'bd prime' failed (exit $?)." >&2
     fi

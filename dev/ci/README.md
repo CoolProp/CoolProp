@@ -83,9 +83,10 @@ CLAUDE.md's "`bd` in ephemeral (Claude Code web/CI) containers" section for
 the full story (gating, idempotency, and why it's the only `SessionStart`
 hook for beads).
 
-It only runs in recognized ephemeral environments (`CI=true` or
-`CLAUDE_CODE_REMOTE=true`); set `BEADS_BOOTSTRAP_FORCE=1` to exercise it on a
-workstation.
+It's opt-in: the install+hydrate steps only run when `BEADS_BOOTSTRAP=1` is
+set in an environment's persistent config (the cold-start cost is a
+per-environment choice, not auto-detected from `CI`/`CLAUDE_CODE_REMOTE`).
+Without it, the hook just primes an already-installed `bd`, if any.
 
 ---
 

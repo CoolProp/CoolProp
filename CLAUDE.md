@@ -61,11 +61,15 @@ GitHub-release download is blocked by the agent proxy; the Go module proxy is
 allowed), rehydrates the DB from the committed `.beads/issues.jsonl`, and
 finally runs `bd prime` itself once both are ready.
 
-It only bootstraps in recognized ephemeral environments (`CI=true` or
-`CLAUDE_CODE_REMOTE=true`) — a developer workstation with `go` on `PATH` is
-left alone rather than getting an unprompted `go install` / toolchain fetch.
-Set `BEADS_BOOTSTRAP_FORCE=1` to opt in anywhere else (e.g. to exercise the
-script locally). It is idempotent — hydration is checked with a `bd count`
+It only bootstraps when explicitly opted in with `BEADS_BOOTSTRAP=1` — set once
+in an environment's persistent config, not auto-detected from `CI`/
+`CLAUDE_CODE_REMOTE`, since the cold-start install+hydrate can take a couple of
+minutes and that cost should be a deliberate per-environment choice, not
+sprung on every session in every ephemeral container. Without it, the hook
+only primes an already-installed `bd` (near-zero cost) and exits — never
+installs, never hydrates; a developer workstation with `go` on `PATH` is
+naturally left alone unless someone sets the variable there too. It is
+idempotent — hydration is checked with a `bd count`
 health probe rather than directory presence, so a partial or failed import is
 retried next session instead of latching "done" forever — and non-fatal: any
 failure warns on stderr and the session continues without bd. An `flock(1)`
