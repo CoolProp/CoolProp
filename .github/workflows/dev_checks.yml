@@ -127,13 +127,21 @@ jobs:
         # turns a real accuracy gate into a vacuous one *in the ASan build
         # only* -- the worst place to lose signal quietly.
         #
-        # Why this costs no ASan coverage: ASan finds heap overflows, UAF,
-        # leaks and ODR problems, which depend on allocation patterns and code
-        # paths, not on matrix magnitude.  BDCSVD over 40x80 runs the same
-        # Eigen code, the same temporaries and the same allocation sequence as
-        # 200x800.  Eight small-grid SVDSBTL tests (NT=40, NR=80, rank=10) are
-        # NOT [slow] and so still run here, keeping the dense-SVD path covered.
-        # The excluded cases add CPU time, not ASan signal.
+        # Why the ASan coverage cost is small: ASan finds heap overflows, UAF,
+        # leaks and ODR problems, which are largely properties of code paths
+        # rather than of matrix magnitude.  BDCSVD over 40x80 exercises the
+        # same Eigen algorithmic path as 200x800, and eight small-grid SVDSBTL
+        # tests (NT=40, NR=80, rank=10) are NOT [slow], so that path stays
+        # covered here.  Being precise about the limit of that argument: the
+        # two sizes differ in allocation counts and sizes, in memory pressure,
+        # and in how far index arithmetic is pushed, so a size-dependent bug
+        # (an overflow only reached past some extent, or a narrowing that only
+        # bites at larger indices) could in principle be visible at 200x800
+        # and not at 40x80.  This is a deliberate trade of that residual risk
+        # against a job that otherwise does not finish at all.
+
+        # (3) margin: budget + --kill-after grace = 4260 s = 71 min, leaving
+        # ~19 min of the 90 min cap for REFPROP + compile (~8.5 min measured).
         #
         # TIMEOUT: the inner `timeout` is deliberate and must stay below
         # timeout-minutes above.  A job that exceeds `timeout-minutes` is
@@ -144,7 +152,7 @@ jobs:
         # an overrun a real step failure with a message that says so.
         run: |
           cd build
-          budget=4200  # 70 min; leaves >=20 min of the 90 min job cap for REFPROP + compile (~8.5 min measured)
+          budget=4200  # 70 min; with the 60 s --kill-after grace that is 71 min worst case, leaving ~19 min of the 90 min cap for REFPROP + compile (~8.5 min measured)
           set +e
           timeout --signal=INT --kill-after=60 "$budget" \
             env ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 \
@@ -152,8 +160,14 @@ jobs:
                 ./CatchTestRunner "~[slow]" --benchmark-samples 1
           rc=$?
           set -e
-          if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+          if [ "$rc" -eq 124 ]; then
             echo "::error title=ASan run exceeded its budget::The ASan test run did not finish within ${budget}s. This is a *timeout*, not a memory error and not a cancellation -- see the SCOPE/TIMEOUT notes in dev_checks.yml and dev/ci/README.md before raising the budget."
+          elif [ "$rc" -eq 137 ]; then
+            # 137 == 128+SIGKILL.  That is what `timeout --kill-after` sends
+            # when SIGINT was ignored, but it is also what the OOM killer
+            # sends -- and ASan roughly doubles the memory footprint, so OOM
+            # is a live possibility on a 2-vCPU runner.  Do not assert which.
+            echo "::error title=ASan run was killed (SIGKILL)::Either the ${budget}s budget elapsed and SIGINT was ignored, or the kernel OOM-killed it (ASan ~2x memory). Check the log for an ASan OOM report and the runner's memory before assuming a timeout."
           fi
           exit $rc
 

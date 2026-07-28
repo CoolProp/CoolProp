@@ -256,13 +256,22 @@ half the SVD rank — would breach that and force the tolerances open. The
 result would be a real accuracy gate quietly becoming a vacuous one *in the
 ASan build only*, which is the worst place to lose signal.
 
-**Why excluding them costs no ASan coverage.** ASan detects heap overflows,
-use-after-free, leaks and ODR problems. Those depend on allocation patterns
-and code paths, not on matrix magnitude: BDCSVD over 40x80 runs the same
-Eigen code, the same temporaries and the same allocation sequence as
-200x800. Eight small-grid SVDSBTL tests (`NT=40, NR=80, rank=10`) are not
-tagged `[slow]` and therefore still run under ASan, so the dense-SVD path
-stays covered. The excluded cases contribute CPU time, not ASan signal.
+**Why the ASan coverage cost is small.** ASan detects heap overflows,
+use-after-free, leaks and ODR problems, which are largely properties of code
+paths rather than of matrix magnitude: BDCSVD over 40x80 exercises the same
+Eigen algorithmic path as 200x800, and eight small-grid SVDSBTL tests
+(`NT=40, NR=80, rank=10`) are not tagged `[slow]`, so that path stays
+covered.
+
+Being precise about where that argument stops: the two sizes are *not*
+equivalent for ASan. They differ in allocation counts and sizes, in memory
+pressure, and in how far index arithmetic is pushed. A size-dependent bug --
+an overflow only reached past some extent, or a narrowing that only bites at
+larger indices -- could in principle be caught at 200x800 and missed at
+40x80. This is a deliberate trade of that residual risk against a job that
+otherwise does not produce a verdict at all. If that trade ever looks wrong,
+the answer is more runner minutes, not a resolution cut (see above for why
+lowering the grid breaks assertions on both sides of the filter).
 
 If you add a test that is the *only* coverage of a memory-safety-relevant
 path, do not tag it `[slow]`, or ASan will not see it.
@@ -290,13 +299,35 @@ So when this job goes red, read the annotation first:
 
 | Symptom | Meaning |
 | --- | --- |
-| `::error::ASan run exceeded its budget` | Timeout. Investigate what got slower; do not just raise the budget. |
+| `::error::ASan run exceeded its budget` (exit 124) | Timeout. Investigate what got slower; do not just raise the budget. |
+| `::error::ASan run was killed (SIGKILL)` (exit 137) | Ambiguous: either the budget elapsed and SIGINT was ignored, **or** the kernel OOM-killed it. ASan roughly doubles memory, so OOM is realistic on a 2-vCPU runner — check for an ASan OOM report before assuming a timeout. |
 | ASan report in the log (`ERROR: AddressSanitizer: ...`) | A real memory bug. Fix it. |
-| Conclusion `cancelled`, no annotation | Not this job's doing — superseded push, or the PR was merged. |
+| Conclusion `cancelled`, no annotation | Most likely a superseded push or a merged PR (`cancel_merged_pr_runs.yml`). But **check which step was running first**: only the test step is wrapped in `timeout`, so if REFPROP setup or the compile overran the job cap you also get an unannotated `cancelled`. |
 
 The true wall time of a clean `~[slow]` run is not yet recorded. Once one
 completes, tighten both the budget and `timeout-minutes` to roughly 1.3x the
 measured time rather than leaving the current deliberately-loose envelope.
+
+### The exit code does propagate test failures (two ASan options exist)
+
+There are two ASan switches in `CMakeLists.txt` and only one is used by CI:
+
+- **`COOLPROP_ASAN`** (what `dev_checks.yml` passes, with
+  `-DCMAKE_BUILD_TYPE=Asan`) adds an `Asan` build type at `-O2 -g -DNDEBUG`.
+  `CatchTestRunner` links `Catch2::Catch2WithMain`, so the process exit code
+  is Catch2's failed-assertion count. Verified: injecting one bad `CHECK`
+  yields exit **42** for 5 failed assertions.
+- **`COOLPROP_CLANG_ADDRESS_SANITIZER`** is a separate, older buildbot-era
+  switch. It appends `src/Tests/catch_always_return_success.cxx`, whose
+  `main` runs the session and then returns `EXIT_SUCCESS` **unconditionally**
+  — deliberately, so that buildbot saw ASan's exit code rather than the Catch
+  failure count.
+
+So the `exit $rc` gate in the workflow is meaningful, but only because CI
+uses the first option. If anyone ever switches the job to
+`COOLPROP_CLANG_ADDRESS_SANITIZER`, ordinary test failures would stop failing
+the job while ASan's own aborts still would — a silent narrowing of the gate.
+Don't.
 
 ### Reproducing locally
 
@@ -305,8 +336,14 @@ cmake -B build_asan -S . -DCMAKE_BUILD_TYPE=Asan -DCOOLPROP_ASAN=ON \
       -DCOOLPROP_CATCH_MODULE=ON -DCMAKE_CXX_COMPILER=clang++
 cmake --build build_asan --target CatchTestRunner -j$(nproc)
 ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 \
-  ./build_asan/CatchTestRunner "~[slow]"
+ASAN_SYMBOLIZER_PATH=$(command -v llvm-symbolizer) \
+  timeout --signal=INT --kill-after=60 4200 \
+  ./build_asan/CatchTestRunner "~[slow]" --benchmark-samples 1
 ```
+
+That mirrors what CI runs. Drop the `timeout` wrapper and
+`--benchmark-samples 1` if you only want a functional check and do not care
+about reproducing the budget or the benchmark sampling.
 
 Note `detect_stack_use_after_return` is deliberately **not** enabled, and
 `detect_odr_violation` is lowered to `1`; both have specific justifications
