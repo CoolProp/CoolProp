@@ -205,9 +205,112 @@ to gate. The exception is `asan`, which does fail.
   Scan web UI for the curated view.
 - **IWYU** (`iwyu` job in `dev_checks.yml`) — runs include-what-you-use
   via the `COOLPROP_IWYU` CMake opt-in and uploads `iwyu.log`.
-- **AddressSanitizer** (`asan` job in `dev_checks.yml`) — full Catch test
-  suite under ASan on every PR. This one *does* fail builds, since memory
-  bugs are real bugs.
+- **AddressSanitizer** (`asan` job in `dev_checks.yml`) — the Catch test
+  suite under ASan on every PR, **excluding `[slow]`**. This one *does* fail
+  builds, since memory bugs are real bugs. See
+  [ASan scope and budget](#asan-scope-and-budget) for why `[slow]` is
+  excluded and what to do when the job times out.
+
+## ASan scope and budget
+
+The `asan` job is the longest-running job in CI, so its scope is a
+deliberate trade-off rather than an accident. Two things to know before
+changing it.
+
+### It runs `~[slow]`, not everything
+
+`./CatchTestRunner "~[slow]"` excludes the 60 `[slow]`-tagged cases, 48 of
+which are in the SVDSBTL suite. Those build SVD surfaces at **production
+resolution** (`SurfaceSpec` defaults `NT=200`, `NR=800`, `rank=20`), and the
+dense BDCSVD over a 200x800 grid is the bulk of the job's wall time.
+
+Measured on one machine, non-ASan, with a cold surface cache (no
+`*.svd.bin.z` present, as in CI):
+
+| Scope | Cases | Wall time |
+| --- | --- | --- |
+| `[slow]` | 58 (6 skipped, no REFPROP locally) | 887 s |
+| `~[slow]` | 412 | >16 min |
+
+So `[slow]` is roughly 40-45% of the local total. That is a *lower* bound on
+the CI saving: the 6 cases that skip locally for lack of REFPROP include the
+5 `SVDSBTL&REFPROP` production-resolution builds, which do run in CI. Note
+these are non-ASan figures; ASan scales everything up but the ratio is what
+matters here.
+
+Note also that excluding `[slow]` does **not** remove production-resolution
+surface builds entirely: 15 non-`[slow]` tests construct SVDSBTL surfaces
+with no `grid` option, so they build at 200x800 too. Surfaces are cached per
+`(fluid, source, input_pair, options)` key, so that cost is paid once rather
+than per test -- which is why the saving comes from the excluded tests'
+repeat work and their REFPROP-sourced surfaces, not from eliminating dense
+SVD altogether.
+
+**Why not just shrink the grid under ASan?** The resolution is load-bearing
+for those tests. They deliberately pass no `grid` option so that they run at
+production resolution, then assert agreement with a truth source (HEOS /
+REFPROP / IF97) at about `1e-3` relative. `SurfaceSpec` records that the
+defaults deliver ~`7e-5` fractional error for Water, so there is only ~14x
+headroom. Dropping to `NT=40, NR=80, rank=10` — 50x fewer grid points and
+half the SVD rank — would breach that and force the tolerances open. The
+result would be a real accuracy gate quietly becoming a vacuous one *in the
+ASan build only*, which is the worst place to lose signal.
+
+**Why excluding them costs no ASan coverage.** ASan detects heap overflows,
+use-after-free, leaks and ODR problems. Those depend on allocation patterns
+and code paths, not on matrix magnitude: BDCSVD over 40x80 runs the same
+Eigen code, the same temporaries and the same allocation sequence as
+200x800. Eight small-grid SVDSBTL tests (`NT=40, NR=80, rank=10`) are not
+tagged `[slow]` and therefore still run under ASan, so the dense-SVD path
+stays covered. The excluded cases contribute CPU time, not ASan signal.
+
+If you add a test that is the *only* coverage of a memory-safety-relevant
+path, do not tag it `[slow]`, or ASan will not see it.
+
+One consequence worth knowing before anyone proposes lowering the grid for
+the *surviving* tests instead: some of them also assert accuracy against
+HEOS (`SVDSBTL DT two-phase dome` at `1e-3`, `DT fast_evaluate` at `1e-2`),
+so a global resolution cut is not safe even with `[slow]` excluded.
+
+### A timeout is a step failure, not a cancellation
+
+The test step is wrapped in `timeout` with a 70-minute budget, inside the
+job's 90-minute `timeout-minutes`. That ordering is intentional:
+
+- A job that exceeds `timeout-minutes` is reported by GitHub with conclusion
+  **`cancelled`**, which is indistinguishable from a concurrency-supersede or
+  from `cancel_merged_pr_runs.yml` cancelling a merged PR's runs. That is
+  exactly the ambiguity the job cap was introduced to remove (CoolProp-xuu),
+  so leaving the cap as the only bound reintroduces it.
+- Bounding the *step* makes an overrun exit `124` (or `137` after
+  `--kill-after`), which fails the step with an explicit `::error::`
+  annotation saying it was a timeout rather than a memory error.
+
+So when this job goes red, read the annotation first:
+
+| Symptom | Meaning |
+| --- | --- |
+| `::error::ASan run exceeded its budget` | Timeout. Investigate what got slower; do not just raise the budget. |
+| ASan report in the log (`ERROR: AddressSanitizer: ...`) | A real memory bug. Fix it. |
+| Conclusion `cancelled`, no annotation | Not this job's doing — superseded push, or the PR was merged. |
+
+The true wall time of a clean `~[slow]` run is not yet recorded. Once one
+completes, tighten both the budget and `timeout-minutes` to roughly 1.3x the
+measured time rather than leaving the current deliberately-loose envelope.
+
+### Reproducing locally
+
+```bash
+cmake -B build_asan -S . -DCMAKE_BUILD_TYPE=Asan -DCOOLPROP_ASAN=ON \
+      -DCOOLPROP_CATCH_MODULE=ON -DCMAKE_CXX_COMPILER=clang++
+cmake --build build_asan --target CatchTestRunner -j$(nproc)
+ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 \
+  ./build_asan/CatchTestRunner "~[slow]"
+```
+
+Note `detect_stack_use_after_return` is deliberately **not** enabled, and
+`detect_odr_violation` is lowered to `1`; both have specific justifications
+in the job's comments in `dev_checks.yml`.
 
 ## `git blame` and the one-shot reformat
 

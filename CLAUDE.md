@@ -65,7 +65,7 @@ cmake --build build_catch --target CatchTestRunner -j8
 # Run the test suite — see "Test filter discipline" below for tag scope
 ./build_catch/CatchTestRunner [SBTL]            # SBTL adapter layer
 ./build_catch/CatchTestRunner [SVDSBTL]         # backend-level tests
-./build_catch/CatchTestRunner "[!slow]"         # everything fast
+./build_catch/CatchTestRunner "~[slow]"         # everything except [slow]
 ```
 
 ## Pre-Push Gate — REQUIRED before every `git push`

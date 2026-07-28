@@ -104,7 +104,58 @@ jobs:
         # reliable *indicator*-based ODR detection — so a real duplicate-symbol
         # violation (e.g. the JSON-symbol-visibility concern) still fails CI —
         # and drops only the poisoning check.  See CoolProp-xma3.
-        run: cd build && ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
+        #
+        # SCOPE: `~[slow]` excludes the 60 [slow]-tagged cases (48 of them in
+        # the SVDSBTL suite).  Those build SVD surfaces at production
+        # resolution -- SurfaceSpec's defaults NT=200, NR=800, rank=20 -- and
+        # the dense BDCSVD over a 200x800 grid is the bulk of this job's time.
+        #
+        # Measured non-ASan with a cold surface cache (as in CI): [slow] alone
+        # is 887 s / 58 cases, against >16 min for the 412-case ~[slow] set --
+        # roughly 40-45% of the total.  That understates the CI saving, since
+        # 6 of those [slow] cases skip locally for want of REFPROP and those
+        # include the 5 SVDSBTL&REFPROP production-resolution builds, which do
+        # run in CI.  See dev/ci/README.md for the full table and caveats.
+        #
+        # Why exclude rather than shrink the grid: the resolution is
+        # load-bearing for those tests.  They pass no `grid` option precisely
+        # so they run at production resolution, then assert agreement with a
+        # truth source (HEOS / REFPROP / IF97) at ~1e-3 relative.  SurfaceSpec
+        # notes the defaults deliver ~7e-5 fractional for Water, so there is
+        # only ~14x headroom; dropping to 40x80/rank-10 (50x fewer points,
+        # half the rank) would breach it and force the tolerances open, which
+        # turns a real accuracy gate into a vacuous one *in the ASan build
+        # only* -- the worst place to lose signal quietly.
+        #
+        # Why this costs no ASan coverage: ASan finds heap overflows, UAF,
+        # leaks and ODR problems, which depend on allocation patterns and code
+        # paths, not on matrix magnitude.  BDCSVD over 40x80 runs the same
+        # Eigen code, the same temporaries and the same allocation sequence as
+        # 200x800.  Eight small-grid SVDSBTL tests (NT=40, NR=80, rank=10) are
+        # NOT [slow] and so still run here, keeping the dense-SVD path covered.
+        # The excluded cases add CPU time, not ASan signal.
+        #
+        # TIMEOUT: the inner `timeout` is deliberate and must stay below
+        # timeout-minutes above.  A job that exceeds `timeout-minutes` is
+        # reported by GitHub with conclusion `cancelled`, which is
+        # indistinguishable from a concurrency-supersede or from
+        # cancel_merged_pr_runs.yml -- the exact ambiguity this job's cap was
+        # added to remove (CoolProp-xuu).  Bounding the test step instead makes
+        # an overrun a real step failure with a message that says so.
+        run: |
+          cd build
+          budget=4200  # 70 min; leaves >=20 min of the 90 min job cap for REFPROP + compile (~8.5 min measured)
+          set +e
+          timeout --signal=INT --kill-after=60 "$budget" \
+            env ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 \
+                ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 \
+                ./CatchTestRunner "~[slow]" --benchmark-samples 1
+          rc=$?
+          set -e
+          if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+            echo "::error title=ASan run exceeded its budget::The ASan test run did not finish within ${budget}s. This is a *timeout*, not a memory error and not a cancellation -- see the SCOPE/TIMEOUT notes in dev_checks.yml and dev/ci/README.md before raising the budget."
+          fi
+          exit $rc
 
   clang-format:
     name: clang-format (PR diff)
