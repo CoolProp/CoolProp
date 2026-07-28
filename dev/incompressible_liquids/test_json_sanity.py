@@ -65,6 +65,15 @@ def _iter_property_coeffs():
             assert prop in fluid, "{0}: missing property block {1}".format(os.path.basename(path), prop)
             entry = fluid[prop]
             coeffs = entry.get("coeffs")
+            # Both spellings are accepted on purpose. The shipped files use the
+            # STRING "null" as the cleared-coefficients placeholder -- that is
+            # the pre-existing convention, not a serialization bug: the C++
+            # parser (JSONIncompressibleLibrary::parse_coefficients) requires
+            # the "coeffs" key to *exist* (a missing one throws "vital"), but
+            # only ever reads its value inside a branch that matches "type".
+            # For type "notdefined" no branch matches, so the value is never
+            # parsed. Real JSON null would work identically; accept either so
+            # this test does not depend on which is used.
             if coeffs in (None, "null"):
                 assert entry.get("type", "notdefined") == "notdefined", \
                     "{0}: {1} has no coefficients but type {2!r}".format(os.path.basename(path), prop, entry.get("type"))
@@ -85,5 +94,9 @@ def test_no_all_zero_fits_shipped():
 def test_all_coefficients_finite():
     for name, prop, flat in _iter_property_coeffs():
         for value in flat:
-            assert isinstance(value, (int, float)), "{0}: {1} has non-numeric coefficient {2!r}".format(name, prop, value)
+            # `not isinstance(value, bool)` is load-bearing: bool subclasses
+            # int, so JSON true/false would otherwise satisfy both this check
+            # and the finiteness one below (math.isnan(True) is False).
+            assert isinstance(value, (int, float)) and not isinstance(value, bool), \
+                "{0}: {1} has non-numeric coefficient {2!r}".format(name, prop, value)
             assert not math.isnan(value) and abs(value) != float("inf"), "{0}: {1} has non-finite coefficient".format(name, prop)
