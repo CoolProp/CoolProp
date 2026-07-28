@@ -140,7 +140,25 @@ jobs:
         # and not at 40x80.  This is a deliberate trade of that residual risk
         # against a job that otherwise does not finish at all.
 
-        # (3) margin: budget + --kill-after grace = 4260 s = 71 min, leaving
+        # VERBOSITY: ASAN_OPTIONS deliberately does NOT set verbosity=1.
+        # It used to, and that is pure cost: at verbosity>=1 ASan VReports its
+        # internal container-annotation traffic, which for this Eigen- and
+        # std::vector-heavy suite means a sustained flood of
+        # "==pid==poisoning: 0x... <n>" lines -- 4365 lines/s measured over a
+        # 0.68 s window of the run in PR #3294, ~38 bytes each.  Every line is
+        # a formatted write() into a pipe that the Actions runner reads,
+        # timestamps and uploads.  Extrapolating that rate across a 70 min test
+        # window is ~18 M lines / ~690 MB (an upper bound -- the rate was
+        # sampled in one window, not averaged over the whole run).
+        #
+        # It buys nothing: ASan error reports, leak reports and ODR-violation
+        # reports are printed unconditionally, independent of verbosity.
+        # verbosity only adds ASan's own bookkeeping chatter.  Verified: a
+        # trivial std::vector program emits 0 lines at the default verbosity
+        # and 236 at verbosity=1.  detect_odr_violation=1 is kept -- that is
+        # the setting doing actual diagnostic work here.
+
+        # MARGIN: budget + --kill-after grace = 4260 s = 71 min, leaving
         # ~19 min of the 90 min cap for REFPROP + compile (~8.5 min measured).
         #
         # TIMEOUT: the inner `timeout` is deliberate and must stay below
@@ -155,7 +173,7 @@ jobs:
           budget=4200  # 70 min; with the 60 s --kill-after grace that is 71 min worst case, leaving ~19 min of the 90 min cap for REFPROP + compile (~8.5 min measured)
           set +e
           timeout --signal=INT --kill-after=60 "$budget" \
-            env ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 \
+            env ASAN_OPTIONS=detect_odr_violation=1 \
                 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 \
                 ./CatchTestRunner "~[slow]" --benchmark-samples 1
           rc=$?

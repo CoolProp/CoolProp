@@ -308,6 +308,35 @@ The true wall time of a clean `~[slow]` run is not yet recorded. Once one
 completes, tighten both the budget and `timeout-minutes` to roughly 1.3x the
 measured time rather than leaving the current deliberately-loose envelope.
 
+### Why `verbosity=1` is not set
+
+The job used to run with `ASAN_OPTIONS=verbosity=1:...`. That was removed, and
+if you are tempted to put it back: it costs a great deal and buys nothing.
+
+At `verbosity>=1` ASan reports its own container-annotation bookkeeping, which
+for this Eigen- and `std::vector`-heavy suite is a sustained stream of
+
+```
+==4681==poisoning: 0x7f7bed013040 800
+==4681==unpoisoning: 0x7f7bed0141c0 400
+```
+
+In PR #3294's ASan log that ran at **4365 lines/s** (measured across a 0.68 s
+window; ~38 bytes per line). Extrapolated over a 70-minute test window that
+is on the order of 18 M lines and ~690 MB of stderr — treat that total as an
+upper bound, since the rate was sampled in one window rather than averaged
+over the whole run. Every one of those lines is a formatted `write()` into a
+pipe that the Actions runner reads, timestamps and uploads.
+
+It is not a diagnostic setting. ASan's error reports, leak reports and
+ODR-violation reports print unconditionally, at any verbosity; `verbosity`
+only adds ASan's internal chatter. Confirmed directly: a trivial
+`std::vector` program emits **0** lines at the default verbosity and **236**
+at `verbosity=1`.
+
+`detect_odr_violation=1` is kept — that one is doing real work (see the ODR
+note in `dev_checks.yml` for why it is level 1 and not 2).
+
 ### The exit code does propagate test failures (two ASan options exist)
 
 There are two ASan switches in `CMakeLists.txt` and only one is used by CI:
@@ -335,7 +364,7 @@ Don't.
 cmake -B build_asan -S . -DCMAKE_BUILD_TYPE=Asan -DCOOLPROP_ASAN=ON \
       -DCOOLPROP_CATCH_MODULE=ON -DCMAKE_CXX_COMPILER=clang++
 cmake --build build_asan --target CatchTestRunner -j$(nproc)
-ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 \
+ASAN_OPTIONS=detect_odr_violation=1 \
 ASAN_SYMBOLIZER_PATH=$(command -v llvm-symbolizer) \
   timeout --signal=INT --kill-after=60 4200 \
   ./build_asan/CatchTestRunner "~[slow]" --benchmark-samples 1
