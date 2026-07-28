@@ -343,7 +343,7 @@ if you are tempted to put it back: it costs a great deal and buys nothing.
 At `verbosity>=1` ASan reports its own container-annotation bookkeeping, which
 for this Eigen- and `std::vector`-heavy suite is a sustained stream of
 
-```
+```text
 ==4681==poisoning: 0x7f7bed013040 800
 ==4681==unpoisoning: 0x7f7bed0141c0 400
 ```

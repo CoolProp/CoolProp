@@ -256,14 +256,30 @@ else
     # "No tests ran") contains neither word and was reported as a pass.
     # Also require a non-zero test count, so a filter that stops matching
     # after a rename fails loudly instead of silently testing nothing.
-    matched=$(./build_catch/CatchTestRunner "$TAG_FILTER" --list-tests 2>/dev/null \
-                | grep -oE '[0-9]+ matching test case' | grep -oE '[0-9]+' || echo 0)
-    if [ "${matched:-0}" -eq 0 ]; then
-        fail "tests (filter '$TAG_FILTER' matched 0 test cases -- filter is stale, not a pass)"
-    elif ./build_catch/CatchTestRunner "$TAG_FILTER" 2>&1 | tee /tmp/preflight-tests.log; then
-        ok "tests ($TAG_FILTER, $matched cases)"
+    #
+    # Count the cases via `--list-tests --verbosity quiet`, which prints one
+    # test name per line and nothing else.  Deliberately NOT parsing the
+    # human-readable "N matching test cases" summary: that string is a
+    # presentation detail that a Catch2 upgrade can reword, and if it ever
+    # stopped matching, the count would silently read 0.  Line counting also
+    # lets the listing's own exit status stay meaningful -- a non-zero exit
+    # here means the listing itself failed (missing/broken runner), which is
+    # distinct from a filter that legitimately matches nothing (exit 0, no
+    # lines).  No `2>/dev/null` and no `|| echo 0`: swallowing either the
+    # stderr or the status is what lets a gate fail open.
+    test_log="$(mktemp "${TMPDIR:-/tmp}/preflight-tests.XXXXXX")"
+    if ! listed_tests=$(./build_catch/CatchTestRunner "$TAG_FILTER" \
+                            --list-tests --verbosity quiet); then
+        fail "tests (could not list cases for filter '$TAG_FILTER' -- is the runner intact?)"
     else
-        fail "tests (see /tmp/preflight-tests.log)"
+        matched=$(printf '%s\n' "$listed_tests" | awk 'NF { c++ } END { print c + 0 }')
+        if [ "$matched" -eq 0 ]; then
+            fail "tests (filter '$TAG_FILTER' matched 0 test cases -- filter is stale, not a pass)"
+        elif ./build_catch/CatchTestRunner "$TAG_FILTER" 2>&1 | tee "$test_log"; then
+            ok "tests ($TAG_FILTER, $matched cases)"
+        else
+            fail "tests (see $test_log)"
+        fi
     fi
 fi
 
