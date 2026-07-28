@@ -5442,9 +5442,22 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         // Tbase pole, so query at a pressure safely above psat(Tbase + dT).
         double p = 101325.0;
         try {
-            p = std::max(p, 2.0 * fluid.psat(Tbase + dT, xmid));
-        } catch (...) {
-            // psat not defined (or not valid) here -- 1 atm is fine then.
+            const double psat = fluid.psat(Tbase + dT, xmid);
+            // Check finiteness explicitly instead of letting std::max absorb a
+            // bad value: std::max(p, NaN) returns p, so a NaN or _HUGE psat
+            // would silently masquerade as "1 atm is fine" rather than being
+            // noticed. Only a real, finite psat is allowed to raise p.
+            if (ValidNumber(psat)) {
+                p = std::max(p, 2.0 * psat);
+            }
+        } catch (const std::exception& e) {
+            // psat is not defined for every fluid; where it is not, the 1 atm
+            // default stands. Narrowed from `catch (...)` deliberately: every
+            // CoolProp error derives from std::exception (CoolPropBaseError),
+            // so the intended NotImplementedError/ValueError is still caught,
+            // while something genuinely unexpected propagates instead of being
+            // swallowed. Capturing the reason keeps the catch non-silent.
+            CAPTURE(e.what());
         }
 
         double h_lo = 0, h_mid = 0, h_hi = 0, s_lo = 0, s_mid = 0, s_hi = 0;
