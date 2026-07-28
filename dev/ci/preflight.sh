@@ -222,25 +222,48 @@ else
     # Tag scope selection.  Path -> tag mapping mirrors how CI's broad
     # workflow runs the full suite, but skips the expensive `[slow]`
     # tests by default for fast local feedback.  Pass --slow to include.
+    # Catch2 filter syntax, since three of these were wrong before:
+    #   ~[tag]   EXCLUDES a tag.  `[!slow]` does NOT exclude -- it selects a
+    #            literal tag named "!slow", which no test carries, so
+    #            `[!slow][!benchmark]` matched 0 test cases and this gate
+    #            passed while running NOTHING.
+    #   ,        inside one spec is OR.
+    #   [!benchmark] is a real Catch2 tag, but benchmarks are HIDDEN from the
+    #            default set already (`~[!benchmark]` and no filter both list
+    #            468).  So appending `,[!benchmark]` to an OR-list ADDED the
+    #            benchmarks instead of excluding them.  No benchmark term is
+    #            needed; --benchmark-samples stays a CI concern.
+    # Separate argv specs are AND-ed (intersected), not OR-ed, so an OR-list
+    # must be one comma-separated argument.
     TAG_FILTER=""
     if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/SBTL/|include/CoolProp/sbtl/|src/Backends/SVDSBTL/|src/Region/|src/SVD/|include/CoolProp/region/|include/CoolProp/svd/)"; then
         # SBTL/SVDSBTL surface area touched — run the umbrella tags.
         # [SBTL] catches the adapter-layer tests (serializer round-trip,
         # multi-fluid PH preset) that [SVDSBTL] alone misses.
-        TAG_FILTER="[SBTL],[SVDSBTL],[SVDComponents],[region],[!benchmark]"
+        TAG_FILTER="[SBTL],[SVDSBTL],[SVDComponents],[region]"
     elif printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/Backends/Helmholtz/|src/Backends/REFPROP/)"; then
         # HEOS / REFPROP path touched — broader sweep including transport
         # and flash routines.
-        TAG_FILTER="[Helmholtz],[REFPROP],[!benchmark]"
+        TAG_FILTER="[Helmholtz],[REFPROP]"
     else
         # Default: run everything fast (skip the [slow] long tests).
-        TAG_FILTER="[!slow][!benchmark]"
+        TAG_FILTER="~[slow]"
     fi
     echo "  tag filter: $TAG_FILTER"
-    if ./build_catch/CatchTestRunner $TAG_FILTER 2>&1 | tee /tmp/preflight-tests.log | tail -3 | grep -qE "failed|Errors:"; then
-        fail "tests (see /tmp/preflight-tests.log)"
+    # Gate on the runner's EXIT CODE, not on grepping its output.  The old
+    # form piped into `grep -qE "failed|Errors:"`, so the `if` saw grep's
+    # status and the runner's was discarded -- a zero-match run (exit 2,
+    # "No tests ran") contains neither word and was reported as a pass.
+    # Also require a non-zero test count, so a filter that stops matching
+    # after a rename fails loudly instead of silently testing nothing.
+    matched=$(./build_catch/CatchTestRunner "$TAG_FILTER" --list-tests 2>/dev/null \
+                | grep -oE '[0-9]+ matching test case' | grep -oE '[0-9]+' || echo 0)
+    if [ "${matched:-0}" -eq 0 ]; then
+        fail "tests (filter '$TAG_FILTER' matched 0 test cases -- filter is stale, not a pass)"
+    elif ./build_catch/CatchTestRunner "$TAG_FILTER" 2>&1 | tee /tmp/preflight-tests.log; then
+        ok "tests ($TAG_FILTER, $matched cases)"
     else
-        ok "tests ($TAG_FILTER)"
+        fail "tests (see /tmp/preflight-tests.log)"
     fi
 fi
 
