@@ -80,6 +80,7 @@ pub fn get_incompressible_fluids_list() -> Result<Vec<String>, String> {
         .filter(|s| !s.is_empty())
         .collect();
     list.sort_unstable();
+    list.dedup();
     Ok(list)
 }
 
@@ -234,6 +235,23 @@ pub fn compute_saturation_table(
 mod tests {
     use super::*;
 
+    /// Serializes the tests that touch the process-wide INCOMP fluid library.
+    ///
+    /// `add_incompressible_fluid` mutates CoolProp's incompressible library
+    /// (the name vectors and index map) in place, and those structures are not
+    /// internally synchronized -- same as the existing HEOS/Cubics runtime-add
+    /// paths. Cargo runs `#[test]` functions on parallel threads, so a test
+    /// that registers a fluid must not overlap a test that enumerates the
+    /// list, or the two race on the same std::map.
+    static INCOMP_LIBRARY_GUARD: Mutex<()> = Mutex::new(());
+
+    /// Take INCOMP_LIBRARY_GUARD, ignoring poisoning: a panic in one INCOMP
+    /// test should surface as that test's own failure, not cascade into
+    /// unwrap() panics in every other test that wants the lock.
+    fn lock_incomp_library() -> std::sync::MutexGuard<'static, ()> {
+        INCOMP_LIBRARY_GUARD.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     #[test]
     fn fluids_list_command_returns_water() {
         let list = get_fluids_list().expect("FluidsList");
@@ -253,6 +271,7 @@ mod tests {
 
     #[test]
     fn incompressible_list_and_runtime_add() {
+        let _guard = lock_incomp_library();
         let before = get_incompressible_fluids_list().expect("incompressible list");
         assert!(before.iter().any(|f| f == "Water"), "INCOMP list missing Water");
 

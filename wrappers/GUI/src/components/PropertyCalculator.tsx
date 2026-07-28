@@ -129,7 +129,12 @@ interface Props {
 }
 
 export default function PropertyCalculator({ fluids, incompFluids = [], basis, onAddFluid }: Props) {
-  const [fluid, setFluid] = useState("Water");
+  // The dropdown value carries the backend explicitly ("HEOS:Water" /
+  // "INCOMP:Water") because the two namespaces overlap -- "Water" is a
+  // shipped fluid in both. Keying selection on the bare name meant a
+  // colliding INCOMP fluid could never be reached, so those entries were
+  // filtered out of the list and silently disappeared.
+  const [selection, setSelection] = useState("HEOS:Water");
   const [pairIdx, setPairIdx] = useState(0);
   const [v1, setV1] = useState(getInputPairs(basis)[0].v1Default);
   const [v2, setV2] = useState(getInputPairs(basis)[0].v2Default);
@@ -138,10 +143,10 @@ export default function PropertyCalculator({ fluids, incompFluids = [], basis, o
   const [computing, setComputing] = useState(false);
   const { width: leftWidth, startDrag } = useDraggableSplit(240, 180, 600);
 
-  // Incompressible fluids share the same name space in the dropdown but run
-  // on the INCOMP backend; HEOS names win a collision (e.g. "Water" exists
-  // in both, and the HEOS equation of state is the better model for it).
-  const isIncomp = incompFluids.includes(fluid) && !fluids.includes(fluid);
+  const separator = selection.indexOf(":");
+  const backend = selection.slice(0, separator);
+  const fluid = selection.slice(separator + 1);
+  const isIncomp = backend === "INCOMP";
   const state = useAbstractState(isIncomp ? "INCOMP" : "HEOS", fluid);
 
   // Reset input values and clear results when basis changes
@@ -191,19 +196,21 @@ export default function PropertyCalculator({ fluids, incompFluids = [], basis, o
       <div className="calc-controls">
         <div className="field-group">
           <label>Fluid</label>
-          <select value={fluid} onChange={(e) => setFluid(e.target.value)}>
+          <select value={selection} onChange={(e) => setSelection(e.target.value)}>
             <optgroup label="Fluids (HEOS)">
               {(fluids.length > 0 ? fluids : ["Water"]).map((f) => (
-                <option key={f} value={f}>{f}</option>
+                <option key={f} value={"HEOS:" + f}>{f}</option>
               ))}
             </optgroup>
             {incompFluids.length > 0 && (
               <optgroup label="Incompressible (INCOMP)">
-                {incompFluids
-                  .filter((f) => !fluids.includes(f))
-                  .map((f) => (
-                    <option key={"incomp-" + f} value={f}>{f}</option>
-                  ))}
+                {incompFluids.map((f) => (
+                  <option key={"incomp-" + f} value={"INCOMP:" + f}>
+                    {/* Disambiguate the names that exist on both backends
+                        rather than dropping them from the list. */}
+                    {fluids.includes(f) ? f + " (incompressible)" : f}
+                  </option>
+                ))}
               </optgroup>
             )}
           </select>

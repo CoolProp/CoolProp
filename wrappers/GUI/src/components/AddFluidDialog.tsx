@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { fitFluid, parseTable } from "../lib/incompfit";
 
@@ -17,7 +17,11 @@ export const USER_FLUIDS_STORAGE_KEY = "coolprop.userIncompressibleFluids";
 
 export function loadUserFluidDefinitions(): Record<string, string> {
   try {
-    return JSON.parse(localStorage.getItem(USER_FLUIDS_STORAGE_KEY) ?? "{}");
+    // A corrupt or stale key can hold any JSON value, not just an object;
+    // returning e.g. a number here makes the `name in defs` lookup throw.
+    const parsed = JSON.parse(localStorage.getItem(USER_FLUIDS_STORAGE_KEY) ?? "{}");
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed as Record<string, string>;
   } catch {
     return {};
   }
@@ -55,11 +59,13 @@ const PROPERTY_LABELS: Record<string, string> = {
 };
 
 interface Props {
+  /** Names already registered with the INCOMP backend (shipped + user). */
+  existingFluids?: string[];
   onSaved: (name: string) => void;
   onCancel: () => void;
 }
 
-export default function AddFluidDialog({ onSaved, onCancel }: Props) {
+export default function AddFluidDialog({ existingFluids = [], onSaved, onCancel }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [reference, setReference] = useState("");
@@ -67,15 +73,42 @@ export default function AddFluidDialog({ onSaved, onCancel }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Stable ids so every visible label is programmatically tied to its control.
+  const uid = useId();
+  const titleId = uid + "-title";
+  const nameId = uid + "-name";
+  const descriptionId = uid + "-description";
+  const referenceId = uid + "-reference";
+  const tableId = uid + "-table";
+
+  const nameRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    // Move focus into the dialog on open, and let Escape dismiss it -- the
+    // overlay click already cancels, but keyboard users had no way out.
+    nameRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onCancel]);
+
   const preview = useMemo(() => {
     if (!tableText.trim() || !name.trim()) return null;
     try {
+      const trimmed = name.trim();
+      // Overwriting the user's own earlier definition is the edit flow;
+      // clobbering a shipped fluid (the core replaces same-name fluids in
+      // place) must be refused.
+      if (existingFluids.includes(trimmed) && !(trimmed in loadUserFluidDefinitions())) {
+        throw new Error(`"${trimmed}" already exists in the incompressible library; choose another name`);
+      }
       const table = parseTable(tableText);
-      return { ok: true as const, ...fitFluid({ name: name.trim(), description, reference, table }) };
+      return { ok: true as const, ...fitFluid({ name: trimmed, description, reference, table }) };
     } catch (e) {
       return { ok: false as const, message: String(e instanceof Error ? e.message : e) };
     }
-  }, [tableText, name, description, reference]);
+  }, [tableText, name, description, reference, existingFluids]);
 
   const handleSave = async () => {
     if (!preview || !preview.ok) return;
@@ -97,14 +130,16 @@ export default function AddFluidDialog({ onSaved, onCancel }: Props) {
 
   return (
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="modal-card" style={{ maxWidth: 560 }}>
-        <div className="modal-title">Add Incompressible Fluid</div>
+      <div className="modal-card" style={{ maxWidth: 560 }} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="modal-title" id={titleId}>Add Incompressible Fluid</div>
 
         <div className="modal-body">
           <div className="field-row">
             <div className="field-group" style={{ flex: 1 }}>
-              <label>Name</label>
+              <label htmlFor={nameId}>Name</label>
               <input
+                id={nameId}
+                ref={nameRef}
                 type="text"
                 value={name}
                 placeholder="MyCoolant"
@@ -112,14 +147,15 @@ export default function AddFluidDialog({ onSaved, onCancel }: Props) {
               />
             </div>
             <div className="field-group" style={{ flex: 2 }}>
-              <label>Description (optional)</label>
-              <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
+              <label htmlFor={descriptionId}>Description (optional)</label>
+              <input id={descriptionId} type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
           </div>
 
           <div className="field-group">
-            <label>Data source / reference (optional)</label>
+            <label htmlFor={referenceId}>Data source / reference (optional)</label>
             <input
+              id={referenceId}
               type="text"
               value={reference}
               placeholder="manufacturer datasheet, publication, …"
@@ -128,12 +164,13 @@ export default function AddFluidDialog({ onSaved, onCancel }: Props) {
           </div>
 
           <div className="field-group">
-            <label>
+            <label htmlFor={tableId}>
               Property table — paste from a spreadsheet. Columns: T plus any of
               rho, cp, k, mu (SI units); a header row is recognised, blank cells
               mean “no data”. Density and cp are required.
             </label>
             <textarea
+              id={tableId}
               value={tableText}
               placeholder={PLACEHOLDER}
               rows={9}
@@ -158,7 +195,9 @@ export default function AddFluidDialog({ onSaved, onCancel }: Props) {
                       <td>{PROPERTY_LABELS[prop] ?? prop}</td>
                       <td className="num">{r.points}</td>
                       <td className="num">{r.degree}</td>
-                      <td className="num">{(r.nrms * 100).toPrecision(2)}%</td>
+                      <td className="num" title={Number.isFinite(r.nrms) ? undefined : "Too few points to leave any residual: the curve interpolates the data exactly, so its accuracy between points is unmeasured."}>
+                        {Number.isFinite(r.nrms) ? (r.nrms * 100).toPrecision(2) + "%" : "n/a (interpolated)"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
