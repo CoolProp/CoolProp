@@ -219,7 +219,7 @@ changing it.
 
 ### It runs `~[slow]`, not everything
 
-`./CatchTestRunner "~[slow]"` excludes the 60 `[slow]`-tagged cases, 48 of
+`./CatchTestRunner "~[slow]"` excludes the 58 `[slow]`-tagged cases, 49 of
 which are in the SVDSBTL suite. Those build SVD surfaces at **production
 resolution** (`SurfaceSpec` defaults `NT=200`, `NR=800`, `rank=20`), and the
 dense BDCSVD over a 200x800 grid is the bulk of the job's wall time.
@@ -239,8 +239,8 @@ these are non-ASan figures; ASan scales everything up but the ratio is what
 matters here.
 
 Note also that excluding `[slow]` does **not** remove production-resolution
-surface builds entirely: 15 non-`[slow]` tests construct SVDSBTL surfaces
-with no `grid` option, so they build at 200x800 too. Surfaces are cached per
+surface builds entirely: 17 non-`[slow]` `TEST_CASE`s construct SVDSBTL
+surfaces with no `grid` option, so they build at 200x800 too. Surfaces are cached per
 `(fluid, source, input_pair, options)` key, so that cost is paid once rather
 than per test -- which is why the saving comes from the excluded tests'
 repeat work and their REFPROP-sourced surfaces, not from eliminating dense
@@ -256,20 +256,28 @@ half the SVD rank — would breach that and force the tolerances open. The
 result would be a real accuracy gate quietly becoming a vacuous one *in the
 ASan build only*, which is the worst place to lose signal.
 
-**Why the ASan coverage cost is small.** ASan detects heap overflows,
-use-after-free, leaks and ODR problems, which are largely properties of code
-paths rather than of matrix magnitude: BDCSVD over 40x80 exercises the same
-Eigen algorithmic path as 200x800, and eight small-grid SVDSBTL tests
-(`NT=40, NR=80, rank=10`) are not tagged `[slow]`, so that path stays
-covered.
+**Why the ASan coverage cost is small.** Because production resolution still
+runs. As noted above, 17 non-`[slow]` `TEST_CASE`s build surfaces at the
+200x800/rank-20 defaults, so full-size dense BDCSVD, its temporaries and its
+allocation pattern are all still exercised under ASan. That is what makes the
+exclusion cheap for the classes ASan detects -- heap overflow, use-after-free,
+leaks, ODR.
 
-Being precise about where that argument stops: the two sizes are *not*
-equivalent for ASan. They differ in allocation counts and sizes, in memory
-pressure, and in how far index arithmetic is pushed. A size-dependent bug --
-an overflow only reached past some extent, or a narrowing that only bites at
-larger indices -- could in principle be caught at 200x800 and missed at
-40x80. This is a deliberate trade of that residual risk against a job that
-otherwise does not produce a verdict at all. If that trade ever looks wrong,
+**Do not restate this as "the small-grid tests keep that path covered."** They
+do not run. All 8 of the `NT=40, NR=80, rank=10` grid specs in
+`src/Tests/CoolProp-Tests-SVDSBTL.cpp` sit inside `[slow]` `TEST_CASE`s, so
+`~[slow]` excludes every one of them; the only non-`[slow]` references to a
+40x80 grid are schema/round-trip tests in `CoolProp-Tests-SVDSBTLOptions.cpp`,
+which build no surface. An earlier version of this section had it backwards --
+it counted the 8 option-string literals and assumed their tags without
+checking them.
+
+What is actually given up is the excluded tests' repeat work and their
+REFPROP-sourced surfaces (the 6 `SVDSBTL&REFPROP` truth-comparison cases), not
+the large-matrix code path. Note the consequence: because 200x800 still runs, a
+size-dependent bug reachable only at production extent is still reachable here,
+so there is no "only visible at full resolution" residual risk to trade away.
+If the trade ever looks wrong,
 the answer is more runner minutes, not a resolution cut (see above for why
 lowering the grid breaks assertions on both sides of the filter).
 
@@ -386,9 +394,15 @@ There are two ASan switches in `CMakeLists.txt` and only one is used by CI:
 
 - **`COOLPROP_ASAN`** (what `dev_checks.yml` passes, with
   `-DCMAKE_BUILD_TYPE=Asan`) adds an `Asan` build type at `-O2 -g -DNDEBUG`.
-  `CatchTestRunner` links `Catch2::Catch2WithMain`, so the process exit code
-  is Catch2's failed-assertion count. Verified: injecting one bad `CHECK`
-  yields exit **42** for 5 failed assertions.
+  `CatchTestRunner` links `Catch2::Catch2WithMain`, so a failed assertion
+  makes the process exit non-zero. Specifically it exits **42** --
+  Catch2's `TestFailureExitCode`, a fixed sentinel, *not* the number of
+  failures (`catch_session.cpp`: `if (totals.assertions.failed) { return
+  TestFailureExitCode; }`). Verified by injecting one bad `CHECK`: 5 failed
+  assertions still yields 42. Catch2's other codes are 1 unspecified error,
+  2 no tests run, 3 unmatched test spec, 4 all skipped, 5 invalid spec.
+  This matters for the `124`/`137` handling below: since 42 is fixed, a test
+  failure can never be mistaken for a `timeout` exit code.
 - **`COOLPROP_CLANG_ADDRESS_SANITIZER`** is a separate, older buildbot-era
   switch. It appends `src/Tests/catch_always_return_success.cxx`, whose
   `main` runs the session and then returns `EXIT_SUCCESS` **unconditionally**

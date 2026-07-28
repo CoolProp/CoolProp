@@ -40,7 +40,10 @@ SKIP_CHECKS=""
 for arg in "$@"; do
     case "$arg" in
         --base=*) BASE_REF="${arg#*=}" ;;
-        --skip=*) SKIP_CHECKS="${arg#*=}" ;;
+        # Append rather than assign: a repeated --skip= used to overwrite the
+        # earlier one, so `--skip=a --skip=b` silently skipped only b and ran a.
+        # Both forms now work -- CSV in one flag, or the flag repeated.
+        --skip=*) SKIP_CHECKS="${SKIP_CHECKS:+$SKIP_CHECKS,}${arg#*=}" ;;
         --help|-h)
             sed -n '2,30p' "$0"
             exit 0
@@ -221,7 +224,8 @@ elif [ ! -x ./build_catch/CatchTestRunner ]; then
 else
     # Tag scope selection.  Path -> tag mapping mirrors how CI's broad
     # workflow runs the full suite, but skips the expensive `[slow]`
-    # tests by default for fast local feedback.  Pass --slow to include.
+    # tests by default for fast local feedback.  (There is no --slow flag;
+    # run `./build_catch/CatchTestRunner "[slow]"` directly for those.)
     # Catch2 filter syntax, since three of these were wrong before:
     #   ~[tag]   EXCLUDES a tag.  `[!slow]` does NOT exclude -- it selects a
     #            literal tag named "!slow", which no test carries, so
@@ -255,7 +259,14 @@ else
     # status and the runner's was discarded -- a zero-match run (exit 2,
     # "No tests ran") contains neither word and was reported as a pass.
     # Also require a non-zero test count, so a filter that stops matching
-    # after a rename fails loudly instead of silently testing nothing.
+    # after a rename fails loudly instead of silently testing nothing.  That
+    # count alone only catches a TOTALLY stale filter, though: rename one tag
+    # out of the comma-separated OR-lists below and the rest still match, so
+    # the gate would pass while testing less.  `--warn UnmatchedTestSpec` on
+    # the run closes that -- Catch2 then exits 3 (UnmatchedTestSpecExitCode)
+    # if any single term matched nothing.  Verified: "[cbor],[NoSuchTag]"
+    # exits 3 on a run.  Note it does NOT work on --list-tests (exits 0
+    # there), which is why it is on the run and not the listing.
     #
     # Count the cases via `--list-tests --verbosity quiet`, which prints one
     # test name per line and nothing else.  Deliberately NOT parsing the
@@ -275,10 +286,21 @@ else
         matched=$(printf '%s\n' "$listed_tests" | awk 'NF { c++ } END { print c + 0 }')
         if [ "$matched" -eq 0 ]; then
             fail "tests (filter '$TAG_FILTER' matched 0 test cases -- filter is stale, not a pass)"
-        elif ./build_catch/CatchTestRunner "$TAG_FILTER" 2>&1 | tee "$test_log"; then
-            ok "tests ($TAG_FILTER, $matched cases)"
+        # tee to the log but NOT to the terminal: streaming all ~410 cases here
+        # would bury the cppcheck/clang-tidy/semgrep results and the summary
+        # below it.  `>/dev/null` does not cost the exit status -- under
+        # pipefail the pipeline still reports the runner's non-zero status, not
+        # tee's (verified).  On failure the tail is echoed so there is context
+        # without having to open the log.
+        elif ./build_catch/CatchTestRunner "$TAG_FILTER" \
+                 --warn UnmatchedTestSpec 2>&1 | tee "$test_log" >/dev/null; then
+            ok "tests ($TAG_FILTER, $matched cases listed)"
         else
-            fail "tests (see $test_log)"
+            # `|| true` guards the DISPLAY only: without it a tail failure
+            # would abort the script under `set -e` before `fail` records the
+            # result.  It cannot mask the gate -- `fail` runs unconditionally.
+            tail -15 "$test_log" || true
+            fail "tests ($TAG_FILTER; full log: $test_log)"
         fi
     fi
 fi
