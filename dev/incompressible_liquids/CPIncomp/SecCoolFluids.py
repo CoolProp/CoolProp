@@ -166,10 +166,10 @@ class SecCoolSolutionData(DigitalData):
         try:
             tried = False
             if len(self.viscosity.yData) == 1:  # and np.isfinite(fluidObject.viscosity.data).sum()<10:
-                self.viscosity.coeffs = np.array([+7e+2, -6e+1, +1e+1])
+                self.viscosity.coeffs = np.copy(IncompressibleData.SECCOOL_VISCOSITY_GUESS)
                 self.viscosity.type = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
                 self.viscosity.fitCoeffs(self.Tbase, self.xbase)
-                if self.viscosity.coeffs is None or IncompressibleFitter.allClose(self.viscosity.coeffs, np.array([+7e+2, -6e+1, +1e+1])):  # Fit failed
+                if self.viscosity.coeffs is None or IncompressibleFitter.allClose(self.viscosity.coeffs, IncompressibleData.SECCOOL_VISCOSITY_GUESS):  # Fit failed
                     tried = True
             if len(self.viscosity.yData) > 1 or tried:
                 self.viscosity.coeffs = np.copy(std_coeffs)  # np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))

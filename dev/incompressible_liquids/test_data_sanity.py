@@ -81,3 +81,50 @@ def test_all_toplevel_grids_load_with_increasing_temperature():
         T = arr[1:, 0]
         T = T[np.isfinite(T)]
         assert np.all(np.diff(T) > 0), (base, T)
+
+
+def test_seccool_ice_hfusion_grid_loads_with_increasing_axes(seccool_fluids):
+    # SecCoolIceData overrides getFromFile, so the test above skips it and its
+    # sortGridAxes call went unexercised. Only the Hfusion table is in
+    # production use (the Cond/Mu csvs for these fluids are latin-1 encoded and
+    # not loadable as-is -- see DATA_AUDIT.md), so pin that one directly.
+    #
+    # These tables happen to ship ascending already, so this asserts the
+    # contract for the real production path rather than exercising the sort
+    # itself; test_sort_grid_axes_orders_a_shuffled_grid below does that.
+    from CPIncomp.SecCoolFluids import SecCoolIceData
+
+    ice = [o for o in seccool_fluids if isinstance(o, SecCoolIceData)]
+    assert ice, "no SecCoolIceData fluids found"
+    for fluid in ice:
+        T, x = _loaded_axes(fluid, "Hfusion")
+        assert T is not None, fluid.name
+        assert np.all(np.diff(T) > 0), (fluid.name, "temperature axis not ascending", T)
+        if x is not None and np.size(x) > 1:
+            assert np.all(np.diff(x) > 0), (fluid.name, "composition axis not ascending", x)
+
+
+def test_sort_grid_axes_orders_a_shuffled_grid():
+    # Direct check on the shared helper, with a grid that is genuinely out of
+    # order in both directions -- the shipped tables are mostly ascending
+    # already, so without this the sorting logic could regress unnoticed.
+    from CPIncomp.BaseObjects import IncompressibleFitter
+
+    grid = np.array([
+        [0.0, 0.30, 0.10, 0.20],   # composition axis, shuffled
+        [300.0, 13.0, 11.0, 12.0],
+        [100.0, 3.0, 1.0, 2.0],    # temperature axis, descending
+        [200.0, 8.0, 6.0, 7.0],
+    ])
+    out = IncompressibleFitter.sortGridAxes(grid.copy())
+
+    assert np.all(np.diff(out[1:, 0]) > 0), out[1:, 0]
+    assert np.all(np.diff(out[0, 1:]) > 0), out[0, 1:]
+    # Values must travel with their axes, not just be re-sorted independently.
+    expected = np.array([
+        [0.0, 0.10, 0.20, 0.30],
+        [100.0, 1.0, 2.0, 3.0],
+        [200.0, 6.0, 7.0, 8.0],
+        [300.0, 11.0, 12.0, 13.0],
+    ])
+    assert np.array_equal(out, expected), out

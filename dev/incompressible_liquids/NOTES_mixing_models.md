@@ -35,8 +35,9 @@ Related CoolProp issues:
 Reference formulation: **Tillner-Roth & Friend (1998)**, *A Helmholtz free
 energy formulation of the thermodynamic properties of the mixture
 {water + ammonia}*, J. Phys. Chem. Ref. Data 27(1):63-96 — adopted as the
-IAPWS 2001 guideline. Structure: `a_mix(tau,delta,x) = sum_i x_i * a_i(tau,delta)
-+ a^E(tau,delta,x)`, i.e. pure-component Helmholtz energies (water via
+IAPWS 2001 guideline. Structure:
+`a_mix(tau,delta,x) = sum_i x_i * a_i(tau,delta) + a^E(tau,delta,x)`,
+i.e. pure-component Helmholtz energies (water via
 IAPWS-95, ammonia via Baehr & Tillner-Roth) plus a composition-dependent
 excess/departure term (polynomial + exponential terms in delta, tau, x, x^2).
 This is the *same shape* as CoolProp's own HEOS multi-fluid mixture model

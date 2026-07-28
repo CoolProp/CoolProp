@@ -66,6 +66,7 @@ class SolutionDataWriter(object):
     PSAT_GUESS = IncompressibleData.PSAT_GUESS
     TFREEZE_GUESS = IncompressibleData.TFREEZE_GUESS
     LOGEXP_GUESS = IncompressibleData.LOGEXP_GUESS
+    SECCOOL_VISCOSITY_GUESS = IncompressibleData.SECCOOL_VISCOSITY_GUESS
 
     def __init__(self):
         """Set up optional dependencies, page geometry and fit-guess constants.
@@ -285,7 +286,7 @@ class SolutionDataWriter(object):
         #2567). Resetting the property to "not defined" makes the backend
         throw a clear "function type is not specified" error instead.
         """
-        knownGuesses = (self.VISCOSITY_GUESS, self.PSAT_GUESS, self.TFREEZE_GUESS, self.LOGEXP_GUESS)
+        knownGuesses = (self.VISCOSITY_GUESS, self.PSAT_GUESS, self.TFREEZE_GUESS, self.LOGEXP_GUESS, self.SECCOOL_VISCOSITY_GUESS)
         properties = ('density', 'specific_heat', 'conductivity', 'viscosity', 'saturation_pressure', 'T_freeze')
         for label in properties:
             data = getattr(fluidObject, label)

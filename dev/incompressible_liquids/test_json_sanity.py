@@ -35,6 +35,7 @@ try:
         list(IncompressibleData.PSAT_GUESS),
         list(IncompressibleData.TFREEZE_GUESS),
         list(IncompressibleData.LOGEXP_GUESS),
+        list(IncompressibleData.SECCOOL_VISCOSITY_GUESS),
     ]
 except ImportError:  # pragma: no cover - exercised only without numpy installed
     KNOWN_GUESSES = [
@@ -42,6 +43,7 @@ except ImportError:  # pragma: no cover - exercised only without numpy installed
         [-5000.0, 60.0, -10.0],  # saturation pressure, exponential
         [700.0, -60.0, 10.0],  # freezing temperature, exponential
         [-250.0, 1.5, 10.0],  # log-exponential retry in IncompressibleData.fitCoeffs
+        [700.0, -60.0, 10.0],  # SecCool single-composition exponential viscosity seed
     ]
 PROPERTIES = ["density", "specific_heat", "conductivity", "viscosity", "saturation_pressure", "T_freeze"]
 
@@ -280,6 +282,7 @@ def test_known_guesses_match_the_fitter():
         list(IncompressibleData.PSAT_GUESS),
         list(IncompressibleData.TFREEZE_GUESS),
         list(IncompressibleData.LOGEXP_GUESS),
+        list(IncompressibleData.SECCOOL_VISCOSITY_GUESS),
     ]
     assert KNOWN_GUESSES == canonical, (
         "KNOWN_GUESSES has drifted from IncompressibleData's starting guesses; "

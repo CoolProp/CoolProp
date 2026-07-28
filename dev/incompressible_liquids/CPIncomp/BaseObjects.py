@@ -37,6 +37,12 @@ class IncompressibleData(object):
     PSAT_GUESS = np.array([-5e+3, +6e+1, -1e+1])
     TFREEZE_GUESS = np.array([+7e+2, -6e+1, +1e+1])
     LOGEXP_GUESS = np.array([-250.0, 1.5, 10.0])
+    # SecCoolSolutionData.fitFluid seeds its single-composition exponential
+    # viscosity fit with this triple. It happens to equal TFREEZE_GUESS, which
+    # is why clearUnfittedCoefficients already caught it -- but relying on that
+    # coincidence is exactly the drift this block exists to prevent, so name it
+    # separately and register it alongside the others.
+    SECCOOL_VISCOSITY_GUESS = np.array([+7e+2, -6e+1, +1e+1])
 
     maxLin = np.finfo(np.float64).max - 1
     minLin = -maxLin
