@@ -123,8 +123,12 @@ Water (smooth pure), LiqNa (400-2500 K range), LiBr (2D solution) and IceEA
   **sample-and-integrate is the production path, division/closed-form only
   as a cross-check.**
 - Enthalpy: exact antiderivative recurrence, `dh/dT = cp` to 2e-16.
-- `ds/dT = cp/T` to 3.4e-15; Maxwell `(ds/dp)_T = -(dv/dT)_p` exactly 0;
-  reference-state pinning (`s = 0` at 293.15 K / 101325 Pa) bit-exact, same
+- `ds/dT = cp/T` to 3.4e-15; the Maxwell relation `(ds/dp)_T = -(dv/dT)_p`
+  holds to <1e-12 relative. (Note this is the *residual of the relation*
+  being ~0, not the derivative itself: with `v = 1/rho(T,x)`,
+  `-(dv/dT)_p = (drho/dT)/rho^2`, which is non-zero for every fluid whose
+  density varies with temperature.) Reference-state pinning (`s = 0` at
+  293.15 K / 101325 Pa) is bit-exact, using the same
   subtract-the-reference scheme the backend uses today.
 - Fit quality: same least-squares space as monomials at equal order (as
   expected), but the design matrix stays well-conditioned to degree 12+
@@ -142,7 +146,8 @@ root-finding; it lacks only a ~15-line `antiderivative()`. The 2D
 composition direction keeps a low-order monomial in `(x - xbase)` per
 T-coefficient, collapsed to 1D at the queried x (same row-combination
 `Polynomial2DFrac` does today). JSON: a `type: "chebyshev"` entry storing
-`Tmin/Tmax` + the coefficient matrix, aligned with the CoolProp-r5h
+`Trange` (the `[Tmin, Tmax]` pair the fit was built on, which need not equal
+the fluid-level `Tmin`/`Tmax`) + the coefficient matrix, aligned with the CoolProp-r5h
 Chebyshev tooling epic's conventions; derive the h- and s-expansions **at
 load time from the single stored cp expansion** so consistency is by
 construction. No product operator is required (cp/T is built by sampling,

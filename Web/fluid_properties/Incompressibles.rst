@@ -47,12 +47,12 @@ Technology (`NIST <https://www.nist.gov>`_).
 
 .. note::
   If you use a mixture, the reference state gets updated each time you change
-  the composition. Furthermore, not all temperatures can be used as reference
-  temperature since the fraction :math:`T_\text{in,1} / T_\text{in,0}` occurs in the integral used to
-  calculate entropy. The centered fits have a base temperature and setting
-  :math:`T_\text{ref}` equal to :math:`T_\text{base}` yields :math:`T_\text{in,0}=0\:\text{K}`,
-  which obviously is a problem. For non-centred fits, the base temperature is
-  equal to 0 K. Read on :ref:`below<BaseValue>` for more details.
+  the composition. Any temperature inside the fluid's validity range may be
+  used as the reference temperature, including one that coincides with a
+  centred fit's base temperature :math:`T_\text{base}`: the entropy integral
+  divides by the *physical* temperature :math:`T`, not by the centred
+  :math:`T_\text{in} = T - T_\text{base}`, so it stays well-defined for every
+  :math:`T>0`. Read on :ref:`below<BaseValue>` for the derivation.
 
 
 Pure Fluid Examples

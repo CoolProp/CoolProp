@@ -521,6 +521,16 @@ void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
         throw ValueError(format("Invalid incompressible fluid name [%s]: must not contain any of ',|[]:&'.", name.c_str()));
     }
 
+    // THREAD SAFETY: the lookup/replace/append below is not synchronized, and
+    // deliberately so -- a write-only lock here would be worse than none,
+    // because every reader (get(), the name-vector accessors, and so every
+    // property evaluation) walks these same containers unlocked and would keep
+    // racing while *looking* protected. Making this genuinely safe means
+    // guarding the read path too, which puts a lock on the property-evaluation
+    // hot path; that is a backend-wide decision, tracked as a follow-up rather
+    // than smuggled in here. Until then the contract matches the pre-existing
+    // HEOS/Cubics add_fluids_as_JSON paths: register fluids during start-up,
+    // before other threads query the library.
     std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(name);
     if (it != string_to_index_map.end()) {
         // Re-adding an existing name replaces the fluid in place (idempotent

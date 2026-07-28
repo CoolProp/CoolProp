@@ -82,7 +82,11 @@ def main():
                 skipped.append((name, prop))
                 continue
             fluid[prop + "_cheb"] = entry
-            (added if rawGrid is not None else converted).append((name, prop))
+            # Classify on what build_entry actually did, not on whether raw
+            # data merely existed: it falls back to an exact basis conversion
+            # when the grid does not cover the fluid's range or no positive
+            # fit is found, so keying off rawGrid over-reports tabular refits.
+            (added if entry.get("fit_source") == "tabular_data" else converted).append((name, prop))
 
         # every pre-existing key must be value-identical, except the *_cheb
         # entries this script owns (re-running it refreshes them)

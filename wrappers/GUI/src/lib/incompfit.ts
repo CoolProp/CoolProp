@@ -176,6 +176,9 @@ export function chebEval(coeffs: number[], T: number, Trange: [number, number]):
 interface Fit1D {
   coeffs: number[];
   degree: number;
+  /** NaN when the fit is an exactly-determined interpolation: there are no
+   *  spare degrees of freedom left to measure a residual against, so the
+   *  quality is genuinely unknown rather than perfect. */
   rms: number;
   nrms: number;
 }
@@ -218,11 +221,14 @@ export function chebFitGCV(T: number[], y: (number | null)[], Trange: [number, n
     }
   }
   if (best === null) {
-    // very short tables: exactly-determined lowest order
+    // Very short tables: exactly-determined lowest order. This interpolates
+    // the points rather than fitting them, so no residual can be measured --
+    // report the quality as unknown (NaN). Reporting 0 here rendered as a
+    // confident "0.0%" in the preview, which reads as a validated fit.
     const degree = Math.max(1, Math.min(cap, pts.length - 1));
     const design = pts.map((p) => chebRow(p.u, degree));
     const coeffs = lstsq(design, values);
-    return { coeffs, degree, rms: 0, nrms: 0 };
+    return { coeffs, degree, rms: NaN, nrms: NaN };
   }
   return best.fit;
 }
@@ -318,7 +324,8 @@ export function fitFluid(def: FluidDefinition): FluidFitResult {
       Trange: [Trange[0], Trange[1]],
       xbase: 0.0,
       coeffs: fit.coeffs.map((c) => [c]),
-      NRMS: fit.nrms,
+      // Omitted rather than emitted as null when the fit is an interpolation.
+      ...(Number.isFinite(fit.nrms) ? { NRMS: fit.nrms } : {}),
       fit_source: "tabular_data",
     };
     const n = (columns[prop] ?? []).filter((v) => v !== null).length;

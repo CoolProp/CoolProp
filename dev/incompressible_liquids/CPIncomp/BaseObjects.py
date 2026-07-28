@@ -25,6 +25,19 @@ class IncompressibleData(object):
     SOURCE_COEFFS = 'coefficients'
     SOURCE_NOT_SET = 'notdefined'
 
+    # Optimizer starting guesses for the iterative (exponential-type) fits.
+    #
+    # These are the single source of truth. They are compared against committed
+    # coefficients to detect a fit that silently failed and left its starting
+    # guess behind (SolutionDataWriter.clearUnfittedCoefficients, and the
+    # test_json_sanity guard) -- so a literal duplicated anywhere else would,
+    # once it drifted, stop recognising a failed fit and let the placeholder
+    # ship again. That is exactly the #1331 / #2567 bug class.
+    VISCOSITY_GUESS = np.array([+5e+2, -6e+1, +1e+1])
+    PSAT_GUESS = np.array([-5e+3, +6e+1, -1e+1])
+    TFREEZE_GUESS = np.array([+7e+2, -6e+1, +1e+1])
+    LOGEXP_GUESS = np.array([-250.0, 1.5, 10.0])
+
     maxLin = np.finfo(np.float64).max - 1
     minLin = -maxLin
 
@@ -125,7 +138,7 @@ class IncompressibleData(object):
             if self.type == IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL:
                 if self.DEBUG: print("Poor solution found with exponential, trying once more with log exponential.")
                 self.type = IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL
-                self.coeffs = np.array([-250, 1.5, 10])
+                self.coeffs = np.copy(IncompressibleData.LOGEXP_GUESS)
                 res, sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
                       xbase=xbase, ybase=ybase, \
                       eqnType=self.type, \
@@ -223,6 +236,22 @@ class IncompressibleData(object):
 
 
 class IncompressibleFitter(object):
+
+    @staticmethod
+    def sortGridAxes(grid):
+        """Order a data grid by its own axis values, in place.
+
+        A grid holds concentration along its first row and temperature down
+        its first column. Some source tables ship with a descending axis (the
+        HFE-7100 files store T from +64 down to -80 degC), so the file order
+        cannot be trusted; a stable sort also handles files that are shuffled
+        rather than exactly reversed. test_data_sanity.py pins this ordering
+        contract, so keep it defined once here rather than pasted into each
+        loader.
+        """
+        grid[1:, :] = grid[1:, :][np.argsort(grid[1:, 0], kind="stable"), :]
+        grid[:, 1:] = grid[:, 1:][:, np.argsort(grid[0, 1:], kind="stable")]
+        return grid
 
     @staticmethod
     def allClose(a, b):

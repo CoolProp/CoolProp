@@ -100,7 +100,10 @@ export default function App() {
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       {addFluidOpen && (
         <AddFluidDialog
-          existingFluids={incompFluids}
+          // Both namespaces, so a new fluid can't silently collide with a
+          // HEOS name (the calculator now labels such a clash rather than
+          // hiding it, but warning at creation time is the better place).
+          existingFluids={[...incompFluids, ...fluids]}
           onSaved={() => {
             setAddFluidOpen(false);
             refreshIncompFluids();

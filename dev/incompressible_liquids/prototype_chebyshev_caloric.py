@@ -245,7 +245,25 @@ def _x_probe(model):
 # ----------------------------------------------------------------------
 
 
+def _require_quad():
+    """scipy backs the independent quadrature reference below.
+
+    This module doubles as a CLI script and a pytest module, so it cannot
+    just ``pytest.importorskip`` at import time. Without this guard a
+    scipy-less environment left ``quad`` as None and then called it, turning
+    a missing optional dependency into a TypeError instead of a skip.
+    """
+    if quad is not None:
+        return
+    try:
+        import pytest
+    except ImportError:  # pragma: no cover - CLI use without pytest installed
+        raise RuntimeError("scipy is required for the adaptive-quadrature reference")
+    pytest.skip("scipy is required for the adaptive-quadrature reference")
+
+
 def _entropy_report(name, deg_T=8):
+    _require_quad()
     model, _fluid = build_model(name, deg_T=deg_T)
     x = _x_probe(model)
     T0, T1 = model.Tmin + 0.05 * (model.Tmax - model.Tmin), model.Tmax - 0.05 * (model.Tmax - model.Tmin)

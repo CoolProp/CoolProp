@@ -199,3 +199,32 @@ def test_entropy_from_committed_cheb_matches_quadrature():
         ds = s_fun(Tb) - s_fun(Ta)
         truth, _ = quad(lambda T: cp1d(T) / T, Ta, Tb, epsabs=1e-13, epsrel=1e-13, limit=200)
         assert abs(ds - truth) / abs(truth) < 1e-12, (name, ds, truth)
+
+
+def test_range_shifted_data_is_not_treated_as_full_coverage():
+    # A tabular refit may only be trusted where the data actually is: the C++
+    # side checks positivity inside Trange only, so a table that merely has
+    # the right *width* but sits off to one side would ship an unguarded
+    # extrapolation over the uncovered end. Comparing spans alone accepted it.
+    Tmin, Tmax = 0.0, 2500.0
+    npts = max(ChebyshevFits.MIN_TEMPERATURE_POINTS, 8)
+
+    aligned = np.linspace(Tmin, Tmax, npts)
+    shifted = np.linspace(Tmin + 500.0, Tmax + 500.0, npts)  # same width, wrong place
+    grid = np.ones((npts, 1))
+
+    assert ChebyshevFits._fit_covers_fluid_range(aligned, grid, Tmin, Tmax)
+    assert not ChebyshevFits._fit_covers_fluid_range(shifted, grid, Tmin, Tmax)
+
+    # A genuinely short table is still rejected, as before.
+    short = np.linspace(Tmin, 0.5 * Tmax, npts)
+    assert not ChebyshevFits._fit_covers_fluid_range(short, grid, Tmin, Tmax)
+
+
+def test_committed_x_degree_handles_flat_coefficient_lists():
+    # Pure fluids may carry a flat list of T-coefficients rather than the
+    # nested (T x composition) form; indexing coeffs[0] then yields a float
+    # and len() raises TypeError instead of reporting degree 0.
+    assert ChebyshevFits._committed_x_degree({"coeffs": [1.0, 2.0, 3.0]}) == 0
+    assert ChebyshevFits._committed_x_degree({"coeffs": [[1.0, 2.0, 3.0]]}) == 2
+    assert ChebyshevFits._committed_x_degree({"coeffs": [[1.0], [2.0]]}) == 0

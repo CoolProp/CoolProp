@@ -22,12 +22,28 @@ JSON_DIR = os.path.join(os.path.dirname(__file__), "json")
 
 # Optimizer starting guesses from SolutionDataWriter.fitAll / fitCoeffs.
 # If a committed file carries exactly these values, the fit never happened.
-KNOWN_GUESSES = [
-    [500.0, -60.0, 10.0],  # viscosity, exponential
-    [-5000.0, 60.0, -10.0],  # saturation pressure, exponential
-    [700.0, -60.0, 10.0],  # freezing temperature, exponential
-    [-250.0, 1.5, 10.0],  # log-exponential retry in IncompressibleData.fitCoeffs
-]
+#
+# Read from the fitter itself rather than restated here: a copy that drifted
+# would silently stop recognising a failed fit, which is the whole failure
+# mode (#1331 / #2567) this check exists to prevent. Falls back to the literal
+# values when numpy/CPIncomp are unavailable, so the stdlib-only checks in this
+# module still run.
+try:
+    from CPIncomp.BaseObjects import IncompressibleData
+
+    KNOWN_GUESSES = [
+        list(IncompressibleData.VISCOSITY_GUESS),
+        list(IncompressibleData.PSAT_GUESS),
+        list(IncompressibleData.TFREEZE_GUESS),
+        list(IncompressibleData.LOGEXP_GUESS),
+    ]
+except ImportError:  # pragma: no cover - exercised only without numpy installed
+    KNOWN_GUESSES = [
+        [500.0, -60.0, 10.0],  # viscosity, exponential
+        [-5000.0, 60.0, -10.0],  # saturation pressure, exponential
+        [700.0, -60.0, 10.0],  # freezing temperature, exponential
+        [-250.0, 1.5, 10.0],  # log-exponential retry in IncompressibleData.fitCoeffs
+    ]
 PROPERTIES = ["density", "specific_heat", "conductivity", "viscosity", "saturation_pressure", "T_freeze"]
 
 
@@ -69,3 +85,20 @@ def test_all_coefficients_finite():
         for value in flat:
             assert isinstance(value, (int, float)), "{0}: {1} has non-numeric coefficient {2!r}".format(name, prop, value)
             assert not math.isnan(value) and abs(value) != float("inf"), "{0}: {1} has non-finite coefficient".format(name, prop)
+
+
+def test_known_guesses_match_the_fitter():
+    # The stdlib fallback above must not drift from the fitter's real starting
+    # guesses: if it did, this module would stop recognising an unfitted
+    # placeholder and quietly pass the very check it exists to enforce.
+    pytest = __import__("pytest")
+    IncompressibleData = pytest.importorskip("CPIncomp.BaseObjects").IncompressibleData
+    canonical = [
+        list(IncompressibleData.VISCOSITY_GUESS),
+        list(IncompressibleData.PSAT_GUESS),
+        list(IncompressibleData.TFREEZE_GUESS),
+        list(IncompressibleData.LOGEXP_GUESS),
+    ]
+    assert KNOWN_GUESSES == canonical, (
+        "KNOWN_GUESSES has drifted from IncompressibleData's starting guesses; "
+        "update the stdlib fallback in this module")
