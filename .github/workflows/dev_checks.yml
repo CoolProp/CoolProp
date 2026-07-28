@@ -47,12 +47,21 @@ jobs:
     # detect_stack_use_after_return BDCSVD blow-up hid for so long).
     # On the 2-vCPU runner with the optimized (-O2) Asan build the measured
     # steps are REFPROP+config ~1 min and compile ~7.5 min; the single-threaded
-    # test run is the long pole and is much slower per-core than a dev laptop
-    # (~187 s locally).  A prior 30 min cap cancelled the job mid-test (the
-    # test run alone was still going at 21.5 min), so the full duration is not
-    # yet known precisely.  90 min is a deliberately safe envelope that still
-    # surfaces a genuine runaway well under GitHub's 6-hour default; re-tighten
-    # once a clean run reports the true wall time.
+    # test run is the long pole and is much slower per-core than a dev laptop.
+    # A prior 30 min cap cancelled the job mid-test (the test run alone was
+    # still going at 21.5 min), and the full-scope run on PR #3294 hit this
+    # 90 min cap outright with CatchTestRunner still live, so the full-scope
+    # duration is not known -- it exceeds 90 min in CI.
+    #
+    # (This comment used to cite "~187 s locally" for the test run.  That does
+    # not reproduce and is left out rather than repeated: measured locally,
+    # non-ASan with a cold surface cache, [slow] alone is 887 s and ~[slow] is
+    # >16 min, so the whole suite is ~33 min BEFORE ASan's slowdown.  See the
+    # table in dev/ci/README.md.)
+    #
+    # 90 min is a deliberately safe envelope that still surfaces a genuine
+    # runaway well under GitHub's 6-hour default; re-tighten once a clean
+    # ~[slow] run reports the true wall time.
     timeout-minutes: 90
     strategy:
       matrix:
