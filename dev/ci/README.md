@@ -304,9 +304,36 @@ So when this job goes red, read the annotation first:
 | ASan report in the log (`ERROR: AddressSanitizer: ...`) | A real memory bug. Fix it. |
 | Conclusion `cancelled`, no annotation | Most likely a superseded push or a merged PR (`cancel_merged_pr_runs.yml`). But **check which step was running first**: only the test step is wrapped in `timeout`, so if REFPROP setup or the compile overran the job cap you also get an unannotated `cancelled`. |
 
-The true wall time of a clean `~[slow]` run is not yet recorded. Once one
-completes, tighten both the budget and `timeout-minutes` to roughly 1.3x the
-measured time rather than leaving the current deliberately-loose envelope.
+### Measured wall time (the first clean `~[slow]` run)
+
+PR #3299, run `30364245551`, job `90291277987` — the first ASan job to finish
+rather than hit the cap. Conclusion `success`:
+
+| Step | Wall time |
+| --- | --- |
+| REFPROP build | 36 s |
+| cmake config | 28 s |
+| compile (`-j$(nproc)`) | 8.8 min |
+| **test run (`~[slow]`)** | **50.7 min (3041 s)** |
+| job total | 60.6 min |
+
+That settles the sizing, and both current values turn out to be about right:
+
+- `budget=4200` is **1.38x** the measured 3041 s, leaving 19 min unused —
+  essentially the 1.3x target, so leave it. Runners are shared and vary by
+  tens of percent between runs; a tighter budget would start flagging normal
+  variance as a timeout, which is the failure mode this gate exists to avoid.
+- `timeout-minutes: 90` is 1.49x the 60.6 min job total. Also fine to leave.
+
+Caveat: this baseline was taken with `verbosity=1` still set (see the section
+above, which removed it). The removal only makes the run faster, so 4200 s
+stays safe — but the 3041 s figure is an upper bound on the shipped config,
+not a measurement of it. Re-measure before tightening further, and do not
+tighten on the strength of one run either way.
+
+For contrast, the full-scope (`[slow]` included) predecessor on PR #3294 did
+not finish at all: it ran 09:33:03 -> 11:03:20, hit the 90 min cap, and its
+log ends `Terminate orphan process: pid (4681) (CatchTestRunner)`.
 
 ### Why `verbosity=1` is not set
 
