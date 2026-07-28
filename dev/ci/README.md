@@ -230,7 +230,7 @@ Measured on one machine, non-ASan, with a cold surface cache (no
 | Scope | Cases | Wall time |
 | --- | --- | --- |
 | `[slow]` | 58 (6 skipped, no REFPROP locally) | 887 s |
-| `~[slow]` | 412 | >16 min |
+| `~[slow]` | 410 | >16 min |
 
 So `[slow]` is roughly 40-45% of the local total. That is a *lower* bound on
 the CI saving: the 6 cases that skip locally for lack of REFPROP include the
