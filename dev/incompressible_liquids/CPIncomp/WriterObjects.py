@@ -58,13 +58,16 @@ class SolutionDataWriter(object):
     def __init__(self):
         """Set up the writer's optional dependencies and report defaults.
 
-        Both heavyweight dependencies are optional and degrade rather than
-        raise here: without the CoolProp Python package ``bibtexer`` stays
-        ``None`` and citations print as raw keys, and without matplotlib the
-        plot styling is skipped (the plot/report methods themselves refuse to
-        run later, via :meth:`requireMatplotlib`). The remaining attributes are
-        page geometry and fit-guess constants used by the report and fitting
-        paths.
+        A *missing* dependency degrades rather than raises: without the CoolProp
+        Python package ``bibtexer`` stays ``None`` and citations print as raw
+        keys, and without matplotlib the plot styling is skipped (the plot and
+        report methods themselves refuse to run later, via
+        :meth:`requireMatplotlib`). Note this is not exception-free in general
+        -- when the CoolProp package *is* importable, ``BibTeXerClass`` opens
+        the ``.bib`` file eagerly and raises ``FileNotFoundError`` if the
+        ``../../../CoolPropBibTeXLibrary.bib`` relative walk misses, which it
+        does in a relocated dev tree. The remaining attributes are page geometry
+        and fit-guess constants used by the report and fitting paths.
         """
         # Resolving BibTeX references needs the CoolProp Python package; fall
         # back to printing the raw citation keys when it is not installed.
@@ -150,8 +153,17 @@ class SolutionDataWriter(object):
         with, so a populated ``coeffs`` mid-fit is not evidence of a
         successful fit. This method's own final step is
         :meth:`clearUnfittedCoefficients`, which resets those to
-        "not defined", so on return every remaining ``coeffs`` is either a
-        real fit or explicitly cleared.
+        "not defined".
+
+        One gap survives that step, so a cleared ``type`` does not imply
+        cleared ``coeffs``: a property arriving with ``coeffs`` already set but
+        ``type`` never assigned is skipped both here (the fits run only when
+        ``coeffs is None``) and by :meth:`clearUnfittedCoefficients` (which
+        ``continue``s on ``INCOMPRESSIBLE_NOT_SET``), while
+        ``IncompressibleData.toJSON`` serialises ``coeffs`` regardless of
+        ``type``. The result reaches disk as ``type: "notdefined"`` alongside a
+        real-looking coefficient array, which the C++ loader rejects outright
+        for a vital property. ``test_json_sanity.py`` fails on that shape.
         """
 
         if fluidObject.Tbase is None:
@@ -504,6 +516,12 @@ class SolutionDataWriter(object):
         single multi-page PDF; otherwise each fluid gets its own
         :meth:`get_report_file` output. ``self.usetex`` forces the per-fluid
         path, since LaTeX output cannot be accumulated into one ``PdfPages``.
+
+        The two branches differ in error handling, which matters when a batch
+        partly fails: the single-PDF branch catches ``TypeError``/``ValueError``
+        per fluid and continues, while the per-fluid branch's equivalent
+        try/except is commented out, so there one bad fluid aborts the whole
+        run. Contrast :meth:`writeFluidList`, which always continues.
         """
         self.requireMatplotlib()
         print("Writing fitting reports:", end="")

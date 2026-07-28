@@ -775,11 +775,16 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install pytest
-        run: python3 -m pip install --upgrade pytest
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
 
+      # Pinned, like the other build-free gates in this file (uvx mypy@1.19.1,
+      # uvx pyright@1.1.409): this is a required check, so an unpinned
+      # `pip install --upgrade pytest` would let a collection or
+      # assertion-rewrite change in a fresh pytest release turn it red on
+      # unrelated PRs.
       - name: Run incompressible JSON sanity checks
-        run: python3 -m pytest dev/incompressible_liquids/test_json_sanity.py -q
+        run: uvx pytest@9.1.1 dev/incompressible_liquids/test_json_sanity.py -q
 
   installed-header-gate:
     name: Installed-header hygiene gate

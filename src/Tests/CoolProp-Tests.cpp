@@ -5408,7 +5408,14 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
             if (!name.empty()) names.push_back(name);
         }
     }
-    REQUIRE(!names.empty());
+    // Pin the library size absolutely, and note why a relative check cannot
+    // stand in for it: `names` is built from the library's own fluid lists, so
+    // a truncated load shrinks names.size() in lockstep and any floor
+    // expressed as a fraction of it still passes. 127 fluids ship today, and
+    // fluids are not removed from CoolProp for compatibility reasons, so this
+    // only ever needs raising. This is the check that actually detects the
+    // add_many abort described below.
+    REQUIRE(names.size() >= 127);
 
     int testedCount = 0;
     for (const std::string& name : names) {
@@ -5465,9 +5472,12 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
             // genuinely unexpected propagates instead of being swallowed.
             // UNSCOPED_INFO, not CAPTURE: a scoped CAPTURE here would be popped
             // at the closing brace with no assertion in between, so the reason
-            // would never reach the reporter. This survives to the next failing
-            // assertion, and stays silent on the ~100 fluids where an
-            // undefined psat is simply expected.
+            // would never reach the reporter at all. UNSCOPED_INFO survives to
+            // the next assertion of any kind -- Catch2 clears unscoped messages
+            // on every non-Warning result, pass or fail -- so in practice the
+            // reason surfaces only if the CHECK_NOTHROW immediately below is
+            // what fails. That is the case worth diagnosing here, and it stays
+            // silent on the ~100 fluids where an undefined psat is expected.
             UNSCOPED_INFO("psat threw for " << fluidString << ": " << e.what());
         }
 
@@ -5509,14 +5519,13 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         CHECK(std::abs(s_mid - 0.5 * (s_lo + s_hi)) < s_tol);
     }
     CAPTURE(testedCount);
-    // 118 of the 127 shipped fluids qualify today. The floor is deliberately
-    // near that rather than at zero: a vital property typed "notdefined"
-    // makes parse_coefficients throw, add_one rethrow and add_many abort its
-    // loop, so the library silently truncates to however many fluids preceded
-    // the offender. `> 0` would still pass with a single fluid loaded and
-    // report green while ~117 went untested. 100 leaves room for fluids whose
-    // Tbase legitimately moves out of range without tolerating a truncation.
-    CHECK(testedCount > 100);
+    // 118 of the 127 shipped fluids qualify today; the 9 skipped are the eight
+    // with Tbase == 0.0 (DEB, HCB, HCM, HFE, PMS1, PMS2, SAB, TCO) plus NaK.
+    // Truncation is caught by the absolute REQUIRE on names.size() above, so
+    // this check has the narrower job of catching a broken Tbase-in-range
+    // filter, and is expressed relative to the library size to avoid going
+    // stale on legitimate Tbase edits.
+    CHECK(testedCount >= static_cast<int>(names.size()) - 15);
 }
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {
     // Issue #1374: the fitted viscosity (and hence Prandtl number) of MPG2

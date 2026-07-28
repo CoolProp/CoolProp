@@ -46,7 +46,10 @@ for arg in "$@"; do
         # Both forms now work -- CSV in one flag, or the flag repeated.
         --skip=*) SKIP_CHECKS="${SKIP_CHECKS:+$SKIP_CHECKS,}${arg#*=}" ;;
         --help|-h)
-            sed -n '2,30p' "$0"
+            # Print the header comment block, stopping at the first
+            # non-comment line. A hardcoded end line silently truncated this
+            # mid-sentence every time a usage line was added to the header.
+            sed -n '2,${/^#/!q;p;}' "$0"
             exit 0
             ;;
         *)
@@ -497,7 +500,7 @@ else
         # gate.  Exiting non-zero when no test_* function is found matters --
         # otherwise a renamed or emptied module would report a clean pass.
         python3 - >"$INCOMP_LOG" 2>&1 <<'PY' || INCOMP_RC=$?
-import importlib.util, pathlib, sys
+import importlib.util, inspect, pathlib, sys
 
 path = pathlib.Path("dev/incompressible_liquids/test_json_sanity.py")
 spec = importlib.util.spec_from_file_location("test_json_sanity", path)
@@ -507,12 +510,31 @@ names = sorted(n for n in dir(module) if n.startswith("test_"))
 if not names:
     sys.exit("no test_* functions found in {0}".format(path))
 for name in names:
-    getattr(module, name)()
+    func = getattr(module, name)
+    # Calling a generator function only builds a generator -- none of its
+    # asserts would run, and this runner would report a clean pass on a test
+    # that verified nothing.  pytest errors on yield-tests; match that.
+    if inspect.isgeneratorfunction(func):
+        sys.exit("{0} is a generator function; its asserts would never run".format(name))
+    result = func()
+    if result is not None:
+        sys.exit("{0} returned {1!r}, expected None".format(name, result))
     print("OK", name)
 PY
     fi
     if [ "$INCOMP_RC" -eq 0 ]; then
-        ok "incomp-sanity ($(grep -cE '^(OK|[0-9]+ passed)' "$INCOMP_LOG" 2>/dev/null || echo 0) check group(s))"
+        # grep -c prints 0 AND returns 1 on no match, so `|| true` keeps the
+        # count without appending a second line.  The count gates the pass:
+        # pytest exits 0 when every test is skipped, and reporting a green
+        # "0 check group(s)" would be this gate failing open.
+        INCOMP_N="$(grep -cE '^(OK|[0-9]+ passed)' "$INCOMP_LOG" 2>/dev/null || true)"
+        [ -n "$INCOMP_N" ] || INCOMP_N=0
+        if [ "$INCOMP_N" -gt 0 ]; then
+            ok "incomp-sanity ($INCOMP_N check group(s))"
+        else
+            tail -30 "$INCOMP_LOG"
+            fail "incomp-sanity (ran but verified nothing; all tests skipped?)"
+        fi
     else
         tail -30 "$INCOMP_LOG"
         fail "incomp-sanity (see $INCOMP_LOG)"
