@@ -46,13 +46,23 @@ jobs:
     # `cancelled` rather than a real failure (that is exactly how the
     # detect_stack_use_after_return BDCSVD blow-up hid for so long).
     # On the 2-vCPU runner with the optimized (-O2) Asan build the measured
-    # steps are REFPROP+config ~1 min and compile ~7.5 min; the single-threaded
-    # test run is the long pole and is much slower per-core than a dev laptop
-    # (~187 s locally).  A prior 30 min cap cancelled the job mid-test (the
-    # test run alone was still going at 21.5 min), so the full duration is not
-    # yet known precisely.  90 min is a deliberately safe envelope that still
-    # surfaces a genuine runaway well under GitHub's 6-hour default; re-tighten
-    # once a clean run reports the true wall time.
+    # steps are REFPROP 36 s, cmake config 28 s and compile 8.8 min; the
+    # single-threaded test run is the long pole (50.7 min) and is much slower
+    # per-core than a dev laptop.
+    # A prior 30 min cap cancelled the job mid-test (the test run alone was
+    # still going at 21.5 min), and the full-scope run on PR #3294 hit this
+    # 90 min cap outright with CatchTestRunner still live, so the full-scope
+    # duration is not known -- it exceeds 90 min in CI.
+    #
+    # (This comment used to cite "~187 s locally" for the test run.  That does
+    # not reproduce and is left out rather than repeated: measured locally,
+    # non-ASan with a cold surface cache, [slow] alone is 887 s and ~[slow] is
+    # >16 min, so the whole suite is ~33 min BEFORE ASan's slowdown.  See the
+    # table in dev/ci/README.md.)
+    #
+    # 90 min is a deliberately safe envelope that still surfaces a genuine
+    # runaway well under GitHub's 6-hour default; re-tighten once a clean
+    # ~[slow] run reports the true wall time.
     timeout-minutes: 90
     strategy:
       matrix:
@@ -82,7 +92,7 @@ jobs:
         run: cmake --build build --config Asan -j$(nproc)
       - name: run all the compiled Catch tests with address sanitizer
         # detect_stack_use_after_return is deliberately NOT enabled here
-        # (CoolProp-xuu).  With REFPROP present — which CI builds — the 5
+        # (CoolProp-xuu).  With REFPROP present — which CI builds — the 6
         # SVDSBTL&REFPROP [source] tests build large BDCSVD surfaces, and
         # under detect_stack_use_after_return=1 the per-coefficient
         # __asan_stack_malloc inside Eigen's O(n^2-n^3) singular-value inner
@@ -104,7 +114,108 @@ jobs:
         # reliable *indicator*-based ODR detection — so a real duplicate-symbol
         # violation (e.g. the JSON-symbol-visibility concern) still fails CI —
         # and drops only the poisoning check.  See CoolProp-xma3.
-        run: cd build && ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
+        #
+        # SCOPE: `~[slow]` excludes the 58 [slow]-tagged cases (49 of them in
+        # the SVDSBTL suite).  Those build SVD surfaces at production
+        # resolution -- SurfaceSpec's defaults NT=200, NR=800, rank=20 -- and
+        # the dense BDCSVD over a 200x800 grid is the bulk of this job's time.
+        #
+        # Measured non-ASan with a cold surface cache (as in CI): [slow] alone
+        # is 887 s / 58 cases, against >16 min for the 410-case ~[slow] set.
+        # Do not quote a precise share: ~[slow] is only bounded below, so 887 s
+        # is AT MOST ~48% of the local total and cannot be pinned tighter.
+        # Whatever the share, it understates the CI saving, since 6 [slow]
+        # cases skip locally for want of REFPROP and all 6 are
+        # SVDSBTL&REFPROP production-resolution builds that do run in CI.
+        # See dev/ci/README.md for the full table and caveats.
+        #
+        # Why exclude rather than shrink the grid: the resolution is
+        # load-bearing for those tests.  They pass no `grid` option precisely
+        # so they run at production resolution, then assert agreement with a
+        # truth source (HEOS / REFPROP / IF97) at ~1e-3 relative.  SurfaceSpec
+        # notes the defaults deliver ~7e-5 fractional for Water, so there is
+        # only ~14x headroom; dropping to 40x80/rank-10 (50x fewer points,
+        # half the rank) would breach it and force the tolerances open, which
+        # turns a real accuracy gate into a vacuous one *in the ASan build
+        # only* -- the worst place to lose signal quietly.
+        #
+        # Why the ASan coverage cost is small -- and note the mechanism, which
+        # is NOT what an earlier version of this comment claimed.  Production
+        # resolution still runs under ASan: 17 non-[slow] TEST_CASEs call
+        # factory("SVDSBTL&...") with no `grid` option, so they build at the
+        # 200x800/rank-20 defaults.  Dense BDCSVD at full size, its temporaries
+        # and its allocation pattern are therefore all still exercised here,
+        # which is what makes the exclusion cheap for ASan's purposes (heap
+        # overflow, UAF, leaks, ODR).
+        #
+        # Do NOT restate this as "the small-grid tests keep that path covered".
+        # They do not run: all 8 of the NT=40/NR=80/rank=10 grid specs in
+        # src/Tests/CoolProp-Tests-SVDSBTL.cpp sit inside [slow] TEST_CASEs, so
+        # `~[slow]` excludes every one of them.  The only non-[slow] references
+        # to a 40x80 grid are schema/round-trip tests in
+        # CoolProp-Tests-SVDSBTLOptions.cpp, which build no surface.  An earlier
+        # comment here had this backwards; it counted the 8 option-string
+        # literals and assumed their tags.
+        #
+        # What is actually given up is the excluded tests' repeat work and their
+        # REFPROP-sourced surfaces (the 6 SVDSBTL&REFPROP truth-comparison
+        # cases), not the large-matrix code path.  Since 200x800 still runs, a
+        # size-dependent bug reachable only at production extent is still
+        # reachable here.
+
+        # VERBOSITY: ASAN_OPTIONS deliberately does NOT set verbosity=1.
+        # It used to.  Note up front what this is and is NOT worth: removing it
+        # did NOT measurably speed the job up (60.6 min with it, 60.2 min
+        # without -- inside runner noise).  Do not re-add it expecting a
+        # slowdown to reappear, and do not cite it as a wall-time lever.  The
+        # reason it stays out is log hygiene: at verbosity>=1 ASan VReports its
+        # internal container-annotation traffic, which for this Eigen- and
+        # std::vector-heavy suite means a sustained flood of
+        # "==pid==poisoning: 0x... <n>" lines -- 4365 lines/s measured over a
+        # 0.68 s window of the run in PR #3294, ~38 bytes each.  Every line is
+        # a formatted write() into a pipe that the Actions runner reads,
+        # timestamps and uploads.  Extrapolating that rate across a 70 min test
+        # window is ~18 M lines / ~690 MB (an upper bound -- the rate was
+        # sampled in one window, not averaged over the whole run).
+        #
+        # It buys nothing: ASan error reports, leak reports and ODR-violation
+        # reports are printed unconditionally, independent of verbosity.
+        # verbosity only adds ASan's own bookkeeping chatter.  Verified: a
+        # trivial std::vector program emits 0 lines at the default verbosity
+        # and 236 at verbosity=1.  detect_odr_violation=1 is kept -- that is
+        # the setting doing actual diagnostic work here.
+
+        # MARGIN: budget + --kill-after grace = 4260 s = 71 min, leaving
+        # ~19 min of the 90 min cap for REFPROP + compile (9.9 min measured:
+        # 36 s REFPROP + 28 s cmake + 8.8 min compile -- so 71 + 9.9 = 80.9 min).
+        #
+        # TIMEOUT: the inner `timeout` is deliberate and must stay below
+        # timeout-minutes above.  A job that exceeds `timeout-minutes` is
+        # reported by GitHub with conclusion `cancelled`, which is
+        # indistinguishable from a concurrency-supersede or from
+        # cancel_merged_pr_runs.yml -- the exact ambiguity this job's cap was
+        # added to remove (CoolProp-xuu).  Bounding the test step instead makes
+        # an overrun a real step failure with a message that says so.
+        run: |
+          cd build
+          budget=4200  # 70 min; with the 60 s --kill-after grace that is 71 min worst case, leaving ~19 min of the 90 min cap for REFPROP + compile (9.9 min measured)
+          set +e
+          timeout --signal=INT --kill-after=60 "$budget" \
+            env ASAN_OPTIONS=detect_odr_violation=1 \
+                ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 \
+                ./CatchTestRunner "~[slow]" --benchmark-samples 1
+          rc=$?
+          set -e
+          if [ "$rc" -eq 124 ]; then
+            echo "::error title=ASan run exceeded its budget::The ASan test run did not finish within ${budget}s. This is a *timeout*, not a memory error and not a cancellation -- see the SCOPE/TIMEOUT notes in dev_checks.yml and dev/ci/README.md before raising the budget."
+          elif [ "$rc" -eq 137 ]; then
+            # 137 == 128+SIGKILL.  That is what `timeout --kill-after` sends
+            # when SIGINT was ignored, but it is also what the OOM killer
+            # sends -- and ASan roughly doubles the memory footprint, so OOM
+            # is a live possibility on a 2-vCPU runner.  Do not assert which.
+            echo "::error title=ASan run was killed (SIGKILL)::Either the ${budget}s budget elapsed and SIGINT was ignored, or the kernel OOM-killed it (ASan ~2x memory). Check the log for an ASan OOM report and the runner's memory before assuming a timeout."
+          fi
+          exit $rc
 
   clang-format:
     name: clang-format (PR diff)
