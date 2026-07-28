@@ -159,6 +159,14 @@ class IncompressibleFluid
       : strict(true), Tmin(_HUGE), Tmax(_HUGE), xmin(_HUGE), xmax(_HUGE), xid(IFRAC_UNDEFINED), TminPsat(_HUGE), xbase(_HUGE), Tbase(_HUGE) {
 
         };
+    // The virtual destructor below suppresses the implicitly-declared move
+    // constructor/assignment operator (even though it is only '= default'),
+    // so state them explicitly - otherwise callers that std::move() a fluid
+    // (e.g. JSONIncompressibleLibrary::add_one) silently fall back to a copy.
+    IncompressibleFluid(const IncompressibleFluid&) = default;
+    IncompressibleFluid(IncompressibleFluid&&) = default;
+    IncompressibleFluid& operator=(const IncompressibleFluid&) = default;
+    IncompressibleFluid& operator=(IncompressibleFluid&&) = default;
     virtual ~IncompressibleFluid() = default;
 
     std::string getName() const {
