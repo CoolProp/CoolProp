@@ -127,9 +127,10 @@ def convert_polynomial(poly_coeffs, Tbase, xbase, Trange):
 
     The committed polynomial ``sum_k sum_j P[k][j] (T-Tbase)^k (x-xbase)^j``
     is, per x-column, a degree-K polynomial in T; interpolating it at K+1
-    Chebyshev-Lobatto nodes reproduces it exactly (same function space), so
-    this adds no fitting error. The x-direction (monomial in x - xbase) is
-    carried over unchanged.
+    Chebyshev points of the first kind (what ``Chebyshev.interpolate`` uses --
+    not the Lobatto/extrema nodes) reproduces it exactly, because both
+    describe the same degree-K polynomial space, so this adds no fitting
+    error. The x-direction (monomial in x - xbase) is carried over unchanged.
     """
     P = np.asarray(poly_coeffs, dtype=float)
     if P.ndim == 1:
@@ -163,7 +164,26 @@ def _fit_covers_fluid_range(rawT, rawGrid, Tmin, Tmax):
     T = np.asarray(rawT, dtype=float).ravel()[np.isfinite(grid).any(axis=1)]
     if T.size < MIN_TEMPERATURE_POINTS:
         return False
-    return (T.max() - T.min()) >= 0.9 * (Tmax - Tmin)
+    # Require essentially full coverage: the C++ side checks positivity only
+    # inside Trange, so shipping extrapolation would be unguarded. Both ends
+    # must line up with the advertised range -- comparing only the *width* of
+    # the data span would accept a range-shifted table (say 500-3000 K of an
+    # advertised 0-2500 K), which extrapolates over the whole low end while
+    # looking like full coverage.
+    tol = 0.001 * (Tmax - Tmin)
+    return T.min() <= Tmin + tol and T.max() >= Tmax - tol
+
+
+def _committed_x_degree(committed):
+    """Composition-direction degree of a committed polynomial entry.
+
+    ``coeffs`` is normally a nested (T-rows x x-columns) list, but a pure
+    fluid may carry a flat list of T-coefficients; indexing ``coeffs[0]``
+    then yields a float and ``len()`` raises, so key off the dimensionality
+    rather than assuming the nested form.
+    """
+    C = np.asarray(committed["coeffs"], dtype=float)
+    return max(C.shape[1] - 1, 0) if C.ndim == 2 else 0
 
 
 def build_entry(fluid_json, prop, rawT=None, rawX=None, rawGrid=None):
@@ -185,7 +205,7 @@ def build_entry(fluid_json, prop, rawT=None, rawX=None, rawGrid=None):
 
     if (rawGrid is not None and rawT is not None
             and _fit_covers_fluid_range(rawT, rawGrid, float(fluid_json["Tmin"]), float(fluid_json["Tmax"]))):
-        deg_x0 = max(len(committed["coeffs"][0]) - 1, 0) if has_poly \
+        deg_x0 = _committed_x_degree(committed) if has_poly \
             else (min(5, np.size(rawX) - 1) if rawX is not None and np.size(rawX) > 1 else 0)
         # Highest orders first; the first fit that is positive over the whole
         # domain wins. Sparse grids (SecCool -1 padding) often need lower

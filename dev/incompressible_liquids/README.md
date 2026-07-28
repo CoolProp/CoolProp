@@ -100,9 +100,13 @@ data axis -- see `SolutionExample` in `CPIncomp/ExampleObjects.py` and the
 Every fluid's JSON also carries optional `density_cheb` /
 `specific_heat_cheb` entries (`type: "chebyshev"`): Chebyshev-in-T
 coefficients on the explicit `Trange`, one column per `(x - xbase)` power.
-They are produced automatically by the writer — fitted from your raw data
-when the fluid has any, otherwise an exact basis conversion of the
-polynomial fit — and were introduced because enthalpy/entropy integrals of
+They are produced automatically by the writer. Your raw data is fitted
+directly when the fluid has data that spans its full advertised temperature
+range and yields a fit that stays positive across the whole domain;
+otherwise — no raw data, insufficient coverage, or no positive fit — the
+entry is an exact basis conversion of the committed polynomial. Either way
+`fit_source` on the entry records which path was taken. They were
+introduced because enthalpy/entropy integrals of
 a Chebyshev cp fit are exact and singularity-free (see
 `NOTES_thermodynamic_consistency.md` and `CPIncomp/ChebyshevFits.py`).
 `add_chebyshev_entries.py` is the one-shot migration tool that added them
@@ -112,9 +116,12 @@ whole domain, agreement with data and with the polynomial fits).
 
 ## Notes
 
-- The fit is centred around `Tbase`/`xbase` (defaults: the midpoint of your
-  data range). The enthalpy/entropy the backend later reports are derived
-  exactly from the fitted density and heat-capacity polynomials.
+- The legacy centred-polynomial fits are centred around `Tbase`/`xbase`
+  (defaults: the midpoint of your data range). The Chebyshev entries do not
+  use that centring at all — they map the explicit `Trange` onto `[-1, 1]`
+  instead, which is why no `Tbase` singularity can arise in that basis. The
+  enthalpy/entropy the backend reports are derived exactly from the fitted
+  density and heat-capacity coefficients either way.
 - Four fluids (Air, Acetone, Ethanol, Hexane) are sampled from CoolProp's
   own equations of state, so *re-fitting those four* needs the CoolProp
   Python package installed; without it they are skipped and their committed

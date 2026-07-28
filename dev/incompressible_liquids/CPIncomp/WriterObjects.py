@@ -63,8 +63,9 @@ class SolutionDataWriter(object):
     """
 
     # Optimizer starting guesses for the iterative (exponential-type) fits in
-    # fitAll. Kept as named constants because clearUnfittedCoefficients also
-    # needs them to recognise a fit that silently failed.
+    # fitAll; clearUnfittedCoefficients also needs them to recognise a fit that
+    # silently failed. Re-exported from IncompressibleData rather than restated
+    # so the two can never drift apart -- see the note at their definition.
     VISCOSITY_GUESS = IncompressibleData.VISCOSITY_GUESS
     PSAT_GUESS = IncompressibleData.PSAT_GUESS
     TFREEZE_GUESS = IncompressibleData.TFREEZE_GUESS
