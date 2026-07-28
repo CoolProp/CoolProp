@@ -61,7 +61,13 @@ def fit_from_data(Tvec, xvec, grid, xbase, deg_x, deg_T=DEFAULT_MAX_DEGREE_T):
     """
     Tvec = np.asarray(Tvec, dtype=float).ravel()
     xvec = np.asarray(xvec, dtype=float).ravel()
-    grid = np.asarray(grid, dtype=float).reshape(len(Tvec), len(xvec))
+    try:
+        grid = np.asarray(grid, dtype=float).reshape(len(Tvec), len(xvec))
+    except ValueError:
+        # Axes out of sync with the grid: treat as unusable data (build_entry's
+        # documented "return None when nothing usable exists" contract) rather
+        # than letting it propagate and abort a whole migration run.
+        return None
     finite_T_rows = int(np.isfinite(grid).any(axis=1).sum())
     if finite_T_rows < MIN_TEMPERATURE_POINTS:
         return None
@@ -160,7 +166,10 @@ def _fit_covers_fluid_range(rawT, rawGrid, Tmin, Tmax):
     otherwise the entry would extrapolate freely where the committed
     low-order polynomial extrapolates gently (LiqNa's cp data stops at
     1000 K of an advertised 2500 K, see DATA_AUDIT.md)."""
-    grid = np.asarray(rawGrid, dtype=float).reshape(np.size(rawT), -1)
+    try:
+        grid = np.asarray(rawGrid, dtype=float).reshape(np.size(rawT), -1)
+    except ValueError:
+        return False  # a malformed grid cannot be said to cover the range
     T = np.asarray(rawT, dtype=float).ravel()[np.isfinite(grid).any(axis=1)]
     if T.size < MIN_TEMPERATURE_POINTS:
         return False

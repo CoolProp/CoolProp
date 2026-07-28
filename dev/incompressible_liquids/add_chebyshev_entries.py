@@ -62,6 +62,8 @@ def deep_equal(a, b):
         return a.keys() == b.keys() and all(deep_equal(a[k], b[k]) for k in a)
     if isinstance(a, list) and isinstance(b, list):
         return len(a) == len(b) and all(deep_equal(x, y) for x, y in zip(a, b))
+    if isinstance(a, float) and isinstance(b, float) and a != a and b != b:
+        return True  # NaN != NaN, but an unchanged NaN field is still unchanged
     return a == b
 
 
@@ -93,7 +95,10 @@ def main():
         for key, value in before.items():
             if key.endswith("_cheb"):
                 continue
-            assert deep_equal(fluid[key], value), (name, key)
+            # Not `assert`: -O / PYTHONOPTIMIZE strips it, and this check is the
+            # entire safety guarantee of a tool that rewrites every json/ file.
+            if not deep_equal(fluid[key], value):
+                raise AssertionError("{0}: {1} would change; refusing to rewrite".format(name, key))
 
         with open(path, "w") as fh:
             fh.write(json.dumps(fluid, indent=2, sort_keys=True))

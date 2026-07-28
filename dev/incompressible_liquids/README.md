@@ -119,9 +119,12 @@ whole domain, agreement with data and with the polynomial fits).
 - The legacy centred-polynomial fits are centred around `Tbase`/`xbase`
   (defaults: the midpoint of your data range). The Chebyshev entries do not
   use that centring at all — they map the explicit `Trange` onto `[-1, 1]`
-  instead, which is why no `Tbase` singularity can arise in that basis. The
-  enthalpy/entropy the backend reports are derived exactly from the fitted
-  density and heat-capacity coefficients either way.
+  instead, which is why no `Tbase` singularity can arise in that basis.
+- The enthalpy/entropy the backend reports are derived exactly from the fitted
+  density and heat-capacity coefficients. Note the C++ backend currently reads
+  only the centred-polynomial entries: the `*_cheb` entries ship alongside them
+  but are inert until the loader that prefers them lands. Until then they change
+  nothing at runtime.
 - Four fluids (Air, Acetone, Ethanol, Hexane) are sampled from CoolProp's
   own equations of state, so *re-fitting those four* needs the CoolProp
   Python package installed; without it they are skipped and their committed
