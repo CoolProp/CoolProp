@@ -32,6 +32,12 @@ PROPERTIES = ["density", "specific_heat", "conductivity", "viscosity", "saturati
 
 
 def _flatten(coeffs):
+    """Flatten an arbitrarily nested coefficient list into a flat list of scalars.
+
+    Coefficient blocks are 1D for pure fluids and 2D (temperature x composition)
+    for solutions, and the checks below only care about the scalar values, not
+    the shape.
+    """
     flat = []
     for value in coeffs:
         flat.extend(_flatten(value) if isinstance(value, list) else [value])
@@ -39,6 +45,12 @@ def _flatten(coeffs):
 
 
 def _iter_property_coeffs():
+    """Yield ``(filename, property, flat_coeffs)`` for every fitted property shipped.
+
+    Walks every fluid JSON in ``JSON_DIR``. Properties that carry no
+    coefficients are asserted to be typed ``notdefined`` and are then skipped,
+    so the three checks below see only blocks that claim to be real fits.
+    """
     files = sorted(glob.glob(os.path.join(JSON_DIR, "*.json")))
     assert files, "no fluid JSON files found in {0}".format(JSON_DIR)
     for path in files:

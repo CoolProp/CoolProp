@@ -126,6 +126,15 @@ class SolutionDataWriter(object):
         else: self.figsize = (longSide * mm_to_inch, shortSide * mm_to_inch)
 
     def fitAll(self, fluidObject=SolutionData()):
+        """Fit every property of ``fluidObject`` in place.
+
+        Fills in ``Tbase``/``xbase`` when unset, then fits density,
+        specific heat, conductivity, viscosity, saturation pressure and
+        freezing temperature. A property whose fit raises is left with its
+        starting guess; :meth:`clearUnfittedCoefficients` is what stops
+        those reaching disk, so do not treat a populated ``coeffs`` here as
+        evidence of a successful fit.
+        """
 
         if fluidObject.Tbase is None:
             fluidObject.Tbase = (fluidObject.Tmin + fluidObject.Tmax) / 2.0
@@ -287,6 +296,14 @@ class SolutionDataWriter(object):
         return os.path.join("report", "{0}_fitreport.{1}".format(name, self.ext))
 
     def toJSON(self, data, quiet=False):
+        """Serialise ``data`` to the JSON dict written into ``dev/incompressible_liquids/json``.
+
+        Calls :meth:`clearUnfittedCoefficients` first, so any property whose
+        fit failed or was skipped is emitted as ``notdefined`` with no
+        coefficients rather than shipping the optimizer's starting guess as
+        though it were a fit. Always emits every property block, which is the
+        invariant ``test_json_sanity.py`` relies on.
+        """
         # Last line of defence: never write placeholder coefficients to disk,
         # no matter which fitting path (fitAll, SecCool, ...) produced them.
         self.clearUnfittedCoefficients(data)
