@@ -45,7 +45,13 @@ def _iter_property_coeffs():
         with open(path) as fh:
             fluid = json.load(fh)
         for prop in PROPERTIES:
-            entry = fluid.get(prop, {})
+            # Require the block to exist rather than defaulting to {}: toJSON
+            # always emits all of PROPERTIES, so an omitted one means data was
+            # lost, and .get(prop, {}) would silently let that pass as
+            # "notdefined" -- the guard failing open on exactly the case it is
+            # meant to catch.
+            assert prop in fluid, "{0}: missing property block {1}".format(os.path.basename(path), prop)
+            entry = fluid[prop]
             coeffs = entry.get("coeffs")
             if coeffs in (None, "null"):
                 assert entry.get("type", "notdefined") == "notdefined", \

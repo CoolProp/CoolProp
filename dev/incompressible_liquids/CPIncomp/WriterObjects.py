@@ -208,7 +208,8 @@ class SolutionDataWriter(object):
                     fluidObject.saturation_pressure.type = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
                     fluidObject.saturation_pressure.fitCoeffs(tBase, xBase)
             except errList as ve:
-                if fluidObject.saturation_pressure.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name, 'saturation pressure', ve))
+                if fluidObject.saturation_pressure.DEBUG:
+                    print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name, 'saturation pressure', ve))
                 pass
 
         # Freezing temperature only makes sense for solutions, not pure fluids

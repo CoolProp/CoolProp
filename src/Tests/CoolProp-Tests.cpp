@@ -5416,10 +5416,15 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         const double Tbase = fluid.getTbase();
         const double Tmin = fluid.getTmin();
         const double Tmax = fluid.getTmax();
-        // Only fluids where Tbase actually falls strictly inside the valid
-        // range can exercise the pole; skip the rest rather than asserting
-        // something meaningless about them.
-        if (!(Tbase > Tmin && Tbase < Tmax)) continue;
+        const double dT = 0.1;
+        // Only fluids where Tbase falls strictly inside the valid range can
+        // exercise the pole; skip the rest rather than asserting something
+        // meaningless about them. The margin matters: the probes below query
+        // Tbase +- dT, so a fluid whose Tbase sits within dT of a limit would
+        // step outside its range and throw for a reason that has nothing to do
+        // with the singularity. No shipped fluid is that tight today, but this
+        // sweep is meant to pick up future additions automatically.
+        if (!(Tbase - dT > Tmin && Tbase + dT < Tmax)) continue;
 
         std::string fluidString = "INCOMP::" + name;
         double xmid = 0.0;
@@ -5429,7 +5434,6 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         }
         ++testedCount;
 
-        const double dT = 0.1;
         // The backend (correctly) rejects states below the saturation curve,
         // and PropsSI reports that rejection as _HUGE rather than throwing.
         // For fluids whose Tbase lies above their atmospheric boiling point
