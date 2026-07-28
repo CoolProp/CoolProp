@@ -580,18 +580,17 @@ jobs:
           restore-keys: |
             cpm-${{ runner.os }}-
 
-      - name: Set up ccache
-        if: ${{ matrix.language == 'cpp' }}
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: dev-checks-codeql-cpp
-
+      # NOTE: deliberately NOT using ccache here (unlike the other dev_checks
+      # jobs). CodeQL's C++ extractor traces actual compiler invocations to
+      # build its database; a ccache hit means the real compiler never runs,
+      # so CodeQL silently omits that translation unit — a security-scanning
+      # gate that can quietly lose coverage as the cache warms up across
+      # runs, without ever failing the job. See ccache.dev/manual, "Using
+      # ccache with other tools" / GitHub codeql issues #9882, #19447.
       - name: Configure CPP
         if: ${{ matrix.language == 'cpp' }}
         run: cmake
                -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
-               -DCMAKE_C_COMPILER_LAUNCHER=ccache
-               -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
                -B ${{github.workspace}}/build
                -S .
 
