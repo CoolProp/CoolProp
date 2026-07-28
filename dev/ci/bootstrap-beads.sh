@@ -91,7 +91,7 @@ if command -v go >/dev/null 2>&1; then
         *":${_gobin}:"*) ;;
         *) PATH="${_gobin}:${PATH}"; export PATH ;;
     esac
-    hash -r 2>/dev/null || echo "beads-bootstrap: 'hash -r' failed — a stale command lookup cache could mask the freshly-installed bd." >&2
+    hash -r || echo "beads-bootstrap: 'hash -r' failed — a stale command lookup cache could mask the freshly-installed bd." >&2
 fi
 
 # 1. Install bd if missing.
@@ -105,7 +105,7 @@ if ! command -v bd >/dev/null 2>&1; then
             "github.com/steveyegge/beads/cmd/bd@${BD_VERSION}" >&2; then
             echo "beads-bootstrap: 'go install bd' failed — bd commands unavailable this session." >&2
         fi
-        hash -r 2>/dev/null || echo "beads-bootstrap: 'hash -r' failed — a stale command lookup cache could mask the freshly-installed bd." >&2
+        hash -r || echo "beads-bootstrap: 'hash -r' failed — a stale command lookup cache could mask the freshly-installed bd." >&2
     else
         echo "beads-bootstrap: 'go' not found — cannot install bd." >&2
     fi
@@ -132,14 +132,20 @@ if command -v bd >/dev/null 2>&1; then
     # the acquire itself is atomic (no TOCTOU window to race), and a holder
     # that dies for any reason — including SIGKILL, which no trap can catch
     # — has its lock released automatically when its file descriptors close,
-    # so there's no separate staleness/steal logic to get subtly wrong. If
-    # flock isn't on PATH (unlikely — it ships with util-linux — but not
-    # guaranteed on every minimal image), proceed unlocked rather than fail:
-    # same exposure as before this lock existed, not a new one.
+    # so there's no separate staleness/steal logic to get subtly wrong.
+    #
+    # Fail CLOSED, not open, if the lock itself can't be obtained (flock
+    # missing, or the lock file can't be opened): the entire point of this
+    # function is to guarantee exclusivity, so "couldn't tell" must be
+    # treated the same as "someone else has it" — skip this session and let
+    # the next session's `bd count` probe retry from scratch, rather than
+    # silently racing an unprotected rm -rf/bd init. flock ships with
+    # util-linux and is present on the Ubuntu-based containers this targets,
+    # so this fallback is defensive, not the expected path.
     _beads_bootstrap_acquire_lock() {
         if ! command -v flock >/dev/null 2>&1; then
-            echo "beads-bootstrap: 'flock' not found — hydration will proceed without a concurrency lock." >&2
-            return 0
+            echo "beads-bootstrap: 'flock' not found — cannot safely coordinate hydration." >&2
+            return 1
         fi
         # No `2>/dev/null` here: a bare `exec` (no command) applies its
         # redirects to the CURRENT shell persistently, not just to this one
@@ -149,8 +155,8 @@ if command -v bd >/dev/null 2>&1; then
         # warn explicitly too so "lock open failed" isn't indistinguishable
         # from "lock acquired" in the caller.
         if ! exec 9>"$_bd_lockfile"; then
-            echo "beads-bootstrap: could not open $_bd_lockfile for locking — hydration will proceed without a concurrency lock." >&2
-            return 0
+            echo "beads-bootstrap: could not open $_bd_lockfile for locking." >&2
+            return 1
         fi
         # fd 9 stays open (and inherited by bd/go/git children) for the rest
         # of this process's life — that's what makes the flock self-release
@@ -205,14 +211,18 @@ if command -v bd >/dev/null 2>&1; then
             # and the kernel drops it when this process's descriptors close,
             # on any exit path including SIGKILL.
         else
-            # Another process holds the lock and is actively hydrating (or
-            # tearing down and rebuilding) .beads/embeddeddolt right now.
-            # Don't call `bd prime` here — it can read mid-rebuild state, or
-            # itself write to the DB (see the comment above `rm -rf
-            # .beads/embeddeddolt`) — race the concurrent hydration. Skip
-            # priming this session entirely; the next session's `bd count`
-            # probe re-evaluates from scratch.
-            echo "beads-bootstrap: another bootstrap appears to be in progress (lock held) — skipping this session; it will retry next session." >&2
+            # Either another process holds the lock and is actively
+            # hydrating (or tearing down and rebuilding) .beads/embeddeddolt
+            # right now, or the lock itself couldn't be obtained (see the
+            # specific warning already logged inside
+            # _beads_bootstrap_acquire_lock) — both cases mean we can't
+            # safely touch the DB this run. Don't call `bd prime` either —
+            # it can read mid-rebuild state, or itself write to the DB (see
+            # the comment above `rm -rf .beads/embeddeddolt`) — race a
+            # concurrent hydration we can't see. Skip priming this session
+            # entirely; the next session's `bd count` probe re-evaluates
+            # from scratch.
+            echo "beads-bootstrap: could not acquire the hydration lock — skipping this session; it will retry next session." >&2
             exit 0
         fi
     fi
