@@ -332,9 +332,12 @@ Both runs of the same scope, before and after `verbosity=1` was dropped:
 | `30364245551` (`0d2af4f9`) | set | 60.6 min |
 | `30371990208` (`3a0f63a5`) | not set | 60.2 min |
 
-So the sizing above holds for the shipped config, and the two runs also
-bracket the run-to-run spread: 0.4 min apart. Do not tighten on the strength
-of two runs — that spread is a floor on the variance, not a measure of it.
+So the sizing above holds for the shipped config. Read the 0.4 min gap as
+nothing more than that: one observed difference between two runs that also
+differ in one setting. It is not a variance bound in either direction — two
+observations cannot establish one — and it is not enough to infer a
+performance effect. If you ever need the real spread, collect repeated runs
+at a fixed config; do not tighten the budget off a pair of numbers.
 
 For contrast, the full-scope (`[slow]` included) predecessor on PR #3294 did
 not finish at all: it ran 09:33:03 -> 11:03:20, hit the 90 min cap, and its
