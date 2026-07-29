@@ -71,7 +71,9 @@ vendoring the CSV. Section 3 records why that distinction earns its keep.
   `HEATFRM`'s standard state as "298.15 K for the ideal gas", identical to ATcT's, so
   this is a genuine disagreement and not a basis mismatch.
 
-  **Conclusion:** ATcT is the reference; REFPROP is a coarse cross-check only.
+  **Conclusion:** ATcT is the reference. This comparison is *source-selection evidence
+  only* — REFPROP is not consulted, called, or asserted against anywhere in this tier
+  (see §7).
 
 ### 3.2 Three parsing traps, each a silent-failure mode
 
@@ -175,11 +177,24 @@ tier is low-risk.
 Never 0, never NaN. A silently-zero formation enthalpy is indistinguishable from a
 legitimate element value and would corrupt any reaction sum built on it.
 
-**Mixtures are supported** as the mole-fraction sum, throwing if any component lacks a
-value. Unlike `GWP100` (which throws for mixtures), this quantity is *exactly* linear —
-the standard state is the ideal gas, so there is no mixing term being neglected. REFPROP
-behaves identically (verified: 0.7 CH₄ / 0.3 C₂H₆ returns exactly
-`0.7·(−74591) + 0.3·(−83822)`). The natural-gas case is the one that motivates #1360.
+**Pure and pseudo-pure fluids only.** A mixture input throws, matching `calc_GWP100` and
+`calc_ODP`.
+
+The mole-fraction sum would be *exactly* linear for the ideal-gas standard state, and
+REFPROP does return it (verified: 0.7 CH₄ / 0.3 C₂H₆ gives exactly
+`0.7·(−74591) + 0.3·(−83822)`). It is nonetheless excluded, for three reasons:
+
+- A mixture is not a compound. Its "formation" includes an arbitrary mixing step, so the
+  term is being stretched beyond what it conventionally denotes.
+- The caller already holds the composition. A weighted mean adds no capability CoolProp
+  is uniquely placed to provide, while inviting the reading that the number accounts for
+  real-mixture behaviour it does not.
+- **It would not generalize to the entropy tier.** S° of a mixture carries an entropy of
+  mixing, −R Σ xᵢ ln xᵢ, and is therefore *not* linear. Supporting mixtures here would
+  make the two standard-state quantities behave differently in a way no user could
+  predict from the API.
+
+Mixture support remains a clean additive change if a concrete need appears.
 
 ## 7. Testing
 
@@ -187,20 +202,21 @@ behaves identically (verified: 0.7 CH₄ / 0.3 C₂H₆ returns exactly
 |---|---|---|
 | Known values: methane −74513, water −241808, CO₂ −393477 J/mol | `[formation]` | ingestion / unit errors |
 | `PropsSI("HFORMATION", ..., "R134a")` throws | `[formation]` | absent-value handling regressing to 0/NaN |
-| Mixture linearity vs. hand-computed sum | `[formation]` | mixture dispatch |
+| A mixture input throws | `[formation]` | pure-only contract (§6) |
 | Every stored value within ±2000 kJ/mol | `[formation]` | a kJ↔J slip anywhere in the pipeline |
 | Regenerator unit tests: element row, `(g, cis)` row, ambiguous-CAS row | pytest | the three §3.2 traps |
 | **Independent reproduction of all 75 CSV values** | pytest | regenerator vs. contributor's dataset |
-| REFPROP `HEATFRMdll` cross-check, ±5 kJ/mol band | `[refprop]` | sign errors, wrong species |
 
 Two deliberate choices:
 
 - The reproduction test treats **ortho/para-H₂ as documented expected differences** — the
   CSV is wrong there (§3.4), so the test asserts our value and records why.
-- The REFPROP band is **deliberately loose**. §3.1 shows the two sources disagree by up
-  to 7σ; a tight tolerance would encode REFPROP's ISO-6976 provenance as truth. 5 kJ/mol
-  catches a sign flip or a mis-bound species without asserting agreement we do not
-  believe in.
+- **No REFPROP cross-check test.** §3.1 establishes that REFPROP's `HFRM` is a derived
+  quantity disagreeing with ATcT by up to 7σ, so any threshold either encodes REFPROP's
+  ISO-6976 provenance as truth or is too loose to catch anything the reproduction test
+  does not already catch. The REFPROP comparison did its job as source-selection
+  evidence; it is not a regression gate. `HEATFRMdll` is not called anywhere in this
+  tier.
 
 ## 8. Out of scope
 
