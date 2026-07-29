@@ -3910,7 +3910,22 @@
     "INCHI_STRING": "InChI=1S/N2/c1-2",
     "NAME": "Nitrogen",
     "REFPROP_NAME": "NITROGEN",
-    "SMILES": "N#N"
+    "SMILES": "N#N",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "7727-37-9*0",
+        "source": "ATcT",
+        "uncertainty": 0.0,
+        "units": "J/mol",
+        "value": 0.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

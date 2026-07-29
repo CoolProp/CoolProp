@@ -4316,7 +4316,22 @@
     "INCHI_STRING": "InChI=1S/C2H5F/c1-2-3/h2H2,1H3",
     "NAME": "R161",
     "REFPROP_NAME": "R161",
-    "SMILES": "CCF"
+    "SMILES": "CCF",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "353-36-6*0",
+        "source": "ATcT",
+        "uncertainty": 350.0,
+        "units": "J/mol",
+        "value": -272110.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

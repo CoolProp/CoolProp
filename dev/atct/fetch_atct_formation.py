@@ -12,12 +12,23 @@ dev/fluids/*.json.  See docs/superpowers/specs/2026-07-29-atct-formation-enthalp
 """
 from __future__ import annotations
 
+import argparse
+import csv
+import hashlib
 import html as html_module
 import json
 import re
+import sys
+import urllib.request
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+
+# dev/package_json.py is repo-local, not an installed package; put dev/ on
+# sys.path before importing it so json_options (the canonical serialization
+# options) is available without duplicating them here.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from package_json import json_options  # noqa: E402
 
 INDEX_URL_TEMPLATE = (
     "https://atct.anl.gov/Thermochemical%20Data/version%20{version}/index.php"
@@ -44,7 +55,8 @@ class AtctRow:
 
 
 _ROW_RE = re.compile(r'<tr id="[^"]*?CAS(?P<cas>[^"]+)">(?P<body>.*?)</tr>', re.S)
-_NAME_RE = re.compile(r'species_number=\d+">(?P<name>.*?)</a>', re.S)
+_NAME_CELL_RE = re.compile(r'class="bkgName">(?P<cell>.*?)</td>', re.S)
+_TAG_RE = re.compile(r"<[^>]+>")
 _FORMULA_RE = re.compile(r'type="button">(?P<formula>.*?)</button>', re.S)
 _PHASE_RE = re.compile(r"^(?P<formula>.+?)\s+(?P<phase>\([^()]*\))$")
 
@@ -72,6 +84,35 @@ def _split_phase(raw: str) -> tuple[str, str]:
     if match is None:
         return collapsed, ""
     return match.group("formula").strip(), match.group("phase").strip()
+
+
+def _extract_name(body: str, cas: str) -> str:
+    """Extract the species name from the bkgName cell's text content.
+
+    ATcT's own page documentation: "For species other than elements in
+    their standard states, the Species Name acts as a link" -- so elements
+    in their standard state (Boron, Sulfur, Br2, I2, ...) render as plain
+    text with no <a> anchor, e.g. '<span class="Name">Boron</span>', while
+    every other species wraps the name in a species-detail link.  Extracting
+    text from the whole bkgName cell -- tolerating the anchor when present
+    rather than requiring it -- covers both shapes; anchoring the extraction
+    on the <a> tag itself (an earlier version of this parser did that)
+    mishandles the unlinked element rows, which the small fixture sample
+    never happened to exercise.
+
+    Matches on the 'bkgName' CSS class specifically (not just any
+    class="Name" span) because the bkgImage cell later in the same row also
+    carries a nested <span class="Name">...</span> around its <img> alt
+    text; matching the first "Name" span anywhere in the row would pick
+    that up instead on rows this regex is not anchored to a td boundary.
+    """
+    cell_match = _NAME_CELL_RE.search(body)
+    if cell_match is None:
+        raise AtctParseError("missing name cell on CAS %s" % cas)
+    text = html_module.unescape(_TAG_RE.sub("", cell_match.group("cell"))).strip()
+    if not text:
+        raise AtctParseError("empty name cell on CAS %s" % cas)
+    return text
 
 
 def _parse_uncertainty(text: str) -> float:
@@ -103,12 +144,7 @@ def parse_atct_rows(page_html: str) -> list[AtctRow]:
         cas = match.group("cas").strip()
         if units not in ("", "kJ/mol"):
             raise AtctParseError("unexpected units %r on CAS %s" % (units, cas))
-        name_match = _NAME_RE.search(body)
-        if name_match is None:
-            # A blank name would otherwise degrade quietly into a row that
-            # still parses and still gets selected -- fail loud instead.
-            raise AtctParseError("missing species-name anchor on CAS %s" % cas)
-        name = html_module.unescape(name_match.group("name")).strip()
+        name = _extract_name(body, cas)
         formula, phase = _split_phase(html_module.unescape(formula_match.group("formula")))
         atct_id = _span(body, "ATcTID")
         if not atct_id:
@@ -252,3 +288,151 @@ def bind(fluids: dict, rows: list) -> BindResult:
             continue
         matched[name] = row
     return BindResult(matched=matched, absent=absent, errors=errors)
+
+
+REFERENCE_T_K = 298.15
+REFERENCE_P_PA = 100000.0
+
+
+def standard_state_block(row: AtctRow, version: str) -> dict:
+    """Build the INFO.STANDARD_STATE block.  kJ/mol -> J/mol happens here only."""
+    return {
+        "T": REFERENCE_T_K,
+        "T_units": "K",
+        "p": REFERENCE_P_PA,
+        "p_units": "Pa",
+        "phase": "ideal_gas",
+        "hmolar_formation": {
+            "value": round(row.dhf298_kJ_per_mol * 1000.0, 6),
+            "units": "J/mol",
+            "uncertainty": round(row.uncertainty_kJ_per_mol * 1000.0, 6),
+            "source": "ATcT",
+            "version": version,
+            "id": row.atct_id,
+        },
+    }
+
+
+def write_standard_state(path: Path, row: AtctRow, version: str) -> None:
+    """Insert the block and re-serialize with CoolProp's canonical options.
+
+    json_options is imported from dev/package_json.py so the file round-trips
+    byte-identically apart from the new block; any other serialization would
+    reformat every fluid file and bury the real diff.
+    """
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc["INFO"]["STANDARD_STATE"] = standard_state_block(row, version)
+    path.write_text(json.dumps(doc, **json_options), encoding="utf-8")
+
+
+def coverage_ledger(result: BindResult) -> dict:
+    ledger = {}
+    for name, row in result.matched.items():
+        ledger[name] = {"state": "matched", "atct_id": row.atct_id}
+    for name, reason in result.absent.items():
+        ledger[name] = {"state": "absent", "reason": reason}
+    return dict(sorted(ledger.items()))
+
+
+def compare_ledger(expected: dict, actual: dict) -> list:
+    """Every difference from the committed ledger is reported, none tolerated."""
+    problems = []
+    for name in sorted(set(expected) | set(actual)):
+        want, got = expected.get(name), actual.get(name)
+        if want is None:
+            problems.append("%s: new fluid, not in the committed ledger (%s)" % (name, got))
+        elif got is None:
+            problems.append("%s: in the committed ledger but absent from this run" % name)
+        elif want != got:
+            problems.append("%s: ledger says %s, this run produced %s" % (name, want, got))
+    return problems
+
+
+def fetch_index(version: str, cache: Path | None) -> tuple[str, str]:
+    """Return (page text, sha256).  Uses the cache file when present."""
+    if cache is not None and cache.exists():
+        raw = cache.read_bytes()
+    else:
+        url = INDEX_URL_TEMPLATE.format(version=version)
+        # atct.anl.gov 403s urllib's default "Python-urllib/x.y" User-Agent
+        # (ordinary Cloudflare bot-defense on an unidentified client); a
+        # plain, honest identifying UA is standard practice for a script
+        # fetching a public data page, not a bypass of any access control.
+        request = urllib.request.Request(
+            url, headers={"User-Agent": "CoolProp-atct-fetcher/1.0 (+https://github.com/CoolProp/CoolProp)"}
+        )
+        with urllib.request.urlopen(request, timeout=120) as response:
+            raw = response.read()
+        if cache is not None:
+            cache.write_bytes(raw)
+    return raw.decode("utf-8", errors="replace"), hashlib.sha256(raw).hexdigest()
+
+
+def write_report(path: Path, result: BindResult, version: str, page_sha256: str) -> None:
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["# ATcT version", version, "page sha256", page_sha256])
+        writer.writerow(
+            ["coolprop_fluid", "state", "atct_id", "phase",
+             "hmolar_formation_J_per_mol", "uncertainty_J_per_mol", "reason"]
+        )
+        for name, row in sorted(result.matched.items()):
+            writer.writerow([name, "matched", row.atct_id, row.phase,
+                             round(row.dhf298_kJ_per_mol * 1000.0, 6),
+                             round(row.uncertainty_kJ_per_mol * 1000.0, 6), ""])
+        for name, reason in sorted(result.absent.items()):
+            writer.writerow([name, "absent", "", "", "", "", reason])
+
+
+def main(argv=None) -> int:
+    here = Path(__file__).resolve().parent
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", default="1.220", help="ATcT Thermochemical Network version")
+    parser.add_argument("--fluids-dir", type=Path, default=here.parents[0] / "fluids")
+    parser.add_argument("--cache", type=Path, default=None,
+                        help="path to cache the fetched page (not committed)")
+    parser.add_argument("--write", action="store_true",
+                        help="write dev/fluids/*.json, the report and the ledger")
+    parser.add_argument("--update-ledger", action="store_true",
+                        help="rewrite expected_coverage.json instead of checking against it")
+    args = parser.parse_args(argv)
+
+    page, page_sha256 = fetch_index(args.version, args.cache)
+    rows = parse_atct_rows(page)
+    fluids = load_coolprop_fluids(args.fluids_dir)
+    result = bind(fluids, rows)
+
+    print("ATcT version %s, page sha256 %s" % (args.version, page_sha256))
+    print("parsed %d species rows; %d fluids matched, %d absent"
+          % (len(rows), len(result.matched), len(result.absent)))
+
+    if result.errors:
+        for problem in result.errors:
+            print("ERROR: %s" % problem, file=sys.stderr)
+        return 1
+
+    ledger_path = here / "expected_coverage.json"
+    actual = coverage_ledger(result)
+    if args.update_ledger:
+        ledger_path.write_text(json.dumps(actual, **json_options), encoding="utf-8")
+        print("wrote %s" % ledger_path)
+    elif ledger_path.exists():
+        problems = compare_ledger(json.loads(ledger_path.read_text(encoding="utf-8")), actual)
+        if problems:
+            for problem in problems:
+                print("ERROR: coverage changed: %s" % problem, file=sys.stderr)
+            return 1
+    else:
+        print("ERROR: %s is missing; run with --update-ledger first" % ledger_path, file=sys.stderr)
+        return 1
+
+    if args.write:
+        for name, row in sorted(result.matched.items()):
+            write_standard_state(fluids[name].path, row, args.version)
+        write_report(here / "atct_report.csv", result, args.version, page_sha256)
+        print("wrote %d fluid files and atct_report.csv" % len(result.matched))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

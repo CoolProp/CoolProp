@@ -4179,7 +4179,22 @@
     "INCHI_STRING": "InChI=1S/CH2F2/c2-1-3/h1H2",
     "NAME": "R32",
     "REFPROP_NAME": "R32",
-    "SMILES": "C(F)F"
+    "SMILES": "C(F)F",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "75-10-5*0",
+        "source": "ATcT",
+        "uncertainty": 350.0,
+        "units": "J/mol",
+        "value": -450930.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

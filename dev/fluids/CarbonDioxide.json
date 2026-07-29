@@ -3951,7 +3951,22 @@
     "INCHI_STRING": "InChI=1S/CO2/c2-1-3",
     "NAME": "CarbonDioxide",
     "REFPROP_NAME": "CO2",
-    "SMILES": "C(=O)=O"
+    "SMILES": "C(=O)=O",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "124-38-9*0",
+        "source": "ATcT",
+        "uncertainty": 15.0,
+        "units": "J/mol",
+        "value": -393477.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

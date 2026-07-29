@@ -3698,7 +3698,22 @@
     "INCHI_STRING": "InChI=1S/C5H12/c1-5(2,3)4/h1-4H3",
     "NAME": "Neopentane",
     "REFPROP_NAME": "NEOPENTN",
-    "SMILES": "CC(C)(C)C"
+    "SMILES": "CC(C)(C)C",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "463-82-1*0",
+        "source": "ATcT",
+        "uncertainty": 380.0,
+        "units": "J/mol",
+        "value": -167140.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

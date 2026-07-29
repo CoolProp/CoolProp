@@ -3856,7 +3856,22 @@
     "INCHI_STRING": "InChI=1S/C2H2Cl2/c3-1-2-4/h1-2H/b2-1+",
     "NAME": "R1130(E)",
     "REFPROP_NAME": "N/A",
-    "SMILES": "Cl/C=C/Cl"
+    "SMILES": "Cl/C=C/Cl",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "156-60-5*0",
+        "source": "ATcT",
+        "uncertainty": 550.0,
+        "units": "J/mol",
+        "value": 220.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

@@ -4451,7 +4451,22 @@
     "INCHI_STRING": "InChI=1S/C5H12/c1-3-5-4-2/h3-5H2,1-2H3",
     "NAME": "n-Pentane",
     "REFPROP_NAME": "PENTANE",
-    "SMILES": "CCCCC"
+    "SMILES": "CCCCC",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "109-66-0*0",
+        "source": "ATcT",
+        "uncertainty": 290.0,
+        "units": "J/mol",
+        "value": -146050.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

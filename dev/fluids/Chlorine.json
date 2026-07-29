@@ -3850,7 +3850,22 @@
     "INCHI_STRING": "InChI=1S/Cl2/c1-2",
     "NAME": "Chlorine",
     "REFPROP_NAME": "CHLORINE",
-    "SMILES": "ClCl"
+    "SMILES": "ClCl",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "7782-50-5*0",
+        "source": "ATcT",
+        "uncertainty": 0.0,
+        "units": "J/mol",
+        "value": 0.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

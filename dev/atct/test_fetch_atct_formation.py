@@ -106,6 +106,34 @@ def test_ambiguous_gas_rows_raise():
 # string instead of failing loud (Finding 3); and select_gas_row() never
 # checked that its rows actually share one CAS number, the precondition
 # its own docstring claims to defend (Finding 4).
+#
+# Fix round 2 (found running the real 3442-row page in Task 3): Finding 3's
+# "missing name anchor" half was itself wrong.  ATcT's own documentation
+# says the Species Name is a link "for species other than elements in
+# their standard states" -- so Boron, Sulfur, Br2, I2 and the aqueous
+# Hydron ion render their name as plain text with no <a> at all.  That is
+# a valid row, not a data-integrity failure; requiring the anchor was too
+# narrow an extraction, not a fail-loud guard worth keeping as originally
+# written.  The ATcT-ID half of Finding 3 was correctly calibrated (it
+# never fired on the full page) and is unchanged.
+
+
+def test_unlinked_element_row_from_the_real_page_is_not_dropped(rows):
+    """Boron's real row from the live ATcT 1.220 page (verbatim, not
+    synthesized): a condensed reference-state element with a plain-text
+    name and no species-detail link.  Must parse, and must not be
+    selectable as a gas row -- it is (cr,l), not (g).
+    """
+    boron = by_cas(rows, "7440-42-8")
+    assert len(boron) == 1
+    assert boron[0].name == "Boron"
+    assert boron[0].formula == "B"
+    assert boron[0].phase == "(cr,l)"
+    assert boron[0].dhf298_kJ_per_mol == pytest.approx(0.0)
+    assert boron[0].uncertainty_kJ_per_mol == pytest.approx(0.0)
+    assert boron[0].atct_id == "7440-42-8*500"
+
+    assert select_gas_row(boron) is None
 
 
 def test_paren_leading_formula_is_not_dropped(rows):
@@ -180,11 +208,23 @@ def test_name_is_html_unescaped():
     assert parsed[0].name == "Bis(2-chloroethyl) & ether"
 
 
-def test_missing_name_anchor_raises():
-    """Without the species_number anchor, a row must fail loud rather than
-    silently yielding a blank-named row.
+def test_unlinked_name_parses_to_plain_text():
+    """ATcT's own page documentation: 'For species other than elements in
+    their standard states, the Species Name acts as a link' -- so an
+    element in its standard state (e.g. Boron, Sulfur) has NO <a> anchor
+    around its name, just plain text.  That is a valid row, not an error;
+    an earlier version of this parser required the anchor and raised here,
+    which was too narrow an extraction, not a real data-integrity problem.
     """
-    row = _single_row_html("900-00-1", "NoAnchorHere", "XX (g)")
+    row = _single_row_html("900-00-1", "PlainTextName", "XX (g)")
+    parsed = parse_atct_rows(row)
+    assert len(parsed) == 1
+    assert parsed[0].name == "PlainTextName"
+
+
+def test_empty_name_cell_raises():
+    """A row with a genuinely empty name cell must still fail loud."""
+    row = _single_row_html("900-00-1", "", "XX (g)")
     with pytest.raises(AtctParseError):
         parse_atct_rows(row)
 
@@ -268,3 +308,81 @@ def test_bind_collects_ambiguity_as_an_error():
     assert result.matched == {}
     assert len(result.errors) == 1
     assert "Fake" in result.errors[0]
+
+
+# --- Task 3: writer, coverage ledger, CLI --------------------------------
+
+from fetch_atct_formation import (  # noqa: E402
+    compare_ledger,
+    coverage_ledger,
+    standard_state_block,
+    write_standard_state,
+)
+
+
+def test_standard_state_block_converts_kJ_to_J(rows):
+    methane = [r for r in rows if r.cas == "74-82-8"][0]
+    block = standard_state_block(methane, "1.220")
+    assert block["T"] == 298.15
+    assert block["p"] == 100000.0
+    assert block["phase"] == "ideal_gas"
+    assert block["hmolar_formation"]["value"] == pytest.approx(-74513.0)
+    assert block["hmolar_formation"]["uncertainty"] == pytest.approx(43.0)
+    assert block["hmolar_formation"]["units"] == "J/mol"
+    assert block["hmolar_formation"]["source"] == "ATcT"
+    assert block["hmolar_formation"]["version"] == "1.220"
+    assert block["hmolar_formation"]["id"] == "74-82-8*0"
+
+
+def test_write_standard_state_preserves_canonical_formatting(tmp_path, rows):
+    """The writer must not reformat the file; only the new block may appear.
+
+    `original` is read from the real dev/fluids/Methane.json, which this
+    same tool's --write step regenerates in place -- so once that has run
+    (in CI, or in any workspace after this feature merges), the "before"
+    snapshot already carries INFO.STANDARD_STATE.  Stripping it from
+    `before` too (it is a no-op when the block is not yet present) keeps
+    this test asserting its real invariant -- nothing else in the file
+    changes -- independent of whether Methane.json has already been
+    regenerated once or a hundred times.
+    """
+    import json as _json
+
+    original = FLUIDS_DIR / "Methane.json"
+    scratch = tmp_path / "Methane.json"
+    scratch.write_text(original.read_text(encoding="utf-8"), encoding="utf-8")
+
+    methane = [r for r in rows if r.cas == "74-82-8"][0]
+    write_standard_state(scratch, methane, "1.220")
+
+    before = _json.loads(original.read_text(encoding="utf-8"))
+    before.get("INFO", {}).pop("STANDARD_STATE", None)
+    after = _json.loads(scratch.read_text(encoding="utf-8"))
+    assert "STANDARD_STATE" in after["INFO"]
+    del after["INFO"]["STANDARD_STATE"]
+    assert after == before
+    # Canonical serialization: 2-space indent, sorted keys, no trailing newline.
+    assert not scratch.read_text(encoding="utf-8").endswith("\n")
+
+
+def test_compare_ledger_flags_a_dropped_fluid():
+    expected = {"Methane": {"state": "matched", "atct_id": "74-82-8*0"}}
+    actual = {"Methane": {"state": "absent", "reason": "no ATcT species for CAS 74-82-8"}}
+    problems = compare_ledger(expected, actual)
+    assert len(problems) == 1
+    assert "Methane" in problems[0]
+
+
+def test_compare_ledger_is_quiet_when_identical():
+    ledger = {"Methane": {"state": "matched", "atct_id": "74-82-8*0"}}
+    assert compare_ledger(ledger, dict(ledger)) == []
+
+
+def test_coverage_ledger_records_both_states(rows):
+    fluids = {
+        "Methane": FluidRef("Methane", "74-82-8", Path("Methane.json")),
+        "R134a": FluidRef("R134a", "811-97-2", Path("R134a.json")),
+    }
+    ledger = coverage_ledger(bind(fluids, rows))
+    assert ledger["Methane"] == {"state": "matched", "atct_id": "74-82-8*0"}
+    assert ledger["R134a"]["state"] == "absent"
