@@ -20,6 +20,61 @@ namespace CoolProp {
 constexpr double CPPOLY_EPSILON = DBL_EPSILON * 100.0;
 constexpr double CPPOLY_DELTA = CPPOLY_EPSILON * 10.0;
 
+/// True if the leading abs(firstExponent) entries of a 1-row/1-column
+/// coefficient matrix are all exactly zero -- i.e. the negative-exponent
+/// block that Polynomial2DFrac::evaluate would otherwise divide by
+/// (x_in - x_base) contributes nothing, for any x_in, including x_in==x_base.
+/// This is the common case for firstExponent==-1: it usually isn't a genuine
+/// fractional term, just bookkeeping left over from differentiating an
+/// ordinary polynomial (see Polynomial2DFrac::deriveCoeffs, which multiplies
+/// the would-be leading coefficient by (0 + 0) == 0). When this holds there
+/// is no pole to guard against at x_in==x_base, so callers can skip the
+/// epsilon-band linear interpolation and get an exact result instead.
+static bool negativeExponentBlockIsZero(const Eigen::MatrixXd& coefficients, int firstExponent) {
+    if (firstExponent >= 0) return true;
+    Eigen::MatrixXd flat(coefficients);
+    if (flat.cols() == 1) flat.transposeInPlace();
+    for (int i = 0; i > firstExponent; i--) {
+        const Eigen::Index idx = -i;  // matches the column consumed by evaluate()'s i-th iteration (0, 1, 2, ...)
+        if (idx >= flat.cols() || flat(0, idx) != 0.0) return false;
+    }
+    return true;
+}
+
+/// Same idea as negativeExponentBlockIsZero, but for the 2D evaluate's
+/// x-direction: true if the leading abs(x_exp) rows of coefficients (every
+/// column) are all exactly zero.
+static bool negativeXExponentBlockIsZero(const Eigen::MatrixXd& coefficients, int x_exp) {
+    if (x_exp >= 0) return true;
+    const Eigen::Index rows = -x_exp;
+    if (rows > coefficients.rows()) return false;
+    for (Eigen::Index i = 0; i < rows; i++) {
+        for (Eigen::Index j = 0; j < coefficients.cols(); j++) {
+            if (coefficients(i, j) != 0.0) return false;
+        }
+    }
+    return true;
+}
+
+/// The y-direction mirror of negativeXExponentBlockIsZero: true if the
+/// leading abs(y_exp) columns of coefficients (every row) are all exactly
+/// zero. The 2D evaluate feeds each row to the 1D evaluate with y_exp as its
+/// firstExponent, so this holding for every row is exactly the condition
+/// under which every one of those 1D calls resolves its own removable
+/// singularity exactly -- making the y-direction epsilon-band interpolation
+/// unnecessary.
+static bool negativeYExponentBlockIsZero(const Eigen::MatrixXd& coefficients, int y_exp) {
+    if (y_exp >= 0) return true;
+    const Eigen::Index cols = -y_exp;
+    if (cols > coefficients.cols()) return false;
+    for (Eigen::Index i = 0; i < coefficients.rows(); i++) {
+        for (Eigen::Index j = 0; j < cols; j++) {
+            if (coefficients(i, j) != 0.0) return false;
+        }
+    }
+    return true;
+}
+
 /// Basic checks for coefficient vectors.
 /** Starts with only the first coefficient dimension
  *  and checks the matrix size against the parameters rows and columns.
@@ -427,7 +482,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
         throw ValueError(format("%s (%d): You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ", __FILE__, __LINE__,
                                 coefficients.rows(), coefficients.cols()));
     }
-    if ((firstExponent < 0) && (std::abs(x_in - x_base) < CPPOLY_EPSILON)) {
+    if ((firstExponent < 0) && (std::abs(x_in - x_base) < CPPOLY_EPSILON) && !negativeExponentBlockIsZero(coefficients, firstExponent)) {
         //throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ", __FILE__, __LINE__, x_in - x_base));
         const double x_lo = x_base - CPPOLY_DELTA;
         const double x_hi = x_base + CPPOLY_DELTA;
@@ -451,7 +506,13 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
             negExp += tmpCoeffs(0, 0);
             removeColumn(tmpCoeffs, 0);
         }
-        negExp /= x_in - x_base;
+        // An exactly-zero accumulator has a removable singularity at x_in==x_base
+        // (0 divided by anything, including 0, is 0): skip the division so we
+        // return the exact limit instead of NaN. This is the common case for a
+        // negative firstExponent produced by differentiating an ordinary
+        // (non-fractional) polynomial, where the leading coefficient is
+        // multiplied by (i+firstExponent)==0 in deriveCoeffs.
+        if (negExp != 0.0) negExp /= x_in - x_base;
         c = tmpCoeffs.cols();
     }
 
@@ -468,7 +529,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
 
 double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const double& x_in, const double& y_in, const int& x_exp, const int& y_exp,
                                   const double& x_base, const double& y_base) {
-    if ((x_exp < 0) && (std::abs(x_in - x_base) < CPPOLY_EPSILON)) {
+    if ((x_exp < 0) && (std::abs(x_in - x_base) < CPPOLY_EPSILON) && !negativeXExponentBlockIsZero(coefficients, x_exp)) {
         // throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ", __FILE__, __LINE__, x_in - x_base));
         if (this->do_debug()) std::cout << "Interpolating in x-direction for base " << x_base << " and input " << x_in << '\n';
         const double x_lo = x_base - CPPOLY_DELTA;
@@ -477,7 +538,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
         const double z_hi = evaluate(coefficients, x_hi, y_in, x_exp, y_exp, x_base, y_base);
         return (z_hi - z_lo) / (x_hi - x_lo) * (x_in - x_lo) + z_lo;
     }
-    if ((y_exp < 0) && (std::abs(y_in - y_base) < CPPOLY_EPSILON)) {
+    if ((y_exp < 0) && (std::abs(y_in - y_base) < CPPOLY_EPSILON) && !negativeYExponentBlockIsZero(coefficients, y_exp)) {
         // throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, y_in-y_base=%f ", __FILE__, __LINE__, y_in - y_base));
         if (this->do_debug()) std::cout << "Interpolating in y-direction for base " << y_base << " and input " << y_in << '\n';
         const double y_lo = y_base - CPPOLY_DELTA;
@@ -500,7 +561,10 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
             negExp += evaluate(tmpCoeffs.row(0), y_in, y_exp, y_base);
             removeRow(tmpCoeffs, 0);
         }
-        negExp /= x_in - x_base;
+        // See the matching comment in the 1D evaluate() above: a zero
+        // accumulator has a removable singularity at x_in==x_base, so skip
+        // the division rather than computing 0/0.
+        if (negExp != 0.0) negExp /= x_in - x_base;
     }
 
     r = tmpCoeffs.rows();
@@ -1296,6 +1360,78 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
             CAPTURE(tmpStr);
             CHECK(check_abs(T, d, acc));
         }
+    }
+
+    SECTION("Derivative of an ordinary polynomial is exact at x_base, not just epsilon-close") {
+        // IncompressibleFluid::drhodTatPx (and, through it, every enthalpy and
+        // entropy evaluation) differentiates an ordinary, non-fractional
+        // (firstExponent==0) centered polynomial via Polynomial2DFrac. The
+        // bookkeeping exponent goes to -1 for that call, but the
+        // corresponding coefficient is multiplied by (0 + 0) == 0 in
+        // deriveCoeffs, so the "negative exponent" term Polynomial2DFrac
+        // ::evaluate would otherwise divide by (x_in - x_base) is always
+        // identically zero here -- there is no real pole at x_in == x_base to
+        // approximate. Confirm evaluate()/derivative() return the exact
+        // analytic derivative there instead of merely an epsilon-close one.
+        CoolProp::Polynomial2DFrac frac;
+        const Eigen::MatrixXd matrix = CoolProp::vec_to_eigen(cHeat);
+        const double xBase = 300.15;
+
+        // d/dT[Sum c_i (T-xBase)^i] at T == xBase analytically equals c_1: every
+        // other term's (T-xBase) factor vanishes at the centering point.
+        const double expected = cHeat[1];
+        const double actual = frac.derivative(matrix, xBase, 0.0, 0, 0, 0, xBase, 0.0);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        CHECK(actual == expected);  // bit-exact: this must not be an approximation
+
+        // Same check through the 1D entry point used for pure (1-column) fits.
+        const double actual1D = frac.evaluate(frac.deriveCoeffs(matrix, 0, 1, 0), xBase, -1, xBase);
+        CAPTURE(actual1D);
+        CHECK(actual1D == expected);
+    }
+
+    SECTION("The y-direction removable singularity is resolved exactly too") {
+        // Mirror of the section above for the 2D evaluate's *other* axis. A
+        // negative y_exp whose leading coefficient columns are identically
+        // zero is the same bookkeeping artefact, not a genuine pole, so
+        // evaluate() must return the exact limit at y_in == y_base instead of
+        // the epsilon-band interpolation. Guarding only the x-direction (as
+        // the first version of this fix did) left this axis approximating a
+        // value it can compute exactly.
+        //
+        // The reference is computed independently, without ever touching the
+        // negative-exponent machinery: a provably-zero leading block cannot
+        // change the answer, so dropping those columns and evaluating with
+        // y_exp == 0 must give a bit-identical result. Over a 20k-case random
+        // sweep the exact path matches that reference every time, while the
+        // interpolation path misses it in roughly a fifth of cases -- the
+        // coefficients below are one such case (the interpolation lands
+        // 5.8e-14 relative away, which the bit-exact CHECK rejects).
+        CoolProp::Polynomial2DFrac frac;
+        // y_exp == -2, and the leading two columns are identically zero.
+        Eigen::MatrixXd matrix(4, 5);
+        matrix.row(0) << 0.0, 0.0, -2.9576137824666917, -2.5279488330177466, 4.9608872817196872;
+        matrix.row(1) << 0.0, 0.0, -3.9662199098154565, -3.1933730462290937, -3.6997374729695043;
+        matrix.row(2) << 0.0, 0.0, -1.7234504045599417, -2.8982416056247025, -0.023120350470767548;
+        matrix.row(3) << 0.0, 0.0, -0.23979292674116337, 4.0150562202520756, -4.652600516513953;
+
+        const double xBase = 300.0, xIn = 298.19879580944979;
+        const double yBase = 250.0, yIn = yBase;  // sits exactly on the singular point
+
+        const double expected = frac.evaluate(matrix.rightCols(3), xIn, yIn, 0, 0, xBase, yBase);
+        const double actual = frac.evaluate(matrix, xIn, yIn, 0, -2, xBase, yBase);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        CHECK(actual == expected);  // bit-exact: this must not be an approximation
+
+        // A genuinely non-zero entry inside the block *is* a real pole; that
+        // path must still take the interpolation rather than dividing by zero.
+        Eigen::MatrixXd polar(matrix);
+        polar(0, 1) = 1.0;
+        const double guarded = frac.evaluate(polar, xIn, yIn, 0, -2, xBase, yBase);
+        CAPTURE(guarded);
+        CHECK(std::isfinite(guarded));
     }
 }
 

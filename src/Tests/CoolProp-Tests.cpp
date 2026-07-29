@@ -6,11 +6,14 @@
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
+#include "../Backends/Incompressible/IncompressibleLibrary.h"
+#include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
 #include <atomic>
 #include <map>
 #include <set>
+#include <sstream>
 #include <thread>
 
 // ############################################
@@ -5480,6 +5483,126 @@ TEST_CASE("Incompressible enthalpy is finite and continuous at T == Tbase (#1578
         const double midpoint = 0.5 * (h_lo + h_hi);
         CHECK(std::abs(h_mid - midpoint) < 1.0);  // [J/kg]
     }
+}
+TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped fluid", "[INCOMP]") {
+    // Generalizes the #1578 regression test above (which only names 4
+    // fluids) to the whole library: the Python fit generator places Tbase at
+    // (Tmin+Tmax)/2 by default (CPIncomp/DigitalFluids.py) or at a hardcoded
+    // value such as 273.15K, both of which routinely fall inside a fluid's
+    // valid range. Any newly-added or re-fit fluid that lands Tbase in-range
+    // is now covered automatically instead of waiting for a bug report.
+    std::vector<std::string> names;
+    {
+        std::istringstream ss(CoolProp::get_global_param_string("incompressible_list_pure") + ","
+                              + CoolProp::get_global_param_string("incompressible_list_solution"));
+        std::string name;
+        while (std::getline(ss, name, ',')) {
+            if (!name.empty()) names.push_back(name);
+        }
+    }
+    // Exact, because `names` comes from the library's own fluid lists: a
+    // truncated load shrinks it in lockstep, so any relative floor still
+    // passes. This is what detects a truncating add_many abort. `==` rather
+    // than `>=` so the literal cannot go stale silently.
+    REQUIRE(names.size() == 127);
+
+    int testedCount = 0;
+    for (const std::string& name : names) {
+        CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
+        const double Tbase = fluid.getTbase();
+        const double Tmin = fluid.getTmin();
+        const double Tmax = fluid.getTmax();
+        const double dT = 0.1;
+        // Only fluids where Tbase falls strictly inside the valid range can
+        // exercise the pole; skip the rest rather than asserting something
+        // meaningless about them. The margin matters: the probes below query
+        // Tbase +- dT, so a fluid whose Tbase sits within dT of a limit would
+        // step outside its range and throw for a reason that has nothing to do
+        // with the singularity. No shipped fluid is that tight today, but this
+        // sweep is meant to pick up future additions automatically.
+        if (!(Tbase - dT > Tmin && Tbase + dT < Tmax)) continue;
+
+        std::string fluidString = "INCOMP::" + name;
+        double xmid = 0.0;
+        if (!fluid.is_pure()) {
+            xmid = 0.5 * (fluid.getxmin() + fluid.getxmax());
+            fluidString += "[" + std::to_string(xmid) + "]";
+        }
+        ++testedCount;
+
+        // The backend (correctly) rejects states below the saturation curve,
+        // and PropsSI reports that rejection as _HUGE rather than throwing.
+        // For fluids whose Tbase lies above their atmospheric boiling point
+        // (Water's Tbase is exactly 373.15 K; liquid sodium's 1450 K), a
+        // fixed 1 atm query would test the rejection path instead of the
+        // Tbase pole, so query at a pressure safely above psat(Tbase + dT).
+        double p = 101325.0;
+        try {
+            const double psat = fluid.psat(Tbase + dT, xmid);
+            // std::max(p, NaN) returns p, so a bad psat would masquerade as
+            // "1 atm is fine". Only a finite psat may raise p, and a non-finite
+            // one is asserted on rather than skipped -- psat is exp(...) with no
+            // overflow guard, the garbage-coefficient class this sweep catches.
+            if (ValidNumber(psat)) {
+                p = std::max(p, 2.0 * psat);
+            } else {
+                CHECK(ValidNumber(psat));
+            }
+        } catch (const std::exception& e) {
+            // psat is undefined for 100 of the 127 shipped fluids; there the
+            // 1 atm default stands. Narrowed from `catch (...)`: every CoolProp
+            // error derives from std::exception, so the intended errors are
+            // still caught while anything unexpected propagates.
+            // UNSCOPED_INFO, not CAPTURE -- a scoped CAPTURE is popped at the
+            // closing brace with no assertion between, so the reason never
+            // reaches the reporter. Catch2 clears unscoped messages on any
+            // result, so this surfaces if the CHECK_NOTHROW below fails.
+            UNSCOPED_INFO("psat threw for " << fluidString << ": " << e.what());
+        }
+
+        double h_lo = 0, h_mid = 0, h_hi = 0, s_lo = 0, s_mid = 0, s_hi = 0;
+        CAPTURE(fluidString);
+        CAPTURE(Tbase);
+        CAPTURE(p);
+        CHECK_NOTHROW(h_lo = CoolProp::PropsSI("Hmass", "T", Tbase - dT, "P", p, fluidString));
+        CHECK_NOTHROW(h_mid = CoolProp::PropsSI("Hmass", "T", Tbase, "P", p, fluidString));
+        CHECK_NOTHROW(h_hi = CoolProp::PropsSI("Hmass", "T", Tbase + dT, "P", p, fluidString));
+        CHECK_NOTHROW(s_lo = CoolProp::PropsSI("Smass", "T", Tbase - dT, "P", p, fluidString));
+        CHECK_NOTHROW(s_mid = CoolProp::PropsSI("Smass", "T", Tbase, "P", p, fluidString));
+        CHECK_NOTHROW(s_hi = CoolProp::PropsSI("Smass", "T", Tbase + dT, "P", p, fluidString));
+        CAPTURE(h_lo);
+        CAPTURE(h_mid);
+        CAPTURE(h_hi);
+        CAPTURE(s_lo);
+        CAPTURE(s_mid);
+        CAPTURE(s_hi);
+        // PropsSI signals errors by returning _HUGE, so check every value,
+        // not just the midpoints -- an invalid neighbour would otherwise
+        // surface as a cryptic "inf < 1.0" in the continuity check below.
+        CHECK(ValidNumber(h_lo));
+        CHECK(ValidNumber(h_mid));
+        CHECK(ValidNumber(h_hi));
+        CHECK(ValidNumber(s_lo));
+        CHECK(ValidNumber(s_mid));
+        CHECK(ValidNumber(s_hi));
+        // Same linearity-residual continuity check as #1578, generalized to
+        // entropy. The tolerance scales with the local span because genuine
+        // curvature over +-dT is fluid-dependent -- the ice slurries fold the
+        // latent heat of melting into cp(T), so their enthalpy is strongly
+        // curved (residual ~1.4 J/kg over a ~16000 J/kg span) without any
+        // discontinuity. A mishandled pole produces a residual of the same
+        // order as the span itself (or a non-finite value, caught above).
+        const double h_tol = 1.0 + 1e-3 * std::abs(h_hi - h_lo);   // [J/kg]
+        const double s_tol = 0.01 + 1e-3 * std::abs(s_hi - s_lo);  // [J/kg/K]
+        CHECK(std::abs(h_mid - 0.5 * (h_lo + h_hi)) < h_tol);
+        CHECK(std::abs(s_mid - 0.5 * (s_lo + s_hi)) < s_tol);
+    }
+    CAPTURE(testedCount);
+    // 118 of 127 qualify; the 9 skipped are the eight with Tbase == 0.0 (DEB,
+    // HCB, HCM, HFE, PMS1, PMS2, SAB, TCO) plus NaK (Tbase below Tmin).
+    // Truncation is caught above, so this catches a broken Tbase filter.
+    // Absolute for the same reason: a margin let fluids go dark unnoticed.
+    CHECK(testedCount == 118);
 }
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {
     // Issue #1374: the fitted viscosity (and hence Prandtl number) of MPG2

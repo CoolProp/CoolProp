@@ -1,92 +1,41 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
-from __future__ import division, print_function
+"""Fitting orchestration, JSON output and report generation.
+
+Fitting fluids and writing the json/*.json files needs only numpy and scipy.
+matplotlib and a built CoolProp Python package (resolving BibTeX references)
+are optional: without them the fit-and-write-JSON path still works, and only
+the plot and report paths refuse to run -- the ones that call
+``requireMatplotlib()``, namely :meth:`writeReportList`,
+:meth:`makeFitReportPage` and :meth:`makeSolutionPlots`. Plain table export
+(:meth:`writeCsvTableToFile`, :meth:`writeTableToFile`) does not need it.
+"""
 import numpy as np
 
-import matplotlib
 import copy
-matplotlib.use("agg")
-
 import hashlib, os, json, sys
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from CPIncomp.DataObjects import SolutionData
-from CPIncomp.BaseObjects import IncompressibleData, IncompressibleFitter
-from matplotlib.patches import Rectangle
-from matplotlib.ticker import MaxNLocator
-from matplotlib.backends.backend_pdf import PdfPages
 import itertools
-from CoolProp.BibtexParser import BibTeXerClass
+import csv, codecs
 from warnings import warn
 
-# See: https://docs.python.org/2/library/csv.html#csv-examples
-import csv, codecs, io
+from CPIncomp.DataObjects import SolutionData
+from CPIncomp.BaseObjects import IncompressibleData, IncompressibleFitter
 
+try:
+    import matplotlib
+    matplotlib.use("agg")
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
+    from matplotlib.patches import Rectangle
+    from matplotlib.ticker import MaxNLocator
+    from matplotlib.backends.backend_pdf import PdfPages
+except ImportError:
+    matplotlib = None
 
-class UTF8Recoder:
-    """
-    Iterator that reads an encoded stream and reencodes the input to UTF-8
-    """
-
-    def __init__(self, f, encoding):
-        self.reader = codecs.getreader(encoding)(f)
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        return next(self.reader).encode("utf-8")
-
-
-class UnicodeReader:
-    """
-    A CSV reader which will iterate over lines in the CSV file "f",
-    which is encoded in the given encoding.
-    """
-
-    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
-        f = UTF8Recoder(f, encoding)
-        self.reader = csv.reader(f, dialect=dialect, **kwds)
-
-    def next(self):
-        row = next(self.reader)
-        return [unicode(s, "utf-8") for s in row]
-
-    def __iter__(self):
-        return self
-
-
-class UnicodeWriter:
-    """
-    A CSV writer which will write rows to CSV file "f",
-    which is encoded in the given encoding.
-    """
-
-    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
-        # Redirect output to a queue
-        self.queue = io.StringIO()
-        self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
-        self.stream = f
-        self.encoder = codecs.getincrementalencoder(encoding)()
-
-    def writerow(self, row):
-        self.writer.writerow(row)
-        # Fetch UTF-8 output from the queue ...
-        data = self.queue.getvalue()
-        try: data = data.decode("utf-8")
-        except: pass
-        try: data = str(data, encoding ="utf-8")
-        except: pass
-        # ... and re-encode it into the target encoding
-        data = self.encoder.encode(data)
-        # write to the target stream
-        self.stream.write(data)
-        # empty queue
-        self.queue.truncate(0)
-
-    def writerows(self, rows):
-        for row in rows:
-            self.writerow(row)
+try:
+    from CoolProp.BibtexParser import BibTeXerClass
+except ImportError:
+    BibTeXerClass = None
 
 
 class SolutionDataWriter(object):
@@ -97,27 +46,42 @@ class SolutionDataWriter(object):
     information came from.
     """
 
-    def __init__(self):
-        bibFile = os.path.join(os.path.dirname(__file__), '../../../CoolPropBibTeXLibrary.bib')
-        self.bibtexer = BibTeXerClass(bibFile)
+    # Optimizer starting guesses for the iterative (exponential-type) fits in
+    # fitAll. Kept as named constants because clearUnfittedCoefficients also
+    # needs them to recognise a fit that silently failed.
+    VISCOSITY_GUESS = np.array([+5e+2, -6e+1, +1e+1])
+    PSAT_GUESS = np.array([-5e+3, +6e+1, -1e+1])
+    TFREEZE_GUESS = np.array([+7e+2, -6e+1, +1e+1])
+    # The log-exponential retry guess hardcoded in IncompressibleData.fitCoeffs
+    LOGEXP_GUESS = np.array([-250.0, 1.5, 10.0])
 
-        matplotlib.rcParams['axes.formatter.useoffset'] = False
+    def __init__(self):
+        """Set up optional dependencies, page geometry and fit-guess constants.
+
+        A *missing* dependency degrades rather than raises: ``bibtexer`` stays
+        ``None`` (citations print as raw keys) and matplotlib styling is
+        skipped. Not exception-free in general -- when the CoolProp package is
+        importable, ``BibTeXerClass`` opens the ``.bib`` eagerly and raises if
+        the relative path misses.
+        """
+        # Resolving BibTeX references needs the CoolProp Python package; fall
+        # back to printing the raw citation keys when it is not installed.
+        if BibTeXerClass is not None:
+            bibFile = os.path.join(os.path.dirname(__file__), '../../../CoolPropBibTeXLibrary.bib')
+            self.bibtexer = BibTeXerClass(bibFile)
+        else:
+            self.bibtexer = None
+
+        if matplotlib is not None:
+            matplotlib.rcParams['axes.formatter.useoffset'] = False
 
         # For standard report generation
         self.ext = "pdf"
-        self.usebp = False
         self.ispage = True  # Do you want a page or a figure?
         self.isportrait = True
         self.resolveRef = True  # Resolve references and print text
 
-        # Latex document mode
-        #self.ext        = "pgf"
-        #self.usebp      = True
-        # self.ispage     = False # Do you want a page or a figure?
-        #self.isportrait = True
-        # self.resolveRef = False # Resolve references and print text
-
-        if self.ext == "pgf" or matplotlib.rcParams['text.usetex']:
+        if matplotlib is not None and (self.ext == "pgf" or matplotlib.rcParams['text.usetex']):
             self.usetex = True
             matplotlib.rcParams['text.usetex'] = True
             # preamble = [r'\usepackage{hyperref}', r'\usepackage{siunitx}']#, r'\usepackage[style=alphabetic,natbib=true,backend=biber]{biblatex}']
@@ -139,7 +103,8 @@ class SolutionDataWriter(object):
             f = 0.85
         else:
             self.usetex = False
-            matplotlib.rcParams['text.usetex'] = False
+            if matplotlib is not None:
+                matplotlib.rcParams['text.usetex'] = False
             self.percent = r'%'
             self.celsius = u'\u00B0C'
             self.errLabel = r'rel. Error (' + self.percent + r')'
@@ -152,28 +117,8 @@ class SolutionDataWriter(object):
             self.TfreLabel = r'Freezing Temperature ($\mathdefault{K}$)'
             f = 1.00
 
-#         self.percent   = ur'pc'
-#         self.celsius   = ur'degC'
-#         self.errLabel  = ur'rel. Error ('+self.percent+ur')'
-#         self.tempLabel = ur'Temperature ('+self.celsius+ur')'
-#         self.densLabel = ur'Density (kg/m3)'
-#         self.heatLabel = ur'Heat Capacity (J/kg/K)'
-#         self.condLabel = ur'Thermal Conductivity (W/m/K)'
-#         self.viscLabel = ur'Dynamic Viscosity (Pa s)'
-#         self.satPLabel = ur'Saturation Pressure (Pa)'
-#         self.TfreLabel = ur'Freezing Temperature (K)'
-
-        if self.usebp:
-            from jopy.dataPlotters import BasePlotter
-            self.bp = BasePlotter()
-            ccycle = self.bp.getColourCycle(length=2)
-            # ccycle.next() # skip the first one
-            # ccycle.next() # skip the first one
-            self.secondaryColour = next(ccycle)
-            self.primaryColour = next(ccycle)
-        else:
-            self.primaryColour = 'blue'
-            self.secondaryColour = 'red'
+        self.primaryColour = 'blue'
+        self.secondaryColour = 'red'
 
         baseSize = 297.0 * f  # A4 in mm
         ratio = 210.0 / 297.0  # A4 in mm
@@ -192,6 +137,25 @@ class SolutionDataWriter(object):
         else: self.figsize = (longSide * mm_to_inch, shortSide * mm_to_inch)
 
     def fitAll(self, fluidObject=SolutionData()):
+        """Fit every property of ``fluidObject`` in place.
+
+        Fills in ``Tbase``/``xbase`` when unset, then fits density, specific
+        heat, conductivity, viscosity and saturation pressure. Freezing
+        temperature is fitted only for actual solutions -- it is skipped when
+        ``xid`` is ``ifrac_pure`` or ``ifrac_undefined``.
+
+        A fit that raises keeps its starting guess, so a populated ``coeffs``
+        mid-fit is not evidence of success; the final step here is
+        :meth:`clearUnfittedCoefficients`. One gap survives it: a property with
+        ``coeffs`` already set but ``type`` never assigned is skipped by both
+        (fits run only when ``coeffs is None``; the reset ``continue``s on
+        ``INCOMPRESSIBLE_NOT_SET``) yet ``toJSON`` serialises ``coeffs``
+        anyway, so ``type: "notdefined"`` reaches disk beside a real-looking
+        array. ``test_json_sanity.py`` rejects that shape for the two vital
+        properties (``density``, ``specific_heat``), which the C++ loader
+        refuses outright; on the others it is caught only if the coefficients
+        also look like a placeholder.
+        """
 
         if fluidObject.Tbase is None:
             fluidObject.Tbase = (fluidObject.Tmin + fluidObject.Tmax) / 2.0
@@ -245,14 +209,13 @@ class SolutionDataWriter(object):
             try:
                 fluidObject.viscosity.setxyData(tData, xData)
                 tried = False
-                if len(fluidObject.viscosity.yData) == 1:  # and np.isfinite(fluidObject.viscosity.data).sum()<10:
-                    fluidObject.viscosity.coeffs = np.array([+5e+2, -6e+1, +1e+1])
+                if len(fluidObject.viscosity.yData) == 1:
+                    fluidObject.viscosity.coeffs = np.copy(self.VISCOSITY_GUESS)
                     fluidObject.viscosity.type = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
                     fluidObject.viscosity.fitCoeffs(tBase, xBase)
-                    if fluidObject.viscosity.coeffs is None or IncompressibleFitter.allClose(fluidObject.viscosity.coeffs, np.array([+5e+2, -6e+1, +1e+1])):  # Fit failed
+                    if fluidObject.viscosity.coeffs is None or IncompressibleFitter.allClose(fluidObject.viscosity.coeffs, self.VISCOSITY_GUESS):  # Fit failed
                         tried = True
                 if len(fluidObject.viscosity.yData) > 1 or tried:
-                    #fluidObject.viscosity.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
                     fluidObject.viscosity.coeffs = np.copy(std_coeffs)
                     fluidObject.viscosity.type = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
                     fluidObject.viscosity.fitCoeffs(tBase, xBase)
@@ -264,28 +227,28 @@ class SolutionDataWriter(object):
             try:
                 fluidObject.saturation_pressure.setxyData(tData, xData)
                 tried = False
-                if len(fluidObject.saturation_pressure.yData) == 1:  # and np.isfinite(fluidObject.saturation_pressure.data).sum()<10:
-                    fluidObject.saturation_pressure.coeffs = np.array([-5e+3, +6e+1, -1e+1])
+                if len(fluidObject.saturation_pressure.yData) == 1:
+                    fluidObject.saturation_pressure.coeffs = np.copy(self.PSAT_GUESS)
                     fluidObject.saturation_pressure.type = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
                     fluidObject.saturation_pressure.fitCoeffs(tBase, xBase)
-                    if fluidObject.saturation_pressure.coeffs is None or IncompressibleFitter.allClose(fluidObject.saturation_pressure.coeffs, np.array([-5e+3, +6e+1, -1e+1])):  # Fit failed
+                    if fluidObject.saturation_pressure.coeffs is None or IncompressibleFitter.allClose(fluidObject.saturation_pressure.coeffs, self.PSAT_GUESS):  # Fit failed
                         tried = True
                 if len(fluidObject.saturation_pressure.yData) > 1 or tried:
-                    #fluidObject.saturation_pressure.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
                     fluidObject.saturation_pressure.coeffs = np.copy(std_coeffs)
                     fluidObject.saturation_pressure.type = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
                     fluidObject.saturation_pressure.fitCoeffs(tBase, xBase)
             except errList as ve:
-                if fluidObject.saturation_pressure.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name, 'saturation pressure', ve))
+                if fluidObject.saturation_pressure.DEBUG:
+                    print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name, 'saturation pressure', ve))
                 pass
 
-        # reset data for getArray and read special files
+        # Freezing temperature only makes sense for solutions, not pure fluids
         if fluidObject.xid != fluidObject.ifrac_pure and fluidObject.xid != fluidObject.ifrac_undefined:
             if fluidObject.T_freeze.coeffs is None:
                 fluidObject.T_freeze.setxyData([0.0], xData)
                 try:
-                    if len(fluidObject.T_freeze.xData) == 1:  # and np.isfinite(fluidObject.T_freeze.data).sum()<10:
-                        fluidObject.T_freeze.coeffs = np.array([+7e+2, -6e+1, +1e+1])
+                    if len(fluidObject.T_freeze.xData) == 1:
+                        fluidObject.T_freeze.coeffs = np.copy(self.TFREEZE_GUESS)
                         fluidObject.T_freeze.type = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
                     else:
                         fluidObject.T_freeze.coeffs = np.copy(std_coeffs)
@@ -294,28 +257,37 @@ class SolutionDataWriter(object):
                 except errList as ve:
                     if fluidObject.T_freeze.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluidObject.name, "T_freeze", ve))
                     pass
-#
-#            # reset data for getArray again
-#            if fluidObject.xid==fluidObject.ifrac_volume:
-#                try:
-#                    fluidObject.mass2input.coeffs = np.copy(std_coeffs)
-#                    fluidObject.mass2input.type   = fluidObject.mass2input.INCOMPRESSIBLE_POLYNOMIAL
-#                    fluidObject.mass2input.fitCoeffs([fluidObject.Tbase],massData,fluidObject.Tbase,fluidObject.xbase)
-#                except errList as ve:
-#                    if fluidObject.mass2input.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluidObject.name,"mass2input",ve))
-#                    pass
-#            elif fluidObject.xid==fluidObject.ifrac_mass:
-#                _,_,fluidObject.volume2input.data = IncompressibleData.shfluidObject.ray(massData,axs=1)
-#                #_,_,volData = IncompressibleData.shapeArray(volData,axs=1)
-#                try:
-#                    fluidObject.volume2input.coeffs = np.copy(std_coeffs)
-#                    fluidObject.volume2input.type   = fluidObject.volume2input.INCOMPRESSIBLE_POLYNOMIAL
-#                    fluidObject.volume2input.fitCoeffs([fluidObject.Tbase],volData,fluidObject.Tbase,fluidObject.xbase)
-#                except errList as ve:
-#                    if fluidObject.volume2input.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluidObject.name,"volume2input",ve))
-#                    pass
-#            else:
-#                raise ValueError("Unknown xid specified.")
+
+        self.clearUnfittedCoefficients(fluidObject)
+
+    def clearUnfittedCoefficients(self, fluidObject):
+        """Reset properties whose fit failed or never ran to "not defined".
+
+        A failed or skipped fit (usually: no data available for the property)
+        leaves the optimizer's starting guess -- or the all-zero polynomial
+        template -- in the coefficient array, and toJSON would write that out
+        as if it were a real fit. The C++ backend then evaluates those
+        coefficients to plausible-looking garbage: shipped examples were LiBr
+        conductivity = 0 W/m/K, LiBr viscosity = exp(0) = 1 Pa.s (GitHub
+        #1331) and LiBr/MITSW T_freeze = exp(700/(x-60) - 10) ~ 0 K (GitHub
+        #2567). Resetting the property to "not defined" makes the backend
+        throw a clear "function type is not specified" error instead.
+        """
+        knownGuesses = (self.VISCOSITY_GUESS, self.PSAT_GUESS, self.TFREEZE_GUESS, self.LOGEXP_GUESS)
+        properties = ('density', 'specific_heat', 'conductivity', 'viscosity', 'saturation_pressure', 'T_freeze')
+        for label in properties:
+            data = getattr(fluidObject, label)
+            if data.type == IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                continue
+            coeffs = data.coeffs
+            unfitted = coeffs is None or not np.any(coeffs)  # never assigned, or still the all-zero template
+            if not unfitted:
+                unfitted = any(IncompressibleFitter.allClose(coeffs, guess) for guess in knownGuesses)
+            if unfitted:
+                print("{0}: could not fit {1}, marking it as not defined".format(fluidObject.name, label))
+                data.type = IncompressibleData.INCOMPRESSIBLE_NOT_SET
+                data.coeffs = None
+                data.NRMS = None
 
     def get_hash(self, data):
         return hashlib.sha224(data.encode()).hexdigest()
@@ -339,12 +311,29 @@ class SolutionDataWriter(object):
         return True
 
     def get_json_file(self, name):
+        """Return the ``json/<name>.json`` path for a fluid, relative to the CWD."""
         return os.path.join("json", "{0}.json".format(name))
 
     def get_report_file(self, name):
+        """Return the ``report/<name>_fitreport.<ext>`` path for a fluid's fit report.
+
+        The extension follows ``self.ext`` (``pdf`` by default).
+        """
         return os.path.join("report", "{0}_fitreport.{1}".format(name, self.ext))
 
     def toJSON(self, data, quiet=False):
+        """Serialise ``data`` to the JSON dict written into ``dev/incompressible_liquids/json``.
+
+        Calls :meth:`clearUnfittedCoefficients` first, so any property whose
+        fit failed or was skipped is emitted as ``notdefined`` with no
+        coefficients rather than shipping the optimizer's starting guess as
+        though it were a fit. Always emits every property block, which is the
+        invariant ``test_json_sanity.py`` relies on.
+        """
+        # Last line of defence: never write placeholder coefficients to disk,
+        # no matter which fitting path (fitAll, SecCool, ...) produced them.
+        self.clearUnfittedCoefficients(data)
+
         jobj = {}
 
         jobj['name'] = data.name  # Name of the current fluid
@@ -372,30 +361,8 @@ class SolutionDataWriter(object):
         jobj['volume2input'] = data.volume2input.toJSON()  # dd
         jobj['mole2input'] = data.mole2input.toJSON()  # dd
 
-        # Quickfix to allow building the docs with Python 3, see #1786
-        try:
-            original_float_repr = json.encoder.FLOAT_REPR
-            # print json.dumps(1.0001)
-            stdFmt = "1.{0}e".format(int(data.significantDigits - 1))
-            #pr = np.finfo(float64).eps * 10.0
-            # pr = np.finfo(float64).precision - 2 # stay away from numerical precision
-            #json.encoder.FLOAT_REPR = lambda o: format(np.around(o,decimals=pr), stdFmt)
-            json.encoder.FLOAT_REPR = lambda o: format(o, stdFmt)
-            dump = json.dumps(jobj, indent=2, sort_keys=True)
-            json.encoder.FLOAT_REPR = original_float_repr
-        except:
-            # Assume Python3
-            stdFmt = "1.{0}e".format(int(data.significantDigits - 1))
-            class RoundingEncoder(json.JSONEncoder):
-                def default(self, obj):
-                    if isinstance(obj, float):
-                        return format(o, stdFmt)
-                    # Let the base class default method raise the TypeError
-                    return json.JSONEncoder.default(self, obj)
-            dump = json.dumps(jobj, indent=2, sort_keys=True, cls=RoundingEncoder)
+        dump = json.dumps(jobj, indent=2, sort_keys=True)
 
-
-        # print dump
         hashes = self.load_hashes()
         hash = self.get_hash(dump)
 
@@ -512,6 +479,11 @@ class SolutionDataWriter(object):
         return
 
     def writeFluidList(self, fluidObjs):
+        """Serialize every fluid to its ``json/<name>.json``.
+
+        A ``TypeError``/``ValueError`` from one fluid is reported and skipped,
+        so a clean return does NOT mean every file was written.
+        """
         print("Writing fluids to JSON:", end="")
         for obj in fluidObjs:
             self.printStatusID(fluidObjs, obj)
@@ -526,6 +498,16 @@ class SolutionDataWriter(object):
         return
 
     def writeReportList(self, fluidObjs, pdfFile=None):
+        """Render a fit report per fluid, into one PDF or separate files.
+
+        Requires matplotlib. ``pdfFile`` collects every report into one
+        multi-page PDF; otherwise each fluid gets its own
+        :meth:`get_report_file`. ``self.usetex`` forces that per-fluid path,
+        since LaTeX output cannot be accumulated into one ``PdfPages``. Note the
+        branches differ on failure: the single-PDF path skips a bad fluid and
+        continues, the per-fluid path (try/except commented out) aborts.
+        """
+        self.requireMatplotlib()
         print("Writing fitting reports:", end="")
 
         if self.usetex and pdfFile is not None:
@@ -593,45 +575,10 @@ class SolutionDataWriter(object):
     ############################################################
     # Define the general purpose routines for plotting
     ############################################################
-    def wireFrame2D(self, xz, yz, linesX=5, linesY=None, color='black', ax=None, plot=False):
-        """
-        xz is a 2D array that holds x-values for constant z1 and z2.
-        yz is a 2D array that holds y-values for the same z1 and z2.
-        xz and yz have to have the same size.
-        The first dimension of xz should be greater than
-        or equal to the lines input.
-        """
-        if xz.ndim != 2:
-            raise ValueError("xz has to be a 2D array.")
-        if yz.ndim != 2:
-            raise ValueError("yz has to be a 2D array.")
-        if xz.shape != yz.shape:
-            raise ValueError("xz and yz have to have the same shape: {0} != {1}".format(xz.shape, yz.shape))
-        if linesY is None and not linesX is None:
-            linesY = linesX
-        if linesX is None and not linesY is None:
-            linesX = linesY
-        if linesY is None and linesX is None:
-            raise ValueError("You have to provide linesX or linesY")
-
-        xl, yl = xz.shape
-        x_index = np.round(np.linspace(0, xl - 1, linesX))
-        y_index = np.round(np.linspace(0, yl - 1, linesY))
-        x_toPlot = []
-        y_toPlot = []
-        for i in x_index:
-            x_toPlot += [xz.T[i]]
-            y_toPlot += [yz.T[i]]
-        for i in y_index:
-            x_toPlot += [xz[i]]
-            y_toPlot += [yz[i]]
-        if plot == False:
-            return x_toPlot, y_toPlot
-        if ax is None:
-            raise ValueError("You have to give an axis to plot.")
-        for i in range(len(x_toPlot)):
-            ax.plot(x_toPlot[i], y_toPlot[i], color=color)
-        return x_toPlot, y_toPlot
+    def requireMatplotlib(self):
+        """The report/plot paths need matplotlib; fitting and JSON output do not."""
+        if matplotlib is None:
+            raise ImportError("matplotlib is required for reports and plots; install it or skip this step (see requirements.txt).")
 
     def plotValues(self, axVal, axErr, solObj=SolutionData(), dataObj=IncompressibleData(), func=None, old=None):
         """
@@ -1013,15 +960,13 @@ class SolutionDataWriter(object):
         #xpos,ypos = ax.transAxes.inverted().transform(ax.transData.transform((0,y)))
         return [xmin, y + 0.5 * dy, xmax, y + 0.5 * dy]
 
-    def printFitDetails(self):
-        pass
-
     def makeFitReportPage(self, solObj=SolutionData(), pdfObj=None, quiet=False):
         """
         Creates a whole page with some plots and basic information
         for both fit quality, reference data, data sources and
         more.
         """
+        self.requireMatplotlib()
 
         # First we determine some basic settings and check the JSON file
 
@@ -1207,10 +1152,7 @@ class SolutionDataWriter(object):
             if not os.path.exists(os.path.dirname(report_path)):
                 os.makedirs(os.path.dirname(report_path))
 
-            if self.usebp and self.ext == "pgf":
-                self.bp.savepgf(report_path, fig=fig, customReplace=["\\cite{", "\\citet{"])
-            else:
-                fig.savefig(report_path)
+            fig.savefig(report_path)
 
             if not quiet: print(" ({0})".format("w"), end="")
 
@@ -1225,6 +1167,7 @@ class SolutionDataWriter(object):
         for both fit quality, reference data, data sources and
         more.
         """
+        self.requireMatplotlib()
         # First we determine some basic settings
         water = None
         solutions = []
@@ -1348,6 +1291,7 @@ class SolutionDataWriter(object):
         return r + u"\n"
 
     def writeTextToFile(self, path, text):
+        """Write ``text`` to ``path``, creating the parent dir. Raises on failure."""
         #print("Writing to file: {0}".format(path))
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
@@ -1356,24 +1300,19 @@ class SolutionDataWriter(object):
 
         return True
 
-    def writeTxtTableToFile(self, path, table, head=u""):
-        if not head == u"":
-            return self.writeTextToFile(path + ".txt", head + u"\n\n" + self.make_table(table))
-        return self.writeTextToFile(path + ".txt", self.make_table(table))
-
     def writeCsvTableToFile(self, path, table):
+        """Write ``table`` to ``<path>.csv`` as UTF-8 CSV. Needs no matplotlib."""
         if not os.path.exists(os.path.dirname(path + ".csv")):
             os.makedirs(os.path.dirname(path + ".csv"))
         with codecs.open(path + ".csv", 'w', encoding='utf-8') as f:
             writer = csv.writer(f)
-            # writer = UnicodeWriter(f)
             writer.writerows(table)
         return True
 
     # Interface
     def writeTableToFile(self, path, table):
+        """Format-neutral alias for :meth:`writeCsvTableToFile`. Needs no matplotlib."""
         self.writeCsvTableToFile(path, table)
-        # self.writeTxtTableToFile(path,table)
         return True
 
     def getReportLink(self, name):

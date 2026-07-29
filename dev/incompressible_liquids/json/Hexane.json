@@ -59,12 +59,8 @@
   "reference": "Thol-FPE-2019-alkanes-hexane; ; Michailidou-JPCRD-2013-Hexane; Assael-JPCRD-2013-Hexane",
   "saturation_pressure": {
     "NRMS": null,
-    "coeffs": [
-      -5000.0,
-      60.0,
-      -10.0
-    ],
-    "type": "exponential"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "specific_heat": {
     "NRMS": 0.006369860782711523,

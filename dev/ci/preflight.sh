@@ -15,6 +15,7 @@
 #   ./dev/ci/preflight.sh --skip=cppcheck,clang-tidy   # subset
 #   ./dev/ci/preflight.sh --skip=json-symbols          # subset
 #   ./dev/ci/preflight.sh --skip=install-headers        # subset
+#   ./dev/ci/preflight.sh --skip=incomp-sanity          # subset
 #
 # Tools resolved at runtime:
 #   - clang-format     : uvx clang-format@<version-from-.pre-commit-config>
@@ -45,7 +46,10 @@ for arg in "$@"; do
         # Both forms now work -- CSV in one flag, or the flag repeated.
         --skip=*) SKIP_CHECKS="${SKIP_CHECKS:+$SKIP_CHECKS,}${arg#*=}" ;;
         --help|-h)
-            sed -n '2,30p' "$0"
+            # Print the header comment block, stopping at the first
+            # non-comment line. A hardcoded end line silently truncated this
+            # mid-sentence every time a usage line was added to the header.
+            sed -n '2,${/^#/!q;p;}' "$0"
             exit 0
             ;;
         *)
@@ -388,13 +392,18 @@ else
         if grep -q "^warning:.*skipping" /tmp/preflight-clang-tidy.log; then
             skip "clang-tidy" "$(grep -m1 '^warning:' /tmp/preflight-clang-tidy.log | sed 's/^warning: //')"
         else
-            RAW="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null | head -1 || echo 0)"
+            # `|| echo 0` appended a second line (grep -c prints 0 then exits
+            # 1).  Harmless here, but the same construct on SIGNAL_COUNT below
+            # fed a numeric test and errored on every clean run.
+            RAW="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null | head -1 || true)"
+            [ -n "$RAW" ] || RAW=0
             # Each finding line ends with `[<check-name>,-warnings-as-errors]`
             # or `[<check-name>]`.  Match the bracketed check name and
             # exclude any line whose name is in NOISE_PATTERN.
             SIGNAL_LINES="$(grep -E 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null \
                 | grep -vE "\\[($NOISE_PATTERN)(,|\\])" || true)"
-            SIGNAL_COUNT="$(printf '%s\n' "$SIGNAL_LINES" | grep -c . || echo 0)"
+            SIGNAL_COUNT="$(printf '%s\n' "$SIGNAL_LINES" | grep -c . || true)"
+            [ -n "$SIGNAL_COUNT" ] || SIGNAL_COUNT=0
             if [ "$SIGNAL_COUNT" -gt 0 ]; then
                 printf '\n--- signal findings (noise-filtered, see #2926) ---\n'
                 printf '%s\n' "$SIGNAL_LINES" | head -30
@@ -460,10 +469,78 @@ else
         echo "no uvx or python3 on PATH" >"$SCHEMA_LOG"
     fi
     if [ "$SCHEMA_RC" -eq 0 ]; then
-        ok "schema-validate ($(grep -c '^OK' "$SCHEMA_LOG" 2>/dev/null || echo 0) data file(s) validated)"
+        SCHEMA_N="$(grep -c '^OK' "$SCHEMA_LOG" 2>/dev/null || true)"
+        [ -n "$SCHEMA_N" ] || SCHEMA_N=0
+        ok "schema-validate ($SCHEMA_N data file(s) validated)"
     else
         tail -30 "$SCHEMA_LOG"
         fail "schema-validate (see $SCHEMA_LOG)"
+    fi
+fi
+
+# ---------- check 8: incompressible JSON sanity -----------------------
+#
+# test_json_sanity.py guards the committed json/*.json against unfitted
+# placeholders, all-zero templates, non-numeric or non-finite values, and
+# blocks the C++ loader would reject.  Nothing ran it before this check.
+# Scoped to runs touching the incompressible data or its writer.
+step "incompressible JSON sanity"
+if skip_check incomp-sanity; then
+    skip "incomp-sanity" "--skip=incomp-sanity"
+elif ! printf '%s\n' "$ALL_PATHS" | grep -qE '^dev/incompressible_liquids/'; then
+    skip "incomp-sanity" "no dev/incompressible_liquids/ files in diff"
+else
+    INCOMP_LOG=/tmp/preflight-incomp-sanity.log
+    INCOMP_RC=0
+    if ! command -v python3 >/dev/null 2>&1; then
+        INCOMP_RC=127
+        echo "no python3 on PATH" >"$INCOMP_LOG"
+    elif python3 -c 'import pytest' >/dev/null 2>&1; then
+        # --color=no is load-bearing: with PY_COLORS/FORCE_COLOR set pytest
+        # emits ANSI even when redirected, so the count grep below scores 0 and
+        # a passing run is reported as "verified nothing".
+        python3 -m pytest dev/incompressible_liquids/test_json_sanity.py -q --color=no >"$INCOMP_LOG" 2>&1 || INCOMP_RC=$?
+    else
+        # pytest is not required: the checks are plain asserts, so call them
+        # directly rather than skip the gate.  Exiting non-zero on an empty or
+        # renamed module matters, else it would report a clean pass.
+        python3 - >"$INCOMP_LOG" 2>&1 <<'PY' || INCOMP_RC=$?
+import importlib.util, inspect, pathlib, sys
+
+path = pathlib.Path("dev/incompressible_liquids/test_json_sanity.py")
+spec = importlib.util.spec_from_file_location("test_json_sanity", path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+names = sorted(n for n in dir(module) if n.startswith("test_"))
+if not names:
+    sys.exit("no test_* functions found in {0}".format(path))
+for name in names:
+    func = getattr(module, name)
+    # Calling a generator function only builds a generator; no assert runs.
+    # pytest errors on yield-tests, so match that instead of passing green.
+    if inspect.isgeneratorfunction(func):
+        sys.exit("{0} is a generator function; its asserts would never run".format(name))
+    result = func()
+    if result is not None:
+        sys.exit("{0} returned {1!r}, expected None".format(name, result))
+    print("OK", name)
+PY
+    fi
+    if [ "$INCOMP_RC" -eq 0 ]; then
+        # grep -c prints 0 and returns 1, so `|| true` (not `|| echo 0`) keeps
+        # one line.  The count gates the pass: pytest exits 0 when every test is
+        # skipped, and a green "0 check group(s)" would be a fail-open.
+        INCOMP_N="$(grep -cE '^(OK|[0-9]+ passed)' "$INCOMP_LOG" 2>/dev/null || true)"
+        [ -n "$INCOMP_N" ] || INCOMP_N=0
+        if [ "$INCOMP_N" -gt 0 ]; then
+            ok "incomp-sanity ($INCOMP_N check group(s))"
+        else
+            tail -30 "$INCOMP_LOG"
+            fail "incomp-sanity (ran but verified nothing; all tests skipped?)"
+        fi
+    else
+        tail -30 "$INCOMP_LOG"
+        fail "incomp-sanity (see $INCOMP_LOG)"
     fi
 fi
 
