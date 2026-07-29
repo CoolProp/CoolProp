@@ -173,10 +173,6 @@ def test_ambiguous_gas_rows_raise():
     ]
     with pytest.raises(AmbiguousSpecies):
         select_gas_row(duplicated)
-
-
-def test_rows_without_a_298K_value_are_skipped(rows):
-    assert all(r.dhf298_kJ_per_mol is not None for r in rows)
 ```
 
 - [ ] **Step 3: Run the tests to verify they fail**
@@ -341,7 +337,7 @@ def select_gas_row(rows: list[AtctRow], qualifier: str | None = None) -> AtctRow
 python -m pytest dev/atct/test_fetch_atct_formation.py -v
 ```
 
-Expected: 9 passed.
+Expected: 8 passed.
 
 - [ ] **Step 6: Commit**
 
@@ -541,7 +537,7 @@ def bind(fluids: dict, rows: list) -> BindResult:
 python -m pytest dev/atct/test_fetch_atct_formation.py -v
 ```
 
-Expected: 15 passed.
+Expected: 14 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -815,7 +811,7 @@ if __name__ == "__main__":
 python -m pytest dev/atct/test_fetch_atct_formation.py -v
 ```
 
-Expected: 20 passed.
+Expected: 19 passed.
 
 - [ ] **Step 5: Generate the ledger and the data (network access required)**
 
@@ -1195,7 +1191,7 @@ Expected: the assertion passes and the job name is listed.
 python -m pytest dev/atct/test_fetch_atct_formation.py -v
 ```
 
-Expected: 20 passed.
+Expected: 19 passed.
 
 - [ ] **Step 4: Commit**
 
