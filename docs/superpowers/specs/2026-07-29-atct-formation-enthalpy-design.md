@@ -215,14 +215,49 @@ Each of these gets its own spec:
   exactly where §4 binds spin-resolved enthalpies. §5's per-quantity provenance reserves
   the slot.
 - **Heating values (HHV/LHV).** Derivable from Δ<sub>f</sub>H plus the parsed `FORMULA`
-  field, restricted to CHONS fluids. Note that values derived from ATcT will *not* match
-  ISO 6976, which is the convention custody-transfer work is held to; any such feature
-  must label its convention explicitly rather than reconcile the two.
+  field, restricted to CHONS fluids. See §8.1 for how ISO 6976 relates.
 - **A `"FORMATION"` reference state.** The trap: the standard state is the *hypothetical
   ideal gas*, so the offset must be set from `hmolar() - hmolar_residual()`, never from a
   real state at (298.15 K, 1 bar) — which for n-decane or water lands in the liquid.
 - **Reaction equilibrium / K_eq solving.** Belongs downstream (Cantera), per
   @matthewzyates in the thread.
+
+### 8.1 Recorded decision — how ISO 6976 is handled
+
+Decided 2026-07-29, so it is not re-litigated when heating values are taken up.
+
+ISO 6976 is **two separable things**, and they get opposite treatment:
+
+1. **A calculation procedure** — mixture combination rules, the compression-factor
+   correction via summation factors on a volumetric basis, molar/mass/volume bases,
+   Wobbe index, relative density. This is method, it is not encumbered, and it is worth
+   implementing.
+2. **A normative table of per-component calorific values** — edition-locked constants
+   whose purpose is reproducible custody-transfer billing. This is a legal reference,
+   not a thermophysical property.
+
+**ISO 6976 data must not live in `dev/fluids/*.json`.** Its values form a matrix over
+combustion reference temperature (25/20/15/0 °C) × metering reference conditions, so a
+fluid record — which holds one canonical value per quantity — cannot express it without
+flattening. Editions differ numerically and contracts cite a specific one, and a fluid
+file has no versioning axis. And it covers only the ~60 natural-gas components: a table
+in a metering standard that happens to be indexed by species.
+
+**Therefore:** implement the procedure as a self-contained module parameterized on a
+component table; ship a CoolProp-derived table (ATcT Δ<sub>f</sub>H + CoolProp's own
+cp₀, which generalizes to any temperature) as the default, named or documented so it
+does **not** imply ISO conformance; expose a documented hook for users to supply the
+normative table. On the REFPROP backend, forward `HG`/`HN` (and the `VOL`/`LQ`
+variants) — those already are ISO 6976 and REFPROP owns that provenance. A single
+heating-value call must never return an ATcT number on one backend and an ISO number on
+another without the caller knowing which.
+
+Two supporting facts. REFPROP already uses the anchor-plus-cp₀ factoring — one stored
+25 °C value per fluid, generalized with its own ideal-gas heat capacity (methane `hg` =
+890.58 kJ/mol at 298.15 K, 871.30 kJ/mol at 500 K) — so this is a proven architecture.
+And CoolProp is MIT-licensed while ISO standards are copyrighted, which makes vendoring
+the normative table a licensing question rather than a technical one. The design above
+does not depend on how that question resolves, which is its main virtue.
 
 ## 9. Acceptance criteria
 
