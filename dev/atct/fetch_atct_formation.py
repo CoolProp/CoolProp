@@ -43,6 +43,7 @@ class AtctRow:
 _ROW_RE = re.compile(r'<tr id="[^"]*?CAS(?P<cas>[^"]+)">(?P<body>.*?)</tr>', re.S)
 _NAME_RE = re.compile(r'species_number=\d+">(?P<name>.*?)</a>', re.S)
 _FORMULA_RE = re.compile(r'type="button">(?P<formula>.*?)</button>', re.S)
+_PHASE_RE = re.compile(r"^(?P<formula>.+?)\s+(?P<phase>\([^()]*\))$")
 
 
 def _span(body: str, css_class: str) -> str:
@@ -53,12 +54,21 @@ def _span(body: str, css_class: str) -> str:
 
 
 def _split_phase(raw: str) -> tuple[str, str]:
-    """'CH4  (g)' -> ('CH4', '(g)');  'H2 (g, para)' -> ('H2', '(g, para)')."""
+    """'CH4  (g)' -> ('CH4', '(g)');  'H2 (g, para)' -> ('H2', '(g, para)');
+    '(CH3)2NH (g)' -> ('(CH3)2NH', '(g)').
+
+    Anchors on the trailing whitespace-separated parenthesized group rather
+    than the first '(' in the string.  Some real ATcT formulas themselves
+    begin with '(' -- '(CH3)2NH (g)', '(F)(HF) (g, lin)' -- and splitting on
+    the first '(' mis-parses those into an empty formula and a bogus phase
+    string, which then fails both the exact-'(g)' and '(g,'-prefix checks in
+    select_gas_row() and makes the species silently vanish as 'absent'.
+    """
     collapsed = " ".join(raw.split())
-    open_paren = collapsed.find("(")
-    if open_paren < 0:
+    match = _PHASE_RE.match(collapsed)
+    if match is None:
         return collapsed, ""
-    return collapsed[:open_paren].strip(), collapsed[open_paren:].strip()
+    return match.group("formula").strip(), match.group("phase").strip()
 
 
 def _parse_uncertainty(text: str) -> float:
@@ -87,19 +97,28 @@ def parse_atct_rows(page_html: str) -> list[AtctRow]:
         if not value_text:
             continue  # species with no published 298.15 K value
         units = _span(body, "Units")
+        cas = match.group("cas").strip()
         if units not in ("", "kJ/mol"):
-            raise AtctParseError("unexpected units %r on CAS %s" % (units, match.group("cas")))
+            raise AtctParseError("unexpected units %r on CAS %s" % (units, cas))
         name_match = _NAME_RE.search(body)
+        if name_match is None:
+            # A blank name would otherwise degrade quietly into a row that
+            # still parses and still gets selected -- fail loud instead.
+            raise AtctParseError("missing species-name anchor on CAS %s" % cas)
+        name = html_module.unescape(name_match.group("name")).strip()
         formula, phase = _split_phase(html_module.unescape(formula_match.group("formula")))
+        atct_id = _span(body, "ATcTID")
+        if not atct_id:
+            raise AtctParseError("missing ATcT ID on CAS %s" % cas)
         rows.append(
             AtctRow(
-                cas=match.group("cas").strip(),
-                name=name_match.group("name").strip() if name_match else "",
+                cas=cas,
+                name=name,
                 formula=formula,
                 phase=phase,
                 dhf298_kJ_per_mol=float(value_text),
                 uncertainty_kJ_per_mol=_parse_uncertainty(_span(body, "Uncert")),
-                atct_id=_span(body, "ATcTID"),
+                atct_id=atct_id,
             )
         )
     if not rows:
@@ -117,7 +136,23 @@ def select_gas_row(rows: list[AtctRow], qualifier: str | None = None) -> AtctRow
 
     Raises AmbiguousSpecies rather than guessing.  Returns None when nothing
     matches, which the caller records as 'absent'.
+
+    Requires that every row shares one CAS number.  "CAS is not a unique
+    key" is the exact trap this function exists to defend against (argon's
+    (g) and (aq, undissoc) rows share a CAS, for instance), so a caller
+    accidentally handing it rows for two different species is a violated
+    precondition, not a legitimate multi-row ambiguity -- it is raised as
+    AtctParseError (an invalid-input-shape error) rather than
+    AmbiguousSpecies (which models a real choice among candidate gas rows
+    for one species that cannot be resolved).
     """
+    cas_values = {r.cas for r in rows}
+    if len(cas_values) > 1:
+        raise AtctParseError(
+            "select_gas_row() requires rows for a single CAS number; got %s"
+            % ", ".join(sorted(cas_values))
+        )
+
     if qualifier is not None:
         wanted = "(g, %s)" % qualifier
         hits = [r for r in rows if r.phase == wanted]
