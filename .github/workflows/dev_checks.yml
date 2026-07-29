@@ -750,21 +750,15 @@ jobs:
   incomp-json-sanity:
     name: incompressible JSON sanity
     # Guards the committed dev/incompressible_liquids/json/*.json against the
-    # "leaked placeholder" class of bug (issues #1331, #2567): a property whose
-    # fit failed or never ran kept the optimizer's starting guess, and the
-    # backend then evaluated it to plausible-looking garbage instead of
-    # throwing. Also rejects all-zero coefficient templates, non-finite and
-    # boolean values, a missing "coeffs" key, and a cleared property the C++
-    # loader treats as vital -- that last one makes parse_coefficients throw at
-    # load time, which truncates the whole fluid list.
+    # "leaked placeholder" class of bug (issues #1331, #2567): unfitted
+    # optimizer guesses, all-zero templates, non-numeric coefficients, and
+    # blocks the C++ loader would throw on at load time (which truncates the
+    # whole fluid list). The test predates this job, but nothing ran it -- CI's
+    # only other pytest invocation is `pytest wrappers/Python/pytest`.
     #
-    # This test existed before this job but nothing ran it: the only other
-    # pytest invocation in CI is `pytest wrappers/Python/pytest`, so the guard
-    # fired solely when a developer ran pytest in that directory by hand.
-    # Build-free and reads only committed JSON. Like type-stubs and
-    # superanc-pin, deliberately NO paths filter so it can be a required check
-    # without deadlocking unrelated PRs. Local twin: the `incomp-sanity` check
-    # in dev/ci/preflight.sh.
+    # Build-free. Like type-stubs and superanc-pin, deliberately NO paths filter
+    # so it can be a required check without deadlocking unrelated PRs. Local
+    # twin: the `incomp-sanity` check in dev/ci/preflight.sh.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -778,11 +772,9 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
-      # Pinned, like the other build-free gates in this file (uvx mypy@1.19.1,
-      # uvx pyright@1.1.409): this is a required check, so an unpinned
-      # `pip install --upgrade pytest` would let a collection or
-      # assertion-rewrite change in a fresh pytest release turn it red on
-      # unrelated PRs.
+      # Pinned like the other build-free gates here (uvx mypy@1.19.1,
+      # uvx pyright@1.1.409): unpinned, a fresh pytest release could turn this
+      # required check red on unrelated PRs.
       - name: Run incompressible JSON sanity checks
         run: uvx pytest@9.1.1 dev/incompressible_liquids/test_json_sanity.py -q --color=no
 

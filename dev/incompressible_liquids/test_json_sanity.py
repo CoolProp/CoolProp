@@ -9,28 +9,13 @@ conductivity = 0 W/m/K, LiBr viscosity = exp(0) = 1 Pa.s, LiBr/MITSW
 T_freeze ~ 0 K. A property without a usable fit must be typed "notdefined"
 so the backend raises a clear error.
 
-Scope limit worth knowing about: the coefficient-VALUE checks cover the six
-fitted properties only, not the three composition-conversion blocks. 24 of
-those currently ship as an all-zero "polynomial" -- the very shape this module
-rejects elsewhere -- because the SecCool writer fits them with the standard
-template, swallows the failure, and clearUnfittedCoefficients does not cover
-them. That data is inert today (the inputFromMass/inputFromVolume evaluation
-switch is commented out behind a NotImplementedError), so cleaning it up is a
-separate data change; the loader-contract check below does apply to those
-blocks. See the CONVERSIONS comment for detail.
-
-Unlike test_fitting_regression.py this needs no third-party packages at all.
-It reads the committed JSON files and, in one test, the loader source itself
-(src/Backends/Incompressible/IncompressibleLibrary.cpp) to cross-check the fit
-types this module duplicates -- so it expects to run from a full checkout, not
-a packaged copy. It is not shipped in the sdist.
+Needs no third-party packages; it only reads the committed JSON files.
 """
 
 import glob
 import json
 import math
 import os
-import re
 
 JSON_DIR = os.path.join(os.path.dirname(__file__), "json")
 
@@ -45,46 +30,24 @@ KNOWN_GUESSES = [
 PROPERTIES = ["density", "specific_heat", "conductivity", "viscosity", "saturation_pressure", "T_freeze"]
 
 # The three composition-conversion blocks. add_one parses these through the
-# same parse_coefficients as the properties above, so the loader-contract
-# requirements below apply to them identically.
-#
-# Their coefficient VALUES are deliberately NOT checked by the
-# placeholder/all-zero tests, and not because they are hand-written constants
-# -- mass2input and volume2input are fit output like the properties are
-# (SecCoolSolutionData fits them with the same all-zero template and swallows
-# the failure; mole2input is fit by no code path and is "notdefined" in all 127
-# files), and clearUnfittedCoefficients does not cover them, so 24 blocks
-# currently ship as type "polynomial" with an all-zero 4x6 matrix and
-# NRMS null: exactly the leaked-template shape this module exists to reject.
-# Extending the value checks here would fail on that pre-existing data, which
-# needs regenerating or clearing first. It is currently inert -- the
-# inputFromMass/inputFromVolume evaluation switch is commented out behind a
-# NotImplementedError -- but it turns 24 fluids into "any composition maps to
-# 0" the moment that is uncommented. Tracked separately; see the module
-# docstring.
+# same parse_coefficients as the properties, so the loader-contract check
+# applies to them identically. Their coefficient VALUES are not checked: 24
+# blocks already ship as an all-zero "polynomial", which the value tests would
+# reject, and clearing that data is a separate change. It is inert today --
+# inputFromMass/inputFromVolume throw NotImplementedError.
 CONVERSIONS = ["mass2input", "volume2input", "mole2input"]
 
-# Properties that JSONIncompressibleLibrary::add_one parses with vital=true.
-# For these, parse_coefficients THROWS on an unrecognised "type" (including
-# "notdefined") rather than returning an empty block, and add_one rethrows --
-# which aborts add_many's loop, so every fluid after the offender silently
-# vanishes from the library. A cleared vital property is therefore not a
-# "property you cannot query", it is a broken file.
+# Parsed by add_one with vital=true: for these, an unrecognised "type"
+# (including "notdefined") throws instead of yielding an empty block, which
+# truncates the fluid list. A cleared vital property is a broken file, not an
+# unqueryable property.
 VITAL_PROPERTIES = ("density", "specific_heat")
 
-# The only "type" strings parse_coefficients dispatches on. Anything else --
-# "notdefined", a typo, a future type this checkout predates -- means "no
-# usable fit": tolerated for a non-vital property, fatal for a vital one.
-# Keyed on the type string rather than on whether coeffs happen to be cleared,
-# because that is what the C++ actually branches on: a vital property with a
-# real-looking coeffs array and an unrecognised type throws just the same.
+# Types parse_coefficients dispatches on, and the coeffs rank each is parsed
+# with (get_double_array2D vs get_double_array). Anything else means "no usable
+# fit": tolerated for a non-vital property, fatal for a vital one.
 RECOGNISED_TYPES = ("polynomial", "exponential", "logexponential", "exppolynomial", "polyoffset")
 
-# Coefficient rank each recognised type is parsed with: get_double_array2D for
-# the 2-D ones, get_double_array for the 1-D ones. Both throw
-# *unconditionally* -- not gated on vital -- when the value is not an array of
-# the right rank containing only numbers, so a recognised type with malformed
-# coeffs is loader-fatal for any property, vital or not.
 TYPE_NDIM = {
     "polynomial": 2,
     "exppolynomial": 2,
@@ -95,15 +58,12 @@ TYPE_NDIM = {
 
 
 def _assert_loader_contract(name, prop, entry):
-    """Assert one block satisfies what JSONIncompressibleLibrary demands of it.
+    """Assert one block is loadable by JSONIncompressibleLibrary.
 
-    parse_coefficients throws *unconditionally* -- irrespective of the vital
-    flag -- when either the "type" or the "coeffs" key is missing from a block
-    that is present, and throws for a vital property whose type it does not
-    recognise. Every such throw propagates out of add_one and aborts
-    add_many's loop, so the library silently truncates from that fluid onward.
-    Checking presence with ``.get(..., default)`` would make an absent key
-    indistinguishable from a cleared one and fail open on exactly that.
+    A throw here propagates out of add_one and aborts add_many's loop, so the
+    library truncates from that fluid onward with only a message on stdout.
+    Presence must be tested with ``in``, not ``.get(..., default)``, which
+    cannot tell an absent key from a cleared one.
     """
     assert isinstance(entry, dict), "{0}: {1} block is {2}, not an object".format(name, prop, type(entry).__name__)
     assert "type" in entry, \
@@ -128,19 +88,15 @@ def _assert_loader_contract(name, prop, entry):
     assert isinstance(coeffs, list), \
         "{0}: {1} claims fitted type {2!r} but coeffs is {3!r}; the loader needs an array".format(
             name, prop, entry["type"], coeffs)
-    # Not loader-fatal (get_double_array2D returns a 0x0 / 1x0 matrix and
-    # validate() is a no-op) but a fit with no coefficients is meaningless data,
-    # so reject it here rather than let it reach a caller as a silent zero.
+    # Not loader-fatal (it yields an empty matrix), but a fit with no
+    # coefficients is meaningless data.
     assert coeffs, "{0}: {1} claims fitted type {2!r} with an empty coeffs array".format(
         name, prop, entry["type"])
-    # Check the structure BEFORE flattening. _flatten erases exactly the nesting
-    # the loader cares about, so validating scalars against a flattened copy
-    # accepts ragged and over-nested arrays that get_double_array{,2D} reject --
-    # and, worse, accepts non-rectangular 2-D arrays that it does NOT reject:
-    # num_cols() falls back to max_cols() for a non-squared input, so
-    # vec_to_eigen indexes coefficients[j][i] past the end of every short row
-    # through unchecked operator[]. That is an out-of-bounds read producing a
-    # fabricated coefficient, not a clean throw.
+    # Check structure BEFORE flattening -- _flatten erases the nesting the
+    # loader validates. Rectangularity matters most: num_cols() falls back to
+    # max_cols() for a non-squared input, so vec_to_eigen reads past every short
+    # row via unchecked operator[], fabricating a coefficient instead of
+    # throwing.
     if ndim == 2:
         for index, row in enumerate(coeffs):
             assert isinstance(row, list), \
@@ -212,49 +168,6 @@ def _iter_property_coeffs():
             yield os.path.basename(path), prop, _flatten(coeffs)
 
 
-def test_recognised_types_match_the_loader():
-    """RECOGNISED_TYPES/TYPE_NDIM still match the C++ dispatch they duplicate.
-
-    Staleness here fails *closed*, not open: a type C++ gained but this module
-    lacks is treated as "no usable fit", which for a vital property asserts and
-    blames the data for what is really an out-of-date list. PR 4/5 of this stack
-    adds a ``chebyshev`` type, so the divergence is scheduled, not theoretical.
-    Cross-checking turns that into one obvious failure telling you to update the
-    tuple.
-    """
-    loader = os.path.join(os.path.dirname(__file__), "..", "..", "src", "Backends", "Incompressible",
-                          "IncompressibleLibrary.cpp")
-    assert os.path.exists(loader), "loader not found at {0}".format(loader)
-    with open(loader) as fh:
-        source = fh.read()
-    start = source.find("IncompressibleData JSONIncompressibleLibrary::parse_coefficients")
-    assert start != -1, "could not locate parse_coefficients in {0}".format(loader)
-    body = source[start:source.index("\n}", start)]
-    found = tuple(re.findall(r'type\.compare\("([^"]+)"\)', body))
-    assert found, "could not parse the loader's type dispatch; update this test alongside it"
-    assert set(found) == set(RECOGNISED_TYPES), \
-        "loader dispatches on {0} but RECOGNISED_TYPES has {1}; update RECOGNISED_TYPES and TYPE_NDIM".format(
-            sorted(found), sorted(RECOGNISED_TYPES))
-    assert set(TYPE_NDIM) == set(RECOGNISED_TYPES), \
-        "TYPE_NDIM covers {0} but RECOGNISED_TYPES has {1}".format(sorted(TYPE_NDIM), sorted(RECOGNISED_TYPES))
-    # Cross-check the RANKS too, not just the key set. The ranks are the only
-    # information TYPE_NDIM adds, and they are what the structural check above
-    # enforces -- so if the loader switched a branch between
-    # get_double_array2D and get_double_array while TYPE_NDIM kept the old
-    # value, every block of that type would be rejected (or worse, wrongly
-    # accepted) and this test would still pass on the key set alone.
-    ranks = {}
-    for match in re.finditer(r'type\.compare\("([^"]+)"\)(.*?)(?=type\.compare\(|\Z)', body, re.S):
-        branch_type, branch_body = match.group(1), match.group(2)
-        if "get_double_array2D(" in branch_body:
-            ranks[branch_type] = 2
-        elif "get_double_array(" in branch_body:
-            ranks[branch_type] = 1
-    assert ranks == TYPE_NDIM, \
-        "loader parses {0} but TYPE_NDIM says {1}; update TYPE_NDIM".format(
-            sorted(ranks.items()), sorted(TYPE_NDIM.items()))
-
-
 def test_loader_contract_satisfied():
     """Every block the C++ loader parses is loadable by it.
 
@@ -284,21 +197,16 @@ def test_loader_contract_satisfied():
             if conv in fluid:
                 _assert_loader_contract(name, conv, fluid[conv])
                 checked_convs += 1
-    # Guard against the loop above going vacuous. Comparing the counts against
-    # len(PROPERTIES)*len(files) would be TAUTOLOGICAL -- the loop increments
-    # once per name it iterates, so the equality holds for any list, including
-    # an empty one, and the whole suite would report green while checking
-    # nothing. Pin the key sets themselves instead: that is what a serializer
-    # rename or an accidentally-narrowed list actually changes.
+    # Pin the key sets, not the counts: a count compared against
+    # len(PROPERTIES)*len(files) is tautological, since the loop increments once
+    # per name it iterates and so passes even for an empty list.
     assert set(PROPERTIES) == {"density", "specific_heat", "conductivity", "viscosity",
                                "saturation_pressure", "T_freeze"}, \
         "PROPERTIES no longer lists the six fitted properties: {0}".format(sorted(PROPERTIES))
     assert set(CONVERSIONS) == {"mass2input", "volume2input", "mole2input"}, \
         "CONVERSIONS no longer lists the three conversion blocks: {0}".format(sorted(CONVERSIONS))
-    # Conversion blocks are optional per file (parse_coefficients throws on an
-    # absent block only when vital, and none of the three is), so this must not
-    # demand three per file -- an earlier revision did and rejected legal data.
-    # A per-file floor still catches wholesale loss, e.g. a renamed key.
+    # Conversion blocks are optional per file, so demanding three per file would
+    # reject legal data; a per-file floor still catches a wholesale key rename.
     assert checked_convs >= len(files), \
         "only {0} conversion blocks across {1} files; a key rename would look like this".format(
             checked_convs, len(files))

@@ -5408,17 +5408,10 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
             if (!name.empty()) names.push_back(name);
         }
     }
-    // Pin the library size exactly, and note why a relative check cannot stand
-    // in for it: `names` is built from the library's own fluid lists, so a
-    // truncated load shrinks names.size() in lockstep and any floor expressed
-    // as a fraction of it still passes. This is the check that actually
-    // detects the add_many abort described below.
-    //
-    // `==`, not `>=`: with `>=` the literal goes stale silently. Add a 128th
-    // fluid without bumping it and a later truncation to 127 still satisfies
-    // `>= 127`, so the library could load short and report green. Equality
-    // forces the bump to be a conscious, reviewable edit -- the failure
-    // message says which direction moved.
+    // Exact, because `names` comes from the library's own fluid lists: a
+    // truncated load shrinks it in lockstep, so any relative floor still
+    // passes. This is what detects a truncating add_many abort. `==` rather
+    // than `>=` so the literal cannot go stale silently.
     REQUIRE(names.size() == 127);
 
     int testedCount = 0;
@@ -5454,34 +5447,24 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         double p = 101325.0;
         try {
             const double psat = fluid.psat(Tbase + dT, xmid);
-            // Check finiteness explicitly instead of letting std::max absorb a
-            // bad value: std::max(p, NaN) returns p, so a NaN or _HUGE psat
-            // would silently masquerade as "1 atm is fine". Only a real, finite
-            // psat is allowed to raise p -- and a non-finite one is asserted on
-            // rather than merely skipped, otherwise "noticed" would still mean
-            // "silently ignored": psat is exp(...) with no overflow guard, so
-            // an overflowing fit is exactly the garbage-coefficient class this
-            // sweep exists to catch.
+            // std::max(p, NaN) returns p, so a bad psat would masquerade as
+            // "1 atm is fine". Only a finite psat may raise p, and a non-finite
+            // one is asserted on rather than skipped -- psat is exp(...) with no
+            // overflow guard, the garbage-coefficient class this sweep catches.
             if (ValidNumber(psat)) {
                 p = std::max(p, 2.0 * psat);
             } else {
                 CHECK(ValidNumber(psat));
             }
         } catch (const std::exception& e) {
-            // psat is not defined for every fluid (100 of 127 shipped files
-            // type it "notdefined"); where it is not, the 1 atm default stands.
-            // Narrowed from `catch (...)` deliberately: every CoolProp error
-            // derives from std::exception (CoolPropBaseError), so the intended
-            // NotImplementedError/ValueError is still caught, while something
-            // genuinely unexpected propagates instead of being swallowed.
-            // UNSCOPED_INFO, not CAPTURE: a scoped CAPTURE here would be popped
-            // at the closing brace with no assertion in between, so the reason
-            // would never reach the reporter at all. UNSCOPED_INFO survives to
-            // the next assertion of any kind -- Catch2 clears unscoped messages
-            // on every non-Warning result, pass or fail -- so in practice the
-            // reason surfaces only if the CHECK_NOTHROW immediately below is
-            // what fails. That is the case worth diagnosing here, and it stays
-            // silent on the ~100 fluids where an undefined psat is expected.
+            // psat is undefined for 100 of the 127 shipped fluids; there the
+            // 1 atm default stands. Narrowed from `catch (...)`: every CoolProp
+            // error derives from std::exception, so the intended errors are
+            // still caught while anything unexpected propagates.
+            // UNSCOPED_INFO, not CAPTURE -- a scoped CAPTURE is popped at the
+            // closing brace with no assertion between, so the reason never
+            // reaches the reporter. Catch2 clears unscoped messages on any
+            // result, so this surfaces if the CHECK_NOTHROW below fails.
             UNSCOPED_INFO("psat threw for " << fluidString << ": " << e.what());
         }
 
@@ -5523,17 +5506,10 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         CHECK(std::abs(s_mid - 0.5 * (s_lo + s_hi)) < s_tol);
     }
     CAPTURE(testedCount);
-    // 118 of the 127 shipped fluids qualify today; the 9 skipped are the eight
-    // with Tbase == 0.0 (DEB, HCB, HCM, HFE, PMS1, PMS2, SAB, TCO) plus NaK
-    // (Tbase 273.15 below Tmin 573.15). Truncation is caught by the exact
-    // REQUIRE on names.size() above, so this has the narrower job of catching a
-    // broken Tbase-in-range filter.
-    //
-    // Absolute, for the same reason the count above is: a margin-based floor
-    // (names.size() - 15) tolerated 15 fluids -- 12.7% of the sweep -- going
-    // dark from a Tbase edit without anyone noticing, which is the fail-open
-    // shape this test exists to catch. A legitimate change to the skip set
-    // should be a conscious bump here.
+    // 118 of 127 qualify; the 9 skipped are the eight with Tbase == 0.0 (DEB,
+    // HCB, HCM, HFE, PMS1, PMS2, SAB, TCO) plus NaK (Tbase below Tmin).
+    // Truncation is caught above, so this catches a broken Tbase filter.
+    // Absolute for the same reason: a margin let fluids go dark unnoticed.
     CHECK(testedCount == 118);
 }
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {

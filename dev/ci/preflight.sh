@@ -392,12 +392,9 @@ else
         if grep -q "^warning:.*skipping" /tmp/preflight-clang-tidy.log; then
             skip "clang-tidy" "$(grep -m1 '^warning:' /tmp/preflight-clang-tidy.log | sed 's/^warning: //')"
         else
-            # `|| echo 0` would APPEND a second line: grep -c already prints 0
-            # before exiting 1, so the result became "0\n0".  Here that only
-            # corrupted the reported count in the message; the same construct
-            # on SIGNAL_COUNT below fed a numeric comparison and printed
-            # "integer expression expected" on every clean run.  `|| true`
-            # keeps grep's own 0.
+            # `|| echo 0` appended a second line (grep -c prints 0 then exits
+            # 1).  Harmless here, but the same construct on SIGNAL_COUNT below
+            # fed a numeric test and errored on every clean run.
             RAW="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null | head -1 || true)"
             [ -n "$RAW" ] || RAW=0
             # Each finding line ends with `[<check-name>,-warnings-as-errors]`
@@ -483,14 +480,10 @@ fi
 
 # ---------- check 8: incompressible JSON sanity -----------------------
 #
-# The committed dev/incompressible_liquids/json/*.json files are guarded by
-# test_json_sanity.py: it rejects optimizer starting guesses, all-zero
-# coefficient templates, non-finite and boolean values, a missing "coeffs"
-# key, and a cleared property that the C++ loader treats as vital.  Nothing
-# ran it before this check -- CI's only pytest invocation is
-# `pytest wrappers/Python/pytest` -- so the guard fired only when someone
-# happened to run pytest in that directory by hand.  Scoped to runs that
-# touch the incompressible data or the writer that generates it.
+# test_json_sanity.py guards the committed json/*.json against unfitted
+# placeholders, all-zero templates, non-numeric values and blocks the C++
+# loader would reject.  Nothing ran it before this check.  Scoped to runs
+# touching the incompressible data or its writer.
 step "incompressible JSON sanity"
 if skip_check incomp-sanity; then
     skip "incomp-sanity" "--skip=incomp-sanity"
@@ -503,17 +496,14 @@ else
         INCOMP_RC=127
         echo "no python3 on PATH" >"$INCOMP_LOG"
     elif python3 -c 'import pytest' >/dev/null 2>&1; then
-        # --color=no is load-bearing, not cosmetic: pytest emits ANSI even when
-        # redirected if PY_COLORS/FORCE_COLOR is set, which puts an escape
-        # sequence in front of the summary line and makes the count grep below
-        # score 0 -- turning a fully passing run into a blocked push blamed on
-        # "all tests skipped".
+        # --color=no is load-bearing: with PY_COLORS/FORCE_COLOR set pytest
+        # emits ANSI even when redirected, so the count grep below scores 0 and
+        # a passing run is reported as "verified nothing".
         python3 -m pytest dev/incompressible_liquids/test_json_sanity.py -q --color=no >"$INCOMP_LOG" 2>&1 || INCOMP_RC=$?
     else
-        # pytest is not a hard requirement here: the checks are plain asserts
-        # over committed JSON, so call them directly rather than skipping the
-        # gate.  Exiting non-zero when no test_* function is found matters --
-        # otherwise a renamed or emptied module would report a clean pass.
+        # pytest is not required: the checks are plain asserts, so call them
+        # directly rather than skip the gate.  Exiting non-zero on an empty or
+        # renamed module matters, else it would report a clean pass.
         python3 - >"$INCOMP_LOG" 2>&1 <<'PY' || INCOMP_RC=$?
 import importlib.util, inspect, pathlib, sys
 
@@ -526,9 +516,8 @@ if not names:
     sys.exit("no test_* functions found in {0}".format(path))
 for name in names:
     func = getattr(module, name)
-    # Calling a generator function only builds a generator -- none of its
-    # asserts would run, and this runner would report a clean pass on a test
-    # that verified nothing.  pytest errors on yield-tests; match that.
+    # Calling a generator function only builds a generator; no assert runs.
+    # pytest errors on yield-tests, so match that instead of passing green.
     if inspect.isgeneratorfunction(func):
         sys.exit("{0} is a generator function; its asserts would never run".format(name))
     result = func()
@@ -538,10 +527,9 @@ for name in names:
 PY
     fi
     if [ "$INCOMP_RC" -eq 0 ]; then
-        # grep -c prints 0 AND returns 1 on no match, so `|| true` keeps the
-        # count without appending a second line.  The count gates the pass:
-        # pytest exits 0 when every test is skipped, and reporting a green
-        # "0 check group(s)" would be this gate failing open.
+        # grep -c prints 0 and returns 1, so `|| true` (not `|| echo 0`) keeps
+        # one line.  The count gates the pass: pytest exits 0 when every test is
+        # skipped, and a green "0 check group(s)" would be a fail-open.
         INCOMP_N="$(grep -cE '^(OK|[0-9]+ passed)' "$INCOMP_LOG" 2>/dev/null || true)"
         [ -n "$INCOMP_N" ] || INCOMP_N=0
         if [ "$INCOMP_N" -gt 0 ]; then

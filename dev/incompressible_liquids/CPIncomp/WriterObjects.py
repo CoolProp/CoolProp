@@ -56,18 +56,13 @@ class SolutionDataWriter(object):
     LOGEXP_GUESS = np.array([-250.0, 1.5, 10.0])
 
     def __init__(self):
-        """Set up the writer's optional dependencies and report defaults.
+        """Set up optional dependencies, page geometry and fit-guess constants.
 
-        A *missing* dependency degrades rather than raises: without the CoolProp
-        Python package ``bibtexer`` stays ``None`` and citations print as raw
-        keys, and without matplotlib the plot styling is skipped (the plot and
-        report methods themselves refuse to run later, via
-        :meth:`requireMatplotlib`). Note this is not exception-free in general
-        -- when the CoolProp package *is* importable, ``BibTeXerClass`` opens
-        the ``.bib`` file eagerly and raises ``FileNotFoundError`` if the
-        ``../../../CoolPropBibTeXLibrary.bib`` relative walk misses, which it
-        does in a relocated dev tree. The remaining attributes are page geometry
-        and fit-guess constants used by the report and fitting paths.
+        A *missing* dependency degrades rather than raises: ``bibtexer`` stays
+        ``None`` (citations print as raw keys) and matplotlib styling is
+        skipped. Not exception-free in general -- when the CoolProp package is
+        importable, ``BibTeXerClass`` opens the ``.bib`` eagerly and raises if
+        the relative path misses.
         """
         # Resolving BibTeX references needs the CoolProp Python package; fall
         # back to printing the raw citation keys when it is not installed.
@@ -149,21 +144,14 @@ class SolutionDataWriter(object):
         temperature is fitted only for actual solutions -- it is skipped when
         ``xid`` is ``ifrac_pure`` or ``ifrac_undefined``.
 
-        A property whose fit raises keeps the starting guess it was seeded
-        with, so a populated ``coeffs`` mid-fit is not evidence of a
-        successful fit. This method's own final step is
-        :meth:`clearUnfittedCoefficients`, which resets those to
-        "not defined".
-
-        One gap survives that step, so a cleared ``type`` does not imply
-        cleared ``coeffs``: a property arriving with ``coeffs`` already set but
-        ``type`` never assigned is skipped both here (the fits run only when
-        ``coeffs is None``) and by :meth:`clearUnfittedCoefficients` (which
-        ``continue``s on ``INCOMPRESSIBLE_NOT_SET``), while
-        ``IncompressibleData.toJSON`` serialises ``coeffs`` regardless of
-        ``type``. The result reaches disk as ``type: "notdefined"`` alongside a
-        real-looking coefficient array, which the C++ loader rejects outright
-        for a vital property. ``test_json_sanity.py`` fails on that shape.
+        A fit that raises keeps its starting guess, so a populated ``coeffs``
+        mid-fit is not evidence of success; the final step here is
+        :meth:`clearUnfittedCoefficients`. One gap survives it: a property with
+        ``coeffs`` already set but ``type`` never assigned is skipped by both
+        (fits run only when ``coeffs is None``; the reset ``continue``s on
+        ``INCOMPRESSIBLE_NOT_SET``) yet ``toJSON`` serialises ``coeffs``
+        anyway, so ``type: "notdefined"`` reaches disk beside a real-looking
+        array. ``test_json_sanity.py`` rejects that shape.
         """
 
         if fluidObject.Tbase is None:
@@ -488,12 +476,10 @@ class SolutionDataWriter(object):
         return
 
     def writeFluidList(self, fluidObjs):
-        """Serialize every fluid in ``fluidObjs`` to its ``json/<name>.json`` file.
+        """Serialize every fluid to its ``json/<name>.json``.
 
-        A ``TypeError``/``ValueError`` from one fluid is reported and skipped so
-        one bad fluid does not abandon the rest of the batch. Note the
-        consequence: this returns normally even when some fluids failed to
-        write, so callers must not read a clean return as "all files written".
+        A ``TypeError``/``ValueError`` from one fluid is reported and skipped,
+        so a clean return does NOT mean every file was written.
         """
         print("Writing fluids to JSON:", end="")
         for obj in fluidObjs:
@@ -509,19 +495,13 @@ class SolutionDataWriter(object):
         return
 
     def writeReportList(self, fluidObjs, pdfFile=None):
-        """Render a fit report per fluid, either into one PDF or separate files.
+        """Render a fit report per fluid, into one PDF or separate files.
 
-        Requires matplotlib and raises via :meth:`requireMatplotlib` when it is
-        unavailable. With ``pdfFile`` set, all reports are collected into that
-        single multi-page PDF; otherwise each fluid gets its own
-        :meth:`get_report_file` output. ``self.usetex`` forces the per-fluid
-        path, since LaTeX output cannot be accumulated into one ``PdfPages``.
-
-        The two branches differ in error handling, which matters when a batch
-        partly fails: the single-PDF branch catches ``TypeError``/``ValueError``
-        per fluid and continues, while the per-fluid branch's equivalent
-        try/except is commented out, so there one bad fluid aborts the whole
-        run. Contrast :meth:`writeFluidList`, which always continues.
+        Requires matplotlib. ``pdfFile`` collects every report into one
+        multi-page PDF; otherwise each fluid gets its own
+        :meth:`get_report_file`, which ``self.usetex`` forces. Note the
+        branches differ on failure: the single-PDF path skips a bad fluid and
+        continues, the per-fluid path (try/except commented out) aborts.
         """
         self.requireMatplotlib()
         print("Writing fitting reports:", end="")
@@ -1307,11 +1287,7 @@ class SolutionDataWriter(object):
         return r + u"\n"
 
     def writeTextToFile(self, path, text):
-        """Write ``text`` to ``path``, creating the parent directory if needed.
-
-        Returns ``True``; failures surface as the underlying ``OSError`` rather
-        than a ``False`` return. Needs no matplotlib.
-        """
+        """Write ``text`` to ``path``, creating the parent dir. Raises on failure."""
         #print("Writing to file: {0}".format(path))
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
@@ -1321,12 +1297,7 @@ class SolutionDataWriter(object):
         return True
 
     def writeCsvTableToFile(self, path, table):
-        """Write ``table`` (a sequence of rows) to ``<path>.csv`` as UTF-8 CSV.
-
-        Creates the parent directory if needed and returns ``True``. Needs no
-        matplotlib -- CSV export stays available when only the plot and report
-        paths are unavailable.
-        """
+        """Write ``table`` to ``<path>.csv`` as UTF-8 CSV. Needs no matplotlib."""
         if not os.path.exists(os.path.dirname(path + ".csv")):
             os.makedirs(os.path.dirname(path + ".csv"))
         with codecs.open(path + ".csv", 'w', encoding='utf-8') as f:
@@ -1336,11 +1307,7 @@ class SolutionDataWriter(object):
 
     # Interface
     def writeTableToFile(self, path, table):
-        """Write ``table`` to ``<path>.csv``; alias for :meth:`writeCsvTableToFile`.
-
-        Kept as the format-neutral entry point for callers that should not care
-        which tabular format is emitted. Needs no matplotlib.
-        """
+        """Format-neutral alias for :meth:`writeCsvTableToFile`. Needs no matplotlib."""
         self.writeCsvTableToFile(path, table)
         return True
 
