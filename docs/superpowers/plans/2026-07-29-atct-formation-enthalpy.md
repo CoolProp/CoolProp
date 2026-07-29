@@ -37,8 +37,8 @@
 - `include/CoolProp/CoolPropFluid.h` — `FormationStruct` + member on `CoolPropFluid`.
 - `src/Backends/Helmholtz/Fluids/FluidLibrary.h` — `parse_standard_state()`.
 - `src/Backends/Helmholtz/Fluids/FluidLibrary.cpp:220-228` — call site.
-- `include/CoolProp/DataStructures.h:174-176` — enum entry.
-- `src/DataStructures.cpp:55-61` — parameter registration.
+- `include/CoolProp/DataStructures.h:47` — enum entry, in the `// General parameters` block.
+- `src/DataStructures.cpp:68` — parameter registration, matching the enum order.
 - `include/CoolProp/AbstractState.h:463-474` — virtual.
 - `src/AbstractState.cpp:486-490` — dispatch case.
 - `src/Backends/Helmholtz/HelmholtzEOSMixtureBackend.h:260` and `.cpp:1175` — implementation.
@@ -1044,18 +1044,16 @@ In `src/Backends/Helmholtz/Fluids/FluidLibrary.cpp`, directly after the environm
 
 - [ ] **Step 5: Register the parameter**
 
-In `include/CoolProp/DataStructures.h`, add the new entry **after `iPhase` and immediately before `iundefined_parameter`**:
+In `include/CoolProp/DataStructures.h`, add the new entry to the **`// General parameters`** block, immediately after `idipole_moment` (around line 47). This is a per-fluid constant, so it belongs beside the other per-fluid constants — not in the environmental block and not appended at the end:
 
 ```cpp
-    iODP,                 ///< Ozone depletion potential (R-11 = 1.0)
-    iPhase,               ///< The phase index of the given state
-    iHmolar_formation,    ///< Standard molar enthalpy of formation of the ideal gas at 298.15 K
-    iundefined_parameter  ///< The last parameter, so we can check that all parameters are described in DataStructures.cpp
+    idipole_moment,      ///< Dipole moment
+    iHmolar_formation,   ///< Standard molar enthalpy of formation of the ideal gas at 298.15 K
 ```
 
-Appending here rather than next to `iODP` is deliberate: enum values are surfaced to the wrappers as numeric constants, so inserting mid-enum renumbers every later parameter. Appending last moves only the sentinel.
+Do **not** append it after `iPhase` to avoid renumbering the later entries. Enum values are not part of CoolProp's public contract — callers use the named constants or the `"HFORMATION"` string — so keeping the logical grouping wins over preserving numeric stability.
 
-In `src/DataStructures.cpp`, after the `{iODP, ...}` line (around line 60):
+In `src/DataStructures.cpp`, after the `{idipole_moment, ...}` line (line 68), matching the enum order:
 
 ```cpp
   {iHmolar_formation, "HFORMATION", "O", "J/mol", "Standard molar enthalpy of formation of the ideal gas at 298.15 K", true},
@@ -1124,7 +1122,7 @@ Expected: all sections pass, with the plausibility section reporting `checked > 
 ./build_catch/CatchTestRunner "~[slow]"
 ```
 
-Expected: no new failures. The enum change is the risk here — if anything indexes parameters numerically, it surfaces now.
+Expected: no new failures. Inserting into the middle of the `parameters` enum shifts the numeric value of every entry after `idipole_moment`, which is fine by design — but this full run is what proves nothing in the library indexes parameters by hard-coded number or persists them to disk. If a failure appears here, the bug is the hard-coded value, not the enum placement.
 
 - [ ] **Step 10: Commit**
 
@@ -1139,8 +1137,8 @@ git commit --no-verify -m "feat: expose HFORMATION standard enthalpy of formatio
 
 Ingests INFO.STANDARD_STATE into FormationStruct and exposes it through
 the existing trivial-parameter path.  Throws for fluids with no value and
-for mixtures; never returns 0 or NaN.  The enum entry is appended last so
-only the sentinel renumbers."
+for mixtures; never returns 0 or NaN.  The enum entry sits with the other
+per-fluid constants next to idipole_moment."
 ```
 
 ---
