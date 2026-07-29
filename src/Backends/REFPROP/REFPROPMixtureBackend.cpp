@@ -2518,6 +2518,74 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, par
         CoolPropDbl dxdp_h = (Q() * dhV_dp + (1 - Q()) * dhL_dp) / (SatL->hmass() - SatV->hmass());
         CoolPropDbl dvdp_h = dvL_dp + dxdp_h * (1 / SatV->rhomass() - 1 / SatL->rhomass()) + Q() * (dvV_dp - dvL_dp);
         return -POW2(rhomass()) * dvdp_h;
+    }
+    // Vapor-quality derivatives in the two-phase region (Thorade & Saadat, 2013).
+    // Mirrors HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv; see there for the
+    // derivation and for why these are restricted to pure fluids.  Mixtures are already
+    // rejected for every two-phase derivative at the top of this function.
+    else if (Of == iQ || Of == iQmass) {
+        // Match the (Of, Wrt, Constant) triplet before anything else so an unsupported
+        // triplet keeps reporting ValueError.
+        const bool use_mass = (Of == iQmass);
+        const parameters h_key = use_mass ? iHmass : iHmolar;
+        const bool wrt_h = (Wrt == h_key && Constant == iP);
+        const bool wrt_p = (Wrt == iP && Constant == h_key);
+        if (!wrt_h && !wrt_p) {
+            throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+        }
+        // The mixture gate above does not catch pseudo-pure fluids: a single .PPF file
+        // loads with Ncomp == 1, and REFPROP (unlike HEOS) accepts 0 < Q < 1 for one.  The
+        // lever rule needs h'(p) and h''(p) at a COMMON pressure, which a pseudo-pure does
+        // not provide -- its bubble and dew curves are offset (R407C by ~24% at 250 K).
+        //
+        // Compare the SATTdll bubble and dew pressures, NOT SatL->p() / SatV->p().  The
+        // latter re-evaluate p_EOS(rho, T) on each branch; on the liquid branch that is a
+        // difference of large terms whose round-off is amplified by dp/drho|_T, so it
+        // measures conditioning rather than any physical offset.  Verified against REFPROP
+        // 10: that EOS-re-evaluation signal reaches 7.9e-04 for PURE ethanol at 159 K and
+        // 6.2e-08 for PURE water at 293 K, overlapping pseudo-pure R507A at 230 K
+        // (1.1e-04) -- so no threshold on it can separate the two populations.  The SATT
+        // pressures are instead bit-identical for every pure-fluid state tested (78 fluids x
+        // 202 temperatures from triple point to critical, max relative difference exactly
+        // 0), while reproducing the pseudo-pure offsets exactly, so 1e-10 discriminates
+        // cleanly.  At the states sampled away from Tc that leaves roughly six orders of
+        // margin to the smallest pseudo-pure offset (R507A, 3.9e-04 at 250 K), but the
+        // margin narrows continuously as T -> Tc.
+        //
+        // Known gap: a pseudo-pure's bubble and dew pressures converge as T -> Tc, so this
+        // check stops rejecting one within roughly 1e-9 in reduced temperature of the
+        // critical point (measured: R507A still accepted at 1 - T/Tc = 1e-9).  Exactly at
+        // Tc the DELTAh <= 0 guard below catches it; only that narrow band leaks, about
+        // 3e-7 K wide.
+        CoolPropDbl p_bubble = saturation_pressure_at_T(T(), 0);
+        CoolPropDbl p_dew = saturation_pressure_at_T(T(), 1);
+        if (!ValidNumber(p_bubble) || !ValidNumber(p_dew) || p_bubble <= 0 || std::abs(p_dew - p_bubble) / p_bubble > 1e-10) {
+            throw NotImplementedError("Vapor-quality two-phase derivatives are only implemented for pure fluids; the bubble and dew "
+                                      "pressures differ at this temperature (a pseudo-pure fluid)");
+        }
+        // h'' - h' is the latent heat: strictly positive inside the dome, collapsing to
+        // zero at the critical point where these derivatives diverge.
+        CoolPropDbl DELTAh = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
+        if (!ValidNumber(DELTAh) || DELTAh <= 0) {
+            throw ValueError("Vapor-quality two-phase derivatives are not defined where h'' <= h' (at the critical point)");
+        }
+        CoolPropDbl out;
+        if (wrt_h) {
+            out = 1 / DELTAh;
+        } else {
+            CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(h_key, iP);
+            CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(h_key, iP);
+            CoolPropDbl q = use_mass ? Qmass() : Q();
+            out = -((1 - q) * dhL_dp + q * dhV_dp) / DELTAh;
+        }
+        // Guarding the denominator alone is not enough to keep the promise of a diagnosable
+        // error instead of a silent inf/NaN: a subnormal DELTAh still overflows the
+        // division, and the saturation derivatives carry their own singular denominators
+        // near the critical point.  Validate what actually goes back to the caller.
+        if (!ValidNumber(out)) {
+            throw ValueError("Vapor-quality two-phase derivative is not a finite number (too close to the critical point?)");
+        }
+        return out;
     } else {
         throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
     }

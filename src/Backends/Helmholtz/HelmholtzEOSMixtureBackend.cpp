@@ -4057,6 +4057,59 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of
         CoolPropDbl dxdp_h = (Q() * dhV_dp + (1 - Q()) * dhL_dp) / (SatL->hmass() - SatV->hmass());
         CoolPropDbl dvdp_h = dvL_dp + dxdp_h * (1 / SatV->rhomass() - 1 / SatL->rhomass()) + Q() * (dvV_dp - dvL_dp);
         return -POW2(rhomass()) * dvdp_h;
+    }
+    // Vapor-quality derivatives in the two-phase region (Thorade & Saadat, 2013).
+    // With the lever rule Q = (h - h')/(h'' - h'):
+    //   dQ/dh|p = 1/(h'' - h')
+    //   dQ/dp|h = -[(1 - Q)*dh'/dp|sat + Q*dh''/dp|sat] / (h'' - h')
+    // Molar quality (iQ) pairs with molar enthalpy; mass quality (iQmass) with mass
+    // enthalpy; for a pure fluid Q == Qmass numerically.
+    //
+    // These require h'(p) and h''(p) to be functions of pressure alone, which restricts
+    // them to *pure* fluids:
+    //   - mixtures have quality-dependent phase compositions (temperature glide), so the
+    //     lever rule does not hold;
+    //   - pseudo-pure fluids carry the bubble and dew curves at different pressures for
+    //     the same temperature, so "at constant p" is not well defined across the dome.
+    // (The REFPROP backend rejects *all* two-phase derivatives for mixtures; here only the
+    // quality ones are gated, since the pre-existing density branches predate this rule.)
+    else if (Of == iQ || Of == iQmass) {
+        // Match the (Of, Wrt, Constant) triplet BEFORE testing composition, so that an
+        // unsupported triplet keeps reporting ValueError for every fluid; the purity
+        // restriction applies only to the four triplets that are actually implemented.
+        const bool use_mass = (Of == iQmass);
+        const parameters h_key = use_mass ? iHmass : iHmolar;
+        const bool wrt_h = (Wrt == h_key && Constant == iP);
+        const bool wrt_p = (Wrt == iP && Constant == h_key);
+        if (!wrt_h && !wrt_p) {
+            throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+        }
+        if (!is_pure()) {
+            throw NotImplementedError("Vapor-quality two-phase derivatives are only implemented for pure fluids");
+        }
+        // h'' - h' is the latent heat: strictly positive inside the dome, collapsing to
+        // zero at the critical point where these derivatives diverge.
+        CoolPropDbl DELTAh = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
+        if (!ValidNumber(DELTAh) || DELTAh <= 0) {
+            throw ValueError("Vapor-quality two-phase derivatives are not defined where h'' <= h' (at the critical point)");
+        }
+        CoolPropDbl out;
+        if (wrt_h) {
+            out = 1 / DELTAh;
+        } else {
+            CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(h_key, iP, *SatL, *SatV);
+            CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(h_key, iP, *SatL, *SatV);
+            CoolPropDbl q = use_mass ? Qmass() : Q();
+            out = -((1 - q) * dhL_dp + q * dhV_dp) / DELTAh;
+        }
+        // Guarding the denominator alone is not enough to keep the promise of a diagnosable
+        // error instead of a silent inf/NaN: a subnormal DELTAh still overflows the
+        // division, and the saturation derivatives carry their own singular denominators
+        // near the critical point.  Validate what actually goes back to the caller.
+        if (!ValidNumber(out)) {
+            throw ValueError("Vapor-quality two-phase derivative is not a finite number (too close to the critical point?)");
+        }
+        return out;
     } else {
         throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
     }
