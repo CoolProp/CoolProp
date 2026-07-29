@@ -414,6 +414,26 @@ def main(argv=None) -> int:
     ledger_path = here / "expected_coverage.json"
     actual = coverage_ledger(result)
     if args.update_ledger:
+        # --update-ledger overwrites the pinned coverage, so it is exactly
+        # the invocation someone reaches for on a version bump -- the brief's
+        # own bootstrap command pairs it with --write in one shot.  Diffing
+        # against whatever ledger is about to be overwritten and printing
+        # every difference (informational: this still exits 0 and still
+        # writes) is what gives the two-step review discipline described in
+        # the README something a reviewer can actually check, instead of a
+        # silent overwrite that leaves no trace in the console, the PR diff,
+        # or CI logs if a fluid quietly flips matched -> absent.
+        if ledger_path.exists():
+            changes = compare_ledger(json.loads(ledger_path.read_text(encoding="utf-8")), actual)
+            if changes:
+                print("INFO: --update-ledger is overwriting %d changed entr%s:"
+                      % (len(changes), "y" if len(changes) == 1 else "ies"))
+                for change in changes:
+                    print("INFO:   %s" % change)
+            else:
+                print("INFO: --update-ledger: no changes from the existing ledger")
+        else:
+            print("INFO: no existing ledger at %s; writing %d entries" % (ledger_path, len(actual)))
         ledger_path.write_text(json.dumps(actual, **json_options), encoding="utf-8")
         print("wrote %s" % ledger_path)
     elif ledger_path.exists():

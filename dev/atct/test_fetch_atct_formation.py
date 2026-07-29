@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fetch_atct_formation  # noqa: E402  (module import, for monkeypatching __file__)
 from fetch_atct_formation import (  # noqa: E402
     AmbiguousSpecies,
     AtctParseError,
@@ -315,6 +316,7 @@ def test_bind_collects_ambiguity_as_an_error():
 from fetch_atct_formation import (  # noqa: E402
     compare_ledger,
     coverage_ledger,
+    main,
     standard_state_block,
     write_standard_state,
 )
@@ -386,3 +388,101 @@ def test_coverage_ledger_records_both_states(rows):
     ledger = coverage_ledger(bind(fluids, rows))
     assert ledger["Methane"] == {"state": "matched", "atct_id": "74-82-8*0"}
     assert ledger["R134a"]["state"] == "absent"
+
+
+# --- Fix round 1 (post-merge review) ------------------------------------
+#
+# A reviewer corrupted a committed ledger entry (flipped Methane's state to
+# "absent") and ran --update-ledger: exit 0, the corruption silently
+# overwritten, zero console output about what changed.  --write alone
+# correctly gates on compare_ledger(), but --update-ledger is exactly the
+# brief's own Step 5 bootstrap invocation (paired with --write in one shot)
+# and exactly what a future ATcT version bump will reach for -- so a fluid
+# quietly flipping matched -> absent between versions would leave no trace
+# in the console, the PR diff, or CI logs.  main() now diffs the existing
+# ledger against the freshly computed one BEFORE overwriting it and prints
+# every difference as labeled informational output; it still exits 0 and
+# still writes, since --update-ledger's whole point is to accept the new
+# state, but a human (or CI log) reviewing the run now has something to
+# actually read.
+
+
+def test_update_ledger_reports_changes_against_a_corrupted_ledger(tmp_path, monkeypatch, capsys):
+    """--update-ledger must surface, not silently swallow, what it overwrites.
+
+    main() resolves its ledger path from its own module __file__, not a
+    CLI flag, so isolating it from the real committed
+    dev/atct/expected_coverage.json means monkeypatching __file__ to a
+    scratch location -- Path(...).resolve() does not require the path to
+    exist, so this is a clean way to run main() fully offline against a
+    disposable ledger.
+    """
+    import json as _json
+
+    monkeypatch.setattr(fetch_atct_formation, "__file__", str(tmp_path / "fetch_atct_formation.py"))
+
+    fluids_dir = tmp_path / "fluids"
+    fluids_dir.mkdir()
+    (fluids_dir / "Methane.json").write_text(
+        _json.dumps({"INFO": {"NAME": "Methane", "CAS": "74-82-8"}}), encoding="utf-8"
+    )
+
+    # Pre-existing ledger, corrupted: Methane recorded as absent when the
+    # page (FIXTURE) actually has a clean gas-phase row for it.
+    ledger_path = tmp_path / "expected_coverage.json"
+    ledger_path.write_text(
+        _json.dumps({"Methane": {"state": "absent", "reason": "corrupted by hand"}}),
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            "--version", "1.220",
+            "--cache", str(FIXTURE),
+            "--fluids-dir", str(fluids_dir),
+            "--update-ledger",
+        ]
+    )
+    out = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "INFO:" in out
+    assert "Methane" in out
+    # The old (corrupted) and new (correct) states must both be visible in
+    # the printed diff, not just a bare "something changed".
+    assert "absent" in out
+    assert "matched" in out
+
+    new_ledger = _json.loads(ledger_path.read_text(encoding="utf-8"))
+    assert new_ledger["Methane"]["state"] == "matched"
+
+
+def test_update_ledger_with_no_existing_ledger_says_so(tmp_path, monkeypatch, capsys):
+    """A bootstrap run (no ledger file yet) must say so explicitly, not just
+    silently write one -- otherwise "first ever run" and "corrupted entry
+    silently overwritten" look identical in the console output.
+    """
+    import json as _json
+
+    monkeypatch.setattr(fetch_atct_formation, "__file__", str(tmp_path / "fetch_atct_formation.py"))
+
+    fluids_dir = tmp_path / "fluids"
+    fluids_dir.mkdir()
+    (fluids_dir / "Methane.json").write_text(
+        _json.dumps({"INFO": {"NAME": "Methane", "CAS": "74-82-8"}}), encoding="utf-8"
+    )
+    # No expected_coverage.json written in tmp_path -- genuinely first run.
+
+    exit_code = main(
+        [
+            "--version", "1.220",
+            "--cache", str(FIXTURE),
+            "--fluids-dir", str(fluids_dir),
+            "--update-ledger",
+        ]
+    )
+    out = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "no existing ledger" in out
+    assert (tmp_path / "expected_coverage.json").exists()
