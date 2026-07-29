@@ -807,6 +807,11 @@ jobs:
     # twin: the `incomp-sanity` check in dev/ci/preflight.sh.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    # Least privilege: this job runs PR-authored test code, and needs nothing
+    # beyond reading the tree. Without an explicit block it would inherit the
+    # repository default, which is broader.
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
