@@ -352,27 +352,27 @@ IncompressibleData JSONIncompressibleLibrary::parse_coefficients(const nlohmann:
         if (entry.contains("type")) {
             if (entry.contains("coeffs")) {
                 std::string type = cpjson::get_string(entry, "type");
-                if (!type.compare("polynomial")) {
+                if (type.compare("polynomial") == 0) {
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
                     fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(entry.at("coeffs")));
                     return fluidData;
-                } else if (!type.compare("exponential")) {
+                } else if (type.compare("exponential") == 0) {
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL;
                     fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(entry.at("coeffs")));
                     return fluidData;
-                } else if (!type.compare("logexponential")) {
+                } else if (type.compare("logexponential") == 0) {
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL;
                     fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(entry.at("coeffs")));
                     return fluidData;
-                } else if (!type.compare("exppolynomial")) {
+                } else if (type.compare("exppolynomial") == 0) {
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL;
                     fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(entry.at("coeffs")));
                     return fluidData;
-                } else if (!type.compare("polyoffset")) {
+                } else if (type.compare("polyoffset") == 0) {
                     fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYOFFSET;
                     fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(entry.at("coeffs")));
                     return fluidData;
-                } else if (!type.compare("chebyshev")) {
+                } else if (type.compare("chebyshev") == 0) {
                     // Chebyshev-in-T x monomial-in-(x - xbase) caloric fit; the
                     // fit domain is explicit per entry (it is the data range,
                     // which need not equal the fluid-level Tmin/Tmax exactly).
@@ -531,7 +531,7 @@ void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
     // than smuggled in here. Until then the contract matches the pre-existing
     // HEOS/Cubics add_fluids_as_JSON paths: register fluids during start-up,
     // before other threads query the library.
-    std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(name);
+    auto it = string_to_index_map.find(name);
     if (it != string_to_index_map.end()) {
         // Re-adding an existing name replaces the fluid in place (idempotent
         // re-registration and edit flows); the name vectors must not grow
