@@ -5,12 +5,13 @@ the corpus (the HFE-7100 tables store temperature descending), and the
 loaders now sort every grid by its own axis values instead of trusting file
 order. These tests pin that behavior for every data-backed fluid.
 
-Needs numpy (the loaders do); skips cleanly without it.
+Needs numpy and scipy (the loaders import both); skips cleanly without either.
 """
 
 import pytest
 
 np = pytest.importorskip("numpy")
+pytest.importorskip("scipy")  # SecCoolFluids imports it transitively at module load
 
 from CPIncomp.SecCoolFluids import SecCoolSolutionData
 

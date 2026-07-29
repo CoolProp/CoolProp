@@ -46,7 +46,12 @@ JSON_DIR = os.path.join(os.path.dirname(__file__), "json")
 # or wrong-fit-type regression like #2488/#2447.
 RELATIVE_TOLERANCE = 1e-2
 ABSOLUTE_TOLERANCE_FRACTION = 1e-6  # of the property's own largest coefficient
-PROPERTIES = ["density", "specific_heat", "viscosity", "conductivity"]
+# All six fitted properties, not just the polynomial ones: saturation_pressure
+# and T_freeze are the exponential-family fits (logexponential / exppolynomial)
+# implicated in #2488, so omitting them left the golden master blind to exactly
+# the fit type that motivated it. Properties a fluid does not define are skipped
+# below, so the list can be exhaustive.
+PROPERTIES = ["density", "specific_heat", "viscosity", "conductivity", "saturation_pressure", "T_freeze"]
 
 
 def _load_json_coeffs(name, key):

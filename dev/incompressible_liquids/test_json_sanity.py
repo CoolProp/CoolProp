@@ -22,29 +22,38 @@ JSON_DIR = os.path.join(os.path.dirname(__file__), "json")
 # Optimizer starting guesses from SolutionDataWriter.fitAll / fitCoeffs.
 # If a committed file carries exactly these values, the fit never happened.
 #
-# Read from the fitter itself rather than restated here: a copy that drifted
-# would silently stop recognising a failed fit, which is the whole failure
-# mode (#1331 / #2567) this check exists to prevent. Falls back to the literal
-# values when numpy/CPIncomp are unavailable, so the stdlib-only checks in this
-# module still run.
-try:
-    from CPIncomp.BaseObjects import IncompressibleData
+# The literals are what the stdlib-only path uses -- CI runs this module without
+# numpy, so the fitter cannot be imported there. They are kept as their own
+# constant, NOT folded into KNOWN_GUESSES, so that
+# test_known_guesses_match_the_fitter has two independent things to compare:
+# deriving KNOWN_GUESSES from the fitter and then comparing it back to the
+# fitter is tautological and passes even with a drifted literal.
+_FALLBACK_GUESSES = [
+    [500.0, -60.0, 10.0],  # viscosity, exponential
+    [-5000.0, 60.0, -10.0],  # saturation pressure, exponential
+    [700.0, -60.0, 10.0],  # freezing temperature, exponential
+    [-250.0, 1.5, 10.0],  # log-exponential retry in IncompressibleData.fitCoeffs
+    [700.0, -60.0, 10.0],  # SecCool single-composition exponential viscosity seed
+]
 
-    KNOWN_GUESSES = [
-        list(IncompressibleData.VISCOSITY_GUESS),
-        list(IncompressibleData.PSAT_GUESS),
-        list(IncompressibleData.TFREEZE_GUESS),
-        list(IncompressibleData.LOGEXP_GUESS),
-        list(IncompressibleData.SECCOOL_VISCOSITY_GUESS),
-    ]
-except ImportError:  # pragma: no cover - exercised only without numpy installed
-    KNOWN_GUESSES = [
-        [500.0, -60.0, 10.0],  # viscosity, exponential
-        [-5000.0, 60.0, -10.0],  # saturation pressure, exponential
-        [700.0, -60.0, 10.0],  # freezing temperature, exponential
-        [-250.0, 1.5, 10.0],  # log-exponential retry in IncompressibleData.fitCoeffs
-        [700.0, -60.0, 10.0],  # SecCool single-composition exponential viscosity seed
-    ]
+
+def _fitter_guesses():
+    """Return the fitter's ``*_GUESS`` constants sorted, or None if unimportable.
+
+    Enumerated dynamically rather than named one by one: a guess added to
+    ``IncompressibleData`` without updating ``_FALLBACK_GUESSES`` would
+    otherwise be a silent hole in the placeholder check -- which is the
+    #1331 / #2567 drift this exists to prevent.
+    """
+    try:
+        from CPIncomp.BaseObjects import IncompressibleData
+    except ImportError:  # numpy/CPIncomp absent: the stdlib-only path
+        return None
+    return sorted([float(v) for v in value] for name, value in vars(IncompressibleData).items() if name.endswith("_GUESS"))
+
+
+_FITTER_GUESSES = _fitter_guesses()
+KNOWN_GUESSES = _FITTER_GUESSES if _FITTER_GUESSES is not None else sorted(_FALLBACK_GUESSES)
 PROPERTIES = ["density", "specific_heat", "conductivity", "viscosity", "saturation_pressure", "T_freeze"]
 
 # The three composition-conversion blocks. add_one parses these through the
@@ -272,18 +281,19 @@ def test_all_coefficients_finite():
 
 
 def test_known_guesses_match_the_fitter():
-    # The stdlib fallback above must not drift from the fitter's real starting
-    # guesses: if it did, this module would stop recognising an unfitted
-    # placeholder and quietly pass the very check it exists to enforce.
-    pytest = __import__("pytest")
-    IncompressibleData = pytest.importorskip("CPIncomp.BaseObjects").IncompressibleData
-    canonical = [
-        list(IncompressibleData.VISCOSITY_GUESS),
-        list(IncompressibleData.PSAT_GUESS),
-        list(IncompressibleData.TFREEZE_GUESS),
-        list(IncompressibleData.LOGEXP_GUESS),
-        list(IncompressibleData.SECCOOL_VISCOSITY_GUESS),
-    ]
-    assert KNOWN_GUESSES == canonical, (
-        "KNOWN_GUESSES has drifted from IncompressibleData's starting guesses; "
-        "update the stdlib fallback in this module")
+    """The stdlib fallback literals must match the fitter's real guesses.
+
+    Compares two independent sources -- the literals in this module against the
+    constants enumerated from ``IncompressibleData`` -- so both a drifted
+    literal and a guess added to the fitter but not here will fail. No-ops where
+    the fitter cannot be imported, which is the situation the literals exist for.
+
+    Deliberately uses no pytest: ``dev/ci/preflight.sh`` calls these functions
+    directly when pytest is unavailable, and importing it here made that gate
+    unpassable.
+    """
+    if _FITTER_GUESSES is None:
+        return
+    assert sorted(_FALLBACK_GUESSES) == _FITTER_GUESSES, (
+        "the fallback literals in this module have drifted from IncompressibleData's "
+        "*_GUESS constants: {0} vs {1}".format(sorted(_FALLBACK_GUESSES), _FITTER_GUESSES))

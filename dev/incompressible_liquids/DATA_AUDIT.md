@@ -21,7 +21,7 @@ convention the loader already handles (see the don't-touch list).
 | 2 | Short grids that cannot support a temperature fit above order ~4: `IceNA` csv (4 T points), several `*_TFreeze` tables (4–5 points), `FRE_Tfreeze` (freeze curve, 1 T row). | Any fitter must cap the T-degree at `N_T − 1` and skip properties with < 3 usable points (the Chebyshev fitter does). |
 | 3 | `data/SecCool/xMass/VDI, Methanol_*` grids are ~66% `-1`-sentinel — sparse but valid (data lives in a narrow T×X band). | Nothing to fix; NaN masking handles it. |
 | 4 | Empty `*_Vol2Mass.txt` grids for mass-based fluids. | Expected — mass-based fluids carry no volume→mass table. |
-| 5 | Nine **orphaned** `xTables/xMass/*.csv` files (`Freezium_{Cond,Cp,Mu}`, `Ice{EA,NA,PG}_{Cond,Mu}`) are **latin-1 encoded** (`·` in unit headers) and fail a default UTF-8 read. | Not read by the production pipeline (only the `Hfusion` csvs are loaded; Freezium reads the root `FRE_*.txt`). Anyone reviving them — e.g. to restore the ice-slurry conductivity/viscosity data (see the reproducibility follow-up) — must pass `encoding="latin-1"`. |
+| 5 | **23 of the 32** `xTables/*.csv` files are **latin-1 encoded** (`·` in unit headers) and fail a default UTF-8 read — including the nine orphaned ones (`Freezium_{Cond,Cp,Mu}`, `Ice{EA,NA,PG}_{Cond,Mu}`) plus `AS{10,20,30,40,55}`, `HY{20,30,40,45,50}` and four `ASHRAE`/`CO2_*` tables. | Not read by the production pipeline (only the `Hfusion` csvs are loaded; Freezium reads the root `FRE_*.txt`). Anyone reviving them — e.g. to restore the ice-slurry conductivity/viscosity data (see the reproducibility follow-up) — must pass `encoding="latin-1"`. |
 
 ## Don't-touch list (looks wrong, is right)
 

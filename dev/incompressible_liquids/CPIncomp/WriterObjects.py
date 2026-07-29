@@ -47,8 +47,10 @@ def ensure_parent_directory(path):
     default arguments generateRstTable/generateTexTable use (path="table").
     """
     directory = os.path.dirname(path)
-    if directory and not os.path.exists(directory):
-        os.makedirs(directory)
+    if directory:
+        # exist_ok rather than a prior exists() check: the check-then-create
+        # pair races two concurrent report runs against each other.
+        os.makedirs(directory, exist_ok=True)
 
 
 class SolutionDataWriter(object):
