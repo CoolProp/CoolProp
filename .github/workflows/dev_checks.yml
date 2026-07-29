@@ -751,7 +751,8 @@ jobs:
     name: incompressible JSON sanity
     # Guards the committed dev/incompressible_liquids/json/*.json against the
     # "leaked placeholder" class of bug (issues #1331, #2567): unfitted
-    # optimizer guesses, all-zero templates, non-numeric coefficients, and
+    # optimizer guesses, all-zero templates, non-numeric or non-finite
+    # coefficients, and
     # blocks the C++ loader would throw on at load time (which truncates the
     # whole fluid list). The test predates this job, but nothing ran it -- CI's
     # only other pytest invocation is `pytest wrappers/Python/pytest`.

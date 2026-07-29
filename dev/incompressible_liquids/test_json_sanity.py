@@ -34,7 +34,8 @@ PROPERTIES = ["density", "specific_heat", "conductivity", "viscosity", "saturati
 # applies to them identically. Their coefficient VALUES are not checked: 24
 # blocks already ship as an all-zero "polynomial", which the value tests would
 # reject, and clearing that data is a separate change. It is inert today --
-# inputFromMass/inputFromVolume throw NotImplementedError.
+# inputFromMass/inputFromVolume throw NotImplementedError wherever a conversion
+# is actually needed (the cross-basis case, which is every one of the 24).
 CONVERSIONS = ["mass2input", "volume2input", "mole2input"]
 
 # Parsed by add_one with vital=true: for these, an unrecognised "type"
@@ -45,7 +46,10 @@ VITAL_PROPERTIES = ("density", "specific_heat")
 
 # Types parse_coefficients dispatches on, and the coeffs rank each is parsed
 # with (get_double_array2D vs get_double_array). Anything else means "no usable
-# fit": tolerated for a non-vital property, fatal for a vital one.
+# fit": tolerated for a non-vital property, fatal for a vital one. Note the rank
+# parsers throw *unconditionally*, not gated on vital, so a recognised type with
+# malformed coeffs is loader-fatal for any property -- which is why the
+# structural checks below run regardless of VITAL_PROPERTIES.
 RECOGNISED_TYPES = ("polynomial", "exponential", "logexponential", "exppolynomial", "polyoffset")
 
 TYPE_NDIM = {

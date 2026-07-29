@@ -151,7 +151,10 @@ class SolutionDataWriter(object):
         (fits run only when ``coeffs is None``; the reset ``continue``s on
         ``INCOMPRESSIBLE_NOT_SET``) yet ``toJSON`` serialises ``coeffs``
         anyway, so ``type: "notdefined"`` reaches disk beside a real-looking
-        array. ``test_json_sanity.py`` rejects that shape.
+        array. ``test_json_sanity.py`` rejects that shape for the two vital
+        properties (``density``, ``specific_heat``), which the C++ loader
+        refuses outright; on the others it is caught only if the coefficients
+        also look like a placeholder.
         """
 
         if fluidObject.Tbase is None:
@@ -499,7 +502,8 @@ class SolutionDataWriter(object):
 
         Requires matplotlib. ``pdfFile`` collects every report into one
         multi-page PDF; otherwise each fluid gets its own
-        :meth:`get_report_file`, which ``self.usetex`` forces. Note the
+        :meth:`get_report_file`. ``self.usetex`` forces that per-fluid path,
+        since LaTeX output cannot be accumulated into one ``PdfPages``. Note the
         branches differ on failure: the single-PDF path skips a bad fluid and
         continues, the per-fluid path (try/except commented out) aborts.
         """

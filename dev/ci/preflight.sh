@@ -481,9 +481,9 @@ fi
 # ---------- check 8: incompressible JSON sanity -----------------------
 #
 # test_json_sanity.py guards the committed json/*.json against unfitted
-# placeholders, all-zero templates, non-numeric values and blocks the C++
-# loader would reject.  Nothing ran it before this check.  Scoped to runs
-# touching the incompressible data or its writer.
+# placeholders, all-zero templates, non-numeric or non-finite values, and
+# blocks the C++ loader would reject.  Nothing ran it before this check.
+# Scoped to runs touching the incompressible data or its writer.
 step "incompressible JSON sanity"
 if skip_check incomp-sanity; then
     skip "incomp-sanity" "--skip=incomp-sanity"
