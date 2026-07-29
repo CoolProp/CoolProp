@@ -167,6 +167,17 @@ jobs:
           fi
           echo "macOS signing: APPLE_* env forwarded to subsequent steps."
 
+      # build.rs configures CoolProp via cmake/dependencies.cmake (CPM), which
+      # fetches Eigen/msgpack-c/nlohmann_json/valijson/etc. from network with
+      # no cache of its own. rust-cache above covers target/, not this path.
+      - name: Cache CPM packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
       # Builds the frontend (Vite), compiles CoolProp via build.rs (CMake),
       # links the Rust crate, and produces native bundles under
       # wrappers/GUI/src-tauri/target/release/bundle/. tauri-action picks up

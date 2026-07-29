@@ -30,6 +30,14 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
+    - name: Cache CPM packages
+      uses: actions/cache@v6
+      with:
+        path: ${{ github.workspace }}/.cpm_cache
+        key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+        restore-keys: |
+          cpm-${{ runner.os }}-
+
     - name: Configure CMake
       shell: bash
       run: |

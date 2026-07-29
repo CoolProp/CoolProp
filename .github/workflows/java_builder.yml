@@ -55,6 +55,14 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install swig -y --no-progress
 
+      - name: Cache CPM packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
       - name: Configure
         shell: bash
         run: cmake -B build -S . -DCOOLPROP_JAVA_MODULE=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCOOLPROP_SWIG_OPTIONS="-package org.coolprop"
