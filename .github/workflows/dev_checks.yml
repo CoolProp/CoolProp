@@ -784,7 +784,7 @@ jobs:
       # assertion-rewrite change in a fresh pytest release turn it red on
       # unrelated PRs.
       - name: Run incompressible JSON sanity checks
-        run: uvx pytest@9.1.1 dev/incompressible_liquids/test_json_sanity.py -q
+        run: uvx pytest@9.1.1 dev/incompressible_liquids/test_json_sanity.py -q --color=no
 
   installed-header-gate:
     name: Installed-header hygiene gate

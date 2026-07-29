@@ -392,13 +392,19 @@ else
         if grep -q "^warning:.*skipping" /tmp/preflight-clang-tidy.log; then
             skip "clang-tidy" "$(grep -m1 '^warning:' /tmp/preflight-clang-tidy.log | sed 's/^warning: //')"
         else
-            RAW="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null | head -1 || echo 0)"
+            # `|| echo 0` would APPEND a second line: grep -c already prints 0
+            # before exiting 1, so the result became "0\n0" and the numeric
+            # comparison below failed with "integer expression expected" on
+            # every clean run.  `|| true` keeps grep's own 0.
+            RAW="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null | head -1 || true)"
+            [ -n "$RAW" ] || RAW=0
             # Each finding line ends with `[<check-name>,-warnings-as-errors]`
             # or `[<check-name>]`.  Match the bracketed check name and
             # exclude any line whose name is in NOISE_PATTERN.
             SIGNAL_LINES="$(grep -E 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null \
                 | grep -vE "\\[($NOISE_PATTERN)(,|\\])" || true)"
-            SIGNAL_COUNT="$(printf '%s\n' "$SIGNAL_LINES" | grep -c . || echo 0)"
+            SIGNAL_COUNT="$(printf '%s\n' "$SIGNAL_LINES" | grep -c . || true)"
+            [ -n "$SIGNAL_COUNT" ] || SIGNAL_COUNT=0
             if [ "$SIGNAL_COUNT" -gt 0 ]; then
                 printf '\n--- signal findings (noise-filtered, see #2926) ---\n'
                 printf '%s\n' "$SIGNAL_LINES" | head -30
@@ -464,7 +470,9 @@ else
         echo "no uvx or python3 on PATH" >"$SCHEMA_LOG"
     fi
     if [ "$SCHEMA_RC" -eq 0 ]; then
-        ok "schema-validate ($(grep -c '^OK' "$SCHEMA_LOG" 2>/dev/null || echo 0) data file(s) validated)"
+        SCHEMA_N="$(grep -c '^OK' "$SCHEMA_LOG" 2>/dev/null || true)"
+        [ -n "$SCHEMA_N" ] || SCHEMA_N=0
+        ok "schema-validate ($SCHEMA_N data file(s) validated)"
     else
         tail -30 "$SCHEMA_LOG"
         fail "schema-validate (see $SCHEMA_LOG)"
@@ -493,7 +501,12 @@ else
         INCOMP_RC=127
         echo "no python3 on PATH" >"$INCOMP_LOG"
     elif python3 -c 'import pytest' >/dev/null 2>&1; then
-        python3 -m pytest dev/incompressible_liquids/test_json_sanity.py -q >"$INCOMP_LOG" 2>&1 || INCOMP_RC=$?
+        # --color=no is load-bearing, not cosmetic: pytest emits ANSI even when
+        # redirected if PY_COLORS/FORCE_COLOR is set, which puts an escape
+        # sequence in front of the summary line and makes the count grep below
+        # score 0 -- turning a fully passing run into a blocked push blamed on
+        # "all tests skipped".
+        python3 -m pytest dev/incompressible_liquids/test_json_sanity.py -q --color=no >"$INCOMP_LOG" 2>&1 || INCOMP_RC=$?
     else
         # pytest is not a hard requirement here: the checks are plain asserts
         # over committed JSON, so call them directly rather than skipping the
