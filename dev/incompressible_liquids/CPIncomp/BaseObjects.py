@@ -1,7 +1,5 @@
-from __future__ import division, print_function
 import numpy as np
-from scipy.optimize._minimize import minimize
-from scipy.optimize.minpack import curve_fit
+from scipy.optimize import minimize, curve_fit
 import sys
 
 # Here we define the types. This is done to keep the definitions at one
@@ -26,6 +24,25 @@ class IncompressibleData(object):
     SOURCE_EQUATION = 'equation'
     SOURCE_COEFFS = 'coefficients'
     SOURCE_NOT_SET = 'notdefined'
+
+    # Optimizer starting guesses for the iterative (exponential-type) fits.
+    #
+    # These are the single source of truth. They are compared against committed
+    # coefficients to detect a fit that silently failed and left its starting
+    # guess behind (SolutionDataWriter.clearUnfittedCoefficients, and the
+    # test_json_sanity guard) -- so a literal duplicated anywhere else would,
+    # once it drifted, stop recognising a failed fit and let the placeholder
+    # ship again. That is exactly the #1331 / #2567 bug class.
+    VISCOSITY_GUESS = np.array([+5e+2, -6e+1, +1e+1])
+    PSAT_GUESS = np.array([-5e+3, +6e+1, -1e+1])
+    TFREEZE_GUESS = np.array([+7e+2, -6e+1, +1e+1])
+    LOGEXP_GUESS = np.array([-250.0, 1.5, 10.0])
+    # SecCoolSolutionData.fitFluid seeds its single-composition exponential
+    # viscosity fit with this triple. It happens to equal TFREEZE_GUESS, which
+    # is why clearUnfittedCoefficients already caught it -- but relying on that
+    # coincidence is exactly the drift this block exists to prevent, so name it
+    # separately and register it alongside the others.
+    SECCOOL_VISCOSITY_GUESS = np.array([+7e+2, -6e+1, +1e+1])
 
     maxLin = np.finfo(np.float64).max - 1
     minLin = -maxLin
@@ -111,9 +128,6 @@ class IncompressibleData(object):
         if x is None and not self.xData is None: x = self.xData
         if y is None and not self.yData is None: y = self.yData
 
-        #res = None
-        #r2 = None
-
         res, sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
                   xbase=xbase, ybase=ybase, \
                   eqnType=self.type, \
@@ -130,7 +144,7 @@ class IncompressibleData(object):
             if self.type == IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL:
                 if self.DEBUG: print("Poor solution found with exponential, trying once more with log exponential.")
                 self.type = IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL
-                self.coeffs = np.array([-250, 1.5, 10])
+                self.coeffs = np.copy(IncompressibleData.LOGEXP_GUESS)
                 res, sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
                       xbase=xbase, ybase=ybase, \
                       eqnType=self.type, \
@@ -152,14 +166,6 @@ class IncompressibleData(object):
                           eqnType=self.type, \
                           coeffs=self.coeffs, DEBUG=self.DEBUG)
 
-#            elif self.type==IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL:
-#                if self.DEBUG: print("Poor solution found with exponential polynomial, trying once more with normal polynomial.")
-#                self.type=IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
-#                self.coeffs = np.zeros((4,6))
-#                res,sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
-#                      xbase=xbase, ybase=ybase, \
-#                      eqnType=self.type, \
-#                      coeffs=self.coeffs, DEBUG=self.DEBUG)
 
             RMS = np.sqrt(np.square(sErr).mean()).sum()
             if RMS < bestRMS:  # Better fit
@@ -189,9 +195,6 @@ class IncompressibleData(object):
                 raise ValueError("Unknown function.")
 
             #if self.DEBUG: print("Fitting statistics:")
-            # SSE = np.square(self.sErr).sum() # Sum of squares due to error
-            #SST = ((zData-zData.mean())**2).sum()
-            #R2  = 1-(ssErr/ssTot )
 
     def setxData(self, xData):
         if self.xData is None:
@@ -239,6 +242,22 @@ class IncompressibleData(object):
 
 
 class IncompressibleFitter(object):
+
+    @staticmethod
+    def sortGridAxes(grid):
+        """Order a data grid by its own axis values, in place.
+
+        A grid holds concentration along its first row and temperature down
+        its first column. Some source tables ship with a descending axis (the
+        HFE-7100 files store T from +64 down to -80 degC), so the file order
+        cannot be trusted; a stable sort also handles files that are shuffled
+        rather than exactly reversed. test_data_sanity.py pins this ordering
+        contract, so keep it defined once here rather than pasted into each
+        loader.
+        """
+        grid[1:, :] = grid[1:, :][np.argsort(grid[1:, 0], kind="stable"), :]
+        grid[:, 1:] = grid[:, 1:][:, np.argsort(grid[0, 1:], kind="stable")]
+        return grid
 
     @staticmethod
     def allClose(a, b):
@@ -390,15 +409,6 @@ class IncompressibleFitter(object):
             raise ValueError("Unknown function.")
 
 
-#    def getCoeffs1d(self, x, z, order):
-#        if (len(x)<order+1):
-#            raise ValueError("You have only {0} elements and try to fit {1} coefficients, please reduce the order.".format(len(x),order+1))
-#        A = np.vander(x,order+1)[:,::-1]
-#        #Anew = np.dot(A.T,A)
-#        #znew = np.dot(A.T,z)
-#        #coeffs = np.linalg.solve(Anew, znew)
-#        coeffs, resids, rank, singulars  = np.linalg.lstsq(A, z)
-#        return np.reshape(coeffs, (len(x),1))
 
     @staticmethod
     def getCoeffs2d(x_in, y_in, z_in, x_order, y_order, DEBUG=False):

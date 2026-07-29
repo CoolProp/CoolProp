@@ -480,10 +480,13 @@ fi
 
 # ---------- check 8: incompressible JSON sanity -----------------------
 #
-# test_json_sanity.py guards the committed json/*.json against unfitted
-# placeholders, all-zero templates, non-numeric or non-finite values, and
-# blocks the C++ loader would reject.  Nothing ran it before this check.
-# Scoped to runs touching the incompressible data or its writer.
+# Guards the committed json/*.json against unfitted placeholders, all-zero
+# templates, non-numeric or non-finite values, and blocks the C++ loader would
+# reject; also the grid-axis ordering contract and the golden-master refit.
+# Nothing ran any of it before this check.  Scoped to runs touching the
+# incompressible data or its writer.  The pytest path runs the whole directory;
+# the fallback below runs only test_json_sanity.py, the one module that needs
+# neither numpy nor scipy.
 step "incompressible JSON sanity"
 if skip_check incomp-sanity; then
     skip "incomp-sanity" "--skip=incomp-sanity"
@@ -499,7 +502,7 @@ else
         # --color=no is load-bearing: with PY_COLORS/FORCE_COLOR set pytest
         # emits ANSI even when redirected, so the count grep below scores 0 and
         # a passing run is reported as "verified nothing".
-        python3 -m pytest dev/incompressible_liquids/test_json_sanity.py -q --color=no >"$INCOMP_LOG" 2>&1 || INCOMP_RC=$?
+        python3 -m pytest dev/incompressible_liquids/ -q --color=no >"$INCOMP_LOG" 2>&1 || INCOMP_RC=$?
     else
         # pytest is not required: the checks are plain asserts, so call them
         # directly rather than skip the gate.  Exiting non-zero on an empty or

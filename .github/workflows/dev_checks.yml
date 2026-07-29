@@ -807,6 +807,11 @@ jobs:
     # twin: the `incomp-sanity` check in dev/ci/preflight.sh.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    # Least privilege: this job runs PR-authored test code, and needs nothing
+    # beyond reading the tree. Without an explicit block it would inherit the
+    # repository default, which is broader.
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -822,7 +827,12 @@ jobs:
       # uvx pyright@1.1.409): unpinned, a fresh pytest release could turn this
       # required check red on unrelated PRs.
       - name: Run incompressible JSON sanity checks
-        run: uvx pytest@9.1.1 dev/incompressible_liquids/test_json_sanity.py -q --color=no
+        # The whole directory, with numpy+scipy: test_data_sanity (grid axis
+        # ordering) and test_fitting_regression (golden-master refit) are the two
+        # safeguards this area relies on, and both importorskip away without
+        # them -- so naming only test_json_sanity.py meant they never ran here.
+        # `uvx --with` matches the pyright job above.
+        run: uvx --with numpy --with scipy pytest@9.1.1 dev/incompressible_liquids/ -q --color=no
 
   installed-header-gate:
     name: Installed-header hygiene gate
