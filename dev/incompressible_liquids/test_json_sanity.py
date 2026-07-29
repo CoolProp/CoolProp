@@ -19,8 +19,11 @@ switch is commented out behind a NotImplementedError), so cleaning it up is a
 separate data change; the loader-contract check below does apply to those
 blocks. See the CONVERSIONS comment for detail.
 
-Unlike test_fitting_regression.py this needs no third-party packages at all;
-it only reads the committed JSON files.
+Unlike test_fitting_regression.py this needs no third-party packages at all.
+It reads the committed JSON files and, in one test, the loader source itself
+(src/Backends/Incompressible/IncompressibleLibrary.cpp) to cross-check the fit
+types this module duplicates -- so it expects to run from a full checkout, not
+a packaged copy. It is not shipped in the sdist.
 """
 
 import glob
@@ -47,9 +50,10 @@ PROPERTIES = ["density", "specific_heat", "conductivity", "viscosity", "saturati
 #
 # Their coefficient VALUES are deliberately NOT checked by the
 # placeholder/all-zero tests, and not because they are hand-written constants
-# -- they are fit output like everything else (SecCoolSolutionData fits
-# mass2input/volume2input with the same all-zero template and swallows the
-# failure), and clearUnfittedCoefficients does not cover them, so 24 blocks
+# -- mass2input and volume2input are fit output like the properties are
+# (SecCoolSolutionData fits them with the same all-zero template and swallows
+# the failure; mole2input is fit by no code path and is "notdefined" in all 127
+# files), and clearUnfittedCoefficients does not cover them, so 24 blocks
 # currently ship as type "polynomial" with an all-zero 4x6 matrix and
 # NRMS null: exactly the leaked-template shape this module exists to reject.
 # Extending the value checks here would fail on that pre-existing data, which
@@ -121,14 +125,35 @@ def _assert_loader_contract(name, prop, entry):
         return
     # Recognised type => coeffs really is parsed, at a rank fixed by the type.
     coeffs = entry["coeffs"]
-    assert isinstance(coeffs, list) and coeffs, \
-        "{0}: {1} claims fitted type {2!r} but coeffs is {3!r}; the loader needs a non-empty array".format(
+    assert isinstance(coeffs, list), \
+        "{0}: {1} claims fitted type {2!r} but coeffs is {3!r}; the loader needs an array".format(
             name, prop, entry["type"], coeffs)
-    is_nested = isinstance(coeffs[0], list)
-    assert is_nested == (ndim == 2), \
-        "{0}: {1} type {2!r} is parsed as {3}-D but coeffs is {4}-D; the loader throws".format(
-            name, prop, entry["type"], ndim, 2 if is_nested else 1)
-    for value in _flatten(coeffs):
+    # Not loader-fatal (get_double_array2D returns a 0x0 / 1x0 matrix and
+    # validate() is a no-op) but a fit with no coefficients is meaningless data,
+    # so reject it here rather than let it reach a caller as a silent zero.
+    assert coeffs, "{0}: {1} claims fitted type {2!r} with an empty coeffs array".format(
+        name, prop, entry["type"])
+    # Check the structure BEFORE flattening. _flatten erases exactly the nesting
+    # the loader cares about, so validating scalars against a flattened copy
+    # accepts ragged and over-nested arrays that get_double_array{,2D} reject --
+    # and, worse, accepts non-rectangular 2-D arrays that it does NOT reject:
+    # num_cols() falls back to max_cols() for a non-squared input, so
+    # vec_to_eigen indexes coefficients[j][i] past the end of every short row
+    # through unchecked operator[]. That is an out-of-bounds read producing a
+    # fabricated coefficient, not a clean throw.
+    if ndim == 2:
+        for index, row in enumerate(coeffs):
+            assert isinstance(row, list), \
+                "{0}: {1} type {2!r} is parsed as 2-D but row {3} is {4!r}; get_double_array2D throws".format(
+                    name, prop, entry["type"], index, row)
+        widths = {len(row) for row in coeffs}
+        assert len(widths) == 1, \
+            "{0}: {1} has non-rectangular coeffs (row widths {2}); vec_to_eigen reads out of bounds".format(
+                name, prop, sorted(widths))
+        scalars = [value for row in coeffs for value in row]
+    else:
+        scalars = coeffs
+    for value in scalars:
         assert isinstance(value, (int, float)) and not isinstance(value, bool), \
             "{0}: {1} has non-numeric coefficient {2!r}; the loader throws".format(name, prop, value)
 
@@ -212,6 +237,22 @@ def test_recognised_types_match_the_loader():
             sorted(found), sorted(RECOGNISED_TYPES))
     assert set(TYPE_NDIM) == set(RECOGNISED_TYPES), \
         "TYPE_NDIM covers {0} but RECOGNISED_TYPES has {1}".format(sorted(TYPE_NDIM), sorted(RECOGNISED_TYPES))
+    # Cross-check the RANKS too, not just the key set. The ranks are the only
+    # information TYPE_NDIM adds, and they are what the structural check above
+    # enforces -- so if the loader switched a branch between
+    # get_double_array2D and get_double_array while TYPE_NDIM kept the old
+    # value, every block of that type would be rejected (or worse, wrongly
+    # accepted) and this test would still pass on the key set alone.
+    ranks = {}
+    for match in re.finditer(r'type\.compare\("([^"]+)"\)(.*?)(?=type\.compare\(|\Z)', body, re.S):
+        branch_type, branch_body = match.group(1), match.group(2)
+        if "get_double_array2D(" in branch_body:
+            ranks[branch_type] = 2
+        elif "get_double_array(" in branch_body:
+            ranks[branch_type] = 1
+    assert ranks == TYPE_NDIM, \
+        "loader parses {0} but TYPE_NDIM says {1}; update TYPE_NDIM".format(
+            sorted(ranks.items()), sorted(TYPE_NDIM.items()))
 
 
 def test_loader_contract_satisfied():
@@ -243,13 +284,24 @@ def test_loader_contract_satisfied():
             if conv in fluid:
                 _assert_loader_contract(name, conv, fluid[conv])
                 checked_convs += 1
-    # Guard against the loop above going vacuous through a renamed key. Counted
-    # in two halves on purpose: the properties are mandatory so their count is
-    # exact, while conversion blocks are optional, so folding them into one
-    # total would demand all three in every file and REJECT LEGAL DATA.
-    assert checked_props == len(PROPERTIES) * len(files), \
-        "checked {0} property blocks, expected {1}".format(checked_props, len(PROPERTIES) * len(files))
-    assert checked_convs > 0, "no conversion blocks checked across {0} files".format(len(files))
+    # Guard against the loop above going vacuous. Comparing the counts against
+    # len(PROPERTIES)*len(files) would be TAUTOLOGICAL -- the loop increments
+    # once per name it iterates, so the equality holds for any list, including
+    # an empty one, and the whole suite would report green while checking
+    # nothing. Pin the key sets themselves instead: that is what a serializer
+    # rename or an accidentally-narrowed list actually changes.
+    assert set(PROPERTIES) == {"density", "specific_heat", "conductivity", "viscosity",
+                               "saturation_pressure", "T_freeze"}, \
+        "PROPERTIES no longer lists the six fitted properties: {0}".format(sorted(PROPERTIES))
+    assert set(CONVERSIONS) == {"mass2input", "volume2input", "mole2input"}, \
+        "CONVERSIONS no longer lists the three conversion blocks: {0}".format(sorted(CONVERSIONS))
+    # Conversion blocks are optional per file (parse_coefficients throws on an
+    # absent block only when vital, and none of the three is), so this must not
+    # demand three per file -- an earlier revision did and rejected legal data.
+    # A per-file floor still catches wholesale loss, e.g. a renamed key.
+    assert checked_convs >= len(files), \
+        "only {0} conversion blocks across {1} files; a key rename would look like this".format(
+            checked_convs, len(files))
 
 
 def test_no_placeholder_guesses_shipped():

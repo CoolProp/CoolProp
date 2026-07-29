@@ -393,9 +393,11 @@ else
             skip "clang-tidy" "$(grep -m1 '^warning:' /tmp/preflight-clang-tidy.log | sed 's/^warning: //')"
         else
             # `|| echo 0` would APPEND a second line: grep -c already prints 0
-            # before exiting 1, so the result became "0\n0" and the numeric
-            # comparison below failed with "integer expression expected" on
-            # every clean run.  `|| true` keeps grep's own 0.
+            # before exiting 1, so the result became "0\n0".  Here that only
+            # corrupted the reported count in the message; the same construct
+            # on SIGNAL_COUNT below fed a numeric comparison and printed
+            # "integer expression expected" on every clean run.  `|| true`
+            # keeps grep's own 0.
             RAW="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null | head -1 || true)"
             [ -n "$RAW" ] || RAW=0
             # Each finding line ends with `[<check-name>,-warnings-as-errors]`
