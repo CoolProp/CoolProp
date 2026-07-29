@@ -12,6 +12,15 @@ from fetch_atct_formation import (  # noqa: E402
     parse_atct_rows,
     select_gas_row,
 )
+from fetch_atct_formation import (  # noqa: E402
+    BindResult,
+    FluidRef,
+    bind,
+    load_coolprop_fluids,
+    normalize_cas,
+)
+
+FLUIDS_DIR = Path(__file__).resolve().parents[2] / "dev" / "fluids"
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "atct_rows_sample.html"
 
@@ -205,3 +214,57 @@ def test_select_gas_row_rejects_mixed_cas():
     ]
     with pytest.raises(AtctParseError):
         select_gas_row(mixed)
+
+
+# --- Task 2: CoolProp <-> ATcT binder -----------------------------------
+
+
+def test_normalize_cas_passes_plain_cas_through():
+    assert normalize_cas("74-82-8") == ("74-82-8", None)
+
+
+def test_normalize_cas_splits_spin_isomer_suffixes():
+    """CoolProp writes ParaHydrogen's CAS as '1333-74-0p'."""
+    assert normalize_cas("1333-74-0p") == ("1333-74-0", "para")
+    assert normalize_cas("1333-74-0o") == ("1333-74-0", "ortho")
+
+
+def test_load_coolprop_fluids_reads_the_real_tree():
+    fluids = load_coolprop_fluids(FLUIDS_DIR)
+    assert fluids["Methane"].cas == "74-82-8"
+    assert fluids["ParaHydrogen"].cas == "1333-74-0p"
+    assert len(fluids) > 100
+
+
+def test_bind_matches_and_reports_absent(rows):
+    fluids = {
+        "Methane": FluidRef("Methane", "74-82-8", Path("Methane.json")),
+        "ParaHydrogen": FluidRef("ParaHydrogen", "1333-74-0p", Path("ParaHydrogen.json")),
+        "R134a": FluidRef("R134a", "811-97-2", Path("R134a.json")),
+    }
+    result = bind(fluids, rows)
+    assert result.errors == []
+    assert result.matched["Methane"].atct_id == "74-82-8*0"
+    # ATcT publishes a real spin-resolved value; it is NOT zero.
+    assert result.matched["ParaHydrogen"].dhf298_kJ_per_mol == pytest.approx(-0.058)
+    assert "R134a" in result.absent
+    assert "811-97-2" in result.absent["R134a"]
+
+
+def test_bind_records_a_fluid_with_no_cas_as_absent(rows):
+    fluids = {"Air": FluidRef("Air", "", Path("Air.json"))}
+    result = bind(fluids, rows)
+    assert "Air" in result.absent
+    assert result.errors == []
+
+
+def test_bind_collects_ambiguity_as_an_error():
+    fluids = {"Fake": FluidRef("Fake", "111-11-1", Path("Fake.json"))}
+    duplicated = [
+        AtctRow("111-11-1", "Fake", "XX", "(g)", 1.0, 0.1, "111-11-1*0"),
+        AtctRow("111-11-1", "Fake", "XX", "(g)", 2.0, 0.1, "111-11-1*1"),
+    ]
+    result = bind(fluids, duplicated)
+    assert result.matched == {}
+    assert len(result.errors) == 1
+    assert "Fake" in result.errors[0]

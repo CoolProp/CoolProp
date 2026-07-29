@@ -13,8 +13,11 @@ dev/fluids/*.json.  See docs/superpowers/specs/2026-07-29-atct-formation-enthalp
 from __future__ import annotations
 
 import html as html_module
+import json
 import re
+from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 
 INDEX_URL_TEMPLATE = (
     "https://atct.anl.gov/Thermochemical%20Data/version%20{version}/index.php"
@@ -173,3 +176,79 @@ def select_gas_row(rows: list[AtctRow], qualifier: str | None = None) -> AtctRow
             % (len(qualified), ", ".join(r.phase for r in qualified))
         )
     return qualified[0] if qualified else None
+
+
+_CAS_SPIN_RE = re.compile(r"^(?P<cas>\d{2,7}-\d{2}-\d)(?P<spin>[op])$")
+_SPIN_NAME = {"p": "para", "o": "ortho"}
+
+
+@dataclass(frozen=True)
+class FluidRef:
+    name: str
+    cas: str
+    path: Path
+
+
+@dataclass
+class BindResult:
+    matched: dict
+    absent: dict
+    errors: list
+
+
+def normalize_cas(cas: str) -> tuple[str, str | None]:
+    """Split CoolProp's spin-isomer CAS suffix off the real CAS number.
+
+    CoolProp identifies ParaHydrogen as '1333-74-0p' and OrthoHydrogen as
+    '1333-74-0o'.  ATcT carries these as phase-qualified rows on the parent
+    CAS, so the suffix becomes the phase qualifier.
+    """
+    match = _CAS_SPIN_RE.match(cas or "")
+    if match is None:
+        return cas, None
+    return match.group("cas"), _SPIN_NAME[match.group("spin")]
+
+
+def load_coolprop_fluids(fluids_dir) -> dict:
+    """Read every dev/fluids/*.json and index it by INFO.NAME."""
+    fluids = {}
+    for path in sorted(Path(fluids_dir).glob("*.json")):
+        info = json.loads(path.read_text(encoding="utf-8"))["INFO"]
+        fluids[info["NAME"]] = FluidRef(name=info["NAME"], cas=info.get("CAS", ""), path=path)
+    if not fluids:
+        raise AtctParseError("no fluid files found in %s" % fluids_dir)
+    return fluids
+
+
+def bind(fluids: dict, rows: list) -> BindResult:
+    """Bind each CoolProp fluid to at most one ATcT gas-phase row.
+
+    Ambiguity is an error, never a silent choice.  A fluid with no matching
+    species is recorded in `absent` with the reason, which the coverage ledger
+    then pins so a future ATcT version cannot quietly drop it.
+    """
+    by_cas = defaultdict(list)
+    for row in rows:
+        by_cas[row.cas].append(row)
+
+    matched, absent, errors = {}, {}, []
+    for name, fluid in sorted(fluids.items()):
+        cas, qualifier = normalize_cas(fluid.cas)
+        if not cas:
+            absent[name] = "fluid has no CAS number"
+            continue
+        candidates = by_cas.get(cas, [])
+        if not candidates:
+            absent[name] = "no ATcT species for CAS %s" % cas
+            continue
+        try:
+            row = select_gas_row(candidates, qualifier)
+        except AmbiguousSpecies as exc:
+            errors.append("%s (CAS %s): %s" % (name, cas, exc))
+            continue
+        if row is None:
+            detail = " with qualifier %s" % qualifier if qualifier else ""
+            absent[name] = "no gas-phase ATcT row for CAS %s%s" % (cas, detail)
+            continue
+        matched[name] = row
+    return BindResult(matched=matched, absent=absent, errors=errors)
