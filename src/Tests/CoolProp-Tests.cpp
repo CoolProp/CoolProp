@@ -5695,6 +5695,30 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         CHECK(occurrences == 1);
         CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) - 900.0) < 1e-9);
 
+        // Re-registering the same name with the opposite pure/solution
+        // classification must be rejected: the name is already in one of the
+        // two name vectors, and replacing in place would leave it in the wrong
+        // one.  A two-column density makes is_pure() false.  The message is
+        // asserted, not just the throw, because this definition also passes
+        // through validate() -- a bare CHECK_THROWS would pass on any
+        // unrelated validation error and so would not cover the guard.
+        const std::string flipped = R"([{
+            "name": "IncompTestFluid", "description": "runtime-added test fluid, as a solution", "reference": "none",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "mass", "xmin": 0.0, "xmax": 0.5,
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0, 1.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0, 1.0]]}
+        }])";
+        std::string flip_msg;
+        try {
+            CoolProp::add_fluids_as_JSON("INCOMP", flipped);
+        } catch (const std::exception& e) {
+            flip_msg = e.what();
+        }
+        CAPTURE(flip_msg);
+        CHECK(flip_msg.find("pure/solution classification differs") != std::string::npos);
+        // The rejected flip must not have disturbed the registered fluid.
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) - 900.0) < 1e-9);
+
         // Malformed definitions must throw, not register garbage: an empty
         // coefficient matrix would otherwise evaluate rho to 0 silently.
         const std::string empty_coeffs = R"([{

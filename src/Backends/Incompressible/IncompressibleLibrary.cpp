@@ -537,22 +537,49 @@ void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
         // re-registration and edit flows); the name vectors must not grow
         // duplicates. A pure/solution flip would leave the name in the wrong
         // list, so reject that instead of silently misfiling it.
-        if (fluid_map[it->second].is_pure() != fluid.is_pure()) {
+        //
+        // find() plus an explicit throw, rather than operator[] or at().
+        // operator[] would default-construct an empty fluid on a desync and
+        // answer is_pure() from it -- and since a default fluid has
+        // density.coeffs.cols() == 0, it reads as a solution, so the guard
+        // below would report a bogus classification mismatch or pass and
+        // overwrite the wrong slot. at() would throw std::out_of_range, which
+        // does not derive from CoolPropBaseError and so reaches the C wrapper's
+        // catch(...) arm: errcode 3 and an untouched message buffer, i.e. an
+        // empty error string at the FFI boundary. ValueError is what get()
+        // already throws for this same missing-index condition and survives
+        // the boundary with its text intact.
+        auto existing = fluid_map.find(it->second);
+        if (existing == fluid_map.end()) {
+            throw ValueError(format("Internal error: incompressible fluid [%s] maps to index %d, which is missing from the fluid map.", name.c_str(),
+                                    static_cast<int>(it->second)));
+        }
+        if (existing->second.is_pure() != fluid.is_pure()) {
             throw ValueError(
               format("Cannot replace incompressible fluid [%s]: pure/solution classification differs from the existing entry.", name.c_str()));
         }
-        fluid_map[it->second] = std::move(fluid);
+        existing->second = std::move(fluid);
         return;
     }
 
+    // Publish into fluid_map BEFORE string_to_index_map. The replace-in-place
+    // branch above treats "name resolves to an index with no fluid" as a broken
+    // invariant and throws; writing the name mapping first would make that
+    // state reachable from an ordinary allocation failure between the two
+    // writes, permanently poisoning the name. In this order a throw can only
+    // leave an unreferenced fluid_map entry, which nothing looks up. The name
+    // vectors go last for the same reason: a throw there leaves the fluid
+    // resolvable but unlisted, which is inert, rather than listed but
+    // unresolvable.
     const std::size_t index = fluid_map.size();
+    const bool is_pure = fluid.is_pure();
+    fluid_map[index] = std::move(fluid);
     string_to_index_map[name] = index;
-    if (fluid.is_pure()) {
+    if (is_pure) {
         this->name_vector_pure.push_back(name);
     } else {
         this->name_vector_solution.push_back(name);
     }
-    fluid_map[index] = std::move(fluid);
 };
 
 void JSONIncompressibleLibrary::add_obj(const IncompressibleFluid& fluid_obj) {
