@@ -84,6 +84,7 @@ enum parameters : int
     iP_max,              ///< Maximum pressure
     iP_min,              ///< Minimum pressure
     idipole_moment,      ///< Dipole moment
+    iHmolar_formation,   ///< Standard molar enthalpy of formation of the ideal gas at 298.15 K
 
     // Bulk properties
     iT,      ///< Temperature

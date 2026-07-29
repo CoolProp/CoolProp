@@ -66,6 +66,7 @@ const std::vector<parameter_info> parameter_info_list = {
   {imolar_mass, "molar_mass", "O", "kg/mol", "Molar mass", true},
   {iacentric_factor, "acentric", "O", "-", "Acentric factor", true},
   {idipole_moment, "dipole_moment", "O", "C-m", "Dipole moment", true},
+  {iHmolar_formation, "HFORMATION", "O", "J/mol", "Standard molar enthalpy of formation of the ideal gas at 298.15 K", true},
   {irhomass_reducing, "rhomass_reducing", "O", "kg/m^3", "Mass density at reducing point", true},
   {irhomolar_reducing, "rhomolar_reducing", "O", "mol/m^3", "Molar density at reducing point", true},
   {irhomolar_critical, "rhomolar_critical", "O", "mol/m^3", "Molar density at critical point", true},

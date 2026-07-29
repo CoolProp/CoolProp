@@ -226,6 +226,13 @@ void JSONFluidLibrary::add_one(const nlohmann::json& fluid_json) {
             parse_environmental(fluid_json.at("INFO").at("ENVIRONMENTAL"), fluid);
         }
 
+        // Parse the standard-state thermochemical data.  Optional: absent for
+        // fluids the source database does not cover -- see
+        // dev/atct/expected_coverage.json for the authoritative list.
+        if (fluid_json.at("INFO").contains("STANDARD_STATE")) {
+            parse_standard_state(fluid_json.at("INFO").at("STANDARD_STATE"), fluid);
+        }
+
         // Aliases
         fluid.aliases = cpjson::get_string_array(fluid_json.at("INFO").at("ALIASES"));
 

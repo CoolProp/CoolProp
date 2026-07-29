@@ -485,6 +485,8 @@ double AbstractState::trivial_keyed_output(parameters key) {
             return this->rhomass_critical();
         case iODP:
             return this->calc_ODP();
+        case iHmolar_formation:
+            return this->calc_Hmolar_formation();
         case iGWP100:
             return this->calc_GWP100();
         case iGWP20:

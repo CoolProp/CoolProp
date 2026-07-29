@@ -7387,4 +7387,51 @@ TEST_CASE("Surface tension of water is nonzero and matches IAPWS", "[surface_ten
     CHECK(CoolProp::PropsSI("I", "T", 300, "Q", 0, "R134a") > 0.0);
 }
 
+TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation]") {
+    using Catch::Approx;
+    SECTION("known values, J/mol") {
+        // ATcT TN 1.220; see dev/atct/atct_report.csv for provenance.
+        struct { const char* fluid; double value; } cases[] = {
+          {"Methane", -74513.0}, {"Water", -241808.0}, {"CarbonDioxide", -393477.0}, {"Nitrogen", 0.0}};
+        for (auto& c : cases) {
+            CAPTURE(c.fluid);
+            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", c.fluid));
+            CHECK(AS->keyed_output(CoolProp::iHmolar_formation) == Approx(c.value).margin(1e-6));
+        }
+    }
+    SECTION("string key resolves through PropsSI") {
+        CHECK(CoolProp::PropsSI("HFORMATION", "", 0, "", 0, "Methane") == Approx(-74513.0).margin(1e-6));
+    }
+    SECTION("a fluid with no ATcT value throws rather than returning 0 or NaN") {
+        // R134a (CAS 811-97-2) is genuinely absent from ATcT.
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R134a"));
+        CHECK_THROWS(AS->keyed_output(CoolProp::iHmolar_formation));
+    }
+    SECTION("mixtures throw: pure and pseudo-pure fluids only") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+        std::vector<double> z{0.7, 0.3};
+        AS->set_mole_fractions(z);
+        CHECK_THROWS(AS->keyed_output(CoolProp::iHmolar_formation));
+    }
+    SECTION("every stored value is physically plausible") {
+        // Guards against a kJ/J slip anywhere in the pipeline: no molecule in
+        // the library has |dHf| above 2000 kJ/mol.
+        std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
+        std::size_t checked = 0;
+        for (auto& fluid : fluids) {
+            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
+            double value = 0;
+            try {
+                value = AS->keyed_output(CoolProp::iHmolar_formation);
+            } catch (...) {
+                continue;  // no ATcT value for this fluid; covered above
+            }
+            CAPTURE(fluid);
+            CHECK(std::abs(value) < 2e6);
+            ++checked;
+        }
+        CHECK(checked > 60);  // the ATcT overlap is ~75 fluids
+    }
+}
+
 #endif

@@ -346,6 +346,19 @@ class JSONFluidLibrary
         fluid.environment.ODP = cpjson::get_double(json, "ODP");
     }
 
+    /// Parse the standard-state thermochemical data (INFO.STANDARD_STATE)
+    void parse_standard_state(const nlohmann::json& json, CoolPropFluid& fluid) {
+        if (!json.contains("hmolar_formation")) {
+            return;
+        }
+        const nlohmann::json& hf = json.at("hmolar_formation");
+        fluid.standard_state.hmolar = cpjson::get_double(hf, "value");
+        fluid.standard_state.hmolar_uncertainty = cpjson::get_double(hf, "uncertainty");
+        fluid.standard_state.source = cpjson::get_string(hf, "source");
+        fluid.standard_state.version = cpjson::get_string(hf, "version");
+        fluid.standard_state.id = cpjson::get_string(hf, "id");
+    }
+
     /// Parse the Equation of state JSON entry
     void parse_EOS(const nlohmann::json& EOS_json, CoolPropFluid& fluid) {
         EquationOfState E;

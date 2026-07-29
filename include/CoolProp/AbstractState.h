@@ -471,6 +471,10 @@ class AbstractState
     virtual CoolPropDbl calc_ODP() {
         throw NotImplementedError("calc_ODP is not implemented for this backend");
     };
+    /// Using this backend, get the standard molar enthalpy of formation of the ideal gas at 298.15 K
+    virtual CoolPropDbl calc_Hmolar_formation() {
+        throw NotImplementedError("calc_Hmolar_formation is not implemented for this backend");
+    };
     /// Using this backend, calculate the flame hazard
     virtual CoolPropDbl calc_flame_hazard() {
         throw NotImplementedError("calc_flame_hazard is not implemented for this backend");
