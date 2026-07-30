@@ -43,6 +43,7 @@
 #include "CoolProp/detail/tools.h"
 #include "CoolProp/numerics/Solvers.h"
 #include "CoolProp/numerics/MatrixMath.h"
+#include "CoolProp/detail/json.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/Incompressible/IncompressibleLibrary.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
@@ -710,8 +711,19 @@ bool add_fluids_as_JSON(const std::string& backend, const std::string& fluidstri
     } else if (backend == "PCSAFT") {
         PCSAFTLibrary::add_fluids_as_JSON(fluidstring);
         return true;
+    } else if (backend == "INCOMP") {
+        // Accept either a single fluid object or an array of them, matching
+        // how the embedded incompressible library JSON is structured (#2384)
+        nlohmann::json j = cpjson::parse(fluidstring);
+        if (j.is_array()) {
+            get_incompressible_library().add_many(j);
+        } else {
+            get_incompressible_library().add_one(j);
+        }
+        return true;
     } else {
-        throw ValueError(format("You have provided an invalid backend [%s] to add_fluids_as_JSON; valid options are SRK, PR, HEOS", backend.c_str()));
+        throw ValueError(format("You have provided an invalid backend [%s] to add_fluids_as_JSON; valid options are SRK, PR, HEOS, PCSAFT, INCOMP",
+                                backend.c_str()));
     }
 }
 

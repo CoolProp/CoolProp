@@ -5484,6 +5484,12 @@ TEST_CASE("Incompressible enthalpy is finite and continuous at T == Tbase (#1578
         CHECK(std::abs(h_mid - midpoint) < 1.0);  // [J/kg]
     }
 }
+// Name prefix for incompressible fluids that tests register at runtime through
+// add_fluids_as_JSON. The library is process-wide and has no unregister, so the
+// shipped-fluid enumeration below filters this prefix; any test that registers a
+// fluid must use it, or it will perturb that count under --order rand.
+static const std::string RUNTIME_TEST_FLUID_PREFIX = "CatchRuntime";
+
 TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped fluid", "[INCOMP]") {
     // Generalizes the #1578 regression test above (which only names 4
     // fluids) to the whole library: the Python fit generator places Tbase at
@@ -5497,7 +5503,16 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
                               + CoolProp::get_global_param_string("incompressible_list_solution"));
         std::string name;
         while (std::getline(ss, name, ',')) {
-            if (!name.empty()) names.push_back(name);
+            if (name.empty()) continue;
+            // Skip fluids that another test registered at runtime. The
+            // incompressible library is process-wide with no unregister, and
+            // Catch2 with --order rand may run the add_fluids_as_JSON section
+            // below BEFORE this test, which would otherwise inflate the exact
+            // count and fail it. Measured: 7 of 10 seeds failed 128 == 127
+            // before this filter. The prefix is test-only, so it cannot hide a
+            // shipped fluid from the count.
+            if (name.compare(0, RUNTIME_TEST_FLUID_PREFIX.size(), RUNTIME_TEST_FLUID_PREFIX) == 0) continue;
+            names.push_back(name);
         }
     }
     // Exact, because `names` comes from the library's own fluid lists: a
@@ -5603,6 +5618,153 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
     // Truncation is caught above, so this catches a broken Tbase filter.
     // Absolute for the same reason: a margin let fluids go dark unnoticed.
     CHECK(testedCount == 118);
+}
+TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[INCOMP]") {
+    const double p = 101325.0;
+    SECTION("Basis-converted fluids reproduce the committed polynomial fit") {
+        // MEG's caloric entries are exact basis conversions of the committed
+        // centered polynomial (fit_source == basis_conversion), so the values
+        // must match the polynomial evaluation at reference precision, not
+        // merely at fit level. Golden values computed directly from the
+        // committed MEG.json polynomial coefficients.
+        const std::string fluid = "INCOMP::MEG[0.35]";
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 300.0, "P", p, fluid) / 1041.843589 - 1) < 1e-9);
+        CHECK(std::abs(CoolProp::PropsSI("C", "T", 300.0, "P", p, fluid) / 3644.159653 - 1) < 1e-9);
+    }
+    SECTION("dh/dT == cp and ds/dT == cp/T through the public interface") {
+        // The h/s integrals are derived from the SAME cp expansion at load
+        // time, so central finite differences of h and s must reproduce cp
+        // to discretization error. Run on a conversion (MEG), a raw-data
+        // refit (Water) and an ice slurry (IceEA, strongly curved cp).
+        struct Probe
+        {
+            std::string fluid;
+            double T;
+        };
+        for (const Probe& probe : {Probe{"INCOMP::MEG[0.35]", 300.0}, Probe{"INCOMP::Water", 350.0}, Probe{"INCOMP::IceEA[0.2]", 255.0}}) {
+            const double dT = 0.01;
+            CAPTURE(probe.fluid);
+            const double cp = CoolProp::PropsSI("C", "T", probe.T, "P", p, probe.fluid);
+            const double h_lo = CoolProp::PropsSI("Hmass", "T", probe.T - dT, "P", p, probe.fluid);
+            const double h_hi = CoolProp::PropsSI("Hmass", "T", probe.T + dT, "P", p, probe.fluid);
+            const double s_lo = CoolProp::PropsSI("Smass", "T", probe.T - dT, "P", p, probe.fluid);
+            const double s_hi = CoolProp::PropsSI("Smass", "T", probe.T + dT, "P", p, probe.fluid);
+            const double dhdT = (h_hi - h_lo) / (2 * dT);
+            const double dsdT = (s_hi - s_lo) / (2 * dT);
+            CAPTURE(cp);
+            CAPTURE(dhdT);
+            CAPTURE(dsdT);
+            // dh/dT differs from cp by the pressure term p*d(dh/dp)/dT
+            // (documented model property, see NOTES_thermodynamic_consistency
+            // .md), which is O(0.1 J/kg/K) at 1 atm -- inside this tolerance.
+            CHECK(std::abs(dhdT / cp - 1) < 1e-4);
+            CHECK(std::abs(dsdT / (cp / probe.T) - 1) < 1e-4);
+        }
+    }
+    SECTION("Runtime addition of an incompressible fluid via add_fluids_as_JSON (#2384)") {
+        // Minimal pure fluid with Chebyshev caloric entries: rho(T) linear,
+        // cp(T) constant 2000, on T in [280, 360]. T_1 has coefficient 1 in
+        // the density entry, so rho = 1000 - 5*u with u in [-1, 1].
+        const std::string json = R"([{
+            "name": "CatchRuntimeTestFluid", "description": "runtime-added test fluid", "reference": "none",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":       {"type": "polynomial", "coeffs": [[1000.0]]},
+            "specific_heat": {"type": "polynomial", "coeffs": [[2000.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[1000.0], [-5.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
+        const std::string fluid = "INCOMP::CatchRuntimeTestFluid";
+        // rho at T=320 (u=0) is exactly 1000; at T=360 (u=1) exactly 995
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) - 1000.0) < 1e-9);
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 360.0, "P", p, fluid) - 995.0) < 1e-9);
+        CHECK(std::abs(CoolProp::PropsSI("C", "T", 320.0, "P", p, fluid) - 2000.0) < 1e-9);
+        // constant-cp enthalpy difference is exactly cp*dT (pressure terms
+        // cancel only in the T-part; keep p identical between the states)
+        const double h1 = CoolProp::PropsSI("Hmass", "T", 300.0, "P", p, fluid);
+        const double h2 = CoolProp::PropsSI("Hmass", "T", 340.0, "P", p, fluid);
+        const double drho_term =
+          p * (1.0 / CoolProp::PropsSI("D", "T", 340.0, "P", p, fluid) - 1.0 / CoolProp::PropsSI("D", "T", 300.0, "P", p, fluid));
+        CAPTURE(h2 - h1);
+        // T-part: 2000 * 40 = 80000 J/kg; pressure part is small but nonzero
+        CHECK(std::abs((h2 - h1) - 80000.0) < std::abs(drho_term) * 40 + 5.0);
+        // and s(T2)-s(T1) = cp*ln(T2/T1) for constant cp (T-part)
+        const double s1 = CoolProp::PropsSI("Smass", "T", 300.0, "P", p, fluid);
+        const double s2 = CoolProp::PropsSI("Smass", "T", 340.0, "P", p, fluid);
+        CHECK(std::abs((s2 - s1) - 2000.0 * std::log(340.0 / 300.0)) < 0.5);
+
+        // Re-adding the same name replaces the fluid in place: the fluid list
+        // must not grow a duplicate entry, and the new definition must win.
+        const std::string updated = R"([{
+            "name": "CatchRuntimeTestFluid", "description": "runtime-added test fluid, v2", "reference": "none",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", updated));
+        const std::string pure_list = CoolProp::get_global_param_string("incompressible_list_pure");
+        std::size_t occurrences = 0;
+        for (std::size_t pos = pure_list.find("CatchRuntimeTestFluid"); pos != std::string::npos;
+             pos = pure_list.find("CatchRuntimeTestFluid", pos + 1)) {
+            ++occurrences;
+        }
+        CHECK(occurrences == 1);
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) - 900.0) < 1e-9);
+
+        // Re-registering the same name with the opposite pure/solution
+        // classification must be rejected: the name is already in one of the
+        // two name vectors, and replacing in place would leave it in the wrong
+        // one.  A two-column density makes is_pure() false.  The message is
+        // asserted, not just the throw, because this definition also passes
+        // through validate() -- a bare CHECK_THROWS would pass on any
+        // unrelated validation error and so would not cover the guard.
+        const std::string flipped = R"([{
+            "name": "CatchRuntimeTestFluid", "description": "runtime-added test fluid, as a solution", "reference": "none",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "mass", "xmin": 0.0, "xmax": 0.5,
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0, 1.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0, 1.0]]}
+        }])";
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", flipped),
+                          Catch::Matchers::ContainsSubstring("pure/solution classification differs"));
+        // The rejected flip must not have disturbed the registered fluid.
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) - 900.0) < 1e-9);
+
+        // Malformed definitions must throw, not register garbage: an empty
+        // coefficient matrix would otherwise evaluate rho to 0 silently.
+        const std::string empty_coeffs = R"([{
+            "name": "CatchRuntimeBadFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": []},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        CHECK_THROWS(CoolProp::add_fluids_as_JSON("INCOMP", empty_coeffs));
+
+        // A Chebyshev fit narrower than the fluid's advertised range must be
+        // rejected at load: u is not clamped, so checkT() would admit a
+        // temperature the expansion then extrapolates at, where a Chebyshev
+        // series diverges fast and silently. Trange here covers [300, 340]
+        // while the fluid claims [280, 360]. The message is asserted so this
+        // cannot pass on some unrelated validation error.
+        const std::string narrow_range = R"([{
+            "name": "CatchRuntimeNarrowFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [300.0, 340.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [300.0, 340.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", narrow_range), Catch::Matchers::ContainsSubstring("does not cover the fluid range"));
+
+        // ...but a fit WIDER than the fluid range is legitimate and must load:
+        // ZS25/ZS40 ship cp fits covering ~2 K below Tmin because the source
+        // data does. This is the guard's fail-closed direction, so assert it
+        // explicitly rather than trusting the comparison's sense.
+        const std::string wide_range = R"([{
+            "name": "CatchRuntimeWideFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [270.0, 370.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [270.0, 370.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", wide_range));
+    }
 }
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {
     // Issue #1374: the fitted viscosity (and hence Prandtl number) of MPG2
