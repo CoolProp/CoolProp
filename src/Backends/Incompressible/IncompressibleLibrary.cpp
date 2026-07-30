@@ -1,6 +1,7 @@
 #include "IncompressibleLibrary.h"
 #include "CoolProp/numerics/MatrixMath.h"
 #include "CoolProp/DataStructures.h"
+#include "CoolProp/Configuration.h"
 //#include "crossplatform_shared_ptr.h"
 #include "CoolProp/detail/json.h"
 #include "all_incompressibles_JSON.h"  // Makes a std::string variable called all_incompressibles_JSON
@@ -471,10 +472,19 @@ void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
         // carries them (exact singularity-free enthalpy/entropy integrals,
         // see dev/incompressible_liquids/NOTES_thermodynamic_consistency.md);
         // the classic polynomial entries remain the fallback and the format
-        // for every other property. Flip this to false to A/B against the
-        // polynomial caloric path with the same library.
-        static constexpr bool prefer_chebyshev_caloric = true;
-        auto parse_caloric = [this, &fluid_json](const std::string& id) {
+        // for every other property.
+        //
+        // Runtime-configurable rather than a compile-time constant, so the old
+        // polynomial caloric equations stay reachable in a shipped binary --
+        // both as an escape hatch if a Chebyshev fit misbehaves for someone and
+        // to A/B the two paths against the same library. Read here, per fluid,
+        // per parse, so a value set before the library is first touched applies
+        // to the shipped fluids and any later add_fluids_as_JSON honours the
+        // then-current value. See the key's description in
+        // include/CoolProp/detail/configuration_keys.h for the ordering
+        // caveat and the COOLPROP_ environment-variable route.
+        const bool prefer_chebyshev_caloric = get_config_bool(INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC);
+        auto parse_caloric = [this, &fluid_json, prefer_chebyshev_caloric](const std::string& id) {
             if (prefer_chebyshev_caloric && fluid_json.contains(id + "_cheb")) {
                 IncompressibleData data = parse_coefficients(fluid_json, id + "_cheb", false);
                 if (data.type != CoolProp::IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
