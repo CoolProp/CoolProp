@@ -99,7 +99,11 @@ def fit_from_data(Tvec, xvec, grid, xbase, deg_x, deg_T=DEFAULT_MAX_DEGREE_T):
 
     u = _scaled_T(T[mask], Trange)
     xpow = np.vander(x[mask] - xbase, deg_x + 1, increasing=True)
-    spread = float(np.nanmax(grid) - np.nanmin(grid))
+    # Normalise the residual against the data actually fitted.  nanmax/nanmin
+    # skip NaN but NOT +/-inf, so a single infinity anywhere in the grid would
+    # make spread infinite and nrms exactly 0.0 -- a corrupt fit reporting as a
+    # perfect one.  z[mask] is the finite subset the least-squares solve uses.
+    spread = float(z[mask].max() - z[mask].min())
 
     # Select the T-degree by generalized cross-validation, GCV = n*RSS/(n-p)^2:
     # tabulated data is typically rounded to 3-4 digits, and a high-order fit
@@ -132,6 +136,12 @@ def fit_from_data(Tvec, xvec, grid, xbase, deg_x, deg_T=DEFAULT_MAX_DEGREE_T):
     coeffs = flat.reshape(chosen_deg_T + 1, deg_x + 1)
     residual_rms = float(np.sqrt(rss / points))
     nrms = residual_rms / spread if spread > 0 else residual_rms
+    if not np.isfinite(nrms):
+        # A non-finite quality metric must not be emitted as if it were a
+        # measurement: callers compare nrms against tolerances, and inf/nan
+        # would silently pass or fail those comparisons rather than rejecting
+        # the fit. Treat it as "no usable fit", the documented contract here.
+        return None
     return coeffs, Trange, nrms
 
 
@@ -158,10 +168,19 @@ def convert_polynomial(poly_coeffs, Tbase, xbase, Trange):
     return out
 
 
-def _positive_on_domain(coeffs, Trange, xbase, xmin, xmax):
-    """Density and heat capacity are strictly positive; a fit that swings
-    non-positive anywhere on the fluid's (T, x) domain is oscillating
-    through data-free regions and must not ship."""
+def _positive_on_sampled_domain(coeffs, Trange, xbase, xmin, xmax):
+    """Screen for a fit that swings non-positive: density and heat capacity are
+    strictly positive, so a sign change means the fit is oscillating through
+    data-free regions and must not ship.
+
+    This SAMPLES a 41 x 9 (T, x) lattice; it does not prove positivity over the
+    domain. A dip narrower than the sample spacing can pass. Proving it would
+    mean bounding the extrema of a 2-D polynomial over a box (interval
+    arithmetic, or rooting the partial derivatives), which is a substantially
+    larger and numerically touchier piece of machinery than the failure mode
+    warrants -- the oscillation this exists to catch is gross, spanning many
+    sample points, not a hairline notch. Named for what it does so callers do
+    not read it as a guarantee."""
     Ts = np.linspace(Trange[0], Trange[1], 41)
     xs = np.linspace(xmin, xmax, 9) if xmax > xmin else [xbase]
     return all(np.min(evaluate(coeffs, Ts, x, Trange, xbase)) > 0.0 for x in xs)
@@ -234,7 +253,7 @@ def build_entry(fluid_json, prop, rawT=None, rawX=None, rawGrid=None):
             if fitted is None:
                 continue
             coeffs, Trange, nrms = fitted
-            if np.all(np.isfinite(coeffs)) and _positive_on_domain(coeffs, Trange, xbase, xmin, xmax):
+            if np.all(np.isfinite(coeffs)) and _positive_on_sampled_domain(coeffs, Trange, xbase, xmin, xmax):
                 return {
                     "type": "chebyshev",
                     "Trange": [Trange[0], Trange[1]],

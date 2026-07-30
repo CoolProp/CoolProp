@@ -3,8 +3,11 @@
 Three layers:
 - schema/shape sanity for every committed entry (stdlib-level checks);
 - physical sanity: density and cp evaluated from the Chebyshev fit are
-  strictly positive across each fluid's whole (T, x) domain -- this is the
-  net that catches a sparse-grid fit oscillating wildly between data;
+  strictly positive on a lattice sampled across each fluid's (T, x) domain --
+  this is the net that catches a sparse-grid fit oscillating wildly between
+  data. Sampled, not proved: a dip narrower than the sample spacing can pass
+  (see ChebyshevFits._positive_on_sampled_domain for why an exhaustive proof
+  is not attempted);
 - agreement with the committed polynomial entry: exact (basis conversions)
   or fit-level (tabular refits);
 - a golden-master refit (DowJ, LiBr, AKF), mirroring

@@ -101,8 +101,26 @@ def main():
             if not deep_equal(fluid[key], value):
                 raise AssertionError("{0}: {1} would change; refusing to rewrite".format(name, key))
 
-        with open(path, "w") as fh:
-            fh.write(json.dumps(fluid, indent=2, sort_keys=True))
+        # Serialise BEFORE touching the file. open(path, "w") truncates on open,
+        # so a json.dumps failure (a numpy scalar that slipped through, a
+        # non-finite value) would leave a committed coefficient file empty --
+        # the file is destroyed by the attempt to rewrite it. Then write a
+        # sibling temp file and os.replace, which is atomic within a directory,
+        # so an interrupted run leaves the original intact rather than half a
+        # JSON document.
+        payload = json.dumps(fluid, indent=2, sort_keys=True)
+        tmp_path = path + ".tmp"
+        try:
+            with open(tmp_path, "w") as fh:
+                fh.write(payload)
+            os.replace(tmp_path, path)
+        except BaseException:
+            # BaseException, not Exception: a KeyboardInterrupt part-way through
+            # a 117-fluid run is the likeliest abort and must not strand .tmp
+            # files next to the data.
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise
 
     print("fitted from raw data : {0} entries".format(len(added)))
     print("basis-converted      : {0} entries".format(len(converted)))
