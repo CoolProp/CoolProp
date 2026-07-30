@@ -1,101 +1,137 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 3.531500e+02, 
-  "Tmax": 5.331500e+02, 
-  "Tmin": 1.731500e+02, 
-  "TminPsat": 5.331500e+02, 
+  },
+  "Tbase": 353.15,
+  "Tmax": 533.15,
+  "Tmin": 173.15,
+  "TminPsat": 533.15,
   "conductivity": {
-    "NRMS": 2.212688e-04, 
+    "NRMS": 0.0002212688,
     "coeffs": [
       [
-        9.727308e-02
-      ], 
+        0.09727308
+      ],
       [
-        -2.341492e-04
-      ], 
+        -0.0002341492
+      ],
       [
         -1.439524e-07
-      ], 
+      ],
       [
-        1.120310e-10
+        1.12031e-10
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 7.803658e-05, 
+    "NRMS": 7.803658e-05,
     "coeffs": [
       [
-        7.936461e+02
-      ], 
+        793.6461
+      ],
       [
-        -1.027177e+00
-      ], 
+        -1.027177
+      ],
       [
         1.633893e-07
-      ], 
+      ],
       [
         1.036812e-09
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "SylthermXLT", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "XLT", 
-  "reference": "Dow1997", 
-  "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "specific_heat": {
-    "NRMS": 3.305015e-04, 
+  },
+  "density_cheb": {
+    "NRMS": 7.820213446863868e-05,
+    "Trange": [
+      173.14999999999998,
+      533.15
+    ],
     "coeffs": [
       [
-        1.897745e+03
-      ], 
+        793.6479452054797
+      ],
       [
-        2.100000e+00
-      ], 
+        -184.88818955942247
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "SylthermXLT",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "XLT",
+  "reference": "Dow1997",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": 0.0003305015,
+    "coeffs": [
+      [
+        1897.745
+      ],
+      [
+        2.1
+      ],
       [
         7.717538e-07
-      ], 
+      ],
       [
-        0.000000e+00
+        0.0
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 5.878053e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.00033065680203839325,
+    "Trange": [
+      173.14999999999998,
+      533.15
+    ],
     "coeffs": [
-      1.033765e+03, 
-      -4.332277e+01, 
-      1.071506e+01
-    ], 
+      [
+        1897.7534246575349
+      ],
+      [
+        377.9999999999999
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.005878053,
+    "coeffs": [
+      1033.765,
+      -43.32277,
+      10.71506
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

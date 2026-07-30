@@ -1,101 +1,143 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 4.306500e+02, 
-  "Tmax": 5.881500e+02, 
-  "Tmin": 2.731500e+02, 
-  "TminPsat": 2.731500e+02, 
+  },
+  "Tbase": 430.65,
+  "Tmax": 588.15,
+  "Tmin": 273.15,
+  "TminPsat": 273.15,
   "conductivity": {
-    "NRMS": 1.057417e-03, 
+    "NRMS": 0.001057417,
     "coeffs": [
       [
-        1.242271e-01
-      ], 
+        0.1242271
+      ],
       [
         -8.007266e-05
-      ], 
+      ],
       [
         -2.820274e-08
-      ], 
+      ],
       [
         5.359448e-12
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 2.812799e-02, 
+    "NRMS": 0.02812799,
     "coeffs": [
       [
-        7.854409e+02
-      ], 
+        785.4409
+      ],
       [
-        -6.916519e-01
-      ], 
+        -0.6916519
+      ],
       [
-        -2.639398e-04
-      ], 
+        -0.0002639398
+      ],
       [
         2.502503e-06
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Dynalene SF", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "DSF", 
-  "reference": "Dynalene, Inc.", 
-  "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "specific_heat": {
-    "NRMS": 2.457411e-04, 
+  },
+  "density_cheb": {
+    "NRMS": 0.02812798771353854,
+    "Trange": [
+      273.15,
+      588.15
+    ],
     "coeffs": [
       [
-        2.469301e+03
-      ], 
+        782.167232836475
+      ],
       [
-        3.654100e+00
-      ], 
+        -101.60223863193704
+      ],
+      [
+        -3.2736789380972704
+      ],
+      [
+        2.4443096993117304
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Dynalene SF",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "DSF",
+  "reference": "Dynalene, Inc.",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": 0.0002457411,
+    "coeffs": [
+      [
+        2469.301
+      ],
+      [
+        3.6541
+      ],
       [
         2.637238e-06
-      ], 
+      ],
       [
         4.220296e-08
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 3.059097e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.0002476932358238147,
+    "Trange": [
+      273.15,
+      588.15
+    ],
     "coeffs": [
-      -2.538312e+02, 
-      2.073714e+00, 
-      4.237850e+00
-    ], 
+      [
+        2469.32586849393
+      ],
+      [
+        575.6296581005137
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.003059097,
+    "coeffs": [
+      -253.8312,
+      2.073714,
+      4.23785
+    ],
     "type": "logexponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }
