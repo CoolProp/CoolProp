@@ -27,6 +27,7 @@ fitted from the same cached grids.
 
 import glob
 import json
+import math
 import os
 import sys
 
@@ -62,7 +63,7 @@ def deep_equal(a, b):
         return a.keys() == b.keys() and all(deep_equal(a[k], b[k]) for k in a)
     if isinstance(a, list) and isinstance(b, list):
         return len(a) == len(b) and all(deep_equal(x, y) for x, y in zip(a, b))
-    if isinstance(a, float) and isinstance(b, float) and a != a and b != b:
+    if isinstance(a, float) and isinstance(b, float) and math.isnan(a) and math.isnan(b):
         return True  # NaN != NaN, but an unchanged NaN field is still unchanged
     return a == b
 

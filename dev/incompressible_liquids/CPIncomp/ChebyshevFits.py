@@ -68,10 +68,17 @@ def fit_from_data(Tvec, xvec, grid, xbase, deg_x, deg_T=DEFAULT_MAX_DEGREE_T):
         # documented "return None when nothing usable exists" contract) rather
         # than letting it propagate and abort a whole migration run.
         return None
-    finite_T_rows = int(np.isfinite(grid).any(axis=1).sum())
+    # Trange must come from the rows that actually carry data, not from the raw
+    # Tvec extent.  Sparse SecCool grids pad cells below a concentration's
+    # freeze point, so a boundary temperature can be entirely non-finite across
+    # every x column; taking min/max of Tvec then advertises a domain edge that
+    # no data point supports and the fit is extrapolating exactly where it
+    # claims validity.  (fit_from_arrays below already masks T this way.)
+    finite_row_mask = np.isfinite(grid).any(axis=1)
+    finite_T_rows = int(finite_row_mask.sum())
     if finite_T_rows < MIN_TEMPERATURE_POINTS:
         return None
-    Trange = (float(np.min(Tvec)), float(np.max(Tvec)))
+    Trange = (float(Tvec[finite_row_mask].min()), float(Tvec[finite_row_mask].max()))
     if Trange[1] <= Trange[0]:
         return None
 
