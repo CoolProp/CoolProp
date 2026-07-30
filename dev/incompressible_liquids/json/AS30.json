@@ -1,101 +1,146 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 2.731500e+02, 
-  "Tmax": 3.031500e+02, 
-  "Tmin": 2.431500e+02, 
-  "TminPsat": 3.031500e+02, 
+  },
+  "Tbase": 273.15,
+  "Tmax": 303.15,
+  "Tmin": 243.15,
+  "TminPsat": 303.15,
   "conductivity": {
-    "NRMS": null, 
+    "NRMS": null,
     "coeffs": [
       [
-        4.603880e-01
-      ], 
+        0.460388
+      ],
       [
-        1.256000e-03
+        0.001256
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": null, 
+    "NRMS": null,
     "coeffs": [
       [
-        1.183859e+03
-      ], 
+        1183.859
+      ],
       [
-        -3.108586e-01
-      ], 
+        -0.3108586
+      ],
       [
-        -1.038960e-03
-      ], 
+        -0.00103896
+      ],
       [
-        1.767680e-05
+        1.76768e-05
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Aspen Temper -30, Potassium acetate/formate", 
+  },
+  "density_cheb": {
+    "NRMS": null,
+    "Trange": [
+      243.15,
+      303.15
+    ],
+    "coeffs": [
+      [
+        1183.3914679999998
+      ],
+      [
+        -8.967802800000015
+      ],
+      [
+        -0.4675320000000056
+      ],
+      [
+        0.11931840000011107
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Aspen Temper -30, Potassium acetate/formate",
   "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "name": "AS30", 
-  "reference": "Aspen2001,Skovrup2013", 
+  },
+  "name": "AS30",
+  "reference": "Aspen2001,Skovrup2013",
   "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": null, 
+    "NRMS": null,
     "coeffs": [
       [
-        3.075040e+03
-      ], 
+        3075.04
+      ],
       [
-        2.990000e+00
-      ], 
+        2.99
+      ],
       [
-        -2.702320e-02
+        -0.0270232
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 1.100917e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": null,
+    "Trange": [
+      243.15,
+      303.15
+    ],
     "coeffs": [
       [
-        -5.529156e+00
-      ], 
+        3062.87956
+      ],
       [
-        -4.005842e-02
-      ], 
+        89.69999999999995
+      ],
       [
-        3.656841e-04
-      ], 
+        -12.160440000000875
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.001100917,
+    "coeffs": [
+      [
+        -5.529156
+      ],
+      [
+        -0.04005842
+      ],
+      [
+        0.0003656841
+      ],
       [
         2.015537e-06
       ]
-    ], 
+    ],
     "type": "exppolynomial"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

@@ -20,6 +20,7 @@ from warnings import warn
 
 from CPIncomp.DataObjects import SolutionData
 from CPIncomp.BaseObjects import IncompressibleData, IncompressibleFitter
+from CPIncomp import ChebyshevFits
 
 try:
     import matplotlib
@@ -62,8 +63,9 @@ class SolutionDataWriter(object):
     """
 
     # Optimizer starting guesses for the iterative (exponential-type) fits in
-    # fitAll. Kept as named constants because clearUnfittedCoefficients also
-    # needs them to recognise a fit that silently failed.
+    # fitAll; clearUnfittedCoefficients also needs them to recognise a fit that
+    # silently failed. Re-exported from IncompressibleData rather than restated
+    # so the two can never drift apart -- see the note at their definition.
     VISCOSITY_GUESS = IncompressibleData.VISCOSITY_GUESS
     PSAT_GUESS = IncompressibleData.PSAT_GUESS
     TFREEZE_GUESS = IncompressibleData.TFREEZE_GUESS
@@ -307,6 +309,22 @@ class SolutionDataWriter(object):
                 data.coeffs = None
                 data.NRMS = None
 
+    @staticmethod
+    def getRawGrid(fluidObject, prop):
+        """(Tvec, xvec, grid) of a property's raw tabular data, or Nones.
+
+        Properties that went through the fitter carry their own axes
+        (xData = temperatures, yData = concentrations, set by setxyData or
+        the SecCool loaders); fall back to the fluid-level axes otherwise.
+        """
+        p = getattr(fluidObject, prop)
+        if p.data is None:
+            return None, None, None
+        if p.xData is not None:
+            return p.xData, (p.yData if p.yData is not None else [0.0]), p.data
+        return fluidObject.temperature.data, (fluidObject.concentration.data
+                                              if fluidObject.concentration.data is not None else [0.0]), p.data
+
     def get_hash(self, data):
         return hashlib.sha224(data.encode()).hexdigest()
 
@@ -378,6 +396,16 @@ class SolutionDataWriter(object):
         jobj['mass2input'] = data.mass2input.toJSON()  # dd
         jobj['volume2input'] = data.volume2input.toJSON()  # dd
         jobj['mole2input'] = data.mole2input.toJSON()  # dd
+
+        # Optional Chebyshev entries for the caloric properties, fitted from
+        # the raw data when the fluid carries any, otherwise an exact basis
+        # conversion of the polynomial fit above. See CPIncomp/ChebyshevFits.py
+        # for the schema and NOTES_thermodynamic_consistency.md for why.
+        for prop in ChebyshevFits.CALORIC_PROPERTIES:
+            rawT, rawX, rawGrid = self.getRawGrid(data, prop)
+            entry = ChebyshevFits.build_entry(jobj, prop, rawT, rawX, rawGrid)
+            if entry is not None:
+                jobj[prop + '_cheb'] = entry
 
         dump = json.dumps(jobj, indent=2, sort_keys=True)
 

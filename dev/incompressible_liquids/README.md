@@ -95,11 +95,36 @@ data axis -- see `SolutionExample` in `CPIncomp/ExampleObjects.py` and the
 "Adding New Fluids" section of the online documentation
 (`Web/fluid_properties/Incompressibles.rst`).
 
+## Chebyshev caloric entries
+
+Every fluid's JSON also carries optional `density_cheb` /
+`specific_heat_cheb` entries (`type: "chebyshev"`): Chebyshev-in-T
+coefficients on the explicit `Trange`, one column per `(x - xbase)` power.
+They are produced automatically by the writer. Your raw data is fitted
+directly when the fluid has data that spans its full advertised temperature
+range and yields a fit that stays positive across the whole domain;
+otherwise — no raw data, insufficient coverage, or no positive fit — the
+entry is an exact basis conversion of the committed polynomial. Either way
+`fit_source` on the entry records which path was taken. They were
+introduced because enthalpy/entropy integrals of
+a Chebyshev cp fit are exact and singularity-free (see
+`NOTES_thermodynamic_consistency.md` and `CPIncomp/ChebyshevFits.py`).
+`add_chebyshev_entries.py` is the one-shot migration tool that added them
+to the committed files without refitting the polynomial entries;
+`test_chebyshev_entries.py` guards their quality (positivity across the
+whole domain, agreement with data and with the polynomial fits).
+
 ## Notes
 
-- The fit is centred around `Tbase`/`xbase` (defaults: the midpoint of your
-  data range). The enthalpy/entropy the backend later reports are derived
-  exactly from the fitted density and heat-capacity polynomials.
+- The legacy centred-polynomial fits are centred around `Tbase`/`xbase`
+  (defaults: the midpoint of your data range). The Chebyshev entries do not
+  use that centring at all — they map the explicit `Trange` onto `[-1, 1]`
+  instead, which is why no `Tbase` singularity can arise in that basis.
+- The enthalpy/entropy the backend reports are derived exactly from the fitted
+  density and heat-capacity coefficients. Note the C++ backend currently reads
+  only the centred-polynomial entries: the `*_cheb` entries ship alongside them
+  but are inert until the loader that prefers them lands. Until then they change
+  nothing at runtime.
 - Four fluids (Air, Acetone, Ethanol, Hexane) are sampled from CoolProp's
   own equations of state, so *re-fitting those four* needs the CoolProp
   Python package installed; without it they are skipped and their committed
