@@ -5484,6 +5484,12 @@ TEST_CASE("Incompressible enthalpy is finite and continuous at T == Tbase (#1578
         CHECK(std::abs(h_mid - midpoint) < 1.0);  // [J/kg]
     }
 }
+// Name prefix for incompressible fluids that tests register at runtime through
+// add_fluids_as_JSON. The library is process-wide and has no unregister, so the
+// shipped-fluid enumeration below filters this prefix; any test that registers a
+// fluid must use it, or it will perturb that count under --order rand.
+static const std::string RUNTIME_TEST_FLUID_PREFIX = "CatchRuntime";
+
 TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped fluid", "[INCOMP]") {
     // Generalizes the #1578 regression test above (which only names 4
     // fluids) to the whole library: the Python fit generator places Tbase at
@@ -5497,7 +5503,16 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
                               + CoolProp::get_global_param_string("incompressible_list_solution"));
         std::string name;
         while (std::getline(ss, name, ',')) {
-            if (!name.empty()) names.push_back(name);
+            if (name.empty()) continue;
+            // Skip fluids that another test registered at runtime. The
+            // incompressible library is process-wide with no unregister, and
+            // Catch2 with --order rand may run the add_fluids_as_JSON section
+            // below BEFORE this test, which would otherwise inflate the exact
+            // count and fail it. Measured: 7 of 10 seeds failed 128 == 127
+            // before this filter. The prefix is test-only, so it cannot hide a
+            // shipped fluid from the count.
+            if (name.compare(0, RUNTIME_TEST_FLUID_PREFIX.size(), RUNTIME_TEST_FLUID_PREFIX) == 0) continue;
+            names.push_back(name);
         }
     }
     // Exact, because `names` comes from the library's own fluid lists: a
@@ -5651,7 +5666,7 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         // cp(T) constant 2000, on T in [280, 360]. T_1 has coefficient 1 in
         // the density entry, so rho = 1000 - 5*u with u in [-1, 1].
         const std::string json = R"([{
-            "name": "IncompTestFluid", "description": "runtime-added test fluid", "reference": "none",
+            "name": "CatchRuntimeTestFluid", "description": "runtime-added test fluid", "reference": "none",
             "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
             "density":       {"type": "polynomial", "coeffs": [[1000.0]]},
             "specific_heat": {"type": "polynomial", "coeffs": [[2000.0]]},
@@ -5659,7 +5674,7 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
             "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
         }])";
         CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
-        const std::string fluid = "INCOMP::IncompTestFluid";
+        const std::string fluid = "INCOMP::CatchRuntimeTestFluid";
         // rho at T=320 (u=0) is exactly 1000; at T=360 (u=1) exactly 995
         CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) - 1000.0) < 1e-9);
         CHECK(std::abs(CoolProp::PropsSI("D", "T", 360.0, "P", p, fluid) - 995.0) < 1e-9);
@@ -5681,7 +5696,7 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         // Re-adding the same name replaces the fluid in place: the fluid list
         // must not grow a duplicate entry, and the new definition must win.
         const std::string updated = R"([{
-            "name": "IncompTestFluid", "description": "runtime-added test fluid, v2", "reference": "none",
+            "name": "CatchRuntimeTestFluid", "description": "runtime-added test fluid, v2", "reference": "none",
             "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
             "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
             "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
@@ -5689,7 +5704,8 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", updated));
         const std::string pure_list = CoolProp::get_global_param_string("incompressible_list_pure");
         std::size_t occurrences = 0;
-        for (std::size_t pos = pure_list.find("IncompTestFluid"); pos != std::string::npos; pos = pure_list.find("IncompTestFluid", pos + 1)) {
+        for (std::size_t pos = pure_list.find("CatchRuntimeTestFluid"); pos != std::string::npos;
+             pos = pure_list.find("CatchRuntimeTestFluid", pos + 1)) {
             ++occurrences;
         }
         CHECK(occurrences == 1);
@@ -5703,7 +5719,7 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         // through validate() -- a bare CHECK_THROWS would pass on any
         // unrelated validation error and so would not cover the guard.
         const std::string flipped = R"([{
-            "name": "IncompTestFluid", "description": "runtime-added test fluid, as a solution", "reference": "none",
+            "name": "CatchRuntimeTestFluid", "description": "runtime-added test fluid, as a solution", "reference": "none",
             "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "mass", "xmin": 0.0, "xmax": 0.5,
             "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0, 1.0]]},
             "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0, 1.0]]}
@@ -5722,12 +5738,45 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         // Malformed definitions must throw, not register garbage: an empty
         // coefficient matrix would otherwise evaluate rho to 0 silently.
         const std::string empty_coeffs = R"([{
-            "name": "IncompBadFluid", "description": "x", "reference": "x",
+            "name": "CatchRuntimeBadFluid", "description": "x", "reference": "x",
             "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
             "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": []},
             "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
         }])";
         CHECK_THROWS(CoolProp::add_fluids_as_JSON("INCOMP", empty_coeffs));
+
+        // A Chebyshev fit narrower than the fluid's advertised range must be
+        // rejected at load: u is not clamped, so checkT() would admit a
+        // temperature the expansion then extrapolates at, where a Chebyshev
+        // series diverges fast and silently. Trange here covers [300, 340]
+        // while the fluid claims [280, 360]. The message is asserted so this
+        // cannot pass on some unrelated validation error.
+        const std::string narrow_range = R"([{
+            "name": "CatchRuntimeNarrowFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [300.0, 340.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [300.0, 340.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        std::string narrow_msg;
+        try {
+            CoolProp::add_fluids_as_JSON("INCOMP", narrow_range);
+        } catch (const std::exception& e) {
+            narrow_msg = e.what();
+        }
+        CAPTURE(narrow_msg);
+        CHECK(narrow_msg.find("does not cover the fluid range") != std::string::npos);
+
+        // ...but a fit WIDER than the fluid range is legitimate and must load:
+        // ZS25/ZS40 ship cp fits covering ~2 K below Tmin because the source
+        // data does. This is the guard's fail-closed direction, so assert it
+        // explicitly rather than trusting the comparison's sense.
+        const std::string wide_range = R"([{
+            "name": "CatchRuntimeWideFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [270.0, 370.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [270.0, 370.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", wide_range));
     }
 }
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {

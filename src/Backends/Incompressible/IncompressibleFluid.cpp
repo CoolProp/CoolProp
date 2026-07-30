@@ -185,6 +185,27 @@ void IncompressibleFluid::validate() {
         if (data->coeffs.rows() < 1 || data->coeffs.cols() < 1) {
             throw ValueError(format("%s (%d): Chebyshev fit for %s has an empty coefficient matrix.", __FILE__, __LINE__, name.c_str()));
         }
+        // The fit domain must cover the fluid's advertised range. The scaled
+        // variable u = (2T - (cheb_Tmax + cheb_Tmin)) / (cheb_Tmax - cheb_Tmin)
+        // is not clamped, and Trange is deliberately independent of the
+        // fluid-level Tmin/Tmax (it is the data range), so a fit narrower than
+        // the fluid range would let checkT() admit a temperature and then have
+        // Clenshaw extrapolate outside [-1, 1], where a Chebyshev series
+        // diverges fast and silently. A fit WIDER than the fluid range is fine
+        // and is shipped deliberately (ZS25/ZS40 cp cover ~2 K below Tmin,
+        // which is real measured data).
+        //
+        // Compared with a tolerance, not exactly: Trange is emitted as a
+        // full-precision double from the Python fitter, so an endpoint that is
+        // conceptually equal to Tmax can differ in the last bits. HFE2 ships
+        // cheb_Tmax = 337.41999999999996 against Tmax = 337.42, and a bit-exact
+        // compare would reject it -- taking the whole incompressible library
+        // down at static-init time over 4e-14 K.
+        const double cover_tol = 1e-6 * std::max(1.0, Tmax - Tmin);
+        if (data->cheb_Tmin > Tmin + cover_tol || data->cheb_Tmax < Tmax - cover_tol) {
+            throw ValueError(format("%s (%d): Chebyshev fit domain [%g, %g] for %s does not cover the fluid range [%g, %g].", __FILE__, __LINE__,
+                                    data->cheb_Tmin, data->cheb_Tmax, name.c_str(), Tmin, Tmax));
+        }
         data->cheb_ddT = chebDerivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
     }
     if (specific_heat.type == IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
