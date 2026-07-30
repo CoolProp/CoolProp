@@ -1,143 +1,101 @@
 {
   "T_freeze": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "Tbase": 299.15,
-  "Tmax": 363.15,
-  "Tmin": 235.15,
-  "TminPsat": 363.15,
+  }, 
+  "Tbase": 2.991500e+02, 
+  "Tmax": 3.631500e+02, 
+  "Tmin": 2.351500e+02, 
+  "TminPsat": 3.631500e+02, 
   "conductivity": {
-    "NRMS": 2.022893e-05,
+    "NRMS": 2.022893e-05, 
     "coeffs": [
       [
-        0.4832764
-      ],
+        4.832764e-01
+      ], 
       [
-        0.001052655
-      ],
+        1.052655e-03
+      ], 
       [
         -1.460887e-07
-      ],
+      ], 
       [
         -5.067611e-12
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
+  }, 
   "density": {
-    "NRMS": 3.963952e-09,
+    "NRMS": 3.963952e-09, 
     "coeffs": [
       [
-        1247.233
-      ],
+        1.247233e+03
+      ], 
       [
-        -0.5673088
-      ],
+        -5.673088e-01
+      ], 
       [
-        2.85294e-12
-      ],
+        2.852940e-12
+      ], 
       [
         4.711277e-13
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
-  "density_cheb": {
-    "NRMS": 3.972976108520871e-09,
-    "Trange": [
-      235.14999999999998,
-      363.15
-    ],
-    "coeffs": [
-      [
-        1247.2332577906973
-      ],
-      [
-        -36.307762033631384
-      ]
-    ],
-    "fit_source": "tabular_data",
-    "type": "chebyshev",
-    "xbase": 0.0
-  },
-  "description": "Zitrec S40, Potassium formate/Sodium propionate",
+  }, 
+  "description": "Zitrec S40, Potassium formate/Sodium propionate", 
   "mass2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
+  }, 
   "mole2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "name": "ZS40",
-  "reference": "Arteco2010,Skovrup2013",
+  }, 
+  "name": "ZS40", 
+  "reference": "Arteco2010,Skovrup2013", 
   "saturation_pressure": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
+  }, 
   "specific_heat": {
-    "NRMS": 1.37286e-06,
+    "NRMS": 1.372860e-06, 
     "coeffs": [
       [
-        2787.399
-      ],
+        2.787399e+03
+      ], 
       [
-        1.325558
-      ],
+        1.325558e+00
+      ], 
       [
-        0.00253847
-      ],
+        2.538470e-03
+      ], 
       [
         6.199037e-05
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
-  "specific_heat_cheb": {
-    "NRMS": 1.3728600121394104e-06,
-    "Trange": [
-      233.14999999999998,
-      363.15
-    ],
-    "coeffs": [
-      [
-        2791.045579588239
-      ],
-      [
-        98.61144667434401
-      ],
-      [
-        4.96965414351682
-      ],
-      [
-        4.256026160588251
-      ]
-    ],
-    "fit_source": "tabular_data",
-    "type": "chebyshev",
-    "xbase": 0.0
-  },
+  }, 
   "viscosity": {
-    "NRMS": 0.004422379,
+    "NRMS": 4.422379e-03, 
     "coeffs": [
-      456.1892,
-      -156.3869,
-      9.221267
-    ],
+      4.561892e+02, 
+      -1.563869e+02, 
+      9.221267e+00
+    ], 
     "type": "exponential"
-  },
+  }, 
   "volume2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "xbase": 0.0,
-  "xid": "pure",
-  "xmax": 1.0,
-  "xmin": 0.0
+  }, 
+  "xbase": 0.000000e+00, 
+  "xid": "pure", 
+  "xmax": 1.000000e+00, 
+  "xmin": 0.000000e+00
 }

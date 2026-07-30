@@ -1,125 +1,89 @@
 {
   "T_freeze": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "Tbase": 273.15,
-  "Tmax": 323.15,
-  "Tmin": 253.15,
-  "TminPsat": 323.15,
+  }, 
+  "Tbase": 2.731500e+02, 
+  "Tmax": 3.231500e+02, 
+  "Tmin": 2.531500e+02, 
+  "TminPsat": 3.231500e+02, 
   "conductivity": {
-    "NRMS": 0.01087061,
+    "NRMS": 1.087061e-02, 
     "coeffs": [
       [
-        0.5181167
-      ],
+        5.181167e-01
+      ], 
       [
-        0.001966495
-      ],
+        1.966495e-03
+      ], 
       [
         -7.108434e-06
-      ],
+      ], 
       [
         -1.079438e-07
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
+  }, 
   "density": {
-    "NRMS": null,
+    "NRMS": null, 
     "coeffs": [
       [
-        1202.2
-      ],
+        1.202200e+03
+      ], 
       [
-        -0.42918
+        -4.291800e-01
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
-  "density_cheb": {
-    "NRMS": null,
-    "Trange": [
-      253.15,
-      323.15
-    ],
-    "coeffs": [
-      [
-        1195.7623
-      ],
-      [
-        -15.021299999999991
-      ]
-    ],
-    "fit_source": "basis_conversion",
-    "type": "chebyshev",
-    "xbase": 0.0
-  },
-  "description": "HYCOOL 20, Potassium formate",
+  }, 
+  "description": "HYCOOL 20, Potassium formate", 
   "mass2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
+  }, 
   "mole2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "name": "HY20",
-  "reference": "Hydro2000",
+  }, 
+  "name": "HY20", 
+  "reference": "Hydro2000", 
   "saturation_pressure": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
+  }, 
   "specific_heat": {
-    "NRMS": null,
+    "NRMS": null, 
     "coeffs": [
       [
-        2955.0
-      ],
+        2.955000e+03
+      ], 
       [
-        2.3
+        2.300000e+00
       ]
-    ],
+    ], 
     "type": "polynomial"
-  },
-  "specific_heat_cheb": {
-    "NRMS": null,
-    "Trange": [
-      253.15,
-      323.15
-    ],
-    "coeffs": [
-      [
-        2989.5
-      ],
-      [
-        80.50000000000018
-      ]
-    ],
-    "fit_source": "basis_conversion",
-    "type": "chebyshev",
-    "xbase": 0.0
-  },
+  }, 
   "viscosity": {
-    "NRMS": 0.006774862,
+    "NRMS": 6.774862e-03, 
     "coeffs": [
-      642.8081,
-      -117.2883,
-      9.971345
-    ],
+      6.428081e+02, 
+      -1.172883e+02, 
+      9.971345e+00
+    ], 
     "type": "exponential"
-  },
+  }, 
   "volume2input": {
-    "NRMS": null,
-    "coeffs": "null",
+    "NRMS": null, 
+    "coeffs": "null", 
     "type": "notdefined"
-  },
-  "xbase": 0.0,
-  "xid": "pure",
-  "xmax": 1.0,
-  "xmin": 0.0
+  }, 
+  "xbase": 0.000000e+00, 
+  "xid": "pure", 
+  "xmax": 1.000000e+00, 
+  "xmin": 0.000000e+00
 }
