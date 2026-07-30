@@ -5724,14 +5724,8 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
             "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0, 1.0]]},
             "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0, 1.0]]}
         }])";
-        std::string flip_msg;
-        try {
-            CoolProp::add_fluids_as_JSON("INCOMP", flipped);
-        } catch (const std::exception& e) {
-            flip_msg = e.what();
-        }
-        CAPTURE(flip_msg);
-        CHECK(flip_msg.find("pure/solution classification differs") != std::string::npos);
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", flipped),
+                          Catch::Matchers::ContainsSubstring("pure/solution classification differs"));
         // The rejected flip must not have disturbed the registered fluid.
         CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) - 900.0) < 1e-9);
 
@@ -5757,14 +5751,7 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
             "density_cheb":       {"type": "chebyshev", "Trange": [300.0, 340.0], "xbase": 0.0, "coeffs": [[1000.0]]},
             "specific_heat_cheb": {"type": "chebyshev", "Trange": [300.0, 340.0], "xbase": 0.0, "coeffs": [[2000.0]]}
         }])";
-        std::string narrow_msg;
-        try {
-            CoolProp::add_fluids_as_JSON("INCOMP", narrow_range);
-        } catch (const std::exception& e) {
-            narrow_msg = e.what();
-        }
-        CAPTURE(narrow_msg);
-        CHECK(narrow_msg.find("does not cover the fluid range") != std::string::npos);
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", narrow_range), Catch::Matchers::ContainsSubstring("does not cover the fluid range"));
 
         // ...but a fit WIDER than the fluid range is legitimate and must load:
         // ZS25/ZS40 ship cp fits covering ~2 K below Tmin because the source
