@@ -475,6 +475,7 @@ void init_CoolProp(nb::module_& m) {
       .value("iP_max", parameters::iP_max)
       .value("iP_min", parameters::iP_min)
       .value("idipole_moment", parameters::idipole_moment)
+      .value("iHmolar_formation", parameters::iHmolar_formation)
       .value("iT", parameters::iT)
       .value("iP", parameters::iP)
       .value("iQ", parameters::iQ)
