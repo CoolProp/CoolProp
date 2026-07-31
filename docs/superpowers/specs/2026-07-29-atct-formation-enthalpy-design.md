@@ -207,13 +207,14 @@ Mixture support remains a clean additive change if a concrete need appears.
 | Regenerator unit tests: element row, `(g, cis)` row, ambiguous-CAS row | pytest | the three §3.2 traps |
 | Four-value spot-check (methane, water, CO2, para-hydrogen) | pytest + `[formation]` | regenerator output vs. known ATcT values |
 
-Two deliberate choices:
+Three deliberate choices:
 
-- The reproduction test treats **ortho/para-H₂ as documented expected differences** — the
-  CSV is wrong there (§3.4), so the test asserts our value and records why.
+- **Para-hydrogen is spot-checked precisely because the CSV is wrong there** (§3.4).
+  ATcT publishes −0.058 kJ/mol; the hand-curated dataset lists 0.000. Asserting our
+  value pins the disagreement rather than letting it pass unnoticed.
 - **No REFPROP cross-check test.** §3.1 establishes that REFPROP's `HFRM` is a derived
   quantity disagreeing with ATcT by up to 7σ, so any threshold either encodes REFPROP's
-  ISO-6976 provenance as truth or is too loose to catch anything the reproduction test
+  ISO-6976 provenance as truth or is too loose to catch anything the spot-check
   does not already catch. The REFPROP comparison did its job as source-selection
   evidence; it is not a regression gate. `HEATFRMdll` is not called anywhere in this
   tier.
