@@ -14,7 +14,6 @@ import hashlib
 import struct
 import glob
 from pathlib import Path
-import pickle
 import tempfile
 
 # Vendored stdlib-only CBOR codec (dev/cbor_min.py) — avoids a third-party
@@ -361,18 +360,20 @@ class DependencyManager:
         # Check source list if cachefile exists
         if self.cachefile.exists():
             try:
-                previous_sources = pickle.load(self.cachefile.open('rb'))['sorted_sources']
+                with self.cachefile.open('r') as fp:
+                    previous_sources = json.load(fp)['sorted_sources']
             except Exception as err:
+                # Invalid or legacy pickle-format cache: treat as a miss
                 return True, f"cache file could not be read ({err})"
             if sorted(str(s) for s in self.sources) != previous_sources:
                 return True, "source list has changed"
         return False, ""
 
     def write_cache(self):
-        # Store paths as strings; pickled Path objects are not portable
-        # across Python versions (e.g. pathlib._local moved in 3.13/3.14)
-        with self.cachefile.open('wb') as fp:
-            pickle.dump(dict(sorted_sources=sorted(str(s) for s in self.sources)), fp)
+        # JSON with string paths: portable across Python versions and safe
+        # to load, unlike pickle (arbitrary code execution on load)
+        with self.cachefile.open('w') as fp:
+            json.dump(dict(sorted_sources=sorted(str(s) for s in self.sources)), fp)
         
 def combine_json(root_dir):
 
