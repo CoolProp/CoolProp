@@ -205,7 +205,7 @@ Mixture support remains a clean additive change if a concrete need appears.
 | A mixture input throws | `[formation]` | pure-only contract (§6) |
 | Every stored value within ±2000 kJ/mol | `[formation]` | a kJ↔J slip anywhere in the pipeline |
 | Regenerator unit tests: element row, `(g, cis)` row, ambiguous-CAS row | pytest | the three §3.2 traps |
-| **Independent reproduction of all 75 CSV values** | pytest | regenerator vs. contributor's dataset |
+| Four-value spot-check (methane, water, CO2, para-hydrogen) | pytest + `[formation]` | regenerator output vs. known ATcT values |
 
 Two deliberate choices:
 
@@ -217,6 +217,13 @@ Two deliberate choices:
   does not already catch. The REFPROP comparison did its job as source-selection
   evidence; it is not a regression gate. `HEATFRMdll` is not called anywhere in this
   tier.
+- **The full 75-value CSV reproduction was descoped.** Reproducing the contributor's
+  dataset entry by entry would require committing that CSV as a test fixture, which
+  reintroduces the hand-curated artifact this design exists to eliminate. The
+  four-value spot-check plus `expected_coverage.json` give the same protection: the
+  spot-check pins the values most likely to expose a units or binding error
+  (including para-hydrogen, where the CSV is wrong), and the coverage ledger fails
+  the run if any fluid changes state.
 
 ## 8. Out of scope
 
@@ -282,8 +289,9 @@ does not depend on how that question resolves, which is its main virtue.
    `STANDARD_STATE` block.
 2. The script exits non-zero if any fluid's coverage state differs from
    `dev/atct/expected_coverage.json`.
-3. All 75 values from the contributor's CSV are reproduced, except the documented
-   ortho/para-H₂ corrections.
+3. The four spot-checked values (methane −74513, water −241808, CO₂ −393477,
+   para-hydrogen −58 J/mol) are reproduced exactly, and `expected_coverage.json`
+   matches the run. Full CSV reproduction was descoped — see §7.
 4. `PropsSI("HFORMATION", "", 0, "", 0, "Methane")` returns −74513 J/mol; the same call
    for `R134a` throws with a message naming the fluid.
 5. `./dev/ci/preflight.sh` passes.

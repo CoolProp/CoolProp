@@ -178,7 +178,7 @@ def test_ambiguous_gas_rows_raise():
 - [ ] **Step 3: Run the tests to verify they fail**
 
 ```bash
-cd /Users/ianbell/Code/CoolProp/.claude/worktrees/formation
+cd <repo-root>
 python -m pytest dev/atct/test_fetch_atct_formation.py -v
 ```
 
@@ -816,7 +816,7 @@ Expected: 19 passed.
 - [ ] **Step 5: Generate the ledger and the data (network access required)**
 
 ```bash
-cd /Users/ianbell/Code/CoolProp/.claude/worktrees/formation
+cd <repo-root>
 python dev/atct/fetch_atct_formation.py --version 1.220 \
     --cache /tmp/atct_1220.html --update-ledger --write
 ```
