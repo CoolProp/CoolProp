@@ -13,37 +13,56 @@ def test_phase_envelope_R410A():
         AS: AbstractState = AbstractState("REFPROP", "R410A.MIX")
 
         AS.update(CP.QT_INPUTS, 0.5, 278.15)
-        print(f"  Viscosity: {AS.viscosity():.12f} Pa.s")
         print(f"  Pressure: {AS.p():.12f} Pa")
+        print(f"  Temperature: {AS.T():.12f} K")
+        print(f"  Viscosity: {AS.viscosity():.12f} Pa.s")
 
         AS.update(CP.QT_INPUTS, 0.0, 278.15)
-        print(f"  Viscosity from PQ (9e5, 0.0): {AS.viscosity():.12f} Pa.s")
+        print(
+            f"  Viscosity from QT (0.0, 278.15): {AS.viscosity():.12f} Pa.s ({AS.p():.12f} Pa, {AS.T():.12f} K)"
+        )
 
         AS.update(CP.QT_INPUTS, 1.0, 278.15)
-        print(f"  Viscosity from PQ (9e5, 1.0): {AS.viscosity():.12f} Pa.s")
+        print(
+            f"  Viscosity from QT (1.0, 278.15): {AS.viscosity():.12f} Pa.s ({AS.p():.12f} Pa, {AS.T():.12f} K)"
+        )
 
         AS.update(CP.QmassT_INPUTS, 0.0, 278.15)
-        print(f"  Viscosity from Qmass (0.0, 278.15): {AS.viscosity():.12f} Pa.s")
+        print(
+            f"  Viscosity from QmassT (0.0, 278.15): {AS.viscosity():.12f} Pa.s ({AS.p():.12f} Pa, {AS.T():.12f} K)"
+        )
 
         AS.update(CP.QmassT_INPUTS, 1.0, 278.15)
-        print(f"  Viscosity from Qmass (1.0, 278.15): {AS.viscosity():.12f} Pa.s")
+        print(
+            f"  Viscosity from QmassT (1.0, 278.15): {AS.viscosity():.12f} Pa.s ({AS.p():.12f} Pa, {AS.T():.12f} K)"
+        )
 
         # -----------------------------------------
 
         AS.update(CP.PQ_INPUTS, 9e5, 0.5)
+        print(f"  Pressure: {AS.p():.12f} Pa")
+        print(f"  Temperature: {AS.T():.12f} K")
         print(f"  Viscosity: {AS.viscosity():.12f} Pa.s")
 
         AS.update(CP.PQ_INPUTS, 9e5, 0.0)
-        print(f"  Viscosity from PQ (9e5, 0.0): {AS.viscosity():.12f} Pa.s")
+        print(
+            f"  Viscosity from PQ (9e5, 0.0): {AS.viscosity():.12f} Pa.s ({AS.p():.12f} Pa, {AS.T():.12f} K)"
+        )
 
         AS.update(CP.PQ_INPUTS, 9e5, 1.0)
-        print(f"  Viscosity from PQ (9e5, 1.0): {AS.viscosity():.12f} Pa.s")
+        print(
+            f"  Viscosity from PQ (9e5, 1.0): {AS.viscosity():.12f} Pa.s ({AS.p():.12f} Pa, {AS.T():.12f} K)"
+        )
 
         AS.update(CP.PQmass_INPUTS, 9e5, 0.0)
-        print(f"  Viscosity from PQmass (9e5, 0.0): {AS.viscosity():.12f} Pa.s")
+        print(
+            f"  Viscosity from PQmass (9e5, 0.0): {AS.viscosity():.12f} Pa.s ({AS.p():.12f} Pa, {AS.T():.12f} K)"
+        )
 
         AS.update(CP.PQmass_INPUTS, 9e5, 1.0)
-        print(f"  Viscosity from PQmass (9e5, 1.0): {AS.viscosity():.12f} Pa.s")
+        print(
+            f"  Viscosity from PQmass (9e5, 1.0): {AS.viscosity():.12f} Pa.s ({AS.p():.12f} Pa, {AS.T():.12f} K)"
+        )
 
         return True
 
