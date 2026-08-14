@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fetch_atct_formation  # noqa: E402  (module import, for monkeypatching __file__)
 from fetch_atct_formation import (  # noqa: E402
     AmbiguousSpecies,
     AtctParseError,
@@ -14,7 +13,6 @@ from fetch_atct_formation import (  # noqa: E402
     select_gas_row,
 )
 from fetch_atct_formation import (  # noqa: E402
-    BindResult,
     FluidRef,
     bind,
     load_coolprop_fluids,
@@ -419,6 +417,8 @@ def test_update_ledger_reports_changes_against_a_corrupted_ledger(tmp_path, monk
     """
     import json as _json
 
+    import fetch_atct_formation
+
     monkeypatch.setattr(fetch_atct_formation, "__file__", str(tmp_path / "fetch_atct_formation.py"))
 
     fluids_dir = tmp_path / "fluids"
@@ -463,6 +463,8 @@ def test_update_ledger_with_no_existing_ledger_says_so(tmp_path, monkeypatch, ca
     silently overwritten" look identical in the console output.
     """
     import json as _json
+
+    import fetch_atct_formation
 
     monkeypatch.setattr(fetch_atct_formation, "__file__", str(tmp_path / "fetch_atct_formation.py"))
 
