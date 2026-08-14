@@ -7391,8 +7391,11 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation]") {
     using Catch::Approx;
     SECTION("known values, J/mol") {
         // ATcT TN 1.220; see dev/atct/atct_report.csv for provenance.
-        struct { const char* fluid; double value; } cases[] = {
-          {"Methane", -74513.0}, {"Water", -241808.0}, {"CarbonDioxide", -393477.0}, {"Nitrogen", 0.0}};
+        struct
+        {
+            const char* fluid;
+            double value;
+        } cases[] = {{"Methane", -74513.0}, {"Water", -241808.0}, {"CarbonDioxide", -393477.0}, {"Nitrogen", 0.0}};
         for (auto& c : cases) {
             CAPTURE(c.fluid);
             shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", c.fluid));
