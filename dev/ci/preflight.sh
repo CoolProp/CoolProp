@@ -126,8 +126,18 @@ else
         CF_VER="18.1.8"
     fi
     # uvx caches the binary; first invocation downloads, subsequent are
-    # ~instant.  --dry-run --Werror returns non-zero on any reformatting.
-    if uvx clang-format@"$CF_VER" --dry-run --Werror $ALL_CPP 2>&1 | grep -q .; then
+    # ~instant.  --dry-run --Werror prints one diagnostic per violation AND
+    # exits non-zero.
+    #
+    # Capture the output and test that, rather than piping into `grep -q`:
+    # under `set -o pipefail` (line 35) the pipeline inherits clang-format's
+    # non-zero exit, so `if <pipeline>` was false exactly when violations
+    # existed and the gate reported PASS.  With no violations clang-format
+    # exits 0 but grep finds nothing and exits 1 -- also false, also PASS.
+    # Both branches led to PASS, so the gate could never fail.
+    CF_OUT="$(uvx clang-format@"$CF_VER" --dry-run --Werror $ALL_CPP 2>&1 || true)"
+    if [ -n "$CF_OUT" ]; then
+        printf '%s\n' "$CF_OUT" | head -20
         fail "clang-format (run: uvx clang-format@$CF_VER -i <files>)"
     else
         ok "clang-format ($CF_VER, $(printf '%s\n' "$ALL_CPP" | wc -l | tr -d ' ') file(s))"
@@ -146,10 +156,17 @@ elif [ ! -d build_catch ]; then
     }
 fi
 if ! skip_check build && [ -d build_catch ]; then
-    if cmake --build build_catch --target CatchTestRunner -j8 2>&1 | tee /tmp/preflight-build.log | tail -5 | grep -qE "error:|FAILED"; then
-        fail "build (see /tmp/preflight-build.log)"
-    else
+    # Test cmake's own exit status.  The previous form piped the build log
+    # through `tee | tail -5 | grep -qE "error:|FAILED"` under `set -o
+    # pipefail`: a failing build made the pipeline non-zero, so `if
+    # <pipeline>` was false and the gate reported the build as PASSING.
+    # Grepping the last 5 lines was independently unreliable -- a link
+    # error, an OOM kill or a cmake usage error need not print "error:".
+    if cmake --build build_catch --target CatchTestRunner -j8 >/tmp/preflight-build.log 2>&1; then
         ok "build CatchTestRunner"
+    else
+        tail -20 /tmp/preflight-build.log
+        fail "build (see /tmp/preflight-build.log)"
     fi
 fi
 
