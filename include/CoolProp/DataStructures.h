@@ -504,7 +504,9 @@ enum backend_families : int
     PR_BACKEND_FAMILY,
     VTPR_BACKEND_FAMILY,
     PCSAFT_BACKEND_FAMILY,
-    SVDSBTL_BACKEND_FAMILY
+    SVDSBTL_BACKEND_FAMILY,
+    GERG2004_BACKEND_FAMILY,
+    GERG2008_BACKEND_FAMILY
 };
 enum backends : int
 {
@@ -522,7 +524,9 @@ enum backends : int
     PR_BACKEND,
     VTPR_BACKEND,
     PCSAFT_BACKEND,
-    SVDSBTL_BACKEND
+    SVDSBTL_BACKEND,
+    GERG2004_BACKEND,
+    GERG2008_BACKEND
 };
 
 /// Convert a string into the enum values

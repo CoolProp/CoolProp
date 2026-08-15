@@ -28,6 +28,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 
 #include <iostream>
@@ -147,7 +148,7 @@ struct delim : std::numpunct<char>
 {
     char m_c;
     delim(char c) : m_c(c) {};
-    char do_decimal_point() const override {
+    [[nodiscard]] char do_decimal_point() const override {
         return m_c;
     }
 };
@@ -226,7 +227,7 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
         x = strtod(fluid_parts[1].c_str(), &pEnd);
 
         // Check if per cent or fraction syntax is used
-        if (!strcmp(pEnd, "%")) {
+        if (strcmp(pEnd, "%") == 0) {
             x *= 0.01;
         }
         fractions.push_back(x);
@@ -301,7 +302,7 @@ void _PropsSI_initialize(const std::string& backend, const std::vector<std::stri
 
 struct output_parameter
 {
-    enum OutputParametersType
+    enum class OutputParametersType : std::uint8_t
     {
         OUTPUT_TYPE_UNSET = 0,
         OUTPUT_TYPE_TRIVIAL,
@@ -317,21 +318,21 @@ struct output_parameter
     static std::vector<output_parameter> get_output_parameters(const std::vector<std::string>& Outputs) {
         std::vector<output_parameter> outputs;
         for (const auto& Output : Outputs) {
-            output_parameter out;
+            output_parameter out{};
             CoolProp::parameters iOutput;
             if (is_valid_parameter(Output, iOutput)) {
                 out.Of1 = iOutput;
                 if (is_trivial_parameter(iOutput)) {
-                    out.type = OUTPUT_TYPE_TRIVIAL;
+                    out.type = OutputParametersType::OUTPUT_TYPE_TRIVIAL;
                 } else {
-                    out.type = OUTPUT_TYPE_NORMAL;
+                    out.type = OutputParametersType::OUTPUT_TYPE_NORMAL;
                 }
             } else if (is_valid_first_saturation_derivative(Output, out.Of1, out.Wrt1)) {
-                out.type = OUTPUT_TYPE_FIRST_SATURATION_DERIVATIVE;
+                out.type = OutputParametersType::OUTPUT_TYPE_FIRST_SATURATION_DERIVATIVE;
             } else if (is_valid_first_derivative(Output, out.Of1, out.Wrt1, out.Constant1)) {
-                out.type = OUTPUT_TYPE_FIRST_DERIVATIVE;
+                out.type = OutputParametersType::OUTPUT_TYPE_FIRST_DERIVATIVE;
             } else if (is_valid_second_derivative(Output, out.Of1, out.Wrt1, out.Constant1, out.Wrt2, out.Constant2)) {
-                out.type = OUTPUT_TYPE_SECOND_DERIVATIVE;
+                out.type = OutputParametersType::OUTPUT_TYPE_SECOND_DERIVATIVE;
             } else {
                 throw ValueError(format("Output string is invalid [%s]", Output.c_str()));
             }
@@ -361,7 +362,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
     // If all trivial outputs, never do a state update
     bool all_trivial_outputs = true;
     for (const auto& j : output_parameters) {
-        if (j.type != output_parameter::OUTPUT_TYPE_TRIVIAL) {
+        if (j.type != output_parameter::OutputParametersType::OUTPUT_TYPE_TRIVIAL) {
             all_trivial_outputs = false;
         }
     }
@@ -373,7 +374,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
         split_input_pair(input_pair, p1, p2);
         // See if each parameter is in the output vector and is a normal type input
         for (const auto& j : output_parameters) {
-            if (j.type != output_parameter::OUTPUT_TYPE_NORMAL) {
+            if (j.type != output_parameter::OutputParametersType::OUTPUT_TYPE_NORMAL) {
                 all_outputs_in_inputs = false;
                 break;
             }
@@ -456,8 +457,8 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
             try {
                 const output_parameter& output = output_parameters[j];
                 switch (output.type) {
-                    case output_parameter::OUTPUT_TYPE_TRIVIAL:
-                    case output_parameter::OUTPUT_TYPE_NORMAL:
+                    case output_parameter::OutputParametersType::OUTPUT_TYPE_TRIVIAL:
+                    case output_parameter::OutputParametersType::OUTPUT_TYPE_NORMAL:
                         IO[i][j] = State->keyed_output(output.Of1);
                         if (use_guesses) {
                             switch (output.Of1) {
@@ -481,13 +482,13 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
                             }
                         }
                         break;
-                    case output_parameter::OUTPUT_TYPE_FIRST_DERIVATIVE:
+                    case output_parameter::OutputParametersType::OUTPUT_TYPE_FIRST_DERIVATIVE:
                         IO[i][j] = State->first_partial_deriv(output.Of1, output.Wrt1, output.Constant1);
                         break;
-                    case output_parameter::OUTPUT_TYPE_FIRST_SATURATION_DERIVATIVE:
+                    case output_parameter::OutputParametersType::OUTPUT_TYPE_FIRST_SATURATION_DERIVATIVE:
                         IO[i][j] = State->first_saturation_deriv(output.Of1, output.Wrt1);
                         break;
-                    case output_parameter::OUTPUT_TYPE_SECOND_DERIVATIVE:
+                    case output_parameter::OutputParametersType::OUTPUT_TYPE_SECOND_DERIVATIVE:
                         IO[i][j] = State->second_partial_deriv(output.Of1, output.Wrt1, output.Constant1, output.Wrt2, output.Constant2);
                         break;
                     default:
@@ -738,6 +739,13 @@ void Skip_if_No_REFPROP() {
 
 #if defined(ENABLE_CATCH)
 
+// cppcheck is run without the Catch2 headers on the include path, so it cannot
+// expand TEST_CASE/SECTION/CHECK and mis-parses the whole block below as a
+// syntax error.  It also explores both sides of every #if, so it reaches this
+// block even though ENABLE_CATCH is not defined for its run.  The suppression
+// is scoped to this one construct and hides no analysis of production code --
+// everything below it is test scaffolding.
+// cppcheck-suppress syntaxError
 TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
     SECTION("Single state, single output") {
         CHECK(ValidNumber(CoolProp::PropsSI("T", "P", 101325, "Q", 0, "Water")));
@@ -955,6 +963,40 @@ double saturation_ancillary(const std::string& fluid_name, const std::string& ou
 
     return HEOS.saturation_ancillary(iOutput, Q, iInput, value);
 }
+/// True if `backend` names either GERG family.
+///
+/// Resolves through extract_backend_families rather than comparing strings,
+/// because DataStructures.cpp registers TWO accepted spellings per backend --
+/// the family name ("GERG2008") and the backend name ("GERG2008Backend") --
+/// and AbstractState::factory accepts both.  A literal `backend == "GERG2008"`
+/// therefore leaves "GERG2008Backend::Methane" outside the guard, and any
+/// future alias would escape it too.
+static bool is_gerg_backend_string(const std::string& backend) {
+    // Strip the "?<options>" suffix FIRST: AbstractState::factory accepts one
+    // on the backend half ("GERG2008?{...}::Methane"), and extract_backend
+    // splits on "::" BEFORE that suffix is stripped, so the raw token
+    // arriving here still carries it.  Without this, "GERG2008?::Methane"
+    // resolved to no family at all and walked straight past the guard back
+    // into the silent no-op.
+    //
+    // A plain substr, NOT parse_factory_options: that function is not a pure
+    // parser -- a "?@<path>" tail makes it READ A FILE, so it can throw
+    // ValueError or even a bare int (errno) out of what is documented here as
+    // a classification predicate, for backend strings that are not GERG at
+    // all.  Only the text before the first '?' is needed to name the family.
+    const std::string clean = backend.substr(0, backend.find('?'));
+    backend_families f1 = INVALID_BACKEND_FAMILY, f2 = INVALID_BACKEND_FAMILY;
+    extract_backend_families(clean, f1, f2);
+    // f2 is checked as well so that a composed string ("<something>&GERG2008")
+    // cannot smuggle a GERG state past the guard.
+    for (backend_families f : {f1, f2}) {
+        if (f == GERG2004_BACKEND_FAMILY || f == GERG2008_BACKEND_FAMILY) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void set_reference_stateS(const std::string& FluidName, const std::string& reference_state) {
     std::string backend, fluid;
     extract_backend(FluidName, backend, fluid);
@@ -1035,7 +1077,54 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
         } else {
             throw ValueError(format("Reference state string is invalid: [%s]", reference_state.c_str()));
         }
+    } else if (is_gerg_backend_string(backend)) {
+        // The GERG backends do not read CoolProp's global fluid library, so
+        // set_fluid_enthalpy_entropy_offset -- which is how both branches
+        // above apply the change -- would write an offset into a JSON fluid
+        // entry that no GERG state ever consults.  Falling off the end of
+        // this if-chain, which is what happened before this arm existed, made
+        // the call a SILENT no-op: a user following Web/coolprop/GERG.rst's
+        // advice to reconcile GERG's ideal-gas reference state with HEOS's
+        // got no error and no change, and kept computing in the old
+        // convention.  Not even the reference_state string was validated.
+        // Throwing is the strictness rule this backend family is built on.
+        //
+        // The test is on the resolved backend FAMILY, not on the literal
+        // string: "GERG2008" and "GERG2008Backend" are both accepted factory
+        // spellings for the same backend (DataStructures.cpp registers a
+        // family name and a backend name for each), so a string comparison
+        // against "GERG2008" alone left "GERG2008Backend::Methane" walking
+        // straight past this guard and back into the silent no-op.
+        throw NotImplementedError(
+          format("set_reference_stateS is not implemented for the %s backend. These backends fix h = s = 0 for the IDEAL GAS at 298.15 K and "
+                 "101325 Pa; see the GERG documentation for how to compare them against HEOS.",
+                 backend.c_str()));
     }
+    // NOTE: two fail-open holes remain here, both PRE-EXISTING and neither
+    // widened by the GERG arm above.
+    //
+    // 1. Any other unrecognised backend prefix (SRK, PR, VTPR, PCSAFT,
+    //    INCOMP, ...) still falls off the end of this chain and silently does
+    //    nothing.  Making it throw would change behaviour for callers that
+    //    have relied on the no-op for years, so it needs its own decision.
+    //    Note this includes the HEOS arm's own literal comparison: the
+    //    registered BACKEND names "HelmholtzEOSBackend" and
+    //    "HelmholtzEOSMixtureBackend" are valid factory spellings that
+    //    `backend == "HEOS"` does not match, so
+    //    set_reference_stateS("HelmholtzEOSBackend::Methane", "NBP") is a
+    //    silent no-op today, as is the "?<options>" spelling
+    //    ("HEOS?::Water"), for the same reason: the HEOS arm compares the raw
+    //    prefix literally.  Those are unambiguously bugs rather than
+    //    preserved legacy behaviour, but fixing them changes HEOS behaviour
+    //    and does not belong in a GERG change.
+    //
+    // 2. A FluidName with no "::" at all resolves to backend "?" and takes the
+    //    HEOS arm above.  That is the documented default and cannot be
+    //    improved here -- the string genuinely carries no backend information
+    //    -- but it does mean set_reference_stateS("Methane", "NBP") adjusts
+    //    the HEOS fluid library and has no effect on a GERG state, silently.
+    //
+    // Both are bd CoolProp-mh1q.
 }
 void set_reference_stateD(const std::string& FluidName, double T, double rhomolar, double hmolar0, double smolar0) {
     std::vector<std::string> _comps(1, FluidName);

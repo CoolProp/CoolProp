@@ -419,8 +419,18 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     virtual void set_components(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV = true);
 
     /** \brief Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
+     *
+     * VIRTUAL because a backend may be defined by a self-contained parameter
+     * set that must NOT be silently supplemented from CoolProp's global binary
+     * interaction parameter library.  The default implementation delegates to
+     * MixtureParameters::set_mixture_parameters, which looks every pair up in
+     * that library by CAS number; GERGMixtureBackend overrides it to read the
+     * published GERG tables instead (src/Backends/GERG/GERGBackend.cpp).
+     * See also GERGMixtureBackend::set_components, which is overridden so that
+     * the linked SatL/SatV states are GERG-typed and therefore reach this
+     * override too rather than the default.
      */
-    void set_mixture_parameters();
+    virtual void set_mixture_parameters();
 
     /** \brief Set the mole fractions
      *
