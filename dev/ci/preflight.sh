@@ -135,12 +135,24 @@ else
     # existed and the gate reported PASS.  With no violations clang-format
     # exits 0 but grep finds nothing and exits 1 -- also false, also PASS.
     # Both branches led to PASS, so the gate could never fail.
-    CF_OUT="$(uvx clang-format@"$CF_VER" --dry-run --Werror $ALL_CPP 2>&1 || true)"
-    if [ -n "$CF_OUT" ]; then
+    # ALL_CPP is a newline-separated scalar; read it into an array so paths
+    # containing spaces or glob characters survive as single arguments.
+    CF_FILES=()
+    while IFS= read -r _f; do
+        [ -n "$_f" ] && CF_FILES+=("$_f")
+    done <<< "$ALL_CPP"
+
+    # Branch on clang-format's EXIT STATUS, not on whether it printed
+    # anything.  uvx writes progress to stderr on a cold cache
+    # ("Downloading clang-format (1.3MiB)"), which 2>&1 captures, so a
+    # non-empty-output test reports a formatting failure on a clean tree
+    # the first time preflight runs on any machine.
+    CF_OUT="$(uvx clang-format@"$CF_VER" --dry-run --Werror "${CF_FILES[@]}" 2>&1)" && CF_RC=0 || CF_RC=$?
+    if [ "$CF_RC" -ne 0 ]; then
         printf '%s\n' "$CF_OUT" | head -20
         fail "clang-format (run: uvx clang-format@$CF_VER -i <files>)"
     else
-        ok "clang-format ($CF_VER, $(printf '%s\n' "$ALL_CPP" | wc -l | tr -d ' ') file(s))"
+        ok "clang-format ($CF_VER, ${#CF_FILES[@]} file(s))"
     fi
 fi
 
