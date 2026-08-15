@@ -547,14 +547,53 @@ CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDb
     }
 }
 
+/// True when BOTH mole fractions of a pair are exactly zero -- the input for
+/// which f_Y_ij and its first derivatives evaluate 0/0 for any PHYSICALLY
+/// VALID composition.
+///
+/// EXACTLY zero is the whole condition, not an epsilon.  For non-negative
+/// mole fractions the denominator beta^2*x_i + x_j is a sum of non-negative
+/// terms and is therefore nonzero for any pair of non-zero doubles, however
+/// small: x_i = x_j = 1e-200 gives a numerator that underflows to 0 over a
+/// denominator near 2e-200, i.e. a clean 0.  A tolerance-based test would
+/// instead start rewriting answers that are currently correct.
+///
+/// SCOPE OF THAT CLAIM, stated precisely because an earlier version of this
+/// comment overstated it.  Restricted to non-negative mole fractions, the
+/// both-exactly-zero corner is the complete set of NaN-producing inputs here,
+/// so guarding it replaces NaN with the correct limit and changes no finite
+/// result.  It is NOT the complete set over arbitrary doubles: with
+/// beta == 1 and x_i == -x_j the denominator cancels to exactly zero while
+/// both mole fractions are nonzero, and f_Y_ij is 0/0 there too; nearby
+/// (near-cancelling) inputs are worse still, returning finite but absurd
+/// reducing parameters (measured: Tr = 2.79e-08 K, rhor = -6.2e13 mol/m^3)
+/// with no error raised.  That cancelling corner is a SEPARATE pre-existing
+/// defect which this guard neither introduces nor fixes -- the unguarded code
+/// was equally NaN there -- and it is unreachable from a valid composition.
+/// It is recorded on bd CoolProp-8psx rather than papered over here.
+///
+/// See GitHub #1677 / bd CoolProp-8psx.
+static inline bool both_mole_fractions_zero(double xi, double xj) {
+    return xi == 0.0 && xj == 0.0;
+}
+
 CoolPropDbl GERG2008ReducingFunction::dfYkidxi__constxk(const std::vector<CoolPropDbl>& x, std::size_t k, std::size_t i,
                                                         const STLMatrix& beta) const {
     double xk = x[k], xi = x[i], beta_Y = beta[k][i], beta_Y_squared = beta_Y * beta_Y;
+    // Removable singularity: with x_k = 0 the whole expression is x_k/beta^2
+    // for any x_i, and with x_i = 0 it is likewise O(x_k), so the limit into
+    // the corner is 0 from every direction inside the simplex.
+    if (both_mole_fractions_zero(xk, xi)) {
+        return 0.0;
+    }
     return xk * (xk + xi) / (beta_Y_squared * xk + xi) + xk * xi / (beta_Y_squared * xk + xi) * (1 - (xk + xi) / (beta_Y_squared * xk + xi));
 }
 CoolPropDbl GERG2008ReducingFunction::dfYikdxi__constxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t k,
                                                         const STLMatrix& beta) const {
     double xk = x[k], xi = x[i], beta_Y = beta[i][k], beta_Y_squared = beta_Y * beta_Y;
+    if (both_mole_fractions_zero(xi, xk)) {
+        return 0.0;  // as above
+    }
     return xk * (xi + xk) / (beta_Y_squared * xi + xk)
            + xi * xk / (beta_Y_squared * xi + xk) * (1 - beta_Y_squared * (xi + xk) / (beta_Y_squared * xi + xk));
 }
@@ -564,6 +603,26 @@ const CoolPropDbl GERG2008ReducingFunction::c_Y_ij(const std::size_t i, const st
 }
 CoolPropDbl GERG2008ReducingFunction::f_Y_ij(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, const STLMatrix& beta) const {
     double xi = x[i], xj = x[j], beta_Y = beta[i][j];
+    // Removable singularity at the both-zero corner: the numerator is
+    // O(|x|^3) and the denominator O(|x|), so the limit is 0 along every path
+    // into it, and a pair of components that are both absent contributes
+    // nothing to the reducing function.  Without this, ANY composition with
+    // two or more exactly-zero mole fractions -- e.g. the 21-name GERG-2008
+    // component list with a realistic natural-gas analysis, where most entries
+    // are 0 -- silently produces a NaN reducing temperature and density, and
+    // therefore NaN for every property, with no error anywhere.  Pre-existing
+    // for every multi-fluid backend, not something the GERG backend
+    // introduced: GitHub #1677 / bd CoolProp-8psx, whose design of record is
+    // exactly this -- guard the both-zero corner at the math source and keep
+    // every component, so that single-zero infinite-dilution derivatives stay
+    // exact.  For any physically valid composition this is a NaN-ONLY change:
+    // over non-negative mole fractions there is no input for which it replaces
+    // one finite value with a different finite value.  See
+    // both_mole_fractions_zero above for why that qualifier is there and for
+    // the separate, pre-existing cancelling-denominator corner it excludes.
+    if (both_mole_fractions_zero(xi, xj)) {
+        return 0.0;
+    }
     return xi * xj * (xi + xj) / (beta_Y * beta_Y * xi + xj);
 }
 CoolPropDbl GERG2008ReducingFunction::d2fYikdxi2__constxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t k,
