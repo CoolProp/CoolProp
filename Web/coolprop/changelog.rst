@@ -1,9 +1,66 @@
 Changelog for CoolProp
 ======================
 
+8.0.1
+-----
+
 Breaking Changes:
 
 * Reintroduced Java wrapper compilation. Java classes generated have been moved from default package, to "org.coolprop" package, in line with Java convention and recommended practice. Applications that previously used the Java wrappers will need to update their import references for CoolProp classes if switching to this version. Java wrappers are built with target Java 11, as Java 8 support has been deprecated. A JDK 11+ must be used to compile using these wrappers.
+
+Highlights:
+
+* Added the :doc:`GERG-2004 and GERG-2008 </coolprop/GERG>` wide-range equations of state for natural gases as two new *strict* backend families (``GERG2004::...``, ``GERG2008::...``).  Strict means the backends admit only the 18 / 21 components each model publishes, carry only that model's own pure-fluid EOS, ideal-gas coefficients, binary reducing parameters and departure functions, use GERG's ``R = 8.314472 J/mol/K`` rather than the CODATA value, and throw rather than answer from a different model — transport properties, superancillaries, and mutable binary interaction parameters are all deliberately unavailable.  Validated against `teqp <https://github.com/usnistgov/teqp>`_ at relative tolerances of 1e-12 on the Helmholtz energies and 1e-10 on pressure, isochoric heat capacity and speed of sound.  See the :doc:`GERG documentation </coolprop/GERG>` for the component tables, the enforced range of validity, the reference-state convention (``h = s = 0`` for the **ideal gas** at 298.15 K / 101325 Pa, which differs from every other CoolProp backend), and the known limitations.  GERG publishes no acentric factor, which CoolProp's VLE and density guess machinery needs; rather than borrow one from a different equation of state, the backends **derive** it from GERG's own equation as :math:`\omega = -1 - \log_{10}(p_{sat}(0.7 T_c)/p_c)` with a converged saturation solve.  Mixture saturation, phase envelopes, VLE flashes and ``DmolarP`` therefore all work.  One limitation deserves calling out here: for **pure** GERG fluids the pressure-plus-caloric input pairs (``HmolarP``, ``PSmolar``, ``PUmolar``) do not work **at all** — through ``PropsSI`` they return ``inf`` plus an error string rather than raising.  That has two separate causes, neither of them the acentric factor: GERG publishes no triple point either, so the flash's temperature bracket falls back to the model's ``Tmin`` instead of the saturation temperature; and the bracket's upper end (1.5x ``Tmax``) is outside the range the backend enforces.  Use ``PT``, ``DmolarT`` or ``DmolarP`` inputs for pure GERG fluids, or ``HEOS`` when you need a caloric input pair.
+
+**Behavior changes (potentially breaking):**
+
+* **Compositions with two or more exactly-zero mole fractions no longer return
+  NaN for the bulk properties.**  ``GERG2008ReducingFunction::f_Y_ij``
+  evaluates :math:`x_i x_j (x_i + x_j) / (\beta^2 x_i + x_j)`, which is
+  :math:`0/0` as soon as *two* mole fractions are exactly zero.  Any such
+  composition previously produced a NaN reducing temperature and density — and
+  therefore NaN for **every** property — **with no error raised anywhere**.
+  This affects **all** multi-fluid backends, including the default ``HEOS``,
+  and it is exactly the shape a natural-gas analysis arrives in (a full
+  component list with most entries zero).  The removable singularity is now
+  guarded at the both-zero corner, where its limit is zero.
+
+  Scope, stated precisely.  **Fixed:** the reducing state and everything that
+  flows from it — :math:`p`, :math:`\rho`, :math:`\alpha^0`,
+  :math:`\alpha^r`, :math:`c_v`, :math:`c_p`, speed of sound, :math:`h`,
+  :math:`s`, molar mass.  These now equal, to the last digit, the same
+  composition with the zero components trimmed away, where before they were
+  NaN.  **Not fixed:** the composition derivatives, and therefore
+  ``fugacity()`` / ``fugacity_coefficient()``, which still return NaN with no
+  error when ``x[N-1] == 0`` and at least one other mole fraction is exactly
+  zero.  CoolProp's ``XN_DEPENDENT`` derivative formulation inlines the same
+  :math:`0/0` expression rather than calling the guarded helpers, and it was
+  left alone here.  If you need fugacities, trim the zero components out of
+  the composition — the trimmed result is exact.  A *single* zero mole
+  fraction was never affected and its infinite-dilution behaviour is
+  bit-for-bit unchanged.  Tracked as GitHub
+  `#1677 <https://github.com/CoolProp/CoolProp/issues/1677>`_.
+
+* **``set_reference_stateS`` now throws on the GERG backends instead of
+  silently doing nothing.**  ``set_reference_stateS`` dispatches on the backend
+  prefix and had no final ``else``, so an unrecognised prefix returned having
+  done nothing at all — not even validating the reference-state string.  The
+  GERG backends now raise ``NotImplementedError`` there.  (Other unrecognised
+  prefixes still no-op; that pre-existing behaviour is unchanged.)
+
+* **vtable change in an internal header:**
+  ``HelmholtzEOSMixtureBackend::set_mixture_parameters()`` is now ``virtual``,
+  so the GERG backends can populate the reducing function and excess term from
+  their own tables instead of CoolProp's global JSON library.  Adding a virtual
+  member function changes the class's vtable layout.  It is **source**
+  compatible — no caller needs to change — but **not binary** compatible.
+  ``src/Backends/Helmholtz/HelmholtzEOSMixtureBackend.h`` is **not** an
+  installed header and ``AbstractState``'s own vtable is unchanged, so
+  consumers using the installed public API are unaffected; the recompile
+  requirement applies to code built against CoolProp's in-tree ``src/``
+  headers.  The new ``backend_families`` / ``backends`` enumerators in
+  ``include/CoolProp/DataStructures.h`` are appended at the end of their enums
+  and are ABI-safe.
 
 8.0.0
 -----
