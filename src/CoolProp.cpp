@@ -1127,6 +1127,36 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
     // Both are bd CoolProp-mh1q.
 }
 void set_reference_stateD(const std::string& FluidName, double T, double rhomolar, double hmolar0, double smolar0) {
+    // Same refusal, same reasoning, as the GERG arm of set_reference_stateS
+    // above -- see that comment for why the test is on the resolved backend
+    // FAMILY rather than a literal string comparison.  This function is the
+    // sibling of that one and carries the SAME hazard: it ends in
+    // set_fluid_enthalpy_entropy_offset, which writes into the global JSON
+    // fluid library that no GERG state ever consults.
+    //
+    // Before this arm existed the two spellings failed in two different, and
+    // equally unhelpful, ways: `set_reference_stateD("GERG2008::Methane", ...)`
+    // threw `key [GERG2008::Methane] was not found in string_to_index_map in
+    // JSONFluidLibrary` -- an internal lookup error that says nothing about
+    // GERG or reference states -- while `set_reference_stateD("Methane", ...)`
+    // succeeded and silently adjusted HEOS's methane with no effect whatever
+    // on a GERG state.  Note the raw FluidName is passed through unsplit here
+    // (unlike set_reference_stateS, which runs extract_backend first), so
+    // this check has to do its own extraction.
+    {
+        std::string backend, fluid;
+        extract_backend(FluidName, backend, fluid);
+        if (is_gerg_backend_string(backend)) {
+            throw NotImplementedError(
+              format("set_reference_stateD is not implemented for the %s backend. These backends fix h = s = 0 for the IDEAL GAS at 298.15 K and "
+                     "101325 Pa; see the GERG documentation for how to compare them against HEOS.",
+                     backend.c_str()));
+        }
+    }
+    // NOTE: the same two pre-existing fail-open holes documented at the end of
+    // set_reference_stateS apply here unchanged (bd CoolProp-mh1q): an
+    // unrecognised non-GERG backend prefix, and a bare FluidName with no "::",
+    // both still reach the HEOS path below.
     std::vector<std::string> _comps(1, FluidName);
     CoolProp::HelmholtzEOSMixtureBackend HEOS(_comps);
 

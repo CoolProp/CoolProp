@@ -145,6 +145,8 @@ emitting a short header, if any of the following don't hold exactly:
 - AGA8 rows emitted `== len(VALIDATION_DATA) == 187`
 - **every** emitted mixture row has a finite `alphar` *and* a finite
   `alphaig` (`nanalpha_*` / `aga8_nanalpha` must all be empty)
+- the **median** AGA8 `p_teqp` vs `validation_data.P_MPa` relative
+  difference is `< 1e-9` — the component-ordering gate, see below
 
 Why this matters more here than almost anywhere else in this backend: the
 Task 5 review established that a single mistyped digit in one of the 225
@@ -184,6 +186,30 @@ both -- 1 gas(es) dropped: [2]
 AssertionError: 2004/methane: only 0/16 grid points have a finite alphar -- this fluid is
 failing broadly (not just isolated near-phase-boundary points); investigate before
 shipping, do not silently ship a near-empty fluid.
+```
+
+The ordering gate was verified the same way, and it is worth recording
+what it caught, because this one was a live gate hole rather than a
+hypothetical: the median was computed and *printed* but never asserted, so
+a regeneration that reintroduced the ordering bug emitted the full
+550-row fixture and exited **0**. Measured in this tree with teqp 0.23.2,
+swapping `AGA8_NAMES` for `GERG2008_NAMES` inside `aga8_points()`:
+
+```
+# before the assert existed
+exit 0, 550 mixture rows emitted
+AGA8 p_teqp vs validation_data.P_MPa: worst 2.704e-01 (gas 97), median 7.092e-04 across 187 rows, 177 rows > 1e-6
+
+# with the assert
+exit 1, 0 rows emitted
+AssertionError: AGA8 p_teqp vs validation_data.P_MPa: median relative difference is 7.092e-04,
+expected < 1e-9. The overwhelmingly likely cause is a component-ORDERING bug -- MIXTURE_COMPS
+rows are ordered per AGA8_NAMES and must not be paired with GERG2008_NAMES (that mistake gives
+a median of ~7.1e-4). Do NOT relax this threshold; fix the ordering.
+
+# correct ordering, with the assert
+exit 0, header byte-identical to the committed GERGReferenceValues.h
+AGA8 p_teqp vs validation_data.P_MPa: worst 6.770e-04 (gas 193), median 3.514e-12 across 187 rows, 41 rows > 1e-6
 ```
 
 ### `validation_data.P_MPa` cross-check: why the worst-case row is 6.8e-4, not 1e-12

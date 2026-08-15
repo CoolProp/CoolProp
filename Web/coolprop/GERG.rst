@@ -145,17 +145,29 @@ two cases, so there is none.  Like every other property-limit guard in
 CoolProp, the temperature check is skipped when the
 ``DONT_CHECK_PROPERTY_LIMITS`` configuration flag is set.
 
-**For a mixture, the enforced limits are mole-fraction-weighted averages of the
-per-component limits.**  This is CoolProp's standard behaviour for
-``Tmin``/``Tmax``/``pmax`` on a mixture, and it applies here too.  Each GERG
-component carries ``Tmin = min(60 K, T_c)`` — the cap exists because taking 60 K
+**For a mixture, the enforced limits are the intersection of the per-component
+limits** — the largest of the components' ``Tmin`` values and the smallest of
+their ``Tmax`` values.  Each GERG component carries ``Tmax = 700 K`` and
+``Tmin = min(60 K, T_c)``; the ``Tmin`` cap exists because taking 60 K
 literally would put ``Tmin`` *above* the reducing temperature for helium
-(5.1953 K) and hydrogen (33.19 K), which is self-contradictory.  A consequence
-is that a helium-rich mixture reports a ``Tmin`` below 60 K: for
-90 % helium / 10 % methane, ``Tmin`` is
-:math:`0.9 \times 5.1953 + 0.1 \times 60 = 10.68` K.  That number is an
-artefact of the averaging rule, **not** a claim that GERG is valid at 10.68 K.
-The authoritative range is the mixture-model range in the table above.
+(5.1953 K) and hydrogen (33.19 K), which is self-contradictory.  So in practice
+a mixture's enforced range is exactly 60–700 K — the published mixture-model
+range — unless *every* component has :math:`T_c` below 60 K, as in a
+helium/hydrogen mixture (33.19–700 K).
+
+Note this is **not** the same as what ``Tmin()`` and ``Tmax()`` report.  Those
+are CoolProp's generic mixture accessors, which return a mole-fraction-weighted
+sum of the per-component limits; the GERG range check deliberately does not use
+them, because that sum is not normalised by :math:`\sum_i x_i` and would
+therefore scale the enforced bounds with the magnitude of the composition
+vector — a composition summing to 2 would have accepted 900 K.  The enforced
+bounds are composition-independent; ``Tmin()``/``Tmax()`` are unchanged and
+still report the weighted values.
+
+**Density is not enforced either.**  Each GERG fluid carries
+``EOS.limits.rhomax = 1e6`` mol/m³, because ``EquationOfState::limits`` has the
+field and leaving it at its default would be worse; nothing in this backend
+checks it.  Treat it as metadata, not as a guard.
 
 The same cap has a consequence for the **pure** fluids: because helium's and
 hydrogen's ``Tmin`` are 5.1953 K and 33.19 K rather than 60 K, ``GERG2008::Helium``
@@ -217,6 +229,14 @@ Mutable binary interaction parameters
     # ValueError: GERG binary interaction parameters are fixed by the published
     # model and cannot be modified. A mixture with altered beta/gamma is not GERG.
 
+``AbstractState`` declares four public mutator routes to the same data — an
+index-keyed and a CAS-keyed overload of each of those two functions.  Only the
+**index-keyed** pair is overridden here, with the ``ValueError`` above; the two
+**CAS-keyed** overloads are inherited from ``AbstractState``, which already
+throws ``NotImplementedError`` for them unconditionally.  So the exception type
+you see depends on which overload you called — both refuse, and a test pins
+that the inherited pair keeps refusing.
+
 A mixture whose :math:`\beta` or :math:`\gamma` has been altered is not GERG,
 so the setters refuse rather than producing a mutant model that still answers
 to the name.  If you want to adjust interaction parameters, that is what the
@@ -235,11 +255,12 @@ itself* it is derived instead.
 Acentric factor
 ----------------
 
-GERG publishes no acentric factor, but CoolProp needs one: the Wilson K-factor
-seed used by every mixture VLE flash and phase envelope, ``T_DP_PengRobinson``,
-and the SRK density estimate ``solver_rho_Tp`` starts from all read
-:math:`\omega` *directly* off the equation-of-state object.  Leaving it at an
-``inf`` sentinel is what used to break mixture saturation.
+GERG publishes no acentric factor, but CoolProp needs one.  Three separate
+pieces of machinery read :math:`\omega` *directly* off the equation-of-state
+object: the Wilson K-factor seed used by every mixture VLE flash and phase
+envelope, ``T_DP_PengRobinson``, and the SRK density estimate ``solver_rho_Tp``
+starts from.  None of them checks the value first, which is why leaving it at
+an ``inf`` sentinel used to break mixture saturation.
 
 Borrowing CoolProp's tabulated value for the same fluid would work numerically
 and would break the property this backend exists to have — that nothing in it
@@ -419,8 +440,11 @@ The guard that was added covers the reducing function's ``f_Y_ij`` and its two
 correct.  It does **not** cover the second- and third-derivative helpers
 (``d2fYijdxidxj`` and friends), which contain the same :math:`0/0` and are
 reached under **both** the ``XN_INDEPENDENT`` and ``XN_DEPENDENT``
-formulations; the latter additionally inlines the expression rather than
-calling the helpers at all.
+formulations.  ``XN_DEPENDENT`` reaches them by two different routes depending
+on which derivative is asked for: ``d2Yrdxidxj`` calls ``d2fYijdxidxj`` and
+``d2fYkidxi2__constxk`` directly, exactly as ``XN_INDEPENDENT`` does, while
+``d2Yrdxi2__constxj`` inlines its own expression instead of calling any helper.
+The unguarded :math:`0/0` is present either way.
 
 Two exactly-zero mole fractions anywhere in the composition are enough to make
 those higher derivatives NaN.  Whether that surfaces through ``fugacity()``
@@ -478,20 +502,28 @@ thing in these models.  The ``p_triple()`` sentinel is not inert: it is one of
 the two reasons the pure-fluid caloric input pairs still fail (see
 :ref:`Which input pairs actually work <gerg_supported_inputs>`).
 
-``set_reference_stateS`` is not available
-------------------------------------------
+``set_reference_stateS`` and ``set_reference_stateD`` are not available
+-----------------------------------------------------------------------
 
-It throws ``NotImplementedError`` on these backends::
+Both throw ``NotImplementedError`` on these backends::
 
     CP.set_reference_state("GERG2008::Methane", "NBP")
     # NotImplementedError: set_reference_stateS is not implemented for the
     # GERG2008 backend. ...
 
+    CP.set_reference_state("GERG2008::Methane", 300.0, 1000.0, 0.0, 0.0)
+    # NotImplementedError: set_reference_stateD is not implemented for the
+    # GERG2008 backend. ...
+
 CoolProp applies a reference-state change by writing an offset into the global
 fluid-library entry for the fluid, and the GERG backends do not read that
-library.  Before this was made explicit the call was a **silent no-op** — it
-returned without error and without effect, and did not even validate the
-reference-state string.  See *Reference state* below for what to do instead.
+library.  Before this was made explicit the ``S`` call was a **silent no-op** —
+it returned without error and without effect, and did not even validate the
+reference-state string.  The ``D`` variant, which ends in the same
+library write, failed in two different unhelpful ways instead: with a backend
+prefix it raised an internal ``key [GERG2008::Methane] was not found in
+string_to_index_map in JSONFluidLibrary``, and without one it silently adjusted
+``HEOS``.  See *Reference state* below for what to do instead.
 
 The throw covers every spelling that resolves to a GERG family, including
 ``GERG2008Backend::``, ``GERG2008?<options>::`` and composed strings such as
@@ -505,13 +537,29 @@ The strictness rules are model-level, not C++-level
 ----------------------------------------------------
 
 The throws listed under *What these backends deliberately do not provide*
-cover the documented API.  They are not a sandbox.  From C++ it remains
-possible to reach past them — for example ``Reducing->set_binary_interaction_double(...)``
-on the reducing-function object, direct assignment into
-``residual_helmholtz->Excess.F[i][j]``, or ``update_DmolarT_direct()``, which
-bypasses the range check by design because it is what the backend uses to
-build its own fluids.  These are documented in ``GERGBackend.h``.  The
-strictness rules exist to stop a *plausible mistake*, not a determined one.
+cover the documented API.  They are not a sandbox.
+
+Two further routes that are reachable from a plain ``AbstractState`` — with no
+downcast — are also **closed**, and are not listed above only because they are
+not "properties GERG does not publish":
+
+* ``change_EOS(i, "SRK")`` throws ``ValueError``.  Swapping the equation of
+  state out from under a GERG backend leaves an object that still answers to
+  the name ``GERG2008`` while computing from a cubic; it was confirmed to
+  install an SRK cubic silently before this refusal existed.
+* ``update_with_guesses(...)`` applies the same range check as ``update()``.
+  It is a separate virtual entry point and previously accepted
+  :math:`T = 900` K.
+
+What remains open needs C++ that already holds a concrete backend pointer or
+reaches through a public data member — for example
+``Reducing->set_binary_interaction_double(...)`` on the reducing-function
+object, direct assignment into ``residual_helmholtz->Excess.F[i][j]``, or
+``update_DmolarT_direct()``, which bypasses the range check by design because
+it is what the backend uses to build its own fluids.  These are enumerated in
+``GERGBackend.h`` and pinned by tests, so closing or reopening one shows up as
+a test change.  The strictness rules exist to stop a *plausible mistake*, not a
+determined one.
 
 Tabular backends wrapping GERG
 -------------------------------
@@ -527,6 +575,10 @@ every lookup inside the model's own range is rejected::
 
 Delete the cache directory if you have created one.  Use the ``GERG2008``
 backend directly.
+
+Both halves of that — the factory succeeding, and every subsequent lookup
+being rejected — are pinned by a test, so if a future change makes these
+wrappers work, this section starts failing rather than quietly going stale.
 
 Helium and hydrogen have no reachable saturation state
 -------------------------------------------------------
@@ -589,7 +641,8 @@ reference-state effect.
 **Any cross-check of a GERG backend against ``HEOS`` must compare *differences*
 in** :math:`h` **and** :math:`s` **, never absolute values.**  Comparing
 absolute enthalpies will make a correct implementation look catastrophically
-wrong.  ``set_reference_stateS`` is **not** available as an escape hatch here
+wrong.  Neither ``set_reference_stateS`` nor ``set_reference_stateD`` is
+available as an escape hatch here
 (see above) — subtract your own offset, or take a single reference point from
 each backend and compare everything relative to it.
 

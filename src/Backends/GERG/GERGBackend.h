@@ -308,6 +308,13 @@ class GERGMixtureBackend : public HelmholtzEOSMixtureBackend
     /// range.  See the `update` override above for why this exists as a
     /// check here rather than relying on the inherited flash machinery, and
     /// for why it is T-only.
+    ///
+    /// The bounds are the INTERSECTION of the components' own
+    /// EOS.limits.Tmin/Tmax (max of the Tmin values, min of the Tmax
+    /// values), NOT AbstractState::Tmin()/Tmax() -- which for a mixture are
+    /// un-normalised mole-fraction-weighted sums and therefore scale with
+    /// sum(x).  The rationale for both halves of that choice is written out
+    /// at the definition in GERGBackend.cpp.
     void check_gerg_range_of_validity();
 
     /// Build directly from already-assembled GERG CoolPropFluid objects.

@@ -22,6 +22,7 @@
 
 #include "CoolProp/Exceptions.h"
 #include "CoolProp/detail/strings.h"
+#include "CoolProp/numerics/numerics.h"  // ValidNumber, for get_pure_info's drift-guard
 
 namespace CoolProp {
 namespace GERG {
@@ -187,6 +188,16 @@ inline const std::vector<std::string>& component_names(GERGModel model) {
     return (model == GERGModel::GERG_2004) ? names_2004 : names_2008;
 }
 
+/// Reject a pure-info row whose values are not all finite.  Split out of
+/// get_pure_info only so the check has one call site and one message; see the
+/// comment at that call site for why it exists at all.
+inline void require_finite_pure_info(const std::string& gerg_name, const PureInfo& data) {
+    if (!ValidNumber(data.rhoc_molm3) || !ValidNumber(data.Tc_K) || !ValidNumber(data.M_kgmol)) {
+        throw ValueError(format("The GERG pure-fluid info for [%s] is not all finite (rhoc = %g, Tc = %g, M = %g)", gerg_name.c_str(),
+                                data.rhoc_molm3, data.Tc_K, data.M_kgmol));
+    }
+}
+
 inline PureInfo get_pure_info(GERGModel model, const std::string& gerg_name) {
     PureInfo data{};
     bool found = false;
@@ -211,6 +222,20 @@ inline PureInfo get_pure_info(GERGModel model, const std::string& gerg_name) {
         }
         data = it->second;
     }
+    // Same drift-guard, and the same reasoning, as get_acentric_factor's
+    // ValidNumber check (GERGBackend.cpp): this is a hand-transcribed table,
+    // and the generator that produced it cannot police an edit made after it
+    // ran.  It matters more here than the shape of the check suggests,
+    // because make_gerg_fluid's very next use of Tc_K is
+    // `EOS.limits.Tmin = std::min(60.0, info.Tc_K)` -- and std::min ABSORBS a
+    // NaN, returning the finite 60.0 (both `a < b` and `b < a` are false for
+    // a NaN operand, so std::min returns its first argument).  A NaN Tc would
+    // therefore not produce an obviously-broken Tmin; it would produce a
+    // perfectly ordinary-looking 60 K limit on a fluid whose reducing
+    // temperature is NaN, and every subsequent tau = Tc/T would be NaN with
+    // nothing pointing back at the table.  rhoc/M get the same treatment:
+    // both feed reduce/crit and the mixture reducing function.
+    require_finite_pure_info(gerg_name, data);
     data.rhoc_molm3 *= 1000;  // mol/dm^3 -> mol/m^3
     data.M_kgmol /= 1000;     // kg/kmol -> kg/mol
     return data;

@@ -111,6 +111,36 @@ def require(cond, msg):
         fail(msg)
 
 
+def require_new_key(rows, key, label):
+    """Refuse a duplicate key while building a parsed table.
+
+    THE WHOLE POINT OF THIS SCRIPT depends on this guard being present in
+    every parser.  C++'s `std::map` initializer-list constructor keeps the
+    FIRST of two entries with equal keys; a Python `dict` built by
+    successive assignment keeps the LAST.  So a table that accidentally
+    carries a row twice -- a bad first copy followed by a correct second
+    copy -- is what C++ actually evaluates from the BAD row, while this
+    verifier silently compares the GOOD one and reports the table clean.
+    Row-count asserts do not catch it either: the C++ map and the Python
+    dict both collapse to the same (short) length, so the counts still
+    agree with each other and with the expected total.
+
+    Verified live: before this guard was added to every parser, injecting a
+    bogus `{{"methane", "nitrogen"}, {1.5, 1.5, 1.5, 1.5}}` row above the
+    real one in `betasgammas_2004()` left this script at exit 0 with all of
+    families 1-5 reported PASS.
+
+    `check_departure`'s specific-table parser and `parse_acentric_rows`
+    already had this guard; `parse_bip_rows`, `parse_pure_info_rows`,
+    `parse_alphaig_rows`, `parse_fij_rows` and `parse_named_vec_block` did
+    not, which is why it lives here as one shared helper rather than five
+    hand-written `require`s that can drift apart.
+    """
+    require(key not in rows, f"{label}: duplicate row for key {key!r} -- a C++ std::map initializer list keeps the FIRST "
+                             "of two equal keys while this script would otherwise keep the LAST, so the row that is "
+                             "actually compiled would go unverified. Remove the duplicate.")
+
+
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
@@ -150,11 +180,12 @@ def bounded(text, start_anchor, end_anchor, label):
 BIP_ROW_RE = re.compile(r'\{\{"([a-z0-9\-]+)"\s*,\s*"([a-z0-9\-]+)"\}\s*,\s*\{([^{}]*)\}\s*\}')
 
 
-def parse_bip_rows(blob):
+def parse_bip_rows(blob, label):
     rows = {}
     for f1, f2, valstr in BIP_ROW_RE.findall(blob):
         vals = parse_floats(valstr)
         require(len(vals) == 4, f"BIP row for ({f1},{f2}) does not have 4 values: {valstr!r}")
+        require_new_key(rows, (f1, f2), label)
         rows[(f1, f2)] = tuple(vals)
     return rows
 
@@ -173,10 +204,10 @@ def check_reducing_parameters(teqp_text, coolprop_text):
     cp_2008_blob = bounded(coolprop_text, "betasgammas_2008_overrides() {\n    static const std::map<BIPKey, BetasGammas> data = {",
                             "\n    };\n    return data;", "CoolProp betasgammas_2008_overrides")
 
-    teqp_2004 = parse_bip_rows(teqp_2004_blob)
-    teqp_2008 = parse_bip_rows(teqp_2008_blob)
-    cp_2004 = parse_bip_rows(cp_2004_blob)
-    cp_2008 = parse_bip_rows(cp_2008_blob)
+    teqp_2004 = parse_bip_rows(teqp_2004_blob, "teqp GERG2004 BIP_data")
+    teqp_2008 = parse_bip_rows(teqp_2008_blob, "teqp GERG2008 BIP_data")
+    cp_2004 = parse_bip_rows(cp_2004_blob, "CoolProp betasgammas_2004")
+    cp_2008 = parse_bip_rows(cp_2008_blob, "CoolProp betasgammas_2008_overrides")
 
     require(len(teqp_2004) == 153, f"teqp GERG-2004 BIP row count is {len(teqp_2004)}, expected 153")
     require(len(teqp_2008) == 72, f"teqp GERG-2008 BIP override row count is {len(teqp_2008)}, expected 72")
@@ -214,13 +245,14 @@ def check_reducing_parameters(teqp_text, coolprop_text):
 ALPHAIG_ROW_RE = re.compile(r'\{"([a-z0-9\-]+)",\s*\{\{([^{}]*)\},\s*\{([^{}]*)\}\}\}', re.DOTALL)
 
 
-def parse_alphaig_rows(blob):
+def parse_alphaig_rows(blob, label):
     rows = {}
     for name, n0str, theta0str in ALPHAIG_ROW_RE.findall(blob):
         n0 = parse_floats(n0str)
         theta0 = parse_floats(theta0str)
         require(len(n0) == 7, f"{name}: alphaig n0 does not have 7 values: {n0str!r}")
         require(len(theta0) == 4, f"{name}: alphaig theta0 does not have 4 values: {theta0str!r}")
+        require_new_key(rows, name, label)
         rows[name] = (tuple(n0), tuple(theta0))
     return rows
 
@@ -239,10 +271,10 @@ def check_ideal_gas(teqp_text, coolprop_text, names_2004, names_2008):
     cp_2008_blob = bounded(coolprop_text, "alphaig_2008_overrides() {\n    static const std::map<std::string, RawAlphaig> data = {",
                             "};\n    return data;", "CoolProp alphaig_2008_overrides")
 
-    teqp_2004 = parse_alphaig_rows(teqp_2004_blob)
-    teqp_2008 = parse_alphaig_rows(teqp_2008_blob)
-    cp_2004 = parse_alphaig_rows(cp_2004_blob)
-    cp_2008 = parse_alphaig_rows(cp_2008_blob)
+    teqp_2004 = parse_alphaig_rows(teqp_2004_blob, "teqp GERG2004 alphaig dict")
+    teqp_2008 = parse_alphaig_rows(teqp_2008_blob, "teqp GERG2008 alphaig dict")
+    cp_2004 = parse_alphaig_rows(cp_2004_blob, "CoolProp alphaig_2004")
+    cp_2008 = parse_alphaig_rows(cp_2008_blob, "CoolProp alphaig_2008_overrides")
 
     require(len(teqp_2004) == 18, f"teqp GERG-2004 alphaig row count is {len(teqp_2004)}, expected 18")
     require(len(teqp_2008) == 5, f"teqp GERG-2008 alphaig override row count is {len(teqp_2008)}, expected 5")
@@ -295,8 +327,12 @@ BESPOKE_RE = lambda name: re.compile(
 )
 
 
-def parse_named_vec_block(blob):
-    return {name: tuple(parse_floats(v)) for name, v in NAMED_VEC_RE.findall(blob)}
+def parse_named_vec_block(blob, label):
+    rows = {}
+    for name, v in NAMED_VEC_RE.findall(blob):
+        require_new_key(rows, name, label)
+        rows[name] = tuple(parse_floats(v))
+    return rows
 
 
 def teqp_shared_quad(text, anchor):
@@ -346,8 +382,8 @@ def check_pure_residual(teqp_text, coolprop_text, names_2004, names_2008):
                             "teqp GERG2008 get_pure_coeffs")
 
     # main12/mne24 n-only maps (2004) and shared exponents.
-    teqp_main_n = parse_named_vec_block(bounded(teqp_2004_fn, "n_dict_main = {", "\n    };", "teqp n_dict_main (2004)"))
-    teqp_mne_n = parse_named_vec_block(bounded(teqp_2004_fn, "n_dict_mne = {", "\n    };", "teqp n_dict_mne (2004)"))
+    teqp_main_n = parse_named_vec_block(bounded(teqp_2004_fn, "n_dict_main = {", "\n    };", "teqp n_dict_main (2004)"), "teqp n_dict_main (2004)")
+    teqp_mne_n = parse_named_vec_block(bounded(teqp_2004_fn, "n_dict_mne = {", "\n    };", "teqp n_dict_mne (2004)"), "teqp n_dict_mne (2004)")
     require(len(teqp_main_n) == 11, f"teqp n_dict_main (2004) has {len(teqp_main_n)} fluids, expected 11")
     require(len(teqp_mne_n) == 3, f"teqp n_dict_mne (2004) has {len(teqp_mne_n)} fluids, expected 3")
     teqp_main_tdcl = teqp_shared_quad(teqp_2004_fn, "pc.n = n_dict_main[fluid]")
@@ -355,14 +391,15 @@ def check_pure_residual(teqp_text, coolprop_text, names_2004, names_2008):
 
     teqp_bespoke_2004 = {name: teqp_bespoke(teqp_2004_fn, name) for name in BESPOKE_FLUIDS}
 
-    teqp_main_n_2008 = parse_named_vec_block(bounded(teqp_2008_fn, "n_dict_main = {", "\n    };", "teqp n_dict_main (2008 override)"))
+    teqp_main_n_2008 = parse_named_vec_block(bounded(teqp_2008_fn, "n_dict_main = {", "\n    };", "teqp n_dict_main (2008 override)"),
+                                              "teqp n_dict_main (2008 override)")
     require(len(teqp_main_n_2008) == 5, f"teqp n_dict_main (2008 override) has {len(teqp_main_n_2008)} fluids, expected 5")
 
     # CoolProp side.
     cp_main_n = parse_named_vec_block(bounded(coolprop_text, "n_main_2004() {\n    static const std::map<std::string, std::vector<double>> data = {",
-                                               "};\n    return data;", "CoolProp n_main_2004"))
+                                               "};\n    return data;", "CoolProp n_main_2004"), "CoolProp n_main_2004")
     cp_mne_n = parse_named_vec_block(bounded(coolprop_text, "n_mne_2004() {\n    static const std::map<std::string, std::vector<double>> data = {",
-                                              "};\n    return data;", "CoolProp n_mne_2004"))
+                                              "};\n    return data;", "CoolProp n_mne_2004"), "CoolProp n_mne_2004")
     require(len(cp_main_n) == 11, f"CoolProp n_main_2004 has {len(cp_main_n)} fluids, expected 11")
     require(len(cp_mne_n) == 3, f"CoolProp n_mne_2004 has {len(cp_mne_n)} fluids, expected 3")
 
@@ -373,7 +410,7 @@ def check_pure_residual(teqp_text, coolprop_text, names_2004, names_2008):
 
     cp_main_n_2008 = parse_named_vec_block(
         bounded(coolprop_text, "n_main_2008_overrides() {\n    static const std::map<std::string, std::vector<double>> data = {",
-                "};\n    return data;", "CoolProp n_main_2008_overrides"))
+                "};\n    return data;", "CoolProp n_main_2008_overrides"), "CoolProp n_main_2008_overrides")
     require(len(cp_main_n_2008) == 5, f"CoolProp n_main_2008_overrides has {len(cp_main_n_2008)} fluids, expected 5")
 
     def resolve_teqp(name, model):
@@ -428,6 +465,16 @@ def check_pure_residual(teqp_text, coolprop_text, names_2004, names_2008):
 # ---------------------------------------------------------------------------
 
 FIJ_ROW_RE = re.compile(r'\{\{"([a-z0-9\-]+)"\s*,\s*"([a-z0-9\-]+)"\}\s*,\s*(' + FLOAT_RE + r')\s*\}')
+
+
+def parse_fij_rows(blob, label):
+    """A named function rather than the dict comprehension this used to be,
+    solely so require_new_key has somewhere to live -- see its docstring."""
+    rows = {}
+    for f1, f2, v in FIJ_ROW_RE.findall(blob):
+        require_new_key(rows, (f1, f2), label)
+        rows[(f1, f2)] = float(v)
+    return rows
 
 # Departure-coefficient rows are multi-line dc.FIELD = {...}; assignments.
 # This pattern captures one field assignment; a full row is 7 consecutive
@@ -546,8 +593,8 @@ def check_departure(teqp_text, coolprop_text):
     cp_fij_blob = bounded(coolprop_text, "fij_table() {\n    static const std::map<BIPKey, double> data = {", "\n    };\n    return data;",
                            "CoolProp fij_table")
 
-    teqp_fij = {(f1, f2): float(v) for f1, f2, v in FIJ_ROW_RE.findall(teqp_fij_blob)}
-    cp_fij = {(f1, f2): float(v) for f1, f2, v in FIJ_ROW_RE.findall(cp_fij_blob)}
+    teqp_fij = parse_fij_rows(teqp_fij_blob, "teqp Fij_dict")
+    cp_fij = parse_fij_rows(cp_fij_blob, "CoolProp fij_table")
 
     require(len(teqp_fij) == 15, f"teqp Fij_dict has {len(teqp_fij)} rows, expected 15")
     require(len(cp_fij) == 15, f"CoolProp fij_table has {len(cp_fij)} rows, expected 15")
@@ -625,7 +672,7 @@ def check_departure(teqp_text, coolprop_text):
 PURE_INFO_ROW_RE = re.compile(r'\{"([a-z0-9\-]+)"\s*,\s*\{([^{}]*)\}\}')
 
 
-def parse_pure_info_rows(blob):
+def parse_pure_info_rows(blob, label):
     """name -> (raw literal tokens, parsed floats), both length-3
     (rhoc_molm3, Tc_K, M_kgmol) in that order -- teqp's PureInfo brace-init
     order and CoolProp's PureInfo field order match, so no reordering is
@@ -634,6 +681,7 @@ def parse_pure_info_rows(blob):
     for name, valstr in PURE_INFO_ROW_RE.findall(blob):
         raw = [v.strip() for v in valstr.split(",") if v.strip() != ""]
         require(len(raw) == 3, f"{name}: pure_info row does not have 3 values: {valstr!r}")
+        require_new_key(rows, name, label)
         rows[name] = (tuple(raw), tuple(parse_floats(valstr)))
     return rows
 
@@ -687,10 +735,10 @@ def check_pure_info(teqp_text, coolprop_data_h_text):
     cp_2008_blob = bounded(coolprop_data_h_text, "pure_info_2008_overrides() {\n    static const std::map<std::string, PureInfo> data = {",
                             "};\n    return data;", "CoolProp pure_info_2008_overrides")
 
-    teqp_2004 = parse_pure_info_rows(teqp_2004_blob)
-    teqp_2008 = parse_pure_info_rows(teqp_2008_blob)
-    cp_2004 = parse_pure_info_rows(cp_2004_blob)
-    cp_2008 = parse_pure_info_rows(cp_2008_blob)
+    teqp_2004 = parse_pure_info_rows(teqp_2004_blob, "teqp GERG2004 pure_info data_map")
+    teqp_2008 = parse_pure_info_rows(teqp_2008_blob, "teqp GERG2008 pure_info data_map")
+    cp_2004 = parse_pure_info_rows(cp_2004_blob, "CoolProp pure_info_2004")
+    cp_2008 = parse_pure_info_rows(cp_2008_blob, "CoolProp pure_info_2008_overrides")
 
     require(len(teqp_2004) == 18, f"teqp GERG-2004 pure_info row count is {len(teqp_2004)}, expected 18")
     require(len(teqp_2008) == 5, f"teqp GERG-2008 pure_info override row count is {len(teqp_2008)}, expected 5")

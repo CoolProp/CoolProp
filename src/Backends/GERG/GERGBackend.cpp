@@ -117,7 +117,55 @@ void GERGMixtureBackend::check_gerg_range_of_validity() {
     if (CoolProp::get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
         return;
     }
-    const double Tlo = Tmin(), Thi = Tmax();
+    // ####################################################################
+    // COMPONENT-WISE bounds, NOT Tmin()/Tmax().
+    //
+    // AbstractState::Tmin()/Tmax() resolve, for a mixture, to
+    // HelmholtzEOSMixtureBackend::calc_Tmin/calc_Tmax
+    // (HelmholtzEOSMixtureBackend.cpp:1305-1319), which are
+    // `sum_i x_i * limits.T{min,max}` -- a mole-fraction weighting that is
+    // NOT normalised by sum(x).  Nothing in set_mole_fractions or PropsSI's
+    // `Fluid[x]&Fluid[x]` syntax requires the composition to sum to 1 (the
+    // string parser rejects an individual fraction > 1, not the sum), so a
+    // range guard built on them SCALES ITS OWN BOUNDS WITH sum(x) and fails
+    // open: measured on this backend before this change, a 50/50 methane +
+    // ethane mixture entered as [0.6]&[0.6] (sum = 1.2) reported
+    // [72, 840] K, and sum(x) = 10 reported [600, 7000] K -- 900 K accepted,
+    // rho = 309.922 mol/m^3 returned, no error anywhere.  The benign-input
+    // version of the same coupling is sharper still: a gas analysis rounded
+    // to sum(x) = 0.999999 moves Tmax to 699.9993 K and throws a spurious
+    // OutOfRangeError at exactly 700 K.
+    //
+    // The bounds below are read straight off the per-component EOS limits
+    // that make_gerg_fluid set, so they are independent of composition
+    // entirely.  Choice of aggregation, made deliberately: the INTERSECTION
+    // of the components' ranges -- max of the Tmin values, min of the Tmax
+    // values.  For a strict backend the defensible reading of "the mixture
+    // is valid where the model is valid" is "where EVERY constituent is
+    // valid"; the union (or a weighted average) would let a mixture be
+    // evaluated at a temperature at which one of its own components has been
+    // declared out of range.  Concretely, with every GERG component carrying
+    // Tmax = 700 K and Tmin = min(60 K, Tc), this makes the mixture range
+    // exactly [60, 700] K unless EVERY component has Tc < 60 K (helium
+    // alone: [5.1953, 700]; helium + hydrogen: [33.19, 700]), which is the
+    // published mixture-model range of Kunz & Wagner 2012 section 4.1 rather
+    // than an artefact of the composition vector.  NOTE this is a
+    // deliberate behaviour change from the mole-fraction-weighted average:
+    // a helium-rich mixture that used to be accepted at 45 K is now
+    // rejected, because methane's own 60 K limit is part of the mixture.
+    //
+    // Deliberately NOT fixed by changing calc_Tmin/calc_Tmax in the shared
+    // Helmholtz backend: those are used by every other backend and their
+    // normalisation is a separate (ABI-affecting) question.  Tmin()/Tmax()
+    // therefore still report the weighted values for a GERG mixture; only
+    // this guard is composition-independent.
+    // ####################################################################
+    double Tlo = -std::numeric_limits<double>::infinity();
+    double Thi = std::numeric_limits<double>::infinity();
+    for (const CoolPropFluid& c : get_components()) {
+        Tlo = std::max(Tlo, static_cast<double>(c.EOS().limits.Tmin));
+        Thi = std::min(Thi, static_cast<double>(c.EOS().limits.Tmax));
+    }
     // !ValidNumber first: a NaN _T makes BOTH comparisons false, so the bare
     // range test would wave it through.  Unreachable today (the base class
     // rejects a non-finite T before this runs), but a range check that passes

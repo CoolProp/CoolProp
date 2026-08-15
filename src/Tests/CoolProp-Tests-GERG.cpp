@@ -3,12 +3,14 @@
 #    include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #    include <cmath>
+#    include <filesystem>
 #    include <iterator>
 #    include <limits>
 #    include <map>
 #    include <memory>
 #    include <stdexcept>
 #    include <string>
+#    include <system_error>
 
 #    include "CoolProp/AbstractState.h"
 #    include "CoolProp/Configuration.h"
@@ -793,30 +795,81 @@ TEST_CASE("GERG limits are not self-contradictory", "[GERG]") {
     }
 }
 
-TEST_CASE("GERG mixture range is a mole-fraction-weighted average and can sit well below 60 K", "[GERG]") {
-    // check_gerg_range_of_validity (GERGBackend.cpp) enforces Tmin()/Tmax(),
-    // which for a MIXTURE resolve to HelmholtzEOSMixtureBackend::calc_Tmin/
-    // calc_Tmax (.cpp:1312) -- a plain mole-fraction-weighted average of each
-    // component's EOS.limits.Tmin/Tmax, not a re-derivation of "60 K unless
-    // below Tc." A 50/50 helium/methane mixture therefore has
-    // Tmin = 0.5*5.1953 + 0.5*60 = 32.60 K, well below the 60 K published for
-    // the mixture MODEL as a whole (Kunz & Wagner 2012 section 4.1) -- and
-    // that is ACCEPTED here as correct rather than patched: the published
-    // 60-700 K range is itself a statement about the mixture model in
-    // aggregate, individual light-component-rich mixtures extending the
-    // usable range below 60 K is consistent with how GERG's own reducing-
-    // temperature machinery already treats light components (see "GERG
-    // limits are not self-contradictory" above, same rationale one level up).
-    // Pinned here, precisely, rather than left as an unstated side effect of
-    // whatever calc_Tmin happens to compute.
-    std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", std::vector<std::string>{"helium", "methane"}));
-    AS->set_mole_fractions(std::vector<CoolPropDbl>{0.5, 0.5});
-    CHECK_THAT(AS->Tmin(), Catch::Matchers::WithinRel(32.5977, 1e-4));
-
-    AS->specify_phase(iphase_gas);
-    CHECK_NOTHROW(AS->update(DmolarT_INPUTS, 5000.0, 45.0));   // 45 K: below 60 K, above this mixture's own Tmin -- accepted
-    CHECK_THROWS_AS(AS->update(DmolarT_INPUTS, 5000.0, 30.0),  // 30 K: below this mixture's own Tmin -- rejected
-                    CoolProp::OutOfRangeError);
+TEST_CASE("GERG mixture range is the component-wise intersection, independent of the composition vector", "[GERG]") {
+    // REPLACES an earlier test that pinned the mole-fraction-WEIGHTED range
+    // as intentional.  It was not defensible: AbstractState::Tmin()/Tmax()
+    // for a mixture are HelmholtzEOSMixtureBackend::calc_Tmin/calc_Tmax
+    // (.cpp:1305-1319), `sum_i x_i * limits.T{min,max}` with NO normalisation
+    // by sum(x) -- so a guard built on them scaled its own bounds with the
+    // sum of the mole fractions and failed open.  Measured on this backend
+    // before the fix, with GERG2008 methane+ethane and x = (0.5s, 0.5s):
+    //
+    //   s = 1   Tmin =  60.00  Tmax =  700.00   update(PT, 1e6, 900) threw
+    //   s = 2   Tmin = 120.00  Tmax = 1400.00   update(PT, 1e6, 900) ACCEPTED,
+    //                                           rho = 184.714 mol/m^3
+    //   PropsSI("Dmolar","T",900,"P",1e6,"GERG2008::METHANE[0.6]&ETHANE[0.6]")
+    //           -> "outside the GERG range of validity [72, 840] K"
+    //
+    // i.e. reachable straight from the string API, whose parser rejects an
+    // individual fraction > 1 but not the sum.  check_gerg_range_of_validity
+    // now reads the per-component EOS.limits directly and takes their
+    // INTERSECTION (max of Tmin, min of Tmax); see its definition for why the
+    // intersection rather than the union or a weighted average.
+    //
+    // Note Tmin()/Tmax() themselves are deliberately left alone -- the fix is
+    // confined to src/Backends/GERG/ -- so this test asserts on what the
+    // guard DOES, not on what Tmin() reports.
+    {
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", std::vector<std::string>{"methane", "ethane"}));
+        AS->set_mole_fractions(std::vector<CoolPropDbl>{1.0, 1.0});  // sum(x) = 2: the exploit above
+        AS->specify_phase(iphase_gas);
+        CHECK(AS->Tmax() > 1000);  // the weighted bound really is inflated...
+        CHECK_THROWS_AS(AS->update(PT_INPUTS, 1e6, 900.0),
+                        CoolProp::OutOfRangeError);  // ...and the guard rejects 900 K anyway
+    }
+    {
+        // The benign half of the same coupling: a gas analysis rounded to
+        // sum(x) = 0.999999 used to move Tmax to 699.9993 K and throw a
+        // spurious OutOfRangeError at exactly 700 K.
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", std::vector<std::string>{"methane", "ethane"}));
+        AS->set_mole_fractions(std::vector<CoolPropDbl>{0.4999995, 0.4999995});
+        AS->specify_phase(iphase_gas);
+        CHECK(AS->Tmax() < 700.0);
+        CHECK_NOTHROW(AS->update(PT_INPUTS, 1e6, 700.0));
+    }
+    {
+        // Same guard through the string API, where the exploit is reachable
+        // without any downcast or direct set_mole_fractions call.  PropsSI
+        // swallows the exception and returns _HUGE, so check both.
+        const double rho = CoolProp::PropsSI("Dmolar", "T", 900, "P", 1e6, "GERG2008::METHANE[0.6]&ETHANE[0.6]");
+        CHECK_FALSE(ValidNumber(rho));
+        CHECK(CoolProp::get_global_param_string("errstring").find("[60, 700] K") != std::string::npos);
+    }
+    {
+        // A 50/50 helium/methane mixture: the weighted Tmin was
+        // 0.5*5.1953 + 0.5*60 = 32.60 K, so 45 K used to be ACCEPTED.  Under
+        // the intersection it is methane's own 60 K that governs -- a
+        // deliberate behaviour change, pinned here so it cannot drift back.
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", std::vector<std::string>{"helium", "methane"}));
+        AS->set_mole_fractions(std::vector<CoolPropDbl>{0.5, 0.5});
+        AS->specify_phase(iphase_gas);
+        CHECK_THAT(AS->Tmin(), Catch::Matchers::WithinRel(32.5977, 1e-4));  // Tmin() itself is unchanged
+        CHECK_THROWS_AS(AS->update(DmolarT_INPUTS, 5000.0, 45.0), CoolProp::OutOfRangeError);
+        CHECK_THROWS_AS(AS->update(DmolarT_INPUTS, 5000.0, 30.0), CoolProp::OutOfRangeError);
+        CHECK_NOTHROW(AS->update(DmolarT_INPUTS, 5000.0, 65.0));
+    }
+    {
+        // The one case where the intersection sits below 60 K: EVERY
+        // component has Tc < 60 K, so make_gerg_fluid's min(60, Tc) cap
+        // governs for all of them.  helium (5.1953 K) + hydrogen (33.19 K)
+        // -> [33.19, 700] K.  Pinned so the "unless every component is a
+        // light one" clause in the guard's comment stays true.
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", std::vector<std::string>{"helium", "hydrogen"}));
+        AS->set_mole_fractions(std::vector<CoolPropDbl>{0.5, 0.5});
+        AS->specify_phase(iphase_gas);
+        CHECK_NOTHROW(AS->update(DmolarT_INPUTS, 5000.0, 40.0));  // above hydrogen's 33.19 K
+        CHECK_THROWS_AS(AS->update(DmolarT_INPUTS, 5000.0, 20.0), CoolProp::OutOfRangeError);
+    }
 }
 
 TEST_CASE("GERG canonical-name fast path does not weaken model strictness", "[GERG]") {
@@ -1864,6 +1917,68 @@ TEST_CASE("GERG refuses set_reference_stateS instead of silently ignoring it", "
     CHECK_THROWS_AS(CoolProp::set_reference_stateS("HEOS::Methane", "NOT_A_REFERENCE_STATE"), CoolProp::ValueError);
 }
 
+TEST_CASE("GERG refuses set_reference_stateD as well as the S variant", "[GERG]") {
+    // The D variant is the sibling of the function above and ends in the same
+    // set_fluid_enthalpy_entropy_offset call, so it carries the same hazard --
+    // but it was left unguarded in the first round.  Its pre-guard behaviour
+    // was arguably worse than the S variant's, because it failed in two
+    // DIFFERENT unhelpful ways depending on spelling:
+    // set_reference_stateD("GERG2008::Methane", ...) threw
+    // "key [GERG2008::Methane] was not found in string_to_index_map in
+    // JSONFluidLibrary" -- an internal lookup error naming neither GERG nor
+    // reference states -- while set_reference_stateD("Methane", ...) succeeded
+    // and adjusted HEOS with no effect on any GERG state.
+    for (const char* fluid : {"GERG2004::Methane", "GERG2008::Methane", "GERG2008Backend::Methane", "GERG2004Backend::Methane", "GERG2008?::Methane",
+                              "BICUBIC&GERG2008::Methane"}) {
+        CAPTURE(fluid);
+        CHECK_THROWS_AS(CoolProp::set_reference_stateD(fluid, 300.0, 1000.0, 0.0, 0.0), CoolProp::NotImplementedError);
+    }
+    // Scoped to GERG: an ordinary HEOS call still works, and is restored with
+    // RESET exactly as in the S-variant case above.  Note the BARE name: unlike
+    // set_reference_stateS, set_reference_stateD passes FluidName through to
+    // HelmholtzEOSMixtureBackend WITHOUT splitting off the backend prefix, so
+    // even "HEOS::Methane" fails here with "key [HEOS::Methane] was not found
+    // in string_to_index_map in JSONFluidLibrary".  That is pre-existing and
+    // deliberately not touched -- it is the non-GERG half of bd CoolProp-mh1q
+    // -- but it is why the GERG guard has to do its own extract_backend rather
+    // than inheriting a split the function never performs.
+    CHECK_THROWS(CoolProp::set_reference_stateD("HEOS::Methane", 300.0, 1000.0, 0.0, 0.0));
+    CHECK_NOTHROW(CoolProp::set_reference_stateD("Methane", 300.0, 1000.0, 0.0, 0.0));
+    CHECK_NOTHROW(CoolProp::set_reference_stateS("HEOS::Methane", "RESET"));
+}
+
+TEST_CASE("GERG rejects a non-finite pure-info row", "[GERG]") {
+    // get_acentric_factor has an explicit ValidNumber drift-guard on the
+    // reasoning that a hand-edit made after the generator ran cannot be
+    // policed by the generator.  pure_info_2004()/pure_info_2008_overrides()
+    // are an equally hand-transcribed table and had no such guard.
+    //
+    // The specific reason it matters here: make_gerg_fluid's next use of
+    // Tc_K is `EOS.limits.Tmin = std::min(60.0, info.Tc_K)`, and std::min
+    // ABSORBS a NaN -- it returns 60.0, a perfectly ordinary-looking limit on
+    // a fluid whose reducing temperature is NaN.  Asserted directly on the
+    // helper, since the shipped tables are (and must remain) all finite, so
+    // there is no fluid name that reaches it.
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    CHECK_NOTHROW(require_finite_pure_info("methane", PureInfo{10.139342719, 190.564, 16.04246}));
+    CHECK_THROWS_AS(require_finite_pure_info("methane", PureInfo{nan, 190.564, 16.04246}), CoolProp::ValueError);
+    CHECK_THROWS_AS(require_finite_pure_info("methane", PureInfo{10.139342719, nan, 16.04246}), CoolProp::ValueError);
+    CHECK_THROWS_AS(require_finite_pure_info("methane", PureInfo{10.139342719, 190.564, nan}), CoolProp::ValueError);
+    // ...and infinities, not just NaN.
+    const double inf = std::numeric_limits<double>::infinity();
+    CHECK_THROWS_AS(require_finite_pure_info("methane", PureInfo{10.139342719, inf, 16.04246}), CoolProp::ValueError);
+    // The std::min-absorbs-NaN mechanism this guard is protecting, pinned so
+    // the comment above cannot rot into a false claim.
+    CHECK(std::min(60.0, nan) == 60.0);
+    // Every shipped row passes, both models.
+    for (const auto& model : {GERGModel::GERG_2004, GERGModel::GERG_2008}) {
+        for (const auto& name : component_names(model)) {
+            CAPTURE(name);
+            CHECK_NOTHROW(get_pure_info(model, name));
+        }
+    }
+}
+
 TEST_CASE("GERG derives its acentric factor from its own equation", "[GERG]") {
     // This case used to assert the opposite: acentric_factor() threw
     // NotImplementedError, because GERG publishes no acentric factor and
@@ -2257,6 +2372,44 @@ TEST_CASE("GERG pins which pure-fluid input pairs work and which do not", "[GERG
     mix2->set_mole_fractions(std::vector<CoolPropDbl>{0.9, 0.1});
     CHECK_NOTHROW(mix2->update(HmolarP_INPUTS, h_mix, p));
     CHECK_THAT(mix2->T(), Catch::Matchers::WithinRel(T, 1e-6));
+}
+
+TEST_CASE("GERG tabular wrappers build a table and then reject every lookup", "[GERG]") {
+    // Web/coolprop/GERG.rst has a "Tabular backends wrapping GERG" section
+    // stating that BICUBIC&GERG2008 / TTSE&GERG2008 are not supported, that
+    // they do NOT fail loudly, and that they persist a cache directory before
+    // rejecting every lookup.  That was the only claim on the page with no
+    // code or test behind it; this case is the link, in the same spirit as
+    // "GERG pins which pure-fluid input pairs work and which do not" above.
+    //
+    // ALTERNATIVE_TABLES_DIRECTORY is redirected first, and restored after, so
+    // running the suite does not leave a stale GERG table cache in the
+    // developer's ~/.CoolProp/Tables -- which is exactly what happens without
+    // the redirect, and exactly what the documentation tells readers to go
+    // delete.  Note the TRAILING SLASH: TabularBackend::path_to_tables
+    // concatenates this string with the backend name directly, so omitting it
+    // silently produces a sibling "<dir>GERG2008Backend(...)" path instead of
+    // a subdirectory.
+    const std::string prev = CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY);
+    const std::string dir = (std::filesystem::temp_directory_path() / "CoolProp-GERG-tabular-test").string() + "/";
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
+    CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, dir);
+
+    for (const char* backend : {"BICUBIC&GERG2008", "TTSE&GERG2008"}) {
+        CAPTURE(backend);
+        // The factory itself succeeds -- this is the "does not fail loudly" half.
+        std::shared_ptr<AbstractState> AS(AbstractState::factory(backend, std::vector<std::string>{"Methane"}));
+        REQUIRE(AS != nullptr);
+        // ...and then a lookup at a perfectly ordinary state well inside the
+        // GERG range of validity is rejected.
+        CHECK_THROWS_AS(AS->update(PT_INPUTS, 1e6, 300.0), CoolProp::ValueError);
+    }
+    // The documented side effect: a cache directory really is written.
+    CHECK(std::filesystem::exists(dir));
+
+    CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev);
+    std::filesystem::remove_all(dir, ec);
 }
 
 #endif /* ENABLE_CATCH */

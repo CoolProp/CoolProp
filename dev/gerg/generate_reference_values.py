@@ -442,6 +442,37 @@ def main():
     median_reldiff = reldiffs_sorted[len(reldiffs_sorted) // 2][0]
     n_over_1e6 = sum(1 for d, _ in p_reldiffs if d > 1e-6)
 
+    # --- AGA8 component-ordering gate. ASSERTED, not merely reported.
+    #
+    # This median is the discriminator for the ordering bug the module
+    # docstring calls CRITICAL: MIXTURE_COMPS is indexed in AGA8_NAMES order,
+    # and pairing it with GERG2008_NAMES instead silently misassigns every
+    # composition -- it does not raise, it does not produce NaN, it produces
+    # a full, plausible-looking 187-row fixture of wrong numbers.  Measured
+    # both ways in this tree (see dev/gerg/README.md):
+    #
+    #   correct AGA8_NAMES ordering  : median 3.5e-12, worst 6.8e-04
+    #   wrong  GERG2008_NAMES ordering: median 7.1e-04, worst 2.7e-01
+    #
+    # 1e-9 sits ~285x above the correct-ordering median and ~7e5x below the
+    # wrong-ordering median, so it discriminates with enormous margin while
+    # leaving room for ordinary teqp-version / libm drift in the last digits.
+    # Deliberately the MEDIAN and not the worst case: the worst rows are a
+    # known table-vs-reference-code provenance issue on a handful of rich
+    # CO2/H2S/He blends (documented in the emitted header below and in
+    # README.md), which is why worst_reldiff and n_over_1e6 stay reported
+    # rather than asserted -- but nothing in that provenance issue can move
+    # the MEDIAN off ~1e-12.
+    #
+    # Before this assert existed, a regeneration that reintroduced the
+    # ordering bug emitted the full 187-row fixture and exited 0.
+    assert median_reldiff < 1e-9, (
+        f"AGA8 p_teqp vs validation_data.P_MPa: median relative difference is {median_reldiff:.3e}, "
+        "expected < 1e-9. The overwhelmingly likely cause is a component-ORDERING bug -- "
+        "MIXTURE_COMPS rows are ordered per AGA8_NAMES and must not be paired with GERG2008_NAMES "
+        "(that mistake gives a median of ~7.1e-4). Do NOT relax this threshold; fix the ordering."
+    )
+
     def null_summary(nulls, names):
         totals = {"alphar": 0, "alphaig": 0, "p": 0, "cv": 0, "w": 0}
         for name in names:
