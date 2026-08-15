@@ -417,9 +417,13 @@ def test_update_ledger_reports_changes_against_a_corrupted_ledger(tmp_path, monk
     """
     import json as _json
 
-    import fetch_atct_formation
+    # Reach the module object via sys.modules rather than a second
+    # "import fetch_atct_formation": importing it both ways trips
+    # CodeQL py/import-and-import-from, and the module is already
+    # loaded by the "from fetch_atct_formation import ..." above.
+    module = sys.modules["fetch_atct_formation"]
 
-    monkeypatch.setattr(fetch_atct_formation, "__file__", str(tmp_path / "fetch_atct_formation.py"))
+    monkeypatch.setattr(module, "__file__", str(tmp_path / "fetch_atct_formation.py"))
 
     fluids_dir = tmp_path / "fluids"
     fluids_dir.mkdir()
@@ -464,9 +468,13 @@ def test_update_ledger_with_no_existing_ledger_says_so(tmp_path, monkeypatch, ca
     """
     import json as _json
 
-    import fetch_atct_formation
+    # Reach the module object via sys.modules rather than a second
+    # "import fetch_atct_formation": importing it both ways trips
+    # CodeQL py/import-and-import-from, and the module is already
+    # loaded by the "from fetch_atct_formation import ..." above.
+    module = sys.modules["fetch_atct_formation"]
 
-    monkeypatch.setattr(fetch_atct_formation, "__file__", str(tmp_path / "fetch_atct_formation.py"))
+    monkeypatch.setattr(module, "__file__", str(tmp_path / "fetch_atct_formation.py"))
 
     fluids_dir = tmp_path / "fluids"
     fluids_dir.mkdir()
