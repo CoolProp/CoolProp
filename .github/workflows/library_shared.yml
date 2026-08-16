@@ -1,5 +1,8 @@
 name: CMake library builds
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ 'master', 'main', 'develop', 'actions_shared' ]

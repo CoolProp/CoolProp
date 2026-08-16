@@ -73,7 +73,7 @@ if(COOLPROP_SOURCE_DIR)
   endif()
 
   if(MSVC AND NOT CMAKE_MSVC_RUNTIME_LIBRARY_DEFAULT)
-    get_target_property(_coolprop_source_compile_options CoolProp
+    get_target_property(_coolprop_source_compile_options CoolProp::Static
                         COMPILE_OPTIONS)
     string(FIND "${_coolprop_source_compile_options}" "/MD"
                 _coolprop_msvc_runtime_index)

@@ -474,8 +474,14 @@ function(coolprop_add_library_targets)
       NAMESPACE CoolProp::
       DESTINATION "${COOLPROP_INSTALL_CMAKEDIR}")
 
-    set(COOLPROP_PACKAGE_HAS_STATIC "${COOLPROP_STATIC_LIBRARY}")
-    set(COOLPROP_PACKAGE_HAS_SHARED "${COOLPROP_SHARED_LIBRARY}")
+    set(COOLPROP_PACKAGE_HAS_STATIC OFF)
+    set(COOLPROP_PACKAGE_HAS_SHARED OFF)
+    if(_static_target)
+      set(COOLPROP_PACKAGE_HAS_STATIC ON)
+    endif()
+    if(_shared_target)
+      set(COOLPROP_PACKAGE_HAS_SHARED ON)
+    endif()
     configure_package_config_file(
       "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CoolPropConfig.cmake.in"
       "${CMAKE_CURRENT_BINARY_DIR}/CoolPropConfig.cmake"

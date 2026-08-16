@@ -76,13 +76,6 @@
 #    include <stdbool.h>
 #endif
 
-// Keep the legacy overrides while retaining the correct producer/consumer
-// visibility decoration selected above.
-#if defined(__powerpc__) || defined(EXTERNC)
-#    undef EXPORT_CODE
-#    define EXPORT_CODE COOLPROP_EXTERN_C COOLPROP_SYMBOL_VISIBILITY
-#endif
-
 #if defined(__powerpc__)
 // From https://rowley.zendesk.com/entries/46176--Undefined-reference-to-assert-error-message
 // The __assert function is an error handler function that is invoked when an assertion fails.

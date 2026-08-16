@@ -1,4 +1,5 @@
 #include <CoolProp/CoolProp.h>
+// Intentionally unused: verifies nested installed headers and transitive Eigen includes.
 #include <CoolProp/numerics/PolyMath.h>
 
 #include <cmath>
