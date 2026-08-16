@@ -43,8 +43,8 @@
 #    define COOLPROP_SHARED_LIBRARY_BUILD
 #endif
 
-#if defined(__cplusplus) && \
-  (defined(COOLPROP_SHARED_LIBRARY_BUILD) || defined(COOLPROP_SHARED_LIBRARY_USE) || defined(EXTERNC) || defined(__powerpc__))
+#if defined(__cplusplus) \
+  && (defined(COOLPROP_SHARED_LIBRARY_BUILD) || defined(COOLPROP_SHARED_LIBRARY_USE) || defined(EXTERNC) || defined(__powerpc__))
 #    define COOLPROP_EXTERN_C extern "C"
 #else
 #    define COOLPROP_EXTERN_C

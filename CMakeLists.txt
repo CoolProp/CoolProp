@@ -95,6 +95,9 @@ option(COOLPROP_SHARED_LIBRARY "Build CoolProp as a shared library (.dll, .so)"
 option(COOLPROP_OBJECT_LIBRARY
        "Build CoolProp objects, but do not link them (.obj, .o)" OFF)
 
+option(COOLPROP_FPIC
+       "Build CoolProp libraries with position-independent code" OFF)
+
 option(COOLPROP_EES_MODULE "Build the EES module" OFF)
 
 option(COOLPROP_WINDOWS_PACKAGE "Build the Windows installer" OFF)
