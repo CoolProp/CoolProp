@@ -189,15 +189,27 @@ jobs:
       # to be hand-merged. The dedicated `release` job below downloads each
       # OS's uploaded bundle artifact and creates a single consolidated
       # release in one shot.
-      - name: Build Tauri bundle
+      # Pull requests, especially those from forks, cannot access updater
+      # signing secrets. Build the normal installers without requesting updater
+      # artifacts, which require a private signing key.
+      - name: Build Tauri bundle (pull request)
+        if: github.event_name == 'pull_request'
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Tauri auto-updater signing — when present, tauri-action signs the
-          # update artifacts and emits latest.json next to each platform
-          # bundle. Without these the build still succeeds; the updater
-          # plugin just won't accept the signatures, so updates won't work
-          # for that release. Activate by adding both repo secrets.
+        with:
+          projectPath: wrappers/GUI
+          tauriScript: npm run tauri
+          args: >-
+            --config '{"bundle":{"createUpdaterArtifacts":false}}'
+
+      - name: Build Tauri bundle (trusted ref)
+        if: github.event_name != 'pull_request'
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Trusted refs create signed updater artifacts, so both repository
+          # secrets are required by Tauri's createUpdaterArtifacts setting.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
