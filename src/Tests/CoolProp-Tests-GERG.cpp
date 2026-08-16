@@ -1163,7 +1163,13 @@ TEST_CASE("GERG rejects components outside the model", "[GERG]") {
     CHECK_THROWS_AS(AbstractState::factory("GERG2008", std::vector<std::string>{"R134a"}), CoolProp::ValueError);
     CHECK_THROWS_AS(AbstractState::factory("GERG2008", std::vector<std::string>{"Methane", "R134a"}), CoolProp::ValueError);
     CHECK_THROWS_AS(AbstractState::factory("GERG2004", std::vector<std::string>{"n-Decane"}), CoolProp::ValueError);
-    CHECK_NOTHROW(AbstractState::factory("GERG2008", std::vector<std::string>{"n-Decane"}));
+    // AbstractState::factory returns a raw *owning* pointer, so the success
+    // case has to hand it to a smart pointer or the whole backend (plus its
+    // linked SatL/SatV states, reducing function and departure functions)
+    // leaks.  The CHECK_THROWS_AS lines above are safe only because the
+    // factory throws before it ever returns.  Same idiom as the n-decane
+    // check in "GERG component resolution" above.
+    CHECK_NOTHROW(std::shared_ptr<AbstractState>(AbstractState::factory("GERG2008", std::vector<std::string>{"n-Decane"})));
 }
 
 TEST_CASE("GERG rejects a name CoolProp cannot resolve at all", "[GERG]") {
