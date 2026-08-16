@@ -1,4 +1,55 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.15)
+
+# CMP0091 makes the MSVC runtime a target property.  This is required when a
+# single build contains both a static and a shared CoolProp library, because
+# the two variants historically use different runtimes.
+cmake_policy(SET CMP0091 NEW)
+
+set(project_name "CoolProp")
+set(app_name ${project_name})
+
+# REVISION is concatenated onto the patch and PEP 440-normalized by the version
+# tooling (dev/extract_version.py, dev/coolprop_version_provider.py): "b1" ->
+# 8.0.0b1 (a beta pre-release), "dev" -> 8.0.0.dev0, "" -> 8.0.0 (final).
+# Keep a numeric version for CMake's project/package version machinery.
+set(COOLPROP_VERSION_MAJOR 8)
+set(COOLPROP_VERSION_MINOR 0)
+set(COOLPROP_VERSION_PATCH 1)
+set(COOLPROP_VERSION_REVISION dev)
+set(COOLPROP_VERSION_NUMERIC
+    "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}"
+)
+set(COOLPROP_VERSION "${COOLPROP_VERSION_NUMERIC}${COOLPROP_VERSION_REVISION}")
+
+# CMAKE_OSX_DEPLOYMENT_TARGET and Xcode toolchain attributes must be selected
+# before the first project()/enable_language() call. A parent may provide this
+# legacy CoolProp option from its cache when using add_subdirectory().
+if(DEFINED DARWIN_USE_LIBCPP)
+  if(DARWIN_USE_LIBCPP)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET
+        "10.9"
+        CACHE STRING "Minimum OS X deployment version")
+    set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
+  else()
+    set(CMAKE_OSX_DEPLOYMENT_TARGET
+        "10.5"
+        CACHE STRING "Minimum OS X deployment version")
+    set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libstdc++")
+  endif()
+endif()
+
+# If an older parent already enabled MSVC languages while CMP0091 used OLD
+# behavior, a nested project() can make the directory-local policy state look
+# modern even though the compiler flags were initialized in legacy mode.
+# Snapshot that condition before CoolProp's project() call.
+set(_coolprop_needs_msvc_runtime_fallback OFF)
+if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR
+   AND MSVC
+   AND NOT CMAKE_MSVC_RUNTIME_LIBRARY_DEFAULT)
+  set(_coolprop_needs_msvc_runtime_fallback ON)
+endif()
+
+project(${project_name} VERSION ${COOLPROP_VERSION_NUMERIC} LANGUAGES C CXX)
 
 # Always export compile_commands.json for clang-tidy, IWYU, and editor LSPs
 # (CoolProp-2uw.7). Honored by Makefile and Ninja generators; harmless on others.
@@ -6,22 +57,25 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(CheckIncludeFileCXX)
 
+if(DEFINED COOLPROP_INSTALL_PREFIX)
+  message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
+  set(CMAKE_INSTALL_PREFIX
+      "${COOLPROP_INSTALL_PREFIX}"
+      CACHE PATH "CoolProp install path" FORCE)
+elseif(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR
+       AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  # Preserve the historical in-tree release layout for top-level builds, but
+  # never overwrite a parent project's install prefix when used via
+  # add_subdirectory()/FetchContent.
+  set(CMAKE_INSTALL_PREFIX
+      "${CMAKE_CURRENT_SOURCE_DIR}/install_root"
+      CACHE PATH "CoolProp install path" FORCE)
+endif()
+
 # Dependency management via CPM.cmake (replaces git submodules).
 # Set CPM_SOURCE_CACHE (e.g. ~/.cache/CPM) to share downloads across worktrees.
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
-
-if(DEFINED COOLPROP_INSTALL_PREFIX)
-  #set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
-  message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
-else()
-  set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
-  message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
-endif()
-
-set(CMAKE_INSTALL_PREFIX
-    ${COOLPROP_INSTALL_PREFIX}
-    CACHE PATH "default install path" FORCE)
 
 #######################################
 #           BUILD OPTIONS             #
@@ -123,12 +177,10 @@ if (COOLPROP_ASAN)
 
   # Optimize the Asan build: -O2 -g -DNDEBUG (the RelWithDebInfo level, plus
   # ASan).  ASan instrumentation is unaffected by optimization level, so this
-  # is the standard way to run ASan; -O is set EXPLICITLY rather than inherited
-  # from ${CMAKE_*_FLAGS_RELWITHDEBINFO} because this block executes before the
-  # project() call (line ~217) that canonically populates those per-config
-  # defaults -- depending on them here is order-fragile.  (Historically this
-  # referenced the mixed-case ${CMAKE_*_FLAGS_RelWithDebInfo}, an undefined ->
-  # empty variable, so the Asan build silently compiled at -O0.  That made the
+  # is the standard way to run ASan; -O is set explicitly rather than inherited
+  # from ${CMAKE_*_FLAGS_RELWITHDEBINFO}. (Historically this referenced the
+  # mixed-case ${CMAKE_*_FLAGS_RelWithDebInfo}, an undefined -> empty variable,
+  # so the Asan build silently compiled at -O0. That made the
   # dense-SVD SVDSBTL surface builds crawl and was the primary reason the ASan
   # CI job took ~45 min; with -O2 the full suite runs ~3 min locally / ~10 min
   # on the 2-vCPU runner.)  Keep these in sync with RelWithDebInfo if it changes.
@@ -160,23 +212,15 @@ endif()
 # https://gitlab.kitware.com/cmake/cmake/issues/18396
 if(DEFINED DARWIN_USE_LIBCPP)
   if(DARWIN_USE_LIBCPP)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET
-        "10.9"
-        CACHE STRING "Minimum OS X deployment version")
     set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -stdlib=libc++")
     set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -mmacosx-version-min=10.9")
     #set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -std=c++11")
     set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -lc++")
     set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -nodefaultlibs")
-    set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
   else(DARWIN_USE_LIBCPP)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET
-        "10.5"
-        CACHE STRING "Minimum OS X deployment version") # Default is 10.7
     set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -stdlib=libstdc++")
     set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -mmacosx-version-min=10.5")
     set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -lstdc++")
-    set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libstdc++")
   endif(DARWIN_USE_LIBCPP)
   message(STATUS "DARWIN_USE_LIBCPP was set added some flags:")
   message(STATUS "  OSX_COMPILE_FLAGS: ${OSX_COMPILE_FLAGS}")
@@ -213,24 +257,8 @@ endif(DEFINED DARWIN_USE_LIBCPP)
 # version information.                #
 #######################################
 
-# Project name
-set(project_name "CoolProp")
-set(app_name ${project_name})
-project(${project_name})
-
-# Project version
-# REVISION is concatenated onto the patch and PEP 440-normalized by the version
-# tooling (dev/extract_version.py, dev/coolprop_version_provider.py): "b1" ->
-# 8.0.0b1 (a beta pre-release), "dev" -> 8.0.0.dev0, "" -> 8.0.0 (final).
 # The dev_checks tag gate (dev/ci/check_tag_version.py) requires a v* tag to
-# match this version, so bump here before tagging a release/beta.
-set(COOLPROP_VERSION_MAJOR 8)
-set(COOLPROP_VERSION_MINOR 0)
-set(COOLPROP_VERSION_PATCH 1)
-set(COOLPROP_VERSION_REVISION dev)
-set(COOLPROP_VERSION
-    "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}"
-)
+# match this version, so bump the variables above before tagging a release.
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
 
 string(TIMESTAMP COOLPROP_YEAR 2010-%Y)
@@ -437,10 +465,6 @@ message(STATUS "Looking for Python")
 find_package(Python REQUIRED COMPONENTS Interpreter)
 set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 
-if(CMAKE_DL_LIBS)
-  find_package(${CMAKE_DL_LIBS} REQUIRED)
-endif()
-
 include(FlagFunctions) # Is found since it is in the module path.
 macro(modify_msvc_flag_release flag_new) # Use a macro to avoid a new scope
   foreach(flag_old IN LISTS COOLPROP_MSVC_ALL)
@@ -592,310 +616,8 @@ endif()
 # settings. Let us rely on that and only handle
 # calling conventions and shared/static issues.
 
-option(COOLPROP_STDCALL_LIBRARY
-       "Build CoolProp as a 32bit shared library with stdcall" OFF)
-
-option(COOLPROP_CDECL_LIBRARY
-       "Build CoolProp as a 32bit shared library with cdecl" OFF)
-
-option(COOLPROP_EXTERNC_LIBRARY
-       "Overwrite the export settings to force extern C" OFF)
-
-set(COOLPROP_LIBRARY_SOURCE
-    "src/CoolPropLib.cpp"
-    CACHE STRING "The file that contains the exported functions")
-
-set(COOLPROP_LIBRARY_HEADER
-    "include/CoolProp/CoolPropLib.h"
-    CACHE STRING "The file that contains the export header")
-
-set(COOLPROP_LIBRARY_NAME
-    "${app_name}"
-    CACHE STRING "The name of the generated library")
-
-set(COOLPROP_LIBRARY_EXPORTS
-    ""
-    CACHE STRING "The file that contains the export alias list")
-
-# Rule out cases that do not make sense
-if("${BITNESS}" STREQUAL "32")
-  if(COOLPROP_CDECL_LIBRARY)
-    set(CONVENTION "__cdecl")
-  elseif(COOLPROP_STDCALL_LIBRARY)
-    set(CONVENTION "__stdcall")
-  else()
-    set(CONVENTION "")
-  endif()
-elseif("${BITNESS}" STREQUAL "64")
-  if(COOLPROP_CDECL_LIBRARY)
-    message(WARNING "You cannot use cdecl conventions in a 64-bit library.")
-  elseif(COOLPROP_STDCALL_LIBRARY)
-    message(WARNING "You cannot use stdcall conventions in a 64-bit library.")
-  endif()
-  set(CONVENTION "")
-elseif("${BITNESS}" STREQUAL "NATIVE")
-  set(CONVENTION "")
-else()
-  message(FATAL_ERROR "Bitness is not defined. Set it and run cmake again.")
-endif()
-
-if((COOLPROP_OBJECT_LIBRARY AND COOLPROP_STATIC_LIBRARY)
-   OR (COOLPROP_OBJECT_LIBRARY AND COOLPROP_SHARED_LIBRARY)
-   OR (COOLPROP_STATIC_LIBRARY AND COOLPROP_SHARED_LIBRARY))
-  message(FATAL_ERROR "You can only use one of the library switches!")
-endif()
-
-if(COOLPROP_OBJECT_LIBRARY
-   OR COOLPROP_STATIC_LIBRARY
-   OR COOLPROP_SHARED_LIBRARY)
-  # Project name
-  set(LIB_NAME ${COOLPROP_LIBRARY_NAME})
-  # Object, static or shared?
-  if(COOLPROP_OBJECT_LIBRARY)
-    add_library(${LIB_NAME} OBJECT ${APP_SOURCES})
-    set(COOLPROP_LIBRARY_SOURCE "")
-    set(COOLPROP_LIBRARY_HEADER "")
-  elseif(COOLPROP_STATIC_LIBRARY)
-    list(APPEND APP_SOURCES
-         "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
-    add_library(${LIB_NAME} STATIC ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
-    if(MSVC)
-      # Add postfix for debugging
-      set_property(TARGET ${LIB_NAME} PROPERTY DEBUG_POSTFIX d)
-      set_property(TARGET ${LIB_NAME} PROPERTY RELEASE_POSTFIX)
-      modify_msvc_flags("/MD")
-
-      # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
-    endif(MSVC)
-    install(
-      TARGETS ${LIB_NAME}
-      DESTINATION
-        static_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit_${CMAKE_CXX_COMPILER_ID}_${CMAKE_CXX_COMPILER_VERSION}
-    )
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
-            DESTINATION static_library)
-    # GH #1280: ship the installable C++ header tree so downstream CMake can
-    # find_package(CoolProp) and get usable include paths. The flat deprecation
-    # shims ship alongside so consumers on the old "X.h" includes keep building
-    # (removed at v9). Excluded as internal-only / non-self-contained: generated
-    # DB headers (*_JSON.h / *_CBOR.h), and detail/json.h + detail/msgpack.h
-    # (they pull the un-shipped nlohmann/valijson and msgpack.hpp) plus the
-    # CPmsgpack.h shim that forwards to the latter. The shipped fluids/numerics/
-    # superancillary tiers transitively require Eigen on the include path, and
-    # fmt unless NO_FMTLIB is defined (boost is NOT required -- the superancillary
-    # rootfinder is defined out-of-line in src/superancillary.cpp);
-    # dev/ci/check-installed-headers.sh compile-checks every shipped header
-    # standalone (Eigen-only) to keep this honest.
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
-            DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
-            REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-            DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
-            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE PATTERN "CPmsgpack.h" EXCLUDE
-            PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
-  elseif(COOLPROP_SHARED_LIBRARY)
-    list(APPEND APP_SOURCES
-         "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
-    # Embed Windows VERSIONINFO so CoolProp.dll's Properties dialog shows
-    # FileVersion/ProductVersion fields (#2391). The .rc is configured from
-    # COOLPROP_VERSION_{MAJOR,MINOR,PATCH} above and added to the source
-    # list only on MSVC and MSYS2 (MinGW), where rc.exe (or MSYS2 windres) is available.
-    if(MSVC OR MINGW)
-      configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/dev/CoolProp.rc.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc"
-        @ONLY)
-      list(APPEND APP_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc")
-    endif()
-    add_library(${LIB_NAME} SHARED ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
-	
-	## For arm64 builds, put the shared library in the Windows/64bit__arm64 folder
-	if(MSVC AND ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM64" OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "arm64"))
-		set(OUTPUT_FOLDER "shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit__arm64")
-	else()
-		set(OUTPUT_FOLDER "shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION}")
-	endif()
-	
-    install(
-      TARGETS ${LIB_NAME}
-      DESTINATION ${OUTPUT_FOLDER}
-    )
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
-            DESTINATION shared_library)
-    # GH #1280: ship the installable C++ header tree (+ flat back-compat shims,
-    # removed at v9; generated *_JSON.h excluded). See the static branch above.
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
-            DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
-            REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-            DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
-            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE PATTERN "CPmsgpack.h" EXCLUDE
-            PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
-    set_property(
-      TARGET ${LIB_NAME}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -DCOOLPROP_LIB")
-    # Now all the compiler specific settings for Visual Studio
-    if(MSVC)
-      # Add postfix for debugging
-      set_property(TARGET ${LIB_NAME} PROPERTY DEBUG_POSTFIX d)
-      set_property(TARGET ${LIB_NAME} PROPERTY RELEASE_POSTFIX)
-      # No lib prefix for the shared library
-      set_property(TARGET ${LIB_NAME} PROPERTY PREFIX "")
-      modify_msvc_flags("/MT")
-
-      # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
-      add_custom_command(
-        TARGET ${LIB_NAME}
-        POST_BUILD
-        COMMAND dumpbin /EXPORTS $<TARGET_FILE:${LIB_NAME}> >
-                ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
-      install(
-        FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt
-        DESTINATION ${OUTPUT_FOLDER}
-	  )
-		  
-      add_custom_command(
-        TARGET ${LIB_NAME}
-        POST_BUILD
-        COMMAND dumpbin /HEADERS $<TARGET_FILE:${LIB_NAME}> >
-                ${CMAKE_CURRENT_BINARY_DIR}/headers.txt)
-      install(
-        FILES ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
-        DESTINATION ${OUTPUT_FOLDER}
-	  )
-    endif()
-
-    # MSYS2(MINGW) specific stuff
-    if(MINGW AND DEFINED ENV{MSYSTEM})
-      # Add postfix for debugging (same as MSVC)
-      set_property(TARGET ${LIB_NAME} PROPERTY DEBUG_POSTFIX d)
-      set_property(TARGET ${LIB_NAME} PROPERTY RELEASE_POSTFIX)
-      # No lib prefix for the shared library (same as MSVC)
-      set_property(TARGET ${LIB_NAME} PROPERTY PREFIX "")
-      set_target_properties(${LIB_NAME} PROPERTIES IMPORT_PREFIX "" IMPORT_SUFFIX ".a")
-      # Statically link all MINGW libraries and make the file truly portable
-      # See (https://stackoverflow.com/questions/13768515/how-to-do-static-linking-of-libwinpthread-1-dll-in-mingw)
-      # NOTE: use MSYS2/UCRT64 ntldd to check dependencies, MSYS2 & cygwin ldd will give false ucrt64 dependencies
-      target_link_options(${LIB_NAME} PRIVATE -static-libgcc -static-libstdc++)
-      target_link_libraries(${LIB_NAME} PRIVATE -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic)  #scopes only winpthreads
-      # Note that Windows system DLLs (ucrt, kernel32, etc.) remain dynamically linked.
-    endif()
-
-    # For Linux
-    if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-      set_property(TARGET ${LIB_NAME} PROPERTY VERSION ${COOLPROP_VERSION})
-      set_property(TARGET ${LIB_NAME} PROPERTY SOVERSION
-                                               ${COOLPROP_VERSION_MAJOR})
-    endif()
-  else()
-    message(FATAL_ERROR "You have to build a static or shared library.")
-  endif()
-
-  if(NOT COOLPROP_OBJECT_LIBRARY)
-    target_link_libraries(${LIB_NAME} ${CMAKE_DL_LIBS})
-  endif()
-  coolprop_hide_json_symbols(${LIB_NAME})
-
-  # For windows systems, bug workaround for Eigen
-  if(MSVC90)
-    message(STATUS "EIGEN WORKAROUND ACTIVE!!")
-    set_property(
-      TARGET ${LIB_NAME}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -DEIGEN_DONT_VECTORIZE")
-  endif()
-
-  # For mac systems, explicitly set the c++ libraries
-  if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-    if(DEFINED OSX_COMPILE_FLAGS)
-      set_target_properties(
-        ${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS
-                                                      "${OSX_COMPILE_FLAGS}")
-    endif(DEFINED OSX_COMPILE_FLAGS)
-    if(DEFINED OSX_COMPILE_FLAGS)
-      set_target_properties(
-        ${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS
-                                                      "${OSX_LINK_FLAGS}")
-    endif(DEFINED OSX_COMPILE_FLAGS)
-  endif()
-
-  # Name mangling settings
-  if(COOLPROP_EXTERNC_LIBRARY)
-    set_property(
-      TARGET ${LIB_NAME}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -DEXTERNC")
-  endif()
-  ### All options are set, we are building a library ###
-  add_dependencies(${LIB_NAME} generate_headers)
-  #
-  if(CMAKE_VERSION VERSION_GREATER 3.0)
-    # Add target include directories for easy linking with other applications
-    target_include_directories(${LIB_NAME} PUBLIC ${APP_INCLUDE_DIRS})
-  endif()
-
-  # Set the bitness
-  if(NOT MSVC)
-    if(NOT "${BITNESS}" STREQUAL "NATIVE")
-      message(STATUS "Setting bitness flag -m${BITNESS}")
-      set_property(
-        TARGET ${LIB_NAME}
-        APPEND_STRING
-        PROPERTY COMPILE_FLAGS " -m${BITNESS}")
-      set_property(
-        TARGET ${LIB_NAME}
-        APPEND_STRING
-        PROPERTY LINK_FLAGS " -m${BITNESS}")
-    endif()
-  endif()
-
-  # ADD -fPIC flag if needed
-  if(COOLPROP_FPIC)
-    message(STATUS "Setting fPIC flag")
-    set_property(
-      TARGET ${LIB_NAME}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -fPIC")
-  endif()
-  #
-  # calling conventions
-  if(("${CONVENTION}" STREQUAL "NULL") OR ("${CONVENTION}" STREQUAL ""))
-    #MESSAGE(STATUS "Skipping unknown calling convention.")
-  else()
-    set_property(
-      TARGET ${LIB_NAME}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -DCONVENTION=${CONVENTION}")
-  endif()
-  #
-  #set_property(SOURCE MyFile.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -msse4.1 ")
-  message(STATUS "Library compilation detected:")
-  message(STATUS "Creating ${LIB_NAME}, a ${BITNESS}-bit library")
-  message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
-  message(STATUS "COOLPROP_STATIC_LIBRARY: ${COOLPROP_STATIC_LIBRARY}")
-  message(STATUS "COOLPROP_SHARED_LIBRARY: ${COOLPROP_SHARED_LIBRARY}")
-  message(STATUS "COOLPROP_OBJECT_LIBRARY: ${COOLPROP_OBJECT_LIBRARY}")
-  if(("${CONVENTION}" STREQUAL "NULL") OR ("${CONVENTION}" STREQUAL ""))
-     message(STATUS "CONVENTION: Not Set")
-  else()
-     message(STATUS "CONVENTION: ${CONVENTION}")
-  endif()
-  message(STATUS "COOLPROP_LIBRARY_HEADER: ${COOLPROP_LIBRARY_HEADER}")
-  message(STATUS "COOLPROP_LIBRARY_SOURCE: ${COOLPROP_LIBRARY_SOURCE}")
-  #
-  get_property(
-    tmpVar
-    TARGET ${LIB_NAME}
-    PROPERTY COMPILE_FLAGS)
-  message(STATUS "COMPILE_FLAGS: ${tmpVar}")
-  get_property(
-    tmpVar
-    TARGET ${LIB_NAME}
-    PROPERTY LINK_FLAGS)
-  message(STATUS "LINK_FLAGS: ${tmpVar}")
-  #
-endif()
+include(CoolPropLibrary)
+coolprop_add_library_targets()
 
 if(COOLPROP_IOS_TARGET)
   # Set the Base SDK (only change the SDKVER value, if for instance, you are building for iOS 5.0):
@@ -933,15 +655,15 @@ if(COOLPROP_DEBIAN_PACKAGE)
     ${app_name} PROPERTIES VERSION ${COOLPROP_VERSION}
                            SOVERSION ${COOLPROP_VERSION_MAJOR})
   add_dependencies(${app_name} generate_headers)
-  install(TARGETS ${app_name} DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/lib")
+  install(TARGETS ${app_name} DESTINATION usr/lib)
   # GH #1280: install the C++ header tree (incl. CoolProp/CoolPropLib.h) plus
   # the flat back-compat shims, so both <CoolProp/CoolPropLib.h> and the legacy
   # <CoolPropLib.h> resolve from /usr/include. Shims removed at v9.
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
+          DESTINATION usr/include FILES_MATCHING PATTERN "*.h"
           REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
+          DESTINATION usr/include FILES_MATCHING PATTERN "*.h"
           PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE PATTERN "CPmsgpack.h" EXCLUDE
           PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
 endif()
@@ -978,7 +700,7 @@ if(COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
                                          "${COMPILE_FLAGS} -DEXTERNC")
   add_dependencies(${app_name} generate_headers)
   install(TARGETS ${app_name}
-          DESTINATION "${COOLPROP_INSTALL_PREFIX}/shared_library/VxWorks")
+          DESTINATION "shared_library/VxWorks")
 endif()
 
 if(COOLPROP_PRIME_MODULE)
@@ -1018,7 +740,7 @@ if(COOLPROP_PRIME_MODULE)
   set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX
                                                                         "")
   install(TARGETS CoolPropMathcadWrapper
-          DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathcadPrime")
+          DESTINATION MathcadPrime)
   install(
     FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/Prime/CoolPropFluidProperties.mcdx"
@@ -1057,7 +779,7 @@ if(COOLPROP_MATHCAD15_MODULE)
   set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX
                                                                         "")
   install(TARGETS CoolPropMathcadWrapper
-          DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathCAD15")
+          DESTINATION MathCAD15)
   install(
     FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropFluidProperties.xmcdz"
@@ -1120,14 +842,14 @@ if(COOLPROP_EES_MODULE)
     VERBATIM)
   # install the generated library and the other files
   install(TARGETS COOLPROP_EES
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}")
+          DESTINATION "EES/${CMAKE_SYSTEM_NAME}")
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp.htm"
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}")
+          DESTINATION "EES/${CMAKE_SYSTEM_NAME}")
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp.LIB"
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}")
+          DESTINATION "EES/${CMAKE_SYSTEM_NAME}")
   install(
     FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp_EES_Sample.EES"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}")
+    DESTINATION "EES/${CMAKE_SYSTEM_NAME}")
 endif()
 
 # Windows package
@@ -1587,7 +1309,7 @@ if(COOLPROP_CSHARP_MODULE)
   #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.cs" DESTINATION Csharp)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z"
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp)
+          DESTINATION Csharp)
   install(TARGETS ${app_name}
           DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
@@ -1683,7 +1405,7 @@ if(COOLPROP_VBDOTNET_MODULE)
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/VB.net_VS2012_example.7z"
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/VB.NET)
+          DESTINATION VB.NET)
 
 endif()
 
@@ -1842,14 +1564,14 @@ if(COOLPROP_JAVA_MODULE)
   #
   # Install all the generated java files
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
+          DESTINATION Java)
   # Ship the archive alongside the unpacked tree, matching the Csharp layout.
   # #3245 dropped this rule when it replaced the flat-glob install with the
   # package-tree DIRECTORY install, which left the release area without the
   # archive that dev/scripts/examples/win64run.py still fetches from
   # nightly/Java/platform-independent.7z (CoolProp-qrn3).
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z"
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
+          DESTINATION Java)
   if(NOT JAVA_PACKAGE_DIR STREQUAL "")
     # Install the package tree rooted at its FIRST path component so the full
     # package layout is preserved under platform-independent/.  The parent-of-
@@ -1869,14 +1591,14 @@ if(COOLPROP_JAVA_MODULE)
     # the DIRECTORY form above would install the entire binary dir.
     install(
       CODE "file( GLOB _GeneratedJavaSources \"${CMAKE_CURRENT_BINARY_DIR}/*.java\" )"
-      CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/platform-independent )"
+      CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION \${CMAKE_INSTALL_PREFIX}/Java/platform-independent )"
     )
   endif()
 
 
   install(
     TARGETS ${app_name}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+    DESTINATION Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
   execute_process(
     COMMAND ${CMAKE_COMMAND} -E make_directory
@@ -1999,9 +1721,9 @@ if(COOLPROP_PHP_MODULE)
   add_dependencies(CoolProp generate_headers)
 
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/cross-platform OPTIONAL)
+          DESTINATION PHP/cross-platform OPTIONAL)
   install(TARGETS ${app_name}
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/${CMAKE_SYSTEM_NAME})
+          DESTINATION PHP/${CMAKE_SYSTEM_NAME})
 
 endif()
 
@@ -2108,9 +1830,9 @@ if(COOLPROP_LIBREOFFICE_MODULE)
 
    # install LibreOffice extension and example spreadsheet file
    install(FILES "${COOLPROP_LIBREOFFICE_TMP_DIR}/CoolProp.oxt"
-           DESTINATION "${COOLPROP_INSTALL_PREFIX}/LibreOffice")
+           DESTINATION LibreOffice)
    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/TestLibreOffice.ods"
-           DESTINATION "${COOLPROP_INSTALL_PREFIX}/LibreOffice")
+           DESTINATION LibreOffice)
 endif()
 
 if(COOLPROP_JAVASCRIPT_MODULE)
@@ -2148,14 +1870,14 @@ if(COOLPROP_JAVASCRIPT_MODULE)
   set_target_properties(coolprop PROPERTIES PREFIX "" SUFFIX .js)
   #install (TARGETS coolprop DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/coolprop.js"
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
+          DESTINATION Javascript)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/coolprop.wasm"
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
+          DESTINATION Javascript)
   #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
   install(
     FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/Web/coolprop/wrappers/Javascript/index.html"
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
+    DESTINATION Javascript)
 endif()
 
 if(COOLPROP_MATHEMATICA_MODULE)

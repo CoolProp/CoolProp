@@ -165,6 +165,22 @@ On Linux, installation could be done by::
     sudo ln -sf libCoolProp.so.5 libCoolProp.so
     popd
 
+CMake package usage
+-------------------
+
+The CMake install step also provides a relocatable package configuration. A
+consumer does not need to add CoolProp's include or library directories
+manually::
+
+    find_package(CoolProp 8 CONFIG REQUIRED COMPONENTS Shared)
+    add_executable(main main.c)
+    target_link_libraries(main PRIVATE CoolProp::Shared)
+
+Static and shared libraries can be produced together by enabling both
+``COOLPROP_STATIC_LIBRARY`` and ``COOLPROP_SHARED_LIBRARY``. In that case the
+canonical ``CoolProp::CoolProp`` target selects ``COOLPROP_DEFAULT_LIBRARY``;
+use ``CoolProp::Static`` or ``CoolProp::Shared`` when linkage must be explicit.
+
 
 Using
 =====
