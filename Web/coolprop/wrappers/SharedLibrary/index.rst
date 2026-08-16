@@ -180,6 +180,8 @@ Static and shared libraries can be produced together by enabling both
 ``COOLPROP_STATIC_LIBRARY`` and ``COOLPROP_SHARED_LIBRARY``. In that case the
 canonical ``CoolProp::CoolProp`` target selects ``COOLPROP_DEFAULT_LIBRARY``;
 use ``CoolProp::Static`` or ``CoolProp::Shared`` when linkage must be explicit.
+Separate consumer targets may select different variants, but one final binary
+must not link both variants.
 
 
 Using

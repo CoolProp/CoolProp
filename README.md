@@ -47,9 +47,10 @@ target_link_libraries(my_app PRIVATE CoolProp::CoolProp)
 
 When both variants are installed, `CoolProp::Static` and `CoolProp::Shared`
 select one explicitly. `CoolProp::CoolProp` selects the value of
-`COOLPROP_DEFAULT_LIBRARY` (`SHARED` by default). On Windows, the portable
-shared-library interface is the C API from `CoolProp/CoolPropLib.h`; use the
-static target for the complete C++ API.
+`COOLPROP_DEFAULT_LIBRARY` (`SHARED` by default). Separate consumer targets may
+select different variants, but one final binary must not link both variants.
+On Windows, the portable shared-library interface is the C API from
+`CoolProp/CoolPropLib.h`; use the static target for the complete C++ API.
 
 Source-tree consumers can use the same canonical target:
 
