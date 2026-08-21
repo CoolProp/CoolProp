@@ -628,7 +628,7 @@ class PNF(PureData):
 # MultiTherm, see https://www.multitherm.com
 class MultiThermPG1(PureData):
     """
-    Heat transfer fluid MultiTherm PG-1 by MultiTherm Corporation
+    Heat transfer fluid MultiTherm PG-1 by MultiTherm LLC
 
     MultiTherm PG-1 is an FDA-certified, USDA-acceptable, NSF HT-1 white
     mineral oil heat transfer fluid for closed-loop, liquid-phase systems,
