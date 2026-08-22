@@ -98,6 +98,10 @@ jobs:
         with:
           name: Csharp-${{ matrix.sysname }}
           path: install_root/Csharp
+          # upload-artifact defaults to 'warn', so a build that installed
+          # nothing would upload no artifact and still pass, leaving the merge
+          # job to publish a Csharp tree missing that platform.
+          if-no-files-found: error
 
   merge:
     needs: build
@@ -130,6 +134,7 @@ jobs:
         with:
           name: Csharp
           path: Csharp
+          if-no-files-found: error
 
       - name: Delete intermediate per-OS artifacts
         uses: geekyeggo/delete-artifact@v6
