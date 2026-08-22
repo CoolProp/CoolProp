@@ -504,7 +504,34 @@ std::vector<Token> lex(const std::string& s) {
 // key.  See the rationale for the curated allowlist in Expression.h.
 static const std::vector<std::pair<std::string, parameters>>& inputTableImpl() {
     static const std::vector<std::pair<std::string, parameters>> table = {
-      {"T", iT}, {"rhomolar", iDmolar}, {"rhomass", iDmass}, {"molar_mass", imolar_mass}, {"p", iP}};
+      // State variables and pure-fluid metadata.
+      {"T", iT},
+      {"rhomolar", iDmolar},
+      {"rhomass", iDmass},
+      {"molar_mass", imolar_mass},
+      {"p", iP},
+      // Critical- and reducing-point constants: trivial parameters, properties of
+      // the fluid rather than of the state.  Use these where the PHYSICS references
+      // the fluid's true critical point -- e.g. a crossover critical enhancement,
+      // whose correlation length is defined relative to it.
+      //
+      // They are NOT a substitute for a correlation's fitted reducing parameters.
+      // Source papers quote those to finite precision and the fit is conditioned on
+      // exactly those digits: nitrogen's 2024 viscosity correlation reduces with
+      // rho_c = 11.1839 mol/L while the Span et al. EOS carries 11183.901464580624
+      // mol/m^3, and since rho_r appears raised to powers up to 8.4, swapping one
+      // for the other moves the answer by ~1e-6.  Fitted reducing parameters belong
+      // in the block's `constants`, frozen.
+      //
+      // That is also why the EOS *reducing* state is deliberately NOT here.  It is a
+      // fitting convenience of the equation of state, correlations that write
+      // `T_reducing` mean their own fitted value, and adding the name would both
+      // advise the wrong thing and silently change the meaning of every existing
+      // formula that already uses it as a constant.  Adding a row to this table is a
+      // BREAKING change to the language -- weigh it that way.
+      {"T_critical", iT_critical},
+      {"rhomolar_critical", irhomolar_critical},
+      {"p_critical", iP_critical}};
     return table;
 }
 

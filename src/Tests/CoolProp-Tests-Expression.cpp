@@ -773,4 +773,171 @@ TEST_CASE("expression host path: p equals HEOS.p()", "[expression]") {
     CHECK(checks > 0);
 }
 
+// ---------------------------------------------------------------------------
+// Critical- and reducing-point constants as DSL inputs.
+// ---------------------------------------------------------------------------
+TEST_CASE("critical and reducing constants resolve as inputs", "[expression]") {
+    using namespace CoolProp::expression;
+    const std::vector<std::pair<std::string, CoolProp::parameters>> cases = {
+      {"T_critical", CoolProp::iT_critical}, {"rhomolar_critical", CoolProp::irhomolar_critical}, {"p_critical", CoolProp::iP_critical}};
+
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Nitrogen"));
+    AS->update(CoolProp::DmolarT_INPUTS, 5000.0, 200.0);
+    for (const auto& c : cases) {
+        CAPTURE(c.first);
+        ExpressionBlock b(R"({"formula": ")" + c.first + R"("})");
+        REQUIRE(b.required_inputs() == std::vector<std::string>{c.first});
+        // Must be the fluid's own value, straight from keyed_output -- not a copy.
+        CHECK(b.evaluate(*AS) == AS->keyed_output(c.second));
+    }
+    // They are trivial parameters, so they do NOT depend on the state.
+    ExpressionBlock tc(R"({"formula": "T_critical"})");
+    const double at_200 = tc.evaluate(*AS);
+    AS->update(CoolProp::DmolarT_INPUTS, 100.0, 400.0);
+    CHECK(tc.evaluate(*AS) == at_200);
+}
+
+// ---------------------------------------------------------------------------
+// GOLDEN: the 5th transport stage, viscosity initial_density (empirical form).
+//
+// CycloHexane is the only shipped fluid using the empirical form; the other 19
+// initial-density fluids use Rainwater-Friend, whose host arm scales the routine's
+// B_eta by eta_dilute*rho.  eta_dilute is a within-correlation intermediate that
+// the DSL cannot see, so an expression block yields this stage's contribution
+// DIRECTLY (the empirical convention).  See the dispatch comment.
+// ---------------------------------------------------------------------------
+TEST_CASE("golden: viscosity initial_density empirical", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("CycloHexane");
+    auto& data = HEOS->get_components()[0].transport.viscosity_initial.empirical;
+    REQUIRE(!data.n.empty());
+    // C++: tau = T_reducing/T; delta = rhomolar/rhomolar_reducing;
+    //      summer += n[i]*pow(delta,d[i])*pow(tau,t[i]);
+    // The constants keep the routine's own names: the EOS reducing state is
+    // deliberately NOT in the input table, precisely so `T_reducing` stays available
+    // to correlations that mean their own fitted value (see the test below).
+    Program p = compile("let tau = T_reducing/T\nlet delta = rhomolar/rhomolar_reducing\nsum(i: n[i]*delta^d[i]*tau^t[i])",
+                        {{"T_reducing", static_cast<double>(data.T_reducing)}, {"rhomolar_reducing", static_cast<double>(data.rhomolar_reducing)}},
+                        {{"n", std::vector<double>(data.n.begin(), data.n.end())},
+                         {"d", std::vector<double>(data.d.begin(), data.d.end())},
+                         {"t", std::vector<double>(data.t.begin(), data.t.end())}});
+    int checks = 0;
+    for (double T : {300.0, 400.0, 500.0}) {
+        for (double rho : {100.0, 2000.0, 8000.0}) {
+            HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
+            double expected = CoolProp::TransportRoutines::viscosity_initial_density_dependence_empirical(*HEOS);
+            std::vector<double> iv;
+            fill_inputs(p, *HEOS, iv);
+            double got = p.evaluate(iv);
+            CAPTURE(T, rho, expected, got);
+            CHECK(got == Catch::Approx(expected).epsilon(1e-14));
+            ++checks;
+        }
+    }
+    CHECK(checks > 0);
+}
+
+TEST_CASE("the EOS reducing state is deliberately NOT an input", "[expression]") {
+    using namespace CoolProp::expression;
+    // Adding a name to the input table is a BREAKING change: it steals that name from
+    // every formula already using it as a constant.  `T_reducing`/`rhomolar_reducing`
+    // are what correlations call their OWN fitted reducing parameters -- six golden
+    // formulas in this file already do -- so those names stay available to authors.
+    CHECK(compile("T_reducing", {{"T_reducing", 500.0}}, {}).evaluate({}) == Catch::Approx(500.0));
+    CHECK(compile("rhomolar_reducing", {{"rhomolar_reducing", 8.0}}, {}).evaluate({}) == Catch::Approx(8.0));
+    // The critical point IS an input, so those three names are now reserved.
+    CHECK_THROWS_AS(compile("1", {{"rhomolar_critical", 1.0}}, {}), CoolProp::ValueError);
+    CHECK_THROWS_AS(compile("1", {{"T_critical", 1.0}}, {}), CoolProp::ValueError);
+}
+
+// ---------------------------------------------------------------------------
+// Huber, Perkins & Lemmon, Int. J. Thermophys. 45:146 (2024), CC BY 4.0 --
+// "Reference Correlation for the Viscosity of Nitrogen from the Triple Point to
+// 1000 K and Pressures up to 2200 MPa".  A correlation published AFTER the DSL
+// was designed, implemented as pure JSON data with no C++ added.
+//
+//   eta = (eta_0(T) + Delta_eta_res(T,rho)) * Delta_eta_c            Eq. 1
+//   eta_0(T) = eta_0(298.15 K) * exp{ sum_i a_i [ln(T/298.15)]^i }   Eq. 3
+//   Delta_eta_res = sum_i N_i Tr^t_i rhor^d_i                        Eq. 5
+//
+// Delta_eta_c (the crossover critical enhancement) is NOT expressible today and is
+// out of scope here; the paper's Table 7 sets it to 1, which is what we check.
+// Reducing parameters are frozen constants, NOT the T_critical/rhomolar_critical
+// inputs: the paper reduces with rho_c = 11.1839 mol/L while the EOS carries
+// 11183.901464580624 mol/m^3, and rho_r^8.4 turns that into a ~1e-6 shift.
+// ---------------------------------------------------------------------------
+namespace {
+// clang-format off
+const char* const N2_DILUTE_2024 = R"JSON({
+  "type": "expression",
+  "formula": "let L = ln(T/T_ref)\n1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))",
+  "constants": {"T_ref": 298.15, "eta_ref": 17.7494},
+  "arrays": {
+    "a": [7.734578e-1, -9.310761e-2, 2.716958e-2, 6.175553e-3, -7.201594e-3,
+          2.094372e-3, 1.922676e-4, -3.454323e-4, 1.051771e-4, -1.126739e-5],
+    "p": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+})JSON";
+
+const char* const N2_RESIDUAL_2024 = R"JSON({
+  "type": "expression",
+  "formula": "let Tr = T/Tc\nlet rhor = rhomolar/1000/rhoc\n1e-6*sum(i: N[i]*Tr^t[i]*rhor^d[i])",
+  "constants": {"Tc": 126.192, "rhoc": 11.1839},
+  "arrays": {
+    "N": [9.955235691668, -6.165266404871, 0.213120936996, -8.473713006806, 10.013103356639,
+          0.638966874603, 0.311620258213, 9.241856768911, -5.252828814854, -0.667072279228],
+    "t": [-0.77512218631, -2.00109608805, -5.814455, -0.67602596996, 0,
+          -0.71613185456, -1.14069399597, -2.3652583598, -2.5463699255, -1.00794034515],
+    "d": [1, 1, 2, 2, 2, 6.96423363249, 8.38651257501, 2.99224857471, 3.42744617975, 7.97371767411]}
+})JSON";
+// clang-format on
+constexpr double MUPAS = 1e-6;  // the paper tabulates muPa.s; the DSL yields Pa.s
+}  // namespace
+
+TEST_CASE("Nitrogen 2024: dilute and residual blocks match the paper's Table 8", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    // Table 8 lists eta_0 and eta_res SEPARATELY, so each block is pinned on its own.
+    ExpressionBlock dilute(N2_DILUTE_2024), residual(N2_RESIDUAL_2024);
+    CHECK(dilute.required_inputs() == std::vector<std::string>{"T"});
+    CHECK(residual.required_inputs() == std::vector<std::string>{"T", "rhomolar"});
+
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Nitrogen"));
+    // T (K), rho (kg/m^3), eta_0 (muPa.s), eta_res (muPa.s)
+    const double tab8[3][4] = {
+      {126.192, 265, 8.43716205, 7.20032032}, {126.212, 333, 8.43843818, 11.03805357}, {126.952, 300, 8.48562461, 9.04720938}};
+    for (const auto& row : tab8) {
+        AS->update(CoolProp::DmassT_INPUTS, row[1], row[0]);
+        CAPTURE(row[0], row[1]);
+        CHECK(dilute.evaluate(*AS) == Catch::Approx(row[2] * MUPAS).epsilon(1e-9));
+        CHECK(residual.evaluate(*AS) == Catch::Approx(row[3] * MUPAS).epsilon(1e-9));
+    }
+}
+
+TEST_CASE("Nitrogen 2024: end-to-end through the fluid library matches Table 7", "[expression]") {
+    using nlohmann::json;
+    // Graft the two blocks onto a copy of Nitrogen and register it as a new fluid,
+    // so PropsSI("V") exercises the real load + dispatch path, not compile() direct.
+    json fluid = json::parse(CoolProp::get_fluid_param_string("Nitrogen", "JSON"))[0];
+    json visc = json::object();
+    // The loader requires a BibTeX member on the viscosity block; cite the new paper.
+    visc["BibTeX"] = "Huber-IJT-2024";
+    visc["dilute"] = json::parse(N2_DILUTE_2024);
+    visc["higher_order"] = json::parse(N2_RESIDUAL_2024);
+    fluid["TRANSPORT"]["viscosity"] = visc;
+    fluid["INFO"]["NAME"] = "N2_HUBER_2024";
+    fluid["INFO"]["CAS"] = "999-99-91";
+    fluid["INFO"]["ALIASES"] = json::array({"N2_HUBER_2024_ALIAS"});
+    REQUIRE(CoolProp::add_fluids_as_JSON("HEOS", json::array({fluid}).dump()));
+
+    // Table 7, the paper's computer-verification values (Delta_eta_c = 1).  The
+    // rho = 0 rows are covered by the dilute-block test above; PropsSI needs a
+    // physical state, so only the finite-density rows go through here.
+    const double tab7[3][3] = {{90, 756, 108.42550781}, {300, 28, 18.23478803}, {300, 560, 50.59605975}};
+    for (const auto& row : tab7) {
+        double got = CoolProp::PropsSI("V", "T", row[0], "Dmass", row[1], "N2_HUBER_2024");
+        CAPTURE(row[0], row[1], row[2]);
+        REQUIRE(ValidNumber(got));
+        CHECK(got == Catch::Approx(row[2] * MUPAS).epsilon(1e-9));
+    }
+}
+
 #endif  // ENABLE_CATCH

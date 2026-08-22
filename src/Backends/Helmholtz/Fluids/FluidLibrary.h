@@ -637,6 +637,9 @@ class JSONFluidLibrary
 
             // Set the type flag
             fluid.transport.viscosity_initial.type = CoolProp::ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EMPIRICAL;
+        } else if (!type.compare("expression")) {
+            fluid.transport.viscosity_initial.expression_data = parse_expression_block(initial_density, fluid.name);
+            fluid.transport.viscosity_initial.type = CoolProp::ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EXPRESSION;
         } else {
             throw ValueError(format("type [%s] is not understood for fluid %s", type.c_str(), fluid.name.c_str()));
         }

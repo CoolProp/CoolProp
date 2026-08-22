@@ -771,6 +771,17 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
             initial_density = TransportRoutines::viscosity_initial_density_dependence_empirical(*this);
             break;
         }
+        case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EXPRESSION: {
+            // The formula yields this stage's contribution directly, in Pa-s -- the
+            // same convention as the EMPIRICAL form and as the other four stages.
+            // It is NOT the Rainwater-Friend B_eta, which the host would have to
+            // scale by eta_dilute*rho; the dilute viscosity is a within-correlation
+            // intermediate and is deliberately not exposed to the DSL.
+            if (!components[0].transport.viscosity_initial.expression_data.correlation)
+                throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+            initial_density = components[0].transport.viscosity_initial.expression_data.correlation->eval(*this);
+            break;
+        }
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_NOT_SET: {
             break;
         }

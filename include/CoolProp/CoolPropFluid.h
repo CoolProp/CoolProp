@@ -286,11 +286,13 @@ struct ViscosityInitialDensityVariables
     {
         VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND,  ///< Use \ref TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend
         VISCOSITY_INITIAL_DENSITY_EMPIRICAL,         ///< Use \ref TransportRoutines::viscosity_initial_density_dependence_empirical
+        VISCOSITY_INITIAL_DENSITY_EXPRESSION,        ///< Runtime expression DSL block
         VISCOSITY_INITIAL_DENSITY_NOT_SET
     };
     ViscosityInitialDensityEnum type = VISCOSITY_INITIAL_DENSITY_NOT_SET;
     ViscosityRainWaterFriendData rainwater_friend;   ///< Data for \ref TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend
     ViscosityInitialDensityEmpiricalData empirical;  ///< Data for \ref TransportRoutines::viscosity_initial_density_dependence_empirical
+    ExpressionData expression_data{};
 };
 
 struct ViscosityModifiedBatschinskiHildebrandData
