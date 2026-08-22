@@ -852,8 +852,82 @@ def test_write_merges_into_a_block_shared_with_another_quantity(tmp_path, rows):
     assert block["smolar_standard"] == {"value": 186.25, "source": "SomeOtherDatabase"}
 
 
+def test_write_does_not_rewrite_another_sources_reference_state(tmp_path, rows):
+    """The reference state is SHARED, so overwriting it re-annotates their data.
+
+    A block holding another source's quantity at p=101325 silently became
+    p=100000, leaving that value stamped with a reference pressure it was never
+    published at.  Worse than deletion: it still reads as valid.  The gate
+    could not see it because it only ever inspected hmolar_formation.
+    """
+    import json as _json
+
+    path = tmp_path / "Methane.json"
+    path.write_text(
+        _json.dumps({"INFO": {"NAME": "Methane", "CAS": "74-82-8", "STANDARD_STATE": {
+            "T": 298.15, "T_units": "K", "p": 101325.0, "p_units": "Pa", "phase": "ideal_gas",
+            "smolar_standard": {"value": 186.25, "units": "J/mol/K", "source": "CODATA"}}}}),
+        encoding="utf-8",
+    )
+    methane = [r for r in rows if r.cas == "74-82-8"][0]
+    write_standard_state(path, methane, "1.220")
+
+    block = _json.loads(path.read_text(encoding="utf-8"))["INFO"]["STANDARD_STATE"]
+    assert block["p"] == 101325.0  # theirs, untouched
+    assert block["smolar_standard"]["source"] == "CODATA"
+    assert block["hmolar_formation"]["value"] == -74513.0  # ours, added
+
+
+def test_write_refuses_a_conflicting_reference_state(tmp_path, monkeypatch, capsys):
+    """No correct automatic answer when two sources disagree -- refuse outright.
+
+    Not overridable by --allow-removals: that flag authorizes discarding data,
+    not silently re-annotating a third party's.
+    """
+    import json as _json
+
+    module = sys.modules["fetch_atct_formation"]
+    monkeypatch.setattr(module, "__file__", str(tmp_path / "fetch_atct_formation.py"))
+    fluids_dir = tmp_path / "fluids"
+    fluids_dir.mkdir()
+    methane = fluids_dir / "Methane.json"
+    payload = _json.dumps({"INFO": {"NAME": "Methane", "CAS": "74-82-8", "STANDARD_STATE": {
+        "p": 101325.0, "smolar_standard": {"value": 186.25, "source": "CODATA"}}}})
+    methane.write_text(payload, encoding="utf-8")
+
+    for extra in ([], ["--allow-removals"]):
+        exit_code = main(["--version", "1.220", "--cache", str(FIXTURE),
+                          "--fluids-dir", str(fluids_dir), "--update-ledger", "--write"] + extra)
+        captured = capsys.readouterr()
+        assert exit_code == 1, "refusal must not be overridable by %r" % extra
+        assert "disagrees with ATcT" in captured.err
+        assert methane.read_text(encoding="utf-8") == payload
+
+
+def test_update_ledger_alone_is_gated(tmp_path, monkeypatch, capsys):
+    """--update-ledger with no --write still destroys the tripwire; gate it too."""
+    import json as _json
+
+    module = sys.modules["fetch_atct_formation"]
+    monkeypatch.setattr(module, "__file__", str(tmp_path / "fetch_atct_formation.py"))
+    fluids_dir = tmp_path / "fluids"
+    fluids_dir.mkdir()
+    (fluids_dir / "Fakium.json").write_text(
+        _json.dumps({"INFO": {"NAME": "Fakium", "CAS": "900-00-0",
+                              "STANDARD_STATE": {"hmolar_formation": {"value": -1.0, "source": "ATcT"}}}}),
+        encoding="utf-8",
+    )
+    ledger_path = tmp_path / "expected_coverage.json"
+    ledger_text = _json.dumps({"Fakium": {"state": "matched", "atct_id": "900-00-0*0"}})
+    ledger_path.write_text(ledger_text, encoding="utf-8")
+
+    assert main(["--version", "1.220", "--cache", str(FIXTURE),
+                 "--fluids-dir", str(fluids_dir), "--update-ledger"]) == 1
+    assert ledger_path.read_text(encoding="utf-8") == ledger_text
+
+
 def test_writers_preserve_a_trailing_newline(tmp_path, rows):
-    """6 of 137 fluid files end with a newline; inserting a block must not strip it."""
+    """7 of 137 fluid files end with a newline; inserting a block must not strip it."""
     import json as _json
 
     path = tmp_path / "Methane.json"

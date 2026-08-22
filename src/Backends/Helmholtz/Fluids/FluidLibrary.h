@@ -396,11 +396,27 @@ class JSONFluidLibrary
             declined("\"value\"/\"uncertainty\" are not numeric");
             return;
         }
-        fluid.standard_state.hmolar = cpjson::get_double(hf, "value");
-        fluid.standard_state.hmolar_uncertainty = cpjson::get_double(hf, "uncertainty");
-        fluid.standard_state.source = cpjson::get_string(hf, "source");
-        fluid.standard_state.version = cpjson::get_string(hf, "version");
-        fluid.standard_state.id = cpjson::get_string(hf, "id");
+        // Type-check the string keys too.  Checking only units/value/uncertainty
+        // left source/version/id to throw inside cpjson::get_string -- and
+        // `"version": 1.220` (unquoted) is the single likeliest way a human
+        // hand-writes that field.  Three keys guarded, three adjacent keys
+        // doing the same damage unguarded, in one function.
+        for (const char* key : {"source", "version", "id"}) {
+            if (!hf.at(key).is_string()) {
+                declined(format("\"%s\" is not a string", key));
+                return;
+            }
+        }
+        // Populate only once every field has been validated.  Assigning hmolar
+        // first left a half-built FormationStruct -- a valid value with empty
+        // provenance -- visible to anything that caught the throw.
+        FormationStruct parsed;
+        parsed.hmolar = cpjson::get_double(hf, "value");
+        parsed.hmolar_uncertainty = cpjson::get_double(hf, "uncertainty");
+        parsed.source = cpjson::get_string(hf, "source");
+        parsed.version = cpjson::get_string(hf, "version");
+        parsed.id = cpjson::get_string(hf, "id");
+        fluid.standard_state = parsed;
     }
 
     /// Parse the Equation of state JSON entry

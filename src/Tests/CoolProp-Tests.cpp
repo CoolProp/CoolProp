@@ -7459,6 +7459,15 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmhol
         // A non-numeric value must not slip through to get_double either.
         CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":"-74513.0",
                         "uncertainty":43.0,"source":"ATcT","version":"1.220","id":"x"}})")));
+        // ...nor a mistyped string key through get_string.  An unquoted
+        // "version": 1.220 is the likeliest hand-authoring slip, and it used
+        // to abort the whole fluid.
+        CHECK_NOTHROW(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"source":"ATcT","version":1.220,"id":"x"}})"));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"source":42,"version":"1.220","id":"x"}})")));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"source":"ATcT","version":"1.220","id":null}})")));
     }
     SECTION("every stored value is physically plausible") {
         // Guards against a kJ/J slip anywhere in the pipeline: no molecule in

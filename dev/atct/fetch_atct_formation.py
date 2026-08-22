@@ -360,9 +360,16 @@ def standard_state_block(row: AtctRow, version: str) -> dict:
     }
 
 
-def _load_ordered(path: Path) -> dict:
-    """Read a fluid file preserving its existing key order."""
-    return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=OrderedDict)
+def _load_ordered(path: Path):
+    """Read a fluid file preserving key order, and report its line terminator.
+
+    Returns (doc, trailing_newline).  The terminator comes back with the
+    document deliberately: capturing it separately is how R1130(E).json lost
+    its newline, and a helper that returns only the doc is exactly what the
+    next writer would reach for.
+    """
+    text = path.read_text(encoding="utf-8")
+    return json.loads(text, object_pairs_hook=OrderedDict), text.endswith("\n")
 
 
 def write_standard_state(path: Path, row: AtctRow, version: str) -> None:
@@ -376,23 +383,35 @@ def write_standard_state(path: Path, row: AtctRow, version: str) -> None:
     digits than Python's shortest round-trip repr -- so those pick up a few
     incidental normalization lines.
     """
-    original = path.read_text(encoding="utf-8")
-    doc = json.loads(original, object_pairs_hook=OrderedDict)
+    doc, trailing_newline = _load_ordered(path)
     block = doc["INFO"].get("STANDARD_STATE")
     fresh = standard_state_block(row, version)
-    if not isinstance(block, dict):
+    if block is None:
         doc["INFO"]["STANDARD_STATE"] = fresh
+    elif not isinstance(block, dict):
+        # Refuse hand-edited garbage rather than overwriting it, matching
+        # clear_standard_state.  main() gates this, so reaching here is a bug.
+        raise AtctParseError("%s has a non-object INFO.STANDARD_STATE; refusing to overwrite it" % path.name)
     else:
-        # MERGE, do not replace.  Assigning the whole object would delete every
-        # other quantity sharing STANDARD_STATE -- and the README's Scope
-        # section plans exactly that (an entropy tier from another source,
-        # since ATcT publishes no standard entropies).  Replacing wiped it for
-        # all 76 MATCHED fluids while clear_standard_state carefully spared the
-        # absent ones: protection on one side of the same object only.
-        # main() refuses to reach here when the existing hmolar_formation
-        # belongs to someone else.
-        block.update(fresh)
-    _write_doc(path, doc, original.endswith("\n"))
+        # MERGE, do not replace: assigning the whole object deletes every other
+        # quantity sharing STANDARD_STATE, and the design commits to sharing it
+        # (spec section "Shared state at the top" -- a later entropy tier drops
+        # a smolar sibling in).
+        #
+        # But merging `fresh` wholesale rewrote the SHARED REFERENCE STATE too.
+        # A block holding another source's quantity at p=101325 silently became
+        # p=100000, leaving THEIR value annotated with OUR reference state --
+        # worse than deletion, because it still reads as valid data.  The gate
+        # could not see it: it only ever inspected hmolar_formation.
+        #
+        # Write our quantity, and only fill scaffolding that is absent.  A
+        # conflicting value is left exactly as found; main() refuses the run so
+        # a human resolves it, because there is no correct automatic answer
+        # when two sources disagree about the reference state.
+        block["hmolar_formation"] = fresh["hmolar_formation"]
+        for key in _REFERENCE_STATE_KEYS:
+            block.setdefault(key, fresh[key])
+    _write_doc(path, doc, trailing_newline)
 
 
 def _formation_source(path: Path):
@@ -437,6 +456,26 @@ def owns_formation(path: Path) -> bool:
     return has and _is_ours(source)
 
 
+def reference_state_conflicts(path: Path, row: AtctRow, version: str) -> dict:
+    """Read-only: scaffolding keys whose existing value disagrees with ours.
+
+    The reference state is shared by every quantity in the block, so writing
+    ours over a differing one silently re-annotates somebody else's data.
+    Returns {key: (existing, ours)}; empty when there is nothing to argue about.
+    """
+    block = json.loads(path.read_text(encoding="utf-8"))["INFO"].get("STANDARD_STATE")
+    if not isinstance(block, dict):
+        return {}
+    fresh = standard_state_block(row, version)
+    return {k: (block[k], fresh[k]) for k in _REFERENCE_STATE_KEYS if k in block and block[k] != fresh[k]}
+
+
+def has_unwritable_block(path: Path) -> bool:
+    """Read-only: is INFO.STANDARD_STATE present but not an object?"""
+    info = json.loads(path.read_text(encoding="utf-8"))["INFO"]
+    return "STANDARD_STATE" in info and not isinstance(info["STANDARD_STATE"], dict)
+
+
 def foreign_formation(path: Path):
     """Read-only: the foreign `source` owning this file's hmolar_formation, else None."""
     has, source = _formation_source(path)
@@ -446,7 +485,7 @@ def foreign_formation(path: Path):
 def _write_doc(path: Path, doc, trailing_newline: bool) -> None:
     """Serialize, restoring the file's original trailing-newline state.
 
-    6 of the 137 fluid files end with a newline and the rest do not; dropping
+    7 of the 137 fluid files end with a newline and the rest do not; dropping
     it turns "insert a block" into "insert a block and strip the terminator",
     which is exactly the kind of incidental change this tool exists to avoid.
     """
@@ -467,8 +506,7 @@ def clear_standard_state(path: Path) -> bool:
     --write runs, the ledger has already been brought into agreement with the
     new bind result.  Removal has to happen on the same pass that writes.
     """
-    original = path.read_text(encoding="utf-8")
-    doc = json.loads(original, object_pairs_hook=OrderedDict)
+    doc, trailing_newline = _load_ordered(path)
     block = doc["INFO"].get("STANDARD_STATE")
     if not isinstance(block, dict) or "hmolar_formation" not in block:
         return False
@@ -488,7 +526,7 @@ def clear_standard_state(path: Path) -> bool:
     # added its own key, keep the wrapper and leave that data alone.
     if not set(block) - _REFERENCE_STATE_KEYS:
         del doc["INFO"]["STANDARD_STATE"]
-    _write_doc(path, doc, original.endswith("\n"))
+    _write_doc(path, doc, trailing_newline)
     return True
 
 
@@ -563,8 +601,11 @@ def main(argv=None) -> int:
     parser.add_argument("--update-ledger", action="store_true",
                         help="rewrite expected_coverage.json instead of checking against it")
     parser.add_argument("--allow-removals", action="store_true",
-                        help="permit --write to DELETE STANDARD_STATE blocks from fluids this run "
-                             "reports as absent (refused by default)")
+                        help="authorize destructive changes, all refused by default: deleting an "
+                             "ATcT formation value from a fluid this run reports absent, "
+                             "overwriting one owned by another source, or overwriting a "
+                             "non-object STANDARD_STATE. Does NOT authorize rewriting a "
+                             "conflicting reference state, which is never automatic.")
     args = parser.parse_args(argv)
 
     page, page_sha256 = fetch_index(args.version, args.cache)
@@ -589,31 +630,61 @@ def main(argv=None) -> int:
     # tripwire: a later plain --write would sail past compare_ledger because
     # the ledger now agrees with the degraded page.  So a refused run must
     # leave the ledger untouched too -- "nothing was written" has to be true.
-    if args.write:
+    ledger_path = here / "expected_coverage.json"
+    # Gate BOTH destructive modes.  --update-ledger alone rewrites the pinned
+    # coverage, and that file is the tripwire everything else leans on, so it
+    # is not a read-only invocation.
+    if args.write or args.update_ledger:
         # Removals: absent fluids whose file still holds an ATcT value.
         to_clear = [name for name in sorted(result.absent) if owns_formation(fluids[name].path)]
-        # Overwrites: matched fluids whose file holds SOMEONE ELSE'S value.
-        # Guarding only removals protected the absent fluids and left every
-        # matched one open to the same destruction.
-        foreign = [(name, foreign_formation(fluids[name].path)) for name in sorted(result.matched)]
-        foreign = [(name, src) for name, src in foreign if src is not None]
-        if (to_clear or foreign) and not args.allow_removals:
-            if to_clear:
+        # Overwrites: matched fluids holding SOMEONE ELSE'S formation value.
+        foreign = [(n, foreign_formation(fluids[n].path)) for n in sorted(result.matched)]
+        foreign = [(n, s) for n, s in foreign if s is not None]
+        # Unwritable: a hand-edited non-object block the writer must not clobber.
+        garbage = [n for n in sorted(result.matched) if has_unwritable_block(fluids[n].path)]
+        # Reference-state disagreements: the block is SHARED, so overwriting
+        # T/p/phase re-annotates another source's quantity.  There is no correct
+        # automatic resolution, so this is refused even with --allow-removals.
+        conflicts = []
+        if args.write:
+            for name in sorted(result.matched):
+                clash = reference_state_conflicts(fluids[name].path, result.matched[name], args.version)
+                if clash:
+                    conflicts.append((name, clash))
+
+        blocked = (to_clear or foreign or garbage) and not args.allow_removals
+        if blocked or conflicts:
+            if to_clear and not args.allow_removals:
                 print("ERROR: %d fluid(s) carry an ATcT formation value but are absent from this"
                       " run; refusing to delete committed values." % len(to_clear), file=sys.stderr)
                 for name in to_clear:
                     print("ERROR:   delete %s (%s)" % (name, result.absent[name]), file=sys.stderr)
-            if foreign:
+            if foreign and not args.allow_removals:
                 print("ERROR: %d matched fluid(s) already carry an hmolar_formation from another"
                       " source; refusing to overwrite it." % len(foreign), file=sys.stderr)
                 for name, src in foreign:
                     print("ERROR:   overwrite %s (source %r)" % (name, src), file=sys.stderr)
-            print("ERROR: nothing was written -- not the fluid files, not the report, and not"
-                  " %s.  If these changes are genuinely correct, re-run with --allow-removals."
-                  % (here / "expected_coverage.json"), file=sys.stderr)
+            if garbage and not args.allow_removals:
+                print("ERROR: %d matched fluid(s) have a non-object INFO.STANDARD_STATE;"
+                      " refusing to overwrite it." % len(garbage), file=sys.stderr)
+                for name in garbage:
+                    print("ERROR:   overwrite %s" % name, file=sys.stderr)
+            if conflicts:
+                print("ERROR: %d matched fluid(s) declare a reference state that disagrees with"
+                      " ATcT's; another quantity in the same block is annotated by it, so this"
+                      " cannot be resolved automatically -- fix the file by hand."
+                      % len(conflicts), file=sys.stderr)
+                for name, clash in conflicts:
+                    for key, (existing, ours) in sorted(clash.items()):
+                        print("ERROR:   %s: %s is %r, ATcT uses %r" % (name, key, existing, ours), file=sys.stderr)
+            hint = ("" if conflicts else
+                    "  If these changes are genuinely correct, re-run with --allow-removals.")
+            print("ERROR: nothing was written -- not the fluid files, not the report, and not %s.%s"
+                  % (ledger_path, hint), file=sys.stderr)
             return 1
+    else:
+        to_clear = []
 
-    ledger_path = here / "expected_coverage.json"
     actual = coverage_ledger(result)
     if args.update_ledger:
         # --update-ledger overwrites the pinned coverage, so it is exactly
