@@ -1074,4 +1074,123 @@ TEST_CASE("Argon 2025: end-to-end over the paper's Table 9 grid", "[expression]"
     WARN("Argon 2025 vs Table 9: worst relative deviation " << worst << " over " << checks << " points");
 }
 
+// ---------------------------------------------------------------------------
+// Velliadou, Tasidou, Antoniadis, Assael, Perkins & Huber, Int. J. Thermophys.
+// 42:74 (2021), "Reference Correlation for the Viscosity of Xenon", WITH the
+// published Correction, Int. J. Thermophys. (2023), doi:10.1007/s10765-023-03175-5:
+// Eq. 6's third bracket term uses rho_r^12, not the rho_r^7 originally printed.
+// That is not cosmetic -- rho_r^7 is 34 % low in the saturated liquid at 170 K.
+//
+// CoolProp ships NO viscosity model for xenon, so this is purely additive.
+//
+// Two things this adds over nitrogen and argon:
+//  * The CLASSIC Vogel/Bich second-viscosity-virial form, B*(T*) = sum b_i
+//    T*^(-i/4) + b_7 T*^-2.5 + b_8 T*^-5.5 -- nine terms with fractional
+//    exponents, a different shape from argon's Najafi/Aziz sum c_i T*^-i.
+//  * A COUNTEREXAMPLE for the T_critical / rhomolar_critical inputs.  The paper
+//    says it adopts Tc and rho_c from the Lemmon-Span EOS, and Xenon.json does
+//    carry exactly 289.733 K and 8400 mol/m^3 -- so using the inputs looked
+//    correct.  It is not.  With superancillaries enabled (the DEFAULT),
+//    HelmholtzEOSMixtureBackend::calc_T_critical/calc_rhomolar_critical return the
+//    NUMERICAL critical point from the superancillary (the state satisfying
+//    dp/drho|T = d2p/drho2|T = 0), not the fluid file's STATES.critical.  Feeding
+//    that into Eq. 6 moved the T=300 K, rho=2500 kg/m^3 verification point by
+//    7e-5 -- small, but it means the inputs are config-dependent and are NEVER
+//    the right source for a correlation's reducing parameters.  Frozen constants,
+//    always.  The inputs remain right where you genuinely want the numerical
+//    critical point, e.g. a crossover critical enhancement.
+//
+// The paper writes B_eta in m^3/kg and scales by mass density; expressing it on a
+// molar basis makes the molar mass cancel (rho_mass/M == rho_molar), which is why
+// no molar mass appears below.
+// ---------------------------------------------------------------------------
+namespace {
+// clang-format off
+const char* const XE_A = R"([9.652514e-1, -5.237199e-2, -6.758414e-2, 2.855787e-2, 1.002789e-2, -9.639621e-3,
+                             1.329770e-3, 1.114305e-3, -5.992234e-4, 1.224218e-4, -9.584978e-6])";
+const char* const XE_P = "[1,2,3,4,5,6,7,8,9,10,11]";
+
+std::string xe_dilute() {
+    return std::string(R"JSON({"type": "expression",
+      "formula": "let L = ln(T/T_ref)\n1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))",
+      "constants": {"T_ref": 298.15, "eta_ref": 23.0183},
+      "arrays": {"a": )JSON") + XE_A + R"JSON(, "p": )JSON" + XE_P + R"JSON(}})JSON";
+}
+std::string xe_initial_density() {
+    return std::string(R"JSON({"type": "expression",
+      "formula": "let L = ln(T/T_ref)\nlet eta0 = 1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*rhomolar",
+      "constants": {"T_ref": 298.15, "eta_ref": 23.0183, "epsilon_over_k": 250.0,
+                    "sigma": 0.396e-9, "N_A": 6.02214076e23},
+      "arrays": {"a": )JSON") + XE_A + R"JSON(, "p": )JSON" + XE_P + R"JSON(,
+                 "b": [-19.572881, 219.73999, -1015.3226, 2471.0125, -3375.1717,
+                       2491.6597, -787.26086, 14.085455, -0.34664158],
+                 "e": [0, -0.25, -0.5, -0.75, -1.0, -1.25, -1.5, -2.5, -5.5]}})JSON";
+}
+// Eq. 6 AS CORRECTED (rho_r^12).  Tc and rho_c come from the EOS via the input
+// table, which is what the paper says to use.
+const char* const XE_RESIDUAL = R"JSON({"type": "expression",
+  "formula": "let Tr = T/Tc\nlet rhor = rhomolar/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*(Tr + c0*Tr*rhor^4 + c1*rhor^12/Tr + (c2 + c3*rhor)/Tr^2)",
+  "constants": {"Tc": 289.733, "rhoc": 8400.0, "c0": 1.396328251, "c1": 5.418871011e-4,
+                "c2": 4.478809952, "c3": 24.91698858}})JSON";
+// clang-format on
+}  // namespace
+
+TEST_CASE("Xenon 2021+correction: stages and critical-point inputs", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    ExpressionBlock dilute(xe_dilute()), initial(xe_initial_density()), residual(XE_RESIDUAL);
+    CHECK(residual.required_inputs() == std::vector<std::string>{"T", "rhomolar"});
+    // Pin the trap above: the critical-point INPUTS are the superancillary's
+    // numerical critical point, NOT Xenon.json's STATES.critical (289.733 K,
+    // 8400 mol/m^3).  If these ever start matching, the comment needs revisiting.
+    {
+        std::shared_ptr<CoolProp::AbstractState> X(CoolProp::AbstractState::factory("HEOS", "Xenon"));
+        X->update(CoolProp::DmassT_INPUTS, 2500.0, 300.0);
+        CAPTURE(X->keyed_output(CoolProp::iT_critical), X->keyed_output(CoolProp::irhomolar_critical));
+        CHECK(X->keyed_output(CoolProp::irhomolar_critical) != 8400.0);
+    }
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Xenon"));
+    // Section 4 verification points, background only (T (K), rho (kg/m^3), eta (muPa.s)).
+    const double verif[3][3] = {{300, 0.0, 23.1561}, {300, 6.0, 23.3186}, {300, 2500.0, 206.449}};
+    for (const auto& row : verif) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-6, row[0]);
+        double got = dilute.evaluate(*AS);
+        if (row[1] > 0) got += initial.evaluate(*AS) + residual.evaluate(*AS);
+        CAPTURE(row[0], row[1]);
+        CHECK(got == Catch::Approx(row[2] * 1e-6).epsilon(1e-5));
+    }
+}
+
+TEST_CASE("Xenon 2021+correction: end-to-end along the saturation line", "[expression]") {
+    using nlohmann::json;
+    json fluid = json::parse(CoolProp::get_fluid_param_string("Xenon", "JSON"))[0];
+    json visc = json::object();
+    visc["BibTeX"] = "Velliadou-IJT-2021";
+    visc["dilute"] = json::parse(xe_dilute());
+    visc["initial_density"] = json::parse(xe_initial_density());
+    visc["higher_order"] = json::parse(XE_RESIDUAL);
+    fluid["TRANSPORT"]["viscosity"] = visc;
+    fluid["INFO"]["NAME"] = "XE_VELLIADOU_2021";
+    fluid["INFO"]["CAS"] = "999-99-93";
+    fluid["INFO"]["ALIASES"] = json::array({"XE_VELLIADOU_2021_ALIAS"});
+    REQUIRE(CoolProp::add_fluids_as_JSON("HEOS", json::array({fluid}).dump()));
+
+    // Table 8: T (K), rho_liq, rho_vap (kg/m^3), eta_liq, eta_vap (muPa.s).
+    const double tab8[7][5] = {{170, 2908.8, 12.88, 442.32, 13.56}, {190, 2768.4, 31.19, 326.28, 15.19}, {210, 2614.9, 64.37, 248.25, 17.00},
+                               {230, 2441.5, 120.1, 193.12, 19.19}, {250, 2235.4, 212.1, 150.75, 22.14}, {270, 1962.2, 376.6, 113.51, 26.93},
+                               {285, 1607.3, 655.3, 81.276, 35.30}};
+    double worst = 0;
+    for (const auto& row : tab8) {
+        for (int k = 0; k < 2; ++k) {
+            const double rho = row[1 + k], ref = row[3 + k] * 1e-6;
+            double got = CoolProp::PropsSI("V", "T", row[0], "Dmass", rho, "XE_VELLIADOU_2021");
+            CAPTURE(row[0], rho, ref);
+            REQUIRE(ValidNumber(got));
+            const double rel = std::abs(got - ref) / ref;
+            worst = std::max(worst, rel);
+            CHECK(rel < 5e-4);
+        }
+    }
+    WARN("Xenon 2021 vs Table 8: worst relative deviation " << worst << " over 14 points");
+}
+
 #endif  // ENABLE_CATCH
