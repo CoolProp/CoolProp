@@ -22,6 +22,7 @@
 #    include "CoolProp/Exceptions.h"
 #    include "CoolProp/detail/json.h"
 #    include "CoolProp/expression/Expression.h"
+#    include "CoolProp/expression/ExpressionBlock.h"
 #    include "CoolProp/expression/ExpressionCorrelation.h"
 #    include "CoolProp/expression/detail/Lexer.h"
 #    include "CoolProp/numerics/numerics.h"  // ValidNumber
@@ -561,6 +562,50 @@ TEST_CASE("golden: conductivity residual polynomial_and_exponential", "[expressi
         }
     }
     CHECK(checks > 0);
+}
+
+// ---------------------------------------------------------------------------
+// ExpressionBlock: the standalone/scripting entry point.  compile_block() is the
+// ONE definition of a `"type": "expression"` block -- the fluid library and this
+// class both go through it -- so these tests pin the block contract itself.
+// ---------------------------------------------------------------------------
+TEST_CASE("ExpressionBlock compiles a fluid-JSON block verbatim", "[expression]") {
+    using namespace CoolProp::expression;
+    // The `"type"` key is carried along and ignored, so the text can be copied
+    // straight out of a fluid file.
+    ExpressionBlock b(R"({"type": "expression",
+                          "formula": "sum(i: a[i]*T^t[i]) + c",
+                          "constants": {"c": 1.0},
+                          "arrays": {"a": [2.0, 3.0], "t": [0.0, 1.0]}})");
+    REQUIRE(b.required_inputs() == std::vector<std::string>{"T"});
+    CHECK(b.evaluate(10.0, 0.0) == Catch::Approx(2.0 + 30.0 + 1.0));
+}
+
+TEST_CASE("ExpressionBlock reports bad blocks as ValueError", "[expression]") {
+    using namespace CoolProp::expression;
+    CHECK_THROWS_AS(ExpressionBlock("{not json}"), CoolProp::ValueError);
+    CHECK_THROWS_AS(ExpressionBlock(R"({"type": "expression"})"), CoolProp::ValueError);  // no formula
+    CHECK_THROWS_AS(ExpressionBlock(R"({"formula": "2 +"})"), CoolProp::ValueError);
+    // The fluid library passes a context string; it must reach the message.
+    try {
+        compile_block(R"({"formula": "2 +"})", "fluid Bogus");
+        FAIL("expected a ValueError");
+    } catch (const CoolProp::ValueError& e) {
+        CHECK(std::string(e.what()).find("fluid Bogus") != std::string::npos);
+    }
+}
+
+TEST_CASE("ExpressionBlock pulls EOS-backed inputs from the named fluid", "[expression]") {
+    using namespace CoolProp::expression;
+    auto HEOS = make_HEOS_for("R123");
+    HEOS->update(CoolProp::DmolarT_INPUTS, 2000.0, 400.0);
+    // `p` needs the EOS, so a fluid is mandatory...
+    ExpressionBlock b(R"({"formula": "p"})");
+    REQUIRE(b.required_inputs() == std::vector<std::string>{"p"});
+    CHECK_THROWS_AS(b.evaluate(400.0, 2000.0), CoolProp::ValueError);
+    CHECK(b.evaluate(400.0, 2000.0, "R123") == Catch::Approx(static_cast<double>(HEOS->p())).epsilon(1e-14));
+    // ...and the backend-qualified spelling resolves to the same fluid.
+    CHECK(b.evaluate(400.0, 2000.0, "HEOS::R123") == Catch::Approx(b.evaluate(400.0, 2000.0, "R123")).epsilon(1e-14));
 }
 
 // ---------------------------------------------------------------------------

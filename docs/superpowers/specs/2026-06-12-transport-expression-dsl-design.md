@@ -222,6 +222,24 @@ fluid load (compile-once).
 No new build dependency; pure C++17; coexists with nlohmann/json under hidden
 symbol visibility; WASM-clean by construction.
 
+### 4b. Standalone / scripting path
+
+`expression::compile_block(json_text, context)`
+(`include/CoolProp/expression/ExpressionBlock.h`) is the **single** definition of
+what a `"type": "expression"` block looks like. Both consumers go through it:
+
+- `JSONFluidLibrary::parse_expression_block()` at fluid load, and
+- `expression::ExpressionBlock`, a compiled block that can be evaluated against a
+  fluid *without* being grafted into a fluid file first.
+
+`ExpressionBlock` takes JSON *text*, not an `nlohmann::json`, deliberately: the
+header is reached from the scripting wrappers, and keeping it JSON-library-free
+keeps nlohmann out of those translation units. The fluid library pays a `dump()`
+round-trip per expression block at load, which is once-per-fluid and exact
+(nlohmann round-trips doubles losslessly).
+
+See "Authoring from Python" below for the Python surface built on it.
+
 ### 5. Error handling
 
 - **Compile-time (at fluid load):** lex/parse/bind errors throw
@@ -263,6 +281,39 @@ Per project convention (`CLAUDE.md`), changes here run under `[SBTL]`-style
 umbrella discipline only if they touch those paths; this feature is new code, so
 the relevant local sweep is `[expression]` plus the existing transport tests to
 prove no regression. `./dev/ci/preflight.sh` selects scope from changed paths.
+
+## Authoring from Python
+
+Correlation authoring and doc writing both want the same loop: type a formula,
+evaluate it at a state, look at the number. `CoolProp.CoolProp.Expression` is that
+loop, with no rebuild and no fluid-file edit in between:
+
+```python
+from CoolProp.CoolProp import Expression
+
+blk = """{
+  "type": "expression",
+  "formula": "sum(i: a[i]*T^t[i])",
+  "arrays": {"a": [-4.87e-7, 3.29e-8], "t": [1.0, 1.5]}
+}"""
+
+e = Expression(blk)
+e.required_inputs()              # ['T']
+e.evaluate(300.0, 1e4, "R123")   # T [K], rhomolar [mol/m^3], fluid
+```
+
+- The JSON text is exactly what goes into the fluid file, so a doc example and the
+  fluid it documents cannot drift.
+- `required_inputs()` reports the DSL names the formula actually references — the
+  quickest way to see that `p` (say) pulled the EOS into the evaluation.
+- `evaluate()` builds an `AbstractState` for `fluid`, updates it at
+  `(rhomolar, T)`, and fills each required input with `keyed_output()` — the same
+  path the production host takes. `fluid` may be omitted only when the formula
+  needs nothing beyond `T` and `rhomolar`.
+- A bad formula raises `ValueError` with the column of the offending token, at
+  construction time.
+
+Pure fluids only; the transport correlations this DSL targets are pure-fluid forms.
 
 ## Risks / open trade-offs
 

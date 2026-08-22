@@ -13,6 +13,30 @@
 
 ---
 
+## Post-review amendment (PR #3185 review, bd CoolProp-u7wz)
+
+This plan is a record of the work as originally sequenced; three review changes
+landed on top of it, and where the two disagree **the shipped code and the spec
+are authoritative**:
+
+1. **One input bucket, not two.** The `Intrinsic` and `Derived` enums below were
+   collapsed into a single list keyed by the existing `CoolProp::parameters`
+   enum. `Program::evaluate(const double*, const double*)` became
+   `evaluate(const double*)`; `requiredIntrinsics()` + `requiredDerived()` became
+   `requiredInputs() -> const std::vector<CoolProp::parameters>&`; the host's
+   `fetchIntrinsic`/`fetchDerived` switches collapsed into one
+   `HEOS.keyed_output(key)` call. See §2/§2b of the spec.
+2. **Tests live in their own TU** — `src/Tests/CoolProp-Tests-Expression.cpp`,
+   not appended to `src/Tests/CoolProp-Tests.cpp`.
+3. **Runtime authoring from Python** — `expression::ExpressionBlock`
+   (`include/CoolProp/expression/ExpressionBlock.h`) compiles a `"type":
+   "expression"` block from its JSON text and evaluates it against a fluid; it is
+   exposed to Python as `CoolProp.CoolProp.Expression`. The fluid library now
+   funnels through the same `compile_block()`, so the block's shape is defined
+   once. See "Authoring from Python" in the spec.
+
+---
+
 ## File Structure
 
 **New module (EOS-free core):**
