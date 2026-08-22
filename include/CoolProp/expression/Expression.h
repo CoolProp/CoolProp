@@ -11,9 +11,18 @@ namespace CoolProp {
 namespace expression {
 
 /// EOS-free independent state and pure fluid metadata, filled by the host per eval.
-enum class Intrinsic : std::uint8_t { T, rhomolar, rhomass, molar_mass };
+enum class Intrinsic : std::uint8_t
+{
+    T,
+    rhomolar,
+    rhomass,
+    molar_mass
+};
 /// State-dependent quantities the EOS must compute; v1 registry holds only p.
-enum class Derived : std::uint8_t { p };
+enum class Derived : std::uint8_t
+{
+    p
+};
 
 namespace detail {
 struct ProgramData;
@@ -32,8 +41,7 @@ class Program
     [[nodiscard]] const std::vector<Derived>& requiredDerived() const;
 
    private:
-    friend Program compile(const std::string&, const std::map<std::string, double>&,
-                           const std::map<std::string, std::vector<double>>&);
+    friend Program compile(const std::string&, const std::map<std::string, double>&, const std::map<std::string, std::vector<double>>&);
     std::shared_ptr<const detail::ProgramData> m_data;
 };
 
@@ -45,8 +53,7 @@ class Program
 ///
 /// Compile a formula string. `constants` are scalar names -> SI values; `arrays`
 /// are vector names -> values. Throws CoolProp::ValueError on any lex/parse/bind error.
-Program compile(const std::string& source, const std::map<std::string, double>& constants,
-                const std::map<std::string, std::vector<double>>& arrays);
+Program compile(const std::string& source, const std::map<std::string, double>& constants, const std::map<std::string, std::vector<double>>& arrays);
 
 }  // namespace expression
 }  // namespace CoolProp

@@ -18,7 +18,21 @@ namespace detail {
 
 // Function intrinsics supported by the grammar.
 // NOLINTNEXTLINE(performance-enum-size) -- already uses std::uint8_t; false positive on some clang-tidy versions
-enum class Func : std::uint8_t { exp, ln, log10, sqrt, abs, pow, sinh, cosh, tanh, sin, cos, atan };
+enum class Func : std::uint8_t
+{
+    exp,
+    ln,
+    log10,
+    sqrt,
+    abs,
+    pow,
+    sinh,
+    cosh,
+    tanh,
+    sin,
+    cos,
+    atan
+};
 
 // Evaluation context: scalars indexed by slot, arrays indexed by slot, and the
 // single active summation index `i` (v1 forbids nested sums, so one is enough).
@@ -48,19 +62,25 @@ struct NumNode : Node
 {
     double v = 0.0;
     explicit NumNode(double value) : v(value) {}
-    double eval(EvalState&) const override { return v; }
+    double eval(EvalState&) const override {
+        return v;
+    }
 };
 
 struct ScalarNode : Node  // intrinsic, constant, derived, or let — all read a slot
 {
     int slot = 0;
     explicit ScalarNode(int s) : slot(s) {}
-    double eval(EvalState& st) const override { return st.scalars[slot]; }
+    double eval(EvalState& st) const override {
+        return st.scalars[slot];
+    }
 };
 
 struct IndexNode : Node  // bare summation index used as a value
 {
-    double eval(EvalState& st) const override { return static_cast<double>(st.i); }
+    double eval(EvalState& st) const override {
+        return static_cast<double>(st.i);
+    }
 };
 
 struct ArrayNode : Node  // arr[i]
@@ -76,7 +96,9 @@ struct NegNode : Node
 {
     NodePtr child{};
     explicit NegNode(NodePtr c) : child(std::move(c)) {}
-    double eval(EvalState& st) const override { return -child->eval(st); }
+    double eval(EvalState& st) const override {
+        return -child->eval(st);
+    }
 };
 
 struct BinNode : Node
@@ -88,12 +110,18 @@ struct BinNode : Node
         double a = l->eval(st), b = r->eval(st);
         // NOLINTBEGIN(bugprone-branch-clone) -- distinct arithmetic ops; clang-tidy false-positive
         switch (op) {
-            case '+': return a + b;
-            case '-': return a - b;
-            case '*': return a * b;
-            case '/': return a / b;
-            case '^': return std::pow(a, b);
-            default: throw ValueError("internal: invalid binary operator");
+            case '+':
+                return a + b;
+            case '-':
+                return a - b;
+            case '*':
+                return a * b;
+            case '/':
+                return a / b;
+            case '^':
+                return std::pow(a, b);
+            default:
+                throw ValueError("internal: invalid binary operator");
         }
         // NOLINTEND(bugprone-branch-clone)
     }
@@ -108,19 +136,32 @@ struct CallNode : Node
         double x = args[0]->eval(st);
         // NOLINTBEGIN(bugprone-branch-clone) -- distinct std:: calls; clang-tidy false-positives them as identical
         switch (fn) {
-            case Func::exp:   return std::exp(x);
-            case Func::ln:    return std::log(x);
-            case Func::log10: return std::log10(x);
-            case Func::sqrt:  return std::sqrt(x);
-            case Func::abs:   return std::fabs(x);
-            case Func::pow:   return std::pow(x, args[1]->eval(st));
-            case Func::sinh:  return std::sinh(x);
-            case Func::cosh:  return std::cosh(x);
-            case Func::tanh:  return std::tanh(x);
-            case Func::sin:   return std::sin(x);
-            case Func::cos:   return std::cos(x);
-            case Func::atan:  return std::atan(x);
-            default: throw ValueError("internal: invalid function");
+            case Func::exp:
+                return std::exp(x);
+            case Func::ln:
+                return std::log(x);
+            case Func::log10:
+                return std::log10(x);
+            case Func::sqrt:
+                return std::sqrt(x);
+            case Func::abs:
+                return std::fabs(x);
+            case Func::pow:
+                return std::pow(x, args[1]->eval(st));
+            case Func::sinh:
+                return std::sinh(x);
+            case Func::cosh:
+                return std::cosh(x);
+            case Func::tanh:
+                return std::tanh(x);
+            case Func::sin:
+                return std::sin(x);
+            case Func::cos:
+                return std::cos(x);
+            case Func::atan:
+                return std::atan(x);
+            default:
+                throw ValueError("internal: invalid function");
         }
         // NOLINTEND(bugprone-branch-clone)
     }
@@ -225,8 +266,12 @@ class Parser
     std::vector<Token> t{};
     std::size_t pos = 0;
 
-    [[nodiscard]] const Token& peek() const { return t[pos]; }
-    const Token& advance() { return t[pos++]; }
+    [[nodiscard]] const Token& peek() const {
+        return t[pos];
+    }
+    const Token& advance() {
+        return t[pos++];
+    }
     bool match(TokenType tt) {
         if (t[pos].type == tt) {
             ++pos;
@@ -235,11 +280,11 @@ class Parser
         return false;
     }
     void skipSeps() {
-        while (t[pos].type == TokenType::StmtSep) ++pos;
+        while (t[pos].type == TokenType::StmtSep)
+            ++pos;
     }
     const Token& expect(TokenType tt, const char* what) {
-        if (t[pos].type != tt)
-            throw ValueError(format("expected %s at col %d", what, (int)t[pos].col));
+        if (t[pos].type != tt) throw ValueError(format("expected %s at col %d", what, (int)t[pos].col));
         return t[pos++];
     }
 
@@ -271,12 +316,18 @@ class Parser
 
     [[nodiscard]] char opChar(TokenType tt) const {
         switch (tt) {
-            case TokenType::Plus: return '+';
-            case TokenType::Minus: return '-';
-            case TokenType::Star: return '*';
-            case TokenType::Slash: return '/';
-            case TokenType::Caret: return '^';
-            default: return '?';
+            case TokenType::Plus:
+                return '+';
+            case TokenType::Minus:
+                return '-';
+            case TokenType::Star:
+                return '*';
+            case TokenType::Slash:
+                return '/';
+            case TokenType::Caret:
+                return '^';
+            default:
+                return '?';
         }
     }
 
@@ -346,7 +397,8 @@ class Parser
         std::vector<NodePtr> args;
         if (peek().type != TokenType::RParen) {
             args.push_back(parseExpr(0));
-            while (match(TokenType::Comma)) args.push_back(parseExpr(0));
+            while (match(TokenType::Comma))
+                args.push_back(parseExpr(0));
         }
         expect(TokenType::RParen, "')' to close call");
         return std::make_unique<NamedCallNode>(name, std::move(args));
@@ -361,7 +413,10 @@ std::vector<Token> lex(const std::string& s) {
     auto col = [&](std::size_t p) { return p + 1; };
     while (i < n) {
         char c = s[i];
-        if (c == ' ' || c == '\t' || c == '\r') { ++i; continue; }
+        if (c == ' ' || c == '\t' || c == '\r') {
+            ++i;
+            continue;
+        }
         if (c == '\n' || c == ';') {
             out.push_back({TokenType::StmtSep, 0.0, "", col(i)});
             ++i;
@@ -379,30 +434,58 @@ std::vector<Token> lex(const std::string& s) {
         }
         if (std::isalpha(static_cast<unsigned char>(c)) != 0 || c == '_') {
             std::size_t j = i;
-            while (j < n && (std::isalnum(static_cast<unsigned char>(s[j])) != 0 || s[j] == '_')) ++j;
+            while (j < n && (std::isalnum(static_cast<unsigned char>(s[j])) != 0 || s[j] == '_'))
+                ++j;
             std::string id = s.substr(i, j - i);
             TokenType tt = TokenType::Ident;
-            if (id == "let") tt = TokenType::Keyword_let;
-            else if (id == "sum") tt = TokenType::Keyword_sum;
+            if (id == "let")
+                tt = TokenType::Keyword_let;
+            else if (id == "sum")
+                tt = TokenType::Keyword_sum;
             out.push_back({tt, 0.0, id, col(i)});
             i = j;
             continue;
         }
         TokenType tt;
         switch (c) {
-            case '+': tt = TokenType::Plus; break;
-            case '-': tt = TokenType::Minus; break;
-            case '*': tt = TokenType::Star; break;
-            case '/': tt = TokenType::Slash; break;
-            case '^': tt = TokenType::Caret; break;
-            case '(': tt = TokenType::LParen; break;
-            case ')': tt = TokenType::RParen; break;
-            case '[': tt = TokenType::LBracket; break;
-            case ']': tt = TokenType::RBracket; break;
-            case ':': tt = TokenType::Colon; break;
-            case ',': tt = TokenType::Comma; break;
-            case '=': tt = TokenType::Equals; break;
-            default: throw ValueError(format("illegal character '%c' at col %d", c, (int)col(i)));
+            case '+':
+                tt = TokenType::Plus;
+                break;
+            case '-':
+                tt = TokenType::Minus;
+                break;
+            case '*':
+                tt = TokenType::Star;
+                break;
+            case '/':
+                tt = TokenType::Slash;
+                break;
+            case '^':
+                tt = TokenType::Caret;
+                break;
+            case '(':
+                tt = TokenType::LParen;
+                break;
+            case ')':
+                tt = TokenType::RParen;
+                break;
+            case '[':
+                tt = TokenType::LBracket;
+                break;
+            case ']':
+                tt = TokenType::RBracket;
+                break;
+            case ':':
+                tt = TokenType::Colon;
+                break;
+            case ',':
+                tt = TokenType::Comma;
+                break;
+            case '=':
+                tt = TokenType::Equals;
+                break;
+            default:
+                throw ValueError(format("illegal character '%c' at col %d", c, (int)col(i)));
         }
         out.push_back({tt, 0.0, "", col(i)});
         ++i;
@@ -416,25 +499,56 @@ std::vector<Token> lex(const std::string& s) {
 // ---------------------------------------------------------------------------
 
 static bool intrinsicForName(const std::string& nm, Intrinsic& out) {
-    if (nm == "T") { out = Intrinsic::T; return true; }
-    if (nm == "rhomolar") { out = Intrinsic::rhomolar; return true; }
-    if (nm == "rhomass") { out = Intrinsic::rhomass; return true; }
-    if (nm == "molar_mass") { out = Intrinsic::molar_mass; return true; }
+    if (nm == "T") {
+        out = Intrinsic::T;
+        return true;
+    }
+    if (nm == "rhomolar") {
+        out = Intrinsic::rhomolar;
+        return true;
+    }
+    if (nm == "rhomass") {
+        out = Intrinsic::rhomass;
+        return true;
+    }
+    if (nm == "molar_mass") {
+        out = Intrinsic::molar_mass;
+        return true;
+    }
     return false;
 }
 static bool derivedForName(const std::string& nm, Derived& out) {
-    if (nm == "p") { out = Derived::p; return true; }
+    if (nm == "p") {
+        out = Derived::p;
+        return true;
+    }
     return false;
 }
 static bool funcForName(const std::string& nm, Func& out, int& arity) {
-    struct E { const char* n; Func f; int a; };
-    static const std::array<E, 12> table = {{
-        {"exp", Func::exp, 1},   {"ln", Func::ln, 1},     {"log10", Func::log10, 1},
-        {"sqrt", Func::sqrt, 1}, {"abs", Func::abs, 1},   {"pow", Func::pow, 2},
-        {"sinh", Func::sinh, 1}, {"cosh", Func::cosh, 1}, {"tanh", Func::tanh, 1},
-        {"sin", Func::sin, 1},   {"cos", Func::cos, 1},   {"atan", Func::atan, 1}}};
+    struct E
+    {
+        const char* n;
+        Func f;
+        int a;
+    };
+    static const std::array<E, 12> table = {{{"exp", Func::exp, 1},
+                                             {"ln", Func::ln, 1},
+                                             {"log10", Func::log10, 1},
+                                             {"sqrt", Func::sqrt, 1},
+                                             {"abs", Func::abs, 1},
+                                             {"pow", Func::pow, 2},
+                                             {"sinh", Func::sinh, 1},
+                                             {"cosh", Func::cosh, 1},
+                                             {"tanh", Func::tanh, 1},
+                                             {"sin", Func::sin, 1},
+                                             {"cos", Func::cos, 1},
+                                             {"atan", Func::atan, 1}}};
     for (const auto& e : table)
-        if (nm == e.n) { out = e.f; arity = e.a; return true; }
+        if (nm == e.n) {
+            out = e.f;
+            arity = e.a;
+            return true;
+        }
     return false;
 }
 
@@ -445,13 +559,13 @@ static bool funcForName(const std::string& nm, Func& out, int& arity) {
 struct ProgramData
 {
     int numScalars = 0;
-    std::vector<std::pair<int, double>> constantInits{};     // (slot, value)
-    std::vector<std::pair<Intrinsic, int>> intrinsicSlots{}; // (kind, slot)
-    std::vector<std::pair<Derived, int>> derivedSlots{};     // (kind, slot)
-    std::vector<std::pair<int, NodePtr>> lets{};             // (slot, node) in order
+    std::vector<std::pair<int, double>> constantInits{};      // (slot, value)
+    std::vector<std::pair<Intrinsic, int>> intrinsicSlots{};  // (kind, slot)
+    std::vector<std::pair<Derived, int>> derivedSlots{};      // (kind, slot)
+    std::vector<std::pair<int, NodePtr>> lets{};              // (slot, node) in order
     NodePtr result{};
-    std::vector<std::vector<double>> arrays{};               // by array slot
-    std::vector<Intrinsic> intrinsicOrder{};                 // cached for required* accessors
+    std::vector<std::vector<double>> arrays{};  // by array slot
+    std::vector<Intrinsic> intrinsicOrder{};    // cached for required* accessors
     std::vector<Derived> derivedOrder{};
 };
 
@@ -462,9 +576,8 @@ struct ProgramData
 class Binder
 {
    public:
-    Binder(ProgramData& pd, const std::map<std::string, double>& consts,
-           const std::map<std::string, std::vector<double>>& arrays)
-        : d(pd), constants(consts), arraysIn(arrays) {}
+    Binder(ProgramData& pd, const std::map<std::string, double>& consts, const std::map<std::string, std::vector<double>>& arrays)
+      : d(pd), constants(consts), arraysIn(arrays) {}
 
     void run(ParseResult& pr) {
         for (auto& L : pr.lets) {
@@ -491,7 +604,9 @@ class Binder
     std::map<std::string, int> derivSlots{};
     std::map<std::string, int> arraySlots{};
 
-    int newScalarSlot() { return nextScalar++; }
+    int newScalarSlot() {
+        return nextScalar++;
+    }
 
     int resolveScalar(const std::string& nm) {
         // Resolution order: let → intrinsic → constant → derived.
@@ -552,8 +667,7 @@ class Binder
         }
         if (auto* ar = dynamic_cast<ArrayRefNode*>(node.get())) {
             if (indexName.empty() || ar->indexName != indexName)
-                throw ValueError(format("array '%s' subscript must be the enclosing sum index",
-                                        ar->arrayName.c_str()));
+                throw ValueError(format("array '%s' subscript must be the enclosing sum index", ar->arrayName.c_str()));
             return std::make_unique<ArrayNode>(resolveArray(ar->arrayName));
         }
         if (auto* neg = dynamic_cast<NegNode*>(node.get())) {
@@ -565,19 +679,19 @@ class Binder
             return std::make_unique<BinNode>(bn->op, std::move(l), std::move(r));
         }
         if (auto* call = dynamic_cast<NamedCallNode*>(node.get())) {
-            Func f; int arity;
-            if (!funcForName(call->name, f, arity))
-                throw ValueError(format("unknown function '%s'", call->name.c_str()));
+            Func f;
+            int arity;
+            if (!funcForName(call->name, f, arity)) throw ValueError(format("unknown function '%s'", call->name.c_str()));
             if (static_cast<int>(call->args.size()) != arity)
                 throw ValueError(format("function '%s' expects %d argument(s)", call->name.c_str(), arity));
             std::vector<NodePtr> bound;
             bound.reserve(call->args.size());
-            for (auto& a : call->args) bound.push_back(bind(a, indexName));
+            for (auto& a : call->args)
+                bound.push_back(bind(a, indexName));
             return std::make_unique<CallNode>(f, std::move(bound));
         }
         if (auto* sum = dynamic_cast<ParseSumNode*>(node.get())) {
-            if (!indexName.empty())
-                throw ValueError("nested summation is not supported in v1");
+            if (!indexName.empty()) throw ValueError("nested summation is not supported in v1");
             long n = sumLength(*sum, sum->indexName);
             NodePtr body = bind(sum->body, sum->indexName);
             return std::make_unique<SumNode>(n, std::move(body));
@@ -591,20 +705,21 @@ class Binder
             if (auto* ar = dynamic_cast<ArrayRefNode*>(nd)) {
                 if (ar->indexName == idx) {
                     auto it = arraysIn.find(ar->arrayName);
-                    if (it == arraysIn.end())
-                        throw ValueError(format("unknown array '%s'", ar->arrayName.c_str()));
+                    if (it == arraysIn.end()) throw ValueError(format("unknown array '%s'", ar->arrayName.c_str()));
                     long n = static_cast<long>(it->second.size());
-                    if (len == -1) len = n;
+                    if (len == -1)
+                        len = n;
                     else if (len != n)
-                        throw ValueError(format("array '%s' length %ld != %ld in sum",
-                                                ar->arrayName.c_str(), n, len));
+                        throw ValueError(format("array '%s' length %ld != %ld in sum", ar->arrayName.c_str(), n, len));
                 }
             } else if (auto* neg = dynamic_cast<NegNode*>(nd)) {
                 scan(neg->child.get());
             } else if (auto* bn = dynamic_cast<BinNode*>(nd)) {
-                scan(bn->l.get()); scan(bn->r.get());
+                scan(bn->l.get());
+                scan(bn->r.get());
             } else if (auto* call = dynamic_cast<NamedCallNode*>(nd)) {
-                for (auto& a : call->args) scan(a.get());
+                for (auto& a : call->args)
+                    scan(a.get());
             }
         };
         scan(sum.body.get());
@@ -622,21 +737,26 @@ class Binder
 double Program::evaluate(const double* intrinsicVals, const double* derivedVals) const {
     const detail::ProgramData& d = *m_data;
     std::vector<double> scalars(static_cast<std::size_t>(d.numScalars), 0.0);
-    for (const auto& c : d.constantInits) scalars[c.first] = c.second;
+    for (const auto& c : d.constantInits)
+        scalars[c.first] = c.second;
     for (std::size_t k = 0; k < d.intrinsicSlots.size(); ++k)
         scalars[d.intrinsicSlots[k].second] = intrinsicVals[k];
     for (std::size_t k = 0; k < d.derivedSlots.size(); ++k)
         scalars[d.derivedSlots[k].second] = derivedVals[k];
     detail::EvalState st{scalars, d.arrays, 0};
-    for (const auto& L : d.lets) scalars[L.first] = L.second->eval(st);
+    for (const auto& L : d.lets)
+        scalars[L.first] = L.second->eval(st);
     return d.result->eval(st);
 }
 
-const std::vector<Intrinsic>& Program::requiredIntrinsics() const { return m_data->intrinsicOrder; }
-const std::vector<Derived>& Program::requiredDerived() const { return m_data->derivedOrder; }
+const std::vector<Intrinsic>& Program::requiredIntrinsics() const {
+    return m_data->intrinsicOrder;
+}
+const std::vector<Derived>& Program::requiredDerived() const {
+    return m_data->derivedOrder;
+}
 
-Program compile(const std::string& source, const std::map<std::string, double>& constants,
-                const std::map<std::string, std::vector<double>>& arrays) {
+Program compile(const std::string& source, const std::map<std::string, double>& constants, const std::map<std::string, std::vector<double>>& arrays) {
     using namespace detail;
     std::vector<Token> toks = lex(source);
     Parser parser(std::move(toks));

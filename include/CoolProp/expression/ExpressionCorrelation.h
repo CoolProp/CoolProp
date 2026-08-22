@@ -18,7 +18,9 @@ class ExpressionCorrelation
    public:
     ExpressionCorrelation() = default;
     explicit ExpressionCorrelation(Program prog) : m_program(std::move(prog)), m_set(true) {}
-    [[nodiscard]] bool is_set() const { return m_set; }
+    [[nodiscard]] bool is_set() const {
+        return m_set;
+    }
     /// Evaluate the formula at the backend's current state; returns base-SI result.
     [[nodiscard]] double eval(HelmholtzEOSMixtureBackend& HEOS) const;
 
