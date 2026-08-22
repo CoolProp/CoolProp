@@ -3825,7 +3825,22 @@
     "INCHI_STRING": "InChI=1S/Ne",
     "NAME": "Neon",
     "REFPROP_NAME": "NEON",
-    "SMILES": "[Ne]"
+    "SMILES": "[Ne]",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "7440-01-9*0",
+        "source": "ATcT",
+        "uncertainty": 0.0,
+        "units": "J/mol",
+        "value": 0.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

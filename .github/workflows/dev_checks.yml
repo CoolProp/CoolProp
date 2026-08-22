@@ -873,3 +873,24 @@ jobs:
 
       - name: Run installed-header hygiene gate
         run: ./dev/ci/check-installed-headers.sh build_shared
+
+  atct-regenerator:
+    name: ATcT regenerator tests
+    # Offline gate for dev/atct/. The tests parse a committed HTML fixture and
+    # read dev/fluids/*.json -- no network, no C++ build. Deliberately NO paths
+    # filter so this can be a required check without deadlocking unrelated PRs.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install pytest
+        run: python -m pip install --upgrade pytest
+
+      - name: Run the ATcT regenerator tests
+        run: python -m pytest dev/atct/test_fetch_atct_formation.py -v

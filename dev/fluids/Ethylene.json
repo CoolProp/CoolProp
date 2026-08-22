@@ -4202,7 +4202,22 @@
     "INCHI_STRING": "InChI=1S/C2H4/c1-2/h1-2H2",
     "NAME": "Ethylene",
     "REFPROP_NAME": "ETHYLENE",
-    "SMILES": "C=C"
+    "SMILES": "C=C",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "74-85-1*0",
+        "source": "ATcT",
+        "uncertainty": 110.0,
+        "units": "J/mol",
+        "value": 52390.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

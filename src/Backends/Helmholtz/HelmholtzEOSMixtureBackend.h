@@ -259,6 +259,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     CoolPropDbl calc_GWP500() override;
     CoolPropDbl calc_GWP100() override;
     CoolPropDbl calc_ODP() override;
+    CoolPropDbl calc_Hmolar_formation() override;
 
     CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1) override;
     CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1, HelmholtzEOSMixtureBackend& SatL, HelmholtzEOSMixtureBackend& SatV);

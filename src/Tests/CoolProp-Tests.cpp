@@ -7,6 +7,7 @@
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
+#include "../Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
@@ -7385,6 +7386,135 @@ TEST_CASE("Surface tension of water is nonzero and matches IAPWS", "[surface_ten
     CHECK(st_350 < st_300);
     // A second fluid, looser bound, just to exercise another correlation.
     CHECK(CoolProp::PropsSI("I", "T", 300, "Q", 0, "R134a") > 0.0);
+}
+
+// [Helmholtz] as well as [formation]: preflight selects TAG_FILTER="[Helmholtz],[REFPROP]"
+// for a diff touching src/Backends/Helmholtz/, and the ingestion path this exercises
+// lives there -- without the tag, the local gate never runs these assertions.
+TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmholtz]") {
+    using Catch::Approx;
+    SECTION("known values, J/mol") {
+        // ATcT TN 1.220; see dev/atct/atct_report.csv for provenance.
+        struct
+        {
+            const char* fluid;
+            double value;
+        } cases[] = {{"Methane", -74513.0}, {"Water", -241808.0}, {"CarbonDioxide", -393477.0}, {"Nitrogen", 0.0}};
+        for (auto& c : cases) {
+            CAPTURE(c.fluid);
+            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", c.fluid));
+            CHECK(AS->keyed_output(CoolProp::iHmolar_formation) == Approx(c.value).margin(1e-6));
+        }
+    }
+    SECTION("string key resolves through PropsSI") {
+        CHECK(CoolProp::PropsSI("HFORMATION", "", 0, "", 0, "Methane") == Approx(-74513.0).margin(1e-6));
+    }
+    SECTION("a fluid with no ATcT value throws rather than returning 0 or NaN") {
+        // R134a (CAS 811-97-2) is genuinely absent from ATcT.
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R134a"));
+        CHECK_THROWS(AS->keyed_output(CoolProp::iHmolar_formation));
+    }
+    SECTION("mixtures throw: pure and pseudo-pure fluids only") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+        std::vector<double> z{0.7, 0.3};
+        AS->set_mole_fractions(z);
+        CHECK_THROWS(AS->keyed_output(CoolProp::iHmolar_formation));
+    }
+    SECTION("a block in the wrong units is declined without killing the fluid") {
+        // parse_standard_state is protected on a non-final class, so a
+        // subclass reaches it directly -- no add_fluids_as_JSON, no failed
+        // add_one, and therefore none of the process-wide fluids_list
+        // poisoning (bd CoolProp-dwuu) that made this look untestable.
+        struct Probe : public CoolProp::JSONFluidLibrary
+        {
+            using CoolProp::JSONFluidLibrary::parse_standard_state;
+        };
+        auto parse = [](const char* units) {
+            Probe probe;
+            CoolProp::CoolPropFluid f;
+            f.name = "Probe";
+            probe.parse_standard_state(nlohmann::json::parse(units), f);
+            return f.standard_state.hmolar;
+        };
+        // Right units: ingested.
+        CHECK(parse(R"({"hmolar_formation":{"value":-74513.0,"units":"J/mol","uncertainty":43.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")
+              == Approx(-74513.0));
+        // Wrong units: declined, NOT silently read as J/mol.  This is the
+        // 1000x error the check exists to stop.
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"value":-74.513,"units":"kJ/mol","uncertainty":0.043,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")));
+        // Missing units: declined too, and without throwing -- a units-less
+        // third-party block must not take the whole fluid down with it.
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"value":-74513.0,"uncertainty":43.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")));
+        // ...and the same for every other key, so the decline is coherent
+        // rather than tolerating one missing field and throwing on the next.
+        CHECK_NOTHROW(parse(R"({"hmolar_formation":{"units":"J/mol","uncertainty":43.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})"));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"version":"1.220","id":"74-82-8*0"}})")));
+        // A non-numeric value must not slip through to get_double either.
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":"-74513.0",
+                        "uncertainty":43.0,"source":"ATcT","version":"1.220","id":"x"}})")));
+        // ...nor a mistyped string key through get_string.  An unquoted
+        // "version": 1.220 is the likeliest hand-authoring slip, and it used
+        // to abort the whole fluid.
+        CHECK_NOTHROW(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"source":"ATcT","version":1.220,"id":"x"}})"));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"source":42,"version":"1.220","id":"x"}})")));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"source":"ATcT","version":"1.220","id":null}})")));
+    }
+    SECTION("every stored value is physically plausible") {
+        // Guards against a kJ/J slip anywhere in the pipeline: no molecule in
+        // the library has |dHf| above 2000 kJ/mol.
+        std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
+        std::size_t checked = 0;
+        for (auto& fluid : fluids) {
+            shared_ptr<CoolProp::AbstractState> AS;
+            try {
+                AS.reset(CoolProp::AbstractState::factory("HEOS", fluid));
+            } catch (const CoolProp::ValueError&) {
+                // A name in fluids_list that will not construct is an orphan
+                // left behind by a failed add_one: name_vector is appended
+                // before add_one's try block and never popped in its catch, so
+                // any test that fails a HEOS add permanently leaves its name in
+                // get_global_param_string("fluids_list") with no entry in
+                // string_to_index_map.  Measured: with such a name present, 2
+                // of 3 --order rand seeds failed here on the factory call.  No
+                // test does that today, but this loop is the only one that
+                // walks the whole list, so it should not be the thing that
+                // breaks when one does.  This cannot hide a real regression:
+                // if a fluid that HAS a value stops constructing, the exact
+                // count below drops below 76 and fails.
+                continue;
+            }
+            double value = 0;
+            try {
+                value = AS->keyed_output(CoolProp::iHmolar_formation);
+            } catch (const CoolProp::ValueError&) {
+                // The only exception that means "no ATcT value for this
+                // fluid".  A bare catch(...) would also swallow a genuine
+                // ingestion regression -- a NotImplementedError, a parse
+                // failure -- and silently recount it as expected coverage.
+                continue;
+            }
+            CAPTURE(fluid);
+            CHECK(std::abs(value) < 2e6);
+            ++checked;
+        }
+        // Exact, not a floor.  dev/atct/expected_coverage.json pins 76 matched
+        // fluids, so a regression that drops some of them must fail here
+        // rather than pass under a loose lower bound.  If a future ATcT
+        // version legitimately changes coverage, this number moves with the
+        // ledger in the same commit.
+        INFO("expected count is pinned by dev/atct/expected_coverage.json (76 matched)");
+        CHECK(checked == 76);
+    }
 }
 
 #endif

@@ -3632,7 +3632,22 @@
       "PH": -1
     },
     "NAME": "OrthoHydrogen",
-    "REFPROP_NAME": "ORTHOHYD"
+    "REFPROP_NAME": "ORTHOHYD",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "1333-74-0*1",
+        "source": "ATcT",
+        "uncertainty": 0.0,
+        "units": "J/mol",
+        "value": 19.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {
