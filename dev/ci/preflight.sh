@@ -279,9 +279,21 @@ else
         # multi-fluid PH preset) that [SVDSBTL] alone misses.
         TAG_FILTER="[SBTL],[SVDSBTL],[SVDComponents],[region]"
     elif printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/Backends/Helmholtz/|src/Backends/REFPROP/)"; then
-        # HEOS / REFPROP path touched — broader sweep including transport
-        # and flash routines.
-        TAG_FILTER="[Helmholtz],[REFPROP]"
+        # HEOS / REFPROP path touched — broader sweep including the flash
+        # routines.  ([transport], [viscosity] and [conductivity] are real
+        # tags and are NOT in this list; the older wording claimed they were.)
+        #
+        # [flash],[mixture] are NOT optional here.  Without them this branch
+        # narrowed a Helmholtz-backend diff to 19 cases and ran NEITHER the
+        # PT-flash two-phase residual test nor the all_deltaonly agreement
+        # test — the two that sat red on master until #3323, because only a
+        # manual ~[slow] sweep ever reached them (bd CoolProp-n2qs).  Cost is
+        # 6 s (69 cases, 7.1 s total vs 0.9 s before; 13 [REFPROP] cases skip
+        # in this worktree, so budget more where REFPROP resolves).  The hole
+        # it closed is the flash surface this branch exists to cover.  Note this branch (like the SBTL one) carries no ~[slow]
+        # exclusion, so 6 [slow]-tagged cases are in scope — but they came in
+        # with [REFPROP] already, not with this widening.
+        TAG_FILTER="[Helmholtz],[REFPROP],[flash],[mixture]"
     else
         # Default: run everything fast (skip the [slow] long tests).
         TAG_FILTER="~[slow]"

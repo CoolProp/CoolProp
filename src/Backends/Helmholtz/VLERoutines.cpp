@@ -3189,7 +3189,7 @@ void SaturationSolvers::PTflash_twophase::build_arrays() {
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
 
-TEST_CASE("Check the PT flash calculation for two-phase inputs", "[PTflash_twophase]") {
+TEST_CASE("Check the PT flash calculation for two-phase inputs", "[flash][PTflash_twophase]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane&Ethane"));
     AS->set_mole_fractions(std::vector<double>(2, 0.5));
     // Dewpoint calculation
@@ -3207,24 +3207,47 @@ TEST_CASE("Check the PT flash calculation for two-phase inputs", "[PTflash_twoph
     o.omega = 1.0;
     CoolProp::SaturationSolvers::PTflash_twophase solver(*static_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get()), o);
     solver.build_arrays();
+    // Two iso-fugacity residuals for a binary (r is sized 2*N-2 with N = 2); assert the size so the
+    // norm below cannot pass vacuously as 0 if the residual vector ever ends up empty.
+    REQUIRE(solver.r.size() == 2);
     double err = solver.r.norm();
     // The state fed in here came from the PQ dewpoint flash above, so this residual can only be as
     // small as THAT solver converged it.  newton_raphson_saturation::call stops on
     // `error_rms > 1e-7` (see its do/while at the end of the function), so 1e-7 is the tightest
-    // bound anything upstream guarantees.
+    // bound anything upstream guarantees.  Two footnotes on that, measured rather than assumed:
     //
-    // This assertion used to read 1e-10 and FAILED ON MASTER at 7.196e-10.  That was never a
-    // justified bound -- it was three orders of magnitude tighter than the solver's own stopping
-    // criterion, and passed only because Newton's quadratic convergence overshoots the criterion on
-    // its final step.  How far it overshoots depends on the iteration path, so the flash-hardening
-    // changes in #3167/#3168/#3187/#3196 were enough to move it.  Restoring 1e-10 would be pinning
-    // luck, not correctness; tightening the saturation solver to earn it would cost iterations
-    // everywhere for no physical gain, since a ln-fugacity residual of 5e-10 per component is an
-    // extremely well converged dewpoint.
+    //  * `error_rms` is set by build_arrays() at the TOP of the do-loop, so at the while-test it is
+    //    the residual of the iterate BEFORE the step just taken; the returned point's residual is
+    //    never evaluated.  Instrumented here, the loop runs exactly ONE iteration and exits with
+    //    error_rms = 7.195841e-10 (the Wilson initial guess was already that good), having applied
+    //    a Newton step of relative size 3.4e-14 -- which is why the value this test then measures,
+    //    7.195839e-10, is the guess's residual and not something the Newton step produced.  So 1e-7
+    //    bounds the pre-step iterate, and the returned point inherits it in practice, not by proof.
+    //  * This assertion used to read 1e-10 and FAILED ON MASTER at 7.196e-10.  #3323 attributed the
+    //    move to the flash hardening in #3167/#3168/#3187/#3196; a git bisect over
+    //    2026-04-22..2026-06-22 names none of those.  The first bad commit is 513f3245f ("Mixture
+    //    HSU_P flash + DHSU_T + HSU_D", #3148), which changed saturation_Wilson() in VLERoutines.h
+    //    to try bounded Brent before unbounded Secant for the Wilson K-factor initial guess (a
+    //    robustness fix carried over from PR #2720) -- squarely on this PQ dewpoint path.  The
+    //    better guess lands close enough that the loop exits after one iteration at 7.2e-10 instead
+    //    of iterating down to ~1e-12.  Both satisfy the solver's 1e-7; only the landing point moved.
+    //
+    // The landing point is not stable within a single build either, which is the real reason a
+    // tight bound here is unmaintainable.  Sweeping the flash INPUT pressure by +/-6 ULP (relative
+    // 1.5e-16) and redoing the whole dewpoint solve gives, in order:
+    //
+    //   3.05e-12 7.19e-10 5.07e-13 7.21e-10 7.20e-10 2.53e-12 7.20e-10
+    //   6.63e-12 7.18e-10 2.69e-13 7.21e-10 7.15e-10 1.18e-11
+    //
+    // Bimodal, no trend, roughly half the samples above 1e-10.  Rebuilding src/Helmholtz.cpp alone
+    // with -ffp-contract=off (no source change at all) moves it to 1.02e-11 -- the same experiment
+    // that identifies FMA contraction as the mechanism behind the sibling all_deltaonly failure.
     //
     // 1e-7 still catches what this test exists to catch: if build_arrays() constructed the wrong
     // residual, or the dewpoint state were not a two-phase solution at all, `err` would be O(1) --
-    // not O(1e-9).
+    // not O(1e-9).  One thing it cannot catch, so nobody over-trusts it: r(k) = log(f_liq / f_vap),
+    // so a symmetric sign error -- log(f_vap / f_liq) -- negates every component, leaving r.norm()
+    // identical to rounding.  It was not a sign-error detector at 1e-10 either.
     CAPTURE(err);
     REQUIRE(std::abs(err) < 1e-7);
 
@@ -3235,14 +3258,31 @@ TEST_CASE("Check the PT flash calculation for two-phase inputs", "[PTflash_twoph
     solver.solve();
     // Make sure we end up with the same liquid composition
     double diffx0 = o.x[0] - x0[0];
-    REQUIRE(std::abs(diffx0) < 1e-10);
+    // This half of the test could not run between 513f3245f and #3323 -- the REQUIRE above aborted
+    // first -- and when #3323 let it through it landed at 8.718615e-11 against a 1e-10 bound, 87% of
+    // the way there.  It rides the same lottery as `err`: over the same +/-6 ULP input-pressure
+    // sweep, diffx0 is perfectly correlated with it and just as bimodal (3.19e-13 / 8.72e-11 /
+    // 3.90e-13 / 8.72e-11 / 8.72e-11 / 3.69e-13 / 8.72e-11 / 4.14e-13 / 8.72e-11 / 3.58e-13 /
+    // 8.72e-11 / 8.72e-11 / 1.69e-12), so it was the next assertion to block the pre-push gate.
+    //
+    // The new bound is derived from the FAILURE signature, not from the noise.  The perturbation
+    // above is o.x[0] *= 1.1, so a re-solve that does not recover the original liquid composition
+    // leaves diffx0 of order 1e-2; the discriminating band is therefore [1e-10, 1e-2] and any bound
+    // inside it detects equally well.  Picking one decade above the observed noise (1e-9) would
+    // leave only ~11x headroom, and the bisect above documents one ordinary flash change moving the
+    // sibling quantity by ~700x -- so a noise-derived bound is queued to re-red on the next
+    // initial-guess improvement, which is exactly the churn this is meant to end.  1e-6 sits four
+    // orders below the failure signature and four above the noise, and hides nothing: no physical
+    // mole-fraction recovery error lands between 1e-9 and 1e-6 here.
+    CAPTURE(diffx0);
+    REQUIRE(std::abs(diffx0) < 1e-6);
 
     // Now do the blind flash call with PT as inputs
     AS->update(CoolProp::PT_INPUTS, AS->p(), AS->T() - 2);
     REQUIRE(AS->phase() == CoolProp::iphase_twophase);
 }
 
-TEST_CASE("Legacy PT flash recovers the vapor quality (not pinned at 0.5)", "[PTflash_twophase]") {
+TEST_CASE("Legacy PT flash recovers the vapor quality (not pinned at 0.5)", "[flash][PTflash_twophase]") {
     // Regression for CoolProp-1tbe.1: solve_legacy() never wrote IO.beta, so
     // a blind PT flash with MIXTURE_STABILITY_ALGORITHM=0 read the default
     // beta = 0.5 and reported a wrong vapor quality (and bulk density) for
