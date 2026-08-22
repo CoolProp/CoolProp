@@ -351,10 +351,20 @@ e.evaluate(AS)
   `std::pow`) vs a hand-written `x*x` in some routines. Golden gate is `1e-14`
   relative (~tens of ULP) with per-form bit-exact assertions where applicable.
   Accepted.
-- **Derived registry, one entry in v1:** ~30 lines of binder machinery plus a
-  single registered getter (`p`). Accepted as cheap insurance that makes Tier B
-  additive (a registration table) rather than a binder rewrite, and the `p` seed
-  proves the path end-to-end.
+- **Input table, five entries in v1:** the binder records the
+  `CoolProp::parameters` keys a formula references and the host fills them with
+  `keyed_output()`. Accepted as cheap insurance that makes Tier B additive (one
+  row in the table) rather than a binder rewrite, and the `p` entry proves the
+  EOS-backed path end-to-end.
+- **Evaluation requires an `AbstractState`,** even for a formula that reads only
+  `T` and `rhomolar` (or nothing at all): the caller must stand up a backend for
+  some fluid. An earlier draft took `(T, rhomolar, fluid_name)` and could evaluate
+  with no fluid at all, which suited authoring a correlation for a fluid CoolProp
+  does not ship yet. **Accepted deliberately** (PR #3185 review): this code lives
+  *inside* CoolProp, so depending on CoolProp's own state type costs nothing and
+  buys the whole existing API — any input pair, any backend, mixtures, and a
+  single shared evaluation path with the fluid-library correlation. The calculus
+  would be different for an API meant to be usable outside the library.
 - **Performance unproven at production scale for `sum`:** Tier-A evals are
   `pow`/`exp`-bound and compiled once; expected tens-to-hundreds of ns. If
   profiling later shows an expression in a tight solver loop, bytecode is the
