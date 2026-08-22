@@ -1,7 +1,8 @@
 # Transport Property Expression DSL — Design
 
 **Date:** 2026-06-12
-**Status:** Design approved, pending spec review
+**Status:** Implemented (PR #3185); this document is the reference for the
+shipped behaviour, kept current through the review round that followed.
 **Branch:** `worktree-exprtk`
 
 ## Problem
