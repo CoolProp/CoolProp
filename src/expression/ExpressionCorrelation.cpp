@@ -13,7 +13,7 @@ double ExpressionCorrelation::eval(HelmholtzEOSMixtureBackend& HEOS) const {
     std::vector<double> vals(keys.size());
     for (std::size_t i = 0; i < keys.size(); ++i)
         vals[i] = HEOS.keyed_output(keys[i]);
-    return m_program.evaluate(vals.empty() ? nullptr : vals.data());
+    return m_program.evaluate(vals);
 }
 
 }  // namespace expression

@@ -37,8 +37,9 @@ class ExpressionBlock
     [[nodiscard]] std::vector<std::string> required_inputs() const;
     /// Evaluate at T [K] and rhomolar [mol/m^3]; the result is in whatever base-SI
     /// unit the formula produces.  `fluid` is a pure-fluid CoolProp name, optionally
-    /// backend-qualified ("HEOS::Nitrogen"), and may be left empty only when the
-    /// formula needs nothing beyond `T` and `rhomolar`.
+    /// backend-qualified ("HEOS::Nitrogen"); a mixture name is rejected.  It may be
+    /// left empty only when the formula needs nothing beyond `T` and `rhomolar`, and
+    /// is ignored outright by a formula that reads no state at all.
     [[nodiscard]] double evaluate(double T, double rhomolar, const std::string& fluid = "") const;
 
    private:

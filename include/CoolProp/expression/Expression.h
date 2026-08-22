@@ -12,14 +12,13 @@
 namespace CoolProp {
 namespace expression {
 
-/// Thermodynamic quantities a formula may reference.  There is a single bucket,
-/// keyed by the existing CoolProp::parameters enum: whatever a program asks for,
-/// the host fills by calling AbstractState::keyed_output() with that key.  Some
-/// keys are free (T, rhomolar) and some cost an EOS call (p); the evaluator does
-/// not care, and Program itself stays EOS-free -- it only reports which keys it
-/// needs and reads back the values the host supplies.
-using Input = CoolProp::parameters;
-
+/// Thermodynamic quantities a formula may reference are keyed by the existing
+/// CoolProp::parameters enum -- one bucket, no DSL-private enum.  Whatever a
+/// program asks for, the host fills by calling AbstractState::keyed_output() with
+/// that key.  Some keys are free (T, rhomolar) and some cost an EOS call (p); the
+/// evaluator does not care, and Program itself stays EOS-free -- it only reports
+/// which keys it needs and reads back the values the host supplies.
+///
 /// The DSL spellings that resolve to a thermodynamic input, paired with the
 /// CoolProp::parameters key each binds to, in name-resolution order.
 ///
@@ -43,9 +42,10 @@ struct ProgramData;
 class Program
 {
    public:
-    /// Evaluate. `inputVals` is an array in the order given by requiredInputs();
-    /// pass nullptr when none are required.
-    [[nodiscard]] double evaluate(const double* inputVals) const;
+    /// Evaluate.  `inputVals` holds one value per entry of requiredInputs(), in
+    /// that order; pass an empty vector when none are required.  A size mismatch
+    /// throws CoolProp::ValueError rather than reading past the end.
+    [[nodiscard]] double evaluate(const std::vector<double>& inputVals) const;
     /// Thermodynamic inputs this program references, in the order evaluate() expects them.
     [[nodiscard]] const std::vector<parameters>& requiredInputs() const;
 

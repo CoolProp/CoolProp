@@ -19,8 +19,14 @@ import pytest
 
 from CoolProp import CoolProp as CP
 
+# Probe the BUILD, not the symbol: skipping on `Expression is None` would turn a
+# dropped/renamed binding into a green skip.  `Props` was removed in v8, so its
+# presence identifies the legacy Cython wheel -- the only build that legitimately
+# lacks Expression.  (Same idiom as test_nanobind_interface.py.)
+is_legacy = hasattr(CP, "Props")
+pytestmark = pytest.mark.skipif(is_legacy, reason="v8 (nanobind) build only")
+
 Expression = getattr(CP, "Expression", None)
-pytestmark = pytest.mark.skipif(Expression is None, reason="v8 (nanobind) build only")
 
 
 def block(formula, constants=None, arrays=None):
@@ -61,6 +67,11 @@ def test_constants_and_arrays_and_let_and_sum():
     assert e.evaluate(300.0, 5000.0) == pytest.approx(2.0 * 0.5 + 3.0 * 0.25)
 
 
+def test_the_binding_exists_on_a_v8_build():
+    # Guards the skip above: on a nanobind build the class must be there.
+    assert Expression is not None
+
+
 def test_bad_formula_raises_at_construction():
     with pytest.raises(ValueError):
         Expression(block("2 +"))
@@ -68,6 +79,15 @@ def test_bad_formula_raises_at_construction():
         Expression(block("nonexistent_name"))
     with pytest.raises(ValueError):
         Expression('{"type": "expression"}')  # no "formula"
+
+
+def test_a_constant_colliding_with_an_input_is_rejected():
+    # Inputs resolve before constants, so a constant named `T` would be dead data
+    # and the formula would quietly mean the state temperature.  Hard error.
+    for name in ("T", "rhomolar", "rhomass", "molar_mass", "p"):
+        with pytest.raises(ValueError):
+            Expression(block("1", constants={name: 1.0}))
+    Expression(block("T_reduce", constants={"T_reduce": 132.0}))  # near-miss is fine
 
 
 def test_a_transport_output_name_does_not_resolve():
@@ -132,6 +152,17 @@ def test_reproduces_the_hardcoded_dilute_viscosity_of_R123():
         got = e.evaluate(T, 0.1, "R123")
         assert math.isfinite(got)
         assert got == pytest.approx(expected, rel=1e-12)
+
+
+def test_mixtures_are_rejected_with_a_useful_message():
+    e = Expression(block("p"))
+    with pytest.raises(ValueError, match="pure-fluid"):
+        e.evaluate(300.0, 1e4, "R32&R125")
+
+
+def test_a_formula_that_reads_no_state_ignores_the_fluid():
+    # It needs nothing from the EOS, so it must not fail on account of one.
+    assert Expression(block("2+3")).evaluate(300.0, 1e4, "Water") == pytest.approx(5.0)
 
 
 def test_a_compiled_block_is_reusable_across_states():

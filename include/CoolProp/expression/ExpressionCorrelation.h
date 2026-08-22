@@ -18,16 +18,15 @@ class ExpressionCorrelation
 {
    public:
     ExpressionCorrelation() = default;
-    explicit ExpressionCorrelation(Program prog) : m_program(std::move(prog)), m_set(true) {}
-    [[nodiscard]] bool is_set() const {
-        return m_set;
-    }
+    explicit ExpressionCorrelation(Program prog) : m_program(std::move(prog)) {}
     /// Evaluate the formula at the backend's current state; returns base-SI result.
+    /// A default-constructed correlation throws CoolProp::ValueError (its Program
+    /// has no compiled body); "is there a correlation here?" is answered by the
+    /// owning ExpressionData::correlation shared_ptr, which the dispatch checks.
     [[nodiscard]] double eval(HelmholtzEOSMixtureBackend& HEOS) const;
 
    private:
     Program m_program{};
-    bool m_set = false;
 };
 
 }  // namespace expression

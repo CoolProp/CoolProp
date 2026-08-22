@@ -46,6 +46,9 @@ std::vector<std::string> ExpressionBlock::required_inputs() const {
 
 double ExpressionBlock::evaluate(double T, double rhomolar, const std::string& fluid) const {
     const std::vector<parameters>& keys = m_program.requiredInputs();
+    // A formula built only from constants and arrays reads no state at all; do not
+    // make it depend on a fluid it never touches.
+    if (keys.empty()) return m_program.evaluate({});
     std::vector<double> vals(keys.size(), 0.0);
     if (fluid.empty()) {
         // No fluid, no EOS: only the two independent variables the caller passed
@@ -60,6 +63,9 @@ double ExpressionBlock::evaluate(double T, double rhomolar, const std::string& f
             }
         }
     } else {
+        if (fluid.find('&') != std::string::npos) {
+            throw ValueError(format("expression evaluation is pure-fluid only; '%s' names a mixture", fluid.c_str()));
+        }
         std::string backend, fluids;
         extract_backend(fluid, backend, fluids);
         std::shared_ptr<AbstractState> AS(AbstractState::factory(backend, fluids));
@@ -67,7 +73,7 @@ double ExpressionBlock::evaluate(double T, double rhomolar, const std::string& f
         for (std::size_t i = 0; i < keys.size(); ++i)
             vals[i] = AS->keyed_output(keys[i]);
     }
-    return m_program.evaluate(vals.empty() ? nullptr : vals.data());
+    return m_program.evaluate(vals);
 }
 
 }  // namespace expression

@@ -730,8 +730,12 @@ const detail::ProgramData& Program::data() const {
     return *m_data;
 }
 
-double Program::evaluate(const double* inputVals) const {
+double Program::evaluate(const std::vector<double>& inputVals) const {
     const detail::ProgramData& d = data();
+    if (inputVals.size() != d.inputOrder.size()) {
+        throw ValueError(
+          format("expression needs %d input value(s), got %d", static_cast<int>(d.inputOrder.size()), static_cast<int>(inputVals.size())));
+    }
     std::vector<double> scalars(static_cast<std::size_t>(d.numScalars), 0.0);
     for (const auto& c : d.constantInits)
         scalars[c.first] = c.second;
@@ -749,6 +753,16 @@ const std::vector<parameters>& Program::requiredInputs() const {
 
 Program compile(const std::string& source, const std::map<std::string, double>& constants, const std::map<std::string, std::vector<double>>& arrays) {
     using namespace detail;
+    // Inputs resolve before constants, so a constant named `T` or `p` would be
+    // dead data and the formula would quietly mean something other than what its
+    // author wrote.  Reject the collision at compile time rather than silently
+    // discarding the constant.
+    for (const auto& c : constants) {
+        parameters key;
+        if (inputForName(c.first, key)) {
+            throw ValueError(format("constant '%s' collides with the thermodynamic input of the same name", c.first.c_str()));
+        }
+    }
     std::vector<Token> toks = lex(source);
     Parser parser(std::move(toks));
     ParseResult pr = parser.parse();

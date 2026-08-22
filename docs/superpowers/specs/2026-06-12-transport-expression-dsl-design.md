@@ -116,7 +116,10 @@ At bind time each identifier resolves against, in order:
 1. **Thermodynamic inputs** (§2b) — one table of DSL names, each bound to an
    existing `CoolProp::parameters` key: `T` (K), `rhomolar` (mol/m³), `rhomass`
    (kg/m³), `molar_mass` (kg/mol), `p` (Pa). Checked *before* constants, so a
-   block-declared constant can never shadow a state variable.
+   block-declared constant can never shadow a state variable. A `constants` key
+   that collides with an input name is a **compile error**, not a silently
+   discarded constant: resolving it either way would give the author a number
+   they did not write.
 2. **Block-declared constants** — scalars from the JSON `constants` object
    (e.g. `T_reduce`, `epsilon_over_k`, `sigma_eta`, `C`).
 
