@@ -2,6 +2,7 @@
 #    include <catch2/catch_all.hpp>
 #    include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#    include <algorithm>
 #    include <cmath>
 #    include <filesystem>
 #    include <iterator>
@@ -2439,6 +2440,110 @@ TEST_CASE("GERG tabular wrappers build a table and then reject every lookup", "[
 
     CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev);
     std::filesystem::remove_all(dir, ec);
+}
+
+TEST_CASE("GERG mixture properties are invariant under component reordering", "[GERG]") {
+    // Ian's review check.  The XN_DEPENDENT composition-derivative formulation
+    // singles out the LAST component: dYrdxi__constxj has a dedicated (i, N-1)
+    // term and a loop over (k, N-1) pairs, both of which inlined the 0/0
+    // expression rather than calling the guarded helpers.  So permuting the
+    // component list is the sharpest available probe of those guards -- it moves
+    // which component is "N-1" and therefore which pairs take the special path,
+    // while the physics must not move at all.
+    //
+    // Non-unity beta is what gives the test teeth.  For beta_ij == 1 the
+    // reducing function is symmetric in i and j term-by-term, so an ordering
+    // bug can hide.  These four components are chosen for strongly non-unity
+    // betas -- CO2/n-butane is betaV = 1.174761, betaT = 1.018171, and
+    // get_betasgammas RECIPROCATES the betas (not the gammas) when the pair is
+    // looked up in reversed order, so a reversed lookup that forgot to
+    // reciprocate would shift the reducing state rather than cancel out.
+    //
+    // Both compositions matter and for different reasons:
+    //   - no zeros  : baseline invariance, which held before the guards too.
+    //   - two zeros : the case the guards address.  Before them this was
+    //                 genuinely order-DEPENDENT -- whether a zero landed in the
+    //                 last slot decided whether the derivative came back NaN,
+    //                 which is why the documentation used to say the behaviour
+    //                 depended on component order.  It must not any more.
+    const std::vector<std::string> base_names = {"CarbonDioxide", "n-Butane", "Methane", "Nitrogen"};
+
+    struct Composition
+    {
+        const char* label;
+        std::vector<CoolPropDbl> z;
+    };
+    const std::vector<Composition> compositions = {
+      {"no zeros", {0.10, 0.05, 0.80, 0.05}},
+      {"two exact zeros", {0.10, 0.00, 0.90, 0.00}},
+      // Three zeros -> C(3,2) = 3 both-zero pairs, the densest exercise of the
+      // guards available in a quaternary.  The permutation loop below already
+      // walks every arrangement, so this does not need its own "zero in the
+      // last slot" variant: some permutation of each composition puts a zero
+      // there, which is the arrangement that used to poison the whole first
+      // derivative (the (k, N-1) loop runs over every component).
+      //
+      // Kept methane-dominant deliberately.  A CO2/n-butane-rich composition
+      // is two-phase at this state and fugacity_coefficient then throws
+      // "not well-defined in the two-phase region", which would make this
+      // case fail for a reason that has nothing to do with reordering.
+      {"three exact zeros", {0.00, 0.00, 1.00, 0.00}},
+    };
+
+    for (const std::string& backend : {std::string("GERG2008"), std::string("HEOS")}) {
+        for (const Composition& comp : compositions) {
+            INFO("backend := " << backend << ", composition := " << comp.label);
+
+            std::shared_ptr<AbstractState> ref(AbstractState::factory(backend, base_names));
+            ref->set_mole_fractions(comp.z);
+            ref->update(PT_INPUTS, 2e6, 320.0);
+
+            // Every one of the 4! orderings, not a hand-picked few: the special
+            // (i, N-1) path only fires for whichever component is last, so a
+            // sample could miss the arrangement that breaks.
+            std::vector<std::size_t> perm = {0, 1, 2, 3};
+            std::size_t n_perms = 0;
+            do {
+                std::vector<std::string> names;
+                std::vector<CoolPropDbl> z;
+                for (std::size_t idx : perm) {
+                    names.push_back(base_names[idx]);
+                    z.push_back(comp.z[idx]);
+                }
+                INFO("permutation := " << names[0] << "," << names[1] << "," << names[2] << "," << names[3]);
+
+                std::shared_ptr<AbstractState> AS(AbstractState::factory(backend, names));
+                AS->set_mole_fractions(z);
+                AS->update(PT_INPUTS, 2e6, 320.0);
+
+                // Reducing state first -- if this moves, everything else does.
+                CHECK_THAT(AS->T_reducing(), Catch::Matchers::WithinRel(ref->T_reducing(), 1e-13));
+                CHECK_THAT(AS->rhomolar_reducing(), Catch::Matchers::WithinRel(ref->rhomolar_reducing(), 1e-13));
+                CHECK_THAT(AS->rhomolar(), Catch::Matchers::WithinRel(ref->rhomolar(), 1e-12));
+                CHECK_THAT(AS->alphar(), Catch::Matchers::WithinRel(ref->alphar(), 1e-12));
+                CHECK_THAT(AS->hmolar(), Catch::Matchers::WithinRel(ref->hmolar(), 1e-11));
+                CHECK_THAT(AS->smolar(), Catch::Matchers::WithinRel(ref->smolar(), 1e-11));
+                CHECK_THAT(AS->cvmolar(), Catch::Matchers::WithinRel(ref->cvmolar(), 1e-11));
+                CHECK_THAT(AS->speed_sound(), Catch::Matchers::WithinRel(ref->speed_sound(), 1e-11));
+                CHECK_THAT(AS->molar_mass(), Catch::Matchers::WithinRel(ref->molar_mass(), 1e-13));
+
+                // Fugacity coefficients are the FIRST composition derivatives,
+                // i.e. exactly what the newly guarded inlined terms feed.
+                // Compared per component THROUGH the permutation, so a
+                // consistent-but-shuffled answer cannot pass.
+                for (std::size_t k = 0; k < perm.size(); ++k) {
+                    if (comp.z[perm[k]] == 0.0) {
+                        continue;  // fugacity of an absent component is not meaningful
+                    }
+                    INFO("component := " << names[k]);
+                    CHECK(ValidNumber(AS->fugacity_coefficient(k)));
+                    CHECK_THAT(AS->fugacity_coefficient(k), Catch::Matchers::WithinRel(ref->fugacity_coefficient(perm[k]), 1e-11));
+                }
+                ++n_perms;
+            } while (std::next_permutation(perm.begin(), perm.end()));
+            CHECK(n_perms == 24);
+        }
+    }
 }
 
 #endif /* ENABLE_CATCH */
