@@ -105,13 +105,7 @@ jobs:
             libreoffice_builder.yml
             mathcad_builder.yml
             csharp_builder.yml
-            # java_builder.yml -- HOLD until CoolProp-qrn3 is fixed.  The Java
-            #   artifact currently ships Example.java plus the three native
-            #   libs and NO wrapper classes at all: #3245 dropped the
-            #   install(FILES ...platform-independent.7z) rule, and the merge
-            #   job never copies the unpacked platform-independent/ tree
-            #   either.  Publishing it today would give users a Java/ folder
-            #   they cannot call into.  Add this line back in the qrn3 PR.
+            java_builder.yml
             # python_buildwheels.yml -- wheels ship via PyPI, not the file drop
           )
           # An all-commented-out list would otherwise sail through every check

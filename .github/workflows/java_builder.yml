@@ -113,6 +113,10 @@ jobs:
         with:
           name: Java-${{ matrix.sysname }}
           path: install_root/Java
+          # upload-artifact defaults to 'warn', so a build that installed
+          # nothing would upload no artifact and still pass, leaving the merge
+          # job to assemble a Java tree missing that platform.
+          if-no-files-found: error
 
   merge:
     needs: build
@@ -131,15 +135,84 @@ jobs:
       - name: Assemble unified Java tree
         shell: bash
         run: |
-          set -eux
+          set -euxo pipefail
           mkdir -p Java
-          for d in staging/Java-*/; do
-            [ -f "${d}Example.java" ] && cp -n "${d}Example.java" Java/ || true
-
-            [ -f "${d}platform-independent.7z" ] && cp -n "${d}platform-independent.7z" Java/ || true
+          shopt -s nullglob
+          # An unmatched glob used to leave the literal 'staging/Java-*/' as the
+          # loop's single iteration, so a download that produced nothing still
+          # walked the body once and "succeeded".
+          dirs=(staging/Java-*/)
+          if [ "${#dirs[@]}" -eq 0 ]; then
+            echo "::error::No per-OS Java artifacts were downloaded; nothing to merge."
+            exit 1
+          fi
+          # Example.java, the archive and the unpacked package tree are
+          # identical in all three per-OS artifacts -- that is what
+          # "platform-independent" means -- so take them from the first and
+          # collect only the native library directories from every artifact.
+          # The copies are unconditional: they were guarded with
+          # '[ -f ... ] && cp -n ... || true', which turned a missing file into
+          # a silent skip and is the whole reason the published artifact
+          # carried no wrapper sources (CoolProp-qrn3).  Copying once also
+          # avoids depending on `cp -n`, whose exit status differs between GNU
+          # (0 when it skips) and BSD (1) coreutils.
+          first="${dirs[0]}"
+          cp "${first}Example.java" Java/
+          cp "${first}platform-independent.7z" Java/
+          # The unpacked package tree was never copied at all, so even with the
+          # archive present the sources beside it were missing.
+          cp -R "${first}platform-independent" Java/
+          for d in "${dirs[@]}"; do
             find "$d" -maxdepth 1 -type d -name '*bit' -exec cp -r {} Java/ \;
           done
           ls -R Java
+
+      - name: Verify the assembled tree is complete
+        shell: bash
+        # Everything above can only fail on a file it actually touches.  This
+        # step asserts the SHAPE of the result instead, so a future refactor
+        # that quietly stops copying something is caught here rather than by a
+        # user downloading an unusable Java/ folder.
+        run: |
+          set -euo pipefail
+          fail=0
+          note() { echo "::error::$1"; fail=1; }
+
+          [ -f Java/Example.java ] || note "Java/Example.java is missing from the merged tree."
+          [ -f Java/platform-independent.7z ] || note "Java/platform-independent.7z is missing from the merged tree."
+
+          # The wrapper classes are the whole point of the artifact: native
+          # libraries with nothing to call them are useless.  Check the
+          # directory first rather than letting find fail under `set -e`, so a
+          # tree missing it outright still reports every other problem too.
+          if [ -d Java/platform-independent ]; then
+            classes=$(find Java/platform-independent -name '*.java' -type f | wc -l)
+          else
+            note "Java/platform-independent is missing from the merged tree."
+            classes=0
+          fi
+          if [ "$classes" -lt 2 ]; then
+            note "Java/platform-independent holds $classes .java source(s); expected the full SWIG wrapper package."
+          fi
+
+          # One native library dir per per-OS artifact that fed the merge.
+          expected=$(find staging -maxdepth 1 -type d -name 'Java-*' | wc -l)
+          got=$(find Java -maxdepth 1 -type d -name '*bit' | wc -l)
+          if [ "$got" -ne "$expected" ]; then
+            note "Merged $got native library director(ies) from $expected per-OS artifact(s)."
+          fi
+
+          libs=$(find Java -maxdepth 2 -type f \( -name '*.so' -o -name '*.so.*' -o -name '*.jnilib' -o -name '*.dll' \) | wc -l)
+          if [ "$libs" -lt "$expected" ]; then
+            note "Found $libs native librar(ies) across $expected platform director(ies)."
+          fi
+
+          if [ "$fail" -ne 0 ]; then
+            echo "Merged tree as assembled:" >&2
+            find Java | sort >&2
+            exit 1
+          fi
+          echo "OK: $classes wrapper sources, the archive, and $libs native librar(ies) across $expected platform(s)."
 
       - name: Upload unified Java artifact
 
@@ -147,6 +220,7 @@ jobs:
         with:
           name: Java
           path: Java
+          if-no-files-found: error
 
       - name: Delete intermediate per-OS artifacts
         uses: geekyeggo/delete-artifact@v6
