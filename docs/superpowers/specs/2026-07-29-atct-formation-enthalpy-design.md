@@ -158,6 +158,44 @@ inheriting the enthalpy's provenance:
 
 An absent block, or an absent `hmolar_formation` key, means the property is unavailable.
 
+### 5.1 The block is shared; ownership is per quantity
+
+*(Added post-review.)* `STANDARD_STATE` is deliberately shared — §8 plans a standard-entropy
+tier from a different source, dropping a `smolar` sibling into the same object. Two
+consequences the original spec did not draw out, both of which produced real defects:
+
+- **The reference state (`T`, `T_units`, `p`, `p_units`, `phase`) is shared by every
+  quantity in the block.** Writing ATcT's over another source's re-annotates their value
+  with a reference state it was never published at — worse than deleting it, because the
+  result still reads as valid. The regenerator therefore fills only *absent* scaffolding
+  and refuses the run outright on a conflict. That refusal is **not** overridable by
+  `--allow-removals`: there is no correct automatic answer when two sources disagree about
+  the reference state.
+- **Ownership is decided per quantity, by its `source`.** The regenerator only ever writes,
+  overwrites or removes an `hmolar_formation` whose `source` is `ATcT` (or absent, which
+  predates the field). Anything else belongs to another tier and is left alone.
+
+### 5.2 Removal semantics
+
+*(Added post-review; the original spec had none, and writing was matched-only.)* A fluid
+that flips `matched → absent` between ATcT versions must lose its value, or it keeps
+serving a number the ledger and report both deny, stamped with the old version, forever.
+
+Removal is destructive and every path into `absent` is quiet — the parser skips rows with
+no formula button or no `DHf298` span, the only floor is one surviving row, and the page
+cache is written before any sanity check. A truncated download therefore reports almost
+everything absent. So:
+
+- Removals and foreign-data overwrites are **computed before anything is written** and
+  **refused by default**, exiting non-zero with the affected fluids on stderr.
+- `--allow-removals` authorizes them. The refusal covers the fluid files, the report **and**
+  `expected_coverage.json` — the ledger is the tripwire the next run depends on, so a
+  refused run must not leave it agreeing with a degraded page.
+- Both `--write` and `--update-ledger` are gated; `--update-ledger` alone is not a
+  read-only invocation.
+- Removal takes only `hmolar_formation`, plus the reference-state scaffolding if no other
+  quantity is still using it.
+
 ## 6. C++ ingestion and API
 
 Mirrors the existing `iGWP100` / `iODP` path exactly — that pattern is the reason this
@@ -168,6 +206,17 @@ tier is low-risk.
   `EnvironmentalFactorsStruct`; held as a member of `CoolPropFluid`.
 - `parse_standard_state()` in `src/Backends/Helmholtz/Fluids/FluidLibrary.h`, guarded by
   `contains("STANDARD_STATE")`, mirroring `parse_environmental`.
+  *(Amended post-review — it does NOT mirror `parse_environmental`'s failure behaviour.)*
+  A malformed block **declines the value, never the fluid**: all six keys of
+  `hmolar_formation` must be present and correctly typed, and `units` must read `J/mol`;
+  any miss leaves `hmolar` unset so `HFORMATION` throws its own "no value available"
+  message. Throwing instead would abort `add_one` for the whole fluid — EOS, ancillaries
+  and transport all unavailable over an optional annotation — and strand the fluid's name
+  in `fluids_list` (bd CoolProp-dwuu). Nothing requires these keys: there is no HEOS fluid
+  schema at all, so a third-party fluid registered through `add_fluids_as_JSON` with a
+  partial or mistyped block must keep loading. This is fail-closed on the number that
+  matters: a `kJ/mol` block is never read as J/mol. Our own data cannot rot unnoticed
+  because `[formation]` pins the readable count at exactly 76.
 - `iHmolar_formation` in the `parameters` enum (`include/CoolProp/DataStructures.h`),
   registered as **trivial**, short name `HFORMATION`, units `J/mol`.
 - Dispatch in `AbstractState::trivial_keyed_output` → virtual `calc_Hmolar_formation()`;

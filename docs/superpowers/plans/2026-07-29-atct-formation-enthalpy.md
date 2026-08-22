@@ -17,7 +17,17 @@
 - **Never fabricate a value.** A fluid with no ATcT species gets **no** `STANDARD_STATE` block. The C++ getter **throws**; it must never return `0`, `_HUGE`, or `NaN`. A silent zero is indistinguishable from a legitimate element value.
 - **Pure and pseudo-pure fluids only.** A mixture input throws, matching `calc_GWP100`/`calc_ODP`.
 - **No REFPROP anywhere in this tier.** Do not call `HEATFRMdll`, do not add a `[refprop]` test, do not compare against REFPROP values.
-- **Fluid JSON serialization must use `package_json.json_options`** (`{'indent': 2, 'sort_keys': True}`, no trailing newline). Any other serialization reformats all ~137 files and buries the real diff.
+- **Fluid JSON serialization must preserve the file's existing key order and line
+  terminator.** *(Amended post-review — this invariant originally said the opposite:
+  "must use `package_json.json_options` (`{'indent': 2, 'sort_keys': True}`, no trailing
+  newline)". That was backwards. `dev/fluids/*.json` is not key-sorted below the top
+  level — `dev/scripts/inject_superancillary.py` writes `indent=2` with no `sort_keys`
+  and ran last over ~127 files — so writing with `sort_keys=True` is precisely what
+  reformats the tree and buries the diff: 2608 deleted lines across 76 files. The
+  writer takes `indent` from `json_options` but overrides `sort_keys` to `False` and
+  loads through `object_pairs_hook=OrderedDict`; 7 of the 137 files end with a newline
+  and that state is preserved per-file. Net diff is now +1219/-80 instead of
+  +3747/-2608.)*
 - **Fail loud.** Ambiguous or unexpected binding is a non-zero exit, never a skip.
 - **Reference conditions:** T = 298.15 K, p = 100000.0 Pa, phase `ideal_gas`.
 - **ATcT version for this plan:** `1.220`.
@@ -278,6 +288,12 @@ def parse_atct_rows(page_html: str) -> list[AtctRow]:
         if not value_text:
             continue  # species with no published 298.15 K value
         units = _span(body, "Units")
+        # AMENDED post-review: `units not in ("", "kJ/mol")` was fail-open.
+        # _span() also returns "" when the Units span is missing or its CSS
+        # class is renamed, so the check meant to catch a units change passed
+        # for every row on exactly the page change most likely to cause one.
+        # The empty-units exemption is now tied to the "exact" uncertainty
+        # that justifies it (see _is_exact()).
         if units not in ("", "kJ/mol"):
             raise AtctParseError("unexpected units %r on CAS %s" % (units, match.group("cas")))
         name_match = _NAME_RE.search(body)
