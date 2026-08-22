@@ -20,7 +20,7 @@ import json
 import re
 import sys
 import urllib.request
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,6 +29,15 @@ from pathlib import Path
 # options) is available without duplicating them here.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from package_json import json_options  # noqa: E402
+
+# dev/fluids/*.json has not been key-sorted since PR #2780, so writing a file
+# with package_json's json_options (which sets sort_keys=True) reorders every
+# pre-existing key as a side effect -- 2608 lines of pure churn across 76 files,
+# burying the one block this tool actually adds.  Preserve the file's existing
+# key order instead and append the new block, so the diff is the addition and
+# nothing else.  indent is still taken from json_options so the two agree on
+# formatting; only the ordering differs.
+_WRITE_OPTIONS = {**json_options, "sort_keys": False}
 
 INDEX_URL_TEMPLATE = (
     "https://atct.anl.gov/Thermochemical%20Data/version%20{version}/index.php"
@@ -327,16 +336,25 @@ def standard_state_block(row: AtctRow, version: str) -> dict:
     }
 
 
-def write_standard_state(path: Path, row: AtctRow, version: str) -> None:
-    """Insert the block and re-serialize with CoolProp's canonical options.
+def _load_ordered(path: Path) -> dict:
+    """Read a fluid file preserving its existing key order."""
+    return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=OrderedDict)
 
-    json_options is imported from dev/package_json.py so the file round-trips
-    byte-identically apart from the new block; any other serialization would
-    reformat every fluid file and bury the real diff.
+
+def write_standard_state(path: Path, row: AtctRow, version: str) -> None:
+    """Insert the block, preserving the file's existing key order.
+
+    Appends STANDARD_STATE as the last INFO key and rewrites with
+    sort_keys=False, so every other line of the file is untouched and the diff
+    is exactly the added block.  Two files are not perfectly round-trippable
+    for reasons that predate this tool -- Chlorine.json carries a duplicate
+    "source_eos_hash" key, and Chlorine/R1130(E) hold float literals with more
+    digits than Python's shortest round-trip repr -- so those pick up a few
+    incidental normalization lines.
     """
-    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc = _load_ordered(path)
     doc["INFO"]["STANDARD_STATE"] = standard_state_block(row, version)
-    path.write_text(json.dumps(doc, **json_options), encoding="utf-8")
+    path.write_text(json.dumps(doc, **_WRITE_OPTIONS), encoding="utf-8")
 
 
 def clear_standard_state(path: Path) -> bool:
@@ -352,11 +370,11 @@ def clear_standard_state(path: Path) -> bool:
     --write runs, the ledger has already been brought into agreement with the
     new bind result.  Removal has to happen on the same pass that writes.
     """
-    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc = _load_ordered(path)
     if "STANDARD_STATE" not in doc["INFO"]:
         return False
     del doc["INFO"]["STANDARD_STATE"]
-    path.write_text(json.dumps(doc, **json_options), encoding="utf-8")
+    path.write_text(json.dumps(doc, **_WRITE_OPTIONS), encoding="utf-8")
     return True
 
 

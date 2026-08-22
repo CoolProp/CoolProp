@@ -362,8 +362,40 @@ def test_write_standard_state_preserves_canonical_formatting(tmp_path, rows):
     assert "STANDARD_STATE" in after["INFO"]
     del after["INFO"]["STANDARD_STATE"]
     assert after == before
-    # Canonical serialization: 2-space indent, sorted keys, no trailing newline.
+    # 2-space indent, no trailing newline.
     assert not scratch.read_text(encoding="utf-8").endswith("\n")
+
+
+def test_insert_then_clear_restores_the_file_byte_for_byte(tmp_path, rows):
+    """Insert-then-remove must be a textual no-op, not merely a parse no-op.
+
+    The parsed-equality assertion above cannot see reordering: `after ==
+    before` holds however the keys are permuted.  That is exactly how
+    json_options' sort_keys=True went unnoticed -- dev/fluids/*.json has
+    non-canonical ordering inside SUPERANCILLARY (injected by
+    dev/scripts/inject_superancillary.py, which writes indent=2 with no
+    sort_keys), so re-serializing sorted rewrote 2608 lines across 76 files
+    while every parsed-equality test stayed green.
+
+    Comparing the TEXT closes that hole: with a sorting writer this fails on
+    the first fluid whose stored order is not already sorted.
+    """
+    # R134a is genuinely absent from ATcT, so its committed file never carries
+    # a block -- an unambiguous baseline no matter how often the regenerator
+    # has run.  Its SUPERANCILLARY ordering is non-canonical like almost every
+    # other fluid, which is what gives this test its teeth.
+    original = FLUIDS_DIR / "R134a.json"
+    scratch = tmp_path / "R134a.json"
+    before = original.read_text(encoding="utf-8")
+    scratch.write_text(before, encoding="utf-8")
+    assert "STANDARD_STATE" not in before
+
+    methane = [r for r in rows if r.cas == "74-82-8"][0]
+    write_standard_state(scratch, methane, "1.220")
+    assert scratch.read_text(encoding="utf-8") != before  # the block really landed
+
+    assert clear_standard_state(scratch) is True
+    assert scratch.read_text(encoding="utf-8") == before
 
 
 def test_compare_ledger_flags_a_dropped_fluid():
