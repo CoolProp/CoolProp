@@ -30,15 +30,33 @@ Highlights:
   :math:`\alpha^r`, :math:`c_v`, :math:`c_p`, speed of sound, :math:`h`,
   :math:`s`, molar mass.  These now equal, to the last digit, the same
   composition with the zero components trimmed away, where before they were
-  NaN.  **Not fixed:** the composition derivatives, and therefore
-  ``fugacity()`` / ``fugacity_coefficient()``, which still return NaN with no
-  error when ``x[N-1] == 0`` and at least one other mole fraction is exactly
-  zero.  CoolProp's ``XN_DEPENDENT`` derivative formulation inlines the same
-  :math:`0/0` expression rather than calling the guarded helpers, and it was
-  left alone here.  If you need fugacities, trim the zero components out of
-  the composition — the trimmed result is exact.  A *single* zero mole
-  fraction was never affected and its infinite-dilution behaviour is
-  bit-for-bit unchanged.  Tracked as GitHub
+  NaN.  Also fixed: the **first** composition derivatives, and therefore
+  ``fugacity()`` / ``fugacity_coefficient()``, which now match the trimmed
+  composition to 1e-12.  Three call sites carried the :math:`0/0` and all
+  three are guarded — ``f_Y_ij``, its two first-derivative helpers, and the
+  two places where the ``XN_DEPENDENT`` branch of ``dYrdxi__constxj``
+  *inlines* the same expression instead of calling those helpers.  That last
+  one is why a single trailing zero used to be so destructive: the inlined
+  loop runs over every component, so ``x[N-1] == 0`` plus one further zero
+  anywhere made the whole first derivative NaN.  Results are now invariant
+  under component reordering, which they previously were not.
+
+  **Not fixed, and not fixable:** the **second and higher** composition
+  derivatives, and therefore phase envelopes, which need
+  :math:`\partial \ln \varphi_i / \partial x_j`.  This is a property of the
+  function rather than work left undone.  :math:`f_{Y,ij}` is homogeneous of
+  degree 2, so its :math:`k`-th composition derivative is homogeneous of
+  degree :math:`2 - k`; over non-negative mole fractions the denominator is
+  bounded away from zero on the unit directions, giving
+  :math:`|\partial^k f(t\mathbf{u})| \le M t^{\,2-k}`.  For :math:`k = 0, 1`
+  that vanishes *uniformly in the direction*, so zero is the unique continuous
+  extension and guarding is exact.  For :math:`k \ge 2` the degree is zero or
+  negative — constant along each ray but different between rays — so no limit
+  exists and no substituted value would be correct.  Those derivatives are
+  therefore deliberately left as NaN.  If you need a phase envelope, trim the
+  zero components out of the composition; the trimmed result is exact.  A
+  *single* zero mole fraction was never affected and its infinite-dilution
+  behaviour is bit-for-bit unchanged.  Tracked as GitHub
   `#1677 <https://github.com/CoolProp/CoolProp/issues/1677>`_.
 
 * **``set_reference_stateS`` now throws on the GERG backends instead of
