@@ -42,7 +42,10 @@
 #    include "CoolProp/DataStructures.h"
 #    include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 
+#    include <algorithm>
 #    include <array>
+#    include <cmath>
+#    include <cstddef>
 #    include <cstring>
 #    include <memory>
 #    include <string>
@@ -62,6 +65,16 @@ std::array<unsigned char, sizeof(CoolPropDbl)> bits_of(CoolPropDbl d) {
     return u;
 }
 
+// Both comparisons below treat "identical on each side" as agreement, so they can pass on garbage:
+// two NaNs with the same payload are bitwise equal (orders 0-2), and WithinAbs(NaN, 1e-300) is
+// false but bits_of(NaN) == bits_of(NaN) is true.  Confirm the values are real numbers separately.
+bool all_delta_fields_finite(const HelmholtzDerivatives& d) {
+    // No narrowing to double first: std::isfinite overloads on long double, and narrowing would
+    // report a finite long-double value above DBL_MAX as non-finite if CoolPropDbl ever changes.
+    return std::isfinite(d.alphar) && std::isfinite(d.dalphar_ddelta) && std::isfinite(d.d2alphar_ddelta2) && std::isfinite(d.d3alphar_ddelta3)
+           && std::isfinite(d.d4alphar_ddelta4);
+}
+
 struct MixCase
 {
     std::string fluids;
@@ -70,7 +83,7 @@ struct MixCase
 
 }  // namespace
 
-TEST_CASE("HEOS all_deltaonly is bit-exact vs full all() on the delta-derivatives", "[flash][mixture][deltaonly]") {
+TEST_CASE("HEOS all_deltaonly agrees with full all() on the delta-derivatives", "[flash][mixture][deltaonly]") {
     const std::vector<MixCase> cases = {
       {"Methane", {1.0}},                                                            // generalized-exponential term only
       {"Methane&Ethane&Propane&n-Butane&Nitrogen", {0.80, 0.10, 0.05, 0.03, 0.02}},  // + GERG departure (excess term)
@@ -85,6 +98,14 @@ TEST_CASE("HEOS all_deltaonly is bit-exact vs full all() on the delta-derivative
         heos->set_mole_fractions(c.z);
         const std::vector<CoolPropDbl> z(c.z.begin(), c.z.end());
 
+        // Every comparison below is an equality or a relative-closeness test, and WithinAbs(0,
+        // 1e-300) makes 0 == 0 pass, so a regression that zeroed a field in BOTH paths -- an
+        // accumulator that is never written, a term container that stops dispatching -- would leave
+        // every assertion for that field green.  Track the largest magnitude produced PER FIELD; one
+        // maximum across fields would be dominated by d4 (by 2 to 5 orders of magnitude here) and
+        // would not notice alphar, d1, d2 or d3 collapsing.
+        std::array<CoolPropDbl, 5> max_abs{};
+
         for (int it_tau = 0; it_tau <= 8; ++it_tau) {
             const double tau = 0.6 + 0.18 * it_tau;  // 0.6 .. 2.04
             for (int it_del = 0; it_del <= 8; ++it_del) {
@@ -92,6 +113,8 @@ TEST_CASE("HEOS all_deltaonly is bit-exact vs full all() on the delta-derivative
                 CAPTURE(c.fluids, tau, delta);
                 HelmholtzDerivatives full = heos->residual_helmholtz->all(*heos, z, tau, delta, /*cache_values=*/false);
                 HelmholtzDerivatives donly = heos->residual_helmholtz->all_deltaonly(*heos, z, tau, delta);
+                CHECK(all_delta_fields_finite(full));
+                CHECK(all_delta_fields_finite(donly));
                 // Orders 0-2: bit-for-bit, which holds for every case on the grid.
                 CHECK(bits_of(donly.alphar) == bits_of(full.alphar));
                 CHECK(bits_of(donly.dalphar_ddelta) == bits_of(full.dalphar_ddelta));
@@ -104,7 +127,22 @@ TEST_CASE("HEOS all_deltaonly is bit-exact vs full all() on the delta-derivative
                                                              || Catch::Matchers::WithinAbs((double)full.d3alphar_ddelta3, 1e-300));
                 CHECK_THAT((double)donly.d4alphar_ddelta4, Catch::Matchers::WithinRel((double)full.d4alphar_ddelta4, 1e-14)
                                                              || Catch::Matchers::WithinAbs((double)full.d4alphar_ddelta4, 1e-300));
+
+                const std::array<CoolPropDbl, 5> f = {full.alphar, full.dalphar_ddelta, full.d2alphar_ddelta2, full.d3alphar_ddelta3,
+                                                      full.d4alphar_ddelta4};
+                for (std::size_t q = 0; q < 5; ++q) {
+                    max_abs[q] = std::max(max_abs[q], std::abs(f[q]));
+                }
             }
+        }
+        // Smallest per-field maximum measured over this grid is ~3e4 (Methane alphar), so 1e-12 is
+        // 16 orders of margin: this cannot flake.  It is deliberately coarse -- it fires only when a
+        // field is zero at EVERY one of the 81 grid points, not at a subset.
+        // Non-finite values need no check here -- all_delta_fields_finite() rejects them at every
+        // grid point, and std::max discards a NaN candidate rather than propagating it.
+        for (std::size_t q = 0; q < 5; ++q) {
+            CAPTURE(c.fluids, q, max_abs[q]);
+            REQUIRE(max_abs[q] > 1e-12);
         }
     }
 }
