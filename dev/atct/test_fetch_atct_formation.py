@@ -706,7 +706,7 @@ def test_write_clears_the_block_of_a_fluid_that_left_the_source(tmp_path, monkey
 
     assert exit_code == 0
     # A deletion is reported on stderr, not buried in progress output.
-    assert "REMOVED the STANDARD_STATE block from Fakium" in captured.err
+    assert "REMOVED the ATcT formation value from Fakium" in captured.err
 
     assert "STANDARD_STATE" not in _json.loads(stale.read_text(encoding="utf-8"))["INFO"]
     # ...and the matched fluid still gained its block on the same pass.
@@ -763,3 +763,106 @@ def test_write_refuses_to_delete_blocks_without_allow_removals(tmp_path, monkeyp
     # did NOT get its block, so a refused run is not a partial run.
     assert stale.read_text(encoding="utf-8") == stale_text
     assert "STANDARD_STATE" not in _json.loads(methane.read_text(encoding="utf-8"))["INFO"]
+
+
+def test_refused_run_leaves_the_ledger_untouched(tmp_path, monkeypatch, capsys):
+    """"nothing was written" must include expected_coverage.json.
+
+    The ledger branch used to run before the gate, so a refused
+    --update-ledger --write still overwrote the ledger with the degraded
+    coverage.  That silences the loudest tripwire: a later plain --write sails
+    past compare_ledger because the ledger now agrees with the bad page,
+    leaving only the gate the operator is already being tempted to override.
+    """
+    import json as _json
+
+    module = sys.modules["fetch_atct_formation"]
+    monkeypatch.setattr(module, "__file__", str(tmp_path / "fetch_atct_formation.py"))
+
+    fluids_dir = tmp_path / "fluids"
+    fluids_dir.mkdir()
+    (fluids_dir / "Methane.json").write_text(
+        _json.dumps({"INFO": {"NAME": "Methane", "CAS": "74-82-8"}}), encoding="utf-8"
+    )
+    (fluids_dir / "Fakium.json").write_text(
+        _json.dumps({"INFO": {"NAME": "Fakium", "CAS": "900-00-0",
+                              "STANDARD_STATE": {"hmolar_formation": {"value": -1.0, "source": "ATcT"}}}}),
+        encoding="utf-8",
+    )
+    ledger_path = tmp_path / "expected_coverage.json"
+    ledger_text = _json.dumps({"Fakium": {"state": "matched", "atct_id": "900-00-0*0"}})
+    ledger_path.write_text(ledger_text, encoding="utf-8")
+
+    exit_code = main(["--version", "1.220", "--cache", str(FIXTURE),
+                      "--fluids-dir", str(fluids_dir), "--update-ledger", "--write"])
+    assert exit_code == 1
+    assert ledger_path.read_text(encoding="utf-8") == ledger_text
+
+
+def test_write_refuses_to_overwrite_another_sources_formation_value(tmp_path, monkeypatch, capsys):
+    """A MATCHED fluid's foreign value must be as protected as an absent one's.
+
+    clear_standard_state refused to delete another source's hmolar_formation,
+    but write_standard_state replaced the whole STANDARD_STATE object -- so the
+    same value was safe on the ~60 absent fluids and destroyed on all 76
+    matched ones, with no flag and no message.
+    """
+    import json as _json
+
+    module = sys.modules["fetch_atct_formation"]
+    monkeypatch.setattr(module, "__file__", str(tmp_path / "fetch_atct_formation.py"))
+
+    fluids_dir = tmp_path / "fluids"
+    fluids_dir.mkdir()
+    methane = fluids_dir / "Methane.json"
+    payload = _json.dumps({"INFO": {"NAME": "Methane", "CAS": "74-82-8",
+                                    "STANDARD_STATE": {"hmolar_formation": {"value": -1.0, "source": "CODATA"}}}})
+    methane.write_text(payload, encoding="utf-8")
+
+    exit_code = main(["--version", "1.220", "--cache", str(FIXTURE),
+                      "--fluids-dir", str(fluids_dir), "--update-ledger", "--write"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "another source" in captured.err
+    assert "CODATA" in captured.err
+    assert methane.read_text(encoding="utf-8") == payload
+
+
+def test_write_merges_into_a_block_shared_with_another_quantity(tmp_path, rows):
+    """Writing must add our quantity, not replace the shared object.
+
+    The planned entropy tier will live in the same STANDARD_STATE block; a
+    replacing writer destroys it for every matched fluid on the first run.
+    """
+    import json as _json
+
+    path = tmp_path / "Methane.json"
+    path.write_text(
+        _json.dumps({"INFO": {"NAME": "Methane", "CAS": "74-82-8",
+                              "STANDARD_STATE": {"smolar_standard": {"value": 186.25,
+                                                                     "source": "SomeOtherDatabase"}}}}),
+        encoding="utf-8",
+    )
+    methane = [r for r in rows if r.cas == "74-82-8"][0]
+    write_standard_state(path, methane, "1.220")
+
+    block = _json.loads(path.read_text(encoding="utf-8"))["INFO"]["STANDARD_STATE"]
+    assert block["hmolar_formation"]["value"] == -74513.0
+    assert block["smolar_standard"] == {"value": 186.25, "source": "SomeOtherDatabase"}
+
+
+def test_writers_preserve_a_trailing_newline(tmp_path, rows):
+    """6 of 137 fluid files end with a newline; inserting a block must not strip it."""
+    import json as _json
+
+    path = tmp_path / "Methane.json"
+    before = _json.dumps({"INFO": {"NAME": "Methane", "CAS": "74-82-8"}}, indent=2) + "\n"
+    path.write_text(before, encoding="utf-8")
+
+    methane = [r for r in rows if r.cas == "74-82-8"][0]
+    write_standard_state(path, methane, "1.220")
+    assert path.read_text(encoding="utf-8").endswith("\n")
+
+    assert clear_standard_state(path) is True
+    assert path.read_text(encoding="utf-8") == before

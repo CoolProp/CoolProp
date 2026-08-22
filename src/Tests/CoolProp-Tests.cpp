@@ -7448,6 +7448,17 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmhol
         // third-party block must not take the whole fluid down with it.
         CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"value":-74513.0,"uncertainty":43.0,
                         "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")));
+        // ...and the same for every other key, so the decline is coherent
+        // rather than tolerating one missing field and throwing on the next.
+        CHECK_NOTHROW(parse(R"({"hmolar_formation":{"units":"J/mol","uncertainty":43.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})"));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"version":"1.220","id":"74-82-8*0"}})")));
+        // A non-numeric value must not slip through to get_double either.
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":"-74513.0",
+                        "uncertainty":43.0,"source":"ATcT","version":"1.220","id":"x"}})")));
     }
     SECTION("every stored value is physically plausible") {
         // Guards against a kJ/J slip anywhere in the pipeline: no molecule in

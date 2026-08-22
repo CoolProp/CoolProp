@@ -352,31 +352,48 @@ class JSONFluidLibrary
             return;
         }
         const nlohmann::json& hf = json.at("hmolar_formation");
-        // The block carries its own units tag; honour it rather than assuming.
-        // Everything downstream -- FormationStruct, calc_Hmolar_formation, the
-        // HFORMATION parameter_info entry -- is J/mol, so a block written in
-        // kJ/mol would be off by 1000x with no error and nothing able to
-        // detect it.  The regenerator always emits this field.
+
+        // Decline the VALUE, never the FLUID, and apply that to EVERY key --
+        // not just "units".
         //
-        // Decline the VALUE rather than the FLUID.  Throwing here would abort
-        // add_one for the whole fluid -- EOS, ancillaries, transport, all of
-        // it unavailable over an optional thermochemical annotation -- and
-        // there is no HEOS fluid schema requiring "units"
-        // (dev/validate_fluid_schemas.py covers pcsaft/cubics/mixtures only),
-        // so a third-party fluid registered through add_fluids_as_JSON with a
-        // units-less block loads today and would stop loading.  A failed
-        // add_one also strands the fluid's name in fluids_list (see
-        // bd CoolProp-dwuu).  Leaving hmolar unset is fail-closed on the
-        // number that matters: HFORMATION then throws its own clear
-        // "no value available" error instead of returning a wrong one.
-        // Our own data cannot silently rot this way -- the [formation]
-        // coverage test pins the count at exactly 76.
-        const bool has_units = hf.contains("units") && hf.at("units").is_string();
-        if (!has_units || hf.at("units").get<std::string>() != "J/mol") {
+        // Throwing here aborts add_one for the whole fluid: EOS, ancillaries
+        // and transport all become unavailable over an optional
+        // thermochemical annotation, and the failed add strands the fluid's
+        // name in fluids_list with no string_to_index_map entry (bd
+        // CoolProp-dwuu).  Nothing requires these keys -- there is no HEOS
+        // fluid schema at all (dev/validate_fluid_schemas.py covers
+        // pcsaft/cubics/mixtures only) -- so a third-party fluid registered
+        // through add_fluids_as_JSON with a partial block loads today and
+        // must keep loading.
+        //
+        // Tolerating a missing "units" while still letting get_double throw on
+        // a missing "value" would have been the worst of both: the same
+        // malformed-block class handled two opposite ways in six consecutive
+        // lines.  Require all six keys, decline on any miss.
+        //
+        // Fail-closed on the number that matters: hmolar stays unset, so
+        // HFORMATION throws its own clear "no value available" message rather
+        // than returning a wrong one -- in particular, a kJ/mol block is never
+        // read as J/mol, which would be off by 1000x with nothing able to
+        // detect it.  Our own data cannot rot unnoticed: the [formation]
+        // coverage test pins the readable count at exactly 76.
+        auto declined = [&](const std::string& why) {
             if (get_debug_level() > 0) {
-                std::cout << format("Ignoring INFO.STANDARD_STATE.hmolar_formation for [%s]: units are [%s], expected [J/mol]\n", fluid.name.c_str(),
-                                    has_units ? hf.at("units").get<std::string>().c_str() : "missing");
+                std::cout << format("Ignoring INFO.STANDARD_STATE.hmolar_formation for [%s]: %s\n", fluid.name.c_str(), why.c_str());
             }
+        };
+        for (const char* key : {"value", "uncertainty", "units", "source", "version", "id"}) {
+            if (!hf.contains(key)) {
+                declined(format("missing \"%s\"", key));
+                return;
+            }
+        }
+        if (!hf.at("units").is_string() || hf.at("units").get<std::string>() != "J/mol") {
+            declined("units are not [J/mol]");
+            return;
+        }
+        if (!hf.at("value").is_number() || !hf.at("uncertainty").is_number()) {
+            declined("\"value\"/\"uncertainty\" are not numeric");
             return;
         }
         fluid.standard_state.hmolar = cpjson::get_double(hf, "value");

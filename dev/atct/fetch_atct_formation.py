@@ -30,13 +30,22 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from package_json import json_options  # noqa: E402
 
-# dev/fluids/*.json has not been key-sorted since PR #2780, so writing a file
+# dev/fluids/*.json is not key-sorted below the top level, so writing a file
 # with package_json's json_options (which sets sort_keys=True) reorders every
 # pre-existing key as a side effect -- 2608 lines of pure churn across 76 files,
 # burying the one block this tool actually adds.  Preserve the file's existing
 # key order instead and append the new block, so the diff is the addition and
 # nothing else.  indent is still taken from json_options so the two agree on
 # formatting; only the ordering differs.
+#
+# This is local to this tool, NOT a settled repo convention: dev/package_json.py,
+# dev/scripts/inject_InChI.py, dev/scripts/fit_rational_functions.py and
+# dev/scripts/convert_FLD.py all still write dev/fluids with sort_keys=True,
+# while dev/scripts/inject_superancillary.py writes indent=2 with no sort_keys
+# and ran last over ~127 files -- which is why the tree is unsorted in the
+# first place.  Any of those reintroduces the churn.  Reconciling them is a
+# separate change; re-sorting the tree without doing so would just regress on
+# the next superancillary injection.
 _WRITE_OPTIONS = {**json_options, "sort_keys": False}
 
 INDEX_URL_TEMPLATE = (
@@ -367,18 +376,82 @@ def write_standard_state(path: Path, row: AtctRow, version: str) -> None:
     digits than Python's shortest round-trip repr -- so those pick up a few
     incidental normalization lines.
     """
-    doc = _load_ordered(path)
-    doc["INFO"]["STANDARD_STATE"] = standard_state_block(row, version)
-    path.write_text(json.dumps(doc, **_WRITE_OPTIONS), encoding="utf-8")
+    original = path.read_text(encoding="utf-8")
+    doc = json.loads(original, object_pairs_hook=OrderedDict)
+    block = doc["INFO"].get("STANDARD_STATE")
+    fresh = standard_state_block(row, version)
+    if not isinstance(block, dict):
+        doc["INFO"]["STANDARD_STATE"] = fresh
+    else:
+        # MERGE, do not replace.  Assigning the whole object would delete every
+        # other quantity sharing STANDARD_STATE -- and the README's Scope
+        # section plans exactly that (an entropy tier from another source,
+        # since ATcT publishes no standard entropies).  Replacing wiped it for
+        # all 76 MATCHED fluids while clear_standard_state carefully spared the
+        # absent ones: protection on one side of the same object only.
+        # main() refuses to reach here when the existing hmolar_formation
+        # belongs to someone else.
+        block.update(fresh)
+    _write_doc(path, doc, original.endswith("\n"))
 
 
-def has_standard_state(path: Path) -> bool:
-    """Read-only: does this fluid file currently carry a STANDARD_STATE block?
+def _formation_source(path: Path):
+    """Read-only: the `source` of this file's hmolar_formation, if it has one.
 
-    Separate from clear_standard_state() so main() can decide about removals
-    before it has written anything.
+    Returns (has_formation, source).  `source` is None both when the key is
+    absent and when there is no block at all, so callers must check the flag.
     """
-    return "STANDARD_STATE" in json.loads(path.read_text(encoding="utf-8"))["INFO"]
+    block = json.loads(path.read_text(encoding="utf-8"))["INFO"].get("STANDARD_STATE")
+    if not isinstance(block, dict):
+        return False, None
+    hf = block.get("hmolar_formation")
+    if not isinstance(hf, dict):
+        # A scalar or string here is hand-edited garbage; report it as present
+        # but foreign so the gates refuse to touch it rather than crash on
+        # .get().
+        return (hf is not None), "<malformed>"
+    return True, hf.get("source")
+
+
+def _is_ours(source) -> bool:
+    """Did this tool write the value?
+
+    A block with no `source` is treated as ours: every block this tool has
+    ever written carries source="ATcT", so an unsourced one predates the field
+    or was hand-copied from our output.  A block naming a different source is
+    someone else's and is never touched without --allow-removals.
+    """
+    return source in (None, "ATcT")
+
+
+def owns_formation(path: Path) -> bool:
+    """Read-only: does this file carry an hmolar_formation THIS tool may remove?
+
+    Mirrors clear_standard_state()'s ownership test exactly, so main() can
+    decide about removals before writing anything.  A broader predicate here
+    would make --write demand --allow-removals for deletions that would never
+    happen -- which teaches the operator to pass the flag by reflex, and that
+    is how a guard fails open in practice.
+    """
+    has, source = _formation_source(path)
+    return has and _is_ours(source)
+
+
+def foreign_formation(path: Path):
+    """Read-only: the foreign `source` owning this file's hmolar_formation, else None."""
+    has, source = _formation_source(path)
+    return source if (has and not _is_ours(source)) else None
+
+
+def _write_doc(path: Path, doc, trailing_newline: bool) -> None:
+    """Serialize, restoring the file's original trailing-newline state.
+
+    6 of the 137 fluid files end with a newline and the rest do not; dropping
+    it turns "insert a block" into "insert a block and strip the terminator",
+    which is exactly the kind of incidental change this tool exists to avoid.
+    """
+    text = json.dumps(doc, **_WRITE_OPTIONS)
+    path.write_text(text + "\n" if trailing_newline else text, encoding="utf-8")
 
 
 def clear_standard_state(path: Path) -> bool:
@@ -394,15 +467,18 @@ def clear_standard_state(path: Path) -> bool:
     --write runs, the ledger has already been brought into agreement with the
     new bind result.  Removal has to happen on the same pass that writes.
     """
-    doc = _load_ordered(path)
+    original = path.read_text(encoding="utf-8")
+    doc = json.loads(original, object_pairs_hook=OrderedDict)
     block = doc["INFO"].get("STANDARD_STATE")
-    if not block or "hmolar_formation" not in block:
+    if not isinstance(block, dict) or "hmolar_formation" not in block:
         return False
+    if not isinstance(block["hmolar_formation"], dict):
+        return False  # hand-edited garbage; leave it for a human
     # Remove only THIS tool's quantity, and only if ATcT wrote it.  The README's
     # Scope section plans an entropy tier from a different source; deleting the
     # whole STANDARD_STATE object would take that source's data with it for
     # every fluid ATcT happens not to cover.
-    if block["hmolar_formation"].get("source") not in (None, "ATcT"):
+    if not _is_ours(block["hmolar_formation"].get("source")):
         return False
     del block["hmolar_formation"]
     # What is left is either nothing, or the reference-state scaffolding that
@@ -412,7 +488,7 @@ def clear_standard_state(path: Path) -> bool:
     # added its own key, keep the wrapper and leave that data alone.
     if not set(block) - _REFERENCE_STATE_KEYS:
         del doc["INFO"]["STANDARD_STATE"]
-    path.write_text(json.dumps(doc, **_WRITE_OPTIONS), encoding="utf-8")
+    _write_doc(path, doc, original.endswith("\n"))
     return True
 
 
@@ -505,6 +581,38 @@ def main(argv=None) -> int:
             print("ERROR: %s" % problem, file=sys.stderr)
         return 1
 
+    # ---- destructive-change gate -------------------------------------------
+    # This runs BEFORE the ledger branch, not just before the fluid writes.
+    # --update-ledger rewrites expected_coverage.json, and that file is the one
+    # artifact whose job is to make the NEXT run fail loudly.  Overwriting it
+    # during a run that then refuses to proceed would silence the loudest
+    # tripwire: a later plain --write would sail past compare_ledger because
+    # the ledger now agrees with the degraded page.  So a refused run must
+    # leave the ledger untouched too -- "nothing was written" has to be true.
+    if args.write:
+        # Removals: absent fluids whose file still holds an ATcT value.
+        to_clear = [name for name in sorted(result.absent) if owns_formation(fluids[name].path)]
+        # Overwrites: matched fluids whose file holds SOMEONE ELSE'S value.
+        # Guarding only removals protected the absent fluids and left every
+        # matched one open to the same destruction.
+        foreign = [(name, foreign_formation(fluids[name].path)) for name in sorted(result.matched)]
+        foreign = [(name, src) for name, src in foreign if src is not None]
+        if (to_clear or foreign) and not args.allow_removals:
+            if to_clear:
+                print("ERROR: %d fluid(s) carry an ATcT formation value but are absent from this"
+                      " run; refusing to delete committed values." % len(to_clear), file=sys.stderr)
+                for name in to_clear:
+                    print("ERROR:   delete %s (%s)" % (name, result.absent[name]), file=sys.stderr)
+            if foreign:
+                print("ERROR: %d matched fluid(s) already carry an hmolar_formation from another"
+                      " source; refusing to overwrite it." % len(foreign), file=sys.stderr)
+                for name, src in foreign:
+                    print("ERROR:   overwrite %s (source %r)" % (name, src), file=sys.stderr)
+            print("ERROR: nothing was written -- not the fluid files, not the report, and not"
+                  " %s.  If these changes are genuinely correct, re-run with --allow-removals."
+                  % (here / "expected_coverage.json"), file=sys.stderr)
+            return 1
+
     ledger_path = here / "expected_coverage.json"
     actual = coverage_ledger(result)
     if args.update_ledger:
@@ -541,37 +649,17 @@ def main(argv=None) -> int:
         return 1
 
     if args.write:
-        # Decide about removals BEFORE writing anything.  Removing a block
-        # DESTROYS a committed value, and every "absent" reason upstream of
-        # here is recoverable-looking rather than loud: parse_atct_rows()
-        # skips rows with no formula button or no DHf298 span, the only floor
-        # is one surviving row, and fetch_index() caches the page before any
-        # sanity check -- so a truncated download makes 136 fluids "absent"
-        # and would silently delete 75 real values.  --update-ledger rewrites
-        # the ledger and the report on the same pass, so the wreckage is
-        # self-consistent and leaves no trace anywhere.
-        #
-        # Refuse by default and exit non-zero, having written NOTHING.
-        # Removal now requires someone to type --allow-removals having read
-        # the list.
-        to_clear = [name for name in sorted(result.absent) if has_standard_state(fluids[name].path)]
-        if to_clear and not args.allow_removals:
-            print("ERROR: %d fluid(s) carry a STANDARD_STATE block but are absent from this run;"
-                  " refusing to delete committed values." % len(to_clear), file=sys.stderr)
-            for name in to_clear:
-                print("ERROR:   %s (%s)" % (name, result.absent[name]), file=sys.stderr)
-            print("ERROR: nothing was written.  If the removals are genuinely correct -- the source"
-                  " really dropped these species -- re-run with --allow-removals.", file=sys.stderr)
-            return 1
-
         for name, row in sorted(result.matched.items()):
             write_standard_state(fluids[name].path, row, args.version)
         cleared = []
         for name in to_clear:
-            # stderr: a deletion is not routine progress output.
-            print("REMOVED the STANDARD_STATE block from %s (%s)" % (name, result.absent[name]), file=sys.stderr)
             if clear_standard_state(fluids[name].path):
+                # stderr, and only when something actually went: printing
+                # unconditionally produced "REMOVED ... X" next to "cleared 0
+                # stale blocks" in the same run.
                 cleared.append(name)
+                print("REMOVED the ATcT formation value from %s (%s)"
+                      % (name, result.absent[name]), file=sys.stderr)
         write_report(here / "atct_report.csv", result, args.version, page_sha256)
         print("wrote %d fluid files, cleared %d stale block%s, and atct_report.csv"
               % (len(result.matched), len(cleared), "" if len(cleared) == 1 else "s"))
