@@ -1100,6 +1100,9 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
         _Q = detail::Qmass_to_Qmolar(q, MM.liquid, MM.vapor);
         _Qmass = q;
         _phase = iphase_twophase;
+        // REFPROP has no calc_gibbsmolar() override, so nothing recomputes this
+        // lazily — update() assigns it at the end of its switch and so must we.
+        _gibbsmolar = hmol - _T * smol;
         _tau = calc_T_reducing() / _T;
         _delta = _rhomolar / calc_rhomolar_reducing();
         return;

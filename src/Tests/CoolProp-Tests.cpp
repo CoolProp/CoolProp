@@ -5239,6 +5239,9 @@ TEST_CASE("Qmass input: REFPROP mixture update clears cached state", "[Qmass][RE
         // Guard the premise: the two states really are far apart, so a stale value
         // cannot pass by coincidence.
         REQUIRE(eta_liquid > 5 * eta_ref);
+        // _rhomolar is a plain double the Qmass path overwrites unconditionally, so
+        // this passes with or without the fix — it is here to establish that the two
+        // states really are the same one, which is what makes the eta compare valid.
         CHECK(AS->rhomolar() == Catch::Approx(rho_ref).epsilon(1e-12));
         CHECK(AS->viscosity() == Catch::Approx(eta_ref).epsilon(1e-12));
     }
@@ -5250,6 +5253,16 @@ TEST_CASE("Qmass input: REFPROP mixture update clears cached state", "[Qmass][RE
         CAPTURE(AS->delta());
         CHECK(AS->tau() == Catch::Approx(AS->T_reducing() / AS->T()).epsilon(1e-12));
         CHECK(AS->delta() == Catch::Approx(AS->rhomolar() / AS->rhomolar_reducing()).epsilon(1e-12));
+    }
+
+    SECTION("gibbsmolar is available and describes the new state") {
+        // REFPROP has no calc_gibbsmolar() override, so _gibbsmolar is only ever
+        // populated by whoever fills the state; update() does it at the end of its
+        // switch.  Without the same assignment here, clear() turns a stale G into a
+        // NotImplementedError instead of a correct one.
+        AS->update(CoolProp::QmassT_INPUTS, Qmass, T);
+        CAPTURE(AS->gibbsmolar());
+        CHECK(AS->gibbsmolar() == Catch::Approx(AS->hmolar() - AS->T() * AS->smolar()).epsilon(1e-12));
     }
 
     SECTION("unset mole fractions are rejected before REFPROP is called") {
