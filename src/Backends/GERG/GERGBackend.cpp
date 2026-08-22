@@ -78,7 +78,7 @@ void GERGMixtureBackend::set_components(const std::vector<CoolPropFluid>& comps,
     // construction, but a future caller of set_components on a live object
     // would silently strand them (non-null members, never reachable through
     // linked_states again) -- trading one latent hazard for another instead
-    // of fixing it. (task-10 review, carried forward from task-9.)
+    // of fixing it.
     linked_states.erase(std::remove_if(linked_states.begin(), linked_states.end(),
                                        [this](const shared_ptr<HelmholtzEOSMixtureBackend>& s) { return s == SatL || s == SatV; }),
                         linked_states.end());
@@ -1288,10 +1288,10 @@ double get_acentric_factor(GERGModel model, const std::string& gerg_name) {
     // SINGLE EXIT POINT, deliberately.  The table lookup below has two
     // successful paths -- the GERG-2008 override table and the GERG-2004 base
     // table -- and the finiteness check at the bottom is worthless to any path
-    // that returns around it.  An earlier version of this function returned
-    // `it->second` directly out of the override branch, which left the guard
-    // inert for exactly the five rows that live in that table
-    // (carbonmonoxide, isopentane, hydrogensulfide, n-nonane, n-decane):
+    // that returns around it.  Returning `it->second` straight out of the
+    // override branch would leave the guard inert for exactly the five rows
+    // that live in that table (carbonmonoxide, isopentane, hydrogensulfide,
+    // n-nonane, n-decane):
     // injecting an infinity into n-nonane's row built a fluid and answered
     // `inf` from acentric_factor(), while the same injection into water threw.
     // The result is assigned into `omega` here and validated once, on the way
@@ -1391,7 +1391,7 @@ CoolPropFluid make_gerg_fluid(GERGModel model, const std::string& gerg_name) {
     const PureCoeffs pc = get_pure_coeffs(model, gerg_name);
     // get_alphaig_coeffs re-solves a 2x2 system on every call.  It is called
     // exactly once per component here, at construction; nothing in a flash
-    // loop may call it (task-4-report.md, "All tasks").
+    // loop may call it.
     const AlphaigCoeffs ac = get_alphaig_coeffs(model, gerg_name);
 
     CoolPropFluid fluid;
@@ -1519,8 +1519,7 @@ CoolPropFluid make_gerg_fluid(GERGModel model, const std::string& gerg_name) {
     //    by get_alphaig_coeffs were re-solved on exactly this basis, so they
     //    stay consistent under the uniform scaling.
     //
-    // 3. Tc-vs-T_red.  RESOLVING the question task-4-report.md left open (its
-    //    point 4): NO Tc/T_red folding is applied to n0[2]/n0[3] here,
+    // 3. Tc-vs-T_red.  NO Tc/T_red folding is applied to n0[2]/n0[3] here,
     //    because CoolProp already does it, and doing it again would
     //    double-apply.  Read HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache:
     //
@@ -1648,7 +1647,7 @@ CoolPropFluid make_gerg_fluid(GERGModel model, const std::string& gerg_name) {
     // FlashRoutines::sat_superanc_path_applies (FlashRoutines.cpp:558) takes
     // the Chebyshev superancillary and RETURNS IT as the answer.  Nothing
     // below calls EquationOfState::set_superancillaries_str, so get_superanc()
-    // stays null and that path is unreachable -- pinned by the task-10 test
+    // stays null and that path is unreachable -- pinned by the test
     // "GERG fluids carry no superancillary".
     {
         fluid.ancillaries.rhoL = make_anc(get_ancillary(model, gerg_name, "rhoL"));

@@ -73,13 +73,8 @@ class GERGMixtureBackend : public HelmholtzEOSMixtureBackend
     /// (FlashRoutines.cpp:298) determines the phase from p
     /// (T_phase_determination_pure_or_pseudopure), solves rho_Tp, and
     /// RETURNS -- nothing in that path compares the resulting T to
-    /// EOS.limits.Tmax.  (Historical note: when this override was written, T
-    /// below Tmin happened to throw as an ACCIDENT -- solver_rho_Tp's liquid
-    /// branch evaluated components[0].ancillaries.rhoL on an ancillary GERG
-    /// fluids did not populate.  Task 11 populates rhoL/rhoV/pL/pV, so that
-    /// accidental throw is GONE; the override is now the only thing enforcing
-    /// EITHER bound, not just Tmax.)  Verified empirically while writing
-    /// this override, `update(PT_INPUTS, 1e5, 900.0)` on GERG2008 methane
+    /// EOS.limits.Tmax.  This override is the only thing enforcing either
+    /// bound: without it `update(PT_INPUTS, 1e5, 900.0)` on GERG2008 methane
     /// (Tmax = 700 K) returns a state instead of throwing.
     ///
     /// `update` is the one AbstractState entry point every input pair
@@ -97,12 +92,11 @@ class GERGMixtureBackend : public HelmholtzEOSMixtureBackend
 
     /// Same guard as `update` above, on the SEPARATE virtual entry point a
     /// caller reaches by supplying an explicit `GuessesStructure`
-    /// (AbstractState.h:885, HelmholtzEOSMixtureBackend.h:397).  Task 10's
-    /// first review round left this open: it is virtual on `AbstractState`
-    /// itself, so it is reachable with NO downcast from the plain
-    /// `AbstractState*` the factory returns -- confirmed to accept T = 900 K
-    /// before this override existed.  Three lines, identical shape to
-    /// `update`: run the inherited flash, then apply the same range check.
+    /// (AbstractState.h:885, HelmholtzEOSMixtureBackend.h:397).  It is
+    /// virtual on `AbstractState` itself, so it is reachable with NO downcast
+    /// from the plain `AbstractState*` the factory returns, and without this
+    /// override it accepts T = 900 K.  Same shape as `update`: run the
+    /// inherited flash, then apply the same range check.
     void update_with_guesses(CoolProp::input_pairs input_pair, double value1, double value2, const GuessesStructure& guesses) override {
         HelmholtzEOSMixtureBackend::update_with_guesses(input_pair, value1, value2, guesses);
         check_gerg_range_of_validity();
@@ -165,21 +159,12 @@ class GERGMixtureBackend : public HelmholtzEOSMixtureBackend
     /// the GERG residual term -- there would be nothing "GERG" left in the
     /// EOS at all.
     ///
-    /// At task-10 review this failed on its own, by accident.  The cubic
-    /// path reads `EOS.reduce.T`, `EOS.reduce.p`, `EOS.reduce.rhomolar` and
-    /// `EOS.acentric` straight off the stored component
-    /// (HelmholtzEOSMixtureBackend.cpp:491-495), and `reduce.p` was not
-    /// populated for a GERG fluid then, so the cubic got a NaN pc and the
-    /// very next `update()` threw "p is not a valid number".
-    ///
-    /// THAT ACCIDENT IS GONE.  `make_gerg_fluid` now fills all four fields
-    /// the cubic reads (GERGBackend.cpp:1427 `acentric`, :1437-1438
-    /// `reduce.T`/`reduce.rhomolar`, :1481 `reduce.p`), so the swap would now
-    /// succeed silently and leave an SRK or Peng-Robinson cubic sitting
-    /// behind a backend still called GERG2004/GERG2008.  This throw is the
-    /// only thing closing that -- which is precisely why task 10 declined to
-    /// rely on the accident while it still held (compare the T-below-Tmin
-    /// case, see check_gerg_range_of_validity).
+    /// Nothing else stops it.  The cubic path reads `EOS.reduce.T`,
+    /// `EOS.reduce.p`, `EOS.reduce.rhomolar` and `EOS.acentric` straight off
+    /// the stored component (HelmholtzEOSMixtureBackend.cpp:491-495), and
+    /// `make_gerg_fluid` populates all four (GERGBackend.cpp:1427, :1437-1438,
+    /// :1481).  The swap would therefore succeed silently and leave an SRK or
+    /// Peng-Robinson cubic behind a backend still called GERG2004/GERG2008.
     void calc_change_EOS(const std::size_t, const std::string&) override {
         throw ValueError("GERG fluids' equation of state is fixed by the published model and cannot be replaced. "
                          "Use the HEOS or cubic backends directly if you want a different EOS.");
@@ -211,7 +196,7 @@ class GERGMixtureBackend : public HelmholtzEOSMixtureBackend
     /// whenever `this` is a GERGMixtureBackend.
     ///
     /// ==================================================================
-    /// KNOWN BYPASSES.  Full enumeration, task-10 review round 2.  Two tiers:
+    /// KNOWN BYPASSES.  Full enumeration, in two tiers:
     /// reachable from a plain `AbstractState*` with NO downcast (the shape
     /// the factory hands back and the only one a strictness claim about
     /// "GERG cannot be mutated" can honestly ignore), and reachable only by

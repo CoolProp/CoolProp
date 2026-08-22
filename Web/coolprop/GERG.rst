@@ -512,9 +512,13 @@ composition made the whole first derivative NaN.
 What still does not work
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The second and higher composition derivatives, per the argument above::
+The second and higher composition derivatives, per the argument above.  These
+are not reachable from the Python API; at the C++ level, with ``z`` the mole
+fraction vector used above,
 
-    AS.Reducing.d2Trdxidxj(z, 0, 1, XN_DEPENDENT)   # nan, and correctly so
+.. code-block:: cpp
+
+    heos->Reducing->d2Trdxidxj(z, 0, 1, XN_DEPENDENT);   // nan, and correctly so
 
 In practice this means **phase envelopes**, which need
 :math:`\partial \ln \varphi_i / \partial x_j`.  Both backends throw

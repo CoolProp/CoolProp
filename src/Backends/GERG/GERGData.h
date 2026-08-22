@@ -87,8 +87,7 @@ constexpr double RSTAR_GERG = 8.314510;  ///< J/mol/K
 /// GERG2004Cosh/GERG2004Sinh terms do not know about it).
 ///
 /// MIXTURES: Tc here is the COMPONENT's own PureInfo::Tc_K, not the mixture
-/// reducing temperature T_red -- and NO Tc/T_red folding is needed or wanted.
-/// An earlier draft of this comment claimed the opposite; it was wrong, and
+/// reducing temperature T_red -- and NO Tc/T_red folding is needed or wanted;
 /// folding would double-apply a rescale CoolProp already performs.  BOTH
 /// branches of HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache hand a
 /// component's alpha0 container that component's own Tc,i/T: the pure branch
@@ -158,9 +157,8 @@ inline const std::map<std::string, PureInfo>& pure_info_2008_overrides() {
 
 /// CAS number -> GERG component name.  Used by resolve_component so that
 /// CoolProp aliases (CO2, R744, 124-38-9, ...) reach the right component.
-/// This table does not exist in teqp; CAS numbers verified against this
-/// CoolProp build's fluid library (see task-2-report.md for the verification
-/// transcript).
+/// This table does not exist in teqp; CAS numbers are verified against this
+/// CoolProp build's fluid library by dev/gerg/verify_transcription.py.
 inline const std::map<std::string, std::string>& cas_to_gerg() {
     static const std::map<std::string, std::string> data = {
       {"74-82-8", "methane"},    {"7727-37-9", "nitrogen"}, {"124-38-9", "carbondioxide"},    {"74-84-0", "ethane"},

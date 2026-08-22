@@ -298,11 +298,26 @@ CoolPropDbl GERG2008ReducingFunction::Yr(const std::vector<CoolPropDbl>& x, cons
 /// denominator near 2e-200, i.e. a clean 0.  A tolerance-based test would
 /// instead start rewriting answers that are currently correct.
 ///
-/// SCOPE OF THAT CLAIM, stated precisely because an earlier version of this
-/// comment overstated it.  Restricted to non-negative mole fractions, the
-/// both-exactly-zero corner is the complete set of NaN-producing inputs here,
-/// so guarding it replaces NaN with the correct limit and changes no finite
-/// result.  It is NOT the complete set over arbitrary doubles: with
+/// SCOPE OF THAT CLAIM, which is narrower than it first looks.
+///
+/// It holds for the forms whose denominator appears to the FIRST power --
+/// f_Y_ij and the two helpers below.  For those, over non-negative mole
+/// fractions, the both-exactly-zero corner is the complete set of
+/// NaN-producing inputs, so guarding it replaces NaN with the correct limit
+/// and changes no finite result.
+///
+/// It does NOT hold for the forms that SQUARE the denominator (the terms
+/// inlined in dYrdxi__constxj's XN_DEPENDENT branch, and the second- and
+/// third-derivative helpers).  There the square underflows before the corner
+/// is reached: measured at beta = 1.3 with x_i = x_N, the inlined bracket
+/// loses its second term entirely below about 1e-150 (7.43e-151 against a
+/// true 6.48e-151) and returns NaN below about 1e-170, while both mole
+/// fractions are still non-zero.  Those inputs are far outside any physical
+/// composition and are NOT addressed here; they are recorded on bd
+/// CoolProp-8psx.  Rewriting them in the non-squared form would fix it but
+/// would perturb the last digit of results for ordinary compositions.
+///
+/// Nor is exact-zero the complete set over arbitrary doubles: with
 /// beta == 1 and x_i == -x_j the denominator cancels to exactly zero while
 /// both mole fractions are nonzero, and f_Y_ij is 0/0 there too; nearby
 /// (near-cancelling) inputs are worse still, returning finite but absurd
@@ -380,12 +395,15 @@ CoolPropDbl GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<CoolProp
         }
         double beta_Y_iN = beta[i][N - 1], xN = x[N - 1];
         // Same removable singularity as dfYikdxi__constxk, which this bracket
-        // algebraically IS -- the two agree bit-for-bit on non-degenerate
-        // inputs.  It is nonetheless left inline rather than replaced by a
-        // call, so that the floating-point operation order, and therefore
-        // every result users already have, is untouched; only the both-zero
-        // corner is intercepted.  Skipping the term IS adding its limit,
-        // which is 0 (degree-1 homogeneous -- see both_mole_fractions_zero).
+        // algebraically IS.  It is left inline rather than replaced by a call
+        // so the floating-point operation order, and therefore every result
+        // users already have, is untouched: the two forms agree only to
+        // rounding, not bit-for-bit (they differ in the last ulp for roughly
+        // 30% of random compositions), so substituting one for the other would
+        // shift existing answers.  Only the both-zero corner is intercepted.
+        // Skipping the term IS adding its limit, which is 0 (degree-1
+        // homogeneous -- see both_mole_fractions_zero, whose SCOPE note also
+        // covers why the squared denominator here is not fully guarded).
         if (!both_mole_fractions_zero(x[i], xN)) {
             dYr_dxi += c_Y_ij(i, N - 1, beta, gamma, Y_c_ij)
                        * (xN * (x[i] + xN) / (pow(beta_Y_iN, 2) * x[i] + xN)
