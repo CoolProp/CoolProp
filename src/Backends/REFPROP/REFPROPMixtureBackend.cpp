@@ -1053,6 +1053,15 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
         double rho_mol_L = 0, rhoLmol_L = 0, rhoVmol_L = 0;
         double emol = 0, hmol = 0, smol = 0, cvmol = 0, cpmol = 0, w = 0;
 
+        // This path populates the state directly instead of going through update()'s
+        // switch, so it has to do update()'s bookkeeping itself.  Without the clear()
+        // every lazily-cached derived property from the previous update (viscosity,
+        // conductivity, ...) would survive into the new state.
+        clear();
+
+        // Check that mole fractions have been set, etc.
+        check_status();
+
         if (pair == CoolProp::QmassT_INPUTS) {
             // QmassT: v1 is Qmass, v2 is T
             T_K = v2;
@@ -1091,6 +1100,11 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
         _Q = detail::Qmass_to_Qmolar(q, MM.liquid, MM.vapor);
         _Qmass = q;
         _phase = iphase_twophase;
+        // REFPROP has no calc_gibbsmolar() override, so nothing recomputes this
+        // lazily — update() assigns it at the end of its switch and so must we.
+        _gibbsmolar = hmol - _T * smol;
+        _tau = calc_T_reducing() / _T;
+        _delta = _rhomolar / calc_rhomolar_reducing();
         return;
     }
     // The 6 remaining Qmass pairs: REFPROP has no native kq flag for them.
