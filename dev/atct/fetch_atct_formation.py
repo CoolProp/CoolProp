@@ -142,7 +142,21 @@ def parse_atct_rows(page_html: str) -> list[AtctRow]:
             continue  # species with no published 298.15 K value
         units = _span(body, "Units")
         cas = match.group("cas").strip()
-        if units not in ("", "kJ/mol"):
+        uncertainty_text = _span(body, "Uncert")
+        # An empty units cell is legitimate ONLY on the "exact" element rows,
+        # which carry no units at all.  _span() also returns "" when the span
+        # is missing outright -- a renamed CSS class, a restyled table -- so
+        # accepting "" unconditionally would make this check, whose entire
+        # purpose is to catch a units change, pass for every row on exactly
+        # the page change most likely to accompany one.  Tie the exemption to
+        # the uncertainty text that justifies it.
+        if units == "":
+            if uncertainty_text.strip().lower() != "exact":
+                raise AtctParseError(
+                    "missing units on CAS %s (uncertainty %r); the units cell is only "
+                    "allowed to be empty on 'exact' element rows" % (cas, uncertainty_text)
+                )
+        elif units != "kJ/mol":
             raise AtctParseError("unexpected units %r on CAS %s" % (units, cas))
         name = _extract_name(body, cas)
         formula, phase = _split_phase(html_module.unescape(formula_match.group("formula")))
@@ -156,7 +170,7 @@ def parse_atct_rows(page_html: str) -> list[AtctRow]:
                 formula=formula,
                 phase=phase,
                 dhf298_kJ_per_mol=float(value_text),
-                uncertainty_kJ_per_mol=_parse_uncertainty(_span(body, "Uncert")),
+                uncertainty_kJ_per_mol=_parse_uncertainty(uncertainty_text),
                 atct_id=atct_id,
             )
         )
@@ -325,6 +339,27 @@ def write_standard_state(path: Path, row: AtctRow, version: str) -> None:
     path.write_text(json.dumps(doc, **json_options), encoding="utf-8")
 
 
+def clear_standard_state(path: Path) -> bool:
+    """Drop INFO.STANDARD_STATE from a fluid the current version does not cover.
+
+    Returns True if a block was actually removed.
+
+    Writing is matched-only, so without this a fluid that flips matched ->
+    absent between ATcT versions keeps serving its previous value: the ledger
+    and atct_report.csv would say "absent" while dev/fluids/<Fluid>.json still
+    carried a block stamped with the OLD version, and HFORMATION would keep
+    returning it forever.  The ledger gate cannot catch that -- by the time
+    --write runs, the ledger has already been brought into agreement with the
+    new bind result.  Removal has to happen on the same pass that writes.
+    """
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if "STANDARD_STATE" not in doc["INFO"]:
+        return False
+    del doc["INFO"]["STANDARD_STATE"]
+    path.write_text(json.dumps(doc, **json_options), encoding="utf-8")
+    return True
+
+
 def coverage_ledger(result: BindResult) -> dict:
     ledger = {}
     for name, row in result.matched.items():
@@ -449,8 +484,14 @@ def main(argv=None) -> int:
     if args.write:
         for name, row in sorted(result.matched.items()):
             write_standard_state(fluids[name].path, row, args.version)
+        # Absent fluids must have any block from a previous version removed,
+        # not merely left alone -- see clear_standard_state().
+        cleared = [name for name in sorted(result.absent) if clear_standard_state(fluids[name].path)]
+        for name in cleared:
+            print("removed the stale STANDARD_STATE block from %s (%s)" % (name, result.absent[name]))
         write_report(here / "atct_report.csv", result, args.version, page_sha256)
-        print("wrote %d fluid files and atct_report.csv" % len(result.matched))
+        print("wrote %d fluid files, cleared %d stale block%s, and atct_report.csv"
+              % (len(result.matched), len(cleared), "" if len(cleared) == 1 else "s"))
     return 0
 
 

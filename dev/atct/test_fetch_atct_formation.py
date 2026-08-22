@@ -15,6 +15,7 @@ from fetch_atct_formation import (  # noqa: E402
 from fetch_atct_formation import (  # noqa: E402
     FluidRef,
     bind,
+    clear_standard_state,
     load_coolprop_fluids,
     normalize_cas,
 )
@@ -496,3 +497,133 @@ def test_update_ledger_with_no_existing_ledger_says_so(tmp_path, monkeypatch, ca
     assert exit_code == 0
     assert "no existing ledger" in out
     assert (tmp_path / "expected_coverage.json").exists()
+
+
+def test_measured_row_with_no_units_cell_raises():
+    """An empty units cell is legitimate only on the 'exact' element rows.
+
+    `_span` returns "" both for a genuinely empty cell and for a cell whose
+    span is missing outright, so accepting "" unconditionally made the units
+    check pass for every row on exactly the page change most likely to
+    accompany a units change -- a restyle that renames the CSS class.  The
+    values would then be ingested as kJ/mol whatever the page actually said,
+    and neither the coverage ledger (state and ID unchanged) nor the C++
+    plausibility test (|dHf| < 2000 kJ/mol) would notice.
+    """
+    row = _single_row_html("900-00-0", "<a href=\'#\'>Fakium</a>", "Fk (g)").replace(
+        '<span class="Units">kJ/mol</span>', '<span class="UnitsRenamed">kcal/mol</span>'
+    )
+    with pytest.raises(AtctParseError) as excinfo:
+        parse_atct_rows(row)
+    assert "missing units" in str(excinfo.value)
+
+
+def test_exact_row_with_no_units_cell_still_parses():
+    """The converse of the check above: the element rows must keep working.
+
+    ATcT publishes elements in their standard state with an 'exact'
+    uncertainty and no units at all; rejecting those would silently drop
+    every element from the output.
+    """
+    row = _single_row_html("900-00-0", "<a href=\'#\'>Fakium</a>", "Fk (g)")
+    row = row.replace('<span class="Uncert">&plusmn; 0.10</span>', '<span class="Uncert">exact</span>')
+    row = row.replace('<span class="Units">kJ/mol</span>', '<span class="Units"></span>')
+    parsed = parse_atct_rows(row)
+    assert len(parsed) == 1
+    assert parsed[0].uncertainty_kJ_per_mol == 0.0
+
+
+def test_clear_standard_state_removes_a_stale_block(tmp_path):
+    """A fluid that drops out of ATcT must lose its block, not keep it.
+
+    Writing is matched-only, so without an explicit removal pass a fluid
+    flipping matched -> absent between versions would keep serving its
+    previous value under the OLD version stamp while the ledger and the
+    report both recorded it as absent.
+    """
+    import json as _json
+
+    path = tmp_path / "Fakium.json"
+    path.write_text(
+        _json.dumps(
+            {
+                "INFO": {
+                    "NAME": "Fakium",
+                    "CAS": "900-00-0",
+                    "STANDARD_STATE": {"hmolar_formation": {"value": -1000.0, "version": "1.220"}},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert clear_standard_state(path) is True
+    doc = _json.loads(path.read_text(encoding="utf-8"))
+    assert "STANDARD_STATE" not in doc["INFO"]
+    # Nothing else may be disturbed by the removal.
+    assert doc["INFO"]["NAME"] == "Fakium"
+    assert doc["INFO"]["CAS"] == "900-00-0"
+
+
+def test_clear_standard_state_is_a_noop_without_a_block(tmp_path):
+    import json as _json
+
+    path = tmp_path / "Fakium.json"
+    payload = _json.dumps({"INFO": {"NAME": "Fakium", "CAS": "900-00-0"}})
+    path.write_text(payload, encoding="utf-8")
+
+    assert clear_standard_state(path) is False
+    # Untouched, byte for byte -- an absent fluid with no block must not be
+    # rewritten just to reserialize it.
+    assert path.read_text(encoding="utf-8") == payload
+
+
+def test_write_clears_the_block_of_a_fluid_that_left_the_source(tmp_path, monkeypatch, capsys):
+    """End-to-end: --write must remove, not preserve, a now-stale block.
+
+    Fakium carries a block from a previous run but has no row on the page,
+    so bind() records it as absent.  Before the removal pass, --write left
+    the block in place and the fluid kept reporting a value that the ledger
+    and atct_report.csv both denied.
+    """
+    import json as _json
+
+    module = sys.modules["fetch_atct_formation"]
+    monkeypatch.setattr(module, "__file__", str(tmp_path / "fetch_atct_formation.py"))
+
+    fluids_dir = tmp_path / "fluids"
+    fluids_dir.mkdir()
+    (fluids_dir / "Methane.json").write_text(
+        _json.dumps({"INFO": {"NAME": "Methane", "CAS": "74-82-8"}}), encoding="utf-8"
+    )
+    stale = fluids_dir / "Fakium.json"
+    stale.write_text(
+        _json.dumps(
+            {
+                "INFO": {
+                    "NAME": "Fakium",
+                    "CAS": "900-00-0",
+                    "STANDARD_STATE": {"hmolar_formation": {"value": -1000.0, "version": "1.219"}},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            "--version", "1.220",
+            "--cache", str(FIXTURE),
+            "--fluids-dir", str(fluids_dir),
+            "--update-ledger",
+            "--write",
+        ]
+    )
+    out = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "removed the stale STANDARD_STATE block from Fakium" in out
+
+    assert "STANDARD_STATE" not in _json.loads(stale.read_text(encoding="utf-8"))["INFO"]
+    # ...and the matched fluid still gained its block on the same pass.
+    assert "STANDARD_STATE" in _json.loads((fluids_dir / "Methane.json").read_text(encoding="utf-8"))["INFO"]
