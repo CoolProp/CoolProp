@@ -122,8 +122,10 @@ CoolProp can be developed locally on your machine.  Once code changes are comple
 
 **AI assistance is permitted. Attribution is required.**
 
-If an AI coding assistant generated or materially shaped code, documentation,
-tests, or data in your contribution, you must disclose it in two places:
+If an AI coding assistant **generated or materially shaped** any part of your
+contribution — source code, comments, documentation, test cases, fluid data,
+build/CI configuration, or the commit and PR text itself — you must disclose it
+in two places:
 
 1. A `Co-authored-by:` trailer on each affected commit, naming the tool:
 
@@ -175,7 +177,7 @@ git config blame.ignoreRevsFile .git-blame-ignore-revs
 * Limit the first line to 72 characters or less
 * Reference issues and pull requests liberally after the first line
 * When only changing documentation (i.e. no actual code), include `[ci skip]` in the commit title
-* If an AI assistant materially contributed, add a `Co-authored-by:` trailer naming it (see [AI-Assisted Contributions](#ai-assisted-contributions))
+* If an AI assistant generated or materially shaped the change, add a `Co-authored-by:` trailer naming it (see [AI-Assisted Contributions](#ai-assisted-contributions))
 
 
 [beginner]:https://github.com/search?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+label%3Abeginner+user%3Acoolprop

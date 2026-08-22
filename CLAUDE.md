@@ -4,9 +4,10 @@ This file provides instructions and context for AI coding agents working on this
 
 ## Attribution — REQUIRED
 
-Work you produce here must be attributed. Every commit you author or materially
-shape carries a `Co-authored-by:` trailer naming the model, and the PR body
-states what you did and what the human verified. Full policy:
+Work you produce here must be attributed. Every commit whose content you
+generated or materially shaped carries a `Co-authored-by:` trailer naming the
+model, and the PR body states what you did and what the human verified. Full
+policy:
 [`AGENTS.md`](AGENTS.md#ai-assistance-and-attribution).
 
 ```

@@ -25,9 +25,9 @@ authorship is the thing this policy exists to prevent.
 
 ### How to attribute
 
-**1. Commit trailer (required).** Every commit with substantive AI assistance
-carries a `Co-authored-by:` trailer naming the tool, in the trailer block at the
-end of the commit message after a blank line:
+**1. Commit trailer (required).** Every commit whose content an AI **generated
+or materially shaped** carries a `Co-authored-by:` trailer naming the tool, in
+the trailer block at the end of the commit message after a blank line:
 
 ```
 fix(HEOS): guard against negative density in the PT solve
