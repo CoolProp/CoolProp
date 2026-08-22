@@ -500,11 +500,11 @@ the last digit, to the same composition with the zero components trimmed away::
     AS.rhomolar()                 # 406.942     correct
     AS.fugacity_coefficient(0)    # 0.983354    correct
 
-Three call sites contain the :math:`0/0`, and all three are now guarded:
-``f_Y_ij`` itself, its two first-derivative helpers
-(``dfYkidxi__constxk`` / ``dfYikdxi__constxk``), and — added in this release —
-the two places where the ``XN_DEPENDENT`` branch of ``dYrdxi__constxj``
-*inlines* the same expression instead of calling those helpers.  That last one
+Five call sites contain the :math:`0/0`, and all five are now guarded: three
+helper functions — ``f_Y_ij`` itself and its two first-derivative helpers
+``dfYkidxi__constxk`` / ``dfYikdxi__constxk`` — plus, added in this release,
+the two *inlined* expressions in the ``XN_DEPENDENT`` branch of
+``dYrdxi__constxj``, which duplicate those helpers rather than calling them.  That last one
 was the reason a single trailing zero was so destructive: the inlined loop runs
 over every component, so with ``x[N-1] == 0`` one further zero anywhere in the
 composition made the whole first derivative NaN.

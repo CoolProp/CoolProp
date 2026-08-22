@@ -32,10 +32,11 @@ Highlights:
   composition with the zero components trimmed away, where before they were
   NaN.  Also fixed: the **first** composition derivatives, and therefore
   ``fugacity()`` / ``fugacity_coefficient()``, which now match the trimmed
-  composition to 1e-12.  Three call sites carried the :math:`0/0` and all
-  three are guarded — ``f_Y_ij``, its two first-derivative helpers, and the
-  two places where the ``XN_DEPENDENT`` branch of ``dYrdxi__constxj``
-  *inlines* the same expression instead of calling those helpers.  That last
+  composition to 1e-12.  Five call sites carried the :math:`0/0` and all five
+  are guarded: ``f_Y_ij``, its two first-derivative helper functions
+  (``dfYkidxi__constxk`` / ``dfYikdxi__constxk``), and the two expressions
+  that the ``XN_DEPENDENT`` branch of ``dYrdxi__constxj`` *inlines* instead of
+  calling those helpers.  That last
   one is why a single trailing zero used to be so destructive: the inlined
   loop runs over every component, so ``x[N-1] == 0`` plus one further zero
   anywhere made the whole first derivative NaN.  Results are now invariant
