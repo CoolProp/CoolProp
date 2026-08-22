@@ -352,6 +352,16 @@ class JSONFluidLibrary
             return;
         }
         const nlohmann::json& hf = json.at("hmolar_formation");
+        // The block carries its own units tag; honour it rather than assuming.
+        // Everything downstream -- FormationStruct, calc_Hmolar_formation, the
+        // HFORMATION parameter_info entry -- is J/mol, so a block written in
+        // kJ/mol would be off by 1000x with no error and nothing able to
+        // detect it.  The regenerator already emits this field.
+        const std::string hf_units = cpjson::get_string(hf, "units");
+        if (hf_units != "J/mol") {
+            throw ValueError(
+              format("INFO.STANDARD_STATE.hmolar_formation for [%s] is in [%s]; only J/mol is supported", fluid.name.c_str(), hf_units.c_str()));
+        }
         fluid.standard_state.hmolar = cpjson::get_double(hf, "value");
         fluid.standard_state.hmolar_uncertainty = cpjson::get_double(hf, "uncertainty");
         fluid.standard_state.source = cpjson::get_string(hf, "source");

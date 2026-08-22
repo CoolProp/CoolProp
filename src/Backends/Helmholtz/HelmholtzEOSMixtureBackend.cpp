@@ -1188,7 +1188,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_Hmolar_formation() {
     // exact, but a mixture is not a compound and the analogous entropy
     // quantity is not linear, so the two would not stay consistent.
     if (components.size() != 1) {
-        throw ValueError(format("calc_Hmolar_formation is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+        throw ValueError(format("calc_Hmolar_formation is only valid for pure and pseudo-pure fluids, %zu components", components.size()));
     }
     CoolPropDbl v = components[0].standard_state.hmolar;
     if (!ValidNumber(v)) {

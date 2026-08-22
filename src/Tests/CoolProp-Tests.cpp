@@ -7422,18 +7422,44 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation]") {
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
         std::size_t checked = 0;
         for (auto& fluid : fluids) {
-            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
+            shared_ptr<CoolProp::AbstractState> AS;
+            try {
+                AS.reset(CoolProp::AbstractState::factory("HEOS", fluid));
+            } catch (const CoolProp::ValueError&) {
+                // A name in fluids_list that will not construct is an orphan
+                // left behind by a failed add_one: name_vector is appended
+                // before add_one's try block and never popped in its catch, so
+                // any test that fails a HEOS add permanently leaves its name in
+                // get_global_param_string("fluids_list") with no entry in
+                // string_to_index_map.  Measured: with such a name present, 2
+                // of 3 --order rand seeds failed here on the factory call.  No
+                // test does that today, but this loop is the only one that
+                // walks the whole list, so it should not be the thing that
+                // breaks when one does.  This cannot hide a real regression:
+                // if a fluid that HAS a value stops constructing, the exact
+                // count below drops below 76 and fails.
+                continue;
+            }
             double value = 0;
             try {
                 value = AS->keyed_output(CoolProp::iHmolar_formation);
-            } catch (...) {
-                continue;  // no ATcT value for this fluid; covered above
+            } catch (const CoolProp::ValueError&) {
+                // The only exception that means "no ATcT value for this
+                // fluid".  A bare catch(...) would also swallow a genuine
+                // ingestion regression -- a NotImplementedError, a parse
+                // failure -- and silently recount it as expected coverage.
+                continue;
             }
             CAPTURE(fluid);
             CHECK(std::abs(value) < 2e6);
             ++checked;
         }
-        CHECK(checked > 60);  // the ATcT overlap is ~75 fluids
+        // Exact, not a floor.  dev/atct/expected_coverage.json pins 76 matched
+        // fluids, so a regression that drops some of them must fail here
+        // rather than pass under a loose lower bound.  If a future ATcT
+        // version legitimately changes coverage, this number moves with the
+        // ledger in the same commit.
+        CHECK(checked == 76);
     }
 }
 
