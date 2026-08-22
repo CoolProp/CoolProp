@@ -940,4 +940,138 @@ TEST_CASE("Nitrogen 2024: end-to-end through the fluid library matches Table 7",
     }
 }
 
+// ---------------------------------------------------------------------------
+// Sotiriadou, Antoniadis, Assael & Huber, Int. J. Thermophys. 46:133 (2025) --
+// "Reference Correlation of the Viscosity of Argon".  Three stages, all data:
+//
+//   eta   = eta_0(T) + eta_1(T)*rho + Delta_eta(rho,T)
+//   eta_0 = eta_0(298.15 K) exp( sum_i a_i [ln(T/298.15)]^i )          Eq. 2
+//   eta_1 = eta_0(T) B_eta(T),  B_eta = B*_eta N_A sigma^3             Eqs. 3,4
+//   B*_eta(T*) = sum_{i=0..6} c_i (T*)^-i,  T* = T/(eps/kB)            Eq. 5
+//   Delta_eta = rhor^(2/3) Tr^(1/2) { f1 rhor + f2 rhor^2/Tr
+//               + (f1 rhor - rhor^2)/Tr^5
+//               + (rhor - f3 rhor^5)/(rhor - f4 - Tr) - f5 }           Eq. 6
+//
+// Three things this exercises that nitrogen did not:
+//
+//  * A REAL Rainwater-Friend initial-density stage.  eta_1 needs eta_0, which is
+//    a within-correlation intermediate the DSL cannot see -- so the block simply
+//    RECOMPUTES eta_0.  Duplicated data, zero new C++.  Collapsing all three
+//    stages into one block would be tidier but wrong: calc_viscosity_dilute() is
+//    consumed independently by conductivity models (TransportRoutines.cpp:845,855)
+//    and viscosity_contributions() is public API, so each stage must report only
+//    its own contribution.
+//  * TWO sums in one formula (12-term dilute, 7-term virial) in separate lets.
+//    Only NESTED sums are forbidden; sequential ones each get their own index.
+//  * Eq. 6 came out of SYMBOLIC REGRESSION -- not a sum of power terms at all,
+//    but a rational expression with fractional exponents and a genuine pole at
+//    rhor - f4 - Tr = 0, which the paper warns about.  Our IEEE-semantics policy
+//    reproduces that rather than papering over it.
+//
+// WHY THE TABLE 9 GRID IS THE TEST, not the three verification points:
+// Section 3.2 gives three points for checking an implementation, and all three
+// are at T = 300 K.  There ln(T/298.15) ~ 6.2e-3, so the i=6 term of Eq. 2
+// contributes ~1e-14 relative and the high-order coefficients are unexercised.
+// A transcription error in a_6 (10^-5 misread as 10^-3) still matched all three
+// points to 6e-8 while being 36 % wrong at 2000 K; only Table 9, which spans
+// 100-2000 K, caught it.  Hence the 41-point grid below.
+// ---------------------------------------------------------------------------
+namespace {
+// clang-format off
+const char* const AR_A_COEFFS =
+  R"([8.395115e-1, -1.062564e-1, 1.065796e-2, 1.879809e-2, -8.881774e-3, -9.613779e-5,
+      1.404406e-3, -4.321739e-4, -2.544782e-5, 4.398471e-5, -9.997908e-6, 7.753453e-7])";
+const char* const AR_P_POWERS = "[1,2,3,4,5,6,7,8,9,10,11,12]";
+
+std::string ar_dilute() {
+    return std::string(R"JSON({"type": "expression",
+      "formula": "let L = ln(T/T_ref)\n1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))",
+      "constants": {"T_ref": 298.15, "eta_ref": 22.5666},
+      "arrays": {"a": )JSON") + AR_A_COEFFS + R"JSON(, "p": )JSON" + AR_P_POWERS + R"JSON(}})JSON";
+}
+std::string ar_initial_density() {
+    return std::string(R"JSON({"type": "expression",
+      "formula": "let L = ln(T/T_ref)\nlet eta0 = 1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: c[i]*Tstar^q[i])\neta0*Bstar*N_A*sigma^3*rhomolar",
+      "constants": {"T_ref": 298.15, "eta_ref": 22.5666, "epsilon_over_k": 143.235,
+                    "sigma": 0.33501e-9, "N_A": 6.02214076e23},
+      "arrays": {"a": )JSON") + AR_A_COEFFS + R"JSON(, "p": )JSON" + AR_P_POWERS + R"JSON(,
+                 "c": [-0.2571, 3.033, 1.144, -5.586, 3.089, -0.8824, -0.03856],
+                 "q": [0, -1, -2, -3, -4, -5, -6]}})JSON";
+}
+const char* const AR_RESIDUAL = R"JSON({"type": "expression",
+  "formula": "let Tr = T/Tc\nlet rhor = rhomolar/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*(f1*rhor + f2*rhor^2/Tr + (f1*rhor - rhor^2)/Tr^5 + (rhor - f3*rhor^5)/(rhor - f4 - Tr) - f5)",
+  "constants": {"Tc": 150.687, "rhoc": 13407.42965855612,
+                "f1": 3.62648753859904, "f2": 6.655428299399591, "f3": 0.39751160825739,
+                "f4": 2.6697983930209,  "f5": 0.0472018570860789}})JSON";
+// clang-format on
+}  // namespace
+
+TEST_CASE("Argon 2025: two sums in one formula, in separate lets", "[expression]") {
+    using namespace CoolProp::expression;
+    // The initial-density block needs a 12-term and a 7-term sum in one formula.
+    // Nested sums are rejected; sequential ones must each get their own index scope.
+    ExpressionBlock b(ar_initial_density());
+    CHECK(b.required_inputs() == std::vector<std::string>{"T", "rhomolar"});
+    Program p = compile("let u = sum(i: a[i])\nlet v = sum(i: b[i])\nu*v", {}, {{"a", {1, 2, 3}}, {"b", {10, 20}}});
+    CHECK(p.evaluate({}) == Catch::Approx(6.0 * 30.0));
+}
+
+TEST_CASE("Argon 2025: stages match the paper's computer-verification points", "[expression][golden]") {
+    using namespace CoolProp::expression;
+    ExpressionBlock dilute(ar_dilute()), initial(ar_initial_density()), residual(AR_RESIDUAL);
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Argon"));
+    // Section 3.2: T (K), rho (kg/m^3), eta (muPa.s).  rho = 0 is the dilute limit.
+    const double verif[3][3] = {{300, 0.0, 22.6840}, {300, 4.0, 22.7334}, {300, 700.0, 49.3360}};
+    for (const auto& row : verif) {
+        // rho = 0 is not a state the EOS will take; evaluate the stages at a valid
+        // state and zero the density-dependent ones by hand for that row.
+        const double rho = (row[1] > 0) ? row[1] : 1e-6;
+        AS->update(CoolProp::DmassT_INPUTS, rho, row[0]);
+        double got = dilute.evaluate(*AS);
+        if (row[1] > 0) got += initial.evaluate(*AS) + residual.evaluate(*AS);
+        CAPTURE(row[0], row[1]);
+        CHECK(got == Catch::Approx(row[2] * 1e-6).epsilon(1e-5));
+    }
+}
+
+TEST_CASE("Argon 2025: end-to-end over the paper's Table 9 grid", "[expression]") {
+    using nlohmann::json;
+    json fluid = json::parse(CoolProp::get_fluid_param_string("Argon", "JSON"))[0];
+    json visc = json::object();
+    visc["BibTeX"] = "Sotiriadou-IJT-2025";
+    visc["dilute"] = json::parse(ar_dilute());
+    visc["initial_density"] = json::parse(ar_initial_density());
+    visc["higher_order"] = json::parse(AR_RESIDUAL);
+    fluid["TRANSPORT"]["viscosity"] = visc;
+    fluid["INFO"]["NAME"] = "AR_SOTIRIADOU_2025";
+    fluid["INFO"]["CAS"] = "999-99-92";
+    fluid["INFO"]["ALIASES"] = json::array({"AR_SOTIRIADOU_2025_ALIAS"});
+    REQUIRE(CoolProp::add_fluids_as_JSON("HEOS", json::array({fluid}).dump()));
+
+    // Table 9: T (K), rho (kg/m^3), eta (muPa.s), printed to 5 significant figures.
+    const double tab9[][3] = {
+      {100, 4.9152, 8.0810},  {150, 3.2255, 12.095},   {200, 2.4093, 15.889},   {400, 1.2012, 28.642},   {600, 0.80058, 38.804},
+      {800, 0.60042, 47.571}, {1000, 0.48034, 55.485}, {1500, 0.32025, 73.039}, {2000, 0.24019, 88.656}, {100, 1349.4, 204.28},
+      {150, 964.88, 67.573},  {200, 337.74, 23.007},   {400, 119.43, 30.618},   {600, 78.026, 39.869},   {800, 58.472, 48.214},
+      {1000, 46.880, 55.893}, {1500, 31.435, 73.167},  {2000, 23.672, 88.666},  {100, 1448.5, 290.45},   {150, 1234.3, 129.45},
+      {200, 1023.7, 79.043},  {400, 511.19, 43.770},   {600, 342.22, 46.526},   {800, 261.22, 52.428},   {1000, 212.57, 58.820},
+      {1500, 146.25, 74.560}, {2000, 111.88, 89.378},  {150, 1363.4, 187.48},   {200, 1213.1, 121.19},   {400, 787.37, 61.681},
+      {600, 574.15, 56.530},  {800, 454.97, 59.113},   {1000, 378.65, 63.713},  {1500, 269.06, 77.260},  {2000, 209.61, 91.054},
+      {150, 1510.1, 309.68},  {200, 1398.8, 198.36},   {400, 1065.5, 93.995},   {600, 856.29, 76.295},   {800, 717.53, 73.178},
+      {1000, 619.24, 74.551}};
+    double worst = 0;
+    int checks = 0;
+    for (const auto& row : tab9) {
+        double got = CoolProp::PropsSI("V", "T", row[0], "Dmass", row[1], "AR_SOTIRIADOU_2025");
+        CAPTURE(row[0], row[1], row[2]);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - row[2] * 1e-6) / (row[2] * 1e-6);
+        worst = std::max(worst, rel);
+        CHECK(rel < 5e-4);  // the table is printed to 5 significant figures
+        ++checks;
+    }
+    CHECK(checks == 41);
+    WARN("Argon 2025 vs Table 9: worst relative deviation " << worst << " over " << checks << " points");
+}
+
 #endif  // ENABLE_CATCH
