@@ -5202,6 +5202,84 @@ TEST_CASE("Qmass input: REFPROP R32+R125 native kq=2 fast path", "[Qmass][REFPRO
     CHECK(AS3->Q() == Catch::Approx(Q_ref).epsilon(1e-5));
 }
 
+TEST_CASE("Qmass input: REFPROP mixture update clears cached state", "[Qmass][REFPROP]") {
+    // REFPROPMixtureBackend::update_Qmass_pair populates the state directly rather
+    // than going through update()'s switch, so it has to do update()'s bookkeeping
+    // itself.  Without a clear() at the top, every lazily-cached derived property
+    // from the PREVIOUS update survives into the new state: a compressed-liquid
+    // viscosity was still being reported after a two-phase QmassT flash (~20x off
+    // here).  _tau/_delta were likewise left describing the old state.
+    std::shared_ptr<CoolProp::AbstractState> AS;
+    try {
+        AS.reset(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+    } catch (...) {
+        WARN("REFPROP not available; skipping");
+        return;
+    }
+    const std::vector<double> z = {0.5, 0.5};
+    const double T = 278.15, Qmass = 0.5;
+
+    // Reference: a state whose ONLY update is the mass-quality flash, so nothing
+    // can be inherited from an earlier call.
+    auto ASref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+    ASref->set_mole_fractions(z);
+    ASref->update(CoolProp::QmassT_INPUTS, Qmass, T);
+    const double eta_ref = ASref->viscosity();
+    const double rho_ref = ASref->rhomolar();
+
+    AS->set_mole_fractions(z);
+
+    SECTION("transport properties are recomputed, not inherited from the previous state") {
+        AS->update(CoolProp::PT_INPUTS, 5e6, 250.0);  // compressed liquid: eta ~ 20x the two-phase value
+        const double eta_liquid = AS->viscosity();
+        AS->update(CoolProp::QmassT_INPUTS, Qmass, T);
+        CAPTURE(eta_liquid);
+        CAPTURE(eta_ref);
+        CAPTURE(AS->viscosity());
+        // Guard the premise: the two states really are far apart, so a stale value
+        // cannot pass by coincidence.
+        REQUIRE(eta_liquid > 5 * eta_ref);
+        CHECK(AS->rhomolar() == Catch::Approx(rho_ref).epsilon(1e-12));
+        CHECK(AS->viscosity() == Catch::Approx(eta_ref).epsilon(1e-12));
+    }
+
+    SECTION("tau and delta describe the new state") {
+        AS->update(CoolProp::PT_INPUTS, 5e6, 250.0);
+        AS->update(CoolProp::QmassT_INPUTS, Qmass, T);
+        CAPTURE(AS->tau());
+        CAPTURE(AS->delta());
+        CHECK(AS->tau() == Catch::Approx(AS->T_reducing() / AS->T()).epsilon(1e-12));
+        CHECK(AS->delta() == Catch::Approx(AS->rhomolar() / AS->rhomolar_reducing()).epsilon(1e-12));
+    }
+
+    SECTION("unset mole fractions are rejected before REFPROP is called") {
+        // update() guards its whole switch with check_status(); update_Qmass_pair
+        // bypasses update(), so without its own guard an unset composition reaches
+        // REFPROP as an all-zero mole-fraction array instead of raising here.
+        auto ASbare = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+        CHECK_THROWS_WITH(ASbare->update(CoolProp::QmassT_INPUTS, Qmass, T), Catch::Matchers::ContainsSubstring("Mole fractions not yet set"));
+    }
+
+    SECTION("PQmass clears the previous state too") {
+        auto ASp = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+        ASp->set_mole_fractions(z);
+        ASp->update(CoolProp::QmassT_INPUTS, Qmass, T);
+        const double p_sat = ASp->p();
+
+        auto ASpref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+        ASpref->set_mole_fractions(z);
+        ASpref->update(CoolProp::PQmass_INPUTS, p_sat, Qmass);
+        const double eta_pref = ASpref->viscosity();
+
+        AS->update(CoolProp::PT_INPUTS, 5e6, 250.0);
+        REQUIRE(AS->viscosity() > 5 * eta_pref);
+        AS->update(CoolProp::PQmass_INPUTS, p_sat, Qmass);
+        CAPTURE(eta_pref);
+        CAPTURE(AS->viscosity());
+        CHECK(AS->viscosity() == Catch::Approx(eta_pref).epsilon(1e-12));
+    }
+}
+
 TEST_CASE("Qmass edge cases: bubble/dew, out-of-range, single-phase", "[Qmass][edge]") {
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
     AS->set_mole_fractions({0.5, 0.5});
