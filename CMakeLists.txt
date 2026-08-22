@@ -334,7 +334,8 @@ set(COOLPROP_ENABLED_BACKENDS
     REFPROP
     Incompressible
     Tabular
-    PCSAFT)
+    PCSAFT
+    GERG)
 
 # Get everything in the src/ directory (always), but not recursive
 file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
@@ -2403,6 +2404,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-JSONHelpers.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CBOR.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-GERG.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})

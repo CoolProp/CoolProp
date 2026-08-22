@@ -800,9 +800,11 @@ struct backend_info
 };
 
 const std::vector<backend_family_info> backend_family_list = {
-  {HEOS_BACKEND_FAMILY, "HEOS"},   {REFPROP_BACKEND_FAMILY, "REFPROP"}, {INCOMP_BACKEND_FAMILY, "INCOMP"},   {IF97_BACKEND_FAMILY, "IF97"},
-  {TREND_BACKEND_FAMILY, "TREND"}, {TTSE_BACKEND_FAMILY, "TTSE"},       {BICUBIC_BACKEND_FAMILY, "BICUBIC"}, {SRK_BACKEND_FAMILY, "SRK"},
-  {PR_BACKEND_FAMILY, "PR"},       {VTPR_BACKEND_FAMILY, "VTPR"},       {PCSAFT_BACKEND_FAMILY, "PCSAFT"},   {SVDSBTL_BACKEND_FAMILY, "SVDSBTL"}};
+  {HEOS_BACKEND_FAMILY, "HEOS"},         {REFPROP_BACKEND_FAMILY, "REFPROP"},  {INCOMP_BACKEND_FAMILY, "INCOMP"},
+  {IF97_BACKEND_FAMILY, "IF97"},         {TREND_BACKEND_FAMILY, "TREND"},      {TTSE_BACKEND_FAMILY, "TTSE"},
+  {BICUBIC_BACKEND_FAMILY, "BICUBIC"},   {SRK_BACKEND_FAMILY, "SRK"},          {PR_BACKEND_FAMILY, "PR"},
+  {VTPR_BACKEND_FAMILY, "VTPR"},         {PCSAFT_BACKEND_FAMILY, "PCSAFT"},    {SVDSBTL_BACKEND_FAMILY, "SVDSBTL"},
+  {GERG2004_BACKEND_FAMILY, "GERG2004"}, {GERG2008_BACKEND_FAMILY, "GERG2008"}};
 
 const std::vector<backend_info> backend_list = {{HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
                                                 {HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY},
@@ -817,7 +819,9 @@ const std::vector<backend_info> backend_list = {{HEOS_BACKEND_PURE, "HelmholtzEO
                                                 {PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY},
                                                 {VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY},
                                                 {PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY},
-                                                {SVDSBTL_BACKEND, "SVDSBTLBackend", SVDSBTL_BACKEND_FAMILY}};
+                                                {SVDSBTL_BACKEND, "SVDSBTLBackend", SVDSBTL_BACKEND_FAMILY},
+                                                {GERG2004_BACKEND, "GERG2004Backend", GERG2004_BACKEND_FAMILY},
+                                                {GERG2008_BACKEND, "GERG2008Backend", GERG2008_BACKEND_FAMILY}};
 
 class BackendInformation
 {
@@ -869,10 +873,20 @@ void extract_backend_families(const std::string& backend_string, backend_familie
     }
 }
 
+// The by-value `backend_string` is a pre-existing signature this branch does
+// not otherwise touch.  It is NOT changed to `const std::string&` here even
+// though clang-tidy is right on the merits: the declaration lives in the
+// installed public header DataStructures.h, so changing it would change the
+// mangled symbol name and break every consumer linking a pre-built
+// libCoolProp — a bigger break than the one being fixed, and unrelated to this
+// change.  Tracked separately for a release that already breaks ABI.
+// NOLINTNEXTLINE(performance-unnecessary-value-param)
 void extract_backend_families_string(std::string backend_string, backend_families& f1, std::string& f2) {
     auto& backend_information = get_backend_information();
     backend_families f2_enum;
-    extract_backend_families(std::move(backend_string), f1, f2_enum);
+    // extract_backend_families takes a const reference, so std::move() here
+    // could never move anything (performance-move-const-arg).
+    extract_backend_families(backend_string, f1, f2_enum);
     std::map<backend_families, std::string>::const_iterator it;
     it = backend_information.family_name_map.find(f2_enum);
     if (it != backend_information.family_name_map.end())

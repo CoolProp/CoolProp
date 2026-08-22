@@ -21,6 +21,7 @@ CoolProp is a C++ library that implements:
 * :ref:`Fast IAPWS-IF97 (Industrial Formulation) for Water/Steam <IF97>`
 * :ref:`Cubic equations of state (SRK, PR) <cubic_backend>`
 * :ref:`PC-SAFT equation of state <pcsaft_backend>`
+* :ref:`Strict GERG-2004 / GERG-2008 equations of state for natural gases <gerg_backend>`
 
 Environments Supported
 ----------------------
