@@ -1059,19 +1059,37 @@ TEST_CASE("Argon 2025: end-to-end over the paper's Table 9 grid", "[expression]"
       {600, 574.15, 56.530},  {800, 454.97, 59.113},   {1000, 378.65, 63.713},  {1500, 269.06, 77.260},  {2000, 209.61, 91.054},
       {150, 1510.1, 309.68},  {200, 1398.8, 198.36},   {400, 1065.5, 93.995},   {600, 856.29, 76.295},   {800, 717.53, 73.178},
       {1000, 619.24, 74.551}};
-    double worst = 0;
+    // Two ways of hitting the same 41 points, with different error floors.
+    //
+    // Table 9 prints rho to five significant figures, and in the dense liquid
+    // dln(eta)/dln(rho) ~ 6, so feeding the TABLE's rho amplifies its rounding
+    // (drho/rho ~ 2.6e-5 at 50 MPa / 100 K) into ~1.6e-4 in viscosity.  That is
+    // the table's precision, not ours.  Letting the EOS supply rho from (p,T) --
+    // CoolProp's argon EOS is Tegeler-JPCRD-1999 with R = 8.31451, exactly the
+    // equation and gas constant of the paper's Table 1 -- drops the worst
+    // deviation to ~4e-5.  The implementation's true fidelity is better still:
+    // the Section 3.2 verification points, whose densities are exact by
+    // construction, agree to 6e-8 / 4.6e-7 / 8.7e-7 (see the test above).
+    const double pres[41] = {0.1e6, 0.1e6, 0.1e6, 0.1e6, 0.1e6, 0.1e6, 0.1e6, 0.1e6, 0.1e6, 10e6,  10e6,  10e6,  10e6, 10e6,
+                             10e6,  10e6,  10e6,  10e6,  50e6,  50e6,  50e6,  50e6,  50e6,  50e6,  50e6,  50e6,  50e6, 100e6,
+                             100e6, 100e6, 100e6, 100e6, 100e6, 100e6, 100e6, 200e6, 200e6, 200e6, 200e6, 200e6, 200e6};
+    double worst_d = 0, worst_pt = 0;
     int checks = 0;
-    for (const auto& row : tab9) {
-        double got = CoolProp::PropsSI("V", "T", row[0], "Dmass", row[1], "AR_SOTIRIADOU_2025");
-        CAPTURE(row[0], row[1], row[2]);
-        REQUIRE(ValidNumber(got));
-        const double rel = std::abs(got - row[2] * 1e-6) / (row[2] * 1e-6);
-        worst = std::max(worst, rel);
-        CHECK(rel < 5e-4);  // the table is printed to 5 significant figures
+    for (int k = 0; k < 41; ++k) {
+        const double T = tab9[k][0], rho = tab9[k][1], ref = tab9[k][2] * 1e-6;
+        const double gd = CoolProp::PropsSI("V", "T", T, "Dmass", rho, "AR_SOTIRIADOU_2025");
+        const double gp = CoolProp::PropsSI("V", "T", T, "P", pres[k], "AR_SOTIRIADOU_2025");
+        CAPTURE(T, rho, pres[k], ref);
+        REQUIRE(ValidNumber(gd));
+        REQUIRE(ValidNumber(gp));
+        worst_d = std::max(worst_d, std::abs(gd - ref) / ref);
+        worst_pt = std::max(worst_pt, std::abs(gp - ref) / ref);
+        CHECK(std::abs(gd - ref) / ref < 2e-4);  // limited by the table's rho
+        CHECK(std::abs(gp - ref) / ref < 1e-4);  // EOS-supplied rho
         ++checks;
     }
+    WARN("Argon 2025 vs Table 9 (41 pts): worst " << worst_d << " with table rho, " << worst_pt << " with EOS rho from (p,T)");
     CHECK(checks == 41);
-    WARN("Argon 2025 vs Table 9: worst relative deviation " << worst << " over " << checks << " points");
 }
 
 // ---------------------------------------------------------------------------
