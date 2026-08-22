@@ -64,13 +64,92 @@ jobs:
           echo "webdir=${{ env.WEBDIR }}" >> $GITHUB_OUTPUT
 
 
-  collect_binaries:
+  # Single source of truth for the builder workflows whose artifacts make up a
+  # release, and a preflight that every one of them still exists on the target
+  # branch.  Without this, deleting or renaming a builder makes the matching
+  # collect_binaries leg die with a bare "Not Found" annotation from
+  # action-download-artifact and takes the whole deploy down with it -- which is
+  # exactly how gh#3315 went unnoticed for six weeks after PR #3245 renamed
+  # csharp_builder.yml into java_builder.yml.
+  list_builders:
     needs: [set_vars]
+    name: Resolve the builder workflow list
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      workflows: ${{ steps.resolve.outputs.workflows }}
+    steps:
+
+      - name: Fetch the sources
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.set_vars.outputs.branch }}
+
+      - name: Resolve and validate the builder list
+        id: resolve
+        shell: bash
+        # BRANCH goes through env rather than being interpolated into the
+        # script body, so a crafted workflow_dispatch input cannot inject shell.
+        env:
+          BRANCH: ${{ needs.set_vars.outputs.branch }}
+        run: |
+          set -euo pipefail
+          # Add a builder here to have its artifacts included in the release.
+          # Every entry must name a file under .github/workflows/.
+          builders=(
+            javascript_builder.yml
+            library_shared.yml
+            windows_installer.yml
+            docs_docker-run.yml
+            libreoffice_builder.yml
+            mathcad_builder.yml
+            csharp_builder.yml
+            # java_builder.yml -- HOLD until CoolProp-qrn3 is fixed.  The Java
+            #   artifact currently ships Example.java plus the three native
+            #   libs and NO wrapper classes at all: #3245 dropped the
+            #   install(FILES ...platform-independent.7z) rule, and the merge
+            #   job never copies the unpacked platform-independent/ tree
+            #   either.  Publishing it today would give users a Java/ folder
+            #   they cannot call into.  Add this line back in the qrn3 PR.
+            # python_buildwheels.yml -- wheels ship via PyPI, not the file drop
+          )
+          # An all-commented-out list would otherwise sail through every check
+          # below, hand collect_binaries an empty matrix, and let deploy_files
+          # publish a release containing nothing but the source zip.
+          if [ "${#builders[@]}" -eq 0 ]; then
+            echo "::error::The builders list in release_all_files.yml is empty; there would be no binaries to release."
+            exit 1
+          fi
+          missing=()
+          for wf in "${builders[@]}"; do
+            if [ -f ".github/workflows/$wf" ]; then
+              echo "found   $wf"
+            else
+              echo "MISSING $wf"
+              missing+=("$wf")
+            fi
+          done
+          if [ "${#missing[@]}" -ne 0 ]; then
+            echo "::error::Builder workflows listed by release_all_files.yml do not exist on '${BRANCH}': ${missing[*]}. A builder was renamed, deleted, or never landed on this branch; fix the file or update the builders list in release_all_files.yml."
+            exit 1
+          fi
+          # jq --args quotes each element for us, so the JSON stays valid no
+          # matter what ends up in the list.  Assign first rather than inlining
+          # the substitution into echo: `echo "x=$(jq ...)"` exits 0 even when
+          # jq dies, which would emit an empty output and fail downstream with
+          # an unrelated fromJSON error.  A bare assignment propagates jq's
+          # status, so `set -e` stops here instead.
+          workflows=$(jq -cn '$ARGS.positional' --args "${builders[@]}")
+          echo "workflows=$workflows" >> "$GITHUB_OUTPUT"
+
+  collect_binaries:
+    needs: [set_vars, list_builders]
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu]
-        workflow: [javascript_builder.yml, library_shared.yml, windows_installer.yml, docs_docker-run.yml, libreoffice_builder.yml, mathcad_builder.yml, csharp_builder.yml] # , python_buildwheels.yml]
+        workflow: ${{ fromJSON(needs.list_builders.outputs.workflows) }}
     uses: ./.github/workflows/release_get_artifact.yml
     with:
       branch: ${{ needs.set_vars.outputs.branch }}
