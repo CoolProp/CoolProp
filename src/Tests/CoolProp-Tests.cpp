@@ -7,6 +7,7 @@
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
+#include "../Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
@@ -7387,7 +7388,10 @@ TEST_CASE("Surface tension of water is nonzero and matches IAPWS", "[surface_ten
     CHECK(CoolProp::PropsSI("I", "T", 300, "Q", 0, "R134a") > 0.0);
 }
 
-TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation]") {
+// [Helmholtz] as well as [formation]: preflight selects TAG_FILTER="[Helmholtz],[REFPROP]"
+// for a diff touching src/Backends/Helmholtz/, and the ingestion path this exercises
+// lives there -- without the tag, the local gate never runs these assertions.
+TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmholtz]") {
     using Catch::Approx;
     SECTION("known values, J/mol") {
         // ATcT TN 1.220; see dev/atct/atct_report.csv for provenance.
@@ -7415,6 +7419,35 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation]") {
         std::vector<double> z{0.7, 0.3};
         AS->set_mole_fractions(z);
         CHECK_THROWS(AS->keyed_output(CoolProp::iHmolar_formation));
+    }
+    SECTION("a block in the wrong units is declined without killing the fluid") {
+        // parse_standard_state is protected on a non-final class, so a
+        // subclass reaches it directly -- no add_fluids_as_JSON, no failed
+        // add_one, and therefore none of the process-wide fluids_list
+        // poisoning (bd CoolProp-dwuu) that made this look untestable.
+        struct Probe : public CoolProp::JSONFluidLibrary
+        {
+            using CoolProp::JSONFluidLibrary::parse_standard_state;
+        };
+        auto parse = [](const char* units) {
+            Probe probe;
+            CoolProp::CoolPropFluid f;
+            f.name = "Probe";
+            probe.parse_standard_state(nlohmann::json::parse(units), f);
+            return f.standard_state.hmolar;
+        };
+        // Right units: ingested.
+        CHECK(parse(R"({"hmolar_formation":{"value":-74513.0,"units":"J/mol","uncertainty":43.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")
+              == Approx(-74513.0));
+        // Wrong units: declined, NOT silently read as J/mol.  This is the
+        // 1000x error the check exists to stop.
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"value":-74.513,"units":"kJ/mol","uncertainty":0.043,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")));
+        // Missing units: declined too, and without throwing -- a units-less
+        // third-party block must not take the whole fluid down with it.
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"value":-74513.0,"uncertainty":43.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")));
     }
     SECTION("every stored value is physically plausible") {
         // Guards against a kJ/J slip anywhere in the pipeline: no molecule in
@@ -7459,6 +7492,7 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation]") {
         // rather than pass under a loose lower bound.  If a future ATcT
         // version legitimately changes coverage, this number moves with the
         // ledger in the same commit.
+        INFO("expected count is pinned by dev/atct/expected_coverage.json (76 matched)");
         CHECK(checked == 76);
     }
 }

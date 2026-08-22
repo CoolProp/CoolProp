@@ -124,15 +124,25 @@ def _extract_name(body: str, cas: str) -> str:
     return text
 
 
+def _is_exact(text: str) -> bool:
+    """ATcT's marker for elements in their standard state.
+
+    One definition shared by the units gate and the uncertainty parser.  They
+    previously disagreed about whether a stray '±' counted as part of the
+    token; harmless only because the divergence happened to be fail-closed.
+    """
+    return text.replace("±", "").strip().lower() == "exact"
+
+
 def _parse_uncertainty(text: str) -> float:
     """ATcT writes '± 0.043' for measured species and 'exact' for elements.
 
     The element form carries no '±' and an empty units cell; treating it as a
     parse failure silently drops all nine elements from the output.
     """
-    cleaned = text.replace("±", "").strip()
-    if cleaned.lower() == "exact":
+    if _is_exact(text):
         return 0.0
+    cleaned = text.replace("±", "").strip()
     if not cleaned:
         raise AtctParseError("empty uncertainty cell")
     return float(cleaned)
@@ -160,7 +170,7 @@ def parse_atct_rows(page_html: str) -> list[AtctRow]:
         # the page change most likely to accompany one.  Tie the exemption to
         # the uncertainty text that justifies it.
         if units == "":
-            if uncertainty_text.strip().lower() != "exact":
+            if not _is_exact(uncertainty_text):
                 raise AtctParseError(
                     "missing units on CAS %s (uncertainty %r); the units cell is only "
                     "allowed to be empty on 'exact' element rows" % (cas, uncertainty_text)
@@ -313,6 +323,11 @@ def bind(fluids: dict, rows: list) -> BindResult:
     return BindResult(matched=matched, absent=absent, errors=errors)
 
 
+# The reference-state scaffolding standard_state_block() writes around the
+# quantity itself; shared with clear_standard_state() so the two agree on what
+# belongs to this tool.
+_REFERENCE_STATE_KEYS = frozenset({"T", "T_units", "p", "p_units", "phase"})
+
 REFERENCE_T_K = 298.15
 REFERENCE_P_PA = 100000.0
 
@@ -357,6 +372,15 @@ def write_standard_state(path: Path, row: AtctRow, version: str) -> None:
     path.write_text(json.dumps(doc, **_WRITE_OPTIONS), encoding="utf-8")
 
 
+def has_standard_state(path: Path) -> bool:
+    """Read-only: does this fluid file currently carry a STANDARD_STATE block?
+
+    Separate from clear_standard_state() so main() can decide about removals
+    before it has written anything.
+    """
+    return "STANDARD_STATE" in json.loads(path.read_text(encoding="utf-8"))["INFO"]
+
+
 def clear_standard_state(path: Path) -> bool:
     """Drop INFO.STANDARD_STATE from a fluid the current version does not cover.
 
@@ -371,9 +395,23 @@ def clear_standard_state(path: Path) -> bool:
     new bind result.  Removal has to happen on the same pass that writes.
     """
     doc = _load_ordered(path)
-    if "STANDARD_STATE" not in doc["INFO"]:
+    block = doc["INFO"].get("STANDARD_STATE")
+    if not block or "hmolar_formation" not in block:
         return False
-    del doc["INFO"]["STANDARD_STATE"]
+    # Remove only THIS tool's quantity, and only if ATcT wrote it.  The README's
+    # Scope section plans an entropy tier from a different source; deleting the
+    # whole STANDARD_STATE object would take that source's data with it for
+    # every fluid ATcT happens not to cover.
+    if block["hmolar_formation"].get("source") not in (None, "ATcT"):
+        return False
+    del block["hmolar_formation"]
+    # What is left is either nothing, or the reference-state scaffolding that
+    # standard_state_block() writes alongside the quantity.  If no OTHER
+    # quantity is using it, the wrapper is ours too and goes with it -- so
+    # insert-then-clear restores the file byte for byte.  If a future tier has
+    # added its own key, keep the wrapper and leave that data alone.
+    if not set(block) - _REFERENCE_STATE_KEYS:
+        del doc["INFO"]["STANDARD_STATE"]
     path.write_text(json.dumps(doc, **_WRITE_OPTIONS), encoding="utf-8")
     return True
 
@@ -448,6 +486,9 @@ def main(argv=None) -> int:
                         help="write dev/fluids/*.json, the report and the ledger")
     parser.add_argument("--update-ledger", action="store_true",
                         help="rewrite expected_coverage.json instead of checking against it")
+    parser.add_argument("--allow-removals", action="store_true",
+                        help="permit --write to DELETE STANDARD_STATE blocks from fluids this run "
+                             "reports as absent (refused by default)")
     args = parser.parse_args(argv)
 
     page, page_sha256 = fetch_index(args.version, args.cache)
@@ -500,13 +541,37 @@ def main(argv=None) -> int:
         return 1
 
     if args.write:
+        # Decide about removals BEFORE writing anything.  Removing a block
+        # DESTROYS a committed value, and every "absent" reason upstream of
+        # here is recoverable-looking rather than loud: parse_atct_rows()
+        # skips rows with no formula button or no DHf298 span, the only floor
+        # is one surviving row, and fetch_index() caches the page before any
+        # sanity check -- so a truncated download makes 136 fluids "absent"
+        # and would silently delete 75 real values.  --update-ledger rewrites
+        # the ledger and the report on the same pass, so the wreckage is
+        # self-consistent and leaves no trace anywhere.
+        #
+        # Refuse by default and exit non-zero, having written NOTHING.
+        # Removal now requires someone to type --allow-removals having read
+        # the list.
+        to_clear = [name for name in sorted(result.absent) if has_standard_state(fluids[name].path)]
+        if to_clear and not args.allow_removals:
+            print("ERROR: %d fluid(s) carry a STANDARD_STATE block but are absent from this run;"
+                  " refusing to delete committed values." % len(to_clear), file=sys.stderr)
+            for name in to_clear:
+                print("ERROR:   %s (%s)" % (name, result.absent[name]), file=sys.stderr)
+            print("ERROR: nothing was written.  If the removals are genuinely correct -- the source"
+                  " really dropped these species -- re-run with --allow-removals.", file=sys.stderr)
+            return 1
+
         for name, row in sorted(result.matched.items()):
             write_standard_state(fluids[name].path, row, args.version)
-        # Absent fluids must have any block from a previous version removed,
-        # not merely left alone -- see clear_standard_state().
-        cleared = [name for name in sorted(result.absent) if clear_standard_state(fluids[name].path)]
-        for name in cleared:
-            print("removed the stale STANDARD_STATE block from %s (%s)" % (name, result.absent[name]))
+        cleared = []
+        for name in to_clear:
+            # stderr: a deletion is not routine progress output.
+            print("REMOVED the STANDARD_STATE block from %s (%s)" % (name, result.absent[name]), file=sys.stderr)
+            if clear_standard_state(fluids[name].path):
+                cleared.append(name)
         write_report(here / "atct_report.csv", result, args.version, page_sha256)
         print("wrote %d fluid files, cleared %d stale block%s, and atct_report.csv"
               % (len(result.matched), len(cleared), "" if len(cleared) == 1 else "s"))

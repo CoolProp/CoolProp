@@ -597,6 +597,56 @@ def test_clear_standard_state_removes_a_stale_block(tmp_path):
     assert doc["INFO"]["CAS"] == "900-00-0"
 
 
+def test_clear_standard_state_leaves_another_sources_data_alone(tmp_path):
+    """Removal must take this tool's quantity, not the whole shared block.
+
+    dev/atct/README.md's Scope section plans an entropy tier from a different
+    source (ATcT publishes no standard entropies).  Once that lands,
+    STANDARD_STATE is shared, and deleting the object wholesale would destroy
+    the other source's data for every fluid ATcT does not cover.
+    """
+    import json as _json
+
+    path = tmp_path / "Fakium.json"
+    path.write_text(
+        _json.dumps(
+            {
+                "INFO": {
+                    "NAME": "Fakium",
+                    "STANDARD_STATE": {
+                        "T": 298.15,
+                        "phase": "ideal_gas",
+                        "hmolar_formation": {"value": -1000.0, "source": "ATcT"},
+                        "smolar_standard": {"value": 186.25, "source": "SomeOtherDatabase"},
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert clear_standard_state(path) is True
+    block = _json.loads(path.read_text(encoding="utf-8"))["INFO"]["STANDARD_STATE"]
+    assert "hmolar_formation" not in block
+    assert block["smolar_standard"] == {"value": 186.25, "source": "SomeOtherDatabase"}
+    assert block["T"] == 298.15  # scaffolding kept: another quantity still needs it
+
+
+def test_clear_standard_state_will_not_delete_another_sources_formation_value(tmp_path):
+    """If hmolar_formation did not come from ATcT, this tool does not own it."""
+    import json as _json
+
+    path = tmp_path / "Fakium.json"
+    payload = _json.dumps(
+        {"INFO": {"NAME": "Fakium",
+                  "STANDARD_STATE": {"hmolar_formation": {"value": -1.0, "source": "CODATA"}}}}
+    )
+    path.write_text(payload, encoding="utf-8")
+
+    assert clear_standard_state(path) is False
+    assert path.read_text(encoding="utf-8") == payload
+
+
 def test_clear_standard_state_is_a_noop_without_a_block(tmp_path):
     import json as _json
 
@@ -649,13 +699,67 @@ def test_write_clears_the_block_of_a_fluid_that_left_the_source(tmp_path, monkey
             "--fluids-dir", str(fluids_dir),
             "--update-ledger",
             "--write",
+            "--allow-removals",
         ]
     )
-    out = capsys.readouterr().out
+    captured = capsys.readouterr()
 
     assert exit_code == 0
-    assert "removed the stale STANDARD_STATE block from Fakium" in out
+    # A deletion is reported on stderr, not buried in progress output.
+    assert "REMOVED the STANDARD_STATE block from Fakium" in captured.err
 
     assert "STANDARD_STATE" not in _json.loads(stale.read_text(encoding="utf-8"))["INFO"]
     # ...and the matched fluid still gained its block on the same pass.
     assert "STANDARD_STATE" in _json.loads((fluids_dir / "Methane.json").read_text(encoding="utf-8"))["INFO"]
+
+
+def test_write_refuses_to_delete_blocks_without_allow_removals(tmp_path, monkeypatch, capsys):
+    """Deleting a committed value must require an explicit opt-in.
+
+    Every path that lands a fluid in `absent` is quiet: parse_atct_rows()
+    skips rows missing a formula button or a DHf298 span, the only floor is
+    one surviving row, and fetch_index() caches the page before any sanity
+    check.  So a truncated download reports most fluids absent, and paired
+    with --update-ledger (which rewrites the ledger AND the report on the same
+    pass) the deletion would be self-consistent and invisible.  Verified
+    against a degraded page: 76 blocks went to 1, exit 0, nothing on stderr.
+
+    The gate must fire BEFORE anything is written, so a refused run leaves the
+    tree untouched rather than half-updated.
+    """
+    import json as _json
+
+    module = sys.modules["fetch_atct_formation"]
+    monkeypatch.setattr(module, "__file__", str(tmp_path / "fetch_atct_formation.py"))
+
+    fluids_dir = tmp_path / "fluids"
+    fluids_dir.mkdir()
+    methane = fluids_dir / "Methane.json"
+    methane.write_text(_json.dumps({"INFO": {"NAME": "Methane", "CAS": "74-82-8"}}), encoding="utf-8")
+    stale = fluids_dir / "Fakium.json"
+    stale_text = _json.dumps(
+        {"INFO": {"NAME": "Fakium", "CAS": "900-00-0",
+                  "STANDARD_STATE": {"hmolar_formation": {"value": -1000.0, "version": "1.219"}}}}
+    )
+    stale.write_text(stale_text, encoding="utf-8")
+
+    exit_code = main(
+        [
+            "--version", "1.220",
+            "--cache", str(FIXTURE),
+            "--fluids-dir", str(fluids_dir),
+            "--update-ledger",
+            "--write",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "refusing to delete committed values" in captured.err
+    assert "Fakium" in captured.err
+    assert "--allow-removals" in captured.err
+
+    # Nothing written: the stale file is byte-identical and the matched fluid
+    # did NOT get its block, so a refused run is not a partial run.
+    assert stale.read_text(encoding="utf-8") == stale_text
+    assert "STANDARD_STATE" not in _json.loads(methane.read_text(encoding="utf-8"))["INFO"]

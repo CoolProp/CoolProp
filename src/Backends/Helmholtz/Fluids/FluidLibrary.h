@@ -356,11 +356,28 @@ class JSONFluidLibrary
         // Everything downstream -- FormationStruct, calc_Hmolar_formation, the
         // HFORMATION parameter_info entry -- is J/mol, so a block written in
         // kJ/mol would be off by 1000x with no error and nothing able to
-        // detect it.  The regenerator already emits this field.
-        const std::string hf_units = cpjson::get_string(hf, "units");
-        if (hf_units != "J/mol") {
-            throw ValueError(
-              format("INFO.STANDARD_STATE.hmolar_formation for [%s] is in [%s]; only J/mol is supported", fluid.name.c_str(), hf_units.c_str()));
+        // detect it.  The regenerator always emits this field.
+        //
+        // Decline the VALUE rather than the FLUID.  Throwing here would abort
+        // add_one for the whole fluid -- EOS, ancillaries, transport, all of
+        // it unavailable over an optional thermochemical annotation -- and
+        // there is no HEOS fluid schema requiring "units"
+        // (dev/validate_fluid_schemas.py covers pcsaft/cubics/mixtures only),
+        // so a third-party fluid registered through add_fluids_as_JSON with a
+        // units-less block loads today and would stop loading.  A failed
+        // add_one also strands the fluid's name in fluids_list (see
+        // bd CoolProp-dwuu).  Leaving hmolar unset is fail-closed on the
+        // number that matters: HFORMATION then throws its own clear
+        // "no value available" error instead of returning a wrong one.
+        // Our own data cannot silently rot this way -- the [formation]
+        // coverage test pins the count at exactly 76.
+        const bool has_units = hf.contains("units") && hf.at("units").is_string();
+        if (!has_units || hf.at("units").get<std::string>() != "J/mol") {
+            if (get_debug_level() > 0) {
+                std::cout << format("Ignoring INFO.STANDARD_STATE.hmolar_formation for [%s]: units are [%s], expected [J/mol]\n", fluid.name.c_str(),
+                                    has_units ? hf.at("units").get<std::string>().c_str() : "missing");
+            }
+            return;
         }
         fluid.standard_state.hmolar = cpjson::get_double(hf, "value");
         fluid.standard_state.hmolar_uncertainty = cpjson::get_double(hf, "uncertainty");
