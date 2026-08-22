@@ -260,6 +260,63 @@ CoolPropDbl GERG2008ReducingFunction::Yr(const std::vector<CoolPropDbl>& x, cons
     return Yr;
 }
 
+/// True when BOTH mole fractions of a pair are exactly zero -- the input for
+/// which f_Y_ij and its first derivatives evaluate 0/0 for any PHYSICALLY
+/// VALID composition.
+///
+/// WHY ONLY THE VALUE AND THE FIRST DERIVATIVES ARE FIXABLE.  f_Y_ij is a
+/// cubic numerator over a linear denominator, so it is homogeneous of degree
+/// 2: f(t*x) = t^2 f(x).  Differentiating that identity k times drops the
+/// degree by k, so the k-th composition derivative is homogeneous of degree
+/// 2 - k.  On the NON-NEGATIVE unit directions the denominator is bounded
+/// below (beta^2*a + b >= min(beta^2, 1) for a, b >= 0 with a^2 + b^2 = 1),
+/// so that compact set carries a finite bound M on each derivative, giving
+/// |g(t*u)| <= M * t^(2-k).  Hence:
+///
+///   k = 0, 1 : the bound vanishes with t, UNIFORMLY in the direction u, so
+///              the limit into the corner is 0 no matter how it is
+///              approached.  Defining the value to be 0 there is the unique
+///              CONTINUOUS extension, not a convention -- which is what makes
+///              guarding legitimate rather than a fudge.
+///   k >= 2   : degree 0 or negative.  A degree-0 function is CONSTANT along
+///              each ray but generally DIFFERENT between rays, so no limit
+///              exists and no value can be assigned.  (Measured, beta = 1.3:
+///              d2f/dxi2 is -7.09e-2 approaching along (1,1), -8.24e-1 along
+///              (1,9), -3.24e-4 along (9,1) -- identical at t = 1e-3, 1e-5
+///              and 1e-7, so it is genuinely direction-dependent rather than
+///              slowly converging.)
+///
+/// So f_Y_ij and the first-derivative terms below are guarded, and the
+/// second- and third-derivative helpers deliberately are NOT: they still
+/// return NaN, because for them NaN is the honest answer.  That is why
+/// fugacity works at this corner while dlnphi_dxj and phase envelopes do not.
+///
+/// EXACTLY zero is the whole condition, not an epsilon.  For non-negative
+/// mole fractions the denominator beta^2*x_i + x_j is a sum of non-negative
+/// terms and is therefore nonzero for any pair of non-zero doubles, however
+/// small: x_i = x_j = 1e-200 gives a numerator that underflows to 0 over a
+/// denominator near 2e-200, i.e. a clean 0.  A tolerance-based test would
+/// instead start rewriting answers that are currently correct.
+///
+/// SCOPE OF THAT CLAIM, stated precisely because an earlier version of this
+/// comment overstated it.  Restricted to non-negative mole fractions, the
+/// both-exactly-zero corner is the complete set of NaN-producing inputs here,
+/// so guarding it replaces NaN with the correct limit and changes no finite
+/// result.  It is NOT the complete set over arbitrary doubles: with
+/// beta == 1 and x_i == -x_j the denominator cancels to exactly zero while
+/// both mole fractions are nonzero, and f_Y_ij is 0/0 there too; nearby
+/// (near-cancelling) inputs are worse still, returning finite but absurd
+/// reducing parameters (measured: Tr = 2.79e-08 K, rhor = -6.2e13 mol/m^3)
+/// with no error raised.  That cancelling corner is a SEPARATE pre-existing
+/// defect which this guard neither introduces nor fixes -- the unguarded code
+/// was equally NaN there -- and it is unreachable from a valid composition.
+/// It is recorded on bd CoolProp-8psx rather than papered over here.
+///
+/// See GitHub #1677 / bd CoolProp-8psx.
+static inline bool both_mole_fractions_zero(double xi, double xj) {
+    return xi == 0.0 && xj == 0.0;
+}
+
 CoolPropDbl GERG2008ReducingFunction::dYr_dgamma(const std::vector<CoolPropDbl>& x, const STLMatrix& beta, const STLMatrix& gamma,
                                                  const STLMatrix& Y_c_ij, const std::vector<CoolPropDbl>& Yc) const {
     CoolPropDbl dYr_dgamma = 0;
@@ -322,11 +379,27 @@ CoolPropDbl GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<CoolProp
             dYr_dxi += c_Y_ij(i, k, beta, gamma, Y_c_ij) * dfYikdxi__constxk(x, i, k, beta);
         }
         double beta_Y_iN = beta[i][N - 1], xN = x[N - 1];
-        dYr_dxi += c_Y_ij(i, N - 1, beta, gamma, Y_c_ij)
-                   * (xN * (x[i] + xN) / (pow(beta_Y_iN, 2) * x[i] + xN)
-                      + (1 - beta_Y_iN * beta_Y_iN) * x[i] * xN * xN / POW2(beta_Y_iN * beta_Y_iN * x[i] + xN));
+        // Same removable singularity as dfYikdxi__constxk, which this bracket
+        // algebraically IS -- the two agree bit-for-bit on non-degenerate
+        // inputs.  It is nonetheless left inline rather than replaced by a
+        // call, so that the floating-point operation order, and therefore
+        // every result users already have, is untouched; only the both-zero
+        // corner is intercepted.  Skipping the term IS adding its limit,
+        // which is 0 (degree-1 homogeneous -- see both_mole_fractions_zero).
+        if (!both_mole_fractions_zero(x[i], xN)) {
+            dYr_dxi += c_Y_ij(i, N - 1, beta, gamma, Y_c_ij)
+                       * (xN * (x[i] + xN) / (pow(beta_Y_iN, 2) * x[i] + xN)
+                          + (1 - beta_Y_iN * beta_Y_iN) * x[i] * xN * xN / POW2(beta_Y_iN * beta_Y_iN * x[i] + xN));
+        }
         for (std::size_t k = 0; k < N - 1; ++k) {
             double beta_Y_kN = beta[k][N - 1], xk = x[k], beta_Y_kN_squared = beta_Y_kN * beta_Y_kN;
+            // As above.  This one is the reason a single trailing zero was so
+            // destructive: the loop runs over EVERY k, so with x[N-1] == 0 one
+            // more zero anywhere in the composition made the whole derivative
+            // NaN.  The bracket is degree-1 homogeneous, so its limit is 0.
+            if (both_mole_fractions_zero(xk, xN)) {
+                continue;
+            }
             dYr_dxi +=
               c_Y_ij(k, N - 1, beta, gamma, Y_c_ij)
               * (-xk * (xk + xN) / (beta_Y_kN_squared * xk + xN) + (1 - beta_Y_kN_squared) * xN * xk * xk / POW2(beta_Y_kN_squared * xk + xN));
@@ -546,37 +619,6 @@ CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDb
         throw ValueError(format("xN dependency flag invalid"));
     }
 }
-
-/// True when BOTH mole fractions of a pair are exactly zero -- the input for
-/// which f_Y_ij and its first derivatives evaluate 0/0 for any PHYSICALLY
-/// VALID composition.
-///
-/// EXACTLY zero is the whole condition, not an epsilon.  For non-negative
-/// mole fractions the denominator beta^2*x_i + x_j is a sum of non-negative
-/// terms and is therefore nonzero for any pair of non-zero doubles, however
-/// small: x_i = x_j = 1e-200 gives a numerator that underflows to 0 over a
-/// denominator near 2e-200, i.e. a clean 0.  A tolerance-based test would
-/// instead start rewriting answers that are currently correct.
-///
-/// SCOPE OF THAT CLAIM, stated precisely because an earlier version of this
-/// comment overstated it.  Restricted to non-negative mole fractions, the
-/// both-exactly-zero corner is the complete set of NaN-producing inputs here,
-/// so guarding it replaces NaN with the correct limit and changes no finite
-/// result.  It is NOT the complete set over arbitrary doubles: with
-/// beta == 1 and x_i == -x_j the denominator cancels to exactly zero while
-/// both mole fractions are nonzero, and f_Y_ij is 0/0 there too; nearby
-/// (near-cancelling) inputs are worse still, returning finite but absurd
-/// reducing parameters (measured: Tr = 2.79e-08 K, rhor = -6.2e13 mol/m^3)
-/// with no error raised.  That cancelling corner is a SEPARATE pre-existing
-/// defect which this guard neither introduces nor fixes -- the unguarded code
-/// was equally NaN there -- and it is unreachable from a valid composition.
-/// It is recorded on bd CoolProp-8psx rather than papered over here.
-///
-/// See GitHub #1677 / bd CoolProp-8psx.
-static inline bool both_mole_fractions_zero(double xi, double xj) {
-    return xi == 0.0 && xj == 0.0;
-}
-
 CoolPropDbl GERG2008ReducingFunction::dfYkidxi__constxk(const std::vector<CoolPropDbl>& x, std::size_t k, std::size_t i,
                                                         const STLMatrix& beta) const {
     double xk = x[k], xi = x[i], beta_Y = beta[k][i], beta_Y_squared = beta_Y * beta_Y;

@@ -417,60 +417,120 @@ Compositions with two or more exactly-zero mole fractions
 The natural way to hand over a natural-gas analysis is the full 21-name
 GERG-2008 component list with a mole fraction for each, most of them exactly
 zero.  Until this release *every* such composition returned NaN for *every*
-property, silently.  It is now partly fixed, and the split matters:
+property, silently.  It is now fixed as far as it mathematically can be, and
+the boundary is worth understanding, because it is a property of the function
+rather than a choice about how much work to do.
 
-**Works.**  The reducing state and everything that flows from it:
-:math:`T_r`, :math:`\rho_r`, :math:`\alpha^0`, :math:`\alpha^r`, :math:`p`,
-:math:`\rho`, :math:`c_v`, :math:`c_p`, speed of sound, :math:`h`, :math:`s`,
-molar mass.  These are now identical — to the last digit — to the same
-composition with the zero components trimmed away.
+Why there is a boundary at all
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Still returns NaN, with no error raised.**  The **second and higher**
-composition derivatives — :math:`\partial^2 T_r / \partial x_i \partial x_j`
-and above — and therefore ``fugacity()`` and ``fugacity_coefficient()``::
+The reducing function sums pairwise terms
+
+.. math::
+
+    f_{Y,ij}(x_i, x_j) = \frac{x_i x_j (x_i + x_j)}{\beta_{Y,ij}^2 x_i + x_j}
+
+which is :math:`0/0` as soon as two mole fractions are exactly zero.  The
+numerator is cubic and the denominator linear, so :math:`f_{Y,ij}` is
+**homogeneous of degree 2**:
+
+.. math::
+
+    f_{Y,ij}(t x_i, t x_j) = t^2 f_{Y,ij}(x_i, x_j), \qquad t > 0.
+
+Differentiating that identity :math:`k` times in the compositions lowers the
+degree by :math:`k`, so the :math:`k`-th composition derivative is homogeneous
+of degree :math:`2 - k`.  Restricted to **non-negative** mole fractions the
+denominator is bounded away from zero on the unit directions —
+:math:`\beta^2 a + b \ge \min(\beta^2, 1)` for :math:`a, b \ge 0` with
+:math:`a^2 + b^2 = 1` — so that direction set is compact and each derivative is
+bounded on it by some :math:`M`.  Writing an approach to the corner as
+:math:`t \mathbf{u}` with :math:`\mathbf{u}` a unit direction,
+
+.. math::
+
+    \left| \partial^k f_{Y,ij}(t \mathbf{u}) \right| \le M \, t^{\,2-k}.
+
+That single inequality decides everything:
+
+* :math:`k = 0` and :math:`k = 1` — the bound vanishes as :math:`t \to 0`, and
+  it does so **uniformly in the direction** :math:`\mathbf{u}`.  The limit is
+  therefore :math:`0` no matter how the corner is approached, and defining the
+  value to be :math:`0` there is the unique *continuous extension*.  It is not
+  a convention or a fudge: the extended function is genuinely :math:`C^1`.
+  Physically this is just the statement that a pair of components which are
+  both absent contributes nothing, and that adding a little of *both* changes
+  the reducing state only at second order in that amount.
+* :math:`k \ge 2` — the exponent is zero or negative.  A degree-zero function
+  is *constant along each ray* but generally *different between rays*, so it
+  has no limit at the corner and no value is correct.  Measured at
+  :math:`\beta = 1.3`, :math:`\partial^2 f / \partial x_i^2` is
+  :math:`-7.09 \times 10^{-2}` approaching along :math:`(1,1)`,
+  :math:`-8.24 \times 10^{-1}` along :math:`(1,9)` and
+  :math:`-3.24 \times 10^{-4}` along :math:`(9,1)` — identical at
+  :math:`t = 10^{-3}`, :math:`10^{-5}` and :math:`10^{-7}`, so this is genuine
+  direction dependence rather than slow convergence.
+
+So the value and the first derivatives are repairable and are repaired; the
+second and higher derivatives are not, and are deliberately left as NaN.
+Substituting any number for them would replace an honest NaN with a silently
+direction-dependent one.
+
+.. note::
+
+   The uniform bound is what fails outside the physical domain.  With
+   :math:`\beta = 1` and :math:`x_i = -x_j` the denominator cancels while both
+   mole fractions are non-zero, and the direction set is no longer bounded away
+   from the singularity.  That corner is unreachable from a valid composition
+   and is a separate pre-existing defect, not something these guards address.
+
+What works
+~~~~~~~~~~
+
+The reducing state and everything that flows from it — :math:`T_r`,
+:math:`\rho_r`, :math:`\alpha^0`, :math:`\alpha^r`, :math:`p`, :math:`\rho`,
+:math:`c_v`, :math:`c_p`, speed of sound, :math:`h`, :math:`s`, molar mass —
+and, since this release, the **first** composition derivatives and therefore
+``fugacity()`` and ``fugacity_coefficient()``.  All of these are identical, to
+the last digit, to the same composition with the zero components trimmed away::
 
     AS = CP.AbstractState("GERG2008", "Methane&Nitrogen&Ethane&Propane")
     AS.set_mole_fractions([0.9, 0.1, 0.0, 0.0])
     AS.update(CP.PT_INPUTS, 1e6, 300)
-    AS.rhomolar()                 # 406.94...   correct
-    AS.fugacity_coefficient(0)    # nan         no error raised
+    AS.rhomolar()                 # 406.942     correct
+    AS.fugacity_coefficient(0)    # 0.983354    correct
 
-The guard that was added covers the reducing function's ``f_Y_ij`` and its two
-**first**-derivative helpers — so :math:`\partial T_r / \partial x_i` is
-correct.  It does **not** cover the second- and third-derivative helpers
-(``d2fYijdxidxj`` and friends), which contain the same :math:`0/0` and are
-reached under **both** the ``XN_INDEPENDENT`` and ``XN_DEPENDENT``
-formulations.  ``XN_DEPENDENT`` reaches them by two different routes depending
-on which derivative is asked for: ``d2Yrdxidxj`` calls ``d2fYijdxidxj`` and
-``d2fYkidxi2__constxk`` directly, exactly as ``XN_INDEPENDENT`` does, while
-``d2Yrdxi2__constxj`` inlines its own expression instead of calling any helper.
-The unguarded :math:`0/0` is present either way.
+Three call sites contain the :math:`0/0`, and all three are now guarded:
+``f_Y_ij`` itself, its two first-derivative helpers
+(``dfYkidxi__constxk`` / ``dfYikdxi__constxk``), and — added in this release —
+the two places where the ``XN_DEPENDENT`` branch of ``dYrdxi__constxj``
+*inlines* the same expression instead of calling those helpers.  That last one
+was the reason a single trailing zero was so destructive: the inlined loop runs
+over every component, so with ``x[N-1] == 0`` one further zero anywhere in the
+composition made the whole first derivative NaN.
 
-Two exactly-zero mole fractions anywhere in the composition are enough to make
-those higher derivatives NaN.  Whether that surfaces through ``fugacity()``
-depends on the path: with ``x[N-1] == 0`` (as above) it does; with the zeros in
-interior positions the fugacity coefficient can still come back finite even
-though the underlying second derivatives are NaN.
+What still does not work
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-Guarding the higher derivatives is not simply an oversight left undone — the
-limit of :math:`\partial^2 f_{Y,ij} / \partial x_i \partial x_j` at the
-both-zero corner is genuinely **path-dependent**, so unlike the value and the
-first derivatives there is no single correct constant to substitute.
+The second and higher composition derivatives, per the argument above::
 
-**This is not GERG-specific.**  It is identical on the default ``HEOS``
-backend, and predates these backends entirely.  It is tracked as
-`GitHub #1677 <https://github.com/CoolProp/CoolProp/issues/1677>`_.
+    AS.Reducing.d2Trdxidxj(z, 0, 1, XN_DEPENDENT)   # nan, and correctly so
 
-Until it is fixed, if you need fugacities, **trim the zero-mole-fraction
-components out of the composition** rather than passing the full component
-list.  The trimmed result is exact.
-
-Phase envelopes fail on such compositions too — but this is the same
-shared-code behaviour, not a GERG one.  Both backends throw
+In practice this means **phase envelopes**, which need
+:math:`\partial \ln \varphi_i / \partial x_j`.  Both backends throw
 ``Unable to calculate at least 4 points in phase envelope; quitting`` on a
-composition with two exact zeros, and both build the envelope normally once
-the zero-mole-fraction components are trimmed out.  A ``PQ`` flash succeeds on
-either backend even with the zeros present.
+composition with two exact zeros, and both build the envelope normally once the
+zero-mole-fraction components are trimmed out.  ``PQ`` and ``QT`` flashes
+succeed with the zeros present.
+
+If you need phase envelopes, **trim the zero-mole-fraction components out of
+the composition** rather than passing the full component list.  The trimmed
+result is exact.
+
+**This is not GERG-specific.**  The reducing function is shared, so the same
+behaviour — before and after — applies to the default ``HEOS`` backend, and it
+predates these backends entirely.  It is tracked as
+`GitHub #1677 <https://github.com/CoolProp/CoolProp/issues/1677>`_.
 
 Saturation states below the enforced ``Tmin``
 ----------------------------------------------

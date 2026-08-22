@@ -2249,19 +2249,30 @@ TEST_CASE("GERG mixture VLE, phase envelopes and gas-phase DmolarP work", "[GERG
 }
 
 TEST_CASE("GERG pins which zero-mole-fraction properties work and which do not", "[GERG]") {
-    // The both-zero guard in GERG2008ReducingFunction fixed the reducing
-    // state and everything downstream of it, which is what makes a full
-    // 21-name natural-gas analysis usable at all.  It did NOT fix the
-    // XN_DEPENDENT composition-derivative branches, which inline the same
-    // 0/0 expression rather than calling the guarded helpers, and those are
-    // what fugacity goes through.  Web/coolprop/GERG.rst states exactly this
-    // split; this test is what stops the documentation drifting away from the
-    // code in either direction.
+    // Where the both-zero guard stops, and WHY it stops there.  f_Y_ij is a
+    // cubic over a linear denominator, i.e. homogeneous of degree 2, so its
+    // k-th composition derivative is homogeneous of degree 2 - k.  Over
+    // non-negative mole fractions the denominator is bounded away from zero on
+    // the unit directions, so each derivative is bounded there, and
+    // |g(t*u)| <= M * t^(2-k):
     //
-    // If a future change fixes the XN_DEPENDENT branches, the second half of
-    // this test SHOULD start failing -- that is the signal to update
-    // GERG.rst, the changelog, and GitHub #1677 / bd CoolProp-8psx, not to
-    // relax the assertion.
+    //   k = 0, 1  ->  vanishes with t uniformly in direction u.  The limit is
+    //                 0 however the corner is approached, so 0 is the unique
+    //                 CONTINUOUS extension and guarding is exact, not a fudge.
+    //   k >= 2    ->  degree 0 or less.  Constant along each ray but different
+    //                 between rays, so NO limit exists and NO value is correct.
+    //
+    // Hence this split, which is a property of the function rather than a
+    // choice: the value and the first derivatives are repaired (so fugacity
+    // works), and the second derivatives are deliberately left NaN (so
+    // dlnphi_dxj, and therefore phase envelopes, still fail).  Web/coolprop/
+    // GERG.rst states the same split; this test is what stops the code and the
+    // documentation drifting apart in either direction.
+    //
+    // The second-derivative assertion below must NOT be "fixed" by returning
+    // some value: doing so would replace an honest NaN with a silently
+    // direction-dependent number.  See both_mole_fractions_zero in
+    // ReducingFunctions.cpp.
     const std::vector<std::string> names = {"Methane", "Nitrogen", "Ethane", "Propane"};
     const std::vector<CoolPropDbl> z_full = {0.9, 0.1, 0.0, 0.0};  // two exact zeros
     const std::vector<std::string> names_trim = {"Methane", "Nitrogen"};
@@ -2284,12 +2295,24 @@ TEST_CASE("GERG pins which zero-mole-fraction properties work and which do not",
         CHECK_THAT(full->rhomolar(), Catch::Matchers::WithinRel(trim->rhomolar(), 1e-12));
         CHECK_THAT(full->alphar(), Catch::Matchers::WithinRel(trim->alphar(), 1e-12));
         CHECK_THAT(full->cvmolar(), Catch::Matchers::WithinRel(trim->cvmolar(), 1e-11));
-        // DOES NOT WORK: the composition derivatives, and therefore fugacity.
-        // Pinned as NaN deliberately -- see the note above.
-        CHECK(!ValidNumber(full->fugacity_coefficient(0)));
+        // WORKS NOW: first composition derivatives, and therefore fugacity.
+        // Checked against the trimmed composition rather than merely for
+        // finiteness -- a finite but wrong number would pass ValidNumber.
+        CHECK(ValidNumber(full->fugacity_coefficient(0)));
+        CHECK_THAT(full->fugacity_coefficient(0), Catch::Matchers::WithinRel(trim->fugacity_coefficient(0), 1e-12));
+        CHECK_THAT(full->fugacity_coefficient(1), Catch::Matchers::WithinRel(trim->fugacity_coefficient(1), 1e-12));
         // The trimmed composition, with no exact zeros, is fine -- which is
         // what identifies the zeros as the cause rather than the mixture.
         CHECK(ValidNumber(trim->fugacity_coefficient(0)));
+
+        // STILL DOES NOT WORK, and cannot: the SECOND composition derivative.
+        // Reached directly rather than through a phase envelope so the pin is
+        // unambiguous -- an envelope can fail for unrelated reasons, which
+        // would make this assertion pass for the wrong cause.
+        auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(full.get());
+        REQUIRE(heos != nullptr);
+        CHECK(ValidNumber(heos->Reducing->dTrdxi__constxj(z_full, 0, XN_DEPENDENT)));
+        CHECK(!ValidNumber(heos->Reducing->d2Trdxidxj(z_full, 0, 1, XN_DEPENDENT)));
     }
 }
 
