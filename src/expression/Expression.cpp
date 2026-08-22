@@ -10,6 +10,8 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace CoolProp {
@@ -498,30 +500,20 @@ std::vector<Token> lex(const std::string& s) {
 // Name-resolution helpers
 // ---------------------------------------------------------------------------
 
-static bool intrinsicForName(const std::string& nm, Intrinsic& out) {
-    if (nm == "T") {
-        out = Intrinsic::T;
-        return true;
-    }
-    if (nm == "rhomolar") {
-        out = Intrinsic::rhomolar;
-        return true;
-    }
-    if (nm == "rhomass") {
-        out = Intrinsic::rhomass;
-        return true;
-    }
-    if (nm == "molar_mass") {
-        out = Intrinsic::molar_mass;
-        return true;
-    }
-    return false;
+// The single bucket of thermodynamic inputs: DSL spelling -> CoolProp::parameters
+// key.  See the rationale for the curated allowlist in Expression.h.
+static const std::vector<std::pair<std::string, parameters>>& inputTableImpl() {
+    static const std::vector<std::pair<std::string, parameters>> table = {
+      {"T", iT}, {"rhomolar", iDmolar}, {"rhomass", iDmass}, {"molar_mass", imolar_mass}, {"p", iP}};
+    return table;
 }
-static bool derivedForName(const std::string& nm, Derived& out) {
-    if (nm == "p") {
-        out = Derived::p;
-        return true;
-    }
+
+static bool inputForName(const std::string& nm, parameters& out) {
+    for (const auto& e : inputTableImpl())
+        if (nm == e.first) {
+            out = e.second;
+            return true;
+        }
     return false;
 }
 static bool funcForName(const std::string& nm, Func& out, int& arity) {
@@ -559,14 +551,12 @@ static bool funcForName(const std::string& nm, Func& out, int& arity) {
 struct ProgramData
 {
     int numScalars = 0;
-    std::vector<std::pair<int, double>> constantInits{};      // (slot, value)
-    std::vector<std::pair<Intrinsic, int>> intrinsicSlots{};  // (kind, slot)
-    std::vector<std::pair<Derived, int>> derivedSlots{};      // (kind, slot)
-    std::vector<std::pair<int, NodePtr>> lets{};              // (slot, node) in order
+    std::vector<std::pair<int, double>> constantInits{};   // (slot, value)
+    std::vector<std::pair<parameters, int>> inputSlots{};  // (key, slot)
+    std::vector<std::pair<int, NodePtr>> lets{};           // (slot, node) in order
     NodePtr result{};
     std::vector<std::vector<double>> arrays{};  // by array slot
-    std::vector<Intrinsic> intrinsicOrder{};    // cached for required* accessors
-    std::vector<Derived> derivedOrder{};
+    std::vector<parameters> inputOrder{};       // cached for requiredInputs()
 };
 
 // ---------------------------------------------------------------------------
@@ -600,8 +590,7 @@ class Binder
     int nextScalar = 0;
     std::map<std::string, int> letNames{};
     std::map<std::string, int> constSlots{};
-    std::map<std::string, int> intrinSlots{};
-    std::map<std::string, int> derivSlots{};
+    std::map<std::string, int> inputSlots{};
     std::map<std::string, int> arraySlots{};
 
     int newScalarSlot() {
@@ -609,19 +598,19 @@ class Binder
     }
 
     int resolveScalar(const std::string& nm) {
-        // Resolution order: let → intrinsic → constant → derived.
-        // Intrinsics are checked before constants so that a JSON constant can
-        // never shadow the built-in state variables T/rhomolar/rhomass/molar_mass.
+        // Resolution order: let -> thermodynamic input -> JSON constant.
+        // Inputs are checked before constants so that a JSON constant can never
+        // shadow a state variable (T/rhomolar/rhomass/molar_mass/p).
         auto itL = letNames.find(nm);
         if (itL != letNames.end()) return itL->second;
-        Intrinsic ik;
-        if (intrinsicForName(nm, ik)) {
-            auto s = intrinSlots.find(nm);
-            if (s != intrinSlots.end()) return s->second;
+        parameters key;
+        if (inputForName(nm, key)) {
+            auto s = inputSlots.find(nm);
+            if (s != inputSlots.end()) return s->second;
             int slot = newScalarSlot();
-            intrinSlots[nm] = slot;
-            d.intrinsicSlots.emplace_back(ik, slot);
-            d.intrinsicOrder.push_back(ik);
+            inputSlots[nm] = slot;
+            d.inputSlots.emplace_back(key, slot);
+            d.inputOrder.push_back(key);
             return slot;
         }
         auto itC = constants.find(nm);
@@ -631,16 +620,6 @@ class Binder
             int slot = newScalarSlot();
             constSlots[nm] = slot;
             d.constantInits.emplace_back(slot, itC->second);
-            return slot;
-        }
-        Derived dk;
-        if (derivedForName(nm, dk)) {
-            auto s = derivSlots.find(nm);
-            if (s != derivSlots.end()) return s->second;
-            int slot = newScalarSlot();
-            derivSlots[nm] = slot;
-            d.derivedSlots.emplace_back(dk, slot);
-            d.derivedOrder.push_back(dk);
             return slot;
         }
         throw ValueError(format("unknown variable '%s'", nm.c_str()));
@@ -734,26 +713,38 @@ class Binder
 // Program methods + compile (namespace CoolProp::expression)
 // ---------------------------------------------------------------------------
 
-double Program::evaluate(const double* intrinsicVals, const double* derivedVals) const {
-    const detail::ProgramData& d = *m_data;
+const std::vector<std::pair<std::string, parameters>>& inputTable() {
+    return detail::inputTableImpl();
+}
+
+std::string inputName(parameters key) {
+    for (const auto& e : detail::inputTableImpl())
+        if (e.second == key) return e.first;
+    throw ValueError(format("parameter key %d is not an expression input", static_cast<int>(key)));
+}
+
+const detail::ProgramData& Program::data() const {
+    // Program is default-constructible (it has to be, to sit inside the transport
+    // structs), so a caller can reach the accessors before compile() ever ran.
+    if (!m_data) throw ValueError("expression Program has no compiled body");
+    return *m_data;
+}
+
+double Program::evaluate(const double* inputVals) const {
+    const detail::ProgramData& d = data();
     std::vector<double> scalars(static_cast<std::size_t>(d.numScalars), 0.0);
     for (const auto& c : d.constantInits)
         scalars[c.first] = c.second;
-    for (std::size_t k = 0; k < d.intrinsicSlots.size(); ++k)
-        scalars[d.intrinsicSlots[k].second] = intrinsicVals[k];
-    for (std::size_t k = 0; k < d.derivedSlots.size(); ++k)
-        scalars[d.derivedSlots[k].second] = derivedVals[k];
+    for (std::size_t k = 0; k < d.inputSlots.size(); ++k)
+        scalars[d.inputSlots[k].second] = inputVals[k];
     detail::EvalState st{scalars, d.arrays, 0};
     for (const auto& L : d.lets)
         scalars[L.first] = L.second->eval(st);
     return d.result->eval(st);
 }
 
-const std::vector<Intrinsic>& Program::requiredIntrinsics() const {
-    return m_data->intrinsicOrder;
-}
-const std::vector<Derived>& Program::requiredDerived() const {
-    return m_data->derivedOrder;
+const std::vector<parameters>& Program::requiredInputs() const {
+    return data().inputOrder;
 }
 
 Program compile(const std::string& source, const std::map<std::string, double>& constants, const std::map<std::string, std::vector<double>>& arrays) {

@@ -11,8 +11,9 @@ class HelmholtzEOSMixtureBackend;  // forward decl keeps this header light
 
 namespace expression {
 
-/// Host-side wrapper: owns a compiled Program and fetches the intrinsic state
-/// and registered derived quantities from an EOS backend, then evaluates.
+/// Host-side wrapper: owns a compiled Program, fetches every thermodynamic input
+/// the program asked for from an EOS backend (one keyed_output() per key), then
+/// evaluates.
 class ExpressionCorrelation
 {
    public:

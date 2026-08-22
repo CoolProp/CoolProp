@@ -1,28 +1,39 @@
 #ifndef COOLPROP_EXPRESSION_H
 #define COOLPROP_EXPRESSION_H
 
-#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
+
+#include "CoolProp/DataStructures.h"  // CoolProp::parameters
 
 namespace CoolProp {
 namespace expression {
 
-/// EOS-free independent state and pure fluid metadata, filled by the host per eval.
-enum class Intrinsic : std::uint8_t
-{
-    T,
-    rhomolar,
-    rhomass,
-    molar_mass
-};
-/// State-dependent quantities the EOS must compute; v1 registry holds only p.
-enum class Derived : std::uint8_t
-{
-    p
-};
+/// Thermodynamic quantities a formula may reference.  There is a single bucket,
+/// keyed by the existing CoolProp::parameters enum: whatever a program asks for,
+/// the host fills by calling AbstractState::keyed_output() with that key.  Some
+/// keys are free (T, rhomolar) and some cost an EOS call (p); the evaluator does
+/// not care, and Program itself stays EOS-free -- it only reports which keys it
+/// needs and reads back the values the host supplies.
+using Input = CoolProp::parameters;
+
+/// The DSL spellings that resolve to a thermodynamic input, paired with the
+/// CoolProp::parameters key each binds to, in name-resolution order.
+///
+/// This is deliberately a curated allowlist rather than an open door onto
+/// get_parameter_index():
+///  * the DSL spells state variables the way the C++ members do (`rhomolar`,
+///    `rhomass`), which get_parameter_index() does not recognise -- it spells
+///    them `Dmolar`/`Dmass` -- and those spellings are baked into fluid JSON;
+///  * an open door would let a viscosity formula reference `V`, whose
+///    keyed_output() re-enters the very correlation being defined.
+const std::vector<std::pair<std::string, parameters>>& inputTable();
+
+/// DSL spelling for `key`.  Throws CoolProp::ValueError if `key` is not in inputTable().
+std::string inputName(parameters key);
 
 namespace detail {
 struct ProgramData;
@@ -32,15 +43,17 @@ struct ProgramData;
 class Program
 {
    public:
-    /// Evaluate. intrinsicVals/derivedVals are arrays in the order given by
-    /// requiredIntrinsics()/requiredDerived(); pass nullptr when none are required.
-    [[nodiscard]] double evaluate(const double* intrinsicVals, const double* derivedVals) const;
-    /// Intrinsics this program references, in the order evaluate() expects them.
-    [[nodiscard]] const std::vector<Intrinsic>& requiredIntrinsics() const;
-    /// Derived quantities this program references, in the order evaluate() expects them.
-    [[nodiscard]] const std::vector<Derived>& requiredDerived() const;
+    /// Evaluate. `inputVals` is an array in the order given by requiredInputs();
+    /// pass nullptr when none are required.
+    [[nodiscard]] double evaluate(const double* inputVals) const;
+    /// Thermodynamic inputs this program references, in the order evaluate() expects them.
+    [[nodiscard]] const std::vector<parameters>& requiredInputs() const;
 
    private:
+    /// Throws CoolProp::ValueError if this Program was default-constructed (no
+    /// compiled body); every public accessor goes through it before dereferencing.
+    const detail::ProgramData& data() const;
+
     friend Program compile(const std::string&, const std::map<std::string, double>&, const std::map<std::string, std::vector<double>>&);
     std::shared_ptr<const detail::ProgramData> m_data;
 };

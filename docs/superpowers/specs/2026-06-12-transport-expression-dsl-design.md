@@ -66,7 +66,7 @@ Reproducing all of these to ULP is the **completeness proof** for the scope.
 | Evaluator | Tree-walking AST, compiled once per fluid at load, evaluated many |
 | Sum syntax | `sum(i: <body>)` explicit index; arrays subscripted `arr[i]` |
 | Variables | Raw state + JSON-declared constants/arrays + `let` bindings; **all quantities base SI, always** |
-| Derived vars | 4-bucket name resolution incl. a derived-state registry, **seeded with one entry — `p` (pressure, Pa) — in v1** as the worked example |
+| Thermodynamic inputs | ONE bucket, keyed by the existing `CoolProp::parameters` enum; the host fills every requested key with `AbstractState::keyed_output()`. A curated allowlist (`T`, `rhomolar`, `rhomass`, `molar_mass`, `p` in v1), not an open door onto `get_parameter_index()` |
 
 ### Why tree-walking AST, not bytecode VM
 
@@ -105,29 +105,28 @@ formula string ──Lexer──▶ tokens ──Parser──▶ AST ──Binde
   matching the existing C++ loops so results agree to ULP.
 - **Literals:** decimal and scientific notation (`2.66958e-08`).
 
-### 2. Symbol-table contract — name resolution (4 buckets)
+### 2. Symbol-table contract — name resolution (3 buckets)
 
 At bind time each identifier resolves against, in order:
 
 0. **`let` bindings** (highest precedence) — names introduced by `let <name> = …`
-   earlier in the same formula. A `let` may therefore shadow an intrinsic/constant
+   earlier in the same formula. A `let` may therefore shadow an input/constant
    name within its formula (conventional local-shadows-global scoping); this is
    intentional and harmless. The remaining buckets follow.
-1. **Intrinsic state** (hardwired, always present, EOS-free): `T` (K),
-   `rhomolar` (mol/m³), `rhomass` (kg/m³), `molar_mass` (kg/mol). These are the
-   independent state variables and pure fluid metadata — available without
-   evaluating the EOS. Pressure is **not** here: `p` requires the EOS at the
-   current state, so it lives in the derived-state registry (§2b).
+1. **Thermodynamic inputs** (§2b) — one table of DSL names, each bound to an
+   existing `CoolProp::parameters` key: `T` (K), `rhomolar` (mol/m³), `rhomass`
+   (kg/m³), `molar_mass` (kg/mol), `p` (Pa). Checked *before* constants, so a
+   block-declared constant can never shadow a state variable.
 2. **Block-declared constants** — scalars from the JSON `constants` object
    (e.g. `T_reduce`, `epsilon_over_k`, `sigma_eta`, `C`).
-3. **Block-declared arrays** — vectors from the JSON `arrays` object, usable only
-   in subscripted form `name[index]` inside a `sum`.
-4. **Derived-state registry** (§2b).
 
-A name found in none of the four buckets is a descriptive compile error
+Arrays live in their own namespace and resolve separately: a name is looked up in
+the JSON `arrays` object only in subscripted form `name[index]` inside a `sum`.
+
+A name found in none of the buckets is a descriptive compile error
 (`unknown variable '<name>' at col <n>`).
 
-**All intrinsic and derived quantities are exposed in base SI, always** (`T` in
+**All inputs are exposed in base SI, always** (`T` in
 K, `rhomolar` in mol/m³, `p` in Pa, result in Pa·s or W/m/K). The DSL imposes no
 unit handling and there is no units metadata field — a formula yields base SI by
 construction. Where the underlying physics needs a non-SI quantity (e.g. a
@@ -135,34 +134,47 @@ collision-integral correlation tabulated in nm and kg/kmol), the conversion
 factor (`*1e9`, `*1000`) is written explicitly in the formula, exactly as the
 current C++ does.
 
-### 2b. Derived-state registry (one entry — `p` — in v1)
+### 2b. Thermodynamic inputs — one bucket keyed by `CoolProp::parameters`
 
-A host-side table mapping a canonical DSL name → a getter on
-`HelmholtzEOSMixtureBackend`, for state-dependent quantities the EOS must compute
-(e.g. a future `smolar_residual`, `cpmolar`, `dpdrho__constT`). Resolution and
-dependency-tracking are built into the binder now (~30 lines). **In v1 the table
-is seeded with exactly one entry — `p` (pressure, Pa)** — both because pressure
-is a genuinely useful always-derivable quantity and because it exercises the
-registry path end-to-end (a worked example) before any Tier-B input depends on
-it. No Tier-A *completeness* form uses `p`; it is proven by a dedicated unit
-test, not by the golden regression.
+There is no separate "intrinsic" vs "derived" split. A single table maps each DSL
+spelling to a key of the existing `CoolProp::parameters` enum:
 
-Mechanism: when the binder resolves an identifier to bucket 4, it records that
-the compiled `Program` depends on that derived name. At eval time the host layer
-(which holds `HEOS`) computes the recorded dependencies and writes them into the
-eval context before the tree walk. The evaluator itself stays EOS-free.
+| DSL name | `CoolProp::parameters` | Unit | Needs the EOS? |
+|---|---|---|---|
+| `T` | `iT` | K | no |
+| `rhomolar` | `iDmolar` | mol/m³ | no |
+| `rhomass` | `iDmass` | kg/m³ | no |
+| `molar_mass` | `imolar_mass` | kg/mol | no (trivial) |
+| `p` | `iP` | Pa | yes |
+
+Whether a key is free or costs an EOS call is not the DSL's business: the compiled
+`Program` reports `requiredInputs()` as a `std::vector<CoolProp::parameters>` and
+reads back a value array in that order. The host — `ExpressionCorrelation::eval`,
+which holds the backend — fills it with one `HEOS.keyed_output(key)` per key. The
+evaluator itself stays EOS-free, and there is no per-quantity `switch` on either
+side to extend.
+
+The DSL spells the state variables the way the C++ members do (`rhomolar`,
+`rhomass`), not the way `PropsSI` does (`Dmolar`, `Dmass`); the table is the
+translation layer, so fluid JSON is unaffected by CoolProp's shorthand naming.
+
+**Why an allowlist rather than `get_parameter_index()`.** Resolving any parameter
+name would let a viscosity formula reference `V`, whose `keyed_output()` re-enters
+the very correlation being compiled — unbounded recursion, at eval time, in
+fluid-file data. The table is the recursion guard. (An author who wants an
+arbitrary name declares it in `constants`, which is the normal path.)
 
 Extension cost, made explicit:
 
-- The v1 seed is one such line:
-  ```cpp
-  registry.add("p", [](HelmholtzEOSMixtureBackend& H){ return H.p(); });
-  ```
-  Adding any **new** derived quantity later is the same one-line pattern plus a
-  CoolProp recompile, e.g.
-  `registry.add("smolar_residual", [](auto& H){ return H.smolar_residual(); });`.
+- Adding a new input later is one line in the table in `Expression.cpp`, e.g.
+  `{"smolar_residual", iSmolar_residual}`, plus a CoolProp recompile. No host-side
+  change at all — `keyed_output()` already knows every parameter.
 - After that, **every fluid and formula** can use that name as pure JSON data,
   no further code. The grammar/parser never changes.
+
+`p` is in the v1 table both because pressure is genuinely useful and because it
+exercises the EOS-backed path end-to-end. No Tier-A *completeness* form uses `p`;
+it is proven by a dedicated unit test, not by the golden regression.
 
 This is the designed bridge to Tier B: each Tier-B input becomes a registry
 one-liner rather than a new hardcoded routine + enum + switch case.
@@ -197,9 +209,9 @@ always (§2), so a units annotation would be redundant.
 | Lexer | `include/CoolProp/expression/Lexer.h` | 100 | source → token stream |
 | AST | `include/CoolProp/expression/Ast.h` | 80 | node types: `Num, Var, Index, Unary, Binary, Call, Sum, Program` |
 | Parser | `include/CoolProp/expression/Parser.h`, `src/expression/Parser.cpp` | 250 | Pratt/precedence-climbing expr parser + statement layer → AST |
-| Binder | (in `Parser.cpp` or `Binder` unit) | 150 | 4-bucket name resolution; validate unknown-name, arity, equal sum-array lengths, index-used-only-as-subscript; cache variable slots; record derived-var deps; descriptive errors |
+| Binder | (in `Parser.cpp` or `Binder` unit) | 150 | 3-bucket name resolution; validate unknown-name, arity, equal sum-array lengths, index-used-only-as-subscript; cache variable slots; record the `CoolProp::parameters` inputs referenced; descriptive errors |
 | Evaluator | `include/CoolProp/expression/ExpressionCorrelation.h` | 150 | recursive walk over eval context; `std::pow/exp/log`; sum accumulation `0…n-1` |
-| Host correlation | `include/CoolProp/expression/ExpressionCorrelation.h`, `src/expression/ExpressionCorrelation.cpp` | 120 | owns compiled `Program` + bound constants/arrays; `eval(HEOS&)` fills context (intrinsics + derived deps) and evaluates |
+| Host correlation | `include/CoolProp/expression/ExpressionCorrelation.h`, `src/expression/ExpressionCorrelation.cpp` | 120 | owns compiled `Program` + bound constants/arrays; `eval(HEOS&)` fills context (one `keyed_output()` per required input) and evaluates |
 
 Dispatch: new enum values (`VISCOSITY_*_EXPRESSION`, `CONDUCTIVITY_*_EXPRESSION`)
 added to the existing transport switch in `HelmholtzEOSMixtureBackend.cpp`; each

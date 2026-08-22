@@ -31,7 +31,7 @@
 TEST_CASE("expression module links and evaluates a constant", "[expression]") {
     using namespace CoolProp::expression;
     Program prog = compile("3 + 4", {}, {});
-    CHECK(prog.evaluate(nullptr, nullptr) == Catch::Approx(7.0));
+    CHECK(prog.evaluate(nullptr) == Catch::Approx(7.0));
 }
 
 TEST_CASE("lexer tokenizes numbers, idents, operators", "[expression]") {
@@ -59,31 +59,31 @@ TEST_CASE("lexer rejects an illegal character", "[expression]") {
 
 TEST_CASE("compile evaluates arithmetic, precedence, right-assoc power", "[expression]") {
     using namespace CoolProp::expression;
-    CHECK(compile("2 + 3*4", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(14.0));
-    CHECK(compile("2^3^2", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(512.0));
-    CHECK(compile("-2^2", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(-4.0));
+    CHECK(compile("2 + 3*4", {}, {}).evaluate(nullptr) == Catch::Approx(14.0));
+    CHECK(compile("2^3^2", {}, {}).evaluate(nullptr) == Catch::Approx(512.0));
+    CHECK(compile("-2^2", {}, {}).evaluate(nullptr) == Catch::Approx(-4.0));
 }
 
 TEST_CASE("compile resolves constants and let bindings", "[expression]") {
     using namespace CoolProp::expression;
     Program p = compile("let y = a*2\ny + 1", {{"a", 5.0}}, {});
-    CHECK(p.evaluate(nullptr, nullptr) == Catch::Approx(11.0));
+    CHECK(p.evaluate(nullptr) == Catch::Approx(11.0));
 }
 
 TEST_CASE("compile sum over co-indexed arrays", "[expression]") {
     using namespace CoolProp::expression;
     Program p = compile("sum(i: a[i]*b[i])", {}, {{"a", {1, 2, 3}}, {"b", {4, 5, 6}}});
-    CHECK(p.evaluate(nullptr, nullptr) == Catch::Approx(32.0));
+    CHECK(p.evaluate(nullptr) == Catch::Approx(32.0));
 }
 
-TEST_CASE("compile binds intrinsics in required order", "[expression]") {
+TEST_CASE("compile binds inputs in required order", "[expression]") {
     using namespace CoolProp::expression;
     Program p = compile("T + rhomolar", {}, {});
-    REQUIRE(p.requiredIntrinsics().size() == 2);
+    REQUIRE(p.requiredInputs().size() == 2);
     std::vector<double> iv(2);
     for (std::size_t k = 0; k < 2; ++k)
-        iv[k] = (p.requiredIntrinsics()[k] == Intrinsic::T) ? 300.0 : 50.0;
-    CHECK(p.evaluate(iv.data(), nullptr) == Catch::Approx(350.0));
+        iv[k] = (p.requiredInputs()[k] == CoolProp::iT) ? 300.0 : 50.0;
+    CHECK(p.evaluate(iv.data()) == Catch::Approx(350.0));
 }
 
 TEST_CASE("compile errors: unknown var, sum length mismatch, bad arity", "[expression]") {
@@ -96,14 +96,14 @@ TEST_CASE("compile errors: unknown var, sum length mismatch, bad arity", "[expre
 
 TEST_CASE("DSL scientific-notation evaluates; pow two-arg; trig", "[expression]") {
     using namespace CoolProp::expression;
-    CHECK(compile("1e3 + 1", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(1001.0));
-    CHECK(compile("pow(2, 10)", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(1024.0));
-    CHECK(compile("sqrt(2)^2", {}, {}).evaluate(nullptr, nullptr) == Catch::Approx(2.0));
+    CHECK(compile("1e3 + 1", {}, {}).evaluate(nullptr) == Catch::Approx(1001.0));
+    CHECK(compile("pow(2, 10)", {}, {}).evaluate(nullptr) == Catch::Approx(1024.0));
+    CHECK(compile("sqrt(2)^2", {}, {}).evaluate(nullptr) == Catch::Approx(2.0));
 }
 
 TEST_CASE("DSL let chaining: a let sees earlier lets, not itself", "[expression]") {
     using namespace CoolProp::expression;
-    CHECK(compile("let x = a*2\nlet y = x+1\ny", {{"a", 5.0}}, {}).evaluate(nullptr, nullptr) == Catch::Approx(11.0));
+    CHECK(compile("let x = a*2\nlet y = x+1\ny", {{"a", 5.0}}, {}).evaluate(nullptr) == Catch::Approx(11.0));
     CHECK_THROWS_AS(compile("let x = x+1\nx", {}, {}), CoolProp::ValueError);  // self-ref unknown
 }
 
@@ -112,25 +112,74 @@ TEST_CASE("DSL nested summation is rejected in v1", "[expression]") {
     CHECK_THROWS_AS(compile("sum(i: sum(j: a[i]*b[j]))", {}, {{"a", {1, 2}}, {"b", {3, 4}}}), CoolProp::ValueError);
 }
 
-TEST_CASE("DSL derived p is reported and injected by position", "[expression]") {
+TEST_CASE("DSL pressure and temperature share one input bucket", "[expression]") {
     using namespace CoolProp::expression;
     Program p = compile("p*2 + T", {}, {});
-    REQUIRE(p.requiredDerived().size() == 1);
-    CHECK(p.requiredDerived()[0] == Derived::p);
-    REQUIRE(p.requiredIntrinsics().size() == 1);
-    double iv[1] = {300.0};  // T
-    double dv[1] = {1e5};    // p
-    CHECK(p.evaluate(iv, dv) == Catch::Approx(2e5 + 300.0));
-}
-
-TEST_CASE("DSL intrinsics rhomass and molar_mass resolve", "[expression]") {
-    using namespace CoolProp::expression;
-    Program p = compile("rhomass * molar_mass", {}, {});
-    REQUIRE(p.requiredIntrinsics().size() == 2);
+    // p costs an EOS call and T does not, but both are plain CoolProp::parameters
+    // keys to the program: one vector, reported in first-reference order.
+    const std::vector<CoolProp::parameters>& req = p.requiredInputs();
+    REQUIRE(req.size() == 2);
+    CHECK(req[0] == CoolProp::iP);
+    CHECK(req[1] == CoolProp::iT);
     std::vector<double> iv(2);
     for (std::size_t k = 0; k < 2; ++k)
-        iv[k] = (p.requiredIntrinsics()[k] == Intrinsic::rhomass) ? 2.0 : 3.0;
-    CHECK(p.evaluate(iv.data(), nullptr) == Catch::Approx(6.0));
+        iv[k] = (req[k] == CoolProp::iP) ? 1e5 : 300.0;
+    CHECK(p.evaluate(iv.data()) == Catch::Approx(2e5 + 300.0));
+}
+
+TEST_CASE("expression input names map onto CoolProp::parameters", "[expression]") {
+    using namespace CoolProp::expression;
+    // Every DSL spelling must round-trip through the shared parameters enum, and
+    // the state variables must keep their CoolProp member spellings (NOT the
+    // PropsSI shorthands) so existing fluid JSON keeps compiling.
+    for (const auto& e : inputTable())
+        CHECK(inputName(e.second) == e.first);
+    CHECK(compile("T", {}, {}).requiredInputs()[0] == CoolProp::iT);
+    CHECK(compile("rhomolar", {}, {}).requiredInputs()[0] == CoolProp::iDmolar);
+    CHECK(compile("rhomass", {}, {}).requiredInputs()[0] == CoolProp::iDmass);
+    CHECK(compile("molar_mass", {}, {}).requiredInputs()[0] == CoolProp::imolar_mass);
+    CHECK(compile("p", {}, {}).requiredInputs()[0] == CoolProp::iP);
+    CHECK_THROWS_AS(inputName(CoolProp::iHmolar), CoolProp::ValueError);
+}
+
+TEST_CASE("only allowlisted parameter names resolve", "[expression]") {
+    using namespace CoolProp::expression;
+    // `V` and `L` are valid get_parameter_index() names but MUST NOT resolve: a
+    // transport formula naming its own output would recurse through keyed_output().
+    CHECK_THROWS_AS(compile("V", {}, {}), CoolProp::ValueError);
+    CHECK_THROWS_AS(compile("L", {}, {}), CoolProp::ValueError);
+    CHECK_THROWS_AS(compile("Hmolar", {}, {}), CoolProp::ValueError);
+    // ...unless the fluid JSON declares it as a constant, which is the normal
+    // way an author introduces an arbitrary name.
+    CHECK(compile("V", {{"V", 4.0}}, {}).evaluate(nullptr) == Catch::Approx(4.0));
+}
+
+TEST_CASE("a JSON constant cannot shadow a thermodynamic input", "[expression]") {
+    using namespace CoolProp::expression;
+    // Inputs are resolved before constants, so `T` stays the state temperature
+    // even when the block also defines a constant called `T`.
+    Program p = compile("T", {{"T", 1.0}}, {});
+    REQUIRE(p.requiredInputs().size() == 1);
+    CHECK(p.requiredInputs()[0] == CoolProp::iT);
+    double iv[1] = {300.0};
+    CHECK(p.evaluate(iv) == Catch::Approx(300.0));
+}
+
+TEST_CASE("a default-constructed Program throws instead of dereferencing null", "[expression]") {
+    using namespace CoolProp::expression;
+    Program p;  // no compile() ever ran
+    CHECK_THROWS_AS(p.evaluate(nullptr), CoolProp::ValueError);
+    CHECK_THROWS_AS(p.requiredInputs(), CoolProp::ValueError);
+}
+
+TEST_CASE("DSL inputs rhomass and molar_mass resolve", "[expression]") {
+    using namespace CoolProp::expression;
+    Program p = compile("rhomass * molar_mass", {}, {});
+    REQUIRE(p.requiredInputs().size() == 2);
+    std::vector<double> iv(2);
+    for (std::size_t k = 0; k < 2; ++k)
+        iv[k] = (p.requiredInputs()[k] == CoolProp::iDmass) ? 2.0 : 3.0;
+    CHECK(p.evaluate(iv.data()) == Catch::Approx(6.0));
 }
 
 TEST_CASE("ExpressionData default-constructs unset", "[expression]") {
@@ -143,22 +192,13 @@ TEST_CASE("expression block compile path (constants+arrays) yields expected valu
     std::map<std::string, double> consts{{"T_reduce", 132.0}, {"rhomolar_reduce", 10000.0}};
     std::map<std::string, std::vector<double>> arrays{{"a", {1.0e-5}}, {"d1", {1.0}}, {"t1", {0.2}}};
     Program p = compile("let delta = rhomolar/rhomolar_reduce\nlet tau = T_reduce/T\nsum(i: a[i]*delta^d1[i]*tau^t1[i])", consts, arrays);
-    std::vector<double> iv(p.requiredIntrinsics().size());
+    std::vector<double> iv(p.requiredInputs().size());
     for (std::size_t k = 0; k < iv.size(); ++k) {
-        switch (p.requiredIntrinsics()[k]) {
-            case Intrinsic::T:
-                iv[k] = 300.0;
-                break;
-            case Intrinsic::rhomolar:
-                iv[k] = 5000.0;
-                break;
-            default:
-                iv[k] = 0.0;
-                break;
-        }
+        const CoolProp::parameters key = p.requiredInputs()[k];
+        iv[k] = (key == CoolProp::iT) ? 300.0 : (key == CoolProp::iDmolar) ? 5000.0 : 0.0;
     }
     double expected = 1.0e-5 * std::pow(0.5, 1.0) * std::pow(132.0 / 300.0, 0.2);
-    CHECK(p.evaluate(iv.data(), nullptr) == Catch::Approx(expected));
+    CHECK(p.evaluate(iv.data()) == Catch::Approx(expected));
 }
 
 // ---------------------------------------------------------------------------
@@ -192,27 +232,13 @@ std::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> make_HEOS_for(const std::s
     std::vector<std::string> names(1, fluid);
     return std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(names);
 }
-// Fill the intrinsic-value array for a Program in its requiredIntrinsics() order.
-void fill_intrinsics(const CoolProp::expression::Program& p, CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::vector<double>& iv) {
-    using CoolProp::expression::Intrinsic;
-    const auto& req = p.requiredIntrinsics();
+// Fill the input array for a Program in its requiredInputs() order -- the same
+// one-liner the production host (ExpressionCorrelation::eval) uses.
+void fill_inputs(const CoolProp::expression::Program& p, CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::vector<double>& iv) {
+    const std::vector<CoolProp::parameters>& req = p.requiredInputs();
     iv.assign(req.size(), 0.0);
-    for (std::size_t k = 0; k < req.size(); ++k) {
-        switch (req[k]) {
-            case Intrinsic::T:
-                iv[k] = HEOS.T();
-                break;
-            case Intrinsic::rhomolar:
-                iv[k] = HEOS.rhomolar();
-                break;
-            case Intrinsic::rhomass:
-                iv[k] = HEOS.rhomass();
-                break;
-            case Intrinsic::molar_mass:
-                iv[k] = HEOS.molar_mass();
-                break;
-        }
-    }
+    for (std::size_t k = 0; k < req.size(); ++k)
+        iv[k] = HEOS.keyed_output(req[k]);
 }
 }  // namespace
 
@@ -230,8 +256,8 @@ TEST_CASE("golden: viscosity dilute powers_of_T", "[expression][golden]") {
             HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
             double expected = CoolProp::TransportRoutines::viscosity_dilute_powers_of_T(*HEOS);
             std::vector<double> iv;
-            fill_intrinsics(p, *HEOS, iv);
-            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            fill_inputs(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data());
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
             // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
@@ -255,8 +281,8 @@ TEST_CASE("golden: viscosity dilute powers_of_Tr", "[expression][golden]") {
             HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
             double expected = CoolProp::TransportRoutines::viscosity_dilute_powers_of_Tr(*HEOS);
             std::vector<double> iv;
-            fill_intrinsics(p, *HEOS, iv);
-            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            fill_inputs(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data());
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
             CHECK(got == expected);  // bit-exact: same op sequence reproduces hardcoded value exactly
@@ -294,8 +320,8 @@ TEST_CASE("golden: viscosity dilute collision_integral", "[expression][golden]")
             HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
             double expected = CoolProp::TransportRoutines::viscosity_dilute_collision_integral(*HEOS);
             std::vector<double> iv;
-            fill_intrinsics(p, *HEOS, iv);
-            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            fill_inputs(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data());
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
             CHECK(got == expected);  // bit-exact: ln/exp/sqrt/pow same order reproduces value exactly
@@ -343,8 +369,8 @@ TEST_CASE("golden: viscosity higher_order modified_Batschinski_Hildebrand", "[ex
             HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
             double expected = CoolProp::TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*HEOS);
             std::vector<double> iv;
-            fill_intrinsics(p, *HEOS, iv);
-            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            fill_inputs(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data());
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
             // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
@@ -421,8 +447,8 @@ TEST_CASE("golden: conductivity dilute ratio_of_polynomials", "[expression][gold
             HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
             double expected = CoolProp::TransportRoutines::conductivity_dilute_ratio_polynomials(*HEOS);
             std::vector<double> iv;
-            fill_intrinsics(p, *HEOS, iv);
-            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            fill_inputs(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data());
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
             // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
@@ -457,8 +483,8 @@ TEST_CASE("golden: conductivity dilute eta0_and_poly", "[expression][golden]") {
                                 {{"A_rest", A_rest}, {"t_rest", t_rest}});
             double expected = CoolProp::TransportRoutines::conductivity_dilute_eta0_and_poly(*HEOS);
             std::vector<double> iv;
-            fill_intrinsics(p, *HEOS, iv);
-            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            fill_inputs(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data());
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
             // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
@@ -489,8 +515,8 @@ TEST_CASE("golden: conductivity residual polynomial", "[expression][golden]") {
             HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
             double expected = CoolProp::TransportRoutines::conductivity_residual_polynomial(*HEOS);
             std::vector<double> iv;
-            fill_intrinsics(p, *HEOS, iv);
-            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            fill_inputs(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data());
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
             // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
@@ -526,8 +552,8 @@ TEST_CASE("golden: conductivity residual polynomial_and_exponential", "[expressi
             HEOS->update(CoolProp::DmolarT_INPUTS, rho, T);
             double expected = CoolProp::TransportRoutines::conductivity_residual_polynomial_and_exponential(*HEOS);
             std::vector<double> iv;
-            fill_intrinsics(p, *HEOS, iv);
-            double got = p.evaluate(iv.empty() ? nullptr : iv.data(), nullptr);
+            fill_inputs(p, *HEOS, iv);
+            double got = p.evaluate(iv.empty() ? nullptr : iv.data());
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
             CHECK(got == expected);  // bit-exact: same op sequence reproduces hardcoded value exactly
@@ -624,15 +650,15 @@ TEST_CASE("expression end-to-end: JSON load + dispatch round-trip (dilute viscos
 // ExpressionCorrelation from compile("p", {}, {}) and evaluate it against a
 // backend at a known state; the registry `p` getter is wired to HEOS.p(), so
 // the result must equal HEOS->p() bit-for-bit (same getter, no algebra).  This
-// proves the Derived::p path threads through ExpressionCorrelation::eval ->
-// fetchDerived -> HEOS.p().
+// proves the `p` input threads through ExpressionCorrelation::eval ->
+// HEOS.keyed_output(iP) -> HEOS.p().
 // ---------------------------------------------------------------------------
-TEST_CASE("expression host path: derived p equals HEOS.p()", "[expression]") {
+TEST_CASE("expression host path: p equals HEOS.p()", "[expression]") {
     using namespace CoolProp::expression;
     auto HEOS = make_HEOS_for("R123");
     Program prog = compile("p", {}, {});
-    REQUIRE(prog.requiredDerived().size() == 1);
-    REQUIRE(prog.requiredDerived()[0] == Derived::p);
+    REQUIRE(prog.requiredInputs().size() == 1);
+    REQUIRE(prog.requiredInputs()[0] == CoolProp::iP);
     ExpressionCorrelation corr(std::move(prog));
     int checks = 0;
     for (double T : {300.0, 400.0, 500.0}) {
