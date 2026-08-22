@@ -3208,7 +3208,25 @@ TEST_CASE("Check the PT flash calculation for two-phase inputs", "[PTflash_twoph
     CoolProp::SaturationSolvers::PTflash_twophase solver(*static_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get()), o);
     solver.build_arrays();
     double err = solver.r.norm();
-    REQUIRE(std::abs(err) < 1e-10);
+    // The state fed in here came from the PQ dewpoint flash above, so this residual can only be as
+    // small as THAT solver converged it.  newton_raphson_saturation::call stops on
+    // `error_rms > 1e-7` (see its do/while at the end of the function), so 1e-7 is the tightest
+    // bound anything upstream guarantees.
+    //
+    // This assertion used to read 1e-10 and FAILED ON MASTER at 7.196e-10.  That was never a
+    // justified bound -- it was three orders of magnitude tighter than the solver's own stopping
+    // criterion, and passed only because Newton's quadratic convergence overshoots the criterion on
+    // its final step.  How far it overshoots depends on the iteration path, so the flash-hardening
+    // changes in #3167/#3168/#3187/#3196 were enough to move it.  Restoring 1e-10 would be pinning
+    // luck, not correctness; tightening the saturation solver to earn it would cost iterations
+    // everywhere for no physical gain, since a ln-fugacity residual of 5e-10 per component is an
+    // extremely well converged dewpoint.
+    //
+    // 1e-7 still catches what this test exists to catch: if build_arrays() constructed the wrong
+    // residual, or the dewpoint state were not a two-phase solution at all, `err` would be O(1) --
+    // not O(1e-9).
+    CAPTURE(err);
+    REQUIRE(std::abs(err) < 1e-7);
 
     // Now, perturb the solution a little bit and actually do the solve
     std::vector<double> x0 = o.x;
