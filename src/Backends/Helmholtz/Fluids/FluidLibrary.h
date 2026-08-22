@@ -3,6 +3,7 @@
 #define FLUIDLIBRARY_H
 
 #include "CoolProp/CoolPropFluid.h"
+#include "CoolProp/expression/ExpressionBlock.h"
 
 #include "CoolProp/detail/json.h"
 #include "FluidLibraryFactories.h"
@@ -456,6 +457,19 @@ class JSONFluidLibrary
         }
     };
 
+    // Build an ExpressionData from a transport sub-block of type "expression".
+    // The block's shape is defined in exactly one place -- expression::compile_block()
+    // -- so the fluid library and the standalone/scripting path can never drift.
+    // The dump() round-trip is what keeps that single definition text-based (and so
+    // nlohmann-free in the wrapper TUs); it runs once per expression block at fluid
+    // load, and nlohmann round-trips doubles exactly.
+    static inline CoolProp::ExpressionData parse_expression_block(const nlohmann::json& j, const std::string& fluidname) {
+        CoolProp::expression::Program prog = CoolProp::expression::compile_block(j.dump(), "fluid " + fluidname);
+        CoolProp::ExpressionData data;
+        data.correlation = std::make_shared<CoolProp::expression::ExpressionCorrelation>(std::move(prog));
+        return data;
+    }
+
     /// Parse the transport properties
     void parse_dilute_viscosity(const nlohmann::json& dilute, CoolPropFluid& fluid) {
         if (dilute.contains("hardcoded")) {
@@ -516,6 +530,9 @@ class JSONFluidLibrary
             CI.C = cpjson::get_double(dilute, "C");
 
             fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR;
+        } else if (!type.compare("expression")) {
+            fluid.transport.viscosity_dilute.expression_data = parse_expression_block(dilute, fluid.name);
+            fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_EXPRESSION;
         } else {
             throw ValueError(format("type [%s] is not understood for fluid %s", type.c_str(), fluid.name.c_str()));
         }
@@ -660,6 +677,9 @@ class JSONFluidLibrary
                 F.Nrrr = cpjson::get_integer(higher, "Nrrr");
             }
 
+        } else if (!type.compare("expression")) {
+            fluid.transport.viscosity_higher_order.expression_data = parse_expression_block(higher, fluid.name);
+            fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_EXPRESSION;
         } else {
             throw ValueError(format("type [%s] is not understood for fluid %s", type.c_str(), fluid.name.c_str()));
         }
@@ -837,6 +857,9 @@ class JSONFluidLibrary
             // Load up the values
             data.A = cpjson::get_long_double_array(dilute.at("A"));
             data.t = cpjson::get_long_double_array(dilute.at("t"));
+        } else if (!type.compare("expression")) {
+            fluid.transport.conductivity_dilute.expression_data = parse_expression_block(dilute, fluid.name);
+            fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_EXPRESSION;
         } else {
             throw ValueError(format("type [%s] is not understood for fluid %s", type.c_str(), fluid.name.c_str()));
         }
@@ -881,6 +904,9 @@ class JSONFluidLibrary
             data.t = cpjson::get_long_double_array(dilute.at("t"));
             data.gamma = cpjson::get_long_double_array(dilute.at("gamma"));
             data.l = cpjson::get_long_double_array(dilute.at("l"));
+        } else if (!type.compare("expression")) {
+            fluid.transport.conductivity_residual.expression_data = parse_expression_block(dilute, fluid.name);
+            fluid.transport.conductivity_residual.type = CoolProp::ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_EXPRESSION;
         } else {
             throw ValueError(format("type [%s] is not understood for fluid %s", type.c_str(), fluid.name.c_str()));
         }

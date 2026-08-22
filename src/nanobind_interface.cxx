@@ -7,6 +7,7 @@
 #    include "CoolProp/DataStructures.h"
 #    include "CoolProp/numerics/numerics.h"  // ValidNumber: scalar PropsSI/HAPropsSI raise on non-finite (Cython parity)
 #    include "CoolProp/detail/state_capi.h"
+#    include "CoolProp/expression/ExpressionBlock.h"
 #    include "CoolProp/superancillary/superancillary.h"
 #    include "Backends/Helmholtz/MixtureParameters.h"
 
@@ -1188,6 +1189,24 @@ void init_CoolProp(nb::module_& m) {
             throw std::invalid_argument("Invalid number of inputs to set_reference_state");
         }
     });
+
+    // Runtime transport-property expression DSL.  Lets you compile the exact
+    // `"type": "expression"` block you would paste into a fluid JSON file and
+    // evaluate it at a state -- correlation authoring and doc examples without a
+    // rebuild or a fluid-file edit.
+    nb::class_<expression::ExpressionBlock>(m, "Expression",
+                                            "A compiled transport-property expression block.\n\n"
+                                            "Construct from the JSON text of a `\"type\": \"expression\"` block\n"
+                                            "({\"formula\": ..., \"constants\": {...}, \"arrays\": {...}}), then\n"
+                                            "evaluate it at a state.  Raises ValueError on a bad formula.")
+      .def(nb::init<const std::string&>(), nb::arg("json_block"))
+      .def("required_inputs", &expression::ExpressionBlock::required_inputs, "DSL names of the thermodynamic inputs the formula references.")
+      .def("evaluate", &expression::ExpressionBlock::evaluate, nb::arg("AS"),
+           "Evaluate at the state `AS` (an AbstractState) is currently sitting at.\n"
+           "Set the state the usual way -- AS.update(DmolarT_INPUTS, rhomolar, T) --\n"
+           "so any input pair, backend, or mixture composition works.\n"
+           "Raises ValueError if an input reads back non-finite (an AbstractState\n"
+           "that was never update()d).");
 
     // Chebyshev rootfinding + SuperAncillary saturation evaluator classes.
     init_superancillary(m);

@@ -1524,6 +1524,29 @@ def set_reference_state(FluidName: str, reference_state: str, /) -> None: ...
 @overload
 def set_reference_state(FluidName: str, T0: float, rhomolar: float, hmolar0: float, smolar0: float, /) -> None: ...
 
+class Expression:
+    """
+    A compiled transport-property expression block.
+
+    Construct from the JSON text of a `"type": "expression"` block
+    ({"formula": ..., "constants": {...}, "arrays": {...}}), then
+    evaluate it at a state.  Raises ValueError on a bad formula.
+    """
+
+    def __init__(self, json_block: str) -> None: ...
+
+    def required_inputs(self) -> list[str]:
+        """DSL names of the thermodynamic inputs the formula references."""
+
+    def evaluate(self, AS: AbstractState) -> float:
+        """
+        Evaluate at the state `AS` (an AbstractState) is currently sitting at.
+        Set the state the usual way -- AS.update(DmolarT_INPUTS, rhomolar, T) --
+        so any input pair, backend, or mixture composition works.
+        Raises ValueError if an input reads back non-finite (an AbstractState
+        that was never update()d).
+        """
+
 class MonotonicExpansionMatch:
     @property
     def idx(self) -> int: ...
