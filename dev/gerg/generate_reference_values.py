@@ -510,7 +510,7 @@ def main():
     out = []
     out.append("// GENERATED FILE -- do not edit by hand.")
     out.append("//")
-    out.append("// Produced by dev/gerg/generate_reference_values.py from teqp 0.23.2")
+    out.append(f"// Produced by dev/gerg/generate_reference_values.py from teqp {teqp.__version__}")
     out.append("// (https://github.com/usnistgov/teqp), the reference implementation the")
     out.append("// CoolProp GERG-2004/GERG-2008 backend is validated against. Regenerating")
     out.append("// this file is expected to produce a byte-identical result unless teqp's")

@@ -466,8 +466,8 @@ a free fitted parameter instead of pinning it to the tabulated reducing value.
   exactly at the end of the saturation curve, which is what makes the
   classical `theta^(1/2)` scaling representable. Pinning `theta = 0` 1.1 K
   short of the critical point instead leaves a square-root branch point inside
-  the fit domain and costs an order of magnitude: propane fitted 7.3e-3 that
-  way versus 1.4e-3 with `T_r = Tc(true)`.
+  the fit domain and costs a factor of five: propane fitted 7.3e-3 that way
+  versus 1.4e-3 with `T_r = Tc(true)`.
 
 `reducing_value` stays the **tabulated** reducing density, and for `pV` the
 pressure evaluated from the EOS at the tabulated reducing state — the same

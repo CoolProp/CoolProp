@@ -67,7 +67,8 @@ both directions:
     saturation curve, which is what makes the classical theta^(1/2) scaling
     representable.  Forcing theta = 0 to land 1.1 K short of the critical
     point instead leaves a square-root branch point INSIDE the fit domain and
-    costs an order of magnitude of accuracy (propane: 7.3e-3 vs 3.5e-4).
+    costs a factor of five in accuracy (propane: 7.3e-3 that way versus
+    1.4e-3 with T_r = Tc(true); run --report to reproduce).
 
 reducing_value stays the TABULATED reducing density / the pressure at the
 tabulated reducing state, so that the ancillary's reducing value and the
@@ -118,8 +119,10 @@ METHOD
 
 import argparse
 import math
+import re
 import sys
 import warnings
+from pathlib import Path
 
 warnings.filterwarnings("ignore")  # teqp 0.23 emits FutureWarnings for top-level fns
 
@@ -541,6 +544,64 @@ def _vec(values):
     return "{" + ", ".join(_fmt(v) for v in values) + "}"
 
 
+#: The aggregate initialisers emitted by _anc() and emit_row() are POSITIONAL,
+#: so reordering either struct in GERGData.h would still compile and would
+#: silently pair every value with the wrong field.  These are the orders this
+#: generator emits; check_struct_field_order() below refuses to generate if
+#: the header no longer agrees.
+EMITTED_ANCILLARY_FIELDS = ["n", "t", "reducing_value", "T_r", "Tmin", "Tmax", "max_rel_dev", "type"]
+EMITTED_SAT_END_FIELDS = ["T_K", "p_Pa", "rhoL_molm3", "rhoV_molm3"]
+
+#: `struct NAME\n{ ... };`, non-greedy so it stops at the first closing brace.
+_STRUCT_RE = r"struct\s+%s\s*\{(.*?)\}\s*;"
+#: One leading type token, optionally templated (std::vector<double>), then the
+#: comma-separated declarators.
+_DECL_TYPE_RE = re.compile(r"^[A-Za-z_][\w:]*(?:<[^>]*>)?\s+")
+
+
+def declared_struct_fields(blob, struct_name):
+    """Field names of `struct struct_name`, in declaration order."""
+    m = re.search(_STRUCT_RE % struct_name, blob, re.S)
+    if m is None:
+        raise SystemExit(f"fit_ancillaries.py: struct {struct_name} not found in GERGData.h")
+    body = re.sub(r"//[^\n]*", "", m.group(1))          # line comments
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.S)    # block comments
+    fields = []
+    for stmt in body.split(";"):
+        stmt = " ".join(stmt.split())
+        if not stmt:
+            continue
+        rest = _DECL_TYPE_RE.sub("", stmt, count=1)
+        if rest == stmt:                                 # no type token -> not a declaration
+            continue
+        fields.extend(name.strip().lstrip("*&") for name in rest.split(","))
+    return [f for f in fields if f]
+
+
+def check_struct_field_order():
+    """Refuse to generate if GERGData.h no longer matches what we emit.
+
+    A reordered struct is invisible to the compiler here -- both aggregates are
+    all-double apart from the two vectors and the trailing string -- so without
+    this the corruption would only surface as wrong saturation numbers.
+    """
+    header = Path(__file__).resolve().parents[2] / "src" / "Backends" / "GERG" / "GERGData.h"
+    blob = header.read_text(encoding="utf-8")
+    for struct_name, emitted in (
+        ("AncillaryCoeffs", EMITTED_ANCILLARY_FIELDS),
+        ("SatEndState", EMITTED_SAT_END_FIELDS),
+    ):
+        declared = declared_struct_fields(blob, struct_name)
+        if declared != emitted:
+            raise SystemExit(
+                f"fit_ancillaries.py: {struct_name} field order changed in {header}.\n"
+                f"  declared: {declared}\n"
+                f"  emitted:  {emitted}\n"
+                "The brace-initialisers in _anc()/emit_row() are positional, so generating "
+                "now would silently pair each value with the wrong field. Update them together."
+            )
+
+
 def _anc(n, t, reducing_value, T_r, Tmin, Tmax, dev):
     """One AncillaryCoeffs brace-initialiser.  Field order MUST match the
     struct declaration in GERGData.h: n, t, reducing_value, T_r, Tmin, Tmax,
@@ -650,6 +711,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--report", action="store_true", help="print the fit report instead of the header")
     args = ap.parse_args()
+
+    check_struct_field_order()
 
     fits_2004 = {}
     fits_2008 = {}

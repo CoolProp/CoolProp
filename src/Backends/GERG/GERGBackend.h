@@ -165,15 +165,21 @@ class GERGMixtureBackend : public HelmholtzEOSMixtureBackend
     /// the GERG residual term -- there would be nothing "GERG" left in the
     /// EOS at all.
     ///
-    /// Found during task-10 review only working BY ACCIDENT today: GERG
-    /// fluids leave `EOS.reduce.p` unset (`make_gerg_fluid` sets it, but the
-    /// cubic path reads `EOS.reduce.p` fresh off whatever component is
-    /// stored, and for a component whose critical pressure was never filled
-    /// in the same way CoolProp's own library fills it, the cubic ends up
-    /// with a NaN pc), so the very next `update()` throws "p is not a valid
-    /// number" -- the identical class of missing-data accident this task
-    /// refused to rely on for the T-below-Tmin case (see check_gerg_range_of_validity).
-    /// Closed explicitly here instead, rather than left to that accident.
+    /// At task-10 review this failed on its own, by accident.  The cubic
+    /// path reads `EOS.reduce.T`, `EOS.reduce.p`, `EOS.reduce.rhomolar` and
+    /// `EOS.acentric` straight off the stored component
+    /// (HelmholtzEOSMixtureBackend.cpp:491-495), and `reduce.p` was not
+    /// populated for a GERG fluid then, so the cubic got a NaN pc and the
+    /// very next `update()` threw "p is not a valid number".
+    ///
+    /// THAT ACCIDENT IS GONE.  `make_gerg_fluid` now fills all four fields
+    /// the cubic reads (GERGBackend.cpp:1427 `acentric`, :1437-1438
+    /// `reduce.T`/`reduce.rhomolar`, :1481 `reduce.p`), so the swap would now
+    /// succeed silently and leave an SRK or Peng-Robinson cubic sitting
+    /// behind a backend still called GERG2004/GERG2008.  This throw is the
+    /// only thing closing that -- which is precisely why task 10 declined to
+    /// rely on the accident while it still held (compare the T-below-Tmin
+    /// case, see check_gerg_range_of_validity).
     void calc_change_EOS(const std::size_t, const std::string&) override {
         throw ValueError("GERG fluids' equation of state is fixed by the published model and cannot be replaced. "
                          "Use the HEOS or cubic backends directly if you want a different EOS.");
@@ -182,7 +188,7 @@ class GERGMixtureBackend : public HelmholtzEOSMixtureBackend
    public:
     /// GERG's betas/gammas and departure functions are the published model,
     /// not a fit that a caller is meant to adjust -- set_mixture_parameters
-    /// above exists specifically so this backend does NOT answer from
+    /// (declared below) exists specifically so this backend does NOT answer from
     /// CoolProp's mutable global BIP library.  Overriding
     /// set_mixture_parameters alone does not close this: AbstractState
     /// declares FOUR public mutator routes to the same underlying data --

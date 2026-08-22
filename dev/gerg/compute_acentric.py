@@ -129,8 +129,9 @@ caught mechanically rather than by remembering to rerun this.
 REPRODUCIBILITY.  Unlike the ancillary fits (a least-squares solve, whose last
 two or three digits move with the numpy version), this is a bisection followed
 by a Newton polish to a fixed residual, so it reproduces to ~1e-12 across
-environments.  verify_transcription.py compares with a 1e-9 relative tolerance
-to leave room for that without letting a real change through.
+environments.  verify_transcription.py compares with a 1e-9 ABSOLUTE tolerance
+(|committed - re-derived|, verify_transcription.py:842) to leave room for that
+without letting a real change through.
 """
 
 import argparse
