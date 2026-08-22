@@ -82,6 +82,22 @@ jobs:
               ;;
           esac
 
+          # The character class above still admits '..', '//', and a leading or
+          # trailing '/', none of which are legal in a ref and all of which
+          # traverse out of the rsync destination: BRANCH='../../foo' yields
+          # TARGET='../../foo' and a destination of
+          # /home/frs/project/coolprop/CoolProp/../../foo -> /home/frs/project/foo.
+          # git's own validator is the authority on ref syntax; prefixing
+          # refs/heads/ makes a single-level name like 'master' valid without
+          # --allow-onelevel.  Both checks are needed and neither subsumes the
+          # other: check-ref-format permits ';', '$', '&' and quotes, which
+          # have no business in a path we interpolate into a shell command,
+          # while the character class permits the traversal forms above.
+          if ! git check-ref-format "refs/heads/$BRANCH"; then
+            echo "::error::Refusing branch input '$BRANCH': not a well-formed git ref name."
+            exit 1
+          fi
+
           # Read a version number out of the ref if there is one, so that
           # 'v7.1.0' publishes to the 7.1.0 directory.  grep exits 1 when
           # nothing matches, which is the normal branch-name case, not an
