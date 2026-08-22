@@ -232,8 +232,15 @@ symbol visibility; WASM-clean by construction.
 what a `"type": "expression"` block looks like. Both consumers go through it:
 
 - `JSONFluidLibrary::parse_expression_block()` at fluid load, and
-- `expression::ExpressionBlock`, a compiled block that can be evaluated against a
-  fluid *without* being grafted into a fluid file first.
+- `expression::ExpressionBlock`, a compiled block that can be evaluated against
+  any `AbstractState` *without* being grafted into a fluid file first.
+
+Both also share the host-side evaluation primitive
+`expression::evaluate_at(const Program&, AbstractState&)` — fill the program's
+required inputs with one `keyed_output()` per key, then evaluate. The
+fluid-library correlation (`ExpressionCorrelation::eval(HEOS&)`) is a one-line
+call to it, so a block evaluated standalone and the same block loaded into a
+fluid cannot disagree.
 
 `ExpressionBlock` takes JSON *text*, not an `nlohmann::json`, deliberately: the
 header is reached from the scripting wrappers, and keeping it JSON-library-free
@@ -249,10 +256,26 @@ See "Authoring from Python" below for the Python surface built on it.
   `CoolProp::ValueError` with the formula, the message, and the column of the
   offending token. A malformed formula fails the fluid load loudly; it never
   produces a silently-wrong correlation and never crashes.
-- **Eval-time:** numeric domain results follow `std::pow/log` semantics exactly
-  (e.g. `log` of a non-positive argument → NaN/-inf as in the current C++), so
-  DSL output matches the hardcoded routines bit-for-bit in behavior, including at
-  domain edges. No exceptions thrown on the hot path.
+- **Eval-time, inside the formula:** numeric domain results follow `std::pow/log`
+  semantics exactly (e.g. `log` of a non-positive argument → NaN/-inf as in the
+  current C++), so DSL output matches the hardcoded routines bit-for-bit in
+  behavior, including at domain edges. No domain guards, no exceptions.
+- **Eval-time, on the way in:** the *inputs* are guarded, which is a different
+  thing. `evaluate_at()` throws `CoolProp::ValueError` naming the input if a
+  `keyed_output()` comes back non-finite. This is the one exception the hot path
+  can raise, and it costs two predictable compares per input (unmeasurable against
+  the `pow`/`exp` calls that dominate). It exists because
+  `AbstractState::p()` on a state that was never `update()`d returns `-_HUGE`
+  rather than throwing, and the formula would propagate that into a
+  plausible-looking `-inf` answer. A state reached through any completed
+  `update()` already satisfies the guard — `HelmholtzEOSMixtureBackend::post_update()`
+  enforces the same `ValidNumber` predicate on `_T`/`_p`/`_rhomolar` — so the
+  guard fires only on a state that was never set.
+
+  It is a guard, not a proof of freshness: `AbstractState::set_T()` mutates `_T`
+  alone and leaves `_p`/`_rhomolar` at the previous state's (finite) values, and
+  `molar_mass` is a trivial parameter that is finite even on an untouched state.
+  Whoever owns the state object is responsible for it being the state they meant.
 
 ## Testing — also the completeness proof
 
@@ -292,6 +315,7 @@ evaluate it at a state, look at the number. `CoolProp.CoolProp.Expression` is th
 loop, with no rebuild and no fluid-file edit in between:
 
 ```python
+import CoolProp.CoolProp as CP
 from CoolProp.CoolProp import Expression
 
 blk = """{
@@ -301,22 +325,24 @@ blk = """{
 }"""
 
 e = Expression(blk)
-e.required_inputs()              # ['T']
-e.evaluate(300.0, 1e4, "R123")   # T [K], rhomolar [mol/m^3], fluid
+e.required_inputs()          # ['T']
+
+AS = CP.AbstractState("HEOS", "R123")
+AS.update(CP.DmolarT_INPUTS, 1e4, 300.0)
+e.evaluate(AS)
 ```
 
 - The JSON text is exactly what goes into the fluid file, so a doc example and the
   fluid it documents cannot drift.
 - `required_inputs()` reports the DSL names the formula actually references — the
   quickest way to see that `p` (say) pulled the EOS into the evaluation.
-- `evaluate()` builds an `AbstractState` for `fluid`, updates it at
-  `(rhomolar, T)`, and fills each required input with `keyed_output()` — the same
-  path the production host takes. `fluid` may be omitted only when the formula
-  needs nothing beyond `T` and `rhomolar`.
+- `evaluate(AS)` reads whatever state `AS` is currently sitting at, via
+  `keyed_output()` — the same path the production host takes. The caller sets the
+  state through the ordinary `AbstractState` API, so **any** input pair, backend,
+  or mixture composition works, and the block duplicates no state-setting logic of
+  its own. Re-`update()` the state and the same compiled block follows it.
 - A bad formula raises `ValueError` with the column of the offending token, at
   construction time.
-
-Pure fluids only; the transport correlations this DSL targets are pure-fluid forms.
 
 ## Risks / open trade-offs
 

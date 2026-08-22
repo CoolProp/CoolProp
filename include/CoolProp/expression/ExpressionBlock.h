@@ -7,6 +7,9 @@
 #include "CoolProp/expression/Expression.h"
 
 namespace CoolProp {
+
+class AbstractState;  // forward decl keeps this header light
+
 namespace expression {
 
 /// Compile a transport `"type": "expression"` block from its JSON text:
@@ -23,10 +26,10 @@ namespace expression {
 /// those translation units.
 Program compile_block(const std::string& json_text, const std::string& context = "");
 
-/// A standalone, compiled expression block, evaluable against a fluid without
-/// having to graft it into a fluid file first.  This is the authoring entry point
-/// the scripting wrappers expose: paste the same JSON block you would put in the
-/// fluid JSON, evaluate it at a state, and see the number.
+/// A standalone, compiled expression block, evaluable against any AbstractState
+/// without having to graft it into a fluid file first.  This is the authoring
+/// entry point the scripting wrappers expose: paste the same JSON block you would
+/// put in the fluid JSON, evaluate it at a state, and see the number.
 class ExpressionBlock
 {
    public:
@@ -35,12 +38,18 @@ class ExpressionBlock
     /// DSL names of the thermodynamic inputs the formula references, in the order
     /// they are fetched.  Empty for a formula built only from constants and arrays.
     [[nodiscard]] std::vector<std::string> required_inputs() const;
-    /// Evaluate at T [K] and rhomolar [mol/m^3]; the result is in whatever base-SI
-    /// unit the formula produces.  `fluid` is a pure-fluid CoolProp name, optionally
-    /// backend-qualified ("HEOS::Nitrogen"); a mixture name is rejected.  It may be
-    /// left empty only when the formula needs nothing beyond `T` and `rhomolar`, and
-    /// is ignored outright by a formula that reads no state at all.
-    [[nodiscard]] double evaluate(double T, double rhomolar, const std::string& fluid = "") const;
+    /// Evaluate at the state `AS` is currently sitting at; the result is in whatever
+    /// base-SI unit the formula produces.  The caller sets the state through the
+    /// ordinary AbstractState API, so any input pair, backend, or mixture
+    /// composition works, and nothing here duplicates state-setting logic:
+    ///
+    ///     std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "R123"));
+    ///     AS->update(DmolarT_INPUTS, rhomolar, T);
+    ///     block.evaluate(*AS);
+    ///
+    /// Throws CoolProp::ValueError if an input reads back non-finite -- in practice,
+    /// if `AS` was never update()d.
+    [[nodiscard]] double evaluate(AbstractState& AS) const;
 
    private:
     Program m_program;

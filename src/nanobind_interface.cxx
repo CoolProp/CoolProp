@@ -1201,9 +1201,12 @@ void init_CoolProp(nb::module_& m) {
                                             "evaluate it at a state.  Raises ValueError on a bad formula.")
       .def(nb::init<const std::string&>(), nb::arg("json_block"))
       .def("required_inputs", &expression::ExpressionBlock::required_inputs, "DSL names of the thermodynamic inputs the formula references.")
-      .def("evaluate", &expression::ExpressionBlock::evaluate, nb::arg("T"), nb::arg("rhomolar"), nb::arg("fluid") = "",
-           "Evaluate at T [K] and rhomolar [mol/m^3] for `fluid`.  `fluid` may be\n"
-           "omitted only when the formula needs nothing beyond T and rhomolar.");
+      .def("evaluate", &expression::ExpressionBlock::evaluate, nb::arg("AS"),
+           "Evaluate at the state `AS` (an AbstractState) is currently sitting at.\n"
+           "Set the state the usual way -- AS.update(DmolarT_INPUTS, rhomolar, T) --\n"
+           "so any input pair, backend, or mixture composition works.\n"
+           "Raises ValueError if an input reads back non-finite (an AbstractState\n"
+           "that was never update()d).");
 
     // Chebyshev rootfinding + SuperAncillary saturation evaluator classes.
     init_superancillary(m);

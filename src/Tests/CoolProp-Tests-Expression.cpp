@@ -26,6 +26,7 @@
 #    include "CoolProp/expression/ExpressionCorrelation.h"
 #    include "CoolProp/expression/detail/Lexer.h"
 #    include "CoolProp/numerics/numerics.h"  // ValidNumber
+#    include "CoolProp/AbstractState.h"
 #    include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #    include "Backends/Helmholtz/TransportRoutines.h"
 
@@ -591,7 +592,9 @@ TEST_CASE("ExpressionBlock compiles a fluid-JSON block verbatim", "[expression]"
                           "constants": {"c": 1.0},
                           "arrays": {"a": [2.0, 3.0], "t": [0.0, 1.0]}})");
     REQUIRE(b.required_inputs() == std::vector<std::string>{"T"});
-    CHECK(b.evaluate(10.0, 0.0) == Catch::Approx(2.0 + 30.0 + 1.0));
+    auto HEOS = make_HEOS_for("R123");
+    HEOS->update(CoolProp::DmolarT_INPUTS, 100.0, 400.0);
+    CHECK(b.evaluate(*HEOS) == Catch::Approx(2.0 + 3.0 * 400.0 + 1.0));
 }
 
 TEST_CASE("ExpressionBlock reports bad blocks as ValueError", "[expression]") {
@@ -608,17 +611,46 @@ TEST_CASE("ExpressionBlock reports bad blocks as ValueError", "[expression]") {
     }
 }
 
-TEST_CASE("ExpressionBlock pulls EOS-backed inputs from the named fluid", "[expression]") {
+TEST_CASE("ExpressionBlock reads whatever state the AbstractState is sitting at", "[expression]") {
     using namespace CoolProp::expression;
-    auto HEOS = make_HEOS_for("R123");
-    HEOS->update(CoolProp::DmolarT_INPUTS, 2000.0, 400.0);
-    // `p` needs the EOS, so a fluid is mandatory...
     ExpressionBlock b(R"({"formula": "p"})");
     REQUIRE(b.required_inputs() == std::vector<std::string>{"p"});
-    CHECK_THROWS_AS(b.evaluate(400.0, 2000.0), CoolProp::ValueError);
-    CHECK(b.evaluate(400.0, 2000.0, "R123") == Catch::Approx(static_cast<double>(HEOS->p())).epsilon(1e-14));
-    // ...and the backend-qualified spelling resolves to the same fluid.
-    CHECK(b.evaluate(400.0, 2000.0, "HEOS::R123") == Catch::Approx(b.evaluate(400.0, 2000.0, "R123")).epsilon(1e-14));
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R123"));
+    AS->update(CoolProp::DmolarT_INPUTS, 2000.0, 400.0);
+    CHECK(b.evaluate(*AS) == Catch::Approx(CoolProp::PropsSI("P", "T", 400.0, "Dmolar", 2000.0, "R123")).epsilon(1e-14));
+    // Re-set the state through the ordinary API and the same block follows it --
+    // including through an input pair the block knows nothing about.
+    AS->update(CoolProp::PT_INPUTS, 1e5, 350.0);
+    CHECK(b.evaluate(*AS) == Catch::Approx(1e5).epsilon(1e-12));
+}
+
+TEST_CASE("ExpressionBlock refuses a state that was never updated", "[expression]") {
+    using namespace CoolProp::expression;
+    // AbstractState::p() on a fresh state returns -_HUGE rather than throwing, and
+    // the formula would propagate it into a plausible-looking -inf.
+    ExpressionBlock b(R"({"formula": "p*2"})");
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R123"));
+    // Pin the message, not just the type: any unrelated ValueError would otherwise
+    // satisfy a bare CHECK_THROWS_AS and the guard could quietly stop working.
+    CHECK_THROWS_WITH(b.evaluate(*AS), Catch::Matchers::ContainsSubstring("finite"));
+    AS->update(CoolProp::DmolarT_INPUTS, 2000.0, 400.0);
+    CHECK(ValidNumber(b.evaluate(*AS)));
+}
+
+TEST_CASE("ExpressionBlock works on a mixture state the caller set up", "[expression]") {
+    using namespace CoolProp::expression;
+    // Nothing in the block is pure-fluid-specific: the caller owns the state, so a
+    // mixture composition is just another state the formula reads.
+    ExpressionBlock b(R"({"formula": "molar_mass*rhomolar"})");
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
+    AS->set_mole_fractions({0.4, 0.6});
+    AS->update(CoolProp::PT_INPUTS, 1e5, 350.0);  // HEOS mixtures do not take DmolarT
+    // NOT compared against AS->rhomass(): calc_rhomass() IS rhomolar()*molar_mass(),
+    // so that would be true by construction even if the mixture molar mass were
+    // wrong.  Build the expected molar mass from the pure-component values instead.
+    const double M_mix = 0.4 * CoolProp::Props1SI("R32", "molar_mass") + 0.6 * CoolProp::Props1SI("R125", "molar_mass");
+    CHECK(AS->rhomolar() > 0.0);
+    CHECK(b.evaluate(*AS) == Catch::Approx(M_mix * AS->rhomolar()).epsilon(1e-14));
 }
 
 // ---------------------------------------------------------------------------

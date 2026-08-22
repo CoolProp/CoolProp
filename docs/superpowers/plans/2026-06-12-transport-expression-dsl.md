@@ -30,10 +30,12 @@ are authoritative**:
    not appended to `src/Tests/CoolProp-Tests.cpp`.
 3. **Runtime authoring from Python** — `expression::ExpressionBlock`
    (`include/CoolProp/expression/ExpressionBlock.h`) compiles a `"type":
-   "expression"` block from its JSON text and evaluates it against a fluid; it is
-   exposed to Python as `CoolProp.CoolProp.Expression`. The fluid library now
-   funnels through the same `compile_block()`, so the block's shape is defined
-   once. See "Authoring from Python" in the spec.
+   "expression"` block from its JSON text and evaluates it against an
+   `AbstractState` the caller set up; it is exposed to Python as
+   `CoolProp.CoolProp.Expression`. The fluid library now funnels through the same
+   `compile_block()`, and both evaluation paths through the same
+   `evaluate_at(Program&, AbstractState&)`, so the block's shape and its
+   evaluation are each defined once. See "Authoring from Python" in the spec.
 
 ---
 

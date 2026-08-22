@@ -1538,10 +1538,13 @@ class Expression:
     def required_inputs(self) -> list[str]:
         """DSL names of the thermodynamic inputs the formula references."""
 
-    def evaluate(self, T: float, rhomolar: float, fluid: str = '') -> float:
+    def evaluate(self, AS: AbstractState) -> float:
         """
-        Evaluate at T [K] and rhomolar [mol/m^3] for `fluid`.  `fluid` may be
-        omitted only when the formula needs nothing beyond T and rhomolar.
+        Evaluate at the state `AS` (an AbstractState) is currently sitting at.
+        Set the state the usual way -- AS.update(DmolarT_INPUTS, rhomolar, T) --
+        so any input pair, backend, or mixture composition works.
+        Raises ValueError if an input reads back non-finite (an AbstractState
+        that was never update()d).
         """
 
 class MonotonicExpansionMatch:

@@ -1,14 +1,11 @@
 #include "CoolProp/expression/ExpressionBlock.h"
 
 #include <map>
-#include <memory>
 
-#include "CoolProp/AbstractState.h"
-#include "CoolProp/CoolProp.h"  // extract_backend
-#include "CoolProp/DataStructures.h"
 #include "CoolProp/Exceptions.h"
 #include "CoolProp/detail/json.h"
 #include "CoolProp/detail/strings.h"
+#include "CoolProp/expression/ExpressionCorrelation.h"  // evaluate_at
 
 namespace CoolProp {
 namespace expression {
@@ -44,36 +41,12 @@ std::vector<std::string> ExpressionBlock::required_inputs() const {
     return out;
 }
 
-double ExpressionBlock::evaluate(double T, double rhomolar, const std::string& fluid) const {
-    const std::vector<parameters>& keys = m_program.requiredInputs();
-    // A formula built only from constants and arrays reads no state at all; do not
-    // make it depend on a fluid it never touches.
-    if (keys.empty()) return m_program.evaluate({});
-    std::vector<double> vals(keys.size(), 0.0);
-    if (fluid.empty()) {
-        // No fluid, no EOS: only the two independent variables the caller passed
-        // are knowable.  Anything else is a hard error rather than a silent zero.
-        for (std::size_t i = 0; i < keys.size(); ++i) {
-            if (keys[i] == iT) {
-                vals[i] = T;
-            } else if (keys[i] == iDmolar) {
-                vals[i] = rhomolar;
-            } else {
-                throw ValueError(format("expression input '%s' needs a fluid; pass one to evaluate()", inputName(keys[i]).c_str()));
-            }
-        }
-    } else {
-        if (fluid.find('&') != std::string::npos) {
-            throw ValueError(format("expression evaluation is pure-fluid only; '%s' names a mixture", fluid.c_str()));
-        }
-        std::string backend, fluids;
-        extract_backend(fluid, backend, fluids);
-        std::shared_ptr<AbstractState> AS(AbstractState::factory(backend, fluids));
-        AS->update(DmolarT_INPUTS, rhomolar, T);
-        for (std::size_t i = 0; i < keys.size(); ++i)
-            vals[i] = AS->keyed_output(keys[i]);
-    }
-    return m_program.evaluate(vals);
+double ExpressionBlock::evaluate(AbstractState& AS) const {
+    // Deliberately the same call the fluid-library correlation makes, so a block
+    // evaluated here and the same block loaded into a fluid cannot disagree.  The
+    // caller owns the state: whatever input pair, backend, or composition `AS` was
+    // set up with is what the formula sees.
+    return evaluate_at(m_program, AS);
 }
 
 }  // namespace expression
