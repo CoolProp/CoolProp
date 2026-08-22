@@ -780,20 +780,46 @@ TEST_CASE("GERG pure fluid reports the GERG reducing point as its critical point
     CHECK_THAT(CH4->p_critical(), Catch::Matchers::WithinRel(4.5992e6, 1e-3));  // methane p_c, 4.5992 MPa
 }
 
-TEST_CASE("GERG limits are not self-contradictory", "[GERG]") {
-    // The published 60-700 K range is a MIXTURE-model range; taken literally
-    // per component it would put Tmin above Tcrit for helium (5.1953 K) and
-    // hydrogen (33.19 K) -- while this very test file evaluates helium down to
-    // 0.7*Tc = 3.64 K.  make_gerg_fluid caps Tmin at the reducing temperature.
+TEST_CASE("GERG applies the published range verbatim to every component", "[GERG]") {
+    // 60-700 K is published for the MIXTURE model as a whole (Kunz & Wagner
+    // 2012, section 4.1) and is applied unchanged to every component.  GERG
+    // publishes no per-component lower limit, and inventing one -- capping
+    // Tmin at the component's own Tc, as an earlier version of this backend
+    // did -- fabricates a limit the model does not state.
     for (const auto& model : {GERGModel::GERG_2004, GERGModel::GERG_2008}) {
         const std::string backend = (model == GERGModel::GERG_2004) ? "GERG2004" : "GERG2008";
         for (const auto& name : component_names(model)) {
             CAPTURE(backend, name);
             std::shared_ptr<AbstractState> AS(AbstractState::factory(backend, std::vector<std::string>{name}));
-            CHECK(AS->Tmin() <= AS->T_critical());
-            CHECK(AS->Tmax() >= AS->T_critical());
+            CHECK_THAT(AS->Tmin(), Catch::Matchers::WithinRel(60.0, 1e-14));
+            CHECK_THAT(AS->Tmax(), Catch::Matchers::WithinRel(700.0, 1e-14));
         }
     }
+}
+
+TEST_CASE("GERG helium and hydrogen are supercritical-only as pure fluids", "[GERG]") {
+    // The consequence of applying 60-700 K verbatim, and it is the physics
+    // rather than a defect: helium critical at 5.1953 K and hydrogen at
+    // 33.19 K are both SUPERCRITICAL everywhere in 60-700 K, so as pure
+    // fluids they have no subcritical region here and no saturation state can
+    // be requested.  A caller who asks gets the range in the error message,
+    // which is a better answer than a silently empty dome.
+    //
+    // Both remain ordinary components in a MIXTURE, where the mixture
+    // reducing temperature governs -- asserted below so this is not read as a
+    // blanket restriction.
+    for (const std::string& name : {std::string("helium"), std::string("hydrogen")}) {
+        CAPTURE(name);
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", std::vector<std::string>{name}));
+        CHECK(AS->T_critical() < AS->Tmin());
+        AS->specify_phase(iphase_gas);
+        CHECK_THROWS_AS(AS->update(QT_INPUTS, 0.5, 0.9 * AS->T_critical()), CoolProp::OutOfRangeError);
+        CHECK_NOTHROW(AS->update(DmolarT_INPUTS, 500.0, 300.0));  // supercritical: fine
+    }
+    std::shared_ptr<AbstractState> mix(AbstractState::factory("GERG2008", std::vector<std::string>{"methane", "helium"}));
+    mix->set_mole_fractions(std::vector<CoolPropDbl>{0.9, 0.1});
+    mix->specify_phase(iphase_gas);
+    CHECK_NOTHROW(mix->update(DmolarT_INPUTS, 5000.0, 200.0));
 }
 
 TEST_CASE("GERG mixture range is the component-wise intersection, independent of the composition vector", "[GERG]") {
@@ -847,29 +873,31 @@ TEST_CASE("GERG mixture range is the component-wise intersection, independent of
         CHECK(CoolProp::get_global_param_string("errstring").find("[60, 700] K") != std::string::npos);
     }
     {
-        // A 50/50 helium/methane mixture: the weighted Tmin was
-        // 0.5*5.1953 + 0.5*60 = 32.60 K, so 45 K used to be ACCEPTED.  Under
-        // the intersection it is methane's own 60 K that governs -- a
-        // deliberate behaviour change, pinned here so it cannot drift back.
+        // A 50/50 helium/methane mixture.  Every component now carries the
+        // published 60 K, so the weighted average and the intersection agree
+        // at 60 -- but the guard still reads the intersection, which is what
+        // keeps it independent of sum(x); the methane+ethane case above is
+        // where the two differ.
         std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", std::vector<std::string>{"helium", "methane"}));
         AS->set_mole_fractions(std::vector<CoolPropDbl>{0.5, 0.5});
         AS->specify_phase(iphase_gas);
-        CHECK_THAT(AS->Tmin(), Catch::Matchers::WithinRel(32.5977, 1e-4));  // Tmin() itself is unchanged
+        CHECK_THAT(AS->Tmin(), Catch::Matchers::WithinRel(60.0, 1e-12));
         CHECK_THROWS_AS(AS->update(DmolarT_INPUTS, 5000.0, 45.0), CoolProp::OutOfRangeError);
         CHECK_THROWS_AS(AS->update(DmolarT_INPUTS, 5000.0, 30.0), CoolProp::OutOfRangeError);
         CHECK_NOTHROW(AS->update(DmolarT_INPUTS, 5000.0, 65.0));
     }
     {
-        // The one case where the intersection sits below 60 K: EVERY
-        // component has Tc < 60 K, so make_gerg_fluid's min(60, Tc) cap
-        // governs for all of them.  helium (5.1953 K) + hydrogen (33.19 K)
-        // -> [33.19, 700] K.  Pinned so the "unless every component is a
-        // light one" clause in the guard's comment stays true.
+        // There is no longer ANY composition whose range dips below 60 K.
+        // The two lightest components together used to give [33.19, 700] K
+        // via the old min(60, Tc) cap; both now carry the published 60 K, so
+        // 40 K is refused here exactly as it is for methane.  Pinned because
+        // the old behaviour was the last remnant of the fabricated limit.
         std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", std::vector<std::string>{"helium", "hydrogen"}));
         AS->set_mole_fractions(std::vector<CoolPropDbl>{0.5, 0.5});
         AS->specify_phase(iphase_gas);
-        CHECK_NOTHROW(AS->update(DmolarT_INPUTS, 5000.0, 40.0));  // above hydrogen's 33.19 K
+        CHECK_THROWS_AS(AS->update(DmolarT_INPUTS, 5000.0, 40.0), CoolProp::OutOfRangeError);
         CHECK_THROWS_AS(AS->update(DmolarT_INPUTS, 5000.0, 20.0), CoolProp::OutOfRangeError);
+        CHECK_NOTHROW(AS->update(DmolarT_INPUTS, 5000.0, 65.0));
     }
 }
 
@@ -1530,27 +1558,44 @@ TEST_CASE("GERG carries no superancillary but does carry the saturation end stat
     CHECK_THAT(AS->get_state("triple_vapor").rhomolar, Catch::Matchers::WithinRel(end.rhoV_molm3, 1e-14));
     CHECK(ValidNumber(AS->get_state("triple_liquid").hmolar));
 
-    // hs_anchor is CoolProp's (1.1*Tc, 0.9*rhoc), with h and s filled in by
-    // update_states() at construction -- both _HUGE without it.
+    // hs_anchor is deliberately NOT populated.  Every site that reads its
+    // h/s (VLERoutines.cpp:200-294) also reads components[0].ancillaries.hL
+    // or .sL, which GERG never fills, so the anchor could not be used even if
+    // it were set.  Asserted rather than left implicit: a future change that
+    // starts populating it should have to justify itself here.
     const CoolProp::SimpleState& anchor = AS->get_state("hs_anchor");
-    CHECK_THAT(anchor.T, Catch::Matchers::WithinRel(1.1 * AS->T_critical(), 1e-14));
-    CHECK_THAT(anchor.rhomolar, Catch::Matchers::WithinRel(0.9 * AS->rhomolar_critical(), 1e-14));
-    CHECK(ValidNumber(anchor.hmolar));
-    CHECK(ValidNumber(anchor.smolar));
+    CHECK_FALSE(ValidNumber(anchor.T));
+    CHECK_FALSE(ValidNumber(anchor.hmolar));
+
+    // reduce/critical h and s ARE filled, because get_state() exposes them.
     CHECK(ValidNumber(AS->get_state("reducing").smolar));
+    CHECK(ValidNumber(AS->get_state("critical").hmolar));
 }
 
-TEST_CASE("GERG hs_anchor stays inside the backend's own temperature range", "[GERG]") {
-    // Water is the fluid this guards: 1.1*647.096 K = 711.8 K is above the
-    // 700 K Tmax that check_gerg_range_of_validity enforces, so an unclamped
-    // anchor makes update_states() throw OutOfRangeError DURING CONSTRUCTION
-    // and the fluid cannot be built at all.
-    std::shared_ptr<AbstractState> AS;
-    REQUIRE_NOTHROW(AS.reset(AbstractState::factory("GERG2008", std::vector<std::string>{"Water"})));
-    const CoolProp::SimpleState& anchor = AS->get_state("hs_anchor");
-    CHECK(anchor.T <= AS->Tmax());
-    CHECK_THAT(anchor.T, Catch::Matchers::WithinRel(700.0, 1e-14));
-    CHECK(ValidNumber(anchor.hmolar));
+TEST_CASE("GERG constructs the fluids whose anchor temperature was out of range", "[GERG]") {
+    // REPLACES a test that pinned hs_anchor's clamping.  Dropping the anchor
+    // removed the clamp and the hazard together, so what is left worth
+    // asserting is that the three fluids the anchor used to break on still
+    // construct and evaluate.
+    //
+    //   water    1.1*647.096 K = 711.8 K, ABOVE the 700 K Tmax
+    //   hydrogen 1.1*33.19 K   =  36.5 K, BELOW the 60 K Tmin
+    //   helium   1.1*5.1953 K  =   5.7 K, BELOW the 60 K Tmin
+    //
+    // Every one of them made update_states() throw OutOfRangeError during
+    // construction, so the fluid could not be built at all -- water via the
+    // upper bound, the other two via the lower bound once the fabricated
+    // per-component Tmin cap was removed.
+    for (const std::string& name : {std::string("Water"), std::string("Hydrogen"), std::string("Helium")}) {
+        CAPTURE(name);
+        std::shared_ptr<AbstractState> AS;
+        REQUIRE_NOTHROW(AS.reset(AbstractState::factory("GERG2008", std::vector<std::string>{name})));
+        CHECK_FALSE(ValidNumber(AS->get_state("hs_anchor").T));
+        CHECK(ValidNumber(AS->get_state("reducing").hmolar));
+        AS->specify_phase(iphase_gas);
+        REQUIRE_NOTHROW(AS->update(DmolarT_INPUTS, 500.0, 400.0));
+        CHECK(ValidNumber(AS->hmolar()));
+    }
 }
 
 TEST_CASE("GERG pure fluid saturation converges", "[GERG]") {

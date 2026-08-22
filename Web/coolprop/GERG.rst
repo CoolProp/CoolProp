@@ -539,21 +539,47 @@ predates these backends entirely.  It is tracked as
 Saturation states below the enforced ``Tmin``
 ----------------------------------------------
 
+The published range of validity, 60–700 K, is applied **verbatim to every
+component**.  GERG states it for the mixture model as a whole and publishes no
+per-component lower limit, so the backend does not invent one.
+
 Seven components have a fitted saturation ancillary whose low-temperature end
-lies *below* the enforced ``Tmin``: methane (57.17 K vs 60 K), nitrogen
-(37.86 K), oxygen (46.41 K), carbon monoxide (39.86 K), argon (45.24 K),
-hydrogen (9.96 K vs 33.19 K) and helium (1.56 K vs 5.20 K).
-``get_state("triple_liquid")`` — and, from C++, ``calc_Tmin_sat()`` /
-``calc_pmin_sat()`` on the Helmholtz backend — therefore report a state that
+lies *below* 60 K: methane (57.17 K), nitrogen (37.86 K), oxygen (46.41 K),
+carbon monoxide (39.86 K), argon (45.24 K), hydrogen (9.96 K) and helium
+(1.56 K).  ``get_state("triple_liquid")`` — and, from C++, ``calc_Tmin_sat()``
+/ ``calc_pmin_sat()`` on the Helmholtz backend — therefore report a state that
 ``update()`` will refuse to evaluate::
 
     AS = CP.AbstractState("GERG2008", "Methane")
     AS.update(CP.QT_INPUTS, 0.0, 58.0)
     # OutOfRangeError: Temperature [58 K] is outside the GERG range of validity [60, 700] K
 
-The ancillary data below ``Tmin`` is real and was traced with teqp; it is
-simply not reachable through the public API, because the model's own range of
-validity stops first.
+The ancillary data below 60 K is real and was traced with teqp; it is simply
+not reachable through the public API, because the model's own range of validity
+stops first.
+
+Helium and hydrogen are supercritical-only as pure fluids
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Helium is critical at 5.1953 K and hydrogen at 33.19 K, both far below the
+60 K lower limit.  As **pure** fluids in these backends they are therefore
+supercritical across the entire valid range, and no saturation state can be
+requested at all::
+
+    AS = CP.AbstractState("GERG2008", "Helium")
+    AS.update(CP.QT_INPUTS, 0.5, 4.5)
+    # OutOfRangeError: Temperature [4.5 K] is outside the GERG range of validity [60, 700] K
+
+That is the physics rather than a defect: at 60 K helium *is* supercritical.
+Single-phase properties work normally, and both are ordinary components in a
+**mixture**, where the mixture reducing temperature governs rather than the
+pure-component critical temperature.
+
+An earlier version of this backend capped ``Tmin`` at each component's own
+critical temperature, which gave helium and hydrogen a degenerate range whose
+lower end equalled ``Tcrit`` — no contradiction in the numbers, but a limit the
+model does not publish, and a silently empty saturation dome instead of a clear
+refusal.  If you need subcritical helium or hydrogen, use ``HEOS``.
 
 Properties GERG does not define at all
 ---------------------------------------

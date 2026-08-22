@@ -1440,18 +1440,20 @@ CoolPropFluid make_gerg_fluid(GERGModel model, const std::string& gerg_name) {
     // because reduce.p is evaluated from them (below).
 
     // GERG-2008 extended range of validity: 60-700 K, p <= 70 MPa
-    // (Kunz & Wagner 2012, section 4.1).  That range is published for the
-    // MIXTURE model as a whole; GERG publishes no per-component lower
+    // (Kunz & Wagner 2012, section 4.1).  Applied verbatim, with no
+    // per-component adjustment: GERG publishes no per-component lower
     // temperature limit, and CoolProp's own triple-point data is deliberately
-    // not consulted here (a strict GERG backend must not borrow it).  Taking
-    // the published 60 K literally would leave Tmin ABOVE the reducing
-    // temperature for helium (5.1953 K) and hydrogen (33.19 K), i.e. a
-    // self-contradictory limit set, so Tmin is capped at the component's own
-    // reducing temperature.  That only removes the contradiction -- it is not
-    // a claim about where the component EOS stops being valid.  Task 11 must
-    // document that the authoritative range is the mixture-model range and
-    // that a pure-component Tmin below 60 K is not a validity statement.
-    EOS.limits.Tmin = std::min(60.0, info.Tc_K);
+    // not consulted here (a strict GERG backend must not borrow it).
+    //
+    // For helium (Tc = 5.1953 K) and hydrogen (Tc = 33.19 K) the whole valid
+    // range therefore lies ABOVE the critical temperature.  That is not a
+    // contradiction, it is the physics: at 60 K and above these two are
+    // supercritical, so as PURE fluids they have no subcritical region here
+    // and no saturation state can be requested.  The range check refuses such
+    // a request with the range in the message, which is a better answer than
+    // inventing a lower limit the model does not publish.  Both are ordinary
+    // components in a MIXTURE, where the mixture reducing temperature governs.
+    EOS.limits.Tmin = 60.0;
     EOS.limits.Tmax = 700.0;
     EOS.limits.pmax = 70e6;
     EOS.limits.rhomax = 1e6;
@@ -1693,20 +1695,19 @@ CoolPropFluid make_gerg_fluid(GERGModel model, const std::string& gerg_name) {
         fluid.triple_vapor.rhomolar = end.rhoV_molm3;
     }
 
-    // --- hs_anchor ------------------------------------------------------
+    // NO hs_anchor.  CoolProp's convention is a single-phase point at
+    // (1.1*Tc, 0.9*rhoc) whose h and s serve as the reference offset for
+    // h/s-input flashes.  It is dead weight for this backend: every site that
+    // reads hs_anchor.hmolar/smolar (VLERoutines.cpp:200-294) pairs it with
+    // components[0].ancillaries.hL or .sL, and GERG populates only rhoL, rhoV,
+    // pL and pV -- so those paths fail on the empty h/s ancillary whatever
+    // hs_anchor holds.  They are the saturation_PHSU_pure family, which is
+    // unsupported for pure GERG fluids anyway (bd CoolProp-kr4o).
     //
-    // CoolProp's convention is (1.1*Tc, 0.9*rhoc) -- a single-phase point just
-    // outside the dome that h/s-input flashes use as a reference offset.
-    //
-    // The min() is water: 1.1*647.096 K = 711.8 K is above this backend's
-    // Tmax of 700 K, and GERGMixtureBackend::update runs
-    // check_gerg_range_of_validity, so update_states() below would throw
-    // OutOfRangeError while building the fluid.  Clamping to Tmax keeps the
-    // anchor inside the range the backend will actually evaluate.  It is only
-    // an offset, so the exact temperature is not load-bearing -- but a fluid
-    // that throws during construction very much is.
-    EOS.hs_anchor.T = std::min(1.1 * EOS.reduce.T, EOS.limits.Tmax);
-    EOS.hs_anchor.rhomolar = 0.9 * EOS.reduce.rhomolar;
+    // Leaving it unset also removes the only reason this function had to
+    // evaluate at 1.1*Tc, which for helium and hydrogen is below the published
+    // 60 K lower limit.  The repo-wide hs_anchor machinery is untouched;
+    // FluidLibrary still fills it for every JSON fluid.
 
     // NOTE: EquationOfState::validate() (CoolPropFluid.h:450-453) is two bare
     // assert()s on R_u and molar_mass, so it is compiled out entirely under
@@ -1717,51 +1718,64 @@ CoolPropFluid make_gerg_fluid(GERGModel model, const std::string& gerg_name) {
     // "uses the GERG gas constant and reducing state" test.
     EOS.validate();
 
-    // hs_anchor.hmolar/smolar and reduce.hmolar/smolar can only be filled in
-    // by EVALUATING the assembled EOS, which needs a backend.  update_states()
-    // is CoolProp's own routine for that (HelmholtzEOSMixtureBackend.cpp:545);
-    // it is not called anywhere else in the tree because FluidLibrary reads
-    // those four numbers out of the fluid JSON instead, and GERG has no JSON.
+    // reduce.hmolar/smolar, and the same two on triple_liquid/triple_vapor,
+    // can only be filled by EVALUATING the assembled EOS, which needs a
+    // backend.  Nothing in CoolProp READS these four; they surface only
+    // through get_state("reducing") / get_state("critical") /
+    // get_state("triple_liquid"), and a public accessor returning _HUGE is a
+    // trap for the next reader, so they are filled here.
     //
     // The temporary is GERG-typed, with generate_SatL_and_SatV = false so the
-    // recursion stops: a base HelmholtzEOSMixtureBackend would compute
-    // hs_anchor.hmolar with CODATA R rather than R_GERG for anything but a
-    // pure fluid, and h/s offsets that are wrong in the 7th digit are exactly
-    // the kind of error that never shows up in p or w.  update_states() writes
-    // into ITS OWN copy of the fluid, so the four values are copied back out.
+    // recursion stops: a base HelmholtzEOSMixtureBackend would use CODATA R
+    // rather than R_GERG for anything but a pure fluid, and h/s offsets wrong
+    // in the 7th digit are exactly the kind of error that never shows up in p
+    // or w.
+    //
+    // update_DmolarT_direct, NOT update_states(): update_states() evaluates at
+    // the reducing state through update(), and for helium and hydrogen the
+    // reducing temperature is below the published 60 K lower limit, so
+    // check_gerg_range_of_validity would refuse to let the fluid be built at
+    // all.  The bypass is unambiguously right here for the same reason it is
+    // right just below -- the point being evaluated is one this backend
+    // computed itself and stored.
     {
         GERGMixtureBackend probe(model, std::vector<CoolPropFluid>(1, fluid), false);
         probe.set_mole_fractions(std::vector<CoolPropDbl>(1, 1.0));
-        probe.update_states();
-        const EquationOfState& probed = probe.get_components()[0].EOS();
-        EOS.hs_anchor.hmolar = probed.hs_anchor.hmolar;
-        EOS.hs_anchor.smolar = probed.hs_anchor.smolar;
-        EOS.reduce.hmolar = probed.reduce.hmolar;
-        EOS.reduce.smolar = probed.reduce.smolar;
 
-        // update_states() does not touch triple_liquid/triple_vapor (only
-        // set_fluid_enthalpy_entropy_offset does, and that is not on this
-        // path), so their h and s would stay at SimpleState's _HUGE and
-        // get_state("triple_liquid") would report a non-number.  Nothing in
-        // the flash routines reads them -- Maxwell only wants T and rhomolar
-        // -- but a public accessor returning _HUGE is a trap for the next
-        // reader, so they are filled in here.
+        // specify_phase before every update_DmolarT_direct.  The direct
+        // updater skips phase determination by design, so calc_hmolar throws
+        // "phase is invalid" unless the phase is imposed first.  This used to
+        // be masked: update_states() ran an ordinary update() beforehand and
+        // left _phase populated, which the triple-state loop below then
+        // silently inherited.  Removing update_states() exposed that; imposing
+        // the phase explicitly is what it should always have done.  The phase
+        // is not used to select a branch of the EOS here -- alpha0 and alphar
+        // are evaluated at the given (rho, T) regardless -- it only has to be
+        // a valid single-phase value.
         //
-        // update_DmolarT_direct, NOT update: for the light fluids the traced
-        // end of the saturation curve is BELOW make_gerg_fluid's 60 K Tmin
+        // update_DmolarT_direct, NOT update: for helium and hydrogen the
+        // reducing temperature is below the published 60 K lower limit, and
+        // for the light fluids the traced end of the saturation curve is too
         // (methane's is 57.17 K), so update() would throw OutOfRangeError from
-        // check_gerg_range_of_validity.  This is the one place the bypass is
-        // unambiguously right: the point being evaluated is one this backend
-        // computed itself and stored, and the alternative is a fluid that
-        // cannot be constructed.
-        for (SimpleState* st : {&fluid.triple_liquid, &fluid.triple_vapor}) {
+        // check_gerg_range_of_validity and the fluid could not be built at
+        // all.  The bypass is unambiguously right here: every point evaluated
+        // is one this backend computed itself and stored.
+        probe.specify_phase(iphase_supercritical);
+        probe.update_DmolarT_direct(EOS.reduce.rhomolar, EOS.reduce.T);
+        EOS.reduce.hmolar = probe.hmolar();
+        EOS.reduce.smolar = probe.smolar();
+
+        for (const auto& item : {std::make_pair(&fluid.triple_liquid, iphase_liquid), std::make_pair(&fluid.triple_vapor, iphase_gas)}) {
+            SimpleState* st = item.first;
+            probe.specify_phase(item.second);
             probe.update_DmolarT_direct(st->rhomolar, st->T);
             st->hmolar = probe.hmolar();
             st->smolar = probe.smolar();
         }
+        probe.unspecify_phase();
     }
     // fluid.crit was copied from EOS.reduce before h/s existed, so refresh the
-    // two fields update_states() just filled in.  Leaving crit.hmolar at
+    // two fields just filled in above.  Leaving crit.hmolar at
     // _HUGE while reduce.hmolar is finite would make get_state("critical") and
     // get_state("reducing") disagree about the same point.
     fluid.crit.hmolar = EOS.reduce.hmolar;
