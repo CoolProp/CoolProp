@@ -510,18 +510,36 @@ static const std::vector<std::pair<std::string, parameters>>& inputTableImpl() {
       {"rhomass", iDmass},
       {"molar_mass", imolar_mass},
       {"p", iP},
-      // Critical- and reducing-point constants: trivial parameters, properties of
-      // the fluid rather than of the state.  Use these where the PHYSICS references
-      // the fluid's true critical point -- e.g. a crossover critical enhancement,
-      // whose correlation length is defined relative to it.
+      // Critical-point constants: trivial parameters, properties of the fluid rather
+      // than of the state.  Use them only where the PHYSICS references the critical
+      // point itself -- e.g. a crossover critical enhancement, whose correlation
+      // length is defined relative to it.
       //
-      // They are NOT a substitute for a correlation's fitted reducing parameters.
-      // Source papers quote those to finite precision and the fit is conditioned on
-      // exactly those digits: nitrogen's 2024 viscosity correlation reduces with
-      // rho_c = 11.1839 mol/L while the Span et al. EOS carries 11183.901464580624
-      // mol/m^3, and since rho_r appears raised to powers up to 8.4, swapping one
-      // for the other moves the answer by ~1e-6.  Fitted reducing parameters belong
-      // in the block's `constants`, frozen.
+      // They are NOT a substitute for a correlation's reducing parameters, for two
+      // separate reasons.
+      //
+      // 1. They are not the fluid file's STATES.critical.  With superancillaries
+      //    enabled -- the DEFAULT -- HelmholtzEOSMixtureBackend::calc_T_critical and
+      //    calc_rhomolar_critical return the NUMERICAL critical point from the
+      //    superancillary, the state satisfying dp/drho|T = d2p/drho2|T = 0.  So the
+      //    value a formula sees depends on ENABLE_SUPERANCILLARIES, and fluid data
+      //    must not do that.  Xenon is the worked example: its 2021 viscosity paper
+      //    says it adopts Tc and rho_c from the Lemmon-Span EOS, Xenon.json carries
+      //    exactly those (289.733 K, 8400 mol/m^3), and reading them through these
+      //    inputs still moved a verification point by 7e-5.
+      //
+      // 2. A reducing parameter is a defining constant of the fit that produced the
+      //    correlation -- whatever number the regression was run with, quoted to
+      //    finite precision in the source paper.  Reproducing the correlation means
+      //    using that number, not a more precise estimate of the same physical
+      //    quantity.  Substituting one for the other is a real error: nitrogen's
+      //    Span et al. EOS and its 2024 viscosity correlation BOTH use
+      //    rho_c = 11.1839 mol/L, yet CoolProp's Nitrogen.json currently carries
+      //    11183.901464580624 mol/m^3 (a 2020 unit-conversion defect, under audit),
+      //    and since rho_r appears raised to powers up to 8.4 that shifts the answer
+      //    by ~1e-6 -- enough to lose the paper's own check values.
+      //
+      // Reducing parameters belong in the block's `constants`, frozen.
       //
       // That is also why the EOS *reducing* state is deliberately NOT here.  It is a
       // fitting convenience of the equation of state, correlations that write
