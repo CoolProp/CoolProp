@@ -1838,6 +1838,13 @@ if(COOLPROP_JAVA_MODULE)
   # Install all the generated java files
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
           DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
+  # Ship the archive alongside the unpacked tree, matching the Csharp layout.
+  # #3245 dropped this rule when it replaced the flat-glob install with the
+  # package-tree DIRECTORY install, which left the release area without the
+  # archive that dev/scripts/examples/win64run.py still fetches from
+  # nightly/Java/platform-independent.7z (CoolProp-qrn3).
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z"
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
   if(NOT JAVA_PACKAGE_DIR STREQUAL "")
     # Install the package tree rooted at its FIRST path component so the full
     # package layout is preserved under platform-independent/.  The parent-of-
