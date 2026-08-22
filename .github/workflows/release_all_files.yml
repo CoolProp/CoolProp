@@ -41,27 +41,96 @@ jobs:
   
   set_vars:
     runs-on: ubuntu-latest
+    # This job only derives strings from the dispatch input; it makes no API
+    # call, so it needs no token at all.  It is also the job an injected
+    # payload would land in, so an empty token is the cheapest blast-radius
+    # reduction available (CoolProp-4i70).
+    permissions: {}
     outputs:
       branch: ${{ steps.propagate_vars.outputs.branch }}
       target: ${{ steps.propagate_vars.outputs.target }}
       webdir: ${{ steps.propagate_vars.outputs.webdir }}
 
     steps:
-      # Start with the branch or tag for the source code
-      - run: echo "BRANCH=${{ (inputs.branch == ''        && 'master') || inputs.branch }}" >> $GITHUB_ENV
-      # Try to parse the branch as a version number
-      - run: |
-          set +e
-          echo "TARGET=$(echo ${{ env.BRANCH }} | grep -Eo '[0-9]+(\.[0-9]+)*')" >> $GITHUB_ENV
-      # Check whether we could parse it or not, use branch or nightly otherwise
-      - if: "${{ env.TARGET == '' }}"
-        run: echo "TARGET=${{ (env.BRANCH    == 'master'  && 'nightly') || env.BRANCH    }}" >> $GITHUB_ENV
-      - run: echo "WEBDIR=${{ (env.TARGET    == 'nightly' && 'dev')     || '.'           }}" >> $GITHUB_ENV
       - id: propagate_vars
+        shell: bash
+        # INPUT_BRANCH arrives through env instead of being interpolated into
+        # the script body.  A ${{ }} expression is substituted into the shell
+        # SOURCE TEXT before bash parses it, so the previous
+        #     echo "BRANCH=${{ ... || inputs.branch }}" >> $GITHUB_ENV
+        # executed a dispatch input of  x" ; <cmd> ; echo "  as shell code, in
+        # a job holding a write-scoped GITHUB_TOKEN.  Through env it is data.
+        env:
+          INPUT_BRANCH: ${{ inputs.branch }}
         run: |
-          echo "branch=${{ env.BRANCH }}" >> $GITHUB_OUTPUT
-          echo "target=${{ env.TARGET }}" >> $GITHUB_OUTPUT
-          echo "webdir=${{ env.WEBDIR }}" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          # Branch or tag to collect the binaries from; schedule/push events
+          # carry no inputs at all, so an empty value means master.
+          BRANCH="${INPUT_BRANCH:-master}"
+
+          # Validate before the value reaches any other job.  branch, and the
+          # target derived from it, are interpolated into run: blocks
+          # downstream -- including the rsync destination in deploy_files,
+          # which holds the SourceForge SSH key -- and are written to
+          # GITHUB_OUTPUT, where an embedded newline would forge extra
+          # outputs.  Restricting to git ref-name characters closes both.
+          case "$BRANCH" in
+            *[!A-Za-z0-9._/-]*)
+              echo "::error::Refusing branch input '$BRANCH': only A-Z a-z 0-9 . _ / - are allowed in a ref name."
+              exit 1
+              ;;
+          esac
+
+          # The character class above still admits '..', '//', and a leading or
+          # trailing '/', none of which are legal in a ref and all of which
+          # traverse out of the rsync destination: BRANCH='../../foo' yields
+          # TARGET='../../foo' and a destination of
+          # /home/frs/project/coolprop/CoolProp/../../foo -> /home/frs/project/foo.
+          # git's own validator is the authority on ref syntax; prefixing
+          # refs/heads/ makes a single-level name like 'master' valid without
+          # --allow-onelevel.  Both checks are needed and neither subsumes the
+          # other: check-ref-format permits ';', '$', '&' and quotes, which
+          # have no business in a path we interpolate into a shell command,
+          # while the character class permits the traversal forms above.
+          if ! git check-ref-format "refs/heads/$BRANCH"; then
+            echo "::error::Refusing branch input '$BRANCH': not a well-formed git ref name."
+            exit 1
+          fi
+
+          # Read a version number out of the ref if there is one, so that
+          # 'v7.1.0' publishes to the 7.1.0 directory.  grep exits 1 when
+          # nothing matches, which is the normal branch-name case, not an
+          # error -- hence '|| true'.  Keep only the first match: grep -Eo
+          # prints one line per match, and a multi-line value would corrupt
+          # GITHUB_OUTPUT the same way a newline in the input would.
+          TARGET="$(printf '%s' "$BRANCH" | grep -Eo '[0-9]+(\.[0-9]+)*' || true)"
+          TARGET="${TARGET%%$'\n'*}"
+
+          # No version in the name: master publishes as the nightly, any other
+          # branch publishes under its own name.
+          if [ -z "$TARGET" ]; then
+            if [ "$BRANCH" = "master" ]; then
+              TARGET="nightly"
+            else
+              TARGET="$BRANCH"
+            fi
+          fi
+
+          # Nightlies go to the 'dev' subdirectory of the web root, releases
+          # to the root itself.
+          if [ "$TARGET" = "nightly" ]; then
+            WEBDIR="dev"
+          else
+            WEBDIR="."
+          fi
+
+          echo "branch=$BRANCH  target=$TARGET  webdir=$WEBDIR"
+          {
+            echo "branch=$BRANCH"
+            echo "target=$TARGET"
+            echo "webdir=$WEBDIR"
+          } >> "$GITHUB_OUTPUT"
 
 
   # Single source of truth for the builder workflows whose artifacts make up a
