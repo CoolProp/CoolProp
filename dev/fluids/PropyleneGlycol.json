@@ -5623,7 +5623,7 @@
       "BibTeX": "Velliadou-IJT-2022-propyleneglycol",
       "dilute": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\n1e-6*sum(i: a[i]*Tr^p[i])",
+        "formula": "let Tr = T/Tc\n1e-6*sum(i: a[i]*Tr^pw[i])",
         "constants": {
           "Tc": 674.0
         },
@@ -5635,7 +5635,7 @@
             -9.37974,
             2.08103
           ],
-          "p": [
+          "pw": [
             0,
             1,
             2,
@@ -5646,7 +5646,7 @@
       },
       "initial_density": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: a[i]*Tr^p[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*rhomass/M",
+        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: a[i]*Tr^pw[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*rhomass/M",
         "constants": {
           "Tc": 674.0,
           "epsilon_over_k": 535.2,
@@ -5662,7 +5662,7 @@
             -9.37974,
             2.08103
           ],
-          "p": [
+          "pw": [
             0,
             1,
             2,
