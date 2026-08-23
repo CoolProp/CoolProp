@@ -5623,19 +5623,19 @@
       "BibTeX": "Velliadou-IJT-2022-propyleneglycol",
       "dilute": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\n1e-6*sum(i: a[i]*Tr^pw[i])",
+        "formula": "let Tr = T/Tc\n1e-6*sum(i: n[i]*Tr^np[i])",
         "constants": {
           "Tc": 674.0
         },
         "arrays": {
-          "a": [
+          "n": [
             1.15331,
             10.6228,
             13.1421,
             -9.37974,
             2.08103
           ],
-          "pw": [
+          "np": [
             0,
             1,
             2,
@@ -5646,7 +5646,7 @@
       },
       "initial_density": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: a[i]*Tr^pw[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*rhomass/M",
+        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: n[i]*Tr^np[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*rhomass/M",
         "constants": {
           "Tc": 674.0,
           "epsilon_over_k": 535.2,
@@ -5655,14 +5655,14 @@
           "M": 0.07609442
         },
         "arrays": {
-          "a": [
+          "n": [
             1.15331,
             10.6228,
             13.1421,
             -9.37974,
             2.08103
           ],
-          "pw": [
+          "np": [
             0,
             1,
             2,

@@ -4262,38 +4262,76 @@
       "BibTeX": "Sotiriadou-IJT-2024-ethene",
       "dilute": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\n1e-6*(n0 + n1*Tr + n2*Tr^2 + n3*Tr^3 + n4*Tr^4)/(m0 + m1*Tr + m2*Tr^2 + Tr^3)",
+        "formula": "let Tr = T/Tc\n1e-6*sum(i: n[i]*Tr^np[i])/sum(i: m[i]*Tr^mp[i])",
         "constants": {
-          "Tc": 282.35,
-          "n0": 0.785697,
-          "n1": 22.0478,
-          "n2": -12.8383,
-          "n3": 48.5252,
-          "n4": 3.04377,
-          "m0": 2.48645,
-          "m1": -0.890015,
-          "m2": 3.73
+          "Tc": 282.35
+        },
+        "arrays": {
+          "n": [
+            0.785697,
+            22.0478,
+            -12.8383,
+            48.5252,
+            3.04377
+          ],
+          "np": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "m": [
+            2.48645,
+            -0.890015,
+            3.73,
+            1.0
+          ],
+          "mp": [
+            0,
+            1,
+            2,
+            3
+          ]
         }
       },
       "initial_density": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*(n0 + n1*Tr + n2*Tr^2 + n3*Tr^3 + n4*Tr^4)/(m0 + m1*Tr + m2*Tr^2 + Tr^3)\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: d[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*rhomass/M",
+        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: n[i]*Tr^np[i])/sum(i: m[i]*Tr^mp[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: d[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*rhomass/M",
         "constants": {
           "Tc": 282.35,
-          "n0": 0.785697,
-          "n1": 22.0478,
-          "n2": -12.8383,
-          "n3": 48.5252,
-          "n4": 3.04377,
-          "m0": 2.48645,
-          "m1": -0.890015,
-          "m2": 3.73,
           "epsilon_over_k": 247.0,
           "sigma": 4.05e-10,
           "N_A": 6.02214076e+23,
           "M": 0.02805316
         },
         "arrays": {
+          "n": [
+            0.785697,
+            22.0478,
+            -12.8383,
+            48.5252,
+            3.04377
+          ],
+          "np": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "m": [
+            2.48645,
+            -0.890015,
+            3.73,
+            1.0
+          ],
+          "mp": [
+            0,
+            1,
+            2,
+            3
+          ],
           "d": [
             -19.572881,
             219.73999,
