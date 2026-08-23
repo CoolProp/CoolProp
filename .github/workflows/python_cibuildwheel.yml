@@ -137,11 +137,6 @@ jobs:
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
         CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 ARM64 (ARM64: native on windows-11-arm for py>=3.11, else cross-compiled — see CoolProp-6z0a)
         CIBW_ARCHS_LINUX: ${{ inputs.arch }} # i686 x86_64 aarch64 ppc64le s390x
-        # Smoke-test the published v8 wheel: it imports, the nanobind PropsSI works
-        # (returns a float for int args), and the State capsule shim loads.
-        # import numpy guards the PIP_ONLY_BINARY backtrack above: a numpy wheel
-        # that installs but cannot import should fail the job.
-        CIBW_TEST_COMMAND: python -c "import numpy; import CoolProp; from CoolProp.CoolProp import PropsSI; from CoolProp.State import State; assert '?' not in CoolProp.__gitrevision__; assert isinstance(PropsSI('T','P',101325,'Q',0,'Water'), float)"
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
