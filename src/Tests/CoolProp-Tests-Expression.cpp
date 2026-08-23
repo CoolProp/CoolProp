@@ -774,30 +774,6 @@ TEST_CASE("expression host path: p equals HEOS.p()", "[expression]") {
 }
 
 // ---------------------------------------------------------------------------
-// Critical- and reducing-point constants as DSL inputs.
-// ---------------------------------------------------------------------------
-TEST_CASE("critical and reducing constants resolve as inputs", "[expression]") {
-    using namespace CoolProp::expression;
-    const std::vector<std::pair<std::string, CoolProp::parameters>> cases = {
-      {"T_critical", CoolProp::iT_critical}, {"rhomolar_critical", CoolProp::irhomolar_critical}, {"p_critical", CoolProp::iP_critical}};
-
-    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Nitrogen"));
-    AS->update(CoolProp::DmolarT_INPUTS, 5000.0, 200.0);
-    for (const auto& c : cases) {
-        CAPTURE(c.first);
-        ExpressionBlock b(R"({"formula": ")" + c.first + R"("})");
-        REQUIRE(b.required_inputs() == std::vector<std::string>{c.first});
-        // Must be the fluid's own value, straight from keyed_output -- not a copy.
-        CHECK(b.evaluate(*AS) == AS->keyed_output(c.second));
-    }
-    // They are trivial parameters, so they do NOT depend on the state.
-    ExpressionBlock tc(R"({"formula": "T_critical"})");
-    const double at_200 = tc.evaluate(*AS);
-    AS->update(CoolProp::DmolarT_INPUTS, 100.0, 400.0);
-    CHECK(tc.evaluate(*AS) == at_200);
-}
-
-// ---------------------------------------------------------------------------
 // GOLDEN: the 5th transport stage, viscosity initial_density (empirical form).
 //
 // CycloHexane is the only shipped fluid using the empirical form; the other 19
@@ -837,17 +813,23 @@ TEST_CASE("golden: viscosity initial_density empirical", "[expression][golden]")
     CHECK(checks > 0);
 }
 
-TEST_CASE("the EOS reducing state is deliberately NOT an input", "[expression]") {
+TEST_CASE("critical point and reducing state are deliberately NOT inputs", "[expression]") {
     using namespace CoolProp::expression;
-    // Adding a name to the input table is a BREAKING change: it steals that name from
-    // every formula already using it as a constant.  `T_reducing`/`rhomolar_reducing`
-    // are what correlations call their OWN fitted reducing parameters -- six golden
-    // formulas in this file already do -- so those names stay available to authors.
-    CHECK(compile("T_reducing", {{"T_reducing", 500.0}}, {}).evaluate({}) == Catch::Approx(500.0));
-    CHECK(compile("rhomolar_reducing", {{"rhomolar_reducing", 8.0}}, {}).evaluate({}) == Catch::Approx(8.0));
-    // The critical point IS an input, so those three names are now reserved.
-    CHECK_THROWS_AS(compile("1", {{"rhomolar_critical", 1.0}}, {}), CoolProp::ValueError);
-    CHECK_THROWS_AS(compile("1", {{"T_critical", 1.0}}, {}), CoolProp::ValueError);
+    // Neither family is in the table -- see the rationale in Expression.cpp.  Both
+    // stay available to authors as ordinary block constants, which is where a
+    // correlation's reducing parameters belong: frozen, at the precision the source
+    // paper quotes.  Six golden formulas in this file already use `T_reducing` that
+    // way, and the xenon/argon/nitrogen blocks all freeze their own Tc and rho_c.
+    for (const char* nm : {"T_critical", "rhomolar_critical", "p_critical", "T_reducing", "rhomolar_reducing"}) {
+        CAPTURE(nm);
+        CHECK_THROWS_AS(compile(nm, {}, {}), CoolProp::ValueError);              // does not resolve
+        CHECK(compile(nm, {{nm, 7.0}}, {}).evaluate({}) == Catch::Approx(7.0));  // usable as a constant
+    }
+    // The five that ARE inputs stay reserved.
+    for (const auto& e : inputTable()) {
+        CAPTURE(e.first);
+        CHECK_THROWS_AS(compile("1", {{e.first, 1.0}}, {}), CoolProp::ValueError);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -862,9 +844,11 @@ TEST_CASE("the EOS reducing state is deliberately NOT an input", "[expression]")
 //
 // Delta_eta_c (the crossover critical enhancement) is NOT expressible today and is
 // out of scope here; the paper's Table 7 sets it to 1, which is what we check.
-// Reducing parameters are frozen constants, NOT the T_critical/rhomolar_critical
-// inputs: the paper reduces with rho_c = 11.1839 mol/L while the EOS carries
-// 11183.901464580624 mol/m^3, and rho_r^8.4 turns that into a ~1e-6 shift.
+// Reducing parameters are frozen constants.  Both Span et al. and this correlation
+// use rho_c = 11.1839 mol/L; CoolProp's Nitrogen.json currently carries
+// 11183.901464580624 mol/m^3 from a 2020 unit-conversion defect (under audit), and
+// rho_r^8.4 turns that difference into a ~1e-6 shift -- enough to lose the paper's
+// own check values.
 // ---------------------------------------------------------------------------
 namespace {
 // clang-format off
@@ -1105,18 +1089,14 @@ TEST_CASE("Argon 2025: end-to-end over the paper's Table 9 grid", "[expression]"
 //  * The CLASSIC Vogel/Bich second-viscosity-virial form, B*(T*) = sum b_i
 //    T*^(-i/4) + b_7 T*^-2.5 + b_8 T*^-5.5 -- nine terms with fractional
 //    exponents, a different shape from argon's Najafi/Aziz sum c_i T*^-i.
-//  * A COUNTEREXAMPLE for the T_critical / rhomolar_critical inputs.  The paper
-//    says it adopts Tc and rho_c from the Lemmon-Span EOS, and Xenon.json does
-//    carry exactly 289.733 K and 8400 mol/m^3 -- so using the inputs looked
-//    correct.  It is not.  With superancillaries enabled (the DEFAULT),
-//    HelmholtzEOSMixtureBackend::calc_T_critical/calc_rhomolar_critical return the
-//    NUMERICAL critical point from the superancillary (the state satisfying
-//    dp/drho|T = d2p/drho2|T = 0), not the fluid file's STATES.critical.  Feeding
-//    that into Eq. 6 moved the T=300 K, rho=2500 kg/m^3 verification point by
-//    7e-5 -- small, but it means the inputs are config-dependent and are NEVER
-//    the right source for a correlation's reducing parameters.  Frozen constants,
-//    always.  The inputs remain right where you genuinely want the numerical
-//    critical point, e.g. a crossover critical enhancement.
+//  * The fluid that killed the critical-point inputs.  The paper says it adopts
+//    Tc and rho_c from the Lemmon-Span EOS, and Xenon.json carries exactly
+//    289.733 K and 8400 mol/m^3 -- so reading them from a live input looked not
+//    just safe but more correct than copying.  It was neither: with
+//    superancillaries enabled (the default) those accessors return the NUMERICAL
+//    critical point, and Eq. 6 moved by 7e-5.  T_critical/rhomolar_critical/
+//    p_critical were removed from the input table as a result; Tc and rho_c below
+//    are frozen constants, as every correlation's reducing parameters should be.
 //
 // The paper writes B_eta in m^3/kg and scales by mass density; expressing it on a
 // molar basis makes the molar mass cancel (rho_mass/M == rho_molar), which is why
@@ -1157,13 +1137,12 @@ TEST_CASE("Xenon 2021+correction: stages and critical-point inputs", "[expressio
     using namespace CoolProp::expression;
     ExpressionBlock dilute(xe_dilute()), initial(xe_initial_density()), residual(XE_RESIDUAL);
     CHECK(residual.required_inputs() == std::vector<std::string>{"T", "rhomolar"});
-    // Pin the trap above: the critical-point INPUTS are the superancillary's
-    // numerical critical point, NOT Xenon.json's STATES.critical (289.733 K,
-    // 8400 mol/m^3).  If these ever start matching, the comment needs revisiting.
+    // Pin the reason the critical-point inputs were removed: keyed_output does NOT
+    // return Xenon.json's STATES.critical (8400 mol/m^3) with superancillaries on.
     {
         std::shared_ptr<CoolProp::AbstractState> X(CoolProp::AbstractState::factory("HEOS", "Xenon"));
         X->update(CoolProp::DmassT_INPUTS, 2500.0, 300.0);
-        CAPTURE(X->keyed_output(CoolProp::iT_critical), X->keyed_output(CoolProp::irhomolar_critical));
+        CAPTURE(X->keyed_output(CoolProp::irhomolar_critical));
         CHECK(X->keyed_output(CoolProp::irhomolar_critical) != 8400.0);
     }
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Xenon"));

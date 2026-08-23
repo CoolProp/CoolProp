@@ -503,55 +503,43 @@ std::vector<Token> lex(const std::string& s) {
 // The single bucket of thermodynamic inputs: DSL spelling -> CoolProp::parameters
 // key.  See the rationale for the curated allowlist in Expression.h.
 static const std::vector<std::pair<std::string, parameters>>& inputTableImpl() {
+    // State variables and pure-fluid metadata.  See below for what is deliberately
+    // NOT here, and why.
     static const std::vector<std::pair<std::string, parameters>> table = {
-      // State variables and pure-fluid metadata.
-      {"T", iT},
-      {"rhomolar", iDmolar},
-      {"rhomass", iDmass},
-      {"molar_mass", imolar_mass},
-      {"p", iP},
-      // Critical-point constants: trivial parameters, properties of the fluid rather
-      // than of the state.  Use them only where the PHYSICS references the critical
-      // point itself -- e.g. a crossover critical enhancement, whose correlation
-      // length is defined relative to it.
-      //
-      // They are NOT a substitute for a correlation's reducing parameters, for two
-      // separate reasons.
-      //
-      // 1. They are not the fluid file's STATES.critical.  With superancillaries
-      //    enabled -- the DEFAULT -- HelmholtzEOSMixtureBackend::calc_T_critical and
-      //    calc_rhomolar_critical return the NUMERICAL critical point from the
-      //    superancillary, the state satisfying dp/drho|T = d2p/drho2|T = 0.  So the
-      //    value a formula sees depends on ENABLE_SUPERANCILLARIES, and fluid data
-      //    must not do that.  Xenon is the worked example: its 2021 viscosity paper
-      //    says it adopts Tc and rho_c from the Lemmon-Span EOS, Xenon.json carries
-      //    exactly those (289.733 K, 8400 mol/m^3), and reading them through these
-      //    inputs still moved a verification point by 7e-5.
-      //
-      // 2. A reducing parameter is a defining constant of the fit that produced the
-      //    correlation -- whatever number the regression was run with, quoted to
-      //    finite precision in the source paper.  Reproducing the correlation means
-      //    using that number, not a more precise estimate of the same physical
-      //    quantity.  Substituting one for the other is a real error: nitrogen's
-      //    Span et al. EOS and its 2024 viscosity correlation BOTH use
-      //    rho_c = 11.1839 mol/L, yet CoolProp's Nitrogen.json currently carries
-      //    11183.901464580624 mol/m^3 (a 2020 unit-conversion defect, under audit),
-      //    and since rho_r appears raised to powers up to 8.4 that shifts the answer
-      //    by ~1e-6 -- enough to lose the paper's own check values.
-      //
-      // Reducing parameters belong in the block's `constants`, frozen.
-      //
-      // That is also why the EOS *reducing* state is deliberately NOT here.  It is a
-      // fitting convenience of the equation of state, correlations that write
-      // `T_reducing` mean their own fitted value, and adding the name would both
-      // advise the wrong thing and silently change the meaning of every existing
-      // formula that already uses it as a constant.  Adding a row to this table is a
-      // BREAKING change to the language -- weigh it that way.
-      {"T_critical", iT_critical},
-      {"rhomolar_critical", irhomolar_critical},
-      {"p_critical", iP_critical}};
+      {"T", iT}, {"rhomolar", iDmolar}, {"rhomass", iDmass}, {"molar_mass", imolar_mass}, {"p", iP}};
     return table;
 }
+
+// Deliberately ABSENT from the table above: the critical point (T_critical,
+// rhomolar_critical, p_critical) and the EOS reducing state (T_reducing,
+// rhomolar_reducing).  Both were tried and removed.
+//
+//  * The critical-point accessors are not the fluid file's STATES.critical.  With
+//    superancillaries enabled -- the DEFAULT -- calc_T_critical and
+//    calc_rhomolar_critical return the NUMERICAL critical point from the
+//    superancillary (the state satisfying dp/drho|T = d2p/drho2|T = 0).  A formula
+//    reading them would give different numbers depending on
+//    ENABLE_SUPERANCILLARIES, and fluid data must not depend on a runtime config
+//    flag.  Xenon is the worked example: its 2021 viscosity paper says it adopts
+//    Tc and rho_c from the Lemmon-Span EOS, Xenon.json carries exactly those
+//    (289.733 K, 8400 mol/m^3), and reading them through the inputs still moved a
+//    verification point by 7e-5.
+//
+//  * The reducing state is a fitting convenience of the equation of state, while
+//    a correlation writing `T_reducing` means its OWN fitted value.  Exposing the
+//    name would advise the wrong thing and silently steal it from every formula
+//    already using it as a constant -- six golden formulas in the test suite do.
+//
+//  * Underlying both: a reducing parameter is a defining constant of the fit that
+//    produced the correlation, quoted to finite precision in the source paper.
+//    Reproducing the correlation means using THAT number, not a better estimate of
+//    the same physical quantity.  Reducing parameters belong in the block's
+//    `constants`, frozen.  The only legitimate use for a live critical point is
+//    physics that references the critical point itself -- a crossover critical
+//    enhancement -- which no shipped viscosity correlation implements.
+//
+// Adding a row to this table is a BREAKING change to the language: it steals that
+// name from every formula already using it as a constant.  Weigh it that way.
 
 static bool inputForName(const std::string& nm, parameters& out) {
     for (const auto& e : inputTableImpl())
