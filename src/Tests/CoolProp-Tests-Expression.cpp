@@ -1410,4 +1410,82 @@ TEST_CASE("Tetrahydrofuran: PropsSI viscosity now works", "[expression]") {
     CHECK(eta == Catch::Approx(589.3956e-6).epsilon(1e-6));
 }
 
+// Polychroniadou, Antoniadis, Assael & Bell, Int. J. Thermophys. 43:6 (2022),
+// "A Reference Correlation for the Viscosity of Krypton From Entropy Scaling".
+//
+// A different FAMILY of correlation, not another polynomial.  There is no
+// dilute/initial-density/residual decomposition: the residual reduces on the
+// residual entropy s+ = -Smolar_residual/R and on Theta2 = B2 + T dB2/dT, with a
+// Lennard-Jones-derived scaled viscosity,
+//
+//   eta = rho_N^(2/3) sqrt(m kB T) / (s+)^(2/3) * (1.05 eta+_LJres + eta+_(rho->0))
+//   eta+_LJres = exp( sum_i d_i (s+)^i ) - 1                          (Eqs. 12-13)
+//
+// This is what the three new DSL inputs -- Smolar_residual, Bvirial and
+// dBvirial_dT -- were added for.  They are genuine state functions, so unlike the
+// critical-point inputs that were tried and removed they carry no configuration
+// dependence.  Bvirial and dBvirial_dT are temperature-only, verified bit-identical
+// across 14 orders of magnitude in density, so reading them at the current state
+// reproduces the reference implementation's rho = 1e-10 evaluation exactly.
+//
+// Stage split follows REFPROP's: eta_0 in `dilute`, and `higher_order` carries the
+// whole entropy-scaling expression MINUS eta_0, recomputing eta_0 internally, so
+// each stage still reports only its own contribution.
+//
+// THREE THINGS that each silently break this and are pinned below:
+//  * R is the EOS's 8.314472, NOT CODATA.  N_A = R/kB is how the correlation
+//    defines it; CODATA's 8.31446261815324 shifts the answer.
+//  * The paper's printed Eq. 13 reads "-1 + sum d_i (s+)^i", omitting the exp that
+//    its own reference implementation (Fig. 8) and REFPROP both apply.  Fig. 6
+//    plots the quantity on a log axis rising to ~10, which settles it.
+//  * The coefficient listing in Fig. 8 renders with a spurious trailing digit on
+//    every one of the twelve values (9.1297123e-1 for 9.129712e-1, and so on);
+//    Table 2 and REFPROP's KRYPTON.FLD agree on the real values.
+TEST_CASE("Krypton: shipped entropy-scaling viscosity matches the paper's Table 3", "[expression][golden]") {
+    // Table 3 is quoted to 17 digits precisely so an implementation can be checked.
+    const double tab3[5][3] = {{200.0, 1e-6, 17.33865170451214},
+                               {200.0, 13020.0, 56.4476422453026},
+                               {298.15, 1e-6, 25.306200000810886},
+                               {400.0, 1e-6, 32.795558620965195},
+                               {400.0, 13020.0, 64.8014771396677}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Krypton"));
+    double worst = 0;
+    for (const auto& row : tab3) {
+        AS->update(CoolProp::DmolarT_INPUTS, row[1], row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-7);
+    }
+    WARN("Krypton vs Table 3: worst relative deviation " << worst << " over 5 points");
+}
+
+TEST_CASE("Krypton: the entropy-scaling inputs are what the block asks for", "[expression]") {
+    using namespace CoolProp::expression;
+    // The residual block is the first thing in the tree to need EOS-derived state
+    // functions beyond p.  Pin that it really does read them.
+    ExpressionBlock probe(R"JSON({"formula": "Smolar_residual + Bvirial + dBvirial_dT"})JSON");
+    CHECK(probe.required_inputs() == std::vector<std::string>{"Smolar_residual", "Bvirial", "dBvirial_dT"});
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Krypton"));
+    AS->update(CoolProp::DmolarT_INPUTS, 13020.0, 200.0);
+    CHECK(
+      probe.evaluate(*AS)
+      == Catch::Approx(AS->keyed_output(CoolProp::iSmolar_residual) + AS->keyed_output(CoolProp::iBvirial) + AS->keyed_output(CoolProp::idBvirial_dT))
+           .epsilon(1e-14));
+    // Bvirial and dBvirial_dT are temperature-only; the reference implementation
+    // evaluates them at rho = 1e-10, and reading them at the state must agree.
+    ExpressionBlock bv(R"JSON({"formula": "Bvirial"})JSON");
+    const double at_dense = bv.evaluate(*AS);
+    AS->update(CoolProp::DmolarT_INPUTS, 1e-10, 200.0);
+    CHECK(bv.evaluate(*AS) == at_dense);
+}
+
+TEST_CASE("Krypton: PropsSI viscosity now works", "[expression]") {
+    const double eta = CoolProp::PropsSI("V", "T", 400.0, "Dmolar", 13020.0, "Krypton");
+    REQUIRE(ValidNumber(eta));
+    CHECK(eta == Catch::Approx(64.8014771396677e-6).epsilon(1e-7));
+}
+
 #endif  // ENABLE_CATCH

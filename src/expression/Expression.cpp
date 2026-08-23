@@ -506,7 +506,20 @@ static const std::vector<std::pair<std::string, parameters>>& inputTableImpl() {
     // State variables and pure-fluid metadata.  See below for what is deliberately
     // NOT here, and why.
     static const std::vector<std::pair<std::string, parameters>> table = {
-      {"T", iT}, {"rhomolar", iDmolar}, {"rhomass", iDmass}, {"molar_mass", imolar_mass}, {"p", iP}};
+      {"T", iT},
+      {"rhomolar", iDmolar},
+      {"rhomass", iDmass},
+      {"molar_mass", imolar_mass},
+      {"p", iP},
+      // EOS-derived state functions.  Added for entropy-scaling correlations, which
+      // are not built from the dilute/initial-density/residual decomposition at all:
+      // krypton's reduces on S+ = -Smolar_residual/R and theta = B + T dB/dT.
+      // Unlike the critical point (see below) these are genuine functions of the
+      // CURRENT state, so they carry no configuration dependence -- keyed_output
+      // computes each from the EOS where it stands.
+      {"Smolar_residual", iSmolar_residual},
+      {"Bvirial", iBvirial},
+      {"dBvirial_dT", idBvirial_dT}};
     return table;
 }
 
