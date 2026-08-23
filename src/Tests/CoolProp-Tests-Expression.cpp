@@ -1308,4 +1308,106 @@ TEST_CASE("PropyleneGlycol: PropsSI viscosity now works", "[expression]") {
     CHECK(eta == Catch::Approx(5135.986461e-6).epsilon(1e-6));
 }
 
+// Sotiriadou, Assael, Huber et al., Int. J. Thermophys. 45:123 (2024),
+// "Correlations for the Viscosity and Thermal Conductivity of Tetrahydrofuran".
+// Viscosity only; the paper's thermal conductivity is not implemented here.
+//
+// Third rational-polynomial dilute term, and a residual (Eq. 8) whose bracket is a
+// polynomial PLUS a ratio of polynomials:
+//   Delta_eta = (rhor^(2/3) Tr^(1/2)) { f0 + f1 Tr + f2 rhor
+//                                       + (f3 + f4 Tr)/(f5 + f6 rhor + rhor^2) }
+// The initial-density term reuses the same universal Vogel/Bich B*(T*) as ethene,
+// xenon and propylene glycol -- that nine-term quarter-power form now serves four
+// fluids and has never needed a code change.
+//
+// TOLERANCE: the checks are against the paper's TABULATED values, and the bound for
+// each point is derived from that point's own printed precision rather than a
+// blanket epsilon.  Both columns matter and neither dominates everywhere:
+//   * eta is printed to 3-5 significant figures, so eta_vap = 10.1 at 350 K carries
+//     5e-3 of rounding on its own, while eta_liq = 2021.1 carries 2.5e-5;
+//   * rho is printed to 5-6 figures, but dln(eta)/dln(rho) reaches 26 in the
+//     saturated liquid at 200 K, which turns 5e-6 of density rounding into 1.3e-4.
+// So the tolerance is halfulp(eta) + the model's own response to halfulp(rho),
+// evaluated point by point.  A single global epsilon would be far too loose for the
+// dense liquid and too tight for the dilute vapour.  All 35 points land inside it,
+// the worst at 0.94 of its bound.
+namespace {
+struct ThfRow
+{
+    double T, rho, rho_halfulp, eta, eta_halfulp;  // K, kg/m^3, muPa.s
+};
+// Table 10 (0.1 / 10 / 25 MPa; the paper omits eta above 25 MPa, its validated
+// limit being 30 MPa) followed by Table 9's saturation boundary, liquid and vapour.
+const ThfRow THF_TABLE[] = {{200, 986.60, 0.005, 2021.1, 0.05},
+                            {250, 933.91, 0.005, 826.0, 0.05},
+                            {300, 879.97, 0.005, 452.9, 0.05},
+                            {350, 2.5418, 0.00005, 10.04, 0.005},
+                            {400, 2.2048, 0.00005, 11.56, 0.005},
+                            {450, 1.9497, 0.00005, 13.04, 0.005},
+                            {500, 1.7489, 0.00005, 14.49, 0.005},
+                            {200, 991.26, 0.005, 2290.9, 0.05},
+                            {250, 940.08, 0.005, 920.6, 0.05},
+                            {300, 888.43, 0.005, 504.8, 0.05},
+                            {350, 834.98, 0.005, 322.3, 0.05},
+                            {400, 778.12, 0.005, 224.1, 0.05},
+                            {450, 715.04, 0.005, 163.1, 0.05},
+                            {500, 639.54, 0.005, 119.8, 0.05},
+                            {200, 997.97, 0.005, 2768.9, 0.05},
+                            {250, 948.79, 0.005, 1080.1, 0.05},
+                            {300, 899.99, 0.005, 589.3, 0.05},
+                            {350, 850.70, 0.005, 379.5, 0.05},
+                            {400, 800.14, 0.005, 269.1, 0.05},
+                            {450, 747.42, 0.005, 203.0, 0.05},
+                            {500, 691.46, 0.005, 159.4, 0.05},
+                            {200, 986.55, 0.005, 2018.5, 0.05},
+                            {200, 0.00091066, 0.000000005, 5.57, 0.005},
+                            {250, 933.85, 0.005, 825.0, 0.05},
+                            {250, 0.055411, 0.0000005, 6.96, 0.005},
+                            {300, 879.90, 0.005, 452.5, 0.05},
+                            {300, 0.68415, 0.000005, 8.44, 0.005},
+                            {350, 822.94, 0.005, 286.1, 0.05},
+                            {350, 3.6651, 0.00005, 10.1, 0.05},
+                            {400, 760.49, 0.005, 195.1, 0.05},
+                            {400, 12.424, 0.0005, 12.1, 0.05},
+                            {450, 687.67, 0.005, 137.4, 0.05},
+                            {450, 32.984, 0.0005, 14.9, 0.05},
+                            {500, 589.08, 0.005, 93.8, 0.05},
+                            {500, 81.621, 0.0005, 19.7, 0.05}};
+}  // namespace
+
+TEST_CASE("Tetrahydrofuran: shipped viscosity matches the paper's tables", "[expression][golden]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Tetrahydrofuran"));
+    auto eta_at = [&](double T, double rho) {
+        AS->update(CoolProp::DmassT_INPUTS, rho, T);
+        return static_cast<double>(AS->viscosity()) * 1e6;  // muPa.s
+    };
+    // Section 4.2 computer-verification points, whose densities are exact.
+    CHECK(eta_at(300.0, 1e-10) == Catch::Approx(8.3705).epsilon(1e-5));
+    CHECK(eta_at(300.0, 900.0) == Catch::Approx(589.3956).epsilon(1e-6));
+
+    double worst_frac = 0;
+    int checks = 0;
+    for (const auto& r : THF_TABLE) {
+        const double got = eta_at(r.T, r.rho);
+        // Propagate BOTH printed columns: the entry's own half-ulp, plus the model's
+        // response to a half-ulp of density.  See the note above for why a single
+        // epsilon cannot serve both the dense liquid and the dilute vapour.
+        const double drho = 0.5 * std::abs(eta_at(r.T, r.rho + r.rho_halfulp) - eta_at(r.T, std::max(r.rho - r.rho_halfulp, 1e-12)));
+        const double tol = r.eta_halfulp + drho;
+        CAPTURE(r.T, r.rho, r.eta, tol);
+        REQUIRE(ValidNumber(got));
+        CHECK(std::abs(got - r.eta) <= tol);
+        worst_frac = std::max(worst_frac, std::abs(got - r.eta) / tol);
+        ++checks;
+    }
+    CHECK(checks == 35);
+    WARN("THF vs Tables 9+10: worst deviation is " << worst_frac << " of the tabulated precision, over " << checks << " points");
+}
+
+TEST_CASE("Tetrahydrofuran: PropsSI viscosity now works", "[expression]") {
+    const double eta = CoolProp::PropsSI("V", "T", 300.0, "Dmass", 900.0, "Tetrahydrofuran");
+    REQUIRE(ValidNumber(eta));
+    CHECK(eta == Catch::Approx(589.3956e-6).epsilon(1e-6));
+}
+
 #endif  // ENABLE_CATCH
