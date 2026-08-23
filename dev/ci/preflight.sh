@@ -286,6 +286,18 @@ else
         # Default: run everything fast (skip the [slow] long tests).
         TAG_FILTER="~[slow]"
     fi
+    # The expression-DSL surface is ORTHOGONAL to the branches above, so it has to
+    # be OR-ed in rather than being another elif.  Its parse branch and dispatch arm
+    # live under src/Backends/Helmholtz/, so any change to them selects
+    # "[Helmholtz],[REFPROP]" -- which contains ZERO [expression] test cases.  Before
+    # this, a branch touching the DSL, its tests and shipped fluid data reported a
+    # green preflight having run none of them.
+    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/expression/|include/CoolProp/expression/|src/Tests/CoolProp-Tests-Expression\.cpp|dev/fluids/)"; then
+        case "$TAG_FILTER" in
+            "~[slow]") : ;;  # already runs everything except [slow]
+            *) TAG_FILTER="${TAG_FILTER},[expression]" ;;
+        esac
+    fi
     echo "  tag filter: $TAG_FILTER"
     # Gate on the runner's EXIT CODE, not on grepping its output.  The old
     # form piped into `grep -qE "failed|Errors:"`, so the `if` saw grep's

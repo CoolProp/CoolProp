@@ -16,6 +16,7 @@
 #    include <string>
 #    include <vector>
 
+#    include "CoolProp/Configuration.h"
 #    include "CoolProp/CoolProp.h"
 #    include "CoolProp/CoolPropFluid.h"
 #    include "CoolProp/DataStructures.h"
@@ -1057,9 +1058,11 @@ TEST_CASE("Argon 2025: end-to-end over the paper's Table 9 grid", "[expression]"
     const double pres[41] = {0.1e6, 0.1e6, 0.1e6, 0.1e6, 0.1e6, 0.1e6, 0.1e6, 0.1e6, 0.1e6, 10e6,  10e6,  10e6,  10e6, 10e6,
                              10e6,  10e6,  10e6,  10e6,  50e6,  50e6,  50e6,  50e6,  50e6,  50e6,  50e6,  50e6,  50e6, 100e6,
                              100e6, 100e6, 100e6, 100e6, 100e6, 100e6, 100e6, 200e6, 200e6, 200e6, 200e6, 200e6, 200e6};
+    static_assert(std::size(tab9) == 41, "tab9 and pres must stay in lockstep");
+    static_assert(std::size(pres) == std::size(tab9), "tab9 and pres must stay in lockstep");
     double worst_d = 0, worst_pt = 0;
     int checks = 0;
-    for (int k = 0; k < 41; ++k) {
+    for (std::size_t k = 0; k < std::size(tab9); ++k) {
         const double T = tab9[k][0], rho = tab9[k][1], ref = tab9[k][2] * 1e-6;
         const double gd = CoolProp::PropsSI("V", "T", T, "Dmass", rho, "AR_SOTIRIADOU_2025");
         const double gp = CoolProp::PropsSI("V", "T", T, "P", pres[k], "AR_SOTIRIADOU_2025");
@@ -1124,8 +1127,9 @@ std::string xe_initial_density() {
                        2491.6597, -787.26086, 14.085455, -0.34664158],
                  "e": [0, -0.25, -0.5, -0.75, -1.0, -1.25, -1.5, -2.5, -5.5]}})JSON";
 }
-// Eq. 6 AS CORRECTED (rho_r^12).  Tc and rho_c come from the EOS via the input
-// table, which is what the paper says to use.
+// Eq. 6 AS CORRECTED (rho_r^12).  Tc and rho_c are FROZEN CONSTANTS, not read from
+// the fluid -- see the block comment above for why the critical-point inputs were
+// removed.  289.733 K and 8400 mol/m^3 are the Lemmon-Span values the paper adopts.
 const char* const XE_RESIDUAL = R"JSON({"type": "expression",
   "formula": "let Tr = T/Tc\nlet rhor = rhomolar/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*(Tr + c0*Tr*rhor^4 + c1*rhor^12/Tr + (c2 + c3*rhor)/Tr^2)",
   "constants": {"Tc": 289.733, "rhoc": 8400.0, "c0": 1.396328251, "c1": 5.418871011e-4,
@@ -1143,7 +1147,12 @@ TEST_CASE("Xenon 2021+correction: stages and critical-point inputs", "[expressio
         std::shared_ptr<CoolProp::AbstractState> X(CoolProp::AbstractState::factory("HEOS", "Xenon"));
         X->update(CoolProp::DmassT_INPUTS, 2500.0, 300.0);
         CAPTURE(X->keyed_output(CoolProp::irhomolar_critical));
-        CHECK(X->keyed_output(CoolProp::irhomolar_critical) != 8400.0);
+        // Only meaningful with superancillaries on, which is the default; with
+        // COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY the accessor DOES return
+        // STATES.critical, and the hazard this pins simply does not exist.
+        if (CoolProp::get_config_bool(ENABLE_SUPERANCILLARIES)) {
+            CHECK(X->keyed_output(CoolProp::irhomolar_critical) != 8400.0);
+        }
     }
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Xenon"));
     // Section 4 verification points, background only (T (K), rho (kg/m^3), eta (muPa.s)).

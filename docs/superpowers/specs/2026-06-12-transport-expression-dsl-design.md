@@ -42,6 +42,24 @@ forms that are pure functions of `(T, ρ, τ, δ)` plus coefficient arrays:
 
 Reproducing all of these to ULP is the **completeness proof** for the scope.
 
+**Amendment (initial-density stage wired, PR follow-up to #3185).** Two of the
+listed forms have no golden test and, as the stage is now wired, one of them
+cannot have a like-for-like one:
+
+- `initial_density_dependence_Rainwater_Friend` — the host arm scales the routine's
+  return by `eta_dilute * rho`, whereas an `initial_density` expression block yields
+  the stage's contribution **directly** (see §3a). So an expression block is not a
+  drop-in replacement for an RF entry: to reproduce one it must compute
+  `eta_0 * B_eta * rho` itself, recomputing the dilute term inside the block. That
+  is what the shipped ethene and propylene-glycol correlations do, and it works —
+  but it is a re-expression rather than a substitution, so "reproduces the RF
+  routine to ULP" is not the right test and none is claimed.
+- `dilute_kinetic_theory` — simply untested; no shipped fluid exercises it through
+  the DSL yet.
+
+The completeness claim therefore covers the eight golden-tested Tier-A forms plus
+`initial_density_dependence_empirical`, not the full list above.
+
 ### Out of scope (v1 non-goals)
 
 - **Tier B** — closed-form but requiring EOS-derived scalars:
@@ -205,6 +223,29 @@ A transport sub-block (`dilute`, `initial_density`, `higher_order`, `residual`,
 
 There is no units field: every exposed quantity and the result are base SI
 always (§2), so a units annotation would be redundant.
+
+### 3a. What a block returns, per stage
+
+**Every expression block yields its own stage's contribution, in base SI, ready to
+be summed.** The host adds the stages; it applies no scaling of its own to an
+expression result. That is the `EMPIRICAL` convention, and it is deliberately NOT
+the `RAINWATER_FRIEND` one, whose hardcoded arm returns a second viscosity virial
+`B_eta` that the host then multiplies by `eta_dilute * rho`.
+
+The consequence is worth stating plainly: a formula cannot see any other stage's
+output. `eta_dilute` is a within-correlation intermediate, not a thermodynamic
+input, and exposing it would mean a stage reading another stage's result — the
+same self-reference the input allowlist exists to prevent. A correlation whose
+initial-density term is defined as `eta_1 = eta_0 * B_eta` therefore **recomputes
+`eta_0` inside the initial-density block**. That duplicates coefficient data in the
+fluid file, which is the price of not adding a code path; the two copies sit side
+by side in one file, and a divergence shows up immediately against the
+correlation's published verification values.
+
+Stages must stay honest about what they report: `calc_viscosity_dilute()` is
+consumed independently by conductivity models, and `viscosity_contributions()` is
+public API. Collapsing a whole correlation into one block would be simpler to
+write and wrong for both reasons.
 
 ### 4. Components
 
