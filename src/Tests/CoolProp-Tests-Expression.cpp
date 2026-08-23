@@ -1190,4 +1190,113 @@ TEST_CASE("Xenon 2021+correction: end-to-end along the saturation line", "[expre
     WARN("Xenon 2021 vs Table 8: worst relative deviation " << worst << " over 14 points");
 }
 
+// ---------------------------------------------------------------------------
+// SHIPPED CORRELATIONS.  Unlike the nitrogen/argon/xenon fixtures above, these
+// live in dev/fluids/*.json and are loaded through the ordinary fluid-data path
+// (JSON -> all_fluids CBOR -> FluidLibrary), so PropsSI("V", ..., "<fluid>") uses
+// them directly.  Purely additive: CoolProp shipped no viscosity for these fluids.
+// ---------------------------------------------------------------------------
+
+// Sotiriadou, Assael, Huber et al., Int. J. Thermophys. 45:87 (2024),
+// "Reference Correlation of the Viscosity of Ethene".
+//
+// Table 8 of that paper is the best verification data in this file: it resolves
+// the STAGES at 283 K, listing eta_0, (eta_1*rho + Delta_eta), their sum, the
+// critical-enhancement factor and the total, at seven significant figures for
+// rho = 0 to 550 kg/m^3.  We implement the background only (Delta_eta_c is the
+// Bhattacharjee crossover, which REFPROP omits for all but water and D2O), so the
+// comparison is against the background column.
+//
+// Note on the molar mass: the initial-density term needs molar density, and the
+// block freezes M = 0.02805316 kg/mol -- the paper's value, and the one REFPROP
+// corrected to in 2024.  CoolProp's Ethylene.json still carries the pre-2024
+// 0.02805376, so driving the block off `rhomass` and the frozen M keeps the
+// correlation exact regardless of when that gets fixed.
+TEST_CASE("Ethylene: shipped viscosity matches the paper's Table 8", "[expression][golden]") {
+    // T (K) = 283 throughout; rho (kg/m^3), eta_0, (eta_1 rho + Delta_eta), background (muPa.s)
+    const double tab8[12][4] = {
+      {0., 9.753447, 0.000000, 9.753447},     {50., 9.753447, 0.883644, 10.637091},   {100., 9.753447, 2.850625, 12.604071},
+      {150., 9.753447, 5.758114, 15.511560},  {200., 9.753447, 9.627286, 19.380732},  {250., 9.753447, 14.637185, 24.390632},
+      {300., 9.753447, 21.181254, 30.934701}, {350., 9.753447, 29.948520, 39.701967}, {400., 9.753447, 42.021090, 51.774536},
+      {450., 9.753447, 58.985091, 68.738538}, {500., 9.753447, 83.053687, 92.807133}, {550., 9.753447, 117.201315, 126.954762}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Ethylene"));
+    double worst = 0;
+    for (const auto& row : tab8) {
+        const double rho = (row[0] > 0) ? row[0] : 1e-8;  // the EOS will not take rho = 0
+        AS->update(CoolProp::DmassT_INPUTS, rho, 283.0);
+        CoolPropDbl dilute = 0, initial = 0, residual = 0, critical = 0;
+        AS->viscosity_contributions(dilute, initial, residual, critical);
+        const double total = AS->viscosity();
+        CAPTURE(row[0], row[3]);
+        REQUIRE(ValidNumber(total));
+        // The dilute stage is temperature-only, so it must be the same at every row.
+        CHECK(static_cast<double>(dilute) == Catch::Approx(row[1] * 1e-6).epsilon(1e-7));
+        // initial_density + higher_order together are the paper's fourth column.
+        // margin, not epsilon, for the rho = 0 row: we substitute rho = 1e-8 kg/m^3
+        // there, and the residual's rhor^(2/3) leaves ~1e-13 Pa.s rather than exactly
+        // zero.  1e-12 is still six orders below the smallest non-zero entry.
+        CHECK(static_cast<double>(initial + residual) == Catch::Approx(row[2] * 1e-6).epsilon(1e-6).margin(1e-12));
+        const double rel = std::abs(total - row[3] * 1e-6) / (row[3] * 1e-6);
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-6);
+        CHECK(critical == 0.0);  // Delta_eta_c deliberately not implemented
+    }
+    WARN("Ethylene vs Table 8 background: worst relative deviation " << worst << " over 12 points");
+}
+
+TEST_CASE("Ethylene: PropsSI viscosity now works and is stage-consistent", "[expression]") {
+    // Before this correlation shipped, PropsSI("V", ..., "Ethylene") threw.
+    const double eta = CoolProp::PropsSI("V", "T", 283.0, "Dmass", 300.0, "Ethylene");
+    REQUIRE(ValidNumber(eta));
+    CHECK(eta == Catch::Approx(30.934701e-6).epsilon(1e-6));
+    // And the three stages sum to the whole.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Ethylene"));
+    AS->update(CoolProp::DmassT_INPUTS, 300.0, 283.0);
+    CoolPropDbl d = 0, i = 0, r = 0, c = 0;
+    AS->viscosity_contributions(d, i, r, c);
+    CHECK(static_cast<double>(d + i + r + c) == Catch::Approx(eta).epsilon(1e-14));
+}
+
+// Velliadou, Assael & Huber, Int. J. Thermophys. 43:22 (2022), "Reference
+// Correlation for the Viscosity of Propane-1,2-diol (Propylene Glycol)".
+//
+// New form for the DSL: the residual (Eq. 9) is an EXPONENTIAL,
+//   Delta_eta = eta_ref (rhor^(2/3) Tr^(1/2)) exp{c0 + c1 rhor + c2 rhor^2/Tr
+//                                                 + c3 rhor^3/Tr^2 + c4 Tr + c5 Tr^2},
+// which is how a glycol spans four orders of magnitude in viscosity between 450 K
+// and the triple point.  The dilute term (Eq. 5) is a plain polynomial in T/Tc --
+// a Chapman-Enskog scheme refit for convenience -- and the initial-density term
+// reuses the same universal Vogel/Bich B*(T*) as ethene and xenon.
+TEST_CASE("PropyleneGlycol: shipped viscosity matches the paper's values", "[expression][golden]") {
+    // Section 3 computer-verification points: T (K), rho (kg/m^3), eta (muPa.s).
+    const double verif[3][3] = {{350, 0.0, 9.051368}, {350, 0.02, 9.058162}, {350, 1000.0, 5135.986461}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "PropyleneGlycol"));
+    for (const auto& row : verif) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-8, row[0]);
+        CAPTURE(row[0], row[1]);
+        CHECK(static_cast<double>(AS->viscosity()) == Catch::Approx(row[2] * 1e-6).epsilon(1e-6));
+    }
+    // Table 7, spanning 245-450 K and four orders of magnitude in viscosity.
+    const double tab7[8][3] = {{245, 1072.3, 4683847.}, {300, 1031.2, 39323.}, {450, 903.51, 674.67}, {245, 1091.6, 9060255.},
+                               {450, 945.09, 885.40},   {300, 1072.7, 88176.}, {450, 998.75, 1289.5}, {450, 1033.4, 1672.3}};
+    double worst = 0;
+    for (const auto& row : tab7) {
+        AS->update(CoolProp::DmassT_INPUTS, row[1], row[0]);
+        const double got = AS->viscosity(), ref = row[2] * 1e-6;
+        CAPTURE(row[0], row[1], row[2]);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-4);  // the table is printed to five significant figures
+    }
+    WARN("PropyleneGlycol vs Table 7: worst relative deviation " << worst << " over 8 points");
+}
+
+TEST_CASE("PropyleneGlycol: PropsSI viscosity now works", "[expression]") {
+    // Threw before this correlation shipped.
+    const double eta = CoolProp::PropsSI("V", "T", 350.0, "Dmass", 1000.0, "PropyleneGlycol");
+    REQUIRE(ValidNumber(eta));
+    CHECK(eta == Catch::Approx(5135.986461e-6).epsilon(1e-6));
+}
+
 #endif  // ENABLE_CATCH
