@@ -446,6 +446,16 @@ EXPORT_CODE void CONVENTION set_departure_functions(const char* string_data, lon
         HandleException(errcode, message_buffer, buffer_length);
     }
 }
+EXPORT_CODE void CONVENTION apply_simple_mixing_rule(const char* identifier1, const char* identifier2, const char* rule, long* errcode,
+                                                      char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    fpu_reset_guard guard;
+    try {
+        CoolProp::apply_simple_mixing_rule(identifier1, identifier2, rule);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
 EXPORT_CODE double CONVENTION HAPropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* Name3,
                                         double Prop3) {
     fpu_reset_guard guard;
