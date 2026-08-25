@@ -1291,7 +1291,6 @@ CoolPropDbl TransportRoutines::viscosity_rhosr(HelmholtzEOSMixtureBackend& HEOS)
     return etastar_fluid * eta_dilute;
 }
 
-
 CoolPropDbl TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend& HEOS, HelmholtzEOSMixtureBackend& HEOS_Reference) {
     // Collect some parameters
     CoolPropDbl M = HEOS.molar_mass(), M_kmol = M * 1000, M0 = HEOS_Reference.molar_mass(), Tc = HEOS.T_critical(), Tc0 = HEOS_Reference.T_critical(),

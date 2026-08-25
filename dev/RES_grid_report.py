@@ -1,4 +1,4 @@
-"""Stage-6(b): measure how well the REFPROP-fitted RES parameters transfer to HEOS.
+"""Measure how well the REFPROP-fitted RES parameters transfer to the HEOS backend.
 
 Consumes dev/RES_comparison/grid_cpp.csv, written by the [RES_grid] Catch2 harness, which
 evaluates the SAME implementation on both backends at the same (T, p) points.  One implementation,
@@ -22,7 +22,7 @@ Two things make a naive comparison misleading, and both are handled here explici
    policy decision, not a measurement.
 
 The [RES_grid] harness pins both backends to the same dilute-gas and enhancement-viscosity source,
-without which this measures the Stage-4 source policy rather than the parameters.
+without which this measures that source policy rather than the parameters.
 """
 
 import argparse

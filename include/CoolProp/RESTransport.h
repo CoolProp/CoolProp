@@ -25,9 +25,9 @@ namespace CoolProp {
 // Residual Entropy Scaling (RES) transport data. Martinek 2025 / Yang 2021-2025.
 struct ViscosityRESData
 {
-    std::vector<double> n_dilute;      // 5 polynomial coefficients: eta0(T)/uPas = sum_k n_k * T^k
-    std::vector<double> n_res;         // 3 coefficients for ln(vis_plus + 1)
-    double xita = 1.0;                 // scaling factor xi; 1.0 when individual fit was used
+    std::vector<double> n_dilute;  // 5 polynomial coefficients: eta0(T)/uPas = sum_k n_k * T^k
+    std::vector<double> n_res;     // 3 coefficients for ln(vis_plus + 1)
+    double xita = 1.0;             // scaling factor xi; 1.0 when individual fit was used
     int group_num = -1;
     double molar_mass = _HUGE;         // kg/mol, cached for Wilke mixing
     bool n_params_match_alpha = true;  // false after alpha-function change without new n_res
@@ -37,8 +37,8 @@ struct ViscosityRESData
 // Residual Entropy Scaling (RES) thermal conductivity data. Yang 2021-2025 / Li 2024.
 struct ConductivityRESData
 {
-    std::vector<double> n_dilute;      // 5 polynomial coefficients: lambda0(T)/Wm-1K-1
-    std::vector<double> n_res;         // 4 coefficients for tc_plus
+    std::vector<double> n_dilute;  // 5 polynomial coefficients: lambda0(T)/Wm-1K-1
+    std::vector<double> n_res;     // 4 coefficients for tc_plus
     double xita = 1.0;
     int group_num = -1;
     double molar_mass = _HUGE;

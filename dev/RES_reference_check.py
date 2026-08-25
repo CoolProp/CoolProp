@@ -1,9 +1,10 @@
-"""Stage-6(a): check the C++ RES implementation against the authors' own reference code.
+"""Check the C++ RES implementation against the authors' own reference code.
 
 Runs Martinek 2025 (viscosity) and Li 2024 (conductivity) over the same grid the C++ REFPROP+RES
 harness used, and compares point by point.  Both sides evaluate on REFPROP, so the equation of
-state is identical and any deviation is an implementation defect -- this is the half of Stage 6
-that says whether the model is coded correctly, separate from whether its parameters transfer.
+state is identical and any deviation is an implementation defect.  This says whether the model
+is coded correctly, separately from whether its parameters transfer to another backend --
+dev/RES_grid_report.py answers that one.
 
 The published sample sets already give one point per fluid (the [RES] parity tests cover those).
 This extends the comparison to states those points never reach: dense supercritical, compressed

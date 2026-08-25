@@ -24,11 +24,11 @@ namespace CoolProp {
 // ─── Residual Entropy Scaling (RES) ──────────────────────────────────────────
 // Physical constants (2018 CODATA)
 namespace {
-static const double RES_N_A  = 6.02214076e23;   // mol^-1
-static const double RES_k_B  = 1.380649e-23;    // J/K
+static const double RES_N_A = 6.02214076e23;  // mol^-1
+static const double RES_k_B = 1.380649e-23;   // J/K
 // Exponent vectors are hardcoded per the fitting scheme of the literature.
-static const double vis_pow[3]  = {1.8, 2.4, 2.8};
-static const double tc_pow[4]   = {1.0, 1.5, 2.0, 2.5};
+static const double vis_pow[3] = {1.8, 2.4, 2.8};
+static const double tc_pow[4] = {1.0, 1.5, 2.0, 2.5};
 }  // namespace
 
 /// s_plus = -s_res/R is the model's independent variable, and every term raises it to a FRACTIONAL
@@ -96,28 +96,26 @@ static double wilke_mix(const std::vector<double>& eta0, const std::vector<doubl
 CoolPropDbl RESTransport::viscosity(AbstractState& HEOS) {
     const std::vector<CoolPropDbl>& z = HEOS.get_mole_fractions();
     const std::size_t N = z.size();
-    const double R      = HEOS.gas_constant();
-    const double T      = HEOS.T();
-    const double rho    = HEOS.rhomass();   // kg/m³
-    const double M_mix  = HEOS.molar_mass();  // kg/mol
-    const double s_res  = HEOS.smolar_residual();
+    const double R = HEOS.gas_constant();
+    const double T = HEOS.T();
+    const double rho = HEOS.rhomass();       // kg/m³
+    const double M_mix = HEOS.molar_mass();  // kg/mol
+    const double s_res = HEOS.smolar_residual();
     const double s_plus = -s_res / R;
-    const double rhoN   = rho / M_mix * RES_N_A;  // number density [m^-3]
+    const double rhoN = rho / M_mix * RES_N_A;  // number density [m^-3]
     check_s_plus(s_plus, "viscosity");
 
     // Guard: alpha-function consistency
     for (std::size_t i = 0; i < N; ++i) {
         if (!HEOS.RES_data().comps[i].viscosity.provided)
-            throw ValueError(format(
-                "Viscosity RES parameters are not available for component '%s'. "
-                "Ensure RES parameters are loaded or call set_viscosity_RES_parameters().",
-                HEOS.RES_data().comps[i].name.c_str()));
+            throw ValueError(format("Viscosity RES parameters are not available for component '%s'. "
+                                    "Ensure RES parameters are loaded or call set_viscosity_RES_parameters().",
+                                    HEOS.RES_data().comps[i].name.c_str()));
         if (!HEOS.RES_data().comps[i].viscosity.n_params_match_alpha)
-            throw ValueError(format(
-                "Viscosity RES n-coefficients for component '%s' were fitted for a different "
-                "alpha function. Call set_viscosity_RES_residual_params(%zu, n_res, xita) "
-                "with parameters refitted for your alpha function.",
-                HEOS.RES_data().comps[i].name.c_str(), i));
+            throw ValueError(format("Viscosity RES n-coefficients for component '%s' were fitted for a different "
+                                    "alpha function. Call set_viscosity_RES_residual_params(%zu, n_res, xita) "
+                                    "with parameters refitted for your alpha function.",
+                                    HEOS.RES_data().comps[i].name.c_str(), i));
     }
 
     // Dilute-gas viscosity per component [Pa·s] from polynomial in T
@@ -127,11 +125,12 @@ CoolPropDbl RESTransport::viscosity(AbstractState& HEOS) {
         const auto& c = d.n_dilute;  // [n0..n4], result in µPa·s
         double v = c[0] + T * (c[1] + T * (c[2] + T * (c[3] + T * c[4])));
         eta0[i] = v * 1e-6;  // µPa·s → Pa·s
-        M[i]    = d.molar_mass;
+        M[i] = d.molar_mass;
     }
 
     std::vector<double> xd(N);
-    for (std::size_t i = 0; i < N; ++i) xd[i] = z[i];
+    for (std::size_t i = 0; i < N; ++i)
+        xd[i] = z[i];
     double eta0_mix = 0;
     if (!dilute_from_backend(HEOS, iviscosity, HEOS.RES_data().viscosity_dilute_source, N == 1, eta0_mix)) {
         eta0_mix = wilke_mix(eta0, M, xd);
@@ -145,7 +144,8 @@ CoolPropDbl RESTransport::viscosity(AbstractState& HEOS) {
         // so fold xita into s_plus rather than into the coefficients.
         double s_eff = s_plus / d.xita;
         double sum = 0;
-        for (int k = 0; k < 3; ++k) sum += d.n_res[k] * pow(s_eff, vis_pow[k]);
+        for (int k = 0; k < 3; ++k)
+            sum += d.n_res[k] * pow(s_eff, vis_pow[k]);
         double vis_plus = exp(sum) - 1.0;
         double m = M[0] / RES_N_A;
         double vis_res = vis_plus / pow(s_plus, 2.0 / 3.0) * pow(rhoN, 2.0 / 3.0) * sqrt(m * RES_k_B * T);
@@ -158,12 +158,14 @@ CoolPropDbl RESTransport::viscosity(AbstractState& HEOS) {
             n_mix[k] += xd[i] * d.n_res[k] / pow(d.xita, vis_pow[k]);
     }
     double sum = 0;
-    for (int k = 0; k < 3; ++k) sum += n_mix[k] * pow(s_plus, vis_pow[k]);
+    for (int k = 0; k < 3; ++k)
+        sum += n_mix[k] * pow(s_plus, vis_pow[k]);
     double vis_plus = exp(sum) - 1.0;
 
     // Mixture effective molecular mass (mole-fraction weighted M for dilute ideal-gas limit)
     double M_eff = 0;
-    for (std::size_t i = 0; i < N; ++i) M_eff += xd[i] * M[i];
+    for (std::size_t i = 0; i < N; ++i)
+        M_eff += xd[i] * M[i];
     double m_mix = M_eff / RES_N_A;
 
     double vis_res = vis_plus / pow(s_plus, 2.0 / 3.0) * pow(rhoN, 2.0 / 3.0) * sqrt(m_mix * RES_k_B * T);
@@ -173,27 +175,25 @@ CoolPropDbl RESTransport::viscosity(AbstractState& HEOS) {
 CoolPropDbl RESTransport::conductivity(AbstractState& HEOS) {
     const std::vector<CoolPropDbl>& z = HEOS.get_mole_fractions();
     const std::size_t N = z.size();
-    const double R      = HEOS.gas_constant();
-    const double T      = HEOS.T();
-    const double rho    = HEOS.rhomass();
-    const double M_mix  = HEOS.molar_mass();
-    const double s_res  = HEOS.smolar_residual();
+    const double R = HEOS.gas_constant();
+    const double T = HEOS.T();
+    const double rho = HEOS.rhomass();
+    const double M_mix = HEOS.molar_mass();
+    const double s_res = HEOS.smolar_residual();
     const double s_plus = -s_res / R;
-    const double rhoN   = rho / M_mix * RES_N_A;
+    const double rhoN = rho / M_mix * RES_N_A;
     check_s_plus(s_plus, "conductivity");
 
     for (std::size_t i = 0; i < N; ++i) {
         if (!HEOS.RES_data().comps[i].conductivity.provided)
-            throw ValueError(format(
-                "Conductivity RES parameters are not available for component '%s'. "
-                "Ensure RES parameters are loaded or call set_conductivity_RES_parameters().",
-                HEOS.RES_data().comps[i].name.c_str()));
+            throw ValueError(format("Conductivity RES parameters are not available for component '%s'. "
+                                    "Ensure RES parameters are loaded or call set_conductivity_RES_parameters().",
+                                    HEOS.RES_data().comps[i].name.c_str()));
         if (!HEOS.RES_data().comps[i].conductivity.n_params_match_alpha)
-            throw ValueError(format(
-                "Conductivity RES n-coefficients for component '%s' were fitted for a different "
-                "alpha function. Call set_conductivity_RES_residual_params(%zu, n_res, xita) "
-                "with parameters refitted for your alpha function.",
-                HEOS.RES_data().comps[i].name.c_str(), i));
+            throw ValueError(format("Conductivity RES n-coefficients for component '%s' were fitted for a different "
+                                    "alpha function. Call set_conductivity_RES_residual_params(%zu, n_res, xita) "
+                                    "with parameters refitted for your alpha function.",
+                                    HEOS.RES_data().comps[i].name.c_str(), i));
     }
 
     // Dilute-gas thermal conductivity per component from polynomial [W/m/K]
@@ -202,11 +202,12 @@ CoolPropDbl RESTransport::conductivity(AbstractState& HEOS) {
         const auto& d = HEOS.RES_data().comps[i].conductivity;
         const auto& c = d.n_dilute;  // result in W/m/K
         tc0[i] = c[0] + T * (c[1] + T * (c[2] + T * (c[3] + T * c[4])));
-        M[i]   = d.molar_mass;
+        M[i] = d.molar_mass;
     }
 
     std::vector<double> xd(N);
-    for (std::size_t i = 0; i < N; ++i) xd[i] = z[i];
+    for (std::size_t i = 0; i < N; ++i)
+        xd[i] = z[i];
     double tc0_mix = 0;
     if (!dilute_from_backend(HEOS, iconductivity, HEOS.RES_data().conductivity_dilute_source, N == 1, tc0_mix)) {
         tc0_mix = wilke_mix(tc0, M, xd);
@@ -214,7 +215,8 @@ CoolPropDbl RESTransport::conductivity(AbstractState& HEOS) {
 
     // Mass-fraction weighted sqrt(m) for effective molecular mass (Yang 2024)
     double M_mix_actual = 0;
-    for (std::size_t i = 0; i < N; ++i) M_mix_actual += xd[i] * M[i];
+    for (std::size_t i = 0; i < N; ++i)
+        M_mix_actual += xd[i] * M[i];
     double sqrt_m_mix = 0;
     for (std::size_t i = 0; i < N; ++i) {
         double w_i = xd[i] * M[i] / M_mix_actual;  // mass fraction
@@ -229,7 +231,8 @@ CoolPropDbl RESTransport::conductivity(AbstractState& HEOS) {
         const auto& d = HEOS.RES_data().comps[0].conductivity;
         double s_eff = s_plus / d.xita;
         tc_plus = 0;
-        for (int k = 0; k < 4; ++k) tc_plus += d.n_res[k] * pow(s_eff, tc_pow[k]);
+        for (int k = 0; k < 4; ++k)
+            tc_plus += d.n_res[k] * pow(s_eff, tc_pow[k]);
     } else {
         for (std::size_t i = 0; i < N; ++i) {
             const auto& d = HEOS.RES_data().comps[i].conductivity;
@@ -237,7 +240,8 @@ CoolPropDbl RESTransport::conductivity(AbstractState& HEOS) {
                 n_mix[k] += xd[i] * d.n_res[k] / pow(d.xita, tc_pow[k]);
         }
         tc_plus = 0;
-        for (int k = 0; k < 4; ++k) tc_plus += n_mix[k] * pow(s_plus, tc_pow[k]);
+        for (int k = 0; k < 4; ++k)
+            tc_plus += n_mix[k] * pow(s_plus, tc_pow[k]);
     }
 
     double tc_res = tc_plus / pow(s_plus, 2.0 / 3.0) * RES_k_B * pow(rhoN, 2.0 / 3.0) * sqrt(RES_k_B * T / m_mix);

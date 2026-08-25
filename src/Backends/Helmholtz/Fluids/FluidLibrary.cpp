@@ -287,8 +287,7 @@ void JSONFluidLibrary::add_one(const nlohmann::json& fluid_json) {
         }
 
         // Overlay RES transport parameters for the HEOS backend (from res_transport_parameters.json)
-        if (!res_transport_json.is_null())
-            load_RES_transport_parameters(res_transport_json, "HEOS", fluid);
+        if (!res_transport_json.is_null()) load_RES_transport_parameters(res_transport_json, "HEOS", fluid);
 
         // If the fluid is ok...
 
@@ -407,12 +406,9 @@ void set_fluid_enthalpy_entropy_offset(const std::string& fluid, double delta_a1
     library.set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, ref);
 }
 
-void overlay_RES_transport_by_name(const std::string& eos_key, CoolPropFluid& fluid,
-                                   double molar_mass_override) {
+void overlay_RES_transport_by_name(const std::string& eos_key, CoolPropFluid& fluid, double molar_mass_override) {
     ensure_library_loaded();
-    if (!res_transport_json.is_null())
-        JSONFluidLibrary::load_RES_transport_parameters(res_transport_json, eos_key, fluid,
-                                                         molar_mass_override);
+    if (!res_transport_json.is_null()) JSONFluidLibrary::load_RES_transport_parameters(res_transport_json, eos_key, fluid, molar_mass_override);
 }
 
 } /* namespace CoolProp */

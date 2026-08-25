@@ -1,4 +1,4 @@
-"""Build the (fluid, T, p) grid used by the Stage-6 RES verification.
+"""Build the (fluid, T, p) grid used to verify the RES transport implementation.
 
 The published sample sets carry ONE point per fluid, and several of those points sit almost
 entirely in the dilute gas -- where the transport property barely depends on s_res at all, so a

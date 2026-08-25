@@ -872,8 +872,7 @@ void AbstractState::set_RES_mixture_enhancement(RESMixtureEnhancement policy) {
     }
 }
 
-void AbstractState::set_viscosity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res,
-                                                 double xita) {
+void AbstractState::set_viscosity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res, double xita) {
     check_RES_component_index(i, "set_viscosity_RES_parameters");
     ViscosityRESData& d = _RES.comps[i].viscosity;
     d.n_dilute = n_dilute;
@@ -888,9 +887,8 @@ void AbstractState::set_viscosity_RES_parameters(std::size_t i, const std::vecto
     _conductivity.clear();
 }
 
-void AbstractState::set_conductivity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res,
-                                                    double xita, double R_D, double gamma_uni, double Gamma, double phi0, double t_ref,
-                                                    double q_D) {
+void AbstractState::set_conductivity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res, double xita,
+                                                    double R_D, double gamma_uni, double Gamma, double phi0, double t_ref, double q_D) {
     check_RES_component_index(i, "set_conductivity_RES_parameters");
     ConductivityRESData& d = _RES.comps[i].conductivity;
     d.n_dilute = n_dilute;

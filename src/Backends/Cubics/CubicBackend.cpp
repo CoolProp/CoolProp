@@ -42,7 +42,7 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
         const std::string eos_key = (backend_name() == "PengRobinsonBackend") ? "PR" : "SRK";
         std::vector<CoolPropFluid>& _comps = HelmholtzEOSMixtureBackend::get_components();
         for (std::size_t i = 0; i < N && i < _comps.size(); ++i) {
-            _comps[i].name    = components[i].name;
+            _comps[i].name = components[i].name;
             _comps[i].aliases = components[i].aliases;  // needed for RES lookup by REFPROP name
             overlay_RES_transport_by_name(eos_key, _comps[i], components[i].molemass);
         }
@@ -814,7 +814,7 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
     }
     // Changing the alpha function invalidates n_res / xita, which were fitted for the default alpha.
     if (i < _RES.comps.size()) {
-        _RES.comps[i].viscosity.n_params_match_alpha    = false;
+        _RES.comps[i].viscosity.n_params_match_alpha = false;
         _RES.comps[i].conductivity.n_params_match_alpha = false;
     }
     for (auto& state : linked_states) {

@@ -39,28 +39,54 @@ using namespace CoolProp;
 #        define RES_SAMPLES_DIR "dev/RES_samples"
 #    endif
 static const std::string VIS_PURE_OUT = RES_SAMPLES_DIR "/Martinek_2025_viscosity/Samples_pure_fluids_output.txt";
-static const std::string VIS_BIN_OUT  = RES_SAMPLES_DIR "/Martinek_2025_viscosity/Samples_binaries_output.txt";
-static const std::string TC_PURE_IN   = RES_SAMPLES_DIR "/Li_2024_conductivity/Samples_pure_fluids.txt";
-static const std::string TC_BIN_IN    = RES_SAMPLES_DIR "/Li_2024_conductivity/Samples_binaries.txt";
-static const std::string TC_PURE_REF  = RES_SAMPLES_DIR "/Li_2024_conductivity/Table_S5_SI.txt";
-static const std::string TC_BIN_REF   = RES_SAMPLES_DIR "/Li_2024_conductivity/Table_S6_SI.txt";
+static const std::string VIS_BIN_OUT = RES_SAMPLES_DIR "/Martinek_2025_viscosity/Samples_binaries_output.txt";
+static const std::string TC_PURE_IN = RES_SAMPLES_DIR "/Li_2024_conductivity/Samples_pure_fluids.txt";
+static const std::string TC_BIN_IN = RES_SAMPLES_DIR "/Li_2024_conductivity/Samples_binaries.txt";
+static const std::string TC_PURE_REF = RES_SAMPLES_DIR "/Li_2024_conductivity/Table_S5_SI.txt";
+static const std::string TC_BIN_REF = RES_SAMPLES_DIR "/Li_2024_conductivity/Table_S6_SI.txt";
 
 // --------------------------------------------------------- name mapping -----
 static const std::unordered_map<std::string, std::string> REFPROP_TO_CP = {
-    {"ARGON","Argon"},{"CO2","CarbonDioxide"},{"BUTANE","n-Butane"},
-    {"METHANE","Methane"},{"ETHANE","Ethane"},{"PROPANE","Propane"},
-    {"HEPTANE","n-Heptane"},{"HEXANE","n-Hexane"},{"PENTANE","n-Pentane"},
-    {"DECANE","n-Decane"},{"DODECANE","n-Dodecane"},{"NITROGEN","Nitrogen"},
-    {"OXYGEN","Oxygen"},{"HELIUM","Helium"},{"NEON","Neon"},
-    {"HYDROGEN","Hydrogen"},{"WATER","Water"},{"AMMONIA","Ammonia"},
-    {"ACETONE","Acetone"},{"BENZENE","Benzene"},{"TOLUENE","Toluene"},
-    {"CYCLOHEX","CycloHexane"},{"CYCLOPEN","Cyclopentane"},{"CYCLOPRO","CycloPropane"},
-    {"CO","CarbonMonoxide"},{"D2O","HeavyWater"},{"D2","Deuterium"},
-    {"ACETYLENE","Acetylene"},{"1BUTENE","1-Butene"},
-    {"13BUTADIENE","1,3-Butadiene"},{"C2BUTENE","cis-2-Butene"},
-    {"C1CC6","MethylCyclohexane"},{"C3CC6","PropylCyclohexane"},
-    {"CHLORINE","Chlorine"},{"C11","n-C11"},{"C12","n-C12"},
-    {"C16","n-C16"},{"C22","n-C22"},{"EGLYCOL","MEG"},{"ETHANOL","Ethanol"},
+  {"ARGON", "Argon"},
+  {"CO2", "CarbonDioxide"},
+  {"BUTANE", "n-Butane"},
+  {"METHANE", "Methane"},
+  {"ETHANE", "Ethane"},
+  {"PROPANE", "Propane"},
+  {"HEPTANE", "n-Heptane"},
+  {"HEXANE", "n-Hexane"},
+  {"PENTANE", "n-Pentane"},
+  {"DECANE", "n-Decane"},
+  {"DODECANE", "n-Dodecane"},
+  {"NITROGEN", "Nitrogen"},
+  {"OXYGEN", "Oxygen"},
+  {"HELIUM", "Helium"},
+  {"NEON", "Neon"},
+  {"HYDROGEN", "Hydrogen"},
+  {"WATER", "Water"},
+  {"AMMONIA", "Ammonia"},
+  {"ACETONE", "Acetone"},
+  {"BENZENE", "Benzene"},
+  {"TOLUENE", "Toluene"},
+  {"CYCLOHEX", "CycloHexane"},
+  {"CYCLOPEN", "Cyclopentane"},
+  {"CYCLOPRO", "CycloPropane"},
+  {"CO", "CarbonMonoxide"},
+  {"D2O", "HeavyWater"},
+  {"D2", "Deuterium"},
+  {"ACETYLENE", "Acetylene"},
+  {"1BUTENE", "1-Butene"},
+  {"13BUTADIENE", "1,3-Butadiene"},
+  {"C2BUTENE", "cis-2-Butene"},
+  {"C1CC6", "MethylCyclohexane"},
+  {"C3CC6", "PropylCyclohexane"},
+  {"CHLORINE", "Chlorine"},
+  {"C11", "n-C11"},
+  {"C12", "n-C12"},
+  {"C16", "n-C16"},
+  {"C22", "n-C22"},
+  {"EGLYCOL", "MEG"},
+  {"ETHANOL", "Ethanol"},
 };
 static std::string cp_name(const std::string& n) {
     auto it = REFPROP_TO_CP.find(n);
@@ -72,15 +98,32 @@ static std::vector<std::string> split_ws(const std::string& line) {
     std::vector<std::string> t;
     std::istringstream ss(line);
     std::string w;
-    while (ss >> w) t.push_back(w);
+    while (ss >> w)
+        t.push_back(w);
     return t;
 }
 
 // --------------------------------------------------------- data structs ------
-struct VisPureSample  { std::string name; double T,p_MPa,den,vis_exp,vis_res; };
-struct VisBinSample   { std::string c1,c2; double mf1,mf2,T,p_MPa,den,vis_exp,vis_res; };
-struct TcPureSample   { std::string name; double T,p_kPa,den,tc_exp,tc_res; };
-struct TcBinSample    { std::string c1,c2; double mf1,mf2,T,p_kPa,den,tc_exp,tc_res; };
+struct VisPureSample
+{
+    std::string name;
+    double T, p_MPa, den, vis_exp, vis_res;
+};
+struct VisBinSample
+{
+    std::string c1, c2;
+    double mf1, mf2, T, p_MPa, den, vis_exp, vis_res;
+};
+struct TcPureSample
+{
+    std::string name;
+    double T, p_kPa, den, tc_exp, tc_res;
+};
+struct TcBinSample
+{
+    std::string c1, c2;
+    double mf1, mf2, T, p_kPa, den, tc_exp, tc_res;
+};
 
 // --------------------------------------------------------- parsers -----------
 // Martinek output: Material T p den s vis_exp vis_res vis_REF
@@ -107,9 +150,8 @@ static std::vector<VisBinSample> parse_vis_bin(const std::string& path) {
     while (std::getline(f, line)) {
         auto t = split_ws(line);
         if (t.size() < 13) continue;
-        out.push_back({t[0],t[1], std::stod(t[4]),std::stod(t[5]),
-                       std::stod(t[6]),std::stod(t[7]), std::stod(t[8]),
-                       std::stod(t[10]),std::stod(t[11])});
+        out.push_back(
+          {t[0], t[1], std::stod(t[4]), std::stod(t[5]), std::stod(t[6]), std::stod(t[7]), std::stod(t[8]), std::stod(t[10]), std::stod(t[11])});
     }
     return out;
 }
@@ -137,9 +179,8 @@ static std::vector<TcBinSample> parse_tc_bin(const std::string& ref_path) {
     while (std::getline(f, line)) {
         auto t = split_ws(line);
         if (t.size() < 13) continue;
-        out.push_back({t[0],t[1], std::stod(t[4]),std::stod(t[5]),
-                       std::stod(t[6]),std::stod(t[7]), std::stod(t[8]),
-                       std::stod(t[10]),std::stod(t[11])});
+        out.push_back(
+          {t[0], t[1], std::stod(t[4]), std::stod(t[5]), std::stod(t[6]), std::stod(t[7]), std::stod(t[8]), std::stod(t[10]), std::stod(t[11])});
     }
     return out;
 }
@@ -374,7 +415,7 @@ TEST_CASE("RES toggles and setters invalidate the memoized transport values", "[
     }
 }
 
-// --------------------------- REFPROP Stage-0 groundwork ----------------------
+// ----------------------- REFPROP building blocks for RES ---------------------
 // These validate the two additions RES-on-REFPROP is built on, before any RES code depends on
 // them.  Both are purely additive to the REFPROP backend.
 
@@ -423,7 +464,7 @@ TEST_CASE("REFPROP off-state alphar evaluation does not mutate the state", "[RES
     CHECK(rp->call_phixdll(0, 2, tau_before, delta_before) == Catch::Approx(d2_before).epsilon(1e-12));
 }
 
-// --------------------------- REFPROP Stage-3: RES on the REFPROP backend -----
+// ------------------------------ RES on the REFPROP backend -------------------
 // REFPROP is the backend where the published coefficients are exactly valid -- they were
 // regressed against REFPROP's reference Helmholtz EOS.  On HEOS they are an approximation,
 // which is what the HEOS_*_EXCLUDE lists in dev/convert_RES_csv_to_json.py are about.
@@ -621,7 +662,7 @@ TEST_CASE("REFPROP RES refuses to run when the EOS has been replaced", "[RES][RE
     CHECK(AS->rhomass() == Catch::Approx(CoolProp::PropsSI("Dmass", "P", 5.0e6, "T", 320.0, "REFPROP::Propane")).epsilon(1e-10));
 }
 
-// --------------------------- Stage-4: where the RES inputs come from ---------
+// -------------------------- where the RES inputs come from -------------------
 // RES takes two inputs that are not part of the entropy-scaling model itself -- the dilute-gas
 // term and the viscosity inside the critical enhancement -- and the source papers take both from
 // the backend's own transport model on some code paths.  These tests pin which source AUTO
@@ -808,9 +849,7 @@ TEST_CASE("RES mixture critical enhancement is off by default on native CoolProp
 // bound catches a subtle regression that a loose per-sample bound would sleep through.
 // Both were set from the measured distribution -- run [RES_refprop_parity] to reprint it.
 //
-// Since Stage 4 sourced the dilute-gas term and the critical-enhancement viscosity the way the
-// papers do, three of the four paths reproduce to better than 0.05 % and the fourth to 1 %.
-// These bounds are deliberately close to the measured maxima: a loose bound here would sleep
+// The bounds are deliberately close to the measured maxima: a loose one here would sleep
 // through exactly the kind of regression this file exists to catch.
 //
 // All four paths now reproduce to better than 0.05 %, mixtures included: the mixture critical
@@ -901,7 +940,7 @@ TEST_CASE("RES on REFPROP reproduces the published mixture values", "[RES][REFPR
     }
 }
 
-// ------------------------- Stage-6 grid evaluation harness -------------------
+// ----------------------------- grid evaluation harness -----------------------
 // Reads the (fluid, T, p) grid built by dev/RES_grid_build.py and evaluates RES on BOTH backends
 // at every point, writing dev/RES_comparison/grid_cpp.csv for dev/RES_grid_report.py to analyse.
 //
@@ -955,8 +994,8 @@ TEST_CASE("RES grid evaluation harness (measurement)", "[.][RES_grid][REFPROP]")
         while (j < points.size() && points[j].fluid == fluid)
             ++j;
 
-        // Three columns, because the two Stage-6 questions need DIFFERENT settings and running
-        // only one of them silently answers the wrong question:
+        // Three columns, because the two questions this grid answers need DIFFERENT settings
+        // and running only one of them silently answers the wrong question:
         //
         //   REFPROP         defaults -- what the papers do, so this is what the reference code is
         //                   comparable to.  Used for (a), implementation correctness.
@@ -1033,13 +1072,13 @@ TEST_CASE("RES grid evaluation harness (measurement)", "[.][RES_grid][REFPROP]")
         i = j;
     }
     out.close();
-    std::cout << "\nWrote dev/RES_comparison/grid_cpp.csv (" << points.size() << " points x 2 backends)\n";
+    std::cout << "\nWrote dev/RES_comparison/grid_cpp.csv (" << points.size() << " points x 3 columns)\n";
 }
 
-// Measurement harness, hidden from the default run by the leading-dot tag.  This is goal (a) of
-// dev/RES_REFPROP_plan.md in its cheapest form: on the REFPROP backend the published columns
-// were computed with the SAME equation of state, so any deviation here is an implementation
-// defect rather than a parameter-transfer error.  Run it with:
+// Measurement harness, hidden from the default run by the leading-dot tag.  It answers the
+// implementation-correctness question in its cheapest form: on the REFPROP backend the
+// published columns were computed with the SAME equation of state, so any deviation here is
+// an implementation defect rather than a parameter-transfer error.  Run it with:
 //     CatchTestRunner.exe [RES_refprop_parity]
 // It reports rather than asserts; the assertions live in the two tests below it, whose
 // tolerances were set from what this printed.
@@ -1148,8 +1187,7 @@ TEST_CASE("RES REFPROP parity sweep (measurement)", "[.][RES_refprop_parity][REF
 // These three mirror Olchowy_critical_enhancement() in the Li 2024 supporting-information
 // code (code_SI.py); each one failed before those guards were ported.
 
-TEST_CASE("RES conductivity is finite for fluids with no fitted critical-enhancement params",
-          "[RES][transport]") {
+TEST_CASE("RES conductivity is finite for fluids with no fitted critical-enhancement params", "[RES][transport]") {
     // D2O / HELIUM / ORTHOHYD carry an all-zero critical-enhancement record in the source
     // tables, meaning "not fitted".  Treating that as provided divides by t_ref == 0 and
     // Gamma == 0, so the enhancement came out NaN and poisoned the whole conductivity.
@@ -1164,8 +1202,7 @@ TEST_CASE("RES conductivity is finite for fluids with no fitted critical-enhance
     CHECK(tc > 0.0);
 }
 
-TEST_CASE("RES conductivity does not throw a viscosity error when only viscosity params are missing",
-          "[RES][transport]") {
+TEST_CASE("RES conductivity does not throw a viscosity error when only viscosity params are missing", "[RES][transport]") {
     // Where the backend supplies no native term to RES, the enhancement term falls back to the RES
     // viscosity, so a fluid carrying conductivity parameters but not viscosity ones used to
     // surface a *viscosity* ValueError out of a conductivity call.  The enhancement must be
@@ -1193,8 +1230,7 @@ TEST_CASE("RES conductivity does not throw a viscosity error when only viscosity
     CHECK(tc > 0.0);
 }
 
-TEST_CASE("RES critical enhancement is suppressed outside the near-critical region",
-          "[RES][transport]") {
+TEST_CASE("RES critical enhancement is suppressed outside the near-critical region", "[RES][transport]") {
     // Li 2024 returns exactly 0 when rho/rhoc >= 2 or T/Tc > 1.4.  Compare against the same
     // state with crit_provided forced off: if the guards work the two must agree bit-for-bit,
     // because the enhancement contributes nothing either way.
@@ -1240,7 +1276,8 @@ TEST_CASE("RES viscosity residual params round-trip", "[RES][transport]") {
     AS->set_viscosity_RES_residual_params(0, n, 1.23);
     auto [n_out, x_out] = AS->get_viscosity_RES_residual_params(0);
     REQUIRE(n_out.size() == n.size());
-    for (std::size_t i = 0; i < n.size(); ++i) CHECK(n_out[i] == Catch::Approx(n[i]));
+    for (std::size_t i = 0; i < n.size(); ++i)
+        CHECK(n_out[i] == Catch::Approx(n[i]));
     CHECK(x_out == Catch::Approx(1.23));
 }
 
@@ -1250,7 +1287,8 @@ TEST_CASE("RES conductivity residual params round-trip", "[RES][transport]") {
     AS->set_conductivity_RES_residual_params(0, n, 0.97);
     auto [n_out, x_out] = AS->get_conductivity_RES_residual_params(0);
     REQUIRE(n_out.size() == n.size());
-    for (std::size_t i = 0; i < n.size(); ++i) CHECK(n_out[i] == Catch::Approx(n[i]));
+    for (std::size_t i = 0; i < n.size(); ++i)
+        CHECK(n_out[i] == Catch::Approx(n[i]));
     CHECK(x_out == Catch::Approx(0.97));
 }
 
@@ -1309,11 +1347,11 @@ TEST_CASE("PR backend without RES params throws NotImplementedError", "[RES][tra
     auto* cubic = dynamic_cast<AbstractCubicBackend*>(AS.get());
     REQUIRE(cubic != nullptr);
     auto& comps = cubic->RES_data_mutable().comps;
-    comps[0].viscosity.provided   = false;
+    comps[0].viscosity.provided = false;
     comps[0].conductivity.provided = false;
     AS->specify_phase(iphase_gas);
     AS->update(PT_INPUTS, 1e6, 300.0);
-    CHECK_THROWS_AS(AS->viscosity(),    CoolProp::NotImplementedError);
+    CHECK_THROWS_AS(AS->viscosity(), CoolProp::NotImplementedError);
     CHECK_THROWS_AS(AS->conductivity(), CoolProp::NotImplementedError);
 }
 

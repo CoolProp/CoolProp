@@ -838,8 +838,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
 }
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_drhomass_dp_constT_at(double T_eval) {
-    // Verbatim from the RES critical-enhancement reference term as it stood before Stage 2, so
-    // that hoisting it out of TransportRoutines is provably a no-op.
+    // Verbatim from the RES critical-enhancement reference term as it stood before it was hoisted
+    // out of TransportRoutines, so that the move is provably a no-op.
     //
     // NOTE (pre-existing, deliberately preserved): tau_ref uses T_critical() while delta is
     // rho/rho_reducing.  dp/drho|T is only strictly correct with tau = T_reducing/T; the two
@@ -859,11 +859,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
         // Explicit RES opt-in overrides the default reference correlation.
         if (_RES.viscosity_enabled) {
             if (!_RES.comps[0].viscosity.provided)
-                throw ValueError(format(
-                  "Viscosity RES was requested via use_viscosity_RES(true), but no RES parameters are available for fluid '%s'. "
-                  "Provide RES parameters via set_viscosity_RES_parameters(), or call use_viscosity_RES(false) to use the "
-                  "default reference correlation.",
-                  name().c_str()));
+                throw ValueError(
+                  format("Viscosity RES was requested via use_viscosity_RES(true), but no RES parameters are available for fluid '%s'. "
+                         "Provide RES parameters via set_viscosity_RES_parameters(), or call use_viscosity_RES(false) to use the "
+                         "default reference correlation.",
+                         name().c_str()));
             return RESTransport::viscosity(*this);
         }
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
@@ -880,11 +880,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
                 }
             }
             if (!missing.empty())
-                throw ValueError(format(
-                  "Viscosity RES was requested via use_viscosity_RES(true), but no RES parameters are available for component(s) "
-                  "[%s]. Provide RES parameters via set_viscosity_RES_parameters(), or call use_viscosity_RES(false) to use the "
-                  "default mixture model.",
-                  missing.c_str()));
+                throw ValueError(
+                  format("Viscosity RES was requested via use_viscosity_RES(true), but no RES parameters are available for component(s) "
+                         "[%s]. Provide RES parameters via set_viscosity_RES_parameters(), or call use_viscosity_RES(false) to use the "
+                         "default mixture model.",
+                         missing.c_str()));
             return RESTransport::viscosity(*this);
         }
         set_warning_string("Mixture model for viscosity is highly approximate");
@@ -1140,11 +1140,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
         // Explicit RES opt-in overrides the default reference correlation.
         if (_RES.conductivity_enabled) {
             if (!_RES.comps[0].conductivity.provided)
-                throw ValueError(format(
-                  "Conductivity RES was requested via use_conductivity_RES(true), but no RES parameters are available for fluid "
-                  "'%s'. Provide RES parameters via set_conductivity_RES_parameters(), or call use_conductivity_RES(false) to use "
-                  "the default reference correlation.",
-                  name().c_str()));
+                throw ValueError(
+                  format("Conductivity RES was requested via use_conductivity_RES(true), but no RES parameters are available for fluid "
+                         "'%s'. Provide RES parameters via set_conductivity_RES_parameters(), or call use_conductivity_RES(false) to use "
+                         "the default reference correlation.",
+                         name().c_str()));
             return RESTransport::conductivity(*this);
         }
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
@@ -1161,11 +1161,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
                 }
             }
             if (!missing.empty())
-                throw ValueError(format(
-                  "Conductivity RES was requested via use_conductivity_RES(true), but no RES parameters are available for "
-                  "component(s) [%s]. Provide RES parameters via set_conductivity_RES_parameters(), or call "
-                  "use_conductivity_RES(false) to use the default mixture model.",
-                  missing.c_str()));
+                throw ValueError(format("Conductivity RES was requested via use_conductivity_RES(true), but no RES parameters are available for "
+                                        "component(s) [%s]. Provide RES parameters via set_conductivity_RES_parameters(), or call "
+                                        "use_conductivity_RES(false) to use the default mixture model.",
+                                        missing.c_str()));
             return RESTransport::conductivity(*this);
         }
         set_warning_string("Mixture model for conductivity is highly approximate");
@@ -4841,6 +4840,5 @@ void HelmholtzEOSMixtureBackend::set_fluid_enthalpy_entropy_offset(CoolPropFluid
 }
 
 // ─── RES transport API ───────────────────────────────────────────────────────
-
 
 } /* namespace CoolProp */

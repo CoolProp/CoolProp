@@ -583,7 +583,6 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      */
     void calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual, CoolPropDbl& critical) override;
 
-
     CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) override;
     CoolPropDbl calc_saturated_vapor_keyed_output(parameters key) override;
 
