@@ -163,6 +163,10 @@ cdef extern from "CoolProp/AbstractState.h" namespace "CoolProp":
         void set_conductivity_RES_residual_params(size_t i, const vector[double] &n_res, double xita) except +ValueError
         pair[vector[double], double] get_viscosity_RES_residual_params(size_t i) except +ValueError
         pair[vector[double], double] get_conductivity_RES_residual_params(size_t i) except +ValueError
+        void set_viscosity_RES_dilute_source(constants_header.RESDiluteSource src) except +ValueError
+        void set_conductivity_RES_dilute_source(constants_header.RESDiluteSource src) except +ValueError
+        void set_conductivity_RES_enhancement_viscosity(constants_header.RESEnhancementViscosity src) except +ValueError
+        void set_RES_mixture_enhancement(constants_header.RESMixtureEnhancement policy) except +ValueError
 
         double gibbsmolar_excess() except +ValueError
         double gibbsmass_excess() except +ValueError

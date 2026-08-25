@@ -144,6 +144,10 @@ cdef class AbstractState:
                                           double R_D, double gamma_uni, double Gamma, double phi0, double t_ref, double q_D)
     cpdef set_viscosity_RES_residual_params(self, size_t i, vector[double] n_res, double xita)
     cpdef set_conductivity_RES_residual_params(self, size_t i, vector[double] n_res, double xita)
+    cpdef set_viscosity_RES_dilute_source(self, constants_header.RESDiluteSource src)
+    cpdef set_conductivity_RES_dilute_source(self, constants_header.RESDiluteSource src)
+    cpdef set_conductivity_RES_enhancement_viscosity(self, constants_header.RESEnhancementViscosity src)
+    cpdef set_RES_mixture_enhancement(self, constants_header.RESMixtureEnhancement policy)
     cpdef tuple get_viscosity_RES_residual_params(self, size_t i)
     cpdef tuple get_conductivity_RES_residual_params(self, size_t i)
     cpdef double surface_tension(self) except *

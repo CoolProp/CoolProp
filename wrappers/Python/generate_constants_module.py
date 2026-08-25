@@ -103,7 +103,9 @@ def generate_cython(data, config_data):
 
 
 def generate():
-    data = [(enum, params_constants(enum)) for enum in ['parameters', 'input_pairs', 'fluid_types', 'phases', 'fast_evaluate_status']]
+    data = [(enum, params_constants(enum)) for enum in ['parameters', 'input_pairs', 'fluid_types', 'phases', 'fast_evaluate_status',
+                                                    'RESDiluteSource', 'RESEnhancementViscosity',
+                                                    'RESMixtureEnhancement']]
     generate_cython(data, config_constants())
 
 

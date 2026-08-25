@@ -495,6 +495,18 @@ cdef class AbstractState:
     cpdef set_conductivity_RES_residual_params(self, size_t i, vector[double] n_res, double xita):
         """ Update only the EOS-specific residual n-coefficients and xita for conductivity - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_residual_params` """
         self.thisptr.set_conductivity_RES_residual_params(i, n_res, xita)
+    cpdef set_viscosity_RES_dilute_source(self, constants_header.RESDiluteSource src):
+        """ Choose where the RES dilute-gas viscosity term comes from - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_viscosity_RES_dilute_source` """
+        self.thisptr.set_viscosity_RES_dilute_source(src)
+    cpdef set_conductivity_RES_dilute_source(self, constants_header.RESDiluteSource src):
+        """ Choose where the RES dilute-gas conductivity term comes from - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_dilute_source` """
+        self.thisptr.set_conductivity_RES_dilute_source(src)
+    cpdef set_conductivity_RES_enhancement_viscosity(self, constants_header.RESEnhancementViscosity src):
+        """ Choose which viscosity the RES critical enhancement consumes - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_enhancement_viscosity` """
+        self.thisptr.set_conductivity_RES_enhancement_viscosity(src)
+    cpdef set_RES_mixture_enhancement(self, constants_header.RESMixtureEnhancement policy):
+        """ Choose whether the RES critical enhancement is applied to mixtures - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_RES_mixture_enhancement` """
+        self.thisptr.set_RES_mixture_enhancement(policy)
     cpdef tuple get_viscosity_RES_residual_params(self, size_t i):
         """ Return (n_res, xita) currently in use for viscosity of component i - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_viscosity_RES_residual_params` """
         cdef pair[vector[double], double] out = self.thisptr.get_viscosity_RES_residual_params(i)

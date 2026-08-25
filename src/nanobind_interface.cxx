@@ -623,6 +623,24 @@ void init_CoolProp(nb::module_& m) {
       .value("FLUID_TYPE_UNDEFINED", fluid_types::FLUID_TYPE_UNDEFINED)
       .export_values();
 
+    nb::enum_<RESDiluteSource>(m, "RESDiluteSource", nb::is_arithmetic())
+      .value("RES_DILUTE_AUTO", RESDiluteSource::RES_DILUTE_AUTO)
+      .value("RES_DILUTE_POLYNOMIAL", RESDiluteSource::RES_DILUTE_POLYNOMIAL)
+      .value("RES_DILUTE_BACKEND_NATIVE", RESDiluteSource::RES_DILUTE_BACKEND_NATIVE)
+      .export_values();
+
+    nb::enum_<RESEnhancementViscosity>(m, "RESEnhancementViscosity", nb::is_arithmetic())
+      .value("RES_ENH_VIS_AUTO", RESEnhancementViscosity::RES_ENH_VIS_AUTO)
+      .value("RES_ENH_VIS_RES", RESEnhancementViscosity::RES_ENH_VIS_RES)
+      .value("RES_ENH_VIS_BACKEND_NATIVE", RESEnhancementViscosity::RES_ENH_VIS_BACKEND_NATIVE)
+      .export_values();
+
+    nb::enum_<RESMixtureEnhancement>(m, "RESMixtureEnhancement", nb::is_arithmetic())
+      .value("RES_MIX_ENH_AUTO", RESMixtureEnhancement::RES_MIX_ENH_AUTO)
+      .value("RES_MIX_ENH_OFF", RESMixtureEnhancement::RES_MIX_ENH_OFF)
+      .value("RES_MIX_ENH_ON", RESMixtureEnhancement::RES_MIX_ENH_ON)
+      .export_values();
+
     nb::enum_<fast_evaluate_status>(m, "fast_evaluate_status", nb::is_arithmetic())
       .value("fast_evaluate_ok", fast_evaluate_status::fast_evaluate_ok)
       .value("fast_evaluate_out_of_range", fast_evaluate_status::fast_evaluate_out_of_range)
@@ -885,18 +903,20 @@ void init_CoolProp(nb::module_& m) {
       // --- Residual Entropy Scaling (RES) transport API ---
       .def("use_viscosity_RES", &AbstractState::use_viscosity_RES, nb::arg("enable"))
       .def("use_conductivity_RES", &AbstractState::use_conductivity_RES, nb::arg("enable"))
-      .def("set_viscosity_RES_parameters", &AbstractState::set_viscosity_RES_parameters, nb::arg("i"), nb::arg("n_dilute"),
-           nb::arg("n_res"), nb::arg("xita"))
-      .def("set_conductivity_RES_parameters", &AbstractState::set_conductivity_RES_parameters, nb::arg("i"), nb::arg("n_dilute"),
-           nb::arg("n_res"), nb::arg("xita"), nb::arg("R_D"), nb::arg("gamma_uni"), nb::arg("Gamma"), nb::arg("phi0"), nb::arg("t_ref"),
-           nb::arg("q_D"))
-      .def("set_viscosity_RES_residual_params", &AbstractState::set_viscosity_RES_residual_params, nb::arg("i"), nb::arg("n_res"),
+      .def("set_viscosity_RES_parameters", &AbstractState::set_viscosity_RES_parameters, nb::arg("i"), nb::arg("n_dilute"), nb::arg("n_res"),
            nb::arg("xita"))
+      .def("set_conductivity_RES_parameters", &AbstractState::set_conductivity_RES_parameters, nb::arg("i"), nb::arg("n_dilute"), nb::arg("n_res"),
+           nb::arg("xita"), nb::arg("R_D"), nb::arg("gamma_uni"), nb::arg("Gamma"), nb::arg("phi0"), nb::arg("t_ref"), nb::arg("q_D"))
+      .def("set_viscosity_RES_residual_params", &AbstractState::set_viscosity_RES_residual_params, nb::arg("i"), nb::arg("n_res"), nb::arg("xita"))
       .def("set_conductivity_RES_residual_params", &AbstractState::set_conductivity_RES_residual_params, nb::arg("i"), nb::arg("n_res"),
            nb::arg("xita"))
       // std::pair maps to a Python tuple, matching the legacy Cython interface.
       .def("get_viscosity_RES_residual_params", &AbstractState::get_viscosity_RES_residual_params, nb::arg("i"))
       .def("get_conductivity_RES_residual_params", &AbstractState::get_conductivity_RES_residual_params, nb::arg("i"))
+      .def("set_viscosity_RES_dilute_source", &AbstractState::set_viscosity_RES_dilute_source, nb::arg("src"))
+      .def("set_conductivity_RES_dilute_source", &AbstractState::set_conductivity_RES_dilute_source, nb::arg("src"))
+      .def("set_conductivity_RES_enhancement_viscosity", &AbstractState::set_conductivity_RES_enhancement_viscosity, nb::arg("src"))
+      .def("set_RES_mixture_enhancement", &AbstractState::set_RES_mixture_enhancement, nb::arg("policy"))
       .def("surface_tension", &AbstractState::surface_tension)
       .def("Prandtl", &AbstractState::Prandtl)
       // bd CoolProp-r9sq.24: T/rho are in/out -> return dict(T, rhomolar) like legacy.

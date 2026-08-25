@@ -4,8 +4,9 @@
 /*!
 Residual Entropy Scaling (RES) transport parameter storage.
 
-This header is deliberately lightweight -- it pulls in nothing but <string>, <vector> and the
-_HUGE definition -- because AbstractState.h includes it in order to own an RESTransportStore.
+This header is deliberately lightweight -- <string>, <vector>, the _HUGE definition and the
+enums in DataStructures.h -- because AbstractState.h includes it in order to own an
+RESTransportStore.
 Do NOT add heavy includes here (CoolPropFluid.h drags in Eigen and the superancillary machinery
 and must not become reachable from AbstractState.h).
 
@@ -15,6 +16,7 @@ CoolPropFluid.h includes this header, so `fluid.transport.viscosity_res` keeps w
 unchanged.
 */
 
+#include "CoolProp/DataStructures.h"
 #include "CoolProp/numerics/numerics.h"
 
 #include <string>
@@ -50,57 +52,6 @@ struct ConductivityRESData
     bool n_params_match_alpha = true;
     bool crit_provided = false;
     bool provided = false;
-};
-
-/// Where the dilute-gas term of the RES model should come from.
-///
-/// The two source papers made OPPOSITE choices, per code path rather than per fluid:
-/// Martinek 2025 uses REFPROP's native eta0 for pure fluids and the fitted polynomial with a
-/// Wilke rule for mixtures; Li 2024 uses the polynomial for pure fluids and REFPROP's native
-/// lambda0 for mixtures.  AUTO reproduces that, resolving to POLYNOMIAL on any backend that has
-/// backend that supplies no native dilute term to RES -- which keeps HEOS and the cubics
-/// numerically unchanged.  Those two are unavailable for different reasons, and neither is
-/// "the backend cannot do transport": the cubics have no transport model at all, which is one
-/// of the reasons RES exists, while HEOS does have correlations and RES deliberately does not
-/// consume them, since that would change existing RES results and has to be a separate,
-/// measured change rather than a side effect of this enum.
-enum RESDiluteSource
-{
-    RES_DILUTE_AUTO = 0,
-    RES_DILUTE_POLYNOMIAL,
-    RES_DILUTE_BACKEND_NATIVE
-};
-
-/// Which viscosity the Olchowy-Sengers critical enhancement consumes.
-///
-/// The enhancement term contains a viscosity.  Li 2024's reference implementation feeds it
-/// REFPROP's NATIVE viscosity (code_SI.py:116, `PropsSI('V', T, Dmass, 'REFPROP::'+fluid)`) --
-/// NOT the RES viscosity it is in the middle of computing.  Using the RES viscosity is more
-/// self-consistent, but it does not reproduce the published values: on the REFPROP backend, where
-/// everything else agrees to ~0.01%, that one choice is the entire remaining gap for PROPANE
-/// (-4.9%) and R143A (+1.4%).
-enum RESEnhancementViscosity
-{
-    RES_ENH_VIS_AUTO = 0,       ///< the backend's own viscosity if it has one, else the RES viscosity
-    RES_ENH_VIS_RES,            ///< always the RES viscosity (self-consistent, diverges from the paper)
-    RES_ENH_VIS_BACKEND_NATIVE  ///< always the backend's own viscosity; throws if it has none
-};
-
-/// Whether the RES critical enhancement is applied to MIXTURES.
-///
-/// Li 2024 does apply it (code_SI.py::Olchowy_critical_enhancement_mix), and reproducing the
-/// published mixture values needs it.  It is nevertheless NOT enabled by default on CoolProp's
-/// own backends: the enhancement requires the MIXTURE critical point, which those backends have
-/// to SOLVE for -- not robustly, and not quickly -- while the physical case for a critical
-/// enhancement in mixtures is not well established in the first place.  REFPROP reports its
-/// mixture critical point directly (CRITPdll), so AUTO enables it there and nowhere else.
-///
-/// Pure fluids are unaffected by this setting; their enhancement is always applied.
-enum RESMixtureEnhancement
-{
-    RES_MIX_ENH_AUTO = 0,  ///< on where the backend reports a critical point directly, off elsewhere
-    RES_MIX_ENH_OFF,       ///< never applied to mixtures
-    RES_MIX_ENH_ON         ///< always applied; may be slow, and surfaces critical-point solver failures
 };
 
 /// RES parameters for one component, independent of any equation of state.
