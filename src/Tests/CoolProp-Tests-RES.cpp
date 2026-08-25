@@ -23,6 +23,7 @@
 
 #    include <algorithm>
 #    include <cmath>
+#    include <limits>
 #    include <fstream>
 #    include <iostream>
 #    include <memory>
@@ -940,6 +941,141 @@ TEST_CASE("RES on REFPROP reproduces the published mixture values", "[RES][REFPR
     }
 }
 
+// ------------------------- Stage-6 grid evaluation harness -------------------
+// Reads the (fluid, T, p) grid built by dev/RES_grid_build.py and evaluates RES on BOTH backends
+// at every point, writing dev/RES_comparison/grid_cpp.csv for dev/RES_grid_report.py to analyse.
+//
+// This is a measurement harness, not a test: it records failures as data rather than asserting,
+// because "HEOS cannot evaluate this fluid here" is itself one of the results being collected.
+// The report script is responsible for surfacing the failure counts -- they are not incidental.
+//
+// Run with:  CatchTestRunner.exe [RES_grid]
+TEST_CASE("RES grid evaluation harness (measurement)", "[.][RES_grid][REFPROP]") {
+    Skip_if_No_REFPROP();
+
+    std::ifstream fin("dev/RES_comparison/grid_points.csv");
+    REQUIRE_FALSE(!fin);  // run dev/RES_grid_build.py first, from the repo root
+
+    struct Point
+    {
+        std::string fluid, region;
+        double T, p;
+    };
+    std::vector<Point> points;
+    std::string line;
+    std::getline(fin, line);  // header
+    while (std::getline(fin, line)) {
+        std::vector<std::string> f;
+        std::string cell;
+        std::istringstream ss(line);
+        while (std::getline(ss, cell, ','))
+            f.push_back(cell);
+        if (f.size() < 4) continue;
+        points.push_back({f[0], f[3], std::stod(f[1]), std::stod(f[2])});
+    }
+    REQUIRE(points.size() > 100);
+
+    std::ofstream out("dev/RES_comparison/grid_cpp.csv");
+    REQUIRE_FALSE(!out);
+    out << "fluid,T_K,p_Pa,region,backend,ok,rho,s_res,eta,tc,phase,eta0_native,eta0_poly,tc0_poly,Tc,rhoc,err\n";
+    out.precision(17);
+
+    // The dilute polynomial is shipped once per fluid and is shared by every backend, so it can
+    // be read off either state; evaluating it here rather than exposing it from the model keeps
+    // the residual-share diagnostic honest about which term was actually subtracted.
+    auto dilute_poly = [](const std::vector<double>& c, double T) {
+        if (c.size() < 5) return std::numeric_limits<double>::quiet_NaN();
+        return c[0] + T * (c[1] + T * (c[2] + T * (c[3] + T * c[4])));
+    };
+
+    std::size_t i = 0;
+    while (i < points.size()) {
+        const std::string fluid = points[i].fluid;
+        std::size_t j = i;
+        while (j < points.size() && points[j].fluid == fluid)
+            ++j;
+
+        // Three columns, because the two Stage-6 questions need DIFFERENT settings and running
+        // only one of them silently answers the wrong question:
+        //
+        //   REFPROP         defaults -- what the papers do, so this is what the reference code is
+        //                   comparable to.  Used for (a), implementation correctness.
+        //   REFPROP_pinned  fitted dilute term and RES enhancement viscosity, i.e. exactly what
+        //   HEOS            HEOS can also do.  Used for (b), parameter transfer, where leaving the
+        //                   defaults alone would measure the source policy instead.
+        //
+        // HEOS needs no second column: with no native transport model its AUTO already resolves to
+        // the fitted model, so its default and pinned results are identical by construction.
+        for (const char* backend : {"REFPROP", "REFPROP_pinned", "HEOS"}) {
+            const bool pinned = (std::string(backend) != "REFPROP");
+            const char* factory_name = pinned && std::string(backend) == "REFPROP_pinned" ? "REFPROP" : backend;
+            // One state per (fluid, column): re-creating it per point would re-run SETUPdll on
+            // every REFPROP row for no benefit.
+            std::shared_ptr<AbstractState> AS;
+            try {
+                AS.reset(AbstractState::factory(factory_name, fluid));
+                AS->use_viscosity_RES(true);
+                AS->use_conductivity_RES(true);
+                if (pinned) {
+                    AS->set_viscosity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
+                    AS->set_conductivity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
+                    AS->set_conductivity_RES_enhancement_viscosity(RES_ENH_VIS_RES);
+                    AS->set_RES_mixture_enhancement(RES_MIX_ENH_OFF);
+                }
+            } catch (const std::exception& e) {
+                for (std::size_t k = i; k < j; ++k) {
+                    out << fluid << "," << points[k].T << "," << points[k].p << "," << points[k].region << "," << backend << ",0,,,,,,,,,,," << '"'
+                        << e.what() << '"' << "\n";
+                }
+                continue;
+            }
+
+            for (std::size_t k = i; k < j; ++k) {
+                double rho = 0, sres = 0, eta = 0, tc = 0, eta0n = 0, eta0p = 0, tc0p = 0, Tc = 0, rhoc = 0;
+                int phase = -1;
+                std::string err;
+                bool ok = false;
+                try {
+                    AS->update(PT_INPUTS, points[k].p, points[k].T);
+                    rho = AS->rhomass();
+                    sres = AS->smolar_residual();
+                    eta = AS->viscosity();
+                    tc = AS->conductivity();
+                    try {
+                        phase = static_cast<int>(AS->phase());
+                    } catch (...) {
+                    }
+                    if (!AS->transport_native(iviscosity, 0.0, eta0n)) eta0n = std::numeric_limits<double>::quiet_NaN();
+                    eta0p = 1e-6 * dilute_poly(AS->RES_data().comps[0].viscosity.n_dilute, points[k].T);
+                    tc0p = dilute_poly(AS->RES_data().comps[0].conductivity.n_dilute, points[k].T);
+                    // Emitted so the report can tell whether the Olchowy-Sengers enhancement was
+                    // even active (Li gates it off at rho/rhoc >= 2 or T/Tc > 1.4).  Near the
+                    // critical point that term depends on each backend's OWN critical point and
+                    // derivatives, so it moves independently of the RES parameters.
+                    Tc = AS->T_critical();
+                    rhoc = AS->rhomass_critical();
+                    ok = true;
+                } catch (const std::exception& e) {
+                    err = e.what();
+                    for (char& c : err)
+                        if (c == '"' || c == '\n' || c == ',') c = ' ';
+                }
+                out << fluid << "," << points[k].T << "," << points[k].p << "," << points[k].region << "," << backend << "," << (ok ? 1 : 0) << ",";
+                if (ok) {
+                    out << rho << "," << sres << "," << eta << "," << tc << "," << phase << "," << eta0n << "," << eta0p << "," << tc0p << "," << Tc
+                        << "," << rhoc << ",";
+                } else {
+                    out << ",,,,,,,,,,";
+                }
+                out << '"' << err << '"' << "\n";
+            }
+        }
+        i = j;
+    }
+    out.close();
+    std::cout << "\nWrote dev/RES_comparison/grid_cpp.csv (" << points.size() << " points x 2 backends)\n";
+}
+
 // Measurement harness, hidden from the default run by the leading-dot tag.  This is goal (a) of
 // dev/RES_REFPROP_plan.md in its cheapest form: on the REFPROP backend the published columns
 // were computed with the SAME equation of state, so any deviation here is an implementation
@@ -1070,24 +1206,29 @@ TEST_CASE("RES conductivity is finite for fluids with no fitted critical-enhance
 
 TEST_CASE("RES conductivity does not throw a viscosity error when only viscosity params are missing",
           "[RES][transport]") {
-    // The enhancement term needs a viscosity, which we take from viscosity_RES.  R41 ships
-    // conductivity RES parameters but no viscosity ones (its HEOS viscosity entry is excluded
-    // for s_res mismatch), and 320 K / 6 MPa is inside the enhancement region
-    // (rho/rhoc = 0.62, T/Tc = 1.01) -- so this used to surface a *viscosity* ValueError out
-    // of a conductivity call.  The enhancement must be skipped instead.
-    auto AS = make_heos("R41");
-    auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
-    REQUIRE(heos != nullptr);
-    const auto& comps = heos->RES_data().comps;
-    // Guard the premise: if R41 ever regains viscosity RES params this test stops proving anything.
-    REQUIRE_FALSE(comps[0].viscosity.provided);
-    REQUIRE(comps[0].conductivity.provided);
-
+    // On a backend with no native transport model the enhancement term falls back to the RES
+    // viscosity, so a fluid carrying conductivity parameters but not viscosity ones used to
+    // surface a *viscosity* ValueError out of a conductivity call.  The enhancement must be
+    // skipped instead.
+    //
+    // This combination used to occur naturally -- R41 was excluded for viscosity but not for
+    // conductivity -- but the grid-derived exclusion lists select the same fluids for both
+    // properties, since s_res is the one input both models share.  So the case is constructed
+    // rather than found: the code path is still reachable by anyone calling
+    // set_conductivity_RES_parameters() without the viscosity counterpart.
+    auto AS = make_heos("Propane");
     AS->use_conductivity_RES(true);
-    AS->update(PT_INPUTS, 6.0e6, 320.0);
+    // 4.65 MPa / 375.9 K is inside the enhancement region, so the fallback is actually reached.
+    AS->update(PT_INPUTS, 4.65e6, 375.9);
+    auto& comps = AS->RES_data_mutable().comps;
+    REQUIRE(comps.size() == 1);
+    REQUIRE(comps[0].conductivity.provided);
+    REQUIRE(comps[0].viscosity.provided);  // premise: it starts out present, so removing it means something
+    comps[0].viscosity.provided = false;
+
     double tc = 0;
     REQUIRE_NOTHROW(tc = AS->conductivity());
-    INFO("R41 conductivity = " << tc);
+    INFO("Propane conductivity without viscosity RES params = " << tc);
     CHECK(std::isfinite(tc));
     CHECK(tc > 0.0);
 }

@@ -622,9 +622,104 @@ BUTANE+METHANE went from -0.998 % to +0.001 %, and is now the *best* of the eigh
   enhancement block replaced non-conforming code.
   Baselines: RES_baseline_stage4b.txt, parity_stage4b.txt.
 
-NEXT: unchanged -- Stage 6(b) parameter transfer (HEOS+RES vs REFPROP+RES on a grid), then
-  Stage 7 (test-suite overhaul, D1 fail-open first).  The implementation is now known correct to
-  <=0.042 % on every path, so any HEOS-vs-REFPROP gap from here is parameters, full stop.
+Stage 6 DONE -- both halves, and the exclusion lists re-derived from measurement.
+
+  Three new dev tools, one shared grid:
+    dev/RES_grid_build.py       -> RES_comparison/grid_points.csv  (3828 pts over 147 fluids)
+    [RES_grid] Catch2 harness   -> RES_comparison/grid_cpp.csv     (both backends, same points)
+    dev/RES_grid_report.py      -> (b) parameter transfer
+    dev/RES_reference_check.py  -> (a) vs the authors' own code
+
+  The grid is built in REDUCED coordinates so every fluid is sampled where the residual term
+  actually dominates, and phase ambiguity is designed out (supercritical isotherms, compressed
+  liquid at >=3x p_sat, superheated vapour at 0.3x p_sat).  Only 2 of 3828 points had the two
+  backends disagree on phase, versus the phase artefacts that dominated the old single-point
+  comparisons.
+
+### (a) Implementation correctness -- C++ REFPROP+RES vs Martinek/Li reference code
+
+  median **0.000026 %** (viscosity) and **0.000012 %** (conductivity) over 587 sampled points --
+  round-off, which was the stated target.
+
+  THE FIRST RUN OF THIS WAS WRONG, and the way it was wrong is the lesson.  The [RES_grid] harness
+  pins both backends to the fitted dilute term, which (b) requires; (a) then unknowingly compared
+  our POLYNOMIAL against the reference's NATIVE dilute term and reported medians ~100x too large.
+  Worse, the gap happened to equal the poly-vs-native gap for the fluids inspected, which read as
+  confirmation of a plausible but entirely wrong story ("the reference fell back to the
+  polynomial").  It was only disproved by actually calling PropsSI at 1e-9 Pa and watching it
+  succeed.  The harness now emits THREE columns -- REFPROP (defaults, for (a)), REFPROP_pinned and
+  HEOS (for (b)) -- so neither question can silently read the other's data.
+
+  Two outlier classes remain, both verified rather than inferred:
+  - **HELIUM, 4 points, 46-57 %.**  Here the fallback really does fire, and the reason is the
+    ENTRY POINT, not the correlation.  We call TRNPRPdll directly at rho = 0, no flash involved.
+    The reference asks PropsSI for a property at p = 1e-9 Pa, which must run a PT flash first, and
+    at that pressure the flash degenerates -- REFPROP then reports `[TRNPRP error 561] Pure fluid
+    correlation produced an erroneous value` and Martinek's try/except falls back to the
+    polynomial.  Verified by sweeping the input: at T = 5.2992 K the same query succeeds at every
+    DENSITY down to 1e-11 kg/m3 and at every PRESSURE from 1e-3 Pa up, always returning
+    1.315073e-6 Pa.s -- which matches our rho = 0 value of 1.315075e-6 to six digits.  Only
+    p = 1e-9 Pa fails.  (Li uses 0.1 Pa and never hits this.)  The polynomial the reference falls
+    back to gives 3.13e-6 Pa.s, 2.4x the true value, since 5 K is far outside its fit range.  So
+    our number is the correct one here.  RES on helium at 4 K is dubious regardless.
+  - **The critical singularity, ~30 conductivity points.**  At rho/rhoc = 1, T/Tc = 1.02 the
+    enhancement carries 1/(dp/drho) and `arg` is a difference of two large near-equal terms, so
+    it is ill-conditioned rather than wrong.  Excluding those 50 points the conductivity max falls
+    from 58 % to 6.4 % and the median to 0.000011 %.  Not decomposed further.
+
+### (b) Parameter transfer -- C++ HEOS+RES vs C++ REFPROP+RES
+
+  median 0.00006 % (viscosity) and 0.00005 % (conductivity) over 3243 comparable points: for 133
+  of 147 fluids the REFPROP-fitted parameters transfer essentially exactly.
+
+  **New exclusion lists: the SAME 14 fluids for both properties.**
+      BENZENE, D5, HEPTANE, MD3M, MD4M, R1123, R1224YDZ, R1233ZDE,
+      R1234YF, R1243ZF, R13, R161, R41, VINYLCHLORIDE
+  Was 6 and 6, and the new lists are supersets of the old -- as expected, since the old ones were
+  derived from single sample points that could not see most of the error.
+
+  Criterion: >1 % transport deviation at residual-dominated states away from the critical
+  enhancement, OR >5 % deviation in s_res itself there.  The second clause is load-bearing:
+  MD4M's conductivity agrees to 0.27 % while its s_res is off by 27 %, so the sampled states are
+  simply insensitive.  Both clauses independently select the same 14 fluids for viscosity and
+  conductivity, which is the coherent answer -- s_res is the one input both models share.
+
+  **BENZENE is now excluded, reversing an earlier call.**  It was kept on the strength of one
+  sample point agreeing to -0.008 % once the phase was imposed.  On the grid it deviates 1.68 %
+  at residual-dominated states with s_res off by 5.6 %; that single point was not diagnostic.
+
+### Three ways this measurement was wrong before it was right -- all silent
+
+  1. **Default source policies.** With the Stage-4 defaults left alone, REFPROP takes the dilute
+     term and enhancement viscosity from its own transport model and HEOS cannot, so the
+     comparison measured that CHOICE, not the parameters: ~40 fluids past the threshold, with
+     s_res agreeing to 0.001 %.  The harness now pins both backends to the fitted model.
+  2. **A grid point exactly on the enhancement gate.** rho/rhoc = 2.0 is where Li switches the
+     enhancement off.  The backends' rhoc differ slightly, so 172 points had it on for one and
+     off for the other -- a pure step artefact that inflated the conductivity list from 12 to 30.
+     Grid moved to 1.80 / 2.30, and the report now discards any straddling point regardless.
+  3. **Reference units.** viscosity_RES returns Pa.s; only main.py's sample table is in microPa.s.
+     Got a uniform 1e6 factor, which at least failed loudly.
+
+  In each case the wrong answer looked entirely plausible.  What caught all three was checking
+  that the CAUSE was consistent with the effect -- a 5 % conductivity gap alongside a 0.001 %
+  s_res gap cannot be a parameter-transfer failure, whatever the threshold says.
+
+  Test-suite consequence: the R41 case in "RES conductivity does not throw a viscosity error..."
+  relied on R41 having conductivity parameters but not viscosity ones.  With the lists now equal
+  no such fluid exists, so the case is CONSTRUCTED via RES_data_mutable() instead of found.  Its
+  own premise guard is what caught this -- it failed loudly rather than passing vacuously.
+
+  Gates: [RES] 36 cases / 1071 assertions, 6 failing cases and 23 failing assertions (was 25 --
+  two fewer because the newly excluded fluids now throw and are skipped by the sample tests
+  rather than failing an assertion).  [REFPROP] 1508, [viscosity],[conductivity] 1131, cubics
+  3698, [SBTL] 5476 -- all pass.  clang-format unchanged at HEAD's count.
+
+NEXT: Stage 7 -- test-suite overhaul, D1 (the fail-open catch(...) + REQUIRE(ok >= N) gate) first;
+  it is now actively misleading, since 14 excluded fluids throw by design and are indistinguishable
+  from breakage.  Also outstanding: the converter invariant gate (see the Stage-5 discussion --
+  structural checks plus a regenerate-and-diff, NOT cross-key equality, which a future HEOS-specific
+  refit would legitimately break).
 
 ---
 
@@ -649,7 +744,7 @@ the pass count is unchanged by definition. It is a bit-identical dump of every c
 
     ./build_tests/Release/CatchTestRunner.exe "[RES]" --success > after.txt 2>&1
     norm(){ grep -v "^Randomness seeded" "$1" | sed -E 's/0x[0-9a-f]+/0xPTR/g; s/[.]cpp\([0-9]+\)/.cpp(LINE)/g'; }
-    diff <(norm dev/RES_comparison/RES_baseline_stage4b.txt) <(norm after.txt)
+    diff <(norm dev/RES_comparison/RES_baseline_stage6.txt) <(norm after.txt)
 
 Two masks, both required. Heap addresses in `dynamic_cast != nullptr` assertions vary per run.
 Source line numbers shift whenever a test is INSERTED above an existing one, which produces
@@ -657,8 +752,8 @@ hundreds of spurious diff lines that hide the real ones -- that mask was added i
 exactly that happened. When a stage adds tests, the gate is not "empty diff" but **no removed or
 changed lines**: `diff ... | grep "^<"` must return only the two summary counts.
 
-Current gate file: `RES_baseline_stage4b.txt`. Current expected [RES] result: **36 cases, 30
-passed, 6 failed; 1089 assertions, 1064 passed, 25 failed.** The 6 failing cases are the HEOS
+Current gate file: `RES_baseline_stage6.txt`. Current expected [RES] result: **36 cases, 30
+passed, 6 failed; 1071 assertions, 1048 passed, 23 failed.** The 6 failing cases are the HEOS
 sample-data comparisons, with documented causes -- see `dev/RES_test_assessment.md`. They are NOT
 regressions, and the failed-assertion count must stay at exactly 25.
 
@@ -746,9 +841,7 @@ columns reproduce to ~1% with the polynomial dilute term (Stage 4 tightens this 
 
 - **Stage 4** DONE -- see the Progress log.
 - **Stage 5** DONE (pulled forward into Stage 3) -- see the Progress log.
-- **Stage 6** the actual objective: (a) C++ REFPROP+RES vs the authors' code = implementation
-  correctness; (b) C++ HEOS+RES vs C++ REFPROP+RES over a grid = parameter transfer. Re-derive the
-  exclusion lists from (b).
+- **Stage 6** DONE -- see the Progress log.
 - **Stage 7** optional, isolated: fix `tau_ref = T_critical/t_ref` -> `T_reducing/t_ref`. Watch
   CYCLOPRO (0.1%); ~1e-7 for the rest.
 

@@ -46,41 +46,55 @@ SOURCES = {
     },
 }
 
-# Fluids whose REFPROP-fitted RES coefficients are not trustworthy on the HEOS backend,
-# because HEOS's smolar_residual differs enough from REFPROP's to move the transport
-# property. Their "HEOS" entry is omitted below so the C++ backend raises a clear exception
-# instead of silently returning an inaccurate value.
+# Fluids whose REFPROP-fitted RES coefficients are not trustworthy on the HEOS backend, because
+# HEOS's residual entropy differs enough from REFPROP's to move the transport property.
+# Their "HEOS" entry is omitted below so the C++ backend raises a clear exception instead of
+# silently returning an inaccurate value.  The "REFPROP" entry is unaffected -- there the
+# coefficients are exact, since that is the EOS they were regressed against.
 #
-# Two measurements decide an exclusion, and BOTH matter:
+# DERIVED FROM MEASUREMENT, not from the published sample points.  Reproduce with:
 #
-#   1. deviation of the transport property from the published reference (Martinek vis_res /
-#      Li TC_RES), via dev/compare_HEOS_vs_REFPROP_RES.py at a 1% threshold;
-#   2. deviation of s_res itself over a range of states.
+#     python dev/convert_RES_csv_to_json.py --keep-all-heos   # so excluded fluids can be measured
+#     python dev/generate_headers.py && <rebuild>
+#     python dev/RES_grid_build.py                            # 3828 points over 147 fluids
+#     ./build_tests/Release/CatchTestRunner.exe "[RES_grid]"  # evaluate both backends
+#     python dev/RES_grid_report.py
 #
-# Criterion (1) alone is NOT sufficient, because there is only ONE published sample point
-# per fluid and some of those points are almost entirely dilute gas -- where the transport
-# property barely depends on s_res, so a large s_res error cannot show up. Measured residual
-# share at the sample point: R161 4.3% (viscosity) and -0.2% (conductivity), VINYLCHLORIDE
-# 0.3%, R13 0.9%, R1234YF 0.2%. Those samples are blind to the error, and each of those
-# fluids has a systematic s_res deviation elsewhere on the (T,p) surface (R161 12%,
-# VINYLCHLORIDE 32%, R13 17%, R1234YF 6%), so they stay excluded despite a <1% transport
-# deviation at their sample point.
+# The grid compares the SAME implementation on both backends at the same (T, p), with both pinned
+# to the same dilute-gas and enhancement-viscosity source, so the equation of state is the only
+# thing that differs.  Three earlier attempts at this list were wrong in instructive ways:
 #
-# By contrast the sample points for D5 (99.9%), R1233ZDE (98.4%) and R1224YDZ (96.1%) are
-# residual-dominated, so their transport deviations are meaningful on their own.
+#   - One published sample point per fluid is not enough.  Several of those points are almost
+#     entirely dilute gas, where the property barely depends on s_res at all, so a large s_res
+#     error cannot show up.  The grid therefore judges each fluid only at states where the
+#     residual term supplies at least 20% of the property.
+#   - Leaving the backends on their default source policies measured that policy, not the
+#     parameters: REFPROP takes the dilute term and the enhancement viscosity from its own
+#     transport model and HEOS cannot, which alone moved ~40 fluids past the threshold.
+#   - A grid point at exactly rho/rhoc = 2 sits on Li's critical-enhancement gate.  The two
+#     backends have slightly different rhoc, so such a point has the enhancement on for one and
+#     off for the other; that step alone inflated the conductivity list from 12 fluids to 30.
 #
-# Two cases need care, because HEOS and REFPROP can disagree about the *phase* at a sample
-# point that straddles their (nearly identical) saturation curves. That inflates the
-# deviation without saying anything about the parameters:
-#   BENZENE  -- deviation collapses from -41.6% to -0.008% once the phase is imposed, so its
-#               parameters are fine and it is NOT excluded.
-#   R41      -- deviation collapses from +266.8% to -1.12%, which still exceeds 1%, so it
-#               stays excluded on the strength of that genuine residual error.
+# The criterion is a >1% transport deviation at residual-dominated states away from the critical
+# enhancement, OR a >5% deviation in s_res itself at those states.  The second clause matters:
+# MD4M's conductivity agrees to 0.27% while its s_res is off by 27%, which means the sampled
+# states happen to be insensitive rather than that the parameters transfer.  Both clauses select
+# the SAME 14 fluids for viscosity and for conductivity -- unsurprising in hindsight, since s_res
+# is the one input both models share.
 #
-# Re-run the comparison script (against a REFPROP-enabled CoolProp build, `pip install .`)
-# to refresh these lists if the fluid library, the EOS, or the parameter fits change.
-HEOS_VISCOSITY_EXCLUDE = {"D5", "R1224YDZ", "R1233ZDE", "R13", "R161", "R41"}
-HEOS_CONDUCTIVITY_EXCLUDE = {"D5", "R1233ZDE", "R1234YF", "R13", "R161", "VINYLCHLORIDE"}
+# Median deviation across all 3243 comparable grid points is 0.00006% (viscosity) and 0.00005%
+# (conductivity): for the other 133 fluids the parameters transfer essentially exactly.
+#
+# NOTE BENZENE.  An earlier round kept it, on the strength of a single sample point that agreed to
+# -0.008% once the phase was imposed.  On the grid it deviates by 1.68% at residual-dominated
+# states and its s_res is off by 5.6%, so that one point was simply not diagnostic.
+HEOS_TRANSFER_EXCLUDE = {
+    "BENZENE", "D5", "HEPTANE", "MD3M", "MD4M", "R1123", "R1224YDZ",
+    "R1233ZDE", "R1234YF", "R1243ZF", "R13", "R161", "R41", "VINYLCHLORIDE",
+}
+# Kept as separate names so a future property-specific refit can diverge again.
+HEOS_VISCOSITY_EXCLUDE = set(HEOS_TRANSFER_EXCLUDE)
+HEOS_CONDUCTIVITY_EXCLUDE = set(HEOS_TRANSFER_EXCLUDE)
 
 
 @functools.cache
@@ -304,9 +318,10 @@ if __name__ == "__main__":
     ap.add_argument("params_dir", nargs="?", default=DEFAULT_PARAMS_DIR,
                     help="directory holding the RES source tables (default: dev/RES_params)")
     ap.add_argument("--keep-all-heos", action="store_true",
-                    help="ignore HEOS_*_EXCLUDE and emit every HEOS entry. Use this to re-measure the "
-                         "per-fluid deviation with dev/compare_HEOS_vs_REFPROP_RES.py before deciding "
-                         "which fluids actually warrant exclusion; do not ship the result.")
+                    help="ignore HEOS_*_EXCLUDE and emit every HEOS entry. Required before re-deriving "
+                         "the exclusion lists, since an excluded fluid cannot be evaluated on HEOS at "
+                         "all; see the comment on HEOS_TRANSFER_EXCLUDE for the full procedure. "
+                         "Do not ship the result.")
     args = ap.parse_args()
     if args.keep_all_heos:
         HEOS_VISCOSITY_EXCLUDE.clear()
