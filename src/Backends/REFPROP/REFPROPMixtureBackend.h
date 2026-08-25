@@ -93,8 +93,11 @@ class REFPROPMixtureBackend : public AbstractState
     /// does not disturb the cached state.  Used only by the RES critical-enhancement term.
     CoolPropDbl calc_drhomass_dp_constT_at(double T_eval) override;
 
-    /// REFPROP reports the mixture critical point directly via CRITPdll -- no solve on our side.
-    bool calc_has_direct_critical_point() override {
+    /// CRITPdll costs well under a microsecond, so the RES mixture enhancement can be enabled by
+    /// default here.  Note it returns an ESTIMATE of the mixture critical point, not the true one
+    /// -- REFPROP's iterative solver for that is CRTPNT -- but the reference implementation of
+    /// Li 2024 uses the same value, so RES matches it either way.
+    bool calc_critical_point_is_cheap() override {
         return true;
     }
 

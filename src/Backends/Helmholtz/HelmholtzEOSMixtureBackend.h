@@ -623,8 +623,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
 
     void calc_all_alphar_deriv_cache(const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau, const CoolPropDbl& delta);
     /// (d rho_mass / dp)_T at temperature T_eval and the CURRENT density, without mutating state.
-    /// The body is the alpha^r-derivative expression the RES critical enhancement used inline
-    /// before it was hoisted here, kept verbatim so that hoisting it changes no numbers.
+    /// Used by the RES critical-enhancement reference term; see the .cpp for why tau is reduced
+    /// by T_reducing rather than T_critical.
     CoolPropDbl calc_drhomass_dp_constT_at(double T_eval) override;
 
     virtual CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,

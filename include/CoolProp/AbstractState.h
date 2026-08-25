@@ -786,11 +786,15 @@ class AbstractState
         return false;
     }
 
-    /// True when the backend reports the critical point of a MIXTURE directly rather than solving
-    /// for it.  Governs RES_MIX_ENH_AUTO: the RES mixture critical enhancement needs Tc, pc and
-    /// rhoc of the mixture, and running a critical-point solve to get them is slow and not
-    /// reliable enough to do by default.  Irrelevant for pure fluids.
-    virtual bool calc_has_direct_critical_point() {
+    /// True when the critical point of a MIXTURE is cheap to obtain on this backend.  Governs
+    /// RES_MIX_ENH_AUTO: the RES mixture critical enhancement needs Tc, pc and rhoc of the
+    /// mixture, and running a critical-point solve to get them is slow and not reliable enough to
+    /// do by default.  Irrelevant for pure fluids.
+    ///
+    /// This is a statement about COST, not about accuracy.  REFPROP answers true because CRITPdll
+    /// returns in well under a microsecond, but what it returns is an estimate: REFPROP's own
+    /// iterative solver for the true mixture critical point is a separate routine, CRTPNT.
+    virtual bool calc_critical_point_is_cheap() {
         return false;
     }
 
@@ -831,6 +835,12 @@ class AbstractState
     std::pair<std::vector<double>, double> get_viscosity_RES_residual_params(std::size_t i);
     /// Return the current residual n-coefficients and xita for conductivity of component i.
     std::pair<std::vector<double>, double> get_conductivity_RES_residual_params(std::size_t i);
+    /// Read back the COMPLETE RES parameter set for component i, as currently in use.  The
+    /// residual-only getters above return just what a refit changes; these also carry the shipped
+    /// dilute polynomial, the critical-enhancement constants for conductivity, and the
+    /// provided / n_params_match_alpha flags that decide whether the model will run at all.
+    ViscosityRESData get_viscosity_RES_parameters(std::size_t i);
+    ConductivityRESData get_conductivity_RES_parameters(std::size_t i);
     /// (d rho_mass / dp)_T at temperature T_eval and the current density, without mutating state.
     /// Public wrapper over the protected calc_ hook, following the viscosity()/calc_viscosity()
     /// pattern, so the backend-neutral RES routines can reach it.
@@ -842,9 +852,9 @@ class AbstractState
     bool transport_native(parameters key, double rhomolar_eval, double& value) {
         return calc_transport_native(key, rhomolar_eval, value);
     }
-    /// Public wrapper for calc_has_direct_critical_point().
-    bool has_direct_critical_point() {
-        return calc_has_direct_critical_point();
+    /// Public wrapper for calc_critical_point_is_cheap().
+    bool critical_point_is_cheap() {
+        return calc_critical_point_is_cheap();
     }
     /// Choose where the RES dilute-gas term comes from.  Defaults to RES_DILUTE_AUTO, which
     /// reproduces the source papers per code path -- see RESDiluteSource.  Clears the memoized

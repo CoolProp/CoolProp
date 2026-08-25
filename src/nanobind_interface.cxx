@@ -913,6 +913,43 @@ void init_CoolProp(nb::module_& m) {
       // std::pair maps to a Python tuple, matching the legacy Cython interface.
       .def("get_viscosity_RES_residual_params", &AbstractState::get_viscosity_RES_residual_params, nb::arg("i"))
       .def("get_conductivity_RES_residual_params", &AbstractState::get_conductivity_RES_residual_params, nb::arg("i"))
+      .def(
+        "get_viscosity_RES_parameters",
+        [](AbstractState& AS, std::size_t i) {
+            const ViscosityRESData d = AS.get_viscosity_RES_parameters(i);
+            nb::dict out;
+            out["n_dilute"] = d.n_dilute;
+            out["n_res"] = d.n_res;
+            out["xita"] = d.xita;
+            out["group_num"] = d.group_num;
+            out["molar_mass"] = d.molar_mass;
+            out["n_params_match_alpha"] = d.n_params_match_alpha;
+            out["provided"] = d.provided;
+            return out;
+        },
+        nb::arg("i"))
+      .def(
+        "get_conductivity_RES_parameters",
+        [](AbstractState& AS, std::size_t i) {
+            const ConductivityRESData d = AS.get_conductivity_RES_parameters(i);
+            nb::dict out;
+            out["n_dilute"] = d.n_dilute;
+            out["n_res"] = d.n_res;
+            out["xita"] = d.xita;
+            out["group_num"] = d.group_num;
+            out["molar_mass"] = d.molar_mass;
+            out["R_D"] = d.R_D;
+            out["gamma_uni"] = d.gamma_uni;
+            out["Gamma"] = d.Gamma;
+            out["phi0"] = d.phi0;
+            out["t_ref"] = d.t_ref;
+            out["q_D"] = d.q_D;
+            out["n_params_match_alpha"] = d.n_params_match_alpha;
+            out["crit_provided"] = d.crit_provided;
+            out["provided"] = d.provided;
+            return out;
+        },
+        nb::arg("i"))
       .def("set_viscosity_RES_dilute_source", &AbstractState::set_viscosity_RES_dilute_source, nb::arg("src"))
       .def("set_conductivity_RES_dilute_source", &AbstractState::set_conductivity_RES_dilute_source, nb::arg("src"))
       .def("set_conductivity_RES_enhancement_viscosity", &AbstractState::set_conductivity_RES_enhancement_viscosity, nb::arg("src"))

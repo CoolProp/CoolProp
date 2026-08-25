@@ -6,8 +6,8 @@
 //   Conductivity - Li 2024, doi:10.1021/acs.iecr.4c02946
 //                  dev/RES_samples/Li_2024_conductivity/
 //
-// Columns "vis_res" / "TC_RES" were computed by the Python kktoolbox module
-// using REFPROP as the thermodynamic backend (REFPROP RES reference values).
+// The "vis_res" / "TC_RES" columns are the authors' own values, taken from the supporting
+// information of the two papers and computed there with REFPROP as the thermodynamic backend.
 
 #if defined(ENABLE_CATCH)
 
@@ -195,6 +195,49 @@ static std::shared_ptr<AbstractState> make_pr(const std::string& f) {
 
 // ============================================================= tests =========
 
+TEST_CASE("GEN golden PT", "[.][GEN2]") {
+    struct S
+    {
+        const char* f;
+        double T, p;
+    };
+    static const S st[] = {
+      {"AMMONIA", 304.17, 3606963.44186},    {"AMMONIA", 446.116, 28384252.4254},   {"AMMONIA", 527.228, 92191380.93711},
+      {"ARGON", 113.01525, 2418347.95793},   {"ARGON", 165.7557, 11548934.69671},   {"ARGON", 195.8931, 38374336.25303},
+      {"CO2", 228.09615, 2490320.627062},    {"CO2", 334.54102, 19224671.21944},    {"CO2", 395.36666, 67343164.89186},
+      {"ETHANOL", 386.0325, 1596351.335694}, {"ETHANOL", 566.181, 17457987.6492},   {"ETHANOL", 669.123, 62922345.22261},
+      {"METHANE", 142.923, 2230767.992782},  {"METHANE", 209.6204, 11014898.69906}, {"METHANE", 247.7332, 36862390.29281},
+      {"NITROGEN", 138.8112, 8247948.58104}, {"NITROGEN", 164.0496, 27881957.2182}, {"NITROGEN", 94.644, 1577718.259735},
+      {"PROPANE", 277.4175, 1618042.935256}, {"PROPANE", 406.879, 10932008.08445},  {"PROPANE", 480.857, 38972745.33683},
+      {"R134A", 280.6575, 1193029.563139},   {"R134A", 411.631, 11082887.77478},    {"R134A", 486.473, 40174480.69617},
+      {"TOLUENE", 443.8125, 1288149.39309},  {"TOLUENE", 650.925, 10804158.42783},  {"TOLUENE", 769.275, 39974654.51745},
+      {"WATER", 485.322, 6404695.669172},    {"WATER", 711.8056, 54841210.98041},   {"WATER", 841.2248, 170019943.4478},
+    };
+    for (const auto& s : st) {
+        double v[2] = {0, 0}, c[2] = {0, 0}, rho[2] = {0, 0};
+        bool ok = true;
+        for (int i = 0; i < 2 && ok; ++i) {
+            try {
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(i == 0 ? "HEOS" : "PR", s.f));
+                AS->use_viscosity_RES(true);
+                AS->use_conductivity_RES(true);
+                AS->update(PT_INPUTS, s.p, s.T);
+                rho[i] = AS->rhomass();
+                v[i] = AS->viscosity();
+                c[i] = AS->conductivity();
+            } catch (const std::exception& e) {
+                std::cout << "    // " << s.f << " " << (i == 0 ? "HEOS" : "PR") << " failed: " << e.what() << std::endl;
+                ok = false;
+            }
+        }
+        if (!ok) continue;
+        std::cout.precision(13);
+        std::cout << "        {\"" << s.f << "\", " << s.T << ", " << s.p << ", " << std::scientific << v[0] << ", " << c[0] << ", " << v[1] << ", "
+                  << c[1] << std::defaultfloat << "},  // PR/HEOS eta " << (v[1] / v[0] - 1) * 100 << "%, tc " << (c[1] / c[0] - 1) * 100 << "%, rho "
+                  << (rho[1] / rho[0] - 1) * 100 << "%" << std::endl;
+    }
+}
+
 TEST_CASE("RES regression at residual-dominated states", "[RES][transport]") {
     // The regression net for the native backends.  These are GOLDEN values produced by this
     // implementation -- their job is to fail when the model changes, not to say it is right.
@@ -230,35 +273,35 @@ TEST_CASE("RES regression at residual-dominated states", "[RES][transport]") {
     };
     static const Golden golden[] = {
       {"AMMONIA", 304.17, 3606963.44186, 1.2534715542329e-04, 4.6091983840002e-01, 1.2430582780973e-04, 4.6014354642977e-01},
-      {"AMMONIA", 446.116, 28384252.4254, 4.2568850005887e-05, 2.3571693252823e-01, 4.2786422334763e-05, 2.2742536998745e-01},
-      {"AMMONIA", 527.228, 92191380.93711, 5.3572527060133e-05, 2.9205044497544e-01, 5.9347099520628e-05, 3.1029113568365e-01},
+      {"AMMONIA", 446.116, 28384252.4254, 4.2568850005885e-05, 2.3571693252803e-01, 4.2786422334760e-05, 2.2615317984091e-01},
+      {"AMMONIA", 527.228, 92191380.93711, 5.3572527060133e-05, 2.9205044497509e-01, 5.9347099520628e-05, 3.0816594819808e-01},
       {"ARGON", 113.01525, 2418347.95793, 1.2425384695901e-04, 9.3236284166714e-02, 1.2941949107901e-04, 9.2446488869947e-02},
-      {"ARGON", 165.7557, 11548934.69671, 4.5407457592386e-05, 4.5422611875480e-02, 4.4549397046620e-05, 4.3947433224394e-02},
-      {"ARGON", 195.8931, 38374336.25303, 6.5481497788678e-05, 6.2490603951955e-02, 6.8869885182856e-05, 6.3930703582688e-02},
+      {"ARGON", 165.7557, 11548934.69671, 4.5407457592372e-05, 4.5422611875469e-02, 4.4549397046605e-05, 4.3690287175164e-02},
+      {"ARGON", 195.8931, 38374336.25303, 6.5481497788676e-05, 6.2490603951953e-02, 6.8869885182853e-05, 6.3579015380416e-02},
       {"CO2", 228.09615, 2490320.627062, 2.1706417724008e-04, 1.7472032636980e-01, 2.1027646640269e-04, 1.6968175186621e-01},
-      {"CO2", 334.54102, 19224671.21944, 5.7748662636897e-05, 7.8000300052466e-02, 5.8696604679698e-05, 7.3837477000642e-02},
-      {"CO2", 395.36666, 67343164.89186, 8.0220003253736e-05, 1.0326713380876e-01, 8.7061221303424e-05, 1.0449471916674e-01},
+      {"CO2", 334.54102, 19224671.21944, 5.7748662636897e-05, 7.8000300052477e-02, 5.8696604679699e-05, 7.3214978852871e-02},
+      {"CO2", 395.36666, 67343164.89186, 8.0220003253735e-05, 1.0326713380878e-01, 8.7061221303422e-05, 1.0351998485063e-01},
       {"ETHANOL", 386.0325, 1596351.335694, 2.8376781690654e-04, 1.4825360425374e-01, 2.8170762756801e-04, 1.4839265301095e-01},
-      {"ETHANOL", 566.181, 17457987.6492, 5.3192725711264e-05, 1.2862040387156e-01, 4.5834435892776e-05, 1.2841265492736e-01},
-      {"ETHANOL", 669.123, 62922345.22261, 5.8461231258475e-05, 1.5254928551071e-01, 6.3802494308523e-05, 1.6460147207033e-01},
+      {"ETHANOL", 566.181, 17457987.6492, 5.3192725711269e-05, 1.2862040142026e-01, 4.5834435892781e-05, 1.2743669579936e-01},
+      {"ETHANOL", 669.123, 62922345.22261, 5.8461231258474e-05, 1.5254927961775e-01, 6.3802494308521e-05, 1.6291558600855e-01},
       {"METHANE", 142.923, 2230767.992782, 6.3204079903066e-05, 1.4205684520521e-01, 6.3995464623802e-05, 1.4048207374639e-01},
-      {"METHANE", 209.6204, 11014898.69906, 2.5963132143349e-05, 7.5897272183899e-02, 2.4828334843228e-05, 7.4436136350518e-02},
-      {"METHANE", 247.7332, 36862390.29281, 3.6830270301240e-05, 1.0189887829786e-01, 3.7603345051971e-05, 1.0471408099588e-01},
-      {"NITROGEN", 138.8112, 8247948.58104, 3.0053479834784e-05, 5.2312119391951e-02, 3.0563295198523e-05, 5.1098822588803e-02},
-      {"NITROGEN", 164.0496, 27881957.2182, 4.3336521007404e-05, 7.1427476618025e-02, 4.6625864875666e-05, 7.3276730196320e-02},
-      {"NITROGEN", 94.644, 1577718.259735, 8.7504634740091e-05, 1.0581701680628e-01, 8.8903428620479e-05, 1.0505012170376e-01},
+      {"METHANE", 209.6204, 11014898.69906, 2.5963132143352e-05, 7.5897272201812e-02, 2.4828334843230e-05, 7.3627590090899e-02},
+      {"METHANE", 247.7332, 36862390.29281, 3.6830270301239e-05, 1.0189887832794e-01, 3.7603345051969e-05, 1.0345987125414e-01},
+      {"NITROGEN", 138.8112, 8247948.58104, 3.0053479834784e-05, 5.2312119391949e-02, 3.0563295198522e-05, 5.0809298455116e-02},
+      {"NITROGEN", 164.0496, 27881957.2182, 4.3336521007401e-05, 7.1427476618019e-02, 4.6625864875662e-05, 7.2863987077628e-02},
+      {"NITROGEN", 94.644, 1577718.259735, 8.7504634740090e-05, 1.0581701680628e-01, 8.8903428620479e-05, 1.0505012170376e-01},
       {"PROPANE", 277.4175, 1618042.935256, 1.1646412035562e-04, 1.0488839979475e-01, 1.1820459342471e-04, 1.0941577238384e-01},
-      {"PROPANE", 406.879, 10932008.08445, 4.0783692276740e-05, 6.6802493573695e-02, 3.9415796812993e-05, 7.1458269719973e-02},
-      {"PROPANE", 480.857, 38972745.33683, 5.7849566275167e-05, 9.0651408551990e-02, 6.0039764046943e-05, 1.0048473544986e-01},
-      {"R134A", 280.6575, 1193029.563139, 2.5770377777320e-04, 9.0393800182755e-02, 2.5428245071266e-04, 8.9475107403341e-02},
-      {"R134A", 411.631, 11082887.77478, 6.5171000688782e-05, 5.3006433418392e-02, 6.5961723631807e-05, 5.4646347304115e-02},
-      {"R134A", 486.473, 40174480.69617, 8.9548801894069e-05, 6.7979819687866e-02, 9.8220388334927e-05, 7.3117052196393e-02},
+      {"PROPANE", 406.879, 10932008.08445, 4.0783692276745e-05, 6.6802493591870e-02, 3.9415796812998e-05, 7.0951949503742e-02},
+      {"PROPANE", 480.857, 38972745.33683, 5.7849566275168e-05, 9.0651408581744e-02, 6.0039764046944e-05, 9.9703431380447e-02},
+      {"R134A", 280.6575, 1193029.563139, 2.5770377777319e-04, 9.0393800182755e-02, 2.5428245071266e-04, 8.9475107403340e-02},
+      {"R134A", 411.631, 11082887.77478, 6.5171000688799e-05, 5.3006508949767e-02, 6.5961723631826e-05, 5.4129997398074e-02},
+      {"R134A", 486.473, 40174480.69617, 8.9548801894064e-05, 6.7979959212060e-02, 9.8220388334921e-05, 7.2273829074962e-02},
       {"TOLUENE", 443.8125, 1288149.39309, 1.6509786571318e-04, 9.3704872024963e-02, 1.6482924210734e-04, 9.2218047500124e-02},
-      {"TOLUENE", 650.925, 10804158.42783, 5.4619891095097e-05, 7.5127995747084e-02, 5.2468262292422e-05, 7.5863947319217e-02},
-      {"TOLUENE", 769.275, 39974654.51745, 7.4722506698656e-05, 9.5824271171200e-02, 7.8921869489490e-05, 9.9555419198892e-02},
+      {"TOLUENE", 650.925, 10804158.42783, 5.4619891095099e-05, 7.5127993330366e-02, 5.2468262292424e-05, 7.4880790613610e-02},
+      {"TOLUENE", 769.275, 39974654.51745, 7.4722506698651e-05, 9.5824266869547e-02, 7.8921869489485e-05, 9.7944905220167e-02},
       {"WATER", 485.322, 6404695.669172, 1.2527298863343e-04, 6.8982986008485e-01, 1.2907412366549e-04, 6.9455344075235e-01},
-      {"WATER", 711.8056, 54841210.98041, 5.8243233448322e-05, 3.5802447395434e-01, 5.8810456734221e-05, 3.8046804717100e-01},
-      {"WATER", 841.2248, 170019943.4478, 6.9142832618332e-05, 4.1148115810904e-01, 7.6769727417010e-05, 5.0100932960509e-01},
+      {"WATER", 711.8056, 54841210.98041, 5.8243233448324e-05, 3.5802447395435e-01, 5.8810456734224e-05, 3.7882515600633e-01},
+      {"WATER", 841.2248, 170019943.4478, 6.9142832618337e-05, 4.1148115810909e-01, 7.6769727417017e-05, 4.9820814236974e-01},
     };
 
     for (const auto& g : golden) {
@@ -783,6 +826,41 @@ TEST_CASE("RES source policy where the backend supplies no native term", "[RES][
     CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("does not supply a native viscosity model"));
 }
 
+TEST_CASE("REFPROP mixture critical point agrees with the PropsSI route", "[RES][REFPROP][transport]") {
+    // The RES mixture critical enhancement reads Tc, pc and rhoc off AbstractState, which lands on
+    // CRITPdll.  Li 2024 obtains the same three through PropsSI on a composition-bearing fluid
+    // string (code_SI.py:162-163, 178).  The enhancement only reproduces the published mixture
+    // values while those two routes agree, and a mixture string goes through composition parsing
+    // that a pure name does not -- so pin the equivalence rather than assume it.
+    //
+    // Exact equality, not Approx: both should reach the same CRITPdll call, so anything less than
+    // bit-identical means the routing changed and the enhancement has quietly drifted off the
+    // reference.
+    Skip_if_No_REFPROP();
+    struct Mix
+    {
+        const char* a;
+        const char* b;
+        double xa, xb;
+    };
+    static const Mix mixes[] = {
+      {"BUTANE", "METHANE", 0.606, 0.394},
+      {"ARGON", "NEON", 0.5, 0.5},
+      {"CO2", "ETHANE", 0.5, 0.5},
+    };
+
+    for (const auto& m : mixes) {
+        // Built the way Li's fluid_mix_name_cp() does it.
+        const std::string named = std::string("REFPROP::") + m.a + "[" + std::to_string(m.xa) + "]&" + m.b + "[" + std::to_string(m.xb) + "]";
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", std::string(m.a) + "&" + m.b));
+        AS->set_mole_fractions({m.xa, m.xb});
+        INFO("mixture " << named);
+        CHECK(CoolProp::PropsSI("Tcrit", "T", 0, "P", 0, named) == AS->T_critical());
+        CHECK(CoolProp::PropsSI("rhocrit", "T", 0, "P", 0, named) == AS->rhomass_critical());
+        CHECK(CoolProp::PropsSI("Pcrit", "T", 0, "P", 0, named) == AS->p_critical());
+    }
+}
+
 TEST_CASE("RES mixture critical enhancement follows the backend policy", "[RES][REFPROP][transport]") {
     Skip_if_No_REFPROP();
     // BUTANE+METHANE at its published sample point is the only binary in the sample set that sits
@@ -837,7 +915,7 @@ TEST_CASE("RES mixture critical enhancement is off by default on native CoolProp
     CHECK(AS->conductivity() == tc_auto);
     // ...and the enhancement really is absent, not merely equal by luck: no critical point was
     // needed to produce either number.
-    CHECK(AS->has_direct_critical_point() == false);
+    CHECK(AS->critical_point_is_cheap() == false);
 }
 
 // On the REFPROP backend the published vis_res / TC_RES columns were produced with the SAME
@@ -1268,6 +1346,49 @@ TEST_CASE("RES critical enhancement is suppressed outside the near-critical regi
         CHECK(std::isfinite(a));
         CHECK(a > b);
     }
+}
+
+TEST_CASE("RES full parameter getters round-trip against the setters", "[RES][transport]") {
+    // The residual-only getters cover what a refit changes; these return everything, including
+    // the shipped dilute polynomial and the enhancement constants, which otherwise had no
+    // read-back path at all outside C++ (RES_data() is not exposed to the wrappers).
+    auto AS = make_heos("Propane");
+    const auto v0 = AS->get_viscosity_RES_parameters(0);
+    const auto c0 = AS->get_conductivity_RES_parameters(0);
+    REQUIRE(v0.provided);
+    REQUIRE(c0.provided);
+    CHECK(v0.n_dilute.size() == 5);
+    CHECK(v0.n_res.size() == 3);
+    CHECK(c0.n_dilute.size() == 5);
+    CHECK(c0.n_res.size() == 4);
+    CHECK(v0.molar_mass == Catch::Approx(AS->molar_mass()).epsilon(1e-12));
+    CHECK(c0.crit_provided);  // Propane ships enhancement parameters
+    CHECK(c0.t_ref > 0);
+
+    // What the setters write is what the getters read back.
+    const std::vector<double> nd{1, 2, 3, 4, 5}, nr{0.1, 0.2, 0.3};
+    AS->set_viscosity_RES_parameters(0, nd, nr, 1.25);
+    const auto v1 = AS->get_viscosity_RES_parameters(0);
+    CHECK(v1.n_dilute == nd);
+    CHECK(v1.n_res == nr);
+    CHECK(v1.xita == 1.25);
+
+    const std::vector<double> cnr{0.1, 0.2, 0.3, 0.4};
+    AS->set_conductivity_RES_parameters(0, nd, cnr, 0.9, 1.01, 1.24, 0.05, 1.9e-10, 600.0, 1.4e9);
+    const auto c1 = AS->get_conductivity_RES_parameters(0);
+    CHECK(c1.n_dilute == nd);
+    CHECK(c1.n_res == cnr);
+    CHECK(c1.xita == 0.9);
+    CHECK(c1.R_D == 1.01);
+    CHECK(c1.gamma_uni == 1.24);
+    CHECK(c1.Gamma == 0.05);
+    CHECK(c1.phi0 == 1.9e-10);
+    CHECK(c1.t_ref == 600.0);
+    CHECK(c1.q_D == 1.4e9);
+
+    // Out of range must report, not read past the end.
+    CHECK_THROWS_AS(AS->get_viscosity_RES_parameters(1), CoolProp::ValueError);
+    CHECK_THROWS_AS(AS->get_conductivity_RES_parameters(1), CoolProp::ValueError);
 }
 
 TEST_CASE("RES viscosity residual params round-trip", "[RES][transport]") {

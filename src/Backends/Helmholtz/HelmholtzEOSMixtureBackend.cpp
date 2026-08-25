@@ -838,16 +838,16 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
 }
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_drhomass_dp_constT_at(double T_eval) {
-    // Verbatim from the RES critical-enhancement reference term as it stood before it was hoisted
-    // out of TransportRoutines, so that the move is provably a no-op.
+    // tau and delta must be reduced by the SAME parameters the EOS is written in, so tau uses
+    // T_reducing and not T_critical -- the two differ for 98 of the 105 fluids that carry
+    // critical-enhancement parameters (R40 by 5.6e-3), and mixing them evaluates alpha^r at the
+    // wrong point on the surface.  Matches conductivity_critical_simplified_Olchowy_Sengers in
+    // TransportRoutines.cpp, whose local `Tc` is likewise get_reducing_state().T.
     //
-    // NOTE (pre-existing, deliberately preserved): tau_ref uses T_critical() while delta is
-    // rho/rho_reducing.  dp/drho|T is only strictly correct with tau = T_reducing/T; the two
-    // differ for 103 of 119 crit-enhancement fluids, by ~1e-7 relative for almost all of them but
-    // by 0.1% for CYCLOPRO.  Fixing that is a separate, measured change -- keeping it verbatim
-    // here is what makes this refactor verifiable.
+    // Using T_reducing() also avoids a critical-point SOLVE on mixtures, which T_critical()
+    // triggers on every call.
     const double delta_st = delta();
-    const double tau_ref = T_critical() / T_eval;
+    const double tau_ref = T_reducing() / T_eval;
     double dp_drho_ref = gas_constant() * T_eval
                          * (1.0 + 2.0 * delta_st * calc_alphar_deriv_nocache(0, 1, mole_fractions, tau_ref, delta_st)
                             + delta_st * delta_st * calc_alphar_deriv_nocache(0, 2, mole_fractions, tau_ref, delta_st));

@@ -934,6 +934,16 @@ std::pair<std::vector<double>, double> AbstractState::get_viscosity_RES_residual
     return {d.n_res, d.xita};
 }
 
+ViscosityRESData AbstractState::get_viscosity_RES_parameters(std::size_t i) {
+    check_RES_component_index(i, "get_viscosity_RES_parameters");
+    return _RES.comps[i].viscosity;
+}
+
+ConductivityRESData AbstractState::get_conductivity_RES_parameters(std::size_t i) {
+    check_RES_component_index(i, "get_conductivity_RES_parameters");
+    return _RES.comps[i].conductivity;
+}
+
 std::pair<std::vector<double>, double> AbstractState::get_conductivity_RES_residual_params(std::size_t i) {
     check_RES_component_index(i, "get_conductivity_RES_residual_params");
     const ConductivityRESData& d = _RES.comps[i].conductivity;

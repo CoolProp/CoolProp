@@ -511,6 +511,20 @@ cdef class AbstractState:
         """ Return (n_res, xita) currently in use for viscosity of component i - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_viscosity_RES_residual_params` """
         cdef pair[vector[double], double] out = self.thisptr.get_viscosity_RES_residual_params(i)
         return (out.first, out.second)
+    cpdef dict get_viscosity_RES_parameters(self, size_t i):
+        """ Return the complete RES viscosity parameter set for component i as a dict - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_viscosity_RES_parameters` """
+        cdef cAbstractState.ViscosityRESData d = self.thisptr.get_viscosity_RES_parameters(i)
+        return {"n_dilute": d.n_dilute, "n_res": d.n_res, "xita": d.xita, "group_num": d.group_num,
+                "molar_mass": d.molar_mass, "n_params_match_alpha": d.n_params_match_alpha,
+                "provided": d.provided}
+    cpdef dict get_conductivity_RES_parameters(self, size_t i):
+        """ Return the complete RES conductivity parameter set for component i as a dict - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_conductivity_RES_parameters` """
+        cdef cAbstractState.ConductivityRESData d = self.thisptr.get_conductivity_RES_parameters(i)
+        return {"n_dilute": d.n_dilute, "n_res": d.n_res, "xita": d.xita, "group_num": d.group_num,
+                "molar_mass": d.molar_mass, "R_D": d.R_D, "gamma_uni": d.gamma_uni, "Gamma": d.Gamma,
+                "phi0": d.phi0, "t_ref": d.t_ref, "q_D": d.q_D,
+                "n_params_match_alpha": d.n_params_match_alpha, "crit_provided": d.crit_provided,
+                "provided": d.provided}
     cpdef tuple get_conductivity_RES_residual_params(self, size_t i):
         """ Return (n_res, xita) currently in use for conductivity of component i - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_conductivity_RES_residual_params` """
         cdef pair[vector[double], double] out = self.thisptr.get_conductivity_RES_residual_params(i)

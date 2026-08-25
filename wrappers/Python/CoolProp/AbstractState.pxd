@@ -150,6 +150,8 @@ cdef class AbstractState:
     cpdef set_RES_mixture_enhancement(self, constants_header.RESMixtureEnhancement policy)
     cpdef tuple get_viscosity_RES_residual_params(self, size_t i)
     cpdef tuple get_conductivity_RES_residual_params(self, size_t i)
+    cpdef dict get_viscosity_RES_parameters(self, size_t i)
+    cpdef dict get_conductivity_RES_parameters(self, size_t i)
     cpdef double surface_tension(self) except *
     cpdef double Prandtl(self) except *
     cpdef double Bvirial(self) except *

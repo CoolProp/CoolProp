@@ -245,8 +245,12 @@ enum RESEnhancementViscosity
 /// published mixture values needs it.  It is nevertheless NOT enabled by default on CoolProp's
 /// own backends: the enhancement requires the MIXTURE critical point, which those backends have
 /// to SOLVE for -- not robustly, and not quickly -- while the physical case for a critical
-/// enhancement in mixtures is not well established in the first place.  REFPROP reports its
-/// mixture critical point directly (CRITPdll), so AUTO enables it there and nowhere else.
+/// enhancement in mixtures is not well established in the first place.  REFPROP's CRITPdll
+/// returns one in well under a microsecond, so AUTO enables it there and nowhere else.
+///
+/// Cheap is not the same as exact: CRITPdll returns an ESTIMATE of the mixture critical point,
+/// and REFPROP's iterative solver for the true one is a separate routine (CRTPNT).  Li 2024
+/// reaches the same estimate through PropsSI, so RES reproduces the published values regardless.
 ///
 /// Pure fluids are unaffected by this setting; their enhancement is always applied.
 enum RESMixtureEnhancement

@@ -19,6 +19,31 @@ cdef extern from "CoolProp/DataStructures.h" namespace "CoolProp":
         double T, p, rhomolar, hmolar, smolar
         bool stable
 
+cdef extern from "CoolProp/RESTransport.h" namespace "CoolProp":
+    cdef cppclass ViscosityRESData:
+        vector[double] n_dilute
+        vector[double] n_res
+        double xita
+        int group_num
+        double molar_mass
+        bint n_params_match_alpha
+        bint provided
+    cdef cppclass ConductivityRESData:
+        vector[double] n_dilute
+        vector[double] n_res
+        double xita
+        int group_num
+        double molar_mass
+        double R_D
+        double gamma_uni
+        double Gamma
+        double phi0
+        double t_ref
+        double q_D
+        bint n_params_match_alpha
+        bint crit_provided
+        bint provided
+
 cdef extern from "CoolProp/AbstractState.h" namespace "CoolProp":
 
     cdef cppclass GuessesStructure:
@@ -163,6 +188,8 @@ cdef extern from "CoolProp/AbstractState.h" namespace "CoolProp":
         void set_conductivity_RES_residual_params(size_t i, const vector[double] &n_res, double xita) except +ValueError
         pair[vector[double], double] get_viscosity_RES_residual_params(size_t i) except +ValueError
         pair[vector[double], double] get_conductivity_RES_residual_params(size_t i) except +ValueError
+        ViscosityRESData get_viscosity_RES_parameters(size_t i) except +ValueError
+        ConductivityRESData get_conductivity_RES_parameters(size_t i) except +ValueError
         void set_viscosity_RES_dilute_source(constants_header.RESDiluteSource src) except +ValueError
         void set_conductivity_RES_dilute_source(constants_header.RESDiluteSource src) except +ValueError
         void set_conductivity_RES_enhancement_viscosity(constants_header.RESEnhancementViscosity src) except +ValueError

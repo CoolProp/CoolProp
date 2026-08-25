@@ -290,7 +290,7 @@ CoolPropDbl RESTransport::conductivity(AbstractState& HEOS) {
         // Mixtures are gated by policy: the enhancement needs the MIXTURE critical point, and on
         // backends that must solve for it that is slow and unreliable.  See RESMixtureEnhancement.
         const RESMixtureEnhancement mix_pol = HEOS.RES_data().mixture_enhancement;
-        if (N > 1 && !(mix_pol == RES_MIX_ENH_ON || (mix_pol == RES_MIX_ENH_AUTO && HEOS.has_direct_critical_point()))) {
+        if (N > 1 && !(mix_pol == RES_MIX_ENH_ON || (mix_pol == RES_MIX_ENH_AUTO && HEOS.critical_point_is_cheap()))) {
             crit_usable = false;
         }
 
@@ -308,9 +308,26 @@ CoolPropDbl RESTransport::conductivity(AbstractState& HEOS) {
                 // returns zero.  Under an explicit RES_MIX_ENH_ON the caller asked for it, so the
                 // failure surfaces instead of being papered over with a silently smaller answer.
                 try {
-                    Tc = HEOS.T_critical();
-                    pc = HEOS.p_critical();
-                    rhoc = HEOS.rhomass_critical();
+                    if (HEOS.critical_point_is_cheap()) {
+                        Tc = HEOS.T_critical();
+                        pc = HEOS.p_critical();
+                        rhoc = HEOS.rhomass_critical();
+                    } else {
+                        // Where the critical point has to be SOLVED for, those three accessors run
+                        // the solve three times over for one answer -- on HEOS that is ~460 ms
+                        // each.  Ask once instead.  Requiring exactly one point mirrors
+                        // HelmholtzEOSMixtureBackend::calc_T_critical(): with several, Tc is
+                        // ambiguous and RES has no basis for choosing between them.
+                        const std::vector<CriticalState> pts = HEOS.all_critical_points();
+                        if (pts.size() != 1) {
+                            throw ValueError(format("RES: the mixture critical enhancement needs a single critical "
+                                                    "point, but the backend reported %d.",
+                                                    static_cast<int>(pts.size())));
+                        }
+                        Tc = pts[0].T;
+                        pc = pts[0].p;
+                        rhoc = pts[0].rhomolar * HEOS.molar_mass();
+                    }
                 } catch (...) {
                     if (mix_pol == RES_MIX_ENH_ON) {
                         throw;

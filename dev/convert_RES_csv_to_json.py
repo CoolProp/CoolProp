@@ -1,7 +1,7 @@
 """Convert RES transport property parameter CSV files to res_transport_parameters.json.
 
-Source text files live under dev/RES_params/ (copied from kktoolbox/property-calculation;
-see dev/RES_params/source_documentation.txt for the literature source of each file).
+Source text files live under dev/RES_params/, taken from the supporting information of the
+papers cited in dev/RES_params/source_documentation.txt, which records the origin of each file.
 Run from the CoolProp root:
     python dev/convert_RES_csv_to_json.py [RES_params_dir]
 
