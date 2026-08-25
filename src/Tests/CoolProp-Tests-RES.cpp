@@ -664,6 +664,180 @@ TEST_CASE("REFPROP RES refuses to run when the EOS has been replaced", "[RES][RE
     CHECK(AS->rhomass() == Catch::Approx(CoolProp::PropsSI("Dmass", "P", 5.0e6, "T", 320.0, "REFPROP::Propane")).epsilon(1e-10));
 }
 
+// --------------------------- Stage-4: where the RES inputs come from ---------
+// RES takes two inputs that are not part of the entropy-scaling model itself -- the dilute-gas
+// term and the viscosity inside the critical enhancement -- and the source papers take both from
+// the backend's own transport model on some code paths.  These tests pin which source AUTO
+// resolves to on each path, since getting that wrong is silent: the answer stays plausible.
+
+TEST_CASE("RES dilute-gas source is selectable and AUTO follows the papers", "[RES][REFPROP][transport]") {
+    Skip_if_No_REFPROP();
+
+    SECTION("pure viscosity: AUTO is the native term (Martinek)") {
+        // D2 is where the fitted polynomial matches REFPROP's eta0 worst, so it is the sharpest
+        // discriminator available: 0.96 % off the published value with the polynomial, 0.0015 %
+        // with the native term.
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "D2"));
+        AS->update(PT_INPUTS, 1.11716e-1 * 1e6, 24.0);
+        AS->use_viscosity_RES(true);
+        const double v_auto = AS->viscosity();
+        AS->set_viscosity_RES_dilute_source(RES_DILUTE_BACKEND_NATIVE);
+        CHECK(AS->viscosity() == v_auto);
+        AS->set_viscosity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
+        const double v_poly = AS->viscosity();
+        CHECK(v_poly != v_auto);
+        // A different dilute term, not a different model: percent-scale, not order-of-magnitude.
+        CHECK(v_poly == Catch::Approx(v_auto).epsilon(0.05));
+        // Setting it back must restore the value exactly -- i.e. the setter clears the cache in
+        // both directions, not just on the way out.
+        AS->set_viscosity_RES_dilute_source(RES_DILUTE_AUTO);
+        CHECK(AS->viscosity() == v_auto);
+    }
+
+    SECTION("mixture viscosity: AUTO is the polynomial (Martinek)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Argon&Nitrogen"));
+        AS->set_mole_fractions({0.5, 0.5});
+        AS->update(PT_INPUTS, 5.0e6, 300.0);
+        AS->use_viscosity_RES(true);
+        const double v_auto = AS->viscosity();
+        AS->set_viscosity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
+        CHECK(AS->viscosity() == v_auto);
+        AS->set_viscosity_RES_dilute_source(RES_DILUTE_BACKEND_NATIVE);
+        CHECK(AS->viscosity() != v_auto);
+    }
+
+    SECTION("pure conductivity: AUTO is the polynomial (Li)") {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+        AS->update(PT_INPUTS, 4.65e6, 375.9);
+        AS->use_conductivity_RES(true);
+        const double v_auto = AS->conductivity();
+        AS->set_conductivity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
+        CHECK(AS->conductivity() == v_auto);
+        AS->set_conductivity_RES_dilute_source(RES_DILUTE_BACKEND_NATIVE);
+        CHECK(AS->conductivity() != v_auto);
+    }
+
+    SECTION("mixture conductivity: AUTO is the native term (Li)") {
+        // ARGON+NEON is the pair this decides: -11.6 % off the published value with the
+        // polynomial-plus-Wilke term, +0.003 % with REFPROP's own mixture lambda0.
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Argon&Neon"));
+        AS->set_mole_fractions({0.5, 0.5});
+        AS->update(PT_INPUTS, 1.0e6, 300.0);
+        AS->use_conductivity_RES(true);
+        const double v_auto = AS->conductivity();
+        AS->set_conductivity_RES_dilute_source(RES_DILUTE_BACKEND_NATIVE);
+        CHECK(AS->conductivity() == v_auto);
+        AS->set_conductivity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
+        CHECK(AS->conductivity() != v_auto);
+    }
+}
+
+TEST_CASE("RES critical-enhancement viscosity source is selectable", "[RES][REFPROP][transport]") {
+    Skip_if_No_REFPROP();
+    // PROPANE at its published sample point is where this choice bites: the enhancement is active,
+    // and feeding it the RES viscosity instead of REFPROP's own moves the answer by ~5 %.
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    AS->update(PT_INPUTS, 4.65e6, 375.9);
+    AS->use_conductivity_RES(true);
+    const double v_auto = AS->conductivity();
+    AS->set_conductivity_RES_enhancement_viscosity(RES_ENH_VIS_BACKEND_NATIVE);
+    CHECK(AS->conductivity() == v_auto);
+    AS->set_conductivity_RES_enhancement_viscosity(RES_ENH_VIS_RES);
+    const double v_res = AS->conductivity();
+    CHECK(v_res != v_auto);
+    CHECK(v_res == Catch::Approx(v_auto).epsilon(0.10));
+    AS->set_conductivity_RES_enhancement_viscosity(RES_ENH_VIS_AUTO);
+    CHECK(AS->conductivity() == v_auto);
+}
+
+TEST_CASE("RES source policy on a backend with no native transport model", "[RES][transport]") {
+    // This is the half of the policy that keeps HEOS and the cubics unchanged, and the half that
+    // must NOT fail open.  AUTO silently uses the fitted model, exactly as the reference
+    // implementations' try/except does.  An EXPLICIT request for the backend's own model, where
+    // there is none, must throw rather than quietly hand back a different model than was asked
+    // for -- that is the difference between "no native model available" and a wrong number.
+    auto AS = make_heos("Propane");
+    AS->update(PT_INPUTS, 4.65e6, 375.9);
+    AS->use_viscosity_RES(true);
+    AS->use_conductivity_RES(true);
+    const double eta_auto = AS->viscosity();
+    const double tc_auto = AS->conductivity();
+
+    AS->set_viscosity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
+    AS->set_conductivity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
+    AS->set_conductivity_RES_enhancement_viscosity(RES_ENH_VIS_RES);
+    CHECK(AS->viscosity() == eta_auto);
+    CHECK(AS->conductivity() == tc_auto);
+
+    AS->set_viscosity_RES_dilute_source(RES_DILUTE_BACKEND_NATIVE);
+    CHECK_THROWS_WITH(AS->viscosity(), Catch::Matchers::ContainsSubstring("no native transport model"));
+    AS->set_viscosity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
+
+    AS->set_conductivity_RES_dilute_source(RES_DILUTE_BACKEND_NATIVE);
+    CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("no native transport model"));
+    AS->set_conductivity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
+
+    AS->set_conductivity_RES_enhancement_viscosity(RES_ENH_VIS_BACKEND_NATIVE);
+    CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("no native viscosity model"));
+}
+
+TEST_CASE("RES mixture critical enhancement follows the backend policy", "[RES][REFPROP][transport]") {
+    Skip_if_No_REFPROP();
+    // BUTANE+METHANE at its published sample point is the only binary in the sample set that sits
+    // inside the near-critical window (T/Tc = 0.974, rho/rhoc = 1.62), so it is the only one where
+    // this policy is observable at all.
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "BUTANE&METHANE"));
+    AS->set_mole_fractions({0.606, 0.394});
+    AS->update(PT_INPUTS, 24131.7 * 1e3, 377.567);
+    AS->use_conductivity_RES(true);
+
+    // REFPROP reports its mixture critical point directly, so AUTO enables the enhancement.
+    const double tc_auto = AS->conductivity();
+    AS->set_RES_mixture_enhancement(RES_MIX_ENH_ON);
+    CHECK(AS->conductivity() == tc_auto);
+
+    AS->set_RES_mixture_enhancement(RES_MIX_ENH_OFF);
+    const double tc_off = AS->conductivity();
+    CHECK(tc_off != tc_auto);
+    CHECK(tc_off < tc_auto);  // the enhancement is a positive contribution
+    // It is worth about 1 % here, which is why leaving it out was the last outlier in the
+    // published-value comparison.
+    CHECK(tc_off == Catch::Approx(tc_auto).epsilon(0.05));
+
+    AS->set_RES_mixture_enhancement(RES_MIX_ENH_AUTO);
+    CHECK(AS->conductivity() == tc_auto);
+}
+
+TEST_CASE("RES mixture enhancement policy does not affect pure fluids", "[RES][REFPROP][transport]") {
+    Skip_if_No_REFPROP();
+    // A pure fluid's enhancement is always applied; only the MIXTURE path is gated.
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    AS->update(PT_INPUTS, 4.65e6, 375.9);
+    AS->use_conductivity_RES(true);
+    const double tc = AS->conductivity();
+    for (auto policy : {RES_MIX_ENH_OFF, RES_MIX_ENH_ON, RES_MIX_ENH_AUTO}) {
+        AS->set_RES_mixture_enhancement(policy);
+        CHECK(AS->conductivity() == tc);
+    }
+}
+
+TEST_CASE("RES mixture critical enhancement is off by default on native CoolProp backends", "[RES][transport]") {
+    // Deliberate: the enhancement needs the MIXTURE critical point, which HEOS has to SOLVE for.
+    // That solve is neither quick nor dependable, and the physical case for a critical enhancement
+    // in mixtures is not well established -- so AUTO must leave it off here.  If this ever starts
+    // failing because AUTO turned it on, that is a policy regression, not a numerical one.
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane"));
+    AS->set_mole_fractions({0.6, 0.4});
+    AS->update(PT_INPUTS, 5.0e6, 250.0);
+    AS->use_conductivity_RES(true);
+    const double tc_auto = AS->conductivity();
+    AS->set_RES_mixture_enhancement(RES_MIX_ENH_OFF);
+    CHECK(AS->conductivity() == tc_auto);
+    // ...and the enhancement really is absent, not merely equal by luck: no critical point was
+    // needed to produce either number.
+    CHECK(AS->has_direct_critical_point() == false);
+}
+
 // On the REFPROP backend the published vis_res / TC_RES columns were produced with the SAME
 // equation of state, so these tests measure implementation correctness alone -- unlike their
 // HEOS counterparts above, which additionally carry the parameter-transfer error.
@@ -673,18 +847,15 @@ TEST_CASE("REFPROP RES refuses to run when the EOS has been replaced", "[RES][RE
 // bound catches a subtle regression that a loose per-sample bound would sleep through.
 // Both were set from the measured distribution -- run [RES_refprop_parity] to reprint it.
 //
-// The residual gaps are NOT parameter error; they are the known dilute-source divergence that
-// Stage 4 of dev/RES_REFPROP_plan.md closes.  Martinek 2025 uses REFPROP's native eta0 for PURE
-// fluids and Li 2024 uses REFPROP's native lambda0 for MIXTURES, while this implementation uses
-// the fitted polynomial on every path.  That is exactly why the pure-viscosity outliers are the
-// light fluids (D2 0.96%, ETHYLENE 0.85%, HELIUM 0.63%) where the polynomial fits eta0 worst,
-// and why binary conductivity is the loosest case of the four (ARGON+NEON 11.6%).  Binary
-// viscosity, the one path where both papers and this code agree on the polynomial, reproduces
-// to 1e-5 -- which is what makes it the sharpest correctness signal in this file.
+// Since Stage 4 sourced the dilute-gas term and the critical-enhancement viscosity the way the
+// papers do, three of the four paths reproduce to better than 0.05 % and the fourth to 1 %.
+// These bounds are deliberately close to the measured maxima: a loose bound here would sleep
+// through exactly the kind of regression this file exists to catch.
 //
-// PROPANE (-4.9%) and R143A (+1.4%) are the pure-conductivity outliers and have a separate
-// cause: the Olchowy-Sengers enhancement consumes a viscosity, and the reference implementation
-// feeds it REFPROP's native value where this code feeds it the RES viscosity.
+// All four paths now reproduce to better than 0.05 %, mixtures included: the mixture critical
+// enhancement is implemented and, on REFPROP, enabled by default.  On CoolProp's own backends it
+// is deliberately OFF by default -- see RESMixtureEnhancement -- so these bounds describe REFPROP
+// and REFPROP only.
 TEST_CASE("RES on REFPROP reproduces the published pure-fluid values", "[RES][REFPROP][transport]") {
     Skip_if_No_REFPROP();
 
@@ -700,13 +871,13 @@ TEST_CASE("RES on REFPROP reproduces the published pure-fluid values", "[RES][RE
             AS->use_viscosity_RES(true);
             const double v = AS->viscosity() * 1e6;
             INFO("fluid=" << s.name << " T=" << s.T << " ref=" << s.vis_res << " cpp=" << v);
-            CHECK(v == Catch::Approx(s.vis_res).epsilon(0.012));
+            CHECK(v == Catch::Approx(s.vis_res).epsilon(2e-4));
             sum_abs += std::abs(v / s.vis_res - 1.0);
             ++n;
         }
         // Every sample must have been evaluated -- no fluid may drop out silently.
         REQUIRE(n == samples.size());
-        CHECK(sum_abs / n < 0.0005);
+        CHECK(sum_abs / n < 1e-5);
     }
 
     SECTION("conductivity (Li 2024)") {
@@ -720,12 +891,12 @@ TEST_CASE("RES on REFPROP reproduces the published pure-fluid values", "[RES][RE
             AS->use_conductivity_RES(true);
             const double v = AS->conductivity();
             INFO("fluid=" << s.name << " T=" << s.T << " ref=" << s.tc_res << " cpp=" << v);
-            CHECK(v == Catch::Approx(s.tc_res).epsilon(0.055));
+            CHECK(v == Catch::Approx(s.tc_res).epsilon(8e-4));
             sum_abs += std::abs(v / s.tc_res - 1.0);
             ++n;
         }
         REQUIRE(n == samples.size());
-        CHECK(sum_abs / n < 0.001);
+        CHECK(sum_abs / n < 1e-4);
     }
 }
 
@@ -762,25 +933,10 @@ TEST_CASE("RES on REFPROP reproduces the published mixture values", "[RES][REFPR
             AS->use_conductivity_RES(true);
             const double v = AS->conductivity();
             INFO("mix=" << s.c1 << "+" << s.c2 << " T=" << s.T << " ref=" << s.tc_res << " cpp=" << v);
-            // The loosest bound in this file, and deliberately so: this is the path where Li
-            // uses REFPROP's native lambda0 and this code does not.  ARGON+NEON, the pair with
-            // the largest dilute share, sits at -11.6%.  Stage 4 should collapse this to 1e-4
-            // like the viscosity case above -- tighten it then rather than living with it.
-            CHECK(v == Catch::Approx(s.tc_res).epsilon(0.125));
+            CHECK(v == Catch::Approx(s.tc_res).epsilon(4e-4));
             ++n;
         }
         REQUIRE(n == samples.size());
-        // Excluding the one dilute-dominated pair, the rest must already be within 2%.
-        double worst_rest = 0;
-        for (const auto& s : samples) {
-            if (s.c1 == "ARGON" && s.c2 == "NEON") continue;
-            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", s.c1 + "&" + s.c2));
-            AS->set_mole_fractions({s.mf1, s.mf2});
-            AS->update(PT_INPUTS, s.p_kPa * 1e3, s.T);
-            AS->use_conductivity_RES(true);
-            worst_rest = std::max(worst_rest, std::abs(AS->conductivity() / s.tc_res - 1.0));
-        }
-        CHECK(worst_rest < 0.02);
     }
 }
 

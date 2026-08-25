@@ -766,6 +766,32 @@ class AbstractState
         throw NotImplementedError("calc_drhomass_dp_constT_at is not implemented for this backend");
     }
 
+    /// A transport property from the backend's OWN transport model, at the current temperature
+    /// and composition but an ARBITRARY molar density.  `key` is iviscosity or iconductivity;
+    /// `rhomolar_eval` of 0 gives the dilute-gas limit.  Returns false -- the default -- when the
+    /// backend has no native transport model, or none for this fluid, in which case the RES
+    /// routines fall back to their own model.
+    ///
+    /// RES needs this at two densities: zero, for the dilute-gas term (see RESDiluteSource), and
+    /// the current density, for the viscosity the critical enhancement consumes (see
+    /// RESEnhancementViscosity).  One hook covers both.
+    ///
+    /// Deliberately NOT given a generic implementation (flashing a scratch state would work on any
+    /// backend): the reference implementations of both source papers ran on REFPROP, so switching
+    /// HEOS or the cubics onto their native models would change their existing RES results and has
+    /// to be a separate, measured change rather than a side effect of this hook.
+    virtual bool calc_transport_native(parameters /*key*/, double /*rhomolar_eval*/, double& /*value*/) {
+        return false;
+    }
+
+    /// True when the backend reports the critical point of a MIXTURE directly rather than solving
+    /// for it.  Governs RES_MIX_ENH_AUTO: the RES mixture critical enhancement needs Tc, pc and
+    /// rhoc of the mixture, and running a critical-point solve to get them is slow and not
+    /// reliable enough to do by default.  Irrelevant for pure fluids.
+    virtual bool calc_has_direct_critical_point() {
+        return false;
+    }
+
     /// Seed the RES store.  Clears any memoized transport values, since the parameters change.
     void set_RES_components(std::vector<RESComponentData> comps) {
         _RES.comps = std::move(comps);
@@ -809,6 +835,26 @@ class AbstractState
     CoolPropDbl drhomass_dp_constT_at(double T_eval) {
         return calc_drhomass_dp_constT_at(T_eval);
     }
+    /// Public wrapper for calc_transport_native(), following the same pattern, so the
+    /// backend-neutral RES routines can reach it.
+    bool transport_native(parameters key, double rhomolar_eval, double& value) {
+        return calc_transport_native(key, rhomolar_eval, value);
+    }
+    /// Public wrapper for calc_has_direct_critical_point().
+    bool has_direct_critical_point() {
+        return calc_has_direct_critical_point();
+    }
+    /// Choose where the RES dilute-gas term comes from.  Defaults to RES_DILUTE_AUTO, which
+    /// reproduces the source papers per code path -- see RESDiluteSource.  Clears the memoized
+    /// transport values, since the model changes.
+    void set_viscosity_RES_dilute_source(RESDiluteSource src);
+    void set_conductivity_RES_dilute_source(RESDiluteSource src);
+    /// Choose which viscosity the Olchowy-Sengers critical enhancement consumes.
+    /// Defaults to RES_ENH_VIS_AUTO -- see RESEnhancementViscosity.
+    void set_conductivity_RES_enhancement_viscosity(RESEnhancementViscosity src);
+    /// Choose whether the RES critical enhancement is applied to MIXTURES.
+    /// Defaults to RES_MIX_ENH_AUTO -- see RESMixtureEnhancement.  Pure fluids are unaffected.
+    void set_RES_mixture_enhancement(RESMixtureEnhancement policy);
     /// Read-only access to the RES store, for the transport routines and for tests.
     const RESTransportStore& RES_data() const {
         return _RES;

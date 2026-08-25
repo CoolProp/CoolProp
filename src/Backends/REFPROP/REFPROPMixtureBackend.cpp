@@ -1308,6 +1308,31 @@ void REFPROPMixtureBackend::setup_RES_transport() {
     set_RES_components(std::move(res_comps));
 }
 
+bool REFPROPMixtureBackend::calc_transport_native(parameters key, double rhomolar_eval, double& value) {
+    if (key != iviscosity && key != iconductivity) {
+        return false;
+    }
+    this->check_loaded_fluid();
+    // TRNPRPdll is a pure function of (T, rho, x), so this evaluates the native model at any
+    // density without a flash, a scratch state, or any mutation of this instance.  At rho = 0
+    // every residual term vanishes and it IS the dilute-gas limit -- which the reference
+    // implementations reach the expensive way, by flashing to a near-zero pressure (Martinek
+    // 1e-9 Pa, Li 0.1 Pa) and reading the ordinary property there.
+    double eta_uPas = NAN, tcx_WmK = NAN, rho_molL = 0.001 * rhomolar_eval;
+    int ierr = 0;
+    std::array<char, 255> herr{};
+    TRNPRPdll(&_T, &rho_molL, &(mole_fractions[0]),     // Inputs
+              &eta_uPas, &tcx_WmK,                      // Outputs
+              &ierr, herr.data(), errormessagelength);  // Error message
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+        return false;  // no transport model for this fluid -- the caller uses the polynomial
+    }
+    value = (key == iviscosity) ? 1e-6 * eta_uPas : tcx_WmK;
+    // REFPROP signals "not available" with a large negative sentinel and ierr == 0 in some
+    // builds, so a clean return code is not on its own evidence of a usable number.
+    return std::isfinite(value) && value > 0;
+}
+
 CoolPropDbl REFPROPMixtureBackend::calc_drhomass_dp_constT_at(double T_eval) {
     this->check_loaded_fluid();
     double t = T_eval, rho = _rhomolar / 1000.0,  // mol/dm^3

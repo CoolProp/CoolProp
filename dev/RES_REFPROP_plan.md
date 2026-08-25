@@ -494,10 +494,137 @@ now attribute whatever HEOS-vs-REFPROP gap remains to the parameters alone.
   `[REFPROP]` 1484/1484 (was 1114; +370 new). `[viscosity],[conductivity]` 1131 unchanged.
   cubics 3698 unchanged.
 
-NEXT: Stage 4 -- dilute source per backend. The table above is its acceptance criterion: pure
-  viscosity and binary conductivity should collapse toward the 1e-5 that binary viscosity already
-  achieves. AUTO must resolve to POLYNOMIAL where there is no native model so HEOS and the cubics
-  stay bit-identical. Then Stage 6(b), then Stage 7 (test-suite overhaul, D1 fail-open first).
+Stage 4 DONE (gate passed, HEOS/cubics bit-identical).
+
+  The plan's premise was right in shape but wrong in two details, both found by reading the
+  reference sources rather than inferring from deviations:
+
+  1. Neither paper calls a "native eta0/lambda0 function".  Both flash to a near-zero pressure and
+     read the ORDINARY transport property there -- Martinek `PropsSI('V', T, P=1e-9, TheEOS::f)`
+     (main.py:100), Li `PropsSI('L', T, P=0.1, 'REFPROP::'+mix)` (code_SI.py:287).  Different
+     pressures, and Li hardcodes REFPROP regardless of the backend in use.  Both wrap the call in
+     try/except and fall back to the polynomial.
+  2. There is a THIRD source choice the plan never mentioned, and it turned out to matter more
+     than the dilute term for pure conductivity: **the viscosity inside the Olchowy-Sengers
+     enhancement**.  Li feeds it REFPROP's NATIVE viscosity (code_SI.py:116,
+     `PropsSI('V', T, Dmass, 'REFPROP::'+f)`), not the RES viscosity being computed.  The existing
+     C++ comment already flagged this as a deliberate deviation; it is the ENTIRE remaining
+     PROPANE (-4.9%) and R143A (+1.4%) gap.
+
+  Implementation.  One hook rather than two: `AbstractState::calc_transport_native(key,
+  rhomolar_eval, value)` -- the backend's own transport model at the current T and composition and
+  an ARBITRARY density.  rho = 0 gives the dilute-gas limit; the current density gives the
+  enhancement viscosity.  REFPROP implements it in one TRNPRPdll call, which is pure in (T, rho, x),
+  so no flash, no scratch state, no mutation -- and it reaches the same numbers the reference gets
+  the expensive way.  It returns false (not throws) when REFPROP has no model, and checks
+  isfinite && > 0 because REFPROP signals "unavailable" with a large negative sentinel and
+  ierr == 0 in some builds.
+
+  Policy lives in one place, `dilute_from_backend()` in RESTransport.cpp, plus the enhancement
+  block.  AUTO reproduces the papers per CODE PATH:
+      viscosity     pure -> native      mixture -> polynomial + Wilke
+      conductivity  pure -> polynomial  mixture -> native (the whole mixture, not per-component)
+      enhancement viscosity -> native where available, else the RES viscosity
+  AUTO falls back silently when the backend has no native model, mirroring the papers' try/except
+  -- and that fallback is exactly what keeps HEOS and the cubics unchanged.  An EXPLICIT
+  RES_DILUTE_BACKEND_NATIVE / RES_ENH_VIS_BACKEND_NATIVE does NOT fall back; it throws.  Quietly
+  substituting a different model than the caller asked for is how a wrong number ships.
+
+  Three new public setters: set_viscosity_RES_dilute_source, set_conductivity_RES_dilute_source,
+  set_conductivity_RES_enhancement_viscosity.  The self-consistent all-RES behaviour is still
+  available via RES_DILUTE_POLYNOMIAL + RES_ENH_VIS_RES; it is just no longer the default, because
+  the default should reproduce the papers.
+
+### Stage 4 result
+
+| path | Stage 3 max | Stage 4 max | mean |
+|---|---|---|---|
+| pure viscosity | 0.96 % | **0.011 %** | 0.0005 % |
+| pure conductivity | 4.88 % | **0.042 %** | 0.006 % |
+| binary viscosity | 0.001 % | 0.001 % (unchanged, correctly) | 0.0003 % |
+| binary conductivity | 11.6 % | **0.998 %** | 0.135 % |
+
+Binary viscosity is unchanged BY DESIGN -- both papers and this code use the polynomial there --
+which is the control proving the change touched only the intended paths.
+
+  One outlier survives and it is a **feature gap, not an error**: BUTANE+METHANE at -1.0 %.  Li
+  applies a critical enhancement to MIXTURES too (`Olchowy_critical_enhancement_mix`,
+  code_SI.py:152); this implementation applies it only to pure fluids.  That sample sits at
+  T/Tc = 0.974, rho/rhoc = 1.62 -- verified inside Li's near-critical window -- so the missing
+  enhancement is worth about that 1 %.  Every other binary is within 0.07 %.  FOLLOW-UP: implement
+  the mixture enhancement, then tighten the binary-conductivity bound from 1.2 % to 1e-3.
+
+  Gates: `[RES]~[REFPROP]` value dump vs RES_baseline_stage3.txt -- added lines were the filter
+  line and the two summary counts ONLY, i.e. every HEOS and cubic value bit-identical, proving the
+  AUTO fallback is a true no-op there.  `[RES]` 33 cases / 1080 assertions, still exactly the same
+  6 failing cases and 25 failing assertions.  `[REFPROP]` 1498, `[viscosity],[conductivity]` 1131,
+  cubics 3698, `[SBTL]` 5476 -- all pass.  clang-format: every touched file back to its exact HEAD
+  violation count (0 new), using dev-only line-range formatting since three of these files carry
+  pre-existing violations.
+
+  New baselines: dev/RES_comparison/RES_baseline_stage4.txt, parity_stage4.txt.
+
+Stage 4b DONE -- mixture critical enhancement, and a parameter-sourcing bug it exposed.
+
+  Mixture critical enhancement implemented (Li 2024 `Olchowy_critical_enhancement_mix`,
+  code_SI.py:152), gated by a new `RESMixtureEnhancement` policy: AUTO / OFF / ON.
+
+  **AUTO is deliberately OFF on CoolProp's own backends.** The enhancement needs the MIXTURE
+  critical point, and HEOS/cubics have to SOLVE for it -- slow, and not reliably convergent --
+  while the physical case for a critical enhancement in mixtures is not well established.  The
+  policy hangs off a new `AbstractState::calc_has_direct_critical_point()`, false by default and
+  true on REFPROP (CRITPdll reports it directly).  So REFPROP reproduces the published mixture
+  values out of the box, and nothing on HEOS silently acquires a critical-point solve.  Pure
+  fluids are unaffected by the setting; only the mixture path is gated.
+
+  Mixing follows Li exactly: mole-fraction linear on gamma, xi0, Gamma, and on **1/q_D** (the
+  table stores qDinv, so the reciprocal is what gets mixed); `t_ref = 1.5*Tc` for mixtures rather
+  than the per-fluid table value, which has no mixture entry.  A failed critical-point lookup
+  under AUTO returns zero enhancement (Li wraps the whole thing in try/except); under an explicit
+  RES_MIX_ENH_ON it propagates, because there the caller asked for it.
+
+### The R_D trap -- worth remembering
+
+  Generalising the pure-fluid block to mixtures meant sourcing R_D and gamma per component instead
+  of the hardcoded 1.02 / 1.239.  That made pure conductivity WORSE: 0.042 % -> 0.314 %, all of it
+  PROPANE, whose enhancement is ~32 % of lambda at its sample point.
+
+  Our parameter table is byte-identical to Li's and says R_D = 1.030 for PROPANE.  But
+  `get_paramters()` **overwrites it with a flat 1.02 for every fluid** (code_SI.py:65) and never
+  reads the R_D column at all.  `gamma` on the next line IS read per fluid.  So the shipped R_D
+  column is dead data, and reproducing the published values requires ignoring it.
+
+  Correct answer: R_D = 1.02 flat, gamma per fluid.  The original code had R_D right and gamma
+  wrong, and the two errors had been cancelling.  Note the trap: the table looked authoritative,
+  the deviation looked like a bug in our enhancement formula, and a plausible-looking "fix" (keep
+  hardcoding both) would have preserved a real error.  Only running the reference implementation
+  and printing what it actually passed settled it.
+
+### Result -- all four paths now reproduce the published values
+
+| path | Stage 3 | Stage 4 | Stage 4b |
+|---|---|---|---|
+| pure viscosity | 0.96 % | 0.011 % | 0.011 % |
+| pure conductivity | 4.88 % | 0.042 % | 0.042 % |
+| binary viscosity | 0.001 % | 0.001 % | 0.001 % |
+| binary conductivity | 11.6 % | 0.998 % | **0.018 %** |
+
+BUTANE+METHANE went from -0.998 % to +0.001 %, and is now the *best* of the eight binaries.
+
+  HEOS/cubic impact of the gamma fix, measured rather than assumed: exactly three sample values
+  move, ETHANE by -0.0075 % and SF6 by +0.0010 %.  No test changes state; [RES] still fails the
+  same 6 cases and 25 assertions.  Mixtures on HEOS are untouched, since AUTO leaves the
+  enhancement off there.
+
+  Gates: [RES] 36 cases / 1089 assertions, same 6 failures / 25 failing assertions.  [REFPROP]
+  1505, [viscosity],[conductivity] 1131, cubics 3698, [SBTL] 5476 -- all pass.  clang-format: no
+  new violations anywhere; RESTransport.cpp actually improved 57 -> 43 because the rewritten
+  enhancement block replaced non-conforming code.
+  Baselines: RES_baseline_stage4b.txt, parity_stage4b.txt.
+
+NEXT: unchanged -- Stage 6(b) parameter transfer (HEOS+RES vs REFPROP+RES on a grid), then
+  Stage 7 (test-suite overhaul, D1 fail-open first).  The implementation is now known correct to
+  <=0.042 % on every path, so any HEOS-vs-REFPROP gap from here is parameters, full stop.
 
 ---
 
@@ -522,7 +649,7 @@ the pass count is unchanged by definition. It is a bit-identical dump of every c
 
     ./build_tests/Release/CatchTestRunner.exe "[RES]" --success > after.txt 2>&1
     norm(){ grep -v "^Randomness seeded" "$1" | sed -E 's/0x[0-9a-f]+/0xPTR/g; s/[.]cpp\([0-9]+\)/.cpp(LINE)/g'; }
-    diff <(norm dev/RES_comparison/RES_baseline_stage3.txt) <(norm after.txt)
+    diff <(norm dev/RES_comparison/RES_baseline_stage4b.txt) <(norm after.txt)
 
 Two masks, both required. Heap addresses in `dynamic_cast != nullptr` assertions vary per run.
 Source line numbers shift whenever a test is INSERTED above an existing one, which produces
@@ -530,8 +657,8 @@ hundreds of spurious diff lines that hide the real ones -- that mask was added i
 exactly that happened. When a stage adds tests, the gate is not "empty diff" but **no removed or
 changed lines**: `diff ... | grep "^<"` must return only the two summary counts.
 
-Current gate file: `RES_baseline_stage3.txt`. Current expected [RES] result: **30 cases, 24
-passed, 6 failed; 1061 assertions, 1036 passed, 25 failed.** The 6 failing cases are the HEOS
+Current gate file: `RES_baseline_stage4b.txt`. Current expected [RES] result: **36 cases, 30
+passed, 6 failed; 1089 assertions, 1064 passed, 25 failed.** The 6 failing cases are the HEOS
 sample-data comparisons, with documented causes -- see `dev/RES_test_assessment.md`. They are NOT
 regressions, and the failed-assertion count must stay at exactly 25.
 
@@ -617,9 +744,8 @@ columns reproduce to ~1% with the polynomial dilute term (Stage 4 tightens this 
 
 ## Remaining stages (detail in this file above)
 
-- **Stage 4** dilute-source per backend (`calc_dilute_transport_native` + AUTO policy). AUTO must
-  resolve to POLYNOMIAL where there is no native model, so HEOS/cubics stay bit-identical.
-- **Stage 5** converter emits a `REFPROP` key; filters go PER KEY not per fluid; 122 -> 151 entries.
+- **Stage 4** DONE -- see the Progress log.
+- **Stage 5** DONE (pulled forward into Stage 3) -- see the Progress log.
 - **Stage 6** the actual objective: (a) C++ REFPROP+RES vs the authors' code = implementation
   correctness; (b) C++ HEOS+RES vs C++ REFPROP+RES over a grid = parameter transfer. Re-derive the
   exclusion lists from (b).

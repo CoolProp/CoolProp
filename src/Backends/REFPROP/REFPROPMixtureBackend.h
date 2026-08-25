@@ -93,6 +93,15 @@ class REFPROPMixtureBackend : public AbstractState
     /// does not disturb the cached state.  Used only by the RES critical-enhancement term.
     CoolPropDbl calc_drhomass_dp_constT_at(double T_eval) override;
 
+    /// REFPROP reports the mixture critical point directly via CRITPdll -- no solve on our side.
+    bool calc_has_direct_critical_point() override {
+        return true;
+    }
+
+    /// REFPROP's own transport model at the current T and composition and an arbitrary density.
+    /// One TRNPRPdll call; see the .cpp for why that is the whole implementation.
+    bool calc_transport_native(parameters key, double rhomolar_eval, double& value) override;
+
     /// dP/dT [Pa/K] along the pure-component saturation line via DPTSATKdll. kph: 1=liquid, 2=vapor.
     double dpdT_along_saturation_pure(int kph);
     /// Saturation pressure [Pa] at temperature T for the bubble (Q=0) / dew (Q=1) branch via SATTdll.

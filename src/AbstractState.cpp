@@ -829,6 +829,49 @@ void AbstractState::use_conductivity_RES(bool enable) {
     }
 }
 
+void AbstractState::set_viscosity_RES_dilute_source(RESDiluteSource src) {
+    if (_RES.comps.empty()) {
+        throw NotImplementedError("set_viscosity_RES_dilute_source is not implemented for this backend");
+    }
+    if (_RES.viscosity_dilute_source != src) {
+        _RES.viscosity_dilute_source = src;
+        // Same reasoning as use_viscosity_RES(): conductivity is cleared too because its
+        // critical enhancement consumes the RES viscosity.
+        _viscosity.clear();
+        _conductivity.clear();
+    }
+}
+
+void AbstractState::set_conductivity_RES_dilute_source(RESDiluteSource src) {
+    if (_RES.comps.empty()) {
+        throw NotImplementedError("set_conductivity_RES_dilute_source is not implemented for this backend");
+    }
+    if (_RES.conductivity_dilute_source != src) {
+        _RES.conductivity_dilute_source = src;
+        _conductivity.clear();
+    }
+}
+
+void AbstractState::set_conductivity_RES_enhancement_viscosity(RESEnhancementViscosity src) {
+    if (_RES.comps.empty()) {
+        throw NotImplementedError("set_conductivity_RES_enhancement_viscosity is not implemented for this backend");
+    }
+    if (_RES.conductivity_enhancement_viscosity != src) {
+        _RES.conductivity_enhancement_viscosity = src;
+        _conductivity.clear();
+    }
+}
+
+void AbstractState::set_RES_mixture_enhancement(RESMixtureEnhancement policy) {
+    if (_RES.comps.empty()) {
+        throw NotImplementedError("set_RES_mixture_enhancement is not implemented for this backend");
+    }
+    if (_RES.mixture_enhancement != policy) {
+        _RES.mixture_enhancement = policy;
+        _conductivity.clear();
+    }
+}
+
 void AbstractState::set_viscosity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res,
                                                  double xita) {
     check_RES_component_index(i, "set_viscosity_RES_parameters");
