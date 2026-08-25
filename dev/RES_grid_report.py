@@ -80,6 +80,12 @@ def main(share_min, dev_limit, verbose):
     seen = collections.Counter()
 
     for (fluid, T_s, _p), byb in rows.items():
+        # Mixtures are skipped here: the exclusion lists this drives are PER FLUID, so a binary
+        # has no entry to withhold, and letting one in would colour a measurement about component
+        # parameters with the mixture's own phase behaviour.  The mixing rules are checked against
+        # the authors' code instead -- see dev/RES_reference_check.py.
+        if "&" in fluid:
+            continue
         # REFPROP_pinned, not REFPROP: the pinned column uses the same dilute term and
         # enhancement viscosity HEOS can, leaving the equation of state as the only difference.
         rp, he = byb.get("REFPROP_pinned"), byb.get("HEOS")

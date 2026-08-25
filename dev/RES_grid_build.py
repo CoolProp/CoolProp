@@ -11,7 +11,13 @@ land HEOS and REFPROP on opposite sides of the dome, which inflates the deviatio
 anything about the parameters.  So the grid uses supercritical isotherms, compressed liquid well
 above p_sat, and superheated vapour well below it -- never a point close to saturation.
 
-Writes dev/RES_comparison/grid_points.csv, consumed by the [RES_grid] Catch2 test.
+Binary mixtures are included as well.  They matter for a different reason than the pure fluids:
+they are the only thing that exercises the Wilke rule for the dilute term and the mole-fraction
+averaging of the residual coefficients, and the published tables carry just 17 viscosity and 8
+conductivity binary points between them -- too few, and all at states the authors chose.
+
+Writes dev/RES_comparison/grid_points.csv, consumed by the [RES_grid] Catch2 test.  The
+`mole_fractions` column is empty for pure fluids and semicolon-separated for mixtures.
 """
 
 import argparse
@@ -38,6 +44,25 @@ SUPERCRIT_RHOR = (0.05, 0.50, 1.00, 1.50, 1.80, 2.30)
 # Subcritical block, deliberately far from saturation in both directions.
 LIQUID_TR = (0.60, 0.75, 0.90)  # evaluated at 3x p_sat, i.e. compressed liquid
 VAPOUR_TR = (0.80, 0.95)  # evaluated at 0.3x p_sat, i.e. superheated vapour
+
+# Binary mixtures, taken from the pairs the two papers tabulate so the components are certain to
+# carry parameters.  Compositions are deliberately away from 0.5/0.5 where the paper used
+# something else, since an even split can hide an error in the mole-fraction weighting.
+MIXTURES = [
+    ("METHANE", "ETHANE", 0.6, 0.4),
+    ("BUTANE", "METHANE", 0.606, 0.394),
+    ("ARGON", "NITROGEN", 0.5, 0.5),
+    ("ARGON", "NEON", 0.3, 0.7),
+    ("CO2", "ETHANE", 0.7, 0.3),
+    ("CO2", "NITROGEN", 0.8, 0.2),
+    ("DECANE", "METHANE", 0.4, 0.6),
+    ("BENZENE", "C16", 0.5, 0.5),
+]
+# Mixtures are sampled only supercritically: below the mixture critical point a (T, p) pair can
+# sit inside the two-phase envelope, and the reference implementation has no more claim to the
+# right root there than we do.
+MIX_TR = (1.05, 1.30)
+MIX_RHOR = (0.30, 1.00, 1.80)
 
 
 def refprop_name(fluid: str) -> str:
@@ -89,6 +114,52 @@ def build_points(fluid: str) -> list[tuple[float, float, str]]:
     return pts
 
 
+def flash_is_consistent(names: list[str], z: list[float], T: float, p: float) -> bool:
+    """True when the PT flash lands on a state that actually corresponds to the pressure asked for.
+
+    For a few mixtures it does not.  ARGON[0.3]&NEON[0.7] at T = 96.98 K is the clearest case: we
+    ask REFPROP for the pressure at rho = 355.63 kg/m3, get 7.6565e6 Pa, flash back at that (p, T)
+    and land on rho = 326.24 -- 8.3% away, and the EOS pressure there is 7.1646e6 Pa, not the
+    7.6565e6 requested.  Nothing raises, because the state caches the pressure it was GIVEN rather
+    than recomputing it, so p() agrees with the input by construction.
+
+    Comparing the cached pressure against the EOS pressure at the returned density is what exposes
+    it.  The identity p = rho*R*T*(1 + delta*alphar_delta) holds to ~1e-16 on a converged state.
+
+    Only mixtures are affected: they are placed by reducing with CRITPdll's critical-point
+    ESTIMATE, which for a pair like Ar/Ne is not a physical density (823 kg/m3), so the requested
+    states can sit where the flash struggles.  All 3828 pure points pass this check.
+    """
+    try:
+        AS = CP.AbstractState("REFPROP", "&".join(names))
+        if len(names) > 1:
+            AS.set_mole_fractions(z)
+        AS.update(CP.PT_INPUTS, p, T)
+        d = AS.delta()
+        p_alphar = AS.rhomolar() * AS.gas_constant() * AS.T() * (1 + d * AS.dalphar_dDelta())
+        return abs(p_alphar / AS.p() - 1) < 1e-9
+    except Exception:
+        return False
+
+
+def build_mixture_points(a: str, b: str, xa: float, xb: float) -> list[tuple[float, float, str]]:
+    """Reduced-coordinate points for one binary, using REFPROP's mixture critical estimate."""
+    mix = f"REFPROP::{a}[{xa}]&{b}[{xb}]"
+    Tc = CP.PropsSI("Tcrit", "T", 0, "p", 0, mix)
+    rhoc = CP.PropsSI("rhocrit", "T", 0, "p", 0, mix)
+    pts = []
+    for tr in MIX_TR:
+        T = tr * Tc
+        for rr in MIX_RHOR:
+            try:
+                p = CP.PropsSI("P", "T", T, "Dmass", rr * rhoc, mix)
+            except Exception:
+                continue
+            if p > 0 and flash_is_consistent([a, b], [xa, xb], T, p):
+                pts.append((T, p, f"mix_Tr{tr}_rhor{rr}"))
+    return pts
+
+
 def main(fluids_arg: str | None) -> None:
     import json
 
@@ -111,7 +182,7 @@ def main(fluids_arg: str | None) -> None:
     skipped = []
     with open(out_path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["fluid", "T_K", "p_Pa", "region"])
+        w.writerow(["fluid", "T_K", "p_Pa", "region", "mole_fractions"])
         for fluid in fluids:
             try:
                 pts = build_points(fluid)
@@ -123,11 +194,24 @@ def main(fluids_arg: str | None) -> None:
                 continue
             n_fluid += 1
             for T, p, region in pts:
-                w.writerow([fluid, repr(T), repr(p), region])
+                w.writerow([fluid, repr(T), repr(p), region, ""])
                 n_pts += 1
 
+        n_mix = 0
+        if not fluids_arg:
+            for a, bb, xa, xb in MIXTURES:
+                try:
+                    pts = build_mixture_points(a, bb, xa, xb)
+                except Exception as exc:
+                    skipped.append(f"{a}&{bb} ({str(exc).splitlines()[0][:50]})")
+                    continue
+                for T, p, region in pts:
+                    w.writerow([f"{a}&{bb}", repr(T), repr(p), region, f"{xa};{xb}"])
+                    n_pts += 1
+                    n_mix += 1
+
     print(f"Wrote {out_path}")
-    print(f"  {n_pts} points over {n_fluid} fluids")
+    print(f"  {n_pts} points over {n_fluid} fluids ({n_mix} of them binary-mixture points)")
     if skipped:
         print(f"  {len(skipped)} fluids skipped (not constructible in REFPROP here):")
         for s in skipped:

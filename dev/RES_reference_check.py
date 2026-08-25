@@ -67,6 +67,16 @@ def read_cpp():
     return out
 
 
+def as_reference_args(fluid, mole_fractions):
+    """Both reference modules take a bare name for a pure fluid and a LIST for a mixture, which
+    is how they pick their pure vs mixture branch -- so a binary must be passed as a list even
+    when it could be spelled as one string."""
+    if "&" not in fluid:
+        return fluid, [1.0]
+    names = fluid.split("&")
+    return names, [float(x) for x in mole_fractions.split(";")]
+
+
 def main(vis_dir, tc_dir, per_fluid, seed, dev_limit):
     shim_pandas()
     cpp = read_cpp()
@@ -103,7 +113,8 @@ def main(vis_dir, tc_dir, per_fluid, seed, dev_limit):
                     # Both modules return the value as a 1-element numpy array for pure fluids.
                     import numpy as np
 
-                    val = float(np.ravel(fn(fluid, [1.0], float(p_s), float(T_s))[0])[0])
+                    ref_fluid, ref_z = as_reference_args(fluid, cpp[key].get("mole_fractions", ""))
+                    val = float(np.ravel(fn(ref_fluid, ref_z, float(p_s), float(T_s))[0])[0])
                 except Exception:
                     failures[(label, "ref")] += 1
                     continue
@@ -120,6 +131,14 @@ def main(vis_dir, tc_dir, per_fluid, seed, dev_limit):
             os.chdir(cwd)
 
     print(f"\ngrid points compared: {len(selected)} (up to {per_fluid} per fluid, seed {seed})")
+    for prop in ("viscosity", "conductivity"):
+        for label, keep in (("pure", False), ("MIXTURES", True)):
+            sub = [t for t in results[prop] if ("&" in t[0]) == keep]
+            if not sub:
+                continue
+            devs = sorted(d for _f, _r, d in sub)
+            print(f"  {prop} {label}: n={len(sub)}  median={devs[len(devs) // 2] * 100:.6f}%  "
+                  f"max={devs[-1] * 100:.4f}%")
     for prop in ("viscosity", "conductivity"):
         rows = results[prop]
         if not rows:

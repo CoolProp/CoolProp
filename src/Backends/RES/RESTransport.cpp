@@ -353,6 +353,18 @@ CoolPropDbl RESTransport::conductivity(AbstractState& HEOS) {
                 // dp/drho = dp_drho_molar * M  when working in mass density; use molar base
                 double drhodp_t = 1.0 / dp_drho * HEOS.molar_mass();  // (kg/m³)/Pa
 
+                // KNOWN DIVERGENCE FROM THE PUBLISHED VALUES, on purpose.  t_ref is 1.5*Tc for most
+                // fluids and REFPROP's Tmax is typically 1.5*Tc as well, so for 114 of the 143
+                // fluids carrying enhancement parameters t_ref sits at or just above that limit.
+                // Li 2024 reaches this derivative through PropsSI, which enforces the limit and
+                // raises; TC_RES catches that and silently returns lambda_c = 0.  Evaluating the
+                // EOS itself is well defined there -- t_ref is a reference state for background
+                // subtraction, not a physical claim -- so this calls THERM2dll (REFPROP) or the
+                // alpha^r derivatives (HEOS) directly and keeps the enhancement.
+                //
+                // The cost is that near rho = rho_c we differ from the published numbers for those
+                // fluids by tens of percent, because they omit a term we include.  Away from the
+                // critical region the enhancement is small and the difference with it.
                 double drhodp_tref = HEOS.drhomass_dp_constT_at(t_ref);
 
                 double arg = drhodp_t - (t_ref / T) * drhodp_tref;

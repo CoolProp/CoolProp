@@ -1037,6 +1037,7 @@ TEST_CASE("RES grid evaluation harness (measurement)", "[.][RES_grid][REFPROP]")
     {
         std::string fluid, region;
         double T, p;
+        std::vector<CoolPropDbl> z;  // empty for a pure fluid
     };
     std::vector<Point> points;
     std::string line;
@@ -1048,18 +1049,35 @@ TEST_CASE("RES grid evaluation harness (measurement)", "[.][RES_grid][REFPROP]")
         while (std::getline(ss, cell, ','))
             f.push_back(cell);
         if (f.size() < 4) continue;
-        points.push_back({f[0], f[3], std::stod(f[1]), std::stod(f[2])});
+        // Column 5 is semicolon-separated mole fractions, empty for pure fluids.
+        std::vector<CoolPropDbl> z;
+        if (f.size() >= 5 && !f[4].empty()) {
+            std::istringstream zs(f[4]);
+            std::string tok;
+            while (std::getline(zs, tok, ';'))
+                if (!tok.empty()) z.push_back(std::stod(tok));
+        }
+        points.push_back({f[0], f[3], std::stod(f[1]), std::stod(f[2]), z});
     }
     REQUIRE(points.size() > 100);
 
     std::ofstream out("dev/RES_comparison/grid_cpp.csv");
     REQUIRE_FALSE(!out);
-    out << "fluid,T_K,p_Pa,region,backend,ok,rho,s_res,eta,tc,phase,eta0_native,eta0_poly,tc0_poly,Tc,rhoc,err\n";
+    out << "fluid,T_K,p_Pa,region,mole_fractions,backend,ok,rho,s_res,eta,tc,phase,eta0_native,eta0_poly,tc0_poly,Tc,rhoc,err\n";
     out.precision(17);
 
     // The dilute polynomial is shipped once per fluid and is shared by every backend, so it can
     // be read off either state; evaluating it here rather than exposing it from the model keeps
     // the residual-share diagnostic honest about which term was actually subtracted.
+    auto csv_z = [](const std::vector<CoolPropDbl>& z) {
+        std::string s;
+        for (std::size_t k = 0; k < z.size(); ++k) {
+            if (k) s += ";";
+            s += format("%0.17g", static_cast<double>(z[k]));
+        }
+        return s;
+    };
+
     auto dilute_poly = [](const std::vector<double>& c, double T) {
         if (c.size() < 5) return std::numeric_limits<double>::quiet_NaN();
         return c[0] + T * (c[1] + T * (c[2] + T * (c[3] + T * c[4])));
@@ -1091,6 +1109,7 @@ TEST_CASE("RES grid evaluation harness (measurement)", "[.][RES_grid][REFPROP]")
             std::shared_ptr<AbstractState> AS;
             try {
                 AS.reset(AbstractState::factory(factory_name, fluid));
+                if (!points[i].z.empty()) AS->set_mole_fractions(points[i].z);
                 AS->use_viscosity_RES(true);
                 AS->use_conductivity_RES(true);
                 if (pinned) {
@@ -1101,8 +1120,8 @@ TEST_CASE("RES grid evaluation harness (measurement)", "[.][RES_grid][REFPROP]")
                 }
             } catch (const std::exception& e) {
                 for (std::size_t k = i; k < j; ++k) {
-                    out << fluid << "," << points[k].T << "," << points[k].p << "," << points[k].region << "," << backend << ",0,,,,,,,,,,," << '"'
-                        << e.what() << '"' << "\n";
+                    out << fluid << "," << points[k].T << "," << points[k].p << "," << points[k].region << "," << csv_z(points[k].z) << "," << backend
+                        << ",0,,,,,,,,,,," << '"' << e.what() << '"' << "\n";
                 }
                 continue;
             }
@@ -1137,7 +1156,8 @@ TEST_CASE("RES grid evaluation harness (measurement)", "[.][RES_grid][REFPROP]")
                     for (char& c : err)
                         if (c == '"' || c == '\n' || c == ',') c = ' ';
                 }
-                out << fluid << "," << points[k].T << "," << points[k].p << "," << points[k].region << "," << backend << "," << (ok ? 1 : 0) << ",";
+                out << fluid << "," << points[k].T << "," << points[k].p << "," << points[k].region << "," << csv_z(points[k].z) << "," << backend
+                    << "," << (ok ? 1 : 0) << ",";
                 if (ok) {
                     out << rho << "," << sres << "," << eta << "," << tc << "," << phase << "," << eta0n << "," << eta0p << "," << tc0p << "," << Tc
                         << "," << rhoc << ",";
