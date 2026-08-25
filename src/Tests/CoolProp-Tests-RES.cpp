@@ -152,179 +152,135 @@ static std::shared_ptr<AbstractState> make_pr(const std::string& f) {
     return std::shared_ptr<AbstractState>(AbstractState::factory("PR", f));
 }
 
-// Try PT_INPUTS first.
-// - If the result is within 5× of experiment: accept it.
-// - If the phase is two-phase: SatL/SatV are already solved; use
-//   saturated_liquid_keyed_output / saturated_vapor_keyed_output directly.
-// - If single-phase but wildly off (wrong phase selected by PR): explicitly
-//   do QT_INPUTS updates to get both saturated states.
-// In all fallback cases, return the candidate closest to exp_ref.
-static double transport_pr_pt_with_sat_fallback(AbstractState& AS, double p, double T,
-                                                double exp_ref,
-                                                parameters keyed_param,
-                                                std::function<double()> get_prop) {
-    double v_pt = -1;
-    phases phase_after_pt = iphase_unknown;
-    try {
-        AS.update(PT_INPUTS, p, T);
-        v_pt = get_prop();
-        phase_after_pt = static_cast<phases>(static_cast<int>(AS.phase()));
-    } catch (...) {}
-
-    if (v_pt > 0 && v_pt > exp_ref / 5.0 && v_pt < exp_ref * 5.0)
-        return v_pt;
-
-    double v_liq = -1, v_vap = -1;
-    if (phase_after_pt == iphase_twophase) {
-        // SatL/SatV are freshly solved — use keyed outputs without re-updating.
-        try { v_liq = AS.saturated_liquid_keyed_output(keyed_param); } catch (...) {}
-        try { v_vap = AS.saturated_vapor_keyed_output(keyed_param); } catch (...) {}
-    } else {
-        // Single-phase wrong-phase: impose liquid and gas phases in turn and retry PT.
-        try { AS.specify_phase(iphase_liquid); AS.update(PT_INPUTS, p, T); v_liq = get_prop(); } catch (...) {}
-        try { AS.specify_phase(iphase_gas);    AS.update(PT_INPUTS, p, T); v_vap = get_prop(); } catch (...) {}
-        AS.unspecify_phase();
-    }
-
-    double best = -1, best_err = 1e30;
-    for (double cand : {v_pt, v_liq, v_vap}) {
-        if (cand <= 0) continue;
-        double err = std::abs(cand - exp_ref);
-        if (err < best_err) { best_err = err; best = cand; }
-    }
-    if (best <= 0) throw std::runtime_error("all PR state updates failed");
-    return best;
-}
-
 // ============================================================= tests =========
 
-TEST_CASE("RES viscosity pure fluids: HEOS matches REFPROP-RES (Martinek 2025)",
-          "[RES][transport]") {
-    auto samples = parse_vis_pure(VIS_PURE_OUT);
-    REQUIRE_FALSE(samples.empty());
-    int ok = 0;
-    for (const auto& s : samples) {
-        std::string cpn = cp_name(s.name);
-        try {
-            auto AS = make_heos(cpn);
-            AS->update(PT_INPUTS, s.p_MPa * 1e6, s.T);
+TEST_CASE("RES regression at residual-dominated states", "[RES][transport]") {
+    // The regression net for the native backends.  These are GOLDEN values produced by this
+    // implementation -- their job is to fail when the model changes, not to say it is right.
+    //
+    // Correctness is established elsewhere, and deliberately not here:
+    //   * against the authors' own code, on REFPROP where the coefficients are exact --
+    //     "RES on REFPROP reproduces the published..." below, and dev/RES_reference_check.py,
+    //     which reproduces Martinek/Li to a median of 2.6e-7 and 1.2e-7;
+    //   * across backends, HEOS vs REFPROP over 3828 grid points -- dev/RES_grid_report.py,
+    //     median 6e-7, which is where the exclusion lists come from.
+    // Repeating those as unit tests would need percent-level tolerances, because several model
+    // choices legitimately differ between backends, and a percent-level bound on a quantity that
+    // agrees to 1e-7 tests almost nothing while reading as though the implementation were poor.
+    //
+    // The states sit where the RESIDUAL term supplies 55-96% of the property.  That is the gap the
+    // published sample points cannot cover: one state per fluid, several of them almost pure
+    // dilute gas -- residual share 0.2% for R1234YF -- where the dilute polynomial is identical on
+    // every backend and the residual term is not exercised at all.
+    //
+    // Both backends are evaluated at (p, T), each finding its own density, because that is how the
+    // model is used and how the PR coefficients were fitted.  Pinning PR at HEOS's density instead
+    // would test it outside the frame it was fitted in: PR's density is up to 25% from HEOS's at
+    // these states, and forcing it onto HEOS's value inflates the apparent PR-HEOS difference from
+    // a median of 3% to tens of percent.  The states are far from saturation, so the flash is
+    // unambiguous on both.
+    //
+    // Regenerate deliberately, and only when a change to the model is intended and understood:
+    // dev/RES_grid_build.py, then the [RES_grid] harness, then re-read the values.
+    struct Golden
+    {
+        const char* fluid;
+        double T, p, eta_heos, tc_heos, eta_pr, tc_pr;
+    };
+    static const Golden golden[] = {
+      {"AMMONIA", 304.17, 3606963.44186, 1.2534715542329e-04, 4.6091983840002e-01, 1.2430582780973e-04, 4.6014354642977e-01},
+      {"AMMONIA", 446.116, 28384252.4254, 4.2568850005887e-05, 2.3571693252823e-01, 4.2786422334763e-05, 2.2742536998745e-01},
+      {"AMMONIA", 527.228, 92191380.93711, 5.3572527060133e-05, 2.9205044497544e-01, 5.9347099520628e-05, 3.1029113568365e-01},
+      {"ARGON", 113.01525, 2418347.95793, 1.2425384695901e-04, 9.3236284166714e-02, 1.2941949107901e-04, 9.2446488869947e-02},
+      {"ARGON", 165.7557, 11548934.69671, 4.5407457592386e-05, 4.5422611875480e-02, 4.4549397046620e-05, 4.3947433224394e-02},
+      {"ARGON", 195.8931, 38374336.25303, 6.5481497788678e-05, 6.2490603951955e-02, 6.8869885182856e-05, 6.3930703582688e-02},
+      {"CO2", 228.09615, 2490320.627062, 2.1706417724008e-04, 1.7472032636980e-01, 2.1027646640269e-04, 1.6968175186621e-01},
+      {"CO2", 334.54102, 19224671.21944, 5.7748662636897e-05, 7.8000300052466e-02, 5.8696604679698e-05, 7.3837477000642e-02},
+      {"CO2", 395.36666, 67343164.89186, 8.0220003253736e-05, 1.0326713380876e-01, 8.7061221303424e-05, 1.0449471916674e-01},
+      {"ETHANOL", 386.0325, 1596351.335694, 2.8376781690654e-04, 1.4825360425374e-01, 2.8170762756801e-04, 1.4839265301095e-01},
+      {"ETHANOL", 566.181, 17457987.6492, 5.3192725711264e-05, 1.2862040387156e-01, 4.5834435892776e-05, 1.2841265492736e-01},
+      {"ETHANOL", 669.123, 62922345.22261, 5.8461231258475e-05, 1.5254928551071e-01, 6.3802494308523e-05, 1.6460147207033e-01},
+      {"METHANE", 142.923, 2230767.992782, 6.3204079903066e-05, 1.4205684520521e-01, 6.3995464623802e-05, 1.4048207374639e-01},
+      {"METHANE", 209.6204, 11014898.69906, 2.5963132143349e-05, 7.5897272183899e-02, 2.4828334843228e-05, 7.4436136350518e-02},
+      {"METHANE", 247.7332, 36862390.29281, 3.6830270301240e-05, 1.0189887829786e-01, 3.7603345051971e-05, 1.0471408099588e-01},
+      {"NITROGEN", 138.8112, 8247948.58104, 3.0053479834784e-05, 5.2312119391951e-02, 3.0563295198523e-05, 5.1098822588803e-02},
+      {"NITROGEN", 164.0496, 27881957.2182, 4.3336521007404e-05, 7.1427476618025e-02, 4.6625864875666e-05, 7.3276730196320e-02},
+      {"NITROGEN", 94.644, 1577718.259735, 8.7504634740091e-05, 1.0581701680628e-01, 8.8903428620479e-05, 1.0505012170376e-01},
+      {"PROPANE", 277.4175, 1618042.935256, 1.1646412035562e-04, 1.0488839979475e-01, 1.1820459342471e-04, 1.0941577238384e-01},
+      {"PROPANE", 406.879, 10932008.08445, 4.0783692276740e-05, 6.6802493573695e-02, 3.9415796812993e-05, 7.1458269719973e-02},
+      {"PROPANE", 480.857, 38972745.33683, 5.7849566275167e-05, 9.0651408551990e-02, 6.0039764046943e-05, 1.0048473544986e-01},
+      {"R134A", 280.6575, 1193029.563139, 2.5770377777320e-04, 9.0393800182755e-02, 2.5428245071266e-04, 8.9475107403341e-02},
+      {"R134A", 411.631, 11082887.77478, 6.5171000688782e-05, 5.3006433418392e-02, 6.5961723631807e-05, 5.4646347304115e-02},
+      {"R134A", 486.473, 40174480.69617, 8.9548801894069e-05, 6.7979819687866e-02, 9.8220388334927e-05, 7.3117052196393e-02},
+      {"TOLUENE", 443.8125, 1288149.39309, 1.6509786571318e-04, 9.3704872024963e-02, 1.6482924210734e-04, 9.2218047500124e-02},
+      {"TOLUENE", 650.925, 10804158.42783, 5.4619891095097e-05, 7.5127995747084e-02, 5.2468262292422e-05, 7.5863947319217e-02},
+      {"TOLUENE", 769.275, 39974654.51745, 7.4722506698656e-05, 9.5824271171200e-02, 7.8921869489490e-05, 9.9555419198892e-02},
+      {"WATER", 485.322, 6404695.669172, 1.2527298863343e-04, 6.8982986008485e-01, 1.2907412366549e-04, 6.9455344075235e-01},
+      {"WATER", 711.8056, 54841210.98041, 5.8243233448322e-05, 3.5802447395434e-01, 5.8810456734221e-05, 3.8046804717100e-01},
+      {"WATER", 841.2248, 170019943.4478, 6.9142832618332e-05, 4.1148115810904e-01, 7.6769727417010e-05, 5.0100932960509e-01},
+    };
+
+    for (const auto& g : golden) {
+        for (int i = 0; i < 2; ++i) {
+            const bool heos = (i == 0);
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory(heos ? "HEOS" : "PR", g.fluid));
             AS->use_viscosity_RES(true);
-            double v = AS->viscosity() * 1e6;
-            INFO("fluid=" << s.name << " T=" << s.T << " ref=" << s.vis_res << " cpp=" << v);
-            CHECK(v == Catch::Approx(s.vis_res).epsilon(0.03));
-            CHECK(v == Catch::Approx(s.vis_exp).epsilon(0.15));
-            ++ok;
-        } catch (...) { WARN("Skip " << s.name); }
-    }
-    REQUIRE(ok >= 10);
-}
-
-TEST_CASE("RES viscosity binary mixtures: HEOS matches REFPROP-RES (Martinek 2025)",
-          "[RES][transport]") {
-    auto samples = parse_vis_bin(VIS_BIN_OUT);
-    REQUIRE_FALSE(samples.empty());
-    int ok = 0;
-    for (const auto& s : samples) {
-        std::string cp1 = cp_name(s.c1), cp2 = cp_name(s.c2);
-        try {
-            auto AS = std::shared_ptr<AbstractState>(
-                AbstractState::factory("HEOS", cp1 + "&" + cp2));
-            AS->set_mole_fractions({s.mf1, s.mf2});
-            AS->update(PT_INPUTS, s.p_MPa * 1e6, s.T);
-            AS->use_viscosity_RES(true);
-            double v = AS->viscosity() * 1e6;
-            INFO("mix=" << s.c1 << "+" << s.c2 << " T=" << s.T << " ref=" << s.vis_res << " cpp=" << v);
-            CHECK(v == Catch::Approx(s.vis_res).epsilon(0.05));
-            CHECK(v == Catch::Approx(s.vis_exp).epsilon(0.20));
-            ++ok;
-        } catch (...) { WARN("Skip " << s.c1 << "+" << s.c2); }
-    }
-    REQUIRE(ok >= 5);
-}
-
-TEST_CASE("RES conductivity pure fluids: HEOS matches REFPROP-RES (Li 2024)",
-          "[RES][transport]") {
-    auto samples = parse_tc_pure(TC_PURE_REF);
-    REQUIRE_FALSE(samples.empty());
-    int ok = 0;
-    for (const auto& s : samples) {
-        std::string cpn = cp_name(s.name);
-        try {
-            auto AS = make_heos(cpn);
-            AS->update(PT_INPUTS, s.p_kPa * 1e3, s.T);
             AS->use_conductivity_RES(true);
-            double tc = AS->conductivity();
-            INFO("fluid=" << s.name << " T=" << s.T << " ref=" << s.tc_res << " cpp=" << tc);
-            CHECK(tc == Catch::Approx(s.tc_res).epsilon(0.03));
-            CHECK(tc == Catch::Approx(s.tc_exp).epsilon(0.15));
-            ++ok;
-        } catch (...) { WARN("Skip " << s.name); }
+            AS->update(PT_INPUTS, g.p, g.T);
+            INFO("fluid=" << g.fluid << " backend=" << (heos ? "HEOS" : "PR") << " T=" << g.T << " p=" << g.p);
+            // 1e-7 absorbs the flash's own last-bit noise and compiler differences.  A real change
+            // to the residual term is orders of magnitude larger -- the R_D/gamma correction moved
+            // ETHANE by 7.5e-5, some 750x this bound -- so the test still fails loudly on one.
+            CHECK(AS->viscosity() == Catch::Approx(heos ? g.eta_heos : g.eta_pr).epsilon(1e-7));
+            CHECK(AS->conductivity() == Catch::Approx(heos ? g.tc_heos : g.tc_pr).epsilon(1e-7));
+        }
     }
-    REQUIRE(ok >= 10);
+    // Guard the premise: if the table is ever emptied or truncated this must not pass quietly.
+    CHECK(std::size(golden) == 30);
 }
 
-TEST_CASE("RES conductivity binary mixtures: HEOS matches REFPROP-RES (Li 2024)",
-          "[RES][transport]") {
-    auto samples = parse_tc_bin(TC_BIN_REF);
-    REQUIRE_FALSE(samples.empty());
-    int ok = 0;
-    for (const auto& s : samples) {
-        std::string cp1 = cp_name(s.c1), cp2 = cp_name(s.c2);
-        try {
-            auto AS = std::shared_ptr<AbstractState>(
-                AbstractState::factory("HEOS", cp1 + "&" + cp2));
-            AS->set_mole_fractions({s.mf1, s.mf2});
-            AS->update(PT_INPUTS, s.p_kPa * 1e3, s.T);
-            AS->use_conductivity_RES(true);
-            double tc = AS->conductivity();
-            INFO("mix=" << s.c1 << "+" << s.c2 << " T=" << s.T << " ref=" << s.tc_res << " cpp=" << tc);
-            CHECK(tc == Catch::Approx(s.tc_res).epsilon(0.05));
-            CHECK(tc == Catch::Approx(s.tc_exp).epsilon(0.20));
-            ++ok;
-        } catch (...) { WARN("Skip " << s.c1 << "+" << s.c2); }
-    }
-    REQUIRE(ok >= 4);
-}
+TEST_CASE("RES withheld fluids report the omission rather than guessing", "[RES][transport]") {
+    // These fluids carry no HEOS entry on purpose: their REFPROP-fitted coefficients do not
+    // transfer to HEOS's residual entropy, measured over a 3828-point grid rather than the single
+    // published sample point that an earlier round used.  See HEOS_TRANSFER_EXCLUDE in
+    // dev/convert_RES_csv_to_json.py for the criterion and the per-fluid numbers.
+    //
+    // The list is repeated here on purpose.  It is the user-visible contract -- "ask for RES on
+    // this fluid and you get a clear error, not a plausible wrong number" -- so changing which
+    // fluids are withheld should require editing a test and justifying it, not just regenerating
+    // a data file.  Under the old suite this behaviour was invisible: a designed throw and a
+    // broken one were indistinguishable to a `catch (...)`.
+    static const char* withheld[] = {"BENZENE",  "D5",      "HEPTANE", "MD3M", "MD4M", "R1123", "R1224YDZ",
+                                     "R1233ZDE", "R1234YF", "R1243ZF", "R13",  "R161", "R41",   "VINYLCHLORIDE"};
 
-TEST_CASE("RES viscosity PR backend pure: within 15% of experimental (Martinek 2025)",
-          "[RES][transport]") {
-    auto samples = parse_vis_pure(VIS_PURE_OUT);
-    REQUIRE_FALSE(samples.empty());
-    int ok = 0;
-    for (const auto& s : samples) {
-        std::string cpn = cp_name(s.name);
+    std::size_t checked = 0;
+    for (const char* name : withheld) {
+        std::shared_ptr<AbstractState> AS;
         try {
-            auto AS = make_pr(cpn);
-            double exp_si = s.vis_exp * 1e-6;
-            double v = transport_pr_pt_with_sat_fallback(
-                *AS, s.p_MPa * 1e6, s.T, exp_si, iviscosity,
-                [&]{ return AS->viscosity(); });
-            INFO("fluid=" << s.name << " exp=" << s.vis_exp << " pr=" << v * 1e6);
-            CHECK(v == Catch::Approx(exp_si).epsilon(0.15));
-            ++ok;
-        } catch (...) { WARN("Skip " << s.name << " (PR)"); }
+            AS.reset(AbstractState::factory("HEOS", name));
+        } catch (const CoolProp::CoolPropBaseError&) {
+            continue;  // not in this build's fluid library at all; nothing to assert
+        }
+        ++checked;
+        INFO("withheld fluid " << name);
+        CHECK_FALSE(AS->RES_data().comps[0].viscosity.provided);
+        CHECK_FALSE(AS->RES_data().comps[0].conductivity.provided);
+        AS->use_viscosity_RES(true);
+        AS->use_conductivity_RES(true);
+        AS->update(PT_INPUTS, 1.0e5, 300.0);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
     }
-    REQUIRE(ok >= 10);
-}
+    CHECK(checked == std::size(withheld));
 
-TEST_CASE("RES conductivity PR backend pure: within 15% of experimental (Li 2024)",
-          "[RES][transport]") {
-    auto samples = parse_tc_pure(TC_PURE_REF);
-    REQUIRE_FALSE(samples.empty());
-    int ok = 0;
-    for (const auto& s : samples) {
-        std::string cpn = cp_name(s.name);
-        try {
-            auto AS = make_pr(cpn);
-            double tc = transport_pr_pt_with_sat_fallback(
-                *AS, s.p_kPa * 1e3, s.T, s.tc_exp, iconductivity,
-                [&]{ return AS->conductivity(); });
-            INFO("fluid=" << s.name << " exp=" << s.tc_exp << " pr=" << tc);
-            CHECK(tc == Catch::Approx(s.tc_exp).epsilon(0.15));
-            ++ok;
-        } catch (...) { WARN("Skip " << s.name << " (PR)"); }
-    }
-    REQUIRE(ok >= 10);
+    // The converse, so that "everything throws" cannot pass this test: a fluid that is NOT
+    // withheld must still evaluate.
+    auto ok = make_heos("Propane");
+    ok->use_viscosity_RES(true);
+    ok->use_conductivity_RES(true);
+    ok->update(PT_INPUTS, 1.0e5, 300.0);
+    CHECK(ok->viscosity() > 0.0);
+    CHECK(ok->conductivity() > 0.0);
 }
 
 // -------------------------------------------------------------- guards -------
@@ -751,12 +707,16 @@ TEST_CASE("RES critical-enhancement viscosity source is selectable", "[RES][REFP
     CHECK(AS->conductivity() == v_auto);
 }
 
-TEST_CASE("RES source policy on a backend with no native transport model", "[RES][transport]") {
+TEST_CASE("RES source policy where the backend supplies no native term", "[RES][transport]") {
     // This is the half of the policy that keeps HEOS and the cubics unchanged, and the half that
     // must NOT fail open.  AUTO silently uses the fitted model, exactly as the reference
     // implementations' try/except does.  An EXPLICIT request for the backend's own model, where
     // there is none, must throw rather than quietly hand back a different model than was asked
-    // for -- that is the difference between "no native model available" and a wrong number.
+    // for -- that is the difference between "no native term available" and a wrong number.
+    //
+    // "Supplies none" is not one situation: the cubics have no transport model at all, which
+    // is a reason RES exists, while HEOS has correlations that RES deliberately does not
+    // consume (see RESDiluteSource).  HEOS is used here because it is the stricter case.
     auto AS = make_heos("Propane");
     AS->update(PT_INPUTS, 4.65e6, 375.9);
     AS->use_viscosity_RES(true);
@@ -771,15 +731,15 @@ TEST_CASE("RES source policy on a backend with no native transport model", "[RES
     CHECK(AS->conductivity() == tc_auto);
 
     AS->set_viscosity_RES_dilute_source(RES_DILUTE_BACKEND_NATIVE);
-    CHECK_THROWS_WITH(AS->viscosity(), Catch::Matchers::ContainsSubstring("no native transport model"));
+    CHECK_THROWS_WITH(AS->viscosity(), Catch::Matchers::ContainsSubstring("does not supply a native transport model"));
     AS->set_viscosity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
 
     AS->set_conductivity_RES_dilute_source(RES_DILUTE_BACKEND_NATIVE);
-    CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("no native transport model"));
+    CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("does not supply a native transport model"));
     AS->set_conductivity_RES_dilute_source(RES_DILUTE_POLYNOMIAL);
 
     AS->set_conductivity_RES_enhancement_viscosity(RES_ENH_VIS_BACKEND_NATIVE);
-    CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("no native viscosity model"));
+    CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("does not supply a native viscosity model"));
 }
 
 TEST_CASE("RES mixture critical enhancement follows the backend policy", "[RES][REFPROP][transport]") {
@@ -1004,7 +964,7 @@ TEST_CASE("RES grid evaluation harness (measurement)", "[.][RES_grid][REFPROP]")
         //   HEOS            HEOS can also do.  Used for (b), parameter transfer, where leaving the
         //                   defaults alone would measure the source policy instead.
         //
-        // HEOS needs no second column: with no native transport model its AUTO already resolves to
+        // HEOS needs no second column: supplying no native term to RES, its AUTO already resolves to
         // the fitted model, so its default and pinned results are identical by construction.
         for (const char* backend : {"REFPROP", "REFPROP_pinned", "HEOS"}) {
             const bool pinned = (std::string(backend) != "REFPROP");
@@ -1206,7 +1166,7 @@ TEST_CASE("RES conductivity is finite for fluids with no fitted critical-enhance
 
 TEST_CASE("RES conductivity does not throw a viscosity error when only viscosity params are missing",
           "[RES][transport]") {
-    // On a backend with no native transport model the enhancement term falls back to the RES
+    // Where the backend supplies no native term to RES, the enhancement term falls back to the RES
     // viscosity, so a fluid carrying conductivity parameters but not viscosity ones used to
     // surface a *viscosity* ValueError out of a conductivity call.  The enhancement must be
     // skipped instead.

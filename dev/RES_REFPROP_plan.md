@@ -715,11 +715,84 @@ Stage 6 DONE -- both halves, and the exclusion lists re-derived from measurement
   rather than failing an assertion).  [REFPROP] 1508, [viscosity],[conductivity] 1131, cubics
   3698, [SBTL] 5476 -- all pass.  clang-format unchanged at HEAD's count.
 
-NEXT: Stage 7 -- test-suite overhaul, D1 (the fail-open catch(...) + REQUIRE(ok >= N) gate) first;
-  it is now actively misleading, since 14 excluded fluids throw by design and are indistinguishable
-  from breakage.  Also outstanding: the converter invariant gate (see the Stage-5 discussion --
-  structural checks plus a regenerate-and-diff, NOT cross-key equality, which a future HEOS-specific
-  refit would legitimately break).
+Stage 7 DONE -- test-suite overhaul.  `[RES]` goes from 19 cases / 6 failing / 23 failing
+assertions to **32 cases, 637 assertions, ZERO failures**.  D1-D5 addressed; see
+dev/RES_test_assessment.md, rewritten to record what changed and why.
+
+  The stage ended somewhere the assessment did not anticipate.  The sample-data comparisons were
+  first REBUILT (bucketed, phase-free, parity split from experiment) and passed -- 34 cases, 1549
+  assertions -- and were then REMOVED.  Reason: every remaining deviation had a known cause that
+  needed a paragraph of comment to stop a reader concluding the implementation was poor, and
+  accommodating those causes needed percent-level tolerances on quantities that agree to 1e-7
+  elsewhere.  A unit test asserting "HEOS within 13% of the reference" adds nothing next to
+  dev/RES_grid_report.py measuring 6e-7 over 3828 points, and it misrepresents HEOS.  The
+  comparisons live in the Stage-6 scripts, where they belong and where the resolution is real.
+
+  D1 (blocking).  The `catch (...) { WARN("Skip") }` + `REQUIRE(ok >= N)` gate is gone.  Rows land
+  in one of three asserted buckets -- NotInCoolProp (counted), NoParams (the call MUST throw, which
+  is what the withheld fluids are for), Evaluable (value asserted, no catch-all).  Bucket sizes are
+  asserted: exactly for sets we control, as a lower bound where CoolProp may legitimately grow.
+
+  D2.  Reference-parity tests set the state with DmassT_INPUTS at the density the published table
+  records.  No flash, no phase to get wrong -- BENZENE -41.6% and R41 +266.8% were phase
+  disagreements reported as model error.
+
+  D3.  Mixture conductivity bound is 13%, with the provenance in the comment (Li uses REFPROP's
+  native lambda0 for mixtures, HEOS has none).  The same comparison on REFPROP is 0.018%, which is
+  what shows the model is fine.
+
+  D4.  Reference parity and experiment agreement are separate test cases.  Experiment agreement is
+  judged on the DISTRIBUTION (median + quantiles), because RES is a correlation and a per-point
+  bound would be either meaningless or brittle.
+
+  D5.  New `RES regression at residual-dominated states`: 30 pinned values over 10 fluids where the
+  residual term supplies 55-96% of the property, closing the hole left by sample points that are
+  almost pure dilute gas.  Golden values from this implementation, not reference data -- their job
+  is to fail when the residual term moves.  Calibration: the Stage-4b R_D/gamma fix moved ETHANE by
+  7.5e-5 relative, ~750x the 1e-7 bound.
+
+### Two defects the overhaul found, neither in the original list
+
+  1. **The PR helper was circular.**  transport_pr_pt_with_sat_fallback evaluated up to three
+     candidate states and returned whichever came closest to the EXPERIMENTAL value -- i.e. picked
+     the answer that best matches the expected answer.  That is how the old test could claim "within
+     15%" per point; with an honest rule the 90th percentile is 15% and the worst point is 57%.
+     Replaced by selection on DENSITY against the published table (an input, not the quantity under
+     test), and the PR bounds are now a distribution.
+
+     Note the first replacement rule was also wrong: "den_ref > rho_crit means liquid" forces PR
+     onto the liquid root for hydrogen at 150 K -- far above its critical temperature -- giving
+     486 kg/m3 against a reference density of 74.8.  Comparing BOTH roots to the published density
+     picks the gas root at 77.7.
+
+  2. **RES could return a silent NaN.**  s_plus = -s_res/R is raised to fractional powers
+     throughout, so a non-positive or non-finite value yields NaN rather than an error and leaves
+     the routine as a plausible transport number.  PR produces exactly that -- a NaN residual
+     entropy for hydrogen on its liquid root at 150 K / 112 MPa.  check_s_plus() now refuses it
+     with a message naming the state.  The old catch-all had been hiding the fluid entirely, which
+     is precisely the failure mode D1 was about.
+
+  Gates: [RES] 34/1549 all passing; [REFPROP] 1508, [viscosity],[conductivity] 1131, cubics 3698,
+  [SBTL] 5476 -- all pass.  clang-format on CoolProp-Tests-RES.cpp actually improves 194 -> 145,
+  since the rewritten sections replaced non-conforming code.  New baseline:
+  dev/RES_comparison/RES_baseline_stage7.txt.
+
+  NOTE the [RES] suite no longer has expected failures.  Any failure is now a real one, so the
+  gate is simply "green", and the value-dump baseline is a convenience rather than a necessity.
+
+REMAINING (not blocking, tracked here so it is not lost):
+  - The converter invariant gate discussed under Stage 5: structural checks mirroring what
+    load_RES_transport_parameters() requires (array lengths, mandatory fields, known EOS keys,
+    sources coverage) plus a regenerate-and-diff.  NOT cross-key equality, which a future
+    HEOS-specific refit would legitimately break.  Best placed as a path-gated Python step in
+    dev/ci/preflight.sh, mirroring the existing incomp-sanity check.
+  - dev/RES_test_assessment.md item 6: the DECANE+METHANE experimental row is +75% off while
+    matching the model exactly.  A data-provenance question, still open.
+  - src/Tests/CoolProp-Tests-RES.cpp carries 145 pre-existing clang-format violations (was 194 at
+    the start of this stage).  They pre-date this work but will block preflight, so the file needs
+    one formatting commit of its own.
+  - Stage 7's original list also mentioned mixture critical enhancement and REFPROP parity tests;
+    both landed earlier (Stages 4b and 3).
 
 ---
 
@@ -744,7 +817,7 @@ the pass count is unchanged by definition. It is a bit-identical dump of every c
 
     ./build_tests/Release/CatchTestRunner.exe "[RES]" --success > after.txt 2>&1
     norm(){ grep -v "^Randomness seeded" "$1" | sed -E 's/0x[0-9a-f]+/0xPTR/g; s/[.]cpp\([0-9]+\)/.cpp(LINE)/g'; }
-    diff <(norm dev/RES_comparison/RES_baseline_stage6.txt) <(norm after.txt)
+    diff <(norm dev/RES_comparison/RES_baseline_stage7.txt) <(norm after.txt)
 
 Two masks, both required. Heap addresses in `dynamic_cast != nullptr` assertions vary per run.
 Source line numbers shift whenever a test is INSERTED above an existing one, which produces
@@ -752,10 +825,10 @@ hundreds of spurious diff lines that hide the real ones -- that mask was added i
 exactly that happened. When a stage adds tests, the gate is not "empty diff" but **no removed or
 changed lines**: `diff ... | grep "^<"` must return only the two summary counts.
 
-Current gate file: `RES_baseline_stage6.txt`. Current expected [RES] result: **36 cases, 30
-passed, 6 failed; 1071 assertions, 1048 passed, 23 failed.** The 6 failing cases are the HEOS
-sample-data comparisons, with documented causes -- see `dev/RES_test_assessment.md`. They are NOT
-regressions, and the failed-assertion count must stay at exactly 25.
+Current gate file: `RES_baseline_stage7.txt`. Current expected [RES] result: **32 cases, 32
+passed, 0 failed; 637 assertions, all passing.** As of Stage 7 the suite has NO expected failures,
+so the gate is simply that it stays green -- the value dump is now a convenience for spotting which
+numbers moved, not a way to tell designed failures from real ones.
 
 This gate earned its keep: it caught a segfault in Stage 1 that a green build and an unchanged
 pass count both hid.
@@ -842,8 +915,10 @@ columns reproduce to ~1% with the polynomial dilute term (Stage 4 tightens this 
 - **Stage 4** DONE -- see the Progress log.
 - **Stage 5** DONE (pulled forward into Stage 3) -- see the Progress log.
 - **Stage 6** DONE -- see the Progress log.
-- **Stage 7** optional, isolated: fix `tau_ref = T_critical/t_ref` -> `T_reducing/t_ref`. Watch
-  CYCLOPRO (0.1%); ~1e-7 for the rest.
+- **Stage 7** DONE -- see the Progress log.
+- **Still open**: fix `tau_ref = T_critical/t_ref` -> `T_reducing/t_ref` (R3), a pre-existing HEOS
+  bug preserved deliberately through every refactor so they stayed provable no-ops. Isolated and
+  measurable; watch CYCLOPRO (0.1%), ~1e-7 for the rest.
 
 ## Reference implementations (for Stage 6)
 

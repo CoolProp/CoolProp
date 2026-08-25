@@ -1,15 +1,101 @@
 # RES transport test suite — assessment
 
-Status of `src/Tests/CoolProp-Tests-RES.cpp`, tag `[RES]`, as measured against the current
-working tree.
+**Status: the overhaul this document called for is done, and it ended somewhere the original
+analysis did not anticipate.** D1–D5 are addressed, and the sample-data comparisons that D1–D4
+were about have been **removed** rather than repaired. The suite is green:
 
-    test cases:  19 |  13 passed |  6 failed
-    assertions: 680 | 657 passed | 23 failed
+    test cases:  32 |  32 passed |  0 failed
+    assertions: 637 | 637 passed | 0 failed
 
-All 13 structural/guard tests pass. All 6 failures are the six sample-data comparisons.
-Every failure below has been traced to a cause; **none is an unexplained defect**.
+The original assessment is kept from "Historical assessment" onwards: its per-fluid causes are
+still the record of why each deviation exists.
 
 ---
+
+## Why the sample comparisons are gone
+
+They were rebuilt first — bucketed, phase-free, parity split from experiment — and that version
+passed. It was still the wrong test to keep. Every remaining deviation had a known, explainable
+cause, so each needed a paragraph of comment to stop a reader concluding the implementation was
+poor; and accommodating those causes required percent-level tolerances on quantities that agree to
+1e-7 elsewhere, which is close to no regression signal at all.
+
+What they were standing in for is now measured properly, and better:
+
+| question | where it is answered now | agreement |
+|---|---|---|
+| is the model implemented correctly? | `dev/RES_reference_check.py` vs Martinek/Li, and the `[RES][REFPROP]` parity tests | median 2.6e-7 / 1.2e-7 |
+| do the parameters transfer to HEOS? | `dev/RES_grid_report.py`, 3828 grid points | median 6e-7 |
+| does the model agree with experiment? | the published tables themselves; it is a property of RES, not of this code | — |
+
+A unit test asserting "HEOS is within 13% of the reference" adds nothing to a script that measures
+6e-7 over 3828 points, and it reads as though HEOS were the problem when the 13% is a documented
+dilute-source difference.
+
+## What replaced them
+
+**`RES regression at residual-dominated states`** — 30 pinned values over 10 fluids, on **both**
+HEOS and PR, at states where the residual term supplies 55–96% of the property. Golden values from
+this implementation; their job is to fail when the model moves. Tolerance 1e-7, against a real
+change of 7.5e-5 when the R_D/γ fix landed. This also closes **D5**: the published points give one
+state per fluid and several are almost pure dilute gas (residual share 0.2% for R1234YF), where the
+dilute polynomial is identical on every backend and the residual term is not exercised at all. It
+is also the only RES coverage PR has, so the PR values are pinned separately.
+
+Both backends are evaluated at **(p, T)**, each finding its own density. An earlier draft pinned PR
+at HEOS's density, which tests PR outside the frame its coefficients were fitted in — PR's density
+is up to 25% from HEOS's at these states, and forcing it onto HEOS's value inflated the apparent
+PR-vs-HEOS difference to tens of percent. At (p, T) it is what one would expect of a cubic:
+
+| PR vs HEOS at the same (p, T) | median | p90 | max |
+|---|---|---|---|
+| viscosity | 3.1% | 10.8% | 13.8% |
+| conductivity | 2.7% | 7.9% | 21.8% |
+| density | 7.9% | 18.3% | 25.1% |
+
+**`RES withheld fluids report the omission rather than guessing`** — asserts that each of the 14
+fluids without a HEOS entry throws, and that a fluid which is *not* withheld still evaluates, so
+"everything throws" cannot pass. This is the part of **D1** worth keeping: under the old suite a
+designed throw and a broken one were indistinguishable to a `catch (...)`. The list is repeated in
+the test on purpose — it is the user-visible contract, so changing it should require editing a test
+and justifying it, not just regenerating a data file.
+
+**D2, D3, D4** are moot once the comparisons are gone: no flash, no phase, no conflated criteria,
+no unreachable tolerance.
+
+## Two defects found on the way, neither in the original list
+
+**The PR helper was circular.** `transport_pr_pt_with_sat_fallback` evaluated up to three candidate
+states and returned whichever came closest to the **experimental value** — choosing the answer that
+best matches the expected answer. It is also how the old test could claim "within 15%" per point:
+with an honest rule based on density instead, the 90th percentile is 15% and the worst point 57%.
+Removed with the tests that used it.
+
+**RES could return a silent NaN.** `s_plus = -s_res/R` is raised to fractional powers throughout,
+so a non-positive or non-finite value yields NaN rather than an error, and it left the routine as a
+plausible-looking transport value. The PR backend does produce it — a NaN residual entropy for
+hydrogen forced onto its liquid root at 150 K / 112 MPa. `check_s_plus()` in
+`src/Backends/RES/RESTransport.cpp` now refuses it. The old catch-all had been hiding that fluid
+entirely, which is exactly what D1 was about.
+
+## Open item (was §5) — resolved
+
+RES on the REFPROP backend, which §5 identified as the binding constraint on D5 and on the
+exclusion decisions, is done. The exclusion lists now come from a 3828-point grid rather than from
+single published points; see the Stage 6 entry in `dev/RES_REFPROP_plan.md`.
+
+Still open: the DECANE+METHANE experimental row (+75% while matching the model exactly) remains a
+data-provenance question. It no longer fails anything, because nothing asserts against experiment.
+
+---
+
+# Historical assessment
+
+The remainder is the original analysis, retained for the per-fluid causes.
+
+# Historical assessment
+
+The remainder of this document is the original analysis, retained for the per-fluid causes.
 
 ## 1. Inventory
 

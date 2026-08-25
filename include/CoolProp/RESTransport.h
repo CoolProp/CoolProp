@@ -58,7 +58,12 @@ struct ConductivityRESData
 /// Martinek 2025 uses REFPROP's native eta0 for pure fluids and the fitted polynomial with a
 /// Wilke rule for mixtures; Li 2024 uses the polynomial for pure fluids and REFPROP's native
 /// lambda0 for mixtures.  AUTO reproduces that, resolving to POLYNOMIAL on any backend that has
-/// no native dilute-gas model -- which keeps HEOS and the cubics numerically unchanged.
+/// backend that supplies no native dilute term to RES -- which keeps HEOS and the cubics
+/// numerically unchanged.  Those two are unavailable for different reasons, and neither is
+/// "the backend cannot do transport": the cubics have no transport model at all, which is one
+/// of the reasons RES exists, while HEOS does have correlations and RES deliberately does not
+/// consume them, since that would change existing RES results and has to be a separate,
+/// measured change rather than a side effect of this enum.
 enum RESDiluteSource
 {
     RES_DILUTE_AUTO = 0,

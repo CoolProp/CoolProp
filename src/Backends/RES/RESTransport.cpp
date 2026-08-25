@@ -31,6 +31,19 @@ static const double vis_pow[3]  = {1.8, 2.4, 2.8};
 static const double tc_pow[4]   = {1.0, 1.5, 2.0, 2.5};
 }  // namespace
 
+/// s_plus = -s_res/R is the model's independent variable, and every term raises it to a FRACTIONAL
+/// power, so a non-positive or non-finite value yields NaN rather than an error -- which then
+/// leaves the routine as a plausible-looking transport value.  Backends do produce such states:
+/// the Peng-Robinson backend returns a NaN residual entropy for hydrogen forced onto its liquid
+/// root at 150 K and 112 MPa.  Refuse it here rather than let a NaN escape to the caller.
+static void check_s_plus(double s_plus, const char* prop) {
+    if (!ValidNumber(s_plus) || s_plus <= 0) {
+        throw ValueError(format("RES %s: the residual entropy is not usable at this state "
+                                "(s+ = -s_res/R = %g); RES requires s+ > 0.",
+                                prop, s_plus));
+    }
+}
+
 /// Decide where the dilute-gas term comes from, and fetch it when the answer is "the backend".
 /// Returns true and sets `value` (already the MIXTURE value) when the backend's own transport
 /// model supplied it; returns false when the caller should use the fitted polynomial, plus the
@@ -54,8 +67,8 @@ static bool dilute_from_backend(AbstractState& HEOS, parameters key, RESDiluteSo
         return true;
     }
     if (src == RES_DILUTE_BACKEND_NATIVE) {
-        throw ValueError(format("RES: the dilute-gas term for %s was set to RES_DILUTE_BACKEND_NATIVE, but %s has no "
-                                "native transport model available for this fluid.",
+        throw ValueError(format("RES: the dilute-gas term for %s was set to RES_DILUTE_BACKEND_NATIVE, but %s does "
+                                "not supply a native transport model to RES for this fluid.",
                                 (key == iviscosity) ? "viscosity" : "conductivity", HEOS.backend_name().c_str()));
     }
     return false;
@@ -90,6 +103,7 @@ CoolPropDbl RESTransport::viscosity(AbstractState& HEOS) {
     const double s_res  = HEOS.smolar_residual();
     const double s_plus = -s_res / R;
     const double rhoN   = rho / M_mix * RES_N_A;  // number density [m^-3]
+    check_s_plus(s_plus, "viscosity");
 
     // Guard: alpha-function consistency
     for (std::size_t i = 0; i < N; ++i) {
@@ -166,6 +180,7 @@ CoolPropDbl RESTransport::conductivity(AbstractState& HEOS) {
     const double s_res  = HEOS.smolar_residual();
     const double s_plus = -s_res / R;
     const double rhoN   = rho / M_mix * RES_N_A;
+    check_s_plus(s_plus, "conductivity");
 
     for (std::size_t i = 0; i < N; ++i) {
         if (!HEOS.RES_data().comps[i].conductivity.provided)
@@ -334,7 +349,7 @@ CoolPropDbl RESTransport::conductivity(AbstractState& HEOS) {
                     have_native = HEOS.transport_native(iviscosity, HEOS.rhomolar(), vis_native) && vis_native > 0;
                     if (!have_native && evs == RES_ENH_VIS_BACKEND_NATIVE) {
                         throw ValueError(format("RES: the critical-enhancement viscosity was set to RES_ENH_VIS_BACKEND_NATIVE, "
-                                                "but %s has no native viscosity model available for this fluid.",
+                                                "but %s does not supply a native viscosity model to RES for this fluid.",
                                                 HEOS.backend_name().c_str()));
                     }
                 }

@@ -769,8 +769,10 @@ class AbstractState
     /// A transport property from the backend's OWN transport model, at the current temperature
     /// and composition but an ARBITRARY molar density.  `key` is iviscosity or iconductivity;
     /// `rhomolar_eval` of 0 gives the dilute-gas limit.  Returns false -- the default -- when the
-    /// backend has no native transport model, or none for this fluid, in which case the RES
-    /// routines fall back to their own model.
+    /// backend supplies no native value to RES, or none for this fluid, in which case the RES
+    /// routines fall back to their own model.  False does not mean one single thing: the cubics
+    /// genuinely have no transport model (a reason RES exists at all), whereas HEOS has
+    /// correlations and deliberately does not offer them here -- see the note below.
     ///
     /// RES needs this at two densities: zero, for the dilute-gas term (see RESDiluteSource), and
     /// the current density, for the viscosity the critical enhancement consumes (see
