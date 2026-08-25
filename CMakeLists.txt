@@ -74,7 +74,6 @@ endif()
 
 # Dependency management via CPM.cmake (replaces git submodules).
 # Set CPM_SOURCE_CACHE (e.g. ~/.cache/CPM) to share downloads across worktrees.
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
 
 #######################################
@@ -130,7 +129,7 @@ option(
 
 option(
   COOLPROP_MSVC_DEBUG
-  "Link the debug version of Microsoft Standard library to the debug builds."
+  "Deprecated compatibility option; Debug builds always use the debug MSVC runtime."
   ON)
 
 option(COOLPROP_NO_EXAMPLES
@@ -968,7 +967,8 @@ if(COOLPROP_WINDOWS_PACKAGE)
     PRE_BUILD
     COMMAND
       ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "-AWin32"
-      "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
+      "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_STATIC_LIBRARY=OFF"
+      "-DCOOLPROP_SHARED_LIBRARY=ON"
       "-DCOOLPROP_STDCALL_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config"
             "Release"
@@ -984,7 +984,8 @@ if(COOLPROP_WINDOWS_PACKAGE)
     PRE_BUILD
     COMMAND
       ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "-AWin32"
-      "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
+      "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_STATIC_LIBRARY=OFF"
+      "-DCOOLPROP_SHARED_LIBRARY=ON"
       "-DCOOLPROP_CDECL_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config"
             "Release"
@@ -1000,7 +1001,8 @@ if(COOLPROP_WINDOWS_PACKAGE)
     TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES
     PRE_BUILD
     COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}"
-            "-Ax64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
+            "-Ax64" "${CMAKE_CURRENT_SOURCE_DIR}"
+            "-DCOOLPROP_STATIC_LIBRARY=OFF" "-DCOOLPROP_SHARED_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config"
             "Release"
     COMMAND
@@ -1016,7 +1018,8 @@ if(COOLPROP_WINDOWS_PACKAGE)
     TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES
     PRE_BUILD
     COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}"
-            "-Aarm64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
+            "-Aarm64" "${CMAKE_CURRENT_SOURCE_DIR}"
+            "-DCOOLPROP_STATIC_LIBRARY=OFF" "-DCOOLPROP_SHARED_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config"
             "Release"
     COMMAND
@@ -1286,9 +1289,7 @@ if(COOLPROP_CSHARP_MODULE)
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
     if(MSVC)
-      modify_msvc_flags("/MT")
-
-      # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
+      _coolprop_set_msvc_runtime(CoolProp SHARED)
     endif()
   endif()
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -1532,9 +1533,7 @@ if(COOLPROP_JAVA_MODULE)
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
     if(MSVC)
-      modify_msvc_flags("/MT")
-
-      # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
+      _coolprop_set_msvc_runtime(CoolProp SHARED)
     endif()
   endif()
 
@@ -1884,12 +1883,6 @@ if(COOLPROP_JAVASCRIPT_MODULE)
 endif()
 
 if(COOLPROP_MATHEMATICA_MODULE)
-
-  if(MSVC)
-    modify_msvc_flags("/MT")
-    # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
-  endif()
-
   set(CMAKE_MODULE_PATH
       ${CMAKE_MODULE_PATH}
       "${FindMathematica_SOURCE_DIR}/CMake/Mathematica/"
@@ -1929,6 +1922,9 @@ if(COOLPROP_MATHEMATICA_MODULE)
   add_library(CoolProp SHARED ${MATHEMATICA_SOURCES})
   add_dependencies(CoolProp generate_headers)
   coolprop_hide_json_symbols(CoolProp)
+  if(MSVC)
+    _coolprop_set_msvc_runtime(CoolProp SHARED)
+  endif()
   if(MINGW AND DEFINED ENV{MSYSTEM})
     # Add postfix for debugging (same as MSVC)
     set_property(TARGET ${app_name} PROPERTY PREFIX "")
