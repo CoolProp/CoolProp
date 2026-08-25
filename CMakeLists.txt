@@ -335,7 +335,10 @@ set(COOLPROP_ENABLED_BACKENDS
     Incompressible
     Tabular
     PCSAFT
-    GERG)
+    GERG
+    # Not an equation of state: the backend-neutral Residual Entropy Scaling transport model,
+    # usable from any backend that carries RES parameters (Helmholtz, cubics, REFPROP).
+    RES)
 
 # Get everything in the src/ directory (always), but not recursive
 file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")

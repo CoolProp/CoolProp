@@ -17,6 +17,7 @@
 #    include "CoolProp/CoolProp.h"
 #    include "Backends/Cubics/CubicBackend.h"
 #    include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#    include "Backends/REFPROP/REFPROPMixtureBackend.h"
 
 #    include <cmath>
 #    include <fstream>
@@ -412,6 +413,55 @@ TEST_CASE("RES toggles and setters invalidate the memoized transport values", "[
     }
 }
 
+// --------------------------- REFPROP Stage-0 groundwork ----------------------
+// These validate the two additions RES-on-REFPROP is built on, before any RES code depends on
+// them.  Both are purely additive to the REFPROP backend.
+
+TEST_CASE("REFPROP get_fluid_constant returns per-component constants", "[RES][REFPROP][transport]") {
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    AS->update(PT_INPUTS, 1.0e6, 300.0);
+    // molar_mass() is the mixture value; for a pure fluid it must equal the component constant.
+    CHECK(AS->get_fluid_constant(0, imolar_mass) == Catch::Approx(AS->molar_mass()).epsilon(1e-10));
+    CHECK(AS->get_fluid_constant(0, iT_critical) == Catch::Approx(AS->T_critical()).epsilon(1e-6));
+    CHECK(AS->get_fluid_constant(0, iP_critical) == Catch::Approx(AS->p_critical()).epsilon(1e-6));
+    CHECK_THROWS(AS->get_fluid_constant(5, imolar_mass));  // out of range
+}
+
+TEST_CASE("REFPROP off-state alphar evaluation does not mutate the state", "[RES][REFPROP][transport]") {
+    // The premise of the RES port: PHIXdll is a pure function of (itau, idelta, tau, delta, x),
+    // so alpha^r can be evaluated at a reference temperature without disturbing the cached state.
+    // If this ever regresses, the critical-enhancement reference term silently corrupts the state.
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    AS->update(PT_INPUTS, 4.0e6, 360.0);
+
+    const double d1_before = AS->dalphar_dDelta();
+    const double d2_before = AS->d2alphar_dDelta2();
+    const double p_before = AS->p();
+    const double sres_before = AS->smolar_residual();
+    const double tau_before = AS->tau();
+    const double delta_before = AS->delta();
+
+    // Evaluate well away from the current temperature, then re-read everything.
+    auto* rp = dynamic_cast<REFPROPMixtureBackend*>(AS.get());
+    REQUIRE(rp != nullptr);
+    const double tau_far = tau_before * 0.5;
+    (void)rp->call_phixdll(0, 1, tau_far, delta_before);
+    (void)rp->call_phixdll(0, 2, tau_far, delta_before);
+
+    CHECK(AS->dalphar_dDelta() == d1_before);
+    CHECK(AS->d2alphar_dDelta2() == d2_before);
+    CHECK(AS->p() == p_before);
+    CHECK(AS->smolar_residual() == sres_before);
+    CHECK(AS->tau() == tau_before);
+    CHECK(AS->delta() == delta_before);
+
+    // At the CURRENT (tau, delta) the new overload must agree with the state-coupled one.
+    CHECK(rp->call_phixdll(0, 1, tau_before, delta_before) == Catch::Approx(d1_before).epsilon(1e-12));
+    CHECK(rp->call_phixdll(0, 2, tau_before, delta_before) == Catch::Approx(d2_before).epsilon(1e-12));
+}
+
 // ------------------------------- critical-enhancement guards -----------------
 // These three mirror Olchowy_critical_enhancement() in the Li 2024 supporting-information
 // code (code_SI.py); each one failed before those guards were ported.
@@ -442,10 +492,10 @@ TEST_CASE("RES conductivity does not throw a viscosity error when only viscosity
     auto AS = make_heos("R41");
     auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
     REQUIRE(heos != nullptr);
-    const auto& comps = heos->get_components();
+    const auto& comps = heos->RES_data().comps;
     // Guard the premise: if R41 ever regains viscosity RES params this test stops proving anything.
-    REQUIRE_FALSE(comps[0].transport.viscosity_res.provided);
-    REQUIRE(comps[0].transport.conductivity_res.provided);
+    REQUIRE_FALSE(comps[0].viscosity.provided);
+    REQUIRE(comps[0].conductivity.provided);
 
     AS->use_conductivity_RES(true);
     AS->update(PT_INPUTS, 6.0e6, 320.0);
@@ -470,7 +520,7 @@ TEST_CASE("RES critical enhancement is suppressed outside the near-critical regi
     auto without_crit = [](double p, double T) {
         auto AS = make_heos("CarbonDioxide");
         auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
-        heos->get_components()[0].transport.conductivity_res.crit_provided = false;
+        heos->RES_data_mutable().comps[0].conductivity.crit_provided = false;
         AS->use_conductivity_RES(true);
         AS->update(PT_INPUTS, p, T);
         return AS->conductivity();
@@ -536,8 +586,8 @@ TEST_CASE("HEOS pure fluid explicit RES opt-in without params throws an informat
     auto AS = make_heos("CarbonDioxide");
     auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
     REQUIRE(heos != nullptr);
-    heos->get_components()[0].transport.viscosity_res.provided = false;
-    heos->get_components()[0].transport.conductivity_res.provided = false;
+    heos->RES_data_mutable().comps[0].viscosity.provided = false;
+    heos->RES_data_mutable().comps[0].conductivity.provided = false;
 
     AS->use_viscosity_RES(true);
     AS->use_conductivity_RES(true);
@@ -556,8 +606,8 @@ TEST_CASE("HEOS mixture explicit RES opt-in without params throws an informative
     AS->set_mole_fractions({0.5, 0.5});
     auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
     REQUIRE(heos != nullptr);
-    heos->get_components()[0].transport.viscosity_res.provided = false;
-    heos->get_components()[0].transport.conductivity_res.provided = false;
+    heos->RES_data_mutable().comps[0].viscosity.provided = false;
+    heos->RES_data_mutable().comps[0].conductivity.provided = false;
 
     AS->use_viscosity_RES(true);
     AS->use_conductivity_RES(true);
@@ -571,9 +621,9 @@ TEST_CASE("PR backend without RES params throws NotImplementedError", "[RES][tra
     auto AS = make_pr("CarbonDioxide");
     auto* cubic = dynamic_cast<AbstractCubicBackend*>(AS.get());
     REQUIRE(cubic != nullptr);
-    auto& comps = cubic->get_components();
-    comps[0].transport.viscosity_res.provided   = false;
-    comps[0].transport.conductivity_res.provided = false;
+    auto& comps = cubic->RES_data_mutable().comps;
+    comps[0].viscosity.provided   = false;
+    comps[0].conductivity.provided = false;
     AS->specify_phase(iphase_gas);
     AS->update(PT_INPUTS, 1e6, 300.0);
     CHECK_THROWS_AS(AS->viscosity(),    CoolProp::NotImplementedError);

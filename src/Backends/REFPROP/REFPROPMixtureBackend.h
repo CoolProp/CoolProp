@@ -65,6 +65,10 @@ class REFPROPMixtureBackend : public AbstractState
     /// Configure *this* as a shim linked to `host`'s already-loaded REFPROP fluids (no SETUPdll).
     void link_to_loaded_fluids(const REFPROPMixtureBackend& host);
 
+    /// Per-component constants from REFPROP's INFOdll.  Needed by the RES transport setters,
+    /// which resolve a component's molar mass through this hook.
+    const double get_fluid_constant(std::size_t i, parameters param) const override;
+
     /// dP/dT [Pa/K] along the pure-component saturation line via DPTSATKdll. kph: 1=liquid, 2=vapor.
     double dpdT_along_saturation_pure(int kph);
     /// Saturation pressure [Pa] at temperature T for the bubble (Q=0) / dew (Q=1) branch via SATTdll.
@@ -83,6 +87,16 @@ class REFPROPMixtureBackend : public AbstractState
 
     /// A function to actually do the initialization to allow it to be called in derived classes
     void construct(const std::vector<std::string>& fluid_names);
+
+    /// Evaluate a residual-Helmholtz derivative at an ARBITRARY (tau, delta), not the cached state.
+    ///
+    /// PHIXdll is a pure function of (itau, idelta, tau, delta, x) -- it calls REDX(x) internally
+    /// for the reducing parameters -- so this evaluates alpha^r off-state without mutating
+    /// anything.  The protected single-argument overload is state-coupled only because it reads
+    /// and normalises by the members _tau/_delta; here we normalise by the arguments instead.
+    /// Public because the RES critical-enhancement reference term needs an off-state evaluation,
+    /// and so that the off-state purity of PHIXdll is directly testable.
+    CoolPropDbl call_phixdll(int itau, int idelta, double tau, double delta);
 
     std::string backend_name() override {
         return get_backend_string(REFPROP_BACKEND_MIX);

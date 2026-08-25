@@ -275,13 +275,7 @@ class TransportRoutines
 
     static CoolPropDbl viscosity_rhosr(HelmholtzEOSMixtureBackend& HEOS);
 
-    /// Viscosity via residual entropy scaling (Martinek 2025 / Yang 2021).
-    /// Works for pure fluids and mixtures; uses RES params from components[i].transport.viscosity_res.
-    static CoolPropDbl viscosity_RES(HelmholtzEOSMixtureBackend& HEOS);
 
-    /// Thermal conductivity via residual entropy scaling (Li 2024 / Yang 2021).
-    /// Includes Olchowy-Sengers critical enhancement for pure fluids when crit_provided=true.
-    static CoolPropDbl conductivity_RES(HelmholtzEOSMixtureBackend& HEOS);
 
     static CoolPropDbl conductivity_ECS(HelmholtzEOSMixtureBackend& HEOS, HelmholtzEOSMixtureBackend& HEOS_Reference);
 

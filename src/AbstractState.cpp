@@ -792,6 +792,113 @@ double AbstractState::speed_sound() {
     if (!_speed_sound) _speed_sound = calc_speed_sound();
     return _speed_sound;
 }
+// --- Residual Entropy Scaling (RES) transport API ---------------------------------------------
+// Storage is AbstractState::_RES, seeded by the backend via set_RES_components().  An empty store
+// means "this backend does not support RES", which is how the previous throwing virtuals behaved
+// for every backend except HEOS and the cubics.
+
+void AbstractState::check_RES_component_index(std::size_t i, const char* fname) const {
+    if (_RES.comps.empty()) {
+        throw NotImplementedError(format("%s is not implemented for this backend", fname));
+    }
+    if (i >= _RES.comps.size()) {
+        throw ValueError(format("%s: component index %zu out of range (N=%zu).", fname, i, _RES.comps.size()));
+    }
+}
+
+void AbstractState::use_viscosity_RES(bool enable) {
+    if (_RES.comps.empty()) {
+        throw NotImplementedError("use_viscosity_RES is not implemented for this backend");
+    }
+    if (_RES.viscosity_enabled != enable) {
+        _RES.viscosity_enabled = enable;
+        // viscosity() memoizes into _viscosity, so without clearing it a toggle after a read
+        // would silently return the previous model's value. The conductivity cache is cleared
+        // too because the RES critical enhancement consumes the RES viscosity.
+        _viscosity.clear();
+        _conductivity.clear();
+    }
+}
+void AbstractState::use_conductivity_RES(bool enable) {
+    if (_RES.comps.empty()) {
+        throw NotImplementedError("use_conductivity_RES is not implemented for this backend");
+    }
+    if (_RES.conductivity_enabled != enable) {
+        _RES.conductivity_enabled = enable;
+        _conductivity.clear();
+    }
+}
+
+void AbstractState::set_viscosity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res,
+                                                 double xita) {
+    check_RES_component_index(i, "set_viscosity_RES_parameters");
+    ViscosityRESData& d = _RES.comps[i].viscosity;
+    d.n_dilute = n_dilute;
+    d.n_res = n_res;
+    d.xita = xita;
+    d.molar_mass = get_fluid_constant(i, imolar_mass);
+    d.n_params_match_alpha = true;
+    d.provided = true;
+    // Drop memoized transport values so the new parameters take effect immediately;
+    // conductivity too, since its critical enhancement consumes the RES viscosity.
+    _viscosity.clear();
+    _conductivity.clear();
+}
+
+void AbstractState::set_conductivity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res,
+                                                    double xita, double R_D, double gamma_uni, double Gamma, double phi0, double t_ref,
+                                                    double q_D) {
+    check_RES_component_index(i, "set_conductivity_RES_parameters");
+    ConductivityRESData& d = _RES.comps[i].conductivity;
+    d.n_dilute = n_dilute;
+    d.n_res = n_res;
+    d.xita = xita;
+    d.molar_mass = get_fluid_constant(i, imolar_mass);
+    d.R_D = R_D;
+    d.gamma_uni = gamma_uni;
+    d.Gamma = Gamma;
+    d.phi0 = phi0;
+    d.t_ref = t_ref;
+    d.q_D = q_D;
+    // An all-zero record means "not fitted", not "zero enhancement": treating it as valid would
+    // divide by t_ref and Gamma downstream and return NaN.
+    d.crit_provided = (t_ref > 0) && (Gamma > 0) && (phi0 > 0) && (q_D > 0);
+    d.n_params_match_alpha = true;
+    d.provided = true;
+    _conductivity.clear();
+}
+
+void AbstractState::set_viscosity_RES_residual_params(std::size_t i, const std::vector<double>& n_res, double xita) {
+    check_RES_component_index(i, "set_viscosity_RES_residual_params");
+    ViscosityRESData& d = _RES.comps[i].viscosity;
+    d.n_res = n_res;
+    d.xita = xita;
+    d.n_params_match_alpha = true;
+    _viscosity.clear();
+    _conductivity.clear();
+}
+
+void AbstractState::set_conductivity_RES_residual_params(std::size_t i, const std::vector<double>& n_res, double xita) {
+    check_RES_component_index(i, "set_conductivity_RES_residual_params");
+    ConductivityRESData& d = _RES.comps[i].conductivity;
+    d.n_res = n_res;
+    d.xita = xita;
+    d.n_params_match_alpha = true;
+    _conductivity.clear();
+}
+
+std::pair<std::vector<double>, double> AbstractState::get_viscosity_RES_residual_params(std::size_t i) {
+    check_RES_component_index(i, "get_viscosity_RES_residual_params");
+    const ViscosityRESData& d = _RES.comps[i].viscosity;
+    return {d.n_res, d.xita};
+}
+
+std::pair<std::vector<double>, double> AbstractState::get_conductivity_RES_residual_params(std::size_t i) {
+    check_RES_component_index(i, "get_conductivity_RES_residual_params");
+    const ConductivityRESData& d = _RES.comps[i].conductivity;
+    return {d.n_res, d.xita};
+}
+
 double AbstractState::viscosity() {
     if (!_viscosity) _viscosity = calc_viscosity();
     return _viscosity;

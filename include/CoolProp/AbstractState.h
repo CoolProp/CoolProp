@@ -12,6 +12,7 @@
 #include "CoolProp/Exceptions.h"
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/fluids/PhaseEnvelope.h"
+#include "CoolProp/RESTransport.h"
 #include <memory>
 using std::shared_ptr;
 
@@ -745,48 +746,80 @@ class AbstractState
         throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend");
     };
 
+   protected:
+    /// Live, per-instance RES transport parameters and flags.
+    ///
+    /// Backends seed this via set_RES_components(); the records in CoolPropFluid::transport are
+    /// the SHIPPED parameters, this is the mutable copy the setters act on and the transport
+    /// routines read.  Held here rather than on a concrete backend so that REFPROP -- which has
+    /// no CoolPropFluid at all -- can carry RES parameters too.
+    RESTransportStore _RES;
+
+    /// (d rho_mass / dp)_T in (kg/m^3)/Pa, evaluated at temperature T_eval and the state's CURRENT
+    /// density, WITHOUT mutating the state.
+    ///
+    /// Used only by the RES (Olchowy-Sengers) critical-enhancement reference term, which needs the
+    /// compressibility at a fixed reference temperature t_ref along the current isochore.  It is a
+    /// narrow, single-purpose hook rather than a general off-state alpha^r evaluator because the
+    /// general form would need a composition argument that some backends cannot honour.
+    virtual CoolPropDbl calc_drhomass_dp_constT_at(double /*T_eval*/) {
+        throw NotImplementedError("calc_drhomass_dp_constT_at is not implemented for this backend");
+    }
+
+    /// Seed the RES store.  Clears any memoized transport values, since the parameters change.
+    void set_RES_components(std::vector<RESComponentData> comps) {
+        _RES.comps = std::move(comps);
+        _viscosity.clear();
+        _conductivity.clear();
+    }
+    /// Throw a uniform, informative error when a RES component index is out of range.
+    void check_RES_component_index(std::size_t i, const char* fname) const;
+
    public:
     // --- Residual Entropy Scaling (RES) transport API ---
-    /// Enable or disable the RES viscosity model for mixture calculations.
-    virtual void use_viscosity_RES(bool /*enable*/) {
-        throw NotImplementedError("use_viscosity_RES is not implemented for this backend");
-    };
-    /// Enable or disable the RES thermal conductivity model for mixture calculations.
-    virtual void use_conductivity_RES(bool /*enable*/) {
-        throw NotImplementedError("use_conductivity_RES is not implemented for this backend");
-    };
+    //
+    // These are concrete rather than virtual: the storage lives on AbstractState, so the
+    // bookkeeping (bounds checks, cache invalidation, "not supported here" errors) is identical
+    // for every backend.  A backend that never calls set_RES_components() has an empty store and
+    // every one of these throws NotImplementedError, preserving the previous behaviour for
+    // IF97 / Incompressible / Tabular / SBTL / PCSAFT.
+
+    /// Enable or disable the RES viscosity model.
+    void use_viscosity_RES(bool enable);
+    /// Enable or disable the RES thermal conductivity model.
+    void use_conductivity_RES(bool enable);
     /// Set full RES viscosity parameters for component i (dilute gas polynomial + residual).
-    virtual void set_viscosity_RES_parameters(std::size_t /*i*/, const std::vector<double>& /*n_dilute*/,
-                                              const std::vector<double>& /*n_res*/, double /*xita*/) {
-        throw NotImplementedError("set_viscosity_RES_parameters is not implemented for this backend");
-    };
+    void set_viscosity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res, double xita);
     /// Set full RES conductivity parameters for component i including critical-enhancement terms.
-    virtual void set_conductivity_RES_parameters(std::size_t /*i*/, const std::vector<double>& /*n_dilute*/,
-                                                 const std::vector<double>& /*n_res*/, double /*xita*/,
-                                                 double /*R_D*/, double /*gamma_uni*/, double /*Gamma*/,
-                                                 double /*phi0*/, double /*t_ref*/, double /*q_D*/) {
-        throw NotImplementedError("set_conductivity_RES_parameters is not implemented for this backend");
-    };
+    void set_conductivity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res, double xita,
+                                         double R_D, double gamma_uni, double Gamma, double phi0, double t_ref, double q_D);
     /// Update only the EOS-specific residual n-coefficients and xita for viscosity.
     /// Call this after changing the alpha function (Twu, custom) with newly fitted values.
     /// Resets the alpha-mismatch guard for component i.
-    virtual void set_viscosity_RES_residual_params(std::size_t /*i*/,
-                                                   const std::vector<double>& /*n_res*/, double /*xita*/) {
-        throw NotImplementedError("set_viscosity_RES_residual_params is not implemented for this backend");
-    };
+    void set_viscosity_RES_residual_params(std::size_t i, const std::vector<double>& n_res, double xita);
     /// Update only the EOS-specific residual n-coefficients and xita for conductivity.
-    virtual void set_conductivity_RES_residual_params(std::size_t /*i*/,
-                                                      const std::vector<double>& /*n_res*/, double /*xita*/) {
-        throw NotImplementedError("set_conductivity_RES_residual_params is not implemented for this backend");
-    };
+    void set_conductivity_RES_residual_params(std::size_t i, const std::vector<double>& n_res, double xita);
     /// Return the current residual n-coefficients and xita for viscosity of component i.
-    virtual std::pair<std::vector<double>, double> get_viscosity_RES_residual_params(std::size_t /*i*/) {
-        throw NotImplementedError("get_viscosity_RES_residual_params is not implemented for this backend");
-    };
+    std::pair<std::vector<double>, double> get_viscosity_RES_residual_params(std::size_t i);
     /// Return the current residual n-coefficients and xita for conductivity of component i.
-    virtual std::pair<std::vector<double>, double> get_conductivity_RES_residual_params(std::size_t /*i*/) {
-        throw NotImplementedError("get_conductivity_RES_residual_params is not implemented for this backend");
-    };
+    std::pair<std::vector<double>, double> get_conductivity_RES_residual_params(std::size_t i);
+    /// (d rho_mass / dp)_T at temperature T_eval and the current density, without mutating state.
+    /// Public wrapper over the protected calc_ hook, following the viscosity()/calc_viscosity()
+    /// pattern, so the backend-neutral RES routines can reach it.
+    CoolPropDbl drhomass_dp_constT_at(double T_eval) {
+        return calc_drhomass_dp_constT_at(T_eval);
+    }
+    /// Read-only access to the RES store, for the transport routines and for tests.
+    const RESTransportStore& RES_data() const {
+        return _RES;
+    }
+    /// Mutable access to the RES store.  Advanced/testing use: the supported way to change
+    /// parameters is the set_*_RES_* methods above, which also invalidate the cached transport
+    /// values -- this does not.  Exposed because tests need to simulate absent parameters, and
+    /// because it is the direct analogue of the already-public HEOS get_components().
+    RESTransportStore& RES_data_mutable() {
+        return _RES;
+    }
     virtual std::vector<CriticalState> calc_all_critical_points() {
         throw NotImplementedError("calc_all_critical_points is not implemented for this backend");
     };

@@ -1224,6 +1224,40 @@ const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions() {
     return mass_fractions;
 }
 
+const double REFPROPMixtureBackend::get_fluid_constant(std::size_t i, parameters param) const {
+    if (i >= Ncomp) {
+        throw ValueError(format("get_fluid_constant: component index %zu out of range (Ncomp=%zu).", i, Ncomp));
+    }
+    // check_loaded_fluid() and the INFOdll call are logically const -- they read REFPROP's global
+    // fluid state -- but neither is marked const, hence the cast (same pattern as the DPDDdll calls).
+    REFPROPMixtureBackend& self = const_cast<REFPROPMixtureBackend&>(*this);
+    self.check_loaded_fluid();
+
+    double wmm = NAN, ttrp = NAN, tnbpt = NAN, tc = NAN, pc = NAN, Dc = NAN, Zc = NAN, acf = NAN, dip = NAN, Rgas = NAN;
+    int icomp = static_cast<int>(i) + 1;  // FORTRAN is 1-based
+    INFOdll(&icomp, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
+
+    switch (param) {
+        case imolar_mass:
+            return wmm / 1000.0;  // g/mol -> kg/mol
+        case iT_critical:
+            return tc;
+        case iP_critical:
+            return pc * 1000.0;  // kPa -> Pa
+        case irhomolar_critical:
+            return Dc * 1000.0;  // mol/L -> mol/m^3
+        case iacentric_factor:
+            return acf;
+        case iT_triple:
+            return ttrp;
+        case igas_constant:
+            return Rgas;
+        default:
+            throw ValueError(
+              format("REFPROP backend: I don't know what to do with this fluid constant: %s", get_parameter_information(param, "short").c_str()));
+    }
+}
+
 CoolPropDbl REFPROPMixtureBackend::calc_PIP() {
     // Calculate the PIP factor of Venkatharathnam and Oellrich, "Identification of the phase of a fluid using
     // partial derivatives of pressure, volume,and temperature without reference to saturation properties:
@@ -2302,6 +2336,16 @@ CoolPropDbl REFPROPMixtureBackend::call_phixdll(int itau, int idel) {
     }
     PHIXdll(&itau, &idel, &tau, &delta, &(mole_fractions[0]), &val);
     return static_cast<CoolPropDbl>(val) / pow(static_cast<CoolPropDbl>(_delta), idel) / pow(static_cast<CoolPropDbl>(_tau), itau);
+}
+CoolPropDbl REFPROPMixtureBackend::call_phixdll(int itau, int idel, double tau, double delta) {
+    this->check_loaded_fluid();
+    double val = 0, tau_arg = tau, delta_arg = delta;
+    if (PHIXdll == nullptr) {
+        throw ValueError("PHIXdll function is not available in your version of REFPROP. Please upgrade");
+    }
+    PHIXdll(&itau, &idel, &tau_arg, &delta_arg, &(mole_fractions[0]), &val);
+    // Normalise by the ARGUMENTS, not the cached members -- that is the whole point of this overload.
+    return static_cast<CoolPropDbl>(val) / pow(static_cast<CoolPropDbl>(delta), idel) / pow(static_cast<CoolPropDbl>(tau), itau);
 }
 CoolPropDbl REFPROPMixtureBackend::call_phi0dll(int itau, int idel) {
     this->check_loaded_fluid();

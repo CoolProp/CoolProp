@@ -7,6 +7,7 @@
 #include "Backends/Helmholtz/MixtureDerivatives.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/Helmholtz/TransportRoutines.h"
+#include "Backends/RES/RESTransport.h"
 #include <Eigen/Dense>
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
@@ -45,6 +46,16 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
             _comps[i].aliases = components[i].aliases;  // needed for RES lookup by REFPROP name
             overlay_RES_transport_by_name(eos_key, _comps[i], components[i].molemass);
         }
+        // set_components() already seeded the RES store, but it ran BEFORE the overlay above,
+        // so at that point the transport records were still empty.  Re-seed from the now-populated
+        // records, otherwise the cubics would report "no RES parameters" for every fluid.
+        std::vector<RESComponentData> res_comps(_comps.size());
+        for (std::size_t i = 0; i < _comps.size(); ++i) {
+            res_comps[i].name = _comps[i].name;
+            res_comps[i].viscosity = _comps[i].transport.viscosity_res;
+            res_comps[i].conductivity = _comps[i].transport.conductivity_res;
+        }
+        set_RES_components(std::move(res_comps));
     }
 
     // Top-level class can hold copies of the base saturation classes,
@@ -767,11 +778,16 @@ void CoolProp::AbstractCubicBackend::copy_internals(AbstractCubicBackend& donor)
     this->components = donor.components;
     this->set_alpha_from_components();
     this->set_alpha0_from_components();
+    // The donor's RES store must come across explicitly: this instance was constructed with an
+    // empty cubic component list, so setup() skipped the RES seeding block entirely and left the
+    // store empty.  Without this, SatL/SatV/TPD_state carry no RES parameters at all.
+    this->_RES = donor._RES;
     for (auto& state : linked_states) {
         auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->components = donor.components;
         ACB->set_alpha_from_components();
         ACB->set_alpha0_from_components();
+        ACB->_RES = donor._RES;
     }
 }
 
@@ -797,10 +813,9 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
     // Changing the alpha function invalidates n_res / xita, which were fitted for the default alpha.
-    std::vector<CoolPropFluid>& _comps = HelmholtzEOSMixtureBackend::get_components();
-    if (i < _comps.size()) {
-        _comps[i].transport.viscosity_res.n_params_match_alpha    = false;
-        _comps[i].transport.conductivity_res.n_params_match_alpha = false;
+    if (i < _RES.comps.size()) {
+        _RES.comps[i].viscosity.n_params_match_alpha    = false;
+        _RES.comps[i].conductivity.n_params_match_alpha = false;
     }
     for (auto& state : linked_states) {
         auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
@@ -853,10 +868,10 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_viscosity() {
     std::vector<CoolPropFluid>& _comps = HelmholtzEOSMixtureBackend::get_components();
     bool all_ok = !_comps.empty();
     for (std::size_t i = 0; i < _comps.size() && all_ok; ++i)
-        all_ok = _comps[i].transport.viscosity_res.provided;
+        all_ok = RES_data().comps[i].viscosity.provided;
     if (all_ok) {
-        viscosity_RES_enabled = true;
-        return TransportRoutines::viscosity_RES(*this);
+        _RES.viscosity_enabled = true;
+        return RESTransport::viscosity(*this);
     }
     throw NotImplementedError(format("Viscosity is not implemented for the %s backend and "
                                      "no RES parameters were found for the fluid(s). "
@@ -868,10 +883,10 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_conductivity() {
     std::vector<CoolPropFluid>& _comps = HelmholtzEOSMixtureBackend::get_components();
     bool all_ok = !_comps.empty();
     for (std::size_t i = 0; i < _comps.size() && all_ok; ++i)
-        all_ok = _comps[i].transport.conductivity_res.provided;
+        all_ok = RES_data().comps[i].conductivity.provided;
     if (all_ok) {
-        conductivity_RES_enabled = true;
-        return TransportRoutines::conductivity_RES(*this);
+        _RES.conductivity_enabled = true;
+        return RESTransport::conductivity(*this);
     }
     throw NotImplementedError(format("Thermal conductivity is not implemented for the %s backend and "
                                      "no RES parameters were found for the fluid(s). "
