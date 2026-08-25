@@ -45,10 +45,13 @@ find_package(CoolProp 8 CONFIG REQUIRED)
 target_link_libraries(my_app PRIVATE CoolProp::CoolProp)
 ```
 
-When both variants are installed, `CoolProp::Static` and `CoolProp::Shared`
-select one explicitly. `CoolProp::CoolProp` selects the value of
-`COOLPROP_DEFAULT_LIBRARY` (`SHARED` by default). Separate consumer targets may
-select different variants, but one final binary must not link both variants.
+When CoolProp is configured with both variants, the producer-side
+`COOLPROP_DEFAULT_LIBRARY` cache setting chooses which variant is exported
+through `CoolProp::CoolProp` (`SHARED` by default). This choice is recorded in
+the installed package and cannot be changed by a package consumer. Consumers
+that require explicit linkage should use `CoolProp::Static` or
+`CoolProp::Shared`. Separate consumer targets may select different variants,
+but one final binary must not link both variants.
 On Windows, the portable shared-library interface is the C API from
 `CoolProp/CoolPropLib.h`; use the static target for the complete C++ API.
 
@@ -59,6 +62,10 @@ set(COOLPROP_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
 add_subdirectory(externals/CoolProp)
 target_link_libraries(my_app PRIVATE CoolProp::CoolProp)
 ```
+
+Nested builds add no CoolProp install rules by default. A parent project that
+intentionally packages CoolProp can enable `COOLPROP_INSTALL_CMAKE_PACKAGE`
+and/or `COOLPROP_INSTALL_LEGACY_LAYOUT` before calling `add_subdirectory`.
 
 ## Sponsors
 

@@ -76,10 +76,17 @@ jobs:
           shared) shared=ON ;;
           both) static=ON; shared=ON ;;
         esac
+        extra_args=()
+        if [ "${{ runner.os }}" = Windows ] && [ "${{ matrix.linkage }}" = both ]; then
+          # Regression gate: Debug must still select the debug CRT even when
+          # the deprecated compatibility switch is explicitly disabled.
+          extra_args+=("-DCOOLPROP_MSVC_DEBUG:BOOL=OFF")
+        fi
         cmake -B build -S . \
           -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} \
           -DCOOLPROP_STATIC_LIBRARY:BOOL="$static" \
-          -DCOOLPROP_SHARED_LIBRARY:BOOL="$shared"
+          -DCOOLPROP_SHARED_LIBRARY:BOOL="$shared" \
+          "${extra_args[@]}"
 
     - name: Build
       shell: bash
@@ -134,13 +141,16 @@ jobs:
         import sys
 
         package_dir = Path(sys.argv[1]) / "lib" / "cmake" / "CoolProp"
+        license_dir = Path(sys.argv[1]) / "share" / "licenses" / "CoolProp"
         required_files = {
             package_dir / "CoolPropConfig.cmake",
             package_dir / "CoolPropTargets.cmake",
+            license_dir / "Eigen" / "COPYING.MPL2",
+            license_dir / "fmt" / "LICENSE",
         }
         missing = sorted(path for path in required_files if not path.is_file())
         if missing:
-            raise SystemExit(f"CMake package files are missing: {missing}")
+            raise SystemExit(f"Required installed files are missing: {missing}")
 
         cmake_files = list(package_dir.glob("*.cmake"))
         if not cmake_files:
@@ -157,14 +167,27 @@ jobs:
                 raise SystemExit(f"{cmake_file} contains non-relocatable paths: {leaked}")
         PY
 
+        if [ "${{ runner.os }}" = Linux ] && [ "${{ matrix.linkage }}" != static ]; then
+          cmake_version="${COOLPROP_VERSION/-/}"
+          test -f "$prefix_b/lib/libCoolProp.so.$cmake_version"
+        fi
+
         expected=""
+        disable_threads=FALSE
         case "${{ matrix.linkage }}" in
           static) expected=STATIC ;;
-          shared) expected=SHARED ;;
+          shared)
+            expected=SHARED
+            # A shared-only imported target has no Threads link interface.
+            # Prove that its config does not impose that static-only consumer
+            # dependency.
+            disable_threads=TRUE
+            ;;
         esac
         cmake -S dev/ci/cmake-consumer -B consumer-build \
           -DCMAKE_PREFIX_PATH="$prefix_b" \
-          -DCOOLPROP_EXPECTED_LINKAGE="$expected"
+          -DCOOLPROP_EXPECTED_LINKAGE="$expected" \
+          -DCMAKE_DISABLE_FIND_PACKAGE_Threads:BOOL="$disable_threads"
         cmake --build consumer-build --config "${{ env.BUILD_TYPE }}"
         ctest --test-dir consumer-build -C "${{ env.BUILD_TYPE }}" --output-on-failure
 
@@ -172,10 +195,39 @@ jobs:
           cmake -S dev/ci/cmake-consumer -B c-consumer-build \
             -DCMAKE_PREFIX_PATH="$prefix_b" \
             -DCOOLPROP_EXPECTED_LINKAGE=SHARED \
-            -DCOOLPROP_C_ONLY=ON
+            -DCOOLPROP_C_ONLY=ON \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Threads:BOOL="$disable_threads"
           cmake --build c-consumer-build --config "${{ env.BUILD_TYPE }}"
           ctest --test-dir c-consumer-build -C "${{ env.BUILD_TYPE }}" --output-on-failure
         fi
+
+    - name: Build Debug MSVC runtimes and installed consumers
+      if: runner.os == 'Windows' && matrix.linkage == 'both'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        python - <<'PY'
+        from pathlib import Path
+
+        expected = {
+            "CoolProp_static.vcxproj": "MultiThreadedDebugDLL",
+            "CoolProp_shared.vcxproj": "MultiThreadedDebug",
+        }
+        for project, runtime in expected.items():
+            content = (Path("build") / project).read_text(encoding="utf-8-sig")
+            setting = f"<RuntimeLibrary>{runtime}</RuntimeLibrary>"
+            if setting not in content:
+                raise SystemExit(f"{project} does not contain {setting}")
+        PY
+
+        cmake --build build --config Debug --parallel 1
+        prefix="$RUNNER_TEMP/coolprop-debug-both"
+        cmake -E remove_directory "$prefix"
+        cmake --install build --config Debug --prefix "$prefix"
+        cmake -S dev/ci/cmake-consumer -B consumer-debug \
+          -DCMAKE_PREFIX_PATH="$prefix"
+        cmake --build consumer-debug --config Debug --parallel 1
 
     - name: Test add_subdirectory consumer
       if: runner.os == 'Linux' && matrix.linkage == 'static'

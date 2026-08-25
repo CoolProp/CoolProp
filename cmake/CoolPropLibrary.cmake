@@ -65,12 +65,13 @@ function(_coolprop_set_msvc_runtime target linkage)
     set(_runtime_flag "/MT")
   endif()
 
-  if(COOLPROP_MSVC_DEBUG)
-    if(_runtime STREQUAL "MultiThreadedDLL")
-      set(_runtime "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-    else()
-      set(_runtime "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    endif()
+  # Debug configurations must always use the matching debug CRT.  Keeping a
+  # release CRT in a d-postfixed library causes _ITERATOR_DEBUG_LEVEL and heap
+  # ownership mismatches in otherwise ordinary Debug consumers.
+  if(_runtime STREQUAL "MultiThreadedDLL")
+    set(_runtime "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+  else()
+    set(_runtime "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   endif()
 
   set_property(TARGET "${target}" PROPERTY MSVC_RUNTIME_LIBRARY "${_runtime}")
@@ -81,14 +82,10 @@ function(_coolprop_set_msvc_runtime target linkage)
   # target-local option so add_subdirectory consumers still get the requested
   # runtime without rewriting the parent's global CMAKE_CXX_FLAGS_* values.
   if(_coolprop_needs_msvc_runtime_fallback)
-    if(COOLPROP_MSVC_DEBUG)
-      target_compile_options(
-        "${target}"
-        PRIVATE "$<$<CONFIG:Debug>:${_runtime_flag}d>"
-                "$<$<NOT:$<CONFIG:Debug>>:${_runtime_flag}>")
-    else()
-      target_compile_options("${target}" PRIVATE "${_runtime_flag}")
-    endif()
+    target_compile_options(
+      "${target}"
+      PRIVATE "$<$<CONFIG:Debug>:${_runtime_flag}d>"
+              "$<$<NOT:$<CONFIG:Debug>>:${_runtime_flag}>")
   endif()
 endfunction()
 
@@ -162,7 +159,7 @@ function(_coolprop_configure_core_target target linkage)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
       set_target_properties(
         "${target}"
-        PROPERTIES VERSION "${COOLPROP_VERSION_NUMERIC}"
+        PROPERTIES VERSION "${COOLPROP_VERSION}"
                    SOVERSION "${COOLPROP_VERSION_MAJOR}")
     endif()
   endif()
@@ -223,11 +220,9 @@ function(_coolprop_install_standard_headers)
           DESTINATION "${_third_party_dir}/fmt")
 
   install(FILES "${Eigen_SOURCE_DIR}/COPYING.MPL2"
-          DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/CoolProp/Eigen"
-          OPTIONAL)
+          DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/CoolProp/Eigen")
   install(FILES "${fmt_SOURCE_DIR}/LICENSE"
-          DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/CoolProp/fmt"
-          OPTIONAL)
+          DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/CoolProp/fmt")
 endfunction()
 
 function(coolprop_add_library_targets)
