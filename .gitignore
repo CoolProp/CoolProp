@@ -24,6 +24,8 @@ Web/fluid_properties/fluids/molecule_geometry_status.md
 /dev/figs
 /dev/builder
 
+/dev/RES_comparison
+
 /wrappers/Python/build
 /wrappers/Python/cmake_build
 /wrappers/Python/CoolProp.egg-info

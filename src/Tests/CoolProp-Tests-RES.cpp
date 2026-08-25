@@ -18,9 +18,13 @@
 #    include "Backends/Cubics/CubicBackend.h"
 #    include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #    include "Backends/REFPROP/REFPROPMixtureBackend.h"
+#    include "CoolProp/Configuration.h"
+#    include "CoolProp/Exceptions.h"
 
+#    include <algorithm>
 #    include <cmath>
 #    include <fstream>
+#    include <iostream>
 #    include <memory>
 #    include <sstream>
 #    include <string>
@@ -460,6 +464,432 @@ TEST_CASE("REFPROP off-state alphar evaluation does not mutate the state", "[RES
     // At the CURRENT (tau, delta) the new overload must agree with the state-coupled one.
     CHECK(rp->call_phixdll(0, 1, tau_before, delta_before) == Catch::Approx(d1_before).epsilon(1e-12));
     CHECK(rp->call_phixdll(0, 2, tau_before, delta_before) == Catch::Approx(d2_before).epsilon(1e-12));
+}
+
+// --------------------------- REFPROP Stage-3: RES on the REFPROP backend -----
+// REFPROP is the backend where the published coefficients are exactly valid -- they were
+// regressed against REFPROP's reference Helmholtz EOS.  On HEOS they are an approximation,
+// which is what the HEOS_*_EXCLUDE lists in dev/convert_RES_csv_to_json.py are about.
+
+TEST_CASE("REFPROP RES is a distinct model from TRNPRPdll", "[RES][REFPROP][transport]") {
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    AS->update(PT_INPUTS, 5.0e6, 320.0);
+    const double eta_native = AS->viscosity();
+    const double tc_native = AS->conductivity();
+    REQUIRE(std::isfinite(eta_native));
+    REQUIRE(std::isfinite(tc_native));
+
+    AS->use_viscosity_RES(true);
+    AS->use_conductivity_RES(true);
+    const double eta_res = AS->viscosity();
+    const double tc_res = AS->conductivity();
+    REQUIRE(std::isfinite(eta_res));
+    REQUIRE(std::isfinite(tc_res));
+    CHECK(eta_res > 0.0);
+    CHECK(tc_res > 0.0);
+    // A bit-equal result would mean the RES branch never ran and the native value leaked
+    // through; a wildly different one would mean it ran on the wrong units or parameters.
+    CHECK(eta_res != eta_native);
+    CHECK(tc_res != tc_native);
+    CHECK(eta_res == Catch::Approx(eta_native).epsilon(0.25));
+    CHECK(tc_res == Catch::Approx(tc_native).epsilon(0.25));
+
+    // Toggling back must restore the native values exactly, not hand back a stale cache.
+    AS->use_viscosity_RES(false);
+    AS->use_conductivity_RES(false);
+    CHECK(AS->viscosity() == eta_native);
+    CHECK(AS->conductivity() == tc_native);
+}
+
+TEST_CASE("REFPROP RES viscosity and conductivity flags are independent", "[RES][REFPROP][transport]") {
+    // TRNPRPdll returns both properties from a single call, and calc_conductivity() used to get
+    // its value by calling calc_viscosity().  With RES enabled on only one of the two, that left
+    // the other CachedElement unpopulated and reading it threw.  All four flag combinations must
+    // work, and -- the part that actually catches a cache defect -- neither value may depend on
+    // the order in which the two are read.
+    Skip_if_No_REFPROP();
+    for (int combo = 0; combo < 4; ++combo) {
+        const bool vis_res = (combo & 1) != 0;
+        const bool tc_res = (combo & 2) != 0;
+        CAPTURE(vis_res, tc_res);
+
+        auto A = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+        A->update(PT_INPUTS, 5.0e6, 320.0);
+        A->use_viscosity_RES(vis_res);
+        A->use_conductivity_RES(tc_res);
+        double eta_first = 0, tc_second = 0;
+        REQUIRE_NOTHROW(eta_first = A->viscosity());
+        REQUIRE_NOTHROW(tc_second = A->conductivity());
+
+        auto B = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+        B->update(PT_INPUTS, 5.0e6, 320.0);
+        B->use_viscosity_RES(vis_res);
+        B->use_conductivity_RES(tc_res);
+        double tc_first = 0, eta_second = 0;
+        REQUIRE_NOTHROW(tc_first = B->conductivity());
+        REQUIRE_NOTHROW(eta_second = B->viscosity());
+
+        CHECK(std::isfinite(eta_first));
+        CHECK(eta_first > 0.0);
+        CHECK(std::isfinite(tc_first));
+        CHECK(tc_first > 0.0);
+        CHECK(eta_second == eta_first);
+        CHECK(tc_second == tc_first);
+    }
+}
+
+TEST_CASE("REFPROP off-state dRhomass/dp matches the alphar route", "[RES][REFPROP][transport]") {
+    // The RES critical enhancement takes this derivative twice: at the current temperature from
+    // alpha^r (PHIXdll), and at the reference temperature from calc_drhomass_dp_constT_at()
+    // (THERM2dll).  Evaluating both at the SAME temperature is the only way to show the two
+    // routes agree -- on units, on the gas constant, and on the reducing density.
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    AS->update(PT_INPUTS, 4.0e6, 360.0);
+    const double T = AS->T();
+    const double delta_st = AS->delta();
+    const double dp_drho = AS->gas_constant() * T * (1.0 + 2.0 * delta_st * AS->dalphar_dDelta() + delta_st * delta_st * AS->d2alphar_dDelta2());
+    const double drhodp_phix = 1.0 / dp_drho * AS->molar_mass();
+    CHECK(AS->drhomass_dp_constT_at(T) == Catch::Approx(drhodp_phix).epsilon(1e-9));
+
+    // Off-state (the actual use, at a supercritical reference temperature) it must stay finite
+    // and positive, and must leave the cached state untouched.
+    const double p_before = AS->p();
+    const double sres_before = AS->smolar_residual();
+    const double d_ref = AS->drhomass_dp_constT_at(1.5 * AS->T_critical());
+    CHECK(std::isfinite(d_ref));
+    CHECK(d_ref > 0.0);
+    CHECK(AS->T() == T);
+    CHECK(AS->p() == p_before);
+    CHECK(AS->smolar_residual() == sres_before);
+}
+
+TEST_CASE("REFPROP RES parameter setters round-trip and invalidate the cache", "[RES][REFPROP][transport]") {
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    AS->update(PT_INPUTS, 5.0e6, 320.0);
+    AS->use_viscosity_RES(true);
+    AS->use_conductivity_RES(true);
+    const double eta_before = AS->viscosity();
+    const double tc_before = AS->conductivity();
+
+    const std::vector<double> n_vis{0.1, 0.2, 0.3};
+    AS->set_viscosity_RES_residual_params(0, n_vis, 1.25);
+    const auto got_vis = AS->get_viscosity_RES_residual_params(0);
+    CHECK(got_vis.first == n_vis);
+    CHECK(got_vis.second == 1.25);
+    CHECK(AS->viscosity() != eta_before);
+
+    const std::vector<double> n_tc{0.1, 0.2, 0.3, 0.4};
+    AS->set_conductivity_RES_residual_params(0, n_tc, 0.9);
+    const auto got_tc = AS->get_conductivity_RES_residual_params(0);
+    CHECK(got_tc.first == n_tc);
+    CHECK(got_tc.second == 0.9);
+    CHECK(AS->conductivity() != tc_before);
+
+    // Pure fluid: only component 0 exists.
+    CHECK_THROWS(AS->set_viscosity_RES_residual_params(1, n_vis, 1.0));
+    CHECK_THROWS(AS->get_conductivity_RES_residual_params(1));
+}
+
+TEST_CASE("REFPROP RES works for a mixture and for a REFPROP-only fluid", "[RES][REFPROP][transport]") {
+    Skip_if_No_REFPROP();
+    // A binary: RES parameters must be attributed per component, in component order.
+    auto MIX = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Methane&Ethane"));
+    MIX->set_mole_fractions({0.6, 0.4});
+    MIX->update(PT_INPUTS, 3.0e6, 280.0);
+    MIX->use_viscosity_RES(true);
+    MIX->use_conductivity_RES(true);
+    const double eta_mix = MIX->viscosity();
+    const double tc_mix = MIX->conductivity();
+    CHECK(std::isfinite(eta_mix));
+    CHECK(eta_mix > 0.0);
+    CHECK(std::isfinite(tc_mix));
+    CHECK(tc_mix > 0.0);
+
+    // 22DIMETHYLBUTANE has no CoolProp EOS at all, so it carries only a "REFPROP" parameter
+    // block -- and its key is 16 characters, which NAMEdll's character*12 hnam would have
+    // truncated to "22DIMETHYLBU" and silently matched nothing.
+    auto ONLY = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "22DIMETHYLBUTANE"));
+    ONLY->update(PT_INPUTS, 1.0e5, 330.0);
+    ONLY->use_viscosity_RES(true);
+    const double eta_only = ONLY->viscosity();
+    CHECK(std::isfinite(eta_only));
+    CHECK(eta_only > 0.0);
+}
+
+TEST_CASE("REFPROP predefined .MIX mixtures report RES as unsupported", "[RES][REFPROP][transport]") {
+    // SETMIXdll reports Ncomp == 1 for the whole mixture and collapses the component list to the
+    // .MIX filename, so there is no per-component identity to attach parameters to.  Reporting
+    // "unsupported" is the only honest answer: silently applying one constituent's parameters
+    // would return a confidently wrong number.
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "AIR.MIX"));
+    AS->update(PT_INPUTS, 1.0e5, 300.0);
+    CHECK(std::isfinite(AS->viscosity()));  // the native path still works
+    CHECK_THROWS_AS(AS->use_viscosity_RES(true), CoolProp::NotImplementedError);
+    CHECK_THROWS_AS(AS->use_conductivity_RES(true), CoolProp::NotImplementedError);
+}
+
+TEST_CASE("REFPROP RES refuses to run when the EOS has been replaced", "[RES][REFPROP][transport]") {
+    // REFPROP_USE_PENGROBINSON (and REFPROP_USE_GERG, which goes through the same guard) swap out
+    // the very Helmholtz EOS the n_res/xita coefficients were regressed against, so s_res is no
+    // longer the quantity they were fitted to.  Returning a number there would be silently wrong.
+    Skip_if_No_REFPROP();
+    const bool restore = get_config_bool(REFPROP_USE_PENGROBINSON);
+    set_config_bool(REFPROP_USE_PENGROBINSON, true);
+    try {
+        auto PR = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+        PR->update(PT_INPUTS, 5.0e6, 320.0);
+        PR->use_viscosity_RES(true);
+        PR->use_conductivity_RES(true);
+        // Match the message, not just the type: a ValueError from some unrelated REFPROP
+        // failure would otherwise let this pass without the guard ever being reached.
+        CHECK_THROWS_WITH(PR->viscosity(), Catch::Matchers::ContainsSubstring("different alpha function"));
+        CHECK_THROWS_WITH(PR->conductivity(), Catch::Matchers::ContainsSubstring("different alpha function"));
+    } catch (...) {
+        set_config_bool(REFPROP_USE_PENGROBINSON, restore);
+        throw;
+    }
+    set_config_bool(REFPROP_USE_PENGROBINSON, restore);
+
+    // Constructing a fresh state calls PREOSdll(0) unconditionally, which restores the reference
+    // EOS.  Assert that here rather than assuming it -- a leaked Peng-Robinson setting would
+    // corrupt every REFPROP test that runs after this one.
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    AS->update(PT_INPUTS, 5.0e6, 320.0);
+    AS->use_viscosity_RES(true);
+    CHECK(std::isfinite(AS->viscosity()));
+    CHECK(AS->rhomass() == Catch::Approx(CoolProp::PropsSI("Dmass", "P", 5.0e6, "T", 320.0, "REFPROP::Propane")).epsilon(1e-10));
+}
+
+// On the REFPROP backend the published vis_res / TC_RES columns were produced with the SAME
+// equation of state, so these tests measure implementation correctness alone -- unlike their
+// HEOS counterparts above, which additionally carry the parameter-transfer error.
+//
+// Two tolerances per case, because they fail for different reasons: the per-sample bound
+// catches gross breakage (wrong component order, wrong units, unattached parameters), the mean
+// bound catches a subtle regression that a loose per-sample bound would sleep through.
+// Both were set from the measured distribution -- run [RES_refprop_parity] to reprint it.
+//
+// The residual gaps are NOT parameter error; they are the known dilute-source divergence that
+// Stage 4 of dev/RES_REFPROP_plan.md closes.  Martinek 2025 uses REFPROP's native eta0 for PURE
+// fluids and Li 2024 uses REFPROP's native lambda0 for MIXTURES, while this implementation uses
+// the fitted polynomial on every path.  That is exactly why the pure-viscosity outliers are the
+// light fluids (D2 0.96%, ETHYLENE 0.85%, HELIUM 0.63%) where the polynomial fits eta0 worst,
+// and why binary conductivity is the loosest case of the four (ARGON+NEON 11.6%).  Binary
+// viscosity, the one path where both papers and this code agree on the polynomial, reproduces
+// to 1e-5 -- which is what makes it the sharpest correctness signal in this file.
+//
+// PROPANE (-4.9%) and R143A (+1.4%) are the pure-conductivity outliers and have a separate
+// cause: the Olchowy-Sengers enhancement consumes a viscosity, and the reference implementation
+// feeds it REFPROP's native value where this code feeds it the RES viscosity.
+TEST_CASE("RES on REFPROP reproduces the published pure-fluid values", "[RES][REFPROP][transport]") {
+    Skip_if_No_REFPROP();
+
+    SECTION("viscosity (Martinek 2025)") {
+        auto samples = parse_vis_pure(VIS_PURE_OUT);
+        REQUIRE(samples.size() >= 120);
+        double sum_abs = 0;
+        std::size_t n = 0;
+        for (const auto& s : samples) {
+            // The sample files carry REFPROP names already, so they go to the backend unmapped.
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", s.name));
+            AS->update(PT_INPUTS, s.p_MPa * 1e6, s.T);
+            AS->use_viscosity_RES(true);
+            const double v = AS->viscosity() * 1e6;
+            INFO("fluid=" << s.name << " T=" << s.T << " ref=" << s.vis_res << " cpp=" << v);
+            CHECK(v == Catch::Approx(s.vis_res).epsilon(0.012));
+            sum_abs += std::abs(v / s.vis_res - 1.0);
+            ++n;
+        }
+        // Every sample must have been evaluated -- no fluid may drop out silently.
+        REQUIRE(n == samples.size());
+        CHECK(sum_abs / n < 0.0005);
+    }
+
+    SECTION("conductivity (Li 2024)") {
+        auto samples = parse_tc_pure(TC_PURE_REF);
+        REQUIRE(samples.size() >= 120);
+        double sum_abs = 0;
+        std::size_t n = 0;
+        for (const auto& s : samples) {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", s.name));
+            AS->update(PT_INPUTS, s.p_kPa * 1e3, s.T);
+            AS->use_conductivity_RES(true);
+            const double v = AS->conductivity();
+            INFO("fluid=" << s.name << " T=" << s.T << " ref=" << s.tc_res << " cpp=" << v);
+            CHECK(v == Catch::Approx(s.tc_res).epsilon(0.055));
+            sum_abs += std::abs(v / s.tc_res - 1.0);
+            ++n;
+        }
+        REQUIRE(n == samples.size());
+        CHECK(sum_abs / n < 0.001);
+    }
+}
+
+TEST_CASE("RES on REFPROP reproduces the published mixture values", "[RES][REFPROP][transport]") {
+    Skip_if_No_REFPROP();
+
+    SECTION("viscosity (Martinek 2025)") {
+        auto samples = parse_vis_bin(VIS_BIN_OUT);
+        REQUIRE(samples.size() >= 15);
+        std::size_t n = 0;
+        for (const auto& s : samples) {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", s.c1 + "&" + s.c2));
+            AS->set_mole_fractions({s.mf1, s.mf2});
+            AS->update(PT_INPUTS, s.p_MPa * 1e6, s.T);
+            AS->use_viscosity_RES(true);
+            const double v = AS->viscosity() * 1e6;
+            INFO("mix=" << s.c1 << "+" << s.c2 << " T=" << s.T << " ref=" << s.vis_res << " cpp=" << v);
+            // Both papers and this code use the fitted polynomial plus Wilke on this path, so
+            // there is no dilute-source divergence to absorb: it must reproduce to round-off.
+            CHECK(v == Catch::Approx(s.vis_res).epsilon(1e-4));
+            ++n;
+        }
+        REQUIRE(n == samples.size());
+    }
+
+    SECTION("conductivity (Li 2024)") {
+        auto samples = parse_tc_bin(TC_BIN_REF);
+        REQUIRE(samples.size() >= 8);
+        std::size_t n = 0;
+        for (const auto& s : samples) {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", s.c1 + "&" + s.c2));
+            AS->set_mole_fractions({s.mf1, s.mf2});
+            AS->update(PT_INPUTS, s.p_kPa * 1e3, s.T);
+            AS->use_conductivity_RES(true);
+            const double v = AS->conductivity();
+            INFO("mix=" << s.c1 << "+" << s.c2 << " T=" << s.T << " ref=" << s.tc_res << " cpp=" << v);
+            // The loosest bound in this file, and deliberately so: this is the path where Li
+            // uses REFPROP's native lambda0 and this code does not.  ARGON+NEON, the pair with
+            // the largest dilute share, sits at -11.6%.  Stage 4 should collapse this to 1e-4
+            // like the viscosity case above -- tighten it then rather than living with it.
+            CHECK(v == Catch::Approx(s.tc_res).epsilon(0.125));
+            ++n;
+        }
+        REQUIRE(n == samples.size());
+        // Excluding the one dilute-dominated pair, the rest must already be within 2%.
+        double worst_rest = 0;
+        for (const auto& s : samples) {
+            if (s.c1 == "ARGON" && s.c2 == "NEON") continue;
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", s.c1 + "&" + s.c2));
+            AS->set_mole_fractions({s.mf1, s.mf2});
+            AS->update(PT_INPUTS, s.p_kPa * 1e3, s.T);
+            AS->use_conductivity_RES(true);
+            worst_rest = std::max(worst_rest, std::abs(AS->conductivity() / s.tc_res - 1.0));
+        }
+        CHECK(worst_rest < 0.02);
+    }
+}
+
+// Measurement harness, hidden from the default run by the leading-dot tag.  This is goal (a) of
+// dev/RES_REFPROP_plan.md in its cheapest form: on the REFPROP backend the published columns
+// were computed with the SAME equation of state, so any deviation here is an implementation
+// defect rather than a parameter-transfer error.  Run it with:
+//     CatchTestRunner.exe [RES_refprop_parity]
+// It reports rather than asserts; the assertions live in the two tests below it, whose
+// tolerances were set from what this printed.
+TEST_CASE("RES REFPROP parity sweep (measurement)", "[.][RES_refprop_parity][REFPROP]") {
+    Skip_if_No_REFPROP();
+
+    struct Row
+    {
+        std::string name;
+        double dev;
+    };
+    auto report = [](const char* what, std::vector<Row>& rows, std::vector<std::string>& failed) {
+        std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return std::abs(a.dev) > std::abs(b.dev); });
+        std::cout << "\n=== " << what << ": " << rows.size() << " reproduced, " << failed.size() << " could not be evaluated\n";
+        double worst = 0, sum = 0;
+        for (const auto& r : rows) {
+            worst = std::max(worst, std::abs(r.dev));
+            sum += std::abs(r.dev);
+        }
+        std::cout << "    max |dev| = " << worst * 100 << " %,  mean |dev| = " << (rows.empty() ? 0 : sum / rows.size()) * 100 << " %\n";
+        for (std::size_t i = 0; i < rows.size() && i < 15; ++i) {
+            std::cout << "    " << rows[i].name << "  " << rows[i].dev * 100 << " %\n";
+        }
+        if (!failed.empty()) {
+            std::cout << "    not evaluated:";
+            for (const auto& f : failed)
+                std::cout << " " << f;
+            std::cout << "\n";
+        }
+    };
+
+    SECTION("pure viscosity") {
+        auto samples = parse_vis_pure(VIS_PURE_OUT);
+        REQUIRE_FALSE(samples.empty());
+        std::vector<Row> rows;
+        std::vector<std::string> failed;
+        for (const auto& s : samples) {
+            try {
+                // Sample files already use REFPROP names, so no alias mapping is needed here.
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", s.name));
+                AS->update(PT_INPUTS, s.p_MPa * 1e6, s.T);
+                AS->use_viscosity_RES(true);
+                rows.push_back({s.name, AS->viscosity() * 1e6 / s.vis_res - 1.0});
+            } catch (const std::exception& e) {
+                failed.push_back(s.name + "(" + e.what() + ")");
+            }
+        }
+        report("pure viscosity", rows, failed);
+    }
+    SECTION("pure conductivity") {
+        auto samples = parse_tc_pure(TC_PURE_REF);
+        REQUIRE_FALSE(samples.empty());
+        std::vector<Row> rows;
+        std::vector<std::string> failed;
+        for (const auto& s : samples) {
+            try {
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", s.name));
+                AS->update(PT_INPUTS, s.p_kPa * 1e3, s.T);
+                AS->use_conductivity_RES(true);
+                rows.push_back({s.name, AS->conductivity() / s.tc_res - 1.0});
+            } catch (const std::exception& e) {
+                failed.push_back(s.name + "(" + e.what() + ")");
+            }
+        }
+        report("pure conductivity", rows, failed);
+    }
+    SECTION("binary viscosity") {
+        auto samples = parse_vis_bin(VIS_BIN_OUT);
+        REQUIRE_FALSE(samples.empty());
+        std::vector<Row> rows;
+        std::vector<std::string> failed;
+        for (const auto& s : samples) {
+            try {
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", s.c1 + "&" + s.c2));
+                AS->set_mole_fractions({s.mf1, s.mf2});
+                AS->update(PT_INPUTS, s.p_MPa * 1e6, s.T);
+                AS->use_viscosity_RES(true);
+                rows.push_back({s.c1 + "+" + s.c2, AS->viscosity() * 1e6 / s.vis_res - 1.0});
+            } catch (const std::exception& e) {
+                failed.push_back(s.c1 + "+" + s.c2 + "(" + e.what() + ")");
+            }
+        }
+        report("binary viscosity", rows, failed);
+    }
+    SECTION("binary conductivity") {
+        auto samples = parse_tc_bin(TC_BIN_REF);
+        REQUIRE_FALSE(samples.empty());
+        std::vector<Row> rows;
+        std::vector<std::string> failed;
+        for (const auto& s : samples) {
+            try {
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", s.c1 + "&" + s.c2));
+                AS->set_mole_fractions({s.mf1, s.mf2});
+                AS->update(PT_INPUTS, s.p_kPa * 1e3, s.T);
+                AS->use_conductivity_RES(true);
+                rows.push_back({s.c1 + "+" + s.c2, AS->conductivity() / s.tc_res - 1.0});
+            } catch (const std::exception& e) {
+                failed.push_back(s.c1 + "+" + s.c2 + "(" + e.what() + ")");
+            }
+        }
+        report("binary conductivity", rows, failed);
+    }
 }
 
 // ------------------------------- critical-enhancement guards -----------------

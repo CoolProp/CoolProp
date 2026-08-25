@@ -42,6 +42,7 @@ surface tension                 N/m
 #include "CoolProp/AbstractState.h"
 #include "qmass_conversions.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "Backends/RES/RESTransport.h"
 
 #include <cmath>
 #include <optional>
@@ -209,6 +210,11 @@ void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_name
     // Try to add this fluid to REFPROP - might want to think about making array of
     // components and setting mole fractions if they change a lot.
     this->set_REFPROP_fluids(fluid_names);
+
+    // Seed the RES transport parameters.  Here and not in set_REFPROP_fluids(), because
+    // check_loaded_fluid() re-invokes that on every property call and re-seeding would discard
+    // anything the user had set through set_*_RES_parameters().
+    this->setup_RES_transport();
 
     // Bump the number of REFPROP backends that are in existence;
     REFPROPMixtureBackend::instance_counter++;
@@ -385,6 +391,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                 }
             }
         }
+        // Keep the resolved stems for the RES parameter lookup.  Cleared again below if this
+        // turns out to be a predefined .MIX mixture, which has no per-component identity.
+        this->resolved_fluid_names = resolved_names;
 
         std::array<char, 10000> component_string{};
         std::array<char, errormessagelength> herr{};
@@ -441,6 +450,12 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                 cached_component_string = mix;
                 this->fluid_names.clear();
                 this->fluid_names.push_back(components_joined_raw);
+                // SETMIXdll reports Ncomp == 1 for the whole mixture and collapses fluid_names
+                // to the single .MIX filename, so there is nothing to hang per-component RES
+                // parameters on.  Leaving this empty makes setup_RES_transport() a no-op, and
+                // use_*_RES() then reports RES as unsupported rather than silently applying the
+                // parameters of one arbitrary constituent.
+                this->resolved_fluid_names.clear();
                 if (CoolProp::get_debug_level() > 5) {
                     std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n", __FILE__, __LINE__, components_joined.c_str());
                 }
@@ -1258,6 +1273,53 @@ const double REFPROPMixtureBackend::get_fluid_constant(std::size_t i, parameters
     }
 }
 
+void REFPROPMixtureBackend::setup_RES_transport() {
+    // No per-component identity (predefined .MIX mixture, or a name set that never resolved)
+    // means RES cannot be attributed to components; leave the store empty, which is how
+    // AbstractState reports "RES unsupported on this backend".
+    if (resolved_fluid_names.empty() || resolved_fluid_names.size() != Ncomp) {
+        return;
+    }
+
+    // The "REFPROP" coefficient block was regressed against REFPROP's reference Helmholtz EOS.
+    // Both of these configuration flags replace that EOS, so the fitted n_res/xita no longer
+    // belong to the alpha^r actually being evaluated and every RES call must fail loudly.
+    // n_params_match_alpha is exactly the existing mechanism for that.
+    const bool alpha_replaced = get_config_bool(REFPROP_USE_GERG) || get_config_bool(REFPROP_USE_PENGROBINSON);
+
+    std::vector<RESComponentData> res_comps(Ncomp);
+    for (std::size_t i = 0; i < Ncomp; ++i) {
+        // A bare carrier with no EOS attached, used only to receive the overlay.  The molar mass
+        // MUST be passed explicitly: CoolPropFluid::molar_mass() dereferences EOSVector[0], which
+        // is empty here.  INFOdll reports g/mol, get_fluid_constant() converts to kg/mol.
+        CoolPropFluid carrier;
+        carrier.name = resolved_fluid_names[i];
+        carrier.REFPROPname = resolved_fluid_names[i];
+        overlay_RES_transport_by_name("REFPROP", carrier, get_fluid_constant(i, imolar_mass));
+
+        res_comps[i].name = resolved_fluid_names[i];
+        res_comps[i].viscosity = carrier.transport.viscosity_res;
+        res_comps[i].conductivity = carrier.transport.conductivity_res;
+        if (alpha_replaced) {
+            res_comps[i].viscosity.n_params_match_alpha = false;
+            res_comps[i].conductivity.n_params_match_alpha = false;
+        }
+    }
+    set_RES_components(std::move(res_comps));
+}
+
+CoolPropDbl REFPROPMixtureBackend::calc_drhomass_dp_constT_at(double T_eval) {
+    this->check_loaded_fluid();
+    double t = T_eval, rho = _rhomolar / 1000.0,  // mol/dm^3
+      pk = 0, e = 0, h = 0, s = 0, cv = 0, cp = 0, w = 0, Z = 0, hjt = 0, A = 0, G = 0, xkappa = 0, beta = 0, dPdrho = 0, d2PdD2 = 0, dPT = 0,
+           drhodT = 0, drhodP = 0, d2PT2 = 0, d2PdTD = 0, spare3 = 0, spare4 = 0;
+    THERM2dll(&t, &rho, &(mole_fractions[0]), &pk, &e, &h, &s, &cv, &cp, &w, &Z, &hjt, &A, &G, &xkappa, &beta, &dPdrho, &d2PdD2, &dPT, &drhodT,
+              &drhodP, &d2PT2, &d2PdTD, &spare3, &spare4);
+    // drhodP comes back as (mol/L)/kPa.  Both units carry the same factor of 1000, so the number
+    // is already (mol/m^3)/Pa; multiplying by the molar mass [kg/mol] gives (kg/m^3)/Pa.
+    return drhodP * molar_mass();
+}
+
 CoolPropDbl REFPROPMixtureBackend::calc_PIP() {
     // Calculate the PIP factor of Venkatharathnam and Oellrich, "Identification of the phase of a fluid using
     // partial derivatives of pressure, volume,and temperature without reference to saturation properties:
@@ -1273,25 +1335,48 @@ CoolPropDbl REFPROPMixtureBackend::calc_PIP() {
     return 2 - rho * (d2PdTD / dPT - d2PdD2 / dPdrho);
 };
 
-CoolPropDbl REFPROPMixtureBackend::calc_viscosity() {
+void REFPROPMixtureBackend::call_TRNPRPdll(double& eta, double& tcx) {
     this->check_loaded_fluid();
-    double eta = NAN, tcx = NAN, rhomol_L = 0.001 * _rhomolar;
+    double eta_uPas = NAN, tcx_WmK = NAN, rhomol_L = 0.001 * _rhomolar;
     int ierr = 0;
     std::array<char, 255> herr{};
     TRNPRPdll(&_T, &rhomol_L, &(mole_fractions[0]),     // Inputs
-              &eta, &tcx,                               // Outputs
+              &eta_uPas, &tcx_WmK,                      // Outputs
               &ierr, herr.data(), errormessagelength);  // Error message
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
         throw ValueError(format("%s", herr.data()).c_str());
     }
     //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
-    _viscosity = 1e-6 * eta;
-    _conductivity = tcx;
+    eta = 1e-6 * eta_uPas;  // microPa.s -> Pa.s
+    tcx = tcx_WmK;
+}
+CoolPropDbl REFPROPMixtureBackend::calc_viscosity() {
+    if (_RES.viscosity_enabled) {
+        _viscosity = RESTransport::viscosity(*this);
+        return static_cast<double>(_viscosity);
+    }
+    double eta = NAN, tcx = NAN;
+    call_TRNPRPdll(eta, tcx);
+    _viscosity = eta;
+    // One TRNPRPdll call yields both properties, so cache the conductivity as well -- but NOT
+    // when the RES conductivity model is active, which would overwrite a RES result with the
+    // native REFPROP one and hand it back from the next conductivity() read.
+    if (!_RES.conductivity_enabled) {
+        _conductivity = tcx;
+    }
     return static_cast<double>(_viscosity);
 }
 CoolPropDbl REFPROPMixtureBackend::calc_conductivity() {
-    // Calling viscosity also caches conductivity, use that to save calls
-    calc_viscosity();
+    if (_RES.conductivity_enabled) {
+        _conductivity = RESTransport::conductivity(*this);
+        return static_cast<double>(_conductivity);
+    }
+    double eta = NAN, tcx = NAN;
+    call_TRNPRPdll(eta, tcx);
+    _conductivity = tcx;
+    if (!_RES.viscosity_enabled) {
+        _viscosity = eta;
+    }
     return static_cast<double>(_conductivity);
 }
 CoolPropDbl REFPROPMixtureBackend::calc_surface_tension() {

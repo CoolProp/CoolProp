@@ -56,6 +56,13 @@ class REFPROPMixtureBackend : public AbstractState
     std::vector<double> mole_fractions, mass_fractions;
     std::vector<double> mole_fractions_liq, mole_fractions_vap;
     std::vector<std::string> fluid_names;
+    /// The REFPROP .FLD stems as resolved in set_REFPROP_fluids(), one per component, in
+    /// component order.  RES transport parameters are looked up by these -- NOT via NAMEdll,
+    /// whose hnam field is character*12 and would silently truncate seven of the fitted keys
+    /// (22DIMETHYLBUTANE, 23DIMETHYLBUTANE, 3METHYLPENTANE, CHLOROBENZENE, ETHYLENEOXIDE,
+    /// PROPYLENEOXIDE, VINYLCHLORIDE) into names that match nothing.
+    /// Left empty for predefined .MIX mixtures, which have no per-component identity here.
+    std::vector<std::string> resolved_fluid_names;
 
     /// Call the PHIXdll function in the dll
     CoolPropDbl call_phixdll(int itau, int idelta);
@@ -68,6 +75,23 @@ class REFPROPMixtureBackend : public AbstractState
     /// Per-component constants from REFPROP's INFOdll.  Needed by the RES transport setters,
     /// which resolve a component's molar mass through this hook.
     const double get_fluid_constant(std::size_t i, parameters param) const override;
+
+    /// Seed AbstractState::_RES with the shipped REFPROP-fitted RES transport parameters.
+    /// Called once from construct(); deliberately NOT from set_REFPROP_fluids(), which
+    /// check_loaded_fluid() re-invokes on every property call and which would therefore
+    /// overwrite any parameters the user had set through the public setters.
+    void setup_RES_transport();
+
+    /// One TRNPRPdll call returning BOTH transport properties: eta [Pa*s] and tcx [W/m/K].
+    /// Extracted so calc_viscosity() and calc_conductivity() have independent bodies -- with
+    /// RES active on only one of the two, the old "conductivity reuses the viscosity call"
+    /// shortcut left the other CachedElement unpopulated, and reading it threw.
+    void call_TRNPRPdll(double& eta, double& tcx);
+
+    /// (d rho_mass / dP)_T evaluated at an arbitrary temperature and the current density.
+    /// One THERM2dll call, which is a pure function of its (T, rho, x) arguments, so this
+    /// does not disturb the cached state.  Used only by the RES critical-enhancement term.
+    CoolPropDbl calc_drhomass_dp_constT_at(double T_eval) override;
 
     /// dP/dT [Pa/K] along the pure-component saturation line via DPTSATKdll. kph: 1=liquid, 2=vapor.
     double dpdT_along_saturation_pure(int kph);

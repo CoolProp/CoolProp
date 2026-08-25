@@ -31,12 +31,14 @@ DEFAULT_PARAMS_DIR = os.path.join(SCRIPT_DIR, "RES_params")
 SOURCES = {
     "viscosity": {
         "dilute": {"citation": "Martinek et al. 2025", "doi": "10.1021/acs.jced.4c00451"},
+        "REFPROP": {"citation": "Martinek et al. 2025", "doi": "10.1021/acs.jced.4c00451"},
         "HEOS": {"citation": "Martinek et al. 2025", "doi": "10.1021/acs.jced.4c00451"},
         "PR": {"citation": "Yang et al. 2025", "doi": "10.1021/acsomega.4c10815"},
         "SRK": {"citation": "Yang et al. 2025", "doi": "10.1021/acsomega.4c10815"},
     },
     "conductivity": {
         "dilute": {"citation": "Li et al. 2024", "doi": "10.1021/acs.iecr.4c02946"},
+        "REFPROP": {"citation": "Li et al. 2024", "doi": "10.1021/acs.iecr.4c02946"},
         "HEOS": {"citation": "Li et al. 2024", "doi": "10.1021/acs.iecr.4c02946"},
         "PR": {"citation": "Yang et al. 2025", "doi": "10.1021/acsomega.4c10815"},
         "SRK": {"citation": "Yang et al. 2025", "doi": "10.1021/acsomega.4c10815"},
@@ -83,11 +85,12 @@ HEOS_CONDUCTIVITY_EXCLUDE = {"D5", "R1233ZDE", "R1234YF", "R13", "R161", "VINYLC
 
 @functools.cache
 def coolprop_has_fluid(name: str) -> bool:
-    """True if any CoolProp backend (HEOS, PR, SRK) can construct this fluid.
+    """True if any native CoolProp backend (HEOS, PR, SRK) can construct this fluid.
 
-    Fluids the local CoolProp build has no data for at all (only fitted against REFPROP's
-    much larger fluid database) can never be looked up by FluidLibrary::load_RES_transport_parameters,
-    so keeping their entry around in the JSON is dead weight.
+    This gates the *native-backend keys*, not the fluid entry itself.  29 of the 151 fitted
+    fluids exist only in REFPROP's much larger database; they still get a "REFPROP" block
+    (the REFPROP backend can load them), but emitting HEOS/PR/SRK blocks for them would ship
+    parameters no backend can ever reach.
     """
     for eos in ("HEOS", "PR", "SRK"):
         try:
@@ -179,11 +182,16 @@ def build_tc_entry(res_row) -> dict:
 
 
 def main(params_dir: str) -> None:
-    # EOS label in source files -> JSON key
+    # EOS label in the source files -> JSON key(s).
+    #
+    # The REFPROP-fitted coefficients are emitted TWICE, under two keys that mean different
+    # things: as "REFPROP" they are exact (that is the EOS they were regressed against), and
+    # as "HEOS" they are an approximation whose validity is decided by HEOS_*_EXCLUDE below.
+    # Shipping the duplicate costs ~370 kB of header and keeps the two meanings separable.
     eos_map = {
-        "REFPROP": "HEOS",  # REFPROP-fitted params are used as HEOS approximation
-        "PR": "PR",
-        "SRK": "SRK",
+        "REFPROP": ["REFPROP", "HEOS"],
+        "PR": ["PR"],
+        "SRK": ["SRK"],
     }
 
     out: dict = {"viscosity": {}, "conductivity": {}, "sources": SOURCES}
@@ -194,17 +202,15 @@ def main(params_dir: str) -> None:
 
     # load per-EOS residual params
     res_by_eos: dict[str, pd.DataFrame] = {}
-    for csv_eos, json_eos in eos_map.items():
+    for csv_eos, json_keys in eos_map.items():
         _, res_df = load_vis_params(params_dir, csv_eos)
-        res_by_eos[json_eos] = res_df
+        for json_eos in json_keys:
+            res_by_eos[json_eos] = res_df
 
-    n_skipped_unavailable_vis = 0
+    n_refprop_only_vis = 0
     n_excluded_heos_vis = 0
     for idx, drow in dilute_v.iterrows():
         fluid = str(drow["Material"]).strip().upper()
-        if not coolprop_has_fluid(fluid):
-            n_skipped_unavailable_vis += 1
-            continue
         n_dilute = [
             float(drow["n0"]),
             float(drow["n1"]),
@@ -216,6 +222,11 @@ def main(params_dir: str) -> None:
         for json_eos, res_df in res_by_eos.items():
             res_row = res_df.iloc[idx]
             entry[json_eos] = build_vis_entry(res_row)
+        # Filters apply PER KEY, not per fluid: "dilute" and "REFPROP" are always valid.
+        if not coolprop_has_fluid(fluid):
+            for dead_key in ("HEOS", "PR", "SRK"):
+                entry.pop(dead_key, None)
+            n_refprop_only_vis += 1
         if fluid in HEOS_VISCOSITY_EXCLUDE:
             entry.pop("HEOS", None)
             n_excluded_heos_vis += 1
@@ -225,20 +236,18 @@ def main(params_dir: str) -> None:
     dilute_tc, _, _ = load_tc_params(params_dir, "REFPROP")
 
     res_tc_by_eos: dict[str, pd.DataFrame] = {}
-    for csv_eos, json_eos in eos_map.items():
+    for csv_eos, json_keys in eos_map.items():
         _, res_df, _ = load_tc_params(params_dir, csv_eos)
-        res_tc_by_eos[json_eos] = res_df
+        for json_eos in json_keys:
+            res_tc_by_eos[json_eos] = res_df
 
     # critical enhancement params are EOS-independent (universal constants)
     _, _, crit_df = load_tc_params(params_dir, "REFPROP")
 
-    n_skipped_unavailable_tc = 0
+    n_refprop_only_tc = 0
     n_excluded_heos_tc = 0
     for idx, drow in dilute_tc.iterrows():
         fluid = str(drow["Material"]).strip().upper()
-        if not coolprop_has_fluid(fluid):
-            n_skipped_unavailable_tc += 1
-            continue
         n_dilute = [
             float(drow["n0"]),
             float(drow["n1"]),
@@ -266,6 +275,11 @@ def main(params_dir: str) -> None:
                 "t_ref": float(crow["Tref"]),
                 "q_D": 1.0 / q_D_inv,
             }
+        # Filters apply PER KEY, not per fluid (see the viscosity loop above).
+        if not coolprop_has_fluid(fluid):
+            for dead_key in ("HEOS", "PR", "SRK"):
+                entry.pop(dead_key, None)
+            n_refprop_only_tc += 1
         if fluid in HEOS_CONDUCTIVITY_EXCLUDE:
             entry.pop("HEOS", None)
             n_excluded_heos_tc += 1
@@ -276,11 +290,11 @@ def main(params_dir: str) -> None:
         json.dump(out, fh, indent=2)
     print(f"Wrote {out_path}")
     print(f"  viscosity entries : {len(out['viscosity'])}"
-          f" ({n_skipped_unavailable_vis} fluids skipped: unavailable in CoolProp;"
-          f" {n_excluded_heos_vis} kept without a HEOS entry: HEOS/REFPROP s_res mismatch)")
+          f" ({n_refprop_only_vis} REFPROP-only: no native CoolProp backend can build them;"
+          f" {n_excluded_heos_vis} without a HEOS entry: HEOS/REFPROP s_res mismatch)")
     print(f"  conductivity entries : {len(out['conductivity'])}"
-          f" ({n_skipped_unavailable_tc} fluids skipped: unavailable in CoolProp;"
-          f" {n_excluded_heos_tc} kept without a HEOS entry: HEOS/REFPROP s_res mismatch)")
+          f" ({n_refprop_only_tc} REFPROP-only: no native CoolProp backend can build them;"
+          f" {n_excluded_heos_tc} without a HEOS entry: HEOS/REFPROP s_res mismatch)")
 
 
 if __name__ == "__main__":

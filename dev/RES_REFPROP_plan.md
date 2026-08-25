@@ -422,5 +422,232 @@ Stage 2 DONE (gate passed, bit-identical): RES moved to src/Backends/RES/RESTran
   preserved on purpose so the refactor stays checkable). RES registered in
   COOLPROP_ENABLED_BACKENDS. Gates: dev/RES_comparison/RES_baseline_stage{0,1,2}.txt
 
-NEXT: Stage 3 -- REFPROP carries the store and dispatches to RES. Watch R7 (calc_conductivity
-  caching trap), R8 (NAMEdll 12-char truncation), R9 (GERG/PR config guard).
+Stage 3 DONE (gate passed) + Stage 5 pulled forward, because Stage 3 is unverifiable without
+  it: with no `REFPROP` key in the parameter JSON every fluid's `provided` stays false and every
+  RES call on REFPROP throws. R10 was therefore implemented first.
+
+  Parameter set (R10). `dev/convert_RES_csv_to_json.py` now emits the REFPROP-fitted block under
+  TWO keys -- `REFPROP` (exact: that is the EOS it was regressed against) and `HEOS` (an
+  approximation, gated by HEOS_*_EXCLUDE). Filters moved from per-fluid to per-key: `dilute` and
+  `REFPROP` always; `PR`/`SRK` only when a native CoolProp backend can build the fluid; `HEOS`
+  additionally not in the exclusion set. 122 -> 151 entries per property, 29 of them REFPROP-only.
+  Gate (dev/RES_comparison/gate_json.py logic, run ad hoc): every pre-existing fluid is identical
+  once the `REFPROP` key is stripped; every added fluid carries no native-backend key; `REFPROP`
+  is present for all 151 and equals `HEOS` wherever `HEOS` survives. PASSED.
+
+  Backend wiring. `resolved_fluid_names` member captures the .FLD stems already computed in
+  set_REFPROP_fluids (R8 -- NAMEdll is never used, so the seven >12-char keys survive);
+  `setup_RES_transport()` seeds the store from a bare CoolPropFluid carrier with the molar mass
+  passed explicitly from INFOdll; `calc_drhomass_dp_constT_at` via one THERM2dll call;
+  calc_viscosity/calc_conductivity given independent bodies over a shared `call_TRNPRPdll` (R7).
+
+  Two placement decisions worth keeping:
+  - setup_RES_transport() is called from construct(), NOT from set_REFPROP_fluids(). The latter is
+    re-invoked by check_loaded_fluid() on every property call, so seeding there would silently
+    discard anything the user had set via set_*_RES_parameters().
+  - The opportunistic co-caching in calc_viscosity/calc_conductivity is suppressed whenever the
+    OTHER property is RES-driven. Without that, a TRNPRPdll value overwrites a RES value and
+    leaks out of the next read -- the mirror image of the R7 trap, and invisible unless the two
+    properties are read in both orders. The test does read them in both orders.
+  - Predefined `.MIX` mixtures clear resolved_fluid_names: SETMIXdll reports Ncomp == 1 for the
+    whole mixture, so there is no per-component identity. RES reports unsupported there.
+
+  R9 guard verified through REFPROP_USE_PENGROBINSON rather than REFPROP_USE_GERG, deliberately:
+  PREOSdll(0) is called unconditionally on every fresh setup so the flag self-restores, whereas
+  GERG04dll is only ever called to ENABLE GERG and would poison every REFPROP test that followed.
+  The test asserts the restore rather than assuming it, and matches the exception message
+  ("different alpha function") rather than just its type.
+
+### Stage 3 result: implementation correctness is now separated from parameter transfer
+
+The parity sweep (`[RES_refprop_parity]`, a hidden measurement test) runs all 276 published
+sample points on REFPROP+RES. **Every one evaluates -- zero fluids drop out**, including the 29
+REFPROP-only fluids and all seven >12-character keys. Because the reference columns were computed
+with the same EOS, what remains is implementation error alone:
+
+| path | mean abs dev | max abs dev | worst |
+|---|---|---|---|
+| binary viscosity | 0.0003 % | **0.001 %** | ARGON+NITROGEN |
+| pure viscosity | 0.032 % | 0.96 % | D2, ETHYLENE, HELIUM, CO, H2 |
+| pure conductivity | 0.061 % | 4.88 % | PROPANE, R143A |
+| binary conductivity | 2.04 % | 11.6 % | ARGON+NEON |
+
+Binary viscosity is the one path where both papers and this code use the fitted polynomial plus
+Wilke, and it reproduces to 1e-5. That is the clean control: the residual-entropy machinery, the
+mixing rule, the units and the component ordering are all correct.
+
+The other three rows are the dilute-source divergence predicted in "Key discovery", now measured
+on a single EOS instead of inferred across two:
+- pure viscosity outliers are exactly the light fluids where the polynomial fits REFPROP's native
+  eta0 worst -- Martinek uses native eta0 on this path;
+- binary conductivity is the loosest because Li uses native lambda0 on this path;
+- PROPANE / R143A are a separate cause: the Olchowy-Sengers enhancement consumes a viscosity, and
+  the reference feeds it REFPROP's native value where this code feeds it the RES viscosity.
+
+**This retires the ambiguity the whole plan was written to resolve.** PROPANE -4.9% and R143A
++1.4% appear at full strength on REFPROP, so they were never parameter transfer. Stage 6(b) can
+now attribute whatever HEOS-vs-REFPROP gap remains to the parameters alone.
+
+  Gates run: `[RES]` value dump diffs against RES_baseline_stage2.txt with ZERO removed or
+  changed lines (only the two summary counts move) -- masking test-file line numbers as well as
+  heap addresses, since inserting tests shifts them. 25 pre-existing failures still exactly 25.
+  `[REFPROP]` 1484/1484 (was 1114; +370 new). `[viscosity],[conductivity]` 1131 unchanged.
+  cubics 3698 unchanged.
+
+NEXT: Stage 4 -- dilute source per backend. The table above is its acceptance criterion: pure
+  viscosity and binary conductivity should collapse toward the 1e-5 that binary viscosity already
+  achieves. AUTO must resolve to POLYNOMIAL where there is no native model so HEOS and the cubics
+  stay bit-identical. Then Stage 6(b), then Stage 7 (test-suite overhaul, D1 fail-open first).
+
+---
+
+# RESUME HERE (written before context compaction)
+
+## Where things stand
+
+Branch `dev_RES`. Two commits of RES work:
+
+- `d3bf7c7c` feat(transport): the RES model itself (HEOS + cubics)
+- `3e10cdcf` refactor(transport): Stages 0-2 below -- RES made backend-neutral
+
+**Stages 0, 1, 2 are DONE and gate-verified. Stage 3 is next.**
+
+Uncommitted: `.claude/settings.json` (unrelated agent config). `dev/RES_comparison/` is
+UNTRACKED -- it holds the gate baselines and would be lost by a clean checkout.
+
+## The verification gate (read this before changing anything)
+
+Stages 1, 2 and 4 must be *provable no-ops* for HEOS and cubics. The gate is NOT "tests pass" --
+the pass count is unchanged by definition. It is a bit-identical dump of every computed value:
+
+    ./build_tests/Release/CatchTestRunner.exe "[RES]" --success > after.txt 2>&1
+    norm(){ grep -v "^Randomness seeded" "$1" | sed -E 's/0x[0-9a-f]+/0xPTR/g; s/[.]cpp\([0-9]+\)/.cpp(LINE)/g'; }
+    diff <(norm dev/RES_comparison/RES_baseline_stage3.txt) <(norm after.txt)
+
+Two masks, both required. Heap addresses in `dynamic_cast != nullptr` assertions vary per run.
+Source line numbers shift whenever a test is INSERTED above an existing one, which produces
+hundreds of spurious diff lines that hide the real ones -- that mask was added in Stage 3 after
+exactly that happened. When a stage adds tests, the gate is not "empty diff" but **no removed or
+changed lines**: `diff ... | grep "^<"` must return only the two summary counts.
+
+Current gate file: `RES_baseline_stage3.txt`. Current expected [RES] result: **30 cases, 24
+passed, 6 failed; 1061 assertions, 1036 passed, 25 failed.** The 6 failing cases are the HEOS
+sample-data comparisons, with documented causes -- see `dev/RES_test_assessment.md`. They are NOT
+regressions, and the failed-assertion count must stay at exactly 25.
+
+This gate earned its keep: it caught a segfault in Stage 1 that a green build and an unchanged
+pass count both hid.
+
+## Environment (non-obvious, cost real time to discover)
+
+- **Build** (MSVC). `-DCOOLPROP_STATIC_LIBRARY=ON` is REQUIRED -- it is the only thing that puts
+  `/MD` into the flags; without it `cl` defaults to `/MT` and the link fails against the `/MD`
+  Catch2. Documented in CLAUDE.md.
+
+      cmake -B build_tests -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON \
+            -DCOOLPROP_STATIC_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release
+      cmake --build build_tests --target CatchTestRunner --config Release -j8
+
+  `CMAKE_BUILD_TYPE` is ignored by the VS generator; `--config Release` is what matters. Binary
+  lands in `build_tests/Release/CatchTestRunner.exe`. Use `build_tests`, not `build_catch`.
+
+- **Python**: `C:\nospace\miniconda3\envs\devCP\python.exe`. REFPROP is installed and on PATH, so
+  `[refprop]` tests RUN rather than skip.
+
+- **Python wrapper**: `pip install .` rebuilds from the working tree. The DEFAULT interface is
+  **nanobind** (`src/nanobind_interface.cxx`), NOT the legacy Cython wrapper -- editing only the
+  Cython files silently has no effect. Both are bound for the RES API.
+
+## Exit-code and tooling traps (all of these bit at least once)
+
+- Catch2's exit code is NOT the failed-assertion count, and a crashing run can exit non-zero with
+  no summary printed. Always redirect to a file and grep for `test cases:` / `assertions:`.
+  Exit 139 = segfault. A run that prints "All tests passed" prints NO `test cases:` line.
+- NEVER pipe the runner through `tail` -- the pipe's exit status replaces the runner's.
+- `grep -c` returning 0 matches exits 1, which fails the whole command. Append `; true`.
+- Bash heredocs have failed twice on markdown content in this repo. Use the Write tool for
+  markdown/C++ blocks, or write to a scratch file and `cat >>`.
+- Bulk string replacement is dangerous here: replacing `transport.conductivity_res` also matched
+  inside `transport.conductivity_residual` (an unrelated member) and produced `conductivityidual`.
+  Grep for collisions before any bulk edit.
+
+## Stage 3 -- REFPROP wiring (DONE -- see the Progress log above)
+
+Goal: REFPROP carries the RES store and dispatches to `RESTransport::viscosity/conductivity`.
+Everything structural is already done; this is wiring. Follow the plan's R7, R8, R9 exactly.
+
+Already in place from Stage 0 (committed, tested):
+- `REFPROPMixtureBackend::get_fluid_constant(i, param)` via `INFOdll` -- the RES setters need it.
+- `REFPROPMixtureBackend::call_phixdll(itau, idel, tau, delta)` -- public, off-state alpha^r.
+  Proven pure by test: evaluating at tau/2 leaves dalphar_dDelta, d2alphar_dDelta2, p,
+  smolar_residual, tau, delta bit-identical.
+
+To do:
+1. Add a `std::vector<CoolPropFluid>` carrier + seed the store at setup via
+   `overlay_RES_transport_by_name(eos_key, carrier, molar_mass_override)`
+   (`FluidLibrary.h:1435`, `FluidLibrary.cpp:403`), mirroring `AbstractCubicBackend::setup()`
+   (`CubicBackend.cpp:38-58`). `molar_mass_override` MUST be > 0 (from INFOdll, wmm/1000) --
+   `CoolPropFluid::molar_mass()` dereferences an empty `EOSVector` otherwise.
+   Then call `set_RES_components(...)`.
+2. Implement `calc_drhomass_dp_constT_at(T_eval)` for REFPROP via ONE `THERM2dll` call (already
+   wired at `REFPROPMixtureBackend.cpp:1223`, in `calc_PIP`); take `dPdrho`/`drhodP` and convert.
+   Pure in its arguments -- no scratch state, no mutation.
+3. **R7 -- the caching trap.** `calc_viscosity` (`.cpp:1228-1248`) is ONE `TRNPRPdll` call that
+   populates BOTH `_viscosity` and `_conductivity`; `calc_conductivity` exploits that by calling
+   it. A naive `if (RES_enabled) return ...` at the top means: RES-viscosity ON + RES-conductivity
+   OFF leaves `_conductivity` unpopulated and the return THROWS on an uncached CachedElement.
+   Fix: extract a private `call_TRNPRPdll(double& eta, double& tcx)` that always populates both,
+   then give the two calc_ methods independent bodies. Test all FOUR flag combinations.
+4. **R8 -- do NOT resolve names via `NAMEdll`.** `hnam` is `character*12`; seven RES keys exceed
+   12 chars (22DIMETHYLBUTANE, 23DIMETHYLBUTANE, 3METHYLPENTANE, CHLOROBENZENE, ETHYLENEOXIDE,
+   PROPYLENEOXIDE, VINYLCHLORIDE) and would silently truncate to non-matching keys. Capture the
+   resolved .FLD stems already computed in `set_REFPROP_fluids` (`.cpp:355-386`, local
+   `resolved_names`) into a member and use those.
+   Predefined `.MIX` mixtures collapse `fluid_names` to one joined string -- leave RES unsupported
+   there in the first pass, with a clear throw.
+5. **R9 -- GERG / Peng-Robinson guard.** `REFPROP_USE_GERG` / `REFPROP_USE_PENGROBINSON`
+   (`.cpp:406-411`, `:520-526`) mean REFPROP is not evaluating the reference Helmholtz EOS, so the
+   REFPROP-fitted n_res/xita are invalid. Set `n_params_match_alpha = false` on both records at
+   setup when either is active -- reuses the existing fail-loud path.
+6. `phase()` throws for REFPROP MIXTURES -- ensure no RES path calls it.
+
+Stage 3 has no bit-identical gate (it adds behaviour). Its gate is: REFPROP+RES returns a value
+distinct from plain `TRNPRPdll`, the 8 API methods round-trip, and the published `vis_res`/`TC_RES`
+columns reproduce to ~1% with the polynomial dilute term (Stage 4 tightens this to <0.05%).
+
+## Remaining stages (detail in this file above)
+
+- **Stage 4** dilute-source per backend (`calc_dilute_transport_native` + AUTO policy). AUTO must
+  resolve to POLYNOMIAL where there is no native model, so HEOS/cubics stay bit-identical.
+- **Stage 5** converter emits a `REFPROP` key; filters go PER KEY not per fluid; 122 -> 151 entries.
+- **Stage 6** the actual objective: (a) C++ REFPROP+RES vs the authors' code = implementation
+  correctness; (b) C++ HEOS+RES vs C++ REFPROP+RES over a grid = parameter transfer. Re-derive the
+  exclusion lists from (b).
+- **Stage 7** optional, isolated: fix `tau_ref = T_critical/t_ref` -> `T_reducing/t_ref`. Watch
+  CYCLOPRO (0.1%); ~1e-7 for the rest.
+
+## Reference implementations (for Stage 6)
+
+Both are callable at arbitrary (p, T), on the network share:
+
+    ...\Stoffdaten\CoolProp\RES\Li_2024_SI\code_SI\code_SI.py
+        TC_RES(fluid, MoleFrac, p_Pa, T_K)
+    ...\Stoffdaten\CoolProp\RES\Martinek_2025_SI\supporting_information\code_SI\main.py
+        viscosity_RES(fluid, MoleFrac, p_Pa, T_K)
+
+Share root: `\\sccfs.scc.kit.edu\OE\IBPT\Groups\Grohmann\Users\Reichert\Stoffdaten\CoolProp\RES`
+
+The two papers differ PER CODE PATH (not per fluid) on the dilute term -- Martinek uses REFPROP's
+native eta0 for PURE fluids, Li uses REFPROP's native lambda0 for MIXTURES; the C++ uses the
+polynomial everywhere. This is why ARGON+NEON mixture conductivity is -11.6% and why the
+light-fluid pure viscosities (D2, He, H2, Ne, ETHYLENE) are the worst outliers.
+
+## Known pre-existing issues -- NOT regressions, do not chase
+
+- A full `~[slow]` run terminates abnormally (exit 127, no summary). Reproduces with ALL RES tests
+  excluded and in the user's own build config, so it predates and is unrelated to this work.
+  Localising it is blocked on Catch2's `-f` rejecting test names containing `,` `[` `(`.
+- `dev/RES_test_assessment.md` documents 5 design defects in the [RES] suite. D1 (the fail-open
+  `catch(...)` + `REQUIRE(ok >= N)` gate) is blocking and should be fixed before relying on the
+  suite. D2 (no phase imposition) is why BENZENE fails at -41.6% despite being correct to -0.008%
+  at the right phase.
