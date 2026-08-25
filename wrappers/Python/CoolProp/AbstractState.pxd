@@ -135,6 +135,17 @@ cdef class AbstractState:
     cpdef dict conformal_state(self, string, CoolPropDbl, CoolPropDbl)
     cpdef dict conductivity_contributions(self)
     cpdef dict viscosity_contributions(self)
+
+    # --- Residual Entropy Scaling (RES) transport API ---
+    cpdef use_viscosity_RES(self, bint enable)
+    cpdef use_conductivity_RES(self, bint enable)
+    cpdef set_viscosity_RES_parameters(self, size_t i, vector[double] n_dilute, vector[double] n_res, double xita)
+    cpdef set_conductivity_RES_parameters(self, size_t i, vector[double] n_dilute, vector[double] n_res, double xita,
+                                          double R_D, double gamma_uni, double Gamma, double phi0, double t_ref, double q_D)
+    cpdef set_viscosity_RES_residual_params(self, size_t i, vector[double] n_res, double xita)
+    cpdef set_conductivity_RES_residual_params(self, size_t i, vector[double] n_res, double xita)
+    cpdef tuple get_viscosity_RES_residual_params(self, size_t i)
+    cpdef tuple get_conductivity_RES_residual_params(self, size_t i)
     cpdef double surface_tension(self) except *
     cpdef double Prandtl(self) except *
     cpdef double Bvirial(self) except *

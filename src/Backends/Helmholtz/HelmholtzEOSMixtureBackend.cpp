@@ -820,10 +820,37 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
     if (is_pure_or_pseudopure) {
+        // Explicit RES opt-in overrides the default reference correlation.
+        if (viscosity_RES_enabled) {
+            if (!components[0].transport.viscosity_res.provided)
+                throw ValueError(format(
+                  "Viscosity RES was requested via use_viscosity_RES(true), but no RES parameters are available for fluid '%s'. "
+                  "Provide RES parameters via set_viscosity_RES_parameters(), or call use_viscosity_RES(false) to use the "
+                  "default reference correlation.",
+                  name().c_str()));
+            return TransportRoutines::viscosity_RES(*this);
+        }
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
         calc_viscosity_contributions(dilute, initial_density, residual, critical);
         return dilute + initial_density + residual + critical;
     } else {
+        // RES model replaces the log-mean rule when explicitly enabled and all params are loaded.
+        if (viscosity_RES_enabled) {
+            std::string missing;
+            for (std::size_t i = 0; i < components.size(); ++i) {
+                if (!components[i].transport.viscosity_res.provided) {
+                    if (!missing.empty()) missing += ", ";
+                    missing += components[i].name;
+                }
+            }
+            if (!missing.empty())
+                throw ValueError(format(
+                  "Viscosity RES was requested via use_viscosity_RES(true), but no RES parameters are available for component(s) "
+                  "[%s]. Provide RES parameters via set_viscosity_RES_parameters(), or call use_viscosity_RES(false) to use the "
+                  "default mixture model.",
+                  missing.c_str()));
+            return TransportRoutines::viscosity_RES(*this);
+        }
         set_warning_string("Mixture model for viscosity is highly approximate");
         CoolPropDbl summer = 0;
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
@@ -1074,10 +1101,37 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background() {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
     if (is_pure_or_pseudopure) {
+        // Explicit RES opt-in overrides the default reference correlation.
+        if (conductivity_RES_enabled) {
+            if (!components[0].transport.conductivity_res.provided)
+                throw ValueError(format(
+                  "Conductivity RES was requested via use_conductivity_RES(true), but no RES parameters are available for fluid "
+                  "'%s'. Provide RES parameters via set_conductivity_RES_parameters(), or call use_conductivity_RES(false) to use "
+                  "the default reference correlation.",
+                  name().c_str()));
+            return TransportRoutines::conductivity_RES(*this);
+        }
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
         calc_conductivity_contributions(dilute, initial_density, residual, critical);
         return dilute + initial_density + residual + critical;
     } else {
+        // RES model replaces the linear-sum rule when explicitly enabled and all params are loaded.
+        if (conductivity_RES_enabled) {
+            std::string missing;
+            for (std::size_t i = 0; i < components.size(); ++i) {
+                if (!components[i].transport.conductivity_res.provided) {
+                    if (!missing.empty()) missing += ", ";
+                    missing += components[i].name;
+                }
+            }
+            if (!missing.empty())
+                throw ValueError(format(
+                  "Conductivity RES was requested via use_conductivity_RES(true), but no RES parameters are available for "
+                  "component(s) [%s]. Provide RES parameters via set_conductivity_RES_parameters(), or call "
+                  "use_conductivity_RES(false) to use the default mixture model.",
+                  missing.c_str()));
+            return TransportRoutines::conductivity_RES(*this);
+        }
         set_warning_string("Mixture model for conductivity is highly approximate");
         CoolPropDbl summer = 0;
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
@@ -4748,6 +4802,106 @@ void HelmholtzEOSMixtureBackend::set_fluid_enthalpy_entropy_offset(CoolPropFluid
         component.EOS().max_sat_p.hmolar = HEOS->hmolar();
         component.EOS().max_sat_p.smolar = HEOS->smolar();
     }
+}
+
+// ─── RES transport API ───────────────────────────────────────────────────────
+
+void HelmholtzEOSMixtureBackend::use_viscosity_RES(bool enable) {
+    if (viscosity_RES_enabled != enable) {
+        viscosity_RES_enabled = enable;
+        // viscosity() memoizes into _viscosity, so without clearing it a toggle after a read
+        // would silently return the previous model's value. The conductivity cache is cleared
+        // too because the RES critical enhancement consumes the RES viscosity.
+        _viscosity.clear();
+        _conductivity.clear();
+    }
+}
+void HelmholtzEOSMixtureBackend::use_conductivity_RES(bool enable) {
+    if (conductivity_RES_enabled != enable) {
+        conductivity_RES_enabled = enable;
+        _conductivity.clear();
+    }
+}
+
+static void check_component_index(std::size_t i, std::size_t N, const char* fname) {
+    if (i >= N) throw ValueError(format("%s: component index %zu out of range (N=%zu).", fname, i, N));
+}
+
+void HelmholtzEOSMixtureBackend::set_viscosity_RES_parameters(std::size_t i,
+                                                               const std::vector<double>& n_dilute,
+                                                               const std::vector<double>& n_res,
+                                                               double xita) {
+    check_component_index(i, components.size(), "set_viscosity_RES_parameters");
+    auto& d         = components[i].transport.viscosity_res;
+    d.n_dilute      = n_dilute;
+    d.n_res         = n_res;
+    d.xita          = xita;
+    d.molar_mass    = get_fluid_constant(i, imolar_mass);
+    d.n_params_match_alpha = true;
+    d.provided      = true;
+    // Drop memoized transport values so the new parameters take effect immediately;
+    // conductivity too, since its critical enhancement consumes the RES viscosity.
+    _viscosity.clear();
+    _conductivity.clear();
+}
+
+void HelmholtzEOSMixtureBackend::set_conductivity_RES_parameters(std::size_t i,
+                                                                   const std::vector<double>& n_dilute,
+                                                                   const std::vector<double>& n_res,
+                                                                   double xita,
+                                                                   double R_D, double gamma_uni, double Gamma,
+                                                                   double phi0, double t_ref, double q_D) {
+    check_component_index(i, components.size(), "set_conductivity_RES_parameters");
+    auto& d         = components[i].transport.conductivity_res;
+    d.n_dilute      = n_dilute;
+    d.n_res         = n_res;
+    d.xita          = xita;
+    d.molar_mass    = get_fluid_constant(i, imolar_mass);
+    d.R_D           = R_D;
+    d.gamma_uni     = gamma_uni;
+    d.Gamma         = Gamma;
+    d.phi0          = phi0;
+    d.t_ref         = t_ref;
+    d.q_D           = q_D;
+    d.crit_provided = (t_ref > 0) && (Gamma > 0) && (phi0 > 0) && (q_D > 0);
+    d.n_params_match_alpha = true;
+    d.provided      = true;
+    _conductivity.clear();
+}
+
+void HelmholtzEOSMixtureBackend::set_viscosity_RES_residual_params(std::size_t i,
+                                                                     const std::vector<double>& n_res,
+                                                                     double xita) {
+    check_component_index(i, components.size(), "set_viscosity_RES_residual_params");
+    auto& d = components[i].transport.viscosity_res;
+    d.n_res = n_res;
+    d.xita  = xita;
+    d.n_params_match_alpha = true;
+    _viscosity.clear();
+    _conductivity.clear();
+}
+
+void HelmholtzEOSMixtureBackend::set_conductivity_RES_residual_params(std::size_t i,
+                                                                        const std::vector<double>& n_res,
+                                                                        double xita) {
+    check_component_index(i, components.size(), "set_conductivity_RES_residual_params");
+    auto& d = components[i].transport.conductivity_res;
+    d.n_res = n_res;
+    d.xita  = xita;
+    d.n_params_match_alpha = true;
+    _conductivity.clear();
+}
+
+std::pair<std::vector<double>, double> HelmholtzEOSMixtureBackend::get_viscosity_RES_residual_params(std::size_t i) {
+    check_component_index(i, components.size(), "get_viscosity_RES_residual_params");
+    const auto& d = components[i].transport.viscosity_res;
+    return {d.n_res, d.xita};
+}
+
+std::pair<std::vector<double>, double> HelmholtzEOSMixtureBackend::get_conductivity_RES_residual_params(std::size_t i) {
+    check_component_index(i, components.size(), "get_conductivity_RES_residual_params");
+    const auto& d = components[i].transport.conductivity_res;
+    return {d.n_res, d.xita};
 }
 
 } /* namespace CoolProp */

@@ -2390,6 +2390,8 @@ if(COOLPROP_CATCH_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CubicAlpha.cpp")
   list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-RES.cpp")
+  list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CubicU.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CubicEntropy.cpp")
@@ -2420,6 +2422,7 @@ if(COOLPROP_CATCH_MODULE)
   target_link_libraries(CatchTestRunner PRIVATE Catch2::Catch2WithMain)
   target_compile_definitions(CatchTestRunner PRIVATE ENABLE_CATCH)
   target_compile_definitions(CatchTestRunner PRIVATE COOLPROP_ALL_FLUIDS_JSON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/dev/all_fluids.json")
+  target_compile_definitions(CatchTestRunner PRIVATE RES_SAMPLES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/dev/RES_samples")
   target_compile_definitions(CatchTestRunner PRIVATE COOLPROP_NO_INCBIN) # Incbin is disabled for Catch2 because of a weird behavior where out-of-date zlib-compressed fluid information were being used.
   if(UNIX)
     target_link_libraries(CatchTestRunner PRIVATE ${CMAKE_DL_LIBS})

@@ -77,6 +77,9 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// call (the dominant cost of e.g. SVDSBTL surface builds for ECS fluids).
     shared_ptr<HelmholtzEOSMixtureBackend> viscosity_ecs_reference_state;
     shared_ptr<HelmholtzEOSMixtureBackend> conductivity_ecs_reference_state;
+    /// Enable RES transport models for this backend instance (opt-in for HEOS mixtures).
+    bool viscosity_RES_enabled = false;
+    bool conductivity_RES_enabled = false;
     /// Update the state class used to calculate the tangent-plane-distance
     virtual void add_TPD_state() {
         if (TPD_state.get() == nullptr) {
@@ -582,6 +585,22 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      * If the conductivity model is hardcoded or ECS is being used, there will only be one entry in initial_density and all others will be zero
      */
     void calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual, CoolPropDbl& critical) override;
+
+    // RES transport API — enable/disable and per-component parameter setters/getters
+    void use_viscosity_RES(bool enable) override;
+    void use_conductivity_RES(bool enable) override;
+    void set_viscosity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute,
+                                      const std::vector<double>& n_res, double xita) override;
+    void set_conductivity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute,
+                                         const std::vector<double>& n_res, double xita,
+                                         double R_D, double gamma_uni, double Gamma,
+                                         double phi0, double t_ref, double q_D) override;
+    void set_viscosity_RES_residual_params(std::size_t i,
+                                           const std::vector<double>& n_res, double xita) override;
+    void set_conductivity_RES_residual_params(std::size_t i,
+                                              const std::vector<double>& n_res, double xita) override;
+    std::pair<std::vector<double>, double> get_viscosity_RES_residual_params(std::size_t i) override;
+    std::pair<std::vector<double>, double> get_conductivity_RES_residual_params(std::size_t i) override;
 
     CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) override;
     CoolPropDbl calc_saturated_vapor_keyed_output(parameters key) override;

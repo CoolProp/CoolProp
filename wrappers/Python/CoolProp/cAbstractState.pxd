@@ -1,4 +1,5 @@
 from libcpp cimport bool
+from libcpp.pair cimport pair
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
@@ -151,6 +152,17 @@ cdef extern from "CoolProp/AbstractState.h" namespace "CoolProp":
         void conformal_state(const string &, CoolPropDbl &, CoolPropDbl &) except +ValueError
         void conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical) except +ValueError
         void viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical) except +ValueError
+
+        # --- Residual Entropy Scaling (RES) transport API ---
+        void use_viscosity_RES(bool enable) except +ValueError
+        void use_conductivity_RES(bool enable) except +ValueError
+        void set_viscosity_RES_parameters(size_t i, const vector[double] &n_dilute, const vector[double] &n_res, double xita) except +ValueError
+        void set_conductivity_RES_parameters(size_t i, const vector[double] &n_dilute, const vector[double] &n_res, double xita,
+                                             double R_D, double gamma_uni, double Gamma, double phi0, double t_ref, double q_D) except +ValueError
+        void set_viscosity_RES_residual_params(size_t i, const vector[double] &n_res, double xita) except +ValueError
+        void set_conductivity_RES_residual_params(size_t i, const vector[double] &n_res, double xita) except +ValueError
+        pair[vector[double], double] get_viscosity_RES_residual_params(size_t i) except +ValueError
+        pair[vector[double], double] get_conductivity_RES_residual_params(size_t i) except +ValueError
 
         double gibbsmolar_excess() except +ValueError
         double gibbsmass_excess() except +ValueError

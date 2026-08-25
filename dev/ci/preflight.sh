@@ -163,8 +163,11 @@ if skip_check build; then
     skip "build" "--skip=build"
 elif [ ! -d build_catch ]; then
     # Auto-configure on first run.  Same flags as CI.
-    cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON >/dev/null 2>&1 || {
-        fail "build (cmake configure failed; run cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON manually)"
+    # -DCOOLPROP_STATIC_LIBRARY=ON is what sets the MSVC runtime to /MD (via
+    # modify_msvc_flags); without it cl defaults to /MT and the link fails
+    # against the fetched Catch2, which builds /MD.  Harmless elsewhere.
+    cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCOOLPROP_STATIC_LIBRARY=ON >/dev/null 2>&1 || {
+        fail "build (cmake configure failed; run cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCOOLPROP_STATIC_LIBRARY=ON manually)"
     }
 fi
 if ! skip_check build && [ -d build_catch ]; then

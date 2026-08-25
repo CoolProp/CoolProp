@@ -882,6 +882,21 @@ void init_CoolProp(nb::module_& m) {
                d["critical"] = static_cast<double>(critical);
                return d;
            })
+      // --- Residual Entropy Scaling (RES) transport API ---
+      .def("use_viscosity_RES", &AbstractState::use_viscosity_RES, nb::arg("enable"))
+      .def("use_conductivity_RES", &AbstractState::use_conductivity_RES, nb::arg("enable"))
+      .def("set_viscosity_RES_parameters", &AbstractState::set_viscosity_RES_parameters, nb::arg("i"), nb::arg("n_dilute"),
+           nb::arg("n_res"), nb::arg("xita"))
+      .def("set_conductivity_RES_parameters", &AbstractState::set_conductivity_RES_parameters, nb::arg("i"), nb::arg("n_dilute"),
+           nb::arg("n_res"), nb::arg("xita"), nb::arg("R_D"), nb::arg("gamma_uni"), nb::arg("Gamma"), nb::arg("phi0"), nb::arg("t_ref"),
+           nb::arg("q_D"))
+      .def("set_viscosity_RES_residual_params", &AbstractState::set_viscosity_RES_residual_params, nb::arg("i"), nb::arg("n_res"),
+           nb::arg("xita"))
+      .def("set_conductivity_RES_residual_params", &AbstractState::set_conductivity_RES_residual_params, nb::arg("i"), nb::arg("n_res"),
+           nb::arg("xita"))
+      // std::pair maps to a Python tuple, matching the legacy Cython interface.
+      .def("get_viscosity_RES_residual_params", &AbstractState::get_viscosity_RES_residual_params, nb::arg("i"))
+      .def("get_conductivity_RES_residual_params", &AbstractState::get_conductivity_RES_residual_params, nb::arg("i"))
       .def("surface_tension", &AbstractState::surface_tension)
       .def("Prandtl", &AbstractState::Prandtl)
       // bd CoolProp-r9sq.24: T/rho are in/out -> return dict(T, rhomolar) like legacy.

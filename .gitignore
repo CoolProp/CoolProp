@@ -59,6 +59,7 @@ Web/fluid_properties/fluids/molecule_geometry_status.md
 /include/cubic_fluids_schema_JSON.h
 /include/mixture_binary_pairs_pcsaft_JSON.h
 /include/pcsaft_fluids_schema_JSON.h
+/include/res_transport_parameters_JSON.h
 /include/version.h
 /include/catch.hpp
 /install_root/

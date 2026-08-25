@@ -335,6 +335,10 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     // Get fluid parameter (currently the volume translation parameter)
     double get_fluid_parameter_double(const size_t i, const std::string& parameter) override;
 
+    // RES transport: use the entropy-scaling model; auto-enabled when params are available.
+    CoolPropDbl calc_viscosity() override;
+    CoolPropDbl calc_conductivity() override;
+
     /// Return the integer code for the EOS type used in the cubic superancillary lookup.
     /// Derived classes (SRKBackend, PengRobinsonBackend) override this.
     virtual int get_superanc_eos_code() const {

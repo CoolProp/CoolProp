@@ -475,6 +475,35 @@ cdef class AbstractState:
         self.thisptr.viscosity_contributions(dilute, initial_density, residual, critical)
         return dict(dilute = dilute, initial_density = initial_density, residual = residual, critical = critical)
 
+    # --- Residual Entropy Scaling (RES) transport API ---
+    cpdef use_viscosity_RES(self, bint enable):
+        """ Enable/disable the residual-entropy-scaling viscosity model - wrapper of c++ function :cpapi:`CoolProp::AbstractState::use_viscosity_RES` """
+        self.thisptr.use_viscosity_RES(enable)
+    cpdef use_conductivity_RES(self, bint enable):
+        """ Enable/disable the residual-entropy-scaling thermal conductivity model - wrapper of c++ function :cpapi:`CoolProp::AbstractState::use_conductivity_RES` """
+        self.thisptr.use_conductivity_RES(enable)
+    cpdef set_viscosity_RES_parameters(self, size_t i, vector[double] n_dilute, vector[double] n_res, double xita):
+        """ Set the full RES viscosity parameters for component i - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_viscosity_RES_parameters` """
+        self.thisptr.set_viscosity_RES_parameters(i, n_dilute, n_res, xita)
+    cpdef set_conductivity_RES_parameters(self, size_t i, vector[double] n_dilute, vector[double] n_res, double xita,
+                                          double R_D, double gamma_uni, double Gamma, double phi0, double t_ref, double q_D):
+        """ Set the full RES conductivity parameters for component i, including critical enhancement - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_parameters` """
+        self.thisptr.set_conductivity_RES_parameters(i, n_dilute, n_res, xita, R_D, gamma_uni, Gamma, phi0, t_ref, q_D)
+    cpdef set_viscosity_RES_residual_params(self, size_t i, vector[double] n_res, double xita):
+        """ Update only the EOS-specific residual n-coefficients and xita for viscosity - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_viscosity_RES_residual_params` """
+        self.thisptr.set_viscosity_RES_residual_params(i, n_res, xita)
+    cpdef set_conductivity_RES_residual_params(self, size_t i, vector[double] n_res, double xita):
+        """ Update only the EOS-specific residual n-coefficients and xita for conductivity - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_residual_params` """
+        self.thisptr.set_conductivity_RES_residual_params(i, n_res, xita)
+    cpdef tuple get_viscosity_RES_residual_params(self, size_t i):
+        """ Return (n_res, xita) currently in use for viscosity of component i - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_viscosity_RES_residual_params` """
+        cdef pair[vector[double], double] out = self.thisptr.get_viscosity_RES_residual_params(i)
+        return (out.first, out.second)
+    cpdef tuple get_conductivity_RES_residual_params(self, size_t i):
+        """ Return (n_res, xita) currently in use for conductivity of component i - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_conductivity_RES_residual_params` """
+        cdef pair[vector[double], double] out = self.thisptr.get_conductivity_RES_residual_params(i)
+        return (out.first, out.second)
+
 
     cpdef double helmholtzmolar_excess(self) except *:
         """ Get the mole-specific excess Helmholtz energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::helmholtzmolar_excess(void)` """

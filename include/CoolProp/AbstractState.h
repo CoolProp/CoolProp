@@ -744,6 +744,49 @@ class AbstractState
     virtual void calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual, CoolPropDbl& critical) {
         throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend");
     };
+
+   public:
+    // --- Residual Entropy Scaling (RES) transport API ---
+    /// Enable or disable the RES viscosity model for mixture calculations.
+    virtual void use_viscosity_RES(bool /*enable*/) {
+        throw NotImplementedError("use_viscosity_RES is not implemented for this backend");
+    };
+    /// Enable or disable the RES thermal conductivity model for mixture calculations.
+    virtual void use_conductivity_RES(bool /*enable*/) {
+        throw NotImplementedError("use_conductivity_RES is not implemented for this backend");
+    };
+    /// Set full RES viscosity parameters for component i (dilute gas polynomial + residual).
+    virtual void set_viscosity_RES_parameters(std::size_t /*i*/, const std::vector<double>& /*n_dilute*/,
+                                              const std::vector<double>& /*n_res*/, double /*xita*/) {
+        throw NotImplementedError("set_viscosity_RES_parameters is not implemented for this backend");
+    };
+    /// Set full RES conductivity parameters for component i including critical-enhancement terms.
+    virtual void set_conductivity_RES_parameters(std::size_t /*i*/, const std::vector<double>& /*n_dilute*/,
+                                                 const std::vector<double>& /*n_res*/, double /*xita*/,
+                                                 double /*R_D*/, double /*gamma_uni*/, double /*Gamma*/,
+                                                 double /*phi0*/, double /*t_ref*/, double /*q_D*/) {
+        throw NotImplementedError("set_conductivity_RES_parameters is not implemented for this backend");
+    };
+    /// Update only the EOS-specific residual n-coefficients and xita for viscosity.
+    /// Call this after changing the alpha function (Twu, custom) with newly fitted values.
+    /// Resets the alpha-mismatch guard for component i.
+    virtual void set_viscosity_RES_residual_params(std::size_t /*i*/,
+                                                   const std::vector<double>& /*n_res*/, double /*xita*/) {
+        throw NotImplementedError("set_viscosity_RES_residual_params is not implemented for this backend");
+    };
+    /// Update only the EOS-specific residual n-coefficients and xita for conductivity.
+    virtual void set_conductivity_RES_residual_params(std::size_t /*i*/,
+                                                      const std::vector<double>& /*n_res*/, double /*xita*/) {
+        throw NotImplementedError("set_conductivity_RES_residual_params is not implemented for this backend");
+    };
+    /// Return the current residual n-coefficients and xita for viscosity of component i.
+    virtual std::pair<std::vector<double>, double> get_viscosity_RES_residual_params(std::size_t /*i*/) {
+        throw NotImplementedError("get_viscosity_RES_residual_params is not implemented for this backend");
+    };
+    /// Return the current residual n-coefficients and xita for conductivity of component i.
+    virtual std::pair<std::vector<double>, double> get_conductivity_RES_residual_params(std::size_t /*i*/) {
+        throw NotImplementedError("get_conductivity_RES_residual_params is not implemented for this backend");
+    };
     virtual std::vector<CriticalState> calc_all_critical_points() {
         throw NotImplementedError("calc_all_critical_points is not implemented for this backend");
     };

@@ -1,0 +1,18 @@
+Yang 2025 (https://doi.org/10.1021/acsomega.4c10815):
+	viscosity
+		RES_V_Parameters_PR.txt
+		RES_V_Parameters_SRK.txt
+	thermal_conductivity
+		RES_TC_Parameters_PR.txt
+		RES_TC_Parameters_SRK.txt
+
+Martinek et al. 2025 (https://doi.org/10.1021/acs.jced.4c00451):
+	viscosity
+		dilute_gas_V_Parameters.txt [note: also used in Yang2025]
+		RES_V_Parameters_REFPROP.txt
+
+Li et al. 2024 (https://doi.org/10.1021/acs.iecr.4c02946):
+	thermal_conductivity
+		dilute_gas_TC_Parameters.txt
+		critical_TC_Parameters.txt
+		RES_TC_Parameters_REFPROP.txt 

@@ -32,6 +32,7 @@ except ImportError:
 
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+from libcpp.pair cimport pair
 
 cdef extern from "Python.h":
     char* __FILE__

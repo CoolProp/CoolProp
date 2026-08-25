@@ -69,16 +69,40 @@ bd close <id>         # Complete work
 # default is an UNOPTIMIZED build, which makes the [slow] SVDSBTL surface
 # builds (a dense SVD at production resolution, NT=200/NR=800/rank=20)
 # crawl for minutes per fresh fluid.  Release turns that into seconds.
-cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+#
+# -DCOOLPROP_STATIC_LIBRARY=ON is REQUIRED on MSVC, and not just to get a
+# library target: it is the only thing in this configuration that sets the
+# MSVC runtime (it reaches modify_msvc_flags("/MD"), putting /MD into
+# CMAKE_CXX_FLAGS_RELEASE).  Without it no /M flag is emitted at all, cl
+# falls back to its /MT default, and the link fails against the fetched
+# Catch2 — which declares cmake_minimum_required(3.16), gets CMP0091 NEW and
+# so builds /MD:
+#   LNK2038: mismatch detected for 'RuntimeLibrary':
+#            value 'MD_DynamicRelease' doesn't match value 'MT_StaticRelease'
+# followed by a wall of LNK2005 duplicate symbols between msvcprt.lib and
+# libcpmt.lib.  (CoolProp's own cmake_minimum_required(3.14) leaves CMP0091
+# unset, which is why -DCMAKE_MSVC_RUNTIME_LIBRARY= alone does nothing here.)
+cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON \
+      -DCOOLPROP_STATIC_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release
 
-# Build the Catch2 runner
-cmake --build build_catch --target CatchTestRunner -j8
+# Build the Catch2 runner.  On a multi-config generator (Visual Studio)
+# CMAKE_BUILD_TYPE above is ignored, so pass --config as well; the binary then
+# lands in build_catch/Release/CatchTestRunner.exe rather than
+# build_catch/CatchTestRunner.
+cmake --build build_catch --target CatchTestRunner --config Release -j8
 
 # Run the test suite — see "Test filter discipline" below for tag scope
+# (on MSVC substitute ./build_catch/Release/CatchTestRunner.exe)
 ./build_catch/CatchTestRunner [SBTL]            # SBTL adapter layer
 ./build_catch/CatchTestRunner [SVDSBTL]         # backend-level tests
 ./build_catch/CatchTestRunner "~[slow]"         # everything except [slow]
 ```
+
+Note the runner's exit code is NOT simply the failed-assertion count, and a
+crashing run can exit non-zero having printed no summary at all.  Always
+redirect to a file and check for the `test cases:` / `assertions:` summary
+lines rather than trusting `$?` — and never pipe through `tail`, which
+replaces the runner's exit code with the pipe's.
 
 ## Pre-Push Gate — REQUIRED before every `git push`
 

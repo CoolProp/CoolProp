@@ -5,6 +5,8 @@
 #include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
 #include "Backends/Helmholtz/MixtureDerivatives.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "Backends/Helmholtz/TransportRoutines.h"
 #include <Eigen/Dense>
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
@@ -32,6 +34,18 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
 
     // Set the ideal-gas helmholtz energy based on the components in use;
     set_alpha0_from_components();
+
+    // Populate name, molemass, and RES transport params in the base HEOS components.
+    // The eos_key selects the correct fitted parameter set from res_transport_parameters.json.
+    if (!components.empty()) {
+        const std::string eos_key = (backend_name() == "PengRobinsonBackend") ? "PR" : "SRK";
+        std::vector<CoolPropFluid>& _comps = HelmholtzEOSMixtureBackend::get_components();
+        for (std::size_t i = 0; i < N && i < _comps.size(); ++i) {
+            _comps[i].name    = components[i].name;
+            _comps[i].aliases = components[i].aliases;  // needed for RES lookup by REFPROP name
+            overlay_RES_transport_by_name(eos_key, _comps[i], components[i].molemass);
+        }
+    }
 
     // Top-level class can hold copies of the base saturation classes,
     // saturation classes cannot hold copies of the saturation classes
@@ -782,6 +796,12 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
+    // Changing the alpha function invalidates n_res / xita, which were fitted for the default alpha.
+    std::vector<CoolPropFluid>& _comps = HelmholtzEOSMixtureBackend::get_components();
+    if (i < _comps.size()) {
+        _comps[i].transport.viscosity_res.n_params_match_alpha    = false;
+        _comps[i].transport.conductivity_res.n_params_match_alpha = false;
+    }
     for (auto& state : linked_states) {
         auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->set_cubic_alpha_C(i, parameter, c1, c2, c3);
@@ -827,6 +847,36 @@ double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
+}
+
+CoolPropDbl CoolProp::AbstractCubicBackend::calc_viscosity() {
+    std::vector<CoolPropFluid>& _comps = HelmholtzEOSMixtureBackend::get_components();
+    bool all_ok = !_comps.empty();
+    for (std::size_t i = 0; i < _comps.size() && all_ok; ++i)
+        all_ok = _comps[i].transport.viscosity_res.provided;
+    if (all_ok) {
+        viscosity_RES_enabled = true;
+        return TransportRoutines::viscosity_RES(*this);
+    }
+    throw NotImplementedError(format("Viscosity is not implemented for the %s backend and "
+                                     "no RES parameters were found for the fluid(s). "
+                                     "Provide RES parameters via set_viscosity_RES_parameters().",
+                                     backend_name().c_str()));
+}
+
+CoolPropDbl CoolProp::AbstractCubicBackend::calc_conductivity() {
+    std::vector<CoolPropFluid>& _comps = HelmholtzEOSMixtureBackend::get_components();
+    bool all_ok = !_comps.empty();
+    for (std::size_t i = 0; i < _comps.size() && all_ok; ++i)
+        all_ok = _comps[i].transport.conductivity_res.provided;
+    if (all_ok) {
+        conductivity_RES_enabled = true;
+        return TransportRoutines::conductivity_RES(*this);
+    }
+    throw NotImplementedError(format("Thermal conductivity is not implemented for the %s backend and "
+                                     "no RES parameters were found for the fluid(s). "
+                                     "Provide RES parameters via set_conductivity_RES_parameters().",
+                                     backend_name().c_str()));
 }
 
 double CoolProp::AbstractCubicBackend::calc_superanc_Tmax() {

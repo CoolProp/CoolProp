@@ -802,7 +802,85 @@ class JSONFluidLibrary
         fluid.transport.viscosity_using_rhosr = true;
     }
 
-    /// Parse the transport properties
+    /// Populate RES transport parameters for one fluid from the pre-parsed RES JSON.
+    /// eos_key is "HEOS", "PR", or "SRK"; silently skips if the fluid is not in the table.
+    /// molar_mass_override > 0 is used when the CoolPropFluid has no EOS data (e.g. cubic backends).
+   public:
+    static void load_RES_transport_parameters(const nlohmann::json& res_json,
+                                              const std::string& eos_key,
+                                              CoolPropFluid& fluid,
+                                              double molar_mass_override = -1.0) {
+        // Find the fluid by alias (all aliases are stored uppercase in the JSON keys)
+        auto find_key = [&](const nlohmann::json& section) -> std::string {
+            if (section.contains(fluid.name))       return fluid.name;
+            if (section.contains(upper(fluid.name))) return upper(fluid.name);
+            if (section.contains(fluid.REFPROPname)) return fluid.REFPROPname;
+            if (section.contains(upper(fluid.REFPROPname))) return upper(fluid.REFPROPname);
+            for (const auto& alias : fluid.aliases) {
+                if (section.contains(alias))       return alias;
+                if (section.contains(upper(alias))) return upper(alias);
+            }
+            return "";
+        };
+
+        if (!res_json.contains("viscosity") || !res_json.contains("conductivity"))
+            return;
+
+        const nlohmann::json& vis_section = res_json.at("viscosity");
+        const nlohmann::json& tc_section  = res_json.at("conductivity");
+
+        // ── viscosity ────────────────────────────────────────────────────────
+        {
+            std::string key = find_key(vis_section);
+            if (!key.empty()) {
+                const nlohmann::json& fe = vis_section.at(key);
+                ViscosityRESData& d = fluid.transport.viscosity_res;
+                d.n_dilute   = fe.at("dilute").at("n").get<std::vector<double>>();
+                d.molar_mass = (molar_mass_override > 0) ? molar_mass_override : fluid.molar_mass();
+                if (fe.contains(eos_key)) {
+                    const nlohmann::json& eos = fe.at(eos_key);
+                    d.n_res    = eos.at("n").get<std::vector<double>>();
+                    d.xita     = eos.at("xita").get<double>();
+                    d.group_num = eos.at("group").get<int>();
+                    d.n_params_match_alpha = true;
+                    d.provided = true;
+                }
+            }
+        }
+
+        // ── thermal conductivity ─────────────────────────────────────────────
+        {
+            std::string key = find_key(tc_section);
+            if (!key.empty()) {
+                const nlohmann::json& fe = tc_section.at(key);
+                ConductivityRESData& d = fluid.transport.conductivity_res;
+                d.n_dilute   = fe.at("dilute").at("n").get<std::vector<double>>();
+                d.molar_mass = (molar_mass_override > 0) ? molar_mass_override : fluid.molar_mass();
+                if (fe.contains(eos_key)) {
+                    const nlohmann::json& eos = fe.at(eos_key);
+                    d.n_res    = eos.at("n").get<std::vector<double>>();
+                    d.xita     = eos.at("xita").get<double>();
+                    d.group_num = eos.at("group").get<int>();
+                    d.n_params_match_alpha = true;
+                    d.provided = true;
+                }
+                if (fe.contains("critical_enhancement")) {
+                    const nlohmann::json& ce = fe.at("critical_enhancement");
+                    d.R_D       = ce.at("R_D").get<double>();
+                    d.gamma_uni = ce.at("gamma_uni").get<double>();
+                    d.Gamma     = ce.at("Gamma").get<double>();
+                    d.phi0      = ce.at("phi0").get<double>();
+                    d.t_ref     = ce.at("t_ref").get<double>();
+                    d.q_D       = ce.at("q_D").get<double>();
+                    // A few fluids carry an all-zero record in the source tables, meaning "not
+                    // fitted" rather than "zero enhancement".  Li 2024 gates on t_ref > 0; treating
+                    // such a record as provided would divide by t_ref and Gamma downstream.
+                    d.crit_provided = (d.t_ref > 0) && (d.Gamma > 0) && (d.phi0 > 0) && (d.q_D > 0);
+                }
+            }
+        }
+    }
+
     void parse_viscosity(const nlohmann::json& viscosity, CoolPropFluid& fluid) {
         // If an array, use the first one, and then stop;
         if (viscosity.is_array()) {
@@ -1450,6 +1528,11 @@ std::string get_fluid_as_JSONstring(const std::string& indentifier);
 
 /// Set the internal enthalpy and entropy offset variables
 void set_fluid_enthalpy_entropy_offset(const std::string& fluid, double delta_a1, double delta_a2, const std::string& ref);
+
+/// Overlay RES transport parameters for `fluid` using the pre-parsed JSON table.
+/// eos_key must be "HEOS", "PR", or "SRK"; silently skips if the fluid is not listed.
+void overlay_RES_transport_by_name(const std::string& eos_key, CoolPropFluid& fluid,
+                                   double molar_mass_override = -1.0);
 
 } /* namespace CoolProp */
 #endif
