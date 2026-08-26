@@ -41,9 +41,10 @@ HEADER = '''\
 # Source: wrappers/Python/CoolProp/CoolProp.pyx (which includes HumidAirProp.pyx
 # and AbstractState.pyx) via stubgen-pyx + dev/stubs/postprocess.py.
 #
-# Enum-like arguments (parameters / phases / input_pairs / configuration_keys)
-# are plain ``int`` at the Python boundary: pass the module-level constants from
-# CoolProp.constants (e.g. PT_INPUTS, iT, iphase_liquid), which are integers.
+# Enum-like arguments (parameters / phases / input_pairs / configuration_keys,
+# and the RES source policies) are plain ``int`` at the Python boundary: pass the
+# module-level constants from CoolProp.constants (e.g. PT_INPUTS, iT,
+# iphase_liquid, RES_DILUTE_AUTO), which are integers.
 from __future__ import annotations
 
 from typing import Any, overload
@@ -62,10 +63,16 @@ _TYPE_MAP = {
     "constants_header.phases": "int",
     "constants_header.input_pairs": "int",
     "constants_header.configuration_keys": "int",
+    "constants_header.RESDiluteSource": "int",
+    "constants_header.RESEnhancementViscosity": "int",
+    "constants_header.RESMixtureEnhancement": "int",
     "parameters": "int",
     "phases": "int",
     "input_pairs": "int",
     "configuration_keys": "int",
+    "RESDiluteSource": "int",
+    "RESEnhancementViscosity": "int",
+    "RESMixtureEnhancement": "int",
     "supanc.SuperAncillaryHolder": "object",
     "bool": "bool",  # identity, but normalises any libcpp-bool reference
 }

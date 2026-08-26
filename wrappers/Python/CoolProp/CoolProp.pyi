@@ -3,9 +3,10 @@
 # Source: wrappers/Python/CoolProp/CoolProp.pyx (which includes HumidAirProp.pyx
 # and AbstractState.pyx) via stubgen-pyx + dev/stubs/postprocess.py.
 #
-# Enum-like arguments (parameters / phases / input_pairs / configuration_keys)
-# are plain ``int`` at the Python boundary: pass the module-level constants from
-# CoolProp.constants (e.g. PT_INPUTS, iT, iphase_liquid), which are integers.
+# Enum-like arguments (parameters / phases / input_pairs / configuration_keys,
+# and the RES source policies) are plain ``int`` at the Python boundary: pass the
+# module-level constants from CoolProp.constants (e.g. PT_INPUTS, iT,
+# iphase_liquid, RES_DILUTE_AUTO), which are integers.
 from __future__ import annotations
 
 from typing import Any, overload
@@ -476,16 +477,16 @@ class AbstractState:
     def set_conductivity_RES_residual_params(self, i: int, n_res: list[float], xita: float):
         """ Update only the EOS-specific residual n-coefficients and xita for conductivity - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_residual_params` """
 
-    def set_viscosity_RES_dilute_source(self, src: constants_header.RESDiluteSource):
+    def set_viscosity_RES_dilute_source(self, src: int):
         """ Choose where the RES dilute-gas viscosity term comes from - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_viscosity_RES_dilute_source` """
 
-    def set_conductivity_RES_dilute_source(self, src: constants_header.RESDiluteSource):
+    def set_conductivity_RES_dilute_source(self, src: int):
         """ Choose where the RES dilute-gas conductivity term comes from - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_dilute_source` """
 
-    def set_conductivity_RES_enhancement_viscosity(self, src: constants_header.RESEnhancementViscosity):
+    def set_conductivity_RES_enhancement_viscosity(self, src: int):
         """ Choose which viscosity the RES critical enhancement consumes - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_enhancement_viscosity` """
 
-    def set_RES_mixture_enhancement(self, policy: constants_header.RESMixtureEnhancement):
+    def set_RES_mixture_enhancement(self, policy: int):
         """ Choose whether the RES critical enhancement is applied to mixtures - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_RES_mixture_enhancement` """
 
     def get_viscosity_RES_residual_params(self, i: int) -> tuple:
