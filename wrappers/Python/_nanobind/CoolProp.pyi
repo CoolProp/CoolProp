@@ -1013,6 +1013,45 @@ FLUID_TYPE_INCOMPRESSIBLE_SOLUTION: fluid_types = fluid_types.FLUID_TYPE_INCOMPR
 
 FLUID_TYPE_UNDEFINED: fluid_types = fluid_types.FLUID_TYPE_UNDEFINED
 
+class RESDiluteSource(enum.IntEnum):
+    RES_DILUTE_AUTO = 0
+
+    RES_DILUTE_POLYNOMIAL = 1
+
+    RES_DILUTE_BACKEND_NATIVE = 2
+
+RES_DILUTE_AUTO: RESDiluteSource = RESDiluteSource.RES_DILUTE_AUTO
+
+RES_DILUTE_POLYNOMIAL: RESDiluteSource = RESDiluteSource.RES_DILUTE_POLYNOMIAL
+
+RES_DILUTE_BACKEND_NATIVE: RESDiluteSource = RESDiluteSource.RES_DILUTE_BACKEND_NATIVE
+
+class RESEnhancementViscosity(enum.IntEnum):
+    RES_ENH_VIS_AUTO = 0
+
+    RES_ENH_VIS_RES = 1
+
+    RES_ENH_VIS_BACKEND_NATIVE = 2
+
+RES_ENH_VIS_AUTO: RESEnhancementViscosity = RESEnhancementViscosity.RES_ENH_VIS_AUTO
+
+RES_ENH_VIS_RES: RESEnhancementViscosity = RESEnhancementViscosity.RES_ENH_VIS_RES
+
+RES_ENH_VIS_BACKEND_NATIVE: RESEnhancementViscosity = ...
+
+class RESMixtureEnhancement(enum.IntEnum):
+    RES_MIX_ENH_AUTO = 0
+
+    RES_MIX_ENH_OFF = 1
+
+    RES_MIX_ENH_ON = 2
+
+RES_MIX_ENH_AUTO: RESMixtureEnhancement = RESMixtureEnhancement.RES_MIX_ENH_AUTO
+
+RES_MIX_ENH_OFF: RESMixtureEnhancement = RESMixtureEnhancement.RES_MIX_ENH_OFF
+
+RES_MIX_ENH_ON: RESMixtureEnhancement = RESMixtureEnhancement.RES_MIX_ENH_ON
+
 class fast_evaluate_status(enum.IntEnum):
     fast_evaluate_ok = 0
 
@@ -1358,6 +1397,34 @@ class AbstractState:
     def conductivity(self) -> float: ...
 
     def conductivity_contributions(self) -> dict: ...
+
+    def use_viscosity_RES(self, enable: bool) -> None: ...
+
+    def use_conductivity_RES(self, enable: bool) -> None: ...
+
+    def set_viscosity_RES_parameters(self, i: int, n_dilute: Sequence[float], n_res: Sequence[float], xita: float) -> None: ...
+
+    def set_conductivity_RES_parameters(self, i: int, n_dilute: Sequence[float], n_res: Sequence[float], xita: float, R_D: float, gamma_uni: float, Gamma: float, phi0: float, t_ref: float, q_D: float) -> None: ...
+
+    def set_viscosity_RES_residual_params(self, i: int, n_res: Sequence[float], xita: float) -> None: ...
+
+    def set_conductivity_RES_residual_params(self, i: int, n_res: Sequence[float], xita: float) -> None: ...
+
+    def get_viscosity_RES_residual_params(self, i: int) -> tuple[list[float], float]: ...
+
+    def get_conductivity_RES_residual_params(self, i: int) -> tuple[list[float], float]: ...
+
+    def get_viscosity_RES_parameters(self, i: int) -> dict: ...
+
+    def get_conductivity_RES_parameters(self, i: int) -> dict: ...
+
+    def set_viscosity_RES_dilute_source(self, src: RESDiluteSource) -> None: ...
+
+    def set_conductivity_RES_dilute_source(self, src: RESDiluteSource) -> None: ...
+
+    def set_conductivity_RES_enhancement_viscosity(self, src: RESEnhancementViscosity) -> None: ...
+
+    def set_RES_mixture_enhancement(self, policy: RESMixtureEnhancement) -> None: ...
 
     def surface_tension(self) -> float: ...
 

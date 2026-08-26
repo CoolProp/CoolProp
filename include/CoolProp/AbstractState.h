@@ -878,6 +878,10 @@ class AbstractState
     RESTransportStore& RES_data_mutable() {
         return _RES;
     }
+
+   protected:
+    // Back to the access level this block interrupted -- everything below here was protected
+    // before the RES API was inserted above and must stay that way.
     virtual std::vector<CriticalState> calc_all_critical_points() {
         throw NotImplementedError("calc_all_critical_points is not implemented for this backend");
     };

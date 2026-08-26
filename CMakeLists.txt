@@ -412,6 +412,7 @@ include_directories(${APP_INCLUDE_DIRS})
 
 set(SWIG_DEPENDENCIES
     ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/DataStructures.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/RESTransport.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/CoolProp.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/AbstractState.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp/Configuration.h

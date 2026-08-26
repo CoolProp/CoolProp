@@ -19,6 +19,7 @@
 
 %include "std_string.i" // This %include allows the use of std::string natively
 %include "std_vector.i" // This allows for the use of STL vectors natively(ish)
+%include "std_pair.i"   // for the (n_res, xita) pair the RES residual-parameter getters return
 %include "exception.i" //
 
 // Instantiate templates used
@@ -49,6 +50,7 @@
 // This stuff will get included verbatim in CoolProp_wrap
 %{
 #include "CoolProp/DataStructures.h"
+#include "CoolProp/RESTransport.h"
 #include "CoolProp/AbstractState.h"
 #include "CoolProp/CoolProp.h"
 #include "CoolProp/fluids/PhaseEnvelope.h"
@@ -60,6 +62,11 @@
 %}
 
 %include "CoolProp/DataStructures.h"
+// Must precede AbstractState.h: it returns these by value, and SWIG does not follow the
+// #include, so without this it emits unqualified type names that do not compile.
+%include "CoolProp/RESTransport.h"
+%template(RESComponentDataVector) std::vector<CoolProp::RESComponentData>;
+%template(RESResidualParams) std::pair<std::vector<double>, double>;
 %include "CoolProp/AbstractState.h"
 %include "CoolProp/CoolProp.h"
 %include "CoolProp/fluids/PhaseEnvelope.h"

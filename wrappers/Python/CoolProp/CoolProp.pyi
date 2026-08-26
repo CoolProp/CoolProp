@@ -458,6 +458,48 @@ class AbstractState:
     def viscosity_contributions(self) -> dict:
         """ Retrieve each of the contributions to the viscosity, each in Pa-s - wrapper of c++ function :cpapi:`CoolProp::AbstractState::viscosity_contributions` """
 
+    def use_viscosity_RES(self, enable: bool):
+        """ Enable/disable the residual-entropy-scaling viscosity model - wrapper of c++ function :cpapi:`CoolProp::AbstractState::use_viscosity_RES` """
+
+    def use_conductivity_RES(self, enable: bool):
+        """ Enable/disable the residual-entropy-scaling thermal conductivity model - wrapper of c++ function :cpapi:`CoolProp::AbstractState::use_conductivity_RES` """
+
+    def set_viscosity_RES_parameters(self, i: int, n_dilute: list[float], n_res: list[float], xita: float):
+        """ Set the full RES viscosity parameters for component i - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_viscosity_RES_parameters` """
+
+    def set_conductivity_RES_parameters(self, i: int, n_dilute: list[float], n_res: list[float], xita: float, R_D: float, gamma_uni: float, Gamma: float, phi0: float, t_ref: float, q_D: float):
+        """ Set the full RES conductivity parameters for component i, including critical enhancement - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_parameters` """
+
+    def set_viscosity_RES_residual_params(self, i: int, n_res: list[float], xita: float):
+        """ Update only the EOS-specific residual n-coefficients and xita for viscosity - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_viscosity_RES_residual_params` """
+
+    def set_conductivity_RES_residual_params(self, i: int, n_res: list[float], xita: float):
+        """ Update only the EOS-specific residual n-coefficients and xita for conductivity - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_residual_params` """
+
+    def set_viscosity_RES_dilute_source(self, src: constants_header.RESDiluteSource):
+        """ Choose where the RES dilute-gas viscosity term comes from - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_viscosity_RES_dilute_source` """
+
+    def set_conductivity_RES_dilute_source(self, src: constants_header.RESDiluteSource):
+        """ Choose where the RES dilute-gas conductivity term comes from - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_dilute_source` """
+
+    def set_conductivity_RES_enhancement_viscosity(self, src: constants_header.RESEnhancementViscosity):
+        """ Choose which viscosity the RES critical enhancement consumes - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_conductivity_RES_enhancement_viscosity` """
+
+    def set_RES_mixture_enhancement(self, policy: constants_header.RESMixtureEnhancement):
+        """ Choose whether the RES critical enhancement is applied to mixtures - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_RES_mixture_enhancement` """
+
+    def get_viscosity_RES_residual_params(self, i: int) -> tuple:
+        """ Return (n_res, xita) currently in use for viscosity of component i - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_viscosity_RES_residual_params` """
+
+    def get_viscosity_RES_parameters(self, i: int) -> dict:
+        """ Return the complete RES viscosity parameter set for component i as a dict - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_viscosity_RES_parameters` """
+
+    def get_conductivity_RES_parameters(self, i: int) -> dict:
+        """ Return the complete RES conductivity parameter set for component i as a dict - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_conductivity_RES_parameters` """
+
+    def get_conductivity_RES_residual_params(self, i: int) -> tuple:
+        """ Return (n_res, xita) currently in use for conductivity of component i - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_conductivity_RES_residual_params` """
+
     def helmholtzmolar_excess(self) -> float:
         """ Get the mole-specific excess Helmholtz energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::helmholtzmolar_excess(void)` """
 
