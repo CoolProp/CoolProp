@@ -19,10 +19,19 @@ unchanged.
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/numerics/numerics.h"
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
 namespace CoolProp {
+
+/// The RES model has a FIXED number of coefficients per property.  RESTransport.cpp indexes
+/// these positions unconditionally once `provided` is set, so the setters must reject anything
+/// shorter -- see AbstractState::check_RES_coeff_sizes().  Keep in step with vis_pow[] / tc_pow[]
+/// in src/Backends/RES/RESTransport.cpp, which carry the matching exponents.
+constexpr std::size_t RES_N_DILUTE = 5;            ///< dilute-gas polynomial, n0..n4
+constexpr std::size_t RES_N_RES_VISCOSITY = 3;     ///< residual viscosity coefficients
+constexpr std::size_t RES_N_RES_CONDUCTIVITY = 4;  ///< residual conductivity coefficients
 
 // Residual Entropy Scaling (RES) transport data. Martinek 2025 / Yang 2021-2025.
 struct ViscosityRESData

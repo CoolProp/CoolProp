@@ -98,11 +98,23 @@ cmake --build build_catch --target CatchTestRunner --config Release -j8
 ./build_catch/CatchTestRunner "~[slow]"         # everything except [slow]
 ```
 
-Note the runner's exit code is NOT simply the failed-assertion count, and a
-crashing run can exit non-zero having printed no summary at all.  Always
-redirect to a file and check for the `test cases:` / `assertions:` summary
-lines rather than trusting `$?` — and never pipe through `tail`, which
-replaces the runner's exit code with the pipe's.
+Require **both** a zero exit status and a summary line.  Neither alone is
+enough: Catch2 v3.8 returns **42** on a failed assertion while still printing a
+perfectly normal `assertions: ... failed` summary, so grepping only for the
+summary accepts a failed run; and a crashing run exits non-zero having printed
+no summary at all, so trusting the status alone can accept a run that never got
+going.  (Other Catch2 statuses: 1 unspecified error, 2 no tests run, 3 unmatched
+test spec, 4 all skipped, 5 invalid spec.)  Note a fully passing run prints
+`All tests passed` and NO `test cases:` line, so match either.
+
+Redirect to a file rather than piping — `| tail` replaces the runner's exit code
+with the pipe's:
+
+```bash
+./build_catch/CatchTestRunner "[SBTL]" > run.log 2>&1; status=$?
+tail -20 run.log
+[ "$status" -eq 0 ] && grep -qE "All tests passed|test cases:" run.log || echo "FAILED"
+```
 
 ## Pre-Push Gate — REQUIRED before every `git push`
 

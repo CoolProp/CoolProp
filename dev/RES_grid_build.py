@@ -23,7 +23,6 @@ Writes dev/RES_comparison/grid_points.csv, consumed by the [RES_grid] Catch2 tes
 import argparse
 import csv
 import os
-import sys
 
 import CoolProp.CoolProp as CP
 
@@ -222,4 +221,4 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--fluids", default=None, help="comma-separated subset (default: every fluid in the JSON)")
     args = ap.parse_args()
-    sys.exit(main(args.fluids))
+    main(args.fluids)

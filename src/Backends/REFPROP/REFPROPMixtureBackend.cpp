@@ -352,6 +352,11 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         return;
     } else {
         int ierr = 0;
+        // Remember what the RES store was seeded for.  RES parameters are per component, so a
+        // change of component set must re-seed them -- but a reload of the SAME components
+        // (what check_loaded_fluid() does when another instance has taken over REFPROP's global
+        // state) must NOT, or it would discard whatever the user set via set_*_RES_parameters().
+        const std::vector<std::string> previously_seeded_for = this->resolved_fluid_names;
         this->fluid_names = fluid_names;
 
         // Resolve each name through the CoolProp fluid library so that any
@@ -471,6 +476,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                     int iflag = 0;  // Tell REFPROP to use normal Helmholtz models
                     PREOSdll(&iflag);
                 }
+                reseed_RES_if_components_changed(previously_seeded_for);
                 return;
             } else {
                 if (CoolProp::get_debug_level() > 0) {
@@ -543,6 +549,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                     int iflag = 0;  // Tell REFPROP to use normal Helmholtz models
                     PREOSdll(&iflag);
                 }
+                reseed_RES_if_components_changed(previously_seeded_for);
                 return;
             } else if (k < number_of_endings - 1) {  // Keep going
                 if (CoolProp::get_debug_level() > 5) {
@@ -1239,6 +1246,10 @@ const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions() {
     return mass_fractions;
 }
 
+// The `const` on the return type is meaningless for a by-value double (CodeQL flags it), but it
+// is the signature of the base-class virtual in AbstractState.h and of the HEOS override, and an
+// override that disagrees with both for no benefit is worse than the redundant qualifier.  Drop it
+// in all three places or in none.
 const double REFPROPMixtureBackend::get_fluid_constant(std::size_t i, parameters param) const {
     if (i >= Ncomp) {
         throw ValueError(format("get_fluid_constant: component index %zu out of range (Ncomp=%zu).", i, Ncomp));
@@ -1271,6 +1282,25 @@ const double REFPROPMixtureBackend::get_fluid_constant(std::size_t i, parameters
             throw ValueError(
               format("REFPROP backend: I don't know what to do with this fluid constant: %s", get_parameter_information(param, "short").c_str()));
     }
+}
+
+void REFPROPMixtureBackend::reseed_RES_if_components_changed(const std::vector<std::string>& previously_seeded_for) {
+    // Nothing was seeded yet (construct() seeds explicitly right after the first load), or the
+    // same components were merely reloaded -- in which case re-seeding would throw away
+    // parameters the user set through set_*_RES_parameters().
+    if (previously_seeded_for.empty() || previously_seeded_for == this->resolved_fluid_names) {
+        return;
+    }
+    // Different components: the old records describe a different fluid.  Reset the whole store
+    // -- parameters, enable flags and source policies -- to what a freshly constructed state
+    // would have, then re-seed.  Dropping the flags is deliberate: silently carrying "RES
+    // enabled" onto a fluid the caller never enabled it for is how wrong numbers get returned
+    // without an error.  setup_RES_transport() is a no-op for a predefined .MIX, which leaves
+    // the store empty and makes use_*_RES() report RES as unsupported.
+    _RES = RESTransportStore();
+    _viscosity.clear();
+    _conductivity.clear();
+    this->setup_RES_transport();
 }
 
 void REFPROPMixtureBackend::setup_RES_transport() {
@@ -2547,6 +2577,10 @@ void REFPROPMixtureBackend::link_to_loaded_fluids(const REFPROPMixtureBackend& h
     this->mole_fractions_vap.assign(ncmax, 0.0);
     this->imposed_phase_index = iphase_not_imposed;
     this->_mole_fractions_set = false;
+    // A linked state evaluates the SAME components, so it must carry the same RES parameters
+    // and flags -- otherwise a shim built from an RES-enabled host silently falls back to
+    // REFPROP's native transport model.  Mirrors HelmholtzEOSMixtureBackend::get_copy().
+    this->_RES = host._RES;
 }
 
 shared_ptr<REFPROPMixtureBackend> REFPROPMixtureBackend::build_saturation_shim(int Q) {

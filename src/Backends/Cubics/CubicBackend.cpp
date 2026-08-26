@@ -817,6 +817,11 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
         _RES.comps[i].viscosity.n_params_match_alpha = false;
         _RES.comps[i].conductivity.n_params_match_alpha = false;
     }
+    // ... and invalidates anything already memoized for the old alpha.  update() would clear
+    // these, but nothing forces a caller to update between the two, and a cached value would
+    // bypass the guard above and be returned as if it still applied.
+    _viscosity.clear();
+    _conductivity.clear();
     for (auto& state : linked_states) {
         auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->set_cubic_alpha_C(i, parameter, c1, c2, c3);

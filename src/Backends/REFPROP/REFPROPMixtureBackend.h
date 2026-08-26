@@ -77,6 +77,10 @@ class REFPROPMixtureBackend : public AbstractState
     const double get_fluid_constant(std::size_t i, parameters param) const override;
 
     /// Seed AbstractState::_RES with the shipped REFPROP-fitted RES transport parameters.
+    /// Re-seed the RES store when set_REFPROP_fluids() has loaded a DIFFERENT component set.
+    /// A reload of the same components leaves the store (and anything the user set on it) alone.
+    void reseed_RES_if_components_changed(const std::vector<std::string>& previously_seeded_for);
+
     /// Called once from construct(); deliberately NOT from set_REFPROP_fluids(), which
     /// check_loaded_fluid() re-invokes on every property call and which would therefore
     /// overwrite any parameters the user had set through the public setters.

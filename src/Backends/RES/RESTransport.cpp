@@ -27,8 +27,8 @@ namespace {
 static const double RES_N_A = 6.02214076e23;  // mol^-1
 static const double RES_k_B = 1.380649e-23;   // J/K
 // Exponent vectors are hardcoded per the fitting scheme of the literature.
-static const double vis_pow[3] = {1.8, 2.4, 2.8};
-static const double tc_pow[4] = {1.0, 1.5, 2.0, 2.5};
+static const double vis_pow[RES_N_RES_VISCOSITY] = {1.8, 2.4, 2.8};
+static const double tc_pow[RES_N_RES_CONDUCTIVITY] = {1.0, 1.5, 2.0, 2.5};
 }  // namespace
 
 /// s_plus = -s_res/R is the model's independent variable, and every term raises it to a FRACTIONAL

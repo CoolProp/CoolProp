@@ -153,6 +153,20 @@ def load_tc_params(data_dir: str, eos: str) -> tuple[pd.DataFrame, pd.DataFrame,
     return dilute, res, crit
 
 
+def check_same_fluid(fluid: str, row, table: str) -> None:
+    """Fail loudly when a positionally-paired row belongs to a different fluid.
+
+    The dilute tables are semicolon-delimited and the residual / critical tables are
+    whitespace-delimited, so they are parsed independently and nothing but row ORDER ties a
+    coefficient set to its fluid.  Reorder or add a row in any one file and this script would
+    otherwise emit one fluid's coefficients under another fluid's name, silently, into the
+    shipped header.  Every table carries a `Material` column, so the check is cheap.
+    """
+    other = str(row["Material"]).strip().upper()
+    if other != fluid:
+        raise SystemExit(f"{table}: row order mismatch -- dilute table has {fluid!r}, this table has {other!r}")
+
+
 def build_vis_entry(res_row) -> dict:
     ind_fit = int(res_row["ind_fit"]) == 1
     if ind_fit:
@@ -223,7 +237,7 @@ def main(params_dir: str) -> None:
 
     n_refprop_only_vis = 0
     n_excluded_heos_vis = 0
-    for idx, drow in dilute_v.iterrows():
+    for idx, (_label, drow) in enumerate(dilute_v.iterrows()):
         fluid = str(drow["Material"]).strip().upper()
         n_dilute = [
             float(drow["n0"]),
@@ -235,6 +249,7 @@ def main(params_dir: str) -> None:
         entry: dict = {"dilute": {"n": n_dilute}}
         for json_eos, res_df in res_by_eos.items():
             res_row = res_df.iloc[idx]
+            check_same_fluid(fluid, res_row, f"RES_V_Parameters_{json_eos}")
             entry[json_eos] = build_vis_entry(res_row)
         # Filters apply PER KEY, not per fluid: "dilute" and "REFPROP" are always valid.
         if not coolprop_has_fluid(fluid):
@@ -260,7 +275,7 @@ def main(params_dir: str) -> None:
 
     n_refprop_only_tc = 0
     n_excluded_heos_tc = 0
-    for idx, drow in dilute_tc.iterrows():
+    for idx, (_label, drow) in enumerate(dilute_tc.iterrows()):
         fluid = str(drow["Material"]).strip().upper()
         n_dilute = [
             float(drow["n0"]),
@@ -272,9 +287,11 @@ def main(params_dir: str) -> None:
         entry: dict = {"dilute": {"n": n_dilute}}
         for json_eos, res_df in res_tc_by_eos.items():
             res_row = res_df.iloc[idx]
+            check_same_fluid(fluid, res_row, f"RES_TC_Parameters_{json_eos}")
             entry[json_eos] = build_tc_entry(res_row)
 
         crow = crit_df.iloc[idx]
+        check_same_fluid(fluid, crow, "critical_TC_Parameters")
         q_D_inv = float(crow["qDinv"])
         # An all-zero row in critical_TC_Parameters.txt means "no critical-enhancement parameters
         # fitted for this fluid" (e.g. D2O, HELIUM, ORTHOHYD), not "zero enhancement".  Li 2024

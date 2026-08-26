@@ -806,6 +806,15 @@ void AbstractState::check_RES_component_index(std::size_t i, const char* fname) 
     }
 }
 
+void AbstractState::check_RES_coeff_sizes(const char* fname, std::size_t n_dilute, std::size_t n_res, std::size_t n_res_expected) {
+    if (n_dilute != RES_N_DILUTE) {
+        throw ValueError(format("%s: expected %zu dilute-gas coefficients, got %zu.", fname, RES_N_DILUTE, n_dilute));
+    }
+    if (n_res != n_res_expected) {
+        throw ValueError(format("%s: expected %zu residual coefficients, got %zu.", fname, n_res_expected, n_res));
+    }
+}
+
 void AbstractState::use_viscosity_RES(bool enable) {
     if (_RES.comps.empty()) {
         throw NotImplementedError("use_viscosity_RES is not implemented for this backend");
@@ -874,6 +883,7 @@ void AbstractState::set_RES_mixture_enhancement(RESMixtureEnhancement policy) {
 
 void AbstractState::set_viscosity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res, double xita) {
     check_RES_component_index(i, "set_viscosity_RES_parameters");
+    check_RES_coeff_sizes("set_viscosity_RES_parameters", n_dilute.size(), n_res.size(), RES_N_RES_VISCOSITY);
     ViscosityRESData& d = _RES.comps[i].viscosity;
     d.n_dilute = n_dilute;
     d.n_res = n_res;
@@ -890,6 +900,7 @@ void AbstractState::set_viscosity_RES_parameters(std::size_t i, const std::vecto
 void AbstractState::set_conductivity_RES_parameters(std::size_t i, const std::vector<double>& n_dilute, const std::vector<double>& n_res, double xita,
                                                     double R_D, double gamma_uni, double Gamma, double phi0, double t_ref, double q_D) {
     check_RES_component_index(i, "set_conductivity_RES_parameters");
+    check_RES_coeff_sizes("set_conductivity_RES_parameters", n_dilute.size(), n_res.size(), RES_N_RES_CONDUCTIVITY);
     ConductivityRESData& d = _RES.comps[i].conductivity;
     d.n_dilute = n_dilute;
     d.n_res = n_res;
@@ -911,6 +922,7 @@ void AbstractState::set_conductivity_RES_parameters(std::size_t i, const std::ve
 
 void AbstractState::set_viscosity_RES_residual_params(std::size_t i, const std::vector<double>& n_res, double xita) {
     check_RES_component_index(i, "set_viscosity_RES_residual_params");
+    check_RES_coeff_sizes("set_viscosity_RES_residual_params", RES_N_DILUTE, n_res.size(), RES_N_RES_VISCOSITY);
     ViscosityRESData& d = _RES.comps[i].viscosity;
     d.n_res = n_res;
     d.xita = xita;
@@ -921,6 +933,7 @@ void AbstractState::set_viscosity_RES_residual_params(std::size_t i, const std::
 
 void AbstractState::set_conductivity_RES_residual_params(std::size_t i, const std::vector<double>& n_res, double xita) {
     check_RES_component_index(i, "set_conductivity_RES_residual_params");
+    check_RES_coeff_sizes("set_conductivity_RES_residual_params", RES_N_DILUTE, n_res.size(), RES_N_RES_CONDUCTIVITY);
     ConductivityRESData& d = _RES.comps[i].conductivity;
     d.n_res = n_res;
     d.xita = xita;

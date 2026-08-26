@@ -806,6 +806,10 @@ class AbstractState
     }
     /// Throw a uniform, informative error when a RES component index is out of range.
     void check_RES_component_index(std::size_t i, const char* fname) const;
+    /// Throw when a caller supplies fewer coefficients than the model indexes.  The transport
+    /// routines read fixed positions of n_dilute and n_res once `provided` is set, so a short
+    /// vector accepted here becomes an out-of-bounds read at the next viscosity()/conductivity().
+    static void check_RES_coeff_sizes(const char* fname, std::size_t n_dilute, std::size_t n_res, std::size_t n_res_expected);
 
    public:
     // --- Residual Entropy Scaling (RES) transport API ---

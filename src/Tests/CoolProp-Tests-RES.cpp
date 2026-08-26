@@ -193,6 +193,15 @@ static std::shared_ptr<AbstractState> make_pr(const std::string& f) {
     return std::shared_ptr<AbstractState>(AbstractState::factory("PR", f));
 }
 
+/// dynamic_cast to the cubic backend, asserted.  Never dereference the result of the cast
+/// directly: a failed cast would be a null-deref that crashes the whole runner instead of
+/// reporting one failed assertion.
+static AbstractCubicBackend* as_cubic(const std::shared_ptr<AbstractState>& AS) {
+    auto* cubic = dynamic_cast<AbstractCubicBackend*>(AS.get());
+    REQUIRE(cubic != nullptr);
+    return cubic;
+}
+
 // ============================================================= tests =========
 
 TEST_CASE("GEN golden PT", "[.][GEN2]") {
@@ -342,8 +351,11 @@ TEST_CASE("RES withheld fluids report the omission rather than guessing", "[RES]
         std::shared_ptr<AbstractState> AS;
         try {
             AS.reset(AbstractState::factory("HEOS", name));
-        } catch (const CoolProp::CoolPropBaseError&) {
-            continue;  // not in this build's fluid library at all; nothing to assert
+        } catch (const CoolProp::CoolPropBaseError& e) {
+            // These fluids are withheld from the RES parameter set, not from CoolProp -- every
+            // one of them must still construct on HEOS.  Reporting the name beats the bare
+            // count mismatch the old `continue` produced two lines further down.
+            FAIL("withheld fluid " << name << " is not constructible on HEOS: " << e.what());
         }
         ++checked;
         INFO("withheld fluid " << name);
@@ -355,7 +367,7 @@ TEST_CASE("RES withheld fluids report the omission rather than guessing", "[RES]
         CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
         CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
     }
-    CHECK(checked == std::size(withheld));
+    CHECK(checked == std::size(withheld));  // unreachable unless the loop body is skipped
 
     // The converse, so that "everything throws" cannot pass this test: a fluid that is NOT
     // withheld must still evaluate.
@@ -374,8 +386,7 @@ TEST_CASE("RES throws after alpha change (viscosity)", "[RES][transport]") {
     AS->specify_phase(iphase_gas);
     AS->update(PT_INPUTS, 1.0e6, 300.0);
     REQUIRE_NOTHROW(AS->viscosity());
-    auto* cubic = dynamic_cast<AbstractCubicBackend*>(AS.get());
-    REQUIRE(cubic != nullptr);
+    auto* cubic = as_cubic(AS);
     cubic->set_cubic_alpha_C(0, "Twu", 0.3, 0.8, 1.1);
     AS->update(PT_INPUTS, 1.0e6, 300.0);
     CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
@@ -386,7 +397,7 @@ TEST_CASE("RES throws after alpha change (conductivity)", "[RES][transport]") {
     AS->specify_phase(iphase_gas);
     AS->update(PT_INPUTS, 1.0e6, 300.0);
     REQUIRE_NOTHROW(AS->conductivity());
-    auto* cubic = dynamic_cast<AbstractCubicBackend*>(AS.get());
+    auto* cubic = as_cubic(AS);
     cubic->set_cubic_alpha_C(0, "Twu", 0.3, 0.8, 1.1);
     AS->update(PT_INPUTS, 1.0e6, 300.0);
     CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
@@ -395,7 +406,7 @@ TEST_CASE("RES throws after alpha change (conductivity)", "[RES][transport]") {
 TEST_CASE("RES recovers after set_viscosity_RES_residual_params", "[RES][transport]") {
     auto AS = make_pr("CarbonDioxide");
     AS->specify_phase(iphase_gas);
-    auto* cubic = dynamic_cast<AbstractCubicBackend*>(AS.get());
+    auto* cubic = as_cubic(AS);
     cubic->set_cubic_alpha_C(0, "Twu", 0.3, 0.8, 1.1);
     AS->update(PT_INPUTS, 1.0e6, 300.0);
     AS->set_viscosity_RES_residual_params(0, {0.417, -0.231, 0.068}, 1.023);
@@ -405,6 +416,133 @@ TEST_CASE("RES recovers after set_viscosity_RES_residual_params", "[RES][transpo
 }
 
 // --------------------------------------------------------- round-trip --------
+
+TEST_CASE("RES setters reject coefficient vectors the model would index past", "[RES][transport]") {
+    // The transport routines read n_dilute[0..4] and n_res[0..2] (viscosity) / n_res[0..3]
+    // (conductivity) unconditionally once `provided` is set, guarded by nothing but that flag.
+    // Both Python bindings expose these setters, so a short list from a caller used to be
+    // accepted here and read out of bounds at the next viscosity()/conductivity().
+    auto AS = make_pr("CarbonDioxide");
+    const std::vector<double> d5{1, 2, 3, 4, 5};
+    const std::vector<double> v3{0.1, 0.2, 0.3};
+    const std::vector<double> c4{0.1, 0.2, 0.3, 0.4};
+
+    CHECK_NOTHROW(AS->set_viscosity_RES_parameters(0, d5, v3, 1.0));
+    CHECK_NOTHROW(AS->set_conductivity_RES_parameters(0, d5, c4, 1.0, 1.02, 1.239, 0.057, 2.1e-10, 600.0, 6.0e-10));
+
+    // too few dilute coefficients
+    CHECK_THROWS_AS(AS->set_viscosity_RES_parameters(0, {1, 2, 3, 4}, v3, 1.0), CoolProp::ValueError);
+    // too many, which would silently ignore the extras
+    CHECK_THROWS_AS(AS->set_viscosity_RES_parameters(0, {1, 2, 3, 4, 5, 6}, v3, 1.0), CoolProp::ValueError);
+    // wrong residual count for each property, including the conductivity count on viscosity
+    CHECK_THROWS_AS(AS->set_viscosity_RES_parameters(0, d5, c4, 1.0), CoolProp::ValueError);
+    CHECK_THROWS_AS(AS->set_conductivity_RES_parameters(0, d5, v3, 1.0, 1.02, 1.239, 0.057, 2.1e-10, 600.0, 6.0e-10), CoolProp::ValueError);
+    CHECK_THROWS_AS(AS->set_viscosity_RES_residual_params(0, {0.1, 0.2}, 1.0), CoolProp::ValueError);
+    CHECK_THROWS_AS(AS->set_conductivity_RES_residual_params(0, v3, 1.0), CoolProp::ValueError);
+}
+
+TEST_CASE("RES alpha change invalidates the memoized transport values", "[RES][transport]") {
+    // set_cubic_alpha_C() clears n_params_match_alpha so that RES refuses to run with
+    // coefficients fitted for the previous alpha.  Without also clearing the memoized values,
+    // a caller who does NOT update() in between gets the stale number back and the guard never
+    // runs -- which is exactly the case the two "throws after alpha change" tests above miss,
+    // because their update() call clears the cache for them.
+    auto AS = make_pr("CarbonDioxide");
+    AS->specify_phase(iphase_gas);
+    AS->update(PT_INPUTS, 1.0e6, 300.0);
+    REQUIRE_NOTHROW(AS->viscosity());
+    REQUIRE_NOTHROW(AS->conductivity());
+
+    as_cubic(AS)->set_cubic_alpha_C(0, "Twu", 0.3, 0.8, 1.1);
+
+    // No update() here -- that is the point.
+    CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+    CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+}
+
+TEST_CASE("REFPROP saturation shims inherit the host RES configuration", "[RES][REFPROP][transport]") {
+    // link_to_loaded_fluids() builds a second state on the SAME components.  If it does not
+    // carry _RES across, a shim built from an RES-enabled host silently evaluates REFPROP's
+    // native transport model instead -- no error, just a different number.
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    AS->use_viscosity_RES(true);
+    AS->use_conductivity_RES(true);
+    AS->update(QT_INPUTS, 0.0, 300.0);
+
+    // saturated_liquid_keyed_output routes through build_saturation_shim().
+    const double eta_L = AS->saturated_liquid_keyed_output(iviscosity);
+    const double tc_L = AS->saturated_liquid_keyed_output(iconductivity);
+    CHECK(std::isfinite(eta_L));
+    CHECK(eta_L > 0.0);
+    CHECK(std::isfinite(tc_L));
+    CHECK(tc_L > 0.0);
+
+    // The RES value must differ from REFPROP's own model; equality would mean the shim fell back.
+    auto REF = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    REF->update(QT_INPUTS, 0.0, 300.0);
+    CHECK(eta_L != REF->saturated_liquid_keyed_output(iviscosity));
+    CHECK(tc_L != REF->saturated_liquid_keyed_output(iconductivity));
+}
+
+TEST_CASE("REFPROP component swap re-seeds the RES parameters", "[RES][REFPROP][transport]") {
+    // set_REFPROP_fluids() is public, so the component set can be changed on a live state.  The
+    // RES store is per component; keeping the previous fluid's coefficients would produce wrong
+    // numbers with no error at all.
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    auto* rp = dynamic_cast<REFPROPMixtureBackend*>(AS.get());
+    REQUIRE(rp != nullptr);
+    const auto propane_vis = AS->get_viscosity_RES_parameters(0);
+    REQUIRE(propane_vis.provided);
+
+    // set_REFPROP_fluids() short-circuits whenever this instance's components are already the
+    // ones REFPROP has loaded: that fast path exists for check_loaded_fluid() and IGNORES its
+    // argument entirely.  Load something else on a second instance first, so the call below
+    // really takes the SETUPdll path and changes this state's component set.
+    auto OTHER = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Water"));
+    OTHER->update(PT_INPUTS, 1.0e5, 300.0);
+
+    rp->set_REFPROP_fluids({"Methane"});
+    rp->set_mole_fractions({1.0});
+    const auto methane_vis = AS->get_viscosity_RES_parameters(0);
+    CHECK(methane_vis.provided);
+    CHECK(methane_vis.n_res != propane_vis.n_res);
+    CHECK(AS->RES_data().comps[0].name == "METHANE");
+
+    // The enable flags are reset with the store: silently carrying "RES enabled" onto a fluid
+    // the caller never enabled it for is how a wrong number gets returned without an error.
+    CHECK_FALSE(AS->RES_data().viscosity_enabled);
+    CHECK_FALSE(AS->RES_data().conductivity_enabled);
+
+    // ... and the re-seeded parameters actually work.
+    AS->use_viscosity_RES(true);
+    AS->update(PT_INPUTS, 5.0e6, 300.0);
+    CHECK(std::isfinite(AS->viscosity()));
+}
+
+TEST_CASE("REFPROP reload of the SAME components keeps user RES parameters", "[RES][REFPROP][transport]") {
+    // The converse of the swap test: check_loaded_fluid() re-invokes set_REFPROP_fluids() with
+    // the same names on every property call once another instance has taken over REFPROP's
+    // global state.  Re-seeding there would silently discard set_*_RES_parameters().
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    auto* rp = dynamic_cast<REFPROPMixtureBackend*>(AS.get());
+    REQUIRE(rp != nullptr);
+    const std::vector<double> mine{0.1, 0.2, 0.3};
+    AS->set_viscosity_RES_residual_params(0, mine, 1.25);
+
+    // As above, force the real reload path rather than the argument-ignoring fast path --
+    // otherwise this would pass without ever reaching the code it is meant to cover.
+    auto OTHER = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Water"));
+    OTHER->update(PT_INPUTS, 1.0e5, 300.0);
+
+    rp->set_REFPROP_fluids({"Propane"});
+
+    const auto got = AS->get_viscosity_RES_residual_params(0);
+    CHECK(got.first == mine);
+    CHECK(got.second == 1.25);
+}
 
 TEST_CASE("RES toggles and setters invalidate the memoized transport values", "[RES][transport]") {
     // viscosity()/conductivity() memoize into _viscosity/_conductivity, so toggling RES or
@@ -1485,8 +1623,7 @@ TEST_CASE("HEOS mixture explicit RES opt-in without params throws an informative
 
 TEST_CASE("PR backend without RES params throws NotImplementedError", "[RES][transport]") {
     auto AS = make_pr("CarbonDioxide");
-    auto* cubic = dynamic_cast<AbstractCubicBackend*>(AS.get());
-    REQUIRE(cubic != nullptr);
+    auto* cubic = as_cubic(AS);
     auto& comps = cubic->RES_data_mutable().comps;
     comps[0].viscosity.provided = false;
     comps[0].conductivity.provided = false;
