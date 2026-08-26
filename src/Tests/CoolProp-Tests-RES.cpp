@@ -544,6 +544,45 @@ TEST_CASE("REFPROP reload of the SAME components keeps user RES parameters", "[R
     CHECK(got.second == 1.25);
 }
 
+TEST_CASE("REFPROP GERG is unset again when the config flag is cleared", "[RES][REFPROP][transport]") {
+    // GERG04dll used to be called only when REFPROP_USE_GERG was true, so REFPROP's own global
+    // GERG selection was never cleared: turning the flag off and reloading left REFPROP still
+    // evaluating GERG while every reader of the config flag -- RES_alpha_is_replaced() included
+    // -- believed the reference EOS was back.  A stale EOS with a "parameters match" stamp is a
+    // silently wrong RES number.
+    Skip_if_No_REFPROP();
+    const bool restore = get_config_bool(REFPROP_USE_GERG);
+
+    // Another instance forces the next call off the reuse fast path and onto a real SETUPdll.
+    auto reload = [] {
+        auto other = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Water"));
+        other->update(PT_INPUTS, 1.0e5, 300.0);
+    };
+    auto rho_propane = [] {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+        AS->update(PT_INPUTS, 5.0e6, 300.0);
+        return AS->rhomass();
+    };
+
+    const double rho_ref = rho_propane();
+    try {
+        set_config_bool(REFPROP_USE_GERG, true);
+        reload();
+        const double rho_gerg = rho_propane();
+        // Guard the guard: if GERG did not move this state at all, the round trip below proves
+        // nothing and the test would pass vacuously.
+        REQUIRE(rho_gerg != Catch::Approx(rho_ref).epsilon(1e-9));
+
+        set_config_bool(REFPROP_USE_GERG, restore);
+        reload();
+        CHECK(rho_propane() == Catch::Approx(rho_ref).epsilon(1e-12));
+    } catch (...) {
+        set_config_bool(REFPROP_USE_GERG, restore);
+        throw;
+    }
+    set_config_bool(REFPROP_USE_GERG, restore);
+}
+
 TEST_CASE("REFPROP RES rejects shipped parameters after an EOS-mode change under reload", "[RES][REFPROP][transport]") {
     // The n_params_match_alpha guard is evaluated at SEED time.  A state seeded against the
     // reference Helmholtz EOS, whose components are later reloaded while REFPROP_USE_PENGROBINSON

@@ -419,8 +419,16 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         }
         memcpy(hmx_bnc.data(), _HMX_path, strlen(_HMX_path) + 1);  // +1 for the NUL; length checked above
 
-        if (get_config_bool(REFPROP_USE_GERG)) {
-            int iflag = 1,  // Tell REFPROP to use GERG04; 0 unsets GERG usage
+        // Call this on EVERY load, not only when the flag is set.  REFPROP keeps the GERG
+        // selection in its own global state, so turning REFPROP_USE_GERG back off and reloading
+        // used to leave REFPROP still evaluating GERG: measured on Propane at 300 K / 5 MPa, the
+        // density stayed at the GERG value (501.1996 kg/m3) instead of returning to the reference
+        // 501.0522 kg/m3, a 0.029 % error that persisted for the rest of the process.  Anything
+        // reading the config flag to decide which EOS is in force -- RES_alpha_is_replaced(), and
+        // any user -- was being told the reference EOS when it was not.  Mirrors the
+        // unconditional PREOSdll(0/2) below, whose 0 branch exists for exactly this reason.
+        {
+            int iflag = get_config_bool(REFPROP_USE_GERG) ? 1 : 0,  // 1 selects GERG04, 0 unsets it
               ierr_gerg = 0;
             std::array<char, 255> herr_gerg{};
             GERG04dll(&N, &iflag, &ierr_gerg, herr_gerg.data(), 255);
