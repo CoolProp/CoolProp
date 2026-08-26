@@ -544,6 +544,50 @@ TEST_CASE("REFPROP reload of the SAME components keeps user RES parameters", "[R
     CHECK(got.second == 1.25);
 }
 
+TEST_CASE("REFPROP .MIX replaced by a normal fluid gains RES support", "[RES][REFPROP][transport]") {
+    // A predefined .MIX leaves resolved_fluid_names empty, exactly as a state that has never been
+    // seeded does.  Inferring "never seeded" from that emptiness would make this state keep an
+    // empty RES store after the swap and report RES as unsupported for a fluid that has
+    // parameters -- fail-closed rather than wrong, but still wrong.
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "AIR.MIX"));
+    auto* rp = dynamic_cast<REFPROPMixtureBackend*>(AS.get());
+    REQUIRE(rp != nullptr);
+    REQUIRE_THROWS_AS(AS->use_viscosity_RES(true), CoolProp::NotImplementedError);
+
+    // Force the real reload path rather than the argument-ignoring fast path.
+    auto OTHER = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Water"));
+    OTHER->update(PT_INPUTS, 1.0e5, 300.0);
+
+    rp->set_REFPROP_fluids({"Propane"});
+    rp->set_mole_fractions({1.0});
+
+    REQUIRE(AS->RES_data().comps.size() == 1);
+    CHECK(AS->RES_data().comps[0].name == "PROPANE");
+    CHECK(AS->get_viscosity_RES_parameters(0).provided);
+    CHECK_NOTHROW(AS->use_viscosity_RES(true));
+    AS->update(PT_INPUTS, 5.0e6, 300.0);
+    CHECK(std::isfinite(AS->viscosity()));
+}
+
+TEST_CASE("REFPROP normal fluid replaced by a .MIX drops RES support", "[RES][REFPROP][transport]") {
+    // The other direction: the old fluid's parameters must not survive onto a mixture that has
+    // no per-component identity to attach them to.
+    Skip_if_No_REFPROP();
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    auto* rp = dynamic_cast<REFPROPMixtureBackend*>(AS.get());
+    REQUIRE(rp != nullptr);
+    REQUIRE(AS->get_viscosity_RES_parameters(0).provided);
+
+    auto OTHER = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Water"));
+    OTHER->update(PT_INPUTS, 1.0e5, 300.0);
+
+    rp->set_REFPROP_fluids({"AIR.MIX"});
+
+    CHECK(AS->RES_data().comps.empty());
+    CHECK_THROWS_AS(AS->use_viscosity_RES(true), CoolProp::NotImplementedError);
+}
+
 TEST_CASE("RES toggles and setters invalidate the memoized transport values", "[RES][transport]") {
     // viscosity()/conductivity() memoize into _viscosity/_conductivity, so toggling RES or
     // pushing new coefficients after a read used to return the previous model's number with

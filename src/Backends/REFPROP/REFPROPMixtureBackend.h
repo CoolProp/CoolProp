@@ -63,6 +63,12 @@ class REFPROPMixtureBackend : public AbstractState
     /// PROPYLENEOXIDE, VINYLCHLORIDE) into names that match nothing.
     /// Left empty for predefined .MIX mixtures, which have no per-component identity here.
     std::vector<std::string> resolved_fluid_names;
+    /// True once setup_RES_transport() has run for the CURRENT component set -- including when
+    /// it found nothing to seed, as for a predefined .MIX.  Distinguishing "not seeded yet" from
+    /// "seeded, but that component set had no identity" cannot be done from resolved_fluid_names
+    /// alone, since both leave it empty, and conflating them means a .MIX replaced by a normal
+    /// fluid never gets its parameters.
+    bool RES_seeded = false;
 
     /// Call the PHIXdll function in the dll
     CoolPropDbl call_phixdll(int itau, int idelta);
@@ -76,11 +82,11 @@ class REFPROPMixtureBackend : public AbstractState
     /// which resolve a component's molar mass through this hook.
     const double get_fluid_constant(std::size_t i, parameters param) const override;
 
-    /// Seed AbstractState::_RES with the shipped REFPROP-fitted RES transport parameters.
     /// Re-seed the RES store when set_REFPROP_fluids() has loaded a DIFFERENT component set.
     /// A reload of the same components leaves the store (and anything the user set on it) alone.
     void reseed_RES_if_components_changed(const std::vector<std::string>& previously_seeded_for);
 
+    /// Seed AbstractState::_RES with the shipped REFPROP-fitted RES transport parameters.
     /// Called once from construct(); deliberately NOT from set_REFPROP_fluids(), which
     /// check_loaded_fluid() re-invokes on every property call and which would therefore
     /// overwrite any parameters the user had set through the public setters.

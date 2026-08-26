@@ -1285,10 +1285,17 @@ const double REFPROPMixtureBackend::get_fluid_constant(std::size_t i, parameters
 }
 
 void REFPROPMixtureBackend::reseed_RES_if_components_changed(const std::vector<std::string>& previously_seeded_for) {
-    // Nothing was seeded yet (construct() seeds explicitly right after the first load), or the
-    // same components were merely reloaded -- in which case re-seeding would throw away
+    // Nothing seeded yet: this is the first load, and construct() calls setup_RES_transport()
+    // itself immediately afterwards.  Deliberately NOT inferred from previously_seeded_for being
+    // empty -- a predefined .MIX also leaves it empty, and treating that as "never seeded" means
+    // a .MIX later replaced by a normal fluid would never get its parameters.
+    if (!RES_seeded) {
+        return;
+    }
+    // The same components were merely reloaded, which is what check_loaded_fluid() does once
+    // another instance has taken over REFPROP's global state.  Re-seeding would throw away
     // parameters the user set through set_*_RES_parameters().
-    if (previously_seeded_for.empty() || previously_seeded_for == this->resolved_fluid_names) {
+    if (previously_seeded_for == this->resolved_fluid_names) {
         return;
     }
     // Different components: the old records describe a different fluid.  Reset the whole store
@@ -1304,6 +1311,9 @@ void REFPROPMixtureBackend::reseed_RES_if_components_changed(const std::vector<s
 }
 
 void REFPROPMixtureBackend::setup_RES_transport() {
+    // Set before the early return, not after: the flag records that seeding was ATTEMPTED for the
+    // current component set, which is what reseed_RES_if_components_changed() needs to know.
+    RES_seeded = true;
     // No per-component identity (predefined .MIX mixture, or a name set that never resolved)
     // means RES cannot be attributed to components; leave the store empty, which is how
     // AbstractState reports "RES unsupported on this backend".
@@ -2580,6 +2590,11 @@ void REFPROPMixtureBackend::link_to_loaded_fluids(const REFPROPMixtureBackend& h
     // A linked state evaluates the SAME components, so it must carry the same RES parameters
     // and flags -- otherwise a shim built from an RES-enabled host silently falls back to
     // REFPROP's native transport model.  Mirrors HelmholtzEOSMixtureBackend::get_copy().
+    // resolved_fluid_names and RES_seeded come across too, so that if this shim ever goes
+    // through a real set_REFPROP_fluids() reload it makes the same same-components-or-not
+    // decision the host would.
+    this->resolved_fluid_names = host.resolved_fluid_names;
+    this->RES_seeded = host.RES_seeded;
     this->_RES = host._RES;
 }
 

@@ -113,8 +113,15 @@ with the pipe's:
 ```bash
 ./build_catch/CatchTestRunner "[SBTL]" > run.log 2>&1; status=$?
 tail -20 run.log
-[ "$status" -eq 0 ] && grep -qE "All tests passed|test cases:" run.log || echo "FAILED"
+if [ "$status" -ne 0 ] || ! grep -qE "All tests passed|test cases:" run.log; then
+    echo "FAILED" >&2
+    exit 1
+fi
 ```
+
+Note the explicit `if`: `A && B || echo "FAILED"` would print the message and
+still return the status of `echo`, i.e. 0 — a gate that reports failure and
+passes anyway.
 
 ## Pre-Push Gate — REQUIRED before every `git push`
 
