@@ -69,6 +69,11 @@ class REFPROPMixtureBackend : public AbstractState
     /// alone, since both leave it empty, and conflating them means a .MIX replaced by a normal
     /// fluid never gets its parameters.
     bool RES_seeded = false;
+    /// The EOS mode the current RES records were stamped for.  Part of the seed identity: the
+    /// n_params_match_alpha guard is evaluated once, at seed time, so a reload that changes the
+    /// mode without changing the component set has to invalidate the seed or the guard would
+    /// keep reporting a match against an alpha^r that is no longer being evaluated.
+    bool RES_seeded_alpha_replaced = false;
 
     /// Call the PHIXdll function in the dll
     CoolPropDbl call_phixdll(int itau, int idelta);
@@ -81,6 +86,10 @@ class REFPROPMixtureBackend : public AbstractState
     /// Per-component constants from REFPROP's INFOdll.  Needed by the RES transport setters,
     /// which resolve a component's molar mass through this hook.
     const double get_fluid_constant(std::size_t i, parameters param) const override;
+
+    /// True when REFPROP is evaluating something other than the reference Helmholtz EOS that the
+    /// shipped RES coefficients were regressed against (REFPROP_USE_GERG / _USE_PENGROBINSON).
+    static bool RES_alpha_is_replaced();
 
     /// Re-seed the RES store when set_REFPROP_fluids() has loaded a DIFFERENT component set.
     /// A reload of the same components leaves the store (and anything the user set on it) alone.

@@ -1284,6 +1284,13 @@ const double REFPROPMixtureBackend::get_fluid_constant(std::size_t i, parameters
     }
 }
 
+bool REFPROPMixtureBackend::RES_alpha_is_replaced() {
+    // The "REFPROP" coefficient block was regressed against REFPROP's reference Helmholtz EOS.
+    // Either of these configuration flags replaces that EOS, so the fitted n_res/xita no longer
+    // belong to the alpha^r actually being evaluated.
+    return get_config_bool(REFPROP_USE_GERG) || get_config_bool(REFPROP_USE_PENGROBINSON);
+}
+
 void REFPROPMixtureBackend::reseed_RES_if_components_changed(const std::vector<std::string>& previously_seeded_for) {
     // Nothing seeded yet: this is the first load, and construct() calls setup_RES_transport()
     // itself immediately afterwards.  Deliberately NOT inferred from previously_seeded_for being
@@ -1292,28 +1299,47 @@ void REFPROPMixtureBackend::reseed_RES_if_components_changed(const std::vector<s
     if (!RES_seeded) {
         return;
     }
-    // The same components were merely reloaded, which is what check_loaded_fluid() does once
-    // another instance has taken over REFPROP's global state.  Re-seeding would throw away
-    // parameters the user set through set_*_RES_parameters().
-    if (previously_seeded_for == this->resolved_fluid_names) {
+    // The seed identity is the component set AND the EOS mode: n_params_match_alpha is stamped
+    // onto the records at seed time, so a reload that swaps the EOS under an unchanged component
+    // set would otherwise leave the guard reading "parameters match" while REFPROP evaluates a
+    // different alpha^r -- a silently wrong number rather than a refusal.  Both directions
+    // matter: switching back to the reference EOS has to make the shipped parameters usable
+    // again rather than leaving the state permanently refusing.
+    if (previously_seeded_for == this->resolved_fluid_names && RES_seeded_alpha_replaced == RES_alpha_is_replaced()) {
+        // Unchanged on both counts -- what check_loaded_fluid() does once another instance has
+        // taken over REFPROP's global state.  Re-seeding would throw away parameters the user
+        // set through set_*_RES_parameters().
         return;
     }
-    // Different components: the old records describe a different fluid.  Reset the whole store
-    // -- parameters, enable flags and source policies -- to what a freshly constructed state
-    // would have, then re-seed.  Dropping the flags is deliberate: silently carrying "RES
-    // enabled" onto a fluid the caller never enabled it for is how wrong numbers get returned
-    // without an error.  setup_RES_transport() is a no-op for a predefined .MIX, which leaves
-    // the store empty and makes use_*_RES() report RES as unsupported.
-    _RES = RESTransportStore();
+    // The old records no longer describe what is being evaluated, but how much of the store to
+    // discard depends on WHICH part of the identity moved.
+    if (previously_seeded_for != this->resolved_fluid_names) {
+        // A different fluid.  Reset everything -- parameters, enable flags and source policies --
+        // to what a freshly constructed state would have.  Dropping the flags is deliberate:
+        // silently carrying "RES enabled" onto a fluid the caller never enabled it for is how
+        // wrong numbers get returned without an error.
+        _RES = RESTransportStore();
+    } else {
+        // Same fluid, different EOS.  Keep the enable flags and source policies: the caller asked
+        // for RES on THIS fluid and that request still stands.  Clearing them would silently
+        // revert to REFPROP's native transport model -- a different number, no error -- whereas
+        // keeping them lets the n_params_match_alpha stamp that setup_RES_transport() is about to
+        // apply do its job and refuse loudly.  Only the parameter records are re-derived.
+        _RES.comps.clear();
+    }
     _viscosity.clear();
     _conductivity.clear();
+    // A no-op for a predefined .MIX, which leaves comps empty and makes use_*_RES() report RES as
+    // unsupported -- which is why the clearing above has to happen first.
     this->setup_RES_transport();
 }
 
 void REFPROPMixtureBackend::setup_RES_transport() {
-    // Set before the early return, not after: the flag records that seeding was ATTEMPTED for the
-    // current component set, which is what reseed_RES_if_components_changed() needs to know.
+    // Set before the early return, not after: these record that seeding was ATTEMPTED for the
+    // current component set and EOS mode, which is what reseed_RES_if_components_changed()
+    // compares against.
     RES_seeded = true;
+    RES_seeded_alpha_replaced = RES_alpha_is_replaced();
     // No per-component identity (predefined .MIX mixture, or a name set that never resolved)
     // means RES cannot be attributed to components; leave the store empty, which is how
     // AbstractState reports "RES unsupported on this backend".
@@ -1321,11 +1347,9 @@ void REFPROPMixtureBackend::setup_RES_transport() {
         return;
     }
 
-    // The "REFPROP" coefficient block was regressed against REFPROP's reference Helmholtz EOS.
-    // Both of these configuration flags replace that EOS, so the fitted n_res/xita no longer
-    // belong to the alpha^r actually being evaluated and every RES call must fail loudly.
-    // n_params_match_alpha is exactly the existing mechanism for that.
-    const bool alpha_replaced = get_config_bool(REFPROP_USE_GERG) || get_config_bool(REFPROP_USE_PENGROBINSON);
+    // Every RES call must fail loudly when the EOS has been replaced; n_params_match_alpha is
+    // exactly the existing mechanism for that.
+    const bool alpha_replaced = RES_seeded_alpha_replaced;
 
     std::vector<RESComponentData> res_comps(Ncomp);
     for (std::size_t i = 0; i < Ncomp; ++i) {
@@ -2595,6 +2619,7 @@ void REFPROPMixtureBackend::link_to_loaded_fluids(const REFPROPMixtureBackend& h
     // decision the host would.
     this->resolved_fluid_names = host.resolved_fluid_names;
     this->RES_seeded = host.RES_seeded;
+    this->RES_seeded_alpha_replaced = host.RES_seeded_alpha_replaced;
     this->_RES = host._RES;
 }
 

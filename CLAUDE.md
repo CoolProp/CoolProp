@@ -111,7 +111,9 @@ Redirect to a file rather than piping — `| tail` replaces the runner's exit co
 with the pipe's:
 
 ```bash
-./build_catch/CatchTestRunner "[SBTL]" > run.log 2>&1; status=$?
+# The runner goes inside the `if` so a failing run does not trip `set -e`
+# before the diagnostics below have run.
+if ./build_catch/CatchTestRunner "[SBTL]" > run.log 2>&1; then status=0; else status=$?; fi
 tail -20 run.log
 if [ "$status" -ne 0 ] || ! grep -qE "All tests passed|test cases:" run.log; then
     echo "FAILED" >&2
@@ -119,9 +121,12 @@ if [ "$status" -ne 0 ] || ! grep -qE "All tests passed|test cases:" run.log; the
 fi
 ```
 
-Note the explicit `if`: `A && B || echo "FAILED"` would print the message and
-still return the status of `echo`, i.e. 0 — a gate that reports failure and
-passes anyway.
+Two things there are deliberate.  `A && B || echo "FAILED"` would print the
+message and still return the status of `echo`, i.e. 0 — a gate that reports
+failure and passes anyway; hence the explicit `if ... exit 1`.  And under
+`set -e` a bare `runner > run.log; status=$?` never reaches the `status=`
+assignment, so the tail and the summary check are skipped and you lose the
+diagnostics — a command in an `if` condition is exempt from `set -e`.
 
 ## Pre-Push Gate — REQUIRED before every `git push`
 

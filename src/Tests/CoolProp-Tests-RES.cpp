@@ -544,6 +544,43 @@ TEST_CASE("REFPROP reload of the SAME components keeps user RES parameters", "[R
     CHECK(got.second == 1.25);
 }
 
+TEST_CASE("REFPROP RES rejects shipped parameters after an EOS-mode change under reload", "[RES][REFPROP][transport]") {
+    // The n_params_match_alpha guard is evaluated at SEED time.  A state seeded against the
+    // reference Helmholtz EOS, whose components are later reloaded while REFPROP_USE_PENGROBINSON
+    // is on, is now evaluating a different alpha^r with coefficients regressed against the old
+    // one -- and the reload alone does not re-run the guard, because the component set is
+    // unchanged.  That is a silently wrong number, not a refusal.
+    Skip_if_No_REFPROP();
+    const bool restore = get_config_bool(REFPROP_USE_PENGROBINSON);
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    AS->use_viscosity_RES(true);
+    AS->update(PT_INPUTS, 5.0e6, 320.0);
+    REQUIRE(std::isfinite(AS->viscosity()));  // reference EOS: the shipped parameters do apply
+
+    try {
+        set_config_bool(REFPROP_USE_PENGROBINSON, true);
+        // Force a real reload of the SAME components: another instance takes over REFPROP's
+        // global state, so this one's next property call goes through set_REFPROP_fluids().
+        auto OTHER = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Water"));
+        OTHER->update(PT_INPUTS, 1.0e5, 300.0);
+        AS->update(PT_INPUTS, 5.0e6, 320.0);
+        CHECK_THROWS_WITH(AS->viscosity(), Catch::Matchers::ContainsSubstring("different alpha function"));
+    } catch (...) {
+        set_config_bool(REFPROP_USE_PENGROBINSON, restore);
+        throw;
+    }
+    set_config_bool(REFPROP_USE_PENGROBINSON, restore);
+
+    // And back: with the reference EOS restored, a reload must make the shipped parameters
+    // usable again rather than leaving the state permanently refusing.
+    auto BACK = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Propane"));
+    BACK->update(PT_INPUTS, 5.0e6, 320.0);
+    auto OTHER2 = std::shared_ptr<AbstractState>(AbstractState::factory("REFPROP", "Water"));
+    OTHER2->update(PT_INPUTS, 1.0e5, 300.0);
+    AS->update(PT_INPUTS, 5.0e6, 320.0);
+    CHECK(std::isfinite(AS->viscosity()));
+}
+
 TEST_CASE("REFPROP .MIX replaced by a normal fluid gains RES support", "[RES][REFPROP][transport]") {
     // A predefined .MIX leaves resolved_fluid_names empty, exactly as a state that has never been
     // seeded does.  Inferring "never seeded" from that emptiness would make this state keep an
