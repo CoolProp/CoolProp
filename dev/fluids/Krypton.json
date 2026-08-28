@@ -3588,6 +3588,9 @@
       "dilute": {
         "type": "expression",
         "formula": "let L = ln(T/T_ref)\neta_ref*exp(sum(i: a[i]*L^np[i]))",
+        "state_variables": [
+          "T"
+        ],
         "constants": {
           "T_ref": 298.15,
           "eta_ref": 2.53062e-05
@@ -3625,7 +3628,14 @@
       },
       "higher_order": {
         "type": "expression",
-        "formula": "let L = ln(T/T_ref)\nlet eta0 = eta_ref*exp(sum(i: a[i]*L^np[i]))\nlet NA = R/k_B\nlet mass = M/NA\nlet root_mkT = (mass*k_B*T)^0.5\nlet Theta2 = (Bvirial + T*dBvirial_dT)/NA\nlet eplus_dilute = eta0/root_mkT*Theta2^(2/3)\nlet splus = -Smolar_residual/R\nlet eplus_res = f*(exp(sum(i: d[i]*splus^dp[i])) - 1)\n(rhomolar*NA)^(2/3)*root_mkT*(eplus_res + eplus_dilute)/splus^(2/3) - eta0",
+        "formula": "let L = ln(T/T_ref)\nlet eta0 = eta_ref*exp(sum(i: a[i]*L^np[i]))\nlet NA = R/k_B\nlet mass = M/NA\nlet root_mkT = (mass*k_B*T)^0.5\nlet Theta2 = (Bvirial + T*dBvirial_dT)/NA\nlet eplus_dilute = eta0/root_mkT*Theta2^(2/3)\nlet splus = -Smolar_residual/R\nlet eplus_res = f*(exp(sum(i: d[i]*splus^dp[i])) - 1)\n(Dmolar*NA)^(2/3)*root_mkT*(eplus_res + eplus_dilute)/splus^(2/3) - eta0",
+        "state_variables": [
+          "T",
+          "Bvirial",
+          "dBvirial_dT",
+          "Smolar_residual",
+          "Dmolar"
+        ],
         "constants": {
           "T_ref": 298.15,
           "eta_ref": 2.53062e-05,

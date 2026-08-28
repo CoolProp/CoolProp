@@ -5623,7 +5623,10 @@
       "BibTeX": "Velliadou-IJT-2022-propyleneglycol",
       "dilute": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\n1e-6*sum(i: n[i]*Tr^np[i])",
+        "formula": "let Tr = T/Tc\n1e-6*sum(i: n[i]*Tr^p[i])",
+        "state_variables": [
+          "T"
+        ],
         "constants": {
           "Tc": 674.0
         },
@@ -5635,7 +5638,7 @@
             -9.37974,
             2.08103
           ],
-          "np": [
+          "p": [
             0,
             1,
             2,
@@ -5646,7 +5649,11 @@
       },
       "initial_density": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: n[i]*Tr^np[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*rhomass/M",
+        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: n[i]*Tr^p[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*Dmass/M",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
         "constants": {
           "Tc": 674.0,
           "epsilon_over_k": 535.2,
@@ -5662,7 +5669,7 @@
             -9.37974,
             2.08103
           ],
-          "np": [
+          "p": [
             0,
             1,
             2,
@@ -5695,7 +5702,11 @@
       },
       "higher_order": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\nlet rhor = rhomass/rhoc\n1e-6*eta_ref*rhor^(2/3)*Tr^0.5*exp(c0 + c1*rhor + c2*rhor^2/Tr + c3*rhor^3/Tr^2 + c4*Tr + c5*Tr^2)",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\n1e-6*eta_ref*rhor^(2/3)*Tr^0.5*exp(c0 + c1*rhor + c2*rhor^2/Tr + c3*rhor^3/Tr^2 + c4*Tr + c5*Tr^2)",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
         "constants": {
           "Tc": 674.0,
           "rhoc": 339.3811132,

@@ -4120,6 +4120,9 @@
       "dilute": {
         "type": "expression",
         "formula": "let Tr = T/Tc\n1e-6*sum(i: n[i]*Tr^np[i])/sum(i: m[i]*Tr^mp[i])",
+        "state_variables": [
+          "T"
+        ],
         "constants": {
           "Tc": 540.2
         },
@@ -4152,7 +4155,11 @@
       },
       "initial_density": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: n[i]*Tr^np[i])/sum(i: m[i]*Tr^mp[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: d[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*rhomass/M",
+        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: n[i]*Tr^np[i])/sum(i: m[i]*Tr^mp[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: d[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*Dmass/M",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
         "constants": {
           "Tc": 540.2,
           "epsilon_over_k": 428.92,
@@ -4211,7 +4218,11 @@
       },
       "higher_order": {
         "type": "expression",
-        "formula": "let Tr = T/Tc\nlet rhor = rhomass/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*(f0 + f1*Tr + f2*rhor + (f3 + f4*Tr)/(f5 + f6*rhor + rhor^2))",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*(f0 + f1*Tr + f2*rhor + (f3 + f4*Tr)/(f5 + f6*rhor + rhor^2))",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
         "constants": {
           "Tc": 540.2,
           "rhoc": 317.265168,

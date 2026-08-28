@@ -1,6 +1,7 @@
 #include "CoolProp/expression/Expression.h"
 #include "CoolProp/expression/detail/Lexer.h"
 #include "CoolProp/Exceptions.h"
+#include "CoolProp/DataStructures.h"
 #include "CoolProp/detail/strings.h"
 #include <array>
 #include <cctype>
@@ -8,6 +9,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
@@ -500,68 +502,55 @@ std::vector<Token> lex(const std::string& s) {
 // Name-resolution helpers
 // ---------------------------------------------------------------------------
 
-// The single bucket of thermodynamic inputs: DSL spelling -> CoolProp::parameters
-// key.  See the rationale for the curated allowlist in Expression.h.
-static const std::vector<std::pair<std::string, parameters>>& inputTableImpl() {
-    // State variables and pure-fluid metadata.  See below for what is deliberately
-    // NOT here, and why.
-    static const std::vector<std::pair<std::string, parameters>> table = {
-      {"T", iT},
-      {"rhomolar", iDmolar},
-      {"rhomass", iDmass},
-      {"molar_mass", imolar_mass},
-      {"p", iP},
-      // EOS-derived state functions.  Added for entropy-scaling correlations, which
-      // are not built from the dilute/initial-density/residual decomposition at all:
-      // krypton's reduces on S+ = -Smolar_residual/R and theta = B + T dB/dT.
-      // Unlike the critical point (see below) these are genuine functions of the
-      // CURRENT state, so they carry no configuration dependence -- keyed_output
-      // computes each from the EOS where it stands.
-      {"Smolar_residual", iSmolar_residual},
-      {"Bvirial", iBvirial},
-      {"dBvirial_dT", idBvirial_dT}};
-    return table;
-}
-
-// Deliberately ABSENT from the table above: the critical point (T_critical,
-// rhomolar_critical, p_critical) and the EOS reducing state (T_reducing,
-// rhomolar_reducing).  Both were tried and removed.
+// Thermodynamic names are NOT resolved from a list kept here.  They are resolved by
+// CoolProp::is_valid_parameter(), so the DSL's vocabulary is exactly CoolProp's and a
+// new quantity costs no code at all -- krypton's entropy-scaling correlation needed
+// Smolar_residual, Bvirial and dBvirial_dT, and under the old curated table each was
+// a row plus a recompile for something keyed_output() already knew how to produce.
 //
-//  * The critical-point accessors are not the fluid file's STATES.critical.  With
-//    superancillaries enabled -- the DEFAULT -- calc_T_critical and
-//    calc_rhomolar_critical return the NUMERICAL critical point from the
-//    superancillary (the state satisfying dp/drho|T = d2p/drho2|T = 0).  A formula
-//    reading them would give different numbers depending on
-//    ENABLE_SUPERANCILLARIES, and fluid data must not depend on a runtime config
-//    flag.  Xenon is the worked example: its 2021 viscosity paper says it adopts
-//    Tc and rho_c from the Lemmon-Span EOS, Xenon.json carries exactly those
-//    (289.733 K, 8400 mol/m^3), and reading them through the inputs still moved a
-//    verification point by 7e-5.
+// What replaces the table is not "resolve everything", but two narrower rules.
 //
-//  * The reducing state is a fitting convenience of the equation of state, while
-//    a correlation writing `T_reducing` means its OWN fitted value.  Exposing the
-//    name would advise the wrong thing and silently steal it from every formula
-//    already using it as a constant -- six golden formulas in the test suite do.
+// FIRST, resolution is opt-in per formula.  A block declares `state_variables`, and
+// only those names are state inside it.  The old design had one namespace shared by
+// state and by the author's own constants and arrays, so every name the DSL knew was
+// reserved everywhere -- and the DSL spelled pressure with an invented lowercase `p`,
+// which is what viscosity papers universally call their exponent array.  Propylene
+// glycol's dilute term had to rename p_i to np_i for a collision with a quantity it
+// never referenced.  Under opt-in that block declares ["T"] and keeps `p`.
 //
-//  * Underlying both: a reducing parameter is a defining constant of the fit that
-//    produced the correlation, quoted to finite precision in the source paper.
-//    Reproducing the correlation means using THAT number, not a better estimate of
-//    the same physical quantity.  Reducing parameters belong in the block's
-//    `constants`, frozen.  The only legitimate use for a live critical point is
-//    physics that references the critical point itself -- a crossover critical
-//    enhancement -- which no shipped viscosity correlation implements.
-//
-// Adding a row to this table is a BREAKING change to the language: it steals that
-// name from every formula already using it as a constant.  Weigh it that way.
-
-static bool inputForName(const std::string& nm, parameters& out) {
-    for (const auto& e : inputTableImpl())
-        if (nm == e.first) {
-            out = e.second;
+// SECOND, two classes stay refused even when declared, because opt-in expresses the
+// author's intent and these are cases where the intent cannot be honoured:
+static bool deniedStateVariable(parameters key, std::string& why) {
+    switch (key) {
+        // keyed_output() for a transport output re-enters the correlation being
+        // defined.  A viscosity formula that reads `V` is asking for itself.
+        case iviscosity:
+        case iconductivity:
+        case iPrandtl:
+        case isurface_tension:
+            why = "it is a transport output, so reading it re-enters the correlation being defined";
             return true;
-        }
-    return false;
+        // calc_T_critical()/calc_rhomolar_critical() return the NUMERICAL critical
+        // point when ENABLE_SUPERANCILLARIES is set (the default), not STATES.critical.
+        // A correlation reducing on them changes answer with configuration, which is
+        // how xenon once missed its reference values by 7e-5.  The fix is to freeze
+        // the number the paper's authors actually regressed against, as a constant.
+        case iT_critical:
+        case iP_critical:
+        case irhomolar_critical:
+        case irhomass_critical:
+        case iT_reducing:
+        case iP_reducing:
+        case irhomolar_reducing:
+        case irhomass_reducing:
+            why = "the critical point and reducing state are configuration-dependent "
+                  "(ENABLE_SUPERANCILLARIES); freeze the paper's value as a constant instead";
+            return true;
+        default:
+            return false;
+    }
 }
+
 static bool funcForName(const std::string& nm, Func& out, int& arity) {
     struct E
     {
@@ -603,6 +592,7 @@ struct ProgramData
     NodePtr result{};
     std::vector<std::vector<double>> arrays{};  // by array slot
     std::vector<parameters> inputOrder{};       // cached for requiredInputs()
+    std::vector<std::string> inputNames{};      // same order, as the author spelled them
 };
 
 // ---------------------------------------------------------------------------
@@ -612,8 +602,9 @@ struct ProgramData
 class Binder
 {
    public:
-    Binder(ProgramData& pd, const std::map<std::string, double>& consts, const std::map<std::string, std::vector<double>>& arrays)
-      : d(pd), constants(consts), arraysIn(arrays) {}
+    Binder(ProgramData& pd, const std::map<std::string, double>& consts, const std::map<std::string, std::vector<double>>& arrays,
+           const std::map<std::string, parameters>& declared)
+      : d(pd), constants(consts), arraysIn(arrays), declaredState(declared) {}
 
     void run(ParseResult& pr) {
         for (auto& L : pr.lets) {
@@ -632,6 +623,7 @@ class Binder
     ProgramData& d;
     const std::map<std::string, double>& constants;
     const std::map<std::string, std::vector<double>>& arraysIn;
+    const std::map<std::string, parameters>& declaredState;
     // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
     int nextScalar = 0;
     std::map<std::string, int> letNames{};
@@ -644,19 +636,20 @@ class Binder
     }
 
     int resolveScalar(const std::string& nm) {
-        // Resolution order: let -> thermodynamic input -> JSON constant.
-        // Inputs are checked before constants so that a JSON constant can never
-        // shadow a state variable (T/rhomolar/rhomass/molar_mass/p).
+        // Resolution order: let -> DECLARED state variable -> JSON constant.  A name
+        // the block did not declare is never state, however well CoolProp knows it.
         auto itL = letNames.find(nm);
         if (itL != letNames.end()) return itL->second;
-        parameters key;
-        if (inputForName(nm, key)) {
+        auto itS = declaredState.find(nm);
+        if (itS != declaredState.end()) {
+            const parameters key = itS->second;
             auto s = inputSlots.find(nm);
             if (s != inputSlots.end()) return s->second;
             int slot = newScalarSlot();
             inputSlots[nm] = slot;
             d.inputSlots.emplace_back(key, slot);
             d.inputOrder.push_back(key);
+            d.inputNames.push_back(nm);
             return slot;
         }
         auto itC = constants.find(nm);
@@ -667,6 +660,15 @@ class Binder
             constSlots[nm] = slot;
             d.constantInits.emplace_back(slot, itC->second);
             return slot;
+        }
+        // A name CoolProp knows, but that this block did not declare, is the most
+        // likely authoring mistake -- say so instead of "unknown variable".
+        parameters probe;
+        std::string ignored;
+        if (resolveStateVariable(nm, probe, ignored)) {
+            throw ValueError(format("unknown variable '%s' -- it is a thermodynamic quantity; add it to this block's "
+                                    "\"state_variables\" to read it from the state",
+                                    nm.c_str()));
         }
         throw ValueError(format("unknown variable '%s'", nm.c_str()));
     }
@@ -759,14 +761,23 @@ class Binder
 // Program methods + compile (namespace CoolProp::expression)
 // ---------------------------------------------------------------------------
 
-const std::vector<std::pair<std::string, parameters>>& inputTable() {
-    return detail::inputTableImpl();
+bool resolveStateVariable(const std::string& name, parameters& key, std::string& reason) {
+    parameters k;
+    if (!is_valid_parameter(name, k)) {
+        reason = format("'%s' is not a CoolProp parameter name", name.c_str());
+        return false;
+    }
+    std::string why;
+    if (detail::deniedStateVariable(k, why)) {
+        reason = format("'%s' may not be used as a state variable: %s", name.c_str(), why.c_str());
+        return false;
+    }
+    key = k;
+    return true;
 }
 
 std::string inputName(parameters key) {
-    for (const auto& e : detail::inputTableImpl())
-        if (e.second == key) return e.first;
-    throw ValueError(format("parameter key %d is not an expression input", static_cast<int>(key)));
+    return get_parameter_information(static_cast<int>(key), "short");
 }
 
 const detail::ProgramData& Program::data() const {
@@ -797,24 +808,37 @@ const std::vector<parameters>& Program::requiredInputs() const {
     return data().inputOrder;
 }
 
-Program compile(const std::string& source, const std::map<std::string, double>& constants, const std::map<std::string, std::vector<double>>& arrays) {
+Program compile(const std::string& source, const std::map<std::string, double>& constants, const std::map<std::string, std::vector<double>>& arrays,
+                const std::vector<std::string>& state_variables) {
     using namespace detail;
-    // Inputs resolve before constants, so a constant named `T` or `p` would be
-    // dead data and the formula would quietly mean something other than what its
-    // author wrote.  Reject the collision at compile time rather than silently
-    // discarding the constant.
-    for (const auto& c : constants) {
+    // Resolve the declaration first, so that a bad `state_variables` entry is
+    // reported as such rather than surfacing later as "unknown variable".
+    std::map<std::string, parameters> declared;
+    for (const auto& nm : state_variables) {
         parameters key;
-        if (inputForName(c.first, key)) {
-            throw ValueError(format("constant '%s' collides with the thermodynamic input of the same name", c.first.c_str()));
-        }
+        std::string reason;
+        if (!resolveStateVariable(nm, key, reason)) throw ValueError(format("state_variables: %s", reason.c_str()));
+        if (!declared.emplace(nm, key).second) throw ValueError(format("state_variables lists '%s' twice", nm.c_str()));
+        // A declared name shadowing the author's own data would make that data dead
+        // and quietly change what the formula means.  This is the collision the old
+        // single-namespace design hit from the other direction, where the language
+        // reserved the name whether the block wanted it or not.
+        if (constants.count(nm)) throw ValueError(format("state variable '%s' collides with the constant of the same name", nm.c_str()));
+        if (arrays.count(nm)) throw ValueError(format("state variable '%s' collides with the array of the same name", nm.c_str()));
     }
     std::vector<Token> toks = lex(source);
     Parser parser(std::move(toks));
     ParseResult pr = parser.parse();
     auto pd = std::make_shared<ProgramData>();
-    Binder binder(*pd, constants, arrays);
+    Binder binder(*pd, constants, arrays, declared);
     binder.run(pr);
+    // Declaring a state variable the formula never reads costs a keyed_output() call
+    // per evaluation and misstates the block's dependencies, so it is an error rather
+    // than dead weight.
+    for (const auto& nm : state_variables) {
+        if (std::find(pd->inputNames.begin(), pd->inputNames.end(), nm) == pd->inputNames.end())
+            throw ValueError(format("state variable '%s' is declared but never used in the formula", nm.c_str()));
+    }
     Program prog;
     prog.m_data = pd;
     return prog;
