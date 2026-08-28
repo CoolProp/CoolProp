@@ -252,3 +252,18 @@ def test_two_classes_stay_refused_even_when_declared():
             Expression(block(nm, state=[nm]))
         # ...but each stays usable as an ordinary frozen constant.
         assert Expression(block(nm, constants={nm: 7.0}, state=[])).evaluate(state()) == 7.0
+
+
+def test_let_renames_a_state_variable_to_whatever_reads_best():
+    """Dropping the invented aliases costs nothing: renaming is in the language."""
+    e = Expression(block("let rho = Dmolar\nlet tau = Tc/T\nrho*tau",
+                         constants={"Tc": 456.83}, state=["Dmolar", "T"]))
+    assert e.required_inputs() == ["Dmolar", "T"]
+    assert e.evaluate(state(rhomolar=1e4, T=300.0)) == pytest.approx(1e4 * 456.83 / 300.0)
+    # A `let` cannot silently shadow a DECLARED name: the declaration then goes
+    # unread, which is already an error.
+    with pytest.raises(ValueError):
+        Expression(block("let T = 5\nT", state=["T"]))
+    # Undeclared, the same name is simply a local -- no state involved at all.
+    assert Expression(block("let T = 5\nT", state=[])).evaluate(state()) == 5.0
+

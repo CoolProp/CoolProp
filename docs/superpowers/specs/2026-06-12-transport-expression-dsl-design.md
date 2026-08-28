@@ -199,6 +199,20 @@ Declaration inverts both. A name the block did not declare is never state, howev
 well CoolProp knows it, so `p` is simply the author's. And `requiredInputs()` stops
 being inferred from an AST walk — it *is* the declaration.
 
+Dropping the aliases costs nothing ergonomically, because **renaming is already in
+the language**. A `let` binds any state variable to whatever reads best — including
+the source paper's own symbol, which neither CoolProp's spelling nor a second
+vocabulary maintained here would have given:
+
+```
+let rho = Dmolar
+let tau = Tc/T
+sum(i: n[i]*rho^d[i]*tau^t[i])
+```
+
+The two rules also compose usefully: a `let` cannot silently shadow a *declared*
+name, because the declaration would then go unread — which is itself an error.
+
 **What is still refused, and why opt-in is not enough.** Two classes are rejected at
 compile time even when explicitly declared, because these are the cases where the
 author's intent cannot be honoured:

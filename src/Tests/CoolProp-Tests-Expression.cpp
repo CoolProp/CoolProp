@@ -216,6 +216,28 @@ TEST_CASE("a name the block did not declare is the author's to use", "[expressio
     CHECK_THROWS_AS(compile("T", {}, {}, {"T", "T"}), CoolProp::ValueError);
 }
 
+TEST_CASE("`let` renames a state variable to whatever reads best", "[expression]") {
+    using namespace CoolProp::expression;
+    // Dropping the invented aliases (`rhomolar`, `rhomass`, `p`) costs nothing
+    // ergonomically: renaming is already in the language, and a `let` can carry the
+    // source paper's own symbol rather than either CoolProp's spelling or a second
+    // vocabulary maintained here.  This is the answer to "but I preferred rhomolar".
+    Program p = compile("let rho = Dmolar\nlet tau = Tc/T\nrho*tau", {{"Tc", 456.83}}, {}, {"Dmolar", "T"});
+    REQUIRE(p.requiredInputs().size() == 2);
+    CHECK(p.requiredInputs()[0] == CoolProp::iDmolar);
+    CHECK(p.requiredInputs()[1] == CoolProp::iT);
+    CHECK(p.evaluate({1e4, 300.0}) == Catch::Approx(1e4 * 456.83 / 300.0));
+
+    // A `let` that shadows a DECLARED name cannot silently win the resolution race:
+    // the declaration then goes unread, which is already an error.  The two rules
+    // compose into "you cannot declare a state variable and then quietly not use it".
+    CHECK_THROWS_AS(compile("let T = 5\nT", {}, {}, {"T"}), CoolProp::ValueError);
+    // Undeclared, that same name is simply a local, with no state involved at all.
+    Program q = compile("let T = 5\nT", {}, {});
+    CHECK(q.requiredInputs().empty());
+    CHECK(q.evaluate({}) == Catch::Approx(5.0));
+}
+
 TEST_CASE("evaluate rejects a wrong-sized input vector", "[expression]") {
     using namespace CoolProp::expression;
     Program p = compile("T + P", {}, {}, {"T", "P"});
