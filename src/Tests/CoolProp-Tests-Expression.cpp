@@ -1597,6 +1597,54 @@ TEST_CASE("Krypton: shipped entropy-scaling viscosity matches the paper's Table 
     WARN("Krypton vs Table 3: worst relative deviation " << worst << " over 5 points");
 }
 
+TEST_CASE("Krypton: finite and positive everywhere the state is stable", "[expression][golden]") {
+    // An entropy-scaling residual is exp(sum_i d_i (s+)^i), so it CAN overflow where
+    // s+ is large -- and s+ is large on a mechanically unstable EOS root.  Sweeping
+    // (T, rho) through the two-phase dome finds +inf, but that asks the correlation a
+    // meaningless question: inside the dome a single (T, rho) root is not a state the
+    // fluid can occupy, and no transport correlation is defined there.
+    //
+    // So the domain that must hold is the STABLE one, and it is pinned here the way a
+    // caller actually addresses it: by (p, T), which always lands on the stable root,
+    // plus both saturation branches, which bound it.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Krypton"));
+    const double Tt = AS->trivial_keyed_output(CoolProp::iT_triple);
+    const double Tc = AS->trivial_keyed_output(CoolProp::iT_critical);
+    int checked = 0;
+    for (int i = 0; i < 40; ++i) {
+        const double T = Tt + (750.0 - Tt) * i / 39.0;
+        for (int j = 0; j < 40; ++j) {
+            const double p = 1.0e3 * std::pow(2.0e5 / 1.0e3, j / 39.0);  // 1 kPa .. 200 MPa
+            try {
+                AS->update(CoolProp::PT_INPUTS, p, T);
+            } catch (...) {
+                continue;  // outside the EOS range; not this test's business
+            }
+            const double eta = AS->viscosity();
+            CAPTURE(T, p, eta);
+            REQUIRE(ValidNumber(eta));
+            REQUIRE(eta > 0);
+            ++checked;
+        }
+    }
+    for (int i = 1; i < 100; ++i) {
+        const double T = Tt + (Tc - Tt) * i / 100.0;
+        for (double Q : {0.0, 1.0}) {
+            try {
+                AS->update(CoolProp::QT_INPUTS, Q, T);
+            } catch (...) {
+                continue;
+            }
+            const double eta = AS->viscosity();
+            CAPTURE(T, Q, eta);
+            REQUIRE(ValidNumber(eta));
+            REQUIRE(eta > 0);
+            ++checked;
+        }
+    }
+    CHECK(checked > 1000);
+}
+
 TEST_CASE("Krypton: the entropy-scaling inputs are what the block asks for", "[expression]") {
     using namespace CoolProp::expression;
     // The residual block is the first thing in the tree to need EOS-derived state
