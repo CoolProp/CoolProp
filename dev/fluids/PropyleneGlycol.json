@@ -5617,5 +5617,108 @@
       "smolar": 191.7119158838503,
       "smolar_units": "J/mol/K"
     }
+  },
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Velliadou-IJT-2022-propyleneglycol",
+      "dilute": {
+        "type": "expression",
+        "formula": "let Tr = T/Tc\n1e-6*sum(i: n[i]*Tr^p[i])",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Tc": 674.0
+        },
+        "arrays": {
+          "n": [
+            1.15331,
+            10.6228,
+            13.1421,
+            -9.37974,
+            2.08103
+          ],
+          "p": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "initial_density": {
+        "type": "expression",
+        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: n[i]*Tr^p[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*Dmass/M",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 674.0,
+          "epsilon_over_k": 535.2,
+          "sigma": 4.915e-10,
+          "N_A": 6.02214076e+23,
+          "M": 0.07609442
+        },
+        "arrays": {
+          "n": [
+            1.15331,
+            10.6228,
+            13.1421,
+            -9.37974,
+            2.08103
+          ],
+          "p": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "b": [
+            -19.572881,
+            219.73999,
+            -1015.3226,
+            2471.0125,
+            -3375.1717,
+            2491.6597,
+            -787.26086,
+            14.085455,
+            -0.34664158
+          ],
+          "e": [
+            0,
+            -0.25,
+            -0.5,
+            -0.75,
+            -1.0,
+            -1.25,
+            -1.5,
+            -2.5,
+            -5.5
+          ]
+        }
+      },
+      "higher_order": {
+        "type": "expression",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\n1e-6*eta_ref*rhor^(2/3)*Tr^0.5*exp(c0 + c1*rhor + c2*rhor^2/Tr + c3*rhor^3/Tr^2 + c4*Tr + c5*Tr^2)",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 674.0,
+          "rhoc": 339.3811132,
+          "eta_ref": 1.0,
+          "c0": 6.17070938,
+          "c1": 3.15366627,
+          "c2": -0.68768625,
+          "c3": 0.0879750441,
+          "c4": -10.2553117,
+          "c5": 4.36659437
+        }
+      }
+    }
   }
 }

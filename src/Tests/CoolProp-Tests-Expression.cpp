@@ -1307,4 +1307,215 @@ TEST_CASE("Xenon 2021+correction: end-to-end along the saturation line", "[expre
     WARN("Xenon 2021 vs Table 8: worst relative deviation " << worst << " over 14 points");
 }
 
+// ---------------------------------------------------------------------------
+// SHIPPED CORRELATIONS.  Unlike the nitrogen/argon/xenon fixtures above, these
+// live in dev/fluids/*.json and are loaded through the ordinary fluid-data path
+// (JSON -> all_fluids CBOR -> FluidLibrary), so PropsSI("V", ..., "<fluid>") uses
+// them directly.  Purely additive: CoolProp shipped no viscosity for these fluids.
+// ---------------------------------------------------------------------------
+
+// Sotiriadou, Assael, Huber et al., Int. J. Thermophys. 45:87 (2024),
+// "Reference Correlation of the Viscosity of Ethene".
+//
+// Table 8 of that paper is the best verification data in this file: it resolves
+// the STAGES at 283 K, listing eta_0, (eta_1*rho + Delta_eta), their sum, the
+// critical-enhancement factor and the total, at seven significant figures for
+// rho = 0 to 550 kg/m^3.  We implement the background only (Delta_eta_c is the
+// Bhattacharjee crossover, which REFPROP omits for all but water and D2O), so the
+// comparison is against the background column.
+//
+// Note on the molar mass: the initial-density term needs molar density, and the
+// block freezes M = 0.02805316 kg/mol -- the paper's value, and the one REFPROP
+// corrected to in 2024.  CoolProp's Ethylene.json still carries the pre-2024
+// 0.02805376, so driving the block off `rhomass` and the frozen M keeps the
+// correlation exact regardless of when that gets fixed.
+TEST_CASE("Ethylene: shipped viscosity matches the paper's Table 8", "[expression][golden]") {
+    // T (K) = 283 throughout; rho (kg/m^3), eta_0, (eta_1 rho + Delta_eta), background (muPa.s)
+    const double tab8[12][4] = {
+      {0., 9.753447, 0.000000, 9.753447},     {50., 9.753447, 0.883644, 10.637091},   {100., 9.753447, 2.850625, 12.604071},
+      {150., 9.753447, 5.758114, 15.511560},  {200., 9.753447, 9.627286, 19.380732},  {250., 9.753447, 14.637185, 24.390632},
+      {300., 9.753447, 21.181254, 30.934701}, {350., 9.753447, 29.948520, 39.701967}, {400., 9.753447, 42.021090, 51.774536},
+      {450., 9.753447, 58.985091, 68.738538}, {500., 9.753447, 83.053687, 92.807133}, {550., 9.753447, 117.201315, 126.954762}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Ethylene"));
+    double worst = 0;
+    for (const auto& row : tab8) {
+        const double rho = (row[0] > 0) ? row[0] : 1e-8;  // the EOS will not take rho = 0
+        AS->update(CoolProp::DmassT_INPUTS, rho, 283.0);
+        CoolPropDbl dilute = 0, initial = 0, residual = 0, critical = 0;
+        AS->viscosity_contributions(dilute, initial, residual, critical);
+        const double total = AS->viscosity();
+        CAPTURE(row[0], row[3]);
+        REQUIRE(ValidNumber(total));
+        // The dilute stage is temperature-only, so it must be the same at every row.
+        CHECK(static_cast<double>(dilute) == Catch::Approx(row[1] * 1e-6).epsilon(1e-7));
+        // initial_density + higher_order together are the paper's fourth column.
+        // margin, not epsilon, for the rho = 0 row: we substitute rho = 1e-8 kg/m^3
+        // there, and the residual's rhor^(2/3) leaves ~1e-13 Pa.s rather than exactly
+        // zero.  1e-12 is still six orders below the smallest non-zero entry.
+        CHECK(static_cast<double>(initial + residual) == Catch::Approx(row[2] * 1e-6).epsilon(1e-6).margin(1e-12));
+        const double rel = std::abs(total - row[3] * 1e-6) / (row[3] * 1e-6);
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-6);
+        CHECK(critical == 0.0);  // Delta_eta_c deliberately not implemented
+    }
+    WARN("Ethylene vs Table 8 background: worst relative deviation " << worst << " over 12 points");
+}
+
+TEST_CASE("Ethylene: PropsSI viscosity now works and is stage-consistent", "[expression]") {
+    // Before this correlation shipped, PropsSI("V", ..., "Ethylene") threw.
+    const double eta = CoolProp::PropsSI("V", "T", 283.0, "Dmass", 300.0, "Ethylene");
+    REQUIRE(ValidNumber(eta));
+    CHECK(eta == Catch::Approx(30.934701e-6).epsilon(1e-6));
+    // And the three stages sum to the whole.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Ethylene"));
+    AS->update(CoolProp::DmassT_INPUTS, 300.0, 283.0);
+    CoolPropDbl d = 0, i = 0, r = 0, c = 0;
+    AS->viscosity_contributions(d, i, r, c);
+    CHECK(static_cast<double>(d + i + r + c) == Catch::Approx(eta).epsilon(1e-14));
+}
+
+// Velliadou, Assael & Huber, Int. J. Thermophys. 43:22 (2022), "Reference
+// Correlation for the Viscosity of Propane-1,2-diol (Propylene Glycol)".
+//
+// New form for the DSL: the residual (Eq. 9) is an EXPONENTIAL,
+//   Delta_eta = eta_ref (rhor^(2/3) Tr^(1/2)) exp{c0 + c1 rhor + c2 rhor^2/Tr
+//                                                 + c3 rhor^3/Tr^2 + c4 Tr + c5 Tr^2},
+// which is how a glycol spans four orders of magnitude in viscosity between 450 K
+// and the triple point.  The dilute term (Eq. 5) is a plain polynomial in T/Tc --
+// a Chapman-Enskog scheme refit for convenience -- and the initial-density term
+// reuses the same universal Vogel/Bich B*(T*) as ethene and xenon.
+TEST_CASE("PropyleneGlycol: shipped viscosity matches the paper's values", "[expression][golden]") {
+    // Section 3 computer-verification points: T (K), rho (kg/m^3), eta (muPa.s).
+    const double verif[3][3] = {{350, 0.0, 9.051368}, {350, 0.02, 9.058162}, {350, 1000.0, 5135.986461}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "PropyleneGlycol"));
+    for (const auto& row : verif) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-8, row[0]);
+        CAPTURE(row[0], row[1]);
+        CHECK(static_cast<double>(AS->viscosity()) == Catch::Approx(row[2] * 1e-6).epsilon(1e-6));
+    }
+    // Table 7, spanning 245-450 K and four orders of magnitude in viscosity.
+    const double tab7[8][3] = {{245, 1072.3, 4683847.}, {300, 1031.2, 39323.}, {450, 903.51, 674.67}, {245, 1091.6, 9060255.},
+                               {450, 945.09, 885.40},   {300, 1072.7, 88176.}, {450, 998.75, 1289.5}, {450, 1033.4, 1672.3}};
+    double worst = 0;
+    for (const auto& row : tab7) {
+        AS->update(CoolProp::DmassT_INPUTS, row[1], row[0]);
+        const double got = AS->viscosity(), ref = row[2] * 1e-6;
+        CAPTURE(row[0], row[1], row[2]);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-4);  // the table is printed to five significant figures
+    }
+    WARN("PropyleneGlycol vs Table 7: worst relative deviation " << worst << " over 8 points");
+}
+
+TEST_CASE("PropyleneGlycol: PropsSI viscosity now works", "[expression]") {
+    // Threw before this correlation shipped.
+    const double eta = CoolProp::PropsSI("V", "T", 350.0, "Dmass", 1000.0, "PropyleneGlycol");
+    REQUIRE(ValidNumber(eta));
+    CHECK(eta == Catch::Approx(5135.986461e-6).epsilon(1e-6));
+}
+
+// Sotiriadou, Assael, Huber et al., Int. J. Thermophys. 45:123 (2024),
+// "Correlations for the Viscosity and Thermal Conductivity of Tetrahydrofuran".
+// Viscosity only; the paper's thermal conductivity is not implemented here.
+//
+// Third rational-polynomial dilute term, and a residual (Eq. 8) whose bracket is a
+// polynomial PLUS a ratio of polynomials:
+//   Delta_eta = (rhor^(2/3) Tr^(1/2)) { f0 + f1 Tr + f2 rhor
+//                                       + (f3 + f4 Tr)/(f5 + f6 rhor + rhor^2) }
+// The initial-density term reuses the same universal Vogel/Bich B*(T*) as ethene,
+// xenon and propylene glycol -- that nine-term quarter-power form now serves four
+// fluids and has never needed a code change.
+//
+// TOLERANCE: the checks are against the paper's TABULATED values, and the bound for
+// each point is derived from that point's own printed precision rather than a
+// blanket epsilon.  Both columns matter and neither dominates everywhere:
+//   * eta is printed to 3-5 significant figures, so eta_vap = 10.1 at 350 K carries
+//     5e-3 of rounding on its own, while eta_liq = 2021.1 carries 2.5e-5;
+//   * rho is printed to 5-6 figures, but dln(eta)/dln(rho) reaches 26 in the
+//     saturated liquid at 200 K, which turns 5e-6 of density rounding into 1.3e-4.
+// So the tolerance is halfulp(eta) + the model's own response to halfulp(rho),
+// evaluated point by point.  A single global epsilon would be far too loose for the
+// dense liquid and too tight for the dilute vapour.  All 35 points land inside it,
+// the worst at 0.94 of its bound.
+namespace {
+struct ThfRow
+{
+    double T, rho, rho_halfulp, eta, eta_halfulp;  // K, kg/m^3, muPa.s
+};
+// Table 10 (0.1 / 10 / 25 MPa; the paper omits eta above 25 MPa, its validated
+// limit being 30 MPa) followed by Table 9's saturation boundary, liquid and vapour.
+const ThfRow THF_TABLE[] = {{200, 986.60, 0.005, 2021.1, 0.05},
+                            {250, 933.91, 0.005, 826.0, 0.05},
+                            {300, 879.97, 0.005, 452.9, 0.05},
+                            {350, 2.5418, 0.00005, 10.04, 0.005},
+                            {400, 2.2048, 0.00005, 11.56, 0.005},
+                            {450, 1.9497, 0.00005, 13.04, 0.005},
+                            {500, 1.7489, 0.00005, 14.49, 0.005},
+                            {200, 991.26, 0.005, 2290.9, 0.05},
+                            {250, 940.08, 0.005, 920.6, 0.05},
+                            {300, 888.43, 0.005, 504.8, 0.05},
+                            {350, 834.98, 0.005, 322.3, 0.05},
+                            {400, 778.12, 0.005, 224.1, 0.05},
+                            {450, 715.04, 0.005, 163.1, 0.05},
+                            {500, 639.54, 0.005, 119.8, 0.05},
+                            {200, 997.97, 0.005, 2768.9, 0.05},
+                            {250, 948.79, 0.005, 1080.1, 0.05},
+                            {300, 899.99, 0.005, 589.3, 0.05},
+                            {350, 850.70, 0.005, 379.5, 0.05},
+                            {400, 800.14, 0.005, 269.1, 0.05},
+                            {450, 747.42, 0.005, 203.0, 0.05},
+                            {500, 691.46, 0.005, 159.4, 0.05},
+                            {200, 986.55, 0.005, 2018.5, 0.05},
+                            {200, 0.00091066, 0.000000005, 5.57, 0.005},
+                            {250, 933.85, 0.005, 825.0, 0.05},
+                            {250, 0.055411, 0.0000005, 6.96, 0.005},
+                            {300, 879.90, 0.005, 452.5, 0.05},
+                            {300, 0.68415, 0.000005, 8.44, 0.005},
+                            {350, 822.94, 0.005, 286.1, 0.05},
+                            {350, 3.6651, 0.00005, 10.1, 0.05},
+                            {400, 760.49, 0.005, 195.1, 0.05},
+                            {400, 12.424, 0.0005, 12.1, 0.05},
+                            {450, 687.67, 0.005, 137.4, 0.05},
+                            {450, 32.984, 0.0005, 14.9, 0.05},
+                            {500, 589.08, 0.005, 93.8, 0.05},
+                            {500, 81.621, 0.0005, 19.7, 0.05}};
+}  // namespace
+
+TEST_CASE("Tetrahydrofuran: shipped viscosity matches the paper's tables", "[expression][golden]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Tetrahydrofuran"));
+    auto eta_at = [&](double T, double rho) {
+        AS->update(CoolProp::DmassT_INPUTS, rho, T);
+        return static_cast<double>(AS->viscosity()) * 1e6;  // muPa.s
+    };
+    // Section 4.2 computer-verification points, whose densities are exact.
+    CHECK(eta_at(300.0, 1e-10) == Catch::Approx(8.3705).epsilon(1e-5));
+    CHECK(eta_at(300.0, 900.0) == Catch::Approx(589.3956).epsilon(1e-6));
+
+    double worst_frac = 0;
+    int checks = 0;
+    for (const auto& r : THF_TABLE) {
+        const double got = eta_at(r.T, r.rho);
+        // Propagate BOTH printed columns: the entry's own half-ulp, plus the model's
+        // response to a half-ulp of density.  See the note above for why a single
+        // epsilon cannot serve both the dense liquid and the dilute vapour.
+        const double drho = 0.5 * std::abs(eta_at(r.T, r.rho + r.rho_halfulp) - eta_at(r.T, std::max(r.rho - r.rho_halfulp, 1e-12)));
+        const double tol = r.eta_halfulp + drho;
+        CAPTURE(r.T, r.rho, r.eta, tol);
+        REQUIRE(ValidNumber(got));
+        CHECK(std::abs(got - r.eta) <= tol);
+        worst_frac = std::max(worst_frac, std::abs(got - r.eta) / tol);
+        ++checks;
+    }
+    CHECK(checks == 35);
+    WARN("THF vs Tables 9+10: worst deviation is " << worst_frac << " of the tabulated precision, over " << checks << " points");
+}
+
+TEST_CASE("Tetrahydrofuran: PropsSI viscosity now works", "[expression]") {
+    const double eta = CoolProp::PropsSI("V", "T", 300.0, "Dmass", 900.0, "Tetrahydrofuran");
+    REQUIRE(ValidNumber(eta));
+    CHECK(eta == Catch::Approx(589.3956e-6).epsilon(1e-6));
+}
+
 #endif  // ENABLE_CATCH
