@@ -601,7 +601,7 @@ class Binder
             // would quietly detach the formula from the state -- and only partly, in
             // a formula that also read `T` on an earlier line.  Declaring a name and
             // then rebinding it is never what an author means.
-            if (declaredState.count(L.name))
+            if (declaredState.count(L.name) > 0)
                 throw ValueError(format("let '%s' shadows the declared state variable of the same name", L.name.c_str()));
             NodePtr bound = bind(L.expr, /*indexName*/ "");
             int slot = newScalarSlot();
@@ -837,8 +837,8 @@ Program compile(const std::string& source, const std::map<std::string, double>& 
         // and quietly change what the formula means.  This is the collision the old
         // single-namespace design hit from the other direction, where the language
         // reserved the name whether the block wanted it or not.
-        if (constants.count(nm)) throw ValueError(format("state variable '%s' collides with the constant of the same name", nm.c_str()));
-        if (arrays.count(nm)) throw ValueError(format("state variable '%s' collides with the array of the same name", nm.c_str()));
+        if (constants.count(nm) > 0) throw ValueError(format("state variable '%s' collides with the constant of the same name", nm.c_str()));
+        if (arrays.count(nm) > 0) throw ValueError(format("state variable '%s' collides with the array of the same name", nm.c_str()));
     }
     std::vector<Token> toks = lex(source);
     Parser parser(std::move(toks));
