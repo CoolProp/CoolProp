@@ -119,9 +119,18 @@ R-E347mcc, MIL-PRF-23699, POE5, POE7, POE9.
   bulk of this work is **data-only**. The critical enhancement is Tier B — it
   needs EOS-derived scalars and stays hardcoded, but CoolProp already has that
   routine and it is shared, not per-fluid.
-- **`TC7`** (nitrogen, xenon, neon) is the RPN-encoded generic form, same
-  situation as `VS7` in the viscosity document — see that document's
-  implementation notes; a transpiler would serve both properties.
+- **`TC7`** (nitrogen, xenon, neon) is the RPN-encoded generic form. **Same
+  decision as `VS7`: it goes through the DSL**, and one transpiler serves both
+  properties. All three correlation *bodies* are pure Tier A — they read only
+  `T` and density, with none of the EOS-derived operands that make krypton's
+  viscosity a special case (see the companion document).
+
+  One difference from `VS7`, which declares no critical enhancement anywhere:
+  **all three `TC7` models do.** Nitrogen points at `TK8` and xenon and neon at
+  `TK3`, both simplified Olchowy–Sengers forms. That is Tier B by the DSL's
+  boundary, but CoolProp already implements `simplified_Olchowy_Sengers` as a
+  shared routine, so this is a matter of supplying parameters alongside the
+  DSL-expressed body — still no new C++ routine.
 - **`TC0`** (heavy water) is hardcoded on both sides. CoolProp's existing
   `HeavyWater` conductivity routine would be rewritten against IAPWS R18-21.
 
@@ -137,8 +146,9 @@ together. One change, both properties.
    These two are the cheapest work in either audit; start here.
    Then, in decreasing order of convenience:
    - **n-undecane and THF** — one paper each covers both properties, but their
-     viscosity is `VS7`, so only the `TC1` half is data-only today; the
-     viscosity half waits on the `VS7` decision.
+     viscosity is `VS7`, so the `TC1` half is data-only today while the
+     viscosity half goes through the DSL path. Both are pure Tier A, so neither
+     is blocked on anything beyond that path existing.
    - **Novec 649** — `VS1`/`TC1`, both data-only, but it needs *two* papers:
      viscosity from Wen et al., *JCED* **62**:3603 (2017) and conductivity from
      Perkins et al., *JCED* **63**:2783 (2018). Both are on PMC.
@@ -150,4 +160,7 @@ together. One change, both properties.
    entry at all, so this is the one remaining transport gap for that fluid — and
    the Perkins/Huber/Assael correlation for it is on PMC.
 4. **R-143a** — cheap, but label it preliminary in the JSON note.
-5. **Nitrogen, xenon, neon** — blocked behind the `TC7`/`VS7` decision.
+5. **Xenon and neon, then nitrogen** — these need the `TC7` → DSL path, now
+   settled. Xenon and neon pair naturally with the same two fluids opening the
+   viscosity `VS7` batch, so the two documents converge there: one transpiler,
+   two properties, the same two fluids first.

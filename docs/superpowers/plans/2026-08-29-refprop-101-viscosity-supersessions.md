@@ -3,7 +3,7 @@
 **Date:** 2026-08-29
 **Status:** Planning. No code changes proposed in this PR — this document is the
 audit that the follow-on work is scoped from.
-**Beads:** epic `CoolProp-rip4`
+**Beads:** epic `CoolProp-rip4`; DSL prerequisite `CoolProp-43rb`
 
 **Goal:** Enumerate every pure-fluid viscosity correlation shipped in the REFPROP
 10.1 beta that is newer than, or fills a gap against, what `dev/fluids/*.json`
@@ -183,10 +183,30 @@ lubricants MIL-PRF-23699, POE5, POE7, POE9.
   C++ needed. Start here.
 - **`VS7`** is REFPROP's generic form, encoded as an RPN token stream
   (`$DG`/`$VV`/`$RF`/`$CF` sections with `SUMLOGT`, `SUM:n`, `EXP` and a postfix
-  operator stack). This is the same NIST RPN encoding the DSL design doc cites as
-  its motivating prior art. The interesting option is a **`VS7` → CoolProp-DSL
-  transpiler** rather than 18 hand-written model blocks; that decision deserves
-  its own brainstorm before anyone starts transcribing.
+  operator stack) — the same NIST RPN encoding the DSL design doc cites as its
+  motivating prior art.
+
+  **Decision: `VS7` goes through the DSL, not hand-written C++ routines.** The
+  fluid files were audited against the DSL's v1 boundary to check that this is
+  actually possible, and it very nearly is:
+
+  - **No `VS7` block declares a viscosity critical enhancement.** Every one
+    either points at `NUL` or omits the pointer entirely, so there is no Tier-B
+    dependency lurking in the viscosity models.
+  - **17 of the 18 are pure Tier A** — their `$DG`/`$VV`/`$RF` sections read
+    only `T` and density, which the v1 thermodynamic-input allowlist already
+    covers. `SUMLOGT`, `SUM:n` and `EXP` map onto `sum(i: …)`, `log`, `exp` and
+    `^`; the postfix operator stack flattens to ordinary infix arithmetic.
+  - **Krypton is the exception and needs work first.** Its correlation is
+    entropy scaling, and the `$RF` section reads `Sres`, `BVir` and `dBVirdT` —
+    residual entropy and the second virial with its temperature derivative.
+    None of those are in the v1 allowlist (`T`, `rhomolar`, `rhomass`,
+    `molar_mass`, `p`). Krypton is therefore **Tier B**, and adopting it means
+    extending the derived-variable registry the DSL design doc describes in §2b.
+
+  A `VS7` → DSL transpiler is the obvious way to land the other 17 without
+  transcribing 17 formulas by hand, but that is now an implementation choice
+  inside a settled direction, not an open question about the direction itself.
 - **`VS0`** (heavy water) is a hardcoded fluid-specific routine on both sides.
   CoolProp already has a `HeavyWater` hardcoded viscosity path; adopting IAPWS
   R17-20 means rewriting that routine, not adding data.
@@ -217,9 +237,19 @@ macOS/Linux 10.1 shared library is a prerequisite for running any of it.
 2. Land the five `VS1` fluids as pure JSON data + tests (ammonia, R-245fa,
    R-161, Novec 649, cyclopentane — cyclopentane last, it needs library access).
 3. Fix `REFPROP_NAME` for `PropyleneGlycol` and `Tetrahydrofuran`.
-4. Brainstorm the `VS7` question (transpiler vs. hand-written), then do the
-   noble gases (krypton, xenon, neon) as the first batch — small, clean,
-   entropy-scaling-based, and krypton is our own correlation.
+4. Stand up the `VS7` → DSL path. **Xenon and neon** are the right first batch:
+   both are pure Tier A, both are gaps rather than supersessions, and neither
+   has a critical enhancement to worry about. Note this is a change from an
+   earlier draft, which proposed the noble gases *including krypton* as the
+   opening batch — krypton is the one `VS7` model that is not Tier A, so it is
+   the worst possible starting point, not the best.
 5. Heavy water via IAPWS R17-20.
 6. The rest of `VS7` in order of user impact: nitrogen, argon, methane, R-134a,
-   R-32, ethane, n-butane, ethanol, ethylene.
+   R-32, ethane, n-butane, ethanol, ethylene, deuterium, n-undecane, THF,
+   propylene glycol.
+7. **Krypton, last** — it needs the DSL's derived-variable registry extended to
+   expose residual entropy and the second virial (§2b of the DSL design doc)
+   before its entropy-scaling form can be expressed at all; tracked as
+   `CoolProp-43rb`. Worth doing: it is
+   the first entropy-scaling reference correlation in either audit, so the
+   registry work is an investment in a form that is likely to recur.
