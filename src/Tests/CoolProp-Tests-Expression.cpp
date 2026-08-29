@@ -184,6 +184,65 @@ TEST_CASE("two classes of parameter stay refused even when declared", "[expressi
     CHECK(reason.find("ENABLE_SUPERANCILLARIES") != std::string::npos);
     REQUIRE_FALSE(resolveStateVariable("not_a_parameter", key, reason));
     CHECK(reason.find("not a CoolProp parameter") != std::string::npos);
+    // A denied quantity gives its real reason even when spelled as an alias -- being
+    // told to use `viscosity` and then refused `viscosity` would be a runaround.
+    REQUIRE_FALSE(resolveStateVariable("V", key, reason));
+    CHECK(reason.find("re-enters") != std::string::npos);
+
+    // Tau and Delta ARE the reducing state (keyed_output computes them as
+    // _reducing.T/_T and _rhomolar/_reducing.rhomolar), so refusing T_reducing while
+    // admitting them would be a guard with a door next to it.
+    for (const char* nm : {"Tau", "Delta"}) {
+        CAPTURE(nm);
+        REQUIRE_FALSE(resolveStateVariable(nm, key, reason));
+        CHECK(reason.find("reducing state") != std::string::npos);
+        CHECK_THROWS_AS(compile(nm, {}, {}, {nm}), CoolProp::ValueError);
+    }
+    // Phase is an enum ordinal widened to double; Q is -1 outside the dome.  Neither
+    // is a continuous state function, and both would compile into plausible arithmetic.
+    for (const char* nm : {"Phase", "Q", "Qmass"}) {
+        CAPTURE(nm);
+        CHECK_THROWS_AS(compile(nm, {}, {}, {nm}), CoolProp::ValueError);
+    }
+    // Fluid metadata is not a function of the state, and several throw from inside
+    // the evaluation -- where fluid-file data has no business failing.
+    for (const char* nm : {"T_freeze", "GWP100", "ODP", "fraction_min"}) {
+        CAPTURE(nm);
+        CHECK_THROWS_AS(compile(nm, {}, {}, {nm}), CoolProp::ValueError);
+    }
+}
+
+TEST_CASE("only CoolProp's canonical spelling is accepted, never an alias", "[expression]") {
+    using namespace CoolProp::expression;
+    // is_valid_parameter() also accepts back-compat aliases and an upper-cased
+    // spelling of every name.  Those are harmless in PropsSI and a trap here, because
+    // a DSL formula is FULL of single-letter coefficient names: an author who forgot
+    // to declare a paper coefficient `A` in `constants` is told to add it to
+    // state_variables, and doing so would silently bind the speed of sound.
+    CoolProp::parameters key;
+    std::string reason;
+    for (const char* alias : {"A", "C", "D", "G", "M", "O", "S", "U", "DMOLAR", "HMOLAR"}) {
+        CAPTURE(alias);
+        REQUIRE_FALSE(resolveStateVariable(alias, key, reason));
+        CHECK(reason.find("alias") != std::string::npos);
+        CHECK_THROWS_AS(compile(alias, {}, {}, {alias}), CoolProp::ValueError);
+    }
+    // ...so each stays free for the author, which is the point.
+    CHECK(compile("A*M", {{"A", 3.0}, {"M", 4.0}}, {}).evaluate({}) == Catch::Approx(12.0));
+    // Every spelling this branch's fluid data actually ships is canonical.
+    for (const char* nm : {"T", "P", "Dmolar", "Dmass", "molar_mass", "Smolar_residual", "Bvirial", "dBvirial_dT"}) {
+        CAPTURE(nm);
+        CHECK(resolveStateVariable(nm, key, reason));
+        CHECK(inputName(key) == nm);
+    }
+}
+
+TEST_CASE("two names for one quantity are rejected rather than fetched twice", "[expression]") {
+    using namespace CoolProp::expression;
+    // Aliases are already refused, so this needs the canonical/alias pair to both be
+    // canonical -- but pin the rule directly: dedupe is on the resolved key, because
+    // two slots for one quantity would cost two keyed_output() calls per evaluation.
+    CHECK_THROWS_AS(compile("T + T", {}, {}, {"T", "T"}), CoolProp::ValueError);
 }
 
 TEST_CASE("a name the block did not declare is the author's to use", "[expression]") {
@@ -228,10 +287,12 @@ TEST_CASE("`let` renames a state variable to whatever reads best", "[expression]
     CHECK(p.requiredInputs()[1] == CoolProp::iT);
     CHECK(p.evaluate({1e4, 300.0}) == Catch::Approx(1e4 * 456.83 / 300.0));
 
-    // A `let` that shadows a DECLARED name cannot silently win the resolution race:
-    // the declaration then goes unread, which is already an error.  The two rules
-    // compose into "you cannot declare a state variable and then quietly not use it".
+    // A `let` may not shadow a DECLARED state variable at all.  Leaning on the
+    // "declared but never used" rule to catch this was not enough: that only fires
+    // when the declared name is read NOWHERE, so the formula below compiled, with
+    // `T` meaning the state on one line and 500 on the next.
     CHECK_THROWS_AS(compile("let T = 5\nT", {}, {}, {"T"}), CoolProp::ValueError);
+    CHECK_THROWS_AS(compile("let a = T*2\nlet T = 500\na + T", {}, {}, {"T"}), CoolProp::ValueError);
     // Undeclared, that same name is simply a local, with no state involved at all.
     Program q = compile("let T = 5\nT", {}, {});
     CHECK(q.requiredInputs().empty());

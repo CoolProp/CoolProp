@@ -190,14 +190,26 @@ pressure — in a block that never reads pressure. Across the eleven shipped blo
 local identifiers outnumber state reads about 5:1 (median 11 against 2), and **not
 one of them declares `P`**. The reservation was pure cost.
 
+**Only the canonical spelling is accepted.** `is_valid_parameter()` also resolves
+CoolProp's back-compat aliases and an upper-cased form of every name: `A` is the
+speed of sound, `D` is `Dmass`, `M` is `molar_mass`, `TAU` is `Tau`. Harmless in
+`PropsSI`; a trap here, because a DSL formula is full of single-letter coefficient
+names. An author who forgets to declare a paper coefficient `A` in `constants` is
+told to add it to `state_variables` — and doing so would silently bind the speed of
+sound, with the compiler's own diagnostic having steered them there. So a
+declaration must match `get_parameter_information(key, "short")` exactly. One name
+per quantity, and still no list kept in this library.
+
 *The DSL invented spellings CoolProp does not use.* `rhomolar`/`rhomass`/`p` are
 not `get_parameter_index()` names; CoolProp says `Dmolar`/`Dmass`/`P`. That
 divergence is what created the lowercase `p` that collided. The aliases are gone:
 one name per quantity, and it is CoolProp's.
 
 Declaration inverts both. A name the block did not declare is never state, however
-well CoolProp knows it, so `p` is simply the author's. And `requiredInputs()` stops
-being inferred from an AST walk — it *is* the declaration.
+well CoolProp knows it, so `p` is simply the author's. `requiredInputs()` is still
+read off the AST walk, but the declaration now gates it: a name reaches the walk only
+if the block asked for it. (The *order* remains first-reference, not declaration
+order — the declaration says what may be read, the formula says in what order.)
 
 Dropping the aliases costs nothing ergonomically, because **renaming is already in
 the language**. A `let` binds any state variable to whatever reads best — including
@@ -210,8 +222,11 @@ let tau = Tc/T
 sum(i: n[i]*rho^d[i]*tau^t[i])
 ```
 
-The two rules also compose usefully: a `let` cannot silently shadow a *declared*
-name, because the declaration would then go unread — which is itself an error.
+A `let` may not shadow a *declared* state variable at all: that is a compile error.
+An earlier draft leaned on the "declared but never used" rule to catch it, but that
+only fires when the declared name is read *nowhere* — `let a = T*2 / let T = 500 /
+a + T` compiled, with `T` meaning the state on one line and 500 on the next. The
+guard is explicit now rather than emergent.
 
 **What is still refused, and why opt-in is not enough.** Two classes are rejected at
 compile time even when explicitly declared, because these are the cases where the
@@ -220,7 +235,10 @@ author's intent cannot be honoured:
 | Refused | Reason |
 |---|---|
 | `V`, `viscosity`, `L`, `conductivity`, `Prandtl`, `surface_tension` | `keyed_output()` re-enters the correlation being defined — unbounded recursion, at eval time, in fluid-file data |
-| `T_critical`, `P_critical`, `rhomolar_critical`, `rhomass_critical`, and the `*_reducing` family | `calc_T_critical()`/`calc_rhomolar_critical()` return the *numerical* critical point under `ENABLE_SUPERANCILLARIES` (the default), so a correlation reducing on them changes answer with configuration. Xenon missed its reference values by 7e-5 exactly this way. Freeze the paper's own value as a constant instead. |
+| `T_critical`, `P_critical`, `rhomolar_critical`, `rhomass_critical` | `calc_T_critical()`/`calc_rhomolar_critical()` return the *numerical* critical point under `ENABLE_SUPERANCILLARIES` (the default), so a correlation reducing on them changes answer with configuration. Xenon missed its reference values by 7e-5 exactly this way. Freeze the paper's own value as a constant instead. |
+| the `*_reducing` family, **and `Tau`/`Delta`** | A different reason, worth stating separately: superancillaries do not touch `get_reducing_state()`. A correlation writing `T_reducing` means its *own* fitted reducing parameter, which is generally not the EOS's and moves when the EOS section is revised. `Tau` and `Delta` are that same state wearing another name — `keyed_output()` computes them as `_reducing.T/_T` and `_rhomolar/_reducing.rhomolar` — so refusing one while admitting the other would be a guard with a door next to it. |
+| `Phase`, `Q`, `Qmass` | Not continuous state functions: `Phase` is an enum ordinal widened to `double` (and depends on any imposed phase), `Q` is `-1` outside the dome. Both would compile into plausible-looking arithmetic. |
+| `T_freeze`, `fraction_min`, `fraction_max`, `GWP20/100/500`, `ODP`, `FH`, `HH`, `PH` | Fluid metadata, not functions of the current state; several are unimplemented for HEOS and throw from inside the evaluation, where fluid-file data has no business failing. |
 
 Three further errors are compile-time, not runtime:
 

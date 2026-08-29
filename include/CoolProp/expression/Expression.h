@@ -46,7 +46,9 @@ namespace expression {
 bool resolveStateVariable(const std::string& name, parameters& key, std::string& reason);
 
 /// CoolProp's canonical spelling for `key`, as used in error messages and in
-/// ExpressionBlock::required_inputs().
+/// ExpressionBlock::required_inputs().  Since only the canonical spelling is
+/// accepted as a declaration, this round-trips whatever the author wrote.  Throws
+/// CoolProp::ValueError for a key outside the parameter-information table.
 std::string inputName(parameters key);
 
 namespace detail {
@@ -62,9 +64,9 @@ class Program
     /// throws CoolProp::ValueError rather than reading past the end.
     [[nodiscard]] double evaluate(const std::vector<double>& inputVals) const;
     /// Thermodynamic inputs this program references, in the order evaluate() expects
-    /// them.  This is the block's DECLARED `state_variables`, filtered to those the
-    /// formula actually reads, in declaration order -- not something inferred from
-    /// the formula alone.
+    /// them: the block's DECLARED `state_variables`, in order of FIRST REFERENCE in
+    /// the formula -- which is not necessarily the order they were declared in.  The
+    /// declaration gates what may be read; the formula fixes the order.
     [[nodiscard]] const std::vector<parameters>& requiredInputs() const;
 
    private:

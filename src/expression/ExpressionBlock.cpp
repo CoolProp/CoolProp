@@ -27,8 +27,13 @@ Program compile_block(const std::string& json_text, const std::string& context) 
         }
         std::vector<std::string> state_variables;
         if (j.contains("state_variables")) {
-            for (const auto& v : j["state_variables"])
+            // Must be an array: nlohmann happily iterates a bare string as a single
+            // element, so "state_variables": "T" would be silently accepted.
+            if (!j["state_variables"].is_array()) throw ValueError("\"state_variables\" must be an array of names");
+            for (const auto& v : j["state_variables"]) {
+                if (!v.is_string()) throw ValueError("\"state_variables\" must contain only names");
                 state_variables.push_back(v.get<std::string>());
+            }
         }
         return compile(cpjson::get_string(j, "formula"), constants, arrays, state_variables);
     } catch (std::exception& e) {

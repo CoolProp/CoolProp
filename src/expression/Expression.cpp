@@ -539,12 +539,49 @@ static bool deniedStateVariable(parameters key, std::string& why) {
         case iP_critical:
         case irhomolar_critical:
         case irhomass_critical:
+            why = "the critical point is configuration-dependent (ENABLE_SUPERANCILLARIES); "
+                  "freeze the paper's value as a constant instead";
+            return true;
+        // The EOS reducing state is refused for a DIFFERENT reason, and saying so
+        // matters: superancillaries do not touch get_reducing_state().  A correlation
+        // that writes `T_reducing` means its OWN fitted reducing parameter, which is
+        // in general not the EOS's and moves whenever the EOS section is revised.
+        //
+        // Tau and Delta are the same quantities wearing a different name --
+        // keyed_output() computes them as _reducing.T/_T and _rhomolar/_reducing.rhomolar
+        // -- so refusing the reducing state while admitting these would be a guard
+        // with a door next to it.  They are also composition-dependent for mixtures.
         case iT_reducing:
         case iP_reducing:
         case irhomolar_reducing:
         case irhomass_reducing:
-            why = "the critical point and reducing state are configuration-dependent "
-                  "(ENABLE_SUPERANCILLARIES); freeze the paper's value as a constant instead";
+        case iTau:
+        case iDelta:
+            why = "the EOS reducing state is not the correlation's own; freeze the paper's "
+                  "reducing parameters as constants instead (Tau and Delta are that state too)";
+            return true;
+        // Not real numbers.  Phase is an enum ordinal widened to double (and depends
+        // on any imposed phase); Q is -1 outside the dome, a sentinel that would enter
+        // arithmetic as data.  Both would compile into a plausible-looking formula.
+        case iPhase:
+        case iQ:
+        case iQmass:
+            why = "it is a phase index or a sentinel-valued quality, not a continuous state function";
+            return true;
+        // Fluid metadata and incompressible-only accessors: not functions of the
+        // current state at all.  Several are unimplemented for HEOS and throw from
+        // inside the evaluation, where fluid-file data has no business failing.
+        case ifraction_min:
+        case ifraction_max:
+        case iT_freeze:
+        case iGWP20:
+        case iGWP100:
+        case iGWP500:
+        case iFH:
+        case iHH:
+        case iPH:
+        case iODP:
+            why = "it is fluid metadata, not a function of the current state";
             return true;
         default:
             return false;
@@ -608,6 +645,12 @@ class Binder
 
     void run(ParseResult& pr) {
         for (auto& L : pr.lets) {
+            // A `let` resolves before a declared state variable, so `let T = 500`
+            // would quietly detach the formula from the state -- and only partly, in
+            // a formula that also read `T` on an earlier line.  Declaring a name and
+            // then rebinding it is never what an author means.
+            if (declaredState.count(L.name))
+                throw ValueError(format("let '%s' shadows the declared state variable of the same name", L.name.c_str()));
             NodePtr bound = bind(L.expr, /*indexName*/ "");
             int slot = newScalarSlot();
             letNames[L.name] = slot;  // available to later statements + result
@@ -762,6 +805,8 @@ class Binder
 // ---------------------------------------------------------------------------
 
 bool resolveStateVariable(const std::string& name, parameters& key, std::string& reason) {
+    key = iundefined_parameter;  // both out-params written on every path
+    reason.clear();
     parameters k;
     if (!is_valid_parameter(name, k)) {
         reason = format("'%s' is not a CoolProp parameter name", name.c_str());
@@ -770,6 +815,20 @@ bool resolveStateVariable(const std::string& name, parameters& key, std::string&
     std::string why;
     if (detail::deniedStateVariable(k, why)) {
         reason = format("'%s' may not be used as a state variable: %s", name.c_str(), why.c_str());
+        return false;
+    }
+
+    // is_valid_parameter() also accepts CoolProp's back-compat aliases and an
+    // upper-cased spelling of every name: `A` is the speed of sound, `D` is Dmass,
+    // `M` is molar_mass, `TAU` is Tau.  Those are a trap here in a way they are not
+    // in PropsSI, because a DSL formula is FULL OF single-letter coefficient names.
+    // An author who forgets to declare a paper coefficient `A` in `constants` gets
+    // told to add it to state_variables, and doing so silently binds the speed of
+    // sound.  Only the canonical spelling is accepted, so the DSL's vocabulary is
+    // CoolProp's with exactly one name per quantity -- and still no list kept here.
+    const std::string canonical = get_parameter_information(static_cast<int>(k), "short");
+    if (canonical != name) {
+        reason = format("'%s' is an alias; use CoolProp's canonical name '%s'", name.c_str(), canonical.c_str());
         return false;
     }
     key = k;
@@ -819,6 +878,12 @@ Program compile(const std::string& source, const std::map<std::string, double>& 
         std::string reason;
         if (!resolveStateVariable(nm, key, reason)) throw ValueError(format("state_variables: %s", reason.c_str()));
         if (!declared.emplace(nm, key).second) throw ValueError(format("state_variables lists '%s' twice", nm.c_str()));
+        // Dedupe on the resolved key, not the spelling: two names for one quantity
+        // would take two slots and cost two keyed_output() calls per evaluation.
+        for (const auto& prev : declared) {
+            if (prev.first != nm && prev.second == key)
+                throw ValueError(format("state_variables lists '%s' and '%s', which are the same quantity", prev.first.c_str(), nm.c_str()));
+        }
         // A declared name shadowing the author's own data would make that data dead
         // and quietly change what the formula means.  This is the collision the old
         // single-namespace design hit from the other direction, where the language

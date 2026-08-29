@@ -76,7 +76,8 @@ def test_constant_only_formula_reads_no_state():
 
 def test_required_inputs_reports_the_names_the_formula_uses():
     e = Expression(block("P*2 + T"))
-    # Reported in first-reference order, spelled the way the formula spells them.
+    # Reported in first-reference order (NOT declaration order); only the canonical
+    # spelling is accepted, so it round-trips whatever the author wrote.
     assert e.required_inputs() == ["P", "T"]
     assert Expression(block("Dmass*molar_mass")).required_inputs() == ["Dmass", "molar_mass"]
 
@@ -266,4 +267,30 @@ def test_let_renames_a_state_variable_to_whatever_reads_best():
         Expression(block("let T = 5\nT", state=["T"]))
     # Undeclared, the same name is simply a local -- no state involved at all.
     assert Expression(block("let T = 5\nT", state=[])).evaluate(state()) == 5.0
+
+
+def test_only_the_canonical_spelling_is_accepted():
+    """CoolProp's back-compat aliases are a trap in a formula full of coefficients."""
+    # `A` is the speed of sound, `D` is Dmass, `M` is molar_mass, `DMOLAR` is Dmolar.
+    for alias in ("A", "C", "D", "G", "M", "O", "S", "U", "DMOLAR"):
+        with pytest.raises(ValueError, match="alias"):
+            Expression(block(alias, state=[alias]))
+    # ...so each stays free for the author, which is the point.
+    assert Expression(block("A*M", constants={"A": 3.0, "M": 4.0}, state=[])).evaluate(state()) == 12.0
+
+
+def test_tau_and_delta_are_the_reducing_state_by_another_name():
+    """keyed_output computes them as _reducing.T/_T and _rhomolar/_reducing.rhomolar."""
+    for nm in ("Tau", "Delta", "T_reducing", "rhomolar_reducing"):
+        with pytest.raises(ValueError):
+            Expression(block(nm, state=[nm]))
+
+
+def test_non_state_quantities_are_refused():
+    for nm in ("Phase", "Q", "Qmass"):          # enum ordinal / sentinel-valued
+        with pytest.raises(ValueError):
+            Expression(block(nm, state=[nm]))
+    for nm in ("T_freeze", "GWP100", "ODP"):    # fluid metadata, not state
+        with pytest.raises(ValueError):
+            Expression(block(nm, state=[nm]))
 
