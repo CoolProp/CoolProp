@@ -13,7 +13,8 @@ implementation work can start without a subscription.
 ## Source of truth and caveats
 
 - **REFPROP fluid files:** `REFPROPv10.1 beta test invitation20260720045933/extracted/app/FLUIDS`,
-  167 `.FLD` files, dated 2026-07-12/19. **This is a beta.** Every finding below
+  161 pure-fluid `.FLD` files plus 5 pseudo-pure `.PPF` files, dated
+  2026-07-12/19. **This is a beta.** Every finding below
   should be re-confirmed against the 10.1 general release before its coefficients
   are transcribed into `dev/fluids/`.
 - The 10.0 set at `~/REFPROP10/FLUIDS` (148 fluids, 2023-04) is materially
@@ -24,7 +25,9 @@ implementation work can start without a subscription.
 - Only REFPROP's **`#ETA`** blocks count — the dedicated, NIST-recommended
   correlations. Fluids whose primary transport model is `#TRN`/`@TRN` (extended
   corresponding states) are excluded: ECS is unpublished fitting, and CoolProp's
-  own ECS is no worse. 61 of the 167 fluids have an `#ETA` block.
+  own ECS is no worse. 61 of the 161 `.FLD` fluids have an `#ETA` block. The
+  `.PPF` files were checked separately: Air still carries Lemmon & Jacobsen
+  (2004), unchanged from 10.0 and matching CoolProp.
 - `#` marks the active model and `@` an alternative, and the two symbols can be
   swapped within a fluid file. The audit therefore reads the `#ETA` block, not
   the first `ETA` block in the file — for PROPANE and ETHANOL those are not the
@@ -116,6 +119,18 @@ those fluids.
   is also ECS-or-unpublished in REFPROP 10.1 (R-11, R-12, R-13, R-14, R-22,
   R-124, R-141b, R-142b, R-143a, R-152a, R-218, R-227ea, R-236ea, R-236fa,
   RC318, isopentane, n-pentane, propylene). No published upgrade exists there.
+
+## C-bis. R-1233zd(E) — a gap that the `#ETA` rule hides
+
+REFPROP 10.1's *primary* transport model for R-1233zd(E) is ECS, so the fluid
+does not appear in §B. But the file also carries a published viscosity
+correlation as an `@ETA` alternative — Meng, Wen & Wu, *J. Chem. Thermodyn.*
+**123**:140–145 (2018), [`10.1016/j.jct.2018.04.001`](https://doi.org/10.1016/j.jct.2018.04.001)
+(no open-access copy found). That matters because on `origin/master`
+`dev/fluids/R1233zd(E).json` has **no `TRANSPORT` block at all** — PR #2768
+dropped it and the restore has not landed — so CoolProp has neither viscosity
+nor conductivity for this fluid. Restoring transport for R-1233zd(E) is worth
+tracking separately from this audit.
 
 ## D. Out of scope — REFPROP 10.1 fluids CoolProp does not have
 
