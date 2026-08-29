@@ -1696,6 +1696,74 @@ TEST_CASE("HSU_P flash: near saturation 5-component N2-HC", "[michelsen][flash][
     }
 }
 
+TEST_CASE("HSU_P flash: near-dew round trip must not return a wrong T silently", "[michelsen][flash][HSU_P][saturation]") {
+    // Regression for CoolProp-ft05.  On a genuine instability the Michelsen
+    // two-phase solver can converge to the TRIVIAL split -- x == y,
+    // rho_liq == rho_vap -- and report o.nonconvergence = 0, i.e. success.
+    // Nothing catches that, and the trivial-split guard in PT_flash_mixtures
+    // (`if (o.beta < 1e-10)`) then publishes it as a SINGLE-PHASE state inside
+    // the two-phase region.  That makes the residual the HSU_P TOMS748 solver
+    // sees discontinuous, so it can settle on a temperature whose wrong-phase
+    // state happens to reproduce the target H/S/U.
+    //
+    // The convergence gate added in #3192 does NOT catch this case: it checks
+    // the RESIDUAL, not T, and here the residual is genuinely satisfied at the
+    // wrong state.  So the failure is silent -- the caller is handed a
+    // converged-looking state at the wrong temperature.  Do not try to fix a
+    // regression here by tightening that gate.
+    //
+    // P = 8e5 near the dew end fails for all three inputs at three consecutive
+    // offsets on the pre-fix code, by 0.11 to 0.67 K.  Errors elsewhere in the
+    // (P, T) sweep reach 2.97 K.
+    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    const double P = 8e5;
+    const double TOL = 0.1;  // K
+
+    auto sat = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+    sat->set_mole_fractions(z);
+    sat->update(PQ_INPUTS, P, 0.0);
+    const double T_bub = sat->T();
+    sat->update(PQ_INPUTS, P, 1.0);
+    const double T_dew = sat->T();
+
+    for (double frac : {0.995, 0.998, 0.999}) {
+        const double T = T_bub + frac * (T_dew - T_bub);
+
+        auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        ref->set_mole_fractions(z);
+        ref->update(PT_INPUTS, P, T);
+        // The reference state itself must be two-phase; if this ever fails the
+        // test has drifted off the intended part of the envelope.
+        REQUIRE(ref->phase() == iphase_twophase);
+        const double H_ref = ref->hmass();
+        const double S_ref = ref->smass();
+        const double U_ref = ref->umass();
+
+        std::ostringstream lbl;
+        lbl << "frac=" << frac << " T=" << T;
+
+        DYNAMIC_SECTION(lbl.str() + " HP") {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+            AS->set_mole_fractions(z);
+            AS->update(HmassP_INPUTS, H_ref, P);
+            CHECK(std::abs(AS->T() - T) < TOL);
+        }
+        DYNAMIC_SECTION(lbl.str() + " SP") {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+            AS->set_mole_fractions(z);
+            AS->update(PSmass_INPUTS, P, S_ref);
+            CHECK(std::abs(AS->T() - T) < TOL);
+        }
+        DYNAMIC_SECTION(lbl.str() + " UP") {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+            AS->set_mole_fractions(z);
+            AS->update(PUmass_INPUTS, P, U_ref);
+            CHECK(std::abs(AS->T() - T) < TOL);
+        }
+    }
+}
+
 TEST_CASE("PT flash: 5-component two-phase consistency", "[michelsen][flash][VLE]") {
     // Sweep 100 temperatures from T_bub to T_dew and verify:
     //   1. phase == iphase_twophase
