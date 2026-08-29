@@ -9,11 +9,23 @@ Designed to run under both native desktop wheels and WebAssembly (Pyodide)
 runtimes with minimal external dependencies.
 
 Usage:
-    pytest wrappers/Python/pytest/test_smoke.py
+    pytest wrappers/Python/pytest/smoke_test.py
 """
 import pytest
+
+# Guard against broken binary wheel installations in CI
+import numpy 
+
+import CoolProp
 from CoolProp.CoolProp import PropsSI, PhaseSI
 from CoolProp.HumidAirProp import HAPropsSI
+
+# Verify the Cython sidecar capsule shim loads alongside the nanobind core
+from CoolProp.State import State  
+
+def test_build_version_injection():
+    """Ensure CMake properly resolved and injected the git revision during build."""
+    assert '?' not in CoolProp.__gitrevision__, "Git revision was not properly injected during build"
 
 
 def test_simple_propssi():
