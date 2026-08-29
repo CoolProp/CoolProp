@@ -1397,6 +1397,10 @@ class JSONFluidLibrary
                         CoolPropFluid fluid;
                         fluid.CAS = vals.CAS;
                         EquationOfState E;
+                        // Populate the scalars this branch needs; without molar_mass
+                        // every mass-basis query on the fluid is silently wrong,
+                        // because it feeds all of mass_to_molar_inputs.
+                        E.molar_mass = vals.molemass;
                         E.acentric = vals.acentric;
                         E.sat_min_liquid.T = _HUGE;
                         E.sat_min_liquid.p = _HUGE;

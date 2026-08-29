@@ -5800,6 +5800,82 @@ TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][no
     }
 }
 
+TEST_CASE("EquationOfState::pseudo_pure is initialized", "[cubic][uninitialized]") {
+    // EquationOfState had no user-declared constructor and declared its scalars
+    // (`bool pseudo_pure;`, R_u, molar_mass, acentric, Ttriple, ptriple) with no
+    // initializers.
+    //
+    // NOTE on the mechanism, because the obvious explanation is wrong: the bug was
+    // NOT in components built with EOSVector.emplace_back().  emplace_back() with no
+    // arguments performs VALUE-initialization, and since the class had no
+    // user-provided default constructor that zero-initialized the whole object
+    // first.  The sites that bit are the two DEFAULT-initializations in FluidLibrary
+    // -- `EquationOfState E;` in parse_EOS, and the same in the -SRK /
+    // -PengRobinson else branch -- both followed by push_back(E), which copies
+    // whatever the stack happened to hold.
+    //
+    // That distinction is why the defaults are 0 and not _HUGE: adding initializers
+    // makes the constructor non-trivial, so the value-initialized components now run
+    // it too.  Zero is what they used to get; _HUGE would have handed them an
+    // infinite Ttriple and broken every supercritical cubic flash.
+    //
+    // On this toolchain the indeterminate read of pseudo_pure happened to yield
+    // false, i.e. the right answer, so a black-box check through the backend cannot
+    // distinguish fixed from broken.  Constructing the object over deliberately
+    // poisoned storage can: without the initializer the member reads back as the
+    // poison.  For a case that WAS user-visible, see the molar-mass test below.
+    SECTION("default construction defines the member, whatever the storage held") {
+        alignas(CoolProp::EquationOfState) unsigned char buf[sizeof(CoolProp::EquationOfState)];
+        std::memset(buf, 0xFF, sizeof(buf));
+        // Default-initialization (no parentheses).  `EquationOfState()` would be
+        // VALUE-initialization, which zeroes the whole object and would mask the
+        // very thing under test.
+        auto* eos = new (static_cast<void*>(buf)) CoolProp::EquationOfState;
+        // Copy the object representation out rather than reading the member.
+        // Reading an indeterminate bool is itself UB, and an optimizing compiler
+        // may fold the comparison away -- an earlier version of this test read the
+        // member directly and passed against the unfixed code at -O1 for exactly
+        // that reason.  memcpy from the member's address reads bytes, which is
+        // well-defined, so this is deterministic at any optimization level.
+        unsigned char raw = 0;
+        std::memcpy(&raw, &eos->pseudo_pure, sizeof(raw));
+        eos->~EquationOfState();
+        CHECK(raw == 0u);
+    }
+
+    SECTION("cubic backends report themselves as pure") {
+        for (const char* backend : {"SRK", "PR"}) {
+            CAPTURE(backend);
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(backend, "Propane"));
+            CHECK(AS->fluid_param_string("pure") == "true");
+        }
+    }
+}
+
+TEST_CASE("Cubic-library-only fluids report a real molar mass", "[cubic][uninitialized]") {
+    // FluidLibrary's -SRK / -PengRobinson else branch builds its EquationOfState by
+    // default-initialization and then assigned only acentric, sat_min_liquid and
+    // reduce -- leaving R_u, molar_mass, Ttriple, ptriple, pseudo_pure and limits
+    // indeterminate, and copying them in via push_back.  (That branch now also
+    // assigns molar_mass, which is what this test pins.)
+    //
+    // R1233ZD(E) is the one cubic-library fluid with no multiparameter sibling, so
+    // it is the fluid that actually takes that branch.  PropsSI("M", ...) on it
+    // returned 1.5e-313 -- with an EMPTY error string, so nothing anywhere reported
+    // a problem.  molar_mass feeds every conversion in mass_to_molar_inputs, which
+    // makes every mass-basis query on that fluid silently wrong.
+    const double M = CoolProp::PropsSI("M", "T", 300.0, "P", 101325.0, "HEOS::R1233ZD(E)-SRK");
+    CAPTURE(M);
+    // Deliberately NOT asserting on get_global_param_string("errstring") here: it is a
+    // read-then-cleared process global that ANY earlier failing PropsSI in the binary
+    // can set, which makes such an assertion order-dependent (it fails under
+    // --order rand on some seeds).  The M check below is the real one -- the C++
+    // PropsSI returns _HUGE rather than throwing, so a regression shows up as inf.
+    // 0.1304944 kg/mol is the "molemass" this fluid carries in
+    // dev/cubics/all_cubic_fluids.json -- the value the branch should be reading.
+    CHECK(M == Catch::Approx(0.1304944).epsilon(1e-9));
+}
+
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
     // --- Cubic (SRK) ---
     // 1. Structurally invalid JSON must throw unconditionally.
