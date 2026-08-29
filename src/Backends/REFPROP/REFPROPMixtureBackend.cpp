@@ -109,6 +109,31 @@ std::string get_casesensitive_fluids(const std::string& root) {
         }
     }
 }
+/// Find either MIXTURES or mixtures folder relative to the root path provided; return the path
+std::string get_casesensitive_mixtures(const std::string& root) {
+    std::string joined = join_path(root, "mixtures");
+    if (path_exists(joined)) {
+        return joined;
+    }
+    std::string ucase_joined = join_path(root, "MIXTURES");
+    if (path_exists(ucase_joined)) {
+        return ucase_joined;
+    }
+    throw CoolProp::ValueError(format(R"(mixture directories "MIXTURES" or "mixtures" could not be found in the directory [%s])", root));
+}
+/// Return the REFPROP root path (parent of FLUIDS/MIXTURES) for SETPATHdll.
+/// Returns empty string when COOLPROP_REFPROP_ROOT env var is set (REFPROP
+/// already knows its own path in that case).
+std::string get_REFPROP_root_path() {
+    if (get_envvar("COOLPROP_REFPROP_ROOT")) {
+        return "";
+    }
+    std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
+    if (!alt_refprop_path.empty()) {
+        return alt_refprop_path;
+    }
+    return refpropPath;
+}
 std::string get_REFPROP_fluid_path_prefix() {
     if (get_envvar("COOLPROP_REFPROP_ROOT")) {
         return "";
@@ -150,12 +175,12 @@ std::string get_REFPROP_mixtures_path_prefix() {
             throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] could not be found", alt_refprop_path.c_str()));
         }
         // The alternative path has been set
-        return join_path(alt_refprop_path, "mixtures");
+        return get_casesensitive_mixtures(alt_refprop_path);
     }
 #if defined(__ISWINDOWS__)
     return rpPath;
 #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-    return join_path(rpPath, "mixtures");
+    return get_casesensitive_mixtures(rpPath);
 #else
     throw CoolProp::NotImplementedError("This function should not be called.");
     return rpPath;
@@ -431,6 +456,12 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
             }
             memcpy(mix, _components_joined_raw, strlen(_components_joined_raw) + 1);  // +1 for the NUL; length checked above
 
+            // Tell REFPROP where to find the component .FLD files.  On Linux
+            // there is no registry, so SETMIXdll cannot locate them on its own.
+            const std::string rp_root = get_REFPROP_root_path();
+            if (!rp_root.empty()) {
+                SETPATHdll(const_cast<char*>(rp_root.c_str()), static_cast<RP_SIZE_T>(rp_root.size()));
+            }
             SETMIXdll(mix, hmx_bnc.data(), reference_state, &N, component_string.data(), &(x[0]), &ierr, herr.data(), 255, 255, 3, 10000, 255);
             if (static_cast<int>(ierr) <= 0) {
                 this->Ncomp = N;
