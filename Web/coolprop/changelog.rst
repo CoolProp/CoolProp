@@ -82,6 +82,23 @@ Highlights:
   ``include/CoolProp/DataStructures.h`` are appended at the end of their enums
   and are ABI-safe.
 
+Bug fixes:
+
+* **R1233zd(E) viscosity works again.**  v8.0.0 replaced the R1233zd(E) equation
+  of state with the Akasaka & Lemmon (JPCRD 2022) international standard, but
+  the fluid's ``TRANSPORT`` block was not carried across, so ``PropsSI("V",
+  ...)`` returned ``inf`` with *"Viscosity model is not available for this
+  fluid"* where v7.2.0 had answered.  The ``rhosr-CS`` correlation
+  (``Bell-PURDUE-2016-ETA``) is restored verbatim, matching what was already
+  done for the seven sibling fluids that use the same model.  Note that
+  ``rhosr_critical`` was fitted against the superseded Mondejar et al. EOS, so
+  values differ from v7.2.0 by up to ~2.5% along the saturated liquid line
+  (largest at low temperature, tapering to ~0% above 50 degC) and by more in the
+  deep compressed liquid near the triple point; that coupling is the same one
+  already shipping for the siblings.  Thermal conductivity remains unavailable
+  for this fluid, as it was in v7.2.0.  See GitHub
+  `#3330 <https://github.com/CoolProp/CoolProp/issues/3330>`_.
+
 8.0.0
 -----
 

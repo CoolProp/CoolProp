@@ -604,6 +604,56 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
 
 }; /* namespace TransportValidation */
 
+// #2768 swapped R1233zd(E) to the Akasaka & Lemmon (JPCRD 2022) international
+// standard EOS and dropped the rho*s_r corresponding-states viscosity
+// correlation that had shipped since v6.  Restoring the block verbatim -- the
+// same thing that was done for the seven sibling rhosr-CS fluids whose EOS were
+// also replaced -- brings viscosity back.
+//
+// The pinned values are a regression lock on "the restored coefficients are the
+// published ones and the EOS feeding them has not moved", NOT an accuracy claim:
+// rhosr_critical was fitted against the superseded Mondejar et al. EOS, so these
+// differ from the v7.2.0 numbers by up to ~2.5% along the saturated liquid line.
+// If an EOS or coefficient change moves them, that is a decision to make
+// consciously, not to absorb silently.
+TEST_CASE("R1233zd(E) has a viscosity model (#3330)", "[viscosity],[transport],[3330]") {
+    SECTION("the state from the bug report is finite") {
+        const double eta = CoolProp::PropsSI("V", "T", 273.15, "Q", 0, "R1233zd(E)");
+        CAPTURE(eta);
+        REQUIRE(ValidNumber(eta));
+        // Saturated liquid at 0 C; the v7.2.0 value was 6.3689e-4 Pa-s.
+        CHECK(eta > 1e-4);
+        CHECK(eta < 1e-3);
+    }
+    SECTION("the correlation is the published one") {
+        CHECK(CoolProp::get_fluid_param_string("R1233zd(E)", "BibTeX-VISCOSITY") == "Bell-PURDUE-2016-ETA");
+    }
+    SECTION("pinned values") {
+        struct row
+        {
+            double T, rhomolar, eta;
+        };
+        // T [K], rhomolar [mol/m^3], eta [Pa-s]
+        // All four are single phase at the stated (T, rho): rhoL(300 K) = 9643.6 and
+        // rhoL(400 K) = 7219.8 mol/m^3, rhoV(350 K) = 246.0 mol/m^3.
+        const row rows[] = {
+          {250.0, 1e-10, 9.2922657253765002e-06},    // dilute-gas limit
+          {350.0, 100.0, 1.3159482156137667e-05},    // vapor
+          {300.0, 10000.0, 5.7811787177563785e-04},  // compressed liquid, liquid branch of the crossover
+          {400.0, 8000.0, 1.9385792402999729e-04},   // compressed liquid, near-critical temperature
+        };
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1233zd(E)"));
+        for (const auto& r : rows) {
+            CAPTURE(r.T);
+            CAPTURE(r.rhomolar);
+            AS->update(CoolProp::DmolarT_INPUTS, r.rhomolar, r.T);
+            const double eta = AS->viscosity();
+            CAPTURE(eta);
+            CHECK(std::abs(eta / r.eta - 1) < 1e-6);
+        }
+    }
+}
+
 static CoolProp::input_pairs inputs[] = {
   CoolProp::DmolarT_INPUTS,
   //CoolProp::SmolarT_INPUTS,
