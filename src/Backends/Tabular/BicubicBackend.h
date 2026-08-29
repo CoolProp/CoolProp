@@ -64,7 +64,9 @@ class BicubicBackend : public TabularBackend
 {
    public:
     /// Instantiator; base class loads or makes tables
-    BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(std::move(AS)) {
+    BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : BicubicBackend(std::move(AS), "") {}
+    /// Instantiator accepting a factory-string options JSON blob (e.g. {"grid":{"Nx":40,"Ny":40}})
+    BicubicBackend(shared_ptr<CoolProp::AbstractState> AS, const std::string& options_json) : TabularBackend(std::move(AS), options_json) {
         imposed_phase_index = iphase_not_imposed;
         // If a pure fluid or a predefined mixture, don't need to set fractions, go ahead and build
         if (!this->AS->get_mole_fractions().empty()) {
