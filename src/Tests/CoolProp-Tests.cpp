@@ -5294,6 +5294,114 @@ TEST_CASE("Qmass input: REFPROP mixture update clears cached state", "[Qmass][RE
     }
 }
 
+TEST_CASE("Qmass input: REFPROP pure fluid takes the molar path", "[Qmass][REFPROP]") {
+    // For a pure or pseudo-pure fluid Qmass IS Qmolar -- no conversion is defined,
+    // so update() is supposed to rewrite the Qmass pair to its molar sibling via
+    // mass_to_molar_inputs() and run the ordinary switch.  The dispatch guard tested
+    // REFPROPMixtureBackend's own mole_fractions member, which every success branch
+    // of set_REFPROP_fluids resize(ncmax)'s to 20 -- so "size() > 1" was never false
+    // and pure fluids took AbstractState::update_Qmass_pair's TOMS748 solve on
+    // Qmolar instead, returning a Q one ULP off the value the caller passed in.
+    //
+    // The comparisons below are deliberately exact, not Approx: on this path nothing
+    // may touch the numbers at all, so any difference is a routing bug, not noise.
+    //
+    // Several fluids on purpose.  Qmass() is recomputed lazily from _Q through the
+    // lever rule, and whether that rounds back to the input depends on the molar
+    // mass -- Water happens to round favourably where CO2 and Nitrogen do not, so a
+    // single-fluid test would pass on luck rather than on the pure-fluid shortcut.
+    const std::vector<std::string> fluids = {"Water", "CO2", "Nitrogen"};
+    std::shared_ptr<CoolProp::AbstractState> probe;
+    try {
+        probe.reset(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    } catch (...) {
+        WARN("REFPROP not available; skipping");
+        return;
+    }
+
+    SECTION("Q and Qmass survive the pure-fluid Qmass flash untouched") {
+        for (const auto& fluid : fluids) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            const double T = 0.8 * AS->T_critical();
+            for (double q : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+                CAPTURE(fluid, q, T);
+                AS->update(CoolProp::QmassT_INPUTS, q, T);
+                CHECK(AS->Q() == q);
+                CHECK(AS->Qmass() == q);
+            }
+        }
+    }
+
+    SECTION("QmassT and QT reach the same state for a pure fluid") {
+        for (const auto& fluid : fluids) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            auto ASm = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            const double T = 0.8 * AS->T_critical();
+            for (double q : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+                CAPTURE(fluid, q, T);
+                AS->update(CoolProp::QT_INPUTS, q, T);
+                ASm->update(CoolProp::QmassT_INPUTS, q, T);
+                CHECK(ASm->p() == AS->p());
+                CHECK(ASm->rhomolar() == AS->rhomolar());
+                CHECK(ASm->hmolar() == AS->hmolar());
+                CHECK(ASm->smolar() == AS->smolar());
+                CHECK(ASm->Q() == AS->Q());
+                CHECK(ASm->phase() == AS->phase());
+            }
+        }
+    }
+
+    SECTION("PQmass and PQ reach the same state for a pure fluid") {
+        for (const auto& fluid : fluids) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            auto ASm = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            AS->update(CoolProp::QT_INPUTS, 0.0, 0.8 * AS->T_critical());
+            const double p_sat = AS->p();
+            for (double q : {0.0, 0.25, 1.0}) {
+                CAPTURE(fluid, q, p_sat);
+                AS->update(CoolProp::PQ_INPUTS, p_sat, q);
+                ASm->update(CoolProp::PQmass_INPUTS, p_sat, q);
+                CHECK(ASm->T() == AS->T());
+                CHECK(ASm->rhomolar() == AS->rhomolar());
+                CHECK(ASm->hmolar() == AS->hmolar());
+                CHECK(ASm->Q() == AS->Q());
+            }
+        }
+    }
+
+    SECTION("out-of-range Qmass is still rejected on the pure path") {
+        // AbstractState::update_Qmass_pair validates Qmass in [0,1] before it
+        // iterates.  The pure-fluid rewrite skips that function entirely, so the
+        // check has to survive independently -- REFPROP will not do it for us:
+        // DQFL2 happily extrapolates a quality above 1 and hands back a state whose
+        // Q() says 1.05 and phase() says gas, while Qmass() on that same state
+        // throws "requires a two-phase state".
+        //
+        // Match on this guard's own message, not merely on ValueError.  REFPROP
+        // rejects most of these by itself -- QmassT via TQFLSH error 19, and the
+        // density pairs at -0.05 and 1.5 via DQFL2 "2-phase iteration did not
+        // converge", a misleading diagnostic for what is really an invalid input.
+        // Only the +1.05 density cases actually die when the guard is deleted, so
+        // a bare CHECK_THROWS_AS would leave most of this section passing on
+        // REFPROP's behaviour rather than on ours, and would go silently vacuous
+        // if REFPROP ever tightened DQFL2's input validation.
+        const auto out_of_range = Catch::Matchers::ContainsSubstring("Qmass out of range");
+        for (const auto& fluid : fluids) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            const double T = 0.8 * AS->T_critical();
+            AS->update(CoolProp::QT_INPUTS, 0.5, T);
+            const double rhomolar = AS->rhomolar(), rhomass = AS->rhomass();
+            // The guard runs before clear(), so the state survives each expected throw.
+            for (double q : {-0.05, 1.05, 1.5, std::numeric_limits<double>::quiet_NaN()}) {
+                CAPTURE(fluid, q);
+                CHECK_THROWS_WITH(AS->update(CoolProp::DmolarQmass_INPUTS, rhomolar, q), out_of_range);
+                CHECK_THROWS_WITH(AS->update(CoolProp::DmassQmass_INPUTS, rhomass, q), out_of_range);
+                CHECK_THROWS_WITH(AS->update(CoolProp::QmassT_INPUTS, q, T), out_of_range);
+            }
+        }
+    }
+}
+
 TEST_CASE("Qmass edge cases: bubble/dew, out-of-range, single-phase", "[Qmass][edge]") {
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
     AS->set_mole_fractions({0.5, 0.5});
