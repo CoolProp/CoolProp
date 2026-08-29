@@ -68,6 +68,21 @@ DOCS_SCRIPT = REPO / 'Web' / 'scripts' / 'fluid_properties.Superancillary.py'
 # whenever the pinned release is fully current.
 PENDING_UPSTREAM = {
     # 'R1243zf': 'awaiting fastchebpure regen, CoolProp/fastchebpure#6',
+    #
+    # CoolProp/CoolProp#3326 corrected the reducing density of these four to the
+    # constant their EOS authors published (each stored value had been
+    # reconstructed through a unit conversion rather than taken from the
+    # publication).  The docs-pinned fastchebpure release still describes the
+    # pre-correction EOS for them, so the deviation plots would be comparing
+    # against a different equation until the release is regenerated and the pin
+    # bumped.  The relative shift is the size of the rho_red change --
+    # OrthoHydrogen 3.0e-5, Ethylene 2.1e-5, n-Undecane 1.1e-5, Nitrogen 1.3e-7
+    # -- so the plots are readable meanwhile, just not exact.  Delete each entry
+    # as the bumped release lands.
+    'Nitrogen': 'awaiting fastchebpure regen after CoolProp/CoolProp#3326',
+    'Ethylene': 'awaiting fastchebpure regen after CoolProp/CoolProp#3326',
+    'OrthoHydrogen': 'awaiting fastchebpure regen after CoolProp/CoolProp#3326',
+    'n-Undecane': 'awaiting fastchebpure regen after CoolProp/CoolProp#3326',
 }
 
 
