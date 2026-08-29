@@ -5858,6 +5858,45 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", wide_range));
     }
 }
+TEST_CASE("INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC selects the caloric path at runtime", "[INCOMP]") {
+    // The fluid carries BOTH representations with deliberately different
+    // constant densities, so which path is in use is directly observable
+    // rather than inferred: polynomial -> 800, Chebyshev -> 900. Without that
+    // asymmetry the test would pass whichever path ran.
+    const std::string tmpl = R"([{
+        "name": "%s", "description": "x", "reference": "x",
+        "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "Tbase": 320.0, "xbase": 0.0, "xid": "pure",
+        "density":            {"type": "polynomial", "coeffs": [[800.0]]},
+        "specific_heat":      {"type": "polynomial", "coeffs": [[2000.0]]},
+        "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+        "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+    }])";
+    const double p = 101325;
+
+    // The shipped default must be the Chebyshev path. Read before anything is
+    // set, and restored on the way out so this cannot leak into another test
+    // (which matters under --order rand).
+    const bool saved = CoolProp::get_config_bool(INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC);
+    CHECK(saved == true);
+    struct RestoreFlag
+    {
+        bool value;
+        ~RestoreFlag() {
+            CoolProp::set_config_bool(INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC, value);
+        }
+    } restore{saved};
+
+    SECTION("true (the default) uses the Chebyshev entries") {
+        CoolProp::set_config_bool(INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC, true);
+        CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", format(tmpl.c_str(), "CatchRuntimeChebOnFluid")));
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, "INCOMP::CatchRuntimeChebOnFluid") - 900.0) < 1e-9);
+    }
+    SECTION("false falls back to the classic polynomial equations") {
+        CoolProp::set_config_bool(INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC, false);
+        CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", format(tmpl.c_str(), "CatchRuntimeChebOffFluid")));
+        CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, "INCOMP::CatchRuntimeChebOffFluid") - 800.0) < 1e-9);
+    }
+}
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {
     // Issue #1374: the fitted viscosity (and hence Prandtl number) of MPG2
     // (Melinder propylene glycol) was a uniform factor of 10 too small versus

@@ -341,6 +341,8 @@ class configuration_keys(enum.IntEnum):
 
     SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB = 39
 
+    INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC = 40
+
 NORMALIZE_GAS_CONSTANTS: configuration_keys = configuration_keys.NORMALIZE_GAS_CONSTANTS
 
 CRITICAL_WITHIN_1UK: configuration_keys = configuration_keys.CRITICAL_WITHIN_1UK
@@ -420,6 +422,8 @@ TABULAR_NY: configuration_keys = configuration_keys.TABULAR_NY
 SVDSBTL_SURFACE_CACHE_MAX_ENTRIES: configuration_keys = ...
 
 SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB: configuration_keys = ...
+
+INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC: configuration_keys = ...
 
 class parameters(enum.IntEnum):
     igas_constant = 1
