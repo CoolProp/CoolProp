@@ -323,6 +323,24 @@ class AbstractState
     /// Mixture backends must override.
     virtual PhaseMolarMasses calc_phase_molar_masses();
 
+    /// A Qmass input pair's molar sibling, and which slot (1=value1, 2=value2)
+    /// carries the Qmass value.
+    struct QmassPairMapping
+    {
+        CoolProp::input_pairs molar;
+        int qmass_slot;
+    };
+
+    /// Map a Qmass input pair to its molar sibling and Qmass slot.
+    static QmassPairMapping qmass_pair_mapping(CoolProp::input_pairs pair);
+
+    /// Throw if the Qmass component of a Qmass input pair is not in [0,1] (NaN
+    /// included).  update_Qmass_pair applies this itself; a backend that rewrites
+    /// the pair to its molar sibling instead of iterating must call it directly,
+    /// or the range goes unchecked -- REFPROP's DQFL2 will extrapolate a quality
+    /// above 1 rather than refuse it.
+    void check_Qmass_pair_range(CoolProp::input_pairs pair, double v1, double v2);
+
     /// Default iterative Qmass-pair solver (secant on Qmolar). Backends may
     /// override to use a native fast path (e.g. REFPROP TQFLSHdll kq=2).
     virtual void update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2);
