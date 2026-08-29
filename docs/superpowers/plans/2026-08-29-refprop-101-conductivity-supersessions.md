@@ -67,9 +67,12 @@ and the neon *viscosity* paper in the companion document still has no free copy.
 Re-check before concluding anything is unobtainable.
 
 Seven of these fluids appear in *both* audits — ethylene, xenon, neon,
-n-undecane, R-161, THF and Novec 649 need viscosity *and* conductivity, and for
-n-undecane, R-161, THF and Novec 649 a single paper supplies both. Those are the
-cheapest wins in either document.
+n-undecane, R-161, THF and Novec 649 need viscosity *and* conductivity. For
+n-undecane, R-161 and THF a single paper supplies both; **Novec 649 needs two**
+(viscosity Wen et al. 2017, conductivity Perkins et al. 2018). R-245fa, in §A
+rather than here, is the other single-paper pair. See the sequencing section —
+the shared-paper fluids are not all equally cheap, because n-undecane and THF
+carry `VS7` viscosity.
 
 ## C. Cautions — things that look like findings but are not
 
@@ -129,9 +132,16 @@ together. One change, both properties.
 
 ## Suggested sequencing
 
-1. **R-245fa, n-undecane, R-161, THF, Novec 649** — one paper each covers both
-   viscosity and conductivity, and all five are `VS1`/`TC1`, i.e. data-only.
-   Highest value per unit of work in either audit.
+1. **R-245fa and R-161** — one paper covers both properties *and* both models
+   are `VS1`/`TC1`, so each fluid is a single data-only change closing two gaps.
+   These two are the cheapest work in either audit; start here.
+   Then, in decreasing order of convenience:
+   - **n-undecane and THF** — one paper each covers both properties, but their
+     viscosity is `VS7`, so only the `TC1` half is data-only today; the
+     viscosity half waits on the `VS7` decision.
+   - **Novec 649** — `VS1`/`TC1`, both data-only, but it needs *two* papers:
+     viscosity from Wen et al., *JCED* **62**:3603 (2017) and conductivity from
+     Perkins et al., *JCED* **63**:2783 (2018). Both are on PMC.
 2. **Heavy water** — both IAPWS releases, one hardcoded pair.
 3. **Ammonia, cyclohexane, ethylene, propylene, R-1233zd(E), R-1336mzz(Z),
    methyl oleate, methyl linoleate** — `TC1`, data-only, all open access.
