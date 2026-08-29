@@ -1274,8 +1274,11 @@ CoolPropDbl TransportRoutines::viscosity_rhosr(HelmholtzEOSMixtureBackend& HEOS)
     // Calculate x
     double x = HEOS.rhomolar() * HEOS.gas_constant() * (HEOS.tau() * HEOS.dalphar_dTau() - HEOS.alphar()) / data.rhosr_critical;
 
-    // Crossover variable
-    double psi_liq = 1 / (1 + exp(-100.0 * (x - 2)));
+    // Crossover variable.  The switch location comes from the fluid file
+    // (x_crossover); the sharpness is a fixed constant of the correlation and is
+    // deliberately not exposed as data.
+    const double crossover_sharpness = 100.0;
+    double psi_liq = 1 / (1 + exp(-crossover_sharpness * (x - data.x_crossover)));
 
     // Evaluated using Horner's method
     const std::vector<double>&cL = data.c_liq, cV = data.c_vap;
