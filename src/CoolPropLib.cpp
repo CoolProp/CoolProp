@@ -447,7 +447,7 @@ EXPORT_CODE void CONVENTION set_departure_functions(const char* string_data, lon
     }
 }
 EXPORT_CODE void CONVENTION apply_simple_mixing_rule(const char* identifier1, const char* identifier2, const char* rule, long* errcode,
-                                                      char* message_buffer, const long buffer_length) {
+                                                     char* message_buffer, const long buffer_length) {
     *errcode = 0;
     fpu_reset_guard guard;
     try {

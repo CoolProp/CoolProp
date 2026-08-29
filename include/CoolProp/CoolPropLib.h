@@ -215,7 +215,7 @@ EXPORT_CODE void CONVENTION set_departure_functions(const char* string_data, lon
      * \sa \ref CoolProp::apply_simple_mixing_rule
      */
 EXPORT_CODE void CONVENTION apply_simple_mixing_rule(const char* identifier1, const char* identifier2, const char* rule, long* errcode,
-                                                      char* message_buffer, const long buffer_length);
+                                                     char* message_buffer, const long buffer_length);
 /**
      * \overload
      * \sa \ref CoolProp::set_reference_stateS
