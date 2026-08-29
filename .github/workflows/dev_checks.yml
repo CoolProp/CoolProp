@@ -396,6 +396,10 @@ jobs:
             fi
             uv pip install "$WHL"   # broken/incompatible wheel -> hard fail via set -e
             uv pip install mypy || echo "::warning::mypy unavailable on $PY; test_stub mypy check will skip"
+            # CoolProp.Plots imports matplotlib at module scope, so without it
+            # the whole Plots suite (test_derivatives_plots, test_isoline_tracer)
+            # silently importorskips (CoolProp-dgxi).
+            uv pip install matplotlib || echo "::warning::matplotlib unavailable on $PY; Plots tests will skip"
             python -c "import sys; print('Python', sys.version.split()[0])"
             pytest wrappers/Python/pytest -q
             ran=$((ran + 1))

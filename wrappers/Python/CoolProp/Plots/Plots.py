@@ -114,17 +114,20 @@ class PropertyPlot(BasePlot):
             output = np.unique(output)
         return output
 
-    def calc_isolines(self, iso_type=None, iso_range=None, num=15, rounding=False, points=250):
+    def calc_isolines(self, iso_type=None, iso_range=None, num=15, rounding=False, points=250, tracing=True):
         """Calculate lines with constant values of type 'iso_type' in terms of x and y as
         defined by the plot object. 'iso_range' either is a collection of values or
         simply the minimum and maximum value between which 'num' lines get calculated.
         The 'rounding' parameter can be used to generate prettier labels if needed.
+        Pass tracing=False to calculate every point with an independent flash
+        instead of walking along the isoline; that is much slower and leaves
+        more gaps, but it does not depend on the neighbouring points.
         """
 
         if iso_type is None or iso_type == 'all':
             for i_type in IsoLine.XY_SWITCH:
                 if IsoLine.XY_SWITCH[i_type].get(self.y_index * 10 + self.x_index, None) is not None:
-                    self.calc_isolines(i_type, None, num, rounding, points)
+                    self.calc_isolines(i_type, None, num, rounding, points, tracing)
             return
 
         if iso_range is None:
@@ -157,7 +160,7 @@ class PropertyPlot(BasePlot):
 
         lines = self.isolines.get(iso_type, [])
         for i in range(num):
-            lines.append(IsoLine(iso_type, self._x_index, self._y_index, value=dim.to_SI(iso_range[i]), state=self._state))
+            lines.append(IsoLine(iso_type, self._x_index, self._y_index, value=dim.to_SI(iso_range[i]), state=self._state, tracing=tracing))
             lines[-1].calc_range(ixrange, iyrange)
             lines[-1].sanitize_data()
         self.isolines[iso_type] = lines
