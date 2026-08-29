@@ -7,8 +7,9 @@ audit that the follow-on work is scoped from.
 
 **Goal:** Enumerate every pure-fluid viscosity correlation shipped in the REFPROP
 10.1 beta that is newer than, or fills a gap against, what `dev/fluids/*.json`
-carries today — with a verified open-access route for each reference, so the
-implementation work can start without a subscription.
+carries today — with a **verified access status for every reference**, and an
+open-access route wherever one exists, so as much of the implementation work as
+possible can start without a subscription.
 
 ## Source of truth and caveats
 
@@ -24,10 +25,24 @@ implementation work can start without a subscription.
   `INFO.REFPROP_NAME`, falling back to `INFO.NAME` / `INFO.ALIASES`.
 - Only REFPROP's **`#ETA`** blocks count — the dedicated, NIST-recommended
   correlations. Fluids whose primary transport model is `#TRN`/`@TRN` (extended
-  corresponding states) are excluded: ECS is unpublished fitting, and CoolProp's
-  own ECS is no worse. 61 of the 161 `.FLD` fluids have an `#ETA` block. The
+  corresponding states) are excluded as a **deliberate scope decision**: ECS is
+  unpublished fitting on both sides, so there is no published correlation to
+  adopt. This is *not* a claim that the two implementations agree. They do not
+  in general — `dev/fluids/R1132a.json` records that CoolProp's ECS implements
+  neither REFPROP's BIG large-molecule dilute-gas correction (worked around
+  there by folding a constant 0.934 into `sigma_eta`) nor the initial-density
+  Rainwater–Friend correction, leaving residual deviations up to ~4 % at
+  moderate vapour densities. Closing that gap is a separate piece of work from
+  this audit and is not scoped here. 61 of the 161 `.FLD` fluids have an
+  `#ETA` block. The
   `.PPF` files were checked separately: Air still carries Lemmon & Jacobsen
   (2004), unchanged from 10.0 and matching CoolProp.
+- **Counting rule:** §A and §B count only fluids whose **active** REFPROP model
+  is a dedicated `#ETA` correlation. A published correlation that REFPROP ships
+  as an `@ETA` *alternative* to an ECS primary does not enter the counts — it is
+  called out narratively instead (§C-bis is the one such case). Adopting a model
+  REFPROP itself does not use as primary is a different, weaker argument, and
+  mixing the two would make the totals mean two things at once.
 - `#` marks the active model and `@` an alternative, and the two symbols can be
   swapped within a fluid file. The audit therefore reads the `#ETA` block, not
   the first `ETA` block in the file — for PROPANE and ETHANOL those are not the
@@ -170,7 +185,7 @@ lubricants MIL-PRF-23699, POE5, POE7, POE9.
   (`$DG`/`$VV`/`$RF`/`$CF` sections with `SUMLOGT`, `SUM:n`, `EXP` and a postfix
   operator stack). This is the same NIST RPN encoding the DSL design doc cites as
   its motivating prior art. The interesting option is a **`VS7` → CoolProp-DSL
-  transpiler** rather than 17 hand-written model blocks; that decision deserves
+  transpiler** rather than 18 hand-written model blocks; that decision deserves
   its own brainstorm before anyone starts transcribing.
 - **`VS0`** (heavy water) is a hardcoded fluid-specific routine on both sides.
   CoolProp already has a `HeavyWater` hardcoded viscosity path; adopting IAPWS
@@ -180,11 +195,21 @@ lubricants MIL-PRF-23699, POE5, POE7, POE9.
 
 **Validation.** Every fluid touched needs a `[refprop]`-tagged Catch2 comparison
 against the REFPROP backend. REFPROP runs locally on this machine
-(`COOLPROP_REFPROP_ROOT=/Users/ianbell/REFPROP10`) — but note that env var points
-at the **10.0** install, which has different viscosity models for most of §A.
-Validating against 10.1 requires pointing CoolProp at the 10.1 tree, and the beta
-ships Windows DLLs only, so a macOS/Linux 10.1 shared library is a prerequisite
-for that comparison.
+(`COOLPROP_REFPROP_ROOT=/Users/ianbell/REFPROP10`) — but that env var points at
+the **10.0** install, which carries *different* viscosity models for most of §A.
+
+**These tests must assert the REFPROP version, not just its availability.** The
+usual `REFPROP_supported()` / skip-if-unavailable guard fails open here: against
+a 10.0 install the backend answers happily, from the older correlation, and the
+test either passes for the wrong reason or fails and gets written off as noise.
+Neither outcome validates anything. Gate on
+`get_global_param_string("REFPROP_version")` (wired up at
+`src/CoolProp.cpp:1202`) and **fail** — do not skip — when the loaded library is
+not 10.1, since at that point REFPROP is present and the test simply cannot mean
+what it claims. Keep the ordinary skip for REFPROP being absent entirely.
+
+Note that this is currently blocked: the 10.1 beta ships Windows DLLs only, so a
+macOS/Linux 10.1 shared library is a prerequisite for running any of it.
 
 ## Suggested sequencing
 

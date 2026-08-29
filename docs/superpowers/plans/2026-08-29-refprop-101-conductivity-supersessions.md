@@ -15,8 +15,11 @@ section first; only the differences are restated here.
   70 of the 161 `.FLD` fluids in the 10.1 beta have one — nine more than have a
   dedicated `#ETA`.
 - CoolProp side is `TRANSPORT.conductivity.BibTeX` in `dev/fluids/*.json`.
-- Fluids whose primary transport model is `#TRN`/`@TRN` (ECS) are excluded, as
-  before. The eleven ECS-primary fluids that carry a `@TCX` secondary were
+- Fluids whose primary transport model is `#TRN`/`@TRN` (ECS) are excluded as a
+  scope decision, for the reason given in the companion document — there is no
+  published correlation to adopt, *not* because the two ECS implementations
+  agree. §A and §B likewise count only fluids whose **active** REFPROP model is
+  a dedicated `#TCX` correlation. The eleven ECS-primary fluids that carry a `@TCX` secondary were
   checked individually: all are Chung-1988 or NIST14 estimates, so none is an
   upgrade over what CoolProp already does.
 
@@ -56,9 +59,12 @@ them together.
 | Tetrahydrofuran | `TC1` Sotiriadou et al., *IJT* **45**:123 (2024), [`10.1007/s10765-024-03415-2`](https://doi.org/10.1007/s10765-024-03415-2) | **Yes** — [NIST pub_id=958095](https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=958095) |
 | Methyl oleate | `TC1` Perkins & Huber, *Energy & Fuels* **25**:2383–2388 (2011), [`10.1021/ef200417x`](https://doi.org/10.1021/ef200417x) | **Yes** — [NIST pub_id=907397](https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=907397) |
 | Methyl linoleate | same Perkins & Huber (2011) paper | **Yes** — as above |
-| Neon | `TC7` Assael, Sotiriadou, Thol & Huber, *IJT* **47**:126 (2026), [`10.1007/s10765-026-03782-y`](https://doi.org/10.1007/s10765-026-03782-y) | **No copy found** — published 2026, NIST deposit not up yet |
+| Neon | `TC7` Assael, Sotiriadou, Thol & Huber, *IJT* **47**:126 (2026), [`10.1007/s10765-026-03782-y`](https://doi.org/10.1007/s10765-026-03782-y) | **Yes** — [NIST pub_id=961954](https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=961954) (accepted manuscript, `.docx`) |
 
-11 of 12 are freely obtainable today.
+All 12 are freely obtainable as of 2026-08-29. Availability is a moving target
+for the 2026 papers — neon's NIST deposit went up after this audit's first pass,
+and the neon *viscosity* paper in the companion document still has no free copy.
+Re-check before concluding anything is unobtainable.
 
 Seven of these fluids appear in *both* audits — ethylene, xenon, neon,
 n-undecane, R-161, THF and Novec 649 need viscosity *and* conductivity, and for
