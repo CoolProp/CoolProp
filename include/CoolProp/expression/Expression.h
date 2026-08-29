@@ -22,16 +22,33 @@ namespace expression {
 /// The DSL spellings that resolve to a thermodynamic input, paired with the
 /// CoolProp::parameters key each binds to, in name-resolution order.
 ///
-/// This is deliberately a curated allowlist rather than an open door onto
-/// get_parameter_index():
-///  * the DSL spells state variables the way the C++ members do (`rhomolar`,
-///    `rhomass`), which get_parameter_index() does not recognise -- it spells
-///    them `Dmolar`/`Dmass` -- and those spellings are baked into fluid JSON;
-///  * an open door would let a viscosity formula reference `V`, whose
-///    keyed_output() re-enters the very correlation being defined.
-const std::vector<std::pair<std::string, parameters>>& inputTable();
+/// Resolve `name` as a state variable a correlation may declare.
+///
+/// The DSL does NOT maintain its own list of thermodynamic quantities.  A name is
+/// resolved by CoolProp::is_valid_parameter(), so the DSL's vocabulary IS CoolProp's
+/// vocabulary -- every quantity keyed_output() can produce is reachable, and adding
+/// a new one never requires touching this library.  The spellings are CoolProp's
+/// canonical ones (`P`, `Dmolar`, `Dmass`); the DSL invents no aliases of its own,
+/// because an invented lowercase `p` is precisely what once collided with the
+/// exponent array every viscosity paper calls p_i.
+///
+/// Returns true and sets `key` when `name` is resolvable and permitted.  Otherwise
+/// returns false and sets `reason` to a message fit for a compile error.  Two
+/// classes are refused even though CoolProp resolves them:
+///
+///  * transport outputs (`V`, `L`, `Prandtl`, ...) -- keyed_output() for these
+///    re-enters the very correlation being defined;
+///  * the critical point and the EOS reducing state -- calc_T_critical() and
+///    calc_rhomolar_critical() return the NUMERICAL critical point when
+///    ENABLE_SUPERANCILLARIES is set, so a correlation reducing on them would
+///    silently change answer with configuration.  Freeze those as `constants`
+///    instead, at the value the paper's authors regressed against.
+bool resolveStateVariable(const std::string& name, parameters& key, std::string& reason);
 
-/// DSL spelling for `key`.  Throws CoolProp::ValueError if `key` is not in inputTable().
+/// CoolProp's canonical spelling for `key`, as used in error messages and in
+/// ExpressionBlock::required_inputs().  Since only the canonical spelling is
+/// accepted as a declaration, this round-trips whatever the author wrote.  Throws
+/// CoolProp::ValueError for a key outside the parameter-information table.
 std::string inputName(parameters key);
 
 namespace detail {
@@ -46,7 +63,10 @@ class Program
     /// that order; pass an empty vector when none are required.  A size mismatch
     /// throws CoolProp::ValueError rather than reading past the end.
     [[nodiscard]] double evaluate(const std::vector<double>& inputVals) const;
-    /// Thermodynamic inputs this program references, in the order evaluate() expects them.
+    /// Thermodynamic inputs this program references, in the order evaluate() expects
+    /// them: the block's DECLARED `state_variables`, in order of FIRST REFERENCE in
+    /// the formula -- which is not necessarily the order they were declared in.  The
+    /// declaration gates what may be read; the formula fixes the order.
     [[nodiscard]] const std::vector<parameters>& requiredInputs() const;
 
    private:
@@ -54,7 +74,8 @@ class Program
     /// compiled body); every public accessor goes through it before dereferencing.
     const detail::ProgramData& data() const;
 
-    friend Program compile(const std::string&, const std::map<std::string, double>&, const std::map<std::string, std::vector<double>>&);
+    friend Program compile(const std::string&, const std::map<std::string, double>&, const std::map<std::string, std::vector<double>>&,
+                           const std::vector<std::string>&);
     std::shared_ptr<const detail::ProgramData> m_data;
 };
 
@@ -66,7 +87,14 @@ class Program
 ///
 /// Compile a formula string. `constants` are scalar names -> SI values; `arrays`
 /// are vector names -> values. Throws CoolProp::ValueError on any lex/parse/bind error.
-Program compile(const std::string& source, const std::map<std::string, double>& constants, const std::map<std::string, std::vector<double>>& arrays);
+/// `state_variables` names the thermodynamic quantities this formula is allowed to
+/// read, in CoolProp's spelling.  It is opt-in and per-formula: a name not declared
+/// here is never state, so a block that does not ask for pressure keeps `P` -- and,
+/// more to the point, keeps every lowercase coefficient name -- for its own use.
+/// Declaring a name the formula never reads is an error, as is declaring one that
+/// also appears in `constants` or `arrays`.
+Program compile(const std::string& source, const std::map<std::string, double>& constants, const std::map<std::string, std::vector<double>>& arrays,
+                const std::vector<std::string>& state_variables = {});
 
 }  // namespace expression
 }  // namespace CoolProp

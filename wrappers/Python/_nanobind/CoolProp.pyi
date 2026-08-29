@@ -1533,14 +1533,26 @@ class Expression:
     A compiled transport-property expression block.
 
     Construct from the JSON text of a `"type": "expression"` block
-    ({"formula": ..., "constants": {...}, "arrays": {...}}), then
-    evaluate it at a state.  Raises ValueError on a bad formula.
+    ({"formula": ..., "state_variables": [...], "constants": {...},
+     "arrays": {...}}), then evaluate it at a state.
+
+    `state_variables` lists the thermodynamic quantities the formula reads,
+    in CoolProp's own spelling ("T", "P", "Dmolar", "Smolar_residual",
+    ...).  It is opt-in: a name not declared there is never state, so a
+    block that does not ask for pressure keeps `p` for its own coefficients.
+    Raises ValueError on a bad formula, on reading an undeclared quantity,
+    or on declaring one that cannot be honoured (a transport output, which
+    would re-enter the correlation; or the configuration-dependent critical
+    point and reducing state).
     """
 
     def __init__(self, json_block: str) -> None: ...
 
     def required_inputs(self) -> list[str]:
-        """DSL names of the thermodynamic inputs the formula references."""
+        """
+        The declared state variables the formula actually reads, in first-reference order
+        (the order the formula mentions them, NOT the order they were declared).
+        """
 
     def evaluate(self, AS: AbstractState) -> float:
         """

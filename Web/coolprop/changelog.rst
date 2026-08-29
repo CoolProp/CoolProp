@@ -15,6 +15,35 @@ Highlights:
 
 **Behavior changes (potentially breaking):**
 
+* **Transport-property** ``"type": "expression"`` **blocks in fluid JSON now
+  require a** ``"state_variables"`` **declaration, and use CoolProp's own parameter
+  names.**  A block must list the thermodynamic quantities its formula reads::
+
+      "state_variables": ["T", "Dmolar"]
+
+  A name that is not declared there is not a state variable inside that block, so
+  a formula that never asks for pressure keeps ``p`` for its own coefficients —
+  which is the point: a dilute term of the form :math:`\eta_0 = \sum n_i T_r^{p_i}`
+  previously could not name its exponent array ``p``, because the language reserved
+  that name in every formula whether the block used it or not.
+
+  The DSL's own spellings ``rhomolar``, ``rhomass`` and ``p`` are **removed**; use
+  CoolProp's canonical ``Dmolar``, ``Dmass`` and ``P``.  CoolProp's back-compatible
+  aliases (``A``, ``C``, ``D``, ``G``, ``M``, ``O``, ``S``, ``U``, and the
+  upper-cased form of any name) are **not** accepted as state variables, precisely
+  because they collide with the single-letter coefficient names correlations use.
+
+  The quantities a block may declare are an explicit set — ``T``, ``P``,
+  ``Dmolar``, ``Dmass``, ``molar_mass``, ``Smolar_residual``, ``Bvirial``,
+  ``dBvirial_dT`` — which grows on demand.  Anything else is refused at fluid-load
+  time, including the critical point and the EOS reducing state (both are
+  configuration-dependent, and a correlation's reducing parameters belong in
+  ``constants``, frozen at the values its authors regressed against).
+
+  There is no version gate and no compatibility shim: a third-party expression
+  block written against the previous format fails when the fluid is loaded, with a
+  message naming the available set.  Blocks shipped with CoolProp are unaffected.
+
 * **Compositions with two or more exactly-zero mole fractions no longer return
   NaN for the bulk properties.**  ``GERG2008ReducingFunction::f_Y_ij``
   evaluates :math:`x_i x_j (x_i + x_j) / (\beta^2 x_i + x_j)`, which is

@@ -14,6 +14,7 @@ the reported inputs match the formula, and that the numbers agree with what the
 same algebra gives through ``PropsSI``.
 """
 import json
+import re
 import math
 
 import pytest
@@ -37,9 +38,28 @@ def state(fluid="R123", rhomolar=1e4, T=300.0):
     return AS
 
 
-def block(formula, constants=None, arrays=None):
+# Every thermodynamic name a block reads must be declared in "state_variables";
+# anything undeclared is the author's own.  The suite derives the declaration from
+# the formula so each test can say what it is actually about, but the contract
+# itself is pinned explicitly in test_state_variables_* below.
+_STATE = ("T", "P", "Dmolar", "Dmass", "molar_mass", "Smolar_residual", "Bvirial", "dBvirial_dT")
+
+
+def block(formula, constants=None, arrays=None, state=None):
     """Build the JSON text of a `"type": "expression"` transport block."""
     b = {"type": "expression", "formula": formula}
+    if state is None:
+        local = set(re.findall(r"\blet\s+(\w+)", formula)) | set(constants or ()) | set(arrays or ())
+        state = []
+        for m in re.finditer(r"\b([A-Za-z_]\w*)\b(\s*\[)?", formula):
+            tok = m.group(1)
+            if m.group(2) or tok in local or tok not in _STATE or tok in state:
+                continue
+            state.append(tok)
+    # `state=[]` must emit an EXPLICIT empty declaration, not omit the key -- those
+    # are different inputs to the parser and both need exercising.
+    if state is not None:
+        b["state_variables"] = list(state)
     if constants:
         b["constants"] = constants
     if arrays:
@@ -57,21 +77,22 @@ def test_constant_only_formula_reads_no_state():
 
 
 def test_required_inputs_reports_the_names_the_formula_uses():
-    e = Expression(block("p*2 + T"))
-    # Reported in first-reference order, spelled the way the formula spells them.
-    assert e.required_inputs() == ["p", "T"]
-    assert Expression(block("rhomass*molar_mass")).required_inputs() == ["rhomass", "molar_mass"]
+    e = Expression(block("P*2 + T"))
+    # Reported in first-reference order (NOT declaration order); only the canonical
+    # spelling is accepted, so it round-trips whatever the author wrote.
+    assert e.required_inputs() == ["P", "T"]
+    assert Expression(block("Dmass*molar_mass")).required_inputs() == ["Dmass", "molar_mass"]
 
 
 def test_constants_and_arrays_and_let_and_sum():
     e = Expression(
         block(
-            "let delta = rhomolar/rhomolar_reduce\nsum(i: a[i]*delta^d[i])",
+            "let delta = Dmolar/rhomolar_reduce\nsum(i: a[i]*delta^d[i])",
             constants={"rhomolar_reduce": 10000.0},
             arrays={"a": [2.0, 3.0], "d": [1.0, 2.0]},
         )
     )
-    assert e.required_inputs() == ["rhomolar"]
+    assert e.required_inputs() == ["Dmolar"]
     assert e.evaluate(state(rhomolar=5000.0)) == pytest.approx(2.0 * 0.5 + 3.0 * 0.25)
 
 
@@ -89,12 +110,15 @@ def test_bad_formula_raises_at_construction():
         Expression('{"type": "expression"}')  # no "formula"
 
 
-def test_a_constant_colliding_with_an_input_is_rejected():
-    # Inputs resolve before constants, so a constant named `T` would be dead data
-    # and the formula would quietly mean the state temperature.  Hard error.
-    for name in ("T", "rhomolar", "rhomass", "molar_mass", "p"):
+def test_a_constant_colliding_with_a_declared_state_variable_is_rejected():
+    # A declared name resolves before constants, so a constant of that name would be
+    # dead data and the formula would quietly mean the state value.  Hard error --
+    # but only when the block actually declared it.
+    for name in ("T", "Dmolar", "Dmass", "molar_mass", "P"):
         with pytest.raises(ValueError):
-            Expression(block("1", constants={name: 1.0}))
+            Expression(block(name, constants={name: 1.0}, state=[name]))
+        # Undeclared, the very same constant is simply the author's own number.
+        assert Expression(block(name, constants={name: 1.0}, state=[])).evaluate(state()) == 1.0
     Expression(block("T_reduce", constants={"T_reduce": 132.0}))  # near-miss is fine
 
 
@@ -111,7 +135,7 @@ def test_a_transport_output_name_does_not_resolve():
 # --------------------------------------------------------------------------- #
 def test_state_variables_come_from_the_AbstractState():
     assert Expression(block("T")).evaluate(state(T=321.5)) == pytest.approx(321.5)
-    assert Expression(block("rhomolar")).evaluate(state(rhomolar=1234.0)) == pytest.approx(1234.0)
+    assert Expression(block("Dmolar")).evaluate(state(rhomolar=1234.0)) == pytest.approx(1234.0)
 
 
 def test_the_block_follows_the_state_object():
@@ -129,11 +153,11 @@ def test_molar_mass_and_pressure_come_from_the_EOS():
     T, rhomolar = 400.0, 2000.0
     AS = state(T=T, rhomolar=rhomolar)
     assert Expression(block("molar_mass")).evaluate(AS) == pytest.approx(CP.PropsSI("molar_mass", "R123"))
-    assert Expression(block("p")).evaluate(AS) == pytest.approx(
+    assert Expression(block("P")).evaluate(AS) == pytest.approx(
         CP.PropsSI("P", "T", T, "Dmolar", rhomolar, "R123"), rel=1e-12
     )
     # rhomass is the EOS's own mass density at that state, not a re-derivation.
-    assert Expression(block("rhomass")).evaluate(AS) == pytest.approx(
+    assert Expression(block("Dmass")).evaluate(AS) == pytest.approx(
         CP.PropsSI("Dmass", "T", T, "Dmolar", rhomolar, "R123"), rel=1e-12
     )
 
@@ -149,13 +173,13 @@ def test_a_mixture_state_is_just_another_state():
     # pure-component values.
     M_mix = 0.4 * CP.PropsSI("molar_mass", "R32") + 0.6 * CP.PropsSI("molar_mass", "R125")
     assert AS.rhomolar() > 0.0
-    assert Expression(block("molar_mass*rhomolar")).evaluate(AS) == pytest.approx(M_mix * AS.rhomolar(), rel=1e-12)
+    assert Expression(block("molar_mass*Dmolar")).evaluate(AS) == pytest.approx(M_mix * AS.rhomolar(), rel=1e-12)
 
 
 def test_evaluating_against_an_unset_state_raises():
     # AbstractState.p() on a fresh state hands back -inf rather than raising, and
     # the formula would propagate it into a plausible-looking answer.
-    e = Expression(block("p*2"))
+    e = Expression(block("P*2"))
     with pytest.raises(ValueError, match="finite"):
         e.evaluate(CP.AbstractState("HEOS", "R123"))  # never update()d
 
@@ -182,10 +206,103 @@ def test_reproduces_the_hardcoded_dilute_viscosity_of_R123():
 
 
 def test_a_compiled_block_is_reusable_across_states():
-    e = Expression(block("T*rhomolar"))
+    e = Expression(block("T*Dmolar"))
     AS = CP.AbstractState("HEOS", "R123")
     out = []
     for T in (300.0, 400.0):
         AS.update(CP.DmolarT_INPUTS, 100.0, T)
         out.append(e.evaluate(AS))
     assert out == pytest.approx([30000.0, 40000.0])
+
+
+# --------------------------------------------------------------------------- #
+# Declared state variables
+# --------------------------------------------------------------------------- #
+def test_state_variables_use_coolprops_own_names():
+    """The DSL keeps no vocabulary of its own; the names are CoolProp's."""
+    assert Expression(block("T", state=["T"])).required_inputs() == ["T"]
+    assert Expression(block("Dmolar", state=["Dmolar"])).required_inputs() == ["Dmolar"]
+    # The DSL once spelled these `rhomolar`/`rhomass`/`p`.  It no longer invents
+    # names -- and the invented lowercase `p` is what used to collide with the
+    # exponent array every viscosity paper writes as p_i.
+    for legacy in ("rhomolar", "rhomass", "p"):
+        with pytest.raises(ValueError):
+            Expression(block(legacy, state=[legacy]))
+
+
+def test_state_variables_are_opt_in_so_undeclared_names_are_yours():
+    """A block that never asks for pressure keeps `p` for its own coefficients."""
+    e = Expression(block("sum(i: n[i]*p[i])", arrays={"n": [2.0, 3.0], "p": [5.0, 7.0]}, state=[]))
+    assert e.required_inputs() == []
+    assert e.evaluate(state()) == pytest.approx(2.0 * 5.0 + 3.0 * 7.0)
+    # Declare pressure and the same name is a collision, not a silent shadowing.
+    with pytest.raises(ValueError):
+        Expression(block("sum(i: n[i]*p[i])", arrays={"n": [2.0], "p": [5.0]}, state=["P"]))
+
+
+def test_reading_an_undeclared_quantity_names_the_fix():
+    with pytest.raises(ValueError, match="state_variables"):
+        Expression(block("Bvirial", state=[]))
+
+
+def test_two_classes_stay_refused_even_when_declared():
+    """Opt-in is not a licence: these cannot be honoured whatever the author asks."""
+    for nm in ("V", "viscosity", "conductivity"):  # re-enters the correlation
+        with pytest.raises(ValueError):
+            Expression(block(nm, state=[nm]))
+    for nm in ("T_critical", "rhomolar_critical", "T_reducing"):  # config-dependent
+        with pytest.raises(ValueError):
+            Expression(block(nm, state=[nm]))
+        # ...but each stays usable as an ordinary frozen constant.
+        assert Expression(block(nm, constants={nm: 7.0}, state=[])).evaluate(state()) == 7.0
+
+
+def test_let_renames_a_state_variable_to_whatever_reads_best():
+    """Dropping the invented aliases costs nothing: renaming is in the language."""
+    e = Expression(block("let rho = Dmolar\nlet tau = Tc/T\nrho*tau",
+                         constants={"Tc": 456.83}, state=["Dmolar", "T"]))
+    assert e.required_inputs() == ["Dmolar", "T"]
+    assert e.evaluate(state(rhomolar=1e4, T=300.0)) == pytest.approx(1e4 * 456.83 / 300.0)
+    # A `let` cannot silently shadow a DECLARED name: the declaration then goes
+    # unread, which is already an error.
+    with pytest.raises(ValueError):
+        Expression(block("let T = 5\nT", state=["T"]))
+    # Undeclared, the same name is simply a local -- no state involved at all.
+    assert Expression(block("let T = 5\nT", state=[])).evaluate(state()) == 5.0
+
+
+def test_only_the_exposed_set_is_declarable():
+    """Opt-in: the DSL exposes an explicit set and refuses everything else."""
+    EXPOSED = ("T", "P", "Dmolar", "Dmass", "molar_mass", "Smolar_residual", "Bvirial", "dBvirial_dT")
+    for nm in EXPOSED:
+        assert Expression(block(nm, state=[nm])).required_inputs() == [nm]
+    # CoolProp's back-compat aliases are a trap in a formula full of coefficient
+    # names -- `A` is the speed of sound, `D` is Dmass, `M` is molar_mass -- and they
+    # are refused for free, because the exposed set holds canonical names only.
+    for alias in ("A", "C", "D", "G", "M", "O", "S", "U", "DMOLAR"):
+        with pytest.raises(ValueError, match="not a state variable the DSL exposes"):
+            Expression(block(alias, state=[alias]))
+    # ...so each stays free for the author, which is the point.
+    assert Expression(block("A*M", constants={"A": 3.0, "M": 4.0}, state=[])).evaluate(state()) == 12.0
+    # The refusal names the whole set, so it answers "then what do I write?" --
+    # including for this DSL's own retired spellings.
+    for old, now in (("rhomolar", "Dmolar"), ("rhomass", "Dmass"), ("p", "P")):
+        with pytest.raises(ValueError, match=now):
+            Expression(block(old, state=[old]))
+
+
+def test_tau_and_delta_are_the_reducing_state_by_another_name():
+    """keyed_output computes them as _reducing.T/_T and _rhomolar/_reducing.rhomolar."""
+    for nm in ("Tau", "Delta", "T_reducing", "rhomolar_reducing"):
+        with pytest.raises(ValueError):
+            Expression(block(nm, state=[nm]))
+
+
+def test_non_state_quantities_are_refused():
+    for nm in ("Phase", "Q", "Qmass"):          # enum ordinal / sentinel-valued
+        with pytest.raises(ValueError):
+            Expression(block(nm, state=[nm]))
+    for nm in ("T_freeze", "GWP100", "ODP"):    # fluid metadata, not state
+        with pytest.raises(ValueError):
+            Expression(block(nm, state=[nm]))
+

@@ -1,6 +1,7 @@
 #include "CoolProp/expression/Expression.h"
 #include "CoolProp/expression/detail/Lexer.h"
 #include "CoolProp/Exceptions.h"
+#include "CoolProp/DataStructures.h"
 #include "CoolProp/detail/strings.h"
 #include <array>
 #include <cctype>
@@ -8,6 +9,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
@@ -500,22 +502,44 @@ std::vector<Token> lex(const std::string& s) {
 // Name-resolution helpers
 // ---------------------------------------------------------------------------
 
-// The single bucket of thermodynamic inputs: DSL spelling -> CoolProp::parameters
-// key.  See the rationale for the curated allowlist in Expression.h.
-static const std::vector<std::pair<std::string, parameters>>& inputTableImpl() {
-    static const std::vector<std::pair<std::string, parameters>> table = {
-      {"T", iT}, {"rhomolar", iDmolar}, {"rhomass", iDmass}, {"molar_mass", imolar_mass}, {"p", iP}};
-    return table;
+// What the DSL exposes as state.  OPT-IN: this is the complete set a formula may
+// declare, and anything absent is refused.
+//
+// The alternative -- resolve anything is_valid_parameter() knows, minus a denylist of
+// the harmful ones -- was tried and is structurally unsound, because it fails OPEN.
+// 59 of CoolProp's 92 canonical parameter names slipped past a denylist that had
+// already grown to four categories, among them fluid metadata that evaluates to
+// nonsense (HFORMATION), fluid limits that are not state at all (P_min, T_max,
+// p_triple), and -- the very defect the denylist existed to prevent -- the EOS
+// internals alphar / alpha0 / dalphar_ddelta_consttau, which are functions of the
+// REDUCED variables and therefore carry the reducing state exactly as Tau and Delta
+// do.  A denylist would need patching for every parameter CoolProp ever adds.
+//
+// So the list is small and grows on demand.  Adding a name is one line, and should
+// require the deliberate judgement that the quantity is
+//   * a continuous function of the CURRENT state -- not fluid metadata, not a range
+//     limit, not a phase index or a sentinel-valued quality;
+//   * free of configuration dependence -- calc_T_critical()/calc_rhomolar_critical()
+//     return the NUMERICAL critical point under ENABLE_SUPERANCILLARIES, and the EOS
+//     reducing state is not a correlation's own fitted reducing parameter.  Both
+//     belong in `constants`, frozen at the value the paper's authors regressed
+//     against; and
+//   * not a transport output, whose keyed_output() re-enters the correlation being
+//     defined.
+//
+// This is NOT the input table that was removed.  That table mapped INVENTED spellings
+// (`rhomolar`, `rhomass`, `p`) and reserved every one of them in every formula.  These
+// are CoolProp's own canonical names, and a block reserves only what it declares -- so
+// `p` remains the author's wherever pressure is not asked for, which is the collision
+// the redesign existed to fix.
+static const std::vector<std::string>& allowedStateVariables() {
+    static const std::vector<std::string> names = {"T", "P", "Dmolar", "Dmass", "molar_mass",
+                                                   // Entropy scaling and the second virial: what an entropy-scaling correlation
+                                                   // reduces on, rather than the dilute/residual decomposition.
+                                                   "Smolar_residual", "Bvirial", "dBvirial_dT"};
+    return names;
 }
 
-static bool inputForName(const std::string& nm, parameters& out) {
-    for (const auto& e : inputTableImpl())
-        if (nm == e.first) {
-            out = e.second;
-            return true;
-        }
-    return false;
-}
 static bool funcForName(const std::string& nm, Func& out, int& arity) {
     struct E
     {
@@ -557,6 +581,7 @@ struct ProgramData
     NodePtr result{};
     std::vector<std::vector<double>> arrays{};  // by array slot
     std::vector<parameters> inputOrder{};       // cached for requiredInputs()
+    std::vector<std::string> inputNames{};      // same order, as the author spelled them
 };
 
 // ---------------------------------------------------------------------------
@@ -566,11 +591,18 @@ struct ProgramData
 class Binder
 {
    public:
-    Binder(ProgramData& pd, const std::map<std::string, double>& consts, const std::map<std::string, std::vector<double>>& arrays)
-      : d(pd), constants(consts), arraysIn(arrays) {}
+    Binder(ProgramData& pd, const std::map<std::string, double>& consts, const std::map<std::string, std::vector<double>>& arrays,
+           const std::map<std::string, parameters>& declared)
+      : d(pd), constants(consts), arraysIn(arrays), declaredState(declared) {}
 
     void run(ParseResult& pr) {
         for (auto& L : pr.lets) {
+            // A `let` resolves before a declared state variable, so `let T = 500`
+            // would quietly detach the formula from the state -- and only partly, in
+            // a formula that also read `T` on an earlier line.  Declaring a name and
+            // then rebinding it is never what an author means.
+            if (declaredState.count(L.name) > 0)
+                throw ValueError(format("let '%s' shadows the declared state variable of the same name", L.name.c_str()));
             NodePtr bound = bind(L.expr, /*indexName*/ "");
             int slot = newScalarSlot();
             letNames[L.name] = slot;  // available to later statements + result
@@ -586,6 +618,7 @@ class Binder
     ProgramData& d;
     const std::map<std::string, double>& constants;
     const std::map<std::string, std::vector<double>>& arraysIn;
+    const std::map<std::string, parameters>& declaredState;
     // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
     int nextScalar = 0;
     std::map<std::string, int> letNames{};
@@ -598,19 +631,20 @@ class Binder
     }
 
     int resolveScalar(const std::string& nm) {
-        // Resolution order: let -> thermodynamic input -> JSON constant.
-        // Inputs are checked before constants so that a JSON constant can never
-        // shadow a state variable (T/rhomolar/rhomass/molar_mass/p).
+        // Resolution order: let -> DECLARED state variable -> JSON constant.  A name
+        // the block did not declare is never state, however well CoolProp knows it.
         auto itL = letNames.find(nm);
         if (itL != letNames.end()) return itL->second;
-        parameters key;
-        if (inputForName(nm, key)) {
+        auto itS = declaredState.find(nm);
+        if (itS != declaredState.end()) {
+            const parameters key = itS->second;
             auto s = inputSlots.find(nm);
             if (s != inputSlots.end()) return s->second;
             int slot = newScalarSlot();
             inputSlots[nm] = slot;
             d.inputSlots.emplace_back(key, slot);
             d.inputOrder.push_back(key);
+            d.inputNames.push_back(nm);
             return slot;
         }
         auto itC = constants.find(nm);
@@ -622,6 +656,20 @@ class Binder
             d.constantInits.emplace_back(slot, itC->second);
             return slot;
         }
+        // Three different mistakes, three different messages.  An exposed name that
+        // this block simply did not declare is the common one; a CoolProp quantity
+        // the DSL does not expose gets the available set (which is also what answers
+        // a formula written against the DSL's own retired spellings); anything else
+        // is an ordinary typo.
+        parameters probe;
+        std::string reason;
+        if (resolveStateVariable(nm, probe, reason)) {
+            throw ValueError(format("unknown variable '%s' -- it is a state variable this DSL exposes; add it to this "
+                                    "block's \"state_variables\" to read it from the state",
+                                    nm.c_str()));
+        }
+        parameters known;
+        if (is_valid_parameter(nm, known)) throw ValueError(format("unknown variable '%s' -- %s", nm.c_str(), reason.c_str()));
         throw ValueError(format("unknown variable '%s'", nm.c_str()));
     }
 
@@ -713,14 +761,31 @@ class Binder
 // Program methods + compile (namespace CoolProp::expression)
 // ---------------------------------------------------------------------------
 
-const std::vector<std::pair<std::string, parameters>>& inputTable() {
-    return detail::inputTableImpl();
+bool resolveStateVariable(const std::string& name, parameters& key, std::string& reason) {
+    key = iundefined_parameter;  // both out-params written on every path
+    reason.clear();
+    const std::vector<std::string>& ok = detail::allowedStateVariables();
+    if (std::find(ok.begin(), ok.end(), name) == ok.end()) {
+        // Naming the whole set is what makes this diagnostic self-servicing: it is
+        // short, and it answers "then what do I write?" -- including for the DSL's
+        // own retired spellings, where `rhomolar` is met with `Dmolar` in the list.
+        std::string avail;
+        for (const auto& n : ok)
+            avail += (avail.empty() ? "" : ", ") + n;
+        reason = format("'%s' is not a state variable the DSL exposes; available: %s", name.c_str(), avail.c_str());
+        return false;
+    }
+    // Every allowed name is one of CoolProp's own, so this cannot fail; a test pins
+    // that, and pins that each is the CANONICAL spelling rather than an alias.
+    if (!is_valid_parameter(name, key)) {
+        reason = format("'%s' is not a CoolProp parameter name", name.c_str());
+        return false;
+    }
+    return true;
 }
 
 std::string inputName(parameters key) {
-    for (const auto& e : detail::inputTableImpl())
-        if (e.second == key) return e.first;
-    throw ValueError(format("parameter key %d is not an expression input", static_cast<int>(key)));
+    return get_parameter_information(static_cast<int>(key), "short");
 }
 
 const detail::ProgramData& Program::data() const {
@@ -751,24 +816,43 @@ const std::vector<parameters>& Program::requiredInputs() const {
     return data().inputOrder;
 }
 
-Program compile(const std::string& source, const std::map<std::string, double>& constants, const std::map<std::string, std::vector<double>>& arrays) {
+Program compile(const std::string& source, const std::map<std::string, double>& constants, const std::map<std::string, std::vector<double>>& arrays,
+                const std::vector<std::string>& state_variables) {
     using namespace detail;
-    // Inputs resolve before constants, so a constant named `T` or `p` would be
-    // dead data and the formula would quietly mean something other than what its
-    // author wrote.  Reject the collision at compile time rather than silently
-    // discarding the constant.
-    for (const auto& c : constants) {
+    // Resolve the declaration first, so that a bad `state_variables` entry is
+    // reported as such rather than surfacing later as "unknown variable".
+    std::map<std::string, parameters> declared;
+    for (const auto& nm : state_variables) {
         parameters key;
-        if (inputForName(c.first, key)) {
-            throw ValueError(format("constant '%s' collides with the thermodynamic input of the same name", c.first.c_str()));
+        std::string reason;
+        if (!resolveStateVariable(nm, key, reason)) throw ValueError(format("state_variables: %s", reason.c_str()));
+        if (!declared.emplace(nm, key).second) throw ValueError(format("state_variables lists '%s' twice", nm.c_str()));
+        // Dedupe on the resolved key, not the spelling: two names for one quantity
+        // would take two slots and cost two keyed_output() calls per evaluation.
+        for (const auto& prev : declared) {
+            if (prev.first != nm && prev.second == key)
+                throw ValueError(format("state_variables lists '%s' and '%s', which are the same quantity", prev.first.c_str(), nm.c_str()));
         }
+        // A declared name shadowing the author's own data would make that data dead
+        // and quietly change what the formula means.  This is the collision the old
+        // single-namespace design hit from the other direction, where the language
+        // reserved the name whether the block wanted it or not.
+        if (constants.count(nm) > 0) throw ValueError(format("state variable '%s' collides with the constant of the same name", nm.c_str()));
+        if (arrays.count(nm) > 0) throw ValueError(format("state variable '%s' collides with the array of the same name", nm.c_str()));
     }
     std::vector<Token> toks = lex(source);
     Parser parser(std::move(toks));
     ParseResult pr = parser.parse();
     auto pd = std::make_shared<ProgramData>();
-    Binder binder(*pd, constants, arrays);
+    Binder binder(*pd, constants, arrays, declared);
     binder.run(pr);
+    // Declaring a state variable the formula never reads costs a keyed_output() call
+    // per evaluation and misstates the block's dependencies, so it is an error rather
+    // than dead weight.
+    for (const auto& nm : state_variables) {
+        if (std::find(pd->inputNames.begin(), pd->inputNames.end(), nm) == pd->inputNames.end())
+            throw ValueError(format("state variable '%s' is declared but never used in the formula", nm.c_str()));
+    }
     Program prog;
     prog.m_data = pd;
     return prog;
