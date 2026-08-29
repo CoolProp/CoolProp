@@ -3581,5 +3581,112 @@
       "smolar": 77.00290899983369,
       "smolar_units": "J/mol/K"
     }
+  },
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Polychroniadou-IJT-2022-Krypton",
+      "dilute": {
+        "type": "expression",
+        "formula": "let L = ln(T/T_ref)\neta_ref*exp(sum(i: a[i]*L^np[i]))",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "T_ref": 298.15,
+          "eta_ref": 2.53062e-05
+        },
+        "arrays": {
+          "a": [
+            0.91297123,
+            -0.10014703,
+            -0.024547423,
+            0.031450093,
+            -0.0044562573,
+            -0.0045112433,
+            0.0022375443,
+            -0.00014554233,
+            -0.00020063853,
+            8.3412883e-05,
+            -1.5202363e-05,
+            1.1590853e-06
+          ],
+          "np": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      },
+      "higher_order": {
+        "type": "expression",
+        "formula": "let L = ln(T/T_ref)\nlet eta0 = eta_ref*exp(sum(i: a[i]*L^np[i]))\nlet NA = R/k_B\nlet mass = M/NA\nlet root_mkT = (mass*k_B*T)^0.5\nlet Theta2 = (Bvirial + T*dBvirial_dT)/NA\nlet eplus_dilute = eta0/root_mkT*Theta2^(2/3)\nlet splus = -Smolar_residual/R\nlet eplus_res = f*(exp(sum(i: d[i]*splus^dp[i])) - 1)\n(Dmolar*NA)^(2/3)*root_mkT*(eplus_res + eplus_dilute)/splus^(2/3) - eta0",
+        "state_variables": [
+          "T",
+          "Bvirial",
+          "dBvirial_dT",
+          "Smolar_residual",
+          "Dmolar"
+        ],
+        "constants": {
+          "T_ref": 298.15,
+          "eta_ref": 2.53062e-05,
+          "R": 8.314472,
+          "k_B": 1.380649e-23,
+          "M": 0.083798,
+          "f": 1.05
+        },
+        "arrays": {
+          "a": [
+            0.91297123,
+            -0.10014703,
+            -0.024547423,
+            0.031450093,
+            -0.0044562573,
+            -0.0045112433,
+            0.0022375443,
+            -0.00014554233,
+            -0.00020063853,
+            8.3412883e-05,
+            -1.5202363e-05,
+            1.1590853e-06
+          ],
+          "np": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "d": [
+            0.125364,
+            0.220795,
+            -0.0313726,
+            0.00313907
+          ],
+          "dp": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      }
+    }
   }
 }
