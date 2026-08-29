@@ -52,12 +52,35 @@ void load() {
     // Let a CBOR-decode failure propagate (it did, as a parse error, before this
     // migration): under std::call_once a thrown load() leaves the once-flag unset
     // so the error surfaces and a later call can retry, rather than silently
-    // leaving the global library empty. add_many keeps its original catch.
+    // leaving the global library empty.
     nlohmann::json dd = cpjson::from_cbor(gall_fluids_CBORData, gall_fluids_CBORSize);
+    // add_many is likewise left to throw.  It used to be wrapped in a handler
+    // that printed to stdout and returned, but add_many has no per-fluid try, so
+    // one bad fluid aborted the loop and every fluid after it in load order
+    // silently vanished -- the library came up truncated, with a stdout line as
+    // the only signal and no error state anywhere. Users saw an arbitrary subset
+    // of fluids reported as unknown.  The same data reaches add_fluids_as_JSON
+    // through a path that has always thrown, so the two entry points used to
+    // disagree about what a malformed fluid means.  This is shipped, CI-verified
+    // data: a throw here means the build is broken, and failing loudly at first
+    // use beats a silently partial library.
+    //
+    // The retry story differs from the from_cbor line above, which is why this
+    // is not a bare call.  from_cbor leaves no state behind, so a rethrow is
+    // simply retried.  add_many mutates the library in place and is NOT
+    // transactional: a mid-array failure leaves every fluid before it
+    // registered.  Since a thrown load() leaves the std::call_once flag unset,
+    // the next library access re-runs load() -- which would meet its own
+    // half-finished first attempt and throw "already in library" for fluid 0,
+    // naming the wrong fluid and pointing at OVERWRITE_FLUIDS instead of the
+    // real parse error.  Wrappers surface the most recent error, so that
+    // misleading message is the one users would actually see.  Resetting first
+    // makes every attempt report the same, true cause.
     try {
         library.add_many(dd);
-    } catch (std::exception& e) {
-        std::cout << e.what() << '\n';
+    } catch (...) {
+        library = JSONFluidLibrary();
+        throw;
     }
 }
 
@@ -162,9 +185,17 @@ void JSONFluidLibrary::add_one(const nlohmann::json& fluid_json) {
     // Parse out Fluid name
     fluid.name = fluid_json.at("INFO").at("NAME").get<std::string>();
 
-    // Push the fluid name onto the name_vector used for returning the full list of library fluids
-    // If it is found that this fluid already exists in the library, it will be popped back off below.
-    name_vector.push_back(fluid.name);
+    // name_vector is deliberately NOT appended here.  It backs
+    // get_global_param_string("fluids_list"), and anything parsed below can
+    // throw, so publishing the name up-front left it permanently listed for a
+    // fluid that has no entry in string_to_index_map or fluid_map -- an orphan
+    // that makes AbstractState::factory("HEOS", <name>) throw for a name the
+    // library itself advertises.  The append now happens at the end of the try,
+    // once the fluid is genuinely in the library.
+    //
+    // Popping in the catch instead would be wrong: the duplicate-fluid branch
+    // below throws *after* it would have popped, so the handler would remove
+    // some other fluid's name and turn a leak into corruption.
 
     try {
         // CAS number
@@ -314,8 +345,7 @@ void JSONFluidLibrary::add_one(const nlohmann::json& fluid_json) {
         bool fluid_exists = false;  // Initialize flag for doing replace instead of add
 
         if (index != fluid_map.size()) {               // Fluid already in list if index was reset to something < fluid_map.size()
-            fluid_exists = true;                       //   Set the flag for replace
-            name_vector.pop_back();                    //   Pop duplicate name off the back of the name vector; otherwise it keeps growing!
+            fluid_exists = true;                       //   Set the flag for replace; the name is already in name_vector
             if (!get_config_bool(OVERWRITE_FLUIDS)) {  // Throw exception if replacing fluids is not allowed
                 throw ValueError(format("Cannot load fluid [%s:%s] because it is already in library; index = [%i] of [%i]; Consider enabling the "
                                         "config boolean variable OVERWRITE_FLUIDS",
@@ -363,6 +393,13 @@ void JSONFluidLibrary::add_one(const nlohmann::json& fluid_json) {
 
             // Add uppercase alias for EES compatibility
             string_to_index_map[upper(alias)] = index;
+        }
+
+        // Everything that can throw is behind us, so the fluid is now genuinely
+        // in the library and its name can be advertised.  Skipped when
+        // overwriting, because the name is already there from the first load.
+        if (!fluid_exists) {
+            name_vector.push_back(fluid.name);
         }
 
         //If Debug level set >5 print fluid name and total size of fluid_map
