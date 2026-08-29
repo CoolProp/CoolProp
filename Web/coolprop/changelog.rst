@@ -84,20 +84,30 @@ Highlights:
 
 Bug fixes:
 
-* **R1233zd(E) viscosity works again.**  v8.0.0 replaced the R1233zd(E) equation
-  of state with the Akasaka & Lemmon (JPCRD 2022) international standard, but
-  the fluid's ``TRANSPORT`` block was not carried across, so ``PropsSI("V",
-  ...)`` returned ``inf`` with *"Viscosity model is not available for this
-  fluid"* where v7.2.0 had answered.  The ``rhosr-CS`` correlation
-  (``Bell-PURDUE-2016-ETA``) is restored verbatim, matching what was already
-  done for the seven sibling fluids that use the same model.  Note that
-  ``rhosr_critical`` was fitted against the superseded Mondejar et al. EOS, so
-  values differ from v7.2.0 by up to ~2.5% along the saturated liquid line
-  (largest at low temperature, tapering to ~0% above 50 degC) and by more in the
-  deep compressed liquid near the triple point; that coupling is the same one
-  already shipping for the siblings.  Thermal conductivity remains unavailable
-  for this fluid, as it was in v7.2.0.  See GitHub
-  `#3330 <https://github.com/CoolProp/CoolProp/issues/3330>`_.
+* **R1233zd(E) viscosity works again, with refit constants.**  v8.0.0 replaced
+  this fluid's equation of state with the Akasaka & Lemmon (JPCRD 2022)
+  international standard but did not carry over its ``TRANSPORT`` block, so
+  ``PropsSI("V", ...)`` returned ``inf`` where v7.2.0 had answered
+  (`#3330 <https://github.com/CoolProp/CoolProp/issues/3330>`_).  The
+  ``rhosr-CS`` correlation is restored.
+
+  It does **not** reproduce v7.2.0, deliberately: saturated liquid viscosity is
+  29-38% lower (3.99e-4 rather than 6.37e-4 Pa-s at 0 degC, against 3.71e-4 from
+  REFPROP 10).  The published ``C = 1.2474`` was fitted to a 2012 dataset that
+  later measurements superseded and ran 40-75% high in the liquid
+  (`#1826 <https://github.com/CoolProp/CoolProp/issues/1826>`_, open since 2019).
+  ``rhosr_critical`` is now recomputed from the shipped EOS - it is
+  :math:`\rho_c R (\tau \alpha^r_\tau - \alpha^r)` at the critical point, not a
+  fitted parameter - and ``C = 0.8089`` is fitted on top of it to the 61 liquid
+  data points of `Miyara et al. (2018)
+  <https://doi.org/10.1016/j.ijrefrig.2018.05.021>`_, giving AAD 2.6% against a
+  stated 3.0% experimental uncertainty.  Rerun with ``python
+  dev/scripts/fit_R1233zdE_viscosity.py``.
+
+  Two limitations remain, both noted in the fluid file: saturated *vapor* is
+  ~10% high whatever ``C`` is (the dilute-gas term uses Chung-estimated
+  Lennard-Jones parameters, which ``C`` cannot correct), and thermal
+  conductivity is still unavailable, as it was in v7.2.0.
 
 8.0.0
 -----

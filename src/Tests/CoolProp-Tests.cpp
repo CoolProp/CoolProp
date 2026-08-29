@@ -606,22 +606,31 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
 
 // #2768 swapped R1233zd(E) to the Akasaka & Lemmon (JPCRD 2022) international
 // standard EOS and dropped the rho*s_r corresponding-states viscosity
-// correlation that had shipped since v6.  Restoring the block verbatim -- the
-// same thing that was done for the seven sibling rhosr-CS fluids whose EOS were
-// also replaced -- brings viscosity back.
+// correlation that had shipped since v6, so viscosity became unavailable
+// entirely (#3330).  The block is back, with the entropy-scaling constant C
+// refit -- the published C = 1.2474 came from a dataset that later measurements
+// superseded, and ran ~50-70% high in the liquid (#1826).  rhosr_critical is
+// now the value the current EOS gives at its own critical point, and C is
+// fitted on top of it to the primary data of Miyara, Alam & Kariya,
+// Int. J. Refrig. 92:86-93 (2018).
 //
-// The pinned values are a regression lock on "the restored coefficients are the
-// published ones and the EOS feeding them has not moved", NOT an accuracy claim:
-// rhosr_critical was fitted against the superseded Mondejar et al. EOS, so these
-// differ from the v7.2.0 numbers by up to ~2.5% along the saturated liquid line.
-// If an EOS or coefficient change moves them, that is a decision to make
-// consciously, not to absorb silently.
+// These values therefore deliberately do NOT reproduce v7.2.0; they are roughly
+// 29-38% lower along the saturated liquid line, and agree with Miyara's
+// measurements to 2.6% AAD against a stated 3.0% experimental uncertainty.  They
+// are a regression lock on "the coefficients are the ones we intend and the EOS
+// feeding them has not moved".
+//
+// If an EOS or coefficient change moves these, that is a decision to make
+// consciously rather than absorb silently -- in particular rhosr_critical must
+// be recomputed from the new EOS and C refitted on top of it, since the two are
+// coupled through x = rho*s_r/rhosr_critical.
 TEST_CASE("R1233zd(E) has a viscosity model (#3330)", "[viscosity],[transport],[3330]") {
     SECTION("the state from the bug report is finite") {
         const double eta = CoolProp::PropsSI("V", "T", 273.15, "Q", 0, "R1233zd(E)");
         CAPTURE(eta);
         REQUIRE(ValidNumber(eta));
-        // Saturated liquid at 0 C; the v7.2.0 value was 6.3689e-4 Pa-s.
+        // Saturated liquid at 0 C.  v7.2.0 answered 6.3689e-4 Pa-s here; with the
+        // refit constants this is 3.99e-4, against 3.71e-4 from REFPROP 10 ECS.
         CHECK(eta > 1e-4);
         CHECK(eta < 1e-3);
     }
@@ -635,12 +644,14 @@ TEST_CASE("R1233zd(E) has a viscosity model (#3330)", "[viscosity],[transport],[
         };
         // T [K], rhomolar [mol/m^3], eta [Pa-s]
         // All four are single phase at the stated (T, rho): rhoL(300 K) = 9643.6 and
-        // rhoL(400 K) = 7219.8 mol/m^3, rhoV(350 K) = 246.0 mol/m^3.
+        // rhoL(400 K) = 7219.8 mol/m^3, rhoV(350 K) = 246.0 mol/m^3.  The two
+        // compressed-liquid rows sit at 18.2 and 10.8 MPa, outside the 1.0-4.1 MPa
+        // range C was fitted over, so they lock extrapolation behaviour on purpose.
         const row rows[] = {
-          {250.0, 1e-10, 9.2922657253765002e-06},    // dilute-gas limit
-          {350.0, 100.0, 1.3159482156137667e-05},    // vapor
-          {300.0, 10000.0, 5.7811787177563785e-04},  // compressed liquid, liquid branch of the crossover
-          {400.0, 8000.0, 1.9385792402999729e-04},   // compressed liquid, near-critical temperature
+          {250.0, 1e-10, 9.2922657253765002e-06},  // dilute-gas limit; C drops out here
+          {350.0, 100.0, 1.314939784502e-05},      // vapor
+          {300.0, 10000.0, 3.6854833102371e-04},   // compressed liquid, liquid branch of the crossover
+          {400.0, 8000.0, 1.289196192878e-04},     // compressed liquid, rho = 2.2 rho_c
         };
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1233zd(E)"));
         for (const auto& r : rows) {

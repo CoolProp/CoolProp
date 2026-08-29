@@ -4133,7 +4133,8 @@
   "TRANSPORT": {
     "viscosity": {
       "BibTeX": "Bell-PURDUE-2016-ETA",
-      "C": 1.2474,
+      "C": 0.8089,
+      "_note": "C and rhosr_critical were both refit for the Akasaka and Lemmon (JPCRD 2022) EOS that replaced Mondejar et al. in v8.0.0. rhosr_critical is not a fitted parameter: it is rho_c*R*(tau*dalphar_dtau - alphar) at the EOS critical point, the quantity that normalises x = rho*s_r/rhosr_critical, so it tracks whichever EOS ships. For R32, R22 and R152A, whose EOS were never replaced, the stored constant equals the value computed from the current EOS to seven digits. The value here is what the shipped EOS gives; the previous -47978.147551213806 came from Mondejar and left x = 1.011 rather than 1 at the critical point. C = 0.8089 is then fitted on top of it against the 61 primary liquid viscosity points of Miyara, Alam and Kariya, Int. J. Refrig. 92:86-93, 2018 (doi 10.1016/j.ijrefrig.2018.05.021), Table 3: 313.67-433.32 K, 1.005-4.074 MPa, stated combined standard uncertainty 3.0%. AAD 2.62%, bias -0.07%, comparable to REFPROP 10 ECS (2.78%) over the same states. The published C = 1.2474 was fitted to Hulse, Basu, Singh and Thomas, JCED 57:3581-3586, 2012, superseded by the later measurements; it runs ~50-70% high in the liquid. That diagnosis, and the first refit (C = 0.671156, against figure-digitized Meng and Cui data; on the superseded normaliser that is 13.9% low against Miyara, and 15.5% low if rescored on the rhosr_critical shipping here), are due to J. P. Kauffman in GitHub issue #1826, 2019-05-07. Miyara covers only 314-433 K; over 243-313 K, where only the paywalled Meng and Cui measurements exist, this pair sits 6.7% above REFPROP 10 ECS. c_liq, c_vap and x_crossover are the universal reference-fluid coefficients and are unchanged. Remaining limitation: saturated vapor is ~10% high whatever C is, because the vapor is dominated by the dilute-gas term, whose Lennard-Jones parameters are Chung estimates rather than fitted values. Fitting script: dev/scripts/fit_R1233zdE_viscosity.py",
       "c_liq": [
         0.6100913843,
         0.4508958312,
@@ -4146,7 +4147,7 @@
         -0.308598,
         0.035317
       ],
-      "rhosr_critical": -47978.147551213806,
+      "rhosr_critical": -48503.78752999625,
       "type": "rhosr-CS",
       "x_crossover": 2
     }
