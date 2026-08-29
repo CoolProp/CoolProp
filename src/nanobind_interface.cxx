@@ -1198,10 +1198,19 @@ void init_CoolProp(nb::module_& m) {
     nb::class_<expression::ExpressionBlock>(m, "Expression",
                                             "A compiled transport-property expression block.\n\n"
                                             "Construct from the JSON text of a `\"type\": \"expression\"` block\n"
-                                            "({\"formula\": ..., \"constants\": {...}, \"arrays\": {...}}), then\n"
-                                            "evaluate it at a state.  Raises ValueError on a bad formula.")
+                                            "({\"formula\": ..., \"state_variables\": [...], \"constants\": {...},\n"
+                                            " \"arrays\": {...}}), then evaluate it at a state.\n\n"
+                                            "`state_variables` lists the thermodynamic quantities the formula reads,\n"
+                                            "in CoolProp's own spelling (\"T\", \"P\", \"Dmolar\", \"Smolar_residual\",\n"
+                                            "...).  It is opt-in: a name not declared there is never state, so a\n"
+                                            "block that does not ask for pressure keeps `p` for its own coefficients.\n"
+                                            "Raises ValueError on a bad formula, on reading an undeclared quantity,\n"
+                                            "or on declaring one that cannot be honoured (a transport output, which\n"
+                                            "would re-enter the correlation; or the configuration-dependent critical\n"
+                                            "point and reducing state).")
       .def(nb::init<const std::string&>(), nb::arg("json_block"))
-      .def("required_inputs", &expression::ExpressionBlock::required_inputs, "DSL names of the thermodynamic inputs the formula references.")
+      .def("required_inputs", &expression::ExpressionBlock::required_inputs,
+           "The declared state variables the formula actually reads, in declaration order.")
       .def("evaluate", &expression::ExpressionBlock::evaluate, nb::arg("AS"),
            "Evaluate at the state `AS` (an AbstractState) is currently sitting at.\n"
            "Set the state the usual way -- AS.update(DmolarT_INPUTS, rhomolar, T) --\n"

@@ -14,7 +14,7 @@ namespace expression {
 double evaluate_at(const Program& prog, AbstractState& AS) {
     // One bucket: every input the program asked for is a CoolProp::parameters key,
     // so the whole host side is a keyed_output() per key -- no per-quantity switch
-    // to extend when a new input name is added to the table in Expression.cpp.
+    // to extend when a block declares a new state variable.
     const std::vector<parameters>& keys = prog.requiredInputs();
     std::vector<double> vals(keys.size());
     for (std::size_t i = 0; i < keys.size(); ++i) {

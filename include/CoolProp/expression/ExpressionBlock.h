@@ -14,7 +14,12 @@ namespace expression {
 
 /// Compile a transport `"type": "expression"` block from its JSON text:
 ///
-///     {"formula": "...", "constants": {...}, "arrays": {...}}
+///     {"formula": "...", "state_variables": [...], "constants": {...}, "arrays": {...}}
+///
+/// `state_variables` names the thermodynamic quantities the formula may read, in
+/// CoolProp's canonical spelling.  It is opt-in and per-block: a name not listed
+/// there is never state, so a block that does not ask for pressure keeps `p` for
+/// its own coefficients.
 ///
 /// Any other key -- `"type"` included -- is ignored, so the text can be lifted
 /// verbatim out of (or pasted verbatim into) a fluid JSON file.  `context`, when
@@ -35,8 +40,9 @@ class ExpressionBlock
    public:
     /// `json_text` is the block as it appears in fluid JSON (see compile_block()).
     explicit ExpressionBlock(const std::string& json_text) : m_program(compile_block(json_text)) {}
-    /// DSL names of the thermodynamic inputs the formula references, in the order
-    /// they are fetched.  Empty for a formula built only from constants and arrays.
+    /// The declared state variables the formula actually reads, in the order they
+    /// are fetched (first reference in the formula, NOT declaration order).  Empty
+    /// for a formula built only from constants and arrays.
     [[nodiscard]] std::vector<std::string> required_inputs() const;
     /// Evaluate at the state `AS` is currently sitting at; the result is in whatever
     /// base-SI unit the formula produces.  The caller sets the state through the
