@@ -120,17 +120,33 @@ those fluids.
   R-124, R-141b, R-142b, R-143a, R-152a, R-218, R-227ea, R-236ea, R-236fa,
   RC318, isopentane, n-pentane, propylene). No published upgrade exists there.
 
-## C-bis. R-1233zd(E) — a gap that the `#ETA` rule hides
+## C-bis. R-1233zd(E) — a candidate the `#ETA` rule hides
 
 REFPROP 10.1's *primary* transport model for R-1233zd(E) is ECS, so the fluid
-does not appear in §B. But the file also carries a published viscosity
-correlation as an `@ETA` alternative — Meng, Wen & Wu, *J. Chem. Thermodyn.*
-**123**:140–145 (2018), [`10.1016/j.jct.2018.04.001`](https://doi.org/10.1016/j.jct.2018.04.001)
-(no open-access copy found). That matters because on `origin/master`
-`dev/fluids/R1233zd(E).json` has **no `TRANSPORT` block at all** — PR #2768
-dropped it and the restore has not landed — so CoolProp has neither viscosity
-nor conductivity for this fluid. Restoring transport for R-1233zd(E) is worth
-tracking separately from this audit.
+does not appear in §B. But the file carries a published, measurement-based
+viscosity correlation as an `@ETA` alternative: Meng, Wen & Wu,
+*J. Chem. Thermodyn.* **123**:140–145 (2018),
+[`10.1016/j.jct.2018.04.001`](https://doi.org/10.1016/j.jct.2018.04.001) — no
+open-access copy found.
+
+CoolProp's side of this moved while the audit was being written. PR #3335
+restored the `TRANSPORT` block that #2768 had dropped and refit the ρ<sub>s</sub>r-CS
+constants (`C = 0.8089`, `rhosr_critical` recomputed for the Akasaka & Lemmon
+2022 EOS) against the 61 primary liquid points of Miyara, Alam & Kariya,
+*Int. J. Refrig.* **92**:86–93 (2018). That refit reports AAD 2.62 % / bias
+−0.07 % over 314–433 K, against 2.78 % for the REFPROP 10 ECS model on the same
+states — so where data exist, CoolProp is now **at least as good as what REFPROP
+actually ships as primary**, and this is no longer an obvious supersession.
+
+It is still worth doing, for one specific reason. The refit note records that
+over **243–313 K** — below Miyara's range, where only paywalled measurements
+exist — the CoolProp model sits 6.7 % above REFPROP's ECS, and that saturated
+vapour is ~10 % high regardless of `C` because the dilute-gas Lennard-Jones
+parameters are Chung estimates. The Meng, Wen & Wu correlation is fitted to
+measurements across 243–373 K and would replace a corresponding-states
+extrapolation with data in exactly the range CoolProp is weakest. Treat this as
+a **lower-priority, data-driven improvement**, not a supersession, and benchmark
+against the Miyara points before switching — the current model is not broken.
 
 ## D. Out of scope — REFPROP 10.1 fluids CoolProp does not have
 

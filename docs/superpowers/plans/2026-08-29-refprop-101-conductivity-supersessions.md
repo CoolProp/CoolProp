@@ -129,9 +129,9 @@ together. One change, both properties.
 2. **Heavy water** — both IAPWS releases, one hardcoded pair.
 3. **Ammonia, cyclohexane, ethylene, propylene, R-1233zd(E), R-1336mzz(Z),
    methyl oleate, methyl linoleate** — `TC1`, data-only, all open access.
-   R-1233zd(E) is worth prioritising for a different reason: on `origin/master`
-   its `dev/fluids/R1233zd(E).json` has **no `TRANSPORT` block at all** — PR
-   #2768 dropped it and the restore has not landed — so the fluid currently has
-   neither viscosity nor conductivity.
+   R-1233zd(E) is worth prioritising: PR #3335 restored and refit its
+   **viscosity**, but `dev/fluids/R1233zd(E).json` still has no `conductivity`
+   entry at all, so this is the one remaining transport gap for that fluid — and
+   the Perkins/Huber/Assael correlation for it is on PMC.
 4. **R-143a** — cheap, but label it preliminary in the JSON note.
 5. **Nitrogen, xenon, neon** — blocked behind the `TC7`/`VS7` decision.
