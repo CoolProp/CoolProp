@@ -3864,28 +3864,12 @@ TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[a
     // the test assert on the *mismatch* (so an accidental regen also forces
     // an update here).
     //
-    // These four had a wrong reducing density corrected to the constant the
-    // EOS authors published (see CoolProp-wu2i).  Each stored rho_red was
-    // reconstructed through a unit conversion rather than taken from the
-    // publication, but the four fail in four different ways -- Nitrogen's
-    // conversion used the *correct* molar mass and went wrong by unrounding a
-    // measured mass density, so this is not uniformly a rounded-M artifact:
-    //
-    //   Nitrogen       11183.901464580624 -> 11183.9         (313.3 kg/m^3 / 28.01348)
-    //   Ethylene       7636.76598074554   -> 7636.9293156279 (214.24 kg/m^3 / stale M)
-    //   OrthoHydrogen  15444.54031369981  -> 15445.0         (31.1352666 kg/m^3 / stale M)
-    //   n-Undecane     1514.916863638556  -> 1514.9          (1.5149 * 156.31 / 156.30826)
-    //
-    // Their superancillaries were fit against the pre-correction EOS and so
-    // carry a relative inconsistency of the same order as the rho_red change
-    // (worst case ~3e-5, OrthoHydrogen) until fastchebpure reissues them.
-    // Remove each entry as its regenerated SA lands.
-    //
-    // R236EA is deliberately NOT here: REFPROP's 3.71616644 is a nine-digit
-    // truncation of 565.0 kg/m^3 / 152.0384, and CoolProp's
-    // 3716.16644216198 is the faithful conversion.  Aligning to REFPROP
-    // there would have been a regression, so its EOS is untouched.
-    static const std::set<std::string> known_stale_SA = {"Nitrogen", "Ethylene", "OrthoHydrogen", "n-Undecane"};
+    // Empty again: the four fluids whose reducing density was corrected in
+    // #3326 (Nitrogen, Ethylene, OrthoHydrogen, n-Undecane) had their
+    // superancillaries refit against the corrected EOS, so their stored
+    // source_eos_hash matches once more and they are held to the strict
+    // branch below rather than allowlisted.
+    static const std::set<std::string> known_stale_SA = {};
 
     // ---------------------------------------------------------------------
     // TreeHasher: FNV-1a 64 over a deterministic byte serialization of a
