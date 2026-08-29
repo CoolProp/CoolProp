@@ -1740,9 +1740,20 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
     // Mass-quality input pair on a true mixture: solve iteratively for Qmolar
     // before delegating to the molar-pair flash. Pure / pseudo-pure (size==1)
     // goes through mass_to_molar_inputs in the existing flow.
-    if (CoolProp::is_Qmass_pair(input_pair) && mole_fractions.size() > 1) {
-        update_Qmass_pair(input_pair, value1, value2);
-        return;
+    if (CoolProp::is_Qmass_pair(input_pair)) {
+        if (mole_fractions.size() > 1) {
+            update_Qmass_pair(input_pair, value1, value2);
+            return;
+        }
+        // Pure / pseudo-pure falls through to mass_to_molar_inputs below, which
+        // rewrites the pair to its molar sibling without looking at the quality.
+        // Unlike the cubic backend, PCSAFT is not fully open here: the QT_INPUTS
+        // and PQ_INPUTS cases downstream do reject a finite out-of-range quality
+        // with OutOfRangeError.  They do NOT reject NaN -- their guard is
+        // (v < 0) || (v > 1), which is false for NaN -- so a NaN quality reached
+        // the flash and surfaced as "solution could not be found".  Validating
+        // here closes that and makes the diagnostic match the other backends.
+        check_Qmass_pair_range(input_pair, value1, value2);
     }
 
     // Converting input to CoolPropDbl

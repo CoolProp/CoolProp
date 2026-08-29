@@ -5582,6 +5582,64 @@ TEST_CASE("Qmass: SRK cubic mixture output works after Q-pair flash", "[Qmass][c
     CHECK(AS2->Q() == Catch::Approx(0.0).epsilon(1e-10));
 }
 
+TEST_CASE("Qmass range check: cubic and PCSAFT pure fluids reject out-of-range quality", "[Qmass][cubic][PCSAFT]") {
+    // CubicBackend::update() and PCSAFTBackend::update() gate the Qmass dispatch on
+    // mole_fractions.size() > 1 and otherwise fall through to mass_to_molar_inputs,
+    // which rewrites the pair to its molar sibling without validating the quality.
+    // AbstractState::update_Qmass_pair's [0,1] check therefore never ran on the pure
+    // path, and nothing downstream caught it: SRK::Propane at Qmass = 1.05 returned
+    // a state reading Q() = 1.05 with phase = 6 instead of throwing.
+    //
+    // The same fail-open #3336 closed for REFPROP, using the helper added there.
+    // Match on the message rather than merely on ValueError: a bare CHECK_THROWS_AS
+    // would also be satisfied by an unrelated flash failure further downstream, and
+    // would leave the test passing if this guard were removed.
+    const auto out_of_range = Catch::Matchers::ContainsSubstring("Qmass out of range");
+    struct BackendFluid
+    {
+        const char* backend;
+        const char* fluid;
+        double T;
+    };
+    const std::vector<BackendFluid> cases = {{"SRK", "Propane", 296.0}, {"PR", "Propane", 296.0}, {"PCSAFT", "METHANE", 150.0}};
+
+    for (const auto& c : cases) {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(c.backend, c.fluid));
+        AS->update(CoolProp::QT_INPUTS, 0.5, c.T);
+        const double p_sat = AS->p();
+        for (double q : {-0.05, 1.05, 1.5, std::numeric_limits<double>::quiet_NaN()}) {
+            CAPTURE(c.backend, c.fluid, q);
+            CHECK_THROWS_WITH(AS->update(CoolProp::QmassT_INPUTS, q, c.T), out_of_range);
+            CHECK_THROWS_WITH(AS->update(CoolProp::PQmass_INPUTS, p_sat, q), out_of_range);
+        }
+        // In-range quality still flashes, and Qmass round-trips exactly on the pure
+        // path via the base-class calc_Qmass short-circuit added in #3336.
+        //
+        // 0.0 and 1.0 are the point of this loop, not filler: they are the boundary
+        // values of the new >= 0 && <= 1 predicate, and the only thing that would
+        // catch a future > 0 && < 1 typo.
+        //
+        // A fresh instance, because a flash that throws after clear() leaves PCSAFT
+        // unusable -- the out-of-range calls above poison AS, and every later flash
+        // on it fails with "solution could not be found" regardless of input.  That
+        // is a pre-existing PCSAFT state-handling issue, not something this guard
+        // touches, but it does mean these assertions need their own object.
+        // QmassT only: PCSAFT's PQ flash cannot converge for METHANE at this p_sat
+        // at any quality, which is likewise separate from the range check.
+        auto ASin = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(c.backend, c.fluid));
+        for (double q : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+            CAPTURE(c.backend, c.fluid, q);
+            ASin->update(CoolProp::QmassT_INPUTS, q, c.T);
+            // Exact, not Approx: on the pure path the backend stores _Q verbatim and
+            // calc_Qmass short-circuits to it, so nothing rounds.  If a backend ever
+            // recomputes _Q through the lever rule this becomes a ULP flake, and that
+            // is the change we would want to hear about.
+            CHECK(ASin->Q() == q);
+            CHECK(ASin->Qmass() == q);
+        }
+    }
+}
+
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
     // --- Cubic (SRK) ---
     // 1. Structurally invalid JSON must throw unconditionally.
