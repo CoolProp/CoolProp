@@ -1210,7 +1210,8 @@ void init_CoolProp(nb::module_& m) {
                                             "point and reducing state).")
       .def(nb::init<const std::string&>(), nb::arg("json_block"))
       .def("required_inputs", &expression::ExpressionBlock::required_inputs,
-           "The declared state variables the formula actually reads, in declaration order.")
+           "The declared state variables the formula actually reads, in first-reference order\n"
+           "(the order the formula mentions them, NOT the order they were declared).")
       .def("evaluate", &expression::ExpressionBlock::evaluate, nb::arg("AS"),
            "Evaluate at the state `AS` (an AbstractState) is currently sitting at.\n"
            "Set the state the usual way -- AS.update(DmolarT_INPUTS, rhomolar, T) --\n"

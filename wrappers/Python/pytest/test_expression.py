@@ -56,7 +56,9 @@ def block(formula, constants=None, arrays=None, state=None):
             if m.group(2) or tok in local or tok not in _STATE or tok in state:
                 continue
             state.append(tok)
-    if state:
+    # `state=[]` must emit an EXPLICIT empty declaration, not omit the key -- those
+    # are different inputs to the parser and both need exercising.
+    if state is not None:
         b["state_variables"] = list(state)
     if constants:
         b["constants"] = constants
@@ -269,14 +271,24 @@ def test_let_renames_a_state_variable_to_whatever_reads_best():
     assert Expression(block("let T = 5\nT", state=[])).evaluate(state()) == 5.0
 
 
-def test_only_the_canonical_spelling_is_accepted():
-    """CoolProp's back-compat aliases are a trap in a formula full of coefficients."""
-    # `A` is the speed of sound, `D` is Dmass, `M` is molar_mass, `DMOLAR` is Dmolar.
+def test_only_the_exposed_set_is_declarable():
+    """Opt-in: the DSL exposes an explicit set and refuses everything else."""
+    EXPOSED = ("T", "P", "Dmolar", "Dmass", "molar_mass", "Smolar_residual", "Bvirial", "dBvirial_dT")
+    for nm in EXPOSED:
+        assert Expression(block(nm, state=[nm])).required_inputs() == [nm]
+    # CoolProp's back-compat aliases are a trap in a formula full of coefficient
+    # names -- `A` is the speed of sound, `D` is Dmass, `M` is molar_mass -- and they
+    # are refused for free, because the exposed set holds canonical names only.
     for alias in ("A", "C", "D", "G", "M", "O", "S", "U", "DMOLAR"):
-        with pytest.raises(ValueError, match="alias"):
+        with pytest.raises(ValueError, match="not a state variable the DSL exposes"):
             Expression(block(alias, state=[alias]))
     # ...so each stays free for the author, which is the point.
     assert Expression(block("A*M", constants={"A": 3.0, "M": 4.0}, state=[])).evaluate(state()) == 12.0
+    # The refusal names the whole set, so it answers "then what do I write?" --
+    # including for this DSL's own retired spellings.
+    for old, now in (("rhomolar", "Dmolar"), ("rhomass", "Dmass"), ("p", "P")):
+        with pytest.raises(ValueError, match=now):
+            Expression(block(old, state=[old]))
 
 
 def test_tau_and_delta_are_the_reducing_state_by_another_name():

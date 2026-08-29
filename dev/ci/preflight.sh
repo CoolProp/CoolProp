@@ -292,7 +292,7 @@ else
     # "[Helmholtz],[REFPROP]" -- which contains ZERO [expression] test cases.  Before
     # this, a branch touching the DSL, its tests and shipped fluid data reported a
     # green preflight having run none of them.
-    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/expression/|include/CoolProp/expression/|src/Tests/CoolProp-Tests-Expression\.cpp|dev/fluids/)"; then
+    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/expression/|include/CoolProp/expression/|src/Backends/Helmholtz/|src/Tests/CoolProp-Tests-Expression\.cpp|dev/fluids/)"; then
         case "$TAG_FILTER" in
             "~[slow]") : ;;  # already runs everything except [slow]
             *) TAG_FILTER="${TAG_FILTER},[expression]" ;;

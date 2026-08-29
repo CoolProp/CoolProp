@@ -1549,7 +1549,8 @@ class Expression:
     def __init__(self, json_block: str) -> None: ...
 
     def required_inputs(self) -> list[str]:
-        """The declared state variables the formula actually reads, in declaration order."""
+        """The declared state variables the formula actually reads, in first-reference order
+        (the order the formula mentions them, NOT the order they were declared)."""
 
     def evaluate(self, AS: AbstractState) -> float:
         """

@@ -132,16 +132,16 @@ TEST_CASE("DSL pressure and temperature share one input bucket", "[expression]")
 
 TEST_CASE("declared state variables resolve through CoolProp's own vocabulary", "[expression]") {
     using namespace CoolProp::expression;
-    // The DSL keeps no list of thermodynamic names.  A declared name is resolved by
-    // is_valid_parameter(), so anything keyed_output() can produce is reachable
-    // without touching this library -- which is the whole point: krypton's
-    // Smolar_residual/Bvirial/dBvirial_dT each cost a C++ row under the old design.
+    // Names are CoolProp's own, resolved to CoolProp's own keys.  The set is opt-in
+    // and deliberately small (see "the DSL exposes an explicit set" below); a state
+    // function that is legitimate but unused -- Hmolar, say -- is simply not exposed
+    // until a correlation needs it, which is one line rather than a design decision.
     CHECK(compile("T", {}, {}, {"T"}).requiredInputs()[0] == CoolProp::iT);
     CHECK(compile("Dmolar", {}, {}, {"Dmolar"}).requiredInputs()[0] == CoolProp::iDmolar);
     CHECK(compile("Dmass", {}, {}, {"Dmass"}).requiredInputs()[0] == CoolProp::iDmass);
     CHECK(compile("molar_mass", {}, {}, {"molar_mass"}).requiredInputs()[0] == CoolProp::imolar_mass);
     CHECK(compile("P", {}, {}, {"P"}).requiredInputs()[0] == CoolProp::iP);
-    CHECK(compile("Hmolar", {}, {}, {"Hmolar"}).requiredInputs()[0] == CoolProp::iHmolar);
+    CHECK_THROWS_AS(compile("Hmolar", {}, {}, {"Hmolar"}), CoolProp::ValueError);
     CHECK(inputName(CoolProp::iDmolar) == "Dmolar");
 
     // The spellings are CoolProp's, with nothing invented.  The DSL used to accept
@@ -154,124 +154,73 @@ TEST_CASE("declared state variables resolve through CoolProp's own vocabulary", 
     }
 }
 
-TEST_CASE("two classes of parameter stay refused even when declared", "[expression]") {
+TEST_CASE("the DSL exposes an explicit set of state variables", "[expression]") {
     using namespace CoolProp::expression;
-    // Opt-in expresses the author's intent, but these are the cases where the intent
-    // cannot be honoured, so declaring them is an error rather than a licence.
-    //
-    // Transport outputs: keyed_output() re-enters the correlation being defined.
-    for (const char* nm : {"V", "viscosity", "L", "conductivity", "Prandtl", "surface_tension"}) {
-        CAPTURE(nm);
-        CHECK_THROWS_AS(compile(nm, {}, {}, {nm}), CoolProp::ValueError);
-    }
-    // Critical point and reducing state: calc_T_critical()/calc_rhomolar_critical()
-    // return the NUMERICAL critical point under ENABLE_SUPERANCILLARIES, so a
-    // correlation reducing on them changes answer with configuration.  Xenon missed
-    // its reference values by 7e-5 exactly this way.
-    for (const char* nm : {"T_critical", "P_critical", "rhomolar_critical", "rhomass_critical", "T_reducing", "rhomolar_reducing"}) {
-        CAPTURE(nm);
-        CHECK_THROWS_AS(compile(nm, {}, {}, {nm}), CoolProp::ValueError);
-        // ...but each stays usable as an ordinary frozen constant, which is where a
-        // correlation's reducing parameters belong: at the precision the paper quotes.
-        CHECK(compile(nm, {{nm, 7.0}}, {}).evaluate({}) == Catch::Approx(7.0));
-    }
-    // The error names the reason, not just the refusal.
+    // Opt-in, and small on purpose.  Each name must be one of CoolProp's own AND its
+    // canonical spelling -- an alias here would silently re-admit `A` for the speed of
+    // sound and the single-letter coefficient names papers use.
     CoolProp::parameters key;
     std::string reason;
-    REQUIRE_FALSE(resolveStateVariable("V", key, reason));
-    CHECK(reason.find("re-enters") != std::string::npos);
-    REQUIRE_FALSE(resolveStateVariable("T_critical", key, reason));
-    CHECK(reason.find("ENABLE_SUPERANCILLARIES") != std::string::npos);
-    REQUIRE_FALSE(resolveStateVariable("not_a_parameter", key, reason));
-    CHECK(reason.find("not a CoolProp parameter") != std::string::npos);
-    // A denied quantity gives its real reason even when spelled as an alias -- being
-    // told to use `viscosity` and then refused `viscosity` would be a runaround.
-    REQUIRE_FALSE(resolveStateVariable("V", key, reason));
-    CHECK(reason.find("re-enters") != std::string::npos);
-
-    // Tau and Delta ARE the reducing state (keyed_output computes them as
-    // _reducing.T/_T and _rhomolar/_reducing.rhomolar), so refusing T_reducing while
-    // admitting them would be a guard with a door next to it.
-    for (const char* nm : {"Tau", "Delta"}) {
+    const std::vector<std::string> expected = {"T", "P", "Dmolar", "Dmass", "molar_mass", "Smolar_residual", "Bvirial", "dBvirial_dT"};
+    for (const auto& nm : expected) {
         CAPTURE(nm);
-        REQUIRE_FALSE(resolveStateVariable(nm, key, reason));
-        CHECK(reason.find("reducing state") != std::string::npos);
-        CHECK_THROWS_AS(compile(nm, {}, {}, {nm}), CoolProp::ValueError);
-    }
-    // Phase is an enum ordinal widened to double; Q is -1 outside the dome.  Neither
-    // is a continuous state function, and both would compile into plausible arithmetic.
-    for (const char* nm : {"Phase", "Q", "Qmass"}) {
-        CAPTURE(nm);
-        CHECK_THROWS_AS(compile(nm, {}, {}, {nm}), CoolProp::ValueError);
-    }
-    // Fluid metadata is not a function of the state, and several throw from inside
-    // the evaluation -- where fluid-file data has no business failing.
-    for (const char* nm : {"T_freeze", "GWP100", "ODP", "fraction_min"}) {
-        CAPTURE(nm);
-        CHECK_THROWS_AS(compile(nm, {}, {}, {nm}), CoolProp::ValueError);
+        REQUIRE(resolveStateVariable(nm, key, reason));
+        CHECK(inputName(key) == nm);                                    // canonical, not an alias
+        CHECK(compile(nm, {}, {}, {nm}).requiredInputs().size() == 1);  // and actually declarable
     }
 }
 
-TEST_CASE("a block in the previous format fails saying what changed", "[expression]") {
+TEST_CASE("anything outside that set is refused, and the message names the set", "[expression]") {
     using namespace CoolProp::expression;
-    // Fluid JSON is data third parties ship, and this branch changed its contract:
-    // blocks must declare `state_variables`, and the DSL's own spellings `rhomolar`,
-    // `rhomass` and `p` are gone in favour of CoolProp's `Dmolar`, `Dmass`, `P`.
-    // There is no version gate and no shim -- so the load-time failure has to name
-    // the migration, or an author sees only "unknown variable 'rhomolar'".
-    const std::pair<const char*, const char*> retired[] = {{"rhomolar", "Dmolar"}, {"rhomass", "Dmass"}, {"p", "P"}};
-    for (const auto& r : retired) {
-        CAPTURE(r.first);
-        // ...used in a formula, the way an old block has it
-        try {
-            compile(r.first, {}, {});
-            FAIL("expected a throw");
-        } catch (const CoolProp::ValueError& e) {
-            const std::string msg = e.what();
-            CHECK(msg.find(r.second) != std::string::npos);           // names the replacement
-            CHECK(msg.find("state_variables") != std::string::npos);  // and the new requirement
-        }
-        // ...and declared, the way a half-finished migration has it
-        CoolProp::parameters key;
-        std::string reason;
+    // A denylist was tried first and fails OPEN: 59 of CoolProp's 92 canonical names
+    // slipped past one that had already grown to four categories.  Each name below is
+    // a distinct way that went wrong, and all are refused by construction now.
+    const std::pair<const char*, const char*> refused[] = {
+      {"viscosity", "a transport output; keyed_output() re-enters the correlation being defined"},
+      {"V", "the same, spelled as an alias"},
+      {"T_critical", "configuration-dependent under ENABLE_SUPERANCILLARIES"},
+      {"T_reducing", "the EOS reducing state is not the correlation's own fitted parameter"},
+      {"Tau", "the reducing state wearing another name: _reducing.T/_T"},
+      {"Delta", "likewise: _rhomolar/_reducing.rhomolar"},
+      {"alphar", "an EOS internal in REDUCED variables, so it carries the reducing state too"},
+      {"dalphar_ddelta_consttau", "the same, and a denylist missed it"},
+      {"Phase", "an enum ordinal widened to double"},
+      {"Q", "-1 outside the dome: a sentinel entering arithmetic as data"},
+      {"HFORMATION", "fluid metadata; evaluates to a number that means nothing here"},
+      {"P_min", "a range limit, not state -- and it reads back p_triple()"},
+      {"T_triple", "likewise a fluid constant"},
+      {"gas_constant", "a fluid constant; freeze it if the correlation needs it"},
+      {"A", "CoolProp's alias for speed_of_sound -- and a coefficient name in every paper"},
+      {"M", "CoolProp's alias for molar_mass"},
+      {"DMOLAR", "an upper-cased spelling; one name per quantity"},
+    };
+    CoolProp::parameters key;
+    std::string reason;
+    for (const auto& r : refused) {
+        CAPTURE(r.first, r.second);
         REQUIRE_FALSE(resolveStateVariable(r.first, key, reason));
-        CHECK(reason.find(r.second) != std::string::npos);
+        // The message answers "then what do I write?" by naming the whole set.
+        CHECK(reason.find("Dmolar") != std::string::npos);
+        CHECK_THROWS_AS(compile(r.first, {}, {}, {r.first}), CoolProp::ValueError);
+        // ...and every one of them stays usable as the author's own frozen constant,
+        // which is where a correlation's reducing parameters belong anyway.
+        CHECK(compile(r.first, {{r.first, 7.0}}, {}).evaluate({}) == Catch::Approx(7.0));
     }
-    // A retired name is still just an identifier: as the author's own constant it is
-    // fine, which is exactly why it cannot be silently reinterpreted as state.
-    CHECK(compile("p*2", {{"p", 21.0}}, {}).evaluate({}) == Catch::Approx(42.0));
-}
-
-TEST_CASE("only CoolProp's canonical spelling is accepted, never an alias", "[expression]") {
-    using namespace CoolProp::expression;
-    // is_valid_parameter() also accepts back-compat aliases and an upper-cased
-    // spelling of every name.  Those are harmless in PropsSI and a trap here, because
-    // a DSL formula is FULL of single-letter coefficient names: an author who forgot
-    // to declare a paper coefficient `A` in `constants` is told to add it to
-    // state_variables, and doing so would silently bind the speed of sound.
-    CoolProp::parameters key;
-    std::string reason;
-    for (const char* alias : {"A", "C", "D", "G", "M", "O", "S", "U", "DMOLAR", "HMOLAR"}) {
-        CAPTURE(alias);
-        REQUIRE_FALSE(resolveStateVariable(alias, key, reason));
-        CHECK(reason.find("alias") != std::string::npos);
-        CHECK_THROWS_AS(compile(alias, {}, {}, {alias}), CoolProp::ValueError);
+    // The DSL's own retired spellings land here too, and the same message answers
+    // them: `rhomolar` is met with `Dmolar` in the available set.
+    for (const char* old : {"rhomolar", "rhomass", "p"}) {
+        CAPTURE(old);
+        REQUIRE_FALSE(resolveStateVariable(old, key, reason));
+        CHECK_THROWS_AS(compile(old, {}, {}, {old}), CoolProp::ValueError);
     }
-    // ...so each stays free for the author, which is the point.
-    CHECK(compile("A*M", {{"A", 3.0}, {"M", 4.0}}, {}).evaluate({}) == Catch::Approx(12.0));
-    // Every spelling this branch's fluid data actually ships is canonical.
-    for (const char* nm : {"T", "P", "Dmolar", "Dmass", "molar_mass", "Smolar_residual", "Bvirial", "dBvirial_dT"}) {
-        CAPTURE(nm);
-        CHECK(resolveStateVariable(nm, key, reason));
-        CHECK(inputName(key) == nm);
-    }
+    // `p` in particular stays the author's, which is the collision this all fixed.
+    CHECK(compile("sum(i: n[i]*p[i])", {}, {{"n", {2.0, 3.0}}, {"p", {5.0, 7.0}}}).evaluate({}) == Catch::Approx(2.0 * 5.0 + 3.0 * 7.0));
 }
 
 TEST_CASE("two names for one quantity are rejected rather than fetched twice", "[expression]") {
     using namespace CoolProp::expression;
-    // Aliases are already refused, so this needs the canonical/alias pair to both be
-    // canonical -- but pin the rule directly: dedupe is on the resolved key, because
-    // two slots for one quantity would cost two keyed_output() calls per evaluation.
+    // Dedupe is on the resolved key: two slots for one quantity would cost two
+    // keyed_output() calls per evaluation.
     CHECK_THROWS_AS(compile("T + T", {}, {}, {"T", "T"}), CoolProp::ValueError);
 }
 

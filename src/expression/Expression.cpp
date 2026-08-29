@@ -502,103 +502,42 @@ std::vector<Token> lex(const std::string& s) {
 // Name-resolution helpers
 // ---------------------------------------------------------------------------
 
-// Thermodynamic names are NOT resolved from a list kept here.  They are resolved by
-// CoolProp::is_valid_parameter(), so the DSL's vocabulary is exactly CoolProp's and a
-// new quantity costs no code at all -- krypton's entropy-scaling correlation needed
-// Smolar_residual, Bvirial and dBvirial_dT, and under the old curated table each was
-// a row plus a recompile for something keyed_output() already knew how to produce.
+// What the DSL exposes as state.  OPT-IN: this is the complete set a formula may
+// declare, and anything absent is refused.
 //
-// What replaces the table is not "resolve everything", but two narrower rules.
+// The alternative -- resolve anything is_valid_parameter() knows, minus a denylist of
+// the harmful ones -- was tried and is structurally unsound, because it fails OPEN.
+// 59 of CoolProp's 92 canonical parameter names slipped past a denylist that had
+// already grown to four categories, among them fluid metadata that evaluates to
+// nonsense (HFORMATION), fluid limits that are not state at all (P_min, T_max,
+// p_triple), and -- the very defect the denylist existed to prevent -- the EOS
+// internals alphar / alpha0 / dalphar_ddelta_consttau, which are functions of the
+// REDUCED variables and therefore carry the reducing state exactly as Tau and Delta
+// do.  A denylist would need patching for every parameter CoolProp ever adds.
 //
-// FIRST, resolution is opt-in per formula.  A block declares `state_variables`, and
-// only those names are state inside it.  The old design had one namespace shared by
-// state and by the author's own constants and arrays, so every name the DSL knew was
-// reserved everywhere -- and the DSL spelled pressure with an invented lowercase `p`,
-// which is what viscosity papers universally call their exponent array.  Propylene
-// glycol's dilute term had to rename p_i to np_i for a collision with a quantity it
-// never referenced.  Under opt-in that block declares ["T"] and keeps `p`.
+// So the list is small and grows on demand.  Adding a name is one line, and should
+// require the deliberate judgement that the quantity is
+//   * a continuous function of the CURRENT state -- not fluid metadata, not a range
+//     limit, not a phase index or a sentinel-valued quality;
+//   * free of configuration dependence -- calc_T_critical()/calc_rhomolar_critical()
+//     return the NUMERICAL critical point under ENABLE_SUPERANCILLARIES, and the EOS
+//     reducing state is not a correlation's own fitted reducing parameter.  Both
+//     belong in `constants`, frozen at the value the paper's authors regressed
+//     against; and
+//   * not a transport output, whose keyed_output() re-enters the correlation being
+//     defined.
 //
-// SECOND, two classes stay refused even when declared, because opt-in expresses the
-// author's intent and these are cases where the intent cannot be honoured:
-// Spellings the DSL used to accept, mapped to what replaced them.  This exists ONLY
-// to produce a good error: fluid JSON is data that third parties ship, and a block
-// written against the previous format must fail at load time saying WHAT changed,
-// not "unknown variable 'rhomolar'".  These names were the DSL's own inventions --
-// CoolProp always called them Dmolar/Dmass/P -- and the invented lowercase `p` is
-// what once collided with the exponent array every viscosity paper writes as p_i.
-static const char* retiredSpelling(const std::string& nm) {
-    if (nm == "rhomolar") return "Dmolar";
-    if (nm == "rhomass") return "Dmass";
-    if (nm == "p") return "P";
-    return nullptr;
-}
-
-static bool deniedStateVariable(parameters key, std::string& why) {
-    switch (key) {
-        // keyed_output() for a transport output re-enters the correlation being
-        // defined.  A viscosity formula that reads `V` is asking for itself.
-        case iviscosity:
-        case iconductivity:
-        case iPrandtl:
-        case isurface_tension:
-            why = "it is a transport output, so reading it re-enters the correlation being defined";
-            return true;
-        // calc_T_critical()/calc_rhomolar_critical() return the NUMERICAL critical
-        // point when ENABLE_SUPERANCILLARIES is set (the default), not STATES.critical.
-        // A correlation reducing on them changes answer with configuration, which is
-        // how xenon once missed its reference values by 7e-5.  The fix is to freeze
-        // the number the paper's authors actually regressed against, as a constant.
-        case iT_critical:
-        case iP_critical:
-        case irhomolar_critical:
-        case irhomass_critical:
-            why = "the critical point is configuration-dependent (ENABLE_SUPERANCILLARIES); "
-                  "freeze the paper's value as a constant instead";
-            return true;
-        // The EOS reducing state is refused for a DIFFERENT reason, and saying so
-        // matters: superancillaries do not touch get_reducing_state().  A correlation
-        // that writes `T_reducing` means its OWN fitted reducing parameter, which is
-        // in general not the EOS's and moves whenever the EOS section is revised.
-        //
-        // Tau and Delta are the same quantities wearing a different name --
-        // keyed_output() computes them as _reducing.T/_T and _rhomolar/_reducing.rhomolar
-        // -- so refusing the reducing state while admitting these would be a guard
-        // with a door next to it.  They are also composition-dependent for mixtures.
-        case iT_reducing:
-        case iP_reducing:
-        case irhomolar_reducing:
-        case irhomass_reducing:
-        case iTau:
-        case iDelta:
-            why = "the EOS reducing state is not the correlation's own; freeze the paper's "
-                  "reducing parameters as constants instead (Tau and Delta are that state too)";
-            return true;
-        // Not real numbers.  Phase is an enum ordinal widened to double (and depends
-        // on any imposed phase); Q is -1 outside the dome, a sentinel that would enter
-        // arithmetic as data.  Both would compile into a plausible-looking formula.
-        case iPhase:
-        case iQ:
-        case iQmass:
-            why = "it is a phase index or a sentinel-valued quality, not a continuous state function";
-            return true;
-        // Fluid metadata and incompressible-only accessors: not functions of the
-        // current state at all.  Several are unimplemented for HEOS and throw from
-        // inside the evaluation, where fluid-file data has no business failing.
-        case ifraction_min:
-        case ifraction_max:
-        case iT_freeze:
-        case iGWP20:
-        case iGWP100:
-        case iGWP500:
-        case iFH:
-        case iHH:
-        case iPH:
-        case iODP:
-            why = "it is fluid metadata, not a function of the current state";
-            return true;
-        default:
-            return false;
-    }
+// This is NOT the input table that was removed.  That table mapped INVENTED spellings
+// (`rhomolar`, `rhomass`, `p`) and reserved every one of them in every formula.  These
+// are CoolProp's own canonical names, and a block reserves only what it declares -- so
+// `p` remains the author's wherever pressure is not asked for, which is the collision
+// the redesign existed to fix.
+static const std::vector<std::string>& allowedStateVariables() {
+    static const std::vector<std::string> names = {"T", "P", "Dmolar", "Dmass", "molar_mass",
+                                                   // Entropy scaling and the second virial: what an entropy-scaling correlation
+                                                   // reduces on, rather than the dilute/residual decomposition.
+                                                   "Smolar_residual", "Bvirial", "dBvirial_dT"};
+    return names;
 }
 
 static bool funcForName(const std::string& nm, Func& out, int& arity) {
@@ -717,21 +656,20 @@ class Binder
             d.constantInits.emplace_back(slot, itC->second);
             return slot;
         }
-        // A name CoolProp knows, but that this block did not declare, is the most
-        // likely authoring mistake -- say so instead of "unknown variable".
-        if (const char* now = retiredSpelling(nm)) {
-            throw ValueError(format("unknown variable '%s' -- it was this DSL's own spelling for a thermodynamic "
-                                    "quantity before blocks declared their inputs; CoolProp calls it '%s', and it must "
-                                    "be listed in this block's \"state_variables\"",
-                                    nm.c_str(), now));
-        }
+        // Three different mistakes, three different messages.  An exposed name that
+        // this block simply did not declare is the common one; a CoolProp quantity
+        // the DSL does not expose gets the available set (which is also what answers
+        // a formula written against the DSL's own retired spellings); anything else
+        // is an ordinary typo.
         parameters probe;
-        std::string ignored;
-        if (resolveStateVariable(nm, probe, ignored)) {
-            throw ValueError(format("unknown variable '%s' -- it is a thermodynamic quantity; add it to this block's "
-                                    "\"state_variables\" to read it from the state",
+        std::string reason;
+        if (resolveStateVariable(nm, probe, reason)) {
+            throw ValueError(format("unknown variable '%s' -- it is a state variable this DSL exposes; add it to this "
+                                    "block's \"state_variables\" to read it from the state",
                                     nm.c_str()));
         }
+        parameters known;
+        if (is_valid_parameter(nm, known)) throw ValueError(format("unknown variable '%s' -- %s", nm.c_str(), reason.c_str()));
         throw ValueError(format("unknown variable '%s'", nm.c_str()));
     }
 
@@ -826,35 +764,23 @@ class Binder
 bool resolveStateVariable(const std::string& name, parameters& key, std::string& reason) {
     key = iundefined_parameter;  // both out-params written on every path
     reason.clear();
-    parameters k;
-    if (!is_valid_parameter(name, k)) {
-        if (const char* now = detail::retiredSpelling(name)) {
-            reason = format("'%s' was this DSL's own spelling; CoolProp calls it '%s'", name.c_str(), now);
-        } else {
-            reason = format("'%s' is not a CoolProp parameter name", name.c_str());
-        }
+    const std::vector<std::string>& ok = detail::allowedStateVariables();
+    if (std::find(ok.begin(), ok.end(), name) == ok.end()) {
+        // Naming the whole set is what makes this diagnostic self-servicing: it is
+        // short, and it answers "then what do I write?" -- including for the DSL's
+        // own retired spellings, where `rhomolar` is met with `Dmolar` in the list.
+        std::string avail;
+        for (const auto& n : ok)
+            avail += (avail.empty() ? "" : ", ") + n;
+        reason = format("'%s' is not a state variable the DSL exposes; available: %s", name.c_str(), avail.c_str());
         return false;
     }
-    std::string why;
-    if (detail::deniedStateVariable(k, why)) {
-        reason = format("'%s' may not be used as a state variable: %s", name.c_str(), why.c_str());
+    // Every allowed name is one of CoolProp's own, so this cannot fail; a test pins
+    // that, and pins that each is the CANONICAL spelling rather than an alias.
+    if (!is_valid_parameter(name, key)) {
+        reason = format("'%s' is not a CoolProp parameter name", name.c_str());
         return false;
     }
-
-    // is_valid_parameter() also accepts CoolProp's back-compat aliases and an
-    // upper-cased spelling of every name: `A` is the speed of sound, `D` is Dmass,
-    // `M` is molar_mass, `TAU` is Tau.  Those are a trap here in a way they are not
-    // in PropsSI, because a DSL formula is FULL OF single-letter coefficient names.
-    // An author who forgets to declare a paper coefficient `A` in `constants` gets
-    // told to add it to state_variables, and doing so silently binds the speed of
-    // sound.  Only the canonical spelling is accepted, so the DSL's vocabulary is
-    // CoolProp's with exactly one name per quantity -- and still no list kept here.
-    const std::string canonical = get_parameter_information(static_cast<int>(k), "short");
-    if (canonical != name) {
-        reason = format("'%s' is an alias; use CoolProp's canonical name '%s'", name.c_str(), canonical.c_str());
-        return false;
-    }
-    key = k;
     return true;
 }
 

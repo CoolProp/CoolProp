@@ -85,7 +85,7 @@ The completeness claim therefore covers the eight golden-tested Tier-A forms plu
 | Evaluator | Tree-walking AST, compiled once per fluid at load, evaluated many |
 | Sum syntax | `sum(i: <body>)` explicit index; arrays subscripted `arr[i]` |
 | Variables | Raw state + JSON-declared constants/arrays + `let` bindings; **all quantities base SI, always** |
-| Thermodynamic inputs | ONE bucket, keyed by the existing `CoolProp::parameters` enum; the host fills every requested key with `AbstractState::keyed_output()`. Resolved per-block from a declared `state_variables` list via `is_valid_parameter()` — CoolProp's own names, no list kept here — minus a policy denylist (transport outputs; critical/reducing state) |
+| Thermodynamic inputs | ONE bucket, keyed by the existing `CoolProp::parameters` enum; the host fills every requested key with `AbstractState::keyed_output()`. Resolved per-block from a declared `state_variables` list, against an explicit opt-in set of CoolProp's own canonical names (8 today, one line to extend). A denylist over `is_valid_parameter()` was implemented first and rejected: it fails open, leaving 59 of 92 names declarable |
 
 ### Why tree-walking AST, not bytecode VM
 
@@ -167,11 +167,11 @@ names lives in this library at all. A block declares what it reads:
 "state_variables": ["T", "Dmolar"]
 ```
 
-Each name is resolved by `CoolProp::is_valid_parameter()`, so **the DSL's
-vocabulary is CoolProp's vocabulary** — every quantity `keyed_output()` can produce
-is reachable, in CoolProp's own canonical spelling (`P`, `Dmolar`, `Dmass`,
-`Smolar_residual`, `Bvirial`, ...). Adding a thermodynamic quantity to the language
-costs nothing: no table row, no recompile.
+Each name is checked against an explicit opt-in set and then resolved to its
+`CoolProp::parameters` key by `is_valid_parameter()`, so the spellings are CoolProp's
+own canonical ones (`P`, `Dmolar`, `Dmass`, `Smolar_residual`, `Bvirial`, ...) with
+nothing invented. The set is small and deliberate — see "What may be declared" below
+for what is in it, and why it is an allowlist rather than a denylist.
 
 Whether a key is free or costs an EOS call is not the DSL's business: the compiled
 `Program` reports `requiredInputs()` as a `std::vector<CoolProp::parameters>` and
@@ -231,34 +231,53 @@ guard is explicit now rather than emergent.
 **Compatibility.** This changed the fluid-JSON contract with no version gate and no
 shim: a block written against the previous format does not compile. That is
 deliberate — the retired spellings were the defect, so silently accepting them is the
-one outcome worth avoiding — but it puts the whole burden on the failure being
-legible. The three retired names are therefore kept in a table that produces *only
-error text*:
-
-```
-unknown variable 'rhomolar' -- it was this DSL's own spelling for a thermodynamic
-quantity before blocks declared their inputs; CoolProp calls it 'Dmolar', and it
-must be listed in this block's "state_variables"
-```
+one outcome worth avoiding. No migration table is carried for them either; the
+allowlist's own refusal message names `Dmolar` where an old block wrote `rhomolar`,
+which is the same answer without a second list to maintain.
 
 A version field was considered and rejected. It would only help if v1 were still
 supported, which is exactly what we do not want; an *optional* version is
 indistinguishable from a new block that omitted it; and a version on this block type
-alone would be the only such field in CoolProp's fluid JSON. The failure above works
-for every old block, including the ones that never carried a version. If schema
-versioning is wanted later it belongs on the fluid file, not on one block type.
+alone would be the only such field in CoolProp's fluid JSON. If schema versioning is
+wanted later it belongs on the fluid file, not on one block type.
 
-**What is still refused, and why opt-in is not enough.** Two classes are rejected at
-compile time even when explicitly declared, because these are the cases where the
-author's intent cannot be honoured:
+**What may be declared: an explicit set.** The DSL exposes
 
-| Refused | Reason |
+    T   P   Dmolar   Dmass   molar_mass   Smolar_residual   Bvirial   dBvirial_dT
+
+and refuses everything else. The set grows on demand — one line — and each addition
+should require the deliberate judgement that the quantity is a continuous function of
+the *current* state (not fluid metadata, not a range limit, not a phase index or a
+sentinel-valued quality), is free of configuration dependence, and is not a transport
+output whose `keyed_output()` re-enters the correlation being defined.
+
+*Why an allowlist and not a denylist.* Resolving anything `is_valid_parameter()`
+knows, minus the harmful ones, was implemented first and is structurally unsound
+because it **fails open**. The denylist reached four categories and still left **59 of
+CoolProp's 92 canonical names declarable**, including:
+
+| slipped through | why it matters |
 |---|---|
-| `V`, `viscosity`, `L`, `conductivity`, `Prandtl`, `surface_tension` | `keyed_output()` re-enters the correlation being defined — unbounded recursion, at eval time, in fluid-file data |
-| `T_critical`, `P_critical`, `rhomolar_critical`, `rhomass_critical` | `calc_T_critical()`/`calc_rhomolar_critical()` return the *numerical* critical point under `ENABLE_SUPERANCILLARIES` (the default), so a correlation reducing on them changes answer with configuration. Xenon missed its reference values by 7e-5 exactly this way. Freeze the paper's own value as a constant instead. |
-| the `*_reducing` family, **and `Tau`/`Delta`** | A different reason, worth stating separately: superancillaries do not touch `get_reducing_state()`. A correlation writing `T_reducing` means its *own* fitted reducing parameter, which is generally not the EOS's and moves when the EOS section is revised. `Tau` and `Delta` are that same state wearing another name — `keyed_output()` computes them as `_reducing.T/_T` and `_rhomolar/_reducing.rhomolar` — so refusing one while admitting the other would be a guard with a door next to it. |
-| `Phase`, `Q`, `Qmass` | Not continuous state functions: `Phase` is an enum ordinal widened to `double` (and depends on any imposed phase), `Q` is `-1` outside the dome. Both would compile into plausible-looking arithmetic. |
-| `T_freeze`, `fraction_min`, `fraction_max`, `GWP20/100/500`, `ODP`, `FH`, `HH`, `PH` | Fluid metadata, not functions of the current state; several are unimplemented for HEOS and throw from inside the evaluation, where fluid-file data has no business failing. |
+| `HFORMATION` | fluid metadata; evaluates to a number that means nothing here |
+| `P_min`, `T_max`, `T_triple`, `p_triple` | range limits and fluid constants, not state — and `P_min` reads back `p_triple()`, so the name silently means something else |
+| `alphar`, `alpha0`, `dalphar_ddelta_consttau` | EOS internals in **reduced** variables, so they carry the reducing state — precisely the defect `Tau` and `Delta` were denied for |
+| `gas_constant`, `acentric`, `dipole_moment` | fluid constants; freeze them in `constants` if a correlation needs them |
+
+Two gaps were found by review before the third category above was noticed at all. A
+denylist would need patching for every parameter CoolProp ever adds; an allowlist
+refuses them until someone decides otherwise.
+
+This is **not** the input table that was removed. That table mapped *invented*
+spellings (`rhomolar`, `rhomass`, `p`) and reserved every one of them in every
+formula. These are CoolProp's own canonical names, and a block reserves only what it
+declares — so `p` remains the author's wherever pressure is not asked for, which is
+the collision the redesign existed to fix. What the allowlist costs is the claim that
+a new quantity is free: krypton's three cost three lines. What it buys is that the
+next quantity CoolProp adds is refused rather than silently admitted.
+
+The refusal names the whole available set, which is short enough to print and answers
+"then what do I write?" — including for the DSL's own retired spellings, where
+`rhomolar` is met with `Dmolar` in the list.
 
 Three further errors are compile-time, not runtime:
 
@@ -304,7 +323,7 @@ the `RAINWATER_FRIEND` one, whose hardcoded arm returns a second viscosity viria
 The consequence is worth stating plainly: a formula cannot see any other stage's
 output. `eta_dilute` is a within-correlation intermediate, not a thermodynamic
 input, and exposing it would mean a stage reading another stage's result — the
-same self-reference the transport-output denylist exists to prevent. A correlation whose
+same self-reference that keeps transport outputs off the allowlist. A correlation whose
 initial-density term is defined as `eta_1 = eta_0 * B_eta` therefore **recomputes
 `eta_0` inside the initial-density block**. That duplicates coefficient data in the
 fluid file, which is the price of not adding a code path; the two copies sit side
