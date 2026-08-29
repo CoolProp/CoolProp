@@ -199,14 +199,16 @@ class IF97Backend : public AbstractState
             case PQ_INPUTS:
                 _p = value1;
                 _Q = value2;
-                if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+                if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q)))
+                    throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _T = IF97::Tsat97(_p);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
                 break;
             case QT_INPUTS:
                 _Q = value1;
                 _T = value2;
-                if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+                if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q)))
+                    throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _p = IF97::psat97(_T);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
                 break;

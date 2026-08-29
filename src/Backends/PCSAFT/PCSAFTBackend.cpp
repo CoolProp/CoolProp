@@ -1748,11 +1748,12 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
         // Pure / pseudo-pure falls through to mass_to_molar_inputs below, which
         // rewrites the pair to its molar sibling without looking at the quality.
         // Unlike the cubic backend, PCSAFT is not fully open here: the QT_INPUTS
-        // and PQ_INPUTS cases downstream do reject a finite out-of-range quality
-        // with OutOfRangeError.  They do NOT reject NaN -- their guard is
-        // (v < 0) || (v > 1), which is false for NaN -- so a NaN quality reached
-        // the flash and surfaced as "solution could not be found".  Validating
-        // here closes that and makes the diagnostic match the other backends.
+        // and PQ_INPUTS cases downstream reject an out-of-range quality with
+        // OutOfRangeError.  Until those guards were rewritten to is_in_closed_range
+        // they were (v < 0) || (v > 1), which is false for NaN, so a NaN quality
+        // reached the flash and surfaced as "solution could not be found".  Both
+        // layers now refuse it; validating here keeps the diagnostic a Qmass one
+        // and matches the other backends.
         check_Qmass_pair_range(input_pair, value1, value2);
     }
 
@@ -1815,7 +1816,8 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             SatL->_T = value2;
             SatV->_T = value2;
             _phase = iphase_twophase;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q)))
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             if (water_present) {
                 components[water_idx].calc_water_sigma(_T);
                 SatL->components[water_idx].calc_water_sigma(_T);
@@ -1835,7 +1837,7 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             SatL->_Q = value2;
             SatV->_Q = value2;
             _phase = iphase_twophase;
-            if ((_Q < 0) || (_Q > 1)) {
+            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))) {
                 throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             }
             flash_PQ(*this);

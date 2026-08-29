@@ -5689,6 +5689,117 @@ TEST_CASE("Qmass range check: cubic and PCSAFT pure fluids reject out-of-range q
     }
 }
 
+TEST_CASE("Non-finite vapor quality is rejected rather than flashed", "[quality][nonfinite]") {
+    // Every quality guard in the library was written (Q < 0) || (Q > 1).  That is
+    // false for NaN, so a NaN quality walked straight past all of them into the
+    // flash routines.  Infinities were caught only incidentally, because inf > 1.
+    //
+    // The consequences ranged from a misleading diagnostic to a hard crash:
+    // HEOS::Propane with HmolarQ_INPUTS at hmolar = 20000 and Q = NaN SEGFAULTED
+    // inside HQ_flash (exit 139).  The value of hmolar mattered -- at 10000 the
+    // same call merely threw "p is not a valid number" -- which is why this test
+    // pins the enthalpy that actually crashed.
+    //
+    // Mixtures were already covered for the Qmass pairs by check_Qmass_pair_range
+    // (#3336); this is the molar side and the pure-fluid side.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const double qinf = std::numeric_limits<double>::infinity();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+
+    SECTION("HEOS pure fluid, update()") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        for (double q : {qnan, qinf, -qinf}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 5e5, q), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::QSmolar_INPUTS, q, 100.0), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::DmolarQ_INPUTS, 1e3, q), between_0_and_1);
+            // hmolar = 20000 is the value that crashed; 10000 did not.
+            CHECK_THROWS_WITH(AS->update(CoolProp::HmolarQ_INPUTS, 2e4, q), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::HmolarQ_INPUTS, 1e4, q), between_0_and_1);
+        }
+    }
+
+    SECTION("HEOS pure fluid, update_with_guesses()") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        CoolProp::GuessesStructure guesses;
+        guesses.T = 300.0;
+        guesses.p = 5e5;
+        for (double q : {qnan, qinf}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, 1e3, q, guesses), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, 2e4, q, guesses), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::QSmolar_INPUTS, q, 100.0, guesses), between_0_and_1);
+        }
+    }
+
+    SECTION("IF97 and PCSAFT carry the same guard") {
+        auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+        auto PC = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "METHANE"));
+        for (double q : {qnan, qinf}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(IF->update(CoolProp::QT_INPUTS, q, 400.0), between_0_and_1);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PQ_INPUTS, 5e5, q), between_0_and_1);
+            CHECK_THROWS_WITH(PC->update(CoolProp::QT_INPUTS, q, 150.0), between_0_and_1);
+            CHECK_THROWS_WITH(PC->update(CoolProp::PQ_INPUTS, 1e6, q), between_0_and_1);
+        }
+    }
+
+    SECTION("valid boundary qualities still flash") {
+        // Guard against a fix that over-rejects: 0 and 1 are legal.
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        for (double q : {0.0, 0.5, 1.0}) {
+            CAPTURE(q);
+            CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+            CHECK(AS->Q() == q);
+        }
+    }
+}
+
+TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][nonfinite]") {
+    // Guarding only at update()'s switch is the wrong altitude.  The quality
+    // reaches the flash routines by other doors, and HQ_flash's own gate,
+    //     if (std::abs(HEOS.Q() - 1) > 1e-10) throw ...
+    // is false for NaN -- so a NaN quality was accepted AS IF it were exactly 1,
+    // fell past the superancillary gate (also false for NaN) into
+    // saturation_PHSU_pure, and faulted.
+    //
+    // update_HmolarQ_with_guessT is such a door: a public HelmholtzEOSMixtureBackend
+    // entry point with no quality check at all.  It has no in-tree callers, which is
+    // exactly why it is the right regression test -- it reaches HQ_flash without
+    // passing through anything this commit's sibling touched.  Before the guard moved
+    // into the flash routines, this call SIGSEGVed (exit 139).
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+    auto* HEOS = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(HEOS != nullptr);
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+
+    SECTION("update_HmolarQ_with_guessT does not crash on NaN quality") {
+        CHECK_THROWS_AS(HEOS->update_HmolarQ_with_guessT(2e4, qnan, 300.0), CoolProp::CoolPropBaseError);
+    }
+
+    SECTION("a valid unity quality still works through the same entry point") {
+        // Flash first so hmolar() is a real saturated-vapor enthalpy; the entry point
+        // is only meaningful for Q = 1, which is what its own gate enforces.
+        auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        auto* H2 = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS2.get());
+        REQUIRE(H2 != nullptr);
+        H2->update(CoolProp::QT_INPUTS, 1.0, 300.0);
+        const double h_sat_vap = H2->hmolar();
+        // It may still fail for an unrelated, pre-existing reason -- propane's
+        // saturated-vapor enthalpy at 300 K has two T-roots (GitHub #2773) -- but it
+        // must not be turned away by the range check this commit adds.
+        try {
+            H2->update_HmolarQ_with_guessT(h_sat_vap, 1.0, 300.0);
+        } catch (const std::exception& e) {
+            CHECK_THAT(std::string(e.what()), !Catch::Matchers::ContainsSubstring("must be between 0 and 1"));
+        }
+        // And the ordinary route for a boundary quality is untouched.
+        CHECK_NOTHROW(H2->update(CoolProp::QT_INPUTS, 1.0, 300.0));
+        CHECK_NOTHROW(H2->update(CoolProp::QT_INPUTS, 0.0, 300.0));
+    }
+}
+
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
     // --- Cubic (SRK) ---
     // 1. Structurally invalid JSON must throw unconditionally.
