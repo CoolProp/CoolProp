@@ -61,6 +61,56 @@ bd close <id>         # Complete work
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
 
+### `bd` in ephemeral (Claude Code web/CI) containers
+
+Fresh containers have no `bd` binary and no Dolt DB (the DB dir
+`.beads/embeddeddolt/` is gitignored). `dev/ci/bootstrap-beads.sh` is the
+**only** `SessionStart` hook for beads (`.claude/settings.json`) — Claude Code
+runs same-event hooks concurrently rather than in array order, so a separate
+`bd prime` hook would race a `bd` this script hasn't finished installing yet.
+The script installs `bd` via `go install` (the `curl|bash` installer's
+GitHub-release download is blocked by the agent proxy; the Go module proxy is
+allowed), rehydrates the DB from the committed `.beads/issues.jsonl`, and
+finally runs `bd prime` itself once both are ready.
+
+It only bootstraps when explicitly opted in with `BEADS_BOOTSTRAP=1` — set once
+in an environment's persistent config, not auto-detected from `CI`/
+`CLAUDE_CODE_REMOTE`, since the cold-start install+hydrate can take a couple of
+minutes and that cost should be a deliberate per-environment choice, not
+sprung on every session in every ephemeral container. Without it, the hook
+only primes an already-installed `bd` (near-zero cost) and exits — never
+installs, never hydrates; a developer workstation with `go` on `PATH` is
+naturally left alone unless someone sets the variable there too. It is
+idempotent — hydration is checked with a `bd count`
+health probe rather than directory presence, so a partial or failed import is
+retried next session instead of latching "done" forever — and non-fatal: any
+failure warns on stderr and the session continues without bd. An `flock(1)`
+lock (not a busy-wait) guards the hydration critical section against two
+SessionStart hooks racing in the same container; a session that loses the
+race skips hydration *and* `bd prime` entirely for that run rather than
+risk reading the DB mid-rebuild, and retries from scratch next session.
+flock's kernel-level exclusivity is what makes the acquire itself atomic
+and self-releasing on any exit (including SIGKILL, which no trap can
+catch) — no separate staleness/steal logic needed. On a tree that was
+clean beforehand, it also restores the few tracked files
+(`.beads/config.yaml`, `.beads/.gitignore`, `.gitignore`) that `bd init
+--stealth` still normalizes even in stealth mode, via a trap on EXIT/INT/TERM
+so a *signal-interrupted* hook doesn't leave those files dirty; it never
+touches a tree that already had pending edits to them. No trap survives
+SIGKILL or a hard container teardown, though — a hydration killed that way
+can still leave those three files modified, and since the next session reads
+"already dirty" as a developer's in-progress edit, it won't auto-restore them
+either; `git checkout -- .beads/config.yaml .beads/.gitignore .gitignore`
+clears it manually. First cold start takes ~2-3 min (Go toolchain fetch +
+build); warm containers skip both install and hydration.
+
+To persist newly filed issues, append their `bd export --include-memories`
+lines to `.beads/issues.jsonl` and commit — do **not** overwrite the file
+wholesale (bd 1.1.0 re-serializes the `dependencies` field on unrelated
+issues, and a plain `bd export` drops the persisted memories). `bd dolt
+push` in the session-completion steps above is a no-op here — there is no
+Dolt remote in web containers; committing `issues.jsonl` is the sync.
+
 
 ## Build & Test
 

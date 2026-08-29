@@ -15,8 +15,9 @@
       {
         "hooks": [
           {
-            "command": "bd prime",
-            "type": "command"
+            "command": "sh \"${CLAUDE_PROJECT_DIR}/dev/ci/bootstrap-beads.sh\"",
+            "type": "command",
+            "timeout": 600
           }
         ],
         "matcher": ""
