@@ -665,6 +665,71 @@ TEST_CASE("R1233zd(E) has a viscosity model (#3330)", "[viscosity],[transport],[
     }
 }
 
+// The rho*s_r correlation blends a liquid and a vapor branch with a logistic
+// switch centred on x_crossover, which every rhosr-CS fluid file carries as
+// data.  TransportRoutines::viscosity_rhosr used to hardcode the centre as the
+// literal 2 and never read the parsed field, so editing x_crossover in a fluid
+// file silently did nothing.  All eight rhosr-CS fluids happen to set it to 2,
+// so nothing was numerically wrong -- the field was simply inert, which is the
+// worse kind of bug: it fails only for whoever next tries to use it.
+//
+// Clone R1233zd(E) twice, changing nothing but x_crossover, and evaluate at a
+// state whose x sits between the two values.  Before the fix both clones return
+// bit-identical viscosity; after it they must diverge, because the switch has
+// moved from "fully liquid branch" to "fully vapor branch" at that state.
+TEST_CASE("rhosr-CS viscosity honours x_crossover from the fluid file", "[viscosity],[transport],[rhosr]") {
+    using nlohmann::json;
+
+    json arr = json::parse(CoolProp::get_fluid_param_string("R1233zd(E)", "JSON"));
+    REQUIRE(arr.is_array());
+    REQUIRE(arr.size() == 1);
+
+    // Guard the premise: this test is meaningless if the block stops being
+    // rhosr-CS, or if the shipped switch location ever moves off 2.
+    REQUIRE(arr[0]["TRANSPORT"]["viscosity"].at("type").get<std::string>() == "rhosr-CS");
+    REQUIRE(arr[0]["TRANSPORT"]["viscosity"].at("x_crossover").get<double>() == 2);
+
+    auto register_clone = [&](const std::string& name, const std::string& CAS, double x_crossover) {
+        json fluid = arr[0];
+        fluid["INFO"]["NAME"] = name;
+        fluid["INFO"]["CAS"] = CAS;
+        fluid["INFO"]["ALIASES"] = json::array();
+        fluid["INFO"]["REFPROP_NAME"] = "N/A";
+        for (const char* key : {"INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID", "2DPNG_URL"}) {
+            fluid["INFO"].erase(key);
+        }
+        fluid["TRANSPORT"]["viscosity"]["x_crossover"] = x_crossover;
+        json doc = json::array();
+        doc.push_back(fluid);
+        // add_fluids_as_JSON returns a literal true on the HEOS branch and
+        // signals failure only by throwing, so assert on the throw.
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("HEOS", doc.dump()));
+    };
+
+    register_clone("R1233zdE_XC_SHIPPED", "999-99-80", 2.0);
+    register_clone("R1233zdE_XC_MOVED", "999-99-81", 12.0);
+
+    // x = rho*s_r/rhosr_critical is 9.00 here, i.e. between the two crossover
+    // values, and the state is single-phase (supercritical liquid).
+    const double T = 300.0, rhomolar = 10000.0;
+
+    const double shipped = CoolProp::PropsSI("V", "T", T, "Dmolar", rhomolar, "R1233zd(E)");
+    const double clone_same = CoolProp::PropsSI("V", "T", T, "Dmolar", rhomolar, "R1233zdE_XC_SHIPPED");
+    const double clone_moved = CoolProp::PropsSI("V", "T", T, "Dmolar", rhomolar, "R1233zdE_XC_MOVED");
+    CAPTURE(shipped, clone_same, clone_moved);
+
+    REQUIRE(ValidNumber(shipped));
+    REQUIRE(ValidNumber(clone_same));
+    REQUIRE(ValidNumber(clone_moved));
+
+    // Round-tripping the fluid through JSON must not perturb the answer.
+    CHECK(std::abs(clone_same / shipped - 1) < 1e-14);
+
+    // The point of the test: moving the switch must move the result.  This
+    // failed before the fix, when the two clones agreed exactly.
+    CHECK(std::abs(clone_moved / shipped - 1) > 0.01);
+}
+
 static CoolProp::input_pairs inputs[] = {
   CoolProp::DmolarT_INPUTS,
   //CoolProp::SmolarT_INPUTS,
