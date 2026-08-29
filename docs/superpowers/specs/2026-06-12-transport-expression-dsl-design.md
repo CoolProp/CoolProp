@@ -228,6 +228,26 @@ only fires when the declared name is read *nowhere* — `let a = T*2 / let T = 5
 a + T` compiled, with `T` meaning the state on one line and 500 on the next. The
 guard is explicit now rather than emergent.
 
+**Compatibility.** This changed the fluid-JSON contract with no version gate and no
+shim: a block written against the previous format does not compile. That is
+deliberate — the retired spellings were the defect, so silently accepting them is the
+one outcome worth avoiding — but it puts the whole burden on the failure being
+legible. The three retired names are therefore kept in a table that produces *only
+error text*:
+
+```
+unknown variable 'rhomolar' -- it was this DSL's own spelling for a thermodynamic
+quantity before blocks declared their inputs; CoolProp calls it 'Dmolar', and it
+must be listed in this block's "state_variables"
+```
+
+A version field was considered and rejected. It would only help if v1 were still
+supported, which is exactly what we do not want; an *optional* version is
+indistinguishable from a new block that omitted it; and a version on this block type
+alone would be the only such field in CoolProp's fluid JSON. The failure above works
+for every old block, including the ones that never carried a version. If schema
+versioning is wanted later it belongs on the fluid file, not on one block type.
+
 **What is still refused, and why opt-in is not enough.** Two classes are rejected at
 compile time even when explicitly declared, because these are the cases where the
 author's intent cannot be honoured:

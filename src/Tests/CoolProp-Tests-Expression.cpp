@@ -212,6 +212,36 @@ TEST_CASE("two classes of parameter stay refused even when declared", "[expressi
     }
 }
 
+TEST_CASE("a block in the previous format fails saying what changed", "[expression]") {
+    using namespace CoolProp::expression;
+    // Fluid JSON is data third parties ship, and this branch changed its contract:
+    // blocks must declare `state_variables`, and the DSL's own spellings `rhomolar`,
+    // `rhomass` and `p` are gone in favour of CoolProp's `Dmolar`, `Dmass`, `P`.
+    // There is no version gate and no shim -- so the load-time failure has to name
+    // the migration, or an author sees only "unknown variable 'rhomolar'".
+    const std::pair<const char*, const char*> retired[] = {{"rhomolar", "Dmolar"}, {"rhomass", "Dmass"}, {"p", "P"}};
+    for (const auto& r : retired) {
+        CAPTURE(r.first);
+        // ...used in a formula, the way an old block has it
+        try {
+            compile(r.first, {}, {});
+            FAIL("expected a throw");
+        } catch (const CoolProp::ValueError& e) {
+            const std::string msg = e.what();
+            CHECK(msg.find(r.second) != std::string::npos);           // names the replacement
+            CHECK(msg.find("state_variables") != std::string::npos);  // and the new requirement
+        }
+        // ...and declared, the way a half-finished migration has it
+        CoolProp::parameters key;
+        std::string reason;
+        REQUIRE_FALSE(resolveStateVariable(r.first, key, reason));
+        CHECK(reason.find(r.second) != std::string::npos);
+    }
+    // A retired name is still just an identifier: as the author's own constant it is
+    // fine, which is exactly why it cannot be silently reinterpreted as state.
+    CHECK(compile("p*2", {{"p", 21.0}}, {}).evaluate({}) == Catch::Approx(42.0));
+}
+
 TEST_CASE("only CoolProp's canonical spelling is accepted, never an alias", "[expression]") {
     using namespace CoolProp::expression;
     // is_valid_parameter() also accepts back-compat aliases and an upper-cased

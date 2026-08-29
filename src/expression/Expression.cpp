@@ -520,6 +520,19 @@ std::vector<Token> lex(const std::string& s) {
 //
 // SECOND, two classes stay refused even when declared, because opt-in expresses the
 // author's intent and these are cases where the intent cannot be honoured:
+// Spellings the DSL used to accept, mapped to what replaced them.  This exists ONLY
+// to produce a good error: fluid JSON is data that third parties ship, and a block
+// written against the previous format must fail at load time saying WHAT changed,
+// not "unknown variable 'rhomolar'".  These names were the DSL's own inventions --
+// CoolProp always called them Dmolar/Dmass/P -- and the invented lowercase `p` is
+// what once collided with the exponent array every viscosity paper writes as p_i.
+static const char* retiredSpelling(const std::string& nm) {
+    if (nm == "rhomolar") return "Dmolar";
+    if (nm == "rhomass") return "Dmass";
+    if (nm == "p") return "P";
+    return nullptr;
+}
+
 static bool deniedStateVariable(parameters key, std::string& why) {
     switch (key) {
         // keyed_output() for a transport output re-enters the correlation being
@@ -706,6 +719,12 @@ class Binder
         }
         // A name CoolProp knows, but that this block did not declare, is the most
         // likely authoring mistake -- say so instead of "unknown variable".
+        if (const char* now = retiredSpelling(nm)) {
+            throw ValueError(format("unknown variable '%s' -- it was this DSL's own spelling for a thermodynamic "
+                                    "quantity before blocks declared their inputs; CoolProp calls it '%s', and it must "
+                                    "be listed in this block's \"state_variables\"",
+                                    nm.c_str(), now));
+        }
         parameters probe;
         std::string ignored;
         if (resolveStateVariable(nm, probe, ignored)) {
@@ -809,7 +828,11 @@ bool resolveStateVariable(const std::string& name, parameters& key, std::string&
     reason.clear();
     parameters k;
     if (!is_valid_parameter(name, k)) {
-        reason = format("'%s' is not a CoolProp parameter name", name.c_str());
+        if (const char* now = detail::retiredSpelling(name)) {
+            reason = format("'%s' was this DSL's own spelling; CoolProp calls it '%s'", name.c_str(), now);
+        } else {
+            reason = format("'%s' is not a CoolProp parameter name", name.c_str());
+        }
         return false;
     }
     std::string why;
