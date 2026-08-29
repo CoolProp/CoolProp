@@ -1314,7 +1314,7 @@ TEST_CASE("Xenon 2021+correction: end-to-end along the saturation line", "[expre
 // them directly.  Purely additive: CoolProp shipped no viscosity for these fluids.
 // ---------------------------------------------------------------------------
 
-// Sotiriadou, Assael, Huber et al., Int. J. Thermophys. 45:87 (2024),
+// Sotiriadou, Ntonti, Assael, Perkins & Huber, Int. J. Thermophys. 45(6):87 (2024),
 // "Reference Correlation of the Viscosity of Ethene".
 //
 // Table 8 of that paper is the best verification data in this file: it resolves
@@ -1325,10 +1325,10 @@ TEST_CASE("Xenon 2021+correction: end-to-end along the saturation line", "[expre
 // comparison is against the background column.
 //
 // Note on the molar mass: the initial-density term needs molar density, and the
-// block freezes M = 0.02805316 kg/mol -- the paper's value, and the one REFPROP
-// corrected to in 2024.  CoolProp's Ethylene.json still carries the pre-2024
-// 0.02805376, so driving the block off `rhomass` and the frozen M keeps the
-// correlation exact regardless of when that gets fixed.
+// block freezes M = 0.02805316 kg/mol -- the paper's value.  Ethylene.json's EOS
+// carries the same number today, so the two agree; freezing it is not correcting a
+// mismatch but pinning the correlation to the value its authors regressed against,
+// so a later revision of the fluid file's molar mass cannot silently move it.
 TEST_CASE("Ethylene: shipped viscosity matches the paper's Table 8", "[expression][golden]") {
     // T (K) = 283 throughout; rho (kg/m^3), eta_0, (eta_1 rho + Delta_eta), background (muPa.s)
     const double tab8[12][4] = {
@@ -1374,7 +1374,7 @@ TEST_CASE("Ethylene: PropsSI viscosity now works and is stage-consistent", "[exp
     CHECK(static_cast<double>(d + i + r + c) == Catch::Approx(eta).epsilon(1e-14));
 }
 
-// Velliadou, Assael & Huber, Int. J. Thermophys. 43:22 (2022), "Reference
+// Velliadou, Antoniadis, Assael & Huber, Int. J. Thermophys. 43(3):42 (2022), "Reference
 // Correlation for the Viscosity of Propane-1,2-diol (Propylene Glycol)".
 //
 // New form for the DSL: the residual (Eq. 9) is an EXPONENTIAL,
@@ -1416,7 +1416,7 @@ TEST_CASE("PropyleneGlycol: PropsSI viscosity now works", "[expression]") {
     CHECK(eta == Catch::Approx(5135.986461e-6).epsilon(1e-6));
 }
 
-// Sotiriadou, Assael, Huber et al., Int. J. Thermophys. 45:123 (2024),
+// Sotiriadou, Ntonti, Assael, Antoniadis & Huber, Int. J. Thermophys. 45(9):123 (2024),
 // "Correlations for the Viscosity and Thermal Conductivity of Tetrahydrofuran".
 // Viscosity only; the paper's thermal conductivity is not implemented here.
 //
@@ -1518,7 +1518,7 @@ TEST_CASE("Tetrahydrofuran: PropsSI viscosity now works", "[expression]") {
     CHECK(eta == Catch::Approx(589.3956e-6).epsilon(1e-6));
 }
 
-// Polychroniadou, Antoniadis, Assael & Bell, Int. J. Thermophys. 43:6 (2022),
+// Polychroniadou, Antoniadis, Assael & Bell, Int. J. Thermophys. 43(1):6 (2022),
 // "A Reference Correlation for the Viscosity of Krypton From Entropy Scaling".
 //
 // A different FAMILY of correlation, not another polynomial.  There is no

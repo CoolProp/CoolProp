@@ -15,16 +15,17 @@ Highlights:
   additive.  Each is shipped as fluid-file data using the expression DSL, with no
   new C++, and each is checked against its source paper's own tabulated values:
 
-  * **Ethylene** — Sotiriadou, Assael, Huber et al., *Int. J. Thermophys.* **45**:87
-    (2024).  Agrees with the paper's Table 8 background column to 4.0e-8.
-  * **Propylene glycol** — Velliadou et al., *Int. J. Thermophys.* **43**:39 (2022).
-    Agrees with Table 7 to 2.7e-5.
-  * **Tetrahydrofuran** — Sotiriadou et al., *Int. J. Thermophys.* **45** (2024).
-    Agrees with Tables 9 and 10 to within the precision those tables are printed at.
+  * **Ethylene** — Sotiriadou, Ntonti, Assael, Perkins and Huber, *Int. J. Thermophys.*
+    **45**\ (6):87 (2024).  Agrees with the paper's Table 8 background column to 4.0e-8.
+  * **Propylene glycol** — Velliadou, Antoniadis, Assael and Huber,
+    *Int. J. Thermophys.* **43**\ (3):42 (2022).  Agrees with Table 7 to 2.7e-5.
+  * **Tetrahydrofuran** — Sotiriadou, Ntonti, Assael, Antoniadis and Huber,
+    *Int. J. Thermophys.* **45**\ (9):123 (2024).  Agrees with Tables 9 and 10 to within the precision those tables are printed at.
   * **Krypton** — Polychroniadou, Antoniadis, Assael and Bell, *Int. J. Thermophys.*
-    **43**:6 (2022), a correlation from **entropy scaling** rather than the usual
-    dilute/initial-density/residual decomposition: the residual reduces on the
-    residual entropy and the second virial coefficient.  Agrees with the paper's
+    **43**\ (1):6 (2022), a correlation from **entropy scaling** rather than the usual
+    dilute/initial-density/residual decomposition: the residual term is a function of the
+    residual entropy and of the second virial coefficient and its temperature
+    derivative.  Agrees with the paper's
     Table 3 to 6.5e-14.
 
   The critical enhancement is not included for any of them; the correlations are the
