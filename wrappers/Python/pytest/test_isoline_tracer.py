@@ -20,11 +20,13 @@ it.
 import pytest
 
 import CoolProp
-from CoolProp import AbstractState
+
+AbstractState = CoolProp.AbstractState
 
 
 @pytest.fixture(scope="module")
 def Common():
+    """The worktree's CoolProp.Plots.Common, or skip if matplotlib is absent"""
     pytest.importorskip("matplotlib")
     import matplotlib
     matplotlib.use("Agg")
@@ -33,6 +35,7 @@ def Common():
 
 
 def _tracer(Common, backend, fluid, index1, index2, iso_index):
+    """Build a tracer on a fresh state of this fluid"""
     return Common.IsoLineTracer(AbstractState(backend, fluid), index1, index2, iso_index)
 
 
@@ -63,6 +66,7 @@ def _reconstruct(backend, fluid, state, mole_fractions=None):
 
 
 def _relerr(a, b):
+    """Relative difference, safe when either value is near zero"""
     return abs(a - b) / max(abs(a), abs(b), 1e-8)
 
 
@@ -262,6 +266,7 @@ class TestIsoLineIntegration:
         original = Common.IsoLineTracer.update
 
         def counting(self, v1, v2):
+            """Record that the tracer was reached, then behave normally"""
             calls.append(1)
             return original(self, v1, v2)
 
@@ -291,12 +296,14 @@ class TestUnbracketableInputs:
     """
 
     def test_supports_requires_temperature_or_pressure(self, Common):
+        """Only pairs that can be bracketed are accepted"""
         assert Common.IsoLineTracer.supports(CoolProp.iP, CoolProp.iSmass)
         assert Common.IsoLineTracer.supports(CoolProp.iHmass, CoolProp.iT)
         assert not Common.IsoLineTracer.supports(CoolProp.iHmass, CoolProp.iSmass)
         assert not Common.IsoLineTracer.supports(CoolProp.iDmass, CoolProp.iSmass)
 
     def test_constructor_refuses_an_unbracketable_pair(self, Common):
+        """supports() is enforced, not merely advisory"""
         with pytest.raises(ValueError):
             Common.IsoLineTracer(AbstractState("HEOS", "Water"),
                                  CoolProp.iHmass, CoolProp.iSmass, CoolProp.iHmass)
@@ -339,6 +346,7 @@ class TestNoMetastableRoots:
         ("HEOS::R513A.mix", 'PH', CoolProp.iT, 300.0),
     ])
     def test_traced_points_are_outside_the_dome(self, Common, fluid, graph, iso_type, value):
+        """Every single-phase root sits outside the saturation densities at its own T"""
         from CoolProp.Plots import PropertyPlot
         import numpy as np
         backend, name = fluid.split("::")
@@ -400,6 +408,7 @@ class TestBracketIsNotSilentlySkipped:
     """
 
     def test_a_failed_build_keeps_failing_instead_of_going_unchecked(self, Common):
+        """A cached bracket failure must keep raising, not read as no-dome"""
         tracer = Common.IsoLineTracer(AbstractState("HEOS", "R513A.mix"),
                                       CoolProp.iP, CoolProp.iSmass, CoolProp.iP)
         p, smass = 1.0e6, 1750.0
@@ -407,6 +416,7 @@ class TestBracketIsNotSilentlySkipped:
         assert tracer._bracket is not None
 
         def always_fails(sat_value, target_index):
+            """Stand in for a saturation solver that will not converge"""
             raise ValueError("saturation solver gave up")
 
         tracer._build_bracket = always_fails

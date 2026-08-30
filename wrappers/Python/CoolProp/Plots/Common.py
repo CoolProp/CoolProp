@@ -612,7 +612,7 @@ class IsoLineTracer(object):
         try:
             self._sp.specify_phase(CoolProp.iphase_gas)
         except Exception:
-            pass
+            pass  # backend without an imposed phase; correctness does not depend on it
         # Using the isoline's own constant as the saturation variable makes the
         # bracket constant along the whole line, so it is computed only once.
         if iso_index in (CoolProp.iT, CoolProp.iP) and iso_index in (index1, index2):
@@ -642,16 +642,24 @@ class IsoLineTracer(object):
         fall back on the default one and the isoline would mix two models --
         traced points from the defaults, flashed points from the caller's.
         Pressure at a given ``(T, rhomolar)`` is a direct function of the
-        model, so one comparison settles it.  A caller whose state is
-        two-phase or has never been updated gives nothing to compare against,
-        and then this cannot help.
+        model, so one comparison settles it.
+
+        The one case this cannot cover: a caller whose state is two-phase or
+        has never been updated gives nothing to compare against, and a
+        departure function is invisible either way, so a mixture customised
+        that way and handed over in that state would be traced with the
+        default model while its fallback points were flashed with the
+        caller's.  Everything reachable through ``set_binary_interaction_double``
+        and ``apply_simple_mixing_rule`` is copied outright and unaffected,
+        and ``PropertyPlot`` leaves its state single-phase, so the probe does
+        run on the path that matters.
         """
         try:
             if state.Q() >= 0.0:
                 return
             T, rhomolar, expected = state.T(), state.rhomolar(), state.p()
         except Exception:
-            return
+            return  # nothing to compare the clone against; see the docstring
         if not (np.isfinite(T) and np.isfinite(rhomolar) and np.isfinite(expected)):
             return
         self._sp.update(CoolProp.DmolarT_INPUTS, rhomolar, T)
@@ -672,6 +680,7 @@ class IsoLineTracer(object):
         return self._out
 
     def keyed_output(self, key):
+        """Read a property of the most recently traced point"""
         return self.state.keyed_output(key)
 
     def set_guess(self, state):
@@ -693,7 +702,7 @@ class IsoLineTracer(object):
                 return
             T, rhomolar = state.T(), state.rhomolar()
         except Exception:
-            return
+            return  # unusable state; keep whatever warm start we already had
         if np.isfinite(T) and np.isfinite(rhomolar) and T > 0.0 and rhomolar > 0.0:
             self._T = T
             self._rhomolar = rhomolar
@@ -746,7 +755,7 @@ class IsoLineTracer(object):
             if np.isfinite(value) and value > 0.0:
                 bounds['T_min'] = value
         except Exception:
-            pass
+            pass  # no lower limit published; the runaway guard uses the upper one
         return bounds
 
     def _find_saturation_bounds(self):
@@ -784,15 +793,16 @@ class IsoLineTracer(object):
             data = self._sat.get_phase_envelope_data()
             envelope = {CoolProp.iT: max(data.T), CoolProp.iP: max(data.p)}
         except Exception:
-            pass
+            pass  # no envelope: every point must be bracketed or handed back
         outer = dict(envelope)
         try:
             for index, name in ((CoolProp.iT, 'Tcrit'), (CoolProp.iP, 'pcrit')):
                 critical = max(PropsSI(name, fluid) for fluid in self._sat.fluid_names())
                 outer[index] = max(outer.get(index, 0.0), critical)
         except Exception:
-            pass
+            pass  # no component critical data; the envelope alone has to do
         def clean(candidate):
+            """Drop unusable bounds, clamp to the EOS range, apply the margin"""
             bounds = {}
             for index, value in candidate.items():
                 if not (np.isfinite(value) and value > 0.0):
@@ -834,7 +844,7 @@ class IsoLineTracer(object):
                 return (temperatures[hot] * self.DOME_MARGIN,
                         float(np.max(np.asarray(data.p, dtype=float))) * self.DOME_MARGIN)
         except Exception:
-            pass
+            pass  # envelope unusable; fall through to locating the critical point
         # An envelope that stopped early bounds neither.  The critical point can
         # be located directly, which is slow enough to be worth avoiding when
         # the envelope already answered, and gives the temperature only: the
@@ -845,7 +855,7 @@ class IsoLineTracer(object):
             if stable:
                 return max(stable) * self.DOME_MARGIN, None
         except Exception:
-            pass
+            pass  # critical point not locatable; fall back on the outer bound
         return self._saturation_bounds.get(CoolProp.iT), None
 
     def _is_plausible_saturation(self, T, p):
@@ -996,6 +1006,7 @@ class IsoLineTracer(object):
     # Two-phase point: solve for the vapour quality
     # -------------------------------------------------------------------
     def _quality_residual(self, quality, bracket):
+        """How far the two-phase state at this quality is from the target"""
         if self._sat_index == CoolProp.iT:
             self._sat.update(CoolProp.QT_INPUTS, quality, self._sat_value)
         else:
@@ -1054,6 +1065,11 @@ class IsoLineTracer(object):
         raise ValueError("No initial guess is available for the Newton iteration.")
 
     def _solve_single_phase(self, targets, bracket):
+        """Newton iteration in (T, rhomolar) onto both target properties
+
+        Raises unless it settles on a root that is checked, in range, and on
+        the side of the saturation curve the bracket says it should be.
+        """
         T, rhomolar = self._seed(bracket)
         i1, i2, state = self._i1, self._i2, self._sp
         v1, v2 = targets[i1], targets[i2]
@@ -1140,7 +1156,8 @@ class IsoLineTracer(object):
         accepted unexamined, which is exactly where the dome is.
         """
         if bracket is None:
-            return self._check_outside_the_dome(T, rhomolar)
+            self._check_outside_the_dome(T, rhomolar)
+            return
         if side is None:
             return
         if side == self.LIQUID:
@@ -1238,7 +1255,9 @@ class IsoLine(Base2DObject):
         return self._tracing
 
     @tracing.setter
-    def tracing(self, value): self._tracing = bool(value)
+    def tracing(self, value):
+        """Turn isoline tracing on or off for this line"""
+        self._tracing = bool(value)
 
     @property
     def value(self): return self._value
