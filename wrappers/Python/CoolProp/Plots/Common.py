@@ -462,6 +462,35 @@ class Base2DObject(object, metaclass=ABCMeta):
 _BINARY_INTERACTION_KEYS = ('betaT', 'gammaT', 'betaV', 'gammaV', 'Fij', 'kij')
 
 
+#: A two-phase state whose two phases differ in density by less than this,
+#: relatively, is the trivial solution: the VLE solver collapsed both phases
+#: onto the same root rather than converging on a saturation state.  Measured
+#: over Q sweeps of eight fluids, genuine states bottom out at 3.4e-3 (Air,
+#: right at its critical point) while collapsed ones come in at ~1e-6, so this
+#: sits about thirty times clear of both.
+_TRIVIAL_SOLUTION_RTOL = 1e-4
+
+
+def _phases_are_distinct(state):
+    """Whether a two-phase state really has two phases
+
+    Near the critical point the mixture QT and PQ solvers can return the
+    trivial solution, reporting the requested quality and a state whose
+    saturated liquid and vapour are the same root.  The result is a plausible
+    looking point that is nowhere near the one asked for -- on an R513A Q=0.5
+    line it puts the last point 93 J/kg/K along in entropy, which is the jag
+    at the top of the dome.
+    """
+    try:
+        rho_liq = state.saturated_liquid_keyed_output(CoolProp.iDmolar)
+        rho_vap = state.saturated_vapor_keyed_output(CoolProp.iDmolar)
+    except Exception:
+        return True         # nothing to check against; the caller's other tests apply
+    if not (np.isfinite(rho_liq) and np.isfinite(rho_vap)) or rho_liq <= 0.0 or rho_vap <= 0.0:
+        return False
+    return (rho_liq - rho_vap) > _TRIVIAL_SOLUTION_RTOL * max(rho_liq, rho_vap)
+
+
 def _clone_state(state):
     """Return a fresh AbstractState with the same backend, fluids and model"""
     fluids = state.fluid_names()
@@ -936,10 +965,10 @@ class IsoLineTracer(object):
         v_liq, v_vap = ends['liq'][0], ends['vap'][0]
         if not (np.isfinite(v_liq) and np.isfinite(v_vap)):
             raise ValueError("The saturation states are not finite.")
-        # A saturation solver that converged on the wrong branch would make
-        # every branch decision below meaningless, so check the one thing that
-        # always holds: the saturated liquid is the denser one.
-        if not ends['liq'][2] > ends['vap'][2]:
+        # A saturation solver that converged on the wrong branch, or onto the
+        # trivial solution with both phases at one density, would make every
+        # branch decision below meaningless.
+        if not ends['liq'][2] > ends['vap'][2] * (1.0 + _TRIVIAL_SOLUTION_RTOL):
             raise ValueError("The saturation states are not on their own branches.")
         degenerate = abs(v_vap - v_liq) <= self.BRACKET_RTOL * max(abs(v_liq), abs(v_vap), 1e-30)
         return {'target_index': target_index, 'liq': ends['liq'], 'vap': ends['vap'],
@@ -1304,6 +1333,10 @@ class IsoLine(Base2DObject):
         for index, _ in np.ndenumerate(one):
             try:
                 self.state.update(pair, one[index], two[index])
+                if not _phases_are_distinct(self.state):
+                    raise ValueError(
+                      "The saturation solver returned the trivial solution, with both "
+                      "phases at the same density.")
                 X[index] = self.state.keyed_output(self._x_index)
                 Y[index] = self.state.keyed_output(self._y_index)
             except Exception as e:
