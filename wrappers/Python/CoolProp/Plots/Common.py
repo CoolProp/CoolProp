@@ -1200,7 +1200,10 @@ class IsoLineTracer(object):
             undecided = "the saturation solver did not converge"
         if undecided is None and not self._is_plausible_saturation(T, max(p_liq, p_vap)):
             undecided = "the saturation solver left the dome behind"
-        if undecided is None and not rho_liq > rho_vap:
+        if undecided is None and not _phases_are_distinct(self._sat):
+            # Same trivial solution the bracket has to reject: a positive but
+            # vanishing density gap is the solver collapsing both phases, not
+            # a narrow dome, and it would let a root inside one through.
             undecided = "the saturation states are not on their own branches"
         if undecided is not None:
             bound = self._dome_T_limit
