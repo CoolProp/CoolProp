@@ -4256,5 +4256,154 @@
       "smolar": 120.03058885995085,
       "smolar_units": "J/mol/K"
     }
+  },
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Sotiriadou-IJT-2024-ethene",
+      "dilute": {
+        "type": "expression",
+        "formula": "let Tr = T/Tc\n1e-6*sum(i: n[i]*Tr^np[i])/sum(i: m[i]*Tr^mp[i])",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Tc": 282.35
+        },
+        "arrays": {
+          "n": [
+            0.785697,
+            22.0478,
+            -12.8383,
+            48.5252,
+            3.04377
+          ],
+          "np": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "m": [
+            2.48645,
+            -0.890015,
+            3.73,
+            1.0
+          ],
+          "mp": [
+            0,
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "initial_density": {
+        "type": "expression",
+        "formula": "let Tr = T/Tc\nlet eta0 = 1e-6*sum(i: n[i]*Tr^np[i])/sum(i: m[i]*Tr^mp[i])\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: d[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*Dmass/M",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 282.35,
+          "epsilon_over_k": 247.0,
+          "sigma": 4.05e-10,
+          "N_A": 6.02214076e+23,
+          "M": 0.02805316
+        },
+        "arrays": {
+          "n": [
+            0.785697,
+            22.0478,
+            -12.8383,
+            48.5252,
+            3.04377
+          ],
+          "np": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "m": [
+            2.48645,
+            -0.890015,
+            3.73,
+            1.0
+          ],
+          "mp": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "d": [
+            -19.572881,
+            219.73999,
+            -1015.3226,
+            2471.01251,
+            -3375.1717,
+            2491.6597,
+            -787.26086,
+            14.085455,
+            -0.34664158
+          ],
+          "e": [
+            0,
+            -0.25,
+            -0.5,
+            -0.75,
+            -1.0,
+            -1.25,
+            -1.5,
+            -2.5,
+            -5.5
+          ]
+        }
+      },
+      "higher_order": {
+        "type": "expression",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*sum(i: a[i]*Tr^b[i]*rhor^c[i])",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 282.35,
+          "rhoc": 214.24
+        },
+        "arrays": {
+          "a": [
+            0.472702,
+            4.53829,
+            0.286355,
+            1.02697,
+            4.95728,
+            3.99433,
+            -3.3044
+          ],
+          "b": [
+            0,
+            0,
+            0,
+            -5,
+            -1,
+            -1,
+            0
+          ],
+          "c": [
+            0,
+            1,
+            5,
+            1,
+            1,
+            2,
+            2
+          ]
+        }
+      }
+    }
   }
 }
