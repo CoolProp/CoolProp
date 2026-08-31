@@ -84,8 +84,9 @@ function(_coolprop_set_msvc_runtime target linkage)
   if(_coolprop_needs_msvc_runtime_fallback)
     target_compile_options(
       "${target}"
-      PRIVATE "$<$<CONFIG:Debug>:${_runtime_flag}d>"
-              "$<$<NOT:$<CONFIG:Debug>>:${_runtime_flag}>")
+      PRIVATE
+        "$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Debug>>:${_runtime_flag}d>"
+        "$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:${_runtime_flag}>")
   endif()
 endfunction()
 
