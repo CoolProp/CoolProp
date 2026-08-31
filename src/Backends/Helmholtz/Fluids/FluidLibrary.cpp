@@ -2,6 +2,7 @@
 #include "FluidLibrary.h"
 
 #include "CoolProp/detail/json.h"
+#include "res_transport_parameters_JSON.h"
 #include <mutex>
 
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
@@ -26,6 +27,7 @@ INCBIN(all_fluids_CBOR, "all_fluids.cbor");
 namespace CoolProp {
 
 static JSONFluidLibrary library;
+static nlohmann::json res_transport_json;  // parsed once in load()
 
 void load();
 
@@ -54,6 +56,11 @@ void load() {
     // so the error surfaces and a later call can retry, rather than silently
     // leaving the global library empty. add_many keeps its original catch.
     nlohmann::json dd = cpjson::from_cbor(gall_fluids_CBORData, gall_fluids_CBORSize);
+    res_transport_json = cpjson::parse(res_transport_parameters_JSON);
+    // Before add_many, deliberately: a throw here propagates out of load() and leaves the
+    // std::call_once flag unset, so the failure is loud and retryable.  Inside add_many it would
+    // instead abort the fluid loop and leave a silently truncated library.
+    JSONFluidLibrary::validate_RES_transport_table(res_transport_json);
     try {
         library.add_many(dd);
     } catch (std::exception& e) {
@@ -282,6 +289,9 @@ void JSONFluidLibrary::add_one(const nlohmann::json& fluid_json) {
         } else {
             parse_transport(fluid_json.at("TRANSPORT"), fluid);
         }
+
+        // Overlay RES transport parameters for the HEOS backend (from res_transport_parameters.json)
+        if (!res_transport_json.is_null()) load_RES_transport_parameters(res_transport_json, "HEOS", fluid);
 
         // If the fluid is ok...
 

@@ -13,6 +13,7 @@
 #include "CoolProp/numerics/Solvers.h"
 #include "CoolProp/expression/ExpressionCorrelation.h"
 
+#include <cstddef>
 #include <numeric>
 #include <string>
 #include <vector>
@@ -334,6 +335,45 @@ struct ViscosityRhoSrVariables
     std::vector<double> c_liq, c_vap;
     double C = _HUGE, x_crossover = _HUGE, rhosr_critical = _HUGE;
 };
+
+/// The RES model has a FIXED number of coefficients per property, and the transport routines
+/// index those positions unconditionally once `provided` is set.  Anything that fills a
+/// ViscosityRESData / ConductivityRESData must therefore reject a short vector rather than
+/// leave an out-of-bounds read for the next viscosity() / conductivity() call.
+constexpr std::size_t RES_N_DILUTE = 5;            ///< dilute-gas polynomial, n0..n4
+constexpr std::size_t RES_N_RES_VISCOSITY = 3;     ///< residual viscosity coefficients
+constexpr std::size_t RES_N_RES_CONDUCTIVITY = 4;  ///< residual conductivity coefficients
+
+// Residual Entropy Scaling (RES) transport data. Martinek 2025 / Yang 2021-2025.
+struct ViscosityRESData
+{
+    std::vector<double> n_dilute;  // 5 polynomial coefficients: eta0(T)/uPas = sum_k n_k * T^k
+    std::vector<double> n_res;     // 3 coefficients for ln(vis_plus + 1)
+    double xita = 1.0;             // scaling factor xi; 1.0 when individual fit was used
+    int group_num = -1;
+    double molar_mass = _HUGE;         // kg/mol, cached for Wilke mixing
+    // Set false by the cubic backends when the alpha function is changed without refitting
+    // n_res; nothing writes it in this commit, which ships the parameters but no model.
+    bool n_params_match_alpha = true;
+    bool provided = false;
+};
+
+// Residual Entropy Scaling (RES) thermal conductivity data. Yang 2021-2025 / Li 2024.
+struct ConductivityRESData
+{
+    std::vector<double> n_dilute;  // 5 polynomial coefficients: lambda0(T)/Wm-1K-1
+    std::vector<double> n_res;     // 4 coefficients for tc_plus
+    double xita = 1.0;
+    int group_num = -1;
+    double molar_mass = _HUGE;
+    // Olchowy-Sengers critical enhancement parameters (Li 2024 parameterization)
+    double R_D = _HUGE, gamma_uni = _HUGE, Gamma = _HUGE;
+    double phi0 = _HUGE, t_ref = _HUGE, q_D = 0.0;
+    // See ViscosityRESData for n_params_match_alpha.
+    bool n_params_match_alpha = true;
+    bool crit_provided = false;
+    bool provided = false;
+};
 struct ViscosityECSVariables
 {
     std::string reference_fluid;
@@ -375,11 +415,13 @@ class TransportPropertyData
     ViscosityECSVariables viscosity_ecs;
     ViscosityRhoSrVariables viscosity_rhosr;
     ViscosityChungData viscosity_Chung;
+    ViscosityRESData viscosity_res;
 
     ConductivityDiluteVariables conductivity_dilute;
     ConductivityResidualVariables conductivity_residual;
     ConductivityCriticalVariables conductivity_critical;
     ConductivityECSVariables conductivity_ecs;
+    ConductivityRESData conductivity_res;
 
     std::string BibTeX_viscosity,                      ///< The BibTeX key for the viscosity model
       BibTeX_conductivity;                             ///< The BibTeX key for the conductivity model
