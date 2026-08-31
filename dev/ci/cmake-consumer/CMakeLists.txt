@@ -52,6 +52,10 @@ if(COOLPROP_SOURCE_DIR)
   set(CMAKE_INSTALL_PREFIX
       "${_coolprop_prefix_sentinel}"
       CACHE PATH "Consumer install prefix" FORCE)
+  set(COOLPROP_INSTALL_PREFIX
+      "${CMAKE_CURRENT_BINARY_DIR}/ignored-coolprop-install-prefix"
+      CACHE PATH "Legacy CoolProp install prefix that nested builds must ignore"
+            FORCE)
   set(COOLPROP_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
   set(COOLPROP_SHARED_LIBRARY OFF CACHE BOOL "" FORCE)
   set(COOLPROP_OBJECT_LIBRARY OFF CACHE BOOL "" FORCE)
@@ -63,6 +67,15 @@ if(COOLPROP_SOURCE_DIR)
     message(
       FATAL_ERROR
         "CoolProp changed its parent project's CMAKE_INSTALL_PREFIX from '${_coolprop_prefix_sentinel}' to '${CMAKE_INSTALL_PREFIX}'"
+    )
+  endif()
+  get_property(_coolprop_cached_install_prefix CACHE CMAKE_INSTALL_PREFIX
+               PROPERTY VALUE)
+  if(NOT "${_coolprop_cached_install_prefix}" STREQUAL
+     "${_coolprop_prefix_sentinel}")
+    message(
+      FATAL_ERROR
+        "CoolProp changed the cached parent CMAKE_INSTALL_PREFIX from '${_coolprop_prefix_sentinel}' to '${_coolprop_cached_install_prefix}'"
     )
   endif()
   if(COOLPROP_INSTALL_LEGACY_LAYOUT)

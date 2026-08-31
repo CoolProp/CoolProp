@@ -208,17 +208,38 @@ jobs:
         set -euo pipefail
 
         python - <<'PY'
+        import re
+        import xml.etree.ElementTree as ET
         from pathlib import Path
 
         expected = {
             "CoolProp_static.vcxproj": "MultiThreadedDebugDLL",
             "CoolProp_shared.vcxproj": "MultiThreadedDebug",
         }
+        namespace = {"msbuild": "http://schemas.microsoft.com/developer/msbuild/2003"}
+        debug_condition = re.compile(
+            r"\s*'\$\(Configuration\)\|\$\(Platform\)'\s*==\s*'Debug\|([^']+)'\s*"
+        )
         for project, runtime in expected.items():
-            content = (Path("build") / project).read_text(encoding="utf-8-sig")
-            setting = f"<RuntimeLibrary>{runtime}</RuntimeLibrary>"
-            if setting not in content:
-                raise SystemExit(f"{project} does not contain {setting}")
+            project_path = Path("build") / project
+            root = ET.parse(project_path).getroot()
+            debug_groups = []
+            for group in root.findall("msbuild:ItemDefinitionGroup", namespace):
+                match = debug_condition.fullmatch(group.get("Condition", ""))
+                if match:
+                    debug_groups.append((group, match.group(1)))
+            if not debug_groups:
+                raise SystemExit(f"{project} has no Debug ItemDefinitionGroup")
+            for group, platform in debug_groups:
+                setting = group.find(
+                    "msbuild:ClCompile/msbuild:RuntimeLibrary", namespace
+                )
+                actual = None if setting is None else setting.text
+                if actual != runtime:
+                    raise SystemExit(
+                        f"{project} Debug|{platform} runtime is {actual!r}; "
+                        f"expected {runtime!r}"
+                    )
         PY
 
         cmake --build build --config Debug --parallel 1

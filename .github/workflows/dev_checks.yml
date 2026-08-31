@@ -864,6 +864,7 @@ jobs:
         run: |
           cmake -B build_shared -S . \
             -DCOOLPROP_SHARED_LIBRARY=ON \
+            -DCMAKE_INSTALL_INCLUDEDIR=cp-headers \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache

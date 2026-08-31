@@ -89,6 +89,22 @@ function(_coolprop_set_msvc_runtime target linkage)
   endif()
 endfunction()
 
+# Keep executables linked through the canonical target on the same CRT as the
+# concrete library variant selected by the producer.
+function(_coolprop_set_canonical_msvc_runtime target)
+  if(COOLPROP_STATIC_LIBRARY AND COOLPROP_SHARED_LIBRARY)
+    string(TOUPPER "${COOLPROP_DEFAULT_LIBRARY}" _linkage)
+  elseif(COOLPROP_STATIC_LIBRARY)
+    set(_linkage STATIC)
+  elseif(COOLPROP_SHARED_LIBRARY)
+    set(_linkage SHARED)
+  else()
+    return()
+  endif()
+
+  _coolprop_set_msvc_runtime("${target}" "${_linkage}")
+endfunction()
+
 function(_coolprop_configure_core_target target linkage)
   # CMake applies cxx_* features only to C++ translation units. This promotes
   # C++ consumers to the standard required by the public headers without

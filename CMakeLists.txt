@@ -57,19 +57,23 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(CheckIncludeFileCXX)
 
-if(DEFINED COOLPROP_INSTALL_PREFIX)
-  message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
-  set(CMAKE_INSTALL_PREFIX
-      "${COOLPROP_INSTALL_PREFIX}"
-      CACHE PATH "CoolProp install path" FORCE)
-elseif(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR
-       AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  # Preserve the historical in-tree release layout for top-level builds, but
-  # never overwrite a parent project's install prefix when used via
-  # add_subdirectory()/FetchContent.
-  set(CMAKE_INSTALL_PREFIX
-      "${CMAKE_CURRENT_SOURCE_DIR}/install_root"
-      CACHE PATH "CoolProp install path" FORCE)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  if(DEFINED COOLPROP_INSTALL_PREFIX)
+    message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
+    set(CMAKE_INSTALL_PREFIX
+        "${COOLPROP_INSTALL_PREFIX}"
+        CACHE PATH "CoolProp install path" FORCE)
+  elseif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    # Preserve the historical in-tree release layout for top-level builds.
+    set(CMAKE_INSTALL_PREFIX
+        "${CMAKE_CURRENT_SOURCE_DIR}/install_root"
+        CACHE PATH "CoolProp install path" FORCE)
+  endif()
+elseif(DEFINED COOLPROP_INSTALL_PREFIX)
+  message(
+    WARNING
+      "Ignoring COOLPROP_INSTALL_PREFIX='${COOLPROP_INSTALL_PREFIX}' in a nested CoolProp build; set CMAKE_INSTALL_PREFIX in the parent project instead."
+  )
 endif()
 
 # Dependency management via CPM.cmake (replaces git submodules).
@@ -2166,6 +2170,7 @@ endif()
 if(COOLPROP_CPP_EXAMPLE_TEST)
   # C++ Documentation Test
   add_executable(docuTest.exe "Web/examples/C++/Example.cpp")
+  _coolprop_set_canonical_msvc_runtime(docuTest.exe)
   add_dependencies(docuTest.exe ${app_name})
   target_link_libraries(docuTest.exe ${app_name})
   if(UNIX)
@@ -2237,6 +2242,7 @@ if(COOLPROP_SNIPPETS)
        "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
   # Make the static library with which the snippets will be linked
   add_library(${app_name} STATIC ${APP_SOURCES})
+  _coolprop_set_msvc_runtime("${app_name}" STATIC)
   add_dependencies(${app_name} generate_headers)
   set_property(
     TARGET ${app_name}
@@ -2255,6 +2261,7 @@ if(COOLPROP_SNIPPETS)
     message(STATUS "snippet_name = ${snippet_name}")
 
     add_executable(${snippet_exe} ${snippet})
+    _coolprop_set_msvc_runtime("${snippet_exe}" STATIC)
     add_dependencies(${snippet_exe} CoolProp)
     target_link_libraries(${snippet_exe} CoolProp)
     if(UNIX)

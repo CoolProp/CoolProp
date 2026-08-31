@@ -36,6 +36,7 @@ Highlights:
 
   The critical enhancement is not included for any of them; the correlations are the
   background viscosity, which is what the comparisons above are against.
+
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
   CoolProp libraries can now be built and installed in one build. Installation
@@ -115,7 +116,8 @@ Highlights:
     enabled that tree can additionally contain the conventional ``bin``,
     ``lib``, ``include``, ``lib/cmake/CoolProp``, and ``share/licenses``
     directories, as applicable to the selected library variants.
-  - MSVC runtime selection is target-local. ``COOLPROP_MSVC_STATIC`` and
+  - MSVC runtime selection is target-local for CoolProp libraries and linked
+    in-tree executables. ``COOLPROP_MSVC_STATIC`` and
     ``COOLPROP_MSVC_DYNAMIC`` no longer rewrite the global C and C++ flags of
     unrelated targets in a parent build. Debug configurations always use the
     corresponding debug CRT; the legacy ``COOLPROP_MSVC_DEBUG`` option remains
@@ -126,8 +128,8 @@ Highlights:
   - In a dual static/shared producer build, the un-namespaced ``CoolProp``
     build-tree target is an INTERFACE selector and is not itself a build-system
     target. Build the normal ``all`` target or the concrete
-     ``CoolProp_static`` / ``CoolProp_shared`` target instead of invoking
-     ``cmake --build ... --target CoolProp``.
+    ``CoolProp_static`` / ``CoolProp_shared`` target instead of invoking
+    ``cmake --build ... --target CoolProp``.
 
 * **Compositions with two or more exactly-zero mole fractions no longer return
   NaN for the bulk properties.**  ``GERG2008ReducingFunction::f_Y_ij``
