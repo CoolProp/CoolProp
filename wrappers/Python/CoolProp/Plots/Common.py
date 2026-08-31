@@ -491,6 +491,31 @@ def _phases_are_distinct(state):
     return (rho_liq - rho_vap) > _TRIVIAL_SOLUTION_RTOL * max(rho_liq, rho_vap)
 
 
+def _model_key(state):
+    """Everything about a state that changes what the EOS computes
+
+    Anything cached per fluid has to be keyed on this rather than on the fluid
+    name, because two states can name the same mixture at the same composition
+    and still be different models.  A departure function installed with
+    ``set_binary_interaction_string`` cannot be read back from Python and so
+    cannot appear here; :func:`IsoLineTracer._check_clone` is what refuses to
+    trace in that case.
+    """
+    fluids = tuple(state.fluid_names())
+    interactions = ()
+    if len(fluids) > 1:
+        values = []
+        for i in range(len(fluids)):
+            for j in range(i + 1, len(fluids)):
+                for name in _BINARY_INTERACTION_KEYS:
+                    try:
+                        values.append(state.get_binary_interaction_double(i, j, name))
+                    except Exception:
+                        values.append(None)  # key absent for this backend
+        interactions = tuple(values)
+    return (state.backend_name(), fluids, tuple(state.get_mole_fractions()), interactions)
+
+
 def _clone_state(state):
     """Return a fresh AbstractState with the same backend, fluids and model"""
     fluids = state.fluid_names()
@@ -571,11 +596,15 @@ class IsoLineTracer(object):
     LIQUID = -1
     VAPOUR = 1
 
-    #: Critical temperatures keyed by fluid, for the blends whose phase
+    #: Critical temperatures keyed by fluid *model*, for the blends whose phase
     #: envelope does not reach the critical point and where locating it costs
     #: seconds to minutes.  Unlike the envelope, this lookup has no side effect
     #: on the state that produced it, so caching it cannot make one tracer
-    #: behave differently from the next.
+    #: behave differently from the next.  The key has to carry the binary
+    #: interaction parameters, not just the fluids and composition: they move
+    #: the critical point, and a shared limit that came out too low would send
+    #: :func:`_check_outside_the_dome` down its no-dome path over a range where
+    #: there is one.
     _CRITICAL_T = {}
 
     @classmethod
@@ -865,8 +894,7 @@ class IsoLineTracer(object):
         # An envelope that stopped early does not bound the dome.  The critical
         # point can be located directly, which is slow enough to be worth
         # avoiding whenever the envelope already answered.
-        key = (self._sat.backend_name(), tuple(self._sat.fluid_names()),
-               tuple(self._sat.get_mole_fractions()))
+        key = _model_key(self._sat)
         if key not in self._CRITICAL_T:
             if len(self._CRITICAL_T) > 64:  # a plotting session, not a cache
                 self._CRITICAL_T.clear()

@@ -242,8 +242,10 @@ class TestBranchSelection:
                                       CoolProp.iP, CoolProp.iSmass, CoolProp.iP)
         sat = AbstractState("HEOS", "R504.mix")
         T = 314.54                       # beyond the envelope, inside the dome
-        sat.update(CoolProp.QT_INPUTS, 0.0, T); rho_liq = sat.rhomolar()
-        sat.update(CoolProp.QT_INPUTS, 1.0, T); rho_vap = sat.rhomolar()
+        sat.update(CoolProp.QT_INPUTS, 0.0, T)
+        rho_liq = sat.rhomolar()
+        sat.update(CoolProp.QT_INPUTS, 1.0, T)
+        rho_vap = sat.rhomolar()
         assert rho_liq > rho_vap
         with pytest.raises(ValueError):
             tracer._check_branch(None, None, T, 0.5 * (rho_liq + rho_vap))
@@ -373,14 +375,16 @@ class TestNoMetastableRoots:
             try:
                 tracer.update(v0, v1)
             except Exception:
-                continue
+                continue        # this point has no dome to be inside of
             state = tracer.state
             if 0.0 <= state.Q() <= 1.0:
                 continue                       # solved as two phase, which is fine
             T, rho = state.T(), state.rhomass()
             try:
-                sat.update(CoolProp.QT_INPUTS, 0.0, T); rho_liq = sat.rhomass()
-                sat.update(CoolProp.QT_INPUTS, 1.0, T); rho_vap = sat.rhomass()
+                sat.update(CoolProp.QT_INPUTS, 0.0, T)
+                rho_liq = sat.rhomass()
+                sat.update(CoolProp.QT_INPUTS, 1.0, T)
+                rho_vap = sat.rhomass()
             except Exception:
                 continue                       # no dome at this T to be inside of
             checked += 1
@@ -449,7 +453,7 @@ class TestBracketIsNotSilentlySkipped:
             try:
                 tracer.update(pressure, smass)
             except Exception:
-                continue
+                continue        # this point has no dome to be inside of
             if tracer._bracket is None:
                 unchecked += 1
                 continue
@@ -515,24 +519,29 @@ class TestPressureIsNotAProxyForTheDome:
         for smass in svals:
             try:
                 tracer.update(pressure, smass)
-            except Exception:
+            except ValueError:
+                # the tracer handed this point back; prime it from the flash the
+                # way calc_range does, and if that fails too the point is simply
+                # one neither can place
                 try:
                     shared.update(CoolProp.PSmass_INPUTS, pressure, smass)
-                    tracer.set_guess(shared)
-                except Exception:
-                    pass
+                except ValueError:
+                    continue        # neither route can place this point
+                tracer.set_guess(shared)
                 continue
             state = tracer.state
             if 0.0 <= state.Q() <= 1.0:
                 continue
             T, rho = state.T(), state.rhomolar()
             try:
-                sat.update(CoolProp.QT_INPUTS, 0.0, T); rho_liq = sat.rhomolar()
-                sat.update(CoolProp.QT_INPUTS, 1.0, T); rho_vap = sat.rhomolar()
-            except Exception:
-                continue
+                sat.update(CoolProp.QT_INPUTS, 0.0, T)
+                rho_liq = sat.rhomolar()
+                sat.update(CoolProp.QT_INPUTS, 1.0, T)
+                rho_vap = sat.rhomolar()
+            except ValueError:
+                continue        # no dome at this T, so nothing to be inside of
             if not rho_liq > rho_vap * 1.0001:
-                continue
+                continue        # collapsed pair: cannot decide, not a failure
             checked += 1
             assert not rho_vap < rho < rho_liq, (
                 "traced rho={0} at T={1} sits inside the dome ({2} .. {3}) on an "
