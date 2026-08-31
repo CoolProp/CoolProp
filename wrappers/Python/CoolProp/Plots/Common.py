@@ -464,10 +464,17 @@ _BINARY_INTERACTION_KEYS = ('betaT', 'gammaT', 'betaV', 'gammaV', 'Fij', 'kij')
 
 #: A two-phase state whose two phases differ in density by less than this,
 #: relatively, is the trivial solution: the VLE solver collapsed both phases
-#: onto the same root rather than converging on a saturation state.  Measured
-#: over Q sweeps of eight fluids, genuine states bottom out at 3.4e-3 (Air,
-#: right at its critical point) while collapsed ones come in at ~1e-6, so this
-#: sits about thirty times clear of both.
+#: onto the same root rather than converging on a saturation state.
+#:
+#: Calibrated where it is load-bearing, which is the Q=0 and Q=1 calls the
+#: bracket and the dome check make: across the predefined blends, genuine
+#: saturation pairs there stay above 1.8e-3 and collapsed ones fall below
+#: 1e-7, so this sits orders clear of both.  At intermediate quality the
+#: separation is looser -- Air, R441A, R448A and R407C all return pairs a
+#: little above this threshold at temperatures beyond their critical point --
+#: and `calc_sat_range` will draw those.  Both error directions are safe for
+#: the tracer: a rejected genuine pair costs a fallback flash, and an accepted
+#: collapsed one still has to get past the density comparison that follows.
 _TRIVIAL_SOLUTION_RTOL = 1e-4
 
 

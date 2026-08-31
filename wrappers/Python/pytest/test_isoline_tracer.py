@@ -491,6 +491,78 @@ class TestFluidModelIsCarriedOver:
         assert _relerr(tracer.keyed_output(CoolProp.iHmass), state.hmass()) < 1e-9
 
 
+class TestCollapsedPairInTheUnbracketedCheck:
+    """The no-bracket path must reject a collapsed saturation pair too
+
+    `_check_outside_the_dome` compares a root against the saturation densities
+    at its own temperature.  A bare ``rho_liq > rho_vap`` is satisfied by the
+    VLE solver's trivial solution -- both phases converged onto one root, which
+    CoolProp really does return near the critical point of a mixture (on R513A
+    at Q=0.5, 367.433 K, it reports rho_liq and rho_vap equal to seven digits)
+    -- and a root between two densities that are the same number is every root.
+
+    The pair is injected rather than provoked: that state is reachable at
+    intermediate quality but not through the Q=0 and Q=1 calls this path makes,
+    where the solver raises instead.  What is under test is this module's
+    handling of such a pair, not CoolProp's production of one.
+    """
+
+    class _CollapsedSaturation:
+        """Minimal stand-in for the tracer's saturation state object"""
+
+        def __init__(self, rho_liq, rho_vap, p):
+            self._rho = {0.0: rho_liq, 1.0: rho_vap}
+            self._rho_liq, self._rho_vap, self._p = rho_liq, rho_vap, p
+            self._q = 0.0
+
+        def update(self, pair, quality, value):
+            """Accept the QT call and remember which end was asked for"""
+            self._q = quality
+
+        def rhomolar(self):
+            """Bulk density of the end most recently asked for"""
+            return self._rho[self._q]
+
+        def p(self):
+            """Pressure, well inside any plausible bound"""
+            return self._p
+
+        def saturated_liquid_keyed_output(self, key):
+            """Saturated liquid density, as the trivial solution reports it"""
+            return self._rho_liq
+
+        def saturated_vapor_keyed_output(self, key):
+            """Saturated vapour density, indistinguishable from the liquid"""
+            return self._rho_vap
+
+    def test_a_collapsed_pair_cannot_certify_a_root(self, Common):
+        """Densities that agree to seven digits decide nothing
+
+        The dangerous root is the one *outside* the collapsed pair, not inside
+        it.  A root between two nearly-equal numbers is caught either way; a
+        root anywhere else is "outside the dome" according to a bare
+        ``rho_liq > rho_vap``, and that is every root the Newton can reach.
+        """
+        tracer = Common.IsoLineTracer(AbstractState("HEOS", "R513A.mix"),
+                                      CoolProp.iP, CoolProp.iSmass, CoolProp.iP)
+        T = 300.0
+        assert tracer._dome_T_limit is None or T <= tracer._dome_T_limit, \
+            "the test temperature has to be one where a dome could exist"
+        rho_liq, rho_vap = 2408.7702, 2408.7601        # gap 4.2e-6, as observed
+        tracer._sat = self._CollapsedSaturation(rho_liq, rho_vap, 3.4e6)
+        with pytest.raises(ValueError):
+            tracer._check_outside_the_dome(T, 5000.0)      # nowhere near the pair
+        with pytest.raises(ValueError):
+            tracer._check_outside_the_dome(T, 0.5 * (rho_liq + rho_vap))
+
+        # and a pair that really is separated still decides normally
+        tracer._sat = self._CollapsedSaturation(11395.8, 2175.9, 3.4e6)
+        with pytest.raises(ValueError):
+            tracer._check_outside_the_dome(T, 5000.0)      # between them
+        tracer._check_outside_the_dome(T, 14000.0)         # denser than liquid
+        tracer._check_outside_the_dome(T, 100.0)           # thinner than vapour
+
+
 class TestPressureIsNotAProxyForTheDome:
     """A pressure above the cricondenbar does not make a root safe
 
