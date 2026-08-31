@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fail if forbidden internal headers are shipped in the installed tree.
 #
-# Two assertions:
+# Three assertions:
 #
 #  1. detail/json.h must NOT ship.  That header #includes nlohmann/json.hpp
 #     and valijson; it is internal-only and is excluded by CMake's install
@@ -81,11 +81,13 @@ if [ -n "$LEAKING_INCLUDES" ]; then
     exit 1
 fi
 
-# Assertion 3: every installed header must compile STANDALONE.  This catches the
-# general non-self-contained case the grep above cannot -- e.g. a shipped header
-# that #includes a non-installed header by some other path (the old
+# Assertion 3: every installed CoolProp-owned header must compile STANDALONE.
+# Vendored third-party headers are intentionally excluded: their internal
+# headers are not part of CoolProp's self-containedness contract.  This catches
+# the general non-self-contained case the grep above cannot -- e.g. a shipped
+# header that #includes a non-installed header by some other path (the old
 # detail/msgpack.h pulling msgpack.hpp slipped past the nlohmann/valijson grep).
-# Compile each installed *.h as its own translation unit.  The installed surface
+# Compile each CoolProp-owned *.h as its own translation unit.  That surface
 # depends only on Eigen (the fluids/numerics/superancillary tiers) and on fmt
 # unless NO_FMTLIB is defined; resolve Eigen from the build's CPM cache and
 # define NO_FMTLIB so fmt is not required.  Boost is deliberately NOT on the
@@ -103,10 +105,14 @@ if [ -z "$EIGEN_DIR" ] || [ ! -d "$EIGEN_DIR" ]; then
     echo "FAIL: could not resolve the Eigen include dir from $CACHE -- cannot run the self-containedness check (fail-closed)." >&2
     exit 1
 fi
-INC_ROOT="$(find "$PREFIX" -path '*/include/CoolProp/CoolProp.h' | head -1)"
-INC_ROOT="${INC_ROOT%/CoolProp/CoolProp.h}"
-if [ -z "$INC_ROOT" ] || [ ! -d "$INC_ROOT" ]; then
-    echo "FAIL: could not locate the installed include root (no CoolProp/CoolProp.h) -- cannot validate self-containedness." >&2
+INSTALL_INCLUDEDIR="$(sed -n 's/^CMAKE_INSTALL_INCLUDEDIR:[^=]*=//p' "$CACHE" | head -1)"
+if [ -z "$INSTALL_INCLUDEDIR" ]; then
+    echo "FAIL: could not resolve CMAKE_INSTALL_INCLUDEDIR from $CACHE -- cannot select the canonical package include root." >&2
+    exit 1
+fi
+INC_ROOT="$PREFIX/$INSTALL_INCLUDEDIR"
+if [ ! -f "$INC_ROOT/CoolProp/CoolProp.h" ]; then
+    echo "FAIL: canonical installed header $INC_ROOT/CoolProp/CoolProp.h is missing -- cannot validate self-containedness." >&2
     exit 1
 fi
 SC_LOG=/tmp/installed-headers-selfcontained.log
@@ -136,7 +142,7 @@ SC_TMP="$(mktemp -d)"
 # a future edit from turning this into an unbounded rm.
 trap 'rm -rf "$PREFIX" "$SC_TMP"' EXIT
 
-SC_TOTAL="$(find "$INC_ROOT" -name '*.h' | grep -c . || true)"
+SC_TOTAL="$(find "$INC_ROOT" -path "$INC_ROOT/CoolProp/third_party" -prune -o -type f -name '*.h' -print | grep -c . || true)"
 [ -n "$SC_TOTAL" ] || SC_TOTAL=0
 if [ "$SC_TOTAL" -eq 0 ]; then
     echo "FAIL: no *.h found under the installed include root ($INC_ROOT) -- the self-containedness sweep would verify nothing." >&2
@@ -159,7 +165,7 @@ export CXX_BIN INC_ROOT EIGEN_DIR SC_TMP
 # passed inline rather than via `export -f`: exported bash functions do not
 # survive a version mismatch between the parent shell and the `bash` on PATH.
 SC_XARGS_RC=0
-find "$INC_ROOT" -name '*.h' -print0 \
+find "$INC_ROOT" -path "$INC_ROOT/CoolProp/third_party" -prune -o -type f -name '*.h' -print0 \
     | xargs -0 -P "$SC_JOBS" -n1 bash -c '
         # SHELLOPTS is not exported, so this child does NOT inherit the parent'"'"'s
         # pipefail.  Without it a failing printf would hand the compiler an empty
@@ -244,13 +250,13 @@ find "$PREFIX" -name '*.h' ! -path "$INC_ROOT/*" | LC_ALL=C sort >"$SC_TMP/unswe
 SC_UNSWEPT_REL="$(while IFS= read -r h; do printf '%s\n' "${h#"$PREFIX"/}"; done <"$SC_TMP/unswept")"
 SC_UNSWEPT_N="$(printf '%s' "$SC_UNSWEPT_REL" | grep -c . || true)"
 [ -n "$SC_UNSWEPT_N" ] || SC_UNSWEPT_N=0
-if [ "$SC_UNSWEPT_N" -ne 1 ] || [ "${SC_UNSWEPT_REL##*/}" != "$SC_UNSWEPT_EXPECTED" ]; then
-    echo "FAIL: expected exactly one installed *.h outside the include root, named '$SC_UNSWEPT_EXPECTED'; found $SC_UNSWEPT_N:" >&2
+if [ "$SC_UNSWEPT_N" -gt 1 ] || { [ "$SC_UNSWEPT_N" -eq 1 ] && [ "${SC_UNSWEPT_REL##*/}" != "$SC_UNSWEPT_EXPECTED" ]; }; then
+    echo "FAIL: only the optional legacy '$SC_UNSWEPT_EXPECTED' may be installed outside the include root; found $SC_UNSWEPT_N:" >&2
     printf '%s\n' "${SC_UNSWEPT_REL:-(none)}" | sed 's/^/        /' >&2
     echo "      Either a header is newly shipped outside the swept tree -- in which case it is going unchecked -- or the sweep has widened and this assertion plus the success message need updating (bd CoolProp-1n5g)." >&2
     exit 1
 fi
-SC_UNSWEPT_SHOWN="$SC_UNSWEPT_REL"
+SC_UNSWEPT_SHOWN="${SC_UNSWEPT_REL:-(none)}"
 
 if [ "$SC_FAIL" -ne 0 ]; then
     find "$SC_TMP" -name 'fail.*' | LC_ALL=C sort | while IFS= read -r marker; do
@@ -268,4 +274,4 @@ fi
 # include C/DLL API header, which sits outside INC_ROOT and is therefore NOT
 # swept (bd CoolProp-1n5g).  Claiming NHEADERS here overstated the
 # check by that one header.
-echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack/boost; all ${SC_TOTAL} headers under the include root compile standalone (of ${NHEADERS} installed *.h; ${SC_UNSWEPT_SHOWN} is not swept) with -DNO_FMTLIB, Eigen-only on the path, from ${BUILD_DIR}"
+echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack/boost; all ${SC_TOTAL} CoolProp-owned headers under the include root compile standalone (of ${NHEADERS} installed *.h; legacy headers outside the sweep: ${SC_UNSWEPT_SHOWN}) with -DNO_FMTLIB, Eigen-only on the path, from ${BUILD_DIR}"
