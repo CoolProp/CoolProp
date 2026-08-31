@@ -487,6 +487,59 @@ class TestFluidModelIsCarriedOver:
         assert _relerr(tracer.keyed_output(CoolProp.iHmass), state.hmass()) < 1e-9
 
 
+class TestPressureIsNotAProxyForTheDome:
+    """A pressure above the cricondenbar does not make a root safe
+
+    It is tempting: above the cricondenbar no two-phase state exists at that
+    pressure, so an isobar there looks like it needs no dome check.  But the
+    question is whether the (T, rhomolar) the Newton landed on is the stable
+    root at *its own* temperature, and the EOS pressure along the metastable
+    branch inside the dome runs well above the cricondenbar -- so such a root
+    satisfies the isobar exactly while sitting between the saturation
+    densities.  Short-circuiting on pressure put 69 of these on a default
+    R441A T-s plot, 8.7 % out in temperature.
+    """
+
+    def test_high_pressure_isobar_has_no_roots_inside_the_dome(self, Common):
+        """The check has to run even where the isobar cannot be two-phase"""
+        from CoolProp.Plots import PropertyPlot
+        import numpy as np
+        plot = PropertyPlot('HEOS::R441A.mix', 'TS')
+        limits = plot._get_axis_limits()
+        svals = plot.generate_ranges(plot._x_index, limits[0], limits[1], 120)
+        pressure = 1.0109e7                      # above R441A's cricondenbar
+        tracer = Common.IsoLineTracer(plot._state, CoolProp.iP, CoolProp.iSmass, CoolProp.iP)
+        sat = AbstractState("HEOS", "R441A.mix")
+        shared = AbstractState("HEOS", "R441A.mix")
+        checked = 0
+        for smass in svals:
+            try:
+                tracer.update(pressure, smass)
+            except Exception:
+                try:
+                    shared.update(CoolProp.PSmass_INPUTS, pressure, smass)
+                    tracer.set_guess(shared)
+                except Exception:
+                    pass
+                continue
+            state = tracer.state
+            if 0.0 <= state.Q() <= 1.0:
+                continue
+            T, rho = state.T(), state.rhomolar()
+            try:
+                sat.update(CoolProp.QT_INPUTS, 0.0, T); rho_liq = sat.rhomolar()
+                sat.update(CoolProp.QT_INPUTS, 1.0, T); rho_vap = sat.rhomolar()
+            except Exception:
+                continue
+            if not rho_liq > rho_vap * 1.0001:
+                continue
+            checked += 1
+            assert not rho_vap < rho < rho_liq, (
+                "traced rho={0} at T={1} sits inside the dome ({2} .. {3}) on an "
+                "isobar above the cricondenbar".format(rho, T, rho_vap, rho_liq))
+        assert checked > 20, "the sweep has to reach temperatures that have a dome"
+
+
 class TestGapFilling:
     def test_mixture_isentrope_has_far_fewer_gaps(self, Common):
         """Flashing an R513A isentrope cold leaves holes in it; tracing mostly does not

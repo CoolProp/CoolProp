@@ -571,6 +571,13 @@ class IsoLineTracer(object):
     LIQUID = -1
     VAPOUR = 1
 
+    #: Critical temperatures keyed by fluid, for the blends whose phase
+    #: envelope does not reach the critical point and where locating it costs
+    #: seconds to minutes.  Unlike the envelope, this lookup has no side effect
+    #: on the state that produced it, so caching it cannot make one tracer
+    #: behave differently from the next.
+    _CRITICAL_T = {}
+
     @classmethod
     def supports(cls, index1, index2):
         """Whether an isoline with these two inputs can be traced
@@ -624,7 +631,7 @@ class IsoLineTracer(object):
         self._eos_bounds = self._find_eos_bounds()
         envelope_bounds, self._saturation_bounds = self._find_saturation_bounds()
         self._dome_limit = envelope_bounds.get(self._sat_index)
-        self._dome_T_limit, self._dome_p_limit = self._find_dome_limits()
+        self._dome_T_limit = self._find_dome_temperature_limit()
         self._sat_value = None
         self._bracket = None
         self._bracket_failure = None
@@ -815,8 +822,19 @@ class IsoLineTracer(object):
             return {k: v * self.DOME_MARGIN for k, v in bounds.items()}
         return clean(envelope), clean(outer)
 
-    def _find_dome_limits(self):
-        """The temperature, and pressure, above which there is certainly no dome
+    def _find_dome_temperature_limit(self):
+        """The temperature above which there is certainly no two-phase region
+
+        Temperature only, deliberately.  A pressure bound looks like it should
+        be just as usable -- above the cricondenbar no two-phase state exists
+        at that pressure -- but it does not answer the question this is for.
+        What has to be decided is whether the ``(T, rhomolar)`` the Newton
+        iteration landed on is the stable root at *its own* temperature, and
+        the EOS pressure along the metastable branch inside the dome runs well
+        above the cricondenbar, so a root there satisfies a high-pressure
+        isobar perfectly while sitting between the saturation densities.
+        Short-circuiting on pressure shipped 69 such roots on a default
+        R441A T-s plot, 8.7 % out in temperature.
 
         This one has to be right rather than generous: it is what decides
         whether a saturation call that could not answer counts as "there is no
@@ -841,22 +859,29 @@ class IsoLineTracer(object):
             if closed:
                 # The trace covered the whole dome, so its own extremes are the
                 # cricondentherm and the cricondenbar.
-                return (temperatures[hot] * self.DOME_MARGIN,
-                        float(np.max(np.asarray(data.p, dtype=float))) * self.DOME_MARGIN)
+                return temperatures[hot] * self.DOME_MARGIN
         except Exception:
             pass  # envelope unusable; fall through to locating the critical point
-        # An envelope that stopped early bounds neither.  The critical point can
-        # be located directly, which is slow enough to be worth avoiding when
-        # the envelope already answered, and gives the temperature only: the
-        # cricondenbar can lie above the critical pressure, so no pressure
-        # bound is claimed here and pressure simply stops short-circuiting.
-        try:
-            stable = [point.T for point in self._sat.all_critical_points() if point.stable]
-            if stable:
-                return max(stable) * self.DOME_MARGIN, None
-        except Exception:
-            pass  # critical point not locatable; fall back on the outer bound
-        return self._saturation_bounds.get(CoolProp.iT), None
+        # An envelope that stopped early does not bound the dome.  The critical
+        # point can be located directly, which is slow enough to be worth
+        # avoiding whenever the envelope already answered.
+        key = (self._sat.backend_name(), tuple(self._sat.fluid_names()),
+               tuple(self._sat.get_mole_fractions()))
+        if key not in self._CRITICAL_T:
+            if len(self._CRITICAL_T) > 64:  # a plotting session, not a cache
+                self._CRITICAL_T.clear()
+            critical = None
+            try:
+                stable = [point.T for point in self._sat.all_critical_points() if point.stable]
+                if stable:
+                    critical = max(stable)
+            except Exception:
+                pass  # critical point not locatable; fall back on the outer bound
+            self._CRITICAL_T[key] = critical
+        critical = self._CRITICAL_T[key]
+        if critical is not None:
+            return critical * self.DOME_MARGIN
+        return self._saturation_bounds.get(CoolProp.iT)
 
     def _is_plausible_saturation(self, T, p):
         """Whether a state the saturation solver returned can be on the dome"""
@@ -1187,9 +1212,6 @@ class IsoLineTracer(object):
         """
         if self._dome_T_limit is not None and T > self._dome_T_limit:
             return          # above the critical point; there is no dome to be in
-        if self._sat_index == CoolProp.iP and self._dome_p_limit is not None \
-                and self._sat_value is not None and self._sat_value > self._dome_p_limit:
-            return          # above the cricondenbar; this isobar has no dome
         undecided = None
         try:
             self._sat.update(CoolProp.QT_INPUTS, 0.0, T)
