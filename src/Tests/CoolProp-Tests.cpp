@@ -5691,6 +5691,114 @@ TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads"
     }
 }
 
+// JSONFluidLibrary::add_one used to append the fluid name to name_vector -- the
+// vector behind get_global_param_string("fluids_list") -- before parsing
+// anything else.  Any failure after that point left the name advertised in
+// fluids_list with no entry in string_to_index_map or fluid_map, so
+// AbstractState::factory("HEOS", <name>) threw for a name the library itself
+// listed.  The library is process-wide with no unregister, so the orphan
+// persisted for the rest of the process: measured, 2 of 3 --order rand seeds
+// then broke the [formation] test, the only one that walks the whole list.
+//
+// This test is only safe to write BECAUSE of that fix.  It deliberately fails an
+// add, which under the old code would have poisoned every later test in the
+// binary -- which is why the guard tests for parse_rhosr_viscosity could not be
+// added at the time and had to be deferred to this fix.
+TEST_CASE("A failed HEOS add leaves no orphan in fluids_list", "[fluids_list],[add_one]") {
+    using nlohmann::json;
+
+    const std::string before = CoolProp::get_global_param_string("fluids_list");
+    const std::string probe_name = "CatchRuntimeOrphanProbe";
+    REQUIRE(before.find(probe_name) == std::string::npos);
+
+    SECTION("a fluid that throws mid-parse is not advertised") {
+        // Enough INFO for add_one to read the name, then nothing else: it throws
+        // on the missing CAS member, which is the first thing inside the try.
+        json bad = json::object();
+        bad["INFO"] = json::object();
+        bad["INFO"]["NAME"] = probe_name;
+
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("HEOS", json::array({bad}).dump()), CoolProp::ValueError);
+
+        const std::string after = CoolProp::get_global_param_string("fluids_list");
+        CHECK(after.find(probe_name) == std::string::npos);
+        // Exact, not just "probe absent": a leak of any other name would also be
+        // a regression, and the list is otherwise immutable here.
+        CHECK(after == before);
+    }
+
+    SECTION("the whole list still constructs afterwards") {
+        // The orphan's real damage was downstream -- an unconstructible name in
+        // fluids_list. Walk the list the way the [formation] test does.
+        for (const auto& fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')) {
+            CAPTURE(fluid);
+            REQUIRE_NOTHROW(std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid)));
+        }
+    }
+
+    SECTION("add_many is not transactional: a mid-list failure keeps what came before") {
+        // This is the mechanism that made the old load() come up truncated.
+        // add_many has no per-fluid try, so a bad entry aborts the loop and
+        // everything after it is never added.  load() used to swallow that into
+        // a stdout line, so the library came up partial with no error state.
+        // The semantics are pinned here through the public path, since the
+        // static load's copy cannot be reached from the test suite.
+        //
+        // R134a is the donor because it carries no INFO.STANDARD_STATE, so the
+        // exact ATcT count in the [formation] test is unperturbed by the clone
+        // that this section leaves permanently registered.
+        json donor = json::parse(CoolProp::get_fluid_param_string("R134a", "JSON"))[0];
+        auto clone = [&](const std::string& name, const std::string& CAS) {
+            json fluid = donor;
+            fluid["INFO"]["NAME"] = name;
+            fluid["INFO"]["CAS"] = CAS;
+            fluid["INFO"]["ALIASES"] = json::array();
+            fluid["INFO"]["REFPROP_NAME"] = "N/A";
+            return fluid;
+        };
+        const std::string before_name = "CatchRuntimeTruncBefore";
+        const std::string after_name = "CatchRuntimeTruncAfter";
+
+        json bad = json::object();
+        bad["INFO"] = json::object();
+        bad["INFO"]["NAME"] = "CatchRuntimeTruncBad";
+
+        json doc = json::array();
+        doc.push_back(clone(before_name, "999-99-70"));
+        doc.push_back(bad);
+        doc.push_back(clone(after_name, "999-99-71"));
+
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("HEOS", doc.dump()), CoolProp::ValueError);
+
+        const std::string list = CoolProp::get_global_param_string("fluids_list");
+        // Entries before the failure are kept.  This assertion DOCUMENTS current
+        // behaviour rather than requiring it: making add_many transactional
+        // would be a defensible improvement and would flip this check.  The two
+        // == npos assertions below are the ones carrying regression signal.
+        CHECK(list.find(before_name) != std::string::npos);
+        CHECK_NOTHROW(CoolProp::PropsSI("T", "P", 101325, "Q", 0, before_name));
+        // ...everything after it is dropped, and — the point of the fix — the
+        // one that failed is not advertised either.
+        CHECK(list.find(after_name) == std::string::npos);
+        CHECK(list.find("CatchRuntimeTruncBad") == std::string::npos);
+    }
+
+    SECTION("a rejected duplicate does not disturb the list either") {
+        // The duplicate branch pops nothing now, but it throws AFTER the point
+        // where the old code had already popped -- so a naive "pop in the catch"
+        // fix would have removed a DIFFERENT fluid's name here.  This is the
+        // case that makes that fix wrong, and it is why the append moved to the
+        // end of the try instead.
+        REQUIRE(CoolProp::get_config_bool(OVERWRITE_FLUIDS) == false);
+        json water = json::parse(CoolProp::get_fluid_param_string("Water", "JSON"));
+
+        const std::string list_before = CoolProp::get_global_param_string("fluids_list");
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("HEOS", water.dump()), CoolProp::ValueError);
+        CHECK(CoolProp::get_global_param_string("fluids_list") == list_before);
+        CHECK_NOTHROW(CoolProp::PropsSI("T", "P", 101325, "Q", 0, "Water"));
+    }
+}
+
 TEST_CASE("Water TS_INPUTS flash near 631-634 K is smooth (no spike to 6e13 Pa)", "[water_flash][2079]") {
     // Issue #2079: previously CP.PropsSI('P','T',T,'S',6763.617,'Water')
     // for T in {631, 632, 633, 634} returned ~6e13 Pa (vs ~3.1 MPa
@@ -7661,9 +7769,10 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmhol
     }
     SECTION("a block in the wrong units is declined without killing the fluid") {
         // parse_standard_state is protected on a non-final class, so a
-        // subclass reaches it directly -- no add_fluids_as_JSON, no failed
-        // add_one, and therefore none of the process-wide fluids_list
-        // poisoning (bd CoolProp-dwuu) that made this look untestable.
+        // subclass reaches it directly -- no add_fluids_as_JSON and no failed
+        // add_one.  That mattered when a failed add poisoned fluids_list
+        // process-wide (bd CoolProp-dwuu); that is fixed now, but reaching the
+        // parser directly is still the tighter test.
         struct Probe : public CoolProp::JSONFluidLibrary
         {
             using CoolProp::JSONFluidLibrary::parse_standard_state;
@@ -7714,24 +7823,15 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmhol
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
         std::size_t checked = 0;
         for (auto& fluid : fluids) {
+            // Every name in fluids_list must construct.  This used to swallow a
+            // ValueError and continue, because add_one appended the name before
+            // its try block, so any failed HEOS add permanently left an orphan
+            // here and broke this loop under --order rand.  add_one now appends
+            // only on success, so an unconstructible name is a real defect
+            // again and is allowed to fail the test rather than be skipped.
             shared_ptr<CoolProp::AbstractState> AS;
-            try {
-                AS.reset(CoolProp::AbstractState::factory("HEOS", fluid));
-            } catch (const CoolProp::ValueError&) {
-                // A name in fluids_list that will not construct is an orphan
-                // left behind by a failed add_one: name_vector is appended
-                // before add_one's try block and never popped in its catch, so
-                // any test that fails a HEOS add permanently leaves its name in
-                // get_global_param_string("fluids_list") with no entry in
-                // string_to_index_map.  Measured: with such a name present, 2
-                // of 3 --order rand seeds failed here on the factory call.  No
-                // test does that today, but this loop is the only one that
-                // walks the whole list, so it should not be the thing that
-                // breaks when one does.  This cannot hide a real regression:
-                // if a fluid that HAS a value stops constructing, the exact
-                // count below drops below 76 and fails.
-                continue;
-            }
+            CAPTURE(fluid);
+            REQUIRE_NOTHROW(AS.reset(CoolProp::AbstractState::factory("HEOS", fluid)));
             double value = 0;
             try {
                 value = AS->keyed_output(CoolProp::iHmolar_formation);
