@@ -1094,7 +1094,7 @@ const char* const AR_RESIDUAL = R"JSON({"type": "expression",
   "formula": "let Tr = T/Tc\nlet rhor = Dmolar/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*(f1*rhor + f2*rhor^2/Tr + (f1*rhor - rhor^2)/Tr^5 + (rhor - f3*rhor^5)/(rhor - f4 - Tr) - f5)",
   "state_variables": ["T", "Dmolar"],
   "constants": {"Tc": 150.687, "rhoc": 13407.42965855612,
-                "f1": 3.62648753859904, "f2": 6.655428299399591, "f3": 0.39751160825739,
+                "f1": 3.62648753859904, "f2": 6.655428299399591, "f3": 0.397511608257391,
                 "f4": 2.6697983930209,  "f5": 0.0472018570860789}})JSON";
 // clang-format on
 }  // namespace

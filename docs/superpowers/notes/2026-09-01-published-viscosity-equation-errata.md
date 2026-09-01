@@ -127,12 +127,21 @@ REFPROP's fluid file:
 | Ammonia | correct | `c0 + c1ρr + c2ρr⁴ + c3ρr⁸/Tr⁴ + c4Trρr²` |
 | Methane | correct | `f5 = −1.48` is an EXPONENT on `Tr`, not a coefficient over it |
 | R-245fa | correct | `c0ρr⁵ + c1ρr²/Tr + c2ρr¹²/Tr³`, all three exponents match |
+| Argon | correct | incl. `f1`'s reuse in the third numerator and the `ρr − f4 − Tr` pole |
+| Nitrogen | correct | Eq. 5 is the plain 10-term sum; Eq. 4's `exp` was dropped in fitting |
 
-**Not checked:** argon and nitrogen, which are implemented as test fixtures rather than
-shipped, and whose printed equations sit past a figure in the text layer. Both were
-validated against their papers' verification points, so both are consistent with their
-papers' *tables*; only the printed *equation* is unread. Every SHIPPED correlation has
-now had its printed equation read.
+**Nothing is left unread.** Every correlation in this set, shipped or test fixture, has
+now had its typeset equation compared term-by-term against the implementation.
+
+Two of these needed care. Argon's Eq. 6 is pushed a page past the "final equation
+obtained was" that introduces it, landing below Fig. 3, so a text-layer search finds the
+sentence and then a figure caption. Nitrogen is the subtler one: its Eq. 4 is a general
+form carrying an `exp(−γi ρr^li)` factor, and reading only that equation would suggest
+the implementation is missing an exponential. It is not — the paper states that
+"although we initially included exponential terms in Eq. 4, our final correlation
+contained only polynomials", and Eq. 5, a plain ten-term sum, is the fitted form. Table 4
+tabulates only `Ni, ti, di` and is captioned for Eqs. 1, 3 and 5, never for Eq. 4. The
+absence of `γ` and `l` columns is the tell.
 
 ### Getting at an equation that will not render
 
