@@ -7864,142 +7864,187 @@
         "type": "polynomial"
       }
     },
-    "viscosity": {
-      "BibTeX": "Huber-IJR-2016-R1234",
-      "dilute": {
-        "type": "expression",
-        "formula": "let eta0 = sum(i: n[i]*T^np[i])/sum(i: m[i]*T^mp[i])\n1e-6*eta0",
-        "state_variables": [
-          "T"
+    "viscosity": [
+      {
+        "BibTeX": "Huber-IJR-2016-R1234",
+        "dilute": {
+          "type": "expression",
+          "formula": "let eta0 = sum(i: n[i]*T^np[i])/sum(i: m[i]*T^mp[i])\n1e-6*eta0",
+          "state_variables": [
+            "T"
+          ],
+          "constants": {},
+          "arrays": {
+            "n": [
+              -836950.0,
+              6336.28,
+              -2.3547,
+              0.0395563
+            ],
+            "np": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "m": [
+              39509.1,
+              121.018,
+              1.0
+            ],
+            "mp": [
+              0,
+              1,
+              2
+            ]
+          }
+        },
+        "initial_density": {
+          "type": "expression",
+          "formula": "let eta0 = sum(i: n[i]*T^np[i])/sum(i: m[i]*T^mp[i])\nlet Ts = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Ts^bp[i])\n1e-6*eta0*Bstar*etaB2red*(Dmolar/1000)",
+          "state_variables": [
+            "T",
+            "Dmolar"
+          ],
+          "constants": {
+            "epsilon_over_k": 275.0,
+            "etaB2red": 0.090164213
+          },
+          "arrays": {
+            "n": [
+              -836950.0,
+              6336.28,
+              -2.3547,
+              0.0395563
+            ],
+            "np": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "m": [
+              39509.1,
+              121.018,
+              1.0
+            ],
+            "mp": [
+              0,
+              1,
+              2
+            ],
+            "b": [
+              -19.572881,
+              219.73999,
+              -1015.3226,
+              2471.01251,
+              -3375.1717,
+              2491.6597,
+              -787.26086,
+              14.085455,
+              -0.34664158
+            ],
+            "bp": [
+              0,
+              -0.25,
+              -0.5,
+              -0.75,
+              -1.0,
+              -1.25,
+              -1.5,
+              -2.5,
+              -5.5
+            ]
+          }
+        },
+        "higher_order": {
+          "type": "expression",
+          "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\nlet num = sum(i: c[i]*tau^ct[i]*del^(cd[i]/3))\nlet den = sum(i: q[i]*tau^qt[i]*del^qd[i])\n1e-6*num/den",
+          "state_variables": [
+            "T",
+            "Dmolar"
+          ],
+          "constants": {
+            "T_red": 367.85,
+            "rho_red": 4170.0
+          },
+          "arrays": {
+            "c": [
+              0.68706100665,
+              7.1608477411,
+              -2.079577245,
+              -43.47027288
+            ],
+            "ct": [
+              1.5,
+              1.5,
+              1.5,
+              0.5
+            ],
+            "cd": [
+              2,
+              5,
+              8,
+              5
+            ],
+            "q": [
+              -3.53682791,
+              1.0
+            ],
+            "qt": [
+              1.0,
+              1.0
+            ],
+            "qd": [
+              0,
+              1
+            ]
+          }
+        }
+      },
+      {
+        "BibTeX": "Bell-PURDUE-2016-ETA",
+        "C": 0.87302,
+        "c_liq": [
+          0.6100913843,
+          0.4508958312,
+          -0.017063,
+          0.000564
         ],
-        "constants": {},
-        "arrays": {
-          "n": [
-            -836950.0,
-            6336.28,
-            -2.3547,
-            0.0395563
+        "c_vap": [
+          0.0,
+          1.2,
+          -0.308598,
+          0.035317
+        ],
+        "rhosr_critical": -54468.47741433059,
+        "type": "rhosr-CS",
+        "x_crossover": 2
+      },
+      {
+        "BibTeX": "BELL-PERSONAL-2015",
+        "_note": "Fit based on the data of Zhao, JCED, 2014: doi: 10.1021/je5001457",
+        "epsilon_over_k": 281.14,
+        "epsilon_over_k_units": "K",
+        "psi": {
+          "a": [
+            0.17682139,
+            0.74500256,
+            -0.16912621
           ],
-          "np": [
-            0,
-            1,
-            2,
-            3
-          ],
-          "m": [
-            39509.1,
-            121.018,
-            1.0
-          ],
-          "mp": [
+          "rhomolar_reducing": 4170.0,
+          "rhomolar_reducing_units": "mol/m^3",
+          "t": [
             0,
             1,
             2
           ]
-        }
-      },
-      "initial_density": {
-        "type": "expression",
-        "formula": "let eta0 = sum(i: n[i]*T^np[i])/sum(i: m[i]*T^mp[i])\nlet Ts = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Ts^bp[i])\n1e-6*eta0*Bstar*etaB2red*(Dmolar/1000)",
-        "state_variables": [
-          "T",
-          "Dmolar"
-        ],
-        "constants": {
-          "epsilon_over_k": 275.0,
-          "etaB2red": 0.090164213
         },
-        "arrays": {
-          "n": [
-            -836950.0,
-            6336.28,
-            -2.3547,
-            0.0395563
-          ],
-          "np": [
-            0,
-            1,
-            2,
-            3
-          ],
-          "m": [
-            39509.1,
-            121.018,
-            1.0
-          ],
-          "mp": [
-            0,
-            1,
-            2
-          ],
-          "b": [
-            -19.572881,
-            219.73999,
-            -1015.3226,
-            2471.01251,
-            -3375.1717,
-            2491.6597,
-            -787.26086,
-            14.085455,
-            -0.34664158
-          ],
-          "bp": [
-            0,
-            -0.25,
-            -0.5,
-            -0.75,
-            -1.0,
-            -1.25,
-            -1.5,
-            -2.5,
-            -5.5
-          ]
-        }
-      },
-      "higher_order": {
-        "type": "expression",
-        "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\nlet num = sum(i: c[i]*tau^ct[i]*del^(cd[i]/3))\nlet den = sum(i: q[i]*tau^qt[i]*del^qd[i])\n1e-6*num/den",
-        "state_variables": [
-          "T",
-          "Dmolar"
-        ],
-        "constants": {
-          "T_red": 367.85,
-          "rho_red": 4170.0
-        },
-        "arrays": {
-          "c": [
-            0.68706100665,
-            7.1608477411,
-            -2.079577245,
-            -43.47027288
-          ],
-          "ct": [
-            1.5,
-            1.5,
-            1.5,
-            0.5
-          ],
-          "cd": [
-            2,
-            5,
-            8,
-            5
-          ],
-          "q": [
-            -3.53682791,
-            1.0
-          ],
-          "qt": [
-            1.0,
-            1.0
-          ],
-          "qd": [
-            0,
-            1
-          ]
-        }
+        "reference_fluid": "R134a",
+        "sigma_eta": 5.328e-10,
+        "sigma_eta_units": "m",
+        "type": "ECS"
       }
-    }
+    ]
   }
 }
