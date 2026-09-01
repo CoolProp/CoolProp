@@ -126,15 +126,31 @@ REFPROP's fluid file:
 | R-1234ze(E) | correct | same Eq. 10 with `c7 = 1, c8 = 0`, which collapses the rational part |
 | Ammonia | correct | `c0 + c1ρr + c2ρr⁴ + c3ρr⁸/Tr⁴ + c4Trρr²` |
 | Methane | correct | `f5 = −1.48` is an EXPONENT on `Tr`, not a coefficient over it |
-
-Coefficients confirmed but the printed equation NOT read (it is an embedded object in
-the accepted manuscript, and the residual has no denominator for a sign to hide in):
-R-245fa — `c0 = 0.83502935`, `c1 = 10.245205`, `c2 = 0.00023356206` all match.
+| R-245fa | correct | `c0ρr⁵ + c1ρr²/Tr + c2ρr¹²/Tr³`, all three exponents match |
 
 **Not checked:** argon and nitrogen, which are implemented as test fixtures rather than
 shipped, and whose printed equations sit past a figure in the text layer. Both were
 validated against their papers' verification points, so both are consistent with their
-papers' *tables*; only the printed *equation* is unread.
+papers' *tables*; only the printed *equation* is unread. Every SHIPPED correlation has
+now had its printed equation read.
+
+### Getting at an equation that will not render
+
+R-245fa took an extra step worth recording, because the same obstacle will recur. NIST
+serves the accepted manuscript (`tsapps.nist.gov/publication/get_pdf.cfm?pub_id=920723`)
+as a `.docx` despite the `.pdf` URL, and its display equations are neither text nor
+raster images — they are embedded WMF vector objects, which is why every text extraction
+of this paper renders Eq. 16 as an empty `, (16)` placeholder. ImageMagick delegates WMF
+to LibreOffice, which was not installed.
+
+The route that worked needs no converter at all. A `.docx` is a ZIP: `word/document.xml`
+maps each paragraph to its image relationship, which identified Eq. 16 as
+`word/media/image18.wmf`; the WMF itself is a record stream whose `ExtTextOut` (0x0A32)
+records each carry a glyph together with its x/y position, and whose
+`CreateFontIndirect` (0x02FB) records carry the font heights. Sorting the 42 text
+records by x and reading y against the baseline recovers the equation exactly —
+y = 416 is the baseline, 512 is a subscript, 244 is a superscript, and the height drops
+from 384 to 224 for both. That is how `ρr¹²/Tr³` was read off with confidence.
 
 ### On what limits the remaining risk — and what does not
 
