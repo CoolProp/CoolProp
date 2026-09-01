@@ -1253,6 +1253,38 @@ TEST_CASE("Xenon: PropsSI viscosity now works", "[expression]") {
     CHECK(static_cast<double>(r) > 0);
 }
 
+// Assael, Papalas & Huber, J. Phys. Chem. Ref. Data 46(3):033103 (2017), "Reference
+// Correlations for the Viscosity and Thermal Conductivity of n-Undecane".  CoolProp
+// shipped no viscosity for n-undecane.
+//
+// TWO stages, not three: the paper states that n-undecane is too large and
+// non-spherical for the Rainwater-Friend treatment, so there is no initial-density
+// term at all and its effect is absorbed into the residual.  The DSL expresses that
+// by simply not declaring the stage.
+//
+// The residual's temperature factor is MULTIPLIED, not divided.  Eq. 8 renders as
+// "rho_r^(2/3) / T_r^(1/2)", and implementing it that way misses the paper's own
+// 550 K / 600 kg/m^3 point by 15 %.  REFPROP's C11.FLD has the numerator term at
+// tau^0.5 with tau = T/T_red, i.e. multiplication, which reproduces the table to
+// 1e-5.  Third correlation in this file where the rendered equation is wrong and the
+// machine-readable form is right.
+TEST_CASE("n-Undecane: shipped viscosity matches the paper's Table 11", "[expression][golden]") {
+    // Table 11, sample points for computer verification: T (K), rho (kg/m^3), eta (muPa.s).
+    const double tab11[5][3] = {{550.0, 0.0, 8.935}, {550.0, 10.0, 10.702}, {550.0, 600.0, 188.68}, {635.0, 0.0, 10.252}, {635.0, 325.0, 49.077}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Undecane"));
+    double worst = 0;
+    for (const auto& row : tab11) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-9, row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-4);
+    }
+    WARN("n-Undecane vs Table 11: worst relative deviation " << worst << " over 5 points");
+}
+
 // Monogenidou, Assael & Huber, J. Phys. Chem. Ref. Data 47(2):023102 (2018),
 // "Reference Correlation for the Viscosity of Ammonia from the Triple Point to 725 K
 // and up to 50 MPa".  A SUPERSESSION: this replaces Fenghour et al. (1995).
