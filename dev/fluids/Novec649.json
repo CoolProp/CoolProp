@@ -4231,5 +4231,79 @@
       "smolar": 393.7760464015246,
       "smolar_units": "J/mol/K"
     }
+  },
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Wen-JCED-2017-Novec649",
+      "dilute": {
+        "type": "expression",
+        "formula": "let Ts = T/epsilon_over_k\nlet Omega = 1.16145*Ts^-0.14874 + 0.52487*exp(-0.7732*Ts) + 2.16178*exp(-2.43787*Ts) - 6.435e-4*Ts^0.14874*sin(18.0323*Ts^-0.7683 - 7.27371)\n1e-6*Ceta*sqrt(T)/(sigma^2*Omega)",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Ceta": 0.412899,
+          "sigma": 0.6509,
+          "epsilon_over_k": 350.84
+        }
+      },
+      "initial_density": {
+        "type": "expression",
+        "formula": "let Ts = T/epsilon_over_k\nlet Omega = 1.16145*Ts^-0.14874 + 0.52487*exp(-0.7732*Ts) + 2.16178*exp(-2.43787*Ts) - 6.435e-4*Ts^0.14874*sin(18.0323*Ts^-0.7683 - 7.27371)\nlet eta0 = 1e-6*Ceta*sqrt(T)/(sigma^2*Omega)\nlet Bstar = sum(i: b[i]*Ts^bp[i])\neta0*Bstar*etaB2red*(Dmolar/1000)",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "Ceta": 0.412899,
+          "sigma": 0.6509,
+          "epsilon_over_k": 350.84,
+          "etaB2red": 0.166071
+        },
+        "arrays": {
+          "b": [
+            -19.572881,
+            219.73999,
+            -1015.3226,
+            2471.0125,
+            -3375.1717,
+            2491.6597,
+            -787.26086,
+            14.085455,
+            -0.34664158
+          ],
+          "bp": [
+            0,
+            -0.25,
+            -0.5,
+            -0.75,
+            -1.0,
+            -1.25,
+            -1.5,
+            -2.5,
+            -5.5
+          ]
+        }
+      },
+      "higher_order": {
+        "type": "expression",
+        "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\nlet simple = c0*tau^0.5*del^(2/3)\nlet den = c2 + c3*del + c4*tau + c5*tau*del + c6*tau*del^2\n1e-6*(simple + c1*tau^0.5*del^(2/3)/den)",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "T_red": 441.81,
+          "rho_red": 1920.0,
+          "c0": 22.0057,
+          "c1": 231.063,
+          "c2": 0.423359,
+          "c3": -0.122057,
+          "c4": 18.461,
+          "c5": -11.1393,
+          "c6": 1.67777
+        }
+      }
+    }
   }
 }

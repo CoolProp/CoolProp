@@ -4370,5 +4370,120 @@
       "smolar": 175.5995934256763,
       "smolar_units": "J/mol/K"
     }
+  },
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Tsolakidou-JPCRD-2017-R161",
+      "dilute": {
+        "type": "expression",
+        "formula": "1e-6*Ceta*sqrt(T)/(sigma^2*exp(a0 + a1*ln(T/epsilon_over_k)))",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Ceta": 0.14805732,
+          "sigma": 0.4457,
+          "epsilon_over_k": 320.39,
+          "a0": 0.2413,
+          "a1": -0.45
+        }
+      },
+      "initial_density": {
+        "type": "expression",
+        "formula": "let eta0 = 1e-6*Ceta*sqrt(T)/(sigma^2*exp(a0 + a1*ln(T/epsilon_over_k)))\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^bp[i])\neta0*Bstar*etaB2red*(Dmolar/1000)",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "Ceta": 0.14805732,
+          "sigma": 0.4457,
+          "epsilon_over_k": 320.39,
+          "a0": 0.2413,
+          "a1": -0.45,
+          "etaB2red": 0.0533186
+        },
+        "arrays": {
+          "b": [
+            -19.572881,
+            219.73999,
+            -1015.3226,
+            2471.0125,
+            -3375.1717,
+            2491.6597,
+            -787.26086,
+            14.085455,
+            -0.34664158
+          ],
+          "bp": [
+            0,
+            -0.25,
+            -0.5,
+            -0.75,
+            -1.0,
+            -1.25,
+            -1.5,
+            -2.5,
+            -5.5
+          ]
+        }
+      },
+      "higher_order": {
+        "type": "expression",
+        "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\nlet simple = sum(i: n[i]*tau^nt[i]*del^nd[i])\nlet num = sum(i: p[i]*tau^pt[i]*del^pd[i])\nlet den = sum(i: q[i]*tau^qt[i]*del^qd[i])\n1e-6*(simple + num/den)",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "T_red": 375.25,
+          "rho_red": 6283.9
+        },
+        "arrays": {
+          "n": [
+            -10.28373,
+            7.65563,
+            4.842,
+            0.42223
+          ],
+          "nt": [
+            0.5,
+            0.5,
+            2.5,
+            0.5
+          ],
+          "nd": [
+            0.6666666667,
+            1.6666666667,
+            0.6666666667,
+            4.6666666667
+          ],
+          "p": [
+            64.34983,
+            64.34983
+          ],
+          "pt": [
+            0.5,
+            1.5
+          ],
+          "pd": [
+            1.6666666667,
+            0.6666666667
+          ],
+          "q": [
+            10.99213,
+            -1.0
+          ],
+          "qt": [
+            2.0,
+            2.0
+          ],
+          "qd": [
+            0.0,
+            2.0
+          ]
+        }
+      }
+    }
   }
 }
