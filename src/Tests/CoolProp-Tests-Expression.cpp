@@ -1253,6 +1253,41 @@ TEST_CASE("Xenon: PropsSI viscosity now works", "[expression]") {
     CHECK(static_cast<double>(r) > 0);
 }
 
+// Huber & Assael, Int. J. Refrigeration 71:39-45 (2016), one paper covering BOTH
+// R-1234yf and R-1234ze(E).  Supersessions: each fluid previously carried a LIST of
+// two models, Bell's rho_s r-CS (2016) plus an ECS fallback.
+//
+// Their dilute terms are ratios of polynomials in ABSOLUTE temperature, not reduced
+// -- the FLD writes `$DG SUM:4 SUM:3 /` with no RED, and the coefficients
+// (-836950, 6336.28, ...) only make sense that way.
+//
+// The two fluids agree to within 0.04 % at 10.522 mol/L, which looks like a
+// transcription error and is not: they are isomers, both C3H2F4, and the paper uses
+// one set of test densities for both.  Checked rather than assumed.
+TEST_CASE("R1234yf and R1234ze(E): shipped viscosity matches the paper's verification points", "[expression][golden]") {
+    // Section 2.4, Computer-Program Verification, inline rather than tabulated.
+    // T = 300 K throughout; rho in mol/L; eta in muPa.s.
+    struct Row
+    {
+        const char* fluid;
+        double rho_molL, eta;
+    };
+    const Row rows[6] = {{"R1234yf", 0.0, 11.579},    {"R1234yf", 0.044, 11.549},    {"R1234yf", 10.522, 217.97},
+                         {"R1234ze(E)", 0.0, 11.777}, {"R1234ze(E)", 0.044, 12.041}, {"R1234ze(E)", 10.522, 217.89}};
+    double worst = 0;
+    for (const auto& r : rows) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", r.fluid));
+        AS->update(CoolProp::DmolarT_INPUTS, (r.rho_molL > 0) ? r.rho_molL * 1000.0 : 1e-9, 300.0);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6;
+        CAPTURE(r.fluid, r.rho_molL, r.eta);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - r.eta) / r.eta;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-4);
+    }
+    WARN("R1234yf/ze(E) vs Section 2.4: worst relative deviation " << worst << " over 6 points");
+}
+
 // Velliadou, Assael, Huber et al., Int. J. Thermophys. 43:129 (2022), "Reference
 // Correlation for the Viscosity of R-32".  A SUPERSESSION: R32.json previously
 // carried a LIST of two models, Bell's rho_s r-CS (2016) and an ECS fallback, both
