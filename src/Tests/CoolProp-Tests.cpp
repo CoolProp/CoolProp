@@ -85,11 +85,21 @@ vel viscosity_validation_data[] = {
   vel("DimethylEther", "T", 253.146, "Dmass", 734.28, "V", 0.20444e-3, 3e-3),
   vel("DimethylEther", "T", 373.132, "Dmass", 613.78, "V", 0.09991e-3, 3e-3),
 
-  // From Fenghour, JPCRD, 1995
-  vel("Ammonia", "T", 200, "Dmolar", 3.9, "V", 6.95e-6, 1e-3),
-  vel("Ammonia", "T", 200, "Dmolar", 42754.4, "V", 507.28e-6, 1e-3),
-  vel("Ammonia", "T", 398, "Dmolar", 7044.7, "V", 17.67e-6, 1e-3),
-  vel("Ammonia", "T", 398, "Dmolar", 21066.7, "V", 43.95e-6, 1e-3),
+  // Ammonia viscosity is now Monogenidou, Assael & Huber, JPCRD 47:023102 (2018),
+  // superseding Fenghour et al. (1995).  These are the 2018 paper's OWN Section 3
+  // verification points, in the units it publishes them (kg/m^3, muPa.s).
+  //
+  // The four Fenghour points that used to sit here are gone because they describe a
+  // correlation CoolProp no longer has.  Worth recording what the supersession moved,
+  // since it is not uniform: at Fenghour's own states the two agree to +0.09 % at
+  // (200 K, 3.9 mol/m^3) and +1.12 % at (200 K, 42754.4), but differ by -2.42 % at
+  // (398 K, 7044.7) and -10.24 % at (398 K, 21066.7).  That last state is
+  // near-critical (T/Tc = 0.981, rho/rho_c = 1.54), which is where the two
+  // correlations' data coverage differs most; NEITHER model carries a viscosity
+  // critical enhancement, so the gap is between the correlations themselves.
+  vel("Ammonia", "T", 300, "Dmass", 1e-9, "V", 10.1812e-6, 1e-5),
+  vel("Ammonia", "T", 300, "Dmass", 8.0, "V", 9.9219e-6, 1e-5),
+  vel("Ammonia", "T", 300, "Dmass", 609.0, "V", 133.3937e-6, 1e-5),
 
   // From Lemmon and Jacobsen, JPCRD, 2004
   vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "V", 6.90349e-6, 1e-3),

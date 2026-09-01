@@ -1253,6 +1253,52 @@ TEST_CASE("Xenon: PropsSI viscosity now works", "[expression]") {
     CHECK(static_cast<double>(r) > 0);
 }
 
+// Monogenidou, Assael & Huber, J. Phys. Chem. Ref. Data 47(2):023102 (2018),
+// "Reference Correlation for the Viscosity of Ammonia from the Triple Point to 725 K
+// and up to 50 MPa".  A SUPERSESSION: this replaces Fenghour et al. (1995).
+//
+// Safe to replace because ammonia's dilute thermal conductivity is
+// `ratio_of_polynomials`, which does not consume the dilute viscosity.  Nitrogen and
+// argon are the two fluids in this audit where it does (`eta0_and_poly`), and they
+// are deliberately NOT part of this batch -- see CoolProp-f1ez.
+TEST_CASE("Ammonia: shipped viscosity matches the paper's verification points", "[expression][golden]") {
+    // Section 3 gives three points inline rather than as a numbered table:
+    // T (K), rho (kg/m^3), eta (muPa.s).
+    const double verif[3][3] = {{300.0, 0.0, 10.1812}, {300.0, 8.0, 9.9219}, {300.0, 609.0, 133.3937}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Ammonia"));
+    double worst = 0;
+    for (const auto& row : verif) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-9, row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-5);
+    }
+    WARN("Ammonia vs Section 3 verification points: worst relative deviation " << worst << " over 3 points");
+}
+
+// Perkins, Huber & Assael, J. Chem. Eng. Data 61(9):3286-3294 (2016).  A supersession
+// of the rho_s r-CS + ECS predictive model; R-245fa's dilute conductivity does not
+// consume the dilute viscosity, so nothing else moves.
+TEST_CASE("R245fa: shipped viscosity matches the paper's Table 8", "[expression][golden]") {
+    // Table 8, sample points for computer verification: T (K), rho (kg/m^3), eta (muPa.s).
+    const double tab8[4][3] = {{250.0, 0.0, 8.6291}, {250.0, 1500.0, 1085.562}, {430.0, 0.0, 14.630}, {430.0, 530.0, 30.632}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R245fa"));
+    double worst = 0;
+    for (const auto& row : tab8) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-9, row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-4);
+    }
+    WARN("R245fa vs Table 8: worst relative deviation " << worst << " over 4 points");
+}
+
 // Wen, Meng, Huber & Wu, J. Chem. Eng. Data 62(10):3603-3609 (2017), "Measurement and
 // Correlation of the Viscosity of 1,1,1,2,2,4,5,5,5-Nonafluoro-4-(trifluoromethyl)-3-
 // pentanone" (Novec 649).  CoolProp shipped no viscosity for it.
