@@ -573,7 +573,24 @@ bool FlashRoutines::sat_superanc_path_applies(HelmholtzEOSMixtureBackend& HEOS) 
     return std::abs(Q) < Q_BOUNDARY_TOL || std::abs(Q - 1) < Q_BOUNDARY_TOL;
 }
 
+namespace {
+/// Reject a vapor quality outside [0,1], NaN included, before any flash consumes it.
+///
+/// The public update() switches check this too, but they are not the only doors into
+/// these routines: update_HmolarQ_with_guessT and direct FlashRoutines calls arrive
+/// unchecked.  HQ_flash's own gate, std::abs(Q - 1) > 1e-10, is false for NaN, so a
+/// NaN quality was accepted as if it were exactly 1, missed the superancillary gate
+/// (false for NaN as well) and faulted inside saturation_PHSU_pure.
+void reject_non_finite_Q(CoolProp::HelmholtzEOSMixtureBackend& HEOS, const char* who) {
+    const double Q = HEOS.Q();  // CoolPropDbl is double; no cast needed
+    if (!is_in_closed_range(0.0, 1.0, Q)) {
+        throw CoolProp::OutOfRangeError(format("%s: input vapor quality [Q] must be between 0 and 1, got %g", who, Q));
+    }
+}
+}  // namespace
+
 void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
+    reject_non_finite_Q(HEOS, "DQ_flash");
     if (!HEOS.is_pure_or_pseudopure) {
         throw NotImplementedError("DQ_flash not ready for mixtures");
     }
@@ -612,6 +629,7 @@ void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
     HEOS._phase = iphase_twophase;
 }
 void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl Tguess) {
+    reject_non_finite_Q(HEOS, "HQ_flash");
     if (!HEOS.is_pure_or_pseudopure) {
         throw NotImplementedError("HQ_flash not ready for mixtures");
     }
@@ -645,6 +663,7 @@ void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl Tgues
     HEOS._phase = iphase_twophase;
 }
 void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend& HEOS) {
+    reject_non_finite_Q(HEOS, "QS_flash");
     if (!HEOS.is_pure_or_pseudopure) {
         throw NotImplementedError("QS_flash not ready for mixtures");
     }
@@ -896,6 +915,7 @@ void FlashRoutines::QS_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
 }
 
 void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
+    reject_non_finite_Q(HEOS, "QT_flash");
     CoolPropDbl T = HEOS._T;
     CoolPropDbl Q = HEOS._Q;
     if (HEOS.is_pure_or_pseudopure) {
@@ -1165,6 +1185,7 @@ void get_Henrys_coeffs_FP(const std::string& CAS, double& A, double& B, double& 
     }
 }
 void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
+    reject_non_finite_Q(HEOS, "PQ_flash");
     if (HEOS.is_pure_or_pseudopure) {
 
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {

@@ -5689,6 +5689,193 @@ TEST_CASE("Qmass range check: cubic and PCSAFT pure fluids reject out-of-range q
     }
 }
 
+TEST_CASE("Non-finite vapor quality is rejected rather than flashed", "[quality][nonfinite]") {
+    // Every quality guard in the library was written (Q < 0) || (Q > 1).  That is
+    // false for NaN, so a NaN quality walked straight past all of them into the
+    // flash routines.  Infinities were caught only incidentally, because inf > 1.
+    //
+    // The consequences ranged from a misleading diagnostic to a hard crash:
+    // HEOS::Propane with HmolarQ_INPUTS at hmolar = 20000 and Q = NaN SEGFAULTED
+    // inside HQ_flash (exit 139).  The value of hmolar mattered -- at 10000 the
+    // same call merely threw "p is not a valid number" -- which is why this test
+    // pins the enthalpy that actually crashed.
+    //
+    // Mixtures were already covered for the Qmass pairs by check_Qmass_pair_range
+    // (#3336); this is the molar side and the pure-fluid side.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const double qinf = std::numeric_limits<double>::infinity();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+
+    SECTION("HEOS pure fluid, update()") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        for (double q : {qnan, qinf, -qinf}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 5e5, q), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::QSmolar_INPUTS, q, 100.0), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::DmolarQ_INPUTS, 1e3, q), between_0_and_1);
+            // hmolar = 20000 is the value that crashed; 10000 did not.
+            CHECK_THROWS_WITH(AS->update(CoolProp::HmolarQ_INPUTS, 2e4, q), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::HmolarQ_INPUTS, 1e4, q), between_0_and_1);
+        }
+    }
+
+    SECTION("HEOS pure fluid, update_with_guesses()") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        CoolProp::GuessesStructure guesses;
+        guesses.T = 300.0;
+        guesses.p = 5e5;
+        for (double q : {qnan, qinf}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, 1e3, q, guesses), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, 2e4, q, guesses), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::QSmolar_INPUTS, q, 100.0, guesses), between_0_and_1);
+        }
+    }
+
+    SECTION("IF97 and PCSAFT carry the same guard") {
+        auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+        auto PC = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "METHANE"));
+        for (double q : {qnan, qinf}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(IF->update(CoolProp::QT_INPUTS, q, 400.0), between_0_and_1);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PQ_INPUTS, 5e5, q), between_0_and_1);
+            CHECK_THROWS_WITH(PC->update(CoolProp::QT_INPUTS, q, 150.0), between_0_and_1);
+            CHECK_THROWS_WITH(PC->update(CoolProp::PQ_INPUTS, 1e6, q), between_0_and_1);
+        }
+    }
+
+    SECTION("valid boundary qualities still flash") {
+        // Guard against a fix that over-rejects: 0 and 1 are legal.
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        for (double q : {0.0, 0.5, 1.0}) {
+            CAPTURE(q);
+            CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+            CHECK(AS->Q() == q);
+        }
+    }
+}
+
+TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][nonfinite]") {
+    // Guarding only at update()'s switch is the wrong altitude.  The quality
+    // reaches the flash routines by other doors, and HQ_flash's own gate,
+    //     if (std::abs(HEOS.Q() - 1) > 1e-10) throw ...
+    // is false for NaN -- so a NaN quality was accepted AS IF it were exactly 1,
+    // fell past the superancillary gate (also false for NaN) into
+    // saturation_PHSU_pure, and faulted.
+    //
+    // update_HmolarQ_with_guessT is such a door: a public HelmholtzEOSMixtureBackend
+    // entry point with no quality check at all.  It has no in-tree callers, which is
+    // exactly why it is the right regression test -- it reaches HQ_flash without
+    // passing through anything this commit's sibling touched.  Before the guard moved
+    // into the flash routines, this call SIGSEGVed (exit 139).
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+    auto* HEOS = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(HEOS != nullptr);
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+
+    SECTION("update_HmolarQ_with_guessT does not crash on NaN quality") {
+        CHECK_THROWS_AS(HEOS->update_HmolarQ_with_guessT(2e4, qnan, 300.0), CoolProp::CoolPropBaseError);
+    }
+
+    SECTION("a valid unity quality still works through the same entry point") {
+        // Flash first so hmolar() is a real saturated-vapor enthalpy; the entry point
+        // is only meaningful for Q = 1, which is what its own gate enforces.
+        auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        auto* H2 = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS2.get());
+        REQUIRE(H2 != nullptr);
+        H2->update(CoolProp::QT_INPUTS, 1.0, 300.0);
+        const double h_sat_vap = H2->hmolar();
+        // It may still fail for an unrelated, pre-existing reason -- propane's
+        // saturated-vapor enthalpy at 300 K has two T-roots (GitHub #2773) -- but it
+        // must not be turned away by the range check this commit adds.
+        try {
+            H2->update_HmolarQ_with_guessT(h_sat_vap, 1.0, 300.0);
+        } catch (const std::exception& e) {
+            CHECK_THAT(std::string(e.what()), !Catch::Matchers::ContainsSubstring("must be between 0 and 1"));
+        }
+        // And the ordinary route for a boundary quality is untouched.
+        CHECK_NOTHROW(H2->update(CoolProp::QT_INPUTS, 1.0, 300.0));
+        CHECK_NOTHROW(H2->update(CoolProp::QT_INPUTS, 0.0, 300.0));
+    }
+}
+
+TEST_CASE("EquationOfState::pseudo_pure is initialized", "[cubic][uninitialized]") {
+    // EquationOfState had no user-declared constructor and declared its scalars
+    // (`bool pseudo_pure;`, R_u, molar_mass, acentric, Ttriple, ptriple) with no
+    // initializers.
+    //
+    // NOTE on the mechanism, because the obvious explanation is wrong: the bug was
+    // NOT in components built with EOSVector.emplace_back().  emplace_back() with no
+    // arguments performs VALUE-initialization, and since the class had no
+    // user-provided default constructor that zero-initialized the whole object
+    // first.  The sites that bit are the two DEFAULT-initializations in FluidLibrary
+    // -- `EquationOfState E;` in parse_EOS, and the same in the -SRK /
+    // -PengRobinson else branch -- both followed by push_back(E), which copies
+    // whatever the stack happened to hold.
+    //
+    // That distinction is why the defaults are 0 and not _HUGE: adding initializers
+    // makes the constructor non-trivial, so the value-initialized components now run
+    // it too.  Zero is what they used to get; _HUGE would have handed them an
+    // infinite Ttriple and broken every supercritical cubic flash.
+    //
+    // On this toolchain the indeterminate read of pseudo_pure happened to yield
+    // false, i.e. the right answer, so a black-box check through the backend cannot
+    // distinguish fixed from broken.  Constructing the object over deliberately
+    // poisoned storage can: without the initializer the member reads back as the
+    // poison.  For a case that WAS user-visible, see the molar-mass test below.
+    SECTION("default construction defines the member, whatever the storage held") {
+        alignas(CoolProp::EquationOfState) unsigned char buf[sizeof(CoolProp::EquationOfState)];
+        std::memset(buf, 0xFF, sizeof(buf));
+        // Default-initialization (no parentheses).  `EquationOfState()` would be
+        // VALUE-initialization, which zeroes the whole object and would mask the
+        // very thing under test.
+        auto* eos = new (static_cast<void*>(buf)) CoolProp::EquationOfState;
+        // Copy the object representation out rather than reading the member.
+        // Reading an indeterminate bool is itself UB, and an optimizing compiler
+        // may fold the comparison away -- an earlier version of this test read the
+        // member directly and passed against the unfixed code at -O1 for exactly
+        // that reason.  memcpy from the member's address reads bytes, which is
+        // well-defined, so this is deterministic at any optimization level.
+        unsigned char raw = 0;
+        std::memcpy(&raw, &eos->pseudo_pure, sizeof(raw));
+        eos->~EquationOfState();
+        CHECK(raw == 0u);
+    }
+
+    SECTION("cubic backends report themselves as pure") {
+        for (const char* backend : {"SRK", "PR"}) {
+            CAPTURE(backend);
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(backend, "Propane"));
+            CHECK(AS->fluid_param_string("pure") == "true");
+        }
+    }
+}
+
+TEST_CASE("Cubic-library-only fluids report a real molar mass", "[cubic][uninitialized]") {
+    // FluidLibrary's -SRK / -PengRobinson else branch builds its EquationOfState by
+    // default-initialization and then assigned only acentric, sat_min_liquid and
+    // reduce -- leaving R_u, molar_mass, Ttriple, ptriple, pseudo_pure and limits
+    // indeterminate, and copying them in via push_back.  (That branch now also
+    // assigns molar_mass, which is what this test pins.)
+    //
+    // R1233ZD(E) is the one cubic-library fluid with no multiparameter sibling, so
+    // it is the fluid that actually takes that branch.  PropsSI("M", ...) on it
+    // returned 1.5e-313 -- with an EMPTY error string, so nothing anywhere reported
+    // a problem.  molar_mass feeds every conversion in mass_to_molar_inputs, which
+    // makes every mass-basis query on that fluid silently wrong.
+    const double M = CoolProp::PropsSI("M", "T", 300.0, "P", 101325.0, "HEOS::R1233ZD(E)-SRK");
+    CAPTURE(M);
+    // Deliberately NOT asserting on get_global_param_string("errstring") here: it is a
+    // read-then-cleared process global that ANY earlier failing PropsSI in the binary
+    // can set, which makes such an assertion order-dependent (it fails under
+    // --order rand on some seeds).  The M check below is the real one -- the C++
+    // PropsSI returns _HUGE rather than throwing, so a regression shows up as inf.
+    // 0.1304944 kg/mol is the "molemass" this fluid carries in
+    // dev/cubics/all_cubic_fluids.json -- the value the branch should be reading.
+    CHECK(M == Catch::Approx(0.1304944).epsilon(1e-9));
+}
+
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
     // --- Cubic (SRK) ---
     // 1. Structurally invalid JSON must throw unconditionally.
