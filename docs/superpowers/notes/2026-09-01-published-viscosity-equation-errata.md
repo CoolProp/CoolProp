@@ -108,14 +108,28 @@ implemented as test fixtures rather than shipped. Each of these was validated ag
 its paper's verification points, so each is consistent with its paper's *table*; only
 the printed *equation* is unread.
 
-### Where a defect can hide
+### On what limits the remaining risk — and what does not
 
-Worth stating, because it makes the remaining gap smaller than the count suggests. A
-sign or an exponent can only go undetected where the residual has structure to hide it
-in — chiefly a denominator carrying a ± pair on like terms. Sorting the family by
-residual shape, exactly two members had that: R-161 and ethanol. Both turned out to be
-defective. Of the unchecked five, R-1234yf has a two-term denominator and the rest have
-none, so the exposure is concentrated there.
+An earlier version of this note claimed a sign or exponent error "can only hide where
+the residual has a denominator carrying a ± pair on like terms", and used that to argue
+the unchecked exposure was concentrated in one correlation. **That is wrong.** A sign
+error can sit on any coefficient in a table, on any term of a numerator or a plain sum,
+or on an exponent; nothing about a denominator is special. The two defects found here
+happen to involve a denominator sign and an exponent, but that is where these two
+landed, not where such errors live.
+
+What actually bounds the risk is different, and it is worth stating precisely because
+the two things are easy to conflate:
+
+* **For CoolProp, the risk is already closed.** Every one of these correlations was
+  validated against the verification points its own authors published. That check is
+  agnostic to where an error would be — it caught R-161's denominator sign, ethanol's
+  exponent, and krypton's missing `exp` alike. A correlation that reproduces its
+  paper's table is implemented correctly wherever the printed equation happens to
+  differ.
+* **For an erratum, the risk is open wherever the printed equation is unread.** That is
+  a statement about the publication, not about the software, and it applies uniformly
+  to all five unread papers rather than being concentrated in any of them.
 
 ## Method note
 
