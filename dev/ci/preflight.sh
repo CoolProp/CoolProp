@@ -298,6 +298,18 @@ else
             *) TAG_FILTER="${TAG_FILTER},[expression]" ;;
         esac
     fi
+    # Same orthogonality problem as [expression] above, and the same fix.  The RES tests carry
+    # [RES][transport] and neither [Helmholtz] nor [REFPROP], and the loader lives under
+    # src/Backends/Helmholtz/ -- so a change to it selects a filter containing zero RES cases.
+    # An elif arm would not do: a branch touching src/SBTL/ AND the RES loader takes the FIRST
+    # arm and would run none of them.
+    if printf '%s
+' "$ALL_PATHS" | grep -qE "^(src/Backends/Helmholtz/Fluids/FluidLibrary|include/CoolProp/CoolPropFluid\.h|src/Tests/CoolProp-Tests-RES\.cpp|dev/res_transport_parameters\.json|dev/convert_RES_csv_to_json\.py|dev/RES_reference/)"; then
+        case "$TAG_FILTER" in
+            "~[slow]") : ;;  # already runs everything except [slow]
+            *) TAG_FILTER="${TAG_FILTER},[RES]" ;;
+        esac
+    fi
     echo "  tag filter: $TAG_FILTER"
     # Gate on the runner's EXIT CODE, not on grepping its output.  The old
     # form piped into `grep -qE "failed|Errors:"`, so the `if` saw grep's

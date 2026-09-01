@@ -326,6 +326,18 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Copy the internals from another class into this one (kij, alpha functions, cp0 functions, etc.)
     void copy_internals(AbstractCubicBackend& donor);
 
+    /// Overlay the RES transport parameters for this cubic EOS onto the base CoolPropFluid
+    /// records and enable RES where every component has them.  See the .cpp for why this has to
+    /// run from copy_internals() as well as setup().
+    void seed_RES_from_components();
+
+    /// Transport for the cubics is RES or nothing.  A cubic equation of state carries no
+    /// viscosity or conductivity model, and the synthetic CoolPropFluid records these backends
+    /// build have empty transport data, so falling through to the Helmholtz correlation path
+    /// would read an unpopulated record rather than refuse.
+    CoolPropDbl calc_viscosity() override;
+    CoolPropDbl calc_conductivity() override;
+
     // Set the cubic alpha function's constants:
     void set_cubic_alpha_C(const size_t i, const std::string& parameter, const double c1, const double c2, const double c3) override;
 

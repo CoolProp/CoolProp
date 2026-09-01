@@ -805,6 +805,171 @@ class JSONFluidLibrary
         fluid.transport.viscosity_using_rhosr = true;
     }
 
+    /// Reject a coefficient vector the RES model would index past.  The routines read fixed
+    /// positions of n_dilute and n_res once `provided` is set, guarded by nothing but that flag,
+    /// so a short vector accepted here is an out-of-bounds read later.  The shipped table is
+    /// generated with fixed counts and cannot trip this today; a regenerated or hand-edited
+    /// res_transport_parameters.json can.
+    static void check_RES_dilute_size(const std::string& fluid_name, const char* property, std::size_t n_dilute) {
+        if (n_dilute != RES_N_DILUTE) {
+            throw ValueError(format("RES %s parameters for '%s': expected %d dilute-gas coefficients, got %d.", property, fluid_name.c_str(),
+                                    static_cast<int>(RES_N_DILUTE), static_cast<int>(n_dilute)));
+        }
+    }
+
+    static void check_RES_coeff_sizes(const std::string& fluid_name, const char* property, std::size_t n_dilute, std::size_t n_res,
+                                      std::size_t n_res_expected) {
+        check_RES_dilute_size(fluid_name, property, n_dilute);
+        if (n_res != n_res_expected) {
+            throw ValueError(format("RES %s parameters for '%s': expected %d residual coefficients, got %d.", property, fluid_name.c_str(),
+                                    static_cast<int>(n_res_expected), static_cast<int>(n_res)));
+        }
+    }
+
+   public:
+    /// Check every record in the RES table before a single fluid is built.
+    ///
+    /// The per-fluid overlay in add_one() throws on a malformed record, and a throw there is
+    /// unrecoverable in a way that is easy to miss: add_one rethrows, add_many's loop has no
+    /// per-fluid guard so it aborts, and load()'s catch only prints.  _is_empty is already
+    /// false and std::call_once has committed, so the process keeps a PARTIAL library -- every
+    /// fluid after the bad record silently missing -- for what is optional side data.
+    ///
+    /// Validating up front turns that into a loud, complete failure: this throws out of load()
+    /// before add_many, which leaves the once-flag unset so the error surfaces to the caller.
+    static void validate_RES_transport_table(const nlohmann::json& res_json) {
+        if (res_json.is_null()) {
+            return;
+        }
+        const std::pair<const char*, std::size_t> sections[] = {{"viscosity", RES_N_RES_VISCOSITY}, {"conductivity", RES_N_RES_CONDUCTIVITY}};
+        for (const auto& section : sections) {
+            if (!res_json.contains(section.first)) {
+                continue;
+            }
+            for (const auto& entry : res_json.at(section.first).items()) {
+                const nlohmann::json& fe = entry.value();
+                if (fe.contains("dilute") && fe.at("dilute").contains("n")) {
+                    check_RES_dilute_size(entry.key(), section.first, fe.at("dilute").at("n").size());
+                }
+                for (const char* eos_key : {"HEOS", "PR", "SRK"}) {
+                    if (fe.contains(eos_key) && fe.at(eos_key).contains("n") && fe.at(eos_key).at("n").size() != section.second) {
+                        throw ValueError(format("RES %s parameters for '%s' (%s): expected %d residual coefficients, got %d.", section.first,
+                                                entry.key().c_str(), eos_key, static_cast<int>(section.second),
+                                                static_cast<int>(fe.at(eos_key).at("n").size())));
+                    }
+                }
+            }
+        }
+    }
+
+    /// Populate RES transport parameters for one fluid from the pre-parsed RES JSON.
+    /// eos_key is "HEOS", "PR", or "SRK"; silently skips if the fluid is not in the table.
+    /// molar_mass_override > 0 is used when the CoolPropFluid has no EOS data (e.g. cubic backends).
+    static void load_RES_transport_parameters(const nlohmann::json& res_json, const std::string& eos_key, CoolPropFluid& fluid,
+                                              double molar_mass_override = -1.0,
+                                              const std::vector<std::string>& lookup_names = std::vector<std::string>()) {
+        // molar_mass_override exists for callers whose CoolPropFluid carries no EOS -- the cubic
+        // backends build one that way.  Without an override AND without an EOS, fluid.molar_mass()
+        // indexes an empty EOSVector, which is undefined behaviour rather than an exception, so
+        // the precondition is enforced here and not left to the doc comment.
+        if (!(molar_mass_override > 0) && fluid.EOSVector.empty()) {
+            throw ValueError(format("load_RES_transport_parameters: fluid '%s' has no EOS data; pass molar_mass_override.", fluid.name.c_str()));
+        }
+        // Find the fluid by alias (all aliases are stored uppercase in the JSON keys).
+        //
+        // `lookup_names`, when supplied, is used INSTEAD of the record's own name and aliases.
+        // The cubic backends need that: their CoolPropFluid records are synthetic and carry no
+        // name, and writing one in so the lookup would succeed had a side effect well outside
+        // RES -- calc_excess_properties() builds a HelmholtzEOSBackend from components[i].name,
+        // so a populated name silently turned "this cubic mixture has no excess properties" into
+        // "compute them from the HEOS equation of state instead".
+        auto find_key = [&](const nlohmann::json& section) -> std::string {
+            for (const std::string& n : lookup_names) {
+                if (section.contains(n)) return n;
+                if (section.contains(upper(n))) return upper(n);
+            }
+            if (!lookup_names.empty()) return "";
+            if (section.contains(fluid.name)) return fluid.name;
+            if (section.contains(upper(fluid.name))) return upper(fluid.name);
+            if (fluid.REFPROPname != "N/A") {
+                if (section.contains(fluid.REFPROPname)) return fluid.REFPROPname;
+                if (section.contains(upper(fluid.REFPROPname))) return upper(fluid.REFPROPname);
+            }
+            for (const auto& alias : fluid.aliases) {
+                if (section.contains(alias)) return alias;
+                if (section.contains(upper(alias))) return upper(alias);
+            }
+            return "";
+        };
+
+        if (!res_json.contains("viscosity") || !res_json.contains("conductivity")) return;
+
+        // Reset before re-seeding: this is a public entry point, and the cubic backends call it a
+        // second time on an already-populated fluid.  Leaving `provided` set from a previous
+        // eos_key would pair that EOS's residual coefficients with the newly-read dilute ones.
+        fluid.transport.viscosity_res = ViscosityRESData();
+        fluid.transport.conductivity_res = ConductivityRESData();
+
+        const nlohmann::json& vis_section = res_json.at("viscosity");
+        const nlohmann::json& tc_section = res_json.at("conductivity");
+
+        // ── viscosity ────────────────────────────────────────────────────────
+        {
+            std::string key = find_key(vis_section);
+            if (!key.empty()) {
+                const nlohmann::json& fe = vis_section.at(key);
+                ViscosityRESData& d = fluid.transport.viscosity_res;
+                d.n_dilute = fe.at("dilute").at("n").get<std::vector<double>>();
+                check_RES_dilute_size(key, "viscosity", d.n_dilute.size());
+                d.molar_mass = (molar_mass_override > 0) ? molar_mass_override : fluid.molar_mass();
+                if (fe.contains(eos_key)) {
+                    const nlohmann::json& eos = fe.at(eos_key);
+                    d.n_res = eos.at("n").get<std::vector<double>>();
+                    d.xita = eos.at("xita").get<double>();
+                    d.group_num = eos.at("group").get<int>();
+                    check_RES_coeff_sizes(key, "viscosity", d.n_dilute.size(), d.n_res.size(), RES_N_RES_VISCOSITY);
+                    d.n_params_match_alpha = true;
+                    d.provided = true;
+                }
+            }
+        }
+
+        // ── thermal conductivity ─────────────────────────────────────────────
+        {
+            std::string key = find_key(tc_section);
+            if (!key.empty()) {
+                const nlohmann::json& fe = tc_section.at(key);
+                ConductivityRESData& d = fluid.transport.conductivity_res;
+                d.n_dilute = fe.at("dilute").at("n").get<std::vector<double>>();
+                check_RES_dilute_size(key, "conductivity", d.n_dilute.size());
+                d.molar_mass = (molar_mass_override > 0) ? molar_mass_override : fluid.molar_mass();
+                if (fe.contains(eos_key)) {
+                    const nlohmann::json& eos = fe.at(eos_key);
+                    d.n_res = eos.at("n").get<std::vector<double>>();
+                    d.xita = eos.at("xita").get<double>();
+                    d.group_num = eos.at("group").get<int>();
+                    check_RES_coeff_sizes(key, "conductivity", d.n_dilute.size(), d.n_res.size(), RES_N_RES_CONDUCTIVITY);
+                    d.n_params_match_alpha = true;
+                    d.provided = true;
+                }
+                if (fe.contains("critical_enhancement")) {
+                    const nlohmann::json& ce = fe.at("critical_enhancement");
+                    d.R_D = ce.at("R_D").get<double>();
+                    d.gamma_uni = ce.at("gamma_uni").get<double>();
+                    d.Gamma = ce.at("Gamma").get<double>();
+                    d.phi0 = ce.at("phi0").get<double>();
+                    d.t_ref = ce.at("t_ref").get<double>();
+                    d.q_D = ce.at("q_D").get<double>();
+                    // A few fluids carry an all-zero record in the source tables, meaning "not
+                    // fitted" rather than "zero enhancement".  Li 2024 gates on t_ref > 0; treating
+                    // such a record as provided would divide by t_ref and Gamma downstream.
+                    d.crit_provided = (d.t_ref > 0) && (d.Gamma > 0) && (d.phi0 > 0) && (d.q_D > 0) && (d.gamma_uni > 0);
+                }
+            }
+        }
+    }
+
+   protected:
     /// Parse the transport properties
     void parse_viscosity(const nlohmann::json& viscosity, CoolPropFluid& fluid) {
         // If an array, use the first one, and then stop;
@@ -1453,6 +1618,12 @@ std::string get_fluid_as_JSONstring(const std::string& indentifier);
 
 /// Set the internal enthalpy and entropy offset variables
 void set_fluid_enthalpy_entropy_offset(const std::string& fluid, double delta_a1, double delta_a2, const std::string& ref);
+
+/// Overlay RES transport parameters for `fluid` from the shipped table.
+/// eos_key must be "HEOS", "PR" or "SRK"; silently does nothing if the fluid is not listed.
+/// molar_mass_override is required when the CoolPropFluid carries no EOS, as the cubics' does.
+void overlay_RES_transport_by_name(const std::string& eos_key, CoolPropFluid& fluid, double molar_mass_override = -1.0,
+                                   const std::vector<std::string>& lookup_names = std::vector<std::string>());
 
 } /* namespace CoolProp */
 #endif
