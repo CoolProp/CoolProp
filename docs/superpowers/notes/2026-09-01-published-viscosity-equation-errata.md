@@ -1,13 +1,13 @@
-# Three published viscosity equations that cannot reproduce their own check values
+# Four published viscosity equations that cannot reproduce their own check values
 
 Found while implementing the REFPROP 10.1 viscosity audit (`CoolProp-rip4`) as
 expression-DSL fluid data. Each correlation was implemented and then validated against
 the **verification points the paper itself publishes** so that an implementation can be
-checked. Three papers failed that test — not because the correlation is wrong, but
+checked. Four papers failed that test — not because the correlation is wrong, but
 because the *printed* equation differs from the one that generated the paper's own
 table. In all three cases REFPROP's fluid file carries the form that works.
 
-All three are from the same group. The krypton one has a CoolProp maintainer as a
+All four are from the same group. The krypton one has a CoolProp maintainer as a
 co-author.
 
 ---
@@ -57,7 +57,31 @@ The rational term is correct as printed, including the factored denominator
 `Tr⁴(1 + ρr²) − Tr²`, which matches the FLD once the common factor 735.012853435941 is
 divided out (71.0415826038262 / 735.012853435941 = 9.66535242e-2).
 
-## 3. Krypton — Polychroniadou, Antoniadis, Assael & Bell, *IJT* **43**(1):6 (2022)
+## 3. Xenon — Velliadou, Assael, Antoniadis & Huber, *IJT* **42**(5):74 (2021)
+
+**Eq. 6, exponent on the third residual term.** As printed:
+
+```
+Δη(ρ,T) = (ρr^(2/3) Tr^(1/2)) { Tr + c0 Tr ρr⁴ + c1ρr⁷/Tr + (c2 + c3ρr)/Tr² }
+```
+
+The third term should be `c1ρr¹²/Tr`. REFPROP's `XENON.FLD` gives that term a density
+exponent of 12.
+
+| verification point | as printed | with ρr¹² | published |
+|---|---|---|---|
+| 300 K, 2500 kg·m⁻³ | 189.815 | 206.449 | **206.449** |
+
+As printed the correlation is 8.1 % low at the paper's own dense check point. The two
+low-density points (0 and 6 kg·m⁻³) are insensitive to this term and pass either way,
+so only the third point exposes it.
+
+**This one is worth singling out**: the error is an exponent in a *numerator*, with no
+denominator involved. It is the direct counterexample to the "sign errors live in
+denominators" heuristic retracted below — a heuristic that, had it been used to
+prioritize, would have skipped xenon entirely.
+
+## 4. Krypton — Polychroniadou, Antoniadis, Assael & Bell, *IJT* **43**(1):6 (2022)
 
 **Eq. 13, a missing exponential.** As printed:
 
@@ -88,6 +112,7 @@ REFPROP's fluid file:
 |---|---|---|
 | **R-161** | **DEFECTIVE** | denominator sign |
 | **Ethanol** | **DEFECTIVE** | exponent on the first residual term |
+| **Xenon** | **DEFECTIVE** | exponent on a numerator term |
 | **Krypton** | **DEFECTIVE** | missing `exp` |
 | R-32 | correct | `c0 + c1ρr + c2ρr⁴/Tr + c3ρr¹⁴/Tr + c4ρr²/Tr²`, matches the FLD |
 | R-134a | correct | Vogel–Bich dilute + 4-term residual, no denominator |
@@ -97,16 +122,19 @@ REFPROP's fluid file:
 | THF | correct | `(f3 + f4Tr)/(f5 + f6ρr + ρr²)`, coefficients match Table 3 |
 | Propylene glycol | correct | `exp{c0 + c1ρr + c2ρr²/Tr + c3ρr³/Tr² + c4Tr + c5Tr²}` |
 | Ethylene | correct | 7-term sum, Table 3 `a/b/c` match exactly |
+| R-1234yf | correct | Eq. 10 folded over its own denominator reproduces the FLD to 10 digits |
+| R-1234ze(E) | correct | same Eq. 10 with `c7 = 1, c8 = 0`, which collapses the rational part |
+| Ammonia | correct | `c0 + c1ρr + c2ρr⁴ + c3ρr⁸/Tr⁴ + c4Trρr²` |
+| Methane | correct | `f5 = −1.48` is an EXPONENT on `Tr`, not a coefficient over it |
 
 Coefficients confirmed but the printed equation NOT read (it is an embedded object in
 the accepted manuscript, and the residual has no denominator for a sign to hide in):
 R-245fa — `c0 = 0.83502935`, `c1 = 10.245205`, `c2 = 0.00023356206` all match.
 
-**Not checked**, because the manuscripts are behind PMC's proof-of-work download gate:
-methane, ammonia, R-1234yf, R-1234ze(E), xenon — and argon and nitrogen, which are
-implemented as test fixtures rather than shipped. Each of these was validated against
-its paper's verification points, so each is consistent with its paper's *table*; only
-the printed *equation* is unread.
+**Not checked:** argon and nitrogen, which are implemented as test fixtures rather than
+shipped, and whose printed equations sit past a figure in the text layer. Both were
+validated against their papers' verification points, so both are consistent with their
+papers' *tables*; only the printed *equation* is unread.
 
 ### On what limits the remaining risk — and what does not
 
@@ -128,8 +156,12 @@ the two things are easy to conflate:
   paper's table is implemented correctly wherever the printed equation happens to
   differ.
 * **For an erratum, the risk is open wherever the printed equation is unread.** That is
-  a statement about the publication, not about the software, and it applies uniformly
-  to all five unread papers rather than being concentrated in any of them.
+  a statement about the publication, not about the software.
+
+Xenon settles the point empirically. It was found *after* the heuristic was written and
+*because* the heuristic was abandoned: its residual has no denominator at all, so
+prioritizing by denominator would have skipped it, and the defect would have gone
+unreported. Of the four defects, exactly one is a denominator sign.
 
 ## Method note
 
