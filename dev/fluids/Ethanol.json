@@ -4698,114 +4698,105 @@
       }
     },
     "viscosity": {
-      "BibTeX": "Kiselev-IECR-2005",
+      "BibTeX": "Sotiriadou-IJT-2023-ethanol",
       "dilute": {
-        "a": [
-          -1.03116e-06,
-          3.48379e-08,
-          -6.50264e-12
+        "type": "expression",
+        "formula": "let Tr = T/T_red\nlet eta0 = sum(i: n[i]*Tr^np[i])/(d0 + Tr)\n1e-6*eta0",
+        "state_variables": [
+          "T"
         ],
-        "t": [
-          0,
-          1,
-          2
-        ],
-        "type": "powers_of_T"
-      },
-      "epsilon_over_k": 362.6,
-      "epsilon_over_k_units": "K",
-      "higher_order": {
-        "T_reduce": 513.9,
-        "T_reduce_units": "K",
-        "a": [
-          0.000131194057,
-          -0.000382240694,
-          -8.05700894e-05,
-          0.000153811778,
-          -0.000110578307
-        ],
-        "d1": [
-          2,
-          2,
-          3,
-          3,
-          3
-        ],
-        "d2": [
-          1
-        ],
-        "f": [
-          0.0237222995
-        ],
-        "g": [
-          -3.38264465,
-          12.7568864
-        ],
-        "gamma": [
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        "h": [
-          0,
-          -0.5
-        ],
-        "l": [
-          1,
-          1,
-          1,
-          1,
-          1
-        ],
-        "p": [
-          1
-        ],
-        "q": [
-          0
-        ],
-        "rhomolar_reduce": 5991,
-        "rhomolar_reduce_units": "mol/m^3",
-        "t1": [
-          0,
-          1,
-          0,
-          1,
-          2
-        ],
-        "t2": [
-          0
-        ],
-        "type": "modified_Batschinski_Hildebrand"
+        "constants": {
+          "T_red": 514.71,
+          "d0": -0.0281703
+        },
+        "arrays": {
+          "n": [
+            0.422373,
+            -3.78868,
+            23.8708,
+            -7.89204,
+            2.09783,
+            -0.247702
+          ],
+          "np": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
       },
       "initial_density": {
-        "b": [
-          -19.572881,
-          219.73999,
-          -1015.3226,
-          2471.01251,
-          -3375.1717,
-          2491.6597,
-          -787.26086,
-          14.085455,
-          -0.34664158
+        "type": "expression",
+        "formula": "let Tr = T/T_red\nlet eta0 = sum(i: n[i]*Tr^np[i])/(d0 + Tr)\nlet Ts = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Ts^bp[i])\n1e-6*eta0*Bstar*etaB2red*(Dmolar/1000)",
+        "state_variables": [
+          "T",
+          "Dmolar"
         ],
-        "t": [
-          0,
-          -0.25,
-          -0.5,
-          -0.75,
-          -1.0,
-          -1.25,
-          -1.5,
-          -2.5,
-          -5.5
-        ],
-        "type": "Rainwater-Friend"
+        "constants": {
+          "T_red": 514.71,
+          "d0": -0.0281703,
+          "epsilon_over_k": 265.0,
+          "etaB2red": 0.0661846339864743
+        },
+        "arrays": {
+          "n": [
+            0.422373,
+            -3.78868,
+            23.8708,
+            -7.89204,
+            2.09783,
+            -0.247702
+          ],
+          "np": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "b": [
+            -19.572881,
+            219.73999,
+            -1015.3226,
+            2471.01251,
+            -3375.1717,
+            2491.6597,
+            -787.26086,
+            14.085455,
+            -0.34664158
+          ],
+          "bp": [
+            0,
+            -0.25,
+            -0.5,
+            -0.75,
+            -1.0,
+            -1.25,
+            -1.5,
+            -2.5,
+            -5.5
+          ]
+        }
       },
-      "sigma_eta": 4.53e-10,
-      "sigma_eta_units": "m"
+      "higher_order": {
+        "type": "expression",
+        "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\nlet front = tau^0.5*del^(2/3)\nlet den = c3*tau^4 + c3*tau^4*del^2 - c3*tau^2\n1e-6*front*(c1*del^2 + c2*del^8/den)",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "T_red": 514.71,
+          "rho_red": 5930.0,
+          "c1": 8.32575272261323,
+          "c2": 71.0415826038262,
+          "c3": 735.012853435941
+        }
+      }
     }
   }
 }

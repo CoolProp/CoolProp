@@ -393,7 +393,10 @@ TEST_CASE("golden: viscosity dilute powers_of_T", "[expression][golden]") {
 
 TEST_CASE("golden: viscosity dilute powers_of_Tr", "[expression][golden]") {
     using namespace CoolProp::expression;
-    auto HEOS = make_HEOS_for("Methane");  // viscosity/dilute type == powers_of_Tr
+    // n-Pentane, not methane: methane's viscosity is now the Sotiriadou (2025)
+    // expression model, so it no longer carries a powers_of_Tr dilute block for this
+    // golden test to read.  n-Pentane is the only remaining fluid with that form.
+    auto HEOS = make_HEOS_for("n-Pentane");  // viscosity/dilute type == powers_of_Tr
     auto& data = HEOS->get_components()[0].transport.viscosity_dilute.powers_of_Tr;
     REQUIRE(!data.a.empty());
     // C++: Tr = T/T_reducing; summer += a[i]*pow(Tr, t[i]);
@@ -1251,6 +1254,47 @@ TEST_CASE("Xenon: PropsSI viscosity now works", "[expression]") {
     CHECK(static_cast<double>(d + i + r + c) == Catch::Approx(eta).epsilon(1e-12));
     CHECK(static_cast<double>(d) > 0);
     CHECK(static_cast<double>(r) > 0);
+}
+
+// Sotiriadou, Ntonti, Velliadou, Antoniadis, Assael & Huber, Int. J. Thermophys.
+// 44(3):40 (2023) -- ethanol, superseding Kiselev et al. (2005).
+// Sotiriadou, Antoniadis, Assael, Martinek & Huber, Int. J. Thermophys. 47(1):18
+// (2025) -- methane, superseding Quinones-Cisneros & Deiters (2006) f-theory.
+//
+// Neither fluid's dilute conductivity is eta0_and_poly, so replacing their viscosity
+// moves nothing else.
+TEST_CASE("Ethanol: shipped viscosity matches the paper's verification points", "[expression][golden]") {
+    // T (K), rho (kg/m^3), eta (muPa.s), given inline in Section 3.
+    const double verif[3][3] = {{300.0, 0.0, 8.9893}, {300.0, 10.0, 8.9382}, {300.0, 850.0, 1682.72}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Ethanol"));
+    double worst = 0;
+    for (const auto& row : verif) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-9, row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-5);
+    }
+    WARN("Ethanol vs verification points: worst relative deviation " << worst << " over 3 points");
+}
+
+TEST_CASE("Methane: shipped viscosity matches the paper's verification points", "[expression][golden]") {
+    // T (K), rho (kg/m^3), eta (muPa.s), from the Computer-Program Verification section.
+    const double verif[3][3] = {{300.0, 0.0, 11.1230}, {300.0, 3.2, 11.1891}, {300.0, 75.0, 13.7130}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane"));
+    double worst = 0;
+    for (const auto& row : verif) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-9, row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-5);
+    }
+    WARN("Methane vs verification points: worst relative deviation " << worst << " over 3 points");
 }
 
 // Huber & Assael, Int. J. Refrigeration 71:39-45 (2016), one paper covering BOTH
