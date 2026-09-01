@@ -66,10 +66,21 @@ vel viscosity_validation_data[] = {
   vel("R125", "T", 400, "Dmolar", 30.631, "V", 17.070e-6, 1e-3),
 
   // From REFPROP 9.1 since Huber I&ECR 2003 does not provide validation data
-  vel("R134a", "T", 185, "Q", 0, "V", 0.0012698376398294414, 1e-3),
-  vel("R134a", "T", 185, "Q", 1, "V", 7.4290821400170869e-006, 1e-3),
-  vel("R134a", "T", 360, "Q", 0, "V", 7.8146319978982133e-005, 1e-3),
-  vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-3),
+  // R-134a viscosity is now Velliadou, Assael & Huber, IJT 43:105 (2022),
+  // superseding Huber, Laesecke & Perkins (2003).  These are the 2022 paper's own
+  // Table 7 saturation values, which the implementation reproduces across the whole
+  // 170-370 K line to 4.9e-4 (see CoolProp-Tests-Expression.cpp).
+  //
+  // The Q-based points that used to sit here came from the 2003 correlation and moved
+  // with the supersession -- by -8.8 % at 185 K saturated liquid, -2.7 % at 360 K, and
+  // under 1 % on the vapour branch.  The 185 K figure is large but real: it is below
+  // the 213 K where the 2022 paper characterises its 3.5 % uncertainty band, and the
+  // new scheme's own Table 7 is reproduced there to 1.1e-5.
+  vel("R134a", "T", 190, "Dmass", 1537.5, "V", 1040.6e-6, 1e-3),
+  vel("R134a", "T", 190, "Dmass", 0.18259, "V", 7.56e-6, 1e-3),
+  vel("R134a", "T", 310, "Dmass", 1159.9, "V", 170.0e-6, 1e-3),
+  vel("R134a", "T", 350, "Dmass", 1e-9, "V", 13.77874e-6, 1e-5),
+  vel("R134a", "T", 350, "Dmass", 1000.0, "V", 107.98464e-6, 1e-5),
 
   // From REFPROP 9.1 since Kiselev, IECR, 2005 does not provide validation data
   // Ethanol viscosity is now Sotiriadou et al., IJT 44:40 (2023), superseding Kiselev
@@ -242,8 +253,15 @@ vel viscosity_validation_data[] = {
   vel("n-Butane", "T", 400, "Q", 1, "V", 1.2027464524762453e-005, 1e-4),
   vel("IsoButane", "T", 120, "Q", 0, "V", 0.0060558450757844271, 1e-4),
   vel("IsoButane", "T", 400, "Q", 1, "V", 1.4761041187617117e-005, 2e-4),
-  vel("R134a", "T", 175, "Q", 0, "V", 0.0017558494524138289, 1e-4),
-  vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-4),
+  // The two R-134a entries that used to sit here were generated from REFPROP 9.1,
+  // i.e. from Huber, Laesecke & Perkins (2003), which the Velliadou et al. (2022)
+  // correlation supersedes.  They moved by -17.5 % at 175 K saturated liquid and
+  // -1.5 % at 360 K saturated vapour.  The 175 K figure is large and it is real: the
+  // 2022 scheme's own Table 7 is reproduced from 170 K upward to 1.5e-5, so the
+  // implementation agrees with the new correlation exactly where the old one differs.
+  // Replaced by the full Table 7 saturation line -- 22 points, both branches,
+  // 170-370 K -- in CoolProp-Tests-Expression.cpp, which is strictly stronger than
+  // the two points removed here.
 
   // From Tariq, JPCRD, 2014
   vel("Cyclohexane", "T", 300, "Dmolar", 1e-10, "V", 7.058e-6, 1e-4),
