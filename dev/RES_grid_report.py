@@ -14,12 +14,26 @@ Output is the HEOS_TRANSFER_EXCLUDE set for dev/convert_RES_csv_to_json.py.
 
 Two things make a naive comparison misleading, and both are handled here explicitly.
 
-1. A transport deviation is only informative where the property actually depends on the residual
-   term.  At a dilute-dominated state the dilute polynomial is identical on both sides by
-   construction, so the deviation is near zero however badly s_res disagrees.  Judging a fluid on
-   such a point is what made the original single-sample-point exclusions unreliable.  Points are
-   therefore weighted by residual share, and a fluid with no residual-dominated point is reported
-   as UNJUDGED rather than silently passed.
+1. A transport deviation is only informative in proportion to how much of the property the
+   residual term actually carries.  At a dilute-dominated state the dilute polynomial is identical
+   on both sides, so the deviation is near zero however badly s_res disagrees.  Judging a fluid on
+   such a point is what made the original single-sample-point exclusions unreliable.
+
+   The dilute terms are not merely similar across the two equations of state, they are BIT-
+   IDENTICAL -- the polynomial is a function of T alone, read from the same table, and measured
+   over the whole grid the deviation between the two sides' eta0 and tc0 columns is exactly 0.
+   So with s the residual share of the property, eta = eta0 + eta_res and s = eta_res/eta,
+
+       d = |eta_H/eta_R - 1| = s * |eta_res,H/eta_res,R - 1| = s * e_res
+
+   holds as an identity, not an approximation.  The criterion is therefore e_res = d / s: the
+   error in the RESIDUAL TERM, which is the thing the coefficients actually determine, and which
+   every point estimates on the same scale.
+
+   Judging d directly instead would mean a different thing at every point: behind a share cutoff
+   of 0.20 a 1% transport limit tests for a 5% residual error, at share 0.9 for 1.1%.  SHARE_FLOOR
+   is only a numerical guard against dividing by a residual share indistinguishable from zero.  A
+   fluid with no point above the floor is reported as UNJUDGED rather than silently passed.
 
 2. Near the critical point the Olchowy-Sengers enhancement uses each side's OWN critical point
    and derivatives, so it moves for reasons that have nothing to do with the RES parameters.  Two
@@ -48,7 +62,12 @@ REF_REFPROP = os.path.join(COMP_DIR, "grid_ref_refprop.csv")
 REF_HEOS = os.path.join(COMP_DIR, "grid_ref_heos.csv")
 JSON_PATH = os.path.join(SCRIPT_DIR, "res_transport_parameters.json")
 
-SHARE_MIN = 0.20  # a point counts only if this much of the property is non-dilute
+# Numerical floor, NOT a physical criterion (see the module docstring).  e_res = d / share
+# amplifies the deviation by 1/share, so a share indistinguishable from zero would amplify
+# floating-point noise into a verdict.  At the floor the amplification is 50x, against a measured
+# median d of 4e-7 -- five orders below DEV_LIMIT, so the floor costs nothing and guards the
+# division.
+SHARE_FLOOR = 0.02
 THIN_POINTS = 5  # at or below this many judged points, say so -- do not let n hide in a table
 DEV_LIMIT = 0.01  # transport deviation above which the parameters are judged not to transfer
 SRES_LIMIT = 0.05  # s_res deviation above which the same conclusion is drawn directly
@@ -74,10 +93,11 @@ def reldev(a, b):
 
 
 def share_of(total, dilute):
-    """Fraction of `total` that is not the dilute term, mapped into [0, 1).
+    """Fraction of `total` carried by the residual term, mapped into [0, 1).
 
-    share >= 0.2 means the residual contribution is at least a quarter of the dilute one, i.e.
-    the property is genuinely responding to s_res at this state.
+    With eta = eta0 + eta_res this is exactly eta_res/eta, which is the factor by which an error
+    in the residual term is attenuated in the property the user sees.  Dividing the observed
+    deviation by it recovers the residual-term error itself.
     """
     if total is None or dilute is None or total == 0:
         return None
@@ -92,9 +112,10 @@ def read(path):
         return {(r["fluid"], r["T_K"], r["p_Pa"]): r for r in csv.DictReader(fh)}
 
 
-def main(share_min, dev_limit, sres_limit, verbose):
+def main(share_min, dev_limit, sres_limit, verbose, residual_criterion=True):
     rp_rows = read(REF_REFPROP)
     he_rows = read(REF_HEOS)
+    residual_criterion = bool(residual_criterion)
 
     F = collections.defaultdict(lambda: collections.defaultdict(list))
     fail = collections.Counter()
@@ -152,7 +173,10 @@ def main(share_min, dev_limit, sres_limit, verbose):
             F[fluid]["tc"].append((sc, d_tc, enh, d_s))
 
     def judged(pairs, narrow):
-        sel = [(d, ds) for s, d, enh, ds in pairs if s >= share_min and (not narrow or not enh)]
+        # Dividing by the residual share turns the observed transport deviation into the error in
+        # the residual term itself.  The legacy branch does not divide; see the module docstring.
+        sel = [((d / s if residual_criterion else d), ds)
+               for s, d, enh, ds in pairs if s >= share_min and (not narrow or not enh)]
         if not sel:
             return None, None, 0
         ds_vals = [ds for _, ds in sel if ds is not None]
@@ -186,8 +210,15 @@ def main(share_min, dev_limit, sres_limit, verbose):
                 )
             result[(fluid, key)] = dict(narrow=verdict[0], broad=verdict[1], wn=wn, wb=wb, nn=nn, nb=nb, ds=dsn)
 
+    # Name the column for what it holds.  Residual-term errors are LARGER than the transport
+    # deviations under --legacy-share-criterion, and reading one as the other would badly misjudge
+    # how close a fluid sits to the limit.
+    col = "e_res" if residual_criterion else "dev"
+    print("criterion: {}\n".format(
+        "e_res = d / share, floor {:g} (residual-term error)".format(share_min) if residual_criterion
+        else "d, share cutoff {:g} (legacy transport deviation)".format(share_min)))
     hdr = "{:<15} {:<4} {:>11} {:>4} {:>11} {:>4} {:>11}  narrow/broad".format(
-        "fluid", "prop", "narrow dev", "n", "broad dev", "n", "max ds_res")
+        "fluid", "prop", "narrow " + col, "n", "broad " + col, "n", "max ds_res")
     print(hdr)
     print("-" * len(hdr))
     for (fluid, key), r in sorted(result.items()):
@@ -234,7 +265,7 @@ def main(share_min, dev_limit, sres_limit, verbose):
 
     all_eta = [d for f in F for _s, d, _e, _ds in F[f]["eta"]]
     all_tc = [d for f in F for _s, d, _e, _ds in F[f]["tc"]]
-    print("\nmedian deviation over all {} points: viscosity {:.5f} %, conductivity {:.5f} %".format(
+    print("\nmedian TRANSPORT deviation over all {} points: viscosity {:.5f} %, conductivity {:.5f} %".format(
         len(all_eta), med(all_eta) * 100, med(all_tc) * 100))
     print("fluids with a HEOS evaluation failure: {}".format(len({f for (f, b) in fail if b == "HEOS"})))
     print("fluids with a REFPROP evaluation failure: {}".format(len({f for (f, b) in fail if b == "REFPROP"})))
@@ -244,9 +275,15 @@ def main(share_min, dev_limit, sres_limit, verbose):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--share-min", type=float, default=SHARE_MIN)
+    ap.add_argument("--share-min", type=float, default=SHARE_FLOOR,
+                    help="numerical floor on the residual share (legacy: the cutoff below which a "
+                         "point was discarded)")
+    ap.add_argument("--legacy-share-criterion", action="store_true",
+                    help="judge the raw transport deviation against a hard share cutoff instead of "
+                         "the residual-term error; with --share-min 0.2 this is the pre-2026-09 "
+                         "criterion, for reproducing an older run")
     ap.add_argument("--dev-limit", type=float, default=DEV_LIMIT)
     ap.add_argument("--sres-limit", type=float, default=SRES_LIMIT)
     ap.add_argument("-v", "--verbose", action="store_true", help="list every fluid, not just the interesting ones")
     a = ap.parse_args()
-    main(a.share_min, a.dev_limit, a.sres_limit, a.verbose)
+    main(a.share_min, a.dev_limit, a.sres_limit, a.verbose, not a.legacy_share_criterion)

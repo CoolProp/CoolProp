@@ -52,7 +52,9 @@ from RES_reference.martinek2025_viscosity import viscosity_RES as vis_ref  # noq
 # What CoolProp does, and therefore what both reference runs are pinned to.  See the module
 # docstring and dev/RES_reference/README.md.
 PINNED_VIS = dict(dilute_source="polynomial")
-PINNED_TC = dict(dilute_source="polynomial", enhancement_viscosity="res")
+# zero_ind_fit: matches the shipped table, which follows Li's paper rather than the SI's flag for
+# NEOPENTN (conductivity only).  See dev/RES_reference/README.md.
+PINNED_TC = dict(dilute_source="polynomial", enhancement_viscosity="res", zero_ind_fit="global")
 
 
 def scalar(v):

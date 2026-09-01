@@ -44,6 +44,17 @@ Every change is a new keyword argument whose **default reproduces the published 
 | `eos=` | `"REFPROP"` | `"HEOS"` for the CoolProp-side comparison |
 | `dilute_source=` | `"native"` — backend's own `eta0` / `lambda0` | `"polynomial"` — the fitted polynomial, as CoolProp uses |
 | `enhancement_viscosity=` (conductivity only) | `"native"` — backend's own viscosity | `"res"` — the RES viscosity, as CoolProp uses |
+| `zero_ind_fit=` (conductivity only) | `"published"` — trust the `ind_fit` flag | `"global"` — ignore an all-zero individual row |
+
+`zero_ind_fit=` is the one option that corrects a source file rather than re-aiming it.  The
+tables carry two coefficient sets per fluid, an individual fit and a group fit, chosen by an
+`ind_fit` flag.  Exactly one row sets that flag over four all-zero individual coefficients:
+NEOPENTN, in `li2024_conductivity/RES_Parameter.txt` and in both of Yang 2025's conductivity
+tables — and Li's published paper lists that fluid with `ind_fit = 0`.  The flag is a
+transcription error in the supporting information; followed literally it deletes the residual
+term, which is **-89%** against REFPROP's own conductivity in the liquid.  CoolProp ships the
+group row the paper intends and the harness pins this option to match.  The default still follows
+the flag, which is why the sample tables below still regenerate byte-for-byte.
 
 Plus five mechanical changes that cannot affect a result: data files resolved relative to the
 module instead of the working directory; `delim_whitespace=` replaced by `sep=r'\s+'` (removed in

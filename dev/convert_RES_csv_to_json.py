@@ -102,13 +102,13 @@ SOURCES = {
 # and derivatives, which says nothing about the RES coefficients.  Viscosity has no enhancement
 # and its two criteria select the same 14 fluids either way.
 #
-# Two caveats the report prints and this list does not encode.  NEOPENTN is shipped for
-# conductivity with NO evidence: none of its sampled states put enough of lambda in the residual
-# term to judge it at all.  And ~15 fluids per property are judged on 5 or fewer points -- CYCLOPRO
-# and RE143A on 2 -- because REFPROP rejects many of their grid states.  Those are kept rather than
-# withheld: every one agrees to better than 0.01%, four orders below the threshold, so the thin
-# evidence is thin agreement rather than a near miss.  Re-run dev/RES_grid_report.py to see the
-# per-fluid counts before trusting any single entry here.
+# One caveat the report prints and this list does not encode: a few fluids per property are
+# judged on 5 or fewer points, because not every sampled state puts enough of the property in the
+# residual term to be informative about it.  Those are kept rather than withheld -- every one
+# agrees to better than 0.01%, four orders below the threshold, so the thin evidence is thin
+# agreement rather than a near miss.  Re-run dev/RES_grid_report.py for the per-fluid counts
+# before trusting any single entry here.
+
 HEOS_TRANSFER_EXCLUDE = {
     "BENZENE", "D5", "HEPTANE", "MD3M", "MD4M", "R1123", "R1224YDZ",
     "R1233ZDE", "R1234YF", "R1243ZF", "R13", "R161", "R41", "VINYLCHLORIDE",
@@ -300,14 +300,40 @@ def check_dilute_order(df, table: str) -> None:
         )
 
 
-def build_vis_entry(res_row) -> dict:
+# Fluids whose individual-fit row was all zeros and therefore fell back to the group row.
+# Collected rather than printed at the point of use so the report is one line per property per
+# equation of state instead of one line per occurrence.
+ZERO_IND_FALLBACK: list[str] = []
+
+
+def _select_res_coefficients(res_row, n_terms: int, label: str) -> tuple[list[float], float, bool]:
+    """Pick the individual or the group coefficient row, per the table's own ind_fit flag.
+
+    With one correction.  The SI data files carry exactly one row whose ind_fit flag is set while
+    all four of its individual coefficients are zero -- NEOPENTN, conductivity, in Li 2024 and in
+    both of Yang 2025's tables.  Li's published paper lists that fluid with ind_fit = 0, so the
+    flag is a transcription error in the SI and the group row is the intended fit.  Followed
+    literally it deletes the residual term instead: -89% against REFPROP in the liquid.
+
+    An all-zero individual row is therefore treated as absent.  dev/RES_reference/ carries the
+    matching `zero_ind_fit` option so both sides of the comparison make the same choice, and every
+    occurrence is printed rather than silently repaired -- a second one would not have the paper
+    behind it.
+    """
+    ind_keys = ["n{}_ind".format(k) for k in range(1, n_terms + 1)]
+    glb_keys = ["n{}_glb".format(k) for k in range(1, n_terms + 1)]
     ind_fit = int(res_row["ind_fit"]) == 1
     if ind_fit:
-        n_res = [float(res_row["n1_ind"]), float(res_row["n2_ind"]), float(res_row["n3_ind"])]
-        xita = 1.0
-    else:
-        n_res = [float(res_row["n1_glb"]), float(res_row["n2_glb"]), float(res_row["n3_glb"])]
-        xita = float(res_row["xita"])
+        n_res = [float(res_row[k]) for k in ind_keys]
+        if any(n_res):
+            return n_res, 1.0, True
+        ZERO_IND_FALLBACK.append(label)
+        ind_fit = False
+    return [float(res_row[k]) for k in glb_keys], float(res_row["xita"]), ind_fit
+
+
+def build_vis_entry(res_row, label: str = "?") -> dict:
+    n_res, xita, ind_fit = _select_res_coefficients(res_row, 3, label)
     return {
         "n": n_res,
         "xita": xita,
@@ -316,24 +342,8 @@ def build_vis_entry(res_row) -> dict:
     }
 
 
-def build_tc_entry(res_row) -> dict:
-    ind_fit = int(res_row["ind_fit"]) == 1
-    if ind_fit:
-        n_res = [
-            float(res_row["n1_ind"]),
-            float(res_row["n2_ind"]),
-            float(res_row["n3_ind"]),
-            float(res_row["n4_ind"]),
-        ]
-        xita = 1.0
-    else:
-        n_res = [
-            float(res_row["n1_glb"]),
-            float(res_row["n2_glb"]),
-            float(res_row["n3_glb"]),
-            float(res_row["n4_glb"]),
-        ]
-        xita = float(res_row["xita"])
+def build_tc_entry(res_row, label: str = "?") -> dict:
+    n_res, xita, ind_fit = _select_res_coefficients(res_row, 4, label)
     return {
         "n": n_res,
         "xita": xita,
@@ -379,7 +389,7 @@ def main() -> None:
         for json_eos, res_df in res_by_eos.items():
             if not backend_has_fluid(json_eos, fluid):
                 continue
-            entry[json_eos] = build_vis_entry(res_df.iloc[idx])
+            entry[json_eos] = build_vis_entry(res_df.iloc[idx], "{} viscosity/{}".format(fluid, json_eos))
         if fluid in HEOS_VISCOSITY_EXCLUDE:
             entry.pop("HEOS", None)
             n_excluded_heos_vis += 1
@@ -417,7 +427,7 @@ def main() -> None:
         for json_eos, res_df in res_tc_by_eos.items():
             if not backend_has_fluid(json_eos, fluid):
                 continue
-            entry[json_eos] = build_tc_entry(res_df.iloc[idx])
+            entry[json_eos] = build_tc_entry(res_df.iloc[idx], "{} conductivity/{}".format(fluid, json_eos))
 
         crow = crit_df.iloc[idx]
         q_D_inv = float(crow["qDinv"])
@@ -457,6 +467,11 @@ def main() -> None:
     print(f"  conductivity entries : {len(out['conductivity'])}"
           f" ({n_skipped_unavailable_tc} fluids skipped: unavailable in CoolProp;"
           f" {n_excluded_heos_tc} kept without a HEOS entry: HEOS/REFPROP s_res mismatch)")
+    # Named, not counted, for the same reason the skip list below is: one occurrence is a known
+    # defect in the published tables, a second would be news.
+    if ZERO_IND_FALLBACK:
+        print(f"  individual-fit row was all zeros, used the group row instead: "
+              f"{', '.join(sorted(ZERO_IND_FALLBACK))}")
     # Named, not merely counted.  A count hides the case where CoolProp DOES have the fluid under
     # a name the papers do not use: R150 is 1,2-dichloroethane, shipped as `Dichloroethane` with
     # no alias spelled R150, so it is skipped here despite being fully supported.  Anything in

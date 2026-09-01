@@ -33,6 +33,12 @@ change:
      where it used to work; the published Table_S5_SI.txt predates that change.  Presentation
      only -- the value written is the same one.
   9. One added comment in TC_RES() recording the coefficient order.  No code change.
+ 10. `zero_ind_fit=` selects what to do with a row whose `ind_fit` flag is set but whose four
+     individual coefficients are all zero.  RES_Parameter.txt has exactly one -- NEOPENTN -- and
+     the published paper lists that fluid with `ind_fit = 0`, so the flag is a transcription error
+     in the supporting information; followed literally it deletes the residual term.  Default
+     "published" keeps the flag, so the sample tables still regenerate byte-for-byte; "global"
+     uses the group row the paper intends.
 
 NOT changed, deliberately: the Olchowy functions use kB = 1.38064852e-23 where the rest of this
 file uses 1.380649e-23 (CoolProp uses the latter throughout).  That is a 1.6e-7 relative
@@ -73,7 +79,10 @@ def geometric_mean(fraction, aa):
     return aa_mix
 
 
-def get_paramters(AllMaterial):
+def get_paramters(AllMaterial, zero_ind_fit="published"):
+    # ADAPTED (10): a typo here would silently mean "published", so it is rejected instead.
+    if zero_ind_fit not in ("published", "global"):
+        raise ValueError("zero_ind_fit must be 'published' or 'global', got %r" % (zero_ind_fit,))
 
     # ADAPTED (4, 5)
     Fluid_Constants = pd.read_csv(os.path.join(_HERE, "Fluid_Constants.txt"), sep=r'\s+', header=0, skipinitialspace=True)
@@ -131,7 +140,19 @@ def get_paramters(AllMaterial):
                     Dilute_Parameter['n3'][ii],
                     Dilute_Parameter['n4'][ii],
                 ]
-                if RES_Parameter['ind_fit'][ii] == 1:
+                # ADAPTED (10): the published branch is `if ind_fit == 1`, with no test on
+                # whether the individual row it selects actually holds any coefficients.
+                use_ind = RES_Parameter['ind_fit'][ii] == 1
+                if use_ind and zero_ind_fit == "global":
+                    n_ind = [
+                        RES_Parameter['n1_ind'][ii],
+                        RES_Parameter['n2_ind'][ii],
+                        RES_Parameter['n3_ind'][ii],
+                        RES_Parameter['n4_ind'][ii],
+                    ]
+                    if not any(float(v) != 0.0 for v in n_ind):
+                        use_ind = False  # falls through to the global row, xita left as the table's
+                if use_ind:
                     parameter_N[ifluid, :] = [
                         RES_Parameter['n1_ind'][ii],
                         RES_Parameter['n2_ind'][ii],
@@ -305,7 +326,8 @@ def fluid_mix_name_cp(material, molefrac):
     return mix_name
 
 
-def TC_RES(fluid, MoleFrac, p_Pa, T_K, eos="REFPROP", dilute_source="native", enhancement_viscosity="native"):
+def TC_RES(fluid, MoleFrac, p_Pa, T_K, eos="REFPROP", dilute_source="native", enhancement_viscosity="native",
+           zero_ind_fit="published"):
     """RES thermal conductivity in W/m/K.
 
     ADAPTED (1, 2, 3, 6).  All three options default to what the paper does, so the published
@@ -318,7 +340,7 @@ def TC_RES(fluid, MoleFrac, p_Pa, T_K, eos="REFPROP", dilute_source="native", en
     N_A = R / kB
     TheEOS = eos  # ADAPTED (1): was TheEOS = "REFPROP"
     (epsilon_kB_K, sigma_nm, parameter_N, xita, Group_N, Tc0_N, Tc_K,
-     cp0_k0, cp0_k1, R_D, gamma, xi0, Gamma, qDinv, Tref) = get_paramters(fluid)
+     cp0_k0, cp0_k1, R_D, gamma, xi0, Gamma, qDinv, Tref) = get_paramters(fluid, zero_ind_fit)
 
     if isinstance(fluid, str):
         Purefluid = True

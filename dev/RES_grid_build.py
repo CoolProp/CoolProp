@@ -18,14 +18,27 @@ averaging of the residual coefficients, and the published tables carry just 17 v
 conductivity binary points between them -- too few, and all at states the authors chose.
 
 Points are PLACED with HEOS, because HEOS is the backend under test; the reference values at
-those points are produced separately by dev/RES_reference_run.py, which is the only step that
-needs REFPROP.
+those points are produced separately by dev/RES_reference_run.py.
+
+Placement is nonetheless LIMIT-AWARE, and that does need REFPROP -- to read its declared limits,
+not to evaluate anything.  A point outside an equation of state's stated range is not a point:
+REFPROP refuses it, and it refuses hardest at the dense end, which is exactly where the residual
+term dominates and where the report is allowed to draw a conclusion.  So the ladder is clamped to
+what both backends will answer, and where a rung is clipped the boundary state is substituted for
+it, keeping the hottest and densest legal state of every fluid in the grid.
+
+REFPROP answers up to 1.5x its declared Tmax and 2x its declared pmax and raises beyond.  Sampling
+into that extrapolation band is deliberate: both sides run the SAME reference code at the SAME
+(T, p), so what is compared there is still only the equation of state, which is the question the
+grid exists to answer.  If REFPROP cannot be loaded, its limits simply do not constrain and the
+grid falls back to HEOS's own.
 
 Writes dev/RES_comparison/grid_points.csv.  The `mole_fractions` column is empty for pure fluids
 and semicolon-separated for mixtures.
 """
 
 import argparse
+import collections
 import csv
 import json
 import os
@@ -74,43 +87,149 @@ MIX_TR = (1.05, 1.30)
 MIX_RHOR = (0.30, 1.00, 1.80)
 
 
+# REFPROP's documented extrapolation ceiling, confirmed by measurement (see the module docstring).
+# The same factors are applied to HEOS: it does not enforce its limits on a PT flash -- it
+# extrapolates silently, and occasionally returns NaN instead of raising -- so left alone it would
+# never be the binding constraint even where its own range is the narrower of the two.
+T_EXTRAP_FACTOR = 1.5
+P_EXTRAP_FACTOR = 2.0
+CAP_MARGIN = 0.98  # stay just inside the gate rather than exactly on it
+
+# Reduced coordinates at which Li's enhancement switches off.  A substituted boundary point must
+# not land on either, for the reason SUPERCRIT_RHOR gives for omitting 2.00: the two equations of
+# state have slightly different Tc and rhoc, so a point placed on the gate is inside the window for
+# one and outside it for the other.
+GATE_RHOR, GATE_TR = 2.0, 1.4
+GATE_KEEPOUT = 0.06
+
+
 def heos(fluid):
     return "HEOS::" + fluid
 
 
-def build_points(fluid):
+def evaluation_caps(fluid):
+    """Highest T and p, and lowest T, that EVERY backend the grid is evaluated on will accept.
+
+    Returns (T_cap, p_cap, T_min).  A backend that cannot build the fluid at all does not
+    constrain it: its points would fail for that reason whatever the grid did, and letting a
+    failed lookup shrink the grid would silently punish every other backend for it.
+    """
+    T_cap = p_cap = float("inf")
+    T_min = 0.0
+    for backend in ("HEOS", "REFPROP"):
+        name = "{}::{}".format(backend, fluid)
+        try:
+            Tmax = CP.PropsSI("Tmax", "T", 0, "p", 0, name)
+            pmax = CP.PropsSI("pmax", "T", 0, "p", 0, name)
+            Ttrip = CP.PropsSI("Ttriple", "T", 0, "p", 0, name)
+        except Exception:
+            continue
+        T_cap = min(T_cap, CAP_MARGIN * T_EXTRAP_FACTOR * Tmax)
+        p_cap = min(p_cap, CAP_MARGIN * P_EXTRAP_FACTOR * pmax)
+        # REFPROP's triple point can sit ABOVE CoolProp's, which is the whole reason the liquid
+        # block lost points at Tr = 0.6 for R1123 and R1224yd(Z).
+        T_min = max(T_min, Ttrip)
+    return T_cap, p_cap, T_min
+
+
+def _isotherm(hp, T, rhoc, p_cap, label, capped):
+    """One isotherm of the density ladder, clipped at p_cap, with the densest legal state added.
+
+    Without the substitution a clipped isotherm ends early, and it ends early precisely at the
+    dense end -- so the fluids whose EOS range is narrowest would contribute no dense evidence at
+    all.
+    """
+    out = []
+    reached = 0.0
+    clipped = False
+    for rr in SUPERCRIT_RHOR:
+        try:
+            p = CP.PropsSI("P", "T", T, "Dmass", rr * rhoc, hp)
+        except Exception:
+            continue
+        if p <= 0:
+            continue
+        if p > p_cap:
+            clipped = True
+            continue
+        out.append((T, p, "{}_rhor{}".format(label, rr)))
+        reached = max(reached, rr)
+    if not (clipped and out):
+        return out
+    try:
+        rho_cap = CP.PropsSI("Dmass", "T", T, "P", p_cap, hp)
+    except Exception:
+        return out
+    rr_cap = rho_cap / rhoc
+    # Only worth a point if it is meaningfully denser than the last rung that fitted.
+    if rr_cap <= 1.05 * reached:
+        return out
+    if abs(rr_cap - GATE_RHOR) < GATE_KEEPOUT:
+        rr_cap = GATE_RHOR - GATE_KEEPOUT
+        try:
+            p_at = CP.PropsSI("P", "T", T, "Dmass", rr_cap * rhoc, hp)
+        except Exception:
+            return out
+        if not (0 < p_at <= p_cap) or rr_cap <= 1.05 * reached:
+            return out
+        out.append((T, p_at, "{}_rhorCap".format(label)))
+    else:
+        out.append((T, p_cap, "{}_rhorCap".format(label)))
+    capped["rhor"] += 1
+    return out
+
+
+def build_points(fluid, capped):
     """Return [(T_K, p_Pa, region)] for one pure fluid, placed in HEOS reduced coordinates."""
     hp = heos(fluid)
     Tc = CP.PropsSI("Tcrit", "T", 0, "p", 0, hp)
     rhoc = CP.PropsSI("rhocrit", "T", 0, "p", 0, hp)
-    Ttrip = CP.PropsSI("Ttriple", "T", 0, "p", 0, hp)
     pcrit = CP.PropsSI("Pcrit", "T", 0, "p", 0, hp)
+    T_cap, p_cap, T_min = evaluation_caps(fluid)
     pts = []
 
+    reached_tr = 0.0
+    clipped_tr = False
     for tr in SUPERCRIT_TR:
         T = tr * Tc
-        for rr in SUPERCRIT_RHOR:
-            try:
-                p = CP.PropsSI("P", "T", T, "Dmass", rr * rhoc, hp)
-            except Exception:
-                continue
-            if p > 0:
-                pts.append((T, p, "sc_Tr{}_rhor{}".format(tr, rr)))
+        if T > T_cap:
+            clipped_tr = True
+            continue
+        pts.extend(_isotherm(hp, T, rhoc, p_cap, "sc_Tr{}".format(tr), capped))
+        reached_tr = max(reached_tr, tr)
+
+    # The hottest legal isotherm, for a fluid whose EOS range stops below the ladder.  Skipped when
+    # it would sit on top of a rung that already fitted, or on the T/Tc = 1.4 enhancement gate.
+    if clipped_tr:
+        tr_cap = T_cap / Tc
+        if abs(tr_cap - GATE_TR) < GATE_KEEPOUT:
+            tr_cap = GATE_TR - GATE_KEEPOUT
+        if tr_cap > 1.02 and tr_cap > 1.05 * reached_tr:
+            pts.extend(_isotherm(hp, tr_cap * Tc, rhoc, p_cap, "sc_TrCap", capped))
+            capped["tr"] += 1
 
     for tr in LIQUID_TR:
         T = tr * Tc
-        if T <= Ttrip:
+        if T <= T_min or T > T_cap:
             continue
         try:
             psat = CP.PropsSI("P", "T", T, "Q", 0, hp)
         except Exception:
             continue
         # A pressure barely above p_sat is still ambiguous in practice; push well past it.
-        pts.append((T, max(3.0 * psat, psat + 0.2 * pcrit), "liq_Tr{}".format(tr)))
+        p = max(3.0 * psat, psat + 0.2 * pcrit)
+        if p > p_cap:
+            # Clamping to p_cap is only worth doing while it stays clear of the dome; otherwise
+            # the point is exactly the ambiguous one this block exists to avoid.
+            if p_cap < 1.5 * psat:
+                continue
+            p = p_cap
+            capped["liq"] += 1
+        pts.append((T, p, "liq_Tr{}".format(tr)))
 
     for tr in VAPOUR_TR:
         T = tr * Tc
-        if T <= Ttrip:
+        if T <= T_min or T > T_cap:
             continue
         try:
             psat = CP.PropsSI("P", "T", T, "Q", 1, hp)
@@ -196,13 +315,14 @@ def main(fluids_arg):
     n_fluid = 0
     n_pts = 0
     n_mix = 0
+    capped = collections.Counter()
     skipped = []
     with open(out_path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["fluid", "T_K", "p_Pa", "region", "mole_fractions"])
         for fluid in fluids:
             try:
-                pts = build_points(fluid)
+                pts = build_points(fluid, capped)
             except Exception as exc:
                 skipped.append("{} ({})".format(fluid, str(exc).splitlines()[0][:60]))
                 continue
@@ -228,6 +348,8 @@ def main(fluids_arg):
 
     print("Wrote {}".format(out_path))
     print("  {} points over {} fluids ({} of them binary-mixture points)".format(n_pts, n_fluid, n_mix))
+    print("  boundary states substituted for clipped rungs: {} density, {} isotherm, {} liquid"
+          .format(capped["rhor"], capped["tr"], capped["liq"]))
     if skipped:
         print("  {} fluids skipped:".format(len(skipped)))
         for s in skipped:
