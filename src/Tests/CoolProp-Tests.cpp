@@ -371,6 +371,16 @@ vel viscosity_validation_data[] = {
   vel("n-Undecane", "T", 550, "Dmass", 600.0, "V", 188.68e-6, 1e-4),
   vel("n-Undecane", "T", 635, "Dmass", 325.0, "V", 49.077e-6, 1e-4),
 
+  // NOTE for anyone comparing these against the papers: TWO of the printed equations
+  // in this family cannot reproduce their own verification points, and the values
+  // below are the papers' tabulated ones, which the implementations DO reproduce.
+  //   R-161,  Eq. 8  -- denominator prints c5*Tr^2 + Tr^2*rho_r^2; needs a MINUS.
+  //                     As printed, 250 K / 850 kg/m^3 gives 84.2 against 308.22.
+  //   Ethanol, Eq. 12 -- first residual term prints 8.32575272*rho_r; needs rho_r^2.
+  //                     As printed, 300 K / 850 kg/m^3 is 5.3 % low.
+  // In both cases REFPROP's FLD carries the form that reproduces the paper's table.
+  // (A third, krypton Eq. 13's missing exp, is recorded in dev/fluids/Krypton.json.)
+
   // Velliadou et al., IJT 43(8):129 (2022) -- Section 3
   vel("R32", "T", 300, "Dmass", 1e-9, "V", 12.6170e-6, 1e-5),
   vel("R32", "T", 300, "Dmass", 10.0, "V", 12.6333e-6, 1e-5),
