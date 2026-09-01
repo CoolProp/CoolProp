@@ -60,6 +60,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 COMP_DIR = os.path.join(SCRIPT_DIR, "RES_comparison")
 REF_REFPROP = os.path.join(COMP_DIR, "grid_ref_refprop.csv")
 REF_HEOS = os.path.join(COMP_DIR, "grid_ref_heos.csv")
+GRID_CPP = os.path.join(COMP_DIR, "grid_cpp.csv")
 JSON_PATH = os.path.join(SCRIPT_DIR, "res_transport_parameters.json")
 
 # Numerical floor, NOT a physical criterion (see the module docstring).  e_res = d / share
@@ -70,6 +71,7 @@ JSON_PATH = os.path.join(SCRIPT_DIR, "res_transport_parameters.json")
 SHARE_FLOOR = 0.02
 THIN_POINTS = 5  # at or below this many judged points, say so -- do not let n hide in a table
 DEV_LIMIT = 0.01  # transport deviation above which the parameters are judged not to transfer
+MIN_COMPARABLE = 2000  # below this the --implementation run measured nothing and must not pass
 SRES_LIMIT = 0.05  # s_res deviation above which the same conclusion is drawn directly
 
 
@@ -110,6 +112,74 @@ def read(path):
         raise SystemExit("missing {} -- run dev/RES_reference_run.py for that equation of state first".format(path))
     with open(path, newline="", encoding="utf-8") as fh:
         return {(r["fluid"], r["T_K"], r["p_Pa"]): r for r in csv.DictReader(fh)}
+
+
+
+def implementation_report(dev_limit):
+    """Compare CoolProp's own RES implementation against the vendored reference code.
+
+    Both sides evaluate the same model on the SAME equation of state, so the equation of state
+    cancels completely and anything left is a defect in the C++ -- a different question from the
+    parameter-transfer measurement the rest of this script performs.
+
+        ./build_catch/Release/CatchTestRunner.exe "[RES_grid]"   # writes grid_cpp.csv
+        python dev/RES_reference_run.py --eos HEOS               # writes grid_ref_heos.csv
+        python dev/RES_grid_report.py --implementation
+    """
+    cpp = read(GRID_CPP)
+    ref = read(REF_HEOS)
+
+    rows = []
+    skipped = collections.Counter()
+    for key, c in cpp.items():
+        r = ref.get(key)
+        if r is None:
+            skipped["not in the reference run"] += 1
+            continue
+        if c["ok"] != "1" or r["ok"] != "1":
+            skipped["failed on one side"] += 1
+            continue
+        # tref_deriv_ok == 0 marks a point where the reference could not reach its enhancement
+        # reference temperature and silently returned zero enhancement, while CoolProp evaluates
+        # alpha^r there directly and keeps it.  That divergence is deliberate and documented, so
+        # those points are reported separately rather than counted as implementation error.
+        deliberate = r.get("tref_deriv_ok") == "0"
+        for prop in ("eta", "tc"):
+            d = reldev(num(c, prop), num(r, prop))
+            if d is not None:
+                rows.append((key[0], c["region"], prop, d, deliberate))
+
+    print("CoolProp vs the vendored reference code, both on HEOS")
+    print("=" * 78)
+    for prop, label in (("eta", "viscosity"), ("tc", "conductivity")):
+        for deliberate in (False, True):
+            sub = [d for _f, _r, p_, d, dl in rows if p_ == prop and dl == deliberate]
+            if not sub:
+                continue
+            tag = "t_ref beyond the reference's reach (documented divergence)" if deliberate else "comparable"
+            print("  {:<13} {:<52} n={:<5} median={:.3e}  max={:.3e}".format(
+                label, tag, len(sub), statistics.median(sub), max(sub)))
+
+    # Fail closed.  Without this the gate is satisfied by a run in which NOTHING was comparable:
+    # `rows` empty means `bad` empty means exit 0, having printed only the "not compared" line.
+    # This is the gate the implementation claim rests on, so it has to be able to fail.
+    comparable = len(rows) // 2
+    if comparable < MIN_COMPARABLE:
+        print("")
+        print("  FAIL: only {} points were comparable (need {}); the C++ side or the "
+              "reference run produced almost nothing.".format(comparable, MIN_COMPARABLE))
+        if skipped:
+            print("  not compared:", dict(skipped))
+        return 1
+
+    bad = sorted((d, f, reg, p_) for f, reg, p_, d, dl in rows if not dl and d > dev_limit)
+    print("")
+    print("  points above {:g}% among the comparable ones: {}".format(dev_limit * 100, len(bad)))
+    for d, f, reg, p_ in list(reversed(bad))[:15]:
+        print("    {:<14} {:<24} {:<4} {:9.5f}%".format(f, reg, p_, d * 100))
+    if skipped:
+        print("  not compared:", dict(skipped))
+    return 1 if bad else 0
 
 
 def main(share_min, dev_limit, sres_limit, verbose, residual_criterion=True):
@@ -285,5 +355,10 @@ if __name__ == "__main__":
     ap.add_argument("--dev-limit", type=float, default=DEV_LIMIT)
     ap.add_argument("--sres-limit", type=float, default=SRES_LIMIT)
     ap.add_argument("-v", "--verbose", action="store_true", help="list every fluid, not just the interesting ones")
+    ap.add_argument("--implementation", action="store_true",
+                    help="compare CoolProp's C++ RES against the vendored reference on the SAME equation of state, "
+                         "instead of measuring parameter transfer between two equations of state")
     a = ap.parse_args()
+    if a.implementation:
+        raise SystemExit(implementation_report(a.dev_limit))
     main(a.share_min, a.dev_limit, a.sres_limit, a.verbose, not a.legacy_share_criterion)

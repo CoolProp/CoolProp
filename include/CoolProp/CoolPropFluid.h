@@ -352,9 +352,13 @@ struct ViscosityRESData
     double xita = 1.0;             // scaling factor xi; 1.0 when individual fit was used
     int group_num = -1;
     double molar_mass = _HUGE;         // kg/mol, cached for Wilke mixing
-    // Set false by the cubic backends when the alpha function is changed without refitting
-    // n_res; nothing writes it in this commit, which ships the parameters but no model.
+    // Cleared by the cubic backends when the alpha function changes, because the shipped n_res
+    // were regressed against the default one.  `refit_pending` is the bitmask of slots still to be
+    // rewritten before the guard may be re-armed -- n_res[0..k-1] plus xita in the top bit -- so a
+    // caller who rewrites only some of them does not silently get a mix of new and stale
+    // coefficients.  See HelmholtzEOSMixtureBackend::set_fluid_parameter_double.
     bool n_params_match_alpha = true;
+    unsigned refit_pending = 0;
     bool provided = false;
 };
 
@@ -369,8 +373,9 @@ struct ConductivityRESData
     // Olchowy-Sengers critical enhancement parameters (Li 2024 parameterization)
     double R_D = _HUGE, gamma_uni = _HUGE, Gamma = _HUGE;
     double phi0 = _HUGE, t_ref = _HUGE, q_D = 0.0;
-    // See ViscosityRESData for n_params_match_alpha.
+    // See ViscosityRESData for n_params_match_alpha and refit_pending.
     bool n_params_match_alpha = true;
+    unsigned refit_pending = 0;
     bool crit_provided = false;
     bool provided = false;
 };

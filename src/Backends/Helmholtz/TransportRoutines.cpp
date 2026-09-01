@@ -1294,6 +1294,354 @@ CoolPropDbl TransportRoutines::viscosity_rhosr(HelmholtzEOSMixtureBackend& HEOS)
     return etastar_fluid * eta_dilute;
 }
 
+// ─── Residual Entropy Scaling (RES) ──────────────────────────────────────────
+//
+// Viscosity: Martinek et al., J. Chem. Eng. Data 70, 727-742 (2025).
+// Conductivity: Li, Duan, Yang, Ind. Eng. Chem. Res. 63, 18160-18175 (2024).
+//
+// The reference implementations of both are vendored under dev/RES_reference/ and are what this
+// is checked against; see dev/RES_reference/README.md.
+namespace {
+// 2018 CODATA.  Li's own code uses the older 1.38064852e-23 inside its Olchowy functions and
+// 1.380649e-23 everywhere else; we use the current value throughout, which moves the enhancement
+// term by 1.6e-7 relative to the reference.
+const double RES_N_A = 6.02214076e23;  // 1/mol
+const double RES_k_B = 1.380649e-23;   // J/K
+// Exponents of the residual-entropy expansion, fixed by the fitting scheme of each paper.
+// Sized from the coefficient counts so the two cannot drift apart.
+const double vis_pow[RES_N_RES_VISCOSITY] = {1.8, 2.4, 2.8};
+const double tc_pow[RES_N_RES_CONDUCTIVITY] = {1.0, 1.5, 2.0, 2.5};
+
+/// Both models divide by powers of s_plus and take s_plus^(2/3), so a non-positive reduced
+/// residual entropy is not a state the correlation is defined at -- it is the ideal gas or a
+/// numerical excursion below it.  Fail with the value rather than returning inf or NaN.
+void check_s_plus(double s_plus, const char* property) {
+    if (!ValidNumber(s_plus) || s_plus <= 0) {
+        throw ValueError(format("RES %s: reduced residual entropy s+ = %g is not positive; the model is "
+                                "undefined at this state (ideal gas or below).",
+                                property, s_plus));
+    }
+}
+
+/// Wilke (1950) mixing rule, as both papers apply it to the dilute-gas term.
+double wilke_mix(const std::vector<double>& prop0, const std::vector<double>& M, const std::vector<CoolPropDbl>& x) {
+    const std::size_t n = prop0.size();
+    if (n == 1) {
+        return prop0[0];
+    }
+    double result = 0;
+    for (std::size_t i = 0; i < n; ++i) {
+        double denom = 0;
+        for (std::size_t j = 0; j < n; ++j) {
+            const double phi_ij = POW2(1.0 + sqrt(prop0[i] / prop0[j]) * pow(M[j] / M[i], 0.25)) / sqrt(8.0 * (1.0 + M[i] / M[j]));
+            denom += x[j] * phi_ij;
+        }
+        result += x[i] * prop0[i] / denom;
+    }
+    return result;
+}
+
+/// The dilute-gas polynomial, ascending in T: n[0] + n[1]*T + ... + n[4]*T^4.
+/// The published tables list these descending; dev/convert_RES_csv_to_json.py reverses them once
+/// on import, so by the time they reach here index 0 is the constant term.
+double res_dilute_poly(const std::vector<double>& n, double T) {
+    return n[0] + T * (n[1] + T * (n[2] + T * (n[3] + T * n[4])));
+}
+}  // namespace
+
+CoolPropDbl TransportRoutines::viscosity_RES_dilute(HelmholtzEOSMixtureBackend& HEOS) {
+    // Public entry point: n_dilute default-constructs EMPTY, so without this the fixed-position
+    // reads below are undefined behaviour rather than an error for any fluid with no RES record.
+    for (std::size_t i = 0; i < HEOS.get_components().size(); ++i) {
+        HEOS.check_RES_usable(HEOS.get_components()[i].transport.viscosity_res.provided, true, 0, i, "viscosity");
+    }
+    // The fitted polynomial per component, Wilke-mixed.  Both papers use the polynomial for
+    // mixtures; Martinek uses REFPROP's native eta0 for pure fluids, which no CoolProp backend can
+    // supply, so the polynomial is used throughout.
+    const std::vector<CoolPropFluid>& comps = HEOS.get_components();
+    const double T = HEOS.T();
+    std::vector<double> eta0(comps.size()), M(comps.size());
+    for (std::size_t i = 0; i < comps.size(); ++i) {
+        eta0[i] = res_dilute_poly(comps[i].transport.viscosity_res.n_dilute, T) * 1e-6;  // uPa.s -> Pa.s
+        M[i] = comps[i].transport.viscosity_res.molar_mass;
+    }
+    return wilke_mix(eta0, M, HEOS.get_mole_fractions());
+}
+
+CoolPropDbl TransportRoutines::conductivity_RES_dilute(HelmholtzEOSMixtureBackend& HEOS) {
+    // Public entry point: n_dilute default-constructs EMPTY, so without this the fixed-position
+    // reads below are undefined behaviour rather than an error for any fluid with no RES record.
+    for (std::size_t i = 0; i < HEOS.get_components().size(); ++i) {
+        HEOS.check_RES_usable(HEOS.get_components()[i].transport.conductivity_res.provided, true, 0, i, "conductivity");
+    }
+    const std::vector<CoolPropFluid>& comps = HEOS.get_components();
+    const double T = HEOS.T();
+    std::vector<double> tc0(comps.size()), M(comps.size());
+    for (std::size_t i = 0; i < comps.size(); ++i) {
+        tc0[i] = res_dilute_poly(comps[i].transport.conductivity_res.n_dilute, T);  // W/m/K
+        M[i] = comps[i].transport.conductivity_res.molar_mass;
+    }
+    return wilke_mix(tc0, M, HEOS.get_mole_fractions());
+}
+
+CoolPropDbl TransportRoutines::viscosity_RES(HelmholtzEOSMixtureBackend& HEOS) {
+    const std::vector<CoolPropFluid>& comps = HEOS.get_components();
+    const std::vector<CoolPropDbl>& z = HEOS.get_mole_fractions();
+    const std::size_t N = comps.size();
+    const double T = HEOS.T();
+    const double s_plus = -HEOS.smolar_residual() / HEOS.gas_constant();
+    const double rhoN = HEOS.rhomass() / HEOS.molar_mass() * RES_N_A;  // number density, 1/m^3
+    check_s_plus(s_plus, "viscosity");
+    for (std::size_t i = 0; i < N; ++i) {
+        HEOS.check_RES_usable(comps[i].transport.viscosity_res.provided, comps[i].transport.viscosity_res.n_params_match_alpha,
+                              comps[i].transport.viscosity_res.refit_pending, i, "viscosity");
+    }
+
+    const double eta0_mix = viscosity_RES_dilute(HEOS);
+    std::vector<double> M(N);
+    for (std::size_t i = 0; i < N; ++i) {
+        M[i] = comps[i].transport.viscosity_res.molar_mass;
+    }
+
+    double vis_plus = 0;
+    double m_mix = 0;
+    if (N == 1) {
+        // n[k]/xita^pow[k] * s_plus^pow[k] == n[k] * (s_plus/xita)^pow[k], so fold xita into
+        // s_plus rather than into each coefficient.
+        const ViscosityRESData& d = comps[0].transport.viscosity_res;
+        const double s_eff = s_plus / d.xita;
+        double sum = 0;
+        for (std::size_t k = 0; k < RES_N_RES_VISCOSITY; ++k) {
+            sum += d.n_res[k] * pow(s_eff, vis_pow[k]);
+        }
+        vis_plus = exp(sum) - 1.0;
+        m_mix = M[0] / RES_N_A;
+    } else {
+        double n_mix[RES_N_RES_VISCOSITY] = {0};
+        double M_eff = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            const ViscosityRESData& d = comps[i].transport.viscosity_res;
+            for (std::size_t k = 0; k < RES_N_RES_VISCOSITY; ++k) {
+                n_mix[k] += z[i] * d.n_res[k] / pow(d.xita, vis_pow[k]);
+            }
+            M_eff += z[i] * M[i];
+        }
+        double sum = 0;
+        for (std::size_t k = 0; k < RES_N_RES_VISCOSITY; ++k) {
+            sum += n_mix[k] * pow(s_plus, vis_pow[k]);
+        }
+        vis_plus = exp(sum) - 1.0;
+        m_mix = M_eff / RES_N_A;  // mole-fraction weighted, the dilute ideal-gas limit
+    }
+
+    return eta0_mix + vis_plus / pow(s_plus, 2.0 / 3.0) * pow(rhoN, 2.0 / 3.0) * sqrt(m_mix * RES_k_B * T);
+}
+
+CoolPropDbl TransportRoutines::conductivity_RES(HelmholtzEOSMixtureBackend& HEOS) {
+    const std::vector<CoolPropFluid>& comps = HEOS.get_components();
+    const std::vector<CoolPropDbl>& z = HEOS.get_mole_fractions();
+    const std::size_t N = comps.size();
+    const double T = HEOS.T();
+    const double rho = HEOS.rhomass();
+    const double s_plus = -HEOS.smolar_residual() / HEOS.gas_constant();
+    const double rhoN = rho / HEOS.molar_mass() * RES_N_A;
+    check_s_plus(s_plus, "conductivity");
+    for (std::size_t i = 0; i < N; ++i) {
+        HEOS.check_RES_usable(comps[i].transport.conductivity_res.provided, comps[i].transport.conductivity_res.n_params_match_alpha,
+                              comps[i].transport.conductivity_res.refit_pending, i, "conductivity");
+    }
+
+    const double tc0_mix = conductivity_RES_dilute(HEOS);
+    std::vector<double> M(N);
+    for (std::size_t i = 0; i < N; ++i) {
+        M[i] = comps[i].transport.conductivity_res.molar_mass;
+    }
+
+    // Effective molecular mass: mass-fraction weighted sqrt(m), squared.  Li computes it as a
+    // geometric mean over the mass fractions, which is the same quantity: (sum_i w_i sqrt(M_i))^2.
+    double M_mix_actual = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        M_mix_actual += z[i] * M[i];
+    }
+    double sqrt_m_mix = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        sqrt_m_mix += (z[i] * M[i] / M_mix_actual) * sqrt(M[i] / RES_N_A);
+    }
+    const double m_mix = POW2(sqrt_m_mix);
+
+    double tc_plus = 0;
+    if (N == 1) {
+        const ConductivityRESData& d = comps[0].transport.conductivity_res;
+        const double s_eff = s_plus / d.xita;
+        for (std::size_t k = 0; k < RES_N_RES_CONDUCTIVITY; ++k) {
+            tc_plus += d.n_res[k] * pow(s_eff, tc_pow[k]);
+        }
+    } else {
+        double n_mix[RES_N_RES_CONDUCTIVITY] = {0};
+        for (std::size_t i = 0; i < N; ++i) {
+            const ConductivityRESData& d = comps[i].transport.conductivity_res;
+            for (std::size_t k = 0; k < RES_N_RES_CONDUCTIVITY; ++k) {
+                n_mix[k] += z[i] * d.n_res[k] / pow(d.xita, tc_pow[k]);
+            }
+        }
+        for (std::size_t k = 0; k < RES_N_RES_CONDUCTIVITY; ++k) {
+            tc_plus += n_mix[k] * pow(s_plus, tc_pow[k]);
+        }
+    }
+    const double tc_res = tc_plus / pow(s_plus, 2.0 / 3.0) * RES_k_B * pow(rhoN, 2.0 / 3.0) * sqrt(RES_k_B * T / m_mix);
+
+    return tc0_mix + tc_res + conductivity_RES_critical(HEOS);
+}
+
+CoolPropDbl TransportRoutines::conductivity_RES_critical(HelmholtzEOSMixtureBackend& HEOS) {
+    const std::vector<CoolPropFluid>& comps = HEOS.get_components();
+    const std::vector<CoolPropDbl>& z = HEOS.get_mole_fractions();
+    const std::size_t N = comps.size();
+    const double T = HEOS.T();
+    const double rho = HEOS.rhomass();
+
+    // Mole-fraction-mixed enhancement parameters.  For a pure fluid this collapses to that one
+    // component's values.  Li mixes linearly, and mixes 1/q_D rather than q_D because its
+    // parameter table stores qDinv, so mix the reciprocal here too.
+    //
+    // R_D is NOT taken from the parameter table.  Li's get_paramters() overwrites that column
+    // with a flat 1.02 for every fluid and never reads it, so ConductivityRESData::R_D carries
+    // it only for completeness -- see the note in dev/convert_RES_csv_to_json.py.  gamma, by
+    // contrast, IS read per fluid and takes two distinct values.
+    const double R_D = 1.02;
+    const double nu = 0.63;
+    double gamma_e = 0, phi0 = 0, Gamma = 0, qD_inv = 0, t_ref_pure = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        const ConductivityRESData& cd = comps[i].transport.conductivity_res;
+        // An all-zero record in the source tables means "not fitted", not "no enhancement".
+        // Every component must carry one, otherwise a zero would silently dilute the mix.
+        if (!cd.crit_provided) {
+            return 0;
+        }
+        gamma_e += z[i] * cd.gamma_uni;
+        phi0 += z[i] * cd.phi0;
+        Gamma += z[i] * cd.Gamma;
+        qD_inv += z[i] / cd.q_D;
+        t_ref_pure = cd.t_ref;
+    }
+    if (N == 1 && !(ValidNumber(t_ref_pure) && t_ref_pure > 0)) {
+        return 0;
+    }
+    // Mixtures are opt-in: the enhancement needs the MIXTURE critical point, which HEOS has to
+    // SOLVE for -- slowly, and not always successfully -- while the physical case for a critical
+    // enhancement in mixtures is not well established.  See kHEOSOptionsSchemaJson.
+    if (N > 1 && !HEOS.RES_mixture_enhancement_enabled()) {
+        return 0;
+    }
+
+    double Tc = 0, pc = 0, rhoc = 0;
+    if (N == 1) {
+        Tc = HEOS.T_critical();
+        pc = HEOS.p_critical();
+        rhoc = HEOS.rhomass_critical();
+    } else {
+        // T_critical()/p_critical()/rhomass_critical() each run the whole solve, so asking for
+        // all three costs it three times over.  Ask once.  Requiring exactly one point mirrors
+        // HelmholtzEOSMixtureBackend::calc_T_critical(): with several, Tc is ambiguous and RES
+        // has no basis for choosing.  The caller asked for this explicitly, so a failure to
+        // converge surfaces rather than being papered over with a silently smaller answer.
+        const std::vector<CriticalState> pts = HEOS.all_critical_points();
+        if (pts.size() != 1) {
+            throw ValueError(format("RES: the mixture critical enhancement needs a single critical point, but the "
+                                    "backend reported %d.",
+                                    static_cast<int>(pts.size())));
+        }
+        Tc = pts[0].T;
+        pc = pts[0].p;
+        rhoc = pts[0].rhomolar * HEOS.molar_mass();
+    }
+    if (!(ValidNumber(Tc) && Tc > 0 && ValidNumber(rhoc) && rhoc > 0 && ValidNumber(pc) && pc > 0)) {
+        return 0;
+    }
+
+    const double delta_r = rho / rhoc;
+    // Li takes the mixture reference temperature as 1.5*Tc; the per-fluid table has no entry.
+    const double t_ref = (N == 1) ? t_ref_pure : 1.5 * Tc;
+    // Outside the near-critical region the enhancement is identically zero (Li 2024).  rho == 0
+    // is excluded too, where delta_r would make Omega0 undefined.
+    if (rho <= 0 || delta_r >= 2.0 || T / Tc > 1.4) {
+        return 0;
+    }
+
+    // (d rho_mass / dp)_T at the current state and at the reference temperature.
+    const double delta_st = HEOS.delta();
+    const double dp_drho = HEOS.gas_constant() * T * (1.0 + 2.0 * delta_st * HEOS.dalphar_dDelta() + delta_st * delta_st * HEOS.d2alphar_dDelta2());
+    const double drhodp_t = 1.0 / dp_drho * HEOS.molar_mass();  // (kg/m^3)/Pa
+    //
+    // Evaluated through alpha^r directly rather than through a property-limit-checked path.  t_ref
+    // is 1.5*Tc for most fluids, which for 88 of the 119 carrying enhancement parameters sits past
+    // the equation of state's stated Tmax; t_ref is a reference state for background subtraction,
+    // not a physical claim about the fluid, so the EOS is well defined there and the enhancement
+    // is kept.  On HEOS this currently changes nothing -- PropsSI's DmassT path does not enforce
+    // the temperature limit, so the reference implementation reaches the same derivative for all
+    // 88 (measured, not assumed).  It would matter on a backend that does enforce it, where the
+    // reference silently drops the enhancement to zero instead.
+    const double drhodp_tref = HEOS.calc_drhomass_dp_constT_at(t_ref);
+
+    const double arg = drhodp_t - (t_ref / T) * drhodp_tref;
+    if (!(arg > 0)) {
+        return 0;
+    }
+    const double phi = phi0 * pow((pc * rho) / (Gamma * POW2(rhoc)), nu / gamma_e) * pow(arg, nu / gamma_e);
+    if (!(phi > 0)) {
+        return 0;
+    }
+    const double y = phi / qD_inv;
+    const double kappa_cv = HEOS.cpmass() / HEOS.cvmass();
+    const double Omega = 2.0 / M_PI * ((1.0 - 1.0 / kappa_cv) * atan(y) + y / kappa_cv);
+    const double Omega0 = 2.0 / M_PI * (1.0 - exp(-1.0 / (1.0 / y + POW2(y / delta_r) / 3.0)));
+    // The enhancement needs a viscosity, and which one is a real choice.  Li feeds it REFPROP's
+    // NATIVE viscosity; we use the RES viscosity, which is self-consistent and is the only option
+    // on the cubic backends, which have no transport model at all.  Costs a few percent near the
+    // critical point relative to the published values.  A fluid can legitimately carry
+    // conductivity parameters but not viscosity ones, so skip the enhancement rather than let
+    // viscosity_RES() throw out of a conductivity call.
+    for (std::size_t i = 0; i < N; ++i) {
+        const ViscosityRESData& vd = comps[i].transport.viscosity_res;
+        if (!vd.provided) {
+            // Legitimate: a fluid may carry conductivity parameters and no viscosity ones, and
+            // Li's enhancement cannot be formed without a viscosity.  Skip it rather than let
+            // viscosity_RES() throw out of a conductivity call.  Does not arise with the shipped
+            // table, where the two coverages are identical.
+            return 0;
+        }
+        if (!vd.n_params_match_alpha) {
+            // NOT legitimate: the parameters exist but were invalidated by an alpha-function
+            // change the caller has only partly refitted.  Silently dropping the enhancement here
+            // would return a conductivity quietly missing a term worth tens of percent near the
+            // critical point, so say so instead.
+            // Reuse the same reporting the viscosity path uses, so the message names exactly
+            // which keys are outstanding rather than leaving the caller to guess.
+            HEOS.check_RES_usable(vd.provided, vd.n_params_match_alpha, vd.refit_pending, i, "viscosity");
+        }
+    }
+    const double vis = viscosity_RES(HEOS);
+    if (!(vis > 0)) {
+        return 0;
+    }
+    const double lambda_c = RES_k_B * R_D * rho * HEOS.cpmass() * T / (vis * phi * 6.0 * M_PI) * (Omega - Omega0);
+    // Li clamps a negative enhancement to zero for mixtures and not for pure fluids; matched
+    // here, since reproducing the published numbers is the point of the comparison.
+    if (N > 1 && !(lambda_c > 0)) {
+        return 0;
+    }
+    // Deliberately NOT `ValidNumber(lambda_c) ? lambda_c : 0`.  A non-finite enhancement absorbed
+    // into a zero would be added to the dilute and residual terms and returned as a perfectly
+    // plausible conductivity.  Every input that could produce one is guarded above, so reaching
+    // here non-finite means an assumption failed and the caller should hear about it.
+    if (!ValidNumber(lambda_c)) {
+        throw ValueError(format("RES conductivity: the critical enhancement evaluated to a non-finite value at T = %g K, "
+                                "rho = %g kg/m3.",
+                                T, rho));
+    }
+    return lambda_c;
+}
+
 CoolPropDbl TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend& HEOS, HelmholtzEOSMixtureBackend& HEOS_Reference) {
     // Collect some parameters
     CoolPropDbl M = HEOS.molar_mass(), M_kmol = M * 1000, M0 = HEOS_Reference.molar_mass(), Tc = HEOS.T_critical(), Tc0 = HEOS_Reference.T_critical(),

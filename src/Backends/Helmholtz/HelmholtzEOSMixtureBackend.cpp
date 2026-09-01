@@ -37,6 +37,8 @@
 #include "PhaseEnvelopeRoutines.h"
 #include "ReducingFunctions.h"
 #include "MixtureParameters.h"
+#include "CoolProp/schemas/HEOSOptions.h"
+#include "CoolProp/SchemaValidation.h"
 #include "CoolProp/fluids/IdealCurves.h"
 #include "MixtureParameters.h"
 #include "CoolProp/expression/ExpressionCorrelation.h"
@@ -53,10 +55,15 @@ class HEOSGenerator : public AbstractStateGenerator
 {
    public:
     AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
+        return get_AbstractState(fluid_names, "");
+    };
+    /// HEOS is opted in to factory-string options; the payload is validated against
+    /// kHEOSOptionsSchemaJson in the constructor.  See Web/coolprop/BackendOptions.rst.
+    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names, const std::string& options_json) override {
         if (fluid_names.size() == 1) {
-            return new HelmholtzEOSBackend(fluid_names[0]);
+            return new HelmholtzEOSBackend(fluid_names[0], options_json);
         } else {
-            return new HelmholtzEOSMixtureBackend(fluid_names);
+            return new HelmholtzEOSMixtureBackend(fluid_names, true, options_json);
         }
     };
 };
@@ -74,7 +81,9 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend() : is_pure_or_pseudopure
     // Reset the residual Helmholtz energy class
     residual_helmholtz = std::make_shared<ResidualHelmholtz>();
 }
-HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV) {
+HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV,
+                                                       const std::string& options_json) {
+    apply_backend_options(options_json);
     std::vector<CoolPropFluid> components(component_names.size());
     for (unsigned int i = 0; i < components.size(); ++i) {
         components[i] = get_library().get(component_names[i]);
@@ -91,7 +100,9 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::st
     // Set the phase to default unknown value
     _phase = iphase_unknown;
 }
-HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV) {
+HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV,
+                                                       const std::string& options_json) {
+    apply_backend_options(options_json);
 
     // Reset the residual Helmholtz energy class
     residual_helmholtz = std::make_shared<ResidualHelmholtz>();
@@ -172,6 +183,10 @@ void HelmholtzEOSMixtureBackend::sync_linked_states(const HelmholtzEOSMixtureBac
 HelmholtzEOSMixtureBackend* HelmholtzEOSMixtureBackend::get_copy(bool generate_SatL_and_SatV) {
     // Set up the class with these components
     auto* ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
+    // The RES opt-in is a plain member, not part of `components`, so a copy would silently fall
+    // back to the reference correlations.  Nothing would fail to compile; SatL/SatV would just
+    // quietly answer with a different transport model than the instance they belong to.
+    ptr->copy_RES_config_from(*this);
     // Recursively walk into linked states, setting the departure and reducing terms
     // to be equal to the parent (this instance)
     ptr->sync_linked_states(this);
@@ -351,6 +366,11 @@ void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
 double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
     if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
+    }
+    // Before get_superanc(): that throws for anything not a pure fluid, which would make every
+    // RES key unreachable on a mixture -- and RES is a mixture model.
+    if (parameter.compare(0, 4, "RES_") == 0) {
+        return get_RES_parameter_double(i, parameter);
     }
     auto superanc_ptr = get_superanc();
     if (parameter.find("SUPERANC::") == 0) {
@@ -830,6 +850,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
 }
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
+    // Opted in through the factory string; never enabled implicitly.  For a mixture this also
+    // replaces the log-mean rule, which is the "highly approximate" path warned about below.
+    if (viscosity_RES_enabled) {
+        return TransportRoutines::viscosity_RES(*this);
+    }
     if (is_pure_or_pseudopure) {
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
         calc_viscosity_contributions(dilute, initial_density, residual, critical);
@@ -1084,6 +1109,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background() {
     return lambda_residual;
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
+    if (conductivity_RES_enabled) {
+        return TransportRoutines::conductivity_RES(*this);
+    }
     if (is_pure_or_pseudopure) {
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
         calc_conductivity_contributions(dilute, initial_density, residual, critical);
@@ -4759,6 +4787,238 @@ void HelmholtzEOSMixtureBackend::set_fluid_enthalpy_entropy_offset(CoolPropFluid
         component.EOS().max_sat_p.hmolar = HEOS->hmolar();
         component.EOS().max_sat_p.smolar = HEOS->smolar();
     }
+}
+
+// ─── Residual entropy scaling: options, guards and per-component parameters ──
+
+void HelmholtzEOSMixtureBackend::copy_RES_config_from(const HelmholtzEOSMixtureBackend& donor) {
+    viscosity_RES_enabled = donor.viscosity_RES_enabled;
+    conductivity_RES_enabled = donor.conductivity_RES_enabled;
+    RES_mixture_enhancement = donor.RES_mixture_enhancement;
+    options_canonical_ = donor.options_canonical_;
+    // Recurse: get_copy() builds SatL/SatV inside the CONSTRUCTOR, before it can assign anything
+    // to the new object, so a copy made with generate_SatL_and_SatV = true would otherwise carry
+    // the flags itself while its own saturation states silently answered with the reference
+    // correlations.  The recursion terminates because SatL/SatV are built with generate = false
+    // and so have none of their own.
+    if (SatL) {
+        SatL->copy_RES_config_from(donor);
+    }
+    if (SatV) {
+        SatV->copy_RES_config_from(donor);
+    }
+}
+
+void HelmholtzEOSMixtureBackend::apply_backend_options(const std::string& options_json) {
+    std::size_t lo = options_json.find_first_not_of(" \t\r\n");
+    if (lo == std::string::npos) {
+        return;  // no options supplied
+    }
+    const std::string trimmed = options_json.substr(lo, options_json.find_last_not_of(" \t\r\n") - lo + 1);
+    if (trimmed == "{}") {
+        return;
+    }
+    validate_json_against_schema(trimmed, kHEOSOptionsSchemaJson);
+    options_canonical_ = to_canonical_json_str(trimmed);
+
+    const nlohmann::json doc = cpjson::parse(trimmed);
+    if (doc.contains("RES")) {
+        const nlohmann::json& res = doc.at("RES");
+        viscosity_RES_enabled = res.value("viscosity", false);
+        conductivity_RES_enabled = res.value("conductivity", false);
+        RES_mixture_enhancement = res.value("mixture_critical_enhancement", false);
+    }
+}
+
+std::string HelmholtzEOSMixtureBackend::RES_component_label(std::size_t i) const {
+    // components[i].name is empty on the cubic backends: their CoolPropFluid records are
+    // synthetic, and RES deliberately does not write a name into them (see
+    // AbstractCubicBackend::seed_RES_from_components).  Fall back to the backend's own view so an
+    // error message still says which fluid it is about.
+    if (!components[i].name.empty()) {
+        return components[i].name;
+    }
+    try {
+        const std::vector<std::string> names = const_cast<HelmholtzEOSMixtureBackend*>(this)->calc_fluid_names();
+        if (i < names.size() && !names[i].empty()) {
+            return names[i];
+        }
+    } catch (...) {
+        // Naming is a courtesy; never let it displace the error being reported.
+    }
+    return format("component %d", static_cast<int>(i));
+}
+
+void HelmholtzEOSMixtureBackend::check_RES_usable(bool provided, bool params_match_alpha, unsigned refit_pending, std::size_t i,
+                                                  const char* property) const {
+    if (i >= components.size()) {
+        throw ValueError(
+          format("RES %s: component index %d is out of range (N = %d).", property, static_cast<int>(i), static_cast<int>(components.size())));
+    }
+    const std::string label = RES_component_label(i);
+    if (!provided) {
+        throw ValueError(format("RES %s parameters are not available for component '%s'.  Either the fluid is absent from "
+                                "dev/res_transport_parameters.json, or its coefficients were deliberately withheld because "
+                                "they do not transfer to this equation of state.",
+                                property, label.c_str()));
+    }
+    if (!params_match_alpha) {
+        // Name every key still outstanding.  The guard requires the WHOLE set -- every n
+        // coefficient and xita -- to be rewritten, because re-arming on a partial refit would run
+        // the model on a mix of new and stale coefficients.
+        const std::size_t n_res = (std::string(property) == "viscosity") ? RES_N_RES_VISCOSITY : RES_N_RES_CONDUCTIVITY;
+        std::string outstanding;
+        for (std::size_t k = 0; k < n_res; ++k) {
+            if ((refit_pending & (1u << k)) != 0) {
+                outstanding += format(" RES_%s_n%d", property, static_cast<int>(k));
+            }
+        }
+        if ((refit_pending & (1u << n_res)) != 0) {
+            outstanding += format(" RES_%s_xita", property);
+        }
+        throw ValueError(format("RES %s coefficients for component '%s' were fitted for a different alpha function.  Every "
+                                "coefficient has to be rewritten through set_fluid_parameter_double(%d, ...) before the model "
+                                "will run again -- including xita, even when it does not change.  Still outstanding:%s.",
+                                property, label.c_str(), static_cast<int>(i),
+                                outstanding.empty() ? " (none -- the guard was cleared without a refit)" : outstanding.c_str()));
+    }
+}
+
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_drhomass_dp_constT_at(double T_eval) {
+    // tau and delta must be reduced by the SAME parameters the equation of state is written in,
+    // so tau uses T_reducing and not T_critical.  The two differ for most fluids that carry
+    // critical-enhancement parameters, and mixing them evaluates alpha^r at the wrong point on the
+    // surface.  This matches conductivity_critical_simplified_Olchowy_Sengers, whose local `Tc` is
+    // likewise get_reducing_state().T.
+    //
+    // Using T_reducing() also avoids a critical-point SOLVE on mixtures, which T_critical() would
+    // trigger on every call.
+    const double delta_st = delta();
+    const double tau_ref = T_reducing() / T_eval;
+    const double dp_drho_ref = gas_constant() * T_eval
+                               * (1.0 + 2.0 * delta_st * calc_alphar_deriv_nocache(0, 1, mole_fractions, tau_ref, delta_st)
+                                  + delta_st * delta_st * calc_alphar_deriv_nocache(0, 2, mole_fractions, tau_ref, delta_st));
+    return 1.0 / dp_drho_ref * molar_mass();
+}
+
+namespace {
+/// Parse "RES_<property>_n<k>" / "RES_<property>_xita" into (property, index).
+/// Returns false when `parameter` is not a RES key at all, so the caller can fall through.
+bool parse_RES_parameter(const std::string& parameter, bool& is_viscosity, int& coeff_index) {
+    const std::string vis = "RES_viscosity_", cond = "RES_conductivity_";
+    std::string tail;
+    if (parameter.compare(0, vis.size(), vis) == 0) {
+        is_viscosity = true;
+        tail = parameter.substr(vis.size());
+    } else if (parameter.compare(0, cond.size(), cond) == 0) {
+        is_viscosity = false;
+        tail = parameter.substr(cond.size());
+    } else {
+        return false;
+    }
+    if (tail == "xita") {
+        coeff_index = -1;  // sentinel: the scaling factor, not one of the n coefficients
+        return true;
+    }
+    if (tail.size() == 2 && tail[0] == 'n' && tail[1] >= '0' && tail[1] <= '9') {
+        coeff_index = tail[1] - '0';
+        return true;
+    }
+    return false;
+}
+}  // namespace
+
+void HelmholtzEOSMixtureBackend::set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) {
+    bool is_viscosity = false;
+    int k = 0;
+    if (!parse_RES_parameter(parameter, is_viscosity, k)) {
+        throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+    }
+    if (i >= components.size()) {
+        throw ValueError(
+          format("Index i [%d] is out of bounds. Must be between 0 and %d.", static_cast<int>(i), static_cast<int>(components.size()) - 1));
+    }
+    const std::size_t n_expected = is_viscosity ? RES_N_RES_VISCOSITY : RES_N_RES_CONDUCTIVITY;
+    if (k >= 0 && static_cast<std::size_t>(k) >= n_expected) {
+        throw ValueError(format("%s: the RES %s model has %d residual coefficients, so n%d does not exist.", parameter.c_str(),
+                                is_viscosity ? "viscosity" : "conductivity", static_cast<int>(n_expected), k));
+    }
+    if (is_viscosity) {
+        ViscosityRESData& d = components[i].transport.viscosity_res;
+        if (!d.provided) {
+            throw ValueError(format("%s: component '%s' carries no RES viscosity parameters to refit; set the whole record "
+                                    "or pick a fluid that has one.",
+                                    parameter.c_str(), RES_component_label(i).c_str()));
+        }
+        const unsigned bit = (k < 0) ? (1u << RES_N_RES_VISCOSITY) : (1u << static_cast<unsigned>(k));
+        if (k < 0) {
+            d.xita = value;
+        } else {
+            d.n_res[k] = value;
+        }
+        // Re-arm only when EVERY slot has been rewritten since the guard tripped.  Clearing it on
+        // the first write would run the model on a mix of new and stale coefficients -- which is
+        // exactly the state the guard exists to prevent, reached by using the cure.
+        d.refit_pending &= ~bit;
+        if (d.refit_pending == 0) {
+            d.n_params_match_alpha = true;
+        }
+    } else {
+        ConductivityRESData& d = components[i].transport.conductivity_res;
+        if (!d.provided) {
+            throw ValueError(format("%s: component '%s' carries no RES conductivity parameters to refit; set the whole record "
+                                    "or pick a fluid that has one.",
+                                    parameter.c_str(), RES_component_label(i).c_str()));
+        }
+        const unsigned bit = (k < 0) ? (1u << RES_N_RES_CONDUCTIVITY) : (1u << static_cast<unsigned>(k));
+        if (k < 0) {
+            d.xita = value;
+        } else {
+            d.n_res[k] = value;
+        }
+        d.refit_pending &= ~bit;
+        if (d.refit_pending == 0) {
+            d.n_params_match_alpha = true;
+        }
+    }
+    // Both caches: the conductivity's critical enhancement consumes the RES viscosity, so a
+    // viscosity coefficient change moves the conductivity too.  Without this a caller who does not
+    // update() in between gets the value computed from the PREVIOUS coefficients back.
+    _viscosity.clear();
+    _conductivity.clear();
+    // SatL/SatV hold their own copy of `components`, taken at construction, exactly as
+    // set_fluid_enthalpy_entropy_offset has to account for.
+    if (SatL) {
+        SatL->set_fluid_parameter_double(i, parameter, value);
+    }
+    if (SatV) {
+        SatV->set_fluid_parameter_double(i, parameter, value);
+    }
+}
+
+double HelmholtzEOSMixtureBackend::get_RES_parameter_double(const size_t i, const std::string& parameter) {
+    bool is_viscosity = false;
+    int k = 0;
+    if (!parse_RES_parameter(parameter, is_viscosity, k)) {
+        throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+    }
+    if (i >= components.size()) {
+        throw ValueError(
+          format("Index i [%d] is out of bounds. Must be between 0 and %d.", static_cast<int>(i), static_cast<int>(components.size()) - 1));
+    }
+    const std::size_t n_expected = is_viscosity ? RES_N_RES_VISCOSITY : RES_N_RES_CONDUCTIVITY;
+    if (k >= 0 && static_cast<std::size_t>(k) >= n_expected) {
+        throw ValueError(format("%s: the RES %s model has %d residual coefficients, so n%d does not exist.", parameter.c_str(),
+                                is_viscosity ? "viscosity" : "conductivity", static_cast<int>(n_expected), k));
+    }
+    if (is_viscosity) {
+        const ViscosityRESData& d = components[i].transport.viscosity_res;
+        check_RES_usable(d.provided, true, 0, i, "viscosity");
+        return (k < 0) ? d.xita : d.n_res[k];
+    }
+    const ConductivityRESData& d = components[i].transport.conductivity_res;
+    check_RES_usable(d.provided, true, 0, i, "conductivity");
+    return (k < 0) ? d.xita : d.n_res[k];
 }
 
 } /* namespace CoolProp */

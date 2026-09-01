@@ -436,6 +436,13 @@ def main() -> None:
         # gates the enhancement on Tref > 0, so omit the block entirely rather than shipping zeros
         # that would divide by Tref/Gamma downstream.
         if float(crow["Tref"]) > 0 and float(crow["Gamma"]) > 0 and float(crow["xi0"]) > 0 and q_D_inv > 0:
+            # Emitted OUTSIDE the per-EOS blocks, i.e. shared by HEOS, PR and SRK.  That follows
+            # the sources: Yang 2025 applies the enhancement to the cubics as well, and the table
+            # published with it agrees with Li's to rounding for 147 of the 151 fluids -- 1.2415
+            # against 1.242 for gamma_uni and the like.  In four cases (R11, R12, R22, R23) Yang
+            # zeroes an enhancement Li keeps, never the reverse, so using Li's throughout is the
+            # more complete choice as well as the simpler one.  A second, near-identical table per
+            # backend would not repay itself.
             entry["critical_enhancement"] = {
                 # Shipped as published, and DELIBERATELY NOT USED.  Li's reference code overwrites
                 # this column with a flat 1.02 for every fluid (conductivity_RES.py, get_paramters)

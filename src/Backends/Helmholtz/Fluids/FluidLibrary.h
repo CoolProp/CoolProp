@@ -866,7 +866,8 @@ class JSONFluidLibrary
     /// eos_key is "HEOS", "PR", or "SRK"; silently skips if the fluid is not in the table.
     /// molar_mass_override > 0 is used when the CoolPropFluid has no EOS data (e.g. cubic backends).
     static void load_RES_transport_parameters(const nlohmann::json& res_json, const std::string& eos_key, CoolPropFluid& fluid,
-                                              double molar_mass_override = -1.0) {
+                                              double molar_mass_override = -1.0,
+                                              const std::vector<std::string>& lookup_names = std::vector<std::string>()) {
         // molar_mass_override exists for callers whose CoolPropFluid carries no EOS -- the cubic
         // backends build one that way.  Without an override AND without an EOS, fluid.molar_mass()
         // indexes an empty EOSVector, which is undefined behaviour rather than an exception, so
@@ -874,8 +875,20 @@ class JSONFluidLibrary
         if (!(molar_mass_override > 0) && fluid.EOSVector.empty()) {
             throw ValueError(format("load_RES_transport_parameters: fluid '%s' has no EOS data; pass molar_mass_override.", fluid.name.c_str()));
         }
-        // Find the fluid by alias (all aliases are stored uppercase in the JSON keys)
+        // Find the fluid by alias (all aliases are stored uppercase in the JSON keys).
+        //
+        // `lookup_names`, when supplied, is used INSTEAD of the record's own name and aliases.
+        // The cubic backends need that: their CoolPropFluid records are synthetic and carry no
+        // name, and writing one in so the lookup would succeed had a side effect well outside
+        // RES -- calc_excess_properties() builds a HelmholtzEOSBackend from components[i].name,
+        // so a populated name silently turned "this cubic mixture has no excess properties" into
+        // "compute them from the HEOS equation of state instead".
         auto find_key = [&](const nlohmann::json& section) -> std::string {
+            for (const std::string& n : lookup_names) {
+                if (section.contains(n)) return n;
+                if (section.contains(upper(n))) return upper(n);
+            }
+            if (!lookup_names.empty()) return "";
             if (section.contains(fluid.name)) return fluid.name;
             if (section.contains(upper(fluid.name))) return upper(fluid.name);
             if (fluid.REFPROPname != "N/A") {
@@ -1605,6 +1618,12 @@ std::string get_fluid_as_JSONstring(const std::string& indentifier);
 
 /// Set the internal enthalpy and entropy offset variables
 void set_fluid_enthalpy_entropy_offset(const std::string& fluid, double delta_a1, double delta_a2, const std::string& ref);
+
+/// Overlay RES transport parameters for `fluid` from the shipped table.
+/// eos_key must be "HEOS", "PR" or "SRK"; silently does nothing if the fluid is not listed.
+/// molar_mass_override is required when the CoolPropFluid carries no EOS, as the cubics' does.
+void overlay_RES_transport_by_name(const std::string& eos_key, CoolPropFluid& fluid, double molar_mass_override = -1.0,
+                                   const std::vector<std::string>& lookup_names = std::vector<std::string>());
 
 } /* namespace CoolProp */
 #endif

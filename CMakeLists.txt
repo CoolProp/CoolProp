@@ -2422,6 +2422,9 @@ if(COOLPROP_CATCH_MODULE)
   target_link_libraries(CatchTestRunner PRIVATE Catch2::Catch2WithMain)
   target_compile_definitions(CatchTestRunner PRIVATE ENABLE_CATCH)
   target_compile_definitions(CatchTestRunner PRIVATE COOLPROP_ALL_FLUIDS_JSON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/dev/all_fluids.json")
+  # Where the RES validation harness reads its grid and writes its results.  Hidden test
+  # [RES_grid] only; see dev/RES_reference_run.py.
+  target_compile_definitions(CatchTestRunner PRIVATE RES_COMPARISON_DIR="${CMAKE_CURRENT_SOURCE_DIR}/dev/RES_comparison")
   target_compile_definitions(CatchTestRunner PRIVATE COOLPROP_NO_INCBIN) # Incbin is disabled for Catch2 because of a weird behavior where out-of-date zlib-compressed fluid information were being used.
   if(UNIX)
     target_link_libraries(CatchTestRunner PRIVATE ${CMAKE_DL_LIBS})
