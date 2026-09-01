@@ -333,6 +333,86 @@ vel viscosity_validation_data[] = {
   vel("EthylBenzene", "T", 400, "Dmolar", 7.2481e3, "V", 250.283e-6, 1e-4),
   vel("EthylBenzene", "T", 600, "Dmolar", 6.4831e3, "V", 155.940e-6, 1e-4),
 
+  // ---- REFPROP 10.1 viscosity supersessions and gaps (CoolProp-rip4) -------------
+  // Each fluid's own paper publishes a small set of points for computer verification.
+  // Those points ARE the test: they are what the authors provide so an implementation
+  // can be checked, and they live here rather than as bespoke test cases.
+  // Densities are given in the unit each paper tabulates.
+
+  // Velliadou et al., IJT 42(5):74 (2021) -- Section 4
+  vel("Xenon", "T", 300, "Dmass", 1e-9, "V", 23.1561e-6, 1e-4),
+  vel("Xenon", "T", 300, "Dmass", 6.0, "V", 23.3186e-6, 1e-4),
+  vel("Xenon", "T", 300, "Dmass", 2500.0, "V", 206.449e-6, 1e-4),
+
+  // Tsolakidou et al., JPCRD 46(2):023103 (2017) -- Table 11
+  vel("R161", "T", 250, "Dmass", 1e-9, "V", 8.280e-6, 1e-4),
+  vel("R161", "T", 250, "Dmass", 1.0, "V", 8.255e-6, 1e-4),
+  vel("R161", "T", 250, "Dmass", 850.0, "V", 308.22e-6, 1e-4),
+  vel("R161", "T", 375, "Dmass", 1e-9, "V", 12.171e-6, 1e-4),
+  vel("R161", "T", 375, "Dmass", 229.0, "V", 20.859e-6, 1e-4),
+
+  // Wen et al., JCED 62(10):3603 (2017) -- Table 4.  The dilute rows print three
+  // significant figures, so half a unit in the last place is 5e-4 there.
+  vel("Novec649", "T", 250, "Dmass", 1e-9, "V", 8.09e-6, 6e-4),
+  vel("Novec649", "T", 250, "Dmass", 1809.77, "V", 2377.5e-6, 1e-4),
+  vel("Novec649", "T", 300, "Dmass", 3.89, "V", 10.85e-6, 6e-4),
+  vel("Novec649", "T", 300, "Dmass", 1701.48, "V", 1059.7e-6, 1e-4),
+  vel("Novec649", "T", 350, "Dmass", 1595.99, "V", 587.87e-6, 1e-4),
+
+  // Perkins, Huber & Assael, JCED 61(9):3286 (2016) -- Table 8
+  vel("R245fa", "T", 250, "Dmass", 1e-9, "V", 8.6291e-6, 1e-4),
+  vel("R245fa", "T", 250, "Dmass", 1500.0, "V", 1085.562e-6, 1e-4),
+  vel("R245fa", "T", 430, "Dmass", 1e-9, "V", 14.630e-6, 1e-4),
+  vel("R245fa", "T", 430, "Dmass", 530.0, "V", 30.632e-6, 1e-4),
+
+  // Assael, Papalas & Huber, JPCRD 46(3):033103 (2017) -- Table 11
+  vel("n-Undecane", "T", 550, "Dmass", 1e-9, "V", 8.935e-6, 1e-4),
+  vel("n-Undecane", "T", 550, "Dmass", 10.0, "V", 10.702e-6, 1e-4),
+  vel("n-Undecane", "T", 550, "Dmass", 600.0, "V", 188.68e-6, 1e-4),
+  vel("n-Undecane", "T", 635, "Dmass", 325.0, "V", 49.077e-6, 1e-4),
+
+  // Velliadou et al., IJT 43(8):129 (2022) -- Section 3
+  vel("R32", "T", 300, "Dmass", 1e-9, "V", 12.6170e-6, 1e-5),
+  vel("R32", "T", 300, "Dmass", 10.0, "V", 12.6333e-6, 1e-5),
+  vel("R32", "T", 300, "Dmass", 1100.0, "V", 173.431e-6, 1e-5),
+
+  // Huber & Assael, Int. J. Refrig. 71:39 (2016) -- Section 2.4, both fluids
+  vel("R1234yf", "T", 300, "Dmolar", 1e-9, "V", 11.579e-6, 1e-4),
+  vel("R1234yf", "T", 300, "Dmolar", 44.0, "V", 11.549e-6, 1e-4),
+  vel("R1234yf", "T", 300, "Dmolar", 10522.0, "V", 217.97e-6, 1e-4),
+  vel("R1234ze(E)", "T", 300, "Dmolar", 1e-9, "V", 11.777e-6, 1e-4),
+  vel("R1234ze(E)", "T", 300, "Dmolar", 44.0, "V", 12.041e-6, 1e-4),
+  vel("R1234ze(E)", "T", 300, "Dmolar", 10522.0, "V", 217.89e-6, 1e-4),
+
+  // Sotiriadou et al., IJT 47(1):18 (2025) -- Computer-Program Verification
+  vel("Methane", "T", 300, "Dmass", 1e-9, "V", 11.1230e-6, 1e-5),
+  vel("Methane", "T", 300, "Dmass", 3.2, "V", 11.1891e-6, 1e-5),
+  vel("Methane", "T", 300, "Dmass", 75.0, "V", 13.7130e-6, 1e-5),
+
+  // Polychroniadou, Antoniadis, Assael & Bell, IJT 43(1):6 (2022) -- Table 3, quoted
+  // to 17 digits precisely so an implementation can be checked.
+  vel("Krypton", "T", 200, "Dmolar", 1e-6, "V", 17.33865170451214e-6, 1e-12),
+  vel("Krypton", "T", 200, "Dmolar", 13020.0, "V", 56.4476422453026e-6, 1e-12),
+  vel("Krypton", "T", 298.15, "Dmolar", 1e-6, "V", 25.306200000810886e-6, 1e-12),
+  vel("Krypton", "T", 400, "Dmolar", 1e-6, "V", 32.795558620965195e-6, 1e-12),
+  vel("Krypton", "T", 400, "Dmolar", 13020.0, "V", 64.8014771396677e-6, 1e-12),
+
+  // Sotiriadou et al., IJT 45(6):87 (2024) -- Table 8 background column, T = 283 K.
+  // The correlation here is the background; the paper's critical enhancement is not
+  // implemented, which is what the background column isolates.
+  vel("Ethylene", "T", 283, "Dmass", 1e-9, "V", 9.753447e-6, 1e-5),
+  vel("Ethylene", "T", 283, "Dmass", 300.0, "V", 30.934701e-6, 1e-5),
+  vel("Ethylene", "T", 283, "Dmass", 550.0, "V", 126.954762e-6, 1e-5),
+
+  // Velliadou et al., IJT 43(3):42 (2022) -- Section 4 verification points
+  vel("PropyleneGlycol", "T", 350, "Dmass", 1e-9, "V", 9.051368e-6, 1e-5),
+  vel("PropyleneGlycol", "T", 350, "Dmass", 0.02, "V", 9.058162e-6, 1e-5),
+  vel("PropyleneGlycol", "T", 350, "Dmass", 1000.0, "V", 5135.986461e-6, 1e-5),
+
+  // Sotiriadou et al., IJT 45(9):123 (2024) -- Section 4.2 verification points
+  vel("Tetrahydrofuran", "T", 300, "Dmass", 1e-10, "V", 8.3705e-6, 1e-5),
+  vel("Tetrahydrofuran", "T", 300, "Dmass", 900.0, "V", 589.3956e-6, 1e-5),
+
   // Heavy Water, IAPWS formulation
   vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 12.0604912273 * 55.2651e-6, 1e-5),
   vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 1.6561616211 * 55.2651e-6, 1e-5),

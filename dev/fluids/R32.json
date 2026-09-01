@@ -4369,7 +4369,7 @@
         },
         "higher_order": {
           "type": "expression",
-          "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\n1e-6*tau^0.5*del^(2/3)*sum(i: c[i]*tau^ct[i]*del^cd[i])",
+          "formula": "let tau = T/T_red\nlet delta = Dmolar/rho_red\n1e-6*tau^0.5*delta^(2/3)*sum(i: c[i]*tau^ct[i]*delta^cd[i])",
           "state_variables": [
             "T",
             "Dmolar"

@@ -4084,7 +4084,7 @@
         },
         "higher_order": {
           "type": "expression",
-          "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\nlet front = tau^0.5*del^(2/3)\nlet A = (a1*del^3 + a2*del^2)/(tau - del + a3)\nlet Bt = (a4 + tau^-1.48)*(a5*del + a6*del^2 + a7*del^3 + a8*del^4)\n1e-6*front*(A + Bt)",
+          "formula": "let tau = T/T_red\nlet delta = Dmolar/rho_red\nlet front = tau^0.5*delta^(2/3)\nlet A = (a1*delta^3 + a2*delta^2)/(tau - delta + a3)\nlet Bt = (a4 + tau^-1.48)*(a5*delta + a6*delta^2 + a7*delta^3 + a8*delta^4)\n1e-6*front*(A + Bt)",
           "state_variables": [
             "T",
             "Dmolar"
