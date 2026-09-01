@@ -3569,5 +3569,130 @@
       "smolar": 77.43035073129097,
       "smolar_units": "J/mol/K"
     }
+  },
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Velliadou-IJT-2021-xenon",
+      "dilute": {
+        "type": "expression",
+        "formula": "let L = ln(T/T_ref)\n1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "T_ref": 298.15,
+          "eta_ref": 23.0183
+        },
+        "arrays": {
+          "a": [
+            0.9652514,
+            -0.05237199,
+            -0.06758414,
+            0.02855787,
+            0.01002789,
+            -0.009639621,
+            0.00132977,
+            0.001114305,
+            -0.0005992234,
+            0.0001224218,
+            -9.584978e-06
+          ],
+          "p": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ]
+        }
+      },
+      "initial_density": {
+        "type": "expression",
+        "formula": "let L = ln(T/T_ref)\nlet eta0 = 1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*Dmolar",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "T_ref": 298.15,
+          "eta_ref": 23.0183,
+          "epsilon_over_k": 250.0,
+          "sigma": 3.96e-10,
+          "N_A": 6.02214076e+23
+        },
+        "arrays": {
+          "a": [
+            0.9652514,
+            -0.05237199,
+            -0.06758414,
+            0.02855787,
+            0.01002789,
+            -0.009639621,
+            0.00132977,
+            0.001114305,
+            -0.0005992234,
+            0.0001224218,
+            -9.584978e-06
+          ],
+          "p": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "b": [
+            -19.572881,
+            219.73999,
+            -1015.3226,
+            2471.0125,
+            -3375.1717,
+            2491.6597,
+            -787.26086,
+            14.085455,
+            -0.34664158
+          ],
+          "e": [
+            0,
+            -0.25,
+            -0.5,
+            -0.75,
+            -1.0,
+            -1.25,
+            -1.5,
+            -2.5,
+            -5.5
+          ]
+        }
+      },
+      "higher_order": {
+        "type": "expression",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmolar/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*(Tr + c0*Tr*rhor^4 + c1*rhor^12/Tr + (c2 + c3*rhor)/Tr^2)",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "Tc": 289.733,
+          "rhoc": 8400.0,
+          "c0": 1.396328251,
+          "c1": 0.0005418871011,
+          "c2": 4.478809952,
+          "c3": 24.91698858
+        }
+      }
+    }
   }
 }
