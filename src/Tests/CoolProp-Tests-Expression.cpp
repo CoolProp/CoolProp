@@ -1450,12 +1450,13 @@ TEST_CASE("R32: shipped viscosity matches the paper's verification points", "[ex
 // term at all and its effect is absorbed into the residual.  The DSL expresses that
 // by simply not declaring the stage.
 //
-// The residual's temperature factor is MULTIPLIED, not divided.  Eq. 8 renders as
-// "rho_r^(2/3) / T_r^(1/2)", and implementing it that way misses the paper's own
-// 550 K / 600 kg/m^3 point by 15 %.  REFPROP's C11.FLD has the numerator term at
-// tau^0.5 with tau = T/T_red, i.e. multiplication, which reproduces the table to
-// 1e-5.  Third correlation in this file where the rendered equation is wrong and the
-// machine-readable form is right.
+// The residual's temperature factor is MULTIPLIED, not divided: the prefactor is
+// (rho_r^(2/3) Tr^(1/2)).  An earlier version of this comment said Eq. 8 "renders as
+// rho_r^(2/3) / Tr^(1/2)" and treated that as a defect in the paper.  It is not --
+// Eq. 8 is typeset correctly as a product, and the divide came from a faulty text
+// extraction of an equation that is an IMAGE in the manuscript PDF.  Implementing the
+// divide misses the paper's own 550 K / 600 kg/m^3 point by 15 %, which is how the
+// mistake surfaced.
 TEST_CASE("n-Undecane: shipped viscosity matches the paper's Table 11", "[expression][golden]") {
     // Table 11, sample points for computer verification: T (K), rho (kg/m^3), eta (muPa.s).
     const double tab11[5][3] = {{550.0, 0.0, 8.935}, {550.0, 10.0, 10.702}, {550.0, 600.0, 188.68}, {635.0, 0.0, 10.252}, {635.0, 325.0, 49.077}};
@@ -1531,10 +1532,18 @@ TEST_CASE("R245fa: shipped viscosity matches the paper's Table 8", "[expression]
 // Fc = 0.87221 against the FLD's 0.87020, and the FLD's value is the one that
 // reproduces the paper's own table.
 //
-// The residual is again a case where the printed equation cannot be implemented as
-// rendered -- Eq. 12 reads "c0 + c1 c2 + c3 rho_r + ..." because the fraction bar is
-// lost.  The FLD's descriptor `0 1 1 5 0 0` says c1 sits over a FIVE-term
-// denominator, which is what reproduces Table 4.
+// A NOTE ON PROVENANCE, because an earlier version of this comment got it wrong.  The
+// residual was implemented from the FLD's descriptor `0 1 1 5 0 0` -- c1 over a
+// five-term denominator -- after a text extraction of the paper produced the
+// nonsensical "c0 + c1 c2 + c3 rho_r + ...".  That extraction was at fault, NOT the
+// paper: Eq. 12 is typeset correctly and unambiguously as
+//
+//   Delta_eta = rho_r^(2/3) Tr^(1/2) ( c0 + c1/(c2 + c3 rho_r + c4 Tr + c5 rho_r Tr
+//                                                + c6 rho_r^2 Tr) )
+//
+// which is what is implemented.  The equation is an IMAGE in the manuscript PDF, so a
+// text-layer or HTML transcription of it flattens the fraction; that is a property of
+// the extraction, not a defect in the publication.
 TEST_CASE("Novec649: shipped viscosity matches the paper's Table 4", "[expression][golden]") {
     // Table 4, sample points for computer verification: T (K), rho (kg/m^3), eta (muPa.s).
     const double tab4[9][3] = {{250.0, 0.0, 8.09},       {250.0, 0.41, 8.33}, {250.0, 1809.77, 2377.5}, {300.0, 0.0, 9.77},      {300.0, 3.89, 10.85},
@@ -1565,16 +1574,24 @@ TEST_CASE("Novec649: PropsSI viscosity now works", "[expression]") {
 // "Correlations for the Viscosity and Thermal Conductivity of Ethyl Fluoride (R161)".
 // CoolProp shipped no viscosity for R-161.
 //
-// The residual form was taken from REFPROP 10.1's R161.FLD, not from the paper's
-// printed Eq. 8, and the difference is not cosmetic.  Two independent readings of
-// Eq. 8 as rendered both fail the paper's OWN verification table by 73 % and 91 % at
-// 250 K / 850 kg/m^3.  The FLD's term descriptor `0 4 2 2 0 0` says the residual is
-// FOUR simple-polynomial terms PLUS a separate two-over-two rational part -- not one
-// quotient as the printed equation reads -- and its last denominator coefficient is
-// -1.0 where the paper prints a plus.  With that structure the same coefficients
-// reproduce the table to table precision.  The lesson is the one from krypton: the
-// machine-readable source is authoritative for the FORM, and the paper's own check
-// values are the independent test of it.
+// EQ. 8 AS PRINTED HAS ONE WRONG SIGN, and that is the whole of the discrepancy.
+// The typeset equation reads
+//
+//   Delta_eta = (rho_r^(2/3) Tr^(1/2)) { c0 + c1 rho_r + c2 Tr^2 + c3 rho_r^4
+//                                        + c4 (Tr + rho_r) / (c5 Tr^2 + Tr^2 rho_r^2) }
+//
+// which is structurally exactly what is implemented here.  But REFPROP's R161.FLD
+// carries -1.0 for that last denominator term, i.e. c5 Tr^2 MINUS Tr^2 rho_r^2, and
+// only the minus reproduces this paper's own Table 11: with the printed plus the
+// 250 K / 850 kg/m^3 point comes out at 84.2 muPa.s against a tabulated 308.22, an
+// error of 73 %.  With the minus it is 1.5e-5.  So either the printed sign is a typo
+// or REFPROP deviates from the paper -- and since the paper's OWN verification table
+// requires the minus, the printed sign cannot be what generated it.
+//
+// An earlier version of this comment claimed the printed STRUCTURE was also wrong
+// (four terms plus a separate rational part rather than one quotient).  That was
+// incorrect -- it is a misreading of a stacked fraction in a text extraction.  The
+// structure is as printed; only the sign differs.
 TEST_CASE("R161: shipped viscosity matches the paper's Table 11", "[expression][golden]") {
     // Table 11, sample points for computer verification: T (K), rho (kg/m^3),
     // eta (muPa.s).  Viscosity carries no critical enhancement here -- the table's
