@@ -1253,6 +1253,31 @@ TEST_CASE("Xenon: PropsSI viscosity now works", "[expression]") {
     CHECK(static_cast<double>(r) > 0);
 }
 
+// Velliadou, Assael, Huber et al., Int. J. Thermophys. 43:129 (2022), "Reference
+// Correlation for the Viscosity of R-32".  A SUPERSESSION: R32.json previously
+// carried a LIST of two models, Bell's rho_s r-CS (2016) and an ECS fallback, both
+// of which this replaces.
+//
+// Safe: R-32's dilute conductivity is not eta0_and_poly, so nothing else moves.  The
+// four fluids where it IS -- Air, Argon, Nitrogen, Oxygen -- are all either out of
+// this audit's scope or deliberately deferred (CoolProp-f1ez).
+TEST_CASE("R32: shipped viscosity matches the paper's verification points", "[expression][golden]") {
+    // Section 3 gives three points inline: T (K), rho (kg/m^3), eta (muPa.s).
+    const double verif[3][3] = {{300.0, 0.0, 12.6170}, {300.0, 10.0, 12.6333}, {300.0, 1100.0, 173.431}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R32"));
+    double worst = 0;
+    for (const auto& row : verif) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-9, row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-5);
+    }
+    WARN("R32 vs Section 3 verification points: worst relative deviation " << worst << " over 3 points");
+}
+
 // Assael, Papalas & Huber, J. Phys. Chem. Ref. Data 46(3):033103 (2017), "Reference
 // Correlations for the Viscosity and Thermal Conductivity of n-Undecane".  CoolProp
 // shipped no viscosity for n-undecane.
