@@ -81,14 +81,41 @@ that. Worth stating the extra digits if the entry is ever revised.
 
 ## What was checked, and what was not
 
-Papers whose printed residual was compared term-by-term against REFPROP's fluid file
-and found **correct**: R-32 (*IJT* 43:129), R-134a (*IJT* 43:105), Novec 649
-(*JCED* 62:3603), n-undecane (*JPCRD* 46:033103), ethylbenzene (*JPCRD* 46:013101).
+Read the typeset equation and compared it term-by-term against the implementation and
+REFPROP's fluid file:
 
-Not compared: methane, ammonia, R-245fa, R-1234yf, R-1234ze(E), xenon, ethylene,
-propylene glycol, THF. Each of those was implemented from the fluid file and validated
-against its paper's verification points, so each is consistent with its paper's
-*table*; the printed *equation* was not independently read for them.
+| correlation | printed equation | note |
+|---|---|---|
+| **R-161** | **DEFECTIVE** | denominator sign |
+| **Ethanol** | **DEFECTIVE** | exponent on the first residual term |
+| **Krypton** | **DEFECTIVE** | missing `exp` |
+| R-32 | correct | `c0 + c1ρr + c2ρr⁴/Tr + c3ρr¹⁴/Tr + c4ρr²/Tr²`, matches the FLD |
+| R-134a | correct | Vogel–Bich dilute + 4-term residual, no denominator |
+| Novec 649 | correct | `c1` over a five-term denominator, as typeset |
+| n-Undecane | correct | prefactor is a product `(ρr^⅔ Tr^½)`, as typeset |
+| Ethylbenzene | correct | incl. the second `exp(ρr²)g` term |
+| THF | correct | `(f3 + f4Tr)/(f5 + f6ρr + ρr²)`, coefficients match Table 3 |
+| Propylene glycol | correct | `exp{c0 + c1ρr + c2ρr²/Tr + c3ρr³/Tr² + c4Tr + c5Tr²}` |
+| Ethylene | correct | 7-term sum, Table 3 `a/b/c` match exactly |
+
+Coefficients confirmed but the printed equation NOT read (it is an embedded object in
+the accepted manuscript, and the residual has no denominator for a sign to hide in):
+R-245fa — `c0 = 0.83502935`, `c1 = 10.245205`, `c2 = 0.00023356206` all match.
+
+**Not checked**, because the manuscripts are behind PMC's proof-of-work download gate:
+methane, ammonia, R-1234yf, R-1234ze(E), xenon — and argon and nitrogen, which are
+implemented as test fixtures rather than shipped. Each of these was validated against
+its paper's verification points, so each is consistent with its paper's *table*; only
+the printed *equation* is unread.
+
+### Where a defect can hide
+
+Worth stating, because it makes the remaining gap smaller than the count suggests. A
+sign or an exponent can only go undetected where the residual has structure to hide it
+in — chiefly a denominator carrying a ± pair on like terms. Sorting the family by
+residual shape, exactly two members had that: R-161 and ethanol. Both turned out to be
+defective. Of the unchecked five, R-1234yf has a two-term denominator and the rest have
+none, so the exposure is concentrated there.
 
 ## Method note
 
