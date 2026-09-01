@@ -1253,6 +1253,87 @@ TEST_CASE("Xenon: PropsSI viscosity now works", "[expression]") {
     CHECK(static_cast<double>(r) > 0);
 }
 
+// Wen, Meng, Huber & Wu, J. Chem. Eng. Data 62(10):3603-3609 (2017), "Measurement and
+// Correlation of the Viscosity of 1,1,1,2,2,4,5,5,5-Nonafluoro-4-(trifluoromethyl)-3-
+// pentanone" (Novec 649).  CoolProp shipped no viscosity for it.
+//
+// The dilute term is the Chung method over the Neufeld collision integral -- the one
+// place in this file where the DSL's `sin` is load-bearing, since Neufeld's Omega*
+// carries a sine correction term.  The Chapman-Enskog constant is taken from
+// REFPROP's NOVEC649.FLD as a single frozen number (0.412899 = 0.02669*sqrt(MW)*Fc)
+// rather than rebuilt from the paper's omega and reduced dipole moment: those give
+// Fc = 0.87221 against the FLD's 0.87020, and the FLD's value is the one that
+// reproduces the paper's own table.
+//
+// The residual is again a case where the printed equation cannot be implemented as
+// rendered -- Eq. 12 reads "c0 + c1 c2 + c3 rho_r + ..." because the fraction bar is
+// lost.  The FLD's descriptor `0 1 1 5 0 0` says c1 sits over a FIVE-term
+// denominator, which is what reproduces Table 4.
+TEST_CASE("Novec649: shipped viscosity matches the paper's Table 4", "[expression][golden]") {
+    // Table 4, sample points for computer verification: T (K), rho (kg/m^3), eta (muPa.s).
+    const double tab4[9][3] = {{250.0, 0.0, 8.09},       {250.0, 0.41, 8.33}, {250.0, 1809.77, 2377.5}, {300.0, 0.0, 9.77},      {300.0, 3.89, 10.85},
+                               {300.0, 1701.48, 1059.7}, {350.0, 0.0, 11.43}, {350.0, 4.42, 12.65},     {350.0, 1595.99, 587.87}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Novec649"));
+    double worst = 0;
+    for (const auto& row : tab4) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-9, row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        // The table prints three significant figures for the dilute rows, so half a
+        // unit in the last place is 5e-4 there; the dense rows are far tighter.
+        CHECK(rel < 6e-4);
+    }
+    WARN("Novec649 vs Table 4: worst relative deviation " << worst << " over 9 points");
+}
+
+TEST_CASE("Novec649: PropsSI viscosity now works", "[expression]") {
+    const double eta = CoolProp::PropsSI("V", "T", 300.0, "Dmass", 1701.48, "Novec649");
+    REQUIRE(ValidNumber(eta));
+    CHECK(eta == Catch::Approx(1059.7e-6).epsilon(1e-4));
+}
+
+// Tsolakidou, Assael, Huber & Perkins, J. Phys. Chem. Ref. Data 46(2):023103 (2017),
+// "Correlations for the Viscosity and Thermal Conductivity of Ethyl Fluoride (R161)".
+// CoolProp shipped no viscosity for R-161.
+//
+// The residual form was taken from REFPROP 10.1's R161.FLD, not from the paper's
+// printed Eq. 8, and the difference is not cosmetic.  Two independent readings of
+// Eq. 8 as rendered both fail the paper's OWN verification table by 73 % and 91 % at
+// 250 K / 850 kg/m^3.  The FLD's term descriptor `0 4 2 2 0 0` says the residual is
+// FOUR simple-polynomial terms PLUS a separate two-over-two rational part -- not one
+// quotient as the printed equation reads -- and its last denominator coefficient is
+// -1.0 where the paper prints a plus.  With that structure the same coefficients
+// reproduce the table to table precision.  The lesson is the one from krypton: the
+// machine-readable source is authoritative for the FORM, and the paper's own check
+// values are the independent test of it.
+TEST_CASE("R161: shipped viscosity matches the paper's Table 11", "[expression][golden]") {
+    // Table 11, sample points for computer verification: T (K), rho (kg/m^3),
+    // eta (muPa.s).  Viscosity carries no critical enhancement here -- the table's
+    // two 375 K / 229 kg/m^3 rows differ only in the conductivity column.
+    const double tab11[5][3] = {{250.0, 0.0, 8.280}, {250.0, 1.0, 8.255}, {250.0, 850.0, 308.22}, {375.0, 0.0, 12.171}, {375.0, 229.0, 20.859}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R161"));
+    double worst = 0;
+    for (const auto& row : tab11) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-9, row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 5e-5);  // the table is printed to 3-5 significant figures
+    }
+    WARN("R161 vs Table 11: worst relative deviation " << worst << " over 5 points");
+}
+
+TEST_CASE("R161: PropsSI viscosity now works", "[expression]") {
+    const double eta = CoolProp::PropsSI("V", "T", 250.0, "Dmass", 850.0, "R161");
+    REQUIRE(ValidNumber(eta));
+    CHECK(eta == Catch::Approx(308.22e-6).epsilon(5e-5));
+}
+
 TEST_CASE("Ethylene: shipped viscosity matches the paper's Table 8", "[expression][golden]") {
     // T (K) = 283 throughout; rho (kg/m^3), eta_0, (eta_1 rho + Delta_eta), background (muPa.s)
     const double tab8[12][4] = {
