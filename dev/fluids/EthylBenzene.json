@@ -4443,26 +4443,78 @@
       }
     },
     "viscosity": {
-      "BibTeX": "Huber-RP912",
-      "epsilon_over_k": 490.05,
-      "epsilon_over_k_units": "K",
-      "psi": {
-        "a": [
-          0.846125588,
-          0.046896067
+      "BibTeX": "Meng-JPCRD-2017-ethylbenzene",
+      "dilute": {
+        "type": "expression",
+        "formula": "let S = exp(A0 + B0/T + C0/T^2)\n1e-6*0.22115*sqrt(T)/S",
+        "state_variables": [
+          "T"
         ],
-        "rhomolar_reducing": 2741.016,
-        "rhomolar_reducing_units": "mol/m^3",
-        "t": [
-          0,
-          1,
-          2
-        ]
+        "constants": {
+          "A0": -1.4933,
+          "B0": 473.2,
+          "C0": -57033.0
+        }
       },
-      "reference_fluid": "Propane",
-      "sigma_eta": 5.781e-10,
-      "sigma_eta_units": "m",
-      "type": "ECS"
+      "initial_density": {
+        "type": "expression",
+        "formula": "1e-6*(A1 + B1/T + C1/T^2)*(Dmolar/1000)",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "A1": 13.2814,
+          "B1": -10862.4,
+          "C1": 1664060.0
+        }
+      },
+      "higher_order": {
+        "type": "expression",
+        "formula": "let Tr = T/T_red\nlet rr = Dmolar/rho_red\nlet f = (D0 + E0/Tr^k0)*rr^n0 + D1*rr^n1 + E2*rr^n2/Tr^k2 + (D3*rr + E3*Tr)*rr^n3 + D4*rr^n4\nlet g = sum(i: Eg[i]*rr^ng[i]/Tr^kg[i])\n1e-6*(rr^(2/3)*Tr^0.5*f + exp(rr^2)*g)",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "T_red": 617.12,
+          "rho_red": 2741.016,
+          "D0": -0.0376893,
+          "n0": 6.3,
+          "E0": 0.168877,
+          "k0": 1.1,
+          "D1": 17.9684,
+          "n1": 0.3,
+          "n2": 23.7,
+          "E2": 3.57702e-11,
+          "k2": 3.4,
+          "D3": 29.996,
+          "n3": 0.3,
+          "E3": -8.00082,
+          "D4": -25.7468,
+          "n4": 0.85
+        },
+        "arrays": {
+          "Eg": [
+            -3.29316e-13,
+            -2.92665e-13,
+            2.97768e-13,
+            1.76186e-18
+          ],
+          "ng": [
+            4.6,
+            11.1,
+            5.6,
+            12.4
+          ],
+          "kg": [
+            20.8,
+            10.6,
+            19.7,
+            21.9
+          ]
+        }
+      }
     }
   }
 }

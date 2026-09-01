@@ -1256,6 +1256,38 @@ TEST_CASE("Xenon: PropsSI viscosity now works", "[expression]") {
     CHECK(static_cast<double>(r) > 0);
 }
 
+// Meng, Cao, Wu & Vesovic, J. Phys. Chem. Ref. Data 46(1):013101 (2017), "Reference
+// Correlation of the Viscosity of Ethylbenzene".  A supersession: EthylBenzene.json
+// previously carried an ECS predictive model, not a fitted correlation for the fluid.
+//
+// Taken from the paper.  REFPROP's EBENZENE.FLD is VS6 and its dilute term points at
+// CI3, a built-in collision-integral model with no in-file definition, so the FLD
+// alone cannot be implemented without guessing REFPROP's internals.  The paper gives
+// Eqs. 2-7 explicitly, including the unusual second residual term exp(rho_r^2)*g,
+// which the authors added to capture a steep low-temperature/high-density rise.
+//
+// Its viscosity critical enhancement is deliberately ZERO -- the authors set it so,
+// citing the absence of industrial applications near Tc and a single datum there.
+TEST_CASE("EthylBenzene: shipped viscosity matches the paper's Table 6", "[expression][golden]") {
+    // Table 6, sample points for computer verification: T (K), rho (mol/L), eta (muPa.s).
+    // Note Table 12 in the same document is p-xylene, from Appendix B -- not this fluid.
+    const double tab6[12][3] = {{250.0, 8.9814, 2948.109}, {300.0, 8.1093, 616.814}, {300.0, 8.4082, 875.361}, {300.0, 8.6762, 1262.986},
+                                {350.0, 0.0, 7.591},       {400.0, 0.0, 8.616},      {400.0, 7.2481, 250.283}, {400.0, 8.1196, 509.868},
+                                {500.0, 0.0, 10.734},      {500.0, 0.020, 10.776},   {600.0, 0.0, 12.841},     {600.0, 6.4831, 155.940}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "EthylBenzene"));
+    double worst = 0;
+    for (const auto& row : tab6) {
+        AS->update(CoolProp::DmolarT_INPUTS, (row[1] > 0) ? row[1] * 1000.0 : 1e-9, row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-4);
+    }
+    WARN("EthylBenzene vs Table 6: worst relative deviation " << worst << " over 12 points");
+}
+
 // Velliadou, Assael & Huber, Int. J. Thermophys. 43(7):105 (2022) -- R-134a,
 // superseding Huber, Laesecke & Perkins (2003).
 //

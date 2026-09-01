@@ -319,8 +319,19 @@ vel viscosity_validation_data[] = {
   vel("p-Xylene", "T", 600, "Dmolar", 1e-10, "V", 12.777e-6, 1e-4),
   vel("p-Xylene", "T", 600, "Dmolar", 7.0985 * 1e3, "V", 209.151e-6, 1e-4),
 
-  // From Mylona, JPCRD, 2014
-  vel("EthylBenzene", "T", 617, "Dmass", 316, "V", 33.22e-6, 1e-2),
+  // Ethylbenzene viscosity is now Meng, Cao, Wu & Vesovic, JPCRD 46:013101 (2017),
+  // replacing an ECS predictive model.  These are that paper's own Table 6 points.
+  //
+  // The Mylona (2014) point that used to sit here was at T = 617 K, essentially Tc
+  // (617.12 K), where the two correlations differ by 8.3 %.  That is by design rather
+  // than by error: Meng et al. set the viscosity critical enhancement to ZERO,
+  // stating the case explicitly -- no industrial applications near Tc and a single
+  // experimental datum there -- whereas the model being replaced did not.  The
+  // implementation is checked either side of it, reproducing Table 6 at 600 K to
+  // 2e-6 in the dense liquid and 3.4e-5 in the dilute limit.
+  vel("EthylBenzene", "T", 300, "Dmolar", 8.1093e3, "V", 616.814e-6, 1e-4),
+  vel("EthylBenzene", "T", 400, "Dmolar", 7.2481e3, "V", 250.283e-6, 1e-4),
+  vel("EthylBenzene", "T", 600, "Dmolar", 6.4831e3, "V", 155.940e-6, 1e-4),
 
   // Heavy Water, IAPWS formulation
   vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 12.0604912273 * 55.2651e-6, 1e-5),
