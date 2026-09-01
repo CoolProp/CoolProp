@@ -4521,133 +4521,178 @@
         "type": "polynomial"
       }
     },
-    "viscosity": {
-      "BibTeX": "Huber-IJR-2016-R1234",
-      "dilute": {
-        "type": "expression",
-        "formula": "let eta0 = sum(i: n[i]*T^np[i])/sum(i: m[i]*T^mp[i])\n1e-6*eta0",
-        "state_variables": [
-          "T"
+    "viscosity": [
+      {
+        "BibTeX": "Huber-IJR-2016-R1234",
+        "dilute": {
+          "type": "expression",
+          "formula": "let eta0 = sum(i: n[i]*T^np[i])/sum(i: m[i]*T^mp[i])\n1e-6*eta0",
+          "state_variables": [
+            "T"
+          ],
+          "constants": {},
+          "arrays": {
+            "n": [
+              -963382.0,
+              9614.09,
+              -13.233,
+              0.0360562
+            ],
+            "np": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "m": [
+              122059.0,
+              -224.741,
+              1.0
+            ],
+            "mp": [
+              0,
+              1,
+              2
+            ]
+          }
+        },
+        "initial_density": {
+          "type": "expression",
+          "formula": "let eta0 = sum(i: n[i]*T^np[i])/sum(i: m[i]*T^mp[i])\nlet Ts = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Ts^bp[i])\n1e-6*eta0*Bstar*etaB2red*(Dmolar/1000)",
+          "state_variables": [
+            "T",
+            "Dmolar"
+          ],
+          "constants": {
+            "epsilon_over_k": 340.0,
+            "etaB2red": 0.075276713
+          },
+          "arrays": {
+            "n": [
+              -963382.0,
+              9614.09,
+              -13.233,
+              0.0360562
+            ],
+            "np": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "m": [
+              122059.0,
+              -224.741,
+              1.0
+            ],
+            "mp": [
+              0,
+              1,
+              2
+            ],
+            "b": [
+              -19.572881,
+              219.73999,
+              -1015.3226,
+              2471.01251,
+              -3375.1717,
+              2491.6597,
+              -787.26086,
+              14.085455,
+              -0.34664158
+            ],
+            "bp": [
+              0,
+              -0.25,
+              -0.5,
+              -0.75,
+              -1.0,
+              -1.25,
+              -1.5,
+              -2.5,
+              -5.5
+            ]
+          }
+        },
+        "higher_order": {
+          "type": "expression",
+          "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\n1e-6*sum(i: c[i]*tau^ct[i]*del^(cd[i]/3))",
+          "state_variables": [
+            "T",
+            "Dmolar"
+          ],
+          "constants": {
+            "T_red": 382.513,
+            "rho_red": 4290.0
+          },
+          "arrays": {
+            "c": [
+              8.61691913,
+              20.83024738,
+              0.5424369,
+              -10.49684841,
+              -1.38137689
+            ],
+            "ct": [
+              0.5,
+              0.5,
+              -0.5,
+              1.5,
+              0.5
+            ],
+            "cd": [
+              2,
+              8,
+              20,
+              5,
+              17
+            ]
+          }
+        }
+      },
+      {
+        "BibTeX": "Bell-PURDUE-2016-ETA",
+        "C": 0.91012,
+        "c_liq": [
+          0.6100913843,
+          0.4508958312,
+          -0.017063,
+          0.000564
         ],
-        "constants": {},
-        "arrays": {
-          "n": [
-            -963382.0,
-            9614.09,
-            -13.233,
-            0.0360562
+        "c_vap": [
+          0.0,
+          1.2,
+          -0.308598,
+          0.035317
+        ],
+        "rhosr_critical": -58081.52496563628,
+        "type": "rhosr-CS",
+        "x_crossover": 2
+      },
+      {
+        "BibTeX": "BELL-PERSONAL-2015",
+        "_note": "Fit based on the data of Zhao, JCED, 2014: doi: 10.1021/je5001457",
+        "epsilon_over_k": 292.11,
+        "epsilon_over_k_units": "K",
+        "psi": {
+          "a": [
+            0.72309634,
+            0.2235595,
+            -0.04217
           ],
-          "np": [
-            0,
-            1,
-            2,
-            3
-          ],
-          "m": [
-            122059.0,
-            -224.741,
-            1.0
-          ],
-          "mp": [
+          "rhomolar_reducing": 4290,
+          "rhomolar_reducing_units": "mol/m^3",
+          "t": [
             0,
             1,
             2
           ]
-        }
-      },
-      "initial_density": {
-        "type": "expression",
-        "formula": "let eta0 = sum(i: n[i]*T^np[i])/sum(i: m[i]*T^mp[i])\nlet Ts = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Ts^bp[i])\n1e-6*eta0*Bstar*etaB2red*(Dmolar/1000)",
-        "state_variables": [
-          "T",
-          "Dmolar"
-        ],
-        "constants": {
-          "epsilon_over_k": 340.0,
-          "etaB2red": 0.075276713
         },
-        "arrays": {
-          "n": [
-            -963382.0,
-            9614.09,
-            -13.233,
-            0.0360562
-          ],
-          "np": [
-            0,
-            1,
-            2,
-            3
-          ],
-          "m": [
-            122059.0,
-            -224.741,
-            1.0
-          ],
-          "mp": [
-            0,
-            1,
-            2
-          ],
-          "b": [
-            -19.572881,
-            219.73999,
-            -1015.3226,
-            2471.01251,
-            -3375.1717,
-            2491.6597,
-            -787.26086,
-            14.085455,
-            -0.34664158
-          ],
-          "bp": [
-            0,
-            -0.25,
-            -0.5,
-            -0.75,
-            -1.0,
-            -1.25,
-            -1.5,
-            -2.5,
-            -5.5
-          ]
-        }
-      },
-      "higher_order": {
-        "type": "expression",
-        "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\n1e-6*sum(i: c[i]*tau^ct[i]*del^(cd[i]/3))",
-        "state_variables": [
-          "T",
-          "Dmolar"
-        ],
-        "constants": {
-          "T_red": 382.513,
-          "rho_red": 4290.0
-        },
-        "arrays": {
-          "c": [
-            8.61691913,
-            20.83024738,
-            0.5424369,
-            -10.49684841,
-            -1.38137689
-          ],
-          "ct": [
-            0.5,
-            0.5,
-            -0.5,
-            1.5,
-            0.5
-          ],
-          "cd": [
-            2,
-            8,
-            20,
-            5,
-            17
-          ]
-        }
+        "reference_fluid": "R134a",
+        "sigma_eta": 5.017e-10,
+        "sigma_eta_units": "m",
+        "type": "ECS"
       }
-    }
+    ]
   }
 }

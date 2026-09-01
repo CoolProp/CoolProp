@@ -4434,123 +4434,259 @@
         "type": "polynomial"
       }
     },
-    "viscosity": {
-      "BibTeX": "Monogenidou-JPCRD-2018-ammonia",
-      "dilute": {
-        "type": "expression",
-        "formula": "let Ts = T/epsilon_over_k\nlet lnS = sum(i: s[i]*ln(Ts)^sp[i])\n1e-6*Ceta*sqrt(T)/(sigma^2*exp(lnS))",
-        "state_variables": [
-          "T"
-        ],
-        "constants": {
-          "Ceta": 0.0881362,
-          "sigma": 0.2957,
-          "epsilon_over_k": 386.0
-        },
-        "arrays": {
-          "s": [
-            0.39175,
-            -0.59918,
-            -0.00022,
-            0.19871,
-            -0.06942
+    "viscosity": [
+      {
+        "BibTeX": "Monogenidou-JPCRD-2018-ammonia",
+        "dilute": {
+          "type": "expression",
+          "formula": "let Ts = T/epsilon_over_k\nlet lnS = sum(i: s[i]*ln(Ts)^sp[i])\n1e-6*Ceta*sqrt(T)/(sigma^2*exp(lnS))",
+          "state_variables": [
+            "T"
           ],
-          "sp": [
-            0,
-            1,
-            2,
-            3,
-            4
-          ]
+          "constants": {
+            "Ceta": 0.0881362,
+            "sigma": 0.2957,
+            "epsilon_over_k": 386.0
+          },
+          "arrays": {
+            "s": [
+              0.39175,
+              -0.59918,
+              -0.00022,
+              0.19871,
+              -0.06942
+            ],
+            "sp": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        },
+        "initial_density": {
+          "type": "expression",
+          "formula": "let Ts = T/epsilon_over_k\nlet lnS = sum(i: s[i]*ln(Ts)^sp[i])\nlet eta0 = 1e-6*Ceta*sqrt(T)/(sigma^2*exp(lnS))\nlet Bstar = sum(i: b[i]*Ts^bp[i])\neta0*Bstar*etaB2red*(Dmolar/1000)",
+          "state_variables": [
+            "T",
+            "Dmolar"
+          ],
+          "constants": {
+            "Ceta": 0.0881362,
+            "sigma": 0.2957,
+            "epsilon_over_k": 386.0,
+            "etaB2red": 0.015570573
+          },
+          "arrays": {
+            "s": [
+              0.39175,
+              -0.59918,
+              -0.00022,
+              0.19871,
+              -0.06942
+            ],
+            "sp": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "b": [
+              -19.572881,
+              219.73999,
+              -1015.3226,
+              2471.0125,
+              -3375.1717,
+              2491.6597,
+              -787.26086,
+              14.085455,
+              -0.34664158
+            ],
+            "bp": [
+              0,
+              -0.25,
+              -0.5,
+              -0.75,
+              -1.0,
+              -1.25,
+              -1.5,
+              -2.5,
+              -5.5
+            ]
+          }
+        },
+        "higher_order": {
+          "type": "expression",
+          "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\n1e-6*sum(i: n[i]*tau^nt[i]*del^nd[i])",
+          "state_variables": [
+            "T",
+            "Dmolar"
+          ],
+          "constants": {
+            "T_red": 405.56,
+            "rho_red": 13696.0
+          },
+          "arrays": {
+            "n": [
+              0.0393308,
+              16.724735,
+              1.1975934,
+              0.0016995,
+              -4.2399794
+            ],
+            "nt": [
+              0.5,
+              0.5,
+              0.5,
+              -3.5,
+              1.5
+            ],
+            "nd": [
+              0.6666666667,
+              1.6666666667,
+              4.6666666667,
+              8.6666666667,
+              2.6666666667
+            ]
+          }
         }
       },
-      "initial_density": {
-        "type": "expression",
-        "formula": "let Ts = T/epsilon_over_k\nlet lnS = sum(i: s[i]*ln(Ts)^sp[i])\nlet eta0 = 1e-6*Ceta*sqrt(T)/(sigma^2*exp(lnS))\nlet Bstar = sum(i: b[i]*Ts^bp[i])\neta0*Bstar*etaB2red*(Dmolar/1000)",
-        "state_variables": [
-          "T",
-          "Dmolar"
-        ],
-        "constants": {
-          "Ceta": 0.0881362,
-          "sigma": 0.2957,
-          "epsilon_over_k": 386.0,
-          "etaB2red": 0.015570573
-        },
-        "arrays": {
-          "s": [
-            0.39175,
-            -0.59918,
-            -0.00022,
-            0.19871,
-            -0.06942
+      {
+        "BibTeX": "Fenghour-JPCRD-1995",
+        "_note": "There is a mysterious factor of 100 missing from the Fenghour equation for the dilute gas.  From REFPROP fluid file: !=0.021357*SQRT(MW)*(unknown factor of 100)  [Chapman-Enskog term]",
+        "dilute": {
+          "C": 2.1357e-06,
+          "a": [
+            4.9931822,
+            -0.61122364,
+            0.0,
+            0.18535124,
+            -0.11160946
           ],
-          "sp": [
+          "molar_mass": 0.01703026,
+          "molar_mass_units": "kg/mol",
+          "t": [
             0,
             1,
             2,
             3,
             4
           ],
+          "type": "collision_integral"
+        },
+        "epsilon_over_k": 386,
+        "epsilon_over_k_units": "K",
+        "higher_order": {
+          "T_reduce": 405.4,
+          "T_reduce_units": "K",
+          "a": [
+            4.005040600989671e-06,
+            -1.4107915123955129e-05,
+            3.4760743039321816e-05,
+            4.631310990138071e-06,
+            -3.937374461785061e-06,
+            -1.200075068367531e-05,
+            1.9284977991745303e-06
+          ],
+          "d1": [
+            3,
+            3,
+            2,
+            4,
+            4,
+            2,
+            4
+          ],
+          "d2": [
+            1
+          ],
+          "f": [
+            0.0
+          ],
+          "g": [
+            1
+          ],
+          "gamma": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "h": [
+            0
+          ],
+          "l": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "p": [
+            1
+          ],
+          "q": [
+            0
+          ],
+          "rhomolar_reduce": 13211.8,
+          "rhomolar_reduce_units": "mol/m^3",
+          "t1": [
+            0,
+            1,
+            2,
+            2,
+            3,
+            4,
+            4
+          ],
+          "t2": [
+            0
+          ],
+          "type": "modified_Batschinski_Hildebrand"
+        },
+        "initial_density": {
           "b": [
-            -19.572881,
-            219.73999,
-            -1015.3226,
-            2471.0125,
-            -3375.1717,
-            2491.6597,
-            -787.26086,
-            14.085455,
-            -0.34664158
+            -1.7999496,
+            46.692621,
+            -534.60794,
+            3360.4074,
+            -13019.164,
+            33414.23,
+            -58711.743,
+            71426.686,
+            -59834.012,
+            33652.741,
+            -12027.35,
+            2434.8205,
+            -208.07957
           ],
-          "bp": [
-            0,
-            -0.25,
+          "t": [
+            -0.0,
             -0.5,
-            -0.75,
             -1.0,
-            -1.25,
             -1.5,
+            -2.0,
             -2.5,
-            -5.5
-          ]
-        }
-      },
-      "higher_order": {
-        "type": "expression",
-        "formula": "let tau = T/T_red\nlet del = Dmolar/rho_red\n1e-6*sum(i: n[i]*tau^nt[i]*del^nd[i])",
-        "state_variables": [
-          "T",
-          "Dmolar"
-        ],
-        "constants": {
-          "T_red": 405.56,
-          "rho_red": 13696.0
-        },
-        "arrays": {
-          "n": [
-            0.0393308,
-            16.724735,
-            1.1975934,
-            0.0016995,
-            -4.2399794
-          ],
-          "nt": [
-            0.5,
-            0.5,
-            0.5,
+            -3.0,
             -3.5,
-            1.5
+            -4.0,
+            -4.5,
+            -5.0,
+            -5.5,
+            -6.0
           ],
-          "nd": [
-            0.6666666667,
-            1.6666666667,
-            4.6666666667,
-            8.6666666667,
-            2.6666666667
-          ]
-        }
+          "type": "Rainwater-Friend"
+        },
+        "sigma_eta": 2.957e-10,
+        "sigma_eta_units": "m"
       }
-    }
+    ]
   }
 }
