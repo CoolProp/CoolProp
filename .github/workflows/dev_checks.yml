@@ -366,6 +366,7 @@ jobs:
           # single cp312-abi3 wheel (the crux of abi3 -- it must work on each).
           ran=0
           ran_abi3=0   # legs that ran the cp312-abi3 wheel (3.12/3.13/3.14)
+          ran_mpl=0    # legs where matplotlib installed, i.e. the Plots suite ran
           for PY in 3.9 3.10 3.11 3.12 3.13 3.14; do
             is_abi3=0
             case "$PY" in
@@ -396,6 +397,19 @@ jobs:
             fi
             uv pip install "$WHL"   # broken/incompatible wheel -> hard fail via set -e
             uv pip install mypy || echo "::warning::mypy unavailable on $PY; test_stub mypy check will skip"
+            # CoolProp.Plots imports matplotlib at module scope, so without it
+            # the whole Plots suite (test_derivatives_plots, test_isoline_tracer)
+            # silently importorskips (CoolProp-dgxi).  Per-leg this is a warning,
+            # because a brand-new interpreter can genuinely lack a matplotlib
+            # wheel -- but if it is missing on EVERY leg the suite reverts to
+            # zero coverage and the job would still be green, which is the exact
+            # condition this install exists to remove.  Counted and asserted
+            # below, the same way the abi3 wheel is.
+            if uv pip install matplotlib; then
+              ran_mpl=$((ran_mpl + 1))
+            else
+              echo "::warning::matplotlib unavailable on $PY; Plots tests will skip on this leg"
+            fi
             python -c "import sys; print('Python', sys.version.split()[0])"
             pytest wrappers/Python/pytest -q
             ran=$((ran + 1))
@@ -408,6 +422,7 @@ jobs:
           # actually be exercised on at least one of them, else a broken abi3 wheel
           # could green the job on the 3.9-3.11 per-version legs alone (CoolProp-1tbe.12).
           test "$ran_abi3" -gt 0 || { echo "::error::the cp312-abi3 wheel ran on NO interpreter (3.12/3.13/3.14) -- it is the v8 crux and must be tested"; exit 1; }
+          test "$ran_mpl" -gt 0 || { echo "::error::matplotlib installed on NO interpreter -- the whole Plots suite importorskipped and this job proves nothing about it"; exit 1; }
 
       - name: PDSim cimport contract (compile + run against the abi3 wheel)
         shell: bash
