@@ -7756,4 +7756,40 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmhol
     }
 }
 
+TEST_CASE("Standard molar enthalpy of formation from REFPROP", "[formation][REFPROP]") {
+    CoolProp::Skip_if_No_REFPROP();
+    using Catch::Approx;
+
+    SECTION("pure-fluid value is available without a state update") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "Methane"));
+        const double hformation = AS->keyed_output(CoolProp::iHmolar_formation);
+        CHECK(ValidNumber(hformation));
+        // Broad enough for REFPROP data revisions, narrow enough to catch a
+        // J/mol-to-kJ/mol conversion error.
+        CHECK(hformation > -1e5);
+        CHECK(hformation < -5e4);
+
+        AS->update(CoolProp::PT_INPUTS, 101325.0, 300.0);
+        CHECK(AS->keyed_output(CoolProp::iHmolar_formation) == Approx(hformation).margin(1e-12));
+        CHECK(CoolProp::PropsSI("HFORMATION", "", 0, "", 0, "REFPROP::Methane") == Approx(hformation).margin(1e-12));
+    }
+
+    SECTION("mixture value uses the current mole fractions") {
+        shared_ptr<CoolProp::AbstractState> methane(CoolProp::AbstractState::factory("REFPROP", "Methane"));
+        shared_ptr<CoolProp::AbstractState> ethane(CoolProp::AbstractState::factory("REFPROP", "Ethane"));
+        const double h_methane = methane->keyed_output(CoolProp::iHmolar_formation);
+        const double h_ethane = ethane->keyed_output(CoolProp::iHmolar_formation);
+
+        shared_ptr<CoolProp::AbstractState> mixture(CoolProp::AbstractState::factory("REFPROP", "Methane&Ethane"));
+        const std::vector<double> z{0.7, 0.3};
+        mixture->set_mole_fractions(z);
+        CHECK(mixture->keyed_output(CoolProp::iHmolar_formation) == Approx(z[0] * h_methane + z[1] * h_ethane).epsilon(1e-12).margin(1e-6));
+    }
+
+    SECTION("unset mixture composition is rejected") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "Methane&Ethane"));
+        CHECK_THROWS_WITH(AS->keyed_output(CoolProp::iHmolar_formation), Catch::Matchers::ContainsSubstring("Mole fractions not yet set"));
+    }
+}
+
 #endif

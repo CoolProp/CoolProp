@@ -1018,6 +1018,33 @@ CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment() {
         throw ValueError(format("dipole moment is only available for pure fluids"));
     }
 };
+CoolPropDbl REFPROPMixtureBackend::calc_Hmolar_formation() {
+    this->check_loaded_fluid();
+    this->check_status();
+
+    if (HEATFRMdll == nullptr) {
+        throw ValueError("HEATFRMdll function is not available in your version of REFPROP. Please upgrade");
+    }
+
+    // HEATFRMdll defines the standard state as the ideal gas at 298.15 K.
+    // Density is part of the legacy signature but is not used by REFPROP.
+    double T = 298.15;
+    double D_mol_L = 0.0;
+    double hformation_J_mol = NAN;
+    int ierr = 0;
+    std::array<char, errormessagelength + 1> herr{};
+    HEATFRMdll(&T, &D_mol_L, mole_fractions.data(), &hformation_J_mol, &ierr, herr.data(), errormessagelength);
+
+    // HEATFRMdll documents only ierr == 0 as success. In particular, missing
+    // heating-value data must not be exposed as a plausible zero or NaN.
+    if (ierr != 0) {
+        throw ValueError(format("REFPROP HEATFRMdll failed with error code %d: %s", ierr, herr.data()));
+    }
+    if (!ValidNumber(hformation_J_mol)) {
+        throw ValueError("REFPROP HEATFRMdll returned an invalid standard molar enthalpy of formation");
+    }
+    return static_cast<CoolPropDbl>(hformation_J_mol);
+}
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant() {
     this->check_loaded_fluid();
     double Rmix = 0;
