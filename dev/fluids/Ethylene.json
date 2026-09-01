@@ -4170,7 +4170,7 @@
       },
       "gas_constant": 8.31451,
       "gas_constant_units": "J/mol/K",
-      "molar_mass": 0.02805316,
+      "molar_mass": 2.805316e-2,
       "molar_mass_units": "kg/mol",
       "p_max": 300000000,
       "p_max_units": "Pa",
@@ -4310,7 +4310,7 @@
           "epsilon_over_k": 247.0,
           "sigma": 4.05e-10,
           "N_A": 6.02214076e+23,
-          "M": 0.02805316
+          "M": 2.805316e-2
         },
         "arrays": {
           "n": [
