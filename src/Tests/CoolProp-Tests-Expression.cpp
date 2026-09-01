@@ -1256,6 +1256,58 @@ TEST_CASE("Xenon: PropsSI viscosity now works", "[expression]") {
     CHECK(static_cast<double>(r) > 0);
 }
 
+// Velliadou, Assael & Huber, Int. J. Thermophys. 43(7):105 (2022) -- R-134a,
+// superseding Huber, Laesecke & Perkins (2003).
+//
+// The one correlation in this batch taken from the PAPER rather than the FLD: its
+// REFPROP encoding is a raw RPN stack building a custom G(T), where every operand is
+// an unlabelled `cnst` and mis-assigning one is easy and silent.  The paper states
+// Eqs. 2, 3 and 7 plainly.  That is the same two-source rule as everywhere else, just
+// with the roles swapped -- take the form from whichever source states it
+// unambiguously, then make the paper's own check values decide.
+TEST_CASE("R134a: shipped viscosity matches the paper's verification points", "[expression][golden]") {
+    // T (K), rho (kg/m^3), eta (muPa.s), given inline in Section 3.
+    const double verif[3][3] = {{350.0, 0.0, 13.77874}, {350.0, 100.0, 14.70183}, {350.0, 1000.0, 107.98464}};
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R134a"));
+    double worst = 0;
+    for (const auto& row : verif) {
+        AS->update(CoolProp::DmassT_INPUTS, (row[1] > 0) ? row[1] : 1e-9, row[0]);
+        const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[2];
+        CAPTURE(row[0], row[1], ref);
+        REQUIRE(ValidNumber(got));
+        const double rel = std::abs(got - ref) / ref;
+        worst = std::max(worst, rel);
+        CHECK(rel < 1e-6);
+    }
+    WARN("R134a vs verification points: worst relative deviation " << worst << " over 3 points");
+
+    // Table 7 is a much stronger check than the three inline points: the whole
+    // saturation line, 170-370 K, both branches.  It is what settles that the -8.8 %
+    // this correlation moves the 185 K saturated liquid away from Huber, Laesecke &
+    // Perkins (2003) is a real difference between the two correlations and not a
+    // transcription error here -- the 2022 scheme's own saturation values are
+    // reproduced across the entire line.
+    // T (K), rho_liq, rho_vap (kg/m^3), eta_liq, eta_vap (muPa.s)
+    const double tab7[11][5] = {
+      {170.0, 1590.7, 0.028625, 1627.8, 6.76}, {190.0, 1537.5, 0.18259, 1040.6, 7.56}, {210.0, 1483.1, 0.76222, 702.2, 8.35},
+      {230.0, 1426.8, 2.3660, 498.0, 9.12},    {250.0, 1367.9, 5.9546, 368.6, 9.86},   {270.0, 1305.1, 12.908, 281.4, 10.61},
+      {290.0, 1236.8, 25.187, 218.6, 11.39},   {310.0, 1159.9, 45.786, 170.0, 12.29},  {330.0, 1069.1, 80.094, 129.8, 13.48},
+      {350.0, 951.32, 140.99, 93.93, 15.44},   {370.0, 740.32, 293.90, 55.12, 21.04}};
+    double worst7 = 0;
+    for (const auto& row : tab7) {
+        for (int br = 0; br < 2; ++br) {
+            AS->update(CoolProp::DmassT_INPUTS, row[1 + br], row[0]);
+            const double got = static_cast<double>(AS->viscosity()) * 1e6, ref = row[3 + br];
+            CAPTURE(row[0], br, ref);
+            REQUIRE(ValidNumber(got));
+            const double rel = std::abs(got - ref) / ref;
+            worst7 = std::max(worst7, rel);
+            CHECK(rel < 1e-3);  // the table prints 3-4 significant figures
+        }
+    }
+    WARN("R134a vs Table 7 saturation line: worst relative deviation " << worst7 << " over 22 points");
+}
+
 // Sotiriadou, Ntonti, Velliadou, Antoniadis, Assael & Huber, Int. J. Thermophys.
 // 44(3):40 (2023) -- ethanol, superseding Kiselev et al. (2005).
 // Sotiriadou, Antoniadis, Assael, Martinek & Huber, Int. J. Thermophys. 47(1):18
