@@ -1,0 +1,95 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 428.15,
+  "Tmax": 613.15,
+  "Tmin": 243.15,
+  "TminPsat": 383.15,
+  "conductivity": {
+    "NRMS": 0.0010566779557489201,
+    "coeffs": [
+      [0.12323492324561407],
+      [-7.228984631664327e-05],
+      [1.5957252798856972e-10],
+      [1.4011246360247468e-12]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 0.0018034049147509649,
+    "coeffs": [
+      [816.573464912281],
+      [-0.4185387989945099],
+      [4.5592150854645297e-07],
+      [-3.528758342631502e-08]
+    ],
+    "type": "polynomial"
+  },
+  "density_cheb": {
+    "NRMS": 0.0018189182239599798,
+    "Trange": [243.15, 613.15],
+    "coeffs": [
+      [816.5789473684213],
+      [-77.5708502024292]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "MultiTherm PG-1",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "PG1",
+  "reference": "MultiTherm2004",
+  "saturation_pressure": {
+    "NRMS": 0.002311512119294138,
+    "coeffs": [-9418.983831376749, 16.471309221761015, -25.95747862443132],
+    "type": "exponential"
+  },
+  "specific_heat": {
+    "NRMS": 0.00020442011443906507,
+    "coeffs": [
+      [2368.500000000001],
+      [3.6330530305658715],
+      [0.0],
+      [1.734725739831535e-08]
+    ],
+    "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.00020485295365563582,
+    "Trange": [243.15, 613.15],
+    "coeffs": [
+      [2368.500000000001],
+      [672.1842105263154]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.0032538349447246697,
+    "coeffs": [850.8486133242304, -168.48560429097608, 9.963902307631278],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}

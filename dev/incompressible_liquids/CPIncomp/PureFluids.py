@@ -625,6 +625,44 @@ class PNF(PureData):
         self.reshapeAll()
 
 
+# MultiTherm, see https://www.multitherm.com
+class MultiThermPG1(PureData):
+    """
+    Heat transfer fluid MultiTherm PG-1 by MultiTherm LLC
+
+    MultiTherm PG-1 is an FDA-certified, USDA-acceptable, NSF HT-1 white
+    mineral oil heat transfer fluid for closed-loop, liquid-phase systems,
+    rated to a maximum recommended operating temperature of 600 F / 316 C
+    (maximum film temperature 650 F / 343 C).
+    """
+
+    def __init__(self):
+        PureData.__init__(self)
+        self.density.source = self.density.SOURCE_DATA
+        self.specific_heat.source = self.specific_heat.SOURCE_DATA
+        self.conductivity.source = self.conductivity.SOURCE_DATA
+        self.viscosity.source = self.viscosity.SOURCE_DATA
+        self.saturation_pressure.source = self.saturation_pressure.SOURCE_DATA
+        self.temperature.data = np.array([2.431500E+2, 2.531500E+2, 2.631500E+2, 2.731500E+2, 2.831500E+2, 2.931500E+2, 3.031500E+2, 3.131500E+2, 3.231500E+2, 3.331500E+2, 3.431500E+2, 3.531500E+2, 3.631500E+2, 3.731500E+2, 3.831500E+2, 3.931500E+2, 4.031500E+2, 4.131500E+2, 4.231500E+2, 4.331500E+2, 4.431500E+2, 4.531500E+2, 4.631500E+2, 4.731500E+2, 4.831500E+2, 4.931500E+2, 5.031500E+2, 5.131500E+2, 5.231500E+2, 5.331500E+2, 5.431500E+2, 5.531500E+2, 5.631500E+2, 5.731500E+2, 5.831500E+2, 5.931500E+2, 6.031500E+2, 6.131500E+2])  # kelvin
+        self.density.data = np.array([8.940000E+2, 8.900000E+2, 8.860000E+2, 8.820000E+2, 8.770000E+2, 8.730000E+2, 8.690000E+2, 8.650000E+2, 8.610000E+2, 8.560000E+2, 8.520000E+2, 8.480000E+2, 8.440000E+2, 8.400000E+2, 8.350000E+2, 8.310000E+2, 8.270000E+2, 8.230000E+2, 8.190000E+2, 8.140000E+2, 8.100000E+2, 8.060000E+2, 8.020000E+2, 7.980000E+2, 7.940000E+2, 7.890000E+2, 7.850000E+2, 7.810000E+2, 7.770000E+2, 7.730000E+2, 7.680000E+2, 7.640000E+2, 7.600000E+2, 7.560000E+2, 7.520000E+2, 7.470000E+2, 7.430000E+2, 7.390000E+2])         # kg/m3
+        self.specific_heat.data = np.array([1.696000E+3, 1.733000E+3, 1.769000E+3, 1.805000E+3, 1.842000E+3, 1.878000E+3, 1.914000E+3, 1.951000E+3, 1.987000E+3, 2.023000E+3, 2.060000E+3, 2.096000E+3, 2.132000E+3, 2.169000E+3, 2.205000E+3, 2.241000E+3, 2.278000E+3, 2.314000E+3, 2.350000E+3, 2.387000E+3, 2.423000E+3, 2.459000E+3, 2.496000E+3, 2.532000E+3, 2.568000E+3, 2.605000E+3, 2.641000E+3, 2.677000E+3, 2.714000E+3, 2.750000E+3, 2.786000E+3, 2.823000E+3, 2.859000E+3, 2.895000E+3, 2.932000E+3, 2.968000E+3, 3.004000E+3, 3.041000E+3])   # J/kg-K
+        self.conductivity.data = np.array([1.366000E-1, 1.359000E-1, 1.352000E-1, 1.344000E-1, 1.337000E-1, 1.330000E-1, 1.323000E-1, 1.315000E-1, 1.308000E-1, 1.301000E-1, 1.294000E-1, 1.287000E-1, 1.279000E-1, 1.272000E-1, 1.265000E-1, 1.258000E-1, 1.250000E-1, 1.243000E-1, 1.236000E-1, 1.229000E-1, 1.222000E-1, 1.214000E-1, 1.207000E-1, 1.200000E-1, 1.193000E-1, 1.185000E-1, 1.178000E-1, 1.171000E-1, 1.164000E-1, 1.156000E-1, 1.149000E-1, 1.142000E-1, 1.135000E-1, 1.128000E-1, 1.120000E-1, 1.113000E-1, 1.106000E-1, 1.099000E-1])         # W/m-K
+        # Source table gives dynamic viscosity in cP (mPa-s); convert to Pa-s
+        self.viscosity.data = np.array([4.113000E+3, 1.113000E+3, 3.900000E+2, 1.630000E+2, 7.900000E+1, 4.300000E+1, 2.500000E+1, 1.600000E+1, 1.120000E+1, 8.100000E+0, 6.000000E+0, 4.600000E+0, 3.670000E+0, 2.980000E+0, 2.490000E+0, 2.090000E+0, 1.790000E+0, 1.550000E+0, 1.370000E+0, 1.210000E+0, 1.080000E+0, 9.750000E-1, 8.740000E-1, 7.980000E-1, 7.340000E-1, 6.670000E-1, 6.180000E-1, 5.720000E-1, 5.280000E-1, 4.940000E-1, 4.560000E-1, 4.290000E-1, 4.010000E-1, 3.750000E-1, 3.530000E-1, 3.320000E-1, 3.140000E-1, 2.970000E-1]) * 1.E-3        # Pa-s
+        # Vapor pressure only published for T >= 110 C; NaN elsewhere (matches
+        # the pattern CoolProp uses for partially-populated data columns, e.g.
+        # LiquidSodium's specific_heat/viscosity arrays in this same file).
+        # Source values given in hPa, converted to Pa (x100).
+        self.saturation_pressure.data = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 1.100000E+1, 1.900000E+1, np.nan, 5.600000E+1, 9.300000E+1, 1.500000E+2, np.nan, 3.700000E+2, np.nan, 8.500000E+2, np.nan, 1.800000E+3, np.nan, 3.570000E+3, 4.900000E+3, 6.400000E+3, np.nan, 1.230000E+4, np.nan, 2.130000E+4, np.nan, 3.680000E+4, np.nan, 6.130000E+4]) # Pa
+        self.Tmin = np.min(self.temperature.data)
+        self.Tmax = np.max(self.temperature.data)
+        self.TminPsat = np.min(self.temperature.data[~np.isnan(self.saturation_pressure.data)])
+        self.name = "PG1"
+        self.description = "MultiTherm PG-1"
+        self.reference = "MultiTherm2004"
+        self.reshapeAll()
+        
+        
 class Water(PureData):
     """
     This is just a fit of the full EOS from Wagner and Pruss
