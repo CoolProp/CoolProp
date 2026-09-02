@@ -1056,7 +1056,7 @@ end
 """
     AbstractState_set_fluid_parameter_double(handle::Clong, i::Integer, parameter::AbstractString, value::Real)
 
-Set some fluid parameter (ie volume translation for cubic). Currently applied to the whole fluid not to components.
+Set some fluid parameter (ie volume translation for cubic). Applied to component `i`; use the name "c_all" to broadcast one value to every component.
 
 # Arguments
 * `handle`: The integer handle for the state class stored in memory
