@@ -120,6 +120,36 @@ struct StatePoint
     double T, p;
 };
 
+/// The quantities that move because v enters them explicitly, asserted as the exact identities
+/// they are rather than merely as "different".
+///
+/// Each shift is known in closed form, so there is no reason to settle for an inequality: asserting
+/// only that one of these changed accepts a change of any wrong magnitude, which is what the
+/// weaker checks alongside these calls do on their own.
+void check_v_scaled_quantities(AbstractState& ref, AbstractState& trn, double c) {
+    const double v_ref = 1.0 / ref.rhomolar(), v_trn = 1.0 / trn.rhomolar();
+
+    // w^2 = -v^2*(dp/dv)_s/M with (dp/dv)_s invariant, so w scales with v EXACTLY.  Asserting only
+    // that w changed would accept a change of any wrong magnitude.
+    CHECK(close_to(trn.speed_sound() / ref.speed_sound(), v_trn / v_ref, 1e-9, 0.0));
+
+    // kappa_T and alpha_v are the invariant derivatives divided by v, so they scale as 1/v.  The
+    // documented rows are the bare derivatives; these are the normalised forms the public API
+    // actually returns, so both are worth pinning.
+    CHECK(close_to(trn.isothermal_compressibility() / ref.isothermal_compressibility(), v_ref / v_trn, 1e-9, 0.0));
+    CHECK(close_to(trn.isobaric_expansion_coefficient() / ref.isobaric_expansion_coefficient(), v_ref / v_trn, 1e-9, 0.0));
+
+    // mu_JT = (dT/dp)_h shifts by +c/c_p.
+    const double mu_ref = ref.first_partial_deriv(iT, iP, iHmolar);
+    const double mu_trn = trn.first_partial_deriv(iT, iP, iHmolar);
+    CAPTURE(mu_ref);
+    CAPTURE(mu_trn);
+    CHECK(close_to(mu_trn, mu_ref + c / ref.cpmolar(), 1e-8, 1e-18));
+
+    // Z = p*v/(RT) inherits the volume shift directly.
+    CHECK(close_to(trn.compressibility_factor(), ref.compressibility_factor() - ref.p() * c / (8.31446261815324 * ref.T()), 1e-9, 1e-14));
+}
+
 /// Derived rather than hardcoded: a fixed (T, p) that is liquid for propane can be supercritical for
 /// carbon dioxide, and a state that lands inside the dome makes the PT flash pick a phase rather
 /// than a root.
@@ -182,6 +212,7 @@ TEST_CASE("Cubic volume translation: pure-fluid property invariances", "[cubic][
                     CHECK(std::abs(trn->speed_sound() / ref->speed_sound() - 1.0) > 1e-6);
                     CHECK(std::abs(trn->isothermal_compressibility() / ref->isothermal_compressibility() - 1.0) > 1e-6);
                     CHECK(std::abs(trn->isobaric_expansion_coefficient() / ref->isobaric_expansion_coefficient() - 1.0) > 1e-6);
+                    check_v_scaled_quantities(*ref, *trn, c);
                 }
             }
         }
@@ -596,11 +627,12 @@ TEST_CASE("Cubic volume translation: spinodal translates", "[cubic][volume_trans
 // Mixtures
 //
 // The mixture column of the invariance table.  Two things differ from a pure fluid.  First the
-// shifts are in c_m(z) = sum_i x_i c_i, EXCEPT ln(phi_i), which shifts by the PURE-component c_i --
-// that is what makes the equifugacity condition cancel, and hence what makes VLE invariant for
-// ARBITRARY c_i and not merely for equal ones.  Second, the property changes on vaporisation split:
-// the two coexisting phases have different compositions, so c_m(y) != c_m(x) unless every c_i is
-// equal, and Dvap V and Dvap H inherit that difference while Dvap S, U and A do not.
+// shifts are in c_m(z) = sum_i x_i c_i, EXCEPT the partial molar pair mu_i and ln(phi_i), which
+// shift by the PURE-component c_i -- that is what makes the equifugacity condition cancel, and
+// hence what makes VLE invariant for ARBITRARY c_i and not merely for equal ones.  Second, the
+// property changes on vaporisation split: the two coexisting phases have different compositions, so
+// c_m(y) != c_m(x) unless every c_i is equal, and Dvap V and Dvap H inherit that difference while
+// Dvap S, U, A, c_p and c_v do not.
 // ============================================================================================
 
 namespace {
@@ -630,6 +662,40 @@ ASptr make_mixture(const std::string& backend, const std::vector<double>& z, con
 const std::vector<std::pair<parameters, double>> kMixtureDvapInvariants{
   {iSmolar, 1e-8}, {iUmolar, 1e-6}, {iHelmholtzmolar, 1e-6}, {iCpmolar, 1e-8}, {iCvmolar, 1e-8}};
 
+/// Single-phase mixture states, derived from the phase envelope rather than hardcoded.
+///
+/// A fixed 5 MPa at 320 K sat 0.51 % below SRK's dew pressure (5.0256 MPa; PR 5.0931 MPa, 1.86 %).
+/// That is closer than a routine tweak to a critical constant in the cubic JSON would move it, and
+/// crossing in is not a soft failure: calc_fugacity_coefficient throws outright for 0 < Q < 1, so
+/// the ln(phi_i) assertions would abort the whole case rather than fail informatively.
+std::vector<StatePoint> mixture_single_phase_points(const std::string& backend, const std::vector<double>& z) {
+    ASptr AS(AbstractState::factory(backend, kMixture));
+    AS->set_mole_fractions(std::vector<CoolPropDbl>(z.begin(), z.end()));
+
+    std::vector<StatePoint> pts;
+    for (double T : {320.0, 450.0}) {
+        double p_dew = -1, p_bub = -1;
+        try {
+            AS->update(QT_INPUTS, 1, T);
+            p_dew = AS->p();
+            AS->update(QT_INPUTS, 0, T);
+            p_bub = AS->p();
+        } catch (...) {
+            // No envelope at this T: the mixture is supercritical there, so every pressure is
+            // single-phase and the absolute fallbacks below cannot land inside a dome.
+        }
+        if (p_dew > 0 && p_bub > 0) {
+            REQUIRE(p_bub > p_dew);
+            pts.push_back({"vapour, 40 % below the dew line", T, 0.6 * p_dew});
+            pts.push_back({"liquid, 3x the bubble pressure", T, 3.0 * p_bub});
+        } else {
+            pts.push_back({"supercritical", T, 5e6});
+            pts.push_back({"supercritical, dense", T, 2e7});
+        }
+    }
+    return pts;
+}
+
 double cm_of(const std::vector<double>& z, const std::vector<double>& c) {
     double s = 0;
     for (std::size_t i = 0; i < z.size(); ++i) {
@@ -651,10 +717,12 @@ TEST_CASE("Cubic volume translation: mixture single-phase invariances", "[cubic]
         ASptr ref = make_mixture(backend, z, {0.0, 0.0, 0.0});
         ASptr trn = make_mixture(backend, z, c);
 
-        // A single-phase state well away from the dome, so the PT flash returns a root rather than
-        // a phase split whose composition would differ between the two runs.
-        for (double T : {320.0, 450.0}) {
-            for (double p : {5e6, 2e7}) {
+        // Single-phase states, so the PT flash returns a root rather than a phase split whose
+        // composition would differ between the two runs.
+        for (const auto& pt : mixture_single_phase_points(backend, z)) {
+            {
+                const double T = pt.T, p = pt.p;
+                CAPTURE(pt.label);
                 CAPTURE(T);
                 CAPTURE(p);
                 REQUIRE_NOTHROW(ref->update(PT_INPUTS, p, T));
@@ -700,6 +768,7 @@ TEST_CASE("Cubic volume translation: mixture single-phase invariances", "[cubic]
                 CHECK(close_to(trn->Bvirial(), ref->Bvirial() - cm, 1e-9, 1e-18));
 
                 CHECK(std::abs(trn->speed_sound() / ref->speed_sound() - 1.0) > 1e-6);
+                check_v_scaled_quantities(*ref, *trn, cm);
             }
         }
     }
@@ -758,7 +827,14 @@ TEST_CASE("Cubic volume translation: mixture VLE is invariant for arbitrary c_i"
                 const double dV_ref = 1.0 / ref->saturated_vapor_keyed_output(iDmolar) - 1.0 / ref->saturated_liquid_keyed_output(iDmolar);
                 const double dV_trn = 1.0 / trn->saturated_vapor_keyed_output(iDmolar) - 1.0 / trn->saturated_liquid_keyed_output(iDmolar);
                 CHECK(close_to(dV_trn, dV_ref - dcm, 1e-6, 1e-15));
-                CHECK(close_to(dvap(*trn, iHmolar), dvap(*ref, iHmolar) - ref->p() * dcm, 1e-6, 1e-6));
+                // Tolerance tied to the SHIFT, not to Dvap H.  The shift is p*dcm ~ 0.27 J/mol at the
+                // 220 K dew point while Dvap H is ~1.4e4 J/mol, so a relative test on the latter
+                // accepted a 5 % error in the former.  The measured residual across all four
+                // (backend, T, Q) points is <= 1.4e-10 J/mol, so this still clears the numerical
+                // floor by four orders while pinning the shift itself to 1e-5 relative.
+                const double dH_shift = ref->p() * dcm;
+                CAPTURE(dH_shift);
+                CHECK(close_to(dvap(*trn, iHmolar), dvap(*ref, iHmolar) - dH_shift, 0.0, 1e-5 * std::abs(dH_shift) + 1e-8));
             }
         }
     }
