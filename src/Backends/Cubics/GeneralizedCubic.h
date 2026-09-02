@@ -399,6 +399,15 @@ class AbstractCubic
     double get_cm() {
         return cm;
     }
+    /**
+	* \brief The factor \f$1 + c_{\rm m}\rho\f$ common to every composition derivative of \f$A\f$
+	*
+	* Named rather than inlined at each of the three call sites so they cannot drift apart, and so
+	* that the one place the translation enters those derivatives is greppable.
+	*/
+    double one_plus_cm_rho(double delta) {
+        return 1.0 + cm_term() * delta * rho_r;
+    }
 
     /// Modify the surface parameter Q_k of the sub group sgi
     virtual void set_Q_k(const size_t sgi, const double value) {
@@ -671,7 +680,12 @@ class AbstractCubic
      */
     double d_A_term_dxi(double delta, const std::vector<double>& x, std::size_t i, bool xN_independent) {
         std::size_t idelta = 0;
-        return delta * rho_r * d_bm_term_dxi(x, i, xN_independent) * (Delta_1 - Delta_2) / PI_12(delta, x, idelta);
+        // The (1 + c_m*rho) factor is easy to miss because PI_12 in the denominator already carries
+        // c_m, which makes the expression look translation-aware when it is not.  Differentiating
+        // A = ln[(1 + (D1*b + c)*rho) / (1 + (D2*b + c)*rho)] gives
+        //     dA/dx_i = rho*(D1 - D2)*(1 + c*rho)*b_i / PI_12
+        // for a composition-independent c.  Omitting the factor is exact only at c = 0.
+        return delta * rho_r * d_bm_term_dxi(x, i, xN_independent) * (Delta_1 - Delta_2) * one_plus_cm_rho(delta) / PI_12(delta, x, idelta);
     };
     /**
      * \brief The second composition derivative of the term \f$A\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -684,7 +698,9 @@ class AbstractCubic
     double d2_A_term_dxidxj(double delta, const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {
         std::size_t idelta = 0;
         double PI12 = PI_12(delta, x, idelta);
-        return delta * rho_r * (Delta_1 - Delta_2) / pow(PI12, 2)
+        // Same missing (1 + c_m*rho) as in d_A_term_dxi; for a composition-independent c it is a
+        // common factor on both surviving terms.
+        return delta * rho_r * (Delta_1 - Delta_2) * one_plus_cm_rho(delta) / pow(PI12, 2)
                * (PI12 * d2_bm_term_dxidxj(x, i, j, xN_independent)
                   - d_PI_12_dxi(delta, x, 0, j, xN_independent) * d_bm_term_dxi(x, i, xN_independent));
     };
@@ -700,8 +716,8 @@ class AbstractCubic
     double d3_A_term_dxidxjdxk(double delta, const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) {
         std::size_t idelta = 0;
         double PI12 = PI_12(delta, x, idelta);
-        // The leading factor
-        double lead = delta * rho_r * (Delta_1 - Delta_2) / pow(PI12, 3);
+        // The leading factor -- see d_A_term_dxi for the missing (1 + c_m*rho)
+        double lead = delta * rho_r * (Delta_1 - Delta_2) * one_plus_cm_rho(delta) / pow(PI12, 3);
         return lead
                * (-PI12
                     * (d_PI_12_dxi(delta, x, idelta, j, xN_independent) * d2_bm_term_dxidxj(x, i, k, xN_independent)

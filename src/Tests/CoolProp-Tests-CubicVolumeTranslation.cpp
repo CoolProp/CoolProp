@@ -462,4 +462,170 @@ TEST_CASE("Cubic volume translation: spinodal translates", "[cubic][volume_trans
     }
 }
 
+// ============================================================================================
+// Composition derivatives
+//
+// These operate on a bare AbstractCubic rather than through a backend, for two reasons: the
+// composition-derivative chain is pure algebra that needs no state object around it, and doing it
+// this way keeps the check independent of get_copy()/linked_states plumbing.
+//
+// The reference is a central difference of the *value* function.  For second derivatives the
+// reference is a central difference of the *analytic first* derivative -- nesting two finite
+// differences would lose far more precision than the defect being hunted.
+// ============================================================================================
+
+namespace {
+
+/// A three-component methane/ethane/propane mixture: enough to make every composition index
+/// distinct and to give b_m a real spread.
+struct CompDerivCase
+{
+    std::shared_ptr<AbstractCubic> cubic;
+    std::vector<double> x{0.3, 0.35, 0.35};
+    double delta = 5000.0;  ///< rho_r defaults to 1, so delta IS the molar density [mol/m^3]
+    double tau = 1.0 / 250.0;
+};
+
+CompDerivCase make_comp_case(const std::string& which, double cm) {
+    const std::vector<double> Tc{190.564, 305.322, 369.89};
+    const std::vector<double> pc{4.5992e6, 4.8722e6, 4.2512e6};
+    const std::vector<double> acentric{0.01142, 0.0995, 0.1521};
+    const double R = 8.31446261815324;
+    CompDerivCase c;
+    if (which == "PR") {
+        c.cubic = std::make_shared<PengRobinson>(Tc, pc, acentric, R);
+    } else {
+        c.cubic = std::make_shared<SRK>(Tc, pc, acentric, R);
+    }
+    c.cubic->set_cm(cm);
+    return c;
+}
+
+/// Central difference of f with respect to x_i, honouring the same x_N convention the analytic
+/// derivatives use: when x_N is dependent, perturbing x_i has to be compensated in x_N.
+double fd_dxi(const std::function<double(const std::vector<double>&)>& f, const std::vector<double>& x, std::size_t i, bool xN_independent,
+              double dz) {
+    std::vector<double> xp = x, xm = x;
+    xp[i] += dz;
+    xm[i] -= dz;
+    if (!xN_independent) {
+        xp[xp.size() - 1] -= dz;
+        xm[xm.size() - 1] += dz;
+    }
+    return (f(xp) - f(xm)) / (2 * dz);
+}
+
+/// Relative error, falling back to absolute when the analytic value is ~0.
+double deriv_err(double numeric, double analytic) {
+    return (std::abs(analytic) > 1e-12) ? std::abs(numeric / analytic - 1) : std::abs(numeric - analytic);
+}
+
+}  // namespace
+
+TEST_CASE("Cubic composition derivatives carry the volume translation", "[cubic][volume_translation][cubic_compderiv]") {
+    // 1e-6 sits comfortably above the floor of a central difference on well-scaled quantities and
+    // five orders below the defect it guards: dropping the (1 + c*rho) factor from d_A_term_dxi is
+    // a 2.4 % error at c = 5e-6 and 9.1 % at c = 2e-5.
+    const double dz = 1e-7, tol = 1e-6;
+
+    for (const auto& which : cubic_backends()) {
+        CAPTURE(which);
+        // c = 0 must pass both before and after the fix -- it is the control that proves the
+        // harness itself is sound.  The nonzero case is the reproduction.
+        for (double cm : {0.0, 3e-6}) {
+            CAPTURE(cm);
+            CompDerivCase cs = make_comp_case(which, cm);
+            AbstractCubic& C = *cs.cubic;
+            const std::vector<double>& x = cs.x;
+            const double d = cs.delta, tau = cs.tau;
+
+            for (bool xNi : {true, false}) {
+                CAPTURE(xNi);
+                for (std::size_t i = 0; i < x.size(); ++i) {
+                    CAPTURE(i);
+
+                    // b_m carries no translation, so this is a second control.
+                    CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.bm_term(z); }, x, i, xNi, dz), C.d_bm_term_dxi(x, i, xNi))
+                          < tol);
+
+                    // psi_minus depends on x only through (b_m - c_m).
+                    for (std::size_t id = 0; id <= 4; ++id) {
+                        CAPTURE(id);
+                        CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.psi_minus(d, z, 0, id); }, x, i, xNi, dz),
+                                        C.d_psi_minus_dxi(d, x, 0, id, i, xNi))
+                              < tol);
+                    }
+
+                    // PI_12 carries c_m in both factors.
+                    for (std::size_t id = 0; id <= 2; ++id) {
+                        CAPTURE(id);
+                        CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.PI_12(d, z, id); }, x, i, xNi, dz),
+                                        C.d_PI_12_dxi(d, x, id, i, xNi))
+                              < tol);
+                    }
+
+                    // A_term -- the one that drops (1 + c_m*rho).
+                    CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.A_term(d, z); }, x, i, xNi, dz), C.d_A_term_dxi(d, x, i, xNi))
+                          < tol);
+
+                    for (std::size_t id = 0; id <= 4; ++id) {
+                        CAPTURE(id);
+                        CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.psi_plus(d, z, id); }, x, i, xNi, dz),
+                                        C.d_psi_plus_dxi(d, x, id, i, xNi))
+                              < tol);
+                    }
+
+                    // alphar closes the loop: it is what the backend actually consumes.
+                    for (std::size_t it = 0; it <= 1; ++it) {
+                        for (std::size_t id = 0; id <= 2; ++id) {
+                            CAPTURE(it);
+                            CAPTURE(id);
+                            CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.alphar(tau, d, z, it, id); }, x, i, xNi, dz),
+                                            C.d_alphar_dxi(tau, d, x, it, id, i, xNi))
+                                  < tol);
+                        }
+                    }
+
+                    // Second derivative of A, referenced against the VALUE function via a
+                    // second-order central difference.
+                    //
+                    // This is deliberately independent of d_A_term_dxi.  Differencing the analytic
+                    // first derivative -- which the loop below does, at much better precision --
+                    // cannot see an error that is a common multiplicative factor on both orders,
+                    // and that is exactly the shape of the missing (1 + c*rho): with only that
+                    // check, d2_A_term_dxidxj passed against the unfixed code.
+                    {
+                        const double h = 1e-4;
+                        std::vector<double> xp = x, xm = x;
+                        xp[i] += h;
+                        xm[i] -= h;
+                        if (!xNi) {
+                            xp[xp.size() - 1] -= h;
+                            xm[xm.size() - 1] += h;
+                        }
+                        const double d2_num = (C.A_term(d, xp) - 2 * C.A_term(d, x) + C.A_term(d, xm)) / (h * h);
+                        // A second difference loses about half the available digits, so 1e-4
+                        // relative -- still two orders below the 1.5 % defect at this c and rho.
+                        CHECK(deriv_err(d2_num, C.d2_A_term_dxidxj(d, x, i, i, xNi)) < 1e-4);
+                    }
+
+                    // Second derivatives, referenced against the analytic first derivative.
+                    for (std::size_t j = 0; j < x.size(); ++j) {
+                        CAPTURE(j);
+                        CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.d_A_term_dxi(d, z, i, xNi); }, x, j, xNi, dz),
+                                        C.d2_A_term_dxidxj(d, x, i, j, xNi))
+                              < tol);
+                        CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.d_PI_12_dxi(d, z, 0, i, xNi); }, x, j, xNi, dz),
+                                        C.d2_PI_12_dxidxj(d, x, 0, i, j, xNi))
+                              < tol);
+                        CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.d_psi_minus_dxi(d, z, 0, 0, i, xNi); }, x, j, xNi, dz),
+                                        C.d2_psi_minus_dxidxj(d, x, 0, 0, i, j, xNi))
+                              < tol);
+                    }
+                }
+            }
+        }
+    }
+}
+
 #endif
