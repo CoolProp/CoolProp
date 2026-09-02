@@ -217,7 +217,11 @@ class VTPRCubic : public PengRobinson
                 summer1 += z[j] * bij_term(i, j);
             }
             double a_i_over_b_i = aii_term(tau, i, 0) / b0_ii(i);
-            double c_i = 0;  // TODO: fix this, allow for volume translation
+            // Under the linear mixing rule d(n*c_m)/dn_i is exactly the pure-component c_i, which is
+            // the Peneloux shift on this component's fugacity coefficient:
+            // ln(phi_i) = ln(phi_i,untranslated) - P*c_i/(R*T).  The rest of the expression is
+            // already written in v + c = v_EOS, so this term is all that was missing.
+            double c_i = get_cm(i);
             double _ln_phi = (2 / b * summer1 - 1) * (p * (v + c) / (R * T) - 1) - p * c_i / (R * T) - log(p * (v + c - b) / (R * T))
                              - 1.0 / (2.0 * sqrt(2.0) * R * T) * (a_i_over_b_i + R * T * unifaq.ln_gamma_R(tau, i, 0) / -0.53087) * bracket;
             ln_phi.push_back(_ln_phi);

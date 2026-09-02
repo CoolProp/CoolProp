@@ -650,47 +650,49 @@ class AbstractCubic
     double d3_psi_plus_dxidxjdxk(double delta, const std::vector<double>& x, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k,
                                  bool xN_independent);
 
-    /** \brief The term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
+    /** \brief The reciprocal covolume \f$1/b_{\rm m}\f$, a factor of \f$\psi^{(+)}\f$
      *
-     * \f$c\f$ is given by
      * \f[
-     * c = \frac{1}{b_m}
+     * \mathrm{inv\_bm} = \frac{1}{b_m}
      * \f]
+     *
+     * Formerly called c_term, which had nothing to do with the volume translation c and sat
+     * directly beside cm_term.
      * \param x The vector of mole fractions
      */
-    double c_term(const std::vector<double>& x) {
+    double inv_bm_term(const std::vector<double>& x) {
         return 1 / bm_term(x);
     };
     /**
-     * \brief The first composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
+     * \brief The first composition derivative of \f$1/b_{\rm m}\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
      * \param x The vector of mole fractions
      * \param i The first index
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
-    double d_c_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent) {
+    double d_inv_bm_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent) {
         return -d_bm_term_dxi(x, i, xN_independent) / pow(bm_term(x), 2);
     };
     /**
-     * \brief The second composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
+     * \brief The second composition derivative of \f$1/b_{\rm m}\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
      * \param x The vector of mole fractions
      * \param i The first index
      * \param j The second index
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
-    double d2_c_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {
+    double d2_inv_bm_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {
         double bm = bm_term(x);
         return (2 * d_bm_term_dxi(x, i, xN_independent) * d_bm_term_dxi(x, j, xN_independent) - bm * d2_bm_term_dxidxj(x, i, j, xN_independent))
                / pow(bm, 3);
     };
     /**
-     * \brief The third composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
+     * \brief The third composition derivative of \f$1/b_{\rm m}\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
      * \param x The vector of mole fractions
      * \param i The first index
      * \param j The second index
      * \param k The third index
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
-    double d3_c_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) {
+    double d3_inv_bm_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) {
         double bm = bm_term(x);
         return 1 / pow(bm, 4)
                * (2 * bm
