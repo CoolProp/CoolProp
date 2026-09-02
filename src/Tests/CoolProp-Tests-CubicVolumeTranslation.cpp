@@ -26,6 +26,7 @@ Run with:  ./CatchTestRunner "[volume_translation]"
 #    include <functional>
 #    include <memory>
 #    include <string>
+#    include <utility>
 #    include <vector>
 
 using namespace CoolProp;
@@ -229,7 +230,7 @@ TEST_CASE("Cubic volume translation: saturation invariances", "[cubic][volume_tr
                 return 1.0 / S.saturated_vapor_keyed_output(iDmolar) - 1.0 / S.saturated_liquid_keyed_output(iDmolar);
             };
             CHECK(close_to(dvap_v(*trn), dvap_v(*ref), 1e-9, 1e-18));
-            for (parameters key : {iHmolar, iSmolar, iUmolar, iCvmolar, iCpmolar}) {
+            for (parameters key : {iHmolar, iSmolar, iUmolar, iHelmholtzmolar, iCvmolar, iCpmolar}) {
                 CAPTURE(get_parameter_information(key, "short"));
                 CHECK(close_to(dvap(*trn, key), dvap(*ref, key), 1e-9, 1e-8));
             }
@@ -389,7 +390,63 @@ TEST_CASE("Cubic volume translation: survives get_copy", "[cubic][volume_transla
 
         // SatL/SatV of the clone must agree too, or a saturation call on the copy silently mixes a
         // translated parent with untranslated daughters.
-        CHECK(clone_cb->get_fluid_parameter_double(0, "cm") == Catch::Approx(c).epsilon(1e-15));
+        //
+        // That has to be checked THROUGH a saturation call.  Reading the clone's own cm back routes
+        // to the same storage the CHECK above already read, so it asserts nothing new -- deleting
+        // copy_cm's linked_states fan-out leaves such a test green.  Drive a QT flash instead:
+        // SatL/SatV are where saturation() puts its converged phases, so an untranslated daughter
+        // shows up immediately.  The density agrees even when it is broken (DmolarT imposes it), so
+        // compare the caloric properties, which are what actually diverge -- by ~11 % here.
+        const double T = 0.7 * trn->T_critical();
+        REQUIRE_NOTHROW(trn->update(QT_INPUTS, 0, T));
+        REQUIRE_NOTHROW(clone->update(QT_INPUTS, 0, T));
+        CHECK(close_to(clone->hmolar(), trn->hmolar(), 1e-9, 1e-6));
+        CHECK(close_to(clone->smolar(), trn->smolar(), 1e-9, 1e-6));
+        CHECK(close_to(clone->umolar(), trn->umolar(), 1e-9, 1e-6));
+        CHECK(close_to(clone->rhomolar(), trn->rhomolar(), 1e-9, 1e-6));
+        REQUIRE_NOTHROW(trn->update(QT_INPUTS, 1, T));
+        REQUIRE_NOTHROW(clone->update(QT_INPUTS, 1, T));
+        CHECK(close_to(clone->hmolar(), trn->hmolar(), 1e-9, 1e-6));
+        CHECK(close_to(clone->rhomolar(), trn->rhomolar(), 1e-9, 1e-6));
+    }
+}
+
+TEST_CASE("Cubic volume translation: the critical and reducing volumes move with c", "[cubic][volume_translation]") {
+    // Three more paths reason about volume and all had to learn about c, but none of them is
+    // reachable through an ordinary property call, so none was covered: reverting the translation in
+    // all three at once left the suite green.  They are exercised directly here.
+    for (const auto& backend : cubic_backends()) {
+        CAPTURE(backend);
+        const double b = covolume(backend, "n-Propane");
+        const double c = 0.15 * b;
+        ASptr ref = make_translated(backend, "n-Propane", 0.0);
+        ASptr trn = make_translated(backend, "n-Propane", c);
+
+        // calc_rhomolar_critical(): the Kazakov correlation returns an UNtranslated critical volume,
+        // so the translated one is exactly c smaller.  An identity, not an approximation.
+        CHECK(close_to(1.0 / trn->rhomolar_critical(), 1.0 / ref->rhomolar_critical() - c, 1e-12, 1e-20));
+
+        // get_linear_reducing_parameters(): the same shift, through the mole-fraction weighted
+        // average that the critical-point tracer starts from.  T_r must NOT move.
+        double rhor_ref = 0, Tr_ref = 0, rhor_trn = 0, Tr_trn = 0;
+        as_cubic(*ref).get_linear_reducing_parameters(rhor_ref, Tr_ref);
+        as_cubic(*trn).get_linear_reducing_parameters(rhor_trn, Tr_trn);
+        CHECK(close_to(1.0 / rhor_trn, 1.0 / rhor_ref - c, 1e-12, 1e-20));
+        CHECK(close_to(Tr_trn, Tr_ref, 1e-14, 0.0));
+
+        // get_critical_is_terminated(): the tracer stops when v < 1.1*(b_m - c_m), so the floor
+        // moves with the translation.  Probe just inside and just outside the TRANSLATED floor --
+        // the outside probe is the discriminating one, because a version still using the
+        // untranslated b_m would see 1.15*(b - c) as below its own (larger) 1.1*b threshold and
+        // terminate early.
+        auto& cb = as_cubic(*trn);
+        const double bmc = b - c;
+        for (const auto& probe : {std::make_pair(1.05, true), std::make_pair(1.15, false)}) {
+            const double v = probe.first * bmc;
+            double delta = 1.0 / (v * cb.rhomolar_reducing()), tau = 1.0;
+            CAPTURE(probe.first);
+            CHECK(cb.get_critical_is_terminated(delta, tau) == probe.second);
+        }
     }
 }
 
@@ -495,6 +552,11 @@ ASptr make_mixture(const std::string& backend, const std::vector<double>& z, con
     return AS;
 }
 
+/// The invariant column of the property-change-on-vaporisation row, each with the absolute
+/// tolerance floor appropriate to its own magnitude.
+const std::vector<std::pair<parameters, double>> kMixtureDvapInvariants{
+  {iSmolar, 1e-8}, {iUmolar, 1e-6}, {iHelmholtzmolar, 1e-6}, {iCpmolar, 1e-8}, {iCvmolar, 1e-8}};
+
 double cm_of(const std::vector<double>& z, const std::vector<double>& c) {
     double s = 0;
     for (std::size_t i = 0; i < z.size(); ++i) {
@@ -545,6 +607,25 @@ TEST_CASE("Cubic volume translation: mixture single-phase invariances", "[cubic]
                     CHECK(close_to(std::log(trn->fugacity_coefficient(i)), std::log(ref->fugacity_coefficient(i)) - p * c[i] / (R * T), 1e-8, 1e-10));
                 }
 
+                // mu_i is NOT shifted by -p*c_m, even though g is.  G shifts by -p*sum_i n_i*c_i,
+                // so mu_i = d(G)/dn_i picks up the PURE-component c_i -- the same c_i that ln(phi_i)
+                // carries, which is the consistency the two have to satisfy.  The distinction is
+                // invisible for a pure fluid, where mu = g and c_i = c_m.
+                for (std::size_t i = 0; i < z.size(); ++i) {
+                    CAPTURE(i);
+                    const double dmu = trn->chemical_potential(i) - ref->chemical_potential(i);
+                    CAPTURE(dmu);
+                    // Sharp enough to separate the two hypotheses: -p*c_i and -p*c_m differ by
+                    // 17 J/mol here at p = 2e7 Pa, and the floor is four orders below that.
+                    CAPTURE(-p * cm);
+                    CHECK(close_to(dmu, -p * c[i], 1e-6, 1e-4));
+                }
+
+                // The second virial coefficient carries the mixture translation too.  B is
+                // evaluated in the zero-density limit at the current tau, so it depends on T and
+                // the composition but not on the state's own density.
+                CHECK(close_to(trn->Bvirial(), ref->Bvirial() - cm, 1e-9, 1e-18));
+
                 CHECK(std::abs(trn->speed_sound() / ref->speed_sound() - 1.0) > 1e-6);
             }
         }
@@ -586,19 +667,56 @@ TEST_CASE("Cubic volume translation: mixture VLE is invariant for arbitrary c_i"
                 }
 
                 // Property changes on vaporisation.  S, U and A survive because the c-dependent
-                // parts cancel between h, P*v and T*s; V and H carry the composition difference in
-                // c_m, which is nonzero precisely because the c_i differ.
+                // parts cancel between h, P*v and T*s, and c_p and c_v survive because each phase's
+                // own value does; V and H carry the composition difference in c_m, which is nonzero
+                // precisely because the c_i differ.
                 const double dcm = cm_of(std::vector<double>(yr.begin(), yr.end()), c) - cm_of(std::vector<double>(xr.begin(), xr.end()), c);
                 CAPTURE(dcm);
                 const auto dvap = [](AbstractState& S, parameters key) {
                     return S.saturated_vapor_keyed_output(key) - S.saturated_liquid_keyed_output(key);
                 };
-                CHECK(close_to(dvap(*trn, iSmolar), dvap(*ref, iSmolar), 1e-6, 1e-8));
-                CHECK(close_to(dvap(*trn, iUmolar), dvap(*ref, iUmolar), 1e-6, 1e-6));
+                // The absolute floors are per property because these are differences of two
+                // large numbers: S and the heat capacities are O(10..100) J/mol/K, while U and A are
+                // O(1e4) J/mol and so carry ~1e-11 relative round-off of their own.
+                for (const auto& probe : kMixtureDvapInvariants) {
+                    CAPTURE(get_parameter_information(probe.first, "short"));
+                    CHECK(close_to(dvap(*trn, probe.first), dvap(*ref, probe.first), 1e-6, probe.second));
+                }
                 const double dV_ref = 1.0 / ref->saturated_vapor_keyed_output(iDmolar) - 1.0 / ref->saturated_liquid_keyed_output(iDmolar);
                 const double dV_trn = 1.0 / trn->saturated_vapor_keyed_output(iDmolar) - 1.0 / trn->saturated_liquid_keyed_output(iDmolar);
                 CHECK(close_to(dV_trn, dV_ref - dcm, 1e-6, 1e-15));
                 CHECK(close_to(dvap(*trn, iHmolar), dvap(*ref, iHmolar) - ref->p() * dcm, 1e-6, 1e-6));
+            }
+        }
+    }
+}
+
+TEST_CASE("Cubic volume translation: c_all broadcasts to every component", "[cubic][volume_translation][mixture]") {
+    // "c_all" is the spelling that keeps the pre-vectorisation behaviour, where the index was
+    // accepted and then ignored.  Nothing else exercises it, so a regression there would silently
+    // change what callers relying on those old fluid-wide semantics get back.
+    const std::vector<double> z{0.30, 0.35, 0.35};
+    const std::size_t N = mixture_c().size();
+
+    for (const auto& backend : cubic_backends()) {
+        CAPTURE(backend);
+        // Seeded with distinct per-component values, so a broadcast that reaches only one of them
+        // is visible rather than being masked by the components already agreeing.
+        ASptr AS = make_mixture(backend, z, mixture_c());
+        for (std::size_t i = 0; i < N; ++i) {
+            CAPTURE(i);
+            CHECK(AS->get_fluid_parameter_double(i, "cm") == Catch::Approx(mixture_c()[i]).epsilon(1e-15));
+        }
+
+        // The index is ignored for c_all, so naming a different one must give the same result.
+        for (std::size_t named = 0; named < N; ++named) {
+            const double broadcast = 1.25e-6 * static_cast<double>(named + 1);
+            CAPTURE(named);
+            CAPTURE(broadcast);
+            REQUIRE_NOTHROW(AS->set_fluid_parameter_double(named, "c_all", broadcast));
+            for (std::size_t i = 0; i < N; ++i) {
+                CAPTURE(i);
+                CHECK(AS->get_fluid_parameter_double(i, "cm") == Catch::Approx(broadcast).epsilon(1e-15));
             }
         }
     }

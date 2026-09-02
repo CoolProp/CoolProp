@@ -281,9 +281,11 @@ at round-off level.
 Quantity                                               Effect of the translation
 =====================================================  =============================================
 :math:`v`                                              :math:`v - c_m(\mathbf{z})`
-:math:`h`, :math:`g`, :math:`\mu_i`                    shifted by :math:`-p\,c_m(\mathbf{z})`
-:math:`\ln \varphi_i`                                  shifted by :math:`-p\,c_i/(RT)`, using the
+:math:`h`, :math:`g`                                   shifted by :math:`-p\,c_m(\mathbf{z})`
+:math:`\mu_i`                                          shifted by :math:`-p\,c_i`, using the
                                                        **pure-component** :math:`c_i`
+:math:`\ln \varphi_i`                                  shifted by :math:`-p\,c_i/(RT)`, the same
+                                                       pure-component :math:`c_i`
 :math:`B` (second virial coefficient)                  :math:`B - c_m(\mathbf{z})`
 :math:`s`, :math:`u`, :math:`a`, :math:`c_p`,          **unchanged**
 :math:`c_v`

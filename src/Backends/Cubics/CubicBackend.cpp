@@ -837,9 +837,12 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
         // while p, h and cp return finite nonsense -- so this has to be a precondition rather than
         // something a caller is expected to notice downstream.
         //
-        // The mixture condition is b_m - c_m = sum_i x_i*(b0_ii - c_i) > 0, which is guaranteed for
-        // every composition if it holds component by component.  Checking per component is both
-        // tighter and independent of whether the mole fractions have been set yet.
+        // For the base cubics b_m is linear in x, so b_m - c_m = sum_i x_i*(b0_ii - c_i) > 0 holds
+        // at every composition as soon as it holds component by component, and checking per
+        // component is both tighter and independent of whether the mole fractions have been set
+        // yet.  That implication does NOT carry to VTPR: its b_ij = ((b_i^(3/4) + b_j^(3/4))/2)^(4/3)
+        // is sub-linear, so b_m^VTPR <= sum_i x_i*b0_ii while c_m stays linear, and the per-component
+        // check is then necessary but not sufficient.
         AbstractCubic* ac = get_cubic().get();
         const bool broadcast = (parameter == "c_all");
         for (std::size_t j = 0; j < N; ++j) {
