@@ -482,12 +482,85 @@ TEST_CASE("Cubic volume translation: rejects a translation past the covolume", "
     }
 }
 
+TEST_CASE("Cubic volume translation: moving Tc or pc cannot strand c past the covolume", "[cubic][volume_translation]") {
+    // b = Omega_b*R*Tc/pc, so the covolume moves with the critical constants and "set c, then
+    // shrink b" reaches the same forbidden state that setting c too large does -- but by a path
+    // that used to be unguarded.  It fails silently rather than loudly: once b - c < 0, the
+    // bracket 1 - (b_m - c_m)*rho in psi_minus is greater than 1 for EVERY rho, so the log never
+    // goes NaN and p, h and c_p keep returning finite nonsense.  update_DmolarT does not consult
+    // calc_rhomolar_max_bound either, so nothing downstream catches it.
+    for (const auto& backend : cubic_backends()) {
+        CAPTURE(backend);
+        const double b = covolume(backend, "n-Propane");
+        const double c = 0.9 * b;
+
+        for (const std::string key : {std::string("Tcrit"), std::string("pcrit")}) {
+            CAPTURE(key);
+            ASptr AS = make_translated(backend, "n-Propane", c);
+            const double before = AS->get_fluid_parameter_double(0, key);
+            // b is proportional to Tc and inversely proportional to pc, so either of these halves
+            // the covolume and leaves b - c = -0.4*b.
+            const double bad = (key == "Tcrit") ? 0.5 * before : 2.0 * before;
+            CHECK_THROWS(AS->set_fluid_parameter_double(0, key, bad));
+
+            // Rejected is not enough -- it has to be rolled back.  set_Tci/set_pci write the
+            // member first and refresh the alpha function and the b0 cache from it, so a throw
+            // without a rollback would leave a state that is wrong in a different way.
+            CHECK(AS->get_fluid_parameter_double(0, key) == Catch::Approx(before).epsilon(1e-15));
+            CHECK(AS->get_fluid_parameter_double(0, "cm") == Catch::Approx(c).epsilon(1e-15));
+
+            // And the rolled-back state must still be usable, which it is not if the derived
+            // caches were left referring to the value that was rejected.
+            REQUIRE_NOTHROW(AS->update(QT_INPUTS, 0, 0.7 * AS->T_critical()));
+            CHECK(AS->p() > 0);
+            CHECK(1.0 / AS->rhomolar() > b - c);
+        }
+
+        // A move in the safe direction still goes through -- the guard must not have frozen Tc/pc.
+        ASptr ok = make_translated(backend, "n-Propane", 0.5 * b);
+        const double Tc0 = ok->get_fluid_parameter_double(0, "Tcrit");
+        REQUIRE_NOTHROW(ok->set_fluid_parameter_double(0, "Tcrit", 1.10 * Tc0));
+        CHECK(ok->get_fluid_parameter_double(0, "Tcrit") == Catch::Approx(1.10 * Tc0).epsilon(1e-12));
+    }
+}
+
+TEST_CASE("Cubic volume translation: the bare AbstractCubic setters enforce the pole condition", "[cubic][volume_translation]") {
+    // The backend is not the only way in.  HEOS embeds an AbstractCubic through
+    // ResidualHelmholtzGeneralizedCubic -- change_EOS(i, "SRK"/"Peng-Robinson") and the
+    // "-SRK"/"-PengRobinson" fluid endings -- and those objects have no AbstractCubicBackend
+    // wrapping them, so a check that lives only in set_fluid_parameter_double does not cover them.
+    const std::vector<double> Tc{369.89}, pc{4.2512e6}, acentric{0.1521};
+    const double R = 8.31446261815324;
+
+    for (const auto& backend : cubic_backends()) {
+        CAPTURE(backend);
+        std::shared_ptr<AbstractCubic> bare;
+        if (backend == "PR") {
+            bare = std::make_shared<PengRobinson>(Tc, pc, acentric, R);
+        } else {
+            bare = std::make_shared<SRK>(Tc, pc, acentric, R);
+        }
+        const double b = bare->b0_ii(0);
+        REQUIRE(b > 0);
+
+        CHECK_THROWS(bare->set_cm(0, b));
+        CHECK_THROWS(bare->set_cm(0, 1.5 * b));
+        CHECK_THROWS(bare->set_cm(b));  // the broadcast form
+        CHECK_THROWS(bare->set_cm_vector(std::vector<double>{b}));
+        // A rejected value must leave the translation untouched rather than half-applied.
+        CHECK(bare->get_cm(0) == Catch::Approx(0.0).margin(1e-300));
+
+        CHECK_NOTHROW(bare->set_cm_vector(std::vector<double>{0.5 * b}));
+        CHECK(bare->get_cm(0) == Catch::Approx(0.5 * b).epsilon(1e-15));
+    }
+}
+
 TEST_CASE("Cubic volume translation: set/get round-trip", "[cubic][volume_translation]") {
     for (const auto& backend : cubic_backends()) {
         CAPTURE(backend);
         const double c = 0.2 * covolume(backend, "n-Propane");
         ASptr AS(AbstractState::factory(backend, "n-Propane"));
-        CHECK(AS->get_fluid_parameter_double(0, "cm") == Catch::Approx(0.0));
+        CHECK(AS->get_fluid_parameter_double(0, "cm") == Catch::Approx(0.0).margin(1e-300));
         for (const char* alias : {"c", "cm", "c_m"}) {
             CAPTURE(alias);
             REQUIRE_NOTHROW(AS->set_fluid_parameter_double(0, alias, c));

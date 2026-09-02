@@ -310,9 +310,22 @@ double AbstractCubic::d3_bm_term_dxidxjdxk(const std::vector<double>& x, std::si
     return 0;
 }
 
+void AbstractCubic::require_below_covolume(std::size_t i, double c) {
+    const double b = b0_ii(i);
+    // Negated rather than `b - c <= 0` so a NaN c is rejected instead of sliding through.
+    if (!(b - c > 0)) {
+        throw CoolProp::ValueError(format("Volume translation c [%g m^3/mol] must be smaller than the covolume b [%g m^3/mol] of "
+                                          "component %d; b - c = %g is not positive",
+                                          c, b, static_cast<int>(i), b - c));
+    }
+}
+
 double AbstractCubic::cm_term(const std::vector<double>& x) {
+    // Bounded by N, matching bm_term.  Ranging over x.size() instead would make bm_term(x) and
+    // cm_term(x) disagree about how many components there are whenever the two differ, and the
+    // difference b_m - c_m is exactly what the pole condition is built from.
     double summer = 0;
-    for (std::size_t i = 0; i < x.size(); ++i) {
+    for (int i = 0; i < N; ++i) {
         summer += x[i] * c_translation[i];
     }
     return summer;
@@ -326,13 +339,6 @@ double AbstractCubic::d_cm_term_dxi(const std::vector<double>& x, std::size_t i,
         return c_translation[i] - c_translation[N - 1];
     }
 }
-double AbstractCubic::d2_cm_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {
-    return 0;
-}
-double AbstractCubic::d3_cm_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) {
-    return 0;
-}
-
 double AbstractCubic::aii_term(double tau, std::size_t i, std::size_t itau) {
     if (itau > 4) {
         // m_aii_cache[i] only stores derivatives for itau = 0..4 (see calc_all_terms()); higher

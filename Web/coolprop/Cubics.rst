@@ -324,10 +324,19 @@ Setting the translation
 :math:`c` is a per-component fluid parameter, in m\ :sup:`3`/mol, reached through
 :cpapi:`set_fluid_parameter_double <CoolProp::AbstractState::set_fluid_parameter_double>` and
 :cpapi:`get_fluid_parameter_double <CoolProp::AbstractState::get_fluid_parameter_double>` under the
-names ``c``, ``cm`` or ``c_m``.  The spelling ``c_all`` broadcasts one value to every component.
+names ``c``, ``cm`` or ``c_m``.  When setting, the spelling ``c_all`` broadcasts one value to
+every component; reading back always names a component, through ``c``/``cm``/``c_m``.
+
 Setting a value that would drive :math:`b_i - c_i \le 0` raises a ``ValueError``, since past that
 point the repulsive pole moves through the liquid branch and the model returns finite nonsense
-rather than failing loudly.
+rather than failing loudly.  Because :math:`b_i = \Omega_b R T_{c,i}/p_{c,i}`, the covolume moves
+with the critical constants, so the same check runs when ``Tcrit`` or ``pcrit`` is set, and such a
+change is rolled back if it would invalidate a translation already in place.
+
+.. warning:: For VTPR the per-component condition is necessary but not sufficient.  Its combining
+             rule :math:`b_{ij} = ((b_i^{3/4} + b_j^{3/4})/2)^{4/3}` is sub-linear, so
+             :math:`b_m \le \sum_i x_i b_i` while :math:`c_m` stays linear.  Per-component values
+             that each pass can therefore still give :math:`b_m - c_m \le 0` at some compositions.
 
 .. ipython::
 

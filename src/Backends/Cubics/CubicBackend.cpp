@@ -837,25 +837,18 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
         // while p, h and cp return finite nonsense -- so this has to be a precondition rather than
         // something a caller is expected to notice downstream.
         //
+        // The b - c > 0 check lives in AbstractCubic::set_cm now, not here, so that every entry
+        // point gets it -- including set_cm_vector and the Tc/pc setters, which move the covolume
+        // underneath a translation already in place.
+        //
         // For the base cubics b_m is linear in x, so b_m - c_m = sum_i x_i*(b0_ii - c_i) > 0 holds
-        // at every composition as soon as it holds component by component, and checking per
-        // component is both tighter and independent of whether the mole fractions have been set
-        // yet.  That implication does NOT carry to VTPR: its b_ij = ((b_i^(3/4) + b_j^(3/4))/2)^(4/3)
-        // is sub-linear, so b_m^VTPR <= sum_i x_i*b0_ii while c_m stays linear, and the per-component
-        // check is then necessary but not sufficient.
+        // at every composition as soon as it holds component by component, and the per-component
+        // check is both tighter and independent of whether the mole fractions have been set yet.
+        // That implication does NOT carry to VTPR: its b_ij = ((b_i^(3/4) + b_j^(3/4))/2)^(4/3) is
+        // sub-linear, so b_m^VTPR <= sum_i x_i*b0_ii while c_m stays linear, and there the
+        // per-component check is necessary but not sufficient.
         AbstractCubic* ac = get_cubic().get();
-        const bool broadcast = (parameter == "c_all");
-        for (std::size_t j = 0; j < N; ++j) {
-            if (!broadcast && j != i) {
-                continue;
-            }
-            if (!(ac->b0_ii(j) - value > 0)) {
-                throw ValueError(format("Volume translation c [%g m^3/mol] must be smaller than the covolume b [%g m^3/mol] of "
-                                        "component %d; b - c = %g is not positive",
-                                        value, ac->b0_ii(j), static_cast<int>(j), ac->b0_ii(j) - value));
-            }
-        }
-        if (broadcast) {
+        if (parameter == "c_all") {
             ac->set_cm(value);
         } else {
             ac->set_cm(i, value);
