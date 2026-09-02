@@ -104,29 +104,30 @@
     "gammaV": 1.08446
   },
   {
-    "BibTeX": "Gernert-Thesis-2013",
+    "BibTeX": "Loevseth-FPE-2018",
     "CAS1": "124-38-9",
     "CAS2": "7440-37-1",
     "F": 1.0,
     "Name1": "CarbonDioxide",
     "Name2": "Argon",
-    "betaT": 1.027147,
-    "betaV": 1.001378,
-    "function": "Argon-CarbonDioxide",
-    "gammaT": 0.968781,
-    "gammaV": 1.02971
+    "betaT": 0.998705,
+    "betaV": 1.003766,
+    "function": "CarbonDioxide-Argon-Loevseth2018",
+    "gammaT": 1.039675,
+    "gammaV": 1.013833
   },
   {
-    "BibTeX": "Gernert-Thesis-2013",
+    "BibTeX": "Souza-AE-2019",
     "CAS1": "124-38-9",
     "CAS2": "630-08-0",
-    "F": 0.0,
+    "F": 1.0,
     "Name1": "CarbonDioxide",
     "Name2": "CarbonMonoxide",
-    "betaT": 0.993245,
-    "betaV": 1.030855,
-    "gammaT": 1.068392,
-    "gammaV": 1.245499
+    "betaT": 0.989782,
+    "betaV": 1.033802,
+    "function": "CarbonDioxide-CarbonMonoxide-EOSCG2021",
+    "gammaT": 1.16213,
+    "gammaV": 1.000162
   },
   {
     "BibTeX": "Gernert-Thesis-2013",
@@ -451,16 +452,17 @@
     "gammaV": 1.006102927
   },
   {
-    "BibTeX": "Kunz-JCED-2012",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "74-82-8",
     "CAS2": "7732-18-5",
-    "F": 0,
+    "F": 1.0,
     "Name1": "Methane",
     "Name2": "Water",
-    "betaT": 1.063333913,
-    "betaV": 1.012783169,
-    "gammaT": 0.775810513,
-    "gammaV": 1.585018334
+    "betaT": 1.263,
+    "betaV": 1.176,
+    "function": "Methane-Water-EOSCG2021",
+    "gammaT": 0.748,
+    "gammaV": 1.038
   },
   {
     "BibTeX": "Kunz-JCED-2012",
@@ -2546,16 +2548,17 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Kunz-JCED-2012",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "7732-18-5",
     "CAS2": "7783-06-4",
-    "F": 0,
+    "F": 1.0,
     "Name1": "Water",
     "Name2": "HydrogenSulfide",
-    "betaT": 1.0,
-    "betaV": 1.0,
-    "gammaT": 0.940587083,
-    "gammaV": 1.014832832
+    "betaT": 1.0410962326891724,
+    "betaV": 1.0572858626078168,
+    "function": "HydrogenSulfide-Water-EOSCG2021",
+    "gammaT": 0.924026,
+    "gammaV": 1.189702
   },
   {
     "BibTeX": "Kunz-JCED-2012",
@@ -3190,16 +3193,17 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Bell-JCED-2016",
+    "BibTeX": "Neumann-FPE-2020",
     "CAS1": "7664-41-7",
     "CAS2": "7440-37-1",
-    "F": 0.0,
+    "F": 1.0,
     "Name1": "AMMONIA",
     "Name2": "ARGON",
-    "betaT": 1.03498,
-    "betaV": 1.0,
-    "gammaT": 1.06504,
-    "gammaV": 1.0
+    "betaT": 0.8723521930061781,
+    "betaV": 1.3218316356609026,
+    "function": "Argon-Ammonia-Neumann2020",
+    "gammaT": 0.998353,
+    "gammaV": 1.041113
   },
   {
     "BibTeX": "Bell-JCED-2016",
@@ -4606,16 +4610,16 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Bell-JCED-2016",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "7782-50-5",
     "CAS2": "7647-01-0",
     "F": 0.0,
     "Name1": "CHLORINE",
     "Name2": "HCL",
-    "betaT": 0.99601,
-    "betaV": 1.0,
-    "gammaT": 0.96115,
-    "gammaV": 1.0
+    "betaT": 1.007373,
+    "betaV": 0.9281,
+    "gammaT": 0.968865,
+    "gammaV": 0.917288
   },
   {
     "BibTeX": "Bell-JCED-2016",
@@ -5026,16 +5030,16 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Bell-JCED-2016",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "124-38-9",
     "CAS2": "7446-09-5",
     "F": 0.0,
     "Name1": "CO2",
     "Name2": "SO2",
-    "betaT": 1.00511,
-    "betaV": 1.0,
-    "gammaT": 1.0107,
-    "gammaV": 1.0
+    "betaT": 1.020063,
+    "betaV": 0.889865,
+    "gammaT": 1.007975,
+    "gammaV": 1.005778
   },
   {
     "BibTeX": "Bell-JCED-2016",
@@ -6790,15 +6794,15 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Bell-JCED-2016",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "7647-01-0",
     "CAS2": "7446-09-5",
     "F": 0.0,
     "Name1": "HCL",
     "Name2": "SO2",
-    "betaT": 0.9942,
+    "betaT": 0.9974017683933354,
     "betaV": 1.0,
-    "gammaT": 1.05144,
+    "gammaT": 1.04838,
     "gammaV": 1.0
   },
   {
@@ -7546,16 +7550,16 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Bell-JCED-2016",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "74-82-8",
     "CAS2": "7446-09-5",
     "F": 0.0,
     "Name1": "METHANE",
     "Name2": "SO2",
-    "betaT": 1.03694,
-    "betaV": 1.0,
-    "gammaT": 1.07082,
-    "gammaV": 1.0
+    "betaT": 1.0005683228073545,
+    "betaV": 0.7601475902561241,
+    "gammaT": 1.115714,
+    "gammaV": 1.119543
   },
   {
     "BibTeX": "Bell-JCED-2016",
@@ -8038,16 +8042,16 @@
     "gammaV": 1.0
   },
   {
-    "BibTeX": "Bell-JCED-2016",
+    "BibTeX": "Neumann-IJT-2023",
     "CAS1": "7782-44-7",
     "CAS2": "7446-09-5",
     "F": 0.0,
     "Name1": "OXYGEN",
     "Name2": "SO2",
-    "betaT": 0.98436,
-    "betaV": 1.0,
-    "gammaT": 1.18081,
-    "gammaV": 1.0
+    "betaT": 1.077631495289134,
+    "betaV": 0.8201790286783799,
+    "gammaT": 1.035878,
+    "gammaV": 1.660632
   },
   {
     "BibTeX": "Bell-JCED-2016",
@@ -10682,5 +10686,199 @@
     "betaV": 1.0,
     "gammaT": 0.993183,
     "gammaV": 1.0
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7446-09-5",
+    "CAS2": "7732-18-5",
+    "F": 0.0,
+    "Name1": "SO2",
+    "Name2": "Water",
+    "betaT": 1.019562,
+    "betaV": 1.094032,
+    "gammaT": 0.916311,
+    "gammaV": 0.962547
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7446-09-5",
+    "CAS2": "7727-37-9",
+    "F": 0.0,
+    "Name1": "SO2",
+    "Name2": "Nitrogen",
+    "betaT": 1.045874,
+    "betaV": 0.903625,
+    "gammaT": 1.194659,
+    "gammaV": 1.215581
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7782-50-5",
+    "CAS2": "7446-09-5",
+    "F": 0.0,
+    "Name1": "CHLORINE",
+    "Name2": "SO2",
+    "betaT": 1.015678,
+    "betaV": 1.024354,
+    "gammaT": 0.92782,
+    "gammaV": 1.016621
+  },
+  {
+    "BibTeX": "Neumann-FPE-2020",
+    "CAS1": "630-08-0",
+    "CAS2": "7664-41-7",
+    "F": 0.0,
+    "Name1": "CO",
+    "Name2": "AMMONIA",
+    "betaT": 1.057512,
+    "betaV": 0.739937,
+    "gammaT": 0.952705,
+    "gammaV": 1.707
+  },
+  {
+    "BibTeX": "Neumann-FPE-2020",
+    "CAS1": "7727-37-9",
+    "CAS2": "7664-41-7",
+    "F": 0.0,
+    "Name1": "Nitrogen",
+    "Name2": "AMMONIA",
+    "betaT": 1.057512,
+    "betaV": 0.739937,
+    "gammaT": 0.952705,
+    "gammaV": 1.447261
+  },
+  {
+    "BibTeX": "Neumann-FPE-2020",
+    "CAS1": "74-82-8",
+    "CAS2": "7664-41-7",
+    "F": 0.0,
+    "Name1": "Methane",
+    "Name2": "AMMONIA",
+    "betaT": 1.022371,
+    "betaV": 1.006058,
+    "gammaT": 0.940156,
+    "gammaV": 1.069834
+  },
+  {
+    "BibTeX": "Neumann-FPE-2020",
+    "CAS1": "7664-41-7",
+    "CAS2": "7782-44-7",
+    "F": 0.0,
+    "Name1": "AMMONIA",
+    "Name2": "Oxygen",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.118566,
+    "gammaV": 1.000002
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7664-41-7",
+    "CAS2": "7732-18-5",
+    "F": 1.0,
+    "Name1": "AMMONIA",
+    "Name2": "Water",
+    "betaT": 0.933585,
+    "betaV": 1.044759,
+    "function": "Ammonia-Water-EOSCG2021",
+    "gammaT": 1.015826,
+    "gammaV": 1.189754
+  },
+  {
+    "BibTeX": "Neumann-FPE-2020",
+    "CAS1": "1333-74-0",
+    "CAS2": "7664-41-7",
+    "F": 1.0,
+    "Name1": "Hydrogen",
+    "Name2": "AMMONIA",
+    "betaT": 0.98824,
+    "betaV": 1.0103,
+    "function": "Hydrogen-Ammonia-Neumann2020",
+    "gammaT": 1.1266,
+    "gammaV": 0.7298
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7446-09-5",
+    "CAS2": "7440-37-1",
+    "F": 0.0,
+    "Name1": "SO2",
+    "Name2": "Argon",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.14102,
+    "gammaV": 1.021291
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7446-09-5",
+    "CAS2": "630-08-0",
+    "F": 0.0,
+    "Name1": "SO2",
+    "Name2": "CarbonMonoxide",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.177903,
+    "gammaV": 1.007241
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7446-09-5",
+    "CAS2": "1333-74-0",
+    "F": 0.0,
+    "Name1": "SO2",
+    "Name2": "Hydrogen",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.940852,
+    "gammaV": 1.035171
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7647-01-0",
+    "CAS2": "1333-74-0",
+    "F": 0.0,
+    "Name1": "HCL",
+    "Name2": "Hydrogen",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.724556,
+    "gammaV": 1.005948
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7782-50-5",
+    "CAS2": "1333-74-0",
+    "F": 0.0,
+    "Name1": "CHLORINE",
+    "Name2": "Hydrogen",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.914078,
+    "gammaV": 1.03541
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7647-01-0",
+    "CAS2": "7440-37-1",
+    "F": 0.0,
+    "Name1": "HCL",
+    "Name2": "Argon",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.074563,
+    "gammaV": 1.001236
+  },
+  {
+    "BibTeX": "Neumann-IJT-2023",
+    "CAS1": "7647-01-0",
+    "CAS2": "7782-44-7",
+    "F": 0.0,
+    "Name1": "HCL",
+    "Name2": "Oxygen",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.069638,
+    "gammaV": 1.001592
   }
 ]
