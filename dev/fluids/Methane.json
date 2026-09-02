@@ -3991,6 +3991,8 @@
     "viscosity": [
       {
         "BibTeX": "Sotiriadou-IJT-2025-methane",
+        "sigma_eta": 3.758e-10,
+        "epsilon_over_k": 148.6,
         "dilute": {
           "type": "expression",
           "formula": "let L = ln(T/T_ref)\nlet eta0 = eta_ref*exp(sum(i: a[i]*L^ap[i]))\n1e-6*eta0",

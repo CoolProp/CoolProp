@@ -4114,6 +4114,8 @@
     "viscosity": [
       {
         "BibTeX": "Velliadou-IJT-2022-R134a",
+        "sigma_eta": 4.68932e-10,
+        "epsilon_over_k": 299.363,
         "dilute": {
           "type": "expression",
           "formula": "let t3 = T^(1/3)\nlet G = f1*T*exp(-2*t3) + (f2 + f3*exp(-t3))/t3 + f4*exp(-1/t3)\nlet eta0 = sqrt(T)/G\n1e-6*eta0",
