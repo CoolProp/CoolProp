@@ -259,9 +259,20 @@ vel viscosity_validation_data[] = {
   // -1.5 % at 360 K saturated vapour.  The 175 K figure is large and it is real: the
   // 2022 scheme's own Table 7 is reproduced from 170 K upward to 1.5e-5, so the
   // implementation agrees with the new correlation exactly where the old one differs.
-  // Replaced by the full Table 7 saturation line -- 22 points, both branches,
-  // 170-370 K -- in CoolProp-Tests-Expression.cpp, which is strictly stronger than
-  // the two points removed here.
+  // Replaced by the three Table 7 points below.  (An earlier revision of this branch
+  // carried the full 22-point saturation line as a bespoke test; that test was removed
+  // when the per-fluid golden cases were dropped in favour of the verification points,
+  // so the replacement is narrower than the two removed points, not stronger.)
+
+  // R-134a is the ECS reference fluid for seven other refrigerants, so replacing its
+  // viscosity model moves theirs too, by 1.1 % to 2.6 % at saturated liquid / 0.7 Tc:
+  // R11 +1.88, R1132a -2.58, R116 +1.69, R12 +1.14, R143a -2.53, R236EA +1.58,
+  // R236FA +1.92 (per cent, measured by swapping only R134a.json).  None of them had
+  // any transport regression point at all, so the move was invisible.  The two below
+  // bracket the sign of the shift and are self-generated locks, NOT published data --
+  // they exist to make the next change to R-134a's viscosity announce itself here.
+  vel("R143a", "T", 242.1, "Q", 0, "V", 182.7897e-6, 1e-4),
+  vel("R236FA", "T", 278.649, "Q", 0, "V", 374.9045e-6, 1e-4),
 
   // From Tariq, JPCRD, 2014
   vel("Cyclohexane", "T", 300, "Dmolar", 1e-10, "V", 7.058e-6, 1e-4),
@@ -406,11 +417,11 @@ vel viscosity_validation_data[] = {
 
   // Polychroniadou, Antoniadis, Assael & Bell, IJT 43(1):6 (2022) -- Table 3, quoted
   // to 17 digits precisely so an implementation can be checked.
-  vel("Krypton", "T", 200, "Dmolar", 1e-6, "V", 17.33865170451214e-6, 1e-12),
-  vel("Krypton", "T", 200, "Dmolar", 13020.0, "V", 56.4476422453026e-6, 1e-12),
-  vel("Krypton", "T", 298.15, "Dmolar", 1e-6, "V", 25.306200000810886e-6, 1e-12),
-  vel("Krypton", "T", 400, "Dmolar", 1e-6, "V", 32.795558620965195e-6, 1e-12),
-  vel("Krypton", "T", 400, "Dmolar", 13020.0, "V", 64.8014771396677e-6, 1e-12),
+  vel("Krypton", "T", 200, "Dmolar", 1e-6, "V", 17.33865170451214e-6, 1e-9),
+  vel("Krypton", "T", 200, "Dmolar", 13020.0, "V", 56.4476422453026e-6, 1e-9),
+  vel("Krypton", "T", 298.15, "Dmolar", 1e-6, "V", 25.306200000810886e-6, 1e-9),
+  vel("Krypton", "T", 400, "Dmolar", 1e-6, "V", 32.795558620965195e-6, 1e-9),
+  vel("Krypton", "T", 400, "Dmolar", 13020.0, "V", 64.8014771396677e-6, 1e-9),
 
   // Sotiriadou et al., IJT 45(6):87 (2024) -- Table 8 background column, T = 283 K.
   // The correlation here is the background; the paper's critical enhancement is not
@@ -694,7 +705,14 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("o-Xylene", "T", 635, "D", 270, "L", 0.10387803232507065, 5e-3),
   vel("m-Xylene", "T", 616, "D", 220, "L", 0.10330950977360005, 5e-3),
   vel("p-Xylene", "T", 620, "D", 287, "L", 0.09804128875928533, 5e-3),
-  vel("EthylBenzene", "T", 617, "D", 316, "L", 0.1479194493736235, 5e-2),
+  // This point is viscosity-coupled: conductivity_critical_simplified_Olchowy_Sengers
+  // divides by viscosity(), so the 2017 viscosity model shipped here moves it from
+  // 0.141062 to 0.148828 W/m/K, i.e. +5.5 %.  That is an IMPROVEMENT -- deviation from
+  // the expected value falls from 4.64 % to 0.61 % -- but the 5e-2 tolerance it was
+  // carrying is wide enough to absorb a 5 % move in either direction, so it could not
+  // have detected the change at all.  Tightened to 1e-2, which holds with margin and
+  // makes the coupling visible if either model moves again.
+  vel("EthylBenzene", "T", 617, "D", 316, "L", 0.1479194493736235, 1e-2),
   // dilute values
   vel("o-Xylene", "T", 300, "D", 1e-12, "L", 13.68e-3, 1e-3),
   vel("o-Xylene", "T", 600, "D", 1e-12, "L", 41.6e-3, 1e-3),

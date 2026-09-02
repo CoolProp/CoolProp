@@ -4700,6 +4700,8 @@
     "viscosity": [
       {
         "BibTeX": "Sotiriadou-IJT-2023-ethanol",
+        "sigma_eta": 4.53e-10,
+        "epsilon_over_k": 362.6,
         "dilute": {
           "type": "expression",
           "formula": "let Tr = T/T_red\nlet eta0 = sum(i: n[i]*Tr^np[i])/(d0 + Tr)\n1e-6*eta0",

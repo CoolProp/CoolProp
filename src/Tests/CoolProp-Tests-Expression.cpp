@@ -1191,33 +1191,10 @@ TEST_CASE("Argon 2025: end-to-end over the paper's Table 9 grid", "[expression]"
 // SHIPPED CORRELATIONS.  Unlike the nitrogen/argon fixtures above, these
 // live in dev/fluids/*.json and are loaded through the ordinary fluid-data path
 // (JSON -> all_fluids CBOR -> FluidLibrary), so PropsSI("V", ..., "<fluid>") uses
-// them directly.  Purely additive: CoolProp shipped no viscosity for these fluids.
+// them directly.  Nine of the thirteen SUPERSEDE a model CoolProp already shipped
+// (the previous model is preserved behind the new one in the fluid file's viscosity
+// list); the verification points for all of them live in CoolProp-Tests.cpp.
 // ---------------------------------------------------------------------------
-
-// Sotiriadou, Ntonti, Assael, Antoniadis & Huber, Int. J. Thermophys. 45(9):123 (2024),
-// "Correlations for the Viscosity and Thermal Conductivity of Tetrahydrofuran".
-// Viscosity only; the paper's thermal conductivity is not implemented here.
-//
-// Third rational-polynomial dilute term, and a residual (Eq. 8) whose bracket is a
-// polynomial PLUS a ratio of polynomials:
-//   Delta_eta = (rhor^(2/3) Tr^(1/2)) { f0 + f1 Tr + f2 rhor
-//                                       + (f3 + f4 Tr)/(f5 + f6 rhor + rhor^2) }
-// The initial-density term reuses the same universal Vogel/Bich B*(T*) as ethene,
-// xenon and propylene glycol -- that nine-term quarter-power form now serves four
-// fluids and has never needed a code change.
-//
-// TOLERANCE: the checks are against the paper's TABULATED values, and the bound for
-// each point is derived from that point's own printed precision rather than a
-// blanket epsilon.  Both columns matter and neither dominates everywhere:
-//   * eta is printed to 3-5 significant figures, so eta_vap = 10.1 at 350 K carries
-//     5e-3 of rounding on its own, while eta_liq = 2021.1 carries 2.5e-5;
-//   * rho is printed to 5-6 figures, but dln(eta)/dln(rho) reaches 26 in the
-//     saturated liquid at 200 K, which turns 5e-6 of density rounding into 1.3e-4.
-// So the tolerance is halfulp(eta) + the model's own response to halfulp(rho),
-// evaluated point by point.  A single global epsilon would be far too loose for the
-// dense liquid and too tight for the dilute vapour.  All 35 points land inside it,
-// the worst at 0.94 of its bound.
-namespace {}  // namespace
 
 TEST_CASE("Krypton: finite and positive everywhere the state is stable", "[expression][golden]") {
     // An entropy-scaling residual is exp(sum_i d_i (s+)^i), so it CAN overflow where

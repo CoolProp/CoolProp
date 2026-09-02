@@ -5,7 +5,7 @@ expression-DSL fluid data. Each correlation was implemented and then validated a
 the **verification points the paper itself publishes** so that an implementation can be
 checked. Four papers failed that test — not because the correlation is wrong, but
 because the *printed* equation differs from the one that generated the paper's own
-table. In all three cases REFPROP's fluid file carries the form that works.
+table. In all four cases REFPROP's fluid file carries the form that works.
 
 All four are from the same group. The krypton one has a CoolProp maintainer as a
 co-author.
@@ -190,7 +190,7 @@ unreported. Of the four defects, exactly one is a denominator sign.
 
 ## Method note
 
-All three defects were found the same way and none is visible without it: implement
+All four defects were found the same way and none is visible without it: implement
 the correlation, then evaluate it at the points the authors published for exactly this
 purpose. A printed equation that cannot reproduce its own paper's check values is the
 signal. Text extraction of the equations is not a substitute — display equations in

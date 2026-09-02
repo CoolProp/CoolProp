@@ -4445,6 +4445,8 @@
     "viscosity": [
       {
         "BibTeX": "Meng-JPCRD-2017-ethylbenzene",
+        "sigma_eta": 5.781e-10,
+        "epsilon_over_k": 490.05,
         "dilute": {
           "type": "expression",
           "formula": "let S = exp(A0 + B0/T + C0/T^2)\n1e-6*0.22115*sqrt(T)/S",

@@ -4437,6 +4437,8 @@
     "viscosity": [
       {
         "BibTeX": "Monogenidou-JPCRD-2018-ammonia",
+        "sigma_eta": 2.957e-10,
+        "epsilon_over_k": 386,
         "dilute": {
           "type": "expression",
           "formula": "let Ts = T/epsilon_over_k\nlet lnS = sum(i: s[i]*ln(Ts)^sp[i])\n1e-6*Ceta*sqrt(T)/(sigma^2*exp(lnS))",
