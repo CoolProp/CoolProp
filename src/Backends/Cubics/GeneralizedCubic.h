@@ -264,6 +264,49 @@ class AbstractCubic
     }
 
     /**
+     * \brief Throw unless component i's volume translation stays strictly inside its covolume
+     *
+     * The repulsive pole sits at \f$v = b - c\f$, so \f$b - c \le 0\f$ inverts the repulsive
+     * branch -- and the model does NOT then fail loudly: only quantities needing \f$\alpha^r\f$
+     * itself go NaN, while p, h and c_p keep returning finite nonsense.  The invariant therefore
+     * has to be enforced at every mutator that can break it, which is why it lives here on the
+     * data rather than in one caller.  Note \f$b_{0,ii} \propto T_c/p_c\f$, so the Tc and pc
+     * setters break it just as surely as the c setters do.
+     */
+    void require_below_covolume(std::size_t i, double c);
+
+    /**
+     * \brief Refresh everything derived from Tc[i] or pc[i] after either has changed
+     *
+     * a0_ii depends on Tc[i]^2/pc[i] and Tr_over_Tci on T_r/Tc[i], so both are refreshed in the
+     * existing alpha function; b0_ii depends on Tc[i]/pc[i], so its cache entry is marked stale.
+     */
+    void refresh_after_critical_change(std::size_t i) {
+        alpha[i]->set_a0(a0_ii(i));
+        alpha[i]->set_Tr_over_Tci(T_r / Tc[i]);
+        if (i < m_b0_ii_cache.size()) {
+            m_b0_ii_cache_valid[i] = 0;
+        }
+        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate aii cache
+    }
+
+    /**
+     * \brief Undo a Tc/pc change that would have left the covolume at or below the translation
+     *
+     * `slot` is the member that was just written, passed by reference so the restore happens
+     * here rather than being duplicated at both call sites.
+     */
+    void rollback_critical_unless_translation_fits(std::size_t i, double previous, double& slot) {
+        try {
+            require_below_covolume(i, c_translation[i]);
+        } catch (...) {
+            slot = previous;
+            refresh_after_critical_change(i);
+            throw;
+        }
+    }
+
+    /**
      * \brief Set the critical temperature of the i-th component [K]
      *
      * Updates Tc[i], refreshes the alpha function's a0 and Tr/Tci ratio, and
@@ -271,16 +314,10 @@ class AbstractCubic
      * up the new value consistently.
      */
     void set_Tci(std::size_t i, double Tci) {
+        const double previous = Tc[i];
         Tc[i] = Tci;
-        // a0_ii depends on Tc[i]^2/pc[i], and Tr_over_Tci = T_r/Tc[i].
-        // Refresh both in the existing alpha function so its parameters stay consistent.
-        alpha[i]->set_a0(a0_ii(i));
-        alpha[i]->set_Tr_over_Tci(T_r / Tc[i]);
-        // b0_ii depends on Tc[i]/pc[i]; mark the affected entry as stale.
-        if (i < m_b0_ii_cache.size()) {
-            m_b0_ii_cache_valid[i] = 0;
-        }
-        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate aii cache
+        refresh_after_critical_change(i);
+        rollback_critical_unless_translation_fits(i, previous, Tc[i]);
     }
     /**
      * \brief Set the critical pressure of the i-th component [Pa]
@@ -289,14 +326,10 @@ class AbstractCubic
      * cache so that all subsequent evaluations pick up the new value consistently.
      */
     void set_pci(std::size_t i, double pci) {
+        const double previous = pc[i];
         pc[i] = pci;
-        // a0_ii depends on Tc[i]^2/pc[i]; refresh it in the existing alpha function.
-        alpha[i]->set_a0(a0_ii(i));
-        // b0_ii depends on Tc[i]/pc[i]; mark the affected entry as stale.
-        if (i < m_b0_ii_cache.size()) {
-            m_b0_ii_cache_valid[i] = 0;
-        }
-        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate aii cache
+        refresh_after_critical_change(i);
+        rollback_critical_unless_translation_fits(i, previous, pc[i]);
     }
     /// Set the three Mathias-Copeman constants in one shot for the component i of a mixture
     void set_C_MC(std::size_t i, double c1, double c2, double c3) {
@@ -410,13 +443,17 @@ class AbstractCubic
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise
      */
     virtual double d_cm_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent);
-    /// The second composition derivative of \f$c_{\rm m}\f$; identically zero for the linear rule
-    virtual double d2_cm_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent);
-    /// The third composition derivative of \f$c_{\rm m}\f$; identically zero for the linear rule
-    virtual double d3_cm_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
+    // No d2_cm_term_dxidxj / d3_cm_term_dxidxjdxk.  Under the linear rule c_m = sum_i x_i*c_i
+    // they are identically zero, and every consumer (d2_PI_12's T1, d3_PI_12's U2, L_term,
+    // L3_term, d2/d3_psi_minus) folds that zero in by hand.  Declaring them virtual would invite
+    // an override that those hardcoded zeros would then silently ignore.
 
-    /// Set the volume translation of every component to the same value
+    /// Set the volume translation of every component to the same value.  All-or-nothing: every
+    /// component is validated before any is written, so a rejected value leaves c untouched.
     void set_cm(double val) {
+        for (std::size_t i = 0; i < c_translation.size(); ++i) {
+            require_below_covolume(i, val);
+        }
         std::fill(c_translation.begin(), c_translation.end(), val);
     }
     /// Set the volume translation of the i-th component
@@ -424,6 +461,7 @@ class AbstractCubic
         if (i >= c_translation.size()) {
             throw CoolProp::ValueError("index out of range in set_cm");
         }
+        require_below_covolume(i, val);
         c_translation[i] = val;
     }
     /// Get the volume translation of the i-th component
@@ -437,10 +475,15 @@ class AbstractCubic
     const std::vector<double>& get_cm_vector() const {
         return c_translation;
     }
-    /// Set the whole vector of volume translations, for copy propagation
+    /// Set the whole vector of volume translations, for copy propagation.  Also the entry point
+    /// used directly on a bare AbstractCubic -- the HEOS "-SRK"/"-PengRobinson" fluids have no
+    /// backend wrapper to validate on their behalf -- so it checks rather than trusting the donor.
     void set_cm_vector(const std::vector<double>& c) {
         if (c.size() != c_translation.size()) {
             throw CoolProp::ValueError("size mismatch in set_cm_vector");
+        }
+        for (std::size_t i = 0; i < c.size(); ++i) {
+            require_below_covolume(i, c[i]);
         }
         c_translation = c;
     }

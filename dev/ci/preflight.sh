@@ -289,7 +289,16 @@ else
         # is instantiated for PengRobinsonBackend and SRKBackend and finite-
         # differences the whole fugacity chain, so it is where a wrong
         # composition derivative shows up.
-        TAG_FILTER="[cubic],[volume_translation],[mixture_derivs2],[michelsen]"
+        #
+        # The last three are NOT optional and must not be trimmed: GeneralizedCubic
+        # is not reached only through the cubic backends.  HEOS embeds an
+        # AbstractCubic via ResidualHelmholtzGeneralizedCubic -- both from
+        # change_EOS(i,"SRK"/"Peng-Robinson") and from the "-SRK"/"-PengRobinson"
+        # fluid endings -- so alphar of an ordinary HEOS fluid can run straight
+        # through psi_minus/PI_12/A_term.  The tests covering that path carry none
+        # of the four tags above, and before this branch a Cubics change fell
+        # through to the whole "~[slow]" suite and picked them up for free.
+        TAG_FILTER="[cubic],[volume_translation],[mixture_derivs2],[michelsen],[change_EOS],[GERG],[json_validation]"
     else
         # Default: run everything fast (skip the [slow] long tests).
         TAG_FILTER="~[slow]"
