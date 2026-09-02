@@ -3679,6 +3679,7 @@
       },
       "higher_order": {
         "type": "expression",
+        "note": "ERRATUM, paper vs. this implementation: Eq. 6 of Velliadou, Tasidou, Antoniadis, Assael, Perkins & Huber, Int. J. Thermophys. 42(5):74 (2021) prints the third residual term as c1*rho_r^7/Tr; it must be rho_r^12, as used here. As printed, 300 K / 2500 kg/m^3 gives 189.815 uPa.s against the paper's own tabulated 206.449 (8.06 % low). REFPROP's XENON.FLD carries the exponent 12.",
         "formula": "let Tr = T/Tc\nlet rhor = Dmolar/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*(Tr + c0*Tr*rhor^4 + c1*rhor^12/Tr + (c2 + c3*rhor)/Tr^2)",
         "state_variables": [
           "T",
