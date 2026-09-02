@@ -605,7 +605,7 @@ double AbstractCubic::d3_PI_12_dxidxjdxk(double delta, const std::vector<double>
 double AbstractCubic::psi_plus(double delta, const std::vector<double>& x, std::size_t idelta) {
     switch (idelta) {
         case 0:
-            return A_term(delta, x) * c_term(x) / (Delta_1 - Delta_2);
+            return A_term(delta, x) * inv_bm_term(x) / (Delta_1 - Delta_2);
         case 1:
             return rho_r / PI_12(delta, x, 0);
         case 2: {
@@ -628,7 +628,8 @@ double AbstractCubic::psi_plus(double delta, const std::vector<double>& x, std::
 double AbstractCubic::d_psi_plus_dxi(double delta, const std::vector<double>& x, std::size_t idelta, std::size_t i, bool xN_independent) {
     double bracket = 0;
     if (idelta == 0) {
-        return (A_term(delta, x) * d_c_term_dxi(x, i, xN_independent) + c_term(x) * d_A_term_dxi(delta, x, i, xN_independent)) / (Delta_1 - Delta_2);
+        return (A_term(delta, x) * d_inv_bm_term_dxi(x, i, xN_independent) + inv_bm_term(x) * d_A_term_dxi(delta, x, i, xN_independent))
+               / (Delta_1 - Delta_2);
     }
     // All the terms with at least one delta derivative are multiplied by a common term of -rhor/PI12^2
     // So we just evaluate the bracketed term and then multiply by the common factor in the front
@@ -664,9 +665,9 @@ double AbstractCubic::d2_psi_plus_dxidxj(double delta, const std::vector<double>
     double bracket = 0;
     double PI12 = PI_12(delta, x, 0);
     if (idelta == 0) {
-        return (A_term(delta, x) * d2_c_term_dxidxj(x, i, j, xN_independent) + c_term(x) * d2_A_term_dxidxj(delta, x, i, j, xN_independent)
-                + d_A_term_dxi(delta, x, i, xN_independent) * d_c_term_dxi(x, j, xN_independent)
-                + d_A_term_dxi(delta, x, j, xN_independent) * d_c_term_dxi(x, i, xN_independent))
+        return (A_term(delta, x) * d2_inv_bm_term_dxidxj(x, i, j, xN_independent) + inv_bm_term(x) * d2_A_term_dxidxj(delta, x, i, j, xN_independent)
+                + d_A_term_dxi(delta, x, i, xN_independent) * d_inv_bm_term_dxi(x, j, xN_independent)
+                + d_A_term_dxi(delta, x, j, xN_independent) * d_inv_bm_term_dxi(x, i, xN_independent))
                / (Delta_1 - Delta_2);
     }
     // All the terms with at least one delta derivative have a common factor of -1/PI_12^2 out front
@@ -728,14 +729,14 @@ double AbstractCubic::d3_psi_plus_dxidxjdxk(double delta, const std::vector<doub
     double PI12 = PI_12(delta, x, 0);
     switch (idelta) {
         case 0:
-            return (A_term(delta, x) * d3_c_term_dxidxjdxk(x, i, j, k, xN_independent)
-                    + c_term(x) * d3_A_term_dxidxjdxk(delta, x, i, j, k, xN_independent)
-                    + d_A_term_dxi(delta, x, i, xN_independent) * d2_c_term_dxidxj(x, j, k, xN_independent)
-                    + d_A_term_dxi(delta, x, j, xN_independent) * d2_c_term_dxidxj(x, i, k, xN_independent)
-                    + d_A_term_dxi(delta, x, k, xN_independent) * d2_c_term_dxidxj(x, i, j, xN_independent)
-                    + d_c_term_dxi(x, i, xN_independent) * d2_A_term_dxidxj(delta, x, j, k, xN_independent)
-                    + d_c_term_dxi(x, j, xN_independent) * d2_A_term_dxidxj(delta, x, i, k, xN_independent)
-                    + d_c_term_dxi(x, k, xN_independent) * d2_A_term_dxidxj(delta, x, i, j, xN_independent))
+            return (A_term(delta, x) * d3_inv_bm_term_dxidxjdxk(x, i, j, k, xN_independent)
+                    + inv_bm_term(x) * d3_A_term_dxidxjdxk(delta, x, i, j, k, xN_independent)
+                    + d_A_term_dxi(delta, x, i, xN_independent) * d2_inv_bm_term_dxidxj(x, j, k, xN_independent)
+                    + d_A_term_dxi(delta, x, j, xN_independent) * d2_inv_bm_term_dxidxj(x, i, k, xN_independent)
+                    + d_A_term_dxi(delta, x, k, xN_independent) * d2_inv_bm_term_dxidxj(x, i, j, xN_independent)
+                    + d_inv_bm_term_dxi(x, i, xN_independent) * d2_A_term_dxidxj(delta, x, j, k, xN_independent)
+                    + d_inv_bm_term_dxi(x, j, xN_independent) * d2_A_term_dxidxj(delta, x, i, k, xN_independent)
+                    + d_inv_bm_term_dxi(x, k, xN_independent) * d2_A_term_dxidxj(delta, x, i, j, xN_independent))
                    / (Delta_1 - Delta_2);
         case 1:
             return -1 / pow(PI12, 2)
