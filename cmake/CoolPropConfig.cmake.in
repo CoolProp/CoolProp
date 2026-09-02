@@ -1,0 +1,35 @@
+@PACKAGE_INIT@
+
+if(@COOLPROP_PACKAGE_HAS_STATIC@)
+  include(CMakeFindDependencyMacro)
+  find_dependency(Threads)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/CoolPropTargets.cmake")
+
+set(CoolProp_VERSION "@COOLPROP_VERSION_NUMERIC@")
+set(CoolProp_STATIC_AVAILABLE @COOLPROP_PACKAGE_HAS_STATIC@)
+set(CoolProp_SHARED_AVAILABLE @COOLPROP_PACKAGE_HAS_SHARED@)
+set(CoolProp_Static_FOUND ${CoolProp_STATIC_AVAILABLE})
+set(CoolProp_Shared_FOUND ${CoolProp_SHARED_AVAILABLE})
+
+# Single-variant builds export the real library as CoolProp::CoolProp to keep
+# the historical build target name stable.  Supply the corresponding explicit
+# linkage target as a small imported wrapper.  Dual builds export these targets
+# directly, so the guards leave them untouched.
+if(CoolProp_STATIC_AVAILABLE AND NOT TARGET CoolProp::Static)
+  add_library(CoolProp::Static INTERFACE IMPORTED)
+  set_property(TARGET CoolProp::Static PROPERTY INTERFACE_LINK_LIBRARIES
+                                                CoolProp::CoolProp)
+endif()
+
+if(CoolProp_SHARED_AVAILABLE AND NOT TARGET CoolProp::Shared)
+  add_library(CoolProp::Shared INTERFACE IMPORTED)
+  set_property(TARGET CoolProp::Shared PROPERTY INTERFACE_LINK_LIBRARIES
+                                                CoolProp::CoolProp)
+endif()
+
+set_and_check(CoolProp_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+set(CoolProp_LIBRARIES CoolProp::CoolProp)
+
+check_required_components(CoolProp)

@@ -6,6 +6,12 @@ Changelog for CoolProp
 
 Breaking Changes:
 
+* **CMake library consumers and packagers:** the minimum supported CMake
+  version is now 3.15.  The exported library targets model CoolProp's C++17,
+  header, and link requirements, and nested ``add_subdirectory`` /
+  ``FetchContent`` builds no longer add CoolProp install rules by default.
+  See the detailed CMake behavior changes below.
+
 * Reintroduced Java wrapper compilation. Java classes generated have been moved from default package, to "org.coolprop" package, in line with Java convention and recommended practice. Applications that previously used the Java wrappers will need to update their import references for CoolProp classes if switching to this version. Java wrappers are built with target Java 11, as Java 8 support has been deprecated. A JDK 11+ must be used to compile using these wrappers.
 
 Highlights:
@@ -30,6 +36,16 @@ Highlights:
 
   The critical enhancement is not included for any of them; the correlations are the
   background viscosity, which is what the comparisons above are against.
+
+* **Relocatable CMake package.** See GitHub issue `#2144
+  <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
+  CoolProp libraries can now be built and installed in one build. Installation
+  exports the config-mode targets ``CoolProp::CoolProp``,
+  ``CoolProp::Static``, and ``CoolProp::Shared`` and supports relocation of the
+  installed prefix. In a dual build the producer-side
+  ``COOLPROP_DEFAULT_LIBRARY`` setting selects the variant exported through
+  ``CoolProp::CoolProp``; that choice is baked into the package, while
+  consumers can select either explicit variant target.
 
 * Added the :doc:`GERG-2004 and GERG-2008 </coolprop/GERG>` wide-range equations of state for natural gases as two new *strict* backend families (``GERG2004::...``, ``GERG2008::...``).  Strict means the backends admit only the 18 / 21 components each model publishes, carry only that model's own pure-fluid EOS, ideal-gas coefficients, binary reducing parameters and departure functions, use GERG's ``R = 8.314472 J/mol/K`` rather than the CODATA value, and throw rather than answer from a different model — transport properties, superancillaries, and mutable binary interaction parameters are all deliberately unavailable.  Validated against `teqp <https://github.com/usnistgov/teqp>`_ at relative tolerances of 1e-12 on the Helmholtz energies and 1e-10 on pressure, isochoric heat capacity and speed of sound.  See the :doc:`GERG documentation </coolprop/GERG>` for the component tables, the enforced range of validity, the reference-state convention (``h = s = 0`` for the **ideal gas** at 298.15 K / 101325 Pa, which differs from every other CoolProp backend), and the known limitations.  GERG publishes no acentric factor, which CoolProp's VLE and density guess machinery needs; rather than borrow one from a different equation of state, the backends **derive** it from GERG's own equation as :math:`\omega = -1 - \log_{10}(p_{sat}(0.7 T_c)/p_c)` with a converged saturation solve.  Mixture saturation, phase envelopes, VLE flashes and ``DmolarP`` therefore all work.  One limitation deserves calling out here: for **pure** GERG fluids the pressure-plus-caloric input pairs (``HmolarP``, ``PSmolar``, ``PUmolar``) do not work **at all** — through ``PropsSI`` they return ``inf`` plus an error string rather than raising.  That has two separate causes, neither of them the acentric factor: GERG publishes no triple point either, so the flash's temperature bracket falls back to the model's ``Tmin`` instead of the saturation temperature; and the bracket's upper end (1.5x ``Tmax``) is outside the range the backend enforces.  Use ``PT``, ``DmolarT`` or ``DmolarP`` inputs for pure GERG fluids, or ``HEOS`` when you need a caloric input pair.
 * Added wasm32 Python wheels for the Pyodide runtime. These wheels are compatible with Pyodide 0.28.x and later. See the :ref:`Python wrapper docs <python_wasm_demo>` for an example of using these wheels in a browser environment.
@@ -64,6 +80,56 @@ Highlights:
   There is no version gate and no compatibility shim: a third-party expression
   block written against the previous format fails when the fluid is loaded, with a
   message naming the available set.  Blocks shipped with CoolProp are unaffected.
+
+* **CMake library and package integration.** See GitHub issue `#2144
+  <https://github.com/CoolProp/CoolProp/issues/2144>`_.
+
+  - Library targets now propagate ``cxx_std_17`` to C++ compilation units. A
+    downstream target configured for C++11 or C++14 can therefore be promoted
+    to C++17; pure-C consumers are unaffected.
+  - On Windows, ``CoolProp::Shared`` propagates
+    ``COOLPROP_SHARED_LIBRARY_USE``. ``CoolPropLib.h`` consequently declares
+    the C API with ``__declspec(dllimport)``, C linkage, and the calling
+    convention selected when CoolProp was built. Hand-written declarations
+    must use the same convention. Caller-defined ``EXPORT_CODE`` and
+    ``CONVENTION`` macros now remain authoritative when ``EXTERNC`` or
+    ``__powerpc__`` is defined; Windows ``EXTERNC`` builds also retain their
+    symbol-visibility decoration rather than discarding it.
+  - Nested ``add_subdirectory`` / ``FetchContent`` builds leave
+    ``COOLPROP_INSTALL_CMAKE_PACKAGE`` and
+    ``COOLPROP_INSTALL_LEGACY_LAYOUT`` disabled by default and no longer change
+    the parent project's install prefix. A parent which intentionally packages
+    CoolProp must enable the desired install option explicitly.
+  - Build-tree consumers receive the supported ``include/CoolProp`` public
+    header tree plus the Eigen and fmt usage requirements, rather than every
+    source, development, and third-party include directory used internally by
+    CoolProp. Code which included CoolProp's non-public in-tree headers must
+    now provide those unsupported include paths itself.
+  - The installed package carries the pinned Eigen and fmt headers required by
+    CoolProp's public C++ headers under ``include/CoolProp/third_party`` and
+    publishes those directories as SYSTEM usage requirements. A downstream
+    project which also exposes a different Eigen or fmt revision must avoid
+    mixing both revisions in one program.
+  - An explicitly supplied top-level ``CMAKE_INSTALL_PREFIX`` is now honored.
+    With no explicit prefix, a top-level CoolProp build keeps the historical
+    ``<source>/install_root`` default; when CMake-package installation is
+    enabled that tree can additionally contain the conventional ``bin``,
+    ``lib``, ``include``, ``lib/cmake/CoolProp``, and ``share/licenses``
+    directories, as applicable to the selected library variants.
+  - MSVC runtime selection is target-local for CoolProp libraries and linked
+    in-tree executables. ``COOLPROP_MSVC_STATIC`` and
+    ``COOLPROP_MSVC_DYNAMIC`` no longer rewrite the global C and C++ flags of
+    unrelated targets in a parent build. Debug configurations always use the
+    corresponding debug CRT; the legacy ``COOLPROP_MSVC_DEBUG`` option remains
+    accepted but no longer changes that selection.
+  - Configuring a CoolProp library requires CMake's ``Threads`` package. The
+    installed static target records that link dependency; a shared-only
+    installed package does not impose it on consumers.
+  - In a dual static/shared producer build, the un-namespaced ``CoolProp``
+    build-tree target is an INTERFACE selector and is not itself a build-system
+    target. Build the normal ``all`` target or the concrete
+    ``CoolProp_static`` / ``CoolProp_shared`` target instead of invoking
+    ``cmake --build ... --target CoolProp``.
 
 * **Compositions with two or more exactly-zero mole fractions no longer return
   NaN for the bulk properties.**  ``GERG2008ReducingFunction::f_Y_ij``
