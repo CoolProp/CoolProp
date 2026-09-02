@@ -481,7 +481,7 @@ class AbstractCubic
      * \param x The vector of mole fractions
      * \param idelta How many derivatives to take with respect to \f$\delta\f$
      *
-     * \f[ \Pi_{12} = (1+\Delta_1\bm\rhor \delta)(1+\Delta_2\bm\rhor \delta) \f]
+     * \f[ \Pi_{12} = (1+(\Delta_1 b_m + c_m)\rho_r \delta)(1+(\Delta_2 b_m + c_m)\rho_r \delta) \f]
      */
     double PI_12(double delta, const std::vector<double>& x, std::size_t idelta);
     /**
@@ -561,7 +561,7 @@ class AbstractCubic
      * \param x The vector of mole fractions
      * \param idelta How many derivatives to take with respect to \f$\delta\f$
      *
-     * \f[  \psi^{(+)} = \dfrac{\ln\left(\dfrac{\Delta_1\bm\rhor \delta+1}{\Delta_2\bm\rhor \delta+1}\right)}{\bm(\Delta_1-\Delta_2)}  \f]
+     * \f[  \psi^{(+)} = \dfrac{\ln\left(\dfrac{(\Delta_1 b_m + c_m)\rho_r \delta+1}{(\Delta_2 b_m + c_m)\rho_r \delta+1}\right)}{b_m(\Delta_1-\Delta_2)}  \f]
      */
     double psi_plus(double delta, const std::vector<double>& x, std::size_t idelta);
     /**
@@ -651,7 +651,7 @@ class AbstractCubic
      * \brief The term \f$A\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
      *
      * \f[
-     * A = \log\left(\frac{\Delta_1\delta\rho_r b_m+1}{\Delta_2\delta\rho_r b+1}\right)
+     * A = \log\left(\frac{(\Delta_1 b_m + c_m)\delta\rho_r+1}{(\Delta_2 b_m + c_m)\delta\rho_r+1}\right)
      * \f]
      *
      * \param delta The reduced density \f$\delta = \frac{\rho}{\rho_c}\f$

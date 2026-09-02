@@ -380,6 +380,11 @@ double AbstractCubic::aij_term(double tau, std::size_t i, std::size_t j, std::si
     }
 }
 double AbstractCubic::psi_minus(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta) {
+    // This early return -- and the absence of any tau derivatives in psi_plus -- IS the assumption
+    // that the volume translation is temperature-independent.  A c(T) would make psi_minus a
+    // function of tau and every one of these would need a chain-rule term.  That is deliberate:
+    // temperature-dependent translations cost the caloric invariances (s, u, cp, cv all move) and
+    // are documented to produce crossing isotherms and negative heat capacities.
     if (itau > 0) return 0.0;
     double bmc = bm_term(x) - cm_term();  // appears only in the form (b-c) in the equations
     double bracket = 1 - bmc * delta * rho_r;

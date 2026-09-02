@@ -303,6 +303,14 @@ else
         # exclusion, so 6 [slow]-tagged cases are in scope — but they came in
         # with [REFPROP] already, not with this widening.
         TAG_FILTER="[Helmholtz],[REFPROP],[flash],[mixture]"
+    elif printf '%s\n' "$ALL_PATHS" | grep -qE "^src/Backends/Cubics/"; then
+        # Cubic backends touched.  [cubic] is the umbrella (every [cubic_*]
+        # test now carries it too — Catch2 tags are exact-match, not prefix).
+        # [mixture_derivs2] is the composition-derivative gate: DerivativeFixture
+        # is instantiated for PengRobinsonBackend and SRKBackend and finite-
+        # differences the whole fugacity chain, so it is where a wrong
+        # composition derivative shows up.
+        TAG_FILTER="[cubic],[volume_translation],[mixture_derivs2],[michelsen]"
     else
         # Default: run everything fast (skip the [slow] long tests).
         TAG_FILTER="~[slow]"
