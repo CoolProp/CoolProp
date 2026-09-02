@@ -272,46 +272,58 @@ which collapses to the linear form above -- so there is no :math:`c_{ij}` to fit
 What changes and what does not
 ------------------------------
 
-A constant translation is *not* a fudge factor applied to one output; it changes some properties by
-an exactly predictable amount and leaves others untouched.  The table below follows Jaubert et al.
-:cite:`Jaubert-FPE-2016` and Privat et al. :cite:`Privat-FPE-2016` and is pinned by the test suite 
-at round-off level.
+A constant translation is *not* a fudge factor applied to one output; at fixed :math:`T`, :math:`p`
+and composition it changes some properties by an exactly predictable amount and leaves others
+untouched.  The table below follows Jaubert et al. :cite:`Jaubert-FPE-2016` and Privat et al.
+:cite:`Privat-FPE-2016` and additionally includes the Joule-Thomson coefficient :math:`\mu_{\mathrm{JT}}`.
 
-=====================================================  =============================================
-Quantity                                               Effect of the translation
-=====================================================  =============================================
-:math:`v`                                              :math:`v - c_m(\mathbf{z})`
-:math:`h`, :math:`g`                                   shifted by :math:`-p\,c_m(\mathbf{z})`
-:math:`\mu_i`                                          shifted by :math:`-p\,c_i`, using the
-                                                       **pure-component** :math:`c_i`
-:math:`\ln \varphi_i`                                  shifted by :math:`-p\,c_i/(RT)`, the same
-                                                       pure-component :math:`c_i`
-:math:`B` (second virial coefficient)                  :math:`B - c_m(\mathbf{z})`
-:math:`s`, :math:`u`, :math:`a`, :math:`c_p`,          **unchanged**
-:math:`c_v`
-:math:`-(\partial v/\partial p)_T`,                    **unchanged**
-:math:`(\partial v/\partial T)_p`
-:math:`p^{\mathrm{sat}}`, :math:`p_{\mathrm{bub}}`,    **unchanged**
-:math:`p_{\mathrm{dew}}`, :math:`K_i`, phase
-compositions
-:math:`w` (speed of sound)                             **changes** (:math:`w^2 \propto v^2`)
-:math:`\Delta_{\mathrm{vap}} S`,                       **unchanged**
-:math:`\Delta_{\mathrm{vap}} U`,
-:math:`\Delta_{\mathrm{vap}} A`,
-:math:`\Delta_{\mathrm{vap}} c_p`,
-:math:`\Delta_{\mathrm{vap}} c_v`
-:math:`\Delta_{\mathrm{vap}} V`,                       unchanged for a pure fluid; for a mixture
-:math:`\Delta_{\mathrm{vap}} H`                        shifted by
-                                                       :math:`-[c_m(\mathbf{y})-c_m(\mathbf{x})]`
-                                                       and
-                                                       :math:`-p[c_m(\mathbf{y})-c_m(\mathbf{x})]`
-=====================================================  =============================================
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
 
-Two consequences are worth spelling out.  Because :math:`\ln \varphi_i` shifts by the same amount in
+   * - Quantity
+     - Effect of the translation
+   * - :math:`v`
+     - shifted by :math:`- c_m(\mathbf{z})`
+   * - :math:`h`, :math:`g`
+     - shifted by :math:`-p\,c_m(\mathbf{z})`
+   * - :math:`\mu_i`
+     - shifted by :math:`-p\,c_i`, using the pure-component :math:`c_i`
+   * - :math:`\ln \varphi_i`
+     - shifted by :math:`-p\,c_i/(RT)`, the same pure-component :math:`c_i`
+   * - :math:`B` (second virial coefficient)
+     - :math:`B - c_m(\mathbf{z})`
+   * - :math:`Z = pv/(RT)`
+     - shifted by :math:`-p\,c_m(\mathbf{z})/(RT)`
+   * - :math:`\mu_{\mathrm{JT}} = (\partial T/\partial p)_h`
+     - | shifted by :math:`+c_m(\mathbf{z})/c_p` 
+       | due to :math:`\mu_{\mathrm{JT}} = [T(\partial v/\partial T)_p - v]/c_p`
+   * - :math:`w` (speed of sound)
+     - changes (:math:`w^2 \propto v^2`)
+   * - :math:`s`, :math:`u`, :math:`a`, :math:`c_p`, :math:`c_v`
+     - **unchanged**
+   * - :math:`-(\partial v/\partial p)_T`,
+       :math:`(\partial v/\partial T)_p`
+     - **unchanged**
+   * - :math:`p^{\mathrm{sat}}`, :math:`p_{\mathrm{bub}}`,
+       :math:`p_{\mathrm{dew}}`, :math:`K_i`, :math:`\mathbf{x}`, :math:`\mathbf{y}`
+     - **unchanged**
+   * - :math:`\Delta_{\mathrm{vap}} S`, :math:`\Delta_{\mathrm{vap}} U`,
+       :math:`\Delta_{\mathrm{vap}} A`, :math:`\Delta_{\mathrm{vap}} c_p`,
+       :math:`\Delta_{\mathrm{vap}} c_v`
+     - **unchanged**
+   * - :math:`\Delta_{\mathrm{vap}} V`, :math:`\Delta_{\mathrm{vap}} H`
+     - unchanged for a pure fluid; for a mixture shifted by
+       :math:`-[c_m(\mathbf{y})-c_m(\mathbf{x})]` and
+       :math:`-p[c_m(\mathbf{y})-c_m(\mathbf{x})]`
+
+Anything containing :math:`v` explicitly changes, unless two such quantities are subtracted at the same 
+composition, which is why all :math:`\Delta_{\mathrm{vap}}` rows survive for a pure fluid. 
+Because :math:`\ln \varphi_i` shifts by the same amount in
 both phases at the same :math:`(T,p)`, the shift cancels in the equifugacity condition: **VLE is
-invariant for arbitrary, unequal** :math:`c_i`, not merely for equal ones.  And because the two
-coexisting phases have different compositions, :math:`\Delta_{\mathrm{vap}} V` and
-:math:`\Delta_{\mathrm{vap}} H` are the one place a mixture behaves differently from a pure fluid.
+invariant for arbitrary** :math:`c_i`.  And because the two coexisting phases have different compositions, 
+:math:`\Delta_{\mathrm{vap}} V` and :math:`\Delta_{\mathrm{vap}} H` are the one place a mixture behaves 
+differently from a pure fluid.
 
 .. warning:: CoolProp implements a **temperature-independent** :math:`c` only.  A :math:`c(T)` would
              break most of the "unchanged" rows above -- it perturbs :math:`s`, :math:`u`,
@@ -321,11 +333,22 @@ coexisting phases have different compositions, :math:`\Delta_{\mathrm{vap}} V` a
 Setting the translation
 -----------------------
 
-:math:`c` is a per-component fluid parameter, in m\ :sup:`3`/mol, reached through
+:math:`c` is a per-component fluid parameter, in m\ :sup:`3`/mol and is :math:`0` by default 
+(no volume translation).  It can be set and retrieved with
 :cpapi:`set_fluid_parameter_double <CoolProp::AbstractState::set_fluid_parameter_double>` and
 :cpapi:`get_fluid_parameter_double <CoolProp::AbstractState::get_fluid_parameter_double>` under the
 names ``c``, ``cm`` or ``c_m``.  When setting, the spelling ``c_all`` broadcasts one value to
 every component; reading back always names a component, through ``c``/``cm``/``c_m``.
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+
+    In [0]: AS = CP.AbstractState("PR", "n-Propane")
+
+    In [0]: AS.set_fluid_parameter_double(0, "cm", -3.7e-6)
+
+    In [0]: AS.get_fluid_parameter_double(0, "cm")
 
 Setting a value that would drive :math:`b_i - c_i \le 0` raises a ``ValueError``, since past that
 point the repulsive pole moves through the liquid branch and the model returns finite nonsense
@@ -337,16 +360,6 @@ change is rolled back if it would invalidate a translation already in place.
              rule :math:`b_{ij} = ((b_i^{3/4} + b_j^{3/4})/2)^{4/3}` is sub-linear, so
              :math:`b_m \le \sum_i x_i b_i` while :math:`c_m` stays linear.  Per-component values
              that each pass can therefore still give :math:`b_m - c_m \le 0` at some compositions.
-
-.. ipython::
-
-    In [0]: import CoolProp.CoolProp as CP
-
-    In [0]: AS = CP.AbstractState("PR", "n-Propane")
-
-    In [0]: AS.set_fluid_parameter_double(0, "cm", -3.7e-6)
-
-    In [0]: AS.get_fluid_parameter_double(0, "cm")
 
 
 Adding your own fluids
