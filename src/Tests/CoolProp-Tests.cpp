@@ -4474,7 +4474,7 @@ TEST_CASE("REFPROP melting_line honors iP_min/iT_min/iP_max/iT_max sentinels", "
 }
 
 // Tests for cubic EOS superancillaries (#2739)
-TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[cubic_superanc][2739]") {
+TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[cubic][cubic_superanc][2739]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
@@ -4532,7 +4532,7 @@ TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[c
     }
 }
 
-TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic_superanc][2739]") {
+TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superanc][2739]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
@@ -4566,7 +4566,7 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic_superanc][2739
     }
 }
 
-TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic_DmolarT][2673]") {
+TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic][cubic_DmolarT][2673]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "nButane"));
@@ -4638,7 +4638,7 @@ TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic_DmolarT][2
 // Tests for set_fluid_parameter_double("Tcrit"/"pcrit") on cubic backends
 // ============================================================================
 
-TEST_CASE("Cubic set/get Tc and pc via set_fluid_parameter_double", "[cubic_Tcpc]") {
+TEST_CASE("Cubic set/get Tc and pc via set_fluid_parameter_double", "[cubic][cubic_Tcpc]") {
     // Use PR backend with propane as a representative pure fluid
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("PR", "Propane"));
     AbstractCubicBackend* raw = dynamic_cast<AbstractCubicBackend*>(AS.get());
