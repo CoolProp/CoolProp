@@ -385,7 +385,7 @@ TEST_CASE("Cubic volume translation: survives get_copy", "[cubic][volume_transla
         std::shared_ptr<HelmholtzEOSMixtureBackend> clone(cb.get_copy(true));
         auto* clone_cb = dynamic_cast<AbstractCubicBackend*>(clone.get());
         REQUIRE(clone_cb != nullptr);
-        CHECK(clone_cb->get_cubic()->get_cm() == Catch::Approx(c).epsilon(1e-15));
+        CHECK(clone_cb->get_cubic()->get_cm(0) == Catch::Approx(c).epsilon(1e-15));
 
         // SatL/SatV of the clone must agree too, or a saturation call on the copy silently mixes a
         // translated parent with untranslated daughters.
@@ -463,6 +463,148 @@ TEST_CASE("Cubic volume translation: spinodal translates", "[cubic][volume_trans
 }
 
 // ============================================================================================
+// Mixtures
+//
+// The mixture column of the invariance table.  Two things differ from a pure fluid.  First the
+// shifts are in c_m(z) = sum_i x_i c_i, EXCEPT ln(phi_i), which shifts by the PURE-component c_i --
+// that is what makes the equifugacity condition cancel, and hence what makes VLE invariant for
+// ARBITRARY c_i and not merely for equal ones.  Second, the property changes on vaporisation split:
+// the two coexisting phases have different compositions, so c_m(y) != c_m(x) unless every c_i is
+// equal, and Dvap V and Dvap H inherit that difference while Dvap S, U and A do not.
+// ============================================================================================
+
+namespace {
+
+const char* kMixture = "Methane&Ethane&n-Propane";
+
+/// Distinct per-component translations with mixed signs -- the case that a scalar c cannot express
+/// and that only a correct dc_m/dx_i chain gets right.  Well inside methane's covolume (~2.7e-5).
+const std::vector<double>& mixture_c() {
+    static const std::vector<double> v{2.5e-6, -1.5e-6, 4.0e-6};
+    return v;
+}
+
+ASptr make_mixture(const std::string& backend, const std::vector<double>& z, const std::vector<double>& c) {
+    ASptr AS(AbstractState::factory(backend, kMixture));
+    for (std::size_t i = 0; i < c.size(); ++i) {
+        if (c[i] != 0.0) {
+            AS->set_fluid_parameter_double(i, "cm", c[i]);
+        }
+    }
+    AS->set_mole_fractions(std::vector<CoolPropDbl>(z.begin(), z.end()));
+    return AS;
+}
+
+double cm_of(const std::vector<double>& z, const std::vector<double>& c) {
+    double s = 0;
+    for (std::size_t i = 0; i < z.size(); ++i) {
+        s += z[i] * c[i];
+    }
+    return s;
+}
+
+}  // namespace
+
+TEST_CASE("Cubic volume translation: mixture single-phase invariances", "[cubic][volume_translation][mixture]") {
+    const std::vector<double> z{0.30, 0.35, 0.35};
+    const std::vector<double> c = mixture_c();
+    const double cm = cm_of(z, c);
+    const double R = 8.31446261815324;
+
+    for (const auto& backend : cubic_backends()) {
+        CAPTURE(backend);
+        ASptr ref = make_mixture(backend, z, {0.0, 0.0, 0.0});
+        ASptr trn = make_mixture(backend, z, c);
+
+        // A single-phase state well away from the dome, so the PT flash returns a root rather than
+        // a phase split whose composition would differ between the two runs.
+        for (double T : {320.0, 450.0}) {
+            for (double p : {5e6, 2e7}) {
+                CAPTURE(T);
+                CAPTURE(p);
+                REQUIRE_NOTHROW(ref->update(PT_INPUTS, p, T));
+                REQUIRE_NOTHROW(trn->update(PT_INPUTS, p, T));
+
+                CHECK(close_to(1.0 / trn->rhomolar(), 1.0 / ref->rhomolar() - cm, 1e-9, 1e-18));
+                CHECK(close_to(trn->hmolar(), ref->hmolar() - p * cm, 1e-9, 1e-8));
+                CHECK(close_to(trn->gibbsmolar(), ref->gibbsmolar() - p * cm, 1e-9, 1e-8));
+                CHECK(close_to(trn->smolar(), ref->smolar(), 1e-9, 1e-10));
+                CHECK(close_to(trn->umolar(), ref->umolar(), 1e-9, 1e-8));
+                CHECK(close_to(trn->helmholtzmolar(), ref->helmholtzmolar(), 1e-9, 1e-8));
+                CHECK(close_to(trn->cpmolar(), ref->cpmolar(), 1e-9, 1e-10));
+                CHECK(close_to(trn->cvmolar(), ref->cvmolar(), 1e-9, 1e-10));
+                CHECK(
+                  close_to(trn->isothermal_compressibility() / trn->rhomolar(), ref->isothermal_compressibility() / ref->rhomolar(), 1e-9, 1e-25));
+                CHECK(close_to(trn->isobaric_expansion_coefficient() / trn->rhomolar(), ref->isobaric_expansion_coefficient() / ref->rhomolar(), 1e-9,
+                               1e-20));
+
+                // The one that needs the PURE-component c_i, not c_m -- and the one that the
+                // d_A_term_dxi defect got wrong.
+                for (std::size_t i = 0; i < z.size(); ++i) {
+                    CAPTURE(i);
+                    CHECK(close_to(std::log(trn->fugacity_coefficient(i)), std::log(ref->fugacity_coefficient(i)) - p * c[i] / (R * T), 1e-8, 1e-10));
+                }
+
+                CHECK(std::abs(trn->speed_sound() / ref->speed_sound() - 1.0) > 1e-6);
+            }
+        }
+    }
+}
+
+TEST_CASE("Cubic volume translation: mixture VLE is invariant for arbitrary c_i", "[cubic][volume_translation][mixture]") {
+    // The headline mixture result.  ln(phi_i) shifts by -P*c_i/(RT), which is the SAME in both
+    // phases at the same (T, P), so it cancels in the equifugacity condition regardless of whether
+    // the c_i are equal.  Bubble and dew pressures and all K-values must therefore be untouched.
+    //
+    // This is the case that fails on the unfixed A_term derivatives: with c = 1e-5 on a
+    // methane/n-decane pair the bubble pressure moved from 10.20 MPa to 6.87 MPa.
+    const std::vector<double> z{0.30, 0.35, 0.35};
+    const std::vector<double> c = mixture_c();
+
+    for (const auto& backend : cubic_backends()) {
+        CAPTURE(backend);
+        for (double T : {220.0, 250.0}) {
+            CAPTURE(T);
+            for (int Q : {0, 1}) {
+                CAPTURE(Q);
+                ASptr ref = make_mixture(backend, z, {0.0, 0.0, 0.0});
+                ASptr trn = make_mixture(backend, z, c);
+                REQUIRE_NOTHROW(ref->update(QT_INPUTS, Q, T));
+                REQUIRE_NOTHROW(trn->update(QT_INPUTS, Q, T));
+
+                CHECK(close_to(trn->p(), ref->p(), 1e-6, 1.0));
+
+                const std::vector<CoolPropDbl> xr = ref->mole_fractions_liquid(), yr = ref->mole_fractions_vapor();
+                const std::vector<CoolPropDbl> xt = trn->mole_fractions_liquid(), yt = trn->mole_fractions_vapor();
+                REQUIRE(xr.size() == xt.size());
+                for (std::size_t i = 0; i < xr.size(); ++i) {
+                    CAPTURE(i);
+                    CHECK(close_to(xt[i], xr[i], 1e-6, 1e-9));
+                    CHECK(close_to(yt[i], yr[i], 1e-6, 1e-9));
+                    // K-values are what a flash actually consumes.
+                    CHECK(close_to(yt[i] / xt[i], yr[i] / xr[i], 1e-6, 1e-9));
+                }
+
+                // Property changes on vaporisation.  S, U and A survive because the c-dependent
+                // parts cancel between h, P*v and T*s; V and H carry the composition difference in
+                // c_m, which is nonzero precisely because the c_i differ.
+                const double dcm = cm_of(std::vector<double>(yr.begin(), yr.end()), c) - cm_of(std::vector<double>(xr.begin(), xr.end()), c);
+                CAPTURE(dcm);
+                const auto dvap = [](AbstractState& S, parameters key) {
+                    return S.saturated_vapor_keyed_output(key) - S.saturated_liquid_keyed_output(key);
+                };
+                CHECK(close_to(dvap(*trn, iSmolar), dvap(*ref, iSmolar), 1e-6, 1e-8));
+                CHECK(close_to(dvap(*trn, iUmolar), dvap(*ref, iUmolar), 1e-6, 1e-6));
+                const double dV_ref = 1.0 / ref->saturated_vapor_keyed_output(iDmolar) - 1.0 / ref->saturated_liquid_keyed_output(iDmolar);
+                const double dV_trn = 1.0 / trn->saturated_vapor_keyed_output(iDmolar) - 1.0 / trn->saturated_liquid_keyed_output(iDmolar);
+                CHECK(close_to(dV_trn, dV_ref - dcm, 1e-6, 1e-15));
+                CHECK(close_to(dvap(*trn, iHmolar), dvap(*ref, iHmolar) - ref->p() * dcm, 1e-6, 1e-6));
+            }
+        }
+    }
+}
+
+// ============================================================================================
 // Composition derivatives
 //
 // These operate on a bare AbstractCubic rather than through a backend, for two reasons: the
@@ -486,7 +628,7 @@ struct CompDerivCase
     double tau = 1.0 / 250.0;
 };
 
-CompDerivCase make_comp_case(const std::string& which, double cm) {
+CompDerivCase make_comp_case(const std::string& which, const std::vector<double>& cvec) {
     const std::vector<double> Tc{190.564, 305.322, 369.89};
     const std::vector<double> pc{4.5992e6, 4.8722e6, 4.2512e6};
     const std::vector<double> acentric{0.01142, 0.0995, 0.1521};
@@ -497,8 +639,21 @@ CompDerivCase make_comp_case(const std::string& which, double cm) {
     } else {
         c.cubic = std::make_shared<SRK>(Tc, pc, acentric, R);
     }
-    c.cubic->set_cm(cm);
+    c.cubic->set_cm_vector(cvec);
     return c;
+}
+
+/// The translations to sweep.  The uniform vector reproduces what a single scalar c used to mean;
+/// the mixed one is the case that actually exercises dc_m/dx_i, and it deliberately mixes signs
+/// because both occur in the real parameter sets.  The smallest covolume here is methane's, about
+/// 2.7e-5 m^3/mol, so all of these stay well inside the pole.
+const std::vector<std::vector<double>>& comp_deriv_translations() {
+    static const std::vector<std::vector<double>> v{
+      {0.0, 0.0, 0.0},      // control: must pass before and after the fix
+      {3e-6, 3e-6, 3e-6},   // uniform
+      {2e-6, -1e-6, 5e-6},  // genuinely per-component, mixed signs
+    };
+    return v;
 }
 
 /// Central difference of f with respect to x_i, honouring the same x_N convention the analytic
@@ -531,10 +686,12 @@ TEST_CASE("Cubic composition derivatives carry the volume translation", "[cubic]
     for (const auto& which : cubic_backends()) {
         CAPTURE(which);
         // c = 0 must pass both before and after the fix -- it is the control that proves the
-        // harness itself is sound.  The nonzero case is the reproduction.
-        for (double cm : {0.0, 3e-6}) {
-            CAPTURE(cm);
-            CompDerivCase cs = make_comp_case(which, cm);
+        // harness itself is sound.  The nonzero vectors are the reproduction.
+        for (const auto& cvec : comp_deriv_translations()) {
+            CAPTURE(cvec[0]);
+            CAPTURE(cvec[1]);
+            CAPTURE(cvec[2]);
+            CompDerivCase cs = make_comp_case(which, cvec);
             AbstractCubic& C = *cs.cubic;
             const std::vector<double>& x = cs.x;
             const double d = cs.delta, tau = cs.tau;

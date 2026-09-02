@@ -147,7 +147,13 @@ void CoolProp::AbstractCubicBackend::get_linear_reducing_parameters(double& rhom
         T_r += mole_fractions[i] * Tc[i];
         // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
         double v_c_Lmol = 2.14107171795 * (Tc[i] / pc[i] * 1000) + 0.00773144012514;  // [L/mol]
-        v_r += mole_fractions[i] * v_c_Lmol / 1000.0;
+        // A volume translation leaves Tc alone but moves each component's critical volume by -c_i,
+        // so the linear volume average has to be taken on the translated volumes to stay consistent
+        // with calc_rhomolar_critical().
+        v_r += mole_fractions[i] * (v_c_Lmol / 1000.0 - cubic->get_cm(i));
+    }
+    if (!(v_r > 0)) {
+        throw ValueError(format("Volume translation is too large: the linear reducing molar volume (%g m^3/mol) is not positive", v_r));
     }
     rhomolar_r = 1 / v_r;
 }
@@ -167,8 +173,8 @@ bool CoolProp::AbstractCubicBackend::get_critical_is_terminated(double& delta, d
     // If the volume is less than the mixture covolume, stop.  The mixture covolume is the
     // smallest volume that is physically allowed for a cubic EOS -- and under a volume translation
     // that floor moves with it, to b_m - c_m.
-    double b = get_cubic()->bm_term(mole_fractions) - get_cubic()->cm_term();  // [m^3/mol]
-    double v = 1 / (delta * rhomolar_reducing());                              //[m^3/mol]
+    double b = get_cubic()->bm_term(mole_fractions) - get_cubic()->cm_term(mole_fractions);  // [m^3/mol]
+    double v = 1 / (delta * rhomolar_reducing());                                            //[m^3/mol]
     bool covolume_check = v < 1.1 * b;
 
     return covolume_check;
@@ -401,7 +407,7 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
     double R = cubic->get_R_u();
     double am = cubic->am_term(cubic->get_Tr() / T, mole_fractions, 0);
     double bm = cubic->bm_term(mole_fractions);
-    double cm = cubic->cm_term();
+    double cm = cubic->cm_term(mole_fractions);
 
     // Introducing new variables to simplify the equation:
     double d1 = cm - bm;
@@ -496,7 +502,7 @@ std::vector<double> CoolProp::AbstractCubicBackend::spinodal_densities() {
     // simply translates: there is no need to re-derive the quartic, only to map v = v_EOS - c_m on
     // the way out.  The v_EOS > b_m filter below is applied to the untranslated volumes, where it
     // belongs.
-    const double cm = cubic->cm_term();
+    const double cm = cubic->cm_term(x);
     std::vector<double> roots;
     for (double rho_eos : {rho0, rho1, rho2, rho3}) {
         if (!(rho_eos > 0) || !(1 / rho_eos > b)) {
@@ -768,7 +774,7 @@ void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend* donor) {
 }
 
 void CoolProp::AbstractCubicBackend::copy_cm(AbstractCubicBackend* donor) {
-    get_cubic()->set_cm(donor->get_cubic()->get_cm());
+    get_cubic()->set_cm_vector(donor->get_cubic()->get_cm_vector());
     for (auto& state : linked_states) {
         auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->copy_cm(this);
@@ -822,24 +828,35 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
     if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
-    // Set the volume translation parrameter, currently applied to the whole fluid, not to components.
-    if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
+    // Volume translation.  "c"/"cm"/"c_m" set the i-th COMPONENT; "c_all" broadcasts to every
+    // component, which is what the parameter used to do unconditionally (the index was accepted and
+    // then ignored).  For a pure fluid the two are identical.
+    if (parameter == "c" || parameter == "cm" || parameter == "c_m" || parameter == "c_all") {
         // Reject a translation large enough to invert the repulsive branch, at set time.  Past the
         // pole the model does not fail loudly -- only quantities needing alpha^r itself go NaN,
         // while p, h and cp return finite nonsense -- so this has to be a precondition rather than
-        // something a caller is expected to notice downstream.  b_m is a mole-fraction average of
-        // the b0_ii, so the composition-independent worst case is the smallest of them.
+        // something a caller is expected to notice downstream.
+        //
+        // The mixture condition is b_m - c_m = sum_i x_i*(b0_ii - c_i) > 0, which is guaranteed for
+        // every composition if it holds component by component.  Checking per component is both
+        // tighter and independent of whether the mole fractions have been set yet.
         AbstractCubic* ac = get_cubic().get();
-        double bm_min = ac->b0_ii(0);
-        for (std::size_t j = 1; j < N; ++j) {
-            bm_min = std::min(bm_min, ac->b0_ii(j));
+        const bool broadcast = (parameter == "c_all");
+        for (std::size_t j = 0; j < N; ++j) {
+            if (!broadcast && j != i) {
+                continue;
+            }
+            if (!(ac->b0_ii(j) - value > 0)) {
+                throw ValueError(format("Volume translation c [%g m^3/mol] must be smaller than the covolume b [%g m^3/mol] of "
+                                        "component %d; b - c = %g is not positive",
+                                        value, ac->b0_ii(j), static_cast<int>(j), ac->b0_ii(j) - value));
+            }
         }
-        if (!(bm_min - value > 0)) {
-            throw ValueError(format("Volume translation c [%g m^3/mol] must be smaller than the smallest component covolume "
-                                    "b [%g m^3/mol]; b - c = %g is not positive",
-                                    value, bm_min, bm_min - value));
+        if (broadcast) {
+            ac->set_cm(value);
+        } else {
+            ac->set_cm(i, value);
         }
-        ac->set_cm(value);
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
         get_cubic()->set_Q_k(i, value);
     } else if (parameter == "Tcrit" || parameter == "Tc") {
@@ -861,7 +878,7 @@ double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i
     }
     // Get the volume translation parrameter, currently applied to the whole fluid, not to components.
     if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
-        return get_cubic()->get_cm();
+        return get_cubic()->get_cm(i);
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
         return get_cubic()->get_Q_k(i);
     } else if (parameter == "Tcrit" || parameter == "Tc") {

@@ -207,7 +207,7 @@ class VTPRCubic : public PengRobinson
         // Common terms for all components
         double tau = get_Tr() / T;
         double b = bm_term(z);
-        double c = cm_term();
+        double c = cm_term(z);
         double R = get_R_u();
         std::vector<double> ln_phi;
         double bracket = log((v + c + (1 + sqrt(2.0)) * b) / (v + c + (1 - sqrt(2.0)) * b));
