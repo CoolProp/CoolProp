@@ -137,7 +137,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         // bound: a sufficiently negative c puts 0.9/b_m PAST the pole (where p, h and cp return
         // finite nonsense rather than NaN), and a positive c puts it BELOW real saturated-liquid
         // densities.
-        const double bmc = get_cubic()->bm_term(mole_fractions) - get_cubic()->cm_term();
+        const double bmc = get_cubic()->bm_term(mole_fractions) - get_cubic()->cm_term(mole_fractions);
         if (!(bmc > 0)) {
             throw ValueError(format("Volume translation is too large: b_m - c_m = %g m^3/mol must be positive", bmc));
         }
@@ -177,7 +177,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
             // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
             double v_c_Lmol = 2.14107171795 * (cubic->get_Tc()[0] / cubic->get_pc()[0] * 1000) + 0.00773144012514;  // [L/mol]
             // A volume translation leaves Tc and pc alone but moves the critical volume by -c.
-            const double v_c = v_c_Lmol / 1000.0 - get_cubic()->cm_term();  // [m^3/mol]
+            const double v_c = v_c_Lmol / 1000.0 - get_cubic()->cm_term(mole_fractions);  // [m^3/mol]
             if (!(v_c > 0)) {
                 throw ValueError(format("Volume translation is too large: the translated critical molar volume (%g m^3/mol) is not positive", v_c));
             }
@@ -372,7 +372,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// a translated fluid is the untranslated one, which then misclassifies states in
     /// update_DmolarT().
     double untranslate_superanc_rho(double rho_tilde, double bm) {
-        const double v = bm / rho_tilde - get_cubic()->cm_term();
+        const double v = bm / rho_tilde - get_cubic()->cm_term(mole_fractions);
         if (!(v > 0)) {
             throw ValueError(format("Volume translation is too large: the translated saturation molar volume (%g m^3/mol) is not positive", v));
         }
