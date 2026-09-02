@@ -4785,6 +4785,7 @@
         },
         "higher_order": {
           "type": "expression",
+          "note": "ERRATUM, paper vs. this implementation: Eq. 12 of Sotiriadou, Ntonti, Velliadou, Antoniadis, Assael & Huber, Int. J. Thermophys. 44(3):40 (2023) prints the first residual term as 8.32575272*rho_r; it must be rho_r^2, as used here. As printed, 300 K / 850 kg/m^3 gives 1593.72 uPa.s against the paper's own tabulated 1682.72 (5.29 % low). REFPROP's ETHANOL.FLD carries the exponent 2.",
           "formula": "let tau = T/T_red\nlet delta = Dmolar/rho_red\nlet front = tau^0.5*delta^(2/3)\nlet den = c3*tau^4 + c3*tau^4*delta^2 - c3*tau^2\n1e-6*front*(c1*delta^2 + c2*delta^8/den)",
           "state_variables": [
             "T",

@@ -4430,6 +4430,7 @@
       },
       "higher_order": {
         "type": "expression",
+        "note": "ERRATUM, paper vs. this implementation: Eq. 8 of Tsolakidou, Assael, Huber & Perkins, J. Phys. Chem. Ref. Data 46(2):023103 (2017) prints the denominator as c5*Tr^2 + Tr^2*rho_r^2; a MINUS is required, which is the -1.0 in the q array here. As printed, 250 K / 850 kg/m^3 gives 84.205 uPa.s against the paper's own tabulated 308.22 (72.7 % low). REFPROP's R161.FLD carries the -1.0 used here.",
         "formula": "let tau = T/T_red\nlet delta = Dmolar/rho_red\nlet simple = sum(i: n[i]*tau^nt[i]*delta^nd[i])\nlet num = sum(i: p[i]*tau^pt[i]*delta^pd[i])\nlet den = sum(i: q[i]*tau^qt[i]*delta^qd[i])\n1e-6*(simple + num/den)",
         "state_variables": [
           "T",
