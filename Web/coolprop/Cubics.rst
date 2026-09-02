@@ -246,6 +246,98 @@ Here we plot phase envelopes and critical points for an equimolar methane/ethane
     plt.tight_layout()
     plt.show()
 
+Volume Translation
+==================
+
+Cubic equations of state predict saturated liquid densities poorly with average deviations of about 
+16 % and 8 % for SRK and PR respectively :cite:`Jaubert-FPE-2016`.  The Péneloux correction :cite:`Peneloux-FPE-1982` 
+fixes this at almost no cost by shifting the molar volume by a constant:
+
+.. math::
+
+  v = v^{\mathrm{EOS}} - c
+
+Equivalently, the Helmholtz energy is evaluated at a shifted volume,
+:math:`a^{vs}(T,v) = a^{\mathrm{EOS}}(T,v+c)`, which is how it is implemented in CoolProp.  For a
+mixture the translation is composition dependent through the **linear** mixing rule
+
+.. math::
+
+  c_m(\mathbf{x}) = \sum_i x_i c_i
+
+This rule is not a choice.  Privat et al. :cite:`Privat-FPE-2016` show that requiring the translation
+to leave phase equilibria unchanged forces the arithmetic-mean combining rule for :math:`c_{ij}`,
+which collapses to the linear form above -- so there is no :math:`c_{ij}` to fit or store.
+
+What changes and what does not
+------------------------------
+
+A constant translation is *not* a fudge factor applied to one output; it changes some properties by
+an exactly predictable amount and leaves others untouched.  The table below follows Jaubert et al.
+:cite:`Jaubert-FPE-2016` and Privat et al. :cite:`Privat-FPE-2016` and is pinned by the test suite 
+at round-off level.
+
+=====================================================  =============================================
+Quantity                                               Effect of the translation
+=====================================================  =============================================
+:math:`v`                                              :math:`v - c_m(\mathbf{z})`
+:math:`h`, :math:`g`, :math:`\mu_i`                    shifted by :math:`-p\,c_m(\mathbf{z})`
+:math:`\ln \varphi_i`                                  shifted by :math:`-p\,c_i/(RT)`, using the
+                                                       **pure-component** :math:`c_i`
+:math:`B` (second virial coefficient)                  :math:`B - c_m(\mathbf{z})`
+:math:`s`, :math:`u`, :math:`a`, :math:`c_p`,          **unchanged**
+:math:`c_v`
+:math:`-(\partial v/\partial p)_T`,                    **unchanged**
+:math:`(\partial v/\partial T)_p`
+:math:`p^{\mathrm{sat}}`, :math:`p_{\mathrm{bub}}`,    **unchanged**
+:math:`p_{\mathrm{dew}}`, :math:`K_i`, phase
+compositions
+:math:`w` (speed of sound)                             **changes** (:math:`w^2 \propto v^2`)
+:math:`\Delta_{\mathrm{vap}} S`,                       **unchanged**
+:math:`\Delta_{\mathrm{vap}} U`,
+:math:`\Delta_{\mathrm{vap}} A`,
+:math:`\Delta_{\mathrm{vap}} c_p`,
+:math:`\Delta_{\mathrm{vap}} c_v`
+:math:`\Delta_{\mathrm{vap}} V`,                       unchanged for a pure fluid; for a mixture
+:math:`\Delta_{\mathrm{vap}} H`                        shifted by
+                                                       :math:`-[c_m(\mathbf{y})-c_m(\mathbf{x})]`
+                                                       and
+                                                       :math:`-p[c_m(\mathbf{y})-c_m(\mathbf{x})]`
+=====================================================  =============================================
+
+Two consequences are worth spelling out.  Because :math:`\ln \varphi_i` shifts by the same amount in
+both phases at the same :math:`(T,p)`, the shift cancels in the equifugacity condition: **VLE is
+invariant for arbitrary, unequal** :math:`c_i`, not merely for equal ones.  And because the two
+coexisting phases have different compositions, :math:`\Delta_{\mathrm{vap}} V` and
+:math:`\Delta_{\mathrm{vap}} H` are the one place a mixture behaves differently from a pure fluid.
+
+.. warning:: CoolProp implements a **temperature-independent** :math:`c` only.  A :math:`c(T)` would
+             break most of the "unchanged" rows above -- it perturbs :math:`s`, :math:`u`,
+             :math:`c_p` and :math:`c_v` as well, which is precisely why constant translations are
+             the standard choice.
+
+Setting the translation
+-----------------------
+
+:math:`c` is a per-component fluid parameter, in m\ :sup:`3`/mol, reached through
+:cpapi:`set_fluid_parameter_double <CoolProp::AbstractState::set_fluid_parameter_double>` and
+:cpapi:`get_fluid_parameter_double <CoolProp::AbstractState::get_fluid_parameter_double>` under the
+names ``c``, ``cm`` or ``c_m``.  The spelling ``c_all`` broadcasts one value to every component.
+Setting a value that would drive :math:`b_i - c_i \le 0` raises a ``ValueError``, since past that
+point the repulsive pole moves through the liquid branch and the model returns finite nonsense
+rather than failing loudly.
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+
+    In [0]: AS = CP.AbstractState("PR", "n-Propane")
+
+    In [0]: AS.set_fluid_parameter_double(0, "cm", -3.7e-6)
+
+    In [0]: AS.get_fluid_parameter_double(0, "cm")
+
+
 Adding your own fluids
 ======================
 

@@ -876,7 +876,7 @@ double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i
     if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
-    // Get the volume translation parrameter, currently applied to the whole fluid, not to components.
+    // The volume translation is per component; component i is returned, not a fluid-wide value.
     if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
         return get_cubic()->get_cm(i);
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
