@@ -147,7 +147,13 @@ void CoolProp::AbstractCubicBackend::get_linear_reducing_parameters(double& rhom
         T_r += mole_fractions[i] * Tc[i];
         // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
         double v_c_Lmol = 2.14107171795 * (Tc[i] / pc[i] * 1000) + 0.00773144012514;  // [L/mol]
-        v_r += mole_fractions[i] * v_c_Lmol / 1000.0;
+        // A volume translation leaves Tc alone but moves each component's critical volume by -c_i,
+        // so the linear volume average has to be taken on the translated volumes to stay consistent
+        // with calc_rhomolar_critical().
+        v_r += mole_fractions[i] * (v_c_Lmol / 1000.0 - cubic->get_cm(i));
+    }
+    if (!(v_r > 0)) {
+        throw ValueError(format("Volume translation is too large: the linear reducing molar volume (%g m^3/mol) is not positive", v_r));
     }
     rhomolar_r = 1 / v_r;
 }
@@ -165,9 +171,10 @@ void CoolProp::AbstractCubicBackend::get_critical_point_search_radii(double& R_d
 
 bool CoolProp::AbstractCubicBackend::get_critical_is_terminated(double& delta, double& tau) {
     // If the volume is less than the mixture covolume, stop.  The mixture covolume is the
-    // smallest volume that is physically allowed for a cubic EOS
-    double b = get_cubic()->bm_term(mole_fractions);  // [m^3/mol]
-    double v = 1 / (delta * rhomolar_reducing());     //[m^3/mol]
+    // smallest volume that is physically allowed for a cubic EOS -- and under a volume translation
+    // that floor moves with it, to b_m - c_m.
+    double b = get_cubic()->bm_term(mole_fractions) - get_cubic()->cm_term(mole_fractions);  // [m^3/mol]
+    double v = 1 / (delta * rhomolar_reducing());                                            //[m^3/mol]
     bool covolume_check = v < 1.1 * b;
 
     return covolume_check;
@@ -400,7 +407,7 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
     double R = cubic->get_R_u();
     double am = cubic->am_term(cubic->get_Tr() / T, mole_fractions, 0);
     double bm = cubic->bm_term(mole_fractions);
-    double cm = cubic->cm_term();
+    double cm = cubic->cm_term(mole_fractions);
 
     // Introducing new variables to simplify the equation:
     double d1 = cm - bm;
@@ -489,18 +496,23 @@ std::vector<double> CoolProp::AbstractCubicBackend::spinodal_densities() {
     double rho0 = NAN, rho1 = NAN, rho2 = NAN, rho3 = NAN;
     int Nsoln = 0;
     solve_quartic(crho4, crho3, crho2, crho1, crho0, Nsoln, rho0, rho1, rho2, rho3);
+
+    // The quartic above is that of the UNTRANSLATED cubic, so its roots are densities of the
+    // untranslated EOS.  Because -(dv/dP)_T is invariant under a Peneloux translation, the spinodal
+    // simply translates: there is no need to re-derive the quartic, only to map v = v_EOS - c_m on
+    // the way out.  The v_EOS > b_m filter below is applied to the untranslated volumes, where it
+    // belongs.
+    const double cm = cubic->cm_term(x);
     std::vector<double> roots;
-    if (rho0 > 0 && 1 / rho0 > b) {
-        roots.push_back(rho0);
-    }
-    if (rho1 > 0 && 1 / rho1 > b) {
-        roots.push_back(rho1);
-    }
-    if (rho2 > 0 && 1 / rho2 > b) {
-        roots.push_back(rho2);
-    }
-    if (rho3 > 0 && 1 / rho3 > b) {
-        roots.push_back(rho3);
+    for (double rho_eos : {rho0, rho1, rho2, rho3}) {
+        if (!(rho_eos > 0) || !(1 / rho_eos > b)) {
+            continue;
+        }
+        const double v = 1 / rho_eos - cm;
+        if (!(v > 0)) {
+            continue;
+        }
+        roots.push_back(1 / v);
     }
     return roots;
 }
@@ -518,8 +530,11 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
             static std::string errstr;
             double Ts = CoolProp::Secant(resid, Ts_est, -0.1, 1e-10, 100);
             _T = Ts;
-            rhoL = resid.deltaL * cubic->get_Tr();
-            rhoV = resid.deltaV * cubic->get_Tr();
+            // deltaL/deltaV are reduced densities (rho/rho_r), so the reducing DENSITY is what
+            // converts them back, not the reducing temperature.  This is currently masked because
+            // the standalone cubic backends never call set_Tr/set_rhor and both default to 1.0.
+            rhoL = resid.deltaL * cubic->get_rhor();
+            rhoV = resid.deltaV * cubic->get_rhor();
             this->SatL->update(DmolarT_INPUTS, rhoL, _T);
             this->SatV->update(DmolarT_INPUTS, rhoV, _T);
         } else {
@@ -556,8 +571,11 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
             }
 
             _p = ps;
-            rhoL = resid.deltaL * cubic->get_Tr();
-            rhoV = resid.deltaV * cubic->get_Tr();
+            // deltaL/deltaV are reduced densities (rho/rho_r), so the reducing DENSITY is what
+            // converts them back, not the reducing temperature.  This is currently masked because
+            // the standalone cubic backends never call set_Tr/set_rhor and both default to 1.0.
+            rhoL = resid.deltaL * cubic->get_rhor();
+            rhoV = resid.deltaV * cubic->get_rhor();
             this->SatL->update(DmolarT_INPUTS, rhoL, _T);
             this->SatV->update(DmolarT_INPUTS, rhoV, _T);
         } else {
@@ -755,8 +773,17 @@ void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend* donor) {
     }
 }
 
+void CoolProp::AbstractCubicBackend::copy_cm(AbstractCubicBackend* donor) {
+    get_cubic()->set_cm_vector(donor->get_cubic()->get_cm_vector());
+    for (auto& state : linked_states) {
+        auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
+        ACB->copy_cm(this);
+    }
+}
+
 void CoolProp::AbstractCubicBackend::copy_internals(AbstractCubicBackend& donor) {
     this->copy_k(&donor);
+    this->copy_cm(&donor);
 
     this->components = donor.components;
     this->set_alpha_from_components();
@@ -801,9 +828,31 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
     if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
-    // Set the volume translation parrameter, currently applied to the whole fluid, not to components.
-    if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
-        get_cubic()->set_cm(value);
+    // Volume translation.  "c"/"cm"/"c_m" set the i-th COMPONENT; "c_all" broadcasts to every
+    // component, which is what the parameter used to do unconditionally (the index was accepted and
+    // then ignored).  For a pure fluid the two are identical.
+    if (parameter == "c" || parameter == "cm" || parameter == "c_m" || parameter == "c_all") {
+        // Reject a translation large enough to invert the repulsive branch, at set time.  Past the
+        // pole the model does not fail loudly -- only quantities needing alpha^r itself go NaN,
+        // while p, h and cp return finite nonsense -- so this has to be a precondition rather than
+        // something a caller is expected to notice downstream.
+        //
+        // The b - c > 0 check lives in AbstractCubic::set_cm now, not here, so that every entry
+        // point gets it -- including set_cm_vector and the Tc/pc setters, which move the covolume
+        // underneath a translation already in place.
+        //
+        // For the base cubics b_m is linear in x, so b_m - c_m = sum_i x_i*(b0_ii - c_i) > 0 holds
+        // at every composition as soon as it holds component by component, and the per-component
+        // check is both tighter and independent of whether the mole fractions have been set yet.
+        // That implication does NOT carry to VTPR: its b_ij = ((b_i^(3/4) + b_j^(3/4))/2)^(4/3) is
+        // sub-linear, so b_m^VTPR <= sum_i x_i*b0_ii while c_m stays linear, and there the
+        // per-component check is necessary but not sufficient.
+        AbstractCubic* ac = get_cubic().get();
+        if (parameter == "c_all") {
+            ac->set_cm(value);
+        } else {
+            ac->set_cm(i, value);
+        }
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
         get_cubic()->set_Q_k(i, value);
     } else if (parameter == "Tcrit" || parameter == "Tc") {
@@ -823,9 +872,9 @@ double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i
     if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
-    // Get the volume translation parrameter, currently applied to the whole fluid, not to components.
+    // The volume translation is per component; component i is returned, not a fluid-wide value.
     if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
-        return get_cubic()->get_cm();
+        return get_cubic()->get_cm(i);
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
         return get_cubic()->get_Q_k(i);
     } else if (parameter == "Tcrit" || parameter == "Tc") {
@@ -879,14 +928,12 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_saturation_ancillary(parameters
 
     using namespace CubicSuperAncillary;
     if (param == iP) {
+        // A volume translation moves no pressure, so the p~ mapping needs no correction.
         double p_tilde = supercubic(eos_code, P_CODE, Ttilde);
         return p_tilde * am / (bm * bm);
     } else if (param == iDmolar) {
-        if (Q == 0) {
-            return supercubic(eos_code, RHOL_CODE, Ttilde) / bm;
-        } else {
-            return supercubic(eos_code, RHOV_CODE, Ttilde) / bm;
-        }
+        double rho_tilde = supercubic(eos_code, (Q == 0) ? RHOL_CODE : RHOV_CODE, Ttilde);
+        return untranslate_superanc_rho(rho_tilde, bm);
     } else {
         throw NotImplementedError(
           format("calc_saturation_ancillary: unsupported param=%s for cubic EOS", get_parameter_information(param, "short").c_str()));
@@ -913,8 +960,9 @@ void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, Cool
     double Ttilde = cubic->get_R_u() * T * bm / am;
 
     using namespace CubicSuperAncillary;
-    CoolPropDbl rhoL = supercubic(eos_code, RHOL_CODE, Ttilde) / bm;
-    CoolPropDbl rhoV = supercubic(eos_code, RHOV_CODE, Ttilde) / bm;
+    CoolPropDbl rhoL = untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm);
+    CoolPropDbl rhoV = untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm);
+    // A volume translation moves no pressure, so p~ needs no correction.
     CoolPropDbl p = supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm);
 
     clear();
