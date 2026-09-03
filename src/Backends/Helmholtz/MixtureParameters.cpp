@@ -94,9 +94,9 @@ class MixtureBinaryPairLibrary
         return m_binary_pair_map;
     };
 
-    void load_from_string(const std::string_view& str) {
+    void load_from_string(const std::string_view& str, bool allow_multiple_models = false) {
         nlohmann::json doc = cpjson::parse(str);
-        load_from_JSON(doc);
+        load_from_JSON(doc, allow_multiple_models);
     }
 
     void load_defaults_if_needed() {
@@ -106,14 +106,38 @@ class MixtureBinaryPairLibrary
     // Load the defaults that come from the JSON-encoded string compiled into library
     // as the variable mixture_departure_functions_JSON
     void load_defaults() {
-        load_from_string(mixture_binary_pairs_JSON);
+        // allow_multiple_models: the shipped library deliberately carries more than one published
+        // model for a handful of pairs.  Data supplied at run time does not get that latitude.
+        load_from_string(mixture_binary_pairs_JSON, true);
     }
 
     /** \brief Construct the binary pair library including all the binary pairs that are possible
      *
      * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.
+     *
+     * @param doc The JSON document holding the binary pair records
+     * @param allow_multiple_models If true, a pair that appears more than once in \a doc keeps every
+     * record, and the LAST one in document order is the model in force: later data supersedes
+     * earlier.  The record in force is held at index 0, so the vector order is deliberately the
+     * reverse of the document order.  If false (the default, and what run-time callers such as
+     * set_interaction_parameters get), a repeated pair is an error unless the configuration key
+     * OVERWRITE_BINARY_INTERACTION is set -- so that parameters supplied by a caller can never be
+     * silently ignored.
      */
-    void load_from_JSON(const nlohmann::json& doc) {
+    void load_from_JSON(const nlohmann::json& doc, bool allow_multiple_models = false) {
+
+        if (!allow_multiple_models) {
+            // Records arriving at run time have to be merged into the COMPLETE shipped library,
+            // never into an empty map.  The shipped library loads lazily, and neither
+            // set_interaction_parameters() nor the REFPROP HMX.BNC import triggers that load, so a
+            // caller reaching one of them before their first property call would otherwise have
+            // their records inserted as brand-new entries; the shipped records would then arrive
+            // afterwards and, being later in document order, take precedence -- silently demoting
+            // the caller's parameters to an unread alternate instead of rejecting them or honouring
+            // OVERWRITE_BINARY_INTERACTION.  Guarded on allow_multiple_models so the shipped load
+            // itself cannot re-enter std::call_once and deadlock.
+            load_defaults_if_needed();
+        }
 
         // Iterate over the papers in the listing
         for (const auto& el : doc) {
@@ -176,14 +200,38 @@ class MixtureBinaryPairLibrary
                 // Add to binary pair map by creating one-element vector
                 m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
             } else {
-                if (get_config_bool(OVERWRITE_BINARY_INTERACTION)) {
-                    // Already there, see http://www.cplusplus.com/reference/map/map/insert/, so we are going to pop it and overwrite it
-                    m_binary_pair_map.erase(it);
-                    std::pair<std::map<std::vector<std::string>, std::vector<Dictionary>>::iterator, bool> ret;
-                    ret = m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
-                    assert(ret.second == true);
+                if (allow_multiple_models) {
+                    // More than one model is published for this pair, so keep them all.  The LAST
+                    // record for the pair in document order is the model in force: later data
+                    // supersedes earlier, which is the direction OVERWRITE_BINARY_INTERACTION has
+                    // always had -- the difference being that here the superseded record is kept
+                    // rather than erased.  A newer correlation is therefore added by appending it
+                    // after the one it replaces, and appending is the only edit needed.
+                    //
+                    // Every consumer of binary_pair_map() reads [0], so the record in force is held
+                    // at the front: vector order is deliberately the REVERSE of document order.
+                    // Nothing currently *reads* an alternate -- selecting a non-default model is
+                    // deliberately not implemented here.
+                    //
+                    // This branch is tested BEFORE OVERWRITE_BINARY_INTERACTION, and that order is
+                    // load-bearing.  The shipped library loads lazily behind a std::call_once, so a
+                    // caller who sets that key before their first mixture call -- which is exactly
+                    // what Web/fluid_properties/Mixtures.rst tells them to do -- would otherwise be
+                    // in overwrite mode while the shipped records were still being read, and each
+                    // record would erase the one before it instead of stacking on top of it.  With
+                    // this layout that would still leave the correct model in force, so it is not
+                    // observable through the API; it would silently discard the retained records,
+                    // which is precisely what shipping them is for.
+                    it->second.insert(it->second.begin(), dict);
+                } else if (get_config_bool(OVERWRITE_BINARY_INTERACTION)) {
+                    // Overwrite: the incoming record replaces everything previously known about
+                    // this pair.  Applies to data supplied at run time only; this is the documented
+                    // behaviour of set_interaction_parameters, see Web/fluid_properties/Mixtures.rst.
+                    it->second = std::vector<Dictionary>(1, dict);
                 } else {
-                    // Error if already in map!
+                    // Error if already in map!  Reached only for data supplied at run time, where
+                    // silently keeping the caller's record as an unread alternate would be worse
+                    // than refusing it.
                     throw ValueError(
                       format("CAS pair(%s,%s) already in binary interaction map; considering enabling configuration key OVERWRITE_BINARY_INTERACTION",
                              CAS[0].c_str(), CAS[1].c_str()));
