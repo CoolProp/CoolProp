@@ -382,20 +382,24 @@ vel viscosity_validation_data[] = {
   vel("n-Undecane", "T", 550, "Dmass", 600.0, "V", 188.68e-6, 1e-4),
   vel("n-Undecane", "T", 635, "Dmass", 325.0, "V", 49.077e-6, 1e-4),
 
-  // NOTE for anyone comparing these against the papers: THREE of the printed equations
-  // in this family cannot reproduce their own verification points, and the values
-  // below are the papers' tabulated ones, which the implementations DO reproduce.
+  // NOTE for anyone comparing these against the papers.  Four of the printed equations
+  // in this family do not reproduce their own verification points.  TWO OF THE FOUR THE
+  // AUTHORS HAVE ALREADY CORRECTED IN PRINT, and this code follows the correction:
+  //   Ethanol Eq. 12 -- Erratum, IJT 44(3) (2023), doi:10.1007/s10765-023-03160-y:
+  //                     "a power \"2\" in the reduced density in the brackets, is missing".
+  //                     The original as printed is 5.29 % low at 300 K / 850 kg/m^3.
+  //   Xenon   Eq. 6  -- Correction, IJT 44(4) (2023), doi:10.1007/s10765-023-03175-5:
+  //                     a power "12" should have been used instead of "7".  The original
+  //                     as printed is 8.06 % low at 300 K / 2500 kg/m^3.
+  // The other two have NO published correction recorded in Crossref as of September 2026:
   //   R-161,  Eq. 8  -- denominator prints c5*Tr^2 + Tr^2*rho_r^2; needs a MINUS.
-  //                     As printed, 250 K / 850 kg/m^3 gives 84.2 against 308.22.
-  //   Ethanol, Eq. 12 -- first residual term prints 8.32575272*rho_r; needs rho_r^2.
-  //                     As printed, 300 K / 850 kg/m^3 is 5.3 % low.
-  //   Xenon,  Eq. 6  -- third residual term prints c1*rho_r^7/Tr; needs rho_r^12.
-  //                     As printed, 300 K / 2500 kg/m^3 gives 189.815 against 206.449,
-  //                     8.1 % low.  Note this one is an exponent in a NUMERATOR, not a
-  //                     denominator sign -- do not assume such errors only live in
-  //                     denominators.
-  // In all three cases REFPROP's FLD carries the form that reproduces the paper's table.
-  // (A fourth, krypton Eq. 13's missing exp, is recorded in dev/fluids/Krypton.json.)
+  //                     As printed, 250 K / 850 kg/m^3 gives 84.205 against 308.22.
+  //   Krypton Eq. 13 -- prints the residual as a bare sum, omitting the exp its own Fig. 8
+  //                     implementation applies; as printed the viscosity is NEGATIVE at all
+  //                     five of the paper's points.  Recorded in dev/fluids/Krypton.json.
+  // Note the xenon case is an exponent in a NUMERATOR, not a denominator sign -- do not
+  // assume such errors only live in denominators.  Each fluid file's higher_order block
+  // carries the full citation.
 
   // Velliadou et al., IJT 43(8):129 (2022) -- Section 3
   vel("R32", "T", 300, "Dmass", 1e-9, "V", 12.6170e-6, 1e-5),
