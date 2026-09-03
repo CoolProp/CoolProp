@@ -20,7 +20,10 @@
 #    include "CoolProp/Configuration.h"
 #    include "CoolProp/DataStructures.h"
 #    include "CoolProp/Exceptions.h"
+#    include "CoolProp/detail/json.h"
+#    include "mixture_binary_pairs_JSON.h"  // the binary pair library as shipped
 
+#    include <algorithm>
 #    include <memory>
 #    include <string>
 #    include <vector>
@@ -106,6 +109,34 @@ TEST_CASE("Beckmueller-2021 is the default model for its H2 pairs", "[mixtures][
         CHECK(get_mixture_binary_pair_data(pr.CAS1, pr.CAS2, "function") == pr.function);
         CHECK(std::stod(get_mixture_binary_pair_data(pr.CAS1, pr.CAS2, "F")) == Catch::Approx(1.0));
         CHECK(std::stod(get_mixture_binary_pair_data(pr.CAS1, pr.CAS2, "gammaT")) == Catch::Approx(pr.gammaT));
+    }
+}
+
+TEST_CASE("Superseded Kunz-JCED-2012 H2 records are retained behind the Beckmueller ones", "[mixtures][hydrogen][2263]") {
+    // The point of shipping two records per pair is that the parameters Beckmueller supersedes are
+    // not thrown away.  Reading an alternate is deliberately not exposed through the API, so assert
+    // against the shipped library itself: exactly two records per pair, Beckmueller first (hence in
+    // force) and Kunz second.  Without this, deleting the Kunz records would leave every other test
+    // in this file passing while quietly undoing the whole arrangement.
+    const nlohmann::json doc = cpjson::parse(mixture_binary_pairs_JSON);
+    REQUIRE(doc.is_array());
+
+    const std::vector<std::vector<std::string>> h2_pairs = {
+      {"1333-74-0", "74-82-8"}, {"1333-74-0", "7727-37-9"}, {"124-38-9", "1333-74-0"}, {"1333-74-0", "630-08-0"}};
+
+    for (const auto& want : h2_pairs) {
+        CAPTURE(want[0], want[1]);
+        std::vector<std::string> bibs;
+        for (const auto& el : doc) {
+            std::vector<std::string> CAS = {el.at("CAS1").get<std::string>(), el.at("CAS2").get<std::string>()};
+            std::sort(CAS.begin(), CAS.end());
+            if (CAS == want) {
+                bibs.push_back(el.at("BibTeX").get<std::string>());
+            }
+        }
+        REQUIRE(bibs.size() == 2);
+        CHECK(bibs[0] == "Beckmueller-JPCRD-2021");
+        CHECK(bibs[1] == "Kunz-JCED-2012");
     }
 }
 
