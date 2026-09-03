@@ -17,7 +17,9 @@
 #    include <catch2/catch_all.hpp>
 
 #    include "CoolProp/AbstractState.h"
+#    include "CoolProp/Configuration.h"
 #    include "CoolProp/DataStructures.h"
+#    include "CoolProp/Exceptions.h"
 
 #    include <memory>
 #    include <string>
@@ -77,6 +79,59 @@ TEST_CASE("Beckmueller-2021 H2 binary mixtures reproduce Table S6", "[mixtures][
         CHECK(AS->smolar() == Catch::Approx(pt.s).epsilon(2e-5));
         CHECK(AS->helmholtzmolar() == Catch::Approx(pt.a).epsilon(2e-5));
     }
+}
+
+TEST_CASE("Beckmueller-2021 is the default model for its H2 pairs", "[mixtures][hydrogen][2263]") {
+    // The superseded Kunz-JCED-2012 records for these four pairs are still present in
+    // dev/mixtures/mixture_binary_pairs.json -- they are not deleted, they are kept as alternates
+    // behind the Beckmueller records.  Which of the two is in force is decided purely by document
+    // order: the loader keeps index 0, the FIRST record for a pair, as the model in force.  These
+    // checks fail if the Beckmueller records are ever moved below the Kunz ones, which would
+    // otherwise silently revert every number in the Table S6 case above.
+    struct Pair
+    {
+        std::string CAS1, CAS2;  // sorted CAS order, as the library keys the map
+        std::string function;    // departure function the default record must point at
+        double gammaT;           // Beckmueller reducing parameter (unaffected by CAS swapping)
+    };
+    const std::vector<Pair> pairs = {
+      {"1333-74-0", "74-82-8", "Methane-Hydrogen-Beckmueller2021", 1.44},
+      {"1333-74-0", "7727-37-9", "Nitrogen-Hydrogen-Beckmueller2021", 1.24},
+      {"124-38-9", "1333-74-0", "CarbonDioxide-Hydrogen-Beckmueller2021", 1.961},
+      {"1333-74-0", "630-08-0", "CarbonMonoxide-Hydrogen-Beckmueller2021", 1.105},
+    };
+    for (const auto& pr : pairs) {
+        CAPTURE(pr.CAS1, pr.CAS2);
+        CHECK(get_mixture_binary_pair_data(pr.CAS1, pr.CAS2, "BibTeX") == "Beckmueller-JPCRD-2021");
+        CHECK(get_mixture_binary_pair_data(pr.CAS1, pr.CAS2, "function") == pr.function);
+        CHECK(std::stod(get_mixture_binary_pair_data(pr.CAS1, pr.CAS2, "F")) == Catch::Approx(1.0));
+        CHECK(std::stod(get_mixture_binary_pair_data(pr.CAS1, pr.CAS2, "gammaT")) == Catch::Approx(pr.gammaT));
+    }
+}
+
+TEST_CASE("Run-time binary parameters for a known pair are refused, not filed away", "[mixtures][hydrogen][2263]") {
+    // Guards the fail-open half of allowing several models per pair.  The library shipped with
+    // CoolProp may carry more than one record for a pair, with the first one in force; parameters
+    // handed in at run time must NOT get that treatment, because becoming an unread alternate looks
+    // exactly like success to the caller while changing nothing.  With OVERWRITE_BINARY_INTERACTION
+    // off -- its default -- supplying a pair that is already known has to throw.
+    const std::string CAS1 = "74-82-8", CAS2 = "7727-37-9";  // Methane & Nitrogen, sorted CAS order
+    const std::string before = get_mixture_binary_pair_data(CAS1, CAS2, "gammaT");
+
+    // A record for that very pair, carrying a gammaT that differs from the shipped one so that a
+    // silent acceptance would be visible.
+    const std::string doc = R"([{"CAS1": "74-82-8", "CAS2": "7727-37-9",)"
+                            R"( "Name1": "Methane", "Name2": "Nitrogen",)"
+                            R"( "BibTeX": "test-not-a-real-model", "F": 0.0,)"
+                            R"( "betaT": 1.0, "betaV": 1.0, "gammaT": 1.234, "gammaV": 1.234}])";
+
+    const bool overwrite_was = get_config_bool(OVERWRITE_BINARY_INTERACTION);
+    set_config_bool(OVERWRITE_BINARY_INTERACTION, false);
+    CHECK_THROWS_AS(set_interaction_parameters(doc), CoolProp::ValueError);
+    set_config_bool(OVERWRITE_BINARY_INTERACTION, overwrite_was);
+
+    // ...and the refusal left the pair exactly as it was.
+    CHECK(get_mixture_binary_pair_data(CAS1, CAS2, "gammaT") == before);
 }
 
 #endif

@@ -94,9 +94,9 @@ class MixtureBinaryPairLibrary
         return m_binary_pair_map;
     };
 
-    void load_from_string(const std::string_view& str) {
+    void load_from_string(const std::string_view& str, bool allow_multiple_models = false) {
         nlohmann::json doc = cpjson::parse(str);
-        load_from_JSON(doc);
+        load_from_JSON(doc, allow_multiple_models);
     }
 
     void load_defaults_if_needed() {
@@ -106,14 +106,23 @@ class MixtureBinaryPairLibrary
     // Load the defaults that come from the JSON-encoded string compiled into library
     // as the variable mixture_departure_functions_JSON
     void load_defaults() {
-        load_from_string(mixture_binary_pairs_JSON);
+        // allow_multiple_models: the shipped library deliberately carries more than one published
+        // model for a handful of pairs.  Data supplied at run time does not get that latitude.
+        load_from_string(mixture_binary_pairs_JSON, true);
     }
 
     /** \brief Construct the binary pair library including all the binary pairs that are possible
      *
      * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.
+     *
+     * @param doc The JSON document holding the binary pair records
+     * @param allow_multiple_models If true, a pair that appears more than once in \a doc keeps every
+     * record, the first one being the model in force.  If false (the default, and what run-time
+     * callers such as set_interaction_parameters get), a repeated pair is an error unless the
+     * configuration key OVERWRITE_BINARY_INTERACTION is set -- so that parameters supplied by a
+     * caller can never be silently ignored.
      */
-    void load_from_JSON(const nlohmann::json& doc) {
+    void load_from_JSON(const nlohmann::json& doc, bool allow_multiple_models = false) {
 
         // Iterate over the papers in the listing
         for (const auto& el : doc) {
@@ -177,13 +186,23 @@ class MixtureBinaryPairLibrary
                 m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
             } else {
                 if (get_config_bool(OVERWRITE_BINARY_INTERACTION)) {
-                    // Already there, see http://www.cplusplus.com/reference/map/map/insert/, so we are going to pop it and overwrite it
-                    m_binary_pair_map.erase(it);
-                    std::pair<std::map<std::vector<std::string>, std::vector<Dictionary>>::iterator, bool> ret;
-                    ret = m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
-                    assert(ret.second == true);
+                    // Overwrite: the incoming record replaces everything previously known about
+                    // this pair.  This is the documented behaviour of set_interaction_parameters,
+                    // see Web/fluid_properties/Mixtures.rst.
+                    it->second = std::vector<Dictionary>(1, dict);
+                } else if (allow_multiple_models) {
+                    // More than one model is published for this pair, so keep them all.  Index 0
+                    // -- the FIRST record for the pair in document order -- is the model in force;
+                    // every consumer of binary_pair_map() reads [0].  Later records are retained
+                    // as alternates rather than discarded, so a newer correlation becomes the
+                    // default by being listed AHEAD of the one it supersedes, without deleting the
+                    // superseded parameters.  Note that nothing currently *reads* an alternate:
+                    // selecting a non-default model is deliberately not implemented here.
+                    it->second.push_back(dict);
                 } else {
-                    // Error if already in map!
+                    // Error if already in map!  Reached only for data supplied at run time, where
+                    // silently keeping the caller's record as an unread alternate would be worse
+                    // than refusing it.
                     throw ValueError(
                       format("CAS pair(%s,%s) already in binary interaction map; considering enabling configuration key OVERWRITE_BINARY_INTERACTION",
                              CAS[0].c_str(), CAS[1].c_str()));

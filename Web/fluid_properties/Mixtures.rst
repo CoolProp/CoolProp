@@ -51,6 +51,29 @@ Here is a sample of using this in python:
     Use with caution!! For other mixtures this can give you entirely(!) wrong predictions
     
 
+More than one published model for a pair
+---------------------------------------
+
+For a few binary pairs CoolProp ships more than one published set of interaction parameters, because
+a newer correlation has superseded an older one without the older one becoming worthless.  Both are
+kept in ``dev/mixtures/mixture_binary_pairs.json``; which one is *in force* is decided by document
+order.  The **first** record for a given pair is the model used for every calculation, and any
+further records for the same pair are retained but not read.  This latitude applies only to the
+library shipped with CoolProp -- parameters you supply yourself at run time still follow the rules
+in the next section, so that they can never be silently ignored.
+
+So a newer correlation is made the default by being listed **ahead of** the record it supersedes.
+Appending it after that record has no effect at all.  As an example, the hydrogen pairs H2 + {CH4,
+N2, CO, CO2} carry the Beckmüller *et al.* (2021) parameters first, followed by the superseded
+GERG-2008 (Kunz & Wagner) parameters.
+
+.. note::
+
+    There is currently no way to *select* a non-default record at run time -- the alternates are
+    preserved in the data file rather than exposed through the API.  If you need the GERG-2008
+    parameters for a natural-gas pair, use the strict :ref:`GERG <gerg_backend>` backends
+    (``GERG2008::``/``GERG2004::``), which carry the Kunz & Wagner model in its entirety.
+
 Using your own interaction parameters
 -------------------------------------
 

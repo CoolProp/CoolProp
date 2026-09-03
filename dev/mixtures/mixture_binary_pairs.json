@@ -429,6 +429,19 @@
   {
     "BibTeX": "Kunz-JCED-2012",
     "CAS1": "74-82-8",
+    "CAS2": "1333-74-0",
+    "F": 1.0,
+    "Name1": "Methane",
+    "Name2": "Hydrogen",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "function": "Methane-Hydrogen",
+    "gammaT": 1.352643115,
+    "gammaV": 1.018702573
+  },
+  {
+    "BibTeX": "Kunz-JCED-2012",
+    "CAS1": "74-82-8",
     "CAS2": "7782-44-7",
     "F": 0,
     "Name1": "Methane",
@@ -647,6 +660,18 @@
   {
     "BibTeX": "Kunz-JCED-2012",
     "CAS1": "7727-37-9",
+    "CAS2": "1333-74-0",
+    "F": 0,
+    "Name1": "Nitrogen",
+    "Name2": "Hydrogen",
+    "betaT": 0.946134337,
+    "betaV": 0.972532065,
+    "gammaT": 1.175696583,
+    "gammaV": 0.970115357
+  },
+  {
+    "BibTeX": "Kunz-JCED-2012",
+    "CAS1": "7727-37-9",
     "CAS2": "7783-06-4",
     "F": 0,
     "Name1": "Nitrogen",
@@ -812,6 +837,18 @@
     "function": "CarbonDioxide-Hydrogen-Beckmueller2021",
     "gammaT": 1.961,
     "gammaV": 0.842
+  },
+  {
+    "BibTeX": "Kunz-JCED-2012",
+    "CAS1": "124-38-9",
+    "CAS2": "1333-74-0",
+    "F": 0,
+    "Name1": "CarbonDioxide",
+    "Name2": "Hydrogen",
+    "betaT": 0.942320195,
+    "betaV": 0.904142159,
+    "gammaT": 1.782924792,
+    "gammaV": 1.15279255
   },
   {
     "BibTeX": "Kunz-JCED-2012",
@@ -2451,6 +2488,18 @@
     "function": "CarbonMonoxide-Hydrogen-Beckmueller2021",
     "gammaT": 1.105,
     "gammaV": 1.04
+  },
+  {
+    "BibTeX": "Kunz-JCED-2012",
+    "CAS1": "1333-74-0",
+    "CAS2": "630-08-0",
+    "F": 0,
+    "Name1": "Hydrogen",
+    "Name2": "CarbonMonoxide",
+    "betaT": 1.0,
+    "betaV": 1.0,
+    "gammaT": 1.377504607,
+    "gammaV": 1.121416201
   },
   {
     "BibTeX": "Kunz-JCED-2012",
