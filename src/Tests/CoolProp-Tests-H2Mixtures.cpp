@@ -142,6 +142,31 @@ TEST_CASE("Superseded Kunz-JCED-2012 H2 records are retained behind the Beckmuel
     }
 }
 
+TEST_CASE("Run-time parameters are refused even before the shipped library has loaded", "[.][runtime_before_defaults]") {
+    // Order-sensitive, so it carries no shared tag: it is strongest as the FIRST library action in
+    // a process, and merely duplicates the case below once the shipped library is already loaded.
+    // Run it deliberately, in a fresh process:
+    //   ./build_catch/CatchTestRunner "[runtime_before_defaults]"
+    //
+    // The shipped library loads lazily, and set_interaction_parameters() does not itself trigger
+    // that load.  Reaching it first therefore used to drop the caller's record into an empty map as
+    // a brand-new entry; the shipped records then arrived later and, being newer in document order,
+    // took precedence -- silently demoting the caller's parameters to an unread alternate instead
+    // of rejecting them or honouring OVERWRITE_BINARY_INTERACTION.
+    const std::string doc = R"([{"CAS1": "74-82-8", "CAS2": "7727-37-9",)"
+                            R"( "Name1": "Methane", "Name2": "Nitrogen",)"
+                            R"( "BibTeX": "test-not-a-real-model", "F": 0.0,)"
+                            R"( "betaT": 1.0, "betaV": 1.0, "gammaT": 1.234, "gammaV": 1.234}])";
+
+    const bool overwrite_was = get_config_bool(OVERWRITE_BINARY_INTERACTION);
+    set_config_bool(OVERWRITE_BINARY_INTERACTION, false);
+    CHECK_THROWS_AS(set_interaction_parameters(doc), CoolProp::ValueError);
+    set_config_bool(OVERWRITE_BINARY_INTERACTION, overwrite_was);
+
+    // The shipped parameters are the ones in force either way.
+    CHECK(get_mixture_binary_pair_data("74-82-8", "7727-37-9", "BibTeX") == "Kunz-JCED-2012");
+}
+
 TEST_CASE("Run-time binary parameters for a known pair are refused, not filed away", "[mixtures][hydrogen][2263]") {
     // Guards the fail-open half of allowing several models per pair.  The library shipped with
     // CoolProp may carry more than one record for a pair, with the first one in force; parameters

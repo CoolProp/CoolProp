@@ -117,12 +117,27 @@ class MixtureBinaryPairLibrary
      *
      * @param doc The JSON document holding the binary pair records
      * @param allow_multiple_models If true, a pair that appears more than once in \a doc keeps every
-     * record, the first one being the model in force.  If false (the default, and what run-time
-     * callers such as set_interaction_parameters get), a repeated pair is an error unless the
-     * configuration key OVERWRITE_BINARY_INTERACTION is set -- so that parameters supplied by a
-     * caller can never be silently ignored.
+     * record, and the LAST one in document order is the model in force: later data supersedes
+     * earlier.  The record in force is held at index 0, so the vector order is deliberately the
+     * reverse of the document order.  If false (the default, and what run-time callers such as
+     * set_interaction_parameters get), a repeated pair is an error unless the configuration key
+     * OVERWRITE_BINARY_INTERACTION is set -- so that parameters supplied by a caller can never be
+     * silently ignored.
      */
     void load_from_JSON(const nlohmann::json& doc, bool allow_multiple_models = false) {
+
+        if (!allow_multiple_models) {
+            // Records arriving at run time have to be merged into the COMPLETE shipped library,
+            // never into an empty map.  The shipped library loads lazily, and neither
+            // set_interaction_parameters() nor the REFPROP HMX.BNC import triggers that load, so a
+            // caller reaching one of them before their first property call would otherwise have
+            // their records inserted as brand-new entries; the shipped records would then arrive
+            // afterwards and, being later in document order, take precedence -- silently demoting
+            // the caller's parameters to an unread alternate instead of rejecting them or honouring
+            // OVERWRITE_BINARY_INTERACTION.  Guarded on allow_multiple_models so the shipped load
+            // itself cannot re-enter std::call_once and deadlock.
+            load_defaults_if_needed();
+        }
 
         // Iterate over the papers in the listing
         for (const auto& el : doc) {
