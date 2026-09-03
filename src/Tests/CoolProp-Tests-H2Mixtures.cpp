@@ -140,6 +140,26 @@ TEST_CASE("Superseded Kunz-JCED-2012 H2 records are retained behind the Beckmuel
     }
 }
 
+TEST_CASE("Shipped binary-pair precedence ignores OVERWRITE_BINARY_INTERACTION", "[.][binary_precedence]") {
+    // Deliberately carries NO shared tag.  It is only meaningful as the FIRST thing in a process
+    // that touches the mixture library -- the shipped library loads lazily behind a std::call_once,
+    // so once any earlier test has triggered that load this check passes without exercising
+    // anything.  Catch2 excludes [.] from the default run but still selects hidden tests on an
+    // explicit tag match, so sharing [mixtures]/[hydrogen] would have swept it into those runs and
+    // produced a vacuous green.  Run it on its own, in a fresh process:
+    //   ./build_catch/CatchTestRunner "[binary_precedence]"
+    //
+    // Web/fluid_properties/Mixtures.rst instructs users to set this key BEFORE touching the
+    // library, which is exactly the ordering that once let the superseded Kunz record overwrite the
+    // Beckmueller one while the shipped library was still being loaded.  Precedence among shipped
+    // records is document order and must not depend on this key at all.
+    const bool overwrite_was = get_config_bool(OVERWRITE_BINARY_INTERACTION);
+    set_config_bool(OVERWRITE_BINARY_INTERACTION, true);
+    const std::string bib = get_mixture_binary_pair_data("1333-74-0", "74-82-8", "BibTeX");
+    set_config_bool(OVERWRITE_BINARY_INTERACTION, overwrite_was);
+    CHECK(bib == "Beckmueller-JPCRD-2021");
+}
+
 TEST_CASE("Run-time binary parameters for a known pair are refused, not filed away", "[mixtures][hydrogen][2263]") {
     // Guards the fail-open half of allowing several models per pair.  The library shipped with
     // CoolProp may carry more than one record for a pair, with the first one in force; parameters

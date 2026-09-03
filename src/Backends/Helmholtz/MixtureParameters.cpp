@@ -185,12 +185,7 @@ class MixtureBinaryPairLibrary
                 // Add to binary pair map by creating one-element vector
                 m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
             } else {
-                if (get_config_bool(OVERWRITE_BINARY_INTERACTION)) {
-                    // Overwrite: the incoming record replaces everything previously known about
-                    // this pair.  This is the documented behaviour of set_interaction_parameters,
-                    // see Web/fluid_properties/Mixtures.rst.
-                    it->second = std::vector<Dictionary>(1, dict);
-                } else if (allow_multiple_models) {
+                if (allow_multiple_models) {
                     // More than one model is published for this pair, so keep them all.  Index 0
                     // -- the FIRST record for the pair in document order -- is the model in force;
                     // every consumer of binary_pair_map() reads [0].  Later records are retained
@@ -198,7 +193,20 @@ class MixtureBinaryPairLibrary
                     // default by being listed AHEAD of the one it supersedes, without deleting the
                     // superseded parameters.  Note that nothing currently *reads* an alternate:
                     // selecting a non-default model is deliberately not implemented here.
+                    //
+                    // This branch is tested BEFORE OVERWRITE_BINARY_INTERACTION, and that order is
+                    // load-bearing.  The shipped library loads lazily behind a std::call_once, so a
+                    // caller who sets that key before their first mixture call -- which is exactly
+                    // what Web/fluid_properties/Mixtures.rst tells them to do -- would otherwise be
+                    // in overwrite mode while the shipped records were still being read, and each
+                    // superseded record would replace the newer one it is meant to sit behind.
+                    // Precedence among shipped records is document order and nothing else.
                     it->second.push_back(dict);
+                } else if (get_config_bool(OVERWRITE_BINARY_INTERACTION)) {
+                    // Overwrite: the incoming record replaces everything previously known about
+                    // this pair.  Applies to data supplied at run time only; this is the documented
+                    // behaviour of set_interaction_parameters, see Web/fluid_properties/Mixtures.rst.
+                    it->second = std::vector<Dictionary>(1, dict);
                 } else {
                     // Error if already in map!  Reached only for data supplied at run time, where
                     // silently keeping the caller's record as an unread alternate would be worse
