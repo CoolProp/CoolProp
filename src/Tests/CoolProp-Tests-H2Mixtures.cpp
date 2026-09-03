@@ -87,10 +87,11 @@ TEST_CASE("Beckmueller-2021 H2 binary mixtures reproduce Table S6", "[mixtures][
 TEST_CASE("Beckmueller-2021 is the default model for its H2 pairs", "[mixtures][hydrogen][2263]") {
     // The superseded Kunz-JCED-2012 records for these four pairs are still present in
     // dev/mixtures/mixture_binary_pairs.json -- they are not deleted, they are kept as alternates
-    // behind the Beckmueller records.  Which of the two is in force is decided purely by document
-    // order: the loader keeps index 0, the FIRST record for a pair, as the model in force.  These
-    // checks fail if the Beckmueller records are ever moved below the Kunz ones, which would
-    // otherwise silently revert every number in the Table S6 case above.
+    // ahead of the Beckmueller records.  Which of the two is in force is decided purely by document
+    // order: later data supersedes earlier, so the LAST record for a pair -- the Beckmueller one,
+    // listed after Kunz -- is the model in force (the loader holds it at index 0, which every getter
+    // reads).  These checks fail if the Beckmueller records are ever moved above the Kunz ones,
+    // which would otherwise silently revert every number in the Table S6 case above.
     struct Pair
     {
         std::string CAS1, CAS2;  // sorted CAS order, as the library keys the map
@@ -169,7 +170,7 @@ TEST_CASE("Run-time parameters are refused even before the shipped library has l
 
 TEST_CASE("Run-time binary parameters for a known pair are refused, not filed away", "[mixtures][hydrogen][2263]") {
     // Guards the fail-open half of allowing several models per pair.  The library shipped with
-    // CoolProp may carry more than one record for a pair, with the first one in force; parameters
+    // CoolProp may carry more than one record for a pair, the last in document order being in force;
     // handed in at run time must NOT get that treatment, because becoming an unread alternate looks
     // exactly like success to the caller while changing nothing.  With OVERWRITE_BINARY_INTERACTION
     // off -- its default -- supplying a pair that is already known has to throw.
