@@ -903,8 +903,10 @@ class ResidualHelmholtz
     /// Delta-only (see BaseHelmholtzTerm::all_deltaonly): only alphar and the delta-derivatives
     /// (orders 1-4) plus the delta_x_/delta2_x_ convenience products are valid on the result;
     /// tau/mixed fields are left zero and must not be read.  Used by the density-root residuals.
-    /// The delta-fields are bit-for-bit identical to all(..., cache_values=false); this mirrors the
-    /// non-cached excess path (get_deriv_nocomp_notcached), which is the only one delta-only uses.
+    /// The delta-fields match all(..., cache_values=false) -- bit-for-bit on orders 0-2, and to
+    /// within a few ULP on orders 3-4 where compiler FMA contraction can differ between the two
+    /// functions (see ResidualHelmholtzNonAnalytic::all_deltaonly in src/Helmholtz.cpp).  This
+    /// mirrors the non-cached excess path (get_deriv_nocomp_notcached), the only one delta-only uses.
     virtual HelmholtzDerivatives all_deltaonly(HelmholtzEOSMixtureBackend& HEOS, const std::vector<CoolPropDbl>& mole_fractions, double tau,
                                                double delta) {
         HelmholtzDerivatives a = CS.all_deltaonly(HEOS, tau, delta, mole_fractions) + Excess.all_deltaonly(tau, delta, mole_fractions);

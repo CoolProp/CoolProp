@@ -3640,10 +3640,13 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,
                                                                   const CoolPropDbl& tau, const CoolPropDbl& delta) {
     // A pure-delta derivative (nTau == 0, orders 0-4) needs no tau-derivatives, so use the cheaper
-    // delta-only alphar evaluation.  all_deltaonly() is bit-for-bit identical to all() on those
-    // fields, so every such caller (the pressure / dp-drho / spinodal density residuals, and also
-    // the transport-property pressure evals) gets the same result -- just faster.  Any request that
-    // needs a tau-derivative (nTau > 0) or an out-of-range order falls through to the full path.
+    // delta-only alphar evaluation.  all_deltaonly() agrees with all() on those fields -- bit-for-bit
+    // on orders 0-2, and to within a few ULP on orders 3-4, where compiler FMA contraction can
+    // differ between the two functions (see ResidualHelmholtzNonAnalytic::all_deltaonly in
+    // src/Helmholtz.cpp).  Every caller of this function asks for nDelta 0, 1 or 2 -- the pressure /
+    // dp-drho / spinodal density residuals and the transport-property pressure evals -- so they are
+    // all in the bit-for-bit range and get the same result, just faster.  Any request that needs a
+    // tau-derivative (nTau > 0) or an out-of-range order falls through to the full path.
     if (nTau == 0 && nDelta >= 0 && nDelta <= 4) {
         HelmholtzDerivatives derivs = residual_helmholtz->all_deltaonly(*this, mole_fractions, tau, delta);
         return derivs.get(0, nDelta);
