@@ -222,15 +222,21 @@ TEST_CASE("Cubic volume translation: pure-fluid property invariances", "[cubic][
 TEST_CASE("Cubic volume translation: second virial coefficient shifts by -c", "[cubic][volume_translation]") {
     for (const auto& backend : cubic_backends()) {
         for (const auto& fluid : probe_fluids()) {
-            CAPTURE(backend);
-            CAPTURE(fluid);
-            const double c = 0.15 * covolume(backend, fluid);
-            ASptr ref = make_translated(backend, fluid, 0.0);
-            ASptr trn = make_translated(backend, fluid, c);
-            const double T = 1.25 * ref->T_critical();
-            ref->update(DmolarT_INPUTS, 1e-3, T);
-            trn->update(DmolarT_INPUTS, 1e-3, T);
-            CHECK(close_to(trn->Bvirial(), ref->Bvirial() - c, 1e-9, 1e-18));
+            const double b = covolume(backend, fluid);
+            // Both signs, for the same reason the single-phase suite sweeps both: the two are not
+            // mirror images through the code, and both occur in published parameter sets.
+            for (double frac : {0.15, -0.15}) {
+                CAPTURE(backend);
+                CAPTURE(fluid);
+                CAPTURE(frac);
+                const double c = frac * b;
+                ASptr ref = make_translated(backend, fluid, 0.0);
+                ASptr trn = make_translated(backend, fluid, c);
+                const double T = 1.25 * ref->T_critical();
+                ref->update(DmolarT_INPUTS, 1e-3, T);
+                trn->update(DmolarT_INPUTS, 1e-3, T);
+                CHECK(close_to(trn->Bvirial(), ref->Bvirial() - c, 1e-9, 1e-18));
+            }
         }
     }
 }
@@ -238,45 +244,57 @@ TEST_CASE("Cubic volume translation: second virial coefficient shifts by -c", "[
 TEST_CASE("Cubic volume translation: saturation invariances", "[cubic][volume_translation]") {
     for (const auto& backend : cubic_backends()) {
         for (const auto& fluid : probe_fluids()) {
-            CAPTURE(backend);
-            CAPTURE(fluid);
-            const double c = 0.15 * covolume(backend, fluid);
-            ASptr ref = make_translated(backend, fluid, 0.0);
-            ASptr trn = make_translated(backend, fluid, c);
+            const double b = covolume(backend, fluid);
+            // Both signs, and three reduced temperatures rather than one.  The property changes on
+            // vaporisation shrink as the two phases converge towards the critical point, so a
+            // single mid-dome temperature says nothing about whether the identities still hold
+            // where Dvap V and Dvap H are small and the cancellation is correspondingly delicate.
+            for (double frac : {0.15, -0.15}) {
+                for (double Tr : {0.65, 0.75, 0.85}) {
+                    CAPTURE(backend);
+                    CAPTURE(fluid);
+                    CAPTURE(frac);
+                    CAPTURE(Tr);
+                    const double c = frac * b;
+                    ASptr ref = make_translated(backend, fluid, 0.0);
+                    ASptr trn = make_translated(backend, fluid, c);
 
-            const double T = 0.75 * ref->T_critical();
-            REQUIRE_NOTHROW(ref->update(QT_INPUTS, 0, T));
-            REQUIRE_NOTHROW(trn->update(QT_INPUTS, 0, T));
+                    const double T = Tr * ref->T_critical();
+                    REQUIRE_NOTHROW(ref->update(QT_INPUTS, 0, T));
+                    REQUIRE_NOTHROW(trn->update(QT_INPUTS, 0, T));
 
-            // The vapour pressure is the headline invariance: it is what lets a translation be
-            // fitted to densities without disturbing anything that was fitted to VLE.
-            CHECK(close_to(trn->p(), ref->p(), 1e-10, 1e-6));
+                    // The vapour pressure is the headline invariance: it is what lets a translation
+                    // be fitted to densities without disturbing anything that was fitted to VLE.
+                    CHECK(close_to(trn->p(), ref->p(), 1e-10, 1e-6));
 
-            // Each saturated phase moves by the same -c, so for a PURE fluid every property change
-            // on vaporisation is invariant -- the volume change included.
-            const auto dvap = [](AbstractState& S, parameters key) {
-                return S.saturated_vapor_keyed_output(key) - S.saturated_liquid_keyed_output(key);
-            };
-            const auto dvap_v = [](AbstractState& S) {
-                return 1.0 / S.saturated_vapor_keyed_output(iDmolar) - 1.0 / S.saturated_liquid_keyed_output(iDmolar);
-            };
-            CHECK(close_to(dvap_v(*trn), dvap_v(*ref), 1e-9, 1e-18));
-            for (parameters key : {iHmolar, iSmolar, iUmolar, iHelmholtzmolar, iCvmolar, iCpmolar}) {
-                CAPTURE(get_parameter_information(key, "short"));
-                CHECK(close_to(dvap(*trn, key), dvap(*ref, key), 1e-9, 1e-8));
-            }
+                    // Each saturated phase moves by the same -c, so for a PURE fluid every property
+                    // change on vaporisation is invariant -- the volume change included.
+                    const auto dvap = [](AbstractState& S, parameters key) {
+                        return S.saturated_vapor_keyed_output(key) - S.saturated_liquid_keyed_output(key);
+                    };
+                    const auto dvap_v = [](AbstractState& S) {
+                        return 1.0 / S.saturated_vapor_keyed_output(iDmolar) - 1.0 / S.saturated_liquid_keyed_output(iDmolar);
+                    };
+                    CHECK(close_to(dvap_v(*trn), dvap_v(*ref), 1e-9, 1e-18));
+                    for (parameters key : {iHmolar, iSmolar, iUmolar, iHelmholtzmolar, iCvmolar, iCpmolar}) {
+                        CAPTURE(get_parameter_information(key, "short"));
+                        CHECK(close_to(dvap(*trn, key), dvap(*ref, key), 1e-9, 1e-8));
+                    }
 
-            // Each saturated phase individually: the volume shifts by -c.
-            //
-            // The corresponding h -> h - p*c identity is deliberately NOT asserted here.  SatL/SatV
-            // are set from (rho, T), so each carries its own converged pressure rather than a shared
-            // exact p, and the residual p mismatch feeds straight into h = u + p*v.  The identity is
-            // pinned rigorously in the single-phase test above, where p is an exact input.
-            for (int Q : {0, 1}) {
-                CAPTURE(Q);
-                const double vr = 1.0 / (Q == 0 ? ref->saturated_liquid_keyed_output(iDmolar) : ref->saturated_vapor_keyed_output(iDmolar));
-                const double vt = 1.0 / (Q == 0 ? trn->saturated_liquid_keyed_output(iDmolar) : trn->saturated_vapor_keyed_output(iDmolar));
-                CHECK(close_to(vt, vr - c, 1e-9, 1e-18));
+                    // Each saturated phase individually: the volume shifts by -c.
+                    //
+                    // The corresponding h -> h - p*c identity is deliberately NOT asserted here.
+                    // SatL/SatV are set from (rho, T), so each carries its own converged pressure
+                    // rather than a shared exact p, and the residual p mismatch feeds straight into
+                    // h = u + p*v.  The identity is pinned rigorously in the single-phase test
+                    // above, where p is an exact input.
+                    for (int Q : {0, 1}) {
+                        CAPTURE(Q);
+                        const double vr = 1.0 / (Q == 0 ? ref->saturated_liquid_keyed_output(iDmolar) : ref->saturated_vapor_keyed_output(iDmolar));
+                        const double vt = 1.0 / (Q == 0 ? trn->saturated_liquid_keyed_output(iDmolar) : trn->saturated_vapor_keyed_output(iDmolar));
+                        CHECK(close_to(vt, vr - c, 1e-9, 1e-18));
+                    }
+                }
             }
         }
     }
