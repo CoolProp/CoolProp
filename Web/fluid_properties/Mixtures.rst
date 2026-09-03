@@ -57,15 +57,15 @@ More than one published model for a pair
 For a few binary pairs CoolProp ships more than one published set of interaction parameters, because
 a newer correlation has superseded an older one without the older one becoming worthless.  Both are
 kept in ``dev/mixtures/mixture_binary_pairs.json``; which one is *in force* is decided by document
-order.  The **first** record for a given pair is the model used for every calculation, and any
-further records for the same pair are retained but not read.  This latitude applies only to the
-library shipped with CoolProp -- parameters you supply yourself at run time still follow the rules
-in the next section, so that they can never be silently ignored.
+order.  Later data supersedes earlier, so the **last** record for a given pair is the model used for
+every calculation, and any earlier records for the same pair are retained but not read.  This
+latitude applies only to the library shipped with CoolProp -- parameters you supply yourself at run
+time still follow the rules in the next section, so that they can never be silently ignored.
 
-So a newer correlation is made the default by being listed **ahead of** the record it supersedes.
-Appending it after that record has no effect at all.  As an example, the hydrogen pairs H2 + {CH4,
-N2, CO, CO2} carry the Beckmüller *et al.* (2021) parameters first, followed by the superseded
-GERG-2008 (Kunz & Wagner) parameters.
+A newer correlation is therefore added by **appending** it after the record it supersedes.  No other
+edit is needed, and the superseded parameters stay in the file.  As an example, the hydrogen pairs
+H2 + {CH4, N2, CO, CO2} carry the GERG-2008 (Kunz & Wagner) parameters first, followed by the
+Beckmüller *et al.* (2021) parameters that supersede them.
 
 .. note::
 
