@@ -3085,39 +3085,52 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     }
     IO.beta = beta;
 
-    // --- Part-2 fallback (#3342 / CoolProp-1tbe.22): stability-seeded V-space Gibbs Newton. ---
-    // The reduced-gradient second-order phase above uses g_i = beta*(1-beta)*(lnf_V - lnf_L),
-    // which VANISHES as beta -> 1, so it stalls at the near-dew/near-bubble edge (beta pinned to a
-    // boundary, split not converged).  Following ThermoPack tp_solver::mod_newton_search, retry in
-    // vapour MOLE NUMBERS V (beta = sum(V) derived) with the UNSCALED gradient dG/dV_i = lnf_i^V -
-    // lnf_i^L (does not vanish at the boundary) and the mole-number Gibbs Hessian, seeded from the
-    // stability trial phases.  Additive and safe: it ACCEPTS only a converged result, and on any
-    // failure restores the pre-fallback state, so it can never regress a currently-passing case.
+    // --- Part-2 fallback (#3342 / CoolProp-1tbe.22): stability-seeded MINORITY-phase Gibbs Newton. ---
+    // The reduced-gradient second-order phase uses g_i = beta*(1-beta)*(lnf_V - lnf_L), which
+    // vanishes as beta -> 0/1, so it stalls at the near-bubble/near-dew edge (beta pinned to a
+    // boundary, split not converged).  Following ThermoPack tp_solver::mod_newton_search, retry a
+    // full Gibbs Newton in the INCIPIENT (minority) phase's mole numbers -- the vanishing liquid
+    // near the dew, the vanishing vapour near the bubble.  Their components are small and far from
+    // the z_i upper bound, so the feasible box is NOT a razor (the failure of a majority-phase
+    // formulation).  Unscaled gradient dG/da_i = lnf_i^min - lnf_i^maj (does not vanish at the
+    // boundary) and the mole-number Gibbs Hessian (1/A_min)[...] + (1/A_maj)[...].  Additive and
+    // safe: ACCEPTS only a converged result; on any failure restores the exact pre-fallback state,
+    // so it can never regress a currently-passing case.
     if (!converged) {
-        // Preserve the pre-fallback published state for exact restore on failure.
         const std::vector<CoolPropDbl> x_pre = IO.x, y_pre = IO.y;
         const CoolPropDbl beta_pre = beta, rhoL_pre = IO.rhomolar_liq, rhoV_pre = IO.rhomolar_vap;
 
-        std::vector<CoolPropDbl> xf = x0_stab, yf = y0_stab;
-        // Seed beta from a mole balance on the widest-spread component of the trial phases.
-        std::size_t iw = 0;
-        CoolPropDbl wbest = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            CoolPropDbl d = std::abs(yf[i] - xf[i]);
-            if (d > wbest) { wbest = d; iw = i; }
+        const bool minority_is_liquid = (beta_pre >= 0.5);  // near dew -> incipient liquid
+        // Incipient composition from the stability trial phase (non-trivial by construction).
+        std::vector<CoolPropDbl> w = minority_is_liquid ? x0_stab : y0_stab;
+        {
+            CoolPropDbl sw = 0;
+            for (std::size_t i = 0; i < N; ++i) sw += std::max(w[i], static_cast<CoolPropDbl>(0));
+            if (sw > 0) {
+                for (std::size_t i = 0; i < N; ++i) w[i] = std::max(w[i], static_cast<CoolPropDbl>(0)) / sw;
+            } else {
+                w = IO.z;
+            }
         }
-        CoolPropDbl betaf = 0.5;
-        if (wbest > 1e-12) {
-            CoolPropDbl b = (IO.z[iw] - xf[iw]) / (yf[iw] - xf[iw]);
-            if (ValidNumber(b)) betaf = std::min(std::max(b, static_cast<CoolPropDbl>(1e-8)), static_cast<CoolPropDbl>(1.0 - 1e-8));
-        }
+        std::vector<CoolPropDbl> a(N);
+        for (std::size_t i = 0; i < N; ++i) a[i] = 1e-3 * w[i];  // small incipient amount
         rho_warm_L = -1;
         rho_warm_V = -1;
 
-        auto eval_state = [&](const std::vector<CoolPropDbl>& xx, const std::vector<CoolPropDbl>& yy, CoolPropDbl bb, double& G, double& mg) -> bool {
-            IO.x = xx;
-            IO.y = yy;
-            beta = bb;
+        // Evaluate the two-phase state from minority mole numbers a; leaves IO.x/IO.y/rho + SatL/SatV
+        // on that state and returns total Gibbs G and equal-fugacity residual mg.
+        auto eval_min = [&](const std::vector<CoolPropDbl>& aa, double& G, double& mg) -> bool {
+            CoolPropDbl A = 0, B = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                if (!(aa[i] > 0) || !(aa[i] < IO.z[i])) return false;
+                A += aa[i];
+                B += IO.z[i] - aa[i];
+            }
+            if (!(A > 0) || !(B > 0)) return false;
+            std::vector<CoolPropDbl> mn(N), mj(N);
+            for (std::size_t i = 0; i < N; ++i) { mn[i] = aa[i] / A; mj[i] = (IO.z[i] - aa[i]) / B; }
+            if (minority_is_liquid) { IO.x = mn; IO.y = mj; beta = B; }
+            else { IO.y = mn; IO.x = mj; beta = A; }
             if (!evaluate_phases()) return false;
             HEOS.SatL->set_mole_fractions(IO.x);
             HEOS.SatL->update_DmolarT_direct(IO.rhomolar_liq, IO.T);
@@ -3137,100 +3150,104 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
 
         bool fb_conv = false;
         double G_cur = 0, mg_cur = 0;
-        bool ok = eval_state(xf, yf, betaf, G_cur, mg_cur);
-        if (cp_dbg_mich) std::printf("[MICH-FB] entry ok=%d betaf=%.6g mg=%.4g G=%.6g\n", (int)ok, (double)betaf, mg_cur, G_cur);
         int fb_iters = 0;
         const char* fb_stop = "maxiter";
-        const int fb_max_iter = 80;
+        bool ok = eval_min(a, G_cur, mg_cur);
+        if (cp_dbg_mich) {
+            CoolPropDbl Asum = 0;
+            for (std::size_t i = 0; i < N; ++i) Asum += a[i];
+            std::printf("[MICH-FB] entry ok=%d minLiq=%d A=%.3g mg=%.4g\n", (int)ok, (int)minority_is_liquid, (double)Asum, mg_cur);
+        }
+        const int fb_max_iter = 100;
         for (int it = 0; ok && it < fb_max_iter; ++it) {
             if (mg_cur < gibbs_tol) { fb_conv = true; fb_stop = "converged"; break; }
-            if (betaf <= 1e-10 || betaf >= 1.0 - 1e-10) { fb_stop = "beta-boundary"; break; }
+            CoolPropDbl A = 0;
+            for (std::size_t i = 0; i < N; ++i) A += a[i];
+            CoolPropDbl B = 1.0 - A;  // z normalized to 1
+            if (!(A > 1e-14) || !(B > 1e-14)) { fb_stop = "amt-boundary"; break; }
 
-            // Unscaled gradient g_i = lnf_i^V - lnf_i^L and mole-number Gibbs Hessian.
+            HelmholtzEOSMixtureBackend* Smin = minority_is_liquid ? HEOS.SatL.get() : HEOS.SatV.get();
+            HelmholtzEOSMixtureBackend* Smaj = minority_is_liquid ? HEOS.SatV.get() : HEOS.SatL.get();
+            std::vector<CoolPropDbl> mnc(N), mjc(N);
+            for (std::size_t i = 0; i < N; ++i) { mnc[i] = a[i] / A; mjc[i] = (IO.z[i] - a[i]) / B; }
+
             Eigen::VectorXd g(N);
-            Eigen::MatrixXd Hm(N, N), DL(N, N), DV(N, N);
+            Eigen::MatrixXd Hm(N, N), Dmin(N, N), Dmaj(N, N);
             for (std::size_t i = 0; i < N; ++i) {
                 for (std::size_t j = 0; j < N; ++j) {
-                    DL(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatL.get()), i, j, CoolProp::XN_INDEPENDENT);
-                    DV(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, CoolProp::XN_INDEPENDENT);
+                    Dmin(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smin, i, j, CoolProp::XN_INDEPENDENT);
+                    Dmaj(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smaj, i, j, CoolProp::XN_INDEPENDENT);
                 }
             }
             for (std::size_t i = 0; i < N; ++i) {
-                CoolPropDbl sL = 0, sV = 0;
-                for (std::size_t k = 0; k < N; ++k) { sL += IO.x[k] * DL(i, k); sV += IO.y[k] * DV(i, k); }
-                CoolPropDbl lV = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
-                CoolPropDbl lL = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
-                g(i) = lV - lL;
-                for (std::size_t j = 0; j < N; ++j) {
-                    Hm(i, j) = (DV(i, j) - sV) / betaf + (DL(i, j) - sL) / (1.0 - betaf);
-                }
+                CoolPropDbl sMin = 0, sMaj = 0;
+                for (std::size_t k = 0; k < N; ++k) { sMin += mnc[k] * Dmin(i, k); sMaj += mjc[k] * Dmaj(i, k); }
+                CoolPropDbl lnf_min = std::log(mnc[i]) + std::log(Smin->fugacity_coefficient(i));
+                CoolPropDbl lnf_maj = std::log(mjc[i]) + std::log(Smaj->fugacity_coefficient(i));
+                g(i) = lnf_min - lnf_maj;
+                for (std::size_t j = 0; j < N; ++j) Hm(i, j) = (Dmin(i, j) - sMin) / A + (Dmaj(i, j) - sMaj) / B;
             }
-            // Positive-definite shift so the step is a descent direction.
-            Eigen::VectorXd ds;
+
+            // Condition the system with Michelsen's alpha = 2*sqrt(n) scaling (D = diag(sqrt(a))):
+            // near a boundary a_i are tiny and the 1/A block of H is ~1000x the 1/B block, so the
+            // raw Newton step is poor.  Solve (D H D + shift I) u = -(D g), then da = D u.
+            Eigen::VectorXd sc(N);
+            for (std::size_t i = 0; i < N; ++i) sc(i) = std::sqrt(std::max(a[i], static_cast<CoolPropDbl>(1e-300)));
+            Eigen::MatrixXd Hs(N, N);
+            Eigen::VectorXd gs(N);
+            for (std::size_t i = 0; i < N; ++i) {
+                gs(i) = g(i) * sc(i);
+                for (std::size_t j = 0; j < N; ++j) Hs(i, j) = Hm(i, j) * sc(i) * sc(j);
+            }
+            Eigen::VectorXd da;
             {
                 double shift = 0.0;
                 bool solved = false;
-                for (int t = 0; t < 30; ++t) {
-                    Eigen::MatrixXd Hl = Hm;
+                for (int t = 0; t < 40; ++t) {
+                    Eigen::MatrixXd Hl = Hs;
                     Hl.diagonal().array() += shift;
                     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(Hl, Eigen::EigenvaluesOnly);
                     double mn = es.eigenvalues().minCoeff();
                     if (!ValidNumber(mn)) break;
-                    if (mn < 1e-8) { shift += (1e-8 - mn); continue; }
-                    ds = Hl.ldlt().solve(-g);
+                    if (mn < 1e-10) { shift += (1e-10 - mn) + 1e-12; continue; }
+                    Eigen::VectorXd u = Hl.ldlt().solve(-gs);
+                    da.resize(N);
+                    for (std::size_t i = 0; i < N; ++i) da(i) = sc(i) * u(i);
                     solved = true;
                     break;
                 }
-                if (!solved) break;
+                if (!solved) { fb_stop = "hessian"; break; }
             }
-            // Capture the base vapour mole numbers NOW: eval_state() overwrites IO.y on every
-            // trial, so the step base must be snapshotted before the loop.
-            std::vector<CoolPropDbl> Vbase(N);
-            for (std::size_t i = 0; i < N; ++i) Vbase[i] = betaf * IO.y[i];
-            // Largest step that keeps every V_i strictly inside (0, z_i) -- near the dew a phase is
-            // a razor-thin sliver (V_i ~ z_i), so the full Newton step must be SCALED to the
-            // feasible boundary (ThermoPack's pos_scale), not rejected.
+            // Feasible step: a_i + t*da_i strictly inside (0, z_i).  a is the MINORITY phase so a_i
+            // are small and far from z_i; the binding side is a_i -> 0 (the phase vanishing).
             double t_max = 1.0;
             for (std::size_t i = 0; i < N; ++i) {
-                if (ds(i) > 0) t_max = std::min(t_max, 0.99 * (IO.z[i] - Vbase[i]) / ds(i));
-                else if (ds(i) < 0) t_max = std::min(t_max, 0.99 * Vbase[i] / (-ds(i)));
+                if (da(i) < 0) t_max = std::min(t_max, 0.99 * a[i] / (-da(i)));
+                else if (da(i) > 0) t_max = std::min(t_max, 0.99 * (IO.z[i] - a[i]) / da(i));
             }
             if (!(t_max > 0)) { fb_stop = "t_max<=0"; break; }
             bool accepted = false;
-            for (double t = t_max; t >= t_max / 1024; t *= 0.5) {
-                std::vector<CoolPropDbl> Vn(N), xt(N), yt(N);
-                CoolPropDbl Vtot = 0, Ltot = 0;
-                bool feasible = true;
+            for (double t = t_max; t >= t_max / 4096; t *= 0.5) {
+                std::vector<CoolPropDbl> at(N);
+                bool feas = true;
                 for (std::size_t i = 0; i < N; ++i) {
-                    CoolPropDbl Vi = Vbase[i] + t * ds(i);
-                    if (!(Vi > 0) || !(Vi < IO.z[i])) { feasible = false; break; }
-                    Vn[i] = Vi;
-                    Vtot += Vi;
-                    Ltot += IO.z[i] - Vi;
+                    CoolPropDbl ai = a[i] + t * da(i);
+                    if (!(ai > 0) || !(ai < IO.z[i])) { feas = false; break; }
+                    at[i] = ai;
                 }
-                if (!feasible || !(Vtot > 0) || !(Ltot > 0)) continue;
-                for (std::size_t i = 0; i < N; ++i) { yt[i] = Vn[i] / Vtot; xt[i] = (IO.z[i] - Vn[i]) / Ltot; }
+                if (!feas) continue;
                 double G_try, mg_try;
-                if (!eval_state(xt, yt, Vtot, G_try, mg_try)) continue;
-                if (G_try < G_cur - 1e-14) {
-                    xf = xt; yf = yt; betaf = Vtot; G_cur = G_try; mg_cur = mg_try;
-                    accepted = true;
-                    break;
-                }
+                if (!eval_min(at, G_try, mg_try)) continue;
+                if (G_try < G_cur - 1e-14) { a = at; G_cur = G_try; mg_cur = mg_try; accepted = true; break; }
             }
             if (!accepted) { fb_stop = "no-decrease"; break; }
             fb_iters = it + 1;
         }
-
-        if (cp_dbg_mich) std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g betaf=%.6g\n", (int)fb_conv, fb_stop, fb_iters, mg_cur, (double)betaf);
+        if (cp_dbg_mich) std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g\n", (int)fb_conv, fb_stop, fb_iters, mg_cur);
         if (fb_conv) {
-            // eval_state left IO.x/IO.y/beta/rho on the converged fallback state.
-            beta = betaf;
-            IO.beta = beta;
+            IO.beta = beta;  // eval_min left IO.x/IO.y/beta/rho on the converged state
             converged = true;
-            if (cp_dbg_mich) std::printf("[MICH-FB] V-space fallback CONVERGED beta=%.6g max_g=%.4g\n", (double)betaf, mg_cur);
         } else {
-            // Restore the exact pre-fallback state; behaviour is then identical to before.
             IO.x = x_pre;
             IO.y = y_pre;
             beta = beta_pre;
@@ -3239,7 +3256,6 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             IO.rhomolar_vap = rhoV_pre;
         }
     }
-
     // Recompute the equal-fugacity residual on the FINAL published (IO.x, IO.y) state
     // so the gate below tests exactly what is returned, not a pre-step value captured
     // at the top of the last iteration (which could over-throw a split that converged
