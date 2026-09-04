@@ -1,6 +1,8 @@
 
 #include "HelmholtzEOSMixtureBackend.h"
 #include "VLERoutines.h"
+#include <cstdlib>
+#include <cstdio>
 #include <numeric>
 
 #include <cmath>
@@ -2694,6 +2696,13 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         lnK[i] = std::log(std::max(ratio, 1e-300));
     }
     CoolPropDbl beta = IO.beta;
+    const bool cp_dbg_mich = std::getenv("CP_DBG_MICH") != nullptr;
+    if (cp_dbg_mich) {
+        double sp = 0, tn = 0;
+        for (std::size_t i = 0; i < N; ++i) { sp = std::max(sp, std::abs(IO.x[i] - IO.y[i])); tn += lnK[i]*lnK[i]; }
+        std::printf("[MICH] ENTRY T=%.6g p=%.6g beta0=%.6g spread0=%.4g trivnorm0=%.4g rhoL=%.6g rhoV=%.6g\n",
+                    (double)IO.T,(double)IO.p,(double)beta,sp,tn,(double)IO.rhomolar_liq,(double)IO.rhomolar_vap);
+    }
 
     // Reject a non-finite seed up front.  A stability false-positive at a single-phase point
     // (e.g. below the bubble) can hand in a NaN trial composition; without this guard the NaN
@@ -2819,6 +2828,11 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         }
     }
 
+    if (cp_dbg_mich) {
+        double sp = 0, tn = 0;
+        for (std::size_t i = 0; i < N; ++i) { sp = std::max(sp, std::abs(IO.x[i] - IO.y[i])); tn += lnK[i]*lnK[i]; }
+        std::printf("[MICH] postSS ss_converged=%d beta=%.6g spread=%.4g trivnorm=%.4g\n",(int)ss_converged,(double)beta,sp,tn);
+    }
     // Ensure phases are up-to-date after SS
     solve_rachford_rice();
     if (!evaluate_phases()) {
@@ -3063,6 +3077,11 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // single-phase.  Distinguish the two: a genuine split has a non-trivial composition spread
     // AND an interior phase fraction AND an equal-fugacity residual at engineering tolerance; a
     // false positive is trivial (x==y), collapsed (beta -> 0/1), or grossly unconverged.
+    if (cp_dbg_mich) {
+        double sp = 0;
+        for (std::size_t i = 0; i < N; ++i) sp = std::max(sp, std::abs(IO.x[i] - IO.y[i]));
+        std::printf("[MICH] EXIT  converged=%d final_max_g=%.4g beta=%.6g spread=%.4g\n",(int)converged,(double)last_max_g,(double)beta,sp);
+    }
     if (!converged) {
         CoolPropDbl spread = 0;
         for (std::size_t i = 0; i < N; ++i)
