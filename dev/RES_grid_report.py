@@ -125,9 +125,13 @@ def main(share_min, dev_limit, sres_limit, verbose, residual_criterion=True):
     # Seed F from every pure fluid in the grid, so a fluid whose points ALL fail still gets a
     # verdict row.  Without this it is simply absent from `result` -- not EXCLUDE, not UNJUDGED,
     # not NO-HEOS -- and silently keeps coefficients nothing ever measured.
+    #
+    # Spelled as an assignment rather than a bare `F[fluid]` subscript: the subscript does seed
+    # the defaultdict, but it reads as a no-op and static analysers flag it as one.
     for key in rp_rows:
-        if "&" not in key[0]:
-            F[key[0]]  # touch the defaultdict
+        fluid = key[0]
+        if "&" not in fluid and fluid not in F:
+            F[fluid] = collections.defaultdict(list)
 
     for key, rp in rp_rows.items():
         fluid = key[0]
@@ -193,11 +197,16 @@ def main(share_min, dev_limit, sres_limit, verbose, residual_criterion=True):
         for prop, key in (("eta", "viscosity"), ("tc", "conductivity")):
             pairs = F[fluid][prop]
             wn, dsn, nn = judged(pairs, True)
-            wb, _dsb, nb = judged(pairs, False)
+            wb, dsb, nb = judged(pairs, False)
             if fail[(fluid, "HEOS")] and not pairs:
                 verdict = ("NO-HEOS", "NO-HEOS")
             else:
-                over = (wn is not None and wn > dev_limit) or (dsn is not None and dsn > sres_limit)
+                # BOTH clauses, on both criteria.  NARROW and BROAD are meant to differ in exactly
+                # one way -- whether points inside the enhancement window are judged -- so that the
+                # gap between them measures the enhancement and nothing else.  Dropping the s_res
+                # clause from BROAD alone would put a second, undocumented difference in that gap.
+                def over(w, ds):
+                    return (w is not None and w > dev_limit) or (ds is not None and ds > sres_limit)
                 # Point COUNT does not enter the verdict.  It was tempting to demote a `keep` on
                 # few points to UNJUDGED, but the fluids that would hit -- CYCLOPRO and RE143A,
                 # both n=2 -- agree to 0.001%, four orders below the limit.  Calling that
@@ -205,8 +214,8 @@ def main(share_min, dev_limit, sres_limit, verbose, residual_criterion=True):
                 # count is reported instead, in the table and in the thin-evidence list below, so
                 # a reader can weigh it.
                 verdict = (
-                    "UNJUDGED" if nn == 0 else ("EXCLUDE" if over else "keep"),
-                    "UNJUDGED" if nb == 0 else ("EXCLUDE" if wb > dev_limit else "keep"),
+                    "UNJUDGED" if nn == 0 else ("EXCLUDE" if over(wn, dsn) else "keep"),
+                    "UNJUDGED" if nb == 0 else ("EXCLUDE" if over(wb, dsb) else "keep"),
                 )
             result[(fluid, key)] = dict(narrow=verdict[0], broad=verdict[1], wn=wn, wb=wb, nn=nn, nb=nb, ds=dsn)
 

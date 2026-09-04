@@ -178,8 +178,12 @@ TEST_CASE("RES table is validated as a whole before any fluid is built", "[RES][
         REQUIRE_NOTHROW(JSONFluidLibrary::validate_RES_transport_table(cpjson::parse(std::string(res_transport_parameters_JSON))));
     }
     SECTION("a short residual vector anywhere in the table is caught") {
-        const nlohmann::json bad = cpjson::parse(std::string(R"({"viscosity": {"OK": {"dilute": {"n": [1,2,3,4,5]}, "HEOS": {"n": [1,2,3]}},)"
-                                                             R"( "BAD": {"dilute": {"n": [1,2,3,4,5]}, "SRK": {"n": [1,2]}}}, "conductivity": {}})"));
+        // Both records carry xita and group, so the only thing wrong with the table is BAD's
+        // residual vector.  Without them this would still throw -- on the missing fields -- and
+        // pass while testing nothing it claims to.
+        const nlohmann::json bad =
+          cpjson::parse(std::string(R"({"viscosity": {"OK": {"dilute": {"n": [1,2,3,4,5]}, "HEOS": {"n": [1,2,3], "xita": 1.0, "group": 1}},)"
+                                    R"( "BAD": {"dilute": {"n": [1,2,3,4,5]}, "SRK": {"n": [1,2], "xita": 1.0, "group": 1}}}, "conductivity": {}})"));
         CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(bad), ValueError);
     }
     SECTION("a short dilute vector anywhere in the table is caught") {
@@ -188,6 +192,73 @@ TEST_CASE("RES table is validated as a whole before any fluid is built", "[RES][
     }
     SECTION("an empty table is not an error") {
         REQUIRE_NOTHROW(JSONFluidLibrary::validate_RES_transport_table(cpjson::parse(std::string(R"({})"))));
+    }
+}
+
+TEST_CASE("RES table validation rejects every record the loader would throw on", "[RES][transport]") {
+    // load_RES_transport_parameters() reads each field below with .at() and .get<T>(), both of
+    // which throw -- from inside add_one(), where the cost is the whole fluid library rather than
+    // one record.  An earlier revision validated only the fields that happened to be PRESENT, so
+    // a record missing "dilute", or an EOS block missing xita or group, walked through this pass
+    // untouched and blew up later.  Each section below is one such record.
+    const auto vis = [](const std::string& body) { return cpjson::parse(R"({"viscosity": {"X": )" + body + R"(}, "conductivity": {}})"); };
+    const auto cond = [](const std::string& body) { return cpjson::parse(R"({"viscosity": {}, "conductivity": {"X": )" + body + R"(}})"); };
+    const std::string dilute = R"("dilute": {"n": [1,2,3,4,5]})";
+    const std::string eos = R"("HEOS": {"n": [1,2,3], "xita": 1.0, "group": 1})";
+
+    SECTION("a complete record passes") {
+        REQUIRE_NOTHROW(JSONFluidLibrary::validate_RES_transport_table(vis("{" + dilute + ", " + eos + "}")));
+    }
+    SECTION("the dilute block is missing entirely") {
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(vis("{" + eos + "}")), ValueError);
+    }
+    SECTION("the dilute block has no n") {
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(vis(R"({"dilute": {}, )" + eos + "}")), ValueError);
+    }
+    SECTION("dilute n is not an array") {
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(vis(R"({"dilute": {"n": 5}, )" + eos + "}")), ValueError);
+    }
+    SECTION("dilute n holds a non-number") {
+        // .get<std::vector<double>>() throws on this just as surely as on a missing key, so
+        // checking only for presence and length would still let it reach add_one().
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(vis(R"({"dilute": {"n": [1,2,3,4,"x"]}, )" + eos + "}")), ValueError);
+    }
+    SECTION("the EOS block has no xita") {
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(vis("{" + dilute + R"(, "HEOS": {"n": [1,2,3], "group": 1}})")), ValueError);
+    }
+    SECTION("the EOS block has no group") {
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(vis("{" + dilute + R"(, "HEOS": {"n": [1,2,3], "xita": 1.0}})")), ValueError);
+    }
+    SECTION("group is not an integer") {
+        // .get<int>() does not throw on 1.5, it truncates -- so this one is silent without the
+        // is_number_integer() test, and ships a group number nobody wrote.
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(vis("{" + dilute + R"(, "HEOS": {"n": [1,2,3], "xita": 1.0, "group": 1.5}})")),
+                        ValueError);
+    }
+    SECTION("the EOS n is not an array") {
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(vis("{" + dilute + R"(, "HEOS": {"n": 3, "xita": 1.0, "group": 1}})")),
+                        ValueError);
+    }
+    SECTION("the EOS block is not an object") {
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(vis("{" + dilute + R"(, "HEOS": 5})")), ValueError);
+    }
+    SECTION("the fluid record is not an object") {
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(vis("5")), ValueError);
+    }
+    SECTION("a complete critical_enhancement passes") {
+        REQUIRE_NOTHROW(JSONFluidLibrary::validate_RES_transport_table(
+          cond("{" + dilute
+               + R"(, "HEOS": {"n": [1,2,3,4], "xita": 1.0, "group": 1},)"
+                 R"( "critical_enhancement": {"R_D": 1.02, "gamma_uni": 1.24, "Gamma": 0.05, "phi0": 1e-10, "t_ref": 500.0, "q_D": 1e9}})")));
+    }
+    SECTION("critical_enhancement is missing a field the loader reads") {
+        // q_D omitted.  The conductivity branch reads all six with .at() as soon as the block is
+        // present, so a partial block is not a smaller enhancement, it is a throw.
+        CHECK_THROWS_AS(JSONFluidLibrary::validate_RES_transport_table(
+                          cond("{" + dilute
+                               + R"(, "HEOS": {"n": [1,2,3,4], "xita": 1.0, "group": 1},)"
+                                 R"( "critical_enhancement": {"R_D": 1.02, "gamma_uni": 1.24, "Gamma": 0.05, "phi0": 1e-10, "t_ref": 500.0}})")),
+                        ValueError);
     }
 }
 

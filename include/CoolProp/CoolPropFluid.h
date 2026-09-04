@@ -351,7 +351,7 @@ struct ViscosityRESData
     std::vector<double> n_res;     // 3 coefficients for ln(vis_plus + 1)
     double xita = 1.0;             // scaling factor xi; 1.0 when individual fit was used
     int group_num = -1;
-    double molar_mass = _HUGE;         // kg/mol, cached for Wilke mixing
+    double molar_mass = _HUGE;  // kg/mol, cached for Wilke mixing
     // Set false by the cubic backends when the alpha function is changed without refitting
     // n_res; nothing writes it in this commit, which ships the parameters but no model.
     bool n_params_match_alpha = true;

@@ -826,6 +826,44 @@ class JSONFluidLibrary
         }
     }
 
+    /// Prove a field load_RES_transport_parameters() will read is present AND of the type it
+    /// reads it as.
+    ///
+    /// That loader reaches these with .at() and .get<T>(), and both throw -- from inside
+    /// add_one(), which is the failure validate_RES_transport_table() exists to prevent.  So a
+    /// contains() test is not enough on its own: .get<std::vector<double>>() on a number throws
+    /// exactly as .at() on a missing key does, and .get<int>() on 3.5 does not throw at all, it
+    /// truncates to 3 and ships a wrong group number.
+    static void check_RES_object(const nlohmann::json& parent, const char* field, const std::string& fluid_name, const char* property,
+                                 const std::string& where) {
+        if (!parent.contains(field) || !parent.at(field).is_object()) {
+            throw ValueError(
+              format("RES %s parameters for '%s'%s: \"%s\" is missing or not an object.", property, fluid_name.c_str(), where.c_str(), field));
+        }
+    }
+
+    static void check_RES_number_array(const nlohmann::json& obj, const char* field, const std::string& fluid_name, const char* property,
+                                       const std::string& where) {
+        if (!obj.contains(field) || !obj.at(field).is_array()) {
+            throw ValueError(
+              format("RES %s parameters for '%s'%s: \"%s\" is missing or not an array.", property, fluid_name.c_str(), where.c_str(), field));
+        }
+        for (const auto& v : obj.at(field)) {
+            if (!v.is_number()) {
+                throw ValueError(
+                  format("RES %s parameters for '%s'%s: \"%s\" contains a non-numeric entry.", property, fluid_name.c_str(), where.c_str(), field));
+            }
+        }
+    }
+
+    static void check_RES_number(const nlohmann::json& obj, const char* field, const std::string& fluid_name, const char* property,
+                                 const std::string& where, bool integer = false) {
+        if (!obj.contains(field) || !(integer ? obj.at(field).is_number_integer() : obj.at(field).is_number())) {
+            throw ValueError(format("RES %s parameters for '%s'%s: \"%s\" is missing or not %s.", property, fluid_name.c_str(), where.c_str(), field,
+                                    integer ? "an integer" : "a number"));
+        }
+    }
+
    public:
     /// Check every record in the RES table before a single fluid is built.
     ///
@@ -841,21 +879,57 @@ class JSONFluidLibrary
         if (res_json.is_null()) {
             return;
         }
-        const std::pair<const char*, std::size_t> sections[] = {{"viscosity", RES_N_RES_VISCOSITY}, {"conductivity", RES_N_RES_CONDUCTIVITY}};
+        // Each field below is one load_RES_transport_parameters() reads unconditionally once its
+        // own guard passes, so each has to be proven HERE.  Checking only the ones that happen to
+        // be present is the same fail-open in miniature: a record missing "dilute", or an EOS
+        // block missing xita or group, used to pass this pass untouched and then throw from
+        // add_one() -- which is exactly the partial-library failure this function prevents.
+        struct RESSection
+        {
+            const char* name;
+            std::size_t n_res;
+            bool reads_enhancement;  ///< only the conductivity branch of the loader reads it
+        };
+        const RESSection sections[] = {{"viscosity", RES_N_RES_VISCOSITY, false}, {"conductivity", RES_N_RES_CONDUCTIVITY, true}};
         for (const auto& section : sections) {
-            if (!res_json.contains(section.first)) {
+            if (!res_json.contains(section.name)) {
                 continue;
             }
-            for (const auto& entry : res_json.at(section.first).items()) {
+            if (!res_json.at(section.name).is_object()) {
+                throw ValueError(format("RES table: \"%s\" is not an object.", section.name));
+            }
+            for (const auto& entry : res_json.at(section.name).items()) {
                 const nlohmann::json& fe = entry.value();
-                if (fe.contains("dilute") && fe.at("dilute").contains("n")) {
-                    check_RES_dilute_size(entry.key(), section.first, fe.at("dilute").at("n").size());
+                const std::string& name = entry.key();
+                if (!fe.is_object()) {
+                    throw ValueError(format("RES %s parameters for '%s': record is not an object.", section.name, name.c_str()));
                 }
+                // Not optional: the loader reads fe.at("dilute").at("n") before it looks at any
+                // EOS block, and does so for the withheld fluids too.
+                check_RES_object(fe, "dilute", name, section.name, "");
+                check_RES_number_array(fe.at("dilute"), "n", name, section.name, "");
+                check_RES_dilute_size(name, section.name, fe.at("dilute").at("n").size());
                 for (const char* eos_key : {"HEOS", "PR", "SRK"}) {
-                    if (fe.contains(eos_key) && fe.at(eos_key).contains("n") && fe.at(eos_key).at("n").size() != section.second) {
-                        throw ValueError(format("RES %s parameters for '%s' (%s): expected %d residual coefficients, got %d.", section.first,
-                                                entry.key().c_str(), eos_key, static_cast<int>(section.second),
-                                                static_cast<int>(fe.at(eos_key).at("n").size())));
+                    if (!fe.contains(eos_key)) {
+                        continue;
+                    }
+                    const std::string where = std::string(" (") + eos_key + ")";
+                    check_RES_object(fe, eos_key, name, section.name, where);
+                    const nlohmann::json& eos = fe.at(eos_key);
+                    check_RES_number_array(eos, "n", name, section.name, where);
+                    if (eos.at("n").size() != section.n_res) {
+                        throw ValueError(format("RES %s parameters for '%s' (%s): expected %d residual coefficients, got %d.", section.name,
+                                                name.c_str(), eos_key, static_cast<int>(section.n_res), static_cast<int>(eos.at("n").size())));
+                    }
+                    check_RES_number(eos, "xita", name, section.name, where);
+                    check_RES_number(eos, "group", name, section.name, where, /*integer=*/true);
+                }
+                // Optional as a block, but read field by field with .at() the moment it is there.
+                if (section.reads_enhancement && fe.contains("critical_enhancement")) {
+                    const std::string where = " (critical_enhancement)";
+                    check_RES_object(fe, "critical_enhancement", name, section.name, where);
+                    for (const char* field : {"R_D", "gamma_uni", "Gamma", "phi0", "t_ref", "q_D"}) {
+                        check_RES_number(fe.at("critical_enhancement"), field, name, section.name, where);
                     }
                 }
             }
