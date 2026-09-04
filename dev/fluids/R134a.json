@@ -4111,202 +4111,125 @@
         "type": "polynomial"
       }
     },
-    "viscosity": [
-      {
-        "BibTeX": "Velliadou-IJT-2022-R134a",
-        "sigma_eta": 4.68932e-10,
-        "epsilon_over_k": 299.363,
-        "dilute": {
-          "type": "expression",
-          "formula": "let t3 = T^(1/3)\nlet G = f1*T*exp(-2*t3) + (f2 + f3*exp(-t3))/t3 + f4*exp(-1/t3)\nlet eta0 = sqrt(T)/G\n1e-6*eta0",
-          "state_variables": [
-            "T"
-          ],
-          "constants": {
-            "f1": -17.294,
-            "f2": 11.15987,
-            "f3": 292.165,
-            "f4": -0.296506
-          }
-        },
-        "initial_density": {
-          "type": "expression",
-          "formula": "let t3 = T^(1/3)\nlet G = f1*T*exp(-2*t3) + (f2 + f3*exp(-t3))/t3 + f4*exp(-1/t3)\nlet eta0 = sqrt(T)/G\nlet Ts = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Ts^bp[i])\n1e-6*eta0*Bstar*etaB2red*sigma^3*(Dmolar/1000)",
-          "state_variables": [
-            "T",
-            "Dmolar"
-          ],
-          "constants": {
-            "f1": -17.294,
-            "f2": 11.15987,
-            "f3": 292.165,
-            "f4": -0.296506,
-            "epsilon_over_k": 277.99,
-            "sigma": 0.48499,
-            "etaB2red": 0.6022137
-          },
-          "arrays": {
-            "b": [
-              -19.572881,
-              219.73999,
-              -1015.3226,
-              2471.0125,
-              -3375.1717,
-              2491.6597,
-              -787.26086,
-              14.085455,
-              -0.34664158
-            ],
-            "bp": [
-              0,
-              -0.25,
-              -0.5,
-              -0.75,
-              -1.0,
-              -1.25,
-              -1.5,
-              -2.5,
-              -5.5
-            ]
-          }
-        },
-        "higher_order": {
-          "type": "expression",
-          "formula": "let Tr = T/T_red\nlet rr = Dmass/rho_red\n1e-6*rr^(2/3)*Tr^0.5*(c0 + c1*rr + c2*rr^4/Tr + c3*rr^14/Tr^2)",
-          "state_variables": [
-            "T",
-            "Dmass"
-          ],
-          "constants": {
-            "T_red": 374.21,
-            "rho_red": 511.9,
-            "c0": -0.19049809,
-            "c1": 14.914096,
-            "c2": 2.1132461,
-            "c3": 1.8611635e-05
-          }
-        }
+    "viscosity": {
+      "BibTeX": "Huber-IECR-2003",
+      "dilute": {
+        "C": 2.1357e-08,
+        "a": [
+          0.355404,
+          -0.464337,
+          0.0257353
+        ],
+        "molar_mass": 0.102031,
+        "molar_mass_units": "kg/mol",
+        "t": [
+          0,
+          1,
+          2
+        ],
+        "type": "collision_integral"
       },
-      {
-        "BibTeX": "Huber-IECR-2003",
-        "dilute": {
-          "C": 2.1357e-08,
-          "a": [
-            0.355404,
-            -0.464337,
-            0.0257353
-          ],
-          "molar_mass": 0.102031,
-          "molar_mass_units": "kg/mol",
-          "t": [
-            0,
-            1,
-            2
-          ],
-          "type": "collision_integral"
-        },
-        "epsilon_over_k": 299.363,
-        "epsilon_over_k_units": "K",
-        "higher_order": {
-          "T_reduce": 374.21,
-          "T_reduce_units": "K",
-          "a": [
-            -2.06900719e-05,
-            3.56029549e-07,
-            2.11101816e-06,
-            1.39601415e-05,
-            -4.5643502e-06,
-            -3.51593275e-06
-          ],
-          "d1": [
-            1,
-            2,
-            2,
-            2,
-            2,
-            3
-          ],
-          "d2": [
-            0
-          ],
-          "f": [
-            0.00021476332
-          ],
-          "g": [
-            3.163695636
-          ],
-          "gamma": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ],
-          "h": [
-            0
-          ],
-          "l": [
-            1,
-            1,
-            1,
-            1,
-            1,
-            1
-          ],
-          "p": [
-            1,
-            -0.0890173375,
-            0.100035295
-          ],
-          "q": [
-            0,
-            -1,
-            -2
-          ],
-          "rhomolar_reduce": 5017.053,
-          "rhomolar_reduce_units": "mol/m^3",
-          "t1": [
-            0,
-            6,
-            2,
-            0.5,
-            -2,
-            0
-          ],
-          "t2": [
-            0
-          ],
-          "type": "modified_Batschinski_Hildebrand"
-        },
-        "initial_density": {
-          "b": [
-            -19.572881,
-            219.73999,
-            -1015.3226,
-            2471.01251,
-            -3375.1717,
-            2491.6597,
-            -787.26086,
-            14.085455,
-            -0.34664158
-          ],
-          "t": [
-            0,
-            -0.25,
-            -0.5,
-            -0.75,
-            -1.0,
-            -1.25,
-            -1.5,
-            -2.5,
-            -5.5
-          ],
-          "type": "Rainwater-Friend"
-        },
-        "sigma_eta": 4.68932e-10,
-        "sigma_eta_units": "m"
-      }
-    ]
+      "epsilon_over_k": 299.363,
+      "epsilon_over_k_units": "K",
+      "higher_order": {
+        "T_reduce": 374.21,
+        "T_reduce_units": "K",
+        "a": [
+          -2.06900719e-05,
+          3.56029549e-07,
+          2.11101816e-06,
+          1.39601415e-05,
+          -4.5643502e-06,
+          -3.51593275e-06
+        ],
+        "d1": [
+          1,
+          2,
+          2,
+          2,
+          2,
+          3
+        ],
+        "d2": [
+          0
+        ],
+        "f": [
+          0.00021476332
+        ],
+        "g": [
+          3.163695636
+        ],
+        "gamma": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "h": [
+          0
+        ],
+        "l": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "p": [
+          1,
+          -0.0890173375,
+          0.100035295
+        ],
+        "q": [
+          0,
+          -1,
+          -2
+        ],
+        "rhomolar_reduce": 5017.053,
+        "rhomolar_reduce_units": "mol/m^3",
+        "t1": [
+          0,
+          6,
+          2,
+          0.5,
+          -2,
+          0
+        ],
+        "t2": [
+          0
+        ],
+        "type": "modified_Batschinski_Hildebrand"
+      },
+      "initial_density": {
+        "b": [
+          -19.572881,
+          219.73999,
+          -1015.3226,
+          2471.01251,
+          -3375.1717,
+          2491.6597,
+          -787.26086,
+          14.085455,
+          -0.34664158
+        ],
+        "t": [
+          0,
+          -0.25,
+          -0.5,
+          -0.75,
+          -1.0,
+          -1.25,
+          -1.5,
+          -2.5,
+          -5.5
+        ],
+        "type": "Rainwater-Friend"
+      },
+      "sigma_eta": 4.68932e-10,
+      "sigma_eta_units": "m"
+    }
   }
 }

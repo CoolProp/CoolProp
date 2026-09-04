@@ -66,21 +66,15 @@ vel viscosity_validation_data[] = {
   vel("R125", "T", 400, "Dmolar", 30.631, "V", 17.070e-6, 1e-3),
 
   // From REFPROP 9.1 since Huber I&ECR 2003 does not provide validation data
-  // R-134a viscosity is now Velliadou, Assael & Huber, IJT 43:105 (2022),
-  // superseding Huber, Laesecke & Perkins (2003).  These are the 2022 paper's own
-  // Table 7 saturation values, which the implementation reproduces across the whole
-  // 170-370 K line to 4.9e-4 (see CoolProp-Tests-Expression.cpp).
-  //
-  // The Q-based points that used to sit here came from the 2003 correlation and moved
-  // with the supersession -- by -8.8 % at 185 K saturated liquid, -2.7 % at 360 K, and
-  // under 1 % on the vapour branch.  The 185 K figure is large but real: it is below
-  // the 213 K where the 2022 paper characterises its 3.5 % uncertainty band, and the
-  // new scheme's own Table 7 is reproduced there to 1.1e-5.
-  vel("R134a", "T", 190, "Dmass", 1537.5, "V", 1040.6e-6, 1e-3),
-  vel("R134a", "T", 190, "Dmass", 0.18259, "V", 7.56e-6, 1e-3),
-  vel("R134a", "T", 310, "Dmass", 1159.9, "V", 170.0e-6, 1e-3),
-  vel("R134a", "T", 350, "Dmass", 1e-9, "V", 13.77874e-6, 1e-5),
-  vel("R134a", "T", 350, "Dmass", 1000.0, "V", 107.98464e-6, 1e-5),
+  // R-134a viscosity is DELIBERATELY still Huber, Laesecke & Perkins (2003) here.
+  // Velliadou, Assael & Huber, IJT 43:105 (2022) supersedes it and is implemented and
+  // validated, but R-134a is the ECS reference fluid for R11, R1132a, R116, R12, R143a,
+  // R236EA and R236FA, so promoting it moves all seven by 1.1 % to 2.6 % with no data
+  // behind the move.  Deferred until that is decided; see the R143a/R236FA locks below.
+  vel("R134a", "T", 185, "Q", 0, "V", 0.0012698376398294414, 1e-3),
+  vel("R134a", "T", 185, "Q", 1, "V", 7.4290821400170869e-006, 1e-3),
+  vel("R134a", "T", 360, "Q", 0, "V", 7.8146319978982133e-005, 1e-3),
+  vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-3),
 
   // From REFPROP 9.1 since Kiselev, IECR, 2005 does not provide validation data
   // Ethanol viscosity is now Sotiriadou et al., IJT 44:40 (2023), superseding Kiselev
@@ -253,27 +247,18 @@ vel viscosity_validation_data[] = {
   vel("n-Butane", "T", 400, "Q", 1, "V", 1.2027464524762453e-005, 1e-4),
   vel("IsoButane", "T", 120, "Q", 0, "V", 0.0060558450757844271, 1e-4),
   vel("IsoButane", "T", 400, "Q", 1, "V", 1.4761041187617117e-005, 2e-4),
-  // The two R-134a entries that used to sit here were generated from REFPROP 9.1,
-  // i.e. from Huber, Laesecke & Perkins (2003), which the Velliadou et al. (2022)
-  // correlation supersedes.  They moved by -17.5 % at 175 K saturated liquid and
-  // -1.5 % at 360 K saturated vapour.  The 175 K figure is large and it is real: the
-  // 2022 scheme's own Table 7 is reproduced from 170 K upward to 1.5e-5, so the
-  // implementation agrees with the new correlation exactly where the old one differs.
-  // Replaced by the three Table 7 points below.  (An earlier revision of this branch
-  // carried the full 22-point saturation line as a bespoke test; that test was removed
-  // when the per-fluid golden cases were dropped in favour of the verification points,
-  // so the replacement is narrower than the two removed points, not stronger.)
-
-  // R-134a is the ECS reference fluid for seven other refrigerants, so replacing its
-  // viscosity model moves theirs too, by 1.1 % to 2.6 % at saturated liquid / 0.7 Tc:
-  // R11 +1.88, R1132a -2.58, R116 +1.69, R12 +1.14, R143a -2.53, R236EA +1.58,
-  // R236FA +1.92 (per cent, measured by swapping only R134a.json).  None of them had
-  // any transport regression point at all, so the move was invisible.  The two below
-  // bracket the sign of the shift and are self-generated locks, NOT published data --
-  // they exist to make the next change to R-134a's viscosity announce itself here.
-  vel("R143a", "T", 242.1, "Q", 0, "V", 182.7897e-6, 1e-4),
-  vel("R236FA", "T", 278.649, "Q", 0, "V", 374.9045e-6, 1e-4),
-
+  vel("R134a", "T", 175, "Q", 0, "V", 0.0017558494524138289, 1e-4),
+  vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-4),
+  // R-134a is the ECS reference fluid for R11, R1132a, R116, R12, R143a, R236EA and
+  // R236FA: TransportRoutines::viscosity_ECS evaluates the reference's
+  // calc_viscosity_background(), so ANY change to R-134a's viscosity moves all seven.
+  // Swapping in Velliadou et al. (2022) moves them by +1.88, -2.58, +1.69, +1.14, -2.53,
+  // +1.58 and +1.92 per cent respectively, and not one of them had a transport
+  // regression point, so the move was silent.  These two are self-generated locks, NOT
+  // published data: they bracket the sign of that shift and exist so the next change to
+  // R-134a's viscosity has to announce itself here rather than slipping through.
+  vel("R143a", "T", 242.1, "Q", 0, "V", 187.5378e-6, 1e-4),
+  vel("R236FA", "T", 278.649, "Q", 0, "V", 367.8328e-6, 1e-4),
   // From Tariq, JPCRD, 2014
   vel("Cyclohexane", "T", 300, "Dmolar", 1e-10, "V", 7.058e-6, 1e-4),
   vel("Cyclohexane", "T", 300, "Dmolar", 0.0430e3, "V", 6.977e-6, 1e-4),
