@@ -3097,11 +3097,19 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // safe: ACCEPTS only a converged result; on any failure restores the exact pre-fallback state,
     // so it can never regress a currently-passing case.
     if (!converged) {
+        const bool cp_dbg_fb = std::getenv("CP_DBG_MICH_FB") != nullptr;
+        const bool fb_warm_rho = std::getenv("CP_MICH_WARMRHO") != nullptr;    // A/B: allow warm-start density (drifts to metastable root)
         const std::vector<CoolPropDbl> x_pre = IO.x, y_pre = IO.y;
         const CoolPropDbl beta_pre = beta, rhoL_pre = IO.rhomolar_liq, rhoV_pre = IO.rhomolar_vap;
 
         const bool minority_is_liquid = (beta_pre >= 0.5);  // near dew -> incipient liquid
-        // Incipient composition from the stability trial phase (non-trivial by construction).
+        // Incipient composition seed.  Prefer the stability trial phase; but near the dew/bubble
+        // the trial handed to this solver can be (near-)trivial (x0_stab ~ z), which makes the
+        // incipient phase collapse to the feed (x == y) -- the fallback then "converges" to the
+        // trivial split at iteration 0 and no genuine tiny split is ever found.  Detect that and
+        // reseed from Wilson K-factors: the incipient liquid near the dew is z_i / K_i (heavy-rich)
+        // and the incipient vapour near the bubble is z_i * K_i (light-rich), both genuinely
+        // non-trivial, giving the Newton a real starting split to refine.
         std::vector<CoolPropDbl> w = minority_is_liquid ? x0_stab : y0_stab;
         {
             CoolPropDbl sw = 0;
@@ -3110,6 +3118,20 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 for (std::size_t i = 0; i < N; ++i) w[i] = std::max(w[i], static_cast<CoolPropDbl>(0)) / sw;
             } else {
                 w = IO.z;
+            }
+            CoolPropDbl wz_spread = 0;
+            for (std::size_t i = 0; i < N; ++i) wz_spread = std::max(wz_spread, std::abs(w[i] - IO.z[i]));
+            if (wz_spread < 1e-3) {  // trial ~ feed -> reseed from Wilson K-factors
+                CoolPropDbl sw2 = 0;
+                for (std::size_t i = 0; i < N; ++i) {
+                    CoolPropDbl Ki = std::exp(Wilson_lnK_factor(HEOS, IO.T, IO.p, i));
+                    w[i] = minority_is_liquid ? IO.z[i] / Ki : IO.z[i] * Ki;
+                    sw2 += w[i];
+                }
+                if (sw2 > 0)
+                    for (std::size_t i = 0; i < N; ++i) w[i] /= sw2;
+                else
+                    w = minority_is_liquid ? x0_stab : y0_stab;  // Wilson unusable; keep the trial
             }
         }
         std::vector<CoolPropDbl> a(N);
@@ -3131,6 +3153,13 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             for (std::size_t i = 0; i < N; ++i) { mn[i] = aa[i] / A; mj[i] = (IO.z[i] - aa[i]) / B; }
             if (minority_is_liquid) { IO.x = mn; IO.y = mj; beta = B; }
             else { IO.y = mn; IO.x = mj; beta = A; }
+            // Force the cold global (lowest-Gibbs) density solve every FB evaluation.  The warm-
+            // start local Newton drifts to a nearby metastable root (within the 0.5x-2x branch
+            // guard) after the first call, so the incipient/majority densities land on the wrong
+            // sheet -- the objective, gradient and acceptance test then live on a higher-Gibbs
+            // surface and the line search stalls.  Global keeps every evaluation on the same
+            // stable roots the seed was built on.
+            if (!fb_warm_rho) { rho_warm_L = -1; rho_warm_V = -1; }
             if (!evaluate_phases()) return false;
             HEOS.SatL->set_mole_fractions(IO.x);
             HEOS.SatL->update_DmolarT_direct(IO.rhomolar_liq, IO.T);
@@ -3156,31 +3185,55 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         if (cp_dbg_mich) {
             CoolPropDbl As = 0;
             for (std::size_t i = 0; i < N; ++i) As += a[i];
-            std::printf("[MICH-FB] entry ok=%d minLiq=%d A=%.3g mg=%.4g\n", (int)ok, (int)minority_is_liquid, (double)As, mg);
+            std::printf("[MICH-FB] entry T=%.5g ok=%d minLiq=%d A=%.3g mg=%.4g beta_pre=%.6g\n", (double)IO.T, (int)ok, (int)minority_is_liquid, (double)As, mg, (double)beta_pre);
+            if (cp_dbg_fb) {
+                std::printf("[MICH-FB]   z    ="); for (std::size_t i = 0; i < N; ++i) std::printf(" %.4e", (double)IO.z[i]); std::printf("\n");
+                std::printf("[MICH-FB]   a0   ="); for (std::size_t i = 0; i < N; ++i) std::printf(" %.4e", (double)a[i]); std::printf("\n");
+            }
         }
-        // Hebden restricted-step (trust-region) Newton in alpha_i = 2*sqrt(a_i), mirroring
-        // StabilityEvaluationClass::minimize_tpd.  alpha keeps a_i >= 0 for free and conditions the
-        // tiny minority amounts; the trust region + positivity clamp globalise the step so a
-        // trace-component bound cannot pin it (the failure of the raw t_max line search).
-        double trust_radius = 0.25, diagonal_shift = 0.0;
-        std::vector<CoolPropDbl> alpha(N), alpha_old(N);
-        for (std::size_t i = 0; i < N; ++i) alpha[i] = 2.0 * std::sqrt(std::max(a[i], static_cast<CoolPropDbl>(1e-300)));
-        const int fb_max_iter = 60;
+        // Globalised Newton on the minority mole numbers a, mirroring ThermoPack
+        // tp_solver::mod_newton_search + optimizers::mod_newton: a positive-definite
+        // (guaranteed-descent) Newton direction with a steepest-descent safeguard, a single-
+        // scalar fraction-to-the-boundary limit that preserves the Newton direction, and an
+        // Armijo backtracking line search on the total Gibbs.  Works directly in mole numbers
+        // (no 2*sqrt(a) transform) using the mole-number Gibbs Hessian's own z/(x*y)
+        // conditioning; eval_min uses the cold global (lowest-Gibbs) density roots so every
+        // evaluation stays on the same stable density sheet as the seed.
+        const int fb_max_iter = 100;
+        const double armijo_c1 = 1e-4;
+        const int max_ls = 40;      // Armijo backtracking tries per outer iteration
+        const double fb_genuine_tol = 1e-5;  // engineering equal-fugacity tolerance (matches the final gate)
+        const int stall_genuine = 3;   // exit once genuine and floored
+        double G_cur = G_old;  // consistent with the seed eval_min (cold global roots)
+        double mg_prev = mg;
+        int stall = 0;
         for (int it = 0; ok && it < fb_max_iter; ++it) {
             if (mg < gibbs_tol) { fb_conv = true; fb_stop = "converged"; break; }
+            // Stall exit: once the split is GENUINE (mg <= 1e-5) the equal-fugacity residual has
+            // floored at ~1e-7 on density-solve accuracy, well before the 1e-9 quadratic target, so
+            // exit after a few flat steps rather than grinding to the maxiter cap.  A non-genuine
+            // probe (e.g. a single-phase T with no split) keeps iterating to the cap and is then
+            // rejected by the final gate.
+            if (mg < fb_genuine_tol && mg > mg_prev * (1.0 - 1e-3)) {
+                if (++stall >= stall_genuine) { fb_stop = "stall"; break; }
+            } else {
+                stall = 0;
+            }
+            mg_prev = mg;
             CoolPropDbl A = 0;
             for (std::size_t i = 0; i < N; ++i) A += a[i];
             CoolPropDbl B = 1.0 - A;  // z normalized to 1
             if (!(A > 1e-14) || !(B > 1e-14)) { fb_stop = "amt-boundary"; break; }
 
-            // SatL/SatV are synced to the current a (from the last accepted eval_min).  Build the
-            // mole-number Gibbs gradient/Hessian, then transform to alpha space.
+            // SatL/SatV are synced to the current a (from the seed or the last accepted line-
+            // search step).  Build the mole-number Gibbs gradient dG/da_i = ln f_i^min - ln
+            // f_i^maj and the Hessian (1/A)[D_min - x.D_min] + (1/B)[D_maj - x.D_maj].
             HelmholtzEOSMixtureBackend* Smin = minority_is_liquid ? HEOS.SatL.get() : HEOS.SatV.get();
             HelmholtzEOSMixtureBackend* Smaj = minority_is_liquid ? HEOS.SatV.get() : HEOS.SatL.get();
-            std::vector<CoolPropDbl> mnc(N), mjc(N), halfa(N), gmole(N);
-            for (std::size_t i = 0; i < N; ++i) { mnc[i] = a[i] / A; mjc[i] = (IO.z[i] - a[i]) / B; halfa[i] = 0.5 * alpha[i]; }
-            Eigen::MatrixXd Dmin(N, N), Dmaj(N, N), HA(N, N);
-            Eigen::VectorXd gA(N);
+            std::vector<CoolPropDbl> mnc(N), mjc(N);
+            for (std::size_t i = 0; i < N; ++i) { mnc[i] = a[i] / A; mjc[i] = (IO.z[i] - a[i]) / B; }
+            Eigen::MatrixXd Dmin(N, N), Dmaj(N, N), Hm(N, N);
+            Eigen::VectorXd grad(N);
             for (std::size_t i = 0; i < N; ++i) {
                 for (std::size_t j = 0; j < N; ++j) {
                     Dmin(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smin, i, j, CoolProp::XN_INDEPENDENT);
@@ -3190,77 +3243,104 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             for (std::size_t i = 0; i < N; ++i) {
                 CoolPropDbl lnf_min = std::log(mnc[i]) + std::log(Smin->fugacity_coefficient(i));
                 CoolPropDbl lnf_maj = std::log(mjc[i]) + std::log(Smaj->fugacity_coefficient(i));
-                gmole[i] = lnf_min - lnf_maj;  // dG/da_i
-                gA(i) = halfa[i] * gmole[i];    // dG/dalpha_i
+                grad(i) = lnf_min - lnf_maj;  // dG/da_i
             }
             std::vector<CoolPropDbl> sMinV(N, 0), sMajV(N, 0);
             for (std::size_t i = 0; i < N; ++i)
                 for (std::size_t k = 0; k < N; ++k) { sMinV[i] += mnc[k] * Dmin(i, k); sMajV[i] += mjc[k] * Dmaj(i, k); }
-            for (std::size_t i = 0; i < N; ++i) {
-                for (std::size_t j = 0; j < N; ++j) {
-                    CoolPropDbl Hm = (Dmin(i, j) - sMinV[i]) / A + (Dmaj(i, j) - sMajV[i]) / B;
-                    HA(i, j) = halfa[i] * halfa[j] * Hm;
-                }
-                HA(i, i) += 0.5 * gmole[i];  // d^2 a_i / d alpha_i^2 = 1/2 term
+            for (std::size_t i = 0; i < N; ++i)
+                for (std::size_t j = 0; j < N; ++j)
+                    Hm(i, j) = (Dmin(i, j) - sMinV[i]) / A + (Dmaj(i, j) - sMajV[i]) / B;
+            // Symmetrize away finite-difference asymmetry before the SPD solve.
+            Hm = (0.5 * (Hm + Hm.transpose())).eval();
+
+            if (cp_dbg_fb) {
+                std::printf("[MICH-FB]  it=%d A=%.4e mg=%.4e G=%.8g\n", it, (double)A, mg, G_cur);
+                std::printf("[MICH-FB]    a   ="); for (std::size_t i = 0; i < N; ++i) std::printf(" %.4e", (double)a[i]); std::printf("\n");
+                std::printf("[MICH-FB]    gmol="); for (std::size_t i = 0; i < N; ++i) std::printf(" %+.3e", grad(i)); std::printf("\n");
             }
 
-            for (std::size_t i = 0; i < N; ++i) alpha_old[i] = alpha[i];
+            // Eigenvalue-modified Newton direction.  The mole-number Gibbs Hessian is (a) genuinely
+            // INDEFINITE far from the solution -- the dominant component's diagonal can be negative,
+            // so LM diag scaling can never make it PD -- and (b) severely ill-conditioned near the
+            // dew (a stiff ~1e5 trace-component direction alongside a soft phase-amount mode).
+            // Diagonalise Hm (symmetric) and floor its eigenvalues at a fraction of the largest:
+            // this both guarantees a descent direction (ThermoPack's modified-Cholesky role) and
+            // caps the condition number, so the step along the soft mode stays bounded and the
+            // single fraction-to-the-boundary scalar no longer has to throttle the stiff directions.
+            Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(Hm);
+            if (es.info() != Eigen::Success) { fb_stop = "eig-fail"; break; }
+            const Eigen::VectorXd evals = es.eigenvalues();
+            const Eigen::MatrixXd& Q = es.eigenvectors();
+            // Gill-Murray-style modification: replace each eigenvalue lambda_k by max(|lambda_k|,
+            // floor).  Taking the ABSOLUTE value of a negative eigenvalue (rather than flooring it
+            // to ~0) turns negative curvature into a curvature-scaled DESCENT step of moderate
+            // length -- flooring to ~0 instead gives a huge step along that mode that the boundary
+            // limit then throttles to nothing.  The relative floor only caps the condition number.
+            const double efloor = 1e-10 * std::max(evals.cwiseAbs().maxCoeff(), 1e-300);
+            Eigen::VectorXd gq = Q.transpose() * grad;
+            for (std::size_t i = 0; i < N; ++i) gq(i) /= std::max(std::abs(evals(i)), efloor);
+            Eigen::VectorXd d = -(Q * gq);  // = -(modified Hm)^{-1} grad, guaranteed descent
+            if (cp_dbg_fb) {
+                std::printf("[MICH-FB]    Hdiag="); for (std::size_t i = 0; i < N; ++i) std::printf(" %+.3e", Hm(i, i)); std::printf("\n");
+                std::printf("[MICH-FB]    eval ="); for (std::size_t i = 0; i < N; ++i) std::printf(" %+.3e", evals(i)); std::printf("\n");
+            }
+
+            // Fraction-to-the-boundary (ThermoPack limitDV): one scalar keeps every
+            // 0 < a_i + t*d_i < z_i, preserving the Newton direction (a per-component clamp would
+            // not -- that is what pinned trace components in the previous formulation).
+            double t = 1.0;
+            for (std::size_t i = 0; i < N; ++i) {
+                double di = d(i);
+                if (a[i] + di <= 0.0) t = std::min(t, -static_cast<double>(a[i]) / di);
+                else if (a[i] + di >= IO.z[i]) t = std::min(t, (static_cast<double>(IO.z[i]) - static_cast<double>(a[i])) / di);
+            }
+            if (t < 1.0) d *= (t * (1.0 - 1e-10));
+
+            const double gTd = grad.dot(d);  // directional derivative (< 0 for a descent step)
+
+            // Armijo backtracking line search on the total Gibbs.
+            double alpha = 1.0;
             bool step_accepted = false;
-            const int max_inner = 25;
-            for (int inner = 0; inner < max_inner; ++inner) {
-                Eigen::MatrixXd Hl = HA;
-                Hl.diagonal().array() += diagonal_shift;
-                Eigen::VectorXd delta = Hl.colPivHouseholderQr().solve(-gA);  // minimisation step
-                double snorm2 = 0;
-                std::vector<CoolPropDbl> at(N);
-                for (std::size_t i = 0; i < N; ++i) {
-                    double da = delta(i);
-                    if (alpha_old[i] + da <= 0) da = -0.9 * alpha_old[i];  // keep a_i >= 0
-                    delta(i) = da;
-                    alpha[i] = alpha_old[i] + da;
-                    at[i] = 0.25 * alpha[i] * alpha[i];
-                    snorm2 += da * da;
-                }
-                double ssize = std::sqrt(snorm2);
-                if (ssize > trust_radius && diagonal_shift == 0) {
-                    diagonal_shift = ssize / trust_radius - 1.0;
-                    for (std::size_t i = 0; i < N; ++i) alpha[i] = alpha_old[i];
-                    continue;
-                }
+            std::vector<CoolPropDbl> at(N);
+            for (int ls = 0; ls < max_ls; ++ls) {
+                for (std::size_t i = 0; i < N; ++i) at[i] = a[i] + alpha * d(i);
                 double G_new = 0, mg_new = 0;
-                if (!eval_min(at, G_new, mg_new)) {
-                    trust_radius = ssize / 3.0;
-                    diagonal_shift = 0;
-                    for (std::size_t i = 0; i < N; ++i) alpha[i] = alpha_old[i];
-                    continue;
+                if (eval_min(at, G_new, mg_new) && G_new <= G_cur + armijo_c1 * alpha * gTd) {
+                    a = at;
+                    G_cur = G_new;
+                    mg = mg_new;
+                    step_accepted = true;
+                    if (cp_dbg_fb) std::printf("[MICH-FB]    -> accept ls=%d alpha=%.3e t=%.3e Gnew=%.8g mgnew=%.4e\n", ls, alpha, t, G_new, mg_new);
+                    break;
                 }
-                if (G_new > G_old + 1e-12) {
-                    trust_radius = ssize / 3.0;
-                    diagonal_shift = 0;
-                    for (std::size_t i = 0; i < N; ++i) alpha[i] = alpha_old[i];
-                    continue;
-                }
-                Eigen::VectorXd Hd = HA * delta;
-                double predicted = -(gA.dot(delta) + 0.5 * delta.dot(Hd));
-                double actual = G_old - G_new;
-                double ratio = (predicted != 0) ? actual / predicted : 1.0;
-                if (ratio < 0.25) trust_radius = ssize / 2.0;
-                else if (ratio > 0.75 && diagonal_shift > 0) trust_radius = ssize * 2.0;
-                else trust_radius = ssize;
-                diagonal_shift = 0;
-                a = at;
-                G_old = G_new;
-                mg = mg_new;
-                step_accepted = true;
-                break;
+                alpha *= 0.5;
             }
             if (!step_accepted) { fb_stop = "no-step"; break; }
             fb_iters = it + 1;
         }
-        if (cp_dbg_mich) std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g\n", (int)fb_conv, fb_stop, fb_iters, mg);
-        if (fb_conv) {
-            IO.beta = beta;  // eval_min left IO.x/IO.y/beta/rho on the converged state
-            converged = true;
+        // Re-sync IO/SatL/SatV to the final iterate a and measure the split we would publish.  The
+        // line search stops at a genuine equal-fugacity equilibrium (mg ~ 1e-7) but rarely reaches
+        // the ultra-strict 1e-9 quadratic-convergence target, so accept the fallback when it
+        // produced a GENUINE two-phase split -- non-trivial composition spread, an interior phase
+        // fraction, and an equal-fugacity residual at engineering tolerance.  The non-trivial +
+        // interior guard is applied to EVERY acceptance (not just the near-1e-9 path): the line
+        // search can also drive x -> y, which trivially satisfies equal fugacity (mg -> 0) but is a
+        // collapsed single-phase state that must never be published as two-phase (GH #3168 /
+        // CoolProp-zgpy).  Restore the exact pre-fallback state otherwise, so a failed fallback can
+        // never regress the caller.
+        double G_fin = 0, mg_fin = 0;
+        const bool fb_eval_ok = eval_min(a, G_fin, mg_fin);
+        CoolPropDbl fb_spread = 0;
+        for (std::size_t i = 0; i < N; ++i) fb_spread = std::max(fb_spread, std::abs(IO.x[i] - IO.y[i]));
+        const bool fb_genuine = fb_eval_ok && ValidNumber(mg_fin) && mg_fin <= 1e-5 && fb_spread >= 1e-4
+                                && beta > 1e-8 && beta < 1.0 - 1e-8;
+        if (cp_dbg_mich)
+            std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g genuine=%d spread=%.4g beta=%.6g\n",
+                        (int)fb_conv, fb_stop, fb_iters, mg_fin, (int)fb_genuine, (double)fb_spread, (double)beta);
+        if (fb_genuine) {
+            IO.beta = beta;  // eval_min left IO.x/IO.y/beta/rho on the best split
+            converged = (mg_fin < gibbs_tol);  // else the final gate re-validates the genuine split
         } else {
             IO.x = x_pre;
             IO.y = y_pre;
