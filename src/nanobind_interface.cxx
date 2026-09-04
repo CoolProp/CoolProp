@@ -1225,6 +1225,11 @@ void init_CoolProp(nb::module_& m) {
 
 #    if defined(COOLPROP_NANOBIND_MODULE)
 NB_MODULE(CoolProp, m) {
+    // Leak "warnings" at interpreter shutdown are benign here (the objects are
+    // reclaimed by the OS at process exit) but confuse end users. nanobind's
+    // documentation recommends disabling them for wheels shipped to end users.
+    // See: https://nanobind.readthedocs.io/en/latest/refleaks.html
+    nb::set_leak_warnings(false);
     init_CoolProp(m);
     // Export the State C-ABI table so the frozen Cython `State` shim can forward
     // through it (PDSim cimport compatibility without a Cython AbstractState).
