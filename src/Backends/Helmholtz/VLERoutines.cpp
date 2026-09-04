@@ -2815,15 +2815,47 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
 
         if (ss_converged) break;
 
-        // GDEM extrapolation ([M&M2007] Ch. 12, Sec. 12.6)
+        // GDEM extrapolation ([M&M2007] Ch. 12, Sec. 12.6) with a try-then-revert guard, ported
+        // from ThermoPack's tp_solver::twoPhaseTPflash.  The extrapolation is SPECULATIVE: the
+        // factor ratio/(1-ratio) blows up as ratio -> 1, and applying it to a non-contracting
+        // error throws lnK across the liquid/vapor phase boundary and collapses the split (the
+        // GitHub #3342 near-dew failure).  So: only extrapolate a genuinely contracting sequence
+        // (ThermoPack's k_dem gate lambda < 1), then take one SS step and KEEP the extrapolation
+        // only if it reduced the SS error norm; otherwise roll lnK and the phase state back to the
+        // pre-extrapolation values.  This preserves the acceleration where it helps and cannot
+        // flip or collapse the split where it does not.
         if (esq_pair[0] > 0) {
             double ratio = std::sqrt(esq_pair[1] / esq_pair[0]);
-            // A NaN ratio (non-finite esq) passes both < 0 and >= 0.95, so guard it
-            // explicitly -- otherwise it poisons the GDEM lnK/Y update (CoolProp-1tbe.8 finding 4c).
-            if (!ValidNumber(ratio) || ratio < 0 || ratio >= 0.95) ratio = 0.95;
-            double factor = ratio / (1.0 - ratio);
-            for (std::size_t i = 0; i < N; ++i) {
-                lnK[i] += factor * err[i];
+            if (ValidNumber(ratio) && ratio > 0 && ratio < 1.0) {
+                const double factor = ratio / (1.0 - ratio);
+                // Snapshot the pre-extrapolation state for a possible revert.
+                const std::vector<CoolPropDbl> lnK_save = lnK, x_save = IO.x, y_save = IO.y;
+                const CoolPropDbl rhoL_save = IO.rhomolar_liq, rhoV_save = IO.rhomolar_vap, beta_save = beta;
+                const double esq_before = esq_pair[1];  // SS error norm entering the extrapolation
+                for (std::size_t i = 0; i < N; ++i) {
+                    lnK[i] += factor * err[i];
+                }
+                // Take one SS step on the extrapolated K and measure whether it helped.
+                solve_rachford_rice();
+                double esq_after = _HUGE;
+                if (evaluate_phases()) {
+                    esq_after = 0;
+                    for (std::size_t i = 0; i < N; ++i) {
+                        double lnK_new = std::log(HEOS.SatL->fugacity_coefficient(i)) - std::log(HEOS.SatV->fugacity_coefficient(i));
+                        double d = lnK_new - lnK[i];
+                        esq_after += IO.z[i] * d * d;
+                        lnK[i] = lnK_new;
+                    }
+                }
+                if (!(esq_after < esq_before)) {
+                    // Extrapolation hurt (or its trial evaluation failed): revert.
+                    lnK = lnK_save;
+                    IO.x = x_save;
+                    IO.y = y_save;
+                    IO.rhomolar_liq = rhoL_save;
+                    IO.rhomolar_vap = rhoV_save;
+                    beta = beta_save;
+                }
             }
         }
     }
