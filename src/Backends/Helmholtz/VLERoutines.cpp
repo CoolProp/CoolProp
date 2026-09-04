@@ -3149,30 +3149,38 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         };
 
         bool fb_conv = false;
-        double G_cur = 0, mg_cur = 0;
+        double G_old = 0, mg = 0;
         int fb_iters = 0;
         const char* fb_stop = "maxiter";
-        bool ok = eval_min(a, G_cur, mg_cur);
+        bool ok = eval_min(a, G_old, mg);  // seeds IO/SatL/SatV synced to a
         if (cp_dbg_mich) {
-            CoolPropDbl Asum = 0;
-            for (std::size_t i = 0; i < N; ++i) Asum += a[i];
-            std::printf("[MICH-FB] entry ok=%d minLiq=%d A=%.3g mg=%.4g\n", (int)ok, (int)minority_is_liquid, (double)Asum, mg_cur);
+            CoolPropDbl As = 0;
+            for (std::size_t i = 0; i < N; ++i) As += a[i];
+            std::printf("[MICH-FB] entry ok=%d minLiq=%d A=%.3g mg=%.4g\n", (int)ok, (int)minority_is_liquid, (double)As, mg);
         }
-        const int fb_max_iter = 100;
+        // Hebden restricted-step (trust-region) Newton in alpha_i = 2*sqrt(a_i), mirroring
+        // StabilityEvaluationClass::minimize_tpd.  alpha keeps a_i >= 0 for free and conditions the
+        // tiny minority amounts; the trust region + positivity clamp globalise the step so a
+        // trace-component bound cannot pin it (the failure of the raw t_max line search).
+        double trust_radius = 0.25, diagonal_shift = 0.0;
+        std::vector<CoolPropDbl> alpha(N), alpha_old(N);
+        for (std::size_t i = 0; i < N; ++i) alpha[i] = 2.0 * std::sqrt(std::max(a[i], static_cast<CoolPropDbl>(1e-300)));
+        const int fb_max_iter = 60;
         for (int it = 0; ok && it < fb_max_iter; ++it) {
-            if (mg_cur < gibbs_tol) { fb_conv = true; fb_stop = "converged"; break; }
+            if (mg < gibbs_tol) { fb_conv = true; fb_stop = "converged"; break; }
             CoolPropDbl A = 0;
             for (std::size_t i = 0; i < N; ++i) A += a[i];
             CoolPropDbl B = 1.0 - A;  // z normalized to 1
             if (!(A > 1e-14) || !(B > 1e-14)) { fb_stop = "amt-boundary"; break; }
 
+            // SatL/SatV are synced to the current a (from the last accepted eval_min).  Build the
+            // mole-number Gibbs gradient/Hessian, then transform to alpha space.
             HelmholtzEOSMixtureBackend* Smin = minority_is_liquid ? HEOS.SatL.get() : HEOS.SatV.get();
             HelmholtzEOSMixtureBackend* Smaj = minority_is_liquid ? HEOS.SatV.get() : HEOS.SatL.get();
-            std::vector<CoolPropDbl> mnc(N), mjc(N);
-            for (std::size_t i = 0; i < N; ++i) { mnc[i] = a[i] / A; mjc[i] = (IO.z[i] - a[i]) / B; }
-
-            Eigen::VectorXd g(N);
-            Eigen::MatrixXd Hm(N, N), Dmin(N, N), Dmaj(N, N);
+            std::vector<CoolPropDbl> mnc(N), mjc(N), halfa(N), gmole(N);
+            for (std::size_t i = 0; i < N; ++i) { mnc[i] = a[i] / A; mjc[i] = (IO.z[i] - a[i]) / B; halfa[i] = 0.5 * alpha[i]; }
+            Eigen::MatrixXd Dmin(N, N), Dmaj(N, N), HA(N, N);
+            Eigen::VectorXd gA(N);
             for (std::size_t i = 0; i < N; ++i) {
                 for (std::size_t j = 0; j < N; ++j) {
                     Dmin(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smin, i, j, CoolProp::XN_INDEPENDENT);
@@ -3180,70 +3188,76 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 }
             }
             for (std::size_t i = 0; i < N; ++i) {
-                CoolPropDbl sMin = 0, sMaj = 0;
-                for (std::size_t k = 0; k < N; ++k) { sMin += mnc[k] * Dmin(i, k); sMaj += mjc[k] * Dmaj(i, k); }
                 CoolPropDbl lnf_min = std::log(mnc[i]) + std::log(Smin->fugacity_coefficient(i));
                 CoolPropDbl lnf_maj = std::log(mjc[i]) + std::log(Smaj->fugacity_coefficient(i));
-                g(i) = lnf_min - lnf_maj;
-                for (std::size_t j = 0; j < N; ++j) Hm(i, j) = (Dmin(i, j) - sMin) / A + (Dmaj(i, j) - sMaj) / B;
+                gmole[i] = lnf_min - lnf_maj;  // dG/da_i
+                gA(i) = halfa[i] * gmole[i];    // dG/dalpha_i
+            }
+            std::vector<CoolPropDbl> sMinV(N, 0), sMajV(N, 0);
+            for (std::size_t i = 0; i < N; ++i)
+                for (std::size_t k = 0; k < N; ++k) { sMinV[i] += mnc[k] * Dmin(i, k); sMajV[i] += mjc[k] * Dmaj(i, k); }
+            for (std::size_t i = 0; i < N; ++i) {
+                for (std::size_t j = 0; j < N; ++j) {
+                    CoolPropDbl Hm = (Dmin(i, j) - sMinV[i]) / A + (Dmaj(i, j) - sMajV[i]) / B;
+                    HA(i, j) = halfa[i] * halfa[j] * Hm;
+                }
+                HA(i, i) += 0.5 * gmole[i];  // d^2 a_i / d alpha_i^2 = 1/2 term
             }
 
-            // Condition the system with Michelsen's alpha = 2*sqrt(n) scaling (D = diag(sqrt(a))):
-            // near a boundary a_i are tiny and the 1/A block of H is ~1000x the 1/B block, so the
-            // raw Newton step is poor.  Solve (D H D + shift I) u = -(D g), then da = D u.
-            Eigen::VectorXd sc(N);
-            for (std::size_t i = 0; i < N; ++i) sc(i) = std::sqrt(std::max(a[i], static_cast<CoolPropDbl>(1e-300)));
-            Eigen::MatrixXd Hs(N, N);
-            Eigen::VectorXd gs(N);
-            for (std::size_t i = 0; i < N; ++i) {
-                gs(i) = g(i) * sc(i);
-                for (std::size_t j = 0; j < N; ++j) Hs(i, j) = Hm(i, j) * sc(i) * sc(j);
-            }
-            Eigen::VectorXd da;
-            {
-                double shift = 0.0;
-                bool solved = false;
-                for (int t = 0; t < 40; ++t) {
-                    Eigen::MatrixXd Hl = Hs;
-                    Hl.diagonal().array() += shift;
-                    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(Hl, Eigen::EigenvaluesOnly);
-                    double mn = es.eigenvalues().minCoeff();
-                    if (!ValidNumber(mn)) break;
-                    if (mn < 1e-10) { shift += (1e-10 - mn) + 1e-12; continue; }
-                    Eigen::VectorXd u = Hl.ldlt().solve(-gs);
-                    da.resize(N);
-                    for (std::size_t i = 0; i < N; ++i) da(i) = sc(i) * u(i);
-                    solved = true;
-                    break;
-                }
-                if (!solved) { fb_stop = "hessian"; break; }
-            }
-            // Feasible step: a_i + t*da_i strictly inside (0, z_i).  a is the MINORITY phase so a_i
-            // are small and far from z_i; the binding side is a_i -> 0 (the phase vanishing).
-            double t_max = 1.0;
-            for (std::size_t i = 0; i < N; ++i) {
-                if (da(i) < 0) t_max = std::min(t_max, 0.99 * a[i] / (-da(i)));
-                else if (da(i) > 0) t_max = std::min(t_max, 0.99 * (IO.z[i] - a[i]) / da(i));
-            }
-            if (!(t_max > 0)) { fb_stop = "t_max<=0"; break; }
-            bool accepted = false;
-            for (double t = t_max; t >= t_max / 4096; t *= 0.5) {
+            for (std::size_t i = 0; i < N; ++i) alpha_old[i] = alpha[i];
+            bool step_accepted = false;
+            const int max_inner = 25;
+            for (int inner = 0; inner < max_inner; ++inner) {
+                Eigen::MatrixXd Hl = HA;
+                Hl.diagonal().array() += diagonal_shift;
+                Eigen::VectorXd delta = Hl.colPivHouseholderQr().solve(-gA);  // minimisation step
+                double snorm2 = 0;
                 std::vector<CoolPropDbl> at(N);
-                bool feas = true;
                 for (std::size_t i = 0; i < N; ++i) {
-                    CoolPropDbl ai = a[i] + t * da(i);
-                    if (!(ai > 0) || !(ai < IO.z[i])) { feas = false; break; }
-                    at[i] = ai;
+                    double da = delta(i);
+                    if (alpha_old[i] + da <= 0) da = -0.9 * alpha_old[i];  // keep a_i >= 0
+                    delta(i) = da;
+                    alpha[i] = alpha_old[i] + da;
+                    at[i] = 0.25 * alpha[i] * alpha[i];
+                    snorm2 += da * da;
                 }
-                if (!feas) continue;
-                double G_try, mg_try;
-                if (!eval_min(at, G_try, mg_try)) continue;
-                if (G_try < G_cur - 1e-14) { a = at; G_cur = G_try; mg_cur = mg_try; accepted = true; break; }
+                double ssize = std::sqrt(snorm2);
+                if (ssize > trust_radius && diagonal_shift == 0) {
+                    diagonal_shift = ssize / trust_radius - 1.0;
+                    for (std::size_t i = 0; i < N; ++i) alpha[i] = alpha_old[i];
+                    continue;
+                }
+                double G_new = 0, mg_new = 0;
+                if (!eval_min(at, G_new, mg_new)) {
+                    trust_radius = ssize / 3.0;
+                    diagonal_shift = 0;
+                    for (std::size_t i = 0; i < N; ++i) alpha[i] = alpha_old[i];
+                    continue;
+                }
+                if (G_new > G_old + 1e-12) {
+                    trust_radius = ssize / 3.0;
+                    diagonal_shift = 0;
+                    for (std::size_t i = 0; i < N; ++i) alpha[i] = alpha_old[i];
+                    continue;
+                }
+                Eigen::VectorXd Hd = HA * delta;
+                double predicted = -(gA.dot(delta) + 0.5 * delta.dot(Hd));
+                double actual = G_old - G_new;
+                double ratio = (predicted != 0) ? actual / predicted : 1.0;
+                if (ratio < 0.25) trust_radius = ssize / 2.0;
+                else if (ratio > 0.75 && diagonal_shift > 0) trust_radius = ssize * 2.0;
+                else trust_radius = ssize;
+                diagonal_shift = 0;
+                a = at;
+                G_old = G_new;
+                mg = mg_new;
+                step_accepted = true;
+                break;
             }
-            if (!accepted) { fb_stop = "no-decrease"; break; }
+            if (!step_accepted) { fb_stop = "no-step"; break; }
             fb_iters = it + 1;
         }
-        if (cp_dbg_mich) std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g\n", (int)fb_conv, fb_stop, fb_iters, mg_cur);
+        if (cp_dbg_mich) std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g\n", (int)fb_conv, fb_stop, fb_iters, mg);
         if (fb_conv) {
             IO.beta = beta;  // eval_min left IO.x/IO.y/beta/rho on the converged state
             converged = true;
