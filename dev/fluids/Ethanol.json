@@ -4697,221 +4697,115 @@
         "type": "polynomial"
       }
     },
-    "viscosity": [
-      {
-        "BibTeX": "Sotiriadou-IJT-2023-ethanol,Sotiriadou-IJT-2023-ethanol-CORR",
-        "sigma_eta": 4.53e-10,
-        "epsilon_over_k": 362.6,
-        "dilute": {
-          "type": "expression",
-          "formula": "let Tr = T/T_red\nlet eta0 = sum(i: n[i]*Tr^np[i])/(d0 + Tr)\n1e-6*eta0",
-          "state_variables": [
-            "T"
-          ],
-          "constants": {
-            "T_red": 514.71,
-            "d0": -0.0281703
-          },
-          "arrays": {
-            "n": [
-              0.422373,
-              -3.78868,
-              23.8708,
-              -7.89204,
-              2.09783,
-              -0.247702
-            ],
-            "np": [
-              0,
-              1,
-              2,
-              3,
-              4,
-              5
-            ]
-          }
-        },
-        "initial_density": {
-          "type": "expression",
-          "formula": "let Tr = T/T_red\nlet eta0 = sum(i: n[i]*Tr^np[i])/(d0 + Tr)\nlet Ts = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Ts^bp[i])\n1e-6*eta0*Bstar*etaB2red*(Dmolar/1000)",
-          "state_variables": [
-            "T",
-            "Dmolar"
-          ],
-          "constants": {
-            "T_red": 514.71,
-            "d0": -0.0281703,
-            "epsilon_over_k": 265.0,
-            "etaB2red": 0.0661846339864743
-          },
-          "arrays": {
-            "n": [
-              0.422373,
-              -3.78868,
-              23.8708,
-              -7.89204,
-              2.09783,
-              -0.247702
-            ],
-            "np": [
-              0,
-              1,
-              2,
-              3,
-              4,
-              5
-            ],
-            "b": [
-              -19.572881,
-              219.73999,
-              -1015.3226,
-              2471.01251,
-              -3375.1717,
-              2491.6597,
-              -787.26086,
-              14.085455,
-              -0.34664158
-            ],
-            "bp": [
-              0,
-              -0.25,
-              -0.5,
-              -0.75,
-              -1.0,
-              -1.25,
-              -1.5,
-              -2.5,
-              -5.5
-            ]
-          }
-        },
-        "higher_order": {
-          "type": "expression",
-          "note": "The form used here follows the authors' PUBLISHED ERRATUM, not the original paper. Sotiriadou, Ntonti, Velliadou, Antoniadis, Assael & Huber, 'Erratum to: Reference Correlation for the Viscosity of Ethanol...', Int. J. Thermophys. 44(3) (2023), doi:10.1007/s10765-023-03160-y, online 12 January 2023: 'in Eq. 12, a power \"2\" in the reduced density in the brackets, is missing'. Hence c1*delta^2 here where the original Eq. 12 prints 8.32575272*rho_r. Using the original as printed gives 1593.72 uPa.s at 300 K / 850 kg/m^3 against the paper's tabulated 1682.72 (5.29 % low); the corrected form reproduces the table. ETHANOL.FLD carries the corrected exponent but does not cite the erratum. SEPARATE, UNRESOLVED ISSUE -- this correlation has a mathematical pole in a REACHABLE state. den vanishes where tau^2*(1 + delta^2) = 1, i.e. along T = 514.71/sqrt(1 + delta^2). Most of that locus lies inside the two-phase dome, but its low-density end does not: at 504.715 K / 1185.98 mol/m^3 and 500 K / 1448.98 mol/m^3 the pole sits BELOW the saturated-vapour density, i.e. in stable superheated vapour inside the correlation's own 159-620 K range. Landing on it returns -541.7 and -3058.9 Pa.s respectively -- negative, not merely large; 0.1 % away in density the values are normal (1.55e-5). Neither the paper nor ETHANOL.FLD mentions or guards this, so REFPROP behaves the same way. Contrast the argon correlation, whose paper deliberately places its line of poles inside the solid region. CoolProp currently reproduces the published behaviour rather than guarding it; see bd CoolProp-z94e for the decision.",
-          "formula": "let tau = T/T_red\nlet delta = Dmolar/rho_red\nlet front = tau^0.5*delta^(2/3)\nlet den = c3*tau^4 + c3*tau^4*delta^2 - c3*tau^2\n1e-6*front*(c1*delta^2 + c2*delta^8/den)",
-          "state_variables": [
-            "T",
-            "Dmolar"
-          ],
-          "constants": {
-            "T_red": 514.71,
-            "rho_red": 5930.0,
-            "c1": 8.32575272261323,
-            "c2": 71.0415826038262,
-            "c3": 735.012853435941
-          }
-        }
+    "viscosity": {
+      "BibTeX": "Kiselev-IECR-2005",
+      "dilute": {
+        "a": [
+          -1.03116e-06,
+          3.48379e-08,
+          -6.50264e-12
+        ],
+        "t": [
+          0,
+          1,
+          2
+        ],
+        "type": "powers_of_T"
       },
-      {
-        "BibTeX": "Kiselev-IECR-2005",
-        "dilute": {
-          "a": [
-            -1.03116e-06,
-            3.48379e-08,
-            -6.50264e-12
-          ],
-          "t": [
-            0,
-            1,
-            2
-          ],
-          "type": "powers_of_T"
-        },
-        "epsilon_over_k": 362.6,
-        "epsilon_over_k_units": "K",
-        "higher_order": {
-          "T_reduce": 513.9,
-          "T_reduce_units": "K",
-          "a": [
-            0.000131194057,
-            -0.000382240694,
-            -8.05700894e-05,
-            0.000153811778,
-            -0.000110578307
-          ],
-          "d1": [
-            2,
-            2,
-            3,
-            3,
-            3
-          ],
-          "d2": [
-            1
-          ],
-          "f": [
-            0.0237222995
-          ],
-          "g": [
-            -3.38264465,
-            12.7568864
-          ],
-          "gamma": [
-            0,
-            0,
-            0,
-            0,
-            0
-          ],
-          "h": [
-            0,
-            -0.5
-          ],
-          "l": [
-            1,
-            1,
-            1,
-            1,
-            1
-          ],
-          "p": [
-            1
-          ],
-          "q": [
-            0
-          ],
-          "rhomolar_reduce": 5991,
-          "rhomolar_reduce_units": "mol/m^3",
-          "t1": [
-            0,
-            1,
-            0,
-            1,
-            2
-          ],
-          "t2": [
-            0
-          ],
-          "type": "modified_Batschinski_Hildebrand"
-        },
-        "initial_density": {
-          "b": [
-            -19.572881,
-            219.73999,
-            -1015.3226,
-            2471.01251,
-            -3375.1717,
-            2491.6597,
-            -787.26086,
-            14.085455,
-            -0.34664158
-          ],
-          "t": [
-            0,
-            -0.25,
-            -0.5,
-            -0.75,
-            -1.0,
-            -1.25,
-            -1.5,
-            -2.5,
-            -5.5
-          ],
-          "type": "Rainwater-Friend"
-        },
-        "sigma_eta": 4.53e-10,
-        "sigma_eta_units": "m"
-      }
-    ]
+      "epsilon_over_k": 362.6,
+      "epsilon_over_k_units": "K",
+      "higher_order": {
+        "T_reduce": 513.9,
+        "T_reduce_units": "K",
+        "a": [
+          0.000131194057,
+          -0.000382240694,
+          -8.05700894e-05,
+          0.000153811778,
+          -0.000110578307
+        ],
+        "d1": [
+          2,
+          2,
+          3,
+          3,
+          3
+        ],
+        "d2": [
+          1
+        ],
+        "f": [
+          0.0237222995
+        ],
+        "g": [
+          -3.38264465,
+          12.7568864
+        ],
+        "gamma": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "h": [
+          0,
+          -0.5
+        ],
+        "l": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "p": [
+          1
+        ],
+        "q": [
+          0
+        ],
+        "rhomolar_reduce": 5991,
+        "rhomolar_reduce_units": "mol/m^3",
+        "t1": [
+          0,
+          1,
+          0,
+          1,
+          2
+        ],
+        "t2": [
+          0
+        ],
+        "type": "modified_Batschinski_Hildebrand"
+      },
+      "initial_density": {
+        "b": [
+          -19.572881,
+          219.73999,
+          -1015.3226,
+          2471.01251,
+          -3375.1717,
+          2491.6597,
+          -787.26086,
+          14.085455,
+          -0.34664158
+        ],
+        "t": [
+          0,
+          -0.25,
+          -0.5,
+          -0.75,
+          -1.0,
+          -1.25,
+          -1.5,
+          -2.5,
+          -5.5
+        ],
+        "type": "Rainwater-Friend"
+      },
+      "sigma_eta": 4.53e-10,
+      "sigma_eta_units": "m"
+    }
   }
 }
