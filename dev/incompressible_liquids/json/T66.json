@@ -1,105 +1,171 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 4.631500e+02, 
-  "Tmax": 6.531500e+02, 
-  "Tmin": 2.731500e+02, 
-  "TminPsat": 3.431500e+02, 
+  },
+  "Tbase": 463.15,
+  "Tmax": 653.15,
+  "Tmin": 273.15,
+  "TminPsat": 343.15,
   "conductivity": {
-    "NRMS": 9.200426e-03, 
+    "NRMS": 0.009200426,
     "coeffs": [
       [
-        1.065831e-01
-      ], 
+        0.1065831
+      ],
       [
-        -9.178790e-05
-      ], 
+        -9.17879e-05
+      ],
       [
-        -1.573730e-07
-      ], 
+        -1.57373e-07
+      ],
       [
         1.361587e-11
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 5.632313e-04, 
+    "NRMS": 0.0005632313,
     "coeffs": [
       [
-        8.924651e+02
-      ], 
+        892.4651
+      ],
       [
-        -7.182484e-01
-      ], 
+        -0.7182484
+      ],
       [
-        -3.391502e-04
-      ], 
+        -0.0003391502
+      ],
       [
         -7.434511e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Therminol66", 
+  },
+  "density_cheb": {
+    "NRMS": 9.035517921440159e-05,
+    "Trange": [
+      273.15,
+      653.15
+    ],
+    "coeffs": [
+      [
+        886.3072136500491
+      ],
+      [
+        -140.30108892498194
+      ],
+      [
+        -6.215452567685691
+      ],
+      [
+        -1.2904671673295895
+      ],
+      [
+        -0.23471240300172716
+      ],
+      [
+        -0.045969541442506104
+      ],
+      [
+        -0.01671751308007072
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Therminol66",
   "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "name": "T66", 
-  "reference": "Therminol2014", 
+  },
+  "name": "T66",
+  "reference": "Therminol2014",
   "saturation_pressure": {
-    "NRMS": 2.309993e-03, 
+    "NRMS": 0.002309993,
     "coeffs": [
-      -9.020703e+03, 
-      6.550192e+01, 
-      -2.445722e+01
-    ], 
+      -9020.703,
+      65.50192,
+      -24.45722
+    ],
     "type": "exponential"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": 3.462753e-04, 
+    "NRMS": 0.0003462753,
     "coeffs": [
       [
-        2.157819e+03
-      ], 
+        2157.819
+      ],
       [
-        3.630114e+00
-      ], 
+        3.630114
+      ],
       [
-        9.171095e-04
-      ], 
+        0.0009171095
+      ],
       [
         1.004461e-06
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 5.477640e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.00020172832715738043,
+    "Trange": [
+      273.15,
+      653.15
+    ],
     "coeffs": [
-      6.538723e+02, 
-      -2.060943e+02, 
-      9.556995e+00
-    ], 
+      [
+        2174.463058370545
+      ],
+      [
+        694.920756694944
+      ],
+      [
+        16.787925251523543
+      ],
+      [
+        1.7753737862657273
+      ],
+      [
+        0.5841956092957514
+      ],
+      [
+        0.15576096256894068
+      ],
+      [
+        0.1075218754327713
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.00547764,
+    "coeffs": [
+      653.8723,
+      -206.0943,
+      9.556995
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

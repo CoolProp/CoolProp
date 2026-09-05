@@ -1,0 +1,5 @@
+# Optional: fitting reports, plots and documentation tables
+# (SolutionDataWriter.writeReportList / generateRstTable). Not needed to fit
+# fluids or write json/.
+-r requirements.txt
+matplotlib>=3.11.0

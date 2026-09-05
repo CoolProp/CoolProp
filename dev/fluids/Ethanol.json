@@ -4558,7 +4558,22 @@
     "INCHI_STRING": "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3",
     "NAME": "Ethanol",
     "REFPROP_NAME": "ETHANOL",
-    "SMILES": "CCO"
+    "SMILES": "CCO",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "64-17-5*0",
+        "source": "ATcT",
+        "uncertainty": 200.0,
+        "units": "J/mol",
+        "value": -234900.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

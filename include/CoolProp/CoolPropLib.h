@@ -201,6 +201,22 @@ EXPORT_CODE void CONVENTION set_config_bool(const char* key, const bool val);
      */
 EXPORT_CODE void CONVENTION set_departure_functions(const char* string_data, long* errcode, char* message_buffer, const long buffer_length);
 /**
+     * @brief Apply a simple mixing rule for a binary pair in the mixture binary pair library
+     * @param identifier1 The CAS number (or name) of the first component of the binary pair
+     * @param identifier2 The CAS number (or name) of the second component of the binary pair
+     * @param rule The simple mixing rule to apply; one of "linear" or "Lorentz-Berthelot"
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error message
+     * @param buffer_length The length of the buffer for the error message
+     *
+     * @note By default, if this binary pair already has an entry in the library, this is an
+     *       error, unless the configuration variable OVERWRITE_BINARY_INTERACTION is set to true
+     *
+     * \sa \ref CoolProp::apply_simple_mixing_rule
+     */
+EXPORT_CODE void CONVENTION apply_simple_mixing_rule(const char* identifier1, const char* identifier2, const char* rule, long* errcode,
+                                                     char* message_buffer, const long buffer_length);
+/**
      * \overload
      * \sa \ref CoolProp::set_reference_stateS
      * @returns error_code 1 = Ok 0 = error

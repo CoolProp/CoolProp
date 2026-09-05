@@ -169,6 +169,45 @@ platforms.  The location is configurable via the
 ``ALTERNATIVE_SVDTABLES_DIRECTORY`` configuration key — see
 :ref:`SVDSBTL-config` below.
 
+.. _SVDSBTL-memcache:
+
+The in-memory surface cache
+===========================
+
+Loading a surface from its ``.svd.bin.z`` file is not free even when
+the bytes are already in the OS page cache — zlib decompression plus
+msgpack deserialization of the region atlas, boundary curves, and
+per-region SVD decompositions costs **~80 ms per surface**.  Every
+``SVDSBTLBackend`` construction used to pay this again, even within a
+single process building the identical ``(fluid, source, input_pair,
+options)`` surface it had already loaded moments earlier.
+
+A process-wide, thread-safe LRU cache now sits in front of the disk
+load.  It is keyed by the same string used to derive the on-disk
+filename, so a second backend construction for an identical tuple is a
+cache hit — a map lookup, not a disk read — and is shared (read-only)
+with the instance that built it.  The cache is bounded by two limits,
+whichever is hit first triggers eviction of the least-recently-used
+surface:
+
+* ``SVDSBTL_SURFACE_CACHE_MAX_ENTRIES`` (default ``16``) — maximum
+  number of resident surfaces, across all fluids / sources / input
+  pairs.
+* ``SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB`` (default ``512``) — maximum
+  total estimated resident size in MB.  Needed because surface size
+  varies widely with the ``grid`` options (``NT`` / ``NR`` / ``rank``),
+  so an entry-count cap alone cannot bound memory.
+
+This cache is **process-local and in-memory only** — it does not
+persist across process restarts (the on-disk ``.svd.bin.z`` cache
+still does that) and is independent of ``ALTERNATIVE_SVDTABLES_DIRECTORY``.
+It helps any workload that constructs multiple ``AbstractState``
+instances for the same surface within one process — most notably
+repeated ``PropsSI`` calls against the same fluid (see below) — but
+does **not** help a fresh process, nor a workload that mostly varies
+the fluid / source / options per call (each distinct tuple is still a
+cache miss the first time it's seen).
+
 .. _SVDSBTL-regimes:
 
 Three performance regimes
@@ -272,13 +311,19 @@ the backend.
    backend and constructs an ``AbstractState`` on every call.  For
    SVDSBTL that means a zlib-decompressed ``.svd.bin.z`` load (~80 ms
    for the typical ~7 MB table, ~140 ms for the larger 14 MB
-   SVDSBTL&IF97 HmassP table).  For a one-off interactive query this
-   is fine; for a throughput workload it is catastrophic — *every*
-   ``PropsSI`` call pays the table-load cost again.
+   SVDSBTL&IF97 HmassP table) *the first time* a given ``(fluid,
+   source, input_pair, options)`` surface is needed in a process.  The
+   :ref:`in-memory cache <SVDSBTL-memcache>` above makes subsequent
+   ``PropsSI`` calls for the **same** tuple in the same process cheap
+   (a map lookup instead of a disk read), but a workload that mostly
+   varies the fluid or options per call — or runs in a fresh process
+   each time — still pays the full load cost on every call, which is
+   catastrophic for throughput.
 
    SVDSBTL therefore opts *out* of ``PropsSI`` by default.  Enable
-   only for interactive / scripting use where the construction cost
-   is irrelevant:
+   only for interactive / scripting use, or for a workload dominated
+   by repeated queries against the same handful of fluids, where the
+   occasional cold-load cost is acceptable:
 
    .. code-block:: python
 
@@ -430,6 +475,18 @@ Configuration keys
 
        import CoolProp.CoolProp as CP
        CP.set_config_string(CP.ALTERNATIVE_SVDTABLES_DIRECTORY, "/srv/coolprop_cache")
+
+``SVDSBTL_SURFACE_CACHE_MAX_ENTRIES`` (default ``16``)
+    Maximum number of surfaces kept resident in the process-wide
+    :ref:`in-memory LRU cache <SVDSBTL-memcache>`, across all fluids /
+    sources / input pairs.  ``0`` disables the in-memory cache (every
+    ``SVDSBTLBackend`` still reads/writes the on-disk cache, but no
+    surface is shared across backend instances in the same process).
+
+``SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB`` (default ``512``)
+    Maximum total estimated resident size, in MB, of the in-memory
+    surface cache.  Evicted LRU-first alongside the entry-count cap
+    above — whichever limit is hit first triggers eviction.
 
 ``SVDSBTL_SAMPLING_THREADS`` (default ``1``)
     Number of worker threads for the per-grid-cell sampling phase of

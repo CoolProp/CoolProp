@@ -35,6 +35,24 @@
     ],
     "type": "polynomial"
   },
+  "density_cheb": {
+    "NRMS": null,
+    "Trange": [
+      233.14999999999998,
+      423.15
+    ],
+    "coeffs": [
+      [
+        1582.0247
+      ],
+      [
+        -29.493700000000082
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
   "description": "Food carbohydrate model from the 2006 ASHRAE Handbook based on data from Choi and Okos (1986)",
   "mass2input": {
     "NRMS": null,
@@ -67,6 +85,27 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": null,
+    "Trange": [
+      233.14999999999998,
+      423.15
+    ],
+    "coeffs": [
+      [
+        1611.9655037499997
+      ],
+      [
+        124.3655449999999
+      ],
+      [
+        -26.80379875000042
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "viscosity": {
     "NRMS": null,

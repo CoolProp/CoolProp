@@ -35,6 +35,24 @@
     ],
     "type": "polynomial"
   },
+  "density_cheb": {
+    "NRMS": null,
+    "Trange": [
+      233.14999999999998,
+      423.15
+    ],
+    "coeffs": [
+      [
+        902.62365
+      ],
+      [
+        -39.669149999999895
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
   "description": "Food fat model from the 2006 ASHRAE Handbook based on data from Choi and Okos (1986)",
   "mass2input": {
     "NRMS": null,
@@ -67,6 +85,27 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": null,
+    "Trange": [
+      233.14999999999998,
+      423.15
+    ],
+    "coeffs": [
+      [
+        2029.0454700000003
+      ],
+      [
+        89.79513999999995
+      ],
+      [
+        -21.66361000000052
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "viscosity": {
     "NRMS": null,

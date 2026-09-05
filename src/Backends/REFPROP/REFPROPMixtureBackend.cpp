@@ -1018,6 +1018,33 @@ CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment() {
         throw ValueError(format("dipole moment is only available for pure fluids"));
     }
 };
+CoolPropDbl REFPROPMixtureBackend::calc_Hmolar_formation() {
+    this->check_loaded_fluid();
+    this->check_status();
+
+    if (HEATFRMdll == nullptr) {
+        throw ValueError("HEATFRMdll function is not available in your version of REFPROP. Please upgrade");
+    }
+
+    // HEATFRMdll defines the standard state as the ideal gas at 298.15 K.
+    // Density is part of the legacy signature but is not used by REFPROP.
+    double T = 298.15;
+    double D_mol_L = 0.0;
+    double hformation_J_mol = NAN;
+    int ierr = 0;
+    std::array<char, errormessagelength + 1> herr{};
+    HEATFRMdll(&T, &D_mol_L, mole_fractions.data(), &hformation_J_mol, &ierr, herr.data(), errormessagelength);
+
+    // HEATFRMdll documents only ierr == 0 as success. In particular, missing
+    // heating-value data must not be exposed as a plausible zero or NaN.
+    if (ierr != 0) {
+        throw ValueError(format("REFPROP HEATFRMdll failed with error code %d: %s", ierr, herr.data()));
+    }
+    if (!ValidNumber(hformation_J_mol)) {
+        throw ValueError("REFPROP HEATFRMdll returned an invalid standard molar enthalpy of formation");
+    }
+    return static_cast<CoolPropDbl>(hformation_J_mol);
+}
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant() {
     this->check_loaded_fluid();
     double Rmix = 0;
@@ -1032,7 +1059,12 @@ CoolPropDbl REFPROPMixtureBackend::calc_molar_mass() {
     return static_cast<CoolPropDbl>(_molar_mass.pt());
 };
 AbstractState::PhaseMolarMasses REFPROPMixtureBackend::calc_phase_molar_masses() {
-    if (mole_fractions.size() == 1) {
+    // get_mole_fractions() is sized Ncomp; the mole_fractions member is padded to
+    // ncmax and is never 1.  Same dead-guard bug that update()'s Qmass dispatch had.
+    // The shortcut matters: without it a pure fluid runs WMOLdll on the liquid and
+    // vapor composition arrays, which are all-zero until a two-phase flash fills
+    // them in -- a molar mass of zero waiting to divide.
+    if (get_mole_fractions().size() == 1) {
         const double mm = molar_mass();
         return {mm, mm};
     }
@@ -1052,6 +1084,15 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
         double T_K = 0, p_kPa = 0, q = 0;
         double rho_mol_L = 0, rhoLmol_L = 0, rhoVmol_L = 0;
         double emol = 0, hmol = 0, smol = 0, cvmol = 0, cpmol = 0, w = 0;
+
+        // This path populates the state directly instead of going through update()'s
+        // switch, so it has to do update()'s bookkeeping itself.  Without the clear()
+        // every lazily-cached derived property from the previous update (viscosity,
+        // conductivity, ...) would survive into the new state.
+        clear();
+
+        // Check that mole fractions have been set, etc.
+        check_status();
 
         if (pair == CoolProp::QmassT_INPUTS) {
             // QmassT: v1 is Qmass, v2 is T
@@ -1091,6 +1132,11 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
         _Q = detail::Qmass_to_Qmolar(q, MM.liquid, MM.vapor);
         _Qmass = q;
         _phase = iphase_twophase;
+        // REFPROP has no calc_gibbsmolar() override, so nothing recomputes this
+        // lazily — update() assigns it at the end of its switch and so must we.
+        _gibbsmolar = hmol - _T * smol;
+        _tau = calc_T_reducing() / _T;
+        _delta = _rhomolar / calc_rhomolar_reducing();
         return;
     }
     // The 6 remaining Qmass pairs: REFPROP has no native kq flag for them.
@@ -1444,14 +1490,39 @@ phases REFPROPMixtureBackend::GetRPphase() {
 }
 
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
-    // Mass-quality input pair on a true mixture: handle via update_Qmass_pair.
-    // Pure / pseudo-pure (mole_fractions.size() == 1) goes through the existing
-    // mass_to_molar_inputs path.
-    if (CoolProp::is_Qmass_pair(input_pair) && mole_fractions.size() > 1) {
-        update_Qmass_pair(input_pair, value1, value2);
-        return;
-    }
     this->check_loaded_fluid();
+
+    // Mass-quality input pair.  On a true mixture Qmass != Qmolar, so it needs the
+    // dedicated update_Qmass_pair path.  For a pure or pseudo-pure fluid the two are
+    // the same number, so rewrite the pair to its molar sibling and fall through to
+    // the switch below.
+    //
+    // Test get_mole_fractions(), which is sized Ncomp -- NOT the mole_fractions
+    // member, which every success branch of set_REFPROP_fluids resize(ncmax)'s to 20
+    // and so is never 1.  An empty vector means the composition was never set; send
+    // that to update_Qmass_pair, whose check_status() reports it properly.
+    if (CoolProp::is_Qmass_pair(input_pair)) {
+        if (get_mole_fractions().size() == 1) {
+            // The rewrite skips AbstractState::update_Qmass_pair, so its [0,1] range
+            // check has to be applied here.  REFPROP will not do it for us: DQFL2
+            // extrapolates a quality above 1 and returns a state whose Q() reads 1.05
+            // and phase() reads gas, while Qmass() on it throws.
+            check_Qmass_pair_range(input_pair, value1, value2);
+            // NOTE: mass_to_molar_inputs runs two switches.  The first rewrites the
+            // Qmass pair to its molar sibling; the second converts any remaining
+            // mass-basis value to molar (DmassQmass -> DmassQ -> DmolarQ, dividing by
+            // the molar mass once).  That lands on case DmolarQ_INPUTS below, NOT on
+            // this backend's own case DmassQ_INPUTS, so the density is not divided
+            // twice -- a fact worth rechecking if either switch changes.
+            CoolPropDbl v1 = value1, v2 = value2;
+            mass_to_molar_inputs(input_pair, v1, v2);
+            value1 = static_cast<double>(v1);
+            value2 = static_cast<double>(v2);
+        } else {
+            update_Qmass_pair(input_pair, value1, value2);
+            return;
+        }
+    }
     double rho_mol_L = _HUGE, rhoLmol_L = _HUGE, rhoVmol_L = _HUGE, hmol = _HUGE, emol = _HUGE, smol = _HUGE, cvmol = _HUGE, cpmol = _HUGE, w = _HUGE,
            q = _HUGE, mm = _HUGE, p_kPa = _HUGE, hjt = _HUGE;
     int ierr = 0;
@@ -2518,6 +2589,74 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, par
         CoolPropDbl dxdp_h = (Q() * dhV_dp + (1 - Q()) * dhL_dp) / (SatL->hmass() - SatV->hmass());
         CoolPropDbl dvdp_h = dvL_dp + dxdp_h * (1 / SatV->rhomass() - 1 / SatL->rhomass()) + Q() * (dvV_dp - dvL_dp);
         return -POW2(rhomass()) * dvdp_h;
+    }
+    // Vapor-quality derivatives in the two-phase region (Thorade & Saadat, 2013).
+    // Mirrors HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv; see there for the
+    // derivation and for why these are restricted to pure fluids.  Mixtures are already
+    // rejected for every two-phase derivative at the top of this function.
+    else if (Of == iQ || Of == iQmass) {
+        // Match the (Of, Wrt, Constant) triplet before anything else so an unsupported
+        // triplet keeps reporting ValueError.
+        const bool use_mass = (Of == iQmass);
+        const parameters h_key = use_mass ? iHmass : iHmolar;
+        const bool wrt_h = (Wrt == h_key && Constant == iP);
+        const bool wrt_p = (Wrt == iP && Constant == h_key);
+        if (!wrt_h && !wrt_p) {
+            throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+        }
+        // The mixture gate above does not catch pseudo-pure fluids: a single .PPF file
+        // loads with Ncomp == 1, and REFPROP (unlike HEOS) accepts 0 < Q < 1 for one.  The
+        // lever rule needs h'(p) and h''(p) at a COMMON pressure, which a pseudo-pure does
+        // not provide -- its bubble and dew curves are offset (R407C by ~24% at 250 K).
+        //
+        // Compare the SATTdll bubble and dew pressures, NOT SatL->p() / SatV->p().  The
+        // latter re-evaluate p_EOS(rho, T) on each branch; on the liquid branch that is a
+        // difference of large terms whose round-off is amplified by dp/drho|_T, so it
+        // measures conditioning rather than any physical offset.  Verified against REFPROP
+        // 10: that EOS-re-evaluation signal reaches 7.9e-04 for PURE ethanol at 159 K and
+        // 6.2e-08 for PURE water at 293 K, overlapping pseudo-pure R507A at 230 K
+        // (1.1e-04) -- so no threshold on it can separate the two populations.  The SATT
+        // pressures are instead bit-identical for every pure-fluid state tested (78 fluids x
+        // 202 temperatures from triple point to critical, max relative difference exactly
+        // 0), while reproducing the pseudo-pure offsets exactly, so 1e-10 discriminates
+        // cleanly.  At the states sampled away from Tc that leaves roughly six orders of
+        // margin to the smallest pseudo-pure offset (R507A, 3.9e-04 at 250 K), but the
+        // margin narrows continuously as T -> Tc.
+        //
+        // Known gap: a pseudo-pure's bubble and dew pressures converge as T -> Tc, so this
+        // check stops rejecting one within roughly 1e-9 in reduced temperature of the
+        // critical point (measured: R507A still accepted at 1 - T/Tc = 1e-9).  Exactly at
+        // Tc the DELTAh <= 0 guard below catches it; only that narrow band leaks, about
+        // 3e-7 K wide.
+        CoolPropDbl p_bubble = saturation_pressure_at_T(T(), 0);
+        CoolPropDbl p_dew = saturation_pressure_at_T(T(), 1);
+        if (!ValidNumber(p_bubble) || !ValidNumber(p_dew) || p_bubble <= 0 || std::abs(p_dew - p_bubble) / p_bubble > 1e-10) {
+            throw NotImplementedError("Vapor-quality two-phase derivatives are only implemented for pure fluids; the bubble and dew "
+                                      "pressures differ at this temperature (a pseudo-pure fluid)");
+        }
+        // h'' - h' is the latent heat: strictly positive inside the dome, collapsing to
+        // zero at the critical point where these derivatives diverge.
+        CoolPropDbl DELTAh = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
+        if (!ValidNumber(DELTAh) || DELTAh <= 0) {
+            throw ValueError("Vapor-quality two-phase derivatives are not defined where h'' <= h' (at the critical point)");
+        }
+        CoolPropDbl out;
+        if (wrt_h) {
+            out = 1 / DELTAh;
+        } else {
+            CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(h_key, iP);
+            CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(h_key, iP);
+            CoolPropDbl q = use_mass ? Qmass() : Q();
+            out = -((1 - q) * dhL_dp + q * dhV_dp) / DELTAh;
+        }
+        // Guarding the denominator alone is not enough to keep the promise of a diagnosable
+        // error instead of a silent inf/NaN: a subnormal DELTAh still overflows the
+        // division, and the saturation derivatives carry their own singular denominators
+        // near the critical point.  Validate what actually goes back to the caller.
+        if (!ValidNumber(out)) {
+            throw ValueError("Vapor-quality two-phase derivative is not a finite number (too close to the critical point?)");
+        }
+        return out;
     } else {
         throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
     }

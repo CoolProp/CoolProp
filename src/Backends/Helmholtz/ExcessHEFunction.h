@@ -42,6 +42,10 @@ class DepartureFunction
     void calc_nocache(double tau, double delta, HelmholtzDerivatives& _derivs) {
         phi.all(tau, delta, _derivs);
     }
+    /// Delta-only (see BaseHelmholtzTerm::all_deltaonly): only the delta-fields of _derivs are valid.
+    void calc_nocache_deltaonly(double tau, double delta, HelmholtzDerivatives& _derivs) {
+        phi.all_deltaonly(tau, delta, _derivs);
+    }
 
     double alphar() {
         return derivs.alphar;
@@ -298,6 +302,24 @@ class ExcessTerm
             }
         }
         return summer;
+    }
+    /// Delta-only (see BaseHelmholtzTerm::all_deltaonly): only the delta-fields of the result are valid.
+    HelmholtzDerivatives get_deriv_nocomp_notcached_deltaonly(const std::vector<CoolPropDbl>& x, double tau, double delta) const {
+        HelmholtzDerivatives summer;
+        if (N == 0) {
+            return summer;
+        }
+        for (std::size_t i = 0; i < N - 1; i++) {
+            for (std::size_t j = i + 1; j < N; j++) {
+                HelmholtzDerivatives term;
+                DepartureFunctionMatrix[i][j]->calc_nocache_deltaonly(tau, delta, term);
+                summer = summer + term * x[i] * x[j] * F[i][j];
+            }
+        }
+        return summer;
+    }
+    HelmholtzDerivatives all_deltaonly(double tau, double delta, const std::vector<CoolPropDbl>& x) {
+        return get_deriv_nocomp_notcached_deltaonly(x, tau, delta);
     }
     double get_deriv_nocomp_cached(const std::vector<CoolPropDbl>& x, std::size_t itau, std::size_t idelta) {
         // If Excess term is not being used, return zero

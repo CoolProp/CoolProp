@@ -1,0 +1,284 @@
+"""Chebyshev fits for the caloric properties (density, specific heat).
+
+Emits the optional ``<property>_cheb`` JSON entries that sit alongside the
+classic centered-polynomial entries::
+
+    "specific_heat_cheb": {
+        "type": "chebyshev",
+        "Trange": [Tmin, Tmax],   # the fit domain in T, explicit
+        "xbase": 0.21,            # centering of the composition direction
+        "coeffs": [[...], ...],   # rows k: Chebyshev-in-T coefficients,
+                                  # cols j: multiplied by (x - xbase)^j
+        "NRMS": 0.001
+    }
+
+so that ``value(T, x) = sum_k sum_j C[k][j] * T_k(u(T)) * (x - xbase)^j``
+with ``u(T) = (2*T - (Tmax + Tmin)) / (Tmax - Tmin)``.
+
+Two provenance paths, mirroring how the polynomial fits are produced:
+
+- fluids with tabular data are least-squares fitted from the raw grid
+  (NaN-masked, T-degree capped by the number of temperature points);
+- coefficient-only fluids (Melinder book, food correlations, LiBr, ...)
+  have no raw data -- their committed polynomial IS the ground truth, so
+  the Chebyshev coefficients are an EXACT basis conversion of it
+  (interpolation at Chebyshev-Lobatto nodes at the same degree).
+
+The math was validated end-to-end in prototype_chebyshev_caloric.py
+(entropy from these fits agrees with adaptive quadrature to ~1e-16; see
+NOTES_thermodynamic_consistency.md).
+"""
+
+import numpy as np
+from numpy.polynomial import chebyshev as ncheb
+
+# T-degree for data fits: enough for every smooth fluid (the prototype's
+# fit-quality tables plateau at or before 8), capped by the data.
+DEFAULT_MAX_DEGREE_T = 8
+# A Chebyshev fit in T needs at least a handful of temperatures; freeze
+# curves and conversion tables with fewer points are skipped (they are not
+# caloric properties anyway).
+MIN_TEMPERATURE_POINTS = 3
+
+CALORIC_PROPERTIES = ("density", "specific_heat")
+
+
+def _scaled_T(T, Trange):
+    return (2.0 * np.asarray(T, dtype=float) - (Trange[1] + Trange[0])) / (Trange[1] - Trange[0])
+
+
+def evaluate(coeffs, T, x, Trange, xbase):
+    """Evaluate a 2D chebyshev-in-T x monomial-in-(x - xbase) fit."""
+    coeffs = np.asarray(coeffs, dtype=float)
+    dx = np.power(x - xbase, np.arange(coeffs.shape[1]))
+    return ncheb.chebval(_scaled_T(T, Trange), coeffs @ dx)
+
+
+def fit_from_data(Tvec, xvec, grid, xbase, deg_x, deg_T=DEFAULT_MAX_DEGREE_T):
+    """Least-squares 2D fit from a raw data grid.
+
+    Returns (coeffs, Trange, NRMS) or None if the grid cannot support a fit.
+    """
+    Tvec = np.asarray(Tvec, dtype=float).ravel()
+    xvec = np.asarray(xvec, dtype=float).ravel()
+    try:
+        grid = np.asarray(grid, dtype=float).reshape(len(Tvec), len(xvec))
+    except ValueError:
+        # Axes out of sync with the grid: treat as unusable data (build_entry's
+        # documented "return None when nothing usable exists" contract) rather
+        # than letting it propagate and abort a whole migration run.
+        return None
+    # Trange must come from the rows that actually carry data, not from the raw
+    # Tvec extent.  Sparse SecCool grids pad cells below a concentration's
+    # freeze point, so a boundary temperature can be entirely non-finite across
+    # every x column; taking min/max of Tvec then advertises a domain edge that
+    # no data point supports and the fit is extrapolating exactly where it
+    # claims validity.  (fit_from_arrays below already masks T this way.)
+    finite_row_mask = np.isfinite(grid).any(axis=1)
+    finite_T_rows = int(finite_row_mask.sum())
+    if finite_T_rows < MIN_TEMPERATURE_POINTS:
+        return None
+    Trange = (float(Tvec[finite_row_mask].min()), float(Tvec[finite_row_mask].max()))
+    if Trange[1] <= Trange[0]:
+        return None
+
+    TT, XX = np.meshgrid(Tvec, xvec, indexing="ij")
+    T, x, z = TT.ravel(), XX.ravel(), grid.ravel()
+    mask = np.isfinite(z)
+    points = int(mask.sum())
+
+    # Fit only as many coefficients as the FINITE data supports: sparse
+    # SecCool grids pad out-of-range cells with NaN, and some hardcoded
+    # arrays (e.g. LiqNa cp) carry NaN gaps.
+    deg_T_cap = min(deg_T, finite_T_rows - 1)
+    deg_x = min(deg_x, max(len(xvec) - 1, 0))
+    while deg_x > 0 and 2 * (deg_x + 1) > points:
+        deg_x -= 1
+    if 2 * (deg_x + 1) > points:
+        return None
+
+    u = _scaled_T(T[mask], Trange)
+    xpow = np.vander(x[mask] - xbase, deg_x + 1, increasing=True)
+    # Normalise the residual against the data actually fitted.  nanmax/nanmin
+    # skip NaN but NOT +/-inf, so a single infinity anywhere in the grid would
+    # make spread infinite and nrms exactly 0.0 -- a corrupt fit reporting as a
+    # perfect one.  z[mask] is the finite subset the least-squares solve uses.
+    spread = float(z[mask].max() - z[mask].min())
+
+    # Select the T-degree by generalized cross-validation, GCV = n*RSS/(n-p)^2:
+    # tabulated data is typically rounded to 3-4 digits, and a high-order fit
+    # of a near-linear property just rings between the data points (0.5 kg/m3
+    # wiggles on ExamplePure's density). GCV keeps the order low for noisy
+    # low-structure data while still choosing high order where the data
+    # genuinely bends (the ice slurries' cp).
+    best = None
+    for candidate in range(1, deg_T_cap + 1):
+        n_coeffs = (candidate + 1) * (deg_x + 1)
+        if n_coeffs >= points:  # interpolation has no leftover DOF to validate
+            break
+        cheb_cols = ncheb.chebvander(u, candidate)
+        design = (cheb_cols[:, :, None] * xpow[:, None, :]).reshape(points, -1)
+        flat, *_ = np.linalg.lstsq(design, z[mask], rcond=None)
+        rss = float(np.sum(np.square(design @ flat - z[mask])))
+        gcv = points * rss / (points - n_coeffs) ** 2
+        if best is None or gcv < best[0]:
+            best = (gcv, candidate, flat, rss)
+    if best is None:
+        # too few points for any validated fit: fall back to the exactly-
+        # determined lowest order that the points allow
+        candidate = max(min(deg_T_cap, points // (deg_x + 1) - 1), 1)
+        cheb_cols = ncheb.chebvander(u, candidate)
+        design = (cheb_cols[:, :, None] * xpow[:, None, :]).reshape(points, -1)
+        flat, *_ = np.linalg.lstsq(design, z[mask], rcond=None)
+        best = (0.0, candidate, flat, float(np.sum(np.square(design @ flat - z[mask]))))
+
+    _, chosen_deg_T, flat, rss = best
+    coeffs = flat.reshape(chosen_deg_T + 1, deg_x + 1)
+    residual_rms = float(np.sqrt(rss / points))
+    nrms = residual_rms / spread if spread > 0 else residual_rms
+    if not np.isfinite(nrms):
+        # A non-finite quality metric must not be emitted as if it were a
+        # measurement: callers compare nrms against tolerances, and inf/nan
+        # would silently pass or fail those comparisons rather than rejecting
+        # the fit. Treat it as "no usable fit", the documented contract here.
+        return None
+    return coeffs, Trange, nrms
+
+
+def convert_polynomial(poly_coeffs, Tbase, xbase, Trange):
+    """EXACT basis conversion of a centered 2D polynomial fit.
+
+    The committed polynomial ``sum_k sum_j P[k][j] (T-Tbase)^k (x-xbase)^j``
+    is, per x-column, a degree-K polynomial in T; interpolating it at K+1
+    Chebyshev points of the first kind (what ``Chebyshev.interpolate`` uses --
+    not the Lobatto/extrema nodes) reproduces it exactly, because both
+    describe the same degree-K polynomial space, so this adds no fitting
+    error. The x-direction (monomial in x - xbase) is carried over unchanged.
+    """
+    P = np.asarray(poly_coeffs, dtype=float)
+    if P.ndim == 1:
+        P = P.reshape(-1, 1)
+    deg_T = P.shape[0] - 1
+    out = np.zeros_like(P)
+    for j in range(P.shape[1]):
+        col = ncheb.Chebyshev.interpolate(
+            lambda T: np.polynomial.polynomial.polyval(np.asarray(T) - Tbase, P[:, j]),
+            deg_T, domain=list(Trange))
+        out[:deg_T + 1, j] = col.coef
+    return out
+
+
+def _positive_on_sampled_domain(coeffs, Trange, xbase, xmin, xmax):
+    """Screen for a fit that swings non-positive: density and heat capacity are
+    strictly positive, so a sign change means the fit is oscillating through
+    data-free regions and must not ship.
+
+    This SAMPLES a 41 x 9 (T, x) lattice; it does not prove positivity over the
+    domain. A dip narrower than the sample spacing can pass. Proving it would
+    mean bounding the extrema of a 2-D polynomial over a box (interval
+    arithmetic, or rooting the partial derivatives), which is a substantially
+    larger and numerically touchier piece of machinery than the failure mode
+    warrants -- the oscillation this exists to catch is gross, spanning many
+    sample points, not a hairline notch. Named for what it does so callers do
+    not read it as a guarantee."""
+    Ts = np.linspace(Trange[0], Trange[1], 41)
+    xs = np.linspace(xmin, xmax, 9) if xmax > xmin else [xbase]
+    return all(np.min(evaluate(coeffs, Ts, x, Trange, xbase)) > 0.0 for x in xs)
+
+
+def _fit_covers_fluid_range(rawT, rawGrid, Tmin, Tmax):
+    """A tabular refit is only trustworthy when the finite data spans
+    (essentially all of) the fluid's advertised temperature range --
+    otherwise the entry would extrapolate freely where the committed
+    low-order polynomial extrapolates gently (LiqNa's cp data stops at
+    1000 K of an advertised 2500 K, see DATA_AUDIT.md)."""
+    try:
+        grid = np.asarray(rawGrid, dtype=float).reshape(np.size(rawT), -1)
+    except ValueError:
+        return False  # a malformed grid cannot be said to cover the range
+    T = np.asarray(rawT, dtype=float).ravel()[np.isfinite(grid).any(axis=1)]
+    if T.size < MIN_TEMPERATURE_POINTS:
+        return False
+    # Require essentially full coverage: the C++ side checks positivity only
+    # inside Trange, so shipping extrapolation would be unguarded. Both ends
+    # must line up with the advertised range -- comparing only the *width* of
+    # the data span would accept a range-shifted table (say 500-3000 K of an
+    # advertised 0-2500 K), which extrapolates over the whole low end while
+    # looking like full coverage.
+    tol = 0.001 * (Tmax - Tmin)
+    return T.min() <= Tmin + tol and T.max() >= Tmax - tol
+
+
+def _committed_x_degree(committed):
+    """Composition-direction degree of a committed polynomial entry.
+
+    ``coeffs`` is normally a nested (T-rows x x-columns) list, but a pure
+    fluid may carry a flat list of T-coefficients; indexing ``coeffs[0]``
+    then yields a float and ``len()`` raises, so key off the dimensionality
+    rather than assuming the nested form.
+    """
+    C = np.asarray(committed["coeffs"], dtype=float)
+    return max(C.shape[1] - 1, 0) if C.ndim == 2 else 0
+
+
+def build_entry(fluid_json, prop, rawT=None, rawX=None, rawGrid=None):
+    """Build the ``<prop>_cheb`` entry dict for one caloric property.
+
+    fluid_json is the committed per-fluid JSON dict (source of the
+    polynomial coefficients, Tbase/xbase, Tmin/Tmax). If a raw data grid
+    covering the fluid's range is supplied, the entry is fitted from it,
+    lowering the fit orders until the result is positive over the whole
+    domain; otherwise (no data, poor coverage, or no positive fit) it is
+    an exact basis conversion of the committed polynomial. Returns None
+    when nothing usable exists.
+    """
+    committed = fluid_json.get(prop, {})
+    xbase = float(fluid_json.get("xbase", 0.0) or 0.0)
+    xmin = float(fluid_json.get("xmin", 0.0) or 0.0)
+    xmax = float(fluid_json.get("xmax", 0.0) or 0.0)
+    has_poly = committed.get("type") == "polynomial" and committed.get("coeffs") not in (None, "null")
+
+    if (rawGrid is not None and rawT is not None
+            and _fit_covers_fluid_range(rawT, rawGrid, float(fluid_json["Tmin"]), float(fluid_json["Tmax"]))):
+        deg_x0 = _committed_x_degree(committed) if has_poly \
+            else (min(5, np.size(rawX) - 1) if rawX is not None and np.size(rawX) > 1 else 0)
+        # Highest orders first; the first fit that is positive over the whole
+        # domain wins. Sparse grids (SecCool -1 padding) often need lower
+        # orders than dense ones to avoid oscillating between data bands.
+        candidates = sorted(
+            ((dT, dx) for dT in range(DEFAULT_MAX_DEGREE_T, 1, -1) for dx in range(deg_x0, -1, -1)),
+            key=lambda p: (p[0] + p[1], p[0]), reverse=True)
+        for deg_T, deg_x in candidates:
+            fitted = fit_from_data(rawT, rawX if rawX is not None else [0.0], rawGrid, xbase, deg_x, deg_T)
+            if fitted is None:
+                continue
+            coeffs, Trange, nrms = fitted
+            if np.all(np.isfinite(coeffs)) and _positive_on_sampled_domain(coeffs, Trange, xbase, xmin, xmax):
+                return {
+                    "type": "chebyshev",
+                    "Trange": [Trange[0], Trange[1]],
+                    "xbase": xbase,
+                    "coeffs": coeffs.tolist(),
+                    "NRMS": nrms,
+                    "fit_source": "tabular_data",
+                }
+
+    # Fall back to the exact re-basis of the committed polynomial: it is the
+    # shipped ground truth, including its (gentle) extrapolation behavior.
+    if not has_poly:
+        return None
+    Trange = (float(fluid_json["Tmin"]), float(fluid_json["Tmax"]))
+    if Trange[1] <= Trange[0]:
+        return None
+    Tbase = float(fluid_json.get("Tbase", 0.0) or 0.0)
+    coeffs = convert_polynomial(committed["coeffs"], Tbase, xbase, Trange)
+    if not np.all(np.isfinite(coeffs)):
+        return None
+    return {
+        "type": "chebyshev",
+        "Trange": [Trange[0], Trange[1]],
+        "xbase": xbase,
+        "coeffs": coeffs.tolist(),
+        "NRMS": committed.get("NRMS"),
+        "fit_source": "basis_conversion",
+    }

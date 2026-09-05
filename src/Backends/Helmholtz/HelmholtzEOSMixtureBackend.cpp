@@ -39,6 +39,7 @@
 #include "MixtureParameters.h"
 #include "CoolProp/fluids/IdealCurves.h"
 #include "MixtureParameters.h"
+#include "CoolProp/expression/ExpressionCorrelation.h"
 #include <atomic>
 #include <cstdlib>
 
@@ -739,6 +740,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_dilute() {
             case ViscosityDiluteVariables::VISCOSITY_DILUTE_CO2_LAESECKE_JPCRD_2017:
                 eta_dilute = TransportRoutines::viscosity_dilute_CO2_LaeseckeJPCRD2017(*this);
                 break;
+            case ViscosityDiluteVariables::VISCOSITY_DILUTE_EXPRESSION:
+                if (!components[0].transport.viscosity_dilute.expression_data.correlation)
+                    throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+                eta_dilute = components[0].transport.viscosity_dilute.expression_data.correlation->eval(*this);
+                break;
             default:
                 throw ValueError(
                   format("dilute viscosity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
@@ -763,6 +769,17 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
         }
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EMPIRICAL: {
             initial_density = TransportRoutines::viscosity_initial_density_dependence_empirical(*this);
+            break;
+        }
+        case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EXPRESSION: {
+            // The formula yields this stage's contribution directly, in Pa-s -- the
+            // same convention as the EMPIRICAL form and as the other four stages.
+            // It is NOT the Rainwater-Friend B_eta, which the host would have to
+            // scale by eta_dilute*rho; the dilute viscosity is a within-correlation
+            // intermediate and is deliberately not exposed to the DSL.
+            if (!components[0].transport.viscosity_initial.expression_data.correlation)
+                throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+            initial_density = components[0].transport.viscosity_initial.expression_data.correlation->eval(*this);
             break;
         }
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_NOT_SET: {
@@ -798,6 +815,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
             break;
         case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_CO2_LAESECKE_JPCRD_2017:
             residual = TransportRoutines::viscosity_CO2_higher_order_hardcoded_LaeseckeJPCRD2017(*this);
+            break;
+        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_EXPRESSION:
+            if (!components[0].transport.viscosity_higher_order.expression_data.correlation)
+                throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+            residual = components[0].transport.viscosity_higher_order.expression_data.correlation->eval(*this);
             break;
         default:
             throw ValueError(
@@ -1001,6 +1023,11 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
             case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_NONE:
                 dilute = 0.0;
                 break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_EXPRESSION:
+                if (!components[0].transport.conductivity_dilute.expression_data.correlation)
+                    throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+                dilute = components[0].transport.conductivity_dilute.expression_data.correlation->eval(*this);
+                break;
             default:
                 throw ValueError(
                   format("dilute conductivity type [%d] is invalid for fluid %s", components[0].transport.conductivity_dilute.type, name().c_str()));
@@ -1044,6 +1071,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background() {
             break;
         case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL:
             lambda_residual = TransportRoutines::conductivity_residual_polynomial_and_exponential(*this);
+            break;
+        case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_EXPRESSION:
+            if (!components[0].transport.conductivity_residual.expression_data.correlation)
+                throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+            lambda_residual = components[0].transport.conductivity_residual.expression_data.correlation->eval(*this);
             break;
         default:
             throw ValueError(
@@ -1182,6 +1214,21 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP100() {
         }
         return v;
     }
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_Hmolar_formation() {
+    // Pure and pseudo-pure only.  The ideal-gas mole-fraction sum would be
+    // exact, but a mixture is not a compound and the analogous entropy
+    // quantity is not linear, so the two would not stay consistent.
+    if (components.size() != 1) {
+        throw ValueError(format("calc_Hmolar_formation is only valid for pure and pseudo-pure fluids, %zu components", components.size()));
+    }
+    CoolPropDbl v = components[0].standard_state.hmolar;
+    if (!ValidNumber(v)) {
+        throw ValueError(format("No standard enthalpy of formation is available for fluid [%s]; the source database "
+                                "does not provide a value for this species",
+                                components[0].name.c_str()));
+    }
+    return v;
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP500() {
     if (components.size() != 1) {
@@ -2662,6 +2709,14 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
        public:
         HelmholtzEOSMixtureBackend* HEOS;
         CoolPropDbl T, p, delta, rhor, tau, R_u;
+        // Residual-alphar delta-derivatives at the current rho, plus the pressure there.  call()
+        // computes them once (delta-only: no tau-derivatives, no state write) and deriv()/
+        // second_deriv() reuse them -- the Halley solver always invokes those at the same rho right
+        // after call().  The previous path wrote the full state and recomputed the FULL derivative
+        // set in each accessor; p_last preserves the pressure the heavy slow-path below needs
+        // (it read this->p(), which used to be a side effect of the dropped state write).
+        HelmholtzDerivatives d;
+        CoolPropDbl p_last;
 
         dpdrho_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl p)
           : HEOS(HEOS),
@@ -2670,21 +2725,22 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             delta(_HUGE),
             rhor(HEOS->get_reducing_state().rhomolar),
             tau(HEOS->get_reducing_state().T / T),
-            R_u(HEOS->gas_constant()) {}
+            R_u(HEOS->gas_constant()),
+            p_last(_HUGE) {}
         double call(double rhomolar) override {
             delta = rhomolar / rhor;  // needed for derivative
-            HEOS->update_DmolarT_direct(rhomolar, T);
+            d = HEOS->calc_alphar_delta_derivs_nocache(tau, delta);
+            p_last = rhomolar * R_u * T * (1 + delta * d.dalphar_ddelta);
             // dp/drho|T
-            return R_u * T * (1 + 2 * delta * HEOS->dalphar_dDelta() + POW2(delta) * HEOS->d2alphar_dDelta2());
+            return R_u * T * (1 + 2 * delta * d.dalphar_ddelta + POW2(delta) * d.d2alphar_ddelta2);
         };
         double deriv(double rhomolar) override {
             // d2p/drho2|T
-            return R_u * T / rhor * (2 * HEOS->dalphar_dDelta() + 4 * delta * HEOS->d2alphar_dDelta2() + POW2(delta) * HEOS->calc_d3alphar_dDelta3());
+            return R_u * T / rhor * (2 * d.dalphar_ddelta + 4 * delta * d.d2alphar_ddelta2 + POW2(delta) * d.d3alphar_ddelta3);
         };
         double second_deriv(double rhomolar) override {
             // d3p/drho3|T
-            return R_u * T / POW2(rhor)
-                   * (6 * HEOS->d2alphar_dDelta2() + 6 * delta * HEOS->d3alphar_dDelta3() + POW2(delta) * HEOS->calc_d4alphar_dDelta4());
+            return R_u * T / POW2(rhor) * (6 * d.d2alphar_ddelta2 + 6 * delta * d.d3alphar_ddelta3 + POW2(delta) * d.d4alphar_ddelta4);
         };
     };
     dpdrho_resid resid(this, T, p);
@@ -2749,9 +2805,9 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             // Now we are going to do something VERY slow - decrease density until curvature is negative or pressure is negative
             double rho = rhomax;
             for (std::size_t counter = 0; counter <= 100; counter++) {
-                resid.call(rho);  // Updates the state
+                resid.call(rho);  // computes the residual's delta-only derivs + pressure at rho
                 double curvature = resid.deriv(rho);
-                if (curvature < 0 || this->p() < 0) {
+                if (curvature < 0 || resid.p_last < 0) {
                     heavy = rho;
                     break;
                 }
@@ -3583,9 +3639,21 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,
                                                                   const CoolPropDbl& tau, const CoolPropDbl& delta) {
+    // A pure-delta derivative (nTau == 0, orders 0-4) needs no tau-derivatives, so use the cheaper
+    // delta-only alphar evaluation.  all_deltaonly() is bit-for-bit identical to all() on those
+    // fields, so every such caller (the pressure / dp-drho / spinodal density residuals, and also
+    // the transport-property pressure evals) gets the same result -- just faster.  Any request that
+    // needs a tau-derivative (nTau > 0) or an out-of-range order falls through to the full path.
+    if (nTau == 0 && nDelta >= 0 && nDelta <= 4) {
+        HelmholtzDerivatives derivs = residual_helmholtz->all_deltaonly(*this, mole_fractions, tau, delta);
+        return derivs.get(0, nDelta);
+    }
     bool cache_values = false;
     HelmholtzDerivatives derivs = residual_helmholtz->all(*this, mole_fractions, tau, delta, cache_values);
     return derivs.get(nTau, nDelta);
+}
+HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_alphar_delta_derivs_nocache(const CoolPropDbl& tau, const CoolPropDbl& delta) {
+    return residual_helmholtz->all_deltaonly(*this, get_mole_fractions_ref(), tau, delta);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,
                                                                   const CoolPropDbl& tau, const CoolPropDbl& delta, const CoolPropDbl& Tr,
@@ -3699,7 +3767,30 @@ HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_all_alpha0_derivs_nocache(
         // Cache the reducing temperature in some terms that need it (GERG-2004 models)
         E.alpha0.set_Tred(Tc);
         double taustar = Tc / Tr * tau, deltastar = rhor / rhomolarc * delta;
-        return E.alpha0.all(taustar, deltastar, false);
+        HelmholtzDerivatives a = E.alpha0.all(taustar, deltastar, false);
+        // all() returns derivatives w.r.t. taustar=Tc/T and deltastar=rho/rhoc, but the caller
+        // needs them w.r.t. tau=Tr/T and delta=rho/rhor.  Apply the same chain-rule scaling as
+        // calc_alpha0_deriv_nocache (val *= pow(rhor/rhomolarc, nDelta); val /= pow(Tr/Tc, nTau))
+        // and the mixture branch below.  For multiparameter EOS Tc/Tr == 1 and rhoc/rhor == 1, so
+        // these are no-ops; only cubics (where Tr != Tc) were affected -- see GH #3287, where the
+        // missing tau factor made cubic Smolar/Smass values too steep in T.  The value (alphar)
+        // carries zero derivative order, so it is intentionally left unscaled.
+        const double fT = Tc / Tr, fD = rhor / rhomolarc;
+        a.dalphar_dtau *= fT;
+        a.dalphar_ddelta *= fD;
+        a.d2alphar_dtau2 *= fT * fT;
+        a.d2alphar_ddelta_dtau *= fT * fD;
+        a.d2alphar_ddelta2 *= fD * fD;
+        a.d3alphar_dtau3 *= fT * fT * fT;
+        a.d3alphar_ddelta_dtau2 *= fT * fT * fD;
+        a.d3alphar_ddelta2_dtau *= fT * fD * fD;
+        a.d3alphar_ddelta3 *= fD * fD * fD;
+        a.d4alphar_dtau4 *= fT * fT * fT * fT;
+        a.d4alphar_ddelta_dtau3 *= fT * fT * fT * fD;
+        a.d4alphar_ddelta2_dtau2 *= fT * fT * fD * fD;
+        a.d4alphar_ddelta3_dtau *= fT * fD * fD * fD;
+        a.d4alphar_ddelta4 *= fD * fD * fD * fD;
+        return a;
     } else {
         HelmholtzDerivatives ders;
 
@@ -4013,6 +4104,59 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of
         CoolPropDbl dxdp_h = (Q() * dhV_dp + (1 - Q()) * dhL_dp) / (SatL->hmass() - SatV->hmass());
         CoolPropDbl dvdp_h = dvL_dp + dxdp_h * (1 / SatV->rhomass() - 1 / SatL->rhomass()) + Q() * (dvV_dp - dvL_dp);
         return -POW2(rhomass()) * dvdp_h;
+    }
+    // Vapor-quality derivatives in the two-phase region (Thorade & Saadat, 2013).
+    // With the lever rule Q = (h - h')/(h'' - h'):
+    //   dQ/dh|p = 1/(h'' - h')
+    //   dQ/dp|h = -[(1 - Q)*dh'/dp|sat + Q*dh''/dp|sat] / (h'' - h')
+    // Molar quality (iQ) pairs with molar enthalpy; mass quality (iQmass) with mass
+    // enthalpy; for a pure fluid Q == Qmass numerically.
+    //
+    // These require h'(p) and h''(p) to be functions of pressure alone, which restricts
+    // them to *pure* fluids:
+    //   - mixtures have quality-dependent phase compositions (temperature glide), so the
+    //     lever rule does not hold;
+    //   - pseudo-pure fluids carry the bubble and dew curves at different pressures for
+    //     the same temperature, so "at constant p" is not well defined across the dome.
+    // (The REFPROP backend rejects *all* two-phase derivatives for mixtures; here only the
+    // quality ones are gated, since the pre-existing density branches predate this rule.)
+    else if (Of == iQ || Of == iQmass) {
+        // Match the (Of, Wrt, Constant) triplet BEFORE testing composition, so that an
+        // unsupported triplet keeps reporting ValueError for every fluid; the purity
+        // restriction applies only to the four triplets that are actually implemented.
+        const bool use_mass = (Of == iQmass);
+        const parameters h_key = use_mass ? iHmass : iHmolar;
+        const bool wrt_h = (Wrt == h_key && Constant == iP);
+        const bool wrt_p = (Wrt == iP && Constant == h_key);
+        if (!wrt_h && !wrt_p) {
+            throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+        }
+        if (!is_pure()) {
+            throw NotImplementedError("Vapor-quality two-phase derivatives are only implemented for pure fluids");
+        }
+        // h'' - h' is the latent heat: strictly positive inside the dome, collapsing to
+        // zero at the critical point where these derivatives diverge.
+        CoolPropDbl DELTAh = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
+        if (!ValidNumber(DELTAh) || DELTAh <= 0) {
+            throw ValueError("Vapor-quality two-phase derivatives are not defined where h'' <= h' (at the critical point)");
+        }
+        CoolPropDbl out;
+        if (wrt_h) {
+            out = 1 / DELTAh;
+        } else {
+            CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(h_key, iP, *SatL, *SatV);
+            CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(h_key, iP, *SatL, *SatV);
+            CoolPropDbl q = use_mass ? Qmass() : Q();
+            out = -((1 - q) * dhL_dp + q * dhV_dp) / DELTAh;
+        }
+        // Guarding the denominator alone is not enough to keep the promise of a diagnosable
+        // error instead of a silent inf/NaN: a subnormal DELTAh still overflows the
+        // division, and the saturation derivatives carry their own singular denominators
+        // near the critical point.  Validate what actually goes back to the caller.
+        if (!ValidNumber(out)) {
+            throw ValueError("Vapor-quality two-phase derivative is not a finite number (too close to the critical point?)");
+        }
+        return out;
     } else {
         throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
     }

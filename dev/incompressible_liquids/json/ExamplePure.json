@@ -1,105 +1,153 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 3.731500e+02, 
-  "Tmax": 4.231500e+02, 
-  "Tmin": 3.231500e+02, 
-  "TminPsat": 4.231500e+02, 
+  },
+  "Tbase": 373.15,
+  "Tmax": 423.15,
+  "Tmin": 323.15,
+  "TminPsat": 423.15,
   "conductivity": {
-    "NRMS": 1.485728e-02, 
+    "NRMS": 0.01485728,
     "coeffs": [
       [
-        9.648019e-02
-      ], 
+        0.09648019
+      ],
       [
-        -1.800894e-04
-      ], 
+        -0.0001800894
+      ],
       [
         -1.165501e-07
-      ], 
+      ],
       [
-        -9.712510e-10
+        -9.71251e-10
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 5.272078e-03, 
+    "NRMS": 0.005272078,
     "coeffs": [
       [
-        7.024452e+02
-      ], 
+        702.4452
+      ],
       [
-        -7.703186e-01
-      ], 
+        -0.7703186
+      ],
       [
-        -5.361305e-04
-      ], 
+        -0.0005361305
+      ],
       [
         -5.439005e-06
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Heat transfer fluid TherminolD12 by Solutia", 
+  },
+  "density_cheb": {
+    "NRMS": 0.00552499123120327,
+    "Trange": [
+      323.15,
+      423.15
+    ],
+    "coeffs": [
+      [
+        701.7750582750583
+      ],
+      [
+        -39.00000000000009
+      ],
+      [
+        -0.6701631701629864
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Heat transfer fluid TherminolD12 by Solutia",
   "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "name": "ExamplePure", 
-  "reference": "Solutia data sheet", 
+  },
+  "name": "ExamplePure",
+  "reference": "Solutia data sheet",
   "saturation_pressure": {
-    "NRMS": 6.550487e-03, 
+    "NRMS": 0.006550487,
     "coeffs": [
-      -3.663550e+03, 
-      -7.399696e+01, 
-      -1.400146e+01
-    ], 
+      -3663.55,
+      -73.99696,
+      -14.00146
+    ],
     "type": "exponential"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": 5.181986e-03, 
+    "NRMS": 0.005181986,
     "coeffs": [
       [
-        2.446529e+03
-      ], 
+        2446.529
+      ],
       [
-        4.096018e+00
-      ], 
+        4.096018
+      ],
       [
-        -2.074592e-03
-      ], 
+        -0.002074592
+      ],
       [
         1.942502e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 4.390378e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.0038796568806162353,
+    "Trange": [
+      323.15,
+      423.15
+    ],
     "coeffs": [
-      1.324503e+03, 
-      -7.727881e+00, 
-      4.420220e+00
-    ], 
+      [
+        2444.076886655011
+      ],
+      [
+        204.81910450660465
+      ],
+      [
+        -2.593240093240359
+      ],
+      [
+        0.006070318570444195
+      ],
+      [
+        -1.7983318764569702
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.004390378,
+    "coeffs": [
+      1324.503,
+      -7.727881,
+      4.42022
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

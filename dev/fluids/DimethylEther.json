@@ -4082,7 +4082,22 @@
     "INCHI_STRING": "InChI=1S/C2H6O/c1-3-2/h1-2H3",
     "NAME": "DimethylEther",
     "REFPROP_NAME": "DME",
-    "SMILES": "COC"
+    "SMILES": "COC",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "115-10-6*0",
+        "source": "ATcT",
+        "uncertainty": 350.0,
+        "units": "J/mol",
+        "value": -183900.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

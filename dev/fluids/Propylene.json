@@ -4494,7 +4494,22 @@
     "INCHI_STRING": "InChI=1S/C3H6/c1-3-2/h3H,1H2,2H3",
     "NAME": "Propylene",
     "REFPROP_NAME": "PROPYLEN",
-    "SMILES": "CC=C"
+    "SMILES": "CC=C",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "115-07-1*0",
+        "source": "ATcT",
+        "uncertainty": 180.0,
+        "units": "J/mol",
+        "value": 20060.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

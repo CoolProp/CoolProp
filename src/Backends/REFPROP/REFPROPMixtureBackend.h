@@ -285,6 +285,7 @@ class REFPROPMixtureBackend : public AbstractState
     CoolPropDbl calc_acentric_factor() override;
     CoolPropDbl calc_gas_constant() override;
     CoolPropDbl calc_dipole_moment() override;
+    CoolPropDbl calc_Hmolar_formation() override;
 
     /// Calculate the "true" critical point where dp/drho|T and d2p/drho2|T are zero
     void calc_true_critical_point(double& T, double& rho) override;

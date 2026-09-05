@@ -329,9 +329,17 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
     // before delegating to the molar-pair flash. The inherited HEOS override of
     // calc_phase_molar_masses (using SatL/SatV->mole_fractions and components[i].molar_mass())
     // works for cubic backends since they share the same SatL/SatV machinery.
-    if (CoolProp::is_Qmass_pair(input_pair) && mole_fractions.size() > 1) {
-        update_Qmass_pair(input_pair, value1, value2);
-        return;
+    if (CoolProp::is_Qmass_pair(input_pair)) {
+        if (mole_fractions.size() > 1) {
+            update_Qmass_pair(input_pair, value1, value2);
+            return;
+        }
+        // Pure / pseudo-pure falls through to mass_to_molar_inputs below, which
+        // rewrites the pair to its molar sibling without looking at the quality.
+        // update_Qmass_pair's [0,1] check is the only one there is, so apply it
+        // here or nothing does: Qmass = 1.05 and 1.5 previously flashed happily
+        // and returned a state reading Q() = 1.05 with phase = 6.
+        check_Qmass_pair_range(input_pair, value1, value2);
     }
 
     CoolPropDbl ld_value1 = value1, ld_value2 = value2;

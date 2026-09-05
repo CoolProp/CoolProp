@@ -3446,7 +3446,22 @@
     "INCHI_STRING": "InChI=1S/CH3Cl/c1-2/h1H3",
     "NAME": "R40",
     "REFPROP_NAME": "R40",
-    "SMILES": "CCl"
+    "SMILES": "CCl",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "74-87-3*0",
+        "source": "ATcT",
+        "uncertainty": 170.0,
+        "units": "J/mol",
+        "value": -82580.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

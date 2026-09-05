@@ -1,4 +1,3 @@
-from __future__ import division, print_function
 import numpy as np
 from .BaseObjects import IncompressibleData, IncompressibleFitter
 from .DataObjects import DigitalData, PureData
@@ -167,10 +166,10 @@ class SecCoolSolutionData(DigitalData):
         try:
             tried = False
             if len(self.viscosity.yData) == 1:  # and np.isfinite(fluidObject.viscosity.data).sum()<10:
-                self.viscosity.coeffs = np.array([+7e+2, -6e+1, +1e+1])
+                self.viscosity.coeffs = np.copy(IncompressibleData.SECCOOL_VISCOSITY_GUESS)
                 self.viscosity.type = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
                 self.viscosity.fitCoeffs(self.Tbase, self.xbase)
-                if self.viscosity.coeffs is None or IncompressibleFitter.allClose(self.viscosity.coeffs, np.array([+7e+2, -6e+1, +1e+1])):  # Fit failed
+                if self.viscosity.coeffs is None or IncompressibleFitter.allClose(self.viscosity.coeffs, IncompressibleData.SECCOOL_VISCOSITY_GUESS):  # Fit failed
                     tried = True
             if len(self.viscosity.yData) > 1 or tried:
                 self.viscosity.coeffs = np.copy(std_coeffs)  # np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
@@ -276,11 +275,7 @@ class SecCoolSolutionData(DigitalData):
                     if i == 0: nu = 0.0  # Dummy for tables without concentration (TFreeze and Vol2Mass)
                     pass
                 numbers[i, j] = nu
-        if numbers[1, 0] > numbers[-1, 0]:
-            numbers[1:, :] = numbers[1:, :][::-1, :]
-        if numbers[0, 1] > numbers[0, -1]:
-            numbers[:, 1:] = numbers[:, 1:][:, ::-1]
-        return numbers
+        return IncompressibleFitter.sortGridAxes(numbers)
 
     def writeToFile(self, data, array):
         raise ValueError("You should not overwrite the SecCool data.")
@@ -502,11 +497,7 @@ class SecCoolIceData(SecCoolSolutionData):
                     if i == 0: nu = 0.0  # Dummy for tables without concentration (TFreeze and Vol2Mass)
                     pass
                 numbers[i, j] = nu
-        if numbers[1, 0] > numbers[-1, 0]:
-            numbers[1:, :] = numbers[1:, :][::-1, :]
-        if numbers[0, 1] > numbers[0, -1]:
-            numbers[:, 1:] = numbers[:, 1:][:, ::-1]
-        return numbers
+        return IncompressibleFitter.sortGridAxes(numbers)
 
 
 class ThermogenVP1869(PureData, DigitalData):

@@ -3794,7 +3794,22 @@
     "INCHI_STRING": "InChI=1S/C6H12/c1-2-4-6-5-3-1/h1-6H2",
     "NAME": "CycloHexane",
     "REFPROP_NAME": "CYCLOHEX",
-    "SMILES": "C1CCCCC1"
+    "SMILES": "C1CCCCC1",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "110-82-7*0",
+        "source": "ATcT",
+        "uncertainty": 290.0,
+        "units": "J/mol",
+        "value": -122780.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

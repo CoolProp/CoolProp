@@ -4301,7 +4301,22 @@
     "INCHI_STRING": "InChI=1S/C8H10/c1-2-8-6-4-3-5-7-8/h3-7H,2H2,1H3",
     "NAME": "EthylBenzene",
     "REFPROP_NAME": "EBENZENE",
-    "SMILES": "CCc1ccccc1"
+    "SMILES": "CCc1ccccc1",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "100-41-4*0",
+        "source": "ATcT",
+        "uncertainty": 520.0,
+        "units": "J/mol",
+        "value": 29960.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

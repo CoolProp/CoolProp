@@ -4322,7 +4322,22 @@
     "INCHI_STRING": "InChI=1S/H3N/h1H3",
     "NAME": "Ammonia",
     "REFPROP_NAME": "AMMONIA",
-    "SMILES": "N"
+    "SMILES": "N",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "7664-41-7*0",
+        "source": "ATcT",
+        "uncertainty": 29.0,
+        "units": "J/mol",
+        "value": -45554.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

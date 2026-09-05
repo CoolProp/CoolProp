@@ -259,6 +259,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     CoolPropDbl calc_GWP500() override;
     CoolPropDbl calc_GWP100() override;
     CoolPropDbl calc_ODP() override;
+    CoolPropDbl calc_Hmolar_formation() override;
 
     CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1) override;
     CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1, HelmholtzEOSMixtureBackend& SatL, HelmholtzEOSMixtureBackend& SatV);
@@ -419,8 +420,18 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     virtual void set_components(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV = true);
 
     /** \brief Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
+     *
+     * VIRTUAL because a backend may be defined by a self-contained parameter
+     * set that must NOT be silently supplemented from CoolProp's global binary
+     * interaction parameter library.  The default implementation delegates to
+     * MixtureParameters::set_mixture_parameters, which looks every pair up in
+     * that library by CAS number; GERGMixtureBackend overrides it to read the
+     * published GERG tables instead (src/Backends/GERG/GERGBackend.cpp).
+     * See also GERGMixtureBackend::set_components, which is overridden so that
+     * the linked SatL/SatV states are GERG-typed and therefore reach this
+     * override too rather than the default.
      */
-    void set_mixture_parameters();
+    virtual void set_mixture_parameters();
 
     /** \brief Set the mole fractions
      *
@@ -613,6 +624,10 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void calc_all_alphar_deriv_cache(const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau, const CoolPropDbl& delta);
     virtual CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,
                                                   const CoolPropDbl& tau, const CoolPropDbl& delta);
+    /// Residual-alphar delta-derivatives (orders 0-4) at (tau, delta) via the cheaper delta-only
+    /// evaluation.  Only the alphar/dalphar_ddelta/.../d4alphar_ddelta4 fields of the result are
+    /// valid; the tau/mixed fields are zero and must not be read.  Used by the density-root solvers.
+    HelmholtzDerivatives calc_alphar_delta_derivs_nocache(const CoolPropDbl& tau, const CoolPropDbl& delta);
 
     /**
     \brief Take derivatives of the ideal-gas part of the Helmholtz energy, don't use any cached values, or store any cached values
@@ -700,6 +715,16 @@ class CorrespondingStatesTerm
         std::size_t N = x.size();
         for (std::size_t i = 0; i < N; ++i) {
             HelmholtzDerivatives derivs = HEOS.components[i].EOS().alphar.all(tau, delta, cache_values);
+            summer = summer + derivs * x[i];
+        }
+        return summer;
+    }
+    /// Delta-only (see BaseHelmholtzTerm::all_deltaonly): only the delta-fields of the result are valid.
+    virtual HelmholtzDerivatives all_deltaonly(HelmholtzEOSMixtureBackend& HEOS, double tau, double delta, const std::vector<CoolPropDbl>& x) {
+        HelmholtzDerivatives summer;
+        std::size_t N = x.size();
+        for (std::size_t i = 0; i < N; ++i) {
+            HelmholtzDerivatives derivs = HEOS.components[i].EOS().alphar.all_deltaonly(tau, delta);
             summer = summer + derivs * x[i];
         }
         return summer;
@@ -873,6 +898,18 @@ class ResidualHelmholtz
         a.deltatau_x_d2alphar_ddelta_dtau = delta * tau * a.d2alphar_ddelta_dtau;
         a.tau2_x_d2alphar_dtau2 = POW2(tau) * a.d2alphar_dtau2;
 
+        return a;
+    }
+    /// Delta-only (see BaseHelmholtzTerm::all_deltaonly): only alphar and the delta-derivatives
+    /// (orders 1-4) plus the delta_x_/delta2_x_ convenience products are valid on the result;
+    /// tau/mixed fields are left zero and must not be read.  Used by the density-root residuals.
+    /// The delta-fields are bit-for-bit identical to all(..., cache_values=false); this mirrors the
+    /// non-cached excess path (get_deriv_nocomp_notcached), which is the only one delta-only uses.
+    virtual HelmholtzDerivatives all_deltaonly(HelmholtzEOSMixtureBackend& HEOS, const std::vector<CoolPropDbl>& mole_fractions, double tau,
+                                               double delta) {
+        HelmholtzDerivatives a = CS.all_deltaonly(HEOS, tau, delta, mole_fractions) + Excess.all_deltaonly(tau, delta, mole_fractions);
+        a.delta_x_dalphar_ddelta = delta * a.dalphar_ddelta;
+        a.delta2_x_d2alphar_ddelta2 = POW2(delta) * a.d2alphar_ddelta2;
         return a;
     }
     virtual CoolPropDbl dalphar_dxi(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {

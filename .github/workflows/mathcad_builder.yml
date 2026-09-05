@@ -35,6 +35,14 @@ jobs:
         cp ../wrappers/MathCAD/Prime/libs/MCADINCL.H .
         cp ../wrappers/MathCAD/Prime/libs/mcaduser.lib .
 
+    - name: Cache CPM packages
+      uses: actions/cache@v6
+      with:
+        path: ${{ github.workspace }}/.cpm_cache
+        key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+        restore-keys: |
+          cpm-${{ runner.os }}-
+
     - name: Configure CMake
       run: cmake -DCOOLPROP_PRIME_MODULE:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="${{ github.workspace }}" -B build -S .
 

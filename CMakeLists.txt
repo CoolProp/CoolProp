@@ -334,7 +334,8 @@ set(COOLPROP_ENABLED_BACKENDS
     REFPROP
     Incompressible
     Tabular
-    PCSAFT)
+    PCSAFT
+    GERG)
 
 # Get everything in the src/ directory (always), but not recursive
 file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
@@ -358,6 +359,10 @@ foreach(backend ${COOLPROP_ENABLED_BACKENDS})
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Backends/${backend}/*.cpp")
   list(APPEND APP_SOURCES ${BACKEND_SOURCES})
 endforeach()
+
+# Expression DSL for runtime-loaded transport correlations
+file(GLOB EXPRESSION_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/expression/*.cpp")
+list(APPEND APP_SOURCES ${EXPRESSION_SOURCES})
 
 ## You can exclude this file, in case you want to run your own tests or use Catch
 list(REMOVE_ITEM APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/Tests.cpp")
@@ -1838,6 +1843,13 @@ if(COOLPROP_JAVA_MODULE)
   # Install all the generated java files
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
           DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
+  # Ship the archive alongside the unpacked tree, matching the Csharp layout.
+  # #3245 dropped this rule when it replaced the flat-glob install with the
+  # package-tree DIRECTORY install, which left the release area without the
+  # archive that dev/scripts/examples/win64run.py still fetches from
+  # nightly/Java/platform-independent.7z (CoolProp-qrn3).
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z"
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
   if(NOT JAVA_PACKAGE_DIR STREQUAL "")
     # Install the package tree rooted at its FIRST path component so the full
     # package layout is preserved under platform-independent/.  The parent-of-
@@ -2368,6 +2380,8 @@ if(COOLPROP_CATCH_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-HS-prototypes.cpp")
   list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-DeltaOnly.cpp")
+  list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-HSU_D.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PXcdj.cpp")
@@ -2379,6 +2393,7 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CubicU.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-WideBoilingSplit.cpp")
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CubicEntropy.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-NeonMelting.cpp")
   list(APPEND APP_SOURCES
@@ -2394,6 +2409,10 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-JSONHelpers.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CBOR.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-GERG.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-Expression.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})

@@ -1,101 +1,170 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 4.206500e+02, 
-  "Tmax": 6.031500e+02, 
-  "Tmin": 2.381500e+02, 
-  "TminPsat": 6.031500e+02, 
+  },
+  "Tbase": 420.65,
+  "Tmax": 603.15,
+  "Tmin": 238.15,
+  "TminPsat": 603.15,
   "conductivity": {
-    "NRMS": 2.028263e-02, 
+    "NRMS": 0.02028263,
     "coeffs": [
       [
-        1.129635e-01
-      ], 
+        0.1129635
+      ],
       [
-        -1.667470e-04
-      ], 
+        -0.000166747
+      ],
       [
         -2.560241e-07
-      ], 
+      ],
       [
-        1.779430e-09
+        1.77943e-09
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 1.558347e-03, 
+    "NRMS": 0.001558347,
     "coeffs": [
       [
-        8.736856e+02
-      ], 
+        873.6856
+      ],
       [
-        -7.653404e-01
-      ], 
+        -0.7653404
+      ],
       [
         -1.034704e-05
-      ], 
+      ],
       [
         1.088053e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Dowtherm Q, Diphenylethane/alkylated aromatics", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "DowQ2", 
-  "reference": "Dow1997,Skovrup2013", 
-  "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "specific_heat": {
-    "NRMS": 9.926756e-04, 
+  },
+  "density_cheb": {
+    "NRMS": 0.0012021075568340697,
+    "Trange": [
+      238.14999999999998,
+      603.15
+    ],
     "coeffs": [
       [
-        2.052103e+03
-      ], 
+        873.4393445387482
+      ],
       [
-        3.052463e+00
-      ], 
+        -139.08327797570615
+      ],
       [
-        -5.705814e-04
-      ], 
+        -0.3459374600121244
+      ],
+      [
+        0.2921546132599599
+      ],
+      [
+        -0.3286993268359643
+      ],
+      [
+        0.2605613753708041
+      ],
+      [
+        -0.20599882202877925
+      ],
+      [
+        0.20890745446039835
+      ],
+      [
+        -0.10435350686591337
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Dowtherm Q, Diphenylethane/alkylated aromatics",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "DowQ2",
+  "reference": "Dow1997,Skovrup2013",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": 0.0009926756,
+    "coeffs": [
+      [
+        2052.103
+      ],
+      [
+        3.052463
+      ],
+      [
+        -0.0005705814
+      ],
       [
         -2.392041e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 5.452126e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.0009581459520825026,
+    "Trange": [
+      238.14999999999998,
+      603.15
+    ],
     "coeffs": [
-      8.324351e+02, 
-      -1.220344e+02, 
-      1.027464e+01
-    ], 
+      [
+        2042.5786899615937
+      ],
+      [
+        555.8437533815451
+      ],
+      [
+        -9.554422882897281
+      ],
+      [
+        -0.5512296971610428
+      ],
+      [
+        -0.10937286906562131
+      ],
+      [
+        -0.42784474735409744
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.005452126,
+    "coeffs": [
+      832.4351,
+      -122.0344,
+      10.27464
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

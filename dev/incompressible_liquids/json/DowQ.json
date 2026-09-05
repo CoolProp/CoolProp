@@ -1,105 +1,174 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 4.356500e+02, 
-  "Tmax": 6.331500e+02, 
-  "Tmin": 2.381500e+02, 
-  "TminPsat": 3.931500e+02, 
+  },
+  "Tbase": 435.65,
+  "Tmax": 633.15,
+  "Tmin": 238.15,
+  "TminPsat": 393.15,
   "conductivity": {
-    "NRMS": 6.550281e-04, 
+    "NRMS": 0.0006550281,
     "coeffs": [
       [
-        1.024267e-01
-      ], 
+        0.1024267
+      ],
       [
-        -1.502677e-04
-      ], 
+        -0.0001502677
+      ],
       [
         -6.168555e-08
-      ], 
+      ],
       [
         2.017078e-10
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 1.937877e-03, 
+    "NRMS": 0.001937877,
     "coeffs": [
       [
-        8.575028e+02
-      ], 
+        857.5028
+      ],
       [
-        -7.530279e-01
-      ], 
+        -0.7530279
+      ],
       [
         1.626521e-05
-      ], 
+      ],
       [
         -1.775612e-07
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "DowthermQ", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "DowQ", 
-  "reference": "Dow1997", 
-  "saturation_pressure": {
-    "NRMS": 7.520851e-03, 
-    "coeffs": [
-      -3.242462e+02, 
-      -4.472192e+00, 
-      -1.254402e+01
-    ], 
-    "type": "logexponential"
-  }, 
-  "specific_heat": {
-    "NRMS": 2.969464e-04, 
+  },
+  "density_cheb": {
+    "NRMS": 0.0012285900201049456,
+    "Trange": [
+      238.14999999999998,
+      633.15
+    ],
     "coeffs": [
       [
-        2.095464e+03
-      ], 
+        857.8453575141978
+      ],
       [
-        3.029662e+00
-      ], 
+        -149.75717036601063
+      ],
       [
-        -5.398472e-04
-      ], 
+        0.4235887266736106
+      ],
       [
-        -8.597050e-08
+        -0.4261469404051959
+      ],
+      [
+        0.40002850477336543
+      ],
+      [
+        -0.37675294622938277
+      ],
+      [
+        0.3520154113793243
+      ],
+      [
+        -0.2762847826562293
+      ],
+      [
+        0.2575157846665225
       ]
-    ], 
-    "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 7.974999e-03, 
-    "coeffs": [
-      8.286090e+02, 
-      -1.232876e+02, 
-      1.044139e+01
-    ], 
-    "type": "exponential"
-  }, 
-  "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "DowthermQ",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "DowQ",
+  "reference": "Dow1997",
+  "saturation_pressure": {
+    "NRMS": 0.007520851,
+    "coeffs": [
+      -324.2462,
+      -4.472192,
+      -12.54402
+    ],
+    "type": "logexponential"
+  },
+  "specific_heat": {
+    "NRMS": 0.0002969464,
+    "coeffs": [
+      [
+        2095.464
+      ],
+      [
+        3.029662
+      ],
+      [
+        -0.0005398472
+      ],
+      [
+        -8.59705e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.00027415884721812463,
+    "Trange": [
+      238.14999999999998,
+      633.15
+    ],
+    "coeffs": [
+      [
+        2084.9350231544504
+      ],
+      [
+        597.8334897139471
+      ],
+      [
+        -10.522611347034847
+      ],
+      [
+        -0.22294395275896295
+      ],
+      [
+        0.03879619487079566
+      ],
+      [
+        -0.1927280155280086
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.007974999,
+    "coeffs": [
+      828.609,
+      -123.2876,
+      10.44139
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

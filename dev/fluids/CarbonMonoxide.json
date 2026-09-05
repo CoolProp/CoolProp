@@ -3716,7 +3716,22 @@
     "INCHI_STRING": "InChI=1S/CO/c1-2",
     "NAME": "CarbonMonoxide",
     "REFPROP_NAME": "CO",
-    "SMILES": "[C-]#[O+]"
+    "SMILES": "[C-]#[O+]",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "630-08-0*0",
+        "source": "ATcT",
+        "uncertainty": 25.0,
+        "units": "J/mol",
+        "value": -110519.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

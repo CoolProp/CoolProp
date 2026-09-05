@@ -9,7 +9,6 @@ from the equations from the publication to the standard
 parameter form.
 
 """
-from __future__ import division, print_function
 import numpy as np
 from .DataObjects import DigitalData, PureData
 

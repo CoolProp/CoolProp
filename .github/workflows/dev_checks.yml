@@ -46,13 +46,23 @@ jobs:
     # `cancelled` rather than a real failure (that is exactly how the
     # detect_stack_use_after_return BDCSVD blow-up hid for so long).
     # On the 2-vCPU runner with the optimized (-O2) Asan build the measured
-    # steps are REFPROP+config ~1 min and compile ~7.5 min; the single-threaded
-    # test run is the long pole and is much slower per-core than a dev laptop
-    # (~187 s locally).  A prior 30 min cap cancelled the job mid-test (the
-    # test run alone was still going at 21.5 min), so the full duration is not
-    # yet known precisely.  90 min is a deliberately safe envelope that still
-    # surfaces a genuine runaway well under GitHub's 6-hour default; re-tighten
-    # once a clean run reports the true wall time.
+    # steps are REFPROP 36 s, cmake config 28 s and compile 8.8 min; the
+    # single-threaded test run is the long pole (50.7 min) and is much slower
+    # per-core than a dev laptop.
+    # A prior 30 min cap cancelled the job mid-test (the test run alone was
+    # still going at 21.5 min), and the full-scope run on PR #3294 hit this
+    # 90 min cap outright with CatchTestRunner still live, so the full-scope
+    # duration is not known -- it exceeds 90 min in CI.
+    #
+    # (This comment used to cite "~187 s locally" for the test run.  That does
+    # not reproduce and is left out rather than repeated: measured locally,
+    # non-ASan with a cold surface cache, [slow] alone is 887 s and ~[slow] is
+    # >16 min, so the whole suite is ~33 min BEFORE ASan's slowdown.  See the
+    # table in dev/ci/README.md.)
+    #
+    # 90 min is a deliberately safe envelope that still surfaces a genuine
+    # runaway well under GitHub's 6-hour default; re-tighten once a clean
+    # ~[slow] run reports the true wall time.
     timeout-minutes: 90
     strategy:
       matrix:
@@ -82,7 +92,7 @@ jobs:
         run: cmake --build build --config Asan -j$(nproc)
       - name: run all the compiled Catch tests with address sanitizer
         # detect_stack_use_after_return is deliberately NOT enabled here
-        # (CoolProp-xuu).  With REFPROP present — which CI builds — the 5
+        # (CoolProp-xuu).  With REFPROP present — which CI builds — the 6
         # SVDSBTL&REFPROP [source] tests build large BDCSVD surfaces, and
         # under detect_stack_use_after_return=1 the per-coefficient
         # __asan_stack_malloc inside Eigen's O(n^2-n^3) singular-value inner
@@ -104,7 +114,108 @@ jobs:
         # reliable *indicator*-based ODR detection — so a real duplicate-symbol
         # violation (e.g. the JSON-symbol-visibility concern) still fails CI —
         # and drops only the poisoning check.  See CoolProp-xma3.
-        run: cd build && ASAN_OPTIONS=verbosity=1:detect_odr_violation=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
+        #
+        # SCOPE: `~[slow]` excludes the 58 [slow]-tagged cases (49 of them in
+        # the SVDSBTL suite).  Those build SVD surfaces at production
+        # resolution -- SurfaceSpec's defaults NT=200, NR=800, rank=20 -- and
+        # the dense BDCSVD over a 200x800 grid is the bulk of this job's time.
+        #
+        # Measured non-ASan with a cold surface cache (as in CI): [slow] alone
+        # is 887 s / 58 cases, against >16 min for the 410-case ~[slow] set.
+        # Do not quote a precise share: ~[slow] is only bounded below, so 887 s
+        # is AT MOST ~48% of the local total and cannot be pinned tighter.
+        # Whatever the share, it understates the CI saving, since 6 [slow]
+        # cases skip locally for want of REFPROP and all 6 are
+        # SVDSBTL&REFPROP production-resolution builds that do run in CI.
+        # See dev/ci/README.md for the full table and caveats.
+        #
+        # Why exclude rather than shrink the grid: the resolution is
+        # load-bearing for those tests.  They pass no `grid` option precisely
+        # so they run at production resolution, then assert agreement with a
+        # truth source (HEOS / REFPROP / IF97) at ~1e-3 relative.  SurfaceSpec
+        # notes the defaults deliver ~7e-5 fractional for Water, so there is
+        # only ~14x headroom; dropping to 40x80/rank-10 (50x fewer points,
+        # half the rank) would breach it and force the tolerances open, which
+        # turns a real accuracy gate into a vacuous one *in the ASan build
+        # only* -- the worst place to lose signal quietly.
+        #
+        # Why the ASan coverage cost is small -- and note the mechanism, which
+        # is NOT what an earlier version of this comment claimed.  Production
+        # resolution still runs under ASan: 17 non-[slow] TEST_CASEs call
+        # factory("SVDSBTL&...") with no `grid` option, so they build at the
+        # 200x800/rank-20 defaults.  Dense BDCSVD at full size, its temporaries
+        # and its allocation pattern are therefore all still exercised here,
+        # which is what makes the exclusion cheap for ASan's purposes (heap
+        # overflow, UAF, leaks, ODR).
+        #
+        # Do NOT restate this as "the small-grid tests keep that path covered".
+        # They do not run: all 8 of the NT=40/NR=80/rank=10 grid specs in
+        # src/Tests/CoolProp-Tests-SVDSBTL.cpp sit inside [slow] TEST_CASEs, so
+        # `~[slow]` excludes every one of them.  The only non-[slow] references
+        # to a 40x80 grid are schema/round-trip tests in
+        # CoolProp-Tests-SVDSBTLOptions.cpp, which build no surface.  An earlier
+        # comment here had this backwards; it counted the 8 option-string
+        # literals and assumed their tags.
+        #
+        # What is actually given up is the excluded tests' repeat work and their
+        # REFPROP-sourced surfaces (the 6 SVDSBTL&REFPROP truth-comparison
+        # cases), not the large-matrix code path.  Since 200x800 still runs, a
+        # size-dependent bug reachable only at production extent is still
+        # reachable here.
+
+        # VERBOSITY: ASAN_OPTIONS deliberately does NOT set verbosity=1.
+        # It used to.  Note up front what this is and is NOT worth: removing it
+        # did NOT measurably speed the job up (60.6 min with it, 60.2 min
+        # without -- inside runner noise).  Do not re-add it expecting a
+        # slowdown to reappear, and do not cite it as a wall-time lever.  The
+        # reason it stays out is log hygiene: at verbosity>=1 ASan VReports its
+        # internal container-annotation traffic, which for this Eigen- and
+        # std::vector-heavy suite means a sustained flood of
+        # "==pid==poisoning: 0x... <n>" lines -- 4365 lines/s measured over a
+        # 0.68 s window of the run in PR #3294, ~38 bytes each.  Every line is
+        # a formatted write() into a pipe that the Actions runner reads,
+        # timestamps and uploads.  Extrapolating that rate across a 70 min test
+        # window is ~18 M lines / ~690 MB (an upper bound -- the rate was
+        # sampled in one window, not averaged over the whole run).
+        #
+        # It buys nothing: ASan error reports, leak reports and ODR-violation
+        # reports are printed unconditionally, independent of verbosity.
+        # verbosity only adds ASan's own bookkeeping chatter.  Verified: a
+        # trivial std::vector program emits 0 lines at the default verbosity
+        # and 236 at verbosity=1.  detect_odr_violation=1 is kept -- that is
+        # the setting doing actual diagnostic work here.
+
+        # MARGIN: budget + --kill-after grace = 4260 s = 71 min, leaving
+        # ~19 min of the 90 min cap for REFPROP + compile (9.9 min measured:
+        # 36 s REFPROP + 28 s cmake + 8.8 min compile -- so 71 + 9.9 = 80.9 min).
+        #
+        # TIMEOUT: the inner `timeout` is deliberate and must stay below
+        # timeout-minutes above.  A job that exceeds `timeout-minutes` is
+        # reported by GitHub with conclusion `cancelled`, which is
+        # indistinguishable from a concurrency-supersede or from
+        # cancel_merged_pr_runs.yml -- the exact ambiguity this job's cap was
+        # added to remove (CoolProp-xuu).  Bounding the test step instead makes
+        # an overrun a real step failure with a message that says so.
+        run: |
+          cd build
+          budget=4200  # 70 min; with the 60 s --kill-after grace that is 71 min worst case, leaving ~19 min of the 90 min cap for REFPROP + compile (9.9 min measured)
+          set +e
+          timeout --signal=INT --kill-after=60 "$budget" \
+            env ASAN_OPTIONS=detect_odr_violation=1 \
+                ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 \
+                ./CatchTestRunner "~[slow]" --benchmark-samples 1
+          rc=$?
+          set -e
+          if [ "$rc" -eq 124 ]; then
+            echo "::error title=ASan run exceeded its budget::The ASan test run did not finish within ${budget}s. This is a *timeout*, not a memory error and not a cancellation -- see the SCOPE/TIMEOUT notes in dev_checks.yml and dev/ci/README.md before raising the budget."
+          elif [ "$rc" -eq 137 ]; then
+            # 137 == 128+SIGKILL.  That is what `timeout --kill-after` sends
+            # when SIGINT was ignored, but it is also what the OOM killer
+            # sends -- and ASan roughly doubles the memory footprint, so OOM
+            # is a live possibility on a 2-vCPU runner.  Do not assert which.
+            echo "::error title=ASan run was killed (SIGKILL)::Either the ${budget}s budget elapsed and SIGINT was ignored, or the kernel OOM-killed it (ASan ~2x memory). Check the log for an ASan OOM report and the runner's memory before assuming a timeout."
+          fi
+          exit $rc
 
   clang-format:
     name: clang-format (PR diff)
@@ -255,6 +366,7 @@ jobs:
           # single cp312-abi3 wheel (the crux of abi3 -- it must work on each).
           ran=0
           ran_abi3=0   # legs that ran the cp312-abi3 wheel (3.12/3.13/3.14)
+          ran_mpl=0    # legs where matplotlib installed, i.e. the Plots suite ran
           for PY in 3.9 3.10 3.11 3.12 3.13 3.14; do
             is_abi3=0
             case "$PY" in
@@ -285,6 +397,19 @@ jobs:
             fi
             uv pip install "$WHL"   # broken/incompatible wheel -> hard fail via set -e
             uv pip install mypy || echo "::warning::mypy unavailable on $PY; test_stub mypy check will skip"
+            # CoolProp.Plots imports matplotlib at module scope, so without it
+            # the whole Plots suite (test_derivatives_plots, test_isoline_tracer)
+            # silently importorskips (CoolProp-dgxi).  Per-leg this is a warning,
+            # because a brand-new interpreter can genuinely lack a matplotlib
+            # wheel -- but if it is missing on EVERY leg the suite reverts to
+            # zero coverage and the job would still be green, which is the exact
+            # condition this install exists to remove.  Counted and asserted
+            # below, the same way the abi3 wheel is.
+            if uv pip install matplotlib; then
+              ran_mpl=$((ran_mpl + 1))
+            else
+              echo "::warning::matplotlib unavailable on $PY; Plots tests will skip on this leg"
+            fi
             python -c "import sys; print('Python', sys.version.split()[0])"
             pytest wrappers/Python/pytest -q
             ran=$((ran + 1))
@@ -297,6 +422,7 @@ jobs:
           # actually be exercised on at least one of them, else a broken abi3 wheel
           # could green the job on the 3.9-3.11 per-version legs alone (CoolProp-1tbe.12).
           test "$ran_abi3" -gt 0 || { echo "::error::the cp312-abi3 wheel ran on NO interpreter (3.12/3.13/3.14) -- it is the v8 crux and must be tested"; exit 1; }
+          test "$ran_mpl" -gt 0 || { echo "::error::matplotlib installed on NO interpreter -- the whole Plots suite importorskipped and this job proves nothing about it"; exit 1; }
 
       - name: PDSim cimport contract (compile + run against the abi3 wheel)
         shell: bash
@@ -348,11 +474,26 @@ jobs:
             /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-18 100
           clang-tidy --version
 
+      - name: Cache CPM packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: dev-checks-clang-tidy
+
       - name: Configure
         run: |
           cmake -G Ninja \
             -DCOOLPROP_MY_MAIN=dev/ci/main.cpp \
             -DCOOLPROP_STATIC_LIBRARY=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -B ${{ github.workspace }}/build \
             -S .
 
@@ -424,7 +565,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
@@ -439,6 +580,28 @@ jobs:
         if: ${{ matrix.language == 'python' }}
         uses: github/codeql-action/autobuild@v4
 
+      # CPM (cmake/dependencies.cmake) fetches Eigen/msgpack-c/nlohmann_json/
+      # valijson/IF97/etc. from network on every configure with no cache, so
+      # every one of this workflow's five independent cmake-configuring jobs
+      # re-downloads the same dependency set. Persisting CPM's source cache
+      # (same path CPMAddPackage defaults to: <repo>/.cpm_cache) turns repeat
+      # runs into cache hits. cpp-only: the python leg never touches CMake.
+      - name: Cache CPM packages
+        if: ${{ matrix.language == 'cpp' }}
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      # NOTE: deliberately NOT using ccache here (unlike the other dev_checks
+      # jobs). CodeQL's C++ extractor traces actual compiler invocations to
+      # build its database; a ccache hit means the real compiler never runs,
+      # so CodeQL silently omits that translation unit — a security-scanning
+      # gate that can quietly lose coverage as the cache warms up across
+      # runs, without ever failing the job. See ccache.dev/manual, "Using
+      # ccache with other tools" / GitHub codeql issues #9882, #19447.
       - name: Configure CPP
         if: ${{ matrix.language == 'cpp' }}
         run: cmake
@@ -530,6 +693,14 @@ jobs:
           sudo apt-get install -y iwyu ninja-build
           include-what-you-use --version || true
 
+      - name: Cache CPM packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
       - name: Configure with COOLPROP_IWYU
         run: |
           cmake -G Ninja \
@@ -575,7 +746,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -629,12 +800,54 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
       - name: Check pinned fastchebpure release matches current EOS
         run: python3 dev/scripts/check_superanc_release_pin.py
+
+  incomp-json-sanity:
+    name: incompressible JSON sanity
+    # Guards the committed dev/incompressible_liquids/json/*.json against the
+    # "leaked placeholder" class of bug (issues #1331, #2567): unfitted
+    # optimizer guesses, all-zero templates, non-numeric or non-finite
+    # coefficients, and
+    # blocks the C++ loader would throw on at load time (which truncates the
+    # whole fluid list). The test predates this job, but nothing ran it -- CI's
+    # only other pytest invocation is `pytest wrappers/Python/pytest`.
+    #
+    # Build-free. Like type-stubs and superanc-pin, deliberately NO paths filter
+    # so it can be a required check without deadlocking unrelated PRs. Local
+    # twin: the `incomp-sanity` check in dev/ci/preflight.sh.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Least privilege: this job runs PR-authored test code, and needs nothing
+    # beyond reading the tree. Without an explicit block it would inherit the
+    # repository default, which is broader.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      # Pinned like the other build-free gates here (uvx mypy@1.19.1,
+      # uvx pyright@1.1.409): unpinned, a fresh pytest release could turn this
+      # required check red on unrelated PRs.
+      - name: Run incompressible JSON sanity checks
+        # The whole directory, with numpy+scipy: test_data_sanity (grid axis
+        # ordering) and test_fitting_regression (golden-master refit) are the two
+        # safeguards this area relies on, and both importorskip away without
+        # them -- so naming only test_json_sanity.py meant they never ran here.
+        # `uvx --with` matches the pyright job above.
+        run: uvx --with numpy --with scipy pytest@9.1.1 dev/incompressible_liquids/ -q --color=no
 
   installed-header-gate:
     name: Installed-header hygiene gate
@@ -649,14 +862,50 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Cache CPM packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: dev-checks-installed-header-gate
+
       - name: Configure shared build
         run: |
           cmake -B build_shared -S . \
             -DCOOLPROP_SHARED_LIBRARY=ON \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build shared library
         run: cmake --build build_shared -j$(nproc)
 
       - name: Run installed-header hygiene gate
         run: ./dev/ci/check-installed-headers.sh build_shared
+
+  atct-regenerator:
+    name: ATcT regenerator tests
+    # Offline gate for dev/atct/. The tests parse a committed HTML fixture and
+    # read dev/fluids/*.json -- no network, no C++ build. Deliberately NO paths
+    # filter so this can be a required check without deadlocking unrelated PRs.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install pytest
+        run: python -m pip install --upgrade pytest
+
+      - name: Run the ATcT regenerator tests
+        run: python -m pytest dev/atct/test_fetch_atct_formation.py -v

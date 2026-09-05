@@ -3859,7 +3859,22 @@
     "INCHI_STRING": "InChI=1S/CHCl2F/c2-1(3)4/h1H",
     "NAME": "R21",
     "REFPROP_NAME": "R21",
-    "SMILES": "C(F)(Cl)Cl"
+    "SMILES": "C(F)(Cl)Cl",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "75-43-4*0",
+        "source": "ATcT",
+        "uncertainty": 900.0,
+        "units": "J/mol",
+        "value": -283080.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

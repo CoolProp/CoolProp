@@ -3627,7 +3627,22 @@
     "INCHI_STRING": "InChI=1S/H2S/h1H2",
     "NAME": "HydrogenSulfide",
     "REFPROP_NAME": "H2S",
-    "SMILES": "S"
+    "SMILES": "S",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "7783-06-4*0",
+        "source": "ATcT",
+        "uncertainty": 180.0,
+        "units": "J/mol",
+        "value": -20300.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

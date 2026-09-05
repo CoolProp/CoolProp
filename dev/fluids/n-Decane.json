@@ -3987,7 +3987,22 @@
     "INCHI_STRING": "InChI=1S/C10H22/c1-3-5-7-9-10-8-6-4-2/h3-10H2,1-2H3",
     "NAME": "n-Decane",
     "REFPROP_NAME": "DECANE",
-    "SMILES": "CCCCCCCCCC"
+    "SMILES": "CCCCCCCCCC",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "124-18-5*0",
+        "source": "ATcT",
+        "uncertainty": 750.0,
+        "units": "J/mol",
+        "value": -249040.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {
