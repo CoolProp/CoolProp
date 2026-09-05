@@ -76,6 +76,95 @@ def myprint(level, *args, **kwargs):
         print(*args, **kwargs)
 
 
+def lowest_valid_T(state):
+    """Lowest temperature the backend will actually evaluate for this fluid.
+
+    The triple point alone is not it.  REFPROP reports the true triple-point
+    temperature while its equation is only fitted down to Tmin, and for a third
+    of the fluid list Tmin sits well above Ttriple (R14: 89.5 K vs 120 K).
+    Sweeping from Ttriple then spends the bottom of every grid throwing
+    "Temperature below triple-point or minimum temperature", which reads as a
+    flash failure when it is really a request outside the equation.  For HEOS the
+    two are equal for every fluid in the library, so this is a no-op there.
+    """
+    T_triple = state.keyed_output(CP.iT_triple)
+    try:
+        return max(T_triple, state.keyed_output(CP.iT_min))
+    except Exception:
+        return T_triple
+
+
+# REFPROPMixtureBackend::GetRPphase derives the phase entirely from the _Q sentinel
+# the DLL happened to return: 999 / -997 give iphase_supercritical, while a
+# Q > 1 with T >= Tcrit gives iphase_supercritical_gas and a Q < 0 with p >= pcrit
+# gives iphase_supercritical_liquid.  Which of those a state comes back with is a
+# property of the flash routine that was called (TPFLSH returns the sentinel, PHFLSH
+# and friends return an out-of-range quality), not of the state.  So a p,T flash and
+# a pair flash naming two different members of this family for the SAME state is the
+# REFPROP phase-index convention showing through -- the same class of noise as the
+# two-phase divergence in GitHub #1057 -- and not a phase-labelling defect.
+_SUPERCRITICAL_FAMILY = frozenset([CP.iphase_supercritical,
+                                   CP.iphase_supercritical_gas,
+                                   CP.iphase_supercritical_liquid])
+
+
+def phases_disagree(backend, phase_pair, phase_pt):
+    """True when two phase labels for one state are a real disagreement."""
+    if phase_pair == phase_pt:
+        return False
+    if 'REFPROP' in backend and phase_pair in _SUPERCRITICAL_FAMILY and phase_pt in _SUPERCRITICAL_FAMILY:
+        return False
+    return True
+
+
+def _mean_good_elapsed(df):
+    """Mean wall time over the points the flash actually solved (cls == GOOD)."""
+    if 'cls' not in df.columns or 'elapsed' not in df.columns:
+        return None
+    good = df[(df['cls'] == 'GOOD') & df['elapsed'].notna()]
+    return float(good['elapsed'].mean()) if len(good) else None
+
+
+_warned = set()
+
+
+def warn_unexpected(context, exc):
+    """Say something, once, when a handler catches an exception that is not a
+    ValueError.
+
+    ``myprint`` cannot carry this: every call site passes level 1 and
+    ``DEBUG_LEVEL`` is 1, so ``level > DEBUG_LEVEL`` is False and it prints
+    nothing at all by default.  A ValueError from a flash is an ordinary property
+    of a state point and stays quiet; anything else is a defect in the library or
+    in this harness, and the handlers guarding the reference curves have nowhere
+    else to report it -- they record no row.  Deduplicated on
+    (context, exception type) so a defect that hits every point of a grid costs
+    one line, not forty thousand.
+    """
+    if isinstance(exc, ValueError):
+        return
+    key = (context, type(exc).__name__)
+    if key in _warned:
+        return
+    _warned.add(key)
+    print('UNEXPECTED {0}: {1}: {2}'.format(context, type(exc).__name__, exc))
+
+
+def err_text(exc):
+    """Message recorded for a failing state point.
+
+    CoolProp raises ``ValueError`` for an input the EOS cannot honour, so those
+    are recorded bare.  Anything else reaching a per-point handler is a defect in
+    the library rather than a property of the state point (a ``RuntimeError``
+    from a malformed ``format()`` message, say), so its type is kept in the text
+    -- otherwise it would be indistinguishable from a normal out-of-range report
+    in the consistency CSV.
+    """
+    if isinstance(exc, ValueError):
+        return str(exc)
+    return '{0}: {1}'.format(type(exc).__name__, exc)
+
+
 class ConsistencyFigure(object):
     def __init__(self, fluid, figsize=(15, 23), backend='HEOS', additional_skips=[], mole_fractions=None, p_limits_1phase=None, T_limits_1phase=None, NT_1phase=40, Np_1phase=40, NT_2phase=20, NQ_2phase=20):
 
@@ -139,7 +228,7 @@ class ConsistencyFigure(object):
         self.dictL, self.dictV = {}, {}
         for Q, dic in zip([0, 1], [self.dictL, self.dictV]):
             rhomolar, smolar, hmolar, T, p, umolar = [], [], [], [], [], []
-            for _T in np.logspace(np.log10(HEOS.keyed_output(CP.iT_triple)), np.log10(HEOS.keyed_output(CP.iT_critical)), 500):
+            for _T in np.logspace(np.log10(lowest_valid_T(HEOS)), np.log10(HEOS.keyed_output(CP.iT_critical)), 500):
                 try:
                     HEOS.update(CP.QT_INPUTS, Q, _T)
                     if (HEOS.p() < 0): raise ValueError('P is negative:' + str(HEOS.p()))
@@ -152,7 +241,8 @@ class ConsistencyFigure(object):
                     hmolar.append(HEOS.hmolar())
                     smolar.append(HEOS.smolar())
                     umolar.append(HEOS.umolar())
-                except ValueError as VE:
+                except Exception as VE:
+                    warn_unexpected(self.backend + '::' + self.fluid + ' saturation curve', VE)
                     myprint(1, 'satT error:', VE, '; T:', '{T:0.16g}'.format(T=_T), 'T/Tc:', _T / HEOS.keyed_output(CP.iT_critical))
 
             dic.update(dict(T=np.array(T),
@@ -171,10 +261,23 @@ class ConsistencyFigure(object):
         HEOS = CP.AbstractState(self.backend, self.fluid)
         rhomolar, smolar, hmolar, T, p, umolar = [], [], [], [], [], []
 
-        for _p in np.logspace(np.log10(HEOS.keyed_output(CP.iP_min) * 1.01), np.log10(HEOS.keyed_output(CP.iP_max)), 300):
+        # P_min is a saturation call under the hood, so it can throw for a backend
+        # whose equation stops above the triple point -- and it sits in the loop
+        # header, outside the per-point handlers below.  Losing this decorative
+        # curve must not lose the figure: 13 of 129 REFPROP fluids died here.
+        try:
+            p_lo = HEOS.keyed_output(CP.iP_min) * 1.01
+            p_hi = HEOS.keyed_output(CP.iP_max)
+        except Exception as VE:
+            myprint(1, 'Tmax curve range:', self.fluid, VE)
+            p_lo = p_hi = None
+
+        have_range = bool(p_lo) and bool(p_hi) and p_lo > 0 and p_hi > p_lo
+        for _p in (np.logspace(np.log10(p_lo), np.log10(p_hi), 300) if have_range else []):
             try:
                 HEOS.update(CP.PT_INPUTS, _p, HEOS.keyed_output(CP.iT_max))
-            except ValueError as VE:
+            except Exception as VE:
+                warn_unexpected(self.backend + '::' + self.fluid + ' Tmax curve', VE)
                 myprint(1, 'Tmax', _p, VE)
                 continue
 
@@ -185,7 +288,8 @@ class ConsistencyFigure(object):
                 hmolar.append(HEOS.hmolar())
                 smolar.append(HEOS.smolar())
                 umolar.append(HEOS.umolar())
-            except ValueError as VE:
+            except Exception as VE:
+                warn_unexpected(self.backend + '::' + self.fluid + ' Tmax curve output', VE)
                 myprint(1, 'Tmax access', VE)
 
         self.Tmax = dict(T=np.array(T),
@@ -218,7 +322,8 @@ class ConsistencyFigure(object):
                     hmolar.append(state.hmolar())
                     smolar.append(state.smolar())
                     umolar.append(state.umolar())
-                except ValueError as VE:
+                except Exception as VE:
+                    warn_unexpected(self.backend + '::' + self.fluid + ' melting curve', VE)
                     myprint(1, 'melting', VE)
 
         self.melt = dict(T=np.array(T),
@@ -264,6 +369,12 @@ class ConsistencyAxis(object):
         self.NT_2phase = NT_2phase
         self.mean_elapsed_1phase = None
         self.mean_elapsed_2phase = None
+        # GOOD-only twins of the above.  The plotted annotation keeps the all-points
+        # mean (what a caller pays at an arbitrary state point); a backend-to-backend
+        # speed comparison needs the cost of a flash that actually SOLVED, because a
+        # backend that throws early on many points would otherwise look fast.
+        self.mean_elapsed_1phase_good = None
+        self.mean_elapsed_2phase_good = None
         # self.saturation_curves()
 
     def label_axes(self):
@@ -307,6 +418,48 @@ class ConsistencyAxis(object):
         else:
             raise ValueError(label)
 
+    def fallback_p_min(self):
+        """Lowest usable pressure when ``P_min`` itself throws.
+
+        ``P_min`` is the saturation pressure at the triple point.  A backend whose
+        equation stops above the triple point cannot answer that, and for some
+        fluids its saturation solver will not converge for a few degrees above Tmin
+        either (REFPROP MethylLinolenate is hopeless below ~240 K, where p is
+        ~5e-9 Pa).  Walk up from the lowest honoured temperature and take the first
+        saturation pressure that comes back; ``None`` if none does.
+        """
+        # A backend broken enough that P_min throws may not answer for the fluid
+        # constants either, and this runs inside the handler for that failure -- so
+        # a raise here would escape as a chained exception and lose the whole figure,
+        # which is the failure mode this fallback exists to prevent.
+        try:
+            sat = CP.AbstractState(self.backend, self.fluid)
+            T_lo = lowest_valid_T(sat)
+            T_c = sat.keyed_output(CP.iT_critical)
+        except Exception as E:
+            warn_unexpected('P_min fallback setup for ' + self.backend + '::' + self.fluid, E)
+            return None
+        for frac in np.linspace(1.0, 1.25, 12):
+            T = min(T_lo * frac, 0.999 * T_c)
+            try:
+                sat.update(CP.QT_INPUTS, 0, T)
+                if sat.p() > 0:
+                    return sat.p() * 1.01
+            except Exception:
+                continue
+        return None
+
+    def setup_failure_frame(self, message):
+        """One EXCEPTION row standing in for a panel that could not be set up.
+
+        Returning an empty frame would make an unbuildable panel indistinguishable
+        from a clean one in the report, which is the worse failure.
+        """
+        df = pandas.DataFrame([dict(err=message, cls='EXCEPTION', type='setup',
+                                    phase_region='1phase')])
+        df['pair'] = self.pair
+        return df
+
     def consistency_check_singlephase(self):
 
         tic = time.time()
@@ -328,9 +481,33 @@ class ConsistencyAxis(object):
             # User-specified limits were provided, use them
             p_min, p_max = self.p_limits_1phase
         else:
-            # No user-specified limits were provided, use the defaults
-            p_min = self.state.keyed_output(CP.iP_min) * 1.01
-            p_max = self.state.keyed_output(CP.iP_max)
+            # No user-specified limits were provided, use the defaults.
+            # P_min is the saturation pressure at the triple point, so it throws
+            # outright for a backend whose equation stops above Ttriple (REFPROP for
+            # a third of the fluid list).  Fall back to the saturation pressure at
+            # the lowest temperature the backend does honour, which is what P_min is
+            # trying to be; only if that fails too is there no grid to build.
+            try:
+                p_min = self.state.keyed_output(CP.iP_min) * 1.01
+            except Exception as VE:
+                myprint(1, 'P_min fallback:', self.fluid, VE)
+                p_min = self.fallback_p_min()
+                if p_min is None:
+                    return self.setup_failure_frame(
+                        'no usable P_min for {0}::{1}, 1-phase grid skipped ({2})'
+                        .format(self.backend, self.fluid, VE))
+            try:
+                p_max = self.state.keyed_output(CP.iP_max)
+            except Exception as VE:
+                return self.setup_failure_frame(
+                    'no usable P_max for {0}::{1}, 1-phase grid skipped ({2})'
+                    .format(self.backend, self.fluid, VE))
+        if not (p_min > 0 and p_max > p_min):
+            # A fallback P_min that walked past P_max would otherwise hand
+            # np.logspace a reversed range and silently sweep the grid backwards.
+            return self.setup_failure_frame(
+                'pressure range for {0}::{1} is not usable (p_min={2!r}, p_max={3!r}), '
+                '1-phase grid skipped'.format(self.backend, self.fluid, p_min, p_max))
 
         # Maximum-density (REFPROP Dmax) domain bound for fluids without a melting line:
         # the densest validated fluid state is the triple-point saturated liquid, so colder
@@ -354,7 +531,7 @@ class ConsistencyAxis(object):
         if self.T_limits_1phase is None and is_pure_fluid and not self.state.has_melting_line():
             try:
                 state_rhomax = CP.AbstractState(self.backend, self.fluid)
-                state_rhomax.update(CP.QT_INPUTS, 0, self.state.keyed_output(CP.iT_triple))
+                state_rhomax.update(CP.QT_INPUTS, 0, lowest_valid_T(self.state))
                 rho_max_1phase = state_rhomax.rhomolar()
                 pc_1phase = self.state.keyed_output(CP.iP_critical)
             except Exception as E:
@@ -367,7 +544,7 @@ class ConsistencyAxis(object):
 
             if self.T_limits_1phase is None:
                 # No user-specified limits were provided, using the defaults
-                Tmin = self.state.keyed_output(CP.iT_triple)
+                Tmin = lowest_valid_T(self.state)
                 if self.state.has_melting_line():
                     try:
                         pmelt_min = self.state.melting_line(CP.iP_min, -1, -1)
@@ -418,8 +595,14 @@ class ConsistencyAxis(object):
                 try:
                     # Update the state using PT inputs in order to calculate all the remaining inputs
                     self.state_PT.update(CP.PT_INPUTS, p, T)
-                except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", phase_region="1phase", in1="P", val1=p, in2="T", val2=T, P=p, T=T))
+                except Exception as VE:
+                    # The p,T flash that establishes the reference state, not the pair
+                    # flash under test.  Labelled apart: a backend refusing to define a
+                    # grid point at all is a domain statement, whereas a failure of the
+                    # pair flash at a point p,T DID define is a flash finding.  Rolling
+                    # the two together makes a strict backend look broken.
+                    warn_unexpected(self.backend + '::' + self.fluid + ' 1-phase reference flash', VE)
+                    data.append(dict(err=err_text(VE), cls="EXCEPTION", type="reference", phase_region="1phase", in1="P", val1=p, in2="T", val2=T, P=p, T=T))
                     myprint(1, 'consistency', VE)
                     continue
 
@@ -432,9 +615,10 @@ class ConsistencyAxis(object):
                 try:
                     self.state.update(pairkey, val1, val2)
                     elapsed = timeit.default_timer() - tic2
-                except ValueError as VE:
+                except Exception as VE:
                     elapsed = timeit.default_timer() - tic2
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", phase_region="1phase",
+                    warn_unexpected(self.backend + '::' + self.fluid + ' 1-phase ' + self.pair + ' flash', VE)
+                    data.append(dict(err=err_text(VE), cls="EXCEPTION", type="update", phase_region="1phase",
                                      in1=param1, val1=val1, in2=param2, val2=val2, P=p, T=T, x=x, y=y, elapsed=elapsed))
                     myprint(1, 'update(1p)', self.pair, 'P', p, 'T', T, 'D', self.state_PT.keyed_output(CP.iDmolar), '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), VE)
                     _exception = True
@@ -446,12 +630,16 @@ class ConsistencyAxis(object):
                     dT = abs(self.state_PT.T() - self.state.T())
                     if drho < 1e-3 and dp < 1e-3 and dT < 1e-3:
                         data.append(dict(cls="GOOD", phase_region="1phase", x=x, y=y, elapsed=elapsed))
-                        if 'REFPROP' not in self.backend:
-                            if self.state_PT.phase() != self.state.phase():
-                                data.append(dict(cls="BAD_PHASE", phase_region="1phase", in1=param1, val1=val1,
-                                                 in2=param2, val2=val2, P=p, T=T, x=x, y=y, elapsed=elapsed,
-                                                 err='phase {0} instead of {1}'.format(self.state.phase(), self.state_PT.phase())))
-                                myprint(1, 'bad phase', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_PT.phase())
+                        # This check runs for every backend: suppressing it wholesale for
+                        # REFPROP (as it was) left the REFPROP plots unable to report a
+                        # phase-labelling bug at all.  phases_disagree() drops the one
+                        # class that is convention rather than defect -- see its note on
+                        # GetRPphase and the supercritical family.
+                        if phases_disagree(self.backend, self.state.phase(), self.state_PT.phase()):
+                            data.append(dict(cls="BAD_PHASE", phase_region="1phase", in1=param1, val1=val1,
+                                             in2=param2, val2=val2, P=p, T=T, x=x, y=y, elapsed=elapsed,
+                                             err='phase {0} instead of {1}'.format(self.state.phase(), self.state_PT.phase())))
+                            myprint(1, 'bad phase', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_PT.phase())
                     else:
                         data.append(dict(cls="INCONSISTENT", type="update", phase_region="1phase",
                                          in1=param1, val1=val1, in2=param2, val2=val2, P=p, T=T, x=x, y=y,
@@ -464,6 +652,7 @@ class ConsistencyAxis(object):
         if 'elapsed' in df.columns and 'cls' in df.columns:
             timed = df[(df['cls'] != 'BAD_PHASE') & df['elapsed'].notna()]
             self.mean_elapsed_1phase = float(timed['elapsed'].mean()) if len(timed) else None
+            self.mean_elapsed_1phase_good = _mean_good_elapsed(df)
         bad = df[df.cls == 'INCONSISTENT']
         good = df[df.cls == 'GOOD']
         slowgood = good[good.elapsed > 0.01]
@@ -506,15 +695,17 @@ class ConsistencyAxis(object):
         data = []
         for q in np.linspace(0, 1, self.NQ_2phase):
 
-            Tmin = state.keyed_output(CP.iT_triple) + 1
+            Tmin = lowest_valid_T(state) + 1
 
             for T in np.linspace(Tmin, state.keyed_output(CP.iT_critical) - 1, self.NT_2phase):
 
                 try:
                     # Update the state using QT inputs in order to calculate all the remaining inputs
                     self.state_QT.update(CP.QT_INPUTS, q, T)
-                except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", phase_region="2phase", in1="Q", val1=q, in2="T", val2=T, P=state.p(), T=T))
+                except Exception as VE:
+                    # Reference Q,T flash -- see the note in consistency_check_singlephase.
+                    warn_unexpected(self.backend + '::' + self.fluid + ' 2-phase reference flash', VE)
+                    data.append(dict(err=err_text(VE), cls="EXCEPTION", type="reference", phase_region="2phase", in1="Q", val1=q, in2="T", val2=T, P=state.p(), T=T))
                     myprint(1, 'consistency', VE)
                     continue
 
@@ -527,9 +718,10 @@ class ConsistencyAxis(object):
                 try:
                     state.update(pairkey, val1, val2)
                     elapsed = timeit.default_timer() - tic2
-                except ValueError as VE:
+                except Exception as VE:
                     elapsed = timeit.default_timer() - tic2
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", phase_region="2phase",
+                    warn_unexpected(self.backend + '::' + self.fluid + ' 2-phase ' + self.pair + ' flash', VE)
+                    data.append(dict(err=err_text(VE), cls="EXCEPTION", type="update", phase_region="2phase",
                                      in1=param1, val1=val1, in2=param2, val2=val2, P=self.state_QT.p(), T=T, x=x, y=y, elapsed=elapsed))
                     myprint(1, 'update_QT', T, q)
                     myprint(1, 'update', param1, self.state_QT.keyed_output(key1), param2, self.state_QT.keyed_output(key2), VE)
@@ -573,6 +765,7 @@ class ConsistencyAxis(object):
         if 'elapsed' in df.columns and 'cls' in df.columns:
             timed = df[(df['cls'] != 'BAD_PHASE') & df['elapsed'].notna()]
             self.mean_elapsed_2phase = float(timed['elapsed'].mean()) if len(timed) else None
+            self.mean_elapsed_2phase_good = _mean_good_elapsed(df)
         bad = df[df.cls == 'INCONSISTENT']
         good = df[df.cls == 'GOOD']
         excep = df[df.cls == 'EXCEPTION']

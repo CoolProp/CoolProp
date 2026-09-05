@@ -130,6 +130,30 @@ def test_consolidated_page(tmp_path):
     assert 'Foo: kaboom' in text
 
 
+def test_consolidated_unavailable_section(tmp_path):
+    """Fluids the backend does not carry are a coverage gap, listed apart from
+    the build failures so the failure list stays about real defects."""
+    out = tmp_path / 'ConsistencyReport_REFPROP.rst'
+    rpt.write_consolidated_rst(pandas.DataFrame(), str(out), 'REFPROP',
+                               build_failures=[('Foo', 'kaboom')],
+                               unavailable=[('SES36', 'Could not load these fluids: SES36')],
+                               date='2026-05-26', orphan=True)
+    text = out.read_text(encoding='utf-8')
+    assert text.startswith(':orphan:')
+    assert 'Not available in this backend' in text
+    assert '1 fluid(s) in the CoolProp fluid list have no REFPROP equivalent' in text
+    assert 'SES36: Could not load these fluids: SES36' in text
+    # The two lists stay distinct.
+    assert 'SES36' not in text.split('Not available in this backend')[0]
+    assert 'Foo: kaboom' in text.split('Not available in this backend')[0]
+
+
+def test_consolidated_no_unavailable_section_when_empty(tmp_path):
+    out = tmp_path / 'ConsistencyReport.rst'
+    rpt.write_consolidated_rst(pandas.DataFrame(), str(out), 'HEOS', date='2026-05-26')
+    assert 'Not available in this backend' not in out.read_text(encoding='utf-8')
+
+
 def test_consolidated_empty(tmp_path):
     out = tmp_path / 'ConsistencyReport.rst'
     rpt.write_consolidated_rst(pandas.DataFrame(), str(out), 'HEOS', date='2026-05-26')
@@ -178,6 +202,70 @@ def test_panel_timing_annotation():
         if any('mean t/pt' in s for s in texts):
             annotated += 1
     assert annotated > 0
+    import matplotlib.pyplot as plt
+    plt.close(ff.fig)
+
+
+def test_lowest_valid_T_prefers_the_equation_minimum():
+    """The grid floor is the colder of the two limits the backend reports, not the
+    triple point alone: REFPROP publishes a true triple point below the range its
+    equation is fitted over."""
+    from CoolProp.Plots.ConsistencyPlots import lowest_valid_T
+    import CoolProp.CoolProp as CP
+
+    class Fake(object):
+        def __init__(self, T_triple, T_min):
+            self._t, self._m = T_triple, T_min
+
+        def keyed_output(self, key):
+            if key == CP.iT_triple:
+                return self._t
+            if key == CP.iT_min:
+                return self._m
+            raise KeyError(key)
+
+    assert lowest_valid_T(Fake(89.54, 120.0)) == 120.0   # REFPROP R14
+    assert lowest_valid_T(Fake(273.16, 251.165)) == 273.16  # REFPROP Water (extended range)
+    assert lowest_valid_T(Fake(200.0, 200.0)) == 200.0   # HEOS: the two coincide
+
+    class NoTmin(Fake):
+        def keyed_output(self, key):
+            if key == CP.iT_triple:
+                return self._t
+            raise ValueError('T_min not available for this backend')
+
+    # A backend with no T_min at all must degrade to the triple point, not throw.
+    assert lowest_valid_T(NoTmin(150.0, None)) == 150.0
+
+
+def test_setup_failure_frame_is_one_visible_exception():
+    """A panel that cannot be set up must be reported, not silently empty --
+    an empty frame is indistinguishable from a clean panel."""
+    from CoolProp.Plots.ConsistencyPlots import ConsistencyFigure
+    import matplotlib
+    matplotlib.use('Agg')
+    ff = ConsistencyFigure('Water', backend='HEOS',
+                           NT_1phase=3, Np_1phase=3, NT_2phase=3, NQ_2phase=3)
+    df = ff.axes_list[0].setup_failure_frame('no usable P_min')
+    assert len(df) == 1
+    assert df['cls'].iloc[0] == 'EXCEPTION'
+    assert df['pair'].iloc[0] == ff.axes_list[0].pair
+    assert 'no usable P_min' in df['err'].iloc[0]
+    import matplotlib.pyplot as plt
+    plt.close(ff.fig)
+
+
+def test_good_only_timing_is_recorded_separately():
+    """The annotation keeps the all-points mean; the GOOD-only twin exists for a
+    backend-to-backend comparison, where counting throw-fast points as fast lies."""
+    from CoolProp.Plots.ConsistencyPlots import ConsistencyFigure
+    import matplotlib
+    matplotlib.use('Agg')
+    ff = ConsistencyFigure('Water', backend='HEOS',
+                           NT_1phase=4, Np_1phase=4, NT_2phase=3, NQ_2phase=3)
+    good = [a.mean_elapsed_1phase_good for a in ff.axes_list
+            if getattr(a, 'mean_elapsed_1phase_good', None) is not None]
+    assert good and all(m > 0 for m in good)
     import matplotlib.pyplot as plt
     plt.close(ff.fig)
 
