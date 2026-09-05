@@ -3085,17 +3085,34 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     }
     IO.beta = beta;
 
-    // --- Part-2 fallback (#3342 / CoolProp-1tbe.22): stability-seeded MINORITY-phase Gibbs Newton. ---
-    // The reduced-gradient second-order phase uses g_i = beta*(1-beta)*(lnf_V - lnf_L), which
-    // vanishes as beta -> 0/1, so it stalls at the near-bubble/near-dew edge (beta pinned to a
-    // boundary, split not converged).  Following ThermoPack tp_solver::mod_newton_search, retry a
-    // full Gibbs Newton in the INCIPIENT (minority) phase's mole numbers -- the vanishing liquid
-    // near the dew, the vanishing vapour near the bubble.  Their components are small and far from
-    // the z_i upper bound, so the feasible box is NOT a razor (the failure of a majority-phase
-    // formulation).  Unscaled gradient dG/da_i = lnf_i^min - lnf_i^maj (does not vanish at the
-    // boundary) and the mole-number Gibbs Hessian (1/A_min)[...] + (1/A_maj)[...].  Additive and
-    // safe: ACCEPTS only a converged result; on any failure restores the exact pre-fallback state,
-    // so it can never regress a currently-passing case.
+    // --- Part-2 fallback (#3342 / CoolProp-1tbe.22): ThermoPack-style minority-phase Gibbs Newton ---
+    //
+    // WHEN INVOKED: only after BOTH phase 1 (SS + GDEM, <= 4 loops) and phase 2 (the reduced-gradient
+    // second-order Newton) have failed to converge.  Easy flashes never reach here.  Phase 2 scales
+    // its gradient by beta*(1-beta), which vanishes as beta -> 0/1, so it stalls exactly at the
+    // near-bubble/near-dew edge where the incipient phase is tiny -- the states master previously
+    // published grossly unconverged or collapsed to a wrong single phase (#3342's silent wrong-T).
+    //
+    // LIFTED FROM ThermoPack (tp_solver::mod_newton_search + optimizers::mod_newton):
+    //   * the variables are the INCIPIENT (minority) phase mole numbers a -- the vanishing liquid
+    //     near the dew, the vanishing vapour near the bubble.  Its components sit far from the z_i
+    //     bound, so the feasible box is not the razor a majority-phase (V ~ z) formulation hits;
+    //   * a MODIFIED-Newton descent direction (ThermoPack uses a modified Cholesky; here an
+    //     eigenvalue flip, below) so an indefinite Hessian still yields a descent step;
+    //   * a single-scalar FRACTION-TO-THE-BOUNDARY limit (ThermoPack limitDV) that scales the whole
+    //     step and so preserves the Newton direction, plus an ARMIJO line search on the total Gibbs;
+    //   * phase-SPECIFIED fugacity roots (ThermoPack thermo(...,LIQPH/VAPPH)); the CoolProp analogue
+    //     here is the deterministic cold global lowest-Gibbs solve, which keeps every evaluation on
+    //     the same stable density sheet (a warm local solve drifts to a metastable root).
+    //
+    // LOGIC: seed the incipient composition from the stability trial (or Wilson K-factors when that
+    // trial is ~trivial), then iterate -- build the mole-number Gibbs gradient dG/da_i = lnf_i^min -
+    // lnf_i^maj and Hessian (1/A_min)[D_min - x.D_min] + (1/A_maj)[D_maj - x.D_maj], diagonalise and
+    // floor its eigenvalues at max(|lambda|, eps*max|lambda|) for a guaranteed-descent, curvature-
+    // scaled step, apply fraction-to-boundary + Armijo, and exit once genuine.  ADDITIVE AND SAFE:
+    // publish only a GENUINE split (equal-fugacity residual <= 1e-5, non-trivial spread, interior
+    // beta); on any other outcome restore the exact pre-fallback state, so it can never regress a
+    // currently-passing case.
     if (!converged) {
         const std::vector<CoolPropDbl> x_pre = IO.x, y_pre = IO.y;
         const CoolPropDbl beta_pre = beta, rhoL_pre = IO.rhomolar_liq, rhoV_pre = IO.rhomolar_vap;
@@ -3230,7 +3247,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // Phase-vanishing bail: if the incipient amount collapses far below any genuine near-dew
             // split (A ~ 1e-4 there) the feed is single-phase at this T -- no split exists -- so stop
             // instead of iterating to the cap on a residual that will never reach genuine.
-            if (A < 1e-6 && mg > fb_genuine_tol) { fb_stop = "vanish"; break; }
+            if (A < 1e-6 && mg > fb_genuine_tol) {
+                fb_stop = "vanish";
+                break;
+            }
 
             // SatL/SatV are synced to the current a (from the seed or the last accepted line-
             // search step).  Build the mole-number Gibbs gradient dG/da_i = ln f_i^min - ln
