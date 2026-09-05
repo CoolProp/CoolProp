@@ -2189,4 +2189,48 @@ TEST_CASE("Mixture PT flash near the dew line resolves to a genuine two-phase sp
     }
 }
 
+TEST_CASE("Mixture PT flash maps the near-dew/near-bubble split to the correct phases (#3357)", "[michelsen][flash][mixture][saturation]") {
+    // Regression for the #3357 phase-label inversion.  A stage of solve_michelsen (in particular
+    // the Phase-2 second-order Newton, which our derivative fix made converge at points it used to
+    // miss) can settle on the correct physical split but with the liquid/vapour labels transposed:
+    // x <-> y, the densities swapped, and Q -> 1 - Q.  The material balance z = (1-Q) x + Q y is
+    // INVARIANT under that swap, so it cannot detect the bug; the discriminating invariants are the
+    // physical phase identities -- the liquid is the denser phase and the light component is
+    // enriched in the vapour.  solve_michelsen now normalises the labels (liquid = denser phase)
+    // before publishing.  Silent on a single-phase verdict, so it stays green on builds that merely
+    // MISS the split (the separate, pre-existing #3342 near-dew miss).
+    const std::string fluids = "Methane&Ethane&n-Propane&n-Butane&IsoButane&Nitrogen&CarbonDioxide";
+    const std::vector<double> z = {0.9188, 0.0532, 0.0193, 0.0010, 0.0012, 0.0064, 0.0001};
+    const std::size_t i_light = 0;  // Methane (lightest)
+    const std::size_t i_heavy = 3;  // n-Butane (heaviest)
+    const double P = 60e5;          // Pa
+
+    // A near-dew band (incipient phase = liquid, the direction that triggered #3357) plus a few
+    // near-bubble points (incipient phase = vapour, guarding against an unconditional flip).
+    const std::vector<double> Ts = {223.10, 223.15, 223.20, 223.28, 223.35, 223.40, 207.91, 208.03, 208.66, 211.77};
+    // A MISS (single-phase verdict) is the SEPARATE, pre-existing #3342 near-dew miss, so each point
+    // is checked only when it resolves two-phase -- but require that AT LEAST ONE point across the
+    // band does, so a regression that lost the whole band cannot pass this test vacuously.
+    int n_twophase = 0;
+    for (double T : Ts) {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        AS->update(PT_INPUTS, P, T);
+        if (AS->phase() != iphase_twophase) continue;
+        ++n_twophase;
+        const double Q = AS->Q();
+        const std::vector<double> xl = AS->mole_fractions_liquid_double();
+        const std::vector<double> xv = AS->mole_fractions_vapor_double();
+        CAPTURE(T, Q, xl[i_light], xv[i_light]);
+        CHECK(Q > 0.0);
+        CHECK(Q < 1.0);
+        // Liquid is the denser phase.
+        CHECK(AS->saturated_liquid_keyed_output(iDmolar) > AS->saturated_vapor_keyed_output(iDmolar));
+        // Light component enriched in the vapour, heavy in the liquid.
+        CHECK(xv[i_light] > xl[i_light]);
+        CHECK(xl[i_heavy] > xv[i_heavy]);
+    }
+    REQUIRE(n_twophase >= 1);  // not a vacuous pass: the band must resolve at least one split
+}
+
 #endif

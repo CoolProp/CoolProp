@@ -3468,6 +3468,25 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             IO.rhomolar_vap = rhoV_pre;
         }
     }
+    // Normalise the phase labels to the VLE convention (liquid = the denser phase) before publishing.
+    // Any stage of this solver -- in particular the Phase-2 second-order Newton, which has no
+    // ordering guard of its own -- can converge to the correct physical split but with the
+    // liquid/vapour labels transposed: x <-> y, the densities swapped, and beta on the wrong side
+    // (GH #3357: near-dew natural-gas points otherwise publish Q = 1 - Q_true with x/y inverted).
+    // The equal-fugacity split is symmetric in its labels, so this relabeling is exact and the
+    // material balance z = (1 - beta) x + beta y is invariant under it.  Doing it here, before the
+    // recompute below, re-syncs SatL/SatV to the corrected assignment.  (The fallback's fb_vle_order
+    // guard already blocks an inverted split from that stage; this covers the stages without one.)
+    if (ValidNumber(IO.rhomolar_liq) && ValidNumber(IO.rhomolar_vap) && IO.rhomolar_liq < IO.rhomolar_vap) {
+        std::vector<CoolPropDbl> x_tmp = IO.x;
+        IO.x = IO.y;
+        IO.y = x_tmp;
+        const CoolPropDbl rho_tmp = IO.rhomolar_liq;
+        IO.rhomolar_liq = IO.rhomolar_vap;
+        IO.rhomolar_vap = rho_tmp;
+        beta = 1.0 - beta;
+        IO.beta = beta;
+    }
     // Recompute the equal-fugacity residual on the FINAL published (IO.x, IO.y) state
     // so the gate below tests exactly what is returned, not a pre-step value captured
     // at the top of the last iteration (which could over-throw a split that converged
