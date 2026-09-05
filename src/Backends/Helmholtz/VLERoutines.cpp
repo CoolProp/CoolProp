@@ -3270,6 +3270,19 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                     Dmaj(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smaj, i, j, CoolProp::XN_INDEPENDENT);
                 }
             }
+            // dln_fugacity_dxj__constT_p_xi hardcodes the ideal term d(ln x_i)/dx_j for the
+            // XN_DEPENDENT convention: for the LAST component it adds -1/x_{N-1} on every j.  We call
+            // it with XN_INDEPENDENT (all x_i treated independent, then projected), where the correct
+            // ideal term for the last component is delta_{N-1,j}/x_{N-1}.  Left uncorrected, row N-1
+            // (the last component -- often the dominant one near the dew) is wrong and flips the
+            // smallest Hessian eigenvalue negative (FD-verified).  Correct that one row for both phases.
+            {
+                const std::size_t last = N - 1;
+                for (std::size_t j = 0; j < N; ++j) {
+                    Dmin(last, j) += 1.0 / mnc[last] + (j == last ? 1.0 / mnc[last] : 0.0);
+                    Dmaj(last, j) += 1.0 / mjc[last] + (j == last ? 1.0 / mjc[last] : 0.0);
+                }
+            }
             for (std::size_t i = 0; i < N; ++i) {
                 CoolPropDbl lnf_min = std::log(mnc[i]) + std::log(Smin->fugacity_coefficient(i));
                 CoolPropDbl lnf_maj = std::log(mjc[i]) + std::log(Smaj->fugacity_coefficient(i));
@@ -3360,10 +3373,41 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         CoolPropDbl fb_spread = 0;
         for (std::size_t i = 0; i < N; ++i)
             fb_spread = std::max(fb_spread, std::abs(IO.x[i] - IO.y[i]));
-        const bool fb_genuine = fb_eval_ok && ValidNumber(mg_fin) && mg_fin <= 1e-5 && fb_spread >= 1e-4 && beta > 1e-8 && beta < 1.0 - 1e-8;
+        // Gibbs-descent guard: publish a two-phase split ONLY if its reduced Gibbs lies below the
+        // single-phase (feed) Gibbs.  Now that the fallback is a competent optimiser it can converge
+        // to a genuine equal-fugacity split even for a stability FALSE POSITIVE (a subcooled liquid
+        // or superheated vapour, e.g. GH #3168 methanol-benzene) -- but that split is METASTABLE
+        // (higher Gibbs than the single phase) and must not be published as two-phase.  Compute the
+        // single-phase reference at the feed with the same cold global (lowest-Gibbs) root eval_min
+        // uses, so the comparison is on one consistent surface.
+        double G_single = HUGE_VAL;
+        {
+            HEOS.SatL->set_mole_fractions(IO.z);
+            CoolPropDbl rw = -1;
+            try {
+                CoolPropDbl rz = solve_trial_rho_warm(*HEOS.SatL, IO.T, IO.p, rw);
+                HEOS.SatL->update_DmolarT_direct(rz, IO.T);
+                double gs = 0;
+                for (std::size_t i = 0; i < N; ++i)
+                    if (IO.z[i] > 0)
+                        gs += static_cast<double>(IO.z[i]) * (std::log(static_cast<double>(IO.z[i])) + std::log(HEOS.SatL->fugacity_coefficient(i)));
+                G_single = gs;
+            } catch (...) {
+                G_single = HUGE_VAL;  // reference unavailable -> do not block on it
+            }
+        }
+        const bool fb_lower_gibbs = fb_eval_ok && ValidNumber(G_fin) && G_fin < G_single - 1e-10;
+        // Vapour-liquid ordering: solve_michelsen is a VLE flash, so a genuine split must have the
+        // liquid denser than the vapour.  A split with rho_vap >= rho_liq is a mislabeled/spurious
+        // liquid-liquid split -- e.g. the poor-kij methanol-benzene LLE the EOS predicts (GH #3168);
+        // the flash finds it (lower Gibbs per the model) but it must not be published as VLE.
+        const bool fb_vle_order = IO.rhomolar_liq > IO.rhomolar_vap;
+        const bool fb_genuine = fb_eval_ok && ValidNumber(mg_fin) && mg_fin <= 1e-5 && fb_spread >= 1e-4 && beta > 1e-8 && beta < 1.0 - 1e-8
+                                && fb_lower_gibbs && fb_vle_order;
         if (cp_dbg_mich)
-            std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g genuine=%d spread=%.4g beta=%.6g\n", (int)fb_conv, fb_stop, fb_iters, mg_fin,
-                        (int)fb_genuine, (double)fb_spread, (double)beta);
+            std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g genuine=%d spread=%.4g beta=%.6g dG=%.3e rhoL=%.5g rhoV=%.5g\n",
+                        (int)fb_conv, fb_stop, fb_iters, mg_fin, (int)fb_genuine, (double)fb_spread, (double)beta, G_fin - G_single,
+                        (double)IO.rhomolar_liq, (double)IO.rhomolar_vap);
         if (fb_genuine) {
             IO.beta = beta;                    // eval_min left IO.x/IO.y/beta/rho on the best split
             converged = (mg_fin < gibbs_tol);  // else the final gate re-validates the genuine split
