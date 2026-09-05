@@ -68,7 +68,7 @@ enum EC
 
 // table of error messages
 // As of Mathcad Prime 10, these are now actually returned as Custom Error: messages
-char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
+const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                "Insufficient Memory",
                                                "Interrupted",
                                                "Only one column allowed in input array",
@@ -857,59 +857,59 @@ static LRESULT CP_set_mixture_binary_pair_data(LPMCSTRING Msg,          // outpu
 // ********************************************************************************************************
 
 FUNCTIONINFO PropsParam = {
-  "get_global_param_string",                                 // Name by which Mathcad will recognize the function
-  "Name of the parameter to retrieve",                       // Description of input parameters
-  "Returns the value of the requested CoolProps parameter",  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_get_global_param_string,                   // Pointer to the function code.
-  MC_STRING,                                                 // Returns a Mathcad string
-  1,                                                         // Number of arguments
-  {MC_STRING}                                                // Argument types
+  const_cast<char*>("get_global_param_string"),                                 // Name by which Mathcad will recognize the function
+  const_cast<char*>("Name of the parameter to retrieve"),                       // Description of input parameters
+  const_cast<char*>("Returns the value of the requested CoolProps parameter"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_get_global_param_string,                                      // Pointer to the function code.
+  MC_STRING,                                                                    // Returns a Mathcad string
+  1,                                                                            // Number of arguments
+  {MC_STRING}                                                                   // Argument types
 };
 
 FUNCTIONINFO FluidParam = {
-  "get_fluid_param_string",                                  // Name by which Mathcad will recognize the function
-  "Fluid, Name of the parameter to retrieve",                // Description of input parameters
-  "Returns the value of the requested CoolProps parameter",  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_get_fluid_param_string,                    // Pointer to the function code.
-  MC_STRING,                                                 // Returns a Mathcad string
-  2,                                                         // Number of arguments
-  {MC_STRING, MC_STRING}                                     // Argument types
+  const_cast<char*>("get_fluid_param_string"),                                  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Fluid, Name of the parameter to retrieve"),                // Description of input parameters
+  const_cast<char*>("Returns the value of the requested CoolProps parameter"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_get_fluid_param_string,                                       // Pointer to the function code.
+  MC_STRING,                                                                    // Returns a Mathcad string
+  2,                                                                            // Number of arguments
+  {MC_STRING, MC_STRING}                                                        // Argument types
 };
 
 FUNCTIONINFO RefState = {
-  "set_reference_state",                                           // Name by which Mathcad will recognize the function
-  "Fluid, Reference State String",                                 // Description of input parameters
-  "Sets the reference state to either IIR, ASHRAE, NBP, or DEF.",  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_set_reference_state,                             // Pointer to the function code.
-  COMPLEX_SCALAR,                                                  // Returns a Mathcad complex scalar
-  2,                                                               // Number of arguments
-  {MC_STRING, MC_STRING}                                           // Argument types
+  const_cast<char*>("set_reference_state"),                                           // Name by which Mathcad will recognize the function
+  const_cast<char*>("Fluid, Reference State String"),                                 // Description of input parameters
+  const_cast<char*>("Sets the reference state to either IIR, ASHRAE, NBP, or DEF."),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_set_reference_state,                                                // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                     // Returns a Mathcad complex scalar
+  2,                                                                                  // Number of arguments
+  {MC_STRING, MC_STRING}                                                              // Argument types
 };
 
 FUNCTIONINFO Props1SI = {
-  "Props1SI",                                                                                     // Name by which Mathcad will recognize the function
-  "Fluid, Property Name",                                                                         // Description of input parameters
-  "Returns a fluid-specific parameter, where the parameter is not dependent on the fluid state",  // Description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_Props1SI,                                                                       // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                 // Returns a Mathcad complex scalar
-  2,                                                                                              // Number of arguments
-  {MC_STRING, MC_STRING}                                                                          // Argument types
+  const_cast<char*>("Props1SI"),                                                                                     // Name by which Mathcad will recognize the function
+  const_cast<char*>("Fluid, Property Name"),                                                                         // Description of input parameters
+  const_cast<char*>("Returns a fluid-specific parameter, where the parameter is not dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_Props1SI,                                                                                          // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                                                    // Returns a Mathcad complex scalar
+  2,                                                                                                                 // Number of arguments
+  {MC_STRING, MC_STRING}                                                                                             // Argument types
 };
 
 FUNCTIONINFO PropsSI = {
-  "PropsSI",                                                                                  // Name by which Mathcad will recognize the function
-  "Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name",  // Description of input parameters
-  "Returns a fluid-specific parameter, where the parameter is dependent on the fluid state",  // Description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_PropsSI,                                                                    // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                             // Returns a Mathcad complex scalar
-  6,                                                                                          // Number of arguments
-  {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                // Argument types
+  const_cast<char*>("PropsSI"),                                                                                  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name"),  // Description of input parameters
+  const_cast<char*>("Returns a fluid-specific parameter, where the parameter is dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_PropsSI,                                                                                       // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                                                // Returns a Mathcad complex scalar
+  6,                                                                                                             // Number of arguments
+  {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                                   // Argument types
 };
 
 FUNCTIONINFO PropsSImulti = {
-  "PropsSImulti",  //                                                         // Name by which Mathcad will recognize the function
-  "Output Name, Input Name 1, Input Property 1 (Array), Input Name 2, Input Property 2 (Array), Fluid Name",  // Description of input parameters
-  "Returns a range of fluid-specific parameters, where the parameters are dependent on the state ranges defined by the input property arrays",  // Description of the function for the Insert Function dialog box
+  const_cast<char*>("PropsSImulti"),                                                                                                              // Name by which Mathcad will recognize the function
+  const_cast<char*>("Output Name, Input Name 1, Input Property 1 (Array), Input Name 2, Input Property 2 (Array), Fluid Name"),                    // Description of input parameters
+  const_cast<char*>("Returns a range of fluid-specific parameters, where the parameters are dependent on the state ranges defined by the input property arrays"),  // Description of the function for the Insert Function dialog box
   (LPCFUNCTION)CP_PropsSImulti,                                               // Pointer to the function code.
   COMPLEX_ARRAY,                                                              // Returns a Mathcad complex array
   6,                                                                          // Number of arguments
@@ -917,73 +917,73 @@ FUNCTIONINFO PropsSImulti = {
 };
 
 FUNCTIONINFO PhaseSI = {
-  "PhaseSI",                                                                     // Name by which Mathcad will recognize the function
-  "Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name",  // Description of input parameters
-  "Returns the fluid phase, dependent on the fluid state",                       // Description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_PhaseSI,                                                       // Pointer to the function code.
-  MC_STRING,                                                                     // Returns a Mathcad String
-  5,                                                                             // Number of arguments
-  {MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}              // Argument types
+  const_cast<char*>("PhaseSI"),                                                                     // Name by which Mathcad will recognize the function
+  const_cast<char*>("Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name"),  // Description of input parameters
+  const_cast<char*>("Returns the fluid phase, dependent on the fluid state"),                       // Description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_PhaseSI,                                                                          // Pointer to the function code.
+  MC_STRING,                                                                                        // Returns a Mathcad String
+  5,                                                                                                // Number of arguments
+  {MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                                 // Argument types
 };
 
 FUNCTIONINFO HAPropsSI = {
-  "HAPropsSI",  // Name by which Mathcad will recognize the function
-  "Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Input Name 3, Input Property 3",  // Description of input parameters
-  "Returns a parameter of humid air, where the parameter is dependent on the fluid state",  // Description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_HAPropsSI,                                                                // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                           // Returns a Mathcad complex scalar
-  7,                                                                                        // Number of arguments
-  {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR}  // Argument types
+  const_cast<char*>("HAPropsSI"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Input Name 3, Input Property 3"),  // Description of input parameters
+  const_cast<char*>("Returns a parameter of humid air, where the parameter is dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_HAPropsSI,                                                                                   // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                                              // Returns a Mathcad complex scalar
+  7,                                                                                                           // Number of arguments
+  {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR}                 // Argument types
 };
 
 FUNCTIONINFO GetMixtureData = {
-  "get_mixture_binary_pair_data",                            // Name by which Mathcad will recognize the function
-  "CAS 1, CAS 2, Name of the parameter to retrieve",         // Description of input parameters
-  "Returns the value of the requested CoolProps parameter",  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_get_mixture_binary_pair_data,              // Pointer to the function code.
-  MC_STRING,                                                 // Returns a Mathcad string
-  3,                                                         // Number of arguments
-  {MC_STRING, MC_STRING, MC_STRING}                          // Argument types
+  const_cast<char*>("get_mixture_binary_pair_data"),                            // Name by which Mathcad will recognize the function
+  const_cast<char*>("CAS 1, CAS 2, Name of the parameter to retrieve"),         // Description of input parameters
+  const_cast<char*>("Returns the value of the requested CoolProps parameter"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_get_mixture_binary_pair_data,                                 // Pointer to the function code.
+  MC_STRING,                                                                    // Returns a Mathcad string
+  3,                                                                            // Number of arguments
+  {MC_STRING, MC_STRING, MC_STRING}                                             // Argument types
 };
 
 FUNCTIONINFO ApplyMixingRule = {
-  "apply_simple_mixing_rule",                   // Name by which Mathcad will recognize the function
-  "CAS 1, CAS 2, Mixing Rule",                  // Description of input parameters
-  "Sets a simple mixing rule for binary pair",  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_apply_simple_mixing_rule,     // Pointer to the function code.
-  MC_STRING,                                    // Returns a Mathcad string
-  3,                                            // Number of arguments
-  {MC_STRING, MC_STRING, MC_STRING}             // Argument types
+  const_cast<char*>("apply_simple_mixing_rule"),                   // Name by which Mathcad will recognize the function
+  const_cast<char*>("CAS 1, CAS 2, Mixing Rule"),                  // Description of input parameters
+  const_cast<char*>("Sets a simple mixing rule for binary pair"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_apply_simple_mixing_rule,                        // Pointer to the function code.
+  MC_STRING,                                                       // Returns a Mathcad string
+  3,                                                               // Number of arguments
+  {MC_STRING, MC_STRING, MC_STRING}                                // Argument types
 };
 
 FUNCTIONINFO SetMixtureData = {
-  "set_mixture_binary_pair_data",                             // Name by which Mathcad will recognize the function
-  "CAS 1, CAS 2, Parameter Name, Parameter value",            // Description of input parameters
-  "Sets the value of the specified binary mixing parameter",  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_set_mixture_binary_pair_data,               // Pointer to the function code.
-  MC_STRING,                                                  // Returns a Mathcad string
-  4,                                                          // Number of arguments
-  {MC_STRING, MC_STRING, MC_STRING, COMPLEX_SCALAR}           // Argument types
+  const_cast<char*>("set_mixture_binary_pair_data"),                             // Name by which Mathcad will recognize the function
+  const_cast<char*>("CAS 1, CAS 2, Parameter Name, Parameter value"),            // Description of input parameters
+  const_cast<char*>("Sets the value of the specified binary mixing parameter"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_set_mixture_binary_pair_data,                                  // Pointer to the function code.
+  MC_STRING,                                                                     // Returns a Mathcad string
+  4,                                                                             // Number of arguments
+  {MC_STRING, MC_STRING, MC_STRING, COMPLEX_SCALAR}                              // Argument types
 };
 
 FUNCTIONINFO GetPredefFluids = {
-  "get_predefined_mixture_fluids",                                      // Name by which Mathcad will recognize the function
-  "MixtureName",                                                        // Description of input parameters
-  "Returns semicolon-delimited fluid names in the predefined mixture",  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_get_predefined_mixture_fluids,                        // Pointer to the function code.
-  MC_STRING,                                                            // Returns a Mathcad string
-  1,                                                                    // Number of arguments
-  {MC_STRING}                                                           // Argument types
+  const_cast<char*>("get_predefined_mixture_fluids"),                                      // Name by which Mathcad will recognize the function
+  const_cast<char*>("MixtureName"),                                                        // Description of input parameters
+  const_cast<char*>("Returns semicolon-delimited fluid names in the predefined mixture"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_get_predefined_mixture_fluids,                                           // Pointer to the function code.
+  MC_STRING,                                                                               // Returns a Mathcad string
+  1,                                                                                       // Number of arguments
+  {MC_STRING}                                                                              // Argument types
 };
 
 FUNCTIONINFO GetPredefMoleFracs = {
-  "get_predefined_mixture_fractions",                                      // Name by which Mathcad will recognize the function
-  "MixtureName",                                                           // Description of input parameters
-  "Returns a column vector of mole fractions for the predefined mixture",  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_get_predefined_mixture_mole_fractions,                   // Pointer to the function code.
-  COMPLEX_ARRAY,                                                           // Returns a Mathcad complex array
-  1,                                                                       // Number of arguments
-  {MC_STRING}                                                              // Argument types
+  const_cast<char*>("get_predefined_mixture_fractions"),                                      // Name by which Mathcad will recognize the function
+  const_cast<char*>("MixtureName"),                                                           // Description of input parameters
+  const_cast<char*>("Returns a column vector of mole fractions for the predefined mixture"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_get_predefined_mixture_mole_fractions,                                      // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                              // Returns a Mathcad complex array
+  1,                                                                                          // Number of arguments
+  {MC_STRING}                                                                                 // Argument types
 };
 
 // ************************************************************************************
@@ -1009,7 +1009,7 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             if (!_CRT_INIT(hDLL, dwReason, lpReserved)) return FALSE;
 
             // Register the error message table
-            if (!CreateUserErrorMessageTable(hDLL, NUMBER_OF_ERRORS, CPErrorMessageTable)) break;
+            if (!CreateUserErrorMessageTable(hDLL, NUMBER_OF_ERRORS, const_cast<char**>(CPErrorMessageTable))) break;
 
             // ...and if the errors register OK, go ahead and register user function
             CreateUserFunction(hDLL, &PropsParam);
@@ -1033,7 +1033,6 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
         case DLL_PROCESS_DETACH:
 
             if (!_CRT_INIT(hDLL, dwReason, lpReserved)) {
-                Sleep(1000);  // Attempt to keep CRT_INIT from detaching before all threads are closed
                 return FALSE;
             }
             break;
