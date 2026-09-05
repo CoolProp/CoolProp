@@ -9,6 +9,7 @@
 #    include <memory>
 #    include <string>
 #    include <vector>
+#    include <sstream>
 #    include <catch2/catch_all.hpp>
 #    include "CoolProp/detail/tools.h"
 #    include "CoolProp/CoolProp.h"
@@ -2135,6 +2136,101 @@ TEST_CASE("HSU_D flash: single-phase N2/O2 HEOS regression", "[michelsen][hsu_d]
         CHECK(AS2->T() == Catch::Approx(T).epsilon(0.001));
         CHECK(AS2->p() == Catch::Approx(P).epsilon(0.001));
     }
+}
+
+TEST_CASE("Mixture PT flash near the dew line resolves to a genuine two-phase split (#3342)", "[michelsen][flash][mixture][saturation]") {
+    // Solver contract for SaturationSolvers::PTflash_twophase::solve_michelsen
+    // (#3342 / CoolProp-1tbe.22).  On a genuine instability just inside the dew line the
+    // second-order phase split can collapse to the TRIVIAL split (x == y,
+    // rho_liq == rho_vap) yet report success; the trivial-split guard in PT_flash_mixtures
+    // then publishes it as a SINGLE-PHASE state inside the two-phase region.  Pin the
+    // solver's contract directly: across the near-dew band the PT flash must return a
+    // GENUINE two-phase state -- classified two-phase, with an interior vapour quality and a
+    // non-trivial liquid/vapour composition spread -- never a collapsed trivial split
+    // misclassified as single phase.
+    //
+    // (The end-to-end HSU_P inverse round trip at these same conditions additionally needs
+    //  the near-dew T-bracket fix; that coverage travels with the reroute change, not here.)
+    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    const double P = 8e5;
+
+    auto sat = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+    sat->set_mole_fractions(z);
+    sat->update(PQ_INPUTS, P, 0.0);
+    const double T_bub = sat->T();
+    sat->update(PQ_INPUTS, P, 1.0);
+    const double T_dew = sat->T();
+
+    for (double frac : {0.99, 0.995, 0.998, 0.999}) {
+        const double T = T_bub + frac * (T_dew - T_bub);
+        std::ostringstream lbl;
+        lbl << "frac=" << frac << " T=" << T;
+        DYNAMIC_SECTION(lbl.str()) {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+            AS->set_mole_fractions(z);
+            AS->update(PT_INPUTS, P, T);
+            // Correctly classified two-phase (not collapsed to a single-phase misclassification).
+            // REQUIRE (fatal): a regression to single phase must stop the section here, before the
+            // liquid/vapour accessors below, which are only valid for a two-phase state.
+            REQUIRE(AS->phase() == iphase_twophase);
+            // ... with an interior vapour quality ...
+            const double Q = AS->Q();
+            CHECK(Q > 1e-8);
+            CHECK(Q < 1.0 - 1e-8);
+            // ... and a genuine composition split (trivial collapse is x == y everywhere).
+            const std::vector<double> xl = AS->mole_fractions_liquid_double();
+            const std::vector<double> xv = AS->mole_fractions_vapor_double();
+            double spread = 0;
+            for (std::size_t i = 0; i < z.size(); ++i)
+                spread = std::max(spread, std::abs(xl[i] - xv[i]));
+            CHECK(spread > 1e-4);
+        }
+    }
+}
+
+TEST_CASE("Mixture PT flash maps the near-dew/near-bubble split to the correct phases (#3357)", "[michelsen][flash][mixture][saturation]") {
+    // Regression for the #3357 phase-label inversion.  A stage of solve_michelsen (in particular
+    // the Phase-2 second-order Newton, which our derivative fix made converge at points it used to
+    // miss) can settle on the correct physical split but with the liquid/vapour labels transposed:
+    // x <-> y, the densities swapped, and Q -> 1 - Q.  The material balance z = (1-Q) x + Q y is
+    // INVARIANT under that swap, so it cannot detect the bug; the discriminating invariants are the
+    // physical phase identities -- the liquid is the denser phase and the light component is
+    // enriched in the vapour.  solve_michelsen now normalises the labels (liquid = denser phase)
+    // before publishing.  Silent on a single-phase verdict, so it stays green on builds that merely
+    // MISS the split (the separate, pre-existing #3342 near-dew miss).
+    const std::string fluids = "Methane&Ethane&n-Propane&n-Butane&IsoButane&Nitrogen&CarbonDioxide";
+    const std::vector<double> z = {0.9188, 0.0532, 0.0193, 0.0010, 0.0012, 0.0064, 0.0001};
+    const std::size_t i_light = 0;  // Methane (lightest)
+    const std::size_t i_heavy = 3;  // n-Butane (heaviest)
+    const double P = 60e5;          // Pa
+
+    // A near-dew band (incipient phase = liquid, the direction that triggered #3357) plus a few
+    // near-bubble points (incipient phase = vapour, guarding against an unconditional flip).
+    const std::vector<double> Ts = {223.10, 223.15, 223.20, 223.28, 223.35, 223.40, 207.91, 208.03, 208.66, 211.77};
+    // A MISS (single-phase verdict) is the SEPARATE, pre-existing #3342 near-dew miss, so each point
+    // is checked only when it resolves two-phase -- but require that AT LEAST ONE point across the
+    // band does, so a regression that lost the whole band cannot pass this test vacuously.
+    int n_twophase = 0;
+    for (double T : Ts) {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        AS->update(PT_INPUTS, P, T);
+        if (AS->phase() != iphase_twophase) continue;
+        ++n_twophase;
+        const double Q = AS->Q();
+        const std::vector<double> xl = AS->mole_fractions_liquid_double();
+        const std::vector<double> xv = AS->mole_fractions_vapor_double();
+        CAPTURE(T, Q, xl[i_light], xv[i_light]);
+        CHECK(Q > 0.0);
+        CHECK(Q < 1.0);
+        // Liquid is the denser phase.
+        CHECK(AS->saturated_liquid_keyed_output(iDmolar) > AS->saturated_vapor_keyed_output(iDmolar));
+        // Light component enriched in the vapour, heavy in the liquid.
+        CHECK(xv[i_light] > xl[i_light]);
+        CHECK(xl[i_heavy] > xv[i_heavy]);
+    }
+    REQUIRE(n_twophase >= 1);  // not a vacuous pass: the band must resolve at least one split
 }
 
 #endif
