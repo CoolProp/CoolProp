@@ -3168,8 +3168,16 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             }
         }
         std::vector<CoolPropDbl> a(N);
+        // Scale the incipient amounts so every component stays strictly below its feed amount:
+        // eval_min requires a[i] < z[i], and a fixed 1e-3 factor can exceed a TRACE z_i when the
+        // seed concentrates that component (e.g. a 1e-4 feed fraction with w_i > 0.1), which would
+        // fail the seed evaluation and make the whole fallback silently no-op.  Cap the factor at
+        // 1e-3 and at half the tightest z_i / w_i ratio.
+        CoolPropDbl seed_frac = 1e-3;
         for (std::size_t i = 0; i < N; ++i)
-            a[i] = 1e-3 * w[i];  // small incipient amount
+            if (w[i] > 0 && IO.z[i] > 0) seed_frac = std::min(seed_frac, 0.5 * IO.z[i] / w[i]);
+        for (std::size_t i = 0; i < N; ++i)
+            a[i] = seed_frac * w[i];  // small incipient amount, strictly below the feed
         rho_warm_L = -1;
         rho_warm_V = -1;
 
@@ -3441,13 +3449,14 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 }
             }
         }
-        // Gibbs-descent guard.  If no single-phase reference could be computed at all (G_single
-        // stays HUGE_VAL -- extremely rare: neither the global nor either phase-specified root
-        // solved), this check is skipped, but that only happens when the feed has no stable single
-        // phase at (T, p), i.e. it is genuinely two-phase, so publishing the split is the correct
-        // outcome; the independent VLE-ordering + genuine gates below still reject a trivial or
-        // mislabeled-LLE split.
-        const bool fb_lower_gibbs = fb_eval_ok && ValidNumber(G_fin) && G_fin < G_single - 1e-10;
+        // Gibbs-descent guard -- fail CLOSED.  The split is accepted only when a FINITE single-phase
+        // reference was actually obtained AND the split's Gibbs energy is below it.  If no reference
+        // could be computed at all (G_single stays HUGE_VAL -- extremely rare: neither the global nor
+        // either phase-specified root solved, a pathological no-root state rather than the
+        // between-spinodals case the phase-specified fallback already covers), the guard fails and
+        // the fallback does not publish, rather than accepting on a vacuous G_fin < HUGE_VAL compare.
+        const bool g_single_valid = ValidNumber(G_single) && G_single < HUGE_VAL;
+        const bool fb_lower_gibbs = fb_eval_ok && g_single_valid && ValidNumber(G_fin) && G_fin < G_single - 1e-10;
         // Vapour-liquid ordering: solve_michelsen is a VLE flash, so a genuine split must have the
         // liquid denser than the vapour.  A split with rho_vap >= rho_liq is a mislabeled/spurious
         // liquid-liquid split -- e.g. the poor-kij methanol-benzene LLE the EOS predicts (GH #3168);
@@ -3514,18 +3523,23 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // single-phase.  Distinguish the two: a genuine split has a non-trivial composition spread
     // AND an interior phase fraction AND an equal-fugacity residual at engineering tolerance; a
     // false positive is trivial (x==y), collapsed (beta -> 0/1), or grossly unconverged.
-    if (!converged) {
-        CoolPropDbl spread = 0;
-        for (std::size_t i = 0; i < N; ++i)
-            spread = std::max(spread, std::abs(IO.x[i] - IO.y[i]));
-        const bool genuine = ValidNumber(last_max_g) && last_max_g <= 1e-5  // near-converged equilibrium
-                             && spread >= 1e-4                              // not a trivial (x==y) split
-                             && beta > 1e-8 && beta < 1.0 - 1e-8;           // not a collapsed phase
-        if (!genuine) {
-            IO.nonconvergence = true;
-            throw SolutionError(format("PTflash_twophase::solve_michelsen failed to converge: max|ln f_V - ln f_L| = %g at T = %g K, p = %g Pa",
-                                       last_max_g, static_cast<double>(IO.T), static_cast<double>(IO.p)));
-        }
+    CoolPropDbl spread = 0;
+    for (std::size_t i = 0; i < N; ++i)
+        spread = std::max(spread, std::abs(IO.x[i] - IO.y[i]));
+    // Trivial/collapsed rejection applies to EVERY published split, converged or not: a trivial
+    // split (x == y) satisfies the equal-fugacity residual identically, so converged == true does
+    // NOT imply a real two-phase state, and such a state must not slip past as a "converged" split.
+    // The trivial threshold (1e-7) sits far below any genuine split -- a near-critical two-phase
+    // state still has spread well above it -- so this does not reject a real near-critical split.
+    const bool trivial_or_collapsed = !(spread > 1e-7) || !(beta > 1e-8) || !(beta < 1.0 - 1e-8);
+    // When NOT at the strict quadratic tolerance, additionally require a genuine near-converged
+    // equilibrium (engineering residual + non-trivial spread), else throw -- restoring the
+    // no-silent-wrong-answer contract for wide-boiling splits that stall at ~1e-6.
+    const bool near_converged_genuine = ValidNumber(last_max_g) && last_max_g <= 1e-5 && spread >= 1e-4;
+    if (trivial_or_collapsed || (!converged && !near_converged_genuine)) {
+        IO.nonconvergence = true;
+        throw SolutionError(format("PTflash_twophase::solve_michelsen failed to converge: max|ln f_V - ln f_L| = %g at T = %g K, p = %g Pa",
+                                   last_max_g, static_cast<double>(IO.T), static_cast<double>(IO.p)));
     }
 }
 
