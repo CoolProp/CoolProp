@@ -3203,28 +3203,34 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         const double fb_genuine_tol = 1e-5;  // engineering equal-fugacity tolerance (matches the final gate)
         const int stall_genuine = 3;         // exit once genuine and floored
         double G_cur = G_old;                // consistent with the seed eval_min (cold global roots)
-        double mg_prev = mg;
-        int stall = 0;
+        double mg_best = mg;                 // lowest residual seen so far (the floor)
+        int stall = 0;                       // iterations since the floor last improved meaningfully
         for (int it = 0; ok && it < fb_max_iter; ++it) {
             if (mg < gibbs_tol) { fb_conv = true; fb_stop = "converged"; break; }
             // Stall exit: once the split is GENUINE (mg <= 1e-5) the equal-fugacity residual has
             // floored at ~1e-7 on density-solve accuracy, well before the 1e-9 quadratic target, so
-            // exit after a few flat steps rather than grinding to the maxiter cap.  A non-genuine
-            // probe (e.g. a single-phase T with no split) keeps iterating to the cap and is then
-            // rejected by the final gate.
-            if (mg < fb_genuine_tol && mg > mg_prev * (1.0 - 1e-3)) {
-                if (++stall >= stall_genuine) {
+            // exit rather than grind to the maxiter cap.  Track the FLOOR (mg_best), not the previous
+            // iterate: near the floor mg micro-oscillates (e.g. 1.43e-6 <-> 1.46e-6), and comparing
+            // against the previous value keeps flipping the counter so a genuine split never exits.
+            // Only a meaningful (>0.1%) drop in the floor resets the counter.
+            if (mg < mg_best * (1.0 - 1e-3)) {
+                mg_best = mg;
+                stall = 0;
+            } else {
+                mg_best = std::min(mg_best, mg);
+                if (mg < fb_genuine_tol && ++stall >= stall_genuine) {
                     fb_stop = "stall";
                     break;
                 }
-            } else {
-                stall = 0;
             }
-            mg_prev = mg;
             CoolPropDbl A = 0;
             for (std::size_t i = 0; i < N; ++i) A += a[i];
             CoolPropDbl B = 1.0 - A;  // z normalized to 1
             if (!(A > 1e-14) || !(B > 1e-14)) { fb_stop = "amt-boundary"; break; }
+            // Phase-vanishing bail: if the incipient amount collapses far below any genuine near-dew
+            // split (A ~ 1e-4 there) the feed is single-phase at this T -- no split exists -- so stop
+            // instead of iterating to the cap on a residual that will never reach genuine.
+            if (A < 1e-6 && mg > fb_genuine_tol) { fb_stop = "vanish"; break; }
 
             // SatL/SatV are synced to the current a (from the seed or the last accepted line-
             // search step).  Build the mole-number Gibbs gradient dG/da_i = ln f_i^min - ln
