@@ -501,7 +501,12 @@ void FlashRoutines::DP_flash(HelmholtzEOSMixtureBackend& HEOS) {
             // Update the state for conditions where the state was guessed
             HEOS.recalculate_singlephase_phase();
             if (!get_config_bool(DONT_CHECK_PROPERTY_LIMITS) && HEOS._T > 1.5 * HEOS.Tmax()) {
-                throw CoolProp::OutOfRangeError(format("DP yielded T > 1.5Tmax w/ T (%g) K").c_str());
+                // NB: the guard above reads HEOS._T first, which is what makes the
+                // CachedElement conversion here safe -- CachedElement::operator double()
+                // throws a bare std::exception when uncached.  Do not hoist this message
+                // construction out of the guard or reorder the condition.
+                throw CoolProp::OutOfRangeError(format("DP yielded T > 1.5Tmax w/ T (%Lg) K and Tmax (%Lg) K", static_cast<CoolPropDbl>(HEOS._T),
+                                                       static_cast<CoolPropDbl>(HEOS.Tmax())));
             }
         } else {
             // Nothing to do here; phase determination has handled this already
@@ -3699,7 +3704,7 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
             }
             Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-9, 100);
         } else {
-            throw ValueError(format("input %Lg is not in range %Lg,%Lg,%Lg", y, yc, ymin));
+            throw ValueError(format("input %Lg is not in range %Lg,%Lg", y, yc, ymin));
         }
         // Update the state (T > Tc). Honor an imposed phase here: a caller who used
         // specify_phase(iphase_supercritical_gas/liquid) would otherwise have it
