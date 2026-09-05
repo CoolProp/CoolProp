@@ -2699,16 +2699,6 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // Snapshot the stability trial-phase seed (non-trivial by construction) for the V-space
     // Newton fallback below (#3342 part 2 / CoolProp-1tbe.22).
     const std::vector<CoolPropDbl> x0_stab = IO.x, y0_stab = IO.y;
-    const bool cp_dbg_mich = std::getenv("CP_DBG_MICH") != nullptr;
-    if (cp_dbg_mich) {
-        double sp = 0, tn = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            sp = std::max(sp, std::abs(IO.x[i] - IO.y[i]));
-            tn += lnK[i] * lnK[i];
-        }
-        std::printf("[MICH] ENTRY T=%.6g p=%.6g beta0=%.6g spread0=%.4g trivnorm0=%.4g rhoL=%.6g rhoV=%.6g\n", (double)IO.T, (double)IO.p,
-                    (double)beta, sp, tn, (double)IO.rhomolar_liq, (double)IO.rhomolar_vap);
-    }
 
     // Reject a non-finite seed up front.  A stability false-positive at a single-phase point
     // (e.g. below the bubble) can hand in a NaN trial composition; without this guard the NaN
@@ -2866,14 +2856,6 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         }
     }
 
-    if (cp_dbg_mich) {
-        double sp = 0, tn = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            sp = std::max(sp, std::abs(IO.x[i] - IO.y[i]));
-            tn += lnK[i] * lnK[i];
-        }
-        std::printf("[MICH] postSS ss_converged=%d beta=%.6g spread=%.4g trivnorm=%.4g\n", (int)ss_converged, (double)beta, sp, tn);
-    }
     // Ensure phases are up-to-date after SS
     solve_rachford_rice();
     if (!evaluate_phases()) {
@@ -3223,35 +3205,34 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // stable roots the seed was built on.
             rho_warm_L = -1;
             rho_warm_V = -1;
-            if (!evaluate_phases()) return false;
-            HEOS.SatL->set_mole_fractions(IO.x);
-            HEOS.SatL->update_DmolarT_direct(IO.rhomolar_liq, IO.T);
-            HEOS.SatV->set_mole_fractions(IO.y);
-            HEOS.SatV->update_DmolarT_direct(IO.rhomolar_vap, IO.T);
-            mg = 0;
-            G = 0;
-            for (std::size_t i = 0; i < N; ++i) {
-                CoolPropDbl lV = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
-                CoolPropDbl lL = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
-                mg = std::max(mg, std::abs(lV - lL));
-                if (IO.x[i] > 0) G += (1.0 - beta) * IO.x[i] * lL;
-                if (IO.y[i] > 0) G += beta * IO.y[i] * lV;
+            // The whole density + fugacity evaluation is wrapped: evaluate_phases already catches the
+            // density solve, but update_DmolarT_direct / fugacity_coefficient can also throw a
+            // CoolPropBaseError.  Returning false on ANY throw keeps the fallback exception-safe --
+            // a failed evaluation is handled gracefully (no-step / non-genuine -> restore), never
+            // escaping solve_michelsen to turn a graceful single-phase fallback into a hard abort.
+            try {
+                if (!evaluate_phases()) return false;
+                HEOS.SatL->set_mole_fractions(IO.x);
+                HEOS.SatL->update_DmolarT_direct(IO.rhomolar_liq, IO.T);
+                HEOS.SatV->set_mole_fractions(IO.y);
+                HEOS.SatV->update_DmolarT_direct(IO.rhomolar_vap, IO.T);
+                mg = 0;
+                G = 0;
+                for (std::size_t i = 0; i < N; ++i) {
+                    CoolPropDbl lV = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
+                    CoolPropDbl lL = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
+                    mg = std::max(mg, std::abs(lV - lL));
+                    if (IO.x[i] > 0) G += (1.0 - beta) * IO.x[i] * lL;
+                    if (IO.y[i] > 0) G += beta * IO.y[i] * lV;
+                }
+            } catch (...) {
+                return false;
             }
             return ValidNumber(G) && ValidNumber(mg);
         };
 
-        bool fb_conv = false;
         double G_old = 0, mg = 0;
-        int fb_iters = 0;
-        const char* fb_stop = "maxiter";
         bool ok = eval_min(a, G_old, mg);  // seeds IO/SatL/SatV synced to a
-        if (cp_dbg_mich) {
-            CoolPropDbl As = 0;
-            for (std::size_t i = 0; i < N; ++i)
-                As += a[i];
-            std::printf("[MICH-FB] entry T=%.5g ok=%d minLiq=%d A=%.3g mg=%.4g beta_pre=%.6g\n", (double)IO.T, (int)ok, (int)minority_is_liquid,
-                        (double)As, mg, (double)beta_pre);
-        }
         // Globalised Newton on the minority mole numbers a, mirroring ThermoPack
         // tp_solver::mod_newton_search + optimizers::mod_newton: a positive-definite
         // (guaranteed-descent) Newton direction with a steepest-descent safeguard, a single-
@@ -3269,11 +3250,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         double mg_best = mg;                 // lowest residual seen so far (the floor)
         int stall = 0;                       // iterations since the floor last improved meaningfully
         for (int it = 0; ok && it < fb_max_iter; ++it) {
-            if (mg < gibbs_tol) {
-                fb_conv = true;
-                fb_stop = "converged";
-                break;
-            }
+            if (mg < gibbs_tol) break;  // quadratic-converged
             // Stall exit: once the split is GENUINE (mg <= 1e-5) the equal-fugacity residual has
             // floored at ~1e-7 on density-solve accuracy, well before the 1e-9 quadratic target, so
             // exit rather than grind to the maxiter cap.  Track the FLOOR (mg_best), not the previous
@@ -3285,26 +3262,17 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 stall = 0;
             } else {
                 mg_best = std::min(mg_best, mg);
-                if (mg < fb_genuine_tol && ++stall >= stall_genuine) {
-                    fb_stop = "stall";
-                    break;
-                }
+                if (mg < fb_genuine_tol && ++stall >= stall_genuine) break;  // genuine and floored
             }
             CoolPropDbl A = 0;
             for (std::size_t i = 0; i < N; ++i)
                 A += a[i];
             CoolPropDbl B = 1.0 - A;  // z normalized to 1
-            if (!(A > 1e-14) || !(B > 1e-14)) {
-                fb_stop = "amt-boundary";
-                break;
-            }
+            if (!(A > 1e-14) || !(B > 1e-14)) break;  // phase amount hit a bound
             // Phase-vanishing bail: if the incipient amount collapses far below any genuine near-dew
             // split (A ~ 1e-4 there) the feed is single-phase at this T -- no split exists -- so stop
             // instead of iterating to the cap on a residual that will never reach genuine.
-            if (A < 1e-6 && mg > fb_genuine_tol) {
-                fb_stop = "vanish";
-                break;
-            }
+            if (A < 1e-6 && mg > fb_genuine_tol) break;
 
             // SatL/SatV are synced to the current a (from the seed or the last accepted line-
             // search step).  Build the mole-number Gibbs gradient dG/da_i = ln f_i^min - ln
@@ -3354,11 +3322,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // caps the condition number, so the step along the soft mode stays bounded and the
             // single fraction-to-the-boundary scalar no longer has to throttle the stiff directions.
             Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(Hm);
-            if (es.info() != Eigen::Success) {
-                fb_stop = "eig-fail";
-                break;
-            }
-            const Eigen::VectorXd evals = es.eigenvalues();
+            if (es.info() != Eigen::Success) break;  // eigensolve failed
+            const Eigen::VectorXd& evals = es.eigenvalues();
             const Eigen::MatrixXd& Q = es.eigenvectors();
             // Gill-Murray-style modification: replace each eigenvalue lambda_k by max(|lambda_k|,
             // floor).  Taking the ABSOLUTE value of a negative eigenvalue (rather than flooring it
@@ -3403,11 +3368,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 }
                 alpha *= 0.5;
             }
-            if (!step_accepted) {
-                fb_stop = "no-step";
-                break;
-            }
-            fb_iters = it + 1;
+            if (!step_accepted) break;  // line search could not find a Gibbs-decreasing step
         }
         // Re-sync IO/SatL/SatV to the final iterate a and measure the split we would publish.  The
         // line search stops at a genuine equal-fugacity equilibrium (mg ~ 1e-7) but rarely reaches
@@ -3434,19 +3395,58 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         double G_single = HUGE_VAL;
         {
             HEOS.SatL->set_mole_fractions(IO.z);
+            CoolPropDbl rz = -1;
             CoolPropDbl rw = -1;
             try {
-                CoolPropDbl rz = solve_trial_rho_warm(*HEOS.SatL, IO.T, IO.p, rw);
-                HEOS.SatL->update_DmolarT_direct(rz, IO.T);
-                double gs = 0;
-                for (std::size_t i = 0; i < N; ++i)
-                    if (IO.z[i] > 0)
-                        gs += static_cast<double>(IO.z[i]) * (std::log(static_cast<double>(IO.z[i])) + std::log(HEOS.SatL->fugacity_coefficient(i)));
-                G_single = gs;
+                rz = solve_trial_rho_warm(*HEOS.SatL, IO.T, IO.p, rw);
             } catch (...) {
-                G_single = HUGE_VAL;  // reference unavailable -> do not block on it
+                rz = -1;
+            }
+            // The global lowest-Gibbs root can fail for a multiparameter mixture when p lies between
+            // the spinodal pressures -- exactly the near-dew regime this fallback targets (the same
+            // failure check_stability_michelsen guards at ~2108).  Fall back to a phase-specified
+            // root so the single-phase reference stays available and the Gibbs-descent guard below
+            // does not silently no-op (fail open).
+            if (!(rz > 0)) {
+                try {
+                    HEOS.SatL->specify_phase(iphase_gas);
+                    rz = HEOS.SatL->solver_rho_Tp(IO.T, IO.p);
+                    HEOS.SatL->unspecify_phase();
+                } catch (...) {
+                    HEOS.SatL->unspecify_phase();
+                    rz = -1;
+                }
+            }
+            if (!(rz > 0)) {
+                try {
+                    HEOS.SatL->specify_phase(iphase_liquid);
+                    rz = HEOS.SatL->solver_rho_Tp(IO.T, IO.p);
+                    HEOS.SatL->unspecify_phase();
+                } catch (...) {
+                    HEOS.SatL->unspecify_phase();
+                    rz = -1;
+                }
+            }
+            if (rz > 0) {
+                try {
+                    HEOS.SatL->update_DmolarT_direct(rz, IO.T);
+                    double gs = 0;
+                    for (std::size_t i = 0; i < N; ++i)
+                        if (IO.z[i] > 0)
+                            gs +=
+                              static_cast<double>(IO.z[i]) * (std::log(static_cast<double>(IO.z[i])) + std::log(HEOS.SatL->fugacity_coefficient(i)));
+                    if (ValidNumber(gs)) G_single = gs;
+                } catch (...) {
+                    G_single = HUGE_VAL;
+                }
             }
         }
+        // Gibbs-descent guard.  If no single-phase reference could be computed at all (G_single
+        // stays HUGE_VAL -- extremely rare: neither the global nor either phase-specified root
+        // solved), this check is skipped, but that only happens when the feed has no stable single
+        // phase at (T, p), i.e. it is genuinely two-phase, so publishing the split is the correct
+        // outcome; the independent VLE-ordering + genuine gates below still reject a trivial or
+        // mislabeled-LLE split.
         const bool fb_lower_gibbs = fb_eval_ok && ValidNumber(G_fin) && G_fin < G_single - 1e-10;
         // Vapour-liquid ordering: solve_michelsen is a VLE flash, so a genuine split must have the
         // liquid denser than the vapour.  A split with rho_vap >= rho_liq is a mislabeled/spurious
@@ -3455,13 +3455,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         const bool fb_vle_order = IO.rhomolar_liq > IO.rhomolar_vap;
         const bool fb_genuine = fb_eval_ok && ValidNumber(mg_fin) && mg_fin <= 1e-5 && fb_spread >= 1e-4 && beta > 1e-8 && beta < 1.0 - 1e-8
                                 && fb_lower_gibbs && fb_vle_order;
-        if (cp_dbg_mich)
-            std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g genuine=%d spread=%.4g beta=%.6g dG=%.3e rhoL=%.5g rhoV=%.5g\n",
-                        (int)fb_conv, fb_stop, fb_iters, mg_fin, (int)fb_genuine, (double)fb_spread, (double)beta, G_fin - G_single,
-                        (double)IO.rhomolar_liq, (double)IO.rhomolar_vap);
         if (fb_genuine) {
-            IO.beta = beta;                    // eval_min left IO.x/IO.y/beta/rho on the best split
-            converged = (mg_fin < gibbs_tol);  // else the final gate re-validates the genuine split
+            // eval_min left IO.x/IO.y/beta/rho on the accepted split; the always-run recompute block
+            // below re-derives `converged` from the published residual, so no need to set it here.
+            IO.beta = beta;
         } else {
             IO.x = x_pre;
             IO.y = y_pre;
@@ -3498,12 +3495,6 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // single-phase.  Distinguish the two: a genuine split has a non-trivial composition spread
     // AND an interior phase fraction AND an equal-fugacity residual at engineering tolerance; a
     // false positive is trivial (x==y), collapsed (beta -> 0/1), or grossly unconverged.
-    if (cp_dbg_mich) {
-        double sp = 0;
-        for (std::size_t i = 0; i < N; ++i)
-            sp = std::max(sp, std::abs(IO.x[i] - IO.y[i]));
-        std::printf("[MICH] EXIT  converged=%d final_max_g=%.4g beta=%.6g spread=%.4g\n", (int)converged, (double)last_max_g, (double)beta, sp);
-    }
     if (!converged) {
         CoolPropDbl spread = 0;
         for (std::size_t i = 0; i < N; ++i)

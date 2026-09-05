@@ -2267,6 +2267,7 @@ TEST_CASE("HSU_P flash: full near-saturation sweep must not return wrong T (spik
         }
     }
     WARN("SWEEP: checked=" << checked << " worst|err|=" << worst << " K  wrong=" << wrong << " threw=" << threw);
+    CHECK(checked > 0);  // guard: the sweep must actually exercise two-phase round trips, not pass vacuously
     CHECK(wrong == 0);
     CHECK(threw == 0);
 }

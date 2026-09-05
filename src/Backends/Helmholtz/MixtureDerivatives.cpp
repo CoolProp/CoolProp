@@ -62,9 +62,15 @@ CoolPropDbl MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(HelmholtzEOSMixtur
     //    d(ln x_{N-1})/dx_j = -1/x_{N-1} for every j, and d(ln x_i)/dx_j = delta_ij/x_i for i < N-1.
     //  * XN_INDEPENDENT: all x_i are treated as independent, so d(ln x_i)/dx_j = delta_ij/x_i for
     //    EVERY i, including the last component.  (Previously this branch was missing: the function
-    //    applied the XN_DEPENDENT term -1/x_{N-1} to the last row regardless of the flag, which
-    //    corrupted the last-component row for XN_INDEPENDENT callers -- e.g. the mole-number Gibbs
-    //    Hessian assembled in the mixture PT-flash second-order solver, GH #3342.)
+    //    applied the XN_DEPENDENT term -1/x_{N-1} to the last row regardless of the flag, so the
+    //    last-component row was wrong for XN_INDEPENDENT callers.  GH #3342: this fed a corrupted
+    //    last row into the new mole-number Gibbs Hessian of the PT-flash minority-phase fallback,
+    //    flipping its smallest eigenvalue negative -- see PTflash_twophase::solve_michelsen.)
+    //    NOTE: the phase-2 second-order Newton and the V-space Newton also consume this derivative
+    //    but feed it into a Hessian built for the fugacity-COEFFICIENT derivative, so they already
+    //    double-count the ideal term; this fix changes (does not fully correct) that pre-existing
+    //    misuse.  It is harmless there -- those solvers use the Hessian only as a positive-definite-
+    //    shifted descent preconditioner with Gibbs-decrease acceptance + a residual gate.
     if (xN_flag == XN_DEPENDENT) {
         if (i == N - 1) {
             val += -1 / x[N - 1];
