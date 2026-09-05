@@ -3267,7 +3267,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             CoolPropDbl A = 0;
             for (std::size_t i = 0; i < N; ++i)
                 A += a[i];
-            CoolPropDbl B = 1.0 - A;  // z normalized to 1
+            CoolPropDbl B = 1.0 - A;                  // z normalized to 1
             if (!(A > 1e-14) || !(B > 1e-14)) break;  // phase amount hit a bound
             // Phase-vanishing bail: if the incipient amount collapses far below any genuine near-dew
             // split (A ~ 1e-4 there) the feed is single-phase at this T -- no split exists -- so stop
