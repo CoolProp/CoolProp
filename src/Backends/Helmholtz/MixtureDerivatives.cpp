@@ -66,11 +66,13 @@ CoolPropDbl MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(HelmholtzEOSMixtur
     //    last-component row was wrong for XN_INDEPENDENT callers.  GH #3342: this fed a corrupted
     //    last row into the new mole-number Gibbs Hessian of the PT-flash minority-phase fallback,
     //    flipping its smallest eigenvalue negative -- see PTflash_twophase::solve_michelsen.)
-    //    NOTE: the phase-2 second-order Newton and the V-space Newton also consume this derivative
-    //    but feed it into a Hessian built for the fugacity-COEFFICIENT derivative, so they already
-    //    double-count the ideal term; this fix changes (does not fully correct) that pre-existing
-    //    misuse.  It is harmless there -- those solvers use the Hessian only as a positive-definite-
-    //    shifted descent preconditioner with Gibbs-decrease acceptance + a residual gate.
+    //    NOTE: the PT-flash Phase-2 second-order Newton used to consume THIS (full fugacity)
+    //    derivative in a Hessian built for the fugacity-COEFFICIENT derivative, double-counting the
+    //    ideal term; it now correctly calls dln_fugacity_coefficient_dxj__constT_p_xi instead (see
+    //    PTflash_twophase::solve_michelsen).  The V-space Newton (~line 2361) still consumes the
+    //    full derivative and thus still double-counts -- pre-existing, harmless there (the Hessian is
+    //    only a positive-definite-shifted descent preconditioner with Gibbs-decrease acceptance + a
+    //    residual gate), left for a separate change.
     if (xN_flag == XN_DEPENDENT) {
         if (i == N - 1) {
             val += -1 / x[N - 1];

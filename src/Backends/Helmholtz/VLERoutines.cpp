@@ -2844,12 +2844,19 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                     }
                 }
                 if (!(esq_after < esq_before)) {
-                    // Extrapolation hurt (or its trial evaluation failed): revert.
+                    // Extrapolation hurt (or its trial evaluation failed): revert.  The trial's
+                    // evaluate_phases() also advanced the warm-start roots rho_warm_L/V to the
+                    // rejected extrapolated composition; restore those too, otherwise the required
+                    // evaluate_phases() after the SS loop warm-starts from the rejected roots and can
+                    // land the restored composition on a different (metastable) density branch,
+                    // silently overwriting the reverted state.
                     lnK = lnK_save;
                     IO.x = x_save;
                     IO.y = y_save;
                     IO.rhomolar_liq = rhoL_save;
                     IO.rhomolar_vap = rhoV_save;
+                    rho_warm_L = rhoL_save;
+                    rho_warm_V = rhoV_save;
                     beta = beta_save;
                 }
             }
@@ -2918,11 +2925,21 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             Eigen::VectorXd g(N), dia(N);
             Eigen::MatrixXd H(N, N);
             CoolPropDbl max_g = 0;
+            // Fugacity-COEFFICIENT composition derivatives d(ln phi_i)/dx_j.  The Hessian assembled
+            // below adds the ideal-gas contribution itself (the "- 1.0" projection term and the
+            // diagonal V_frac/x_i + L_frac/y_i), so it must be fed the coefficient derivative, NOT
+            // the full fugacity derivative d(ln f_i)/dx_j = d(ln phi_i)/dx_j + delta_ij/x_i.  Feeding
+            // the full derivative (as this site did before) double-counts the ideal term -- off-
+            // diagonals become "... - 2" instead of "... - 1" and the diagonal ideal is doubled --
+            // degrading the Hessian's conditioning and, for some mixtures (e.g. N2/O2/Ar), stalling
+            // Phase 2 short of the strict tolerance so it falls through to the expensive fallback.
             Eigen::MatrixXd DL(N, N), DV(N, N);
             for (std::size_t i = 0; i < N; ++i) {
                 for (std::size_t j = 0; j < N; ++j) {
-                    DL(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatL.get()), i, j, CoolProp::XN_INDEPENDENT);
-                    DV(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, CoolProp::XN_INDEPENDENT);
+                    DL(i, j) =
+                      CoolProp::MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(*(HEOS.SatL.get()), i, j, CoolProp::XN_INDEPENDENT);
+                    DV(i, j) =
+                      CoolProp::MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, CoolProp::XN_INDEPENDENT);
                 }
             }
             for (std::size_t i = 0; i < N; ++i) {
