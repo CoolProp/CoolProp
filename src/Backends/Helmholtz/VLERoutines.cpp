@@ -3543,17 +3543,21 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     CoolPropDbl spread = 0;
     for (std::size_t i = 0; i < N; ++i)
         spread = std::max(spread, std::abs(IO.x[i] - IO.y[i]));
-    // Trivial/collapsed rejection applies to EVERY published split, converged or not: a trivial
-    // split (x == y) satisfies the equal-fugacity residual identically, so converged == true does
-    // NOT imply a real two-phase state, and such a state must not slip past as a "converged" split.
-    // The trivial threshold (1e-7) sits far below any genuine split -- a near-critical two-phase
-    // state still has spread well above it -- so this does not reject a real near-critical split.
-    const bool trivial_or_collapsed = !(spread > 1e-7) || !(beta > 1e-8) || !(beta < 1.0 - 1e-8);
+    // Converged-trivial guard (the converged-path half of #3168): a split that is composition-
+    // trivial (x == y) satisfies the equal-fugacity residual identically, so converged == true does
+    // NOT imply a real two-phase state -- reject it even though the residual is met.  Gate ONLY on
+    // the composition spread here, NOT on beta: a genuine dew/bubble split legitimately has beta
+    // -> 0/1 (a vanishing incipient phase, the #3342 target -- e.g. a flash AT the dew point returns
+    // beta ~ 1 with a full-size composition spread), and collapse of beta to a single phase is
+    // handled by the caller's own beta -> 0/1 guard.  The trivial threshold (1e-7) sits far below
+    // any genuine split, including near-critical, so this does not reject a real split.
+    const bool converged_trivial = !(spread > 1e-7);
     // When NOT at the strict quadratic tolerance, additionally require a genuine near-converged
-    // equilibrium (engineering residual + non-trivial spread), else throw -- restoring the
-    // no-silent-wrong-answer contract for wide-boiling splits that stall at ~1e-6.
-    const bool near_converged_genuine = ValidNumber(last_max_g) && last_max_g <= 1e-5 && spread >= 1e-4;
-    if (trivial_or_collapsed || (!converged && !near_converged_genuine)) {
+    // equilibrium -- engineering residual, non-trivial spread, AND an interior phase fraction --
+    // else throw, restoring the no-silent-wrong-answer contract for wide-boiling splits that stall
+    // at ~1e-6.  (This matches the pre-existing #3168/#3192 gate exactly on the !converged path.)
+    const bool near_converged_genuine = ValidNumber(last_max_g) && last_max_g <= 1e-5 && spread >= 1e-4 && beta > 1e-8 && beta < 1.0 - 1e-8;
+    if (converged_trivial || (!converged && !near_converged_genuine)) {
         IO.nonconvergence = true;
         throw SolutionError(format("PTflash_twophase::solve_michelsen failed to converge: max|ln f_V - ln f_L| = %g at T = %g K, p = %g Pa",
                                    last_max_g, static_cast<double>(IO.T), static_cast<double>(IO.p)));
