@@ -3290,23 +3290,14 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             }
             Eigen::MatrixXd Dmin(N, N), Dmaj(N, N), Hm(N, N);
             Eigen::VectorXd grad(N);
+            // Fugacity composition derivatives d(ln f_i)/dx_j.  XN_INDEPENDENT is the correct
+            // convention for the mole-number Hessian below (all x_i independent, then projected); the
+            // last-component ideal-term bug that used to corrupt row N-1 here is now fixed at the
+            // source in MixtureDerivatives::dln_fugacity_dxj__constT_p_xi (GH #3342, FD-verified).
             for (std::size_t i = 0; i < N; ++i) {
                 for (std::size_t j = 0; j < N; ++j) {
                     Dmin(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smin, i, j, CoolProp::XN_INDEPENDENT);
                     Dmaj(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smaj, i, j, CoolProp::XN_INDEPENDENT);
-                }
-            }
-            // dln_fugacity_dxj__constT_p_xi hardcodes the ideal term d(ln x_i)/dx_j for the
-            // XN_DEPENDENT convention: for the LAST component it adds -1/x_{N-1} on every j.  We call
-            // it with XN_INDEPENDENT (all x_i treated independent, then projected), where the correct
-            // ideal term for the last component is delta_{N-1,j}/x_{N-1}.  Left uncorrected, row N-1
-            // (the last component -- often the dominant one near the dew) is wrong and flips the
-            // smallest Hessian eigenvalue negative (FD-verified).  Correct that one row for both phases.
-            {
-                const std::size_t last = N - 1;
-                for (std::size_t j = 0; j < N; ++j) {
-                    Dmin(last, j) += 1.0 / mnc[last] + (j == last ? 1.0 / mnc[last] : 0.0);
-                    Dmaj(last, j) += 1.0 / mjc[last] + (j == last ? 1.0 / mjc[last] : 0.0);
                 }
             }
             for (std::size_t i = 0; i < N; ++i) {
