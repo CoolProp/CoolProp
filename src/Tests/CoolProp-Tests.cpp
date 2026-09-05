@@ -7850,4 +7850,44 @@ TEST_CASE("Standard molar enthalpy of formation from REFPROP", "[formation][REFP
     }
 }
 
+// CoolProp's format() is fmt::sprintf, which is type-safe: a format string whose
+// printf specifiers outnumber its arguments throws fmt::format_error("argument not
+// found") *while the message is being built*, so the intended CoolProp::ValueError
+// is never constructed and the caller gets an untyped std::runtime_error instead.
+// Every wrapper that catches CoolProp errors by type (and every `except ValueError`
+// in the Python layer) then lets it escape.
+//
+// These (Smolar, T) pairs sit above Tc with an entropy no density can reproduce, so
+// they land in the T > Tc branch of DHSU_T_flash -- the site that carried a
+// 4-specifier / 3-argument message and killed both fluids outright in every docs
+// consistency-plot build (bd CoolProp-b7p8).  The entropies are held well clear of
+// the reachable range rather than at the historical grid points that first tripped
+// this (MethylOleate S = 502.386 against a 499.458 bound, 0.6% of margin;
+// MethylLinolenate S = 613.312 against 613.253, 0.01%), so an ancillary or EOS refit
+// cannot quietly pull them back in range and turn this into a spurious failure.
+TEST_CASE("Unreachable supercritical T+caloric inputs raise a CoolProp error, not a format error", "[Helmholtz],[flash_error_type]") {
+    struct Point
+    {
+        const char* fluid;
+        double smolar;  // J/mol/K
+        double T;       // K
+    };
+    // Tc(MethylOleate) = 782 K, Tc(MethylLinolenate) = 772 K.
+    const std::vector<Point> points{{"MethylOleate", 900.0, 789.7505128205128}, {"MethylLinolenate", 1100.0, 905.2692307692307}};
+    for (const Point& pt : points) {
+        CAPTURE(pt.fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", pt.fluid));
+        // Matches() is a WHOLE-string match, so it pins three things at once that
+        // CHECK_THROWS_AS plus a substring check cannot: that a CoolProp error type
+        // came out, that it came from THIS throw site (the sibling at the top of the
+        // same branch prefixes its message with "Even by increasing rhoc, ..."), and
+        // that all three values actually rendered.  A message that lost a value to a
+        // specifier/argument mismatch in either direction fails this -- checking only
+        // for an absent '%' would not, because fmt drops the value, not the specifier.
+        CHECK_THROWS_MATCHES(
+          AS->update(CoolProp::SmolarT_INPUTS, pt.smolar, pt.T), CoolProp::ValueError,
+          Catch::Matchers::MessageMatches(Catch::Matchers::Matches(R"(input [-+0-9.eE]+ is not in range [-+0-9.eE]+,[-+0-9.eE]+)")));
+    }
+}
+
 #endif
