@@ -2170,8 +2170,10 @@ TEST_CASE("Mixture PT flash near the dew line resolves to a genuine two-phase sp
             auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
             AS->set_mole_fractions(z);
             AS->update(PT_INPUTS, P, T);
-            // Correctly classified two-phase (not collapsed to a single-phase misclassification)...
-            CHECK(AS->phase() == iphase_twophase);
+            // Correctly classified two-phase (not collapsed to a single-phase misclassification).
+            // REQUIRE (fatal): a regression to single phase must stop the section here, before the
+            // liquid/vapour accessors below, which are only valid for a two-phase state.
+            REQUIRE(AS->phase() == iphase_twophase);
             // ... with an interior vapour quality ...
             const double Q = AS->Q();
             CHECK(Q > 1e-8);

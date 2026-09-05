@@ -3231,8 +3231,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             return ValidNumber(G) && ValidNumber(mg);
         };
 
-        double G_old = 0, mg = 0;
-        bool ok = eval_min(a, G_old, mg);  // seeds IO/SatL/SatV synced to a
+        double fb_G_old = 0, mg = 0;
+        bool ok = eval_min(a, fb_G_old, mg);  // seeds IO/SatL/SatV synced to a
         // Globalised Newton on the minority mole numbers a, mirroring ThermoPack
         // tp_solver::mod_newton_search + optimizers::mod_newton: a positive-definite
         // (guaranteed-descent) Newton direction with a steepest-descent safeguard, a single-
@@ -3246,7 +3246,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         const int max_ls = 40;               // Armijo backtracking tries per outer iteration
         const double fb_genuine_tol = 1e-5;  // engineering equal-fugacity tolerance (matches the final gate)
         const int stall_genuine = 3;         // exit once genuine and floored
-        double G_cur = G_old;                // consistent with the seed eval_min (cold global roots)
+        double G_cur = fb_G_old;             // consistent with the seed eval_min (cold global roots)
         double mg_best = mg;                 // lowest residual seen so far (the floor)
         int stall = 0;                       // iterations since the floor last improved meaningfully
         for (int it = 0; ok && it < fb_max_iter; ++it) {
