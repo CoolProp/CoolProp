@@ -3420,39 +3420,9 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         double G_single = HUGE_VAL;
         {
             HEOS.SatL->set_mole_fractions(IO.z);
-            CoolPropDbl rz = -1;
-            CoolPropDbl rw = -1;
-            try {
-                rz = solve_trial_rho_warm(*HEOS.SatL, IO.T, IO.p, rw);
-            } catch (...) {
-                rz = -1;
-            }
-            // The global lowest-Gibbs root can fail for a multiparameter mixture when p lies between
-            // the spinodal pressures -- exactly the near-dew regime this fallback targets (the same
-            // failure check_stability_michelsen guards at ~2108).  Fall back to a phase-specified
-            // root so the single-phase reference stays available and the Gibbs-descent guard below
-            // does not silently no-op (fail open).
-            if (!(rz > 0)) {
-                try {
-                    HEOS.SatL->specify_phase(iphase_gas);
-                    rz = HEOS.SatL->solver_rho_Tp(IO.T, IO.p);
-                    HEOS.SatL->unspecify_phase();
-                } catch (...) {
-                    HEOS.SatL->unspecify_phase();
-                    rz = -1;
-                }
-            }
-            if (!(rz > 0)) {
-                try {
-                    HEOS.SatL->specify_phase(iphase_liquid);
-                    rz = HEOS.SatL->solver_rho_Tp(IO.T, IO.p);
-                    HEOS.SatL->unspecify_phase();
-                } catch (...) {
-                    HEOS.SatL->unspecify_phase();
-                    rz = -1;
-                }
-            }
-            if (rz > 0) {
+            // Single-phase feed Gibbs at a given density root (HUGE_VAL if the root/eval is unusable).
+            auto feed_gibbs = [&](CoolPropDbl rz) -> double {
+                if (!(rz > 0)) return HUGE_VAL;
                 try {
                     HEOS.SatL->update_DmolarT_direct(rz, IO.T);
                     double gs = 0;
@@ -3460,9 +3430,39 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                         if (IO.z[i] > 0)
                             gs +=
                               static_cast<double>(IO.z[i]) * (std::log(static_cast<double>(IO.z[i])) + std::log(HEOS.SatL->fugacity_coefficient(i)));
-                    if (ValidNumber(gs)) G_single = gs;
+                    return ValidNumber(gs) ? gs : HUGE_VAL;
                 } catch (...) {
-                    G_single = HUGE_VAL;
+                    return HUGE_VAL;
+                }
+            };
+            // Prefer the global lowest-Gibbs root -- it already selects the stable single phase.
+            CoolPropDbl rw = -1, rz_global = -1;
+            try {
+                rz_global = solve_trial_rho_warm(*HEOS.SatL, IO.T, IO.p, rw);
+            } catch (...) {
+                rz_global = -1;
+            }
+            if (rz_global > 0) {
+                G_single = feed_gibbs(rz_global);
+            } else {
+                // The global root can fail for a multiparameter mixture when p lies between the
+                // spinodal pressures -- the near-dew regime this fallback targets (the same failure
+                // check_stability_michelsen guards at ~2108).  Solve BOTH phase-specified roots and
+                // take the LOWER-Gibbs one: taking the first that solves (e.g. the gas branch) could
+                // pick a higher-Gibbs branch and make the descent guard too lenient, letting a
+                // metastable split through.
+                for (int which = 0; which < 2; ++which) {
+                    const phases fl = (which == 0) ? iphase_gas : iphase_liquid;
+                    CoolPropDbl rz = -1;
+                    try {
+                        HEOS.SatL->specify_phase(fl);
+                        rz = HEOS.SatL->solver_rho_Tp(IO.T, IO.p);
+                        HEOS.SatL->unspecify_phase();
+                    } catch (...) {
+                        HEOS.SatL->unspecify_phase();
+                        rz = -1;
+                    }
+                    G_single = std::min(G_single, feed_gibbs(rz));
                 }
             }
         }
