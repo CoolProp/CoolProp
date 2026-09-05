@@ -77,15 +77,16 @@ vel viscosity_validation_data[] = {
   vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-3),
 
   // From REFPROP 9.1 since Kiselev, IECR, 2005 does not provide validation data
-  // Ethanol viscosity is now Sotiriadou et al., IJT 44:40 (2023), superseding Kiselev
-  // et al. (2005).  These are the 2023 paper's OWN verification points.  The four
-  // saturation-state points that used to sit here described the old correlation and
-  // moved with it: +0.65 % and +1.80 % at 300 K (liquid, vapour), -2.40 % and -4.73 %
-  // at 500 K.  They were CoolProp-generated rather than published values, so they are
-  // replaced by the paper's rather than regenerated from the code under test.
-  vel("Ethanol", "T", 300, "Dmass", 1e-9, "V", 8.9893e-6, 1e-5),
-  vel("Ethanol", "T", 300, "Dmass", 10.0, "V", 8.9382e-6, 1e-5),
-  vel("Ethanol", "T", 300, "Dmass", 850.0, "V", 1682.72e-6, 1e-5),
+  // Ethanol viscosity is DELIBERATELY still Kiselev et al. (2005) here.  Sotiriadou
+  // et al., IJT 44:40 (2023) supersedes it and is implemented and validated, but its
+  // residual has a pole at tau^2*(1 + delta^2) = 1 whose low-density end lies in
+  // REACHABLE superheated vapour (493.6 K to Tc), where the viscosity diverges and
+  // changes sign.  It is ~1e-7 wide in relative density so it is unlikely to be hit,
+  // but the chance is not zero.  Withdrawn pending bd CoolProp-z94e.
+  vel("Ethanol", "T", 300, "Q", 0, "V", 0.0010439017679191723, 1e-3),
+  vel("Ethanol", "T", 300, "Q", 1, "V", 8.8293820936046416e-006, 1e-3),
+  vel("Ethanol", "T", 500, "Q", 0, "V", 6.0979347125450671e-005, 1e-3),
+  vel("Ethanol", "T", 500, "Q", 1, "V", 1.7229157141572511e-005, 1e-3),
 
   // From CoolProp v5 implementation of correlation - more or less agrees with REFPROP
   // Errata in BibTeX File
@@ -367,12 +368,10 @@ vel viscosity_validation_data[] = {
   vel("n-Undecane", "T", 550, "Dmass", 600.0, "V", 188.68e-6, 1e-4),
   vel("n-Undecane", "T", 635, "Dmass", 325.0, "V", 49.077e-6, 1e-4),
 
-  // NOTE for anyone comparing these against the papers.  Four of the printed equations
-  // in this family do not reproduce their own verification points.  TWO OF THE FOUR THE
-  // AUTHORS HAVE ALREADY CORRECTED IN PRINT, and this code follows the correction:
-  //   Ethanol Eq. 12 -- Erratum, IJT 44(3) (2023), doi:10.1007/s10765-023-03160-y:
-  //                     "a power \"2\" in the reduced density in the brackets, is missing".
-  //                     The original as printed is 5.29 % low at 300 K / 850 kg/m^3.
+  // NOTE for anyone comparing these against the papers.  THREE of the printed equations
+  // behind the correlations shipped here do not reproduce their own verification points.
+  // ONE OF THE THREE THE AUTHORS HAVE ALREADY CORRECTED IN PRINT, and this code follows
+  // the correction:
   //   Xenon   Eq. 6  -- Correction, IJT 44(4) (2023), doi:10.1007/s10765-023-03175-5:
   //                     a power "12" should have been used instead of "7".  The original
   //                     as printed is 8.06 % low at 300 K / 2500 kg/m^3.
@@ -382,6 +381,9 @@ vel viscosity_validation_data[] = {
   //   Krypton Eq. 13 -- prints the residual as a bare sum, omitting the exp its own Fig. 8
   //                     implementation applies; as printed the viscosity is NEGATIVE at all
   //                     five of the paper's points.  Recorded in dev/fluids/Krypton.json.
+  // A fourth, ethanol Eq. 12, was also defective and also already corrected in print
+  // (doi:10.1007/s10765-023-03160-y); that correlation is NOT shipped here -- see the
+  // ethanol entry above and bd CoolProp-z94e.
   // Note the xenon case is an exponent in a NUMERATOR, not a denominator sign -- do not
   // assume such errors only live in denominators.  Each fluid file's higher_order block
   // carries the full citation.
@@ -513,7 +515,7 @@ vel conductivity_validation_data[] = {
   // different viscosity than the conductivity correlation was built against.
   // Measured over 192 stable (p,T) states the whole-surface movement is <= 1.53 %,
   // concentrated near the critical point where the enhancement dominates.
-  vel("Ethanol", "T", 400, "Dmass", 690, "L", 149.21e-3, 2e-4),
+  vel("Ethanol", "T", 400, "Dmass", 690, "L", 149.21e-3, 1e-4),
   vel("Ethanol", "T", 500, "Dmass", 10, "L", 39.594e-3, 1e-4),
 
   //// From Assael, JPCRD, 2012
