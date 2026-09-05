@@ -4699,7 +4699,7 @@
     },
     "viscosity": [
       {
-        "BibTeX": "Sotiriadou-IJT-2023-ethanol",
+        "BibTeX": "Sotiriadou-IJT-2023-ethanol,Sotiriadou-IJT-2023-ethanol-CORR",
         "sigma_eta": 4.53e-10,
         "epsilon_over_k": 362.6,
         "dilute": {

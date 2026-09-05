@@ -3572,7 +3572,7 @@
   },
   "TRANSPORT": {
     "viscosity": {
-      "BibTeX": "Velliadou-IJT-2021-xenon",
+      "BibTeX": "Velliadou-IJT-2021-xenon,Velliadou-IJT-2021-xenon-CORR",
       "dilute": {
         "type": "expression",
         "formula": "let L = ln(T/T_ref)\n1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))",
