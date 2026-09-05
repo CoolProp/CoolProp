@@ -2702,9 +2702,12 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     const bool cp_dbg_mich = std::getenv("CP_DBG_MICH") != nullptr;
     if (cp_dbg_mich) {
         double sp = 0, tn = 0;
-        for (std::size_t i = 0; i < N; ++i) { sp = std::max(sp, std::abs(IO.x[i] - IO.y[i])); tn += lnK[i]*lnK[i]; }
-        std::printf("[MICH] ENTRY T=%.6g p=%.6g beta0=%.6g spread0=%.4g trivnorm0=%.4g rhoL=%.6g rhoV=%.6g\n",
-                    (double)IO.T,(double)IO.p,(double)beta,sp,tn,(double)IO.rhomolar_liq,(double)IO.rhomolar_vap);
+        for (std::size_t i = 0; i < N; ++i) {
+            sp = std::max(sp, std::abs(IO.x[i] - IO.y[i]));
+            tn += lnK[i] * lnK[i];
+        }
+        std::printf("[MICH] ENTRY T=%.6g p=%.6g beta0=%.6g spread0=%.4g trivnorm0=%.4g rhoL=%.6g rhoV=%.6g\n", (double)IO.T, (double)IO.p,
+                    (double)beta, sp, tn, (double)IO.rhomolar_liq, (double)IO.rhomolar_vap);
     }
 
     // Reject a non-finite seed up front.  A stability false-positive at a single-phase point
@@ -2865,8 +2868,11 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
 
     if (cp_dbg_mich) {
         double sp = 0, tn = 0;
-        for (std::size_t i = 0; i < N; ++i) { sp = std::max(sp, std::abs(IO.x[i] - IO.y[i])); tn += lnK[i]*lnK[i]; }
-        std::printf("[MICH] postSS ss_converged=%d beta=%.6g spread=%.4g trivnorm=%.4g\n",(int)ss_converged,(double)beta,sp,tn);
+        for (std::size_t i = 0; i < N; ++i) {
+            sp = std::max(sp, std::abs(IO.x[i] - IO.y[i]));
+            tn += lnK[i] * lnK[i];
+        }
+        std::printf("[MICH] postSS ss_converged=%d beta=%.6g spread=%.4g trivnorm=%.4g\n", (int)ss_converged, (double)beta, sp, tn);
     }
     // Ensure phases are up-to-date after SS
     solve_rachford_rice();
@@ -3154,9 +3160,11 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         std::vector<CoolPropDbl> w = minority_is_liquid ? x0_stab : y0_stab;
         {
             CoolPropDbl sw = 0;
-            for (std::size_t i = 0; i < N; ++i) sw += std::max(w[i], static_cast<CoolPropDbl>(0));
+            for (std::size_t i = 0; i < N; ++i)
+                sw += std::max(w[i], static_cast<CoolPropDbl>(0));
             if (sw > 0) {
-                for (std::size_t i = 0; i < N; ++i) w[i] = std::max(w[i], static_cast<CoolPropDbl>(0)) / sw;
+                for (std::size_t i = 0; i < N; ++i)
+                    w[i] = std::max(w[i], static_cast<CoolPropDbl>(0)) / sw;
             } else {
                 w = IO.z;
             }
@@ -3178,7 +3186,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             }
         }
         std::vector<CoolPropDbl> a(N);
-        for (std::size_t i = 0; i < N; ++i) a[i] = 1e-3 * w[i];  // small incipient amount
+        for (std::size_t i = 0; i < N; ++i)
+            a[i] = 1e-3 * w[i];  // small incipient amount
         rho_warm_L = -1;
         rho_warm_V = -1;
 
@@ -3193,9 +3202,19 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             }
             if (!(A > 0) || !(B > 0)) return false;
             std::vector<CoolPropDbl> mn(N), mj(N);
-            for (std::size_t i = 0; i < N; ++i) { mn[i] = aa[i] / A; mj[i] = (IO.z[i] - aa[i]) / B; }
-            if (minority_is_liquid) { IO.x = mn; IO.y = mj; beta = B; }
-            else { IO.y = mn; IO.x = mj; beta = A; }
+            for (std::size_t i = 0; i < N; ++i) {
+                mn[i] = aa[i] / A;
+                mj[i] = (IO.z[i] - aa[i]) / B;
+            }
+            if (minority_is_liquid) {
+                IO.x = mn;
+                IO.y = mj;
+                beta = B;
+            } else {
+                IO.y = mn;
+                IO.x = mj;
+                beta = A;
+            }
             // Force the cold global (lowest-Gibbs) density solve every FB evaluation.  The warm-
             // start local Newton drifts to a nearby metastable root (within the 0.5x-2x branch
             // guard) after the first call, so the incipient/majority densities land on the wrong
@@ -3228,7 +3247,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         bool ok = eval_min(a, G_old, mg);  // seeds IO/SatL/SatV synced to a
         if (cp_dbg_mich) {
             CoolPropDbl As = 0;
-            for (std::size_t i = 0; i < N; ++i) As += a[i];
+            for (std::size_t i = 0; i < N; ++i)
+                As += a[i];
             std::printf("[MICH-FB] entry T=%.5g ok=%d minLiq=%d A=%.3g mg=%.4g beta_pre=%.6g\n", (double)IO.T, (int)ok, (int)minority_is_liquid,
                         (double)As, mg, (double)beta_pre);
         }
@@ -3249,7 +3269,11 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         double mg_best = mg;                 // lowest residual seen so far (the floor)
         int stall = 0;                       // iterations since the floor last improved meaningfully
         for (int it = 0; ok && it < fb_max_iter; ++it) {
-            if (mg < gibbs_tol) { fb_conv = true; fb_stop = "converged"; break; }
+            if (mg < gibbs_tol) {
+                fb_conv = true;
+                fb_stop = "converged";
+                break;
+            }
             // Stall exit: once the split is GENUINE (mg <= 1e-5) the equal-fugacity residual has
             // floored at ~1e-7 on density-solve accuracy, well before the 1e-9 quadratic target, so
             // exit rather than grind to the maxiter cap.  Track the FLOOR (mg_best), not the previous
@@ -3267,9 +3291,13 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 }
             }
             CoolPropDbl A = 0;
-            for (std::size_t i = 0; i < N; ++i) A += a[i];
+            for (std::size_t i = 0; i < N; ++i)
+                A += a[i];
             CoolPropDbl B = 1.0 - A;  // z normalized to 1
-            if (!(A > 1e-14) || !(B > 1e-14)) { fb_stop = "amt-boundary"; break; }
+            if (!(A > 1e-14) || !(B > 1e-14)) {
+                fb_stop = "amt-boundary";
+                break;
+            }
             // Phase-vanishing bail: if the incipient amount collapses far below any genuine near-dew
             // split (A ~ 1e-4 there) the feed is single-phase at this T -- no split exists -- so stop
             // instead of iterating to the cap on a residual that will never reach genuine.
@@ -3307,7 +3335,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             }
             std::vector<CoolPropDbl> sMinV(N, 0), sMajV(N, 0);
             for (std::size_t i = 0; i < N; ++i)
-                for (std::size_t k = 0; k < N; ++k) { sMinV[i] += mnc[k] * Dmin(i, k); sMajV[i] += mjc[k] * Dmaj(i, k); }
+                for (std::size_t k = 0; k < N; ++k) {
+                    sMinV[i] += mnc[k] * Dmin(i, k);
+                    sMajV[i] += mjc[k] * Dmaj(i, k);
+                }
             for (std::size_t i = 0; i < N; ++i)
                 for (std::size_t j = 0; j < N; ++j)
                     Hm(i, j) = (Dmin(i, j) - sMinV[i]) / A + (Dmaj(i, j) - sMajV[i]) / B;
@@ -3372,7 +3403,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 }
                 alpha *= 0.5;
             }
-            if (!step_accepted) { fb_stop = "no-step"; break; }
+            if (!step_accepted) {
+                fb_stop = "no-step";
+                break;
+            }
             fb_iters = it + 1;
         }
         // Re-sync IO/SatL/SatV to the final iterate a and measure the split we would publish.  The
@@ -3466,8 +3500,9 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // false positive is trivial (x==y), collapsed (beta -> 0/1), or grossly unconverged.
     if (cp_dbg_mich) {
         double sp = 0;
-        for (std::size_t i = 0; i < N; ++i) sp = std::max(sp, std::abs(IO.x[i] - IO.y[i]));
-        std::printf("[MICH] EXIT  converged=%d final_max_g=%.4g beta=%.6g spread=%.4g\n",(int)converged,(double)last_max_g,(double)beta,sp);
+        for (std::size_t i = 0; i < N; ++i)
+            sp = std::max(sp, std::abs(IO.x[i] - IO.y[i]));
+        std::printf("[MICH] EXIT  converged=%d final_max_g=%.4g beta=%.6g spread=%.4g\n", (int)converged, (double)last_max_g, (double)beta, sp);
     }
     if (!converged) {
         CoolPropDbl spread = 0;
