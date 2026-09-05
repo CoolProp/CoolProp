@@ -3113,6 +3113,27 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // publish only a GENUINE split (equal-fugacity residual <= 1e-5, non-trivial spread, interior
     // beta); on any other outcome restore the exact pre-fallback state, so it can never regress a
     // currently-passing case.
+    //
+    // METHOD PROVENANCE.  This is Michelsen's second-order phase-split, mirrored via ThermoPack:
+    //   [M1982b]  Michelsen, "The isothermal flash problem. Part II. Phase-split calculation",
+    //             Fluid Phase Equilib. 9 (1982) 21-40.  The minority/reference-phase mole-number
+    //             variables are Eq.14-15 (dependent variable = the phase where the component is most
+    //             abundant), the gradient dG/da_i = ln f_i^min - ln f_i^maj is Eq.16, the mole-number
+    //             Hessian is Eq.17; the modified-Cholesky descent + Gibbs-decrease-accepted line
+    //             search (our eigenvalue-flip is a spectral variant) is the "Second order methods"
+    //             section; the Gibbs-descent/"never return to the trivial solution" and phase-removal
+    //             rules motivate our genuine/Gibbs/VLE-ordering guards.
+    //   [MHA1980b] Mehra, Heidemann & Aziz, "Computation of multiphase equilibria for compositional
+    //             simulators", SPE 9232 (1980) -- origin of the yield-fraction/reference-phase choice
+    //             adopted by M1982b Eq.14-15.
+    //   [Murray1972] W. Murray, "Second derivative methods", in Methods for Unconstrained
+    //             Optimization, Academic Press (1972) -- the modified-Cholesky modified-Newton.
+    //   [CN1975]  Crowe & Nishio, AIChE J. 21 (1975) 528-533 -- the GDEM acceleration of Phase 1.
+    //   [MM2007]  Michelsen & Mollerup, "Thermodynamic Models: Fundamentals & Computational
+    //             Aspects", 2nd ed. (2007), Ch.12 -- textbook treatment of the above.
+    //   [TP2017]  Wilhelmsen et al., Ind. Eng. Chem. Res. 56 (2017) 3503-3515; ThermoPack
+    //             (https://github.com/thermotools/thermopack), tp_solver.f90 + optimizer.f90 --
+    //             the implementation mirrored here.
     if (!converged) {
         const std::vector<CoolPropDbl> x_pre = IO.x, y_pre = IO.y;
         const CoolPropDbl beta_pre = beta, rhoL_pre = IO.rhomolar_liq, rhoV_pre = IO.rhomolar_vap;
