@@ -3097,8 +3097,6 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // safe: ACCEPTS only a converged result; on any failure restores the exact pre-fallback state,
     // so it can never regress a currently-passing case.
     if (!converged) {
-        const bool cp_dbg_fb = std::getenv("CP_DBG_MICH_FB") != nullptr;
-        const bool fb_warm_rho = std::getenv("CP_MICH_WARMRHO") != nullptr;    // A/B: allow warm-start density (drifts to metastable root)
         const std::vector<CoolPropDbl> x_pre = IO.x, y_pre = IO.y;
         const CoolPropDbl beta_pre = beta, rhoL_pre = IO.rhomolar_liq, rhoV_pre = IO.rhomolar_vap;
 
@@ -3120,7 +3118,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 w = IO.z;
             }
             CoolPropDbl wz_spread = 0;
-            for (std::size_t i = 0; i < N; ++i) wz_spread = std::max(wz_spread, std::abs(w[i] - IO.z[i]));
+            for (std::size_t i = 0; i < N; ++i)
+                wz_spread = std::max(wz_spread, std::abs(w[i] - IO.z[i]));
             if (wz_spread < 1e-3) {  // trial ~ feed -> reseed from Wilson K-factors
                 CoolPropDbl sw2 = 0;
                 for (std::size_t i = 0; i < N; ++i) {
@@ -3129,7 +3128,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                     sw2 += w[i];
                 }
                 if (sw2 > 0)
-                    for (std::size_t i = 0; i < N; ++i) w[i] /= sw2;
+                    for (std::size_t i = 0; i < N; ++i)
+                        w[i] /= sw2;
                 else
                     w = minority_is_liquid ? x0_stab : y0_stab;  // Wilson unusable; keep the trial
             }
@@ -3159,7 +3159,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // sheet -- the objective, gradient and acceptance test then live on a higher-Gibbs
             // surface and the line search stalls.  Global keeps every evaluation on the same
             // stable roots the seed was built on.
-            if (!fb_warm_rho) { rho_warm_L = -1; rho_warm_V = -1; }
+            rho_warm_L = -1;
+            rho_warm_V = -1;
             if (!evaluate_phases()) return false;
             HEOS.SatL->set_mole_fractions(IO.x);
             HEOS.SatL->update_DmolarT_direct(IO.rhomolar_liq, IO.T);
@@ -3185,11 +3186,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         if (cp_dbg_mich) {
             CoolPropDbl As = 0;
             for (std::size_t i = 0; i < N; ++i) As += a[i];
-            std::printf("[MICH-FB] entry T=%.5g ok=%d minLiq=%d A=%.3g mg=%.4g beta_pre=%.6g\n", (double)IO.T, (int)ok, (int)minority_is_liquid, (double)As, mg, (double)beta_pre);
-            if (cp_dbg_fb) {
-                std::printf("[MICH-FB]   z    ="); for (std::size_t i = 0; i < N; ++i) std::printf(" %.4e", (double)IO.z[i]); std::printf("\n");
-                std::printf("[MICH-FB]   a0   ="); for (std::size_t i = 0; i < N; ++i) std::printf(" %.4e", (double)a[i]); std::printf("\n");
-            }
+            std::printf("[MICH-FB] entry T=%.5g ok=%d minLiq=%d A=%.3g mg=%.4g beta_pre=%.6g\n", (double)IO.T, (int)ok, (int)minority_is_liquid,
+                        (double)As, mg, (double)beta_pre);
         }
         // Globalised Newton on the minority mole numbers a, mirroring ThermoPack
         // tp_solver::mod_newton_search + optimizers::mod_newton: a positive-definite
@@ -3201,10 +3199,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         // evaluation stays on the same stable density sheet as the seed.
         const int fb_max_iter = 100;
         const double armijo_c1 = 1e-4;
-        const int max_ls = 40;      // Armijo backtracking tries per outer iteration
+        const int max_ls = 40;               // Armijo backtracking tries per outer iteration
         const double fb_genuine_tol = 1e-5;  // engineering equal-fugacity tolerance (matches the final gate)
-        const int stall_genuine = 3;   // exit once genuine and floored
-        double G_cur = G_old;  // consistent with the seed eval_min (cold global roots)
+        const int stall_genuine = 3;         // exit once genuine and floored
+        double G_cur = G_old;                // consistent with the seed eval_min (cold global roots)
         double mg_prev = mg;
         int stall = 0;
         for (int it = 0; ok && it < fb_max_iter; ++it) {
@@ -3215,7 +3213,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // probe (e.g. a single-phase T with no split) keeps iterating to the cap and is then
             // rejected by the final gate.
             if (mg < fb_genuine_tol && mg > mg_prev * (1.0 - 1e-3)) {
-                if (++stall >= stall_genuine) { fb_stop = "stall"; break; }
+                if (++stall >= stall_genuine) {
+                    fb_stop = "stall";
+                    break;
+                }
             } else {
                 stall = 0;
             }
@@ -3231,7 +3232,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             HelmholtzEOSMixtureBackend* Smin = minority_is_liquid ? HEOS.SatL.get() : HEOS.SatV.get();
             HelmholtzEOSMixtureBackend* Smaj = minority_is_liquid ? HEOS.SatV.get() : HEOS.SatL.get();
             std::vector<CoolPropDbl> mnc(N), mjc(N);
-            for (std::size_t i = 0; i < N; ++i) { mnc[i] = a[i] / A; mjc[i] = (IO.z[i] - a[i]) / B; }
+            for (std::size_t i = 0; i < N; ++i) {
+                mnc[i] = a[i] / A;
+                mjc[i] = (IO.z[i] - a[i]) / B;
+            }
             Eigen::MatrixXd Dmin(N, N), Dmaj(N, N), Hm(N, N);
             Eigen::VectorXd grad(N);
             for (std::size_t i = 0; i < N; ++i) {
@@ -3254,12 +3258,6 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // Symmetrize away finite-difference asymmetry before the SPD solve.
             Hm = (0.5 * (Hm + Hm.transpose())).eval();
 
-            if (cp_dbg_fb) {
-                std::printf("[MICH-FB]  it=%d A=%.4e mg=%.4e G=%.8g\n", it, (double)A, mg, G_cur);
-                std::printf("[MICH-FB]    a   ="); for (std::size_t i = 0; i < N; ++i) std::printf(" %.4e", (double)a[i]); std::printf("\n");
-                std::printf("[MICH-FB]    gmol="); for (std::size_t i = 0; i < N; ++i) std::printf(" %+.3e", grad(i)); std::printf("\n");
-            }
-
             // Eigenvalue-modified Newton direction.  The mole-number Gibbs Hessian is (a) genuinely
             // INDEFINITE far from the solution -- the dominant component's diagonal can be negative,
             // so LM diag scaling can never make it PD -- and (b) severely ill-conditioned near the
@@ -3269,7 +3267,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // caps the condition number, so the step along the soft mode stays bounded and the
             // single fraction-to-the-boundary scalar no longer has to throttle the stiff directions.
             Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(Hm);
-            if (es.info() != Eigen::Success) { fb_stop = "eig-fail"; break; }
+            if (es.info() != Eigen::Success) {
+                fb_stop = "eig-fail";
+                break;
+            }
             const Eigen::VectorXd evals = es.eigenvalues();
             const Eigen::MatrixXd& Q = es.eigenvectors();
             // Gill-Murray-style modification: replace each eigenvalue lambda_k by max(|lambda_k|,
@@ -3279,12 +3280,9 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // limit then throttles to nothing.  The relative floor only caps the condition number.
             const double efloor = 1e-10 * std::max(evals.cwiseAbs().maxCoeff(), 1e-300);
             Eigen::VectorXd gq = Q.transpose() * grad;
-            for (std::size_t i = 0; i < N; ++i) gq(i) /= std::max(std::abs(evals(i)), efloor);
+            for (std::size_t i = 0; i < N; ++i)
+                gq(i) /= std::max(std::abs(evals(i)), efloor);
             Eigen::VectorXd d = -(Q * gq);  // = -(modified Hm)^{-1} grad, guaranteed descent
-            if (cp_dbg_fb) {
-                std::printf("[MICH-FB]    Hdiag="); for (std::size_t i = 0; i < N; ++i) std::printf(" %+.3e", Hm(i, i)); std::printf("\n");
-                std::printf("[MICH-FB]    eval ="); for (std::size_t i = 0; i < N; ++i) std::printf(" %+.3e", evals(i)); std::printf("\n");
-            }
 
             // Fraction-to-the-boundary (ThermoPack limitDV): one scalar keeps every
             // 0 < a_i + t*d_i < z_i, preserving the Newton direction (a per-component clamp would
@@ -3292,8 +3290,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             double t = 1.0;
             for (std::size_t i = 0; i < N; ++i) {
                 double di = d(i);
-                if (a[i] + di <= 0.0) t = std::min(t, -static_cast<double>(a[i]) / di);
-                else if (a[i] + di >= IO.z[i]) t = std::min(t, (static_cast<double>(IO.z[i]) - static_cast<double>(a[i])) / di);
+                if (a[i] + di <= 0.0)
+                    t = std::min(t, -static_cast<double>(a[i]) / di);
+                else if (a[i] + di >= IO.z[i])
+                    t = std::min(t, (static_cast<double>(IO.z[i]) - static_cast<double>(a[i])) / di);
             }
             if (t < 1.0) d *= (t * (1.0 - 1e-10));
 
@@ -3304,14 +3304,14 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             bool step_accepted = false;
             std::vector<CoolPropDbl> at(N);
             for (int ls = 0; ls < max_ls; ++ls) {
-                for (std::size_t i = 0; i < N; ++i) at[i] = a[i] + alpha * d(i);
+                for (std::size_t i = 0; i < N; ++i)
+                    at[i] = a[i] + alpha * d(i);
                 double G_new = 0, mg_new = 0;
                 if (eval_min(at, G_new, mg_new) && G_new <= G_cur + armijo_c1 * alpha * gTd) {
                     a = at;
                     G_cur = G_new;
                     mg = mg_new;
                     step_accepted = true;
-                    if (cp_dbg_fb) std::printf("[MICH-FB]    -> accept ls=%d alpha=%.3e t=%.3e Gnew=%.8g mgnew=%.4e\n", ls, alpha, t, G_new, mg_new);
                     break;
                 }
                 alpha *= 0.5;
@@ -3332,14 +3332,14 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         double G_fin = 0, mg_fin = 0;
         const bool fb_eval_ok = eval_min(a, G_fin, mg_fin);
         CoolPropDbl fb_spread = 0;
-        for (std::size_t i = 0; i < N; ++i) fb_spread = std::max(fb_spread, std::abs(IO.x[i] - IO.y[i]));
-        const bool fb_genuine = fb_eval_ok && ValidNumber(mg_fin) && mg_fin <= 1e-5 && fb_spread >= 1e-4
-                                && beta > 1e-8 && beta < 1.0 - 1e-8;
+        for (std::size_t i = 0; i < N; ++i)
+            fb_spread = std::max(fb_spread, std::abs(IO.x[i] - IO.y[i]));
+        const bool fb_genuine = fb_eval_ok && ValidNumber(mg_fin) && mg_fin <= 1e-5 && fb_spread >= 1e-4 && beta > 1e-8 && beta < 1.0 - 1e-8;
         if (cp_dbg_mich)
-            std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g genuine=%d spread=%.4g beta=%.6g\n",
-                        (int)fb_conv, fb_stop, fb_iters, mg_fin, (int)fb_genuine, (double)fb_spread, (double)beta);
+            std::printf("[MICH-FB] exit conv=%d stop=%s iters=%d mg=%.4g genuine=%d spread=%.4g beta=%.6g\n", (int)fb_conv, fb_stop, fb_iters, mg_fin,
+                        (int)fb_genuine, (double)fb_spread, (double)beta);
         if (fb_genuine) {
-            IO.beta = beta;  // eval_min left IO.x/IO.y/beta/rho on the best split
+            IO.beta = beta;                    // eval_min left IO.x/IO.y/beta/rho on the best split
             converged = (mg_fin < gibbs_tol);  // else the final gate re-validates the genuine split
         } else {
             IO.x = x_pre;
