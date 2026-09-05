@@ -3569,5 +3569,150 @@
       "smolar": 77.43035073129097,
       "smolar_units": "J/mol/K"
     }
+  },
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Velliadou-IJT-2021-xenon,Velliadou-IJT-2021-xenon-CORR",
+      "dilute": {
+        "type": "expression",
+        "formula": "let L = ln(T/T_ref)\n1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "T_ref": 298.15,
+          "eta_ref": 23.0183
+        },
+        "arrays": {
+          "a": [
+            0.9652514,
+            -0.05237199,
+            -0.06758414,
+            0.02855787,
+            0.01002789,
+            -0.009639621,
+            0.00132977,
+            0.001114305,
+            -0.0005992234,
+            0.0001224218,
+            -9.584978e-06
+          ],
+          "p": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ]
+        }
+      },
+      "initial_density": {
+        "type": "expression",
+        "formula": "let L = ln(T/T_ref)\nlet eta0 = 1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))\nlet Tstar = T/epsilon_over_k\nlet Bstar = sum(i: b[i]*Tstar^e[i])\neta0*Bstar*N_A*sigma^3*Dmolar",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "T_ref": 298.15,
+          "eta_ref": 23.0183,
+          "epsilon_over_k": 250.0,
+          "sigma": 3.96e-10,
+          "N_A": 6.02214076e+23
+        },
+        "arrays": {
+          "a": [
+            0.9652514,
+            -0.05237199,
+            -0.06758414,
+            0.02855787,
+            0.01002789,
+            -0.009639621,
+            0.00132977,
+            0.001114305,
+            -0.0005992234,
+            0.0001224218,
+            -9.584978e-06
+          ],
+          "p": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "b": [
+            -19.572881,
+            219.73999,
+            -1015.3226,
+            2471.0125,
+            -3375.1717,
+            2491.6597,
+            -787.26086,
+            14.085455,
+            -0.34664158
+          ],
+          "e": [
+            0,
+            -0.25,
+            -0.5,
+            -0.75,
+            -1.0,
+            -1.25,
+            -1.5,
+            -2.5,
+            -5.5
+          ]
+        }
+      },
+      "higher_order": {
+        "type": "expression",
+        "note": "The form used here follows the authors' PUBLISHED CORRECTION, not the original paper. Velliadou, Tasidou, Antoniadis, Assael, Perkins & Huber, 'Correction to: Reference Correlation for the Viscosity of Xenon...', Int. J. Thermophys. 44(4) (2023), doi:10.1007/s10765-023-03175-5, 24 February 2023: 'in Eq. 6, a power \"12\" in the reduced density in the third term in the bracket should have been used instead of \"7\"'. Using the original as printed gives 189.815 uPa.s at 300 K / 2500 kg/m^3 against the paper's tabulated 206.449 (8.06 % low); the corrected form reproduces the table. XENON.FLD carries the corrected exponent but does not cite the correction.",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmolar/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*sum(i: n[i]*Tr^t[i]*rhor^d[i])",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "Tc": 289.733,
+          "rhoc": 8400.0
+        },
+        "arrays": {
+          "n": [
+            1.0,
+            1.396328251,
+            0.0005418871011,
+            4.478809952,
+            24.91698858
+          ],
+          "t": [
+            1,
+            1,
+            -1,
+            -2,
+            -2
+          ],
+          "d": [
+            0,
+            4,
+            12,
+            0,
+            1
+          ]
+        }
+      }
+    }
   }
 }
