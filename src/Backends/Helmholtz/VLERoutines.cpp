@@ -3085,7 +3085,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     }
     IO.beta = beta;
 
-    // --- Part-2 fallback (#3342 / CoolProp-1tbe.22): ThermoPack-style minority-phase Gibbs Newton ---
+    // --- Part-2 fallback (#3342 / CoolProp-1tbe.22): Michelsen second-order minority-phase Gibbs Newton ---
     //
     // WHEN INVOKED: only after BOTH phase 1 (SS + GDEM, <= 4 loops) and phase 2 (the reduced-gradient
     // second-order Newton) have failed to converge.  Easy flashes never reach here.  Phase 2 scales
@@ -3093,17 +3093,22 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // near-bubble/near-dew edge where the incipient phase is tiny -- the states master previously
     // published grossly unconverged or collapsed to a wrong single phase (#3342's silent wrong-T).
     //
-    // LIFTED FROM ThermoPack (tp_solver::mod_newton_search + optimizers::mod_newton):
+    // This is an INDEPENDENT implementation of Michelsen's second-order phase-split (the METHOD is
+    // published -- see METHOD PROVENANCE below; ThermoPack's tp_solver was read as an open-source
+    // REFERENCE, not copied).  The method elements:
     //   * the variables are the INCIPIENT (minority) phase mole numbers a -- the vanishing liquid
     //     near the dew, the vanishing vapour near the bubble.  Its components sit far from the z_i
     //     bound, so the feasible box is not the razor a majority-phase (V ~ z) formulation hits;
-    //   * a MODIFIED-Newton descent direction (ThermoPack uses a modified Cholesky; here an
+    //   * a MODIFIED-Newton descent direction (a spectral variant of Michelsen's modified Cholesky:
     //     eigenvalue flip, below) so an indefinite Hessian still yields a descent step;
-    //   * a single-scalar FRACTION-TO-THE-BOUNDARY limit (ThermoPack limitDV) that scales the whole
-    //     step and so preserves the Newton direction, plus an ARMIJO line search on the total Gibbs;
-    //   * phase-SPECIFIED fugacity roots (ThermoPack thermo(...,LIQPH/VAPPH)); the CoolProp analogue
-    //     here is the deterministic cold global lowest-Gibbs solve, which keeps every evaluation on
-    //     the same stable density sheet (a warm local solve drifts to a metastable root).
+    //   * a single-scalar FRACTION-TO-THE-BOUNDARY limit that scales the whole step and so preserves
+    //     the Newton direction, plus an ARMIJO line search on the total Gibbs.
+    // Where this implementation deliberately DIVERGES from ThermoPack's specific coding: deterministic
+    // cold global lowest-Gibbs density roots (vs its LIQPH/VAPPH specified roots) to keep every
+    // evaluation on the same stable density sheet; the eigenvalue-flip Hessian modification (vs its
+    // modified-Cholesky factorization); a single global minority phase (vs its per-component setV
+    // reference-phase toggle); and CoolProp-specific guards (Wilson reseed, Gibbs-descent, VLE
+    // ordering) below.
     //
     // LOGIC: seed the incipient composition from the stability trial (or Wilson K-factors when that
     // trial is ~trivial), then iterate -- build the mole-number Gibbs gradient dG/da_i = lnf_i^min -
