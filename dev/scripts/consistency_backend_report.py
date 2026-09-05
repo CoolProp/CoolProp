@@ -32,6 +32,13 @@ _PHASES = ['liquid', 'supercritical', 'supercritical_gas', 'supercritical_liquid
            'critical_point', 'gas', 'twophase', 'unknown', 'not_imposed']
 _BAD_PHASE = re.compile(r'^phase (\d+) instead of (\d+)$')
 
+# The input-pair names CoolProp's REFPROP backend prepends to its error text
+# ("DmolarSmolar: [DSFLSH error 207] ...").  Matched by name so that an exception
+# type prefixed by err_text() is never mistaken for one.
+_PAIR_TAGS = ['Dmolar', 'Hmolar', 'Smolar', 'Umolar', 'P', 'T', 'Q']
+_PAIR_TAGS = sorted({a + b for a in _PAIR_TAGS for b in _PAIR_TAGS} | set(_PAIR_TAGS),
+                    key=len, reverse=True)
+
 
 def _phase_name(index):
     try:
@@ -54,7 +61,12 @@ def message_class(err):
     # non-ValueError: that prefix is the whole point of err_text, and erasing it here
     # would file a library defect under the same class as an ordinary out-of-range
     # report.
-    text = re.sub(r'^(?!\w*(?:Error|Exception):)[A-Za-z]\w*: ', '', text)
+    # The negative lookahead covers ANY capitalised identifier, not just names ending
+    # Error/Exception: err_text() prepends type(exc).__name__ for every non-ValueError,
+    # so StopIteration/KeyboardInterrupt/SystemExit are all producible and were being
+    # stripped.  CoolProp's input-pair tags (DmolarSmolar, HmolarP, P2T) are also
+    # capitalised, so they are matched by name instead.
+    text = re.sub(r'^(?:' + '|'.join(_PAIR_TAGS) + r'): ', '', text)
     bad = _BAD_PHASE.match(text)
     if bad:
         return 'phase {0} instead of {1}'.format(_phase_name(bad.group(1)), _phase_name(bad.group(2)))
@@ -591,6 +603,7 @@ accompany this page.</footer>
       fluid: row.fluid, row: row,
       ref_inc: a.inconsistent, ref_exc: a.exceptions, ref_bad: a.bad_phase,
       oth_inc: b.inconsistent, oth_exc: b.exceptions, oth_bad: b.bad_phase, oth_ref: b.reference,
+      ok: (a.ok !== false) && (b.ok !== false),
       oth_total: b.inconsistent + b.exceptions + b.bad_phase + a.inconsistent + a.exceptions + a.bad_phase,
       ratio: row.ratio
     }};
@@ -646,6 +659,12 @@ accompany this page.</footer>
       return sortDir * (a - b) || x.fluid.localeCompare(y.fluid);
     }});
     body.innerHTML = shown.map(function (r) {{
+      // A grid that produced no measurement must not render as a row of zeroes next to
+      // the genuinely clean fluids -- that is the one reading the section text forbids.
+      if (!r.ok) {{
+        return '<tr class="expandable" data-fluid="' + r.fluid + '"><td class="name">' + r.fluid + '</td>' +
+          '<td class="num" colspan="7"><span class="chip exc">no result &mdash; see "Runs that did not complete"</span></td></tr>';
+      }}
       return '<tr class="expandable" data-fluid="' + r.fluid + '"><td class="name">' + r.fluid + '</td>' +
         num(r.ref_inc, 'inc') + num(r.ref_exc, 'exc') + num(r.ref_bad, 'bad') +
         '<td class="num grp">' + (r.oth_inc ? '<span class="chip inc">' + r.oth_inc + '</span>' : '<span class="zero">0</span>') + '</td>' +

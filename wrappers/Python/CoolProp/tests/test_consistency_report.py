@@ -270,6 +270,59 @@ def test_good_only_timing_is_recorded_separately():
     plt.close(ff.fig)
 
 
+def test_phases_disagree_excludes_only_the_refprop_supercritical_family():
+    """REFPROPMixtureBackend::GetRPphase derives the phase from the _Q sentinel the DLL
+    returned, so which member of the supercritical family comes back is a property of the
+    flash routine called, not of the state.  That one class is convention; nothing else is."""
+    from CoolProp.Plots.ConsistencyPlots import phases_disagree
+    import CoolProp.CoolProp as CP
+    sc, scg, scl = CP.iphase_supercritical, CP.iphase_supercritical_gas, CP.iphase_supercritical_liquid
+    # The convention class, REFPROP only.
+    assert not phases_disagree('REFPROP', scg, sc)
+    assert not phases_disagree('REFPROP', sc, scl)
+    # Same labels are never a disagreement, on any backend.
+    assert not phases_disagree('HEOS', sc, sc)
+    # HEOS gets no exclusion: it distinguishes these deliberately.
+    assert phases_disagree('HEOS', scg, sc)
+    # Crossing OUT of the family is a real disagreement even for REFPROP.
+    assert phases_disagree('REFPROP', CP.iphase_twophase, CP.iphase_liquid)
+    assert phases_disagree('REFPROP', CP.iphase_gas, sc)
+    assert phases_disagree('REFPROP', CP.iphase_twophase, scl)
+
+
+def test_message_class_keeps_exception_types_and_strips_pair_tags():
+    """err_text() prepends the exception type for a non-ValueError precisely so a library
+    defect stays distinguishable; the prefix strip must not undo that."""
+    from consistency_backend_report import message_class
+    # Input-pair tags are noise and go.
+    assert message_class('DmolarSmolar: [DSFLSH error 207] rho 1.5') == '[DSFLSH error #] rho #'
+    assert message_class('HmolarP: something') == 'something'
+    # Exception types are the signal and stay -- including ones not ending Error/Exception.
+    for exc in ('RuntimeError', 'ValueError', 'StopIteration', 'KeyboardInterrupt', 'SystemExit'):
+        assert message_class(exc + ': boom').startswith(exc + ':'), exc
+    # A message with no prefix is untouched apart from number masking.
+    assert message_class('no prefix here') == 'no prefix here'
+    # Bad-phase messages are named, not masked: the numbers ARE the content.
+    assert message_class('phase 2 instead of 1') == 'phase supercritical_gas instead of supercritical'
+
+
+def test_describe_exit_calls_only_fault_signals_a_crash():
+    """A CI timeout TERMs the process group; reporting that as 'died in native code' across
+    every in-flight fluid would be a wall of false alarms about the one signal that has to
+    stay trustworthy."""
+    from consistency_backend_compare import describe_exit
+    for sig, name in ((11, 'SIGSEGV'), (6, 'SIGABRT')):
+        crashed, text = describe_exit(-sig)
+        assert crashed and 'CRASHED' in text and name in text
+    for sig in (15, 2):  # SIGTERM, SIGINT
+        crashed, text = describe_exit(-sig)
+        assert not crashed and 'CRASHED' not in text
+    assert describe_exit(-999) == (False, 'killed by signal 999 (signal 999)')
+    assert describe_exit(1) == (False, 'worker exited 1')
+    assert describe_exit(2) == (False, 'worker exited 2')  # argparse, not a crash
+    assert describe_exit(0)[0] is False
+
+
 if __name__ == '__main__':
     import pytest
     pytest.main([__file__, '-v'])

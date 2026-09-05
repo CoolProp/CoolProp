@@ -89,9 +89,15 @@ def lowest_valid_T(state):
     """
     T_triple = state.keyed_output(CP.iT_triple)
     try:
-        return max(T_triple, state.keyed_output(CP.iT_min))
+        T_min = state.keyed_output(CP.iT_min)
     except Exception:
         return T_triple
+    # Guard the non-finite case explicitly rather than leaning on max(): max(T, nan) happens
+    # to return T, but max(T, inf) returns inf, and np.logspace(log10(inf), ...) is an
+    # all-NaN grid on which every point of every panel fails.
+    if not np.isfinite(T_min):
+        return T_triple
+    return max(T_triple, T_min)
 
 
 # REFPROPMixtureBackend::GetRPphase derives the phase entirely from the _Q sentinel

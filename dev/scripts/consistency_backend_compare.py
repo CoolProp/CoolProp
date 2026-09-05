@@ -23,6 +23,9 @@ Usage::
     python dev/scripts/consistency_backend_compare.py --out /tmp/cmp \\
         --refprop-path ~/REFPROP10/
 
+Exit status: 0 clean, 1 some (fluid, backend) produced no result, 10 a worker was
+killed by a signal.  10 rather than 2 because argparse owns 2.
+
 Each fluid is rendered in its own subprocess (``--one-fluid``), so a backend that
 segfaults or leaks costs one fluid rather than the run.  Both backends are timed
 back to back *inside the same worker*, so the per-pair time ratio is meaningful
@@ -188,7 +191,15 @@ def describe_exit(returncode):
             name = signal.Signals(sig).name
         except ValueError:
             name = 'signal %d' % sig
-        return True, 'CRASHED: killed by signal %d (%s)' % (sig, name)
+        # Only the fault signals are a crash.  A CI job timeout TERMs the process group,
+        # and reporting that as "a backend died in native code" across every in-flight
+        # fluid would be a wall of false alarms about the one thing that must stay
+        # trustworthy.  (POSIX only: Windows reports an access violation as a large
+        # POSITIVE status, which lands in the branch below.)
+        fault = {getattr(signal, n, None) for n in ('SIGSEGV', 'SIGABRT', 'SIGBUS', 'SIGFPE', 'SIGILL')}
+        if sig in fault:
+            return True, 'CRASHED: killed by signal %d (%s)' % (sig, name)
+        return False, 'killed by signal %d (%s)' % (sig, name)
     if returncode > 0:
         return False, 'worker exited %d' % returncode
     return False, 'worker exited 0 without writing a result'
@@ -368,7 +379,10 @@ def main(argv=None):
               % (sys.executable, os.path.abspath(__file__), out_dir, crashed[0][0],
                  (' --refprop-path ' + args.refprop_path) if args.refprop_path else ''))
         print(bar)
-        return 2
+        # 10, not 2: argparse exits 2 for a bad option value, and this script is driven
+        # by a wrapper that forwards user-supplied values, so 2 would report tool misuse
+        # as a native-code crash -- the one signal this exit code exists to make trustworthy.
+        return 10
     return 1 if failed else 0
 
 

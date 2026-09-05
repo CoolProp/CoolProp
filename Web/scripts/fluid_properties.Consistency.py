@@ -285,22 +285,10 @@ for fluid in fluids:
             summaries.append(s)
 combined = pandas.concat(summaries, ignore_index=True) if summaries else pandas.DataFrame()
 
-report_name = 'ConsistencyReport.rst' if backend == 'HEOS' else 'ConsistencyReport_%s.rst' % backend
-report_path = os.path.join(web_dir, 'fluid_properties', report_name)
-if _subset:
-    # The consolidated page aggregates the fluids this run built.  Writing it from a
-    # deliberately partial run would replace the full report with a handful of rows
-    # and read as "everything else is clean".
-    print('Subset run (COOLPROP_CONSISTENCY_FLUIDS); leaving %s untouched' % report_name)
-    raise SystemExit(0)
-rpt.write_consolidated_rst(combined, report_path, backend,
-                           build_failures=build_failures, unavailable=unavailable,
-                           orphan=(backend != 'HEOS'))
-print('Wrote consolidated report:', report_path)
-
-# Repeat any crash at the very end: one line among 130 fluids scrolls out of a CI
-# log, and a native-code death is the finding most likely to be missed and least
-# safe to miss.
+# Crash summary FIRST: one '!!!!' block among 137 fluids scrolls out of a CI log, and
+# the subset early-exit below must not skip it -- the reproduce command the per-fluid
+# banner prints is itself a subset run, so that is precisely when a human is chasing a
+# crash and needs the summary.
 crashed = [(fluid, msg) for fluid, msg in build_failures if str(msg).startswith('CRASHED')]
 if crashed:
     print('!' * 78)
@@ -308,3 +296,24 @@ if crashed:
     for fluid, msg in crashed:
         print('!!   %-24s %s' % (fluid, msg))
     print('!' * 78)
+
+report_name = 'ConsistencyReport.rst' if backend == 'HEOS' else 'ConsistencyReport_%s.rst' % backend
+report_path = os.path.join(web_dir, 'fluid_properties', report_name)
+if _subset:
+    # The consolidated page aggregates the fluids this run built.  Writing it from a
+    # deliberately partial run would replace the full report with a handful of rows
+    # and read as "everything else is clean".
+    print('Subset run (COOLPROP_CONSISTENCY_FLUIDS); leaving %s untouched' % report_name)
+    print('WARNING: %s now disagrees with the per-fluid artifacts this run rewrote.' % report_name)
+    raise SystemExit(2 if crashed else 0)
+rpt.write_consolidated_rst(combined, report_path, backend,
+                           build_failures=build_failures, unavailable=unavailable,
+                           orphan=(backend != 'HEOS'))
+print('Wrote consolidated report:', report_path)
+
+# Exit non-zero ONLY for a native-code crash.  An ordinary per-fluid build failure
+# keeps exit 0, because one bad fluid must not cost the documentation -- but a
+# backend dying in native code is a library defect, every artifact has already been
+# written by this point, and a green run would be the loudest possible way to hide it.
+if crashed:
+    raise SystemExit(2)

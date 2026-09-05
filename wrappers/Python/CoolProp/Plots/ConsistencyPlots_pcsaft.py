@@ -398,8 +398,8 @@ class ConsistencyAxis(object):
 
                 _exception = False
                 tic2 = timeit.default_timer()
+                val1, val2 = self.state_pcsaft_PT.keyed_output(key1), self.state_pcsaft_PT.keyed_output(key2)  # hoisted: the handler below reads these
                 try:
-                    val1, val2 = self.state_pcsaft_PT.keyed_output(key1), self.state_pcsaft_PT.keyed_output(key2)
                     self.state_pcsaft.update(pairkey, val1, val2)
                     toc2 = timeit.default_timer()
                 except Exception as VE:
@@ -487,8 +487,8 @@ class ConsistencyAxis(object):
                     continue
 
                 _exception = False
+                val1, val2 = self.state_pcsaft_QT.keyed_output(key1), self.state_pcsaft_QT.keyed_output(key2)  # hoisted: the handler below reads these
                 try:
-                    val1, val2 = self.state_pcsaft_QT.keyed_output(key1), self.state_pcsaft_QT.keyed_output(key2)
                     self.state_pcsaft.update(pairkey, val1, val2)
                 except Exception as VE:
                     warn_unexpected('pcsaft update_QT', VE)

@@ -16,7 +16,7 @@
 # Exit codes (chosen so CI can distinguish "the tool broke" from "the fluids
 # have failures", which they always do -- a zero-failure report is not the goal):
 #   0  report generated
-#   2  a worker crashed (a backend died in native code); report still generated
+#  10  a worker crashed (a backend died in native code); report still generated
 #   3  REFPROP unavailable, or Python/CoolProp not importable; nothing generated
 #   1  anything else went wrong
 set -uo pipefail
@@ -34,17 +34,28 @@ usage() {
     exit "${1:-0}"
 }
 
+# need_value: `shift 2` with only one argument left FAILS WITHOUT SHIFTING, and with no
+# `set -e` that leaves the loop spinning on the same argument forever.  A trailing
+# `--fluids` (a templated-away variable in a CI job, say) would burn a core until the
+# job timed out, silently.  Check before shifting.
+need_value() {
+    if [[ $# -lt 2 ]]; then
+        echo "error: $1 requires a value" >&2
+        exit 1
+    fi
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --out) OUT="${2:-}"; shift 2 ;;
+        --out) need_value "$@"; OUT="$2"; shift 2 ;;
         --out=*) OUT="${1#*=}"; shift ;;
-        --fluids) FLUIDS="${2:-}"; shift 2 ;;
+        --fluids) need_value "$@"; FLUIDS="$2"; shift 2 ;;
         --fluids=*) FLUIDS="${1#*=}"; shift ;;
-        --jobs) JOBS="${2:-}"; shift 2 ;;
+        --jobs) need_value "$@"; JOBS="$2"; shift 2 ;;
         --jobs=*) JOBS="${1#*=}"; shift ;;
-        --refprop-path) REFPROP_PATH="${2:-}"; shift 2 ;;
+        --refprop-path) need_value "$@"; REFPROP_PATH="$2"; shift 2 ;;
         --refprop-path=*) REFPROP_PATH="${1#*=}"; shift ;;
-        --title) TITLE="${2:-}"; shift 2 ;;
+        --title) need_value "$@"; TITLE="$2"; shift 2 ;;
         --title=*) TITLE="${1#*=}"; shift ;;
         -h|--help) usage 0 ;;
         *) echo "unknown argument: $1" >&2; usage 1 ;;
@@ -97,7 +108,8 @@ PY
     exit 3
 fi
 
-COOLPROP_VERSION=$("$PYTHON" -c "import CoolProp; print(CoolProp.__version__)" 2>/dev/null || echo "unknown")
+COOLPROP_VERSION=$("$PYTHON" -c "import CoolProp; print(CoolProp.__version__)" 2>/dev/null)
+COOLPROP_VERSION="${COOLPROP_VERSION:-unknown}"
 GITREV=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 echo "CoolProp $COOLPROP_VERSION @ $GITREV vs REFPROP $REFPROP_VERSION"
@@ -109,13 +121,22 @@ COMPARE_ARGS=(--out "$OUT" --backends HEOS,REFPROP)
 [[ -n "$JOBS" ]] && COMPARE_ARGS+=(--jobs "$JOBS")
 [[ -n "$REFPROP_PATH" ]] && COMPARE_ARGS+=(--refprop-path "$REFPROP_PATH")
 
+# Remove the previous run's aggregate first.  It is the only evidence the shell has
+# that the driver got as far as writing results, and nothing else deletes it -- so a
+# driver that died on a typo'd --fluids would leave YESTERDAY's json in place, satisfy
+# the check below, and re-render a stale report under today's date, exit 0.
+rm -f "$OUT/backend_compare.json"
+
 "$PYTHON" "$SCRIPT_DIR/consistency_backend_compare.py" "${COMPARE_ARGS[@]}"
 COMPARE_RC=$?
-# 0 = clean, 1 = some (fluid, backend) produced no result, 2 = a worker crashed.
-# None of those should stop the report: the report is where a reader finds out
-# WHICH fluid failed, so suppressing it on failure hides the finding.  Anything
-# else is the tool itself breaking.
-if [[ $COMPARE_RC -gt 2 ]]; then
+# Driver contract: 0 = clean, 1 = some (fluid, backend) produced no result,
+# 10 = a worker crashed.  10 rather than 2 ON PURPOSE: argparse exits 2 for a bad
+# option value (--jobs abc), and the driver is invoked with values forwarded from
+# this script, so 2 would report tool misuse as a native-code crash.
+# 0/1/10 must not stop the report -- the report is where a reader finds out WHICH
+# fluid failed, so suppressing it on failure hides the finding.  Anything else is
+# the tooling breaking.
+if [[ $COMPARE_RC -ne 0 && $COMPARE_RC -ne 1 && $COMPARE_RC -ne 10 ]]; then
     echo "error: the comparison driver failed (exit $COMPARE_RC)" >&2
     exit 1
 fi
@@ -137,12 +158,13 @@ fi
 
 echo
 echo "Report:      $OUT/report.html"
-echo "Per-pair:    $OUT/backend_compare_pairs.csv"
-echo "All points:  $OUT/backend_compare_points.csv"
+for _f in backend_compare_pairs.csv backend_compare_points.csv; do
+    [[ -f "$OUT/$_f" ]] && echo "             $OUT/$_f"
+done
 
-if [[ $COMPARE_RC -eq 2 ]]; then
+if [[ $COMPARE_RC -eq 10 ]]; then
     echo
     echo "A worker CRASHED -- see the banner at the top of the report." >&2
-    exit 2
+    exit 10
 fi
 exit 0
