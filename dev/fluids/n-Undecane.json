@@ -4108,7 +4108,7 @@
       },
       "higher_order": {
         "type": "expression",
-        "formula": "let Tr = T/T_red\nlet rr = Dmass/rho_red\nlet den = c1 + c2*Tr + rr^2 + Tr^2 + c3*rr*Tr + c4*rr\n1e-6*rr^(2/3)*Tr^0.5*c0/den",
+        "formula": "let Tr = T/T_red\nlet rr = Dmass/rho_red\nlet den = sum(i: q[i]*Tr^qt[i]*rr^qd[i])\n1e-6*rr^(2/3)*Tr^0.5*num/den",
         "state_variables": [
           "T",
           "Dmass"
@@ -4116,11 +4116,33 @@
         "constants": {
           "T_red": 638.8,
           "rho_red": 236.7914,
-          "c0": 256.66394,
-          "c1": 10.351826,
-          "c2": 6.4977736,
-          "c3": -1.968383,
-          "c4": -6.4530492
+          "num": 256.66394
+        },
+        "arrays": {
+          "q": [
+            10.351826,
+            6.4977736,
+            1.0,
+            1.0,
+            -1.968383,
+            -6.4530492
+          ],
+          "qt": [
+            0,
+            1,
+            0,
+            2,
+            1,
+            0
+          ],
+          "qd": [
+            0,
+            0,
+            2,
+            0,
+            1,
+            1
+          ]
         }
       }
     }

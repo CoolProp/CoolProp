@@ -4086,7 +4086,7 @@
         },
         "higher_order": {
           "type": "expression",
-          "formula": "let tau = T/T_red\nlet delta = Dmolar/rho_red\nlet front = tau^0.5*delta^(2/3)\nlet A = (a1*delta^3 + a2*delta^2)/(tau - delta + a3)\nlet Bt = (a4 + tau^-1.48)*(a5*delta + a6*delta^2 + a7*delta^3 + a8*delta^4)\n1e-6*front*(A + Bt)",
+          "formula": "let tau = T/T_red\nlet delta = Dmolar/rho_red\nlet front = tau^0.5*delta^(2/3)\nlet A = sum(i: p[i]*delta^pd[i])/(tau - delta + f3)\nlet Bt = (f4 + tau^-1.48)*sum(i: b[i]*delta^bd[i])\n1e-6*front*(A + Bt)",
           "state_variables": [
             "T",
             "Dmolar"
@@ -4094,14 +4094,30 @@
           "constants": {
             "T_red": 190.56,
             "rho_red": 10139.128,
-            "a1": 0.923,
-            "a2": 0.293514,
-            "a3": 2.57,
-            "a4": 0.513,
-            "a5": 1.653650300856,
-            "a6": 4.2185350152,
-            "a7": -2.84630784,
-            "a8": 0.77532
+            "f3": 2.57,
+            "f4": 0.513
+          },
+          "arrays": {
+            "p": [
+              0.923,
+              0.293514
+            ],
+            "pd": [
+              3,
+              2
+            ],
+            "b": [
+              1.653650300856,
+              4.2185350152,
+              -2.84630784,
+              0.77532
+            ],
+            "bd": [
+              1,
+              2,
+              3,
+              4
+            ]
           }
         }
       },

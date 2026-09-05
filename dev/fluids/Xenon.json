@@ -3680,18 +3680,37 @@
       "higher_order": {
         "type": "expression",
         "note": "The form used here follows the authors' PUBLISHED CORRECTION, not the original paper. Velliadou, Tasidou, Antoniadis, Assael, Perkins & Huber, 'Correction to: Reference Correlation for the Viscosity of Xenon...', Int. J. Thermophys. 44(4) (2023), doi:10.1007/s10765-023-03175-5, 24 February 2023: 'in Eq. 6, a power \"12\" in the reduced density in the third term in the bracket should have been used instead of \"7\"'. Using the original as printed gives 189.815 uPa.s at 300 K / 2500 kg/m^3 against the paper's tabulated 206.449 (8.06 % low); the corrected form reproduces the table. XENON.FLD carries the corrected exponent but does not cite the correction.",
-        "formula": "let Tr = T/Tc\nlet rhor = Dmolar/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*(Tr + c0*Tr*rhor^4 + c1*rhor^12/Tr + (c2 + c3*rhor)/Tr^2)",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmolar/rhoc\n1e-6*rhor^(2/3)*Tr^0.5*sum(i: n[i]*Tr^t[i]*rhor^d[i])",
         "state_variables": [
           "T",
           "Dmolar"
         ],
         "constants": {
           "Tc": 289.733,
-          "rhoc": 8400.0,
-          "c0": 1.396328251,
-          "c1": 0.0005418871011,
-          "c2": 4.478809952,
-          "c3": 24.91698858
+          "rhoc": 8400.0
+        },
+        "arrays": {
+          "n": [
+            1.0,
+            1.396328251,
+            0.0005418871011,
+            4.478809952,
+            24.91698858
+          ],
+          "t": [
+            1,
+            1,
+            -1,
+            -2,
+            -2
+          ],
+          "d": [
+            0,
+            4,
+            12,
+            0,
+            1
+          ]
         }
       }
     }

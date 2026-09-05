@@ -4287,7 +4287,7 @@
       },
       "higher_order": {
         "type": "expression",
-        "formula": "let tau = T/T_red\nlet delta = Dmolar/rho_red\nlet simple = c0*tau^0.5*delta^(2/3)\nlet den = c2 + c3*delta + c4*tau + c5*tau*delta + c6*tau*delta^2\n1e-6*(simple + c1*tau^0.5*delta^(2/3)/den)",
+        "formula": "let tau = T/T_red\nlet delta = Dmolar/rho_red\nlet den = sum(i: c[i]*tau^ct[i]*delta^cd[i])\n1e-6*tau^0.5*delta^(2/3)*(A + B/den)",
         "state_variables": [
           "T",
           "Dmolar"
@@ -4295,13 +4295,31 @@
         "constants": {
           "T_red": 441.81,
           "rho_red": 1920.0,
-          "c0": 22.0057,
-          "c1": 231.063,
-          "c2": 0.423359,
-          "c3": -0.122057,
-          "c4": 18.461,
-          "c5": -11.1393,
-          "c6": 1.67777
+          "A": 22.0057,
+          "B": 231.063
+        },
+        "arrays": {
+          "c": [
+            0.423359,
+            -0.122057,
+            18.461,
+            -11.1393,
+            1.67777
+          ],
+          "ct": [
+            0,
+            0,
+            1,
+            1,
+            1
+          ],
+          "cd": [
+            0,
+            1,
+            0,
+            1,
+            2
+          ]
         }
       }
     }
