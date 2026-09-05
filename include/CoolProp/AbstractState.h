@@ -77,6 +77,18 @@ Interpolator inherit AS implemented by TTSE BICUBIC
 class AbstractState
 {
    protected:
+    /// Drop every cached property value, keeping the bulk state (T, p, rhomolar, Q) and the
+    /// cached critical/reducing states.  For a solver that has just moved the state to a new
+    /// density: the cached values belong to the density last evaluated, not the one now set,
+    /// and clearing them is cheaper than re-evaluating to refill them.
+    ///
+    /// Protected, not public: a backend may cache something it cannot recompute (REFPROP's
+    /// saturated liquid/vapour densities arrive from a DLL flash and their accessors throw
+    /// when unset), so this is for a backend or a flash routine that knows what it invalidated.
+    void clear_cached_properties() {
+        cache.clear();
+    }
+
     /// Some administrative variables
     long _fluid_type;
     phases _phase;               ///< The key for the phase from CoolProp::phases enum
