@@ -52,13 +52,15 @@ Highlights:
   * For **R-1234yf, R-1234ze(E), R-245fa, R-32** (previously ``rhosr-CS``) and
     **ethylbenzene** (previously ``ECS``), the change is largest — median 2.9–7.1 %,
     and 14.5 % for R-245fa.  Both the old and the new models were fitted to
-    experimental viscosity data; they are different functional forms, fitted by
-    different groups, and they disagree by more than either one's stated uncertainty.
-    For R-245fa the new correlation claims 2 % in the dilute gas and 3 % in the liquid,
-    yet differs from ``rhosr-CS`` by 14 % at 250 K and by 61 % at 430 K / 530 kg·m⁻³.
-    A disagreement that size is a statement about the underlying data — its coverage,
-    its weighting, or its accuracy — and this release does not attempt to settle it.
-    What changed is which correlation CoolProp reports.
+    experimental viscosity data; they are different functional forms fitted by
+    different groups, and where the data are dense they largely agree to within the
+    scatter of the data itself.  The large differences are concentrated where the
+    measurements are not.  For R-245fa the two models differ by 61 % at
+    430 K / 530 kg·m⁻³ — which is :math:`T/T_c = 1.007`, :math:`\rho/\rho_c = 1.021`,
+    essentially the critical point, where the critical enhancement dominates and
+    neither model includes it.  Check the near-critical region and the extremes of the
+    compressed liquid against your own data; elsewhere the change is the few per cent
+    quoted above.
   * For **ammonia** (Fenghour et al., 1995) and **methane** (Quiñones-Cisneros et al.,
     2006), the previous model was a published fluid-specific correlation of the same
     kind, and the change is correspondingly small — median 0.5 % and 1.5 %.
