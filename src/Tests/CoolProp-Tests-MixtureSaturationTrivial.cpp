@@ -25,6 +25,7 @@
 
 #    include <catch2/catch_all.hpp>
 #    include <catch2/catch_approx.hpp>
+#    include <catch2/matchers/catch_matchers_string.hpp>
 
 #    include "AbstractState.h"
 #    include "CoolProp.h"
@@ -50,21 +51,14 @@ TEST_CASE("QT_flash does not return the trivial solution for a mixture", "[mixsa
 
     SECTION("a collapsed pair is reported rather than returned") {
         // At these temperatures the solver used to return rho_liq == rho_vap to
-        // seven digits, which put the Q=0.5 line 93 J/kg/K out of place.
+        // seven digits, which put the Q=0.5 line 93 J/kg/K out of place.  The
+        // message is asserted, not merely the throw: without it this section
+        // would pass on any exception at all -- including one that had nothing
+        // to do with the trivial solution -- and it would pass just as happily
+        // if someone made the flash throw unconditionally for mixtures.
         for (double T : {367.4330, 368.0}) {
             CAPTURE(T);
-            bool threw = false;
-            try {
-                AS->update(QT_INPUTS, 0.5, T);
-            } catch (const std::exception&) {
-                threw = true;
-            }
-            if (!threw) {
-                // Converging here is fine, provided the two phases are distinct.
-                const double rho_liq = AS->saturated_liquid_keyed_output(iDmolar);
-                const double rho_vap = AS->saturated_vapor_keyed_output(iDmolar);
-                CHECK(std::abs(rho_liq - rho_vap) > 1e-4 * std::max(rho_liq, rho_vap));
-            }
+            REQUIRE_THROWS_WITH(AS->update(QT_INPUTS, 0.5, T), Catch::Matchers::ContainsSubstring("trivial solution"));
         }
     }
 }
@@ -73,23 +67,82 @@ TEST_CASE("DmassT_INPUTS returns the density it was given for a mixture", "[mixs
     std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "R513A.mix"));
     const double T = 288.853439;
 
+    // These four round trip and must keep doing so.
+    for (double rho : {1190.0, 1195.0, 1210.0, 1250.0}) {
+        CAPTURE(rho);
+        REQUIRE_NOTHROW(AS->update(DmassT_INPUTS, rho, T));
+        CHECK(AS->rhomass() == Catch::Approx(rho).epsilon(1e-9));
+        CHECK(AS->hmass() > 0.0);
+        CHECK(AS->hmass() < 1e6);
+    }
+
     // 1198.85 and 1200.0 used to come back as 617.6 and 1256.6 kg/m3, the first
-    // of them with h = -1.02e7 J/kg, while their neighbours round tripped exactly.
-    for (double rho : {1190.0, 1195.0, 1198.85, 1200.0, 1210.0}) {
+    // of them with h = -1.02e7 J/kg, while their neighbours round tripped
+    // exactly.  Refusing them is acceptable -- answering wrongly is not -- so
+    // assert the disjunction explicitly rather than skipping the check when the
+    // call throws, which would let a tolerance regression pass unnoticed.
+    for (double rho : {1198.85, 1200.0}) {
         CAPTURE(rho);
         bool threw = false;
         try {
             AS->update(DmassT_INPUTS, rho, T);
         } catch (const std::exception&) {
-            threw = true;  // refusing is acceptable; answering wrongly is not
+            threw = true;
         }
+        CHECK((threw || AS->rhomass() == Catch::Approx(rho).epsilon(1e-9)));
         if (!threw) {
-            CHECK(AS->rhomass() == Catch::Approx(rho).epsilon(1e-9));
-            // and the enthalpy has to be a compressed-liquid value, not -1e7
             CHECK(AS->hmass() > 0.0);
             CHECK(AS->hmass() < 1e6);
         }
     }
+}
+
+TEST_CASE("DmassT still answers inside the dome of a narrow-boiling mixture", "[mixsat]") {
+    // The convergence check applies a relative tolerance to a density the
+    // P-sweep obtained by solving rho(P) through PT flashes.  Inside a narrow
+    // dome drho/dP is enormous -- R502.mix spans bubble to dew in about 1e-10 Pa
+    // at 213 K -- so TOMS748 converging P to 40 bits still leaves ~1e-5 relative
+    // in rho.  That is the conditioning of the parameterisation, not a failure
+    // to solve, and a tolerance tight enough for H/S/U reads it as one: at 1e-6
+    // every density below threw, including all six of these.
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "R502.mix"));
+    const double T = 213.2394;
+    for (double rho : {537.960, 1225.640, 1378.458, 1454.867, 1500.712, 1523.635}) {
+        CAPTURE(rho);
+        REQUIRE_NOTHROW(AS->update(DmassT_INPUTS, rho, T));
+        CHECK(AS->rhomass() == Catch::Approx(rho).epsilon(1e-4));
+    }
+}
+
+TEST_CASE("DmassT never answers with a density far from the one requested", "[mixsat]") {
+    // The complement of the test above: loosening the tolerance must not let a
+    // genuinely wrong state through.  Sweeping the R502 dome at 195 K, about
+    // half the points cannot be placed at all and throw -- that is the flash's
+    // own limitation and is acceptable -- but every point it *does* answer has
+    // to carry the density it was given.
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "R502.mix"));
+    std::shared_ptr<AbstractState> sat(AbstractState::factory("HEOS", "R502.mix"));
+    const double T = 195.47;
+    sat->update(QT_INPUTS, 0.0, T);
+    const double rho_liq = sat->rhomass();
+    sat->update(QT_INPUTS, 1.0, T);
+    const double rho_vap = sat->rhomass();
+    REQUIRE(rho_liq > rho_vap * 10);
+
+    int answered = 0;
+    for (int i = 1; i < 24; ++i) {
+        const double rho = rho_vap + (rho_liq - rho_vap) * i / 24.0;
+        CAPTURE(rho);
+        try {
+            AS->update(DmassT_INPUTS, rho, T);
+        } catch (const std::exception&) {
+            continue;  // cannot place this point; refusing is the honest answer
+        }
+        ++answered;
+        CHECK(AS->rhomass() == Catch::Approx(rho).epsilon(1e-4));
+    }
+    CAPTURE(answered);
+    CHECK(answered > 4);  // it must not have simply rejected everything
 }
 
 TEST_CASE("the trivial-solution guard does not disturb phase envelope tracing", "[mixsat]") {

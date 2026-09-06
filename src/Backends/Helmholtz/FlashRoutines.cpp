@@ -943,12 +943,26 @@ void FlashRoutines::QS_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
  */
 static void check_not_trivial_solution(double rho_liq, double rho_vap, double T, double p, const char* who) {
     if (!ValidNumber(rho_liq) || !ValidNumber(rho_vap) || rho_liq <= 0 || rho_vap <= 0) {
-        return;  // not our failure to diagnose; the callers' own checks apply
+        throw ValueError(format("%s returned saturation densities that are not usable numbers "
+                                "(rhomolar %g and %g mol/m3)",
+                                who, rho_liq, rho_vap));
     }
-    // Genuine saturation pairs stay orders above this even within a kelvin of
-    // the critical point; a collapsed pair comes in around 1e-6 relative.
+    // Signed, not absolute: the saturated liquid is the denser phase by
+    // definition, so an inverted pair is a bubble/dew root swap and is no more
+    // an answer than a collapsed one.  Matches _phases_are_distinct() in
+    // wrappers/Python/CoolProp/Plots/Common.py, which uses the same constant.
+    //
+    // Genuine saturation pairs stay far above this: across the predefined
+    // blends the closest approach on the converged branch is 0.087 (R463A at
+    // Q=0.5), because the solvers stop converging well before the two phases
+    // get close.  Collapsed pairs are not so tidily separated -- they run from
+    // 1e-10 up to a few times 1e-3 -- so this catches the bulk of them rather
+    // than all: a pair just above the threshold with a latent heat of a few
+    // J/kg is still returned.  Tightening it is not the answer, since that
+    // would start eating into the genuine branch; a latent-heat test would
+    // discriminate better and is worth adding separately.
     const double rtol = 1e-4;
-    if (std::abs(rho_liq - rho_vap) <= rtol * std::max(rho_liq, rho_vap)) {
+    if (rho_liq - rho_vap <= rtol * std::max(rho_liq, rho_vap)) {
         throw ValueError(format("%s converged on the trivial solution: the saturated liquid and vapour "
                                 "are the same state (rhomolar %g and %g mol/m3 at T=%g K, p=%g Pa), so this "
                                 "is not a saturation point",
@@ -1465,6 +1479,9 @@ void FlashRoutines::PQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
         throw ValueError(format("Quality must be 0 or 1"));
     }
 
+    if (!HEOS.is_pure_or_pseudopure) {
+        check_not_trivial_solution(IO.rhomolar_liq, IO.rhomolar_vap, IO.T, IO.p, "PQ_flash_with_guesses");
+    }
     // Load the other outputs
     HEOS._phase = iphase_twophase;
     HEOS._rhomolar = 1 / (HEOS._Q / IO.rhomolar_vap + (1 - HEOS._Q) / IO.rhomolar_liq);
@@ -1497,6 +1514,9 @@ void FlashRoutines::QT_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
         throw ValueError(format("Quality must be 0 or 1"));
     }
 
+    if (!HEOS.is_pure_or_pseudopure) {
+        check_not_trivial_solution(IO.rhomolar_liq, IO.rhomolar_vap, IO.T, IO.p, "QT_flash_with_guesses");
+    }
     // Load the other outputs
     HEOS._p = IO.p;
     HEOS._phase = iphase_twophase;
@@ -4247,7 +4267,19 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
             {
                 const auto resid_dhsu = static_cast<double>(HEOS.keyed_output(other) - value);
                 const double scale_dhsu = std::abs(static_cast<double>(value)) + 1.0;
-                if (!ValidNumber(resid_dhsu) || std::abs(resid_dhsu) > 1e-6 * scale_dhsu) {
+                // Density gets a looser tolerance than H/S/U, because the P-sweep
+                // parameterises by pressure and inside the dome of a narrow-boiling
+                // mixture drho/dP is enormous -- R502.mix has a bubble-to-dew
+                // pressure window of about 1e-10 Pa at 213 K.  TOMS748 converging P
+                // to 40 bits there still leaves ~1e-5 relative in rho, which is the
+                // conditioning of the parameterisation and not a failure to solve.
+                // Measured across the R502/R404A/R508B domes the two populations are
+                // four orders apart: conditioning noise tops out near 1e-5 relative,
+                // while the states this check exists to catch are wrong by 1e-2 to
+                // 20+ relative.  1e-6 would reject 19 of 23 correct two-phase points
+                // on the R502 dome at 195 K.
+                const double rtol_dhsu = (other == iDmolar) ? 1e-4 : 1e-6;
+                if (!ValidNumber(resid_dhsu) || std::abs(resid_dhsu) > rtol_dhsu * scale_dhsu) {
                     throw ValueError(format("DHSU_T_flash for mixture did not converge to the specification: residual %g "
                                             "(target %s=%g) at T=%g K -- the (T,p) flash is misclassifying the phase for this mixture",
                                             resid_dhsu, get_parameter_information(other, "short").c_str(), static_cast<double>(value),
