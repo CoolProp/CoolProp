@@ -31,6 +31,7 @@
 
 #    include <cmath>
 #    include <memory>
+#    include <string>
 
 using namespace CoolProp;
 
@@ -88,6 +89,21 @@ TEST_CASE("DmassT_INPUTS returns the density it was given for a mixture", "[mixs
             CHECK(AS->hmass() > 0.0);
             CHECK(AS->hmass() < 1e6);
         }
+    }
+}
+
+TEST_CASE("the trivial-solution guard does not disturb phase envelope tracing", "[mixsat]") {
+    // The guard sits at the QT/PQ flash boundary rather than inside the
+    // saturation solvers precisely because PhaseEnvelopeRoutines drives those
+    // same solvers up to and through the critical point, where the two phases
+    // collapsing together is the answer it is looking for.  If that reasoning
+    // were wrong, envelope construction would be the first thing to break.
+    for (std::string fluid :
+         {"R513A.mix", "R410A.mix", "R404A.mix", "R407C.mix", "Air.mix", "R454B.mix", "R448A.mix", "R441A.mix", "R504.mix", "R507A.mix"}) {
+        CAPTURE(fluid);
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", fluid));
+        REQUIRE_NOTHROW(AS->build_phase_envelope("none"));
+        CHECK(AS->get_phase_envelope_data().T.size() > 10);
     }
 }
 
