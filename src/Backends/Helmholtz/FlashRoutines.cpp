@@ -342,8 +342,27 @@ void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend& HEOS) {
             // Phase is imposed.  Update _phase in case it was reset elsewhere by another call
             HEOS._phase = HEOS.imposed_phase_index;
         }
-        // Find density
-        HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
+        // Find density.  p is an INPUT to this flash, so capture it before the density
+        // residual runs: every residual evaluation goes through update_DmolarT_direct,
+        // which overwrites HEOS._p with the EOS pressure at the trial density.
+        const CoolPropDbl p_spec = HEOS._p;
+        HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, p_spec);
+        // Householder4/Halley take their step and THEN return, so the last density the
+        // residual evaluated is one step short of the root handed back.  Everything the
+        // residual cached -- _p included -- therefore describes a slightly different state
+        // than _rhomolar does.  Left alone, PropsSI("P","P",p,"T",T,fluid) does not return p
+        // (measured 7.4e-10 relative for supercritical nitrogen), and every cached property
+        // belongs to the previous iterate.  Restore the specified pressure and drop the
+        // cached values so anything asked for afterwards is evaluated at the density we
+        // actually converged to.  Cheaper than re-evaluating: a caller that only wants the
+        // density pays nothing, and one that wants more gets a correct answer instead of a
+        // stale one.
+        // NB: with _p restored to the input, post_update's !ValidNumber(_p) check can no
+        // longer fail on this path, so it stops doubling as a proxy for "the density solve
+        // produced something sane".  What still guards that: post_update's _rhomolar checks,
+        // and every solver_rho_Tp path verifying its own residual before returning.
+        HEOS._p = p_spec;
+        HEOS.clear_cached_properties();
         HEOS._Q = -1;
     } else {
         PT_flash_mixtures(HEOS);
