@@ -132,7 +132,42 @@ Highlights:
   ``include/CoolProp/DataStructures.h`` are appended at the end of their enums
   and are ABI-safe.
 
+Performance:
+
+* **The p,T flash stops recomputing derivatives it already has**, and the
+  supercritical-liquid branch, which solved without derivatives at all, now tries a
+  derivative method before its bracketed fallback.  ``Householder4`` was doing six
+  full derivative evaluations per solve where two suffice.  Compressed water goes
+  from 11.96 to 4.97 microseconds, against REFPROP's 4.45
+  (`#3360 <https://github.com/CoolProp/CoolProp/pull/3360>`_).
+
+* **Entropy-input density solves invert on a logarithmic density axis.**  ``s ~
+  -R*ln(rho)``, so the residual is nearly straight in ``ln(rho)`` where the bracket
+  spans 13 to 18 decades of density.  ``SmolarT`` is 2.4x faster at low pressure
+  (Water 51.18 to 20.96 microseconds per point) and slower at high pressure (Water
+  22.31 to 24.33), the log path running a 1e-12 tolerance rather than 1e-9.  Entropy
+  only — ``h`` and ``u`` have no ideal-gas logarithm and stay on the linear axis.
+  Together the two changes take a 137-fluid flash-consistency sweep from 3614
+  inconsistent points to 2185
+  (`#3362 <https://github.com/CoolProp/CoolProp/pull/3362>`_).
+
 Bug fixes:
+
+* **Low-density entropy flashes returned wrong densities.**  ``SmolarT`` resolved
+  absolute density on a bracket spanning up to 18 decades, so at ``rho = 1e-8``
+  mol/m^3 the answer was off by 6.1e-2 relative; it is now 4e-16 to 1e-12 across
+  twelve decades, and the ``SmolarT`` panel of the 137-fluid sweep falls from 1446
+  inconsistent points to 439
+  (`#3362 <https://github.com/CoolProp/CoolProp/pull/3362>`_).
+
+* **The p,T flash did not return the pressure it was given.**  Each density-residual
+  evaluation overwrote ``p`` with the equation of state's pressure at the trial
+  density, so ``PropsSI("P", "P", p, "T", T, fluid)`` came back 7.4e-10 relative
+  away from ``p`` for supercritical nitrogen.  It is now restored exactly, on the
+  **pure-fluid** path (`#3360 <https://github.com/CoolProp/CoolProp/pull/3360>`_).
+  Properties read after a pure-fluid p,T update are now evaluated at the converged
+  density rather than the previous iterate, so bit-exact baselines move in the last
+  digits.
 
 * **R1233zd(E) viscosity works again, with refit constants.**  v8.0.0 replaced
   this fluid's equation of state with the Akasaka & Lemmon (JPCRD 2022)
