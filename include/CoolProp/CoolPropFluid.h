@@ -438,12 +438,38 @@ class EquationOfState
       max_sat_T,         ///< The state at the maximum saturation temperature for pseudo-pure
       max_sat_p;         ///< The state at the maximum saturation pressure for pseudo-pure
     EOSLimits limits;    ///< Limits on the EOS
-    double R_u,          ///< The universal gas constant used for this EOS (usually, but not always, 8.314472 J/mol/K)
-      molar_mass,        ///< The molar mass in kg/mol (note NOT kg/kmol)
-      acentric,          ///< The acentric factor \f$ \omega = -log_{10}\left(\frac{p_s(T/T_c=0.7)}{p_c}\right)-1\f$
-      Ttriple,           ///< Triple point temperature (K)
-      ptriple;           ///< Triple point pressure (Pa)
-    bool pseudo_pure;    ///< Is a pseudo-pure fluid (true) or pure fluid (false)
+    /// Every scalar below carries a default because EquationOfState is built by
+    /// DEFAULT-initialization in two places -- `EquationOfState E;` in FluidLibrary's
+    /// parse_EOS, and the same in its -SRK / -PengRobinson else branch -- each
+    /// followed by push_back(E), which copies whatever the stack happened to hold.
+    /// parse_EOS then overwrites everything from JSON, so it is UB but benign; the
+    /// cubic branch does not, and that one was user-visible: PropsSI("M", ...) on
+    /// HEOS::R1233ZD(E)-SRK, the only cubic-library fluid with no multiparameter
+    /// sibling and so the only one taking that branch, returned 1.5e-313 with an
+    /// empty error string.
+    ///
+    /// The values are 0, NOT _HUGE, and that is load-bearing.  Adding initializers
+    /// also changes the VALUE-initialized path -- AbstractCubicBackend::
+    /// set_alpha0_from_components builds its components with EOSVector.emplace_back(),
+    /// which zero-initialized them before and now runs this constructor instead.
+    /// Zero reproduces what those components used to get.  _HUGE does not: it makes
+    /// the (T > Tc && T > Ttriple) supercritical branch of FlashRoutines::
+    /// DHSU_T_flash unreachable, so every supercritical T+H/S/U flash on a cubic
+    /// throws "we don't support T below Ttriple [inf K]".  GERGBackend.cpp documents
+    /// the same hazard and picks Ttriple = 0 for the same reason.
+    double R_u = 0,    ///< The universal gas constant used for this EOS (usually, but not always, 8.314472 J/mol/K)
+      molar_mass = 0,  ///< The molar mass in kg/mol (note NOT kg/kmol)
+      acentric = 0,    ///< The acentric factor \f$ \omega = -log_{10}\left(\frac{p_s(T/T_c=0.7)}{p_c}\right)-1\f$
+      Ttriple = 0,     ///< Triple point temperature (K)
+      ptriple = 0;     ///< Triple point pressure (Pa)
+    /// Is a pseudo-pure fluid (true) or pure fluid (false).
+    /// Initialized here because only two places ever assign it -- FluidLibrary
+    /// (from HEOS JSON) and GERGBackend -- while cubic components are synthesised
+    /// in set_alpha0_from_components without touching it.  Every read on a cubic
+    /// backend was therefore an indeterminate read, including is_pure() and the
+    /// pseudo_pure branches in HelmholtzEOSMixtureBackend and FlashRoutines that
+    /// cubics inherit.
+    bool pseudo_pure = false;
     ResidualHelmholtzContainer alphar;  ///< The residual Helmholtz energy
     IdealHelmholtzContainer alpha0;     ///< The ideal Helmholtz energy
     std::string BibTeX_EOS,             ///< The bibtex key for the equation of state
