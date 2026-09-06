@@ -3642,28 +3642,81 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
 }
 void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, CoolPropDbl value, parameters other) {
     // Define the residual to be driven to zero
+    /// Density solve on a logarithmic axis, g(u) = f(exp(u)) -- ENTROPY ONLY.
+    ///
+    /// s carries the ideal-gas -R*ln(rho) term, so its residual is nearly straight in
+    /// ln(rho) and strongly curved in rho; h and u have no such term and the transform
+    /// costs them 2-3x the evaluations.  Iterating (not merely seeding) in log space is
+    /// what makes the seed stop mattering: on an 18-decade bracket the arithmetic and
+    /// geometric midpoints are each good at one end and useless at the other.
+    /// Residual for the density solve at fixed T, on a linear or logarithmic axis.
+    ///
+    /// The axis lives here rather than in a wrapper: deriv() and second_deriv() evaluate
+    /// nothing, they read partial derivatives out of the state call() left in the backend.
+    /// A wrapper would scale those by a chain-rule factor from its own exp(x) -- a
+    /// derivative at one density times a factor from another.  Inside, both come from the
+    /// same rho.  log_axis is fixed at construction, so an instance cannot change axis
+    /// between call() and deriv().
     class solver_resid : public FuncWrapper1DWithTwoDerivs
     {
        public:
         HelmholtzEOSMixtureBackend* HEOS;
         CoolPropDbl T, value;
         parameters other;
+        bool log_axis;
+        /// Density this residual last put the backend on; NaN before the first call().
+        double rho_evaluated;
 
-        solver_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl value, parameters other)
-          : HEOS(HEOS), T(T), value(value), other(other) {}
-        double call(double rhomolar) override {
-            HEOS->update_DmolarT_direct(rhomolar, T);
-            double eos = HEOS->keyed_output(other);
-            return eos - value;
-        };
-        double deriv(double rhomolar) override {
-            return HEOS->first_partial_deriv(other, iDmolar, iT);
+        solver_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl value, parameters other, bool log_axis = false)
+          : HEOS(HEOS), T(T), value(value), other(other), log_axis(log_axis), rho_evaluated(NAN) {}
+
+        /// x is ln(rho) on the log axis, rho otherwise.
+        [[nodiscard]] double rho_of(double x) const {
+            return log_axis ? std::exp(x) : x;
         }
-        double second_deriv(double rhomolar) override {
-            return HEOS->second_partial_deriv(other, iDmolar, iT, iDmolar, iT);
+        /// Bring the backend onto rho; normally a no-op, since Halley evaluates
+        /// call/deriv/second_deriv at the same x.  Keeps a derivative from being read at
+        /// the wrong density.
+        void evaluate_at(double rhomolar) {
+            // Exact equality is intended: this asks whether rho IS the cached value, not
+            // whether it is near it.  A tolerance here would skip a needed re-evaluation.
+            if (!(rhomolar == rho_evaluated)) {
+                HEOS->update_DmolarT_direct(rhomolar, T);
+                rho_evaluated = rhomolar;
+            }
+        }
+        double call(double x) override {
+            const double rhomolar = rho_of(x);
+            HEOS->update_DmolarT_direct(rhomolar, T);
+            rho_evaluated = rhomolar;
+            return HEOS->keyed_output(other) - value;
+        };
+        /// With u = ln(rho):  dg/du = rho * f'(rho)
+        double deriv(double x) override {
+            const double rhomolar = rho_of(x);
+            evaluate_at(rhomolar);
+            const double d1 = HEOS->first_partial_deriv(other, iDmolar, iT);
+            return log_axis ? d1 * rhomolar : d1;
+        }
+        /// With u = ln(rho):  d2g/du2 = rho^2 * f''(rho) + rho * f'(rho)
+        double second_deriv(double x) override {
+            const double rhomolar = rho_of(x);
+            evaluate_at(rhomolar);
+            const double d2 = HEOS->second_partial_deriv(other, iDmolar, iT, iDmolar, iT);
+            if (!log_axis) {
+                return d2;
+            }
+            const double d1 = HEOS->first_partial_deriv(other, iDmolar, iT);
+            return d2 * rhomolar * rhomolar + d1 * rhomolar;
         }
     };
+    // Entropy carries the ideal-gas -R*ln(rho) term, so its residual is nearly a straight
+    // line in ln(rho) across an 18-decade bracket; h and u have no such logarithm and the
+    // transform costs them 2-3x the evaluations.  Both instances sit over the same backend;
+    // each tracks the density it last evaluated at, so interleaving them is safe.
+    const bool use_log_rho = (other == iSmolar);
     solver_resid resid(&HEOS, T, value, other);
+    solver_resid resid_log(&HEOS, T, value, other, /*log_axis=*/true);
 
     double T_critical_ = (HEOS.is_pure_or_pseudopure) ? HEOS.T_critical() : HEOS._crit.T;
 
@@ -3697,7 +3750,11 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
                 throw ValueError();
         }
         if (is_in_closed_range(yc, ymin, y)) {
-            Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-9, 100);
+            if (use_log_rho) {
+                Brent(resid_log, std::log(rhoc), std::log(rhomin), LDBL_EPSILON, 1e-12, 100);
+            } else {
+                Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-9, 100);
+            }
         } else if (y < yc) {
             // Increase rhomelt until it bounds the solution
             int step_count = 0;
@@ -3721,7 +3778,11 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
                 }
                 step_count++;
             }
-            Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-9, 100);
+            if (use_log_rho) {
+                Brent(resid_log, std::log(rhomin), std::log(rhoc), LDBL_EPSILON, 1e-12, 100);
+            } else {
+                Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-9, 100);
+            }
         } else {
             throw ValueError(format("input %Lg is not in range %Lg,%Lg", y, yc, ymin));
         }
@@ -3820,10 +3881,21 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
         }
 
         try {
-            Halley(resid, 0.5 * (rhomin + rhoV), 1e-8, 100);
+            if (use_log_rho) {
+                // Halley ON the log axis, seeded at the geometric midpoint.  Solving in
+                // log space rather than only seeding there is what makes this robust at
+                // BOTH ends of an 18-decade bracket -- see solver_resid.
+                Halley(resid_log, std::log(std::sqrt(rhomin * rhoV)), 1e-8, 100);
+            } else {
+                Halley(resid, 0.5 * (rhomin + rhoV), 1e-8, 100);
+            }
         } catch (...) {
             try {
-                Brent(resid, rhomin, rhoV, LDBL_EPSILON, 1e-12, 100);
+                if (use_log_rho) {
+                    Brent(resid_log, std::log(rhomin), std::log(rhoV), LDBL_EPSILON, 1e-12, 100);
+                } else {
+                    Brent(resid, rhomin, rhoV, LDBL_EPSILON, 1e-12, 100);
+                }
             } catch (...) {
                 throw ValueError();
             }

@@ -1546,6 +1546,47 @@ TEST_CASE("DHSU_T flash: mixture ST round-trip", "[michelsen][flash][DHSU_T]") {
     }
 }
 
+// solver_for_rho_given_T_oneof_HSU takes its logarithmic density axis for entropy only,
+// and iterates on it (Halley in ln(rho)) in the subcritical single-phase vapour branch.
+// The mixture cases above are gas or liquid near rho_c; these run from rho/rho_c ~ 8e-3
+// down to ~1e-5, the wide-bracket case the axis exists for.  The HT cases that follow are
+// the same states on the linear axis.
+//
+// These are COVERAGE, not regression tests for the axis: they pass with use_log_rho forced
+// false (checked).  The axis changes iteration count, not the answer -- no state was found
+// where the linear axis returns a different density, including the R410A seed-trap state
+// named in the commit rationale, which round-trips to 2e-16 either way.  What they do catch
+// is this branch throwing or returning a wrong density for any other reason.
+TEST_CASE("DHSU_T flash: pure subcritical-vapour ST round-trip", "[michelsen][flash][DHSU_T]") {
+    SECTION("n-Propane vapour T=300 P=1e5") {
+        dhsu_t_roundtrip("HEOS", "n-Propane", {1.0}, 1e5, 300.0, SmolarT_INPUTS);
+    }
+    SECTION("n-Propane rarefied vapour T=250 P=1e2") {
+        dhsu_t_roundtrip("HEOS", "n-Propane", {1.0}, 1e2, 250.0, SmolarT_INPUTS);
+    }
+    SECTION("Water vapour T=400 P=1e4") {
+        dhsu_t_roundtrip("HEOS", "Water", {1.0}, 1e4, 400.0, SmolarT_INPUTS);
+    }
+    SECTION("R134a vapour T=260 P=1e4") {
+        dhsu_t_roundtrip("HEOS", "R134a", {1.0}, 1e4, 260.0, SmolarT_INPUTS);
+    }
+}
+
+TEST_CASE("DHSU_T flash: pure subcritical-vapour HT round-trip (linear-axis control)", "[michelsen][flash][DHSU_T]") {
+    SECTION("n-Propane vapour T=300 P=1e5") {
+        dhsu_t_roundtrip("HEOS", "n-Propane", {1.0}, 1e5, 300.0, HmolarT_INPUTS);
+    }
+    SECTION("n-Propane rarefied vapour T=250 P=1e2") {
+        dhsu_t_roundtrip("HEOS", "n-Propane", {1.0}, 1e2, 250.0, HmolarT_INPUTS);
+    }
+    SECTION("Water vapour T=400 P=1e4") {
+        dhsu_t_roundtrip("HEOS", "Water", {1.0}, 1e4, 400.0, HmolarT_INPUTS);
+    }
+    SECTION("R134a vapour T=260 P=1e4") {
+        dhsu_t_roundtrip("HEOS", "R134a", {1.0}, 1e4, 260.0, HmolarT_INPUTS);
+    }
+}
+
 TEST_CASE("DHSU_T flash: mixture UT round-trip", "[michelsen][flash][DHSU_T]") {
     SECTION("N2/O2 gas T=300 P=1e5") {
         dhsu_t_roundtrip("HEOS", "Nitrogen&Oxygen", {0.79, 0.21}, 1e5, 300.0, TUmolar_INPUTS);
