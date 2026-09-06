@@ -602,10 +602,17 @@ jobs:
       # gate that can quietly lose coverage as the cache warms up across
       # runs, without ever failing the job. See ccache.dev/manual, "Using
       # ccache with other tools" / GitHub codeql issues #9882, #19447.
+      #
+      # -DCOOLPROP_USE_CCACHE=OFF is what enforces that. CMakeLists.txt now
+      # auto-enables ccache whenever find_program locates it, so merely
+      # omitting a launcher flag no longer keeps it out: the protection would
+      # rest on ccache being absent from the runner image's PATH, and would
+      # break silently the day that changes. Opt out explicitly instead.
       - name: Configure CPP
         if: ${{ matrix.language == 'cpp' }}
         run: cmake
                -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
+               -DCOOLPROP_USE_CCACHE=OFF
                -B ${{github.workspace}}/build
                -S .
 

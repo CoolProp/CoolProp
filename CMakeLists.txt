@@ -6,6 +6,86 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(CheckIncludeFileCXX)
 
+#######################################
+#          COMPILER CACHE             #
+#-------------------------------------#
+
+# Route compiles through ccache when it is available.  A fresh git worktree
+# otherwise recompiles the entire library from scratch -- measured at 3m47s for
+# the Catch runner tree plus 4m02s for the shared-library tree, on sources
+# byte-identical to the ones the main checkout already built (bd CoolProp-tl0w).
+#
+# This MUST sit above the dependencies.cmake include below.  CMAKE_<LANG>_-
+# COMPILER_LAUNCHER is consumed when a target is created, and that include adds
+# every CPM package -- Catch2 alone is 106 of the Catch runner tree's 205
+# objects.  Setting the launcher after project() (line ~219) left those 106
+# compiling uncached, which measured as 99/205 objects covered.
+#
+# CCACHE_BASEDIR is load-bearing, not a tuning knob.  CoolProp's compile lines
+# bake in absolute paths: every -I into the source tree, the CPM _deps includes
+# under the build dir, and the input file itself.  Those strings differ per
+# worktree, so without base_dir every object in a new worktree misses and ccache
+# buys nothing.  Pointing base_dir at the source root makes ccache rewrite
+# absolute paths beneath it to CWD-relative form before hashing; since a
+# worktree's build dir sits inside the worktree exactly as the main checkout's
+# does, the rewritten command lines coincide and the cache is shared.
+#
+# What base_dir does NOT do is reach inside a -D macro value, and CatchTestRunner
+# carries -DCOOLPROP_ALL_FLUIDS_JSON_PATH="<source dir>/dev/all_fluids.json" on
+# all 99 of its objects (CMakeLists.txt, target_compile_definitions below).  That
+# costs far less than it looks like it should, because ccache's preprocessor mode
+# excludes -D from the command-line hash -- a define's effect is already present
+# in the preprocessed text -- so only a TU that actually expands the macro fails
+# to share.  Measured on a fresh cache populated from an unrelated path:
+#
+#   cacheable calls  205 / 205      direct hits         106  (Catch2; no -D)
+#   hits             204 / 205      preprocessed hits    98  (-D present, unused)
+#   misses             1 / 205      the one TU that expands the macro
+#
+# The other limit is ccache's hash_dir, which defaults true and folds the working
+# directory into the hash whenever -g is present.  Debug / RelWithDebInfo /
+# sanitizer trees therefore do NOT share across worktrees; the numbers above are
+# Release, and only -g-free builds get them.
+#
+# `cmake -E env` rather than a bare `env` so the launcher stays portable.
+#
+# Only the Makefile and Ninja generators honour <LANG>_COMPILER_LAUNCHER, so
+# Visual Studio and Xcode are excluded -- wiring it there is a silent no-op that
+# reads as support.  (CoolProp documents `cmake -G Xcode` for the iOS wrapper,
+# and already special-cases Xcode further down, so this is a live path.)
+# MSVC itself is NOT excluded: this runs before project(), so the MSVC variable
+# is not populated yet and cannot be tested here.  ccache has supported cl.exe
+# since 4.6 under Ninja and Makefiles, though MSVC's default /Zi debug format is
+# uncacheable (/Z7 is required); opt out with -DCOOLPROP_USE_CCACHE=OFF.
+#
+# A launcher the caller already supplied (distcc, sccache, a CI wrapper) is
+# honoured rather than overwritten.  Both the -D form and the environment-
+# variable form are checked: CMake itself initializes the cache variable from
+# the environment, but only during project(), which is ~200 lines below here --
+# so testing the variable alone would silently discard an env-set launcher.
+# Either language being pre-set defers the whole block, so a caller who sets
+# only CXX does not end up with a mismatched C launcher.
+option(COOLPROP_USE_CCACHE "Route compiles through ccache when available" ON)
+
+if(COOLPROP_USE_CCACHE
+   AND NOT CMAKE_GENERATOR MATCHES "Visual Studio|Xcode"
+   AND NOT CMAKE_C_COMPILER_LAUNCHER
+   AND NOT CMAKE_CXX_COMPILER_LAUNCHER
+   AND NOT DEFINED ENV{CMAKE_C_COMPILER_LAUNCHER}
+   AND NOT DEFINED ENV{CMAKE_CXX_COMPILER_LAUNCHER})
+  find_program(COOLPROP_CCACHE_PROGRAM ccache)
+  if(COOLPROP_CCACHE_PROGRAM)
+    set(_coolprop_ccache_launcher
+        "${CMAKE_COMMAND}" -E env "CCACHE_BASEDIR=${CMAKE_CURRENT_SOURCE_DIR}"
+        "${COOLPROP_CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER ${_coolprop_ccache_launcher})
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${_coolprop_ccache_launcher})
+    message(STATUS "ccache enabled: ${COOLPROP_CCACHE_PROGRAM} (CCACHE_BASEDIR=${CMAKE_CURRENT_SOURCE_DIR})")
+  else()
+    message(STATUS "ccache not found; compiling without a compiler cache")
+  endif()
+endif()
+
 # Dependency management via CPM.cmake (replaces git submodules).
 # Set CPM_SOURCE_CACHE (e.g. ~/.cache/CPM) to share downloads across worktrees.
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
