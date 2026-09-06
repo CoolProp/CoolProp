@@ -50,16 +50,18 @@ Highlights:
   How much, and whether it matters, depends on what was there before:
 
   * For **R-1234yf, R-1234ze(E), R-245fa, R-32** (previously ``rhosr-CS``) and
-    **ethylbenzene** (previously ``ECS``), the old value came from a *predictive*
-    method — corresponding states or extended corresponding states — not from a
-    correlation fitted to that fluid.  These move the most, and the movement is a
-    correction.  R-245fa is the clearest case: against the four check values its
-    source paper publishes, the new correlation agrees to within 0.002 %, while the
-    superseded ``rhosr-CS`` was off by +14.1 %, −14.1 %, +16.6 % and +61.0 %.  Median
-    change over the domain below is 2.9–7.1 %, and 14.5 % for R-245fa.
+    **ethylbenzene** (previously ``ECS``), the change is largest — median 2.9–7.1 %,
+    and 14.5 % for R-245fa.  Both the old and the new models were fitted to
+    experimental viscosity data; they are different functional forms, fitted by
+    different groups, and they disagree by more than either one's stated uncertainty.
+    For R-245fa the new correlation claims 2 % in the dilute gas and 3 % in the liquid,
+    yet differs from ``rhosr-CS`` by 14 % at 250 K and by 61 % at 430 K / 530 kg·m⁻³.
+    A disagreement that size is a statement about the underlying data — its coverage,
+    its weighting, or its accuracy — and this release does not attempt to settle it.
+    What changed is which correlation CoolProp reports.
   * For **ammonia** (Fenghour et al., 1995) and **methane** (Quiñones-Cisneros et al.,
-    2006), the previous model was itself a published correlation, and the change is
-    correspondingly small — median 0.5 % and 1.5 %.
+    2006), the previous model was a published fluid-specific correlation of the same
+    kind, and the change is correspondingly small — median 0.5 % and 1.5 %.
 
   Measured over 0.1–100 bar, triple point to 1.3\ :math:`T_c`, plus both saturation
   branches.  Differences are largest in the compressed liquid near the triple point,
