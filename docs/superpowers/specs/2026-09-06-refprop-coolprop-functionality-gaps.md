@@ -1,7 +1,7 @@
 # REFPROP-vs-CoolProp functionality gaps
 
 **Date:** 2026-09-06
-**Issue:** CoolProp-it6e (epic), CoolProp-it6e.1 .. .10 (individual gaps)
+**Issue:** CoolProp-it6e (epic), CoolProp-it6e.1 .. .12 (individual gaps)
 **Status:** assessment complete; each gap needs its own design + plan before implementation
 
 ## Goal
@@ -31,14 +31,21 @@ verified from CoolProp's own source.  Where the claim is about REFPROP's
 routines and is in-tree after a configure at
 `build_shared/_deps/refprop_headers-src/`.  That header proves a routine
 *exists* or does not.  It says nothing about what a routine *does* internally —
-so claims of the form "REFPROP's `TRNPRP` uses mixture ECS plus friction
-theory" rest on REFPROP's documentation and are marked as such below.
+so **every description below of what a REFPROP routine *does* — `TRNPRP` using
+mixture ECS plus friction theory, `SATH`/`SATS` taking a `kph` code, what
+`SETMOD` and `SETAGA` switch, REFPROP's estimation fallback, `MELTT`/`SUBLT`
+returning correlated lines — rests on REFPROP's documentation, not on anything
+checkable here.**  Treat those as the weaker half of this document.
 
 **How the gap list was selected:** by scanning all 176 exported routines in that
 header for CoolProp counterparts, plus the mixture-model and flash coverage
-found by reading the HEOS backend.  A reader can therefore distinguish "not a
-gap" from "not considered": anything in the header not listed below was checked
-and found to have a counterpart.
+found by reading the HEOS backend.  Routines mapping to a thermophysical
+property or a model-selection facility were checked individually; REFPROP's
+infrastructure and I/O routines (`SETPATH`, `ERRMSG`, `FLAGS`, `PASSCMN`,
+`HMXORDER`, `GETENUM`, ...) were excluded as having no meaningful CoolProp
+counterpart to look for.  The scan is **not** claimed to be exhaustive beyond
+that: it found gaps 9 through 12, which the first draft missed entirely, so a
+further pass may well find more.
 
 ## Rejected claims
 
@@ -60,8 +67,9 @@ load-bearing: `StabilityRoutines::StabilityEvaluationClass`
 (`VLERoutines.h:666`, `VLERoutines.cpp:2094` `check_stability_michelsen`,
 `:2288` `minimize_tpd`), and `PT_flash_mixtures` gates its split on it —
 `FlashRoutines.cpp:179-180` constructs the tester and sets
-`do_twophase = !stability_tester.is_stable()`.  It is used at five further
-sites.  The accurate statement is that the stability test is *binary* — it
+`do_twophase = !stability_tester.is_stable()`.  It is constructed at four further
+production sites (`HelmholtzEOSMixtureBackend.cpp:4356`; `FlashRoutines.cpp:2572`,
+`:3950`, `:4077`), plus test-only uses.  The accurate statement is that the stability test is *binary* — it
 decides one phase versus two and cannot discover a third — not that there is
 none.
 
@@ -212,8 +220,9 @@ as gap 6.
 REFPROP exports `DIELECdll` (`REFPROP_lib.h:128`).  CoolProp has no such
 property; the only matches under `src/` belong to PC-SAFT's internal
 electrolyte term (`PCSAFTBackend.cpp`, `PCSAFTBackend.h:37`), which is neither a
-general-purpose dielectric constant nor exposed as a parameter.  Also searched
-`permittivity` and `epsilon_r`: no hits.
+general-purpose dielectric constant nor exposed as a parameter.  Also searched `permittivity`
+(one hit, `PCSAFTBackend.h:20` `perm_vac`, vacuum permittivity — PC-SAFT
+internals again) and `epsilon_r` (no hits).
 
 Requires a new `DataStructures` entry, parameter plumbing, and per-fluid
 correlations — the last being the real cost.
@@ -232,8 +241,10 @@ Tillner-Roth-1993; also D4, D5, Helium, HydrogenChloride, MD2M, MD3M, MD4M, …)
 and `parse_EOS_listing`
 (`src/Backends/Helmholtz/Fluids/FluidLibrary.h:527-531`) loads all of them into
 `EOSVector`.  What hard-codes the choice is the accessor:
-`include/CoolProp/CoolPropFluid.h:564` and `:567` return `EOSVector[0]`, and
-nothing anywhere indexes `EOSVector[i>0]`.  So the alternate models are already
+`include/CoolProp/CoolPropFluid.h:564` and `:567` return `EOSVector[0]`, and no
+consumer ever selects among the entries — the only non-zero index in the tree is
+the loader's own back-insertion while parsing (`FluidLibrary.h:428`,
+`EOSVector.at(EOSVector.size() - 1)`).  So the alternate models are already
 shipped and parsed; the missing piece is **selection plumbing above the loader**,
 not loader work.
 
@@ -241,9 +252,12 @@ This interacts with open work: `CoolProp-f1ez` (nitrogen/argon viscosity
 supersession blocked by the conductivity coupling) and `CoolProp-3bpg` (how to
 adopt the 2022 R-134a viscosity given its ECS reference role) are genuine
 forced-choice cases, and 3bpg's option (b) is literally per-fluid model pinning.
-`CoolProp-9s9u` is *not* such a case — its items are blocked on missing
-manuscript verification points and a NIST HTTP 503, which model switching does
-not address.  Worth revisiting this priority if the supersession work stalls.
+`CoolProp-9s9u` is a mixed case and should not be cited whole: its nitrogen and
+argon items *are* the `f1ez` forced-choice case already counted above, while its
+remaining items (deuterium, three correlations blocked on a NIST HTTP 503, neon,
+heavy water) are blocked on missing manuscripts, a server outage, or a VS0
+rewrite — none of which model switching addresses.  Worth revisiting this
+priority if the supersession work stalls.
 
 *Effort:* medium; a selection API plus a policy for what a selected model means
 downstream (notably for ECS reference fluids).
@@ -271,9 +285,9 @@ whether to change the default.
 ### 9. No choked-flow / critical-flow factor — `CoolProp-it6e.9`, P3
 
 REFPROP exports `CSTARdll` (critical flow factor, `REFPROP_lib.h:113`) and
-`MASSFLUXdll` (choked mass flux, `:170`).  CoolProp has neither: `grep -rin
-'cstar|choked|mass_flux'` over `src/` and `include/` returns nothing outside the
-GERG backend.  Relevant to relief-valve and nozzle sizing.
+`MASSFLUXdll` (choked mass flux, `:170`).  CoolProp has neither: `grep -rin` for `cstar`, `choked`,
+`mass_flux` and `massflux` over `src/` and `include/` returns **zero** hits
+each.  Relevant to relief-valve and nozzle sizing.
 
 *Effort:* medium; the thermodynamics is standard but needs an isentropic-choking
 solver.
@@ -287,6 +301,28 @@ model a user can select.  Closely related to gap 7 — `SETAGA` is a special cas
 of runtime model switching — so sequence them together.
 
 *Effort:* medium.
+
+### 11. No gross/net heating value — `CoolProp-it6e.11`, P3
+
+REFPROP exports `HEATdll` (`REFPROP_lib.h:158`) for gross and net heating
+values.  CoolProp has no counterpart: `grep -rinE 'HHV|LHV|heating_value|
+combustion'` over `src/` and `include/` returns nothing.
+
+Do not confuse this with `HFORMATION`/`HEATFRMdll`, added in `2ce7b0a1a` — that
+is the standard enthalpy of *formation*, a different quantity.  Relevant to
+natural-gas custody transfer, so it pairs naturally with gap 10.
+
+*Effort:* small; it is a combination of formation enthalpies plus a
+stoichiometry table.
+
+### 12. No fourth virial coefficient — `CoolProp-it6e.12`, P4
+
+REFPROP's `VIRBCDdll` (`REFPROP_lib.h:262`) returns the second, third **and
+fourth** virial coefficients.  CoolProp exposes `iBvirial` and `iCvirial` only;
+`grep -rin 'Dvirial'` over `src/` and `include/` returns zero hits.
+
+*Effort:* small, but `D` is rarely used — listed for completeness of the virial
+surface rather than because anyone is asking.
 
 ## Non-gap, for completeness
 
@@ -306,6 +342,10 @@ rather than a functionality gap.  No issue filed.
 4. **`CoolProp-it6e.1` (mixture transport)** as its own project, once someone can
    commit to it.  Do not start it as a side quest.
 
-Gaps 3, 5, 6, 8 and 9 are unblocked and can be picked up independently.  Each
-needs its own design doc first, because each turns on a modelling or
-architecture decision that this assessment deliberately does not make.
+Gaps 3, 5, 6, 8, 9, 11 and 12 are unblocked and can be picked up independently.
+Gap 11 pairs naturally with gap 10 (both serve natural-gas work).  Gap 12 is
+listed for completeness and nobody should prioritise it.
+
+Each remaining gap needs its own design doc first, because each turns on a
+modelling or architecture decision that this assessment deliberately does not
+make.
