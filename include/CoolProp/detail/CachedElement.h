@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>  // memset, used by CacheArray::clear()
 #include "CoolProp/detail/tools.h"
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/numerics/numerics.h"
@@ -154,8 +155,8 @@ class CacheArray
 
    public:
     void clear() {
-        memset(m_values.data(), 0, sizeof(m_values));
-        memset(m_cached.data(), false, sizeof(m_cached));
+        std::memset(m_values.data(), 0, sizeof(m_values));
+        std::memset(m_cached.data(), false, sizeof(m_cached));
     }
     auto factory(std::size_t i) {
         return CacheArrayElement<double>(m_values[i], m_cached[i]);
