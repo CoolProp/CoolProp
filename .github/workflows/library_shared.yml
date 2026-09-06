@@ -1,4 +1,7 @@
-name: Library builds (shared)
+name: CMake library builds
+
+permissions:
+  contents: read
 
 on:
   push:
@@ -28,6 +31,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macOS-latest]
+        linkage: [shared, static]
+        include:
+          - os: ubuntu-latest
+            linkage: both
+          - os: windows-latest
+            linkage: both
 
     steps:
     - uses: actions/checkout@v7
@@ -48,8 +57,7 @@ jobs:
         COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
         echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
 
-    # cmake/dependencies.cmake fetches its CPM deps from network with no
-    # cache, so every OS leg here re-downloads the same dependency set.
+    # Reuse the pinned CPM dependency sources across builds on each OS.
     - name: Cache CPM packages
       uses: actions/cache@v6
       with:
@@ -59,7 +67,26 @@ jobs:
           cpm-${{ runner.os }}-
 
     - name: Configure CMake
-      run: cmake -B build -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON
+      shell: bash
+      run: |
+        static=OFF
+        shared=OFF
+        case "${{ matrix.linkage }}" in
+          static) static=ON ;;
+          shared) shared=ON ;;
+          both) static=ON; shared=ON ;;
+        esac
+        extra_args=()
+        if [ "${{ runner.os }}" = Windows ] && [ "${{ matrix.linkage }}" = both ]; then
+          # Regression gate: Debug must still select the debug CRT even when
+          # the deprecated compatibility switch is explicitly disabled.
+          extra_args+=("-DCOOLPROP_MSVC_DEBUG:BOOL=OFF")
+        fi
+        cmake -B build -S . \
+          -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} \
+          -DCOOLPROP_STATIC_LIBRARY:BOOL="$static" \
+          -DCOOLPROP_SHARED_LIBRARY:BOOL="$shared" \
+          "${extra_args[@]}"
 
     - name: Build
       shell: bash
@@ -70,6 +97,11 @@ jobs:
       # under bash on all three runners. Mirrors csharp_builder.yml.
       run: |
         JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
+        if [ "${{ runner.os }}" = Windows ] && [ "${{ matrix.linkage }}" = both ]; then
+          # Each MSVC project already uses /MP. Building both projects in
+          # parallel can exhaust the compiler heap on hosted runners.
+          JOBS=1
+        fi
         echo "Building with -j$JOBS"
         cmake --build build --target install -j "$JOBS" --config ${{ env.BUILD_TYPE }}
 
@@ -78,7 +110,7 @@ jobs:
       # dynamic export table. Rides the shared build produced above (ELF on
       # ubuntu, Mach-O on macOS) — no separate build. nm-based, so the Windows
       # PE legs are skipped (exports are opt-in via src/CoolPropLib.def).
-      if: runner.os == 'Linux' || runner.os == 'macOS'
+      if: matrix.linkage != 'static' && (runner.os == 'Linux' || runner.os == 'macOS')
       shell: bash
       run: |
         set -euo pipefail
@@ -93,42 +125,231 @@ jobs:
         echo "Gating $lib"
         ./dev/ci/check-json-symbols.sh "$lib"
 
+    - name: Test installed CMake package
+      shell: bash
+      run: |
+        set -euo pipefail
+        prefix_a="$RUNNER_TEMP/coolprop-prefix-a-${{ matrix.linkage }}"
+        prefix_b="$RUNNER_TEMP/coolprop-prefix-b-${{ matrix.linkage }}"
+        cmake -E remove_directory "$prefix_a"
+        cmake -E remove_directory "$prefix_b"
+        cmake --install build --config "${{ env.BUILD_TYPE }}" --prefix "$prefix_a"
+        cmake -E rename "$prefix_a" "$prefix_b"
+
+        python - "$prefix_b" "$GITHUB_WORKSPACE" "$prefix_a" <<'PY'
+        from pathlib import Path
+        import sys
+
+        package_dir = Path(sys.argv[1]) / "lib" / "cmake" / "CoolProp"
+        license_dir = Path(sys.argv[1]) / "share" / "licenses" / "CoolProp"
+        required_files = {
+            package_dir / "CoolPropConfig.cmake",
+            package_dir / "CoolPropTargets.cmake",
+            license_dir / "Eigen" / "COPYING.MPL2",
+            license_dir / "fmt" / "LICENSE",
+        }
+        missing = sorted(path for path in required_files if not path.is_file())
+        if missing:
+            raise SystemExit(f"Required installed files are missing: {missing}")
+
+        cmake_files = list(package_dir.glob("*.cmake"))
+        if not cmake_files:
+            raise SystemExit(f"No CMake package files found under {package_dir}")
+
+        forbidden = {
+            value.replace("\\", "/")
+            for value in (sys.argv[2], sys.argv[3])
+        }
+        for cmake_file in cmake_files:
+            content = cmake_file.read_text(encoding="utf-8").replace("\\", "/")
+            leaked = [value for value in forbidden if value and value in content]
+            if leaked:
+                raise SystemExit(f"{cmake_file} contains non-relocatable paths: {leaked}")
+        PY
+
+        if [ "${{ runner.os }}" = Linux ] && [ "${{ matrix.linkage }}" != static ]; then
+          cmake_version="${COOLPROP_VERSION/-/}"
+          test -f "$prefix_b/lib/libCoolProp.so.$cmake_version"
+        fi
+
+        expected=""
+        disable_threads=FALSE
+        case "${{ matrix.linkage }}" in
+          static) expected=STATIC ;;
+          shared)
+            expected=SHARED
+            # A shared-only imported target has no Threads link interface.
+            # Prove that its config does not impose that static-only consumer
+            # dependency.
+            disable_threads=TRUE
+            ;;
+        esac
+        cmake -S dev/ci/cmake-consumer -B consumer-build \
+          -DCMAKE_PREFIX_PATH="$prefix_b" \
+          -DCOOLPROP_EXPECTED_LINKAGE="$expected" \
+          -DCMAKE_DISABLE_FIND_PACKAGE_Threads:BOOL="$disable_threads"
+        cmake --build consumer-build --config "${{ env.BUILD_TYPE }}"
+        ctest --test-dir consumer-build -C "${{ env.BUILD_TYPE }}" --output-on-failure
+
+        if [ "${{ matrix.linkage }}" != static ]; then
+          cmake -S dev/ci/cmake-consumer -B c-consumer-build \
+            -DCMAKE_PREFIX_PATH="$prefix_b" \
+            -DCOOLPROP_EXPECTED_LINKAGE=SHARED \
+            -DCOOLPROP_C_ONLY=ON \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Threads:BOOL="$disable_threads"
+          cmake --build c-consumer-build --config "${{ env.BUILD_TYPE }}"
+          ctest --test-dir c-consumer-build -C "${{ env.BUILD_TYPE }}" --output-on-failure
+        fi
+
+    - name: Build Debug MSVC runtimes and installed consumers
+      if: runner.os == 'Windows' && matrix.linkage == 'both'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        python - <<'PY'
+        import re
+        import xml.etree.ElementTree as ET
+        from pathlib import Path
+
+        expected = {
+            "CoolProp_static.vcxproj": "MultiThreadedDebugDLL",
+            "CoolProp_shared.vcxproj": "MultiThreadedDebug",
+        }
+        namespace = {"msbuild": "http://schemas.microsoft.com/developer/msbuild/2003"}
+        debug_condition = re.compile(
+            r"\s*'\$\(Configuration\)\|\$\(Platform\)'\s*==\s*'Debug\|([^']+)'\s*"
+        )
+        for project, runtime in expected.items():
+            project_path = Path("build") / project
+            root = ET.parse(project_path).getroot()
+            debug_groups = []
+            for group in root.findall("msbuild:ItemDefinitionGroup", namespace):
+                match = debug_condition.fullmatch(group.get("Condition", ""))
+                if match:
+                    debug_groups.append((group, match.group(1)))
+            if not debug_groups:
+                raise SystemExit(f"{project} has no Debug ItemDefinitionGroup")
+            for group, platform in debug_groups:
+                setting = group.find(
+                    "msbuild:ClCompile/msbuild:RuntimeLibrary", namespace
+                )
+                actual = None if setting is None else setting.text
+                if actual != runtime:
+                    raise SystemExit(
+                        f"{project} Debug|{platform} runtime is {actual!r}; "
+                        f"expected {runtime!r}"
+                    )
+        PY
+
+        cmake --build build --config Debug --parallel 1
+        prefix="$RUNNER_TEMP/coolprop-debug-both"
+        cmake -E remove_directory "$prefix"
+        cmake --install build --config Debug --prefix "$prefix"
+        cmake -S dev/ci/cmake-consumer -B consumer-debug \
+          -DCMAKE_PREFIX_PATH="$prefix"
+        cmake --build consumer-debug --config Debug --parallel 1
+
+    - name: Test add_subdirectory consumer
+      if: runner.os == 'Linux' && matrix.linkage == 'static'
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake -S dev/ci/cmake-consumer -B source-consumer \
+          -DCOOLPROP_SOURCE_DIR="$GITHUB_WORKSPACE" \
+          -DCOOLPROP_EXPECTED_LINKAGE=STATIC
+        cmake --build source-consumer --config "${{ env.BUILD_TYPE }}"
+        ctest --test-dir source-consumer -C "${{ env.BUILD_TYPE }}" --output-on-failure
+
+    - name: Configure add_subdirectory consumer with CMP0091-old parent
+      if: runner.os == 'Windows' && matrix.linkage == 'static'
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake -S dev/ci/cmake-consumer -B source-consumer-windows \
+          -DCOOLPROP_SOURCE_DIR="$GITHUB_WORKSPACE" \
+          -DCOOLPROP_EXPECTED_LINKAGE=STATIC
+
     # Create a special case for Windows since we also need 2 flavours of 32bit binaries
     - name: Configure CMake for 32bit Windows stdcall
-      if: startsWith(matrix.os, 'windows')
+      if: startsWith(matrix.os, 'windows') && matrix.linkage == 'shared'
       run: cmake -B build_stdc  -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -DCOOLPROP_STDCALL_LIBRARY:BOOL=ON -A Win32
       
     - name: Build with CMake for 32bit Windows stdcall
-      if: startsWith(matrix.os, 'windows')
+      if: startsWith(matrix.os, 'windows') && matrix.linkage == 'shared'
       shell: bash
       run: |
         JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
         echo "Building with -j$JOBS"
         cmake --build build_stdc --target install -j "$JOBS" --config ${{ env.BUILD_TYPE }}
 
+    - name: Test 32bit Windows stdcall package
+      if: startsWith(matrix.os, 'windows') && matrix.linkage == 'shared'
+      shell: bash
+      run: |
+        set -euo pipefail
+        prefix="$RUNNER_TEMP/coolprop-stdcall"
+        cmake -E remove_directory "$prefix"
+        cmake --install build_stdc --config "${{ env.BUILD_TYPE }}" --prefix "$prefix"
+        cmake -S dev/ci/cmake-consumer -B consumer-stdcall -A Win32 \
+          -DCMAKE_PREFIX_PATH="$prefix" \
+          -DCOOLPROP_EXPECTED_LINKAGE=SHARED \
+          -DCOOLPROP_C_ONLY=ON
+        cmake --build consumer-stdcall --config "${{ env.BUILD_TYPE }}"
+        ctest --test-dir consumer-stdcall -C "${{ env.BUILD_TYPE }}" --output-on-failure
+
     - name: Configure CMake for 32bit Windows cdecl
-      if: startsWith(matrix.os, 'windows')
+      if: startsWith(matrix.os, 'windows') && matrix.linkage == 'shared'
       run: cmake -B build_cdecl -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -DCOOLPROP_CDECL_LIBRARY:BOOL=ON   -A Win32
       
     - name: Build with CMake for 32bit Windows cdecl
-      if: startsWith(matrix.os, 'windows')
+      if: startsWith(matrix.os, 'windows') && matrix.linkage == 'shared'
       shell: bash
       run: |
         JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
         echo "Building with -j$JOBS"
         cmake --build build_cdecl --target install -j "$JOBS" --config ${{ env.BUILD_TYPE }}
 
+    - name: Test 32bit Windows cdecl package
+      if: startsWith(matrix.os, 'windows') && matrix.linkage == 'shared'
+      shell: bash
+      run: |
+        set -euo pipefail
+        prefix="$RUNNER_TEMP/coolprop-cdecl"
+        cmake -E remove_directory "$prefix"
+        cmake --install build_cdecl --config "${{ env.BUILD_TYPE }}" --prefix "$prefix"
+        cmake -S dev/ci/cmake-consumer -B consumer-cdecl -A Win32 \
+          -DCMAKE_PREFIX_PATH="$prefix" \
+          -DCOOLPROP_EXPECTED_LINKAGE=SHARED \
+          -DCOOLPROP_C_ONLY=ON
+        cmake --build consumer-cdecl --config "${{ env.BUILD_TYPE }}"
+        ctest --test-dir consumer-cdecl -C "${{ env.BUILD_TYPE }}" --output-on-failure
+
     - name: Configure CMake for 64bit Windows arm64
-      if: startsWith(matrix.os, 'windows')
+      if: startsWith(matrix.os, 'windows') && matrix.linkage == 'shared'
       run: cmake -B build_arm64 -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -A ARM64
       
     - name: Build with CMake for 64bit Windows arm64
-      if: startsWith(matrix.os, 'windows')
+      if: startsWith(matrix.os, 'windows') && matrix.linkage == 'shared'
       shell: bash
       run: |
         JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)
         echo "Building with -j$JOBS"
         cmake --build build_arm64 --target install -j "$JOBS" --config ${{ env.BUILD_TYPE }}
+
+    - name: Link CMake consumer for Windows arm64
+      if: startsWith(matrix.os, 'windows') && matrix.linkage == 'shared'
+      shell: bash
+      run: |
+        set -euo pipefail
+        prefix="$RUNNER_TEMP/coolprop-arm64"
+        cmake -E remove_directory "$prefix"
+        cmake --install build_arm64 --config "${{ env.BUILD_TYPE }}" --prefix "$prefix"
+        cmake -S dev/ci/cmake-consumer -B consumer-arm64 -A ARM64 \
+          -DCMAKE_PREFIX_PATH="$prefix" \
+          -DCOOLPROP_EXPECTED_LINKAGE=SHARED \
+          -DCOOLPROP_C_ONLY=ON
+        cmake --build consumer-arm64 --config "${{ env.BUILD_TYPE }}"
 
 
     # - name: Tar.gz the shared library to maintain case sensitivy and file permissions
@@ -139,10 +360,11 @@ jobs:
     #     tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz ./*
 
     - name: Archive artifacts
+      if: matrix.linkage == 'shared'
       uses: actions/upload-artifact@v7
       with:
           # Upload to unique artifact names tagged with suffix of matrix.os
-          # This is now requried by upload-artifact@v4, but will be merged later
+          # This is now required by upload-artifact@v4, but will be merged later
           name: shared_library-${{ matrix.os }}
           path: install_root/shared_library
 

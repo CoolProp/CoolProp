@@ -24,6 +24,49 @@ It was originally developed by Ian Bell, at the time a post-doc at the Universit
 
 * If you are new to Git and Github, please see the [CoolProp Wiki](https://github.com/CoolProp/CoolProp/wiki) for guidance on becoming a contributor to the project.
 
+## CMake package
+
+CoolProp can build and install static and shared libraries independently or in
+the same build:
+
+```sh
+cmake -S . -B build \
+  -DCOOLPROP_STATIC_LIBRARY=ON \
+  -DCOOLPROP_SHARED_LIBRARY=ON
+cmake --build build --config Release
+cmake --install build --config Release --prefix /path/to/prefix
+```
+
+An installed package is consumed through imported targets, without manually
+adding include directories or platform libraries:
+
+```cmake
+find_package(CoolProp 8 CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE CoolProp::CoolProp)
+```
+
+When CoolProp is configured with both variants, the producer-side
+`COOLPROP_DEFAULT_LIBRARY` cache setting chooses which variant is exported
+through `CoolProp::CoolProp` (`SHARED` by default). This choice is recorded in
+the installed package and cannot be changed by a package consumer. Consumers
+that require explicit linkage should use `CoolProp::Static` or
+`CoolProp::Shared`. Separate consumer targets may select different variants,
+but one final binary must not link both variants.
+On Windows, the portable shared-library interface is the C API from
+`CoolProp/CoolPropLib.h`; use the static target for the complete C++ API.
+
+Source-tree consumers can use the same canonical target:
+
+```cmake
+set(COOLPROP_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
+add_subdirectory(externals/CoolProp)
+target_link_libraries(my_app PRIVATE CoolProp::CoolProp)
+```
+
+Nested builds add no CoolProp install rules by default. A parent project that
+intentionally packages CoolProp can enable `COOLPROP_INSTALL_CMAKE_PACKAGE`
+and/or `COOLPROP_INSTALL_LEGACY_LAYOUT` before calling `add_subdirectory`.
+
 ## Sponsors
 
 Free code signing on Windows provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).

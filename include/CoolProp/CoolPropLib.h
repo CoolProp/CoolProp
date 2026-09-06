@@ -9,7 +9,9 @@
  * EXPORT_CODE void CONVENTION AFunction(double, double);
  * will be exported to the DLL
  *
- * The exact symbol that will be exported depends on the values of the preprocessor macros COOLPROP_LIB, EXPORT_CODE, CONVENTION, etc.
+ * The exact symbol that will be exported depends on the values of the
+ * preprocessor macros COOLPROP_SHARED_LIBRARY_BUILD,
+ * COOLPROP_SHARED_LIBRARY_USE, EXPORT_CODE, CONVENTION, etc.
  *
  * In order to have 100% control over the export macros, you can specify EXPORT_CODE and CONVENTION directly. Check out
  * CMakeLists.txt in the repo root to see some examples.
@@ -35,42 +37,45 @@
 #    pragma error
 #endif
 
-#if defined(COOLPROP_LIB)
-#    ifndef EXPORT_CODE
-#        if defined(__ISWINDOWS__)
-#            define EXPORT_CODE extern "C" __declspec(dllexport)
-#        else
-#            define EXPORT_CODE extern "C"
-#        endif
-#    endif
-#    ifndef CONVENTION
-#        if defined(__ISWINDOWS__)
-#            define CONVENTION __stdcall
-#        else
-#            define CONVENTION
-#        endif
-#    endif
+// Backwards compatibility: COOLPROP_LIB historically selected producer-side
+// DLL exports. New CMake consumers receive the unambiguous BUILD/USE macros.
+#if defined(COOLPROP_LIB) && !defined(COOLPROP_SHARED_LIBRARY_BUILD) && !defined(COOLPROP_SHARED_LIBRARY_USE)
+#    define COOLPROP_SHARED_LIBRARY_BUILD
+#endif
+
+#if defined(__cplusplus) \
+  && (defined(COOLPROP_SHARED_LIBRARY_BUILD) || defined(COOLPROP_SHARED_LIBRARY_USE) || defined(EXTERNC) || defined(__powerpc__))
+#    define COOLPROP_EXTERN_C extern "C"
 #else
-#    ifndef EXPORT_CODE
-#        define EXPORT_CODE
+#    define COOLPROP_EXTERN_C
+#endif
+
+#ifndef COOLPROP_SYMBOL_VISIBILITY
+#    if defined(__ISWINDOWS__) && defined(COOLPROP_SHARED_LIBRARY_USE)
+#        define COOLPROP_SYMBOL_VISIBILITY __declspec(dllimport)
+#    elif defined(__ISWINDOWS__) && defined(COOLPROP_SHARED_LIBRARY_BUILD)
+#        define COOLPROP_SYMBOL_VISIBILITY __declspec(dllexport)
+#    else
+#        define COOLPROP_SYMBOL_VISIBILITY
 #    endif
-#    ifndef CONVENTION
+#endif
+
+#ifndef EXPORT_CODE
+#    define EXPORT_CODE COOLPROP_EXTERN_C COOLPROP_SYMBOL_VISIBILITY
+#endif
+
+#ifndef CONVENTION
+#    if defined(__ISWINDOWS__) && (defined(COOLPROP_SHARED_LIBRARY_BUILD) || defined(COOLPROP_SHARED_LIBRARY_USE))
+#        define CONVENTION __stdcall
+#    else
 #        define CONVENTION
 #    endif
 #endif
 
 #ifndef __cplusplus
-#    if defined(__STDC_VERSION__)
-#        if (__STDC_VERSION__ >= 199901L)
-#            include <stdbool.h>
-#        endif
+#    if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)) || (defined(_MSC_VER) && (_MSC_VER >= 1800))
+#        include <stdbool.h>
 #    endif
-#endif
-
-// Hack for PowerPC compilation to only use extern "C"
-#if defined(__powerpc__) || defined(EXTERNC)
-#    undef EXPORT_CODE
-#    define EXPORT_CODE extern "C"
 #endif
 
 #if defined(__powerpc__)
