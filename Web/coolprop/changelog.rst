@@ -46,30 +46,8 @@ Highlights:
     **46**\ (3):033103 (2017).
 
   **Replaces the previous model** for ammonia, ethylbenzene, methane, R-1234yf,
-  R-1234ze(E), R-245fa and R-32, so **returned viscosities change for these seven**.
-  How much, and whether it matters, depends on what was there before:
-
-  * For **R-1234yf, R-1234ze(E), R-245fa, R-32** (previously ``rhosr-CS``) and
-    **ethylbenzene** (previously ``ECS``), the change is largest — median 2.9–7.1 %,
-    and 14.5 % for R-245fa.  Both the old and the new models were fitted to
-    experimental viscosity data; they are different functional forms fitted by
-    different groups, and where the data are dense they largely agree to within the
-    scatter of the data itself.  The large differences are concentrated where the
-    measurements are not.  For R-245fa the two models differ by 61 % at
-    430 K / 530 kg·m⁻³ — which is :math:`T/T_c = 1.007`, :math:`\rho/\rho_c = 1.021`,
-    essentially the critical point, where the critical enhancement dominates and
-    neither model includes it.  Check the near-critical region and the extremes of the
-    compressed liquid against your own data; elsewhere the change is the few per cent
-    quoted above.
-  * For **ammonia** (Fenghour et al., 1995) and **methane** (Quiñones-Cisneros et al.,
-    2006), the previous model was a published fluid-specific correlation of the same
-    kind, and the change is correspondingly small — median 0.5 % and 1.5 %.
-
-  Measured over 0.1–100 bar, triple point to 1.3\ :math:`T_c`, plus both saturation
-  branches.  Differences are largest in the compressed liquid near the triple point,
-  where the superseded models were extrapolating furthest — up to 202 % for
-  ethylbenzene at 178 K and 100 bar.  The previous model is preserved in each fluid
-  file behind the new one.
+  R-1234ze(E), R-245fa and R-32, so returned viscosities change for these seven.  The
+  previous model is preserved in each fluid file behind the new one.
 
   **Four of these papers print an equation that does not reproduce their own
   verification table**, so the shipped correlation deliberately differs from the
@@ -78,18 +56,16 @@ Highlights:
   2023) and ethanol (**44**\ (3), 2023, though that correlation is not shipped — see
   below).  Two have no published correction: R-161 Eq. 8 needs a minus in its
   denominator, and krypton Eq. 13 omits the exponential that the paper's own Fig. 8
-  reference implementation applies.  Each affected fluid file records the discrepancy,
-  the correct form and the deviation at the paper's own check point.
+  reference implementation applies.  Each affected fluid file records the discrepancy and the
+  correct form.
 
   Two correlations were implemented and validated but are **deliberately not shipped**.
   **R-134a** (Velliadou, Assael and Huber, *Int. J. Thermophys.* **43**\ (7):105, 2022)
-  is the ECS reference fluid for R11, R1132a, R116, R12, R143a, R236EA and R236FA, so
-  adopting it would move all seven by 1.1–2.6 % with nothing in this work to justify
-  that.  **Ethanol** (Sotiriadou and co-workers, *Int. J. Thermophys.* **44**\ (3):40,
-  2023) has a pole at :math:`\tau^2(1+\delta^2) = 1` whose low-density end lies in
-  reachable superheated vapour between 493.6 K and the critical point, where the
-  viscosity diverges and changes sign; it is only ~1e-7 wide in relative density, but a
-  negative viscosity propagates silently.  Both remain on their previous models.
+  is the ECS reference fluid for seven other refrigerants, so adopting it would change
+  their viscosities too, which is a separate decision.  **Ethanol** (Sotiriadou and
+  co-workers, *Int. J. Thermophys.* **44**\ (3):40, 2023) has a pole at
+  :math:`\tau^2(1+\delta^2) = 1` that falls in reachable superheated vapour, where the
+  viscosity diverges and changes sign.  Both remain on their previous models.
 
   As with the previous batch, the critical enhancement is not included for any of these.
 
