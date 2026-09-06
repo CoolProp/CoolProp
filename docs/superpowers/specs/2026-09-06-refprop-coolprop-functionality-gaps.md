@@ -355,13 +355,19 @@ covered by gaps 1-12:
 | `RIEMdll`  | :206 | thermodynamic curvature |
 | `B12dll`   | :105 | interaction second virial for a binary |
 | `CV2PKdll` | :114 | two-phase isochoric heat capacity |
-| `VIRBCD12dll` | :263 | virial composition derivatives |
+| `VIRBCD12dll` | :263 | first and second temperature derivatives of the virials |
 | `VIRTAUdll`   | :267 | higher-order tau derivatives of the virials |
 | `FPVdll`   | :147 | supercompressibility factor (arguably subsumed by gap 10) |
 
 `grep -rin 'acoustic'` over `src/` and `include/` returns zero hits, and
-`include/CoolProp/DataStructures.h:156` onward carries only `iBvirial`,
-`iCvirial`, `idBvirial_dT`, `idCvirial_dT`.
+`include/CoolProp/DataStructures.h:156` onward carries exactly four virial
+entries — `iBvirial`, `iCvirial`, `idBvirial_dT`, `idCvirial_dT`.
+
+`VIRTAUdll`'s quantity is inferred from its name and signature: it is absent
+from the FORTRAN tree on this machine, which is an older release than the
+pinned header.  That skew is worth remembering generally — `VIRBCD12` takes 14
+arguments in the local source against 7 in the pinned header — so the FORTRAN
+route verifies *semantics*, not the pinned API's exact shape.
 
 *Effort:* not estimated.  Triage into real issues if anyone asks; nobody
 currently is.
