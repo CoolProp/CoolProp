@@ -1,7 +1,7 @@
 # REFPROP-vs-CoolProp functionality gaps
 
 **Date:** 2026-09-06
-**Issue:** CoolProp-it6e (epic), CoolProp-it6e.1 .. .12 (individual gaps)
+**Issue:** CoolProp-it6e (epic), CoolProp-it6e.1 .. .13 (individual gaps)
 **Status:** assessment complete; each gap needs its own design + plan before implementation
 
 ## Goal
@@ -31,21 +31,34 @@ verified from CoolProp's own source.  Where the claim is about REFPROP's
 routines and is in-tree after a configure at
 `build_shared/_deps/refprop_headers-src/`.  That header proves a routine
 *exists* or does not.  It says nothing about what a routine *does* internally —
-so **every description below of what a REFPROP routine *does* — `TRNPRP` using
-mixture ECS plus friction theory, `SATH`/`SATS` taking a `kph` code, what
-`SETMOD` and `SETAGA` switch, REFPROP's estimation fallback, `MELTT`/`SUBLT`
-returning correlated lines — rests on REFPROP's documentation, not on anything
-checkable here.**  Treat those as the weaker half of this document.
+so **every
+description below of what a REFPROP routine *does* — `TRNPRP` using mixture ECS
+plus friction theory, `SATH`/`SATS` taking a `kph` code, what `SETMOD` and
+`SETAGA` switch, REFPROP's estimation fallback, `MELTT`/`SUBLT` returning
+correlated lines — rests on REFPROP's documentation rather than on this
+repository.**  Treat those as the weaker half of this document.
 
-**How the gap list was selected:** by scanning all 176 exported routines in that
-header for CoolProp counterparts, plus the mixture-model and flash coverage
-found by reading the HEOS backend.  Routines mapping to a thermophysical
-property or a model-selection facility were checked individually; REFPROP's
-infrastructure and I/O routines (`SETPATH`, `ERRMSG`, `FLAGS`, `PASSCMN`,
-`HMXORDER`, `GETENUM`, ...) were excluded as having no meaningful CoolProp
-counterpart to look for.  The scan is **not** claimed to be exhaustive beyond
-that: it found gaps 9 through 12, which the first draft missed entirely, so a
-further pass may well find more.
+One qualification: REFPROP's FORTRAN source is available to maintainers holding
+a license (on Ian's machine at `~/Code/gpgREFPROP/REFPROPungpg/FORTRAN/`), and
+the semantics of `HEAT`, `HEATFRM` and `VIRBCD` in gaps 11 and 12 *were* checked
+against it rather than against the documentation.  That route is open for any
+claim here that turns out to matter; it is not reproducible in CI, and no
+REFPROP source is quoted in this document.
+
+**How the gap list was selected:** every one of the 176 exported routines in that
+header was screened by name, plus the mixture-model and flash coverage found by
+reading the HEOS backend.  REFPROP's infrastructure and I/O routines
+(`SETPATH`, `ERRMSG`, `FLAGS`, `PASSCMN`, `HMXORDER`, `GETENUM`, ...) were then
+set aside as having no meaningful CoolProp counterpart to look for.  Of the
+property and model-selection routines that remained, those with a CoolProp
+counterpart were dropped, those worth acting on became gaps 1-12, and those
+with **no** counterpart but no current demand are named explicitly in gap 13
+rather than left implicit.
+
+Screening by name is weaker than reading each routine, and this document does
+not claim more: the first draft missed gaps 9 through 12 entirely, and gap 13
+exists because a review pass found property routines the second draft had
+silently cleared.  A further pass may well find more.
 
 ## Rejected claims
 
@@ -254,9 +267,10 @@ adopt the 2022 R-134a viscosity given its ECS reference role) are genuine
 forced-choice cases, and 3bpg's option (b) is literally per-fluid model pinning.
 `CoolProp-9s9u` is a mixed case and should not be cited whole: its nitrogen and
 argon items *are* the `f1ez` forced-choice case already counted above, while its
-remaining items (deuterium, three correlations blocked on a NIST HTTP 503, neon,
-heavy water) are blocked on missing manuscripts, a server outage, or a VS0
-rewrite — none of which model switching addresses.  Worth revisiting this
+remaining items are blocked on things model switching does not address:
+deuterium (no manuscript verification points exist at all), three correlations
+behind a NIST HTTP 503, neon (published 2026, no accessible copy yet — an access
+problem, not a missing manuscript), and heavy water (a VS0 rewrite).  Worth revisiting this
 priority if the supersession work stalls.
 
 *Effort:* medium; a selection API plus a policy for what a selected model means
@@ -321,8 +335,36 @@ REFPROP's `VIRBCDdll` (`REFPROP_lib.h:262`) returns the second, third **and
 fourth** virial coefficients.  CoolProp exposes `iBvirial` and `iCvirial` only;
 `grep -rin 'Dvirial'` over `src/` and `include/` returns zero hits.
 
+(`VIRBCD` also carries a fifth-virial output slot that the shipped code does not
+currently compute, so "fourth" is the right claim today but is a statement about
+this REFPROP version, not about the signature.)
+
 *Effort:* small, but `D` is rarely used — listed for completeness of the virial
 surface rather than because anyone is asking.
+
+### 13. Property routines with no counterpart and no current demand — `CoolProp-it6e.13`, P4
+
+Named rather than left implicit, so the selection methodology above is honest.
+Each maps to a thermophysical property, has zero trace in CoolProp, and is not
+covered by gaps 1-12:
+
+| Routine | `REFPROP_lib.h` | Quantity |
+| ------- | --------------- | -------- |
+| `VIRBAdll` | :261 | second *acoustic* virial coefficient |
+| `VIRCAdll` | :265 | third *acoustic* virial coefficient |
+| `RIEMdll`  | :206 | thermodynamic curvature |
+| `B12dll`   | :105 | interaction second virial for a binary |
+| `CV2PKdll` | :114 | two-phase isochoric heat capacity |
+| `VIRBCD12dll` | :263 | virial composition derivatives |
+| `VIRTAUdll`   | :267 | higher-order tau derivatives of the virials |
+| `FPVdll`   | :147 | supercompressibility factor (arguably subsumed by gap 10) |
+
+`grep -rin 'acoustic'` over `src/` and `include/` returns zero hits, and
+`include/CoolProp/DataStructures.h:156` onward carries only `iBvirial`,
+`iCvirial`, `idBvirial_dT`, `idCvirial_dT`.
+
+*Effort:* not estimated.  Triage into real issues if anyone asks; nobody
+currently is.
 
 ## Non-gap, for completeness
 
@@ -343,8 +385,9 @@ rather than a functionality gap.  No issue filed.
    commit to it.  Do not start it as a side quest.
 
 Gaps 3, 5, 6, 8, 9, 11 and 12 are unblocked and can be picked up independently.
-Gap 11 pairs naturally with gap 10 (both serve natural-gas work).  Gap 12 is
-listed for completeness and nobody should prioritise it.
+Gap 11 pairs naturally with gap 10 (both serve natural-gas work).  Gaps 12 and
+13 are recorded for completeness of the survey and nobody should prioritise
+them.
 
 Each remaining gap needs its own design doc first, because each turns on a
 modelling or architecture decision that this assessment deliberately does not
