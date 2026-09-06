@@ -919,6 +919,43 @@ void FlashRoutines::QS_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
     HEOS._phase = iphase_twophase;
 }
 
+/// Reject the trivial solution from a mixture saturation flash.
+/**
+ * Successive substitution and the Newton-Raphson saturation solver both
+ * converge when every K-value reaches unity, because the Rachford-Rice
+ * residual is then identically zero.  That solution is the two phases having
+ * become the same phase, which is not a saturation state: near the critical
+ * point of a mixture it is what the solvers land on, and they report success.
+ * On HEOS::R513A.mix at Q=0.5 the QT flash fails outright from 365 K to 367 K
+ * and then returns rho_liq = rho_vap = 2408.7 mol/m3 at 367.433 K, 93 J/kg/K
+ * away in entropy from the last real point.
+ *
+ * The check lives here, at the flash boundary, rather than inside the solvers:
+ * the phase envelope tracer drives those same solvers deliberately up to and
+ * through the critical point, where the collapse is the answer it is looking
+ * for.
+ *
+ * @param rho_liq Molar density of the saturated liquid the solver returned
+ * @param rho_vap Molar density of the saturated vapour the solver returned
+ * @param T Temperature of the solved state, for the error message
+ * @param p Pressure of the solved state, for the error message
+ * @param who Name of the calling flash, for the error message
+ */
+static void check_not_trivial_solution(double rho_liq, double rho_vap, double T, double p, const char* who) {
+    if (!ValidNumber(rho_liq) || !ValidNumber(rho_vap) || rho_liq <= 0 || rho_vap <= 0) {
+        return;  // not our failure to diagnose; the callers' own checks apply
+    }
+    // Genuine saturation pairs stay orders above this even within a kelvin of
+    // the critical point; a collapsed pair comes in around 1e-6 relative.
+    const double rtol = 1e-4;
+    if (std::abs(rho_liq - rho_vap) <= rtol * std::max(rho_liq, rho_vap)) {
+        throw ValueError(format("%s converged on the trivial solution: the saturated liquid and vapour "
+                                "are the same state (rhomolar %g and %g mol/m3 at T=%g K, p=%g Pa), so this "
+                                "is not a saturation point",
+                                who, rho_liq, rho_vap, T, p));
+    }
+}
+
 void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
     CoolPropDbl T = HEOS._T;
     CoolPropDbl Q = HEOS._Q;
@@ -1075,6 +1112,9 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
 
             HEOS._p = IO.p;
             HEOS._rhomolar = 1 / (HEOS._Q / IO.rhomolar_vap + (1 - HEOS._Q) / IO.rhomolar_liq);
+        }
+        if (!HEOS.is_pure_or_pseudopure && HEOS.SatL && HEOS.SatV) {
+            check_not_trivial_solution(HEOS.SatL->rhomolar(), HEOS.SatV->rhomolar(), HEOS.SatL->T(), HEOS.SatV->p(), "QT_flash");
         }
         // Load the outputs
         HEOS._phase = iphase_twophase;
@@ -1392,6 +1432,9 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
             }
         }
 
+        if (!HEOS.is_pure_or_pseudopure && HEOS.SatL && HEOS.SatV) {
+            check_not_trivial_solution(HEOS.SatL->rhomolar(), HEOS.SatV->rhomolar(), HEOS.SatL->T(), HEOS.SatV->p(), "PQ_flash");
+        }
         // Load the outputs
         HEOS._phase = iphase_twophase;
         HEOS._p = HEOS.SatV->p();
@@ -4189,10 +4232,19 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
             // Verify the mixture result reproduces the requested property (#3148/#3192).  The
             // P-sweep + TOMS748 (and the fast-path density sweep) can return a state where
             // keyed_output(other) != value -- e.g. a discontinuity from a phase misclassification
-            // -- so without this check the flash could SILENTLY return a wrong state.  D+T is a
-            // direct evaluation and needs no check; H/S/U at fixed T solve for the state and must
-            // be verified.  Mirrors the HSU_P guard.
-            if (other != iDmolar) {
+            // -- so without this check the flash could SILENTLY return a wrong state.
+            // Mirrors the HSU_P guard.
+            //
+            // Density is included.  This check used to exclude it, reasoning that
+            // D+T is a direct evaluation and needs none -- true of the fast path,
+            // where update_DmolarT_direct is handed the requested density, but not
+            // of the P-sweep below it.  That sweep solves rho(P) = value through PT
+            // flashes, and rho(P) at fixed T is not monotonic, so it can settle on a
+            // state at a different density entirely: HEOS::R513A.mix at 288.853439 K
+            // returned 617.6 mol/m3 for a requested 1198.85 with h = -1.02e7 J/kg,
+            // while 1190 and 1210 round tripped exactly.  The check costs nothing
+            // when the fast path ran, since the residual is then identically zero.
+            {
                 const auto resid_dhsu = static_cast<double>(HEOS.keyed_output(other) - value);
                 const double scale_dhsu = std::abs(static_cast<double>(value)) + 1.0;
                 if (!ValidNumber(resid_dhsu) || std::abs(resid_dhsu) > 1e-6 * scale_dhsu) {
