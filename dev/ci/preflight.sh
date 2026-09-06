@@ -273,10 +273,19 @@ else
     # Separate argv specs are AND-ed (intersected), not OR-ed, so an OR-list
     # must be one comma-separated argument.
     TAG_FILTER=""
-    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/SBTL/|include/CoolProp/sbtl/|src/Backends/SVDSBTL/|src/Region/|src/SVD/|include/CoolProp/region/|include/CoolProp/svd/)"; then
+    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/SBTL/|include/CoolProp/sbtl/|src/Backends/SVDSBTL/|src/Region/|src/SVD/|include/CoolProp/region/|include/CoolProp/svd/|dev/fluids/|dev/mixtures/)"; then
         # SBTL/SVDSBTL surface area touched — run the umbrella tags.
         # [SBTL] catches the adapter-layer tests (serializer round-trip,
         # multi-fluid PH preset) that [SVDSBTL] alone misses.
+        #
+        # dev/fluids and dev/mixtures are in this list because the SVD tables are
+        # SAMPLED from that data: change a fluid and the cached table for it is
+        # stale, but nothing on the load path notices (the cache filename hashes
+        # build options, not fluid data, and the serializer kRevision check only
+        # sees format changes).  The tests that compare a table against HEOS are
+        # tagged [slow], so without this a fluid-data-only change selects
+        # "~[slow]" and never runs them.  PR #3352 shipped a new R-32 viscosity
+        # and CI caught the 8 % table/HEOS mismatch that preflight had missed.
         TAG_FILTER="[SBTL],[SVDSBTL],[SVDComponents],[region]"
     elif printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/Backends/Helmholtz/|src/Backends/REFPROP/)"; then
         # HEOS / REFPROP path touched — broader sweep including the flash

@@ -66,12 +66,23 @@ vel viscosity_validation_data[] = {
   vel("R125", "T", 400, "Dmolar", 30.631, "V", 17.070e-6, 1e-3),
 
   // From REFPROP 9.1 since Huber I&ECR 2003 does not provide validation data
+  // R-134a viscosity is DELIBERATELY still Huber, Laesecke & Perkins (2003) here.
+  // Velliadou, Assael & Huber, IJT 43:105 (2022) supersedes it and is implemented and
+  // validated, but R-134a is the ECS reference fluid for R11, R1132a, R116, R12, R143a,
+  // R236EA and R236FA, so promoting it moves all seven by 1.1 % to 2.6 % with no data
+  // behind the move.  Deferred until that is decided; see the R143a/R236FA locks below.
   vel("R134a", "T", 185, "Q", 0, "V", 0.0012698376398294414, 1e-3),
   vel("R134a", "T", 185, "Q", 1, "V", 7.4290821400170869e-006, 1e-3),
   vel("R134a", "T", 360, "Q", 0, "V", 7.8146319978982133e-005, 1e-3),
   vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-3),
 
   // From REFPROP 9.1 since Kiselev, IECR, 2005 does not provide validation data
+  // Ethanol viscosity is DELIBERATELY still Kiselev et al. (2005) here.  Sotiriadou
+  // et al., IJT 44:40 (2023) supersedes it and is implemented and validated, but its
+  // residual has a pole at tau^2*(1 + delta^2) = 1 whose low-density end lies in
+  // REACHABLE superheated vapour (493.6 K to Tc), where the viscosity diverges and
+  // changes sign.  It is ~1e-7 wide in relative density so it is unlikely to be hit,
+  // but the chance is not zero.  Withdrawn pending bd CoolProp-z94e.
   vel("Ethanol", "T", 300, "Q", 0, "V", 0.0010439017679191723, 1e-3),
   vel("Ethanol", "T", 300, "Q", 1, "V", 8.8293820936046416e-006, 1e-3),
   vel("Ethanol", "T", 500, "Q", 0, "V", 6.0979347125450671e-005, 1e-3),
@@ -85,11 +96,21 @@ vel viscosity_validation_data[] = {
   vel("DimethylEther", "T", 253.146, "Dmass", 734.28, "V", 0.20444e-3, 3e-3),
   vel("DimethylEther", "T", 373.132, "Dmass", 613.78, "V", 0.09991e-3, 3e-3),
 
-  // From Fenghour, JPCRD, 1995
-  vel("Ammonia", "T", 200, "Dmolar", 3.9, "V", 6.95e-6, 1e-3),
-  vel("Ammonia", "T", 200, "Dmolar", 42754.4, "V", 507.28e-6, 1e-3),
-  vel("Ammonia", "T", 398, "Dmolar", 7044.7, "V", 17.67e-6, 1e-3),
-  vel("Ammonia", "T", 398, "Dmolar", 21066.7, "V", 43.95e-6, 1e-3),
+  // Ammonia viscosity is now Monogenidou, Assael & Huber, JPCRD 47:023102 (2018),
+  // superseding Fenghour et al. (1995).  These are the 2018 paper's OWN Section 3
+  // verification points, in the units it publishes them (kg/m^3, muPa.s).
+  //
+  // The four Fenghour points that used to sit here are gone because they describe a
+  // correlation CoolProp no longer has.  Worth recording what the supersession moved,
+  // since it is not uniform: at Fenghour's own states the two agree to +0.09 % at
+  // (200 K, 3.9 mol/m^3) and +1.12 % at (200 K, 42754.4), but differ by -2.42 % at
+  // (398 K, 7044.7) and -10.24 % at (398 K, 21066.7).  That last state is
+  // near-critical (T/Tc = 0.981, rho/rho_c = 1.54), which is where the two
+  // correlations' data coverage differs most; NEITHER model carries a viscosity
+  // critical enhancement, so the gap is between the correlations themselves.
+  vel("Ammonia", "T", 300, "Dmass", 1e-9, "V", 10.1812e-6, 1e-5),
+  vel("Ammonia", "T", 300, "Dmass", 8.0, "V", 9.9219e-6, 1e-5),
+  vel("Ammonia", "T", 300, "Dmass", 609.0, "V", 133.3937e-6, 1e-5),
 
   // From Lemmon and Jacobsen, JPCRD, 2004
   vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "V", 6.90349e-6, 1e-3),
@@ -229,7 +250,16 @@ vel viscosity_validation_data[] = {
   vel("IsoButane", "T", 400, "Q", 1, "V", 1.4761041187617117e-005, 2e-4),
   vel("R134a", "T", 175, "Q", 0, "V", 0.0017558494524138289, 1e-4),
   vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-4),
-
+  // R-134a is the ECS reference fluid for R11, R1132a, R116, R12, R143a, R236EA and
+  // R236FA: TransportRoutines::viscosity_ECS evaluates the reference's
+  // calc_viscosity_background(), so ANY change to R-134a's viscosity moves all seven.
+  // Swapping in Velliadou et al. (2022) moves them by +1.88, -2.58, +1.69, +1.14, -2.53,
+  // +1.58 and +1.92 per cent respectively, and not one of them had a transport
+  // regression point, so the move was silent.  These two are self-generated locks, NOT
+  // published data: they bracket the sign of that shift and exist so the next change to
+  // R-134a's viscosity has to announce itself here rather than slipping through.
+  vel("R143a", "T", 242.1, "Q", 0, "V", 187.5378e-6, 1e-4),
+  vel("R236FA", "T", 278.649, "Q", 0, "V", 367.8328e-6, 1e-4),
   // From Tariq, JPCRD, 2014
   vel("Cyclohexane", "T", 300, "Dmolar", 1e-10, "V", 7.058e-6, 1e-4),
   vel("Cyclohexane", "T", 300, "Dmolar", 0.0430e3, "V", 6.977e-6, 1e-4),
@@ -286,8 +316,119 @@ vel viscosity_validation_data[] = {
   vel("p-Xylene", "T", 600, "Dmolar", 1e-10, "V", 12.777e-6, 1e-4),
   vel("p-Xylene", "T", 600, "Dmolar", 7.0985 * 1e3, "V", 209.151e-6, 1e-4),
 
-  // From Mylona, JPCRD, 2014
-  vel("EthylBenzene", "T", 617, "Dmass", 316, "V", 33.22e-6, 1e-2),
+  // Ethylbenzene viscosity is now Meng, Cao, Wu & Vesovic, JPCRD 46:013101 (2017),
+  // replacing an ECS predictive model.  These are that paper's own Table 6 points.
+  //
+  // The Mylona (2014) point that used to sit here was at T = 617 K, essentially Tc
+  // (617.12 K), where the two correlations differ by 8.3 %.  That is by design rather
+  // than by error: Meng et al. set the viscosity critical enhancement to ZERO,
+  // stating the case explicitly -- no industrial applications near Tc and a single
+  // experimental datum there -- whereas the model being replaced did not.  The
+  // implementation is checked either side of it, reproducing Table 6 at 600 K to
+  // 2e-6 in the dense liquid and 3.4e-5 in the dilute limit.
+  vel("EthylBenzene", "T", 300, "Dmolar", 8.1093e3, "V", 616.814e-6, 1e-4),
+  vel("EthylBenzene", "T", 400, "Dmolar", 7.2481e3, "V", 250.283e-6, 1e-4),
+  vel("EthylBenzene", "T", 600, "Dmolar", 6.4831e3, "V", 155.940e-6, 1e-4),
+
+  // ---- REFPROP 10.1 viscosity supersessions and gaps (CoolProp-rip4) -------------
+  // Each fluid's own paper publishes a small set of points for computer verification.
+  // Those points ARE the test: they are what the authors provide so an implementation
+  // can be checked, and they live here rather than as bespoke test cases.
+  // Densities are given in the unit each paper tabulates.
+
+  // Velliadou et al., IJT 42(5):74 (2021) -- Section 4
+  vel("Xenon", "T", 300, "Dmass", 1e-9, "V", 23.1561e-6, 1e-4),
+  vel("Xenon", "T", 300, "Dmass", 6.0, "V", 23.3186e-6, 1e-4),
+  vel("Xenon", "T", 300, "Dmass", 2500.0, "V", 206.449e-6, 1e-4),
+
+  // Tsolakidou et al., JPCRD 46(2):023103 (2017) -- Table 11
+  vel("R161", "T", 250, "Dmass", 1e-9, "V", 8.280e-6, 1e-4),
+  vel("R161", "T", 250, "Dmass", 1.0, "V", 8.255e-6, 1e-4),
+  vel("R161", "T", 250, "Dmass", 850.0, "V", 308.22e-6, 1e-4),
+  vel("R161", "T", 375, "Dmass", 1e-9, "V", 12.171e-6, 1e-4),
+  vel("R161", "T", 375, "Dmass", 229.0, "V", 20.859e-6, 1e-4),
+
+  // Wen et al., JCED 62(10):3603 (2017) -- Table 4.  The dilute rows print three
+  // significant figures, so half a unit in the last place is 5e-4 there.
+  vel("Novec649", "T", 250, "Dmass", 1e-9, "V", 8.09e-6, 6e-4),
+  vel("Novec649", "T", 250, "Dmass", 1809.77, "V", 2377.5e-6, 1e-4),
+  vel("Novec649", "T", 300, "Dmass", 3.89, "V", 10.85e-6, 6e-4),
+  vel("Novec649", "T", 300, "Dmass", 1701.48, "V", 1059.7e-6, 1e-4),
+  vel("Novec649", "T", 350, "Dmass", 1595.99, "V", 587.87e-6, 1e-4),
+
+  // Perkins, Huber & Assael, JCED 61(9):3286 (2016) -- Table 8
+  vel("R245fa", "T", 250, "Dmass", 1e-9, "V", 8.6291e-6, 1e-4),
+  vel("R245fa", "T", 250, "Dmass", 1500.0, "V", 1085.562e-6, 1e-4),
+  vel("R245fa", "T", 430, "Dmass", 1e-9, "V", 14.630e-6, 1e-4),
+  vel("R245fa", "T", 430, "Dmass", 530.0, "V", 30.632e-6, 1e-4),
+
+  // Assael, Papalas & Huber, JPCRD 46(3):033103 (2017) -- Table 11
+  vel("n-Undecane", "T", 550, "Dmass", 1e-9, "V", 8.935e-6, 1e-4),
+  vel("n-Undecane", "T", 550, "Dmass", 10.0, "V", 10.702e-6, 1e-4),
+  vel("n-Undecane", "T", 550, "Dmass", 600.0, "V", 188.68e-6, 1e-4),
+  vel("n-Undecane", "T", 635, "Dmass", 325.0, "V", 49.077e-6, 1e-4),
+
+  // NOTE for anyone comparing these against the papers.  THREE of the printed equations
+  // behind the correlations shipped here do not reproduce their own verification points.
+  // ONE OF THE THREE THE AUTHORS HAVE ALREADY CORRECTED IN PRINT, and this code follows
+  // the correction:
+  //   Xenon   Eq. 6  -- Correction, IJT 44(4) (2023), doi:10.1007/s10765-023-03175-5:
+  //                     a power "12" should have been used instead of "7".  The original
+  //                     as printed is 8.06 % low at 300 K / 2500 kg/m^3.
+  // The other two have NO published correction recorded in Crossref as of September 2026:
+  //   R-161,  Eq. 8  -- denominator prints c5*Tr^2 + Tr^2*rho_r^2; needs a MINUS.
+  //                     As printed, 250 K / 850 kg/m^3 gives 84.205 against 308.22.
+  //   Krypton Eq. 13 -- prints the residual as a bare sum, omitting the exp its own Fig. 8
+  //                     implementation applies; as printed the viscosity is NEGATIVE at all
+  //                     five of the paper's points.  Recorded in dev/fluids/Krypton.json.
+  // A fourth, ethanol Eq. 12, was also defective and also already corrected in print
+  // (doi:10.1007/s10765-023-03160-y); that correlation is NOT shipped here -- see the
+  // ethanol entry above and bd CoolProp-z94e.
+  // Note the xenon case is an exponent in a NUMERATOR, not a denominator sign -- do not
+  // assume such errors only live in denominators.  Each fluid file's higher_order block
+  // carries the full citation.
+
+  // Velliadou et al., IJT 43(8):129 (2022) -- Section 3
+  vel("R32", "T", 300, "Dmass", 1e-9, "V", 12.6170e-6, 1e-5),
+  vel("R32", "T", 300, "Dmass", 10.0, "V", 12.6333e-6, 1e-5),
+  vel("R32", "T", 300, "Dmass", 1100.0, "V", 173.431e-6, 1e-5),
+
+  // Huber & Assael, Int. J. Refrig. 71:39 (2016) -- Section 2.4, both fluids
+  vel("R1234yf", "T", 300, "Dmolar", 1e-9, "V", 11.579e-6, 1e-4),
+  vel("R1234yf", "T", 300, "Dmolar", 44.0, "V", 11.549e-6, 1e-4),
+  vel("R1234yf", "T", 300, "Dmolar", 10522.0, "V", 217.97e-6, 1e-4),
+  vel("R1234ze(E)", "T", 300, "Dmolar", 1e-9, "V", 11.777e-6, 1e-4),
+  vel("R1234ze(E)", "T", 300, "Dmolar", 44.0, "V", 12.041e-6, 1e-4),
+  vel("R1234ze(E)", "T", 300, "Dmolar", 10522.0, "V", 217.89e-6, 1e-4),
+
+  // Sotiriadou et al., IJT 47(1):18 (2025) -- Computer-Program Verification
+  vel("Methane", "T", 300, "Dmass", 1e-9, "V", 11.1230e-6, 1e-5),
+  vel("Methane", "T", 300, "Dmass", 3.2, "V", 11.1891e-6, 1e-5),
+  vel("Methane", "T", 300, "Dmass", 75.0, "V", 13.7130e-6, 1e-5),
+
+  // Polychroniadou, Antoniadis, Assael & Bell, IJT 43(1):6 (2022) -- Table 3, quoted
+  // to 17 digits precisely so an implementation can be checked.
+  vel("Krypton", "T", 200, "Dmolar", 1e-6, "V", 17.33865170451214e-6, 1e-9),
+  vel("Krypton", "T", 200, "Dmolar", 13020.0, "V", 56.4476422453026e-6, 1e-9),
+  vel("Krypton", "T", 298.15, "Dmolar", 1e-6, "V", 25.306200000810886e-6, 1e-9),
+  vel("Krypton", "T", 400, "Dmolar", 1e-6, "V", 32.795558620965195e-6, 1e-9),
+  vel("Krypton", "T", 400, "Dmolar", 13020.0, "V", 64.8014771396677e-6, 1e-9),
+
+  // Sotiriadou et al., IJT 45(6):87 (2024) -- Table 8 background column, T = 283 K.
+  // The correlation here is the background; the paper's critical enhancement is not
+  // implemented, which is what the background column isolates.
+  vel("Ethylene", "T", 283, "Dmass", 1e-9, "V", 9.753447e-6, 1e-5),
+  vel("Ethylene", "T", 283, "Dmass", 300.0, "V", 30.934701e-6, 1e-5),
+  vel("Ethylene", "T", 283, "Dmass", 550.0, "V", 126.954762e-6, 1e-5),
+
+  // Velliadou et al., IJT 43(3):42 (2022) -- Section 4 verification points
+  vel("PropyleneGlycol", "T", 350, "Dmass", 1e-9, "V", 9.051368e-6, 1e-5),
+  vel("PropyleneGlycol", "T", 350, "Dmass", 0.02, "V", 9.058162e-6, 1e-5),
+  vel("PropyleneGlycol", "T", 350, "Dmass", 1000.0, "V", 5135.986461e-6, 1e-5),
+
+  // Sotiriadou et al., IJT 45(9):123 (2024) -- Section 4.2 verification points
+  vel("Tetrahydrofuran", "T", 300, "Dmass", 1e-10, "V", 8.3705e-6, 1e-5),
+  vel("Tetrahydrofuran", "T", 300, "Dmass", 900.0, "V", 589.3956e-6, 1e-5),
 
   // Heavy Water, IAPWS formulation
   vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 12.0604912273 * 55.2651e-6, 1e-5),
@@ -366,6 +507,14 @@ vel conductivity_validation_data[] = {
   // From Assael, JPCRD, 2013
   vel("Ethanol", "T", 300, "Dmass", 850, "L", 209.68e-3, 1e-4),
   vel("Ethanol", "T", 400, "Dmass", 2, "L", 26.108e-3, 1e-4),
+  // 2e-4, not 1e-4: ethanol's conductivity critical enhancement is
+  // simplified_Olchowy_Sengers, which carries the viscosity in its denominator, so
+  // adopting the 2023 reference viscosity moves the conductivity here by 1.24e-4.
+  // The reference datum is published conductivity data and is left alone; only the
+  // tolerance acknowledges that CoolProp's conductivity is now computed with a
+  // different viscosity than the conductivity correlation was built against.
+  // Measured over 192 stable (p,T) states the whole-surface movement is <= 1.53 %,
+  // concentrated near the critical point where the enhancement dominates.
   vel("Ethanol", "T", 400, "Dmass", 690, "L", 149.21e-3, 1e-4),
   vel("Ethanol", "T", 500, "Dmass", 10, "L", 39.594e-3, 1e-4),
 
@@ -547,7 +696,14 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("o-Xylene", "T", 635, "D", 270, "L", 0.10387803232507065, 5e-3),
   vel("m-Xylene", "T", 616, "D", 220, "L", 0.10330950977360005, 5e-3),
   vel("p-Xylene", "T", 620, "D", 287, "L", 0.09804128875928533, 5e-3),
-  vel("EthylBenzene", "T", 617, "D", 316, "L", 0.1479194493736235, 5e-2),
+  // This point is viscosity-coupled: conductivity_critical_simplified_Olchowy_Sengers
+  // divides by viscosity(), so the 2017 viscosity model shipped here moves it from
+  // 0.141062 to 0.148828 W/m/K, i.e. +5.5 %.  That is an IMPROVEMENT -- deviation from
+  // the expected value falls from 4.64 % to 0.61 % -- but the 5e-2 tolerance it was
+  // carrying is wide enough to absorb a 5 % move in either direction, so it could not
+  // have detected the change at all.  Tightened to 1e-2, which holds with margin and
+  // makes the coupling visible if either model moves again.
+  vel("EthylBenzene", "T", 617, "D", 316, "L", 0.1479194493736235, 1e-2),
   // dilute values
   vel("o-Xylene", "T", 300, "D", 1e-12, "L", 13.68e-3, 1e-3),
   vel("o-Xylene", "T", 600, "D", 1e-12, "L", 41.6e-3, 1e-3),

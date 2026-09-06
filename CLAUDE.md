@@ -105,8 +105,11 @@ push without preflight, use `git push --no-verify` and document why.
 ### Test filter discipline
 
 When changes touch files under `src/SBTL/`, `include/CoolProp/sbtl/`,
-`src/Backends/SVDSBTL/`, or `src/Region/`, run the **umbrella**
-`[SBTL]` tag locally — NOT just `[SVDSBTL]`.  The SBTL adapter layer
+`src/Backends/SVDSBTL/`, `src/Region/`, **or `dev/fluids/` and
+`dev/mixtures/`**, run the **umbrella** `[SBTL]` tag locally — NOT just
+`[SVDSBTL]`, and NOT just `~[slow]`.  The SVD tables are sampled from the
+fluid data, so changing a fluid silently invalidates its cached table; the
+tests that would catch it are tagged `[slow]`.  The SBTL adapter layer
 (serializer round-trip, multi-fluid PH preset tests) lives under
 `[SBTL]` only; narrowing to `[SVDSBTL]` misses tests that bite in CI.
 `./dev/ci/preflight.sh` auto-selects the right umbrella tag from the

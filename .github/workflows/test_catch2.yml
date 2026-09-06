@@ -47,16 +47,27 @@ jobs:
     #   - fluid + mixture JSON (EOS data feeds the sampled values)
     # Any of those changing bumps the key, gets a fresh build, and
     # populates a new cache.  Everything else (docs, wrappers, CI
-    # config) leaves the cache hot.  The on-wire kRevision check in
-    # SVDSurfaceSerializer::load is the safety net if the hash ever
-    # misses an invalidation trigger.
+    # config) leaves the cache hot.
+    #
+    # THE FLUID HASH IS A SEPARATE KEY SEGMENT ON PURPOSE.  restore-keys is a
+    # PREFIX fallback, so a single flat key meant that a fluid-data change
+    # correctly missed the exact key and was then handed a stale table set by
+    # the fallback anyway.  Nothing downstream catches that: the cache filename's
+    # opthash covers build options, not fluid data, so the stale files have the
+    # same names and get loaded; and the kRevision check in
+    # SVDSurfaceSerializer::load only detects FORMAT changes, never a table whose
+    # sampled values are simply out of date.  That is exactly what happened on
+    # PR #3352 -- a new R-32 viscosity correlation against a table built from the
+    # old one, 8 % apart, caught only by [SBTL] on the [slow] tag.
+    # With the fluid hash in the prefix, fallback can only ever land on a table
+    # set sampled from the SAME fluid data.
     - name: Cache SVDSBTL tables
       uses: actions/cache@v6
       with:
         path: ~/.CoolProp/SVDTables
-        key: svdsbtl-${{ runner.os }}-${{ hashFiles('include/CoolProp/sbtl/**', 'include/CoolProp/Backends/SVDSBTL/**', 'include/CoolProp/svd/**', 'include/CoolProp/region/**', 'src/SBTL/**', 'src/Backends/SVDSBTL/**', 'src/SVD/**', 'src/Region/**', 'dev/fluids/**', 'dev/mixtures/**') }}
+        key: svdsbtl-${{ runner.os }}-${{ hashFiles('dev/fluids/**', 'dev/mixtures/**') }}-${{ hashFiles('include/CoolProp/sbtl/**', 'include/CoolProp/Backends/SVDSBTL/**', 'include/CoolProp/svd/**', 'include/CoolProp/region/**', 'src/SBTL/**', 'src/Backends/SVDSBTL/**', 'src/SVD/**', 'src/Region/**') }}
         restore-keys: |
-          svdsbtl-${{ runner.os }}-
+          svdsbtl-${{ runner.os }}-${{ hashFiles('dev/fluids/**', 'dev/mixtures/**') }}-
 
     # cmake/dependencies.cmake fetches Eigen/msgpack-c/nlohmann_json/valijson/
     # IF97/fmt/Catch2/etc. via CPM with no persistent cache, so every run

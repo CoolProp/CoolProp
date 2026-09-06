@@ -31,6 +31,27 @@ Highlights:
   The critical enhancement is not included for any of them; the correlations are the
   background viscosity, which is what the comparisons above are against.
 
+* **Eleven more viscosity correlations**, as fluid-file data using the expression DSL.
+  Each is validated against the verification points its source paper publishes.
+
+  * New — ``PropsSI("V", ...)`` previously raised: **xenon** (Velliadou, *IJT* 2021),
+    **R-161** (Tsolakidou, *JPCRD* 2017), **Novec 649** (Wen, *JCED* 2017),
+    **n-undecane** (Assael, *JPCRD* 2017).
+  * Replaces the previous model, so returned viscosities change: **ammonia**,
+    **ethylbenzene**, **methane**, **R-1234yf**, **R-1234ze(E)**, **R-245fa**, **R-32**.
+    The previous model is kept in the fluid file behind the new one.
+
+  Four source papers print an equation that does not reproduce their own verification
+  table, so the shipped form differs from the typeset one.  Xenon and ethanol have
+  published errata, which CoolProp follows and cites; R-161 and krypton do not.  Each
+  fluid file records the discrepancy.
+
+  **R-134a** and **ethanol** were implemented but are not shipped — R-134a is the ECS
+  reference fluid for seven refrigerants, and ethanol's correlation has a pole in
+  reachable superheated vapour.  Both stay on their previous models.
+
+  No critical enhancement, as with the previous batch.
+
 * Added the :doc:`GERG-2004 and GERG-2008 </coolprop/GERG>` wide-range equations of state for natural gases as two new *strict* backend families (``GERG2004::...``, ``GERG2008::...``).  Strict means the backends admit only the 18 / 21 components each model publishes, carry only that model's own pure-fluid EOS, ideal-gas coefficients, binary reducing parameters and departure functions, use GERG's ``R = 8.314472 J/mol/K`` rather than the CODATA value, and throw rather than answer from a different model — transport properties, superancillaries, and mutable binary interaction parameters are all deliberately unavailable.  Validated against `teqp <https://github.com/usnistgov/teqp>`_ at relative tolerances of 1e-12 on the Helmholtz energies and 1e-10 on pressure, isochoric heat capacity and speed of sound.  See the :doc:`GERG documentation </coolprop/GERG>` for the component tables, the enforced range of validity, the reference-state convention (``h = s = 0`` for the **ideal gas** at 298.15 K / 101325 Pa, which differs from every other CoolProp backend), and the known limitations.  GERG publishes no acentric factor, which CoolProp's VLE and density guess machinery needs; rather than borrow one from a different equation of state, the backends **derive** it from GERG's own equation as :math:`\omega = -1 - \log_{10}(p_{sat}(0.7 T_c)/p_c)` with a converged saturation solve.  Mixture saturation, phase envelopes, VLE flashes and ``DmolarP`` therefore all work.  One limitation deserves calling out here: for **pure** GERG fluids the pressure-plus-caloric input pairs (``HmolarP``, ``PSmolar``, ``PUmolar``) do not work **at all** — through ``PropsSI`` they return ``inf`` plus an error string rather than raising.  That has two separate causes, neither of them the acentric factor: GERG publishes no triple point either, so the flash's temperature bracket falls back to the model's ``Tmin`` instead of the saturation temperature; and the bracket's upper end (1.5x ``Tmax``) is outside the range the backend enforces.  Use ``PT``, ``DmolarT`` or ``DmolarP`` inputs for pure GERG fluids, or ``HEOS`` when you need a caloric input pair.
 * Added wasm32 Python wheels for the Pyodide runtime. These wheels are compatible with Pyodide 0.28.x and later. See the :ref:`Python wrapper docs <python_wasm_demo>` for an example of using these wheels in a browser environment.
 
