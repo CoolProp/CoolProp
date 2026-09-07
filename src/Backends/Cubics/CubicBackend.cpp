@@ -875,6 +875,14 @@ double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i
     // The volume translation is per component; component i is returned, not a fluid-wide value.
     if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
         return get_cubic()->get_cm(i);
+    } else if (parameter == "c_all") {
+        // Deliberately not readable: "c_all" is a broadcast, and once the components can differ
+        // there is no single value to hand back.  It gets its own arm anyway, because it is the
+        // one spelling the setter accepts and this getter does not, so a generic round-trip
+        // caller lands here -- and the generic message below would send them looking for a typo
+        // rather than telling them which spelling to read.
+        throw ValueError(format("Parameter [c_all] is write-only: it broadcasts one value to every "
+                                "component. Read the translation back per component with \"c\", \"cm\" or \"c_m\"."));
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
         return get_cubic()->get_Q_k(i);
     } else if (parameter == "Tcrit" || parameter == "Tc") {
