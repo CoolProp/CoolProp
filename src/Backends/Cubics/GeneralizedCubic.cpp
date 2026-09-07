@@ -204,7 +204,7 @@ AbstractCubic::AbstractCubic(const std::vector<double>& Tc, std::vector<double> 
     Delta_1(Delta_1),
     Delta_2(Delta_2),
     N(static_cast<int>(Tc.size())),
-    cm(0.) {
+    c_translation(Tc.size(), 0.0) {
 
     k.resize(N, std::vector<double>(N, 0));
 
@@ -310,10 +310,35 @@ double AbstractCubic::d3_bm_term_dxidxjdxk(const std::vector<double>& x, std::si
     return 0;
 }
 
-double AbstractCubic::cm_term() {
-    return cm;
+void AbstractCubic::require_below_covolume(std::size_t i, double c) {
+    const double b = b0_ii(i);
+    // Negated rather than `b - c <= 0` so a NaN c is rejected instead of sliding through.
+    if (!(b - c > 0)) {
+        throw CoolProp::ValueError(format("Volume translation c [%g m^3/mol] must be smaller than the covolume b [%g m^3/mol] of "
+                                          "component %d; b - c = %g is not positive",
+                                          c, b, static_cast<int>(i), b - c));
+    }
 }
 
+double AbstractCubic::cm_term(const std::vector<double>& x) {
+    // Bounded by N, matching bm_term.  Ranging over x.size() instead would make bm_term(x) and
+    // cm_term(x) disagree about how many components there are whenever the two differ, and the
+    // difference b_m - c_m is exactly what the pole condition is built from.
+    double summer = 0;
+    for (int i = 0; i < N; ++i) {
+        summer += x[i] * c_translation[i];
+    }
+    return summer;
+}
+double AbstractCubic::d_cm_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent) {
+    // Same x_N convention as d_bm_term_dxi -- both b_m and c_m are linear in x, so the chain rule
+    // through the dependent x_N applies to them identically.
+    if (xN_independent) {
+        return c_translation[i];
+    } else {
+        return c_translation[i] - c_translation[N - 1];
+    }
+}
 double AbstractCubic::aii_term(double tau, std::size_t i, std::size_t itau) {
     if (itau > 4) {
         // m_aii_cache[i] only stores derivatives for itau = 0..4 (see calc_all_terms()); higher
@@ -380,8 +405,13 @@ double AbstractCubic::aij_term(double tau, std::size_t i, std::size_t j, std::si
     }
 }
 double AbstractCubic::psi_minus(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta) {
+    // This early return -- and the absence of any tau derivatives in psi_plus -- IS the assumption
+    // that the volume translation is temperature-independent.  A c(T) would make psi_minus a
+    // function of tau and every one of these would need a chain-rule term.  That is deliberate:
+    // temperature-dependent translations cost the caloric invariances (s, u, cp, cv all move) and
+    // are documented to produce crossing isotherms and negative heat capacities.
     if (itau > 0) return 0.0;
-    double bmc = bm_term(x) - cm_term();  // appears only in the form (b-c) in the equations
+    double bmc = bm_term(x) - cm_term(x);  // appears only in the form (b-c) in the equations
     double bracket = 1 - bmc * delta * rho_r;
 
     switch (idelta) {
@@ -408,8 +438,12 @@ double AbstractCubic::psi_minus(double delta, const std::vector<double>& x, std:
 double AbstractCubic::d_psi_minus_dxi(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta, std::size_t i,
                                       bool xN_independent) {
     if (itau > 0) return 0.0;
-    double bmc = bm_term(x) - cm_term();  // appears only in the form (b-c) in the equations
-    double db_dxi = d_bm_term_dxi(x, i, xN_independent);
+    double bmc = bm_term(x) - cm_term(x);  // appears only in the form (b-c) in the equations
+    // psi_minus depends on x ONLY through B = b_m - c_m, so every composition derivative is a
+    // function of the B-derivatives.  With a composition-dependent c that means b_i -> b_i - c_i in
+    // the first-order slots; the second and third derivatives of c vanish under the linear rule, so
+    // the d2b/d3b terms carry through unchanged.
+    double db_dxi = d_bm_term_dxi(x, i, xN_independent) - d_cm_term_dxi(x, i, xN_independent);
     double bracket = 1 - bmc * delta * rho_r;
 
     switch (idelta) {
@@ -430,8 +464,9 @@ double AbstractCubic::d_psi_minus_dxi(double delta, const std::vector<double>& x
 double AbstractCubic::d2_psi_minus_dxidxj(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta, std::size_t i,
                                           std::size_t j, bool xN_independent) {
     if (itau > 0) return 0.0;
-    double bmc = bm_term(x) - cm_term();  // appears only in the form (b-c) in the equations
-    double db_dxi = d_bm_term_dxi(x, i, xN_independent), db_dxj = d_bm_term_dxi(x, j, xN_independent),
+    double bmc = bm_term(x) - cm_term(x);  // appears only in the form (b-c) in the equations
+    double db_dxi = d_bm_term_dxi(x, i, xN_independent) - d_cm_term_dxi(x, i, xN_independent),
+           db_dxj = d_bm_term_dxi(x, j, xN_independent) - d_cm_term_dxi(x, j, xN_independent),
            d2b_dxidxj = d2_bm_term_dxidxj(x, i, j, xN_independent);
     double bracket = 1 - bmc * delta * rho_r;
 
@@ -456,8 +491,10 @@ double AbstractCubic::d2_psi_minus_dxidxj(double delta, const std::vector<double
 double AbstractCubic::d3_psi_minus_dxidxjdxk(double delta, const std::vector<double>& x, std::size_t itau, std::size_t idelta, std::size_t i,
                                              std::size_t j, std::size_t k, bool xN_independent) {
     if (itau > 0) return 0.0;
-    double bmc = bm_term(x) - cm_term();  // appears only in the form (b-c) in the equations
-    double db_dxi = d_bm_term_dxi(x, i, xN_independent), db_dxj = d_bm_term_dxi(x, j, xN_independent), db_dxk = d_bm_term_dxi(x, k, xN_independent),
+    double bmc = bm_term(x) - cm_term(x);  // appears only in the form (b-c) in the equations
+    double db_dxi = d_bm_term_dxi(x, i, xN_independent) - d_cm_term_dxi(x, i, xN_independent),
+           db_dxj = d_bm_term_dxi(x, j, xN_independent) - d_cm_term_dxi(x, j, xN_independent),
+           db_dxk = d_bm_term_dxi(x, k, xN_independent) - d_cm_term_dxi(x, k, xN_independent),
            d2b_dxidxj = d2_bm_term_dxidxj(x, i, j, xN_independent), d2b_dxidxk = d2_bm_term_dxidxj(x, i, k, xN_independent),
            d2b_dxjdxk = d2_bm_term_dxidxj(x, j, k, xN_independent), d3b_dxidxjdxk = d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent);
     double bracket = 1 - bmc * delta * rho_r;
@@ -475,7 +512,7 @@ double AbstractCubic::d3_psi_minus_dxidxjdxk(double delta, const std::vector<dou
 }
 double AbstractCubic::PI_12(double delta, const std::vector<double>& x, std::size_t idelta) {
     double bm = bm_term(x);
-    double cm = cm_term();
+    double cm = cm_term(x);
     switch (idelta) {
         case 0:
             return (1 + (Delta_1 * bm + cm) * rho_r * delta) * (1 + (Delta_2 * bm + cm) * rho_r * delta);
@@ -493,15 +530,23 @@ double AbstractCubic::PI_12(double delta, const std::vector<double>& x, std::siz
 }
 double AbstractCubic::d_PI_12_dxi(double delta, const std::vector<double>& x, std::size_t idelta, std::size_t i, bool xN_independent) {
     double bm = bm_term(x);
-    double cm = cm_term();
+    double cm = cm_term(x);
     double db_dxi = d_bm_term_dxi(x, i, xN_independent);
+    double dc_dxi = d_cm_term_dxi(x, i, xN_independent);
+    // PI_12 = (1 + (D1*b + c)*rho)*(1 + (D2*b + c)*rho).  Grouping the composition derivative by
+    // powers of rho gives a linear part S1 and a quadratic part S2; the three idelta cases below
+    // are the same pair with different rho weights.  Setting c_i = 0 recovers the untranslated
+    // expressions exactly.
+    const double rho = delta * rho_r;
+    const double S1 = (Delta_1 + Delta_2) * db_dxi + 2 * dc_dxi;
+    const double S2 = 2 * Delta_1 * Delta_2 * bm * db_dxi + (Delta_1 + Delta_2) * (db_dxi * cm + bm * dc_dxi) + 2 * cm * dc_dxi;
     switch (idelta) {
         case 0:
-            return delta * rho_r * db_dxi * (2 * Delta_1 * Delta_2 * bm * delta * rho_r + (Delta_1 + Delta_2) * (1 + cm * delta * rho_r));
+            return rho * (S1 + rho * S2);
         case 1:
-            return rho_r * db_dxi * (4 * Delta_1 * Delta_2 * bm * delta * rho_r + (Delta_1 + Delta_2) * (1 + 2 * cm * delta * rho_r));
+            return rho_r * (S1 + 2 * rho * S2);
         case 2:
-            return 2 * pow(rho_r, 2) * (2 * Delta_1 * Delta_2 * bm + (Delta_1 + Delta_2) * cm) * db_dxi;
+            return 2 * pow(rho_r, 2) * S2;
         case 3:
             return 0;
         case 4:
@@ -513,21 +558,24 @@ double AbstractCubic::d_PI_12_dxi(double delta, const std::vector<double>& x, st
 double AbstractCubic::d2_PI_12_dxidxj(double delta, const std::vector<double>& x, std::size_t idelta, std::size_t i, std::size_t j,
                                       bool xN_independent) {
     double bm = bm_term(x);
-    double cm = cm_term();
+    double cm = cm_term(x);
     double db_dxi = d_bm_term_dxi(x, i, xN_independent), db_dxj = d_bm_term_dxi(x, j, xN_independent),
            d2b_dxidxj = d2_bm_term_dxidxj(x, i, j, xN_independent);
+    double dc_dxi = d_cm_term_dxi(x, i, xN_independent), dc_dxj = d_cm_term_dxi(x, j, xN_independent);
+    // Same S1/S2 grouping as d_PI_12_dxi, one order up.  The cross terms (b_i*c_j + b_j*c_i) and
+    // 2*c_i*c_j SURVIVE even though d2(c_m) is identically zero under the linear rule -- they come
+    // from the product structure of PI_12, not from a second derivative of c.
+    const double rho = delta * rho_r;
+    const double T1 = (Delta_1 + Delta_2) * d2b_dxidxj;
+    const double T2 = 2 * Delta_1 * Delta_2 * (db_dxi * db_dxj + bm * d2b_dxidxj)
+                      + (Delta_1 + Delta_2) * (d2b_dxidxj * cm + db_dxi * dc_dxj + db_dxj * dc_dxi) + 2 * dc_dxi * dc_dxj;
     switch (idelta) {
         case 0:
-            return delta * rho_r
-                   * (2 * Delta_1 * Delta_2 * delta * rho_r * db_dxi * db_dxj
-                      + (2 * Delta_1 * Delta_2 * bm * delta * rho_r + (Delta_1 + Delta_2) * (1 + cm * delta * rho_r)) * d2b_dxidxj);
+            return rho * (T1 + rho * T2);
         case 1:
-            return rho_r
-                   * (4 * Delta_1 * Delta_2 * delta * rho_r * db_dxi * db_dxj
-                      + (4 * Delta_1 * Delta_2 * bm * delta * rho_r + (Delta_1 + Delta_2) * (1 + 2 * cm * delta * rho_r)) * d2b_dxidxj);
+            return rho_r * (T1 + 2 * rho * T2);
         case 2:
-            return 2 * pow(rho_r, 2)
-                   * (2 * Delta_1 * Delta_2 * db_dxi * db_dxj + (2 * Delta_1 * Delta_2 * bm + (Delta_1 + Delta_2) * cm) * d2b_dxidxj);
+            return 2 * pow(rho_r, 2) * T2;
         case 3:
             return 0;
         case 4:
@@ -539,19 +587,23 @@ double AbstractCubic::d2_PI_12_dxidxj(double delta, const std::vector<double>& x
 double AbstractCubic::d3_PI_12_dxidxjdxk(double delta, const std::vector<double>& x, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k,
                                          bool xN_independent) {
     double bm = bm_term(x);
-    double cm = cm_term();
+    double cm = cm_term(x);
     double db_dxi = d_bm_term_dxi(x, i, xN_independent), db_dxj = d_bm_term_dxi(x, j, xN_independent), db_dxk = d_bm_term_dxi(x, k, xN_independent),
            d2b_dxidxj = d2_bm_term_dxidxj(x, i, j, xN_independent), d2b_dxidxk = d2_bm_term_dxidxj(x, i, k, xN_independent),
            d2b_dxjdxk = d2_bm_term_dxidxj(x, j, k, xN_independent), d3b_dxidxjdxk = d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent);
+    double dc_dxi = d_cm_term_dxi(x, i, xN_independent), dc_dxj = d_cm_term_dxi(x, j, xN_independent), dc_dxk = d_cm_term_dxi(x, k, xN_independent);
+    // The (D1+D2)*(b_ij*c_k + b_ik*c_j + b_jk*c_i) terms are nonzero only where d2_bm_term_dxidxj
+    // is -- that is, for VTPRCubic, whose covolume mixing rule is quadratic.  For AbstractCubic
+    // they vanish, so an error in them would hide everywhere except VTPR.
+    const double rho = delta * rho_r;
+    const double U1 = (Delta_1 + Delta_2) * d3b_dxidxjdxk;
+    const double U2 = 2 * Delta_1 * Delta_2 * (bm * d3b_dxidxjdxk + d2b_dxidxj * db_dxk + d2b_dxidxk * db_dxj + d2b_dxjdxk * db_dxi)
+                      + (Delta_1 + Delta_2) * (d3b_dxidxjdxk * cm + d2b_dxidxj * dc_dxk + d2b_dxidxk * dc_dxj + d2b_dxjdxk * dc_dxi);
     switch (idelta) {
         case 0:
-            return delta * rho_r
-                   * ((2 * Delta_1 * Delta_2 * bm * delta * rho_r + (Delta_1 + Delta_2) * (1 + cm * delta * rho_r)) * d3b_dxidxjdxk
-                      + 2 * Delta_1 * Delta_2 * delta * rho_r * (db_dxi * d2b_dxjdxk + db_dxj * d2b_dxidxk + db_dxk * d2b_dxidxj));
+            return rho * (U1 + rho * U2);
         case 1:
-            return rho_r
-                   * ((4. * Delta_1 * Delta_2 * bm * delta * rho_r + (Delta_1 + Delta_2) * (1 + 2 * cm * delta * rho_r)) * d3b_dxidxjdxk
-                      + 4 * Delta_1 * Delta_2 * delta * rho_r * (db_dxi * d2b_dxjdxk + db_dxj * d2b_dxidxk + db_dxk * d2b_dxidxj));
+            return rho_r * (U1 + 2 * rho * U2);
         default:
             throw -1;
     }
@@ -559,7 +611,7 @@ double AbstractCubic::d3_PI_12_dxidxjdxk(double delta, const std::vector<double>
 double AbstractCubic::psi_plus(double delta, const std::vector<double>& x, std::size_t idelta) {
     switch (idelta) {
         case 0:
-            return A_term(delta, x) * c_term(x) / (Delta_1 - Delta_2);
+            return A_term(delta, x) * inv_bm_term(x) / (Delta_1 - Delta_2);
         case 1:
             return rho_r / PI_12(delta, x, 0);
         case 2: {
@@ -582,7 +634,8 @@ double AbstractCubic::psi_plus(double delta, const std::vector<double>& x, std::
 double AbstractCubic::d_psi_plus_dxi(double delta, const std::vector<double>& x, std::size_t idelta, std::size_t i, bool xN_independent) {
     double bracket = 0;
     if (idelta == 0) {
-        return (A_term(delta, x) * d_c_term_dxi(x, i, xN_independent) + c_term(x) * d_A_term_dxi(delta, x, i, xN_independent)) / (Delta_1 - Delta_2);
+        return (A_term(delta, x) * d_inv_bm_term_dxi(x, i, xN_independent) + inv_bm_term(x) * d_A_term_dxi(delta, x, i, xN_independent))
+               / (Delta_1 - Delta_2);
     }
     // All the terms with at least one delta derivative are multiplied by a common term of -rhor/PI12^2
     // So we just evaluate the bracketed term and then multiply by the common factor in the front
@@ -618,9 +671,9 @@ double AbstractCubic::d2_psi_plus_dxidxj(double delta, const std::vector<double>
     double bracket = 0;
     double PI12 = PI_12(delta, x, 0);
     if (idelta == 0) {
-        return (A_term(delta, x) * d2_c_term_dxidxj(x, i, j, xN_independent) + c_term(x) * d2_A_term_dxidxj(delta, x, i, j, xN_independent)
-                + d_A_term_dxi(delta, x, i, xN_independent) * d_c_term_dxi(x, j, xN_independent)
-                + d_A_term_dxi(delta, x, j, xN_independent) * d_c_term_dxi(x, i, xN_independent))
+        return (A_term(delta, x) * d2_inv_bm_term_dxidxj(x, i, j, xN_independent) + inv_bm_term(x) * d2_A_term_dxidxj(delta, x, i, j, xN_independent)
+                + d_A_term_dxi(delta, x, i, xN_independent) * d_inv_bm_term_dxi(x, j, xN_independent)
+                + d_A_term_dxi(delta, x, j, xN_independent) * d_inv_bm_term_dxi(x, i, xN_independent))
                / (Delta_1 - Delta_2);
     }
     // All the terms with at least one delta derivative have a common factor of -1/PI_12^2 out front
@@ -682,14 +735,14 @@ double AbstractCubic::d3_psi_plus_dxidxjdxk(double delta, const std::vector<doub
     double PI12 = PI_12(delta, x, 0);
     switch (idelta) {
         case 0:
-            return (A_term(delta, x) * d3_c_term_dxidxjdxk(x, i, j, k, xN_independent)
-                    + c_term(x) * d3_A_term_dxidxjdxk(delta, x, i, j, k, xN_independent)
-                    + d_A_term_dxi(delta, x, i, xN_independent) * d2_c_term_dxidxj(x, j, k, xN_independent)
-                    + d_A_term_dxi(delta, x, j, xN_independent) * d2_c_term_dxidxj(x, i, k, xN_independent)
-                    + d_A_term_dxi(delta, x, k, xN_independent) * d2_c_term_dxidxj(x, i, j, xN_independent)
-                    + d_c_term_dxi(x, i, xN_independent) * d2_A_term_dxidxj(delta, x, j, k, xN_independent)
-                    + d_c_term_dxi(x, j, xN_independent) * d2_A_term_dxidxj(delta, x, i, k, xN_independent)
-                    + d_c_term_dxi(x, k, xN_independent) * d2_A_term_dxidxj(delta, x, i, j, xN_independent))
+            return (A_term(delta, x) * d3_inv_bm_term_dxidxjdxk(x, i, j, k, xN_independent)
+                    + inv_bm_term(x) * d3_A_term_dxidxjdxk(delta, x, i, j, k, xN_independent)
+                    + d_A_term_dxi(delta, x, i, xN_independent) * d2_inv_bm_term_dxidxj(x, j, k, xN_independent)
+                    + d_A_term_dxi(delta, x, j, xN_independent) * d2_inv_bm_term_dxidxj(x, i, k, xN_independent)
+                    + d_A_term_dxi(delta, x, k, xN_independent) * d2_inv_bm_term_dxidxj(x, i, j, xN_independent)
+                    + d_inv_bm_term_dxi(x, i, xN_independent) * d2_A_term_dxidxj(delta, x, j, k, xN_independent)
+                    + d_inv_bm_term_dxi(x, j, xN_independent) * d2_A_term_dxidxj(delta, x, i, k, xN_independent)
+                    + d_inv_bm_term_dxi(x, k, xN_independent) * d2_A_term_dxidxj(delta, x, i, j, xN_independent))
                    / (Delta_1 - Delta_2);
         case 1:
             return -1 / pow(PI12, 2)
