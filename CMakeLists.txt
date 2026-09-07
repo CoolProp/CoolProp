@@ -2472,6 +2472,7 @@ if(COOLPROP_CATCH_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CubicU.cpp")
   list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-WideBoilingSplit.cpp")
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-CubicEntropy.cpp")
   list(APPEND
        APP_SOURCES
