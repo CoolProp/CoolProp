@@ -24,6 +24,10 @@ Web/fluid_properties/fluids/molecule_geometry_status.md
 /dev/figs
 /dev/builder
 
+# Generated output of the RES validation harness (grid points and per-EOS reference
+# values).
+/dev/RES_comparison
+
 /wrappers/Python/build
 /wrappers/Python/cmake_build
 /wrappers/Python/CoolProp.egg-info
@@ -59,6 +63,7 @@ Web/fluid_properties/fluids/molecule_geometry_status.md
 /include/cubic_fluids_schema_JSON.h
 /include/mixture_binary_pairs_pcsaft_JSON.h
 /include/pcsaft_fluids_schema_JSON.h
+/include/res_transport_parameters_JSON.h
 /include/version.h
 /include/catch.hpp
 /install_root/
