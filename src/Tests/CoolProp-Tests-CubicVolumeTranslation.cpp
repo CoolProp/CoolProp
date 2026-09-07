@@ -966,7 +966,7 @@ TEST_CASE("Cubic composition derivatives carry the volume translation", "[cubic]
     // 1e-6 sits comfortably above the floor of a central difference on well-scaled quantities and
     // five orders below the defect it guards: dropping the (1 + c*rho) factor from d_A_term_dxi is
     // a 2.4 % error at c = 5e-6 and 9.1 % at c = 2e-5.
-    const double dz = 1e-7, tol = 1e-6;
+    const double dz = 1e-7, dz3 = 1e-5, tol = 1e-6;
 
     for (const auto& which : cubic_backends()) {
         CAPTURE(which);
@@ -1063,6 +1063,51 @@ TEST_CASE("Cubic composition derivatives carry the volume translation", "[cubic]
                         CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.d_psi_minus_dxi(d, z, 0, 0, i, xNi); }, x, j, xNi, dz),
                                         C.d2_psi_minus_dxidxj(d, x, 0, 0, i, j, xNi))
                               < tol);
+
+                        // Third derivatives, referenced against the analytic second.
+                        //
+                        // These use a LARGER step than the orders above.  Differencing a second
+                        // derivative to reach a third subtracts two numbers that already agree to
+                        // most of their digits, so roundoff dominates far sooner: sweeping the step
+                        // for d3_psi_plus_dxidxjdxk (magnitude ~73) gives a relative error of
+                        // 1.4e-9 at dz3 = 1e-5 but 1.9e-6 at 1e-7 and 1.0e-4 at 1e-9 -- the error
+                        // GROWS as the step shrinks, which is cancellation, not truncation.  1e-7
+                        // is comfortable for the first and second orders and two-to-one over
+                        // tolerance here, so the third order gets its own step.
+                        //
+                        // Nothing else in the suite reaches these with a nonzero translation:
+                        // [mixture_derivs2] does run d3alphardxidxjdxk for PengRobinsonBackend and
+                        // SRKBackend, but at the default c = 0, where every term this branch added
+                        // vanishes identically.  And it is not a VTPR-only path -- for plain PR/SRK
+                        // d2b and d3b are zero, yet d3_A_term_dxidxjdxk still carries live c
+                        // dependence through K_term and d2_PI_12_dxidxj, which feeds
+                        // MixtureDerivatives::d3alphardxidxjdxk and hence the critical-point tracer
+                        // and the stability analysis for a translated mixture.
+                        //
+                        // One caveat on d3_PI_12: its U1 and U2 are built entirely from d2b and
+                        // d3b, so for PR/SRK it is structurally zero and so is the difference it is
+                        // compared against.  That assertion is therefore a zero-check here rather
+                        // than a value-check -- it cannot see a wrong coefficient, but it does
+                        // catch a SPURIOUS term (adding 2*c_i*c_j*c_k to U2 fails 124 assertions).
+                        // The value-checking work for PR/SRK is done by the other three.
+                        for (std::size_t k = 0; k < x.size(); ++k) {
+                            CAPTURE(k);
+                            CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.d2_A_term_dxidxj(d, z, i, j, xNi); }, x, k, xNi, dz3),
+                                            C.d3_A_term_dxidxjdxk(d, x, i, j, k, xNi))
+                                  < tol);
+                            CHECK(
+                              deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.d2_PI_12_dxidxj(d, z, 0, i, j, xNi); }, x, k, xNi, dz3),
+                                        C.d3_PI_12_dxidxjdxk(d, x, 0, i, j, k, xNi))
+                              < tol);
+                            CHECK(deriv_err(fd_dxi([&](const std::vector<double>& z) { return C.d2_psi_minus_dxidxj(d, z, 0, 0, i, j, xNi); }, x, k,
+                                                   xNi, dz3),
+                                            C.d3_psi_minus_dxidxjdxk(d, x, 0, 0, i, j, k, xNi))
+                                  < tol);
+                            CHECK(deriv_err(
+                                    fd_dxi([&](const std::vector<double>& z) { return C.d2_psi_plus_dxidxj(d, z, 0, i, j, xNi); }, x, k, xNi, dz3),
+                                    C.d3_psi_plus_dxidxjdxk(d, x, 0, i, j, k, xNi))
+                                  < tol);
+                        }
                     }
                 }
             }
