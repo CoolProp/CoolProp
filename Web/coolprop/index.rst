@@ -18,6 +18,7 @@ This section includes information about the CoolProp software, listings of input
     Cubics.rst
     PCSAFT.rst
     GERG.rst
+    RES.rst
     examples.rst
     changelog.rst
     SuperAncillary.ipynb

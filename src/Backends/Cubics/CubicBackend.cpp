@@ -5,6 +5,8 @@
 #include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
 #include "Backends/Helmholtz/MixtureDerivatives.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "Backends/Helmholtz/TransportRoutines.h"
 #include <Eigen/Dense>
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
@@ -32,6 +34,8 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
 
     // Set the ideal-gas helmholtz energy based on the components in use;
     set_alpha0_from_components();
+
+    seed_RES_from_components();
 
     // Top-level class can hold copies of the base saturation classes,
     // saturation classes cannot hold copies of the saturation classes
@@ -755,17 +759,95 @@ void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend* donor) {
     }
 }
 
+CoolPropDbl CoolProp::AbstractCubicBackend::calc_viscosity() {
+    if (viscosity_RES_enabled) {
+        return TransportRoutines::viscosity_RES(*this);
+    }
+    throw NotImplementedError(format("Viscosity is not implemented for the %s backend, and no RES viscosity parameters are "
+                                     "available for this fluid.",
+                                     backend_name().c_str()));
+}
+
+CoolPropDbl CoolProp::AbstractCubicBackend::calc_conductivity() {
+    if (conductivity_RES_enabled) {
+        return TransportRoutines::conductivity_RES(*this);
+    }
+    throw NotImplementedError(format("Thermal conductivity is not implemented for the %s backend, and no RES conductivity "
+                                     "parameters are available for this fluid.",
+                                     backend_name().c_str()));
+}
+
+void CoolProp::AbstractCubicBackend::seed_RES_from_components() {
+    // Overlay the RES transport parameters fitted for THIS cubic equation of state.
+    //
+    // Enabled rather than opted into, which is the opposite of HEOS: the cubic backends have no
+    // transport model at all, so there is no reference correlation for RES to displace and nothing
+    // to protect.  A cubic fluid with no RES parameters keeps throwing NotImplementedError from
+    // viscosity()/conductivity(), exactly as before.
+    //
+    // Called from setup() AND from copy_internals(): the cubic get_copy() rebuilds the instance
+    // from raw Tc/pc/acentric numbers, so the fresh CoolPropFluid records carry no fluid name for
+    // the RES table to be keyed on.  copy_internals() is where the names arrive, and without a
+    // re-seed there SatL and SatV silently end up with no RES parameters at all -- which surfaces
+    // only later, as a saturated-state transport call that throws or as a refit that cannot find
+    // the component.
+    //
+    // The cubic CoolPropFluid carries no EOS, so molar_mass() would index an empty vector; the
+    // mass comes from the cubic's own component record instead.
+    if (components.empty()) {
+        return;
+    }
+    // An explicit EOS key, not a two-way guess: a third cubic subclass would otherwise silently be
+    // handed SRK coefficients.  VTPR does not reach here today (VTPRBackend::setup shadows this
+    // one), which is exactly the kind of accident worth failing on rather than inheriting.
+    std::string eos_key;
+    if (backend_name() == get_backend_string(PR_BACKEND)) {
+        eos_key = "PR";
+    } else if (backend_name() == get_backend_string(SRK_BACKEND)) {
+        eos_key = "SRK";
+    } else {
+        return;  // no RES fits published for this cubic; leave transport unimplemented
+    }
+    std::vector<CoolPropFluid>& base = HelmholtzEOSMixtureBackend::get_components();
+    for (std::size_t i = 0; i < components.size() && i < base.size(); ++i) {
+        // The name and aliases are passed for the LOOKUP only, never written into base[i].  These
+        // synthetic records are shared with the Helmholtz base class, which reads
+        // components[i].name in calc_excess_properties() to build a HEOS pure-fluid state -- so
+        // populating it would silently switch a cubic mixture's excess properties onto a
+        // different equation of state instead of failing as it does today.
+        // Already seeded means this is a re-seed from copy_internals() on a live instance, where
+        // re-reading the shipped table would silently overwrite coefficients the caller refitted
+        // for a changed alpha function -- and re-arm the guard that protects them.  A genuinely
+        // fresh copy has empty records here and does get seeded.
+        if (base[i].transport.viscosity_res.provided || base[i].transport.conductivity_res.provided) {
+            continue;
+        }
+        std::vector<std::string> lookup = components[i].aliases;
+        lookup.insert(lookup.begin(), components[i].name);
+        overlay_RES_transport_by_name(eos_key, base[i], components[i].molemass, lookup);
+    }
+    bool all_vis = !base.empty(), all_cond = !base.empty();
+    for (std::size_t i = 0; i < base.size(); ++i) {
+        all_vis = all_vis && base[i].transport.viscosity_res.provided;
+        all_cond = all_cond && base[i].transport.conductivity_res.provided;
+    }
+    viscosity_RES_enabled = all_vis;
+    conductivity_RES_enabled = all_cond;
+}
+
 void CoolProp::AbstractCubicBackend::copy_internals(AbstractCubicBackend& donor) {
     this->copy_k(&donor);
 
     this->components = donor.components;
     this->set_alpha_from_components();
     this->set_alpha0_from_components();
+    this->seed_RES_from_components();
     for (auto& state : linked_states) {
         auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->components = donor.components;
         ACB->set_alpha_from_components();
         ACB->set_alpha0_from_components();
+        ACB->seed_RES_from_components();
     }
 }
 
@@ -790,6 +872,21 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
+    // The shipped RES coefficients were regressed against the DEFAULT alpha function, so changing
+    // it invalidates them until the caller supplies a refit.
+    std::vector<CoolPropFluid>& base = HelmholtzEOSMixtureBackend::get_components();
+    if (i < base.size()) {
+        // Every residual slot plus xita has to be rewritten before RES will run again.
+        base[i].transport.viscosity_res.n_params_match_alpha = false;
+        base[i].transport.viscosity_res.refit_pending = (1u << (RES_N_RES_VISCOSITY + 1)) - 1u;
+        base[i].transport.conductivity_res.n_params_match_alpha = false;
+        base[i].transport.conductivity_res.refit_pending = (1u << (RES_N_RES_CONDUCTIVITY + 1)) - 1u;
+    }
+    // ...and invalidates anything already memoized under the old alpha.  update() would clear
+    // these, but nothing forces a caller to update in between, and a cached value would bypass the
+    // guard above and be returned as though it still applied.
+    _viscosity.clear();
+    _conductivity.clear();
     for (auto& state : linked_states) {
         auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->set_cubic_alpha_C(i, parameter, c1, c2, c3);
@@ -811,7 +908,11 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
     } else if (parameter == "pcrit" || parameter == "pc") {
         get_cubic()->set_pci(i, value);
     } else {
-        throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+        // Not a cubic parameter: hand it to the Helmholtz base, which owns the RES_* keys.  It
+        // throws the same "I don't know what to do with parameter" for anything it does not know
+        // either, so an unknown key still fails here rather than being silently ignored.
+        HelmholtzEOSMixtureBackend::set_fluid_parameter_double(i, parameter, value);
+        return;  // the base has already pushed the change into its own SatL/SatV
     }
     for (auto& state : linked_states) {
         auto* ACB = static_cast<AbstractCubicBackend*>(state.get());
@@ -833,7 +934,7 @@ double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i
     } else if (parameter == "pcrit" || parameter == "pc") {
         return get_cubic()->get_pc()[i];
     } else {
-        throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+        return HelmholtzEOSMixtureBackend::get_fluid_parameter_double(i, parameter);
     }
 }
 

@@ -64,7 +64,8 @@ values = [
     ('cubics/cubic_fluids_schema.json', 'cubic_fluids_schema_JSON.h', 'cubic_fluids_schema_JSON'),
     ('pcsaft/pcsaft_fluids_schema.json', 'pcsaft_fluids_schema_JSON.h', 'pcsaft_fluids_schema_JSON'),
     ('pcsaft/all_pcsaft_fluids.json', 'all_pcsaft_JSON.h', 'all_pcsaft_JSON'),
-    ('pcsaft/mixture_binary_pairs_pcsaft.json', 'mixture_binary_pairs_pcsaft_JSON.h', 'mixture_binary_pairs_pcsaft_JSON')
+    ('pcsaft/mixture_binary_pairs_pcsaft.json', 'mixture_binary_pairs_pcsaft_JSON.h', 'mixture_binary_pairs_pcsaft_JSON'),
+    ('res_transport_parameters.json', 'res_transport_parameters_JSON.h', 'res_transport_parameters_JSON'),
 ]
 zvalues = [
     ('all_fluids.cbor', 'all_fluids_CBOR.h', 'all_fluids_CBOR'),

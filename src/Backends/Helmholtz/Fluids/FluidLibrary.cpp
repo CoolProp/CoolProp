@@ -2,6 +2,7 @@
 #include "FluidLibrary.h"
 
 #include "CoolProp/detail/json.h"
+#include "res_transport_parameters_JSON.h"
 #include <mutex>
 
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
@@ -26,6 +27,21 @@ INCBIN(all_fluids_CBOR, "all_fluids.cbor");
 namespace CoolProp {
 
 static JSONFluidLibrary library;
+static nlohmann::json res_transport_json;
+static std::once_flag res_transport_load_flag;
+
+/// Parse the RES table, once, independently of the fluid library.
+///
+/// Separate from load() so that constructing a CUBIC state does not drag in the whole Helmholtz
+/// fluid library.  The cubics need the RES table (it is their only transport model) but not the
+/// HEOS fluids, and going through ensure_library_loaded() to reach it made every cubic-only
+/// program pay a full CBOR decode of all_fluids at startup that it never paid before.
+void ensure_RES_transport_loaded() {
+    std::call_once(res_transport_load_flag, []() {
+        res_transport_json = cpjson::parse(res_transport_parameters_JSON);
+        JSONFluidLibrary::validate_RES_transport_table(res_transport_json);
+    });
+}
 
 void load();
 
@@ -54,6 +70,10 @@ void load() {
     // so the error surfaces and a later call can retry, rather than silently
     // leaving the global library empty. add_many keeps its original catch.
     nlohmann::json dd = cpjson::from_cbor(gall_fluids_CBORData, gall_fluids_CBORSize);
+    // Before add_many, deliberately: a throw here propagates out of load() and leaves the
+    // std::call_once flag unset, so the failure is loud and retryable.  Inside add_many it would
+    // instead abort the fluid loop and leave a silently truncated library.
+    ensure_RES_transport_loaded();
     try {
         library.add_many(dd);
     } catch (std::exception& e) {
@@ -283,6 +303,9 @@ void JSONFluidLibrary::add_one(const nlohmann::json& fluid_json) {
             parse_transport(fluid_json.at("TRANSPORT"), fluid);
         }
 
+        // Overlay RES transport parameters for the HEOS backend (from res_transport_parameters.json)
+        if (!res_transport_json.is_null()) load_RES_transport_parameters(res_transport_json, "HEOS", fluid);
+
         // If the fluid is ok...
 
         // First check that none of the identifiers are already present
@@ -398,6 +421,14 @@ std::string get_fluid_list() {
 void set_fluid_enthalpy_entropy_offset(const std::string& fluid, double delta_a1, double delta_a2, const std::string& ref) {
     ensure_library_loaded();
     library.set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, ref);
+}
+
+void overlay_RES_transport_by_name(const std::string& eos_key, CoolPropFluid& fluid, double molar_mass_override,
+                                   const std::vector<std::string>& lookup_names) {
+    ensure_RES_transport_loaded();
+    if (!res_transport_json.is_null()) {
+        JSONFluidLibrary::load_RES_transport_parameters(res_transport_json, eos_key, fluid, molar_mass_override, lookup_names);
+    }
 }
 
 } /* namespace CoolProp */

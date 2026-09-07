@@ -77,6 +77,20 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// call (the dominant cost of e.g. SVDSBTL surface builds for ECS fluids).
     shared_ptr<HelmholtzEOSMixtureBackend> viscosity_ecs_reference_state;
     shared_ptr<HelmholtzEOSMixtureBackend> conductivity_ecs_reference_state;
+    /// Residual entropy scaling, opted into per instance through the factory string.  Off by
+    /// default and never enabled implicitly: HEOS already carries reference correlations for most
+    /// fluids, and silently replacing one with a different model would change existing results.
+    /// See include/CoolProp/schemas/HEOSOptions.h.
+    bool viscosity_RES_enabled = false;
+    bool conductivity_RES_enabled = false;
+    bool RES_mixture_enhancement = false;
+    /// Canonical JSON of the options this instance was built with; "" when none were supplied.
+    std::string options_canonical_;
+    /// Validate `options_json` against kHEOSOptionsSchemaJson and apply it.  Called from the
+    /// constructor BEFORE setup(), because setup() builds SatL/SatV from this instance.
+    void apply_backend_options(const std::string& options_json);
+    /// Copy the RES opt-in onto this instance and its saturation states.
+    void copy_RES_config_from(const HelmholtzEOSMixtureBackend& donor);
     /// Update the state class used to calculate the tangent-plane-distance
     virtual void add_TPD_state() {
         if (TPD_state.get() == nullptr) {
@@ -133,8 +147,10 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void ensure_caloric_superancillaries();
 
     HelmholtzEOSMixtureBackend();
-    HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV = true);
-    HelmholtzEOSMixtureBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV = true);
+    HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV = true,
+                               const std::string& options_json = "");
+    HelmholtzEOSMixtureBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV = true,
+                               const std::string& options_json = "");
     virtual HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true);
 
     // Copy over the reducing and departure terms to all linked states (recursively)
@@ -229,10 +245,9 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         throw ValueError("set_cubic_alpha_C only defined for cubic backends");
     };
 
-    // Set fluid parameter (currently the volume translation parameter for cubic)
-    void set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) override {
-        throw ValueError("set_fluid_parameter_double only defined for cubic backends");
-    };
+    // Set fluid parameter.  Cubic-only until RES arrived; HEOS now also accepts the RES_* keys
+    // that let a caller supply residual coefficients refitted for a changed alpha function.
+    void set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) override;
     double get_fluid_parameter_double(const size_t i, const std::string& parameter) override;
 
     phases calc_phase() override {
@@ -563,6 +578,34 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     CoolPropDbl calc_d3alpha0_dTau3() override;
 
     CoolPropDbl calc_surface_tension() override;
+    /// True when the RES critical enhancement should be applied to a MIXTURE.  Pure fluids always
+    /// get it and do not consult this.
+    bool RES_mixture_enhancement_enabled() const {
+        return RES_mixture_enhancement;
+    }
+    /// Throw a uniform, informative error when component `i` cannot be evaluated with RES.
+    /// `refit_pending` is the record's outstanding-slot mask, used to name exactly which
+    /// coefficients a caller still has to supply after an alpha-function change.
+    void check_RES_usable(bool provided, bool params_match_alpha, unsigned refit_pending, std::size_t i, const char* property) const;
+    /// A human name for component `i`, for error messages.  Falls back to the backend's own fluid
+    /// names when the CoolPropFluid record carries none, as the cubics' synthetic records do.
+    std::string RES_component_label(std::size_t i) const;
+    /// Read back one RES residual coefficient or the xita scaling factor.  Reached through
+    /// get_fluid_parameter_double() for keys beginning "RES_".
+    double get_RES_parameter_double(const size_t i, const std::string& parameter);
+    /// (d rho_mass / dp)_T at temperature T_eval and the CURRENT density, without mutating state.
+    /// Used by the RES critical enhancement; see the .cpp for why tau is reduced by T_reducing.
+    CoolPropDbl calc_drhomass_dp_constT_at(double T_eval);
+
+    /// Canonical JSON of the options this instance was built with.
+    ///
+    /// Empty when none were supplied, which is the base-class contract and what nearly every HEOS
+    /// instance is.  SVDSBTL returns "{}" instead because it always carries options (its source
+    /// backend is required), so the two differ for a reason.
+    std::string build_options_json() const override {
+        return options_canonical_;
+    }
+
     CoolPropDbl calc_viscosity() override;
     CoolPropDbl calc_viscosity_dilute();
     CoolPropDbl calc_viscosity_background();

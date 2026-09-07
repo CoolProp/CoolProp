@@ -275,6 +275,29 @@ class TransportRoutines
 
     static CoolPropDbl viscosity_rhosr(HelmholtzEOSMixtureBackend& HEOS);
 
+    /// Viscosity via residual entropy scaling, Martinek 2025.
+    ///
+    /// Works for pure fluids and mixtures; reads components[i].transport.viscosity_res, which
+    /// FluidLibrary overlays from dev/res_transport_parameters.json.  Throws ValueError naming
+    /// the component when its parameters are missing, or when they were fitted for a different
+    /// alpha function than the one currently set.
+    static CoolPropDbl viscosity_RES(HelmholtzEOSMixtureBackend& HEOS);
+
+    /// Thermal conductivity via residual entropy scaling, Li 2024, including the
+    /// Olchowy-Sengers critical enhancement.  Calls viscosity_RES() for the enhancement term.
+    static CoolPropDbl conductivity_RES(HelmholtzEOSMixtureBackend& HEOS);
+
+    /// The Olchowy-Sengers critical enhancement of the RES conductivity, in W/m/K.  Returns 0
+    /// wherever Li 2024 returns 0: outside the near-critical window, when the fluid carries no
+    /// fitted enhancement parameters, and -- unless the caller opted in -- for mixtures.
+    static CoolPropDbl conductivity_RES_critical(HelmholtzEOSMixtureBackend& HEOS);
+
+    /// The Wilke-mixed dilute-gas term each RES model uses, in Pa.s and W/m/K.  Exposed because
+    /// the validation harness weights every comparison by how much of the property is genuinely
+    /// residual, and recomputing the mixing rule there would stop it being a check of this one.
+    static CoolPropDbl viscosity_RES_dilute(HelmholtzEOSMixtureBackend& HEOS);
+    static CoolPropDbl conductivity_RES_dilute(HelmholtzEOSMixtureBackend& HEOS);
+
     static CoolPropDbl conductivity_ECS(HelmholtzEOSMixtureBackend& HEOS, HelmholtzEOSMixtureBackend& HEOS_Reference);
 
     /* \brief Solver for the conformal state for ECS model
