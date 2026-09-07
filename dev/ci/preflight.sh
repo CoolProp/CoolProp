@@ -311,15 +311,22 @@ else
         # differences the whole fugacity chain, so it is where a wrong
         # composition derivative shows up.
         #
-        # The last three are NOT optional and must not be trimmed: GeneralizedCubic
-        # is not reached only through the cubic backends.  HEOS embeds an
-        # AbstractCubic via ResidualHelmholtzGeneralizedCubic -- both from
-        # change_EOS(i,"SRK"/"Peng-Robinson") and from the "-SRK"/"-PengRobinson"
-        # fluid endings -- so alphar of an ordinary HEOS fluid can run straight
-        # through psi_minus/PI_12/A_term.  The tests covering that path carry none
-        # of the four tags above, and before this branch a Cubics change fell
-        # through to the whole "~[slow]" suite and picked them up for free.
-        TAG_FILTER="[cubic],[volume_translation],[mixture_derivs2],[michelsen],[change_EOS],[GERG],[json_validation]"
+        # [helmholtz] is NOT optional, and neither is it covered by the rest of
+        # this list: GeneralizedCubic is not reached only through the cubic
+        # backends.  HelmholtzConsistencyFixture builds a
+        # ResidualHelmholtzGeneralizedCubic over both SRK and PengRobinson and
+        # finite-differences all 14 derivatives, including the third- and
+        # fourth-order delta terms -- psi_minus/psi_plus cases 3 and 4, which feed
+        # d3alphar_ddelta3 / d4alphar_ddelta4 and hence the critical-point and
+        # stability routines.  Nothing else here reaches them: [mixture_derivs2]
+        # stops at d2alphar_dDelta2, and [change_EOS] only asserts that
+        # change_EOS(0,"SRK") does not throw -- it never evaluates a property
+        # afterwards, so it cannot see a wrong alphar.  Nor does anything in the
+        # suite evaluate a thermodynamic property through the "-SRK" /
+        # "-PengRobinson" fluid endings; the one test that names them reads molar
+        # mass.  [GERG] and [json_validation] stay for the cubic JSON payload and
+        # change_EOS surfaces they do cover.
+        TAG_FILTER="[cubic],[volume_translation],[mixture_derivs2],[michelsen],[change_EOS],[GERG],[json_validation],[helmholtz]"
     else
         # Default: run everything fast (skip the [slow] long tests).
         TAG_FILTER="~[slow]"
