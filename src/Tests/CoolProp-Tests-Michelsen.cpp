@@ -11,6 +11,8 @@
 #    include <vector>
 #    include <catch2/catch_all.hpp>
 #    include "../Backends/Helmholtz/VLERoutines.h"
+#    include "../Backends/Helmholtz/MixtureDerivatives.h"
+#    include <Eigen/Dense>
 #    include "CoolProp/detail/tools.h"
 #    include <numeric>
 #    include "CoolProp/CoolProp.h"
@@ -2198,10 +2200,15 @@ TEST_CASE("newton_raphson_twophase converges at interior Q (#3372)", "[michelsen
       {"5comp", "Nitrogen&Methane&Ethane&Butane&Pentane", {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 3e5},
       // Control: converged before this change too, must still converge.
       {"binary", "Methane&n-Butane", {0.97, 0.03}, 2e6},
+      // Mirror of the 5comp case: a LIGHT trace component (K >> 1) rather than a heavy one
+      // (K << 1).  Determining x_i from the mass balance has gain (beta/(1-beta)) * K_i, which
+      // peaks at HIGH beta -- so if the elimination-free form is still mass-balance-limited it
+      // should fail at large Q here, mirroring the 5comp failure at small Q.
+      {"N2-trace", "Nitrogen&n-Propane&n-Butane&n-Pentane", {0.001, 0.40, 0.35, 0.249}, 1e5},
     };
 
     for (const auto& c : cases) {
-        for (double Q : {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 0.9}) {
+        for (double Q : {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 0.9, 0.95, 0.99}) {
             DYNAMIC_SECTION(c.name << " Q=" << Q) {
                 auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
                 AS->set_mole_fractions(c.z);
@@ -2240,6 +2247,18 @@ TEST_CASE("newton_raphson_twophase converges at interior Q (#3372)", "[michelsen
                     CHECK(IO.x[i] > 0.0);
                     CHECK(IO.y[i] > 0.0);
                 }
+                // K_i and the mass-balance amplification for each phase, so a failure can be
+                // read against the gain that predicts it.
+                double Kmin = 1e300, Kmax = 0;
+                for (std::size_t i = 0; i < c.z.size(); ++i) {
+                    const double Ki = static_cast<double>(IO.y[i] / IO.x[i]);
+                    Kmin = std::min(Kmin, Ki);
+                    Kmax = std::max(Kmax, Ki);
+                }
+                const double gain_y = ((1 - Q) / Q) / Kmin;   // error in x_i -> y_i, worst for K << 1
+                const double gain_x = (Q / (1 - Q)) * Kmax;   // error in y_i -> x_i, worst for K >> 1
+                printf("  %-10s Q=%-5.2f Kmin=%10.3e Kmax=%10.3e gain_y=%10.3e gain_x=%10.3e mass=%9.2e T=%8.3f\n", c.name.c_str(), Q, Kmin,
+                       Kmax, gain_y, gain_x, mass, static_cast<double>(IO.T));
                 CAPTURE(mass);
                 CAPTURE(IO.T);
                 CHECK(mass < 1e-12);
@@ -2250,5 +2269,6 @@ TEST_CASE("newton_raphson_twophase converges at interior Q (#3372)", "[michelsen
         }
     }
 }
+
 
 #endif
