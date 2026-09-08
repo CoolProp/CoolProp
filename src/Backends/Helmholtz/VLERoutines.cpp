@@ -1597,12 +1597,19 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
     z = IO.z;
     beta = IO.beta;
 
+    // All 2N mole fractions are independent variables, plus the imposed-variable partner
+    // (T or p): 2N+1 unknowns.  Eliminating x[N-1] = 1 - sum(x) instead costs the dependent
+    // component its relative precision -- it is formed by subtracting from 1, so it carries
+    // ~1 ulp of absolute error, and when that component is the SMALLEST (a heavy trace
+    // component in a wide-boiling mixture, y ~ 1e-14) the relative error reaches ~1%.
+    // ln f_{N-1} contains ln y_{N-1}, so that error lands directly in the residual and floors
+    // it above the convergence gate, rejecting an otherwise converged answer (GH #3372).
     this->N = z.size();
     x.resize(N);
     y.resize(N);
-    r.resize(2 * N - 1);
-    J.resize(2 * N - 1, 2 * N - 1);
-    err_rel.resize(2 * N - 1);
+    r.resize(2 * N + 1);
+    J.resize(2 * N + 1, 2 * N + 1);
+    err_rel.resize(2 * N + 1);
 
     // Hold a pointer to the backend
     this->HEOS = &HEOS;
@@ -1630,15 +1637,10 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
         // inside (0,1), backed off by step_safety so it stays strictly interior.
         double tau = 1.0;
         const double step_safety = 0.8;
-        // The dependent mole fractions x[N-1] = 1 - sum(x[0..N-2]) and y[N-1] likewise change by
-        // minus the sum of the independent steps; accumulate those so the dependent component is
-        // bounded to (0,1) too (otherwise it can still overshoot for N>=3 and reintroduce the
-        // non-finite fugacity path this damping is meant to prevent).
-        double dx_last = 0.0, dy_last = 0.0;
-        for (std::size_t i = 0; i < N - 1; ++i) {
-            const double dx = v[i], dy = v[i + (N - 1)];
-            dx_last -= dx;
-            dy_last -= dy;
+        // Every mole fraction is an independent variable now, so all 2N of them are bounded
+        // by the same rule; there is no dependent component to treat separately.
+        for (std::size_t i = 0; i < N; ++i) {
+            const double dx = v[i], dy = v[i + N];
             if (x[i] + dx <= 0.0) {
                 tau = std::min(tau, step_safety * (-x[i] / dx));
             } else if (x[i] + dx >= 1.0) {
@@ -1650,34 +1652,20 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
                 tau = std::min(tau, step_safety * ((1.0 - y[i]) / dy));
             }
         }
-        // Bound the dependent (Nth) mole fraction with the same rule.
-        const double x_last = x[N - 1], y_last = y[N - 1];
-        if (x_last + dx_last <= 0.0) {
-            tau = std::min(tau, step_safety * (-x_last / dx_last));
-        } else if (x_last + dx_last >= 1.0) {
-            tau = std::min(tau, step_safety * ((1.0 - x_last) / dx_last));
-        }
-        if (y_last + dy_last <= 0.0) {
-            tau = std::min(tau, step_safety * (-y_last / dy_last));
-        } else if (y_last + dy_last >= 1.0) {
-            tau = std::min(tau, step_safety * ((1.0 - y_last) / dy_last));
-        }
 
-        for (unsigned int i = 0; i < N - 1; ++i) {
+        for (std::size_t i = 0; i < N; ++i) {
             err_rel[i] = tau * v[i] / x[i];
             x[i] += tau * v[i];
-            err_rel[i + (N - 1)] = tau * v[i + (N - 1)] / y[i];
-            y[i] += tau * v[i + (N - 1)];
+            err_rel[i + N] = tau * v[i + N] / y[i];
+            y[i] += tau * v[i + N];
         }
-        x[N - 1] = 1 - std::accumulate(x.begin(), x.end() - 1, 0.0);
-        y[N - 1] = 1 - std::accumulate(y.begin(), y.end() - 1, 0.0);
 
         if (imposed_variable == newton_raphson_twophase_options::P_IMPOSED) {
-            T += tau * v[2 * N - 2];
-            err_rel[2 * N - 2] = tau * v[2 * N - 2] / T;
+            T += tau * v[2 * N];
+            err_rel[2 * N] = tau * v[2 * N] / T;
         } else if (imposed_variable == newton_raphson_twophase_options::T_IMPOSED) {
-            p += tau * v[2 * N - 2];
-            err_rel[2 * N - 2] = tau * v[2 * N - 2] / p;
+            p += tau * v[2 * N];
+            err_rel[2 * N] = tau * v[2 * N] / p;
         } else {
             throw ValueError("invalid imposed_variable");
         }
@@ -1698,6 +1686,22 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
     build_arrays();
     if (!ValidNumber(error_rms) || error_rms > 1e-7) {
         throw ValueError(format("newton_raphson_twophase::call did not converge (error_rms = %g)", static_cast<double>(error_rms)));
+    }
+
+    // sum(x) = 1 and sum(y) = 1 are now solved for rather than imposed by construction, so they
+    // hold only to the convergence tolerance.  Callers (and the SatL/SatV states published
+    // above) expect normalized compositions, so close the residual gap explicitly.  Every
+    // component is accurate in a RELATIVE sense here, and dividing by a sum within a few ulp of
+    // 1 preserves that -- which is the whole point of not eliminating one of them.
+    const CoolPropDbl sum_x_final = std::accumulate(x.begin(), x.end(), static_cast<CoolPropDbl>(0.0));
+    const CoolPropDbl sum_y_final = std::accumulate(y.begin(), y.end(), static_cast<CoolPropDbl>(0.0));
+    if (!(sum_x_final > 0) || !(sum_y_final > 0)) {
+        throw ValueError(format("newton_raphson_twophase::call produced a non-positive composition sum (sum_x = %g, sum_y = %g)",
+                                static_cast<double>(sum_x_final), static_cast<double>(sum_y_final)));
+    }
+    for (std::size_t i = 0; i < N; ++i) {
+        x[i] /= sum_x_final;
+        y[i] /= sum_y_final;
     }
 
     IO.Nsteps = iter;
@@ -1747,44 +1751,54 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays() {
     // -------
     // Build the residual vector and the Jacobian matrix
 
-    x_N_dependency_flag xN_flag = XN_DEPENDENT;
+    // Every mole fraction is a free variable here, so the composition derivatives must be the
+    // XN_INDEPENDENT ones.  (dln_fugacity_dxj__constT_p_xi honours this flag as of the fix that
+    // precedes this change; before it, the XN_DEPENDENT ideal term was applied unconditionally.)
+    x_N_dependency_flag xN_flag = XN_INDEPENDENT;
 
-    // Form of residuals do not depend on which variable is imposed
+    // Residuals, laid out as
+    //   [0 .. N-1]    iso-fugacity        ln f_i^L - ln f_i^V
+    //   [N .. 2N-1]   overall mass balance z_i - (1-beta) x_i - beta y_i
+    //   [2N]          simplex closure      sum(x) - 1
+    // sum(y) = 1 is NOT a separate row: summing the N mass balances with sum(z) = 1 and
+    // sum(x) = 1 already forces it (for beta != 0), so adding it would over-determine the
+    // system.  The mass balance is in linear rather than ratio form because there are now N of
+    // them rather than N-1, and the linear form has no pole at y_i = x_i.
     for (std::size_t i = 0; i < N; ++i) {
-        // Equate the liquid and vapor fugacities
         CoolPropDbl ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
         CoolPropDbl ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
-        r[i] = ln_f_liq - ln_f_vap;  // N of these
-
-        if (i != N - 1) {
-            // Equate the specified vapor mole fraction and that given defined by the ith component
-            r[i + N] = (z[i] - x[i]) / (y[i] - x[i]) - beta;  // N-1 of these
-        }
+        r[i] = ln_f_liq - ln_f_vap;
+        r[i + N] = z[i] - (1 - beta) * x[i] - beta * y[i];
     }
+    CoolPropDbl sum_x = std::accumulate(x.begin(), x.end(), static_cast<CoolPropDbl>(0.0));
+    r[2 * N] = sum_x - 1;
 
-    // First part of derivatives with respect to ln f_i
+    // Iso-fugacity rows: d/dx_j on the liquid, -d/dy_j on the vapor, and the imposed-variable
+    // partner in the last column.
     for (std::size_t i = 0; i < N; ++i) {
-        for (std::size_t j = 0; j < N - 1; ++j) {
+        for (std::size_t j = 0; j < N; ++j) {
             J(i, j) = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatL, i, j, xN_flag);
-            J(i, j + N - 1) = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
+            J(i, j + N) = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
         }
 
-        // Last derivative with respect to either T or p depending on what is imposed
         if (imposed_variable == newton_raphson_twophase_options::P_IMPOSED) {
-            J(i, 2 * N - 2) =
+            J(i, 2 * N) =
               MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatV, i, xN_flag);
         } else if (imposed_variable == newton_raphson_twophase_options::T_IMPOSED) {
-            J(i, 2 * N - 2) =
+            J(i, 2 * N) =
               MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatV, i, xN_flag);
         } else {
             throw ValueError();
         }
     }
-    // Derivatives with respect to the vapor mole fractions residual
-    for (std::size_t i = 0; i < N - 1; ++i) {
-        std::size_t k = i + N;  // N ln f_i residuals
-        J(k, i) = (z[i] - y[i]) / pow(y[i] - x[i], 2);
-        J(k, i + (N - 1)) = -(z[i] - x[i]) / pow(y[i] - x[i], 2);
+    // Mass-balance rows: two entries each, and no dependence on T or p.
+    for (std::size_t i = 0; i < N; ++i) {
+        J(i + N, i) = -(1 - beta);
+        J(i + N, i + N) = -beta;
+    }
+    // Simplex-closure row.
+    for (std::size_t j = 0; j < N; ++j) {
+        J(2 * N, j) = 1.0;
     }
 
     error_rms = r.norm();  // Square-root (The R in RMS)
