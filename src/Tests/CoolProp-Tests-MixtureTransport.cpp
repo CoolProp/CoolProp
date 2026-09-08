@@ -20,6 +20,16 @@ class InspectableMixtureTransport : public HelmholtzEOSMixtureBackend
     const std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>& transport_states() const {
         return component_transport_states;
     }
+
+    const std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>& linked_helpers() const {
+        return linked_states;
+    }
+
+    void create_linked_helpers() {
+        add_TPD_state();
+        add_critical_state();
+        add_transient_pure_state();
+    }
 };
 
 // Preserve the previous implementation as an equivalence reference, not as
@@ -78,6 +88,48 @@ TEST_CASE("Mixture transport agrees with fresh component backends across updates
     }
 }
 
+TEST_CASE("Excess matrices remain square when the component count changes", "[transport][mixture][mixture-transport]") {
+    ExcessTerm excess;
+    for (const std::size_t count : {2, 3, 2, 0, 3}) {
+        CAPTURE(count);
+        excess.resize(count);
+        REQUIRE(excess.N == count);
+        REQUIRE(excess.F.size() == count);
+        REQUIRE(excess.DepartureFunctionMatrix.size() == count);
+        for (std::size_t i = 0; i < count; ++i) {
+            REQUIRE(excess.F[i].size() == count);
+            REQUIRE(excess.DepartureFunctionMatrix[i].size() == count);
+        }
+    }
+}
+
+TEST_CASE("Mixture transport rejects missing or mismatched mole fractions", "[transport][mixture][mixture-transport]") {
+    InspectableMixtureTransport mixture(std::vector<std::string>{"Methane", "Ethane"});
+    SECTION("mole fractions have not been set") {}
+    SECTION("too few mole fractions after replacing components") {
+        check_transport(mixture, {0.6, 0.4}, 100.0, 400.0);
+        const HelmholtzEOSMixtureBackend replacement(std::vector<std::string>{"Methane", "Ethane", "Propane"});
+        mixture.set_components(replacement.get_components());
+    }
+    SECTION("too many mole fractions after replacing components") {
+        const HelmholtzEOSMixtureBackend replacement(std::vector<std::string>{"Methane", "Ethane", "Propane"});
+        mixture.set_components(replacement.get_components());
+        check_transport(mixture, {0.6, 0.3, 0.1}, 100.0, 400.0);
+        const HelmholtzEOSMixtureBackend original(std::vector<std::string>{"Methane", "Ethane"});
+        mixture.set_components(original.get_components());
+    }
+    // Invalidate AbstractState's cached outputs without a flash, which would
+    // itself require valid mole fractions before reaching the transport path.
+    mixture.clear();
+    for (const auto property : {iviscosity, iconductivity}) {
+        CHECK_THROWS_WITH(mixture.keyed_output(property),
+                          "Mole fractions must be set and match the component count before evaluating mixture transport");
+        CHECK(mixture.transport_states().empty());
+    }
+    const auto count = static_cast<const HelmholtzEOSMixtureBackend&>(mixture).get_components().size();
+    check_transport(mixture, std::vector<CoolPropDbl>(count, 1.0 / count), 100.0, 400.0);
+}
+
 TEST_CASE("Mixture transport follows replaced components and EOS", "[transport][mixture][mixture-transport]") {
     InspectableMixtureTransport mixture(std::vector<std::string>{"Methane", "Ethane"});
     check_transport(mixture, {0.6, 0.4}, 100.0, 400.0);
@@ -121,6 +173,61 @@ TEST_CASE("Mixture transport follows replaced components and EOS", "[transport][
     }
 }
 
+TEST_CASE("Component replacement discards old linked helper models", "[transport][mixture][mixture-transport]") {
+    InspectableMixtureTransport mixture(std::vector<std::string>{"Methane", "Ethane"});
+    check_transport(mixture, {0.6, 0.4}, 100.0, 400.0);
+    mixture.create_linked_helpers();
+    const auto old_helpers = mixture.linked_helpers();
+    REQUIRE(old_helpers.size() == 5);
+    const HelmholtzEOSMixtureBackend replacement(std::vector<std::string>{"Methane", "Ethane", "Propane"});
+
+    SECTION("replacement with saturation helpers") {
+        mixture.set_components(replacement.get_components());
+        REQUIRE(mixture.linked_helpers().size() == 2);
+        check_transport(mixture, {0.6, 0.3, 0.1}, 100.0, 400.0);
+        // With an old two-component helper still linked, this write passes
+        // its updated N check but indexes past its unchanged 2x2 matrix.
+        REQUIRE_NOTHROW(mixture.set_binary_interaction_double(0, 2, "Fij", 1.0));
+        CHECK(mixture.SatL->get_binary_interaction_double(0, 2, "Fij") == 1.0);
+        CHECK(mixture.SatV->get_binary_interaction_double(0, 2, "Fij") == 1.0);
+        mixture.create_linked_helpers();
+        REQUIRE(mixture.linked_helpers().size() == 5);
+        for (const auto& helper : mixture.linked_helpers()) {
+            CHECK(static_cast<const HelmholtzEOSMixtureBackend&>(*helper).get_components().size() == 3);
+        }
+    }
+    SECTION("replacement without saturation helpers") {
+        mixture.set_components(replacement.get_components(), false);
+        CHECK(mixture.linked_helpers().empty());
+        CHECK_FALSE(mixture.SatL);
+        CHECK_FALSE(mixture.SatV);
+    }
+    for (const auto& helper : old_helpers) {
+        CHECK(static_cast<const HelmholtzEOSMixtureBackend&>(*helper).get_components().size() == 2);
+        CHECK_THROWS(helper->set_binary_interaction_double(0, 2, "Fij", 1.0));
+    }
+}
+
+TEST_CASE("Invalid mole fractions discard already warmed transport helpers", "[transport][mixture][mixture-transport]") {
+    for (const auto property : {iviscosity, iconductivity}) {
+        for (const std::size_t count : {0, 1, 3}) {
+            CAPTURE(property, count);
+            InspectableMixtureTransport mixture(std::vector<std::string>{"Methane", "Ethane"});
+            check_transport(mixture, {0.6, 0.4}, 100.0, 400.0);
+            const auto old_helpers = mixture.transport_states();
+            REQUIRE(old_helpers.size() == 2);
+            mixture.get_mole_fractions_ref().resize(count);
+            mixture.clear();
+            REQUIRE(mixture.transport_states() == old_helpers);
+            CHECK_THROWS_WITH(mixture.keyed_output(property),
+                              "Mole fractions must be set and match the component count before evaluating mixture transport");
+            CHECK(mixture.transport_states().empty());
+            check_transport(mixture, {0.6, 0.4}, 100.0, 400.0);
+            CHECK(mixture.transport_states() != old_helpers);
+        }
+    }
+}
+
 TEST_CASE("Mixture transport reuses helpers without linking their component counts", "[transport][mixture][mixture-transport]") {
     InspectableMixtureTransport mixture(std::vector<std::string>{"Methane", "Ethane"});
     REQUIRE(mixture.transport_states().empty());
@@ -130,6 +237,8 @@ TEST_CASE("Mixture transport reuses helpers without linking their component coun
     REQUIRE(original[0]);
     REQUIRE(original[1]);
 
+    CHECK(mixture.fluid_param_string("CAS") == "74-82-8");
+    CHECK(mixture.transport_states() == original);
     mixture.clear();
     check_transport(mixture, {0.2, 0.8}, 200.0, 450.0, true);
     CHECK(mixture.transport_states() == original);

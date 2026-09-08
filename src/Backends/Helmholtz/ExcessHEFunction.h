@@ -233,9 +233,10 @@ class ExcessTerm
     /// Resize the parts of this term
     void resize(std::size_t N) {
         this->N = N;
-        F.resize(N, std::vector<CoolPropDbl>(N, 0));
+        F.resize(N);
         DepartureFunctionMatrix.resize(N);
         for (std::size_t i = 0; i < N; ++i) {
+            F[i].resize(N, 0);
             DepartureFunctionMatrix[i].resize(N);
         }
     };
