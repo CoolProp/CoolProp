@@ -2259,4 +2259,69 @@ TEST_CASE("newton_raphson_twophase converges at interior Q (#3372)", "[michelsen
 }
 
 
+
+// GH #3372: the blind mixture PQ/QT path (no phase envelope) must satisfy the overall mass
+// balance z_i = (1-Q) x_i + Q y_i at an interior quality.  It previously used
+// newton_raphson_saturation, a bubble/dew-point solver with no mass-balance condition, so the
+// returned split satisfied equal fugacity but not the specification -- with the error peaking
+// in the Q ~ 0.2..0.4 band (1.2e-4 at p = 3e5 for the mixture below).
+//
+// The metric is the issue's own, computed entirely from the flash's published output.
+TEST_CASE("Mixture PQ/QT flash satisfies the overall mass balance (#3372)", "[michelsen][flash][PQ_flash][massbalance]") {
+    struct Case
+    {
+        std::string name, fluids;
+        std::vector<double> z;
+        double p;
+    };
+    const std::vector<Case> cases = {
+      {"5comp", "Nitrogen&Methane&Ethane&Butane&Pentane", {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 3e5},
+      {"ternary", "Nitrogen&Methane&Ethane", {0.10, 0.85, 0.05}, 5e5},
+      {"binary", "Methane&n-Butane", {0.97, 0.03}, 2e6},
+    };
+
+    for (const auto& c : cases) {
+        for (double Q : {0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 0.9, 0.95}) {
+            DYNAMIC_SECTION(c.name << " Q=" << Q) {
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+                AS->set_mole_fractions(c.z);
+                // No build_phase_envelope() -- this is deliberately the blind path.
+                REQUIRE_NOTHROW(AS->update(PQ_INPUTS, c.p, Q));
+                REQUIRE(AS->phase() == iphase_twophase);
+
+                const std::vector<double> x = AS->mole_fractions_liquid();
+                const std::vector<double> y = AS->mole_fractions_vapor();
+                REQUIRE(x.size() == c.z.size());
+                REQUIRE(y.size() == c.z.size());
+
+                double mass = 0;
+                for (std::size_t i = 0; i < c.z.size(); ++i) {
+                    mass = std::max(mass, std::abs(c.z[i] - (1 - Q) * x[i] - Q * y[i]));
+                }
+                CAPTURE(mass);
+                CAPTURE(AS->T());
+                CHECK(mass < 1e-10);
+
+                // Independent of the residual the solver minimises: round-trip the reported
+                // (T, p) back through a PT flash and check the vapour fraction comes back.
+                auto RT = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+                RT->set_mole_fractions(c.z);
+                if (Q > 0.02 && Q < 0.98) {
+                    REQUIRE_NOTHROW(RT->update(PT_INPUTS, AS->p(), AS->T()));
+                    if (RT->phase() == iphase_twophase) {
+                        CAPTURE(RT->Q());
+                        // Looser below Q = 0.4, and deliberately so: this leg is limited by the
+                        // PT flash, not the PQ flash.  Measured worst |dQ| is 3.9e-6, all of it
+                        // on the wide-boiling 5-component mixture at low Q, where the mass
+                        // balance above is simultaneously 4e-17 -- i.e. the PQ answer satisfies
+                        // its own specification exactly and the disagreement is the PT solve's.
+                        // The ternary and binary stay under 1.4e-10 at every Q.
+                        CHECK(RT->Q() == Catch::Approx(Q).margin(Q < 0.4 ? 1e-5 : 1e-8));
+                    }
+                }
+            }
+        }
+    }
+}
+
 #endif
