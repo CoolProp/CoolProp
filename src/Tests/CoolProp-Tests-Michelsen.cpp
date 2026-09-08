@@ -10,7 +10,9 @@
 #    include <string>
 #    include <vector>
 #    include <catch2/catch_all.hpp>
+#    include "../Backends/Helmholtz/VLERoutines.h"
 #    include "CoolProp/detail/tools.h"
+#    include <numeric>
 #    include "CoolProp/CoolProp.h"
 #    include <cmath>
 
@@ -2175,6 +2177,77 @@ TEST_CASE("HSU_D flash: single-phase N2/O2 HEOS regression", "[michelsen][hsu_d]
         REQUIRE_NOTHROW(AS2->update(DmolarUmolar_INPUTS, rho, U));
         CHECK(AS2->T() == Catch::Approx(T).epsilon(0.001));
         CHECK(AS2->p() == Catch::Approx(P).epsilon(0.001));
+    }
+}
+
+// GH #3372: newton_raphson_twophase seeded exactly as the blind PQ path seeds itself
+// (saturation_preconditioner -> saturation_Wilson -> successive_substitution), then called
+// directly at an interior quality.  Before all mole fractions were made independent variables,
+// this threw for every Q <= 0.5 on the 5-component mixture: the dependent component (Pentane)
+// is also the smallest (y ~ 1e-14), and forming it as 1 - sum(...) cost it ~1% relative
+// precision, which ln f_{N-1} carried into the residual and floored it above the gate.
+TEST_CASE("newton_raphson_twophase converges at interior Q (#3372)", "[michelsen][flash][PQ_flash][twophase]") {
+    struct Case
+    {
+        std::string name, fluids;
+        std::vector<double> z;
+        double p;
+    };
+    const std::vector<Case> cases = {
+      // Wide-boiling, with the smallest component last -- the case that used to fail.
+      {"5comp", "Nitrogen&Methane&Ethane&Butane&Pentane", {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 3e5},
+      // Control: converged before this change too, must still converge.
+      {"binary", "Methane&n-Butane", {0.97, 0.03}, 2e6},
+    };
+
+    for (const auto& c : cases) {
+        for (double Q : {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 0.9}) {
+            DYNAMIC_SECTION(c.name << " Q=" << Q) {
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+                AS->set_mole_fractions(c.z);
+                auto& HEOS = *static_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+                const std::vector<CoolPropDbl>& zz = HEOS.get_mole_fractions();
+
+                SaturationSolvers::mixture_VLE_IO io;
+                io.sstype = SaturationSolvers::imposed_p;
+                io.Nstep_max = 10;
+                CoolPropDbl Tg = SaturationSolvers::saturation_preconditioner(HEOS, c.p, SaturationSolvers::imposed_p, zz);
+                Tg = SaturationSolvers::saturation_Wilson(HEOS, Q, c.p, SaturationSolvers::imposed_p, zz, Tg);
+                std::vector<CoolPropDbl> K = HEOS.get_K();
+                REQUIRE_NOTHROW(SaturationSolvers::successive_substitution(HEOS, Q, Tg, c.p, zz, K, io));
+
+                SaturationSolvers::newton_raphson_twophase NR;
+                SaturationSolvers::newton_raphson_twophase_options IO;
+                IO.beta = Q;
+                IO.x = io.x;
+                IO.y = io.y;
+                IO.rhomolar_liq = io.rhomolar_liq;
+                IO.rhomolar_vap = io.rhomolar_vap;
+                IO.T = io.T;
+                IO.p = io.p;
+                IO.z = std::vector<CoolPropDbl>(c.z.begin(), c.z.end());
+                IO.Nstep_max = 30;
+                IO.imposed_variable = SaturationSolvers::newton_raphson_twophase_options::P_IMPOSED;
+
+                REQUIRE_NOTHROW(NR.call(HEOS, IO));
+
+                // The point of the change: the overall mass balance must actually hold.
+                double mass = 0, sx = 0, sy = 0;
+                for (std::size_t i = 0; i < c.z.size(); ++i) {
+                    mass = std::max(mass, std::abs(c.z[i] - (1 - Q) * IO.x[i] - Q * IO.y[i]));
+                    sx += IO.x[i];
+                    sy += IO.y[i];
+                    CHECK(IO.x[i] > 0.0);
+                    CHECK(IO.y[i] > 0.0);
+                }
+                CAPTURE(mass);
+                CAPTURE(IO.T);
+                CHECK(mass < 1e-12);
+                CHECK(sx == Catch::Approx(1.0).epsilon(1e-14));
+                CHECK(sy == Catch::Approx(1.0).epsilon(1e-14));
+                CHECK(IO.T > 0);
+            }
+        }
     }
 }
 
