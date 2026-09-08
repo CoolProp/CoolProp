@@ -2247,18 +2247,6 @@ TEST_CASE("newton_raphson_twophase converges at interior Q (#3372)", "[michelsen
                     CHECK(IO.x[i] > 0.0);
                     CHECK(IO.y[i] > 0.0);
                 }
-                // K_i and the mass-balance amplification for each phase, so a failure can be
-                // read against the gain that predicts it.
-                double Kmin = 1e300, Kmax = 0;
-                for (std::size_t i = 0; i < c.z.size(); ++i) {
-                    const double Ki = static_cast<double>(IO.y[i] / IO.x[i]);
-                    Kmin = std::min(Kmin, Ki);
-                    Kmax = std::max(Kmax, Ki);
-                }
-                const double gain_y = ((1 - Q) / Q) / Kmin;   // error in x_i -> y_i, worst for K << 1
-                const double gain_x = (Q / (1 - Q)) * Kmax;   // error in y_i -> x_i, worst for K >> 1
-                printf("  %-10s Q=%-5.2f Kmin=%10.3e Kmax=%10.3e gain_y=%10.3e gain_x=%10.3e mass=%9.2e T=%8.3f\n", c.name.c_str(), Q, Kmin,
-                       Kmax, gain_y, gain_x, mass, static_cast<double>(IO.T));
                 CAPTURE(mass);
                 CAPTURE(IO.T);
                 CHECK(mass < 1e-12);
