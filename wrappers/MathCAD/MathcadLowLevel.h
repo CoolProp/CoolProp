@@ -602,6 +602,53 @@ static LRESULT CP_AS_props_multi(LPCOMPLEXARRAY Prop,            // output: matr
     return 0;
 }
 
+// Return every currently-live Low-Level state's handle, as a column vector,
+// and AS_list_states() (below)'s Backend|Fluids string, in the same order.
+// See MathcadStateGuard::snapshot()'s comment for the ordering guarantee and
+// its one caveat (a factory/free call landing between this call and
+// AS_list_states() on the same worksheet -- rely on Recalculate Worksheet
+// for a guaranteed-consistent pair, same advice already given for the
+// worksheet-level-handle authoring pattern).
+//
+// `Trigger` is intentionally unused -- Mathcad Prime's Custom Function
+// syntax requires at least one argument, and there is no *natural* one to
+// key a whole-registry snapshot on, so this exists purely to satisfy that
+// requirement (any real scalar works, e.g. a literal 0). It does double
+// duty, though: wiring it to a handle already on the sheet (rather than a
+// bare literal) gives Mathcad a real dependency edge, so this call re-runs
+// whenever THAT handle's defining cell does -- a narrower, more reliable
+// trigger than waiting for a full Recalculate Worksheet.
+static LRESULT CP_AS_list_handles(LPCOMPLEXARRAY Handles, LPCCOMPLEXSCALAR Trigger) {
+    (void)Trigger;
+    auto snap = as_state_guard.snapshot();
+    if (snap.empty()) return MAKELRESULT(NO_ACTIVE_STATES, 1);
+
+    std::vector<std::vector<double>> Vec;
+    Vec.reserve(snap.size());
+    for (const auto& kv : snap) {
+        Vec.push_back(std::vector<double>(1, static_cast<double>(kv.second)));
+    }
+    return AllocateToMathcadArray(Handles, Vec);
+}
+
+// Companion to AS_list_handles(): the same live states' "Backend|Fluids" key
+// (the same string AS_factory()'s two arguments were joined into), ";"-
+// delimited, in the same order AS_list_handles() returns their handles.
+// `Trigger` is unused -- see CP_AS_list_handles()'s comment above.
+static LRESULT CP_AS_list_states(LPMCSTRING States, LPCCOMPLEXSCALAR Trigger) {
+    (void)Trigger;
+    auto snap = as_state_guard.snapshot();
+    if (snap.empty()) return MAKELRESULT(NO_ACTIVE_STATES, 1);
+
+    std::vector<std::string> keys;
+    keys.reserve(snap.size());
+    for (const auto& kv : snap) {
+        keys.push_back(kv.first);
+    }
+    States->str = AllocMathcadString(strjoin(keys, ";"));
+    return 0;
+}
+
 // ********************************************************************************************************
 // Fill out FUNCTIONINFO structures for the Low-Level (AbstractState) API functions above
 // ********************************************************************************************************
@@ -714,6 +761,26 @@ FUNCTIONINFO ASPropsMulti = {
   COMPLEX_ARRAY,                                                                                                                           // Returns a Mathcad complex array
   5,                                                                                                                                        // Number of arguments
   {COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_ARRAY, COMPLEX_ARRAY, COMPLEX_ARRAY}                                                            // Argument types
+};
+
+FUNCTIONINFO ASListHandles = {
+  const_cast<char*>("AS_list_handles"),                                                              // Name by which Mathcad will recognize the function
+  const_cast<char*>("Trigger"),                                                                       // Description of input parameters (unused -- see function comment)
+  const_cast<char*>("Returns a column vector of all currently-live Low-Level state Handles"),         // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_list_handles,                                                                    // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                       // Returns a Mathcad complex array
+  1,                                                                                                   // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR}                                                                                     // Argument types
+};
+
+FUNCTIONINFO ASListStates = {
+  const_cast<char*>("AS_list_states"),                                                                                // Name by which Mathcad will recognize the function
+  const_cast<char*>("Trigger"),                                                                                      // Description of input parameters (unused -- see function comment)
+  const_cast<char*>("Returns \";\"-delimited \"Backend|Fluids\" for all currently-live states, matching AS_list_handles() order"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_list_states,                                                                                     // Pointer to the function code.
+  MC_STRING,                                                                                                          // Returns a Mathcad string
+  1,                                                                                                                  // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR}                                                                                                    // Argument types
 };
 
 #endif  // MATHCAD_LOWLEVEL_H

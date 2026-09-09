@@ -73,6 +73,7 @@ enum EC
     INV_PARAMETER_IDX,
     INV_INPUT_PAIR_STR,
     INV_INPUT_PAIR_IDX,
+    NO_ACTIVE_STATES,
     UNKNOWN,
     NUMBER_OF_ERRORS
 };  // Dummy Code for Error Count
@@ -118,6 +119,7 @@ const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                "Invalid Parameter Index",
                                                "Invalid Input Pair String",
                                                "Invalid Input Pair Index",
+                                               "No Active States",
                                                "CoolProp Issue: Use get_global_param_string(\"errstring\") for more info.",
                                                "Error Count - Not Used"};
 
@@ -1100,6 +1102,8 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             CreateUserFunction(hDLL, &ASGet);
             CreateUserFunction(hDLL, &ASProps);
             CreateUserFunction(hDLL, &ASPropsMulti);
+            CreateUserFunction(hDLL, &ASListHandles);
+            CreateUserFunction(hDLL, &ASListStates);
             break;
 
         case DLL_THREAD_ATTACH:

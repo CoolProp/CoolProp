@@ -12,6 +12,8 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <utility>
+#include <vector>
 
 // Gives the Mathcad wrapper's AS_factory() function "get-or-create" (memoized)
 // semantics on top of AbstractState_factory(): calling get_or_create() again
@@ -56,9 +58,31 @@ class MathcadStateGuard
     // truncate if it doesn't fit" convention used throughout that API.
     long get_or_create(const std::string& backend, const std::string& fluids, long* errcode, char* message_buffer, long buffer_length);
 
+    // Returns a point-in-time copy of every currently-registered (key, handle)
+    // pair whose handle is still actually alive, in key order -- i.e. the
+    // same order std::map<std::string, long> iterates in, which depends only
+    // on the CURRENT set of keys, not on when the copy is taken. That
+    // property is what lets two independent callers (AS_list_handles() and
+    // AS_list_states() in MathcadLowLevel.h, each calling snapshot()
+    // separately since a Mathcad function can only return one of
+    // COMPLEX_ARRAY/MC_STRING, never both) agree on ordering as long as no
+    // get_or_create()/erase happens between the two calls -- the normal case
+    // for two list-cells on the same worksheet. See those functions'
+    // comments for the one edge case where that assumption doesn't hold.
+    //
+    // A handle registered here can go dead without this class knowing --
+    // AS_free() in MathcadLowLevel.h releases handles directly via
+    // AbstractState_free(), deliberately bypassing this registry (see that
+    // function's own comment), so it has no way to remove the now-stale
+    // entry at free time. snapshot() is where that staleness actually gets
+    // noticed and cleaned up: like get_or_create(), it probes each handle
+    // before reporting it, and silently drops (erases) any that are dead.
+    // Not const, since it can mutate `live` this way.
+    std::vector<std::pair<std::string, long>> snapshot();
+
    private:
     std::map<std::string, long> live;  // key: backend + "|" + fluids -> the live handle for that key, if any
-    std::mutex mtx;
+    mutable std::mutex mtx;            // mutable: snapshot() is logically read-only but still needs to lock
 };
 
 #endif

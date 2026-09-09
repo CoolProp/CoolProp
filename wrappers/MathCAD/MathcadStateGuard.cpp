@@ -40,3 +40,32 @@ long MathcadStateGuard::get_or_create(const std::string& backend, const std::str
     }
     return handle;
 }
+
+std::vector<std::pair<std::string, long>> MathcadStateGuard::snapshot() {
+    std::scoped_lock guard(mtx);
+
+    std::vector<std::pair<std::string, long>> result;
+    result.reserve(live.size());
+
+    for (auto it = live.begin(); it != live.end();) {
+        // Read-only aliveness probe. Unlike get_or_create()'s reuse-time
+        // probe (AbstractState_unspecify_phase(), which deliberately also
+        // clears a stale phase constraint as part of reusing the handle),
+        // this call must not have any side effect on a state it is merely
+        // listing -- AbstractState_backend_name() only reads the object
+        // (handle_manager.get(handle) then AS->backend_name()), so it's safe
+        // to use purely as a liveness check.
+        long probe_errcode = 0;
+        char probe_message[256];
+        char backend_buf[256];
+        AbstractState_backend_name(it->second, backend_buf, &probe_errcode, probe_message, static_cast<long>(sizeof(probe_message)));
+        if (probe_errcode != 0 && std::strncmp(probe_message, "HandleError:", 12) == 0) {
+            it = live.erase(it);  // dead -- freed directly via AS_free() outside this registry
+        } else {
+            result.emplace_back(it->first, it->second);
+            ++it;
+        }
+    }
+
+    return result;
+}

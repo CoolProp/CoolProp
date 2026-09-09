@@ -608,6 +608,33 @@ Where,
 
 ----
 
+AS_list_handles / AS_list_states
+---------------------------------
+
+An introspection pair -- mainly useful for debugging -- that lists every Low-Level state currently open anywhere in the worksheet, i.e. every live handle from an ``AS_factory`` call that hasn't been released via ``AS_free`` (or superseded by a later call to ``AS_factory`` with the same Backend/Fluids, per its memoization).::
+
+    AS_list_handles(Trigger)
+    AS_list_states(Trigger)
+
+Where,
+
+* `Trigger` is unused by either function -- Mathcad Custom Functions require at least one argument, and there is no argument that naturally belongs to a whole-registry snapshot, so this exists only to satisfy that requirement. Any real scalar works, e.g. a literal ``0``.
+
+``AS_list_handles`` returns a column vector of the currently-live handles; ``AS_list_states`` returns their ``"Backend|Fluids"`` keys (the same string ``AS_factory``'s two arguments were joined into) as one ``";"``-delimited string, **in the same order**. Both raise a Custom Error if no Low-Level states are currently open. A handle released via ``AS_free`` (or otherwise gone dead) is dropped from the listing automatically -- neither function ever reports a stale handle.
+
+.. note::
+    **Why two functions:** a Mathcad Custom Function can only return one value -- either a complex array or a string, never both -- so this is the same array-plus-parallel-string pairing already used by ``get_predefined_mixture_fluids``/``get_predefined_mixture_mole_fractions`` above, applied to the Low-Level registry instead of a predefined mixture.
+
+.. note::
+    **Ordering guarantee:** the two functions independently snapshot the same underlying registry, ordered by its ``"Backend|Fluids"`` key -- an order that depends only on which keys are *currently* registered, not on when each snapshot was taken. Two calls placed on the same worksheet will therefore agree, unless an ``AS_factory``/``AS_free`` call is evaluated in between them within the same recalculation pass.
+
+.. note::
+    **Using Trigger for recalculation:** since ``Trigger``'s value is otherwise ignored, wiring it to a handle already on the sheet -- rather than a bare literal -- gives Mathcad a real dependency edge, so the call re-runs whenever that handle's defining cell does. Without that, use **Recalculate Worksheet** to refresh these two calls, since they otherwise have no dependency edge to anything that changed.
+
+|
+
+----
+
 Applying Mathcad Units to CoolProp Functions
 ============================================
 
