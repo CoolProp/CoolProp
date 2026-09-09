@@ -2353,12 +2353,32 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
             return true;
         }
 
-        // Build Hessian
+        // Build Hessian.
+        //
+        // The curvature term multiplying (half_alpha_i * half_alpha_j / N_tot) is the
+        // mole-number log-fugacity-COEFFICIENT derivative  n * d(ln phi_i)/dn_j , NOT the
+        // full log-fugacity derivative  d(ln f_i)/dx_j .  They differ by the ideal-gas term
+        // delta_ij/y_i, which the alpha-transform already carries via the delta_ij(1 + s_i/2)
+        // diagonal and the sqrt(W) Jacobian; adding it again here (as dln_fugacity_dxj did)
+        // double-counts it and, worse, drops the Gibbs-Duhem projection  sum_k y_k D(i,k)
+        // that makes the curvature matrix symmetric (Maxwell reciprocity
+        // d(ln phi_i)/dn_j = d(ln phi_j)/dn_i).  Feeding d(ln f_i)/dx_j flipped the MSVC
+        // stability verdict for methanol/benzene near x_meoh = 0.54, publishing a spurious
+        // LLE split as VLE (GH #3357, jakobreichert; latent until the XN_INDEPENDENT ideal
+        // term was corrected in dln_fugacity_dxj__constT_p_xi).  This mirrors the coefficient
+        // derivative + mole-number projection already used by the Phase-2 Gibbs Hessian below.
+        Eigen::MatrixXd D(N, N);
+        for (std::size_t i = 0; i < N; ++i)
+            for (std::size_t j = 0; j < N; ++j)
+                D(i, j) = MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, XN_INDEPENDENT);
         Eigen::MatrixXd H(N, N);
         for (std::size_t i = 0; i < N; ++i) {
             double ahi = half_alpha[i] / sumY;
+            double sum_yD = 0;  // sum_k y_k D(i,k): the mole-number projection
+            for (std::size_t k = 0; k < N; ++k)
+                sum_yD += y_norm[k] * D(i, k);
             for (std::size_t j = 0; j <= i; ++j) {
-                double dln_phi_dnj = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, XN_INDEPENDENT);
+                double dln_phi_dnj = D(i, j) - sum_yD;  // n * d(ln phi_i)/dn_j
                 double term = ahi * half_alpha[j] * dln_phi_dnj;
                 H(i, j) = term;
                 H(j, i) = term;
