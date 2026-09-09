@@ -1928,12 +1928,23 @@ TEST_CASE("PQ flash with built PE: N2/CH4", "[michelsen][flash][PQ_flash][PhaseE
     CAPTURE(npts);
     CHECK(npts > 0);
     CHECK(AS->get_phase_envelope_data().built);
-    // Use a separate (non-PE) object for PQ flash — PQ flash on the same
-    // object that built the PE can crash in the current codebase.
-    auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Methane"));
-    AS2->set_mole_fractions({0.5, 0.5});
-    REQUIRE_NOTHROW(AS2->update(PQ_INPUTS, 1.5e5, 0.5));
-    CHECK(AS2->phase() == iphase_twophase);
+    // Flash on the SAME object that built the envelope.  This used to be done on a separate
+    // envelope-free object, with a comment that flashing on the envelope owner "can crash in
+    // the current codebase" — that crash was the Eigen::Vector2d overflow fixed by #3196, so
+    // the workaround was stale and left the test taking the blind path despite its name
+    // (GH #3372).
+    REQUIRE_NOTHROW(AS->update(PQ_INPUTS, 1.5e5, 0.5));
+    CHECK(AS->phase() == iphase_twophase);
+    CHECK(std::isfinite(AS->T()));
+    // ... and check it actually solved the two-phase specification, not merely that it returned.
+    const std::vector<double> x = AS->mole_fractions_liquid();
+    const std::vector<double> y = AS->mole_fractions_vapor();
+    double mass = 0;
+    for (std::size_t i = 0; i < 2; ++i) {
+        mass = std::max(mass, std::abs(0.5 - 0.5 * x[i] - 0.5 * y[i]));
+    }
+    CAPTURE(mass);
+    CHECK(mass < 1e-10);
 }
 
 TEST_CASE("PQ flash: 6-component no-throw sweep", "[michelsen][flash][PQ_flash]") {
@@ -2322,6 +2333,128 @@ TEST_CASE("Mixture PQ/QT flash satisfies the overall mass balance (#3372)", "[mi
             }
         }
     }
+}
+
+
+
+// GH #3372: interior-Q coverage for the ENVELOPE-guided branch of the mixture PQ/QT dispatch.
+//
+// Before this, four tests built an envelope and then ran a mixture PQ flash, but only two
+// actually reached the envelope branch and both sat at Q = 0.5.  Two guards keep this one
+// honest, because either failing silently would make it vacuous:
+//   * REQUIRE(built) -- without it the dispatch falls straight through to the blind path
+//     (the pattern #3196 established).
+//   * the warning slot must be EMPTY afterwards -- PQ_flash reports every fallback to the
+//     blind solver through set_warning_string, so a non-empty slot means the envelope branch
+//     did not answer and the test would be measuring the blind path again.
+//
+// The mixtures and pressures are chosen because the envelope branch answers at every Q there;
+// it is not yet reliable everywhere (Methane&n-Butane falls back at every Q, for instance),
+// which is tracked separately as the envelope-seed work.
+TEST_CASE("Envelope-branch mixture PQ flash across interior Q (#3372)", "[michelsen][flash][PQ_flash][PhaseEnvelope]") {
+    struct Case
+    {
+        std::string name, fluids;
+        std::vector<double> z;
+        double p;
+    };
+    const std::vector<Case> cases = {
+      {"CH4-C2H6", "Methane&Ethane", {0.5, 0.5}, 1e6},
+      {"N2-CH4", "Nitrogen&Methane", {0.5, 0.5}, 1e6},
+    };
+
+    for (const auto& c : cases) {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+        AS->set_mole_fractions(c.z);
+        AS->build_phase_envelope("");
+        REQUIRE(AS->get_phase_envelope_data().built);
+
+        // Reference on an envelope-free object: same state, forced down the blind path.
+        auto REF = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+        REF->set_mole_fractions(c.z);
+
+        for (double Q : {0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95}) {
+            DYNAMIC_SECTION(c.name << " Q=" << Q) {
+                get_global_param_string("warnstring");  // drain
+                REQUIRE_NOTHROW(AS->update(PQ_INPUTS, c.p, Q));
+                const std::string warn = get_global_param_string("warnstring");
+                CAPTURE(warn);
+                REQUIRE(warn.empty());  // the envelope branch answered, not the fallback
+
+                CHECK(AS->phase() == iphase_twophase);
+                CHECK(std::isfinite(AS->T()));
+                CHECK(AS->T() > 0);
+
+                const std::vector<double> x = AS->mole_fractions_liquid();
+                const std::vector<double> y = AS->mole_fractions_vapor();
+                double mass = 0;
+                for (std::size_t i = 0; i < c.z.size(); ++i) {
+                    mass = std::max(mass, std::abs(c.z[i] - (1 - Q) * x[i] - Q * y[i]));
+                }
+                CAPTURE(mass);
+                CHECK(mass < 1e-10);
+
+                // The two branches must agree: #3192 was the envelope branch silently
+                // publishing a different (and wrong) state than the blind one.
+                REF->update(PQ_INPUTS, c.p, Q);
+                CAPTURE(REF->T());
+                CHECK(AS->T() == Catch::Approx(REF->T()).epsilon(1e-7));
+            }
+        }
+    }
+}
+
+// GH #3372: there was no QT_INPUTS coverage at all after a phase-envelope build.  Take the
+// temperature from a PQ flash and feed it back through QT at the same quality; the pressure
+// must come back, and the split must satisfy the overall mass balance.
+//
+// The QT leg does not assert per-state that the envelope branch answered, because its seed is
+// not yet reliable at every quality -- at the time of writing Q = 0.3 here falls back with a
+// seed pressure of 8.2e7 Pa for a state near 1e6 Pa, which is the envelope-seed defect tracked
+// as item 3 of the issue.  Pinning the exact set of failing qualities would just encode today's
+// bug.  Instead the test requires that SOME quality exercised the QT envelope branch
+// successfully -- enough to catch that path breaking entirely -- while the round-trip and
+// mass-balance checks below hold at every quality regardless of which branch answered.
+TEST_CASE("Envelope-branch mixture QT flash round-trips PQ (#3372)", "[michelsen][flash][QT_flash][PhaseEnvelope]") {
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane"));
+    const std::vector<double> z = {0.5, 0.5};
+    AS->set_mole_fractions(z);
+    AS->build_phase_envelope("");
+    REQUIRE(AS->get_phase_envelope_data().built);
+
+    const double p = 1e6;
+    int qt_via_envelope = 0;
+    for (double Q : {0.1, 0.3, 0.5, 0.7, 0.9}) {
+        CAPTURE(Q);
+
+        get_global_param_string("warnstring");  // drain
+        REQUIRE_NOTHROW(AS->update(PQ_INPUTS, p, Q));
+        REQUIRE(get_global_param_string("warnstring").empty());  // PQ envelope branch answered
+        const double T = AS->T();
+        REQUIRE(std::isfinite(T));
+
+        get_global_param_string("warnstring");
+        REQUIRE_NOTHROW(AS->update(QT_INPUTS, Q, T));
+        if (get_global_param_string("warnstring").empty()) {
+            ++qt_via_envelope;
+        }
+
+        CHECK(AS->phase() == iphase_twophase);
+        CAPTURE(T);
+        CAPTURE(AS->p());
+        CHECK(AS->p() == Catch::Approx(p).epsilon(1e-6));
+
+        const std::vector<double> x = AS->mole_fractions_liquid();
+        const std::vector<double> y = AS->mole_fractions_vapor();
+        double mass = 0;
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            mass = std::max(mass, std::abs(z[i] - (1 - Q) * x[i] - Q * y[i]));
+        }
+        CAPTURE(mass);
+        CHECK(mass < 1e-10);
+    }
+    CAPTURE(qt_via_envelope);
+    CHECK(qt_via_envelope > 0);  // the QT envelope branch is reachable and works somewhere
 }
 
 #endif
