@@ -1,6 +1,7 @@
 // CoolPropMathcad.cpp : Defines the exported functions for the DLL Add-in.
 //
 
+#include <cmath>
 #include <limits>
 #include <string>
 #include <cstring>
@@ -18,6 +19,7 @@ enum
 #undef STRING  // undefine STRING as it conflicts with STRING enum in fmtlib/format.h
 
 #include "CoolProp/CoolProp.h"
+#include "CoolProp/Configuration.h"
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/HumidAirProp.h"
 #include <Backends/Helmholtz/MixtureParameters.h>
@@ -62,6 +64,15 @@ enum EC
     BAD_RULE,
     PAIR_EXISTS,
     NO_SOLUTION,
+    BAD_HANDLE,       // Low-Level (AbstractState) Error Codes from here   v
+    TOO_MANY_OUTPUTS,
+    LOWLEVEL_ERROR,
+    BAD_BACKEND,
+    NOT_MIXTURE,
+    BAD_FRACTION_SUM,
+    INV_PARAMETER_IDX,
+    INV_INPUT_PAIR_STR,
+    INV_INPUT_PAIR_IDX,
     UNKNOWN,
     NUMBER_OF_ERRORS
 };  // Dummy Code for Error Count
@@ -83,7 +94,7 @@ const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                "Input Parameter is Non-Trivial",
                                                "REFPROP not installed correctly",
                                                "This Output parameter is not available for this Fluid",
-                                               "This Input Pair is not yet support for this Fluid",
+                                               "This Input Pair is not yet supported for this Fluid",
                                                "Input vapor quality must be between 0 and 1",
                                                "Output variable not valid in two phase region",
                                                "Output variable only valid in two phase region",
@@ -98,6 +109,15 @@ const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                "Mixing rule must be \"linear\" or \"Lorentz-Berthelot\".",
                                                "Specified binary pair already exists.",
                                                "No solution found for the given inputs and fluid.",
+                                               "Invalid or stale AbstractState handle; it may already have been freed or replaced",
+                                               "Low-Level Multi function supports at most 5 output parameters per call",
+                                               "CoolProp Low-Level API Issue: Use get_global_param_string(\"errstring\") for more info.",
+                                               "Invalid Backend String",
+                                               "AS_set_fractions is not valid for a pure fluid",
+                                               "Input fractions must sum to 1.0",
+                                               "Invalid Parameter Index",
+                                               "Invalid Input Pair String",
+                                               "Invalid Input Pair Index",
                                                "CoolProp Issue: Use get_global_param_string(\"errstring\") for more info.",
                                                "Error Count - Not Used"};
 
@@ -853,6 +873,40 @@ static LRESULT CP_set_mixture_binary_pair_data(LPMCSTRING Msg,          // outpu
 }
 
 // ********************************************************************************************************
+//   Low-Level (AbstractState) API Functions
+//
+// These wrap CoolProp's handle-based low-level C API (CoolProp/CoolPropLib.h),
+// which already solves the "Mathcad can't hold a C++ object" problem for
+// other host languages that face the same restriction (Fortran, Julia): the
+// handle IS just an integer, carried through a Mathcad worksheet as an
+// ordinary real scalar (imag == 0).
+//
+// Two supported authoring patterns for getting the call ORDER right --
+// Mathcad recalculates by dependency/region order, not sequential code, so
+// neither the DLL nor these functions can enforce sequencing on their own:
+//   1. A Mathcad "program" block: create the handle, make however many
+//      AS_props()/AS_props_multi() calls are needed, and release it with
+//      AS_free(), all as sequential statements in one program region.
+//   2. One AS_factory() cell near the top of a worksheet, referenced by
+//      many downstream cells, relying on Recalculate Worksheet (full
+//      top-to-bottom recalculation in region order) to guarantee the
+//      factory cell runs first.
+// See wrappers/MathCAD/README.md and the example worksheet for both.
+//
+// AS_factory() and AS_set_fractions() both return the Handle they were
+// given/created, unchanged, purely so a downstream cell that uses that
+// return value as its own Handle argument gets Mathcad's normal dependency
+// tracking as an extra correctness net on top of whichever pattern above is
+// in use -- it is not, by itself, a substitute for one of those patterns.
+//
+// Implementations (CP_AS_*) and their FUNCTIONINFO registrations live in
+// MathcadLowLevel.h, not here -- pulled out into their own included file so
+// this one doesn't grow unbounded as more Low-Level functions are added.
+// ********************************************************************************************************
+
+#include "MathcadLowLevel.h"
+
+// ********************************************************************************************************
 // Fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
 // ********************************************************************************************************
 
@@ -886,7 +940,15 @@ FUNCTIONINFO RefState = {
   {MC_STRING, MC_STRING}                                                              // Argument types
 };
 
-FUNCTIONINFO Props1SI = {
+// Note: these FUNCTIONINFO variables are named with an "Info" suffix (rather
+// than matching the Mathcad-facing function name exactly, as most other
+// FUNCTIONINFO variables in this file do) because CoolProp/CoolPropLib.h --
+// included above for the Low-Level API functions -- declares global
+// Props1SI/PropsSI/PropsSImulti/PhaseSI/HAPropsSI functions of its own; a
+// same-named variable at file scope would conflict with those declarations.
+// The Mathcad-facing function name (first field of each struct below) is
+// unaffected -- worksheets still call PropsSI(...), etc.
+FUNCTIONINFO Props1SIInfo = {
   const_cast<char*>("Props1SI"),                                                                                     // Name by which Mathcad will recognize the function
   const_cast<char*>("Fluid, Property Name"),                                                                         // Description of input parameters
   const_cast<char*>("Returns a fluid-specific parameter, where the parameter is not dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
@@ -896,7 +958,7 @@ FUNCTIONINFO Props1SI = {
   {MC_STRING, MC_STRING}                                                                                             // Argument types
 };
 
-FUNCTIONINFO PropsSI = {
+FUNCTIONINFO PropsSIInfo = {
   const_cast<char*>("PropsSI"),                                                                                  // Name by which Mathcad will recognize the function
   const_cast<char*>("Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name"),  // Description of input parameters
   const_cast<char*>("Returns a fluid-specific parameter, where the parameter is dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
@@ -906,7 +968,7 @@ FUNCTIONINFO PropsSI = {
   {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                                   // Argument types
 };
 
-FUNCTIONINFO PropsSImulti = {
+FUNCTIONINFO PropsSImultiInfo = {
   const_cast<char*>("PropsSImulti"),                                                                                                              // Name by which Mathcad will recognize the function
   const_cast<char*>("Output Name, Input Name 1, Input Property 1 (Array), Input Name 2, Input Property 2 (Array), Fluid Name"),                    // Description of input parameters
   const_cast<char*>("Returns a range of fluid-specific parameters, where the parameters are dependent on the state ranges defined by the input property arrays"),  // Description of the function for the Insert Function dialog box
@@ -916,7 +978,7 @@ FUNCTIONINFO PropsSImulti = {
   {MC_STRING, MC_STRING, COMPLEX_ARRAY, MC_STRING, COMPLEX_ARRAY, MC_STRING}  // Argument types
 };
 
-FUNCTIONINFO PhaseSI = {
+FUNCTIONINFO PhaseSIInfo = {
   const_cast<char*>("PhaseSI"),                                                                     // Name by which Mathcad will recognize the function
   const_cast<char*>("Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name"),  // Description of input parameters
   const_cast<char*>("Returns the fluid phase, dependent on the fluid state"),                       // Description of the function for the Insert Function dialog box
@@ -926,7 +988,7 @@ FUNCTIONINFO PhaseSI = {
   {MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                                 // Argument types
 };
 
-FUNCTIONINFO HAPropsSI = {
+FUNCTIONINFO HAPropsSIInfo = {
   const_cast<char*>("HAPropsSI"),  // Name by which Mathcad will recognize the function
   const_cast<char*>("Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Input Name 3, Input Property 3"),  // Description of input parameters
   const_cast<char*>("Returns a parameter of humid air, where the parameter is dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
@@ -1015,17 +1077,29 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             CreateUserFunction(hDLL, &PropsParam);
             CreateUserFunction(hDLL, &FluidParam);
             CreateUserFunction(hDLL, &RefState);
-            CreateUserFunction(hDLL, &Props1SI);
-            CreateUserFunction(hDLL, &PropsSI);
-            CreateUserFunction(hDLL, &PropsSImulti);
-            CreateUserFunction(hDLL, &PhaseSI);
-            CreateUserFunction(hDLL, &HAPropsSI);
+            CreateUserFunction(hDLL, &Props1SIInfo);
+            CreateUserFunction(hDLL, &PropsSIInfo);
+            CreateUserFunction(hDLL, &PropsSImultiInfo);
+            CreateUserFunction(hDLL, &PhaseSIInfo);
+            CreateUserFunction(hDLL, &HAPropsSIInfo);
             CreateUserFunction(hDLL, &GetMixtureData);
             CreateUserFunction(hDLL, &SetMixtureData);
             CreateUserFunction(hDLL, &ApplyMixingRule);
             // Register the new helper functions for predefined mixtures
             CreateUserFunction(hDLL, &GetPredefFluids);
             CreateUserFunction(hDLL, &GetPredefMoleFracs);
+            // Register the Low-Level (AbstractState) API functions
+            CreateUserFunction(hDLL, &ASFactory);
+            CreateUserFunction(hDLL, &ASSetFractions);
+            CreateUserFunction(hDLL, &ASSpecifyPhase);
+            CreateUserFunction(hDLL, &ASUnspecifyPhase);
+            CreateUserFunction(hDLL, &ASFree);
+            CreateUserFunction(hDLL, &ASParamIndex);
+            CreateUserFunction(hDLL, &ASInputPairIndex);
+            CreateUserFunction(hDLL, &ASUpdate);
+            CreateUserFunction(hDLL, &ASGet);
+            CreateUserFunction(hDLL, &ASProps);
+            CreateUserFunction(hDLL, &ASPropsMulti);
             break;
 
         case DLL_THREAD_ATTACH:

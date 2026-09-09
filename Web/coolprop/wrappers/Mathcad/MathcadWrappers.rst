@@ -185,7 +185,7 @@ At least one of the inputs must be "T" (dry bulb temperature), "R" (Relative Hum
 Pseudo-Low-Level Functions
 ==========================
 
-CoolProp's Low-level functions require the creation of an Abstract State object and then evaluation of properties using that object's member functions.  Mathcad does not have the ability to store objects as variables and so the Low-Level interface to CoolProp is not implemented.  However, there are some pseudo-Low-Level functions that to not require an abstract state object, or can at least create one temporarily for the purposes of extracting and setting CoolProp data and parameters.  These wrapper functions are listed here.
+CoolProp's Low-level functions require the creation of an Abstract State object and then evaluation of properties using that object's member functions.  Mathcad does not have the ability to store objects as variables directly, so these pseudo-Low-Level functions either do not require an abstract state object, or create one temporarily for the purposes of extracting and setting CoolProp data and parameters.  These wrapper functions are listed here.  (A true, persistent Low-Level interface *is* available -- see :ref:`Low-Level (AbstractState) Functions <mathcad_lowlevel_functions>` below, which represents the Abstract State object as a plain numeric handle instead.)
 
 get_global_param_string
 -----------------------
@@ -365,6 +365,246 @@ Where,
 * `value` is the value of the parameter being set.
 
 Use of this function follows the python example exactly on the Fluid Properties | Mixtures page and will not be repeated here.
+
+----
+
+.. _mathcad_lowlevel_functions:
+
+Low-Level (AbstractState) Functions
+====================================
+
+CoolProp's `Low-Level (AbstractState) API <https://coolprop.github.io/devdocs/coolprop/LowLevelAPI.html>`_ lets a caller build one persistent fluid/mixture state and reuse it for many flashes/outputs, avoiding the cost of reconstructing the backend for every call -- this matters most for tabular backends (BICUBIC/TTSE), where construction alone can cost 80-140 ms.  Since Mathcad cannot hold a C++ object as a worksheet variable, the state is represented here by a plain numeric **handle** (a real scalar): ``AS_factory`` creates the state and returns the handle; the other ``AS_*`` functions take that handle as their first argument.
+
+.. note::
+    All Low-Level functions in the Mathcad wrapper are implemented with the two-letter prefix `AS_` for `AbstractState`.
+
+**Getting call order right.**  Mathcad recalculates by dependency/region order, not top-to-bottom sequential code, so a handle must always be created before it is used.  Two patterns are supported:
+
+1. A Mathcad **program** block (Programming toolbar): create the handle, make however many ``AS_props``/``AS_props_multi`` calls are needed (or ``AS_update`` followed by as many ``AS_get`` calls as needed), and release it with ``AS_free`` at the end, all as sequential statements in one program region.  Recommended when the worksheet just needs one derived result.
+2. One ``AS_factory`` call near the top of a worksheet, referenced by many downstream calls/plots.  Use **Recalculate Worksheet** (a full top-to-bottom recalculation in region order, not a partial/incremental recalc) to guarantee the factory call runs before anything that reads the handle.  In this pattern, avoid calling ``AS_free`` from an independent call -- nothing guarantees it runs after every reader of the handle.  ``AS_factory`` itself is memoized: recalculating it with the same ``Backend``/``Fluids`` returns the SAME handle rather than rebuilding the backend, so repeatedly recalculating the same call neither leaks state nor pays construction cost again (any phase constraint from a prior ``AS_specify_phase`` call is cleared on reuse, so an edited-away call can't leave it silently in effect; mixture fractions are not reset, since ``AS_set_fractions`` is always re-chained after ``AS_factory`` anyway).
+
+See the ``CoolPropFluidProperties.mcdx`` example worksheet for both patterns in use.
+
+|
+
+----
+
+AS_factory
+----------
+
+Creates a persistent Low-Level fluid/mixture state and returns a handle.::
+
+    AS_factory("Backend", "Fluids")
+
+Where,
+
+* "Backend" is the backend to use, e.g. "HEOS", "REFPROP", "BICUBIC&HEOS".
+* "Fluids" is a ``&``-delimited list of fluids, e.g. "Water" or "Methane&Ethane".
+
+.. note::
+    Calling this again with the same "Backend"/"Fluids" returns the SAME handle rather than rebuilding the backend -- so recalculating this call repeatedly (every worksheet recalculation re-executes it) neither leaks state nor pays construction cost again.  Any phase constraint set by a prior ``AS_specify_phase`` call is cleared on reuse, so removing/changing that call in the worksheet can't leave a stale constraint in effect.
+
+**EXAMPLE:**
+
+    :math:`h := AS\_factory("HEOS",\ "Water")`
+
+|
+
+----
+
+AS_set_fractions
+-----------------
+
+Sets the mole/mass/volume fractions for a mixture handle created by ``AS_factory``.::
+
+    AS_set_fractions(Handle, Fractions)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `Fractions` is a column vector of mole/mass/volume fractions, one per fluid in the mixture.
+
+.. note::
+    **Why it echoes Handle back:** Returns ``Handle`` unchanged.  Reassign it, e.g. ``h := AS_set_fractions(h, x)``, so a downstream call that uses this call's return value as its own ``Handle`` argument is guaranteed to run after this one.
+
+.. note::
+    **Fraction basis:** The fraction basis (mole, mass, or volume) is auto-detected from the backend and is **not user-selectable** -- it is a fixed property of the backend, not a runtime setting.  HEOS, REFPROP, Cubics, PCSAFT, and the tabular backends all use mole fractions; the Incompressible backend uses mass fractions.  Just pass fractions in whichever basis the backend you chose in ``AS_factory`` expects.
+
+.. note::
+    **Input validation:** This function validates: that ``Fractions`` has exactly one entry per fluid in the handle's mixture; that the entries sum to 1.0 (within 1e-6); and that the handle is actually a mixture in the first place -- calling it on a pure-fluid handle is a Custom Error, not a silent no-op.
+
+|
+
+----
+
+AS_specify_phase
+-----------------
+
+Imposes a fixed phase on a Low-Level state handle for all subsequent updates (``AS_update``, ``AS_props``, ``AS_props_multi``).  Call this before any of those, once per handle.  Returns ``Handle`` unchanged, so a downstream Low-Level call that uses this call's return value as its own ``Handle`` argument depends on it.::
+
+    AS_specify_phase(Handle, Phase)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `Phase` is a phase name (case sensitive): "phase_liquid", "phase_gas", "phase_twophase", "phase_supercritical", "phase_supercritical_gas", "phase_supercritical_liquid", "phase_critical_point", "phase_unknown", or "phase_not_imposed" (``CoolProp::phases`` in ``DataStructures.h``).
+
+|
+
+----
+
+AS_unspecify_phase
+--------------------
+
+Removes a phase imposed by ``AS_specify_phase`` from a Low-Level state handle.  Returns ``Handle`` unchanged.::
+
+    AS_unspecify_phase(Handle)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+
+|
+
+----
+
+AS_free
+-------
+
+Releases a Low-Level state handle created by ``AS_factory``.  Calling this is optional -- unreleased handles are automatically cleaned up when Mathcad closes -- and is intended for use as the last statement of a Mathcad program block (see above).::
+
+    AS_free(Handle)
+
+|
+
+----
+
+AS_param_index
+---------------
+
+Resolves an output parameter name (e.g. "T", "Dmolar", "Hmass") to the integer index ``AS_props``/``AS_props_multi`` expect.  Resolve once and reuse the result, rather than passing the name string on every call.::
+
+    AS_param_index("Name")
+
+.. note::
+    This function only needs to be called **once anywhere in the worksheet**, not once per program block.  Its result is an ordinary Mathcad variable, so it can be defined at worksheet scope and referenced from any number of program blocks or independent math regions -- it is not limited to use as a local variable inside a single Mathcad program structure.
+
+|
+
+----
+
+AS_input_pair_index
+---------------------
+
+Resolves an input pair name (e.g. "PT_INPUTS", "HmassP_INPUTS") to the integer index ``AS_props``/``AS_props_multi`` expect.::
+
+    AS_input_pair_index("Name")
+
+.. note::
+    Like ``AS_param_index``, this only needs to be called **once anywhere in the worksheet** and the result reused throughout -- it is not limited to setting a local variable within a single Mathcad program structure.
+
+    For the full list of valid input pair names, see the `CoolProp::input_pairs <https://coolprop.org/_static/doxygen/html/namespace_cool_prop.html#a85cda1634e1e4c1f76425cfd63edf155>`_ enum in the CoolProp source documentation.
+
+|
+
+----
+
+AS_update
+---------
+
+Updates a Low-Level state handle to a new state point without returning any output.  Returns ``Handle`` unchanged, so a downstream Low-Level call that uses this function's return value as its own ``Handle`` argument depends on it.  Pair with ``AS_get`` to update once and then read as many outputs as needed with separate calls, without re-running the flash for each one -- an alternative to ``AS_props``/``AS_props_multi`` when many outputs are wanted from the same point.::
+
+    AS_update(Handle, InputPairIdx, Value1, Value2)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `InputPairIdx` is an input pair index from ``AS_input_pair_index``.
+* `Value1`, `Value2` are the two input property values for that input pair.
+
+|
+
+----
+
+AS_get
+------
+
+Returns one output parameter from a Low-Level state handle's *current* point -- i.e. whatever ``AS_update`` (or ``AS_props``) last set it to.::
+
+    AS_get(Handle, ParamIdx)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `ParamIdx` is an output parameter index from ``AS_param_index``.
+
+**EXAMPLE:**
+
+    Temperature and density at 101325 Pa, 1 kg/kg quality (saturated vapor), updating once and reading two outputs:
+
+    :math:`h := AS\_factory("HEOS",\ "Water")`
+
+    :math:`iPQ := AS\_input\_pair\_index("PQ\_INPUTS")`
+
+    :math:`iT := AS\_param\_index("T")`
+
+    :math:`i\rho := AS\_param\_index("Dmolar")`
+
+    :math:`h := AS\_update(h,\ iPQ,\ 101325,\ 1)`
+
+    :math:`T := AS\_get(h,\ iT) = 373.1`
+
+    :math:`\rho := AS\_get(h,\ i\rho)`
+
+|
+
+----
+
+AS_props
+--------
+
+Updates a Low-Level state handle for one input point and returns one output value.::
+
+    AS_props(Handle, InputPairIdx, Value1, Value2, ParamIdx)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `InputPairIdx` is an input pair index from ``AS_input_pair_index``.
+* `Value1`, `Value2` are the two input property values for that input pair.
+* `ParamIdx` is an output parameter index from ``AS_param_index``.
+
+**EXAMPLE:**
+
+    Temperature at 101325 Pa, 1 kg/kg quality (saturated vapor):
+
+    :math:`h := AS\_factory("HEOS",\ "Water")`
+
+    :math:`iPQ := AS\_input\_pair\_index("PQ\_INPUTS")`
+
+    :math:`iT := AS\_param\_index("T")`
+
+    :math:`T := AS\_props(h,\ iPQ,\ 101325,\ 1,\ iT) = 373.1`
+
+|
+
+----
+
+AS_props_multi
+---------------
+
+Updates a Low-Level state handle for a range of input points and returns up to 5 requested output parameters as a table (one row per input point, one column per requested output) in a single call -- the function to use when evaluating many state points against the same fluid/mixture, since it evaluates the whole array with one native flash loop rather than one Mathcad call per point.::
+
+    AS_props_multi(Handle, InputPairIdx, Value1Array, Value2Array, ParamIdxArray)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `InputPairIdx` is an input pair index from ``AS_input_pair_index``.
+* `Value1Array`, `Value2Array` are column vectors of the two input property values, one row per point (both must be the same length).
+* `ParamIdxArray` is a column vector of 1 to 5 output parameter indices from ``AS_param_index``.
+
+|
 
 ----
 
