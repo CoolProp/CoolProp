@@ -11,10 +11,7 @@
 #    include <vector>
 #    include <catch2/catch_all.hpp>
 #    include "../Backends/Helmholtz/VLERoutines.h"
-#    include "../Backends/Helmholtz/MixtureDerivatives.h"
-#    include <Eigen/Dense>
 #    include "CoolProp/detail/tools.h"
-#    include <numeric>
 #    include "CoolProp/CoolProp.h"
 #    include <cmath>
 
@@ -1936,7 +1933,10 @@ TEST_CASE("PQ flash with built PE: N2/CH4", "[michelsen][flash][PQ_flash][PhaseE
     REQUIRE_NOTHROW(AS->update(PQ_INPUTS, 1.5e5, 0.5));
     CHECK(AS->phase() == iphase_twophase);
     CHECK(std::isfinite(AS->T()));
-    // ... and check it actually solved the two-phase specification, not merely that it returned.
+    // The mass balance below holds by construction for the two-phase solver (x_i = z_i/D_i,
+    // y_i = K_i x_i), so it does not prove convergence -- it proves the dispatch did not fall
+    // back to the bubble/dew solver, which does not satisfy it.  See the #3372 mass-balance
+    // test for the equal-fugacity check that does prove convergence.
     const std::vector<double> x = AS->mole_fractions_liquid();
     const std::vector<double> y = AS->mole_fractions_vapor();
     double mass = 0;
@@ -2303,6 +2303,13 @@ TEST_CASE("Mixture PQ/QT flash satisfies the overall mass balance (#3372)", "[mi
                 REQUIRE(x.size() == c.z.size());
                 REQUIRE(y.size() == c.z.size());
 
+                // ROUTING check, not a convergence check.  Read what it does and does not
+                // prove: the two-phase solver reconstructs x_i = z_i/D_i and y_i = K_i x_i with
+                // D_i = (1-Q) + Q K_i, so (1-Q)x_i + Q y_i = x_i D_i = z_i IDENTICALLY, for any
+                // K, converged or not.  What this catches is the dispatch falling back to
+                // newton_raphson_saturation, which does not construct x and y that way and
+                // whose mass-balance error reached 1.2e-4 in the Q ~ 0.2..0.4 band (GH #3372).
+                // Convergence is asserted separately, below.
                 double mass = 0;
                 for (std::size_t i = 0; i < c.z.size(); ++i) {
                     mass = std::max(mass, std::abs(c.z[i] - (1 - Q) * x[i] - Q * y[i]));
@@ -2311,22 +2318,31 @@ TEST_CASE("Mixture PQ/QT flash satisfies the overall mass balance (#3372)", "[mi
                 CAPTURE(AS->T());
                 CHECK(mass < 1e-10);
 
-                // Independent of the residual the solver minimises: round-trip the reported
-                // (T, p) back through a PT flash and check the vapour fraction comes back.
-                auto RT = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
-                RT->set_mole_fractions(c.z);
+                // CONVERGENCE check, and the one with teeth: re-solve each published
+                // composition as a single-phase state at the reported (T, p) and require equal
+                // fugacity.  This is computed by a separate code path from the published output,
+                // so unlike the mass balance it cannot be satisfied by construction.
+                const double fug = equilibrium_residual("HEOS", c.fluids, x, y, AS->T(), AS->p());
+                CAPTURE(fug);
+                CHECK(fug < 1e-6);
+
+                // Second independent leg: round-trip the reported (T, p) back through a PT
+                // flash and check the vapour fraction comes back.  The two-phase REQUIRE is
+                // deliberate -- guarding it with `if (RT->phase() == twophase)` would skip the
+                // assertion in exactly the case it exists to detect, a PQ flash returning a bad
+                // T that lands the PT flash outside the two-phase region.
                 if (Q > 0.02 && Q < 0.98) {
+                    auto RT = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+                    RT->set_mole_fractions(c.z);
                     REQUIRE_NOTHROW(RT->update(PT_INPUTS, AS->p(), AS->T()));
-                    if (RT->phase() == iphase_twophase) {
-                        CAPTURE(RT->Q());
-                        // Looser below Q = 0.4, and deliberately so: this leg is limited by the
-                        // PT flash, not the PQ flash.  Measured worst |dQ| is 3.9e-6, all of it
-                        // on the wide-boiling 5-component mixture at low Q, where the mass
-                        // balance above is simultaneously 4e-17 -- i.e. the PQ answer satisfies
-                        // its own specification exactly and the disagreement is the PT solve's.
-                        // The ternary and binary stay under 1.4e-10 at every Q.
-                        CHECK(RT->Q() == Catch::Approx(Q).margin(Q < 0.4 ? 1e-5 : 1e-8));
-                    }
+                    REQUIRE(RT->phase() == iphase_twophase);
+                    CAPTURE(RT->Q());
+                    // Looser below Q = 0.4, and deliberately so: this leg is limited by the
+                    // PT flash, not the PQ flash.  Measured worst |dQ| is 3.9e-6, all of it on
+                    // the wide-boiling 5-component mixture at low Q, where the fugacity residual
+                    // above is simultaneously tiny -- i.e. the PQ answer is converged and the
+                    // disagreement is the PT solve's.  Ternary and binary stay under 1.4e-10.
+                    CHECK(RT->Q() == Catch::Approx(Q).margin(Q < 0.4 ? 1e-5 : 1e-8));
                 }
             }
         }
@@ -2388,7 +2404,13 @@ TEST_CASE("Envelope-branch mixture PQ flash across interior Q (#3372)", "[michel
                     mass = std::max(mass, std::abs(c.z[i] - (1 - Q) * x[i] - Q * y[i]));
                 }
                 CAPTURE(mass);
-                CHECK(mass < 1e-10);
+                CHECK(mass < 1e-10);  // routing check -- identical by construction, see above
+
+                // Convergence check: equal fugacity, recomputed from the published state by a
+                // separate code path, so it cannot be satisfied by the parameterization.
+                const double fug = equilibrium_residual("HEOS", c.fluids, x, y, AS->T(), AS->p());
+                CAPTURE(fug);
+                CHECK(fug < 1e-6);
 
                 // The two branches must agree: #3192 was the envelope branch silently
                 // publishing a different (and wrong) state than the blind one.

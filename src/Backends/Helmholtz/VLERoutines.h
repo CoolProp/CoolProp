@@ -374,29 +374,37 @@ struct newton_raphson_twophase_options
      *
      * A class is used rather than a function so that it is easier to store iteration histories, additional output values, etc.
      *
-     * As in Gernert, FPE, 2014, except that only one of T and P are known
+     * The independent variables are the \f$N\f$ logarithmic K-factors \f$\ln K_i\f$ and the
+     * non-specified variable in p or T, for a total of \f$N+1\f$ independent variables.  The
+     * compositions are RECONSTRUCTED from K rather than solved for,
      *
-     * The independent variables are \f$N-1\f$ mole fractions in liquid, \f$N-1\f$ mole fractions in vapor, and the non-specified variable in p or T, for a total of \f$2N-1\f$ independent variables
+     * \f$D_i = (1-\beta) + \beta K_i, \quad x_i = z_i/D_i, \quad y_i = K_i x_i\f$
      *
-     * First N residuals are from
+     * so the overall mass balance \f$(1-\beta)x_i + \beta y_i = z_i\f$ holds identically at every
+     * iterate.  \f$D_i\f$ is a sum of non-negative terms for \f$\beta \in [0,1]\f$ and
+     * \f$K_i > 0\f$, so no cancellation is possible in it: a trace \f$x_i\f$ arrives by division
+     * and a trace \f$y_i\f$ by multiplication, both at full relative precision.  Carrying x and y
+     * as unknowns instead -- with or without eliminating one of them -- makes a mass-balance row
+     * determine the trace composition, amplifying the relative error in \f$x_i\f$ by
+     * \f$((1-\beta)/\beta)/K_i\f$, which reaches 1e13 for a heavy trace component (GH #3372).
      *
-     * \f$F_k = \ln f_i(T,p,\mathbf{x}) - \ln f_i(T,p,\mathbf{y})\f$ for \f$i = 1, ... N\f$ and \f$k=i\f$
+     * First N residuals are the iso-fugacity conditions in \f$\ln K\f$ form,
      *
-     * Derivatives are the same as for the saturation solver \ref newton_raphson_saturation
+     * \f$F_i = \ln K_i - (\ln \varphi_i^L - \ln \varphi_i^V)\f$ for \f$i = 0, ... N-1\f$
      *
-     * Second N-1 residuals are from
+     * The last residual is Rachford-Rice, which is the closure condition: combined with
+     * \f$(1-\beta)\sum x + \beta\sum y = \sum z = 1\f$ it forces \f$\sum x = \sum y = 1\f$.
      *
-     * \f$F_k = \dfrac{z_i-x_i}{y_i-x_i} - \beta_{spec}\f$ for \f$ i = 1, ... N-2\f$ and \f$k = i+N\f$
+     * \f$F_N = \sum_i z_i (K_i - 1)/D_i\f$
      *
-     * Gernert eq. 35
+     * The composition sensitivities are diagonal (\f$D_i\f$ depends on \f$K_i\f$ alone),
      *
-     * \f$\dfrac{\partial F_k}{\partial x_i} = \dfrac{z_i-y_i}{(y_i-x_i)^2}\f$
+     * \f$\partial x_i/\partial \ln K_j = -\delta_{ij} x_i \beta K_i / D_i\f$
      *
-     * Gernert eq. 36
+     * \f$\partial y_i/\partial \ln K_j = \delta_{ij} y_i (1 - \beta K_i / D_i)\f$
      *
-     * \f$\dfrac{\partial F_k}{\partial y_i} = -\dfrac{z_i-x_i}{(y_i-x_i)^2}\f$
-     *
-     * \f$\dfrac{\partial F_k}{\partial T} = 0\f$ Because x, y and T are independent by definition of the formulation
+     * \f$\partial F_N/\partial \ln K_j = z_j K_j / D_j^2\f$, and \f$\partial F_N/\partial T = 0\f$
+     * because Rachford-Rice depends only on K, beta and z.
      *
      * \f$\dfrac{\partial F_k}{\partial p} = 0\f$ Because x, y and p are independent by definition of the formulation
      */
@@ -410,9 +418,9 @@ class newton_raphson_twophase
     bool logging;
     int Nsteps;
     Eigen::MatrixXd J;
-    // r and err_rel hold 2N-1 residuals/relative-errors (see class docstring), so they MUST
+    // r and err_rel hold N+1 residuals/relative-errors (see class docstring), so they MUST
     // be dynamically sized.  They were Eigen::Vector2d (fixed size 2), which overflowed for
-    // every mixture (N>=2 -> 2N-1>=3) and hard-crashed via out-of-bounds writes (GH #3192).
+    // every mixture and hard-crashed via out-of-bounds writes (GH #3192).
     Eigen::VectorXd r, err_rel;
     std::vector<CoolPropDbl> K, x, y, z;
     std::vector<SuccessiveSubstitutionStep> step_logger;
@@ -430,8 +438,6 @@ class newton_raphson_twophase
         N(0),
         logging(false),
         Nsteps(0) {};
-
-    void resize(unsigned int N);
 
     // Reset the state of all the internal variables
     void pre_call() {
