@@ -2269,8 +2269,6 @@ TEST_CASE("newton_raphson_twophase converges at interior Q (#3372)", "[michelsen
     }
 }
 
-
-
 // GH #3372: the blind mixture PQ/QT path (no phase envelope) must satisfy the overall mass
 // balance z_i = (1-Q) x_i + Q y_i at an interior quality.  It previously used
 // newton_raphson_saturation, a bubble/dew-point solver with no mass-balance condition, so the
@@ -2334,8 +2332,6 @@ TEST_CASE("Mixture PQ/QT flash satisfies the overall mass balance (#3372)", "[mi
         }
     }
 }
-
-
 
 // GH #3372: interior-Q coverage for the ENVELOPE-guided branch of the mixture PQ/QT dispatch.
 //
