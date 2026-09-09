@@ -1707,11 +1707,34 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
         throw ValueError(format("newton_raphson_twophase::call did not converge (error_rms = %g)", static_cast<double>(error_rms)));
     }
 
-    // sum(x) = 1 and sum(y) = 1 are now solved for rather than imposed by construction, so they
-    // hold only to the convergence tolerance.  Callers (and the SatL/SatV states published
-    // above) expect normalized compositions, so close the residual gap explicitly.  Every
-    // component is accurate in a RELATIVE sense here, and dividing by a sum within a few ulp of
-    // 1 preserves that -- which is the whole point of not eliminating one of them.
+    // Reject the trivial solution.  At K_i == 1 the reconstruction gives x == y == z, so both
+    // phases are the SAME state: every iso-fugacity residual is 0 because ln phi^L == ln phi^V,
+    // and Rachford-Rice is 0 because every (K_i - 1) is.  error_rms is therefore 0 and the gate
+    // above passes while SatL and SatV describe one phase.  Nothing else here rules it out --
+    // the last Jacobian column is identically zero at that point and colPivHouseholderQr
+    // silently zeroes the null-space components rather than raising.  A genuine split has at
+    // least one component partitioning measurably.  The threshold is deliberately loose: near a
+    // mixture critical point every K_i legitimately approaches 1, so a tight bound would reject
+    // real splits.  (A rhomolar_liq > rhomolar_vap test is NOT used for the same reason -- the
+    // two roots legitimately converge there.)
+    double max_abs_lnK = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        max_abs_lnK = std::max(max_abs_lnK, std::abs(log(static_cast<double>(K[i]))));
+    }
+    if (!(max_abs_lnK > 1e-6)) {
+        throw ValueError(
+          format("newton_raphson_twophase::call converged to the trivial solution (max|ln K| = %g, both phases identical)", max_abs_lnK));
+    }
+
+    // sum(x) = 1 and sum(y) = 1 are solved for -- that is what the Rachford-Rice row does --
+    // rather than imposed by construction, so they hold only to the convergence tolerance.
+    // Normalize and then RE-EVALUATE both phases: the compositions this flash publishes are
+    // read from SatL/SatV by calc_mole_fractions_liquid/vapor, not from IO, and the enthalpies
+    // and densities below come from those same backends.  Normalizing IO alone would leave the
+    // published state on the un-normalized composition and the correction invisible.
+    //
+    // This perturbs the (otherwise identical) mass balance by O(|sum(x) - 1|), which the
+    // convergence gate bounds and which measures ~1e-14 in practice.
     const CoolPropDbl sum_x_final = std::accumulate(x.begin(), x.end(), static_cast<CoolPropDbl>(0.0));
     const CoolPropDbl sum_y_final = std::accumulate(y.begin(), y.end(), static_cast<CoolPropDbl>(0.0));
     if (!(sum_x_final > 0) || !(sum_y_final > 0)) {
@@ -1722,6 +1745,12 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
         x[i] /= sum_x_final;
         y[i] /= sum_y_final;
     }
+    HEOS.SatL->set_mole_fractions(x);
+    HEOS.SatL->update_TP_guessrho(T, p, rhomolar_liq);
+    rhomolar_liq = HEOS.SatL->rhomolar();
+    HEOS.SatV->set_mole_fractions(y);
+    HEOS.SatV->update_TP_guessrho(T, p, rhomolar_vap);
+    rhomolar_vap = HEOS.SatV->rhomolar();
 
     IO.Nsteps = iter;
     IO.p = p;
@@ -1740,11 +1769,12 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays() {
     // References to the classes for concision
     HelmholtzEOSMixtureBackend &rSatL = *(HEOS->SatL.get()), &rSatV = *(HEOS->SatV.get());
 
-    // Zero the Jacobian first: the beta-constraint rows (k = N .. 2N-2) below only write the
-    // two mole-fraction columns the constraint depends on; the imposed-variable (T/p) column,
-    // and for N>=3 the off-diagonal mole-fraction columns, are left untouched and their true
-    // value is 0.  Eigen::resize() does not zero storage, so without this those entries are
-    // uninitialized memory feeding the Newton solve (GH #3192 follow-up).
+    // Defensive: every one of the (N+1)^2 entries is written explicitly below, so this is
+    // currently redundant.  It is kept because Eigen::resize() does not zero storage, and a
+    // future row or column that is only written conditionally would otherwise read
+    // uninitialized memory straight into the Newton solve -- which is exactly what happened
+    // when the beta-constraint rows left their off-diagonal entries untouched (GH #3192
+    // follow-up).
     J.setZero();
 
     // Step 0:
