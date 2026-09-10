@@ -38,7 +38,7 @@
     "license-checker": "^25",
     "typescript": "^5",
     "vite": "^8.0.16",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "protocol-buffers-schema": "3.6.1",
