@@ -11,6 +11,7 @@
 #    include <vector>
 #    include <catch2/catch_all.hpp>
 #    include "../Backends/Helmholtz/VLERoutines.h"
+#    include <Eigen/Dense>
 #    include "CoolProp/detail/tools.h"
 #    include "CoolProp/CoolProp.h"
 #    include <cmath>
@@ -2199,7 +2200,7 @@ TEST_CASE("HSU_D flash: single-phase N2/O2 HEOS regression", "[michelsen][hsu_d]
 // this threw for every Q <= 0.5 on the 5-component mixture: the dependent component (Pentane)
 // is also the smallest (y ~ 1e-14), and forming it as 1 - sum(...) cost it ~1% relative
 // precision, which ln f_{N-1} carried into the residual and floored it above the gate.
-TEST_CASE("newton_raphson_twophase converges at interior Q (#3372)", "[michelsen][flash][PQ_flash][twophase]") {
+TEST_CASE("newton_raphson_twophase converges at interior Q (#3372)", "[flash][PQ_flash][twophase]") {
     struct Case
     {
         std::string name, fluids;
@@ -2363,7 +2364,7 @@ TEST_CASE("Mixture PQ/QT flash satisfies the overall mass balance (#3372)", "[mi
 // The mixtures and pressures are chosen because the envelope branch answers at every Q there;
 // it is not yet reliable everywhere (Methane&n-Butane falls back at every Q, for instance),
 // which is tracked separately as the envelope-seed work.
-TEST_CASE("Envelope-branch mixture PQ flash across interior Q (#3372)", "[michelsen][flash][PQ_flash][PhaseEnvelope]") {
+TEST_CASE("Envelope-branch mixture PQ flash across interior Q (#3372)", "[flash][PQ_flash][PhaseEnvelope]") {
     struct Case
     {
         std::string name, fluids;
@@ -2433,7 +2434,7 @@ TEST_CASE("Envelope-branch mixture PQ flash across interior Q (#3372)", "[michel
 // bug.  Instead the test requires that SOME quality exercised the QT envelope branch
 // successfully -- enough to catch that path breaking entirely -- while the round-trip and
 // mass-balance checks below hold at every quality regardless of which branch answered.
-TEST_CASE("Envelope-branch mixture QT flash round-trips PQ (#3372)", "[michelsen][flash][QT_flash][PhaseEnvelope]") {
+TEST_CASE("Envelope-branch mixture QT flash round-trips PQ (#3372)", "[flash][QT_flash][PhaseEnvelope]") {
     auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane"));
     const std::vector<double> z = {0.5, 0.5};
     AS->set_mole_fractions(z);
@@ -2473,6 +2474,138 @@ TEST_CASE("Envelope-branch mixture QT flash round-trips PQ (#3372)", "[michelsen
     }
     CAPTURE(qt_via_envelope);
     CHECK(qt_via_envelope > 0);  // the QT envelope branch is reachable and works somewhere
+}
+
+// GH #3372: finite-difference check of newton_raphson_twophase's analytic Jacobian.
+//
+// newton_raphson_saturation has had a check_Jacobian() for a long time; this class never did,
+// and its Jacobian was rewritten wholesale for the ln K formulation.  Each column is checked by
+// central-differencing the residual vector around the converged state.  The ln K columns are
+// perturbed multiplicatively (K *= exp(+-h)), which is exactly a +-h step in w = ln K; the last
+// column perturbs the imposed-variable partner.
+//
+// Every evaluation restores the baseline first, and that is load-bearing: build_arrays() mutates
+// rhomolar_liq/vap (it re-solves both densities using the current values as warm starts) and
+// overwrites p with 0.5*(p_liq + p_vap).  Without the restore the two sides of the difference
+// start from different states, and the check would quietly measure warm-start history instead of
+// a derivative.
+//
+// Errors are scaled by the largest entry in each column.  An entry negligible next to its column
+// cannot be resolved by differencing the whole residual vector, so a per-entry relative error
+// would report a meaningless blow-up on entries the difference simply cannot see.
+TEST_CASE("newton_raphson_twophase Jacobian matches finite differences (#3372)", "[flash][twophase][jacobian]") {
+    struct Case
+    {
+        std::string name, fluids;
+        std::vector<double> z;
+        double p, Q;
+    };
+    const std::vector<Case> cases = {
+      {"binary", "Methane&n-Butane", {0.97, 0.03}, 2e6, 0.5},
+      {"ternary", "Nitrogen&Methane&Ethane", {0.10, 0.85, 0.05}, 5e5, 0.5},
+      {"5comp mid-Q", "Nitrogen&Methane&Ethane&Butane&Pentane", {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 3e5, 0.5},
+      // Low Q on the wide-boiling mixture: the state the (x, y) formulation could not solve, and
+      // where the trace component's K is ~1e-12.
+      {"5comp low-Q", "Nitrogen&Methane&Ethane&Butane&Pentane", {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 3e5, 0.1},
+    };
+
+    for (const auto& c : cases) {
+        DYNAMIC_SECTION(c.name) {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+            AS->set_mole_fractions(c.z);
+            auto& HEOS = *static_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+            const std::vector<CoolPropDbl>& zz = HEOS.get_mole_fractions();
+
+            SaturationSolvers::mixture_VLE_IO io;
+            io.sstype = SaturationSolvers::imposed_p;
+            io.Nstep_max = 10;
+            CoolPropDbl Tg = SaturationSolvers::saturation_preconditioner(HEOS, c.p, SaturationSolvers::imposed_p, zz);
+            Tg = SaturationSolvers::saturation_Wilson(HEOS, c.Q, c.p, SaturationSolvers::imposed_p, zz, Tg);
+            std::vector<CoolPropDbl> Kv = HEOS.get_K();
+            REQUIRE_NOTHROW(SaturationSolvers::successive_substitution(HEOS, c.Q, Tg, c.p, zz, Kv, io));
+
+            SaturationSolvers::newton_raphson_twophase NR;
+            SaturationSolvers::newton_raphson_twophase_options IO;
+            IO.beta = c.Q;
+            IO.x = io.x;
+            IO.y = io.y;
+            IO.rhomolar_liq = io.rhomolar_liq;
+            IO.rhomolar_vap = io.rhomolar_vap;
+            IO.T = io.T;
+            IO.p = io.p;
+            IO.z = std::vector<CoolPropDbl>(c.z.begin(), c.z.end());
+            IO.Nstep_max = 30;
+            IO.imposed_variable = SaturationSolvers::newton_raphson_twophase_options::P_IMPOSED;
+            REQUIRE_NOTHROW(NR.call(HEOS, IO));  // land on the converged state
+
+            const std::size_t N = NR.N;
+            const std::vector<CoolPropDbl> K0 = NR.K;
+            const double T0 = NR.T, p0 = NR.p, rhoL0 = NR.rhomolar_liq, rhoV0 = NR.rhomolar_vap;
+
+            auto restore = [&]() {
+                NR.K = K0;
+                NR.T = T0;
+                NR.p = p0;
+                NR.rhomolar_liq = rhoL0;
+                NR.rhomolar_vap = rhoV0;
+            };
+
+            restore();
+            NR.build_arrays();
+            const Eigen::MatrixXd Jan = NR.J;
+
+            for (std::size_t j = 0; j <= N; ++j) {
+                Eigen::VectorXd rp, rm;
+                double step = 0;
+                if (j < N) {
+                    step = 1e-6;  // in w = ln K
+                    restore();
+                    NR.K[j] = K0[j] * std::exp(step);
+                    NR.build_arrays();
+                    rp = NR.r;
+                    restore();
+                    NR.K[j] = K0[j] * std::exp(-step);
+                    NR.build_arrays();
+                    rm = NR.r;
+                } else {
+                    step = 1e-4 * T0;  // imposed-variable partner (T, since p is imposed)
+                    restore();
+                    NR.T = T0 + step;
+                    NR.build_arrays();
+                    rp = NR.r;
+                    restore();
+                    NR.T = T0 - step;
+                    NR.build_arrays();
+                    rm = NR.r;
+                }
+                const Eigen::VectorXd num = (rp - rm) / (2 * step);
+
+                double col_scale = 0;
+                for (std::size_t i = 0; i <= N; ++i) {
+                    col_scale = std::max(col_scale, std::abs(Jan(static_cast<Eigen::Index>(i), static_cast<Eigen::Index>(j))));
+                }
+                REQUIRE(col_scale > 0);  // a wholly zero column would make the check vacuous
+
+                double worst = 0;
+                std::size_t worst_i = 0;
+                for (std::size_t i = 0; i <= N; ++i) {
+                    const double a = Jan(static_cast<Eigen::Index>(i), static_cast<Eigen::Index>(j));
+                    const double rel = std::abs(num(static_cast<Eigen::Index>(i)) - a) / col_scale;
+                    if (rel > worst) {
+                        worst = rel;
+                        worst_i = i;
+                    }
+                }
+                CAPTURE(j);
+                CAPTURE(worst_i);
+                CAPTURE(col_scale);
+                CAPTURE(num(static_cast<Eigen::Index>(worst_i)));
+                CAPTURE(Jan(static_cast<Eigen::Index>(worst_i), static_cast<Eigen::Index>(j)));
+                CHECK(worst < 1e-4);  // measured worst across these four states is 6.6e-7
+            }
+            restore();
+        }
+    }
 }
 
 #endif
