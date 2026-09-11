@@ -359,9 +359,9 @@ class JSONFluidLibrary
         //
         // Throwing here aborts add_one for the whole fluid: EOS, ancillaries
         // and transport all become unavailable over an optional
-        // thermochemical annotation, and the failed add strands the fluid's
-        // name in fluids_list with no string_to_index_map entry (bd
-        // CoolProp-dwuu).  Nothing requires these keys -- there is no HEOS
+        // thermochemical annotation.  (It used to also strand the fluid's name
+        // in fluids_list, bd CoolProp-dwuu; that is fixed, but the rest of this
+        // reasoning stands on its own.)  Nothing requires these keys -- there is no HEOS
         // fluid schema at all (dev/validate_fluid_schemas.py covers
         // pcsaft/cubics/mixtures only) -- so a third-party fluid registered
         // through add_fluids_as_JSON with a partial block loads today and
