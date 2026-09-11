@@ -608,6 +608,90 @@ Where,
 
 ----
 
+AS_build_phase_envelope
+------------------------
+
+Traces the phase envelope (dew/bubble curve) for a Low-Level state handle.  Call once before ``AS_get_phase_envelope_data`` on that handle.  Returns ``Handle`` unchanged, so a downstream Low-Level call that uses this call's return value as its own ``Handle`` argument depends on it.::
+
+    AS_build_phase_envelope(Handle, Level)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `Level` (string) controls how much extra refining is done between traced points: ``"none"`` (**CoolProp's own recommendation** -- skips refining), ``"fine"`` (default tolerances -- any value other than ``"none"``/``"veryfine"`` behaves the same way), or ``"veryfine"`` (tighter tolerances, more points).
+
+|
+
+----
+
+AS_get_phase_envelope_data
+----------------------------
+
+Returns the phase envelope traced by ``AS_build_phase_envelope`` as a table: one row per point, columns ``T``, ``P``, ``rhomolar_vap``, ``rhomolar_liq`` -- matching the fields returned by the C++/Python ``get_phase_envelope_data`` interface, minus the per-component compositions (see the note below).::
+
+    AS_get_phase_envelope_data(Handle, Trigger)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``, after a prior ``AS_build_phase_envelope`` call.
+* `Trigger` is unused -- just pass a dummy integer (``0``).
+
+Raises a Custom Error if ``AS_build_phase_envelope`` hasn't been called yet for this ``Handle``.
+
+.. note::
+    **Compositions not included:** the C++/Python interface's ``x``/``y`` per-component compositions (an ``N`` x ``Ncomp`` matrix per phase) are not part of this table -- a meaningfully different, mixture-size-dependent shape. Not implemented for now; a dedicated getter could be added later if needed.
+
+.. note::
+    **Cricondentherm / cricondenbar:** see ``AS_pe_tmax``/``AS_pe_pmax`` below.
+
+|
+
+----
+
+AS_pe_tmax
+-----------
+
+The cricondentherm -- the point on the phase envelope traced by ``AS_build_phase_envelope`` with the highest temperature -- as a 2-element column vector ``[T; P]``.::
+
+    AS_pe_tmax(Handle, Trigger)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``, after a prior ``AS_build_phase_envelope`` call.
+* `Trigger` is unused -- just pass a dummy integer (``0``).
+
+Raises a Custom Error if ``AS_build_phase_envelope`` hasn't been called yet for this ``Handle``.
+
+.. note::
+    **How this is computed:** CoolProp tracks this same point internally while tracing the envelope (``PhaseEnvelopeData::iTsat_max``, set in ``PhaseEnvelopeRoutines::finalize()``), but doesn't expose it through the public Low-Level C API this wrapper is built on -- extending that shared surface (used by every CoolProp wrapper, not just Mathcad's) is out of scope here. Instead, this function fetches the same table ``AS_get_phase_envelope_data`` returns and scans its ``T`` column for the max, entirely on the Mathcad-wrapper side.
+
+.. note::
+    **Exactness:** for most mixtures ("Type I", where the traced curve's pressure rises to a single peak then falls), CoolProp doesn't just pick the closest already-traced point for the cricondentherm -- it fits a spline through the nearby points, solves for where :math:`dT_{sat}/dP_{sat} = 0`, and inserts that exact solved point into the envelope. Since that insertion happens before this wrapper ever sees the data, the max-scan above lands on that same exact point. For other mixtures ("Type II"), no such insertion happens, and the result is only as good as how finely the curve was traced -- see ``AS_build_phase_envelope``'s ``Level`` argument to trace more finely if that matters.
+
+|
+
+----
+
+AS_pe_pmax
+-----------
+
+The cricondenbar -- the point on the phase envelope traced by ``AS_build_phase_envelope`` with the highest pressure -- as a 2-element column vector ``[T; P]``.::
+
+    AS_pe_pmax(Handle, Trigger)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``, after a prior ``AS_build_phase_envelope`` call.
+* `Trigger` is unused -- just pass a dummy integer (``0``).
+
+Raises a Custom Error if ``AS_build_phase_envelope`` hasn't been called yet for this ``Handle``.
+
+See ``AS_pe_tmax``'s notes above -- both functions work identically, this one scanning ``P`` instead of ``T`` (CoolProp's internal counterpart is ``PhaseEnvelopeData::ipsat_max``).
+
+|
+
+----
+
 AS_list_handles / AS_list_states
 ---------------------------------
 

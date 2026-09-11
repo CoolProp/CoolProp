@@ -33,9 +33,19 @@
 #include "CoolProp/CoolPropLib.h"
 #include "MathcadStateGuard.h"
 
+#include <algorithm>  // std::max_element, used by CP_AS_pe_tmax/CP_AS_pe_pmax
+
 // Fixed size of the local errcode/message_buffer used by every Low-Level
 // (AbstractState) wrapper function below to call into CoolPropLib.h.
 constexpr long AS_ERR_BUFFER_LEN = 500;
+
+// Generous upper bound on mixture component count, used only to size the
+// (unused, discarded) per-component composition buffers
+// AbstractState_get_phase_envelope_data_checkedMemory() requires even though
+// AS_get_phase_envelope_data() doesn't surface x/y itself -- see that
+// function's comment for why this can't just be learned from a probe call
+// the way the point count can.
+constexpr long AS_MAX_PE_COMPONENTS = 64;
 
 // Helper: round a Mathcad complex scalar's real part to the nearest integer
 // and return it as a long.  Used both for AbstractState handles and for the
@@ -143,7 +153,7 @@ static inline bool IsValidInputPairIndex(long idx) {
     }
 }
 
-// Process-wide registry giving AS_factory() "get-or-create" (memoized)
+// Process-wide registry giving AS_factory() "get-or-create" (cached)
 // semantics across worksheet recalculations: recalculating the same
 // AS_factory() cell with the same (Backend, Fluids) returns the SAME live
 // handle rather than rebuilding the backend, so it doesn't pay construction
@@ -198,7 +208,7 @@ static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,   // output: Handl
     if (r) return r;
 
     // Look up how many fluids this handle actually has, so the two most
-    // common misuses -- calling AS_set_fractions on a pure fluid at all, or
+    // common misuses -- calling AS_set_fractions on a pure fluid, or
     // passing the wrong number of fractions for the mixture -- get a clear,
     // specific error instead of whatever message
     // AbstractState::set_mole_fractions()/set_mass_fractions() happens to
@@ -649,6 +659,197 @@ static LRESULT CP_AS_list_states(LPMCSTRING States, LPCCOMPLEXSCALAR Trigger) {
     return 0;
 }
 
+// This code executes the user function CP_AS_build_phase_envelope, which is a
+// wrapper for AbstractState_build_phase_envelope(), used to trace the phase
+// envelope (dew/bubble curve) for a handle created by AS_factory before any
+// call to AS_get_phase_envelope_data() on it.  Returns Handle unchanged so
+// downstream cells that use this call's return value depend on it.
+static LRESULT CP_AS_build_phase_envelope(LPCOMPLEXSCALAR HandleOut,  // output: Handle, unchanged
+                                          LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                                          LPCMCSTRING Level)          // refinement level -- CoolProp recommends "none" (skip refining)
+{
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN];
+    AbstractState_build_phase_envelope(handle, Level->str, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (errcode) return TranslateASError(msg, 1);
+
+    HandleOut->real = Handle->real;
+    HandleOut->imag = 0;
+
+    // normal return
+    return 0;
+}
+
+// Holds one handle's traced phase envelope, fetched via FetchPhaseEnvelope()
+// below. Per-component compositions (x/y) are deliberately not kept here --
+// see FetchPhaseEnvelope()'s comment.
+struct PhaseEnvelopeTPRho
+{
+    std::vector<double> T, P, rhomolar_vap, rhomolar_liq;
+};
+
+// Helper: fetch the phase envelope traced by a prior AS_build_phase_envelope
+// call for `handle` -- shared by CP_AS_get_phase_envelope_data() and the
+// cricondentherm/cricondenbar max-point functions below, so the probe/fetch
+// dance only needs writing once. On success, returns 0 and `out` is sized to
+// the actual point count; on failure, returns the LRESULT to propagate
+// (BAD_HANDLE / LOWLEVEL_ERROR / PHASE_ENVELOPE_NOT_BUILT) and `out` is left
+// however std::vector::resize leaves it (unspecified contents, not read by
+// any caller that checks the return value first).
+//
+// Mathcad (or, for the two max-point functions, this function itself) must
+// allocate its own output storage before it can be filled, but the point
+// count isn't known until AFTER the envelope has been built -- so this makes
+// two calls into the same underlying C API function. The first is a probe:
+// length=0 with no output buffers. Looking at
+// AbstractState_get_phase_envelope_data_checkedMemory()'s own implementation
+// (src/CoolPropLib.cpp), it always writes *actual_length before it can
+// either succeed or throw on the length check, so this probe safely reports
+// the true point count even though it also reports an error (0 is
+// essentially never a big enough buffer). Component count can NOT be learned
+// the same way -- that check, and the write to *actual_components, only
+// happens AFTER the length check already passed, so a length=0 probe never
+// reaches it. Passing AS_MAX_PE_COMPONENTS (a generous fixed upper bound) as
+// maxComponents on the real (second) call sidesteps needing to learn the
+// real component count in advance. The per-component x/y buffers that call
+// still requires are allocated and immediately discarded -- no caller of
+// this helper needs them: an N x Ncomp matrix per phase is a meaningfully
+// different, more complex shape than what any of them return.
+static LRESULT FetchPhaseEnvelope(long handle, PhaseEnvelopeTPRho* out) {
+    long probe_length = 0, probe_components = 0;
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN];
+    AbstractState_get_phase_envelope_data_checkedMemory(handle, 0, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &probe_length,
+                                                        &probe_components, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (probe_length <= 0) {
+        // errcode==0 here means AS->get_phase_envelope_data() genuinely
+        // returned zero points (build_phase_envelope() was never called for
+        // this handle) -- not an error the underlying call raised itself.
+        // A non-zero errcode with probe_length still 0 means the exception
+        // happened before the length was even written (e.g. a dead handle),
+        // so TranslateASError's usual BAD_HANDLE/LOWLEVEL_ERROR mapping applies.
+        if (errcode) return TranslateASError(msg, 1);
+        return MAKELRESULT(PHASE_ENVELOPE_NOT_BUILT, 1);
+    }
+
+    out->T.resize(static_cast<size_t>(probe_length));
+    out->P.resize(static_cast<size_t>(probe_length));
+    out->rhomolar_vap.resize(static_cast<size_t>(probe_length));
+    out->rhomolar_liq.resize(static_cast<size_t>(probe_length));
+    std::vector<double> x(static_cast<size_t>(probe_length) * static_cast<size_t>(AS_MAX_PE_COMPONENTS));
+    std::vector<double> y(x.size());
+
+    long final_length = 0, final_components = 0;
+    errcode = 0;
+    AbstractState_get_phase_envelope_data_checkedMemory(handle, probe_length, AS_MAX_PE_COMPONENTS, out->T.data(), out->P.data(),
+                                                        out->rhomolar_vap.data(), out->rhomolar_liq.data(), x.data(), y.data(), &final_length,
+                                                        &final_components, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (errcode) return TranslateASError(msg, 1);
+
+    out->T.resize(static_cast<size_t>(final_length));
+    out->P.resize(static_cast<size_t>(final_length));
+    out->rhomolar_vap.resize(static_cast<size_t>(final_length));
+    out->rhomolar_liq.resize(static_cast<size_t>(final_length));
+    return 0;
+}
+
+// This code executes the user function CP_AS_get_phase_envelope_data, which
+// returns the traced phase envelope (from a prior AS_build_phase_envelope
+// call) as a table: one row per envelope point, columns T, P, rhomolar_vap,
+// rhomolar_liq. Per-component compositions (x/y) are not surfaced by this
+// function -- see FetchPhaseEnvelope()'s comment.
+static LRESULT CP_AS_get_phase_envelope_data(LPCOMPLEXARRAY Data,       // output: N rows x {T, P, rhomolar_vap, rhomolar_liq}
+                                             LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
+                                             LPCCOMPLEXSCALAR Trigger)  // unused -- see AS_list_handles()'s comment for why this argument exists
+{
+    (void)Trigger;
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    PhaseEnvelopeTPRho pe;
+    r = FetchPhaseEnvelope(handle, &pe);
+    if (r) return r;
+
+    std::vector<std::vector<double>> Vec(pe.T.size(), std::vector<double>(4));
+    for (size_t i = 0; i < pe.T.size(); ++i) {
+        Vec[i][0] = pe.T[i];
+        Vec[i][1] = pe.P[i];
+        Vec[i][2] = pe.rhomolar_vap[i];
+        Vec[i][3] = pe.rhomolar_liq[i];
+    }
+    return AllocateToMathcadArray(Data, Vec);
+}
+
+// This code executes the user function CP_AS_pe_tmax, the cricondentherm --
+// the point on the phase envelope traced by a prior AS_build_phase_envelope
+// call with the highest temperature. Returns a 2-element column vector
+// [T; P]. Implemented as a max-scan over FetchPhaseEnvelope()'s T column,
+// entirely on this side of the C API -- CoolProp itself tracks this same
+// point internally (PhaseEnvelopeData::iTsat_max, set in
+// PhaseEnvelopeRoutines::finalize(), src/Backends/Helmholtz/
+// PhaseEnvelopeRoutines.cpp) but does not expose it through the public
+// Low-Level C API this wrapper is built on, and extending that shared
+// surface is out of scope here -- see this function's entry in
+// MathcadWrappers.rst for what that means for exactness of the result.
+static LRESULT CP_AS_pe_tmax(LPCOMPLEXARRAY Point,       // output: 2-element column vector [T; P]
+                             LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                             LPCCOMPLEXSCALAR Trigger)   // unused -- see AS_list_handles()'s comment for why this argument exists
+{
+    (void)Trigger;
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    PhaseEnvelopeTPRho pe;
+    r = FetchPhaseEnvelope(handle, &pe);
+    if (r) return r;
+
+    size_t imax = static_cast<size_t>(std::max_element(pe.T.begin(), pe.T.end()) - pe.T.begin());
+    std::vector<std::vector<double>> Vec = {{pe.T[imax]}, {pe.P[imax]}};
+    return AllocateToMathcadArray(Point, Vec);
+}
+
+// This code executes the user function CP_AS_pe_pmax, the cricondenbar --
+// the point on the phase envelope traced by a prior AS_build_phase_envelope
+// call with the highest pressure. Returns a 2-element column vector [T; P].
+// See CP_AS_pe_tmax()'s comment above (mirrors it exactly, scanning P
+// instead of T; CoolProp's internal counterpart is
+// PhaseEnvelopeData::ipsat_max).
+static LRESULT CP_AS_pe_pmax(LPCOMPLEXARRAY Point,       // output: 2-element column vector [T; P]
+                             LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                             LPCCOMPLEXSCALAR Trigger)   // unused -- see AS_list_handles()'s comment for why this argument exists
+{
+    (void)Trigger;
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    PhaseEnvelopeTPRho pe;
+    r = FetchPhaseEnvelope(handle, &pe);
+    if (r) return r;
+
+    size_t imax = static_cast<size_t>(std::max_element(pe.P.begin(), pe.P.end()) - pe.P.begin());
+    std::vector<std::vector<double>> Vec = {{pe.T[imax]}, {pe.P[imax]}};
+    return AllocateToMathcadArray(Point, Vec);
+}
+
 // ********************************************************************************************************
 // Fill out FUNCTIONINFO structures for the Low-Level (AbstractState) API functions above
 // ********************************************************************************************************
@@ -781,6 +982,46 @@ FUNCTIONINFO ASListStates = {
   MC_STRING,                                                                                                          // Returns a Mathcad string
   1,                                                                                                                  // Number of arguments (Mathcad requires >= 1; Trigger is unused)
   {COMPLEX_SCALAR}                                                                                                    // Argument types
+};
+
+FUNCTIONINFO ASBuildPhaseEnvelope = {
+  const_cast<char*>("AS_build_phase_envelope"),                                                       // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Level"),                                                                 // Description of input parameters
+  const_cast<char*>("Traces the phase envelope for a Low-Level state Handle; returns Handle"),        // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_build_phase_envelope,                                                            // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                                      // Returns a Mathcad complex scalar (Handle, unchanged)
+  2,                                                                                                    // Number of arguments
+  {COMPLEX_SCALAR, MC_STRING}                                                                          // Argument types
+};
+
+FUNCTIONINFO ASGetPhaseEnvelopeData = {
+  const_cast<char*>("AS_get_phase_envelope_data"),                                                                    // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),                                                                              // Description of input parameters
+  const_cast<char*>("Returns the traced phase envelope as a table: T, P, rhomolar_vap, rhomolar_liq (one row per point)"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get_phase_envelope_data,                                                                        // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                                     // Returns a Mathcad complex array
+  2,                                                                                                                  // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                                    // Argument types
+};
+
+FUNCTIONINFO ASPeTmax = {
+  const_cast<char*>("AS_pe_tmax"),                                                                    // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),                                                                // Description of input parameters
+  const_cast<char*>("Cricondentherm: [T; P] at the phase envelope's highest-temperature point"),      // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_pe_tmax,                                                                          // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                       // Returns a Mathcad complex array (2-element column vector)
+  2,                                                                                                    // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                     // Argument types
+};
+
+FUNCTIONINFO ASPePmax = {
+  const_cast<char*>("AS_pe_pmax"),                                                                    // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),                                                                // Description of input parameters
+  const_cast<char*>("Cricondenbar: [T; P] at the phase envelope's highest-pressure point"),           // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_pe_pmax,                                                                          // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                       // Returns a Mathcad complex array (2-element column vector)
+  2,                                                                                                    // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                     // Argument types
 };
 
 #endif  // MATHCAD_LOWLEVEL_H

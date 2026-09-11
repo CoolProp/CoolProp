@@ -74,6 +74,7 @@ enum EC
     INV_INPUT_PAIR_STR,
     INV_INPUT_PAIR_IDX,
     NO_ACTIVE_STATES,
+    PHASE_ENVELOPE_NOT_BUILT,
     UNKNOWN,
     NUMBER_OF_ERRORS
 };  // Dummy Code for Error Count
@@ -120,6 +121,7 @@ const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                "Invalid Input Pair String",
                                                "Invalid Input Pair Index",
                                                "No Active States",
+                                               "Phase Envelope Not Built",
                                                "CoolProp Issue: Use get_global_param_string(\"errstring\") for more info.",
                                                "Error Count - Not Used"};
 
@@ -1104,6 +1106,10 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             CreateUserFunction(hDLL, &ASPropsMulti);
             CreateUserFunction(hDLL, &ASListHandles);
             CreateUserFunction(hDLL, &ASListStates);
+            CreateUserFunction(hDLL, &ASBuildPhaseEnvelope);
+            CreateUserFunction(hDLL, &ASGetPhaseEnvelopeData);
+            CreateUserFunction(hDLL, &ASPeTmax);
+            CreateUserFunction(hDLL, &ASPePmax);
             break;
 
         case DLL_THREAD_ATTACH:
