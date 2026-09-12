@@ -37,6 +37,8 @@ struct AlgorithmGuard
     }
     AlgorithmGuard(const AlgorithmGuard&) = delete;
     AlgorithmGuard& operator=(const AlgorithmGuard&) = delete;
+    AlgorithmGuard(AlgorithmGuard&&) = delete;
+    AlgorithmGuard& operator=(AlgorithmGuard&&) = delete;
 };
 
 std::shared_ptr<HelmholtzEOSMixtureBackend> make_heos(const std::string& fluids, const std::vector<double>& z) {
@@ -255,7 +257,7 @@ TEST_CASE("Phase envelope tracers: natural-gas-like quaternary terminates at Tmi
             CHECK(pmax < 20e6);
             // Whatever ends the trace, it is reported rather than swallowed.  The legacy
             // tracer returns here with built = false and no error at all.
-            const std::string stop = PhaseEnvelopeTracers::last_stop_reason();
+            const std::string& stop = PhaseEnvelopeTracers::last_stop_reason();
             CAPTURE(stop, env.T.back(), env.T.size());
             CHECK(stop != "none");
             CHECK(stop != "max_points");
@@ -284,7 +286,7 @@ TEST_CASE("Phase envelope tracers: trivial solution and runaway pressure are rej
                 const PhaseEnvelopeData& env = HEOS->get_phase_envelope_data();
                 CHECK(env.built);
                 // A bounded stop, not a runaway: the ceiling is what ends an open branch
-                const std::string stop = PhaseEnvelopeTracers::last_stop_reason();
+                const std::string& stop = PhaseEnvelopeTracers::last_stop_reason();
                 CAPTURE(stop);
                 CHECK(stop != "none");
                 CHECK(stop != "max_points");

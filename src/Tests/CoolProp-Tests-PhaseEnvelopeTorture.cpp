@@ -110,7 +110,7 @@ std::vector<CorpusCase> build_corpus() {
         }
         label += " [";
         for (std::size_t i = 0; i < h.second.size(); ++i) {
-            label += (i ? "," : "") + format("%g", h.second[i]);
+            label += (i > 0 ? "," : "") + format("%g", h.second[i]);
         }
         label += "]";
         corpus.push_back({label, h.first, h.second, false});

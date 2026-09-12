@@ -9,6 +9,7 @@
 #include "CoolProp/detail/tools.h"
 #include "CoolProp/Configuration.h"
 #include "CoolProp/numerics/numerics.h"
+#include <cstdint>
 
 namespace CoolProp {
 
@@ -176,6 +177,9 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
         CoolPropDbl factor = 1.05;
 
         for (;;) {
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto) pre-existing legacy flow control: the
+        // nested composition loop below needs to restart the outer step.  Left as-is deliberately:
+        // this is the DEFAULT tracer and restructuring it is out of scope for the tracer spike.
         top_of_loop:;  // A goto label so that nested loops can break out to the top of this loop
 
             if (failure_count > 5) {
@@ -403,7 +407,9 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
         int failure_count = 0;
         // Geometric density sweep (factor = (end/start)^(1/N)); ~N
         // iterations, no FP accumulation issue worth converting.
-        for (double rhomolar_vap = rhomolar_vap_start * factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor) {  // NOLINT(cert-flp30-c)
+        // NOLINTNEXTLINE(cert-flp30-c,clang-analyzer-security.FloatLoopCounter) geometric density
+        // sweep over ~N steps; no FP accumulation issue worth converting, and this is the default tracer.
+        for (double rhomolar_vap = rhomolar_vap_start * factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor) {
             IO.rhomolar_vap = rhomolar_vap;
             IO.x.resize(IO.y.size());
             if (i < env.T.size() - 3) {
@@ -525,7 +531,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
         return;
     }
 
-    enum maxima_points
+    enum maxima_points : std::uint8_t
     {
         PMAX_SAT = 0,
         TMAX_SAT = 1
