@@ -11,6 +11,10 @@ from math import ceil
 
 CP.CoolProp.set_debug_level(00)
 from matplotlib.backends.backend_pdf import PdfPages
+# Same per-point handler contract as the HEOS harness next door: a non-ValueError
+# escaping one of them is a library defect rather than a property of the state
+# point, so it is recorded with its type and announced once.
+from CoolProp.Plots.ConsistencyPlots import err_text, warn_unexpected
 
 # all_solvers = ['PT', 'DmolarT', 'HmolarP', 'PSmolar', 'SmolarT', 'DmolarP', 'DmolarHmolar', 'DmolarSmolar', 'HmolarSmolar', 'HmolarT']
 # not_implemented_solvers = ['HmolarP', 'PSmolar', 'SmolarT', 'DmolarP', 'DmolarHmolar', 'DmolarSmolar', 'HmolarSmolar', 'HmolarT']
@@ -165,7 +169,8 @@ class ConsistencyFigure(object):
                     # hmolar.append(PCSAFT.hmolar())
                     # smolar.append(PCSAFT.smolar())
                     # umolar.append(PCSAFT.umolar())
-                except ValueError as VE:
+                except Exception as VE:
+                    warn_unexpected('pcsaft satT error', VE)
                     myprint(1, 'satT error:', VE, '; T:', '{T:0.16g}'.format(T=_T), 'T/Tc:', _T / HEOS.keyed_output(CP.iT_critical))
 
             dic.update(dict(T=np.array(T),
@@ -189,7 +194,8 @@ class ConsistencyFigure(object):
         for _p in np.logspace(np.log10(HEOS.keyed_output(CP.iP_min) * 1.01), np.log10(HEOS.keyed_output(CP.iP_max)), 300):
             try:
                 PCSAFT.update(CP.PT_INPUTS, _p, HEOS.keyed_output(CP.iT_max))
-            except ValueError as VE:
+            except Exception as VE:
+                warn_unexpected('pcsaft Tmax', VE)
                 print(1, 'Tmax', _p, VE)
                 print('T', PCSAFT.T())
                 print('p', PCSAFT.p())
@@ -204,7 +210,8 @@ class ConsistencyFigure(object):
                 # hmolar.append(PCSAFT.hmolar())
                 # smolar.append(PCSAFT.smolar())
                 # umolar.append(PCSAFT.umolar())
-            except ValueError as VE:
+            except Exception as VE:
+                warn_unexpected('pcsaft Tmax access', VE)
                 myprint(1, 'Tmax access', VE)
 
         self.Tmax = dict(T=np.array(T),
@@ -238,7 +245,8 @@ class ConsistencyFigure(object):
                     # hmolar.append(state.hmolar())
                     # smolar.append(state.smolar())
                     # umolar.append(state.umolar())
-                except ValueError as VE:
+                except Exception as VE:
+                    warn_unexpected('pcsaft melting', VE)
                     myprint(1, 'melting', VE)
 
         self.melt = dict(T=np.array(T),
@@ -380,21 +388,23 @@ class ConsistencyAxis(object):
                 try:
                     # Update the state using PT inputs in order to calculate all the remaining inputs
                     self.state_pcsaft_PT.update(CP.PT_INPUTS, p, T)
-                except ValueError as VE:
+                except Exception as VE:
+                    warn_unexpected('pcsaft consistency', VE)
                     print(self.state_pcsaft_PT.get_mole_fractions())
                     print(self.state_PT.get_mole_fractions())
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1="P", val1=p, in2="T", val2=T))
+                    data.append(dict(err=err_text(VE), cls="EXCEPTION", type="update", in1="P", val1=p, in2="T", val2=T))
                     myprint(1, 'consistency', VE)
                     continue
 
                 _exception = False
                 tic2 = timeit.default_timer()
+                val1, val2 = self.state_pcsaft_PT.keyed_output(key1), self.state_pcsaft_PT.keyed_output(key2)  # hoisted: the handler below reads these
                 try:
-                    val1, val2 = self.state_pcsaft_PT.keyed_output(key1), self.state_pcsaft_PT.keyed_output(key2)
                     self.state_pcsaft.update(pairkey, val1, val2)
                     toc2 = timeit.default_timer()
-                except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2))
+                except Exception as VE:
+                    warn_unexpected('pcsaft update(1p)', VE)
+                    data.append(dict(err=err_text(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2))
                     myprint(1, 'update(1p)', self.pair, 'P', p, 'T', T, 'D', self.state_pcsaft_PT.keyed_output(CP.iDmolar), '{0:18.16g}, {1:18.16g}'.format(self.state_pcsaft_PT.keyed_output(key1), self.state_pcsaft_PT.keyed_output(key2)), VE)
                     _exception = True
 
@@ -470,17 +480,19 @@ class ConsistencyAxis(object):
                 try:
                     # Update the state using QT inputs in order to calculate all the remaining inputs
                     self.state_pcsaft_QT.update(CP.QT_INPUTS, q, T)
-                except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1="Q", val1=q, in2="T", val2=T))
+                except Exception as VE:
+                    warn_unexpected('pcsaft consistency', VE)
+                    data.append(dict(err=err_text(VE), cls="EXCEPTION", type="update", in1="Q", val1=q, in2="T", val2=T))
                     myprint(1, 'consistency', VE)
                     continue
 
                 _exception = False
+                val1, val2 = self.state_pcsaft_QT.keyed_output(key1), self.state_pcsaft_QT.keyed_output(key2)  # hoisted: the handler below reads these
                 try:
-                    val1, val2 = self.state_pcsaft_QT.keyed_output(key1), self.state_pcsaft_QT.keyed_output(key2)
                     self.state_pcsaft.update(pairkey, val1, val2)
-                except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2))
+                except Exception as VE:
+                    warn_unexpected('pcsaft update_QT', VE)
+                    data.append(dict(err=err_text(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2))
                     myprint(1, 'update_QT', T, q)
                     myprint(1, 'update', param1, self.state_pcsaft_QT.keyed_output(key1), param2, self.state_pcsaft_QT.keyed_output(key2), VE)
                     _exception = True
