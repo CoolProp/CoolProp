@@ -381,36 +381,75 @@ wide-boiling pairs, near-pure limits, a 15-component gas with heavy traces).
 | | legacy | lnK_density | lnK_pressure |
 |---|---|---|---|
 | built | 133 | **155** | 155 |
-| closed | 130 | **133** | 1 |
-| dew points within 1e-3 of a blind flash | 145/152 | 146/155 | 149/152 |
+| closed | 130 | 131 | 1 |
+| **closed and verified correct** | **123** | 116 | 0 |
+| false closures | 7 | 15 | 1 |
 | median points | 207 | **177** | 128 |
-| median time | 9.0 ms | **7.7 ms** | 10.2 ms |
+| median time | 8.8 ms | **7.5 ms** | 10.1 ms |
 | 90th-percentile time | 40 ms | 41 ms | 41 ms |
-| worst case | 0.52 s | 13.5 s | 5.0 s |
-| total | **4.3 s** | 30.9 s | 12.5 s |
+| total | **4.2 s** | 22.4 s | 12.2 s |
 
-**`lnK_density` is the winner and the candidate worth promoting later.** It
-builds 22 more envelopes than the default and closes 3 more, and its median
-case is slightly faster than the default with fewer points. It closes 8 that
-the default cannot, including every natural gas in the predefined set, the
-azeotropic ethane + carbon dioxide at 0.7/0.3 (where the default manages 21
-points), the nitrogen/methane/ethane/propane quaternary, and R508A, whose
-starting dew point the default cannot solve at all.  It loses 5 refrigerant
-blends that the default closes (R422A, R439A, R466A, R508B, R509A); those are
-the outstanding work before it could become the default.
+![Envelope comparison](2026-09-11-phase-envelope-tracers-comparison.png)
 
-Its total time is dominated by a handful of hard cases, not by the typical
-mixture. The distribution matters more than the sum here: at the median and
-the 90th percentile it matches or beats the default.
+### The verdict: no candidate is proven better, so the default does not move
 
-**`lnK_pressure` loses decisively and should not be promoted.** It builds 155
-envelopes but closes only 1: 154 of 157 traces end as `stalled`, because
-`update_TP_guessrho` cannot find the incipient density root once the two
-phases approach each other near the critical point. Keeping the classic
-Michelsen (T, p) form as a selectable option documents the negative result and
-costs nothing, since it shares the whole driver. The measurement answers the
-question section 4.4 posed: for a Helmholtz EOS the density root solve is a
-liability, not an asset.
+`lnK_density` is the better *tracer* on reach and the worse one on
+*trustworthiness*, and reach is not what earns a promotion.
+
+What it wins: it builds 155 envelopes against the default's 133, so 22
+mixtures that the default abandons now produce something usable. It handles
+every natural gas in the predefined set, a five-component gas and the
+nitrogen/methane/ethane/propane quaternary, all of which the default gives up
+on; it starts R508A, whose 100 Pa dew point the default cannot solve at all;
+and its median case is slightly faster with fewer points.
+
+What it loses, and why that decides it: 15 of its 131 closures are wrong,
+against 7 of the default's 130, so it ends with 116 verified-correct
+envelopes against 123. **Turning a visible failure into a silently wrong
+answer is a regression even when the closed count goes up.** Until that is
+fixed, `legacy` stays the default and this is not a close call.
+
+The worst case is ethane + carbon dioxide at 0.7/0.3, whose real envelope
+reaches 4.2 MPa at 285 K (confirmed by direct `QT` flashes). The default
+traces 21 points to 11 kPa and reports failure. `lnK_density` traces 118
+points over the same 11 kPa fragment and reports it *closed*, 47 % off. The
+natural gas samples close 5.9 % off. Two more (R472A, R472B) are shared with
+the default at identical deviations, which points at the blind flash rather
+than at either tracer.
+
+### How closure is verified, and why the first measurement was wrong
+
+Closure alone is meaningless as a quality metric: a trace that collapses onto
+a degenerate root also drives the pressure down and then reports success. The
+corpus therefore cross-checks each stored point against a blind `QT` flash on
+a separate instance and counts a closure with more than 0.1 % pressure
+deviation as a *false closure*. Both counts are printed, listed case by case,
+and pinned.
+
+Two earlier versions of this check gave the wrong answer and are worth
+recording:
+
+1. **Checking only the dew branch** made `lnK_density` look like the winner
+   (130 correct against 126). Every false closure found since is on the
+   bubble branch, which the dew-only check never looked at.
+2. **Splitting the branches at the critical index** then made the default
+   look catastrophic (88 false closures). The default never sets that index,
+   so half its points were compared against the wrong branch. The stored `Q`
+   flag, which `store_variables` derives from the density ordering, is the
+   correct branch label for every algorithm and needs no assumption about
+   point ordering.
+
+The deviation distribution is strongly bimodal: the median closed envelope
+agrees with the blind flash to 1e-8 and the failures are percent-level, so
+the verdict is insensitive to the threshold anywhere between 1e-4 and 1e-2.
+
+**`lnK_pressure` loses outright and should not be promoted.** It builds 155
+envelopes and closes none correctly: 154 of 157 traces end as `stalled`,
+because `update_TP_guessrho` cannot find the incipient density root once the
+two phases approach each other near the critical point. It is kept as a
+selectable option because it shares the whole driver and costs nothing, and
+because the negative result answers the question section 4.4 posed: for a
+Helmholtz EOS the density root solve is a liability, not an asset.
 
 ### What the driver needed beyond the design
 
@@ -451,11 +490,15 @@ order `rho R T`, so its round-off noise is a fixed fraction of that, and a
 
 ### Remaining work before `lnK_density` could become the default
 
-1. The 5 refrigerant blends it loses (2 stall, 1 hits the point cap, 1 stops
-   on a pure incipient phase).
-2. The 9 cases that end at the 1 GPa ceiling and the 6 at the point cap:
-   confirm which are genuine open branches and which are the trace wandering.
-3. A promotion decision needs the flash paths exercised against envelopes
+1. **The 15 false closures, which are the blocker.**  Ethane + carbon dioxide
+   at 0.7/0.3 must either reach the real 4.2 MPa boundary or refuse to call an
+   11 kPa fragment closed.  A closure test that also required the envelope to
+   span a plausible pressure range, or that restarted from the opposite end
+   and met in the middle, would catch this class.
+2. The refrigerant blends the default closes and this one does not.
+3. The cases that end at the 1 GPa ceiling or the point cap: confirm which are
+   genuine open branches and which are the trace wandering.
+4. A promotion decision needs the flash paths exercised against envelopes
    built by the new tracer, not just the envelope geometry.
-4. The isochoric parametric-marching system (Deiters and Bell 2019) is still
+5. The isochoric parametric-marching system (Deiters and Bell 2019) is still
    unimplemented; the `IsoplethSystem` interface is shaped to take it.

@@ -124,7 +124,8 @@ struct Row
     bool predefined = false, constructed = false, built = false, closed = false, finite = true, coolprop_error = true;
     std::size_t n = 0;
     long long icrit = -1;
-    double seconds = 0, pmax = 0, Tmin = 0, Tmax = 0, dev = -1;  ///< dev: max relative dew-T deviation vs blind flash, -1 when unavailable
+    double seconds = 0, pmax = 0, Tmin = 0, Tmax = 0,
+           dev = -1;  ///< max relative pressure deviation vs a blind QT flash on both branches, -1 when unavailable
 };
 
 Row run_case(const CorpusCase& c, const std::string& algorithm) {
@@ -175,19 +176,30 @@ Row run_case(const CorpusCase& c, const std::string& algorithm) {
                 r.finite = r.finite && std::isfinite(xj[k]);
             }
         }
-        // Consistency: stored dew-side points against a blind PQ flash.  The dew side is the
-        // stretch before the critical crossing (or the first half when none was recorded).
-        const std::size_t dew_end = r.icrit > 0 ? static_cast<std::size_t>(r.icrit) : r.n / 2;
-        std::size_t checked = 0;
-        for (std::size_t k = 2; k + 2 < dew_end && checked < 3; k += std::max<std::size_t>(1, dew_end / 4)) {
-            try {
-                blind->update(PQ_INPUTS, env.p[k], 1.0);
-                r.dev = std::max(r.dev, std::abs(blind->T() / env.T[k] - 1));
-                ++checked;
-            } catch (...) {  // NOLINT(bugprone-empty-catch)
-                // blind flash unavailable at this point; leave dev as is
+        // Consistency: stored points against a blind QT flash on a separate instance.  BOTH
+        // branches are sampled; checking only the dew side misses a bubble branch that has
+        // wandered off the boundary, which is exactly how a false closure arises.  The branch
+        // of each stored point comes from env.Q, which store_variables sets from the density
+        // ordering (1 where the incipient phase is the denser one, i.e. a dew point), so it is
+        // correct for every algorithm and needs no assumption about point ordering.
+        auto sample = [&](double Q) {
+            std::size_t checked = 0;
+            const std::size_t stride = std::max<std::size_t>(1, r.n / 12);
+            for (std::size_t k = 1; k + 1 < r.n && checked < 3; k += stride) {
+                if (env.Q[k] != Q) {
+                    continue;
+                }
+                try {
+                    blind->update(QT_INPUTS, Q, env.T[k]);
+                    r.dev = std::max(r.dev, std::abs(blind->p() / env.p[k] - 1));
+                    ++checked;
+                } catch (...) {  // NOLINT(bugprone-empty-catch)
+                    // blind flash unavailable at this point; leave dev as is
+                }
             }
-        }
+        };
+        sample(1.0);  // dew branch: incipient phase is the liquid
+        sample(0.0);  // bubble branch: incipient phase is the vapor
     }
     return r;
 }
@@ -218,8 +230,8 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
     // Tallies
     struct Tally
     {
-        std::size_t constructed = 0, built = 0, closed = 0, complete = 0, consistent = 0, checked = 0, predefined_constructed = 0,
-                    predefined_closed = 0;
+        std::size_t constructed = 0, built = 0, closed = 0, complete = 0, consistent = 0, checked = 0, closed_consistent = 0, false_closure = 0,
+                    predefined_constructed = 0, predefined_closed = 0;
         std::vector<double> seconds;
     };
     std::map<std::string, Tally> tally;
@@ -234,6 +246,16 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
         if (r.dev >= 0) {
             ++t.checked;
             if (r.dev < 1e-3) ++t.consistent;
+            // A closed envelope whose own dew points disagree with a blind flash is a FALSE
+            // closure: the trace closed some small loop rather than the real boundary.  Closure
+            // alone is therefore not the quality metric; closed AND consistent is.
+            if (r.closed) {
+                if (r.dev < 1e-3) {
+                    ++t.closed_consistent;
+                } else {
+                    ++t.false_closure;
+                }
+            }
         }
         if (r.predefined) {
             ++t.predefined_constructed;
@@ -246,11 +268,20 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
         std::sort(t.seconds.begin(), t.seconds.end());
         const double median = t.seconds.empty() ? 0 : t.seconds[t.seconds.size() / 2];
         const double total = std::accumulate(t.seconds.begin(), t.seconds.end(), 0.0);
-        std::cout << format(
-          "%-13s constructed=%3d built=%3d closed=%3d complete=%3d consistent=%3d/%3d predefined closed=%3d/%3d median=%.3fs total=%.1fs\n",
-          kv.first.c_str(), static_cast<int>(t.constructed), static_cast<int>(t.built), static_cast<int>(t.closed), static_cast<int>(t.complete),
-          static_cast<int>(t.consistent), static_cast<int>(t.checked), static_cast<int>(t.predefined_closed),
-          static_cast<int>(t.predefined_constructed), median, total);
+        std::cout << format("%-13s constructed=%3d built=%3d closed=%3d closed+consistent=%3d FALSE-closures=%2d complete=%3d consistent=%3d/%3d "
+                            "predefined closed=%3d/%3d median=%.4fs total=%.1fs\n",
+                            kv.first.c_str(), static_cast<int>(t.constructed), static_cast<int>(t.built), static_cast<int>(t.closed),
+                            static_cast<int>(t.closed_consistent), static_cast<int>(t.false_closure), static_cast<int>(t.complete),
+                            static_cast<int>(t.consistent), static_cast<int>(t.checked), static_cast<int>(t.predefined_closed),
+                            static_cast<int>(t.predefined_constructed), median, total);
+    }
+
+    std::cout << "\n--- FALSE closures (reported closed, but the stored dew points disagree with a blind flash) ---\n";
+    for (const auto& r : rows) {
+        if (r.closed && r.dev >= 1e-3) {
+            std::cout << format("%-58s %-13s dev=%8.4f n=%4d pmax=%9.3f MPa\n", r.label.substr(0, 58).c_str(), r.algorithm.c_str(), r.dev,
+                                static_cast<int>(r.n), r.pmax / 1e6);
+        }
     }
 
     if (const char* csv = std::getenv("COOLPROP_PHASE_ENVELOPE_TORTURE_CSV")) {
@@ -288,6 +319,12 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
     const Tally& legacy = tally["legacy"];
     CHECK(legacy.predefined_constructed >= 116);
     CHECK(legacy.predefined_closed >= 106);
+    // Quality pins measured 2026-09-11.  Closure alone is not enough: a false closure is a
+    // silently wrong envelope, which is worse than an honest failure, so it is bounded too.
+    CHECK(legacy.closed_consistent >= 123);
+    CHECK(legacy.false_closure <= 7);
+    CHECK(tally["lnK_density"].closed_consistent >= 116);
+    CHECK(tally["lnK_density"].false_closure <= 15);
     // Every algorithm: finite stored values, CoolProp exceptions only, bounded point count.
     for (const auto& r : rows) {
         CAPTURE(r.label, r.algorithm, r.error);

@@ -64,6 +64,9 @@ class PhaseEnvelopeTracers
         /// using it as a floor truncates envelopes that would otherwise close.  A trace that
         /// runs out of EOS stops as "stalled" instead, which is reported, not silent.
         double T_floor = 0;
+        double merge_rho_tol = 0.02;       ///< densities within this relative distance count as merged
+        double merge_lnK_tol = 0.1;        ///< ...which is only legitimate when max|ln K| is below this (a real critical point)
+        double closure_rho_ratio = 100.0;  ///< closure also needs the two densities to differ by at least this factor
         std::size_t min_points_for_built = 5;
         int start_retries = 4;  ///< decades of start pressure tried after the configured one
     };

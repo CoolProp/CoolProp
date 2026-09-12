@@ -527,6 +527,13 @@ void PhaseEnvelopeTracers::run(HelmholtzEOSMixtureBackend& HEOS, IsoplethSystem&
                     reject = format("corrector moved %g, predictor step allows %g", moved, allowed);
                 } else if (!sys.is_lnK(ns) && maxlnK_new < 1e-8) {
                     reject = "trivial solution";
+                } else if (std::abs(pt_new.rho_inc / pt_new.rho_feed - 1) < opts.merge_rho_tol && maxlnK_new > opts.merge_lnK_tol) {
+                    // The two phases have the same density but different compositions.  At a
+                    // genuine critical point both merge together, so density equality with a
+                    // large ln K spread is a spurious root, not a point on the boundary.
+                    // Without this the N2/CH4/C2/C3 bubble branch drops from 4.3 MPa to 800 Pa
+                    // at constant T onto a nonsense state, which then trips the closure test.
+                    reject = format("densities merged (%g vs %g) while max|lnK| = %g", pt_new.rho_inc, pt_new.rho_feed, maxlnK_new);
                 } else if (!prev_tangent.isZero() && (X_new - X).dot(prev_tangent) <= 0) {
                     // The corrector landed behind the current point along the direction of
                     // travel: the predictor overshot a turning point and the Newton solve fell
@@ -578,7 +585,12 @@ void PhaseEnvelopeTracers::run(HelmholtzEOSMixtureBackend& HEOS, IsoplethSystem&
         // Termination
         const std::size_t npts = env.T.size();
         const double xmax = *std::max_element(pt_new.x_inc.begin(), pt_new.x_inc.end());
-        if (crossed_any && npts > 5 && pt_new.p < p_start) {
+        // Closure means the trace came back round to a low-pressure point on the other
+        // branch, where the incipient phase is again dilute relative to the feed.  Pressure
+        // alone is not enough: a collapse onto a degenerate root also drives p down, and
+        // calling that "closed" reports a wrong envelope as a good one.
+        const double rho_ratio = std::max(pt_new.rho_inc, pt_new.rho_feed) / std::min(pt_new.rho_inc, pt_new.rho_feed);
+        if (crossed_any && npts > 5 && pt_new.p < p_start && rho_ratio > opts.closure_rho_ratio) {
             env.closed = true;
             g_stop_reason = "closed";
             stop_reason = "closed";
