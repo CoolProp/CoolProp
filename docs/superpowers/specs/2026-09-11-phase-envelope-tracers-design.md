@@ -1,8 +1,8 @@
 # Pluggable isopleth tracers for mixture phase envelopes
 
 Date: 2026-09-11
-Status: draft for review
-Tracking: bd issue CoolProp-2ta4
+Status: spike complete; results in section 8
+Tracking: bd issues CoolProp-2ta4 (this work), CoolProp-jdph (legacy NaN defect found by the corpus)
 
 ## 1. Problem
 
@@ -369,3 +369,93 @@ subclass (no raw `std::exception`, no non-finite stored values).
   including the documentation change for the configuration key.
 - Derivative caching in `MixtureDerivatives` for the `N x N` block.
 - The 31 predefined mixtures with missing binary pairs.
+
+## 8. Spike results (measured 2026-09-11)
+
+Both candidates were implemented behind `PHASE_ENVELOPE_ALGORITHM` with the
+legacy tracer left as the default, and run against the torture corpus: 147
+unique predefined mixtures plus 42 hard cases (azeotropes, open envelopes,
+wide-boiling pairs, near-pure limits, a 15-component gas with heavy traces).
+157 of the 189 construct; the other 32 lack binary interaction parameters.
+
+| | legacy | lnK_density | lnK_pressure |
+|---|---|---|---|
+| built | 133 | **155** | 155 |
+| closed | 130 | **133** | 1 |
+| dew points within 1e-3 of a blind flash | 145/152 | 146/155 | 149/152 |
+| median points | 207 | **177** | 128 |
+| median time | 9.0 ms | **7.7 ms** | 10.2 ms |
+| 90th-percentile time | 40 ms | 41 ms | 41 ms |
+| worst case | 0.52 s | 13.5 s | 5.0 s |
+| total | **4.3 s** | 30.9 s | 12.5 s |
+
+**`lnK_density` is the winner and the candidate worth promoting later.** It
+builds 22 more envelopes than the default and closes 3 more, and its median
+case is slightly faster than the default with fewer points. It closes 8 that
+the default cannot, including every natural gas in the predefined set, the
+azeotropic ethane + carbon dioxide at 0.7/0.3 (where the default manages 21
+points), the nitrogen/methane/ethane/propane quaternary, and R508A, whose
+starting dew point the default cannot solve at all.  It loses 5 refrigerant
+blends that the default closes (R422A, R439A, R466A, R508B, R509A); those are
+the outstanding work before it could become the default.
+
+Its total time is dominated by a handful of hard cases, not by the typical
+mixture. The distribution matters more than the sum here: at the median and
+the 90th percentile it matches or beats the default.
+
+**`lnK_pressure` loses decisively and should not be promoted.** It builds 155
+envelopes but closes only 1: 154 of 157 traces end as `stalled`, because
+`update_TP_guessrho` cannot find the incipient density root once the two
+phases approach each other near the critical point. Keeping the classic
+Michelsen (T, p) form as a selectable option documents the negative result and
+costs nothing, since it shares the whole driver. The measurement answers the
+question section 4.4 posed: for a Helmholtz EOS the density root solve is a
+liability, not an asset.
+
+### What the driver needed beyond the design
+
+Four things were not in the design and turned out to be load-bearing:
+
+1. **A direction-of-travel guard.** A predictor that overshoots a turning
+   point lets the corrector land back on the stretch already traced, and the
+   trace then retraces itself for hundreds of points. Rejecting a step whose
+   corrected displacement opposes the previous tangent fixed it.
+2. **A step cap that scales with `max|ln K|`.** In a low-temperature tail the
+   incipient phase goes numerically pure and `ln K` races to tens while T and
+   the marching density barely move; a fixed cap spent 800 points there.
+3. **A degeneracy stop relative to the starting spread.** An absolute
+   `max|ln K|` limit rejects the first point of a wide-boiling gas, which can
+   start at 61. The limit is `max(50, 1.2x the value at the start)`.
+4. **No temperature floor.** `HEOS.Tmin()` is a mole-fraction-weighted number
+   that real envelopes run well below: methane/ethane traces to 65 K against a
+   weighted floor of 91 K. Using it as a floor truncated 50 envelopes that
+   otherwise close. Traces that run out of EOS now stop as `stalled`, which is
+   reported rather than silent.
+
+The pressure-equality residual also needed scaling by `max(p_ref, 1e-3 rho R T)`
+rather than `p_ref` alone: the liquid pressure is a difference of terms of
+order `rho R T`, so its round-off noise is a fixed fraction of that, and a
+100 Pa dew point cannot be asked for pressure equality to 1e-9 of 100 Pa.
+
+### Defects found in existing code
+
+- **The legacy tracer stores NaN mole fractions** for the 15-component gas
+  (bd CoolProp-jdph), and returns `built = false` with no error. Pinned in the
+  corpus so the count cannot grow.
+- **`finalize` could read out of bounds and throw.** Its 4-point spline
+  stencil indexes `imax - 1` without checking that the extremum has room on
+  both sides, so an extremum at index 0 underflowed `std::size_t`. Its
+  `spline.build()` also sat outside the try/catch that already swallows
+  maxima-insertion failures, so a singular spline propagated out and failed an
+  otherwise good envelope. Both are fixed, which hardens the legacy path too.
+
+### Remaining work before `lnK_density` could become the default
+
+1. The 5 refrigerant blends it loses (2 stall, 1 hits the point cap, 1 stops
+   on a pure incipient phase).
+2. The 9 cases that end at the 1 GPa ceiling and the 6 at the point cap:
+   confirm which are genuine open branches and which are the trace wandering.
+3. A promotion decision needs the flash paths exercised against envelopes
+   built by the new tracer, not just the envelope geometry.
+4. The isochoric parametric-marching system (Deiters and Bell 2019) is still
+   unimplemented; the `IsoplethSystem` interface is shaped to take it.

@@ -4,6 +4,7 @@
 #include "HelmholtzEOSMixtureBackend.h"
 #include "VLERoutines.h"
 #include "PhaseEnvelopeRoutines.h"
+#include "PhaseEnvelopeTracers.h"
 #include "CoolProp/fluids/PhaseEnvelope.h"
 #include "CoolProp/detail/tools.h"
 #include "CoolProp/Configuration.h"
@@ -94,6 +95,13 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
     } else {
         // It's a mixture
         // --------------
+
+        // Experimental tracers selected by configuration; "legacy" is the code below, untouched.
+        const std::string algorithm = get_config_string(PHASE_ENVELOPE_ALGORITHM);
+        if (algorithm != "legacy") {
+            PhaseEnvelopeTracers::trace(HEOS, algorithm, level);
+            return;
+        }
 
         // First we try to generate all the critical points.  This
         // is very useful
@@ -550,46 +558,71 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
                 throw ValueError("I don't understand your maxima index");
             }
 
-            // Spline using the points around it
+            // Spline using the points around it.  The 4-point stencil is [i-1, i+2], so the
+            // anchor has to leave room on both sides: an extremum sitting at index 0 or 1 used
+            // to underflow i-1 (std::size_t) into an enormous index and read out of bounds.
+            const std::size_t nenv = env.T.size();
+            if (nenv < 4) {
+                break;
+            }
             SplineClass spline;
             if (maxima == TMAX_SAT) {
-                imax = iTmax;
-                if (iTmax > env.T.size() - 3) {
-                    iTmax -= 2;
+                if (iTmax + 3 > nenv) {
+                    iTmax = nenv - 3;
                 }
+                if (iTmax < 1) {
+                    iTmax = 1;
+                }
+                imax = iTmax;
                 spline.add_4value_constraints(env.rhomolar_vap[iTmax - 1], env.rhomolar_vap[iTmax], env.rhomolar_vap[iTmax + 1],
                                               env.rhomolar_vap[iTmax + 2], env.T[iTmax - 1], env.T[iTmax], env.T[iTmax + 1], env.T[iTmax + 2]);
             } else {
-                imax = ipmax;
-                if (ipmax > env.p.size() - 3) {
-                    ipmax -= 2;
+                if (ipmax + 3 > nenv) {
+                    ipmax = nenv - 3;
                 }
+                if (ipmax < 1) {
+                    ipmax = 1;
+                }
+                imax = ipmax;
                 spline.add_4value_constraints(env.rhomolar_vap[ipmax - 1], env.rhomolar_vap[ipmax], env.rhomolar_vap[ipmax + 1],
                                               env.rhomolar_vap[ipmax + 2], env.p[ipmax - 1], env.p[ipmax], env.p[ipmax + 1], env.p[ipmax + 2]);
             }
-            spline.build();  // y = a*rho^3 + b*rho^2 + c*rho + d
-
-            // Take derivative
-            // dy/drho = 3*a*rho^2 + 2*b*rho + c
-            // Solve quadratic for derivative to find rho
-            int Nsoln = 0;
-            double rho0 = _HUGE, rho1 = _HUGE, rho2 = _HUGE;
-            solve_cubic(0, 3 * spline.a, 2 * spline.b, spline.c, Nsoln, rho0, rho1, rho2);
-
             SaturationSolvers::newton_raphson_saturation_options IO;
             IO.rhomolar_vap = _HUGE;
-            // Find the correct solution
-            if (Nsoln == 1) {
-                IO.rhomolar_vap = rho0;
-            } else if (Nsoln == 2) {
-                if (is_in_closed_range(env.rhomolar_vap[imax - 1], env.rhomolar_vap[imax + 1], rho0)) {
+            try {
+                spline.build();  // y = a*rho^3 + b*rho^2 + c*rho + d
+
+                // Take derivative
+                // dy/drho = 3*a*rho^2 + 2*b*rho + c
+                // Solve quadratic for derivative to find rho
+                int Nsoln = 0;
+                double rho0 = _HUGE, rho1 = _HUGE, rho2 = _HUGE;
+                solve_cubic(0, 3 * spline.a, 2 * spline.b, spline.c, Nsoln, rho0, rho1, rho2);
+
+                // Find the correct solution
+                if (Nsoln == 1) {
                     IO.rhomolar_vap = rho0;
+                } else if (Nsoln == 2) {
+                    if (is_in_closed_range(env.rhomolar_vap[imax - 1], env.rhomolar_vap[imax + 1], rho0)) {
+                        IO.rhomolar_vap = rho0;
+                    }
+                    if (is_in_closed_range(env.rhomolar_vap[imax - 1], env.rhomolar_vap[imax + 1], rho1)) {
+                        IO.rhomolar_vap = rho1;
+                    }
+                } else {
+                    throw ValueError("More than 2 solutions found");
                 }
-                if (is_in_closed_range(env.rhomolar_vap[imax - 1], env.rhomolar_vap[imax + 1], rho1)) {
-                    IO.rhomolar_vap = rho1;
+            } catch (std::exception& e) {
+                // The spline is singular when the four abscissae are not distinct, which happens
+                // where the traced points bunch up.  The maxima are a convenience for
+                // is_inside(); skipping one is far better than failing the whole envelope.
+                if (get_debug_level() > 0) {
+                    std::cout << format("finalize: no maxima insertion for index %d: %s\n", imaxima, e.what());
                 }
-            } else {
-                throw ValueError("More than 2 solutions found");
+                continue;
+            }
+            if (!ValidNumber(IO.rhomolar_vap) || IO.rhomolar_vap == _HUGE) {
+                continue;
             }
 
             class solver_resid : public FuncWrapper1D
