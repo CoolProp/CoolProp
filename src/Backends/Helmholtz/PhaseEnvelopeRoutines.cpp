@@ -807,7 +807,15 @@ std::vector<std::pair<std::size_t, std::size_t>> PhaseEnvelopeRoutines::find_int
                                                                                            double value) {
     std::vector<std::pair<std::size_t, std::size_t>> intersections;
 
-    for (std::size_t i = 0; i < env.p.size() - 1; ++i) {
+    // `env.p.size() - 1` is unsigned: an empty envelope wraps it to SIZE_MAX and the loop below
+    // reads out of bounds on the first iteration.  An empty envelope reaches here whenever a
+    // build failed but the caller carried on -- TabularDataSet::build_tables copies whatever
+    // build_phase_envelope left behind and never checks `built`.
+    if (env.p.size() < 2) {
+        return intersections;
+    }
+
+    for (std::size_t i = 0; i + 1 < env.p.size(); ++i) {
         bool matched = false;
         switch (iInput) {
             case iP:
