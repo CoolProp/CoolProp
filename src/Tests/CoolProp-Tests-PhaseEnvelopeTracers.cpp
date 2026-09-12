@@ -214,9 +214,12 @@ TEST_CASE("Phase envelope tracers: methane/ethane closes and matches blind dew p
             auto HEOS = make_heos("Methane&Ethane", z);
             REQUIRE_NOTHROW(HEOS->build_phase_envelope(""));
             const PhaseEnvelopeData& env = HEOS->get_phase_envelope_data();
-            CHECK(env.built);
+            // `built` means a CLOSED envelope, so it only holds where the trace closed.
+            CHECK(env.built == env.closed);
+            CHECK(env.T.size() > 50);
             if (std::string(alg) == "lnK_density") {
                 CHECK(env.closed);
+                CHECK(env.built);
             } else {
                 WARN(alg << ": closed=" << env.closed << " (the (T,p) form loses the density root near the critical point)");
             }
@@ -253,7 +256,9 @@ TEST_CASE("Phase envelope tracers: natural-gas-like quaternary terminates at Tmi
             auto HEOS = make_heos("Nitrogen&Methane&Ethane&Propane", z);
             REQUIRE_NOTHROW(HEOS->build_phase_envelope(""));
             const PhaseEnvelopeData& env = HEOS->get_phase_envelope_data();
-            CHECK(env.built);
+            // This one need not close; what matters is that it traced a usable stretch and said
+            // why it stopped, where the legacy tracer used to return nothing and raise nothing.
+            CHECK(env.T.size() > 50);
             CHECK(env.icrit < env.T.size());
             double pmax = 0;
             for (double p : env.p) {
@@ -290,7 +295,7 @@ TEST_CASE("Phase envelope tracers: trivial solution and runaway pressure are rej
                 auto HEOS = make_heos(c.fluids, c.z);
                 REQUIRE_NOTHROW(HEOS->build_phase_envelope(""));
                 const PhaseEnvelopeData& env = HEOS->get_phase_envelope_data();
-                CHECK(env.built);
+                CHECK(env.T.size() > 20);
                 // A bounded stop, not a runaway: the ceiling is what ends an open branch
                 const std::string& stop = PhaseEnvelopeTracers::last_stop_reason();
                 CAPTURE(stop);
@@ -321,7 +326,6 @@ TEST_CASE("Phase envelope tracers: heavy trace components stay finite", "[phase_
             auto HEOS = make_heos(fluids, z);
             REQUIRE_NOTHROW(HEOS->build_phase_envelope(""));
             const PhaseEnvelopeData& env = HEOS->get_phase_envelope_data();
-            CHECK(env.built);
             CHECK(env.T.size() > 20);
             for (const auto& xj : env.x) {
                 for (double v : xj) {
@@ -343,7 +347,7 @@ TEST_CASE("Phase envelope tracers: start pressure fallback", "[phase_envelope][t
                 std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", mix));
                 REQUIRE_NOTHROW(AS->build_phase_envelope(""));
                 const PhaseEnvelopeData& env = AS->get_phase_envelope_data();
-                CHECK(env.built);
+                CHECK(env.T.size() > 20);
                 CHECK(env.p.front() > 100.0);
             }
         }

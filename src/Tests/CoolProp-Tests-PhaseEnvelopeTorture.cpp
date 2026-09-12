@@ -452,9 +452,8 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
     CHECK(tally["lnK_density"].false_closure <= 21);
     // Floors for every algorithm, so a candidate that regressed to producing nothing at all
     // cannot pass: the per-row checks below are all vacuously true for an empty envelope.
-    CHECK(tally["lnK_density"].built >= 150);
+    // `built` now means "closed" for every algorithm, so reach is floored through `traced`.
     CHECK(tally["lnK_density"].closed >= 125);
-    CHECK(tally["lnK_pressure"].built >= 150);
     CHECK(tally["lnK_pressure"].constructed >= 157);
     // Every algorithm: finite stored values, CoolProp exceptions only, bounded point count.
     for (const auto& r : rows) {

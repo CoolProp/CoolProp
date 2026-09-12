@@ -644,7 +644,7 @@ point in the corpus is now 8.4e-4.
 | | default | lnK_density | lnK_pressure |
 |---|---|---|---|
 | traced (>= 20 usable points) | **154** | 155 | 151 |
-| built (a closed, interpolatable envelope) | 134 | 155 | 155 |
+| built (a closed, interpolatable envelope) | 134 | 131 | 1 |
 | closed | **131** | 131 | 1 |
 | worst fugacity residual | 8.4e-4 | 9.3e-10 | 9.9e-10 |
 | disagrees with a blind flash | 22 | 17 | 1 |
@@ -655,13 +655,14 @@ Against master the default gains +23 traced (131 -> 154), +1 built, +1 closed an
 mixture closed. The headline is `traced`, not `built`: 23 mixtures that previously returned an
 empty envelope *and no error* now return points a caller can use, plus a reason they stopped.
 
-`built` deliberately keeps its old meaning -- a closed, interpolatable envelope -- and an open
-one does not set it. An earlier revision of this branch did set it, which would have let the
-envelope-guided flash fast paths steer off a boundary that stops short. Those paths gate on
-`built` without also checking `closed`, and seeding them from a partial boundary does not
-reliably fail (see the stalled-solver note above), so they would have returned a wrong answer
-instead of falling through to the blind solver. Leaving `built` false keeps every consumer
-behaving exactly as it does on master.
+`built` deliberately keeps its old meaning -- a closed, interpolatable envelope -- for EVERY
+algorithm, and an open one does not set it.  An earlier revision of this branch set it on partial
+envelopes, which would have let the envelope-guided flash fast paths steer off a boundary that
+stops short.  Those paths gate on `built` without also checking `closed`, and seeding them from a
+partial boundary does not reliably fail (see the stalled-solver note above), so they would have
+returned a wrong answer instead of falling through to the blind solver.  Leaving `built` false
+keeps every consumer behaving exactly as it does on master, and keeping the rule identical across
+algorithms means enabling a candidate cannot reintroduce the hazard either.
 
 The default and `lnK_density` now reach equally far and both produce thermodynamically valid
 points. `lnK_density` converges several orders tighter and disagrees with the flash on five fewer

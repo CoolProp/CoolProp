@@ -655,7 +655,13 @@ void PhaseEnvelopeTracers::run(HelmholtzEOSMixtureBackend& HEOS, IsoplethSystem&
     if (env.T.size() < opts.min_points_for_built) {
         throw ValueError(format("PhaseEnvelopeTracers: only %d points traced (%s)", static_cast<int>(env.T.size()), stop_reason.c_str()));
     }
-    env.built = true;
+    // Only a CLOSED envelope sets `built`, matching the legacy path.  `built` is what the
+    // envelope-guided flash fast paths gate on, and two of them do not also check `closed`, so an
+    // open envelope must not set it: seeding a guided solve from a boundary that stops short does
+    // not reliably fail (newton_raphson_saturation::call returns a stalled solve without checking
+    // its residual), and it would answer wrongly instead of falling through to the blind solver.
+    // The traced points and the stop reason remain available either way.
+    env.built = env.closed;
 }
 
 void PhaseEnvelopeTracers::trace(HelmholtzEOSMixtureBackend& HEOS, const std::string& algorithm, const std::string& level) {
