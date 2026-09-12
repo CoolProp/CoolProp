@@ -46,6 +46,8 @@
     X(HENRYS_LAW_TO_GENERATE_VLE_GUESSES, "HENRYS_LAW_TO_GENERATE_VLE_GUESSES", false,                                                               \
       "If true, when doing water-based mixture dewpoint calculations, use Henry's Law to generate guesses for liquid-phase composition")             \
     X(PHASE_ENVELOPE_STARTING_PRESSURE_PA, "PHASE_ENVELOPE_STARTING_PRESSURE_PA", 100.0, "Starting pressure [Pa] for phase envelope construction")   \
+    X(PHASE_ENVELOPE_ALGORITHM, "PHASE_ENVELOPE_ALGORITHM", "legacy",                                                                                \
+      "Isopleth tracer for mixture phase envelopes: legacy, lnK_density, lnK_pressure")                                                              \
     X(R_U_CODATA, "R_U_CODATA", 8.31446261815324,                                                                                                    \
       "The value for the ideal gas constant in J/mol/K according to CODATA 2022.  This value is used to harmonize all the ideal gas constants. "     \
       "This is especially important in the critical region.")                                                                                        \

@@ -168,6 +168,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     friend class
       MixtureDerivatives;  // Allows the static methods in the MixtureDerivatives class to have access to all the protected members and methods of this class
     friend class
+      PhaseEnvelopeTracers;  // Allows the static methods in the PhaseEnvelopeTracers class to have access to all the protected members and methods of this class
+    friend class
       PhaseEnvelopeRoutines;  // Allows the static methods in the PhaseEnvelopeRoutines class to have access to all the protected members and methods of this class
     friend class
       MixtureParameters;  // Allows the static methods in the MixtureParameters class to have access to all the protected members and methods of this class
