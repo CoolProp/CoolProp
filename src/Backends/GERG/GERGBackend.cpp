@@ -64,31 +64,14 @@ void GERGMixtureBackend::set_components(const std::vector<CoolPropFluid>& comps,
     // with GERG-typed states.  Constructing them with
     // generate_SatL_and_SatV = false is what stops the recursion.
     //
-    // The PREVIOUS SatL/SatV (if any -- set_components is only called from
-    // constructors today, so on a freshly-constructed object there is
-    // nothing to remove) are erased from linked_states before being replaced,
-    // so calling set_components twice on one object does not leave the
-    // superseded SatL/SatV in linked_states, where sync_linked_states would
-    // keep writing to them forever.  This erases ONLY the two SatL/SatV
-    // entries -- by pointer identity, not by clearing the whole vector -- so
-    // TPD_state/critical_state/transient_pure_state (HelmholtzEOSMixtureBackend.h:85,93,101)
-    // are left untouched if they happen to already be linked.  An earlier
-    // version called linked_states.clear() unconditionally: harmless today
-    // because those three are only ever created lazily, long after
-    // construction, but a future caller of set_components on a live object
-    // would silently strand them (non-null members, never reachable through
-    // linked_states again) -- trading one latent hazard for another instead
-    // of fixing it.
-    linked_states.erase(std::remove_if(linked_states.begin(), linked_states.end(),
-                                       [this](const shared_ptr<HelmholtzEOSMixtureBackend>& s) { return s == SatL || s == SatV; }),
-                        linked_states.end());
-
-    SatL.reset(new GERGMixtureBackend(m_model, comps, false));
+    // The base setter has discarded the old helpers. Use its owned component
+    // copy: comps may have referred to one of those now-destroyed helpers.
+    SatL.reset(new GERGMixtureBackend(m_model, this->components, false));
     SatL->specify_phase(iphase_liquid);
     linked_states.push_back(SatL);
     SatL->clear();
 
-    SatV.reset(new GERGMixtureBackend(m_model, comps, false));
+    SatV.reset(new GERGMixtureBackend(m_model, this->components, false));
     SatV->specify_phase(iphase_gas);
     SatV->clear();
     linked_states.push_back(SatV);

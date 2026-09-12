@@ -193,16 +193,16 @@ jobs:
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Tauri auto-updater signing — when present, tauri-action signs the
-          # update artifacts and emits latest.json next to each platform
-          # bundle. Without these the build still succeeds; the updater
-          # plugin just won't accept the signatures, so updates won't work
-          # for that release. Activate by adding both repo secrets.
+          # Sign updater artifacts for pushes and releases. PR builds skip
+          # signing below because fork PRs cannot access these secrets.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: wrappers/GUI
           tauriScript: npm run tauri
+          # Fork PRs have no signing secrets. Keep signing enabled for pushes
+          # and releases; PR bundles are only used for build and smoke tests.
+          args: ${{ github.event_name == 'pull_request' && '--no-sign' || '' }}
 
       # ─── Linux smoke tests ────────────────────────────────────────────────
       # 1) Forward-compat: install .deb in a clean ubuntu:26.04 container,

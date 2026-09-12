@@ -104,6 +104,7 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPro
     _phase = iphase_unknown;
 }
 void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV) {
+    component_transport_states.clear();
 
     // Drop the cached ECS transport reference fluids: they are tied to the
     // OLD component's reference-fluid name, so a post-construction component
@@ -130,6 +131,15 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
         // Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
         set_mixture_parameters();
     }
+
+    // Linked helpers contain the old component models and matrix dimensions.
+    // Reset both ownership paths so they are rebuilt for the new components.
+    linked_states.clear();
+    SatL.reset();
+    SatV.reset();
+    TPD_state.reset();
+    critical_state.reset();
+    transient_pure_state.reset();
 
     imposed_phase_index = iphase_not_imposed;
 
@@ -246,7 +256,7 @@ void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase() {
     }
 }
 std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string& ParamName) {
-    CoolProp::CoolPropFluid cpfluid = get_components()[0];
+    CoolProp::CoolPropFluid cpfluid = components[0];
     if (!ParamName.compare("name")) {
         return cpfluid.name;
     } else if (!ParamName.compare("aliases")) {
@@ -482,6 +492,7 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t
 };
 
 void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std::string& EOS_name) {
+    component_transport_states.clear();
 
     if (i < components.size()) {
         CoolPropFluid& fluid = components[i];
@@ -829,6 +840,32 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
     return initial_density + residual;
 }
 
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_mixture_transport(parameters property) {
+    CoolPropDbl summer = 0;
+    try {
+        if (mole_fractions.size() == 0 || mole_fractions.size() != components.size()) {
+            throw ValueError("Mole fractions must be set and match the component count before evaluating mixture transport");
+        }
+        component_transport_states.resize(components.size());
+        for (std::size_t i = 0; i < components.size(); ++i) {
+            auto& pure = component_transport_states[i];
+            if (!pure || components_exposed) {
+                pure = std::make_shared<HelmholtzEOSBackend>(components[i]);
+            }
+            // Keep the original pure-fluid update, including phase determination.
+            // Updating every time also clears the pure-fluid property caches.
+            pure->update(DmolarT_INPUTS, _rhomolar, _T);
+            const double value = pure->keyed_output(property);
+            summer += mole_fractions[i] * (property == iviscosity ? log(value) : value);
+        }
+    } catch (...) {
+        // Do not reuse a partially updated saturation or ECS helper after failure.
+        component_transport_states.clear();
+        throw;
+    }
+    return property == iviscosity ? exp(summer) : summer;
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
     if (is_pure_or_pseudopure) {
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
@@ -836,13 +873,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
         return dilute + initial_density + residual + critical;
     } else {
         set_warning_string("Mixture model for viscosity is highly approximate");
-        CoolPropDbl summer = 0;
-        for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
-            shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
-            HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
-            summer += mole_fractions[i] * log(HEOS->viscosity());
-        }
-        return exp(summer);
+        return calc_mixture_transport(iviscosity);
     }
 }
 void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
@@ -1090,13 +1121,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
         return dilute + initial_density + residual + critical;
     } else {
         set_warning_string("Mixture model for conductivity is highly approximate");
-        CoolPropDbl summer = 0;
-        for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
-            shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
-            HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
-            summer += mole_fractions[i] * HEOS->conductivity();
-        }
-        return summer;
+        return calc_mixture_transport(iconductivity);
     }
 }
 void HelmholtzEOSMixtureBackend::calc_conformal_state(const std::string& reference_fluid, CoolPropDbl& T, CoolPropDbl& rhomolar) {
@@ -2184,9 +2209,9 @@ void HelmholtzEOSMixtureBackend::calc_ssat_max() {
         }
     };
     if (!ssat_max.is_valid() && ssat_max.exists != SsatSimpleState::SSAT_MAX_DOESNT_EXIST) {
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(get_components());
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(components);
         Residual resid(*HEOS_copy);
-        const CoolProp::SimpleState& tripleV = HEOS_copy->get_components()[0].triple_vapor;
+        const CoolProp::SimpleState& tripleV = HEOS_copy->components[0].triple_vapor;
         double v1 = resid.call(hsat_max.T);
         double v2 = resid.call(tripleV.T);
         // If there is a sign change, there is a maxima, otherwise there is no local maxima/minima
@@ -2219,7 +2244,7 @@ void HelmholtzEOSMixtureBackend::calc_hsat_max() {
         }
     };
     if (!hsat_max.is_valid()) {
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(get_components());
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(components);
         Residualhmax residhmax(*HEOS_copy);
         Brent(residhmax, T_critical() - 0.1, HEOS_copy->Ttriple() + 1, DBL_EPSILON, 1e-8, 30);
         hsat_max.T = residhmax.HEOS->T();
@@ -4278,8 +4303,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         throw ValueError(format("state is not two-phase"));
     }
 
-    shared_ptr<HelmholtzEOSMixtureBackend> Liq = std::make_shared<HelmholtzEOSMixtureBackend>(this->get_components());
-    shared_ptr<HelmholtzEOSMixtureBackend> End = std::make_shared<HelmholtzEOSMixtureBackend>(this->get_components());
+    shared_ptr<HelmholtzEOSMixtureBackend> Liq = std::make_shared<HelmholtzEOSMixtureBackend>(components);
+    shared_ptr<HelmholtzEOSMixtureBackend> End = std::make_shared<HelmholtzEOSMixtureBackend>(components);
 
     Liq->specify_phase(iphase_liquid);
     Liq->_Q = -1;
@@ -4706,6 +4731,7 @@ void HelmholtzEOSMixtureBackend::calc_build_spinodal() {
 }
 
 void HelmholtzEOSMixtureBackend::set_reference_stateS(const std::string& reference_state) {
+    component_transport_states.clear();
     for (auto& component : components) {
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<CoolPropFluid>(1, component));
         if (!reference_state.compare("IIR")) {
@@ -4772,6 +4798,7 @@ void HelmholtzEOSMixtureBackend::set_reference_stateS(const std::string& referen
 /// @param hmolar0 Molar enthalpy at reference state [J/mol]
 /// @param smolar0 Molar entropy at reference state [J/mol/K]
 void HelmholtzEOSMixtureBackend::set_reference_stateD(double T, double rhomolar, double hmolar0, double smolar0) {
+    component_transport_states.clear();
     for (auto& component : components) {
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<CoolPropFluid>(1, component));
 

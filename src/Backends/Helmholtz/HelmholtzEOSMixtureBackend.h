@@ -77,6 +77,10 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// call (the dominant cost of e.g. SVDSBTL surface builds for ECS fluids).
     shared_ptr<HelmholtzEOSMixtureBackend> viscosity_ecs_reference_state;
     shared_ptr<HelmholtzEOSMixtureBackend> conductivity_ecs_reference_state;
+    /// Pure-component transport backends, independent of the mixture's linked states.
+    std::vector<shared_ptr<HelmholtzEOSMixtureBackend>> component_transport_states;
+    bool components_exposed = false;
+    CoolPropDbl calc_mixture_transport(parameters property);
     /// Update the state class used to calculate the tangent-plane-distance
     virtual void add_TPD_state() {
         if (TPD_state.get() == nullptr) {
@@ -340,6 +344,10 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         return components;
     }
     std::vector<CoolPropFluid>& get_components() {
+        // A retained mutable reference can change the models at any later time.
+        // Such callers keep the fresh-component transport evaluation path.
+        components_exposed = true;
+        component_transport_states.clear();
         return components;
     }
     std::vector<CoolPropDbl>& get_K() {
