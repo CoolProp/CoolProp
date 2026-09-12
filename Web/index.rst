@@ -69,6 +69,7 @@ Projects Using CoolProp
 * `HYRAM+ <https://energy.sandia.gov/programs/sustainable-transportation/hydrogen/hydrogen-safety-codes-and-standards/hyram/>`_ - hydrogen and other alternative fuels risk assessment models
 * `UH2SC <https://github.com/sandialabs/uh2sc>`_ - underground hydrogen salt cavern simulation tool
 * `Calcumber <https://calcumber.app/fluid-properties/>`_ – notebook-style unit-aware web calculator
+* `FluidProps <https://fluidprops.com>`_ - free fluid property calculators and steam tables built on CoolProp
 
 Main Developers
 ---------------
