@@ -310,7 +310,7 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
     struct Tally
     {
         std::size_t constructed = 0, built = 0, closed = 0, complete = 0, consistent = 0, checked = 0, closed_consistent = 0, false_closure = 0,
-                    closed_unverified = 0, fug_checked = 0, traced = 0, predefined_constructed = 0, predefined_closed = 0;
+                    closed_unverified = 0, fug_checked = 0, traced = 0, closed_unmeasured = 0, predefined_constructed = 0, predefined_closed = 0;
         std::vector<double> seconds;
         double fug_max = 0;  ///< worst fugacity-equality residual over every sampled stored point
     };
@@ -338,6 +338,10 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
         if (r.fug >= 0) {
             ++t.fug_checked;
             t.fug_max = std::max(t.fug_max, r.fug);
+        } else if (r.closed) {
+            // A closed envelope that could not be fugacity-checked at all is not evidence of
+            // anything; count it so an unmeasurable run cannot masquerade as a clean one.
+            ++t.closed_unmeasured;
         }
         if (r.dev >= 0) {
             ++t.checked;
@@ -388,14 +392,15 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
             std::cout << "could not open " << csv << " for writing\n";
             return;
         }
-        f << "label,algorithm,predefined,constructed,built,closed,stop,n,icrit,seconds,pmax_Pa,Tmin_K,Tmax_K,dev,fug,error\n";
+        f << "label,algorithm,predefined,constructed,built,closed,stop,n,icrit,seconds,pmax_Pa,Tmin_K,Tmax_K,dev,dev_samples,dev_failures,fug,fug_"
+             "samples,error\n";
         for (const auto& r : rows) {
             std::string err = r.error;
             std::replace(err.begin(), err.end(), ',', ';');
             std::replace(err.begin(), err.end(), '\n', ' ');
             f << '"' << r.label << "\"," << r.algorithm << ',' << r.predefined << ',' << r.constructed << ',' << r.built << ',' << r.closed << ','
               << r.stop << ',' << r.n << ',' << r.icrit << ',' << r.seconds << ',' << r.pmax << ',' << r.Tmin << ',' << r.Tmax << ',' << r.dev << ','
-              << r.fug << ",\"" << err << "\"\n";
+              << r.dev_samples << ',' << r.dev_failures << ',' << r.fug << ',' << r.fug_samples << ",\"" << err << "\"\n";
         }
         f.flush();
         std::cout << (f ? "wrote " : "FAILED to write ") << csv << '\n';
@@ -425,19 +430,24 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
     CHECK(legacy.traced >= 154);
     CHECK(tally["lnK_density"].traced >= 150);
     CHECK(tally["lnK_pressure"].traced >= 145);
-    CHECK(legacy.closed_unverified == 0);
-    CHECK(tally["lnK_density"].closed_unverified == 0);
+    for (auto& kv : tally) {
+        CAPTURE(kv.first);
+        CHECK(kv.second.closed_unverified == 0);
+        CHECK(kv.second.closed_unmeasured == 0);
+    }
 
-    // PRIMARY correctness gate.  Equality of component fugacities is the definition of a
-    // phase-boundary point, so this is the one measure here that needs no second solver and
-    // cannot be argued with.  Measured 2026-09-12: legacy 8.4e-4 worst (its store-time gate
-    // admits up to 1e-3), both candidates 1e-9.  Before the store-time gate existed the worst
-    // stored point was off by 4.2, so this catches that class with room to spare.  The count of
-    // checked rows is pinned too, so an algorithm that produced nothing cannot pass by being
+    // Correctness gate.  Equality of component fugacities is the definition of a phase-boundary
+    // point, so it is the one measure here that needs no second solver.  Measured 2026-09-12:
+    // legacy 8.4e-4 worst, both candidates 1e-9.  Note what each bound actually protects: for
+    // the DEFAULT this largely re-checks its own store-time gate (which rejects above 1e-3), so
+    // it mainly guards against that gate being removed or bypassed; for the two candidates,
+    // which have no store-time gate, it is the only thing standing between a bad point and the
+    // stored envelope, so they are held an order of magnitude tighter.  The count of checked
+    // rows is pinned too, so an algorithm that produced nothing cannot pass by being
     // unmeasurable.
     for (auto& kv : tally) {
         CAPTURE(kv.first, kv.second.fug_max);
-        CHECK(kv.second.fug_max < 5e-3);
+        CHECK(kv.second.fug_max < (kv.first == "legacy" ? 5e-3 : 1e-6));
         CHECK(kv.second.fug_checked >= 150);
     }
 
@@ -459,9 +469,11 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
     for (const auto& r : rows) {
         CAPTURE(r.label, r.algorithm, r.error);
         CHECK(r.coolprop_error);
-        // The tracers cap themselves at Options::max_points; legacy's only bound is refine's
-        // 4x growth cap, so give it the wider bound rather than a single shared magic number.
-        CHECK(r.n <= (r.algorithm == "legacy" ? 8192u : 1002u));
+        // The tracers cap themselves at Options::max_points (1000, +2 from finalize's maxima).
+        // Legacy has no absolute cap, only refine's 4x growth limit, so this is an empirical
+        // bound: the observed maximum over the whole corpus is 224, and 512 leaves room for
+        // fluid-data churn while still firing on a runaway.
+        CHECK(r.n <= (r.algorithm == "legacy" ? 512u : 1002u));
     }
 }
 

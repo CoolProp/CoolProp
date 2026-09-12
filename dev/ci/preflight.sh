@@ -302,14 +302,7 @@ else
         # it closed is the flash surface this branch exists to cover.  Note this branch (like the SBTL one) carries no ~[slow]
         # exclusion, so 6 [slow]-tagged cases are in scope — but they came in
         # with [REFPROP] already, not with this widening.
-        # [phase_envelope] is the isopleth-tracer umbrella (the fast [tracers]
-        # cases, the documented-example [docs] cases, and the [torture] corpus
-        # over every predefined mixture).  It is NOT reachable through any of
-        # the other tags here, so without it the gate builds those tests and
-        # runs none of them -- which is exactly how the corpus pins would rot
-        # unnoticed.  The [torture] case is [slow]-tagged and this branch
-        # carries no ~[slow] exclusion, so budget ~45 s for it.
-        TAG_FILTER="[Helmholtz],[REFPROP],[flash],[mixture],[phase_envelope]"
+        TAG_FILTER="[Helmholtz],[REFPROP],[flash],[mixture]"
     elif printf '%s\n' "$ALL_PATHS" | grep -qE "^src/Backends/Cubics/"; then
         # Cubic backends touched.  [cubic] is the umbrella (every [cubic_*]
         # test now carries it too — Catch2 tags are exact-match, not prefix).
@@ -348,6 +341,19 @@ else
         case "$TAG_FILTER" in
             "~[slow]") : ;;  # already runs everything except [slow]
             *) TAG_FILTER="${TAG_FILTER},[expression]" ;;
+        esac
+    fi
+    # The isopleth-tracer surface is ORTHOGONAL too.  Its umbrella tag [phase_envelope] covers
+    # the fast [tracers] cases, the documented-example [docs] cases and the [torture] corpus over
+    # every predefined mixture, and it intersects NONE of the branch filters above -- so without
+    # this the gate builds those files and runs none of them.  It has to catch a change to the
+    # test files themselves as well: editing a pinned count is exactly what a regression in this
+    # area looks like, and that alone would otherwise fall through to "~[slow]", which excludes
+    # [torture].  Cost is ~45 s for the torture case.
+    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/Backends/Helmholtz/|src/Tests/CoolProp-Tests-PhaseEnvelope.*\.cpp|include/CoolProp/fluids/PhaseEnvelope\.h)"; then
+        case "$TAG_FILTER" in
+            "~[slow]") TAG_FILTER="${TAG_FILTER},[phase_envelope]" ;;  # ~[slow] would skip [torture]
+            *) TAG_FILTER="${TAG_FILTER},[phase_envelope]" ;;
         esac
     fi
     echo "  tag filter: $TAG_FILTER"

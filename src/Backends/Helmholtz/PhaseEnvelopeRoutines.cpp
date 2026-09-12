@@ -18,11 +18,6 @@ namespace {
 /// Minimum number of stored points for a partial (non-closed) envelope to be worth keeping.
 constexpr std::size_t kMinPointsForPartialEnvelope = 20;
 
-/// Throw unless every value that would be stored for this point is finite.
-///
-/// Checking the state variables alone is not enough: for a wide-boiling multicomponent gas the
-/// trace-component mole fractions underflow and go non-finite while T, p and the densities still
-/// look reasonable, and the bad composition is then stored and handed to callers.
 /// Throw unless the point the saturation solver landed on is actually on the phase boundary.
 ///
 /// newton_raphson_saturation::call leaves its loop as soon as ANY single variable stops moving
@@ -36,25 +31,30 @@ constexpr std::size_t kMinPointsForPartialEnvelope = 20;
 /// dimensionless, so check that directly on the two instances the solver just converged.  Before
 /// this, the worst stored point in the corpus was off by 4.2 in ln-fugacity -- on exactly the
 /// partial envelopes that are now kept rather than discarded.
-void require_on_boundary(HelmholtzEOSMixtureBackend& HEOS, const SaturationSolvers::newton_raphson_saturation_options& IO) {
-    // Genuinely converged points in the corpus sit at |dln f| ~ 1e-10 and the stalled ones at
-    // 0.02 to 4.2, so there are several orders of gap to place this in.  1e-3 (0.1 % in fugacity)
-    // rejects everything that is actually broken while leaving merely loose-but-sound points
-    // alone -- tightening it to 1e-6 starts costing closed envelopes for no correctness gain.
+void require_on_boundary(HelmholtzEOSMixtureBackend& HEOS, SaturationSolvers::newton_raphson_saturation_options& IO) {
+    // Threshold note.  There is NO clean gap in the observed distribution -- an earlier version of
+    // this comment claimed one and was wrong.  What settles the value is that reach does not
+    // depend on it: measured over the corpus, 1e-3 and 1e-2 both give 154 traced and 131 closed,
+    // but 1e-2 admits stored points as bad as 6.4e-3 while 1e-3 caps them at 8.4e-4.  Same
+    // envelopes, better data, so take the tighter one.  Its purpose is to stop states that are
+    // not on the boundary at all (the worst seen was off by 4.2, a factor of 67 in fugacity),
+    // not to police convergence quality.
     constexpr double tol = 1e-3;
     if (!HEOS.SatL || !HEOS.SatV) {
-        return;
+        throw ValueError("Cannot verify the phase boundary: SatL/SatV are unavailable");  // never read "cannot check" as "checked"
     }
     HelmholtzEOSMixtureBackend &liq = *HEOS.SatL, &vap = *HEOS.SatV;
+    if (IO.x.empty() || IO.x.size() != IO.y.size()) {
+        throw ValueError("Cannot verify the phase boundary: empty or mismatched composition vectors");
+    }
     // Evaluate at exactly the values about to be stored.  The solver leaves SatL/SatV holding the
-    // state from its last Jacobian build, which is one Newton step behind the answer it returns,
-    // so checking them in place would grade a slightly different point than the one recorded.
+    // state from its last Jacobian build, one Newton step behind the answer it returns, so
+    // checking them in place would grade a slightly different point than the one recorded.
     liq.set_mole_fractions(IO.x);
     liq.update(DmolarT_INPUTS, IO.rhomolar_liq, IO.T);
     vap.set_mole_fractions(IO.y);
     vap.update(DmolarT_INPUTS, IO.rhomolar_vap, IO.T);
-    const std::size_t N = liq.get_mole_fractions_ref().size();
-    for (std::size_t i = 0; i < N; ++i) {
+    for (std::size_t i = 0; i < IO.x.size(); ++i) {
         const CoolPropDbl fl = MixtureDerivatives::fugacity_i(liq, i, XN_DEPENDENT);
         const CoolPropDbl fv = MixtureDerivatives::fugacity_i(vap, i, XN_DEPENDENT);
         if (!ValidNumber(fl) || !ValidNumber(fv) || fl <= 0 || fv <= 0) {
@@ -65,8 +65,21 @@ void require_on_boundary(HelmholtzEOSMixtureBackend& HEOS, const SaturationSolve
             throw ValueError(format("Point is not on the phase boundary: |dln f| = %g for component %d", d, static_cast<int>(i)));
         }
     }
+    // SatL/SatV now hold exactly the state being stored, so take the caloric properties from it.
+    // IO's copies came from the solver's pre-final-step state -- the same staleness this function
+    // exists to avoid -- so refreshing them keeps the stored h and s consistent with the stored
+    // T, rho and composition.
+    IO.hmolar_liq = liq.hmolar();
+    IO.hmolar_vap = vap.hmolar();
+    IO.smolar_liq = liq.smolar();
+    IO.smolar_vap = vap.smolar();
 }
 
+/// Throw unless every value that would be stored for this point is finite.
+///
+/// Checking the state variables alone is not enough: for a wide-boiling multicomponent gas the
+/// trace-component mole fractions underflow and go non-finite while T, p and the densities still
+/// look reasonable, and the bad composition is then stored and handed to callers.
 void require_storable(const SaturationSolvers::newton_raphson_saturation_options& IO) {
     // Finiteness of the state is not sufficient.  store_variables/insert_variables also derive
     // and store K = y/x, ln K, ln T and ln p, so a value that is merely finite but non-positive
@@ -494,7 +507,12 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
             // Require the two phases to be genuinely distinct as well, as the continuation
             // tracers do -- at a real low-pressure closure the incipient phase is dilute.
             const double closure_rho_ratio = std::max(IO.rhomolar_liq, IO.rhomolar_vap) / std::max(std::min(IO.rhomolar_liq, IO.rhomolar_vap), 1e-30);
-            const bool pressure_closed = IO.p < env.p[0] && closure_rho_ratio > 100;
+            // The bar is "the phases are still clearly distinct", i.e. not a collapse onto a
+            // degenerate root where the densities merge (ratio -> 1).  It has to stay well below
+            // the ratio at a genuine closure, which shrinks as the start pressure rises: after
+            // four decades of retry a real dew point can sit near a ratio of 25, so a threshold
+            // like 100 would reject exactly the closures the start retry newly rescued.
+            const bool pressure_closed = IO.p < env.p[0] && closure_rho_ratio > 3;
             if (iter > 4 && (pressure_closed || std::abs(1.0 - max_fraction) < 1e-9)) {
                 env.built = true;
                 env.closed = pressure_closed;

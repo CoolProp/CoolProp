@@ -2496,7 +2496,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-GERG.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PhaseEnvelopeTracers.cpp"
-       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PhaseEnvelopeTorture.cpp")
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PhaseEnvelopeTorture.cpp"
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-PhaseEnvelopeDocs.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-Expression.cpp")
 
