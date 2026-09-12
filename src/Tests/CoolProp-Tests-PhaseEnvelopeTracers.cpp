@@ -155,8 +155,10 @@ TEST_CASE("Phase envelope tracers: diagnostic trace from environment", "[phase_e
     std::vector<std::string> parts = strsplit(spec, '|');
     REQUIRE(parts.size() >= 3);
     std::vector<double> z;
-    for (const auto& s : strsplit(parts[1], ',')) {
-        z.push_back(std::stod(s));
+    if (parts[1] != "-" && !parts[1].empty()) {  // "-" means a predefined mixture, which carries its own composition
+        for (const auto& s : strsplit(parts[1], ',')) {
+            z.push_back(std::stod(s));
+        }
     }
     AlgorithmGuard guard(parts[2]);
     std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", parts[0]));

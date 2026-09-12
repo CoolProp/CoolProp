@@ -15,6 +15,20 @@ class PhaseEnvelopeRoutines
      */
     static void build(HelmholtzEOSMixtureBackend& HEOS, const std::string& level = "");
 
+    /** \brief Finish a trace that stopped before the envelope closed
+     *
+     * Keeps the partial envelope (built = true, closed = false) when enough points were
+     * traced to be useful, and throws otherwise.  Either way the reason is recorded via
+     * PhaseEnvelopeTracers::set_last_stop, so a caller can tell a closed envelope from an
+     * abandoned one.  Replaces a bare `return` that left built = false with no error.
+     *
+     * @param HEOS The HelmholtzEOSMixtureBackend instance to be used
+     * @param level The level of detail for the refinement
+     * @param reason Short machine-readable stop code
+     * @param detail Human-readable explanation
+     */
+    static void finish_partial(HelmholtzEOSMixtureBackend& HEOS, const std::string& level, const std::string& reason, const std::string& detail);
+
     /** \brief Refine the phase envelope, adding points in places that are sparse
      *
      * @param HEOS The HelmholtzEOSMixtureBackend instance to be used

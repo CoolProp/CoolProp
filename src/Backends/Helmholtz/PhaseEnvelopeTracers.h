@@ -188,9 +188,13 @@ class PhaseEnvelopeTracers
     /// Run the continuation with a given system and options, filling HEOS.PhaseEnvelope.
     static void run(HelmholtzEOSMixtureBackend& HEOS, IsoplethSystem& sys, const Options& opts);
 
-    /// Why the most recent trace on this thread stopped ("closed", "floor", "ceiling", "pure", "max_points", "stalled").
+    /// Why the most recent trace on this thread stopped ("closed", "floor", "ceiling", "pure",
+    /// "max_points", "stalled", "degenerate").  Set by every algorithm, legacy included, so a
+    /// caller can always tell a closed envelope from an abandoned one.
     static const std::string& last_stop_reason();
     static const std::string& last_stop_detail();
+    /// Record the stop reason; used by PhaseEnvelopeRoutines::build for the legacy tracer.
+    static void set_last_stop(const std::string& reason, const std::string& detail);
 
     /// Entry point used by PhaseEnvelopeRoutines::build for any algorithm other than "legacy".
     static void trace(HelmholtzEOSMixtureBackend& HEOS, const std::string& algorithm, const std::string& level);

@@ -222,6 +222,10 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
     std::cout << "\n=== Phase envelope torture corpus: " << corpus.size() << " mixtures x " << algorithms.size() << " algorithms ===\n";
     for (const auto& c : corpus) {
         for (const auto& alg : algorithms) {
+            // Unbuffered progress on stderr: stdout is block-buffered when redirected, so a case
+            // that runs away leaves no trace of which mixture it was stuck on.
+            // std::cerr is unit-buffered, so this reaches the terminal immediately
+            std::cerr << "[torture] " << c.label.substr(0, 48) << " / " << alg << '\n';
             rows.push_back(run_case(c, alg));
             std::cout << row_line(rows.back()) << '\n';
         }
@@ -298,31 +302,26 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
         std::cout << "wrote " << csv << '\n';
     }
 
-    // Known pre-existing defect of the DEFAULT algorithm, found by this corpus: the legacy
-    // tracer stores NaN mole fractions for a 15-component gas with heavy traces, because its
-    // 100 Pa dew start is a nearly pure n-octane liquid below n-octane's triple point.  Pinned
-    // rather than ignored: the count may not grow, and no candidate algorithm may join it.
-    // Tracked as a bd bug; delete this pin when the legacy tracer is fixed.
-    std::size_t legacy_nonfinite = 0;
+    // No algorithm may store a non-finite value.  This started as a pinned known defect of the
+    // DEFAULT tracer (NaN mole fractions on a wide-boiling 15-component gas); the legacy insert
+    // sites now validate everything they store, so the count is zero and stays zero.
     for (const auto& r : rows) {
         if (r.constructed && !r.finite) {
-            CAPTURE(r.label, r.algorithm);
-            CHECK(r.algorithm == "legacy");
-            if (r.algorithm == "legacy") {
-                ++legacy_nonfinite;
-            }
+            std::cout << "NON-FINITE: " << r.label << " / " << r.algorithm << '\n';
         }
+        CAPTURE(r.label, r.algorithm);
+        CHECK((!r.constructed || r.finite));
     }
-    CHECK(legacy_nonfinite <= 1);
 
     // Pins.  Legacy on the predefined subset: baseline 2026-09-11 was 116 constructed, 106 closed.
     const Tally& legacy = tally["legacy"];
     CHECK(legacy.predefined_constructed >= 116);
-    CHECK(legacy.predefined_closed >= 106);
+    CHECK(legacy.predefined_closed >= 107);
     // Quality pins measured 2026-09-11.  Closure alone is not enough: a false closure is a
     // silently wrong envelope, which is worse than an honest failure, so it is bounded too.
-    CHECK(legacy.closed_consistent >= 123);
-    CHECK(legacy.false_closure <= 7);
+    CHECK(legacy.closed_consistent >= 126);
+    CHECK(legacy.false_closure <= 5);
+    CHECK(legacy.built >= 155);
     CHECK(tally["lnK_density"].closed_consistent >= 116);
     CHECK(tally["lnK_density"].false_closure <= 15);
     // Every algorithm: finite stored values, CoolProp exceptions only, bounded point count.

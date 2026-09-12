@@ -375,6 +375,10 @@ const std::string& PhaseEnvelopeTracers::last_stop_reason() {
 const std::string& PhaseEnvelopeTracers::last_stop_detail() {
     return g_stop_detail;
 }
+void PhaseEnvelopeTracers::set_last_stop(const std::string& reason, const std::string& detail) {
+    g_stop_reason = reason;
+    g_stop_detail = detail;
+}
 
 void PhaseEnvelopeTracers::run(HelmholtzEOSMixtureBackend& HEOS, IsoplethSystem& sys, const Options& opts) {
     const bool debug = get_debug_level() > 0;

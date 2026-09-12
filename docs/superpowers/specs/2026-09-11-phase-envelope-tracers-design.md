@@ -1,8 +1,10 @@
 # Pluggable isopleth tracers for mixture phase envelopes
 
 Date: 2026-09-11
-Status: spike complete; results in section 8
-Tracking: bd issues CoolProp-2ta4 (this work), CoolProp-jdph (legacy NaN defect found by the corpus)
+Status: spike complete (section 8); superseded by the section 9 follow-up, in which small
+fixes to the default tracer beat both candidates
+Tracking: bd issues CoolProp-2ta4 (this work), CoolProp-jdph (legacy NaN defect found by the
+corpus, fixed in section 9), CoolProp-gipl (candidate false closures)
 
 ## 1. Problem
 
@@ -502,3 +504,71 @@ order `rho R T`, so its round-off noise is a fixed fraction of that, and a
    built by the new tracer, not just the envelope geometry.
 5. The isochoric parametric-marching system (Deiters and Bell 2019) is still
    unimplemented; the `IsoplethSystem` interface is shaped to take it.
+
+## 9. Follow-up (2026-09-12): small tweaks to the default tracer beat both candidates
+
+The spike's conclusion was that no continuation candidate had earned promotion.  The obvious
+next question was whether the default's failures needed a new algorithm at all.  They did not:
+most were bookkeeping, and three small changes plus two latent-bug fixes take the default past
+every candidate on every correctness metric.
+
+| | legacy before | **legacy after** | lnK_density |
+|---|---|---|---|
+| built | 133 | **155** | 155 |
+| closed | 130 | **131** | 131 |
+| **closed and verified correct** | 123 | **126** | 116 |
+| false closures | 7 | **5** | 15 |
+| envelopes storing a non-finite value | 1 | **0** | 0 |
+| predefined mixtures closed | 106 | **107** | 105 |
+| median time | 8.8 ms | 8.8 ms | 7.6 ms |
+| total | 4.2 s | 6.0 s | 22.8 s |
+
+### The three tweaks
+
+1. **Retry the start pressure by decades.**  The configured 100 Pa start is unsolvable for some
+   blends, whose incipient liquid there sits below its own triple point, and the whole build
+   failed with no envelope.  Amarillo and R508A went from nothing to a usable envelope, and
+   R508A closes.
+2. **Stop returning silently.**  The `failure_count > 5` path returned with `built` still false
+   and no exception; 24 of 157 corpus mixtures ended there, handing callers an empty envelope
+   and no way to know.  It now keeps a partial envelope when at least 20 points were traced,
+   marks it open rather than closed, and records why; below that it throws.  Both envelope-guided
+   flash paths gate on `built` alone but wrap the guided solve in try/catch with a blind
+   fallback, so a partial envelope is safe for them.
+3. **Report a stop reason**, shared with the new tracers via
+   `PhaseEnvelopeTracers::set_last_stop`, so a caller can tell a closed envelope from an
+   abandoned one.
+
+### Two latent bugs the tweaks exposed, both pre-existing
+
+Refining partial envelopes reached code paths that closed envelopes never do.
+
+- **`refine` could not terminate.**  Its density sweep was
+  `for (rho = start*factor; rho < end; rho *= factor)` with `factor = pow(end/start, 1/N)`.
+  When two adjacent points have nearly equal vapor density the factor rounds to exactly 1, every
+  swept density lands back on the segment start, and refine inserts an unbounded run of
+  duplicates of that one point.  The array then grows exactly as fast as the index advances, so
+  the outer loop never reaches the end either.  Ekofisk emitted 99882 identical points.  A closed
+  envelope escapes through the coarseness skip at the top of the loop, which is why this never
+  fired before.  The sweep is now an integer loop over `k = 1..N-1` (exactly the same densities),
+  segments narrower than a rounding step are skipped, the index is guaranteed to advance every
+  pass, and total insertions are capped.
+- **Only the state variables were checked before storing a point.**  For a wide-boiling
+  multicomponent gas the trace-component mole fractions underflow and go non-finite while T, p
+  and the densities still look reasonable, so the bad composition was stored and handed to
+  callers.  All three insert sites now share one `require_storable` check covering composition
+  and caloric properties as well.  This closes the NaN defect (bd CoolProp-jdph) at its root
+  rather than pinning it.
+
+### What this means for the candidates
+
+`lnK_density` no longer wins on anything except median speed, where the margin is 1.2 ms on a
+sub-10 ms operation.  The default now matches it on reach (155 built, 131 closed) and beats it
+decisively on correctness (126 verified against 116, 5 false closures against 15) at a quarter
+of the total time.  The candidates stay available behind the configuration key as a research
+tool and as the record of a measured negative result, but there is no longer a case for
+promoting either, and the remaining work in section 8 is lower priority than it looked.
+
+The broader lesson is that the default tracer's marching scheme was never the problem.  Its
+failures were an unsolvable fixed start pressure, a silent early return, and two unreachable-
+until-now bugs in the refinement pass.
