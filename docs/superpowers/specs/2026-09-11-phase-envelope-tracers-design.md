@@ -635,9 +635,24 @@ dimensionless ln-fugacity terms with a pressure difference in Pascals, so it is 
 any fixed tolerance and the loop essentially never exits on it.
 
 All three insert sites now check fugacity equality directly, at exactly the values about to be
-stored, and reject anything worse than 1e-3. Converged points sit at 1e-10 and the stalled ones at
-0.02 and above, so there are several orders of gap to place the threshold in. The worst stored
-point in the corpus is now 8.4e-4.
+stored, and reject anything worse than 1e-3. There is no clean gap in the distribution -- an
+earlier draft of this section claimed one and was wrong. What settles the threshold is that reach
+does not depend on it: 1e-3 and 1e-2 both give 154 traced and 131 closed, but 1e-2 admits stored
+points as bad as 6.4e-3 where 1e-3 caps them at 8.4e-4. Same envelopes, better data. The check
+also refreshes the stored enthalpies and entropies from the exact state it validated, which the
+solver otherwise leaves one Newton step stale.
+
+### Compatibility
+
+`built` is unchanged in meaning, so existing consumers behave as they do on master. Four
+deliberate visible differences:
+
+- A trace yielding fewer than 20 points throws instead of silently returning an empty envelope.
+- `build_phase_envelope` retries the start pressure by decades before giving up.
+- A feed composition containing an exact zero is rejected rather than producing an envelope with
+  `ln K = -inf`. Omit the component instead.
+- Closure additionally requires the two phase densities to differ by more than a factor of three,
+  so a collapse onto a degenerate root no longer counts as closed.
 
 ### Where that leaves the comparison
 
