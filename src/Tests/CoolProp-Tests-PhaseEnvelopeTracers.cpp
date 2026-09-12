@@ -150,8 +150,12 @@ TEST_CASE("Phase envelope tracers: raw composition derivatives vs finite differe
 
 TEST_CASE("Phase envelope tracers: diagnostic trace from environment", "[phase_envelope][tracers][diag][.]") {
     // Hidden test: COOLPROP_TRACER_DIAG="Methane&Ethane|0.85,0.15|lnK_density[|debuglevel]" prints the full trace.
+    // [.] hides this from a default run, but an explicit tag filter (preflight passes
+    // [phase_envelope]) still selects it, so an absent variable must skip rather than fail.
     const char* spec = std::getenv("COOLPROP_TRACER_DIAG");
-    REQUIRE(spec != nullptr);
+    if (spec == nullptr) {
+        SKIP("set COOLPROP_TRACER_DIAG=\"<fluids>|<z or ->|<algorithm>[|debuglevel]\" to run this");
+    }
     std::vector<std::string> parts = strsplit(spec, '|');
     REQUIRE(parts.size() >= 3);
     std::vector<double> z;

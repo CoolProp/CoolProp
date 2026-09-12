@@ -17,8 +17,9 @@ class PhaseEnvelopeRoutines
 
     /** \brief Finish a trace that stopped before the envelope closed
      *
-     * Keeps the partial envelope (built = true, closed = false) when enough points were
-     * traced to be useful, and throws otherwise.  Either way the reason is recorded via
+     * Keeps the traced points when there are enough of them to be useful, and throws otherwise.
+     * `built` stays false: it is what the envelope-guided flash paths gate on, and an open
+     * envelope must not steer them (see the comment on the definition).  Either way the reason is recorded via
      * PhaseEnvelopeTracers::set_last_stop, so a caller can tell a closed envelope from an
      * abandoned one.  Replaces a bare `return` that left built = false with no error.
      *

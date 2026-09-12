@@ -1,8 +1,8 @@
 # Pluggable isopleth tracers for mixture phase envelopes
 
 Date: 2026-09-11
-Status: spike complete (section 8); superseded by the section 9 follow-up, in which small
-fixes to the default tracer beat both candidates
+Status: spike complete (section 8); sections 9 and 10 supersede its conclusions.  Read
+section 10 first: it corrects the correctness metric the earlier sections were scored on.
 Tracking: bd issues CoolProp-2ta4 (this work), CoolProp-jdph (legacy NaN defect found by the
 corpus, fixed in section 9), CoolProp-gipl (candidate false closures)
 
@@ -324,11 +324,15 @@ For every unique predefined mixture (deduplicated case-insensitively from
 - Build the envelope in a fresh instance; record `built`, `closed`, point
   count, wall time, `max p`, `T` range, `icrit`, and the exception text if
   any.
-- Consistency check where possible: at three pressures spread between
-  `p_start` and `0.8 p_max`, compare the dew temperature interpolated by
-  `PhaseEnvelopeRoutines::evaluate` with a blind `PQ_INPUTS, Q = 1` flash on
-  a separate instance; record the maximum relative deviation, or mark the
-  check as unavailable when the blind flash fails.
+- Correctness check (primary): equality of the component fugacities at the
+  stored `(T, rho', x)` and `(T, rho'', y)`.  This is the definition of a
+  phase-boundary point and needs no second solver, so it is the measure the
+  corpus pins.
+- Agreement check (diagnostic): compare stored points against a blind
+  `QT_INPUTS` flash on a separate instance, on BOTH branches, using the stored
+  `Q` flag as the branch label; record the maximum relative pressure
+  deviation.  A disagreement means the two routines landed on different states,
+  not that the envelope is wrong -- see section 10.
 
 Output: a summary table on stdout (one line per mixture per algorithm) and
 a per-algorithm tally (`constructed / built / closed / consistent within
@@ -336,8 +340,8 @@ a per-algorithm tally (`constructed / built / closed / consistent within
 `COOLPROP_PHASE_ENVELOPE_TORTURE_CSV` names a path, the full table is also
 written there for offline comparison.
 
-Assertions: the `legacy` tally must not regress below the pinned baseline
-(116 constructed, 106 closed).  The candidate algorithms are informational
+Assertions: the pins are listed in the test; see section 10 for the measured
+values they were set from.  The candidate algorithms are informational
 until one is promoted, but each must finish every mixture without a crash
 and within `max_points`, and any exception must be a `CoolProp::CoolPropError`
 subclass (no raw `std::exception`, no non-finite stored values).
@@ -350,9 +354,9 @@ subclass (no raw `std::exception`, no non-finite stored values).
   monotone at the maxima, which holds for the new tracers too; failures are
   swallowed there today and stay swallowed.  A tangent-based maxima locator
   is a possible follow-up, not part of this work.
-- `Tmin()` for a mixture is the mole-fraction-weighted component `Tmin`.
-  It is a validity floor, not a freezing line; a bubble branch that
-  physically ends in solid formation is still traced to this floor.
+- `Tmin()` is NOT used as a floor.  It is a mole-fraction-weighted number that
+  real envelopes run well below, so using it as one truncates envelopes that
+  would otherwise close.  See section 8.
 - The `p_ref` scaling of the pressure row makes `F_{N+2}` dimensionless but
   not scale-free across the trace; the corrector tolerance therefore
   applies to a pressure mismatch of about `1e-9 p_ref`, which is far below
@@ -505,16 +509,20 @@ order `rho R T`, so its round-off noise is a fixed fraction of that, and a
 5. The isochoric parametric-marching system (Deiters and Bell 2019) is still
    unimplemented; the `IsoplethSystem` interface is shaped to take it.
 
-## 9. Follow-up (2026-09-12): small tweaks to the default tracer beat both candidates
+## 9. Follow-up (2026-09-12): small tweaks to the default tracer
 
+**The counts in this section were scored on a metric section 10 shows was measuring the wrong
+thing, and the `built` change described here was later reverted.  Section 10 has the final
+numbers; this section is kept for the reasoning about the tweaks themselves.**
 The spike's conclusion was that no continuation candidate had earned promotion.  The obvious
 next question was whether the default's failures needed a new algorithm at all.  They did not:
 most were bookkeeping, and three small changes plus two latent-bug fixes take the default past
 every candidate on every correctness metric.
 
-| | legacy before | **legacy after** | lnK_density |
+| | legacy before | legacy after | lnK_density |
 |---|---|---|---|
-| built | 133 | **155** | 155 |
+| traced | 131 | 154 | 155 |
+| built | 133 | 134 | 155 |
 | closed | 130 | **131** | 131 |
 | **closed and verified correct** | 123 | **126** | 116 |
 | false closures | 7 | **5** | 15 |
@@ -531,10 +539,9 @@ every candidate on every correctness metric.
    R508A closes.
 2. **Stop returning silently.**  The `failure_count > 5` path returned with `built` still false
    and no exception; 24 of 157 corpus mixtures ended there, handing callers an empty envelope
-   and no way to know.  It now keeps a partial envelope when at least 20 points were traced,
-   marks it open rather than closed, and records why; below that it throws.  Both envelope-guided
-   flash paths gate on `built` alone but wrap the guided solve in try/catch with a blind
-   fallback, so a partial envelope is safe for them.
+   and no way to know.  It now keeps the traced points when there are at least 20 of them and
+   records why it stopped; below that it throws.  `built` stays false for an open envelope -- see
+   section 10 for why that matters.
 3. **Report a stop reason**, shared with the new tracers via
    `PhaseEnvelopeTracers::set_last_stop`, so a caller can tell a closed envelope from an
    abandoned one.
@@ -572,3 +579,102 @@ promoting either, and the remaining work in section 8 is lower priority than it 
 The broader lesson is that the default tracer's marching scheme was never the problem.  Its
 failures were an unsolvable fixed start pressure, a silent early return, and two unreachable-
 until-now bugs in the refinement pass.
+
+## 10. Correction (2026-09-12): the metric sections 8 and 9 were scored on was wrong
+
+An adversarial review of the branch showed that the "false closure" count those sections lean on
+does not measure what they claim, and following it up changed both the verdict and the code.
+
+### What was wrong
+
+The corpus scored an envelope by comparing its stored points against a blind `QT` flash and
+calling a disagreement a *false closure*, i.e. evidence the tracer was wrong. Two sampling bugs
+made the numbers meaningless in different directions, and then the metric itself turned out to be
+the wrong question.
+
+1. Only the **first three matching points of each branch** were sampled. A false closure shows up
+   where a trace *ends*, so the metric looked everywhere except where the answer was.
+2. Branches were split at the critical index, which the default tracer never sets, so half its
+   points were compared against the wrong branch. That alone produced 88 spurious false closures
+   for the default. The stored `Q` flag is the correct branch label for every algorithm.
+
+Fixing both raised the disagreement counts sharply, which prompted the real question: **when the
+tracer and the flash disagree, which one is wrong?**
+
+### The answer, and the metric that replaces it
+
+Equality of the component fugacities at the stored `(T, rho', x)` and `(T, rho'', y)` is the
+*definition* of a phase-boundary point. It needs no second solver, so it settles the question.
+Measured over every sampled stored point:
+
+| | where the flash agrees | where the flash disagrees |
+|---|---|---|
+| legacy, median residual | 6.1e-14 | 9.2e-14 |
+| lnK_density, median residual | 1.5e-11 | 2.1e-11 |
+
+**The distributions are identical.** Every point behind every "false closure" is a valid
+equilibrium point to about 1e-13. The disagreements were the blind flash finding a different root
+at the same `(T, Q)`, not the tracer producing wrong states. The counts in sections 8 and 9 were
+substantially measuring the flash.
+
+So the fugacity residual is now the corpus's primary correctness gate, pinned for every
+algorithm. Flash agreement is kept and reported, but as a diagnostic with generous bounds: it
+still catches an envelope that traced the wrong *extent* (ethane + carbon dioxide at 0.7/0.3
+remains a genuine fragment, verified by hand against direct flashes), but a disagreement is no
+longer treated as proof of error.
+
+### A real defect the new gate caught immediately
+
+With the gate in place the default tracer's worst stored point was off by **4.2 in ln-fugacity**
+— not a boundary point at all. Every offender was on a *partial* envelope, i.e. exactly the ones
+section 9 started keeping and marking `built`. The cause: `newton_raphson_saturation::call` leaves
+its loop as soon as any single variable stops moving and returns without checking its residual, so
+a stalled solve is indistinguishable from a converged one at the call site. Its own `error_rms`
+cannot serve as the gate either — for the density-imposed formulation the residual vector mixes
+dimensionless ln-fugacity terms with a pressure difference in Pascals, so it is not comparable to
+any fixed tolerance and the loop essentially never exits on it.
+
+All three insert sites now check fugacity equality directly, at exactly the values about to be
+stored, and reject anything worse than 1e-3. Converged points sit at 1e-10 and the stalled ones at
+0.02 and above, so there are several orders of gap to place the threshold in. The worst stored
+point in the corpus is now 8.4e-4.
+
+### Where that leaves the comparison
+
+| | default | lnK_density | lnK_pressure |
+|---|---|---|---|
+| traced (>= 20 usable points) | **154** | 155 | 151 |
+| built (a closed, interpolatable envelope) | 134 | 155 | 155 |
+| closed | **131** | 131 | 1 |
+| worst fugacity residual | 8.4e-4 | 9.3e-10 | 9.9e-10 |
+| disagrees with a blind flash | 22 | 17 | 1 |
+| median time | 9.6 ms | 7.5 ms | 10.2 ms |
+| total | **6.0 s** | 22.8 s | 12.4 s |
+
+Against master the default gains +23 traced (131 -> 154), +1 built, +1 closed and +1 predefined
+mixture closed. The headline is `traced`, not `built`: 23 mixtures that previously returned an
+empty envelope *and no error* now return points a caller can use, plus a reason they stopped.
+
+`built` deliberately keeps its old meaning -- a closed, interpolatable envelope -- and an open
+one does not set it. An earlier revision of this branch did set it, which would have let the
+envelope-guided flash fast paths steer off a boundary that stops short. Those paths gate on
+`built` without also checking `closed`, and seeding them from a partial boundary does not
+reliably fail (see the stalled-solver note above), so they would have returned a wrong answer
+instead of falling through to the blind solver. Leaving `built` false keeps every consumer
+behaving exactly as it does on master.
+
+The default and `lnK_density` now reach equally far and both produce thermodynamically valid
+points. `lnK_density` converges several orders tighter and disagrees with the flash on five fewer
+mixtures; the default is nearly four times faster overall and needs no new code path. Neither
+margin justifies moving a default that thousands of users depend on, so **the default stays**.
+`lnK_pressure` remains a documented negative result.
+
+### What to take from this
+
+The earlier sections' headline numbers should not be quoted. Two rounds of measurement said
+opposite things before the metric itself was checked against a definition rather than against
+another solver. The lasting output of this work is not a new tracer: it is the default tracer
+reaching 23 more mixtures, a store-time gate that makes an unconverged or non-finite point
+impossible to record, two latent bugs fixed (a non-terminating refinement loop and an unsigned
+underflow that read out of bounds on an empty envelope), and a corpus that grades envelopes on
+thermodynamics instead of on a second solver's opinion.

@@ -302,7 +302,14 @@ else
         # it closed is the flash surface this branch exists to cover.  Note this branch (like the SBTL one) carries no ~[slow]
         # exclusion, so 6 [slow]-tagged cases are in scope — but they came in
         # with [REFPROP] already, not with this widening.
-        TAG_FILTER="[Helmholtz],[REFPROP],[flash],[mixture]"
+        # [phase_envelope] is the isopleth-tracer umbrella (the fast [tracers]
+        # cases, the documented-example [docs] cases, and the [torture] corpus
+        # over every predefined mixture).  It is NOT reachable through any of
+        # the other tags here, so without it the gate builds those tests and
+        # runs none of them -- which is exactly how the corpus pins would rot
+        # unnoticed.  The [torture] case is [slow]-tagged and this branch
+        # carries no ~[slow] exclusion, so budget ~45 s for it.
+        TAG_FILTER="[Helmholtz],[REFPROP],[flash],[mixture],[phase_envelope]"
     elif printf '%s\n' "$ALL_PATHS" | grep -qE "^src/Backends/Cubics/"; then
         # Cubic backends touched.  [cubic] is the umbrella (every [cubic_*]
         # test now carries it too — Catch2 tags are exact-match, not prefix).

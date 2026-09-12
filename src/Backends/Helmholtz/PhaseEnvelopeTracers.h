@@ -163,7 +163,9 @@ class PhaseEnvelopeTracers
         [[nodiscard]] Eigen::VectorXd pack(const SaturationSolvers::newton_raphson_saturation_options& s0) const override;
 
        private:
-        double rho_inc_guess = -1, rho_feed_guess = -1;
+        // Mutable trace state: pack() is const but seeds these.  mutable rather than const_cast,
+        // which would be undefined behaviour if the object were ever genuinely const.
+        mutable double rho_inc_guess = -1, rho_feed_guess = -1;
     };
 
     /// Names accepted by PHASE_ENVELOPE_ALGORITHM, "legacy" first.

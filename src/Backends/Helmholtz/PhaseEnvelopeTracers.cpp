@@ -155,10 +155,9 @@ Eigen::VectorXd PhaseEnvelopeTracers::LnKPressureSystem::pack(const SaturationSo
     }
     X[static_cast<Eigen::Index>(N)] = std::log(s0.T);
     X[static_cast<Eigen::Index>(N + 1)] = std::log(s0.p);
-    // The density guesses are mutable trace state; pack is const, so seed them via a cast.
-    auto* self = const_cast<LnKPressureSystem*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-    self->rho_inc_guess = s0.rhomolar_liq;
-    self->rho_feed_guess = s0.rhomolar_vap;
+    // Density guesses are trace state, declared mutable, so a const pack() may seed them.
+    rho_inc_guess = s0.rhomolar_liq;
+    rho_feed_guess = s0.rhomolar_vap;
     return X;
 }
 
@@ -428,11 +427,33 @@ void PhaseEnvelopeTracers::run(HelmholtzEOSMixtureBackend& HEOS, IsoplethSystem&
     if (debug) {
         std::cout << format("PhaseEnvelopeTracers: started at p = %g Pa\n", p_start);
     }
+    // store_variables also derives K = y/x, ln K, ln T and ln p, so every value it takes a
+    // logarithm or a quotient of has to be positive, not merely finite.
+    auto storable = [](const TracedPoint& pt) -> bool {
+        if (!ValidNumber(pt.T) || !ValidNumber(pt.p) || pt.T <= 0 || pt.p <= 0) {
+            return false;
+        }
+        if (!ValidNumber(pt.rho_inc) || !ValidNumber(pt.rho_feed) || pt.rho_inc <= 0 || pt.rho_feed <= 0) {
+            return false;
+        }
+        if (!ValidNumber(pt.h_inc) || !ValidNumber(pt.h_feed) || !ValidNumber(pt.s_inc) || !ValidNumber(pt.s_feed)) {
+            return false;
+        }
+        for (double xi : pt.x_inc) {
+            if (!ValidNumber(xi) || xi <= 0) {
+                return false;
+            }
+        }
+        return true;
+    };
     auto store = [&](TracedPoint& pt) {
         env.store_variables(pt.T, pt.p, pt.rho_inc, pt.rho_feed, pt.h_inc, pt.h_feed, pt.s_inc, pt.s_feed, pt.x_inc, HEOS.get_mole_fractions_ref());
     };
     TracedPoint pt;
     sys.unpack(X, pt);
+    if (!storable(pt)) {
+        throw ValueError("PhaseEnvelopeTracers: the polished starting point is not storable (non-positive or non-finite value)");
+    }
     store(pt);
     sys.set_p_ref(pt.p);
     // The degeneracy limit is relative to the spread already present at the start: a wide-boiling
@@ -525,8 +546,8 @@ void PhaseEnvelopeTracers::run(HelmholtzEOSMixtureBackend& HEOS, IsoplethSystem&
                 const double allowed = std::max(2.0 * std::abs(dS) * dXdS.cwiseAbs().maxCoeff(), 1e-6);
                 const double maxlnK_new = X_new.head(static_cast<Eigen::Index>(N)).cwiseAbs().maxCoeff();
                 sys.unpack(X_new, pt_new);
-                if (!ValidNumber(pt_new.p) || pt_new.p <= 0 || !ValidNumber(pt_new.T)) {
-                    reject = "invalid pressure or temperature";
+                if (!storable(pt_new)) {
+                    reject = "point is not storable (non-positive or non-finite value)";
                 } else if (moved > allowed) {
                     reject = format("corrector moved %g, predictor step allows %g", moved, allowed);
                 } else if (!sys.is_lnK(ns) && maxlnK_new < 1e-8) {
