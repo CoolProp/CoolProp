@@ -177,9 +177,9 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
         CoolPropDbl factor = 1.05;
 
         for (;;) {
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto) pre-existing legacy flow control: the
-        // nested composition loop below needs to restart the outer step.  Left as-is deliberately:
-        // this is the DEFAULT tracer and restructuring it is out of scope for the tracer spike.
+        // Pre-existing legacy flow control: the nested composition loop below restarts the outer
+        // step via `goto top_of_loop`.  Left as-is deliberately -- this is the DEFAULT tracer and
+        // restructuring its control flow is out of scope for the tracer spike.
         top_of_loop:;  // A goto label so that nested loops can break out to the top of this loop
 
             if (failure_count > 5) {
@@ -235,6 +235,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
                         IO.rhomolar_vap /= factor;
                         factor = 1 + (factor - 1) / 2;
                         failure_count++;
+                        // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto)
                         goto top_of_loop;
                     }
                 }
@@ -405,10 +406,9 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
         double factor = pow(rhomolar_vap_end / rhomolar_vap_start, 1.0 / N);
 
         int failure_count = 0;
-        // Geometric density sweep (factor = (end/start)^(1/N)); ~N
-        // iterations, no FP accumulation issue worth converting.
-        // NOLINTNEXTLINE(cert-flp30-c,clang-analyzer-security.FloatLoopCounter) geometric density
-        // sweep over ~N steps; no FP accumulation issue worth converting, and this is the default tracer.
+        // Geometric density sweep (factor = (end/start)^(1/N)) over ~N steps; no FP accumulation
+        // issue worth converting, and this is the default tracer.
+        // NOLINTNEXTLINE(cert-flp30-c,clang-analyzer-security.FloatLoopCounter)
         for (double rhomolar_vap = rhomolar_vap_start * factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor) {
             IO.rhomolar_vap = rhomolar_vap;
             IO.x.resize(IO.y.size());
@@ -531,7 +531,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
         return;
     }
 
-    enum maxima_points : std::uint8_t
+    enum class maxima_points : std::uint8_t
     {
         PMAX_SAT = 0,
         TMAX_SAT = 1
@@ -555,11 +555,11 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
     // See method in Gernert.  We use our spline class to find the coefficients
     if (env.TypeI) {
         for (int imaxima = 0; imaxima <= 1; ++imaxima) {
-            maxima_points maxima;
-            if (imaxima == PMAX_SAT) {
-                maxima = PMAX_SAT;
-            } else if (imaxima == TMAX_SAT) {
-                maxima = TMAX_SAT;
+            maxima_points maxima = maxima_points::PMAX_SAT;
+            if (imaxima == static_cast<int>(maxima_points::PMAX_SAT)) {
+                maxima = maxima_points::PMAX_SAT;
+            } else if (imaxima == static_cast<int>(maxima_points::TMAX_SAT)) {
+                maxima = maxima_points::TMAX_SAT;
             } else {
                 throw ValueError("I don't understand your maxima index");
             }
@@ -572,7 +572,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
                 break;
             }
             SplineClass spline;
-            if (maxima == TMAX_SAT) {
+            if (maxima == maxima_points::TMAX_SAT) {
                 if (iTmax + 3 > nenv) {
                     iTmax = nenv - 3;
                 }
@@ -660,7 +660,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
                     }
                     IO.x[IO.x.size() - 1] = 1 - std::accumulate(IO.x.begin(), IO.x.end() - 1, 0.0);
                     NR.call(*HEOS, IO.y, IO.x, IO);
-                    if (maxima == TMAX_SAT) {
+                    if (maxima == maxima_points::TMAX_SAT) {
                         return NR.dTsat_dPsat;
                     } else {
                         return NR.dPsat_dTsat;
