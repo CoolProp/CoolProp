@@ -65,6 +65,17 @@ void require_on_boundary(HelmholtzEOSMixtureBackend& HEOS, SaturationSolvers::ne
             throw ValueError(format("Point is not on the phase boundary: |dln f| = %g for component %d", d, static_cast<int>(i)));
         }
     }
+    // Mechanical equilibrium is the other half of the definition; the fugacity loop above is only
+    // the chemical half.  Relative, since the absolute difference is meaningless at the sub-Pascal
+    // pressures a low-temperature tail reaches.  Measured worst on this path: 6.5e-6.
+    const double p_liq = liq.p(), p_vap = vap.p();
+    if (!ValidNumber(p_liq) || !ValidNumber(p_vap) || p_liq <= 0 || p_vap <= 0) {
+        throw ValueError("Non-positive phase pressure");
+    }
+    if (std::abs(p_liq / p_vap - 1) > 1e-3) {
+        throw ValueError(format("Phases are not in mechanical equilibrium: p' = %g, p'' = %g", p_liq, p_vap));
+    }
+
     // SatL/SatV now hold exactly the state being stored, so take the caloric properties from it.
     // IO's copies came from the solver's pre-final-step state -- the same staleness this function
     // exists to avoid -- so refreshing them keeps the stored h and s consistent with the stored
@@ -73,6 +84,11 @@ void require_on_boundary(HelmholtzEOSMixtureBackend& HEOS, SaturationSolvers::ne
     IO.hmolar_vap = vap.hmolar();
     IO.smolar_liq = liq.smolar();
     IO.smolar_vap = vap.smolar();
+    // ...and the pressure, for the same reason.  The solver leaves IO.p holding the mean of the
+    // two phase pressures from its PREVIOUS Jacobian build, which is what env.p then stores and
+    // what evaluate() and the flash fast paths interpolate.  Refreshing h and s but not p would
+    // leave the stored tuple internally inconsistent (measured up to 0.43 % apart).
+    IO.p = 0.5 * (liq.p() + vap.p());
 }
 
 /// Throw unless every value that would be stored for this point is finite.
@@ -508,17 +524,27 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
             // tracers do -- at a real low-pressure closure the incipient phase is dilute.
             const double closure_rho_ratio = std::max(IO.rhomolar_liq, IO.rhomolar_vap) / std::max(std::min(IO.rhomolar_liq, IO.rhomolar_vap), 1e-30);
             // The bar is "the phases are still clearly distinct", i.e. not a collapse onto a
-            // degenerate root where the densities merge (ratio -> 1).  It has to stay well below
-            // the ratio at a genuine closure, which shrinks as the start pressure rises: after
-            // four decades of retry a real dew point can sit near a ratio of 25, so a threshold
-            // like 100 would reject exactly the closures the start retry newly rescued.
-            const bool pressure_closed = IO.p < env.p[0] && closure_rho_ratio > 3;
+            // degenerate root where the densities merge (ratio -> 1).  Measured over the corpus,
+            // 3, 100 and 1e4 give bit-identical tallies and 1e9 breaks 22 closures, so every
+            // genuine closure here has a ratio above 1e4 and nothing is bought by being lenient.
+            // 100 matches the continuation tracers and leaves two decades of margin.
+            const bool pressure_closed = IO.p < env.p[0] && closure_rho_ratio > 100;
             if (iter > 4 && (pressure_closed || std::abs(1.0 - max_fraction) < 1e-9)) {
+                if (!pressure_closed) {
+                    // A phase went numerically pure: the trace ended, but it did not come back
+                    // round, so this is an OPEN envelope and must be finished the same way every
+                    // other non-closure is -- `built` stays false, the minimum-length rule
+                    // applies, and the reason is recorded.  This branch used to set built = true
+                    // with closed = false, which is precisely the state that can steer the
+                    // envelope-guided flash fast paths (they gate on `built` alone) off an
+                    // incomplete boundary; it did so on a 5-point Neon/Argon envelope and on a
+                    // Methane/Hydrogen one that disagrees with a blind flash by ~100 %.
+                    finish_partial(HEOS, level, "pure", "a phase became numerically pure");
+                    return;
+                }
                 env.built = true;
-                env.closed = pressure_closed;
-                PhaseEnvelopeTracers::set_last_stop(env.closed ? "closed" : "pure",
-                                                    env.closed ? "pressure fell below the starting pressure with the phases still distinct"
-                                                               : "a phase became numerically pure");
+                env.closed = true;
+                PhaseEnvelopeTracers::set_last_stop("closed", "pressure fell below the starting pressure with the phases still distinct");
                 if (debug) {
                     std::cout << format("envelope built.\n");
                     std::cout << format("closest fraction to 1.0: distance %g\n", 1 - max_fraction);

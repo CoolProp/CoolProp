@@ -388,10 +388,9 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
 
     if (const char* csv = std::getenv("COOLPROP_PHASE_ENVELOPE_TORTURE_CSV")) {
         std::ofstream f(csv);
-        if (!f) {
-            std::cout << "could not open " << csv << " for writing\n";
-            return;
-        }
+        // NB: report and carry on.  An early return here would skip every assertion below, so a
+        // bad path in COOLPROP_PHASE_ENVELOPE_TORTURE_CSV would turn the whole gate green.
+        CHECK(static_cast<bool>(f));
         f << "label,algorithm,predefined,constructed,built,closed,stop,n,icrit,seconds,pmax_Pa,Tmin_K,Tmax_K,dev,dev_samples,dev_failures,fug,fug_"
              "samples,error\n";
         for (const auto& r : rows) {
@@ -402,7 +401,10 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
               << r.stop << ',' << r.n << ',' << r.icrit << ',' << r.seconds << ',' << r.pmax << ',' << r.Tmin << ',' << r.Tmax << ',' << r.dev << ','
               << r.dev_samples << ',' << r.dev_failures << ',' << r.fug << ',' << r.fug_samples << ",\"" << err << "\"\n";
         }
-        f.flush();
+        if (f) {
+            f.flush();
+        }
+        CHECK(static_cast<bool>(f));
         std::cout << (f ? "wrote " : "FAILED to write ") << csv << '\n';
     }
 
@@ -423,17 +425,31 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
     CHECK(legacy.predefined_closed >= 107);
     // Quality pins measured 2026-09-11.  Closure alone is not enough: a false closure is a
     // silently wrong envelope, which is worse than an honest failure, so it is bounded too.
-    // `built` keeps its old meaning (a closed, interpolatable envelope), so it barely moves;
-    // the reach improvement shows up in `traced`, which is 154 here against 131 on master.
-    CHECK(legacy.built >= 134);
+    // `built` now means exactly "closed", which is STRICTER than master's meaning (master also
+    // set it on the pure-component stop), so it is not comparable to master's 133.  Reach is
+    // measured by `traced`: 153 here against 131 on master.
+    CHECK(legacy.built >= 131);
     CHECK(legacy.closed >= 131);
-    CHECK(legacy.traced >= 154);
+    // Reach floors.  These are what stop an algorithm that regressed to producing nothing from
+    // passing: every per-row check below is vacuously true for an empty envelope, and
+    // `constructed` is set before the build runs so it cannot serve the purpose either.
+    CHECK(legacy.traced >= 153);
     CHECK(tally["lnK_density"].traced >= 150);
     CHECK(tally["lnK_pressure"].traced >= 145);
     for (auto& kv : tally) {
         CAPTURE(kv.first);
         CHECK(kv.second.closed_unverified == 0);
         CHECK(kv.second.closed_unmeasured == 0);
+    }
+
+    // `built` must mean "closed" for EVERY algorithm, the default included.  An envelope marked
+    // built but not closed steers the two envelope-guided flash fast paths that gate on `built`
+    // alone, off a boundary that stops short.  The default's pure-component stop used to do
+    // exactly that -- on a 5-point Neon/Argon envelope among others -- so this is asserted
+    // per row rather than trusted.
+    for (const auto& r : rows) {
+        CAPTURE(r.label, r.algorithm, r.stop, r.n);
+        CHECK((!r.built || r.closed));
     }
 
     // Correctness gate.  Equality of component fugacities is the definition of a phase-boundary
@@ -460,9 +476,7 @@ TEST_CASE("Phase envelope torture corpus: all predefined mixtures and hard cases
     CHECK(legacy.false_closure <= 26);
     CHECK(tally["lnK_density"].closed_consistent >= 110);
     CHECK(tally["lnK_density"].false_closure <= 21);
-    // Floors for every algorithm, so a candidate that regressed to producing nothing at all
-    // cannot pass: the per-row checks below are all vacuously true for an empty envelope.
-    // `built` now means "closed" for every algorithm, so reach is floored through `traced`.
+
     CHECK(tally["lnK_density"].closed >= 125);
     CHECK(tally["lnK_pressure"].constructed >= 157);
     // Every algorithm: finite stored values, CoolProp exceptions only, bounded point count.

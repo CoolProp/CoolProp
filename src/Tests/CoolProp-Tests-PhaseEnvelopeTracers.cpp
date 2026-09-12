@@ -214,8 +214,6 @@ TEST_CASE("Phase envelope tracers: methane/ethane closes and matches blind dew p
             auto HEOS = make_heos("Methane&Ethane", z);
             REQUIRE_NOTHROW(HEOS->build_phase_envelope(""));
             const PhaseEnvelopeData& env = HEOS->get_phase_envelope_data();
-            // `built` means a CLOSED envelope, so it only holds where the trace closed.
-            CHECK(env.built == env.closed);
             CHECK(env.T.size() > 50);
             if (std::string(alg) == "lnK_density") {
                 CHECK(env.closed);

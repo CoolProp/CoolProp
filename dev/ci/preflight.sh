@@ -350,11 +350,14 @@ else
     # test files themselves as well: editing a pinned count is exactly what a regression in this
     # area looks like, and that alone would otherwise fall through to "~[slow]", which excludes
     # [torture].  Cost is ~45 s for the torture case.
-    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/Backends/Helmholtz/|src/Tests/CoolProp-Tests-PhaseEnvelope.*\.cpp|include/CoolProp/fluids/PhaseEnvelope\.h)"; then
-        case "$TAG_FILTER" in
-            "~[slow]") TAG_FILTER="${TAG_FILTER},[phase_envelope]" ;;  # ~[slow] would skip [torture]
-            *) TAG_FILTER="${TAG_FILTER},[phase_envelope]" ;;
-        esac
+    # Paths, and why each one is here: the backend that traces envelopes; the envelope tests
+    # themselves (editing a pinned count is exactly what a regression here looks like); the data
+    # structure they fill; the cubic backends, since the docs test builds an SRK envelope; the
+    # fluid and mixture data the corpus enumerates and pins counts against; and the docs the
+    # docs test transcribes.  Appended unconditionally -- Catch2 comma-ORs, so adding it to
+    # "~[slow]" is what pulls the [slow]-tagged [torture] case back in.
+    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/Backends/Helmholtz/|src/Backends/Cubics/|src/Tests/CoolProp-Tests-PhaseEnvelope.*\.cpp|include/CoolProp/fluids/PhaseEnvelope\.h|dev/fluids/|dev/mixtures/|Web/)"; then
+        TAG_FILTER="${TAG_FILTER},[phase_envelope]"
     fi
     echo "  tag filter: $TAG_FILTER"
     # Gate on the runner's EXIT CODE, not on grepping its output.  The old

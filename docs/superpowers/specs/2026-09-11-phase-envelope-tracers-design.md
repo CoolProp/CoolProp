@@ -651,15 +651,20 @@ deliberate visible differences:
 - `build_phase_envelope` retries the start pressure by decades before giving up.
 - A feed composition containing an exact zero is rejected rather than producing an envelope with
   `ln K = -inf`. Omit the component instead.
-- Closure additionally requires the two phase densities to differ by more than a factor of three,
-  so a collapse onto a degenerate root no longer counts as closed.
+- Closure additionally requires the two phase densities to differ by more than a factor of 100,
+  so a collapse onto a degenerate root no longer counts as closed.  Measured over the corpus, 3,
+  100 and 1e4 give identical tallies and 1e9 breaks 22 closures, so every genuine closure here
+  clears the bar by two decades.
+- The pure-component stop no longer sets `built`.  It ends an OPEN envelope, so it now follows the
+  same rule as every other non-closure: the traced points are kept, the reason is recorded, and a
+  trace shorter than 20 points throws rather than being handed out.
 
 ### Where that leaves the comparison
 
 | | default | lnK_density | lnK_pressure |
 |---|---|---|---|
-| traced (>= 20 usable points) | **154** | 155 | 151 |
-| built (a closed, interpolatable envelope) | 134 | 131 | 1 |
+| traced (>= 20 usable points) | **153** | 155 | 151 |
+| built (a closed, interpolatable envelope) | 131 | 131 | 1 |
 | closed | **131** | 131 | 1 |
 | worst fugacity residual | 8.4e-4 | 9.3e-10 | 9.9e-10 |
 | disagrees with a blind flash | 22 | 17 | 1 |
