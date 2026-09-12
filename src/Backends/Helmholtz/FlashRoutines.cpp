@@ -21,6 +21,27 @@
 
 namespace CoolProp {
 
+namespace {
+
+/// Record that a mixture flash fell back from its preferred solver to a less accurate one.
+///
+/// These fallbacks are deliberately fail-open -- PQ/QT must not start throwing where they
+/// previously returned an answer -- but a fallback that leaves no trace is indistinguishable
+/// from success to every caller and to CI.  The envelope-guided path was measured falling back
+/// on 42% of interior-Q states on a two-component mixture with nobody able to observe it
+/// (GH #3372).  Route every such fallback through here so it is at least visible via
+/// get_global_param_string("warnstring").
+void record_flash_fallback(const char* attempted, const char* fallback, const char* why) {
+    set_warning_string(format("%s failed (%s); fell back to %s", attempted, why, fallback));
+}
+
+/// Below this distance from Q = 0 or Q = 1 a mixture VLE state is treated as a bubble- or
+/// dew-point rather than an interior two-phase state, and solved with the (cheaper, and there
+/// exact) saturation solver.  Matches the gate in PQ_flash_with_guesses / QT_flash_with_guesses.
+const double Q_saturation_tol = 1e-10;
+
+}  // namespace
+
 void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
     // Only use the phase envelope to classify the (T, p) point when the caller has
     // NOT imposed a single homogeneous phase.  A user who called specify_phase(iphase_gas
@@ -1045,10 +1066,16 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
             try {
                 PT_Q_flash_mixtures(HEOS, iT, HEOS._T);
                 solved_with_envelope = true;
+            } catch (const std::exception& e) {
+                HEOS._T = T_in;
+                HEOS._p = p_in;
+                solved_with_envelope = false;  // fall back to the blind solver below
+                record_flash_fallback("envelope-guided QT flash", "the blind solver", e.what());
             } catch (...) {
                 HEOS._T = T_in;
                 HEOS._p = p_in;
                 solved_with_envelope = false;  // fall back to the blind solver below
+                record_flash_fallback("envelope-guided QT flash", "the blind solver", "unknown exception");
             }
         }
         if (!solved_with_envelope) {
@@ -1070,33 +1097,63 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
             // Newton-Raphson
             // -----
 
-            SaturationSolvers::newton_raphson_saturation NR;
-            SaturationSolvers::newton_raphson_saturation_options IO;
-
-            IO.bubble_point = (HEOS._Q < 0.5);
-
-            IO.x = options.x;
-            IO.y = options.y;
-            IO.rhomolar_liq = options.rhomolar_liq;
-            IO.rhomolar_vap = options.rhomolar_vap;
-            IO.T = options.T;
-            IO.p = options.p;
-            IO.Nstep_max = 30;
-
-            IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::T_IMPOSED;
-
-            if (IO.bubble_point) {
-                // Compositions are z, z_incipient
-                NR.call(HEOS, IO.x, IO.y, IO);
-            } else {
-                // Compositions are z, z_incipient
-                NR.call(HEOS, IO.y, IO.x, IO);
+            // Interior Q goes to the two-phase solver; Q ~ 0 and Q ~ 1 stay on the bubble/dew
+            // solver, which is exact there and cheaper.  See the matching block in PQ_flash for
+            // why the saturation solver cannot answer an interior-Q question (GH #3372).
+            const bool interior_Q = (HEOS._Q > Q_saturation_tol) && (HEOS._Q < 1 - Q_saturation_tol);
+            bool solved_twophase = false;
+            if (interior_Q) {
+                SaturationSolvers::newton_raphson_twophase NR2;
+                SaturationSolvers::newton_raphson_twophase_options IO2;
+                IO2.beta = HEOS._Q;
+                IO2.x = options.x;
+                IO2.y = options.y;
+                IO2.rhomolar_liq = options.rhomolar_liq;
+                IO2.rhomolar_vap = options.rhomolar_vap;
+                IO2.T = options.T;
+                IO2.p = options.p;
+                IO2.z = HEOS.mole_fractions;
+                IO2.Nstep_max = 30;
+                IO2.imposed_variable = SaturationSolvers::newton_raphson_twophase_options::T_IMPOSED;
+                try {
+                    NR2.call(HEOS, IO2);
+                    solved_twophase = true;
+                } catch (const std::exception& e) {
+                    record_flash_fallback("two-phase QT solve", "the bubble/dew solver (no mass balance)", e.what());
+                } catch (...) {
+                    record_flash_fallback("two-phase QT solve", "the bubble/dew solver (no mass balance)", "unknown exception");
+                }
             }
 
-            HEOS._p = IO.p;
-            HEOS._rhomolar = 1 / (HEOS._Q / IO.rhomolar_vap + (1 - HEOS._Q) / IO.rhomolar_liq);
+            if (!solved_twophase) {
+                SaturationSolvers::newton_raphson_saturation NR;
+                SaturationSolvers::newton_raphson_saturation_options IO;
+
+                IO.bubble_point = (HEOS._Q < 0.5);
+
+                IO.x = options.x;
+                IO.y = options.y;
+                IO.rhomolar_liq = options.rhomolar_liq;
+                IO.rhomolar_vap = options.rhomolar_vap;
+                IO.T = options.T;
+                IO.p = options.p;
+                IO.Nstep_max = 30;
+
+                IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::T_IMPOSED;
+
+                if (IO.bubble_point) {
+                    // Compositions are z, z_incipient
+                    NR.call(HEOS, IO.x, IO.y, IO);
+                } else {
+                    // Compositions are z, z_incipient
+                    NR.call(HEOS, IO.y, IO.x, IO);
+                }
+            }
         }
-        // Load the outputs
+        // Load the outputs.  (An assignment of _p / _rhomolar from the saturation solver's IO
+        // used to sit here; it was a dead store -- both are overwritten from SatL/SatV
+        // immediately below on every path -- and it referenced a solver-specific local that no
+        // longer spans both branches.)
         HEOS._phase = iphase_twophase;
         HEOS._p = HEOS.SatV->p();
         HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
@@ -1332,10 +1389,16 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
             try {
                 PT_Q_flash_mixtures(HEOS, iP, HEOS._p);
                 solved_with_envelope = true;
+            } catch (const std::exception& e) {
+                HEOS._T = T_in;
+                HEOS._p = p_in;
+                solved_with_envelope = false;  // fall back to the blind solver below
+                record_flash_fallback("envelope-guided PQ flash", "the blind solver", e.what());
             } catch (...) {
                 HEOS._T = T_in;
                 HEOS._p = p_in;
                 solved_with_envelope = false;  // fall back to the blind solver below
+                record_flash_fallback("envelope-guided PQ flash", "the blind solver", "unknown exception");
             }
         }
         if (!solved_with_envelope) {
@@ -1391,25 +1454,59 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
             // Newton-Raphson
             // -----
 
-            SaturationSolvers::newton_raphson_saturation NR;
-            SaturationSolvers::newton_raphson_saturation_options IO;
+            // For an interior quality, prefer the two-phase solver.  newton_raphson_saturation
+            // is a bubble/dew-point solver: its residual is the N equal-fugacity conditions plus
+            // one specification, and its unknowns are the INCIPIENT phase's composition and
+            // T (or p).  It carries no overall mass-balance condition, so the other phase stays
+            // pinned to whatever successive substitution produced and z = (1-Q)x + Qy is never
+            // enforced.  It is exact at Q = 0 and Q = 1, where the incipient phase is the whole
+            // answer, and only there (GH #3372).
+            const bool interior_Q = (HEOS._Q > Q_saturation_tol) && (HEOS._Q < 1 - Q_saturation_tol);
+            bool solved_twophase = false;
+            if (interior_Q) {
+                SaturationSolvers::newton_raphson_twophase NR2;
+                SaturationSolvers::newton_raphson_twophase_options IO2;
+                IO2.beta = HEOS._Q;
+                IO2.x = io.x;
+                IO2.y = io.y;
+                IO2.rhomolar_liq = io.rhomolar_liq;
+                IO2.rhomolar_vap = io.rhomolar_vap;
+                IO2.T = io.T;
+                IO2.p = io.p;
+                IO2.z = HEOS.mole_fractions;
+                IO2.Nstep_max = 30;
+                IO2.imposed_variable = SaturationSolvers::newton_raphson_twophase_options::P_IMPOSED;
+                try {
+                    NR2.call(HEOS, IO2);
+                    solved_twophase = true;
+                } catch (const std::exception& e) {
+                    record_flash_fallback("two-phase PQ solve", "the bubble/dew solver (no mass balance)", e.what());
+                } catch (...) {
+                    record_flash_fallback("two-phase PQ solve", "the bubble/dew solver (no mass balance)", "unknown exception");
+                }
+            }
 
-            IO.bubble_point = (HEOS._Q < 0.5);
-            IO.x = io.x;
-            IO.y = io.y;
-            IO.rhomolar_liq = io.rhomolar_liq;
-            IO.rhomolar_vap = io.rhomolar_vap;
-            IO.T = io.T;
-            IO.p = io.p;
-            IO.Nstep_max = 30;
-            IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
+            if (!solved_twophase) {
+                SaturationSolvers::newton_raphson_saturation NR;
+                SaturationSolvers::newton_raphson_saturation_options IO;
 
-            if (IO.bubble_point) {
-                // Compositions are z, z_incipient
-                NR.call(HEOS, IO.x, IO.y, IO);
-            } else {
-                // Compositions are z, z_incipient
-                NR.call(HEOS, IO.y, IO.x, IO);
+                IO.bubble_point = (HEOS._Q < 0.5);
+                IO.x = io.x;
+                IO.y = io.y;
+                IO.rhomolar_liq = io.rhomolar_liq;
+                IO.rhomolar_vap = io.rhomolar_vap;
+                IO.T = io.T;
+                IO.p = io.p;
+                IO.Nstep_max = 30;
+                IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
+
+                if (IO.bubble_point) {
+                    // Compositions are z, z_incipient
+                    NR.call(HEOS, IO.x, IO.y, IO);
+                } else {
+                    // Compositions are z, z_incipient
+                    NR.call(HEOS, IO.y, IO.x, IO);
+                }
             }
         }
 

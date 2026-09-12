@@ -7708,7 +7708,15 @@ TEST_CASE("mole_fractions_liquid/vapor reject single-phase states (#2308)", "[mo
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
     AS->set_mole_fractions({0.10, 0.34, 0.41, 0.15});
 
-    // Build the phase envelope so SatL/SatV pick up some non-trivial state
+    // Build the phase envelope so SatL/SatV pick up some non-trivial state.
+    //
+    // NOTE: for this mixture build_phase_envelope() returns without throwing but leaves
+    // built == 0, so the PQ flash below runs on the BLIND branch.  That is fine here — this
+    // test is about the mole_fractions_liquid/vapor accessors, not about the envelope — but it
+    // means this cannot be counted as envelope-branch coverage, which is what it looks like at
+    // a glance.  Envelope-branch coverage lives in CoolProp-Tests-Michelsen.cpp, guarded by
+    // REQUIRE(get_phase_envelope_data().built) so it cannot silently degrade the same way
+    // (GH #3372).
     AS->build_phase_envelope("");
 
     // Single-phase point: T well above the dew curve at 1.5 bar
