@@ -1,0 +1,174 @@
+// Regression tests for two silent wrong answers from the mixture flash routines.
+//
+// Runs in the default suite (tag [mixsat], NOT [.]-hidden).  Run explicitly:
+//   ./CatchTestRunner "[mixsat]"
+//
+// Both were found while building the isoline tracer for the Python plotting
+// package (GH #3344, discussion #3269), where they surfaced as excursions and
+// gaps in mixture property plots.  Neither raised an error at the time: each
+// returned a plausible-looking state that was simply not the one asked for.
+//
+//  GH #3346 / bd CoolProp-mojf -- QT_flash and PQ_flash could converge on the
+//      trivial solution near the critical point of a mixture, returning a state
+//      whose saturated liquid and vapour are the same root.  Successive
+//      substitution and the Newton-Raphson saturation solver both satisfy their
+//      residual when every K-value reaches unity, and near the critical point
+//      that is where they land.
+//
+//  bd CoolProp-1gth -- DHSU_T_flash excluded density from its own
+//      "did this converge to what was asked for" check, on the reasoning that
+//      D+T is a direct evaluation.  True of the fast path, but the P-sweep
+//      fallback solves rho(P) = value through PT flashes and can settle on a
+//      different density entirely.
+
+#if defined(ENABLE_CATCH)
+
+#    include <catch2/catch_all.hpp>
+#    include <catch2/catch_approx.hpp>
+#    include <catch2/matchers/catch_matchers_string.hpp>
+
+#    include "AbstractState.h"
+#    include "CoolProp.h"
+
+#    include <cmath>
+#    include <memory>
+#    include <string>
+
+using namespace CoolProp;
+
+TEST_CASE("QT_flash does not return the trivial solution for a mixture", "[mixsat]") {
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "R513A.mix"));
+
+    SECTION("a genuine two-phase point is unaffected") {
+        // 364.05 K is comfortably below the critical region: the two phases are
+        // separated by a factor of about 2.6 in density.
+        REQUIRE_NOTHROW(AS->update(QT_INPUTS, 0.5, 364.0501));
+        const double rho_liq = AS->saturated_liquid_keyed_output(iDmolar);
+        const double rho_vap = AS->saturated_vapor_keyed_output(iDmolar);
+        CHECK(rho_liq > rho_vap * 1.5);
+        CHECK(AS->smass() == Catch::Approx(1581.676).epsilon(1e-4));
+    }
+
+    SECTION("a collapsed pair is reported rather than returned") {
+        // At these temperatures the solver used to return rho_liq == rho_vap to
+        // seven digits, which put the Q=0.5 line 93 J/kg/K out of place.  The
+        // message is asserted, not merely the throw: without it this section
+        // would pass on any exception at all -- including one that had nothing
+        // to do with the trivial solution -- and it would pass just as happily
+        // if someone made the flash throw unconditionally for mixtures.
+        for (double T : {367.4330, 368.0}) {
+            CAPTURE(T);
+            REQUIRE_THROWS_WITH(AS->update(QT_INPUTS, 0.5, T), Catch::Matchers::ContainsSubstring("trivial solution"));
+        }
+    }
+}
+
+TEST_CASE("DmassT_INPUTS returns the density it was given for a mixture", "[mixsat]") {
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "R513A.mix"));
+    const double T = 288.853439;
+
+    // These four round trip and must keep doing so.
+    for (double rho : {1190.0, 1195.0, 1210.0, 1250.0}) {
+        CAPTURE(rho);
+        REQUIRE_NOTHROW(AS->update(DmassT_INPUTS, rho, T));
+        CHECK(AS->rhomass() == Catch::Approx(rho).epsilon(1e-9));
+        CHECK(AS->hmass() > 0.0);
+        CHECK(AS->hmass() < 1e6);
+    }
+
+    // 1198.85 and 1200.0 used to come back as 617.6 and 1256.6 kg/m3, the first
+    // of them with h = -1.02e7 J/kg, while their neighbours round tripped
+    // exactly.  Refusing them is acceptable -- answering wrongly is not -- so
+    // assert the disjunction explicitly rather than skipping the check when the
+    // call throws, which would let a tolerance regression pass unnoticed.
+    for (double rho : {1198.85, 1200.0}) {
+        CAPTURE(rho);
+        bool threw = false;
+        try {
+            AS->update(DmassT_INPUTS, rho, T);
+        } catch (const std::exception&) {
+            threw = true;
+        }
+        CHECK((threw || AS->rhomass() == Catch::Approx(rho).epsilon(1e-9)));
+        if (!threw) {
+            CHECK(AS->hmass() > 0.0);
+            CHECK(AS->hmass() < 1e6);
+        }
+    }
+}
+
+TEST_CASE("DmassT still answers inside the dome of a narrow-boiling mixture", "[mixsat]") {
+    // The convergence check applies a relative tolerance to a density the
+    // P-sweep obtained by solving rho(P) through PT flashes.  Inside a narrow
+    // dome drho/dP is enormous -- R502.mix spans bubble to dew in about 1e-10 Pa
+    // at 213 K -- so TOMS748 converging P to 40 bits still leaves ~1e-5 relative
+    // in rho.  That is the conditioning of the parameterisation, not a failure
+    // to solve, and a tolerance tight enough for H/S/U reads it as one: at 1e-6
+    // every density below threw, including all six of these.
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "R502.mix"));
+    const double T = 213.2394;
+    for (double rho : {537.960, 1225.640, 1378.458, 1454.867, 1500.712, 1523.635}) {
+        CAPTURE(rho);
+        REQUIRE_NOTHROW(AS->update(DmassT_INPUTS, rho, T));
+        CHECK(AS->rhomass() == Catch::Approx(rho).epsilon(1e-4));
+    }
+}
+
+TEST_CASE("DmassT never answers with a density far from the one requested", "[mixsat]") {
+    // The complement of the test above: loosening the tolerance must not let a
+    // genuinely wrong state through.  Sweeping the R502 dome at 195 K, about
+    // half the points cannot be placed at all and throw -- that is the flash's
+    // own limitation and is acceptable -- but every point it *does* answer has
+    // to carry the density it was given.
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "R502.mix"));
+    std::shared_ptr<AbstractState> sat(AbstractState::factory("HEOS", "R502.mix"));
+    const double T = 195.47;
+    sat->update(QT_INPUTS, 0.0, T);
+    const double rho_liq = sat->rhomass();
+    sat->update(QT_INPUTS, 1.0, T);
+    const double rho_vap = sat->rhomass();
+    REQUIRE(rho_liq > rho_vap * 10);
+
+    int answered = 0;
+    for (int i = 1; i < 24; ++i) {
+        const double rho = rho_vap + (rho_liq - rho_vap) * i / 24.0;
+        CAPTURE(rho);
+        try {
+            AS->update(DmassT_INPUTS, rho, T);
+        } catch (const std::exception&) {
+            continue;  // cannot place this point; refusing is the honest answer
+        }
+        ++answered;
+        CHECK(AS->rhomass() == Catch::Approx(rho).epsilon(1e-4));
+    }
+    CAPTURE(answered);
+    CHECK(answered > 4);  // it must not have simply rejected everything
+}
+
+TEST_CASE("the trivial-solution guard does not disturb phase envelope tracing", "[mixsat]") {
+    // The guard sits at the QT/PQ flash boundary rather than inside the
+    // saturation solvers precisely because PhaseEnvelopeRoutines drives those
+    // same solvers up to and through the critical point, where the two phases
+    // collapsing together is the answer it is looking for.  If that reasoning
+    // were wrong, envelope construction would be the first thing to break.
+    for (std::string fluid :
+         {"R513A.mix", "R410A.mix", "R404A.mix", "R407C.mix", "Air.mix", "R454B.mix", "R448A.mix", "R441A.mix", "R504.mix", "R507A.mix"}) {
+        CAPTURE(fluid);
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", fluid));
+        REQUIRE_NOTHROW(AS->build_phase_envelope("none"));
+        CHECK(AS->get_phase_envelope_data().T.size() > 10);
+    }
+}
+
+TEST_CASE("imposing the phase still gives the correct compressed liquid", "[mixsat]") {
+    // The EOS always had the right answer; the defect was in the free path's
+    // phase determination.  This pins the reference the fix is measured against.
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "R513A.mix"));
+    AS->specify_phase(iphase_liquid);
+    AS->update(DmassT_INPUTS, 1198.85, 288.853439);
+    CHECK(AS->rhomass() == Catch::Approx(1198.85).epsilon(1e-9));
+    CHECK(AS->p() == Catch::Approx(6.4474e6).epsilon(1e-3));
+    CHECK(AS->hmass() == Catch::Approx(224455.0).epsilon(1e-3));
+}
+
+#endif
