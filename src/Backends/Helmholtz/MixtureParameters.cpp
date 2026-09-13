@@ -555,7 +555,7 @@ DepartureFunction* get_departure_function(const std::string& Name) {
 }
 void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend& HEOS) {
 
-    std::vector<CoolPropFluid> components = HEOS.get_components();
+    std::vector<CoolPropFluid> components = static_cast<const HelmholtzEOSMixtureBackend&>(HEOS).get_components();
 
     std::size_t N = components.size();
 

@@ -1088,6 +1088,14 @@ TEST_CASE("GERG mixture linked saturation states are GERG-typed", "[GERG]") {
     std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", std::vector<std::string>{"methane", "ethane"}));
     auto* gerg = dynamic_cast<GERGMixtureBackend*>(AS.get());
     REQUIRE(gerg != nullptr);
+    SECTION("fresh construction") {}
+    SECTION("components borrowed from the liquid helper") {
+        // Do not retain shared ownership: replacement destroys the old helper.
+        static_cast<HelmholtzEOSMixtureBackend&>(*gerg).set_components(gerg->get_SatL().get_components());
+    }
+    SECTION("components borrowed from the vapor helper") {
+        static_cast<HelmholtzEOSMixtureBackend&>(*gerg).set_components(gerg->get_SatV().get_components());
+    }
     CHECK(gerg->backend_name() == "GERG2008Backend");
     CHECK(gerg->get_SatL().backend_name() == "GERG2008Backend");
     CHECK(gerg->get_SatV().backend_name() == "GERG2008Backend");
