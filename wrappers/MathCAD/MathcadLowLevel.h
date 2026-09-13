@@ -39,13 +39,18 @@
 // (AbstractState) wrapper function below to call into CoolPropLib.h.
 constexpr long AS_ERR_BUFFER_LEN = 500;
 
-// Generous upper bound on mixture component count, used only to size the
-// (unused, discarded) per-component composition buffers
-// AbstractState_get_phase_envelope_data_checkedMemory() requires even though
-// AS_get_phase_envelope_data() doesn't surface x/y itself -- see that
-// function's comment for why this can't just be learned from a probe call
-// the way the point count can.
-constexpr long AS_MAX_PE_COMPONENTS = 64;
+// Generous upper bound on mixture component count. Two uses:
+//  - sizing the (unused, discarded) per-component composition buffers
+//    AbstractState_get_phase_envelope_data_checkedMemory() requires even
+//    though AS_get_phase_envelope_data() doesn't surface x/y itself -- see
+//    that function's comment for why this can't just be learned from a
+//    probe call the way the point count can.
+//  - sizing the fixed-size output buffer AS_mole_fractions_liquid()/
+//    AS_mole_fractions_vapor() pass to
+//    AbstractState_get_mole_fractions_satState() -- component counts are
+//    always small enough that a single generously-sized call is simpler
+//    than a probe-then-fetch dance for these.
+constexpr long AS_MAX_COMPONENTS = 64;
 
 // Helper: round a Mathcad complex scalar's real part to the nearest integer
 // and return it as a long.  Used both for AbstractState handles and for the
@@ -250,6 +255,124 @@ static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,   // output: Handl
     return 0;
 }
 
+// Helper: molar mass (kg/mol) of each fluid in `handle`'s mixture, in the
+// same order AbstractState_fluid_names() lists them -- shared by
+// CP_AS_mole_to_mass_fractions()/CP_AS_mass_to_mole_fractions() below.
+//
+// Deliberately avoids adding any new CoolPropLib.h export: per-component
+// molar mass isn't exposed through the handle itself, but each component's
+// NAME is (AbstractState_fluid_names(), already used by CP_AS_set_fractions
+// above), and CoolProp::Props1SI() -- a plain, handle-independent,
+// name-based lookup already used by CP_Props1SI() elsewhere in this file --
+// resolves "molar_mass" for any of them directly. No new shared C API
+// surface needed for what is, underneath, the same computation
+// AbstractState::calc_mass_fractions() already does in the C++ API (mass_i
+// = mm_i * x_i / sum(mm_j * x_j)) -- just re-derived here from
+// already-exposed building blocks instead of wrapping that C++-only method.
+static LRESULT GetComponentMolarMasses(long handle, std::vector<double>* molarMasses, unsigned int position) {
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN];
+    char namesBuf[AS_ERR_BUFFER_LEN];
+    AbstractState_fluid_names(handle, namesBuf, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (errcode) return TranslateASError(msg, position);
+
+    const std::string delimiter = CoolProp::get_config_string(LIST_STRING_DELIMITER);
+    const std::string namesStr(namesBuf);
+    const std::vector<std::string> names =
+      (namesStr.find(delimiter) == std::string::npos) ? std::vector<std::string>{namesStr} : strsplit(namesStr, delimiter[0]);
+
+    molarMasses->clear();
+    molarMasses->reserve(names.size());
+    for (const auto& name : names) {
+        double mm = CoolProp::Props1SI(name, "molar_mass");
+        if (!ValidNumber(mm)) {
+            std::string emsg = CoolProp::get_global_param_string("errstring");
+            CoolProp::set_error_string(emsg);
+            return MAKELRESULT(LOWLEVEL_ERROR, position);
+        }
+        molarMasses->push_back(mm);
+    }
+    return 0;
+}
+
+// This code executes the user function CP_AS_mole_to_mass_fractions, which
+// converts an arbitrary mole-fraction composition to the equivalent mass
+// fractions for `handle`'s mixture (component identities and molar masses
+// come from the handle; the fractions to convert are a separate argument,
+// not whatever happens to already be set on the handle -- so this is usable
+// as a preprocessing step before AS_set_fractions, not just as a read-back).
+// Self-normalizing: divides by the actual weighted sum rather than assuming
+// MoleFractions already sums to 1, so a not-quite-normalized input still
+// produces a correctly-normalized result.
+static LRESULT CP_AS_mole_to_mass_fractions(LPCOMPLEXARRAY MassFractions,  // output: column vector of mass fractions
+                                            LPCCOMPLEXSCALAR Handle,      // AbstractState handle from AS_factory (for component identities)
+                                            LPCCOMPLEXARRAY MoleFractions)  // column vector of mole fractions to convert
+{
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+    r = CheckRealArrayOrError(MoleFractions, 2);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    std::vector<double> molarMasses;
+    r = GetComponentMolarMasses(handle, &molarMasses, 1);
+    if (r) return r;
+
+    if (static_cast<size_t>(MoleFractions->rows) != molarMasses.size()) {
+        return MAKELRESULT(UNEQUAL_LENGTH, 2);
+    }
+
+    double denom = 0.0;
+    for (size_t i = 0; i < molarMasses.size(); ++i) {
+        denom += molarMasses[i] * MoleFractions->hReal[0][i];
+    }
+
+    std::vector<std::vector<double>> Vec(molarMasses.size());
+    for (size_t i = 0; i < molarMasses.size(); ++i) {
+        Vec[i] = {molarMasses[i] * MoleFractions->hReal[0][i] / denom};
+    }
+    return AllocateToMathcadArray(MassFractions, Vec);
+}
+
+// This code executes the user function CP_AS_mass_to_mole_fractions -- the
+// inverse of CP_AS_mole_to_mass_fractions() above (mole_i = (w_i / mm_i) /
+// sum(w_j / mm_j)). See that function's comment for the shared rationale.
+static LRESULT CP_AS_mass_to_mole_fractions(LPCOMPLEXARRAY MoleFractions,  // output: column vector of mole fractions
+                                            LPCCOMPLEXSCALAR Handle,      // AbstractState handle from AS_factory (for component identities)
+                                            LPCCOMPLEXARRAY MassFractions)  // column vector of mass fractions to convert
+{
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+    r = CheckRealArrayOrError(MassFractions, 2);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    std::vector<double> molarMasses;
+    r = GetComponentMolarMasses(handle, &molarMasses, 1);
+    if (r) return r;
+
+    if (static_cast<size_t>(MassFractions->rows) != molarMasses.size()) {
+        return MAKELRESULT(UNEQUAL_LENGTH, 2);
+    }
+
+    double denom = 0.0;
+    for (size_t i = 0; i < molarMasses.size(); ++i) {
+        denom += MassFractions->hReal[0][i] / molarMasses[i];
+    }
+
+    std::vector<std::vector<double>> Vec(molarMasses.size());
+    for (size_t i = 0; i < molarMasses.size(); ++i) {
+        Vec[i] = {(MassFractions->hReal[0][i] / molarMasses[i]) / denom};
+    }
+    return AllocateToMathcadArray(MoleFractions, Vec);
+}
+
 // This code executes the user function CP_AS_specify_phase, which is a wrapper for
 // AbstractState_specify_phase(), used to impose a phase on a handle created by
 // AS_factory for all subsequent AS_update/AS_props/AS_props_multi calls -- call
@@ -452,6 +575,208 @@ static LRESULT CP_AS_get(LPCOMPLEXSCALAR Prop,       // output: the requested va
 
     Prop->real = value;
     Prop->imag = 0;
+
+    // normal return
+    return 0;
+}
+
+// This code executes the user function CP_AS_get_sat_liquid, which is a
+// wrapper for AbstractState_saturated_liquid_keyed_output(), used to read
+// one output parameter from the SATURATED LIQUID side of a handle's current
+// two-phase state -- e.g. after an AS_update/AS_props call with a Q (quality)
+// input. Distinct from AS_get, which reads the bulk/overall state.
+static LRESULT CP_AS_get_sat_liquid(LPCOMPLEXSCALAR Prop,       // output: the requested value
+                                    LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory/AS_update
+                                    LPCCOMPLEXSCALAR ParamIdx)  // output parameter index, from AS_param_index
+{
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+    r = CheckRealOrError(ParamIdx, 2);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+    long paramIdx;
+    r = ToLongOrError(ParamIdx, INV_PARAMETER_IDX, 2, &paramIdx);
+    if (r) return r;
+    if (!IsValidParamIndex(paramIdx)) return MAKELRESULT(INV_PARAMETER_IDX, 2);
+
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN];
+    double value = AbstractState_saturated_liquid_keyed_output(handle, paramIdx, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (errcode) return TranslateASError(msg, 1);
+
+    Prop->real = value;
+    Prop->imag = 0;
+
+    // normal return
+    return 0;
+}
+
+// This code executes the user function CP_AS_get_sat_vapor, which is a
+// wrapper for AbstractState_saturated_vapor_keyed_output() -- see
+// CP_AS_get_sat_liquid()'s comment above; identical except it reads the
+// SATURATED VAPOR side of the current two-phase state.
+static LRESULT CP_AS_get_sat_vapor(LPCOMPLEXSCALAR Prop,       // output: the requested value
+                                   LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory/AS_update
+                                   LPCCOMPLEXSCALAR ParamIdx)  // output parameter index, from AS_param_index
+{
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+    r = CheckRealOrError(ParamIdx, 2);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+    long paramIdx;
+    r = ToLongOrError(ParamIdx, INV_PARAMETER_IDX, 2, &paramIdx);
+    if (r) return r;
+    if (!IsValidParamIndex(paramIdx)) return MAKELRESULT(INV_PARAMETER_IDX, 2);
+
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN];
+    double value = AbstractState_saturated_vapor_keyed_output(handle, paramIdx, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (errcode) return TranslateASError(msg, 1);
+
+    Prop->real = value;
+    Prop->imag = 0;
+
+    // normal return
+    return 0;
+}
+
+// This code executes the user function CP_AS_mole_fractions_liquid, which is
+// a wrapper for AbstractState_get_mole_fractions_satState() with
+// saturated_state="liquid" -- the SATURATED LIQUID side's mole fractions at
+// a handle's current two-phase state, as a column vector. Requires the
+// state to actually be in the two-phase region (0 <= quality <= 1);
+// AbstractState_get_mole_fractions_satState() enforces that itself and its
+// message surfaces via LOWLEVEL_ERROR if not.
+//
+// Unlike AS_get_phase_envelope_data(), no probe-then-fetch dance is needed
+// here: component counts are always small, so this just allocates a
+// generously-sized fixed buffer (AS_MAX_COMPONENTS) up front.
+//
+// `Trigger` is unused by this function's body, but NOT because Mathcad
+// requires an argument -- Handle already satisfies that on its own. The
+// real reason: Handle's own value never changes when the AbstractState it
+// names is mutated in place -- AS_update/AS_props/AS_specify_phase all echo
+// Handle back unchanged, by design (see AS_update's comment) -- so a cell
+// whose only input is Handle gives Mathcad's dependency graph nothing to
+// key a recalculation on when the underlying point moves. Wire Trigger to
+// whatever value actually drives the state you want reflected here -- e.g.
+// the quality value fed into the AS_update/AS_props call that put the state
+// in the two-phase region this function reads -- so this cell re-evaluates
+// whenever that does, instead of needing a full Recalculate Worksheet. If
+// this cell already references the freshly-reassigned Handle from that same
+// update (the normal chaining idiom), that alone may already provide the
+// dependency edge; Trigger is the explicit fallback for call shapes where
+// it doesn't.
+static LRESULT CP_AS_mole_fractions_liquid(LPCOMPLEXARRAY Fractions,   // output: column vector of mole fractions
+                                           LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                                           LPCCOMPLEXSCALAR Trigger)   // unused -- see comment above for why this argument exists
+{
+    (void)Trigger;
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    std::vector<double> fracBuf(static_cast<size_t>(AS_MAX_COMPONENTS));
+    long N = 0;
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN];
+    AbstractState_get_mole_fractions_satState(handle, "liquid", fracBuf.data(), AS_MAX_COMPONENTS, &N, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (errcode) return TranslateASError(msg, 1);
+
+    std::vector<std::vector<double>> Vec(static_cast<size_t>(N));
+    for (long i = 0; i < N; ++i) {
+        Vec[static_cast<size_t>(i)] = {fracBuf[static_cast<size_t>(i)]};
+    }
+    return AllocateToMathcadArray(Fractions, Vec);
+}
+
+// This code executes the user function CP_AS_mole_fractions_vapor -- see
+// CP_AS_mole_fractions_liquid()'s comment above; identical except it wraps
+// AbstractState_get_mole_fractions_satState() with saturated_state="gas"
+// (the SATURATED VAPOR side).
+static LRESULT CP_AS_mole_fractions_vapor(LPCOMPLEXARRAY Fractions,   // output: column vector of mole fractions
+                                          LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                                          LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
+{
+    (void)Trigger;
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    std::vector<double> fracBuf(static_cast<size_t>(AS_MAX_COMPONENTS));
+    long N = 0;
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN];
+    AbstractState_get_mole_fractions_satState(handle, "gas", fracBuf.data(), AS_MAX_COMPONENTS, &N, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (errcode) return TranslateASError(msg, 1);
+
+    std::vector<std::vector<double>> Vec(static_cast<size_t>(N));
+    for (long i = 0; i < N; ++i) {
+        Vec[static_cast<size_t>(i)] = {fracBuf[static_cast<size_t>(i)]};
+    }
+    return AllocateToMathcadArray(Fractions, Vec);
+}
+
+// This code executes the user function CP_AS_generate_update_pair, which is
+// a wrapper for CoolProp::generate_update_pair() (DataStructures.h) -- given
+// two output-parameter indices in EITHER order, resolves which
+// CoolProp::input_pairs the combination corresponds to (if any) and returns
+// its name as a string, e.g. "PT_INPUTS", for further use with
+// AS_input_pair_index/AS_update/AS_props/AS_props_multi. Unlike those,
+// generate_update_pair() takes no Handle -- it is a pure lookup over the two
+// parameter keys, not tied to any particular fluid/mixture state, so this
+// function needs no Trigger argument either: its two real ParamIdx
+// arguments already give Mathcad everything it needs to know when to re-run
+// this cell.
+//
+// No Value1/Value2 arguments: generate_update_pair()'s own implementation
+// picks the pair purely from key1/key2 (a long chain of
+// match_pair(key1, key2, ...) checks against the two keys, nothing else) --
+// its value1/value2 parameters exist only to be copied into out1/out2 in
+// the resolved pair's order, which this function doesn't surface anyway
+// (see below). Passing them would be dead weight, so this only takes the
+// two indices. The dummy 0.0s below stand in for the unused value
+// arguments generate_update_pair()'s signature still requires.
+static LRESULT CP_AS_generate_update_pair(LPMCSTRING PairName,        // output: resolved input pair name, e.g. "PT_INPUTS"
+                                          LPCCOMPLEXSCALAR ParamIdx1,  // first output parameter index, from AS_param_index
+                                          LPCCOMPLEXSCALAR ParamIdx2)  // second output parameter index, from AS_param_index
+{
+    LRESULT r = CheckRealOrError(ParamIdx1, 1);
+    if (r) return r;
+    r = CheckRealOrError(ParamIdx2, 2);
+    if (r) return r;
+
+    long idx1;
+    r = ToLongOrError(ParamIdx1, INV_PARAMETER_IDX, 1, &idx1);
+    if (r) return r;
+    if (!IsValidParamIndex(idx1)) return MAKELRESULT(INV_PARAMETER_IDX, 1);
+
+    long idx2;
+    r = ToLongOrError(ParamIdx2, INV_PARAMETER_IDX, 2, &idx2);
+    if (r) return r;
+    if (!IsValidParamIndex(idx2)) return MAKELRESULT(INV_PARAMETER_IDX, 2);
+
+    double out1, out2;
+    CoolProp::input_pairs pair =
+      CoolProp::generate_update_pair(static_cast<CoolProp::parameters>(idx1), 0.0, static_cast<CoolProp::parameters>(idx2), 0.0, out1, out2);
+    if (pair == CoolProp::INPUT_PAIR_INVALID) {
+        return MAKELRESULT(NO_SUCH_INPUT_PAIR, 1);
+    }
+
+    PairName->str = AllocMathcadString(CoolProp::get_input_pair_short_desc(pair));
 
     // normal return
     return 0;
@@ -716,7 +1041,7 @@ struct PhaseEnvelopeTPRho
 // essentially never a big enough buffer). Component count can NOT be learned
 // the same way -- that check, and the write to *actual_components, only
 // happens AFTER the length check already passed, so a length=0 probe never
-// reaches it. Passing AS_MAX_PE_COMPONENTS (a generous fixed upper bound) as
+// reaches it. Passing AS_MAX_COMPONENTS (a generous fixed upper bound) as
 // maxComponents on the real (second) call sidesteps needing to learn the
 // real component count in advance. The per-component x/y buffers that call
 // still requires are allocated and immediately discarded -- no caller of
@@ -743,12 +1068,12 @@ static LRESULT FetchPhaseEnvelope(long handle, PhaseEnvelopeTPRho* out) {
     out->P.resize(static_cast<size_t>(probe_length));
     out->rhomolar_vap.resize(static_cast<size_t>(probe_length));
     out->rhomolar_liq.resize(static_cast<size_t>(probe_length));
-    std::vector<double> x(static_cast<size_t>(probe_length) * static_cast<size_t>(AS_MAX_PE_COMPONENTS));
+    std::vector<double> x(static_cast<size_t>(probe_length) * static_cast<size_t>(AS_MAX_COMPONENTS));
     std::vector<double> y(x.size());
 
     long final_length = 0, final_components = 0;
     errcode = 0;
-    AbstractState_get_phase_envelope_data_checkedMemory(handle, probe_length, AS_MAX_PE_COMPONENTS, out->T.data(), out->P.data(),
+    AbstractState_get_phase_envelope_data_checkedMemory(handle, probe_length, AS_MAX_COMPONENTS, out->T.data(), out->P.data(),
                                                         out->rhomolar_vap.data(), out->rhomolar_liq.data(), x.data(), y.data(), &final_length,
                                                         &final_components, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
@@ -767,7 +1092,7 @@ static LRESULT FetchPhaseEnvelope(long handle, PhaseEnvelopeTPRho* out) {
 // function -- see FetchPhaseEnvelope()'s comment.
 static LRESULT CP_AS_get_phase_envelope_data(LPCOMPLEXARRAY Data,       // output: N rows x {T, P, rhomolar_vap, rhomolar_liq}
                                              LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
-                                             LPCCOMPLEXSCALAR Trigger)  // unused -- see AS_list_handles()'s comment for why this argument exists
+                                             LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
@@ -804,7 +1129,7 @@ static LRESULT CP_AS_get_phase_envelope_data(LPCOMPLEXARRAY Data,       // outpu
 // MathcadWrappers.rst for what that means for exactness of the result.
 static LRESULT CP_AS_pe_tmax(LPCOMPLEXARRAY Point,       // output: 2-element column vector [T; P]
                              LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
-                             LPCCOMPLEXSCALAR Trigger)   // unused -- see AS_list_handles()'s comment for why this argument exists
+                             LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
@@ -831,7 +1156,7 @@ static LRESULT CP_AS_pe_tmax(LPCOMPLEXARRAY Point,       // output: 2-element co
 // PhaseEnvelopeData::ipsat_max).
 static LRESULT CP_AS_pe_pmax(LPCOMPLEXARRAY Point,       // output: 2-element column vector [T; P]
                              LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
-                             LPCCOMPLEXSCALAR Trigger)   // unused -- see AS_list_handles()'s comment for why this argument exists
+                             LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
@@ -1022,6 +1347,76 @@ FUNCTIONINFO ASPePmax = {
   COMPLEX_ARRAY,                                                                                       // Returns a Mathcad complex array (2-element column vector)
   2,                                                                                                    // Number of arguments (Mathcad requires >= 1; Trigger is unused)
   {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                     // Argument types
+};
+
+FUNCTIONINFO ASGetSatLiquid = {
+  const_cast<char*>("AS_get_sat_liquid"),                                                                          // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Output Parameter Index"),                                                             // Description of input parameters
+  const_cast<char*>("Returns one output parameter from the saturated LIQUID side of a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get_sat_liquid,                                                                               // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                                                  // Returns a Mathcad complex scalar
+  2,                                                                                                                // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                                 // Argument types
+};
+
+FUNCTIONINFO ASGetSatVapor = {
+  const_cast<char*>("AS_get_sat_vapor"),                                                                           // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Output Parameter Index"),                                                             // Description of input parameters
+  const_cast<char*>("Returns one output parameter from the saturated VAPOR side of a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get_sat_vapor,                                                                                // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                                                  // Returns a Mathcad complex scalar
+  2,                                                                                                                // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                                 // Argument types
+};
+
+FUNCTIONINFO ASMoleFractionsLiquid = {
+  const_cast<char*>("AS_mole_fractions_liquid"),                                                        // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),                                                                  // Description of input parameters
+  const_cast<char*>("Returns the saturated LIQUID side's mole fractions at a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_mole_fractions_liquid,                                                              // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                         // Returns a Mathcad complex array (column vector)
+  2,                                                                                                      // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                       // Argument types
+};
+
+FUNCTIONINFO ASMoleFractionsVapor = {
+  const_cast<char*>("AS_mole_fractions_vapor"),                                                         // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),                                                                  // Description of input parameters
+  const_cast<char*>("Returns the saturated VAPOR side's mole fractions at a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_mole_fractions_vapor,                                                               // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                         // Returns a Mathcad complex array (column vector)
+  2,                                                                                                      // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                       // Argument types
+};
+
+FUNCTIONINFO ASGenerateUpdatePair = {
+  const_cast<char*>("AS_generate_update_pair"),                                                                                // Name by which Mathcad will recognize the function
+  const_cast<char*>("Output Parameter Index 1, Output Parameter Index 2"),                                                     // Description of input parameters
+  const_cast<char*>("Resolves two output parameters to the CoolProp input pair name they form, e.g. \"PT_INPUTS\""),           // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_generate_update_pair,                                                                                     // Pointer to the function code.
+  MC_STRING,                                                                                                                   // Returns a Mathcad string
+  2,                                                                                                                            // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                                             // Argument types
+};
+
+FUNCTIONINFO ASMoleToMassFractions = {
+  const_cast<char*>("AS_mole_to_mass_fractions"),                                                       // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, MoleFractions"),                                                            // Description of input parameters
+  const_cast<char*>("Converts a mole-fraction composition to the equivalent mass fractions for Handle's mixture"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_mole_to_mass_fractions,                                                             // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                         // Returns a Mathcad complex array (column vector)
+  2,                                                                                                      // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                                        // Argument types
+};
+
+FUNCTIONINFO ASMassToMoleFractions = {
+  const_cast<char*>("AS_mass_to_mole_fractions"),                                                       // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, MassFractions"),                                                            // Description of input parameters
+  const_cast<char*>("Converts a mass-fraction composition to the equivalent mole fractions for Handle's mixture"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_mass_to_mole_fractions,                                                             // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                         // Returns a Mathcad complex array (column vector)
+  2,                                                                                                      // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                                        // Argument types
 };
 
 #endif  // MATHCAD_LOWLEVEL_H

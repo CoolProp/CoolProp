@@ -75,6 +75,7 @@ enum EC
     INV_INPUT_PAIR_IDX,
     NO_ACTIVE_STATES,
     PHASE_ENVELOPE_NOT_BUILT,
+    NO_SUCH_INPUT_PAIR,
     UNKNOWN,
     NUMBER_OF_ERRORS
 };  // Dummy Code for Error Count
@@ -122,6 +123,7 @@ const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                "Invalid Input Pair Index",
                                                "No Active States",
                                                "Phase Envelope Not Built",
+                                               "No Such Input Pair",
                                                "CoolProp Issue: Use get_global_param_string(\"errstring\") for more info.",
                                                "Error Count - Not Used"};
 
@@ -1110,6 +1112,13 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             CreateUserFunction(hDLL, &ASGetPhaseEnvelopeData);
             CreateUserFunction(hDLL, &ASPeTmax);
             CreateUserFunction(hDLL, &ASPePmax);
+            CreateUserFunction(hDLL, &ASGetSatLiquid);
+            CreateUserFunction(hDLL, &ASGetSatVapor);
+            CreateUserFunction(hDLL, &ASMoleFractionsLiquid);
+            CreateUserFunction(hDLL, &ASMoleFractionsVapor);
+            CreateUserFunction(hDLL, &ASGenerateUpdatePair);
+            CreateUserFunction(hDLL, &ASMoleToMassFractions);
+            CreateUserFunction(hDLL, &ASMassToMoleFractions);
             break;
 
         case DLL_THREAD_ATTACH:

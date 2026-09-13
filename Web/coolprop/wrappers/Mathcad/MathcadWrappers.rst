@@ -437,6 +437,29 @@ Where,
 
 ----
 
+AS_mole_to_mass_fractions / AS_mass_to_mole_fractions
+--------------------------------------------------------
+
+Converts an arbitrary composition between mole and mass fractions, using a Low-Level state handle's mixture for component identities and molar masses. Unlike ``AS_set_fractions``, this doesn't read or write the handle's own state at all -- it's a pure unit conversion on the ``MoleFractions``/``MassFractions`` argument, useful as a preprocessing step *before* ``AS_set_fractions`` (e.g. converting a mass-basis composition you have on hand into the mole fractions a HEOS-backed handle actually expects).::
+
+    AS_mole_to_mass_fractions(Handle, MoleFractions)
+    AS_mass_to_mole_fractions(Handle, MassFractions)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory`` -- only its mixture's component identities and molar masses are used; its own composition/state is untouched.
+* `MoleFractions`/`MassFractions` is a column vector of the fractions to convert, one entry per fluid in the mixture, in either basis.
+
+.. note::
+    **No new CoolPropLib export:** the C++ API has a direct equivalent of this (``AbstractState::calc_mass_fractions()``, computing ``mass_i = mm_i * mole_i / sum(mm_j * mole_j)`` from whatever mole fractions are already set), but it isn't exposed through the public Low-Level C API this wrapper is built on, and adding it there was deliberately avoided. This function gets the same result a different way: ``AbstractState_fluid_names()`` (already used by ``AS_set_fractions`` above) gives the component names, and ``Props1SI("molar_mass", name)`` -- a plain, handle-independent lookup already used elsewhere in this wrapper -- resolves each one's molar mass. Both are already-public surface; nothing new was added to CoolPropLib.h for this.
+
+.. note::
+    **Self-normalizing:** the conversion divides by the actual weighted sum of the input (``sum(mm_j * mole_j)`` or ``sum(mass_j / mm_j)``), not by an assumed 1.0 -- so a composition that doesn't already sum to exactly 1.0 still converts to a correctly-normalized result in the other basis, unlike ``AS_set_fractions``, which requires its input to already sum to 1.0.
+
+|
+
+----
+
 AS_specify_phase
 -----------------
 
@@ -509,6 +532,29 @@ Resolves an input pair name (e.g. "PT_INPUTS", "HmassP_INPUTS") to the integer i
 
 ----
 
+AS_generate_update_pair
+-------------------------
+
+The reverse direction from ``AS_input_pair_index``: given two output-parameter indices, in *either* order, resolves which named input pair they form and returns that name as a string, for further use with ``AS_input_pair_index``/``AS_update``/``AS_props``/``AS_props_multi``.::
+
+    AS_generate_update_pair(ParamIdx1, ParamIdx2)
+
+Where,
+
+* `ParamIdx1`, `ParamIdx2` are output parameter indices from ``AS_param_index``, in either order.
+
+Raises a Custom Error if the two parameters don't form any known input pair.
+
+.. note::
+    **No Handle argument:** unlike the other Low-Level functions, this one takes no ``Handle`` -- ``CoolProp::generate_update_pair()`` (the function this wraps) is a pure lookup over the two parameter keys, not tied to any particular fluid/mixture state.
+
+.. note::
+    **No value arguments either:** ``generate_update_pair()``'s own signature takes two values alongside the two keys, but its pair-selection logic (a long chain of key-only comparisons) never inspects them -- they exist solely to get copied into its ``out1``/``out2`` parameters in the resolved pair's order, which this function doesn't surface anyway (a Mathcad Custom Function returns one value, and this one returns the resolved name). Passing values through for no purpose would just be dead arguments, so this function only takes the two indices, calling ``generate_update_pair()`` with dummy placeholder values internally. The resolved name itself already answers the ordering question ``out1``/``out2`` exist for: e.g. ``"PT_INPUTS"`` unambiguously means pressure first, temperature second, regardless of which order `ParamIdx1`/`ParamIdx2` were supplied in.
+
+|
+
+----
+
 AS_update
 ---------
 
@@ -555,6 +601,45 @@ Where,
     :math:`T := AS\_get(h,\ iT) = 373.1`
 
     :math:`\rho := AS\_get(h,\ i\rho)`
+
+|
+
+----
+
+AS_get_sat_liquid / AS_get_sat_vapor
+--------------------------------------
+
+Like ``AS_get`` above, but read the saturated liquid/vapor side of the handle's current point rather than the bulk state -- meaningful when the current point is in the two-phase region, e.g. after a ``Q`` (quality)-based update.::
+
+    AS_get_sat_liquid(Handle, ParamIdx)
+    AS_get_sat_vapor(Handle, ParamIdx)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `ParamIdx` is an output parameter index from ``AS_param_index``.
+
+|
+
+----
+
+AS_mole_fractions_liquid / AS_mole_fractions_vapor
+------------------------------------------------------
+
+The saturated liquid/vapor side's mole fractions at the handle's current point, as a column vector.::
+
+    AS_mole_fractions_liquid(Handle, Trigger)
+    AS_mole_fractions_vapor(Handle, Trigger)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `Trigger` is unused -- just pass a dummy integer (``0``), or see the note below for a better choice.
+
+Requires the current point to actually be in the two-phase region (``0 <= quality <= 1``); raises a Custom Error otherwise.
+
+.. note::
+    **Why Trigger, when Handle is already an argument:** this is *not* about satisfying Mathcad's one-argument minimum -- ``Handle`` already does that on its own. The real reason is that ``Handle``'s own value never changes when the AbstractState it names is mutated in place: ``AS_update``, ``AS_props``, and ``AS_specify_phase`` all echo ``Handle`` back unchanged, by design (see ``AS_update``'s entry above). So a cell whose only input is ``Handle`` gives Mathcad's dependency graph nothing to key a recalculation on when the underlying point moves. Wire ``Trigger`` to whatever value actually drives the state you want reflected here -- e.g. the quality or mole-fraction value fed into the ``AS_update``/``AS_props`` call that put the state in the two-phase region this function reads -- and this cell re-evaluates whenever that does, instead of needing a full **Recalculate Worksheet**. If this cell already references the freshly-reassigned ``Handle`` from that same update (the normal chaining idiom), that alone may already provide the dependency edge; ``Trigger`` is the explicit fallback for call shapes where it doesn't.
 
 |
 
@@ -634,7 +719,7 @@ Returns the phase envelope traced by ``AS_build_phase_envelope`` as a table: one
 Where,
 
 * `Handle` is a handle returned by ``AS_factory``, after a prior ``AS_build_phase_envelope`` call.
-* `Trigger` is unused -- just pass a dummy integer (``0``).
+* `Trigger` is unused -- just pass a dummy integer (``0``), or see ``AS_mole_fractions_liquid``'s note above for a better choice.
 
 Raises a Custom Error if ``AS_build_phase_envelope`` hasn't been called yet for this ``Handle``.
 
@@ -658,7 +743,7 @@ The cricondentherm -- the point on the phase envelope traced by ``AS_build_phase
 Where,
 
 * `Handle` is a handle returned by ``AS_factory``, after a prior ``AS_build_phase_envelope`` call.
-* `Trigger` is unused -- just pass a dummy integer (``0``).
+* `Trigger` is unused -- just pass a dummy integer (``0``), or see ``AS_mole_fractions_liquid``'s note above for a better choice.
 
 Raises a Custom Error if ``AS_build_phase_envelope`` hasn't been called yet for this ``Handle``.
 
@@ -682,7 +767,7 @@ The cricondenbar -- the point on the phase envelope traced by ``AS_build_phase_e
 Where,
 
 * `Handle` is a handle returned by ``AS_factory``, after a prior ``AS_build_phase_envelope`` call.
-* `Trigger` is unused -- just pass a dummy integer (``0``).
+* `Trigger` is unused -- just pass a dummy integer (``0``), or see ``AS_mole_fractions_liquid``'s note above for a better choice.
 
 Raises a Custom Error if ``AS_build_phase_envelope`` hasn't been called yet for this ``Handle``.
 
