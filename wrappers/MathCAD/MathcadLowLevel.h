@@ -160,7 +160,7 @@ static inline bool IsValidInputPairIndex(long idx) {
 
 // Process-wide registry giving AS_factory() "get-or-create" (cached)
 // semantics across worksheet recalculations: recalculating the same
-// AS_factory() cell with the same (Backend, Fluids) returns the SAME live
+// AS_factory() call with the same (Backend, Fluids) returns the SAME live
 // handle rather than rebuilding the backend, so it doesn't pay construction
 // cost -- up to 80-140 ms for tabular backends -- on every recalculation.
 // See MathcadStateGuard.h.
@@ -170,7 +170,7 @@ static MathcadStateGuard as_state_guard;
 // AbstractState_factory(), used to get (or, the first time, create) a
 // persistent low-level fluid/mixture state and return an integer handle (as
 // a real scalar) for use by the other AS_* functions below.  Recalculating
-// this cell with the same Backend/Fluids returns the SAME handle rather than
+// this call with the same Backend/Fluids returns the SAME handle rather than
 // rebuilding the backend -- see MathcadStateGuard.h.
 static LRESULT CP_AS_factory(LPCOMPLEXSCALAR Handle,  // output: handle for use by the other AS_* functions
                              LPCMCSTRING Backend,     // backend to use, e.g. "HEOS", "REFPROP", "BICUBIC&HEOS"
@@ -198,7 +198,7 @@ constexpr double AS_FRACTION_SUM_TOLERANCE = 1e-6;
 // This code executes the user function CP_AS_set_fractions, which is a wrapper for
 // AbstractState_set_fractions(), used to set the mole/mass/volume fractions for a
 // mixture handle created by AS_factory.  Returns Handle unchanged so downstream
-// cells that use this call's return value depend on it.
+// equations that use this call's return value depend on it.
 static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,   // output: Handle, unchanged
                                    LPCCOMPLEXSCALAR Handle,     // AbstractState handle from AS_factory
                                    LPCCOMPLEXARRAY Fractions)   // mole/mass/volume fractions
@@ -377,7 +377,7 @@ static LRESULT CP_AS_mass_to_mole_fractions(LPCOMPLEXARRAY MoleFractions,  // ou
 // AbstractState_specify_phase(), used to impose a phase on a handle created by
 // AS_factory for all subsequent AS_update/AS_props/AS_props_multi calls -- call
 // this before any of those, once per handle.  Returns Handle unchanged so
-// downstream cells that use this call's return value depend on it.
+// downstream equations that use this call's return value depend on it.
 static LRESULT CP_AS_specify_phase(LPCOMPLEXSCALAR HandleOut,  // output: Handle, unchanged
                                    LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
                                    LPCMCSTRING Phase)          // phase name: "phase_liquid", "phase_gas", "phase_twophase", "phase_supercritical",
@@ -417,7 +417,7 @@ static LRESULT CP_AS_specify_phase(LPCOMPLEXSCALAR HandleOut,  // output: Handle
 // This code executes the user function CP_AS_unspecify_phase, which is a wrapper for
 // AbstractState_unspecify_phase(), used to remove a phase imposed by
 // AS_specify_phase from a handle created by AS_factory.  Returns Handle
-// unchanged so downstream cells that use this call's return value depend on it.
+// unchanged so downstream equations that use this call's return value depend on it.
 static LRESULT CP_AS_unspecify_phase(LPCOMPLEXSCALAR HandleOut,   // output: Handle, unchanged
                                      LPCCOMPLEXSCALAR Handle)     // AbstractState handle from AS_factory
 {
@@ -440,10 +440,42 @@ static LRESULT CP_AS_unspecify_phase(LPCOMPLEXSCALAR HandleOut,   // output: Han
     return 0;
 }
 
+// This code executes the user function CP_AS_get_phase, which is a wrapper
+// for AbstractState_phase() -- the read-only complement to
+// AS_specify_phase()/AS_unspecify_phase() (which impose/remove a phase
+// constraint): returns the phase the CURRENT point actually is in right
+// now, as a string, e.g. "phase_liquid" -- the exact same string
+// AS_specify_phase()'s Phase argument accepts, so the two round-trip.
+// Useful for worksheet branching -- e.g. checking the state is actually
+// two-phase before calling AS_get_sat_liquid/AS_mole_fractions_liquid --
+// without relying on those raising a LOWLEVEL_ERROR to find out.
+static LRESULT CP_AS_get_phase(LPMCSTRING PhaseStr,        // output: phase name, e.g. "phase_liquid"
+                               LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                               LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
+{
+    (void)Trigger;
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN];
+    int phase = AbstractState_phase(handle, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (errcode) return TranslateASError(msg, 1);
+
+    PhaseStr->str = AllocMathcadString(CoolProp::get_phase_short_desc(static_cast<CoolProp::phases>(phase)));
+
+    // normal return
+    return 0;
+}
+
 // This code executes the user function CP_AS_free, which is a wrapper for
 // AbstractState_free(), used to explicitly release a handle created by
 // AS_factory.  Safe as the last statement of a Mathcad program block;
-// calling it from an independent worksheet cell is discouraged since nothing
+// calling it from an independent worksheet equation is discouraged since nothing
 // guarantees it runs after every reader of the same handle -- rely on
 // AS_factory's registry guard to bound leakage there instead (see README.md).
 static LRESULT CP_AS_free(LPCOMPLEXSCALAR Dummy,     // output (dummy value, 0 on success)
@@ -647,6 +679,40 @@ static LRESULT CP_AS_get_sat_vapor(LPCOMPLEXSCALAR Prop,       // output: the re
     return 0;
 }
 
+// This code executes the user function CP_AS_get_mole_fractions, which is a
+// wrapper for AbstractState_get_mole_fractions() -- the handle's current
+// BULK mole fractions (whatever AS_set_fractions last set, or the trivial
+// [1] for a pure fluid). Distinct from AS_mole_fractions_liquid/vapor below,
+// which read the saturated liquid/vapor side of a two-phase point, not the
+// overall composition. Useful to read back what AS_set_fractions actually
+// applied, or the composition of a handle built from a predefined-mixture
+// string. Same fixed-buffer approach as those two -- see their comment.
+static LRESULT CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,   // output: column vector of mole fractions
+                                        LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                                        LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
+{
+    (void)Trigger;
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    std::vector<double> fracBuf(static_cast<size_t>(AS_MAX_COMPONENTS));
+    long N = 0;
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN];
+    AbstractState_get_mole_fractions(handle, fracBuf.data(), AS_MAX_COMPONENTS, &N, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (errcode) return TranslateASError(msg, 1);
+
+    std::vector<std::vector<double>> Vec(static_cast<size_t>(N));
+    for (long i = 0; i < N; ++i) {
+        Vec[static_cast<size_t>(i)] = {fracBuf[static_cast<size_t>(i)]};
+    }
+    return AllocateToMathcadArray(Fractions, Vec);
+}
+
 // This code executes the user function CP_AS_mole_fractions_liquid, which is
 // a wrapper for AbstractState_get_mole_fractions_satState() with
 // saturated_state="liquid" -- the SATURATED LIQUID side's mole fractions at
@@ -663,14 +729,14 @@ static LRESULT CP_AS_get_sat_vapor(LPCOMPLEXSCALAR Prop,       // output: the re
 // requires an argument -- Handle already satisfies that on its own. The
 // real reason: Handle's own value never changes when the AbstractState it
 // names is mutated in place -- AS_update/AS_props/AS_specify_phase all echo
-// Handle back unchanged, by design (see AS_update's comment) -- so a cell
+// Handle back unchanged, by design (see AS_update's comment) -- so an equation
 // whose only input is Handle gives Mathcad's dependency graph nothing to
 // key a recalculation on when the underlying point moves. Wire Trigger to
 // whatever value actually drives the state you want reflected here -- e.g.
 // the quality value fed into the AS_update/AS_props call that put the state
-// in the two-phase region this function reads -- so this cell re-evaluates
+// in the two-phase region this function reads -- so this equation re-evaluates
 // whenever that does, instead of needing a full Recalculate Worksheet. If
-// this cell already references the freshly-reassigned Handle from that same
+// this equation already references the freshly-reassigned Handle from that same
 // update (the normal chaining idiom), that alone may already provide the
 // dependency edge; Trigger is the explicit fallback for call shapes where
 // it doesn't.
@@ -740,7 +806,7 @@ static LRESULT CP_AS_mole_fractions_vapor(LPCOMPLEXARRAY Fractions,   // output:
 // parameter keys, not tied to any particular fluid/mixture state, so this
 // function needs no Trigger argument either: its two real ParamIdx
 // arguments already give Mathcad everything it needs to know when to re-run
-// this cell.
+// this equation.
 //
 // No Value1/Value2 arguments: generate_update_pair()'s own implementation
 // picks the pair purely from key1/key2 (a long chain of
@@ -785,7 +851,7 @@ static LRESULT CP_AS_generate_update_pair(LPMCSTRING PairName,        // output:
 // This code executes the user function CP_AS_props, which fuses
 // AbstractState_update() and AbstractState_keyed_output() into one call for
 // one-off/interactive use against a handle created by AS_factory -- so a
-// single Mathcad cell is atomic regardless of which authoring pattern is in
+// single Mathcad equation is atomic regardless of which authoring pattern is in
 // use.  All arguments after Handle are pre-resolved integer indices (from
 // AS_input_pair_index/AS_param_index): the hot path here is pure numeric, no
 // string marshalling per call.  See AS_update/AS_get above for a leaner
@@ -951,7 +1017,7 @@ static LRESULT CP_AS_props_multi(LPCOMPLEXARRAY Prop,            // output: matr
 // requirement (any real scalar works, e.g. a literal 0). It does double
 // duty, though: wiring it to a handle already on the sheet (rather than a
 // bare literal) gives Mathcad a real dependency edge, so this call re-runs
-// whenever THAT handle's defining cell does -- a narrower, more reliable
+// whenever THAT handle's defining equation does -- a narrower, more reliable
 // trigger than waiting for a full Recalculate Worksheet.
 static LRESULT CP_AS_list_handles(LPCOMPLEXARRAY Handles, LPCCOMPLEXSCALAR Trigger) {
     (void)Trigger;
@@ -984,11 +1050,68 @@ static LRESULT CP_AS_list_states(LPMCSTRING States, LPCCOMPLEXSCALAR Trigger) {
     return 0;
 }
 
+// This code executes the user function CP_AS_backend_name, which returns
+// the short backend string (e.g. "HEOS", "REFPROP", "BICUBIC&HEOS") a
+// single handle is using -- the same short form AS_factory's Backend
+// argument takes. AS_list_states() already reports this for every
+// currently-open handle at once (as the "Backend|Fluids" half of its key),
+// so this is mainly a convenience when you only have one specific Handle in
+// scope and don't want to fetch/parse the whole registry listing.
+//
+// Deliberately does NOT just return AbstractState_backend_name()'s value
+// as-is: that call returns CoolProp's internal C++ implementation class
+// name for the backend (get_backend_string() in src/DataStructures.cpp
+// literally maps, e.g., HEOS_BACKEND_MIX to "HelmholtzEOSMixtureBackend"),
+// which is correct but reads as an implementation detail to a Mathcad user
+// expecting the same short string they typed into AS_factory. Recovering
+// that short string requires CoolProp's backend-family lookup tables,
+// which are private to DataStructures.cpp (no public header declares them,
+// unlike get_phase_short_desc()/get_input_pair_short_desc() for phases and
+// input pairs) -- rather than reaching into that internal machinery,
+// MathcadStateGuard already remembers the short string verbatim: it's the
+// "Backend" half of the "Backend|Fluids" key this handle was registered
+// under. AbstractState_backend_name() is still called first, purely so
+// this function validates/errors on a dead handle exactly like every other
+// AS_* function does; its result becomes the fallback if, for any reason,
+// the handle isn't found in the registry snapshot (confirmed live above,
+// so this shouldn't normally happen, but a long name beats no answer).
+static LRESULT CP_AS_backend_name(LPMCSTRING BackendStr,     // output: backend name, e.g. "HEOS"
+                                  LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
+                                  LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
+{
+    (void)Trigger;
+    LRESULT r = CheckRealOrError(Handle, 1);
+    if (r) return r;
+
+    long handle;
+    r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
+    if (r) return r;
+
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN];
+    char backendBuf[AS_ERR_BUFFER_LEN];
+    AbstractState_backend_name(handle, backendBuf, &errcode, msg, AS_ERR_BUFFER_LEN);
+    if (errcode) return TranslateASError(msg, 1);
+
+    for (const auto& kv : as_state_guard.snapshot()) {
+        if (kv.second == handle) {
+            const std::string& key = kv.first;
+            auto sep = key.find('|');
+            BackendStr->str = AllocMathcadString(sep == std::string::npos ? key : key.substr(0, sep));
+            return 0;
+        }
+    }
+    BackendStr->str = AllocMathcadString(std::string(backendBuf));  // fallback -- see comment above
+
+    // normal return
+    return 0;
+}
+
 // This code executes the user function CP_AS_build_phase_envelope, which is a
 // wrapper for AbstractState_build_phase_envelope(), used to trace the phase
 // envelope (dew/bubble curve) for a handle created by AS_factory before any
 // call to AS_get_phase_envelope_data() on it.  Returns Handle unchanged so
-// downstream cells that use this call's return value depend on it.
+// downstream equations that use this call's return value depend on it.
 static LRESULT CP_AS_build_phase_envelope(LPCOMPLEXSCALAR HandleOut,  // output: Handle, unchanged
                                           LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
                                           LPCMCSTRING Level)          // refinement level -- CoolProp recommends "none" (skip refining)
@@ -1417,6 +1540,36 @@ FUNCTIONINFO ASMassToMoleFractions = {
   COMPLEX_ARRAY,                                                                                         // Returns a Mathcad complex array (column vector)
   2,                                                                                                      // Number of arguments
   {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                                        // Argument types
+};
+
+FUNCTIONINFO ASGetPhase = {
+  const_cast<char*>("AS_get_phase"),                                                                    // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),                                                                  // Description of input parameters
+  const_cast<char*>("Returns the phase name of a Low-Level state Handle's current point, e.g. \"phase_liquid\""),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get_phase,                                                                          // Pointer to the function code.
+  MC_STRING,                                                                                              // Returns a Mathcad string
+  2,                                                                                                      // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                       // Argument types
+};
+
+FUNCTIONINFO ASGetMoleFractions = {
+  const_cast<char*>("AS_get_mole_fractions"),                                                            // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),                                                                   // Description of input parameters
+  const_cast<char*>("Returns a Low-Level state Handle's current bulk mole fractions"),                    // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get_mole_fractions,                                                                  // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                          // Returns a Mathcad complex array (column vector)
+  2,                                                                                                       // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                        // Argument types
+};
+
+FUNCTIONINFO ASBackendName = {
+  const_cast<char*>("AS_backend_name"),                                                                  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),                                                                   // Description of input parameters
+  const_cast<char*>("Returns the backend name (e.g. \"HEOS\") a Low-Level state Handle is using"),        // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_backend_name,                                                                        // Pointer to the function code.
+  MC_STRING,                                                                                               // Returns a Mathcad string
+  2,                                                                                                       // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                        // Argument types
 };
 
 #endif  // MATHCAD_LOWLEVEL_H

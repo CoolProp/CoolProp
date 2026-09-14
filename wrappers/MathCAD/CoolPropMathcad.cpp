@@ -29,6 +29,14 @@ HWND hwndDlg;  // Generic Dialog handle for pop-up message boxes (MessageBox) wh
 
 namespace CoolProp {
 extern void apply_simple_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule);
+// get_phase_short_desc() has external linkage (src/DataStructures.cpp) but,
+// unlike its inverse get_phase_index(), isn't declared in DataStructures.h --
+// forward-declared here the same way apply_simple_mixing_rule() above is.
+// Converts a phases enum value (as returned by AbstractState_phase()) back
+// to the same "phase_..." string AS_specify_phase()'s Phase argument
+// accepts; throws CoolProp::ValueError for a value with no mapping (not
+// reachable from a value AbstractState_phase() itself returned).
+extern const std::string& get_phase_short_desc(phases phase);
 }
 
 enum EC
@@ -893,14 +901,14 @@ static LRESULT CP_set_mixture_binary_pair_data(LPMCSTRING Msg,          // outpu
 //   1. A Mathcad "program" block: create the handle, make however many
 //      AS_props()/AS_props_multi() calls are needed, and release it with
 //      AS_free(), all as sequential statements in one program region.
-//   2. One AS_factory() cell near the top of a worksheet, referenced by
-//      many downstream cells, relying on Recalculate Worksheet (full
+//   2. One AS_factory() call near the top of a worksheet, referenced by
+//      many downstream equations, relying on Recalculate Worksheet (full
 //      top-to-bottom recalculation in region order) to guarantee the
-//      factory cell runs first.
+//      factory call runs first.
 // See wrappers/MathCAD/README.md and the example worksheet for both.
 //
 // AS_factory() and AS_set_fractions() both return the Handle they were
-// given/created, unchanged, purely so a downstream cell that uses that
+// given/created, unchanged, purely so a downstream equation that uses that
 // return value as its own Handle argument gets Mathcad's normal dependency
 // tracking as an extra correctness net on top of whichever pattern above is
 // in use -- it is not, by itself, a substitute for one of those patterns.
@@ -1119,6 +1127,9 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             CreateUserFunction(hDLL, &ASGenerateUpdatePair);
             CreateUserFunction(hDLL, &ASMoleToMassFractions);
             CreateUserFunction(hDLL, &ASMassToMoleFractions);
+            CreateUserFunction(hDLL, &ASGetPhase);
+            CreateUserFunction(hDLL, &ASGetMoleFractions);
+            CreateUserFunction(hDLL, &ASBackendName);
             break;
 
         case DLL_THREAD_ATTACH:

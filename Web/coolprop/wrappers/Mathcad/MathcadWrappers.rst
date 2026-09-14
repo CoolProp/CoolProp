@@ -491,6 +491,25 @@ Where,
 
 ----
 
+AS_get_phase
+-------------
+
+The read-only complement to ``AS_specify_phase``/``AS_unspecify_phase``: the phase the handle's *current* point actually is in right now, as a string -- one of the same ``"phase_..."`` values ``AS_specify_phase``'s ``Phase`` argument accepts.::
+
+    AS_get_phase(Handle, Trigger)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `Trigger` is unused -- just pass a dummy integer (``0``), or see ``AS_mole_fractions_liquid``'s note on ``Trigger`` for a better choice.
+
+.. note::
+    **Why this is useful:** confirms whether the current point is actually in the two-phase region before calling ``AS_get_sat_liquid``/``AS_get_sat_vapor``/``AS_mole_fractions_liquid``/``AS_mole_fractions_vapor`` -- rather than relying on those raising a Custom Error (``LOWLEVEL_ERROR``) to find out after the fact.
+
+|
+
+----
+
 AS_free
 -------
 
@@ -623,6 +642,22 @@ Where,
 
 ----
 
+AS_get_mole_fractions
+-----------------------
+
+The handle's current *bulk* mole fractions, as a column vector -- whatever ``AS_set_fractions`` last set, or the trivial ``[1]`` for a pure fluid. Distinct from ``AS_mole_fractions_liquid``/``AS_mole_fractions_vapor`` below, which read the saturated liquid/vapor side of a two-phase point, not the overall composition.::
+
+    AS_get_mole_fractions(Handle, Trigger)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `Trigger` is unused -- just pass a dummy integer (``0``), or see the note below for a better choice.
+
+|
+
+----
+
 AS_mole_fractions_liquid / AS_mole_fractions_vapor
 ------------------------------------------------------
 
@@ -639,7 +674,7 @@ Where,
 Requires the current point to actually be in the two-phase region (``0 <= quality <= 1``); raises a Custom Error otherwise.
 
 .. note::
-    **Why Trigger, when Handle is already an argument:** this is *not* about satisfying Mathcad's one-argument minimum -- ``Handle`` already does that on its own. The real reason is that ``Handle``'s own value never changes when the AbstractState it names is mutated in place: ``AS_update``, ``AS_props``, and ``AS_specify_phase`` all echo ``Handle`` back unchanged, by design (see ``AS_update``'s entry above). So a cell whose only input is ``Handle`` gives Mathcad's dependency graph nothing to key a recalculation on when the underlying point moves. Wire ``Trigger`` to whatever value actually drives the state you want reflected here -- e.g. the quality or mole-fraction value fed into the ``AS_update``/``AS_props`` call that put the state in the two-phase region this function reads -- and this cell re-evaluates whenever that does, instead of needing a full **Recalculate Worksheet**. If this cell already references the freshly-reassigned ``Handle`` from that same update (the normal chaining idiom), that alone may already provide the dependency edge; ``Trigger`` is the explicit fallback for call shapes where it doesn't.
+    **Why Trigger, when Handle is already an argument:** this is *not* about satisfying Mathcad's one-argument minimum -- ``Handle`` already does that on its own. The real reason is that ``Handle``'s own value never changes when the AbstractState it names is mutated in place: ``AS_update``, ``AS_props``, and ``AS_specify_phase`` all echo ``Handle`` back unchanged, by design (see ``AS_update``'s entry above). So an equation whose only input is ``Handle`` gives Mathcad's dependency graph nothing to key a recalculation on when the underlying point moves. Wire ``Trigger`` to whatever value actually drives the state you want reflected here -- e.g. the quality or mole-fraction value fed into the ``AS_update``/``AS_props`` call that put the state in the two-phase region this function reads -- and this equation re-evaluates whenever that does, instead of needing a full **Recalculate Worksheet**. If this equation already references the freshly-reassigned ``Handle`` from that same update (the normal chaining idiom), that alone may already provide the dependency edge; ``Trigger`` is the explicit fallback for call shapes where it doesn't.
 
 |
 
@@ -777,6 +812,28 @@ See ``AS_pe_tmax``'s notes above -- both functions work identically, this one sc
 
 ----
 
+AS_backend_name
+-----------------
+
+The same short backend string (e.g. ``"HEOS"``, ``"REFPROP"``, ``"BICUBIC&HEOS"``) originally passed to ``AS_factory``'s ``Backend`` argument for this Handle.::
+
+    AS_backend_name(Handle, Trigger)
+
+Where,
+
+* `Handle` is a handle returned by ``AS_factory``.
+* `Trigger` is unused -- just pass a dummy integer (``0``), or see ``AS_mole_fractions_liquid``'s note above for a better choice.
+
+.. note::
+    **Why this doesn't just call AbstractState::backend_name():** that C++/C API call returns CoolProp's internal implementation class name for the backend (``get_backend_string()`` in ``src/DataStructures.cpp`` maps, e.g., the enum for ``"HEOS"`` to the string ``"HelmholtzEOSMixtureBackend"``) -- correct, but reads as an implementation detail to a Mathcad user expecting the same short string they typed into ``AS_factory``. Recovering that short string from the long one would require CoolProp's backend-family lookup tables, which (unlike the phase and input-pair short-description lookups this wrapper already uses elsewhere) are private to ``DataStructures.cpp`` with no public header declaring them. Simpler and more direct: the Mathcad wrapper's own handle registry already remembers the short string verbatim -- it's the "Backend" half of the "Backend|Fluids" key this Handle was registered under -- so this function recovers it from there instead. ``AbstractState_backend_name()`` is still called first, purely so this function validates a dead Handle exactly like every other ``AS_*`` function does.
+
+.. note::
+    **Redundant with AS_list_states, mostly:** ``AS_list_states`` already reports the short form for every currently-open handle at once, as the ``"Backend|Fluids"`` half of its key. This function is a convenience when you only have one specific Handle in scope and don't want to fetch and parse the whole registry listing just to confirm it.
+
+|
+
+----
+
 AS_list_handles / AS_list_states
 ---------------------------------
 
@@ -798,7 +855,7 @@ Where,
     **Ordering guarantee:** the two functions independently snapshot the same underlying registry, ordered by its ``"Backend|Fluids"`` key -- an order that depends only on which keys are *currently* registered, not on when each snapshot was taken. Two calls placed on the same worksheet will therefore agree, unless an ``AS_factory``/``AS_free`` call is evaluated in between them within the same recalculation pass.
 
 .. note::
-    **Using Trigger for recalculation:** since ``Trigger``'s value is otherwise ignored, wiring it to a handle already on the sheet -- rather than a bare literal -- gives Mathcad a real dependency edge, so the call re-runs whenever that handle's defining cell does. Without that, use **Recalculate Worksheet** to refresh these two calls, since they otherwise have no dependency edge to anything that changed.
+    **Using Trigger for recalculation:** since ``Trigger``'s value is otherwise ignored, wiring it to a handle already on the sheet -- rather than a bare literal -- gives Mathcad a real dependency edge, so the call re-runs whenever that handle's defining equation does. Without that, use **Recalculate Worksheet** to refresh these two calls, since they otherwise have no dependency edge to anything that changed.
 
 |
 
