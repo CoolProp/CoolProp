@@ -34,6 +34,8 @@
 #include "MathcadStateGuard.h"
 
 #include <algorithm>  // std::max_element, used by CP_AS_pe_tmax/CP_AS_pe_pmax
+#include <limits>     // std::numeric_limits<long>, used by TryRoundToLong()
+#include <mutex>      // std::mutex/std::scoped_lock, used by g_as_mutex below
 
 // Fixed size of the local errcode/message_buffer used by every Low-Level
 // (AbstractState) wrapper function below to call into CoolPropLib.h.
@@ -52,33 +54,64 @@ constexpr long AS_ERR_BUFFER_LEN = 500;
 //    than a probe-then-fetch dance for these.
 constexpr long AS_MAX_COMPONENTS = 64;
 
-// Helper: round a Mathcad complex scalar's real part to the nearest integer
-// and return it as a long.  Used both for AbstractState handles and for the
-// input-pair/parameter index arguments to the Low-Level API functions below
-// -- Mathcad has no integer type, so all of these are carried through a
-// worksheet as an ordinary real scalar (imag == 0, checked separately via
-// CheckRealOrError).
-static inline long RoundToLong(LPCCOMPLEXSCALAR val) {
-    return static_cast<long>(std::llround(val->real));
+// Helper: round a plain double to the nearest integer and return it as a
+// long, validating BOTH that it's finite AND that the rounded value is
+// actually representable in a long -- the single checked-conversion path
+// shared by ToLongOrError() below (for COMPLEXSCALAR Handle/InputPairIdx/
+// ParamIdx arguments) and CP_AS_props_multi()'s own per-entry ParamIdxArray
+// loop (a raw array read, not a COMPLEXSCALAR, so it can't go through
+// ToLongOrError directly). Mathcad has no integer type, so all of these
+// arrive as an ordinary real scalar -- and Mathcad can legitimately carry
+// NaN (this file's own AS_props_multi uses get_nan() to mark a failed point
+// in its output array) or an arbitrarily large finite magnitude, so both
+// are real, reachable failure modes, not hypothetical ones: std::llround()
+// on a non-finite value, or narrowing an in-range-for-long-long-but-
+// out-of-range-for-`long` result via static_cast<long>, is undefined
+// behavior that in practice aliases to handle 0 (or another live handle/
+// index) rather than erroring -- silently operating on the WRONG object is
+// worse than a crash. Returns false (leaving *out untouched) for either
+// failure; the caller maps that to whichever Custom Error fits its
+// argument.
+static inline bool TryRoundToLong(double real, long* out) {
+    if (!std::isfinite(real)) return false;
+    // Reject anything outside `long`'s range (with 0.5 of slack either side
+    // for correct rounding at the boundary) BEFORE calling std::llround() --
+    // not just after narrowing its result.  A finite double can be far
+    // outside even long long's representable range (roughly +-9.2e18,
+    // against double's own range out to ~1.8e308), and the standard leaves
+    // std::llround()'s return value unspecified in that case: checking the
+    // post-round long long against long's range (as this function used to)
+    // relies on llround() saturating in practice rather than being
+    // guaranteed to by the standard.  Pre-filtering to (roughly) long's own
+    // range keeps the value llround() actually sees always representable in
+    // long long, so the call itself is well-defined, not just its result's
+    // subsequent range check.
+    constexpr double kLongMin = static_cast<double>((std::numeric_limits<long>::min)());
+    constexpr double kLongMax = static_cast<double>((std::numeric_limits<long>::max)());
+    if (real < kLongMin - 0.5 || real > kLongMax + 0.5) return false;
+    const long long rounded = std::llround(real);
+    // NOT dead code: the pre-check above only bounds `real`, not `rounded`.
+    // At the exact half-integer boundary (real == kLongMax + 0.5, say),
+    // the pre-check's strict `>` lets it through, but round-half-away-from-
+    // zero then produces kLongMax + 1 -- one past what fits in `long`. This
+    // check is what actually rejects that case; removing it as "redundant"
+    // with the pre-check reintroduces the narrowing bug this function
+    // exists to close.
+    if (rounded < static_cast<long long>((std::numeric_limits<long>::min)())
+        || rounded > static_cast<long long>((std::numeric_limits<long>::max)())) {
+        return false;
+    }
+    *out = static_cast<long>(rounded);
+    return true;
 }
 
-// Helper: validate that a Mathcad complex scalar's real part is finite, then
-// round it to a long -- combines the NaN/Inf guard with RoundToLong() so
-// every Handle/InputPairIdx/ParamIdx conversion below gets both checks
-// together, rather than risking one being added without the other.  Mathcad
-// can legitimately carry NaN (this file's own AS_props_multi uses get_nan()
-// to mark a failed point in its output array), so a non-finite value
-// reaching one of these arguments is a real, reachable failure mode, not a
-// hypothetical one: std::llround() on NaN/Inf, or the subsequent narrowing
-// static_cast<long> of an out-of-range magnitude, is undefined behavior
-// that in practice aliases to handle 0 (or another live handle/index)
-// rather than erroring -- silently operating on the WRONG object is worse
-// than a crash.  `code` is the caller's EC value for this specific
+// Helper: validate/convert a Mathcad complex scalar's real part into a long
+// via TryRoundToLong() above, for every Handle/InputPairIdx/ParamIdx
+// argument below. `code` is the caller's EC value for this specific
 // argument (BAD_HANDLE/INV_INPUT_PAIR_IDX/INV_PARAMETER_IDX), so the Custom
 // Error stays specific to what was actually being converted.
 static LRESULT ToLongOrError(LPCCOMPLEXSCALAR val, EC code, unsigned int position, long* out) {
-    if (!std::isfinite(val->real)) return MAKELRESULT(code, position);
-    *out = RoundToLong(val);
+    if (!TryRoundToLong(val->real, out)) return MAKELRESULT(code, position);
     return 0;
 }
 
@@ -174,6 +207,54 @@ static inline bool IsValidInputPairIndex(long idx) {
 // See MathcadStateGuard.h.
 static MathcadStateGuard as_state_guard;
 
+// Process-wide lock serializing every CP_AS_* call below that touches a
+// handle or the as_state_guard registry (every one of them except the three
+// pure lookups that never reference a handle: CP_AS_param_index,
+// CP_AS_input_pair_index, CP_AS_generate_update_pair).
+//
+// Why this is needed: MathcadStateGuard's own mutex (see MathcadStateGuard.h)
+// protects only ITS registry map -- it is released before AbstractState_*
+// functions ever touch the underlying AbstractState object.
+// AbstractStateLibrary::get() (src/CoolPropLib.cpp) is the same story: its
+// mutex protects the handle table lookup, then releases before the caller
+// reads or mutates the object the returned pointer refers to. Mathcad Prime
+// can call custom DLL functions from more than one worksheet-recalculation
+// thread at once (nothing in the Mathcad SDK registration used here declares
+// these functions as needing single-threaded dispatch), so two callbacks
+// that happen to reference the SAME handle -- e.g. one cell's AS_props and
+// another's AS_get, both reading/writing the shared AbstractState h refers
+// to -- could otherwise interleave: an update from one call landing between
+// another call's update and its output read, silently returning a value for
+// the WRONG input point rather than erroring. AbstractState itself documents
+// no thread-safety guarantee for concurrent calls on one instance, so this
+// is a real, not hypothetical, race.
+//
+// Fix: a single global lock, held for the ENTIRE body of every handle-
+// touching CP_AS_* function (acquired as each function's first statement,
+// released automatically on every return path via std::scoped_lock's
+// destructor) -- not just around the individual AbstractState_* calls
+// inside it, and not two narrower locks taken separately by, say,
+// CP_AS_update and CP_AS_get, which would still let a third call interleave
+// between them. This fully serializes the Low-Level API surface: correct
+// regardless of whether Mathcad Prime's multi-threaded worksheet
+// calculation is enabled, at the cost of no longer benefiting from it for
+// these calls specifically (they queue rather than overlap). Given
+// AS_props_multi already batches an entire array's worth of points into one
+// call specifically to avoid needing many parallel Low-Level calls, that
+// cost is small next to the correctness it buys.
+//
+// Note this is a single PROCESS-wide lock, not one per handle: while one
+// call is in progress, every other handle-touching call blocks too, even
+// against a completely unrelated handle/fluid -- e.g. CP_AS_build_phase_envelope
+// tracing one handle's envelope holds this lock for that whole trace, which
+// briefly serializes an unrelated AS_get on a different handle behind it.
+// A deliberate simplicity-over-throughput trade-off: per-handle locking
+// would avoid that unrelated-handle stall, but a single mutex is trivially
+// easy to reason about (see the deadlock argument above) and each call here
+// is a thin wrapper, not a Mathcad-facing hot loop -- AS_props_multi is
+// still the answer for genuinely high-throughput array evaluation.
+static std::mutex g_as_mutex;
+
 // This code executes the user function CP_AS_factory, which is a wrapper for
 // AbstractState_factory(), used to get (or, the first time, create) a
 // persistent low-level fluid/mixture state and return an integer handle (as
@@ -184,6 +265,7 @@ static LRESULT CP_AS_factory(LPCOMPLEXSCALAR Handle,  // output: handle for use 
                              LPCMCSTRING Backend,     // backend to use, e.g. "HEOS", "REFPROP", "BICUBIC&HEOS"
                              LPCMCSTRING Fluids)       // '&' delimited list of fluids
 {
+    std::scoped_lock lock(g_as_mutex);
     long errcode = 0;
     char msg[AS_ERR_BUFFER_LEN] = {};
 
@@ -211,6 +293,7 @@ static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,   // output: Handl
                                    LPCCOMPLEXSCALAR Handle,     // AbstractState handle from AS_factory
                                    LPCCOMPLEXARRAY Fractions)   // mole/mass/volume fractions
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
     r = CheckRealArrayOrError(Fractions, 2);
@@ -316,6 +399,7 @@ static LRESULT CP_AS_mole_to_mass_fractions(LPCOMPLEXARRAY MassFractions,  // ou
                                             LPCCOMPLEXSCALAR Handle,      // AbstractState handle from AS_factory (for component identities)
                                             LPCCOMPLEXARRAY MoleFractions)  // column vector of mole fractions to convert
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
     r = CheckRealArrayOrError(MoleFractions, 2);
@@ -359,6 +443,7 @@ static LRESULT CP_AS_mass_to_mole_fractions(LPCOMPLEXARRAY MoleFractions,  // ou
                                             LPCCOMPLEXSCALAR Handle,      // AbstractState handle from AS_factory (for component identities)
                                             LPCCOMPLEXARRAY MassFractions)  // column vector of mass fractions to convert
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
     r = CheckRealArrayOrError(MassFractions, 2);
@@ -403,6 +488,7 @@ static LRESULT CP_AS_specify_phase(LPCOMPLEXSCALAR HandleOut,  // output: Handle
                                                                // "phase_supercritical_gas", "phase_supercritical_liquid", "phase_critical_point",
                                                                // "phase_unknown", or "phase_not_imposed" (CoolProp::phases, DataStructures.h)
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
 
@@ -440,6 +526,7 @@ static LRESULT CP_AS_specify_phase(LPCOMPLEXSCALAR HandleOut,  // output: Handle
 static LRESULT CP_AS_unspecify_phase(LPCOMPLEXSCALAR HandleOut,   // output: Handle, unchanged
                                      LPCCOMPLEXSCALAR Handle)     // AbstractState handle from AS_factory
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
 
@@ -472,6 +559,7 @@ static LRESULT CP_AS_get_phase(LPMCSTRING PhaseStr,        // output: phase name
                                LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
                                LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
+    std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
@@ -500,6 +588,7 @@ static LRESULT CP_AS_get_phase(LPMCSTRING PhaseStr,        // output: phase name
 static LRESULT CP_AS_free(LPCOMPLEXSCALAR Dummy,     // output (dummy value, 0 on success)
                           LPCCOMPLEXSCALAR Handle)   // AbstractState handle to release
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
 
@@ -568,6 +657,7 @@ static LRESULT CP_AS_update(LPCOMPLEXSCALAR HandleOut,      // output: Handle, u
                             LPCCOMPLEXSCALAR Value1,        // first input value
                             LPCCOMPLEXSCALAR Value2)        // second input value
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
     r = CheckRealOrError(InputPairIdx, 2);
@@ -606,6 +696,7 @@ static LRESULT CP_AS_get(LPCOMPLEXSCALAR Prop,       // output: the requested va
                          LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory/AS_update
                          LPCCOMPLEXSCALAR ParamIdx)  // output parameter index, from AS_param_index
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
     r = CheckRealOrError(ParamIdx, 2);
@@ -640,6 +731,7 @@ static LRESULT CP_AS_get_sat_liquid(LPCOMPLEXSCALAR Prop,       // output: the r
                                     LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory/AS_update
                                     LPCCOMPLEXSCALAR ParamIdx)  // output parameter index, from AS_param_index
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
     r = CheckRealOrError(ParamIdx, 2);
@@ -673,6 +765,7 @@ static LRESULT CP_AS_get_sat_vapor(LPCOMPLEXSCALAR Prop,       // output: the re
                                    LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory/AS_update
                                    LPCCOMPLEXSCALAR ParamIdx)  // output parameter index, from AS_param_index
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
     r = CheckRealOrError(ParamIdx, 2);
@@ -710,6 +803,7 @@ static LRESULT CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,   // output: c
                                         LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
                                         LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
+    std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
@@ -763,6 +857,7 @@ static LRESULT CP_AS_mole_fractions_liquid(LPCOMPLEXARRAY Fractions,   // output
                                            LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
                                            LPCCOMPLEXSCALAR Trigger)   // unused -- see comment above for why this argument exists
 {
+    std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
@@ -793,6 +888,7 @@ static LRESULT CP_AS_mole_fractions_vapor(LPCOMPLEXARRAY Fractions,   // output:
                                           LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
                                           LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
+    std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
@@ -882,6 +978,7 @@ static LRESULT CP_AS_props(LPCOMPLEXSCALAR Prop,           // output: computed v
                            LPCCOMPLEXSCALAR Value2,        // second input value
                            LPCCOMPLEXSCALAR ParamIdx)      // output parameter index, from AS_param_index
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
     r = CheckRealOrError(InputPairIdx, 2);
@@ -933,6 +1030,7 @@ static LRESULT CP_AS_props_multi(LPCOMPLEXARRAY Prop,            // output: matr
                                  LPCCOMPLEXARRAY Value2Array,    // second input values (Array)
                                  LPCCOMPLEXARRAY ParamIdxArray)  // 1-5 output parameter indices, from AS_param_index (Array)
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
     r = CheckRealOrError(InputPairIdx, 2);
@@ -971,17 +1069,16 @@ static LRESULT CP_AS_props_multi(LPCOMPLEXARRAY Prop,            // output: matr
     // padding index can never throw mid-point and blank out a later,
     // genuinely requested output for that same point: all 5 keyed_output()
     // calls for one point share a single try/catch, in order.  Validate each
-    // genuinely requested (non-padding) index up front -- both that it's
-    // finite (a raw array read, not a COMPLEXSCALAR, so not covered by
-    // ToLongOrError above; NaN/Inf here hits the same std::llround() UB
-    // ToLongOrError's own doc comment describes) and that it's a registered
-    // parameter -- so a bad one is a clean BAD_PARAMETER Custom Error
-    // instead of a LOWLEVEL_ERROR surfacing from deep inside the batch call.
+    // genuinely requested (non-padding) index up front via TryRoundToLong()
+    // -- a raw array read, not a COMPLEXSCALAR, so it can't go through
+    // ToLongOrError() above directly, but needs the exact same finite-AND-
+    // in-range check that helper does -- and that it's a registered
+    // parameter, so a bad one is a clean BAD_PARAMETER Custom Error instead
+    // of a LOWLEVEL_ERROR surfacing from deep inside the batch call.
     long outputs[5];
     for (long i = 0; i < nOut; ++i) {
         const double entry = ParamIdxArray->hReal[0][i];
-        if (!std::isfinite(entry)) return MAKELRESULT(INV_PARAMETER_IDX, 5);
-        outputs[i] = static_cast<long>(std::llround(entry));
+        if (!TryRoundToLong(entry, &outputs[i])) return MAKELRESULT(INV_PARAMETER_IDX, 5);
         if (!IsValidParamIndex(outputs[i])) return MAKELRESULT(INV_PARAMETER_IDX, 5);
     }
     for (long i = nOut; i < 5; ++i) {
@@ -1039,6 +1136,7 @@ static LRESULT CP_AS_props_multi(LPCOMPLEXARRAY Prop,            // output: matr
 // whenever THAT handle's defining equation does -- a narrower, more reliable
 // trigger than waiting for a full Recalculate Worksheet.
 static LRESULT CP_AS_list_handles(LPCOMPLEXARRAY Handles, LPCCOMPLEXSCALAR Trigger) {
+    std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
     auto snap = as_state_guard.snapshot();
     if (snap.empty()) return MAKELRESULT(NO_ACTIVE_STATES, 1);
@@ -1056,6 +1154,7 @@ static LRESULT CP_AS_list_handles(LPCOMPLEXARRAY Handles, LPCCOMPLEXSCALAR Trigg
 // delimited, in the same order AS_list_handles() returns their handles.
 // `Trigger` is unused -- see CP_AS_list_handles()'s comment above.
 static LRESULT CP_AS_list_states(LPMCSTRING States, LPCCOMPLEXSCALAR Trigger) {
+    std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
     auto snap = as_state_guard.snapshot();
     if (snap.empty()) return MAKELRESULT(NO_ACTIVE_STATES, 1);
@@ -1098,6 +1197,7 @@ static LRESULT CP_AS_backend_name(LPMCSTRING BackendStr,     // output: backend 
                                   LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
                                   LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
+    std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
@@ -1135,6 +1235,7 @@ static LRESULT CP_AS_build_phase_envelope(LPCOMPLEXSCALAR HandleOut,  // output:
                                           LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
                                           LPCMCSTRING Level)          // refinement level -- CoolProp recommends "none" (skip refining)
 {
+    std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
 
@@ -1236,6 +1337,7 @@ static LRESULT CP_AS_get_phase_envelope_data(LPCOMPLEXARRAY Data,       // outpu
                                              LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
                                              LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
+    std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
@@ -1273,6 +1375,7 @@ static LRESULT CP_AS_pe_tmax(LPCOMPLEXARRAY Point,       // output: 2-element co
                              LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
                              LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
+    std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
@@ -1300,6 +1403,7 @@ static LRESULT CP_AS_pe_pmax(LPCOMPLEXARRAY Point,       // output: 2-element co
                              LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
                              LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
+    std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;

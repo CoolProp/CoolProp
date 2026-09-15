@@ -38,7 +38,7 @@ Build Your Own
 Prerequisites
 --------------
 
-* You will need to have Microsoft Visual Studio 2008 or later installed (Express version is fine).
+* You will need to have Microsoft Visual Studio 2017 or later installed (Community/Express version is fine) -- a C++17-capable toolchain. This target already compiled ``src/CoolPropLib.cpp``, which independently requires C++17 (``std::scoped_lock``) regardless of anything in this ``LegacyMathcad`` directory itself, so a VS2008-2015-era compiler cannot build this target even though CoolProp as a whole doesn't require C++17 everywhere.
 
 * You will need CMake version 2.8.12 or later from https://cmake.org/download/
 
@@ -65,10 +65,10 @@ To Build
 
 * **Build the makefile using CMake** (Note: Mathcad 15 is 32-bit)::
 
-    cmake .. -DCOOLPROP_MATHCAD15_MODULE=ON 
-             -DCOOLPROP_MATHCAD15_ROOT="C:/Program Files (x86)/Mathcad/Mathcad 15"  
-             -G "Visual Studio 10 2010" 
-             -DCMAKE_VERBOSE_MAKEFILE=ON 
+    cmake .. -DCOOLPROP_MATHCAD15_MODULE=ON
+             -DCOOLPROP_MATHCAD15_ROOT="C:/Program Files (x86)/Mathcad/Mathcad 15"
+             -G "Visual Studio 15 2017"
+             -DCMAKE_VERBOSE_MAKEFILE=ON
 
 * **Make the dynamic library (DLL)**::
 

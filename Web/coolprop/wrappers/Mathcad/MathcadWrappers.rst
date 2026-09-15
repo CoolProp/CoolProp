@@ -385,6 +385,9 @@ CoolProp's `Low-Level (AbstractState) API <https://coolprop.github.io/devdocs/co
 
 See the ``CoolPropFluidProperties.mcdx`` example worksheet for both patterns in use.
 
+.. note::
+    **Multi-threaded worksheet recalculation:** every ``AS_*`` call that touches a handle is internally serialized by the wrapper (one global lock, held for the whole call), so it is safe to use the Low-Level API with Mathcad Prime's Multithreaded Calculations setting either on or off -- two worksheet regions recalculating the same handle concurrently cannot interleave and return a value for the wrong input point.  That serialization means these calls don't benefit from multithreading (they queue rather than run in parallel), so there's no performance reason to enable it for a worksheet that's mainly exercising the Low-Level API; ``AS_props_multi`` batching a whole array into one call is the intended way to get throughput here instead.
+
 |
 
 ----
