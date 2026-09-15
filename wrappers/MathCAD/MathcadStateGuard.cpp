@@ -23,8 +23,13 @@ long MathcadStateGuard::get_or_create(const std::string& backend, const std::str
         // A live handle whose backend simply doesn't implement phase
         // specification (NotImplementedError, not a HandleError) is NOT a
         // reason to discard it -- there's nothing to clear, not a failure.
+        // Zero-initialized: HandleException() (src/CoolPropLib.cpp) only
+        // writes message_buffer when the formatted error text fits in it --
+        // on its "didn't fit" path (errcode==2) the buffer is left as-is, so
+        // an uninitialized array here could leave strncmp() below reading
+        // garbage stack memory instead of a real (or empty) message.
         long probe_errcode = 0;
-        char probe_message[256];
+        char probe_message[256] = {};
         AbstractState_unspecify_phase(it->second, &probe_errcode, probe_message, static_cast<long>(sizeof(probe_message)));
         if (probe_errcode != 0 && std::strncmp(probe_message, "HandleError:", 12) == 0) {
             live.erase(it);  // dead -- fall through to creating a fresh one below
@@ -55,9 +60,11 @@ std::vector<std::pair<std::string, long>> MathcadStateGuard::snapshot() {
         // listing -- AbstractState_backend_name() only reads the object
         // (handle_manager.get(handle) then AS->backend_name()), so it's safe
         // to use purely as a liveness check.
+        // See the matching comment in get_or_create() above -- same
+        // zero-init reasoning applies to this probe's message buffer.
         long probe_errcode = 0;
-        char probe_message[256];
-        char backend_buf[256];
+        char probe_message[256] = {};
+        char backend_buf[256] = {};
         AbstractState_backend_name(it->second, backend_buf, &probe_errcode, probe_message, static_cast<long>(sizeof(probe_message)));
         if (probe_errcode != 0 && std::strncmp(probe_message, "HandleError:", 12) == 0) {
             it = live.erase(it);  // dead -- freed directly via AS_free() outside this registry

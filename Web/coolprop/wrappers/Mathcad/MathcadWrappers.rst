@@ -454,7 +454,7 @@ Where,
     **No new CoolPropLib export:** the C++ API has a direct equivalent of this (``AbstractState::calc_mass_fractions()``, computing ``mass_i = mm_i * mole_i / sum(mm_j * mole_j)`` from whatever mole fractions are already set), but it isn't exposed through the public Low-Level C API this wrapper is built on, and adding it there was deliberately avoided. This function gets the same result a different way: ``AbstractState_fluid_names()`` (already used by ``AS_set_fractions`` above) gives the component names, and ``Props1SI("molar_mass", name)`` -- a plain, handle-independent lookup already used elsewhere in this wrapper -- resolves each one's molar mass. Both are already-public surface; nothing new was added to CoolPropLib.h for this.
 
 .. note::
-    **Self-normalizing:** the conversion divides by the actual weighted sum of the input (``sum(mm_j * mole_j)`` or ``sum(mass_j / mm_j)``), not by an assumed 1.0 -- so a composition that doesn't already sum to exactly 1.0 still converts to a correctly-normalized result in the other basis, unlike ``AS_set_fractions``, which requires its input to already sum to 1.0.
+    **Self-normalizing:** the conversion divides by the actual weighted sum of the input (``sum(mm_j * mole_j)`` or ``sum(mass_j / mm_j)``), not by an assumed 1.0 -- so a composition that doesn't already sum to exactly 1.0 still converts to a correctly-normalized result in the other basis, unlike ``AS_set_fractions``, which requires its input to already sum to 1.0. That weighted sum does need to be nonzero, though: an all-zero (or exactly canceling) input -- reachable even for a pure fluid via ``MoleFractions = [0]`` -- is reported as a Custom Error rather than silently dividing by zero into a ``NaN`` result.
 
 |
 

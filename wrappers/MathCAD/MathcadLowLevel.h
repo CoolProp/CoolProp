@@ -12,7 +12,7 @@
 //     whatever exception AbstractState's own dispatch happens to throw)
 //   - enum EC and CPErrorMessageTable (for BAD_HANDLE, BAD_PARAMETER,
 //     BAD_INPUT_PAIR, BAD_FLUID, BAD_BACKEND, BAD_PHASE, NOT_MIXTURE,
-//     BAD_FRACTION_SUM, UNEQUAL_LENGTH, TOO_MANY_OUTPUTS, INV_PARAMETER_IDX,
+//     BAD_FRACTION_SUM, ZERO_FRACTION_SUM, UNEQUAL_LENGTH, TOO_MANY_OUTPUTS, INV_PARAMETER_IDX,
 //     INV_INPUT_PAIR_STR, INV_INPUT_PAIR_IDX, MAKELRESULT)
 //   - the general Mathcad wrapper helpers: CheckRealOrError,
 //     CheckRealArrayOrError, get_nan, AllocateToMathcadArray
@@ -97,6 +97,14 @@ static LRESULT ToLongOrError(LPCCOMPLEXSCALAR val, EC code, unsigned int positio
 // in CoolPropMathcad.cpp, this does NOT attempt substring-matching for a more
 // specific code: the low-level API's message text does not follow the same
 // shape as the ValueError text those helpers were written against.
+//
+// Every `msg`/`namesBuf` buffer passed in here (and to every AbstractState_*
+// call throughout this file) is zero-initialized at its declaration --
+// HandleException() (src/CoolPropLib.cpp) only memcpy's into message_buffer
+// when the formatted text fits; on its "didn't fit" path (errcode==2, not
+// reachable in practice at AS_ERR_BUFFER_LEN=500 but not provably
+// unreachable either) the buffer is left untouched, and the strncmp() below
+// must not read uninitialized stack memory in that case.
 static LRESULT TranslateASError(const char* message, unsigned int position) {
     CoolProp::set_error_string(message);
     if (std::strncmp(message, "HandleError:", 12) == 0) {
@@ -177,7 +185,7 @@ static LRESULT CP_AS_factory(LPCOMPLEXSCALAR Handle,  // output: handle for use 
                              LPCMCSTRING Fluids)       // '&' delimited list of fluids
 {
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
 
     long handle = as_state_guard.get_or_create(Backend->str, Fluids->str, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateFactoryError(msg);
@@ -219,8 +227,8 @@ static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,   // output: Handl
     // AbstractState::set_mole_fractions()/set_mass_fractions() happens to
     // throw, routed through the generic LOWLEVEL_ERROR fallback.
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
-    char namesBuf[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
+    char namesBuf[AS_ERR_BUFFER_LEN] = {};
     AbstractState_fluid_names(handle, namesBuf, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -271,8 +279,8 @@ static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,   // output: Handl
 // already-exposed building blocks instead of wrapping that C++-only method.
 static LRESULT GetComponentMolarMasses(long handle, std::vector<double>* molarMasses, unsigned int position) {
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
-    char namesBuf[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
+    char namesBuf[AS_ERR_BUFFER_LEN] = {};
     AbstractState_fluid_names(handle, namesBuf, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, position);
 
@@ -329,6 +337,13 @@ static LRESULT CP_AS_mole_to_mass_fractions(LPCOMPLEXARRAY MassFractions,  // ou
     for (size_t i = 0; i < molarMasses.size(); ++i) {
         denom += molarMasses[i] * MoleFractions->hReal[0][i];
     }
+    // Guard the normalization divide -- an all-zero (or exactly canceling)
+    // MoleFractions input, trivially reachable even for a pure fluid via
+    // MoleFractions=[0], would otherwise silently produce NaN in every
+    // output element instead of a diagnosable Custom Error.
+    if (denom == 0.0) {
+        return MAKELRESULT(ZERO_FRACTION_SUM, 2);
+    }
 
     std::vector<std::vector<double>> Vec(molarMasses.size());
     for (size_t i = 0; i < molarMasses.size(); ++i) {
@@ -364,6 +379,10 @@ static LRESULT CP_AS_mass_to_mole_fractions(LPCOMPLEXARRAY MoleFractions,  // ou
     double denom = 0.0;
     for (size_t i = 0; i < molarMasses.size(); ++i) {
         denom += MassFractions->hReal[0][i] / molarMasses[i];
+    }
+    // See the matching guard in CP_AS_mole_to_mass_fractions() above.
+    if (denom == 0.0) {
+        return MAKELRESULT(ZERO_FRACTION_SUM, 2);
     }
 
     std::vector<std::vector<double>> Vec(molarMasses.size());
@@ -403,7 +422,7 @@ static LRESULT CP_AS_specify_phase(LPCOMPLEXSCALAR HandleOut,  // output: Handle
     if (r) return r;
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_specify_phase(handle, Phase->str, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -429,7 +448,7 @@ static LRESULT CP_AS_unspecify_phase(LPCOMPLEXSCALAR HandleOut,   // output: Han
     if (r) return r;
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_unspecify_phase(handle, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -462,7 +481,7 @@ static LRESULT CP_AS_get_phase(LPMCSTRING PhaseStr,        // output: phase name
     if (r) return r;
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     int phase = AbstractState_phase(handle, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -489,7 +508,7 @@ static LRESULT CP_AS_free(LPCOMPLEXSCALAR Dummy,     // output (dummy value, 0 o
     if (r) return r;
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_free(handle, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -567,7 +586,7 @@ static LRESULT CP_AS_update(LPCOMPLEXSCALAR HandleOut,      // output: Handle, u
     if (!IsValidInputPairIndex(inputPair)) return MAKELRESULT(INV_INPUT_PAIR_IDX, 2);
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_update(handle, inputPair, Value1->real, Value2->real, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -601,7 +620,7 @@ static LRESULT CP_AS_get(LPCOMPLEXSCALAR Prop,       // output: the requested va
     if (!IsValidParamIndex(paramIdx)) return MAKELRESULT(INV_PARAMETER_IDX, 2);
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     double value = AbstractState_keyed_output(handle, paramIdx, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -635,7 +654,7 @@ static LRESULT CP_AS_get_sat_liquid(LPCOMPLEXSCALAR Prop,       // output: the r
     if (!IsValidParamIndex(paramIdx)) return MAKELRESULT(INV_PARAMETER_IDX, 2);
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     double value = AbstractState_saturated_liquid_keyed_output(handle, paramIdx, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -668,7 +687,7 @@ static LRESULT CP_AS_get_sat_vapor(LPCOMPLEXSCALAR Prop,       // output: the re
     if (!IsValidParamIndex(paramIdx)) return MAKELRESULT(INV_PARAMETER_IDX, 2);
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     double value = AbstractState_saturated_vapor_keyed_output(handle, paramIdx, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -702,7 +721,7 @@ static LRESULT CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,   // output: c
     std::vector<double> fracBuf(static_cast<size_t>(AS_MAX_COMPONENTS));
     long N = 0;
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_get_mole_fractions(handle, fracBuf.data(), AS_MAX_COMPONENTS, &N, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -755,7 +774,7 @@ static LRESULT CP_AS_mole_fractions_liquid(LPCOMPLEXARRAY Fractions,   // output
     std::vector<double> fracBuf(static_cast<size_t>(AS_MAX_COMPONENTS));
     long N = 0;
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_get_mole_fractions_satState(handle, "liquid", fracBuf.data(), AS_MAX_COMPONENTS, &N, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -785,7 +804,7 @@ static LRESULT CP_AS_mole_fractions_vapor(LPCOMPLEXARRAY Fractions,   // output:
     std::vector<double> fracBuf(static_cast<size_t>(AS_MAX_COMPONENTS));
     long N = 0;
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_get_mole_fractions_satState(handle, "gas", fracBuf.data(), AS_MAX_COMPONENTS, &N, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -887,7 +906,7 @@ static LRESULT CP_AS_props(LPCOMPLEXSCALAR Prop,           // output: computed v
     if (!IsValidParamIndex(paramIdx)) return MAKELRESULT(INV_PARAMETER_IDX, 5);
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
 
     AbstractState_update(handle, inputPair, Value1->real, Value2->real, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
@@ -977,7 +996,7 @@ static LRESULT CP_AS_props_multi(LPCOMPLEXARRAY Prop,            // output: matr
     std::vector<double> out1(N, NaN), out2(N, NaN), out3(N, NaN), out4(N, NaN), out5(N, NaN);
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_update_and_5_out(handle, inputPair, Value1Vec.data(), Value2Vec.data(), N, outputs, out1.data(), out2.data(), out3.data(),
                                     out4.data(), out5.data(), &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
@@ -1088,8 +1107,8 @@ static LRESULT CP_AS_backend_name(LPMCSTRING BackendStr,     // output: backend 
     if (r) return r;
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
-    char backendBuf[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
+    char backendBuf[AS_ERR_BUFFER_LEN] = {};
     AbstractState_backend_name(handle, backendBuf, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -1124,7 +1143,7 @@ static LRESULT CP_AS_build_phase_envelope(LPCOMPLEXSCALAR HandleOut,  // output:
     if (r) return r;
 
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_build_phase_envelope(handle, Level->str, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
@@ -1173,7 +1192,7 @@ struct PhaseEnvelopeTPRho
 static LRESULT FetchPhaseEnvelope(long handle, PhaseEnvelopeTPRho* out) {
     long probe_length = 0, probe_components = 0;
     long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN];
+    char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_get_phase_envelope_data_checkedMemory(handle, 0, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &probe_length,
                                                         &probe_components, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (probe_length <= 0) {
