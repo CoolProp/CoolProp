@@ -37,7 +37,7 @@ extern void apply_simple_mixing_rule(const std::string& identifier1, const std::
 // accepts; throws CoolProp::ValueError for a value with no mapping (not
 // reachable from a value AbstractState_phase() itself returned).
 extern const std::string& get_phase_short_desc(phases phase);
-}
+}  // namespace CoolProp
 
 enum EC
 {
@@ -72,7 +72,7 @@ enum EC
     BAD_RULE,
     PAIR_EXISTS,
     NO_SOLUTION,
-    BAD_HANDLE,       // Low-Level (AbstractState) Error Codes from here   v
+    BAD_HANDLE,  // Low-Level (AbstractState) Error Codes from here   v
     TOO_MANY_OUTPUTS,
     LOWLEVEL_ERROR,
     BAD_BACKEND,
@@ -92,50 +92,50 @@ enum EC
 // table of error messages
 // As of Mathcad Prime 10, these are now actually returned as Custom Error: messages
 const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
-                                               "Insufficient Memory",
-                                               "Interrupted",
-                                               "Only one column allowed in input array",
-                                               "Input arrays must be the same length",
-                                               "Invalid Fluid String",
-                                               "Invalid predefined mixture",
-                                               "IF97 Backend supports pure \"Water\" only",
-                                               "Invalid Parameter String",
-                                               "Invalid Phase String",
-                                               "Only one input key phase specification allowed",
-                                               "Cannot use this REF State with this fluid",
-                                               "Input Parameter is Non-Trivial",
-                                               "REFPROP not installed correctly",
-                                               "This Output parameter is not available for this Fluid",
-                                               "This Input Pair is not yet supported for this Fluid",
-                                               "Input vapor quality must be between 0 and 1",
-                                               "Output variable not valid in two phase region",
-                                               "Output variable only valid in two phase region",
-                                               "Temperature out of range",
-                                               "Pressure out of range",
-                                               "Enthalpy out of range",
-                                               "Entropy out of range",
-                                               "Temperature-Pressure inputs in 2-phase region; use TQ or PQ",
-                                               "At least one of the inputs must be [T], [R], [W], or [Tdp]",
-                                               "Could not match binary pair",
-                                               "Missing at least one set of binary interaction parameters.",
-                                               "Mixing rule must be \"linear\" or \"Lorentz-Berthelot\".",
-                                               "Specified binary pair already exists.",
-                                               "No solution found for the given inputs and fluid.",
-                                               "Invalid or stale AbstractState handle; it may already have been freed or replaced",
-                                               "Low-Level Multi function supports at most 5 output parameters per call",
-                                               "CoolProp Low-Level API Issue: Use get_global_param_string(\"errstring\") for more info.",
-                                               "Invalid Backend String",
-                                               "AS_set_fractions is not valid for a pure fluid",
-                                               "Input fractions must sum to 1.0",
-                                               "Weighted fraction sum is zero; cannot normalize (check for an all-zero or canceling input)",
-                                               "Invalid Parameter Index",
-                                               "Invalid Input Pair String",
-                                               "Invalid Input Pair Index",
-                                               "No Active States",
-                                               "Phase Envelope Not Built",
-                                               "No Such Input Pair",
-                                               "CoolProp Issue: Use get_global_param_string(\"errstring\") for more info.",
-                                               "Error Count - Not Used"};
+                                                     "Insufficient Memory",
+                                                     "Interrupted",
+                                                     "Only one column allowed in input array",
+                                                     "Input arrays must be the same length",
+                                                     "Invalid Fluid String",
+                                                     "Invalid predefined mixture",
+                                                     "IF97 Backend supports pure \"Water\" only",
+                                                     "Invalid Parameter String",
+                                                     "Invalid Phase String",
+                                                     "Only one input key phase specification allowed",
+                                                     "Cannot use this REF State with this fluid",
+                                                     "Input Parameter is Non-Trivial",
+                                                     "REFPROP not installed correctly",
+                                                     "This Output parameter is not available for this Fluid",
+                                                     "This Input Pair is not yet supported for this Fluid",
+                                                     "Input vapor quality must be between 0 and 1",
+                                                     "Output variable not valid in two phase region",
+                                                     "Output variable only valid in two phase region",
+                                                     "Temperature out of range",
+                                                     "Pressure out of range",
+                                                     "Enthalpy out of range",
+                                                     "Entropy out of range",
+                                                     "Temperature-Pressure inputs in 2-phase region; use TQ or PQ",
+                                                     "At least one of the inputs must be [T], [R], [W], or [Tdp]",
+                                                     "Could not match binary pair",
+                                                     "Missing at least one set of binary interaction parameters.",
+                                                     "Mixing rule must be \"linear\" or \"Lorentz-Berthelot\".",
+                                                     "Specified binary pair already exists.",
+                                                     "No solution found for the given inputs and fluid.",
+                                                     "Invalid or stale AbstractState handle; it may already have been freed or replaced",
+                                                     "Low-Level Multi function supports at most 5 output parameters per call",
+                                                     "CoolProp Low-Level API Issue: Use get_global_param_string(\"errstring\") for more info.",
+                                                     "Invalid Backend String",
+                                                     "AS_set_fractions is not valid for a pure fluid",
+                                                     "Input fractions must sum to 1.0",
+                                                     "Weighted fraction sum is zero; cannot normalize (check for an all-zero or canceling input)",
+                                                     "Invalid Parameter Index",
+                                                     "Invalid Input Pair String",
+                                                     "Invalid Input Pair Index",
+                                                     "No Active States",
+                                                     "Phase Envelope Not Built",
+                                                     "No Such Input Pair",
+                                                     "CoolProp Issue: Use get_global_param_string(\"errstring\") for more info.",
+                                                     "Error Count - Not Used"};
 
 // Helper: allocate Mathcad string and copy contents
 static char* AllocMathcadString(const std::string& s) {
@@ -947,13 +947,14 @@ FUNCTIONINFO FluidParam = {
 };
 
 FUNCTIONINFO RefState = {
-  const_cast<char*>("set_reference_state"),                                           // Name by which Mathcad will recognize the function
-  const_cast<char*>("Fluid, Reference State String"),                                 // Description of input parameters
-  const_cast<char*>("Sets the reference state to either IIR, ASHRAE, NBP, or DEF."),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_set_reference_state,                                                // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                     // Returns a Mathcad complex scalar
-  2,                                                                                  // Number of arguments
-  {MC_STRING, MC_STRING}                                                              // Argument types
+  const_cast<char*>("set_reference_state"),            // Name by which Mathcad will recognize the function
+  const_cast<char*>("Fluid, Reference State String"),  // Description of input parameters
+  const_cast<char*>(
+    "Sets the reference state to either IIR, ASHRAE, NBP, or DEF."),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_set_reference_state,                                // Pointer to the function code.
+  COMPLEX_SCALAR,                                                     // Returns a Mathcad complex scalar
+  2,                                                                  // Number of arguments
+  {MC_STRING, MC_STRING}                                              // Argument types
 };
 
 // Note: these FUNCTIONINFO variables are named with an "Info" suffix (rather
@@ -965,29 +966,33 @@ FUNCTIONINFO RefState = {
 // The Mathcad-facing function name (first field of each struct below) is
 // unaffected -- worksheets still call PropsSI(...), etc.
 FUNCTIONINFO Props1SIInfo = {
-  const_cast<char*>("Props1SI"),                                                                                     // Name by which Mathcad will recognize the function
-  const_cast<char*>("Fluid, Property Name"),                                                                         // Description of input parameters
-  const_cast<char*>("Returns a fluid-specific parameter, where the parameter is not dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_Props1SI,                                                                                          // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                                    // Returns a Mathcad complex scalar
-  2,                                                                                                                 // Number of arguments
-  {MC_STRING, MC_STRING}                                                                                             // Argument types
+  const_cast<char*>("Props1SI"),              // Name by which Mathcad will recognize the function
+  const_cast<char*>("Fluid, Property Name"),  // Description of input parameters
+  const_cast<char*>(
+    "Returns a fluid-specific parameter, where the parameter is not dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_Props1SI,                                                                          // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                                    // Returns a Mathcad complex scalar
+  2,                                                                                                 // Number of arguments
+  {MC_STRING, MC_STRING}                                                                             // Argument types
 };
 
 FUNCTIONINFO PropsSIInfo = {
-  const_cast<char*>("PropsSI"),                                                                                  // Name by which Mathcad will recognize the function
+  const_cast<char*>("PropsSI"),  // Name by which Mathcad will recognize the function
   const_cast<char*>("Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name"),  // Description of input parameters
-  const_cast<char*>("Returns a fluid-specific parameter, where the parameter is dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_PropsSI,                                                                                       // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                                // Returns a Mathcad complex scalar
-  6,                                                                                                             // Number of arguments
-  {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                                   // Argument types
+  const_cast<char*>(
+    "Returns a fluid-specific parameter, where the parameter is dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_PropsSI,                                                                       // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                                // Returns a Mathcad complex scalar
+  6,                                                                                             // Number of arguments
+  {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                   // Argument types
 };
 
 FUNCTIONINFO PropsSImultiInfo = {
-  const_cast<char*>("PropsSImulti"),                                                                                                              // Name by which Mathcad will recognize the function
-  const_cast<char*>("Output Name, Input Name 1, Input Property 1 (Array), Input Name 2, Input Property 2 (Array), Fluid Name"),                    // Description of input parameters
-  const_cast<char*>("Returns a range of fluid-specific parameters, where the parameters are dependent on the state ranges defined by the input property arrays"),  // Description of the function for the Insert Function dialog box
+  const_cast<char*>("PropsSImulti"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>(
+    "Output Name, Input Name 1, Input Property 1 (Array), Input Name 2, Input Property 2 (Array), Fluid Name"),  // Description of input parameters
+  const_cast<char*>("Returns a range of fluid-specific parameters, where the parameters are dependent on the state ranges defined by the input "
+                    "property arrays"),                                       // Description of the function for the Insert Function dialog box
   (LPCFUNCTION)CP_PropsSImulti,                                               // Pointer to the function code.
   COMPLEX_ARRAY,                                                              // Returns a Mathcad complex array
   6,                                                                          // Number of arguments
@@ -995,23 +1000,25 @@ FUNCTIONINFO PropsSImultiInfo = {
 };
 
 FUNCTIONINFO PhaseSIInfo = {
-  const_cast<char*>("PhaseSI"),                                                                     // Name by which Mathcad will recognize the function
+  const_cast<char*>("PhaseSI"),  // Name by which Mathcad will recognize the function
   const_cast<char*>("Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name"),  // Description of input parameters
-  const_cast<char*>("Returns the fluid phase, dependent on the fluid state"),                       // Description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_PhaseSI,                                                                          // Pointer to the function code.
-  MC_STRING,                                                                                        // Returns a Mathcad String
-  5,                                                                                                // Number of arguments
-  {MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                                 // Argument types
+  const_cast<char*>("Returns the fluid phase, dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_PhaseSI,                                                     // Pointer to the function code.
+  MC_STRING,                                                                   // Returns a Mathcad String
+  5,                                                                           // Number of arguments
+  {MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}            // Argument types
 };
 
 FUNCTIONINFO HAPropsSIInfo = {
   const_cast<char*>("HAPropsSI"),  // Name by which Mathcad will recognize the function
-  const_cast<char*>("Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Input Name 3, Input Property 3"),  // Description of input parameters
-  const_cast<char*>("Returns a parameter of humid air, where the parameter is dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_HAPropsSI,                                                                                   // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                              // Returns a Mathcad complex scalar
-  7,                                                                                                           // Number of arguments
-  {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR}                 // Argument types
+  const_cast<char*>(
+    "Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Input Name 3, Input Property 3"),  // Description of input parameters
+  const_cast<char*>(
+    "Returns a parameter of humid air, where the parameter is dependent on the fluid state"),  // Description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_HAPropsSI,                                                                   // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                              // Returns a Mathcad complex scalar
+  7,                                                                                           // Number of arguments
+  {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR}  // Argument types
 };
 
 FUNCTIONINFO GetMixtureData = {
@@ -1045,23 +1052,25 @@ FUNCTIONINFO SetMixtureData = {
 };
 
 FUNCTIONINFO GetPredefFluids = {
-  const_cast<char*>("get_predefined_mixture_fluids"),                                      // Name by which Mathcad will recognize the function
-  const_cast<char*>("MixtureName"),                                                        // Description of input parameters
-  const_cast<char*>("Returns semicolon-delimited fluid names in the predefined mixture"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_get_predefined_mixture_fluids,                                           // Pointer to the function code.
-  MC_STRING,                                                                               // Returns a Mathcad string
-  1,                                                                                       // Number of arguments
-  {MC_STRING}                                                                              // Argument types
+  const_cast<char*>("get_predefined_mixture_fluids"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("MixtureName"),                    // Description of input parameters
+  const_cast<char*>(
+    "Returns semicolon-delimited fluid names in the predefined mixture"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_get_predefined_mixture_fluids,                           // Pointer to the function code.
+  MC_STRING,                                                               // Returns a Mathcad string
+  1,                                                                       // Number of arguments
+  {MC_STRING}                                                              // Argument types
 };
 
 FUNCTIONINFO GetPredefMoleFracs = {
-  const_cast<char*>("get_predefined_mixture_fractions"),                                      // Name by which Mathcad will recognize the function
-  const_cast<char*>("MixtureName"),                                                           // Description of input parameters
-  const_cast<char*>("Returns a column vector of mole fractions for the predefined mixture"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_get_predefined_mixture_mole_fractions,                                      // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                              // Returns a Mathcad complex array
-  1,                                                                                          // Number of arguments
-  {MC_STRING}                                                                                 // Argument types
+  const_cast<char*>("get_predefined_mixture_fractions"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("MixtureName"),                       // Description of input parameters
+  const_cast<char*>(
+    "Returns a column vector of mole fractions for the predefined mixture"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_get_predefined_mixture_mole_fractions,                      // Pointer to the function code.
+  COMPLEX_ARRAY,                                                              // Returns a Mathcad complex array
+  1,                                                                          // Number of arguments
+  {MC_STRING}                                                                 // Argument types
 };
 
 // ************************************************************************************

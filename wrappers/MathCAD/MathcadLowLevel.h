@@ -250,7 +250,7 @@ static std::mutex g_as_mutex;
 // rebuilding the backend -- see MathcadStateGuard.h.
 static LRESULT CP_AS_factory(LPCOMPLEXSCALAR Handle,  // output: handle for use by the other AS_* functions
                              LPCMCSTRING Backend,     // backend to use, e.g. "HEOS", "REFPROP", "BICUBIC&HEOS"
-                             LPCMCSTRING Fluids)       // '&' delimited list of fluids
+                             LPCMCSTRING Fluids)      // '&' delimited list of fluids
 {
     std::scoped_lock lock(g_as_mutex);
     long errcode = 0;
@@ -276,9 +276,9 @@ constexpr double AS_FRACTION_SUM_TOLERANCE = 1e-6;
 // AbstractState_set_fractions(), used to set the mole/mass/volume fractions for a
 // mixture handle created by AS_factory.  Returns Handle unchanged so downstream
 // equations that use this call's return value depend on it.
-static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,   // output: Handle, unchanged
-                                   LPCCOMPLEXSCALAR Handle,     // AbstractState handle from AS_factory
-                                   LPCCOMPLEXARRAY Fractions)   // mole/mass/volume fractions
+static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,  // output: Handle, unchanged
+                                   LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                                   LPCCOMPLEXARRAY Fractions)  // mole/mass/volume fractions
 {
     std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
@@ -382,8 +382,8 @@ static LRESULT GetComponentMolarMasses(long handle, std::vector<double>* molarMa
 // Self-normalizing: divides by the actual weighted sum rather than assuming
 // MoleFractions already sums to 1, so a not-quite-normalized input still
 // produces a correctly-normalized result.
-static LRESULT CP_AS_mole_to_mass_fractions(LPCOMPLEXARRAY MassFractions,  // output: column vector of mass fractions
-                                            LPCCOMPLEXSCALAR Handle,      // AbstractState handle from AS_factory (for component identities)
+static LRESULT CP_AS_mole_to_mass_fractions(LPCOMPLEXARRAY MassFractions,   // output: column vector of mass fractions
+                                            LPCCOMPLEXSCALAR Handle,        // AbstractState handle from AS_factory (for component identities)
                                             LPCCOMPLEXARRAY MoleFractions)  // column vector of mole fractions to convert
 {
     std::scoped_lock lock(g_as_mutex);
@@ -426,8 +426,8 @@ static LRESULT CP_AS_mole_to_mass_fractions(LPCOMPLEXARRAY MassFractions,  // ou
 // This code executes the user function CP_AS_mass_to_mole_fractions -- the
 // inverse of CP_AS_mole_to_mass_fractions() above (mole_i = (w_i / mm_i) /
 // sum(w_j / mm_j)). See that function's comment for the shared rationale.
-static LRESULT CP_AS_mass_to_mole_fractions(LPCOMPLEXARRAY MoleFractions,  // output: column vector of mole fractions
-                                            LPCCOMPLEXSCALAR Handle,      // AbstractState handle from AS_factory (for component identities)
+static LRESULT CP_AS_mass_to_mole_fractions(LPCOMPLEXARRAY MoleFractions,   // output: column vector of mole fractions
+                                            LPCCOMPLEXSCALAR Handle,        // AbstractState handle from AS_factory (for component identities)
                                             LPCCOMPLEXARRAY MassFractions)  // column vector of mass fractions to convert
 {
     std::scoped_lock lock(g_as_mutex);
@@ -510,8 +510,8 @@ static LRESULT CP_AS_specify_phase(LPCOMPLEXSCALAR HandleOut,  // output: Handle
 // AbstractState_unspecify_phase(), used to remove a phase imposed by
 // AS_specify_phase from a handle created by AS_factory.  Returns Handle
 // unchanged so downstream equations that use this call's return value depend on it.
-static LRESULT CP_AS_unspecify_phase(LPCOMPLEXSCALAR HandleOut,   // output: Handle, unchanged
-                                     LPCCOMPLEXSCALAR Handle)     // AbstractState handle from AS_factory
+static LRESULT CP_AS_unspecify_phase(LPCOMPLEXSCALAR HandleOut,  // output: Handle, unchanged
+                                     LPCCOMPLEXSCALAR Handle)    // AbstractState handle from AS_factory
 {
     std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
@@ -542,9 +542,9 @@ static LRESULT CP_AS_unspecify_phase(LPCOMPLEXSCALAR HandleOut,   // output: Han
 // Useful for worksheet branching -- e.g. checking the state is actually
 // two-phase before calling AS_get_sat_liquid/AS_mole_fractions_liquid --
 // without relying on those raising a LOWLEVEL_ERROR to find out.
-static LRESULT CP_AS_get_phase(LPMCSTRING PhaseStr,        // output: phase name, e.g. "phase_liquid"
-                               LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
-                               LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
+static LRESULT CP_AS_get_phase(LPMCSTRING PhaseStr,       // output: phase name, e.g. "phase_liquid"
+                               LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
+                               LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
     std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
@@ -572,8 +572,8 @@ static LRESULT CP_AS_get_phase(LPMCSTRING PhaseStr,        // output: phase name
 // calling it from an independent worksheet equation is discouraged since nothing
 // guarantees it runs after every reader of the same handle -- rely on
 // AS_factory's registry guard to bound leakage there instead (see README.md).
-static LRESULT CP_AS_free(LPCOMPLEXSCALAR Dummy,     // output (dummy value, 0 on success)
-                          LPCCOMPLEXSCALAR Handle)   // AbstractState handle to release
+static LRESULT CP_AS_free(LPCOMPLEXSCALAR Dummy,    // output (dummy value, 0 on success)
+                          LPCCOMPLEXSCALAR Handle)  // AbstractState handle to release
 {
     std::scoped_lock lock(g_as_mutex);
     LRESULT r = CheckRealOrError(Handle, 1);
@@ -601,7 +601,7 @@ static LRESULT CP_AS_free(LPCOMPLEXSCALAR Dummy,     // output (dummy value, 0 o
 // anywhere in the worksheet, reuse many times, so a Mathcad array formula
 // evaluating many points never marshals a string per point.
 static LRESULT CP_AS_param_index(LPCOMPLEXSCALAR Index,  // output: parameter index
-                                 LPCMCSTRING Name)        // parameter name, e.g. "T", "Dmolar", "Hmass"
+                                 LPCMCSTRING Name)       // parameter name, e.g. "T", "Dmolar", "Hmass"
 {
     long idx = get_param_index(Name->str);
     if (idx < 0) return MAKELRESULT(BAD_PARAMETER, 1);
@@ -617,7 +617,7 @@ static LRESULT CP_AS_param_index(LPCOMPLEXSCALAR Index,  // output: parameter in
 // get_input_pair_index(), used to resolve an input pair name (e.g. "PT_INPUTS") to
 // the integer index AS_update/AS_props/AS_props_multi expect.
 static LRESULT CP_AS_input_pair_index(LPCOMPLEXSCALAR Index,  // output: input pair index
-                                      LPCMCSTRING Name)        // input pair name, e.g. "PT_INPUTS", "HmassP_INPUTS"
+                                      LPCMCSTRING Name)       // input pair name, e.g. "PT_INPUTS", "HmassP_INPUTS"
 {
     long idx = get_input_pair_index(Name->str);
     if (idx < 0) return MAKELRESULT(INV_INPUT_PAIR_STR, 1);
@@ -841,9 +841,10 @@ static LRESULT FetchComponentVector(Fn&& call, std::vector<double>* out) {
 // overall composition. Useful to read back what AS_set_fractions actually
 // applied, or the composition of a handle built from a predefined-mixture
 // string.
-static LRESULT CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,   // output: column vector of mole fractions
-                                        LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
-                                        LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
+static LRESULT
+  CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,  // output: column vector of mole fractions
+                           LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
+                           LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
     std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
@@ -855,11 +856,9 @@ static LRESULT CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,   // output: c
     if (r) return r;
 
     std::vector<double> fracVec;
-    r = FetchComponentVector(
-      [handle](double* buf, long maxN, long* N, long* errcode, char* msg) {
-          AbstractState_get_mole_fractions(handle, buf, maxN, N, errcode, msg, AS_ERR_BUFFER_LEN);
-      },
-      &fracVec);
+    r = FetchComponentVector([handle](double* buf, long maxN, long* N, long* errcode,
+                                      char* msg) { AbstractState_get_mole_fractions(handle, buf, maxN, N, errcode, msg, AS_ERR_BUFFER_LEN); },
+                             &fracVec);
     if (r) return r;
 
     std::vector<std::vector<double>> Vec(fracVec.size());
@@ -896,9 +895,9 @@ static LRESULT CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,   // output: c
 // update (the normal chaining idiom), that alone may already provide the
 // dependency edge; Trigger is the explicit fallback for call shapes where
 // it doesn't.
-static LRESULT CP_AS_mole_fractions_liquid(LPCOMPLEXARRAY Fractions,   // output: column vector of mole fractions
-                                           LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
-                                           LPCCOMPLEXSCALAR Trigger)   // unused -- see comment above for why this argument exists
+static LRESULT CP_AS_mole_fractions_liquid(LPCOMPLEXARRAY Fractions,  // output: column vector of mole fractions
+                                           LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
+                                           LPCCOMPLEXSCALAR Trigger)  // unused -- see comment above for why this argument exists
 {
     std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
@@ -928,9 +927,10 @@ static LRESULT CP_AS_mole_fractions_liquid(LPCOMPLEXARRAY Fractions,   // output
 // CP_AS_mole_fractions_liquid()'s comment above; identical except it wraps
 // AbstractState_get_mole_fractions_satState() with saturated_state="gas"
 // (the SATURATED VAPOR side).
-static LRESULT CP_AS_mole_fractions_vapor(LPCOMPLEXARRAY Fractions,   // output: column vector of mole fractions
-                                          LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
-                                          LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
+static LRESULT
+  CP_AS_mole_fractions_vapor(LPCOMPLEXARRAY Fractions,  // output: column vector of mole fractions
+                             LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
+                             LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
     std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
@@ -976,7 +976,7 @@ static LRESULT CP_AS_mole_fractions_vapor(LPCOMPLEXARRAY Fractions,   // output:
 // (see below). Passing them would be dead weight, so this only takes the
 // two indices. The dummy 0.0s below stand in for the unused value
 // arguments generate_update_pair()'s signature still requires.
-static LRESULT CP_AS_generate_update_pair(LPMCSTRING PairName,        // output: resolved input pair name, e.g. "PT_INPUTS"
+static LRESULT CP_AS_generate_update_pair(LPMCSTRING PairName,         // output: resolved input pair name, e.g. "PT_INPUTS"
                                           LPCCOMPLEXSCALAR ParamIdx1,  // first output parameter index, from AS_param_index
                                           LPCCOMPLEXSCALAR ParamIdx2)  // second output parameter index, from AS_param_index
 {
@@ -1140,7 +1140,7 @@ static LRESULT CP_AS_props_multi(LPCOMPLEXARRAY Prop,            // output: matr
     long errcode = 0;
     char msg[AS_ERR_BUFFER_LEN] = {};
     AbstractState_update_and_5_out(handle, inputPair, Value1Vec.data(), Value2Vec.data(), N, outputs, out1.data(), out2.data(), out3.data(),
-                                    out4.data(), out5.data(), &errcode, msg, AS_ERR_BUFFER_LEN);
+                                   out4.data(), out5.data(), &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
     // Transpose into row-per-point order: AllocateToMathcadArray/hReal are
@@ -1421,9 +1421,10 @@ static LRESULT FetchPhaseEnvelope(long handle, PhaseEnvelopeTPRho* out) {
 // call) as a table: one row per envelope point, columns T, P, rhomolar_vap,
 // rhomolar_liq. Per-component compositions (x/y) are not surfaced by this
 // function -- see FetchPhaseEnvelope()'s comment.
-static LRESULT CP_AS_get_phase_envelope_data(LPCOMPLEXARRAY Data,       // output: N rows x {T, P, rhomolar_vap, rhomolar_liq}
-                                             LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
-                                             LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
+static LRESULT
+  CP_AS_get_phase_envelope_data(LPCOMPLEXARRAY Data,       // output: N rows x {T, P, rhomolar_vap, rhomolar_liq}
+                                LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
+                                LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
     std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
@@ -1459,9 +1460,9 @@ static LRESULT CP_AS_get_phase_envelope_data(LPCOMPLEXARRAY Data,       // outpu
 // Low-Level C API this wrapper is built on, and extending that shared
 // surface is out of scope here -- see this function's entry in
 // MathcadWrappers.rst for what that means for exactness of the result.
-static LRESULT CP_AS_pe_tmax(LPCOMPLEXARRAY Point,       // output: 2-element column vector [T; P]
-                             LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
-                             LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
+static LRESULT CP_AS_pe_tmax(LPCOMPLEXARRAY Point,      // output: 2-element column vector [T; P]
+                             LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
+                             LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
     std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
@@ -1487,9 +1488,9 @@ static LRESULT CP_AS_pe_tmax(LPCOMPLEXARRAY Point,       // output: 2-element co
 // See CP_AS_pe_tmax()'s comment above (mirrors it exactly, scanning P
 // instead of T; CoolProp's internal counterpart is
 // PhaseEnvelopeData::ipsat_max).
-static LRESULT CP_AS_pe_pmax(LPCOMPLEXARRAY Point,       // output: 2-element column vector [T; P]
-                             LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
-                             LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
+static LRESULT CP_AS_pe_pmax(LPCOMPLEXARRAY Point,      // output: 2-element column vector [T; P]
+                             LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
+                             LPCCOMPLEXSCALAR Trigger)  // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
 {
     std::scoped_lock lock(g_as_mutex);
     (void)Trigger;
@@ -1514,273 +1515,300 @@ static LRESULT CP_AS_pe_pmax(LPCOMPLEXARRAY Point,       // output: 2-element co
 // ********************************************************************************************************
 
 FUNCTIONINFO ASFactory = {
-  const_cast<char*>("AS_factory"),                                                                  // Name by which Mathcad will recognize the function
-  const_cast<char*>("Backend, Fluids"),                                                             // Description of input parameters
-  const_cast<char*>("Creates a persistent Low-Level fluid/mixture state and returns a handle"),      // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_factory,                                                                       // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                   // Returns a Mathcad complex scalar (the handle)
-  2,                                                                                                 // Number of arguments
-  {MC_STRING, MC_STRING}                                                                            // Argument types
+  const_cast<char*>("AS_factory"),       // Name by which Mathcad will recognize the function
+  const_cast<char*>("Backend, Fluids"),  // Description of input parameters
+  const_cast<char*>(
+    "Creates a persistent Low-Level fluid/mixture state and returns a handle"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_factory,                                                    // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                // Returns a Mathcad complex scalar (the handle)
+  2,                                                                             // Number of arguments
+  {MC_STRING, MC_STRING}                                                         // Argument types
 };
 
 FUNCTIONINFO ASSetFractions = {
-  const_cast<char*>("AS_set_fractions"),                                                            // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Fractions"),                                                            // Description of input parameters
-  const_cast<char*>("Sets the mole/mass/volume fractions for a mixture Handle; returns Handle"),     // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_set_fractions,                                                                  // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                   // Returns a Mathcad complex scalar (Handle, unchanged)
-  2,                                                                                                 // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                                    // Argument types
+  const_cast<char*>("AS_set_fractions"),   // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Fractions"),  // Description of input parameters
+  const_cast<char*>(
+    "Sets the mole/mass/volume fractions for a mixture Handle; returns Handle"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_set_fractions,                                               // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                 // Returns a Mathcad complex scalar (Handle, unchanged)
+  2,                                                                              // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                 // Argument types
 };
 
 FUNCTIONINFO ASSpecifyPhase = {
-  const_cast<char*>("AS_specify_phase"),                                                             // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Phase"),                                                                // Description of input parameters
-  const_cast<char*>("Imposes a phase on a Low-Level state Handle for subsequent updates; returns Handle"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_specify_phase,                                                                  // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                   // Returns a Mathcad complex scalar (Handle, unchanged)
-  2,                                                                                                 // Number of arguments
-  {COMPLEX_SCALAR, MC_STRING}                                                                        // Argument types
+  const_cast<char*>("AS_specify_phase"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Phase"),     // Description of input parameters
+  const_cast<char*>(
+    "Imposes a phase on a Low-Level state Handle for subsequent updates; returns Handle"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_specify_phase,                                                         // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                           // Returns a Mathcad complex scalar (Handle, unchanged)
+  2,                                                                                        // Number of arguments
+  {COMPLEX_SCALAR, MC_STRING}                                                               // Argument types
 };
 
 FUNCTIONINFO ASUnspecifyPhase = {
-  const_cast<char*>("AS_unspecify_phase"),                                                           // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle"),                                                                       // Description of input parameters
-  const_cast<char*>("Removes a phase imposed by AS_specify_phase from a Low-Level state Handle; returns Handle"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_unspecify_phase,                                                                // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                   // Returns a Mathcad complex scalar (Handle, unchanged)
-  1,                                                                                                 // Number of arguments
-  {COMPLEX_SCALAR}                                                                                   // Argument types
+  const_cast<char*>("AS_unspecify_phase"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle"),              // Description of input parameters
+  const_cast<char*>(
+    "Removes a phase imposed by AS_specify_phase from a Low-Level state Handle; returns Handle"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_unspecify_phase,                                                              // Pointer to the function code.
+  COMPLEX_SCALAR,   // Returns a Mathcad complex scalar (Handle, unchanged)
+  1,                // Number of arguments
+  {COMPLEX_SCALAR}  // Argument types
 };
 
 FUNCTIONINFO ASFree = {
-  const_cast<char*>("AS_free"),                                                                      // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle"),                                                                       // Description of input parameters
-  const_cast<char*>("Releases a Low-Level state Handle created by AS_factory"),                     // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_free,                                                                           // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                   // Returns a Mathcad complex scalar (dummy value)
-  1,                                                                                                 // Number of arguments
-  {COMPLEX_SCALAR}                                                                                   // Argument types
+  const_cast<char*>("AS_free"),                                                  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle"),                                                   // Description of input parameters
+  const_cast<char*>("Releases a Low-Level state Handle created by AS_factory"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_free,                                                       // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                // Returns a Mathcad complex scalar (dummy value)
+  1,                                                                             // Number of arguments
+  {COMPLEX_SCALAR}                                                               // Argument types
 };
 
 FUNCTIONINFO ASParamIndex = {
-  const_cast<char*>("AS_param_index"),                                                               // Name by which Mathcad will recognize the function
-  const_cast<char*>("Name"),                                                                         // Description of input parameters
-  const_cast<char*>("Returns the integer index for an output parameter name, e.g. \"T\", \"Dmolar\""),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_param_index,                                                                    // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                   // Returns a Mathcad complex scalar
-  1,                                                                                                 // Number of arguments
-  {MC_STRING}                                                                                        // Argument types
+  const_cast<char*>("AS_param_index"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Name"),            // Description of input parameters
+  const_cast<char*>(
+    "Returns the integer index for an output parameter name, e.g. \"T\", \"Dmolar\""),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_param_index,                                                       // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                       // Returns a Mathcad complex scalar
+  1,                                                                                    // Number of arguments
+  {MC_STRING}                                                                           // Argument types
 };
 
 FUNCTIONINFO ASInputPairIndex = {
-  const_cast<char*>("AS_input_pair_index"),                                                          // Name by which Mathcad will recognize the function
-  const_cast<char*>("Name"),                                                                         // Description of input parameters
-  const_cast<char*>("Returns the integer index for an input pair name, e.g. \"PT_INPUTS\""),         // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_input_pair_index,                                                               // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                   // Returns a Mathcad complex scalar
-  1,                                                                                                 // Number of arguments
-  {MC_STRING}                                                                                        // Argument types
+  const_cast<char*>("AS_input_pair_index"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Name"),                 // Description of input parameters
+  const_cast<char*>(
+    "Returns the integer index for an input pair name, e.g. \"PT_INPUTS\""),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_input_pair_index,                                        // Pointer to the function code.
+  COMPLEX_SCALAR,                                                             // Returns a Mathcad complex scalar
+  1,                                                                          // Number of arguments
+  {MC_STRING}                                                                 // Argument types
 };
 
 FUNCTIONINFO ASUpdate = {
-  const_cast<char*>("AS_update"),                                                                                  // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Input Pair Index, Input Property 1, Input Property 2"),                               // Description of input parameters
-  const_cast<char*>("Updates a Low-Level state Handle to a new input point (no output read); returns Handle"),     // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_update,                                                                                       // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                                  // Returns a Mathcad complex scalar (Handle, unchanged)
-  4,                                                                                                                // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_SCALAR}                                                 // Argument types
+  const_cast<char*>("AS_update"),                                                     // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Input Pair Index, Input Property 1, Input Property 2"),  // Description of input parameters
+  const_cast<char*>(
+    "Updates a Low-Level state Handle to a new input point (no output read); returns Handle"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_update,                                                                    // Pointer to the function code.
+  COMPLEX_SCALAR,                                                   // Returns a Mathcad complex scalar (Handle, unchanged)
+  4,                                                                // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_SCALAR}  // Argument types
 };
 
 FUNCTIONINFO ASGet = {
-  const_cast<char*>("AS_get"),                                                                                     // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Output Parameter Index"),                                                             // Description of input parameters
-  const_cast<char*>("Returns one output parameter from a Low-Level state Handle's current point"),                // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_get,                                                                                          // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                                  // Returns a Mathcad complex scalar
-  2,                                                                                                                // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                                 // Argument types
+  const_cast<char*>("AS_get"),                          // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Output Parameter Index"),  // Description of input parameters
+  const_cast<char*>(
+    "Returns one output parameter from a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get,                                                           // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                   // Returns a Mathcad complex scalar
+  2,                                                                                // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                  // Argument types
 };
 
 FUNCTIONINFO ASProps = {
-  const_cast<char*>("AS_props"),                                                                                          // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Input Pair Index, Input Property 1, Input Property 2, Output Parameter Index"),              // Description of input parameters
-  const_cast<char*>("Updates a Low-Level state Handle and returns one output parameter"),                                 // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_props,                                                                                                // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                                          // Returns a Mathcad complex scalar
-  5,                                                                                                                       // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_SCALAR}                                        // Argument types
+  const_cast<char*>("AS_props"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Input Pair Index, Input Property 1, Input Property 2, Output Parameter Index"),  // Description of input parameters
+  const_cast<char*>(
+    "Updates a Low-Level state Handle and returns one output parameter"),           // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_props,                                                         // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                   // Returns a Mathcad complex scalar
+  5,                                                                                // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_SCALAR}  // Argument types
 };
 
 FUNCTIONINFO ASPropsMulti = {
-  const_cast<char*>("AS_props_multi"),                                                                                                    // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Input Pair Index, Input Property 1 (Array), Input Property 2 (Array), Output Parameter Indices (Array)"),     // Description of input parameters
-  const_cast<char*>("Updates a Low-Level state Handle for a range of inputs and returns up to 5 output parameters as a table (row per input point, column per output)"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_props_multi,                                                                                                          // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                                                           // Returns a Mathcad complex array
-  5,                                                                                                                                        // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_ARRAY, COMPLEX_ARRAY, COMPLEX_ARRAY}                                                            // Argument types
+  const_cast<char*>("AS_props_multi"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>(
+    "Handle, Input Pair Index, Input Property 1 (Array), Input Property 2 (Array), Output Parameter Indices (Array)"),  // Description of input parameters
+  const_cast<char*>("Updates a Low-Level state Handle for a range of inputs and returns up to 5 output parameters as a table (row per input point, "
+                    "column per output)"),                                       // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_props_multi,                                                // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                 // Returns a Mathcad complex array
+  5,                                                                             // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_SCALAR, COMPLEX_ARRAY, COMPLEX_ARRAY, COMPLEX_ARRAY}  // Argument types
 };
 
 FUNCTIONINFO ASListHandles = {
-  const_cast<char*>("AS_list_handles"),                                                              // Name by which Mathcad will recognize the function
-  const_cast<char*>("Trigger"),                                                                       // Description of input parameters (unused -- see function comment)
-  const_cast<char*>("Returns a column vector of all currently-live Low-Level state Handles"),         // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_list_handles,                                                                    // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                       // Returns a Mathcad complex array
-  1,                                                                                                   // Number of arguments (Mathcad requires >= 1; Trigger is unused)
-  {COMPLEX_SCALAR}                                                                                     // Argument types
+  const_cast<char*>("AS_list_handles"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Trigger"),          // Description of input parameters (unused -- see function comment)
+  const_cast<char*>(
+    "Returns a column vector of all currently-live Low-Level state Handles"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_list_handles,                                             // Pointer to the function code.
+  COMPLEX_ARRAY,                                                               // Returns a Mathcad complex array
+  1,                                                                           // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR}                                                             // Argument types
 };
 
 FUNCTIONINFO ASListStates = {
-  const_cast<char*>("AS_list_states"),                                                                                // Name by which Mathcad will recognize the function
-  const_cast<char*>("Trigger"),                                                                                      // Description of input parameters (unused -- see function comment)
-  const_cast<char*>("Returns \";\"-delimited \"Backend|Fluids\" for all currently-live states, matching AS_list_handles() order"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_list_states,                                                                                     // Pointer to the function code.
-  MC_STRING,                                                                                                          // Returns a Mathcad string
-  1,                                                                                                                  // Number of arguments (Mathcad requires >= 1; Trigger is unused)
-  {COMPLEX_SCALAR}                                                                                                    // Argument types
+  const_cast<char*>("AS_list_states"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Trigger"),         // Description of input parameters (unused -- see function comment)
+  const_cast<char*>(
+    "Returns \";\"-delimited \"Backend|Fluids\" for all currently-live states, matching AS_list_handles() order"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_list_states,                                                                                   // Pointer to the function code.
+  MC_STRING,                                                                                                        // Returns a Mathcad string
+  1,                // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR}  // Argument types
 };
 
 FUNCTIONINFO ASBuildPhaseEnvelope = {
-  const_cast<char*>("AS_build_phase_envelope"),                                                       // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Level"),                                                                 // Description of input parameters
-  const_cast<char*>("Traces the phase envelope for a Low-Level state Handle; returns Handle"),        // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_build_phase_envelope,                                                            // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                      // Returns a Mathcad complex scalar (Handle, unchanged)
-  2,                                                                                                    // Number of arguments
-  {COMPLEX_SCALAR, MC_STRING}                                                                          // Argument types
+  const_cast<char*>("AS_build_phase_envelope"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Level"),            // Description of input parameters
+  const_cast<char*>(
+    "Traces the phase envelope for a Low-Level state Handle; returns Handle"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_build_phase_envelope,                                      // Pointer to the function code.
+  COMPLEX_SCALAR,                                                               // Returns a Mathcad complex scalar (Handle, unchanged)
+  2,                                                                            // Number of arguments
+  {COMPLEX_SCALAR, MC_STRING}                                                   // Argument types
 };
 
 FUNCTIONINFO ASGetPhaseEnvelopeData = {
-  const_cast<char*>("AS_get_phase_envelope_data"),                                                                    // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Trigger"),                                                                              // Description of input parameters
-  const_cast<char*>("Returns the traced phase envelope as a table: T, P, rhomolar_vap, rhomolar_liq (one row per point)"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_get_phase_envelope_data,                                                                        // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                                     // Returns a Mathcad complex array
-  2,                                                                                                                  // Number of arguments (Mathcad requires >= 1; Trigger is unused)
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                                    // Argument types
+  const_cast<char*>("AS_get_phase_envelope_data"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),             // Description of input parameters
+  const_cast<char*>(
+    "Returns the traced phase envelope as a table: T, P, rhomolar_vap, rhomolar_liq (one row per point)"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get_phase_envelope_data,                                                               // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                            // Returns a Mathcad complex array
+  2,                                // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}  // Argument types
 };
 
 FUNCTIONINFO ASPeTmax = {
-  const_cast<char*>("AS_pe_tmax"),                                                                    // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Trigger"),                                                                // Description of input parameters
-  const_cast<char*>("Cricondentherm: [T; P] at the phase envelope's highest-temperature point"),      // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_pe_tmax,                                                                          // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                       // Returns a Mathcad complex array (2-element column vector)
-  2,                                                                                                    // Number of arguments (Mathcad requires >= 1; Trigger is unused)
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                     // Argument types
+  const_cast<char*>("AS_pe_tmax"),       // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),  // Description of input parameters
+  const_cast<char*>(
+    "Cricondentherm: [T; P] at the phase envelope's highest-temperature point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_pe_tmax,                                                     // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                  // Returns a Mathcad complex array (2-element column vector)
+  2,                                                                              // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                // Argument types
 };
 
 FUNCTIONINFO ASPePmax = {
-  const_cast<char*>("AS_pe_pmax"),                                                                    // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Trigger"),                                                                // Description of input parameters
-  const_cast<char*>("Cricondenbar: [T; P] at the phase envelope's highest-pressure point"),           // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_pe_pmax,                                                                          // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                       // Returns a Mathcad complex array (2-element column vector)
-  2,                                                                                                    // Number of arguments (Mathcad requires >= 1; Trigger is unused)
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                     // Argument types
+  const_cast<char*>("AS_pe_pmax"),       // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),  // Description of input parameters
+  const_cast<char*>(
+    "Cricondenbar: [T; P] at the phase envelope's highest-pressure point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_pe_pmax,                                                // Pointer to the function code.
+  COMPLEX_ARRAY,                                                             // Returns a Mathcad complex array (2-element column vector)
+  2,                                                                         // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                           // Argument types
 };
 
 FUNCTIONINFO ASGetSatLiquid = {
-  const_cast<char*>("AS_get_sat_liquid"),                                                                          // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Output Parameter Index"),                                                             // Description of input parameters
-  const_cast<char*>("Returns one output parameter from the saturated LIQUID side of a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_get_sat_liquid,                                                                               // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                                  // Returns a Mathcad complex scalar
-  2,                                                                                                                // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                                 // Argument types
+  const_cast<char*>("AS_get_sat_liquid"),               // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Output Parameter Index"),  // Description of input parameters
+  const_cast<char*>(
+    "Returns one output parameter from the saturated LIQUID side of a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get_sat_liquid,                                                                             // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                                                // Returns a Mathcad complex scalar
+  2,                                                                                                             // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                               // Argument types
 };
 
 FUNCTIONINFO ASGetSatVapor = {
-  const_cast<char*>("AS_get_sat_vapor"),                                                                           // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Output Parameter Index"),                                                             // Description of input parameters
-  const_cast<char*>("Returns one output parameter from the saturated VAPOR side of a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_get_sat_vapor,                                                                                // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                                                  // Returns a Mathcad complex scalar
-  2,                                                                                                                // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                                 // Argument types
+  const_cast<char*>("AS_get_sat_vapor"),                // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Output Parameter Index"),  // Description of input parameters
+  const_cast<char*>(
+    "Returns one output parameter from the saturated VAPOR side of a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get_sat_vapor,                                                                             // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                                               // Returns a Mathcad complex scalar
+  2,                                                                                                            // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                              // Argument types
 };
 
 FUNCTIONINFO ASMoleFractionsLiquid = {
-  const_cast<char*>("AS_mole_fractions_liquid"),                                                        // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Trigger"),                                                                  // Description of input parameters
-  const_cast<char*>("Returns the saturated LIQUID side's mole fractions at a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_mole_fractions_liquid,                                                              // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                         // Returns a Mathcad complex array (column vector)
-  2,                                                                                                      // Number of arguments (Mathcad requires >= 1; Trigger is unused)
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                       // Argument types
+  const_cast<char*>("AS_mole_fractions_liquid"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),           // Description of input parameters
+  const_cast<char*>(
+    "Returns the saturated LIQUID side's mole fractions at a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_mole_fractions_liquid,                                                             // Pointer to the function code.
+  COMPLEX_ARRAY,                    // Returns a Mathcad complex array (column vector)
+  2,                                // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}  // Argument types
 };
 
 FUNCTIONINFO ASMoleFractionsVapor = {
-  const_cast<char*>("AS_mole_fractions_vapor"),                                                         // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Trigger"),                                                                  // Description of input parameters
-  const_cast<char*>("Returns the saturated VAPOR side's mole fractions at a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_mole_fractions_vapor,                                                               // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                         // Returns a Mathcad complex array (column vector)
-  2,                                                                                                      // Number of arguments (Mathcad requires >= 1; Trigger is unused)
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                       // Argument types
+  const_cast<char*>("AS_mole_fractions_vapor"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),          // Description of input parameters
+  const_cast<char*>(
+    "Returns the saturated VAPOR side's mole fractions at a Low-Level state Handle's current point"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_mole_fractions_vapor,                                                             // Pointer to the function code.
+  COMPLEX_ARRAY,                    // Returns a Mathcad complex array (column vector)
+  2,                                // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}  // Argument types
 };
 
 FUNCTIONINFO ASGenerateUpdatePair = {
-  const_cast<char*>("AS_generate_update_pair"),                                                                                // Name by which Mathcad will recognize the function
-  const_cast<char*>("Output Parameter Index 1, Output Parameter Index 2"),                                                     // Description of input parameters
-  const_cast<char*>("Resolves two output parameters to the CoolProp input pair name they form, e.g. \"PT_INPUTS\""),           // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_generate_update_pair,                                                                                     // Pointer to the function code.
-  MC_STRING,                                                                                                                   // Returns a Mathcad string
-  2,                                                                                                                            // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                                             // Argument types
+  const_cast<char*>("AS_generate_update_pair"),                             // Name by which Mathcad will recognize the function
+  const_cast<char*>("Output Parameter Index 1, Output Parameter Index 2"),  // Description of input parameters
+  const_cast<char*>(
+    "Resolves two output parameters to the CoolProp input pair name they form, e.g. \"PT_INPUTS\""),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_generate_update_pair,                                                            // Pointer to the function code.
+  MC_STRING,                                                                                          // Returns a Mathcad string
+  2,                                                                                                  // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                    // Argument types
 };
 
 FUNCTIONINFO ASMoleToMassFractions = {
-  const_cast<char*>("AS_mole_to_mass_fractions"),                                                       // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, MoleFractions"),                                                            // Description of input parameters
-  const_cast<char*>("Converts a mole-fraction composition to the equivalent mass fractions for Handle's mixture"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_mole_to_mass_fractions,                                                             // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                         // Returns a Mathcad complex array (column vector)
-  2,                                                                                                      // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                                        // Argument types
+  const_cast<char*>("AS_mole_to_mass_fractions"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, MoleFractions"),      // Description of input parameters
+  const_cast<char*>(
+    "Converts a mole-fraction composition to the equivalent mass fractions for Handle's mixture"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_mole_to_mass_fractions,                                                        // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                    // Returns a Mathcad complex array (column vector)
+  2,                                                                                                // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                                   // Argument types
 };
 
 FUNCTIONINFO ASMassToMoleFractions = {
-  const_cast<char*>("AS_mass_to_mole_fractions"),                                                       // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, MassFractions"),                                                            // Description of input parameters
-  const_cast<char*>("Converts a mass-fraction composition to the equivalent mole fractions for Handle's mixture"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_mass_to_mole_fractions,                                                             // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                         // Returns a Mathcad complex array (column vector)
-  2,                                                                                                      // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                                        // Argument types
+  const_cast<char*>("AS_mass_to_mole_fractions"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, MassFractions"),      // Description of input parameters
+  const_cast<char*>(
+    "Converts a mass-fraction composition to the equivalent mole fractions for Handle's mixture"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_mass_to_mole_fractions,                                                        // Pointer to the function code.
+  COMPLEX_ARRAY,                                                                                    // Returns a Mathcad complex array (column vector)
+  2,                                                                                                // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                                   // Argument types
 };
 
 FUNCTIONINFO ASGetPhase = {
-  const_cast<char*>("AS_get_phase"),                                                                    // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Trigger"),                                                                  // Description of input parameters
-  const_cast<char*>("Returns the phase name of a Low-Level state Handle's current point, e.g. \"phase_liquid\""),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_get_phase,                                                                          // Pointer to the function code.
-  MC_STRING,                                                                                              // Returns a Mathcad string
-  2,                                                                                                      // Number of arguments (Mathcad requires >= 1; Trigger is unused)
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                       // Argument types
+  const_cast<char*>("AS_get_phase"),     // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),  // Description of input parameters
+  const_cast<char*>(
+    "Returns the phase name of a Low-Level state Handle's current point, e.g. \"phase_liquid\""),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get_phase,                                                                    // Pointer to the function code.
+  MC_STRING,                                                                                       // Returns a Mathcad string
+  2,                                // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}  // Argument types
 };
 
 FUNCTIONINFO ASGetMoleFractions = {
-  const_cast<char*>("AS_get_mole_fractions"),                                                            // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Trigger"),                                                                   // Description of input parameters
-  const_cast<char*>("Returns a Low-Level state Handle's current bulk mole fractions"),                    // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_get_mole_fractions,                                                                  // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                          // Returns a Mathcad complex array (column vector)
-  2,                                                                                                       // Number of arguments (Mathcad requires >= 1; Trigger is unused)
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                        // Argument types
+  const_cast<char*>("AS_get_mole_fractions"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),        // Description of input parameters
+  const_cast<char*>(
+    "Returns a Low-Level state Handle's current bulk mole fractions"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_get_mole_fractions,                                // Pointer to the function code.
+  COMPLEX_ARRAY,                                                        // Returns a Mathcad complex array (column vector)
+  2,                                                                    // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                      // Argument types
 };
 
 FUNCTIONINFO ASBackendName = {
-  const_cast<char*>("AS_backend_name"),                                                                  // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Trigger"),                                                                   // Description of input parameters
-  const_cast<char*>("Returns the backend name (e.g. \"HEOS\") a Low-Level state Handle is using"),        // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_backend_name,                                                                        // Pointer to the function code.
-  MC_STRING,                                                                                               // Returns a Mathcad string
-  2,                                                                                                       // Number of arguments (Mathcad requires >= 1; Trigger is unused)
-  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                                        // Argument types
+  const_cast<char*>("AS_backend_name"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Trigger"),  // Description of input parameters
+  const_cast<char*>(
+    "Returns the backend name (e.g. \"HEOS\") a Low-Level state Handle is using"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_backend_name,                                                  // Pointer to the function code.
+  MC_STRING,                                                                        // Returns a Mathcad string
+  2,                                                                                // Number of arguments (Mathcad requires >= 1; Trigger is unused)
+  {COMPLEX_SCALAR, COMPLEX_SCALAR}                                                  // Argument types
 };
 
 #endif  // MATHCAD_LOWLEVEL_H
