@@ -41,19 +41,6 @@
 // (AbstractState) wrapper function below to call into CoolPropLib.h.
 constexpr long AS_ERR_BUFFER_LEN = 500;
 
-// Generous upper bound on mixture component count. Two uses:
-//  - sizing the (unused, discarded) per-component composition buffers
-//    AbstractState_get_phase_envelope_data_checkedMemory() requires even
-//    though AS_get_phase_envelope_data() doesn't surface x/y itself -- see
-//    that function's comment for why this can't just be learned from a
-//    probe call the way the point count can.
-//  - sizing the fixed-size output buffer AS_mole_fractions_liquid()/
-//    AS_mole_fractions_vapor() pass to
-//    AbstractState_get_mole_fractions_satState() -- component counts are
-//    always small enough that a single generously-sized call is simpler
-//    than a probe-then-fetch dance for these.
-constexpr long AS_MAX_COMPONENTS = 64;
-
 // Helper: round a plain double to the nearest integer and return it as a
 // long, validating BOTH that it's finite AND that the rounded value is
 // actually representable in a long -- the single checked-conversion path
@@ -791,6 +778,61 @@ static LRESULT CP_AS_get_sat_vapor(LPCOMPLEXSCALAR Prop,       // output: the re
     return 0;
 }
 
+// Helper: fetch a component-indexed vector -- mole fractions, or anything
+// else sharing the same (values, maxN, N, errcode, message_buffer,
+// buffer_length) "checked memory" contract most AbstractState_get_*()
+// getters use -- into `out`, sized from the mixture's ACTUAL component
+// count instead of a fixed guess. Shared by
+// CP_AS_get_mole_fractions()/CP_AS_mole_fractions_liquid()/
+// CP_AS_mole_fractions_vapor() below, so this probe/fetch dance (mirroring
+// FetchPhaseEnvelope()'s, for the same reason -- see that function's
+// comment for the full ordering argument) only needs writing once.
+//
+// `call` is a callable taking (double* values, long maxN, long* N, long*
+// errcode, char* message_buffer) that forwards straight into one of those
+// AbstractState_get_mole_fractions*() C functions with `handle` (and, for
+// the satState variant, its "liquid"/"gas" argument) already bound --
+// buffer_length is always AS_ERR_BUFFER_LEN here, so it's baked in by the
+// caller's lambda rather than threaded through this helper's own signature.
+//
+// Two calls into `call`: the first probes with maxN=0 and a null buffer.
+// Every getter this is used with writes *N* before comparing it to maxN and
+// throwing if too small (see e.g. AbstractState_get_mole_fractions() in
+// src/CoolPropLib.cpp) -- so maxN=0 reliably throws (a mixture always has
+// >=1 component) but only AFTER *N already holds the true count, and before
+// the write loop that would touch the output buffer ever runs -- making a
+// null buffer safe for this probe, the same way FetchPhaseEnvelope()'s
+// length/component probes rely on. The second call then allocates `out` to
+// that real size and fetches for real, instead of capping at a fixed bound
+// that would otherwise reject any mixture with more components than that
+// guess (a 64-component bound is generous for realistic worksheets, but not
+// a hard CoolProp limit -- a large predefined mixture or a many-component
+// custom blend can exceed it).
+template <typename Fn>
+static LRESULT FetchComponentVector(Fn&& call, std::vector<double>* out) {
+    long N = 0;
+    long errcode = 0;
+    char msg[AS_ERR_BUFFER_LEN] = {};
+    call(nullptr, 0, &N, &errcode, msg);
+    if (N <= 0) {
+        // Should be unreachable in practice -- see FetchPhaseEnvelope()'s
+        // matching comment for the same reasoning -- but report whatever
+        // this probe actually raised rather than proceeding with a bogus
+        // zero count.
+        if (errcode) return TranslateASError(msg, 1);
+        return MAKELRESULT(LOWLEVEL_ERROR, 1);
+    }
+
+    out->resize(static_cast<size_t>(N));
+    long finalN = 0;
+    errcode = 0;
+    char finalMsg[AS_ERR_BUFFER_LEN] = {};
+    call(out->data(), N, &finalN, &errcode, finalMsg);
+    if (errcode) return TranslateASError(finalMsg, 1);
+    out->resize(static_cast<size_t>(finalN));
+    return 0;
+}
+
 // This code executes the user function CP_AS_get_mole_fractions, which is a
 // wrapper for AbstractState_get_mole_fractions() -- the handle's current
 // BULK mole fractions (whatever AS_set_fractions last set, or the trivial
@@ -798,7 +840,7 @@ static LRESULT CP_AS_get_sat_vapor(LPCOMPLEXSCALAR Prop,       // output: the re
 // which read the saturated liquid/vapor side of a two-phase point, not the
 // overall composition. Useful to read back what AS_set_fractions actually
 // applied, or the composition of a handle built from a predefined-mixture
-// string. Same fixed-buffer approach as those two -- see their comment.
+// string.
 static LRESULT CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,   // output: column vector of mole fractions
                                         LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
                                         LPCCOMPLEXSCALAR Trigger)   // unused -- see CP_AS_mole_fractions_liquid()'s comment for why this argument exists
@@ -812,16 +854,17 @@ static LRESULT CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,   // output: c
     r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
     if (r) return r;
 
-    std::vector<double> fracBuf(static_cast<size_t>(AS_MAX_COMPONENTS));
-    long N = 0;
-    long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN] = {};
-    AbstractState_get_mole_fractions(handle, fracBuf.data(), AS_MAX_COMPONENTS, &N, &errcode, msg, AS_ERR_BUFFER_LEN);
-    if (errcode) return TranslateASError(msg, 1);
+    std::vector<double> fracVec;
+    r = FetchComponentVector(
+      [handle](double* buf, long maxN, long* N, long* errcode, char* msg) {
+          AbstractState_get_mole_fractions(handle, buf, maxN, N, errcode, msg, AS_ERR_BUFFER_LEN);
+      },
+      &fracVec);
+    if (r) return r;
 
-    std::vector<std::vector<double>> Vec(static_cast<size_t>(N));
-    for (long i = 0; i < N; ++i) {
-        Vec[static_cast<size_t>(i)] = {fracBuf[static_cast<size_t>(i)]};
+    std::vector<std::vector<double>> Vec(fracVec.size());
+    for (size_t i = 0; i < fracVec.size(); ++i) {
+        Vec[i] = {fracVec[i]};
     }
     return AllocateToMathcadArray(Fractions, Vec);
 }
@@ -834,9 +877,9 @@ static LRESULT CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,   // output: c
 // AbstractState_get_mole_fractions_satState() enforces that itself and its
 // message surfaces via LOWLEVEL_ERROR if not.
 //
-// Unlike AS_get_phase_envelope_data(), no probe-then-fetch dance is needed
-// here: component counts are always small, so this just allocates a
-// generously-sized fixed buffer (AS_MAX_COMPONENTS) up front.
+// Like AS_get_mole_fractions() above, sizes its output from the mixture's
+// actual component count via FetchComponentVector() rather than a fixed
+// guess -- see that helper's comment.
 //
 // `Trigger` is unused by this function's body, but NOT because Mathcad
 // requires an argument -- Handle already satisfies that on its own. The
@@ -866,16 +909,17 @@ static LRESULT CP_AS_mole_fractions_liquid(LPCOMPLEXARRAY Fractions,   // output
     r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
     if (r) return r;
 
-    std::vector<double> fracBuf(static_cast<size_t>(AS_MAX_COMPONENTS));
-    long N = 0;
-    long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN] = {};
-    AbstractState_get_mole_fractions_satState(handle, "liquid", fracBuf.data(), AS_MAX_COMPONENTS, &N, &errcode, msg, AS_ERR_BUFFER_LEN);
-    if (errcode) return TranslateASError(msg, 1);
+    std::vector<double> fracVec;
+    r = FetchComponentVector(
+      [handle](double* buf, long maxN, long* N, long* errcode, char* msg) {
+          AbstractState_get_mole_fractions_satState(handle, "liquid", buf, maxN, N, errcode, msg, AS_ERR_BUFFER_LEN);
+      },
+      &fracVec);
+    if (r) return r;
 
-    std::vector<std::vector<double>> Vec(static_cast<size_t>(N));
-    for (long i = 0; i < N; ++i) {
-        Vec[static_cast<size_t>(i)] = {fracBuf[static_cast<size_t>(i)]};
+    std::vector<std::vector<double>> Vec(fracVec.size());
+    for (size_t i = 0; i < fracVec.size(); ++i) {
+        Vec[i] = {fracVec[i]};
     }
     return AllocateToMathcadArray(Fractions, Vec);
 }
@@ -897,16 +941,17 @@ static LRESULT CP_AS_mole_fractions_vapor(LPCOMPLEXARRAY Fractions,   // output:
     r = ToLongOrError(Handle, BAD_HANDLE, 1, &handle);
     if (r) return r;
 
-    std::vector<double> fracBuf(static_cast<size_t>(AS_MAX_COMPONENTS));
-    long N = 0;
-    long errcode = 0;
-    char msg[AS_ERR_BUFFER_LEN] = {};
-    AbstractState_get_mole_fractions_satState(handle, "gas", fracBuf.data(), AS_MAX_COMPONENTS, &N, &errcode, msg, AS_ERR_BUFFER_LEN);
-    if (errcode) return TranslateASError(msg, 1);
+    std::vector<double> fracVec;
+    r = FetchComponentVector(
+      [handle](double* buf, long maxN, long* N, long* errcode, char* msg) {
+          AbstractState_get_mole_fractions_satState(handle, "gas", buf, maxN, N, errcode, msg, AS_ERR_BUFFER_LEN);
+      },
+      &fracVec);
+    if (r) return r;
 
-    std::vector<std::vector<double>> Vec(static_cast<size_t>(N));
-    for (long i = 0; i < N; ++i) {
-        Vec[static_cast<size_t>(i)] = {fracBuf[static_cast<size_t>(i)]};
+    std::vector<std::vector<double>> Vec(fracVec.size());
+    for (size_t i = 0; i < fracVec.size(); ++i) {
+        Vec[i] = {fracVec[i]};
     }
     return AllocateToMathcadArray(Fractions, Vec);
 }
@@ -1273,23 +1318,46 @@ struct PhaseEnvelopeTPRho
 // any caller that checks the return value first).
 //
 // Mathcad (or, for the two max-point functions, this function itself) must
-// allocate its own output storage before it can be filled, but the point
-// count isn't known until AFTER the envelope has been built -- so this makes
-// two calls into the same underlying C API function. The first is a probe:
-// length=0 with no output buffers. Looking at
-// AbstractState_get_phase_envelope_data_checkedMemory()'s own implementation
-// (src/CoolPropLib.cpp), it always writes *actual_length before it can
-// either succeed or throw on the length check, so this probe safely reports
-// the true point count even though it also reports an error (0 is
-// essentially never a big enough buffer). Component count can NOT be learned
-// the same way -- that check, and the write to *actual_components, only
-// happens AFTER the length check already passed, so a length=0 probe never
-// reaches it. Passing AS_MAX_COMPONENTS (a generous fixed upper bound) as
-// maxComponents on the real (second) call sidesteps needing to learn the
-// real component count in advance. The per-component x/y buffers that call
-// still requires are allocated and immediately discarded -- no caller of
-// this helper needs them: an N x Ncomp matrix per phase is a meaningfully
-// different, more complex shape than what any of them return.
+// allocate its own output storage before it can be filled, but neither the
+// point count nor the component count is known until AFTER the envelope has
+// been built -- so this makes THREE calls into the same underlying C API
+// function, each learning one more thing than the last.
+//
+// Call 1 (length probe): length=0, maxComponents=0, no output buffers.
+// Looking at AbstractState_get_phase_envelope_data_checkedMemory()'s own
+// implementation (src/CoolPropLib.cpp), it always writes *actual_length
+// before it can either succeed or throw on the length check, so this probe
+// safely reports the true point count even though it also reports an error
+// (0 is essentially never a big enough buffer). *actual_components is NOT
+// learned here -- that check, and the write to it, only happens AFTER the
+// length check already passed, so a length=0 probe never reaches it.
+//
+// Call 2 (component probe): length=<the real point count from call 1>,
+// maxComponents=0, still no output buffers. With the length check now
+// passing, execution reaches the components check -- which writes
+// *actual_components BEFORE comparing it to maxComponents=0 and throwing
+// (a mixture always has >=1 component, so this throw is as reliable as call
+// 1's). Crucially, the x/y write loop is reached only AFTER that comparison
+// passes, so passing null x/y here is exactly as safe as passing null
+// T/P/rhomolar_vap/rhomolar_liq was in call 1. This is what lets this
+// function size its composition buffers from the mixture's ACTUAL component
+// count instead of guessing/capping at a fixed bound -- a mixture with more
+// components than that fixed bound would otherwise make call 3 below throw
+// a LOWLEVEL_ERROR instead of returning the envelope,
+// even though CoolProp itself has no trouble tracing it.
+//
+// Call 3 (the real fetch): length and maxComponents both sized from what
+// calls 1-2 actually learned, output buffers sized to match. The
+// per-component x/y buffers this call still requires are allocated and
+// immediately discarded -- no caller of this helper needs them: an N x
+// Ncomp matrix per phase is a meaningfully different, more complex shape
+// than what any of them return.
+//
+// All three calls happen while the caller (every CP_AS_* function that
+// reaches this helper) already holds g_as_mutex, so they're atomic with
+// respect to any other Low-Level call on this or any other handle -- no
+// other thread's AS_build_phase_envelope()/AS_free() etc. can run between
+// them and change what these three calls see out from under this function.
 static LRESULT FetchPhaseEnvelope(long handle, PhaseEnvelopeTPRho* out) {
     long probe_length = 0, probe_components = 0;
     long errcode = 0;
@@ -1307,16 +1375,36 @@ static LRESULT FetchPhaseEnvelope(long handle, PhaseEnvelopeTPRho* out) {
         return MAKELRESULT(PHASE_ENVELOPE_NOT_BUILT, 1);
     }
 
+    long actual_components = 0;
+    long component_probe_length = 0;
+    long component_errcode = 0;
+    char component_msg[AS_ERR_BUFFER_LEN] = {};
+    AbstractState_get_phase_envelope_data_checkedMemory(handle, probe_length, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+                                                        &component_probe_length, &actual_components, &component_errcode, component_msg,
+                                                        AS_ERR_BUFFER_LEN);
+    if (actual_components <= 0) {
+        // Should be unreachable in practice -- get_phase_envelope_data()
+        // always returns one composition entry per fluid in the mixture,
+        // and a handle always has at least one -- but if this probe somehow
+        // didn't throw (a future CoolProp version tolerating
+        // maxComponents==0?) or threw before *actual_components was even
+        // written (e.g. the handle went dead between call 1 and here),
+        // report whatever this probe actually raised rather than dividing
+        // by a bogus zero component count below.
+        if (component_errcode) return TranslateASError(component_msg, 1);
+        return MAKELRESULT(LOWLEVEL_ERROR, 1);
+    }
+
     out->T.resize(static_cast<size_t>(probe_length));
     out->P.resize(static_cast<size_t>(probe_length));
     out->rhomolar_vap.resize(static_cast<size_t>(probe_length));
     out->rhomolar_liq.resize(static_cast<size_t>(probe_length));
-    std::vector<double> x(static_cast<size_t>(probe_length) * static_cast<size_t>(AS_MAX_COMPONENTS));
+    std::vector<double> x(static_cast<size_t>(probe_length) * static_cast<size_t>(actual_components));
     std::vector<double> y(x.size());
 
     long final_length = 0, final_components = 0;
     errcode = 0;
-    AbstractState_get_phase_envelope_data_checkedMemory(handle, probe_length, AS_MAX_COMPONENTS, out->T.data(), out->P.data(),
+    AbstractState_get_phase_envelope_data_checkedMemory(handle, probe_length, actual_components, out->T.data(), out->P.data(),
                                                         out->rhomolar_vap.data(), out->rhomolar_liq.data(), x.data(), y.data(), &final_length,
                                                         &final_components, &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
