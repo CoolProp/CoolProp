@@ -1077,6 +1077,8 @@ if(COOLPROP_PRIME_MODULE)
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/MathcadStateGuard.cpp")
   # Embed Windows VERSIONINFO so CoolPropPrimeWrapper.dll's Properties dialog shows
   # FileVersion/ProductVersion fields (#2391). The .rc is configured from
   # COOLPROP_VERSION_{MAJOR,MINOR,PATCH} above and added to the source list.
@@ -1125,6 +1127,8 @@ if(COOLPROP_MATHCAD15_MODULE)
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/MathcadStateGuard.cpp")
   add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
   coolprop_hide_json_symbols(CoolPropMathcadWrapper)
   include_directories("${COOLPROP_MATHCAD15_ROOT}/userefi/microsft/include")
