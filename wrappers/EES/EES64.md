@@ -192,7 +192,10 @@ earlier local build. In CI the tree is always fresh.
   `0e3974c`, and `cmake/dependencies.cmake` pins exactly that commit. Re-pin to
   the merge commit once the branch lands on master there. Pinning a commit that
   is not on the default branch works because the package is fetched without
-  `GIT_SHALLOW`, so the full history is cloned before the checkout.
+  `GIT_SHALLOW`, so the full history is cloned before the checkout. **Do not
+  delete that branch before the re-pin has landed**: a squash merge followed by
+  the usual branch deletion makes the commit unreachable, and every Windows
+  package build then fails at the configure step, tagged releases included.
 
 ### 4.4 Documentation
 
@@ -220,7 +223,10 @@ checklist for a Windows machine with both EES licences:
    calculation with the CoolProp message rather than return 0 (positive mode),
    and the units shown for the arguments must be acceptable, since the empty
    answer to mode -2 and -3 is our reading of the documentation, not something
-   F-Chart spells out.
+   F-Chart spells out. Watch in particular whether any of the three requests
+   comes back as a warning: they answer in the string and leave the mode at the
+   value EES passed in, following the F-Chart example, and a negative mode is
+   also what a warning looks like on a normal call.
 6. Check the `$DEBUG` path, it writes `log.txt` and `log_stdout.txt` into the
    working directory of the EES process.
 

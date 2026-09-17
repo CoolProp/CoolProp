@@ -36,6 +36,11 @@ MACHINE_NAMES = {
 # EES derives the name of the external function from the file name
 EXPORTED_FUNCTION = "COOLPROP_EES"
 
+# What a malformed image can raise while it is inspected.  struct.error is not
+# a ValueError, so it has to be listed: without it a truncated library escapes
+# the handlers below and the collected diagnostics are never printed.
+PE_ERRORS = (ValueError, OSError, struct.error)
+
 # One entry per bitness: folder, the library file and the expected machine
 LAYOUT = [
     {
@@ -67,7 +72,7 @@ def _pe_offset(image):
 def read_pe_machine(path):
     """Return the machine type stored in the PE header of path.
 
-    Raises ValueError if the file is not a PE image.
+    Raises one of PE_ERRORS if the file is not a PE image.
     """
     with open(path, "rb") as handle:
         image = handle.read()
@@ -79,8 +84,8 @@ def read_pe_exports(path):
     """Return the names exported by the PE image at path.
 
     Walks the export directory by hand so that the check needs no third party
-    module on the build agent.  Raises ValueError when the image cannot be
-    read, which the caller reports as a failure: a library whose exports
+    module on the build agent.  Raises one of PE_ERRORS when the image cannot
+    be read, which the caller reports as a failure: a library whose exports
     cannot be inspected is never silently accepted.
     """
     with open(path, "rb") as handle:
@@ -148,7 +153,7 @@ def check_entry(source_dir, entry, errors):
         return
     try:
         machine = read_pe_machine(library)
-    except (ValueError, OSError) as err:
+    except PE_ERRORS as err:
         errors.append("cannot read the PE header of {0}: {1}".format(library, err))
         return
     if machine != entry["machine"]:
@@ -168,7 +173,7 @@ def check_entry(source_dir, entry, errors):
     # use even when the bitness is right.
     try:
         exports = read_pe_exports(library)
-    except (ValueError, OSError) as err:
+    except PE_ERRORS as err:
         errors.append("cannot read the export table of {0}: {1}".format(library, err))
         return
     if EXPORTED_FUNCTION not in exports:

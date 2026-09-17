@@ -88,9 +88,12 @@ static void log_debug(const std::string& line) {
 
 // Report an error back to EES: the message goes into the string and the mode
 // has to be positive, which makes EES stop the calculation and show it.  A
-// warning uses a negative mode instead, see the header comment.
+// warning uses a negative mode instead, see the header comment.  An empty
+// message is replaced: stopping the calculation without saying why would be
+// worse than the wrong-but-silent zero this used to return, and CoolProp does
+// hand out an empty error string now and then because reading it clears it.
 static void set_error(char* fluid, int& mode, const std::string& message) {
-    set_fluid(fluid, message);
+    set_fluid(fluid, message.empty() ? std::string("CoolProp failed without reporting a reason") : message);
     mode = 1;
 }
 
@@ -110,6 +113,10 @@ extern "C"
         std::string Outstr, In1str, In2str, Fluidstr, Units;
         std::vector<std::string> fluid_split;
 
+        // The three requests below answer in the string and leave the mode as
+        // EES set it, which is what the F-Chart example does.  The 0 / positive
+        // / negative convention described in the header applies to a normal
+        // call, where the mode says what came of the calculation.
         if (mode == -1) {
             // EES asks for an example of the call format
             set_fluid(fluid, "T = PropsSI('T','P',101325,'Q',0,'Water')");

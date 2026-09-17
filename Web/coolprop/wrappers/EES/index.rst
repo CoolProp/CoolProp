@@ -11,7 +11,7 @@ Users
 
 32-bit and 64-bit EES
 ---------------------
-EES comes in a 32-bit and a 64-bit flavour, and the two cannot share an external library.  The 32-bit program loads ``COOLPROP_EES.dlf`` and ``CoolProp.LIB`` from its ``Userlib`` folder (by default ``c:\EES32\Userlib``), the 64-bit program ``EES64.exe`` loads ``COOLPROP_EES.dlf64`` and ``CoolProp.LIB64`` from ``Userlib64`` (by default ``c:\EES64\Userlib64``).  Both are built and published, the 64-bit pair in the ``EES`` folder of the downloads, and the Windows installer offers one task per flavour.
+EES comes in a 32-bit and a 64-bit flavour, and the two cannot share an external library.  The 32-bit program loads ``COOLPROP_EES.dlf`` and ``CoolProp.LIB`` from its ``Userlib`` folder (by default ``c:\EES32\Userlib``), the 64-bit program ``EES64.exe`` loads ``COOLPROP_EES.dlf64`` and ``CoolProp.LIB64`` from ``Userlib64`` (by default ``c:\EES64\Userlib64``).  Both are built and published, in the ``EES/EES`` and ``EES/EES64`` folders of the downloads, and the Windows installer offers one task per flavour.
 
 Automated Installation
 ----------------------
