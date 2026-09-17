@@ -16,6 +16,10 @@
 *.csproj text eol=crlf
 *.cs text eol=crlf
 
+# Patch files carry the line endings of the files they apply to, so they must
+# not be normalized or they stop applying cleanly.
+*.patch -text
+
 # Denote all files that are truly binary and should not be modified.
 *.png binary
 *.jpg binary
