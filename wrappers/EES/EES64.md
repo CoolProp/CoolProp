@@ -185,16 +185,14 @@ earlier local build. In CI the tree is always fresh.
   bitness, into `c:\EES32\Userlib\COOLPROP_EES` and
   `c:\EES64\Userlib64\COOLPROP_EES`. Note that this script is not wired into the
   build, the shipped installer comes from the repository below.
-- `CoolProp/ExcelAddinInstaller` (separate repository): `config.iss` gains
+- `CoolProp/ExcelAddinInstaller` (separate repository): `config.iss` gained
   `EESINSDIR64`, `addin-installer.iss` the four `Source:` lines and the
-  `EesUserLib64` task, `messages.iss` the task descriptions. The change is kept
-  here as `wrappers/EES/exceladdininstaller-ees64.patch` because it cannot be
-  committed from this repository. Apply it there with
-  `git apply /path/to/exceladdininstaller-ees64.patch`, then bump the `GIT_TAG`
-  in `cmake/dependencies.cmake` to the resulting commit. Until that happens the
-  package still builds, the extra `source/EES64` folder is simply not referenced
-  by the pinned script, so the 64-bit library is built and published as an
-  artifact but not yet installed by the combined installer.
+  `EesUserLib64` task, `messages.iss` the task descriptions in all three
+  languages. That change lives on the branch `chp/ees-64bit-userlib64`, commit
+  `0e3974c`, and `cmake/dependencies.cmake` pins exactly that commit. Re-pin to
+  the merge commit once the branch lands on master there. Pinning a commit that
+  is not on the default branch works because the package is fetched without
+  `GIT_SHALLOW`, so the full history is cloned before the checkout.
 
 ### 4.4 Documentation
 

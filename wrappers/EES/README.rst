@@ -14,8 +14,8 @@ Bitness
 EES cannot load an external library of the wrong bitness.  The 32-bit program
 reads COOLPROP_EES.dlf and CoolProp.LIB from Userlib, the 64-bit program
 EES64.exe reads COOLPROP_EES.dlf64 and CoolProp.LIB64 from Userlib64.  Both are
-built and published, but the Windows installer still installs the 32-bit pair
-only, see `<EES64.md>`_ for the details and for what is left to do.
+built, published and offered by the installer, see `<EES64.md>`_ for the details
+and for what still needs a manual check in EES.
 
 Debug
 -----

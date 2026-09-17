@@ -114,10 +114,14 @@ endif()
 # ── Windows packaging helpers (optional) ──────────────────────────────────
 
 if(COOLPROP_WINDOWS_PACKAGE)
+  # This commit adds the EesUserLib64 task that installs COOLPROP_EES.dlf64
+  # and CoolProp.LIB64 into the Userlib64 folder of the 64-bit EES.  It sits
+  # on the branch chp/ees-64bit-userlib64 of that repository, re-pin it to
+  # the merge commit once the branch lands on master.
   CPMAddPackage(
     NAME ExcelAddinInstaller
     GIT_REPOSITORY https://github.com/CoolProp/ExcelAddinInstaller.git
-    GIT_TAG        db8ce41cdb02079a2d9242ea08f3633e8a1d38b0
+    GIT_TAG        0e3974c1803cc073ba88d1472e0e8b28161963f6
     DOWNLOAD_ONLY  YES
   )
 endif()
