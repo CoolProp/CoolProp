@@ -116,7 +116,12 @@ reach the user either. It now declares `int& mode` and follows the contract:
 
 - `-1` returns the example call, `-2` and `-3` return an empty string because
   the units of the two inputs depend on the property keys encoded in the fluid
-  string,
+  string. F-Chart defines what that means: "EES will provide unit checking if
+  the external procedure provides the strings of inputs and outputs requested
+  with Modes=-2 and -3. Otherwise it will skip unit checking for this
+  equation." EES therefore leaves a `COOLPROP_EES` call out of its unit check,
+  which is what happened before this change as well, when the requests were
+  never served at all,
 - a normal call returns the null string with `mode` set to 0,
 - every error path sets `mode` to 1 and leaves its message in the string,
 - a CoolProp warning sets `mode` to -1 and leaves the warning in the string.
@@ -221,9 +226,9 @@ checklist for a Windows machine with both EES licences:
 5. Exercise the mode contract in both flavours: the Function Information dialog
    must show the example call (mode -1), a bad fluid name must stop the
    calculation with the CoolProp message rather than return 0 (positive mode),
-   and the units shown for the arguments must be acceptable, since the empty
-   answer to mode -2 and -3 is our reading of the documentation, not something
-   F-Chart spells out. Watch in particular whether any of the three requests
+   and `Check Units` (F8) must report that it skipped the equation rather than
+   flag it, which is the documented consequence of the empty answer to mode -2
+   and -3. Watch in particular whether any of the three requests
    comes back as a warning: they answer in the string and leave the mode at the
    value EES passed in, following the F-Chart example, and a negative mode is
    also what a warning looks like on a normal call.

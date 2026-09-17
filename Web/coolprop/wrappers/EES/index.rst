@@ -37,7 +37,7 @@ Debugging
 ---------
 1. Install CoolProp EES wrapper
 2. Append ``'$DEBUG'`` to the fluid name
-3. Open the log.txt and log_stdout.txt files in c:\\ees32\\userlib\\COOLPROP_EES (c:\\ees64\\userlib64\\COOLPROP_EES for the 64-bit program) to see the error.
+3. Open the log.txt and log_stdout.txt files to see the error.  The wrapper opens them by name, so they are written to the working directory of the EES process, not to the user library folder.
 
 Developers
 ==========
@@ -64,7 +64,7 @@ Once the dependencies are installed, you can run the installer with::
 
 The 64-bit library is built from the same sources, only the architecture changes::
 
-    mkdir CoolProp/build64 && cd CoolProp/build64
+    cd .. && mkdir build64 && cd build64
     cmake .. -G "Visual Studio 17 2022" -A x64 -DCOOLPROP_EES_MODULE=ON
     cmake --build . --target COOLPROP_EES --config Release
 

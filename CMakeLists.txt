@@ -1238,9 +1238,10 @@ if(COOLPROP_EES_MODULE)
     COMMENT "Copying the EES files to the build directory"
     VERBATIM)
   # install the generated library and the other files, one folder per bitness
-  # so that a 32-bit and a 64-bit build do not overwrite each other
-  set(COOLPROP_EES_INSTALL_DIR
-      "${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}/${BITNESS}bit")
+  # so that a 32-bit and a 64-bit build do not overwrite each other.  The
+  # destination stays relative: CMake resolves it against the install prefix,
+  # and an absolute one would ignore "cmake --install --prefix" and DESTDIR.
+  set(COOLPROP_EES_INSTALL_DIR "EES/${CMAKE_SYSTEM_NAME}/${BITNESS}bit")
   install(TARGETS COOLPROP_EES DESTINATION "${COOLPROP_EES_INSTALL_DIR}")
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp.htm"
           DESTINATION "${COOLPROP_EES_INSTALL_DIR}")
