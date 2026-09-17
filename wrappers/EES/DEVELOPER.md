@@ -155,15 +155,21 @@ script fails the ISCC step of the build instead.
   and -3. Otherwise it will skip unit checking for this equation." The unit
   system itself is still checked, by `CoolProp.LIB` (see
   `coolprop_assert_si_units` and its siblings).
-- **`coolprop()` enforces the wrong unit system.** The legacy `coolprop()`
-  function in `CoolProp.LIB` tags its string with `kSI`, so the wrapper calls the
-  deprecated `Props`, which reads kPa and kJ. It then calls
-  `coolprop_assert_si_units`, which demands Pa and J from the model. The values
-  handed over are therefore a factor of 1000 out for anyone who satisfies the
-  assertion. `coolprop_assert_ksi_units` exists right above it and is never
-  called, which suggests the assertion is the mistake rather than the tag. This
-  predates the 64-bit work and is left alone here; `PropsSI` and `PropsSIZ` are
-  consistent and are what new models should use.
+- **Each EES function enforces its own unit system**, because the string
+  protocol carries no units. `CoolProp.LIB` asserts the unit system before every
+  call:
+
+  | Function | Tag in the string | C++ path | Unit system asserted |
+  |---|---|---|---|
+  | `PropsSI`, `PropsSIZ` | `SI` | `PropsSI` / `PropsSImulti` | K, Pa, J, mass |
+  | `coolprop` (deprecated) | `kSI` | `Props`, the deprecated kSI API | K, kPa, kJ, mass |
+  | `coolpropsi` (deprecated) | `SI` | `PropsSI`, with C converted to K in the library file | C, Pa, J, mass |
+
+  Until September 2026 `coolprop()` asserted the SI system while sending `kSI`,
+  so a model that satisfied the assertion handed pressures in Pa to a function
+  reading kPa and got answers for a state a factor of 1000 away, without any
+  complaint. `CoolProp.htm` had the same mix-up: the kSI units table and the
+  `P=100` example sat under the `PropsSI` heading.
 - **`$DEBUG` writes to the working directory of the EES process.** Append
   `'$DEBUG'` to the fluid name and the wrapper writes `log.txt` and
   `log_stdout.txt` by relative path, so they land where EES runs, not in the

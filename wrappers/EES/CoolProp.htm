@@ -26,16 +26,27 @@ The wrapper for EES is now essentially 100% in line with the other wrappers for 
 
 The documentation for the PropsSI function is exactly in line with that for the High Level API.  No other functions from the high-level API are exposed through the EES interface.
 
+<p>The general call looks like:</p>
+
+<p><em>out = PropsSI(output$,inputvar1$,input1,inputvar2$,input2,fluid$)</em></p>
+
+<p>PropsSI requires the EES unit system to be set to K, Pa, J and mass.  The
+following example retrieves the enthalpy of Methane at 1 bar (100000 Pa) and
+15 °C (288.15 K):</p>
+
+<p><em>h = PropsSI('H','P',100000,'T',288.15,'Methane')</em></p>
+
 <h4>CoolProp v4 backwards compatibility </h4>
 
 For backwards compatibility, the coolprop() function has been retained in EES.  The coolprop() function has been officially deprecated and will be removed in a future release.  The PropsSI function is the only function that will be supported in the future.
 
 <p>The general call looks like:</p>
 
-<p><em>out = PropsSI(output$,inputvar1$,input1,inputvar2$,input2,fluid$)</em></p>
+<p><em>out = coolprop(output$,inputvar1$,input1,inputvar2$,input2,fluid$)</em></p>
 
-<p>A modified SI system of units is used in CoolProp. The units employed are
-shown below.</p>
+<p>The coolprop() function uses a modified SI system of units, with kPa and kJ
+in place of Pa and J, so it requires the EES unit system to be set to K, kPa,
+kJ and mass.  The units employed are shown below.</p>
 
 <p></p>
 
@@ -46,7 +57,7 @@ thermodynamic state is given by two variables : p and T, that are set to 1 bar
 (100 kPa) and 15 °C (288.15 K) respectively:</p>
 
 <p><em>h =
-PropsSI('H',&rsquo;P',100,&rsquo;T&rsquo;,288.15,&rsquo;Methane&rsquo;)</em></p>
+coolprop('H',&rsquo;P',100,&rsquo;T&rsquo;,288.15,&rsquo;Methane&rsquo;)</em></p>
 
 <p></p>
 
