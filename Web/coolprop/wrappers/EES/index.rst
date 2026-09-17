@@ -19,11 +19,11 @@ As of October 2016, the EES wrapper can be installed from the Windows package as
 
 Manual Install
 --------------
-Pre-compiled binaries can be downloaded from :sfdownloads:`EES` - follow the instructions there.  Of you can download an installer from the development preview at :sfnightly:`EES`.
+Pre-compiled binaries can be downloaded from :sfdownloads:`EES` - follow the instructions there.  Or you can download an installer from the development preview at :sfnightly:`EES`.  The ``EES`` folder of the downloads holds both flavours, the 32-bit files in ``EES`` and the 64-bit files in ``EES64``.  To install by hand, copy the four files of the matching flavour into ``c:\EES32\Userlib\COOLPROP_EES`` or ``c:\EES64\Userlib64\COOLPROP_EES`` and restart EES.
 
 Usage
 -----
-Open EES, you should see the external function COOLPROP_EES.  The function ``PropsSI`` takes the same inputs as described in the :ref:`High-Level API <high_level_api>`.  You can use something like::
+Open EES, you should see the external function COOLPROP_EES.  The Function Information dialog shows an example call for it.  The function ``PropsSI`` takes the same inputs as described in the :ref:`High-Level API <high_level_api>`.  You can use something like::
 
     xx = string$(0.5)
     yy = string$(0.5)
@@ -32,6 +32,12 @@ Open EES, you should see the external function COOLPROP_EES.  The function ``Pro
 which is a 50/50 molar blend of methane and ethane.
 
 The function ``PropsSIZ`` takes the normal inputs, but then also takes the mole fractions as an array rather than encoding them in the string.  The example file for EES demonstrates all of these types of inputs
+
+Errors and units
+----------------
+A call that CoolProp cannot evaluate stops the calculation and shows the CoolProp error message, rather than returning zero and letting the solve continue with that number.  A warning is shown without stopping the calculation.
+
+EES skips its unit check for a ``COOLPROP_EES`` call: the units of the arguments depend on the property keys inside the fluid string, which EES does not pass when it asks an external function for units.  The unit system itself is still checked by the library file, so ``PropsSI``, ``PropsSIZ`` and ``coolprop`` require K, Pa, J and mass, and the legacy ``coolpropsi`` requires C, Pa, J and mass.
 
 Debugging
 ---------
@@ -68,7 +74,7 @@ The 64-bit library is built from the same sources, only the architecture changes
     cmake .. -G "Visual Studio 17 2022" -A x64 -DCOOLPROP_EES_MODULE=ON
     cmake --build . --target COOLPROP_EES --config Release
 
-This creates ``COOLPROP_EES.dlf64`` next to ``CoolProp.LIB64``.  Both bitnesses are built and packaged automatically by the ``COOLPROP_WINDOWS_PACKAGE_INSTALLER`` target, which is what the nightly and the tagged releases run.  See ``wrappers/EES/EES64.md`` for the background.
+This creates ``COOLPROP_EES.dlf64`` next to ``CoolProp.LIB64``.  Both bitnesses are built and packaged automatically by the ``COOLPROP_WINDOWS_PACKAGE_INSTALLER`` target, which is what the nightly and the tagged releases run.  ``wrappers/EES/DEVELOPER.md`` describes the interface, the build and the packaging for both flavours.
 
 Low-level debugging
 -------------------

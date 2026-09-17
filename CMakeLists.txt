@@ -1149,7 +1149,8 @@ endif()
 # EES is compiled once per bitness: a ".dlf" that the 32-bit program loads
 # from its USERLIB folder and a ".dlf64" that the 64-bit program (EES64.exe)
 # loads from USERLIB64.  EES refuses an external library of the wrong
-# bitness, see wrappers/EES/EES64.md for the details and the F-Chart sources.
+# bitness, see wrappers/EES/DEVELOPER.md for the details and the F-Chart
+# sources.
 if(COOLPROP_EES_MODULE)
   if(NOT WIN32)
     message(

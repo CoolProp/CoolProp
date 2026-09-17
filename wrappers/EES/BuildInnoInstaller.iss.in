@@ -9,7 +9,7 @@
 ; Inno Setup resolves the relative Source paths below against the folder that
 ; holds this script, so copy it into the InnoScript folder that the
 ; COOLPROP_WINDOWS_PACKAGE_EES and COOLPROP_WINDOWS_PACKAGE_EES64 targets fill,
-; see wrappers/EES/EES64.md.
+; see wrappers/EES/DEVELOPER.md.
 
 #define MyAppName "CoolProp"
 #define MyAppVersion "${COOLPROP_VERSION}"
