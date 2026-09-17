@@ -14,8 +14,11 @@
 //    concentrations with the input strings concatenated to the fluid name joined by |        //
 //    (e.g. "R134a|T|P|D" or "REFPROP-R134a|O|T|P" or                                         //
 //    "REFPROP-MIX:R32[0.697615]&R125[0.302385]|V|P|H" (R410A))                               //
-//  - mode, which is -1 if to return a default form of the call as string, normal mode        //
-//    otherwise                                                                               //
+//  - mode, which EES passes BY REFERENCE (see the F-Chart help, "External                    //
+//    Functions" and the Visual C++ skeleton).  EES asks for a description of                 //
+//    the call with mode = -1, for the units of the inputs with mode = -2 and                 //
+//    for the units of the output with mode = -3.  Any other value means a                    //
+//    normal call, and the function should then set mode to 0.                                //
 //  - The last value is a linked list of the input values                                     //
 //																							  //
 //  The file needs to be built in coolprop_ees.dlf, which is the standard extension           //
@@ -36,8 +39,11 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <stdio.h>
+#include <system_error>
 #include <vector>
 #include "CoolProp/CoolProp.h"
 #include "CoolProp/CoolPropLib.h"
@@ -68,17 +74,30 @@ static void set_fluid(char* fluid, const std::string& message) {
 // opened.  Debug logging must never crash or abort the EES call, so the fopen
 // result is always checked before use.
 static void log_debug(const std::string& line) {
-    FILE* fp = fopen("log.txt", "a+");
-    if (fp != nullptr) {
-        fputs(line.c_str(), fp);
-        fclose(fp);
+    const char* path = "log.txt";
+    {
+        std::ofstream log_file(path, std::ios::app);
+        if (!log_file) {
+            return;
+        }
+        log_file << line;
     }
+    // The log holds the fluid strings of the calling model, so it is kept
+    // readable for the current user only.  The error code is collected and
+    // ignored on purpose: debug logging must never abort the EES call.
+    std::error_code permission_error;
+    std::filesystem::permissions(path, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write,
+                                 std::filesystem::perm_options::replace, permission_error);
 }
 
 // Tell C++ to use the "C" style calling conventions rather than the C++ mangled names
 extern "C"
 {
-    __declspec(dllexport) double COOLPROP_EES(char fluid[256], int mode, struct EesParamRec* input_rec) {
+    // The mode argument is a reference because that is how EES passes it, see
+    // the file header.  Taking it by value (as this wrapper did until 2026)
+    // reads the low bits of the pointer instead of the mode, so the requests
+    // below were never served.
+    __declspec(dllexport) double COOLPROP_EES(char fluid[256], int& mode, struct EesParamRec* input_rec) {
         double In1 = _HUGE, In2 = _HUGE, out = _HUGE;  // Two inputs, one output
         int NInputs = 0;                               // Ninputs is the number of inputs
         std::string fluid_string = fluid;
@@ -89,7 +108,17 @@ extern "C"
         std::vector<std::string> fluid_split;
 
         if (mode == -1) {
+            // EES asks for an example of the call format
             set_fluid(fluid, "T = PropsSI('T','P',101325,'Q',0,'Water')");
+            return 0;
+        }
+
+        if (mode == -2 || mode == -3) {
+            // EES asks for the units of the inputs (-2) or of the output (-3).
+            // Both depend on the property keys that are encoded in the fluid
+            // string of the actual call, so there is no fixed answer here.  An
+            // empty string tells EES that no units are declared.
+            set_fluid(fluid, "");
             return 0;
         }
 
@@ -210,6 +239,10 @@ extern "C"
             set_fluid(fluid, error_message);
             return 0.0;
         } else {
+            // A normal call returns the null string and sets the mode to 0,
+            // the error and warning paths write their message instead.
+            set_fluid(fluid, "");
+            mode = 0;
             // Check if there was a warning
             std::string warn_string = CoolProp::get_global_param_string("warnstring");
             if (!warn_string.empty()) {
