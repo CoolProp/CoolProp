@@ -9,6 +9,10 @@ EES is an acausal solver that can be used to solve a wide range of technical pro
 Users
 =====
 
+32-bit and 64-bit EES
+---------------------
+EES comes in a 32-bit and a 64-bit flavour, and the two cannot share an external library.  The 32-bit program loads ``COOLPROP_EES.dlf`` and ``CoolProp.LIB`` from its ``Userlib`` folder (by default ``c:\\EES32\\Userlib``), the 64-bit program ``EES64.exe`` loads ``COOLPROP_EES.dlf64`` and ``CoolProp.LIB64`` from ``Userlib64`` (by default ``c:\\EES64\\Userlib64``).  CoolProp ships both, the installer offers one task per flavour.
+
 Automated Installation
 ----------------------
 As of October 2016, the EES wrapper can be installed from the Windows package as described on the :ref:`page on installation packages <Installers>`. Please refer to the documentation there for issues related to the installation process.
@@ -33,7 +37,7 @@ Debugging
 ---------
 1. Install CoolProp EES wrapper
 2. Append ``'$DEBUG'`` to the fluid name
-3. Open the log.txt and log_stdout.txt files in c:\\ees32\\userlib\\COOLPROP_EES to see the error.
+3. Open the log.txt and log_stdout.txt files in c:\\ees32\\userlib\\COOLPROP_EES (c:\\ees64\\userlib64\\COOLPROP_EES for the 64-bit program) to see the error.
 
 Developers
 ==========
@@ -53,10 +57,18 @@ Once the dependencies are installed, you can run the installer with::
     git clone https://github.com/CoolProp/CoolProp
     # Make a build folder
     mkdir CoolProp/build && cd CoolProp/build
-    # Build the makefile using CMake
-    cmake .. -DCOOLPROP_EES_MODULE=ON
+    # Build the makefile using CMake, 32-bit for the 32-bit EES
+    cmake .. -G "Visual Studio 17 2022" -A Win32 -DCOOLPROP_EES_MODULE=ON
     # Make the DLF file
-    cmake --build . --target COOLPROP_EES
+    cmake --build . --target COOLPROP_EES --config Release
+
+The 64-bit library is built from the same sources, only the architecture changes::
+
+    mkdir CoolProp/build64 && cd CoolProp/build64
+    cmake .. -G "Visual Studio 17 2022" -A x64 -DCOOLPROP_EES_MODULE=ON
+    cmake --build . --target COOLPROP_EES --config Release
+
+This creates ``COOLPROP_EES.dlf64`` next to ``CoolProp.LIB64``.  Both bitnesses are built and packaged automatically by the ``COOLPROP_WINDOWS_PACKAGE_INSTALLER`` target, which is what the nightly and the tagged releases run.  See ``wrappers/EES/EES64.md`` for the background.
 
 Low-level debugging
 -------------------

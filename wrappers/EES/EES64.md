@@ -1,6 +1,8 @@
 # Adding a 64-bit library for the EES wrapper
 
-Status: investigation / implementation plan, September 2026.
+Status: implemented in the build, packaging and release workflow, September
+2026. The parts that need a Windows machine with both EES licences are listed
+in section 5 and are still open.
 
 This note collects what F-Chart documents about 64-bit EES, what the current
 CoolProp EES wrapper does, and what has to change to ship a 64-bit external
@@ -56,7 +58,7 @@ The relevant facts:
    extended type of the 32-bit program. We exchange plain doubles, so this only
    means slightly different round-off in EES itself, not in CoolProp.
 
-## 2. Current state in this repository
+## 2. State before this change
 
 | Item | Location | 32-bit assumption |
 |---|---|---|
@@ -64,20 +66,19 @@ The relevant facts:
 | EES library file | `wrappers/EES/CoolProp.LIB` | name only |
 | Help file | `wrappers/EES/CoolProp.htm` | none |
 | Sample | `wrappers/EES/CoolProp_EES_Sample.EES` | none |
-| Build target | `CMakeLists.txt:1149-1212` | hard `FATAL_ERROR` for 64-bit, `.dlf` suffix, `-m32` |
-| Windows package | `CMakeLists.txt:1386-1404` | sub-build forced to `-AWin32` |
-| Stand-alone installer | `wrappers/EES/BuildInnoInstaller.iss.in:21,34` | `c:\ees32\Userlib\COOLPROP_EES`, `COOLPROP_EES.dlf` |
-| Combined installer | `CoolProp/ExcelAddinInstaller`, `addin-installer.iss:91-94` and `cmake-templates/config.iss:19` | single `EESINSDIR` pointing at `C:\EES32\Userlib\COOLPROP_EES` |
+| Build target | `CMakeLists.txt`, EES module block | hard `FATAL_ERROR` for 64-bit, `.dlf` suffix, `-m32` |
+| Windows package | `CMakeLists.txt`, `COOLPROP_WINDOWS_PACKAGE_EES` | sub-build forced to `-AWin32` |
+| Stand-alone installer | `wrappers/EES/BuildInnoInstaller.iss.in` | `c:\ees32\Userlib\COOLPROP_EES`, `COOLPROP_EES.dlf` |
+| Combined installer | `CoolProp/ExcelAddinInstaller`, `addin-installer.iss` and `cmake-templates/config.iss` | single `EESINSDIR` pointing at `C:\EES32\Userlib\COOLPROP_EES` |
 
-Notable details found while reading the build:
+Two defects found while reading the build:
 
-- `CMakeLists.txt:1150-1153` aborts the configure step with
-  "You cannot build the EES wrapper as a 64-bit library." That is the only hard
-  blocker, the rest is packaging.
-- `CMakeLists.txt:1169-1172` sets `COMPILE_FLAGS` to `-m32` for non-MSVC
-  compilers, which **overwrites** the `-DCOOLPROP_LIB -DCONVENTION=__cdecl` set a
-  few lines earlier instead of appending to it. Worth fixing while touching the
-  block.
+- The EES module aborted the configure step with "You cannot build the EES
+  wrapper as a 64-bit library." That was the only hard blocker, the rest was
+  packaging.
+- For non-MSVC compilers the module **assigned** `COMPILE_FLAGS` as `-m32`,
+  which dropped the `-DCOOLPROP_LIB -DCONVENTION=__cdecl` set a few lines
+  earlier instead of appending to it. Both are fixed.
 
 ## 3. ABI finding: the `mode` argument
 
@@ -100,60 +101,71 @@ Consequences:
 - This is not new, the same signature is in the museum version of the wrapper,
   so the 32-bit library has always behaved this way.
 
-Recommendation: fix it to `int& mode` as part of, or just before, the 64-bit
-work, but **verify it on a machine with EES installed first**. If the
+The wrapper now declares `int& mode` and answers the three requests: `-1`
+returns the example call, `-2` and `-3` return an empty string because the units
+of the two inputs depend on the property keys encoded in the fluid string, and a
+normal call returns the null string with `mode` set to 0, as documented.
+
+**This still needs one manual run in EES before it ships.** If the F-Chart
 documentation were wrong and EES really passed the mode by value, the
-dereference would fault, so this needs one manual run in EES 32-bit and EES
-64-bit before it ships. If `mode` is honoured, the `-2` and `-3` cases must also
-be answered (or at least answered with an empty string and `mode` set to 0),
-otherwise EES will take whatever we leave in the buffer as a unit string.
+dereference would fault. The change is kept in its own commit so it can be
+reverted on its own.
 
-This is independent of the 64-bit port and can be split into its own change.
-
-## 4. Proposed changes
+## 4. What was changed
 
 ### 4.1 `CMakeLists.txt`, EES module block
 
-1. Drop the `FATAL_ERROR` and derive the artefact name from `BITNESS`:
-   `.dlf` for 32-bit, `.dlf64` for 64-bit.
-2. Only apply `-m32` for a 32-bit non-MSVC build, and append to the existing
-   `COMPILE_FLAGS` instead of replacing them.
-3. Use `-DCONVENTION=` (empty) for the 64-bit build, `-DCONVENTION=__cdecl`
-   stays for 32-bit.
-4. Copy `CoolProp.LIB` to the build directory as `CoolProp.LIB64` for a 64-bit
-   build (same content, different name), and install into
-   `${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}/64bit` so the two bitnesses
-   do not overwrite each other.
+1. The `FATAL_ERROR` is gone, the artefact name follows `BITNESS`: `.dlf` for
+   32-bit, `.dlf64` for 64-bit.
+2. `-m32` is only applied for a 32-bit non-MSVC build, and appended instead of
+   replacing `COMPILE_FLAGS`.
+3. `-DCONVENTION=__cdecl` stays for 32-bit. The 64-bit build defines nothing and
+   lets `CoolPropLib.h` pick the empty default, the same way the shared library
+   does.
+4. `CoolProp.LIB` is copied to the build directory as `CoolProp.LIB64` for a
+   64-bit build (same content, different name). Only one of the two names is
+   shipped per folder, EES would otherwise load the same functions twice.
+5. The install destination gained a bitness folder,
+   `${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}/<32|64>bit`, so the two
+   builds no longer overwrite each other.
 
-### 4.2 Windows package
+### 4.2 Windows package and release
 
-Add a `COOLPROP_WINDOWS_PACKAGE_EES64` target next to
-`COOLPROP_WINDOWS_PACKAGE_EES` (`CMakeLists.txt:1386-1404`) that runs the same
-sub-build with `-A x64` into a separate binary directory and copies the result to
-`InnoScript/source/EES64`. `COOLPROP_WINDOWS_PACKAGE_INSTALLER` then depends on
-both.
+`COOLPROP_WINDOWS_PACKAGE_EES64` runs the same sub-build with `-A x64` into
+`EES64/` and copies the result to `InnoScript/source/EES64`.
+`COOLPROP_WINDOWS_PACKAGE_INSTALLER` depends on both EES targets, so the
+Windows installer job builds both bitnesses. That job runs on every push to
+`master` and on `v*` tags, and `windows_installer.yml` is already in the builder
+list of `release_all_files.yml`, which is what the nightly and the tagged file
+drops collect.
+
+`dev/ci/check_ees_artifacts.py` verifies after the build that both libraries
+exist and that their PE headers really report i386 and amd64, then stages the
+eight files for the new `EES` artifact. A library of the wrong bitness is
+ignored by EES without a message, so this gate fails the job rather than
+shipping a broken 64-bit wrapper.
 
 ### 4.3 Installers
 
-- `wrappers/EES/BuildInnoInstaller.iss.in`: parameterise the default directory
-  and the file list, or add a second script for the 64-bit case. The 64-bit
-  target directory is `C:\EES64\Userlib64\COOLPROP_EES`.
-- `CoolProp/ExcelAddinInstaller` (separate repository, read-only from here):
-  `cmake-templates/config.iss` needs a second define, for example
-  `#define EESINSDIR64 "C:\EES64\Userlib64\COOLPROP_EES"`, and
-  `addin-installer.iss` needs four more `Source:` lines under a second task
-  (`EesUserLib64`) for `CoolProp.htm`, `CoolProp.LIB64`, `COOLPROP_EES.dlf64` and
-  the sample. This has to go in as a separate pull request there, and the
-  `GIT_TAG` in `cmake/dependencies.cmake:120` has to be bumped afterwards.
-- Both tasks should ideally only be offered when the matching EES folder exists.
-  Inno Setup can check that with `DirExists()` in a `Check:` parameter, which
-  avoids installing a 64-bit library for a user who only has the 32-bit program.
+- `wrappers/EES/BuildInnoInstaller.iss.in` installs both sets, one task per
+  bitness, into `c:\EES32\Userlib\COOLPROP_EES` and
+  `c:\EES64\Userlib64\COOLPROP_EES`. Note that this script is not wired into the
+  build, the shipped installer comes from the repository below.
+- `CoolProp/ExcelAddinInstaller` (separate repository): `config.iss` gains
+  `EESINSDIR64`, `addin-installer.iss` the four `Source:` lines and the
+  `EesUserLib64` task, `messages.iss` the task descriptions. The change is kept
+  here as `wrappers/EES/exceladdininstaller-ees64.patch` because it cannot be
+  committed from this repository. Apply it there with
+  `git apply /path/to/exceladdininstaller-ees64.patch`, then bump the `GIT_TAG`
+  in `cmake/dependencies.cmake` to the resulting commit. Until that happens the
+  package still builds, the extra `source/EES64` folder is simply not referenced
+  by the pinned script, so the 64-bit library is built and published as an
+  artifact but not yet installed by the combined installer.
 
 ### 4.4 Documentation
 
-`Web/coolprop/wrappers/EES/index.rst` needs the 64-bit build command, the
-`USERLIB64` paths and the debugging instructions for `EES64.exe`.
-`wrappers/EES/README.rst` mentions `c:\EES32\Userlib` only.
+`Web/coolprop/wrappers/EES/index.rst` and `wrappers/EES/README.rst` describe the
+two flavours, the `Userlib64` paths and the 64-bit build command.
 
 ## 5. Verification
 
@@ -176,10 +188,10 @@ checklist for a Windows machine with both EES licences:
 
 - Does EES64 accept a `.LIB` file in `USERLIB64`, or is `.LIB64` mandatory? The
   help says the `.LIB64` set is auto-loaded, and that the 64-bit program can read
-  32-bit files, but this should be confirmed by experiment. Shipping the copy
-  under both names costs 7 kB and removes the doubt.
+  32-bit files. We ship `.LIB64` only, because shipping both names in the same
+  folder would define every function twice.
 - Should the sample be re-saved as `CoolProp_EES_Sample.EES64`? Not required, the
   64-bit program reads `.EES` files, but the conversion is reported to be slow
   for large files.
-- Is the `mode` fix (section 3) wanted in the same change, or separately? It
-  changes 32-bit behaviour as well.
+- The `mode` fix of section 3 changes 32-bit behaviour as well and is the one
+  part of this change that cannot be checked without a running EES.
