@@ -84,22 +84,29 @@ Two defects found while reading the build:
 
 F-Chart documents the second argument as passed **by reference**, both in the
 Delphi skeleton (`var Mode: integer`) and in the C++ skeleton and example
-(`int& mode`). Our wrapper declares it by value:
+(`int& mode`). The wrapper declared it by value until this change. The old
+signature, kept here only to explain the symptoms below, was:
 
 ```cpp
-// wrappers/EES/main.cpp:81
+// historical, do NOT copy: the pre-fix signature
 __declspec(dllexport) double COOLPROP_EES(char fluid[256], int mode, struct EesParamRec* input_rec)
 ```
 
-Consequences:
+and it now reads, matching what EES passes:
 
-- The stack/register slot is the same size on both bitnesses, so nothing is
-  corrupted, but `mode` holds the low bits of a pointer instead of the mode
+```cpp
+__declspec(dllexport) double COOLPROP_EES(char fluid[256], int& mode, struct EesParamRec* input_rec)
+```
+
+Consequences of the old form:
+
+- The stack/register slot is the same size on both bitnesses, so nothing was
+  corrupted, but `mode` held the low bits of a pointer instead of the mode
   value. The `mode == -1` branch (return an example call string for the Function
-  Information dialog) can therefore never be taken, and `mode == -2` / `-3` (unit
-  strings for inputs and outputs) are not handled at all.
-- This is not new, the same signature is in the museum version of the wrapper,
-  so the 32-bit library has always behaved this way.
+  Information dialog) could therefore never be taken, and `mode == -2` / `-3`
+  (unit strings for inputs and outputs) were not handled at all.
+- This was not new, the same signature is in the museum version of the wrapper,
+  so the 32-bit library had always behaved this way.
 
 The mode is also the channel for the result status. The F-Chart help says it
 plainly:
