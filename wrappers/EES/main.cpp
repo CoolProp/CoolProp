@@ -18,7 +18,10 @@
 //    Functions" and the Visual C++ skeleton).  EES asks for a description of                 //
 //    the call with mode = -1, for the units of the inputs with mode = -2 and                 //
 //    for the units of the output with mode = -3.  Any other value means a                    //
-//    normal call, and the function should then set mode to 0.                                //
+//    normal call.  On the way back the mode says what happened: 0 and an                     //
+//    empty string for a normal result, a positive value and a message for an                 //
+//    error, which stops the calculation, and a negative value and a message                  //
+//    for a warning, which does not.                                                          //
 //  - The last value is a linked list of the input values                                     //
 //																							  //
 //  The file needs to be built in coolprop_ees.dlf, which is the standard extension           //
@@ -39,11 +42,10 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <algorithm>
-#include <filesystem>
 #include <fstream>
 #include <string>
 #include <stdio.h>
-#include <system_error>
+#include <string.h>
 #include <vector>
 #include "CoolProp/CoolProp.h"
 #include "CoolProp/CoolPropLib.h"
@@ -70,24 +72,26 @@ static void set_fluid(char* fluid, const std::string& message) {
     fluid[n] = '\0';
 }
 
-// Append a line to the EES debug log, skipping silently if the file can't be
-// opened.  Debug logging must never crash or abort the EES call, so the fopen
-// result is always checked before use.
+// Append a line to the EES debug log, skipping silently if the file cannot be
+// opened.  Debug logging must never crash or abort the EES call, so the stream
+// state is always checked before use.  The log holds the fluid strings of the
+// calling model and lands in the folder EES runs from, where it inherits that
+// folder's access rights.  Windows ignores std::filesystem::permissions apart
+// from the read-only flag, so there is nothing portable to tighten here.
 static void log_debug(const std::string& line) {
-    const char* path = "log.txt";
-    {
-        std::ofstream log_file(path, std::ios::app);
-        if (!log_file) {
-            return;
-        }
-        log_file << line;
+    std::ofstream log_file("log.txt", std::ios::app);
+    if (!log_file) {
+        return;
     }
-    // The log holds the fluid strings of the calling model, so it is kept
-    // readable for the current user only.  The error code is collected and
-    // ignored on purpose: debug logging must never abort the EES call.
-    std::error_code permission_error;
-    std::filesystem::permissions(path, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write,
-                                 std::filesystem::perm_options::replace, permission_error);
+    log_file << line;
+}
+
+// Report an error back to EES: the message goes into the string and the mode
+// has to be positive, which makes EES stop the calculation and show it.  A
+// warning uses a negative mode instead, see the header comment.
+static void set_error(char* fluid, int& mode, const std::string& message) {
+    set_fluid(fluid, message);
+    mode = 1;
 }
 
 // Tell C++ to use the "C" style calling conventions rather than the C++ mangled names
@@ -100,7 +104,6 @@ extern "C"
     __declspec(dllexport) double COOLPROP_EES(char fluid[256], int& mode, struct EesParamRec* input_rec) {
         double In1 = _HUGE, In2 = _HUGE, out = _HUGE;  // Two inputs, one output
         int NInputs = 0;                               // Ninputs is the number of inputs
-        std::string fluid_string = fluid;
 
         std::vector<double> z;
 
@@ -122,11 +125,16 @@ extern "C"
             return 0;
         }
 
+        // Only a normal call fills the buffer, so read it here rather than
+        // above.  The length is bounded because EES does not promise a
+        // terminating NUL for the requests handled above.
+        const std::string fluid_string(fluid, ::strnlen(fluid, 255));
+
         // Split the string that is passed in at the '~' delimiter that was used to join it
         fluid_split = strsplit(fluid_string, '~');
         if (fluid_split.size() != 5) {
             const std::string msg = format("fluid[%s] length[%d] not 5 elements long", fluid_string.c_str(), static_cast<int>(fluid_split.size()));
-            set_fluid(fluid, msg);
+            set_error(fluid, mode, msg);
             if (EES_DEBUG) {
                 log_debug(format("%s %s %g %s %g %s\n%s\n", Outstr.c_str(), In1str.c_str(), In1, In2str.c_str(), In2, Fluidstr.c_str(), msg.c_str()));
             }
@@ -158,7 +166,7 @@ extern "C"
         };
 
         if (NInputs < 2) {
-            set_fluid(fluid, format("Number of inputs [%d] < 2", NInputs));
+            set_error(fluid, mode, format("Number of inputs [%d] < 2", NInputs));
             return 0;
         }
 
@@ -208,11 +216,11 @@ extern "C"
                 }
             } else {
                 if (In1str.size() != 1) {
-                    set_fluid(fluid, format("Input #1 [%s] can only be 1 character long for coolprop()", In1str.c_str()));
+                    set_error(fluid, mode, format("Input #1 [%s] can only be 1 character long for coolprop()", In1str.c_str()));
                     return 0;
                 }
                 if (In2str.size() != 1) {
-                    set_fluid(fluid, format("Input #2 [%s] can only be 1 character long for coolprop()", In2str.c_str()));
+                    set_error(fluid, mode, format("Input #2 [%s] can only be 1 character long for coolprop()", In2str.c_str()));
                     return 0;
                 }
                 // Mole fractions are not given
@@ -225,7 +233,7 @@ extern "C"
             if (EES_DEBUG) {
                 log_debug(format("Error: %s \n", error_message.c_str()));
             }
-            set_fluid(fluid, error_message);
+            set_error(fluid, mode, error_message);
 
             return 0.0;
         }
@@ -236,11 +244,10 @@ extern "C"
             if (EES_DEBUG) {
                 log_debug(format("Error: %s \n", error_message.c_str()));
             }
-            set_fluid(fluid, error_message);
+            set_error(fluid, mode, error_message);
             return 0.0;
         } else {
-            // A normal call returns the null string and sets the mode to 0,
-            // the error and warning paths write their message instead.
+            // A normal call returns the null string and sets the mode to 0.
             set_fluid(fluid, "");
             mode = 0;
             // Check if there was a warning
@@ -249,8 +256,10 @@ extern "C"
                 if (EES_DEBUG) {
                     log_debug(format("Warning: %s \n", warn_string.c_str()));
                 }
-                // There was a warning, write it back
+                // There was a warning, write it back.  A negative mode makes
+                // EES show the message without stopping the calculation.
                 set_fluid(fluid, warn_string);
+                mode = -1;
             }
             if (EES_DEBUG) {
                 log_debug(format("Output: %g\n", out));

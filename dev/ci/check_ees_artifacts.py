@@ -33,6 +33,9 @@ MACHINE_NAMES = {
     IMAGE_FILE_MACHINE_AMD64: "amd64 (64-bit)",
 }
 
+# EES derives the name of the external function from the file name
+EXPORTED_FUNCTION = "COOLPROP_EES"
+
 # One entry per bitness: folder, the library file and the expected machine
 LAYOUT = [
     {
@@ -50,21 +53,83 @@ LAYOUT = [
 ]
 
 
+def _pe_offset(image):
+    """Return the offset of the PE header, raising ValueError if there is none."""
+    if len(image) < 0x40 or image[0:2] != b"MZ":
+        raise ValueError("no MZ signature, this is not a Windows library")
+    # The offset of the PE header is stored at 0x3C in the DOS header
+    (offset,) = struct.unpack_from("<I", image, 0x3C)
+    if offset + 24 > len(image) or image[offset : offset + 4] != b"PE\0\0":
+        raise ValueError("no PE signature at offset {0}".format(offset))
+    return offset
+
+
 def read_pe_machine(path):
     """Return the machine type stored in the PE header of path.
 
     Raises ValueError if the file is not a PE image.
     """
     with open(path, "rb") as handle:
-        header = handle.read(0x1000)
-    if len(header) < 0x40 or header[0:2] != b"MZ":
-        raise ValueError("no MZ signature, this is not a Windows library")
-    # The offset of the PE header is stored at 0x3C in the DOS header
-    (pe_offset,) = struct.unpack_from("<I", header, 0x3C)
-    if pe_offset + 6 > len(header) or header[pe_offset : pe_offset + 4] != b"PE\0\0":
-        raise ValueError("no PE signature at offset {0}".format(pe_offset))
-    (machine,) = struct.unpack_from("<H", header, pe_offset + 4)
+        image = handle.read()
+    (machine,) = struct.unpack_from("<H", image, _pe_offset(image) + 4)
     return machine
+
+
+def read_pe_exports(path):
+    """Return the names exported by the PE image at path.
+
+    Walks the export directory by hand so that the check needs no third party
+    module on the build agent.  Raises ValueError when the image cannot be
+    read, which the caller reports as a failure: a library whose exports
+    cannot be inspected is never silently accepted.
+    """
+    with open(path, "rb") as handle:
+        image = handle.read()
+    pe = _pe_offset(image)
+    section_count, = struct.unpack_from("<H", image, pe + 6)
+    optional_size, = struct.unpack_from("<H", image, pe + 20)
+    optional = pe + 24
+    magic, = struct.unpack_from("<H", image, optional)
+    if magic == 0x10B:  # PE32
+        directories = optional + 96
+    elif magic == 0x20B:  # PE32+, the 64-bit variant
+        directories = optional + 112
+    else:
+        raise ValueError("unknown optional header magic 0x{0:04x}".format(magic))
+    export_rva, export_size = struct.unpack_from("<II", image, directories)
+    if export_rva == 0 or export_size == 0:
+        return []
+
+    # The section table follows the optional header and maps the addresses
+    # used inside the image (RVAs) to offsets in the file.
+    sections = []
+    for index in range(section_count):
+        entry = optional + optional_size + index * 40
+        virtual_size, virtual_address, raw_size, raw_offset = struct.unpack_from("<IIII", image, entry + 8)
+        sections.append((virtual_address, max(virtual_size, raw_size), raw_offset))
+
+    def to_offset(rva):
+        for virtual_address, size, raw_offset in sections:
+            if virtual_address <= rva < virtual_address + size:
+                return rva - virtual_address + raw_offset
+        raise ValueError("address 0x{0:08x} is outside every section".format(rva))
+
+    export_dir = to_offset(export_rva)
+    name_count, = struct.unpack_from("<I", image, export_dir + 24)
+    names_rva, = struct.unpack_from("<I", image, export_dir + 32)
+    if name_count == 0:
+        return []
+    names_table = to_offset(names_rva)
+
+    names = []
+    for index in range(name_count):
+        (name_rva,) = struct.unpack_from("<I", image, names_table + index * 4)
+        start = to_offset(name_rva)
+        end = image.find(b"\0", start)
+        if end < 0:
+            raise ValueError("unterminated export name at offset {0}".format(start))
+        names.append(image[start:end].decode("ascii", "replace"))
+    return names
 
 
 def check_entry(source_dir, entry, errors):
@@ -97,6 +162,21 @@ def check_entry(source_dir, entry, errors):
         )
     else:
         print("ok: {0} is {1}".format(library, MACHINE_NAMES[machine]))
+
+    # EES takes the function name from the file name and looks it up in the
+    # export table, so an image without an undecorated COOLPROP_EES is of no
+    # use even when the bitness is right.
+    try:
+        exports = read_pe_exports(library)
+    except (ValueError, OSError) as err:
+        errors.append("cannot read the export table of {0}: {1}".format(library, err))
+        return
+    if EXPORTED_FUNCTION not in exports:
+        errors.append(
+            "{0} does not export {1}, it exports {2}".format(library, EXPORTED_FUNCTION, ", ".join(exports) or "nothing")
+        )
+    else:
+        print("ok: {0} exports {1}".format(library, EXPORTED_FUNCTION))
 
 
 def stage(source_dir, stage_dir):

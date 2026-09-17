@@ -101,15 +101,36 @@ Consequences:
 - This is not new, the same signature is in the museum version of the wrapper,
   so the 32-bit library has always behaved this way.
 
-The wrapper now declares `int& mode` and answers the three requests: `-1`
-returns the example call, `-2` and `-3` return an empty string because the units
-of the two inputs depend on the property keys encoded in the fluid string, and a
-normal call returns the null string with `mode` set to 0, as documented.
+The mode is also the channel for the result status. The F-Chart help says it
+plainly:
 
-**This still needs one manual run in EES before it ships.** If the F-Chart
-documentation were wrong and EES really passed the mode by value, the
-dereference would fault. The change is kept in its own commit so it can be
-reverted on its own.
+> Under normal operation, S is returned from the function as the null string and
+> the function should set Mode to 0. [On error] S should be set to an
+> appropriate error message and Mode should be set to a positive integer. EES
+> will then terminate calculations and display this error message. [For a
+> non-fatal warning] Mode should be set to a negative integer and the warning
+> should appear in string S.
+
+Because the wrapper never wrote to `mode`, none of its error messages could
+reach the user either. It now declares `int& mode` and follows the contract:
+
+- `-1` returns the example call, `-2` and `-3` return an empty string because
+  the units of the two inputs depend on the property keys encoded in the fluid
+  string,
+- a normal call returns the null string with `mode` set to 0,
+- every error path sets `mode` to 1 and leaves its message in the string,
+- a CoolProp warning sets `mode` to -1 and leaves the warning in the string.
+
+The error case is a real behaviour change: a failing call used to return 0 and
+let the EES solve continue with that number, it now stops the calculation and
+shows the message. That is what the documented contract asks for, and a silent
+zero is the worse of the two.
+
+**This still needs one manual run in EES before it ships, in 32-bit as much as
+in 64-bit.** If the F-Chart documentation were wrong and EES really passed the
+mode by value, the dereference would fault on every call. The 32-bit library is
+therefore not bit-identical to the one before this change. The change is kept in
+its own commit so it can be reverted on its own.
 
 ## 4. What was changed
 
@@ -128,6 +149,13 @@ reverted on its own.
 5. The install destination gained a bitness folder,
    `${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}/<32|64>bit`, so the two
    builds no longer overwrite each other.
+6. A non-Windows configure is refused up front. The old 64-bit `FATAL_ERROR`
+   happened to block that too, now it is checked on purpose.
+
+For MSVC the 32-bit compile flags come out exactly as before. For a 32-bit
+MinGW build they do not: the old code dropped `-DCOOLPROP_LIB` (see the second
+defect above), so that library exported `COOLPROP_EES` alone, and it now also
+exports the CoolProp C API, the same way the MSVC build always did.
 
 ### 4.2 Windows package and release
 
@@ -140,10 +168,16 @@ list of `release_all_files.yml`, which is what the nightly and the tagged file
 drops collect.
 
 `dev/ci/check_ees_artifacts.py` verifies after the build that both libraries
-exist and that their PE headers really report i386 and amd64, then stages the
-eight files for the new `EES` artifact. A library of the wrong bitness is
-ignored by EES without a message, so this gate fails the job rather than
-shipping a broken 64-bit wrapper.
+exist, that their PE headers really report i386 and amd64, and that each one
+exports an undecorated `COOLPROP_EES`, which is the name EES derives from the
+file name. It then stages the eight files for the new `EES` artifact, and both
+uploads use `if-no-files-found: error`. A library of the wrong bitness or with a
+decorated export is ignored by EES without a message, so this gate fails the job
+rather than shipping a broken wrapper.
+
+What the gate does not cover: it inspects the staged files, not the compiled
+installer, and it does not notice a stale `InnoScript/source` tree from an
+earlier local build. In CI the tree is always fresh.
 
 ### 4.3 Installers
 
@@ -174,14 +208,22 @@ checklist for a Windows machine with both EES licences:
 
 1. `cmake -G "Visual Studio 17 2022" -A x64 .. -DCOOLPROP_EES_MODULE=ON` and
    build the `COOLPROP_EES` target, confirm `COOLPROP_EES.dlf64` is produced and
-   that `dumpbin /exports` shows an undecorated `COOLPROP_EES`.
+   that `dumpbin /exports` shows an undecorated `COOLPROP_EES`. The CI gate
+   checks both, this is the manual equivalent.
 2. Copy `COOLPROP_EES.dlf64`, `CoolProp.LIB64` and `CoolProp.htm` into
    `C:\EES64\Userlib64\COOLPROP_EES`, start `EES64.exe`, check that the function
    shows up in the Function Information dialog.
 3. Run `CoolProp_EES_Sample.EES` in EES64 and compare the numbers against the
    32-bit run.
-4. Repeat the 32-bit build to make sure the existing artefact is unchanged.
-5. Check the `$DEBUG` path, it writes `log.txt` and `log_stdout.txt` into the
+4. Run the same sample with the 32-bit build. The mode fix changes that library
+   too, so it needs the same pass, not just a rebuild.
+5. Exercise the mode contract in both flavours: the Function Information dialog
+   must show the example call (mode -1), a bad fluid name must stop the
+   calculation with the CoolProp message rather than return 0 (positive mode),
+   and the units shown for the arguments must be acceptable, since the empty
+   answer to mode -2 and -3 is our reading of the documentation, not something
+   F-Chart spells out.
+6. Check the `$DEBUG` path, it writes `log.txt` and `log_stdout.txt` into the
    working directory of the EES process.
 
 ## 6. Open questions

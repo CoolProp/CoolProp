@@ -4,9 +4,12 @@
 ; This is the stand-alone installer for the EES wrapper only.  The installer
 ; that is actually shipped is built from the CoolProp/ExcelAddinInstaller
 ; repository, this script is kept for a quick local package of the two
-; libraries.  Run it from the directory that holds the "source" tree created
-; by the COOLPROP_WINDOWS_PACKAGE_EES and COOLPROP_WINDOWS_PACKAGE_EES64
-; targets, see wrappers/EES/EES64.md.
+; libraries.  Nothing in the build system configures it, so the ${...}
+; placeholders have to be substituted by hand or with CMake's configure_file.
+; Inno Setup resolves the relative Source paths below against the folder that
+; holds this script, so copy it into the InnoScript folder that the
+; COOLPROP_WINDOWS_PACKAGE_EES and COOLPROP_WINDOWS_PACKAGE_EES64 targets fill,
+; see wrappers/EES/EES64.md.
 
 #define MyAppName "CoolProp"
 #define MyAppVersion "${COOLPROP_VERSION}"
@@ -48,10 +51,10 @@ Source: "source\EES\CoolProp.LIB"; DestDir: "{#EesDir32}"; Flags: ignoreversion;
 Source: "source\EES\COOLPROP_EES.dlf"; DestDir: "{#EesDir32}"; Flags: ignoreversion; Tasks: EesUserLib
 Source: "source\EES\CoolProp_EES_Sample.EES"; DestDir: "{#EesDir32}"; Flags: ignoreversion; Tasks: EesUserLib
 ; 64-bit EES
-Source: "source\EES\CoolProp.htm"; DestDir: "{#EesDir64}"; Flags: ignoreversion; Tasks: EesUserLib64
+Source: "source\EES64\CoolProp.htm"; DestDir: "{#EesDir64}"; Flags: ignoreversion; Tasks: EesUserLib64
 Source: "source\EES64\CoolProp.LIB64"; DestDir: "{#EesDir64}"; Flags: ignoreversion; Tasks: EesUserLib64
 Source: "source\EES64\COOLPROP_EES.dlf64"; DestDir: "{#EesDir64}"; Flags: ignoreversion; Tasks: EesUserLib64
-Source: "source\EES\CoolProp_EES_Sample.EES"; DestDir: "{#EesDir64}"; Flags: ignoreversion; Tasks: EesUserLib64
+Source: "source\EES64\CoolProp_EES_Sample.EES"; DestDir: "{#EesDir64}"; Flags: ignoreversion; Tasks: EesUserLib64
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Tasks]

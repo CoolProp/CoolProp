@@ -1151,6 +1151,12 @@ endif()
 # loads from USERLIB64.  EES refuses an external library of the wrong
 # bitness, see wrappers/EES/EES64.md for the details and the F-Chart sources.
 if(COOLPROP_EES_MODULE)
+  if(NOT WIN32)
+    message(
+      FATAL_ERROR
+        "The EES wrapper is a Windows library, it cannot be built for ${CMAKE_SYSTEM_NAME}."
+    )
+  endif()
   if("${BITNESS}" STREQUAL "32")
     set(COOLPROP_EES_SUFFIX ".dlf")
     set(COOLPROP_EES_LIBRARY_NAME "CoolProp.LIB")
@@ -1159,8 +1165,10 @@ if(COOLPROP_EES_MODULE)
   elseif("${BITNESS}" STREQUAL "64")
     set(COOLPROP_EES_SUFFIX ".dlf64")
     set(COOLPROP_EES_LIBRARY_NAME "CoolProp.LIB64")
-    # x64 has a single calling convention, so no keyword is needed.  Leaving
-    # CONVENTION undefined lets CoolPropLib.h pick the empty default.
+    # x64 has a single calling convention, so no keyword is needed.  Nothing is
+    # defined here and CoolPropLib.h falls back to __stdcall, which the x64
+    # compilers accept and ignore.  This is the same path the 64-bit
+    # CoolProp.dll takes.
     set(COOLPROP_EES_CONVENTION "")
   else()
     message(
