@@ -37,7 +37,7 @@ Errors and units
 ----------------
 A call that CoolProp cannot evaluate stops the calculation and shows the CoolProp error message, rather than returning zero and letting the solve continue with that number.  A warning is shown without stopping the calculation.
 
-EES skips its unit check for a ``COOLPROP_EES`` call: the units of the arguments depend on the property keys inside the fluid string, which EES does not pass when it asks an external function for units.  The unit system itself is still checked by the library file, and each function has its own: ``PropsSI`` and ``PropsSIZ`` require K, Pa, J and mass, the deprecated ``coolprop`` requires K, kPa, kJ and mass, and the deprecated ``coolpropsi`` requires C, Pa, J and mass.
+EES skips its unit check for a ``COOLPROP_EES`` call: the units of the arguments depend on the property keys inside the fluid string, which EES does not pass when it asks an external function for units.  The unit system itself is still checked by the library file, and each function has its own: ``PropsSI`` and ``PropsSIZ`` require K, Pa, J and mass, and the deprecated ``coolprop`` requires K, kPa, kJ and mass.  The other deprecated function, ``coolpropsi``, does not work at all: it calls the external function with an undefined string variable, so use ``PropsSI``.
 
 Debugging
 ---------

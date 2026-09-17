@@ -46,7 +46,8 @@ For backwards compatibility, the coolprop() function has been retained in EES.  
 
 <p>The coolprop() function uses a modified SI system of units, with kPa and kJ
 in place of Pa and J, so it requires the EES unit system to be set to K, kPa,
-kJ and mass.  The units employed are shown below.</p>
+kJ and mass.  The units it accepts are listed under Fluid Properties at the
+end of this page.</p>
 
 <p></p>
 
@@ -81,8 +82,14 @@ c:\EES32\Userlib\CoolProp_EES\CoolProp_EES_Sample.ees</p>
 
 <h3>Fluid Properties</h3>
 
+<p>The table and the list below describe the deprecated coolprop() function:
+its property keys, its kPa and kJ units, and the input pairs it accepts.
+PropsSI takes base SI units (Pa, J) and the full set of inputs of the
+<a href="http://www.coolprop.org/coolprop/HighLevelAPI.html">High Level
+API</a>, not the subset below.</p>
+
 <table border="1">
-  <caption></caption>
+  <caption>Units of the deprecated coolprop() function</caption>
   <col>
   <col>
   <col>
@@ -202,7 +209,8 @@ c:\EES32\Userlib\CoolProp_EES\CoolProp_EES_Sample.ees</p>
 
 <p></p>
 
-<p>The following combinations of inputs are valid (in either order):</p>
+<p>The following combinations of inputs are valid for coolprop() (in either
+order):</p>
 <ul>
   <li>T,P</li>
   <li>T,Q</li>
