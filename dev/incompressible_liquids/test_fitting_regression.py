@@ -107,3 +107,25 @@ def test_seccool_fluid_refit_matches_disk():
     target = fluids["AKF"]
     SolutionDataWriter().fitSecCoolList([target])
     _assert_close_to_disk(target)
+
+
+@pytest.mark.parametrize("name", ["IceEA", "IceNA", "IcePG"])
+def test_seccool_ice_refit_matches_disk(name):
+    # Issue #3303: the conductivity and viscosity committed for these three
+    # fluids could not be regenerated, because their source csv tables were
+    # latin-1 encoded and the read that failed on them sat inside a bare
+    # try/except. A refit cleared both properties to "notdefined" and nothing
+    # noticed -- the golden master above pins DowJ, LiBr and AKF only.
+    #
+    # Re-encoding the csvs to ASCII recovered the data: the refit reproduces
+    # the committed coefficients to ~3e-7 relative, well inside the tolerance
+    # above, which confirms the shipped values came from exactly this data.
+    # Pin all three here so the next silent data-loading failure fails a test.
+    fluids = {f.name: f for f in getSecCoolFluids()}
+    target = fluids[name]
+    SolutionDataWriter().fitSecCoolList([target])
+    for prop in ["conductivity", "viscosity"]:
+        assert _load_json_coeffs(name, prop) is not None, (
+            "json/{0}.json no longer ships {1} -- if that is deliberate, drop this "
+            "test rather than the data".format(name, prop))
+    _assert_close_to_disk(target)

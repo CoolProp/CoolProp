@@ -53,9 +53,8 @@ def test_all_seccool_grids_load_with_increasing_axes(seccool_fluids):
             continue
         if type(fluid).getFromFile is not SecCoolSolutionData.getFromFile:
             # Subclasses with their own loaders (SecCoolIceData) read csv
-            # tables of which only Hfusion is in production use; the unused
-            # Cond/Mu csvs are latin-1 encoded and not loadable as-is (see
-            # DATA_AUDIT.md).
+            # tables instead of txt ones; they are covered by
+            # test_seccool_ice_grids_load_with_increasing_axes below.
             continue
         for dataID in PROPERTY_IDS:
             T, x = _loaded_axes(fluid, dataID)
@@ -84,11 +83,12 @@ def test_all_toplevel_grids_load_with_increasing_temperature():
         assert np.all(np.diff(T) > 0), (base, T)
 
 
-def test_seccool_ice_hfusion_grid_loads_with_increasing_axes(seccool_fluids):
+def test_seccool_ice_grids_load_with_increasing_axes(seccool_fluids):
     # SecCoolIceData overrides getFromFile, so the test above skips it and its
-    # sortGridAxes call went unexercised. Only the Hfusion table is in
-    # production use (the Cond/Mu csvs for these fluids are latin-1 encoded and
-    # not loadable as-is -- see DATA_AUDIT.md), so pin that one directly.
+    # sortGridAxes call went unexercised. All three csv tables are in
+    # production use: Hfusion feeds the specific heat, Cond and Mu feed the
+    # conductivity and viscosity fits (they were unreadable while the files
+    # were latin-1, which is issue #3303).
     #
     # These tables happen to ship ascending already, so this asserts the
     # contract for the real production path rather than exercising the sort
@@ -98,11 +98,74 @@ def test_seccool_ice_hfusion_grid_loads_with_increasing_axes(seccool_fluids):
     ice = [o for o in seccool_fluids if isinstance(o, SecCoolIceData)]
     assert ice, "no SecCoolIceData fluids found"
     for fluid in ice:
-        T, x = _loaded_axes(fluid, "Hfusion")
-        assert T is not None, fluid.name
-        assert np.all(np.diff(T) > 0), (fluid.name, "temperature axis not ascending", T)
-        if x is not None and np.size(x) > 1:
-            assert np.all(np.diff(x) > 0), (fluid.name, "composition axis not ascending", x)
+        for dataID in ["Hfusion", "Cond", "Mu"]:
+            T, x = _loaded_axes(fluid, dataID)
+            assert T is not None, (fluid.name, dataID)
+            assert np.all(np.diff(T) > 0), (fluid.name, dataID, "temperature axis not ascending", T)
+            if x is not None and np.size(x) > 1:
+                assert np.all(np.diff(x) > 0), (fluid.name, dataID, "composition axis not ascending", x)
+
+
+def test_seccool_ice_conductivity_and_viscosity_are_data_backed(seccool_fluids):
+    """The three ice slurries must carry real Cond/Mu grids, not empty ones.
+
+    Issue #3303: the Ice*_Cond.csv and Ice*_Mu.csv files were latin-1 encoded,
+    so the read in SecCoolSolutionData.__init__ raised UnicodeDecodeError. That
+    read sits inside a bare try/except, so the failure was swallowed and both
+    properties silently fell out of the fit and were written to json/ as
+    "notdefined". Assert the loaded state directly, because a plain
+    "does the file parse" check would not have caught the fail-open path.
+    """
+    from CPIncomp.BaseObjects import IncompressibleData
+    from CPIncomp.SecCoolFluids import SecCoolIceData
+
+    ice = [o for o in seccool_fluids if isinstance(o, SecCoolIceData)]
+    assert ice, "no SecCoolIceData fluids found"
+    for fluid in ice:
+        for prop in ["conductivity", "viscosity"]:
+            obj = getattr(fluid, prop)
+            assert obj.source == IncompressibleData.SOURCE_DATA, (
+                fluid.name, prop, "not marked as data-backed -- the csv read failed and was swallowed")
+            assert obj.data is not None, (fluid.name, prop, "no data loaded")
+            finite = np.isfinite(obj.data).sum()
+            assert finite > 0, (fluid.name, prop, "grid loaded but holds no finite values")
+            assert np.all(obj.data[np.isfinite(obj.data)] > 0), (fluid.name, prop, "non-positive transport property")
+
+
+def test_loaded_data_files_are_ascii():
+    """Every data file the loaders read must decode without an encoding argument.
+
+    numpy's loadtxt decodes as UTF-8, so a stray latin-1 byte anywhere in a
+    file -- even in a header line that skiprows discards -- makes the whole
+    read raise. That is how issue #3303 happened. Files that are still
+    orphaned (see DATA_AUDIT.md finding 5) are not covered: this pins only
+    what the pipeline actually reads today.
+    """
+    import glob
+    import os
+
+    data_dir = os.path.join(os.path.dirname(__file__), "CPIncomp", "data")
+    paths = sorted(glob.glob(os.path.join(data_dir, "*.txt")))
+    paths += sorted(glob.glob(os.path.join(data_dir, "SecCool", "xMass", "*.txt")))
+    paths += sorted(glob.glob(os.path.join(data_dir, "SecCool", "xVolume", "*.txt")))
+    paths += sorted(glob.glob(os.path.join(data_dir, "SecCool", "xPure", "*.txt")))
+    for name in ["IceEA", "IceNA", "IcePG"]:
+        for dataID in ["Hfusion", "Cond", "Mu", "Rho"]:
+            paths.append(os.path.join(data_dir, "SecCool", "xTables", "xMass",
+                                      "{0}_{1}.csv".format(name, dataID)))
+
+    assert paths, "no data files found -- the glob paths are wrong"
+    offenders = []
+    for path in paths:
+        if not os.path.isfile(path):
+            continue
+        with open(path, "rb") as fh:
+            raw = fh.read()
+        try:
+            raw.decode("ascii")
+        except UnicodeDecodeError as err:
+            offenders.append("{0}: {1}".format(os.path.relpath(path, data_dir), err))
+    assert not offenders, "non-ASCII bytes in data files read by the pipeline:\n" + "\n".join(offenders)
 
 
 def test_sort_grid_axes_orders_a_shuffled_grid():

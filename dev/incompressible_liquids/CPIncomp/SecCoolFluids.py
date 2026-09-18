@@ -425,11 +425,18 @@ class SecCoolIceData(SecCoolSolutionData):
         self.specific_heat.xData, self.specific_heat.yData, self.specific_heat.data = self.getArray(dataID='Hfusion')
         self.specific_heat.source = self.specific_heat.SOURCE_DATA
 
-        #self.conductivity.xData,self.conductivity.yData,self.conductivity.data   = self.getArray(dataID='Cond')
-        #self.conductivity.source = self.conductivity.SOURCE_DATA
+        # Conductivity and viscosity are also read by SecCoolSolutionData.__init__,
+        # but there each read sits inside a bare try/except.  The Ice*_Cond.csv and
+        # Ice*_Mu.csv files used to be latin-1 encoded, so those reads raised a
+        # UnicodeDecodeError that the bare except swallowed: the properties silently
+        # dropped out of the fit and were written to json/ as "notdefined" (see
+        # issue #3303).  Repeating the loads here, outside any except, means a future
+        # unreadable data file stops the pipeline instead of quietly losing a property.
+        self.conductivity.xData, self.conductivity.yData, self.conductivity.data = self.getArray(dataID='Cond')
+        self.conductivity.source = self.conductivity.SOURCE_DATA
 
-        #self.viscosity.xData,self.viscosity.yData,self.viscosity.data   = self.getArray(dataID='Mu')
-        #self.viscosity.source = self.viscosity.SOURCE_DATA
+        self.viscosity.xData, self.viscosity.yData, self.viscosity.data = self.getArray(dataID='Mu')
+        self.viscosity.source = self.viscosity.SOURCE_DATA
 
 
 #    def fitFluid(self):
