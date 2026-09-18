@@ -143,10 +143,14 @@ installed gets only the files it can use. The shipped installer is built from
 package of the two libraries and is not wired into the build.
 
 `dev/ci/check_ees_artifacts.py` runs after the build and fails the job unless
-both libraries exist, their PE headers report i386 and amd64 respectively, and
-each one exports an undecorated `COOLPROP_EES`. EES ignores a library of the
-wrong bitness or with a decorated export without saying anything, so this is
-checked before release rather than by the user. The script inspects the staged
+both libraries exist, their PE headers report i386 and amd64 respectively, each
+one exports an undecorated `COOLPROP_EES`, and each `CoolProp.LIB` agrees with
+its own header and still defines `propssi`, `propssiz` and
+`coolprop_assert_si_units` and none of the removed functions. EES ignores a
+library of the wrong bitness or with a decorated export without saying anything,
+so this is checked before release rather than by the user. The check runs in the
+Windows installer job, which means on a push to `master` and on a pull request
+against it, not on every branch. The script inspects the staged
 files, not the compiled installer; a missing or misnamed file in the installer
 script fails the ISCC step of the build instead.
 

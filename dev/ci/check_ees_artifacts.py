@@ -47,6 +47,15 @@ EES_LIB_HEADER_LEN = 35
 EES_LIB_TRAILER_LEN = 14
 EES_LIB_LENGTH_OFFSET = 31
 
+# A correct length field only proves the header agrees with the body, not that
+# the body is the library.  These are what the body has to define, and what it
+# must not define any more, so that a bad hand edit cannot pass the gate.  The
+# version string and the undecoded header fields are deliberately NOT pinned:
+# re-saving the file from EES is the documented way out of a broken edit, and a
+# newer EES may well write a different header.
+EES_LIB_REQUIRED = ["Function propssi(", "Function propssiz(", "Function coolprop_assert_si_units("]
+EES_LIB_REMOVED = ["Function coolprop(", "Function coolpropsi(", "coolprop_assert_ksi_units", "coolprop_assert_cpsi_units"]
+
 # What a malformed image can raise while it is inspected.  struct.error is not
 # a ValueError, so it has to be listed: without it a truncated library escapes
 # the handlers below and the collected diagnostics are never printed.
@@ -69,6 +78,14 @@ LAYOUT = [
         "files": ["COOLPROP_EES.dlf64", "CoolProp.LIB64", "CoolProp.htm", "CoolProp_EES_Sample.EES"],
     },
 ]
+
+
+# A missing file is reported by the existence loop in check_entry, which only
+# covers the names in "files".  Keep the library file in that list, so that
+# renaming it cannot turn the header check into a silent pass.
+for _entry in LAYOUT:
+    assert _entry["ees_library"] in _entry["files"], "{0} is not in the file list of {1}".format(_entry["ees_library"], _entry["folder"])
+    assert _entry["library"] in _entry["files"], "{0} is not in the file list of {1}".format(_entry["library"], _entry["folder"])
 
 
 def _pe_offset(image):
@@ -164,6 +181,14 @@ def check_ees_library(path, errors):
         errors.append("{0} declares a body of {1} bytes in its header but holds {2}".format(path, declared, actual))
     else:
         print("ok: {0} declares its body length of {1} bytes correctly".format(path, actual))
+
+    body = blob[EES_LIB_HEADER_LEN:-EES_LIB_TRAILER_LEN].decode("latin-1").lower()
+    for needle in EES_LIB_REQUIRED:
+        if needle.lower() not in body:
+            errors.append("{0} does not define {1}".format(path, needle.rstrip("(")))
+    for needle in EES_LIB_REMOVED:
+        if needle.lower() in body:
+            errors.append("{0} still defines {1}, which was removed".format(path, needle.rstrip("(")))
 
 
 def check_entry(source_dir, entry, errors):

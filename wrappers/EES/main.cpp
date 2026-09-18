@@ -229,9 +229,12 @@ extern "C"
                 // from CoolProp.LIB in September 2026.  Reaching this point means
                 // the library file and this DLL come from different releases, so
                 // say that rather than guess which units the numbers are in.
+                // The remedy comes first: a long unit string pushes the end of
+                // the message past the 255 characters the buffer holds.
                 set_error(fluid, mode,
-                          format("Unit system [%s] is no longer supported: the deprecated coolprop() and coolpropsi() functions were removed. "
-                                 "Use PropsSI, and install CoolProp.LIB and COOLPROP_EES from the same CoolProp release.",
+                          format("Use PropsSI, and install CoolProp.LIB and COOLPROP_EES from the same CoolProp release. "
+                                 "The deprecated coolprop() and coolpropsi() functions were removed, so unit system [%s] is no "
+                                 "longer supported.",
                                  Units.c_str()));
                 return 0;
             }

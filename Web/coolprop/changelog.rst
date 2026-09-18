@@ -6,6 +6,7 @@ Changelog for CoolProp
 
 Breaking Changes:
 
+* The deprecated ``coolprop()`` and ``coolpropsi()`` functions of the EES wrapper were removed. ``coolprop()`` worked in kPa and kJ and called the CoolProp v4 API, and it asserted the wrong unit system, so a model that satisfied its own error message was computing states a factor of 1000 away. ``coolpropsi()`` had not worked at all for years, because it called the external function with a string variable that was never assigned. An EES model calling ``coolprop()`` has to be changed to ``PropsSI``, with pressures in Pa and energies in J; its results change, because they were wrong before. ``CoolProp.LIB`` and ``COOLPROP_EES.dlf`` have to be installed from the same release: a mismatched pair now reports that rather than computing.
 * Reintroduced Java wrapper compilation. Java classes generated have been moved from default package, to "org.coolprop" package, in line with Java convention and recommended practice. Applications that previously used the Java wrappers will need to update their import references for CoolProp classes if switching to this version. Java wrappers are built with target Java 11, as Java 8 support has been deprecated. A JDK 11+ must be used to compile using these wrappers.
 
 Highlights:
