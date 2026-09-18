@@ -128,11 +128,11 @@ the project.
 sub-builds with `-A Win32` and `-A x64` and stage their output in
 `InnoScript/source/EES` and `InnoScript/source/EES64`.
 `COOLPROP_WINDOWS_PACKAGE_INSTALLER` depends on both, so the Windows installer
-job builds both libraries. That job runs on every push to `master` and on `v*`
-tags, and `windows_installer.yml` is in the builder list of
-`release_all_files.yml`, which is what the nightly and the tagged file drops
-collect. The libraries are also published on their own, as the `EES` artifact
-with one subfolder per bitness.
+job builds both libraries. `windows_installer.yml` runs it on a push to the
+mainline branches, on `v*` tags and on a pull request against those branches,
+and the file is in the builder list of `release_all_files.yml`, which is what
+the nightly and the tagged file drops collect. The libraries are also published
+on their own, as the `EES` artifact with one subfolder per bitness.
 
 The installer offers one task per flavour, so a machine with only one EES
 installed gets only the files it can use. The shipped installer is built from
@@ -146,12 +146,12 @@ one exports an undecorated `COOLPROP_EES`, and each `CoolProp.LIB` agrees with
 its own header and still defines `propssi`, `propssiz` and
 `coolprop_assert_si_units` and none of the removed functions. EES ignores a
 library of the wrong bitness or with a decorated export without saying anything,
-so this is checked before release rather than by the user. The check runs in the
-Windows installer job, which means on a push to `master` and on a pull request
-against it, not on every branch. What it inspects is the `InnoScript/source`
-tree that the packaging targets fill, before it copies the files on to the
-artifact folder, and never the compiled installer; a missing or misnamed file in
-the installer script fails the ISCC step of the build instead.
+so this is checked before release rather than by the user. It runs as part of
+the Windows installer job, so it covers the triggers listed above and not every
+branch. What it inspects is the `InnoScript/source` tree that the packaging
+targets fill, before it copies the files on to the artifact folder, and never
+the compiled installer; a missing or misnamed file in the installer script fails
+the ISCC step of the build instead.
 
 ## 5. Behaviour worth knowing
 
