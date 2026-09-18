@@ -36,6 +36,17 @@ MACHINE_NAMES = {
 # EES derives the name of the external function from the file name
 EXPORTED_FUNCTION = "COOLPROP_EES"
 
+# The EES library file is not plain text: the source sits between a header and
+# a trailer written by EES, and four header bytes hold the length of that text.
+# An edit that changes the length without writing the field back leaves EES
+# reading the wrong number of bytes, so the invariant is checked here.  The
+# three constants are taken from the shipped file; if EES ever writes a
+# different header this check fails and the layout has to be looked at again,
+# which is the safe direction.
+EES_LIB_HEADER_LEN = 35
+EES_LIB_TRAILER_LEN = 14
+EES_LIB_LENGTH_OFFSET = 31
+
 # What a malformed image can raise while it is inspected.  struct.error is not
 # a ValueError, so it has to be listed: without it a truncated library escapes
 # the handlers below and the collected diagnostics are never printed.
@@ -46,12 +57,14 @@ LAYOUT = [
     {
         "folder": "EES",
         "library": "COOLPROP_EES.dlf",
+        "ees_library": "CoolProp.LIB",
         "machine": IMAGE_FILE_MACHINE_I386,
         "files": ["COOLPROP_EES.dlf", "CoolProp.LIB", "CoolProp.htm", "CoolProp_EES_Sample.EES"],
     },
     {
         "folder": "EES64",
         "library": "COOLPROP_EES.dlf64",
+        "ees_library": "CoolProp.LIB64",
         "machine": IMAGE_FILE_MACHINE_AMD64,
         "files": ["COOLPROP_EES.dlf64", "CoolProp.LIB64", "CoolProp.htm", "CoolProp_EES_Sample.EES"],
     },
@@ -137,6 +150,22 @@ def read_pe_exports(path):
     return names
 
 
+def check_ees_library(path, errors):
+    """Check the header of an EES library file against its own contents."""
+    with open(path, "rb") as handle:
+        blob = handle.read()
+    wrapper = EES_LIB_HEADER_LEN + EES_LIB_TRAILER_LEN
+    if len(blob) <= wrapper:
+        errors.append("{0} is {1} bytes, too short to hold an EES header and a body".format(path, len(blob)))
+        return
+    (declared,) = struct.unpack_from("<I", blob, EES_LIB_LENGTH_OFFSET)
+    actual = len(blob) - wrapper
+    if declared != actual:
+        errors.append("{0} declares a body of {1} bytes in its header but holds {2}".format(path, declared, actual))
+    else:
+        print("ok: {0} declares its body length of {1} bytes correctly".format(path, actual))
+
+
 def check_entry(source_dir, entry, errors):
     """Check one bitness and append a message to errors for every problem."""
     folder = os.path.join(source_dir, entry["folder"])
@@ -146,6 +175,13 @@ def check_entry(source_dir, entry, errors):
             errors.append("missing file: {0}".format(path))
         elif os.path.getsize(path) == 0:
             errors.append("empty file: {0}".format(path))
+
+    ees_library = os.path.join(folder, entry["ees_library"])
+    if os.path.isfile(ees_library):
+        try:
+            check_ees_library(ees_library, errors)
+        except (OSError, struct.error) as err:
+            errors.append("cannot read the header of {0}: {1}".format(ees_library, err))
 
     library = os.path.join(folder, entry["library"])
     if not os.path.isfile(library):
