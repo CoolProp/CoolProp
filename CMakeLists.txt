@@ -1146,10 +1146,33 @@ if(COOLPROP_MATHCAD15_MODULE)
           DESTINATION MathCAD15)
 endif()
 
-# EES is only compiled for 32bit Windows
+# EES is compiled once per bitness: a ".dlf" that the 32-bit program loads from
+# its USERLIB folder and a ".dlf64" that EES64.exe loads from USERLIB64.  EES
+# refuses a library of the wrong bitness; see wrappers/EES/DEVELOPER.md.
 if(COOLPROP_EES_MODULE)
-  if(NOT "${BITNESS}" STREQUAL "32")
-    message(FATAL_ERROR "You cannot build the EES wrapper as a 64-bit library.")
+  if(NOT WIN32)
+    message(
+      FATAL_ERROR
+        "The EES wrapper is a Windows library, it cannot be built for ${CMAKE_SYSTEM_NAME}."
+    )
+  endif()
+  if("${BITNESS}" STREQUAL "32")
+    set(COOLPROP_EES_SUFFIX ".dlf")
+    set(COOLPROP_EES_LIBRARY_NAME "CoolProp.LIB")
+    # 32-bit Windows has several calling conventions, EES expects the C one
+    set(COOLPROP_EES_CONVENTION "__cdecl")
+  elseif("${BITNESS}" STREQUAL "64")
+    set(COOLPROP_EES_SUFFIX ".dlf64")
+    set(COOLPROP_EES_LIBRARY_NAME "CoolProp.LIB64")
+    # x64 has a single calling convention, so no keyword is needed.  Leaving
+    # CONVENTION undefined lets CoolPropLib.h fall back to __stdcall, which the
+    # x64 compilers accept and ignore, the same as for the 64-bit CoolProp.dll.
+    set(COOLPROP_EES_CONVENTION "")
+  else()
+    message(
+      FATAL_ERROR
+        "The EES wrapper needs a 32-bit or 64-bit build, BITNESS is '${BITNESS}'."
+    )
   endif()
   # Prepare the sources
   include_directories(${APP_INCLUDE_DIRS})
@@ -1160,15 +1183,29 @@ if(COOLPROP_EES_MODULE)
   coolprop_hide_json_symbols(COOLPROP_EES)
   # Modify the target and add dependencies
   add_dependencies(COOLPROP_EES generate_headers)
-  set_target_properties(
-    COOLPROP_EES
-    PROPERTIES COMPILE_FLAGS
-               "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
-  set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
-  # Creates "COOLPROP_EES.dlf"
+  set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS
+                                                "${COMPILE_FLAGS} -DCOOLPROP_LIB")
+  if(NOT "${COOLPROP_EES_CONVENTION}" STREQUAL "")
+    set_property(
+      TARGET COOLPROP_EES APPEND_STRING
+      PROPERTY COMPILE_FLAGS " -DCONVENTION=${COOLPROP_EES_CONVENTION}")
+  endif()
+  set_target_properties(COOLPROP_EES PROPERTIES SUFFIX
+                                                "${COOLPROP_EES_SUFFIX}" PREFIX "")
+  # Creates "COOLPROP_EES.dlf" or "COOLPROP_EES.dlf64"
   if(NOT MSVC)
-    set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32"
-                                                  LINK_FLAGS "-m32")
+    # Only the 32-bit build needs -m32, and it is appended so that it does not
+    # drop the defines set above.
+    if("${BITNESS}" STREQUAL "32")
+      set_property(
+        TARGET COOLPROP_EES
+        APPEND_STRING
+        PROPERTY COMPILE_FLAGS " -m32")
+      set_property(
+        TARGET COOLPROP_EES
+        APPEND_STRING
+        PROPERTY LINK_FLAGS " -m32")
+    endif()
   elseif(MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY
                                                   ${CMAKE_CURRENT_BINARY_DIR})
@@ -1190,7 +1227,7 @@ if(COOLPROP_EES_MODULE)
     COMMAND
       ${CMAKE_COMMAND} ARGS "-E" "copy"
       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp.LIB"
-      "${CMAKE_CURRENT_BINARY_DIR}/."
+      "${CMAKE_CURRENT_BINARY_DIR}/${COOLPROP_EES_LIBRARY_NAME}"
     COMMAND
       ${CMAKE_COMMAND} ARGS "-E" "copy"
       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp_EES_Sample.EES"
@@ -1198,16 +1235,21 @@ if(COOLPROP_EES_MODULE)
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Copying the EES files to the build directory"
     VERBATIM)
-  # install the generated library and the other files
-  install(TARGETS COOLPROP_EES
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}")
+  # install the generated library and the other files, one folder per bitness
+  # so that a 32-bit and a 64-bit build do not overwrite each other.  The
+  # destination stays relative: CMake resolves it against the install prefix,
+  # and an absolute one would ignore "cmake --install --prefix" and DESTDIR.
+  set(COOLPROP_EES_INSTALL_DIR "EES/${CMAKE_SYSTEM_NAME}/${BITNESS}bit")
+  install(TARGETS COOLPROP_EES DESTINATION "${COOLPROP_EES_INSTALL_DIR}")
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp.htm"
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}")
-  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp.LIB"
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}")
+          DESTINATION "${COOLPROP_EES_INSTALL_DIR}")
+  install(
+    FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp.LIB"
+    DESTINATION "${COOLPROP_EES_INSTALL_DIR}"
+    RENAME "${COOLPROP_EES_LIBRARY_NAME}")
   install(
     FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp_EES_Sample.EES"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME}")
+    DESTINATION "${COOLPROP_EES_INSTALL_DIR}")
 endif()
 
 # Windows package
@@ -1225,6 +1267,7 @@ if(COOLPROP_WINDOWS_PACKAGE)
   set(COOLPROP_WINDOWS_PACKAGE_64B_DIR "${CMAKE_CURRENT_BINARY_DIR}/64bitDLL")
   set(COOLPROP_WINDOWS_PACKAGE_ARM64_DIR "${CMAKE_CURRENT_BINARY_DIR}/arm64bitDLL")
   set(COOLPROP_WINDOWS_PACKAGE_EES_DIR "${CMAKE_CURRENT_BINARY_DIR}/EES")
+  set(COOLPROP_WINDOWS_PACKAGE_EES64_DIR "${CMAKE_CURRENT_BINARY_DIR}/EES64")
   set(COOLPROP_WINDOWS_PACKAGE_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/InnoScript")
   # Pointers to the sources
   set(COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR
@@ -1267,6 +1310,8 @@ if(COOLPROP_WINDOWS_PACKAGE)
             "${COOLPROP_WINDOWS_PACKAGE_ARM64_DIR}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory"
             "${COOLPROP_WINDOWS_PACKAGE_EES_DIR}"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory"
+            "${COOLPROP_WINDOWS_PACKAGE_EES64_DIR}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory"
             "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory"
@@ -1385,6 +1430,7 @@ if(COOLPROP_WINDOWS_PACKAGE)
   # *************************************************************
   # Add the target for EES and populate it with custom commands
   # *************************************************************
+  # One target per bitness, both pulled in by the installer target below.
   add_custom_target(COOLPROP_WINDOWS_PACKAGE_EES)
   add_dependencies(COOLPROP_WINDOWS_PACKAGE_EES
                    COOLPROP_WINDOWS_PACKAGE_PREPARE)
@@ -1401,6 +1447,24 @@ if(COOLPROP_WINDOWS_PACKAGE)
       "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/EES"
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_EES_DIR}
     COMMENT "Building the 32bit library for EES"
+    VERBATIM)
+
+  add_custom_target(COOLPROP_WINDOWS_PACKAGE_EES64)
+  add_dependencies(COOLPROP_WINDOWS_PACKAGE_EES64
+                   COOLPROP_WINDOWS_PACKAGE_PREPARE)
+  add_custom_command(
+    TARGET COOLPROP_WINDOWS_PACKAGE_EES64
+    PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}"
+            "-Ax64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_EES_MODULE=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "COOLPROP_EES"
+            "--config" "Release"
+    COMMAND
+      ${CMAKE_COMMAND} ARGS "-E" "copy_directory"
+      "${COOLPROP_WINDOWS_PACKAGE_EES64_DIR}"
+      "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/EES64"
+    WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_EES64_DIR}
+    COMMENT "Building the 64bit library for EES"
     VERBATIM)
 
   # *************************************************************
@@ -1477,6 +1541,8 @@ if(COOLPROP_WINDOWS_PACKAGE)
                    COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES)
   add_dependencies(COOLPROP_WINDOWS_PACKAGE_INSTALLER
                    COOLPROP_WINDOWS_PACKAGE_EES)
+  add_dependencies(COOLPROP_WINDOWS_PACKAGE_INSTALLER
+                   COOLPROP_WINDOWS_PACKAGE_EES64)
   add_dependencies(COOLPROP_WINDOWS_PACKAGE_INSTALLER
                    COOLPROP_WINDOWS_PACKAGE_EXCEL)
   add_dependencies(COOLPROP_WINDOWS_PACKAGE_INSTALLER
