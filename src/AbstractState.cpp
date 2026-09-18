@@ -235,20 +235,14 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
     }
 #if !defined(NO_TABULAR_BACKENDS)
     else if (f1 == TTSE_BACKEND_FAMILY) {
-        // Will throw if there is a problem with this backend.  These
-        // tabular backends don't accept options today; if the caller
-        // supplied any, fail loud so the suffix isn't silently dropped.
-        if (!options_json.empty()) {
-            throw NotImplementedError("TTSE backend does not yet accept factory-string options");
-        }
+        // Will throw if there is a problem with this backend.  The JSON
+        // options payload is forwarded verbatim to the constructor, which
+        // validates against kTabularOptionsSchemaJson before applying.
         const shared_ptr<AbstractState> AS(factory(f2, clean_fluid_names));
-        return new TTSEBackend(AS);
+        return new TTSEBackend(AS, options_json);
     } else if (f1 == BICUBIC_BACKEND_FAMILY) {
-        if (!options_json.empty()) {
-            throw NotImplementedError("BICUBIC backend does not yet accept factory-string options");
-        }
         const shared_ptr<AbstractState> AS(factory(f2, clean_fluid_names));
-        return new BicubicBackend(AS);
+        return new BicubicBackend(AS, options_json);
     } else if (f1 == SVDSBTL_BACKEND_FAMILY) {
         // SVDSBTL requires an explicit source-of-truth backend in
         // its name (e.g. "SVDSBTL&HEOS").  No default — see

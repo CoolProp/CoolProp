@@ -15,7 +15,9 @@ class TTSEBackend : public TabularBackend
         return get_backend_string(TTSE_BACKEND);
     }
     /// Instantiator; base class loads or makes tables
-    TTSEBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(std::move(AS)) {
+    TTSEBackend(shared_ptr<CoolProp::AbstractState> AS) : TTSEBackend(std::move(AS), "") {}
+    /// Instantiator accepting a factory-string options JSON blob (e.g. {"grid":{"Nx":40,"Ny":40}})
+    TTSEBackend(shared_ptr<CoolProp::AbstractState> AS, const std::string& options_json) : TabularBackend(std::move(AS), options_json) {
         imposed_phase_index = iphase_not_imposed;
         // If a pure fluid or a predefined mixture, don't need to set fractions, go ahead and build
         if (!this->AS->get_mole_fractions().empty()) {
