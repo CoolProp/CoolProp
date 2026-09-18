@@ -15,6 +15,7 @@ import numpy as np
 import copy
 import hashlib, os, json, sys
 import itertools
+import math
 import csv, codecs
 from warnings import warn
 
@@ -52,6 +53,39 @@ def ensure_parent_directory(path):
         # exist_ok rather than a prior exists() check: the check-then-create
         # pair races two concurrent report runs against each other.
         os.makedirs(directory, exist_ok=True)
+
+
+SIGNIFICANT_DIGITS = 7
+
+
+def roundToSignificantDigits(value, digits=SIGNIFICANT_DIGITS):
+    """Round a single number to a fixed count of significant digits.
+
+    Python's round() takes a number of decimal places, so the exponent has to
+    be taken out first: -3 decimals for a value near 1e4, +10 for one near
+    1e-4. Non-finite values, zero and anything that is not a number are
+    returned untouched.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float, np.floating, np.integer)):
+        return value
+    value = float(value)
+    if value == 0.0 or not np.isfinite(value):
+        return value
+    return round(value, digits - int(math.floor(math.log10(abs(value)))) - 1)
+
+
+def roundNestedNumbers(obj, digits=SIGNIFICANT_DIGITS):
+    """Apply roundToSignificantDigits to every number in a nested structure.
+
+    Walks dicts and lists and leaves everything else (strings, None, the
+    literal "null" placeholder) alone, so it can be applied to a whole fluid
+    dict just before it is serialised.
+    """
+    if isinstance(obj, dict):
+        return dict((k, roundNestedNumbers(v, digits)) for k, v in obj.items())
+    if isinstance(obj, (list, tuple)):
+        return [roundNestedNumbers(v, digits) for v in obj]
+    return roundToSignificantDigits(obj, digits)
 
 
 class SolutionDataWriter(object):
@@ -407,7 +441,13 @@ class SolutionDataWriter(object):
             if entry is not None:
                 jobj[prop + '_cheb'] = entry
 
-        dump = json.dumps(jobj, indent=2, sort_keys=True)
+        # The fits carry far more digits than the source data supports (the
+        # SecCool tables are 4-digit), and json.dumps would write all 17 of a
+        # double's decimal digits. Rounding here keeps the committed files
+        # stable: without it, re-running the pipeline on a different
+        # numpy/scipy rewrites every coefficient in every file with
+        # last-digit noise, and a real change cannot be told from that churn.
+        dump = json.dumps(roundNestedNumbers(jobj), indent=2, sort_keys=True)
 
         hashes = self.load_hashes()
         hash = self.get_hash(dump)
@@ -1405,7 +1445,14 @@ class SolutionDataWriter(object):
         return text
 
     def x(self, number):
-        text = u"{0:3.2f}".format(self.checkForNumber(number))
+        # Three decimals, not two. These are the composition limits published
+        # in the online fluid tables, and users feed them straight back into
+        # set_mass_fractions(). At two decimals the printed limit can land
+        # OUTSIDE the real one -- MAM2 runs to x = 0.236 but was published as
+        # 0.24, so sweeping the documented range raised "Your composition
+        # 0.24 is not between 0.078 and 0.236" (issue #2567). Every limit in
+        # json/ is exact at three decimals, so this rounds nothing away.
+        text = u"{0:5.3f}".format(self.checkForNumber(number))
         return text
 
     def generateTexTable(self, solObjs=[SolutionData()], path="table"):

@@ -33,6 +33,7 @@ convention the loader already handles (see the don't-touch list).
 | freeze temperatures 214–263 (no °C offset) | `FRE_Tfreeze.txt`, `xTables/.../Freezium_TFreeze.csv` | These two tables are in **Kelvin** (csv header says so); the SecCool `_TFreeze.txt` files are in °C. Both conventions handled by their loaders. |
 | freeze point −125.4 °C | `xVolume/Zitrec M_TFreeze.txt` at 100 vol-% | Monotonic freeze-depression curve endpoint (pure-glycol glass former), internally consistent. |
 | cp dips to 437 J/kg/K; density rising with T | `ExampleObjects.py` → `DigitalExample` | Synthetic analytic test functions, not fluid data. |
+| no `T_freeze` at all | `Ice{EA,NA,PG}` | There is no `Ice*_TFreeze` table in the corpus, and none is missing. These are **ice slurries**: the composition axis is the *ice mass fraction*, so the fluid is already at solid-liquid equilibrium everywhere in its range. The equilibrium temperature is the `T` axis of the tables, not a separate curve over `x`. `T_freeze` stays `notdefined` and the backend raises, which is correct (issue #2567). |
 
 ## Unit conventions per source (for anyone touching loaders)
 
