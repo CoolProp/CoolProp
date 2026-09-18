@@ -139,7 +139,7 @@ export interface CoolPropModule {
   /** Convert degrees Fahrenheit to Kelvin. */
   F2K(F: number): number;
   /** Simple fluid properties that do not depend on the state. */
-  Props1SI(fluid: string, output: string): string;
+  Props1SI(fluid: string, output: string): number;
   /** High-level state-based property evaluation. */
   PropsSI(output: string, name1: string, value1: number, name2: string, value2: number, fluid: string): number;
   /** Humid-air properties. */
@@ -148,7 +148,7 @@ export interface CoolPropModule {
   get_fluid_param_string(fluid: string, param: string): string;
   apply_simple_mixing_rule(identifier1: string, identifier2: string, rule: string): void;
   get_mixture_binary_pair_data(CAS1: string, CAS2: string, param: string): string;
-  add_fluids_as_JSON(backend: string, json: string): void;
+  add_fluids_as_JSON(backend: string, json: string): boolean;
 
   /** Construct an AbstractState for `backend` and `&`-separated fluid names. */
   factory(backend: string, fluidNames: string): AbstractState;
