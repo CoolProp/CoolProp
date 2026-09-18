@@ -265,6 +265,32 @@ double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, do
     throw ValueError(format("%s (%d): You have to provide a vector (1D matrix) of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
 }
 
+/// Build the error for a property this fluid carries no fit for.
+/** The message this replaces named neither the fluid nor the property.  It
+ *  read "IncompressibleFluid.cpp (388): The function type is not specified
+ *  ("[0]"), are you sure the coefficients have been set?", which gave a user
+ *  asking for something the reference data simply does not cover no way to
+ *  tell that from a bug in CoolProp, and no way to see which fluid or which
+ *  property was at fault when several were in play.  See issue #2567, where
+ *  T_freeze on the ice slurries surfaced exactly this way.
+ *
+ *  A missing fit is a gap in the data, not a bad input, so the message says
+ *  so plainly and leaves out the file and line: those point into CoolProp's
+ *  own source, which is not where the answer is.
+ *
+ *  Returned rather than thrown so that every call site keeps its own throw
+ *  statement.  The compiler then still sees each switch case as terminating;
+ *  a helper that threw internally would need [[noreturn]] for that, and would
+ *  produce "control reaches end of non-void function" warnings on any
+ *  compiler that ignored the attribute.
+ */
+ValueError IncompressibleFluid::notDefinedError(const std::string& property) const {
+    return ValueError(format("INCOMP::%s does not define %s: no fit for this property is shipped in its fluid "
+                             "data, so there is nothing to evaluate. This is a gap in the reference data for "
+                             "this fluid, not a problem with your inputs.",
+                             this->name.c_str(), property.c_str()));
+}
+
 /// Density as a function of temperature, pressure and composition.
 double IncompressibleFluid::rho(double T, double p, double x) {
     switch (density.type) {
@@ -281,8 +307,7 @@ double IncompressibleFluid::rho(double T, double p, double x) {
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(density, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, density.type));
+            throw notDefinedError("density");
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, density.type));
     }
@@ -296,8 +321,7 @@ double IncompressibleFluid::c(double T, double p, double x) {
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             return chebEvalMatrix(specific_heat.coeffs, specific_heat, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, specific_heat.type));
+            throw notDefinedError("a specific heat");
         default:
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for specific heat.", __FILE__, __LINE__,
                                     specific_heat.type));
@@ -318,8 +342,7 @@ double IncompressibleFluid::visc(double T, double p, double x) {
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(viscosity, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, viscosity.type));
+            throw notDefinedError("a viscosity");
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, viscosity.type));
     }
@@ -338,8 +361,7 @@ double IncompressibleFluid::cond(double T, double p, double x) {
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(conductivity, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, conductivity.type));
+            throw notDefinedError("a thermal conductivity");
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, conductivity.type));
     }
@@ -367,8 +389,7 @@ double IncompressibleFluid::psat(double T, double x) {
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(p_sat, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, p_sat.type));
+            throw notDefinedError("a saturation pressure");
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, p_sat.type));
     }
@@ -387,8 +408,7 @@ double IncompressibleFluid::Tfreeze(double p, double x) {
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(T_freeze, p, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, T_freeze.type));
+            throw notDefinedError("a freezing temperature");
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, T_freeze.type));
     }
@@ -406,8 +426,7 @@ double IncompressibleFluid::drhodTatPx(double T, double p, double x) {
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             return chebEvalMatrix(density.cheb_ddT, density, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, density.type));
+            throw notDefinedError("density");
         default:
             throw ValueError(
               format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.", __FILE__, __LINE__, density.type));
@@ -424,8 +443,7 @@ double IncompressibleFluid::dsdTatPxdT(double T, double p, double x) {
             // Indefinite Int c/T dT, derived once at load time in validate()
             return chebEvalMatrix(specific_heat.cheb_int_dTdivT, specific_heat, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, specific_heat.type));
+            throw notDefinedError("a specific heat");
         default:
             throw ValueError(
               format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, specific_heat.type));
@@ -442,8 +460,7 @@ double IncompressibleFluid::dhdTatPxdT(double T, double p, double x) {
             // Indefinite Int c dT, derived once at load time in validate()
             return chebEvalMatrix(specific_heat.cheb_int_dT, specific_heat, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, specific_heat.type));
+            throw notDefinedError("a specific heat");
         default:
             throw ValueError(
               format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, specific_heat.type));
@@ -552,8 +569,7 @@ double IncompressibleFluid::inputFromMole(double T, double x) {
                 return basePolyOffset(mole2input, T, x);
                 break;
             case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-                throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,mole2input.type));
-                break;
+                throw notDefinedError("a mole fraction conversion");
             default:
                 throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,mole2input.type));
                 break;
@@ -591,11 +607,13 @@ double IncompressibleFluid::T_rho(double Dmass, double p, double x) {
             return Brent(&res, Tmin, Tmax, DBL_EPSILON, 1e3 * DBL_EPSILON, 100);
         }
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, specific_heat.type));
+            throw notDefinedError("density");
         default:
+            // density.type, not specific_heat.type: T_rho switches on the
+            // density fit, so reporting the heat capacity's type code here
+            // named the wrong property.
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse density.", __FILE__, __LINE__,
-                                    specific_heat.type));
+                                    density.type));
     }
 }
 /// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
@@ -619,8 +637,7 @@ double IncompressibleFluid::T_c(double Cmass, double p, double x) {
             return Brent(&res, Tmin, Tmax, DBL_EPSILON, 1e3 * DBL_EPSILON, 100);
         }
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, specific_heat.type));
+            throw notDefinedError("a specific heat");
         default:
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse specific heat.", __FILE__,
                                     __LINE__, specific_heat.type));
