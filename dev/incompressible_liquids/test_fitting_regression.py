@@ -129,3 +129,117 @@ def test_seccool_ice_refit_matches_disk(name):
             "json/{0}.json no longer ships {1} -- if that is deliberate, drop this "
             "test rather than the data".format(name, prop))
     _assert_close_to_disk(target)
+
+
+# ---------------------------------------------------------------------------
+# "Does the committed fit still describe the data it was fitted to?"
+#
+# The golden master above pins refit-vs-json. It cannot catch a fit that was
+# committed long ago from data that has since been rescaled or replaced,
+# because both sides of that comparison come from the same fitter run.
+# PCL is the case that motivated this: json/PCL.json shipped a viscosity a
+# factor of 100 above the Paracryol table times its declared
+# viscosityFactor=1e-5, i.e. 0.26 Pa s at 0 degC for a light hydrocarbon whose
+# own density (792) and conductivity (0.149) put it in Therminol D-12
+# territory, where 2.6 mPa s is right. The committed coefficients corresponded
+# to an older factor of 1e-3.
+# ---------------------------------------------------------------------------
+
+# A fit smooths its data, so some deviation is expected and healthy. Across
+# the whole corpus the worst legitimate deviation is 33% (VMA viscosity, a
+# steep low-temperature curve fitted by a low-order polynomial), and the
+# median is 0.08%. A committed fit that is more than 100% off its own data is
+# not smoothing, it is describing something else. The threshold sits three
+# times above the worst real fluid and a hundred times below the PCL failure,
+# so it is not a hair trigger.
+MAX_DEVIATION_FROM_SOURCE_DATA = 1.0
+
+DATA_BACKED_PROPERTIES = ["density", "specific_heat", "conductivity", "viscosity"]
+
+
+def _evaluate(kind, coeffs, T, x, Tbase, xbase):
+    """Mirror of IncompressibleFluid's evaluators for the shipped fit types.
+
+    Kept deliberately literal rather than importing the fitter, so that a
+    change in the fitter cannot quietly change what this test measures.
+    """
+    import math
+
+    c = np.atleast_2d(np.array(coeffs, dtype=float))
+    if kind in ("polynomial", "exppolynomial"):
+        dT, dx = T - Tbase, x - xbase
+        value = sum(c[i, j] * dT ** i * dx ** j
+                    for i in range(c.shape[0]) for j in range(c.shape[1]))
+        return math.exp(value) if kind == "exppolynomial" else value
+    flat = c.ravel()
+    if kind == "exponential":
+        # exp(c0 / (T + c1) - c2), with a pole at T = -c1
+        denominator = T + flat[1]
+        if abs(denominator) < 1e-8:
+            return float("nan")
+        return math.exp(flat[0] / denominator - flat[2])
+    if kind == "logexponential":
+        denominator = T + flat[0]
+        if denominator < 1e-8:
+            return float("nan")
+        return math.exp(math.log(1.0 / denominator + 1.0 / denominator / denominator) * flat[1] + flat[2])
+    return float("nan")  # notdefined, or a type this test does not model
+
+
+def _worst_deviation_from_data(fluidObject, prop, entry, Tbase, xbase):
+    """Largest relative gap between the committed fit and the loaded grid.
+
+    Returns None when there is nothing to compare -- no loaded data, no
+    committed coefficients, or a fit type this test does not model.
+    """
+    data = getattr(fluidObject, prop, None)
+    if data is None or data.data is None or data.xData is None or data.yData is None:
+        return None
+    coeffs = entry.get("coeffs")
+    if coeffs in (None, "null"):
+        return None
+    grid = np.atleast_2d(np.array(data.data, dtype=float))
+    Ts = np.atleast_1d(np.array(data.xData, dtype=float))
+    xs = np.atleast_1d(np.array(data.yData, dtype=float))
+    if grid.shape != (len(Ts), len(xs)):
+        return None  # a reshaped or transposed grid is not this test's business
+
+    worst = None
+    for i, T in enumerate(Ts):
+        for j, x in enumerate(xs):
+            measured = grid[i, j]
+            if not np.isfinite(measured) or measured == 0.0:
+                continue  # NaN sentinels mark points the source does not cover
+            fitted = _evaluate(entry.get("type"), coeffs, T, x, Tbase, xbase)
+            if not np.isfinite(fitted):
+                continue
+            deviation = abs(fitted - measured) / abs(measured)
+            if worst is None or deviation > worst:
+                worst = deviation
+    return worst
+
+
+def test_committed_fits_still_describe_their_source_data():
+    fluids = getSecCoolFluids() + getSolutionFluids() + getPureFluids()
+    offenders = []
+    compared = 0
+    for fluidObject in fluids:
+        path = os.path.join(JSON_DIR, fluidObject.name + ".json")
+        if not os.path.isfile(path):
+            continue
+        with open(path) as fh:
+            disk = json.load(fh)
+        for prop in DATA_BACKED_PROPERTIES:
+            entry = disk.get(prop, {})
+            worst = _worst_deviation_from_data(fluidObject, prop, entry, disk["Tbase"], disk["xbase"])
+            if worst is None:
+                continue
+            compared += 1
+            if worst > MAX_DEVIATION_FROM_SOURCE_DATA:
+                offenders.append("{0}.{1}: committed fit is off its own data by {2:.0f}x".format(
+                    fluidObject.name, prop, worst))
+
+    # Without this the test passes vacuously if the loaders ever stop
+    # populating .data -- which is exactly the failure mode of #3303.
+    assert compared > 150, "only {0} property blocks could be compared; the data loaders look broken".format(compared)
+    assert not offenders, "committed coefficients no longer match their source data:\n" + "\n".join(offenders)

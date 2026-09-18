@@ -437,6 +437,24 @@ and lithium bromide :cite:`Patek2006`, :download:`LiBr<../_static/fluid_properti
 which can be used to model absorption chillers.
 
 
+.. note::
+   The :math:`x_\text{min}` and :math:`x_\text{max}` columns in the tables below
+   are the composition limits of each mixture. A composition outside them is
+   rejected with ``Your composition ... is not between ... and ...``, so if you
+   sweep a composition range, read the limits at runtime rather than off this
+   page:
+
+   .. code-block:: python
+
+      import CoolProp
+      state = CoolProp.AbstractState("INCOMP", "MAM2")
+      x_min = state.trivial_keyed_output(CoolProp.ifraction_min)
+      x_max = state.trivial_keyed_output(CoolProp.ifraction_max)
+
+   The same two values are available as the ``fraction_min`` and
+   ``fraction_max`` parameter names. The tabulated numbers are rounded for
+   display; the runtime values are the ones the backend actually enforces.
+
 .. _MassMix:
 
 .. csv-table:: All incompressible mass-based binary mixtures included in CoolProp
@@ -461,7 +479,11 @@ which can be used to model absorption chillers.
 
 For slurry ice, the concentration :math:`x` refers to the solid content and the
 heat capacity includes the heat of fusion. It might be necessary to adjust the
-solid content during heat transfer. The implementation is based on the data
+solid content during heat transfer. Note that the slurry-ice fluids define no
+freezing temperature: the composition axis is the ice fraction, so the fluid is
+already at solid-liquid equilibrium everywhere in its range and the equilibrium
+temperature is the temperature axis itself, not a separate curve over :math:`x`.
+Asking for ``T_freeze`` on one of them raises rather than returning a number. The implementation is based on the data
 available in `SecCool <https://www.ipu.dk/products/seccool>`_,
 which was originally recorded at the Danish Technological Institute `(DTI) <https://www.dti.dk/>`_.
 
