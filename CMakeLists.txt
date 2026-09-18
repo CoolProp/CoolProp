@@ -2255,18 +2255,18 @@ if(COOLPROP_JAVASCRIPT_MODULE)
     "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Javascript/package.json.in"
     "${CMAKE_CURRENT_BINARY_DIR}/package.json" @ONLY)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/package.json"
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
+          DESTINATION Javascript)
   install(
     FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Javascript/README.md"
           "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Javascript/coolprop.d.ts"
           "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
+    DESTINATION Javascript)
 
   #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
   install(
     FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/Web/coolprop/wrappers/Javascript/index.html"
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
+    DESTINATION Javascript)
 endif()
 
 if(COOLPROP_MATHEMATICA_MODULE)
