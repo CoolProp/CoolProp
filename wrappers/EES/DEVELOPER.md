@@ -150,9 +150,10 @@ its own header and still defines `propssi`, `propssiz` and
 library of the wrong bitness or with a decorated export without saying anything,
 so this is checked before release rather than by the user. The check runs in the
 Windows installer job, which means on a push to `master` and on a pull request
-against it, not on every branch. The script inspects the staged
-files, not the compiled installer; a missing or misnamed file in the installer
-script fails the ISCC step of the build instead.
+against it, not on every branch. What it inspects is the `InnoScript/source`
+tree that the packaging targets fill, before it copies the files on to the
+artifact folder, and never the compiled installer; a missing or misnamed file in
+the installer script fails the ISCC step of the build instead.
 
 ## 5. Behaviour worth knowing
 
