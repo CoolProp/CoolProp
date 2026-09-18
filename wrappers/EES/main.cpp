@@ -10,10 +10,11 @@
 //  input data                                                                                //
 //                                                                                            //
 //  The arguments are defined as follows :                                                    //
-//  - The string variable contains the the definition of the fluids and of their              //
-//    concentrations with the input strings concatenated to the fluid name joined by |        //
-//    (e.g. "R134a|T|P|D" or "REFPROP-R134a|O|T|P" or                                         //
-//    "REFPROP-MIX:R32[0.697615]&R125[0.302385]|V|P|H" (R410A))                               //
+//  - The string variable carries five fields joined by ~, in the order fluid,                //
+//    output key, first input key, second input key and unit system, and the                  //
+//    fluid field holds the mixture composition when there is one                             //
+//    (e.g. "R134a~D~T~P~SI" or "REFPROP-R134a~O~T~P~SI" or                                   //
+//    "REFPROP-MIX:R32[0.697615]&R125[0.302385]~V~P~H~SI" (R410A))                            //
 //  - mode, which EES passes BY REFERENCE (see the F-Chart help, "External                    //
 //    Functions" and the Visual C++ skeleton).  EES asks for a description of                 //
 //    the call with mode = -1, for the units of the inputs with mode = -2 and                 //
@@ -30,12 +31,13 @@
 //                                                                                            //
 //     link /DEBUG /DLL main.obj CoolPropStaticLibrary.lib /OUT:COOLPROP_EES.dlf              //
 //																							  //
-//  Only one unit system is used (modified SI - see help). Future versions might              //
-//  include a detection of EES current unit system and its definition in the dll              //
+//  Base SI units are the only ones this library accepts (K, Pa, J, mass).  The               //
+//  unit system is named in the last field of the string and CoolProp.LIB checks              //
+//  that the EES unit system matches before it calls in here.                                 //
 //																							  //
 //  Ian Bell                                                                                  //
 //  Thermodynamics Laboratory                                                                 //
-//  University of Liège                                                                       //
+//  University of Liege                                                                       //
 //                                                                                            //
 //  January 2013                                                                              //
 //============================================================================================//
@@ -222,16 +224,16 @@ extern "C"
                     out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr);
                 }
             } else {
-                if (In1str.size() != 1) {
-                    set_error(fluid, mode, format("Input #1 [%s] can only be 1 character long for coolprop()", In1str.c_str()));
-                    return 0;
-                }
-                if (In2str.size() != 1) {
-                    set_error(fluid, mode, format("Input #2 [%s] can only be 1 character long for coolprop()", In2str.c_str()));
-                    return 0;
-                }
-                // Mole fractions are not given
-                out = Props(Outstr.c_str(), In1str[0], In1, In2str[0], In2, Fluidstr.c_str());
+                // The deprecated coolprop() and coolpropsi() functions were the
+                // only ones that put anything but SI here, and they were removed
+                // from CoolProp.LIB in September 2026.  Reaching this point means
+                // the library file and this DLL come from different releases, so
+                // say that rather than guess which units the numbers are in.
+                set_error(fluid, mode,
+                          format("Unit system [%s] is no longer supported: the deprecated coolprop() and coolpropsi() functions were removed. "
+                                 "Use PropsSI, and install CoolProp.LIB and COOLPROP_EES from the same CoolProp release.",
+                                 Units.c_str()));
+                return 0;
             }
         } catch (...) {
             std::string error_message = format("Uncaught error: \"%s\",\"%s\",%g,\"%s\",%g,\"%s\"\n", Outstr.c_str(), In1str.c_str(), In1,

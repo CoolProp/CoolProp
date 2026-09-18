@@ -78,13 +78,21 @@ Four files per bitness, installed into the folder named above:
 | 32-bit | 64-bit | What it is |
 |---|---|---|
 | `COOLPROP_EES.dlf` | `COOLPROP_EES.dlf64` | the external function, CoolProp linked in statically |
-| `CoolProp.LIB` | `CoolProp.LIB64` | EES source: the `PropsSI`, `PropsSIZ`, `coolprop` and `coolpropsi` wrappers, the unit-system checks, and the string protocol that packs the fluid and the property keys into the one string argument |
+| `CoolProp.LIB` | `CoolProp.LIB64` | EES source: the `PropsSI` and `PropsSIZ` wrappers, the unit-system check, and the string protocol that packs the fluid and the property keys into the one string argument |
 | `CoolProp.htm` | `CoolProp.htm` | the help file EES shows for the library |
 | `CoolProp_EES_Sample.EES` | `CoolProp_EES_Sample.EES` | the example file |
 
 Only one library name is shipped per folder. Both names in one folder would make
 EES define every function twice. The `.LIB64` file is a copy of the `.LIB` file,
 the content does not depend on the bitness.
+
+**The `.LIB` file is not plain text.** EES wraps the source in a 35-byte header
+and a 14-byte trailer. Four of those header bytes, at offset 31, are the length
+of the text body as a little-endian unsigned integer, so a hand edit that changes
+the length has to write that field back. `dev/ci/check_ees_artifacts.py` checks
+it. The other header and trailer fields have not been decoded; they are the same
+in every version of this file and are left alone. If EES ever refuses the file,
+open it in EES and save it again, which rewrites the whole wrapper.
 
 ## 3. Building it
 
@@ -144,11 +152,8 @@ script fails the ISCC step of the build instead.
 
 ## 5. Behaviour worth knowing
 
-- **A model cannot mix `PropsSI` and `coolprop()`.** Their assertions disagree
-  on the pressure and energy units, so a model calling both now stops at
-  whichever runs first. Before the September 2026 fix both were satisfied by the
-  SI system and the model ran, with every `coolprop()` result silently computed
-  for a state a factor of 1000 away. Port such models to `PropsSI`.
+- **Only `PropsSI` and `PropsSIZ` are left.** The deprecated `coolprop()` and
+  `coolpropsi()` were removed in September 2026, see below.
 - **A failed call stops the EES calculation.** The wrapper reports errors the way
   F-Chart documents, with a positive mode and the message in the string. Before
   September 2026 it returned 0 instead and the solve continued with that number.
@@ -159,34 +164,30 @@ script fails the ISCC step of the build instead.
   procedure provides the strings of inputs and outputs requested with Modes=-2
   and -3. Otherwise it will skip unit checking for this equation." The unit
   system itself is still checked, by `CoolProp.LIB` (see
-  `coolprop_assert_si_units` and its siblings).
-- **Each EES function enforces its own unit system**, because the string
-  protocol carries no units. `CoolProp.LIB` asserts the unit system before every
-  call:
+  `coolprop_assert_si_units`).
+- **One unit system, checked before the call.** The string protocol carries no
+  units, so `CoolProp.LIB` asserts the EES unit system before it calls in, and
+  the last field of the string names the system the numbers are in:
 
-  | Function | Tag in the string | C++ path | Unit system asserted | Consistent |
-  |---|---|---|---|---|
-  | `PropsSI`, `PropsSIZ` | `SI` | `PropsSI` / `PropsSImulti` | K, Pa, J, mass | yes |
-  | `coolprop` (deprecated) | `kSI` | `Props`, the deprecated kSI API | K, kPa, kJ, mass | yes |
-  | `coolpropsi` (deprecated) | `SI` | `PropsSI` | C, Pa, J, mass | no, and the function is broken |
+  | Function | Tag in the string | C++ path | Unit system asserted |
+  |---|---|---|---|
+  | `PropsSI`, `PropsSIZ` | `SI` | `PropsSI` / `PropsSImulti` | K, Pa, J, mass |
 
-  Until September 2026 `coolprop()` asserted the SI system while sending `kSI`,
-  so a model that satisfied the assertion handed pressures in Pa to a function
-  reading kPa and got answers for a state a factor of 1000 away, without any
-  complaint. `CoolProp.htm` had the same mix-up: the kSI units table, the
-  general call and the `P=100` example were presented as `PropsSI`.
+  The wrapper refuses any other tag with a message about mismatched releases.
+  Nothing in the shipped library file sends one, so a tag other than `SI` means
+  an old `CoolProp.LIB` is sitting next to a new `COOLPROP_EES`.
 
-  `coolpropsi()` is a dead function and is left as it is. It calls
-  `COOLPROP_EES(f6$, ...)`, and `f6$` is never assigned anywhere in the library
-  file, so the call cannot run. Two more defects sit behind that one: it builds
-  its string from the raw `output$`, `input1$` and `input2$` rather than the
-  translated `out$`, `in1$` and `in2$`, which makes its 160-line key-translation
-  block dead, and it divides pressures and energies by 1000 on the way in and
-  multiplies by 1000 on the way out, which is the conversion for the kSI core
-  while it tags the string `SI` and therefore reaches `PropsSI`. Repairing it
-  means choosing between the tag and the conversions and cannot be tested
-  without a running EES, so it wants its own change, or removal: `coolprop()`
-  already covers the same v4 compatibility need.
+  **What was removed in September 2026.** `coolprop()` tagged its string `kSI`
+  and reached the deprecated v4 `Props` API, which reads kPa and kJ, while the
+  library file asserted the *SI* system. A model that did what the error message
+  asked handed pressures in Pa to a function reading kPa and got a state a factor
+  of 1000 away without any complaint, and `CoolProp.htm` carried the same mix-up.
+  `coolpropsi()` had been dead for years: it called `COOLPROP_EES(f6$, ...)` and
+  `f6$` was never assigned, so the call could not run, and behind that sat a
+  key-translation block it never used and a set of 1000x conversions that
+  contradicted its own `SI` tag. Rather than ship a corrected version of a
+  deprecated function and then delete it, both were removed and the v4 `Props`
+  call went with them. `PropsSI` covers what they did.
 - **`$DEBUG` writes to the working directory of the EES process.** Append
   `'$DEBUG'` to the fluid name and the wrapper writes `log.txt` and
   `log_stdout.txt` by relative path, so they land where EES runs, not in the
@@ -210,10 +211,13 @@ check, or to run it for the 32-bit library after a change to `main.cpp`:
    CoolProp message instead of returning 0.
 5. Press F8. `Check Units` reports the `COOLPROP_EES` equation as skipped rather
    than flagging it.
-6. Exercise the unit assertions, which are the one part of `CoolProp.LIB` with
-   no automated cover. With the unit system on K, kPa, kJ and mass, a
-   `coolprop()` call goes through and `PropsSI` is rejected; on K, Pa, J and
-   mass it is the other way round. `coolprop_assert_ksi_units` had no call site
-   before September 2026, so this is the first time EES evaluates it.
-7. Append `'$DEBUG'` to a fluid name and look for `log.txt` and `log_stdout.txt`
+6. Exercise the unit assertion, which is the one part of `CoolProp.LIB` with no
+   automated cover. On K, Pa, J and mass a `PropsSI` call goes through; set the
+   unit system to kPa or kJ and it stops with the message from
+   `coolprop_assert_si_units`.
+7. Confirm that the library file still loads at all. The Function Information
+   dialog listing `PropsSI` and `PropsSIZ`, and no longer listing `coolprop` or
+   `coolpropsi`, is the check that the September 2026 edit of the wrapped
+   `.LIB` format was accepted by EES.
+8. Append `'$DEBUG'` to a fluid name and look for `log.txt` and `log_stdout.txt`
    in the working directory of the EES process.

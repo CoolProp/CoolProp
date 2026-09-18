@@ -20,44 +20,44 @@ computer</p>
 <p> More information on CoolProp can be obtained at <a href="http://www.coolprop.org">www.coolprop.org</a>.  Furthermore, information on the EES wrapper can be found at <a href="http://www.coolprop.org/coolprop/wrappers/EES"> EES</a>.</p>
 <p></p>
 
-<h4>CoolProp v5+ Support</h4>
+<h4>The PropsSI function</h4>
 
-The wrapper for EES is now essentially 100% in line with the other wrappers for Python, Excel, etc. Users should use the PropsSI function.  This function always takes in and returns base SI units (Pa, J, kg, mol, etc.).
-
-The documentation for the PropsSI function is exactly in line with that for the High Level API.  No other functions from the high-level API are exposed through the EES interface.
+The wrapper for EES is in line with the other wrappers for Python, Excel and the
+rest.  PropsSI always takes in and returns base SI units (Pa, J, kg, mol and so
+on), and its documentation is exactly that of the High Level API.
 
 <p>The general call looks like:</p>
 
 <p><em>out = PropsSI(output$,inputvar1$,input1,inputvar2$,input2,fluid$)</em></p>
 
-<p>PropsSI requires the EES unit system to be set to K, Pa, J and mass.  The
-following example retrieves the enthalpy of Methane at 1 bar (100000 Pa) and
-15 °C (288.15 K):</p>
+<p>PropsSI requires the EES unit system to be set to K, Pa, J and mass.  A model
+that uses another unit system is stopped with a message saying so, because the
+external function receives plain numbers and cannot tell what units they are
+in.</p>
 
-<p><em>h = PropsSI('H','P',100000,'T',288.15,'Methane')</em></p>
+<h4>The PropsSIZ function</h4>
 
-<h4>CoolProp v4 backwards compatibility </h4>
+<p>PropsSIZ takes the same inputs as PropsSI, and then the number of components
+and their mole fractions as an array, rather than encoding the composition in
+the fluid string.  Up to three components are supported.  It requires the same
+unit system as PropsSI.</p>
 
-For backwards compatibility, the coolprop() function has been retained in EES.  The coolprop() function has been officially deprecated and will be removed in a future release.  The PropsSI function is the only function that will be supported in the future.
+<p><em>out = PropsSIZ(output$,inputvar1$,input1,inputvar2$,input2,fluid$,N,Z[1..N])</em></p>
 
-<p>The general call looks like:</p>
+<h4>Functions that were removed</h4>
 
-<p><em>out = coolprop(output$,inputvar1$,input1,inputvar2$,input2,fluid$)</em></p>
-
-<p>The coolprop() function uses a modified SI system of units, with kPa and kJ
-in place of Pa and J, so it requires the EES unit system to be set to K, kPa,
-kJ and mass.  The units it accepts are listed under Fluid Properties at the
-end of this page.</p>
-
-<p></p>
+<p>The deprecated coolprop() and coolpropsi() functions were removed in
+September 2026.  coolprop() worked in kPa and kJ and called the CoolProp v4 API,
+and coolpropsi() had not worked at all for years.  Models that used coolprop()
+need their pressures in Pa and their energies in J, and the call renamed to
+PropsSI.</p>
 
 <h3>Example</h3>
 
-<p>The following example retrieves the enthalpy of &ldquo;Methane&rdquo;. The
-thermodynamic state is given by two variables : p and T, that are set to 1 bar
-(100 kPa) and 15 °C (288.15 K) respectively:</p>
+<p>The following example retrieves the enthalpy of Methane at 1 bar (100000 Pa)
+and 15 deg C (288.15 K):</p>
 
-<p><em>h = coolprop('H','P',100,'T',288.15,'Methane')</em></p>
+<p><em>h = PropsSI('H','P',100000,'T',288.15,'Methane')</em></p>
 
 <p></p>
 
@@ -75,22 +75,21 @@ from the high level interface. The documentation there is generally more up-to-d
 
 <p></p>
 
-<p>Also refer to the example file at
-c:\EES32\Userlib\CoolProp_EES\CoolProp_EES_Sample.ees</p>
+<p>Also refer to the example file, which is installed next to this help file, in
+c:\EES32\Userlib\CoolProp_EES for the 32-bit EES and in
+c:\EES64\Userlib64\CoolProp_EES for the 64-bit EES.</p>
 
 <p></p>
 
 <h3>Fluid Properties</h3>
 
-<p>The table and the list below describe the deprecated coolprop() function:
-its property keys, its kPa and kJ units, and the input pairs it accepts.
-PropsSI takes base SI units (Pa, J) and the full set of inputs of the
-<a href="http://www.coolprop.org/coolprop/HighLevelAPI.html">High Level
-API</a>, not the subset below.</p>
+<p>These are the property keys in common use, with the units PropsSI reads and
+returns them in.  They are a subset: PropsSI accepts every key of the <a
+href="http://www.coolprop.org/coolprop/HighLevelAPI.html">High Level API</a>,
+and that page also lists which pairs of inputs can be used to fix the state.</p>
 
 <table border="1">
-  <caption>Units of the deprecated coolprop() function</caption>
-  <col>
+  <caption>Property keys and their base SI units</caption>
   <col>
   <col>
   <col>
@@ -99,126 +98,99 @@ API</a>, not the subset below.</p>
       <td>Thermophysical property</td>
       <td>Symbol</td>
       <td>Units</td>
-      <td>Input/Output</td>
     </tr>
     <tr>
       <td>Pressure (absolute)</td>
       <td>P</td>
-      <td>kPa</td>
-      <td>Both</td>
+      <td>Pa</td>
     </tr>
     <tr>
       <td>Temperature</td>
       <td>T</td>
       <td>K</td>
-      <td>Both</td>
     </tr>
     <tr>
       <td>Density</td>
       <td>D</td>
       <td>kg/m<sup>3</sup></td>
-      <td>Both</td>
     </tr>
     <tr>
       <td>Specific Enthalpy</td>
       <td>H</td>
-      <td>kJ/kg</td>
-      <td>Both</td>
+      <td>J/kg</td>
     </tr>
     <tr>
       <td>Specific Entropy</td>
       <td>S</td>
-      <td>kJ/kg/K</td>
-      <td>Both</td>
+      <td>J/kg/K</td>
     </tr>
     <tr>
-      <td>Quality</td>
+      <td>Vapour Quality</td>
       <td>Q</td>
-      <td>kg/kg</td>
-      <td>Both</td>
+      <td>mol/mol</td>
     </tr>
     <tr>
       <td>Specific Internal Energy</td>
       <td>U</td>
-      <td>kJ/kg</td>
-      <td>Output only</td>
+      <td>J/kg</td>
     </tr>
     <tr>
       <td>Specific Gibbs Function</td>
       <td>G</td>
-      <td>kJ/kg</td>
-      <td>Output only</td>
+      <td>J/kg</td>
     </tr>
     <tr>
       <td>Specific Heat at Constant Volume</td>
       <td>O</td>
-      <td>kJ/kg/K</td>
-      <td>Output only</td>
+      <td>J/kg/K</td>
     </tr>
     <tr>
       <td>Specific Heat at Constant Pressure</td>
       <td>C</td>
-      <td>kJ/kg/K</td>
-      <td>Output only</td>
+      <td>J/kg/K</td>
     </tr>
     <tr>
       <td>Speed of Sound</td>
       <td>A</td>
       <td>m/s</td>
-      <td>Output only</td>
     </tr>
     <tr>
       <td>Surface Tension</td>
       <td>I</td>
       <td>N/m</td>
-      <td>Output only</td>
     </tr>
-    
     <tr>
       <td>Viscosity</td>
       <td>V</td>
-      <td>Pa·s</td>
-      <td>Output only</td>
+      <td>Pa-s</td>
     </tr>
     <tr>
       <td>Thermal Conductivity</td>
       <td>L</td>
-      <td>kW/m/K</td>
-      <td>Output only</td>
+      <td>W/m/K</td>
+    </tr>
+    <tr>
+      <td>Molar Mass</td>
+      <td>M</td>
+      <td>kg/mol</td>
     </tr>
     <tr>
       <td>Critical Temperature</td>
       <td>Tcrit</td>
       <td>K</td>
-      <td>Output only</td>
     </tr>
     <tr>
       <td>Critical Pressure</td>
       <td>pcrit</td>
-      <td>kPa</td>
-      <td>Output only</td>
+      <td>Pa</td>
     </tr>
     <tr>
       <td>Minimum Temperature</td>
       <td>Tmin</td>
       <td>K</td>
-      <td>Output only</td>
     </tr>
   </tbody>
 </table>
-
-<p></p>
-
-<p>The following combinations of inputs are valid for coolprop() (in either
-order):</p>
-<ul>
-  <li>T,P</li>
-  <li>T,Q</li>
-  <li>T,D</li>
-  <li>P,H</li>
-  <li>P,S</li>
-  <li>P,Q</li>
-</ul>
 
 <h3></h3>
 </body>
