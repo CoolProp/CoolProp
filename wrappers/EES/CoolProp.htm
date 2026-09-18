@@ -46,11 +46,10 @@ unit system as PropsSI.</p>
 
 <h4>Functions that were removed</h4>
 
-<p>The deprecated coolprop() and coolpropsi() functions were removed in
-September 2026.  coolprop() worked in kPa and kJ and called the CoolProp v4 API,
-and coolpropsi() had not worked at all for years.  Models that used coolprop()
-need their pressures in Pa and their energies in J, and the call renamed to
-PropsSI.</p>
+<p>The deprecated coolprop() and coolpropsi() functions were removed in CoolProp
+8.0.1.  coolprop() worked in kPa and kJ and called the CoolProp v4 API, and
+coolpropsi() did not work at all.  A model that used coolprop() needs its
+pressures in Pa and its energies in J, and the call renamed to PropsSI.</p>
 
 <h3>Example</h3>
 

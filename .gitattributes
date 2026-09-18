@@ -22,7 +22,5 @@
 *.pdf binary
 
 # The EES library file is a text body wrapped in a header that records its
-# length, so a line ending conversion would change the length and leave the
-# header wrong.  Git already detects it as binary because of the NUL bytes in
-# that header; say so explicitly, since the length is now a CI invariant.
+# length, so a line ending conversion would leave that header wrong.
 wrappers/EES/CoolProp.LIB binary

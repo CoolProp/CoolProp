@@ -41,7 +41,7 @@ __declspec(dllexport) double COOLPROP_EES(char fluid[256], int& mode, struct Ees
 with `struct EesParamRec { double value; struct EesParamRec* next; }`. `fluid`
 is a 255-character C string plus its terminator, used in both directions. The
 linked list carries the inputs and ends on a null `next`. On x64 the record is
-16 bytes, which is what EES (Delphi) and our C++ both produce.
+16 bytes, which is what both EES (Delphi) and this C++ produce.
 
 **The mode says what EES wants and what it got.** EES passes it by reference:
 
@@ -58,10 +58,8 @@ makes EES stop the calculation and show the message, and a negative value with a
 message for a warning, which does not stop it. The three requests answer in the
 string and leave the mode as EES set it, the way the F-Chart example does.
 
-Until September 2026 the wrapper took `mode` by value, so it read the low bits
-of the pointer instead of the mode. That is why older releases never showed the
-example call in the Function Information dialog and never surfaced a CoolProp
-error message in EES.
+Taking `mode` by value reads the low bits of the pointer instead, which serves
+none of the requests and lets no error message reach the user.
 
 **Calling convention.** 32-bit Windows has several, and EES uses the C one, so
 the 32-bit build defines `CONVENTION=__cdecl`. x64 has a single convention and
@@ -90,9 +88,9 @@ the content does not depend on the bitness.
 and a 14-byte trailer. Four of those header bytes, at offset 31, are the length
 of the text body as a little-endian unsigned integer, so a hand edit that changes
 the length has to write that field back. `dev/ci/check_ees_artifacts.py` checks
-it. The other header and trailer fields have not been decoded; they are the same
-in every version of this file and are left alone. If EES ever refuses the file,
-open it in EES and save it again, which rewrites the whole wrapper.
+it. The remaining header and trailer bytes are not decoded and are left alone.
+If EES ever refuses the file, open it in EES and save it again, which rewrites
+the whole wrapper.
 
 ## 3. Building it
 
@@ -157,11 +155,11 @@ the installer script fails the ISCC step of the build instead.
 
 ## 5. Behaviour worth knowing
 
-- **Only `PropsSI` and `PropsSIZ` are left.** The deprecated `coolprop()` and
-  `coolpropsi()` were removed in September 2026, see below.
-- **A failed call stops the EES calculation.** The wrapper reports errors the way
-  F-Chart documents, with a positive mode and the message in the string. Before
-  September 2026 it returned 0 instead and the solve continued with that number.
+- **`PropsSI` and `PropsSIZ` are the only functions.** The deprecated
+  `coolprop()` and `coolpropsi()` were removed, see below.
+- **A failed call stops the EES calculation**, with a positive mode and the
+  message in the string, the way F-Chart documents it. The alternative is
+  returning 0 and letting the solve continue with that number.
 - **EES does not unit-check a `COOLPROP_EES` call.** The units of the two
   arguments depend on the property keys encoded in the fluid string, which EES
   does not pass when it asks for units, so the wrapper answers modes -2 and -3
@@ -182,17 +180,15 @@ the installer script fails the ISCC step of the build instead.
   Nothing in the shipped library file sends one, so a tag other than `SI` means
   an old `CoolProp.LIB` is sitting next to a new `COOLPROP_EES`.
 
-  **What was removed in September 2026.** `coolprop()` tagged its string `kSI`
-  and reached the deprecated v4 `Props` API, which reads kPa and kJ, while the
-  library file asserted the *SI* system. A model that did what the error message
-  asked handed pressures in Pa to a function reading kPa and got a state a factor
-  of 1000 away without any complaint, and `CoolProp.htm` carried the same mix-up.
-  `coolpropsi()` had been dead for years: it called `COOLPROP_EES(f6$, ...)` and
-  `f6$` was never assigned, so the call could not run, and behind that sat a
-  key-translation block it never used and a set of 1000x conversions that
-  contradicted its own `SI` tag. Rather than ship a corrected version of a
-  deprecated function and then delete it, both were removed and the v4 `Props`
-  call went with them. `PropsSI` covers what they did.
+  **Why `coolprop()` and `coolpropsi()` are gone.** `coolprop()` tagged its
+  string `kSI` and reached the deprecated v4 `Props` API, which reads kPa and kJ,
+  while the library file asserted the *SI* system. A model that did what the
+  error message asked handed pressures in Pa to a function reading kPa and got a
+  state a factor of 1000 away without any complaint. `coolpropsi()` could not run
+  at all: it called `COOLPROP_EES(f6$, ...)` and `f6$` was never assigned, and
+  behind that sat a key-translation block it never used and a set of 1000x
+  conversions that contradicted its own `SI` tag. The v4 `Props` call went with
+  them; `PropsSI` covers what they did.
 - **`$DEBUG` writes to the working directory of the EES process.** Append
   `'$DEBUG'` to the fluid name and the wrapper writes `log.txt` and
   `log_stdout.txt` by relative path, so they land where EES runs, not in the
@@ -202,8 +198,8 @@ the installer script fails the ISCC step of the build instead.
 
 ## 6. Checking a build
 
-The 64-bit library has been built from this tree and run in EES64. To repeat the
-check, or to run it for the 32-bit library after a change to `main.cpp`:
+CI covers the bitness and the exported name; everything below needs a licence of
+EES. Run it for a bitness after a change to `main.cpp` or `CoolProp.LIB`:
 
 1. Build the target as in section 3 and confirm that `dumpbin /exports` lists an
    undecorated `COOLPROP_EES`. This is the manual equivalent of the CI gate.
@@ -220,9 +216,8 @@ check, or to run it for the 32-bit library after a change to `main.cpp`:
    automated cover. On K, Pa, J and mass a `PropsSI` call goes through; set the
    unit system to kPa or kJ and it stops with the message from
    `coolprop_assert_si_units`.
-7. Confirm that the library file still loads at all. The Function Information
-   dialog listing `PropsSI` and `PropsSIZ`, and no longer listing `coolprop` or
-   `coolpropsi`, is the check that the September 2026 edit of the wrapped
-   `.LIB` format was accepted by EES.
+7. Confirm that EES accepted the library file: the Function Information dialog
+   lists `PropsSI` and `PropsSIZ` and nothing else. This is the check that
+   matters after any edit of the wrapped `.LIB` format.
 8. Append `'$DEBUG'` to a fluid name and look for `log.txt` and `log_stdout.txt`
    in the working directory of the EES process.

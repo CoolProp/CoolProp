@@ -1146,11 +1146,9 @@ if(COOLPROP_MATHCAD15_MODULE)
           DESTINATION MathCAD15)
 endif()
 
-# EES is compiled once per bitness: a ".dlf" that the 32-bit program loads
-# from its USERLIB folder and a ".dlf64" that the 64-bit program (EES64.exe)
-# loads from USERLIB64.  EES refuses an external library of the wrong
-# bitness, see wrappers/EES/DEVELOPER.md for the details and the F-Chart
-# sources.
+# EES is compiled once per bitness: a ".dlf" that the 32-bit program loads from
+# its USERLIB folder and a ".dlf64" that EES64.exe loads from USERLIB64.  EES
+# refuses a library of the wrong bitness; see wrappers/EES/DEVELOPER.md.
 if(COOLPROP_EES_MODULE)
   if(NOT WIN32)
     message(
@@ -1166,10 +1164,9 @@ if(COOLPROP_EES_MODULE)
   elseif("${BITNESS}" STREQUAL "64")
     set(COOLPROP_EES_SUFFIX ".dlf64")
     set(COOLPROP_EES_LIBRARY_NAME "CoolProp.LIB64")
-    # x64 has a single calling convention, so no keyword is needed.  Nothing is
-    # defined here and CoolPropLib.h falls back to __stdcall, which the x64
-    # compilers accept and ignore.  This is the same path the 64-bit
-    # CoolProp.dll takes.
+    # x64 has a single calling convention, so no keyword is needed.  Leaving
+    # CONVENTION undefined lets CoolPropLib.h fall back to __stdcall, which the
+    # x64 compilers accept and ignore, the same as for the 64-bit CoolProp.dll.
     set(COOLPROP_EES_CONVENTION "")
   else()
     message(
@@ -1197,8 +1194,8 @@ if(COOLPROP_EES_MODULE)
                                                 "${COOLPROP_EES_SUFFIX}" PREFIX "")
   # Creates "COOLPROP_EES.dlf" or "COOLPROP_EES.dlf64"
   if(NOT MSVC)
-    # Only the 32-bit build needs the -m32 switch.  Append it rather than
-    # assigning COMPILE_FLAGS, which used to drop the defines set above.
+    # Only the 32-bit build needs -m32, and it is appended so that it does not
+    # drop the defines set above.
     if("${BITNESS}" STREQUAL "32")
       set_property(
         TARGET COOLPROP_EES
@@ -1433,8 +1430,7 @@ if(COOLPROP_WINDOWS_PACKAGE)
   # *************************************************************
   # Add the target for EES and populate it with custom commands
   # *************************************************************
-  # Both bitnesses are built: the 32-bit program loads COOLPROP_EES.dlf from
-  # its USERLIB folder, the 64-bit program COOLPROP_EES.dlf64 from USERLIB64.
+  # One target per bitness, both pulled in by the installer target below.
   add_custom_target(COOLPROP_WINDOWS_PACKAGE_EES)
   add_dependencies(COOLPROP_WINDOWS_PACKAGE_EES
                    COOLPROP_WINDOWS_PACKAGE_PREPARE)

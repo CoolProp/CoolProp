@@ -114,9 +114,8 @@ endif()
 # ── Windows packaging helpers (optional) ──────────────────────────────────
 
 if(COOLPROP_WINDOWS_PACKAGE)
-  # Tip of master, the merge of pull request 2, which adds the EesUserLib64
-  # task that installs COOLPROP_EES.dlf64 and CoolProp.LIB64 into the
-  # Userlib64 folder of the 64-bit EES.
+  # This revision carries the EesUserLib64 task, which installs the 64-bit EES
+  # library into the Userlib64 folder.
   CPMAddPackage(
     NAME ExcelAddinInstaller
     GIT_REPOSITORY https://github.com/CoolProp/ExcelAddinInstaller.git

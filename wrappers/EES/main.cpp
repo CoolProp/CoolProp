@@ -75,11 +75,8 @@ static void set_fluid(char* fluid, const std::string& message) {
 }
 
 // Append a line to the EES debug log, skipping silently if the file cannot be
-// opened.  Debug logging must never crash or abort the EES call, so the stream
-// state is always checked before use.  The log holds the fluid strings of the
-// calling model and lands in the folder EES runs from, where it inherits that
-// folder's access rights.  Windows ignores std::filesystem::permissions apart
-// from the read-only flag, so there is nothing portable to tighten here.
+// opened: logging must never abort the EES call.  The path is relative, so the
+// file lands in the folder EES runs from.
 static void log_debug(const std::string& line) {
     std::ofstream log_file("log.txt", std::ios::app);
     if (!log_file) {
@@ -89,11 +86,10 @@ static void log_debug(const std::string& line) {
 }
 
 // Report an error back to EES: the message goes into the string and the mode
-// has to be positive, which makes EES stop the calculation and show it.  A
-// warning uses a negative mode instead, see the header comment.  An empty
-// message is replaced: stopping the calculation without saying why would be
-// worse than the wrong-but-silent zero this used to return, and CoolProp does
-// hand out an empty error string now and then because reading it clears it.
+// has to be positive, which makes EES stop the calculation and show it.  An
+// empty message is replaced by a generic one, because CoolProp hands out an
+// empty error string now and then and stopping the calculation without saying
+// why would leave the user with nothing to go on.
 static void set_error(char* fluid, int& mode, const std::string& message) {
     set_fluid(fluid, message.empty() ? std::string("CoolProp failed without reporting a reason") : message);
     mode = 1;
@@ -102,10 +98,8 @@ static void set_error(char* fluid, int& mode, const std::string& message) {
 // Tell C++ to use the "C" style calling conventions rather than the C++ mangled names
 extern "C"
 {
-    // The mode argument is a reference because that is how EES passes it, see
-    // the file header.  Taking it by value (as this wrapper did until 2026)
-    // reads the low bits of the pointer instead of the mode, so the requests
-    // below were never served.
+    // EES passes the mode by reference, see the file header.  Taking it by
+    // value reads the low bits of the pointer instead of the mode.
     __declspec(dllexport) double COOLPROP_EES(char fluid[256], int& mode, struct EesParamRec* input_rec) {
         double In1 = _HUGE, In2 = _HUGE, out = _HUGE;  // Two inputs, one output
         int NInputs = 0;                               // Ninputs is the number of inputs
@@ -116,9 +110,8 @@ extern "C"
         std::vector<std::string> fluid_split;
 
         // The three requests below answer in the string and leave the mode as
-        // EES set it, which is what the F-Chart example does.  The 0 / positive
-        // / negative convention described in the header applies to a normal
-        // call, where the mode says what came of the calculation.
+        // EES set it.  The mode convention in the header applies to a normal
+        // call, where it reports what came of the calculation.
         if (mode == -1) {
             // EES asks for an example of the call format
             set_fluid(fluid, "T = PropsSI('T','P',101325,'Q',0,'Water')");
@@ -224,13 +217,11 @@ extern "C"
                     out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr);
                 }
             } else {
-                // The deprecated coolprop() and coolpropsi() functions were the
-                // only ones that put anything but SI here, and they were removed
-                // from CoolProp.LIB in September 2026.  Reaching this point means
-                // the library file and this DLL come from different releases, so
-                // say that rather than guess which units the numbers are in.
-                // The remedy comes first: a long unit string pushes the end of
-                // the message past the 255 characters the buffer holds.
+                // CoolProp.LIB only ever sends SI, so another unit system means
+                // an old library file next to a new DLL.  Say so rather than
+                // guess which units the numbers are in.  The remedy comes first
+                // because a long unit string pushes the end of the message past
+                // the 255 characters the buffer holds.
                 set_error(fluid, mode,
                           format("Use PropsSI, and install CoolProp.LIB and COOLPROP_EES from the same CoolProp release. "
                                  "The deprecated coolprop() and coolpropsi() functions were removed, so unit system [%s] is no "

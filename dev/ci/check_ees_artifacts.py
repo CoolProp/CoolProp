@@ -3,13 +3,15 @@
 
 EES loads external functions by bitness: the 32-bit program reads
 COOLPROP_EES.dlf from its Userlib folder, the 64-bit program (EES64.exe)
-reads COOLPROP_EES.dlf64 from Userlib64.  A library of the wrong bitness is
-silently ignored by EES, so a build that produces two files with the same
-machine type would ship a broken 64-bit wrapper without anybody noticing.
+reads COOLPROP_EES.dlf64 from Userlib64.  EES ignores a library of the wrong
+bitness without a message, so a build that produced two files of the same
+machine type would ship a broken 64-bit wrapper unnoticed.
 
-This script checks that both files exist and that their PE headers really
-report the expected machine type.  With --stage it also copies the checked
-files into a clean folder, which is what the release workflow uploads.
+For each bitness this checks that the four files exist, that the PE header
+reports the expected machine type, that the library exports an undecorated
+COOLPROP_EES, and that CoolProp.LIB agrees with its own header and defines
+what it should.  With --stage the checked files are also copied into a clean
+folder, which is what the release workflow uploads.
 
 Usage:
     python dev/ci/check_ees_artifacts.py <source-dir> [--stage <dir>]
@@ -39,26 +41,21 @@ EXPORTED_FUNCTION = "COOLPROP_EES"
 # The EES library file is not plain text: the source sits between a header and
 # a trailer written by EES, and four header bytes hold the length of that text.
 # An edit that changes the length without writing the field back leaves EES
-# reading the wrong number of bytes, so the invariant is checked here.  The
-# three constants are taken from the shipped file; if EES ever writes a
-# different header this check fails and the layout has to be looked at again,
-# which is the safe direction.
+# reading the wrong number of bytes.  These offsets hold for the file as EES
+# writes it; a different header fails the check, which is the safe direction.
 EES_LIB_HEADER_LEN = 35
 EES_LIB_TRAILER_LEN = 14
 EES_LIB_LENGTH_OFFSET = 31
 
-# A correct length field only proves the header agrees with the body, not that
-# the body is the library.  These are what the body has to define, and what it
-# must not define any more, so that a bad hand edit cannot pass the gate.  The
-# version string and the undecoded header fields are deliberately NOT pinned:
-# re-saving the file from EES is the documented way out of a broken edit, and a
-# newer EES may well write a different header.
+# A correct length only proves the header agrees with the body, not that the
+# body is the library, so the body is checked for what it must and must not
+# define.  The version string and the undecoded header fields are deliberately
+# not pinned, because a newer EES may write a different header.
 EES_LIB_REQUIRED = ["Function propssi(", "Function propssiz(", "Function coolprop_assert_si_units("]
 EES_LIB_REMOVED = ["Function coolprop(", "Function coolpropsi(", "coolprop_assert_ksi_units", "coolprop_assert_cpsi_units"]
 
 # What a malformed image can raise while it is inspected.  struct.error is not
-# a ValueError, so it has to be listed: without it a truncated library escapes
-# the handlers below and the collected diagnostics are never printed.
+# a ValueError, so it has to be listed separately.
 PE_ERRORS = (ValueError, OSError, struct.error)
 
 # One entry per bitness: folder, the library file and the expected machine
@@ -80,9 +77,9 @@ LAYOUT = [
 ]
 
 
-# A missing file is reported by the existence loop in check_entry, which only
-# covers the names in "files".  Keep the library file in that list, so that
-# renaming it cannot turn the header check into a silent pass.
+# check_entry only reports a missing file for the names in "files", so both
+# libraries have to stay in that list; otherwise renaming one would turn its
+# check into a silent pass.
 for _entry in LAYOUT:
     assert _entry["ees_library"] in _entry["files"], "{0} is not in the file list of {1}".format(_entry["ees_library"], _entry["folder"])
     assert _entry["library"] in _entry["files"], "{0} is not in the file list of {1}".format(_entry["library"], _entry["folder"])

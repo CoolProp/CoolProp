@@ -92,12 +92,9 @@ jobs:
           path: build/InnoScript/bin/Installers
           if-no-files-found: error
 
-    # The installer target builds the EES wrapper twice, once for the 32-bit
-    # program and once for EES64.exe.  EES ignores a library of the wrong
-    # bitness without a word, so the PE headers are checked here rather than by
-    # the user.  The script exits non-zero on any mismatch, and it runs after
-    # the installers are archived so a broken EES build still leaves them
-    # available for inspection.
+    # EES ignores a library of the wrong bitness without a word, so both are
+    # verified here rather than by the user.  This runs after the installers
+    # are archived, so a failure still leaves them available for inspection.
     - name: Check the EES libraries and stage them
       working-directory: ./build
       shell: bash
