@@ -1,0 +1,47 @@
+{
+  "name": "coolprop",
+  "version": "@COOLPROP_VERSION_NPM@",
+  "description": "Thermophysical property database and wrappers -- official WebAssembly/ES6-module build of CoolProp",
+  "keywords": [
+    "coolprop",
+    "thermodynamics",
+    "thermophysical-properties",
+    "equation-of-state",
+    "fluids",
+    "webassembly",
+    "wasm"
+  ],
+  "homepage": "https://coolprop.github.io",
+  "bugs": "https://github.com/CoolProp/CoolProp/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CoolProp/CoolProp.git",
+    "directory": "wrappers/Javascript"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "coolprop.js",
+  "module": "coolprop.js",
+  "types": "coolprop.d.ts",
+  "exports": {
+    ".": {
+      "types": "./coolprop.d.ts",
+      "import": "./coolprop.js",
+      "default": "./coolprop.js"
+    },
+    "./coolprop.wasm": "./coolprop.wasm"
+  },
+  "files": [
+    "coolprop.js",
+    "coolprop.wasm",
+    "coolprop.d.ts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}
