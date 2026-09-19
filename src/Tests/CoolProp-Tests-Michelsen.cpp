@@ -9,6 +9,7 @@
 #    include <memory>
 #    include <string>
 #    include <vector>
+#    include <sstream>
 #    include <catch2/catch_all.hpp>
 #    include "CoolProp/detail/tools.h"
 #    include "CoolProp/CoolProp.h"
@@ -1138,11 +1139,30 @@ TEST_CASE("Methanol-benzene PT flash at problematic compositions", "[michelsen][
     //
     // At 308.15 K / 1 atm this mixture is subcooled single-phase liquid (bubble
     // pressure ~34 kPa << 101 kPa).  #3168: the Michelsen stability check produces
-    // a false-positive two-phase classification at x_methanol = 0.54 whose split
-    // never converges (both roots liquid-like, rho_vap > rho_liq).  The convergence
-    // gate + single-phase fallback must recover the correct single-phase liquid
-    // result rather than publishing the unconverged split.
-    for (double x : {0.54, 0.56, 0.58, 0.76, 0.78, 0.80}) {
+    // a false-positive two-phase classification whose split never converges (both
+    // roots liquid-like, rho_vap > rho_liq).  The convergence gate + single-phase
+    // fallback must recover the correct single-phase liquid result rather than
+    // publishing the unconverged split.
+    //
+    // x_methanol = 0.54 is the ORIGINAL #3168 composition.  At that composition the poor
+    // methanol/benzene binary interaction parameters make the model *marginally* prefer a spurious
+    // liquid-liquid split (TPD objective ~ -1e-5; the split's Gibbs energy is ~1e-3 J/mol BELOW the
+    // single phase), so the single-vs-two-phase verdict is a ULP-scale razor edge that flips between
+    // compilers (correct on MSVC, wrong on gcc, and vice-versa) for the SAME source -- see GH #3357
+    // (jakobreichert).  This is not fixable downstream of the model: correcting the stability-
+    // classifier Hessian (this PR) does not remove the razor edge, and a Gibbs-descent guard on the
+    // converged split cannot separate it from a GENUINE split -- the near-dew/near-bubble tiny-
+    // incipient splits this solver exists to find (#3342) are just as Gibbs-marginal (or shallower),
+    // so any margin that rejects 0.54 also rejects them (measured; see the closed GH #3358).  The
+    // spuriousness lives in the binary parameters, not the solver -- tracked in CoolProp-fhzw.
+    //
+    // Rather than DROP 0.54 (which would leave the original #3168 case untested on every platform --
+    // Ian Bell review, GH #3357), it is KEPT below with SELF-CONSISTENCY-only assertions: the flash
+    // must not publish an unconverged split, densities must be ordered, and any two-phase quality
+    // must be interior -- but the single-vs-two-phase VERDICT itself is deliberately NOT asserted
+    // until the kij is fixed.  The remaining compositions sit well inside single-phase liquid and
+    // keep the strict verdict assertion.
+    for (double x : {0.56, 0.58, 0.76, 0.78, 0.80}) {
         DYNAMIC_SECTION("x_methanol = " << x) {
             auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "methanol&benzene"));
             AS->set_mole_fractions({x, 1.0 - x});
@@ -1156,6 +1176,28 @@ TEST_CASE("Methanol-benzene PT flash at problematic compositions", "[michelsen][
             CHECK(AS->Q() == -1);
             CHECK(AS->phase() == iphase_liquid);
             CHECK(rho > 9000);
+        }
+    }
+
+    // The original #3168 razor-edge composition (x_methanol = 0.54): assert only a SELF-CONSISTENT
+    // verdict, not the single-vs-two-phase call itself (see the block comment above; kij tracked in
+    // CoolProp-fhzw).  This keeps the #3168 case exercised on every platform without pinning the
+    // razor-edge verdict that legitimately differs between compilers.
+    {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "methanol&benzene"));
+        AS->set_mole_fractions({0.54, 0.46});
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, 101325, 308.15));  // never publish an unconverged split
+        const double rho = AS->rhomolar();
+        CAPTURE(rho, AS->phase(), AS->Q());
+        CHECK(std::isfinite(rho));
+        CHECK(rho > 0);
+        CHECK(std::isfinite(AS->gibbsmolar()));
+        if (AS->phase() == iphase_twophase) {
+            // If the razor edge lands two-phase on this build, the split must still be physical:
+            // liquid denser than vapour, with an interior quality.
+            CHECK(AS->saturated_liquid_keyed_output(iDmolar) > AS->saturated_vapor_keyed_output(iDmolar));
+            CHECK(AS->Q() > 0.0);
+            CHECK(AS->Q() < 1.0);
         }
     }
 }
@@ -2176,6 +2218,167 @@ TEST_CASE("HSU_D flash: single-phase N2/O2 HEOS regression", "[michelsen][hsu_d]
         CHECK(AS2->T() == Catch::Approx(T).epsilon(0.001));
         CHECK(AS2->p() == Catch::Approx(P).epsilon(0.001));
     }
+}
+
+TEST_CASE("Mixture PT flash near the dew line resolves to a genuine two-phase split (#3342)", "[michelsen][flash][mixture][saturation]") {
+    // Solver contract for SaturationSolvers::PTflash_twophase::solve_michelsen
+    // (#3342 / CoolProp-1tbe.22).  On a genuine instability just inside the dew line the
+    // second-order phase split can collapse to the TRIVIAL split (x == y,
+    // rho_liq == rho_vap) yet report success; the trivial-split guard in PT_flash_mixtures
+    // then publishes it as a SINGLE-PHASE state inside the two-phase region.  Pin the
+    // solver's contract directly: across the near-dew band the PT flash must return a
+    // GENUINE two-phase state -- classified two-phase, with an interior vapour quality and a
+    // non-trivial liquid/vapour composition spread -- never a collapsed trivial split
+    // misclassified as single phase.
+    //
+    // (The end-to-end HSU_P inverse round trip at these same conditions additionally needs
+    //  the near-dew T-bracket fix; that coverage travels with the reroute change, not here.)
+    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    const double P = 8e5;
+
+    auto sat = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+    sat->set_mole_fractions(z);
+    sat->update(PQ_INPUTS, P, 0.0);
+    const double T_bub = sat->T();
+    sat->update(PQ_INPUTS, P, 1.0);
+    const double T_dew = sat->T();
+
+    for (double frac : {0.99, 0.995, 0.998, 0.999}) {
+        const double T = T_bub + frac * (T_dew - T_bub);
+        std::ostringstream lbl;
+        lbl << "frac=" << frac << " T=" << T;
+        DYNAMIC_SECTION(lbl.str()) {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+            AS->set_mole_fractions(z);
+            AS->update(PT_INPUTS, P, T);
+            // Correctly classified two-phase (not collapsed to a single-phase misclassification).
+            // REQUIRE (fatal): a regression to single phase must stop the section here, before the
+            // liquid/vapour accessors below, which are only valid for a two-phase state.
+            REQUIRE(AS->phase() == iphase_twophase);
+            // ... with an interior vapour quality ...
+            const double Q = AS->Q();
+            CHECK(Q > 1e-8);
+            CHECK(Q < 1.0 - 1e-8);
+            // ... and a genuine composition split (trivial collapse is x == y everywhere).
+            const std::vector<double> xl = AS->mole_fractions_liquid_double();
+            const std::vector<double> xv = AS->mole_fractions_vapor_double();
+            double spread = 0;
+            for (std::size_t i = 0; i < z.size(); ++i)
+                spread = std::max(spread, std::abs(xl[i] - xv[i]));
+            CHECK(spread > 1e-4);
+        }
+    }
+}
+
+TEST_CASE("Mixture PT flash maps the near-dew/near-bubble split to the correct phases (#3357)", "[michelsen][flash][mixture][saturation]") {
+    // Regression for the #3357 phase-label inversion.  A stage of solve_michelsen (in particular
+    // the Phase-2 second-order Newton, which our derivative fix made converge at points it used to
+    // miss) can settle on the correct physical split but with the liquid/vapour labels transposed:
+    // x <-> y, the densities swapped, and Q -> 1 - Q.  The material balance z = (1-Q) x + Q y is
+    // INVARIANT under that swap, so it cannot detect the bug; the discriminating invariants are the
+    // physical phase identities -- the liquid is the denser phase and the light component is
+    // enriched in the vapour.  solve_michelsen now normalises the labels (liquid = denser phase)
+    // before publishing.  Silent on a single-phase verdict, so it stays green on builds that merely
+    // MISS the split (the separate, pre-existing #3342 near-dew miss).
+    const std::string fluids = "Methane&Ethane&n-Propane&n-Butane&IsoButane&Nitrogen&CarbonDioxide";
+    const std::vector<double> z = {0.9188, 0.0532, 0.0193, 0.0010, 0.0012, 0.0064, 0.0001};
+    const std::size_t i_light = 0;  // Methane (lightest)
+    const std::size_t i_heavy = 3;  // n-Butane (heaviest)
+    const double P = 60e5;          // Pa
+
+    // A near-dew band (incipient phase = liquid, the direction that triggered #3357) plus a few
+    // near-bubble points (incipient phase = vapour, guarding against an unconditional flip).
+    const std::vector<double> Ts = {223.10, 223.15, 223.20, 223.28, 223.35, 223.40, 207.91, 208.03, 208.66, 211.77};
+    // A MISS (single-phase verdict) is the SEPARATE, pre-existing #3342 near-dew miss, so each point
+    // is checked only when it resolves two-phase.  The floor below must SCALE WITH THE BAND, not sit
+    // at 1: at 1, a regression that drops 9 of the 10 points to a single-phase verdict still leaves
+    // n_twophase == 1 and passes green (Ian Bell review, GH #3357).  Require MOST of the band to
+    // resolve, which still tolerates a handful of platform-dependent near-dew misses.
+    std::size_t n_twophase = 0;
+    for (double T : Ts) {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        AS->update(PT_INPUTS, P, T);
+        if (AS->phase() != iphase_twophase) continue;
+        ++n_twophase;
+        const double Q = AS->Q();
+        const std::vector<double> xl = AS->mole_fractions_liquid_double();
+        const std::vector<double> xv = AS->mole_fractions_vapor_double();
+        CAPTURE(T, Q, xl[i_light], xv[i_light]);
+        CHECK(Q > 0.0);
+        CHECK(Q < 1.0);
+        // Liquid is the denser phase.
+        CHECK(AS->saturated_liquid_keyed_output(iDmolar) > AS->saturated_vapor_keyed_output(iDmolar));
+        // Light component enriched in the vapour, heavy in the liquid.
+        CHECK(xv[i_light] > xl[i_light]);
+        CHECK(xl[i_heavy] > xv[i_heavy]);
+    }
+    // "Most of the band" = 3/5 of the points (6 of 10 here); well above 1, so a band-wide collapse
+    // to single-phase can no longer pass vacuously, while a few #3342 near-dew misses are tolerated.
+    const std::size_t min_twophase = (Ts.size() * 3) / 5;
+    CAPTURE(n_twophase, Ts.size(), min_twophase);
+    REQUIRE(n_twophase >= min_twophase);
+}
+
+TEST_CASE("Mixture PT flash near the dew line supports a zero-mole-fraction component (#3357)", "[michelsen][flash][mixture][saturation]") {
+    // Zero-mole-fraction feed robustness (GH #3357, Ian Bell review).  Two hardening changes in this
+    // PR are about feeds with an absent component: (a) the minority-phase Gibbs Newton FALLBACK now
+    // runs on the ACTIVE set (z_i > 0) only -- it used to require 0 < a_i < z_i for EVERY component,
+    // unsatisfiable when any z_i == 0, so it silently no-op'd; (b) the final equal-fugacity recompute
+    // now skips absent components, so a published zero-component split cannot feed log(0) -> NaN into
+    // the residual (which only survives today by std::max argument order, and would throw on a
+    // NaN-propagating STL).  This test pins the WHOLE zero-component PT-flash pipeline: the flash must
+    // not throw or publish an unconverged split, must resolve a genuine self-consistent two-phase
+    // split, and the absent component must stay absent from both phases.
+    //
+    // Scope honesty: with the derivative + stability-Hessian fixes already in this PR, the PRIMARY
+    // SS/Newton path converges this near-dew band on its own, so this case does NOT itself reach the
+    // active-set fallback (verified: the full [michelsen] suite still passes with the fallback
+    // disabled).  It therefore guards the zero-component pipeline and the recompute NaN-skip, not the
+    // fallback's active-set logic specifically -- that hardening is defensive (see the PR discussion).
+    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
+    const std::vector<double> z = {0.38, 0.32, 0.28, 0.0, 0.02};  // Butane (index 3) absent, sum = 1
+    const std::size_t i_absent = 3;
+    const double P = 8e5;
+
+    auto sat = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+    sat->set_mole_fractions(z);
+    REQUIRE_NOTHROW(sat->update(PQ_INPUTS, P, 0.0));
+    const double T_bub = sat->T();
+    REQUIRE_NOTHROW(sat->update(PQ_INPUTS, P, 1.0));
+    const double T_dew = sat->T();
+
+    std::size_t n_twophase = 0;
+    for (double frac : {0.99, 0.995, 0.998, 0.999}) {
+        const double T = T_bub + frac * (T_dew - T_bub);
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        AS->set_mole_fractions(z);
+        CAPTURE(frac, T);
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, P, T));  // no silent throw / no unconverged split
+        if (AS->phase() != iphase_twophase) continue;
+        ++n_twophase;
+        const std::vector<double> xl = AS->mole_fractions_liquid_double();
+        const std::vector<double> xv = AS->mole_fractions_vapor_double();
+        CAPTURE(AS->Q(), xl[i_absent], xv[i_absent]);
+        // The absent component stays absent from both phases (mole balance).
+        CHECK(xl[i_absent] < 1e-12);
+        CHECK(xv[i_absent] < 1e-12);
+        // Genuine, ordered split.
+        CHECK(AS->Q() > 1e-8);
+        CHECK(AS->Q() < 1.0 - 1e-8);
+        CHECK(AS->saturated_liquid_keyed_output(iDmolar) > AS->saturated_vapor_keyed_output(iDmolar));
+        double spread = 0;
+        for (std::size_t i = 0; i < z.size(); ++i)
+            spread = std::max(spread, std::abs(xl[i] - xv[i]));
+        CHECK(spread > 1e-4);
+    }
+    // Floor is >= 1 (not the >= 3/5 the sibling band test uses): the property guarded here is BINARY
+    // -- zero-mole-fraction support is either present (the band resolves splits) or absent (a total
+    // no-op) -- so one resolved point already proves the pipeline handles the absent component; and
+    // these four fracs are all 0.99-0.999 near-dew, legitimately miss-prone (the separate #3342 miss),
+    // so a higher floor on so thin a band would flake rather than catch a real regression.
+    REQUIRE(n_twophase >= 1);  // a zero component must not silently disable the split
 }
 
 #endif
