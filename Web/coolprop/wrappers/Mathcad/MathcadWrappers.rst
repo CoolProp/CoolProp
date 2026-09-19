@@ -883,6 +883,129 @@ Where,
 
 ----
 
+Configuration Functions
+========================
+
+Get/set access to CoolProp's process-wide `Configuration <https://coolprop.org/coolprop/Configuration.html>`_ -- the same settings the Python ``CoolProp.CoolProp.get_config_bool``/``set_config_bool`` family (and its ``int``/``double``/``string`` counterparts) exposes, e.g. ``NORMALIZE_GAS_CONSTANTS``, ``TABULAR_NX``/``TABULAR_NY``, ``ALTERNATIVE_REFPROP_PATH``, ``PHASE_ENVELOPE_STARTING_PRESSURE_PA``. These apply to the High-Level functions above just as much as the Low-Level ones -- they are deliberately not prefixed ``AS_``.
+
+.. note::
+    Every configuration key is typed at registration as exactly one of bool/int/double/string (see `configuration_keys.h <https://github.com/CoolProp/CoolProp/blob/master/include/CoolProp/detail/configuration_keys.h>`_ for the full, authoritative list of names, types, defaults, and descriptions). Mathcad has no tagged/variant type, so this is four type-specific getter/setter pairs, each committing to one return type, rather than one generic pair.
+
+|
+
+----
+
+config_get_bool / config_set_bool
+------------------------------------
+
+Reads/sets a boolean configuration value.::
+
+    config_get_bool(Key, Trigger)
+    config_set_bool(Key, Value)
+
+Where,
+
+* `Key` is the configuration key name, e.g. ``"NORMALIZE_GAS_CONSTANTS"``, ``"CRITICAL_SPLINES_ENABLED"``, ``"SAVE_RAW_TABLES"``.
+* `Trigger` is unused by ``config_get_bool`` -- see the note below.
+* `Value` (``config_set_bool`` only) must be exactly ``1`` or ``0`` -- Mathcad has no boolean type, and this wrapper uses ``1``/``0`` rather than a Mathcad "true"/"false" string.
+
+``config_get_bool`` returns ``1`` or ``0``. ``config_set_bool`` returns a dummy ``0`` on success.
+
+.. note::
+    **Not a truthiness coercion:** a ``Value`` other than exactly ``1`` or ``0`` (e.g. ``2``, ``0.5``, ``-1``) is a Custom Error, not silently treated as "true" the way C-family truthiness would.
+
+|
+
+----
+
+config_get_int / config_set_int
+-----------------------------------
+
+Reads/sets an integer configuration value.::
+
+    config_get_int(Key, Trigger)
+    config_set_int(Key, Value)
+
+Where,
+
+* `Key` is the configuration key name, e.g. ``"TABULAR_NX"``, ``"TABULAR_NY"``, ``"SVDSBTL_SAMPLING_THREADS"``, ``"MIXTURE_STABILITY_ALGORITHM"``.
+* `Trigger` is unused by ``config_get_int`` -- see the note below.
+* `Value` (``config_set_int`` only) is rounded to the nearest integer.
+
+``config_get_int`` returns the integer value as a real scalar. ``config_set_int`` returns a dummy ``0`` on success.
+
+.. note::
+    **Value validation:** ``Value`` is validated with the same finite-and-in-range checked conversion the Low-Level API's Handle/InputPairIdx/ParamIdx arguments use (see ``AS_update`` above) before rounding -- a non-finite ``Value``, or one too large to represent as a 32-bit integer, is a Custom Error rather than an undefined-behavior narrowing that could silently apply the wrong value.
+
+|
+
+----
+
+config_get_double / config_set_double
+-----------------------------------------
+
+Reads/sets a double-valued configuration value.::
+
+    config_get_double(Key, Trigger)
+    config_set_double(Key, Value)
+
+Where,
+
+* `Key` is the configuration key name, e.g. ``"R_U_CODATA"``, ``"PHASE_ENVELOPE_STARTING_PRESSURE_PA"``, ``"MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB"``, ``"SPINODAL_MINIMUM_DELTA"``.
+* `Trigger` is unused by ``config_get_double`` -- see the note below.
+* `Value` (``config_set_double`` only) must be finite.
+
+``config_get_double`` returns the value as a real scalar. ``config_set_double`` returns a dummy ``0`` on success.
+
+.. note::
+    **Value validation:** a non-finite ``Value`` (NaN or Infinity) is a Custom Error rather than being silently accepted and then propagating into every subsequent calculation that reads this key.
+
+|
+
+----
+
+config_get_string / config_set_string
+-----------------------------------------
+
+Reads/sets a string-valued configuration value.::
+
+    config_get_string(Key, Trigger)
+    config_set_string(Key, Value)
+
+Where,
+
+* `Key` is the configuration key name, e.g. ``"ALTERNATIVE_REFPROP_PATH"``, ``"ALTERNATIVE_TABLES_DIRECTORY"``, ``"VTPR_UNIFAC_PATH"``.
+* `Trigger` is unused by ``config_get_string`` -- see the note below.
+* `Value` (``config_set_string`` only) is the string to set.
+
+``config_get_string`` returns the value as a Mathcad string. ``config_set_string`` returns a dummy ``0`` on success.
+
+.. note::
+    **REFPROP path keys force a reload:** setting ``ALTERNATIVE_REFPROP_PATH``, ``ALTERNATIVE_REFPROP_HMX_BNC_PATH``, or ``ALTERNATIVE_REFPROP_LIBRARY_PATH`` additionally forces REFPROP to unload (``CoolProp::force_unload_REFPROP()``, inside ``CoolProp::set_config_string()`` itself) so the next REFPROP call re-loads from the new path -- handled underneath, nothing this wrapper needs to do differently.
+
+|
+
+----
+
+Common behavior across all eight configuration functions
+--------------------------------------------------------------
+
+.. note::
+    **Wrong-typed getter/setter:** calling the getter/setter for the wrong value type on a given key (e.g. ``config_get_bool("TABULAR_NX")``, an int-valued key) is a Custom Error, not a silent misread -- CoolProp's own ``ConfigurationItem`` already refuses this internally; this wrapper gives it a specific error code instead of letting it fall through to a generic one.
+
+.. note::
+    **Unrecognized key:** a ``Key`` string that doesn't match any entry in ``configuration_keys.h`` is a Custom Error on all eight functions.
+
+.. note::
+    **Two keys are read-only from Mathcad:** every ``config_set_*`` function refuses ``"FLOAT_PUNCTUATION"`` and ``"LIST_STRING_DELIMITER"`` with a Custom Error -- both are relied on by this wrapper's own string parsing (``FLOAT_PUNCTUATION`` controls the decimal separator CoolProp uses when formatting/parsing numbers in strings; ``LIST_STRING_DELIMITER`` is the separator this wrapper already assumes when splitting a Low-Level handle's fluid-name list -- see ``AS_mole_to_mass_fractions`` above). Changing either at runtime would silently corrupt string parsing elsewhere in this same wrapper, not just whatever the caller intended. Both remain readable via ``config_get_bool``/``config_get_string``.
+
+.. note::
+    **Why the four getters take Trigger:** the same reasoning as the Low-Level API's ``Trigger`` argument (see ``AS_mole_fractions_liquid`` above) -- ``Key``'s own value never changes between recalculations, so a getter whose only argument is ``Key`` gives Mathcad's dependency graph nothing to key a recalculation on when a *different* region's ``config_set_*`` call changes the same process-wide value out from under it. Wire ``Trigger`` to something that actually changes when you need the getter to re-run, or use **Recalculate Worksheet**. The four setters don't take a ``Trigger``: each already takes ``Key``/``Value`` as real arguments, and the normal case (editing ``Key`` or ``Value``) already gives Mathcad a natural recalculation edge; sequencing a setter relative to unrelated reads otherwise follows the same two authoring patterns documented for ``AS_factory`` above.
+
+|
+
+----
+
 Applying Mathcad Units to CoolProp Functions
 ============================================
 

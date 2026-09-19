@@ -85,6 +85,12 @@ enum EC
     NO_ACTIVE_STATES,
     PHASE_ENVELOPE_NOT_BUILT,
     NO_SUCH_INPUT_PAIR,
+    BAD_CONFIG_KEY,  // Configuration Error Codes from here   v
+    RESTRICTED_CONFIG_KEY,
+    BAD_CONFIG_TYPE,
+    BAD_CONFIG_BOOL_VALUE,
+    BAD_CONFIG_INT_VALUE,
+    BAD_CONFIG_DOUBLE_VALUE,
     UNKNOWN,
     NUMBER_OF_ERRORS
 };  // Dummy Code for Error Count
@@ -134,6 +140,13 @@ const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                      "No Active States",
                                                      "Phase Envelope Not Built",
                                                      "No Such Input Pair",
+                                                     "Not a recognized CoolProp configuration key; see https://coolprop.org/coolprop/Configuration.html",
+                                                     "FLOAT_PUNCTUATION and LIST_STRING_DELIMITER cannot be set from Mathcad -- both are relied on by "
+                                                     "this wrapper's own string parsing",
+                                                     "This configuration key is not of the type this function handles (bool/int/double/string)",
+                                                     "Boolean configuration Value must be exactly 0 or 1",
+                                                     "Integer configuration Value must be a finite number representable as a 32-bit integer",
+                                                     "Double configuration Value must be finite (not NaN or Infinity)",
                                                      "CoolProp Issue: Use get_global_param_string(\"errstring\") for more info.",
                                                      "Error Count - Not Used"};
 
@@ -924,6 +937,16 @@ static LRESULT CP_set_mixture_binary_pair_data(LPMCSTRING Msg,          // outpu
 #include "MathcadLowLevel.h"
 
 // ********************************************************************************************************
+// CoolProp global Configuration get/set functions (config_get_*/config_set_*)
+// -- not prefixed "AS_" since they apply to the high-level functions above
+// just as much as to the Low-Level (AbstractState) functions above them.
+// Implementations, helpers, and FUNCTIONINFO registrations live in
+// MathcadConfig.h, not here -- see that file's own top comment.
+// ********************************************************************************************************
+
+#include "MathcadConfig.h"
+
+// ********************************************************************************************************
 // Fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
 // ********************************************************************************************************
 
@@ -1143,6 +1166,15 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             CreateUserFunction(hDLL, &ASGetPhase);
             CreateUserFunction(hDLL, &ASGetMoleFractions);
             CreateUserFunction(hDLL, &ASBackendName);
+            // Register the CoolProp global Configuration get/set functions
+            CreateUserFunction(hDLL, &ConfigGetBool);
+            CreateUserFunction(hDLL, &ConfigSetBool);
+            CreateUserFunction(hDLL, &ConfigGetInt);
+            CreateUserFunction(hDLL, &ConfigSetInt);
+            CreateUserFunction(hDLL, &ConfigGetDouble);
+            CreateUserFunction(hDLL, &ConfigSetDouble);
+            CreateUserFunction(hDLL, &ConfigGetString);
+            CreateUserFunction(hDLL, &ConfigSetString);
             break;
 
         case DLL_THREAD_ATTACH:
