@@ -1,8 +1,6 @@
 
 #include "HelmholtzEOSMixtureBackend.h"
 #include "VLERoutines.h"
-#include <cstdlib>
-#include <cstdio>
 #include <numeric>
 
 #include <cmath>
@@ -3204,32 +3202,68 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                     w = minority_is_liquid ? x0_stab : y0_stab;  // Wilson unusable; keep the trial
             }
         }
-        std::vector<CoolPropDbl> a(N);
-        // Scale the incipient amounts so every component stays strictly below its feed amount:
-        // eval_min requires a[i] < z[i], and a fixed 1e-3 factor can exceed a TRACE z_i when the
+        // Active set: the components actually present in the feed.  A component with z_i == 0 cannot
+        // appear in either phase (mole balance), so it is NOT a variable of the incipient-phase split
+        // -- carrying it would put the ideal-gas term 1/x_i = inf into the fugacity Hessian and
+        // log(0) into the gradient.  The Newton below runs on the active set only; inactive
+        // components are pinned at a_i = 0.  Previously eval_min required 0 < a_i < z_i for EVERY i,
+        // which is unsatisfiable when any z_i == 0 (or when the stability trial gave w_i == 0), so
+        // the whole fallback silently no-op'd for such feeds -- e.g. a ternary z = {0.5, 0.5, 0} just
+        // inside the dew line still hit the #3342 failure this code exists to fix (Ian Bell review,
+        // GH #3357).
+        std::vector<std::size_t> act;
+        act.reserve(N);
+        for (std::size_t i = 0; i < N; ++i)
+            if (IO.z[i] > 0) act.push_back(i);
+        const std::size_t Na = act.size();
+
+        std::vector<CoolPropDbl> a(N, 0);  // inactive components (z_i == 0) stay pinned at 0
+        // Scale the incipient amounts so every active component stays strictly below its feed amount:
+        // eval_min requires 0 < a[i] < z[i], and a fixed 1e-3 factor can exceed a TRACE z_i when the
         // seed concentrates that component (e.g. a 1e-4 feed fraction with w_i > 0.1), which would
         // fail the seed evaluation and make the whole fallback silently no-op.  Cap the factor at
-        // 1e-3 and at half the tightest z_i / w_i ratio.
+        // 1e-3 and at half the tightest z_i / w_i ratio.  An active component the trial left at
+        // w_i == 0 is floored to a tiny positive interior seed rather than 0, so it stays a genuine
+        // (log-finite) variable the Newton can grow instead of failing the seed evaluation.
         CoolPropDbl seed_frac = 1e-3;
         for (std::size_t i = 0; i < N; ++i)
             if (w[i] > 0 && IO.z[i] > 0) seed_frac = std::min(seed_frac, 0.5 * IO.z[i] / w[i]);
-        for (std::size_t i = 0; i < N; ++i)
-            a[i] = seed_frac * w[i];  // small incipient amount, strictly below the feed
+        for (std::size_t i = 0; i < N; ++i) {
+            if (!(IO.z[i] > 0)) continue;  // inactive: pinned at 0
+            a[i] = seed_frac * w[i];
+            if (!(a[i] > 0)) a[i] = 1e-6 * IO.z[i];  // active but w_i == 0: keep it strictly interior
+        }
         rho_warm_L = -1;
         rho_warm_V = -1;
+
+        // Bound the total search cost: eval_min forces two cold global density solves per call, and
+        // fb_max_iter * max_ls line-search tries would otherwise allow thousands of them per failed
+        // flash -- and this fallback fires exactly in the near-dew/near-bubble band that envelope
+        // tracing walks through point after point (Ian Bell review, GH #3357).  fb_evals counts every
+        // eval_min call; the outer loop and line search stop once the budget is spent.  The final
+        // measurement eval_min after the loop is deliberately outside the budget so a last accepted
+        // (already-evaluated) step is still published.
+        const int fb_max_evals = 500;
+        int fb_evals = 0;
 
         // Evaluate the two-phase state from minority mole numbers a; leaves IO.x/IO.y/rho + SatL/SatV
         // on that state and returns total Gibbs G and equal-fugacity residual mg.
         auto eval_min = [&](const std::vector<CoolPropDbl>& aa, double& G, double& mg) -> bool {
+            ++fb_evals;
             CoolPropDbl A = 0, B = 0;
             for (std::size_t i = 0; i < N; ++i) {
+                if (!(IO.z[i] > 0)) {
+                    if (aa[i] != 0) return false;  // an inactive (z_i == 0) component must stay pinned at 0
+                    continue;
+                }
                 if (!(aa[i] > 0) || !(aa[i] < IO.z[i])) return false;
                 A += aa[i];
                 B += IO.z[i] - aa[i];
             }
             if (!(A > 0) || !(B > 0)) return false;
-            std::vector<CoolPropDbl> mn(N), mj(N);
+            std::vector<CoolPropDbl> mn(N, 0), mj(N, 0);
             for (std::size_t i = 0; i < N; ++i) {
+                if (!(IO.z[i] > 0)) continue;  // inactive -> mn/mj stay 0 (component absent from both phases)
                 mn[i] = aa[i] / A;
                 mj[i] = (IO.z[i] - aa[i]) / B;
             }
@@ -3264,11 +3298,16 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 mg = 0;
                 G = 0;
                 for (std::size_t i = 0; i < N; ++i) {
+                    // Skip inactive (z_i == 0) components: absent from both phases (x_i == y_i == 0),
+                    // so log(0) would poison mg/G.  An active component always has BOTH fractions > 0
+                    // (0 < a_i < z_i), so this gate never drops a real equal-fugacity residual term.
+                    // Use && (both zero) not || so a hypothetical one-phase-pure component fails closed.
+                    if (!(IO.x[i] > 0) && !(IO.y[i] > 0)) continue;
                     CoolPropDbl lV = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
                     CoolPropDbl lL = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
                     mg = std::max(mg, std::abs(lV - lL));
-                    if (IO.x[i] > 0) G += (1.0 - beta) * IO.x[i] * lL;
-                    if (IO.y[i] > 0) G += beta * IO.y[i] * lV;
+                    G += (1.0 - beta) * IO.x[i] * lL;
+                    G += beta * IO.y[i] * lV;
                 }
             } catch (...) {
                 return false;
@@ -3295,7 +3334,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         double mg_best = mg;                 // lowest residual seen so far (the floor)
         int stall = 0;                       // iterations since the floor last improved meaningfully
         for (int it = 0; ok && it < fb_max_iter; ++it) {
-            if (mg < gibbs_tol) break;  // quadratic-converged
+            if (fb_evals >= fb_max_evals) break;  // evaluation budget spent (Ian Bell review, GH #3357)
+            if (mg < gibbs_tol) break;            // quadratic-converged
             // Stall exit: once the split is GENUINE (mg <= 1e-5) the equal-fugacity residual has
             // floored at ~1e-7 on density-solve accuracy, well before the 1e-9 quadratic target, so
             // exit rather than grind to the maxiter cap.  Track the FLOOR (mg_best), not the previous
@@ -3324,37 +3364,46 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // f_i^maj and the Hessian (1/A)[D_min - x.D_min] + (1/B)[D_maj - x.D_maj].
             HelmholtzEOSMixtureBackend* Smin = minority_is_liquid ? HEOS.SatL.get() : HEOS.SatV.get();
             HelmholtzEOSMixtureBackend* Smaj = minority_is_liquid ? HEOS.SatV.get() : HEOS.SatL.get();
-            std::vector<CoolPropDbl> mnc(N), mjc(N);
-            for (std::size_t i = 0; i < N; ++i) {
+            std::vector<CoolPropDbl> mnc(N, 0), mjc(N, 0);
+            for (std::size_t ia = 0; ia < Na; ++ia) {
+                const std::size_t i = act[ia];
                 mnc[i] = a[i] / A;
                 mjc[i] = (IO.z[i] - a[i]) / B;
             }
-            Eigen::MatrixXd Dmin(N, N), Dmaj(N, N), Hm(N, N);
-            Eigen::VectorXd grad(N);
+            // Build the gradient and mole-number Gibbs Hessian on the ACTIVE set only (indices with
+            // z_i > 0).  An inactive component carries 1/x_i = inf in the fugacity derivative's ideal
+            // term and log(0) in the gradient, so it is dropped from the variable set rather than
+            // pinned with a patched identity row (Ian Bell review, GH #3357).  For an all-active feed
+            // (Na == N) this is byte-identical to the previous full-N system.
+            Eigen::MatrixXd Dmin(Na, Na), Dmaj(Na, Na), Hm(Na, Na);
+            Eigen::VectorXd grad(Na);
             // Fugacity composition derivatives d(ln f_i)/dx_j.  XN_INDEPENDENT is the correct
             // convention for the mole-number Hessian below (all x_i independent, then projected); the
             // last-component ideal-term bug that used to corrupt row N-1 here is now fixed at the
             // source in MixtureDerivatives::dln_fugacity_dxj__constT_p_xi (GH #3342, FD-verified).
-            for (std::size_t i = 0; i < N; ++i) {
-                for (std::size_t j = 0; j < N; ++j) {
-                    Dmin(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smin, i, j, CoolProp::XN_INDEPENDENT);
-                    Dmaj(i, j) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smaj, i, j, CoolProp::XN_INDEPENDENT);
+            for (std::size_t ia = 0; ia < Na; ++ia) {
+                const std::size_t i = act[ia];
+                for (std::size_t ja = 0; ja < Na; ++ja) {
+                    const std::size_t j = act[ja];
+                    Dmin(ia, ja) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smin, i, j, CoolProp::XN_INDEPENDENT);
+                    Dmaj(ia, ja) = CoolProp::MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*Smaj, i, j, CoolProp::XN_INDEPENDENT);
                 }
             }
-            for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t ia = 0; ia < Na; ++ia) {
+                const std::size_t i = act[ia];
                 CoolPropDbl lnf_min = std::log(mnc[i]) + std::log(Smin->fugacity_coefficient(i));
                 CoolPropDbl lnf_maj = std::log(mjc[i]) + std::log(Smaj->fugacity_coefficient(i));
-                grad(i) = lnf_min - lnf_maj;  // dG/da_i
+                grad(ia) = lnf_min - lnf_maj;  // dG/da_i
             }
-            std::vector<CoolPropDbl> sMinV(N, 0), sMajV(N, 0);
-            for (std::size_t i = 0; i < N; ++i)
-                for (std::size_t k = 0; k < N; ++k) {
-                    sMinV[i] += mnc[k] * Dmin(i, k);
-                    sMajV[i] += mjc[k] * Dmaj(i, k);
+            std::vector<CoolPropDbl> sMinV(Na, 0), sMajV(Na, 0);
+            for (std::size_t ia = 0; ia < Na; ++ia)
+                for (std::size_t ka = 0; ka < Na; ++ka) {
+                    sMinV[ia] += mnc[act[ka]] * Dmin(ia, ka);
+                    sMajV[ia] += mjc[act[ka]] * Dmaj(ia, ka);
                 }
-            for (std::size_t i = 0; i < N; ++i)
-                for (std::size_t j = 0; j < N; ++j)
-                    Hm(i, j) = (Dmin(i, j) - sMinV[i]) / A + (Dmaj(i, j) - sMajV[i]) / B;
+            for (std::size_t ia = 0; ia < Na; ++ia)
+                for (std::size_t ja = 0; ja < Na; ++ja)
+                    Hm(ia, ja) = (Dmin(ia, ja) - sMinV[ia]) / A + (Dmaj(ia, ja) - sMajV[ia]) / B;
             // Symmetrize away finite-difference asymmetry before the SPD solve.
             Hm = (0.5 * (Hm + Hm.transpose())).eval();
 
@@ -3377,16 +3426,17 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // limit then throttles to nothing.  The relative floor only caps the condition number.
             const double efloor = 1e-10 * std::max(evals.cwiseAbs().maxCoeff(), 1e-300);
             Eigen::VectorXd gq = Q.transpose() * grad;
-            for (std::size_t i = 0; i < N; ++i)
-                gq(i) /= std::max(std::abs(evals(i)), efloor);
+            for (std::size_t ia = 0; ia < Na; ++ia)
+                gq(ia) /= std::max(std::abs(evals(ia)), efloor);
             Eigen::VectorXd d = -(Q * gq);  // = -(modified Hm)^{-1} grad, guaranteed descent
 
-            // Fraction-to-the-boundary (ThermoPack limitDV): one scalar keeps every
+            // Fraction-to-the-boundary (ThermoPack limitDV): one scalar keeps every active
             // 0 < a_i + t*d_i < z_i, preserving the Newton direction (a per-component clamp would
             // not -- that is what pinned trace components in the previous formulation).
             double t = 1.0;
-            for (std::size_t i = 0; i < N; ++i) {
-                double di = d(i);
+            for (std::size_t ia = 0; ia < Na; ++ia) {
+                const std::size_t i = act[ia];
+                double di = d(ia);
                 if (a[i] + di <= 0.0)
                     t = std::min(t, -static_cast<double>(a[i]) / di);
                 else if (a[i] + di >= IO.z[i])
@@ -3401,8 +3451,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             bool step_accepted = false;
             std::vector<CoolPropDbl> at(N);
             for (int ls = 0; ls < max_ls; ++ls) {
-                for (std::size_t i = 0; i < N; ++i)
-                    at[i] = a[i] + alpha * d(i);
+                if (fb_evals >= fb_max_evals) break;  // evaluation budget spent (Ian Bell review, GH #3357)
+                at = a;                               // inactive components stay pinned at their (zero) value
+                for (std::size_t ia = 0; ia < Na; ++ia)
+                    at[act[ia]] = a[act[ia]] + alpha * d(ia);
                 double G_new = 0, mg_new = 0;
                 if (eval_min(at, G_new, mg_new) && G_new <= G_cur + armijo_c1 * alpha * gTd) {
                     a = at;
@@ -3499,7 +3551,13 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         // liquid-liquid split -- e.g. the poor-kij methanol-benzene LLE the EOS predicts (GH #3168);
         // the flash finds it (lower Gibbs per the model) but it must not be published as VLE.
         const bool fb_vle_order = IO.rhomolar_liq > IO.rhomolar_vap;
-        const bool fb_genuine = fb_eval_ok && ValidNumber(mg_fin) && mg_fin <= 1e-5 && fb_spread >= 1e-4 && beta > 1e-8 && beta < 1.0 - 1e-8
+        // Interior-beta bound matched to the CALLER's collapse guard (PT_flash_mixtures uses 1e-10),
+        // consistent with the near_converged_genuine relaxation below (Ian Bell review, GH #3357):
+        // gate at 1e-8 here would restore (and typically throw) a genuine but extremely-near-dew split
+        // whose vanishing incipient amount puts beta within 1e-8 of a bound -- exactly the split the
+        // caller would publish.  The spread / equal-fugacity / lower-Gibbs / VLE-ordering guards still
+        // reject a collapsed or metastable split; beta-collapse itself is delegated to the caller.
+        const bool fb_genuine = fb_eval_ok && ValidNumber(mg_fin) && mg_fin <= 1e-5 && fb_spread >= 1e-4 && beta > 1e-10 && beta < 1.0 - 1e-10
                                 && fb_lower_gibbs && fb_vle_order;
         if (fb_genuine) {
             // eval_min left IO.x/IO.y/beta/rho on the accepted split; the always-run recompute block
@@ -3544,6 +3602,16 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         HEOS.SatV->update_DmolarT_direct(IO.rhomolar_vap, IO.T);
         double final_max_g = 0;
         for (std::size_t i = 0; i < N; ++i) {
+            // Skip a component absent from BOTH phases (x_i == y_i == 0): now that the fallback can
+            // publish a split for a feed with a zero mole fraction, log(0) here would make the
+            // residual term NaN and rely on std::max's argument order to absorb it (the recurring
+            // "non-finite absorbed by std::max" trap).  An active component has both fractions > 0, so
+            // this drops only the absent-component terms -- mirroring the guard in eval_min.  Use &&
+            // (both zero), not || : if a single component were ever pure in one phase (x_i == 0 but
+            // y_i > 0 -- unreachable today, since an exact zero fraction only arises from z_i == 0)
+            // its real residual is +inf, and && lets that fail CLOSED (non-convergence) instead of
+            // silently dropping it.
+            if (!(IO.x[i] > 0) && !(IO.y[i] > 0)) continue;
             double l_act = std::log(IO.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
             double v_act = std::log(IO.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
             final_max_g = std::max(final_max_g, std::abs(v_act - l_act));
@@ -3573,10 +3641,14 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // any genuine split, including near-critical, so this does not reject a real split.
     const bool converged_trivial = !(spread > 1e-7);
     // When NOT at the strict quadratic tolerance, additionally require a genuine near-converged
-    // equilibrium -- engineering residual, non-trivial spread, AND an interior phase fraction --
-    // else throw, restoring the no-silent-wrong-answer contract for wide-boiling splits that stall
-    // at ~1e-6.  (This matches the pre-existing #3168/#3192 gate exactly on the !converged path.)
-    const bool near_converged_genuine = ValidNumber(last_max_g) && last_max_g <= 1e-5 && spread >= 1e-4 && beta > 1e-8 && beta < 1.0 - 1e-8;
+    // equilibrium -- engineering residual and a non-trivial composition spread -- else throw,
+    // restoring the no-silent-wrong-answer contract for wide-boiling splits that stall at ~1e-6.
+    // Do NOT gate on beta here (Ian Bell review, GH #3357): as the converged_trivial comment above
+    // explains, a genuine dew/bubble split legitimately has beta -> 0/1 (a vanishing incipient
+    // phase, the #3342 target), and collapse to a single phase is the CALLER's business -- and the
+    // caller (PT_flash_mixtures) only collapses at 1e-10, so a beta gate at 1e-8 here would throw a
+    // near-dew split (e.g. residual ~1e-6 at beta = 1 - 1e-9) that the caller would have published.
+    const bool near_converged_genuine = ValidNumber(last_max_g) && last_max_g <= 1e-5 && spread >= 1e-4;
     if (converged_trivial || (!converged && !near_converged_genuine)) {
         IO.nonconvergence = true;
         throw SolutionError(format("PTflash_twophase::solve_michelsen failed to converge: max|ln f_V - ln f_L| = %g at T = %g K, p = %g Pa",
