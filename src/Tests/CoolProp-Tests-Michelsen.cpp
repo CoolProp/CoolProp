@@ -1160,8 +1160,8 @@ TEST_CASE("Methanol-benzene PT flash at problematic compositions", "[michelsen][
     // Ian Bell review, GH #3357), it is KEPT below with SELF-CONSISTENCY-only assertions: the flash
     // must not publish an unconverged split, densities must be ordered, and any two-phase quality
     // must be interior -- but the single-vs-two-phase VERDICT itself is deliberately NOT asserted
-    // until the kij is fixed.  The remaining compositions sit well inside single-phase liquid and
-    // keep the strict verdict assertion.
+    // until the binary interaction parameters are fixed.  The remaining compositions sit well inside
+    // single-phase liquid and keep the strict verdict assertion.
     for (double x : {0.56, 0.58, 0.76, 0.78, 0.80}) {
         DYNAMIC_SECTION("x_methanol = " << x) {
             auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "methanol&benzene"));
@@ -1180,9 +1180,9 @@ TEST_CASE("Methanol-benzene PT flash at problematic compositions", "[michelsen][
     }
 
     // The original #3168 razor-edge composition (x_methanol = 0.54): assert only a SELF-CONSISTENT
-    // verdict, not the single-vs-two-phase call itself (see the block comment above; kij tracked in
-    // CoolProp-fhzw).  This keeps the #3168 case exercised on every platform without pinning the
-    // razor-edge verdict that legitimately differs between compilers.
+    // verdict, not the single-vs-two-phase call itself (see the block comment above; binary
+    // interaction parameters tracked in CoolProp-fhzw).  This keeps the #3168 case exercised on every
+    // platform without pinning the razor-edge verdict that legitimately differs between compilers.
     {
         auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "methanol&benzene"));
         AS->set_mole_fractions({0.54, 0.46});

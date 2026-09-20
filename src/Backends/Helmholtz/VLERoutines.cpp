@@ -3548,7 +3548,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         const bool fb_lower_gibbs = fb_eval_ok && g_single_valid && ValidNumber(G_fin) && G_fin < G_single - 1e-10;
         // Vapour-liquid ordering: solve_michelsen is a VLE flash, so a genuine split must have the
         // liquid denser than the vapour.  A split with rho_vap >= rho_liq is a mislabeled/spurious
-        // liquid-liquid split -- e.g. the poor-kij methanol-benzene LLE the EOS predicts (GH #3168);
+        // liquid-liquid split -- e.g. the poor-binary-parameter methanol-benzene LLE the EOS predicts (GH #3168);
         // the flash finds it (lower Gibbs per the model) but it must not be published as VLE.
         const bool fb_vle_order = IO.rhomolar_liq > IO.rhomolar_vap;
         // Interior-beta bound matched to the CALLER's collapse guard (PT_flash_mixtures uses 1e-10),
