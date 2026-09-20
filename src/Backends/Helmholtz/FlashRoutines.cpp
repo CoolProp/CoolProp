@@ -152,6 +152,20 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 HEOS.unspecify_phase();
 
                 if (rho_gas > 0 && rho_liq > 0) {
+                    // INVARIANT (Ian Bell review, GH #3284): a published single-phase root must be a
+                    // genuine, mechanically-stable point on the correct isotherm branch -- not a
+                    // secondary-loop artifact of the multiparameter mixture model.  This Gibbs
+                    // comparison does NOT yet enforce that: if the gas-seeded HEOS solve converged onto
+                    // an artifact branch whose (unphysical) Gibbs energy is lower, this line would still
+                    // select it -- the same #3283 signature reached through the distinct-root branch.
+                    // A plain dp/drho > 0 mechanical-stability test does NOT close this: the concrete
+                    // #3283 artifact (Methane/Ethane/Propane, 2 MPa, 223.15 K, rho~6760) is itself
+                    // mechanically STABLE (dp/drho ~ +2.5e5 > 0), sitting just above a negative-pressure
+                    // secondary loop -- so it would pass such a guard.  A robust guard needs a stronger
+                    // invariant (reject roots adjacent to a negative-pressure segment, or select the
+                    // lowest-Gibbs mechanically-valid root from a spinodal-bracketed global scan).
+                    // Tracked as a follow-up in CoolProp-ktc0; #3283 itself goes through the single-root
+                    // branch above, so this distinct-root path has no known reproducer today.
                     double G_gas = HEOS.calc_gibbsmolar_nocache(T_saved, rho_gas);
                     double G_liq = HEOS.calc_gibbsmolar_nocache(T_saved, rho_liq);
                     rho = (G_liq <= G_gas) ? rho_liq : rho_gas;
@@ -167,7 +181,20 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 // and avoids converging to the spurious middle root.  Fall back to the other
                 // branch if HEOS throws.
                 double rho_srk = liq_ok ? rho_srk_liq : rho_srk_gas;
-                phases primary = (gas_ok || liq_ok) ? ((rho_srk > HEOS.rhomolar_reducing()) ? iphase_liquid : iphase_gas) : iphase_gas;
+                // Classify the single SRK root by SRK's OWN critical density, not the multiparameter
+                // rhomolar_reducing() -- that mixes two equations of state (Ian Bell review, GH #3284).
+                // SRK systematically underpredicts liquid density, so near the critical region the SRK
+                // root can fall below the GERG reducing density while the true HEOS root is liquid; the
+                // solve is then seeded on the gas side and can converge onto exactly the middle root
+                // this branch is meant to avoid.  Comparing against an SRK-intrinsic density keeps the
+                // seed decision on one consistent density scale.  SRK has Z_c = 1/3, and b = Omega_b
+                // R Tc / pc, so its critical molar volume is v_c = Z_c R Tc / pc = (Z_c / Omega_b) b =
+                // b / (3 Omega_b), i.e. rho_c,SRK = 1 / v_c = 3 Omega_b / b (Omega_b = 0.08664..., the
+                // same covolume coefficient SRK_covolume() sums per component).
+                constexpr double SRK_Omega_b = 0.08664034999649577215890158147700;
+                const double b_srk = HEOS.SRK_covolume();
+                const double rho_srk_crit = (b_srk > 0) ? (3.0 * SRK_Omega_b / b_srk) : HEOS.rhomolar_reducing();
+                phases primary = (gas_ok || liq_ok) ? ((rho_srk > rho_srk_crit) ? iphase_liquid : iphase_gas) : iphase_gas;
                 phases fallback = (primary == iphase_gas) ? iphase_liquid : iphase_gas;
                 HEOS.specify_phase(primary);
                 try {
