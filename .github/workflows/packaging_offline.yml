@@ -180,10 +180,14 @@ jobs:
 
           echo "== via pkg-config =="
           export PKG_CONFIG_PATH="${libdir}/pkgconfig"
-          # --define-prefix makes pkg-config resolve ${prefix} against the .pc
-          # file's real location rather than the /usr baked in at install time.
-          cflags="$(pkg-config --define-prefix --cflags coolprop)"
-          libs="$(pkg-config --define-prefix --libs coolprop)"
+          # The .pc has prefix=/usr baked in, but this is a DESTDIR install, so
+          # point it at the staging root.  NOT --define-prefix: that recomputes
+          # the prefix by stripping two components from the .pc file's
+          # directory, which is wrong whenever libdir is multiarch
+          # (lib/x86_64-linux-gnu/pkgconfig is three), and yields
+          # -I<root>/lib/include.
+          cflags="$(pkg-config --define-variable=prefix="${root}" --cflags coolprop)"
+          libs="$(pkg-config --define-variable=prefix="${root}" --libs coolprop)"
           echo "cflags: ${cflags}"
           echo "libs:   ${libs}"
           cc "${work}/main.c" ${cflags} ${libs} -o "${work}/consumer_pc"

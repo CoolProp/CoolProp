@@ -129,11 +129,13 @@ install(FILES "${PROJECT_BINARY_DIR}/CoolPropConfig.cmake"
 # through unchanged.
 #
 # Note that prefix= itself is the absolute CMAKE_INSTALL_PREFIX baked in at
-# install time, so moving the installed tree elsewhere only resolves correctly
-# for a consumer who passes `pkg-config --define-prefix`, which recomputes the
-# prefix from where the .pc file actually is.  Distribution packages install to
-# the prefix they were configured with, so this only bites someone relocating a
-# tarball by hand.
+# install time, so a relocated tree needs the consumer's help.  `pkg-config
+# --define-prefix` is NOT that help here: it recomputes the prefix by stripping
+# two components from the .pc file's own directory, which is wrong as soon as
+# libdir is multiarch (lib/x86_64-linux-gnu/pkgconfig is three components) and
+# silently yields -I<root>/lib/include.  `--define-variable=prefix=<root>`
+# works.  Distribution packages install to the prefix they were configured
+# with, so this only bites someone relocating a tarball by hand.
 if(IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
   set(COOLPROP_PC_LIBDIR "${CMAKE_INSTALL_LIBDIR}")
 else()
