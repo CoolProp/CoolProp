@@ -575,10 +575,20 @@ class SolutionDataWriter(object):
     def writeFluidList(self, fluidObjs):
         """Serialize every fluid to its ``json/<name>.json``.
 
-        A ``TypeError``/``ValueError`` from one fluid is reported and skipped,
-        so a clean return does NOT mean every file was written.
+        Every fluid is attempted, so one bad fluid does not hide the state of
+        the rest, but the failures are collected and raised at the end. A
+        normal return therefore means every file really was written.
+
+        This used to log and continue. That was already misleading, and it
+        became a real hazard once toJSON gained ``allow_nan=False``: a
+        non-finite value now raises there, and swallowing it would leave
+        ``json/<name>.json`` missing or holding the previous run's numbers
+        while the pipeline printed "done" and exited 0. Silently shipping a
+        stale coefficient file is the failure mode this whole branch is
+        about, so it must not be reintroduced at the last step.
         """
         print("Writing fluids to JSON:", end="")
+        failures = []
         for obj in fluidObjs:
             self.printStatusID(fluidObjs, obj)
             try:
@@ -587,8 +597,12 @@ class SolutionDataWriter(object):
                 print("An error occurred for fluid: {0}".format(obj.name))
                 print(obj)
                 print(str(e))
-                pass
+                failures.append("{0}: {1}".format(obj.name, e))
         print(" ... done")
+        if failures:
+            raise ValueError(
+                "{0} fluid(s) could not be written; their json/ files are now missing or stale:\n  {1}".format(
+                    len(failures), "\n  ".join(failures)))
         return
 
     def writeReportList(self, fluidObjs, pdfFile=None):

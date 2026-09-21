@@ -90,6 +90,7 @@ def test_all_toplevel_grids_load_with_increasing_temperature():
 
 
 def test_seccool_ice_grids_load_with_increasing_axes(seccool_fluids):
+    """Every ice slurry csv must load with both axes ascending."""
     # SecCoolIceData overrides getFromFile, so the test above skips it and its
     # sortGridAxes call went unexercised. All three csv tables are in
     # production use: Hfusion feeds the specific heat, Cond and Mu feed the

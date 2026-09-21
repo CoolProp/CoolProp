@@ -54,6 +54,7 @@ def _significant_digits(value):
 
 
 def test_round_to_significant_digits_handles_every_magnitude():
+    """Rounding must work across the exponent range, and pass non-finites through."""
     assert roundToSignificantDigits(0.5582565205627504) == 0.5582565
     assert roundToSignificantDigits(1.3048060293070506e-08) == 1.304806e-08
     assert roundToSignificantDigits(278.27819999999997) == 278.2782
@@ -95,6 +96,7 @@ def test_round_nested_numbers_leaves_non_numbers_alone():
 
 
 def test_round_nested_numbers_caps_the_digits_it_emits():
+    """No value that survives rounding may carry more than 7 significant digits."""
     noisy = {"coeffs": [[0.5582565205627504, 1.3048060293070506e-08],
                         [-67.98607219465411, 948.7603675742353]]}
     for value in np.array(roundNestedNumbers(noisy)["coeffs"]).ravel():
@@ -144,3 +146,36 @@ def test_published_composition_range_is_a_valid_range(path):
         assert xmin * (1 - INCOMP_EPSILON) <= x <= xmax * (1 + INCOMP_EPSILON), (
             "{0}: sweeping the published range reaches {1}, outside [{2}, {3}]".format(
                 name, x, xmin, xmax))
+
+
+def test_write_fluid_list_raises_when_a_fluid_cannot_be_serialised(monkeypatch, tmp_path):
+    """A fluid that fails to serialise must not be reported as written.
+
+    toJSON can now raise (allow_nan=False), and writeFluidList used to log
+    that and carry on, printing "done" and returning normally while
+    json/<name>.json stayed missing or stale. Shipping a stale coefficient
+    file while the pipeline claims success is exactly the failure this branch
+    exists to remove, so the batch writer has to surface it.
+    """
+    writer = SolutionDataWriter()
+
+    class FakeFluid(object):
+        def __init__(self, name):
+            self.name = name
+
+    fluids = [FakeFluid("GoodOne"), FakeFluid("BadOne")]
+    written = []
+
+    def fakeToJSON(data, quiet=False):
+        if data.name == "BadOne":
+            raise ValueError("Out of range float values are not JSON compliant")
+        written.append(data.name)
+
+    monkeypatch.setattr(writer, "toJSON", fakeToJSON)
+    monkeypatch.setattr(writer, "printStatusID", lambda objs, obj: None)
+
+    with pytest.raises(ValueError, match="BadOne"):
+        writer.writeFluidList(fluids)
+
+    # The good fluid is still attempted: one bad fluid must not mask the rest.
+    assert written == ["GoodOne"]

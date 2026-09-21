@@ -111,6 +111,7 @@ def test_seccool_fluid_refit_matches_disk():
 
 @pytest.mark.parametrize("name", ["IceEA", "IceNA", "IcePG"])
 def test_seccool_ice_refit_matches_disk(name):
+    """Refit each ice slurry and compare against the committed json."""
     # Issue #3303: the conductivity and viscosity committed for these three
     # fluids could not be regenerated, because their source csv tables were
     # latin-1 encoded and the read that failed on them sat inside a bare
@@ -220,6 +221,11 @@ def _worst_deviation_from_data(fluidObject, prop, entry, Tbase, xbase):
 
 
 def test_committed_fits_still_describe_their_source_data():
+    """Every committed fit must still match the grid its fluid loads.
+
+    See the block comment above for why the golden master cannot catch this
+    and what PCL looked like when it did not.
+    """
     fluids = getSecCoolFluids() + getSolutionFluids() + getPureFluids()
     offenders = []
     compared = 0
