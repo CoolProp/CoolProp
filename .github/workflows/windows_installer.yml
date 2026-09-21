@@ -19,6 +19,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
 
+# Default the GITHUB_TOKEN to read-only; jobs that need more opt in explicitly.
+permissions:
+  contents: read
+
 jobs:
   build:
 
@@ -86,6 +90,22 @@ jobs:
       with:
           name: Installers
           path: build/InnoScript/bin/Installers
+          if-no-files-found: error
+
+    # EES ignores a library of the wrong bitness without a word, so both are
+    # verified here rather than by the user.  This runs after the installers
+    # are archived, so a failure still leaves them available for inspection.
+    - name: Check the EES libraries and stage them
+      working-directory: ./build
+      shell: bash
+      run: python ../dev/ci/check_ees_artifacts.py InnoScript/source --stage InnoScript/bin/EES
+
+    - name: Archive the EES libraries
+      uses: actions/upload-artifact@v7
+      with:
+          name: EES
+          path: build/InnoScript/bin/EES
+          if-no-files-found: error
 
     # - name: Upload TGZ or ZIP to release
     #   if: contains(github.ref, 'refs/tags')
