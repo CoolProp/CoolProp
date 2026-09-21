@@ -297,6 +297,13 @@ def test_mitsw_freezing_curve_never_crosses_tmin():
 # ---------------------------------------------------------------------------
 
 def _walk_numbers(obj, path=""):
+    """Yield (location, value) for every number anywhere in a fluid dict.
+
+    The location is a slash-separated path with "[]" for a list step, e.g.
+    "/density_cheb/coeffs[][]", so a failure message says which number is
+    wrong rather than only that one is. Booleans are skipped: bool subclasses
+    int, and JSON true/false is not a number.
+    """
     if isinstance(obj, dict):
         for k, v in obj.items():
             for r in _walk_numbers(v, path + "/" + str(k)):
@@ -524,6 +531,12 @@ def test_writer_keeps_basis_conversions_exact_against_what_it_serialises(monkeyp
         realGetHash = writer.get_hash
 
         def captureDump(dump, _captured=captured, _real=realGetHash):
+            """Stand in for get_hash to grab the text the writer serialises.
+
+            get_hash is the first thing toJSON does with its finished dump,
+            so this sees exactly what would be committed. The defaults bind
+            this iteration's values rather than the loop variables.
+            """
             _captured["dump"] = dump
             return _real(dump)
 

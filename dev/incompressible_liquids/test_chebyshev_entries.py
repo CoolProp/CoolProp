@@ -99,6 +99,11 @@ def test_density_and_cp_positive_across_domain():
 
 
 def test_conversions_reproduce_committed_polynomial_exactly():
+    """A basis conversion must reproduce the polynomial it was derived from.
+
+    It is an algebraic re-expression, not an independent fit, so the only
+    error allowed is arithmetic: EXACT_CONVERSION_TOLERANCE, not fit quality.
+    """
     # Counted, not assumed. The filter below reads a constant that the WRITER
     # also uses to decide how to round, so a typo in that one constant would
     # otherwise skip every fluid and leave this green while checking nothing.
@@ -125,6 +130,11 @@ def test_conversions_reproduce_committed_polynomial_exactly():
 
 
 def test_tabular_fits_describe_their_data():
+    """A tabular refit must track its raw grid, and the committed fit on it.
+
+    Unlike a basis conversion this is an independent fit, so it is held to
+    fit-level agreement rather than to arithmetic exactness.
+    """
     # For refitted entries, compare against the actual data (and against the
     # committed polynomial AT the data points). Comparing the two fits away
     # from the data would only measure how differently they extrapolate into
