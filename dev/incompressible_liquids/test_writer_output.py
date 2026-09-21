@@ -265,7 +265,21 @@ def test_mitsw_freezing_curve_never_crosses_tmin():
     if entry.get("coeffs") in (None, "null"):
         pytest.skip("MITSW ships no T_freeze")
 
-    xs = np.linspace(fluid["xmin"], fluid["xmax"], 241)
+    # Endpoints plus the real roots of the derivative, NOT a sampling grid. A
+    # polynomial attains its extremes on an interval only at an endpoint or a
+    # critical point, so this is exhaustive; a grid is not. An earlier version
+    # sampled 241 points, and a parabola peaked exactly between two samples
+    # passes that at 273.0875 K while actually reaching 274.15 K, a whole
+    # kelvin above Tmin. The point of this test is to constrain coefficients
+    # nobody has written yet, so it has to hold for any polynomial, not just
+    # the well-behaved cubic shipped today.
+    coeffs = np.atleast_2d(np.array(entry["coeffs"], dtype=float))[0]
+    derivativeRoots = np.polynomial.Polynomial(coeffs).deriv().roots()
+    interior = [root.real + fluid["xbase"] for root in np.atleast_1d(derivativeRoots)
+                if np.isclose(root.imag, 0.0)
+                and fluid["xmin"] <= root.real + fluid["xbase"] <= fluid["xmax"]]
+    xs = np.array([fluid["xmin"], fluid["xmax"]] + interior)
+
     values = np.array([_evaluate_T_freeze(entry, x, fluid["xbase"]) for x in xs])
     worstIndex = int(np.argmax(values))
     assert values[worstIndex] <= fluid["Tmin"], (
