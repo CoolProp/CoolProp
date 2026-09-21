@@ -17,6 +17,12 @@ from CPIncomp.SecCoolFluids import SecCoolSolutionData
 
 PROPERTY_IDS = ["Rho", "Cp", "Mu", "Cond"]
 
+# Floor for test_loaded_data_files_are_ascii, well below the ~280 files the
+# globs match today. It exists to catch a glob that has stopped matching
+# anything, not to pin an exact inventory, so adding or removing a few data
+# files must not need it changed.
+MIN_DATA_FILES_EXPECTED = 200
+
 
 def _loaded_axes(obj, dataID):
     import os
@@ -149,22 +155,37 @@ def test_loaded_data_files_are_ascii():
     paths += sorted(glob.glob(os.path.join(data_dir, "SecCool", "xMass", "*.txt")))
     paths += sorted(glob.glob(os.path.join(data_dir, "SecCool", "xVolume", "*.txt")))
     paths += sorted(glob.glob(os.path.join(data_dir, "SecCool", "xPure", "*.txt")))
-    for name in ["IceEA", "IceNA", "IcePG"]:
-        for dataID in ["Hfusion", "Cond", "Mu", "Rho"]:
-            paths.append(os.path.join(data_dir, "SecCool", "xTables", "xMass",
-                                      "{0}_{1}.csv".format(name, dataID)))
+    icePaths = [os.path.join(data_dir, "SecCool", "xTables", "xMass", "{0}_{1}.csv".format(name, dataID))
+                for name in ["IceEA", "IceNA", "IcePG"]
+                for dataID in ["Hfusion", "Cond", "Mu", "Rho"]]
+    paths += icePaths
 
-    assert paths, "no data files found -- the glob paths are wrong"
+    # The six csvs of issue #3303 are named explicitly and must exist. Without
+    # this, a renamed file is simply skipped below and the test goes green
+    # having checked nothing -- and "assert paths" would not notice, because
+    # the ice paths are appended whether or not they exist.
+    missing = [p for p in icePaths if not os.path.isfile(p)]
+    assert not missing, "ice slurry data files are missing: {0}".format(
+        [os.path.relpath(p, data_dir) for p in missing])
+
     offenders = []
+    checked = 0
     for path in paths:
         if not os.path.isfile(path):
             continue
         with open(path, "rb") as fh:
             raw = fh.read()
+        checked += 1
         try:
             raw.decode("ascii")
         except UnicodeDecodeError as err:
             offenders.append("{0}: {1}".format(os.path.relpath(path, data_dir), err))
+
+    # A wrong data_dir makes every glob empty and every isfile() false, so the
+    # loop above would decode nothing and still report success. Pin the count.
+    assert checked >= MIN_DATA_FILES_EXPECTED, (
+        "only {0} data files were read (expected at least {1}) -- the glob paths are wrong, "
+        "so this test checked almost nothing".format(checked, MIN_DATA_FILES_EXPECTED))
     assert not offenders, "non-ASCII bytes in data files read by the pipeline:\n" + "\n".join(offenders)
 
 
@@ -192,3 +213,29 @@ def test_sort_grid_axes_orders_a_shuffled_grid():
         [300.0, 11.0, 12.0, 13.0],
     ])
     assert np.array_equal(out, expected), out
+
+
+def test_missing_ice_data_file_raises_instead_of_silently_dropping(tmp_path, monkeypatch):
+    """A data file the loader cannot find must stop construction, not vanish.
+
+    The first fix for #3303 moved the Cond/Mu reads outside the base class's
+    bare try/except and claimed that made an unreadable file stop the
+    pipeline. That was only true for a file that exists but cannot be decoded.
+    getArray returns (None, None, None) for a file it cannot FIND, so a
+    renamed or moved csv still produced an all-zero fit that
+    clearUnfittedCoefficients turned into "notdefined" -- the #3303 outcome
+    reached by a second route. getRequiredArray closes that hole; this pins it.
+    """
+    from CPIncomp.SecCoolFluids import SecCoolIceData
+
+    realGetArray = SecCoolIceData.getArray
+
+    def missingCond(self, dataID=None, **kwargs):
+        if dataID == "Cond":
+            return None, None, None  # what getArray does for a file it cannot find
+        return realGetArray(self, dataID=dataID, **kwargs)
+
+    monkeypatch.setattr(SecCoolIceData, "getArray", missingCond)
+    with pytest.raises(ValueError, match="no usable Cond grid"):
+        SecCoolIceData(sFile="IceEA", sFolder="xMass", name="IceEA",
+                       desc="Ice slurry with Ethanol", ref="Kauffeld2001,Skovrup2013")

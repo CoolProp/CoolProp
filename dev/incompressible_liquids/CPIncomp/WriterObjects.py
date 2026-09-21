@@ -322,7 +322,9 @@ class SolutionDataWriter(object):
         conductivity = 0 W/m/K, LiBr viscosity = exp(0) = 1 Pa.s (GitHub
         #1331) and LiBr/MITSW T_freeze = exp(700/(x-60) - 10) ~ 0 K (GitHub
         #2567). Resetting the property to "not defined" makes the backend
-        throw a clear "function type is not specified" error instead.
+        throw instead, naming the fluid and the property:
+        'INCOMP::<name> does not define <property>: no fit for this property
+        is shipped in its fluid data'.
         """
         knownGuesses = (self.VISCOSITY_GUESS, self.PSAT_GUESS, self.TFREEZE_GUESS, self.LOGEXP_GUESS, self.SECCOOL_VISCOSITY_GUESS)
         properties = ('density', 'specific_heat', 'conductivity', 'viscosity', 'saturation_pressure', 'T_freeze')
@@ -447,7 +449,14 @@ class SolutionDataWriter(object):
         # stable: without it, re-running the pipeline on a different
         # numpy/scipy rewrites every coefficient in every file with
         # last-digit noise, and a real change cannot be told from that churn.
-        dump = json.dumps(roundNestedNumbers(jobj), indent=2, sort_keys=True)
+        # allow_nan=False: by default json.dumps writes NaN and Infinity as bare
+        # tokens, which are not valid JSON and which the C++ loader has no
+        # reason to accept. clearUnfittedCoefficients scrubs non-finite
+        # *coefficients*, but nothing covers Tbase, xbase, NRMS, Trange or the
+        # Chebyshev blocks, so a non-finite value there would be written out
+        # silently. Raising here is the fail-closed choice: a broken fit stops
+        # the pipeline instead of shipping a file nothing can parse.
+        dump = json.dumps(roundNestedNumbers(jobj), indent=2, sort_keys=True, allow_nan=False)
 
         hashes = self.load_hashes()
         hash = self.get_hash(dump)

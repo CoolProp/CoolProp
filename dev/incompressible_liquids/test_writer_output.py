@@ -21,6 +21,7 @@ import glob
 import json
 import math
 import os
+import sys
 
 import pytest
 
@@ -34,9 +35,13 @@ JSON_DIR = os.path.join(os.path.dirname(__file__), "json")
 # IncompressibleFluid::checkX in the C++ backend, which is what a user hits
 # after reading a limit off the published table:
 #   x < xmin * (1 - eps) or x > xmax * (1 + eps)  ->  ValueError
-# Note the tolerance is relative to the bound, so it buys nothing at all when
-# the bound is 0.0 and very little when it is small.
-INCOMP_EPSILON = 1e-6
+# This must be the backend's own value, from IncompressibleFluid.cpp:
+#   constexpr double INCOMP_EPSILON = DBL_EPSILON * 100.0;
+# An earlier draft used 1e-6 here, which is around 4.5e7 times looser, so a
+# published limit up to 1e-6 outside the enforced range would have passed this
+# test and still been rejected at runtime. Note the tolerance is relative to
+# the bound, so it buys nothing at all when the bound is 0.0.
+INCOMP_EPSILON = sys.float_info.epsilon * 100.0
 
 
 def _significant_digits(value):
@@ -96,7 +101,15 @@ def test_round_nested_numbers_caps_the_digits_it_emits():
         assert _significant_digits(value) <= SIGNIFICANT_DIGITS, value
 
 
-@pytest.mark.parametrize("path", sorted(glob.glob(os.path.join(JSON_DIR, "*.json"))),
+JSON_PATHS = sorted(glob.glob(os.path.join(JSON_DIR, "*.json")))
+
+# pytest's default empty_parameter_set_mark is "skip", so an empty JSON_PATHS
+# would collapse the test below into a single skipped item and the run would
+# still be green. Fail at import instead.
+assert JSON_PATHS, "no files found in {0} -- the composition-range test would silently skip".format(JSON_DIR)
+
+
+@pytest.mark.parametrize("path", JSON_PATHS,
                          ids=lambda p: os.path.splitext(os.path.basename(p))[0])
 def test_published_composition_range_is_a_valid_range(path):
     """Sweeping the documented limits must not trip the backend's own check.
@@ -109,11 +122,13 @@ def test_published_composition_range_is_a_valid_range(path):
     """
     with open(path) as fh:
         fluid = json.load(fh)
+    # skip, not return: a bare return reports these as passes, so if the "xid"
+    # key were ever renamed all 127 cases would go vacuous with no signal.
     if fluid.get("xid") not in ("mass", "volume"):
-        return  # pure fluids carry no composition axis
+        pytest.skip("pure fluid, no composition axis")
     xmin, xmax = fluid["xmin"], fluid["xmax"]
     if xmin == xmax:
-        return
+        pytest.skip("single-composition fluid")
 
     writer = SolutionDataWriter()
     shownMin = float(writer.x(xmin))
