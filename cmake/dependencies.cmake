@@ -9,6 +9,76 @@ endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/CPM.cmake")
 
+# ── Offline (vendored) dependency sources — GH #3388 ──────────────────────
+#
+# Every distribution build system (sbuild, mock, OBS, makepkg in a clean
+# chroot) builds inside a sandbox with no network at all, so CPM cannot
+# download anything there.  The release tarball produced by
+# dev/packaging/make-release-tarball.sh therefore ships a pre-unpacked copy of
+# each dependency under externals/cpm/<name>/.
+#
+# Where such a directory exists we hand it to CPM as CPM_<name>_SOURCE, which
+# makes CPMAddPackage use that directory verbatim and skip the download
+# entirely.  A normal developer checkout has no externals/cpm/, so nothing
+# changes for day-to-day work: CPM keeps fetching and caching as before.
+set(COOLPROP_VENDORED_DEPS_DIR
+    "${CMAKE_CURRENT_LIST_DIR}/../externals/cpm"
+    CACHE PATH
+    "Directory of pre-unpacked dependency sources used for offline builds")
+
+# Normalised copy, used for the path comparison in the offline gate at the
+# bottom of this file.  The default above contains a "/../" segment, and CPM
+# echoes whatever it was handed straight back into CPM_PACKAGE_*_SOURCE_DIR.
+get_filename_component(COOLPROP_VENDORED_DEPS_REAL
+                       "${COOLPROP_VENDORED_DEPS_DIR}" REALPATH)
+
+# Fail-closed switch for packaging builds.  With this ON, a dependency that is
+# not vendored aborts the configure step instead of quietly reaching for the
+# network, which is what would otherwise happen the moment somebody adds a
+# dependency and forgets to re-run dev/packaging/vendor-deps.sh.
+option(COOLPROP_REQUIRE_VENDORED_DEPS
+       "Abort the configure step if any dependency is not vendored (offline packaging builds)"
+       OFF)
+
+# Point CPM at the vendored copy of one dependency, if the tarball shipped one.
+# A macro rather than a function, so that the CPM_<name>_SOURCE variable it sets
+# lands in the scope where CPMAddPackage is called a few lines below.
+macro(coolprop_vendor_dependency _dep_name)
+  if(NOT "${CPM_${_dep_name}_SOURCE}" STREQUAL "")
+    # Somebody pointed CPM at a local checkout by hand; leave that alone.
+    message(STATUS "CPM: ${_dep_name} overridden by CPM_${_dep_name}_SOURCE")
+  elseif(IS_DIRECTORY "${COOLPROP_VENDORED_DEPS_DIR}/${_dep_name}")
+    set(CPM_${_dep_name}_SOURCE "${COOLPROP_VENDORED_DEPS_DIR}/${_dep_name}")
+    message(STATUS "CPM: ${_dep_name} from vendored source (offline)")
+  elseif(COOLPROP_REQUIRE_VENDORED_DEPS)
+    message(
+      FATAL_ERROR
+        "COOLPROP_REQUIRE_VENDORED_DEPS is ON but '${COOLPROP_VENDORED_DEPS_DIR}/${_dep_name}' "
+        "does not exist, so ${_dep_name} would be downloaded.  Run "
+        "dev/packaging/vendor-deps.sh to populate it, or build from a release tarball.")
+  endif()
+endmacro()
+
+# Every dependency fetched below.  The optional Windows- and Mathematica-only
+# packages are deliberately absent: they are not part of a Linux package build.
+set(COOLPROP_CPM_DEPENDENCIES
+    Eigen
+    msgpack-c
+    nlohmann_json
+    valijson
+    IF97
+    REFPROP_headers
+    boost_headers
+    multicomplex
+    fmt)
+if(COOLPROP_CATCH_MODULE)
+  list(APPEND COOLPROP_CPM_DEPENDENCIES Catch2)
+endif()
+
+foreach(_dep IN LISTS COOLPROP_CPM_DEPENDENCIES)
+  coolprop_vendor_dependency(${_dep})
+endforeach()
+
 # ── Core header-only deps ──────────────────────────────────────────────────
 
 # Use tarball instead of git clone: gitlab.com cloning over CMake's
@@ -133,4 +203,35 @@ if(COOLPROP_MATHEMATICA_MODULE)
     GIT_TAG        4.2.0
     DOWNLOAD_ONLY  YES
   )
+endif()
+
+# ── Offline gate — GH #3388 ───────────────────────────────────────────────
+#
+# coolprop_vendor_dependency() above only knows the names listed in
+# COOLPROP_CPM_DEPENDENCIES, so on its own it would let a dependency that
+# somebody adds later download from the network while still reporting an
+# offline build.  This check does not depend on that list: CPM_PACKAGES holds
+# every package CPMAddPackage actually resolved, whatever its name, and each one
+# has to have come out of the vendored directory.
+if(COOLPROP_REQUIRE_VENDORED_DEPS)
+  if(NOT CPM_PACKAGES)
+    message(
+      FATAL_ERROR
+        "Offline build requested but CPM reported no packages at all, so this check "
+        "cannot confirm anything.  CPM.cmake may have changed how it records packages; "
+        "fix this gate before shipping a package built from this tree.")
+  endif()
+  foreach(_pkg IN LISTS CPM_PACKAGES)
+    get_filename_component(_pkg_dir "${CPM_PACKAGE_${_pkg}_SOURCE_DIR}" REALPATH)
+    string(FIND "${_pkg_dir}" "${COOLPROP_VENDORED_DEPS_REAL}/" _vendor_pos)
+    if(NOT _vendor_pos EQUAL 0)
+      message(
+        FATAL_ERROR
+          "Offline build requested (COOLPROP_REQUIRE_VENDORED_DEPS=ON) but package "
+          "'${_pkg}' was resolved from '${_pkg_dir}', which is not inside "
+          "'${COOLPROP_VENDORED_DEPS_REAL}'.  Run dev/packaging/vendor-deps.sh, or "
+          "build from a release tarball made by dev/packaging/make-release-tarball.sh.")
+    endif()
+  endforeach()
+  message(STATUS "Offline build verified: all ${CPM_PACKAGES} came from vendored sources")
 endif()
