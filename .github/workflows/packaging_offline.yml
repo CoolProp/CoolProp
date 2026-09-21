@@ -42,6 +42,29 @@ jobs:
         with:
           python-version: '3.x'
 
+      # The FHS install work makes CMAKE_INSTALL_PREFIX actually take effect,
+      # which is one edit away from making the DEFAULT prefix stop working --
+      # and every wrapper build job reads install_root/ without ever passing a
+      # prefix, so nothing else here would notice.  Configure both ways and
+      # check both answers.
+      - name: Check the install prefix defaults
+        run: |
+          set -euo pipefail
+          expect_prefix() {
+            local build="$1" want="$2"; shift 2
+            cmake -S . -B "${build}" -DCOOLPROP_SHARED_LIBRARY=ON "$@" > "${build}.log" 2>&1
+            local got
+            got="$(sed -n 's/^CMAKE_INSTALL_PREFIX:PATH=//p' "${build}/CMakeCache.txt")"
+            if [ "${got}" != "${want}" ]; then
+              echo "prefix check failed for [$*]: want '${want}', got '${got}'" >&2
+              exit 1
+            fi
+            echo "ok: [$*] -> ${got}"
+          }
+          expect_prefix "${RUNNER_TEMP}/pfx-default" "${GITHUB_WORKSPACE}/install_root"
+          expect_prefix "${RUNNER_TEMP}/pfx-explicit" "/usr" -DCMAKE_INSTALL_PREFIX=/usr
+          expect_prefix "${RUNNER_TEMP}/pfx-legacy" "/opt/cp" -DCOOLPROP_INSTALL_PREFIX=/opt/cp
+
       - name: Build the offline release tarball
         run: dev/packaging/make-release-tarball.sh --output-dir "${RUNNER_TEMP}/dist"
 
@@ -181,7 +204,7 @@ jobs:
           LD_LIBRARY_PATH="${libdir}" "${work}/build/consumer"
 
       - name: Upload the tarball
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coolprop-source-tarball
           path: ${{ runner.temp }}/dist/

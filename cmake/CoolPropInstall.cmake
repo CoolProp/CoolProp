@@ -65,13 +65,15 @@ if(NOT TARGET CoolProp::CoolProp)
   add_library(CoolProp::CoolProp ALIAS ${LIB_NAME})
 endif()
 
+# No INCLUDES DESTINATION here: the $<INSTALL_INTERFACE:...> set above already
+# puts ${CMAKE_INSTALL_INCLUDEDIR} into the exported interface, and naming it
+# twice just lists the same path twice in CoolPropTargets.cmake.
 install(
   TARGETS ${LIB_NAME}
   EXPORT CoolPropTargets
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-  INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
 # --------------------------------------------------------------------------
 # CMake package config: lib/cmake/CoolProp/CoolPropConfig.cmake
@@ -122,10 +124,16 @@ install(FILES "${PROJECT_BINARY_DIR}/CoolPropConfig.cmake"
 # pkg-config: lib/pkgconfig/coolprop.pc
 # --------------------------------------------------------------------------
 #
-# Keep the paths expressed relative to ${prefix} where GNUInstallDirs gave us a
-# relative directory, so that a package relocated by a distribution (or a
-# --prefix install into a home directory) still resolves.  An absolute
-# CMAKE_INSTALL_LIBDIR/INCLUDEDIR is passed through unchanged.
+# Express libdir and includedir relative to ${prefix} where GNUInstallDirs gave
+# us a relative directory; an absolute CMAKE_INSTALL_LIBDIR/INCLUDEDIR is passed
+# through unchanged.
+#
+# Note that prefix= itself is the absolute CMAKE_INSTALL_PREFIX baked in at
+# install time, so moving the installed tree elsewhere only resolves correctly
+# for a consumer who passes `pkg-config --define-prefix`, which recomputes the
+# prefix from where the .pc file actually is.  Distribution packages install to
+# the prefix they were configured with, so this only bites someone relocating a
+# tarball by hand.
 if(IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
   set(COOLPROP_PC_LIBDIR "${CMAKE_INSTALL_LIBDIR}")
 else()

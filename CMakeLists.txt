@@ -92,19 +92,27 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
 
 # CoolProp collects its release artefacts under <source>/install_root, which is
-# what the upload scripts expect, so that stays the default.  A prefix the user
-# actually asked for has to win over it though, otherwise a distribution build
-# (or any plain -DCMAKE_INSTALL_PREFIX=/usr) silently installs into the source
-# tree instead -- see GH #3388.  CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT is
-# how CMake tells us that the prefix in the cache is only its own default; it is
-# set on the first configure run only, which is exactly when the question
-# arises.
+# what the upload scripts and the wrapper CI jobs expect, so that stays the
+# default.  A prefix the user actually asked for has to win over it though,
+# otherwise a distribution build (or any plain -DCMAKE_INSTALL_PREFIX=/usr)
+# silently installs into the source tree instead -- see GH #3388.
+#
+# This runs BEFORE project(), which matters: CMake only fills
+# CMAKE_INSTALL_PREFIX in during project(), so up here the variable is empty
+# unless the user passed -DCMAKE_INSTALL_PREFIX on the command line, which puts
+# it in the cache before any CMakeLists.txt is read.  "Empty" is therefore
+# exactly "the user asked for nothing", and on a reconfigure the cache already
+# holds whatever the first run settled on, so the default sticks.
+#
+# (Do NOT reach for CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT here.  It is
+# set inside project(), so at this point it is always undefined and the test
+# silently sends every default build to /usr/local.)
 if(DEFINED COOLPROP_INSTALL_PREFIX)
   message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
   set(CMAKE_INSTALL_PREFIX
       ${COOLPROP_INSTALL_PREFIX}
       CACHE PATH "default install path" FORCE)
-elseif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+elseif(NOT CMAKE_INSTALL_PREFIX)
   set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
   message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
   set(CMAKE_INSTALL_PREFIX
@@ -862,20 +870,25 @@ if(COOLPROP_OBJECT_LIBRARY
         POST_BUILD
         COMMAND dumpbin /EXPORTS $<TARGET_FILE:${LIB_NAME}> >
                 ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
-      install(
-        FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt
-        DESTINATION ${OUTPUT_FOLDER}
-	  )
-		  
       add_custom_command(
         TARGET ${LIB_NAME}
         POST_BUILD
         COMMAND dumpbin /HEADERS $<TARGET_FILE:${LIB_NAME}> >
                 ${CMAKE_CURRENT_BINARY_DIR}/headers.txt)
-      install(
-        FILES ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
-        DESTINATION ${OUTPUT_FOLDER}
-	  )
+      # These two land in ${OUTPUT_FOLDER}, i.e. the release-artifact layout, so
+      # they are skipped along with the rest of it under COOLPROP_SYSTEM_INSTALL
+      # (GH #3388) rather than leaving a stray shared_library/ subtree inside an
+      # otherwise FHS prefix.
+      if(NOT COOLPROP_SYSTEM_INSTALL)
+        install(
+          FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt
+          DESTINATION ${OUTPUT_FOLDER}
+        )
+        install(
+          FILES ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
+          DESTINATION ${OUTPUT_FOLDER}
+        )
+      endif()
     endif()
 
     # MSYS2(MINGW) specific stuff
@@ -1011,14 +1024,20 @@ if(COOLPROP_OBJECT_LIBRARY
   # that the library target already carries its final properties, in particular
   # the PUBLIC include directories that the export set has to rewrite.
   if(COOLPROP_SYSTEM_INSTALL)
-    if(COOLPROP_OBJECT_LIBRARY)
-      message(
-        FATAL_ERROR
-          "COOLPROP_SYSTEM_INSTALL needs an installable library; build with COOLPROP_SHARED_LIBRARY or COOLPROP_STATIC_LIBRARY"
-      )
-    endif()
     include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CoolPropInstall.cmake")
   endif()
+endif()
+
+# The check above lives inside the library block, so on its own it would say
+# nothing at all when no library switch was given: `cmake --install` would then
+# succeed having installed nothing, and the packaging recipe would build an
+# empty package.  Repeat it out here, where it sees that case (GH #3388).
+if(COOLPROP_SYSTEM_INSTALL AND NOT (COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY))
+  message(
+    FATAL_ERROR
+      "COOLPROP_SYSTEM_INSTALL needs an installable library target. "
+      "Configure with -DCOOLPROP_SHARED_LIBRARY=ON or -DCOOLPROP_STATIC_LIBRARY=ON "
+      "(an OBJECT library has nothing to install).")
 endif()
 
 if(COOLPROP_IOS_TARGET)
