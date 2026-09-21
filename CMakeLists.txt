@@ -91,17 +91,31 @@ endif()
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
 
+# CoolProp collects its release artefacts under <source>/install_root, which is
+# what the upload scripts expect, so that stays the default.  A prefix the user
+# actually asked for has to win over it though, otherwise a distribution build
+# (or any plain -DCMAKE_INSTALL_PREFIX=/usr) silently installs into the source
+# tree instead -- see GH #3388.  CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT is
+# how CMake tells us that the prefix in the cache is only its own default; it is
+# set on the first configure run only, which is exactly when the question
+# arises.
 if(DEFINED COOLPROP_INSTALL_PREFIX)
-  #set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
   message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
-else()
+  set(CMAKE_INSTALL_PREFIX
+      ${COOLPROP_INSTALL_PREFIX}
+      CACHE PATH "default install path" FORCE)
+elseif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
   message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
+  set(CMAKE_INSTALL_PREFIX
+      ${COOLPROP_INSTALL_PREFIX}
+      CACHE PATH "default install path" FORCE)
+else()
+  set(COOLPROP_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+  message(
+    STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX} (taken from CMAKE_INSTALL_PREFIX)"
+  )
 endif()
-
-set(CMAKE_INSTALL_PREFIX
-    ${COOLPROP_INSTALL_PREFIX}
-    CACHE PATH "default install path" FORCE)
 
 #######################################
 #           BUILD OPTIONS             #
@@ -681,6 +695,14 @@ option(COOLPROP_CDECL_LIBRARY
 option(COOLPROP_EXTERNC_LIBRARY
        "Overwrite the export settings to force extern C" OFF)
 
+# Distribution packaging (GH #3388).  OFF keeps the historical release-artifact
+# layout (shared_library/Linux/64bit_GNU_11/ and friends) that the SourceForge
+# uploads expect.  ON switches to an FHS layout with a pkg-config file and a
+# CMake package config; see cmake/CoolPropInstall.cmake.
+option(COOLPROP_SYSTEM_INSTALL
+       "Install into an FHS layout (libdir/includedir, pkg-config, CMake package config)"
+       OFF)
+
 set(COOLPROP_LIBRARY_SOURCE
     "src/CoolPropLib.cpp"
     CACHE STRING "The file that contains the exported functions")
@@ -747,32 +769,37 @@ if(COOLPROP_OBJECT_LIBRARY
 
       # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
     endif(MSVC)
-    install(
-      TARGETS ${LIB_NAME}
-      DESTINATION
-        static_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit_${CMAKE_CXX_COMPILER_ID}_${CMAKE_CXX_COMPILER_VERSION}
-    )
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
-            DESTINATION static_library)
-    # GH #1280: ship the installable C++ header tree so downstream CMake can
-    # find_package(CoolProp) and get usable include paths. The flat deprecation
-    # shims ship alongside so consumers on the old "X.h" includes keep building
-    # (removed at v9). Excluded as internal-only / non-self-contained: generated
-    # DB headers (*_JSON.h / *_CBOR.h), and detail/json.h + detail/msgpack.h
-    # (they pull the un-shipped nlohmann/valijson and msgpack.hpp) plus the
-    # CPmsgpack.h shim that forwards to the latter. The shipped fluids/numerics/
-    # superancillary tiers transitively require Eigen on the include path, and
-    # fmt unless NO_FMTLIB is defined (boost is NOT required -- the superancillary
-    # rootfinder is defined out-of-line in src/superancillary.cpp);
-    # dev/ci/check-installed-headers.sh compile-checks every shipped header
-    # standalone (Eigen-only) to keep this honest.
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
-            DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
-            REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-            DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
-            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE PATTERN "CPmsgpack.h" EXCLUDE
-            PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
+    # The release-artifact layout.  Skipped when COOLPROP_SYSTEM_INSTALL is ON,
+    # because cmake/CoolPropInstall.cmake then installs the same files into an
+    # FHS layout instead (GH #3388).
+    if(NOT COOLPROP_SYSTEM_INSTALL)
+      install(
+        TARGETS ${LIB_NAME}
+        DESTINATION
+          static_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit_${CMAKE_CXX_COMPILER_ID}_${CMAKE_CXX_COMPILER_VERSION}
+      )
+      install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
+              DESTINATION static_library)
+      # GH #1280: ship the installable C++ header tree so downstream CMake can
+      # find_package(CoolProp) and get usable include paths. The flat deprecation
+      # shims ship alongside so consumers on the old "X.h" includes keep building
+      # (removed at v9). Excluded as internal-only / non-self-contained: generated
+      # DB headers (*_JSON.h / *_CBOR.h), and detail/json.h + detail/msgpack.h
+      # (they pull the un-shipped nlohmann/valijson and msgpack.hpp) plus the
+      # CPmsgpack.h shim that forwards to the latter. The shipped fluids/numerics/
+      # superancillary tiers transitively require Eigen on the include path, and
+      # fmt unless NO_FMTLIB is defined (boost is NOT required -- the superancillary
+      # rootfinder is defined out-of-line in src/superancillary.cpp);
+      # dev/ci/check-installed-headers.sh compile-checks every shipped header
+      # standalone (Eigen-only) to keep this honest.
+      install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
+              DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
+              REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)
+      install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+              DESTINATION static_library/include FILES_MATCHING PATTERN "*.h"
+              PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE PATTERN "CPmsgpack.h" EXCLUDE
+              PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
+    endif()
   elseif(COOLPROP_SHARED_LIBRARY)
     list(APPEND APP_SOURCES
          "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
@@ -796,21 +823,26 @@ if(COOLPROP_OBJECT_LIBRARY
 		set(OUTPUT_FOLDER "shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION}")
 	endif()
 	
-    install(
-      TARGETS ${LIB_NAME}
-      DESTINATION ${OUTPUT_FOLDER}
-    )
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
-            DESTINATION shared_library)
-    # GH #1280: ship the installable C++ header tree (+ flat back-compat shims,
-    # removed at v9; generated *_JSON.h excluded). See the static branch above.
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
-            DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
-            REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-            DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
-            PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE PATTERN "CPmsgpack.h" EXCLUDE
-            PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
+    # The release-artifact layout.  Skipped when COOLPROP_SYSTEM_INSTALL is ON,
+    # because cmake/CoolPropInstall.cmake then installs the same files into an
+    # FHS layout instead (GH #3388).
+    if(NOT COOLPROP_SYSTEM_INSTALL)
+      install(
+        TARGETS ${LIB_NAME}
+        DESTINATION ${OUTPUT_FOLDER}
+      )
+      install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
+              DESTINATION shared_library)
+      # GH #1280: ship the installable C++ header tree (+ flat back-compat shims,
+      # removed at v9; generated *_JSON.h excluded). See the static branch above.
+      install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
+              DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
+              REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)
+      install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+              DESTINATION shared_library/include FILES_MATCHING PATTERN "*.h"
+              PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE PATTERN "CPmsgpack.h" EXCLUDE
+              PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
+    endif()
     set_property(
       TARGET ${LIB_NAME}
       APPEND_STRING
@@ -975,6 +1007,18 @@ if(COOLPROP_OBJECT_LIBRARY
     PROPERTY LINK_FLAGS)
   message(STATUS "LINK_FLAGS: ${tmpVar}")
   #
+  # FHS install rules for distribution packaging (GH #3388).  Included last, so
+  # that the library target already carries its final properties, in particular
+  # the PUBLIC include directories that the export set has to rewrite.
+  if(COOLPROP_SYSTEM_INSTALL)
+    if(COOLPROP_OBJECT_LIBRARY)
+      message(
+        FATAL_ERROR
+          "COOLPROP_SYSTEM_INSTALL needs an installable library; build with COOLPROP_SHARED_LIBRARY or COOLPROP_STATIC_LIBRARY"
+      )
+    endif()
+    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CoolPropInstall.cmake")
+  endif()
 endif()
 
 if(COOLPROP_IOS_TARGET)
