@@ -1,0 +1,188 @@
+name: Packaging (offline build)
+
+# Keeps the Linux packaging path honest.  See GH #3388: the 2014 wrappers/DEB
+# attempt broke the day a cmake-format pass removed a space and nobody found
+# out for twelve years, because no CI job ran it.  This job builds CoolProp the
+# way OBS, sbuild and mock do -- from the release tarball, in a sandbox with no
+# network -- so a regression in dependency handling or the install layout shows
+# up on the commit that caused it.
+
+on:
+  push:
+    branches: [ 'master', 'main', 'develop' ]
+    tags: [ 'v*' ]
+    paths:
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'dev/packaging/**'
+      - 'dev/generate_headers.py'
+      - '.github/workflows/packaging_offline.yml'
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+    paths:
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'dev/packaging/**'
+      - 'dev/generate_headers.py'
+      - '.github/workflows/packaging_offline.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  offline-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Build the offline release tarball
+        run: dev/packaging/make-release-tarball.sh --output-dir "${RUNNER_TEMP}/dist"
+
+      - name: Unpack the tarball
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/src"
+          tar -x -f "${RUNNER_TEMP}"/dist/coolprop-*.tar.gz -C "${RUNNER_TEMP}/src"
+          # Exactly one top-level directory is expected; anything else means the
+          # tarball layout changed and the steps below would silently guess.
+          mapfile -t roots < <(find "${RUNNER_TEMP}/src" -mindepth 1 -maxdepth 1 -type d)
+          if [ "${#roots[@]}" -ne 1 ]; then
+            echo "expected one directory in the tarball, found ${#roots[@]}" >&2
+            printf '%s\n' "${roots[@]}" >&2
+            exit 1
+          fi
+          echo "COOLPROP_SRC=${roots[0]}" >> "${GITHUB_ENV}"
+
+      - name: Build and install with the network switched off
+        run: |
+          set -euo pipefail
+          # Written to a file rather than passed to bash -c, so that the quoting
+          # stays readable and the variables below are plain shell variables.
+          cat > "${RUNNER_TEMP}/offline-build.sh" <<'SCRIPT'
+          set -euo pipefail
+          cmake -S "${COOLPROP_SRC}" -B "${RUNNER_TEMP}/build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCOOLPROP_SHARED_LIBRARY=ON \
+            -DCOOLPROP_SYSTEM_INSTALL=ON \
+            -DCOOLPROP_REQUIRE_VENDORED_DEPS=ON \
+            -DCOOLPROP_NO_EXAMPLES=ON
+          cmake --build "${RUNNER_TEMP}/build" -j "$(nproc)"
+          DESTDIR="${RUNNER_TEMP}/destdir" cmake --install "${RUNNER_TEMP}/build"
+          SCRIPT
+
+          # "unshare --net" gives the build a network namespace with nothing in
+          # it, the same situation as an OBS or sbuild chroot.  Anything that
+          # still reaches for the network fails here; there is no fallback to
+          # the host network, and no "keep going" branch.
+          sudo --preserve-env=COOLPROP_SRC,RUNNER_TEMP \
+            unshare --net -- bash "${RUNNER_TEMP}/offline-build.sh"
+
+      - name: Check the installed layout
+        run: |
+          set -euo pipefail
+          root="${RUNNER_TEMP}/destdir/usr"
+
+          # Find the library rather than assuming a libdir name, but insist on
+          # exactly one match: two would mean the install rules are firing
+          # twice, which is as much of a bug as none at all.
+          mapfile -t sonames < <(find "${root}" -name 'libCoolProp.so' -type l)
+          if [ "${#sonames[@]}" -ne 1 ]; then
+            echo "expected exactly one libCoolProp.so symlink, found ${#sonames[@]}" >&2
+            printf '%s\n' "${sonames[@]:-(none)}" >&2
+            exit 1
+          fi
+          libdir="$(dirname "${sonames[0]}")"
+          echo "libdir: ${libdir#"${root}"}"
+
+          for f in \
+              "${libdir}/libCoolProp.so.8" \
+              "${libdir}/pkgconfig/coolprop.pc" \
+              "${libdir}/cmake/CoolProp/CoolPropConfig.cmake" \
+              "${libdir}/cmake/CoolProp/CoolPropTargets.cmake" \
+              "${root}/include/CoolProp/CoolProp.h" \
+              "${root}/include/CoolProp/CoolPropLib.h" ; do
+            if [ ! -e "${f}" ]; then
+              echo "missing from the install: ${f}" >&2
+              exit 1
+            fi
+          done
+
+          # The flat deprecation shims must stay out of /usr/include: names like
+          # Solvers.h, MatrixMath.h and Exceptions.h are far too generic to
+          # share a system include directory with other packages.
+          stray="$(find "${root}/include" -maxdepth 1 -name '*.h' -printf '%f\n')"
+          if [ -n "${stray}" ]; then
+            echo "flat headers leaked into the include root:" >&2
+            echo "${stray}" >&2
+            exit 1
+          fi
+
+          echo "COOLPROP_INSTALL_ROOT=${root}" >> "${GITHUB_ENV}"
+          echo "COOLPROP_INSTALL_LIBDIR=${libdir}" >> "${GITHUB_ENV}"
+
+      - name: Build a consumer against the install
+        run: |
+          set -euo pipefail
+          root="${COOLPROP_INSTALL_ROOT}"
+          libdir="${COOLPROP_INSTALL_LIBDIR}"
+          work="${RUNNER_TEMP}/consumer"
+          mkdir -p "${work}"
+
+          # The C API only, so this checks the packaged library and headers
+          # without dragging Eigen into the test.
+          cat > "${work}/main.c" <<'EOF'
+          #include <CoolProp/CoolPropLib.h>
+          #include <stdio.h>
+          #include <stdlib.h>
+
+          int main(void) {
+              /* Normal boiling point of water, expected near 373.12 K. */
+              double T_sat_K = PropsSI("T", "P", 101325.0, "Q", 0.0, "Water");
+              printf("T_sat_K = %.4f\n", T_sat_K);
+              if (!(T_sat_K > 372.0 && T_sat_K < 374.0)) {
+                  fprintf(stderr, "unexpected saturation temperature\n");
+                  return 1;
+              }
+              return 0;
+          }
+          EOF
+
+          echo "== via pkg-config =="
+          export PKG_CONFIG_PATH="${libdir}/pkgconfig"
+          # --define-prefix makes pkg-config resolve ${prefix} against the .pc
+          # file's real location rather than the /usr baked in at install time.
+          cflags="$(pkg-config --define-prefix --cflags coolprop)"
+          libs="$(pkg-config --define-prefix --libs coolprop)"
+          echo "cflags: ${cflags}"
+          echo "libs:   ${libs}"
+          cc "${work}/main.c" ${cflags} ${libs} -o "${work}/consumer_pc"
+          LD_LIBRARY_PATH="${libdir}" "${work}/consumer_pc"
+
+          echo "== via find_package(CoolProp) =="
+          cat > "${work}/CMakeLists.txt" <<'EOF'
+          cmake_minimum_required(VERSION 3.14)
+          project(coolprop_consumer C)
+          find_package(CoolProp REQUIRED)
+          add_executable(consumer main.c)
+          target_link_libraries(consumer PRIVATE CoolProp::CoolProp)
+          EOF
+          cmake -S "${work}" -B "${work}/build" \
+            -DCMAKE_PREFIX_PATH="${root}" \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build "${work}/build"
+          LD_LIBRARY_PATH="${libdir}" "${work}/build/consumer"
+
+      - name: Upload the tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: coolprop-source-tarball
+          path: ${{ runner.temp }}/dist/
+          if-no-files-found: error
