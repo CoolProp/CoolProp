@@ -35,7 +35,7 @@ cpdef HAPropsSI(string OutputName, string Input1Name, Input1, string Input2Name,
 
     There are also strings for the mixture volume and mixture enthalpy that will return the properties on a total humid air flow rate basis, they are given by 'Vha' [units of m^3/kg humid air] and 'Cha' [units of kJ/kg humid air/K] and 'Hha' [units of kJ/kg humid air] respectively.
 
-    For more information, go to http://www.coolprop.org
+    For more information, go to https://www.coolprop.org
     """
     
     if isinstance(Input1, (int, float, complex)) and isinstance(Input2, (int, float, complex)) and isinstance(Input3, (int, float, complex)):

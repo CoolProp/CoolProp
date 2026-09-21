@@ -11,15 +11,15 @@ function props = PropsSI(varargin)
 %
 % varargin{1} - *char array* or a *cell array of char arrays* representing the 
 %   desired outputs, according to:
-%   http://www.coolprop.org/coolprop/HighLevelAPI.html#table-of-string-inputs-to-propssi-function
+%   https://www.coolprop.org/coolprop/HighLevelAPI.html#table-of-string-inputs-to-propssi-function
 % varargin{2} - A *char array* representing the meaning of the next input vector.
 % varargin{3} - A vector of doubles.
 % varargin{4} - A *char array* representing the meaning of the next input vector.
 % varargin{5} - A vector of doubles.
 % varargin{6} - a *char array* representing the fluid name, according to:
-%   http://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids
+%   https://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids
 % Specifying a mixture is possible, but requires additional steps as shown in:
-%   http://www.coolprop.org/fluid_properties/Mixtures.html
+%   https://www.coolprop.org/fluid_properties/Mixtures.html
 % 
 % Copyright (C) 2017 Iliya Romm, under the MIT license.
 
