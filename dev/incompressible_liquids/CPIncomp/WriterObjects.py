@@ -459,13 +459,14 @@ class SolutionDataWriter(object):
             entry = ChebyshevFits.build_entry(jobj, prop, rawT, rawX, rawGrid)
             if entry is not None:
                 # A tabular_data entry is an independent fit of the raw grid,
-                # so it rounds like everything else. A basis_conversion entry
-                # is determined exactly by the already-rounded polynomial
-                # above, and rounding it again would throw that exactness away.
-                if entry.get('fit_source') == 'basis_conversion':
-                    jobj[prop + '_cheb'] = entry
-                else:
-                    jobj[prop + '_cheb'] = roundNestedNumbers(entry)
+                # so it rounds like everything else. An exact conversion is
+                # determined by the already-rounded polynomial above, so it
+                # keeps more digits -- but it is still rounded, not written at
+                # full precision, or these coefficients would be the only ones
+                # in the corpus free to churn on a numpy change.
+                exact = entry.get('fit_source') in ChebyshevFits.EXACT_FIT_SOURCES
+                digits = ChebyshevFits.EXACT_CONVERSION_DIGITS if exact else SIGNIFICANT_DIGITS
+                jobj[prop + '_cheb'] = roundNestedNumbers(entry, digits)
 
         # allow_nan=False: by default json.dumps writes NaN and Infinity as bare
         # tokens, which are not valid JSON and which the C++ loader has no

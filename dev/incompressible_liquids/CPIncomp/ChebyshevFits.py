@@ -42,6 +42,30 @@ MIN_TEMPERATURE_POINTS = 3
 
 CALORIC_PROPERTIES = ("density", "specific_heat")
 
+# Every provenance a committed *_cheb entry may declare. The writer, the
+# schema test and the exactness test all read these, so adding a new one
+# forces a decision about which set it belongs in instead of silently
+# falling into the rounded, non-exact branch.
+FIT_SOURCE_TABULAR = "tabular_data"
+FIT_SOURCE_CONVERSION = "basis_conversion"
+FIT_SOURCES = (FIT_SOURCE_TABULAR, FIT_SOURCE_CONVERSION)
+
+# Provenances that are an exact algebraic re-expression of the committed
+# polynomial rather than an independent fit. These must reproduce that
+# polynomial to EXACT_CONVERSION_TOLERANCE, so they are written at higher
+# precision than everything else.
+EXACT_FIT_SOURCES = frozenset({FIT_SOURCE_CONVERSION})
+
+# Digits kept for an exact conversion's coefficients. Not full precision:
+# 710 of the corpus's 936 conversion coefficients carry more than 12
+# significant digits when left unrounded, and those trailing digits are
+# exactly the numpy-version churn that the rounding exists to remove. At 12
+# digits the conversions reproduce their polynomials to 6e-12, three orders
+# inside the 1e-9 contract below, and every number in the corpus stays
+# digit-capped.
+EXACT_CONVERSION_DIGITS = 12
+EXACT_CONVERSION_TOLERANCE = 1e-9
+
 
 def _scaled_T(T, Trange):
     return (2.0 * np.asarray(T, dtype=float) - (Trange[1] + Trange[0])) / (Trange[1] - Trange[0])
@@ -260,7 +284,7 @@ def build_entry(fluid_json, prop, rawT=None, rawX=None, rawGrid=None):
                     "xbase": xbase,
                     "coeffs": coeffs.tolist(),
                     "NRMS": nrms,
-                    "fit_source": "tabular_data",
+                    "fit_source": FIT_SOURCE_TABULAR,
                 }
 
     # Fall back to the exact re-basis of the committed polynomial: it is the
@@ -280,5 +304,5 @@ def build_entry(fluid_json, prop, rawT=None, rawX=None, rawGrid=None):
         "xbase": xbase,
         "coeffs": coeffs.tolist(),
         "NRMS": committed.get("NRMS"),
-        "fit_source": "basis_conversion",
+        "fit_source": FIT_SOURCE_CONVERSION,
     }

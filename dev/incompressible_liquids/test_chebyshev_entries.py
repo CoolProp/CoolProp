@@ -77,7 +77,7 @@ def test_cheb_entries_schema():
             assert entry["type"] == "chebyshev", name
             T0, T1 = entry["Trange"]
             assert 0.0 < T0 < T1, (name, prop, entry["Trange"])
-            assert entry["fit_source"] in ("tabular_data", "basis_conversion"), name
+            assert entry["fit_source"] in ChebyshevFits.FIT_SOURCES, name
             coeffs = np.asarray(entry["coeffs"], dtype=float)
             assert coeffs.ndim == 2 and coeffs.size, (name, prop)
             assert np.all(np.isfinite(coeffs)), (name, prop)
@@ -104,14 +104,16 @@ def test_conversions_reproduce_committed_polynomial_exactly():
         for prop in CALORIC:
             entry = fluid.get(prop + "_cheb")
             committed = fluid.get(prop, {})
-            if entry is None or entry["fit_source"] != "basis_conversion" or committed.get("type") != "polynomial":
+            if (entry is None
+                    or entry["fit_source"] not in ChebyshevFits.EXACT_FIT_SOURCES
+                    or committed.get("type") != "polynomial"):
                 continue
             Ts, xs = _domain_grid(fluid, entry)
             for x in xs:
                 cheb = ChebyshevFits.evaluate(entry["coeffs"], Ts, x, entry["Trange"], entry["xbase"])
                 poly = _poly_eval(committed, Tbase, entry["xbase"], Ts, x)
                 rel = np.max(np.abs(cheb - poly) / np.maximum(np.abs(poly), 1e-30))
-                assert rel < 1e-9, (name, prop, float(x), rel)
+                assert rel < ChebyshevFits.EXACT_CONVERSION_TOLERANCE, (name, prop, float(x), rel)
 
 
 def test_tabular_fits_describe_their_data():
