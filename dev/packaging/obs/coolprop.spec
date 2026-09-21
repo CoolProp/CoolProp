@@ -16,7 +16,7 @@
 
 Name:           coolprop
 Version:        8.0.1
-Release:        0
+Release:        0%{?dist}
 Summary:        Thermophysical property library for pure fluids, mixtures and humid air
 License:        MIT
 URL:            https://www.coolprop.org
@@ -60,7 +60,7 @@ This package contains the shared library.  The fluid data is compiled into the
 binary, so there is no separate data package and no runtime data path to
 configure.
 
-%package devel
+%package -n libcoolprop-devel
 Summary:        Development files for CoolProp
 Requires:       libcoolprop%{sover} = %{version}-%{release}
 Requires:       eigen3-devel
@@ -71,7 +71,7 @@ Requires:       fmt-devel
 Requires:       fmt-devel
 %endif
 
-%description devel
+%description -n libcoolprop-devel
 Headers, the pkg-config file and the CMake package configuration needed to
 build against CoolProp.
 
@@ -120,10 +120,16 @@ include root) are not shipped here: their names are too generic to put into
 # CMakeLists.txt appends COOLPROP_VERSION_REVISION to the library VERSION.
 %{_libdir}/libCoolProp.so.%{sover}.*
 
-%files devel
+%files -n libcoolprop-devel
 %{_includedir}/CoolProp/
 %{_libdir}/libCoolProp.so
 %{_libdir}/pkgconfig/coolprop.pc
+# %{_libdir}/cmake is not owned by the filesystem package on Fedora or
+# openSUSE, so claim it here; an unowned directory is an rpmlint error and an
+# OBS review will bounce it.
+%dir %{_libdir}/cmake
 %{_libdir}/cmake/CoolProp/
 
 %changelog
+* Mon Sep 21 2026 CoolProp developers <coolprop@coolprop.org> - 8.0.1-0
+- Initial packaging for the openSUSE Build Service (GH #3388).

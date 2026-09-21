@@ -64,10 +64,38 @@ version_patch="$(read_version_component COOLPROP_VERSION_PATCH)"
 # COOLPROP_VERSION_REVISION is "dev" between releases and empty on a release
 # tag.  It is part of the library file name (libCoolProp.so.8.0.1dev), so it is
 # part of the tarball name too, otherwise a snapshot tarball would claim to be
-# the release.  Letters and digits only: it goes into an RPM Version tag.
-version_revision="$(sed -n -E \
-    's/^[[:space:]]*set[[:space:]]*\([[:space:]]*COOLPROP_VERSION_REVISION[[:space:]]*([A-Za-z0-9]*)[[:space:]]*\).*/\1/p' \
-    "${repo_root}/CMakeLists.txt" | head -1)"
+# the release.
+#
+# An empty result here is ambiguous in a way the numeric components are not: it
+# means either "this is a release" or "the parse broke".  Guessing wrong ships a
+# dev snapshot named as the release, which is the 2014 failure mode again.  So
+# find the whole line first and fail if it is missing, then insist the value is
+# letters and digits only -- it goes into an RPM Version tag -- before deciding
+# the revision really is empty.
+# The "|| true" masks nothing: grep exits 1 when it matches nothing, which under
+# `set -o pipefail` would kill the script before the emptiness check below could
+# report why.  That check is the real gate and it aborts.
+revision_line="$(grep -E '^[[:space:]]*set[[:space:]]*\([[:space:]]*COOLPROP_VERSION_REVISION([[:space:]]|\))' \
+    "${repo_root}/CMakeLists.txt" | head -1 || true)"
+if [[ -z "${revision_line}" ]]; then
+    echo "error: no COOLPROP_VERSION_REVISION line found in CMakeLists.txt." >&2
+    echo "       Refusing to guess whether this tree is a release or a snapshot." >&2
+    exit 1
+fi
+
+version_revision="$(printf '%s' "${revision_line}" | sed -n -E \
+    's/^[[:space:]]*set[[:space:]]*\([[:space:]]*COOLPROP_VERSION_REVISION[[:space:]]*([A-Za-z0-9]*)[[:space:]]*\).*/\1/p')"
+
+# The sed above prints nothing when the line does not match its shape, for
+# instance once somebody quotes the value.  That is indistinguishable from a
+# genuinely empty revision unless we re-check the line itself.
+if [[ -z "${version_revision}" ]] \
+   && ! [[ "${revision_line}" =~ ^[[:space:]]*set[[:space:]]*\([[:space:]]*COOLPROP_VERSION_REVISION[[:space:]]*\) ]]; then
+    echo "error: could not parse COOLPROP_VERSION_REVISION from:" >&2
+    echo "         ${revision_line}" >&2
+    echo "       Fix the parser here rather than shipping a mis-named tarball; GH #3388." >&2
+    exit 1
+fi
 
 version="${version_major}.${version_minor}.${version_patch}${version_revision}"
 if [[ -n "${version_revision}" ]]; then

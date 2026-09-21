@@ -96,6 +96,13 @@ for entry in "${entries[@]}"; do
     name="${entry%% *}"
     src="${entry#* }"
 
+    # Guard the rm -rf below.  An empty name would make dest the vendor
+    # directory itself and wipe everything copied so far, mid-loop.
+    if [[ -z "${name}" || "${name}" == */* ]]; then
+        echo "error: refusing to vendor a package with the name '${name}'" >&2
+        exit 1
+    fi
+
     if [[ ! -d "${src}" ]]; then
         echo "error: package '${name}' points at '${src}', which is not a directory" >&2
         exit 1

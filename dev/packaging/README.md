@@ -96,8 +96,12 @@ Two deliberate differences from the release archives:
   include `<CoolProp/CoolProp.h>`.
 - **`CMAKE_INSTALL_PREFIX` is honoured.**  CoolProp used to force it to
   `<source>/install_root` with `CACHE ... FORCE`, which silently swallowed
-  `-DCMAKE_INSTALL_PREFIX=/usr`.  It now only does that when CMake reports the
-  prefix as its own default, so `%cmake` and `dh_auto_configure` work.
+  `-DCMAKE_INSTALL_PREFIX=/usr`.  It now only does that when no prefix was
+  asked for, so `%cmake` and `dh_auto_configure` work while a plain
+  `cmake -B build -S .` still collects artefacts in `install_root/` the way the
+  wrapper build jobs expect.  The check runs before `project()`, where
+  `CMAKE_INSTALL_PREFIX` is still empty unless the user put it in the cache from
+  the command line; `packaging_offline.yml` asserts all three outcomes.
 
 ### Known limitation: Eigen and fmt version skew
 
@@ -166,6 +170,20 @@ cp /path/to/CoolProp/dist/coolprop-8.0.1.tar.gz .
 osc add *
 osc commit -m "Initial CoolProp packaging"
 ```
+
+**The recipes carry placeholder values, on purpose, and nothing in CI checks
+them yet.** Fix these by hand for the first run, then automate it as described
+under "Keeping it alive" below:
+
+| File | Placeholder | Why it is there |
+|---|---|---|
+| `coolprop.spec` | `Version: 8.0.1` | the tree is `8.0.1dev`, so `make-release-tarball.sh` currently emits `coolprop-8.0.1dev.tar.gz` and `%autosetup -n coolprop-%{version}` will not find it |
+| `coolprop.dsc` | `Version: 8.0.1-1`, and a `Files:` line of zeros | OBS's `debtransform` normally rewrites the `Files:` stanza, so the zeros are expected to work, but that is unverified here |
+| `debian.changelog` | `(8.0.1-1)` | `dpkg-source` rejects a changelog version that does not match the tarball |
+| `_service` | 64 zeros for the checksum, and a release asset URL that does not exist yet | so `osc service manualrun` fails closed rather than fetching something unchecked |
+
+Tag a release, or set `COOLPROP_VERSION_REVISION` to empty in `CMakeLists.txt`,
+and all four line up at `8.0.1`.
 
 ### 3. Choose build targets
 
