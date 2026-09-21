@@ -460,13 +460,24 @@ class SolutionDataWriter(object):
             if entry is not None:
                 # A tabular_data entry is an independent fit of the raw grid,
                 # so it rounds like everything else. An exact conversion is
-                # determined by the already-rounded polynomial above, so it
-                # keeps more digits -- but it is still rounded, not written at
-                # full precision, or these coefficients would be the only ones
-                # in the corpus free to churn on a numpy change.
-                exact = entry.get('fit_source') in ChebyshevFits.EXACT_FIT_SOURCES
-                digits = ChebyshevFits.EXACT_CONVERSION_DIGITS if exact else SIGNIFICANT_DIGITS
-                jobj[prop + '_cheb'] = roundNestedNumbers(entry, digits)
+                # determined by the already-rounded polynomial above, so its
+                # COEFFICIENTS keep more digits -- but they are still rounded,
+                # not written at full precision, or they would be the only
+                # numbers in the corpus free to churn on a numpy change.
+                #
+                # Only the coefficients get the wider cap. Trange, xbase and
+                # NRMS are ordinary numbers and stay at SIGNIFICANT_DIGITS, so
+                # the rule here is the same one test_writer_output.py enforces
+                # on the committed files.
+                #
+                # roundNestedNumbers returns a new structure, so the
+                # unrounded coefficients survive for the second pass.
+                unroundedCoeffs = entry['coeffs']
+                entry = roundNestedNumbers(entry, SIGNIFICANT_DIGITS)
+                if entry['fit_source'] in ChebyshevFits.EXACT_FIT_SOURCES:
+                    entry['coeffs'] = roundNestedNumbers(
+                        unroundedCoeffs, ChebyshevFits.EXACT_CONVERSION_DIGITS)
+                jobj[prop + '_cheb'] = entry
 
         # allow_nan=False: by default json.dumps writes NaN and Infinity as bare
         # tokens, which are not valid JSON and which the C++ loader has no

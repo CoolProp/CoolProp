@@ -99,6 +99,10 @@ def test_density_and_cp_positive_across_domain():
 
 
 def test_conversions_reproduce_committed_polynomial_exactly():
+    # Counted, not assumed. The filter below reads a constant that the WRITER
+    # also uses to decide how to round, so a typo in that one constant would
+    # otherwise skip every fluid and leave this green while checking nothing.
+    compared = 0
     for name, fluid in _fluids():
         Tbase = float(fluid.get("Tbase", 0.0) or 0.0)
         for prop in CALORIC:
@@ -114,6 +118,10 @@ def test_conversions_reproduce_committed_polynomial_exactly():
                 poly = _poly_eval(committed, Tbase, entry["xbase"], Ts, x)
                 rel = np.max(np.abs(cheb - poly) / np.maximum(np.abs(poly), 1e-30))
                 assert rel < ChebyshevFits.EXACT_CONVERSION_TOLERANCE, (name, prop, float(x), rel)
+                compared += 1
+    assert compared > 0, ("no committed entry declared fit_source in {0}, so "
+                          "this test checked nothing".format(
+                              sorted(ChebyshevFits.EXACT_FIT_SOURCES)))
 
 
 def test_tabular_fits_describe_their_data():
@@ -124,12 +132,13 @@ def test_tabular_fits_describe_their_data():
     from add_chebyshev_entries import collect_fluid_objects, raw_grids
 
     objects = collect_fluid_objects()
+    compared = 0
     for name, fluid in _fluids():
         Tbase = float(fluid.get("Tbase", 0.0) or 0.0)
         for prop in CALORIC:
             entry = fluid.get(prop + "_cheb")
             committed = fluid.get(prop, {})
-            if entry is None or entry["fit_source"] != "tabular_data":
+            if entry is None or entry["fit_source"] != ChebyshevFits.FIT_SOURCE_TABULAR:
                 continue
             assert entry["NRMS"] is None or entry["NRMS"] < 0.06, (name, prop, entry["NRMS"])
             rawT, rawX, rawGrid = raw_grids(objects.get(name), prop)
@@ -153,6 +162,10 @@ def test_tabular_fits_describe_their_data():
                 if committed.get("type") == "polynomial" and not name.startswith("Example"):
                     poly = _poly_eval(committed, Tbase, entry["xbase"], rawT[mask], x)
                     assert np.max(np.abs(cheb - poly)) / spread < 0.20, (name, prop, float(x))
+                compared += 1
+    assert compared > 0, ("no committed entry declared fit_source "
+                          "{0!r} with raw data behind it, so this test checked "
+                          "nothing".format(ChebyshevFits.FIT_SOURCE_TABULAR))
 
 
 def test_refit_golden_master():

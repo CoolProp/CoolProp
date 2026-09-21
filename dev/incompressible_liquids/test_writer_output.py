@@ -296,14 +296,6 @@ def test_mitsw_freezing_curve_never_crosses_tmin():
 # keeping the regenerated json, left the whole suite green.
 # ---------------------------------------------------------------------------
 
-def _significant_digit_count(value):
-    text = repr(float(value))
-    if "e" in text or "E" in text:
-        text = text.split("e")[0].split("E")[0]
-    digits = text.lstrip("-").replace(".", "").lstrip("0")
-    return len(digits.rstrip("0")) or 1
-
-
 def _walk_numbers(obj, path=""):
     if isinstance(obj, dict):
         for k, v in obj.items():
@@ -348,11 +340,18 @@ def _digit_cap_offenders(path):
     offenders, checked = [], 0
     for where, value in _walk_numbers(fluid):
         checked += 1
+        # repr(nan) is "nan", which walks through the digit counter as three
+        # significant digits and so passes every cap. json.load accepts the
+        # bare NaN and Infinity tokens, so report them here rather than let
+        # the counter wave them through.
+        if not math.isfinite(value):
+            offenders.append("{0}: {1!r} is not finite".format(where, value))
+            continue
         cap = (ChebyshevFits.EXACT_CONVERSION_DIGITS
                if where.replace("[]", "") in exactCoeffPaths else SIGNIFICANT_DIGITS)
-        if _significant_digit_count(value) > cap:
+        if _significant_digits(value) > cap:
             offenders.append("{0}: {1!r} has {2} significant digits, cap {3}".format(
-                where, value, _significant_digit_count(value), cap))
+                where, value, _significant_digits(value), cap))
     return checked, offenders
 
 
@@ -364,14 +363,29 @@ def test_unrounded_legacy_files_are_exactly_the_known_set():
     removal from the list. An exemption nobody revisits is how a temporary
     carve-out becomes permanent.
     """
-    offending = set()
+    offenderPaths = {}
     for path in JSON_PATHS:
         _, offenders = _digit_cap_offenders(path)
         if offenders:
-            offending.add(os.path.splitext(os.path.basename(path))[0])
-    assert offending == set(UNROUNDED_LEGACY_FLUIDS), (
+            offenderPaths[os.path.splitext(os.path.basename(path))[0]] = offenders
+
+    assert set(offenderPaths) == set(UNROUNDED_LEGACY_FLUIDS), (
         "files exceeding the digit cap are {0}, expected exactly {1}".format(
-            sorted(offending), sorted(UNROUNDED_LEGACY_FLUIDS)))
+            sorted(offenderPaths), sorted(UNROUNDED_LEGACY_FLUIDS)))
+
+    # Set equality alone is too coarse. A legacy file that has been HALF
+    # regenerated -- polynomial rounded to 7 digits, Chebyshev conversion
+    # left at 17 -- still has offenders, so it stays in the set and this
+    # test stays green while carrying exactly the inconsistency the writer
+    # fix exists to prevent. A file that predates the rounding entirely has
+    # over-precise numbers outside its *_cheb blocks too; require that.
+    for name, offenders in sorted(offenderPaths.items()):
+        outsideCheb = [o for o in offenders if "_cheb" not in o]
+        assert outsideCheb, (
+            "{0} is over the cap only inside its Chebyshev entries, which is "
+            "what a half-regenerated file looks like: its polynomial has been "
+            "rounded but the conversion derived from it has not. Regenerate "
+            "the fluid, or work out why only the conversion is stale.".format(name))
 
 
 @pytest.mark.parametrize("path", JSON_PATHS,
@@ -405,26 +419,39 @@ def _cheb_minus_poly(entry, poly_coeffs, Tbase, xmin, xmax):
     """Worst relative gap between a Chebyshev entry and a centered polynomial.
 
     Both describe the same property, so on the fit domain they must agree.
-    Sampled on a lattice, which is enough: the two are polynomials of the
-    same degree, so they cannot diverge only between the samples.
+    The difference of the two is itself a polynomial, so sampling it on a
+    lattice is enough PROVIDED there are more samples than its degree in
+    each direction, which is what the sample counts below are for.
     """
     from numpy.polynomial import chebyshev as ncheb
 
     Trange, xbase = entry["Trange"], entry["xbase"]
     M = np.array(entry["coeffs"], dtype=float)
     P = np.atleast_2d(np.array(poly_coeffs, dtype=float))
-    Ts = np.linspace(Trange[0], Trange[1], 25)
+    # Degrees are (rows - 1) in T and (columns - 1) in x; two extra samples
+    # beyond "just determined" in each direction, and never fewer than the
+    # counts this started with.
+    nT = max(25, M.shape[0] + 2, P.shape[0] + 2)
+    nx = max(5, M.shape[1] + 2, P.shape[1] + 2)
+    Ts = np.linspace(Trange[0], Trange[1], nT)
     u = (2.0 * Ts - (Trange[1] + Trange[0])) / (Trange[1] - Trange[0])
 
     worst = 0.0
-    for x in np.linspace(xmin, xmax, 5):
+    for x in np.linspace(xmin, xmax, nx):
         a = np.array([sum(M[i, j] * (x - xbase) ** j for j in range(M.shape[1]))
                       for i in range(M.shape[0])])
         cheb = ncheb.chebval(u, a)
         poly = sum(P[i, j] * (Ts - Tbase) ** i * (x - xbase) ** j
                    for i in range(P.shape[0]) for j in range(P.shape[1]))
-        worst = max(worst, float(np.max(np.abs(cheb - poly)
-                                        / np.maximum(np.abs(poly), 1e-30))))
+        gap = float(np.max(np.abs(cheb - poly) / np.maximum(np.abs(poly), 1e-30)))
+        # max(0.0, nan) is 0.0 -- Python compares nan > 0.0, gets False, and
+        # keeps the running value. A NaN anywhere would therefore be reported
+        # as perfect agreement, so it has to be caught rather than compared.
+        if not math.isfinite(gap):
+            raise AssertionError(
+                "non-finite gap at x = {0!r}: the conversion or the "
+                "polynomial evaluated to NaN or infinity".format(float(x)))
+        worst = max(worst, gap)
     return worst
 
 
@@ -457,23 +484,39 @@ def test_writer_keeps_basis_conversions_exact_against_what_it_serialises(monkeyp
     objects = collect_fluid_objects()
     writer = SolutionDataWriter()
 
-    # Fit first: pure numerics, but it reads the SecCool data files by a path
-    # relative to this directory.
     targets = []
     for name in WRITER_TEST_FLUIDS:
+        if name not in objects:
+            pytest.fail("WRITER_TEST_FLUIDS names {0}, which no fluid getter "
+                        "produces any more; pick a current fluid whose caloric "
+                        "polynomials are fitted".format(name))
         target = objects[name]
         writer.fitFluidList([target])
         # toJSON ends by reloading the written file into the object, which
         # replaces these with their rounded selves, so snapshot them now.
-        unrounded = {prop: np.atleast_2d(np.array(getattr(target, prop).coeffs,
-                                                  dtype=float))
-                     for prop in ChebyshevFits.CALORIC_PROPERTIES}
+        # A property with no fit has coeffs = None, and np.array(None) is
+        # NaN rather than an error, so keep only the real ones.
+        unrounded = {}
+        for prop in ChebyshevFits.CALORIC_PROPERTIES:
+            coeffs = getattr(target, prop).coeffs
+            if coeffs is not None:
+                unrounded[prop] = np.atleast_2d(np.array(coeffs, dtype=float))
         targets.append((target, unrounded))
 
-    # toJSON writes json/<name>.json and the hash cache relative to the
-    # current directory, so running this from the repo root used to drop a
-    # stray json/ into the working tree.
+    # toJSON writes json/<name>.json relative to the current directory, so
+    # running this from the repo root used to drop a stray json/ into the
+    # working tree.
     monkeypatch.chdir(tmp_path)
+
+    # The hash cache is NOT cwd-relative: get_hash_file resolves it next to
+    # the CPIncomp package, so chdir does not isolate it. Left alone, this
+    # test stamps the hash of a fluid it wrote into a temp directory over the
+    # entry for the committed file. On a machine where the refit differs at
+    # all -- the numpy drift this whole rounding contract is about -- a later
+    # real pipeline run would then see a matching hash and an existing file,
+    # skip that fluid, and report it as unchanged.
+    monkeypatch.setattr(writer, "get_hash_file",
+                        lambda: str(tmp_path / "hashes.json"))
 
     compared, sensitive = 0, 0
     for target, unrounded in targets:
@@ -512,7 +555,10 @@ def test_writer_keeps_basis_conversions_exact_against_what_it_serialises(monkeyp
             # Non-vacuity, measured rather than assumed: would the WRONG
             # order (convert from the unrounded fit, round the polynomial
             # afterwards) actually be caught here? If not, this property
-            # proves nothing and must not be counted.
+            # proves nothing and must not be counted. Not counting fails the
+            # test, so a missing snapshot is fail-closed.
+            if prop not in unrounded:
+                continue
             wrongOrder = ChebyshevFits.convert_polynomial(
                 unrounded[prop], Tbase, entry["xbase"], entry["Trange"])
             if _cheb_minus_poly(dict(entry, coeffs=wrongOrder.tolist()),

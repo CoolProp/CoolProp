@@ -43,26 +43,43 @@ MIN_TEMPERATURE_POINTS = 3
 CALORIC_PROPERTIES = ("density", "specific_heat")
 
 # Every provenance a committed *_cheb entry may declare. The writer, the
-# schema test and the exactness test all read these, so adding a new one
-# forces a decision about which set it belongs in instead of silently
-# falling into the rounded, non-exact branch.
+# schema test and both exactness tests read these rather than repeating the
+# strings.
 FIT_SOURCE_TABULAR = "tabular_data"
 FIT_SOURCE_CONVERSION = "basis_conversion"
 FIT_SOURCES = (FIT_SOURCE_TABULAR, FIT_SOURCE_CONVERSION)
 
 # Provenances that are an exact algebraic re-expression of the committed
 # polynomial rather than an independent fit. These must reproduce that
-# polynomial to EXACT_CONVERSION_TOLERANCE, so they are written at higher
-# precision than everything else.
+# polynomial to EXACT_CONVERSION_TOLERANCE, so their coefficients are written
+# at higher precision than everything else. The rest are ordinary fits and
+# round like every other number in the corpus.
 EXACT_FIT_SOURCES = frozenset({FIT_SOURCE_CONVERSION})
+ROUNDED_FIT_SOURCES = frozenset({FIT_SOURCE_TABULAR})
+
+# Adding a provenance to FIT_SOURCES without saying which of the two groups
+# it belongs to would let it fall silently into the rounded, non-exact
+# branch, because that branch is just "not in EXACT_FIT_SOURCES". This makes
+# the omission an import-time error instead. Checked here rather than in a
+# test so it cannot be reached at all.
+if EXACT_FIT_SOURCES | ROUNDED_FIT_SOURCES != set(FIT_SOURCES):
+    raise AssertionError(
+        "every entry of FIT_SOURCES must be listed in exactly one of "
+        "EXACT_FIT_SOURCES or ROUNDED_FIT_SOURCES; unclassified: {0}".format(
+            sorted(set(FIT_SOURCES) - EXACT_FIT_SOURCES - ROUNDED_FIT_SOURCES)))
+if EXACT_FIT_SOURCES & ROUNDED_FIT_SOURCES:
+    raise AssertionError("a provenance cannot be both exact and rounded: {0}".format(
+        sorted(EXACT_FIT_SOURCES & ROUNDED_FIT_SOURCES)))
 
 # Digits kept for an exact conversion's coefficients. Not full precision:
 # 710 of the corpus's 936 conversion coefficients carry more than 12
 # significant digits when left unrounded, and those trailing digits are
 # exactly the numpy-version churn that the rounding exists to remove. At 12
-# digits the conversions reproduce their polynomials to 6e-12, three orders
-# inside the 1e-9 contract below, and every number in the corpus stays
-# digit-capped.
+# digits the conversions reproduce their polynomials to 6.0e-12, a factor of
+# ~170 inside the 1e-9 contract below. Every number the pipeline writes then
+# carries a digit cap; the four DigitalFluids that need a built CoolProp
+# package to regenerate (Acetone, Air, Ethanol, Hexane) predate the rounding
+# and are still committed at full precision.
 EXACT_CONVERSION_DIGITS = 12
 EXACT_CONVERSION_TOLERANCE = 1e-9
 
