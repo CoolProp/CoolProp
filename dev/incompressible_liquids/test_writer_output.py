@@ -188,3 +188,86 @@ def test_write_fluid_list_raises_when_a_fluid_cannot_be_serialised(monkeypatch, 
     assert written == ["GoodOne"], (
         "the healthy fluid after the failure was not written, so writeFluidList "
         "stopped at the first error instead of attempting every fluid")
+
+
+# IAPWS-08 seawater freezing temperature at 0.1013 MPa, across MITSW's own
+# salinity range. Generated once with iapws.iapws08._Tf and committed here so
+# the check needs no runtime dependency and cannot silently skip when a
+# package is absent. Regenerate with:
+#     from iapws.iapws08 import _Tf; _Tf(0.1013, x)
+IAPWS08_SEAWATER_FREEZE = [
+    (0.00, 273.1525), (0.01, 272.6139), (0.02, 272.0748), (0.03, 271.5225),
+    (0.04, 270.9536), (0.05, 270.3652), (0.06, 269.7542), (0.07, 269.1178),
+    (0.08, 268.4532), (0.09, 267.7583), (0.10, 267.0318), (0.11, 266.2730),
+    (0.12, 265.4820),
+]
+
+# The shipped curve is a cubic, deliberately smoothed so it never crosses Tmin
+# (see the long comment on MITSeaWater in CPIncomp/SolutionFluids.py). Its
+# worst departure from IAPWS-08 is ~10 mK, at zero salinity. 20 mK leaves room
+# for a coefficient re-fit without being loose enough to miss a real error: a
+# wrong sign, a dropped term or a stale xbase all move it by whole kelvin.
+SEAWATER_FREEZE_TOLERANCE_K = 0.02
+
+
+def _evaluate_T_freeze(entry, x, xbase):
+    """Mirror of IncompressibleFluid::Tfreeze for a single-row coefficient set.
+
+    The backend evaluates poly.evaluate(coeffs, p, x, 0, 0, 0.0, xbase), so
+    rows are powers of pressure and columns are powers of (x - xbase). One row
+    means no pressure dependence, which is what this fluid ships.
+    """
+    coeffs = np.atleast_2d(np.array(entry["coeffs"], dtype=float))
+    assert coeffs.shape[0] == 1, "expected no pressure dependence, got {0}".format(coeffs.shape)
+    return sum(coeffs[0, j] * (x - xbase) ** j for j in range(coeffs.shape[1]))
+
+
+def test_mitsw_freezing_curve_matches_iapws08():
+    """MITSW's committed T_freeze must be the IAPWS-08 seawater freeze curve.
+
+    Issue #2567 asked for this. Sharqawy 2010 supplies every other MITSW
+    property but publishes no freezing temperature, and neither does the MIT
+    seawater library, so IAPWS-08 is the source. Checking the committed
+    coefficients against IAPWS values directly keeps this honest: refitting
+    and comparing to the same coefficients would prove nothing.
+    """
+    with open(os.path.join(JSON_DIR, "MITSW.json")) as fh:
+        fluid = json.load(fh)
+    entry = fluid["T_freeze"]
+
+    assert entry["type"] == "polynomial", (
+        "MITSW T_freeze is {0}; if it was deliberately removed, delete this test "
+        "rather than loosening it".format(entry["type"]))
+
+    worst = 0.0
+    for x, expected in IAPWS08_SEAWATER_FREEZE:
+        got = _evaluate_T_freeze(entry, x, fluid["xbase"])
+        worst = max(worst, abs(got - expected))
+    assert worst <= SEAWATER_FREEZE_TOLERANCE_K, (
+        "MITSW T_freeze departs from IAPWS-08 by {0:.4f} K, tolerance {1} K".format(
+            worst, SEAWATER_FREEZE_TOLERANCE_K))
+
+
+def test_mitsw_freezing_curve_never_crosses_tmin():
+    """The freeze curve must stay at or below Tmin, or checkT starts rejecting.
+
+    IncompressibleFluid::checkT throws when T < T_freeze(x), on top of the
+    Tmin bound. The true freezing point of pure water at 1 atm is 273.1525 K,
+    slightly ABOVE MITSW's Tmin of 273.15 K, because 273.15 K is the
+    air-saturated ice point. So a curve fitted too closely to IAPWS-08 at
+    x = 0 would make PropsSI reject T = Tmin at zero salinity, which works
+    today. The shipped cubic is smoothed to avoid exactly that, and this is
+    the test that stops someone "improving" the fit and breaking it.
+    """
+    with open(os.path.join(JSON_DIR, "MITSW.json")) as fh:
+        fluid = json.load(fh)
+    entry = fluid["T_freeze"]
+    if entry.get("coeffs") in (None, "null"):
+        pytest.skip("MITSW ships no T_freeze")
+
+    xs = np.linspace(fluid["xmin"], fluid["xmax"], 241)
+    values = np.array([_evaluate_T_freeze(entry, x, fluid["xbase"]) for x in xs])
+    worstIndex = int(np.argmax(values))
+    assert values[worstIndex] <= fluid["Tmin"], (
+        "T_freeze reaches {0:.6f} K at x = {1:.4f}, above Tmin = {2}. checkT would "
+        "reject T = Tmin there.".format(values[worstIndex], xs[worstIndex], fluid["Tmin"]))
