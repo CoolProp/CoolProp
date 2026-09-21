@@ -97,8 +97,10 @@ for entry in "${entries[@]}"; do
     src="${entry#* }"
 
     # Guard the rm -rf below.  An empty name would make dest the vendor
-    # directory itself and wipe everything copied so far, mid-loop.
-    if [[ -z "${name}" || "${name}" == */* ]]; then
+    # directory itself and wipe everything copied so far, mid-loop; "." and ".."
+    # and any name with a slash would escape it.  Allow-list the shape instead
+    # of blocking the cases somebody thought of.
+    if [[ ! "${name}" =~ ^[A-Za-z0-9._+-]+$ || "${name}" == "." || "${name}" == ".." ]]; then
         echo "error: refusing to vendor a package with the name '${name}'" >&2
         exit 1
     fi

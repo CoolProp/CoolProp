@@ -37,7 +37,21 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Read one COOLPROP_VERSION_* component out of CMakeLists.txt.
+commit="$(git -C "${repo_root}" rev-parse "${ref}")"
+commit_epoch="$(git -C "${repo_root}" show -s --format=%ct "${commit}")"
+
+work_dir="$(mktemp -d)"
+trap 'rm -rf "${work_dir}"' EXIT
+
+# Parse the version out of the CMakeLists.txt OF THE REVISION BEING EXPORTED,
+# not the one on disk.  With --ref, or simply an edited working tree, those two
+# disagree, and the tarball would be named for one revision while containing
+# another -- a mis-named tarball, which is the 2014 failure class this script
+# exists to avoid, and one the parser below cannot see by itself.
+version_source="${work_dir}/CMakeLists.at-ref.txt"
+git -C "${repo_root}" show "${commit}:CMakeLists.txt" > "${version_source}"
+
+# Read one COOLPROP_VERSION_* component out of that file.
 #
 # The 2014 packaging script did this with `cut -d " " -f 3` and started
 # returning an empty string the day cmake-format removed the space in
@@ -48,7 +62,7 @@ read_version_component() {
     local name="$1" value
     value="$(sed -n -E \
         "s/^[[:space:]]*set[[:space:]]*\\([[:space:]]*${name}[[:space:]]+([0-9]+)[[:space:]]*\\).*/\\1/p" \
-        "${repo_root}/CMakeLists.txt" | head -1)"
+        "${version_source}" | head -1)"
     if [[ ! "${value}" =~ ^[0-9]+$ ]]; then
         echo "error: could not read ${name} from CMakeLists.txt (got '${value}')." >&2
         echo "       Fix the parser here rather than shipping a mis-named tarball; GH #3388." >&2
@@ -76,7 +90,7 @@ version_patch="$(read_version_component COOLPROP_VERSION_PATCH)"
 # `set -o pipefail` would kill the script before the emptiness check below could
 # report why.  That check is the real gate and it aborts.
 revision_line="$(grep -E '^[[:space:]]*set[[:space:]]*\([[:space:]]*COOLPROP_VERSION_REVISION([[:space:]]|\))' \
-    "${repo_root}/CMakeLists.txt" | head -1 || true)"
+    "${version_source}" | head -1 || true)"
 if [[ -z "${revision_line}" ]]; then
     echo "error: no COOLPROP_VERSION_REVISION line found in CMakeLists.txt." >&2
     echo "       Refusing to guess whether this tree is a release or a snapshot." >&2
@@ -102,12 +116,7 @@ if [[ -n "${version_revision}" ]]; then
     echo "note: this is a ${version_revision} snapshot, not a release tarball" >&2
 fi
 
-commit="$(git -C "${repo_root}" rev-parse "${ref}")"
-commit_epoch="$(git -C "${repo_root}" show -s --format=%ct "${commit}")"
-
 name="coolprop-${version}"
-work_dir="$(mktemp -d)"
-trap 'rm -rf "${work_dir}"' EXIT
 stage="${work_dir}/${name}"
 
 echo "==> Exporting ${ref} (${commit:0:12}) as ${name}"
@@ -123,9 +132,11 @@ echo "==> Vendoring dependencies into the export"
 
 # Keep CPM's download cache out of the export.  cmake/dependencies.cmake means
 # to default it to <repo>/.cpm_cache, which would put a second copy of every
-# dependency inside the tarball; pointing it at the work directory makes that
-# impossible rather than relying on it to stay away.
-export CPM_SOURCE_CACHE="${work_dir}/cpm-cache"
+# dependency inside the tarball; naming a cache elsewhere makes that impossible
+# rather than relying on it to stay away.  An inherited CPM_SOURCE_CACHE is
+# honoured and saves re-downloading ten dependencies: it cannot point inside
+# this run's fresh mktemp stage, so the guarantee holds either way.
+export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE:-${work_dir}/cpm-cache}"
 
 "${stage}/dev/packaging/vendor-deps.sh"
 

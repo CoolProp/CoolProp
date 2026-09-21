@@ -98,11 +98,17 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
 # silently installs into the source tree instead -- see GH #3388.
 #
 # This runs BEFORE project(), which matters: CMake only fills
-# CMAKE_INSTALL_PREFIX in during project(), so up here the variable is empty
-# unless the user passed -DCMAKE_INSTALL_PREFIX on the command line, which puts
-# it in the cache before any CMakeLists.txt is read.  "Empty" is therefore
-# exactly "the user asked for nothing", and on a reconfigure the cache already
-# holds whatever the first run settled on, so the default sticks.
+# CMAKE_INSTALL_PREFIX in during project(), so up here there is no cache entry
+# at all unless the user passed -DCMAKE_INSTALL_PREFIX on the command line,
+# which lands in the cache before any CMakeLists.txt is read.  "No cache entry"
+# is therefore exactly "the user asked for nothing", and on a reconfigure the
+# cache already holds whatever the first run settled on, so the default sticks.
+#
+# Test the cache entry rather than plain `if(NOT CMAKE_INSTALL_PREFIX)`: CMake's
+# if() treats OFF, NO, 0, IGNORE and anything ending in -NOTFOUND as false, so
+# the plain form would quietly ignore a handful of odd but legitimate prefixes
+# -- the very swallowing this block exists to stop.  The explicit STREQUAL ""
+# still catches -DCMAKE_INSTALL_PREFIX= from an unset shell variable.
 #
 # (Do NOT reach for CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT here.  It is
 # set inside project(), so at this point it is always undefined and the test
@@ -112,7 +118,7 @@ if(DEFINED COOLPROP_INSTALL_PREFIX)
   set(CMAKE_INSTALL_PREFIX
       ${COOLPROP_INSTALL_PREFIX}
       CACHE PATH "default install path" FORCE)
-elseif(NOT CMAKE_INSTALL_PREFIX)
+elseif(NOT DEFINED CACHE{CMAKE_INSTALL_PREFIX} OR CMAKE_INSTALL_PREFIX STREQUAL "")
   set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
   message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
   set(CMAKE_INSTALL_PREFIX

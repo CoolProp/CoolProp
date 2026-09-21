@@ -64,11 +64,12 @@ configure.
 Summary:        Development files for CoolProp
 Requires:       libcoolprop%{sover} = %{version}-%{release}
 Requires:       eigen3-devel
+Requires:       fmt-devel
 %if 0%{?suse_version}
 Group:          Development/Libraries/C and C++
-Requires:       fmt-devel
 %else
-Requires:       fmt-devel
+# Owns %{_libdir}/cmake on Fedora and RHEL; see the %files section below.
+Requires:       cmake-filesystem
 %endif
 
 %description -n libcoolprop-devel
@@ -124,10 +125,13 @@ include root) are not shipped here: their names are too generic to put into
 %{_includedir}/CoolProp/
 %{_libdir}/libCoolProp.so
 %{_libdir}/pkgconfig/coolprop.pc
-# %{_libdir}/cmake is not owned by the filesystem package on Fedora or
-# openSUSE, so claim it here; an unowned directory is an rpmlint error and an
-# OBS review will bounce it.
+# Fedora ships cmake-filesystem, which owns %{_libdir}/cmake, so depend on it
+# there (claiming the directory as well would be dual ownership and a review
+# flag).  openSUSE has no such package, so claim it there instead; an unowned
+# directory is an rpmlint error and OBS will bounce it.
+%if 0%{?suse_version}
 %dir %{_libdir}/cmake
+%endif
 %{_libdir}/cmake/CoolProp/
 
 %changelog

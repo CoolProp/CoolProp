@@ -52,11 +52,30 @@ jobs:
           set -euo pipefail
           expect_prefix() {
             local build="$1" want="$2"; shift 2
-            cmake -S . -B "${build}" -DCOOLPROP_SHARED_LIBRARY=ON "$@" > "${build}.log" 2>&1
+            if ! cmake -S . -B "${build}" -DCOOLPROP_SHARED_LIBRARY=ON "$@" > "${build}.log" 2>&1; then
+              echo "configure failed for [$*]:" >&2
+              cat "${build}.log" >&2
+              exit 1
+            fi
+
             local got
             got="$(sed -n 's/^CMAKE_INSTALL_PREFIX:PATH=//p' "${build}/CMakeCache.txt")"
             if [ "${got}" != "${want}" ]; then
-              echo "prefix check failed for [$*]: want '${want}', got '${got}'" >&2
+              echo "CMAKE_INSTALL_PREFIX check failed for [$*]: want '${want}', got '${got}'" >&2
+              exit 1
+            fi
+
+            # Assert COOLPROP_INSTALL_PREFIX separately.  It is the variable the
+            # release-artifact rules interpolate (VxWorks, MathcadPrime,
+            # MathCAD15, LibreOffice), and an empty value there turns
+            # DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathCAD15" into an
+            # absolute path at the filesystem root.  A regression that broke
+            # only that variable would leave CMAKE_INSTALL_PREFIX above
+            # perfectly correct and sail through.
+            local got_cp
+            got_cp="$(sed -n 's/^-- COOLPROP_INSTALL_PREFIX=\([^ ]*\).*/\1/p' "${build}.log" | head -1)"
+            if [ "${got_cp}" != "${want}" ]; then
+              echo "COOLPROP_INSTALL_PREFIX check failed for [$*]: want '${want}', got '${got_cp}'" >&2
               exit 1
             fi
             echo "ok: [$*] -> ${got}"
@@ -177,6 +196,16 @@ jobs:
               return 0;
           }
           EOF
+
+          # Check the prefix that was actually baked into the .pc before
+          # overriding it below.  Without this, a coolprop.pc generated with a
+          # wrong prefix would still sail through the compile, because the
+          # override replaces exactly the value under test.
+          if ! grep -qx 'prefix=/usr' "${libdir}/pkgconfig/coolprop.pc"; then
+            echo "coolprop.pc has the wrong baked-in prefix:" >&2
+            grep '^prefix=' "${libdir}/pkgconfig/coolprop.pc" >&2
+            exit 1
+          fi
 
           echo "== via pkg-config =="
           export PKG_CONFIG_PATH="${libdir}/pkgconfig"
