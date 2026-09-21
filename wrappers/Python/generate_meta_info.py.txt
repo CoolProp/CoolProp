@@ -46,7 +46,7 @@ if local:
     generate_headers.generate()
     del generate_headers
     version = open(os.path.join(coolprop_dir, '.version'), 'r').read().strip()
-    home = "http://www.coolprop.org"
+    home = "https://www.coolprop.org"
     license = "MIT"
     summary = "Open-source thermodynamic and transport properties database"
     fil = None

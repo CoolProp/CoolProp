@@ -507,7 +507,7 @@ if __name__ == '__main__':
                version=version,  # look above for the definition of version variable - don't modify it here
                author="Ian Bell",
                author_email='ian.h.bell@gmail.com',
-               url='http://www.coolprop.org',
+               url='https://www.coolprop.org',
                #install_requires=['msvc_runtime'] if sys.platform.startswith('win') else [], # post-install the C++ runtime for windows will be automatically installed, nothing on other platforms
                description="""Open-source thermodynamic and transport properties database""",
                packages=find_packages(),

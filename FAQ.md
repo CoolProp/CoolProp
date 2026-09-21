@@ -27,7 +27,7 @@ Usage
     a. Fluid XY does not have viscosity/thermal conductivity/ ... 
 
        Please have a look at 
-       http://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids 
+       https://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids 
        if there is no reference for your property, we do not have the information required to 
        implement the functionality. If you file an issue, please provide information and 
        a link to a publication with the required data. 
@@ -43,11 +43,11 @@ Usage
 
     Mixture calculations require binary interaction parameters for each pair in the mixture.  While many binary interaction parameters are available in the CoolProp library, sadly, many are not.  If you get this error message, then the binary interaction parameters for the CAS fluids listed are not available in CoolProp.  
     
-    If you have data for the binary interaction parameters, you can enter them interactively using the [set_mixture_binary_pair_data](http://www.coolprop.org/dev/fluid_properties/Mixtures.html#id826) function in CoolProp.  Otherwise, a more sophisticated mixing model is needed, like the ones in NIST RefProp.
+    If you have data for the binary interaction parameters, you can enter them interactively using the [set_mixture_binary_pair_data](https://www.coolprop.org/dev/fluid_properties/Mixtures.html#id826) function in CoolProp.  Otherwise, a more sophisticated mixing model is needed, like the ones in NIST RefProp.
     
 5. **Where is the MATLAB wrapper?**
 
-    We retired the MATLAB wrapper in favour of a Python-based approach, read more in the [docs](http://www.coolprop.org/coolprop/wrappers/MATLAB/index.html#matlab-wrapper).
+    We retired the MATLAB wrapper in favour of a Python-based approach, read more in the [docs](https://www.coolprop.org/coolprop/wrappers/MATLAB/index.html#matlab-wrapper).
 
 6. **Where is the enthalpy of mixing for incompressible fluids?**
 
@@ -83,5 +83,5 @@ Compilation
     error: Microsoft Visual C++ 14.0 is required. Get it with "Microsoft Visual C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/
     ```
     
-    Different versions of Python (2.7, 3.6, etc.) are built with and require specific versions of the Microsoft Visual C++ compiler.  Please see the [common wrapper prerequisites](http://www.coolprop.org/dev/coolprop/wrappers/index.html#wrapper-common-prereqs) specifically for Windows build requirements.
+    Different versions of Python (2.7, 3.6, etc.) are built with and require specific versions of the Microsoft Visual C++ compiler.  Please see the [common wrapper prerequisites](https://www.coolprop.org/dev/coolprop/wrappers/index.html#wrapper-common-prereqs) specifically for Windows build requirements.
     

@@ -8,11 +8,11 @@ It was originally developed by Ian Bell, at the time a post-doc at the Universit
 
 * For Python, get the latest release via `pip install coolprop` [![PyPI downloads](https://img.shields.io/pypi/dm/CoolProp.svg?label=PyPI-downloads)](http://pypi.python.org/pypi/CoolProp/) [![PyPI version](https://img.shields.io/pypi/v/coolprop.svg?label=PyPI-binaries)](http://pypi.python.org/pypi/CoolProp/)
 
-* ... other binaries are available from [SourceForge](http://sourceforge.net/projects/coolprop/files) [![sourceforge downloads](https://img.shields.io/sourceforge/dm/CoolProp.svg?label=SF-downloads)](http://sourceforge.net/projects/coolprop/files) ![CoolProp version tag](https://img.shields.io/github/release/CoolProp/CoolProp.svg?label=SF-binaries)
+* ... other binaries are available from [SourceForge](https://sourceforge.net/projects/coolprop/files) [![sourceforge downloads](https://img.shields.io/sourceforge/dm/CoolProp.svg?label=SF-downloads)](https://sourceforge.net/projects/coolprop/files) ![CoolProp version tag](https://img.shields.io/github/release/CoolProp/CoolProp.svg?label=SF-binaries)
 
-* There is also a bleeding edge nightly build of the [development version](http://sourceforge.net/projects/coolprop/files/CoolProp/nightly).
+* There is also a bleeding edge nightly build of the [development version](https://sourceforge.net/projects/coolprop/files/CoolProp/nightly).
 
-* The documentation is available for the [latest release](http://www.coolprop.org) and the [development version](https://coolprop.github.io/devdocs/)
+* The documentation is available for the [latest release](https://www.coolprop.org) and the [development version](https://coolprop.github.io/devdocs/)
 
 * For any kind of question regarding CoolProp and its usage, you can ask the [CoolProp Discussions](https://github.com/CoolProp/CoolProp/discussions)
 

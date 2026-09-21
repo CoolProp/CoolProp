@@ -4,7 +4,7 @@ programming environments. It offers similar functionality to REFPROP, but CoolPr
 is open-source and free. 
 
 This is only the download location, please visit the `GitHub project <https://github.com/CoolProp/CoolProp>`_ 
-to get support and to browse the source code. The documentation is hosted at `coolprop.sourceforge.net <http://coolprop.sourceforge.net>`_.
+to get support and to browse the source code. The documentation is hosted at `coolprop.sourceforge.net <https://coolprop.sourceforge.net>`_.
 
 You may find answers to some frequently asked questions at the `project's FAQ <https://github.com/CoolProp/CoolProp/blob/master/FAQ.md>`_.
 

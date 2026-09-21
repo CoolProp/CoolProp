@@ -1,7 +1,7 @@
 Source: coolprop
-Maintainer: Jorrit Wronski <jowr@mek.dtu.dk>
+Maintainer: Jorrit Wronski <jow@cleanheatpartners.com>
 Section: science
-Homepage: http://www.coolprop.org
+Homepage: https://www.coolprop.org
 Priority: optional
 Standards-Version: 3.9.2
 Build-Depends: debhelper (>= 7), cmake (>= 2.7)
