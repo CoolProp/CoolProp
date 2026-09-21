@@ -219,6 +219,10 @@ jobs:
           libs="$(pkg-config --define-variable=prefix="${root}" --libs coolprop)"
           echo "cflags: ${cflags}"
           echo "libs:   ${libs}"
+          # Unquoted on purpose: pkg-config hands back several arguments in one
+          # string and they have to word-split.  Quoting passes "-I... -L... -l..."
+          # as a single argument and the compile fails.
+          # shellcheck disable=SC2086
           cc "${work}/main.c" ${cflags} ${libs} -o "${work}/consumer_pc"
           LD_LIBRARY_PATH="${libdir}" "${work}/consumer_pc"
 
