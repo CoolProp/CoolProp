@@ -6,7 +6,7 @@ It was originally developed by Ian Bell, at the time a post-doc at the Universit
 
 * CoolProp has flexible licensing terms: Commercial - ok! Academic? - ok! [![license](https://img.shields.io/github/license/CoolProp/CoolProp.svg)](https://github.com/CoolProp/CoolProp/blob/master/LICENSE)
 
-* For Python, get the latest release via `pip install coolprop` [![PyPI downloads](https://img.shields.io/pypi/dm/CoolProp.svg?label=PyPI-downloads)](http://pypi.python.org/pypi/CoolProp/) [![PyPI version](https://img.shields.io/pypi/v/coolprop.svg?label=PyPI-binaries)](http://pypi.python.org/pypi/CoolProp/)
+* For Python, get the latest release via `pip install coolprop` [![PyPI downloads](https://img.shields.io/pypi/dm/CoolProp.svg?label=PyPI-downloads)](https://pypi.org/project/CoolProp/) [![PyPI version](https://img.shields.io/pypi/v/coolprop.svg?label=PyPI-binaries)](https://pypi.org/project/CoolProp/)
 
 * ... other binaries are available from [SourceForge](https://sourceforge.net/projects/coolprop/files) [![sourceforge downloads](https://img.shields.io/sourceforge/dm/CoolProp.svg?label=SF-downloads)](https://sourceforge.net/projects/coolprop/files) ![CoolProp version tag](https://img.shields.io/github/release/CoolProp/CoolProp.svg?label=SF-binaries)
 

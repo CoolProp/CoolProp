@@ -15,7 +15,7 @@ Several things are required:
 2. A python release with the |numpy|_ and |CoolProp|_ packages installed. If you have several python environments/versions available, make sure that your MATLAB recognizes the desired executable using |pyversion|_.
 
 .. |numpy| replace:: ``numpy``
-.. _numpy: https://pypi.python.org/pypi/numpy
+.. _numpy: https://pypi.org/project/numpy/
 
 .. |CoolProp| replace:: ``CoolProp``
 .. _CoolProp: https://www.coolprop.org/coolprop/wrappers/Python/index.html
