@@ -6,7 +6,7 @@
   },
   "Tbase": 273.15,
   "Tmax": 423.15,
-  "Tmin": 233.14999999999998,
+  "Tmin": 233.15,
   "TminPsat": 423.15,
   "conductivity": {
     "NRMS": null,
@@ -38,7 +38,7 @@
   "density_cheb": {
     "NRMS": null,
     "Trange": [
-      233.14999999999998,
+      233.15,
       423.15
     ],
     "coeffs": [
@@ -78,7 +78,7 @@
         2062.3
       ],
       [
-        6.076899999999999
+        6.0769
       ]
     ],
     "type": "polynomial"
@@ -86,7 +86,7 @@
   "specific_heat_cheb": {
     "NRMS": null,
     "Trange": [
-      233.14999999999998,
+      233.15,
       423.15
     ],
     "coeffs": [

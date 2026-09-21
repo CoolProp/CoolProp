@@ -433,6 +433,23 @@ class SolutionDataWriter(object):
         jobj['volume2input'] = data.volume2input.toJSON()  # dd
         jobj['mole2input'] = data.mole2input.toJSON()  # dd
 
+        # Round the fitted quantities BEFORE deriving the Chebyshev entries.
+        #
+        # The fits carry far more digits than the source data supports (the
+        # SecCool tables are 4-digit), and json.dumps would write all 17 of a
+        # double's decimal digits. Rounding keeps the committed files stable:
+        # without it, re-running the pipeline on a different numpy/scipy
+        # rewrites every coefficient in every file with last-digit noise, and
+        # a real change cannot be told from that churn.
+        #
+        # The order matters. A basis conversion is exact with respect to the
+        # polynomial it is derived from, so it has to be derived from the
+        # polynomial that actually gets COMMITTED, not the full-precision one
+        # still in memory. Deriving first and rounding afterwards leaves the
+        # two committed representations of the same property disagreeing by
+        # ~1e-7, which test_chebyshev_entries.py catches at 1e-9.
+        jobj = roundNestedNumbers(jobj)
+
         # Optional Chebyshev entries for the caloric properties, fitted from
         # the raw data when the fluid carries any, otherwise an exact basis
         # conversion of the polynomial fit above. See CPIncomp/ChebyshevFits.py
@@ -441,14 +458,15 @@ class SolutionDataWriter(object):
             rawT, rawX, rawGrid = self.getRawGrid(data, prop)
             entry = ChebyshevFits.build_entry(jobj, prop, rawT, rawX, rawGrid)
             if entry is not None:
-                jobj[prop + '_cheb'] = entry
+                # A tabular_data entry is an independent fit of the raw grid,
+                # so it rounds like everything else. A basis_conversion entry
+                # is determined exactly by the already-rounded polynomial
+                # above, and rounding it again would throw that exactness away.
+                if entry.get('fit_source') == 'basis_conversion':
+                    jobj[prop + '_cheb'] = entry
+                else:
+                    jobj[prop + '_cheb'] = roundNestedNumbers(entry)
 
-        # The fits carry far more digits than the source data supports (the
-        # SecCool tables are 4-digit), and json.dumps would write all 17 of a
-        # double's decimal digits. Rounding here keeps the committed files
-        # stable: without it, re-running the pipeline on a different
-        # numpy/scipy rewrites every coefficient in every file with
-        # last-digit noise, and a real change cannot be told from that churn.
         # allow_nan=False: by default json.dumps writes NaN and Infinity as bare
         # tokens, which are not valid JSON and which the C++ loader has no
         # reason to accept. clearUnfittedCoefficients scrubs non-finite
@@ -456,7 +474,7 @@ class SolutionDataWriter(object):
         # Chebyshev blocks, so a non-finite value there would be written out
         # silently. Raising here is the fail-closed choice: a broken fit stops
         # the pipeline instead of shipping a file nothing can parse.
-        dump = json.dumps(roundNestedNumbers(jobj), indent=2, sort_keys=True, allow_nan=False)
+        dump = json.dumps(jobj, indent=2, sort_keys=True, allow_nan=False)
 
         hashes = self.load_hashes()
         hash = self.get_hash(dump)
