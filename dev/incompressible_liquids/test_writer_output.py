@@ -327,10 +327,13 @@ UNROUNDED_LEGACY_FLUIDS = frozenset({"Acetone", "Air", "Ethanol", "Hexane"})
 
 
 def _digit_cap_offenders(path):
-    """Numbers in one file that carry more digits than their rule allows.
+    """Inspect every number in one file against the rules it must obey.
 
-    Returns (how many numbers were examined, the offending ones). The count
-    is returned so a caller can tell "nothing was over the cap" apart from
+    Returns (how many numbers were examined, the non-finite ones, the
+    over-precise ones). The two offender lists are kept apart because they
+    are governed by different rules: the legacy files below are exempt from
+    the digit cap, but nothing is ever exempt from being a real number. The
+    count is returned so a caller can tell "nothing was wrong" apart from
     "nothing was looked at".
     """
     from CPIncomp import ChebyshevFits
@@ -344,22 +347,24 @@ def _digit_cap_offenders(path):
         if entry and entry.get("fit_source") in ChebyshevFits.EXACT_FIT_SOURCES:
             exactCoeffPaths.add("/" + prop + "_cheb/coeffs")
 
-    offenders, checked = [], 0
+    nonFinite, overPrecise, checked = [], [], 0
     for where, value in _walk_numbers(fluid):
         checked += 1
-        # repr(nan) is "nan", which walks through the digit counter as three
-        # significant digits and so passes every cap. json.load accepts the
-        # bare NaN and Infinity tokens, so report them here rather than let
-        # the counter wave them through.
+        # Two ways a committed number can fail to be finite: the bare NaN and
+        # Infinity tokens, which json.load accepts even though they are not
+        # valid JSON, and an ordinary literal such as 1e400 that overflows on
+        # parse. The second is syntactically valid, so only this check sees
+        # it. Either way repr(nan) is "nan", which the digit counter would
+        # score as three significant digits and wave through every cap.
         if not math.isfinite(value):
-            offenders.append("{0}: {1!r} is not finite".format(where, value))
+            nonFinite.append("{0}: {1!r} is not finite".format(where, value))
             continue
         cap = (ChebyshevFits.EXACT_CONVERSION_DIGITS
                if where.replace("[]", "") in exactCoeffPaths else SIGNIFICANT_DIGITS)
         if _significant_digits(value) > cap:
-            offenders.append("{0}: {1!r} has {2} significant digits, cap {3}".format(
+            overPrecise.append("{0}: {1!r} has {2} significant digits, cap {3}".format(
                 where, value, _significant_digits(value), cap))
-    return checked, offenders
+    return checked, nonFinite, overPrecise
 
 
 def test_unrounded_legacy_files_are_exactly_the_known_set():
@@ -372,9 +377,9 @@ def test_unrounded_legacy_files_are_exactly_the_known_set():
     """
     offenderPaths = {}
     for path in JSON_PATHS:
-        _, offenders = _digit_cap_offenders(path)
-        if offenders:
-            offenderPaths[os.path.splitext(os.path.basename(path))[0]] = offenders
+        _, _, overPrecise = _digit_cap_offenders(path)
+        if overPrecise:
+            offenderPaths[os.path.splitext(os.path.basename(path))[0]] = overPrecise
 
     assert set(offenderPaths) == set(UNROUNDED_LEGACY_FLUIDS), (
         "files exceeding the digit cap are {0}, expected exactly {1}".format(
@@ -410,16 +415,26 @@ def test_committed_numbers_respect_the_digit_cap(path):
     ChebyshevFits.EXACT_CONVERSION_TOLERANCE against the polynomial it comes
     from, which 7 digits cannot deliver, so it gets EXACT_CONVERSION_DIGITS.
     """
-    if os.path.splitext(os.path.basename(path))[0] in UNROUNDED_LEGACY_FLUIDS:
-        pytest.skip("legacy full-precision file; pinned by "
-                    "test_unrounded_legacy_files_are_exactly_the_known_set")
-
-    checked, offenders = _digit_cap_offenders(path)
+    checked, nonFinite, overPrecise = _digit_cap_offenders(path)
 
     # A fluid file always carries numbers; zero would mean this walked nothing.
     assert checked > 0, "no numbers found in {0}".format(path)
-    assert not offenders, "{0}:\n  {1}".format(
-        os.path.basename(path), "\n  ".join(offenders[:10]))
+
+    # Finiteness is checked BEFORE the legacy skip, and for every file. The
+    # exemption below is from the digit cap only: a legacy file is allowed to
+    # be over-precise, never to carry a value that is not a number. Skipping
+    # first left the four legacy files with no finiteness check at all, since
+    # test_json_sanity.py's finite check walks only the six property blocks
+    # and would not see a Chebyshev entry, Tbase, Trange, xbase or NRMS.
+    assert not nonFinite, "{0}:\n  {1}".format(
+        os.path.basename(path), "\n  ".join(nonFinite[:10]))
+
+    if os.path.splitext(os.path.basename(path))[0] in UNROUNDED_LEGACY_FLUIDS:
+        pytest.skip("legacy full-precision file; its digit cap is pinned by "
+                    "test_unrounded_legacy_files_are_exactly_the_known_set")
+
+    assert not overPrecise, "{0}:\n  {1}".format(
+        os.path.basename(path), "\n  ".join(overPrecise[:10]))
 
 
 def _cheb_minus_poly(entry, poly_coeffs, Tbase, xmin, xmax):
