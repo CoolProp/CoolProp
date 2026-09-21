@@ -92,7 +92,7 @@ Supporters
 .. image:: _static/logo_labothap.png
    :height: 100px
    :alt: labothap
-   :target: http://www.labothap.ulg.ac.be/
+   :target: https://www.labothap.uliege.be/
 
 .. image:: _static/logo_ORCNext.jpg
    :height: 100px
