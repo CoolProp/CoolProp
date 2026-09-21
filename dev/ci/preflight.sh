@@ -16,6 +16,7 @@
 #   ./dev/ci/preflight.sh --skip=json-symbols          # subset
 #   ./dev/ci/preflight.sh --skip=install-headers        # subset
 #   ./dev/ci/preflight.sh --skip=incomp-sanity          # subset
+#   ./dev/ci/preflight.sh --skip=shellcheck,actionlint  # subset
 #
 # Tools resolved at runtime:
 #   - clang-format     : uvx clang-format@<version-from-.pre-commit-config>
@@ -24,6 +25,9 @@
 #                         (which already graceful-skips when clang-tidy or
 #                          compile_commands.json isn't around)
 #   - semgrep          : uvx semgrep with p/cpp + p/security-audit rulesets
+#   - shellcheck       : uvx shellcheck-py, changed *.sh only, warning+
+#   - actionlint       : uvx actionlint-py + shellcheck-py, changed
+#                         .github/workflows/*.yml only
 #   - Catch2 tests     : ./build_catch/CatchTestRunner with tag scope
 #                        auto-selected from the changed paths
 #
@@ -83,6 +87,18 @@ ALL_CPP="$(printf '%s\n%s\n' "$CHANGED_CPP" "$UNSTAGED_CPP" | sort -u | grep -v 
 # All paths changed (any extension) — used for tag auto-selection.
 ALL_PATHS="$(git diff --name-only "$BASE_REF"...HEAD; git diff --name-only)"
 ALL_PATHS="$(printf '%s\n' "$ALL_PATHS" | sort -u | grep -v '^$' || true)"
+
+# Shell scripts and GitHub Actions workflows, same ACMR filtering as the C++
+# set above.  Every C-family check below skips when a diff carries no .cpp/.h,
+# which left a branch made entirely of shell, CMake and YAML — a packaging or
+# CI change, exactly the shape that breaks quietly — reporting
+# "0 passed / 0 failed" and gating nothing.
+CHANGED_SH="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.sh' '*.bash'
+                 git diff --name-only --diff-filter=ACMR -- '*.sh' '*.bash'; } \
+               | sort -u | grep -v '^$' || true)"
+CHANGED_WORKFLOWS="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '.github/workflows/*.yml' '.github/workflows/*.yaml'
+                        git diff --name-only --diff-filter=ACMR -- '.github/workflows/*.yml' '.github/workflows/*.yaml'; } \
+                      | sort -u | grep -v '^$' || true)"
 
 # ---------- pretty helpers -------------------------------------------
 
@@ -526,6 +542,71 @@ else
         fail "semgrep (see /tmp/preflight-semgrep.log)"
     else
         ok "semgrep ($(printf '%s\n' "$ALL_CPP" | wc -l | tr -d ' ') file(s))"
+    fi
+fi
+
+# ---------- check 6b: shellcheck (changed shell scripts) -------------
+#
+# Scoped to changed files on purpose: a handful of legacy scripts carry
+# pre-existing findings (two missing shebangs, and broken `[` test expressions
+# in wrappers/Fluent/), and blocking an unrelated push on those helps nobody.
+# --severity=warning keeps style and info out of the way for the same reason;
+# drop it once the tree is clean if you want SC2086 enforced too.
+step "shellcheck (changed shell scripts)"
+if skip_check shellcheck; then
+    skip "shellcheck" "--skip=shellcheck"
+elif [ -z "$CHANGED_SH" ]; then
+    skip "shellcheck" "no shell scripts in diff"
+elif ! command -v uvx >/dev/null 2>&1; then
+    skip "shellcheck" "uvx not on PATH"
+else
+    # Unquoted on purpose, as with $ALL_CPP above: the file list has to split.
+    # shellcheck disable=SC2086
+    if ! uvx --from shellcheck-py shellcheck --severity=warning $CHANGED_SH \
+         > /tmp/preflight-shellcheck.log 2>&1; then
+        cat /tmp/preflight-shellcheck.log
+        fail "shellcheck (see /tmp/preflight-shellcheck.log)"
+    else
+        ok "shellcheck ($(printf '%s\n' "$CHANGED_SH" | wc -l | tr -d ' ') file(s))"
+    fi
+fi
+
+# ---------- check 6c: actionlint (changed workflows) -----------------
+#
+# Catches the GitHub Actions mistakes that only show up as a red run: bad
+# `needs:` references, unknown contexts, deprecated runner images, and broken
+# shell inside `run:` blocks (through shellcheck, see below).
+#
+# Note for anyone editing the comments here: a line starting with the word
+# "shellcheck" after the # is parsed as a shellcheck directive, and an
+# unparseable one is an SC1073 error. Keep the word off the start of a comment.
+step "actionlint (changed workflows)"
+if skip_check actionlint; then
+    skip "actionlint" "--skip=actionlint"
+elif [ -z "$CHANGED_WORKFLOWS" ]; then
+    skip "actionlint" "no workflow files in diff"
+elif ! command -v uvx >/dev/null 2>&1; then
+    skip "actionlint" "uvx not on PATH"
+else
+    # --with shellcheck-py is load-bearing, not a nicety.  actionlint shells out
+    # to a shellcheck BINARY to lint `run:` blocks, and silently lints none of
+    # them when there is no such binary on PATH: a workflow whose shell is
+    # plainly broken then exits 0.  Verified both ways before relying on it.
+    #
+    # SHELLCHECK_OPTS matches the severity floor of the check above, so touching
+    # a workflow does not fail on style findings in steps you did not write.
+    # Confirmed it filters rather than disables: a warning-level bug in a `run:`
+    # block still fails with it set.  (Some warnings legitimately disappear
+    # regardless, because actionlint prepends `set -e` as Actions does, under
+    # which SC2164 and friends are dropped by design.)
+    # shellcheck disable=SC2086
+    if ! SHELLCHECK_OPTS="--severity=warning" \
+         uvx --with shellcheck-py --from actionlint-py actionlint $CHANGED_WORKFLOWS \
+         > /tmp/preflight-actionlint.log 2>&1; then
+        cat /tmp/preflight-actionlint.log
+        fail "actionlint (see /tmp/preflight-actionlint.log)"
+    else
+        ok "actionlint ($(printf '%s\n' "$CHANGED_WORKFLOWS" | wc -l | tr -d ' ') file(s))"
     fi
 fi
 
