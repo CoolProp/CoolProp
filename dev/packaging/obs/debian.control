@@ -1,0 +1,54 @@
+Source: coolprop
+Section: libs
+Priority: optional
+Maintainer: CoolProp developers <coolprop@coolprop.org>
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.14),
+               g++,
+               pkg-config,
+               python3
+Standards-Version: 4.7.0
+Homepage: https://www.coolprop.org
+Rules-Requires-Root: no
+
+Package: libcoolprop8
+Section: libs
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: thermophysical property library for fluids and humid air
+ CoolProp implements pure and pseudo-pure fluid equations of state and
+ transport properties for 122 components, mixture properties using
+ high-accuracy Helmholtz energy formulations, correlations of incompressible
+ fluids and brines, and psychrometric routines for humid air.
+ .
+ This package contains the shared library.  The fluid data is compiled into
+ the binary, so there is no separate data package and nothing to configure at
+ runtime.
+ .
+ Note on dependencies: the library calls dlopen(), which needs no explicit
+ dependency because libc6 provides it and ${shlibs:Depends} picks that up.
+ The 2014 packaging attempt listed a package called "dl" here, which does not
+ exist and made the package uninstallable.
+
+Package: libcoolprop-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: libcoolprop8 (= ${binary:Version}),
+         ${misc:Depends},
+         libeigen3-dev,
+         libfmt-dev
+Description: thermophysical property library for fluids and humid air (development)
+ CoolProp implements pure and pseudo-pure fluid equations of state and
+ transport properties for 122 components, mixture properties using
+ high-accuracy Helmholtz energy formulations, correlations of incompressible
+ fluids and brines, and psychrometric routines for humid air.
+ .
+ This package contains the headers, the pkg-config file and the CMake package
+ configuration.  Use <CoolProp/CoolProp.h> for the C++ API or
+ <CoolProp/CoolPropLib.h> for the C API.
+ .
+ The C++ headers are not self-contained: they include Eigen and fmt, hence the
+ dependencies on libeigen3-dev and libfmt-dev.  See README.md in
+ dev/packaging/ for the version-skew caveat that comes with that.

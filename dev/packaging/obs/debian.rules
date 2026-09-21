@@ -1,0 +1,26 @@
+#!/usr/bin/make -f
+#
+# Debian packaging rules for CoolProp, built on the openSUSE Build Service.
+# See dev/packaging/README.md in the CoolProp source tree.
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@ --buildsystem=cmake
+
+override_dh_auto_configure:
+	# dh's cmake buildsystem already passes CMAKE_INSTALL_PREFIX=/usr and the
+	# multiarch CMAKE_INSTALL_LIBDIR, which COOLPROP_SYSTEM_INSTALL then uses.
+	# COOLPROP_REQUIRE_VENDORED_DEPS makes the configure step fail loudly if
+	# anything would have to be downloaded, which it cannot do in the build
+	# chroot anyway.
+	dh_auto_configure -- \
+		-DCOOLPROP_SHARED_LIBRARY=ON \
+		-DCOOLPROP_SYSTEM_INSTALL=ON \
+		-DCOOLPROP_REQUIRE_VENDORED_DEPS=ON \
+		-DCOOLPROP_NO_EXAMPLES=ON
+
+override_dh_auto_test:
+	# The Catch2 suite is not built here: BUILD_TESTING is off, and the test
+	# data would make the source package considerably larger.  CoolProp's own
+	# CI runs the suite on every commit.
