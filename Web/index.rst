@@ -105,17 +105,12 @@ Supporters
    :alt: Herrick
    :target: https://engineering.purdue.edu/Herrick/index.html
 
-.. image:: _static/logo_maplesoft.png
-   :height: 100px
-   :alt: Maple
-   :target: https://www.maplesoft.com
-
 \
 
 .. image:: _static/logo_dtu_mekanik.png
    :height: 50px
    :alt: DTU Mechanical Engineering - Section for Thermal Energy
-   :target: https://www.mek.dtu.dk/english/Sections/TES
+   :target: https://construct.dtu.dk/Sections/thermal-energy
 
 
 License Information
