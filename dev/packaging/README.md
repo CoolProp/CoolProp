@@ -228,8 +228,15 @@ So:
    freshly-made offline tarball, with the network blocked, on every push that
    touches the build system or this directory.  If dependency handling regresses,
    that job goes red on the commit that caused it, not months later.
-2. The release workflow should build the tarball, attach it to the GitHub
-   release, and push it to OBS with `osc`.  Version numbers appear in four
+2. The `prepare_sources` job in `.github/workflows/release_all_files.yml`
+   builds the tarball as a second output alongside the existing
+   `CoolProp_sources.zip`, so both land in `binaries/source/` and get rsynced
+   to SourceForge with everything else.  That zip is not a substitute: it has
+   no vendored dependencies (so it cannot build in a chroot), unpacks as
+   `source/` rather than `coolprop-<version>/`, carries no version in its name
+   and is not reproducible.
+3. Still to wire up: pushing the tarball to OBS with `osc` from that same job,
+   and attaching it to the GitHub release.  Version numbers appear in four
    places that must agree, so have CI rewrite them rather than a human:
    `coolprop.spec` (`Version:`), `coolprop.dsc` (`Version:`, `Files:`),
    `debian.changelog` (top entry) and `_service`.  OBS's `set_version` service
@@ -237,7 +244,7 @@ So:
    `dpkg-source` rejects a changelog version that does not match the tarball,
    which is one of the things that would have stopped the 2014 scripts even if
    their version parser had worked.
-3. Never let a packaging check fail open.  `vendor-deps.sh` aborts if CPM
+4. Never let a packaging check fail open.  `vendor-deps.sh` aborts if CPM
    reports no packages at all rather than declaring an empty tree vendored, and
    `make-release-tarball.sh` asserts that each version component it parsed is a
    number instead of building `coolprop_..orig.tar.gz` the way the 2014 script

@@ -230,6 +230,25 @@ jobs:
         ref: ${{ needs.set_vars.outputs.branch }}
         path: source
         
+    # The offline tarball the Linux distribution packaging consumes (GH #3388).
+    # It is a second output of this job rather than a job of its own, so there
+    # stays one place that prepares sources for a release.
+    #
+    # It differs from CoolProp_sources.zip below in the ways a build chroot
+    # cares about: it carries every CPM dependency under externals/cpm/, so it
+    # configures with no network; it unpacks as coolprop-<version>/, which is
+    # what dpkg-source and %autosetup expect; and it is reproducible, so the
+    # checksum OBS pins does not change when the same revision is rebuilt.
+    #
+    # Runs before the step below, which deletes the .git directory that
+    # make-release-tarball.sh needs for git archive.  It works on its own
+    # temporary copy, so it leaves source/ untouched for the zip.
+    - name: Build the offline packaging tarball
+      run: |
+        mkdir -p binaries/source
+        source/dev/packaging/make-release-tarball.sh \
+          --output-dir "${GITHUB_WORKSPACE}/binaries/source"
+
     - name: Update the headers
       run: |
         pushd source

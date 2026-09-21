@@ -92,7 +92,27 @@ git -C "${repo_root}" archive --format=tar "${commit}" | tar -x -C "${stage}"
 echo "${commit}" > "${stage}/dev/gitrevision.txt"
 
 echo "==> Vendoring dependencies into the export"
+
+# Keep CPM's download cache out of the export.  cmake/dependencies.cmake means
+# to default it to <repo>/.cpm_cache, which would put a second copy of every
+# dependency inside the tarball; pointing it at the work directory makes that
+# impossible rather than relying on it to stay away.
+export CPM_SOURCE_CACHE="${work_dir}/cpm-cache"
+
 "${stage}/dev/packaging/vendor-deps.sh"
+
+# Ship the source, not somebody's build directory.  Fail rather than quietly
+# tar up leftovers that would inflate the archive and confuse dpkg-source.
+# The parentheses are load-bearing: without them -maxdepth would apply only to
+# the first -name and the other branches would search the whole tree.
+strays="$(find "${stage}" -maxdepth 1 \
+    \( -name '.cpm_cache' -o -name 'install_root' -o -name 'build*' -o -name 'dist' \) \
+    -printf '%f\n')"
+if [[ -n "${strays}" ]]; then
+    echo "error: build leftovers found in the export, refusing to ship them:" >&2
+    echo "${strays}" >&2
+    exit 1
+fi
 
 echo "==> Creating the tarball"
 mkdir -p "${output_dir}"
