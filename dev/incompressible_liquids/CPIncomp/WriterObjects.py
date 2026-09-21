@@ -15,6 +15,7 @@ import numpy as np
 import copy
 import hashlib, os, json, sys
 import itertools
+import math
 import csv, codecs
 from warnings import warn
 
@@ -52,6 +53,39 @@ def ensure_parent_directory(path):
         # exist_ok rather than a prior exists() check: the check-then-create
         # pair races two concurrent report runs against each other.
         os.makedirs(directory, exist_ok=True)
+
+
+SIGNIFICANT_DIGITS = 7
+
+
+def roundToSignificantDigits(value, digits=SIGNIFICANT_DIGITS):
+    """Round a single number to a fixed count of significant digits.
+
+    Python's round() takes a number of decimal places, so the exponent has to
+    be taken out first: -3 decimals for a value near 1e4, +10 for one near
+    1e-4. Non-finite values, zero and anything that is not a number are
+    returned untouched.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float, np.floating, np.integer)):
+        return value
+    value = float(value)
+    if value == 0.0 or not np.isfinite(value):
+        return value
+    return round(value, digits - int(math.floor(math.log10(abs(value)))) - 1)
+
+
+def roundNestedNumbers(obj, digits=SIGNIFICANT_DIGITS):
+    """Apply roundToSignificantDigits to every number in a nested structure.
+
+    Walks dicts and lists and leaves everything else (strings, None, the
+    literal "null" placeholder) alone, so it can be applied to a whole fluid
+    dict just before it is serialised.
+    """
+    if isinstance(obj, dict):
+        return dict((k, roundNestedNumbers(v, digits)) for k, v in obj.items())
+    if isinstance(obj, (list, tuple)):
+        return [roundNestedNumbers(v, digits) for v in obj]
+    return roundToSignificantDigits(obj, digits)
 
 
 class SolutionDataWriter(object):
@@ -288,7 +322,9 @@ class SolutionDataWriter(object):
         conductivity = 0 W/m/K, LiBr viscosity = exp(0) = 1 Pa.s (GitHub
         #1331) and LiBr/MITSW T_freeze = exp(700/(x-60) - 10) ~ 0 K (GitHub
         #2567). Resetting the property to "not defined" makes the backend
-        throw a clear "function type is not specified" error instead.
+        throw instead, naming the fluid and the property:
+        'INCOMP::<name> does not define <property>: no fit for this property
+        is shipped in its fluid data'.
         """
         knownGuesses = (self.VISCOSITY_GUESS, self.PSAT_GUESS, self.TFREEZE_GUESS, self.LOGEXP_GUESS, self.SECCOOL_VISCOSITY_GUESS)
         properties = ('density', 'specific_heat', 'conductivity', 'viscosity', 'saturation_pressure', 'T_freeze')
@@ -407,7 +443,20 @@ class SolutionDataWriter(object):
             if entry is not None:
                 jobj[prop + '_cheb'] = entry
 
-        dump = json.dumps(jobj, indent=2, sort_keys=True)
+        # The fits carry far more digits than the source data supports (the
+        # SecCool tables are 4-digit), and json.dumps would write all 17 of a
+        # double's decimal digits. Rounding here keeps the committed files
+        # stable: without it, re-running the pipeline on a different
+        # numpy/scipy rewrites every coefficient in every file with
+        # last-digit noise, and a real change cannot be told from that churn.
+        # allow_nan=False: by default json.dumps writes NaN and Infinity as bare
+        # tokens, which are not valid JSON and which the C++ loader has no
+        # reason to accept. clearUnfittedCoefficients scrubs non-finite
+        # *coefficients*, but nothing covers Tbase, xbase, NRMS, Trange or the
+        # Chebyshev blocks, so a non-finite value there would be written out
+        # silently. Raising here is the fail-closed choice: a broken fit stops
+        # the pipeline instead of shipping a file nothing can parse.
+        dump = json.dumps(roundNestedNumbers(jobj), indent=2, sort_keys=True, allow_nan=False)
 
         hashes = self.load_hashes()
         hash = self.get_hash(dump)
@@ -526,10 +575,20 @@ class SolutionDataWriter(object):
     def writeFluidList(self, fluidObjs):
         """Serialize every fluid to its ``json/<name>.json``.
 
-        A ``TypeError``/``ValueError`` from one fluid is reported and skipped,
-        so a clean return does NOT mean every file was written.
+        Every fluid is attempted, so one bad fluid does not hide the state of
+        the rest, but the failures are collected and raised at the end. A
+        normal return therefore means every file really was written.
+
+        This used to log and continue. That was already misleading, and it
+        became a real hazard once toJSON gained ``allow_nan=False``: a
+        non-finite value now raises there, and swallowing it would leave
+        ``json/<name>.json`` missing or holding the previous run's numbers
+        while the pipeline printed "done" and exited 0. Silently shipping a
+        stale coefficient file is the failure mode this whole branch is
+        about, so it must not be reintroduced at the last step.
         """
         print("Writing fluids to JSON:", end="")
+        failures = []
         for obj in fluidObjs:
             self.printStatusID(fluidObjs, obj)
             try:
@@ -538,8 +597,12 @@ class SolutionDataWriter(object):
                 print("An error occurred for fluid: {0}".format(obj.name))
                 print(obj)
                 print(str(e))
-                pass
+                failures.append("{0}: {1}".format(obj.name, e))
         print(" ... done")
+        if failures:
+            raise ValueError(
+                "{0} fluid(s) could not be written; their json/ files are now missing or stale:\n  {1}".format(
+                    len(failures), "\n  ".join(failures)))
         return
 
     def writeReportList(self, fluidObjs, pdfFile=None):
@@ -1405,7 +1468,14 @@ class SolutionDataWriter(object):
         return text
 
     def x(self, number):
-        text = u"{0:3.2f}".format(self.checkForNumber(number))
+        # Three decimals, not two. These are the composition limits published
+        # in the online fluid tables, and users feed them straight back into
+        # set_mass_fractions(). At two decimals the printed limit can land
+        # OUTSIDE the real one -- MAM2 runs to x = 0.236 but was published as
+        # 0.24, so sweeping the documented range raised "Your composition
+        # 0.24 is not between 0.078 and 0.236" (issue #2567). Every limit in
+        # json/ is exact at three decimals, so this rounds nothing away.
+        text = u"{0:5.3f}".format(self.checkForNumber(number))
         return text
 
     def generateTexTable(self, solObjs=[SolutionData()], path="table"):

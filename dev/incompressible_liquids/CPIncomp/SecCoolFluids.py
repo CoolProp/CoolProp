@@ -422,14 +422,44 @@ class SecCoolIceData(SecCoolSolutionData):
         #self.density.xData,self.density.yData,self.density.data = self.getArray(dataID="Rho")
         #self.density.source = self.density.SOURCE_DATA
 
-        self.specific_heat.xData, self.specific_heat.yData, self.specific_heat.data = self.getArray(dataID='Hfusion')
+        # Conductivity and viscosity are also read by SecCoolSolutionData.__init__,
+        # but there each read sits inside a bare try/except.  The Ice*_Cond.csv and
+        # Ice*_Mu.csv files used to be latin-1 encoded, so those reads raised a
+        # UnicodeDecodeError that the bare except swallowed: the properties silently
+        # dropped out of the fit and were written to json/ as "notdefined" (see
+        # issue #3303).  All three grids are re-read here through a helper that
+        # refuses to continue without them, so neither an undecodable file nor a
+        # missing one can quietly turn into a notdefined property again.
+        self.specific_heat.xData, self.specific_heat.yData, self.specific_heat.data = self.getRequiredArray('Hfusion')
         self.specific_heat.source = self.specific_heat.SOURCE_DATA
 
-        #self.conductivity.xData,self.conductivity.yData,self.conductivity.data   = self.getArray(dataID='Cond')
-        #self.conductivity.source = self.conductivity.SOURCE_DATA
+        # Note: the parent applies conductivityFactor/viscosityFactor to these
+        # same grids. SecCoolIceData takes no factor arguments, so re-reading
+        # here changes nothing today, but the two paths would diverge the
+        # moment a factor is added for an ice slurry.
+        self.conductivity.xData, self.conductivity.yData, self.conductivity.data = self.getRequiredArray('Cond')
+        self.conductivity.source = self.conductivity.SOURCE_DATA
 
-        #self.viscosity.xData,self.viscosity.yData,self.viscosity.data   = self.getArray(dataID='Mu')
-        #self.viscosity.source = self.viscosity.SOURCE_DATA
+        self.viscosity.xData, self.viscosity.yData, self.viscosity.data = self.getRequiredArray('Mu')
+        self.viscosity.source = self.viscosity.SOURCE_DATA
+
+    def getRequiredArray(self, dataID):
+        """Read a grid this fluid cannot do without, or raise.
+
+        getArray only raises for a file that exists but cannot be decoded. For
+        a file it cannot find at all it returns (None, None, None) instead.
+        Assigning that None to a property and then marking the property
+        SOURCE_DATA yields an all-zero fit, which clearUnfittedCoefficients
+        turns into "notdefined" -- which is precisely the silent data loss of
+        issue #3303, reached by a different route. So check the result here
+        rather than trusting the read to have thrown.
+        """
+        xData, yData, data = self.getArray(dataID=dataID)
+        if data is None:
+            raise ValueError("{0}: no usable {1} grid at {2}. This fluid requires it; a missing or unreadable "
+                             "file must not silently become a notdefined property (issue #3303).".format(
+                                 self.name, dataID, self.getFile(dataID)))
+        return xData, yData, data
 
 
 #    def fitFluid(self):

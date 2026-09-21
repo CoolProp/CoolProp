@@ -199,3 +199,36 @@ class MITSeaWater(SolutionData):
         self.xmin = np.min(self.concentration.data)
         self.xid = self.ifrac_mass
         self.TminPsat = self.Tmin
+
+        # Freezing temperature, cubic in (x - xbase), no pressure dependence.
+        #
+        # Source: IAPWS-08 seawater formulation, evaluated at 0.1013 MPa over
+        # this fluid's own salinity range (0 to 0.12 mass fraction). Sharqawy
+        # 2010, which supplies every other property here, does not publish a
+        # freezing temperature, and neither does the MIT seawater library, so
+        # there is no same-source option. Requested in issue #2567.
+        #
+        # Why a cubic and not the quintic that fits better: the true freezing
+        # point of PURE water at 1 atm is 273.1525 K, because 273.15 K (0 degC)
+        # is the air-saturated ice point. IAPWS-08 returns the true value, so
+        # at x = 0 the real freeze curve sits 2.5 mK ABOVE this fluid's own
+        # Tmin of 273.15 K. IncompressibleFluid::checkT throws when
+        # T < T_freeze, so a curve crossing Tmin would start rejecting PropsSI
+        # calls at exactly T = Tmin and zero salinity, which work today. A
+        # quintic lands 0.7 mK above Tmin there; the cubic smooths that corner
+        # and stays about 7 mK below Tmin across the whole range, even after
+        # the writer rounds it to 7 significant digits.
+        #
+        # The cost is honest and small: the shipped curve reads about 10 mK
+        # low at zero salinity and is within 10 mK of IAPWS-08 elsewhere.
+        # test_writer_output.py pins both the agreement with IAPWS-08 and the
+        # stays-below-Tmin property against a committed reference table.
+        #
+        # This does NOT widen the usable range. The Sharqawy correlations stop
+        # at 0 degC so Tmin is unchanged, and T_freeze is below it everywhere,
+        # so it never binds in checkT. What it buys is that
+        # trivial_keyed_output(iT_freeze) returns a real number rather than
+        # raising.
+        self.T_freeze.source = self.T_freeze.SOURCE_COEFFS
+        self.T_freeze.type = self.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
+        self.T_freeze.coeffs = np.array([[269.7524, -62.34556, -123.0204, -428.2232]])
