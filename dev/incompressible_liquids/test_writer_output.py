@@ -163,7 +163,13 @@ def test_write_fluid_list_raises_when_a_fluid_cannot_be_serialised(monkeypatch, 
         def __init__(self, name):
             self.name = name
 
-    fluids = [FakeFluid("GoodOne"), FakeFluid("BadOne")]
+    # BadOne comes FIRST on purpose. With the healthy fluid first, a fail-fast
+    # writeFluidList that re-raised immediately would still have written
+    # GoodOne before raising, and the assertions below would pass -- the test
+    # would then be pinning "it raises" without pinning "it keeps going".
+    # Putting the failure first means only an implementation that continues
+    # past it can reach GoodOne at all.
+    fluids = [FakeFluid("BadOne"), FakeFluid("GoodOne")]
     written = []
 
     def fakeToJSON(data, quiet=False):
@@ -177,5 +183,8 @@ def test_write_fluid_list_raises_when_a_fluid_cannot_be_serialised(monkeypatch, 
     with pytest.raises(ValueError, match="BadOne"):
         writer.writeFluidList(fluids)
 
-    # The good fluid is still attempted: one bad fluid must not mask the rest.
-    assert written == ["GoodOne"]
+    # This is the assertion that distinguishes aggregation from fail-fast, and
+    # it must not rely on the raised message happening to name the fluid.
+    assert written == ["GoodOne"], (
+        "the healthy fluid after the failure was not written, so writeFluidList "
+        "stopped at the first error instead of attempting every fluid")
