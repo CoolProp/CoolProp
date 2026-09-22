@@ -71,7 +71,7 @@ get caught locally.
 
 ---
 
-## bd in ephemeral containers — bootstrap-beads.sh, bd-shim.sh, beads-install.sh, beads-lib.sh
+## bd in ephemeral containers: bootstrap-beads.sh, bd-shim.sh, beads-install.sh, beads-lib.sh
 
 Four small scripts make `bd` (the beads issue tracker) usable in Claude Code
 web/CI containers, which start from a fresh clone with no `bd` binary and no
@@ -79,7 +79,7 @@ database, **without making every session wait for the install**.
 
 | Script | When it runs | Cost |
 |---|---|---|
-| `bootstrap-beads.sh` | `SessionStart` hook (`.claude/settings.json`) | ~10 ms — symlinks the shim onto PATH as `bd` and returns |
+| `bootstrap-beads.sh` | `SessionStart` hook (`.claude/settings.json`) | ~10 ms: puts the shim on PATH as `bd` and returns |
 | `bd-shim.sh` | Every `bd` command | ~60 ms resolution + exec, once installed |
 | `beads-install.sh` | First `bd` command only | ~15 s: npm install of `@beads/bd` + `bd init --from-jsonl` |
 | `beads-lib.sh` | sourced by all three | shared resolver, shim detection and readiness probe |
@@ -100,8 +100,8 @@ installer pulls a binary from GitHub Releases, which the agent proxy blocks
 (403).  Building from source is worse than slow, it does not work here: a cgo
 build needs the ICU development headers that `github.com/dolthub/go-icu-regex`
 compiles against (these containers have libicu but not libicu-dev), and a
-`CGO_ENABLED=0` build compiles fine then refuses to run — *"embedded Dolt
-requires a CGO build"* — which is the mode `.beads/metadata.json` selects.  The
+`CGO_ENABLED=0` build compiles fine then refuses to run (*"embedded Dolt
+requires a CGO build"*), which is the mode `.beads/metadata.json` selects.  The
 npm package ships a prebuilt CGO-enabled binary and `registry.npmjs.org` is on
 the proxy allowlist, so it installs in about three seconds.  `go install` is
 kept as a fallback for hosts that have the ICU headers or no npm.
@@ -113,11 +113,24 @@ The install targets a private prefix (`~/.cache/coolprop/beads`), not
 prefixed install is self-contained, survives a wipe-and-retry, needs no root,
 and cannot disturb other globally installed packages.
 
-Environment variables: `BEADS_BOOTSTRAP=1` also warms the setup in the
-background at session start (non-blocking); `BEADS_BOOTSTRAP=0` disables the
-hook; `BEADS_SHIM_NO_INSTALL=1` runs an existing `bd` without ever installing.
+What the `SessionStart` hook actually does is a little more than "symlink":
+it looks for a real `bd` reachable as `bd` on PATH, and if one is there AND the
+database is already hydrated it primes that instead and returns, installing no
+shim.  Otherwise it walks the conventional PATH directories, takes the first
+writable one, and symlinks the shim there - but only over a free name or one of
+our own shims, never over a real `bd` binary that a developer installed by hand.
+
+Environment variables:
+
+| Variable | Default | Effect |
+|---|---|---|
+| `BEADS_BOOTSTRAP` | unset | `1` also warms the setup in the background at session start (non-blocking); `0` disables the hook entirely |
+| `BEADS_SHIM_NO_INSTALL` | unset | `1` runs an existing `bd` but never triggers an install.  Used by the `PreCompact` hook and by the installer's own restore step |
+| `BEADS_LOCK_WAIT` | `300` | Seconds the installer waits for another setup to finish before giving up.  The lock covers install and hydration together |
+| `BEADS_SHIM_DEPTH` | unset | Set and incremented by the shim itself; not for callers.  At depth 1 the shim still resolves and execs `bd` but starts no setup, and above depth 2 it refuses outright.  It is a backstop under the content-based shim detection, which is what actually prevents an exec loop |
+
 The shim also stands down inside git hooks, keyed on the `BD_GIT_HOOK` that
-`.beads/hooks/*` already export — load-bearing, because those hooks guard on
+`.beads/hooks/*` already export - load-bearing, because those hooks guard on
 `command -v bd` and the shim satisfies that guard.  See CLAUDE.md's "`bd` in
 ephemeral (Claude Code web/CI) containers" for that and for the hydration,
 locking and recovery details.
