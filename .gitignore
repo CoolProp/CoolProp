@@ -17,9 +17,9 @@ Web/fluid_properties/fluids/molecule_geometry_status.md
 /.cpm_cache/
 /.cache
 
-# Packaging (GH #3388): vendored dependency sources written by
-# dev/packaging/vendor-deps.sh, and the release tarballs built from them.
-# Both are build products; they ship inside the tarball, not in the repository.
+# Packaging build products (GH #3388): vendored dependency sources and the
+# release tarballs built from them.  Written by dev/packaging/, they ship
+# inside the tarball rather than in the repository.
 /externals/cpm/
 /dist/
 
