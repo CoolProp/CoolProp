@@ -285,3 +285,320 @@ def test_mitsw_freezing_curve_never_crosses_tmin():
     assert values[worstIndex] <= fluid["Tmin"], (
         "T_freeze reaches {0:.6f} K at x = {1:.4f}, above Tmin = {2}. checkT would "
         "reject T = Tmin there.".format(values[worstIndex], xs[worstIndex], fluid["Tmin"]))
+
+
+# ---------------------------------------------------------------------------
+# Two guards for the rounding contract itself.
+#
+# Both exist because an adversarial review of the regeneration found that the
+# contract was asserted in comments and demonstrated once by hand, with
+# nothing mechanical holding it. Reverting the writer fix entirely, while
+# keeping the regenerated json, left the whole suite green.
+# ---------------------------------------------------------------------------
+
+def _walk_numbers(obj, path=""):
+    """Yield (location, value) for every number anywhere in a fluid dict.
+
+    The location is a slash-separated path with "[]" for a list step, e.g.
+    "/density_cheb/coeffs[][]", so a failure message says which number is
+    wrong rather than only that one is. Booleans are skipped: bool subclasses
+    int, and JSON true/false is not a number.
+    """
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            for r in _walk_numbers(v, path + "/" + str(k)):
+                yield r
+    elif isinstance(obj, (list, tuple)):
+        for v in obj:
+            for r in _walk_numbers(v, path + "[]"):
+                yield r
+    elif isinstance(obj, float) or (isinstance(obj, int) and not isinstance(obj, bool)):
+        yield path, float(obj)
+
+
+# Acetone, Air, Ethanol and Hexane are DigitalFluids generated from the
+# CoolProp HEOS backend, so regenerating them needs a built CoolProp Python
+# package. They predate the rounding and are still committed at full
+# precision. They are excluded here rather than hand-edited, because rounding
+# a polynomial without re-deriving its Chebyshev conversion is exactly the bug
+# this module's other tests exist to catch. The set is pinned below so it can
+# neither grow silently nor go stale once someone regenerates them.
+UNROUNDED_LEGACY_FLUIDS = frozenset({"Acetone", "Air", "Ethanol", "Hexane"})
+
+
+def _digit_cap_offenders(path):
+    """Inspect every number in one file against the rules it must obey.
+
+    Returns (how many numbers were examined, the non-finite ones, the
+    over-precise ones). The two offender lists are kept apart because they
+    are governed by different rules: the legacy files below are exempt from
+    the digit cap, but nothing is ever exempt from being a real number. The
+    count is returned so a caller can tell "nothing was wrong" apart from
+    "nothing was looked at".
+    """
+    from CPIncomp import ChebyshevFits
+
+    with open(path) as fh:
+        fluid = json.load(fh)
+
+    exactCoeffPaths = set()
+    for prop in ChebyshevFits.CALORIC_PROPERTIES:
+        entry = fluid.get(prop + "_cheb")
+        if entry and entry.get("fit_source") in ChebyshevFits.EXACT_FIT_SOURCES:
+            exactCoeffPaths.add("/" + prop + "_cheb/coeffs")
+
+    nonFinite, overPrecise, checked = [], [], 0
+    for where, value in _walk_numbers(fluid):
+        checked += 1
+        # Two ways a committed number can fail to be finite: the bare NaN and
+        # Infinity tokens, which json.load accepts even though they are not
+        # valid JSON, and an ordinary literal such as 1e400 that overflows on
+        # parse. The second is syntactically valid, so only this check sees
+        # it. Either way repr(nan) is "nan", which the digit counter would
+        # score as three significant digits and wave through every cap.
+        if not math.isfinite(value):
+            nonFinite.append("{0}: {1!r} is not finite".format(where, value))
+            continue
+        cap = (ChebyshevFits.EXACT_CONVERSION_DIGITS
+               if where.replace("[]", "") in exactCoeffPaths else SIGNIFICANT_DIGITS)
+        if _significant_digits(value) > cap:
+            overPrecise.append("{0}: {1!r} has {2} significant digits, cap {3}".format(
+                where, value, _significant_digits(value), cap))
+    return checked, nonFinite, overPrecise
+
+
+def test_unrounded_legacy_files_are_exactly_the_known_set():
+    """The exemption list must match reality, in both directions.
+
+    If a fifth file starts shipping full-precision numbers this fails, and if
+    one of the four is finally regenerated this also fails, prompting its
+    removal from the list. An exemption nobody revisits is how a temporary
+    carve-out becomes permanent.
+    """
+    offenderPaths = {}
+    for path in JSON_PATHS:
+        _, _, overPrecise = _digit_cap_offenders(path)
+        if overPrecise:
+            offenderPaths[os.path.splitext(os.path.basename(path))[0]] = overPrecise
+
+    assert set(offenderPaths) == set(UNROUNDED_LEGACY_FLUIDS), (
+        "files exceeding the digit cap are {0}, expected exactly {1}".format(
+            sorted(offenderPaths), sorted(UNROUNDED_LEGACY_FLUIDS)))
+
+    # Set equality alone is too coarse. A legacy file that has been HALF
+    # regenerated -- polynomial rounded to 7 digits, Chebyshev conversion
+    # left at 17 -- still has offenders, so it stays in the set and this
+    # test stays green while carrying exactly the inconsistency the writer
+    # fix exists to prevent. A file that predates the rounding entirely has
+    # over-precise numbers outside its *_cheb blocks too; require that.
+    for name, offenders in sorted(offenderPaths.items()):
+        outsideCheb = [o for o in offenders if "_cheb" not in o]
+        assert outsideCheb, (
+            "{0} is over the cap only inside its Chebyshev entries, which is "
+            "what a half-regenerated file looks like: its polynomial has been "
+            "rounded but the conversion derived from it has not. Regenerate "
+            "the fluid, or work out why only the conversion is stale.".format(name))
+
+
+@pytest.mark.parametrize("path", JSON_PATHS,
+                         ids=lambda p: os.path.splitext(os.path.basename(p))[0])
+def test_committed_numbers_respect_the_digit_cap(path):
+    """No committed number may carry more digits than its rule allows.
+
+    The rounding exists so that regenerating json/ on a different numpy or
+    scipy does not rewrite every coefficient in every file. That property is
+    only real if it holds for the FILES, not just for the helper: a value
+    added to the writer's dict after the rounding pass would ship at 17
+    digits and nothing would notice. This is the check that notices.
+
+    One documented exception: an exact Chebyshev conversion is held to
+    ChebyshevFits.EXACT_CONVERSION_TOLERANCE against the polynomial it comes
+    from, which 7 digits cannot deliver, so it gets EXACT_CONVERSION_DIGITS.
+    """
+    checked, nonFinite, overPrecise = _digit_cap_offenders(path)
+
+    # A fluid file always carries numbers; zero would mean this walked nothing.
+    assert checked > 0, "no numbers found in {0}".format(path)
+
+    # Finiteness is checked BEFORE the legacy skip, and for every file. The
+    # exemption below is from the digit cap only: a legacy file is allowed to
+    # be over-precise, never to carry a value that is not a number. Skipping
+    # first left the four legacy files with no finiteness check at all, since
+    # test_json_sanity.py's finite check walks only the six property blocks
+    # and would not see a Chebyshev entry, Tbase, Trange, xbase or NRMS.
+    assert not nonFinite, "{0}:\n  {1}".format(
+        os.path.basename(path), "\n  ".join(nonFinite[:10]))
+
+    if os.path.splitext(os.path.basename(path))[0] in UNROUNDED_LEGACY_FLUIDS:
+        pytest.skip("legacy full-precision file; its digit cap is pinned by "
+                    "test_unrounded_legacy_files_are_exactly_the_known_set")
+
+    assert not overPrecise, "{0}:\n  {1}".format(
+        os.path.basename(path), "\n  ".join(overPrecise[:10]))
+
+
+def _cheb_minus_poly(entry, poly_coeffs, Tbase, xmin, xmax):
+    """Worst relative gap between a Chebyshev entry and a centered polynomial.
+
+    Both describe the same property, so on the fit domain they must agree.
+    The difference of the two is itself a polynomial, so sampling it on a
+    lattice is enough PROVIDED there are more samples than its degree in
+    each direction, which is what the sample counts below are for.
+    """
+    from numpy.polynomial import chebyshev as ncheb
+
+    Trange, xbase = entry["Trange"], entry["xbase"]
+    M = np.array(entry["coeffs"], dtype=float)
+    P = np.atleast_2d(np.array(poly_coeffs, dtype=float))
+    # Degrees are (rows - 1) in T and (columns - 1) in x; two extra samples
+    # beyond "just determined" in each direction, and never fewer than the
+    # counts this started with.
+    nT = max(25, M.shape[0] + 2, P.shape[0] + 2)
+    nx = max(5, M.shape[1] + 2, P.shape[1] + 2)
+    Ts = np.linspace(Trange[0], Trange[1], nT)
+    u = (2.0 * Ts - (Trange[1] + Trange[0])) / (Trange[1] - Trange[0])
+
+    worst = 0.0
+    for x in np.linspace(xmin, xmax, nx):
+        a = np.array([sum(M[i, j] * (x - xbase) ** j for j in range(M.shape[1]))
+                      for i in range(M.shape[0])])
+        cheb = ncheb.chebval(u, a)
+        poly = sum(P[i, j] * (Ts - Tbase) ** i * (x - xbase) ** j
+                   for i in range(P.shape[0]) for j in range(P.shape[1]))
+        gap = float(np.max(np.abs(cheb - poly) / np.maximum(np.abs(poly), 1e-30)))
+        # max(0.0, nan) is 0.0 -- Python compares nan > 0.0, gets False, and
+        # keeps the running value. A NaN anywhere would therefore be reported
+        # as perfect agreement, so it has to be caught rather than compared.
+        if not math.isfinite(gap):
+            raise AssertionError(
+                "non-finite gap at x = {0!r}: the conversion or the "
+                "polynomial evaluated to NaN or infinity".format(float(x)))
+        worst = max(worst, gap)
+    return worst
+
+
+# Fluids used by the writer test below. They must be ones whose caloric
+# polynomials are least-squares FITS, because only then does the 7-digit
+# rounding actually change the coefficients. The Melinder fluids (MEG and
+# friends) carry book coefficients that already fit in 7 digits, so rounding
+# them is a no-op and the ordering bug is invisible on them -- an earlier
+# version of this test used MEG and passed with the bug reinstated.
+WRITER_TEST_FLUIDS = ("TVP1869", "ZMC")
+
+
+def test_writer_keeps_basis_conversions_exact_against_what_it_serialises(monkeypatch, tmp_path):
+    """Drive the writer and check the SERIALISED polynomial, not the file.
+
+    test_chebyshev_entries.py checks the same invariant, but only by reading
+    json/. That cannot see a writer that has stopped producing it: reverting
+    this fix and keeping the regenerated files leaves the suite green. The
+    bug it protects against is an ordering one, so it only appears when the
+    writer actually runs.
+
+    A basis conversion is exact with respect to the polynomial it is derived
+    from. If the writer derives it from the full-precision polynomial in
+    memory and rounds that polynomial afterwards, the two committed
+    representations disagree by ~1e-7 even though each is individually fine.
+    """
+    from CPIncomp import ChebyshevFits
+    from add_chebyshev_entries import collect_fluid_objects
+
+    objects = collect_fluid_objects()
+    writer = SolutionDataWriter()
+
+    targets = []
+    for name in WRITER_TEST_FLUIDS:
+        if name not in objects:
+            pytest.fail("WRITER_TEST_FLUIDS names {0}, which no fluid getter "
+                        "produces any more; pick a current fluid whose caloric "
+                        "polynomials are fitted".format(name))
+        target = objects[name]
+        writer.fitFluidList([target])
+        # toJSON ends by reloading the written file into the object, which
+        # replaces these with their rounded selves, so snapshot them now.
+        # A property with no fit has coeffs = None, and np.array(None) is
+        # NaN rather than an error, so keep only the real ones.
+        unrounded = {}
+        for prop in ChebyshevFits.CALORIC_PROPERTIES:
+            coeffs = getattr(target, prop).coeffs
+            if coeffs is not None:
+                unrounded[prop] = np.atleast_2d(np.array(coeffs, dtype=float))
+        targets.append((target, unrounded))
+
+    # toJSON writes json/<name>.json relative to the current directory, so
+    # running this from the repo root used to drop a stray json/ into the
+    # working tree.
+    monkeypatch.chdir(tmp_path)
+
+    # The hash cache is NOT cwd-relative: get_hash_file resolves it next to
+    # the CPIncomp package, so chdir does not isolate it. Left alone, this
+    # test stamps the hash of a fluid it wrote into a temp directory over the
+    # entry for the committed file. On a machine where the refit differs at
+    # all -- the numpy drift this whole rounding contract is about -- a later
+    # real pipeline run would then see a matching hash and an existing file,
+    # skip that fluid, and report it as unchanged.
+    monkeypatch.setattr(writer, "get_hash_file",
+                        lambda: str(tmp_path / "hashes.json"))
+
+    compared, sensitive = 0, 0
+    for target, unrounded in targets:
+        captured = {}
+        realGetHash = writer.get_hash
+
+        def captureDump(dump, _captured=captured, _real=realGetHash):
+            """Stand in for get_hash to grab the text the writer serialises.
+
+            get_hash is the first thing toJSON does with its finished dump,
+            so this sees exactly what would be committed. The defaults bind
+            this iteration's values rather than the loop variables.
+            """
+            _captured["dump"] = dump
+            return _real(dump)
+
+        writer.get_hash = captureDump
+        try:
+            writer.toJSON(target, quiet=True)
+        finally:
+            writer.get_hash = realGetHash
+
+        assert "dump" in captured, "the writer did not serialise anything"
+        fluid = json.loads(captured["dump"])
+        Tbase = float(fluid.get("Tbase", 0.0) or 0.0)
+
+        for prop in ChebyshevFits.CALORIC_PROPERTIES:
+            entry = fluid.get(prop + "_cheb")
+            committed = fluid.get(prop, {})
+            if (entry is None
+                    or entry.get("fit_source") not in ChebyshevFits.EXACT_FIT_SOURCES
+                    or committed.get("type") != "polynomial"):
+                continue
+
+            gap = _cheb_minus_poly(entry, committed["coeffs"], Tbase,
+                                   fluid["xmin"], fluid["xmax"])
+            assert gap < ChebyshevFits.EXACT_CONVERSION_TOLERANCE, (
+                "{0} {1}: conversion disagrees with the committed polynomial "
+                "by {2:.2e}".format(fluid["name"], prop, gap))
+            compared += 1
+
+            # Non-vacuity, measured rather than assumed: would the WRONG
+            # order (convert from the unrounded fit, round the polynomial
+            # afterwards) actually be caught here? If not, this property
+            # proves nothing and must not be counted. Not counting fails the
+            # test, so a missing snapshot is fail-closed.
+            if prop not in unrounded:
+                continue
+            wrongOrder = ChebyshevFits.convert_polynomial(
+                unrounded[prop], Tbase, entry["xbase"], entry["Trange"])
+            if _cheb_minus_poly(dict(entry, coeffs=wrongOrder.tolist()),
+                                committed["coeffs"], Tbase,
+                                fluid["xmin"], fluid["xmax"]) \
+                    >= ChebyshevFits.EXACT_CONVERSION_TOLERANCE:
+                sensitive += 1
+
+    assert compared > 0, ("no exact Chebyshev conversion was produced, so this "
+                          "test checked nothing; pick fluids that produce one")
+    assert sensitive > 0, (
+        "none of {0} has a caloric polynomial that the 7-digit rounding "
+        "actually changes, so this test would pass with the ordering bug "
+        "reinstated; pick fluids whose polynomials are fitted, not "
+        "tabulated".format(list(WRITER_TEST_FLUIDS)))
