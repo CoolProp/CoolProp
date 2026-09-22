@@ -2,28 +2,82 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: CoolProp
 Upstream-Contact: CoolProp developers <coolprop@coolprop.org>
 Source: https://github.com/CoolProp/CoolProp
-Comment: This file covers the contents of the offline release tarball produced
- by dev/packaging/make-release-tarball.sh, which is a git archive of the
+Comment: INCOMPLETE - DO NOT SUBMIT TO A DISTRIBUTION ARCHIVE AS IS.
+ .
+ This file covers the offline release tarball produced by
+ dev/packaging/make-release-tarball.sh, which is a git archive of the whole
  upstream tree plus pre-vendored third-party sources under externals/cpm/.
- The vendored trees are NOT enumerated individually below.  Their licences are
- not uniform and not all of them are MIT: Eigen in particular is MPL-2.0.  Each
- vendored tree ships its own licence file, and the stanza below points at them
- rather than restating terms that could drift from what is actually shipped.
- Enumerating them per dependency is required before any submission to a
- distribution archive; see dev/packaging/README.md.
+ .
+ Two gaps are known and deliberate rather than overlooked:
+ .
+ 1. The third-party code carried in git has been enumerated only as far as a
+ grep for copyright notices reached.  The stanzas below are each verified
+ against the file they name, but the SET is not proven complete, so
+ "Files: *" may still cover third-party code that is not MIT.  A full
+ licensecheck(1) pass over an unpacked tarball is required before this file
+ can be trusted.
+ .
+ 2. The sources vendored under externals/cpm/ are not enumerated per
+ dependency.  Their licences are not uniform and not all are MIT: Eigen is
+ MPL-2.0, which is more restrictive.  The stanza for them points at the
+ licence file inside each tree rather than restating terms that could drift.
+ .
+ See dev/packaging/README.md for what closing these requires.
 
 Files: *
 Copyright: 2012-2018 Ian H. Bell and other CoolProp developers
+License: MIT
+Comment: Covers CoolProp's own code.  See gap 1 in the header comment: this
+ stanza is a default, not an audited claim over every remaining path.
+
+Files: wrappers/Modelica/src/*
+Copyright: 2006-2012 Politecnico di Milano, TU Braunschweig,
+           Politecnico di Torino
+License: Modelica-2
+Comment: The ExternalMedia library.  Stated in
+ wrappers/Modelica/src/documentation.h: "Licensed by the Modelica Association
+ under the Modelica License 2".
+
+Files: dev/cmake/Modules/FindSharedPtr.cmake
+Copyright: 2015 Google Inc.
+License: BSD-3-Clause
+Comment: Taken from Ceres Solver; the terms are in the file's own header.
+
+Files: dev/cmake/Modules/FindOctave.cmake
+Copyright: 2013 Julien Schueller
+License: BSD-2-Clause
+Comment: The terms are in the file's own header.
+
+Files: dev/cmake/Modules/FindCsharp.cmake
+       dev/cmake/Modules/FindMono.cmake
+       dev/cmake/Modules/FindDotNetFrameworkSdk.cmake
+Copyright: 2006-2010 Mathieu Malaterre <mathieu.malaterre@gmail.com>
+License: BSD-3-Clause
+Comment: Derived from GDCM.  The terms are in each file's own header.
+
+Files: wrappers/Lua/lualib.mk
+Copyright: 2013-2015 Craig Barnes
+License: ISC
+Comment: The terms are in the file's own header.
+
+Files: wrappers/MATLAB/*
+Copyright: 2017 Iliya Romm
 License: MIT
 
 Files: externals/incbin/*
 Copyright: 2015-2021 Dale Weiler
 License: Unlicense
+Comment: externals/incbin/ carries no copyright line of its own - incbin.h
+ names Dale Weiler as author and UNLICENSE disclaims copyright.  The years are
+ taken from upstream repository history, not from the shipped files.
 
 Files: externals/miniz-3.1.1/*
 Copyright: 2013-2014 RAD Game Tools and Valve Software
            2010-2014 Rich Geldreich and Tenacious Software LLC
+           2016 Martin Raiber
 License: MIT
+Comment: Part of miniz.c additionally carries a public-domain dedication; the
+ MIT terms in externals/miniz-3.1.1/LICENSE cover the tree as shipped.
 
 Files: cmake/CPM.cmake
 Copyright: 2019-2023 Lars Melchior and contributors
@@ -38,9 +92,10 @@ Copyright: the respective upstream authors of each vendored dependency
 License: various
 Comment: Present only in the offline release tarball, not in the git tree.
  Each dependency keeps its own licence file inside externals/cpm/<name>/.
- Known terms as of this writing: Eigen is MPL-2.0 (with some files under
- BSD and other MPL-2.0-compatible licences), msgpack-c and Catch2 are
- BSL-1.0, valijson is BSD-2-Clause, nlohmann_json and fmt are MIT.
+ Terms for six of the ten, as of this writing: Eigen is MPL-2.0 (with some
+ files under BSD and other MPL-2.0-compatible licences), msgpack-c and Catch2
+ are BSL-1.0, valijson is BSD-2-Clause, nlohmann_json and fmt are MIT.  NOT
+ established here: IF97, REFPROP-headers, boost-headers and multicomplex.
 
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -81,6 +136,32 @@ License: Unlicense
  AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+License: Modelica-2
+ Licensed by the Modelica Association under the Modelica License 2.  The full
+ text accompanies the ExternalMedia sources; see wrappers/Modelica/src/ and
+ https://www.modelica.org/licenses/ModelicaLicense2 .  Note this is NOT an
+ MIT-style permissive licence.
+
+License: BSD-3-Clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the conditions stated in the header
+ of each covered file are met, including retention of the copyright notice and
+ the disclaimer, and no use of the copyright holder's name to endorse derived
+ products without permission.  The authoritative text is the header of each
+ covered file.
+
+License: BSD-2-Clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the conditions stated in the header
+ of the covered file are met, including retention of the copyright notice and
+ the disclaimer.  The authoritative text is the header of that file.
+
+License: ISC
+ Permission to use, copy, modify, and/or distribute this software for any
+ purpose with or without fee is hereby granted, provided that the above
+ copyright notice and this permission notice appear in all copies.  The
+ authoritative text is the header of the covered file.
 
 License: various
  The vendored dependency trees under externals/cpm/ are distributed under

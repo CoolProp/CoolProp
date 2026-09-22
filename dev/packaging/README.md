@@ -131,23 +131,37 @@ be called production-ready.  Until then:
 
 ### Known limitation: `debian.copyright` is not per-dependency yet
 
-`debian.copyright` names the copyright holders and licences for the upstream
-tree and for the third-party code carried in git (`externals/incbin`,
-`externals/miniz-3.1.1`, `cmake/CPM.cmake`, `wrappers/Rust`).  For the sources
-the release tarball vendors under `externals/cpm/`, it points at the licence
-file inside each tree instead of restating the terms.
+`debian.copyright` is **incomplete, and says so in its own header**.  It is
+good enough for our own OBS repositories and is not good enough for a
+distribution archive.  Two gaps:
 
-That is honest but not sufficient for a distribution archive.  Those licences
-are **not uniform and not all MIT** - Eigen is MPL-2.0, msgpack-c and Catch2
-are BSL-1.0, valijson is BSD-2-Clause - so an archive submission needs a
-`Files:` stanza per vendored dependency with its real short name and text.
-Writing one blanket "MIT or compatible" claim over the set would be wrong, and
-a copyright file is the last place to guess.
+**The in-git third-party code is enumerated only as far as a grep reached.**
+The tarball is a `git archive` of the whole tree, and that tree carries code
+under licences other than MIT.  Stanzas exist for the ones found - ExternalMedia
+under `wrappers/Modelica/src/` (**Modelica License 2**, not MIT), the BSD-licensed
+CMake find-modules under `dev/cmake/Modules/` taken from Ceres and GDCM,
+`wrappers/Lua/lualib.mk` (ISC), `wrappers/MATLAB/`, `externals/incbin`,
+`externals/miniz-3.1.1`, `cmake/CPM.cmake` and `wrappers/Rust` - each verified
+against the file it names.  What is *not* established is that the set is
+complete, so `Files: *` may still cover third-party code.  Closing this needs a
+`licensecheck(1)` pass over an unpacked tarball, which is a review task rather
+than a scripted one.
 
-This is a step 6 concern in the GH #3388 staging (archive inclusion), not a
-step 4 one (our own OBS repos), which is why it is recorded rather than done.
-Landing `COOLPROP_USE_SYSTEM_DEPS=ON` shrinks the problem first, since a
+**The vendored sources are not enumerated per dependency.**  For the trees
+under `externals/cpm/`, the file points at the licence inside each rather than
+restating terms that could drift.  Those licences are **not uniform and not all
+MIT** - Eigen is MPL-2.0, msgpack-c and Catch2 are BSL-1.0, valijson is
+BSD-2-Clause, and the terms for IF97, REFPROP-headers, boost-headers and
+multicomplex have not been established at all.  A blanket "MIT or compatible"
+claim over that set would simply be false.
+
+Both are step 6 concerns in the GH #3388 staging (archive inclusion), not step
+4 ones (our own OBS repos), which is why they are recorded rather than done.
+Landing `COOLPROP_USE_SYSTEM_DEPS=ON` shrinks the second one first, since a
 dependency taken from the distribution is not vendored and needs no stanza.
+Narrowing what the tarball ships (a `.gitattributes` `export-ignore` over the
+wrapper trees a distribution build does not compile) would shrink the first,
+and is worth considering on its own merits.
 
 ## Setting up OBS
 

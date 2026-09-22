@@ -124,49 +124,52 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
 # (Do NOT reach for CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT here.  It is
 # set inside project(), so at this point it is always undefined and the test
 # silently sends every default build to /usr/local.)
+# Pick the prefix the user asked for, then normalise it in ONE place.
+#
+# Each branch only chooses a candidate; it does not touch the cache.  The
+# single set(... CACHE PATH ... FORCE) below stores it, and the read-back after
+# it is what keeps COOLPROP_INSTALL_PREFIX equal to CMAKE_INSTALL_PREFIX.  That
+# matters because a PATH cache entry is NORMALISED on the way in -- a trailing
+# slash is dropped, "//" is collapsed, "~" is expanded, backslashes become
+# forward slashes -- while an untyped -D on the command line is not.  Doing it
+# per branch got this wrong twice: a prefix as ordinary as one ending in "/"
+# left the two variables disagreeing, and the four absolute wrapper rules below
+# (VxWorks, MathcadPrime, MathCAD15, LibreOffice) interpolate
+# COOLPROP_INSTALL_PREFIX directly, so they would embed the raw spelling.
 if(DEFINED COOLPROP_INSTALL_PREFIX AND NOT COOLPROP_INSTALL_PREFIX STREQUAL "")
-  message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
-  set(CMAKE_INSTALL_PREFIX
-      ${COOLPROP_INSTALL_PREFIX}
-      CACHE PATH "default install path" FORCE)
+  set(_cp_prefix_candidate "${COOLPROP_INSTALL_PREFIX}")
+  set(_cp_prefix_origin "COOLPROP_INSTALL_PREFIX")
 elseif(NOT DEFINED CACHE{CMAKE_INSTALL_PREFIX} OR CMAKE_INSTALL_PREFIX STREQUAL "")
-  set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
-  message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
-  set(CMAKE_INSTALL_PREFIX
-      ${COOLPROP_INSTALL_PREFIX}
-      CACHE PATH "default install path" FORCE)
+  set(_cp_prefix_candidate "${CMAKE_CURRENT_SOURCE_DIR}/install_root")
+  set(_cp_prefix_origin "the default")
 else()
-  set(COOLPROP_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-  message(
-    STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX} (taken from CMAKE_INSTALL_PREFIX)"
-  )
+  set(_cp_prefix_candidate "${CMAKE_INSTALL_PREFIX}")
+  set(_cp_prefix_origin "CMAKE_INSTALL_PREFIX")
 endif()
 
-# Fail-closed post-condition on the three branches above.
+set(CMAKE_INSTALL_PREFIX
+    ${_cp_prefix_candidate}
+    CACHE PATH "default install path" FORCE)
+set(COOLPROP_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+
+# Fail closed on an empty prefix.
 #
-# Testing each individual bad spelling is a losing game: the real mechanism is
-# that an unquoted ${X} expands to a LIST, and a list of zero elements turns
-# `set(CMAKE_INSTALL_PREFIX ${X} CACHE PATH "..." FORCE)` into a set() with no
-# value, which writes an EMPTY cache entry that project() does not repair.  The
-# emptiness test above closes X="" and nothing else -- X=";" still expands to
-# zero arguments and still lands an empty prefix (measured), and quoting the
-# expansion does not help, because CMake stores an empty PATH entry either way.
-#
-# So assert the property we actually need instead: a non-empty prefix, and the
-# two variables agreeing.  Every branch above establishes both, so this cannot
-# fire for any value a caller legitimately passes; anything that reaches it is
-# a value that would otherwise have installed relative DESTINATIONs to /lib and
-# /include and the wrapper rules straight into the filesystem root.  Stopping
-# the configure is the mild outcome.
-if(CMAKE_INSTALL_PREFIX STREQUAL ""
-   OR NOT CMAKE_INSTALL_PREFIX STREQUAL COOLPROP_INSTALL_PREFIX)
+# The mechanism is not a value that can be enumerated: an unquoted ${X} expands
+# to a LIST, and a list of zero elements turns the set() above into one with no
+# value, writing an EMPTY cache entry that project() does not repair.  X="" and
+# X=";" both do it, through either variable, and quoting does not help because
+# CMake stores an empty PATH entry either way.  An empty prefix sends every
+# relative DESTINATION to /lib and /include and the absolute wrapper rules into
+# the filesystem root, so stopping here is much the milder outcome.  A real
+# path always normalises to a non-empty one, so this cannot fire for one.
+if(CMAKE_INSTALL_PREFIX STREQUAL "")
   message(
     FATAL_ERROR
-      "Install prefix resolution failed: CMAKE_INSTALL_PREFIX='${CMAKE_INSTALL_PREFIX}' "
-      "COOLPROP_INSTALL_PREFIX='${COOLPROP_INSTALL_PREFIX}'.  An empty or inconsistent "
-      "prefix would install into the filesystem root.  Pass a real path, or pass neither "
-      "and take the default.")
+      "Install prefix resolution failed: the prefix taken from ${_cp_prefix_origin} came out "
+      "empty, which would install into the filesystem root.  Pass a real path, or pass "
+      "neither COOLPROP_INSTALL_PREFIX nor CMAKE_INSTALL_PREFIX and take the default.")
 endif()
+message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX} (from ${_cp_prefix_origin})")
 
 #######################################
 #           BUILD OPTIONS             #

@@ -222,49 +222,63 @@ endif()
 if(COOLPROP_REQUIRE_VENDORED_DEPS)
   # Refuse a vendor root that cannot discriminate.
   #
-  # Test the RAW variable for emptiness, not the resolved one: measured on
-  # CMake 3.28, get_filename_component(REALPATH) turns an empty path into
-  # CMAKE_CURRENT_SOURCE_DIR rather than leaving it empty, so a check on the
-  # resolved value never fires.  With the root silently equal to the source
-  # tree, the prefix test below accepts an ordinary in-tree build/_deps/...
-  # download as "vendored" (verified: it matches at position 0) and the gate
-  # passes on exactly the thing it exists to catch.
+  # The check further down is a path-PREFIX test, so the root has to be a
+  # directory that only vendored sources live under.  Three ways it can fail
+  # to be one, all measured on CMake 3.28:
   #
-  # The source and binary directories are rejected for the same reason even
-  # when spelled out in full, and "/" because every path starts with it.  The
-  # macro above happens to abort first in today's code, but a gate must not
-  # depend on another check firing.
-  # Reject ANCESTRY, not equality.  The check below is a path-prefix test, so a
-  # root that merely sits ABOVE the build tree makes every in-tree download
-  # match it -- /tmp, or the parent of the source tree, and so on.  Testing for
-  # equality with the source and binary directories closes two spellings and
-  # leaves the whole class open (measured: with the root at any ancestor of the
-  # build directory, a package downloaded into <build>/_deps/ is accepted and
-  # the gate reports "Offline build verified").
+  #   * Empty.  get_filename_component(REALPATH) turns an empty path into
+  #     CMAKE_CURRENT_SOURCE_DIR rather than leaving it empty, so testing the
+  #     RESOLVED value never fires.  Test the RAW variable.
+  #   * At or ABOVE the source or build tree.  Then every in-tree
+  #     build/_deps/... download matches the prefix at position 0 and the gate
+  #     reports "Offline build verified" on a fully networked build.  Rejecting
+  #     only roots EQUAL to those two directories closes two spellings and
+  #     leaves the class open.
+  #   * INSIDE the build tree, or equal to CPM_SOURCE_CACHE.  Those are where
+  #     downloads land, so a root there makes a downloaded package look
+  #     vendored by construction.
   #
   # Both sides are REALPATH-resolved before comparing, because
   # COOLPROP_VENDORED_DEPS_REAL is resolved while CMAKE_CURRENT_*_DIR keeps
   # whatever spelling the caller used; a source tree reached through a symlink
-  # would otherwise never compare equal.  "/" is kept as its own case purely for
-  # the message: it resolves so that the prefix test below rejects every
-  # package anyway (fail-closed), but saying "at or above the source tree" up
-  # front beats ten confusing per-package errors.
+  # would otherwise never compare equal.  The trailing slash on both operands
+  # is what stops a sibling matching by string alone (/tmp/ven vs /tmp/vendor).
+  # "/" gets its own case purely for the message: it is fail-closed anyway,
+  # but saying so up front beats ten confusing per-package errors.
+  #
+  # The macro above happens to abort first in today's code, on a missing
+  # <root>/<name> directory.  That is not a reason to leave any of this open:
+  # a gate must not depend on another check firing.
   get_filename_component(_cp_src_real "${CMAKE_CURRENT_SOURCE_DIR}" REALPATH)
   get_filename_component(_cp_bin_real "${CMAKE_CURRENT_BINARY_DIR}" REALPATH)
   string(FIND "${_cp_src_real}/" "${COOLPROP_VENDORED_DEPS_REAL}/" _cp_src_under)
   string(FIND "${_cp_bin_real}/" "${COOLPROP_VENDORED_DEPS_REAL}/" _cp_bin_under)
+  string(FIND "${COOLPROP_VENDORED_DEPS_REAL}/" "${_cp_bin_real}/" _cp_in_bin)
+  set(_cp_cache_clash FALSE)
+  if(NOT "${CPM_SOURCE_CACHE}" STREQUAL "")
+    get_filename_component(_cp_cache_real "${CPM_SOURCE_CACHE}" REALPATH)
+    string(FIND "${COOLPROP_VENDORED_DEPS_REAL}/" "${_cp_cache_real}/" _cp_in_cache)
+    if(_cp_in_cache EQUAL 0)
+      set(_cp_cache_clash TRUE)
+    endif()
+  endif()
   if("${COOLPROP_VENDORED_DEPS_DIR}" STREQUAL ""
      OR "${COOLPROP_VENDORED_DEPS_REAL}" STREQUAL ""
      OR "${COOLPROP_VENDORED_DEPS_REAL}" STREQUAL "/"
      OR _cp_src_under EQUAL 0
-     OR _cp_bin_under EQUAL 0)
+     OR _cp_bin_under EQUAL 0
+     OR _cp_in_bin EQUAL 0
+     OR _cp_cache_clash)
     message(
       FATAL_ERROR
         "Offline build requested but COOLPROP_VENDORED_DEPS_DIR ('${COOLPROP_VENDORED_DEPS_DIR}') "
-        "resolves to '${COOLPROP_VENDORED_DEPS_REAL}', which is at or above the source or build "
-        "directory and therefore cannot be told apart from an ordinary in-tree download.  Set it "
-        "to the directory holding the vendored sources (externals/cpm in a release tarball).")
+        "resolves to '${COOLPROP_VENDORED_DEPS_REAL}', which cannot be told apart from an "
+        "ordinary download: it is empty, or at or above the source or build directory, or "
+        "inside the build directory or the CPM source cache.  Set it to the directory holding "
+        "the vendored sources (externals/cpm in a release tarball).  A relative value is "
+        "resolved against the current working directory, not the source tree.")
   endif()
+
   if(NOT CPM_PACKAGES)
     message(
       FATAL_ERROR

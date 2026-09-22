@@ -91,6 +91,32 @@ jobs:
           # root.  Asserting only the three cases above let exactly that through.
           expect_prefix "${RUNNER_TEMP}/pfx-empty-legacy" "${GITHUB_WORKSPACE}/install_root" -DCOOLPROP_INSTALL_PREFIX=
           expect_prefix "${RUNNER_TEMP}/pfx-empty-cmake" "${GITHUB_WORKSPACE}/install_root" -DCMAKE_INSTALL_PREFIX=
+          # Trailing slash, through both variables.  A PATH cache entry is
+          # normalised on the way in and an untyped -D is not, so a prefix as
+          # ordinary as "$PREFIX/" once left the two variables disagreeing and
+          # aborted the configure.  Assert the normalised value.
+          expect_prefix "${RUNNER_TEMP}/pfx-slash-legacy" "/opt/cp" -DCOOLPROP_INSTALL_PREFIX=/opt/cp/
+          expect_prefix "${RUNNER_TEMP}/pfx-slash-cmake" "/usr" -DCMAKE_INSTALL_PREFIX=/usr/
+
+          # A prefix that collapses to nothing must ABORT, not configure.  This
+          # is the other half of the same guard: ";" expands to zero arguments,
+          # which writes an empty prefix that would send every relative
+          # DESTINATION to /lib and /include.
+          expect_configure_failure() {
+            local build="$1"; shift
+            if cmake -S "${GITHUB_WORKSPACE}" -B "${build}" "$@" > "${build}.log" 2>&1; then
+              echo "expected the configure to fail for [$*], but it succeeded" >&2
+              exit 1
+            fi
+            if ! grep -q "Install prefix resolution failed" "${build}.log"; then
+              echo "configure failed for [$*] but not with the prefix guard:" >&2
+              tail -20 "${build}.log" >&2
+              exit 1
+            fi
+            echo "ok: [$*] -> aborted as expected"
+          }
+          expect_configure_failure "${RUNNER_TEMP}/pfx-collapse-legacy" "-DCOOLPROP_INSTALL_PREFIX=;"
+          expect_configure_failure "${RUNNER_TEMP}/pfx-collapse-cmake" "-DCMAKE_INSTALL_PREFIX=;"
 
       - name: Build the offline release tarball
         run: dev/packaging/make-release-tarball.sh --output-dir "${RUNNER_TEMP}/dist"
