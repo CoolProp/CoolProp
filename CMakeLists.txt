@@ -86,11 +86,16 @@ if(COOLPROP_USE_CCACHE
   endif()
 endif()
 
-# Dependency management via CPM.cmake (replaces git submodules).
-# Set CPM_SOURCE_CACHE (e.g. ~/.cache/CPM) to share downloads across worktrees.
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
-
+# NOTE ON POSITION: this block MUST stay above the CPM/dependencies include
+# below.  CPM pulls its packages in with add_subdirectory, and a dependency's
+# own project() call populates CMAKE_INSTALL_PREFIX in the cache as
+# /usr/local.  Run after that and the "did the user ask for a prefix?" test
+# below cannot tell a real -DCMAKE_INSTALL_PREFIX from a dependency's default,
+# takes /usr/local, and the whole release install goes to a system directory
+# (measured in CI: `cmake --build . --target install` tried to write
+# /usr/local/lib/libCatch2.a and failed on permissions).  It does not
+# reproduce where the dependency fetch cannot complete, because then nothing
+# ever calls project() first.
 # CoolProp collects its release artefacts under <source>/install_root, which is
 # what the upload scripts and the wrapper CI jobs expect, so that stays the
 # default.  A prefix the user actually asked for has to win over it though,
@@ -170,6 +175,12 @@ if(CMAKE_INSTALL_PREFIX STREQUAL "")
       "neither COOLPROP_INSTALL_PREFIX nor CMAKE_INSTALL_PREFIX and take the default.")
 endif()
 message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX} (from ${_cp_prefix_origin})")
+
+
+# Dependency management via CPM.cmake (replaces git submodules).
+# Set CPM_SOURCE_CACHE (e.g. ~/.cache/CPM) to share downloads across worktrees.
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
 
 #######################################
 #           BUILD OPTIONS             #
