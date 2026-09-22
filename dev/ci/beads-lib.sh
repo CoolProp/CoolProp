@@ -25,25 +25,6 @@ BEADS_SHIM_MARKER="BEADS-SHIM-IDENTITY-b7f3c1"
 BEADS_NPM_PREFIX="${XDG_CACHE_HOME:-${HOME:-/tmp}/.cache}/coolprop/beads"
 BEADS_NPM_BIN="${BEADS_NPM_PREFIX}/node_modules/.bin"
 
-# Resolve a path through symlinks.  `readlink -f` is coreutils and absent on
-# BSD/macOS, hence the bounded manual walk.
-beads_realpath() {
-    _brp="$1"
-    if command -v readlink >/dev/null 2>&1 && readlink -f "$_brp" 2>/dev/null; then
-        return 0
-    fi
-    _brn=0
-    while [ -L "$_brp" ] && [ "$_brn" -lt 32 ]; do
-        _brl="$(readlink "$_brp")" || break
-        case "$_brl" in
-            /*) _brp="$_brl" ;;
-            *)  _brp="$(dirname -- "$_brp")/$_brl" ;;
-        esac
-        _brn=$((_brn + 1))
-    done
-    printf '%s\n' "$(CDPATH='' cd -- "$(dirname -- "$_brp")" 2>/dev/null && pwd)/$(basename -- "$_brp")"
-}
-
 # Is this candidate our shim rather than a real bd?  Content, not path.
 beads_is_shim() {
     [ -f "$1" ] || return 1

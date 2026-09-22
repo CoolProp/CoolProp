@@ -46,9 +46,15 @@ fi
 # which then looks like a working tracker while every query returns nothing.
 # When the binary is there but the database is not, fall through and install
 # the shim so the first real command does the hydration.
-BD_REAL="$(beads_find_binary)"
-if [ -n "$BD_REAL" ] && beads_db_ready "$BD_REPO"; then
-    "$BD_REAL" prime || echo "beads: 'bd prime' failed (exit $?)." >&2
+# "Reachable as `bd`", not merely "a binary exists somewhere".
+# beads_find_binary deliberately also searches the private npm prefix, $GOBIN
+# and ~/go/bin, none of which need be on PATH - and this very tooling installs
+# into the first of those.  Exiting on a hit there would leave `command -v bd`
+# failing for the whole session, which is what .beads/hooks/* and the agent
+# both rely on, with no shim installed and no message printed.
+BD_ON_PATH="$(command -v bd 2>/dev/null || true)"
+if [ -n "$BD_ON_PATH" ] && ! beads_is_shim "$BD_ON_PATH" && beads_db_ready "$BD_REPO"; then
+    "$BD_ON_PATH" prime || echo "beads: 'bd prime' failed (exit $?)." >&2
     exit 0
 fi
 
@@ -71,6 +77,14 @@ beads_install_shim() {
         # exist yet, which is common on a fresh non-root account.
         [ -d "$_d" ] || mkdir -p "$_d" 2>/dev/null || continue
         [ -w "$_d" ] || continue
+        # Never clobber a real bd.  `ln -sfn` unlinks whatever is in the way,
+        # and /usr/local/bin and ~/.local/bin are exactly where a hand- or
+        # curl-installed bd lands; deleting it would also downgrade the user to
+        # our pinned npm version on the next command.  Only take the name when
+        # it is free, or already one of our own shims.
+        if [ -e "${_d}/bd" ] || [ -L "${_d}/bd" ]; then
+            beads_is_shim "${_d}/bd" || continue
+        fi
         if ln -sfn "$SHIM_SOURCE" "${_d}/bd" 2>/dev/null; then
             printf '%s\n' "${_d}/bd"
             return 0

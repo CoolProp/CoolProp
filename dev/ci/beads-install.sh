@@ -176,7 +176,20 @@ beads_hydrate() {
     [ -f .beads/issues.jsonl ] || return 0
     # Re-check under the lock: another process may have finished while we
     # waited for it.
-    if beads_hydrated "$_bd" && [ -f "$(beads_db_marker "$BD_REPO")" ]; then
+    if beads_hydrated "$_bd"; then
+        # A healthy database with no marker is one this tooling did not create:
+        # a developer's existing database, or a container warm from before the
+        # marker existed.  ADOPT it - write the marker and leave it alone.
+        #
+        # It must never fall through to the rm -rf below.  The database can
+        # hold issues that were never exported to .beads/issues.jsonl, and
+        # re-importing would silently discard them.  With BEADS_BOOTSTRAP=1
+        # that would happen in a background job at session start, with output
+        # going to /dev/null.
+        if [ ! -f "$(beads_db_marker "$BD_REPO")" ]; then
+            : > "$(beads_db_marker "$BD_REPO")" 2>/dev/null ||
+                echo "beads: could not write the hydration marker; setup will re-check next time." >&2
+        fi
         return 0
     fi
 
@@ -190,10 +203,12 @@ beads_hydrate() {
     fi
 
     echo "beads: hydrating the issue database from .beads/issues.jsonl..." >&2
-    # The probe above says the database is not usable, so nothing of value is
-    # here.  Clearing matters because `bd init --from-jsonl` refuses to run
-    # against ANY existing database ("already initialized"), and `bd prime`
-    # leaves an empty one behind as a side effect.
+    # Only reached when `bd count` could not read any issues out of it, so
+    # there is nothing here to lose - a healthy database was adopted above and
+    # returned before this point.  Clearing is necessary because
+    # `bd init --from-jsonl` refuses to run against ANY existing database
+    # ("already initialized"), and `bd prime` leaves an empty one behind as a
+    # side effect.
     rm -rf .beads/embeddeddolt
     # --stealth keeps beads files out of git (via .git/info/exclude), so init
     #   makes NO commits - critical when this runs from a hook or a shim;

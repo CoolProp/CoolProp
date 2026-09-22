@@ -18,28 +18,32 @@
 
 set -u
 
-_bd_self_raw="$0"
-
-# Find our own real path (we are invoked through a symlink) so we can locate
-# the checkout we belong to, and the sibling scripts.
-_bd_here_seed="$(dirname -- "$_bd_self_raw")"
-if [ -r "${_bd_here_seed}/beads-lib.sh" ]; then
-    _bd_lib="${_bd_here_seed}/beads-lib.sh"
-else
-    # Invoked through a symlink from elsewhere on PATH: resolve it by hand,
-    # without the library (which is what we are trying to find).
-    _bd_p="$_bd_self_raw"
-    _bd_n=0
-    while [ -L "$_bd_p" ] && [ "$_bd_n" -lt 32 ]; do
-        _bd_l="$(readlink "$_bd_p")" || break
-        case "$_bd_l" in
-            /*) _bd_p="$_bd_l" ;;
-            *)  _bd_p="$(dirname -- "$_bd_p")/$_bd_l" ;;
-        esac
-        _bd_n=$((_bd_n + 1))
-    done
-    _bd_lib="$(CDPATH='' cd -- "$(dirname -- "$_bd_p")" 2>/dev/null && pwd)/beads-lib.sh"
+# Find our own real path so we can locate the checkout we belong to, and the
+# sibling library.  This has to be done by hand, because the library is what we
+# are trying to find.
+#
+# ALWAYS resolve $0 first; never short-circuit on "is there a beads-lib.sh next
+# to the unresolved $0?".  We are normally invoked through a symlink on PATH,
+# and that shortcut would source any beads-lib.sh sitting beside the symlink -
+# in /usr/local/bin, say - or, when $0 has no slash at all, `./beads-lib.sh`
+# from the current working directory.  The library defines the function that
+# chooses which binary to exec, so sourcing the wrong one hands over control.
+_bd_p="$0"
+_bd_n=0
+while [ -L "$_bd_p" ] && [ "$_bd_n" -lt 32 ]; do
+    _bd_l="$(readlink "$_bd_p")" || break
+    case "$_bd_l" in
+        /*) _bd_p="$_bd_l" ;;
+        *)  _bd_p="$(dirname -- "$_bd_p")/$_bd_l" ;;
+    esac
+    _bd_n=$((_bd_n + 1))
+done
+_bd_dir="$(CDPATH='' cd -- "$(dirname -- "$_bd_p")" 2>/dev/null && pwd)" || _bd_dir=""
+if [ -z "$_bd_dir" ]; then
+    echo "bd: cannot resolve the shim's own location." >&2
+    exit 127
 fi
+_bd_lib="${_bd_dir}/beads-lib.sh"
 
 if [ ! -r "$_bd_lib" ]; then
     echo "bd: cannot find beads-lib.sh next to the shim - is the checkout intact?" >&2
@@ -48,22 +52,27 @@ fi
 # shellcheck source=dev/ci/beads-lib.sh
 . "$_bd_lib"
 
-bd_shim_dir="$(CDPATH='' cd -- "$(dirname -- "$_bd_lib")" && pwd)" || {
-    echo "bd: cannot locate the CoolProp checkout this shim belongs to." >&2
-    exit 127
-}
+bd_shim_dir="$_bd_dir"
 bd_installer="${bd_shim_dir}/beads-install.sh"
 bd_repo="$(CDPATH='' cd -- "${bd_shim_dir}/../.." && pwd)" || bd_repo=""
 
-# Hard depth guard.  Shim detection below is content-based and should make an
-# exec loop impossible, but a loop costs the whole machine, so refuse outright
-# to be entered twice rather than relying on detection alone.
-if [ -n "${BEADS_SHIM_DEPTH:-}" ]; then
+# Depth counter, as a backstop under the content-based shim detection below.
+#
+# It must NOT refuse outright on the first re-entry.  A nested `bd` is normal:
+# the real binary runs git, git runs .beads/hooks/*, and those run `bd` again.
+# Refusing there returns 127, and .beads/hooks/pre-commit and pre-push
+# propagate a non-zero hook exit, which aborts the commit or push outright.
+#
+# So: at depth 1 skip the SETUP only (a nested call must never kick off an
+# install), and still resolve and exec the real binary.  Detection at the
+# bottom is what actually prevents a loop; this only bounds the damage if
+# detection is ever defeated.
+BEADS_SHIM_DEPTH=$(( ${BEADS_SHIM_DEPTH:-0} + 1 ))
+export BEADS_SHIM_DEPTH
+if [ "$BEADS_SHIM_DEPTH" -gt 2 ]; then
     echo "bd: refusing to re-enter the bd shim (depth ${BEADS_SHIM_DEPTH})." >&2
     exit 127
 fi
-BEADS_SHIM_DEPTH=1
-export BEADS_SHIM_DEPTH
 
 bd_real="$(beads_find_binary)"
 
@@ -92,6 +101,9 @@ bd_shim_may_setup() {
     [ "${BEADS_SHIM_NO_INSTALL:-}" = "1" ] && return 1
     [ "${BD_GIT_HOOK:-}" = "1" ] && return 1
     [ -n "${GIT_INDEX_FILE:-}" ] && return 1
+    # Nested invocation (see the depth counter above): resolve and run, but
+    # never start a setup from inside one.
+    [ "${BEADS_SHIM_DEPTH:-1}" -gt 1 ] && return 1
     return 0
 }
 
