@@ -44,7 +44,11 @@ beads_is_shim() {
 beads_find_binary() {
     {
         printf '%s\n' "$BEADS_NPM_BIN"
-        printf '%s' "$PATH" | tr ':' '\n'
+        # The \n in the format string is load-bearing: PATH does not end in a
+        # colon, so without it the last PATH entry and the first Go directory
+        # run together into one nonsense line and BOTH are lost - which can end
+        # a successful install with "no bd binary was found".
+        printf '%s\n' "$PATH" | tr ':' '\n'
         [ -n "${GOBIN:-}" ] && printf '%s\n' "$GOBIN"
         [ -n "${GOPATH:-}" ] && printf '%s\n' "${GOPATH}/bin"
         printf '%s\n' "${HOME:-/nonexistent}/go/bin"

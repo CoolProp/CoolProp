@@ -132,10 +132,15 @@ Environment variables:
 | `BEADS_LOCK_WAIT` | `300` | Seconds the installer waits for another setup to finish before giving up.  The lock covers install and hydration together.  A value that is not a whole number of seconds is ignored with a warning |
 | `BEADS_SHIM_DEPTH` | unset | Set and incremented by the shim itself; not for callers.  Depth 1 is the ordinary outermost call and may start a setup; at depth 2 the shim resolves and execs `bd` but starts no setup; above depth 2 it stands down.  It is a backstop under the content-based shim detection, which is what actually prevents an exec loop |
 
-When the shim cannot run `bd` at all it exits **3**, never 127.  The five hooks
-in `.beads/hooks/` neutralise exactly two statuses, 3 and 124, and propagate
+On a hard setup failure the shim exits **3**, never 127.  The five hooks in
+`.beads/hooks/` neutralise exactly two statuses, 3 and 124, and propagate
 everything else, and a propagated non-zero status out of `pre-commit` or
 `pre-push` aborts the commit or the push.
+
+A deliberate stand-down is different and exits **0**.  When the shim is asked
+to keep out of the way (inside a git hook, or under `BEADS_SHIM_NO_INSTALL`)
+and no `bd` is installed, nothing has gone wrong: the caller wanted a
+best-effort sync, and "bd is not set up here" is the normal answer.
 
 The shim also stands down inside git hooks, keyed on the `BD_GIT_HOOK` that
 `.beads/hooks/*` already export - load-bearing, because those hooks guard on

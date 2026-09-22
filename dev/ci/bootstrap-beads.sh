@@ -114,7 +114,25 @@ beads_install_shim() {
     return 1
 }
 
-if beads_install_shim >/dev/null; then
+if BD_SHIM_PATH="$(beads_install_shim)"; then
+    # Installed - but is it the `bd` that will actually run?
+    #
+    # Not necessarily.  We never take the name from a real bd, so when one
+    # occupies the first candidate directory the shim lands in the second, and
+    # if that directory comes LATER on PATH then every `bd` still reaches the
+    # real binary and the shim is never entered.  The database then stays
+    # unhydrated while we announce that the first command will set it up, which
+    # is simply false.  Check, and say what is actually true.
+    #
+    # `command -v` is a fresh PATH search here: this script has not run bd, so
+    # there is no hashed location to go stale.
+    BD_RESOLVED="$(command -v bd 2>/dev/null || true)"
+    if [ -n "$BD_RESOLVED" ] && ! beads_is_shim "$BD_RESOLVED"; then
+        echo "beads: '${BD_RESOLVED}' comes earlier on PATH than the shim at ${BD_SHIM_PATH}," >&2
+        echo "       so the shim will not be reached and the issue database stays cold." >&2
+        echo "       Run '${BD_HERE}/beads-install.sh' once to hydrate it." >&2
+        exit 0
+    fi
     # stdout on purpose: SessionStart output joins the session context, so the
     # agent learns bd exists without anything having to be installed to tell it.
     echo "beads: 'bd' is available; the first command sets it up (~15 s), then runs normally. Start with 'bd prime'."

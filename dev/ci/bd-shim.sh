@@ -18,7 +18,7 @@
 
 set -u
 
-# Exit status used whenever the shim cannot run bd at all.
+# Exit status for a HARD setup failure: something is wrong and bd cannot run.
 #
 # 3, not 127.  All five hooks in .beads/hooks/ special-case exactly two
 # statuses - 3 ("database not initialized") and 124 (a timeout) - and propagate
@@ -26,6 +26,12 @@ set -u
 # the commit or the push.  A broken bd setup must never do that.  3 says "bd is
 # not usable here", which is true, and which those hooks already know to
 # ignore; a human still sees a non-zero status and the reason on stderr.
+#
+# There is one deliberate exception, further down: when the shim is standing
+# down on purpose (a git hook, or BEADS_SHIM_NO_INSTALL) and no binary is
+# installed, it exits 0.  Nothing is wrong there - the caller asked for a
+# best-effort sync and "bd is not set up here" is the normal answer, exactly as
+# it was before this shim existed.
 BD_SHIM_UNAVAILABLE=3
 
 # Find our own real path so we can locate the checkout we belong to, and the
@@ -168,7 +174,9 @@ fi
 if [ "$bd_need_setup" = 1 ]; then
     if ! bd_shim_may_setup; then
         # Standing down.  With a binary in hand, run it and let bd report its
-        # own state; with none, succeed quietly.
+        # own state; with none, succeed quietly - status 0, not
+        # BD_SHIM_UNAVAILABLE, because nothing has gone wrong here (see the
+        # note on BD_SHIM_UNAVAILABLE at the top of this file).
         [ -n "$bd_real" ] || exit 0
     else
         if [ ! -x "$bd_installer" ]; then
