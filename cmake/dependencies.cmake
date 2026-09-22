@@ -9,7 +9,7 @@ endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/CPM.cmake")
 
-# ── Offline (vendored) dependency sources — GH #3388 ──────────────────────
+# --- Offline (vendored) dependency sources, GH #3388 ----------------------
 #
 # Every distribution build system (sbuild, mock, OBS, makepkg in a clean
 # chroot) builds inside a sandbox with no network at all, so CPM cannot
@@ -46,6 +46,12 @@ option(COOLPROP_REQUIRE_VENDORED_DEPS
 macro(coolprop_vendor_dependency _dep_name)
   if(NOT "${CPM_${_dep_name}_SOURCE}" STREQUAL "")
     # Somebody pointed CPM at a local checkout by hand; leave that alone.
+    # Note this does NOT exempt it from the offline gate at the bottom of this
+    # file: with COOLPROP_REQUIRE_VENDORED_DEPS=ON the gate still demands that
+    # every resolved package sit under COOLPROP_VENDORED_DEPS_DIR, so a hand
+    # override outside that directory is refused there.  That is deliberate -
+    # an offline packaging build must not quietly pick up a developer's working
+    # checkout - but it does mean the two options are not combinable.
     message(STATUS "CPM: ${_dep_name} overridden by CPM_${_dep_name}_SOURCE")
   elseif(IS_DIRECTORY "${COOLPROP_VENDORED_DEPS_DIR}/${_dep_name}")
     set(CPM_${_dep_name}_SOURCE "${COOLPROP_VENDORED_DEPS_DIR}/${_dep_name}")
@@ -205,7 +211,7 @@ if(COOLPROP_MATHEMATICA_MODULE)
   )
 endif()
 
-# ── Offline gate — GH #3388 ───────────────────────────────────────────────
+# --- Offline gate, GH #3388 -----------------------------------------------
 #
 # coolprop_vendor_dependency() above only knows the names listed in
 # COOLPROP_CPM_DEPENDENCIES, so on its own it would let a dependency that
@@ -214,6 +220,32 @@ endif()
 # every package CPMAddPackage actually resolved, whatever its name, and each one
 # has to have come out of the vendored directory.
 if(COOLPROP_REQUIRE_VENDORED_DEPS)
+  # Refuse a vendor root that cannot discriminate.
+  #
+  # Test the RAW variable for emptiness, not the resolved one: measured on
+  # CMake 3.28, get_filename_component(REALPATH) turns an empty path into
+  # CMAKE_CURRENT_SOURCE_DIR rather than leaving it empty, so a check on the
+  # resolved value never fires.  With the root silently equal to the source
+  # tree, the prefix test below accepts an ordinary in-tree build/_deps/...
+  # download as "vendored" (verified: it matches at position 0) and the gate
+  # passes on exactly the thing it exists to catch.
+  #
+  # The source and binary directories are rejected for the same reason even
+  # when spelled out in full, and "/" because every path starts with it.  The
+  # macro above happens to abort first in today's code, but a gate must not
+  # depend on another check firing.
+  if("${COOLPROP_VENDORED_DEPS_DIR}" STREQUAL ""
+     OR "${COOLPROP_VENDORED_DEPS_REAL}" STREQUAL ""
+     OR "${COOLPROP_VENDORED_DEPS_REAL}" STREQUAL "/"
+     OR "${COOLPROP_VENDORED_DEPS_REAL}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}"
+     OR "${COOLPROP_VENDORED_DEPS_REAL}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
+    message(
+      FATAL_ERROR
+        "Offline build requested but COOLPROP_VENDORED_DEPS_DIR ('${COOLPROP_VENDORED_DEPS_DIR}') "
+        "resolves to '${COOLPROP_VENDORED_DEPS_REAL}', which cannot be told apart from an "
+        "ordinary in-tree download.  Set it to the directory holding the vendored sources "
+        "(externals/cpm in a release tarball).")
+  endif()
   if(NOT CPM_PACKAGES)
     message(
       FATAL_ERROR

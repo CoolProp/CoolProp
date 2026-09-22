@@ -1,0 +1,39 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: CoolProp
+Upstream-Contact: CoolProp developers <coolprop@coolprop.org>
+Source: https://github.com/CoolProp/CoolProp
+
+Files: *
+Copyright: 2012-2018 Ian H. Bell and other CoolProp developers
+License: MIT
+
+Files: externals/cpm/*
+Copyright: the respective upstream authors
+License: MIT-or-compatible
+ The release tarball vendors the third-party sources CoolProp builds
+ against, so that a distribution build needs no network access.  Each
+ vendored tree keeps its own licence file; see externals/cpm/<name>/ in
+ the unpacked source.  None is linked into the shipped binary under terms
+ more restrictive than the MIT licence above.
+
+License: MIT
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+
+License: MIT-or-compatible
+ See the licence file shipped inside each vendored dependency tree.

@@ -90,8 +90,8 @@ ALL_PATHS="$(printf '%s\n' "$ALL_PATHS" | sort -u | grep -v '^$' || true)"
 
 # Shell scripts and GitHub Actions workflows, same ACMR filtering as the C++
 # set above.  Every C-family check below skips when a diff carries no .cpp/.h,
-# which left a branch made entirely of shell, CMake and YAML — a packaging or
-# CI change, exactly the shape that breaks quietly — reporting
+# which left a branch made entirely of shell, CMake and YAML (a packaging or
+# CI change, exactly the shape that breaks quietly) reporting
 # "0 passed / 0 failed" and gating nothing.
 CHANGED_SH="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.sh' '*.bash'
                  git diff --name-only --diff-filter=ACMR -- '*.sh' '*.bash'; } \
@@ -599,14 +599,28 @@ else
     # block still fails with it set.  (Some warnings legitimately disappear
     # regardless, because actionlint prepends `set -e` as Actions does, under
     # which SC2164 and friends are dropped by design.)
-    # shellcheck disable=SC2086
-    if ! SHELLCHECK_OPTS="--severity=warning" \
-         uvx --with shellcheck-py --from actionlint-py actionlint $CHANGED_WORKFLOWS \
-         > /tmp/preflight-actionlint.log 2>&1; then
-        cat /tmp/preflight-actionlint.log
-        fail "actionlint (see /tmp/preflight-actionlint.log)"
+    # Prove the binary is really there before trusting the run.  Everything
+    # above rides on uv happening to expose shellcheck on PATH inside the
+    # ephemeral environment, and NOTHING in the lint itself says whether it
+    # did: with no binary, actionlint lints zero `run:` blocks and exits 0, so
+    # the step would report a pass while gating nothing.  That is the
+    # fail-open shape CLAUDE.md calls out, and it would arrive silently - a uv
+    # change to `--with` entry points, a platform with no shellcheck-py wheel,
+    # or somebody "simplifying" the flag away.  Fail the step instead.
+    if ! uvx --with shellcheck-py --from actionlint-py \
+         sh -c 'command -v shellcheck' > /tmp/preflight-actionlint-probe.log 2>&1; then
+        cat /tmp/preflight-actionlint-probe.log
+        fail "actionlint (no shellcheck binary in the uvx environment; run: blocks would not be linted)"
     else
-        ok "actionlint ($(printf '%s\n' "$CHANGED_WORKFLOWS" | wc -l | tr -d ' ') file(s))"
+        # shellcheck disable=SC2086
+        if ! SHELLCHECK_OPTS="--severity=warning" \
+             uvx --with shellcheck-py --from actionlint-py actionlint $CHANGED_WORKFLOWS \
+             > /tmp/preflight-actionlint.log 2>&1; then
+            cat /tmp/preflight-actionlint.log
+            fail "actionlint (see /tmp/preflight-actionlint.log)"
+        else
+            ok "actionlint ($(printf '%s\n' "$CHANGED_WORKFLOWS" | wc -l | tr -d ' ') file(s), shell linting confirmed active)"
+        fi
     fi
 fi
 

@@ -19,6 +19,7 @@ dev/packaging/
     debian.control            Debian binary packages
     debian.rules              Debian build rules
     debian.changelog          Debian changelog
+    debian.copyright          Debian copyright file (Policy 12.5 requires one)
     debian.libcoolprop8.install
     debian.libcoolprop-dev.install
 ```

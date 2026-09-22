@@ -83,6 +83,14 @@ jobs:
           expect_prefix "${RUNNER_TEMP}/pfx-default" "${GITHUB_WORKSPACE}/install_root"
           expect_prefix "${RUNNER_TEMP}/pfx-explicit" "/usr" -DCMAKE_INSTALL_PREFIX=/usr
           expect_prefix "${RUNNER_TEMP}/pfx-legacy" "/opt/cp" -DCOOLPROP_INSTALL_PREFIX=/opt/cp
+          # Both empty forms, which is what an unset shell variable expands to in
+          # `cmake -DCOOLPROP_INSTALL_PREFIX="$PREFIX"`.  Each must fall back to
+          # the default rather than leaving the prefix empty: an empty prefix
+          # sends every relative DESTINATION to /lib and /include, and the four
+          # rules that interpolate COOLPROP_INSTALL_PREFIX to the filesystem
+          # root.  Asserting only the three cases above let exactly that through.
+          expect_prefix "${RUNNER_TEMP}/pfx-empty-legacy" "${GITHUB_WORKSPACE}/install_root" -DCOOLPROP_INSTALL_PREFIX=
+          expect_prefix "${RUNNER_TEMP}/pfx-empty-cmake" "${GITHUB_WORKSPACE}/install_root" -DCMAKE_INSTALL_PREFIX=
 
       - name: Build the offline release tarball
         run: dev/packaging/make-release-tarball.sh --output-dir "${RUNNER_TEMP}/dist"

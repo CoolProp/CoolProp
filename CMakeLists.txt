@@ -110,10 +110,21 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
 # -- the very swallowing this block exists to stop.  The explicit STREQUAL ""
 # still catches -DCMAKE_INSTALL_PREFIX= from an unset shell variable.
 #
+# COOLPROP_INSTALL_PREFIX needs the SAME emptiness test, for the same reason.
+# DEFINED is true for an empty cache entry, and
+# `set(CMAKE_INSTALL_PREFIX ${empty} CACHE PATH "..." FORCE)` then collapses to
+# `set(CMAKE_INSTALL_PREFIX CACHE PATH "..." FORCE)`, which writes an EMPTY
+# prefix that project() does not repair.  Every relative DESTINATION would then
+# install to /lib, /include and so on, and the four absolute wrapper rules that
+# interpolate ${COOLPROP_INSTALL_PREFIX} (VxWorks, MathcadPrime, MathCAD15,
+# LibreOffice) would write straight into the filesystem root.  An empty
+# -DCOOLPROP_INSTALL_PREFIX= is what an unset shell variable produces, so it is
+# ordinary rather than exotic; treat it as "asked for nothing" and fall through.
+#
 # (Do NOT reach for CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT here.  It is
 # set inside project(), so at this point it is always undefined and the test
 # silently sends every default build to /usr/local.)
-if(DEFINED COOLPROP_INSTALL_PREFIX)
+if(DEFINED COOLPROP_INSTALL_PREFIX AND NOT COOLPROP_INSTALL_PREFIX STREQUAL "")
   message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
   set(CMAKE_INSTALL_PREFIX
       ${COOLPROP_INSTALL_PREFIX}
