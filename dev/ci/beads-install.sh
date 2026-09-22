@@ -12,7 +12,7 @@
 #     absent, so it has to be rehydrated from the committed .beads/issues.jsonl,
 #     which is the source of truth.
 #
-# Together those take two to three minutes, which is why nothing calls this at
+# Together those take about fifteen seconds, which is why nothing calls this at
 # session start.  dev/ci/bd-shim.sh calls it on the first actual `bd` command,
 # so a session that never touches the issue tracker never pays for it.
 #

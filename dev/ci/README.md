@@ -84,9 +84,9 @@ database, **without making every session wait for the install**.
 | `beads-install.sh` | First `bd` command only | ~15 s: npm install of `@beads/bd` + `bd init --from-jsonl` |
 
 The install is lazy rather than opt-in on purpose.  An opt-in flag forces a
-choice between paying two to three minutes at every cold start and not having
-`bd` at all; paying on first use means only the session that actually opens
-the tracker pays, and it pays at the moment it asked.
+choice between paying the setup cost at every cold start and not having `bd` at
+all; paying on first use means only the session that actually opens the tracker
+pays, and it pays at the moment it asked.
 
 npm rather than the upstream `curl | bash` or `go install`.  The `curl | bash`
 installer pulls a binary from GitHub Releases, which the agent proxy blocks

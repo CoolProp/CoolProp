@@ -87,8 +87,7 @@ bd_real="$(bd_shim_binary)"
 # Not every `bd` on the system is a deliberate request for the issue tracker.
 # All five beads git hooks (.beads/hooks/) guard on `command -v bd`, and that
 # guard passes as soon as this shim is on PATH - so without this, an ordinary
-# `git commit` would block for two to three minutes installing a tracker the
-# committer never asked for.  git exports GIT_DIR / GIT_INDEX_FILE when it runs
+# `git commit` would stop to install a tracker the committer never asked for.  git exports GIT_DIR / GIT_INDEX_FILE when it runs
 # a hook, which is a reliable signal for that case.
 #
 # BEADS_SHIM_NO_INSTALL=1 says the same thing explicitly, for callers like the

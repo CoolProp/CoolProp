@@ -3,9 +3,10 @@
 # bootstrap-beads.sh - the SessionStart hook for beads.
 #
 # It does NOT install anything.  Installing `bd` and hydrating its database
-# takes two to three minutes, and making every session in every ephemeral
-# container wait for that - including the many that never open the issue
-# tracker - is not a cost worth paying.
+# takes about fifteen seconds - and minutes, if it has to fall back to building
+# from source - and making every session in every ephemeral container wait for
+# that, including the many that never open the issue tracker, is not a cost
+# worth paying.
 #
 # Instead this puts dev/ci/bd-shim.sh on PATH as `bd`, which takes
 # milliseconds, and the first actual `bd` command triggers the install
@@ -80,7 +81,7 @@ if _shim_path="$(beads_install_shim)"; then
     # This goes to stdout on purpose: SessionStart output is added to the
     # session context, so the agent learns bd exists without anyone paying for
     # an install to tell it so.
-    echo "beads: 'bd' is available; the first command installs it (~2-3 min), then runs normally. Start with 'bd prime'."
+    echo "beads: 'bd' is available; the first command sets it up (~15 s), then runs normally. Start with 'bd prime'."
 else
     echo "beads: no writable directory on PATH - could not install the bd shim." >&2
     exit 0
