@@ -61,6 +61,63 @@ bd close <id>         # Complete work
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
 
+### `bd` in ephemeral (Claude Code web/CI) containers
+
+A fresh container has no `bd` binary and no database — the embedded Dolt dir
+`.beads/embeddeddolt/` is gitignored, so it has to be rehydrated from the
+committed `.beads/issues.jsonl`, which is the source of truth.  Installing
+`bd` and hydrating takes about fifteen seconds (and minutes, if it ever has to
+fall back to building from source).
+
+**That cost is paid on first use, not at session start.**  The `SessionStart`
+hook (`dev/ci/bootstrap-beads.sh`) only symlinks `dev/ci/bd-shim.sh` onto PATH
+as `bd`, which takes milliseconds.  The first actual `bd` command runs
+`dev/ci/beads-install.sh` — an npm install of `@beads/bd` into a private
+prefix under `~/.cache/coolprop/beads` (about 3 s; the
+upstream `curl | bash` installer's GitHub-Releases download is proxy-blocked,
+and building from source needs ICU headers these containers lack, while a
+`CGO_ENABLED=0` build cannot open an embedded Dolt database at all), then
+`bd init --from-jsonl` (about 12 s) — and then execs the real binary.  Every
+later command adds roughly 60 ms of resolution.  A session that never opens the
+tracker installs nothing.
+
+So **just run `bd prime`** when you need the tracker; the first command does
+the setup and says so.  Nothing needs enabling.
+
+- `BEADS_BOOTSTRAP=1` additionally starts the install in the background at
+  session start, so the first command usually finds it ready.  Still
+  non-blocking; the installer's `flock` makes the two safe together.
+- `BEADS_BOOTSTRAP=0` disables the hook entirely.
+- `BEADS_SHIM_NO_INSTALL=1` primes an already-installed `bd` but never
+  triggers an install — used by the `PreCompact` hook.
+- The shim also stands down inside git hooks (detected via `GIT_DIR` /
+  `GIT_INDEX_FILE`).  All five hooks in `.beads/hooks/` guard on
+  `command -v bd`, which the shim satisfies, so without this an ordinary
+  `git commit` would trigger an install nobody asked for.
+
+The install goes into a private npm prefix rather than `npm install -g`,
+because the global tree is not reliably repeatable: after `npm uninstall -g`,
+the next global install of the same package prints "changed 1 package", exits
+0 and installs nothing — not with `--force`, and not after clearing the empty
+scope directory it leaves behind.  A prefixed install is self-contained,
+repeatable, and needs no root.
+
+Hydration is idempotent and non-fatal: it is checked with a `bd count` health
+probe rather than directory presence, so a partial import is retried rather
+than latching "done", and any failure warns and lets the session continue
+without bd.  A hydration killed by SIGKILL or a hard container teardown can
+leave `.beads/config.yaml`, `.beads/.gitignore` and `.gitignore` modified (no
+trap survives SIGKILL), and the next run reads that as a developer's edit and
+will not auto-restore it; clear it with
+`git checkout -- .beads/config.yaml .beads/.gitignore .gitignore`.
+
+To persist newly filed issues, append their `bd export --include-memories`
+lines to `.beads/issues.jsonl` and commit — do **not** overwrite the file
+wholesale (bd 1.1.0 re-serializes the `dependencies` field on unrelated
+issues, and a plain `bd export` drops the persisted memories).  `bd dolt push`
+in the session-completion steps above is a no-op here: there is no Dolt remote
+in web containers, so committing `issues.jsonl` is the sync.
+
 
 ## Build & Test
 

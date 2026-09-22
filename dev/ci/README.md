@@ -71,6 +71,50 @@ get caught locally.
 
 ---
 
+## bd in ephemeral containers — bootstrap-beads.sh, bd-shim.sh, beads-install.sh
+
+Three small scripts make `bd` (the beads issue tracker) usable in Claude Code
+web/CI containers, which start from a fresh clone with no `bd` binary and no
+database, **without making every session wait for the install**.
+
+| Script | When it runs | Cost |
+|---|---|---|
+| `bootstrap-beads.sh` | `SessionStart` hook (`.claude/settings.json`) | ~10 ms — symlinks the shim onto PATH as `bd` and returns |
+| `bd-shim.sh` | Every `bd` command | ~60 ms resolution + exec, once installed |
+| `beads-install.sh` | First `bd` command only | ~15 s: npm install of `@beads/bd` + `bd init --from-jsonl` |
+
+The install is lazy rather than opt-in on purpose.  An opt-in flag forces a
+choice between paying two to three minutes at every cold start and not having
+`bd` at all; paying on first use means only the session that actually opens
+the tracker pays, and it pays at the moment it asked.
+
+npm rather than the upstream `curl | bash` or `go install`.  The `curl | bash`
+installer pulls a binary from GitHub Releases, which the agent proxy blocks
+(403).  Building from source is worse than slow, it does not work here: a cgo
+build needs the ICU development headers that `github.com/dolthub/go-icu-regex`
+compiles against (these containers have libicu but not libicu-dev), and a
+`CGO_ENABLED=0` build compiles fine then refuses to run — *"embedded Dolt
+requires a CGO build"* — which is the mode `.beads/metadata.json` selects.  The
+npm package ships a prebuilt CGO-enabled binary and `registry.npmjs.org` is on
+the proxy allowlist, so it installs in about three seconds.  `go install` is
+kept as a fallback for hosts that have the ICU headers or no npm.
+
+The install targets a private prefix (`~/.cache/coolprop/beads`), not
+`npm install -g`.  The global tree is not reliably repeatable here: after an
+`npm uninstall -g`, the next global install of the same package reports
+"changed 1 package", exits 0 and installs nothing, even with `--force`.  A
+prefixed install is self-contained, survives a wipe-and-retry, needs no root,
+and cannot disturb other globally installed packages.
+
+Environment variables: `BEADS_BOOTSTRAP=1` also warms the install in the
+background at session start (non-blocking); `BEADS_BOOTSTRAP=0` disables the
+hook; `BEADS_SHIM_NO_INSTALL=1` primes an existing `bd` without ever
+installing.  The shim also stands down inside git hooks, which is load-bearing
+— see CLAUDE.md's "`bd` in ephemeral (Claude Code web/CI) containers" for that
+and for the hydration, locking and recovery details.
+
+---
+
 ## clang-format
 
 `.clang-format` at repo root is the source of truth for formatting rules.
