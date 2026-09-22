@@ -84,16 +84,21 @@ tracker installs nothing.
 So **just run `bd prime`** when you need the tracker; the first command does
 the setup and says so.  Nothing needs enabling.
 
-- `BEADS_BOOTSTRAP=1` additionally starts the install in the background at
+- `BEADS_BOOTSTRAP=1` additionally starts the setup in the background at
   session start, so the first command usually finds it ready.  Still
-  non-blocking; the installer's `flock` makes the two safe together.
+  non-blocking: a command issued mid-setup waits on the installer's lock
+  rather than failing.
 - `BEADS_BOOTSTRAP=0` disables the hook entirely.
 - `BEADS_SHIM_NO_INSTALL=1` primes an already-installed `bd` but never
   triggers an install — used by the `PreCompact` hook.
-- The shim also stands down inside git hooks (detected via `GIT_DIR` /
-  `GIT_INDEX_FILE`).  All five hooks in `.beads/hooks/` guard on
+- The shim stands down inside git hooks, keyed on `BD_GIT_HOOK`, which all
+  five hooks in `.beads/hooks/` already export.  They guard on
   `command -v bd`, which the shim satisfies, so without this an ordinary
-  `git commit` would trigger an install nobody asked for.
+  `git commit` -- or `git checkout`, or `git push` -- would stop to set up a
+  tracker nobody asked for.  Do **not** key on `GIT_DIR`: measured on git
+  2.43 it is not exported to hooks at all, and `GIT_INDEX_FILE` is set only
+  for the index-touching hooks, so `post-checkout`, `post-merge` and
+  `pre-push` would slip straight through.
 
 The install goes into a private npm prefix rather than `npm install -g`,
 because the global tree is not reliably repeatable: after `npm uninstall -g`,
@@ -102,11 +107,17 @@ the next global install of the same package prints "changed 1 package", exits
 scope directory it leaves behind.  A prefixed install is self-contained,
 repeatable, and needs no root.
 
-Hydration is idempotent and non-fatal: it is checked with a `bd count` health
-probe rather than directory presence, so a partial import is retried rather
-than latching "done", and any failure warns and lets the session continue
-without bd.  A hydration killed by SIGKILL or a hard container teardown can
-leave `.beads/config.yaml`, `.beads/.gitignore` and `.gitignore` modified (no
+Hydration is idempotent and non-fatal.  The installer checks it with a
+`bd count` health probe and, on success, writes a marker inside
+`.beads/embeddeddolt/`; the shim gates on that marker.  Neither uses directory
+presence, because `bd init` creates the directory before importing and
+`bd prime` creates an empty database as a side effect -- either would latch
+"ready" and leave every query silently returning nothing.  A single lock
+(`flock -w`, bounded) covers both the install and the hydration, so two
+concurrent first commands wait for one another instead of racing or failing.
+Any failure warns and lets the session continue without bd.
+
+A hydration killed by SIGKILL or a hard container teardown can leave `.beads/config.yaml`, `.beads/.gitignore` and `.gitignore` modified (no
 trap survives SIGKILL), and the next run reads that as a developer's edit and
 will not auto-restore it; clear it with
 `git checkout -- .beads/config.yaml .beads/.gitignore .gitignore`.

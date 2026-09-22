@@ -71,9 +71,9 @@ get caught locally.
 
 ---
 
-## bd in ephemeral containers — bootstrap-beads.sh, bd-shim.sh, beads-install.sh
+## bd in ephemeral containers — bootstrap-beads.sh, bd-shim.sh, beads-install.sh, beads-lib.sh
 
-Three small scripts make `bd` (the beads issue tracker) usable in Claude Code
+Four small scripts make `bd` (the beads issue tracker) usable in Claude Code
 web/CI containers, which start from a fresh clone with no `bd` binary and no
 database, **without making every session wait for the install**.
 
@@ -82,6 +82,13 @@ database, **without making every session wait for the install**.
 | `bootstrap-beads.sh` | `SessionStart` hook (`.claude/settings.json`) | ~10 ms — symlinks the shim onto PATH as `bd` and returns |
 | `bd-shim.sh` | Every `bd` command | ~60 ms resolution + exec, once installed |
 | `beads-install.sh` | First `bd` command only | ~15 s: npm install of `@beads/bd` + `bd init --from-jsonl` |
+| `beads-lib.sh` | sourced by all three | shared resolver, shim detection and readiness probe |
+
+`beads-lib.sh` exists because the shim and the installer both need to answer
+"where is the real bd?", and an earlier version kept two copies of that
+answer in step by comment alone.  They diverged immediately: the installer's
+copy lost the portable `readlink` fallback and began returning the shim itself
+as the real binary, which forks until the machine gives up.
 
 The install is lazy rather than opt-in on purpose.  An opt-in flag forces a
 choice between paying the setup cost at every cold start and not having `bd` at
@@ -106,12 +113,14 @@ The install targets a private prefix (`~/.cache/coolprop/beads`), not
 prefixed install is self-contained, survives a wipe-and-retry, needs no root,
 and cannot disturb other globally installed packages.
 
-Environment variables: `BEADS_BOOTSTRAP=1` also warms the install in the
+Environment variables: `BEADS_BOOTSTRAP=1` also warms the setup in the
 background at session start (non-blocking); `BEADS_BOOTSTRAP=0` disables the
-hook; `BEADS_SHIM_NO_INSTALL=1` primes an existing `bd` without ever
-installing.  The shim also stands down inside git hooks, which is load-bearing
-— see CLAUDE.md's "`bd` in ephemeral (Claude Code web/CI) containers" for that
-and for the hydration, locking and recovery details.
+hook; `BEADS_SHIM_NO_INSTALL=1` runs an existing `bd` without ever installing.
+The shim also stands down inside git hooks, keyed on the `BD_GIT_HOOK` that
+`.beads/hooks/*` already export — load-bearing, because those hooks guard on
+`command -v bd` and the shim satisfies that guard.  See CLAUDE.md's "`bd` in
+ephemeral (Claude Code web/CI) containers" for that and for the hydration,
+locking and recovery details.
 
 ---
 
