@@ -2,19 +2,45 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: CoolProp
 Upstream-Contact: CoolProp developers <coolprop@coolprop.org>
 Source: https://github.com/CoolProp/CoolProp
+Comment: This file covers the contents of the offline release tarball produced
+ by dev/packaging/make-release-tarball.sh, which is a git archive of the
+ upstream tree plus pre-vendored third-party sources under externals/cpm/.
+ The vendored trees are NOT enumerated individually below.  Their licences are
+ not uniform and not all of them are MIT: Eigen in particular is MPL-2.0.  Each
+ vendored tree ships its own licence file, and the stanza below points at them
+ rather than restating terms that could drift from what is actually shipped.
+ Enumerating them per dependency is required before any submission to a
+ distribution archive; see dev/packaging/README.md.
 
 Files: *
 Copyright: 2012-2018 Ian H. Bell and other CoolProp developers
 License: MIT
 
+Files: externals/incbin/*
+Copyright: 2015-2021 Dale Weiler
+License: Unlicense
+
+Files: externals/miniz-3.1.1/*
+Copyright: 2013-2014 RAD Game Tools and Valve Software
+           2010-2014 Rich Geldreich and Tenacious Software LLC
+License: MIT
+
+Files: cmake/CPM.cmake
+Copyright: 2019-2023 Lars Melchior and contributors
+License: MIT
+
+Files: wrappers/Rust/*
+Copyright: 2020 Steffen Golle
+License: MIT
+
 Files: externals/cpm/*
-Copyright: the respective upstream authors
-License: MIT-or-compatible
- The release tarball vendors the third-party sources CoolProp builds
- against, so that a distribution build needs no network access.  Each
- vendored tree keeps its own licence file; see externals/cpm/<name>/ in
- the unpacked source.  None is linked into the shipped binary under terms
- more restrictive than the MIT licence above.
+Copyright: the respective upstream authors of each vendored dependency
+License: various
+Comment: Present only in the offline release tarball, not in the git tree.
+ Each dependency keeps its own licence file inside externals/cpm/<name>/.
+ Known terms as of this writing: Eigen is MPL-2.0 (with some files under
+ BSD and other MPL-2.0-compatible licences), msgpack-c and Catch2 are
+ BSL-1.0, valijson is BSD-2-Clause, nlohmann_json and fmt are MIT.
 
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -35,5 +61,31 @@ License: MIT
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
 
-License: MIT-or-compatible
- See the licence file shipped inside each vendored dependency tree.
+License: Unlicense
+ This is free and unencumbered software released into the public domain.
+ .
+ Anyone is free to copy, modify, publish, use, compile, sell, or distribute
+ this software, either in source code form or as a compiled binary, for any
+ purpose, commercial or non-commercial, and by any means.
+ .
+ In jurisdictions that recognize copyright laws, the author or authors of this
+ software dedicate any and all copyright interest in the software to the public
+ domain. We make this dedication for the benefit of the public at large and to
+ the detriment of our heirs and successors. We intend this dedication to be an
+ overt act of relinquishment in perpetuity of all present and future rights to
+ this software under copyright law.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+License: various
+ The vendored dependency trees under externals/cpm/ are distributed under
+ their own terms, which are not all the same and are not all MIT.  The licence
+ text for each is in the licence file shipped inside that dependency's
+ directory in the release tarball.  No blanket claim is made here about their
+ compatibility; see the Comment field on that stanza for the terms known at
+ the time of writing.

@@ -142,6 +142,32 @@ else()
   )
 endif()
 
+# Fail-closed post-condition on the three branches above.
+#
+# Testing each individual bad spelling is a losing game: the real mechanism is
+# that an unquoted ${X} expands to a LIST, and a list of zero elements turns
+# `set(CMAKE_INSTALL_PREFIX ${X} CACHE PATH "..." FORCE)` into a set() with no
+# value, which writes an EMPTY cache entry that project() does not repair.  The
+# emptiness test above closes X="" and nothing else -- X=";" still expands to
+# zero arguments and still lands an empty prefix (measured), and quoting the
+# expansion does not help, because CMake stores an empty PATH entry either way.
+#
+# So assert the property we actually need instead: a non-empty prefix, and the
+# two variables agreeing.  Every branch above establishes both, so this cannot
+# fire for any value a caller legitimately passes; anything that reaches it is
+# a value that would otherwise have installed relative DESTINATIONs to /lib and
+# /include and the wrapper rules straight into the filesystem root.  Stopping
+# the configure is the mild outcome.
+if(CMAKE_INSTALL_PREFIX STREQUAL ""
+   OR NOT CMAKE_INSTALL_PREFIX STREQUAL COOLPROP_INSTALL_PREFIX)
+  message(
+    FATAL_ERROR
+      "Install prefix resolution failed: CMAKE_INSTALL_PREFIX='${CMAKE_INSTALL_PREFIX}' "
+      "COOLPROP_INSTALL_PREFIX='${COOLPROP_INSTALL_PREFIX}'.  An empty or inconsistent "
+      "prefix would install into the filesystem root.  Pass a real path, or pass neither "
+      "and take the default.")
+endif()
+
 #######################################
 #           BUILD OPTIONS             #
 #-------------------------------------#

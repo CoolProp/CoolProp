@@ -129,6 +129,26 @@ be called production-ready.  Until then:
 - The `-dev` packages still depend on `libeigen3-dev` / `eigen3-devel` and the
   fmt equivalents, so the headers a consumer needs are at least present.
 
+### Known limitation: `debian.copyright` is not per-dependency yet
+
+`debian.copyright` names the copyright holders and licences for the upstream
+tree and for the third-party code carried in git (`externals/incbin`,
+`externals/miniz-3.1.1`, `cmake/CPM.cmake`, `wrappers/Rust`).  For the sources
+the release tarball vendors under `externals/cpm/`, it points at the licence
+file inside each tree instead of restating the terms.
+
+That is honest but not sufficient for a distribution archive.  Those licences
+are **not uniform and not all MIT** - Eigen is MPL-2.0, msgpack-c and Catch2
+are BSL-1.0, valijson is BSD-2-Clause - so an archive submission needs a
+`Files:` stanza per vendored dependency with its real short name and text.
+Writing one blanket "MIT or compatible" claim over the set would be wrong, and
+a copyright file is the last place to guess.
+
+This is a step 6 concern in the GH #3388 staging (archive inclusion), not a
+step 4 one (our own OBS repos), which is why it is recorded rather than done.
+Landing `COOLPROP_USE_SYSTEM_DEPS=ON` shrinks the problem first, since a
+dependency taken from the distribution is not vendored and needs no stanza.
+
 ## Setting up OBS
 
 ### 1. Account and project
