@@ -67,7 +67,10 @@ fi
 # preferring the conventional one.  A symlink, so the shim always runs the
 # checked-out version rather than a stale copy - and so that only one shim file
 # exists no matter how many directories point at it.
+BD_SHIM_SKIP_REASON=""
+
 beads_install_shim() {
+    BD_SHIM_SKIP_REASON=""
     for _d in /usr/local/bin "${HOME:-/nonexistent}/.local/bin"; do
         case ":${PATH}:" in
             *":${_d}:"*) ;;
@@ -76,19 +79,37 @@ beads_install_shim() {
         # Create the $HOME candidate if PATH advertises it but it does not
         # exist yet, which is common on a fresh non-root account.
         [ -d "$_d" ] || mkdir -p "$_d" 2>/dev/null || continue
-        [ -w "$_d" ] || continue
+        if [ ! -w "$_d" ]; then
+            BD_SHIM_SKIP_REASON="not writable"
+            continue
+        fi
         # Never clobber a real bd.  `ln -sfn` unlinks whatever is in the way,
         # and /usr/local/bin and ~/.local/bin are exactly where a hand- or
         # curl-installed bd lands; deleting it would also downgrade the user to
         # our pinned npm version on the next command.  Only take the name when
-        # it is free, or already one of our own shims.
+        # it is free, already one of our own shims, or a DANGLING symlink.
+        #
+        # The dangling case has to be spelled out separately, because
+        # beads_is_shim starts with `[ -f ]`, which follows the link and is
+        # therefore false for a broken one.  Without it, our own stale link -
+        # left behind by a checkout that was moved, renamed or deleted - can
+        # never be repaired, and every later session reports that bd could not
+        # be installed while a perfectly writable directory sits there holding
+        # our own corpse.  A dangling `bd` is broken for its owner too,
+        # whoever that was, so taking the name costs nothing.
         if [ -e "${_d}/bd" ] || [ -L "${_d}/bd" ]; then
-            beads_is_shim "${_d}/bd" || continue
+            if [ -L "${_d}/bd" ] && [ ! -e "${_d}/bd" ]; then
+                : # dangling link: reclaimable
+            elif ! beads_is_shim "${_d}/bd"; then
+                BD_SHIM_SKIP_REASON="occupied by something that is not our shim"
+                continue
+            fi
         fi
         if ln -sfn "$SHIM_SOURCE" "${_d}/bd" 2>/dev/null; then
             printf '%s\n' "${_d}/bd"
             return 0
         fi
+        BD_SHIM_SKIP_REASON="symlink creation failed"
     done
     return 1
 }
@@ -98,7 +119,9 @@ if beads_install_shim >/dev/null; then
     # agent learns bd exists without anything having to be installed to tell it.
     echo "beads: 'bd' is available; the first command sets it up (~15 s), then runs normally. Start with 'bd prime'."
 else
-    echo "beads: no writable directory on PATH - could not install the bd shim." >&2
+    # Say WHICH obstacle it was.  "No writable directory on PATH" was printed
+    # for an occupied name too, which points at the wrong problem entirely.
+    echo "beads: could not install the bd shim into /usr/local/bin or ~/.local/bin${BD_SHIM_SKIP_REASON:+ (${BD_SHIM_SKIP_REASON})}." >&2
     exit 0
 fi
 

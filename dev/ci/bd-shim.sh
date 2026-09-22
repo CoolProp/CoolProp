@@ -18,6 +18,16 @@
 
 set -u
 
+# Exit status used whenever the shim cannot run bd at all.
+#
+# 3, not 127.  All five hooks in .beads/hooks/ special-case exactly two
+# statuses - 3 ("database not initialized") and 124 (a timeout) - and propagate
+# everything else, and a non-zero status out of pre-commit or pre-push ABORTS
+# the commit or the push.  A broken bd setup must never do that.  3 says "bd is
+# not usable here", which is true, and which those hooks already know to
+# ignore; a human still sees a non-zero status and the reason on stderr.
+BD_SHIM_UNAVAILABLE=3
+
 # Find our own real path so we can locate the checkout we belong to, and the
 # sibling library.  This has to be done by hand, because the library is what we
 # are trying to find.
@@ -25,29 +35,58 @@ set -u
 # ALWAYS resolve $0 first; never short-circuit on "is there a beads-lib.sh next
 # to the unresolved $0?".  We are normally invoked through a symlink on PATH,
 # and that shortcut would source any beads-lib.sh sitting beside the symlink -
-# in /usr/local/bin, say - or, when $0 has no slash at all, `./beads-lib.sh`
-# from the current working directory.  The library defines the function that
-# chooses which binary to exec, so sourcing the wrong one hands over control.
+# in /usr/local/bin, say.  The library defines the function that chooses which
+# binary to exec, so sourcing the wrong one hands over control.
+#
+# Every step below therefore stands down rather than guessing: a path we could
+# not resolve is not a path we may source a library from.
 _bd_p="$0"
+
+# No slash in $0 means there is nothing to resolve and `dirname` would answer
+# ".", i.e. ./beads-lib.sh from whatever directory the caller happened to be
+# standing in.  A PATH exec of a #! script always hands the interpreter a path
+# with a slash, so this is only reachable when something invoked us oddly.
+case "$_bd_p" in
+    */*) ;;
+    *)
+        echo "bd: invoked as '$0' with no path - cannot locate the beads checkout." >&2
+        exit "$BD_SHIM_UNAVAILABLE"
+        ;;
+esac
+
+# Chase the symlink chain.  The bound sits ABOVE Linux's SYMLOOP_MAX of 40 on
+# purpose: a bound below it leaves chains the kernel will happily execute but
+# that we stop following half way, and the half-resolved path is still a
+# symlink - whose DIRECTORY we would then source the library from, which is
+# exactly the hole this block exists to close.  The check after the loop is
+# what makes that safe; the bound only stops a cycle spinning forever.
 _bd_n=0
-while [ -L "$_bd_p" ] && [ "$_bd_n" -lt 32 ]; do
-    _bd_l="$(readlink "$_bd_p")" || break
+while [ -L "$_bd_p" ]; do
+    if [ "$_bd_n" -ge 64 ]; then
+        echo "bd: the symlink chain for '$0' is too long to resolve - standing down." >&2
+        exit "$BD_SHIM_UNAVAILABLE"
+    fi
+    if ! _bd_l="$(readlink "$_bd_p")"; then
+        echo "bd: cannot read the symlink '$_bd_p' - standing down." >&2
+        exit "$BD_SHIM_UNAVAILABLE"
+    fi
     case "$_bd_l" in
         /*) _bd_p="$_bd_l" ;;
         *)  _bd_p="$(dirname -- "$_bd_p")/$_bd_l" ;;
     esac
     _bd_n=$((_bd_n + 1))
 done
+
 _bd_dir="$(CDPATH='' cd -- "$(dirname -- "$_bd_p")" 2>/dev/null && pwd)" || _bd_dir=""
 if [ -z "$_bd_dir" ]; then
     echo "bd: cannot resolve the shim's own location." >&2
-    exit 127
+    exit "$BD_SHIM_UNAVAILABLE"
 fi
 _bd_lib="${_bd_dir}/beads-lib.sh"
 
 if [ ! -r "$_bd_lib" ]; then
     echo "bd: cannot find beads-lib.sh next to the shim - is the checkout intact?" >&2
-    exit 127
+    exit "$BD_SHIM_UNAVAILABLE"
 fi
 # shellcheck source=dev/ci/beads-lib.sh
 . "$_bd_lib"
@@ -60,18 +99,26 @@ bd_repo="$(CDPATH='' cd -- "${bd_shim_dir}/../.." && pwd)" || bd_repo=""
 #
 # It must NOT refuse outright on the first re-entry.  A nested `bd` is normal:
 # the real binary runs git, git runs .beads/hooks/*, and those run `bd` again.
-# Refusing there returns 127, and .beads/hooks/pre-commit and pre-push
-# propagate a non-zero hook exit, which aborts the commit or push outright.
 #
-# So: at depth 1 skip the SETUP only (a nested call must never kick off an
-# install), and still resolve and exec the real binary.  Detection at the
-# bottom is what actually prevents a loop; this only bounds the damage if
-# detection is ever defeated.
-BEADS_SHIM_DEPTH=$(( ${BEADS_SHIM_DEPTH:-0} + 1 ))
+# Depth 1 is the ordinary, outermost invocation and may do anything, a setup
+# included.  Depth 2 is that expected nesting: resolve and exec, but never
+# start a setup from inside it.  Deeper is unexpected, so we stand down - and
+# with BD_SHIM_UNAVAILABLE rather than 127, so a hook wrapped around us does
+# not abort the git operation.  Detection at the bottom of this file is what
+# actually prevents a loop; this only bounds the damage if it is ever defeated.
+#
+# Sanitize before the arithmetic.  `${x:-0}` covers unset and empty and nothing
+# else: a value like "1x" is an arithmetic SYNTAX ERROR, and dash kills the
+# script with status 2 on the spot - before the git-hook stand-down below has
+# had any chance to run.  Anything that is not a plain number is not ours.
+case "${BEADS_SHIM_DEPTH:-}" in
+    ''|*[!0-9]*) BEADS_SHIM_DEPTH=0 ;;
+esac
+BEADS_SHIM_DEPTH=$((BEADS_SHIM_DEPTH + 1))
 export BEADS_SHIM_DEPTH
 if [ "$BEADS_SHIM_DEPTH" -gt 2 ]; then
     echo "bd: refusing to re-enter the bd shim (depth ${BEADS_SHIM_DEPTH})." >&2
-    exit 127
+    exit "$BD_SHIM_UNAVAILABLE"
 fi
 
 bd_real="$(beads_find_binary)"
@@ -101,8 +148,8 @@ bd_shim_may_setup() {
     [ "${BEADS_SHIM_NO_INSTALL:-}" = "1" ] && return 1
     [ "${BD_GIT_HOOK:-}" = "1" ] && return 1
     [ -n "${GIT_INDEX_FILE:-}" ] && return 1
-    # Nested invocation (see the depth counter above): resolve and run, but
-    # never start a setup from inside one.
+    # Depth 2 or more, i.e. a nested invocation (see the depth counter above):
+    # resolve and run, but never start a setup from inside one.
     [ "${BEADS_SHIM_DEPTH:-1}" -gt 1 ] && return 1
     return 0
 }
@@ -126,13 +173,13 @@ if [ "$bd_need_setup" = 1 ]; then
     else
         if [ ! -x "$bd_installer" ]; then
             echo "bd: ${bd_installer} is missing - cannot set bd up." >&2
-            exit 127
+            exit "$BD_SHIM_UNAVAILABLE"
         fi
-        "$bd_installer" || exit 127
+        "$bd_installer" || exit "$BD_SHIM_UNAVAILABLE"
         bd_real="$(beads_find_binary)"
         if [ -z "$bd_real" ]; then
             echo "bd: setup reported success but no bd binary was found." >&2
-            exit 127
+            exit "$BD_SHIM_UNAVAILABLE"
         fi
     fi
 fi
@@ -140,7 +187,7 @@ fi
 # Last guard before handing over: never exec another shim, however it got here.
 if [ -z "$bd_real" ] || beads_is_shim "$bd_real"; then
     echo "bd: refusing to exec '${bd_real:-<none>}' - it is a bd shim, not the real binary." >&2
-    exit 127
+    exit "$BD_SHIM_UNAVAILABLE"
 fi
 
 exec "$bd_real" "$@"

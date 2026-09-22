@@ -118,7 +118,10 @@ it looks for a real `bd` reachable as `bd` on PATH, and if one is there AND the
 database is already hydrated it primes that instead and returns, installing no
 shim.  Otherwise it walks the conventional PATH directories, takes the first
 writable one, and symlinks the shim there - but only over a free name or one of
-our own shims, never over a real `bd` binary that a developer installed by hand.
+our own shims (or a dangling link, so a moved checkout does not leave a broken
+`bd` behind), never over a real `bd` binary that a developer installed by hand.
+It can still shadow a real `bd` that sits later on PATH; that costs 60 ms and
+nothing else, because the shim then execs that binary.
 
 Environment variables:
 
@@ -126,8 +129,13 @@ Environment variables:
 |---|---|---|
 | `BEADS_BOOTSTRAP` | unset | `1` also warms the setup in the background at session start (non-blocking); `0` disables the hook entirely |
 | `BEADS_SHIM_NO_INSTALL` | unset | `1` runs an existing `bd` but never triggers an install.  Used by the `PreCompact` hook and by the installer's own restore step |
-| `BEADS_LOCK_WAIT` | `300` | Seconds the installer waits for another setup to finish before giving up.  The lock covers install and hydration together |
-| `BEADS_SHIM_DEPTH` | unset | Set and incremented by the shim itself; not for callers.  At depth 1 the shim still resolves and execs `bd` but starts no setup, and above depth 2 it refuses outright.  It is a backstop under the content-based shim detection, which is what actually prevents an exec loop |
+| `BEADS_LOCK_WAIT` | `300` | Seconds the installer waits for another setup to finish before giving up.  The lock covers install and hydration together.  A value that is not a whole number of seconds is ignored with a warning |
+| `BEADS_SHIM_DEPTH` | unset | Set and incremented by the shim itself; not for callers.  Depth 1 is the ordinary outermost call and may start a setup; at depth 2 the shim resolves and execs `bd` but starts no setup; above depth 2 it stands down.  It is a backstop under the content-based shim detection, which is what actually prevents an exec loop |
+
+When the shim cannot run `bd` at all it exits **3**, never 127.  The five hooks
+in `.beads/hooks/` neutralise exactly two statuses, 3 and 124, and propagate
+everything else, and a propagated non-zero status out of `pre-commit` or
+`pre-push` aborts the commit or the push.
 
 The shim also stands down inside git hooks, keyed on the `BD_GIT_HOOK` that
 `.beads/hooks/*` already export - load-bearing, because those hooks guard on

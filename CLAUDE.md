@@ -74,8 +74,11 @@ hook (`dev/ci/bootstrap-beads.sh`) does no installing: it puts
 `dev/ci/bd-shim.sh` on PATH as `bd`, which takes milliseconds, and returns.
 (If a real `bd` is already reachable as `bd` AND the database is already
 hydrated, it primes that instead and installs no shim.  It never symlinks over
-a real `bd` binary; it takes the name only when it is free or already one of
-our own shims.)
+a real `bd` binary; it takes the name only when it is free, already one of our
+own shims, or a dangling link - that last so a checkout that was moved or
+renamed does not leave a broken `bd` nobody can repair.  It can still *shadow*
+a real `bd` that sits later on PATH, which costs the 60 ms of resolution and
+nothing else, since the shim then execs that very binary.)
 
 The first actual `bd` command runs `dev/ci/beads-install.sh`: an npm install of
 `@beads/bd` into a private prefix under `~/.cache/coolprop/beads` (about 3 s;
@@ -98,12 +101,18 @@ the setup and says so.  Nothing needs enabling.
   triggers an install.  Used by the `PreCompact` hook, and by the installer's
   own restore step.
 - `BEADS_LOCK_WAIT` (default 300) is how many seconds the installer waits for
-  another setup to finish before giving up.
+  another setup to finish before giving up.  Anything that is not a whole
+  number of seconds is ignored with a warning.
 - `BEADS_SHIM_DEPTH` is set and incremented by the shim itself and is not for
-  callers.  At depth 1 the shim still resolves and execs `bd` but starts no
-  setup; above depth 2 it refuses outright.  It is only a backstop: what
-  actually prevents an exec loop is that the shim recognises another shim by
-  content before handing over.
+  callers.  Depth 1 is the ordinary outermost call and may do anything, a
+  setup included; at depth 2 (the expected nesting, bd -> git -> hook -> bd)
+  the shim still resolves and execs `bd` but starts no setup; above depth 2 it
+  stands down.  It is only a backstop: what actually prevents an exec loop is
+  that the shim recognises another shim by content before handing over.
+- When the shim cannot run `bd` at all it exits **3**, never 127.  All five
+  hooks in `.beads/hooks/` neutralise exactly two statuses, 3 ("database not
+  initialized") and 124 (timeout), and propagate everything else, so a 127 out
+  of `pre-commit` or `pre-push` would abort the commit or the push.
 - The shim stands down inside git hooks, keyed on `BD_GIT_HOOK`, which all
   five hooks in `.beads/hooks/` already export.  They guard on
   `command -v bd`, which the shim satisfies, so without this an ordinary
@@ -129,6 +138,10 @@ presence, because `bd init` creates the directory before importing and
 healthy but has no marker (a developer's own, or one from before the marker
 existed) is **adopted**, never rebuilt: it can hold issues that were never
 exported to `.beads/issues.jsonl`, and re-importing would discard them.  A
+populated database that the probe cannot read at all is **refused** rather
+than rebuilt, with a message telling you to look at it, because "`bd count`
+failed" and "there are no issues in here" are not the same statement.  Only an
+absent, empty or provably issue-free database is cleared and re-imported.  A
 single lock (`flock -w`, bounded by `BEADS_LOCK_WAIT`) covers both the install
 and the hydration, so two concurrent first commands wait for one another
 instead of racing or failing.  Any failure warns and lets the session continue

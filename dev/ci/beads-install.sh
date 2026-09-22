@@ -63,7 +63,7 @@ beads_install_binary() {
     if command -v npm >/dev/null 2>&1; then
         echo "beads: installing bd ${BD_NPM_VERSION} from npm (first use)..." >&2
         if mkdir -p "$BEADS_NPM_PREFIX" 2>/dev/null &&
-           npm install --prefix "$BEADS_NPM_PREFIX" "@beads/bd@${BD_NPM_VERSION}" >&2; then
+           npm install --prefix "$BEADS_NPM_PREFIX" "@beads/bd@${BD_NPM_VERSION}" >&2 9>&-; then
             # Never trust npm's exit status alone; verify a binary appeared.
             beads_have_binary && return 0
             echo "beads: npm reported success but produced no usable bd." >&2
@@ -81,7 +81,7 @@ beads_install_binary() {
     # GOTOOLCHAIN=auto lets go fetch the newer toolchain beads' go.mod requires.
     # cgo is left ENABLED on purpose - see the note above.
     if ! GOTOOLCHAIN=auto GOFLAGS=-mod=mod go install \
-        "github.com/steveyegge/beads/cmd/bd@${BD_GO_VERSION}" >&2; then
+        "github.com/steveyegge/beads/cmd/bd@${BD_GO_VERSION}" >&2 9>&-; then
         echo "beads: 'go install bd' failed - bd unavailable.  If it failed on" >&2
         echo "       unicode/uregex.h, install the ICU dev headers (libicu-dev)." >&2
         return 1
@@ -95,13 +95,41 @@ beads_install_binary() {
 
 # ---------------------------------------------------------------- hydrate ---
 
-# Is the database usable?  A health probe, because `bd init` creates the
-# directory BEFORE importing and `bd prime` creates an empty database as a side
-# effect, so directory presence would latch "hydrated" after a partial import
-# and leave every query silently returning nothing.
-beads_hydrated() {
-    _n="$("$1" count --quiet 2>/dev/null)" || return 1
-    [ -n "$_n" ] && [ "$_n" -gt 0 ] 2>/dev/null
+# Probe the database.  THREE outcomes, not two, and the difference is the
+# whole safety argument below:
+#
+#   0  healthy    - readable, and it holds at least one issue
+#   1  empty      - readable, and it holds nothing
+#   2  unreadable - the probe itself failed
+#
+# "bd count failed" is not the same statement as "there are no issues in here".
+# A probe can fail because the database was written by a newer bd than the
+# pinned one, because a config is wrong, because the process was killed, or
+# because the output was not a bare number.  Treating any of those as "empty"
+# would send a populated database to the rm -rf in beads_hydrate, and a
+# database can hold issues that were never exported to .beads/issues.jsonl.
+#
+# A plain existence check on .beads/embeddeddolt/ is no substitute for the
+# probe: `bd init` creates the directory BEFORE importing and `bd prime`
+# creates an empty database as a side effect, so presence alone would latch
+# "hydrated" after a partial import and leave every query silently returning
+# nothing.
+#
+# 9>&- keeps the setup lock out of the probe's process - see beads_acquire_lock.
+beads_probe_db() {
+    _n="$("$1" count --quiet 2>/dev/null 9>&-)" || return 2
+    case "$_n" in
+        '' | *[!0-9]*) return 2 ;;
+    esac
+    [ "$_n" -gt 0 ] && return 0
+    return 1
+}
+
+# Does this directory contain anything at all?  Used only to tell a stray empty
+# directory (safe to clear) from a populated one (never cleared blindly).
+beads_dir_nonempty() {
+    [ -d "$1" ] || return 1
+    [ -n "$(ls -A "$1" 2>/dev/null)" ]
 }
 
 # `bd init --stealth` still normalizes a few tracked files.  Restore them, but
@@ -146,7 +174,18 @@ trap 'beads_restore_tracked; exit 143' TERM
 # warm-up (BEADS_BOOTSTRAP=1): the optimisation would break the very command
 # it is meant to speed up.  Waiting is what the caller wants; the bound stops
 # a wedged holder hanging a session forever.
-BEADS_LOCK_WAIT="${BEADS_LOCK_WAIT:-300}"
+#
+# The value is sanitized rather than trusted: flock rejects a non-numeric or
+# negative timeout with its own exit status, which lands in the "timed out"
+# branch below and prints a diagnostic that is simply false ("timed out after
+# abcs").  `${x:-300}` only covers unset and empty.
+case "${BEADS_LOCK_WAIT:-}" in
+    '')            BEADS_LOCK_WAIT=300 ;;
+    *[!0-9]*)
+        echo "beads: ignoring BEADS_LOCK_WAIT='${BEADS_LOCK_WAIT}' (not a whole number of seconds); using 300." >&2
+        BEADS_LOCK_WAIT=300
+        ;;
+esac
 
 beads_acquire_lock() {
     if ! command -v flock >/dev/null 2>&1; then
@@ -164,6 +203,13 @@ beads_acquire_lock() {
     exec 9>".beads/.bootstrap.lock"
     # fd 9 stays open for the rest of this process, which is what makes the
     # lock self-release on any exit path.
+    #
+    # It is also INHERITED by every child, and the lock belongs to the open
+    # file description, not to the process - so a child that outlives us keeps
+    # the lock held after we exit, and the next bd command then waits the full
+    # BEADS_LOCK_WAIT for a setup that finished long ago.  npm lifecycle
+    # scripts, npm's own background update-notifier, and dolt are all capable
+    # of that.  Every child started under the lock therefore gets 9>&-.
     if ! flock -w "$BEADS_LOCK_WAIT" 9; then
         echo "beads: timed out after ${BEADS_LOCK_WAIT}s waiting for another setup to finish." >&2
         return 1
@@ -176,7 +222,10 @@ beads_hydrate() {
     [ -f .beads/issues.jsonl ] || return 0
     # Re-check under the lock: another process may have finished while we
     # waited for it.
-    if beads_hydrated "$_bd"; then
+    beads_probe_db "$_bd"
+    _bd_probe=$?
+
+    if [ "$_bd_probe" = 0 ]; then
         # A healthy database with no marker is one this tooling did not create:
         # a developer's existing database, or a container warm from before the
         # marker existed.  ADOPT it - write the marker and leave it alone.
@@ -193,6 +242,20 @@ beads_hydrate() {
         return 0
     fi
 
+    # Unreadable AND populated: refuse, do not rebuild.  This is the other half
+    # of the adoption rule above.  We know the directory has contents and we do
+    # NOT know that those contents are worthless - the probe failing is exactly
+    # the case where we cannot tell - so deleting it would be a guess with
+    # somebody's unexported issues riding on it.  Hand it to a human instead.
+    if [ "$_bd_probe" = 2 ] && beads_dir_nonempty .beads/embeddeddolt; then
+        echo "beads: .beads/embeddeddolt exists but 'bd count' could not read it." >&2
+        echo "       Refusing to rebuild: an unreadable database is not an empty one," >&2
+        echo "       and it may hold issues that were never exported to issues.jsonl." >&2
+        echo "       Run 'bd count' by hand to see why.  To force a fresh import from" >&2
+        echo "       .beads/issues.jsonl, remove .beads/embeddeddolt yourself." >&2
+        return 1
+    fi
+
     _bd_did_init=1
     # Record whether the tree was already dirty, so the restore only runs on a
     # clean tree.  Checked separately from emptiness: a `git status` that
@@ -203,24 +266,25 @@ beads_hydrate() {
     fi
 
     echo "beads: hydrating the issue database from .beads/issues.jsonl..." >&2
-    # Only reached when `bd count` could not read any issues out of it, so
-    # there is nothing here to lose - a healthy database was adopted above and
-    # returned before this point.  Clearing is necessary because
-    # `bd init --from-jsonl` refuses to run against ANY existing database
-    # ("already initialized"), and `bd prime` leaves an empty one behind as a
-    # side effect.
+    # Only reached when the directory is absent, or empty of files, or `bd
+    # count` read it successfully and found zero issues.  A populated database
+    # is either adopted or refused above and never arrives here, so there is
+    # nothing to lose.  Clearing is necessary because `bd init --from-jsonl`
+    # refuses to run against ANY existing database ("already initialized"), and
+    # `bd prime` leaves an empty one behind as a side effect.
     rm -rf .beads/embeddeddolt
     # --stealth keeps beads files out of git (via .git/info/exclude), so init
     #   makes NO commits - critical when this runs from a hook or a shim;
     # --from-jsonl imports the committed JSONL in the same step;
     # --non-interactive / --quiet for a non-TTY container.
-    if ! "$_bd" init --stealth --non-interactive --quiet --from-jsonl >/dev/null; then
+    if ! "$_bd" init --stealth --non-interactive --quiet --from-jsonl >/dev/null 9>&-; then
         echo "beads: 'bd init --from-jsonl' failed - database unavailable." >&2
         rm -rf .beads/embeddeddolt
         return 1
     fi
-    if ! beads_hydrated "$_bd"; then
-        echo "beads: bd init reported success but the database has no issues - treating as a failed hydration." >&2
+    # Safe to clear on failure: whatever is there now, this run created it.
+    if ! beads_probe_db "$_bd"; then
+        echo "beads: bd init reported success but the database is empty or unreadable - treating as a failed hydration." >&2
         rm -rf .beads/embeddeddolt
         return 1
     fi
