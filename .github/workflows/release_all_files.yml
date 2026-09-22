@@ -289,7 +289,7 @@ jobs:
       run: |
         echo    "CoolProp ${{ needs.set_vars.outputs.target }} binaries"                    > binaries/README.rst.txt
         echo    "-------------------------"                                                >> binaries/README.rst.txt
-        echo -n "Binaries of the \`CoolProp project <http://coolprop.sourceforge.net>\`_ " >> binaries/README.rst.txt
+        echo -n "Binaries of the \`CoolProp project <https://coolprop.sourceforge.net>\`_ " >> binaries/README.rst.txt
         echo    "updated on $(date +%F) at $(date +%X) $(date +%Z)."                       >> binaries/README.rst.txt
         cat binaries/README.rst.txt
         mkdir -p binaries/Python

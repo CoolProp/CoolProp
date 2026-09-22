@@ -25,17 +25,17 @@ if __name__ == '__main__':
     O = Octave()
     code = O.parse()
     O.write('Octave\Example.m', code)
-    DownloadFile('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/Octave/Octave3.8.2_Windows_32bit/CoolProp.oct', 'Octave')
+    DownloadFile('https://sourceforge.net/projects/coolprop/files/CoolProp/nightly/Octave/Octave3.8.2_Windows_32bit/CoolProp.oct', 'Octave')
     subprocess.call(r'c:\octave-3.8.2\bin\octave Example.m', stderr=sys.stderr, stdout=sys.stdout, cwd='Octave')
 
     if not os.path.exists('Java'): os.mkdir('Java')
     J = Java()
     code = J.parse()
     J.write('Java\Example.java', code)
-    DownloadFile('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/Java/platform-independent.7z', 'Java')
+    DownloadFile('https://sourceforge.net/projects/coolprop/files/CoolProp/nightly/Java/platform-independent.7z', 'Java')
     subprocess.call(r'7z  platform-independent.7z', stderr=sys.stderr, stdout=sys.stdout, cwd='Java')
 
-    DownloadFile('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/Java/platform-independent.7z', 'Java')
+    DownloadFile('https://sourceforge.net/projects/coolprop/files/CoolProp/nightly/Java/platform-independent.7z', 'Java')
 
     if not os.path.exists('Csharp'): os.mkdir('Csharp')
     C = Csharp()
@@ -45,4 +45,4 @@ if __name__ == '__main__':
     # ~ M = MATLAB()
     # ~ code = M.parse()
     #~ M.write('Example.m', code)
-    #~ DownloadFile('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/MATLAB/CoolPropMATLAB_wrap.mexw64', 'Octave')
+    #~ DownloadFile('https://sourceforge.net/projects/coolprop/files/CoolProp/nightly/MATLAB/CoolPropMATLAB_wrap.mexw64', 'Octave')

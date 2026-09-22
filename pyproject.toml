@@ -46,8 +46,8 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-Homepage = "http://www.coolprop.org"
-Documentation = "http://www.coolprop.org"
+Homepage = "https://www.coolprop.org"
+Documentation = "https://www.coolprop.org"
 Repository = "https://github.com/CoolProp/CoolProp"
 "Bug Tracker" = "https://github.com/CoolProp/CoolProp/issues"
 

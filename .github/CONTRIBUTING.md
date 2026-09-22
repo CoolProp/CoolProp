@@ -26,7 +26,7 @@ The following is a set of guidelines for contributing to CoolProp, which is host
 We have an official Google Group, where the community chimes in with helpful advice if you have questions, and a fairly detailed set of on-line documentation.
 
 * [Discuss, the official CoolProp User Group](https://goo.gl/Pa7FBT)
-* CoolProp documentation: [Release Version](http://www.coolprop.org) and [Development Version](http://www.coolprop.org/dev)
+* CoolProp documentation: [Release Version](https://www.coolprop.org) and [Development Version](https://www.coolprop.org/dev)
 
 ## How Can I Contribute?
 
@@ -41,7 +41,7 @@ Before creating bug reports, please check [this list](#before-submitting-a-bug-r
 #### Before Submitting A Bug Report
 
 * **Check the [FAQs file](https://github.com/CoolProp/CoolProp/blob/master/FAQ.md)** for a list of common questions and problems.
-* **Check the [release](http://www.CoolProp.org) and [development](http://www.CoolProp.org) CoolProp documentation**.
+* **Check the [release](https://www.coolprop.org) and [development](https://www.coolprop.org/dev) CoolProp documentation**.
 * **Perform a [cursory search](https://github.com/search?q=+is%3Aissue+user%3ACoolProp)** to see if the problem has already been reported. If it has **and the issue is still open**, add a comment to the existing issue instead of opening a new one.
 
 #### How Do I Submit A (Good) Issue Report?
@@ -80,7 +80,7 @@ Before creating enhancement suggestions, please check [this list](#before-submit
 
 #### Before Submitting An Enhancement Suggestion
 
-* **Check the [development documentation](http://www.coolprop.org/dev)** — you might discover that the enhancement is already available or planned for the next official release. Most importantly, check if you're using [the latest version of CoolProp](http://www.coolprop.org/dev/coolprop/changelog.html) and if you can get the desired behavior by updating CoolProp.  
+* **Check the [development documentation](https://www.coolprop.org/dev)** — you might discover that the enhancement is already available or planned for the next official release. Most importantly, check if you're using [the latest version of CoolProp](https://www.coolprop.org/dev/coolprop/changelog.html) and if you can get the desired behavior by updating CoolProp.  
 * **Perform a [cursory search](https://github.com/search?q=+is%3Aissue+label%3Awishlist+user%3ACoolProp)** to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
 
 #### How Do I Submit A (Good) Enhancement Suggestion?

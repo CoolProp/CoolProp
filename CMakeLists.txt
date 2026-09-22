@@ -1068,33 +1068,6 @@ if(COOLPROP_IOS_TARGET)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
-if(COOLPROP_DEBIAN_PACKAGE)
-  if(NOT UNIX)
-    message(
-      FATAL_ERROR "COOLPROP_DEBIAN_PACKAGE can only be used on linux host")
-  endif()
-  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
-  add_library(${app_name} SHARED ${APP_SOURCES})
-  coolprop_hide_json_symbols(${app_name})
-  set_target_properties(
-    ${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
-  set_target_properties(
-    ${app_name} PROPERTIES VERSION ${COOLPROP_VERSION}
-                           SOVERSION ${COOLPROP_VERSION_MAJOR})
-  add_dependencies(${app_name} generate_headers)
-  install(TARGETS ${app_name} DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/lib")
-  # GH #1280: install the C++ header tree (incl. CoolProp/CoolPropLib.h) plus
-  # the flat back-compat shims, so both <CoolProp/CoolPropLib.h> and the legacy
-  # <CoolPropLib.h> resolve from /usr/include. Shims removed at v9.
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
-          REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include" FILES_MATCHING PATTERN "*.h"
-          PATTERN "CoolProp" EXCLUDE PATTERN "*_JSON*.h" EXCLUDE PATTERN "*_CBOR*.h" EXCLUDE PATTERN "CPmsgpack.h" EXCLUDE
-          PATTERN "gitrevision.h" EXCLUDE PATTERN "cpversion.h" EXCLUDE)
-endif()
-
 if(COOLPROP_VXWORKS_MAKEFILE)
 
   set(INCLUDE_DIRECTORIES)
