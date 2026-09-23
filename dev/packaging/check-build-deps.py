@@ -95,28 +95,62 @@ def parse_workflow_apt_packages(text):
 def parse_distro_cmake_options(text):
     """Return the -DCOOLPROP_* options of the distribution configure call.
 
-    Each recipe configures CoolProp once for a distribution build, and that
-    call is identified by COOLPROP_REQUIRE_VENDORED_DEPS, which only an
-    offline packaging build passes.  Other cmake calls in the same file, such
-    as the install-prefix assertions in the workflow, are ignored.
-    """
-    blocks = []
-    current = []
-    for line in text.splitlines():
-        if "-D" in line:
-            current.append(line)
-        elif current:
-            blocks.append("\n".join(current))
-            current = []
-    if current:
-        blocks.append("\n".join(current))
+    The three recipes are a YAML workflow, an RPM spec and a makefile, so the
+    only structure they share is a configure command continued over several
+    lines with trailing backslashes.  This therefore drops comments, rejoins
+    those continuations into whole commands, and picks the command that passes
+    COOLPROP_REQUIRE_VENDORED_DEPS, which only an offline packaging build does.
+    Dropping comments first matters: all three files describe these options in
+    prose above the command, and a comment that quoted one would otherwise be
+    mistaken for the command itself.
 
-    for block in blocks:
-        if "COOLPROP_REQUIRE_VENDORED_DEPS" in block:
-            return dict(
-                re.findall(r"-D(COOLPROP_\w+)=([A-Za-z0-9_./-]+)", block)
+    Raises ValueError rather than returning a partial answer, because an option
+    this cannot read is an option it would silently stop comparing.
+    """
+    commands = []
+    current = ""
+    for raw in text.splitlines():
+        if raw.lstrip().startswith("#"):
+            continue
+        line = raw.rstrip()
+        if line.endswith("\\"):
+            current += line[:-1] + " "
+            continue
+        current += line
+        commands.append(current)
+        current = ""
+    if current:
+        commands.append(current)
+
+    matching = [c for c in commands if "COOLPROP_REQUIRE_VENDORED_DEPS" in c]
+    if not matching:
+        return None
+    if len(matching) > 1:
+        raise ValueError(
+            "found {0} configure commands passing "
+            "COOLPROP_REQUIRE_VENDORED_DEPS; expected exactly one".format(
+                len(matching)
             )
-    return None
+        )
+
+    command = matching[0]
+    # A value may be bare, double quoted or single quoted; a quoted one can
+    # contain spaces, as -DCOOLPROP_PC_REQUIRES="eigen3 fmt" will when step 2
+    # of GH #3388 lands.
+    pairs = re.findall(
+        r"""-D(COOLPROP_\w+)=("[^"]*"|'[^']*'|\S+)""", command
+    )
+    # Every -DCOOLPROP_ in the command must have been read.  Without this, a
+    # value shape the pattern above cannot match would simply disappear from
+    # the comparison and the checker would pass while the recipes disagree.
+    if len(pairs) != command.count("-DCOOLPROP_"):
+        raise ValueError(
+            "read {0} of {1} -DCOOLPROP_ options; one of them has a value "
+            "this parser cannot read".format(
+                len(pairs), command.count("-DCOOLPROP_")
+            )
+        )
+    return {name: value.strip("\"'") for name, value in pairs}
 
 
 def main():
@@ -129,9 +163,22 @@ def main():
         WORKFLOW.read_text(encoding="utf-8")
     )
 
-    workflow_opts = parse_distro_cmake_options(WORKFLOW.read_text(encoding="utf-8"))
-    spec_opts = parse_distro_cmake_options(SPEC.read_text(encoding="utf-8"))
-    rules_opts = parse_distro_cmake_options(RULES.read_text(encoding="utf-8"))
+    options = {}
+    for label, path in (
+        ("packaging_offline.yml", WORKFLOW),
+        ("coolprop.spec", SPEC),
+        ("debian.rules", RULES),
+    ):
+        try:
+            options[label] = parse_distro_cmake_options(
+                path.read_text(encoding="utf-8")
+            )
+        except ValueError as error:
+            problems.append("{0}: {1}".format(label, error))
+            options[label] = None
+    workflow_opts = options["packaging_offline.yml"]
+    spec_opts = options["coolprop.spec"]
+    rules_opts = options["debian.rules"]
 
     # A parse that finds nothing must be an error, never a silent pass.  This
     # is the fail-open that would make every check below vacuously true.
@@ -222,7 +269,7 @@ def main():
         report(problems)
         return 1
 
-    print("ok: the packaging recipes agree on their build dependencies")
+    print("ok: the recipes agree on build dependencies and configure options")
     print("  debian.control / coolprop.dsc: " + ", ".join(sorted(control_deps)))
     print("  coolprop.spec:                 " + ", ".join(sorted(spec_reqs)))
     print("  shared cmake options:          "
@@ -237,8 +284,10 @@ def report(problems):
         print("  - " + problem, file=sys.stderr)
     print(
         "\nEvery build dependency has to be declared in debian.control, "
-        "coolprop.dsc\nand coolprop.spec, and installed by "
-        "packaging_offline.yml.  See dev/packaging/README.md.",
+        "coolprop.dsc and\ncoolprop.spec, and installed by "
+        "packaging_offline.yml.  Every -DCOOLPROP_ option\nhas to be passed "
+        "the same way by packaging_offline.yml, coolprop.spec and\n"
+        "debian.rules.  See dev/packaging/README.md.",
         file=sys.stderr,
     )
 

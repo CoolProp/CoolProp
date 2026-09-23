@@ -12,8 +12,8 @@ operational half.
 dev/packaging/
   make-release-tarball.sh     build the offline source tarball
   vendor-deps.sh              fill externals/cpm/ so a build needs no network
-  check-build-deps.py         assert the recipes below declare the same
-                              build dependencies (run by the CI workflow)
+  check-build-deps.py         assert the recipes below declare the same build
+                              dependencies and configure options (run by CI)
   obs/
     _service                  bootstrap-only: fetch + checksum a release tarball
     coolprop.spec             RPM recipe   (openSUSE, SLE, Fedora, RHEL/EPEL)
@@ -86,7 +86,8 @@ branch was open.  A packaging build asks for it with four options:
   `%{_includedir}/CoolProp/` and rpmbuild aborts on "Installed (but
   unpackaged) files found"
 
-OFF is not free: it makes `cmake/dependencies.cmake` resolve Eigen and fmt with
+`COOLPROP_VENDOR_THIRD_PARTY=OFF` is not free: it makes
+`cmake/dependencies.cmake` resolve Eigen and fmt with
 `find_package(... CONFIG REQUIRED)` instead of CPM, so both have to be
 installed at **build** time, not just depended on at install time.  A recipe
 that turns the option off without declaring them fails in the configure step
