@@ -139,38 +139,6 @@ enable_testing()
 
 foreach(_coolprop_provider_target IN LISTS _coolprop_provider_targets)
   get_target_property(_coolprop_target_type "${_coolprop_provider_target}" TYPE)
-  set(_coolprop_effective_linkage "")
-
-  if(_coolprop_provider_target STREQUAL "CoolProp::Static")
-    set(_coolprop_effective_linkage STATIC)
-    if(NOT _coolprop_target_type STREQUAL "STATIC_LIBRARY"
-       AND NOT _coolprop_target_type STREQUAL "INTERFACE_LIBRARY")
-      message(
-        FATAL_ERROR
-          "CoolProp::Static exists but has incompatible type ${_coolprop_target_type}"
-      )
-    endif()
-  elseif(_coolprop_provider_target STREQUAL "CoolProp::Shared")
-    set(_coolprop_effective_linkage SHARED)
-    if(NOT _coolprop_target_type STREQUAL "SHARED_LIBRARY"
-       AND NOT _coolprop_target_type STREQUAL "INTERFACE_LIBRARY")
-      message(
-        FATAL_ERROR
-          "CoolProp::Shared exists but has incompatible type ${_coolprop_target_type}"
-      )
-    endif()
-  elseif(_coolprop_target_type STREQUAL "STATIC_LIBRARY")
-    set(_coolprop_effective_linkage STATIC)
-  elseif(_coolprop_target_type STREQUAL "SHARED_LIBRARY")
-    set(_coolprop_effective_linkage SHARED)
-  elseif(_coolprop_target_type STREQUAL "INTERFACE_LIBRARY")
-    set(_coolprop_effective_linkage "${_coolprop_expected_linkage}")
-  else()
-    message(
-      FATAL_ERROR
-        "${_coolprop_provider_target} has unsupported type ${_coolprop_target_type}"
-    )
-  endif()
 
   # A canonical selector or single-variant compatibility target may be an
   # INTERFACE wrapper. Resolve one level to find its actual provider type and,
@@ -192,30 +160,42 @@ foreach(_coolprop_provider_target IN LISTS _coolprop_provider_targets)
     endforeach()
   endif()
 
+  # The linkage under test is always that of the concrete library, never the
+  # linkage the caller expected: deriving it from the expectation would let
+  # every check below agree with itself whatever the package provides.
   get_target_property(_coolprop_runtime_target_type
                       "${_coolprop_runtime_target}" TYPE)
-  if(_coolprop_effective_linkage STREQUAL "")
-    if(_coolprop_runtime_target_type STREQUAL "STATIC_LIBRARY")
-      set(_coolprop_effective_linkage STATIC)
-    elseif(_coolprop_runtime_target_type STREQUAL "SHARED_LIBRARY")
-      set(_coolprop_effective_linkage SHARED)
-    endif()
+  if(_coolprop_runtime_target_type STREQUAL "STATIC_LIBRARY")
+    set(_coolprop_effective_linkage STATIC)
+  elseif(_coolprop_runtime_target_type STREQUAL "SHARED_LIBRARY")
+    set(_coolprop_effective_linkage SHARED)
+  else()
+    message(
+      FATAL_ERROR
+        "${_coolprop_provider_target} (${_coolprop_target_type}) does not resolve to a static or shared library; resolved to ${_coolprop_runtime_target} (${_coolprop_runtime_target_type})"
+    )
   endif()
 
-  if(_coolprop_provider_target STREQUAL "CoolProp::CoolProp"
-     AND _coolprop_expected_linkage STREQUAL "STATIC"
+  if(_coolprop_provider_target STREQUAL "CoolProp::Static"
      AND NOT _coolprop_effective_linkage STREQUAL "STATIC")
     message(
       FATAL_ERROR
-        "Expected a static CoolProp package, but CoolProp::CoolProp has type ${_coolprop_target_type}"
+        "CoolProp::Static resolves to ${_coolprop_runtime_target}, which is a ${_coolprop_runtime_target_type}"
     )
   endif()
-  if(_coolprop_provider_target STREQUAL "CoolProp::CoolProp"
-     AND _coolprop_expected_linkage STREQUAL "SHARED"
+  if(_coolprop_provider_target STREQUAL "CoolProp::Shared"
      AND NOT _coolprop_effective_linkage STREQUAL "SHARED")
     message(
       FATAL_ERROR
-        "Expected a shared CoolProp package, but CoolProp::CoolProp has type ${_coolprop_target_type}"
+        "CoolProp::Shared resolves to ${_coolprop_runtime_target}, which is a ${_coolprop_runtime_target_type}"
+    )
+  endif()
+  if(_coolprop_provider_target STREQUAL "CoolProp::CoolProp"
+     AND NOT _coolprop_expected_linkage STREQUAL ""
+     AND NOT _coolprop_effective_linkage STREQUAL "${_coolprop_expected_linkage}")
+    message(
+      FATAL_ERROR
+        "Expected CoolProp::CoolProp to provide a ${_coolprop_expected_linkage} library, but it resolves to ${_coolprop_runtime_target} (${_coolprop_runtime_target_type})"
     )
   endif()
 
