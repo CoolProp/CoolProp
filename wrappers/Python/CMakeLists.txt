@@ -132,14 +132,22 @@ file(GLOB_RECURSE COOLPROP_SOURCES
 # Remove any test files or unwanted sources
 list(FILTER COOLPROP_SOURCES EXCLUDE REGEX ".*tests?/.*")
 
-# Include directories
+# Include directories.  Eigen and fmt come from cmake/dependencies.cmake:
+# the pinned copies by default, or with COOLPROP_VENDOR_THIRD_PARTY=OFF the
+# system packages, whose prefixes (e.g. a conda $PREFIX/include) can also hold
+# other libraries' headers -- so in that mode they are searched last.
+if(COOLPROP_VENDOR_THIRD_PARTY)
+  set(_coolprop_vendored_include_dirs ${COOLPROP_EIGEN_INCLUDE_DIRS}
+                                      ${COOLPROP_FMT_INCLUDE_DIRS})
+else()
+  set(_coolprop_vendored_include_dirs "")
+endif()
 set(COOLPROP_INCLUDE_DIRS
     ${ROOT_DIR}
     ${ROOT_DIR}/include
     ${ROOT_DIR}/src
     ${ROOT_DIR}/dev
-    ${Eigen_SOURCE_DIR}
-    ${fmt_SOURCE_DIR}/include
+    ${_coolprop_vendored_include_dirs}
     ${boost_headers_SOURCE_DIR}
     ${ROOT_DIR}/externals/incbin
     ${nlohmann_json_SOURCE_DIR}/include
@@ -149,6 +157,10 @@ set(COOLPROP_INCLUDE_DIRS
     ${IF97_SOURCE_DIR}
     ${REFPROP_headers_SOURCE_DIR}
 )
+if(NOT COOLPROP_VENDOR_THIRD_PARTY)
+  list(APPEND COOLPROP_INCLUDE_DIRS ${COOLPROP_EIGEN_INCLUDE_DIRS}
+       ${COOLPROP_FMT_INCLUDE_DIRS})
+endif()
 
 # Build miniz as a static library
 add_library(miniz STATIC "${ROOT_DIR}/externals/miniz-3.1.1/miniz.c")
@@ -466,7 +478,10 @@ install(DIRECTORY "${ROOT_DIR}/include/"
 # downstream Cython that cimports constants_header (DataStructures.h ->
 # numerics.h -> detail/strings.h -> fmt/format.h, header-only via FMT_HEADER_ONLY
 # unless NO_FMTLIB).  Affected the legacy wheel too; this fixes both.
-install(DIRECTORY "${fmt_SOURCE_DIR}/include/fmt"
+# COOLPROP_FMT_INCLUDE_DIRS is ${fmt_SOURCE_DIR}/include for the pinned copy,
+# or the system fmt package's include root with COOLPROP_VENDOR_THIRD_PARTY=OFF.
+list(GET COOLPROP_FMT_INCLUDE_DIRS 0 _coolprop_fmt_include_root)
+install(DIRECTORY "${_coolprop_fmt_include_root}/fmt"
     DESTINATION CoolProp/include
     FILES_MATCHING
     PATTERN "*.h"

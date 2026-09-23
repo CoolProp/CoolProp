@@ -499,13 +499,17 @@ list(REMOVE_ITEM APP_SOURCES
 list(REMOVE_ITEM APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
 
 set(APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}")
-list(APPEND APP_INCLUDE_DIRS ${COOLPROP_EIGEN_INCLUDE_DIRS})
+if(COOLPROP_VENDOR_THIRD_PARTY)
+  list(APPEND APP_INCLUDE_DIRS ${COOLPROP_EIGEN_INCLUDE_DIRS})
+endif()
 list(APPEND APP_INCLUDE_DIRS "${msgpack-c_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/dev")
 list(APPEND APP_INCLUDE_DIRS "${boost_headers_SOURCE_DIR}")
-list(APPEND APP_INCLUDE_DIRS ${COOLPROP_FMT_INCLUDE_DIRS})
+if(COOLPROP_VENDOR_THIRD_PARTY)
+  list(APPEND APP_INCLUDE_DIRS ${COOLPROP_FMT_INCLUDE_DIRS})
+endif()
 list(APPEND APP_INCLUDE_DIRS "${nlohmann_json_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${valijson_SOURCE_DIR}/include")
 # Valijson is consumed header-only (DOWNLOAD_ONLY), so its INTERFACE
@@ -522,6 +526,15 @@ if (MSVC)
 endif()
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
+# With COOLPROP_VENDOR_THIRD_PARTY=OFF the Eigen and fmt roots are system or
+# package-manager prefixes (/opt/homebrew/include, a vcpkg or conda include
+# dir, ...) which can also hold other libraries' headers, or an installed
+# CoolProp.  Search them last, so they cannot shadow the pinned dependencies
+# or CoolProp's own include/ and src/ trees.
+if(NOT COOLPROP_VENDOR_THIRD_PARTY)
+  list(APPEND APP_INCLUDE_DIRS ${COOLPROP_EIGEN_INCLUDE_DIRS}
+       ${COOLPROP_FMT_INCLUDE_DIRS})
+endif()
 
 ## Set endianess for msgpack on ARM64 with MSVC
 #if(MSVC)
