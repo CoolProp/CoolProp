@@ -66,6 +66,12 @@ jobs:
         restore-keys: |
           cpm-${{ runner.os }}-
 
+    - name: Install system Eigen and fmt for package tests
+      if: runner.os == 'Linux' && matrix.linkage == 'static'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libeigen3-dev libfmt-dev
+
     - name: Configure CMake
       shell: bash
       run: |
@@ -77,6 +83,9 @@ jobs:
           both) static=ON; shared=ON ;;
         esac
         extra_args=()
+        if [ "${{ runner.os }}" = Linux ] && [ "${{ matrix.linkage }}" = static ]; then
+          extra_args+=("-DCPM_USE_LOCAL_PACKAGES=ON")
+        fi
         if [ "${{ runner.os }}" = Windows ] && [ "${{ matrix.linkage }}" = both ]; then
           # Regression gate: Debug must still select the debug CRT even when
           # the deprecated compatibility switch is explicitly disabled.
@@ -200,6 +209,69 @@ jobs:
           cmake --build c-consumer-build --config "${{ env.BUILD_TYPE }}"
           ctest --test-dir c-consumer-build -C "${{ env.BUILD_TYPE }}" --output-on-failure
         fi
+
+    - name: Reject an empty legacy install prefix
+      if: runner.os == 'Linux' && matrix.linkage == 'static'
+      shell: bash
+      run: |
+        set -euo pipefail
+        if cmake -S . -B empty-prefix -DCOOLPROP_INSTALL_PREFIX:PATH= >empty-prefix.log 2>&1; then
+          echo "FAIL: an empty COOLPROP_INSTALL_PREFIX was accepted"
+          exit 1
+        fi
+        grep -F "COOLPROP_INSTALL_PREFIX must not be empty" empty-prefix.log
+
+    - name: Honor explicit dependency source directories
+      if: runner.os == 'Linux' && matrix.linkage == 'static'
+      shell: bash
+      run: |
+        set -euo pipefail
+        eigen_source=$(sed -n 's/^CPM_PACKAGE_Eigen_SOURCE_DIR:INTERNAL=//p' build/CMakeCache.txt)
+        fmt_source=$(sed -n 's/^CPM_PACKAGE_fmt_SOURCE_DIR:INTERNAL=//p' build/CMakeCache.txt)
+        test -f "$eigen_source/Eigen/Core"
+        test -f "$fmt_source/include/fmt/format.h"
+        cmake -S . -B source-overrides \
+          -DCOOLPROP_STATIC_LIBRARY=ON \
+          -DCPM_USE_LOCAL_PACKAGES=ON \
+          -DCPM_Eigen_SOURCE="$eigen_source" \
+          -DCPM_fmt_SOURCE="$fmt_source" \
+          -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+
+    - name: Test system Eigen and fmt without vendored headers
+      if: runner.os == 'Linux' && matrix.linkage == 'static'
+      shell: bash
+      run: |
+        set -euo pipefail
+        prefix_a="$RUNNER_TEMP/coolprop-system-a"
+        prefix_b="$RUNNER_TEMP/coolprop-system-b"
+        cmake -S . -B system-build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCOOLPROP_STATIC_LIBRARY=ON \
+          -DCOOLPROP_VENDOR_THIRD_PARTY=OFF \
+          -DCPM_USE_LOCAL_PACKAGES=ON \
+          -DCOOLPROP_INSTALL_LEGACY_LAYOUT=OFF \
+          -DCMAKE_INSTALL_PREFIX="$prefix_a"
+        cmake --build system-build --parallel 2
+        cmake --install system-build
+        cmake -E rename "$prefix_a" "$prefix_b"
+        test ! -d "$prefix_b/include/CoolProp/third_party"
+        if grep -R -E 'CoolProp/third_party|Eigen_SOURCE_DIR|fmt_SOURCE_DIR' "$prefix_b/lib/cmake/CoolProp"; then
+          echo "FAIL: the system package still references vendored source/header paths"
+          exit 1
+        fi
+        cmake -S dev/ci/cmake-consumer -B system-consumer \
+          -DCMAKE_PREFIX_PATH="$prefix_b" \
+          -DCOOLPROP_EXPECTED_LINKAGE=STATIC
+        cmake --build system-consumer --parallel 2
+        ctest --test-dir system-consumer --output-on-failure
+        if cmake -S dev/ci/cmake-consumer -B missing-eigen-consumer \
+            -DCMAKE_PREFIX_PATH="$prefix_b" \
+            -DCOOLPROP_EXPECTED_LINKAGE=STATIC \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Eigen3=ON >missing-eigen.log 2>&1; then
+          echo "FAIL: the system package did not require Eigen3"
+          exit 1
+        fi
+        grep -F Eigen3 missing-eigen.log
 
     - name: Build Debug MSVC runtimes and installed consumers
       if: runner.os == 'Windows' && matrix.linkage == 'both'

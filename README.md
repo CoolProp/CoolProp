@@ -67,6 +67,20 @@ Nested builds add no CoolProp install rules by default. A parent project that
 intentionally packages CoolProp can enable `COOLPROP_INSTALL_CMAKE_PACKAGE`
 and/or `COOLPROP_INSTALL_LEGACY_LAYOUT` before calling `add_subdirectory`.
 
+By default, `COOLPROP_VENDOR_THIRD_PARTY=ON` bundles the pinned Eigen and fmt
+headers and licenses into the relocatable package. Their sources are fetched
+even with `CPM_USE_LOCAL_PACKAGES=ON`, because installed packages may not supply
+the source files required for vendoring. Explicit `CPM_Eigen_SOURCE` and
+`CPM_fmt_SOURCE` source-directory overrides remain supported. Distributors can set
+`COOLPROP_VENDOR_THIRD_PARTY=OFF` to use installed `Eigen3` and `fmt` CMake
+packages instead (Eigen 3.4 or newer); downstream consumers must then provide
+those packages too.
+This option concerns Eigen/fmt only, not CoolProp's other build dependencies.
+
+Use `CMAKE_INSTALL_PREFIX` (or `cmake --install --prefix`) to choose the install
+location. The legacy `COOLPROP_INSTALL_PREFIX` override must not be empty and
+is ignored in nested builds, which retain their parent's install prefix.
+
 ## Sponsors
 
 Free code signing on Windows provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).

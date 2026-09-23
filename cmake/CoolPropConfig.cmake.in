@@ -1,7 +1,20 @@
 @PACKAGE_INIT@
 
+# Resolve this before dependencies can change PACKAGE_PREFIX_DIR (CMake < 3.30).
+set_and_check(CoolProp_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+
+include(CMakeFindDependencyMacro)
+if(NOT @COOLPROP_VENDOR_THIRD_PARTY@)
+  find_dependency(Eigen3 CONFIG)
+  if(Eigen3_VERSION VERSION_LESS 3.4)
+    set(CoolProp_FOUND FALSE)
+    set(CoolProp_NOT_FOUND_MESSAGE "CoolProp requires Eigen 3.4 or newer; found ${Eigen3_VERSION}.")
+    return()
+  endif()
+  find_dependency(fmt CONFIG)
+endif()
+
 if(@COOLPROP_PACKAGE_HAS_STATIC@)
-  include(CMakeFindDependencyMacro)
   find_dependency(Threads)
 endif()
 
@@ -29,7 +42,6 @@ if(CoolProp_SHARED_AVAILABLE AND NOT TARGET CoolProp::Shared)
                                                 CoolProp::CoolProp)
 endif()
 
-set_and_check(CoolProp_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
 set(CoolProp_LIBRARIES CoolProp::CoolProp)
 
 check_required_components(CoolProp)

@@ -223,6 +223,10 @@ function(_coolprop_install_standard_headers)
     PATTERN "gitrevision.h" EXCLUDE
     PATTERN "cpversion.h" EXCLUDE)
 
+  if(NOT COOLPROP_VENDOR_THIRD_PARTY)
+    return()
+  endif()
+
   # Eigen and fmt are header-only implementation dependencies which also occur
   # in installed public headers.  Install private copies under the CoolProp
   # include tree so the exported package is self-contained and relocatable.
@@ -304,19 +308,21 @@ function(coolprop_add_library_targets)
   add_library(coolprop_eigen_headers INTERFACE)
   set_property(TARGET coolprop_eigen_headers PROPERTY EXPORT_NAME
                                                         _EigenHeaders)
-  target_include_directories(
-    coolprop_eigen_headers SYSTEM
-    INTERFACE "$<BUILD_INTERFACE:${Eigen_SOURCE_DIR}>"
-              "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/CoolProp/third_party/eigen>"
-  )
-
   add_library(coolprop_fmt_headers INTERFACE)
   set_property(TARGET coolprop_fmt_headers PROPERTY EXPORT_NAME _FmtHeaders)
-  target_include_directories(
-    coolprop_fmt_headers SYSTEM
-    INTERFACE "$<BUILD_INTERFACE:${fmt_SOURCE_DIR}/include>"
-              "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/CoolProp/third_party/fmt>"
-  )
+  if(COOLPROP_VENDOR_THIRD_PARTY)
+    target_include_directories(
+      coolprop_eigen_headers SYSTEM
+      INTERFACE "$<BUILD_INTERFACE:${Eigen_SOURCE_DIR}>"
+                "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/CoolProp/third_party/eigen>")
+    target_include_directories(
+      coolprop_fmt_headers SYSTEM
+      INTERFACE "$<BUILD_INTERFACE:${fmt_SOURCE_DIR}/include>"
+                "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/CoolProp/third_party/fmt>")
+  else()
+    target_link_libraries(coolprop_eigen_headers INTERFACE Eigen3::Eigen)
+    target_link_libraries(coolprop_fmt_headers INTERFACE fmt::fmt-header-only)
+  endif()
   if(MSVC)
     target_compile_options(coolprop_fmt_headers
                            INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:/utf-8>")

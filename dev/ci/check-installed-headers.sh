@@ -89,8 +89,9 @@ fi
 # detail/msgpack.h pulling msgpack.hpp slipped past the nlohmann/valijson grep).
 # Compile each CoolProp-owned *.h as its own translation unit.  That surface
 # depends only on Eigen (the fluids/numerics/superancillary tiers) and on fmt
-# unless NO_FMTLIB is defined; resolve Eigen from the build's CPM cache and
-# define NO_FMTLIB so fmt is not required.  Boost is deliberately NOT on the
+# unless NO_FMTLIB is defined; use the installed Eigen copy and define
+# NO_FMTLIB so fmt is not required. For a non-vendored package, set EIGEN_DIR
+# to the system Eigen include directory. Boost is deliberately NOT on the
 # path: the superancillary rootfinder routes through an out-of-line helper
 # (src/superancillary.cpp), so a regression that re-introduces a boost include
 # into an installed header fails this compile (and assertion 2 above).
@@ -100,17 +101,17 @@ if [ ! -f "$CACHE" ]; then
     echo "FAIL: $CACHE not found -- '$BUILD_DIR' is not a configured CMake build dir; cannot resolve Eigen for the self-containedness check." >&2
     exit 1
 fi
-EIGEN_DIR="$(sed -n 's/^CPM_PACKAGE_Eigen_SOURCE_DIR:INTERNAL=//p' "$CACHE" | head -1)"
-if [ -z "$EIGEN_DIR" ] || [ ! -d "$EIGEN_DIR" ]; then
-    echo "FAIL: could not resolve the Eigen include dir from $CACHE -- cannot run the self-containedness check (fail-closed)." >&2
-    exit 1
-fi
 INSTALL_INCLUDEDIR="$(sed -n 's/^CMAKE_INSTALL_INCLUDEDIR:[^=]*=//p' "$CACHE" | head -1)"
 if [ -z "$INSTALL_INCLUDEDIR" ]; then
     echo "FAIL: could not resolve CMAKE_INSTALL_INCLUDEDIR from $CACHE -- cannot select the canonical package include root." >&2
     exit 1
 fi
 INC_ROOT="$PREFIX/$INSTALL_INCLUDEDIR"
+EIGEN_DIR="${EIGEN_DIR:-$INC_ROOT/CoolProp/third_party/eigen}"
+if [ ! -f "$EIGEN_DIR/Eigen/Core" ]; then
+    echo "FAIL: Eigen/Core not found under $EIGEN_DIR; for a non-vendored package, set EIGEN_DIR to the system Eigen include directory." >&2
+    exit 1
+fi
 if [ ! -f "$INC_ROOT/CoolProp/CoolProp.h" ]; then
     echo "FAIL: canonical installed header $INC_ROOT/CoolProp/CoolProp.h is missing -- cannot validate self-containedness." >&2
     exit 1
@@ -222,41 +223,23 @@ if [ "$SC_CHECKED" -ne "$SC_TOTAL" ]; then
     exit 1
 fi
 
-# The success line below names shared_library/CoolPropLib.h as *the* header
-# outside the sweep.  Assert that rather than trusting it: if an install rule
-# ever ships another header outside INC_ROOT, the message would understate the
-# gap -- the same overstatement this change just fixed in the other direction.
-#
-# Compare the IDENTITY of the unswept set, not merely its size.  A count-only
-# check ("exactly one header is unswept") passes unchanged if CoolPropLib.h stops
-# being installed and some different header takes its place outside the sweep:
-# the total still differs by one, the gate still goes green, and the success line
-# then names a file that is no longer the exemption.  Enumerating the paths is
-# what makes the claim true rather than merely arithmetically consistent.
-#
-# A mismatch is a hard failure, which also means the gate stops asserting a stale
-# exemption once the sweep widens to cover CoolPropLib.h (bd CoolProp-1n5g).
-# Identity is asserted on the FILE NAME, not the full installed path.  What the
-# gate needs to know is "the one header we do not compile is still CoolPropLib.h,
-# not some other header that quietly stopped being swept".  Pinning the whole
-# relative path would additionally hard-code one install layout, so a change to
-# the install prefix or directory structure would fail the gate for a reason that
-# has nothing to do with header coverage.  The full path is printed either way,
-# so a layout change is still visible in the log.
-SC_UNSWEPT_EXPECTED="CoolPropLib.h"
+# Optional legacy layouts contain copies of the canonical headers. Verify
+# those copies too, without compiling every identical header a second time.
 find "$PREFIX" -name '*.h' ! -path "$INC_ROOT/*" | LC_ALL=C sort >"$SC_TMP/unswept"
-# -printf '%P' would be tidier but is GNU-only; strip the prefix in the shell so
-# this keeps working under BSD/macOS find.
-SC_UNSWEPT_REL="$(while IFS= read -r h; do printf '%s\n' "${h#"$PREFIX"/}"; done <"$SC_TMP/unswept")"
-SC_UNSWEPT_N="$(printf '%s' "$SC_UNSWEPT_REL" | grep -c . || true)"
-[ -n "$SC_UNSWEPT_N" ] || SC_UNSWEPT_N=0
-if [ "$SC_UNSWEPT_N" -gt 1 ] || { [ "$SC_UNSWEPT_N" -eq 1 ] && [ "${SC_UNSWEPT_REL##*/}" != "$SC_UNSWEPT_EXPECTED" ]; }; then
-    echo "FAIL: only the optional legacy '$SC_UNSWEPT_EXPECTED' may be installed outside the include root; found $SC_UNSWEPT_N:" >&2
-    printf '%s\n' "${SC_UNSWEPT_REL:-(none)}" | sed 's/^/        /' >&2
-    echo "      Either a header is newly shipped outside the swept tree -- in which case it is going unchecked -- or the sweep has widened and this assertion plus the success message need updating (bd CoolProp-1n5g)." >&2
-    exit 1
-fi
-SC_UNSWEPT_SHOWN="${SC_UNSWEPT_REL:-(none)}"
+while IFS= read -r hdr; do
+    relative="${hdr#"$PREFIX"/}"
+    case "$relative" in
+        static_library/include/*|shared_library/include/*)
+            canonical="$INC_ROOT/${relative#*/include/}" ;;
+        static_library/CoolPropLib.h|shared_library/CoolPropLib.h)
+            canonical="$INC_ROOT/CoolProp/CoolPropLib.h" ;;
+        *) echo "FAIL: unexpected header outside the canonical include root: $hdr" >&2; exit 1 ;;
+    esac
+    if ! cmp -s "$hdr" "$canonical"; then
+        echo "FAIL: legacy header differs from its checked canonical copy: $hdr" >&2
+        exit 1
+    fi
+done <"$SC_TMP/unswept"
 
 if [ "$SC_FAIL" -ne 0 ]; then
     find "$SC_TMP" -name 'fail.*' | LC_ALL=C sort | while IFS= read -r marker; do
@@ -268,10 +251,4 @@ if [ "$SC_FAIL" -ne 0 ]; then
     exit 1
 fi
 
-# ${SC_TOTAL}, not ${NHEADERS}: the sweep compiles the headers under the include
-# root, while NHEADERS counts every *.h in the install prefix.  The difference is
-# exactly one file -- the top-level shared_library/CoolPropLib.h, the single-
-# include C/DLL API header, which sits outside INC_ROOT and is therefore NOT
-# swept (bd CoolProp-1n5g).  Claiming NHEADERS here overstated the
-# check by that one header.
-echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack/boost; all ${SC_TOTAL} CoolProp-owned headers under the include root compile standalone (of ${NHEADERS} installed *.h; legacy headers outside the sweep: ${SC_UNSWEPT_SHOWN}) with -DNO_FMTLIB, Eigen-only on the path, from ${BUILD_DIR}"
+echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack/boost; all ${SC_TOTAL} canonical CoolProp-owned headers compile standalone; legacy copies match; vendored headers excluded (of ${NHEADERS} installed *.h) from ${BUILD_DIR}"
