@@ -141,7 +141,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if(DEFINED COOLPROP_INSTALL_PREFIX)
     if(COOLPROP_INSTALL_PREFIX STREQUAL "")
       message(FATAL_ERROR
-              "COOLPROP_INSTALL_PREFIX must not be empty; omit it to use the default install prefix.")
+              "COOLPROP_INSTALL_PREFIX must not be empty; omit it to use the default install prefix (after a failed configure, also clear the cached value with cmake -U COOLPROP_INSTALL_PREFIX).")
     endif()
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
     set(CMAKE_INSTALL_PREFIX
@@ -152,6 +152,14 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(CMAKE_INSTALL_PREFIX
         "${CMAKE_CURRENT_SOURCE_DIR}/install_root"
         CACHE PATH "CoolProp install path" FORCE)
+  endif()
+  # Install destinations are relative, so an empty prefix installs into the
+  # filesystem root.  Master always forced install_root; now that an explicit
+  # CMAKE_INSTALL_PREFIX is honoured, refuse an empty one too (for example
+  # -DCMAKE_INSTALL_PREFIX="$PREFIX" with PREFIX unset).
+  if(CMAKE_INSTALL_PREFIX STREQUAL "")
+    message(FATAL_ERROR
+            "CMAKE_INSTALL_PREFIX must not be empty; omit it to use the default install prefix (after a failed configure, also clear the cached value with cmake -U CMAKE_INSTALL_PREFIX).")
   endif()
 elseif(DEFINED COOLPROP_INSTALL_PREFIX)
   message(

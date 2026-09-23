@@ -220,6 +220,11 @@ jobs:
           exit 1
         fi
         grep -F "COOLPROP_INSTALL_PREFIX must not be empty" empty-prefix.log
+        if cmake -S . -B empty-cmake-prefix -DCMAKE_INSTALL_PREFIX:PATH= >empty-cmake-prefix.log 2>&1; then
+          echo "FAIL: an empty CMAKE_INSTALL_PREFIX was accepted"
+          exit 1
+        fi
+        grep -F "CMAKE_INSTALL_PREFIX must not be empty" empty-cmake-prefix.log
 
     - name: Honor explicit dependency source directories
       if: runner.os == 'Linux' && matrix.linkage == 'static'
