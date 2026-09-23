@@ -266,21 +266,28 @@ static LRESULT CP_AS_factory(LPCOMPLEXSCALAR Handle,  // output: handle for use 
     return 0;
 }
 
-// Fixed tolerance for the AS_set_fractions sum-to-1.0 check below.  Loose
-// enough to tolerate ordinary floating-point representation of fractions a
-// user typed to a handful of decimal places, tight enough to catch a
-// genuinely missing/mistyped component.
+// Fixed tolerance for the AS_set_mole_fractions/AS_set_mass_fractions sum-to-1.0
+// check below.  Loose enough to tolerate ordinary floating-point representation
+// of fractions a user typed to a handful of decimal places, tight enough to
+// catch a genuinely missing/mistyped component.
 constexpr double AS_FRACTION_SUM_TOLERANCE = 1e-6;
 
-// This code executes the user function CP_AS_set_fractions, which is a wrapper for
-// AbstractState_set_fractions(), used to set the mole/mass/volume fractions for a
-// mixture handle created by AS_factory.  Returns Handle unchanged so downstream
-// equations that use this call's return value depend on it.
-static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,  // output: Handle, unchanged
-                                   LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
-                                   LPCCOMPLEXARRAY Fractions)  // mole/mass/volume fractions
-{
-    std::scoped_lock lock(g_as_mutex);
+// Function-pointer type shared by AbstractState_set_mole_fractions/
+// AbstractState_set_mass_fractions (CoolPropLib.h) -- lets
+// CP_AS_set_mole_fractions/CP_AS_set_mass_fractions below share one
+// validation body and differ only in which explicit basis they call.
+typedef void(CONVENTION* SetFractionsFn)(const long, const double*, const long, long*, char*, const long);
+
+// Shared body for CP_AS_set_mole_fractions/CP_AS_set_mass_fractions.  There is
+// deliberately no auto-detecting AS_set_fractions any more: several backends
+// (HEOS, REFPROP, Cubics, PCSAFT, Incompressible) accept EITHER basis via two
+// distinct, fully-implemented methods, so inferring the basis from the
+// backend's "native" flag silently discarded the caller's actual intent.
+// Callers must now say which basis they mean.
+static LRESULT SetFractionsCommon(LPCOMPLEXSCALAR HandleOut,  // output: Handle, unchanged
+                                  LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                                  LPCCOMPLEXARRAY Fractions,  // fractions in the caller-specified basis
+                                  SetFractionsFn setFractions) {
     LRESULT r = CheckRealOrError(Handle, 1);
     if (r) return r;
     r = CheckRealArrayOrError(Fractions, 2);
@@ -291,11 +298,11 @@ static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,  // output: Handle
     if (r) return r;
 
     // Look up how many fluids this handle actually has, so the two most
-    // common misuses -- calling AS_set_fractions on a pure fluid, or
-    // passing the wrong number of fractions for the mixture -- get a clear,
-    // specific error instead of whatever message
-    // AbstractState::set_mole_fractions()/set_mass_fractions() happens to
-    // throw, routed through the generic LOWLEVEL_ERROR fallback.
+    // common misuses -- calling this on a pure fluid, or passing the wrong
+    // number of fractions for the mixture -- get a clear, specific error
+    // instead of whatever message AbstractState::set_mole_fractions()/
+    // set_mass_fractions() happens to throw, routed through the generic
+    // LOWLEVEL_ERROR fallback.
     long errcode = 0;
     char msg[AS_ERR_BUFFER_LEN] = {};
     char namesBuf[AS_ERR_BUFFER_LEN] = {};
@@ -323,7 +330,7 @@ static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,  // output: Handle
         return MAKELRESULT(BAD_FRACTION_SUM, 2);
     }
 
-    AbstractState_set_fractions(handle, fracVec.data(), static_cast<long>(fracVec.size()), &errcode, msg, AS_ERR_BUFFER_LEN);
+    setFractions(handle, fracVec.data(), static_cast<long>(fracVec.size()), &errcode, msg, AS_ERR_BUFFER_LEN);
     if (errcode) return TranslateASError(msg, 1);
 
     HandleOut->real = Handle->real;
@@ -333,14 +340,41 @@ static LRESULT CP_AS_set_fractions(LPCOMPLEXSCALAR HandleOut,  // output: Handle
     return 0;
 }
 
+// This code executes the user function CP_AS_set_mole_fractions, which is a
+// wrapper for AbstractState_set_mole_fractions(), used to set the MOLE
+// fractions explicitly for a mixture handle created by AS_factory.  Returns
+// Handle unchanged so downstream equations that use this call's return value
+// depend on it.
+static LRESULT CP_AS_set_mole_fractions(LPCOMPLEXSCALAR HandleOut,  // output: Handle, unchanged
+                                        LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                                        LPCCOMPLEXARRAY Fractions)  // mole fractions
+{
+    std::scoped_lock lock(g_as_mutex);
+    return SetFractionsCommon(HandleOut, Handle, Fractions, AbstractState_set_mole_fractions);
+}
+
+// This code executes the user function CP_AS_set_mass_fractions, which is a
+// wrapper for AbstractState_set_mass_fractions(), used to set the MASS
+// fractions explicitly for a mixture handle created by AS_factory.  Returns
+// Handle unchanged so downstream equations that use this call's return value
+// depend on it.
+static LRESULT CP_AS_set_mass_fractions(LPCOMPLEXSCALAR HandleOut,  // output: Handle, unchanged
+                                        LPCCOMPLEXSCALAR Handle,    // AbstractState handle from AS_factory
+                                        LPCCOMPLEXARRAY Fractions)  // mass fractions
+{
+    std::scoped_lock lock(g_as_mutex);
+    return SetFractionsCommon(HandleOut, Handle, Fractions, AbstractState_set_mass_fractions);
+}
+
 // Helper: molar mass (kg/mol) of each fluid in `handle`'s mixture, in the
 // same order AbstractState_fluid_names() lists them -- shared by
 // CP_AS_mole_to_mass_fractions()/CP_AS_mass_to_mole_fractions() below.
 //
 // Deliberately avoids adding any new CoolPropLib.h export: per-component
 // molar mass isn't exposed through the handle itself, but each component's
-// NAME is (AbstractState_fluid_names(), already used by CP_AS_set_fractions
-// above), and CoolProp::Props1SI() -- a plain, handle-independent,
+// NAME is (AbstractState_fluid_names(), already used by
+// CP_AS_set_mole_fractions/CP_AS_set_mass_fractions above), and
+// CoolProp::Props1SI() -- a plain, handle-independent,
 // name-based lookup already used by CP_Props1SI() elsewhere in this file --
 // resolves "molar_mass" for any of them directly. No new shared C API
 // surface needed for what is, underneath, the same computation
@@ -378,7 +412,8 @@ static LRESULT GetComponentMolarMasses(long handle, std::vector<double>* molarMa
 // fractions for `handle`'s mixture (component identities and molar masses
 // come from the handle; the fractions to convert are a separate argument,
 // not whatever happens to already be set on the handle -- so this is usable
-// as a preprocessing step before AS_set_fractions, not just as a read-back).
+// as a preprocessing step before AS_set_mole_fractions/AS_set_mass_fractions,
+// not just as a read-back).
 // Self-normalizing: divides by the actual weighted sum rather than assuming
 // MoleFractions already sums to 1, so a not-quite-normalized input still
 // produces a correctly-normalized result.
@@ -632,7 +667,8 @@ static LRESULT CP_AS_input_pair_index(LPCOMPLEXSCALAR Index,  // output: input p
 // This code executes the user function CP_AS_update, which is a wrapper for
 // AbstractState_update(), used to move a handle created by AS_factory to a
 // new input point without reading any output yet.  Returns Handle unchanged
-// (same convention as AS_set_fractions) so subsequent AS_get() calls that use
+// (same convention as AS_set_mole_fractions/AS_set_mass_fractions) so
+// subsequent AS_get() calls that use
 // this call's return value as their own Handle argument are guaranteed by
 // Mathcad's dependency tracking to see the updated state.  An alternative to
 // AS_props/AS_props_multi when several outputs are wanted from the same
@@ -835,12 +871,13 @@ static LRESULT FetchComponentVector(Fn&& call, std::vector<double>* out) {
 
 // This code executes the user function CP_AS_get_mole_fractions, which is a
 // wrapper for AbstractState_get_mole_fractions() -- the handle's current
-// BULK mole fractions (whatever AS_set_fractions last set, or the trivial
-// [1] for a pure fluid). Distinct from AS_mole_fractions_liquid/vapor below,
-// which read the saturated liquid/vapor side of a two-phase point, not the
-// overall composition. Useful to read back what AS_set_fractions actually
-// applied, or the composition of a handle built from a predefined-mixture
-// string.
+// BULK mole fractions (whatever AS_set_mole_fractions/AS_set_mass_fractions
+// last set, or the trivial [1] for a pure fluid). Distinct from
+// AS_mole_fractions_liquid/vapor below, which read the saturated
+// liquid/vapor side of a two-phase point, not the overall composition.
+// Useful to read back what AS_set_mole_fractions/AS_set_mass_fractions
+// actually applied, or the composition of a handle built from a
+// predefined-mixture string.
 static LRESULT
   CP_AS_get_mole_fractions(LPCOMPLEXARRAY Fractions,  // output: column vector of mole fractions
                            LPCCOMPLEXSCALAR Handle,   // AbstractState handle from AS_factory
@@ -1525,15 +1562,26 @@ FUNCTIONINFO ASFactory = {
   {MC_STRING, MC_STRING}                                                         // Argument types
 };
 
-FUNCTIONINFO ASSetFractions = {
-  const_cast<char*>("AS_set_fractions"),   // Name by which Mathcad will recognize the function
-  const_cast<char*>("Handle, Fractions"),  // Description of input parameters
+FUNCTIONINFO ASSetMoleFractions = {
+  const_cast<char*>("AS_set_mole_fractions"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Fractions"),      // Description of input parameters
   const_cast<char*>(
-    "Sets the mole/mass/volume fractions for a mixture Handle; returns Handle"),  // description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_AS_set_fractions,                                               // Pointer to the function code.
-  COMPLEX_SCALAR,                                                                 // Returns a Mathcad complex scalar (Handle, unchanged)
-  2,                                                                              // Number of arguments
-  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                 // Argument types
+    "Sets the MOLE fractions explicitly for a mixture Handle; returns Handle"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_set_mole_fractions,                                         // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                // Returns a Mathcad complex scalar (Handle, unchanged)
+  2,                                                                             // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                // Argument types
+};
+
+FUNCTIONINFO ASSetMassFractions = {
+  const_cast<char*>("AS_set_mass_fractions"),  // Name by which Mathcad will recognize the function
+  const_cast<char*>("Handle, Fractions"),      // Description of input parameters
+  const_cast<char*>(
+    "Sets the MASS fractions explicitly for a mixture Handle; returns Handle"),  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_AS_set_mass_fractions,                                         // Pointer to the function code.
+  COMPLEX_SCALAR,                                                                // Returns a Mathcad complex scalar (Handle, unchanged)
+  2,                                                                             // Number of arguments
+  {COMPLEX_SCALAR, COMPLEX_ARRAY}                                                // Argument types
 };
 
 FUNCTIONINFO ASSpecifyPhase = {

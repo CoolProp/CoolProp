@@ -372,6 +372,39 @@ EXPORT_CODE void CONVENTION AbstractState_free(const long handle, long* errcode,
 EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const double* fractions, const long N, long* errcode, char* message_buffer,
                                                         const long buffer_length);
 /**
+     * @brief Set the MOLE fractions for the AbstractState explicitly, regardless of which
+     * basis (mole/mass/volume) the backend uses natively -- unlike AbstractState_set_fractions(),
+     * which silently reinterprets `fractions` as whichever basis the backend's
+     * using_mole_fractions()/using_mass_fractions()/using_volu_fractions() flags report, this
+     * always calls the backend's own set_mole_fractions(), which several backends (HEOS,
+     * REFPROP, Cubics, PCSAFT, Incompressible) implement as a real conversion even when mole
+     * fractions aren't their native basis -- removing the ambiguity of what `fractions` means
+     * when a backend accepts more than one.
+     * @param handle The integer handle for the state class stored in memory
+     * @param fractions The array of mole fractions
+     * @param N The length of the fractions array
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+EXPORT_CODE void CONVENTION AbstractState_set_mole_fractions(const long handle, const double* fractions, const long N, long* errcode,
+                                                             char* message_buffer, const long buffer_length);
+/**
+     * @brief Set the MASS fractions for the AbstractState explicitly -- see
+     * AbstractState_set_mole_fractions()'s docstring for why this and its mole-fraction
+     * counterpart exist as separate, explicit calls rather than one auto-detecting one.
+     * @param handle The integer handle for the state class stored in memory
+     * @param fractions The array of mass fractions
+     * @param N The length of the fractions array
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+EXPORT_CODE void CONVENTION AbstractState_set_mass_fractions(const long handle, const double* fractions, const long N, long* errcode,
+                                                             char* message_buffer, const long buffer_length);
+/**
      * @brief Get the molar fractions for the AbstractState
      * @param handle The integer handle for the state class stored in memory
      * @param fractions The array of fractions

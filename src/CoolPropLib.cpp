@@ -578,6 +578,30 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
         HandleException(errcode, message_buffer, buffer_length);
     }
 }
+EXPORT_CODE void CONVENTION AbstractState_set_mole_fractions(const long handle, const double* fractions, const long N, long* errcode,
+                                                             char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    fpu_reset_guard guard;
+    std::vector<double> _fractions(fractions, fractions + N);
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        AS->set_mole_fractions(_fractions);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+EXPORT_CODE void CONVENTION AbstractState_set_mass_fractions(const long handle, const double* fractions, const long N, long* errcode,
+                                                             char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    fpu_reset_guard guard;
+    std::vector<double> _fractions(fractions, fractions + N);
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        AS->set_mass_fractions(_fractions);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
 EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, double* fractions, const long maxN, long* N, long* errcode,
                                                              char* message_buffer, const long buffer_length) {
     *errcode = 0;

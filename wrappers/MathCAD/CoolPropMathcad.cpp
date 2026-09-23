@@ -125,7 +125,7 @@ const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                      "Low-Level Multi function supports at most 5 output parameters per call",
                                                      "CoolProp Low-Level API Issue: Use get_global_param_string(\"errstring\") for more info.",
                                                      "Invalid Backend String",
-                                                     "AS_set_fractions is not valid for a pure fluid",
+                                                     "AS_set_mole_fractions/AS_set_mass_fractions is not valid for a pure fluid",
                                                      "Input fractions must sum to 1.0",
                                                      "Weighted fraction sum is zero; cannot normalize (check for an all-zero or canceling input)",
                                                      "Invalid Parameter Index",
@@ -909,8 +909,9 @@ static LRESULT CP_set_mixture_binary_pair_data(LPMCSTRING Msg,          // outpu
 //      factory call runs first.
 // See wrappers/MathCAD/README.md and the example worksheet for both.
 //
-// AS_factory() and AS_set_fractions() both return the Handle they were
-// given/created, unchanged, purely so a downstream equation that uses that
+// AS_factory() and AS_set_mole_fractions()/AS_set_mass_fractions() all return
+// the Handle they were given/created, unchanged, purely so a downstream
+// equation that uses that
 // return value as its own Handle argument gets Mathcad's normal dependency
 // tracking as an extra correctness net on top of whichever pattern above is
 // in use -- it is not, by itself, a substitute for one of those patterns.
@@ -1115,7 +1116,8 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             CreateUserFunction(hDLL, &GetPredefMoleFracs);
             // Register the Low-Level (AbstractState) API functions
             CreateUserFunction(hDLL, &ASFactory);
-            CreateUserFunction(hDLL, &ASSetFractions);
+            CreateUserFunction(hDLL, &ASSetMoleFractions);
+            CreateUserFunction(hDLL, &ASSetMassFractions);
             CreateUserFunction(hDLL, &ASSpecifyPhase);
             CreateUserFunction(hDLL, &ASUnspecifyPhase);
             CreateUserFunction(hDLL, &ASFree);

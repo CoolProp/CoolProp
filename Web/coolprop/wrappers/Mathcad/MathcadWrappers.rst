@@ -53,7 +53,6 @@ Where,
     .. math::
        h := PropsSI("H",\ "T",\ 300.0,\ "P",\ 500,\ "Helium") = 1562994.2
 
-|
 
 ----
 
@@ -70,7 +69,6 @@ Where,
 * "Outputs" = Requested output properties string containing a delimited list of one or more valid output property names from the :ref:`Table of Valid Parameters <parameter_table>`.  For this Mathcad wrapper, the delimiter can be any one of (*comma, <space>, colon, semi-colon, or ampersand*), but must be consistent.
 * Vec1, Vec2 = State point array pairs corresponding to "Input1" and "Input2".  These are single-column, :math:`m`-element vector arrays and must be the same length or an error will be thrown.
 
-|
 
 **EXAMPLE:**
 
@@ -89,7 +87,6 @@ Where,
 
     Extract individual variables from columns:         :math:`\rho = M^{<0>}`     &     :math:`h = M^{<1>}`
 
-|
 
 ----
 
@@ -119,7 +116,6 @@ Where,
 
     Critical Pressure:                       :math:`P_c := Props1SI("pcrit",\ fl) = 2.206\cdot10^7`
 
-|
 
 ----
 
@@ -151,7 +147,6 @@ The input parameters are the same as for `PropsSI`, except there is no "Output" 
 
     Calc:                           :math:`PhaseSI("T",\ T_L,\ "P",\ P_L,\ fl)` = "Liquid"
 
-|
 
 ----
 
@@ -301,12 +296,13 @@ Where "mixture" is a predefined mixture name ending in .mix or .MIX. Mixture nam
 
     For air:         :math:`mf_{Air}` := :math:`get\_predefined\_mixture\_fractions("Air.mix")` = :math:`\begin{bmatrix} 0.7812\\ 0.0092 \\ 0.2096 \end{bmatrix}`
 
-    For R401A:   :math:`mf_{R401A}` := :math:`get\_predefined\_mixture\_fractions("R401A.mix")` = :math:`\begin{bmatrix} 0.578854 \\ 0.0.185871 \\ 0.0.235274 \end{bmatrix}`
+    For R401A:   :math:`mf_{R401A}` := :math:`get\_predefined\_mixture\_fractions("R401A.mix")`  
+
+                         :math:`mf_{R401A}` = :math:`\begin{bmatrix} 0.578854 \\ 0.0.185871 \\ 0.0.235274 \end{bmatrix}`
 
 .. note::
    A few predefined mixtures are missing binary interaction parameters for at least one component pair.  These mixtures are defined, but cannot be used, for now, for property calculations.
 
-|
 
 ----
 
@@ -335,8 +331,6 @@ Where,
 .. note::
    Error message string from CoolProp may indicate that the input CAS numbers need to be reversed to retrieve values.
 
-|
-
 ----
 
 apply_simple_mixing_rule
@@ -348,7 +342,6 @@ The function ``apply_simpl_mixing_rule()`` will take either CAS strings or fluid
 
 Use of this function follows the python example exactly on the Fluid Properties | Mixtures page and will not be repeated here.
 
-|
 
 ----
 
@@ -378,17 +371,17 @@ CoolProp's `Low-Level (AbstractState) API <https://coolprop.github.io/devdocs/co
 .. note::
     All Low-Level functions in the Mathcad wrapper are implemented with the two-letter prefix `AS_` for `AbstractState`.
 
-**Getting call order right.**  Mathcad recalculates by dependency/region order, not top-to-bottom sequential code, so a handle must always be created before it is used.  Two patterns are supported:
+**Getting call order right.**  Natively, Mathcad recalculates by dependency/region order, not top-to-bottom sequential code, so a handle must always be created before it is used.  Worksheet calculations can be **forced** to use top-to-bottom, left-to-right calculation order; two patterns are supported (*see warning below on multi-threading*):
 
-1. A Mathcad **program** block (Programming toolbar): create the handle, make however many ``AS_props``/``AS_props_multi`` calls are needed (or ``AS_update`` followed by as many ``AS_get`` calls as needed), and release it with ``AS_free`` at the end, all as sequential statements in one program region.  Recommended when the worksheet just needs one derived result.
-2. One ``AS_factory`` call near the top of a worksheet, referenced by many downstream calls/plots.  Use **Recalculate Worksheet** (a full top-to-bottom recalculation in region order, not a partial/incremental recalc) to guarantee the factory call runs before anything that reads the handle.  In this pattern, avoid calling ``AS_free`` from an independent call -- nothing guarantees it runs after every reader of the handle.  ``AS_factory`` itself is memoized: recalculating it with the same ``Backend``/``Fluids`` returns the SAME handle rather than rebuilding the backend, so repeatedly recalculating the same call neither leaks state nor pays construction cost again (any phase constraint from a prior ``AS_specify_phase`` call is cleared on reuse, so an edited-away call can't leave it silently in effect; mixture fractions are not reset, since ``AS_set_fractions`` is always re-chained after ``AS_factory`` anyway).
+1. A Mathcad **program** block (Programming toolbar): create the handle, make however many ``AS_props``/``AS_props_multi`` calls are needed (or ``AS_update`` followed by as many ``AS_get`` calls as needed), and release it with ``AS_free`` at the end, all as sequential statements in one program region.  Recommended when the worksheet just needs one derived result.  
 
-See the ``CoolPropFluidProperties.mcdx`` example worksheet for both patterns in use.
+2. One ``AS_factory`` call near the top of a worksheet, referenced by many downstream calls/plots.  Use **Recalculate Worksheet** **(<Ctrl><F9>)** (a full top-to-bottom recalculation in region order, not a partial/incremental recalc) to guarantee the factory call runs before anything that reads the handle.  In this pattern, avoid calling ``AS_free`` from an independent call -- nothing guarantees it runs after every reader of the handle.  ``AS_factory`` itself is memoized: recalculating it with the same ``Backend``/``Fluids`` returns the SAME handle rather than rebuilding the backend, so repeatedly recalculating the same call neither leaks state nor pays construction cost again (any phase constraint from a prior ``AS_specify_phase`` call is cleared on reuse, so an edited-away call can't leave it silently in effect; mixture fractions are not reset, since ``AS_set_mole_fractions``/``AS_set_mass_fractions`` is always re-chained after ``AS_factory`` anyway).
 
-.. note::
-    **Multi-threaded worksheet recalculation:** every ``AS_*`` call that touches a handle is internally serialized by the wrapper (one global lock, held for the whole call), so it is safe to use the Low-Level API with Mathcad Prime's Multithreaded Calculations setting either on or off -- two worksheet regions recalculating the same handle concurrently cannot interleave and return a value for the wrong input point.  That serialization means these calls don't benefit from multithreading (they queue rather than run in parallel), so there's no performance reason to enable it for a worksheet that's mainly exercising the Low-Level API; ``AS_props_multi`` batching a whole array into one call is the intended way to get throughput here instead.
+Examples of both calling patterns are demonstrated below. 
 
-|
+.. warning::
+    In both cases, Mathcad Prime's multi-threading feature **must** be disabled (this the the default state) or unexpected results can occur. Every ``AS_*`` call that touches a handle is internally serialized by the wrapper (one global lock, held for the whole call), so that Low-Level API calls with Mathcad Prime's Multithreaded Calculations setting enabled will not crash.  However, multi-threading should be disabled to avoid unexpected results that can arise from dependency based re-calculations.  A guard is used to ensure that existing abstract states are reused and not duplicated when ``AS_factory`` calls are recalculated.
+
 
 ----
 
@@ -411,39 +404,45 @@ Where,
 
     :math:`h := AS\_factory("HEOS",\ "Water")`
 
-|
 
 ----
 
-AS_set_fractions
------------------
+AS_set_mole_fractions / AS_set_mass_fractions
+----------------------------------------------
 
-Sets the mole/mass/volume fractions for a mixture handle created by ``AS_factory``.::
+Sets a mixture handle's composition explicitly, in the stated basis.::
 
-    AS_set_fractions(Handle, Fractions)
+    AS_set_mole_fractions(Handle, Fractions)
+    AS_set_mass_fractions(Handle, Fractions)
 
 Where,
 
 * `Handle` is a handle returned by ``AS_factory``.
-* `Fractions` is a column vector of mole/mass/volume fractions, one per fluid in the mixture.
+* `Fractions` is a column vector of mole (or mass) fractions, one per fluid in the mixture.
+
+**EXAMPLE:**
+
+    :math:`hMix := AS\_factory("HEOS",\ "Methane\&Ethane")`
+
+    :math:`hMix := AS\_set\_mole\_fractions(hMix,\ \begin{bmatrix} 0.5\\ 0.5 \end{bmatrix})`
+
 
 .. note::
-    **Why it echoes Handle back:** Returns ``Handle`` unchanged.  Reassign it, e.g. ``h := AS_set_fractions(h, x)``, so a downstream call that uses this call's return value as its own ``Handle`` argument is guaranteed to run after this one.
+    **Why it echoes Handle back:** Both return ``Handle`` unchanged.  Reassign it, e.g. ``h := AS_set_mole_fractions(h, x)``, so a downstream call that uses this call's return value as its own ``Handle`` argument is guaranteed to run after this one.
 
 .. note::
-    **Fraction basis:** The fraction basis (mole, mass, or volume) is auto-detected from the backend and is **not user-selectable** -- it is a fixed property of the backend, not a runtime setting.  HEOS, REFPROP, Cubics, PCSAFT, and the tabular backends all use mole fractions; the Incompressible backend uses mass fractions.  Just pass fractions in whichever basis the backend you chose in ``AS_factory`` expects.
+    **Fraction basis is caller-specified, not auto-detected:** several backends (HEOS, REFPROP, Cubics, PCSAFT, Incompressible) accept *either* basis, via distinct, fully-implemented conversions on the underlying ``AbstractState`` -- there is no single "native" basis to infer.  Call whichever of the two functions matches the composition you actually have on hand; use ``AS_mole_to_mass_fractions``/``AS_mass_to_mole_fractions`` below to convert first if you only have the other basis.
 
 .. note::
-    **Input validation:** This function validates: that ``Fractions`` has exactly one entry per fluid in the handle's mixture; that the entries sum to 1.0 (within 1e-6); and that the handle is actually a mixture in the first place -- calling it on a pure-fluid handle is a Custom Error, not a silent no-op.
+    **Input validation:** Both functions validate: that ``Fractions`` has exactly one entry per fluid in the handle's mixture; that the entries sum to 1.0 (within 1e-6); and that the handle is actually a mixture in the first place -- calling either on a pure-fluid handle is a Custom Error, not a silent no-op.
 
-|
 
 ----
 
 AS_mole_to_mass_fractions / AS_mass_to_mole_fractions
 --------------------------------------------------------
 
-Converts an arbitrary composition between mole and mass fractions, using a Low-Level state handle's mixture for component identities and molar masses. Unlike ``AS_set_fractions``, this doesn't read or write the handle's own state at all -- it's a pure unit conversion on the ``MoleFractions``/``MassFractions`` argument, useful as a preprocessing step *before* ``AS_set_fractions`` (e.g. converting a mass-basis composition you have on hand into the mole fractions a HEOS-backed handle actually expects).::
+Converts an arbitrary composition between mole and mass fractions, using a Low-Level state handle's mixture for component identities and molar masses. Unlike ``AS_set_mole_fractions``/``AS_set_mass_fractions``, this doesn't read or write the handle's own state at all -- it's a pure unit conversion on the ``MoleFractions``/``MassFractions`` argument, useful as a preprocessing step *before* ``AS_set_mole_fractions``/``AS_set_mass_fractions`` (e.g. converting a mass-basis composition you have on hand into the mole fractions ``AS_set_mole_fractions`` expects).::
 
     AS_mole_to_mass_fractions(Handle, MoleFractions)
     AS_mass_to_mole_fractions(Handle, MassFractions)
@@ -453,13 +452,25 @@ Where,
 * `Handle` is a handle returned by ``AS_factory`` -- only its mixture's component identities and molar masses are used; its own composition/state is untouched.
 * `MoleFractions`/`MassFractions` is a column vector of the fractions to convert, one entry per fluid in the mixture, in either basis.
 
-.. note::
-    **No new CoolPropLib export:** the C++ API has a direct equivalent of this (``AbstractState::calc_mass_fractions()``, computing ``mass_i = mm_i * mole_i / sum(mm_j * mole_j)`` from whatever mole fractions are already set), but it isn't exposed through the public Low-Level C API this wrapper is built on, and adding it there was deliberately avoided. This function gets the same result a different way: ``AbstractState_fluid_names()`` (already used by ``AS_set_fractions`` above) gives the component names, and ``Props1SI("molar_mass", name)`` -- a plain, handle-independent lookup already used elsewhere in this wrapper -- resolves each one's molar mass. Both are already-public surface; nothing new was added to CoolPropLib.h for this.
+**EXAMPLE:**
+
+    :math:`hMix := AS\_factory("HEOS",\ "Methane\&Ethane")`
+
+    :math:`xMole := \begin{bmatrix} 0.5\\ 0.5 \end{bmatrix}`
+
+    :math:`hMix := AS\_set\_mole\_fractions(hMix,\ xMole)`
+
+    :math:`xMass := AS\_mole\_to\_mass\_fractions(hMix, xMole) = \begin{bmatrix} 0.348\\ 0.652 \end{bmatrix}`
+
+    :math:`AS\_mass\_to\_mole\_fractions(hMix, xMass) = \begin{bmatrix} 0.5\\ 0.5 \end{bmatrix}`
+
 
 .. note::
-    **Self-normalizing:** the conversion divides by the actual weighted sum of the input (``sum(mm_j * mole_j)`` or ``sum(mass_j / mm_j)``), not by an assumed 1.0 -- so a composition that doesn't already sum to exactly 1.0 still converts to a correctly-normalized result in the other basis, unlike ``AS_set_fractions``, which requires its input to already sum to 1.0. That weighted sum does need to be nonzero, though: an all-zero (or exactly canceling) input -- reachable even for a pure fluid via ``MoleFractions = [0]`` -- is reported as a Custom Error rather than silently dividing by zero into a ``NaN`` result.
+    **No new CoolPropLib export:** the C++ API has a direct equivalent of this (``AbstractState::calc_mass_fractions()``, computing ``mass_i = mm_i * mole_i / sum(mm_j * mole_j)`` from whatever mole fractions are already set), but it isn't exposed through the public Low-Level C API this wrapper is built on, and adding it there was deliberately avoided. This function gets the same result a different way: ``AbstractState_fluid_names()`` (already used by ``AS_set_mole_fractions``/``AS_set_mass_fractions`` above) gives the component names, and ``Props1SI("molar_mass", name)`` -- a plain, handle-independent lookup already used elsewhere in this wrapper -- resolves each one's molar mass. Both are already-public surface; nothing new was added to CoolPropLib.h for this.
 
-|
+.. note::
+    **Self-normalizing:** the conversion divides by the actual weighted sum of the input (``sum(mm_j * mole_j)`` or ``sum(mass_j / mm_j)``), not by an assumed 1.0 -- so a composition that doesn't already sum to exactly 1.0 still converts to a correctly-normalized result in the other basis, unlike ``AS_set_mole_fractions``/``AS_set_mass_fractions``, which require their input to already sum to 1.0. That weighted sum does need to be nonzero, though: an all-zero (or exactly canceling) input -- reachable even for a pure fluid via ``MoleFractions = [0]`` -- is reported as a Custom Error rather than silently dividing by zero into a ``NaN`` result.
+
 
 ----
 
@@ -475,7 +486,6 @@ Where,
 * `Handle` is a handle returned by ``AS_factory``.
 * `Phase` is a phase name (case sensitive): "phase_liquid", "phase_gas", "phase_twophase", "phase_supercritical", "phase_supercritical_gas", "phase_supercritical_liquid", "phase_critical_point", "phase_unknown", or "phase_not_imposed" (``CoolProp::phases`` in ``DataStructures.h``).
 
-|
 
 ----
 
@@ -490,7 +500,6 @@ Where,
 
 * `Handle` is a handle returned by ``AS_factory``.
 
-|
 
 ----
 
@@ -509,7 +518,6 @@ Where,
 .. note::
     **Why this is useful:** confirms whether the current point is actually in the two-phase region before calling ``AS_get_sat_liquid``/``AS_get_sat_vapor``/``AS_mole_fractions_liquid``/``AS_mole_fractions_vapor`` -- rather than relying on those raising a Custom Error (``LOWLEVEL_ERROR``) to find out after the fact.
 
-|
 
 ----
 
@@ -520,7 +528,6 @@ Releases a Low-Level state handle created by ``AS_factory``.  Calling this is op
 
     AS_free(Handle)
 
-|
 
 ----
 
@@ -534,7 +541,6 @@ Resolves an output parameter name (e.g. "T", "Dmolar", "Hmass") to the integer i
 .. note::
     This function only needs to be called **once anywhere in the worksheet**, not once per program block.  Its result is an ordinary Mathcad variable, so it can be defined at worksheet scope and referenced from any number of program blocks or independent math regions -- it is not limited to use as a local variable inside a single Mathcad program structure.
 
-|
 
 ----
 
@@ -550,7 +556,6 @@ Resolves an input pair name (e.g. "PT_INPUTS", "HmassP_INPUTS") to the integer i
 
     For the full list of valid input pair names, see the `CoolProp::input_pairs <https://coolprop.org/_static/doxygen/html/namespace_cool_prop.html#a85cda1634e1e4c1f76425cfd63edf155>`_ enum in the CoolProp source documentation.
 
-|
 
 ----
 
@@ -573,7 +578,6 @@ Raises a Custom Error if the two parameters don't form any known input pair.
 .. note::
     **No value arguments either:** ``generate_update_pair()``'s own signature takes two values alongside the two keys, but its pair-selection logic (a long chain of key-only comparisons) never inspects them -- they exist solely to get copied into its ``out1``/``out2`` parameters in the resolved pair's order, which this function doesn't surface anyway (a Mathcad Custom Function returns one value, and this one returns the resolved name). Passing values through for no purpose would just be dead arguments, so this function only takes the two indices, calling ``generate_update_pair()`` with dummy placeholder values internally. The resolved name itself already answers the ordering question ``out1``/``out2`` exist for: e.g. ``"PT_INPUTS"`` unambiguously means pressure first, temperature second, regardless of which order `ParamIdx1`/`ParamIdx2` were supplied in.
 
-|
 
 ----
 
@@ -590,7 +594,6 @@ Where,
 * `InputPairIdx` is an input pair index from ``AS_input_pair_index``.
 * `Value1`, `Value2` are the two input property values for that input pair.
 
-|
 
 ----
 
@@ -606,9 +609,9 @@ Where,
 * `Handle` is a handle returned by ``AS_factory``.
 * `ParamIdx` is an output parameter index from ``AS_param_index``.
 
-**EXAMPLE:**
+**EXAMPLE 1 (Independent Equations - ):**
 
-    Temperature and density at 101325 Pa, 1 kg/kg quality (saturated vapor), updating once and reading two outputs:
+    Pressure and Quality at 101325 Pa, 1 kg/kg (saturated vapor), updating once and reading two outputs.  This is risky. Use <Ctrl><F9> to recalculate entire worksheet:
 
     :math:`h := AS\_factory("HEOS",\ "Water")`
 
@@ -624,7 +627,34 @@ Where,
 
     :math:`\rho := AS\_get(h,\ i\rho)`
 
-|
+----
+
+**EXAMPLE 2 (Program Block):**
+
+    Pressure and Quality at 101325 Pa, 1 kg/kg (saturated vapor), updating once and reading two outputs:
+
+    :math:`\begin{bmatrix} T\\ \rho \end{bmatrix} := \left\Vert
+    \begin{array}{l}
+    h \leftarrow AS\_factory("HEOS",\ "Water") \\
+    P \leftarrow 101325.0 \\
+    Q \leftarrow 1.0 \\
+    iPQ \leftarrow AS\_input\_pair\_index("PQ\_INPUTS") \\
+    iT \leftarrow AS\_param\_index("T") \\
+    i\rho \leftarrow AS\_param\_index("Dmolar") \\
+    h := AS\_update(h,\ iPQ,\ P,\ Q) \\
+    Dmolar \leftarrow AS\_get(h,\ i\rho) \\
+    T \leftarrow AS\_get(h,\ iT) \\
+    AS\_free(h) \\
+    return\ \begin{bmatrix} T\\ Dmolar \end{bmatrix}
+    \end{array}
+    \right.`
+
+    :math:`T = 373.1`
+
+    :math:`\rho = 33.175`
+
+    Within the program block above, the handle (h) and all other variables local and don't exist outside the Program Block.  The equation steps in the Program Block are **ALWAYS** called in top-down order.  Even the abstract state is created and freed within the Program Block.  The program returns a vector containing the calculated values for T and Dmolar.
+
 
 ----
 
@@ -641,14 +671,13 @@ Where,
 * `Handle` is a handle returned by ``AS_factory``.
 * `ParamIdx` is an output parameter index from ``AS_param_index``.
 
-|
 
 ----
 
 AS_get_mole_fractions
 -----------------------
 
-The handle's current *bulk* mole fractions, as a column vector -- whatever ``AS_set_fractions`` last set, or the trivial ``[1]`` for a pure fluid. Distinct from ``AS_mole_fractions_liquid``/``AS_mole_fractions_vapor`` below, which read the saturated liquid/vapor side of a two-phase point, not the overall composition.::
+The handle's current *bulk* mole fractions, as a column vector -- whatever ``AS_set_mole_fractions``/``AS_set_mass_fractions`` last set, or the trivial ``[1]`` for a pure fluid. Distinct from ``AS_mole_fractions_liquid``/``AS_mole_fractions_vapor`` below, which read the saturated liquid/vapor side of a two-phase point, not the overall composition.::
 
     AS_get_mole_fractions(Handle, Trigger)
 
@@ -657,7 +686,6 @@ Where,
 * `Handle` is a handle returned by ``AS_factory``.
 * `Trigger` is unused -- just pass a dummy integer (``0``), or see the note below for a better choice.
 
-|
 
 ----
 
@@ -679,7 +707,6 @@ Requires the current point to actually be in the two-phase region (``0 <= qualit
 .. note::
     **Why Trigger, when Handle is already an argument:** this is *not* about satisfying Mathcad's one-argument minimum -- ``Handle`` already does that on its own. The real reason is that ``Handle``'s own value never changes when the AbstractState it names is mutated in place: ``AS_update``, ``AS_props``, and ``AS_specify_phase`` all echo ``Handle`` back unchanged, by design (see ``AS_update``'s entry above). So an equation whose only input is ``Handle`` gives Mathcad's dependency graph nothing to key a recalculation on when the underlying point moves. Wire ``Trigger`` to whatever value actually drives the state you want reflected here -- e.g. the quality or mole-fraction value fed into the ``AS_update``/``AS_props`` call that put the state in the two-phase region this function reads -- and this equation re-evaluates whenever that does, instead of needing a full **Recalculate Worksheet**. If this equation already references the freshly-reassigned ``Handle`` from that same update (the normal chaining idiom), that alone may already provide the dependency edge; ``Trigger`` is the explicit fallback for call shapes where it doesn't.
 
-|
 
 ----
 
@@ -707,9 +734,8 @@ Where,
 
     :math:`iT := AS\_param\_index("T")`
 
-    :math:`T := AS\_props(h,\ iPQ,\ 101325,\ 1,\ iT) = 373.1`
+    :math:`T := AS\_props(h,\ iPQ,\ 101325,\ 1,\ iT) = 373.1`  // Similar to high-level PropsSI call
 
-|
 
 ----
 
@@ -727,7 +753,6 @@ Where,
 * `Value1Array`, `Value2Array` are column vectors of the two input property values, one row per point (both must be the same length).
 * `ParamIdxArray` is a column vector of 1 to 5 output parameter indices from ``AS_param_index``.
 
-|
 
 ----
 
@@ -743,7 +768,6 @@ Where,
 * `Handle` is a handle returned by ``AS_factory``.
 * `Level` (string) controls how much extra refining is done between traced points: ``"none"`` (**CoolProp's own recommendation** -- skips refining), ``"fine"`` (default tolerances -- any value other than ``"none"``/``"veryfine"`` behaves the same way), or ``"veryfine"`` (tighter tolerances, more points).
 
-|
 
 ----
 
@@ -767,7 +791,6 @@ Raises a Custom Error if ``AS_build_phase_envelope`` hasn't been called yet for 
 .. note::
     **Cricondentherm / cricondenbar:** see ``AS_pe_tmax``/``AS_pe_pmax`` below.
 
-|
 
 ----
 
@@ -791,7 +814,6 @@ Raises a Custom Error if ``AS_build_phase_envelope`` hasn't been called yet for 
 .. note::
     **Exactness:** for most mixtures ("Type I", where the traced curve's pressure rises to a single peak then falls), CoolProp doesn't just pick the closest already-traced point for the cricondentherm -- it fits a spline through the nearby points, solves for where :math:`dT_{sat}/dP_{sat} = 0`, and inserts that exact solved point into the envelope. Since that insertion happens before this wrapper ever sees the data, the max-scan above lands on that same exact point. For other mixtures ("Type II"), no such insertion happens, and the result is only as good as how finely the curve was traced -- see ``AS_build_phase_envelope``'s ``Level`` argument to trace more finely if that matters.
 
-|
 
 ----
 
@@ -811,7 +833,6 @@ Raises a Custom Error if ``AS_build_phase_envelope`` hasn't been called yet for 
 
 See ``AS_pe_tmax``'s notes above -- both functions work identically, this one scanning ``P`` instead of ``T`` (CoolProp's internal counterpart is ``PhaseEnvelopeData::ipsat_max``).
 
-|
 
 ----
 
@@ -833,7 +854,6 @@ Where,
 .. note::
     **Redundant with AS_list_states, mostly:** ``AS_list_states`` already reports the short form for every currently-open handle at once, as the ``"Backend|Fluids"`` half of its key. This function is a convenience when you only have one specific Handle in scope and don't want to fetch and parse the whole registry listing just to confirm it.
 
-|
 
 ----
 
@@ -860,7 +880,6 @@ Where,
 .. note::
     **Using Trigger for recalculation:** since ``Trigger``'s value is otherwise ignored, wiring it to a handle already on the sheet -- rather than a bare literal -- gives Mathcad a real dependency edge, so the call re-runs whenever that handle's defining equation does. Without that, use **Recalculate Worksheet** to refresh these two calls, since they otherwise have no dependency edge to anything that changed.
 
-|
 
 ----
 

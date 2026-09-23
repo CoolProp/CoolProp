@@ -48,9 +48,10 @@ class MathcadStateGuard
     // constraint silently in effect on the reused handle -- this is the one
     // piece of AbstractState configuration state cheap enough to reset
     // without a full rebuild. (Mixture fractions are NOT reset: there is no
-    // cheap "clear fractions" call, and AS_set_fractions() is always
-    // re-chained immediately after AS_factory() in normal use, so it
-    // naturally re-applies on every recalculation regardless.)
+    // cheap "clear fractions" call, and AS_set_mole_fractions()/
+    // AS_set_mass_fractions() is always re-chained immediately after
+    // AS_factory() in normal use, so it naturally re-applies on every
+    // recalculation regardless.)
     //
     // Same errcode/message_buffer/buffer_length contract as the
     // AbstractState_* functions in CoolPropLib.h: *errcode == 0 on success;
