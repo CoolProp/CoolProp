@@ -7,7 +7,7 @@ Build-Depends: debhelper-compat (= 13),
                g++,
                pkg-config,
                python3,
-               libeigen3-dev,
+               libeigen3-dev (>= 3.4),
                libfmt-dev
 Standards-Version: 4.7.0
 Homepage: https://www.coolprop.org

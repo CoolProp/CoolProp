@@ -12,6 +12,8 @@ operational half.
 dev/packaging/
   make-release-tarball.sh     build the offline source tarball
   vendor-deps.sh              fill externals/cpm/ so a build needs no network
+  check-build-deps.py         assert the recipes below declare the same
+                              build dependencies (run by the CI workflow)
   obs/
     _service                  bootstrap-only: fetch + checksum a release tarball
     coolprop.spec             RPM recipe   (openSUSE, SLE, Fedora, RHEL/EPEL)
@@ -132,10 +134,36 @@ Two deliberate differences from the release archives:
 ### Known limitation: Eigen and fmt version skew
 
 The installed C++ headers are not self-contained: they include `<Eigen/Dense>`,
-and `<fmt/format.h>` unless the consumer defines `NO_FMTLIB`.  CoolProp builds
-against its own CPM-pinned Eigen 5.0.1 and fmt 12.0.0 and does not install
-them, so a consumer compiles those same headers against whatever the
-distribution ships, which is a different Eigen major on most of them.
+and `<fmt/format.h>` unless the consumer defines `NO_FMTLIB`.  What follows
+from that depends on which way `COOLPROP_VENDOR_THIRD_PARTY` is set, and the
+two cases are genuinely different:
+
+- **ON** (the default, and what an SDK-style install wants): CoolProp builds
+  against its CPM-pinned Eigen 5.0.1 and fmt 12.0.0 and installs them under
+  `<prefix>/include/CoolProp/third_party/`, so a consumer compiles against
+  those same copies.  Library and consumer agree by construction.
+- **OFF** (what every distribution build passes): CoolProp builds against the
+  distribution's Eigen and fmt and installs neither, so a consumer compiles
+  against those same system copies.  Library and consumer agree here too.
+
+So a packaged build has no library-versus-consumer skew.  The hazard it does
+have is a different one, and it is worth stating precisely rather than as
+"version skew": CoolProp is developed and tested against Eigen 5.0.1, and a
+distribution build compiles it against whatever that distribution ships, which
+is 3.4.0 on every target listed above.  `cmake/dependencies.cmake` enforces a
+3.4 floor and the recipes now declare it, but "configures and compiles" is not
+"behaves identically", and nobody has run the test suite against Eigen 3.4.
+
+There is a second, narrower gap in the OFF build: `coolprop.pc` ships with an
+empty `Requires:`, so `pkg-config --cflags coolprop` emits no include path for
+Eigen.  On Debian that matters, because Eigen lives in `/usr/include/eigen3`
+rather than `/usr/include`, so a **C++** consumer using pkg-config will not
+find `<Eigen/Dense>`.  CMake consumers are unaffected: `CoolPropConfig.cmake`
+calls `find_dependency(Eigen3)` and picks the path up from the imported
+target.  The C API is unaffected either way, and that is the only thing the CI
+consumer test exercises, so this gap is documented rather than observed.
+Setting `-DCOOLPROP_PC_REQUIRES="eigen3 fmt"` closes it, at the cost of
+asserting a compatibility nobody has established yet; see below.
 
 For the **C API** (`<CoolProp/CoolPropLib.h>`) this does not arise; it is a
 plain C interface over a compiled library.
@@ -148,11 +176,6 @@ be called production-ready.  Until then:
 - `coolprop.pc` ships with an empty `Requires:`, because naming `eigen3` there
   would claim a compatibility that has not been established.  It is one
   `-DCOOLPROP_PC_REQUIRES="eigen3 fmt"` away once it has been.
-- With `COOLPROP_VENDOR_THIRD_PARTY=ON` (the default, and what an SDK-style
-  install wants) the question does not arise at all: the bundled Eigen and fmt
-  under `<prefix>/include/CoolProp/third_party/` are the ones a consumer
-  compiles against.  A distribution build turns that OFF, which is exactly
-  where the skew reappears.
 - The `-dev` packages still depend on `libeigen3-dev` / `eigen3-devel` and the
   fmt equivalents, so the headers a consumer needs are at least present.
 
@@ -257,9 +280,14 @@ starting set:
 | `openSUSE_Tumbleweed` | rolling openSUSE |
 | `openSUSE_Leap_15.6` | current Leap |
 | `Fedora_41`, `Fedora_42` | Fedora |
-| `CentOS_9_Stream` | RHEL-compatible |
+| `CentOS_9_Stream` | RHEL-compatible; needs EPEL in the project's repository list, see below |
 | `Debian_12`, `Debian_13` | Debian stable and next |
 | `xUbuntu_24.04`, `xUbuntu_22.04` | Ubuntu LTS |
+
+`eigen3-devel` and `fmt-devel` are not in the RHEL or CentOS Stream base
+repositories, they come from EPEL.  The `CentOS_9_Stream` target is therefore
+unresolvable until EPEL is added to the OBS project's repository list.  The
+openSUSE and Fedora targets carry both packages themselves.
 | `Arch` | Arch (community-maintained is usually better; see AUR below) |
 
 Enable `x86_64` everywhere and `aarch64` where the distribution offers it.

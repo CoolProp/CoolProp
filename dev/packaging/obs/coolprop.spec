@@ -29,7 +29,7 @@ BuildRequires:  pkgconfig
 # find_package, so they must be present at build time as well as at
 # install time.  Without these two the configure step fails with
 # "Could not find a package configuration file provided by Eigen3".
-BuildRequires:  eigen3-devel
+BuildRequires:  eigen3-devel >= 3.4
 BuildRequires:  fmt-devel
 # dev/generate_headers.py runs at build time to turn the fluid JSON into the
 # generated headers that get compiled into the library.

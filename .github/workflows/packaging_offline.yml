@@ -141,7 +141,15 @@ jobs:
       - name: Install the build dependencies the distribution recipes declare
         run: |
           set -euo pipefail
-          sudo apt-get update
+          # Fail if the four copies of the dependency list have drifted apart.
+          # Installing the right packages here while a recipe has lost one is
+          # exactly how this job went green on a build that was broken for
+          # Debian, so the check runs before the install, not after it.
+          python3 dev/packaging/check-build-deps.py
+          # Error-Mode=any turns a partially failed index refresh into a
+          # failure.  Plain "apt-get update" exits 0 when some sources fail and
+          # the install then silently resolves against a stale package list.
+          sudo apt-get update -o APT::Update::Error-Mode=any
           sudo apt-get install -y libeigen3-dev libfmt-dev
 
       - name: Build and install with the network switched off
