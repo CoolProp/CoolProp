@@ -196,6 +196,9 @@ jobs:
             # dependency.
             disable_threads=TRUE
             ;;
+          # A dual build exports CoolProp::CoolProp as the variant named by
+          # COOLPROP_DEFAULT_LIBRARY, SHARED by default; assert that selection.
+          both) expected=SHARED ;;
         esac
         cmake -S dev/ci/cmake-consumer -B consumer-build \
           -DCMAKE_PREFIX_PATH="$prefix_b" \
@@ -243,12 +246,30 @@ jobs:
         fmt_source=$(sed -n 's/^CPM_PACKAGE_fmt_SOURCE_DIR:INTERNAL=//p' build/CMakeCache.txt)
         test -f "$eigen_source/Eigen/Core"
         test -f "$fmt_source/include/fmt/format.h"
+        # Override with copies OUTSIDE the CPM cache.  Pointing the overrides
+        # at the cache directories themselves cannot fail: CPM would resolve
+        # the same paths even if the overrides were ignored.
+        eigen_override="$RUNNER_TEMP/override-eigen"
+        fmt_override="$RUNNER_TEMP/override-fmt"
+        rm -rf "$eigen_override" "$fmt_override"
+        cp -R "$eigen_source" "$eigen_override"
+        cp -R "$fmt_source" "$fmt_override"
         cmake -S . -B source-overrides \
           -DCOOLPROP_STATIC_LIBRARY=ON \
           -DCPM_USE_LOCAL_PACKAGES=ON \
-          -DCPM_Eigen_SOURCE="$eigen_source" \
-          -DCPM_fmt_SOURCE="$fmt_source" \
+          -DCPM_Eigen_SOURCE="$eigen_override" \
+          -DCPM_fmt_SOURCE="$fmt_override" \
           -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+        # The resolved include path must be the override, and the cached copy
+        # must not appear at all.
+        sed -n 's/^COOLPROP_INCLUDE_DIRECTORIES:[^=]*=//p' source-overrides/CMakeCache.txt \
+          | tr ';' '\n' >source-overrides/include-dirs.txt
+        grep -Fx "$eigen_override" source-overrides/include-dirs.txt
+        grep -Fx "$fmt_override/include" source-overrides/include-dirs.txt
+        if grep -Fx -e "$eigen_source" -e "$fmt_source/include" source-overrides/include-dirs.txt; then
+          echo "FAIL: the CPM cache copy of Eigen or fmt was used despite the override"
+          exit 1
+        fi
 
     - name: Test system Eigen and fmt without vendored headers
       if: runner.os == 'Linux' && matrix.linkage == 'static'
@@ -332,8 +353,12 @@ jobs:
         cmake -E remove_directory "$prefix"
         cmake --install build --config Debug --prefix "$prefix"
         cmake -S dev/ci/cmake-consumer -B consumer-debug \
-          -DCMAKE_PREFIX_PATH="$prefix"
+          -DCMAKE_PREFIX_PATH="$prefix" \
+          -DCOOLPROP_EXPECTED_LINKAGE=SHARED
         cmake --build consumer-debug --config Debug --parallel 1
+        # Run the Debug consumers, not only link them: this is the leg that
+        # exercises the /MDd and /MTd CoolPropd libraries at runtime.
+        ctest --test-dir consumer-debug -C Debug --output-on-failure
 
     - name: Test add_subdirectory consumer
       if: runner.os == 'Linux' && matrix.linkage == 'static'
