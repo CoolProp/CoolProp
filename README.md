@@ -24,6 +24,64 @@ It was originally developed by Ian Bell, at the time a post-doc at the Universit
 
 * If you are new to Git and Github, please see the [CoolProp Wiki](https://github.com/CoolProp/CoolProp/wiki) for guidance on becoming a contributor to the project.
 
+## CMake package
+
+CoolProp can build and install static and shared libraries independently or in
+the same build:
+
+```sh
+cmake -S . -B build \
+  -DCOOLPROP_STATIC_LIBRARY=ON \
+  -DCOOLPROP_SHARED_LIBRARY=ON
+cmake --build build --config Release
+cmake --install build --config Release --prefix /path/to/prefix
+```
+
+An installed package is consumed through imported targets, without manually
+adding include directories or platform libraries:
+
+```cmake
+find_package(CoolProp 8 CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE CoolProp::CoolProp)
+```
+
+When CoolProp is configured with both variants, the producer-side
+`COOLPROP_DEFAULT_LIBRARY` cache setting chooses which variant is exported
+through `CoolProp::CoolProp` (`SHARED` by default). This choice is recorded in
+the installed package and cannot be changed by a package consumer. Consumers
+that require explicit linkage should use `CoolProp::Static` or
+`CoolProp::Shared`. Separate consumer targets may select different variants,
+but one final binary must not link both variants.
+On Windows, the portable shared-library interface is the C API from
+`CoolProp/CoolPropLib.h`; use the static target for the complete C++ API.
+
+Source-tree consumers can use the same canonical target:
+
+```cmake
+set(COOLPROP_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
+add_subdirectory(externals/CoolProp)
+target_link_libraries(my_app PRIVATE CoolProp::CoolProp)
+```
+
+Nested builds add no CoolProp install rules by default. A parent project that
+intentionally packages CoolProp can enable `COOLPROP_INSTALL_CMAKE_PACKAGE`
+and/or `COOLPROP_INSTALL_LEGACY_LAYOUT` before calling `add_subdirectory`.
+
+By default, `COOLPROP_VENDOR_THIRD_PARTY=ON` bundles the pinned Eigen and fmt
+headers and licenses into the relocatable package. Their sources are fetched
+even with `CPM_USE_LOCAL_PACKAGES=ON`, because installed packages may not supply
+the source files required for vendoring. Explicit `CPM_Eigen_SOURCE` and
+`CPM_fmt_SOURCE` source-directory overrides remain supported; they must point at
+complete source trees, including the upstream license files. Distributors can set
+`COOLPROP_VENDOR_THIRD_PARTY=OFF` to use installed `Eigen3` and `fmt` CMake
+packages instead (Eigen 3.4 or newer); downstream consumers must then provide
+those packages too.
+This option concerns Eigen/fmt only, not CoolProp's other build dependencies.
+
+Use `CMAKE_INSTALL_PREFIX` (or `cmake --install --prefix`) to choose the install
+location. The legacy `COOLPROP_INSTALL_PREFIX` override must not be empty and
+is ignored in nested builds, which retain their parent's install prefix.
+
 ## Sponsors
 
 Free code signing on Windows provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
