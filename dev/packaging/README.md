@@ -68,7 +68,7 @@ download timeout.
 ## The FHS install layout
 
 The FHS layout itself comes from GH #3311, which landed in master while this
-branch was open.  A packaging build asks for it with three options:
+branch was open.  A packaging build asks for it with four options:
 
 - `-DCOOLPROP_INSTALL_CMAKE_PACKAGE=ON` installs the system layout below
 - `-DCOOLPROP_INSTALL_LEGACY_LAYOUT=OFF` drops CoolProp's release-artifact
@@ -77,6 +77,14 @@ branch was open.  A packaging build asks for it with three options:
 - `-DCOOLPROP_VENDOR_THIRD_PARTY=OFF` keeps the bundled Eigen and fmt out of
   `/usr/include`; leaving it ON is right for a relocatable SDK and is the one
   thing a distribution will reject
+- `-DCOOLPROP_INSTALL_FLAT_HEADERS=OFF` keeps the deprecated flat shims
+  (`AbstractState.h`, `Solvers.h`, `Exceptions.h`, `Ice.h` and friends, GH
+  #1280) out of the include root.  They forward to the canonical
+  `<CoolProp/*.h>` and their names are far too generic for `/usr/include`.
+  Leaving it ON is right for an SDK, which is why that is the default; for an
+  RPM it is not optional, because the recipes ship only
+  `%{_includedir}/CoolProp/` and rpmbuild aborts on "Installed (but
+  unpackaged) files found"
 
 OFF is not free: it makes `cmake/dependencies.cmake` resolve Eigen and fmt with
 `find_package(... CONFIG REQUIRED)` instead of CPM, so both have to be

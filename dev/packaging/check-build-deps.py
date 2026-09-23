@@ -16,6 +16,11 @@ Debian and CI still went green.  This script is the missing coupling.  It is
 run by the packaging workflow, so dropping a dependency from one recipe now
 fails CI instead of failing somebody's distribution build months later.
 
+It checks two things that must not drift: the build dependencies above, and
+the -DCOOLPROP_* options the three recipes configure CoolProp with, since
+adopting an option in two recipes and not the third is the same mistake in a
+different place.
+
 Run it with no arguments to check.  Exit status 0 means the recipes agree.
 """
 
@@ -28,6 +33,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 CONTROL = ROOT / "dev/packaging/obs/debian.control"
 DSC = ROOT / "dev/packaging/obs/coolprop.dsc"
 SPEC = ROOT / "dev/packaging/obs/coolprop.spec"
+RULES = ROOT / "dev/packaging/obs/debian.rules"
 WORKFLOW = ROOT / ".github/workflows/packaging_offline.yml"
 
 # COOLPROP_VENDOR_THIRD_PARTY=OFF, which every distribution build passes, makes
@@ -86,6 +92,33 @@ def parse_workflow_apt_packages(text):
     return set(match.group(1).split())
 
 
+def parse_distro_cmake_options(text):
+    """Return the -DCOOLPROP_* options of the distribution configure call.
+
+    Each recipe configures CoolProp once for a distribution build, and that
+    call is identified by COOLPROP_REQUIRE_VENDORED_DEPS, which only an
+    offline packaging build passes.  Other cmake calls in the same file, such
+    as the install-prefix assertions in the workflow, are ignored.
+    """
+    blocks = []
+    current = []
+    for line in text.splitlines():
+        if "-D" in line:
+            current.append(line)
+        elif current:
+            blocks.append("\n".join(current))
+            current = []
+    if current:
+        blocks.append("\n".join(current))
+
+    for block in blocks:
+        if "COOLPROP_REQUIRE_VENDORED_DEPS" in block:
+            return dict(
+                re.findall(r"-D(COOLPROP_\w+)=([A-Za-z0-9_./-]+)", block)
+            )
+    return None
+
+
 def main():
     problems = []
 
@@ -96,6 +129,10 @@ def main():
         WORKFLOW.read_text(encoding="utf-8")
     )
 
+    workflow_opts = parse_distro_cmake_options(WORKFLOW.read_text(encoding="utf-8"))
+    spec_opts = parse_distro_cmake_options(SPEC.read_text(encoding="utf-8"))
+    rules_opts = parse_distro_cmake_options(RULES.read_text(encoding="utf-8"))
+
     # A parse that finds nothing must be an error, never a silent pass.  This
     # is the fail-open that would make every check below vacuously true.
     for label, value in (
@@ -103,6 +140,9 @@ def main():
         ("coolprop.dsc Build-Depends", dsc_deps),
         ("coolprop.spec BuildRequires", spec_reqs or None),
         ("packaging_offline.yml apt-get install", workflow_pkgs),
+        ("packaging_offline.yml cmake options", workflow_opts),
+        ("coolprop.spec cmake options", spec_opts),
+        ("debian.rules cmake options", rules_opts),
     ):
         if not value:
             problems.append(
@@ -156,6 +196,28 @@ def main():
             "packaging_offline.yml does not install: " + ", ".join(uninstalled)
         )
 
+    # 4. The three recipes must configure CoolProp identically.  Adopting an
+    #    option in two of them and not the third is how this checker's own
+    #    subject matter went wrong in the first place.
+    for label, opts in (("coolprop.spec", spec_opts), ("debian.rules", rules_opts)):
+        for name in sorted(set(workflow_opts) | set(opts)):
+            in_ci = workflow_opts.get(name)
+            in_recipe = opts.get(name)
+            if in_ci != in_recipe:
+                describe = (
+                    "does not set {0}".format(name)
+                    if in_recipe is None
+                    else "sets {0}={1}".format(name, in_recipe)
+                )
+                expected = (
+                    "packaging_offline.yml does not set it"
+                    if in_ci is None
+                    else "packaging_offline.yml uses {0}".format(in_ci)
+                )
+                problems.append(
+                    "{0} {1}, but {2}".format(label, describe, expected)
+                )
+
     if problems:
         report(problems)
         return 1
@@ -163,6 +225,9 @@ def main():
     print("ok: the packaging recipes agree on their build dependencies")
     print("  debian.control / coolprop.dsc: " + ", ".join(sorted(control_deps)))
     print("  coolprop.spec:                 " + ", ".join(sorted(spec_reqs)))
+    print("  shared cmake options:          "
+          + ", ".join("{0}={1}".format(k, v)
+                      for k, v in sorted(workflow_opts.items())))
     return 0
 
 

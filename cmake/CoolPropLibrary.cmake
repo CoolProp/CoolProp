@@ -40,6 +40,17 @@ option(COOLPROP_INSTALL_CMAKE_PACKAGE
 option(COOLPROP_INSTALL_LEGACY_LAYOUT
        "Install the historical static_library/shared_library release layout"
        ${_coolprop_top_level_install_default})
+# The flat headers at the root of include/ are deprecation shims (GH #1280,
+# to be removed at v9) that forward to the canonical <CoolProp/*.h>.  Shipping
+# them is right for an SDK-style install, which is why this defaults to ON and
+# nothing changes for an existing consumer.  A distribution build turns it off:
+# names like Solvers.h, Exceptions.h, MatrixMath.h and Ice.h are far too
+# generic to share /usr/include with every other package, and because the
+# packaging recipes ship only %{_includedir}/CoolProp/, rpmbuild would abort on
+# the leftovers with "Installed (but unpackaged) files found".
+option(COOLPROP_INSTALL_FLAT_HEADERS
+       "Install the deprecated flat compatibility headers into the include root"
+       ON)
 set(COOLPROP_INSTALL_CMAKEDIR
     "${CMAKE_INSTALL_LIBDIR}/cmake/CoolProp"
     CACHE STRING "CoolProp CMake package installation directory")
@@ -211,17 +222,19 @@ function(_coolprop_install_standard_headers)
     FILES_MATCHING
     PATTERN "*.h"
     REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)
-  install(
-    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-    FILES_MATCHING
-    PATTERN "*.h"
-    PATTERN "CoolProp" EXCLUDE
-    PATTERN "*_JSON*.h" EXCLUDE
-    PATTERN "*_CBOR*.h" EXCLUDE
-    PATTERN "CPmsgpack.h" EXCLUDE
-    PATTERN "gitrevision.h" EXCLUDE
-    PATTERN "cpversion.h" EXCLUDE)
+  if(COOLPROP_INSTALL_FLAT_HEADERS)
+    install(
+      DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      FILES_MATCHING
+      PATTERN "*.h"
+      PATTERN "CoolProp" EXCLUDE
+      PATTERN "*_JSON*.h" EXCLUDE
+      PATTERN "*_CBOR*.h" EXCLUDE
+      PATTERN "CPmsgpack.h" EXCLUDE
+      PATTERN "gitrevision.h" EXCLUDE
+      PATTERN "cpversion.h" EXCLUDE)
+  endif()
 
   if(NOT COOLPROP_VENDOR_THIRD_PARTY)
     return()
