@@ -137,7 +137,8 @@ Highlights:
     package then ships neither copy, and consumers must provide both packages.
     Vendored builds fetch the pinned Eigen and fmt sources even with
     ``CPM_USE_LOCAL_PACKAGES=ON``; explicit ``CPM_Eigen_SOURCE`` /
-    ``CPM_fmt_SOURCE`` overrides are honored.
+    ``CPM_fmt_SOURCE`` overrides are honored and must point at complete
+    source trees, including the upstream license files.
   - ``COOLPROP_EXTERNC_LIBRARY`` now adds ``EXTERNC`` to the library targets'
     public compile definitions, so consumers of those targets compile with it
     too.

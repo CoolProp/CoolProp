@@ -154,9 +154,10 @@ jobs:
         required_files = {
             package_dir / "CoolPropConfig.cmake",
             package_dir / "CoolPropTargets.cmake",
+            license_dir / "Eigen" / "COPYING.README",
             license_dir / "Eigen" / "COPYING.MPL2",
             # The shipped Eigen tree also contains Apache-2.0 (BFloat16.h) and
-            # BSD (*_LAPACKE.h) headers.
+            # BSD (e.g. the *_LAPACKE.h, *_BLAS.h and MKL headers) files.
             license_dir / "Eigen" / "COPYING.APACHE",
             license_dir / "Eigen" / "COPYING.BSD",
             license_dir / "fmt" / "LICENSE",
@@ -186,6 +187,7 @@ jobs:
         fi
 
         expected=""
+        expected_default=""
         disable_threads=FALSE
         case "${{ matrix.linkage }}" in
           static) expected=STATIC ;;
@@ -197,12 +199,15 @@ jobs:
             disable_threads=TRUE
             ;;
           # A dual build exports CoolProp::CoolProp as the variant named by
-          # COOLPROP_DEFAULT_LIBRARY, SHARED by default; assert that selection.
-          both) expected=SHARED ;;
+          # COOLPROP_DEFAULT_LIBRARY, SHARED by default.  Assert that selection
+          # without narrowing the components: Static and Shared are both
+          # still linked and run.
+          both) expected_default=SHARED ;;
         esac
         cmake -S dev/ci/cmake-consumer -B consumer-build \
           -DCMAKE_PREFIX_PATH="$prefix_b" \
           -DCOOLPROP_EXPECTED_LINKAGE="$expected" \
+          -DCOOLPROP_EXPECTED_DEFAULT_LINKAGE="$expected_default" \
           -DCMAKE_DISABLE_FIND_PACKAGE_Threads:BOOL="$disable_threads"
         cmake --build consumer-build --config "${{ env.BUILD_TYPE }}"
         ctest --test-dir consumer-build -C "${{ env.BUILD_TYPE }}" --output-on-failure
@@ -354,11 +359,13 @@ jobs:
         cmake --install build --config Debug --prefix "$prefix"
         cmake -S dev/ci/cmake-consumer -B consumer-debug \
           -DCMAKE_PREFIX_PATH="$prefix" \
-          -DCOOLPROP_EXPECTED_LINKAGE=SHARED
+          -DCOOLPROP_EXPECTED_DEFAULT_LINKAGE=SHARED
         cmake --build consumer-debug --config Debug --parallel 1
         # Run the Debug consumers, not only link them: this is the leg that
-        # exercises the /MDd and /MTd CoolPropd libraries at runtime.
-        ctest --test-dir consumer-debug -C Debug --output-on-failure
+        # exercises the static (/MDd) and shared (/MTd) CoolPropd libraries at
+        # runtime.  The timeout turns a Debug-CRT assertion dialog, which would
+        # otherwise block until the job limit, into a failure.
+        ctest --test-dir consumer-debug -C Debug --output-on-failure --timeout 900
 
     - name: Test add_subdirectory consumer
       if: runner.os == 'Linux' && matrix.linkage == 'static'

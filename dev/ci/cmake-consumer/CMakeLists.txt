@@ -26,6 +26,20 @@ set(
 set_property(CACHE COOLPROP_EXPECTED_LINKAGE PROPERTY STRINGS "" STATIC SHARED)
 string(TOUPPER "${COOLPROP_EXPECTED_LINKAGE}" _coolprop_expected_linkage)
 
+# For a dual static+shared package, which variant CoolProp::CoolProp must
+# resolve to (the producer's COOLPROP_DEFAULT_LIBRARY).  Unlike
+# COOLPROP_EXPECTED_LINKAGE this does not narrow the requested components, so
+# CoolProp::Static and CoolProp::Shared are still both linked and run.
+set(
+  COOLPROP_EXPECTED_DEFAULT_LINKAGE
+  ""
+  CACHE STRING
+        "Expected variant behind CoolProp::CoolProp: STATIC, SHARED, or empty")
+set_property(CACHE COOLPROP_EXPECTED_DEFAULT_LINKAGE PROPERTY STRINGS "" STATIC
+                                                              SHARED)
+string(TOUPPER "${COOLPROP_EXPECTED_DEFAULT_LINKAGE}"
+       _coolprop_expected_default_linkage)
+
 set(COOLPROP_SOURCE_DIR "" CACHE PATH
     "Optional CoolProp checkout to consume with add_subdirectory")
 
@@ -35,6 +49,28 @@ if(NOT _coolprop_expected_linkage STREQUAL ""
   message(
     FATAL_ERROR
       "COOLPROP_EXPECTED_LINKAGE must be STATIC, SHARED, or empty; got '${COOLPROP_EXPECTED_LINKAGE}'"
+  )
+endif()
+if(NOT _coolprop_expected_default_linkage STREQUAL ""
+   AND NOT _coolprop_expected_default_linkage STREQUAL "STATIC"
+   AND NOT _coolprop_expected_default_linkage STREQUAL "SHARED")
+  message(
+    FATAL_ERROR
+      "COOLPROP_EXPECTED_DEFAULT_LINKAGE must be STATIC, SHARED, or empty; got '${COOLPROP_EXPECTED_DEFAULT_LINKAGE}'"
+  )
+endif()
+# The linkage CoolProp::CoolProp must resolve to: the single expected linkage
+# if one is given, otherwise the expected default variant (if any).
+set(_coolprop_expected_canonical_linkage "${_coolprop_expected_linkage}")
+if(_coolprop_expected_canonical_linkage STREQUAL "")
+  set(_coolprop_expected_canonical_linkage
+      "${_coolprop_expected_default_linkage}")
+elseif(NOT _coolprop_expected_default_linkage STREQUAL ""
+       AND NOT _coolprop_expected_default_linkage STREQUAL
+           "${_coolprop_expected_linkage}")
+  message(
+    FATAL_ERROR
+      "COOLPROP_EXPECTED_LINKAGE=${_coolprop_expected_linkage} contradicts COOLPROP_EXPECTED_DEFAULT_LINKAGE=${_coolprop_expected_default_linkage}"
   )
 endif()
 
@@ -191,11 +227,12 @@ foreach(_coolprop_provider_target IN LISTS _coolprop_provider_targets)
     )
   endif()
   if(_coolprop_provider_target STREQUAL "CoolProp::CoolProp"
-     AND NOT _coolprop_expected_linkage STREQUAL ""
-     AND NOT _coolprop_effective_linkage STREQUAL "${_coolprop_expected_linkage}")
+     AND NOT _coolprop_expected_canonical_linkage STREQUAL ""
+     AND NOT _coolprop_effective_linkage STREQUAL
+         "${_coolprop_expected_canonical_linkage}")
     message(
       FATAL_ERROR
-        "Expected CoolProp::CoolProp to provide a ${_coolprop_expected_linkage} library, but it resolves to ${_coolprop_runtime_target} (${_coolprop_runtime_target_type})"
+        "Expected CoolProp::CoolProp to provide a ${_coolprop_expected_canonical_linkage} library, but it resolves to ${_coolprop_runtime_target} (${_coolprop_runtime_target_type})"
     )
   endif()
 

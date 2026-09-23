@@ -131,9 +131,6 @@ if(COOLPROP_VENDOR_THIRD_PARTY)
       "${Eigen_SOURCE_DIR}/unsupported/Eigen/src/Polynomials"
       "${Eigen_SOURCE_DIR}/COPYING.README"
       "${Eigen_SOURCE_DIR}/COPYING.MPL2"
-      "${Eigen_SOURCE_DIR}/COPYING.APACHE"
-      "${Eigen_SOURCE_DIR}/COPYING.BSD"
-      "${Eigen_SOURCE_DIR}/COPYING.MINPACK"
       "${fmt_SOURCE_DIR}/include/fmt/format.h"
       "${fmt_SOURCE_DIR}/LICENSE")
     if(NOT EXISTS "${_header_or_license}")

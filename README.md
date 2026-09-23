@@ -71,7 +71,8 @@ By default, `COOLPROP_VENDOR_THIRD_PARTY=ON` bundles the pinned Eigen and fmt
 headers and licenses into the relocatable package. Their sources are fetched
 even with `CPM_USE_LOCAL_PACKAGES=ON`, because installed packages may not supply
 the source files required for vendoring. Explicit `CPM_Eigen_SOURCE` and
-`CPM_fmt_SOURCE` source-directory overrides remain supported. Distributors can set
+`CPM_fmt_SOURCE` source-directory overrides remain supported; they must point at
+complete source trees, including the upstream license files. Distributors can set
 `COOLPROP_VENDOR_THIRD_PARTY=OFF` to use installed `Eigen3` and `fmt` CMake
 packages instead (Eigen 3.4 or newer); downstream consumers must then provide
 those packages too.
