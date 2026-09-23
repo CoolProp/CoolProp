@@ -422,30 +422,7 @@ if(MINGW AND DEFINED ENV{MSYSTEM})
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
 endif()
 
-if(COOLPROP_MSVC_STATIC)
-  set(COOLPROP_MSVC_REL "/MT")
-  if(COOLPROP_MSVC_DEBUG)
-    set(COOLPROP_MSVC_DBG "/MTd")
-  else()
-    set(COOLPROP_MSVC_DBG "/MT")
-  endif()
-elseif(COOLPROP_MSVC_DYNAMIC)
-  set(COOLPROP_MSVC_REL "/MD")
-  if(COOLPROP_MSVC_DEBUG)
-    set(COOLPROP_MSVC_DBG "/MDd")
-  else()
-    set(COOLPROP_MSVC_DBG "/MD")
-  endif()
-else(COOLPROP_MSVC_DYNAMIC)
-  set(COOLPROP_MSVC_REL "IGNORE")
-  set(COOLPROP_MSVC_DBG "IGNORE")
-endif()
-
-set(COOLPROP_MSVC_ALL "/MTd" "/MT" "/MDd" "/MD"
-)# order matters "/MXd" before "/MX"
-
 include_directories("${boost_headers_SOURCE_DIR}")
-
 
 #######################################
 #         FIND ALL SOURCES            #
@@ -583,32 +560,6 @@ find_package(Python REQUIRED COMPONENTS Interpreter)
 set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 
 include(FlagFunctions) # Is found since it is in the module path.
-macro(modify_msvc_flag_release flag_new) # Use a macro to avoid a new scope
-  foreach(flag_old IN LISTS COOLPROP_MSVC_ALL)
-    remove_compiler_flag_release("${flag_old} ") # add a space
-    remove_compiler_flag_release(" ${flag_old}") # add a space
-  endforeach()
-  add_compiler_flag_release("${flag_new}")
-endmacro()
-macro(modify_msvc_flag_debug flag_new) # Use a macro to avoid a new scope
-  foreach(flag_old IN LISTS COOLPROP_MSVC_ALL)
-    remove_compiler_flag_debug("${flag_old} ") # add a space
-    remove_compiler_flag_debug(" ${flag_old}") # add a space
-  endforeach()
-  add_compiler_flag_debug("${flag_new}")
-endmacro()
-macro(modify_msvc_flags flag_default) # Use a macro to avoid a new scope
-  if(NOT "${COOLPROP_MSVC_REL}" STREQUAL "IGNORE")
-    modify_msvc_flag_release("${COOLPROP_MSVC_REL}")
-  else()
-    modify_msvc_flag_release("${flag_default}")
-  endif()
-  if(NOT "${COOLPROP_MSVC_DBG}" STREQUAL "IGNORE")
-    modify_msvc_flag_debug("${COOLPROP_MSVC_DBG}")
-  else()
-    modify_msvc_flag_debug("${flag_default}d")
-  endif()
-endmacro()
 
 #if(MSVC)
 #  add_compiler_flag_release("/EHsc")
