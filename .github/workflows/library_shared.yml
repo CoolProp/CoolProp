@@ -155,6 +155,10 @@ jobs:
             package_dir / "CoolPropConfig.cmake",
             package_dir / "CoolPropTargets.cmake",
             license_dir / "Eigen" / "COPYING.MPL2",
+            # The shipped Eigen tree also contains Apache-2.0 (BFloat16.h) and
+            # BSD (*_LAPACKE.h) headers.
+            license_dir / "Eigen" / "COPYING.APACHE",
+            license_dir / "Eigen" / "COPYING.BSD",
             license_dir / "fmt" / "LICENSE",
         }
         missing = sorted(path for path in required_files if not path.is_file())

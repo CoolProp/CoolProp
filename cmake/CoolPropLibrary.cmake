@@ -240,7 +240,14 @@ function(_coolprop_install_standard_headers)
   install(DIRECTORY "${fmt_SOURCE_DIR}/include/fmt"
           DESTINATION "${_third_party_dir}/fmt")
 
-  install(FILES "${Eigen_SOURCE_DIR}/COPYING.MPL2"
+  # The installed Eigen/ tree is not MPL-2.0 only: e.g. arch/Default/BFloat16.h
+  # is Apache-2.0 and the *_LAPACKE.h / lapacke.h headers are BSD.  Ship every
+  # license Eigen carries, plus its COPYING.README that maps files to them.
+  install(FILES "${Eigen_SOURCE_DIR}/COPYING.README"
+                "${Eigen_SOURCE_DIR}/COPYING.MPL2"
+                "${Eigen_SOURCE_DIR}/COPYING.APACHE"
+                "${Eigen_SOURCE_DIR}/COPYING.BSD"
+                "${Eigen_SOURCE_DIR}/COPYING.MINPACK"
           DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/CoolProp/Eigen")
   install(FILES "${fmt_SOURCE_DIR}/LICENSE"
           DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/CoolProp/fmt")
