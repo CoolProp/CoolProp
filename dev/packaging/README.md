@@ -292,12 +292,12 @@ starting set:
 | `CentOS_9_Stream` | RHEL-compatible; needs EPEL in the project's repository list, see below |
 | `Debian_12`, `Debian_13` | Debian stable and next |
 | `xUbuntu_24.04`, `xUbuntu_22.04` | Ubuntu LTS |
+| `Arch` | Arch (community-maintained is usually better; see AUR below) |
 
 `eigen3-devel` and `fmt-devel` are not in the RHEL or CentOS Stream base
 repositories, they come from EPEL.  The `CentOS_9_Stream` target is therefore
 unresolvable until EPEL is added to the OBS project's repository list.  The
 openSUSE and Fedora targets carry both packages themselves.
-| `Arch` | Arch (community-maintained is usually better; see AUR below) |
 
 Enable `x86_64` everywhere and `aarch64` where the distribution offers it.
 Each repository can be added from the command line too, by editing the project
