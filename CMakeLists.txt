@@ -110,9 +110,10 @@ include(CheckIncludeFileCXX)
 #
 # A launcher the caller already supplied (distcc, sccache, a CI wrapper) is
 # honoured rather than overwritten.  Both the -D form and the environment-
-# variable form are checked.  project(), just above, already initializes the
-# cache variable from the environment on CMake 3.17+, so the explicit
-# environment check only matters on the 3.15/3.16 this project still supports.
+# variable form are checked, so a launcher set either way -- including an
+# environment variable that is defined but empty, meaning "no launcher" -- is
+# honoured.  (project(), just above, also copies an environment launcher into
+# the cache variable on CMake 3.17+.)
 # Either language being pre-set defers the whole block, so a caller who sets
 # only CXX does not end up with a mismatched C launcher.
 option(COOLPROP_USE_CCACHE "Route compiles through ccache when available" ON)
@@ -137,6 +138,17 @@ if(COOLPROP_USE_CCACHE
 endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  # Preserve the historical in-tree release layout for top-level builds.
+  # Apply this default BEFORE validating COOLPROP_INSTALL_PREFIX: a configure
+  # that stops on the guard below still writes the cache, and if the platform
+  # default were cached at that point (INITIALIZED_TO_DEFAULT is only set on the
+  # first run), the recovery the message suggests would silently install to
+  # /usr/local instead of install_root.
+  if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX
+        "${CMAKE_CURRENT_SOURCE_DIR}/install_root"
+        CACHE PATH "CoolProp install path" FORCE)
+  endif()
   if(DEFINED COOLPROP_INSTALL_PREFIX)
     if(COOLPROP_INSTALL_PREFIX STREQUAL "")
       message(FATAL_ERROR
@@ -145,11 +157,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
     set(CMAKE_INSTALL_PREFIX
         "${COOLPROP_INSTALL_PREFIX}"
-        CACHE PATH "CoolProp install path" FORCE)
-  elseif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    # Preserve the historical in-tree release layout for top-level builds.
-    set(CMAKE_INSTALL_PREFIX
-        "${CMAKE_CURRENT_SOURCE_DIR}/install_root"
         CACHE PATH "CoolProp install path" FORCE)
   endif()
   # Install destinations are relative, so an empty prefix installs into the

@@ -473,8 +473,8 @@ install(DIRECTORY "${ROOT_DIR}/include/"
     REGEX "detail/json\\.h$" EXCLUDE
 )
 
-# Install fmtlib headers (for packaging).  fmt is CPM-fetched (fmt_SOURCE_DIR);
-# the old externals/fmtlib path was stale, so no fmt shipped -- which broke
+# Install fmtlib headers (for packaging).  An earlier externals/fmtlib path
+# was stale, so no fmt shipped -- which broke
 # downstream Cython that cimports constants_header (DataStructures.h ->
 # numerics.h -> detail/strings.h -> fmt/format.h, header-only via FMT_HEADER_ONLY
 # unless NO_FMTLIB).  Affected the legacy wheel too; this fixes both.

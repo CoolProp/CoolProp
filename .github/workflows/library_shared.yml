@@ -220,6 +220,10 @@ jobs:
           exit 1
         fi
         grep -F "COOLPROP_INSTALL_PREFIX must not be empty" empty-prefix.log
+        # The failed configure must leave the install_root default cached, so
+        # the suggested recovery (-U COOLPROP_INSTALL_PREFIX) does not fall
+        # back to the platform default prefix.
+        grep -E '^CMAKE_INSTALL_PREFIX:PATH=.*/install_root$' empty-prefix/CMakeCache.txt
         if cmake -S . -B empty-cmake-prefix -DCMAKE_INSTALL_PREFIX:PATH= >empty-cmake-prefix.log 2>&1; then
           echo "FAIL: an empty CMAKE_INSTALL_PREFIX was accepted"
           exit 1

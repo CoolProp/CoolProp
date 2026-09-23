@@ -138,9 +138,6 @@ Highlights:
     Vendored builds fetch the pinned Eigen and fmt sources even with
     ``CPM_USE_LOCAL_PACKAGES=ON``; explicit ``CPM_Eigen_SOURCE`` /
     ``CPM_fmt_SOURCE`` overrides are honored.
-  - An empty ``COOLPROP_INSTALL_PREFIX``, or an empty explicit top-level
-    ``CMAKE_INSTALL_PREFIX``, is now a configure error. Install destinations
-    are relative, so either would otherwise install into the filesystem root.
   - ``COOLPROP_EXTERNC_LIBRARY`` now adds ``EXTERNC`` to the library targets'
     public compile definitions, so consumers of those targets compile with it
     too.
@@ -150,6 +147,9 @@ Highlights:
     enabled that tree can additionally contain the conventional ``bin``,
     ``lib``, ``include``, ``lib/cmake/CoolProp``, and ``share/licenses``
     directories, as applicable to the selected library variants.
+  - An empty ``COOLPROP_INSTALL_PREFIX``, or an empty explicit top-level
+    ``CMAKE_INSTALL_PREFIX``, is now a configure error. Install destinations
+    are relative, so either would otherwise install into the filesystem root.
   - MSVC runtime selection is target-local for CoolProp libraries and linked
     in-tree executables. ``COOLPROP_MSVC_STATIC`` and
     ``COOLPROP_MSVC_DYNAMIC`` no longer rewrite the global C and C++ flags of
