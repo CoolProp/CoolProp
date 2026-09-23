@@ -363,9 +363,11 @@ jobs:
         cmake --build consumer-debug --config Debug --parallel 1
         # Run the Debug consumers, not only link them: this is the leg that
         # exercises the static (/MDd) and shared (/MTd) CoolPropd libraries at
-        # runtime.  The timeout turns a Debug-CRT assertion dialog, which would
-        # otherwise block until the job limit, into a failure.
-        ctest --test-dir consumer-debug -C Debug --output-on-failure --timeout 900
+        # runtime.  Each Debug smoke test loads the fluid library under the
+        # checked-iterator CRT and takes minutes (~160-200 s locally), so run
+        # the four in parallel.  The timeout turns a Debug-CRT assertion dialog,
+        # which would otherwise block until the job limit, into a failure.
+        ctest --test-dir consumer-debug -C Debug --output-on-failure -j 4 --timeout 1800
 
     - name: Test add_subdirectory consumer
       if: runner.os == 'Linux' && matrix.linkage == 'static'
