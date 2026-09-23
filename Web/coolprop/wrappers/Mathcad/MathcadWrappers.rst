@@ -900,16 +900,15 @@ config_get_bool / config_set_bool
 
 Reads/sets a boolean configuration value.::
 
-    config_get_bool(Key, Trigger)
+    config_get_bool(Key)
     config_set_bool(Key, Value)
 
 Where,
 
 * `Key` is the configuration key name, e.g. ``"NORMALIZE_GAS_CONSTANTS"``, ``"CRITICAL_SPLINES_ENABLED"``, ``"SAVE_RAW_TABLES"``.
-* `Trigger` is unused by ``config_get_bool`` -- see the note below.
 * `Value` (``config_set_bool`` only) must be exactly ``1`` or ``0`` -- Mathcad has no boolean type, and this wrapper uses ``1``/``0`` rather than a Mathcad "true"/"false" string.
 
-``config_get_bool`` returns ``1`` or ``0``. ``config_set_bool`` returns a dummy ``0`` on success.
+``config_get_bool`` returns ``1`` or ``0``. ``config_set_bool`` returns the Mathcad string ``"Set"`` on success.
 
 .. note::
     **Not a truthiness coercion:** a ``Value`` other than exactly ``1`` or ``0`` (e.g. ``2``, ``0.5``, ``-1``) is a Custom Error, not silently treated as "true" the way C-family truthiness would.
@@ -923,19 +922,24 @@ config_get_int / config_set_int
 
 Reads/sets an integer configuration value.::
 
-    config_get_int(Key, Trigger)
+    config_get_int(Key)
     config_set_int(Key, Value)
 
 Where,
 
 * `Key` is the configuration key name, e.g. ``"TABULAR_NX"``, ``"TABULAR_NY"``, ``"SVDSBTL_SAMPLING_THREADS"``, ``"MIXTURE_STABILITY_ALGORITHM"``.
-* `Trigger` is unused by ``config_get_int`` -- see the note below.
 * `Value` (``config_set_int`` only) is rounded to the nearest integer.
 
-``config_get_int`` returns the integer value as a real scalar. ``config_set_int`` returns a dummy ``0`` on success.
+``config_get_int`` returns the integer value as a real scalar. ``config_set_int`` returns the Mathcad string ``"Set"`` on success.
 
 .. note::
     **Value validation:** ``Value`` is validated with the same finite-and-in-range checked conversion the Low-Level API's Handle/InputPairIdx/ParamIdx arguments use (see ``AS_update`` above) before rounding -- a non-finite ``Value``, or one too large to represent as a 32-bit integer, is a Custom Error rather than an undefined-behavior narrowing that could silently apply the wrong value.
+
+.. note::
+    **One int key only accepts a small, documented set of legal values:** ``MIXTURE_STABILITY_ALGORITHM`` is genuinely a 2-way choice (``0``: Legacy, ``1``: Michelsen, the default -- see its own description in ``configuration_keys.h``), not a free-form tuning integer -- an out-of-set ``Value`` is a Custom Error with a fixed message naming both legal choices, rather than one that sends you hunting through documentation. Checked in two stages, in this order: first, is ``Value`` an exact whole number at all (checked against the RAW value, before any rounding, so ``0.5`` -- which would otherwise round to the legal choice ``1`` -- is caught here rather than silently resolving to whichever choice it happens to round to); only once that passes is it checked against the legal set itself. A non-integer ``Value`` for this key and an out-of-set-but-otherwise-valid integer therefore raise two different Custom Errors, so the message always matches what was actually wrong.
+
+.. note::
+    **``REFPROP_ERROR_THRESHOLD`` is deliberately NOT restricted this way:** unlike ``MIXTURE_STABILITY_ALGORITHM``, it isn't a small enumerated choice -- it's a threshold compared (``ierr > REFPROP_ERROR_THRESHOLD``) against REFPROP's own ``ierr`` output across many internal Fortran subroutines (``src/Backends/REFPROP/REFPROPMixtureBackend.cpp``). The sign carries the primary meaning (negative ``ierr`` = warning-only, positive = hard error), and specific magnitudes (e.g. 223/224/226 for convergence failures in particular flash routines) are assigned per-subroutine by REFPROP itself -- not enumerated anywhere in CoolProp's own source, or in any publicly available REFPROP documentation consulted while building this function. Any finite, in-range integer is accepted.
 
 |
 
@@ -946,16 +950,15 @@ config_get_double / config_set_double
 
 Reads/sets a double-valued configuration value.::
 
-    config_get_double(Key, Trigger)
+    config_get_double(Key)
     config_set_double(Key, Value)
 
 Where,
 
 * `Key` is the configuration key name, e.g. ``"R_U_CODATA"``, ``"PHASE_ENVELOPE_STARTING_PRESSURE_PA"``, ``"MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB"``, ``"SPINODAL_MINIMUM_DELTA"``.
-* `Trigger` is unused by ``config_get_double`` -- see the note below.
 * `Value` (``config_set_double`` only) must be finite.
 
-``config_get_double`` returns the value as a real scalar. ``config_set_double`` returns a dummy ``0`` on success.
+``config_get_double`` returns the value as a real scalar. ``config_set_double`` returns the Mathcad string ``"Set"`` on success.
 
 .. note::
     **Value validation:** a non-finite ``Value`` (NaN or Infinity) is a Custom Error rather than being silently accepted and then propagating into every subsequent calculation that reads this key.
@@ -969,16 +972,15 @@ config_get_string / config_set_string
 
 Reads/sets a string-valued configuration value.::
 
-    config_get_string(Key, Trigger)
+    config_get_string(Key)
     config_set_string(Key, Value)
 
 Where,
 
 * `Key` is the configuration key name, e.g. ``"ALTERNATIVE_REFPROP_PATH"``, ``"ALTERNATIVE_TABLES_DIRECTORY"``, ``"VTPR_UNIFAC_PATH"``.
-* `Trigger` is unused by ``config_get_string`` -- see the note below.
 * `Value` (``config_set_string`` only) is the string to set.
 
-``config_get_string`` returns the value as a Mathcad string. ``config_set_string`` returns a dummy ``0`` on success.
+``config_get_string`` returns the value as a Mathcad string. ``config_set_string`` returns the Mathcad string ``"Set"`` on success.
 
 .. note::
     **REFPROP path keys force a reload:** setting ``ALTERNATIVE_REFPROP_PATH``, ``ALTERNATIVE_REFPROP_HMX_BNC_PATH``, or ``ALTERNATIVE_REFPROP_LIBRARY_PATH`` additionally forces REFPROP to unload (``CoolProp::force_unload_REFPROP()``, inside ``CoolProp::set_config_string()`` itself) so the next REFPROP call re-loads from the new path -- handled underneath, nothing this wrapper needs to do differently.
@@ -999,8 +1001,34 @@ Common behavior across all eight configuration functions
 .. note::
     **Two keys are read-only from Mathcad:** every ``config_set_*`` function refuses ``"FLOAT_PUNCTUATION"`` and ``"LIST_STRING_DELIMITER"`` with a Custom Error -- both are relied on by this wrapper's own string parsing (``FLOAT_PUNCTUATION`` controls the decimal separator CoolProp uses when formatting/parsing numbers in strings; ``LIST_STRING_DELIMITER`` is the separator this wrapper already assumes when splitting a Low-Level handle's fluid-name list -- see ``AS_mole_to_mass_fractions`` above). Changing either at runtime would silently corrupt string parsing elsewhere in this same wrapper, not just whatever the caller intended. Both remain readable via ``config_get_bool``/``config_get_string``.
 
+.. warning::
+    **Call these sequentially -- don't rely on Mathcad's dependency graph.** None of the eight functions above take a ``Trigger`` argument. Unlike a Low-Level ``AS_*`` handle, there's nothing here to scope a get/set pair to, so letting Mathcad's normal region/dependency-order recalculation decide when a ``config_get_*`` call sees a prior ``config_set_*``'s effect is fragile by construction -- Mathcad recalculates by region/dependency order, not top-to-bottom source order, so which call "wins" for a same-key get/set pair with no explicit dependency between them is exactly the kind of out-of-order surprise a ``Trigger`` argument could paper over in one specific case without fixing the general problem. Instead, put every ``config_set_*`` call a worksheet needs together, near the top, in a Mathcad program block or as ordinary sequential regions, then use **Recalculate Worksheet** (Ctrl-F5/Ctrl-F9) before anything downstream reads a value -- the same deliberate-order discipline ``AS_factory``'s worksheet-level pattern already documents above, just without a handle to chain through. This applies to ``get_config_as_json_string`` below too, even though it keeps a ``Trigger``-named argument -- there purely to satisfy Mathcad's one-argument minimum, since it has no ``Key`` to use instead, not because it's any safer to rely on automatic recalculation for.
+
+|
+
+----
+
+get_config_as_json_string
+-----------------------------
+
+The eight functions above read/write one key you already know the name of, committing to a fixed return type each -- a poor fit for viewing the *entire* configuration at once. This function is a verbatim wrapper for ``CoolProp::get_config_as_json_string()`` instead -- the same name Python's ``CoolProp.CoolProp`` module already uses for it, since there's no per-key selection here to distinguish it from and reusing a name already familiar from the other bindings is the least surprising choice.::
+
+    get_config_as_json_string(Trigger)
+
+Where,
+
+* `Trigger` is unused -- just pass a dummy integer (``0``). Same recalculation-dependency rationale as the four getters' ``Trigger`` above: this reads the whole process-wide configuration, so it needs the same edge to re-run when a *different* region's ``config_set_*`` call changes something.
+
+Returns every configuration key as one raw JSON object string, unmodified, e.g. ``{"NORMALIZE_GAS_CONSTANTS":true,"TABULAR_NX":200,...}``.
+
 .. note::
-    **Why the four getters take Trigger:** the same reasoning as the Low-Level API's ``Trigger`` argument (see ``AS_mole_fractions_liquid`` above) -- ``Key``'s own value never changes between recalculations, so a getter whose only argument is ``Key`` gives Mathcad's dependency graph nothing to key a recalculation on when a *different* region's ``config_set_*`` call changes the same process-wide value out from under it. Wire ``Trigger`` to something that actually changes when you need the getter to re-run, or use **Recalculate Worksheet**. The four setters don't take a ``Trigger``: each already takes ``Key``/``Value`` as real arguments, and the normal case (editing ``Key`` or ``Value``) already gives Mathcad a natural recalculation edge; sequencing a setter relative to unrelated reads otherwise follows the same two authoring patterns documented for ``AS_factory`` above.
+    **Mathcad has no native JSON viewer.** For a readable, one-pair-per-line display, split this string on ``,`` with a Mathcad program block and rejoin the pieces with a line-break character built natively via ``vec2str()`` -- a DLL function's returned string can't embed a Unicode line-break character itself (Mathcad Prime decodes it byte-for-byte through the Windows-1252 codepage, with no Unicode awareness), so that step has to happen on the Mathcad side. See the worked example below.
+
+.. TODO: worked example -- Mathcad program block splitting on "," and
+   rejoining with vec2str([133]) for a one-pair-per-line display.
+
+.. note::
+    **Line breaks between key/value pairs have to be built on the Mathcad side:** the natural choice, U+0085 (NEL -- recognized as a line break by many rich-text controls), is NOT reachable through this function's return value. Testing confirmed Mathcad Prime decodes a DLL's returned string byte-for-byte through the Windows-1252 codepage with no Unicode/UTF-8 awareness at all -- a raw ``0x85`` byte rendered as an ellipsis ("..."), CP-1252's own mapping for that byte, and the correct 2-byte UTF-8 encoding of U+0085 (``0xC2 0x85``) rendered as "Â…" (those two bytes decoded *separately* under CP-1252, with no UTF-8 decoding happening anywhere). CP-1252 has a fixed, complete mapping for byte ``0x85`` already, so no byte value decodes to U+0085 through this path. Split this function's result on ``,`` with a Mathcad program (e.g. ``search``/``substr``) and rejoin the pieces with a natively-built ``vec2str([133])`` in between instead -- that runs inside Mathcad's own Unicode-aware engine, never touching the lossy boundary this function is limited by.
 
 |
 

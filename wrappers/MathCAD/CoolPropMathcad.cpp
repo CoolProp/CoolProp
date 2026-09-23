@@ -91,66 +91,83 @@ enum EC
     BAD_CONFIG_BOOL_VALUE,
     BAD_CONFIG_INT_VALUE,
     BAD_CONFIG_DOUBLE_VALUE,
+    BAD_CONFIG_RESTRICTED_VALUE,
     UNKNOWN,
     NUMBER_OF_ERRORS
 };  // Dummy Code for Error Count
 
 // table of error messages
 // As of Mathcad Prime 10, these are now actually returned as Custom Error: messages
-const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
-                                                     "Insufficient Memory",
-                                                     "Interrupted",
-                                                     "Only one column allowed in input array",
-                                                     "Input arrays must be the same length",
-                                                     "Invalid Fluid String",
-                                                     "Invalid predefined mixture",
-                                                     "IF97 Backend supports pure \"Water\" only",
-                                                     "Invalid Parameter String",
-                                                     "Invalid Phase String",
-                                                     "Only one input key phase specification allowed",
-                                                     "Cannot use this REF State with this fluid",
-                                                     "Input Parameter is Non-Trivial",
-                                                     "REFPROP not installed correctly",
-                                                     "This Output parameter is not available for this Fluid",
-                                                     "This Input Pair is not yet supported for this Fluid",
-                                                     "Input vapor quality must be between 0 and 1",
-                                                     "Output variable not valid in two phase region",
-                                                     "Output variable only valid in two phase region",
-                                                     "Temperature out of range",
-                                                     "Pressure out of range",
-                                                     "Enthalpy out of range",
-                                                     "Entropy out of range",
-                                                     "Temperature-Pressure inputs in 2-phase region; use TQ or PQ",
-                                                     "At least one of the inputs must be [T], [R], [W], or [Tdp]",
-                                                     "Could not match binary pair",
-                                                     "Missing at least one set of binary interaction parameters.",
-                                                     "Mixing rule must be \"linear\" or \"Lorentz-Berthelot\".",
-                                                     "Specified binary pair already exists.",
-                                                     "No solution found for the given inputs and fluid.",
-                                                     "Invalid or stale AbstractState handle; it may already have been freed or replaced",
-                                                     "Low-Level Multi function supports at most 5 output parameters per call",
-                                                     "CoolProp Low-Level API Issue: Use get_global_param_string(\"errstring\") for more info.",
-                                                     "Invalid Backend String",
-                                                     "AS_set_mole_fractions/AS_set_mass_fractions is not valid for a pure fluid",
-                                                     "Input fractions must sum to 1.0",
-                                                     "Weighted fraction sum is zero; cannot normalize (check for an all-zero or canceling input)",
-                                                     "Invalid Parameter Index",
-                                                     "Invalid Input Pair String",
-                                                     "Invalid Input Pair Index",
-                                                     "No Active States",
-                                                     "Phase Envelope Not Built",
-                                                     "No Such Input Pair",
-                                                     "Not a recognized CoolProp configuration key; see https://coolprop.org/coolprop/Configuration.html",
-                                                     "FLOAT_PUNCTUATION and LIST_STRING_DELIMITER cannot be set from Mathcad -- both are relied on by "
-                                                     "this wrapper's own string parsing",
-                                                     "This configuration key is not of the type this function handles (bool/int/double/string)",
-                                                     "Boolean configuration Value must be exactly 0 or 1",
-                                                     "Integer configuration Value must be a finite number representable as a 32-bit integer",
-                                                     "Double configuration Value must be finite (not NaN or Infinity)",
-                                                     "CoolProp Issue: Use get_global_param_string(\"errstring\") for more info.",
-                                                     "Error Count - Not Used"};
+const char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {
+  "Argument must be real",
+  "Insufficient Memory",
+  "Interrupted",
+  "Only one column allowed in input array",
+  "Input arrays must be the same length",
+  "Invalid Fluid String",
+  "Invalid predefined mixture",
+  "IF97 Backend supports pure \"Water\" only",
+  "Invalid Parameter String",
+  "Invalid Phase String",
+  "Only one input key phase specification allowed",
+  "Cannot use this REF State with this fluid",
+  "Input Parameter is Non-Trivial",
+  "REFPROP not installed correctly",
+  "This Output parameter is not available for this Fluid",
+  "This Input Pair is not yet supported for this Fluid",
+  "Input vapor quality must be between 0 and 1",
+  "Output variable not valid in two phase region",
+  "Output variable only valid in two phase region",
+  "Temperature out of range",
+  "Pressure out of range",
+  "Enthalpy out of range",
+  "Entropy out of range",
+  "Temperature-Pressure inputs in 2-phase region; use TQ or PQ",
+  "At least one of the inputs must be [T], [R], [W], or [Tdp]",
+  "Could not match binary pair",
+  "Missing at least one set of binary interaction parameters.",
+  "Mixing rule must be \"linear\" or \"Lorentz-Berthelot\".",
+  "Specified binary pair already exists.",
+  "No solution found for the given inputs and fluid.",
+  "Invalid or stale AbstractState handle; it may already have been freed or replaced",
+  "Low-Level Multi function supports at most 5 output parameters per call",
+  "CoolProp Low-Level API Issue: Use get_global_param_string(\"errstring\") for more info.",
+  "Invalid Backend String",
+  "AS_set_mole_fractions/AS_set_mass_fractions is not valid for a pure fluid",
+  "Input fractions must sum to 1.0",
+  "Weighted fraction sum is zero; cannot normalize (check for an all-zero or canceling input)",
+  "Invalid Parameter Index",
+  "Invalid Input Pair String",
+  "Invalid Input Pair Index",
+  "No Active States",
+  "Phase Envelope Not Built",
+  "No Such Input Pair",
+  "Not a recognized CoolProp configuration key; see https://coolprop.org/coolprop/Configuration.html",
+  "This configuration key is restricted by the Mathcad interface and cannot be changed",
+  "This configuration key is not of the type this function handles (bool/int/double/string)",
+  "Boolean configuration Value must be exactly 0 or 1",
+  "Integer configuration Value must be a finite, 32-bit integer",
+  "Double configuration Value must be finite (not NaN or Infinity)",
+  "This integer configuration key Value must be exactly 0 (Legacy) or 1 (Michelsen - default)",
+  "CoolProp Issue: Use get_global_param_string(\"errstring\") for more info.",
+  "Error Count - Not Used"};
 
 // Helper: allocate Mathcad string and copy contents
+//
+// Encoding note for any future caller wanting to embed non-ASCII bytes
+// here: Mathcad Prime decodes an MC_STRING's returned char* content
+// byte-for-byte through the Windows-1252 codepage, with no Unicode/UTF-8
+// awareness -- confirmed empirically while building get_config_as_json_string()
+// (MathcadConfig.h), attempting to embed U+0085 (NEL) as a line-break
+// character. A raw 0x85 byte rendered as "..." (CP-1252's own mapping of
+// that byte to U+2026 ELLIPSIS); the correct 2-byte UTF-8 encoding of
+// U+0085 (0xC2 0x85) rendered as "Â…" (those two bytes decoded SEPARATELY
+// under CP-1252, with no UTF-8 decoding happening anywhere). Plain ASCII
+// (0x00-0x7F, e.g. Tab) round-trips fine since it's identical under any
+// encoding, but a non-ASCII codepoint generally can't be embedded through
+// this function's return value -- build it natively in Mathcad instead
+// (e.g. vec2str()), which runs inside Mathcad's own Unicode-aware engine
+// rather than through this byte-oriented boundary.
 static char* AllocMathcadString(const std::string& s) {
     // Must use MathcadAllocate(size) so Mathcad can track and release the memory properly.
     char* c = MathcadAllocate(static_cast<int>(s.size()) + 1);
@@ -1175,6 +1192,7 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             CreateUserFunction(hDLL, &ConfigSetDouble);
             CreateUserFunction(hDLL, &ConfigGetString);
             CreateUserFunction(hDLL, &ConfigSetString);
+            CreateUserFunction(hDLL, &GetConfigAsJsonString);
             break;
 
         case DLL_THREAD_ATTACH:
