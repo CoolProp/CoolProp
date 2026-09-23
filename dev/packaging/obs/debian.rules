@@ -10,13 +10,15 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
 override_dh_auto_configure:
 	# dh's cmake buildsystem already passes CMAKE_INSTALL_PREFIX=/usr and the
-	# multiarch CMAKE_INSTALL_LIBDIR, which COOLPROP_SYSTEM_INSTALL then uses.
+	# multiarch CMAKE_INSTALL_LIBDIR, which the install rules then use.
 	# COOLPROP_REQUIRE_VENDORED_DEPS makes the configure step fail loudly if
 	# anything would have to be downloaded, which it cannot do in the build
 	# chroot anyway.
 	dh_auto_configure -- \
 		-DCOOLPROP_SHARED_LIBRARY=ON \
-		-DCOOLPROP_SYSTEM_INSTALL=ON \
+		-DCOOLPROP_INSTALL_CMAKE_PACKAGE=ON \
+		-DCOOLPROP_INSTALL_LEGACY_LAYOUT=OFF \
+		-DCOOLPROP_VENDOR_THIRD_PARTY=OFF \
 		-DCOOLPROP_REQUIRE_VENDORED_DEPS=ON \
 		-DCOOLPROP_NO_EXAMPLES=ON
 

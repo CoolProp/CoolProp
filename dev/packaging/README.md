@@ -65,9 +65,18 @@ download timeout.
 
 ## The FHS install layout
 
-`-DCOOLPROP_SYSTEM_INSTALL=ON` switches the install rules from CoolProp's
-release-artifact folders (`shared_library/Linux/64bit_GNU_11/`, which is what
-the SourceForge uploads want) to a normal system layout:
+The FHS layout itself comes from GH #3311, which landed in master while this
+branch was open.  A packaging build asks for it with three options:
+
+- `-DCOOLPROP_INSTALL_CMAKE_PACKAGE=ON` installs the system layout below
+- `-DCOOLPROP_INSTALL_LEGACY_LAYOUT=OFF` drops CoolProp's release-artifact
+  folders (`shared_library/Linux/64bit_GNU_11/`, which is what the SourceForge
+  uploads want, and which has no business in `/usr`)
+- `-DCOOLPROP_VENDOR_THIRD_PARTY=OFF` keeps the bundled Eigen and fmt out of
+  `/usr/include`; leaving it ON is right for a relocatable SDK and is the one
+  thing a distribution will reject
+
+That gives:
 
 | What | Where |
 |---|---|
@@ -75,6 +84,12 @@ the SourceForge uploads want) to a normal system layout:
 | headers | `${CMAKE_INSTALL_INCLUDEDIR}/CoolProp/` |
 | pkg-config | `${CMAKE_INSTALL_LIBDIR}/pkgconfig/coolprop.pc` |
 | CMake package | `${CMAKE_INSTALL_LIBDIR}/cmake/CoolProp/` |
+
+Of these, only the pkg-config file comes from this branch; GH #3311 supplies
+the rest.  This branch originally carried its own `cmake/CoolPropInstall.cmake`
+doing the same job, and that was deleted when #3311 merged rather than left to
+fight with it: two `install(EXPORT)` rules over the same targets is not a merge
+conflict CMake reports, it is one that ships.
 
 So a downstream project can finally do either of:
 
@@ -120,12 +135,14 @@ For the **C++ API** it is a real hazard, and it is why step 2 of GH #3388,
 that distributions already package, has to land before the `-dev` package can
 be called production-ready.  Until then:
 
-- `coolprop.pc` ships with an empty `Requires:` and `CoolPropConfig.cmake`
-  with no `find_dependency()` calls, because naming `eigen3` there would claim
-  a compatibility that has not been established.
-- Both are one `cmake -D` away when it has been:
-  `-DCOOLPROP_PC_REQUIRES="eigen3 fmt"` and
-  `-DCOOLPROP_EXPORTED_DEPENDENCIES="Eigen3;fmt"`.
+- `coolprop.pc` ships with an empty `Requires:`, because naming `eigen3` there
+  would claim a compatibility that has not been established.  It is one
+  `-DCOOLPROP_PC_REQUIRES="eigen3 fmt"` away once it has been.
+- With `COOLPROP_VENDOR_THIRD_PARTY=ON` (the default, and what an SDK-style
+  install wants) the question does not arise at all: the bundled Eigen and fmt
+  under `<prefix>/include/CoolProp/third_party/` are the ones a consumer
+  compiles against.  A distribution build turns that OFF, which is exactly
+  where the skew reappears.
 - The `-dev` packages still depend on `libeigen3-dev` / `eigen3-devel` and the
   fmt equivalents, so the headers a consumer needs are at least present.
 

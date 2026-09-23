@@ -31,13 +31,19 @@ If you are using CMake, the process is quite trivial to integrate the CoolProp s
 
 Then CMakeLists.txt might have the contents::
 
-    # See also https://stackoverflow.com/a/18697099
-    cmake_minimum_required (VERSION 2.8.11)
-    project (main)
-    set(COOLPROP_STATIC_LIBRARY true)
-    add_subdirectory ("${CMAKE_SOURCE_DIR}/externals/CoolProp" CoolProp)
-    add_executable (main "${CMAKE_SOURCE_DIR}/mycode.cpp")
-    target_link_libraries (main CoolProp)
+    cmake_minimum_required(VERSION 3.15)
+    project(main LANGUAGES CXX)
+    set(COOLPROP_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
+    add_subdirectory("${CMAKE_SOURCE_DIR}/externals/CoolProp" CoolProp)
+    add_executable(main "${CMAKE_SOURCE_DIR}/mycode.cpp")
+    target_link_libraries(main PRIVATE CoolProp::CoolProp)
+
+An already-installed CoolProp package can instead be used without embedding
+its source tree::
+
+    find_package(CoolProp 8 CONFIG REQUIRED COMPONENTS Static)
+    add_executable(main mycode.cpp)
+    target_link_libraries(main PRIVATE CoolProp::Static)
 
 Pre-compiled Binaries
 =====================

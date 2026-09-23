@@ -90,16 +90,21 @@ include root) are not shipped here: their names are too generic to put into
 # would have to be downloaded, rather than letting it fail later and less
 # clearly inside the OBS sandbox.
 #
-# COOLPROP_PC_REQUIRES and COOLPROP_EXPORTED_DEPENDENCIES are deliberately left
-# unset.  CoolProp is compiled against its own pinned Eigen and fmt, so telling
-# a consumer to find the distribution's copies would claim a compatibility
-# nobody has established yet.  Set them to "eigen3 fmt" and "Eigen3;fmt" once
-# COOLPROP_USE_SYSTEM_DEPS exists (step 2 of GH #3388); see
-# dev/packaging/README.md.
+# COOLPROP_VENDOR_THIRD_PARTY=OFF keeps CoolProp's pinned Eigen and fmt out of
+# /usr/include: a private copy of Eigen in a system include directory is the one
+# thing a distribution will not accept.  The consumer therefore compiles the
+# installed C++ headers against the distribution's own Eigen.
+#
+# COOLPROP_PC_REQUIRES is deliberately left unset for the same reason in
+# reverse: naming eigen3 there would assert a version compatibility nobody has
+# established.  Set it to "eigen3 fmt" once COOLPROP_USE_SYSTEM_DEPS exists
+# (step 2 of GH #3388); see dev/packaging/README.md.
 %cmake \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCOOLPROP_SHARED_LIBRARY=ON \
-    -DCOOLPROP_SYSTEM_INSTALL=ON \
+    -DCOOLPROP_INSTALL_CMAKE_PACKAGE=ON \
+    -DCOOLPROP_INSTALL_LEGACY_LAYOUT=OFF \
+    -DCOOLPROP_VENDOR_THIRD_PARTY=OFF \
     -DCOOLPROP_REQUIRE_VENDORED_DEPS=ON \
     -DCOOLPROP_NO_EXAMPLES=ON
 

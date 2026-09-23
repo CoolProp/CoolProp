@@ -65,19 +65,11 @@ jobs:
               exit 1
             fi
 
-            # Assert COOLPROP_INSTALL_PREFIX separately.  It is the variable the
-            # release-artifact rules interpolate (VxWorks, MathcadPrime,
-            # MathCAD15, LibreOffice), and an empty value there turns
-            # DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathCAD15" into an
-            # absolute path at the filesystem root.  A regression that broke
-            # only that variable would leave CMAKE_INSTALL_PREFIX above
-            # perfectly correct and sail through.
-            local got_cp
-            got_cp="$(sed -n 's/^-- COOLPROP_INSTALL_PREFIX=\([^ ]*\).*/\1/p' "${build}.log" | head -1)"
-            if [ "${got_cp}" != "${want}" ]; then
-              echo "COOLPROP_INSTALL_PREFIX check failed for [$*]: want '${want}', got '${got_cp}'" >&2
-              exit 1
-            fi
+            # Only CMAKE_INSTALL_PREFIX is asserted now.  Before #3311 the
+            # release-artifact rules interpolated ${COOLPROP_INSTALL_PREFIX}
+            # into four absolute DESTINATIONs, so that variable needed its own
+            # check; #3311 made every DESTINATION relative, so the cache entry
+            # above is the single thing that decides where anything lands.
             echo "ok: [$*] -> ${got}"
           }
           expect_prefix "${RUNNER_TEMP}/pfx-default" "${GITHUB_WORKSPACE}/install_root"
@@ -89,8 +81,8 @@ jobs:
           # sends every relative DESTINATION to /lib and /include, and the four
           # rules that interpolate COOLPROP_INSTALL_PREFIX to the filesystem
           # root.  Asserting only the three cases above let exactly that through.
-          expect_prefix "${RUNNER_TEMP}/pfx-empty-legacy" "${GITHUB_WORKSPACE}/install_root" -DCOOLPROP_INSTALL_PREFIX=
-          expect_prefix "${RUNNER_TEMP}/pfx-empty-cmake" "${GITHUB_WORKSPACE}/install_root" -DCMAKE_INSTALL_PREFIX=
+          # Both empty forms ABORT since #3311 landed; they used to fall back to
+          # install_root.  Asserted below with expect_configure_failure.
           # Trailing slash, through both variables.  A PATH cache entry is
           # normalised on the way in and an untyped -D is not, so a prefix as
           # ordinary as "$PREFIX/" once left the two variables disagreeing and
@@ -108,7 +100,7 @@ jobs:
               echo "expected the configure to fail for [$*], but it succeeded" >&2
               exit 1
             fi
-            if ! grep -q "Install prefix resolution failed" "${build}.log"; then
+            if ! grep -q "must not be empty" "${build}.log"; then
               echo "configure failed for [$*] but not with the prefix guard:" >&2
               tail -20 "${build}.log" >&2
               exit 1
@@ -117,6 +109,8 @@ jobs:
           }
           expect_configure_failure "${RUNNER_TEMP}/pfx-collapse-legacy" "-DCOOLPROP_INSTALL_PREFIX=;"
           expect_configure_failure "${RUNNER_TEMP}/pfx-collapse-cmake" "-DCMAKE_INSTALL_PREFIX=;"
+          expect_configure_failure "${RUNNER_TEMP}/pfx-empty-legacy" "-DCOOLPROP_INSTALL_PREFIX="
+          expect_configure_failure "${RUNNER_TEMP}/pfx-empty-cmake" "-DCMAKE_INSTALL_PREFIX="
 
       - name: Build the offline release tarball
         run: dev/packaging/make-release-tarball.sh --output-dir "${RUNNER_TEMP}/dist"
@@ -147,7 +141,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
             -DCOOLPROP_SHARED_LIBRARY=ON \
-            -DCOOLPROP_SYSTEM_INSTALL=ON \
+            -DCOOLPROP_INSTALL_CMAKE_PACKAGE=ON \
+            -DCOOLPROP_INSTALL_LEGACY_LAYOUT=OFF \
+            -DCOOLPROP_VENDOR_THIRD_PARTY=OFF \
             -DCOOLPROP_REQUIRE_VENDORED_DEPS=ON \
             -DCOOLPROP_NO_EXAMPLES=ON
           cmake --build "${RUNNER_TEMP}/build" -j "$(nproc)"
