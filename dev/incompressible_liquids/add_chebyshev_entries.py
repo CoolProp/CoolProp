@@ -17,7 +17,15 @@ numpy/scipy version drift would churn every committed coefficient. Instead:
 
 Future full regenerations get the same entries automatically through
 SolutionDataWriter.toJSON; this script exists so the *_cheb rollout does
-not entangle with a full refit.
+not entangle with a full refit. It is superseded by that path and should
+not normally be re-run, but it is kept because both test modules import
+collect_fluid_objects and raw_grids from it. It therefore has to obey the
+same rounding and allow_nan rules as the writer, or re-running it would
+quietly put full-precision numbers back into files the digit-cap tests
+hold to seven digits. Re-running it today is a no-op on the 123 fluids the
+pipeline regenerates; it would still rewrite the four DigitalFluids
+(Acetone, Air, Ethanol, Hexane), which predate the rounding and need a
+built CoolProp package to regenerate properly.
 
 Fluids sampled from CoolProp's own EOS (Air, Acetone, Ethanol, Hexane) are
 basis-converted rather than refit when the CoolProp package is absent --
@@ -32,7 +40,7 @@ import os
 import sys
 
 from CPIncomp import getPureFluids, getSolutionFluids, getSecCoolFluids, getDigitalFluids, getExampleNames
-from CPIncomp.WriterObjects import SolutionDataWriter
+from CPIncomp.WriterObjects import SolutionDataWriter, roundNestedNumbers, SIGNIFICANT_DIGITS
 from CPIncomp import ChebyshevFits
 
 JSON_DIR = os.path.join(os.path.dirname(__file__), "json")
@@ -84,12 +92,24 @@ def main():
             if entry is None:
                 skipped.append((name, prop))
                 continue
+            # Same rounding rule as SolutionDataWriter.toJSON: the entry
+            # rounds to SIGNIFICANT_DIGITS, and an exact conversion's
+            # COEFFICIENTS keep EXACT_CONVERSION_DIGITS. Writing them at full
+            # precision here would put 17-digit numbers into files that the
+            # digit-cap tests hold to 7, and hand back the numpy-version churn
+            # the rounding exists to remove.
+            unroundedCoeffs = entry["coeffs"]
+            entry = roundNestedNumbers(entry, SIGNIFICANT_DIGITS)
+            if entry["fit_source"] in ChebyshevFits.EXACT_FIT_SOURCES:
+                entry["coeffs"] = roundNestedNumbers(
+                    unroundedCoeffs, ChebyshevFits.EXACT_CONVERSION_DIGITS)
             fluid[prop + "_cheb"] = entry
             # Classify on what build_entry actually did, not on whether raw
             # data merely existed: it falls back to an exact basis conversion
             # when the grid does not cover the fluid's range or no positive
             # fit is found, so keying off rawGrid over-reports tabular refits.
-            (added if entry.get("fit_source") == "tabular_data" else converted).append((name, prop))
+            (added if entry["fit_source"] == ChebyshevFits.FIT_SOURCE_TABULAR
+             else converted).append((name, prop))
 
         # every pre-existing key must be value-identical, except the *_cheb
         # entries this script owns (re-running it refreshes them)
@@ -108,7 +128,11 @@ def main():
         # sibling temp file and os.replace, which is atomic within a directory,
         # so an interrupted run leaves the original intact rather than half a
         # JSON document.
-        payload = json.dumps(fluid, indent=2, sort_keys=True)
+        # allow_nan=False for the same reason the writer sets it: json.dumps
+        # would otherwise emit bare NaN and Infinity tokens, which are not
+        # valid JSON and which the C++ loader has no reason to accept.
+        # Raising here fails closed, before the file is touched.
+        payload = json.dumps(fluid, indent=2, sort_keys=True, allow_nan=False)
         tmp_path = path + ".tmp"
         try:
             with open(tmp_path, "w") as fh:
